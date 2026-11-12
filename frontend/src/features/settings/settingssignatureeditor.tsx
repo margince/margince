@@ -4,7 +4,14 @@
 import type { components } from "../../api/schema";
 import { SignatureHtml } from "../../components/signaturehtml";
 import { Field, Textarea, TextInput } from "../../design-system/atoms";
-import { useT } from "../../i18n";
+import { formatNumber } from "../../format/format";
+import { useLocale, usePlural, useT } from "../../i18n";
+
+// The server's cap on personal HTML, counted on the trimmed raw input.
+// backend/gates/frontendsignaturecap_test.go fails when it and the contract disagree.
+export const SIGNATURE_HTML_MAX_CHARS = 10_000;
+// The counter shows once the input passes this share of the cap.
+const COUNTER_FROM = 0.8;
 
 export type SignatureFormat = "text" | "html";
 export type SignatureDraft = Pick<
@@ -23,7 +30,9 @@ export function SignatureFields({
   shown: SignatureDraft;
   mode: "plain" | "html" | "template" | "retained";
   previewHtml?: string;
-  htmlHint?: string;
+  htmlHint?:
+    | "settings.signatureHtmlHintTemplate"
+    | "settings.signatureHtmlHintPlain";
   disabled: boolean;
   change: (
     field: Exclude<keyof SignatureDraft, "format">,
@@ -31,6 +40,21 @@ export function SignatureFields({
   ) => void;
 }>) {
   const t = useT();
+  const plural = usePlural();
+  const { locale } = useLocale();
+  const max = formatNumber(SIGNATURE_HTML_MAX_CHARS, locale);
+  // Code points, because the server counts runes: "𝐀" is one, not two units.
+  const count = [...shown.html.trim()].length;
+  const counter = count > SIGNATURE_HTML_MAX_CHARS * COUNTER_FROM && (
+    <span
+      className={count > SIGNATURE_HTML_MAX_CHARS ? "field-error" : undefined}
+    >
+      {plural("settings.signatureHtmlCount", count, {
+        count: formatNumber(count, locale),
+        max,
+      })}
+    </span>
+  );
   return (
     <>
       {(mode === "plain" || mode === "retained") && (
@@ -65,9 +89,11 @@ export function SignatureFields({
               />
             )}
           </Field>
-          {mode === "html" && (
+          {(mode === "html" || counter) && (
             <p className="t-caption">
-              {htmlHint ?? t("settings.signatureHtmlHintPlain")}
+              {mode === "html" &&
+                t(htmlHint ?? "settings.signatureHtmlHintPlain", { max })}{" "}
+              {counter}
             </p>
           )}
         </>

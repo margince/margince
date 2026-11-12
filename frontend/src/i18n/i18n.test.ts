@@ -40,6 +40,7 @@ const KEPT_IN_ENGLISH = new Set<string>([
   "signatureTemplate.placeholder",
   "agent.fact.sourceOnProvider",
   "standing.mark.label",
+  "worklist.happened.deal",
   // The promiser and stored summary are values separated by punctuation.
   "magic.action.approval_commitment_task_named",
   "magic.action.approval_commitment_task_summary",
@@ -341,12 +342,10 @@ const KEPT_IN_ENGLISH = new Set<string>([
   // A fixture company name, which a locale would rename into a different company.
   "ob.fieldEg.display_name",
 
-  // Brand names, a protocol's acronym, and the console Google itself names
-  // in English.
+  // Brand names and a protocol's acronym.
   "firstRun.platform.google",
   "firstRun.platform.microsoft",
   "firstRun.platform.imap",
-  "firstRun.google.helpConsole",
 ]);
 
 // Every invariant below derives from `catalogs`, so a locale added to the

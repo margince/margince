@@ -22,7 +22,6 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
-	"github.com/margince/margince/backend/internal/shared/kernel/deadline"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -471,7 +470,7 @@ func settlementStatus(open, paid int64, due *time.Time, now time.Time) string {
 		// Nothing is owed, whether money, credits or a zero total settled it, so
 		// a passed due date makes nothing late.
 		return statusPaid
-	case deadline.Passed(due, now):
+	case pastDue(due, now):
 		return statusOverdue
 	case paid > 0:
 		return statusPartiallyPaid

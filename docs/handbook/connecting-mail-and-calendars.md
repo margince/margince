@@ -1,5 +1,5 @@
 <!-- prose:plain -->
-<!-- describes: backend/internal/modules/capture/health.go frontend/src/app/capturehealthbanner.tsx frontend/src/features/capture/connectors.tsx frontend/src/features/capture/imap-connect-form.tsx frontend/src/features/capture/connectors.telegram.tsx frontend/src/features/capture/backfill.tsx backend/internal/modules/capture/registry_connections.go backend/internal/modules/capture/oauthflow backend/internal/modules/capture/backfill.go backend/internal/modules/capture/historybaseline.go frontend/src/features/capture/connection-service.tsx frontend/src/features/capture/connection-stop.tsx backend/internal/modules/capture/gdocs backend/internal/modules/capture/meetingnotes.go backend/internal/compose/connectors_sharedconsent.go backend/internal/compose/connectors_picture.go -->
+<!-- describes: backend/internal/modules/capture/health.go frontend/src/app/capturehealthbanner.tsx frontend/src/features/capture/connectors.tsx frontend/src/features/capture/imap-connect-form.tsx frontend/src/features/capture/connectors.telegram.tsx frontend/src/features/capture/backfill.tsx backend/internal/modules/capture/registry_connections.go backend/internal/modules/capture/oauthflow backend/internal/modules/capture/backfill.go backend/internal/modules/capture/historybaseline.go frontend/src/features/capture/connection-service.tsx frontend/src/features/capture/connection-stop.tsx backend/internal/modules/capture/gdocs backend/internal/modules/capture/meetingnotes.go backend/internal/modules/capture/meetingnotesread.go backend/internal/modules/activities/meetingnotes.go backend/internal/compose/connectors_sharedconsent.go backend/internal/compose/connectors_picture.go -->
 # Connecting your mailbox and calendar
 
 Capture reads mail and meetings only from an account you connect. This page
@@ -64,9 +64,11 @@ Margince can read the notes and transcripts Google Meet writes. You connect this
 
 Margince may then open a Google Doc by its address, and nothing else in your Drive. It cannot list or search your files. It reads only the notes and transcripts Google Meet adds to a meeting in your calendar.
 
+Once Google adds the notes to a meeting, Margince puts their text on the meeting as a transcript. It then suggests the tasks it finds in it. Each document is read once. Margince reads notes only for meetings of the last 14 days that someone at your company set up. Everyone who can see the meeting can see its transcript. A document taken off the meeting is not read.
+
 Connect meeting notes with the same Google account as your calendar. Notes are read only for meetings in that account's calendar, and the row says so when the two accounts differ.
 
-If you untick the permission on the Google screen, the row says **Cannot read meeting notes** and the account offers **Reconnect**.
+If you untick the permission on the Google screen, the row says **Cannot read meeting notes** and the account offers **Reconnect**. The same happens when Google later refuses it.
 To stop it, choose **Stop reading meeting notes** in the row. Mail and calendar keep running, and notes already on a meeting stay. Disconnecting the whole account stops it too.
 Also called: Google Docs, Meet transcripts, Gemini notes, meeting minutes.
 
@@ -275,10 +277,10 @@ judges it ordinary business. The same holds for contacts the import creates. A
 contact from a thread that nothing has judged yet is yours alone until
 Margince has sorted the thread.
 
-Once an import finishes, check two places:
-**Senders**, for what was decided about each address it found, and **Held
-threads**, for the threads still held. Both are under Settings → Capture
-activity.
+Once an import finishes, check two places.
+**Sender decisions** shows what was decided about each address it found. **Mail
+not shared with the team** shows the threads still held. Both are under Settings →
+Connections → Activity.
 
 ## Why is there a warning about my mailbox?
 

@@ -11,11 +11,32 @@
 .task-detail-meta {
   display: flex;
   flex-wrap: wrap;
+  align-items: center;
   gap: var(--space-2) var(--space-3);
 }
-.task-detail-actions {
-  align-items: flex-end;
+/* The records take the meta line's first row, chip by chip, as on a Home card. */
+.task-detail-records {
+  display: flex;
   flex-wrap: wrap;
+  flex-basis: 100%;
+  gap: var(--space-2);
+}
+/* A drawer reads from its start edge, so its verbs start there too. */
+.task-detail-actions,
+.task-detail-buttons,
+.task-detail-due {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: var(--gapActions);
+}
+/* The day and time fields take a row of their own under the buttons. */
+.task-detail-verbs {
+  display: grid;
+  gap: var(--gapActions);
+}
+.task-detail-due > .field {
+  flex: 1 1 10rem;
 }
 
 /* A single newline in the body is a line the writer broke, as in the timeline. */

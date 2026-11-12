@@ -18,10 +18,10 @@ afterEach(() => {
 type Moment = NonNullable<components["schemas"]["Company360"]["moment"]>;
 
 const QUESTION: Moment = {
-  claim_key: "moment:account_may_be_done:c-3",
+  claim_key: "moment:may_be_done:c-3",
   evidence_fingerprint: "fp-1",
   rule: "open_promise",
-  headline: "You may have done this — you wrote to them on 2026-09-13",
+  headline: "This may be done: an email went to them on 2026-09-13",
   why_now:
     "You owe Lena Kunde: Send the listing details. Promised with no due date.",
   confidence: "medium",

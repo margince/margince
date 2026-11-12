@@ -38,7 +38,7 @@ import (
 )
 
 // requestKinds are the kinds the page lists a deadline for, in queue order.
-var requestKinds = []subjectrightsrules.RequestKind{"access", "rectify", "erasure"}
+var requestKinds = []subjectrightsrules.RequestKind{"access", "rectify", "erasure", "restriction"}
 
 // GetInstallationJurisdiction answers the page.
 func (h installationSettingsHandlers) GetInstallationJurisdiction(w http.ResponseWriter, r *http.Request) {

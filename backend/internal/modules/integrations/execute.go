@@ -161,6 +161,9 @@ func (s *Store) leaseForSubmit(ctx context.Context, tx pgx.Tx, name, runID strin
 	if state != string(provider.RunQueued) || contact == nil {
 		return none, false, nil
 	}
+	if restricted, err := contactRestricted(ctx, tx, *contact); err != nil || restricted {
+		return none, false, err
+	}
 	conn, err := s.readLiveConnection(ctx, tx, name)
 	switch {
 	case errors.Is(err, errConnectionImpaired):
@@ -484,17 +487,14 @@ func (s *Store) writeStatusThrough(ctx context.Context, tx pgx.Tx, name, status,
 		 RETURNING c.id::text, was.status, was.last_safe_status_code`,
 		name, status, safeCode).Scan(&id, &priorStatus, &priorSafeCode)
 	if errors.Is(err, pgx.ErrNoRows) {
-		// Already in this status: nothing changed, so there is nothing to
-		// audit and no second identical row to write.
+		// Already in this status: nothing changed, so there is nothing to audit.
 		return nil
 	}
 	if err != nil {
 		return fmt.Errorf("integrations: writing the refusal through to the connection: %w", err)
 	}
-	if _, err := storekit.Audit(ctx, tx, "update", "provider_connection", uuidOf(id),
+	_, err = storekit.Audit(ctx, tx, "update", "provider_connection", uuidOf(id),
 		map[string]any{auditKeyProvider: name, "status": priorStatus, "safe_status_code": priorSafeCode},
-		map[string]any{auditKeyProvider: name, "status": status, "safe_status_code": safeCode}); err != nil {
-		return err
-	}
-	return nil
+		map[string]any{auditKeyProvider: name, "status": status, "safe_status_code": safeCode})
+	return err
 }

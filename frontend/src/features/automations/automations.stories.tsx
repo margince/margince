@@ -17,8 +17,8 @@ import {
   configuredAutomations,
 } from "./automations.fixtures";
 
-// The whole automations page: the configured rules, then the starter library,
-// each in a pane of its own.
+// The automations page, one tab at a time: the configured rules, or the
+// starter library.
 
 const meta: Meta = {
   title: "Settings/Data/Automations/Automations",
@@ -129,8 +129,14 @@ export const AdminCardPhone: Story = {
   render: () => <Card />,
 };
 
-// The library stays readable without the create grant; its rows stop opening,
-// and the table's switches give way to words.
+export const Library: Story = {
+  play: async ({ canvasElement }) => {
+    await within(canvasElement).findByTestId("template-no_activity_reminder");
+  },
+  render: () => <Card view="library" />,
+};
+
+// The library stays readable without the create grant; its rows stop opening.
 export const AdminCardReadOnly: Story = {
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);

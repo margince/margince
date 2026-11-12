@@ -134,7 +134,7 @@ Below a confidence of 0.7, the sender is asked about once more on its own. If it
 is still below, it stays unsure. There is no task or approval to clear.
 A low score costs one more question; it never deletes anything by mistake.
 
-Open **Settings** → **Capture activity** → **Sender decisions** to find a sender
+Open **Settings** → **Connections** → **Activity** → **Sender decisions** to find a sender
 and correct a decision. Search by address, name or domain, or choose **My overrides**.
 You can mark a sender as business, exclude them, or withdraw your own override.
 Withdrawing an override does not restore mail already destroyed. Leaving an unsure
@@ -275,7 +275,7 @@ capture, as *What happens to one message* describes.
 
 **Deleting in your own mailbox can reach Margince.** If you delete a captured message in Gmail or Outlook, Margince notices and acts on it.
 
-In Gmail, the message must be deleted for good. In Outlook, it must be hard-deleted: Shift+Delete, or Delete and then empty Deleted Items. Margince then waits 14 days, and a message you recover in that time stays. Moving a message to another folder or to the archive never deletes it here. What happens then depends on who else has it:
+In Gmail, the message must be deleted for good. In Outlook, it must be hard-deleted: Shift+Delete, or Delete and then empty Deleted Items. Margince then waits 10 days, and a message you recover in that time stays. Outlook keeps it for 14 days, but if you recover it after day 10, the copy in Margince is already gone. Moving a message to another folder or to the archive never deletes it here. What happens then depends on who else has it:
 
 | Case | What happens |
 |---|---|
@@ -340,8 +340,8 @@ It applies from the next message; captured mail stays. **Whole company** rules b
 Also called: block a sender, ignore a domain, blacklist, do not log.
 
 ### How do I tell Margince a sender is business, or exclude one?
-To correct what Margince decided about a sender, open **Settings → Connections → Activity** and find the address in **Senders**. In its **…** (**Actions**) menu, choose **Mark as business** to let it back in, or **Exclude** to hide its mail for good.
-1. Open **Settings**, then **Connections**, then **Activity**, and go down to **Senders**.
+To correct what Margince decided about a sender, open **Settings → Connections → Activity** and find the address in **Sender decisions**. In its **…** (**Actions**) menu, choose **Mark as business** to let it back in, or **Exclude** to hide its mail for good.
+1. Open **Settings**, then **Connections**, then **Activity**, and go down to **Sender decisions**.
 2. Find the address; the **Decision** column shows what was decided. **Contact** opens the contact that holds the address. **Messages** counts your stored mail with it. **Last seen** is when the newest of those arrived or went out.
 3. Open its **…** (**Actions**) menu and choose **Mark as business**, or choose **Exclude** and confirm **Exclude and destroy**.
 **Exclude** creates no contact and destroys the mail that sender sent into your mailbox; copies a colleague imported stay theirs. Margince still receives their later mail, but hides and destroys it, so it never shows. **Capture exclusions** work earlier: they stop new mail before it is stored. What Margince sorts by itself never writes over a decision you make.
@@ -380,7 +380,7 @@ company** makes it the company of the contacts on the domain; contacts at anothe
 **Choose another** opens the question with a company search and **Create company**. **Not now** puts
 it off until new mail arrives. **Stop capturing in your mailboxes** stops saving mail from the domain.
 
-**Senders** (Settings → Connections → Activity): every address that came in through your mailbox, and
+**Sender decisions** (Settings → Connections → Activity): every address that came in through your mailbox, and
 what Margince decided about each. That is a contact, a role mailbox, an
 automated tool, a newsletter, an advisor, or personal. You can change any of them.
 
@@ -389,9 +389,9 @@ later ([how](#how-do-i-tell-margince-a-sender-is-business-or-exclude-one)). **Wa
 list, names the contacts only you see until their sender is decided. Each says if it waits on Margince or on you.
 Decide the sender there, or remove the contact, which archives it and keeps its mail. An administrator sees only how many there are.
 
-**Held threads** (Settings → Connections → Activity): the threads your mailbox is holding
-back right now, with the reason and the outside addresses on each. **Share with
-the team** releases one.
+**Mail not shared with the team** (Settings → Connections → Activity) lists the threads your mailbox holds
+back now. Each shows the reason and its outside addresses. No action is needed. To share one,
+search for it and choose **Preview and change sharing**.
 
 Three settings decide who may read captured mail. **Mail visibility** is in
 each mailbox's settings in Settings → Connections. **Private correspondence** is on a

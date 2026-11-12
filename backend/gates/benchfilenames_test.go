@@ -80,14 +80,14 @@ func TestEveryBenchFileSaysSoInItsName(t *testing.T) {
 // judgeBenchFile reports whether the file at path is bench-tagged, and whether
 // its name hides that from a listing by suffix.
 func judgeBenchFile(path string, file *ast.File) (bench, refused bool, err error) {
-	bench, err = isBenchTagged(file)
+	bench, err = requiresBuildTag(file, benchTag)
 	return bench, bench && !strings.HasSuffix(path, benchFileSuffix), err
 }
 
-// isBenchTagged reports whether the file's build constraint asks for the bench
-// tag. Only constraint lines above the package clause count, which is where the
+// requiresBuildTag reports whether the file's build constraint asks for tag.
+// Only constraint lines above the package clause count, which is where the
 // toolchain reads them.
-func isBenchTagged(file *ast.File) (bool, error) {
+func requiresBuildTag(file *ast.File, tag string) (bool, error) {
 	for _, group := range file.Comments {
 		if group.Pos() >= file.Package {
 			break
@@ -100,7 +100,7 @@ func isBenchTagged(file *ast.File) (bool, error) {
 			if err != nil {
 				return false, err
 			}
-			if requiresTag(expr, benchTag, true) {
+			if requiresTag(expr, tag, true) {
 				return true, nil
 			}
 		}

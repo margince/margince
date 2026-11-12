@@ -53,17 +53,10 @@ func (e *resolveEnv) secondEntity(t *testing.T) ids.UUID {
 	return entity
 }
 
-// vouchAs records a marketing vouch through the real door, as user.
+// vouchAs plants a marketing vouch as user recorded it, for user's entity.
 func (e *resolveEnv) vouchAs(t *testing.T, user ids.UUID) ids.UUID {
 	t.Helper()
-	id, err := e.store.Allow(e.seatCtx(user), AllowInput{
-		ContactID: e.contact, Category: string(commsauthz.CategoryMarketing),
-		Reason: "she asked on the call for the spring catalogue",
-	})
-	if err != nil {
-		t.Fatalf("recording the vouch: %v", err)
-	}
-	return id
+	return recordedOverrideAs(e.seatCtx(user), t, e.store, e.contact, string(commsauthz.CategoryMarketing))
 }
 
 // decideAs runs the whole per-recipient decision as user, naming the sending

@@ -23,8 +23,11 @@ import (
 
 	"github.com/margince/margince/backend/internal/compose/attention"
 	"github.com/margince/margince/backend/internal/compose/integration"
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/activities"
+	"github.com/margince/margince/backend/internal/platform/clocktest"
 	"github.com/margince/margince/backend/internal/platform/database"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/platform/mailidentity"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -103,7 +106,6 @@ func TestTheWaitingSeamAttachesAnEmailRowToEmailsAlone(t *testing.T) {
 
 	seam := attentionWaiting{
 		store: activities.NewStore(e.DB()),
-		now:   func() time.Time { return asOf },
 	}
 	rows, _, err := seam.Unanswered(e.Admin(), asOf, attention.WaitingFor{})
 	if err != nil {
@@ -134,6 +136,59 @@ func TestTheWaitingSeamAttachesAnEmailRowToEmailsAlone(t *testing.T) {
 	}
 }
 
+func TestAWaitingBadgeUsesTheReadTimeAcrossTheHorizon(t *testing.T) {
+	e := integration.Setup(t)
+	asOf := clocktest.Now(t)
+	mailAt := asOf.AddDate(0, 0, 1-storekit.DefaultWaitingHorizonDays)
+	contact := seedLinkedContact(t, e, "dana@acme.example")
+	mail := seedWaitingOfKind(t, e, contact, "email", "Re: the renewal quote", mailAt)
+	serverNow := asOf.AddDate(0, 0, 2)
+	seam := attentionWaiting{
+		store: activities.NewStore(e.DB()).WithClock(func() time.Time { return serverNow }),
+	}
+
+	rows, _, err := seam.Unanswered(e.Admin(), asOf, attention.WaitingFor{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	card := waitingOf(rows, mail)
+	if card == nil || card.EmailSummary == nil || card.EmailSummary.Move != crmcontracts.EmailSummaryMoveNeedsReply {
+		t.Fatalf("waiting card at %v with server clock %v = %+v, want a needs-reply badge", asOf, serverNow, card)
+	}
+
+	tail, err := seam.WaitingAfter(e.Admin(), asOf, attention.WaitingFor{}, "", 10)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var tailCard *attention.WaitingCustomer
+	for i := range tail.Cards {
+		if tail.Cards[i].Row.ActivityID == mail {
+			tailCard = &tail.Cards[i].Row
+			break
+		}
+	}
+	if tailCard == nil || tailCard.EmailSummary == nil || tailCard.EmailSummary.Move != crmcontracts.EmailSummaryMoveNeedsReply {
+		t.Fatalf("waiting tail at %v with server clock %v = %+v, want the same needs-reply badge", asOf, serverNow, tailCard)
+	}
+	if err := database.WithWorkspaceSnapshot(e.Admin(), e.Pool, func(ctx context.Context) error {
+		return database.ReuseGenericPlans(ctx, func(ctx context.Context) error {
+			cards, err := seam.WaitingAfter(ctx, asOf, attention.WaitingFor{}, "", 10)
+			if err != nil {
+				return err
+			}
+			for _, card := range cards.Cards {
+				if card.Row.ActivityID == mail {
+					return nil
+				}
+			}
+			t.Error("the generic-plan waiting tail omitted the judged message")
+			return nil
+		})
+	}); err != nil {
+		t.Fatal(err)
+	}
+}
+
 // A message whose content this reader may not read produces no waiting row at
 // all — so there is nothing to attach a row to. The seam's reader carries the
 // content gate a second time, which is the lock that holds if the lane's own
@@ -148,7 +203,6 @@ func TestTheWaitingSeamHandsNoRowForAMessageTheReaderCannotRead(t *testing.T) {
 	// the fixture never having qualified.
 	seam := attentionWaiting{
 		store: activities.NewStore(e.DB()),
-		now:   func() time.Time { return asOf },
 	}
 	before, _, err := seam.Unanswered(e.Admin(), asOf, attention.WaitingFor{})
 	if err != nil {
@@ -230,7 +284,6 @@ func TestAFloodOfMachineMailDoesNotHideAWaitingCustomer(t *testing.T) {
 
 	seam := attentionWaiting{
 		store: activities.NewStore(e.DB()),
-		now:   func() time.Time { return asOf },
 	}
 	rows, _, err := seam.Unanswered(e.Admin(), asOf, attention.WaitingFor{})
 	if err != nil {

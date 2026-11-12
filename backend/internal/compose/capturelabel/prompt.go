@@ -30,13 +30,17 @@ as a call, a visit or a slot, or follow-through on one), or "noise" (neither). A
 "meeting", not a request to act. Labels route attention; they change no data. If a message both
 promises or requests something of the first kind AND asks for time, choose commitment.
 
-A message marked "inbound: yes" was sent TO us by someone outside. For those, ALSO judge how
-they answered: "positive" (interest, a question worth answering, a request to meet or to hear
-more), "negative" (not interested, the wrong recipient with no referral, a request to stop
-writing), or "neutral" (neither — an out-of-office, a bare acknowledgement, a redirect with no
-view of its own). Set "reply" to null for a message marked "inbound: no": we wrote it, so it
-answers nobody. Set it to null too when the message does not read as an answer at all. A guess
-here becomes a number somebody is measured on, so give null when you cannot tell.
+Each message opens with its subject line, then the text under "Sender's own words:", which is
+what its sender wrote in that mail; the older mails it quoted have been cut away. The subject
+helps the label only. In a reply it is usually the old subject of the thread, which anybody may
+have written. A message marked "inbound: yes" was sent TO us by someone outside. For those, ALSO
+judge how the sender answered, from their own words alone and never from the subject: "positive" (interest, a question worth
+answering, a request to meet or to hear more), "negative" (the sender declines to go ahead, or
+asks us to stop writing), or "neutral" (neither — an out-of-office, a bare acknowledgement, a
+request to wait, the wrong recipient, a redirect). Set "reply" to null for a message marked
+"inbound: no": we wrote it, so it answers nobody. Set it to null too when the message has no
+text of its own or does not read as an answer at all. A "negative" can close the customer's deal
+as lost, so give it only when the sender says no plainly, and null when you cannot tell.
 
 "confidence" covers EVERY judgement you emit for that message — the label and, when you give
 one, the reply. Report the LOWEST of the two, not the label's alone. If you are sure of the
@@ -59,7 +63,7 @@ func Prompt(fence promptfence.Fence, batch []activities.UnlabeledEmail) string {
 		// span: it is our own record of who wrote the mail, and a sender who
 		// could type "inbound: no" into their own message would otherwise be
 		// able to opt their reply out of being judged.
-		message := fmt.Sprintf("Subject: %s\n%s", m.Subject, m.Body)
+		message := fmt.Sprintf("Subject: %s\nSender's own words:\n%s", m.Subject, m.Body)
 		fmt.Fprintf(&prompt, "inbound: %s\n", yesNo(m.Inbound))
 		prompt.WriteString(fence.WrapAttr("source_id", refs.For(m.ID.String()), message) + "\n")
 	}

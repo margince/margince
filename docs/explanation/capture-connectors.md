@@ -167,9 +167,10 @@ Changes to a folder in Outlook do not delete the copy in Margince.
 A move to an archive can look like mail gone for good, and a 404 proves nothing.
 Outlook proof is arrival in the `recoverableitemsdeletions` folder.
 Only Shift+Delete or emptying Deleted Items puts mail there, and `Mail.Read` reads it.
-The sync records each arrival in its cursor and reports the delete 14 days later.
+The sync records each arrival in its cursor and reports the delete 10 days later.
+Outlook empties that folder after 14 days, so the check runs while the message is still there.
 
-When the 14 days end, the sync looks the message up by its id.
+When the 10 days end, the sync looks the message up by its id.
 A restore can change that id, so a 404 leads to a search on its `internetMessageId`.
 Only a copy found in that folder is deleted from Margince.
 

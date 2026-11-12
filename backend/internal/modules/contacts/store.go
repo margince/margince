@@ -14,6 +14,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/config"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/platform/extprivacy"
 	"github.com/margince/margince/backend/internal/platform/freemail"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/ports/fieldcatalog"
@@ -55,6 +56,9 @@ type Store struct {
 	// contacts never imports a sibling. Nil files links and derives nothing —
 	// which is what every fixture is until it says otherwise.
 	recomputeAudience AudienceRecompute
+	// stampSenders names a newly filed contact the sender where the stated
+	// address proves it. activities owns that rule and compose injects it.
+	stampSenders SenderStamp
 	// seatReadsLeads answers whether another seat may read leads; see the
 	// type below. Nil is a composition that did not wire it.
 	seatReadsLeads SeatReadsLeads
@@ -96,6 +100,9 @@ type Store struct {
 	leadArrivals LeadArrivals
 	// leadQualifyTasks files the durable follow-up when captured work lands on a lead.
 	leadQualifyTasks LeadQualifyTasks
+	// extensions declares the extension tables whose rows depend on a record; a
+	// merge of a record they name is refused (mergedependents.go).
+	extensions extprivacy.Registry
 	// renameInstallation keeps the installation's name on the anchor's display
 	// name (anchorname.go); nil refuses an anchor rename.
 	renameInstallation InstallationRenamer
@@ -186,6 +193,29 @@ func (s *Store) WithAudienceRecompute(recompute AudienceRecompute) *Store {
 	return s
 }
 
+// SenderStamp makes contact the proven sender of the held activities it
+// proves, and answers the activities it wrote (activities.StampProvenSendersTx).
+type SenderStamp func(ctx context.Context, tx pgx.Tx, activityIDs []ids.UUID, contact ids.UUID) ([]ids.UUID, error)
+
+// WithSenderStamp wires the proven-sender rule every link this store writes
+// applies. A store that links or promotes without it returns an error.
+func (s *Store) WithSenderStamp(stamp SenderStamp) *Store {
+	s.stampSenders = stamp
+	return s
+}
+
+// WithSenderStamp wires the rule on the store behind the agent provider.
+func (p *Provider) WithSenderStamp(stamp SenderStamp) *Provider {
+	p.store.WithSenderStamp(stamp)
+	return p
+}
+
+// WithSenderStamp wires the rule on the store behind the handlers.
+func (h Handlers) WithSenderStamp(stamp SenderStamp) Handlers {
+	h.store.WithSenderStamp(stamp)
+	return h
+}
+
 // WithVatCheckEnqueue wires the VIES consultation a VAT-number write queues.
 func (s *Store) WithVatCheckEnqueue(enqueue VatCheckEnqueue) *Store {
 	s.vatCheckEnqueue = enqueue
@@ -226,6 +256,9 @@ func (s *Store) txSnapshot(ctx context.Context, fn func(pgx.Tx) error) error {
 // its own, so every caller that embeds a scope in a larger WHERE needs this
 // substitute. The site read's system worker is one such actor.
 const scopeAllRows = "TRUE"
+
+// scopeNoRows is the predicate for a read the caller may make of no row at all.
+const scopeNoRows = "FALSE"
 
 // scopeOrAllRows renders one table's row-scope clause as a predicate that
 // always composes into a larger WHERE.

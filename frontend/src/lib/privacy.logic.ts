@@ -4,7 +4,7 @@ import type { MessageKey } from "../i18n/en";
 import { problemFieldErrors } from "./problem";
 
 export type DsrStatus = "open" | "in_progress" | "fulfilled" | "rejected";
-export type DsrKind = "access" | "rectify" | "erasure";
+export type DsrKind = "access" | "rectify" | "erasure" | "restriction";
 export type DsrStatusFacet = "all" | DsrStatus;
 
 export const DSR_STATUS_FACETS: readonly DsrStatusFacet[] = [
@@ -51,6 +51,7 @@ export const DSR_KIND_LABEL: Record<DsrKind, MessageKey> = {
   access: "privacy.kindAccess",
   rectify: "privacy.kindRectify",
   erasure: "privacy.kindErasure",
+  restriction: "privacy.kindRestriction",
 };
 
 export const DSR_STATUS_LABEL: Record<DsrStatus, MessageKey> = {

@@ -13,7 +13,6 @@ import (
 	"github.com/margince/margince/backend/internal/modules/consent"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/datatask"
-	"github.com/margince/margince/backend/internal/shared/kernel/correspondence"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/kernel/systemtext"
@@ -42,10 +41,7 @@ func subjectMailScopeSQL() string {
  WHERE e.kind = 'unknown_legacy' AND ` + capturedAcquisition + `
  AND EXISTS (SELECT 1 FROM privacy_notice_case n WHERE n.acquisition_id = e.id
  AND n.state = ANY(@states))) c WHERE true
- AND EXISTS (SELECT 1 FROM contact_email ce
- JOIN activity_participant p ON lower(p.address) = ce.email AND p.role = 'from'
- JOIN activity a ON a.id = p.activity_id
- WHERE ce.contact_id = c.id AND ce.archived_at IS NULL AND ` + correspondence.SubjectMailSQL("a") + `)`
+ AND EXISTS (SELECT 1 FROM ` + consent.SubjectMailFromSQL("c.id") + `)`
 }
 
 func estimateSubjectMailDuties(ctx context.Context, q datatask.Querier, maximum int64) (int64, bool, error) {
@@ -77,10 +73,7 @@ func settleSubjectMailBatch(ctx context.Context, tx pgx.Tx, in datatask.BatchIn,
 	for _, contact := range contacts {
 		var mail ids.UUID
 		var sent time.Time
-		err := tx.QueryRow(ctx, `SELECT a.id, a.occurred_at FROM contact_email ce
-   JOIN activity_participant p ON lower(p.address) = ce.email AND p.role = 'from'
-   JOIN activity a ON a.id = p.activity_id
-   WHERE ce.contact_id = @subject_contact AND ce.archived_at IS NULL AND `+correspondence.SubjectMailSQL("a")+`
+		err := tx.QueryRow(ctx, `SELECT a.id, a.occurred_at FROM `+consent.SubjectMailFromSQL("@subject_contact")+`
    ORDER BY a.occurred_at, a.id LIMIT 1`, pgx.NamedArgs{"subject_contact": contact}).Scan(&mail, &sent)
 		if errors.Is(err, pgx.ErrNoRows) {
 			continue

@@ -204,7 +204,7 @@ func activityContentAudienceArm(p principal.Principal, alias string, arg func(an
 		own, alias, provenance.EmailRequestSource, alias, arg(p.UserID))
 	// A captured request is a personal reminder of its source, not a new grant
 	// to that correspondence. Archiving or restricting the source withholds it.
-	source := discoverGateFor(p, contentGateSource, arg) + " AND " + activityAudienceArm(p, contentGateSource, arg)
+	source := discoverGateFor(p, contentGateSource, arg) + " AND " + activityAudienceArm(p, contentGateSource, arg) + agentRestrictionArm(p, contentGateSource)
 	sourceID := provenance.TaskSourceActivitySQL(alias)
 	sourceBound := own + fmt.Sprintf(` AND ((coalesce(%[1]s.source_system, '') NOT IN ('`+provenance.EmailRequestSource+`', '`+provenance.CommitmentTaskSource+`', '`+provenance.LeadRepliedSource+`') AND (%[1]s.kind <> 'task' OR %[1]s.source_activity_id IS NULL))
 	 OR EXISTS (SELECT 1 FROM activity %[4]s
@@ -212,7 +212,19 @@ func activityContentAudienceArm(p principal.Principal, alias string, arg func(an
      AND (coalesce(%[1]s.source_system, '') <> '`+provenance.EmailRequestSource+`' OR %[4]s.archived_at IS NULL)
 	     AND %[4]s.restricted_at IS NULL AND %[2]s))`, alias, source, sourceID, contentGateSource)
 	return sourceBound + fmt.Sprintf(" AND (coalesce(%s.source_system, '') <> '%s' OR %s)",
-		alias, provenance.CommitmentTaskSource, commitmentEvidenceArm(p, alias+".source_activity_id", alias+".source_id", arg))
+		alias, provenance.CommitmentTaskSource, commitmentEvidenceArm(p, alias+".source_activity_id", alias+".source_id", arg)) +
+		agentRestrictionArm(p, alias)
+}
+
+// agentRestrictionArm withholds from an agent, the product's own or one a seat
+// connected, every mail a restricted contact sent or received (GDPR Art. 18).
+// It sits in the audience arm, so a discover-gated reader's content_state and
+// a reminder whose source is such a mail both answer no.
+func agentRestrictionArm(p principal.Principal, alias string) string {
+	if p.Type != principal.PrincipalAgent {
+		return ""
+	}
+	return " AND NOT " + ActivityRestrictedSQL(alias+".id")
 }
 
 // ActivityAudienceArm renders the audience membership test alone — the

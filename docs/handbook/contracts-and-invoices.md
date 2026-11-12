@@ -194,7 +194,7 @@ the whole total is left blank instead of leaving that invoice out.
 
 An invoice in another currency changes into the base currency at the rate on the
 day it was issued. If that day has no rate yet, an admin can add older history in
-**Settings → Company profile → Currency rates**. The next sync then uses it.
+**Settings → Company profile → Money → Currency rates**. The next sync then uses it.
 
 ### Connection states
 
@@ -213,4 +213,5 @@ Invoice statuses in Margince are **Draft, Open, Partially paid, Paid, Overdue,
 Disputed, Credited, Void.**
 
 Margince works out **Overdue** against today rather than taking it from the
-accounting system. So it is current even when the last sync is not.
+accounting system. So it is current even when the last sync is not. An invoice
+still open on its due date is not overdue yet; it becomes overdue the day after.

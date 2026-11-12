@@ -2,39 +2,13 @@ import { Link } from "lucide-react";
 import { type Ref, useRef, useState } from "react";
 import type { components } from "../../api/schema";
 import { useActivityGate } from "../../components/activitygate";
-import { RecordMeetingOutcome } from "../../components/meetingoutcome";
-import { Badge, Button, type ButtonVariant } from "../../design-system/atoms";
-import {
-  Panel,
-  PanelBody,
-  RailPanel,
-  type RailPanelState,
-} from "../../design-system/panel";
-import { LoadMoreButton } from "../../design-system/querystates";
-import {
-  type TimelineFilters,
-  useRecordTimeline,
-} from "../../design-system/recordtimeline";
-import {
-  omitted,
-  SurfaceState,
-  sectionState,
-} from "../../design-system/surfacestate";
-import { formatNumber } from "../../format/format";
-import { useLocale, useT } from "../../i18n";
-import { entityTimelineKeys } from "../../lib/activitykeys";
-import { useActivity } from "../../lib/activityread";
+import { RecordMeetings } from "../../components/recordmeetings";
+import { Button } from "../../design-system/atoms";
+import { useT } from "../../i18n";
 import { useCopyBookingLink } from "../../lib/bookinglinkcopy";
 import { useCan } from "../../lib/capability";
 import { navigate } from "../../lib/router";
 import { useSchedulingProfile } from "../../lib/scheduling-profile-query";
-import {
-  bookedCount,
-  MeetingFigures,
-  timelineRead,
-} from "./contactmeetings.figures";
-import { HeldMeetingsList } from "./contactmeetings.held";
-import { MeetingRow, NextMeetingCard } from "./contactmeetings.rows";
 import {
   type CopiedLink,
   useMeetingProposals,
@@ -44,52 +18,7 @@ import { momentDrafts } from "./contactpage.drawers";
 import "./contact360.css";
 
 type Contact360 = components["schemas"]["Contact360"];
-type Activity = components["schemas"]["Activity"];
 type ContactMomentAction = components["schemas"]["ContactMomentAction"];
-
-// --- Meetings ---------------------------------------------------------------
-
-// The brief verb for one meeting, booked or already held — the backend
-// assembles a brief for any meeting activity, and reading one afterwards is
-// how a reader recovers what a room agreed.
-//
-// Every reason NOT to offer it is decided here rather than at each call site,
-// because a third caller that forgets one of them ships a button that fails:
-//
-//   - no id, or a surface with no drawer to open — nothing to ask for.
-//   - a row that is not a meeting — the endpoint answers 404 for any other
-//     kind, by design.
-//   - a meeting the reader may DISCOVER but not READ. The timeline carries
-//     those deliberately, as `content_state: "withheld"`, so the reader knows
-//     a conversation happened without seeing it. The brief endpoint applies
-//     the stricter content gate, so offering the verb here would promise a
-//     reader something their own grant refuses.
-export function MeetingBriefAction({
-  activity,
-  onBriefMeeting,
-  variant,
-}: Readonly<{
-  activity: Pick<Activity, "id" | "kind" | "content_state"> | undefined;
-  onBriefMeeting?: (activityId: string) => void;
-  // Filled for the next meeting: a reader is about to walk in, and the verb is
-  // the card's lead. `aiQuiet` for a meeting already held, where the brief is
-  // one of several equal ways to look back.
-  variant?: ButtonVariant;
-}>) {
-  const t = useT();
-  if (!activity?.id || !onBriefMeeting) {
-    return null;
-  }
-  if (activity.kind !== "meeting" || activity.content_state === "withheld") {
-    return null;
-  }
-  const activityId = activity.id;
-  return (
-    <Button variant={variant} onClick={() => onBriefMeeting(activityId)}>
-      {t("contact.meeting.brief")}
-    </Button>
-  );
-}
 
 // One verb off a moment, rendered where the meeting it is about already sits.
 // The moment's OWN card (contacttoday.tsx) carries the same contract for the
@@ -123,77 +52,12 @@ function MeetingMomentAction({
   );
 }
 
-const MEETINGS_ONLY: TimelineFilters = { kind: "meeting" };
-
-function calledOff(activity: Activity): boolean {
-  return (
-    activity.meeting_status === "canceled" ||
-    activity.invitation_status === "canceled" ||
-    activity.invitation_status === "canceling"
-  );
-}
-
-// Which of the contact's meetings still lie ahead and which are behind, on the
-// server's clock: the read's own `as_of`, so a reader whose computer clock is
-// wrong still sees the meeting where it belongs. The soonest booked one is
-// drawn on its own, from the server's next-meeting read, and is not listed a
-// second time.
-function splitMeetings(
-  listed: readonly Activity[],
-  asOf: string,
-  nextId: string | undefined,
-): Readonly<{
-  ahead: Activity[];
-  held: Activity[];
-  happened: Activity[];
-  pastReached: boolean;
-}> {
-  const now = Date.parse(asOf);
-  const at = (activity: Activity) => Date.parse(activity.occurred_at);
-  // A meeting called off keeps its date, and the server's next-meeting read
-  // leaves it out; it is listed with what became of it, not as upcoming.
-  const isAhead = (activity: Activity) =>
-    at(activity) > now && !calledOff(activity);
-  const others = listed.filter((activity) => activity.id !== nextId);
-  // Newest first: the row on top answers "what just happened".
-  const held = others
-    .filter((activity) => !isAhead(activity))
-    .sort((a, b) => at(b) - at(a));
-  return {
-    ahead: others.filter(isAhead).sort((a, b) => at(a) - at(b)),
-    held,
-    // What the figures count as held: one called off keeps its row, unheld.
-    happened: held.filter((activity) => !calledOff(activity)),
-    // The list arrives newest first, so once a page reaches a meeting already
-    // behind the read, every meeting still ahead is on the pages read so far.
-    pastReached: listed.some((activity) => at(activity) <= now),
-  };
-}
-
-// The held list is the contact's own meetings read, page by page, so it can
-// say more than the composite read's first page of every kind carries.
-function heldState(
-  view: Contact360 | undefined,
-  loading: boolean,
-  listed: ReturnType<typeof useRecordTimeline>,
-  count: number,
-): RailPanelState {
-  if (!view) return loading ? "loading" : "unavailable";
-  if (omitted(view, "activities")) return "withheld";
-  if (count > 0) return "ready";
-  if (listed.isError) return "failed";
-  // A first page of meetings still ahead says nothing yet about those held:
-  // the panel offers the next page rather than calling itself empty.
-  if (listed.hasNextPage) return "ready";
-  return listed.isPending ? "loading" : "empty";
-}
-
 /**
- * ContactMeetingsTab reads as its figures, then three panels: what is
- * booked, what is still waiting on the contact's answer, and what has already
- * been held. The booked meeting leads, from the server's own next-meeting read.
- * That read goes through this contact's activity link, not their account's.
- * The company's answer names a meeting this contact may not be in.
+ * ContactMeetingsTab is the record's Meetings tab with the contact's own
+ * parts: the ways to book them, and the invitations still waiting on their
+ * answer. The booked meeting leads from this contact's activity link, not
+ * their account's: the company's answer names a meeting this contact may not
+ * be in.
  */
 export function ContactMeetingsTab({
   view,
@@ -209,194 +73,51 @@ export function ContactMeetingsTab({
   // record's front page opens.
   onAction?: (action: ContactMomentAction) => void;
 }>) {
-  const t = useT();
-  const { locale } = useLocale();
   const canReadActivity = useCan("activity", "read");
   // Reading past proposals does not attach anything to the contact.
   const proposals = useMeetingProposals(
     canReadActivity ? view?.contact.id : undefined,
   );
-  const listed = useRecordTimeline("contact", view?.contact.id ?? "", {
-    filters: MEETINGS_ONLY,
-    enabled: view !== undefined && !omitted(view, "activities"),
-  });
-  const next = view?.next_meeting;
-  const { ahead, held, happened, pastReached } = splitMeetings(
-    listed.activities,
-    view?.as_of ?? "",
-    next?.activity_id,
-  );
   const bookButton = useRef<HTMLButtonElement>(null);
   const [copiedUrl, setCopiedUrl] = useState<string | null>(null);
   const copied: CopiedLink = { url: copiedUrl, onCopied: setCopiedUrl };
-  const upcoming = sectionState(
-    view,
-    "next_meeting",
-    Boolean(view),
-    (next ? 1 : 0) + ahead.length,
-    loading,
-  );
-  // An AI verb among equals on every row: outlined with its ✦, where the next
-  // meeting leads with the filled one.
-  const briefOf = (activity: Activity) => (
-    <MeetingBriefAction
-      activity={activity}
-      onBriefMeeting={onBriefMeeting}
-      variant="aiQuiet"
-    />
-  );
-  const contactId = view?.contact.id;
-  const heldVerbs = (activity: Activity) => (
-    <>
-      {contactId && (
-        <RecordMeetingOutcome
-          activity={activity}
-          invalidateKeys={entityTimelineKeys("contact", contactId)}
-        />
-      )}
-      {briefOf(activity)}
-    </>
-  );
-  const { withheld, ...timeline } = timelineRead(view, listed);
-  const booked = bookedCount(upcoming, timeline, pastReached, [next, ...ahead]);
-  const figured = view && (upcoming === "ready" || upcoming === "empty");
+  // The prep chip and its agenda verb belong only to a meeting-prep moment,
+  // which is about the next meeting. Other moments say nothing about one.
+  const meetingPrep =
+    view?.moment?.rule === "meeting_prep" ? view.moment : undefined;
   return (
-    <div className="record-stack pe-meetings">
-      <div className="pe-meetings-head">
-        {figured && (
-          <MeetingFigures
-            next={next}
-            booked={booked}
-            held={timeline.isSuccess ? happened : null}
-            heldMore={listed.hasNextPage}
-            withheld={withheld}
-            asOf={view.as_of}
-          />
-        )}
+    <RecordMeetings
+      entity="contact"
+      recordId={view?.contact.id}
+      view={view}
+      loading={loading}
+      next={view?.next_meeting}
+      onBriefMeeting={onBriefMeeting}
+      toolbar={
         <MeetingsToolbar
           view={view}
           loading={loading}
           copied={copied}
           bookButton={bookButton}
         />
-      </div>
-      <Panel
-        title={t("contact.meetings.upcoming")}
-        titleAction={
-          upcoming === "ready" &&
-          booked !== null && <Badge>{formatNumber(booked, locale)}</Badge>
-        }
-      >
-        {upcoming === "ready" ? (
-          <>
-            {view && next && (
-              <NextMeeting
-                view={view}
-                next={next}
-                listed={listed}
-                onBriefMeeting={onBriefMeeting}
-                onAction={onAction}
-              />
-            )}
-            {ahead.map((activity) => (
-              <MeetingRow
-                key={activity.id}
-                activity={activity}
-                asOf={view?.as_of}
-                verbs={briefOf(activity)}
-              />
-            ))}
-          </>
-        ) : (
-          <PanelBody>
-            <SurfaceState
-              state={upcoming}
-              loadingLabel={t("contact.meetings.upcoming")}
-              emptyLabel={t("contact.meetings.noneBooked")}
-            >
-              {null}
-            </SurfaceState>
-          </PanelBody>
-        )}
-      </Panel>
-      {view && (
-        <WaitingSection
-          contact={view.contact}
-          proposals={proposals}
-          copied={copied}
-          afterWithdraw={() => bookButton.current}
+      }
+      nextNote={meetingPrep && { by: "Margince", whyNow: meetingPrep.why_now }}
+      nextVerbs={meetingPrep?.secondary_actions?.map((action) => (
+        <MeetingMomentAction
+          key={action.label}
+          action={action}
+          onAction={onAction}
         />
-      )}
-      <RailPanel
-        title={t("contact.meetings.past")}
-        state={heldState(view, loading, listed, held.length)}
-        emptyLabel={t("contact.meetings.noneLogged")}
-        detail={{ onRetry: () => void listed.refetch() }}
-        footer={listed.hasNextPage ? <LoadMoreButton query={listed} /> : null}
-      >
-        {held.length > 0 && <HeldMeetingsList held={held} verbs={heldVerbs} />}
-      </RailPanel>
-    </div>
-  );
-}
-
-// The booked meeting, with what the prep moment says about it and the verbs
-// that get a reader ready for it.
-function NextMeeting({
-  view,
-  next,
-  listed,
-  onBriefMeeting,
-  onAction,
-}: Readonly<{
-  view: Contact360;
-  next: NonNullable<Contact360["next_meeting"]>;
-  listed: ReturnType<typeof useRecordTimeline>;
-  onBriefMeeting?: (activityId: string) => void;
-  onAction?: (action: ContactMomentAction) => void;
-}>) {
-  // The meeting's own row says whether it was booked through Margince. The
-  // contact's list carries it unless a busy calendar pushed it past the first
-  // page; then it is read on its own.
-  const listedRow = listed.activities.find(
-    (activity) => activity.id === next.activity_id,
-  );
-  const ownRow = useActivity(
-    next.activity_id,
-    !listedRow && listed.isSuccess && listed.hasNextPage,
-  );
-  const activity = listedRow ?? ownRow.data;
-  // The prep chip and its agenda verb belong to the meeting the moment is
-  // ABOUT (the next one) and to no other rung: a moment on a different
-  // claim (a re-engagement, an overdue promise) has nothing to say about a
-  // meeting at all.
-  const meetingPrep =
-    view.moment?.rule === "meeting_prep" ? view.moment : undefined;
-  return (
-    <NextMeetingCard
-      next={next}
-      asOf={view.as_of}
-      activity={activity}
-      note={meetingPrep && { by: "Margince", whyNow: meetingPrep.why_now }}
-      verbs={
-        <>
-          <MeetingBriefAction
-            // next_meeting carries no content_state because the 360 withholds
-            // the whole section rather than a redacted row, so a booked
-            // meeting the reader can see here is one they can read. The kind
-            // is stated for the same reason: this section IS the meeting.
-            activity={{ id: next.activity_id, kind: "meeting" }}
-            onBriefMeeting={onBriefMeeting}
-            variant="ai"
+      ))}
+      waiting={
+        view && (
+          <WaitingSection
+            contact={view.contact}
+            proposals={proposals}
+            copied={copied}
+            afterWithdraw={() => bookButton.current}
           />
-          {meetingPrep?.secondary_actions?.map((action) => (
-            <MeetingMomentAction
-              key={action.label}
-              action={action}
-              onAction={onAction}
-            />
-          ))}
-        </>
+        )
       }
     />
   );

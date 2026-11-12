@@ -320,7 +320,7 @@ func (s *Store) waitingStatement(
 		return "", err
 	}
 	responsibility := personalMailResponsibilitySQL(&relax.reader, identities, arg, fmt.Sprintf("$%d", instant), fmt.Sprint(horizon))
-	return fmt.Sprintf(waitingRepliesSQL, instant, content, linkVisible, WaitingScanCap,
+	return fmt.Sprintf(waitingRepliesSQL, instant, content, linkVisible, waitingLimitSQL(arg, WaitingScanCap),
 		horizon,
 		liveRecord(openDealPredicate, "d"),
 		liveRecord(workingLeadPredicate, "ld"),
@@ -351,7 +351,7 @@ func (s *Store) countWaiting(
 	// list: the query GROUPs and LIMITs, so the row count IS the answer and a
 	// count(*) pushed inside would report groups before the cap.
 	if err := tx.QueryRow(ctx, `SELECT count(*) FROM (`+inner+`) waiting`,
-		planEachBind(args)...).Scan(&count); err != nil {
+		planEachBind(ctx, args)...).Scan(&count); err != nil {
 		return 0, err
 	}
 	return count, nil

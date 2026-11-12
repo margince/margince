@@ -144,6 +144,15 @@ func (h Handlers) UpdateDataSubjectRequest(w http.ResponseWriter, r *http.Reques
 			h.writeDSR(w, r, http.StatusOK, updated)
 			return
 		}
+		if current.Kind == dsrKindRestriction {
+			updated, err := h.store.FulfilRestriction(r.Context(), ids.UUID(id), in)
+			if err != nil {
+				writeConsentErr(w, r, err)
+				return
+			}
+			h.writeDSR(w, r, http.StatusOK, updated)
+			return
+		}
 	}
 	updated, err := h.store.UpdateDSR(r.Context(), ids.UUID(id), in)
 	if err != nil {
@@ -209,7 +218,14 @@ func (h Handlers) DownloadDataSubjectPackage(w http.ResponseWriter, r *http.Requ
 		})
 		return
 	}
-	body, err := h.assembler.AssemblePackage(r.Context(), contactID)
+	// A request opened before a merge still names the retired record. The
+	// package belongs to the survivor, which carries every record merged into it.
+	subject, err := h.store.survivingContact(r.Context(), contactID)
+	if err != nil {
+		writeConsentErr(w, r, err)
+		return
+	}
+	body, err := h.assembler.AssemblePackage(r.Context(), subject)
 	if err != nil {
 		writeConsentErr(w, r, err)
 		return

@@ -26,6 +26,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -48,6 +49,8 @@ func (s *PendingStore) ClaimDue(ctx context.Context, limit int) ([]PendingCounte
 			   SELECT id FROM capture_pending_counterparty
 			    WHERE status = 'pending'
 			      AND next_attempt_at IS NOT NULL AND next_attempt_at <= now()
+			      -- Mail a restricted contact sent or received waits for the lift.
+			      AND NOT `+auth.ActivityRestrictedSQL("capture_pending_counterparty.activity_id")+`
 			      AND (claimed_until IS NULL OR claimed_until <= now())
 			      -- The bound is a property of the ROW, not of a live worker.
 			      -- A worker that crashes, is killed, or outruns its lease never

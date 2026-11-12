@@ -36,7 +36,6 @@ type attentionWaiting struct {
 	// deals answers the same-day next-step figure /worklist/response carries
 	// beside the waiting work's own two.
 	deals *deals.Store
-	now   attention.Clock
 }
 
 // The instant comes from the caller so the whole read is one snapshot. Asking
@@ -99,7 +98,7 @@ func (w attentionWaiting) Unanswered(
 	if err != nil {
 		return nil, false, err
 	}
-	summaries, err := w.emailRows(ctx, kept)
+	summaries, err := w.emailRows(ctx, kept, asOf)
 	if err != nil {
 		return nil, false, err
 	}
@@ -181,7 +180,7 @@ func (w attentionWaiting) HiddenRows(
 	if err != nil {
 		return nil, err
 	}
-	summaries, err := w.emailRows(ctx, kept)
+	summaries, err := w.emailRows(ctx, kept, asOf)
 	if err != nil {
 		return nil, err
 	}
@@ -306,21 +305,10 @@ func earliestAsk(a, b activities.WaitingReply) time.Time {
 	return first
 }
 
-// emailRows reads the canonical email row behind each waiting message that is
-// one, in a single statement over the whole lane.
-//
-// The lane spans email and channel messages (the waiting query's own
-// `a.kind IN ('email', 'message')`), so the ids are filtered to email BEFORE
-// the read rather than after: a chat has no email row to fetch, and asking for
-// one would spend the statement's budget on rows that can only come back
-// absent.
-//
-// The reader carries its own content gate, so a summary reaches the lane only
-// for a message this caller may read. That is belt and braces here — a message
-// the reader may not read produces no waiting row at all — and it is the lock
-// that holds if the lane's own gate is ever loosened.
+// emailRows filters channel messages before fetching summaries, since they
+// have no email row. The summary reader keeps its own content gate.
 func (w attentionWaiting) emailRows(
-	ctx context.Context, rows []activities.WaitingReply,
+	ctx context.Context, rows []activities.WaitingReply, asOf time.Time,
 ) (map[ids.UUID]crmcontracts.EmailSummary, error) {
 	var emailIDs []ids.UUID
 	for _, row := range rows {
@@ -334,19 +322,19 @@ func (w attentionWaiting) emailRows(
 		// the same answer to that question as "no rows for you".
 		return map[ids.UUID]crmcontracts.EmailSummary{}, nil
 	}
-	return emailSummariesReusingPlans(ctx, w.store, emailIDs)
+	return emailSummariesReusingPlans(ctx, w.store, emailIDs, asOf)
 }
 
 // emailSummariesReusingPlans reads the email rows behind a lane's rows. Its
 // statements key on the ids and spell kinds as literals, so the generic plan
 // serves. Planned at every call, they cost more to plan than to run.
 func emailSummariesReusingPlans(
-	ctx context.Context, store *activities.Store, activityIDs []ids.UUID,
+	ctx context.Context, store *activities.Store, activityIDs []ids.UUID, asOf time.Time,
 ) (map[ids.UUID]crmcontracts.EmailSummary, error) {
 	var summaries map[ids.UUID]crmcontracts.EmailSummary
 	err := database.ReuseGenericPlans(ctx, func(ctx context.Context) error {
 		var err error
-		summaries, err = store.EmailSummariesByID(ctx, activityIDs)
+		summaries, err = store.EmailSummariesByIDAt(ctx, activityIDs, asOf)
 		return err
 	})
 	return summaries, err
@@ -377,7 +365,7 @@ func (w attentionWaiting) WaitingAfter(
 	// The store drops stamped mail before its fold. Mail from before the stamp
 	// is dropped here; one sender's machine mail folds only with itself.
 	read.Cards = slices.DeleteFunc(read.Cards, sentBySendingSystem)
-	summaries, err := w.emailRows(ctx, read.Cards)
+	summaries, err := w.emailRows(ctx, read.Cards, asOf)
 	if err != nil {
 		return attention.WaitingTail{}, err
 	}

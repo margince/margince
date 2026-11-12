@@ -50,7 +50,7 @@ func TestNewLocalRouterWithoutResultCacheServesEveryScriptedAnswer(t *testing.T)
 		t.Fatal(err)
 	}
 	ctx := wsContext(t)
-	req := model.Request{Messages: []model.Message{{Role: "user", Content: "same prompt"}}}
+	req := model.Request{Subjects: model.AboutNoContact("test prompt"), Messages: []model.Message{{Role: "user", Content: "same prompt"}}}
 
 	first, info1, err := r.Complete(ctx, TaskSummarize, req)
 	if err != nil {
@@ -84,8 +84,8 @@ func TestNewLocalRouterWithCallStoreRecordsOneCallPerCompletionAndStampsCacheOff
 		t.Fatal(err)
 	}
 	ctx := wsContext(t)
-	req1 := model.Request{Messages: []model.Message{{Role: "user", Content: "one"}}}
-	req2 := model.Request{Messages: []model.Message{{Role: "user", Content: "two"}}}
+	req1 := model.Request{Subjects: model.AboutNoContact("test prompt"), Messages: []model.Message{{Role: "user", Content: "one"}}}
+	req2 := model.Request{Subjects: model.AboutNoContact("test prompt"), Messages: []model.Message{{Role: "user", Content: "two"}}}
 
 	if _, _, err := r.Complete(ctx, TaskSummarize, req1); err != nil {
 		t.Fatal(err)
@@ -115,7 +115,7 @@ func TestNewLocalRouterCacheOnByDefaultCollapsesIdenticalRequests(t *testing.T) 
 		t.Fatal(err)
 	}
 	ctx := wsContext(t)
-	req := model.Request{Messages: []model.Message{{Role: "user", Content: "same prompt"}}}
+	req := model.Request{Subjects: model.AboutNoContact("test prompt"), Messages: []model.Message{{Role: "user", Content: "same prompt"}}}
 
 	first, _, err := r.Complete(ctx, TaskSummarize, req)
 	if err != nil {
@@ -143,7 +143,7 @@ func TestAFreshAnswerReachesTheModelThoughTheRequestIsCached(t *testing.T) {
 		t.Fatal(err)
 	}
 	ctx := wsContext(t)
-	req := model.Request{Messages: []model.Message{{Role: "user", Content: "same prompt"}}}
+	req := model.Request{Subjects: model.AboutNoContact("test prompt"), Messages: []model.Message{{Role: "user", Content: "same prompt"}}}
 
 	if _, _, err := r.Complete(ctx, TaskSummarize, req); err != nil {
 		t.Fatal(err)
@@ -179,7 +179,7 @@ func TestNewLocalRouterWithMonthlyBudgetIsLive(t *testing.T) {
 		t.Fatal(err)
 	}
 	ctx := wsContext(t)
-	req := model.Request{Messages: []model.Message{{Role: "user", Content: "burn the budget"}}}
+	req := model.Request{Subjects: model.AboutNoContact("test prompt"), Messages: []model.Message{{Role: "user", Content: "burn the budget"}}}
 
 	if _, info, err := r.Complete(ctx, TaskSummarize, req); err != nil || info.Degraded {
 		t.Fatalf("first call should serve un-degraded and spend real tokens, got info=%+v err=%v", info, err)
@@ -261,7 +261,7 @@ func TestNewLocalRouterServesAHarnessProviderWithTheCallersClient(t *testing.T) 
 	if err != nil {
 		t.Fatalf("a harness-served binding could not be built: %v", err)
 	}
-	resp, _, err := r.Complete(wsContext(t), TaskSummarize, model.Request{Messages: []model.Message{{Role: "user", Content: "hi"}}})
+	resp, _, err := r.Complete(wsContext(t), TaskSummarize, model.Request{Subjects: model.AboutNoContact("test prompt"), Messages: []model.Message{{Role: "user", Content: "hi"}}})
 	if err != nil || resp.Text != "served by the harness" {
 		t.Fatalf("resp = %q, err = %v, want the harness client's answer", resp.Text, err)
 	}

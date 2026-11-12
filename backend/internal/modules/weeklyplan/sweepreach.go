@@ -16,15 +16,15 @@ import "github.com/margince/margince/backend/pkg/extension/reach"
 func SweepReach() []reach.Table {
 	return []reach.Table{{
 		Name:  "weekly_plan_commitment",
-		Links: []reach.Link{{Column: "linked_record_id", KindColumn: "linked_record_type"}},
+		Links: []reach.Link{{Column: fieldLinkedID, KindColumn: fieldLinkedKind}},
 		Erase: []reach.Clear{
-			{Column: "label", To: reach.Tombstone},
+			{Column: fieldLabel, To: reach.Tombstone},
 			{Column: "help_requested", To: reach.Empty},
-			{Column: "manager_response", To: reach.Empty},
+			{Column: fieldResponse, To: reach.Empty},
 			{Column: "manager_user_id", To: reach.Null},
 			{Column: "responded_at", To: reach.Null},
-			{Column: "linked_record_type", To: reach.Null},
-			{Column: "linked_record_id", To: reach.Null},
+			{Column: fieldLinkedKind, To: reach.Null},
+			{Column: fieldLinkedID, To: reach.Null},
 		},
 	}}
 }

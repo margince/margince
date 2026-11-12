@@ -57,7 +57,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "users.retirement.lists":
     "Listen dieses Mitglieds neu zuweisen oder archivieren.",
   "users.retirement.stewarded_lists":
-    "Betreute Listen dieses Mitglieds neu zuweisen oder archivieren.",
+    "Listen, für die dieses Mitglied zuständig ist, neu zuweisen oder archivieren.",
   "users.retirement.mail_drafts":
     "Gespeicherte E-Mail-Entwürfe dieses Mitglieds senden oder verwerfen.",
   "users.retirement.meeting_invitations":
@@ -850,6 +850,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "approval.preview.unsignedSend":
     "Versand ohne menschlichen Anzeigenamen oder persönliche Signatur. Die Freigabe macht die prüfende Person nicht zur absendenden Person.",
   "approval.preview.senderSignature": "Signatur der absendenden Person",
+  "approval.preview.showImages": "Bilder anzeigen",
   "approval.preview.signaturePrivate":
     "Die private Signatur der absendenden Person darf dieser prüfenden Person nicht angezeigt werden. Lass die absendende Person diese Nachricht prüfen.",
   "approval.preview.recordMeeting":
@@ -2403,6 +2404,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "systemJob.erasure_replay": "Erneute Löschung nach einer Wiederherstellung",
   "systemJob.privacy_review": "Datenschutzprüfung nach einer Löschung",
   "systemJob.extension_inventory": "Bestandsaufnahme der Erweiterungen",
+  "systemJob.extension_privacy": "Datenschutzprüfung der Erweiterungen",
   "systemJob.extraction_activity_reannounce":
     "Reparatur extrahierter Aktivitäten",
   "systemJob.forecast_snapshot": "Täglicher Prognose-Snapshot",
@@ -2704,7 +2706,6 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "history.field.body": "Notizen",
   "history.field.emails": "E-Mail-Adressen",
   "history.field.nudge_dismissal": "Hinweis ausgeblendet",
-  "history.field.override_category": "Kategorie der Freigabe",
   "history.field.overrides_carried": "Übernommene Freigaben",
   "history.field.phone": "Telefonnummer",
   "history.field.phones": "Telefonnummern",
@@ -2742,6 +2743,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "history.field.lifted_by": "Aufgehoben von",
   "history.field.lifted_by_level": "Aufgehoben auf Ebene",
   "history.field.lifted_suppression": "Aufgehobene Sperre",
+  "history.field.restriction_lift_requested":
+    "Aufhebung der Einschränkung angefragt",
   "history.field.linkedin_url": "LinkedIn-URL",
   "history.field.lost_reason": "Verlustgrund",
   "history.field.name": "Name",
@@ -2980,6 +2983,9 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "action.booking": "Buchungsseite",
 
   "common.fieldInvalid": "Prüfe diesen Wert und versuche es erneut.",
+  "common.fieldTooLongMax": "{field}: höchstens {max} Zeichen.",
+  "common.valueTooLongMax": "Dieser Wert darf höchstens {max} Zeichen haben.",
+  "common.valueTooLong": "Dieser Wert ist zu lang.",
   "common.undo": "Rückgängig",
   "common.close": "Schließen",
   "common.unknownValue": "Sonstiges",
@@ -3609,7 +3615,21 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "consent.stopBlocked.address":
     "Die Sperre endet, sobald Mails an die Adresse wieder ankommen.",
   "consent.stopBlocked.restriction":
-    "Wer eine Einschränkung aufhebt, muss den Kontakt vorher informieren. Margince kann diese Nachricht noch nicht senden, daher bleibt die Einschränkung.",
+    "Wer eine Einschränkung aufhebt, muss den Kontakt vorher informieren. Nur ein Admin hebt sie auf, und Margince sendet diese Nachricht.",
+  "consent.restrictionLift": "Einschränkung aufheben",
+  "consent.restrictionLiftTitle": "Diese Einschränkung aufheben?",
+  "consent.restrictionLiftBody":
+    "Margince schickt dem Kontakt zuerst eine Nachricht, dass die Einschränkung endet. Die Einschränkung endet, sobald diese Nachricht gesendet ist. Danach liest Margince seine E-Mails wieder, auch die, die während der Einschränkung eingegangen sind.",
+  "consent.restrictionLiftQueued":
+    "Die Nachricht wartet auf den Versand. Bis dahin bleibt die Einschränkung.",
+  "consent.restrictionLiftSent":
+    "Die Nachricht wurde gesendet. Die Einschränkung endet.",
+  "consent.restrictionLiftRetrying":
+    "Die Nachricht wurde noch nicht gesendet, Margince versucht es erneut. Bis sie gesendet ist, bleibt die Einschränkung: {reason}",
+  "consent.restrictionLiftFailed":
+    "Die Nachricht wurde nicht gesendet, daher bleibt die Einschränkung: {reason}",
+  "consent.restrictionLiftFailedNoReason":
+    "Die Nachricht wurde nicht gesendet, daher bleibt die Einschränkung. Hebe sie erneut auf, um eine neue Nachricht zu senden.",
   "consent.stopBlocked.subject_decision":
     "Der Kontakt hat diese Sperre selbst gesetzt. Nur er kann sie ändern.",
   "consent.stopCorrect": "Sperre korrigieren",
@@ -3820,7 +3840,15 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "co.aside.visibleEveryone": "Alle",
   "co.aside.visibleOnlyYou": "Nur dich",
   "co.aside.visibleOnly": "Nur {owner}",
-  "co.aside.visibleOnlyOwner": "Nur die zuständige Person",
+  "co.aside.visibleOnlyOwner": "Nur die verantwortliche Person",
+  "co.aside.visibleYouAndShared_one": "Dich · {count} Freigabe",
+  "co.aside.visibleYouAndShared_other": "Dich · {count} Freigaben",
+  "co.aside.visibleOwnerAndShared_one": "{owner} · {count} Freigabe",
+  "co.aside.visibleOwnerAndShared_other": "{owner} · {count} Freigaben",
+  "co.aside.visibleTheOwnerAndShared_one":
+    "Die verantwortliche Person · {count} Freigabe",
+  "co.aside.visibleTheOwnerAndShared_other":
+    "Die verantwortliche Person · {count} Freigaben",
   "co.aside.vatId": "USt-IdNr.",
   "co.aside.add": "Hinzufügen…",
   "co.strip.unanswered": "Unbeantwortet",
@@ -3874,13 +3902,14 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "timeline.filters.searchOmitsLimited":
     "Die Suche schließt Threads aus, deren Inhalt du nicht öffnen kannst.",
   "tab.contacts": "Kontakte",
+  "tab.companies": "Unternehmen",
   "tab.deals": "Deals",
   "tab.dealRoom": "Deal Room",
   "tab.dealsProjects": "Deals und Projekte",
   "tab.tasks": "Aufgaben",
   "tab.timeline": "Verlauf",
   "tab.finance": "Finanzen",
-  "tab.network": "Netzwerk",
+  "tab.network": "Beziehungen",
   "tab.documents": "Dokumente",
   "tab.profile": "Profil",
   "tab.meetings": "Termine",
@@ -3964,6 +3993,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "standing.title": "Wie es steht · {date}",
   "standing.noteMore": "Mehr anzeigen",
   "standing.noteLess": "Weniger anzeigen",
+  "standing.latest.title": "Zuletzt",
+  "standing.latest.open": "Im Verlauf öffnen",
   "standing.sources.records": "Aus den CRM-Daten",
   "standing.sources.model_one": "Margince · {count} Quelle",
   "standing.sources.model_other": "Margince · {count} Quellen",
@@ -4596,6 +4627,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "approval.field.because": "Grund",
   "approval.field.lost_reason": "Warum er verloren ging",
   "approval.field.note": "Notiz",
+  "approval.field.task": "Aufgabe",
   "approval.kind.transcript_proposal":
     "Nächsten Schritt aus Transkript erstellen",
   "approval.kind.stage_progression": "Deal-Phase voranbringen",
@@ -6001,6 +6033,26 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "deal.winProbability.source.colleague": "von {name} gesetzt",
   "deal.winProbability.source.margince": "von Margince gesenkt",
   "deal.winProbability.stageValue": "Phase {percent}",
+  "deal.winProbability.why": "Warum diese Abschlusschance",
+  "deal.winProbability.reason.stage": "Das ist der Wert, den {stage} vorgibt.",
+  "deal.winProbability.reason.closed":
+    "Der Deal ist abgeschlossen, daher legt {stage} den Wert fest.",
+  "deal.winProbability.reason.you": "Du hast den Wert von Hand gesetzt.",
+  "deal.winProbability.reason.colleague":
+    "{name} hat den Wert von Hand gesetzt.",
+  "deal.winProbability.reason.human":
+    "Ein Teammitglied hat den Wert von Hand gesetzt.",
+  "deal.winProbability.reason.stageGives":
+    "Ohne ihn gibt {stage} {percent} vor.",
+  "deal.winProbability.reason.margince": "Margince hat diesen Wert gesetzt.",
+  "deal.winProbability.reason.marginceRule":
+    "Margince kann eine Wahrscheinlichkeit, die niemand von Hand gesetzt hat, senken, wenn der Deal ruht oder E-Mails dagegen sprechen.",
+  "deal.winProbability.reason.override":
+    "Gib einen eigenen Wert ein, um ihn zu überschreiben.",
+  "deal.winProbability.reason.clear":
+    "Leere das Feld, um wieder der Phase zu folgen.",
+  "deal.winProbability.reason.stageNamed": "die Phase {name}",
+  "deal.winProbability.reason.stageUnnamed": "die Phase des Deals",
   "deal.winProbability.setByStage":
     "Abschlusschance durch die Phase {stage} auf {percent} gesetzt",
   "deal.winProbability.band.90_plus": "90 % oder mehr",
@@ -8852,15 +8904,17 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "signatureTemplate.label": "Vorlage (HTML)",
   "signatureTemplate.placeholder": "<p><b>{name}</b><br>{title}<br>{phone}</p>",
   "signatureTemplate.hint":
-    "Nutze {name}, {title}, {phone}, {logo} und {imprint}. {logo} ist das in die E-Mail eingebettete Logo des Rechtsträgers, für den das Mitglied arbeitet, {imprint} sein Impressum. Ein Rechtsträger mit eigener Vorlage nutzt diese. Absätze, Zeilenumbrüche, fett, kursiv, unterstrichen, Links sowie Farbe und Pixelgröße auf einem span bleiben erhalten. Ein leeres Feld deaktiviert die Vorlage.",
+    "Nutze {name}, {title}, {phone}, {logo} und {imprint}. {logo} ist das in die E-Mail eingebettete Logo des Rechtsträgers, für den das Mitglied arbeitet, {imprint} sein Impressum. Ein Rechtsträger mit eigener Vorlage nutzt diese. Absätze, Zeilenumbrüche, fett, kursiv, unterstrichen, Links, Tabellen, Layout-Stile und Bilder von https-Adressen bleiben erhalten. Skripte und Formulare werden entfernt. Ein leeres Feld deaktiviert die Vorlage.",
   "settings.signatureFormat": "Format",
   "settings.signatureFormatText": "Nur Text",
   "settings.signatureFormatHtml": "HTML",
   "settings.signatureHtmlLabel": "HTML-Signatur",
   "settings.signatureHtmlHintTemplate":
-    "Diese Signatur ersetzt die Unternehmensvorlage. Leere das Feld, um wieder die Unternehmensvorlage zu verwenden. Externe Bilder und Skripte werden entfernt.",
+    "Diese Signatur ersetzt die Unternehmensvorlage. Leere das Feld, um wieder die Unternehmensvorlage zu verwenden. Bis zu {max} Zeichen. Tabellen, Layout und Bilder von https-Adressen bleiben erhalten; Skripte und Formulare werden entfernt.",
   "settings.signatureHtmlHintPlain":
-    "Leere das Feld, um wieder deinen Text zu verwenden. Externe Bilder und Skripte werden entfernt.",
+    "Leere das Feld, um wieder deinen Text zu verwenden. Bis zu {max} Zeichen. Tabellen, Layout und Bilder von https-Adressen bleiben erhalten; Skripte und Formulare werden entfernt.",
+  "settings.signatureHtmlCount_one": "{count} von {max} Zeichen",
+  "settings.signatureHtmlCount_other": "{count} von {max} Zeichen",
   "settings.signatureOwnHtml": "Deine HTML-Signatur",
   "settings.signatureReviewTitle": "Gespeicherte Signatur von {name} prüfen",
   "settings.signatureReviewIntro":
@@ -9615,6 +9669,21 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "setup.action.ai": "Verbinden",
   "setup.step.aiDone": "{name} ist verbunden.",
   "setup.step.aiDoneUnnamed": "Ein KI-Tool ist verbunden.",
+  "firstRun.ai.skip": "Nicht jetzt",
+  "ob.gate.noModelSub":
+    "Noch ist kein KI-Anbieter eingerichtet, daher kann Margince deine Website nicht lesen. Gib die Angaben zu deinem Unternehmen selbst ein oder füge jetzt einen Schlüssel hinzu.",
+  "ob.gate.addModel": "KI-Schlüssel hinzufügen",
+  "aiSetup.title": "KI einrichten",
+  "aiSetup.intro":
+    "Margince braucht einen KI-Anbieter, um Websites zu lesen, Antworten zu entwerfen und zu recherchieren. Füge einen Schlüssel hinzu und wähle die Modelle.",
+  "aiSetup.connect": "Anbieter verbinden",
+  "aiSetup.connected":
+    "{vendor} ist verbunden. Margince kann jetzt lesen, entwerfen und recherchieren.",
+  "setup.step.model": "KI einrichten",
+  "setup.caption.model":
+    "Füge einen Schlüssel deines KI-Anbieters hinzu, damit Margince Websites liest, Antworten entwirft und recherchiert.",
+  "setup.action.model": "Schlüssel hinzufügen",
+  "setup.step.modelDone": "Ein KI-Anbieter ist verbunden.",
   "ob.conv.connect.aiRow": "Dein KI-Tool",
   "ob.conv.connect.aiBody":
     "Frag Claude, ChatGPT, Copilot oder deinen Editor nach deinen Deals und lass ihn Margince für dich aktualisieren.",
@@ -10956,6 +11025,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "privacy.kindAccess": "Auskunft",
   "privacy.kindRectify": "Berichtigung",
   "privacy.kindErasure": "Löschung",
+  "privacy.kindRestriction": "Einschränkung",
   "privacy.purpose": "Zweck",
   "privacy.purposeDoiBadge": "Double-Opt-in",
   "privacy.purposesLoading": "Zwecke werden geladen…",
@@ -11001,8 +11071,13 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "privacy.openRequest": "Anfrage erstellen",
   "privacy.erasureNeedsContact":
     "Eine Löschanfrage muss einen Kontakt in diesem Unternehmen nennen, da beim Erfüllen der Anfrage genau dieser Datensatz gelöscht wird. Betroffene, die nur als Freitext erfasst sind, lassen sich nicht löschen.",
-  "privacy.accessManual":
-    "Eine Auskunftsanfrage wird manuell erfüllt: Halte im Ergebnis fest, was du gesendet hast. Dieses System stellt die Daten nicht für dich zusammen und exportiert sie nicht.",
+  "privacy.restrictionNeedsContact":
+    "Eine Anfrage auf Einschränkung muss einen Kontakt in diesem Unternehmen nennen, da beim Erfüllen der Anfrage die Verarbeitung genau dieses Datensatzes eingeschränkt wird. Betroffene, die nur als Freitext erfasst sind, lassen sich nicht einschränken.",
+  "privacy.accessPicksContact":
+    "Wähle den Kontakt, um den es in dieser Anfrage geht. In der Anfrage kannst du dann alles herunterladen, was über ihn gespeichert ist.",
+  "privacy.downloadPackage": "Datenpaket herunterladen",
+  "privacy.possibleDuplicates":
+    "Andere Datensätze könnten dieselbe Person sein. Prüfe sie, bevor du antwortest.",
   "privacy.fulfilErasureTitle": "Löschanfrage erfüllen",
   "privacy.erasureIrreversible":
     "Damit wird der Kontakt im gesamten System dauerhaft gelöscht: Datensatz, erfasste Aktivitäten und abgeleitete Werte. Das lässt sich nicht rückgängig machen. Die Löschung selbst wird im Audit-Log festgehalten.",
@@ -11119,6 +11194,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "retention.scopeRawCapture": "Gespeicherte Originalnachrichten",
   "retention.scopeDealRiskDay":
     "Tägliche Aufzeichnung wichtiger gefährdeter Deals",
+  "retention.scopeExtension": "Von Erweiterungen gespeicherte Datensätze",
   "pipeline.new": "Neue Pipeline",
   "pipeline.createRefused":
     "Deine Rolle darf keine Pipelines anlegen. Frage einen Admin.",
@@ -13451,7 +13527,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "cf.retire.body":
     "Das Feld verschwindet aus neuen Datensätzen und Filtern. Gespeicherte Werte bleiben erhalten. Das Archivieren lässt sich nicht rückgängig machen.",
   "cf.retire.lists":
-    "Diese Live-Listen filtern danach. Mit den gespeicherten Werten funktionieren sie weiter und bitten ihre Verantwortlichen, die Bedingung zu ersetzen:",
+    "Diese Live-Listen filtern danach. Mit den gespeicherten Werten funktionieren sie weiter und bitten ihre Zuständigen, die Bedingung zu ersetzen:",
   "cf.retire.unseen_one":
     "{count} weitere Live-Liste, die du nicht öffnen kannst, filtert ebenfalls danach.",
   "cf.retire.unseen_other":
@@ -15488,30 +15564,28 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "oauthApp.microsoft.save": "Microsoft-App speichern",
   "oauthApp.drawer.google.title": "Google-App einrichten",
   "oauthApp.drawer.google.intro":
-    "Zwei Schritte in der Google Cloud Console, dann fügst du das Ergebnis hier ein. Du brauchst Zugriff auf das Google-Cloud-Projekt deines Unternehmens.",
+    "Ein paar Schritte in der Google Cloud Console, dann fügst du das Ergebnis hier ein. Du brauchst Zugriff auf das Google-Cloud-Projekt deines Unternehmens.",
   "oauthApp.drawer.google.value":
     "Eine App für das ganze Unternehmen. Sobald sie gespeichert ist, können alle bei {company} Gmail und Google Kalender verbinden, und „Weiter mit Google“ kann auf der Anmeldeseite erscheinen.",
   "oauthApp.drawer.google.step1Title": "OAuth-Client in Google Cloud anlegen",
   "oauthApp.drawer.google.step1Body":
-    "Öffne „APIs und Dienste“, dann „Anmeldedaten“, und lege eine OAuth-Client-ID vom Typ „Webanwendung“ an.",
+    "Wähle ein Projekt für Margince oder lege eines an, öffne „APIs und Dienste“, dann „Anmeldedaten“, und lege eine OAuth-Client-ID vom Typ „Webanwendung“ an. Wähle auf dem Zustimmungsbildschirm unter „Zielgruppe“ die Option „Intern“, wenn alle Anmeldungen über Google-Konten deines Unternehmens laufen: Dann können nur diese Konten die App nutzen, und Google muss die App nicht prüfen. Wähle „Extern“ nur, wenn auch private Gmail-Konten verbunden werden.",
   "oauthApp.drawer.google.step1Link": "Google Cloud Console öffnen",
   "oauthApp.drawer.google.step2Body":
     "Im Client unter „Autorisierte Weiterleitungs-URIs“. Margince listet eine Adresse für alles, wofür diese Installation Google nutzt. Füge sie genau so ein; fehlt eine, bricht Google die Verbindung mit „redirect_uri_mismatch“ ab und nennt die Adresse nicht.",
   "oauthApp.drawer.microsoft.title": "Microsoft-App einrichten",
   "oauthApp.drawer.microsoft.intro":
-    "Zwei Schritte im Microsoft Entra Admin Center, dann fügst du das Ergebnis hier ein. Du brauchst Zugriff auf das Entra-Verzeichnis deines Unternehmens.",
+    "Ein paar Schritte im Microsoft Entra Admin Center, dann fügst du das Ergebnis hier ein. Du brauchst Zugriff auf das Entra-Verzeichnis deines Unternehmens.",
   "oauthApp.drawer.microsoft.value":
     "Eine App für das ganze Unternehmen. Sobald sie gespeichert ist, können alle bei {company} Outlook-E-Mail und -Kalender verbinden, und „Weiter mit Microsoft“ kann auf der Anmeldeseite erscheinen.",
   "oauthApp.drawer.microsoft.step1Title": "App in Microsoft Entra registrieren",
   "oauthApp.drawer.microsoft.step1Body":
-    "Öffne „App-Registrierungen“, registriere eine neue App und füge unter „Zertifikate und Geheimnisse“ einen geheimen Clientschlüssel hinzu.",
+    "Öffne „App-Registrierungen“ und wähle „Neue Registrierung“. Nenne sie Margince und wähle unter „Unterstützte Kontotypen“ die erste Option, nur Konten in diesem Verzeichnis; die Verzeichnis-ID trägst du im letzten Schritt ein. Nur wenn auch Postfächer anderer Unternehmen verbunden werden, wähle die zweite Option, Konten in einem beliebigen Verzeichnis, und lass das Verzeichnis in den Einstellungen leer.",
   "oauthApp.drawer.microsoft.step1Link": "Microsoft Entra Admin Center öffnen",
   "oauthApp.drawer.microsoft.step2Body":
-    "In der App-Registrierung unter „Authentifizierung“ als Umleitungs-URIs der Web-Plattform. Margince listet eine Adresse für alles, wofür diese Installation Microsoft nutzt. Füge sie genau so ein; fehlt eine, bricht Microsoft die Verbindung mit „AADSTS50011“ ab und nennt die Adresse nicht.",
+    "Öffne in der App-Registrierung „Authentifizierung“, wähle „Plattform hinzufügen“, dann „Web“, und füge jede Adresse unten ein. Margince listet eine Adresse für alles, wofür diese Installation Microsoft nutzt. Füge sie genau so ein; fehlt eine, bricht Microsoft die Verbindung mit „AADSTS50011“ ab und nennt die Adresse nicht.",
   "oauthApp.drawer.step2Title": "Diese Weiterleitungsadressen eintragen",
   "oauthApp.drawer.step3Title": "Client-ID und Clientschlüssel einfügen",
-  "oauthApp.drawer.step3Body":
-    "{vendor} zeigt beides an, sobald der Client angelegt ist.",
   "oauthApp.drawer.secretHint":
     "Wird verschlüsselt gespeichert und nie wieder angezeigt. Um ihn später zu ändern, ersetze die App.",
   "oauthApp.drawer.foot": "Gilt für alle, sobald es gespeichert ist.",
@@ -15948,7 +16022,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "firstRun.continue": "Weiter",
   "firstRun.ai.title": "Modellanbieter auswählen",
   "firstRun.ai.sub":
-    "Margince nutzt deinen Zugang beim KI-Anbieter. All das lässt sich später in den Einstellungen unter KI ändern.",
+    "Margince nutzt deinen Zugang beim KI-Anbieter. Kein Schlüssel zur Hand? Du kannst ihn später in den Einstellungen unter KI hinzufügen.",
   "firstRun.ai.provider": "Anbieter",
   "firstRun.ai.key": "API-Schlüssel",
   "firstRun.ai.keyHint":
@@ -17293,7 +17367,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Jemand erstellt eine Live-Liste oder eine Shortlist.",
   "webhooks.event.list.updated.label": "Listeneinstellungen geändert",
   "webhooks.event.list.updated.when":
-    "Name, Zweck, Filter, Teilen, Team oder Verantwortung einer Liste ändern sich.",
+    "Name, Zweck, Filter, Teilen, Team oder Zuständigkeit einer Liste ändern sich.",
   "webhooks.event.list.archived.label": "Liste archiviert",
   "webhooks.event.list.archived.when": "Eine Liste wird archiviert.",
   "webhooks.event.list.restored.label": "Liste wiederhergestellt",
@@ -17388,7 +17462,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Jemand mit der nötigen Berechtigung hebt eine Sperre auf.",
   "webhooks.event.consent.override_recorded.label": "Ausnahme erfasst",
   "webhooks.event.consent.override_recorded.when":
-    "Ein Teammitglied bestätigt, dass eine maschinelle Ablehnung für eine Kategorie übergangen werden darf.",
+    "Beim Zusammenführen von Kontakten wird eine bestehende Ausnahme auf den verbleibenden Kontakt kopiert.",
   "webhooks.event.consent.override_lifted.label": "Ausnahme aufgehoben",
   "webhooks.event.consent.override_lifted.when":
     "Jemand mit der nötigen Berechtigung hebt eine Ausnahme auf.",
@@ -17984,8 +18058,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Du kannst diesen Kontakt nicht bearbeiten. Frage die verantwortliche Person, ob sie ihn dir übergibt oder mit dir teilt, oder frage einen Admin.",
   "contact.rail.employmentVersionUnresolved":
     "Die aktuelle Version dieser Zeile konnte nicht geladen werden. Bitte lade die Seite neu und versuche es erneut.",
-  "contact.rail.employmentTitle": "Unternehmen",
-  "contact.rail.noEmployment": "Keine Anstellung erfasst.",
+  "contact.rail.employmentTitle": "Werdegang",
+  "contact.rail.noEmployment": "Noch kein Werdegang erfasst.",
   "contact.rail.noPrimaryEmployer": "Kein Hauptarbeitgeber. Wähle einen aus.",
   "contact.rail.addEmployment": "Unternehmen hinzufügen",
   "contact.employer.contacts_one": "{count} Kontakt",
@@ -18679,8 +18753,13 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "lists.team.allOwners": "Alle Teams der verantwortlichen Person",
   "lists.audience.yourTeams": "Deine Teams",
   "lists.audience.ownerTeams": "Die Teams der verantwortlichen Person",
+  "lists.audience.ownerOnly": "Die verantwortliche Person",
+  "lists.audience.stewardOnly": "Die zuständige Person",
+  "lists.audience.youAndSteward": "Du und die zuständige Person",
+  "lists.audience.ownerAndSteward":
+    "Die verantwortliche und die zuständige Person",
   "lists.audience.unknownTeam": "Ein Team, das du nicht sehen kannst",
-  "lists.health.ownerless": "Niemand verantwortlich",
+  "lists.health.ownerless": "Niemand zuständig",
   "lists.health.invalid": "Filter funktioniert nicht mehr",
   "lists.health.retiredField": "Nutzt ein stillgelegtes Feld",
   "lists.col.name": "Name",
@@ -18706,23 +18785,23 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "lists.filterLine": "Filter: {sentence}",
   "lists.head.exported_one": "{count}-mal, zuletzt am {when}",
   "lists.head.exported_other": "{count}-mal, zuletzt am {when}",
-  "lists.fact.steward": "Verantwortlich",
+  "lists.fact.steward": "Zuständig",
   "lists.fact.exported": "Exportiert",
   "lists.archived.title": "Diese Liste ist archiviert",
   "lists.archived.body":
     "Bis zur Wiederherstellung ist die Liste schreibgesch\u00fctzt. Mitglieder und Verlauf bleiben erhalten.",
   "lists.invalid.title": "Dieser Filter funktioniert nicht mehr",
   "lists.invalid.body":
-    "Ein Feld im Filter hat sich geändert. Wer für die Liste verantwortlich ist, kann den Filter im Editor korrigieren.",
-  "lists.ownerless.title": "Niemand ist für diese Liste verantwortlich",
+    "Ein Feld im Filter hat sich geändert. Wer für die Liste zuständig ist, kann den Filter im Editor korrigieren.",
+  "lists.ownerless.title": "Niemand ist für diese Liste zuständig",
   "lists.ownerless.body":
-    "Für diese Liste ist niemand mehr verantwortlich, oder es wurde nie jemand festgelegt. Wer die Liste ändern darf, sollte sie übernehmen.",
+    "Für diese Liste ist niemand mehr zuständig, oder es wurde nie jemand festgelegt. Wer die Liste ändern darf, sollte sie übernehmen.",
   "lists.ownerless.takeOver": "\u00dcbernehmen",
   "lists.retiredField.title": "Dieser Filter nutzt ein stillgelegtes Feld",
   "lists.retiredField.body_one":
-    "{fields} wurde stillgelegt. Die Liste arbeitet weiter mit den bereits gespeicherten Werten. Neue Werte werden dort nicht mehr erfasst. Wer die Liste verantwortet, sollte diese Bedingung im Editor ersetzen.",
+    "{fields} wurde stillgelegt. Die Liste arbeitet weiter mit den bereits gespeicherten Werten. Neue Werte werden dort nicht mehr erfasst. Wer für die Liste zuständig ist, sollte diese Bedingung im Editor ersetzen.",
   "lists.retiredField.body_other":
-    "{fields} wurden stillgelegt. Die Liste arbeitet weiter mit den bereits gespeicherten Werten. Neue Werte werden dort nicht mehr erfasst. Wer die Liste verantwortet, sollte diese Bedingungen im Editor ersetzen.",
+    "{fields} wurden stillgelegt. Die Liste arbeitet weiter mit den bereits gespeicherten Werten. Neue Werte werden dort nicht mehr erfasst. Wer für die Liste zuständig ist, sollte diese Bedingungen im Editor ersetzen.",
   "lists.members.title": "Mitglieder",
   "lists.members.loading": "Mitglieder werden geladen",
   "lists.members.emptyLive":
@@ -18774,9 +18853,12 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "lists.record.empty": "Auf keiner Liste, die du finden kannst.",
   "lists.record.check": "Live-Liste pr\u00fcfen",
   "lists.record.checkHint":
-    "Eine Live-Liste aktualisiert sich selbst nach ihren Filtern. Wähle eine, um zu sehen, ob dieser Datensatz passt und warum.",
+    "Nur Live-Listen lassen sich prüfen. Wähle eine, um zu sehen, ob dieser Eintrag passt und warum.",
+  "lists.record.checkHintAdd":
+    "Nur Live-Listen lassen sich prüfen. Für eine Shortlist wähle „Zur Shortlist hinzufügen“.",
   "lists.record.checkPick": "Live-Liste ausw\u00e4hlen",
   "lists.record.truncated": "Und weitere Listen, die hier nicht stehen.",
+  "lists.record.allLists": "Alle Listen",
   "lists.record.takenOff": "Von {name} entfernt",
   "lists.record.putBack": "Wieder auf {name}",
   "lists.addToShortlist": "Zur Shortlist hinzuf\u00fcgen",
@@ -18855,8 +18937,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "filters.new.deals": "Neuer Deal-Filter",
   "filters.new.leads": "Neuer Lead-Filter",
   "filters.library.whichRecords": "Welche Datensätze filtern?",
-  "filters.library.mine": "Privat",
-  "filters.library.shared": "Geteilt",
+  "filters.library.mine": "Meine",
+  "filters.library.shared": "Mit mir geteilt",
   "filters.library.views": "Gespeicherte Ansichten",
   "filters.library.kindView": "Gespeicherte Ansicht",
   "filters.library.rowMore": "Weitere Aktionen für {name}",
@@ -18871,9 +18953,9 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "filters.library.records.project_one": "{count} Projekt",
   "filters.library.records.project_other": "{count} Projekte",
   "filters.library.recordsSeen": "{records}, die du sehen kannst",
-  "filters.library.mineEmpty": "Hier stehen die Ansichten, die du speicherst.",
-  "filters.library.sharedEmpty":
-    "Noch keine geteilten Listen. Hier steht jede Liste, die mit einem Team oder allen geteilt ist.",
+  "filters.library.mineEmpty":
+    "Hier stehen die Ansichten, die du speicherst, und die Listen, die dir gehören.",
+  "filters.library.sharedEmpty": "Noch hat niemand eine Liste mit dir geteilt.",
   "filters.library.noHits": "Keine Ansicht und keine Liste passt zu „{q}“.",
   "filters.library.clearSearch": "Suche leeren",
   "filters.library.noTypeHits.contacts":
@@ -19341,9 +19423,216 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "worklist.pane.conversation": "Thread",
   "worklist.pane.openEmail": "E-Mail öffnen",
   "worklist.pane.deal": "Deal",
-  "worklist.why.title": "Warum das Aufmerksamkeit braucht",
+  "worklist.why.title": "Warum das auf deiner Liste steht",
   "worklist.why.reasons": "Gründe",
   "worklist.why.detail": "Detail",
+  "worklist.why.happened": "Was passiert ist",
+  "worklist.why.now": "Warum jetzt",
+  "worklist.why.consequence": "Wenn nichts passiert",
+  "worklist.why.todo": "Was zu tun ist",
+  "worklist.title.deal_at_risk": "Bei {name} tut sich nichts mehr",
+  "worklist.title.deal_at_risk.close_overdue":
+    "{name} ist über das Abschlussdatum",
+  "worklist.title.relationship_decay": "Länger kein Kontakt mit {name}",
+  "worklist.title.automation_run": "{name} ist nicht durchgelaufen",
+  "worklist.title.automation_run.failed": "{name} ist fehlgeschlagen",
+  "worklist.title.automation_run.blocked": "{name} wurde blockiert",
+  "worklist.title.meeting_outcome": "Ergebnis von {name} festhalten",
+  "worklist.title.meeting_follow_up": "Bei {name} nachfassen",
+  "worklist.title.awaiting_reply": "Noch keine Antwort: {name}",
+  "worklist.title.bounce": "Unzustellbar: {name}",
+  "worklist.title.lead_response": "Neuen Lead {name} kontaktieren",
+  "worklist.title.customer_waiting": "{name} wartet auf deine Antwort",
+  "worklist.todo.task.named":
+    "Erledige die Aufgabe mit {name} und markiere sie als erledigt, oder verschiebe sie auf einen anderen Tag.",
+  "worklist.todo.deal_at_risk.named":
+    "Öffne {name} und plane den nächsten Schritt.",
+  "worklist.todo.customer_waiting.named": "Antworte {name}.",
+  "worklist.todo.awaiting_reply.named": "Sende {name} eine Nachfrage.",
+  "worklist.todo.lead_response.named":
+    "Melde dich jetzt bei {name}, ein neuer Lead kühlt schnell ab.",
+  "worklist.todo.meeting.named":
+    "Öffne den Termin, um dich auf {name} vorzubereiten.",
+  "worklist.todo.meeting_follow_up.named": "Sende {name} ein Follow-up.",
+  "worklist.todo.relationship_decay.named":
+    "Melde dich bei {name}, oder leg es für einen Monat beiseite.",
+  "worklist.todo.conversation_claim.named":
+    "Erledige, was du {name} zugesagt hast, und markiere es dann als erledigt.",
+  "worklist.todo.bounce.named":
+    "Prüfe die Adresse von {name} und sende die E-Mail dann erneut.",
+  "worklist.todo.undelivered.named":
+    "Öffne die E-Mail an {name}, um den Grund zu sehen, und sende sie dann erneut.",
+  "worklist.todo.automation_run.named":
+    "Öffne {name}, sieh nach, warum es angehalten hat, und behebe die Ursache.",
+  "worklist.todo.capture_health.named":
+    "Prüfe die Verbindung von {name}, damit seine E-Mails wieder erfasst werden.",
+  "worklist.todo.capture_health.backfill":
+    "Öffne das Postfach in den Einstellungen und setze den Import des Postfachverlaufs fort oder starte ihn neu.",
+  "worklist.todo.capture_health.backfill.named":
+    "Öffne {name} in den Einstellungen und setze den Import des Postfachverlaufs fort oder starte ihn neu.",
+  "worklist.todo.capture_health.calendar":
+    "Prüfe die Verbindung des Kalenders, damit seine Termine wieder erfasst werden.",
+  "worklist.todo.capture_health.calendar.named":
+    "Prüfe die Verbindung von {name}, damit seine Termine wieder erfasst werden.",
+  "worklist.consequence.task_slips.named":
+    "Die Aufgabe mit {name} bleibt unerledigt.",
+  "worklist.happened.customer_waiting":
+    "{name} hat am {when} geschrieben, und noch niemand hat geantwortet.",
+  "worklist.happened.customer_waiting.bare":
+    "Am {when} kam eine Nachricht, und noch niemand hat geantwortet.",
+  "worklist.happened.awaiting_reply":
+    "Du hast {name} am {when} geschrieben, und seitdem kam keine Antwort.",
+  "worklist.happened.awaiting_reply.bare":
+    "Du hast am {when} geschrieben, und seitdem kam keine Antwort.",
+  "worklist.happened.lead_response":
+    "{name} kam am {when} als Lead herein und hat noch keine erste Antwort.",
+  "worklist.happened.lead_response.bare":
+    "Dieser Lead kam am {when} herein und hat noch keine erste Antwort.",
+  "worklist.happened.meeting_outcome":
+    "Der Termin mit {name} war am {when}, und nichts hält fest, wie er lief.",
+  "worklist.happened.meeting_outcome.bare":
+    "Der Termin war am {when}, und nichts hält fest, wie er lief.",
+  "worklist.happened.meeting_follow_up":
+    "Du hast {name} am {when} getroffen. Danach ging nichts an den Kontakt raus.",
+  "worklist.happened.meeting_follow_up.bare":
+    "Der Termin war am {when}, und danach ging nichts an die Teilnehmenden raus.",
+  "worklist.happened.relationship_decay":
+    "Der letzte erfasste Kontakt mit {name} war am {when}.",
+  "worklist.happened.conversation_claim":
+    "Du hast das {name} am {when} zugesagt.",
+  "worklist.happened.conversation_claim.bare":
+    "Du hast das am {when} in einem Gespräch zugesagt.",
+  "worklist.happened.bounce": "Eine E-Mail an {name} kam am {when} zurück.",
+  "worklist.happened.bounce.bare": "Eine E-Mail kam am {when} zurück.",
+  "worklist.happened.undelivered":
+    "Eine E-Mail an {name} wurde am {when} nicht gesendet.",
+  "worklist.happened.undelivered.bare":
+    "Eine E-Mail wurde am {when} nicht gesendet.",
+  "worklist.happened.automation_run":
+    "Die Automation {name} wurde am {when} nicht abgeschlossen.",
+  "worklist.happened.automation_run.bare":
+    "Eine Automation wurde am {when} nicht abgeschlossen.",
+  "worklist.happened.capture_health":
+    "Das Postfach {name} wurde seit dem {when} nicht synchronisiert.",
+  "worklist.happened.capture_health.bare":
+    "Ein Postfach wurde seit dem {when} nicht synchronisiert.",
+  "worklist.happened.capture_health.backfill":
+    "Der Import des Postfachverlaufs für {name} ist am {when} fehlgeschlagen.",
+  "worklist.happened.capture_health.backfill.bare":
+    "Ein Import des Postfachverlaufs ist am {when} fehlgeschlagen.",
+  "worklist.happened.capture_health.silent":
+    "Das Postfach {name} hat seit dem {when} keine E-Mails erfasst.",
+  "worklist.happened.capture_health.silent.bare":
+    "Ein Postfach hat seit dem {when} keine E-Mails erfasst.",
+  "worklist.happened.capture_health.calendar":
+    "Der Kalender {name} wurde seit dem {when} nicht synchronisiert.",
+  "worklist.happened.capture_health.calendar.bare":
+    "Ein Kalender wurde seit dem {when} nicht synchronisiert.",
+  "worklist.happened.capture_health.calendar_silent":
+    "Der Kalender {name} hat seit dem {when} keine Termine erfasst.",
+  "worklist.happened.capture_health.calendar_silent.bare":
+    "Ein Kalender hat seit dem {when} keine Termine erfasst.",
+  "worklist.happened.ai_work_health":
+    "Die KI-Aufgabe {name} ist am {when} fehlgeschlagen.",
+  "worklist.happened.ai_work_health.bare":
+    "Eine KI-Aufgabe ist am {when} fehlgeschlagen.",
+  "worklist.happened.ai_work_health.stalled":
+    "Die KI-Aufgabe {name} ist seit dem {when} nicht fertig geworden.",
+  "worklist.happened.ai_work_health.stalled.bare":
+    "Eine KI-Aufgabe ist seit dem {when} nicht fertig geworden.",
+  "worklist.happened.failed_approval":
+    "Eine Aktion, die du für {name} freigegeben hast, lief am {when} nicht.",
+  "worklist.happened.failed_approval.bare":
+    "Eine Aktion, die du freigegeben hast, lief am {when} nicht.",
+  "worklist.happened.deal_suggestion":
+    "Am {when} sah eine Aktivität mit {name} nach einem neuen Deal aus.",
+  "worklist.happened.deal_suggestion.bare":
+    "Am {when} sah eine erfasste Aktivität nach einem neuen Deal aus.",
+  "worklist.happened.tag_suggestion":
+    "Am {when} hat Margince ein Tag für {name} vorgeschlagen.",
+  "worklist.happened.tag_suggestion.bare":
+    "Am {when} hat Margince ein Tag für diesen Datensatz vorgeschlagen.",
+  "worklist.happened.domain_question":
+    "Am {when} konnte Margince nicht erkennen, für welches Unternehmen {name} arbeitet.",
+  "worklist.happened.domain_question.bare":
+    "Am {when} konnte Margince diesen Kontakt keinem Unternehmen zuordnen.",
+  "worklist.happened.meeting": "Du triffst {name} am {when}.",
+  "worklist.happened.meeting.bare": "Dieser Termin ist am {when}.",
+  "worklist.happened.task": "Die Aufgabe ist am {due} fällig.",
+  "worklist.happened.task.overdue":
+    "Die Aufgabe war am {due} fällig und ist noch offen.",
+  "worklist.happened.task.undated": "Die Aufgabe hat kein Fälligkeitsdatum.",
+  "worklist.happened.deal": "{deal}: {figures}.",
+  "worklist.happened.lastFrom": "Letzter Kontakt von {name}: {when}.",
+  "worklist.happened.lastTo": "Letzter Kontakt an {name}: {when}.",
+  "worklist.happened.noneFrom":
+    "Letzter Kontakt von {name}: keiner, den du öffnen kannst.",
+  "worklist.happened.noneTo":
+    "Letzter Kontakt an {name}: keiner, den du öffnen kannst.",
+  "worklist.happened.neverFrom": "Letzter Kontakt von {name}: nie.",
+  "worklist.happened.neverTo": "Letzter Kontakt an {name}: nie.",
+  "worklist.consequence.buyer_waits":
+    "Die Antwort lässt weiter auf sich warten.",
+  "worklist.consequence.buyer_waits.named":
+    "{name} wartet weiter auf eine Antwort.",
+  "worklist.consequence.promise_breaks": "Eine Zusage von dir wird gebrochen.",
+  "worklist.consequence.promise_breaks.named":
+    "Eine Zusage von dir an {name} wird gebrochen.",
+  "worklist.consequence.deal_drifts": "Der Deal stagniert weiter.",
+  "worklist.consequence.deal_drifts.named": "{name} stagniert weiter.",
+  "worklist.consequence.deal_slips_past_close":
+    "Der Deal rutscht über sein erwartetes Abschlussdatum.",
+  "worklist.consequence.deal_slips_past_close.named":
+    "{name} rutscht über das erwartete Abschlussdatum.",
+  "worklist.consequence.meeting_unprepared":
+    "Du gehst unvorbereitet in den Termin.",
+  "worklist.consequence.task_slips": "Die Aufgabe bleibt unerledigt.",
+  "worklist.consequence.work_blocked":
+    "Arbeit, die an dieser Entscheidung hängt, bleibt blockiert.",
+  "worklist.consequence.customer_never_received": "Die Nachricht kommt nie an.",
+  "worklist.consequence.customer_never_received.named":
+    "{name} bekommt die Nachricht nie.",
+  "worklist.consequence.you_believe_it_happened":
+    "Der Schritt sieht erledigt aus, ist aber nicht passiert.",
+  "worklist.consequence.legal_deadline_missed":
+    "Die gesetzliche Frist läuft ohne Antwort ab.",
+  "worklist.consequence.mailbox_blind":
+    "E-Mails aus diesem Postfach kommen nicht in Margince an.",
+  "worklist.consequence.data_drifts":
+    "Die Datensätze laufen weiter auseinander.",
+  "worklist.todo.deal_at_risk":
+    "Öffne den Deal und plane den nächsten Schritt.",
+  "worklist.todo.task":
+    "Erledige sie und markiere sie als erledigt, oder verschiebe sie auf einen anderen Tag.",
+  "worklist.todo.customer_waiting": "Beantworte die Nachricht.",
+  "worklist.todo.awaiting_reply": "Sende eine Nachfrage.",
+  "worklist.todo.lead_response":
+    "Melde dich jetzt, ein neuer Lead kühlt schnell ab.",
+  "worklist.todo.meeting": "Öffne den Termin, um dich vorzubereiten.",
+  "worklist.todo.meeting_outcome":
+    "Halte fest, was dabei herauskam. Fand er nicht statt, wähle „Hat nicht stattgefunden“ oder sag ihn über die Kalendereinladung ab.",
+  "worklist.todo.meeting_follow_up": "Sende den Teilnehmenden ein Follow-up.",
+  "worklist.todo.relationship_decay":
+    "Melde dich, oder leg es für einen Monat beiseite.",
+  "worklist.todo.conversation_claim":
+    "Erledige es und markiere es dann als erledigt.",
+  "worklist.todo.bounce": "Prüfe die Adresse und sende die E-Mail dann erneut.",
+  "worklist.todo.undelivered":
+    "Öffne die E-Mail, um den Grund zu sehen, und sende sie dann erneut.",
+  "worklist.todo.automation_run":
+    "Öffne den Lauf, sieh nach, warum er angehalten hat, und behebe die Ursache.",
+  "worklist.todo.capture_health":
+    "Prüfe die Verbindung des Postfachs, damit seine E-Mails wieder erfasst werden.",
+  "worklist.todo.ai_work_health":
+    "Prüfe ihren KI-Anbieter in den Einstellungen.",
+  "worklist.todo.failed_approval":
+    "Prüfe, was passiert ist, und nimm es dann zur Kenntnis.",
+  "worklist.todo.deal_suggestion":
+    "Lege den Deal an, oder verwirf den Vorschlag.",
+  "worklist.todo.tag_suggestion":
+    "Wende das Tag an, oder verwirf den Vorschlag.",
+  "worklist.todo.domain_question":
+    "Bestätige ein Unternehmen, wähle eines, oder erfasse keine E-Mails von dieser Domain mehr.",
   "worklist.ask.approval":
     "Ein Agent hat eine Änderung vorgeschlagen und wartet auf eine Entscheidung. Gib sie frei oder lehne sie ab.",
   "worklist.ask.dedupe_candidate":
@@ -19354,6 +19643,9 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Für diesen Datensatz wurde ein Tag vorgeschlagen. Übernimm ihn oder verwirf den Vorschlag.",
   "worklist.ask.task":
     "Diese Aufgabe ist offen. Erledige sie und markiere sie als erledigt, oder verschiebe sie auf einen anderen Tag.",
+  "worklist.ask.task_unchecked":
+    "Margince kann nicht prüfen, ob dies beantwortet wurde: Der Text der Mail lässt sich nicht mehr lesen. Markiere die Aufgabe als erledigt, sobald sie es ist.",
+  "worklist.ask.task_unchecked_reply": "Zuletzt gesendete Antwort: {date}",
   "worklist.ask.brief_item":
     "Die nächtliche Prüfung hat diesen Deal markiert. Reagiere darauf, stelle ihn zurück oder verwirf ihn.",
   "worklist.ask.conversation_claim":
@@ -19363,7 +19655,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "worklist.ask.customer_waiting":
     "Ein Kunde hat geschrieben, und noch niemand hat geantwortet. Beantworte die Nachricht.",
   "worklist.ask.lead_response":
-    "Dieser Lead wartet auf eine erste Antwort. Melde dich, bevor seine Antwortfrist abläuft.",
+    "Dieser Lead wartet auf eine erste Antwort. Melde dich jetzt, ein neuer Lead kühlt schnell ab.",
   "worklist.ask.deal_at_risk":
     "Dieser Deal zeigt Anzeichen, dass er abrutscht. Öffne ihn und plane den nächsten Schritt.",
   "worklist.ask.meeting":
@@ -19378,6 +19670,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Diesem Kontakt steht ein Datenschutzhinweis zu. Sende ihn, fordere eine Bestätigung der Daten an oder beende die Pflicht.",
   "worklist.ask.booking_health":
     "Deine Buchungsseite ist pausiert, Gäste können nicht buchen. Öffne die Buchungseinstellungen und verbinde einen Kalender, in den Margince Termine eintragen darf.",
+  "worklist.ask.capture_health.calendar":
+    "Ein Kalender erfasst keine Termine mehr. Verbinde ihn neu, damit seine Termine wieder erfasst werden.",
   "worklist.ask.capture_health":
     "Ein Postfach erfasst keine E-Mails mehr. Verbinde es neu, damit seine E-Mails wieder erfasst werden.",
   "worklist.ask.domain_question":
@@ -19395,7 +19689,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "worklist.ask.introduction_request":
     "Ein Teammitglied bittet dich, es einem Kontakt vorzustellen. Nimm die Anfrage an oder lehne sie ab.",
   "worklist.ask.meeting_outcome":
-    "Dieser Termin ist vorbei, und nichts hält fest, wie er gelaufen ist. Halte das Ergebnis fest oder markiere ihn als abgesagt, wenn er nicht stattfand.",
+    "Dieser Termin ist vorbei, und nichts hält fest, wie er gelaufen ist. Halte das Ergebnis fest. Fand er nicht statt, wähle „Hat nicht stattgefunden“ oder sag ihn über die Kalendereinladung ab.",
   "worklist.ask.weekly_commitment":
     "Du hast das für diese Woche geplant. Erledige es oder verschiebe es in deinem Wochenplan.",
   "worklist.ask.awaiting_reply":
@@ -19625,6 +19919,12 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "receipt.detail.by": "Ausgeführt von",
   "receipt.detail.when": "Zeitpunkt",
   "receipt.detail.source": "Quelle",
+  "receipt.detail.sourceAt": "Datum der Quelle",
+  "receipt.detail.reasonKind": "Grund",
+  "receipt.detail.reasonKind.rule":
+    "Eine Regel: Margince hat gezählt, was die Daten zeigen",
+  "receipt.detail.reasonKind.inference":
+    "Eine Schlussfolgerung: Margince hat gelesen, was der Kunde geschrieben oder gesagt hat",
   "worklist.handled.showMore": "Mehr anzeigen",
   "worklist.exceptions.empty": "Keine Team-Ausnahmen.",
   "worklist.exceptions.loading": "Team wird geladen…",
@@ -19851,7 +20151,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "worklist.untitled.task": "Aufgabe ohne Titel",
   "worklist.untitled.brief_item": "Zu prüfender Deal",
   "worklist.mayBeDone.asked":
-    "Vielleicht schon erledigt: Du hast am {date} geschrieben.",
+    "Vielleicht schon erledigt: Am {date} ging eine E-Mail an sie.",
   "worklist.mayBeDone.done": "Erledigt",
   "worklist.mayBeDone.notYet": "Noch nicht",
   "worklist.recipients.label": "Empfangende",
@@ -20168,32 +20468,37 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "E-Mail, Kalender und Anmeldung über eine eigene Entra-App.",
   "firstRun.platform.imap": "IMAP",
   "firstRun.platform.imapWhat":
-    "Jedes Postfach verbindet sich mit einem eigenen IMAP-App-Passwort. Angemeldet wird mit E-Mail-Adresse und Passwort.",
-  "firstRun.platform.redirectTitle":
-    "Diese Weiterleitungs-URIs in der App registrieren",
-  "firstRun.platform.redirectHint":
-    "Füge jede URI der App hinzu, bevor du hier speicherst. „Anmeldung“ bringt eine Schaltfläche zum Anmelden auf die Anmeldeseite. Mit „Postfach“ und „Kalender“ können Nutzende ihr eigenes Postfach und ihren eigenen Kalender verbinden. Fehlt eine URI, schlägt die Verbindung am Zustimmungsbildschirm des Anbieters fehl.",
-  "firstRun.google.helpToggle": "Wo du diese Angaben findest",
-  "firstRun.google.helpStep1":
-    "Öffne in der Google Cloud Console ein Projekt und gehe zu „APIs und Dienste“, dann „Anmeldedaten“. Wähle „Anmeldedaten erstellen“, dann „OAuth-Client-ID“, und wähle „Webanwendung“.",
-  "firstRun.google.helpStep2":
-    "Aktiviere die Gmail API und füge dem Zustimmungsbildschirm die Bereiche gmail.readonly, gmail.send und userinfo.profile hinzu (userinfo.profile liefert das Profilbild des Google-Kontos). Die Bereiche werden gemeinsam angefragt, da Google einem bereits ausgestellten Refresh-Token keinen Bereich hinzufügt. Wird ein Bereich später angefordert, muss das Postfach erneut verbunden werden.",
-  "firstRun.google.helpStep3":
-    "Füge unter „Autorisierte Weiterleitungs-URIs“ die oben aufgeführten URIs hinzu. „Postfach“ ist für E-Mails erforderlich. „Kalender“ und „Anmeldung“ aktivieren die jeweilige Funktion.",
-  "firstRun.google.helpStep4":
-    "Kopiere Client-ID und Clientschlüssel in die 2 Felder unten. Der Clientschlüssel wird einmal gesendet, im Schlüsseltresor gespeichert und ist danach nie wieder lesbar.",
-  "firstRun.google.helpConsole": "Google Cloud Console für Anmeldedaten",
-  "firstRun.google.helpDocs":
-    "Alle Voraussetzungen, inklusive Microsoft und IMAP: docs/how-to/connect-a-mailbox.md",
+    "Jedes Postfach verbindet sich über IMAP mit dem Passwort, das sein Maildienst dafür vergibt, oft einem App-Passwort. Angemeldet wird mit E-Mail-Adresse und Passwort.",
+  "oauthApp.steps.google.apisTitle": "Gmail und Google Kalender aktivieren",
+  "oauthApp.steps.google.apisBody":
+    "Aktiviere in der API-Bibliothek die Gmail API und die Google Calendar API. Füge dann auf dem Zustimmungsbildschirm unter „Datenzugriff“ die Bereiche gmail.readonly, gmail.send, calendar.readonly, calendar.events.owned und userinfo.profile hinzu. Diese werden beim Verbinden von Postfach und Kalender bestätigt.",
+  "oauthApp.steps.google.apisLink": "API-Bibliothek öffnen",
+  "oauthApp.steps.google.pasteBody":
+    "Google zeigt beides in einem Dialog, nachdem du „Erstellen“ gewählt hast. Hast du ihn geschlossen, öffne den Client unter „Anmeldedaten“: Oben steht die Client-ID, und „Secret hinzufügen“ erzeugt einen neuen Clientschlüssel.",
+  "oauthApp.steps.microsoft.permissionsTitle":
+    "Zugriff auf Mail und Kalender erlauben",
+  "oauthApp.steps.microsoft.permissionsBody":
+    "Öffne „API-Berechtigungen“, wähle „Berechtigung hinzufügen“, dann „Microsoft Graph“, dann „Delegierte Berechtigungen“. Füge openid, email, profile, offline_access, User.Read, Mail.Read, Mail.Send und Calendars.ReadWrite hinzu. Wähle dann „Administratorzustimmung erteilen“, damit niemand in deinem Unternehmen sie einzeln bestätigen muss.",
+  "oauthApp.steps.microsoft.secretTitle": "Clientschlüssel erstellen",
+  "oauthApp.steps.microsoft.secretBody":
+    "Öffne „Zertifikate & Geheimnisse“ und wähle „Neuer geheimer Clientschlüssel“. Kopiere sofort den „Wert“, nicht die „Geheimnis-ID“: Entra zeigt den Wert nur einmal. Notiere das Ablaufdatum; läuft der Schlüssel ab, synchronisieren die Postfächer erst wieder, wenn hier ein neuer gespeichert ist.",
+  "oauthApp.steps.microsoft.pasteTitle": "IDs und Clientschlüssel einfügen",
+  "oauthApp.steps.microsoft.pasteBody":
+    "Die Übersicht der App zeigt die Anwendungs-ID und die Verzeichnis-ID.",
+  "firstRun.imap.passwordTitle": "IMAP-Passwort besorgen",
+  "firstRun.imap.passwordBody":
+    "Gmail und iCloud brauchen ein App-Passwort, das du erstellst, sobald die Bestätigung in zwei Schritten aktiv ist; das normale Passwort wird abgelehnt. Gmail: Google-Konto, Sicherheit, App-Passwörter. iCloud: Apple-Konto, Anmeldung und Sicherheit, App-spezifische Passwörter. Jeder andere Maildienst sagt auf seiner Hilfeseite, welches Passwort IMAP braucht. Postfächer von Microsoft 365 nehmen über IMAP kein Passwort mehr an: Wähle oben Microsoft 365. Private Postfächer von Outlook.com lassen sich hier nicht verbinden.",
+  "firstRun.imap.serverTitle": "IMAP-Server nachschlagen",
+  "firstRun.imap.serverBody":
+    "Gmail nutzt imap.gmail.com und iCloud nutzt imap.mail.me.com, jeweils auf Port 993. Jeder andere Maildienst nennt seinen Server auf seiner Hilfeseite zu den IMAP-Einstellungen.",
+  "firstRun.imap.connectTitle": "Dein Postfach verbinden",
   "firstRun.platform.imapNote":
-    "Für die ganze Installation wird nichts konfiguriert. Verbinde dein eigenes Postfach jetzt oder später. Weitere Postfächer werden in den Einstellungen unter Verbindungen verbunden, jedes mit eigenem App-Passwort.",
+    "Für die ganze Installation wird nichts konfiguriert. Verbinde dein eigenes Postfach jetzt oder später. Weitere Postfächer werden in den Einstellungen unter Verbindungen verbunden, jedes mit eigenem IMAP-Passwort.",
   "firstRun.platform.skip": "Nicht jetzt",
   "firstRun.needed": "Zum Fortfahren nötig",
   "firstRun.stillNeeded": "Noch erforderlich: {fields}",
   "firstRun.platform.foot":
     "Alle Antworten hier lassen sich später in den Einstellungen ändern.",
-  "firstRun.microsoft.note":
-    "Registriere in Microsoft Entra eine App mit den Weiterleitungs-URIs oben und füge hier ihre Client-ID und ihren Clientschlüssel ein. Binde die App an dein Verzeichnis: Die Postfächer dieses Verzeichnisses verbinden sich über die App, und seine Mitglieder melden sich darüber an.",
   "firstRun.microsoft.helpSignIn":
     "Das Verzeichnis ist hier erforderlich, da es Microsoft auf die Anmeldeseite bringt. Um eine App ohne Verzeichnis zu registrieren (jedes Unternehmen kann ein Postfach verbinden, niemand meldet sich mit Microsoft an), nutze stattdessen die Einstellungen.",
   "firstRun.microsoft.tenantHint":
@@ -20320,6 +20625,10 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Bis du „Weiter“ wählst, wird nichts an den Anbieter gesendet.",
   "contact.card.dealTitle": "Deal von {name}",
   "contact.card.deals": "Deals",
+  "contact.card.openTasks": "Offene Aufgaben",
+  "contact.card.noOpenTasks": "Keine offenen Aufgaben",
+  "contact.moment.doneToast":
+    "Als erledigt markiert. Es kommt wieder, sobald eine Seite erneut schreibt.",
   "contact.card.understandingTitle": "{name} verstehen",
   "contact.card.correct": "Etwas korrigieren",
   "contact.card.said": "Was gesagt wurde",
@@ -21306,6 +21615,9 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "scheduling.pause": "Buchungen pausieren",
   "record.details.showEmpty_one": "{count} leeres Feld zeigen",
   "record.details.showEmpty_other": "{count} leere Felder zeigen",
+  "contact.handles.more_one": "+{count} weitere",
+  "contact.handles.more_other": "+{count} weitere",
+  "contact.handles.fewer": "Weniger anzeigen",
   "record.details.hideEmpty": "Leere Felder ausblenden",
   "record.verb.email": "E-Mail",
   "record.verb.call": "Anruf",
@@ -21937,10 +22249,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "brief.done.changeCount_other": "{count} Änderungen",
   "brief.done.steps": "Änderungen an diesem Deal, neueste zuerst",
   "brief.done.title": "Für dich erledigt",
-  "brief.done.waiting_one": "{count} Deal wartet auf deine Prüfung",
-  "brief.done.waiting_other": "{count} Deals warten auf deine Prüfung",
-  "brief.done.reviewAll_one": "{count} Deal prüfen",
-  "brief.done.reviewAll_other": "Alle {count} Deals prüfen",
+  "brief.done.seeAll_one": "{count} Deal ansehen",
+  "brief.done.seeAll_other": "Alle {count} Deals ansehen",
   "brief.done.drawerTitle_one": "{count} Deal, den Margince geändert hat",
   "brief.done.drawerTitle_other": "{count} Deals, die Margince geändert hat",
   "changes.undoDeals_one": "Änderungen an {count} Deal rückgängig machen",
@@ -21952,11 +22262,10 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "brief.done.showNew": "Neue Änderungen zeigen",
   "brief.done.history": "Änderungsverlauf",
   "brief.done.dealsLabel": "Deals, die Margince geändert hat",
+  "brief.done.pick": "Änderungen an {name} rückgängig machen",
   "brief.done.noReason": "Grund nicht verfügbar",
   "brief.done.markedLost": "Als verloren markiert",
   "brief.done.customerWrote": "Der Kunde schrieb:",
-  "brief.changes.markReviewed": "Als geprüft markieren",
-  "brief.changes.reviewed": "Geprüft",
   "magic.lane.doneOther": "Weitere Änderungen",
   "changes.bulk.undone_one": "Auf {count} Deal rückgängig gemacht.",
   "changes.bulk.undone_other": "Auf {count} Deals rückgängig gemacht.",
@@ -21970,9 +22279,166 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "changes.bulk.confirm_other":
     "{count} Deals brauchen deine Bestätigung. Mach jeden in seiner eigenen Zeile rückgängig.",
   "changes.bulk.unsent_one": "{count} Deal wurde nicht gesendet.",
+  "changes.bulk.settled_one":
+    "{count} Deal hat keine Änderung mehr zum Rückgängigmachen.",
+  "changes.bulk.settled_other":
+    "{count} Deals haben keine Änderung mehr zum Rückgängigmachen.",
   "changes.bulk.unsent_other": "{count} Deals wurden nicht gesendet.",
   "changes.bulk.confirmOnDeal":
     "Öffne den Deal, um das Rückgängigmachen zu bestätigen.",
   "changes.bulk.retry": "Erneut senden",
   "changes.bulk.unfinished": "Nicht ganz rückgängig gemachte Deals",
+  "changes.bulk.clear": "Ergebnis ausblenden",
+  "nav.progress": "Fortschritt",
+  "nav.myProgress": "Mein Fortschritt",
+  "nav.salesGoals": "Umsatzziele",
+  "progress.controls": "Zeitraum und Umfang",
+  "progress.viewGoals": "Umsatzziele ansehen",
+  "progress.period": "Zeitraum",
+  "progress.monthly": "Monatlich",
+  "progress.yearly": "Jährlich",
+  "progress.month": "Monat",
+  "progress.year": "Jahr",
+  "progress.scope": "Mitglied oder Team",
+  "progress.reading": "Fortschritt wird gelesen",
+  "progress.myTitle": "Fortschritt",
+  "progress.teamTitle": "Team-Fortschritt",
+  "progress.heading": "{whose} · {scope} · {period} · Zahlen bis {cutoff}",
+  "progress.closedRevenue": "Abgeschlossener Umsatz",
+  "progress.goal": "Ziel",
+  "progress.goalLine": "Ziel für den Zeitraum: {goal}",
+  "progress.goalIncompleteTeamLine":
+    "Ziele unvollständig: Mindestens einem Teammitglied fehlt ein Monatsziel, bisher {subtotal}",
+  "progress.goalIncompleteLine":
+    "Ziele unvollständig: {set} von {needed} Monaten gesetzt, bisher {subtotal}",
+  "progress.goal.set": "Gesetzt",
+  "progress.goal.zero": "Null",
+  "progress.goal.missing": "Kein Ziel gesetzt",
+  "progress.goal.incomplete": "Ziele unvollständig",
+  "progress.goal.withheld": "Ausgeblendet",
+  "progress.goal.other_currency": "In anderer Währung",
+  "progress.goal.changed_outside_plan": "Außerhalb des Plans geändert",
+  "progress.goalChanged":
+    "Ein Monat dieses Ziels wurde außerhalb der Umsatzziele geändert. Eine Führungskraft sollte den Plan prüfen.",
+  "progress.completion": "{percent} % des Ziels",
+  "progress.partial":
+    "Einige Deals in dieser Zahl haben keinen umgerechneten Wert, darum wird keine Erreichung angegeben.",
+  "progress.notStarted": "Nicht begonnen",
+  "progress.withheld": "Ausgeblendet",
+  "progress.goalMet": "Ziel erreicht",
+  "progress.aboveGoal": "{amount} über dem Ziel",
+  "progress.belowGoal": "{amount} unter dem Ziel",
+  "progress.viewClosedDeals": "Abgeschlossene Deals ansehen",
+  "progress.readings": "Umsatzwerte",
+  "progress.productSales": "Produktverkäufe",
+  "progress.serviceSales": "Services und Projekte",
+  "progress.planned": "Geplanter Umsatz",
+  "progress.plannedAt": "Offene Deals, Stand {at}",
+  "progress.unclassified": "Nicht zugeordnet",
+  "progress.unclassifiedDetail":
+    "Dieser Umsatz ist keinem Produkt und keiner Dienstleistung zugeordnet.",
+  "progress.invalidDeals_one":
+    "{count} Deal hat Positionen, die mehr wert sind als der Deal.",
+  "progress.invalidDeals_other":
+    "{count} Deals haben Positionen, die mehr wert sind als der Deal.",
+  "progress.itemsMore_one": "{items} und {count} weiteres",
+  "progress.itemsMore_other": "{items} und {count} weitere",
+  "progress.team": "Team",
+  "progress.member": "Teammitglied",
+  "progress.delta": "Differenz",
+  "progress.membersWithheld":
+    "Einige Mitglieder sind ausgeblendet, darum ist auch das Teamziel ausgeblendet.",
+  "progress.months": "Monate {year}",
+  "progress.definition":
+    "Abgeschlossener Umsatz ist der Wert der im Zeitraum gewonnenen Deals, dieselbe Zahl wie in Analytics. Das Ziel ist die Summe der monatlichen Umsatzziele im Zeitraum. Ein Jahresziel braucht alle zwölf Monate.",
+  "progress.work": "Aktuelle Arbeit",
+  "progress.work.leads": "Leads",
+  "progress.work.deals": "Deals",
+  "progress.work.lead": "Lead",
+  "progress.work.deal": "Deal",
+  "progress.work.status": "Status",
+  "progress.work.nextTask": "Nächste Aufgabe",
+  "progress.work.noNextTask": "Keine nächste Aufgabe",
+  "progress.work.owner": "Verantwortlich",
+  "progress.work.amount": "Geplanter Betrag",
+  "progress.work.noAmount": "Kein Betrag",
+  "progress.work.expectedClose": "Erwarteter Abschluss",
+  "progress.work.noClose": "Kein Datum",
+  "progress.work.unnamed": "Lead ohne Namen",
+  "progress.work.empty": "In dieser Liste ist nichts offen.",
+  "progress.work.more": "Mehr anzeigen",
+  "progress.plannedAhead": "Geplant, noch nicht abgeschlossen",
+  "progress.rail": "Ziel und Definition",
+  "progress.definitionTitle": "Was zählt",
+  "progress.goalBasis": "Woher das Ziel kommt",
+  "progress.goalFor": "Ziel für {period}",
+  "progress.goalMonths": "Monate mit Ziel",
+  "progress.goalMonthsSet": "{set} von {needed}",
+  "progress.goalBasisNote":
+    "Das Ziel ist die Summe der veröffentlichten Monatsziele.",
+  "progress.ofGoal": "Abgeschlossener Umsatz von {name} gegenüber dem Ziel",
+  "progress.yearLine": "{year} bisher: {closed} von {goal} ({percent} %)",
+  "progress.work.note": "Jetzt offen, unabhängig vom Zeitraum.",
+  "progress.work.saleProduct": "Produkt",
+  "progress.work.saleService": "Dienstleistung",
+  "progress.work.saleBoth": "Produkt und Dienstleistung",
+  "progress.work.salePartly": "Teilweise zugeordnet",
+  "progress.work.saleNone": "Nicht zugeordnet",
+  "progress.work.overdue": "Überfällig",
+  "progress.work.outside": "Außerhalb des Zeitraums",
+  "goals.controls": "Jahr und Mitglied",
+  "goals.viewProgress": "Fortschritt ansehen",
+  "goals.seller": "Mitglied",
+  "goals.reading": "Umsatzziele werden gelesen",
+  "goals.planTitle": "Umsatzziele von {name} für {year}",
+  "goals.state.no_goal": "Kein Plan",
+  "goals.state.draft": "Entwurf",
+  "goals.state.published": "Veröffentlicht",
+  "goals.state.published_with_draft": "Veröffentlicht, Entwurf offen",
+  "goals.state.withdrawn": "Zurückgezogen",
+  "goals.state.changed_outside_plan": "Außerhalb des Plans geändert",
+  "goals.readOnly":
+    "Nur lesen. Ziele werden gemeinsam vereinbart. Nur wer Umsatzziele verwaltet, kann sie anlegen, ändern oder veröffentlichen.",
+  "goals.months": "Monatsziele",
+  "goals.yearTotal": "Jahressumme",
+  "goals.notSet": "Nicht gesetzt",
+  "goals.history": "Verlauf",
+  "goals.history.what": "Änderung",
+  "goals.history.reason": "Grund",
+  "goals.history.when": "Wann",
+  "goals.event.draft": "{name} hat einen Entwurf gespeichert",
+  "goals.event.published": "{name} hat die Ziele veröffentlicht",
+  "goals.event.discarded": "{name} hat den Entwurf verworfen",
+  "goals.event.withdrawn": "{name} hat die Ziele zurückgezogen",
+  "goals.roster": "Vertriebsteam",
+  "goals.status": "Status",
+  "goals.yearly": "Jahresziel in {currency}",
+  "goals.spread": "Gleich verteilen",
+  "goals.monthsSum": "Die Monate ergeben zusammen {total}.",
+  "goals.monthsMissing_one": "{count} Monat ist nicht gesetzt.",
+  "goals.monthsMissing_other": "{count} Monate sind nicht gesetzt.",
+  "goals.sumDiffers":
+    "Die Monate ergeben {total}, nicht das Jahresziel von {yearly}.",
+  "goals.reason": "Grund",
+  "goals.reasonHint":
+    "Wird mit der Änderung gespeichert und im Verlauf gezeigt.",
+  "goals.reasonNeeded": "Schreib zuerst einen Grund.",
+  "goals.sellerReads":
+    "{name} kann diesen Plan, seine Entwürfe und den Grund jeder Änderung lesen.",
+  "goals.saveDraft": "Entwurf speichern",
+  "goals.discard": "Entwurf verwerfen",
+  "goals.publish": "Veröffentlichen",
+  "goals.withdraw": "Zurückziehen",
+  "goals.saveFirst": "Speichere zuerst den Entwurf.",
+  "goals.completeFirst": "Setze zuerst alle zwölf Monate.",
+  "goals.positiveFirst": "Das Jahresziel muss größer als null sein.",
+  "goals.matchFirst": "Lass die Monate zuerst das Jahresziel ergeben.",
+  "goals.publishTitle": "Ziele von {name} für {year} veröffentlichen?",
+  "goals.publishBody":
+    "Die zwölf Monate, insgesamt {total}, werden zu den Zielen, die jeder Bericht liest.",
+  "goals.agreed": "Diese Ziele wurden gemeinsam vereinbart.",
+  "goals.agreeFirst": "Bestätige, dass die Ziele gemeinsam vereinbart wurden.",
+  "goals.withdrawTitle": "Ziele von {name} für {year} zurückziehen?",
+  "goals.withdrawBody":
+    "Alle zwölf Monate zählen nicht mehr als Ziele. Der Verlauf behält sie.",
 };

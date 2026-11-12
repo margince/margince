@@ -198,7 +198,7 @@ const (
 // TaskContractHash is the sha256 of api/ai-tasks.yaml at generation
 // time: a build fingerprint the cert runner can compare against a
 // freshly hashed contract file to catch a stale generated table.
-const TaskContractHash = "0117180ee08b2783f8c9111aad8c3de026d815de0beb813e0505ba519bfee71b"
+const TaskContractHash = "57f69bac5b28bd95ac7b17bcf6b3fbca849c709ff3c0b0ae139d3672489ecae4"
 
 // AllTasks returns every contract task, sorted — the completeness
 // check a certification run walks to prove it covers every routed
@@ -630,6 +630,52 @@ var localOnlyTaskList = []Task{
 
 // LocalOnlyTasks returns the local-only tasks in contract order.
 func LocalOnlyTasks() []Task { return localOnlyTaskList }
+
+// taskSubjectRestriction is each task's declared restriction posture.
+var taskSubjectRestriction = map[Task]SubjectRestrictionPosture{
+	TaskAccountScan:                   {Posture: "honour", Reason: ""},
+	TaskAgentLoop:                     {Posture: "none", Reason: "an agent principal's reads are filtered below the model: the content gate and the audience arm (auth.ActivityContentClause, auth.ActivityAudienceArm) withhold the subject, body and reminders of every mail a restricted contact sent or received, discover-level listings included, and the contact row scope hides the restricted contact itself from every record read, listing and link walk. The runner binds the agent principal for every tool step, a resumed run included, so no tool step reads as the system principal"},
+	TaskBriefRanking:                  {Posture: "none", Reason: "ranks deals by numeric factor scores; no contact's data is in the prompt"},
+	TaskCaptureClassify:               {Posture: "honour", Reason: ""},
+	TaskCaptureConfidentialityVerdict: {Posture: "honour", Reason: ""},
+	TaskCaptureCounterpartyVerdict:    {Posture: "honour", Reason: ""},
+	TaskCertJudge:                     {Posture: "none", Reason: "grades certification corpus answers, never live records"},
+	TaskColdStart:                     {Posture: "none", Reason: "reads our own company's website and what the admin types about our company"},
+	TaskCorpusAsk:                     {Posture: "none", Reason: "reads the documents our company filed in its knowledge base, not contact records or mail"},
+	TaskDealHealth:                    {Posture: "honour", Reason: ""},
+	TaskDealVerdict:                   {Posture: "honour", Reason: ""},
+	TaskDocumentExtract:               {Posture: "honour", Reason: ""},
+	TaskDraftReply:                    {Posture: "honour", Reason: ""},
+	TaskEnrich:                        {Posture: "honour", Reason: ""},
+	TaskGrowthFit:                     {Posture: "none", Reason: "reads the company's own recorded facts and our offering, never a contact's record or mail"},
+	TaskNlSearch:                      {Posture: "none", Reason: "is handed a sentence and the caller's filter vocabulary, never a record"},
+	TaskOfferDraft:                    {Posture: "honour", Reason: ""},
+	TaskOwedVerdict:                   {Posture: "honour", Reason: ""},
+	TaskProposeRoles:                  {Posture: "honour", Reason: ""},
+	TaskRateExtract:                   {Posture: "none", Reason: "reads a published exchange-rate page"},
+	TaskReaderRendering:               {Posture: "honour", Reason: ""},
+	TaskReportInterpret:               {Posture: "none", Reason: "reads evaluated report figures and deal names, never a contact's record or mail"},
+	TaskReportSetup:                   {Posture: "none", Reason: "reads the manager's description and the report catalog, never a record"},
+	TaskRequestSettlement:             {Posture: "honour", Reason: ""},
+	TaskSignalExtract:                 {Posture: "honour", Reason: ""},
+	TaskSiteExtract:                   {Posture: "none", Reason: "reads a company's public website"},
+	TaskSiteFactExtract:               {Posture: "none", Reason: "reads a company's public website"},
+	TaskSiteTriage:                    {Posture: "none", Reason: "reads an email domain's public website"},
+	TaskStageEvidenceExtract:          {Posture: "honour", Reason: ""},
+	TaskSummarize:                     {Posture: "honour", Reason: ""},
+	TaskTagSuggest:                    {Posture: "honour", Reason: ""},
+	TaskTranscript:                    {Posture: "honour", Reason: ""},
+	TaskTranscriptPropose:             {Posture: "honour", Reason: ""},
+	TaskVoiceBuild:                    {Posture: "none", Reason: "learns from the user's own corpus, and loading it leaves out sent mail a restricted contact received"},
+	TaskWeeklyLearnings:               {Posture: "none", Reason: "reads the week's results as figures, never a contact's record or mail"},
+	TaskWeeklyReview:                  {Posture: "none", Reason: "reads the week's counts and deal names, never a contact's record or mail"},
+}
+
+// SubjectRestrictionOf returns the task's declared restriction posture.
+func SubjectRestrictionOf(t Task) SubjectRestrictionPosture { return taskSubjectRestriction[t] }
+
+// HonoursRestriction reports whether the task refuses a restricted contact.
+func HonoursRestriction(t Task) bool { return taskSubjectRestriction[t].Posture == "honour" }
 
 // taskDecisions are the tasks that declare a decision form. DECLARED,
 // because a decision site needs an adapter that builds the typed question

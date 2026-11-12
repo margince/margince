@@ -42,6 +42,10 @@ type Sink struct {
 	// files is the timeline module's attachment writer. Nil is a role that
 	// keeps no files: messages still land, and their attachments do not.
 	files FileKeeper
+	// meetingNotes lands the text of a meeting's notes Docs. Nil reads none.
+	meetingNotes MeetingNotesWriter
+	// now dates the meeting-notes window. Nil is the wall clock.
+	now func() time.Time
 	// projectKeys resolves the subject-line rung of the project attribution
 	// ladder. Nil is a role that attributes nothing — messages still land, and
 	// none of them is filed under a project.

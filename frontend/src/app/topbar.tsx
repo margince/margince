@@ -20,6 +20,7 @@ import {
   listAddress,
   rememberListAddress,
 } from "../lib/listreturn";
+import { useReadsTeamProgress } from "../lib/progressreader";
 import { type Route, routeHash, useHash } from "../lib/router";
 import { usePhoneViewport } from "../lib/viewport";
 import { AccountMenu } from "./account";
@@ -28,6 +29,7 @@ import {
   entryLabel,
   NAV,
   type NavSection,
+  navLabelKey,
   recordKindOf,
   reservedPageTitle,
 } from "./nav";
@@ -76,6 +78,7 @@ function useCrumbs(route: Route, section?: NavSection): readonly Crumb[] {
   const t = useT();
   const { locale } = useLocale();
   const navItem = NAV.find((item) => item.screen === route.screen);
+  const labelKey = navLabelKey(navItem, useReadsTeamProgress());
   const subject = useRouteSubject(route);
   const inSection = sectionHead(section, route);
   const unit =
@@ -87,7 +90,7 @@ function useCrumbs(route: Route, section?: NavSection): readonly Crumb[] {
     // keeps the filter the reader left it with.
     return [
       {
-        label: resolveTitle(route.screen, navItem?.labelKey, t),
+        label: resolveTitle(route.screen, labelKey, t),
         href: listAddress(route.screen),
       },
       { label: subject },
@@ -119,7 +122,7 @@ function useCrumbs(route: Route, section?: NavSection): readonly Crumb[] {
   if (filtersCrumbs) {
     return filtersCrumbs;
   }
-  return [{ label: resolveTitle(route.screen, navItem?.labelKey, t) }];
+  return [{ label: resolveTitle(route.screen, labelKey, t) }];
 }
 
 /**

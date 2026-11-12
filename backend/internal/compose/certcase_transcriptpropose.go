@@ -188,7 +188,7 @@ func (c *transcriptProposeCase) Run(ctx context.Context, completer aitasks.Compl
 	// whose prompt carried today's date would grade a different request every
 	// morning, and any deadline a corpus case states relative to the meeting
 	// would resolve to a different day each run.
-	req := transcriptRequest(c.lines, certTranscriptMeetingDay, string(textlang.English), c.parties)
+	req := transcriptRequest(ids.UUID{}, c.lines, certTranscriptMeetingDay, string(textlang.English), c.parties)
 	trace := aitasks.Trace{Requests: []model.Request{req}}
 	resp, err := completer.Complete(ctx, req)
 	if err != nil {

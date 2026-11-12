@@ -575,9 +575,9 @@ describe("WebFormsCard actions", () => {
     await user.type(screen.getByLabelText(/^Thank-you page/), "x");
     await user.click(screen.getByTestId("save-web-form"));
 
-    expect(await screen.findByText("must be an https address")).toBeTruthy();
+    expect(await screen.findByText("Must be an https address.")).toBeTruthy();
     await user.type(screen.getByLabelText(/^Thank-you page/), "y");
-    expect(screen.queryByText("must be an https address")).toBeNull();
+    expect(screen.queryByText("Must be an https address.")).toBeNull();
   });
 });
 

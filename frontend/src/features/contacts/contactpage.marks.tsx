@@ -1,9 +1,10 @@
 import type { ReactNode } from "react";
+import { ContactCaseEntry } from "../../components/contactcase.entry";
+import { ContactRestrictedMark } from "../../components/stops";
 import { Badge } from "../../design-system/atoms";
 import { useT } from "../../i18n";
 import { dealRoleLabel } from "../../lib/recordlabels";
 import { RecordAccess } from "../records/recordaccess";
-import { ContactCaseEntry } from "./contactcaseentry";
 import type { Contact360 } from "./contactpage";
 
 // Role and record access do not infer an obligation from exchange order.
@@ -19,6 +20,10 @@ export function ContactMarks({
         key={view.contact.id}
         kind="contact"
         record={view.contact}
+      />
+      <ContactRestrictedMark
+        key={`restricted-${view.contact.id}`}
+        contactId={view.contact.id}
       />
       <ContactCaseEntry
         key={`case-${view.contact.id}`}

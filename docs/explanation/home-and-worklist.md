@@ -1,5 +1,5 @@
 <!-- prose:plain -->
-<!-- describes: backend/internal/compose/dealstatus backend/internal/platform/database/storekit/leadengagement.go backend/internal/compose/leadworktasks.go backend/internal/compose/attention backend/internal/compose/commitmentdispatch.go backend/internal/compose/commitmentsettle.go backend/internal/compose/weekly backend/internal/compose/weeklyjobs.go backend/internal/modules/deals/closedate.go backend/internal/modules/deals/changeacceptance.go frontend/src/features/brief/brief.queue.tsx backend/internal/compose/slipping.go backend/internal/compose/attentionriskseam.go backend/internal/modules/deals/deal_read.go backend/internal/modules/deals/atrisklist.go -->
+<!-- describes: backend/internal/compose/dealstatus backend/internal/platform/database/storekit/leadengagement.go backend/internal/compose/leadworktasks.go backend/internal/compose/attention backend/internal/compose/attentionseam.go backend/internal/compose/attentionsnapshotseam.go backend/internal/compose/worklistmetrics.go backend/internal/platform/database/statementmeter.go backend/internal/platform/database/planreuse.go backend/internal/modules/activities/waitingsql.go backend/internal/modules/consent/noticecase.go backend/internal/compose/commitmentdispatch.go backend/internal/compose/commitmentsettle.go backend/internal/compose/weekly backend/internal/compose/weeklyjobs.go backend/internal/modules/deals/closedate.go backend/internal/modules/deals/changeacceptance.go frontend/src/features/brief/brief.queue.tsx backend/internal/compose/slipping.go backend/internal/compose/attentionriskseam.go backend/internal/modules/deals/deal_read.go backend/internal/modules/deals/atrisklist.go -->
 # Home and the Worklist: how the day is ranked
 
 Home has one ranking engine behind three views: the Worklist, the **Needs you** section on Home, and the
@@ -20,6 +20,18 @@ The code:
 - `backend/internal/modules/deals/closedate.go` and `closedatesweep.go`: the nightly close date repair; `changeacceptance.go`: **Accept**.
 - `backend/internal/modules/notices/store.go` and `backend/internal/modules/automation/handlers_event.go`: stage change notices.
 - `frontend/src/lib/router.tsx` and `frontend/src/features/brief/brief.queue.tsx`: old addresses.
+
+The Worklist assembles its lanes in one database snapshot and reuses plans for that read.
+The waiting queue binds its scan cap so its statement text stays stable across pages, and it keeps
+named plans inside the snapshot. Outside that read, the waiting walk plans with each set of bound
+values so it can stop at the cap. The privacy notice queue uses a custom plan because its bound state list
+must be visible to the partial-index planner. The plan-mode scopes restore the mode they found
+before the next read.
+
+The stage metrics count database calls as well as statements, with a batch counted as one exchange.
+Internal plan lookups can cost another protocol round trip. The Worklist integration read holds a
+limit of 106 exchanges for a seeded open-task day. The snapshot sets its plan mode once and
+the task windows share the same mail identities in that read.
 
 ## How a row is ranked
 
@@ -285,10 +297,11 @@ provisional; a future date a human set stays theirs.
 `setCloseDate` in `closedatecorrect.go` and `setWinProbability` in `winprobability.go` write only a real change. The sweep sees a quiet deal again every night. Without that guard, the audit log would show a forecast that moves each night while it stands
 still.
 
-**Accept** (`acceptAppliedDealChange`, `changeacceptance.go`) records an audited review of a close date
-fix or an automatic stage move, and keeps the values the change applied. It is not another write of the
-change. It needs the deal version the reader saw, and refuses a change that was undone or replaced. Undo
-goes through the guarded stage undo for a stage move, and through the record history for a date.
+No screen asks the reader to sign off a change Margince made, because each change carries its Undo.
+`PendingChangesOwnedBy` in `changereport.go` lists a change for 7 days. Undo goes through the guarded
+stage undo for a stage move, and through the record history for a date. **Accept**
+(`acceptAppliedDealChange`, `changeacceptance.go`) stays in the API for older clients, marked to be
+removed. It records an audited review and takes the change off the list, but writes nothing to the deal.
 
 ## Promises read from a conversation
 

@@ -27,6 +27,7 @@ import (
 	"testing"
 
 	"github.com/margince/margince/backend/internal/compose/corereach"
+	"github.com/margince/margince/backend/internal/platform/testdb"
 	"github.com/margince/margince/backend/internal/shared/gatekit"
 	"github.com/margince/margince/backend/pkg/extension/reach"
 )
@@ -139,8 +140,11 @@ func TestEveryCompanyForeignKeyJoinsTheMerge(t *testing.T) {
 		t.Fatal("the merge path's source yielded no written tables — the scan is broken, not the merge")
 	}
 
-	owner := SchemaPool(t)
 	ctx := context.Background()
+	owner := OwnerConn(t)
+	if err := testdb.EnsureSchema(ctx, owner); err != nil {
+		t.Fatal(err)
+	}
 
 	rows, err := owner.Query(ctx, `
 		SELECT c.conrelid::regclass::text AS src_table, a.attname AS src_col,
@@ -221,7 +225,7 @@ func tablesTheMergeWrites(t *testing.T) map[string]bool {
 	t.Helper()
 	written := map[string]bool{}
 	for _, rel := range mergePathFiles {
-		path := filepath.Join(gatekit.ModuleRoot(t), rel)
+		path := filepath.Join("../../..", rel)
 		body, err := os.ReadFile(path)
 		if err != nil {
 			t.Fatalf("reading the merge path %s: %v", rel, err)
@@ -269,7 +273,7 @@ func tablesTheMergeWrites(t *testing.T) map[string]bool {
 // still calls the registry, so dropping that call fails here too.
 func declaredCompanyLinks(t *testing.T) map[string]bool {
 	t.Helper()
-	body, err := os.ReadFile(filepath.Join(gatekit.ModuleRoot(t), "internal/modules/contacts/mergekindid.go"))
+	body, err := os.ReadFile(filepath.Join("../../..", "internal/modules/contacts/mergekindid.go"))
 	if err != nil {
 		t.Fatalf("reading the merge's call into the declared tables: %v", err)
 	}

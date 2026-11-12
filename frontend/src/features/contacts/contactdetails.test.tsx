@@ -260,12 +260,14 @@ describe("the address in the About group", () => {
     );
   }
 
-  it("is the server's address, not the first row", async () => {
+  it("leads with the server's address, not the first row", async () => {
     show("dana.private@brandt.example");
-    expect(
-      await screen.findByText("dana.private@brandt.example"),
-    ).toBeInTheDocument();
-    expect(screen.queryByText("dana@brandt.example")).toBeNull();
+    await screen.findByText("dana.private@brandt.example");
+    const lines = screen.getAllByRole("link", { name: /@brandt\.example$/ });
+    expect(lines.map((line) => line.textContent)).toEqual([
+      "dana.private@brandt.example",
+      "dana@brandt.example",
+    ]);
   });
 
   it("is empty when the server names none", async () => {
@@ -305,12 +307,12 @@ describe("a postal address whose country does not fit", () => {
     expect(
       await screen.findByText("Postal code and city are in Germany"),
     ).toBeInTheDocument();
-    expect(screen.getByText("Berlin, AT")).toBeInTheDocument();
+    expect(screen.getByText("10115 Berlin AT")).toBeInTheDocument();
   });
 
   it("shows no flag when the server reports no mismatch", async () => {
     show({ ...view.contact, address: berlin });
-    expect(await screen.findByText("Berlin, AT")).toBeInTheDocument();
+    expect(await screen.findByText("10115 Berlin AT")).toBeInTheDocument();
     expect(screen.queryByText(/Postal code and city are in/)).toBeNull();
   });
 });

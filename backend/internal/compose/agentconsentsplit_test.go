@@ -21,12 +21,16 @@ func TestConsentRoutesSplitByWhoseDecisionTheyHold(t *testing.T) {
 		asksFirst bool
 	}
 	writes := map[string]weight{
-		"recordConsent": {scopeWrite, true}, "allowContact": {scopeWrite, true}, "revokeOverride": {scopeWrite, true},
+		"recordConsent": {scopeWrite, true}, "revokeOverride": {scopeWrite, true},
 		"liftSuppression": {scopeWrite, true}, "recordQualifyingEvent": {scopeWrite, true},
 		"retractQualifyingEvent": {scopeWrite, true},
 		"issueDoubleOptIn":       {scopeSend, true}, "sendPrivacyNotice": {scopeSend, true}, "requestDetailsConfirmation": {scopeSend, true},
 		// A contact asking to stop has legal weight. The marker asks the model; the server still records it at once.
 		"suppressContact": {scopeWrite, true},
+	}
+	// Consent writes that stay a human admin's alone, each with why.
+	humanOnly := map[string]string{
+		"liftContactRestriction": "ending a restriction of processing resumes the product's use of the contact's data, which only an admin signed in to the app decides, as only one records the restriction",
 	}
 	verbs := map[string]agents.RouteVerb{}
 	for _, v := range RouteVerbs() {
@@ -45,6 +49,13 @@ func TestConsentRoutesSplitByWhoseDecisionTheyHold(t *testing.T) {
 			}
 			continue
 		}
+		if _, human := humanOnly[pol.Op]; human {
+			if pol.Access != accessHumanOnly {
+				t.Errorf("%s (%s) is a human admin's decision and must refuse an agent, got %+v", route, pol.Op, pol)
+			}
+			delete(humanOnly, pol.Op)
+			continue
+		}
 		if pol.Access != accessTool || pol.ServedBy != servedByRoute {
 			t.Errorf("%s (%s) must be a route-backed action of the user's agent, got %+v", route, pol.Op, pol)
 			continue
@@ -61,6 +72,9 @@ func TestConsentRoutesSplitByWhoseDecisionTheyHold(t *testing.T) {
 		delete(writes, pol.Op)
 	}
 	for op := range writes {
+		t.Errorf("%s left the per-contact consent routes: this pin no longer covers it", op)
+	}
+	for op := range humanOnly {
 		t.Errorf("%s left the per-contact consent routes: this pin no longer covers it", op)
 	}
 	if seen == 0 {

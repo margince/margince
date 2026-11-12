@@ -10,8 +10,7 @@ import {
 } from "../design-system/listpopover";
 import { TagPill } from "../design-system/tagpill";
 import { useT } from "../i18n";
-import { useCan } from "../lib/capability";
-import { useListsAvailable } from "../lib/lists.queries";
+import { useCan, useCanWrite } from "../lib/capability";
 import { problemMessageOf } from "../lib/problem";
 import type { RecordTag, TaggableType } from "../lib/tags.queries";
 import {
@@ -19,7 +18,7 @@ import {
   useCreateOrFindTag,
   useTagVocabulary,
 } from "../lib/tags.queries";
-import { AddToShortlistDialog } from "./addtoshortlist";
+import { AddToShortlistDialog, useMayAddToShortlist } from "./addtoshortlist";
 import type { PickedTag } from "./bulktag";
 import "./tagpicker.css";
 import { CreateTagWay, TagListFooter } from "./tagwayforward";
@@ -60,9 +59,10 @@ export function AddTagPicker({
   const apply = useApplyTag(entityType, entityID);
   const create = useCreateOrFindTag();
   const canCreate = useCan("tag", "create");
-  const listsOn = useListsAvailable();
-  const canMakeList = useCan("list", "create");
-  const canShortlist = listsOn && canMakeList;
+  // This way out always creates the Shortlist, then adds the record to it.
+  const mayAdd = useMayAddToShortlist();
+  const mayCreate = useCanWrite("list", "create");
+  const canShortlist = mayAdd && mayCreate;
   // The name a new Shortlist opens with, once the reader takes that way out.
   const [shortlistName, setShortlistName] = useState<string | null>(null);
   // The word this picker created and then failed to put on the record. The

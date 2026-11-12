@@ -14,6 +14,7 @@ import (
 	"context"
 	"testing"
 
+	"github.com/margince/margince/backend/internal/platform/testdb"
 	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
 
@@ -54,7 +55,10 @@ func TestEveryCompanyKindIDReferenceJoinsTheMerge(t *testing.T) {
 		t.Fatal("the merge path's source yielded no written tables — the scan is broken, not the merge")
 	}
 
-	owner := SchemaPool(t)
+	owner := OwnerConn(t)
+	if err := testdb.EnsureSchema(context.Background(), owner); err != nil {
+		t.Fatal(err)
+	}
 
 	rows, err := owner.Query(context.Background(), `
 		SELECT c.relname, a.attname

@@ -15,7 +15,8 @@ set -euo pipefail
 fail=0
 workflow_dir=".github/workflows"
 actions_dir=".github/actions"
-compose_files="docker-compose.dev.yml"
+# The dev stack, and the compose folder a release packs for operators.
+compose_files="docker-compose.dev.yml scripts/deploy/compose/compose.yaml"
 
 if [[ ! -d "$workflow_dir" ]]; then
   echo "No $workflow_dir directory found — skipping image-pin check"
@@ -60,6 +61,9 @@ while IFS= read -r line; do
     \#*) continue ;;                                # commented out — not pulled
   esac
   image=$(echo "$content" | sed 's/.*image:[[:space:]]*//' | cut -d'#' -f1 | tr -d ' "'"'")
+  # The tag RELEASE pulls nothing: scripts/release-compose.sh swaps it for the
+  # pushed digest and refuses to pack without one.
+  [[ "$image" =~ ^ghcr\.io/margince/(api|web|worker):RELEASE$ ]] && continue
   if ! grep -qE '@sha256:[0-9a-f]{64}$' <<<"$image"; then
     echo "UNPINNED IMAGE (pin as tag@sha256:<digest>): $line" >&2
     fail=1

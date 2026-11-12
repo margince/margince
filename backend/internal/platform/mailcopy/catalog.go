@@ -312,6 +312,14 @@ func recordNoticeLines(line writeLine) {
 		"No reply or further action is needed.",
 		"Sie müssen nichts weiter tun und nicht antworten.",
 		"Quý khách không cần trả lời hay thực hiện thêm thao tác nào.")
+	line(func(c *Copy) *string { return &c.RestrictionLiftSubject },
+		"The restriction on your personal data will be lifted",
+		"Die Einschränkung der Verarbeitung Ihrer Daten wird aufgehoben",
+		"Việc hạn chế xử lý dữ liệu cá nhân của quý khách sẽ được dỡ bỏ")
+	line(func(c *Copy) *string { return &c.RestrictionLiftBody },
+		"You asked us to restrict the processing of your personal data. We are lifting that restriction, and we tell you before we do. After this message we process your data as before, including the messages we received while it was restricted.\nIf you disagree, you can contact us directly using the contact details in this message.",
+		"Sie hatten uns gebeten, die Verarbeitung Ihrer personenbezogenen Daten einzuschränken. Wir heben diese Einschränkung auf und teilen Ihnen das vorher mit. Nach dieser Nachricht verarbeiten wir Ihre Daten wieder wie zuvor, auch die Nachrichten, die wir während der Einschränkung erhalten haben.\nWenn Sie nicht einverstanden sind, wenden Sie sich direkt über die Kontaktdaten in dieser E-Mail an uns.",
+		"Quý khách đã yêu cầu chúng tôi hạn chế xử lý dữ liệu cá nhân của quý khách. Chúng tôi sẽ dỡ bỏ việc hạn chế này và thông báo trước cho quý khách. Sau thư này, chúng tôi xử lý dữ liệu của quý khách như trước đây, kể cả các thư nhận được trong thời gian hạn chế.\nNếu không đồng ý, quý khách có thể liên hệ trực tiếp theo thông tin trong email này.")
 }
 
 // confirmConsentLines is the message that asks a reader to turn a request into

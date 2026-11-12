@@ -40,6 +40,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/employment"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/relstrength"
 )
 
 // cohortRepairBatch bounds ONE pass, in messages of each kind.
@@ -140,6 +141,11 @@ func (s *Store) promoteCohortTx(
 	if err := fillContactNameFromAttendance(ctx, tx, canonical); err != nil {
 		return CohortPromotion{}, err
 	}
+	stamped, err := s.stampProvenSenders(ctx, tx, held, canonical)
+	if err != nil {
+		return CohortPromotion{}, err
+	}
+	promoted = append(promoted, stamped...)
 	// A meeting this pass has just FILED is no longer the link-less record the
 	// capture limiter held. Re-deriving says so: until this ran, a meeting
 	// captured before its attendee was a contact stayed participants-only
@@ -307,6 +313,7 @@ func (s *Store) ContactsOwedACohortRepair(ctx context.Context, limit int) ([]ids
 				  FROM activity_participant ap
 				  JOIN contact_email pe ON lower(pe.email) = ap.address AND pe.archived_at IS NULL
 				 WHERE ap.contact_id IS NULL AND ap.user_id IS NULL AND ap.address IS NOT NULL AND NOT ap.past_party_cap
+				   AND `+relstrength.AddressProvesSQL("pe.contact_id", "ap.address")+`
 				   AND NOT EXISTS (
 				       SELECT 1 FROM activity_participant other
 				        WHERE other.activity_id = ap.activity_id
@@ -487,14 +494,4 @@ func (s *Store) AttachDomainBacklog(ctx context.Context, owed DomainBacklog) (in
 		return 0, err
 	}
 	return planted, nil
-}
-
-const (
-	cohortLinkedKey   = "cohort_linked"
-	cohortPromotedKey = "cohort_promoted"
-)
-
-// CohortAuditSQL identifies the additive address-to-contact repair by its immutable audit payload.
-func CohortAuditSQL(alias string) string {
-	return `COALESCE((` + alias + `.entity_type='contact' AND ` + alias + `.action='update' AND ` + alias + `.after ? '` + cohortLinkedKey + `' AND ` + alias + `.after ? '` + cohortPromotedKey + `'),false)`
 }

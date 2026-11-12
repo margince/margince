@@ -69,7 +69,6 @@ func TestAStuckWaitingLaneIsNamedUnavailableAndTheRestOfTheDayStillLoads(t *test
 			Waiting: attentionWaiting{
 				store: activities.NewStore(db),
 				deals: deals.NewStore(db, DealsInstallation()),
-				now:   time.Now,
 			},
 			pool: e.Pool,
 		}).

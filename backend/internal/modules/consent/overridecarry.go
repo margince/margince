@@ -8,30 +8,23 @@ package consent
 // file so each carry's own worked-through reasoning stays legible on its own
 // rather than doubling one already-long file.
 //
-// A standing override (override.go's Allow) is a rep vouching that a
-// machine-level refusal may be overruled for one category. Left uncarried at
-// a merge, it is exactly as quiet a loss as an uncarried stop: the merge
-// moves everything else that points at the retiring record, the override
-// stays attached to an id the send engine no longer evaluates, and the next
-// send to the survivor for that category is refused again — with nothing
-// saying a rep already vouched for it.
+// A standing override is a rep's earlier vouch that a machine-level refusal
+// may be overruled for one category. Left on the retiring record, it sits on
+// an id the send engine no longer evaluates. The next send to the survivor in
+// that category is then refused, with nothing saying a rep vouched for it.
 //
 // COPY, NEVER MOVE, for the same three reasons stopcarry.go gives: the
 // predecessor's row is evidence that THIS record's rep vouched, it may be
 // read in an export or after an un-merge, and a later erasure reaching the
 // predecessor must still find its own rows.
 //
-// NO SEPARATE LOCK METHOD on StopCarrier, but CarryOverridesTx still takes the
-// lock itself, exactly as CarryStopsTx does — every writer of this table's
-// sibling, communication_suppression, takes lockSubjectSuppressions's key
-// (suppressionlock.go's own header states the rule), and this is a writer of
-// communication_override under the same key, so it holds itself to it too.
-// pg_advisory_xact_lock is session-reentrant, so the call is free from
-// mergeContactTx, which already holds the key via LockStopsTx before either
-// carry runs; what it buys is that a caller reaching this exported method
-// WITHOUT that pre-lock — none exists today, but nothing stops one being
-// written tomorrow — cannot let a concurrent Allow interleave and drop a row
-// the same way suppressionlock.go's header describes losing a stop.
+// No separate lock method on StopCarrier, but CarryOverridesTx takes the lock
+// itself, as CarryStopsTx does. Every writer of this table and of
+// communication_suppression takes lockSubjectSuppressions's key
+// (suppressionlock.go states the rule). pg_advisory_xact_lock is
+// session-reentrant, so the call is free from mergeContactTx, which already
+// holds the key. A caller without that pre-lock still cannot let a concurrent
+// revoke interleave and drop a row.
 //
 // A SECOND LOCK, WHICH THE SUBJECT KEYS CANNOT STAND IN FOR. The copy below
 // EXTENDS a carry chain, and a chain outlives the subject it started on: the
@@ -45,7 +38,9 @@ import (
 	"fmt"
 
 	"github.com/jackc/pgx/v5"
+	openapi_types "github.com/oapi-codegen/runtime/types"
 
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/ports/commsauthz"
@@ -68,13 +63,11 @@ import (
 // the next vouch, which is still a vouch. So the honest record is both rows, and
 // the read — not a destructive write at merge time — decides which one speaks.
 //
-// WHICH ONLY HOLDS BECAUSE BOTH ROWS ARE NAMEABLE. Each carried row ships its
-// own consent.override_recorded carrying the NEW row's id
-// (auditAndEmitCarriedOverrides below), exactly as the write door does, so a
-// revoker who takes back the strongest can see what is left rather than
-// discovering it from a send that went out anyway. If that id ever comes off the
-// event, this argument goes with it and the carry owes a revoke of the weaker
-// row instead.
+// This holds only because both rows are nameable. Each carried row ships its
+// own consent.override_recorded with the new row's id
+// (auditAndEmitCarriedOverrides below). A revoker who takes back the strongest
+// can see what is left. Without that id on the event, the carry would owe a
+// revoke of the weaker row instead.
 //
 // THE AUTHORITY — AND THE REASON — TRAVEL. RevokeOverride only lets a caller
 // take back a row their own level may revoke, and a rep's never reaches a level
@@ -92,12 +85,9 @@ func (s *Store) CarryOverridesTx(ctx context.Context, tx pgx.Tx, from, to commsa
 	if err := admitACarry(ctx, tx, from, to); err != nil {
 		return err
 	}
-	// LOCKED, on both sides, before the read below — the same call
-	// CarryStopsTx makes and for the same reason: this reads the retiring
-	// subject's live rows and writes the survivor's, and locking only one side
-	// leaves the read open to a concurrent Allow landing between the read and
-	// the write. See the file header for why this is free from mergeContactTx
-	// and load-bearing for any other caller.
+	// Locked on both sides before the read below, as CarryStopsTx does. This
+	// reads the retiring subject's live rows and writes the survivor's. Locking
+	// one side only would let a concurrent carry or revoke land in between.
 	if err := lockBothSidesOfACarry(ctx, tx, from, to); err != nil {
 		return err
 	}
@@ -197,4 +187,17 @@ func auditAndEmitCarriedOverrides(ctx context.Context, tx pgx.Tx, to commsauthz.
 		}
 	}
 	return nil
+}
+
+// overrideRecordedPayload names the carried row, the category it covers and the
+// authority it was recorded at. The id is the handle the revoke door takes, and
+// a lifted event names the same id so the two pair without a lookup.
+func overrideRecordedPayload(
+	id ids.UUID, category string, level commsauthz.AuthorityLevel,
+) crmcontracts.PublicEventConsentOverrideRecorded {
+	return crmcontracts.PublicEventConsentOverrideRecorded{
+		OverrideId:     openapi_types.UUID(id),
+		Category:       category,
+		DecidedByLevel: string(level),
+	}
 }

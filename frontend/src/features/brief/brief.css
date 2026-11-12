@@ -787,6 +787,12 @@
 .brief-done-name a {
   color: var(--textPrimary);
 }
+/* The tick that puts the deal in the review list's Undo, before its name. */
+.brief-done-pick {
+  display: inline-flex;
+  margin-inline-end: var(--space-2);
+  vertical-align: middle;
+}
 .brief-done-latest,
 .brief-done-when {
   color: var(--textSecondary);

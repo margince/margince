@@ -25,8 +25,8 @@ export function FiltersScreen({
 }: Readonly<{ id?: string; list?: string; view?: string }>) {
   const t = useT();
   const me = useMe();
-  // `#/lists` names no list, and the lists a reader can find live in the
-  // library's Shared group. A redirect, so Back never lands here again.
+  // `#/lists` names no list, and every list a reader can find is in the
+  // library. A redirect, so Back never lands here again.
   useEffect(() => {
     if (list === "") {
       navigateReplacing({ screen: "filters", id: "lists" });

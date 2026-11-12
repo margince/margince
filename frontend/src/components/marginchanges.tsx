@@ -13,14 +13,23 @@ import { type Translator, useLocale, usePlural, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import { useCanWrite } from "../lib/capability";
 import { undoResultText } from "../lib/changecopy";
+import { useHandledForYou } from "../lib/handled";
 import {
   archiveQuestion,
   type BundleUndoRun,
   type MarginceChangeBundle,
   pendingChangesQuery,
   stillPending,
+  usePendingMarginceChanges,
   useUndoMarginceChanges,
 } from "../lib/marginchanges";
+import { useViewerId } from "../lib/session";
+import {
+  rememberedUndoRun,
+  rememberUndoRun,
+  settledRun,
+  useRememberedUndoRun,
+} from "../lib/undorun";
 import { EntityRef } from "./entityref";
 
 const KIND_LABEL: Readonly<Record<string, MessageKey>> = {
@@ -52,21 +61,25 @@ type ArchiveQuestion = NonNullable<ReturnType<typeof archiveQuestion>> & {
  * Undoes whole deals. One deal answers in the words for its kinds. Many answer
  * with a count for each outcome, and the deals a failed batch never answered
  * for can be sent again. `onDone` hears each answer the server gave.
+ * `remember` keeps the answer in this browser until the reader clears it, so
+ * a reload still shows what the last run did.
  */
 export function BundleUndo({
   bundles,
   label,
   onDone,
+  remember = false,
 }: Readonly<{
   bundles: readonly MarginceChangeBundle[];
   label: string;
   onDone?: () => void;
+  remember?: boolean;
 }>) {
   const t = useT();
   const client = useQueryClient();
   const writable = useCanWrite("deal", "update");
   const undo = useUndoMarginceChanges();
-  const [run, setRun] = useState<BundleUndoRun | null>(null);
+  const { run, nameOf, setRun } = useUndoRun(remember, bundles);
   const [asking, setAsking] = useState<ArchiveQuestion | null>(null);
   const [rereading, setRereading] = useState(false);
   if (!run && (!writable || bundles.length === 0)) {
@@ -75,12 +88,13 @@ export function BundleUndo({
   const press = (
     chosen: readonly MarginceChangeBundle[],
     archiveConfirmedFor?: string,
+    left: readonly MarginceChangeBundle[] = [],
   ) =>
     undo.mutate(
       { bundles: chosen, archiveConfirmedFor },
       {
         onSuccess: (answer) => {
-          const merged = mergeRuns(run, answer);
+          const merged = mergeRuns(run, answer, left);
           const only =
             bundles.length === 1 && merged.results.length === 1
               ? merged.results[0]
@@ -106,12 +120,24 @@ export function BundleUndo({
         staleTime: 0,
       });
       const again = stillPending(unsent, fresh);
+      // A deal the read no longer lists keeps a line of its own as settled.
+      const left = unsent.filter(
+        (bundle) => !again.some((next) => next.deal_id === bundle.deal_id),
+      );
       if (again.length === 0) {
-        setRun((last) => last && { ...last, unsent: [], error: undefined });
+        setRun(
+          (last) =>
+            last && {
+              ...last,
+              unsent: [],
+              settled: [...(last.settled ?? []), ...left],
+              error: undefined,
+            },
+        );
         onDone?.();
         return;
       }
-      press(again);
+      press(again, undefined, left);
     } catch (error) {
       setRun((last) => last && { ...last, error });
     } finally {
@@ -122,10 +148,13 @@ export function BundleUndo({
     return (
       <BundleUndoAnswer
         run={run}
-        bundles={bundles}
-        single={bundles.length === 1}
+        nameOf={nameOf}
+        single={
+          bundles.length === 1 && run.results.length + run.unsent.length <= 1
+        }
         pending={undo.isPending || rereading}
         onRetry={() => void retry(run.unsent)}
+        onClear={remember ? () => setRun(null) : undefined}
       />
     );
   }
@@ -149,6 +178,62 @@ export function BundleUndo({
   );
 }
 
+type RunUpdate =
+  | BundleUndoRun
+  | null
+  | ((last: BundleUndoRun | null) => BundleUndoRun | null);
+
+/**
+ * The run this control answers with, and the name of each deal in it. A deal
+ * a failed batch did not send is read against the change history. Remembered,
+ * the run is the browser's last one; its error stays with this control.
+ */
+function useUndoRun(
+  remember: boolean,
+  bundles: readonly MarginceChangeBundle[],
+): Readonly<{
+  run: BundleUndoRun | null;
+  nameOf: (dealId: string) => string | undefined;
+  setRun: (next: RunUpdate) => void;
+}> {
+  const [own, setOwn] = useState<BundleUndoRun | null>(null);
+  const [error, setError] = useState<unknown>(undefined);
+  const seat = useViewerId();
+  const kept = useRememberedUndoRun();
+  const receipts = useHandledForYou().data?.receipts;
+  const pending = usePendingMarginceChanges().data;
+  const held = remember ? kept && { ...kept.run, error } : own;
+  const named = (dealId: string) =>
+    bundles.find((bundle) => bundle.deal_id === dealId)?.deal_name;
+  const setRun = (next: RunUpdate) => {
+    if (!remember) {
+      setOwn(next);
+      return;
+    }
+    const last = rememberedUndoRun(seat);
+    const run =
+      typeof next === "function" ? next(last && { ...last.run, error }) : next;
+    setError(run?.error);
+    rememberUndoRun(
+      seat,
+      run && {
+        run,
+        names: {
+          ...last?.names,
+          ...Object.fromEntries(
+            bundles.map((bundle) => [bundle.deal_id, bundle.deal_name]),
+          ),
+        },
+      },
+    );
+  };
+  return {
+    run: held && settledRun(held, receipts, pending),
+    nameOf: (dealId) => named(dealId) ?? kept?.names[dealId],
+    setRun,
+  };
+}
+
 function ConfirmWords({ asking }: Readonly<{ asking: ArchiveQuestion }>) {
   const t = useT();
   const { locale } = useLocale();
@@ -164,30 +249,38 @@ function ConfirmWords({ asking }: Readonly<{ asking: ArchiveQuestion }>) {
 }
 
 // A retry answers for the deals it sent again, so their earlier answer is
-// replaced and every other one is kept.
+// replaced and every other one is kept. `left` are the deals the retry found
+// settled and did not send.
 function mergeRuns(
   last: BundleUndoRun | null,
   answer: BundleUndoRun,
+  left: readonly MarginceChangeBundle[],
 ): BundleUndoRun {
   const answered = new Set(answer.results.map((result) => result.deal_id));
   const kept = (last?.results ?? []).filter(
     (result) => !answered.has(result.deal_id),
   );
-  return { ...answer, results: [...kept, ...answer.results] };
+  return {
+    ...answer,
+    results: [...kept, ...answer.results],
+    settled: [...(last?.settled ?? []), ...left],
+  };
 }
 
 function BundleUndoAnswer({
   run,
-  bundles,
+  nameOf,
   single,
   pending,
   onRetry,
+  onClear,
 }: Readonly<{
   run: BundleUndoRun;
-  bundles: readonly MarginceChangeBundle[];
+  nameOf: (dealId: string) => string | undefined;
   single: boolean;
   pending: boolean;
   onRetry: () => void;
+  onClear?: () => void;
 }>) {
   const t = useT();
   const only = single && run.unsent.length === 0 ? run.results[0] : undefined;
@@ -196,7 +289,7 @@ function BundleUndoAnswer({
       <span role="status">
         {only ? undoResultText(only, t) : <BulkCounts run={run} />}
       </span>
-      {!only && <UnfinishedDeals run={run} bundles={bundles} />}
+      {!only && <UnfinishedDeals run={run} nameOf={nameOf} />}
       {run.unsent.length > 0 && (
         <Button
           variant="ghost"
@@ -210,6 +303,11 @@ function BundleUndoAnswer({
       {run.error !== undefined && run.error !== null && (
         <ErrorLine error={run.error} />
       )}
+      {onClear && (
+        <Button variant="link" onClick={onClear}>
+          {t("changes.bulk.clear")}
+        </Button>
+      )}
     </>
   );
 }
@@ -221,10 +319,10 @@ function BundleUndoAnswer({
  */
 function UnfinishedDeals({
   run,
-  bundles,
+  nameOf,
 }: Readonly<{
   run: BundleUndoRun;
-  bundles: readonly MarginceChangeBundle[];
+  nameOf: (dealId: string) => string | undefined;
 }>) {
   const t = useT();
   const unfinished = run.results.filter(
@@ -238,10 +336,7 @@ function UnfinishedDeals({
           <EntityRef
             kind="deal"
             id={result.deal_id}
-            name={
-              bundles.find((bundle) => bundle.deal_id === result.deal_id)
-                ?.deal_name
-            }
+            name={nameOf(result.deal_id)}
           />{" "}
           {archiveQuestion(result)
             ? t("changes.bulk.confirmOnDeal")
@@ -273,6 +368,7 @@ function BulkCounts({ run }: Readonly<{ run: BundleUndoRun }>) {
     ),
     count("changes.bulk.kept", refused.length),
     count("changes.bulk.confirm", confirm.length),
+    count("changes.bulk.settled", run.settled?.length ?? 0),
     count("changes.bulk.unsent", run.unsent.length),
   ]
     .filter(Boolean)

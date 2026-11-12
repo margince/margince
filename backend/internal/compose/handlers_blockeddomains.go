@@ -10,7 +10,6 @@ package compose
 // the company.
 
 import (
-	"fmt"
 	"net/http"
 	"strings"
 
@@ -82,10 +81,8 @@ func (h blockedDomainHandlers) SetBlockedDomain(w http.ResponseWriter, r *http.R
 	// The contract says maxLength: 500 and the generated type does not enforce
 	// it. Unchecked, one caller stores a megabyte per domain and every reader
 	// of the list is served it back in full.
-	if len([]rune(body.Reason)) > maxBlockedDomainReason {
-		httperr.Write(w, r, httperr.Validation("reason", "too_long",
-			fmt.Sprintf("a reason is at most %d characters; this one is %d",
-				maxBlockedDomainReason, len([]rune(body.Reason)))))
+	if err := httperr.RequireWithin("reason", body.Reason, maxBlockedDomainReason); err != nil {
+		httperr.Write(w, r, err)
 		return
 	}
 	if _, ok := freemail.Hostname(body.Domain); !ok {

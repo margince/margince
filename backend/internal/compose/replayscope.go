@@ -109,6 +109,10 @@ const (
 	// which, so the probe reads it back (bulkwithhold.go).
 	probeBulkBatch = "bulk_batch"
 
+	// probeSalesGoalPlan keys the reporting probe for a sales goal plan,
+	// whose owner names it and which carries no row of its own to scope.
+	probeSalesGoalPlan = "sales_goal_plan"
+
 	// probeDealSuggestion keys the deals-owned suggestion probe. A suggestion
 	// has no owner column: it is visible only to a reader who may see its
 	// company and every piece of its evidence, a rule only the deals store
@@ -162,13 +166,24 @@ const (
 // recorded confirmation. The anonymous surface needs its own dedupe scope
 // (workspace + request digest) before the header's promise can be honored;
 // until then the slot's natural key refuses a duplicate booking.
-const replayMemberAdminObject = "user_admin"
+const (
+	replayMemberAdminObject = "user_admin"
+	replaySalesTargetObject = "sales_target"
+	salesGoalPlanOwnerParam = "owner_id"
+	salesGoalPlanReplayNote = "a plan carries no owner column a scope reads; it answers the seller's draft and history, so the reporting module owns the probe"
+)
 
 var replayableOperations = map[string]replayTarget{
 	"POST /v1/users/{id}/merge":       {object: replayMemberAdminObject, rowNote: "the response is only a boolean acknowledgment; it contains no member record or private content"},
 	"POST /v1/scheduling/invitations": {object: tableActivity, table: tableActivity, idPath: "id"},
 	"POST /v1/scheduling/proposals":   {object: tableActivity, table: tableActivity, idPath: "id"},
 	"POST /v1/analytics/decisions":    {object: tableActivity, table: tableActivity, idPath: "id"},
+	"PUT /v1/analytics/sales-goals/{owner_id}/{year}/draft": {
+		object: replaySalesTargetObject, moduleProbe: probeSalesGoalPlan, pathParam: salesGoalPlanOwnerParam, rowNote: salesGoalPlanReplayNote,
+	},
+	"POST /v1/analytics/sales-goals/{owner_id}/{year}/publish": {
+		object: replaySalesTargetObject, moduleProbe: probeSalesGoalPlan, pathParam: salesGoalPlanOwnerParam, rowNote: salesGoalPlanReplayNote,
+	},
 	// Row-scoped records: both gates apply, and the object and the table are
 	// the same word by construction (policy.coreObjects mirrors the table).
 	"POST /v1/contacts": {object: tableContact, table: tableContact, idPath: "id"},

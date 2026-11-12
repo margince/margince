@@ -13,6 +13,7 @@ import (
 	"fmt"
 	"log/slog"
 	"slices"
+	"strings"
 	"time"
 
 	"github.com/jackc/pgx/v5"
@@ -62,10 +63,12 @@ func newSilentDealCloser(pool *pgxpool.Pool, log *slog.Logger) silentDealCloser 
 type closeDecision struct {
 	reasonCode string
 	reasonDays int
-	deal       ids.DealID
-	owner      ids.UUID
-	code       string
-	reason     string
+	// refusal is the message a refusal close was judged on.
+	refusal ids.UUID
+	deal    ids.DealID
+	owner   ids.UUID
+	code    string
+	reason  string
 }
 
 // CloseWorkspace closes every due deal in the workspace bound in ctx and
@@ -99,10 +102,15 @@ func (c silentDealCloser) CloseWorkspace(ctx context.Context) (int, error) {
 
 // closeOne closes one deal as its owner's agent. The close reads the owner's
 // grants in its own transaction, before the deal row lock. Under that lock the
-// owner's switch must be on and the deal still due.
+// owner's switch must be on and the deal still due. The re-check reads the
+// deal's activities under their lock, so no verdict can change before commit.
 func (c silentDealCloser) closeOne(ctx context.Context, decision closeDecision, now time.Time) (bool, error) {
 	return c.deals.CloseAsLost(ctx, deals.CloseLostInput{
 		DealID: decision.deal, Owner: decision.owner, ReasonCode: decision.code, Reason: decision.reason,
+		SourceActivityID: decision.refusal,
+		HoldEvidence: func(ctx context.Context, tx pgx.Tx) error {
+			return activities.LockDealActivitiesTx(ctx, tx, decision.deal.UUID)
+		},
 		StillDue: func(ctx context.Context, tx pgx.Tx) (bool, error) {
 			mode, err := approvals.AutoApplyModeTx(ctx, tx, decision.owner, deals.DealCloseLostKind)
 			if err != nil || mode != approvals.ModeAuto {
@@ -123,14 +131,26 @@ func (c silentDealCloser) closeOne(ctx context.Context, decision closeDecision, 
 // deal being worked on.
 func (c silentDealCloser) recordOnTimeline(ctx context.Context, tx pgx.Tx, decision closeDecision) error {
 	subject := systemtext.Literal("deal.lost")
-	body := decision.reason + ". " + systemtext.Literal("deal.lost_undo")
+	tail := []string{"deal.lost_undo"}
+	if !decision.refusal.IsZero() {
+		tail = append(tail, "deal.lost_refusal_linked")
+	}
+	sentences := []string{decision.reason + "."}
+	for _, code := range tail {
+		sentences = append(sentences, systemtext.Literal(code))
+	}
+	body := strings.Join(sentences, " ")
 	var component *systemtext.Component
 	if decision.reasonCode != "" {
 		component = systemtext.Sentence(decision.reasonCode)
 		if decision.reasonCode != "deal.customer_declined" {
 			component.Args = []systemtext.Argument{systemtext.Count(int64(decision.reasonDays))}
 		}
-		component = systemtext.Sequence(component, systemtext.Sentence("deal.lost_undo"))
+		following := make([]*systemtext.Component, 0, len(tail))
+		for _, code := range tail {
+			following = append(following, systemtext.Sentence(code))
+		}
+		component = systemtext.Sequence(component, following...)
 		component.Layout = "sentences"
 	}
 	_, _, err := c.activities.LogActivityTx(ctx, tx, activities.LogActivityInput{
@@ -200,9 +220,9 @@ func closeMailRead(
 	return dealMailCovered(sourceChecked(coverage, sourceMail), byOwner, byConnection), nil
 }
 
-// decideClose is the rule; it needs the owner's mail read on time. With no
-// wait or accepted meeting ahead, a deal closes when the customer refused, or
-// after more than threshold days of silence.
+// decideClose is the rule; it needs the owner's mail read on time. It closes
+// nothing while a wait, an accepted meeting or an owed reply is open. Else a
+// deal closes when the customer refused, or after threshold days of silence.
 func decideClose(
 	subject assurance.Subject, facts closeFacts, threshold int, now time.Time, zone *time.Location,
 ) (closeDecision, bool) {
@@ -219,12 +239,12 @@ func decideClose(
 	keptOpen := facts.keptOpenAt()
 	silentDays := min(assessed.SilentDays, daysSince(facts.anyProgressAt, now, zone))
 	switch {
-	case facts.deferredAt(now):
+	case facts.deferredAt(now), facts.replyOwed:
 		return closeDecision{}, false
 	case slices.Contains(assessed.Reasons, viability.ReasonCustomerDeclined) &&
 		after(facts.refusalAt, keptOpen) && after(facts.refusalAt, facts.anyProgressAt):
 		decision.code, decision.reason = deals.LossReasonOther, systemtext.Literal("deal.customer_declined")
-		decision.reasonCode = "deal.customer_declined"
+		decision.reasonCode, decision.refusal = "deal.customer_declined", facts.refusal
 		return decision, true
 	case silentReason(assessed.Reasons) && silentDays > threshold && daysSince(keptOpen, now, zone) > threshold:
 		decision.code = deals.LossReasonWentSilent

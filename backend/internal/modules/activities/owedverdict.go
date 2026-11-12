@@ -97,7 +97,9 @@ type OwedCandidate struct {
 	ID      ids.UUID
 	Kind    string
 	Subject string
-	Body    string // pre-truncated to bodyLimit
+	// Body is the sender's current message as ClassifyBody cuts it. Empty
+	// when the message is only a quote or a forward.
+	Body string
 	// To and Cc are the addresses the message was sent to, so the model can
 	// tell a direct ask from a copy. Bounded by the caller.
 	To []string
@@ -179,8 +181,9 @@ var priorContextComplete = `coalesce((SELECT ` + provenance.MailBodyCompleteSQL(
 const candidateGroupBy = `a.id, a.kind, a.subject, a.body, a.has_calendar_part, a.calendar_method, a.occurred_at,
           prior.id, prior.subject, prior.body, prior.occurred_at`
 
-// scanCandidates reads the rows both candidate queries return.
-func scanCandidates(rows pgx.Rows) ([]OwedCandidate, error) {
+// scanCandidates reads the rows both candidate queries return, each body cut
+// to the sender's current message of at most bodyLimit runes.
+func scanCandidates(rows pgx.Rows, bodyLimit int) ([]OwedCandidate, error) {
 	defer rows.Close()
 	var out []OwedCandidate
 	for rows.Next() {
@@ -188,6 +191,7 @@ func scanCandidates(rows pgx.Rows) ([]OwedCandidate, error) {
 		if err != nil {
 			return nil, err
 		}
+		m.Body = ClassifyBody(m.Body, bodyLimit)
 		out = append(out, m)
 	}
 	return out, rows.Err()
@@ -255,7 +259,7 @@ func (s *Store) OwedBacklog(ctx context.Context, ruleset string, asOf time.Time,
 		}
 		args := []any{}
 		arg := func(v any) int { args = append(args, v); return len(args) }
-		body := arg(bodyLimit)
+		body := arg(storedBodyReadRunes)
 		prior := arg(priorBodyLimit)
 		own, err := s.ownDomainList(ctx, tx)
 		if err != nil {
@@ -289,6 +293,7 @@ func (s *Store) OwedBacklog(ctx context.Context, ruleset string, asOf time.Time,
 		waiting, err := waitingReplyExistsClause(ctx, arg, asOf, nil, nil, own, nil, horizon,
 			`a.owed_verdict IS NULL AND `+owedVerdictDecline.offeredSQL("a.", fmt.Sprintf("$%d", arg(ruleset)))+
 				` AND `+auth.WorkspaceAudienceSQL("a")+` AND a.restricted_at IS NULL AND `+provenance.MailBodyCompleteSQL("a")+
+				` AND NOT `+auth.ActivityRestrictedSQL("a.id")+
 				` AND `+priorContextComplete,
 			// An unjudged calendar response is off the lane until judged, and
 			// judged it must be: any sender can mark a request REPLY.
@@ -309,7 +314,7 @@ func (s *Store) OwedBacklog(ctx context.Context, ruleset string, asOf time.Time,
 		if err != nil {
 			return err
 		}
-		out, err = scanCandidates(rows)
+		out, err = scanCandidates(rows, bodyLimit)
 		return err
 	})
 	if err != nil {
@@ -364,7 +369,7 @@ func (s *Store) OwedRestale(ctx context.Context, ruleset string, limit, bodyLimi
 		}
 		args := []any{}
 		arg := func(v any) int { args = append(args, v); return len(args) }
-		body := arg(bodyLimit)
+		body := arg(storedBodyReadRunes)
 		prior := arg(priorBodyLimit)
 		query := fmt.Sprintf(`
 			SELECT `+candidateColumns+`
@@ -379,6 +384,7 @@ func (s *Store) OwedRestale(ctx context.Context, ruleset string, limit, bodyLimi
 			   AND a.archived_at IS NULL
 			   AND `+auth.WorkspaceAudienceSQL("a")+`
 			   AND a.restricted_at IS NULL
+			   AND NOT `+auth.ActivityRestrictedSQL("a.id")+`
 			   AND `+provenance.MailBodyCompleteSQL("a")+`
 			   AND `+priorContextComplete+`
 			   -- Declined by every rung under THESE rules (MarkOwedVerdictDeclined):
@@ -403,7 +409,7 @@ func (s *Store) OwedRestale(ctx context.Context, ruleset string, limit, bodyLimi
 		if err != nil {
 			return err
 		}
-		out, err = scanCandidates(rows)
+		out, err = scanCandidates(rows, bodyLimit)
 		return err
 	})
 	if err != nil {

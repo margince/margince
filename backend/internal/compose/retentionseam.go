@@ -55,6 +55,7 @@ func NewRetentionServiceFor(db *database.DB, blob blobstore.Store, log *slog.Log
 		WithOutboxReaders(storekit.OutboxReaders{
 			UnreadTypes: assurance.MarkingEventTypes(), NeededBy: []func(string) string{automation.RetryableTriggerSQL},
 		}).
+		WithExtensions(ExtensionData()).
 		WithEdgeInvalidator(search.RecomputeEdgesForActivities)
 }
 
@@ -125,7 +126,7 @@ func privacyPayloads(vault keyvault.Vault) privacy.PayloadPurger {
 }
 
 func eraserWithGraph(db *database.DB) *privacy.Eraser {
-	return privacy.NewEraser(db).WithEdgeInvalidator(search.RecomputeEdgesForActivities)
+	return privacy.NewEraser(db).WithEdgeInvalidator(search.RecomputeEdgesForActivities).WithExtensions(ExtensionData())
 }
 
 // ComposedEraser is the eraser an Art. 17 erasure runs through, with every

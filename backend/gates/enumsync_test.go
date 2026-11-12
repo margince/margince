@@ -252,6 +252,8 @@ var enumBindings = map[string]struct{ pkgDir, typeName string }{
 	"report_definition.audience":                   {"internal/contracts", "ReportingReportAudience"},
 	"report_edition_question.reason":               {"internal/contracts", "ReportingEditionQuestionReason"},
 	"report_execution.status":                      {"internal/contracts", "ReportingExecutionStatus"},
+	"sales_goal_plan_revision.kind":                {"internal/contracts", "SalesGoalEventKind"},
+	"sales_goal_plan_revision.origin":              {"internal/contracts", "SalesGoalRevisionOrigin"},
 	"sales_target.period_kind":                     {"internal/contracts", "ReportingTargetInputPeriodKind"},
 	"sales_target.scope_kind":                      {"internal/contracts", "ForecastCallScopeKind"},
 	"sdr_handoff.status":                           {"internal/contracts", "HandoffAssigneeStatus"},
@@ -284,6 +286,7 @@ var enumBindings = map[string]struct{ pkgDir, typeName string }{
 // own enum would otherwise widen apart from the row it stores.
 var requestEnumBindings = []struct{ typeName, col string }{
 	{"CreateCaptureCounterpartyHoldRequestKind", "capture_counterparty_hold.kind"},
+	{"SalesGoalDraftInputOrigin", "sales_goal_plan_revision.origin"},
 }
 
 // checkInList captures CHECK (col IN ('a','b',…)) allowing an optional

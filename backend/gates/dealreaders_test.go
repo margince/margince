@@ -176,6 +176,9 @@ var lifecycleDealReads = gatekit.Waive(map[string]string{
 // graph is by NAME and a gated Store.X would then vouch for an ungated
 // Handlers.X.
 var calleeGatedDealReads = gatekit.Waive(map[string]string{
+	"internal/modules/activities/emailtarget.go:dealContactCandidatesSQL":   "the stakeholders of a task's deal, as the record an email about the task goes to. linkedCandidates asks auth.ReadGranted for deal and renders its row scope; the object arrives as a PARAMETER. No deal column but the join leaves",
+	"internal/modules/activities/emailtarget.go:dealCompanyCandidatesSQL":   "the company of a task's deal, as the record an email about the task goes to. linkedCandidates asks auth.ReadGranted for deal and renders its row scope; the object arrives as a PARAMETER. No deal column but the join leaves",
+	"internal/compose/metricmixsettle.go:wonDealValues":                     "the converted value of won deals whose ids came off readDealMetricFacts, which reads only the gated deal population. The value goes through reportingFactValue and follows the reader's field mask",
 	"internal/compose/capturedealtopicread.go:readDealTopicDeals":           "the names, projects and recent mail subjects of the deals a topic check weighs, under the deal row scope. Its one caller, readDealTopicInput, asks auth.Require(ctx, \"deal\", read) first",
 	"internal/modules/activities/dealdecline.go:offeredDeals":               "the ids of the open deals a deal question offered, under the deal row scope. Its one caller, DeclineDeal, asks auth.Require(ctx, \"deal\", read) first. No deal column but the id leaves",
 	"internal/modules/activities/dealdeclineproject.go:projectCameFromDeal": "reads one deal's project_id to test the message's project link; only a boolean leaves. Its one caller chain starts at DeclineDeal, which asks auth.Require(ctx, \"deal\", read) and auth.EnsureVisibleExisting on that deal first",

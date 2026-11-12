@@ -180,7 +180,7 @@ var decisionGrants = map[string][]DecisionGrant{
 	// A send is an activity write plus consent enforcement at redemption
 	// time; the approver needs the write grant, the consent gate runs in
 	// the handler regardless of who approved.
-	"send_email": {{objectActivity, principal.ActionCreate}},
+	"send_email": sendShapedGrants,
 	// send_company_email is the same send from the other origin (ADR-0087 §6):
 	// it starts a conversation instead of continuing one, and the effect it
 	// stages is the identical activity write. The records the message is filed
@@ -188,10 +188,10 @@ var decisionGrants = map[string][]DecisionGrant{
 	// staging and again at insert — they are a question about the STAGER's
 	// reach, not about the approver's, so they add nothing here. Governed
 	// identically to the reply means exactly this grant and no other.
-	"send_company_email": {{objectActivity, principal.ActionCreate}},
+	"send_company_email": sendShapedGrants,
 	// send_message is the same effect on a messaging channel: an activity
 	// write, with the consent gate running in the handler whoever approved it.
-	"send_message":   {{objectActivity, principal.ActionCreate}},
+	"send_message":   sendShapedGrants,
 	"book_meeting":   {{objectActivity, principal.ActionCreate}},
 	"invite_meeting": {{objectActivity, principal.ActionCreate}},
 	// A relink moves an activity onto another record, which the store gates on
@@ -322,7 +322,7 @@ var decisionGrants = map[string][]DecisionGrant{
 	// automation composed is still a message this human is putting their name
 	// on, and "an automation wrote it" is not a reason to release it on
 	// weaker authority than typing it would have taken.
-	kindHeldDraft: {{objectActivity, principal.ActionCreate}},
+	kindHeldDraft: sendShapedGrants,
 }
 
 // targetResolvedGrants are the kinds whose decision grant is not fixed by the

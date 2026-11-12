@@ -16,8 +16,6 @@ report was frozen. At the end of the calendar week's line, the two arrows **Earl
 **Later week** step through the weeks that have a report. When Margince wrote about the week, a
 card first in the report holds those words, in your own language, marked as written by AI. The
 report's parts are:
-- **At a glance**: four figures. Deals won shows what they were worth; the other three show their
-  share as a bar. Each shows its change on the week before, where there is one.
 - **Closed deals**: the deals won and lost, each with what it closed at, and a bar of won against
   lost.
 - **Pipeline movement**: the deals that changed stage, and the stage each reached.
@@ -29,9 +27,11 @@ report's parts are:
 - **Figures**: **Scorecard and all figures** opens the scorecard, every figure beside the week
   before, and each other reading on a row of its own. The columns name the weeks by number, such as
   **Week 27** and **Week 26**. **How this is counted** opens what the figures rest on.
-- **Observations**: what worked in the week and what did not, where Margince found something.
+- **What the week taught**: what worked in the week and what did not, where Margince found something.
 
-**Closed deals**, **Pipeline movement** and **Observations** are left out when
+Beside the report, **The week in figures** shows a **Weeks** panel with **Won per week** bars and the list of weeks.
+
+**Closed deals**, **Pipeline movement** and **What the week taught** are left out when
 they hold nothing. **Forecast** and **Figures** are always there. The last line says when the next report
 comes.
 
@@ -90,15 +90,15 @@ Two rows appear only when a count is not complete:
 
 Margince cannot count deals touched by a deletion for the week. It lists them on their own.
 
-### Observations
+### What the week taught
 
-**Observations** holds at most four observations. Each names the deals it was read from,
+**What the week taught** holds at most four observations. Each names the deals it was read from,
 and each has a tag: **Positive outcome**, **Unsuccessful outcome**, **Pattern**, or **Experiment**.
 
 Each carries a warning: the observations show links in recorded work, and do not show what made the
 outcome happen.
 
-A week with no observation has no **Observations** part. Either the reading did not run, or there
+A week with no observation has no **What the week taught** part. Either the reading did not run, or there
 were fewer than three records to name, so no model was asked.
 
 An installation with no AI model set up still gets the whole review. It only never gets the
@@ -106,7 +106,7 @@ observations or the written summary.
 
 ## Planning a week
 
-**Plan for week {week}**, on **Home → Weekly**, is your plan for the week. It holds what you said
+The **Plan for this week** card, on **Home → Weekly**, is your plan for the week. It holds what you said
 you will do, and what you need to do it. A commitment with a **Due date** joins your Worklist and **Needs you**
 on that day, in the company's time zone. Done ones, ones due later and ones with no date stay out.
 

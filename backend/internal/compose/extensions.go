@@ -10,6 +10,7 @@ import (
 	"sync"
 
 	"github.com/margince/margince/backend/internal/compose/corereach"
+	"github.com/margince/margince/backend/internal/compose/extensionprivacy"
 	"github.com/margince/margince/backend/internal/modules/approvals"
 	"github.com/margince/margince/backend/internal/platform/jobs"
 	kevents "github.com/margince/margince/backend/internal/shared/kernel/events"
@@ -242,6 +243,9 @@ func validateExtensionSet(exts []extension.Extension) error {
 		}
 		if err := e.Description.Validate(); err != nil {
 			return fmt.Errorf("compose: extension %q: %w", e.Name, err)
+		}
+		if err := extensionprivacy.Preflight(e); err != nil {
+			return err
 		}
 		if err := preflightJurisdictions(e, packCodes); err != nil {
 			return err

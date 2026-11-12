@@ -2,10 +2,12 @@ import {
   Briefcase,
   Building2,
   ChartNoAxesCombined,
+  Flag,
   Handshake,
   Home,
   Layers2,
   type LucideIcon,
+  Target,
   UserPlus,
   Users,
 } from "lucide-react";
@@ -153,6 +155,15 @@ export const NAV_GROUPS: readonly NavGroup[] = [
         labelKey: "nav.analytics",
         icon: ChartNoAxesCombined,
       },
+      // Closed revenue against the goal. The rail names it My progress or
+      // Team progress (navLabelKey); this key is its name in the shortcuts.
+      {
+        screen: "progress",
+        labelKey: "nav.progress",
+        icon: Target,
+        aliases: ["my progress", "team progress"],
+      },
+      { screen: "goals", labelKey: "nav.salesGoals", icon: Flag },
     ],
   },
 ];
@@ -286,6 +297,8 @@ export const GRIDDED_SCREENS: ReadonlySet<Screen> = new Set([
   "filters",
   "lists",
   "analytics",
+  "progress",
+  "goals",
   "share",
   "offers",
 ]);
@@ -368,9 +381,19 @@ function forkItems(
   }));
 }
 
+// Progress is named for whose number it opens on: a manager reads a team.
+export function navLabelKey(
+  item: NavItem | undefined,
+  readsTeam: boolean,
+): MessageKey | undefined {
+  if (item?.screen !== "progress") return item?.labelKey;
+  return readsTeam ? "progress.teamTitle" : "nav.myProgress";
+}
+
 function primaryLevel(
   route: Route,
   disabled: readonly CoreFeature[],
+  readsTeam: boolean,
 ): NavTrailLevel {
   return {
     groups: NAV_GROUPS.map((group) => ({
@@ -380,7 +403,7 @@ function primaryLevel(
           .filter((item) => screenEnabled(item.screen, disabled))
           .map((item) => ({
             id: item.screen,
-            labelKey: item.labelKey,
+            labelKey: navLabelKey(item, readsTeam) ?? item.labelKey,
             icon: item.icon,
           })),
         ...forkItems(group.headingKey),
@@ -443,9 +466,10 @@ export function railTrail(
   route: Route,
   section?: NavSection,
   disabled: readonly CoreFeature[] = [],
+  readsTeam = false,
 ): readonly NavTrailLevel[] {
   return navTrail(
-    primaryLevel(route, disabled),
+    primaryLevel(route, disabled, readsTeam),
     route,
     activeRowFor(route),
     section,

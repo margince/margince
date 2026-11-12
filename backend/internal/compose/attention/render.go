@@ -337,7 +337,8 @@ func taskItem(task Task, asOf, until time.Time, loc *time.Location) crmcontracts
 		SystemDisplay:  task.SystemDisplay,
 		WebsiteInquiry: task.Inquiry,
 		Subject:        subjectOf(task.LinkType, task.LinkID), MayBeDone: task.MayBeDone,
-		Actions: taskActions(task),
+		RequestCheck: task.RequestCheck,
+		Actions:      taskActions(task),
 	}
 	if task.WebsiteInquiry {
 		item.Kind = new(provenance.WebsiteInquirySource)
@@ -356,7 +357,7 @@ func taskItem(task Task, asOf, until time.Time, loc *time.Location) crmcontracts
 		due := *task.DueAt
 		item.DueAt = &due
 		item.DueHasTime = new(task.DueHasTime)
-		past := deadline.Passed(task.DueAt, asOf)
+		past := taskLateAt(task.DueAt, asOf, task.MayBeDone)
 		item.Overdue = &past
 		// Which run of the page it heads. Only dated rows carry one, which is
 		// what the contract says and what lets a client group without having to

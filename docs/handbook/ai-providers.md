@@ -18,6 +18,16 @@ Only an administrator or an operations user can change a provider. Others can
 open the sheet and read it.
 Also called: model vendor, AI vendor, LLM provider, API key settings.
 
+### Can I skip the AI provider when I first set up Margince?
+Yes. On the first setup screen, select **Not now**. Without a provider, Margince
+cannot read your website, so you enter your company details yourself.
+
+To add the key later, select **Finish setup** in the top bar, then **Add key** on
+**Set up AI**. It opens **Settings**, then **AI models**, where the same form
+asks for the provider, the key and the two models. The step stays on the list
+until a model is set up. Only someone who may change AI models sees it.
+Also called: skip AI key, add AI key later.
+
 ### What does each provider need?
 Each provider in Margince needs different settings:
 - **Anthropic**, **OpenAI**, **Google Gemini**: a key. Nothing else.
@@ -99,8 +109,8 @@ Gemini on Vertex AI serves the Gemini models. So a model that its own
 Gemini**. Edit one to give Vertex its own price for that model.
 
 ### How do model prices stay current?
-Model prices update on their own once a day. The **Model prices** card under
-Settings → AI shows when they last synced and what changed for each provider.
+Model prices update on their own once a day. The **Model prices** card on
+the **Prices** tab of Settings → **AI models** shows when they last synced and what changed for each provider.
 Anthropic, OpenAI, Google Gemini and Gemini on Vertex AI get prices from
 models.dev when their key works. The OpenRouter models that a model tier uses
 get prices from the OpenRouter list. Other providers keep the prices you set.

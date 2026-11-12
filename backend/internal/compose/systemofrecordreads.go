@@ -104,6 +104,8 @@ func (s *Server) wireSystemOfRecordReads(pool *pgxpool.Pool) {
 	// The contact page is the company page's sibling, so it is wired here
 	// rather than beside the handler sets.
 	s.wireContact360(pool)
+	// The account card's Not yet to Done? lands in the contact page's store.
+	s.company360Svc.WithDoneAnswers(s.contact360Svc)
 	s.wireReversal(pool)
 	s.wireProject360(pool)
 	s.wireSalesReview(pool)

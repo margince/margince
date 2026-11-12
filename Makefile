@@ -33,7 +33,7 @@ ROOT_SCRIPT_GATES := check-craft-doc test-dev-isolation test-dev-dsn test-dev-en
   test-release-version-stamped test-closing-declaration test-release-patch-base \
   test-docs-describing \
   test-craft-review test-release-tag-version test-release-dist-version test-release-license-stamped \
-  test-release-notes test-release-bundle test-backend-notices embedded-binary-licenses third-party-files test-third-party-files \
+  test-release-notes test-release-bundle test-release-compose test-backend-notices embedded-binary-licenses third-party-files test-third-party-files \
   test-strict-lint-packages
 
 # How wide the gate fan-out runs: the machine's online core count, so a 4-core
@@ -71,7 +71,7 @@ MINIO_PORT ?= 29000
 # called inside another command's argument would fail unnoticed.
 
 .PHONY: gate-timings
-.PHONY: help help-all install dev-fresh check check-config check-all check-backend check-root-gates check-lane-craft check-lane-gates check-lane-backend check-lane-fe check-q check-go check-gates check-fe dev dev-stop dev-sweep dev-snapshot dev-restore dev-logs infra-up seed-dev seed-analytics verify-boot frontend-check frontend-e2e bench-mobile bench-mobile-check bench-home home-budget test-home-budget-compare e2e-company e2e-brief e2e-llm e2e-llm-guards fe-install fe-typecheck fe-typecheck-composed fe-lint fe-compiler-lint fe-build fe-preview fe-format fe-test fe-test-ext fe-ds-gates fe-drift fe-unit fe-census fe-unit-merge fe-clock-drift backend-clock-drift fe-edge-padding fe-quality fe-bundle fe-storybook ds-purity font-lock icon-lint ds-spacing ds-spacing-roles space-tokens native-controls ext-imports action-rows storybook fe-uat craft-static craft-review test-craft-review craft-residue craft-prose check-craft-doc test-craft-pin test-golangci-guard test-scheduled-report test-renovate-liveness test-pace-workflow test-ci-verdict test-merge-verdict test-review-coverage test-laneorder test-shardqueue test-lane-binaries test-integration-artifacts secret-scan test-secret-scan test-sbom-sign release-sign test-sbom-census embedded-binary-licenses test-embedded-binary-licenses test-dev-dsn test-dev-env-local test-testdb-redis test-lane-timeout-report test-dev-isolation test-dev-cleanup test-disk-headroom test-api-entrypoint check-image-pins check-host-ports ci-doc-parity make-target-parity test-make-target-parity check-ext-migrations check-extension-modules go-work-sum contract-breaking-check contract-frontend-drift test-contract-frontend-drift migration-versions test-migration-versions test-lanes env-reads gofmt lint-modules go-file-length fe-file-length test-fe-file-length test-budget test-input-census test-input-census-judge test-strict-lint-packages test-test-budget comment-budget test-comment-budget comment-density test-keep-unchanged-mtimes test-check-lane-end test-phase-timer comment-stats comment-stats-pin slop-trend rls-store-path no-jurisdiction test-no-jurisdiction pkg-freeze test-pkg-freeze test-release-tag-version test-release-dist-version test-release-license-stamped test-release-notes test-release-bundle test-release-version-stamped test-closing-declaration test-release-patch-base docs-describing test-docs-describing test-dev-postgres-container test-e2e-llm-check hooks sbom sbom-normalize sbom-supplement sbom-parity sbom-census sbom-validate sbom-sign release-sign sbom-check sbom-gate
+.PHONY: help help-all install dev-fresh check check-config check-all check-backend check-root-gates check-lane-craft check-lane-gates check-lane-backend check-lane-fe check-q check-go check-gates check-fe dev dev-stop dev-sweep dev-snapshot dev-restore dev-logs infra-up seed-dev seed-analytics verify-boot frontend-check frontend-e2e bench-mobile bench-mobile-check bench-home home-budget test-home-budget-compare e2e-company e2e-brief e2e-llm e2e-llm-guards fe-install fe-typecheck fe-typecheck-composed fe-lint fe-compiler-lint fe-build fe-preview fe-format fe-test fe-test-ext fe-ds-gates fe-drift fe-unit fe-census fe-unit-merge fe-clock-drift backend-clock-drift fe-edge-padding fe-quality fe-bundle fe-storybook ds-purity font-lock icon-lint ds-spacing ds-spacing-roles space-tokens native-controls ext-imports action-rows storybook fe-uat craft-static craft-review test-craft-review craft-residue craft-prose check-craft-doc test-craft-pin test-golangci-guard test-scheduled-report test-renovate-liveness test-pace-workflow test-ci-verdict test-merge-verdict test-review-coverage test-laneorder test-shardqueue test-lane-binaries test-integration-artifacts secret-scan test-secret-scan test-sbom-sign release-sign test-sbom-census embedded-binary-licenses test-embedded-binary-licenses test-dev-dsn test-dev-env-local test-testdb-redis test-lane-timeout-report test-dev-isolation test-dev-cleanup test-disk-headroom test-api-entrypoint check-image-pins check-host-ports ci-doc-parity make-target-parity test-make-target-parity check-ext-migrations check-extension-modules go-work-sum contract-breaking-check contract-frontend-drift test-contract-frontend-drift migration-versions test-migration-versions test-lanes env-reads gofmt lint-modules go-file-length fe-file-length test-fe-file-length test-budget test-input-census test-input-census-judge test-strict-lint-packages test-test-budget comment-budget test-comment-budget comment-density test-keep-unchanged-mtimes test-check-lane-end test-phase-timer comment-stats comment-stats-pin slop-trend rls-store-path no-jurisdiction test-no-jurisdiction pkg-freeze test-pkg-freeze test-release-tag-version test-release-dist-version test-release-license-stamped test-release-notes test-release-bundle test-release-compose test-release-version-stamped test-closing-declaration test-release-patch-base docs-describing test-docs-describing test-dev-postgres-container test-e2e-llm-check hooks sbom sbom-normalize sbom-supplement sbom-parity sbom-census sbom-validate sbom-sign release-sign sbom-check sbom-gate
 # Bare `make` lists every command instead of running the first target.
 .DEFAULT_GOAL := help
 
@@ -1316,7 +1316,8 @@ test-shardqueue:
 ## test-lane-binaries — prove the integration build empties only a directory it
 ## made, and that a shard refuses binaries compiled from other source than its
 ## checkout. Neither fails on its own: one deletes files, the other tests old
-## code and reports green.
+## code and reports green. Also that a shard waits for its own attempt's
+## binaries and stops when the build failed.
 test-lane-binaries:
 	@./scripts/test-lane-binaries.sh
 
@@ -1485,23 +1486,31 @@ test-budget:
 ## test-input-census — every cached unit-test package that reads a file outside
 ## its module also reads that file's tree digest, or a replayed pass outlives an
 ## edit to it. Judged on a real run, since such paths are mostly built at run
-## time; a failing test does not decide it. cache-warm runs it.
+## time; a failing test does not decide it. cache-warm runs it. The solo
+## packages log apart and are judged against their own floor, which the tree's
+## logs cannot make up for.
 test-input-census:
-	@set -e; logs="$$(mktemp -d)"; trap 'rm -rf "$$logs"' EXIT; \
-	if ! TESTLOG_DIR="$$logs" $(MAKE) -C backend -k test-cached test-extensions TEST_EXEC="$(CURDIR)/scripts/testlog-exec.sh"; then \
+	@set -e; logs="$$(mktemp -d)"; trap 'rm -rf "$$logs"' EXIT; mkdir "$$logs/tree" "$$logs/solo"; \
+	if ! TESTLOG_DIR="$$logs/tree" $(MAKE) -C backend -k test-cached test-extensions TEST_EXEC="$(CURDIR)/scripts/testlog-exec.sh"; then \
 	  echo "test-input-census: a test failed under the census; its inputs are judged all the same" >&2; \
 	fi; \
-	TESTLOG_DIR="$$logs" $(MAKE) --no-print-directory test-input-census-judge
+	if ! TESTLOG_DIR="$$logs/solo" $(MAKE) -C backend test-solo TEST_EXEC="$(CURDIR)/scripts/testlog-exec.sh"; then \
+	  echo "test-input-census: a solo test failed under the census; its inputs are judged all the same" >&2; \
+	fi; \
+	TESTLOG_DIR="$$logs/tree" TESTLOG_MINIMUM=100 $(MAKE) --no-print-directory test-input-census-judge; \
+	TESTLOG_DIR="$$logs/solo" TESTLOG_MINIMUM=1 $(MAKE) --no-print-directory test-input-census-judge
 
 ## test-input-census-judge — the judging half of test-input-census, over logs a
 ## pass run with TEST_EXEC=scripts/testlog-exec.sh left in TESTLOG_DIR. CI's
-## deterministic-gates (unit) leg logs its own test pass and judges it here, so
-## the census costs no second run of the tests.
+## deterministic-gates legs log their own test pass and judge it here, so the
+## census costs no second run of the tests. TESTLOG_MINIMUM is the fewest logs
+## that pass can leave: 100 for a leg over the tree, the count for a named few.
+TESTLOG_MINIMUM ?= 100
 test-input-census-judge:
 	@set -e; logs="$(TESTLOG_DIR)"; \
 	[ -d "$$logs" ] || { echo "test-input-census-judge: TESTLOG_DIR must name the logs a testlog-exec.sh pass wrote" >&2; exit 2; }; \
 	./scripts/ci-stable-mtimes.sh --names > "$$logs/names.tsv"; \
-	cd backend && GOWORK="$(CURDIR)/go.work" go run ./tools/check-test-inputs -logs "$$logs" -names "$$logs/names.tsv"
+	cd backend && GOWORK="$(CURDIR)/go.work" go run ./tools/check-test-inputs -logs "$$logs" -names "$$logs/names.tsv" -minimum "$(TESTLOG_MINIMUM)"
 
 ## test-test-budget — the budget gate's own test, run by check-backend because
 ## the gate itself runs only on CI, where a refusal that stopped firing reads green.
@@ -1648,6 +1657,12 @@ test-release-notes:
 ## missing platform or program it refuses. Its one caller is a tag push.
 test-release-bundle:
 	@./scripts/release-bundle.test.sh
+
+## test-release-compose — the compose packer's own test: every image pinned to
+## its digest, the bundle's routes pointed at the stack's services, and the
+## image it refuses to pack without. Its one caller is a tag push.
+test-release-compose:
+	@./scripts/release-compose.test.sh
 
 ## test-backend-notices — the Go notice generator's own test: it writes every
 ## linked module's licence text, the toolchain's and the embedded-binary

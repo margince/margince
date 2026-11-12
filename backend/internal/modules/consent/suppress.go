@@ -45,10 +45,8 @@ type SuppressInput struct {
 	// yet, and an input field naming a subject the authorization check cannot
 	// name would be a door claiming a reach it does not have.
 	ContactID ids.ContactID
-	// Kind is which stop this is. The vocabulary is the table's own CHECK, and
-	// a caller may only ever record subject_request — the other three are
-	// written by machinery (a bounce) or describe a legal fact (an objection, a
-	// restriction) that a rep relaying a phone call is not recording.
+	// Kind is which stop this is. The vocabulary is the table's own CHECK;
+	// admitSuppress says which kinds a caller may write.
 	Kind string
 	// Reason is what the rep was told, in their words. Stored because a
 	// suppression somebody later wants lifted is only reviewable if the record
@@ -70,9 +68,9 @@ type SuppressInput struct {
 // newsletter" on the phone had only subject_request — which stopped the
 // invoices too.
 //
-// A processing restriction and a hard bounce stay machine-written: the first is
-// an Art. 18 legal state with its own workflow, the second a fact about a
-// mailbox only the mail path can observe.
+// A processing restriction is admitted through admitRestriction instead, and a
+// hard bounce stays machine-written: a fact about a mailbox only the mail path
+// can observe.
 var suppressibleKinds = []string{"subject_request", commsauthz.ReasonObjection}
 
 // suppressibleKind is the kind a seat writes when the subject asked to stop
@@ -123,11 +121,15 @@ func admitSuppress(ctx context.Context, in SuppressInput) (subject, commsauthz.A
 	if err != nil {
 		return subject{}, "", err
 	}
-	if !slices.Contains(suppressibleKinds, in.Kind) {
+	if in.Kind == kindProcessingRestriction {
+		if err := admitRestriction(ctx); err != nil {
+			return subject{}, "", err
+		}
+	} else if !slices.Contains(suppressibleKinds, in.Kind) {
 		return subject{}, "", &ValidationError{
 			Field: auditFieldKind,
-			Reason: "a contact may record that the subject asked us to stop, or objected to " +
-				"marketing; a processing restriction and a bounce are not recorded by hand here",
+			Reason: "a contact may record that the subject asked us to stop, objected to " +
+				"marketing, or restricted processing; a bounce is not recorded by hand here",
 		}
 	}
 	// The BOUND only. The contract makes this reason optional (`required: [kind]`),
@@ -145,6 +147,18 @@ func admitSuppress(ctx context.Context, in SuppressInput) (subject, commsauthz.A
 		return subject{}, "", err
 	}
 	return sub, levelFor(ctx, in.Kind), nil
+}
+
+// survivingContact is survivingSubject in a transaction of its own, for a
+// caller that holds none.
+func (s *Store) survivingContact(ctx context.Context, id ids.UUID) (ids.UUID, error) {
+	var surviving ids.UUID
+	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
+		var err error
+		surviving, err = survivingSubject(ctx, tx, id)
+		return err
+	})
+	return surviving, err
 }
 
 // survivingSubject resolves a contact to whichever record survives them, so a
@@ -184,7 +198,7 @@ func survivingSubject(ctx context.Context, tx pgx.Tx, id ids.UUID) (ids.UUID, er
 // conversation, with no article behind it, and an admin correcting a
 // misheard "stop everything" should not need the subject on the phone.
 func levelFor(ctx context.Context, kind string) commsauthz.AuthorityLevel {
-	if kind == commsauthz.ReasonObjection {
+	if kind == commsauthz.ReasonObjection || kind == kindProcessingRestriction {
 		return commsauthz.LevelSubject
 	}
 	return authorityOf(ctx)

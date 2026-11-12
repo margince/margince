@@ -220,6 +220,24 @@ const (
 func predicateFor(p principal.Principal, table string, arg func(any) int,
 	capture capturePrivacy, class readClass, share shareLevel,
 ) func(alias string) string {
+	visible := scopedPredicate(p, table, arg, capture, class, share)
+	if p.Type != principal.PrincipalAgent || table != tableContact {
+		return visible
+	}
+	// An agent does not see a restricted contact at all (GDPR Art. 18), so no
+	// record, listing or link walk hands it the contact or what hangs on it.
+	return func(alias string) string {
+		id := table + ".id"
+		if alias != "" {
+			id = alias + ".id"
+		}
+		return "(" + visible(alias) + " AND NOT " + ContactRestrictedSQL(id) + ")"
+	}
+}
+
+func scopedPredicate(p principal.Principal, table string, arg func(any) int,
+	capture capturePrivacy, class readClass, share shareLevel,
+) func(alias string) string {
 	if table == tableList {
 		return listSharingPredicate(p, arg)
 	}

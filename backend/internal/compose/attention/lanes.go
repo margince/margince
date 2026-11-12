@@ -179,7 +179,10 @@ type Task struct {
 	Commitment bool
 	// MayBeDone is the question whether our later mail kept the promise, set
 	// when one asks it (momentaction.DoneKey).
-	MayBeDone              *crmcontracts.WorklistMayBeDone
+	MayBeDone *crmcontracts.WorklistMayBeDone
+	// RequestCheck says why a reminder taken from a request will not close by
+	// itself, set when Margince cannot check whether it was answered.
+	RequestCheck           *crmcontracts.TaskRequestCheck
 	LeadResponseEscalation bool
 	ID                     ids.UUID
 	Subject                string

@@ -1,11 +1,16 @@
+import { useState } from "react";
 import { SignatureHtml } from "../../components/signaturehtml";
+import { Button } from "../../design-system/button";
 import type { DecisionApproval } from "../../design-system/decisioncard";
 import { EmailAttachments } from "../../design-system/emailmessage";
 import { EmailText } from "../../design-system/emailtext";
+import { ErrorLine } from "../../design-system/errorline";
 import { SourceEvidence } from "../../design-system/sourceevidence";
 import { SurfaceState } from "../../design-system/surfacestate";
 import { useT } from "../../i18n";
+import { useApproval } from "../../lib/approvalread";
 import { useSourceOpener } from "../../lib/opensource";
+import { REMOTE_IMAGE_BOX } from "./remoteimagebox";
 
 export function ApprovalEvidence({
   approval,
@@ -41,14 +46,46 @@ function ApprovalMessage({
         <SignatureHtml html={html} title={t("approval.preview.htmlBody")} />
       )}
       {signatureHtml ? (
-        <SignatureHtml
-          html={signatureHtml}
-          title={t("approval.preview.senderSignature")}
-        />
+        <ApprovalSignature approvalId={approval.id} listed={signatureHtml} />
       ) : signature ? (
         <EmailText body={signature} />
       ) : null}
       <EmailAttachments files={preview.files ?? []} />
+    </>
+  );
+}
+
+// A list read draws each signature image as a box and fetches nothing. The
+// reader asks for the images, and one approval's own read draws them.
+function ApprovalSignature({
+  approvalId,
+  listed,
+}: Readonly<{ approvalId: string; listed: string }>) {
+  const t = useT();
+  const [wanted, setWanted] = useState(false);
+  const one = useApproval(approvalId, wanted);
+  const preview = one.data?.preview;
+  const drawn =
+    preview?.version === 2
+      ? preview.details?.find((detail) => detail.field === "signature_html")
+          ?.value.text
+      : undefined;
+  return (
+    <>
+      <SignatureHtml
+        html={drawn ?? listed}
+        title={t("approval.preview.senderSignature")}
+      />
+      {drawn === undefined && listed.includes(REMOTE_IMAGE_BOX) && (
+        <Button
+          pending={one.isFetching}
+          // A read that failed is asked again on the next press.
+          onClick={() => (wanted ? void one.refetch() : setWanted(true))}
+        >
+          {t("approval.preview.showImages")}
+        </Button>
+      )}
+      {one.error && <ErrorLine error={one.error} inline />}
     </>
   );
 }

@@ -236,6 +236,7 @@ function CompanyRecord({
           // rename a tab that did not change. This label now also names the
           // lead's own Deals & projects tab, which reads the same two things.
           deals: t("tab.dealsProjects"),
+          meetings: t("tab.meetings"),
           tasks: t("tab.tasks"),
           timeline: t("tab.timeline"),
           // The tab's own key rather than `finance.title`, which the card

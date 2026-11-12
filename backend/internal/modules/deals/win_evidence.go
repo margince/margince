@@ -101,6 +101,9 @@ func (e *WonReasonDetailTooLongError) FieldFault() (field, code, message string)
 	return "won_without_contract_detail", "too_long", e.Error()
 }
 
+// FieldMax is the detail's limit.
+func (e *WonReasonDetailTooLongError) FieldMax() int { return maxWonReasonDetail }
+
 // maxWonReasonDetail is the contract's `maxLength` on this field, applied here
 // because nothing else does.
 //

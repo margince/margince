@@ -14,7 +14,7 @@ import { TokenInput } from "../../design-system/tokeninput";
 import { useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
 import { useConnectorState } from "../../lib/connector-state";
-import { problemFieldErrorsOf } from "../../lib/problem";
+import { faultSentenceFor, problemFieldErrorsOf } from "../../lib/problem";
 import {
   type RegisteredAgentClient,
   useRegisterAgentClient,
@@ -54,7 +54,7 @@ function useFieldProblem(error: unknown) {
       return undefined;
     }
     const key = FIELD_PROBLEM_COPY[problem.code];
-    return key === undefined ? problem.message : t(key);
+    return key === undefined ? faultSentenceFor(problem, t) : t(key);
   };
 }
 

@@ -22,9 +22,9 @@ import (
 )
 
 const (
-	// deletionHold matches Exchange's default deleted-item retention, the
-	// owner's own window to restore a hard-deleted message.
-	deletionHold = 14 * 24 * time.Hour
+	// deletionHold ends before Exchange's default 14-day retention empties
+	// Deletions, so the check at its end still finds the message there.
+	deletionHold = 10 * 24 * time.Hour
 	// pendingPurgeCap bounds the cursor. An arrival past it is not recorded,
 	// so its captured copy is kept.
 	pendingPurgeCap = 5000

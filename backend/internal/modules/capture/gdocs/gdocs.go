@@ -9,14 +9,15 @@
 // The grant is documents.readonly: it opens a Doc by its id and cannot list or
 // search Drive. The address scope names the account that connected.
 //
-// The connection captures nothing on its own. Its Sync only mints an access
-// token, so a revoked grant shows as "reconnect" on Connections. The notes are
-// read by a job that knows which Doc a meeting carries.
+// The connection writes no records of its own. Its Sync mints an access token,
+// so a revoked grant shows as "reconnect" on Connections. It then reads the
+// Docs the Sink names and hands their text back to it.
 package gdocs
 
 import (
 	"context"
 	"errors"
+	"log/slog"
 	"net/http"
 
 	"github.com/margince/margince/backend/internal/modules/capture/googleconn"
@@ -105,6 +106,7 @@ func NewOwner(client *http.Client, base string) Owner {
 type Connector struct {
 	oauth googleconn.Authorizer
 	owner Owner
+	docs  DocsAPI
 }
 
 // New returns a Docs connector over the given OAuth and owner surfaces.
@@ -117,6 +119,14 @@ var (
 	_ connector.GrantedScoper  = (*Connector)(nil)
 	_ connector.AccountLabeler = (*Connector)(nil)
 )
+
+// WithDocs returns a copy that reads meeting notes through docs. Without it a
+// sync only refreshes the token.
+func (c *Connector) WithDocs(docs DocsAPI) *Connector {
+	copied := *c
+	copied.docs = docs
+	return &copied
+}
 
 // errNoRecords marks the one record shape this connector never produces.
 var errNoRecords = errors.New("gdocs: the Google Docs connection captures no records")
@@ -148,13 +158,50 @@ func (c *Connector) AccountLabel(auth connector.Auth) (string, error) {
 	return googleconn.AccountLabel(auth)
 }
 
-// Sync captures nothing. It mints an access token so a revoked or expired
-// grant parks the connection, and hands the cursor back unchanged.
-func (c *Connector) Sync(ctx context.Context, auth connector.Auth, cursor connector.Cursor, _ connector.Sink) (connector.Cursor, error) {
-	if _, _, err := googleconn.Session(ctx, c.oauth, auth); err != nil {
+// Sync mints an access token, so a revoked or expired grant parks the
+// connection, then reads the meeting notes the sink names. The cursor goes back
+// unchanged: what is due is the sink's answer, not a position in a feed.
+func (c *Connector) Sync(ctx context.Context, auth connector.Auth, cursor connector.Cursor, sink connector.Sink) (connector.Cursor, error) {
+	_, token, err := googleconn.Session(ctx, c.oauth, auth)
+	if err != nil {
+		return nil, err
+	}
+	keeper, ok := sink.(connector.MeetingNotesKeeper)
+	if !ok || c.docs == nil {
+		return cursor, nil
+	}
+	if err := c.readMeetingNotes(ctx, keeper, token); err != nil {
 		return nil, err
 	}
 	return cursor, nil
+}
+
+// readMeetingNotes reads each due Doc and lands its text. A Doc this account
+// cannot open is skipped, and the next sync asks again. A refused grant stops
+// the pass, because no other Doc can be read either.
+func (c *Connector) readMeetingNotes(ctx context.Context, keeper connector.MeetingNotesKeeper, token string) error {
+	due, err := keeper.MeetingNotesDue(ctx)
+	if err != nil {
+		return err
+	}
+	for _, doc := range due {
+		read, err := c.docs.Document(ctx, token, doc.FileID)
+		switch {
+		case errors.Is(err, ErrScopeRefused):
+			return keeper.MeetingNotesRefused(ctx)
+		case errors.Is(err, ErrDocumentUnreadable):
+			slog.InfoContext(ctx, "gdocs: a meeting's notes document could not be opened by this account",
+				"meeting_id", doc.Meeting.String(), "error", err)
+			continue
+		case err != nil:
+			return err
+		}
+		notes := connector.MeetingNotesText{Title: read.Title, Revision: read.Revision, Text: read.Text}
+		if err := keeper.KeepMeetingNotes(ctx, doc, notes); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 // Normalize has nothing to map: this connection writes no records.

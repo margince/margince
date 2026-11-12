@@ -37,6 +37,13 @@ The current CI lane supplies no removal release version, and the current release
 format cannot authorize removal. Whole operations therefore stay supported. A
 supported non-patch release lane must be added before retiring an operation.
 
+A maintainer may ratify removing a named operation without a notice, for an
+operation no stable release ever served. Each one is a line in
+[contract-ratified-removals.txt](../../scripts/contract-ratified-removals.txt)
+with its method, path and reason. The notice check and the compatibility check
+both let that one operation go. Every operation not on the list keeps the rules
+above.
+
 The shared rules are in
 [notice.go](../../backend/internal/platform/apideprecation/notice.go).
 The check refuses a removal without a recorded announcement and prevents changes

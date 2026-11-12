@@ -143,8 +143,9 @@ export const DayOnlyToday: Story = {
     ).closest("section");
     await expect(next?.textContent).toMatch(/Walkthrough/);
     await expect(next?.textContent).not.toMatch(en["standing.noneYet"]);
+    // A mark's name carries its day, and a day-only visit names no clock.
     await userEvent.click(
-      await screen.findByRole("button", { name: en["timeline.kind.note"] }),
+      await screen.findByRole("button", { name: "Note, 13 Aug" }),
     );
     const row = (await screen.findByText("Site visit")).parentElement;
     await expect(row?.textContent).not.toMatch(/\d{1,2}:\d{2}/);

@@ -260,6 +260,9 @@ var heldDimension = activityDimension{scopeMarkers: heldScopeMarkers, literalMar
 // sender addresses to the system, and must reach held rows too.
 const senderStampReader = "the sender_is_machine repair reads only the id and sender address of received mail, as the system. It must reach held rows, so a lifted hold does not bring back a notice counted as an exchange. No content leaves it"
 
+// subjectMailReader ratifies the notice readers of a subject's own mail.
+const subjectMailReader = "composes correspondence.SubjectMailSQL, which filters archived_at IS NULL on the same activity row. It answers only whether and when the subject wrote to us, never content. A held mail is still the subject's own word for where their address came from"
+
 // restrictedReadersAdmitted ratifies the readers that reach a held row and may.
 //
 // Keyed by FILE AND FUNCTION. It used to be keyed by file, which meant a
@@ -275,11 +278,14 @@ const senderStampReader = "the sender_is_machine repair reads only the id and se
 // ClassifyBacklogPredicate, which filters archived rows. A reason a gate can
 // work out is better computed than written down.
 var restrictedReadersAdmitted = gatekit.Waive(map[string]string{
+	"internal/modules/consent/noticesubjectwrote.go:SubjectMailFromSQL":                 subjectMailReader,
+	"internal/compose/noticesubjectwrote.go:NoticeCaseOpen.settleWhenSubjectWrote":      subjectMailReader,
 	"internal/modules/privacy/sarretainedcopies.go:sarThreadVerdictSection":             "The authorized subject-access export includes a held thread verdict only when its seen addresses name the requested subject. Exported addresses are reduced to that subject and the existing content-disclosure predicate still applies. Cost: a held message's classification can appear in its subject's export.",
 	"internal/modules/privacy/sarmessages.go:sarPartySourceSection":                     "The authorized subject-access export includes held party-source rows only for the requested subject's addresses. Recipients and policy addresses are reduced to that subject, and the existing content-disclosure predicate still applies. Cost: the held row's provider and owner-sender flag can appear in its subject's export.",
 	"internal/modules/activities/dealdeclineproject.go:projectCameFromDeal":             "reads the link and audit rows of the one message the decline already locked and write-checked; only a boolean leaves, never content",
 	"internal/modules/privacy/linkedhistoricalaudit.go:legacyAuditEntries":              "system-only audit-key walk returns metadata and reduction flags. Each matching record is checked for current holds and correspondence floors before a per-entry proof changes its payload; no activity image leaves the database",
 	"internal/modules/privacy/historicalaudit.go:RedactHistoricalAuditPageTx":           "scans audit IDs, entity references and a certificate flag, not activity content. Each candidate is checked against current holds and the shared correspondence floor before any payload is erased",
+	"internal/modules/activities/dealactivitylists.go:LockDealActivitiesTx":             "Share-locks every activity linked to one deal before the automatic close re-reads its evidence, and returns nothing. A held row must be locked too, or its writer would not serialize with the close. Cost: a writer on a held message waits for that close.",
 	"internal/modules/activities/participantevidence.go:lockParticipantEvidenceParents": "Locks only opaque parent IDs before derived-clock backfill takes child row locks. Held parents must share the cascade lock order too; no date or content leaves this function, and evidence readers separately exclude held rows.",
 	"internal/modules/capture/capturebeforethewrite.go:Sink.captureThreadLocks":         "Reads only opaque component keys before capture acquires its locks. Held rows must participate so a merge cannot bypass a privacy writer; content admission remains separate and no content is returned.",
 	"internal/modules/capture/senderstanding.go:heldContactThreads":                     "System-only hold release collects opaque thread keys, including held messages, before locking and rechecking the set. Excluding held rows would omit the very evidence the release must serialize against; no content is returned.",

@@ -102,6 +102,9 @@ signs; see [the workflows beside the merge gate](../reference/ci-workflows.md).
 cancelling, because nothing replaces a daily run. `cache-warm.yml` groups without cancelling, because a
 cancelled run saves no cache.
 
+A pull request workflow that also starts with no new commit groups without cancelling, because Renovate
+never merges a head with a `cancelled` check. `backend/gates/samecommitcancel_test.go` holds this.
+
 A skipped required check counts as *passing* on GitHub. That is why the build checks are put together
 in one `ci` job that refuses a skip on `merge_group`; see
 [The `ci` aggregate](#the-ci-aggregate-is-the-only-required-build-context).
@@ -225,8 +228,8 @@ changes ──┬─> deterministic-gates *
           ├─> backend-lint *
           ├─> craftsmanship
           ├─> integration  →  _lane-integration.yml ────────────────┐
-          │                     integration-build                   │
-          │                      └─> integration-shards (×8) ┐      │
+          │                     integration-build ┐ (binaries)      │
+          │                     integration-shards (×8) ─────┐      │
           │                     integration-unit-coverage ───┴> fan-in
           ├─> vuln                                              │   │
           ├─> license gate  (`deps` scope)                      │   │
@@ -293,14 +296,14 @@ The integration lane on a real Postgres runs **beside** `deterministic-gates` fo
 the longest lane in the pipeline. Running the two slowest jobs one after the other would set the clock
 time of a PR. And `deterministic-gates` itself still catches a broken build.
 
-- The lane is **sharded**. 8 matrix runners share its tests, cut into parts per test. Splitting per
-  package could go no faster than the largest package, `compose/integration`.
+- The lane is **sharded** per test over 8 runners: per package, `compose/integration` sets the floor.
 - The `integration` fan-in puts them together again, into the single result the `ci` aggregate reads.
 
 The lane **compiles once**: a part picked per test reaches nearly every package. The `integration build`
 job links each package's test binary with the shards' flags, and each shard runs its part from them in
-the package directory. A compile error fails the build job, so no shard starts. Each shard still pays
-start-up, the fetch and its own template, so size the matrix from the measured test times.
+the package directory. The shards start beside the build: stack and template come up while it compiles,
+then they wait for `test-binaries-integration-<attempt>`. A failed build uploads `…-<attempt>-failed`,
+and the shards stop ([`lib-lanebinaries.sh`](../../scripts/lib-lanebinaries.sh)).
 
 The shards **share one queue**, so they end close together. Runner speed differs by up to 1.9 times,
 and with a fixed split the fast shards waited for the slow ones. Parts of about 120 seconds of test time
@@ -472,7 +475,7 @@ The first kind is held by a census, not a scan, because such paths are mostly bu
 `backend/tools/check-test-inputs` fails on any package that read outside its module without reading the
 matching digest.
 
-On a ready PR into `main` that touches the backend, `deterministic-gates (unit)` runs its own tests through that wrapper. It then judges the logs (`make test-input-census-judge`), so the PR that adds such a read fails. `cache-warm`
+On a ready PR into `main` that touches the backend, `deterministic-gates (unit)` and `deterministic-gates (solo)` each run their own tests through that wrapper. It then judges the logs (`make test-input-census-judge`), so the PR that adds such a read fails. `cache-warm`
 runs it before it saves an entry, and a failing census holds back the entry, so readers stay on the last
 good one. The second kind is held by a gate: a cached test file that runs `git` or `go` must declare its inputs.
 

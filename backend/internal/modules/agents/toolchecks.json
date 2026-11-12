@@ -114,11 +114,6 @@
         "relationship.read"
       ]
     },
-    "allow_contact": {
-      "checks": [
-        "contact.update"
-      ]
-    },
     "annotate_brief": {
       "checks": [
         "deal.read"
@@ -1679,6 +1674,7 @@
     "get_team_margince_changes": {
       "checks": [
         "deal.read",
+        "pipeline.read",
         "scope:team"
       ]
     },

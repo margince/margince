@@ -212,9 +212,13 @@ type taskDef struct {
 	Decision       bool               `yaml:"decision"`
 	CompanyContext *companyContextDef `yaml:"company_context"`
 	CostUnit       string             `yaml:"cost_unit"`
-	Doc            string             `yaml:"doc"`
-	DisplayName    string             `yaml:"display_name"`
-	Summary        string             `yaml:"summary"`
+	// SubjectRestriction is honour or none: whether the task refuses to read
+	// a contact under a restriction of processing. none names its reason.
+	SubjectRestriction       string `yaml:"subject_restriction"`
+	SubjectRestrictionReason string `yaml:"subject_restriction_reason"`
+	Doc                      string `yaml:"doc"`
+	DisplayName              string `yaml:"display_name"`
+	Summary                  string `yaml:"summary"`
 }
 
 // contract is the parsed ai-tasks.yaml. Tiers is a YAML sequence, so its

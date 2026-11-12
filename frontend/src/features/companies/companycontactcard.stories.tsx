@@ -41,6 +41,9 @@ export default meta;
 
 type Story = StoryObj<typeof meta>;
 
+// The link's name carries the monogram it prints, then the contact's name.
+const CARD_LINK = /Phạm Thị Lan$/;
+
 // The pill takes its words from the shared deal role map, in the reader's
 // language.
 export const SeatInTheReadersLanguage: Story = {
@@ -49,7 +52,7 @@ export const SeatInTheReadersLanguage: Story = {
   },
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
-    await canvas.findByRole("link", { name: "Phạm Thị Lan" });
+    await canvas.findByRole("link", { name: CARD_LINK });
     await expect(canvas.getByText("Người cản trở")).toBeVisible();
   },
 };
@@ -68,7 +71,7 @@ export const SeatTheMapDoesNotKnow: Story = {
   },
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
-    await canvas.findByRole("link", { name: "Phạm Thị Lan" });
+    await canvas.findByRole("link", { name: CARD_LINK });
     await expect(canvasElement.textContent).not.toMatch(
       /function|toString|gatekeeper/,
     );

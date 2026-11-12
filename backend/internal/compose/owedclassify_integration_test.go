@@ -21,6 +21,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"log/slog"
+	"strings"
 	"testing"
 
 	"github.com/jackc/pgx/v5"
@@ -145,6 +146,41 @@ func TestTheWorkerJudgesWhatIsWaiting(t *testing.T) {
 	}
 	if *got != activities.OwedVerdictInformsUs {
 		t.Errorf("verdict = %q, want %q", *got, activities.OwedVerdictInformsUs)
+	}
+}
+
+// The owed question is asked of the sender's own words. A quoted request under
+// a short reply never reaches the model. A mail that is only a quote takes no
+// verdict, because someone else's old question is not owed by us.
+func TestTheOwedVerdictReadsOnlyTheSendersOwnWords(t *testing.T) {
+	e := integration.Setup(t)
+	quoted := "On Mon, 10 Nov 2026 at 09:00, Anna Berg <anna@example.test> wrote:\n> Could you send the signed contract by Friday?" +
+		strings.Repeat("\n> More of the old thread.", 200)
+	reply := seedWaitingMail(t, e, "Re: contract")
+	onlyQuote := seedWaitingMail(t, e, "Fwd: contract")
+	e.WsExec(t, `UPDATE activity SET body = $2 WHERE id = $1`, reply, "Thanks, all clear now.\n\n"+quoted)
+	e.WsExec(t, `UPDATE activity SET body = $2 WHERE id = $1`, onlyQuote, quoted)
+
+	brain := &owedBrainStub{verdict: activities.OwedVerdictAsksUs, confidence: 0.95}
+	runOwedWorker(t, e, brain)
+
+	for _, req := range brain.prompts {
+		prompt := req.Messages[0].Content
+		if strings.Contains(prompt, "signed contract") {
+			t.Fatalf("the quoted request reached the model:\n%s", prompt)
+		}
+		if !strings.Contains(prompt, "Thanks, all clear now.") {
+			t.Fatalf("the short reply's own words did not reach the model:\n%s", prompt)
+		}
+	}
+	if got := verdictOf(t, e, reply); got == nil {
+		t.Error("the short reply was not judged")
+	}
+	if got := verdictOf(t, e, onlyQuote); got != nil {
+		t.Errorf("a mail that is only a quote was judged %q, want no verdict", *got)
+	}
+	if n := e.WsCount(t, `SELECT count(*) FROM activity WHERE id = $1 AND owed_verdict_declined_at IS NOT NULL`, onlyQuote); n != 1 {
+		t.Error("the mail that is only a quote stays in the backlog; it should be stamped declined")
 	}
 }
 

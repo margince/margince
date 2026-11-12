@@ -106,15 +106,15 @@ func Relink(ctx context.Context, tx pgx.Tx, record reach.Record, source, target 
 	}
 	for _, o := range tables {
 		for _, l := range o.Table.Links {
+			if !movesFor(l, record) {
+				continue
+			}
 			column := pgx.Identifier{l.Column}.Sanitize()
 			stmt := `UPDATE ` + o.qualified() + ` SET ` + column + ` = $2 WHERE ` + column + ` = $1`
 			args := []any{source, target}
-			switch {
-			case l.KindColumn != "":
+			if l.KindColumn != "" {
 				stmt += ` AND ` + pgx.Identifier{l.KindColumn}.Sanitize() + ` = $3`
 				args = append(args, string(record))
-			case l.Record != record:
-				continue
 			}
 			if _, err := tx.Exec(ctx, stmt, args...); err != nil {
 				return fmt.Errorf("move %s's %s.%s onto the surviving %s: %w", o.Owner, o.Table.Name, l.Column, record, err)
@@ -122,6 +122,48 @@ func Relink(ctx context.Context, tx pgx.Tx, record reach.Record, source, target 
 		}
 	}
 	return nil
+}
+
+// movesFor reports whether Relink moves any row of the link when a record of
+// this kind is merged away. A kind-column link moves only the rows whose kind
+// column names that kind.
+func movesFor(l reach.Link, record reach.Record) bool {
+	return l.KindColumn != "" || l.Record == record
+}
+
+// Column names one declared link column. Schema is empty for a core table.
+type Column struct {
+	Schema, Table, Name string
+}
+
+// Moved says which rows of one column Relink moves. With KindColumn empty, it
+// moves every row naming the retired record. Otherwise it moves only the rows
+// whose KindColumn holds the merged kind.
+type Moved struct {
+	KindColumn string
+}
+
+// MovedColumns returns the declared columns Relink moves when a record of this
+// kind is merged away, and which of its rows. The merge's dependents check
+// reads it. A row the merge carries onto the survivor never blocks that merge,
+// and a row it leaves behind still does.
+func MovedColumns(record reach.Record) (map[Column]Moved, error) {
+	if err := record.Validate(); err != nil {
+		return nil, err
+	}
+	tables, err := Tables()
+	if err != nil {
+		return nil, err
+	}
+	moved := map[Column]Moved{}
+	for _, o := range tables {
+		for _, l := range o.Table.Links {
+			if movesFor(l, record) {
+				moved[Column{Schema: o.Schema, Table: o.Table.Name, Name: l.Column}] = Moved{KindColumn: l.KindColumn}
+			}
+		}
+	}
+	return moved, nil
 }
 
 // Cleared is one table the erasure wrote and the rows it cleared there.

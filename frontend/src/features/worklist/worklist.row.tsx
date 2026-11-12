@@ -10,6 +10,7 @@ import { useLocale, useT } from "../../i18n";
 import { useCompanyZone } from "../../lib/companyzone";
 import { isUnprepared } from "../../lib/meetingreadiness";
 import { useMe } from "../../lib/session";
+import { askKey, saysOpen } from "../../lib/worklistask";
 import {
   briefContextTitle,
   briefSubjectLabel,
@@ -29,7 +30,7 @@ import {
   eyebrowKeyFor,
   kindClass,
 } from "../../lib/worklisteyebrow";
-import { askKey } from "./worklist.ask";
+import { cardLine, useHappenedClock } from "../../lib/worklisthappened";
 import { useBriefAnswer, withFoldedBrief } from "./worklist.briefverbs";
 import { DepartedOwnerCaption } from "./worklist.departedowner";
 import {
@@ -56,7 +57,7 @@ import { RowActs } from "./worklist.rowverbs";
 import "./worklist.row.css";
 import { useViewerZone } from "../../lib/viewerzone";
 import { PreparationNote } from "./worklist.ready";
-import { rowAnswer } from "./worklist.row.answer";
+import { RowProposal, rowAnswer } from "./worklist.row.answer";
 import { Rank, RowLead, RowText, titleLinks } from "./worklist.row.cells";
 
 // Preserve server order while naming each group member once.
@@ -386,14 +387,24 @@ function framedName(
   };
 }
 
-// The card is read on its own, so it says what the row asks. A queue row leaves
-// that to the details its reader opens.
+// The card is read on its own, so it says what happened and what to do about
+// it. A queue row leaves that to the details its reader opens.
 function RowAsk({
   item,
   framed,
 }: Readonly<{ item: WorklistItem; framed: boolean }>) {
   const t = useT();
-  return framed ? (
-    <p className="t-body worklist-row-ask">{t(askKey(item))}</p>
-  ) : null;
+  const clock = useHappenedClock();
+  if (!framed) return null;
+  // A reminder Margince cannot check says so in place of its event. A row
+  // asking whether it may be done has its question below, not the stock ask.
+  const event = item.request_check ? null : cardLine(item, t, clock);
+  const ask = saysOpen(item) ? t(askKey(item)) : null;
+  const line = event ?? ask;
+  return (
+    <>
+      {line && <p className="t-body worklist-row-ask">{line}</p>}
+      <RowProposal item={item} />
+    </>
+  );
 }

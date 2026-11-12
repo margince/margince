@@ -4,6 +4,7 @@
 package compose
 
 import (
+	"github.com/margince/margince/backend/internal/compose/salesprogress"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/shared/kernel/langcopy"
 )
@@ -53,9 +54,10 @@ var reportingLeadStatusLabels = map[crmcontracts.LeadStatus]langcopy.Phrase{
 // product.component_kind, a product nobody classified, and the part of a won
 // deal no product carries.
 var reportingComponentKindLabels = map[string]langcopy.Phrase{
-	"software":       {En: "Software", De: "Software", Vi: "Phần mềm"},
-	"implementation": {En: "Implementation", De: "Umsetzung", Vi: "Triển khai"},
-	"other":          {En: "Other", De: "Sonstiges", Vi: "Khác"},
-	"unclassified":   {En: "Unclassified product", De: "Nicht eingeordnetes Produkt", Vi: "Sản phẩm chưa phân loại"},
-	"unallocated":    {En: "Unallocated", De: "Nicht zugeordnet", Vi: "Chưa phân bổ"},
+	string(crmcontracts.DealLineComponentKindSoftware):       {En: "Software", De: "Software", Vi: "Phần mềm"},
+	string(crmcontracts.DealLineComponentKindImplementation): {En: "Implementation", De: "Umsetzung", Vi: "Triển khai"},
+	string(crmcontracts.DealLineComponentKindOther):          {En: "Other", De: "Sonstiges", Vi: "Khác"},
+	"unclassified":            {En: "Unclassified product", De: "Nicht eingeordnetes Produkt", Vi: "Sản phẩm chưa phân loại"},
+	"unallocated":             {En: "Unallocated", De: "Nicht zugeordnet", Vi: "Chưa phân bổ"},
+	salesprogress.InvalidKind: {En: "Lines exceed the deal value", De: "Positionen übersteigen den Dealwert", Vi: "Các dòng vượt quá giá trị deal"},
 }

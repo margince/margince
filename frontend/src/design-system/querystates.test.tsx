@@ -10,7 +10,7 @@ import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { LocaleProvider, translate } from "../i18n";
 import { ProblemError } from "../lib/problem";
-import { QueryStates } from "./querystates";
+import { QueryStates, WriteRefused } from "./querystates";
 
 const t = (key: Parameters<typeof translate>[1]) => translate("en", key);
 
@@ -112,5 +112,42 @@ describe("QueryStates", () => {
     expect(loading.getAttribute("aria-busy")).toBe("true");
     // And nothing claims to have failed while it is still loading.
     expect(screen.queryByRole("alert")).toBeNull();
+  });
+});
+
+describe("WriteRefused", () => {
+  const tooLong = new ProblemError({
+    status: 422,
+    code: "validation_error",
+    detail: "a signature's html is at most 10000 characters, this one is 10001",
+    details: {
+      errors: [
+        {
+          field: "html",
+          code: "too_long",
+          message:
+            "a signature's html is at most 10000 characters, this one is 10001",
+          max: 10000,
+        },
+      ],
+    },
+  });
+
+  it("names the field by the form's own label, and its limit, in the reader's language", async () => {
+    const client = new QueryClient();
+    rtlRender(
+      <QueryClientProvider client={client}>
+        <LocaleProvider initial="de">
+          <WriteRefused
+            titleKey="common.error"
+            error={tooLong}
+            fieldLabels={{ html: "HTML-Signatur" }}
+          />
+        </LocaleProvider>
+      </QueryClientProvider>,
+    );
+    expect(
+      await screen.findByText("HTML-Signatur: höchstens 10.000 Zeichen."),
+    ).toBeTruthy();
   });
 });

@@ -11,18 +11,14 @@ import { RecordCustomFields } from "../../components/recordcustomfields";
 import { RecordFields } from "../../components/recordfields";
 import { TagsPanel } from "../../components/tagspanel";
 import { Badge } from "../../design-system/atoms";
-import {
-  ContactLink,
-  CopyEmail,
-  EmailFace,
-} from "../../design-system/contactlink";
+import { ContactLink } from "../../design-system/contactlink";
 import { FieldRow } from "../../design-system/fieldgrid";
 import { RecordCard } from "../../design-system/recordcard";
 import type {
   DetailRow,
   DetailSection,
 } from "../../design-system/recorddetails";
-import { countryBeyondCity } from "../../format/address";
+import { postalLines } from "../../format/address";
 import {
   EMAIL_TYPE_LABEL,
   PHONE_TYPE_LABEL,
@@ -42,6 +38,7 @@ import { BoughtMark, boughtFields } from "./boughtmarks";
 import { BoughtAttributes } from "./contactboughtattributes";
 import { useContactEdit } from "./contactedit";
 import { ContactSource } from "./contactfacts";
+import { EmailHandles, PhoneHandles } from "./contacthandles";
 import { EmployerValue } from "./employerchange";
 import { type ProfileField, proposedEmployer } from "./employerproposal";
 import { ProposedEmployerRow } from "./employerproposalrow";
@@ -66,20 +63,13 @@ export function useContactAboutSections(view: Contact360): DetailSection[] {
     typeof contact.social?.linkedin === "string" ? contact.social.linkedin : "";
   const linkedinHref = linkedinUrl(linkedin);
   const email = contact.primary_email;
-  const emailRow = contact.emails?.find((row) => row.email === email);
   const phone = primaryPhone(contact.phones);
-  const address = [
-    contact.address?.city,
-    countryBeyondCity(contact.address?.city, contact.address?.country),
-  ]
-    .filter(Boolean)
-    .join(", ");
+  const address = postalLines(contact.address);
   const employer = currentEmployer(view.employments?.data);
   const proposed = employer
     ? undefined
     : proposedEmployer(view, view.employments?.data ?? []);
   const owner = rosterOwnerName(contact.owner_id, ownerName, t, notSet);
-  const record = { entityType: "contact", entityId: contact.id } as const;
   // Every row opens its edit from its value; an empty one still folds.
   // A handle (an address or number with its marks and glyphs) lays them out.
   const field = (
@@ -120,37 +110,24 @@ export function useContactAboutSections(view: Contact360): DetailSection[] {
           empty: !employer && !proposed,
           block: Boolean(employer ?? proposed),
         },
-        field("email", t("create.email"), Boolean(email), {
-          keys: ["emails"],
-          link: Boolean(email),
-          reading: email && (
-            <>
-              <span className="contactlink-copyable">
-                <ContactLink kind="email" value={email} record={record}>
-                  <EmailFace address={email} />
-                </ContactLink>
-                <CopyEmail address={email} />
-              </span>
-              <BoughtMark
-                bought={emailRow && bought.get(`email:${emailRow.id}`)}
-                subject={email}
-              />
-            </>
-          ),
-        }),
-        field("phone", t("create.phone"), Boolean(phone), {
-          keys: ["phones"],
-          link: Boolean(phone),
-          reading: phone && (
-            <>
-              <ContactLink kind="phone" value={phone.phone} record={record} />
-              <BoughtMark
-                bought={bought.get(`phone:${phone.id}`)}
-                subject={phone.phone}
-              />
-            </>
-          ),
-        }),
+        stacked(
+          field("email", t("create.email"), Boolean(email), {
+            keys: ["emails"],
+            link: Boolean(email),
+            reading: email && (
+              <EmailHandles contact={contact} bought={bought} />
+            ),
+          }),
+        ),
+        stacked(
+          field("phone", t("create.phone"), Boolean(phone), {
+            keys: ["phones"],
+            link: Boolean(phone),
+            reading: phone && (
+              <PhoneHandles contact={contact} bought={bought} />
+            ),
+          }),
+        ),
         field("linkedin", t("contact.page.linkedin"), linkedin !== "", {
           keys: ["social.linkedin"],
           // The label claims the destination is LinkedIn, and a crawl or a
@@ -204,6 +181,12 @@ export function useContactAboutSections(view: Contact360): DetailSection[] {
       ],
     },
   ];
+}
+
+// A row whose lines take the column's width under its label, as the
+// employer card does, so an address never breaks to fit beside it.
+function stacked(row: DetailRow): DetailRow {
+  return row.empty ? row : { ...row, block: true };
 }
 
 function employerValue(

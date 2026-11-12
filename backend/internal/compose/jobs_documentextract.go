@@ -115,7 +115,7 @@ func (w *documentExtractWorker) read(wsCtx context.Context, args DocumentExtract
 			"attachment_extraction_id", args.ExtractionReadID)
 		return nil
 	}
-	return jobs.FaultContext(wsCtx, err)
+	return jobs.FaultContext(wsCtx, snoozeWhileRestricted(err))
 }
 
 // declineUnread closes a reading no configured lane can perform. Failing it

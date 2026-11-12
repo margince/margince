@@ -155,7 +155,6 @@
     "change_compliance": {
       "field": "action",
       "actions": {
-        "allow_contact": "allow_contact",
         "assign_notice_case": "assign_notice_case",
         "assign_notice_case_review": "assign_notice_case_review",
         "confirm_notice_source": "confirm_notice_source",

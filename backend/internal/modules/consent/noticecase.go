@@ -23,6 +23,7 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/platform/auth"
+	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -254,7 +255,7 @@ func (s *Store) OpenNoticeCasesDueSoonestTx(ctx context.Context, tx pgx.Tx, in N
 	if err != nil {
 		return nil, err
 	}
-	err = func() error {
+	err = database.UseCustomPlansTx(ctx, tx, func(ctx context.Context) error {
 		rows, err := tx.Query(ctx, query, args...)
 		if err != nil {
 			return err
@@ -284,7 +285,7 @@ func (s *Store) OpenNoticeCasesDueSoonestTx(ctx context.Context, tx pgx.Tx, in N
 			}
 		}
 		return nil
-	}()
+	})
 	return out, err
 }
 

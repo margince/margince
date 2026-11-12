@@ -117,7 +117,7 @@ func TestCompanyReadMessageCaseRefusesAFixtureProductionCouldNotProduce(t *testi
 			fixture := companyReadCorrectionFixture()
 			tc.mutate(&fixture)
 			_, err := companyReadMessageCases{}.Prepare(
-				companyReadFixtureJSON(t, fixture), companyReadCorrectionExpectation(t),
+				fixtureJSON(t, fixture), companyReadCorrectionExpectation(t),
 			)
 			if err == nil {
 				t.Fatalf("a fixture production could not produce prepared")
@@ -187,7 +187,7 @@ func TestCompanyReadMessageCaseRefusesAnUnreachableExpectation(t *testing.T) {
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
 			_, err := companyReadMessageCases{}.Prepare(
-				companyReadFixtureJSON(t, tc.fixture), companyReadExpectationJSON(t, tc.kind, tc.changes),
+				fixtureJSON(t, tc.fixture), companyReadExpectationJSON(t, tc.kind, tc.changes),
 			)
 			if err == nil {
 				t.Fatalf("an unreachable expectation prepared")
@@ -208,7 +208,7 @@ func TestCompanyReadMessageCaseRefusesAnExpectationItCannotRead(t *testing.T) {
 		json.RawMessage(`"correction"`),
 		json.RawMessage(`{"kind":"correction","proposed_changes":{"legal_name":"Acme Robotics GmbH"}}`),
 	} {
-		_, err := companyReadMessageCases{}.Prepare(companyReadFixtureJSON(t, companyReadCorrectionFixture()), expected)
+		_, err := companyReadMessageCases{}.Prepare(fixtureJSON(t, companyReadCorrectionFixture()), expected)
 		if err == nil {
 			t.Fatalf("a scenario expecting %s prepared", expected)
 		}

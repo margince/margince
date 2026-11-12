@@ -217,7 +217,7 @@ func readNextSteps(ctx context.Context, tx pgx.Tx, companyID ids.CompanyID, now 
 	}
 	extra := " AND " + activities.CurrentTaskClause("a", now, identities, arg)
 	if promisesOnly {
-		extra += " AND " + activities.NotSystemMinted("a", arg)
+		extra += " AND " + activities.NotSystemMinted("a")
 	}
 	query := fmt.Sprintf(`
 		SELECT a.id, coalesce(a.subject, ''), a.body, `+storekit.TaskDueSQL("a")+`, a.due_has_time, a.assignee_id, coalesce(u.display_name, ''), a.occurred_at, a.version,

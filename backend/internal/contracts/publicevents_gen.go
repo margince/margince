@@ -1563,15 +1563,15 @@ type PublicEventConsentOverrideLifted struct {
 	RevokedByLevel string `json:"revoked_by_level"`
 }
 
-// PublicEventConsentOverrideRecorded Payload for consent.override_recorded. A rep recorded a standing vouch that a machine-level refusal for one category may be overruled for this contact (consent/override.go's Allow). It is its own event rather than a consent.changed. An override is neither consent nor a lawful basis. It outranks only a machine-level, non-absolute refusal, and a subject-level stop still wins at the gate regardless of this row. The subject is always a contact, because the write door names that object as a literal. So this is a static entity, and the fan-out gate proves its delivery scope mechanically rather than by hand-ratification. It names what category was vouched for and at which authority. It never names the reason the rep gave. That explanation belongs to the audit trail a rep reviewing the contact reads, and not to every subscriber the event reaches.
+// PublicEventConsentOverrideRecorded Payload for consent.override_recorded. A merge carried a standing exception onto the surviving contact under a new id (consent/overridecarry.go). No route records a new standing exception, so this event announces a carried copy only. An exception is neither consent nor a lawful basis. It outranks only a machine-level, non-absolute refusal, and a subject-level stop still wins at the gate. It is its own event rather than a consent.changed. The event names the category the exception covers and the authority it was first recorded at. It never names the reason the rep gave, which stays on the row for the audit trail.
 type PublicEventConsentOverrideRecorded struct {
 	// Category Which category of send this vouch covers. The engine resolves every send to a single category, and the override applies to that one only.
 	Category string `json:"category"`
 
-	// DecidedByLevel Whose decision it is (user | admin) — always the recording seat's own authority, never a value the request body could name.
+	// DecidedByLevel Whose decision it is (user | admin): the authority of the seat that recorded the original exception.
 	DecidedByLevel string `json:"decided_by_level"`
 
-	// OverrideId Which row was recorded. It is the handle the revoke door takes (POST /contacts/{id}/consent/allow/{overrideId}/revoke). A contact can hold several live vouches at once: one per category, and after a merge more than one for a single category. So a consumer with no id cannot say which of them a later consent.override_lifted describes.
+	// OverrideId Which row the merge wrote. It is the handle the revoke door takes (POST /contacts/{id}/consent/allow/{overrideId}/revoke). A contact can hold several live vouches at once: one per category, and after a merge more than one for a single category. So a consumer with no id cannot say which of them a later consent.override_lifted describes.
 	OverrideId openapi_types.UUID `json:"override_id"`
 }
 

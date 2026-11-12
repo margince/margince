@@ -1,7 +1,7 @@
 import type { ReactNode } from "react";
 import { useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
-import { problemMessageOf } from "../lib/problem";
+import { type FieldLabels, problemMessageOf } from "../lib/problem";
 import { Button, EmptyState, PendingBody } from "./atoms";
 import { Callout } from "./callout";
 import "./querystates.css";
@@ -95,18 +95,23 @@ export function WriteRefused({
   titleKey,
   message,
   error,
+  fieldLabels,
   actions,
 }: Readonly<{
   titleKey: MessageKey;
   message?: string | null;
   error?: unknown;
+  /** The form's own words for the fields a refusal may name. */
+  fieldLabels?: FieldLabels;
   /** What the reader can do about it: a retry, a way back out. */
   actions?: ReactNode;
 }>) {
   const t = useT();
   const cause =
     message ??
-    (error === null || error === undefined ? null : problemMessageOf(error, t));
+    (error === null || error === undefined
+      ? null
+      : problemMessageOf(error, t, undefined, fieldLabels));
   if (cause === null) {
     return null;
   }

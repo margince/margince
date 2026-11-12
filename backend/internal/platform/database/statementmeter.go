@@ -14,12 +14,10 @@ import (
 )
 
 // StatementCost is what the pgx calls made under one metered context cost.
-// DBTime runs from the start of each pgx call, before encoding or prepare,
-// until its result is closed. So it holds the network, the server's planning
-// and execution, and the rows read in Go between Query and Close. PoolWait is
-// the whole of each Acquire call: checkout, any connect and health check.
-// Exchanges counts round trips to the server: a batch is one exchange however
-// many queries it holds. Transactions counts the begins among them.
+// DBTime includes encoding, planning, execution, network and row scans until
+// Close. PoolWait covers pool checkout, connect and health checks.
+// Exchanges counts pgx calls, with a batch as one. Internal plan lookups may
+// add protocol trips. Transactions counts the begins among those calls.
 type StatementCost struct {
 	Statements   int64
 	Exchanges    int64

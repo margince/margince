@@ -39,11 +39,7 @@ func verdictEvidenceHolds(
 func citedActivities(changes []deals.VerdictChange) []string {
 	var out []string
 	for _, change := range changes {
-		ids, ok := change.Evidence["cited_activity_ids"].([]string)
-		if !ok {
-			continue
-		}
-		for _, id := range ids {
+		for _, id := range change.Cited() {
 			if !slices.Contains(out, id) {
 				out = append(out, id)
 			}
