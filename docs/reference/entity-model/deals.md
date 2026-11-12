@@ -1122,12 +1122,13 @@ The 29 tables owned by `deals`, as the migrations build them. [Back to the entit
 
 ## stage
 
-10 columns · primary key `(id)` · referenced by 9 foreign keys
+11 columns · primary key `(id)` · referenced by 9 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
 | `id` | `uuid`, default `uuidv7()` | yes | Primary key. |
 | `name` | `text` | yes |  |
+| `name_translations` | `jsonb`, default `'{}'::jsonb` | yes |  |
 | `pipeline_id` | `uuid` | yes | Points at `pipeline.id`. |
 | `position` | `integer` | yes | Unique within the pipeline. |
 | `semantic` | `text`, default `'open'::text` | yes | One of `open`, `won`, `lost`. |

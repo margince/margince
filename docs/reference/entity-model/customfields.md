@@ -6,7 +6,7 @@ The 1 table owned by `customfields`, as the migrations build them. [Back to the 
 
 ## custom_field
 
-17 columns · primary key `(id)` · referenced by 0 foreign keys
+19 columns · primary key `(id)` · referenced by 0 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
@@ -16,7 +16,9 @@ The 1 table owned by `customfields`, as the migrations build them. [Back to the 
 | `created_by` | `uuid` | yes | Points at `app_user.id`. |
 | `currency` | `currency_code` |  | ISO-4217 currency code; present when `type=currency`, null otherwise. |
 | `label` | `text` | yes | Display label; a rename changes it, and never the slug or column_name. |
+| `label_translations` | `jsonb`, default `'{}'::jsonb` | yes |  |
 | `object` | `text` | yes | The existing core object this field is added to. |
+| `option_translations` | `jsonb`, default `'{}'::jsonb` | yes |  |
 | `options` | `jsonb` |  | Allowed picklist values; present (non-empty) when `type=picklist`, null otherwise. |
 | `reportable` | `boolean`, default `false` | yes | Whether reports may group and filter by this field. |
 | `show_in_create` | `boolean`, default `true` | yes | Whether the field is offered in the create dialog of its object. |

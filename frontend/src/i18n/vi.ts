@@ -10947,6 +10947,10 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "stage.createRefused":
     "Vai trò của bạn không thể thêm giai đoạn. Liên hệ quản trị viên.",
   "stage.edit": "Sửa giai đoạn",
+  "translation.nameIn.en": "Tên tiếng Anh",
+  "translation.nameIn.de": "Tên tiếng Đức",
+  "translation.nameIn.vi": "Tên tiếng Việt",
+  "translation.given": "{name} ({language})",
   "stage.name": "Tên",
   "stage.semantic": "Loại giai đoạn",
   "stage.winProb": "Xác suất thắng",
@@ -13105,6 +13109,9 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "cf.writing": "Đang lưu…",
   "cf.added":
     "Đã thêm trường “{label}”. Trường xuất hiện trên hồ sơ, trong bộ lọc, bản xuất và API.",
+  "cf.translate": "Tên bằng ngôn ngữ khác",
+  "cf.translated": "Đã lưu tên của “{label}”",
+  "cf.translateOption": "{option} – {language}",
   "cf.edit": "Sửa nhãn",
   "cf.archive": "Chuyển trường vào kho lưu trữ",
   "cf.archived":

@@ -45509,11 +45509,17 @@ type CreateStageExitCriterionRequest struct {
 
 // CreateStageRequest defines model for CreateStageRequest.
 type CreateStageRequest struct {
-	Name           string                      `json:"name"`
-	PipelineId     openapi_types.UUID          `json:"pipeline_id"`
-	Position       int                         `json:"position"`
-	Semantic       *CreateStageRequestSemantic `json:"semantic,omitempty"`
-	WinProbability *int                        `json:"win_probability,omitempty" maximum:"100" minimum:"0"`
+	Name string `json:"name"`
+
+	// NameTranslations An admin-named label in further UI languages, keyed by language. A reader whose UI
+	// language has an entry sees it; any other reader sees the stored label. On a write the
+	// map replaces the stored one, an empty text drops its language, and a language outside
+	// en, de and vi is 422 `invalid_translation`.
+	NameTranslations *LabelTranslations          `json:"name_translations,omitempty"`
+	PipelineId       openapi_types.UUID          `json:"pipeline_id"`
+	Position         int                         `json:"position"`
+	Semantic         *CreateStageRequestSemantic `json:"semantic,omitempty"`
+	WinProbability   *int                        `json:"win_probability,omitempty" maximum:"100" minimum:"0"`
 }
 
 // CreateStageRequestSemantic defines model for CreateStageRequest.Semantic.
@@ -45672,8 +45678,20 @@ type CustomField struct {
 	// Label Display label; a rename changes it, and never the slug or column_name.
 	Label string `json:"label"`
 
+	// LabelTranslations An admin-named label in further UI languages, keyed by language. A reader whose UI
+	// language has an entry sees it; any other reader sees the stored label. On a write the
+	// map replaces the stored one, an empty text drops its language, and a language outside
+	// en, de and vi is 422 `invalid_translation`.
+	LabelTranslations *LabelTranslations `json:"label_translations,omitempty"`
+
 	// Object The existing core object this field is added to.
 	Object CustomFieldObject `json:"object"`
+
+	// OptionTranslations Each picklist option's name in further UI languages, keyed by the option as stored. The
+	// stored option stays the value written on records; only its display changes. On a write
+	// the map replaces the stored one, and an option the field does not offer is 422
+	// `invalid_translation`.
+	OptionTranslations *OptionTranslations `json:"option_translations,omitempty"`
 
 	// Options Allowed picklist values; present (non-empty) when `type=picklist`, null otherwise.
 	Options *[]string `json:"options,omitempty"`
@@ -52379,6 +52397,16 @@ type KnowledgeDocumentList struct {
 //   - `complete`: every live passage carries a vector under the model bound now.
 type KnowledgeEmbedState string
 
+// LabelTranslations An admin-named label in further UI languages, keyed by language. A reader whose UI
+// language has an entry sees it; any other reader sees the stored label. On a write the
+// map replaces the stored one, an empty text drops its language, and a language outside
+// en, de and vi is 422 `invalid_translation`.
+type LabelTranslations struct {
+	De *string `json:"de,omitempty"`
+	En *string `json:"en,omitempty"`
+	Vi *string `json:"vi,omitempty"`
+}
+
 // LastExchange The newest call, meeting, email or message on the record. Absent when there is none.
 type LastExchange struct {
 	// Activity A polymorphic timeline item. Mirrors the `activity` table + `activity_link`.
@@ -56539,6 +56567,12 @@ type OperationSettings struct {
 	WebhookRetryIntervalSeconds int `json:"webhook_retry_interval_seconds" maximum:"3600" minimum:"10"`
 }
 
+// OptionTranslations Each picklist option's name in further UI languages, keyed by the option as stored. The
+// stored option stays the value written on records; only its display changes. On a write
+// the map replaces the stored one, and an option the field does not offer is 422
+// `invalid_translation`.
+type OptionTranslations map[string]LabelTranslations
+
 // OutcomeReview defines model for OutcomeReview.
 type OutcomeReview struct {
 	// ActivityId The note this review was written as. It is where the prose, the author and the audience rules live.
@@ -59394,12 +59428,24 @@ type RemoveMemberRequest struct {
 	ToUserId     *openapi_types.UUID `json:"to_user_id,omitempty"`
 }
 
-// RenameCustomFieldRequest Merge-PATCH of the settings a live field may change: `label`, `show_in_create`, `reportable` and `activity_kinds`. At least one is required. `column_name`, `object`, and `type` are absent from this request schema entirely (immutable, not just ignored if sent). `reportable` true on a field that is not a picklist or boolean is refused. `activity_kinds` replaces the kinds an activity field applies to, and an empty array means every kind again; it is refused on another object's field.
+// RenameCustomFieldRequest Merge-PATCH of the settings a live field may change: `label`, `label_translations`, `option_translations`, `show_in_create`, `reportable` and `activity_kinds`. At least one is required. `column_name`, `object`, and `type` are absent from this request schema entirely (immutable, not just ignored if sent). `reportable` true on a field that is not a picklist or boolean is refused. `activity_kinds` replaces the kinds an activity field applies to, and an empty array means every kind again; it is refused on another object's field.
 type RenameCustomFieldRequest struct {
 	ActivityKinds *[]RenameCustomFieldRequestActivityKinds `json:"activity_kinds,omitempty"`
 	Label         *string                                  `json:"label,omitempty"`
-	Reportable    *bool                                    `json:"reportable,omitempty"`
-	ShowInCreate  *bool                                    `json:"show_in_create,omitempty"`
+
+	// LabelTranslations An admin-named label in further UI languages, keyed by language. A reader whose UI
+	// language has an entry sees it; any other reader sees the stored label. On a write the
+	// map replaces the stored one, an empty text drops its language, and a language outside
+	// en, de and vi is 422 `invalid_translation`.
+	LabelTranslations *LabelTranslations `json:"label_translations,omitempty"`
+
+	// OptionTranslations Each picklist option's name in further UI languages, keyed by the option as stored. The
+	// stored option stays the value written on records; only its display changes. On a write
+	// the map replaces the stored one, and an option the field does not offer is 422
+	// `invalid_translation`.
+	OptionTranslations *OptionTranslations `json:"option_translations,omitempty"`
+	Reportable         *bool               `json:"reportable,omitempty"`
+	ShowInCreate       *bool               `json:"show_in_create,omitempty"`
 }
 
 // RenameCustomFieldRequestActivityKinds defines model for RenameCustomFieldRequest.ActivityKinds.
@@ -64065,7 +64111,13 @@ type Stage struct {
 	ExitCriteria *StageExitCriteriaCounts `json:"exit_criteria,omitempty"`
 	Id           openapi_types.UUID       `json:"id"`
 	Name         string                   `json:"name"`
-	PipelineId   openapi_types.UUID       `json:"pipeline_id"`
+
+	// NameTranslations An admin-named label in further UI languages, keyed by language. A reader whose UI
+	// language has an entry sees it; any other reader sees the stored label. On a write the
+	// map replaces the stored one, an empty text drops its language, and a language outside
+	// en, de and vi is 422 `invalid_translation`.
+	NameTranslations *LabelTranslations `json:"name_translations,omitempty"`
+	PipelineId       openapi_types.UUID `json:"pipeline_id"`
 
 	// Position Unique within the pipeline.
 	Position  int           `json:"position"`
@@ -66844,10 +66896,16 @@ type UpdateStageExitCriterionRequest struct {
 
 // UpdateStageRequest defines model for UpdateStageRequest.
 type UpdateStageRequest struct {
-	Name           *string                     `json:"name,omitempty"`
-	Position       *int                        `json:"position,omitempty"`
-	Semantic       *UpdateStageRequestSemantic `json:"semantic,omitempty"`
-	WinProbability *int                        `json:"win_probability,omitempty" maximum:"100" minimum:"0"`
+	Name *string `json:"name,omitempty"`
+
+	// NameTranslations An admin-named label in further UI languages, keyed by language. A reader whose UI
+	// language has an entry sees it; any other reader sees the stored label. On a write the
+	// map replaces the stored one, an empty text drops its language, and a language outside
+	// en, de and vi is 422 `invalid_translation`.
+	NameTranslations *LabelTranslations          `json:"name_translations,omitempty"`
+	Position         *int                        `json:"position,omitempty"`
+	Semantic         *UpdateStageRequestSemantic `json:"semantic,omitempty"`
+	WinProbability   *int                        `json:"win_probability,omitempty" maximum:"100" minimum:"0"`
 }
 
 // UpdateStageRequestSemantic defines model for UpdateStageRequest.Semantic.

@@ -127,7 +127,11 @@ func (s *Service) setOptionsInTx(ctx context.Context, tx pgx.Tx, id ids.UUID, op
 		return crmcontracts.CustomField{}, err
 	}
 	if _, err := tx.Exec(ctx,
-		`UPDATE custom_field SET options = $1 WHERE id = $2`, optionsArg, id); err != nil {
+		`UPDATE custom_field SET options = $1,
+		        option_translations = COALESCE((SELECT jsonb_object_agg(key, value)
+		                                          FROM jsonb_each(option_translations)
+		                                         WHERE key = ANY ($3::text[])), '{}'::jsonb)
+		  WHERE id = $2`, optionsArg, id, options); err != nil {
 		return crmcontracts.CustomField{}, fmt.Errorf("customfields: updating options: %w", err)
 	}
 	out, err := readField(ctx, tx, id)

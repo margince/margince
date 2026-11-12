@@ -11,6 +11,11 @@ import type { components } from "../../api/schema";
 import { ifMatch, requireVersion } from "../../api/version";
 import { type CreateField, CreateRecordModal } from "../../components/create";
 import { EditAction } from "../../components/edit";
+import {
+  translationFields,
+  translationsFromValues,
+  translationValues,
+} from "../../components/labeltranslations";
 import { Button, OverflowMenu } from "../../design-system/atoms";
 import { ConfirmModal } from "../../design-system/confirmmodal";
 import { useLastSubject } from "../../design-system/presence";
@@ -52,14 +57,19 @@ function stageSemantic(v: unknown): Stage["semantic"] {
 function mapStageBody(v: Record<string, unknown>) {
   return {
     name: str(v.name),
+    name_translations: translationsFromValues(STAGE_NAME, v),
     semantic: stageSemantic(v.semantic),
     win_probability: v.win_probability ? Number(str(v.win_probability)) : 0,
   };
 }
 
+// The form keys the stage's name in further languages travel under.
+const STAGE_NAME = "name";
+
 function stageFields(t: T): CreateField[] {
   return [
     { key: "name", label: "stage.name", required: true },
+    ...translationFields(STAGE_NAME),
     {
       key: "semantic",
       label: "stage.semantic",
@@ -151,6 +161,7 @@ function StageEdit({ stage }: Readonly<{ stage: Stage }>) {
         id: stage.id,
         version: stage.version,
         name: stage.name,
+        ...translationValues(STAGE_NAME, stage.name_translations),
         semantic: stage.semantic,
         win_probability: String(stage.win_probability),
       }}

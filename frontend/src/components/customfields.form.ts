@@ -16,6 +16,7 @@ import { browserZone } from "../format/timezone";
 import { webUrl } from "../format/weburl";
 import { type Locale, useLocale, useT } from "../i18n";
 import type { CfObject } from "../lib/customfields.logic";
+import { translatedLabel } from "../lib/labeltranslation";
 import {
   type CreateField,
   joinMultiselectValue,
@@ -32,8 +33,17 @@ export function customFieldToFormField(
   field: CustomField,
   boolLabels: BooleanLabels,
   tooPrecise: (currency: string) => string,
+  locale = "en",
 ): CreateField {
-  const base = { key: field.column_name, labelText: field.label };
+  const base = {
+    key: field.column_name,
+    labelText: translatedLabel(field.label, field.label_translations, locale),
+  };
+  // The option stays the stored value; only the label the reader sees moves.
+  const optionChoices = (field.options ?? []).map((option) => ({
+    value: option,
+    label: translatedLabel(option, field.option_translations?.[option], locale),
+  }));
   switch (field.type) {
     case "number":
       return { ...base, type: "number" };
@@ -58,19 +68,13 @@ export function customFieldToFormField(
         type: "multiselect",
         multiselectEncoding: "json",
         toInput: (raw) => customFieldFormValue(field, raw),
-        options: (field.options ?? []).map((option) => ({
-          value: option,
-          label: option,
-        })),
+        options: optionChoices,
       };
     case "picklist":
       return {
         ...base,
         type: "select",
-        options: (field.options ?? []).map((option) => ({
-          value: option,
-          label: option,
-        })),
+        options: optionChoices,
       };
     case "boolean":
       return {
@@ -358,6 +362,7 @@ export function useObjectCustomFields(
   activity?: ActivityNarrowing,
 ): ObjectCustomFields {
   const t = useT();
+  const { locale } = useLocale();
   const query = useQuery({
     queryKey: ["custom-fields", object],
     queryFn: async () => {
@@ -379,8 +384,11 @@ export function useObjectCustomFields(
   const boolLabels = { yes: t("field.yes"), no: t("field.no") };
 
   const controls = fields.map((field) =>
-    customFieldToFormField(field, boolLabels, (currency) =>
-      t("record.amountTooPrecise", { currency }),
+    customFieldToFormField(
+      field,
+      boolLabels,
+      (currency) => t("record.amountTooPrecise", { currency }),
+      locale,
     ),
   );
   const formFields: CreateField[] =

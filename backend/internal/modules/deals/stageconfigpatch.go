@@ -13,6 +13,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"maps"
 
 	"github.com/jackc/pgx/v5"
 
@@ -67,6 +68,7 @@ func pipelineUpdatePatch(current pipelineConfig, in UpdatePipelineInput) *storek
 // the version an If-Match is judged against.
 type stageConfig struct {
 	name           string
+	translations   map[string]string
 	position       int
 	semantic       string
 	winProbability int
@@ -76,9 +78,9 @@ type stageConfig struct {
 func readStageConfig(ctx context.Context, tx pgx.Tx, id ids.StageID) (stageConfig, error) {
 	var current stageConfig
 	err := tx.QueryRow(ctx, `
-		SELECT name, position, semantic, win_probability, version
+		SELECT name, name_translations, position, semantic, win_probability, version
 		FROM stage WHERE id = $1 AND archived_at IS NULL`, id).
-		Scan(&current.name, &current.position, &current.semantic, &current.winProbability, &current.version)
+		Scan(&current.name, &current.translations, &current.position, &current.semantic, &current.winProbability, &current.version)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return current, apperrors.ErrNotFound
 	}
@@ -134,6 +136,9 @@ func stageUpdatePatch(current stageConfig, in UpdateStageInput) *storekit.Patch 
 	patch := storekit.NewPatch()
 	if in.Name != nil {
 		patch.Set("name", current.name, *in.Name)
+	}
+	if in.NameTranslations != nil && !maps.Equal(in.NameTranslations, current.translations) {
+		patch.Set(stageNameTranslationsField, current.translations, in.NameTranslations)
 	}
 	if in.Position != nil {
 		patch.Set(positionField, current.position, *in.Position)

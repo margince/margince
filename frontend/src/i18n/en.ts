@@ -11209,6 +11209,10 @@ export const en = {
   "stage.new": "New stage",
   "stage.createRefused": "Your role cannot add stages. Ask an admin.",
   "stage.edit": "Edit stage",
+  "translation.nameIn.en": "Name in English",
+  "translation.nameIn.de": "Name in German",
+  "translation.nameIn.vi": "Name in Vietnamese",
+  "translation.given": "{language}: {name}",
   "stage.name": "Name",
   "stage.semantic": "Stage type",
   "stage.winProb": "Win probability",
@@ -13425,6 +13429,9 @@ export const en = {
   "cf.writing": "Saving…",
   "cf.added":
     "Field “{label}” added. It appears on records and in filters, exports and the API.",
+  "cf.translate": "Names in other languages",
+  "cf.translated": "Names of “{label}” saved",
+  "cf.translateOption": "{option}: {language}",
   "cf.edit": "Edit label",
   "cf.archive": "Archive field",
   "cf.archived":

@@ -144,6 +144,9 @@ const (
 	fieldKinds    = "activity_kinds"
 	codeRequired  = "required"
 
+	fieldLabelTranslations  = "label_translations"
+	fieldOptionTranslations = "option_translations"
+
 	// codeInvalidCharacters flags a picklist option carrying a NUL byte or
 	// invalid UTF-8 — the same class of malformed input the identifier path
 	// already refuses (pgx.Identifier.Sanitize strips NULs). An option value
