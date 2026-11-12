@@ -40,11 +40,30 @@ import (
 // its tool advertised, and it has to ask that question the same way the server
 // asks it — a second spelling would be a second definition of "conforms".
 func ResultDefect(schema, value json.RawMessage) string {
-	var declared jsonSchema
-	if err := json.Unmarshal(schema, &declared); err != nil {
-		return "the advertised schema is not readable: " + err.Error()
+	declared, err := readSchema(schema)
+	if err != nil {
+		return err.Error()
 	}
 	return checkValue(&declared, value, "")
+}
+
+// SchemaReadable reports a schema this checker cannot read, which would turn
+// every answer held to it into a logged defect. An empty schema declares
+// nothing and reads.
+func SchemaReadable(schema json.RawMessage) error {
+	if len(schema) == 0 {
+		return nil
+	}
+	_, err := readSchema(schema)
+	return err
+}
+
+func readSchema(schema json.RawMessage) (jsonSchema, error) {
+	var declared jsonSchema
+	if err := json.Unmarshal(schema, &declared); err != nil {
+		return declared, fmt.Errorf("the advertised schema is not readable: %w", err)
+	}
+	return declared, nil
 }
 
 // checkValue walks one node of the declared schema against the same node of the
