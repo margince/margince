@@ -63,7 +63,8 @@ func DealsWithoutNextStepTx(
 // open and not archived, and it has no next step.
 func FollowUpTx(ctx context.Context, tx pgx.Tx, deal ids.UUID, asOf time.Time) (string, error) {
 	var open bool
-	if err := tx.QueryRow(ctx, `SELECT status = 'open' AND archived_at IS NULL FROM deal WHERE id = $1`, deal).Scan(&open); err != nil {
+	// FOR SHARE: a close or archive of the deal waits for this transaction.
+	if err := tx.QueryRow(ctx, `SELECT status = 'open' AND archived_at IS NULL FROM deal WHERE id = $1 FOR SHARE`, deal).Scan(&open); err != nil {
 		return "", fmt.Errorf("stillowed: reading whether the deal is open: %w", err)
 	}
 	if !open {

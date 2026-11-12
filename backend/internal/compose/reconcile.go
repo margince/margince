@@ -457,12 +457,15 @@ func followUpConfirmEffect(svc *approvals.Service, store *activities.Store, now 
 		// The rollback also keeps a failed effect re-drivable: the approval is
 		// still unconsumed, so deciding it again runs this effect again
 		// (approvals.effectIsStillOwed).
-		return svc.RedeemAndApply(ctx, approvalID, deals.FollowUpReconcileKind, diffHash,
+		var gone string
+		err = svc.RedeemAndApply(ctx, approvalID, deals.FollowUpReconcileKind, diffHash,
 			func(tx pgx.Tx) error {
-				// Asked again here: a task or meeting logged between the
-				// precheck and this write makes the follow-up unneeded, and the
-				// redemption commits with nothing written.
-				if gone, err := stillowed.FollowUpTx(ctx, tx, proposal.DealID.UUID, now().UTC()); err != nil || gone != "" {
+				// Asked again here: a next step or a close landing between the
+				// precheck and this write makes the follow-up unneeded. The
+				// redemption commits with nothing written, and the decider is
+				// told why.
+				var err error
+				if gone, err = stillowed.FollowUpTx(ctx, tx, proposal.DealID.UUID, now().UTC()); err != nil || gone != "" {
 					return err
 				}
 				doer, err := followUpDoer(ctx, tx, proposal, decider.UserID)
@@ -489,5 +492,6 @@ func followUpConfirmEffect(svc *approvals.Service, store *activities.Store, now 
 				_, _, err = store.LogActivityTx(execCtx, tx, in)
 				return err
 			})
+		return obsoleteOr(gone, err)
 	}
 }

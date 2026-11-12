@@ -51,6 +51,7 @@ func TestAFollowUpNoLongerNeededIsWithdrawnWithItsReason(t *testing.T) {
 
 // The effect asks again as it writes, so a next step logged after the precheck
 // still stops the follow-up. Here no precheck is wired, so only the effect can.
+// The card is spent with nothing written, and the decider is told why.
 func TestTheFollowUpEffectWritesNothingOnceTheDealHasANextStep(t *testing.T) {
 	e := setupReconcile(t)
 	deal := e.SeedDeal(t, "Booked meanwhile", e.pipeline, e.open, &e.Rep1)
@@ -64,11 +65,18 @@ func TestTheFollowUpEffectWritesNothingOnceTheDealHasANextStep(t *testing.T) {
 	effectOnly := approvals.NewService(e.DB())
 	effectOnly.WithEffect(deals.FollowUpReconcileKind,
 		followUpConfirmEffect(effectOnly, e.Activities, func() time.Time { return clocktest.Now(t) }))
-	if _, err := effectOnly.Decide(e.As(e.Rep1, []ids.UUID{e.Team1}, reconcilePerms), id, true, nil); err != nil {
-		t.Fatalf("the approval failed instead of resolving with nothing to write: %v", err)
+	_, err := effectOnly.Decide(e.As(e.Rep1, []ids.UUID{e.Team1}, reconcilePerms), id, true, nil)
+	if _, ok := errors.AsType[*approvals.ObsoleteError](err); !ok {
+		t.Fatalf("the decider was answered %v, want the no-longer-needed reason", err)
 	}
 	if n := e.WsCount(t, `SELECT count(*) FROM activity WHERE source = 'overnight-reconcile'`); n != 0 {
 		t.Errorf("the effect wrote %d follow-up(s) for a deal that has a next step", n)
+	}
+	// Spent and settled, so nothing re-drives it and no failed-effect lane
+	// tells the decider their approval broke.
+	if n := e.WsCount(t, `SELECT count(*) FROM approval WHERE id = $1
+		AND consumed_at IS NOT NULL AND effect_ran_at IS NOT NULL`, id); n != 1 {
+		t.Error("the card is not marked spent with its effect run")
 	}
 }
 

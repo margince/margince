@@ -186,9 +186,18 @@ func (s *Service) runPrecheck(ctx context.Context, id ids.ApprovalID, approve bo
 }
 
 // withdrawObsolete closes a card whose work is no longer needed and answers
-// the decider with the reason. A decision that landed first keeps the card.
+// the decider with the reason. The decider's authority is asked again under the
+// row lock, as a decision asks it. A decision that landed first keeps the card.
 func (s *Service) withdrawObsolete(ctx context.Context, id ids.ApprovalID, obsolete *ObsoleteError) error {
+	p, _ := principal.Actor(ctx)
 	if err := s.db.Tx(ctx, func(tx pgx.Tx) error {
+		var locked ids.ApprovalID
+		if err := tx.QueryRow(ctx, `SELECT id FROM approval WHERE id = $1 FOR UPDATE`, id).Scan(&locked); err != nil {
+			return err
+		}
+		if _, err := s.pendingToDecide(ctx, tx, p, id, true, nil, decidedByContact); err != nil {
+			return err
+		}
 		_, err := withdrawInTx(ctx, tx, id, obsolete.Reason)
 		return err
 	}); err != nil {

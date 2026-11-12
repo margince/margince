@@ -214,10 +214,15 @@ func commitmentTaskEffect(
 		// The write runs as the deciding human, so each staged link meets the
 		// visibility check a link they typed would. One they cannot see refuses
 		// the whole acceptance, and the approval stays unspent.
-		return svc.RedeemAndApply(ctx, approvalID, CommitmentTaskKind, diffHash, func(tx pgx.Tx) error {
+		gone := ""
+		err = svc.RedeemAndApply(ctx, approvalID, CommitmentTaskKind, diffHash, func(tx pgx.Tx) error {
 			// Asked again here: a promise settled or dismissed between the
-			// precheck and this write redeems the card with nothing written.
+			// precheck and this write redeems the card with nothing written,
+			// and the decider is told why.
 			if open, err := commitmentStillOpenTx(ctx, tx, claims, proposal); err != nil || !open {
+				if err == nil {
+					gone = promiseClosedReason
+				}
 				return err
 			}
 			privateTo, err := privateWorkHeldNow(ctx, tx, proposal, assignee)
@@ -247,6 +252,7 @@ func commitmentTaskEffect(
 			_, err = writeCommitmentTask(writer, tx, tasks, claims, task)
 			return err
 		})
+		return obsoleteOr(gone, err)
 	}
 }
 
@@ -480,10 +486,10 @@ func commitmentStillOpenTx(ctx context.Context, tx pgx.Tx, claims *contacts.Stor
 		proposal.SourceActivityID, proposal.Locator)
 }
 
-// obsoleteOr is a precheck's answer for work that is no longer owed. It is the
-// read error when there is one, else the card's reason, which withdraws it.
+// obsoleteOr is the answer for a card's work: the read error when there is
+// one, else the reason it is no longer owed, else nil while it still is.
 func obsoleteOr(reason string, err error) error {
-	if err != nil {
+	if err != nil || reason == "" {
 		return err
 	}
 	return &approvals.ObsoleteError{Reason: reason}
