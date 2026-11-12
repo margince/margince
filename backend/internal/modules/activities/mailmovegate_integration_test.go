@@ -16,16 +16,16 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
-// mailThreads seeds the reader's mail to one contact, each on its own thread,
-// with the replies a colleague filed.
+// mailThreads seeds email linked to one contact, all filed by the colleague.
+// Outbound mail names the reader as its sender.
 type mailThreads struct {
 	e       *loadEnv
 	store   *Store
 	contact ids.UUID
 }
 
-// mail seeds one email on thread, linked to the contact, after the given
-// offset. Outbound mail names the reader as its sender.
+// mail seeds one email on thread, linked to the contact, at the offset from
+// requestInstant.
 func (m *mailThreads) mail(t *testing.T, direction, thread string, after time.Duration) ids.UUID {
 	t.Helper()
 	id := ids.NewV7()
@@ -62,7 +62,7 @@ func TestAMailsMoveReadsOnlyTheThreadTheReaderMayRead(t *testing.T) {
 
 	answeredThread, hiddenReplyThread := thread(), thread()
 	answered := m.mail(t, "outbound", answeredThread, 0)
-	m.mail(t, "inbound", answeredThread, time.Hour)
+	answer := m.mail(t, "inbound", answeredThread, time.Hour)
 	repliedOutOfSight := m.mail(t, "outbound", hiddenReplyThread, 0)
 	m.limit(t, m.mail(t, "inbound", hiddenReplyThread, time.Hour))
 	// The reader is a participant of every mail they sent, so the mail they may
@@ -74,7 +74,7 @@ func TestAMailsMoveReadsOnlyTheThreadTheReaderMayRead(t *testing.T) {
 	reader := e.asSeat(e.rep)
 	if err := database.BindTo(e.pool, ids.From[ids.WorkspaceKind](e.ws)).Tx(reader, func(tx pgx.Tx) error {
 		var err error
-		moves, err = MailMovesFor(reader, tx, []ids.UUID{answered, repliedOutOfSight, unreadable}, requestInstant.Add(24*time.Hour))
+		moves, err = MailMovesFor(reader, tx, []ids.UUID{answered, answer, repliedOutOfSight, unreadable}, requestInstant.Add(24*time.Hour))
 		return err
 	}); err != nil {
 		t.Fatal(err)
@@ -86,6 +86,9 @@ func TestAMailsMoveReadsOnlyTheThreadTheReaderMayRead(t *testing.T) {
 	}{
 		{"the answered mail", answered, crmcontracts.EmailSummaryMoveNone},
 		{"the mail whose reply is limited", repliedOutOfSight, crmcontracts.EmailSummaryMoveWaitingForThem},
+		// A received mail the reader may read has a move, so the limit alone
+		// takes the unreadable one's away.
+		{"the reply the reader may read", answer, crmcontracts.EmailSummaryMoveNeedsReply},
 	} {
 		if got, ok := moves[want.id]; !ok || got != want.move {
 			t.Errorf("%s: move %q (has one %v), want %q", want.name, got, ok, want.move)

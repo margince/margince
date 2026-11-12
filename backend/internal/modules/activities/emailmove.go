@@ -143,13 +143,13 @@ func MailMovesFor(ctx context.Context, tx pgx.Tx, activityIDs []ids.UUID, asOf t
 	if err != nil {
 		return nil, err
 	}
-	in := moveInputsGatedBy(ctx, arg, asOf, mailMoveReadableSQL("later"))
+	in := moveInputsGatedBy(ctx, arg, asOf, inGatedSetSQL(mailMoveReadable, "later"))
 	rows, err := tx.Query(ctx, `WITH `+mailMoveCandidates+` AS MATERIALIZED (
   SELECT a.id, a.thread_key, a.kind, a.channel_provider FROM activity a
    WHERE a.id = ANY(`+fmt.Sprintf("$%d", wanted)+`) AND a.kind = 'email' AND a.restricted_at IS NULL),
 `+mailMoveReadable+` AS MATERIALIZED (`+readable+`)
 SELECT a.id, `+moveSQL(in, mailKinds)+` FROM activity a
- WHERE a.id IN (SELECT id FROM `+mailMoveCandidates+`) AND `+mailMoveReadableSQL("a"), args...)
+ WHERE a.id IN (SELECT id FROM `+mailMoveCandidates+`) AND `+inGatedSetSQL(mailMoveReadable, "a"), args...)
 	if err != nil {
 		return nil, fmt.Errorf("activities: reading whose move each mail is: %w", err)
 	}
@@ -171,7 +171,3 @@ const (
 	mailMoveCandidates = "mail_move_candidates"
 	mailMoveReadable   = "mail_move_readable"
 )
-
-func mailMoveReadableSQL(alias string) string {
-	return alias + ".id IN (SELECT id FROM " + mailMoveReadable + ")"
-}
