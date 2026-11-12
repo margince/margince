@@ -6,7 +6,7 @@ The 33 tables owned by `activities`, as the migrations build them. [Back to the 
 
 ## activity
 
-79 columns · primary key `(id)` · referenced by 45 foreign keys
+80 columns · primary key `(id)` · referenced by 45 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
@@ -19,6 +19,7 @@ The 33 tables owned by `activities`, as the migrations build them. [Back to the 
 | `body_completeness` | `text`, default `'complete'::text` | yes | How much of a mail's text Margince could decode. |
 | `booking_interval_exact` | `boolean`, default `false` | yes |  |
 | `bulk_mail_attested` | `boolean`, default `false` | yes | This message carried an RFC 2369 List-Unsubscribe header, so the SENDER declared it bulk. |
+| `calendar_event` | `jsonb` |  |  |
 | `calendar_method` | `text` |  | One of `PUBLISH`, `REQUEST`, `REPLY`, `ADD`, `CANCEL`, `REFRESH` and 2 more. |
 | `calendar_uid` | `text` |  |  |
 | `call_outcome` | `text` |  | How a call ended: reached, not_reached (nobody answered), voicemail (left a voicemail), call_back_later (asked to be called back), put_through (passed to someone else who took it). |
@@ -109,6 +110,7 @@ The 33 tables owned by `activities`, as the migrations build them. [Back to the 
 
 - `activity_audience_check`: `CHECK ((audience = ANY (ARRAY['workspace', 'participants', 'selected'])))`
 - `activity_body_completeness_check`: `CHECK ((body_completeness = ANY (ARRAY['complete', 'partial', 'unreadable', 'forwarded', 'unassessed', 'unverifiable'])))`
+- `activity_calendar_event_shape`: `CHECK (((calendar_event IS NULL) OR ((jsonb_typeof(calendar_event) = 'object') AND (octet_length((calendar_event)) <= 32768))))`
 - `activity_calendar_method_check`: `CHECK ((calendar_method = ANY (ARRAY['PUBLISH', 'REQUEST', 'REPLY', 'ADD', 'CANCEL', 'REFRESH', 'COUNTER', 'DECLINECOUNTER'])))`
 - `activity_call_outcome_check`: `CHECK (((call_outcome IS NULL) OR (call_outcome = ANY (ARRAY['reached', 'not_reached', 'voicemail', 'call_back_later', 'put_through']))))`
 - `activity_call_outcome_kind_check`: `CHECK (((call_outcome IS NULL) OR (kind = 'call')))`
@@ -157,6 +159,7 @@ The 33 tables owned by `activities`, as the migrations build them. [Back to the 
 - `idx_activity_answer_mail_subject`: `btree (counterparty_email, kind, lower(btrim(regexp_replace(regexp_replace(COALESCE(subject, ''), '^(\s*(re|aw|antw)\s*:)+\s*', '', 'i'), '\s+', ' ', 'g'))), occurred_at) WHERE ((direction = 'outbound') AND counterparty_outbound_attested AND (restricted_at IS NULL) AND (audience = 'workspace') AND (archived_at IS NULL))`
 - `idx_activity_answer_touch`: `btree (id, occurred_at) WHERE (((kind = 'call') OR ((kind = 'meeting') AND (meeting_status = 'held'))) AND (restricted_at IS NULL) AND (audience = 'workspace') AND (archived_at IS NULL))`
 - `idx_activity_attested_counterparty`: `btree (counterparty_email) WHERE counterparty_outbound_attested`
+- `idx_activity_calendar_sends`: `btree (calendar_uid, occurred_at DESC, id) WHERE ((calendar_uid IS NOT NULL) AND (kind = 'email'))`
 - `idx_activity_channel_thread`: `btree (channel_provider, thread_key) WHERE (channel_provider IS NOT NULL)`
 - `idx_activity_counterparty_email`: `btree (counterparty_email) WHERE (counterparty_email IS NOT NULL)`
 - `idx_activity_direction`: `btree (direction, occurred_at DESC) WHERE ((direction IS NOT NULL) AND (archived_at IS NULL))`

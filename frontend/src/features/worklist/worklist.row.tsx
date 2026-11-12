@@ -10,7 +10,7 @@ import { useLocale, useT } from "../../i18n";
 import { useCompanyZone } from "../../lib/companyzone";
 import { isUnprepared } from "../../lib/meetingreadiness";
 import { useMe } from "../../lib/session";
-import { askKey, saysOpen } from "../../lib/worklistask";
+import { askSentence, saysOpen } from "../../lib/worklistask";
 import {
   briefContextTitle,
   briefSubjectLabel,
@@ -407,7 +407,7 @@ function RowAsk({
   // A reminder Margince cannot check says so in place of its event. A row
   // asking whether it may be done has its question below, not the stock ask.
   const event = item.request_check ? null : cardLine(item, t, clock);
-  const ask = saysOpen(item) ? t(askKey(item)) : null;
+  const ask = saysOpen(item) ? askSentence(item, t) : null;
   const line = event ?? ask;
   return (
     <>

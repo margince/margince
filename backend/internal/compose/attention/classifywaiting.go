@@ -117,8 +117,7 @@ func classifyWaiting(waiting WaitingCustomer, asOf time.Time) ranked {
 		Action:     crmcontracts.WorklistMoveActionDraftReply,
 		ActivityId: &answers,
 	}
-	// An invitation is answered on the calendar, never by a drafted reply.
-	if row.EmailSummary != nil && row.EmailSummary.CalendarInvitation != nil {
+	if answeredOnTheCalendar(row.EmailSummary) {
 		row.Move.Action = crmcontracts.WorklistMoveActionNone
 	}
 	// Both ages travel: the true one for everything a reader is shown, the
@@ -188,6 +187,18 @@ func demotionsOf(waiting WaitingCustomer, days int) waitingDemotions {
 		informational: waiting.AsksNothing,
 		booked:        waiting.MeetingBookedAt != nil && !asksForAnswer(waiting),
 	}
+}
+
+// answeredOnTheCalendar is calendar mail no drafted reply answers: an
+// invitation, or a change only to be seen. A proposed new time may get a reply.
+func answeredOnTheCalendar(mail *crmcontracts.EmailSummary) bool {
+	if mail == nil {
+		return false
+	}
+	if mail.CalendarInvitation != nil {
+		return true
+	}
+	return mail.CalendarChange != nil && mail.CalendarChange.Kind != crmcontracts.EmailCalendarChangeKindProposed
 }
 
 // asksForAnswer is an invitation the reader has not answered. The meeting it

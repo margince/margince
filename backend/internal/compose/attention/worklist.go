@@ -90,7 +90,8 @@ func (s *Service) worklistIn(
 	if reader, err = reader.readingPins(ctx); err != nil {
 		return crmcontracts.Worklist{}, err
 	}
-	reader.omitDecay = reader.omitDecay && !reader.relationshipsChosen()
+	// A Done check never reads decay, pinned or not: no decay row offers Done.
+	reader.omitDecay = reader.marked.probe != nil || reader.omitDecay && !reader.relationshipsChosen()
 	// The day AND what the night knows about each deal — its finding and its
 	// score — from one read of the brief lane. Both travel as values rather than
 	// on the service: feed.go's assembleDay states why a field there would carry
