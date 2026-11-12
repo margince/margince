@@ -13,7 +13,6 @@ backend/internal/modules/activities/emailmove.go activities.MailMovesFor repeats
 backend/internal/compose/weekly/weeklycounts.go weekly.countWeekMeetings repeats the gate; awaits its own rewrite and bench measurement
 backend/internal/compose/weekly/weeklycoverage.go weekly.readFigureStarts repeats the gate; awaits its own rewrite and bench measurement
 backend/internal/compose/weekly/weeklyscorecard.go weekly.scoreDeals repeats the gate; awaits its own rewrite and bench measurement
-backend/internal/modules/activities/citedthread.go activities.SettledCitations repeats the gate; awaits its own rewrite and bench measurement
 backend/internal/modules/activities/owedreview.go activities.owedReviewReadTx repeats the gate; awaits its own rewrite and bench measurement
 backend/internal/compose/reportsql.go compose.(*reportEngine).fetchRows.func1 repeats the gate; awaits its own rewrite and bench measurement
 backend/internal/compose/company360/suggestionreads.go company360.newestMessage repeats the gate; awaits its own rewrite and bench measurement
