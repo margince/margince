@@ -99,20 +99,20 @@ func (s followUpStager) StageFollowUp(ctx context.Context, dealID ids.UUID, prop
 		// A draft composed for someone who no longer owns the deal is text in
 		// their name. It is dropped and nothing is staged, so the deal stays
 		// eligible and the next sweep drafts for the new owner.
+		if draft != nil && draft.owner != owner {
+			return nil
+		}
+		answered, err := followUpAlreadyAnswered(ctx, tx, s.svc, dealID, proposal)
+		if err != nil || answered {
+			return err
+		}
 		if draft != nil {
-			if draft.owner != owner {
-				return nil
-			}
 			return stageFollowUpDraft(onBehalfOf(ctx, owner), tx, s.svc, draft.summary,
 				dealID, proposal.EvidenceActivityID.UUID, draft.proposal)
 		}
 		// An unowned deal has nobody to follow it up, so nothing is filed.
 		if owner.IsZero() {
 			return nil
-		}
-		answered, err := followUpAlreadyAnswered(ctx, tx, s.svc, dealID, proposal)
-		if err != nil || answered {
-			return err
 		}
 		return writeOvernightFollowUp(ctx, tx, s.tasks, owner, proposal)
 	})

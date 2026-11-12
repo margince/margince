@@ -8076,7 +8076,7 @@ export const en = {
   "tasks.origin.analytics_decision":
     "Recorded from a sales review: a decision with an owner and a review date. Record the outcome under Decisions from the last review.",
   "tasks.origin.overnight_reconcile":
-    "Created from a follow-up that the overnight review proposed and someone approved.",
+    "Created from a follow-up that the overnight review proposed.",
   "tasks.origin.commitment":
     "Created from a commitment read out of a conversation.",
   "tasks.origin.email_request": "Created from a request in an email.",
