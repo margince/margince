@@ -231,6 +231,7 @@ describe("a record timeline you can work in", () => {
     // The open is exactly one request, with nothing a filter would add.
     expect(feed.calls).toHaveLength(1);
     expect([...feed.last().searchParams.keys()].sort(stable)).toEqual([
+      "collapse_copies",
       "entity_id",
       "entity_type",
       "limit",
@@ -238,6 +239,8 @@ describe("a record timeline you can work in", () => {
     expect(feed.last().searchParams.get("limit")).toBe(
       String(TIMELINE_PAGE_SIZE),
     );
+    // One row per mail across mailboxes, as the 360 page that seeds it.
+    expect(feed.last().searchParams.get("collapse_copies")).toBe("true");
 
     await user.click(screen.getByRole("button", { name: "Load more" }));
     expect(await screen.findByText("Invoice question")).toBeTruthy();

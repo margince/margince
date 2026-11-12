@@ -54,6 +54,12 @@ func (m mailSeats) responsibilitySQL(identities string, arg func(any) int, asOf,
 	return fmt.Sprintf("(a.kind <> 'email' OR %s = ANY($%d::uuid[]))", soleDirectSeatSQL(identities), arg(m.answeredBy))
 }
 
+// notAColleaguesOwnMailSQL keeps what a record page shows reader as waiting.
+// Unlike the Worklist it keeps unaddressed mail and non-mail messages, and hides only mail whose sole direct seat is a colleague.
+func notAColleaguesOwnMailSQL(identities, reader string) string {
+	return fmt.Sprintf("(a.kind <> 'email' OR coalesce(%s, %s) = %s)", soleDirectSeatSQL(identities), reader, reader)
+}
+
 // The raw instant bound is a superset of the waiting horizon's day comparison.
 func waitingMailCutoffSQL(asOf, days string) string {
 	return fmt.Sprintf("%s - make_interval(days => %s)", asOf, days)

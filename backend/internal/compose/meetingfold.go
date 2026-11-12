@@ -74,6 +74,10 @@ func lockFoldPair(ctx context.Context, tx pgx.Tx, duplicate, survivor ids.Activi
 const sameImportAccess = `(kept.posture_at_import, kept.verdict_status, kept.verdict_reason, kept.verdict_reasons)
 	IS NOT DISTINCT FROM (other.posture_at_import, other.verdict_status, other.verdict_reason, other.verdict_reasons)`
 
+// sameImporter matches two import rows of one importer: one seat, or one
+// shared mailbox, which names no seat.
+const sameImporter = `(kept.user_id, kept.connection_id) IS NOT DISTINCT FROM (other.user_id, other.connection_id)`
+
 // copyRetiresCleanly answers whether archiving the copy loses nothing.
 //   - The seat still has the copy's calendar connected.
 //   - Every other importer of the copy imports the survivor with the same
@@ -87,9 +91,9 @@ func copyRetiresCleanly(ctx context.Context, tx pgx.Tx, duplicate, survivor ids.
 		                WHERE c.provider = d.source_system AND c.user_id = $3 AND c.status = 'connected'
 		                  AND ($4 = '' OR lower(btrim(c.account_label)) = lower(btrim($4))))
 		   AND NOT EXISTS (SELECT 1 FROM capture_import other
-		                    WHERE other.activity_id = $1 AND other.user_id <> $3
+		                    WHERE other.activity_id = $1 AND other.user_id IS DISTINCT FROM $3
 		                      AND NOT EXISTS (SELECT 1 FROM capture_import kept
-		                                       WHERE kept.activity_id = $2 AND kept.user_id = other.user_id
+		                                       WHERE kept.activity_id = $2 AND `+sameImporter+`
 		                                         AND `+sameImportAccess+`))
 		   AND NOT EXISTS (SELECT 1 FROM capture_import kept
 		                    JOIN capture_import other ON other.activity_id = $1 AND other.user_id = kept.user_id

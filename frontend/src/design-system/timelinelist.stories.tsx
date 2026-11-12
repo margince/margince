@@ -61,6 +61,8 @@ export const Flat: Story = {
           direction: "inbound",
           counterparts: "Dana Buyer",
           body: "Can you hold the price until Friday?",
+          // Two colleagues received it too: one row, with a badge.
+          copies: 3,
         }),
         entry("f2", "2026-08-14T09:05:00Z", {
           kind: "call",

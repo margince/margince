@@ -107,7 +107,7 @@ func mailCoverageByOwner(ctx context.Context, tx pgx.Tx, now time.Time) (map[ids
 		SELECT c.user_id, `+mailCountsSQL+`
 		FROM capture_connection c
 		LEFT JOIN capture_sync_state s ON s.connection_id = c.id
-		WHERE c.provider = ANY($1) AND c.archived_at IS NULL
+		WHERE c.provider = ANY($1) AND c.archived_at IS NULL AND c.user_id IS NOT NULL
 		GROUP BY c.user_id
 		HAVING count(*) FILTER (WHERE c.status <> 'disconnected') > 0`, mailProviders)
 	if err != nil {
@@ -150,7 +150,7 @@ func dealMailboxesWhereSQL(deal, audience string) string {
 		          JOIN activity_link mal ON mal.activity_id = ma.id
 		          LEFT JOIN LATERAL unnest(ci.delivered_by) AS dm(mailbox) ON true
 		         WHERE mal.deal_id = ` + deal + `.id
-		           AND ma.kind = 'email'
+		           AND ma.kind = 'email' AND ci.user_id IS NOT NULL
 		           AND ma.archived_at IS NULL` + audience + `
 		         ORDER BY 1)`
 }
@@ -176,7 +176,7 @@ func mailCoverageByConnection(ctx context.Context, tx pgx.Tx, now time.Time) (ma
 		SELECT c.user_id, c.provider, c.generation::text, `+mailCountsSQL+`
 		FROM capture_connection c
 		LEFT JOIN capture_sync_state s ON s.connection_id = c.id
-		WHERE c.provider = ANY($1) AND c.archived_at IS NULL
+		WHERE c.provider = ANY($1) AND c.archived_at IS NULL AND c.user_id IS NOT NULL
 		GROUP BY c.id, c.user_id, c.provider, c.generation`, mailProviders)
 	if err != nil {
 		return nil, fmt.Errorf("compose: reading each mail connection: %w", err)

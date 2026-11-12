@@ -7,7 +7,11 @@ package accountdraft
 // is grounded in. Its own file rather than input.go's tail: the fold is a long
 // read of a 360, and these six methods are a contract with draftcore.
 
-import "github.com/margince/margince/backend/internal/shared/kernel/draftfloor"
+import (
+	"github.com/margince/margince/backend/internal/shared/kernel/draftfloor"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/ports/model"
+)
 
 // The draftcore.Input contract: what the shared writer needs of a folded
 // record, and nothing about what this one is grounded in.
@@ -47,4 +51,22 @@ func (in Input) Addresses() []string {
 		return nil
 	}
 	return []string{in.Recipient.Email}
+}
+
+// Subjects are the recipient, by id and address, and every activity the
+// payload quotes.
+func (in Input) Subjects() *model.Subjects {
+	var activities []string
+	for _, a := range in.Recent {
+		activities = append(activities, a.ID)
+	}
+	if in.Commitment != nil {
+		activities = append(activities, in.Commitment.ID)
+	}
+	about := model.SubjectsOf([]string{in.Recipient.ID}, activities)
+	about.Addresses = in.Addresses()
+	if company, err := ids.Parse(in.CompanyID); err == nil {
+		about.Companies = []ids.UUID{company}
+	}
+	return about
 }

@@ -28,6 +28,10 @@ func TestConsentRoutesSplitByWhoseDecisionTheyHold(t *testing.T) {
 		// A contact asking to stop has legal weight. The marker asks the model; the server still records it at once.
 		"suppressContact": {scopeWrite, true},
 	}
+	// Consent writes that stay a human admin's alone, each with why.
+	humanOnly := map[string]string{
+		"liftContactRestriction": "ending a restriction of processing resumes the product's use of the contact's data, which only an admin signed in to the app decides, as only one records the restriction",
+	}
 	verbs := map[string]agents.RouteVerb{}
 	for _, v := range RouteVerbs() {
 		verbs[v.Verb] = v
@@ -43,6 +47,13 @@ func TestConsentRoutesSplitByWhoseDecisionTheyHold(t *testing.T) {
 			if pol.Access != accessTool || pol.ServedBy != servedByRoute || pol.Scope != scopeRead {
 				t.Errorf("%s (%s) reads a contact's consent, so a read scope reaches it; got %+v", route, pol.Op, pol)
 			}
+			continue
+		}
+		if _, human := humanOnly[pol.Op]; human {
+			if pol.Access != accessHumanOnly {
+				t.Errorf("%s (%s) is a human admin's decision and must refuse an agent, got %+v", route, pol.Op, pol)
+			}
+			delete(humanOnly, pol.Op)
 			continue
 		}
 		if pol.Access != accessTool || pol.ServedBy != servedByRoute {
@@ -61,6 +72,9 @@ func TestConsentRoutesSplitByWhoseDecisionTheyHold(t *testing.T) {
 		delete(writes, pol.Op)
 	}
 	for op := range writes {
+		t.Errorf("%s left the per-contact consent routes: this pin no longer covers it", op)
+	}
+	for op := range humanOnly {
 		t.Errorf("%s left the per-contact consent routes: this pin no longer covers it", op)
 	}
 	if seen == 0 {

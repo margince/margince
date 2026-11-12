@@ -36,6 +36,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
+	"strings"
 	"time"
 
 	"github.com/margince/margince/backend/internal/modules/capture/graphconn"
@@ -45,9 +46,6 @@ import (
 const (
 	// subscriptionsPath is Microsoft's subscription collection.
 	subscriptionsPath = "/subscriptions"
-	// messagesResource is what the subscription watches. Quoted the way Graph
-	// spells a resource path, which is not the same as the request path.
-	messagesResource = "/me/messages"
 	// createdChange is the only change type worth a sync: an updated or deleted
 	// message changes nothing this system has already captured, and asking for
 	// them would wake a sync on every read receipt.
@@ -288,12 +286,10 @@ var ErrSubscriptionGone = errors.New("graph: the subscription no longer exists")
 // findSubscription returns the id of this app's subscription for this user
 // pointing at notificationURL, or empty.
 //
-// Matched on the notification URL ALONE, and never additionally on the
-// resource. The URL is a value this deployment chose and Microsoft stores
-// verbatim, so comparing it is comparing our own bytes; `resource` is a value
-// Microsoft may echo in a normalized form of its own, and a comparison that
-// missed would create a second subscription every renewal round — each one
-// delivering the same notification, forever.
+// A personal client matches on the notification URL alone. That URL is our
+// own bytes, which Microsoft stores verbatim. The resource may come back in a
+// normalized form, and a missed match adds a subscription every round.
+// A shared client also matches the resource, in watchesThisMailbox.
 //
 // The URL carries the operator token, so a subscription left behind by a
 // rotated token is correctly seen as somebody else's and replaced rather than
@@ -309,7 +305,7 @@ func (a *httpAPI) findSubscription(ctx context.Context, accessToken, notificatio
 			return "", err
 		}
 		for _, s := range body.Value {
-			if s.NotificationURL == notificationURL {
+			if s.NotificationURL == notificationURL && a.watchesThisMailbox(s.Resource) {
 				return s.ID, nil
 			}
 		}
@@ -398,6 +394,22 @@ func (a *httpAPI) GetSubscription(ctx context.Context, accessToken, id string) (
 	return Subscription{ID: out.ID, Expiration: out.Expiration, NotificationURL: out.NotificationURL}, nil
 }
 
+// watchesThisMailbox reports whether a listed subscription is this mailbox's.
+// A personal token lists only its own user's subscriptions, so the URL alone
+// decides, as findSubscription explains. An app token lists every mailbox's,
+// so a shared client also matches the resource, ignoring case and a leading
+// slash, which Microsoft may drop.
+func (a *httpAPI) watchesThisMailbox(resource string) bool {
+	if a.mailbox == personalMailbox {
+		return true
+	}
+	return strings.EqualFold(strings.TrimPrefix(resource, "/"), strings.TrimPrefix(a.messagesResource(), "/"))
+}
+
+// messagesResource is what the subscription watches. Quoted the way Graph
+// spells a resource path, which is not the same as the request path.
+func (a *httpAPI) messagesResource() string { return a.mailbox + "/messages" }
+
 func (a *httpAPI) createSubscription(
 	ctx context.Context, accessToken, notificationURL, clientState string, deadline time.Time,
 ) (Subscription, error) {
@@ -405,7 +417,7 @@ func (a *httpAPI) createSubscription(
 	if _, err := a.writeJSON(ctx, http.MethodPost, a.base+subscriptionsPath, accessToken, subscriptionRequest{
 		ChangeType:      createdChange,
 		NotificationURL: notificationURL,
-		Resource:        messagesResource,
+		Resource:        a.messagesResource(),
 		ClientState:     clientState,
 		Expiration:      deadline,
 	}, &out); err != nil {

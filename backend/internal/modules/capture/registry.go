@@ -223,7 +223,7 @@ func (r *Registry) SyncOnce(ctx context.Context, connectionID ids.UUID) error {
 func (r *Registry) syncConnection(ctx context.Context, connectionID ids.UUID) error {
 	var (
 		name          string
-		grantedBy     ids.UserID
+		grantedBy     *ids.UserID
 		credentialRef *string
 		authBytes     []byte
 		cursor        []byte
@@ -238,7 +238,8 @@ func (r *Registry) syncConnection(ctx context.Context, connectionID ids.UUID) er
 		// 'reauth_required' park a connection.
 		return tx.QueryRow(ctx, `
 			SELECT provider, user_id, credential_ref, auth, sync_cursor, generation, sync_revision, sync_anchor
-			  FROM capture_connection WHERE id = $1 AND status IN ('connected','error')`, connectionID).
+			  FROM capture_connection c WHERE id = $1 AND status IN ('connected','error')
+			   AND (user_id IS NOT NULL OR `+sharedMailboxLiveSQL+`)`, connectionID).
 			Scan(&name, &grantedBy, &credentialRef, &authBytes, &cursor, &generation, &revision, &heldAnchor)
 	})
 	if errors.Is(err, pgx.ErrNoRows) {
@@ -255,7 +256,7 @@ func (r *Registry) syncConnection(ctx context.Context, connectionID ids.UUID) er
 	// The connector principal is built before credential resolution so every
 	// failure past this point records into the scheduling state under an
 	// actor-bearing context (the sidecar's system_log line needs one).
-	runCtx, err := r.connectorContext(ctx, name, grantedBy)
+	runCtx, err := r.runContext(ctx, name, grantedBy, connectionID)
 	if err != nil {
 		return err
 	}

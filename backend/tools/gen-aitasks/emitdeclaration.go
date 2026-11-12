@@ -52,6 +52,8 @@ func writeDeclarationTables(b *strings.Builder, c contract, taskNames []string) 
 
 	writeLocalOnlyTable(b, c, taskNames)
 
+	writeSubjectRestrictionTable(b, c, taskNames)
+
 	writeDecisionTable(b, c, taskNames)
 
 	writeCompanyContextTable(b, c, taskNames)
@@ -255,4 +257,20 @@ func writeSiteTable(b *strings.Builder, c contract, taskNames []string) {
 	b.WriteString("// SitesFor returns the task's declared sites in contract order. A\n")
 	b.WriteString("// planned task returns none.\n")
 	b.WriteString("func SitesFor(t Task) []Site { return taskSites[t] }\n\n")
+}
+
+// writeSubjectRestrictionTable emits each task's restriction posture and, for
+// none, its reason.
+func writeSubjectRestrictionTable(b *strings.Builder, c contract, taskNames []string) {
+	b.WriteString("// taskSubjectRestriction is each task's declared restriction posture.\n")
+	b.WriteString("var taskSubjectRestriction = map[Task]SubjectRestrictionPosture{\n")
+	for _, name := range taskNames {
+		def := c.Tasks[name]
+		fmt.Fprintf(b, "\t%s: {Posture: %q, Reason: %q},\n", taskConst(name), def.SubjectRestriction, def.SubjectRestrictionReason)
+	}
+	b.WriteString("}\n\n")
+	b.WriteString("// SubjectRestrictionOf returns the task's declared restriction posture.\n")
+	b.WriteString("func SubjectRestrictionOf(t Task) SubjectRestrictionPosture { return taskSubjectRestriction[t] }\n\n")
+	b.WriteString("// HonoursRestriction reports whether the task refuses a restricted contact.\n")
+	b.WriteString("func HonoursRestriction(t Task) bool { return taskSubjectRestriction[t].Posture == \"honour\" }\n\n")
 }

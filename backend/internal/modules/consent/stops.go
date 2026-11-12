@@ -39,6 +39,7 @@ func (s *Store) stopsOfSubject(ctx context.Context, in RecordInput) ([]crmcontra
 		return nil, err
 	}
 	caller := lifterOf(ctx)
+	asksLift := admitRestriction(ctx) == nil
 	var out []crmcontracts.ContactStop
 	err = s.db.Tx(ctx, func(tx pgx.Tx) error {
 		if err := auth.EnsureReadable(ctx, tx, sub.entityType, sub.id); err != nil {
@@ -66,11 +67,19 @@ func (s *Store) stopsOfSubject(ctx context.Context, in RecordInput) ([]crmcontra
 			SELECT live.id, live.kind, live.decided_by_level, live.source, live.recorded_at,
 			       live.address, live.pinned, cp.key, live.recorded_through,
 			       CASE WHEN live.recorded_through IN ($5, $7) AND NOT starts_with(live.origin_source, $6)
-			            THEN u.display_name END
+			            THEN u.display_name END,
+			       notice.status, notice.reason, notice.created_at
 			  FROM live
 			  LEFT JOIN consent_purpose cp ON cp.id = live.purpose_id
 			  LEFT JOIN passport p ON live.origin = $8 || p.id::text
 			  LEFT JOIN app_user u ON live.origin = $4 || u.id::text OR u.id = p.on_behalf_of
+			  LEFT JOIN LATERAL (
+			       SELECT o.status, o.reason, o.created_at
+			         FROM communication_suppression rs
+			         JOIN comms_outbound o ON o.message_id LIKE `+liftNoticeLikeSQL("rs.id")+`
+			        WHERE live.kind = '`+kindProcessingRestriction+`' AND rs.`+sub.column+` = $1
+			          AND `+auth.LiveRestrictionSQL("rs")+`
+			        ORDER BY o.created_at DESC LIMIT 1) notice ON true
 			 ORDER BY live.recorded_at DESC, live.id`,
 			append([]any{sub.id}, append(addressArgs,
 				principal.HumanIDPrefix, string(commsauthz.RecordedByColleague), carriedSourceMark,
@@ -79,7 +88,7 @@ func (s *Store) stopsOfSubject(ctx context.Context, in RecordInput) ([]crmcontra
 			return fmt.Errorf("consent: reading the subject's stops: %w", err)
 		}
 		out, err = pgx.CollectRows(rows, func(row pgx.CollectableRow) (crmcontracts.ContactStop, error) {
-			return scanStop(row, caller, admitted)
+			return scanStop(row, stopReader{caller: caller, admitted: admitted, asksLift: admitted && asksLift})
 		})
 		if err != nil {
 			return fmt.Errorf("consent: reading the subject's stops: %w", err)
@@ -92,21 +101,32 @@ func (s *Store) stopsOfSubject(ctx context.Context, in RecordInput) ([]crmcontra
 	return out, err
 }
 
-func scanStop(row pgx.CollectableRow, caller lifter, admitted bool) (crmcontracts.ContactStop, error) {
+// stopReader is what the caller may do with the stops it reads.
+type stopReader struct {
+	caller lifter
+	// admitted is the caller half of a lift on this subject.
+	admitted bool
+	// asksLift is an admin signed in, who may lift a restriction with its notice.
+	asksLift bool
+}
+
+func scanStop(row pgx.CollectableRow, reader stopReader) (crmcontracts.ContactStop, error) {
 	var (
 		id                             ids.UUID
 		kind, decided, source, through string
 		recordedAt                     time.Time
 		address, purpose, name         *string
 		pinned                         bool
+		notice                         liftNoticeRow
 	)
 	if err := row.Scan(&id, &kind, &decided, &source, &recordedAt,
-		&address, &pinned, &purpose, &through, &name); err != nil {
+		&address, &pinned, &purpose, &through, &name,
+		&notice.status, &notice.reason, &notice.queuedAt); err != nil {
 		return crmcontracts.ContactStop{}, err
 	}
 	verdict := liftVerdict{blockedBy: crmcontracts.ContactStopLiftBlockedByPermission}
-	if admitted {
-		verdict = judgeLift(caller, stopFacts{
+	if reader.admitted {
+		verdict = judgeLift(reader.caller, stopFacts{
 			kind: kind, decided: commsauthz.AuthorityLevel(decided),
 			through: commsauthz.RecordedThrough(through), pinned: pinned,
 		})
@@ -127,8 +147,48 @@ func scanStop(row pgx.CollectableRow, caller lifter, admitted bool) (crmcontract
 	if !verdict.may {
 		stop.LiftBlockedBy = &verdict.blockedBy
 	}
+	if kind == kindProcessingRestriction {
+		stop.LiftNotice = notice.wire()
+		mayAsk := reader.asksLift && !pinned && !notice.underway()
+		stop.MayLiftRestriction = &mayAsk
+	}
 	return stop, nil
 }
+
+// liftNoticeRow is the newest delivery of a restriction's lift notice.
+type liftNoticeRow struct {
+	status, reason *string
+	queuedAt       *time.Time
+}
+
+// wire answers where the notice is. A stop still listed with a sent notice is
+// one whose lift the sweep has yet to apply.
+func (n liftNoticeRow) wire() *crmcontracts.RestrictionLiftNotice {
+	if n.status == nil || n.queuedAt == nil {
+		return nil
+	}
+	status := crmcontracts.RestrictionLiftNoticeStatusQueued
+	switch *n.status {
+	case deliverySent:
+		status = crmcontracts.RestrictionLiftNoticeStatusSent
+	case deliveryParked:
+		status = crmcontracts.RestrictionLiftNoticeStatusFailed
+	}
+	return &crmcontracts.RestrictionLiftNotice{Status: status, Reason: n.reason, QueuedAt: *n.queuedAt}
+}
+
+// underway is a notice that waits or went out, which a second lift must not
+// duplicate (refuseLiftUnderwayTx).
+func (n liftNoticeRow) underway() bool {
+	return n.status != nil && (*n.status == deliveryPending || *n.status == deliverySent)
+}
+
+// The comms_outbound statuses the restriction lift reads.
+const (
+	deliveryPending = "pending"
+	deliverySent    = "sent"
+	deliveryParked  = "parked"
+)
 
 // reasonFromSource reads back what suppressionSource stored: the words after
 // its prefix, on a carried copy too. A row another writer stored names its

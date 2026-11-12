@@ -116,6 +116,60 @@ func TestRecordCardsArePublicButExposeOnlyTheirLimitedContext(t *testing.T) {
 	}
 }
 
+// A card has no reader to ask, so it names nothing some seat is denied. That
+// rules out a deal's company once any role masks the link, and a company that
+// capture privacy keeps for its mailbox owner.
+func TestRecordCardsNameNothingASeatIsDenied(t *testing.T) {
+	e := apptest.SetupApp(t)
+	e.BootstrapWorkspace(t)
+	customer := createdID(t, e, "/v1/companies", AnyMap{"display_name": "Masked Customer", "source": "manual"})
+	employer := createdID(t, e, "/v1/companies", AnyMap{"display_name": "Owner Only Employer", "source": "manual"})
+	stages := apptest.DiscoverSeededPipeline(t, e)
+	deal := createdID(t, e, "/v1/deals", AnyMap{"name": "Quiet renewal", "company_id": customer, "pipeline_id": stages.PipelineID, "stage_id": stages.Open, "source": "manual"})
+	contact := createdID(t, e, "/v1/contacts", AnyMap{"full_name": "Quiet Buyer", "company_id": employer, "title": "Buyer", "source": "manual"})
+
+	if status, body := recordCard(t, e, "deals", deal); status != http.StatusOK || !strings.Contains(body, "Masked Customer") {
+		t.Fatalf("unmasked deal card: %d %s — the company shows until a role masks it", status, body)
+	}
+
+	maskDealField(t, e, "rep", "company_id", "outside_write_authority")
+	if _, err := e.Owner.Exec(t.Context(), `UPDATE company SET visibility = 'owner' WHERE id = $1`, employer); err != nil {
+		t.Fatalf("making the employer private to its owner: %v", err)
+	}
+
+	status, body := recordCard(t, e, "deals", deal)
+	if status != http.StatusOK || !strings.Contains(body, "Quiet renewal") || strings.Contains(body, "Masked Customer") {
+		t.Errorf("deal card with deal.company_id masked on a role: %d %s", status, body)
+	}
+	status, body = recordCard(t, e, "contacts", contact)
+	if status != http.StatusOK || !strings.Contains(body, "Buyer") || strings.Contains(body, "Owner Only Employer") {
+		t.Errorf("contact card beside an owner-private employer: %d %s", status, body)
+	}
+	if status, body = recordCard(t, e, "companies", employer); status != http.StatusNotFound || strings.Contains(body, "Owner Only Employer") {
+		t.Errorf("owner-private company card: %d %s, want 404 naming nothing", status, body)
+	}
+}
+
+func recordCard(t *testing.T, e *apptest.AppEnv, kind, id string) (int, string) {
+	t.Helper()
+	client := *e.TS.Client()
+	client.Jar = nil
+	response, err := client.Get(e.TS.URL + "/v1/public/record-previews/" + kind + "/" + id)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer func() {
+		if err := response.Body.Close(); err != nil {
+			t.Errorf("close response: %v", err)
+		}
+	}()
+	body, err := io.ReadAll(response.Body)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return response.StatusCode, string(body)
+}
+
 func TestRecordCardsRemainAvailableWhenRelatedCompanyIsArchived(t *testing.T) {
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)

@@ -5,7 +5,6 @@ package contacts
 
 import (
 	"context"
-	"errors"
 	"strings"
 
 	"github.com/jackc/pgx/v5"
@@ -13,7 +12,6 @@ import (
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/platform/freemail"
-	"github.com/margince/margince/backend/internal/shared/kernel/employment"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
@@ -124,19 +122,14 @@ func currentEmployerID(ctx context.Context, tx pgx.Tx, id ids.ContactID) (*ids.C
 	if err := auth.Require(ctx, "relationship", principal.ActionRead); err != nil {
 		return nil, err
 	}
-	args := []any{id}
-	var company ids.CompanyID
-	err := tx.QueryRow(ctx, storekit.SQLf(`SELECT company_id FROM relationship r WHERE contact_id = $%d AND `+employment.CurrentPrimarySlotSQL("r"), len(args)), args...).Scan(&company)
-	if errors.Is(err, pgx.ErrNoRows) {
-		return nil, nil //nolint:nilnil // No current employer is an ordinary lookup result.
-	}
-	if err != nil {
+	company, _, err := readCurrentEmployer(ctx, tx, id.UUID)
+	if err != nil || company == nil {
 		return nil, err
 	}
 	if err := auth.EnsureLinkTarget(ctx, tx, companyEntity, company.UUID); err != nil {
 		return nil, err
 	}
-	return &company, nil
+	return company, nil
 }
 
 // ensureCompanyAndEmployment reuses admitted companies or records a durable domain question.

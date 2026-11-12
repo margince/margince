@@ -13,6 +13,7 @@ import "./composed.css";
 import {
   automaticLabel,
   CommitmentReviewFlag,
+  CopiesFlag,
   groupCountLabel,
   MoveFlag,
   sideClass,
@@ -253,6 +254,7 @@ function ThreadMessage({
           {entry.emailSummary && (
             <EmailFiles summaries={[entry.emailSummary]} />
           )}
+          <CopiesFlag entry={entry} />
           <CommitmentReviewFlag
             count={entry.withheld ? 0 : entry.commitmentReviewCount}
           />

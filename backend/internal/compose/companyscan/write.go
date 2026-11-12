@@ -100,7 +100,17 @@ func ScanRequest(in Input, lang string) model.Request {
 		MaxTokens:             ai.ReasoningOutputMaxTokens,
 		ResponseSchema:        findingsSchema(in),
 		SecretStripper:        ai.NewSecretStripper(),
+		Subjects:              scanSubjects(in),
 	}
+}
+
+// scanSubjects are the account and every message the scan reads.
+func scanSubjects(in Input) *model.Subjects {
+	about := in.Account.Subjects()
+	for _, message := range in.Messages {
+		about.Activities = append(about.Activities, message.ID)
+	}
+	return about
 }
 
 func findingsSchema(in Input) json.RawMessage {
@@ -165,6 +175,10 @@ func Read(
 	})
 	if ai.IsDeferral(err) {
 		return nil, crmcontracts.WrittenByDeterministic, err
+	}
+	// A restricted contact on the account: the floor, not a failed read.
+	if errors.Is(err, ai.ErrSubjectRestricted) {
+		return nil, crmcontracts.WrittenByDeterministic, nil
 	}
 	if err != nil {
 		return nil, crmcontracts.WrittenByDeterministic, &LaneError{Cause: err}

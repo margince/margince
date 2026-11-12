@@ -104,6 +104,7 @@ func replyDraftRequest(activity replyActivityData, voiceBlock voiceBlockFor, cor
 		MaxTokens:      ai.ReasoningOutputMaxTokens,
 		ResponseSchema: replyDraftSchema,
 		SecretStripper: ai.NewSecretStripper(),
+		Subjects:       model.AboutActivities(activity.Anchor),
 	}, nil
 }
 

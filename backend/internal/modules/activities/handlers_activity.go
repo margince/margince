@@ -54,6 +54,7 @@ func (h Handlers) ListActivities(w http.ResponseWriter, r *http.Request, params 
 	}
 	in.WaitingReply = params.WaitingReply != nil && *params.WaitingReply
 	in.RemindersDue = params.ReminderDue != nil && *params.ReminderDue
+	in.CollapseSeatCopies = params.CollapseCopies != nil && *params.CollapseCopies
 
 	activities, page, err := h.store.ListActivities(r.Context(), in)
 	if err != nil {

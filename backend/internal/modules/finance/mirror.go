@@ -60,7 +60,7 @@ func (s *Store) mirrorLedger(
 	for _, invoice := range ledger.Invoices {
 		out.InvoicesSeen++
 		id, outcome, err := s.mirrorInvoice(ctx, tx, mirrorArgs{
-			connectionID: connectionID, companyID: mapped.companyID,
+			connectionID: connectionID, companyID: mapped.companyID, linkID: mapped.id,
 			invoice: invoice, capturedBy: by, rowIDs: rowIDs, source: source,
 			creditedAgainst: credited[invoice.ExternalID], baseCurrency: base,
 		})
@@ -73,7 +73,7 @@ func (s *Store) mirrorLedger(
 	for _, payment := range ledger.Payments {
 		out.PaymentsSeen++
 		outcome, err := s.mirrorPayment(ctx, tx, paymentArgs{
-			connectionID: connectionID, companyID: mapped.companyID,
+			connectionID: connectionID, companyID: mapped.companyID, linkID: mapped.id,
 			payment: payment, capturedBy: by, rowIDs: rowIDs, source: source,
 		})
 		if err != nil {
@@ -140,6 +140,7 @@ const (
 type mirrorArgs struct {
 	connectionID ids.UUID
 	companyID    ids.CompanyID
+	linkID       ids.UUID
 	invoice      SourceInvoice
 	capturedBy   string
 	// source is the provider's own name, stamped on every row it produced so a
@@ -167,8 +168,8 @@ func (s *Store) mirrorInvoice(
 		return ids.UUID{}, wroteNothing, err
 	}
 	// A relinked customer's invoices move even when the source is unchanged:
-	// the hash covers the source, and the company is the link's.
-	relinked := found && existing.image.CompanyID != args.companyID
+	// the hash covers the source, and the link and its company are the mapping's.
+	relinked := found && !existing.image.mirroredThrough(args.linkID, args.companyID)
 	// The source says what it said last time. Rewriting the row would bump its
 	// version and write an audit row for a change that did not happen. That is
 	// history minted four times a day by a sweep over an unchanged ledger.
@@ -224,7 +225,7 @@ func findInvoice(
 	// reason it writes: the change key covers them, so a narrower read would
 	// produce a before image that cannot explain the update beside it.
 	err = tx.QueryRow(ctx, `
-		SELECT id, sync_hash, fx_rate_to_base, company_id, number,
+		SELECT id, sync_hash, fx_rate_to_base, company_id, customer_link_id, number,
 		       issued_at, due_at, status, currency, net_minor, tax_minor,
 		       gross_minor, open_minor, credited_minor,
 		       fully_paid_at, disputed_at, void_at
@@ -232,7 +233,7 @@ func findInvoice(
 		 WHERE connection_id = $1 AND external_id = $2
 		   FOR UPDATE`,
 		connectionID, externalID).Scan(&row.id, &row.hash, &row.fxRate,
-		&row.image.CompanyID, &row.image.Number,
+		&row.image.CompanyID, &row.image.CustomerLinkID, &row.image.Number,
 		&row.image.IssuedAt, &row.image.DueAt, &row.image.Status,
 		&row.image.Currency, &row.image.NetMinor, &row.image.TaxMinor,
 		&row.image.GrossMinor, &row.image.OpenMinor, &row.image.CreditedMinor,
@@ -253,7 +254,7 @@ func findInvoice(
 func invoiceImageOf(args mirrorArgs, values invoiceValues, hash string) invoiceImage {
 	inv := args.invoice
 	return invoiceImage{
-		CompanyID: args.companyID, Number: nullable(inv.Number),
+		CompanyID: args.companyID, CustomerLinkID: &args.linkID, Number: nullable(inv.Number),
 		IssuedAt: inv.IssuedOn, DueAt: inv.DueOn, Status: values.status,
 		Currency: inv.Currency, NetMinor: inv.NetMinor, TaxMinor: inv.TaxMinor,
 		GrossMinor: inv.GrossMinor, OpenMinor: values.openMinor,
@@ -325,16 +326,16 @@ func insertInvoice(
 		        issued_at, due_at, status, currency, net_minor, tax_minor, gross_minor,
 		        open_minor, credited_minor, fully_paid_at, disputed_at, void_at,
 		        credits_invoice_id, source_updated_at, sync_hash, fx_rate_to_base,
-		        fx_rate_date, source, captured_by)
+		        fx_rate_date, source, captured_by, customer_link_id)
 		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15,
-		        $16, $17, $18, $19, $20, $21, $22, $23, $24)
+		        $16, $17, $18, $19, $20, $21, $22, $23, $24, $25)
 		RETURNING fx_rate_to_base`,
 		id, args.connectionID, args.companyID,
 		inv.ExternalID, nullable(inv.Number), inv.IssuedOn, inv.DueOn, values.status,
 		inv.Currency, inv.NetMinor, inv.TaxMinor, inv.GrossMinor, values.openMinor,
 		values.credited, inv.FullyPaidAt, values.disputedAt, values.voidAt,
 		values.creditsID, inv.UpdatedAt, hash, values.fxRate, values.fxDate,
-		args.source, args.capturedBy).Scan(&values.fxRate)
+		args.source, args.capturedBy, args.linkID).Scan(&values.fxRate)
 	if err != nil {
 		return fmt.Errorf("mirror the invoice: %w", err)
 	}
@@ -374,14 +375,14 @@ func updateInvoice(
 		       gross_minor = $10, open_minor = $11, credited_minor = $12,
 		       fully_paid_at = $13, disputed_at = $14, void_at = $15,
 		       credits_invoice_id = $16, source_updated_at = $17, sync_hash = $18,
-		       fx_rate_to_base = $19, fx_rate_date = $20
+		       fx_rate_to_base = $19, fx_rate_date = $20, customer_link_id = $21
 		 WHERE id = $1
 		RETURNING fx_rate_to_base`,
 		id, args.companyID, nullable(inv.Number), inv.IssuedOn, inv.DueOn,
 		values.status, inv.Currency, inv.NetMinor, inv.TaxMinor, inv.GrossMinor,
 		values.openMinor, values.credited, inv.FullyPaidAt, values.disputedAt,
 		values.voidAt, values.creditsID, inv.UpdatedAt, hash,
-		values.fxRate, values.fxDate).Scan(&values.fxRate)
+		values.fxRate, values.fxDate, args.linkID).Scan(&values.fxRate)
 	if err != nil {
 		return fmt.Errorf("update the mirrored invoice: %w", err)
 	}

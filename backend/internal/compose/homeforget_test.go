@@ -4,6 +4,7 @@
 package compose
 
 import (
+	"net/http"
 	"net/http/httptest"
 	"slices"
 	"testing"
@@ -32,5 +33,20 @@ func TestAWriteEndsTheCachedHomeOfEachReaderItWasMadeForOnce(t *testing.T) {
 				t.Errorf("writers %v, want %v", got, c.want)
 			}
 		})
+	}
+}
+
+func TestASuccessOrAConflictEndsTheWritersCachedHome(t *testing.T) {
+	for status, want := range map[int]bool{
+		http.StatusOK: true, http.StatusNoContent: true, http.StatusConflict: true,
+		http.StatusForbidden: false, http.StatusUnprocessableEntity: false, http.StatusInternalServerError: false,
+	} {
+		forgot := 0
+		w := &forgettingWriter{ResponseWriter: httptest.NewRecorder(), forget: func() { forgot++ }}
+		w.WriteHeader(status)
+		w.WriteHeader(status)
+		if wantCount := map[bool]int{true: 1, false: 0}[want]; forgot != wantCount {
+			t.Errorf("a %d answer ended the cache %d times, want %d", status, forgot, wantCount)
+		}
 	}
 }

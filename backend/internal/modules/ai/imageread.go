@@ -59,6 +59,9 @@ type ImageReading struct {
 	// that no record holds yet (a photo about to become contacts) leaves it
 	// zero, and the call then cites nothing.
 	Subject ids.Ref
+	// About is what the request declares it carries, for a task that honours
+	// a restriction of processing.
+	About *model.Subjects
 }
 
 // ReadImage puts one image to the model and returns the validated reply.
@@ -72,6 +75,7 @@ func ReadImage(ctx context.Context, lane ImageLane, in ImageReading) (json.RawMe
 		return nil, err
 	}
 	req := ImageRequest(in, img)
+	req.Subjects = in.About
 	if !in.Subject.ID.IsZero() {
 		ctx = WithSubject(ctx, in.Subject, "")
 	}

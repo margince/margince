@@ -8,6 +8,7 @@ import (
 	"time"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/textcut"
 )
 
@@ -38,6 +39,9 @@ const (
 // Input is the room as the model is shown it. Dates are calendar days in UTC,
 // the form the grounding filter reads a stated date against.
 type Input struct {
+	// Room names every participant, revoked seats and comment authors included,
+	// for a restriction of processing; the prompt never shows it.
+	Room         ids.UUID     `json:"-"`
 	Title        string       `json:"title"`
 	State        string       `json:"state"`
 	AccessEndsOn string       `json:"access_ends_on,omitempty"`
@@ -55,6 +59,9 @@ type BuyerIn struct {
 	LastSeenOn        string   `json:"last_seen_on,omitempty"`
 	AskedForNewLinkOn string   `json:"asked_for_new_link_on,omitempty"`
 	Downloaded        []string `json:"downloaded,omitempty"`
+	// Email names the buyer's contact for a restriction of processing; the
+	// prompt never shows it.
+	Email string `json:"-"`
 }
 
 // DocumentIn is one shared document.
@@ -95,7 +102,7 @@ func FromRoom(
 	documents []crmcontracts.DealRoomDocument,
 	threads []crmcontracts.DealRoomThread,
 ) Input {
-	in := Input{Title: room.Title, State: string(room.State)}
+	in := Input{Room: ids.UUID(room.Id), Title: room.Title, State: string(room.State)}
 	if room.ExpiresAt != nil {
 		in.AccessEndsOn = day(*room.ExpiresAt)
 	}
@@ -136,7 +143,7 @@ func buyersFrom(participants []crmcontracts.DealRoomParticipant) []BuyerIn {
 		if p.RevokedAt != nil || len(out) == maxBuyers {
 			continue
 		}
-		buyer := BuyerIn{ID: p.Id.String(), Name: p.FullName, SignedIn: p.HasSignedIn != nil && *p.HasSignedIn}
+		buyer := BuyerIn{ID: p.Id.String(), Name: p.FullName, SignedIn: p.HasSignedIn != nil && *p.HasSignedIn, Email: string(p.Email)}
 		if p.LastSeenAt != nil {
 			buyer.LastSeenOn = day(*p.LastSeenAt)
 		}

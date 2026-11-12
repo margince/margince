@@ -17,13 +17,13 @@ func TestContactMergePreviewNamesDiscardedAndMovingSocialHandles(t *testing.T) {
 	e := integration.Setup(t)
 	ctx := e.As(e.AdminUser, nil, integration.AdminPerms)
 	source, err := e.Contacts.CreateContact(ctx, contacts.CreateContactInput{
-		FullName: "Original contact", Source: "manual", Social: map[string]any{"linkedin": "original-profile", "github": "developer-profile"},
+		FullName: "Original contact", Source: "manual", Social: map[string]any{"linkedin": profileLink("original-profile"), "github": "developer-profile"},
 	})
 	if err != nil {
 		t.Fatal(err)
 	}
 	target, err := e.Contacts.CreateContact(ctx, contacts.CreateContactInput{
-		FullName: "Surviving contact", Source: "manual", Social: map[string]any{"linkedin": "surviving-profile"},
+		FullName: "Surviving contact", Source: "manual", Social: map[string]any{"linkedin": profileLink("surviving-profile")},
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -46,7 +46,7 @@ func TestContactMergePreviewNamesDiscardedAndMovingSocialHandles(t *testing.T) {
 				t.Fatalf("moving handle: %+v", effect)
 			}
 		case "linkedin":
-			if effect.SourceHandle != "original-profile" || effect.TargetID == nil || effect.TargetHandle == nil || *effect.TargetHandle != "surviving-profile" {
+			if effect.SourceHandle != profileLink("original-profile") || effect.TargetID == nil || effect.TargetHandle == nil || *effect.TargetHandle != profileLink("surviving-profile") {
 				t.Fatalf("discarded handle: %+v", effect)
 			}
 		default:
@@ -58,7 +58,7 @@ func TestContactMergePreviewNamesDiscardedAndMovingSocialHandles(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if merged.Social == nil || len(*merged.Social) != 2 || (*merged.Social)["linkedin"] != "surviving-profile" || (*merged.Social)["github"] != "developer-profile" {
+	if merged.Social == nil || len(*merged.Social) != 2 || (*merged.Social)["linkedin"] != profileLink("surviving-profile") || (*merged.Social)["github"] != "developer-profile" {
 		t.Fatalf("merged social handles: %+v", merged.Social)
 	}
 }

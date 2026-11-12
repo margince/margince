@@ -248,6 +248,7 @@ type Request struct {
 	// capable adapter maps them to its wire; one that cannot carry a given MIME
 	// returns ErrAttachmentUnsupported (never a silent drop).
 	Attachments []Attachment
+	Subjects    *Subjects
 }
 
 type Message struct {
@@ -451,11 +452,9 @@ type Capabilities struct {
 // only refuse. A caller type-asserts and treats a non-implementer as "this
 // vendor publishes no list" rather than as a failure.
 //
-// It answers AVAILABILITY, never price. The price sheet is its own
-// effective-dated record and stays the authority on cost for anything reached
-// through a stored binding, so a second price arriving here would drift the
-// first time either moved. A model the sheet cannot price is bindable and
-// reports UNPRICED, which is honest.
+// It answers AVAILABILITY, never price. The price sheet is its own record and
+// the authority on cost, so a second price here would drift from it. A model
+// the sheet cannot price is still bindable.
 type Lister interface {
 	// ListModels reports what the vendor serves, newest first where the vendor
 	// dates its models and in the vendor's own order where it does not.

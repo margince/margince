@@ -171,7 +171,8 @@ func (x *SignalExtractor) RunWorkspace(ctx context.Context, wsID ids.WorkspaceID
 			pass.Deferred = true
 			return pass, passFailure(failed)
 		}
-		if err != nil {
+		// A restricted conversation stays due and is read once the restriction lifts.
+		if err != nil && !errors.Is(err, ai.ErrSubjectRestricted) {
 			failed = append(failed, fmt.Errorf("reading conversation %q: %w", thread.Key, err))
 		}
 	}

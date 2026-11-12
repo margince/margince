@@ -137,12 +137,13 @@ func scheduledRunNoteSQL(alias string) string {
 }
 
 // LastActivityCountsSQL admits an activity row to a record's last-activity
-// clock. It needs a kind that moves it, contact we had (HadContactSQL) and no
-// scheduled run's note. It must also have happened at now (occurredday.HappenedSQL).
-// The last_activity_of_* functions carry its text rendered with now().
+// clock. It needs a kind that moves it, contact we had (HadContactSQL), no
+// scheduled run's note and no newsletter (BulkMailSQL). It must also have
+// happened at now (occurredday.HappenedSQL). The last_activity_of_* functions
+// carry its text rendered with now().
 func LastActivityCountsSQL(alias, now string) string {
 	return "(" + LastActivityKindSQL(alias) + " AND " + HadContactSQL(alias, now) + " AND NOT " +
-		scheduledRunNoteSQL(alias) + " AND " + occurredday.HappenedSQL(alias, now) + ")"
+		scheduledRunNoteSQL(alias) + " AND NOT " + BulkMailSQL(alias) + " AND " + occurredday.HappenedSQL(alias, now) + ")"
 }
 
 // InteractionCountsSQL is the whole test for an activity row that counts as an

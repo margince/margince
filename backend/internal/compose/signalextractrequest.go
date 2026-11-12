@@ -182,7 +182,22 @@ func extractRequest(thread settledThread, lang string) model.Request {
 		MaxTokens:      ai.ReasoningOutputMaxTokens,
 		ResponseSchema: extractSchema(thread),
 		SecretStripper: ai.NewSecretStripper(),
+		Subjects:       threadSubjects(thread),
 	}
+}
+
+// threadSubjects are a thread's messages and every contact party to them.
+func threadSubjects(thread settledThread) *model.Subjects {
+	about := &model.Subjects{}
+	for _, message := range thread.Messages {
+		about.Activities = append(about.Activities, message.ID)
+		for _, party := range message.Parties {
+			if party.Contact != nil {
+				about.Contacts = append(about.Contacts, *party.Contact)
+			}
+		}
+	}
+	return about
 }
 
 const directionUnknown = "unknown"

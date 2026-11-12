@@ -87,7 +87,7 @@ func (a *assembly) readTimeline() error {
 	limit := sectionLimit
 	rows, page, err := activities.ListActivitiesTx(a.ctx, a.tx, activities.ListActivitiesInput{
 		EntityType: &entityTypeProject, EntityID: &a.projectID.UUID, Limit: &limit,
-		AsOf: &a.now, Columns: a.cats.activity,
+		AsOf: &a.now, Columns: a.cats.activity, CollapseSeatCopies: true,
 	})
 	if err != nil {
 		return err

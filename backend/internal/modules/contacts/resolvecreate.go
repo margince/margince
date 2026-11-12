@@ -188,7 +188,7 @@ func createContact(ctx context.Context, tx pgx.Tx, s *Store, match ContactResolu
 		args); err != nil {
 		return ids.ContactID{}, fmt.Errorf("insert contact: %w", err)
 	}
-	if err := replaceContactSocial(ctx, tx, wsID, id, spec.Social, spec.converting); err != nil {
+	if err := writeContactSocial(ctx, tx, wsID, id, spec.Social, spec.converting); err != nil {
 		return ids.ContactID{}, err
 	}
 	if err := insertContactEmails(ctx, tx, wsID, id, spec.Source, spec.CapturedBy, spec.Emails, spec.erasure, spec.converting); err != nil {

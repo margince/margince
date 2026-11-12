@@ -18,6 +18,7 @@ import (
 	"github.com/margince/margince/backend/internal/compose/contactdraft"
 	"github.com/margince/margince/backend/internal/compose/contactresearch"
 	"github.com/margince/margince/backend/internal/compose/dealstatus"
+	"github.com/margince/margince/backend/internal/compose/erasurereturn"
 	"github.com/margince/margince/backend/internal/compose/leaddraft"
 	"github.com/margince/margince/backend/internal/compose/meetingbrief"
 	"github.com/margince/margince/backend/internal/compose/pipelinetrace"
@@ -84,6 +85,7 @@ type (
 	webhooksHandlers        = webhooks.Handlers
 	webFormsHandlers        = webforms.Handlers
 	company360Handlers      = company360.Handlers
+	erasureReturnHandlers   = erasurereturn.Handlers
 	contact360Handlers      = contact360.Handlers
 	project360Handlers      = project360.Handlers
 	contactBriefHandlers    = contactbrief.Handlers

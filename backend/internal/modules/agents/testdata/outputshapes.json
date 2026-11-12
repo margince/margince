@@ -6865,6 +6865,9 @@
           "contributions_limited": {
             "type": "boolean"
           },
+          "contributions_limited_reason": {
+            "type": "string"
+          },
           "coverage_note": {
             "type": "string"
           },
@@ -14590,6 +14593,9 @@
           "contributions_limited": {
             "type": "boolean"
           },
+          "contributions_limited_reason": {
+            "type": "string"
+          },
           "coverage_note": {
             "type": "string"
           },
@@ -16233,6 +16239,40 @@
       "data": {
         "type": "object",
         "properties": {
+          "facts": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "category": {
+                  "type": "string"
+                },
+                "confirmed": {
+                  "type": "boolean"
+                },
+                "fact_key": {
+                  "type": "string"
+                },
+                "field": {
+                  "type": "string"
+                },
+                "source": {
+                  "type": "string"
+                },
+                "value": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "category",
+                "confirmed",
+                "fact_key",
+                "field",
+                "source",
+                "value"
+              ]
+            }
+          },
           "fields": {
             "type": "object"
           },
@@ -16258,6 +16298,32 @@
               "id",
               "is_you"
             ]
+          },
+          "profile_fields": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "confirmed": {
+                  "type": "boolean"
+                },
+                "field": {
+                  "type": "string"
+                },
+                "source": {
+                  "type": "string"
+                },
+                "value": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "confirmed",
+                "field",
+                "source",
+                "value"
+              ]
+            }
           },
           "record_type": {
             "type": "string"

@@ -87,6 +87,7 @@ var predicateLeadReads = gatekit.Waive(map[string]string{
 // (platform/auth/rbac.go), so the gate would admit them anyway and the entry
 // records why asking was never the point.
 var lifecycleLeadReads = gatekit.Waive(map[string]string{
+	"internal/modules/initiatives/enrolment.go:estimatedJoin":                        "the upgrade task's estimate reads only the created_at of a lead or deal the membership evaluation already admitted, to date its enrolment row. It runs under the system data task, and no field of the record leaves the statement",
 	"internal/modules/privacy/anonymizedsubject.go:subjectStillNamedSQL":             "the missed-receipt sweep asks whether a lead it is about to name in a notice was erased or anonymized, and leaves such leads out of its read. One boolean per lead leaves it, and it only ever withholds a notice; no lead column reaches any caller",
 	"internal/platform/database/storekit/stopaddress.go:LockSubjectsStopAddresses":   "consent and erasure writers read addresses only to lock their stop keys inside the same transaction. The helper returns only an error and discloses no lead field; its caller owns the permission for the mutation",
 	"internal/modules/consent/qualifyingsubject.go:bindQualifyingAddresses":          "The authorized promotion or merge holds the source subject and binds carried exchanges to their original addresses. Only the email of the lead named by that evidence row is read; no lead row is returned, and this private fragment is used only by the satellite carrier.",

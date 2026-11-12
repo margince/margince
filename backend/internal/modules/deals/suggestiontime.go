@@ -63,8 +63,17 @@ func suggestionEvidenceCurrentTx(ctx context.Context, tx pgx.Tx, current Suggest
 	for _, item := range current.Evidence {
 		evidence = append(evidence, item.SuggestionEvidence)
 	}
-	_, stands, err := suggestionSourceTimes(ctx, tx, evidence)
-	return stands, err
+	placed, stands, err := suggestionSourceTimes(ctx, tx, evidence)
+	if err != nil || !stands {
+		return false, err
+	}
+	// A deal archived after the suggestion was raised moves the floor past it.
+	floor, err := suggestionFloorTx(ctx, tx, current.CompanyID)
+	if err != nil {
+		return false, err
+	}
+	_, past := evidenceThrough(evidence, placed, floor)
+	return past, nil
 }
 
 func (s *Store) supersedeIfBuyerChanged(ctx context.Context, tx pgx.Tx, current Suggestion) (bool, error) {

@@ -14,6 +14,7 @@ package installseam
 
 import (
 	"context"
+	"errors"
 	"strings"
 
 	"github.com/jackc/pgx/v5"
@@ -25,6 +26,8 @@ import (
 	"github.com/margince/margince/backend/internal/modules/deals"
 	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/modules/projects"
+	"github.com/margince/margince/backend/internal/platform/auth"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -113,4 +116,25 @@ func dealsIssuerEntity(ctx context.Context, tx pgx.Tx, id *ids.LegalEntityID) (d
 func installationCountry(ctx context.Context, tx pgx.Tx) (string, error) {
 	code, err := identity.CountryOf(ctx, tx)
 	return strings.ToLower(string(code)), err
+}
+
+// ProjectDealLink points the deal a new project comes from at the project.
+// It runs the deal store's own update: the same write check,
+// attach check and audit row as a link made from the deal.
+func ProjectDealLink(store *deals.Store) projects.AttachDeal {
+	return func(ctx context.Context, tx pgx.Tx, dealID ids.DealID, projectID ids.ProjectID) error {
+		deal, err := store.GetDealTx(ctx, tx, dealID, storekit.LiveOnly, deals.CustomColumns{})
+		if err != nil {
+			return auth.NameMissingReference("deal_id", err)
+		}
+		if refusal := projects.RefuseDealForNewProject(string(deal.Status), deal.ProjectId != nil, deal.MaskedFields); refusal != nil {
+			return refusal
+		}
+		// The version read above, so a link made in between is not overwritten.
+		_, err = store.UpdateDealTx(ctx, tx, dealID, deals.UpdateDealInput{ProjectID: &projectID, IfVersion: deal.Version}, deals.CustomColumns{})
+		if _, mismatch := errors.AsType[*deals.DealProjectCompanyMismatchError](err); mismatch {
+			return &projects.DealCompanyMismatchError{}
+		}
+		return auth.NameMissingReference("deal_id", err)
+	}
 }

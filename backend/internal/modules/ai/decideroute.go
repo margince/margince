@@ -66,6 +66,9 @@ func (r *Router) Decide(ctx context.Context, task Task, site string, dreq decisi
 	if _, ok := taskLadders[task]; !ok {
 		return DecideOutcome{}, RouteInfo{}, fmt.Errorf("ai: unknown task %q", task)
 	}
+	if err := r.admitSubjects(ctx, task, req); err != nil {
+		return DecideOutcome{}, RouteInfo{}, err
+	}
 	// One snapshot for the decision half and the flush, so a Rebind mid-call
 	// cannot split them across two routings. The ladder walk behind it loads
 	// its own binding per walk, exactly as CompleteStructured's walks do.

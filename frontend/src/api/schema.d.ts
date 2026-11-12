@@ -4913,12 +4913,20 @@ export interface paths {
          * @description `company_id` names the project's CUSTOMER — the company the work is for. A project is
          *     work several companies do together, and the others are put on with
          *     `PUT /projects/{id}/companies`; this one is required because a project starts with a client.
-         *     The `key` is MINTED BY THE SERVER from the name (initials plus the lowest free
-         *     number, e.g. `ERA-1`) and is read-only thereafter: it is what a human writes in a
-         *     subject line to file mail under this project, so a caller-chosen one is a matcher
-         *     a caller can get wrong. A collision is resolved by taking the next number, never
-         *     reported.
-         *     The project starts in `initiative` and its creation row is appended to the phase history.
+         *     `key` is optional. Without it the server mints one from the name: the initials alone
+         *     (`ERA`) when no live project uses those letters, else the letters plus the lowest free
+         *     number from 2 (`ERA-2`). `getProjectKeyPreview` answers the key a create would mint.
+         *     A sent key is stored in upper case and is refused with 422 naming `key` when it does not
+         *     fit the key shape (`invalid_key`), is a word often bracketed in subject lines
+         *     (`key_is_common_word`), is a word of a colleague's name (`key_is_colleague_name`), or is
+         *     held by a live project (`key_taken`). The key is read-only after create: it is what a
+         *     human writes in a subject line to file mail under this project.
+         *     `phase` is the starting phase, `initiative` when omitted; a project cannot start
+         *     `closed` (422 `invalid_phase`). The creation row is appended to the phase history.
+         *     `deal_id` points that deal at the new project in the same transaction, under the check
+         *     `updateDeal.project_id` takes: the caller must be able to write the deal, and the deal
+         *     must be on the project's company (422 `project_company_mismatch` naming `deal_id`). Only
+         *     an open deal that names no project is taken (422 `deal_not_open`, `deal_has_project`).
          *     A `company_id` that names a company the caller cannot read answers 422 naming `company_id`,
          *     the same for a missing record and for one hidden by row scope.
          */
@@ -5103,6 +5111,29 @@ export interface paths {
          *     `executeBulkChange` does.
          */
         post: operations["undoBulkChange"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/projects/key-preview": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * The key a new project of this name would be given.
+         * @description Runs the mint `createProject` runs when no `key` is sent, and writes nothing. A create
+         *     that lands in between can move the number on, so the create's answer is the key that
+         *     holds. Needs the grant to create projects. An agent's `create_record` mints the key the
+         *     same way, so it needs no preview of its own.
+         */
+        get: operations["getProjectKeyPreview"];
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -7869,6 +7900,83 @@ export interface paths {
          *     no approval token (the host pre-authorized the public page).
          */
         post: operations["bookPublicMeeting"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/public/booking/{host_slug}/return": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                host_slug: string;
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Ask to be stored again after an erasure (anonymous); mails a confirmation link.
+         * @description The one way an erased subject lifts their own erasure. When the address is on the erasure
+         *     list, a single-use link is mailed to it; the address is stored only when that link is
+         *     confirmed (`confirmBookingReturn`). Nothing is stored before the click.
+         *     **Always answers 202** with no body, for every well-formed request, whether or not the
+         *     address was erased, so the answer and its timing say nothing about the address. One
+         *     link a day goes to one address, however it is spelled. The consent wording the link
+         *     carries is this installation's own, never the caller's.
+         */
+        post: operations["requestBookingReturn"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/public/booking/{host_slug}/return/preview": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                host_slug: string;
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Show what a mailed return link will store, before it is confirmed (anonymous).
+         * @description Reads the token `requestBookingReturn` mailed and answers the name and the consent wording
+         *     `confirmBookingReturn` would record. Stores nothing. A link that would not work is the same
+         *     neutral `422` (`code: link_spent`) the confirm answers.
+         */
+        post: operations["previewBookingReturn"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/public/booking/{host_slug}/return/confirm": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                host_slug: string;
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Confirm the mailed link and be stored again (anonymous).
+         * @description Spends the token `requestBookingReturn` mailed. In one transaction it lifts the erasure for
+         *     that address, stores the subject as a contact of this booking page's host, and records the
+         *     consent they gave. A token works once, for the erasure it was mailed for, until it expires.
+         *     A bad, expired, spent or foreign token is one neutral `422` (`code: link_spent`) on `token`.
+         */
+        post: operations["confirmBookingReturn"];
         delete?: never;
         options?: never;
         head?: never;
@@ -17946,9 +18054,10 @@ export interface paths {
          *     recorded. `marketing_objection` is Art. 21(2) and stops marketing only, so the invoice the
          *     same contact is owed still goes.
          *
-         *     A processing restriction and a hard bounce are not recordable by hand: the first is an
-         *     Art. 18 legal state with its own workflow, the second a fact about a mailbox only the mail
-         *     path observes.
+         *     `processing_restriction` is Art. 18: it stops sending, except the three notices above, and
+         *     stops the AI reading, enrichment and scoring of the contact. Only a human admin records
+         *     one, at the subject's authority. A hard bounce is not recordable by hand:
+         *     it is a fact about a mailbox only the mail path observes.
          */
         post: operations["suppressContact"];
         delete?: never;
@@ -17988,7 +18097,7 @@ export interface paths {
          *     admin makes it signed in themselves; an agent working for them cannot.
          *
          *     **No seat lifts a processing restriction here.** Lifting one owes the contact notice
-         *     first, and Margince sends no such notice yet.
+         *     first, so an admin asks `liftContactRestriction`, which sends that notice.
          *
          *     `listContactStops` answers, per stop, whether this caller may lift it and why not.
          *
@@ -17997,6 +18106,40 @@ export interface paths {
          *     touch either way.
          */
         post: operations["liftSuppression"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/contacts/{id}/consent/suppress/{suppressionId}/lift-restriction": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+                /** @description The contact's processing restriction to lift. */
+                suppressionId: string;
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Lift a restriction of processing, after telling the contact.
+         * @description GDPR Art. 18(3) owes the contact notice before their restriction is lifted. This queues
+         *     that notice and lifts nothing yet. The restriction ends once the notice is handed to the
+         *     mail provider. If the notice does not go out, the restriction stays, and
+         *     `listContactStops` shows why in the stop's `lift_notice`. Mail stored during the
+         *     restriction is then read as if it had just arrived.
+         *
+         *     Only an admin signed in to the app asks, as only one records a restriction. An agent is
+         *     refused.
+         *
+         *     A stop that is not a live restriction of this contact answers `404`.
+         */
+        post: operations["liftContactRestriction"];
         delete?: never;
         options?: never;
         head?: never;
@@ -18021,8 +18164,9 @@ export interface paths {
          *     `may_lift` is the answer `liftSuppression` would give this caller, from the same rule. An
          *     admin may correct a marketing objection a colleague recorded by mistake (`correction`);
          *     one the contact recorded themselves stays until they change it. No seat lifts a processing
-         *     restriction here, because lifting one owes the contact notice first and Margince sends no
-         *     such notice yet.
+         *     restriction here, because lifting one owes the contact notice first: `may_lift_restriction`
+         *     says whether this caller may ask `liftContactRestriction`, and `lift_notice` says where
+         *     that notice is.
          */
         get: operations["listContactStops"];
         put?: never;
@@ -19691,7 +19835,8 @@ export interface paths {
          * @description Renaming needs `team_admin.update`. Archiving or restoring switches every member's
          *     team reach off or on, so it is admin only, like every other change to who is on a
          *     team: a holder of `team_admin` who is not an admin gets 403
-         *     `team_membership_requires_admin`.
+         *     `team_membership_requires_admin`. A team that reads a shared mailbox is not archived:
+         *     409, naming the mailbox, until the mailbox has another reader team.
          */
         patch: operations["updateTeam"];
         trace?: never;
@@ -19715,6 +19860,10 @@ export interface paths {
          *
          *     Only an admin changes who is on a team. A holder of `team_admin.update` who is not an
          *     admin gets 403 `team_membership_requires_admin`, for themselves as for anybody else.
+         *
+         *     A team that reads a shared mailbox grants its members that mailbox's mail. An agent
+         *     adding a member to such a team gets 403, naming the mailbox; an admin adds them in the
+         *     app, and the audit row names the mailbox the member can now read.
          */
         put: operations["addTeamMember"];
         post?: never;
@@ -28236,6 +28385,20 @@ export interface components {
             /** @description The class of the last failed sync (as `CaptureConnection.last_sync_error_class`), so a `forbidden` mailbox reads as a role problem and not a broken connection. Null while none failed. */
             error_class?: string | null;
         };
+        /** @description A shared mailbox with an active concern. No member owns it, so `account_label` names it. */
+        CaptureSharedMailboxConcern: {
+            /** Format: uuid */
+            connection_id: string;
+            provider: string;
+            account_label: string | null;
+            concern: components["schemas"]["CaptureConcernKind"];
+            /** Format: date-time */
+            since: string | null;
+            /** Format: date-time */
+            last_success_at: string | null;
+            /** @description The class of the last failed sync, as on `CaptureConnectionConcern`. */
+            error_class?: string | null;
+        };
         /**
          * @description A per-user mail/calendar capture connection + sync state (capture.md CAP-DDL-2). The
          *     credential itself is NEVER in this shape — it lives encrypted in the vault, referenced only
@@ -32464,7 +32627,9 @@ export interface components {
             readonly writable?: boolean;
             /** @description Whether THIS caller may archive THIS contact: the row write gate `writable` asks, plus the `contact:delete` grant or being the contact's owner with `contact:update`. An owner who named themselves owner (an edit or a claim) needs the delete grant. Server-computed per row, per caller. A UX signal, never the enforcement, exactly like `writable`; absent means NOT archivable. */
             readonly archivable?: boolean;
-            /** @description { linkedin, twitter, github, ... } */
+            /** @description The contact's LinkedIn profile link. The same stored value as `social.linkedin`, not a second copy. */
+            linkedin_url?: string | null;
+            /** @description The contact's links by platform: github, linkedin, twitter. linkedin is a LinkedIn profile link. */
             social?: {
                 [key: string]: unknown;
             };
@@ -32586,6 +32751,9 @@ export interface components {
             title?: string | null;
             /** Format: uuid */
             owner_id?: string | null;
+            /** @description The contact's LinkedIn profile link (https://www.linkedin.com/in/<name>). Writes the same stored value as `social.linkedin`; a request naming both with different profiles is refused with 422 `linkedin_url_conflicts_with_social`. */
+            linkedin_url?: string | null;
+            /** @description Links by platform. Only github, linkedin and twitter are taken; any other key is refused with 422 `social_platform_unknown`. linkedin takes only a LinkedIn profile link (https://www.linkedin.com/in/<name>). */
             social?: {
                 [key: string]: unknown;
             };
@@ -32640,7 +32808,7 @@ export interface components {
             company_name?: string | null;
             /** @description What they do at that employer, when it differs from `title`. */
             role?: string | null;
-            /** @description The public profile this was read from. Stored, never fetched. A LinkedIn URL must be a profile (`/in/<name>`); a company page is refused with 422 `linkedin_url_not_profile` on this field. */
+            /** @description The LinkedIn profile this was read from. Stored, never fetched. It must be a LinkedIn profile (`/in/<name>`): a page off LinkedIn is refused with 422 `linkedin_url_not_linkedin` on this field, and a company page with `linkedin_url_not_profile`. */
             profile_url?: string | null;
             /**
              * Format: email
@@ -32870,6 +33038,9 @@ export interface components {
              * @enum {string}
              */
             visibility?: "workspace" | "owner";
+            /** @description The contact's LinkedIn profile link (https://www.linkedin.com/in/<name>). Writes the same stored value as `social.linkedin`; null or "" removes it. A request naming both with different profiles is refused with 422 `linkedin_url_conflicts_with_social`. */
+            linkedin_url?: string | null;
+            /** @description Merged into the stored links: a key not sent keeps its link, and a key sent as "" or null removes it. Only github, linkedin and twitter are taken; any other key is refused with 422 `social_platform_unknown`. linkedin takes only a LinkedIn profile link (https://www.linkedin.com/in/<name>). */
             social?: {
                 [key: string]: unknown;
             };
@@ -33100,6 +33271,8 @@ export interface components {
         };
         CreateCompanyRequest: {
             display_name: string;
+            /** @description Canonical LinkedIn company URL, held to the rule the update holds it to. website_url is derived and refused here. */
+            linkedin_url?: string | null;
             legal_name?: string | null;
             /** @description The company's main number. A formatted number is accepted and stored in E.164 form (for example +49301234567). It is never a contact's own number. */
             phone?: string | null;
@@ -39788,8 +39961,24 @@ export interface components {
             source_author_id?: string | null;
             /** @description The source system's own spelling of who wrote this record. Same door as source_author_id: a declared importer only, beside a source_system. Kept when a seat is also named, so the name survives the seat. */
             source_author_name?: string | null;
+            /** @description The key the creator chose; omitted or null to have the server mint one. Read-only after create. */
+            key?: string | null;
+            /**
+             * @description The phase the project starts in; initiative when omitted.
+             * @enum {string|null}
+             */
+            phase?: "initiative" | "pursuing" | "delivering" | null;
+            /**
+             * Format: uuid
+             * @description The deal this project comes from. The deal is pointed at the new project in the same transaction.
+             */
+            deal_id?: string | null;
         } & {
             [key: string]: unknown;
+        };
+        ProjectKeyPreview: {
+            /** @description The key a project of this name would be given if it were created now. */
+            key: string;
         };
         SetProjectCompanyRequest: {
             /** Format: uuid */
@@ -39810,11 +39999,10 @@ export interface components {
         };
         /**
          * @description Note `phase` is absent by design — it moves only through advanceProjectPhase.
-         *     `key` is absent for a different reason: the server mints it from the name and
-         *     it is read-only thereafter. A key is what a human writes in a subject line to
-         *     file mail under a project, so a caller-chosen one is a matcher a caller can
-         *     get wrong — a project keyed after a contact's name would claim every bracketed
-         *     mention of that word.
+         *     `key` is absent for a different reason: it is set on create and read-only
+         *     thereafter (422 `read_only`). A key is what a human writes in a subject line to
+         *     file mail under a project, so changing it would stop mail already sent with it
+         *     from filing.
          */
         UpdateProjectRequest: {
             name?: string;
@@ -41029,6 +41217,10 @@ export interface components {
             readonly source_activity_id?: string | null;
             /** @description Every record this activity is filed under that the caller may read; a link to a record they cannot read is left out. One activity may link to several, a contact and a deal say. Every read that returns an activity answers the same links: the list, one activity, and a contact's 360. */
             links?: components["schemas"]["ActivityLink"][];
+            /** @description How many colleagues' mailboxes hold a copy of this email that the caller may read, this one included. Set only on a timeline that shows one row per email (the 360 pages, or `collapse_copies=true`); absent when there is one copy. `links` is the union over those copies. */
+            readonly copies?: number;
+            /** @description The other copies this row stands for, each readable by the caller through `GET /activities/{id}`. Set exactly when `copies` is. Copies join only when they agree on Message-ID, sender, subject, body, direction and the second they occurred. */
+            readonly copy_ids?: string[];
             /** @description Whether Write email on this row opens with a recipient filled in: true exactly when `GET /activities/{id}/reply-recipient` answers a non-empty `address` for a call, meeting, note or task. Both are computed by one rule, the one `email_target` states. Always false for an email or a message, which are answered with Reply instead, for an archived row, for a task the product filed itself (`automatic_kind` product), and for a row whose content is withheld from the caller. False for a company target too, which has no single address: the composer asks which of the company's contacts the mail is for. */
             offers_email: boolean;
             /** @description Task only, absent on every other kind. The type a human, an agent or the AI gave the task when it was made. A task made before types existed, or by a product rule that sets none, reads the type of its rule: an answer owed to a request is `reply`, a lead to qualify is `review`, a mail to file is `decide`. A task with neither reads `reach_out` when a human or an agent made it, else `do`. `offers_email` is false for every type but `reply` and `reach_out`. */
@@ -45691,6 +45883,8 @@ export interface components {
             workflow: "handoff" | "qualification";
             /** @description Individual performance is off and these figures would show one colleague's work, so `meetings` and `handoffs` are absent. */
             withheld: boolean;
+            /** @description Present when `withheld` is true: the sentence that says why, in the reader's language. It is the `coverage.reason` a reporting chart withheld by the same rule carries. */
+            withheld_reason?: string;
             /** @description A count of rounds below this is too small to compare with another. Show its size, not a rate. */
             small_sample_below: number;
             meetings?: components["schemas"]["SdrTeamMeetings"];
@@ -47403,6 +47597,8 @@ export interface components {
             range_high_minor?: number;
             /** @description True when `contributions` holds only the caller's own deals because the installation switched off individual performance and at least one row was withheld. The totals still include colleagues' deals. On a shared snapshot it says the same of the rows its CSV export holds. */
             contributions_limited?: boolean;
+            /** @description Present when `contributions_limited` is true: the sentence that says why, in the reader's language. It is the `coverage.reason` an owner chart limited by the same switch carries. */
+            contributions_limited_reason?: string;
             /** @description Present only when asked for with `contributions=true`: the deals behind the won and open readings, ordered by deal id, limited to those the caller may read. */
             contributions?: components["schemas"]["ForecastContribution"][];
         };
@@ -48676,6 +48872,8 @@ export interface components {
             categories?: components["schemas"]["CaptureHealthCategories"];
             /** @description Active connection concerns for live members. Names account state, never correspondence. */
             connection_concerns: components["schemas"]["CaptureConnectionConcern"][];
+            /** @description Active connection concerns for shared mailboxes. Names account state, never correspondence. */
+            shared_mailbox_concerns?: components["schemas"]["CaptureSharedMailboxConcern"][];
             /** Format: date-time */
             generated_at: string;
             /** @description One row per mailbox owner with anything waiting. A mailbox with a clear queue is absent. */
@@ -52693,12 +52891,12 @@ export interface components {
             /** @description Why they decided that, when they said. */
             note?: string | null;
         };
-        /** @description A GDPR data-subject request (Art. 15/16/17) tracked to completion (B-E11.30; data-model §12.5). */
+        /** @description A GDPR data-subject request (Art. 15/16/17/18) tracked to completion. */
         DataSubjectRequest: {
             /** Format: uuid */
             id: string;
             /** @enum {string} */
-            kind: "access" | "rectify" | "erasure";
+            kind: "access" | "rectify" | "erasure" | "restriction";
             /** @description The data subject: a contact id or external identifier. */
             subject_ref: string;
             /**
@@ -53063,7 +53261,7 @@ export interface components {
         };
         CreateDataSubjectRequest: {
             /** @enum {string} */
-            kind: "access" | "rectify" | "erasure";
+            kind: "access" | "rectify" | "erasure" | "restriction";
             subject_ref: string;
             /**
              * Format: date-time
@@ -53172,7 +53370,7 @@ export interface components {
         };
         JurisdictionDeadline: {
             /** @enum {string} */
-            kind: "access" | "rectify" | "erasure";
+            kind: "access" | "rectify" | "erasure" | "restriction";
             /** @description `gdpr`, or `<jurisdiction> v<version>`. */
             rule: string;
             /** @description ISO 8601 calendar period, when the deadline counts in calendar units. */
@@ -53233,6 +53431,12 @@ export interface components {
             requester_email?: string;
             /** @description Opens (true) or closes (false) a complaint or dispute about the request. Any status takes it. */
             dispute_open?: boolean;
+        };
+        BookingReturnPreview: {
+            name: string;
+            /** @description The consent wording the confirm records. */
+            wording: string;
+            policy_version: string;
         };
         /**
          * @description The consent passthrough every capture surface (booking, public forms, imports) must carry
@@ -55237,12 +55441,39 @@ export interface components {
             /**
              * @description Why `may_lift` is false. `permission`: you may not change this contact, or you are not
              *     signed in to a seat. `address`: a stop on an address clears when mail to it works
-             *     again. `restriction`: lifting it owes the contact notice first, which Margince cannot
-             *     send yet. `subject_decision`: the contact set it and only they change it. `level`: it
-             *     was recorded at your level or above. Null when `may_lift` is true.
+             *     again. `restriction`: lifting it owes the contact notice first, through
+             *     `liftContactRestriction`. `subject_decision`: the contact set it and only they change
+             *     it. `level`: it was recorded at your level or above. Null when `may_lift` is true.
              * @enum {string|null}
              */
             lift_blocked_by?: "address" | "restriction" | "subject_decision" | "level" | "permission" | null;
+            /**
+             * @description The stop is a processing restriction and this caller, an admin signed in to the app,
+             *     may ask `liftContactRestriction` to lift it. False for every other stop, and while a
+             *     lift notice is queued or sent.
+             */
+            may_lift_restriction?: boolean;
+            /**
+             * @description The newest notice a lift of this restriction queued. Absent when no lift was asked,
+             *     and for every other kind of stop.
+             */
+            lift_notice?: components["schemas"]["RestrictionLiftNotice"];
+        };
+        /** @description Where the notice that lifts a restriction of processing is. */
+        RestrictionLiftNotice: {
+            /**
+             * @description `queued`: the notice waits to be sent, and the restriction stays until it is. A
+             *     `reason` says an attempt failed and Margince tries again. `sent`: the notice went out
+             *     and the restriction is ending; a periodic pass ends it if the first attempt did not.
+             *     `failed`: Margince gave up on the notice, so the restriction stays. Ask again to send a
+             *     new notice.
+             * @enum {string}
+             */
+            status: "queued" | "sent" | "failed";
+            /** @description Why the last attempt did not go out. Null while nothing went wrong. */
+            reason?: string | null;
+            /** Format: date-time */
+            queued_at: string;
         };
         /** @description A recorded exception for one contact, message category and sending company. */
         StandingOverride: {
@@ -68172,7 +68403,7 @@ export interface operations {
             };
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
-            /** @description A live project already holds this key. */
+            /** @description Another project already has this source_system and source_id. */
             409: {
                 headers: {
                     [name: string]: unknown;
@@ -68383,6 +68614,31 @@ export interface operations {
                     "application/json": components["schemas"]["Problem"];
                 };
             };
+        };
+    };
+    getProjectKeyPreview: {
+        parameters: {
+            query: {
+                name: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The key. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProjectKeyPreview"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            422: components["responses"]["ValidationError"];
         };
     };
     transferProjectOwnership: {
@@ -70171,6 +70427,8 @@ export interface operations {
                 waiting_reply?: boolean;
                 /** @description Restrict the list to the caller's own due reminders: open, live tasks assigned to the caller whose `remind_at` has passed, at most 30 days ago. The latest reminder comes first. It reads content, so a task whose content the caller may not read is left out. */
                 reminder_due?: boolean;
+                /** @description Show one row per email when several colleagues' mailboxes each hold a copy of it. Only copies the caller may read are joined, and the row shown says how many in `copies`. Off by default, so an export or sync client still reads every row. */
+                collapse_copies?: boolean;
             };
             header?: never;
             path?: never;
@@ -73073,6 +73331,118 @@ export interface operations {
             };
             422: components["responses"]["ValidationError"];
             502: components["responses"]["CalendarUnavailable"];
+        };
+    };
+    requestBookingReturn: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                host_slug: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    name: string;
+                    /** Format: email */
+                    email: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Accepted. If the address was erased, a confirmation link is on its way to it. */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            422: components["responses"]["ValidationError"];
+            /** @description Rate-limited. */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    previewBookingReturn: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                host_slug: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    token: string;
+                };
+            };
+        };
+        responses: {
+            /** @description What the link stores. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BookingReturnPreview"];
+                };
+            };
+            422: components["responses"]["ValidationError"];
+            /** @description Rate-limited. */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    confirmBookingReturn: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                host_slug: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    token: string;
+                };
+            };
+        };
+        responses: {
+            /** @description The subject is stored again. */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            422: components["responses"]["ValidationError"];
+            /** @description Rate-limited. */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
         };
     };
     submitWebForm: {
@@ -86126,7 +86496,7 @@ export interface operations {
     getDataSubjectRequestDeadline: {
         parameters: {
             query: {
-                kind: "access" | "rectify" | "erasure";
+                kind: "access" | "rectify" | "erasure" | "restriction";
                 /** @description When the request arrived. Absent means now. Up to five minutes ahead of the server clock reads as now; later is refused with 422 naming `received_at`. */
                 received_at?: string;
             };
@@ -88040,9 +88410,10 @@ export interface operations {
                      *     category but the three the controller owes anyway. `marketing_objection` is
                      *     Art. 21(2), reaches marketing only, and is recorded at the subject's own
                      *     authority, so only an admin correcting a mistake can lift it.
+                     *     `processing_restriction` is Art. 18 and recorded by a human admin only.
                      * @enum {string}
                      */
-                    kind: "subject_request" | "marketing_objection";
+                    kind: "subject_request" | "marketing_objection" | "processing_restriction";
                     /**
                      * @description What the contact was told, in their words. Stored because a suppression somebody
                      *     later asks to lift is only reviewable if the record says why it was made.
@@ -88095,6 +88466,40 @@ export interface operations {
         responses: {
             /** @description Lifted. */
             204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    liftContactRestriction: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+                /** @description The contact's processing restriction to lift. */
+                suppressionId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    /** @description Why the restriction is being lifted. The audit row keeps it. */
+                    reason: string;
+                };
+            };
+        };
+        responses: {
+            /** @description The notice is queued. The restriction stays until it is sent. */
+            202: {
                 headers: {
                     [name: string]: unknown;
                 };
