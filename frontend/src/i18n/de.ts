@@ -4237,6 +4237,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "finance.col.amount": "Betrag",
   "finance.col.status": "Status",
   "finance.unnumbered": "Ohne Nummer",
+  "finance.openInvoicePdf": "Rechnung {number} als PDF öffnen",
   "finance.moreInvoices": "Weitere Rechnungen im Buchhaltungssystem",
   "finance.syncedFrom": "Aus {provider} · synchronisiert {when}",
   "finance.fromNeverSynced": "Aus {provider} · noch nicht synchronisiert",
