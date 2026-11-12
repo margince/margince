@@ -38,7 +38,7 @@ const (
 var unitJurisdiction = integration.GoBDFloorPack{}.Code()
 
 // syntheticUnit is a unit with an accounting source of two customers, one of
-// them billed, and one document, so the verbs that read either reach their gates.
+// them billed, and one document. The verbs that read either reach their gates.
 func syntheticUnit() extension.Extension {
 	return extension.Extension{
 		Name: unitName, Version: "1.0.0", Description: "A synthetic unit, composed only for this suite's own test binary.",
