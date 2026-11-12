@@ -697,8 +697,10 @@ test("an archived contact gets no Call on a call task", async () => {
     ...ALICE,
     archived_at: "2026-09-01T00:00:00Z",
   });
+  // The mail target was named before the archive, so only the read knows.
   stubNextSteps({
     taskType: "reply_by_call",
+    mailTarget: true,
     routes: { "GET /contacts/c-1": contact.route },
   });
   openTaskWith();
@@ -706,6 +708,9 @@ test("an archived contact gets no Call on a call task", async () => {
   await screen.findByRole("button", { name: "Open original" });
   await contactSettled(contact.read);
   expect(call()).toBeNull();
+  expect(
+    screen.queryByRole("link", { name: en["record.verb.email"] }),
+  ).toBeNull();
 });
 
 test("a refused Draft email is said once, after every verb in the row", async () => {

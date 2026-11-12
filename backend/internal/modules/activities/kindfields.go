@@ -96,11 +96,14 @@ func checkTaskTypeKind(kind string, taskType *crmcontracts.TaskType) error {
 	return nil
 }
 
+// taskTypeList names the values crm.yaml's TaskType holds, for the refusal.
+const taskTypeList = "reply, reach_out, meet, review, decide, do"
+
 // taskTypeValueError is a task type the fixed list does not hold.
 type taskTypeValueError struct{}
 
 func (e *taskTypeValueError) Error() string {
-	return "task_type takes one of reply, write, call, meet, review, decide, do"
+	return "task_type takes one of " + taskTypeList
 }
 
 // FieldFault names task_type on every surface.

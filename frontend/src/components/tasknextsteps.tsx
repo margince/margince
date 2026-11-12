@@ -98,6 +98,7 @@ export function useTaskNextSteps(
       mail || call ? (
         <OtherWays
           task={task}
+          contact={ways.reachable}
           phone={call ? ways.phone : undefined}
           mail={mail}
         />
@@ -224,11 +225,17 @@ function reachOutSteps(ways: Ways): Omit<Steps, "others"> {
  *  one can be, and the call. */
 function OtherWays({
   task,
+  contact,
   phone,
   mail,
-}: Readonly<{ task: Activity; phone: Contact | undefined; mail: boolean }>) {
+}: Readonly<{
+  task: Activity;
+  // The contact that can still be reached: an archived one offers no mail.
+  contact: Contact | undefined;
+  phone: Contact | undefined;
+  mail: boolean;
+}>) {
   const t = useT();
-  const { contact } = useTaskContact(task);
   const target = task.email_target;
   const intent = intentAbout(t("task.next.draftIntent"), task.subject);
   const number = phone && primaryPhone(phone.phones)?.phone;

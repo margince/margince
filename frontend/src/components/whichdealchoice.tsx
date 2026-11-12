@@ -1,7 +1,12 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-import { useMutation, useQueries, useQueryClient } from "@tanstack/react-query";
+import {
+  useIsMutating,
+  useMutation,
+  useQueries,
+  useQueryClient,
+} from "@tanstack/react-query";
 import { Handshake } from "lucide-react";
 import { useState } from "react";
 import { api } from "../api/client";
@@ -21,7 +26,11 @@ import { TASK_QUEUE_KEY } from "../lib/activitykeys";
 import { problemStatus, unwrap } from "../lib/problem";
 import { useViewerZone } from "../lib/viewerzone";
 import { worklistKey } from "../lib/workkeys";
-import { WHICH_DEAL_SOURCE, WhichDealDecline } from "./whichdealdecline";
+import {
+  WHICH_DEAL_SOURCE,
+  WhichDealDecline,
+  whichDealKey,
+} from "./whichdealdecline";
 import "./whichdealchoice.css";
 
 type Activity = components["schemas"]["Activity"];
@@ -66,6 +75,9 @@ export function WhichDealChoice({ task }: Readonly<{ task: Activity }>) {
   const choices = useDealChoices(
     deals.flatMap((read) => (read.data ? [read.data] : [])),
   );
+  const answering = useIsMutating({ mutationKey: whichDealKey(task.id) }) > 0;
+  // A deal that closed since it was picked is no longer a card to file on.
+  const choice = choices.find((option) => option.value === picked)?.value;
   if (!mail || !asksWhichDeal(task)) return null;
   // A deal gone or out of reach (404) is no choice; any other failure leaves
   // the question unanswerable until a retry reads every deal offered.
@@ -109,8 +121,8 @@ export function WhichDealChoice({ task }: Readonly<{ task: Activity }>) {
         {choices.length > 0 && (
           <Button
             variant="primary"
-            disabled={!picked || file.isPending}
-            onClick={() => file.mutate({ mail, deal: picked })}
+            disabled={!choice || answering}
+            onClick={() => choice && file.mutate({ mail, deal: choice })}
           >
             {t("tasks.whichDeal.file")}
           </Button>
@@ -171,6 +183,7 @@ function useFileOnDeal(taskId: string) {
   const toast = useToast();
   const queryClient = useQueryClient();
   return useMutation({
+    mutationKey: whichDealKey(taskId),
     mutationFn: async ({ mail, deal }: { mail: string; deal: string }) =>
       unwrap(
         await api.POST("/activities/relink-thread", {

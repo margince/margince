@@ -6,6 +6,7 @@ package activities
 import (
 	"errors"
 	"fmt"
+	"strings"
 	"testing"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
@@ -113,5 +114,13 @@ func TestATaskOnlyFieldOnANoteNamesTheField(t *testing.T) {
 	_, err := LogActivityInputFrom(crmcontracts.CreateActivityRequest{Kind: "note", Source: "test", DueAt: &due})
 	if refusal, ok := errors.AsType[*KindFieldError](err); !ok || refusal.Field != "due_at" {
 		t.Errorf("create of a note with a due date answered %v, want a refusal naming due_at", err)
+	}
+}
+
+func TestTheTaskTypeRefusalNamesOnlyTypesTheContractHolds(t *testing.T) {
+	for _, name := range strings.Split(taskTypeList, ", ") {
+		if !crmcontracts.TaskType(name).Valid() {
+			t.Errorf("the task_type refusal offers %q, which the contract refuses", name)
+		}
 	}
 }
