@@ -92,6 +92,9 @@ type State struct {
 	// presses the link twice is told the truth the second time rather
 	// than being shown a fresh confirmation for a no-op.
 	Changed bool
+	// ProofEventID is the consent_event row this call wrote, zero when it
+	// wrote none.
+	ProofEventID ids.UUID
 }
 
 type ProofEvent struct {
@@ -307,6 +310,10 @@ type RecordInput struct {
 	// (silently: refusing loudly would make the surface a consent-state
 	// oracle).
 	NeverOverrideExisting bool
+	// ProveReassertion writes a proof row even when the state does not move.
+	// A door whose request is itself the evidence sets it, so the row it
+	// cites is always one it wrote.
+	ProveReassertion bool
 }
 
 // subject is the resolved consent subject: which entity the state and

@@ -37046,6 +37046,15 @@ type BlockedDomainListResponse struct {
 // body.
 type BodyCompleteness string
 
+// BookingReturnPreview defines model for BookingReturnPreview.
+type BookingReturnPreview struct {
+	Name          string `json:"name"`
+	PolicyVersion string `json:"policy_version"`
+
+	// Wording The consent wording the confirm records.
+	Wording string `json:"wording"`
+}
+
 // BoughtField One value on a contact that a data provider's run wrote and still owns.
 type BoughtField struct {
 	// AppliedAt When the run wrote it.
@@ -76584,6 +76593,22 @@ type GetPublicSchedulingProfileParams struct {
 	L *int `form:"l,omitempty" json:"l,omitempty"`
 }
 
+// RequestBookingReturnJSONBody defines parameters for RequestBookingReturn.
+type RequestBookingReturnJSONBody struct {
+	Email openapi_types.Email `json:"email"`
+	Name  string              `json:"name"`
+}
+
+// ConfirmBookingReturnJSONBody defines parameters for ConfirmBookingReturn.
+type ConfirmBookingReturnJSONBody struct {
+	Token string `json:"token"`
+}
+
+// PreviewBookingReturnJSONBody defines parameters for PreviewBookingReturn.
+type PreviewBookingReturnJSONBody struct {
+	Token string `json:"token"`
+}
+
 // SubmitConfirmDetailsJSONBody defines parameters for SubmitConfirmDetails.
 type SubmitConfirmDetailsJSONBody struct {
 	// Corrections Proposed values, at most one per field. An empty list is the ordinary case.
@@ -79383,6 +79408,15 @@ type ConnectProviderJSONRequestBody = ConnectProviderRequest
 
 // BookPublicMeetingJSONRequestBody defines body for BookPublicMeeting for application/json ContentType.
 type BookPublicMeetingJSONRequestBody BookPublicMeetingJSONBody
+
+// RequestBookingReturnJSONRequestBody defines body for RequestBookingReturn for application/json ContentType.
+type RequestBookingReturnJSONRequestBody RequestBookingReturnJSONBody
+
+// ConfirmBookingReturnJSONRequestBody defines body for ConfirmBookingReturn for application/json ContentType.
+type ConfirmBookingReturnJSONRequestBody ConfirmBookingReturnJSONBody
+
+// PreviewBookingReturnJSONRequestBody defines body for PreviewBookingReturn for application/json ContentType.
+type PreviewBookingReturnJSONRequestBody PreviewBookingReturnJSONBody
 
 // SubmitConfirmDetailsJSONRequestBody defines body for SubmitConfirmDetails for application/json ContentType.
 type SubmitConfirmDetailsJSONRequestBody SubmitConfirmDetailsJSONBody
@@ -95002,6 +95036,15 @@ type ServerInterface interface {
 	// Read the host-approved booking page identity and meeting details.
 	// (GET /public/booking/{host_slug}/profile)
 	GetPublicSchedulingProfile(w http.ResponseWriter, r *http.Request, hostSlug string, params GetPublicSchedulingProfileParams)
+	// Ask to be stored again after an erasure (anonymous); mails a confirmation link.
+	// (POST /public/booking/{host_slug}/return)
+	RequestBookingReturn(w http.ResponseWriter, r *http.Request, hostSlug string)
+	// Confirm the mailed link and be stored again (anonymous).
+	// (POST /public/booking/{host_slug}/return/confirm)
+	ConfirmBookingReturn(w http.ResponseWriter, r *http.Request, hostSlug string)
+	// Show what a mailed return link will store, before it is confirmed (anonymous).
+	// (POST /public/booking/{host_slug}/return/preview)
+	PreviewBookingReturn(w http.ResponseWriter, r *http.Request, hostSlug string)
 	// What the workspace holds about this contact (anonymous, token-authed).
 	// (GET /public/confirm/{token})
 	GetConfirmDetails(w http.ResponseWriter, r *http.Request, token string)
@@ -100693,6 +100736,24 @@ func (_ Unimplemented) GetPublicBookingPreview(w http.ResponseWriter, r *http.Re
 // Read the host-approved booking page identity and meeting details.
 // (GET /public/booking/{host_slug}/profile)
 func (_ Unimplemented) GetPublicSchedulingProfile(w http.ResponseWriter, r *http.Request, hostSlug string, params GetPublicSchedulingProfileParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Ask to be stored again after an erasure (anonymous); mails a confirmation link.
+// (POST /public/booking/{host_slug}/return)
+func (_ Unimplemented) RequestBookingReturn(w http.ResponseWriter, r *http.Request, hostSlug string) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Confirm the mailed link and be stored again (anonymous).
+// (POST /public/booking/{host_slug}/return/confirm)
+func (_ Unimplemented) ConfirmBookingReturn(w http.ResponseWriter, r *http.Request, hostSlug string) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Show what a mailed return link will store, before it is confirmed (anonymous).
+// (POST /public/booking/{host_slug}/return/preview)
+func (_ Unimplemented) PreviewBookingReturn(w http.ResponseWriter, r *http.Request, hostSlug string) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -139329,6 +139390,84 @@ func (siw *ServerInterfaceWrapper) GetPublicSchedulingProfile(w http.ResponseWri
 	handler.ServeHTTP(w, r)
 }
 
+// RequestBookingReturn operation middleware
+func (siw *ServerInterfaceWrapper) RequestBookingReturn(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "host_slug" -------------
+	var hostSlug string
+
+	err = runtime.BindStyledParameterWithOptions("simple", "host_slug", chi.URLParam(r, "host_slug"), &hostSlug, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "host_slug", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.RequestBookingReturn(w, r, hostSlug)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// ConfirmBookingReturn operation middleware
+func (siw *ServerInterfaceWrapper) ConfirmBookingReturn(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "host_slug" -------------
+	var hostSlug string
+
+	err = runtime.BindStyledParameterWithOptions("simple", "host_slug", chi.URLParam(r, "host_slug"), &hostSlug, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "host_slug", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ConfirmBookingReturn(w, r, hostSlug)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// PreviewBookingReturn operation middleware
+func (siw *ServerInterfaceWrapper) PreviewBookingReturn(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "host_slug" -------------
+	var hostSlug string
+
+	err = runtime.BindStyledParameterWithOptions("simple", "host_slug", chi.URLParam(r, "host_slug"), &hostSlug, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "host_slug", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.PreviewBookingReturn(w, r, hostSlug)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // GetConfirmDetails operation middleware
 func (siw *ServerInterfaceWrapper) GetConfirmDetails(w http.ResponseWriter, r *http.Request) {
 
@@ -151630,6 +151769,15 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/public/booking/{host_slug}/profile", wrapper.GetPublicSchedulingProfile)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/public/booking/{host_slug}/return", wrapper.RequestBookingReturn)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/public/booking/{host_slug}/return/confirm", wrapper.ConfirmBookingReturn)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/public/booking/{host_slug}/return/preview", wrapper.PreviewBookingReturn)
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/public/confirm/{token}", wrapper.GetConfirmDetails)

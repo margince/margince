@@ -15,6 +15,7 @@ package auth
 import (
 	"slices"
 
+	"github.com/margince/margince/backend/internal/shared/kernel/fieldmask"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
@@ -56,6 +57,13 @@ func MaskedHistoryFields(p principal.Principal, entityType string, writable bool
 			if !slices.Contains(withheld, key) {
 				withheld = append(withheld, key)
 			}
+		}
+	}
+	// A deal's close freezes its base amount and rate into the image, and the
+	// two give the masked amount and currency back.
+	for _, column := range fieldmask.DerivedFrom(entityType, withheld) {
+		if !slices.Contains(withheld, column) {
+			withheld = append(withheld, column)
 		}
 	}
 	return withheld

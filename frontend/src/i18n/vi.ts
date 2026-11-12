@@ -12606,6 +12606,15 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "book.pageTitle": "Đặt lịch họp với {host}",
   "book.pageTitleGeneric": "Đặt lịch họp",
   "book.meetingTitle": "Cuộc họp của quý khách",
+  "book.returnTitle": "Lưu lại thông tin của quý khách",
+  "book.returnBody":
+    "Quý khách đã yêu cầu lưu lại thông tin sau khi đã xóa. Thông tin chỉ được lưu khi quý khách xác nhận.",
+  "book.returnStoredAs":
+    "Quý khách sẽ được lưu với tên {name}, kèm sự đồng ý này:",
+  "book.returnAction": "Lưu lại thông tin của tôi",
+  "book.returnDone": "Thông tin của quý khách đã được lưu lại.",
+  "book.returnSpent":
+    "Liên kết này đã được dùng hoặc đã hết hạn. Hãy yêu cầu liên kết mới trên trang đặt lịch.",
   "book.attendee": "Email người tham dự",
   "book.subject": "Cuộc họp qua Margince",
   "book.name": "Họ và tên",
