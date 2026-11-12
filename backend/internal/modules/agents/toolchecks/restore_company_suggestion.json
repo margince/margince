@@ -1,7 +1,10 @@
 {
   "verb": "restore_company_suggestion",
   "checks": [
-    "company.read"
+    "activity.read",
+    "company.read",
+    "contact.read",
+    "relationship.read"
   ],
   "takes": [
     "company"

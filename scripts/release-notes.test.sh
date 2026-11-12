@@ -121,6 +121,22 @@ perf(reports): one query for the whole pipeline report, not one per stage (#13)
 perf(search): the index answers prefix search without a scan of every row (#15)
 EOF
 
+named="$(printf 'fix: dialogs survive a drag (#14)\n' |
+	bash "$BUILD" 3f786850e387550fdab836ed7e6dc881de23001b 9f86d081884c7d659a2feaa0c55ad015a3bf4f1b margince/margince 100000 2026.1.0)"
+want_named="$(
+	cat <<'EOF'
+### Fixed
+
+- dialogs survive a drag (#14)
+
+Every change since 2026.1.0: https://github.com/margince/margince/compare/3f786850e387550fdab836ed7e6dc881de23001b...9f86d081884c7d659a2feaa0c55ad015a3bf4f1b
+EOF
+)"
+if [[ "$named" != "$want_named" ]]; then
+	printf 'FAIL: a named previous release is the sentence, the revisions stay the link\n--- want\n%s\n--- got\n%s\n' "$want_named" "$named"
+	FAILURES=$((FAILURES + 1))
+fi
+
 if printf 'feat(api)!: offers drop the legacy total (#12)\n' |
 	bash "$BUILD" v1.0.0 v1.1.0 margince/margince 10 >/dev/null 2>&1; then
 	echo "FAIL: notes that cannot fit the room were printed instead of refused"

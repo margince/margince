@@ -4,6 +4,9 @@
 package storekit
 
 import (
+	"crypto/sha256"
+	"encoding/hex"
+	"encoding/json"
 	"fmt"
 	"strings"
 	"time"
@@ -134,26 +137,56 @@ func DecodeCursor(token string) (Cursor, error) {
 	return c, nil
 }
 
-// DecodeIDCursor reads the cursor of a page Query.SelectPage walks: the last id
-// of the page before. An empty token reads the first page.
-func DecodeIDCursor(token string) (*ids.UUID, error) {
+// idCursor is the position of a page an id keyset walks. It holds the last id
+// of the page before, and the scope of the paging that minted it. A token from
+// another filter or list names a different scope, so it is refused rather
+// than starting an arbitrary tail.
+type idCursor struct {
+	Scope string   `json:"s"`
+	After ids.UUID `json:"a"`
+}
+
+// CursorScope names one paging: the thing paged and what narrows it, such as
+// a resource and its filter, or a list. JSON writes a map's keys in order, so
+// one filter spelt in two key orders is one scope.
+//
+//craft:ignore naked-any a scope is built from whichever values name the paging
+func CursorScope(parts ...any) (string, error) {
+	raw, err := json.Marshal(parts)
+	if err != nil {
+		return "", fmt.Errorf("store: naming a cursor scope: %w", err)
+	}
+	sum := sha256.Sum256(raw)
+	return hex.EncodeToString(sum[:12]), nil
+}
+
+// DecodeIDCursor reads the cursor of a page Query.SelectPage walks, for the
+// paging scope names. An empty token reads the first page.
+func DecodeIDCursor(scope, token string) (*ids.UUID, error) {
 	if token == "" {
 		return nil, nil //nolint:nilnil // no cursor is the first page, the after SelectPage reads as nil
 	}
-	after, err := ids.Parse(token)
+	position, err := DecodeOpaque[idCursor](token)
 	if err != nil {
+		return nil, err
+	}
+	if position.Scope != scope || position.After == (ids.UUID{}) {
 		return nil, &MalformedCursorError{}
 	}
-	return &after, nil
+	return &position.After, nil
 }
 
-// IDPage is the Page that continues a Query.SelectPage answer, whose cursor
-// DecodeIDCursor reads back.
-func IDPage(matched []ids.UUID, more bool) Page {
+// IDPage is the Page that continues a Query.SelectPage answer within scope,
+// whose cursor DecodeIDCursor reads back.
+func IDPage(scope string, matched []ids.UUID, more bool) (Page, error) {
 	if !more || len(matched) == 0 {
-		return Page{}
+		return Page{}, nil
 	}
-	return Page{HasMore: true, NextCursor: matched[len(matched)-1].String()}
+	token, err := EncodeOpaque(idCursor{Scope: scope, After: matched[len(matched)-1]})
+	if err != nil {
+		return Page{}, err
+	}
+	return Page{HasMore: true, NextCursor: token}, nil
 }
 
 // SQLf keeps store-side SQL assembly lines readable; arguments are

@@ -4763,7 +4763,7 @@
     },
     {
       "name": "read_lists",
-      "tokens": 788,
+      "tokens": 797,
       "agents": [],
       "required_by_cases": [
         "case47_tidy_the_fair_list"
