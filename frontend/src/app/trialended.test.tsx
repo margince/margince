@@ -72,3 +72,53 @@ it("leaves an installation still on its trial, and a refused session, to the res
     lockScreen(null, new Error("signed out"), { trial_ended: true }),
   ).toBeNull();
 });
+
+it("lets an admin who may change the installation check the licence again from the lock", async () => {
+  const user = userEvent.setup();
+  const reads: string[] = [];
+  vi.stubGlobal(
+    "fetch",
+    vi.fn(async (input: RequestInfo | URL) => {
+      const url = input instanceof Request ? input.url : String(input);
+      reads.push(url);
+      const body = url.includes("/installation/license")
+        ? { state: "valid", seats_used: 3, over_limit: false }
+        : {
+            ...meFixture({
+              allow: {
+                license: ["read"],
+                installation_settings: ["update"],
+              },
+            }),
+            trial_ended: true,
+          };
+      return new Response(JSON.stringify(body), {
+        headers: { "Content-Type": "application/json" },
+      });
+    }),
+  );
+  const client = new QueryClient({
+    defaultOptions: { queries: { retry: false } },
+  });
+  render(
+    <QueryClientProvider client={client}>
+      <LocaleProvider initial="en">
+        {lockScreen(null, null, { trial_ended: true })}
+      </LocaleProvider>
+    </QueryClientProvider>,
+  );
+  const meReads = () => reads.filter((url) => url.endsWith("/me")).length;
+
+  const check = await screen.findByRole("button", {
+    name: en["license.check.button"],
+  });
+  const before = meReads();
+  await user.click(check);
+
+  expect(await screen.findByText(en["license.check.done"])).toBeTruthy();
+  // /me is what holds the seat on this screen, so the check reads it again.
+  await vi.waitFor(() => expect(meReads()).toBeGreaterThan(before));
+  expect(reads.some((url) => url.includes("/installation/license/check"))).toBe(
+    true,
+  );
+});

@@ -46,7 +46,12 @@ const meta: Meta<typeof TrialEndedScreen> = {
 export default meta;
 type Story = StoryObj<typeof TrialEndedScreen>;
 
-// An admin is told where the licence goes once the team sends it.
-export const Admin: Story = { render: story({ license: ["read"] }, ["admin"]) };
+// An admin is told where the licence goes once the team sends it. One who may
+// change the installation can also check the licence again here.
+export const Admin: Story = {
+  render: story({ license: ["read"], installation_settings: ["update"] }, [
+    "admin",
+  ]),
+};
 // Every other seat is pointed at its admin, and can write to the team too.
 export const Member: Story = { render: story({}, ["rep"]) };

@@ -9,6 +9,7 @@ package installtrial
 import (
 	"context"
 	"fmt"
+	"log/slog"
 	"sync/atomic"
 	"time"
 
@@ -62,6 +63,19 @@ func (t *Trial) Ended(ctx context.Context) (bool, error) {
 		return false, err
 	}
 	return trial.Ended(t.now()), nil
+}
+
+// Paused is the question every background lane asks before it works. A failed
+// read does not pause: the lane meets the same database failure and reports it.
+func (t *Trial) Paused(log *slog.Logger) func(context.Context) bool {
+	return func(ctx context.Context) bool {
+		ended, err := t.Ended(ctx)
+		if err != nil {
+			log.WarnContext(ctx, "reading whether the trial has ended failed", "err", err)
+			return false
+		}
+		return ended
+	}
 }
 
 // start is the creation time of the installation's first workspace, archived

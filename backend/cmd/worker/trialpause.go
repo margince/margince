@@ -25,17 +25,7 @@ type workPauseKey struct{}
 // has this unlicensed installation's trial ended? It rides the context because
 // every lane is started on it, and a parameter would thread through each one.
 func pauseAfterTrial(ctx context.Context, pool *pgxpool.Pool, license *licensecheck.Watcher, env runtimeenv.Environment, log *slog.Logger) context.Context {
-	trial := installtrial.New(pool, env, license.Posture, time.Now)
-	paused := func(ctx context.Context) bool {
-		ended, err := trial.Ended(ctx)
-		if err != nil {
-			// Not paused: the lane or job that runs meets the same database
-			// failure and reports it as its own.
-			log.WarnContext(ctx, "reading whether the trial has ended failed", "err", err)
-			return false
-		}
-		return ended
-	}
+	paused := installtrial.New(pool, env, license.Posture, time.Now).Paused(log)
 	go recheckWhileLocked(ctx, license, paused)
 	return context.WithValue(ctx, workPauseKey{}, paused)
 }

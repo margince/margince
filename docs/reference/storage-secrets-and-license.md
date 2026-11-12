@@ -252,12 +252,14 @@ When the trial ends, the installation stops working until a token is set up:
   sessions, `/installation/license*`, `POST /exports` and `/data-subject-requests*` stay open, and
   so does every read;
 - every agent tool call is refused with `trial_ended`;
-- the worker does no background work: a job is snoozed and an event lane stops reading, so nothing
-  is lost. While it waits, it reads the token again every 5 minutes;
+- no role does background work. A job is snoozed, an event lane stops reading, and the outbox
+  relay stops shipping. Events wait in the outbox, so nothing is lost. The inline relay and webhook
+  lane in the api stop the same way. While it waits, the worker reads the token again every 5
+  minutes;
 - `/me` answers `trial_ended: true`, and the app shows every seat the screen that says so.
 
-To end the lock, set up the token and start the api again. The lock screen takes the place of the
-whole app, so **Check now** in Settings is out of reach while it shows.
+To end the lock, set up the token and start the api again. Or replace a token file and click
+**Check now** on the lock screen, which a seat that may change installation settings sees.
 
 A refused license refuses the boot in *every* posture. To name yourself as not
 production says you have no license. It does not let you run one the module has refused.

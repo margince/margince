@@ -157,7 +157,7 @@ reference to it.
 | Credential | Sources, first match wins | When no source has a value |
 |---|---|---|
 | SMTP password | `email.smtp.password` → the file `email.smtp.password_file` names → a copy an earlier release sealed in the vault; `${none}` deletes that copy, [when it may](storage-secrets-and-license.md#the-vault-may-hold-copies-of-the-two-deployment-credentials) | The relay is used with no password. |
-| License | `license.token` (variable `MARGINCE_LICENSE`) → the file the older `license.token_file` names → a copy an earlier release sealed in the vault | Production runs a 14-day trial from the oldest workspace's creation, then stops working; `dev` and `test` run with no license. |
+| License | `license.token` (variable `MARGINCE_LICENSE`) → the file the older `license.token_file` names → a copy an earlier release sealed in the vault | Production runs a 14-day trial from the day the oldest workspace was created, then stops working; `dev` and `test` run with no license. |
 
 ### Seeds
 

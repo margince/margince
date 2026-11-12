@@ -13,11 +13,13 @@ import (
 	"fmt"
 	"io"
 	"log/slog"
+	"time"
 
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/redis/go-redis/v9"
 
 	"github.com/margince/margince/backend/internal/compose"
+	"github.com/margince/margince/backend/internal/compose/installtrial"
 	ps "github.com/margince/margince/backend/internal/compose/programsettings"
 	"github.com/margince/margince/backend/internal/modules/ai"
 	"github.com/margince/margince/backend/internal/platform/agentvolume"
@@ -353,12 +355,14 @@ func agentVolumeOptions(volumeMeter *agentvolume.Meter) []compose.Option {
 // inlineRelayLane runs the outbox relay in this process unless the deployment
 // split it out to cmd/worker (--inline-relay=false). The returned stop is a
 // no-op in that split case, so the caller stops one lane either way.
-func inlineRelayLane(ctx context.Context, cfg apiConfig, pool *pgxpool.Pool, logger *slog.Logger, stdout io.Writer) ([]compose.Option, func(), error) {
+func inlineRelayLane(ctx context.Context, cfg apiConfig, pool *pgxpool.Pool, license *licensecheck.Watcher, logger *slog.Logger, stdout io.Writer) ([]compose.Option, func(), error) {
 	if !cfg.inlineRelay {
 		// No inline relay to stop: cmd/worker is running it.
 		return nil, func() {}, nil
 	}
-	busReady, stop, err := startInlineRelay(ctx, pool, cfg.redisAddr, cfg.redisPassword, cfg.webhookKey, cfg.publicBaseURL, logger)
+	// The lanes here hold on the trial as the worker's do.
+	paused := installtrial.New(pool, cfg.posture, license.Posture, time.Now).Paused(logger)
+	busReady, stop, err := startInlineRelay(ctx, pool, cfg.redisAddr, cfg.redisPassword, cfg.webhookKey, cfg.publicBaseURL, paused, logger)
 	if err != nil {
 		return nil, nil, err
 	}

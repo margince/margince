@@ -7,8 +7,9 @@ import { usePageTitle, Wordmark } from "../components/auth-identity";
 import { TrialContactDialog } from "../components/trialcontact";
 import { Button } from "../design-system/atoms";
 import { ErrorLine } from "../design-system/errorline";
+import { LicenseCheck } from "../features/settings/license";
 import { useT } from "../i18n";
-import { useCan } from "../lib/capability";
+import { useCan, useCanWrite } from "../lib/capability";
 import {
   useLicenseEntitlement,
   useTrialStanding,
@@ -20,12 +21,13 @@ import "../components/auth-core.css";
  * What every seat sees once the installation's trial has ended. The server
  * refuses every change by then, and this screen says why. It holds the one
  * way out, the email to the Margince team. An admin is also told where the
- * license goes.
+ * license goes, and one who may change the installation can check it again.
  */
 export function TrialEndedScreen() {
   const t = useT();
   usePageTitle(t("trial.locked.pageTitle"));
   const admin = useCan("license", "read");
+  const canCheck = useCanWrite("installation_settings", "update");
   const standing = useTrialStanding();
   const entitlement = useLicenseEntitlement(admin);
   const logout = useLogout();
@@ -37,6 +39,7 @@ export function TrialEndedScreen() {
         <AuthCardTitle>{t("trial.locked.title")}</AuthCardTitle>
         <p>{t("trial.locked.body")}</p>
         <p>{t(admin ? "trial.locked.admin" : "trial.locked.member")}</p>
+        {canCheck && <LicenseCheck />}
         <div className="auth-actions">
           <Button variant="primary" onClick={() => setWriting(true)}>
             {t("trial.contact.title")}

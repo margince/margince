@@ -19,7 +19,7 @@ import {
   trialStandingOf,
   useLicenseEntitlement,
 } from "../../lib/license-posture";
-import { throwProblem, unwrap } from "../../lib/problem";
+import { logUnexpectedError, throwProblem, unwrap } from "../../lib/problem";
 import { useMe } from "../../lib/session";
 import "./license.css";
 import { LicenseHolderCard } from "./licenseholder";
@@ -201,7 +201,8 @@ export function SeatUsageReading({
  * "Check now": the api reads the deployment's license token again at once.
  *
  * The answer is the entitlement itself, so it replaces the shared query's data.
- * The banner, the agent rail and this card then all show the new posture.
+ * The banner, the agent rail and this card then all show the new posture, and
+ * /me says again whether the trial still locks the app.
  */
 export function LicenseCheck() {
   const t = useT();
@@ -209,8 +210,12 @@ export function LicenseCheck() {
   const check = useMutation({
     mutationFn: async () =>
       unwrap(await api.POST("/installation/license/check")),
-    onSuccess: (entitlement) =>
-      queryClient.setQueryData(LICENSE_ENTITLEMENT_KEY, entitlement),
+    onSuccess: (entitlement) => {
+      queryClient.setQueryData(LICENSE_ENTITLEMENT_KEY, entitlement);
+      queryClient
+        .invalidateQueries({ queryKey: ["me"], exact: true })
+        .catch(logUnexpectedError);
+    },
   });
   return (
     <CellStack>

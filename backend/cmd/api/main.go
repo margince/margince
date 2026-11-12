@@ -153,7 +153,7 @@ func run(ctx context.Context, args []string, stdout io.Writer) error {
 	volumeMeter := newVolumeMeter(rdb, pool)
 	opts = append(opts, agentVolumeOptions(volumeMeter)...)
 
-	relayOpts, stopRelay, err := inlineRelayLane(ctx, cfg, pool, logger, stdout)
+	relayOpts, stopRelay, err := inlineRelayLane(ctx, cfg, pool, license, logger, stdout)
 	if err != nil {
 		return err
 	}
