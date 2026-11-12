@@ -123,6 +123,7 @@ var fieldLabelsByLang = map[textlang.Lang]map[string]string{
 	},
 	textlang.German: {
 		"extension_relationship_types": "Erweiterungs-Beziehungstypen",
+		"task_type":                    "Aufgabentyp",
 		"deal_filing":                  "Deal-Zuordnung",
 		"acquisition_source":           "Akquisitionsquelle",
 		"active":                       "Aktiv",
@@ -310,6 +311,7 @@ var fieldLabelsByLang = map[textlang.Lang]map[string]string{
 		"wait_until":                   "Chờ đến",
 		"win_probability":              "Xác suất",
 		"extension_relationship_types": "Loại quan hệ từ tiện ích mở rộng",
+		"task_type":                    "Loại việc",
 	},
 }
 
