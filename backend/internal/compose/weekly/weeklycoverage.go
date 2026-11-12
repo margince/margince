@@ -198,7 +198,6 @@ func readFigureStarts(ctx context.Context, tx pgx.Tx, owners []ids.UUID, asOf ti
 		}
 		leadScope = orUnbounded(leadScope)
 	}
-	// The task and meeting arms share one content gate over both their rows.
 	readable, err := auth.ContentReadableActivitiesSQL(ctx,
 		"SELECT id FROM owned_task UNION ALL SELECT id FROM owned_meeting", arg)
 	if err != nil {

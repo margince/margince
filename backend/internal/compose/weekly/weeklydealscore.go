@@ -103,7 +103,6 @@ const dealScoreSQL = `
 		    JOIN activity_link dl ON dl.deal_id = o.id
 		    JOIN activity act ON act.id = dl.activity_id
 		   WHERE act.archived_at IS NULL AND %[4]s),
-		-- One content gate answers both sets above.
 		readable_activity AS MATERIALIZED (%[11]s)
 		SELECT
 		  EXISTS (SELECT 1 FROM open_deals) OR EXISTS (SELECT 1 FROM moves)
