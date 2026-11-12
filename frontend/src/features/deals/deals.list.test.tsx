@@ -11,6 +11,7 @@ import {
 } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { listFetchLimit } from "../../components/listquery";
 import { pickOption } from "../../design-system/select-testing";
 import { stable } from "../../format/collate";
 import { formatMoneyCompact } from "../../format/format";
@@ -86,7 +87,9 @@ describe("DealsScreen", () => {
     expect(tableReads.map((url) => url.searchParams.get("stage_id"))).toEqual(
       tableReads.map(() => null),
     );
-    expect(tableReads[0]?.searchParams.get("limit")).toBe("100");
+    expect(tableReads[0]?.searchParams.get("limit")).toBe(
+      String(listFetchLimit(25)),
+    );
   });
 
   // With one pipeline there is no Pipeline row, so the count is where the
