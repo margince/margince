@@ -4107,7 +4107,7 @@
     },
     {
       "name": "read_workspace",
-      "tokens": 2767,
+      "tokens": 2747,
       "agents": [],
       "required_by_cases": [
         "case111_how_is_the_workspace_doing",
@@ -4274,7 +4274,7 @@
     },
     {
       "name": "find_records",
-      "tokens": 1952,
+      "tokens": 2024,
       "agents": [
         "morning_brief",
         "overnight_at_risk_sweep"

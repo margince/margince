@@ -16,12 +16,10 @@ import { useT } from "../../i18n";
 import { useFilterVocabulary } from "../../lib/filterdata";
 import {
   type ObjectTab,
-  RESOURCE_OF,
-  TAB_LABEL,
+  resourceOf,
   tabOfViewResource,
-  UNIT_LABEL,
+  useTabWords,
 } from "../../lib/filtersaddress";
-import { labelFor } from "../../lib/labelfor";
 import { useListsAvailable } from "../../lib/lists.queries";
 import { problemCodeOf, problemMessageOf } from "../../lib/problem";
 import { navigateReplacing } from "../../lib/router";
@@ -62,7 +60,7 @@ export function OpenedViewPage({
 }: Readonly<{ tab: ObjectTab; viewId: string }>) {
   const t = useT();
   const read = useSavedView(viewId);
-  const vocabulary = useFilterVocabulary(RESOURCE_OF[tab]);
+  const vocabulary = useFilterVocabulary(resourceOf(tab));
   const opened = useFirstAnswer(read);
   const own = opened ? tabOfViewResource(opened.resource) : undefined;
   const elsewhere = own !== undefined && own !== tab;
@@ -207,7 +205,8 @@ function OpenedView({
   const [saving, setSaving] = useState<Saving | null>(null);
   const focus = useFoldFocus();
   const onScreen = useOnScreen(draft.tree);
-  const resource = RESOURCE_OF[tab];
+  const resource = resourceOf(tab);
+  const tabWords = useTabWords()(tab);
   const plainWords = usePlainWords({
     resource,
     dispatch,
@@ -271,9 +270,7 @@ function OpenedView({
     <div className="wrap filters-screen">
       <FocusedHead
         title={pin.view.name}
-        facts={t("filters.view.facts", {
-          records: t(labelFor(TAB_LABEL, tab)),
-        })}
+        facts={t("filters.view.facts", { records: tabWords.tab })}
         actions={
           // Held with the rows while a save is out: a rename or delete here
           // would race it on the version it is about to advance.
@@ -355,7 +352,7 @@ function OpenedView({
                 dispatch={dispatch}
                 vocabulary={vocabulary}
                 words={plainWords}
-                records={t(labelFor(UNIT_LABEL, tab))}
+                records={tabWords.unit}
               />
             </div>
           ) : (

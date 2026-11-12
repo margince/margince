@@ -289,6 +289,35 @@ type Extension struct {
 	// unit name one would undo the axis split from outside the core.
 	Channels []Channel
 
+	// CompanyTypes are the company types this unit adds beside core's own. A
+	// unit sets them only on a company, under its own name, through
+	// Core.Companies().SetExtensionTypes; a type no unit declared is refused.
+	CompanyTypes []CompanyType
+
+	// RecordKinds are the kinds of record this unit adds beside core's own,
+	// stored as `ext:<unit>:<kind>`. Core treats each as a real record in links,
+	// tags, lists and the audit log, under rights that default to deny.
+	RecordKinds []RecordKindDeclaration
+
+	// LinkTypes are the ways this unit says two core records relate, stored as
+	// `ext:<unit>:<type>`. A link of one is made through core's links, under the
+	// rights of both records it joins.
+	LinkTypes []LinkType
+
+	// ReportCounts are the named numbers this unit adds to Reports and Home.
+	// They are data: core builds the query, so a unit cannot register one that
+	// skips row scope, field masks or the group floor.
+	ReportCounts []ReportCount
+
+	// ReportBreakdowns are counts split by one field, added to Reports and Home.
+	// They are data too, and core builds the only query that reads the field.
+	ReportBreakdowns []ReportBreakdown
+
+	// SignalTypes are the kinds of signal this unit adds beside core's own,
+	// each with an evidence layout declared as data. The unit files them
+	// through Core.Signals().Create.
+	SignalTypes []SignalTypeDeclaration
+
 	// FinanceSources are the accounting systems this unit can read into the
 	// core's finance mirror. Read only: nothing on the surface writes back to
 	// an accounting system. A provider may be supplied by one unit only.

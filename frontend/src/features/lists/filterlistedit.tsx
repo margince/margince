@@ -18,12 +18,10 @@ import { useFilterVocabulary } from "../../lib/filterdata";
 import {
   EDIT_LIST_SEGMENT,
   type ObjectTab,
-  RESOURCE_OF,
-  TAB_LABEL,
+  resourceOf,
   tabOfListType,
-  UNIT_LABEL,
+  useTabWords,
 } from "../../lib/filtersaddress";
-import { labelFor } from "../../lib/labelfor";
 import {
   type List,
   useList,
@@ -120,7 +118,8 @@ function ListFilter({
   const [draft, dispatch] = useFilterDraft(() => rootGroup(tree));
   // The tree on screen when Save was pressed, as on a new filter.
   const [saving, setSaving] = useState<Group | null>(null);
-  const resource = RESOURCE_OF[tab];
+  const resource = resourceOf(tab);
+  const tabWords = useTabWords()(tab);
   const vocabulary = useFilterVocabulary(resource);
   const words = usePlainWords({ resource, dispatch });
   const focus = useRowsFocus();
@@ -129,7 +128,7 @@ function ListFilter({
   const changed = wireSignature(draft.tree) !== wireSignature(tree);
   const leave = useGuardedLeave(changed);
   const land = useLandOnSaved(tab, leave);
-  const records = t(labelFor(UNIT_LABEL, tab));
+  const records = tabWords.unit;
 
   const foot = editable ? (
     <FilterFoot
@@ -170,7 +169,7 @@ function ListFilter({
       <FocusedHead
         title={list.name}
         facts={t("filters.listFacts", {
-          records: t(labelFor(TAB_LABEL, tab)),
+          records: tabWords.tab,
           who: audienceOf(list),
         })}
       />

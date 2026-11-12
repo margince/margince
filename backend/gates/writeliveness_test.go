@@ -125,6 +125,7 @@ const retirableTableFloor = 20
 // for were closed before it was armed, so a waiver here is a statement that the
 // obligation is MET some other way — never that it is owed and unpaid.
 var livenessUnstated = gatekit.Waive(map[string]string{
+	"internal/modules/privacy:redactSubjectExtensionSignals":  "redacts archived signals on purpose: an archived signal about the erased contact holds the same free text and personal members a live one does",
 	"internal/modules/activities:StampSenderAuthenticationTx": "system-only repair of sender-authentication evidence from a retained original. Archiving a message does not change its sender authentication; restricted content is excluded explicitly",
 	"internal/modules/automation:claimDraftStarter":           "UpdateAutomation holds a storekit.LiveOnly row lock before settleRuleOwner calls this claim, and retains it through the update transaction",
 	"internal/modules/contacts:refreshContactPhoneEvidence":   "lockOpenPairs selects only open, unarchived candidates FOR UPDATE OF d before stillFiled refreshes their evidence in the same transaction",

@@ -213,7 +213,7 @@ describe("a lead's Lists group", () => {
   });
 
   it("keeps the lists it is on beside the verbs", async () => {
-    show([{ id: "s-1", name: "Launch references" }]);
+    show([{ id: "s-1", name: "Launch references", entity_type: "lead" }]);
     const lists = await group();
     expect(await lists.findByText("Launch references")).toBeTruthy();
     expect(

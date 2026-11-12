@@ -16,15 +16,12 @@ import { Panel, PanelBody } from "../../design-system/panel";
 import { useT } from "../../i18n";
 import { useFilterVocabulary } from "../../lib/filterdata";
 import {
-  NEW_FILTER_LABEL,
-  OBJECT_TABS,
+  isObjectTab,
   type ObjectTab,
-  RESOURCE_OF,
-  SWITCH_CLEARS_LABEL,
-  TAB_LABEL,
-  UNIT_LABEL,
+  resourceOf,
+  useObjectTabs,
+  useTabWords,
 } from "../../lib/filtersaddress";
-import { labelFor } from "../../lib/labelfor";
 import { type Group, isComplete, newGroup } from "../../lib/segmentpredicate";
 import { useFilterDraft } from "./filterdraft";
 import { FilterEditor } from "./filtereditor";
@@ -42,7 +39,13 @@ export function FilterPage({ tab }: Readonly<{ tab: ObjectTab }>) {
   // The tree as the reader saw it when they pressed Save: an answer landing
   // behind the dialog must not become part of what they named and saved.
   const [saving, setSaving] = useState<Group | null>(null);
-  const resource = RESOURCE_OF[tab];
+  const resource = resourceOf(tab);
+  const listed = useObjectTabs();
+  // A kind the directory does not list still owns this page. Its unit may be
+  // gone, or the seat may lack the read right. It stays selectable.
+  const tabs = listed.includes(tab) ? listed : [...listed, tab];
+  const wordsOf = useTabWords();
+  const current = wordsOf(tab);
   const words = usePlainWords({ resource, dispatch });
   const vocabulary = useFilterVocabulary(resource);
   const complete = isComplete(draft.tree);
@@ -53,7 +56,7 @@ export function FilterPage({ tab }: Readonly<{ tab: ObjectTab }>) {
   const land = useLandOnSaved(tab, leave);
 
   const empty = draft.tree.children.length === 0;
-  const records = t(labelFor(UNIT_LABEL, tab));
+  const records = current.unit;
   const switchTab = (next: ObjectTab) => {
     if (next === tab) {
       return;
@@ -71,18 +74,19 @@ export function FilterPage({ tab }: Readonly<{ tab: ObjectTab }>) {
   return (
     <div className="wrap filters-screen">
       <FocusedHead
-        title={t(labelFor(NEW_FILTER_LABEL, tab))}
+        title={current.newFilter}
         control={
-          <SegmentedControl
-            options={OBJECT_TABS}
+          <SegmentedControl<string>
+            options={tabs}
             value={tab}
-            onChange={switchTab}
-            labels={{
-              contacts: t(TAB_LABEL.contacts),
-              companies: t(TAB_LABEL.companies),
-              deals: t(TAB_LABEL.deals),
-              leads: t(TAB_LABEL.leads),
+            onChange={(next) => {
+              if (isObjectTab(next)) {
+                switchTab(next);
+              }
             }}
+            labels={Object.fromEntries(
+              tabs.map((option) => [option, wordsOf(option).tab]),
+            )}
             label={t("filters.objectLabel")}
           />
         }
@@ -126,7 +130,7 @@ export function FilterPage({ tab }: Readonly<{ tab: ObjectTab }>) {
         open={switchTo !== null}
         onClose={() => setSwitchTo(null)}
         title={t("filters.switch.title", {
-          records: switchTo ? t(labelFor(UNIT_LABEL, switchTo)) : "",
+          records: switchTo ? wordsOf(switchTo).unit : "",
         })}
         confirmLabel={t("filters.switch.confirm")}
         onConfirm={() => {
@@ -136,7 +140,7 @@ export function FilterPage({ tab }: Readonly<{ tab: ObjectTab }>) {
           setSwitchTo(null);
         }}
       >
-        <p>{t(labelFor(SWITCH_CLEARS_LABEL, tab))}</p>
+        <p>{current.switchClears}</p>
       </ConfirmModal>
     </div>
   );

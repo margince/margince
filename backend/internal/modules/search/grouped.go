@@ -75,5 +75,11 @@ func (g groupedShape) page(hits []Hit) Page {
 			page.TypesWithMore = append(page.TypesWithMore, branch.entity)
 		}
 	}
+	// Declared kinds follow the core types, by name: they are no branch row.
+	for _, kind := range extensionTypes() {
+		if more[kind] {
+			page.TypesWithMore = append(page.TypesWithMore, kind)
+		}
+	}
 	return page
 }
