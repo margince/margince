@@ -3,7 +3,7 @@
 
 //go:build integration
 
-package compose
+package integration
 
 import (
 	"testing"
@@ -11,7 +11,6 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
-	"github.com/margince/margince/backend/internal/compose/integration"
 	"github.com/margince/margince/backend/internal/platform/clocktest"
 )
 
@@ -42,7 +41,7 @@ const offsetsRead = 424 * 24 * 4
 // Where one copy moved a transition and the other did not, one instant falls
 // on two days, and neither reader reports a fault.
 func TestGoAndPostgresBucketAnInstantAlike(t *testing.T) {
-	e := integration.Setup(t)
+	e := Setup(t)
 	from := clocktest.Now(t).UTC().Truncate(15 * time.Minute)
 	transitioned := 0
 
@@ -69,7 +68,7 @@ func TestGoAndPostgresBucketAnInstantAlike(t *testing.T) {
 // which transition moved. It answers how many offsets the zone held, which is
 // above one where the window covered a transition.
 func compareZoneOffsets(
-	t *testing.T, e *integration.Env, zone string, loc *time.Location, from time.Time,
+	t *testing.T, e *Env, zone string, loc *time.Location, from time.Time,
 ) int {
 	t.Helper()
 	ctx := e.Admin()
