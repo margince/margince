@@ -22,11 +22,9 @@ var recordedDigest string
 // truncated, or edited on one side alone fails the build gate rather than booting
 // and quietly trusting a different keyset than the one that was reviewed.
 //
-// What this does NOT hold is module/VERSION. The pin is not in the comparison, so
-// a refresh that replaced the blob and its digest while leaving the pin behind
-// passes — and every posture this process reports would then name the wrong
-// module. Binding the three is tracked on issue #1190; until then the pin is
-// only as good as the review of the commit that moved it.
+// This does not hold module/VERSION. A refresh that replaces the blob and its
+// digest but not the pin passes, and every posture then names the wrong module.
+// Only review of the commit that moved the pin holds it.
 func TestBundledModuleMatchesItsRecordedDigest(t *testing.T) {
 	t.Parallel()
 	want, name, ok := strings.Cut(strings.TrimSpace(recordedDigest), " ")
