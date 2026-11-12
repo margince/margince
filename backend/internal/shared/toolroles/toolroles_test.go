@@ -96,3 +96,56 @@ func TestWriteRefusesAFolderTheSweepDidNotMake(t *testing.T) {
 		t.Error("the refused write removed a file")
 	}
 }
+
+func TestARowsFolderReadsEachRowByItsVerb(t *testing.T) {
+	fsys := fstest.MapFS{
+		HeadFile:        {Data: []byte(`{"note":"n","roles":["admin","sales_rep"]}`)},
+		"get_deal.json": {Data: []byte(`{"tool":"deals","verb":"get_deal","allowed_for":["admin"],"refused_for":["sales_rep"]}`)},
+	}
+	head, rows, err := Read[Row](fsys)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !slices.Equal(head.Roles, []string{"admin", "sales_rep"}) || !slices.Equal(rows["get_deal"].Refused, []string{"sales_rep"}) {
+		t.Errorf("read head %+v and rows %+v", head, rows)
+	}
+}
+
+func TestAFolderThatDoesNotReadIsAnError(t *testing.T) {
+	for name, fsys := range map[string]fstest.MapFS{
+		"no head":          {"get_deal.json": {Data: []byte(`{"verb":"get_deal"}`)}},
+		"head not json":    {HeadFile: {Data: []byte(`{`)}},
+		"verb file broken": {HeadFile: {Data: []byte(`{}`)}, "get_deal.json": {Data: []byte(`[`)}},
+	} {
+		if _, _, err := Read[Checks](fsys); err == nil {
+			t.Errorf("%s: the folder was read", name)
+		}
+	}
+}
+
+func TestDriftReadsAsTheFilesThatDiffer(t *testing.T) {
+	drift := Drift{Missing: []string{"a.json"}, Changed: []string{"b.json", "c.json"}}
+	if got, want := drift.String(), "missing: a.json; changed: b.json, c.json"; got != want {
+		t.Errorf("drift reads %q, want %q", got, want)
+	}
+	if drift.Empty() || !(Drift{}).Empty() {
+		t.Error("Empty does not tell a drift from none")
+	}
+}
+
+func TestAFolderThatCannotBeListedOrReadIsAnError(t *testing.T) {
+	want := map[string][]byte{HeadFile: []byte("{}\n")}
+	if _, err := Compare(filepath.Join(t.TempDir(), "bad["), want); err == nil {
+		t.Error("a folder name that is not a pattern was compared")
+	}
+	dir := sweepFolder(t)
+	if err := os.Mkdir(filepath.Join(dir, "unreadable.json"), 0o700); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := Compare(dir, want); err == nil {
+		t.Error("a verb file that cannot be read was compared")
+	}
+	if err := Write(dir, want); err == nil {
+		t.Error("a folder holding a verb file that cannot be read was written")
+	}
+}
