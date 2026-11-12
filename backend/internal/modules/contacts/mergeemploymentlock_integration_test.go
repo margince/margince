@@ -40,7 +40,7 @@ func TestAContactMergeWaitsForAPrimaryEmploymentEditOnTheSurvivor(t *testing.T) 
 		merged <- err
 		close(returned)
 	}()
-	testdb.AwaitQueuedBehind(t, e.store.db.Pool(), int32(holderPID), 1, returned, "the merge") //nolint:gosec // a backend pid fits in int32
+	testdb.AwaitQueuedBehind(t, e.store.db.Pool(), int32(holderPID), 1, returned, "the merge")
 	if err := holder.Commit(ctx); err != nil {
 		t.Fatalf("committing the primary edit: %v", err)
 	}
@@ -116,7 +116,7 @@ func TestAContactMergeQueuesBehindAWriterHoldingTheEmploymentLockFirst(t *testin
 		merged <- err
 		close(returned)
 	}()
-	testdb.AwaitQueuedBehind(t, e.store.db.Pool(), int32(holderPID), 1, returned, "the merge") //nolint:gosec // a backend pid fits in int32
+	testdb.AwaitQueuedBehind(t, e.store.db.Pool(), int32(holderPID), 1, returned, "the merge")
 	if _, err := holder.Exec(ctx, `SELECT 1 FROM contact WHERE id = $1 FOR UPDATE`, survivor.UUID); err != nil {
 		t.Fatalf("the writer could not take the contact row after its employment lock: %v", err)
 	}
