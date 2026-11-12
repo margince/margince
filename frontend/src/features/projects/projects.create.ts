@@ -74,9 +74,8 @@ function useKeyPreview(name: string): string | undefined {
   return settled === "" ? undefined : preview.data;
 }
 
-// The open deals of the company the form names, as picker options. The server
-// refuses a deal on another company, so the picker offers none until a
-// company is chosen.
+// The open deals of the company the form names that have no project yet: the
+// only deals the server links. It offers none until a company is chosen.
 function useDealsOfCompany(
   companyId: string,
 ): readonly { value: string; label: string }[] {
@@ -85,7 +84,9 @@ function useDealsOfCompany(
     queryFn: async () =>
       unwrap(
         await api.GET("/deals", {
-          params: { query: { company_id: companyId, limit: 100 } },
+          params: {
+            query: { company_id: companyId, status: "open", limit: 100 },
+          },
         }),
       ).data,
     enabled: companyId !== "",

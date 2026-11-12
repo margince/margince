@@ -10,6 +10,7 @@ package projects
 import (
 	"context"
 	"errors"
+	"slices"
 
 	"github.com/jackc/pgx/v5"
 
@@ -39,6 +40,35 @@ func (e *DealCompanyMismatchError) Error() string {
 // FieldFault places the refusal on the create body's deal field.
 func (e *DealCompanyMismatchError) FieldFault() (field, code, message string) {
 	return "deal_id", "project_company_mismatch", e.Error()
+}
+
+// DealNotLinkableError maps to 422: the deal cannot become the new project's
+// deal. A link it already has is changed on the deal, not by a create.
+type DealNotLinkableError struct {
+	Code    string
+	Message string
+}
+
+func (e *DealNotLinkableError) Error() string { return e.Message }
+
+// FieldFault places the refusal on the create body's deal field.
+func (e *DealNotLinkableError) FieldFault() (field, code, message string) {
+	return "deal_id", e.Code, e.Message
+}
+
+// RefuseDealForNewProject admits only an open deal that names no project. A
+// withheld project pointer counts as named, so a create never moves a deal
+// off a project its caller cannot see.
+func RefuseDealForNewProject(status string, namesProject bool, masked *[]string) error {
+	if namesProject || (masked != nil && slices.Contains(*masked, "project_id")) {
+		return &DealNotLinkableError{Code: "deal_has_project",
+			Message: "the deal already belongs to a project; change its project on the deal instead"}
+	}
+	if status != "open" {
+		return &DealNotLinkableError{Code: "deal_not_open",
+			Message: "only an open deal can start a project here; create the project, then attach the deal on the deal page"}
+	}
+	return nil
 }
 
 // createSeams are the cross-module edges a create runs inside its transaction.

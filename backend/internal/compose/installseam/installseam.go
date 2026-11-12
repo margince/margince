@@ -27,6 +27,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/modules/projects"
 	"github.com/margince/margince/backend/internal/platform/auth"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -122,7 +123,15 @@ func installationCountry(ctx context.Context, tx pgx.Tx) (string, error) {
 // attach check and audit row as a link made from the deal.
 func ProjectDealLink(store *deals.Store) projects.AttachDeal {
 	return func(ctx context.Context, tx pgx.Tx, dealID ids.DealID, projectID ids.ProjectID) error {
-		_, err := store.UpdateDealTx(ctx, tx, dealID, deals.UpdateDealInput{ProjectID: &projectID}, deals.CustomColumns{})
+		deal, err := store.GetDealTx(ctx, tx, dealID, storekit.LiveOnly, deals.CustomColumns{})
+		if err != nil {
+			return auth.NameMissingReference("deal_id", err)
+		}
+		if refusal := projects.RefuseDealForNewProject(string(deal.Status), deal.ProjectId != nil, deal.MaskedFields); refusal != nil {
+			return refusal
+		}
+		// The version read above, so a link made in between is not overwritten.
+		_, err = store.UpdateDealTx(ctx, tx, dealID, deals.UpdateDealInput{ProjectID: &projectID, IfVersion: deal.Version}, deals.CustomColumns{})
 		var mismatch *deals.DealProjectCompanyMismatchError
 		if errors.As(err, &mismatch) {
 			return &projects.DealCompanyMismatchError{}

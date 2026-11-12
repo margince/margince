@@ -155,7 +155,7 @@ var projectCreatorPerms = principal.Permissions{
 
 func TestAProjectCreatedFromADealLinksItUnderTheDealsWriteCheck(t *testing.T) {
 	e := Setup(t)
-	pipeline, open, _ := DealFixture(t, e)
+	pipeline, open, won := DealFixture(t, e)
 	company := e.SeedCompany(t, "Globex", nil)
 	other := e.SeedCompany(t, "Umbrella", nil)
 	dealOn := func(name string, companyID ids.UUID, owner ids.UUID) ids.DealID {
@@ -201,5 +201,22 @@ func TestAProjectCreatedFromADealLinksItUnderTheDealsWriteCheck(t *testing.T) {
 	var mismatch *projects.DealCompanyMismatchError
 	if _, err := create("Wrong company", elsewhere, company); !errors.As(err, &mismatch) {
 		t.Errorf("a deal on another company answered %v, want the company mismatch", err)
+	}
+
+	// A create never moves a deal off the project it already names.
+	var notLinkable *projects.DealNotLinkableError
+	if _, err := create("Second project", teammates, company); !errors.As(err, &notLinkable) || notLinkable.Code != "deal_has_project" {
+		t.Errorf("relinking a deal answered %v, want deal_has_project", err)
+	}
+	if linkedTo(teammates) != project.String() {
+		t.Error("a refused create moved the deal off its project")
+	}
+	closed := dealOn("Won deal", company, e.Rep2)
+	reason := "verbal"
+	if _, err := e.Deals.AdvanceDeal(e.Admin(), closed, deals.AdvanceDealInput{ToStageID: won, WonWithoutContractReason: &reason}); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := create("After the win", closed, company); !errors.As(err, &notLinkable) || notLinkable.Code != "deal_not_open" {
+		t.Errorf("a won deal answered %v, want deal_not_open", err)
 	}
 }

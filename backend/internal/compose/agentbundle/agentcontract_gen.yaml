@@ -5304,7 +5304,8 @@ paths:
         `closed` (422 `invalid_phase`). The creation row is appended to the phase history.
         `deal_id` points that deal at the new project in the same transaction, under the check
         `updateDeal.project_id` takes: the caller must be able to write the deal, and the deal
-        must be on the project's company (422 `project_company_mismatch` naming `deal_id`).
+        must be on the project's company (422 `project_company_mismatch` naming `deal_id`). Only
+        an open deal that names no project is taken (422 `deal_not_open`, `deal_has_project`).
         A `company_id` that names a company the caller cannot read answers 422 naming `company_id`,
         the same for a missing record and for one hidden by row scope.
 

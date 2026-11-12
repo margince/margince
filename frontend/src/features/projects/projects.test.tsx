@@ -240,7 +240,8 @@ describe("ProjectsScreen", () => {
         }
         if (
           read.pathname === "/v1/deals" &&
-          read.searchParams.get("company_id") === FAR_COMPANY.id
+          read.searchParams.get("company_id") === FAR_COMPANY.id &&
+          read.searchParams.get("status") === "open"
         ) {
           return jsonResponse({
             data: [{ id: "d-1", name: "Wendt renewal", project_id: null }],
