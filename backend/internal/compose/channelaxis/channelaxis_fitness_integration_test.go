@@ -3,7 +3,7 @@
 
 //go:build integration
 
-package compose
+package channelaxis_test
 
 // The axis separation, held as obligations DERIVED from the system rather than
 // as lists somebody has to remember to update (repo rule 2). Each of these
@@ -62,7 +62,7 @@ func contractPath(t *testing.T, name string) string {
 	t.Helper()
 	// The test binary runs in its package directory; the contract lives at the
 	// backend module root.
-	return filepath.Join("..", "..", "api", name)
+	return filepath.Join("..", "..", "..", "api", name)
 }
 
 // A registered transport must not appear as a member of any kind-style enum in
