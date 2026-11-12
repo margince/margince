@@ -5,7 +5,7 @@
 // and sent from the reader's own mail app, so the installation never calls home.
 
 /** Where the Margince team reads a trial's request. */
-export const MARGINCE_TEAM_ADDRESS = "hello@margince.com";
+export const MARGINCE_TEAM_ADDRESS = "info@margince.com";
 
 /** What the reader asks the team for. */
 export type TrialAsk = "time" | "license" | "call";
