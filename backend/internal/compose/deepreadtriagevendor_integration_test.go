@@ -215,8 +215,8 @@ func TestOnlyTheSoleDirectRecipientOfCurrentStaffMailDecidesAVendorQuestion(t *t
 	if row := vendorRowOf(t, e, hostingDomain); row.status != contacts.DomainPending || row.reason != contacts.PendingVendorVerdict || !row.cursorCleared {
 		t.Fatalf("disposition = %+v, want an open vendor question no sweep re-reads", row)
 	}
-	if _, _, companies := triageState(t, e, hostingDomain); companies != 0 || extract.calls != 0 {
-		t.Fatalf("companies=%d extractions=%d, want the read held at the landing page", companies, extract.calls)
+	if _, _, companies := triageState(t, e, hostingDomain); companies != 0 || extract.calls.Load() != 0 {
+		t.Fatalf("companies=%d extractions=%d, want the read held at the landing page", companies, extract.calls.Load())
 	}
 	if !asksAbout(rep1, t, e, hostingDomain) {
 		t.Fatal("the sole direct recipient was not asked")
@@ -414,7 +414,7 @@ func TestAnAdmittedDomainIsReadOnAndASuppressedOneAsksNobody(t *testing.T) {
 	if _, err := e.Contacts.SetDomainAdmission(rep1, admitted, contacts.DomainAdmitted, "a client of ours"); err != nil {
 		t.Fatal(err)
 	}
-	if extract := runVendorTriageRead(t, e, args, admitted); extract.calls == 0 {
+	if extract := runVendorTriageRead(t, e, args, admitted); extract.calls.Load() == 0 {
 		t.Error("an admitted domain stopped at the vendor verdict; a colleague's yes outranks it")
 	}
 	if row := vendorRowOf(t, e, admitted); row.reason == contacts.PendingVendorVerdict {

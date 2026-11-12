@@ -247,7 +247,7 @@ func operationalMux(srv Server, pool *pgxpool.Pool, log *slog.Logger, identitySv
 	// nothing tells a prober which gate is closed.
 	// One set of limiters serves the transport and the authorization server.
 	// They are one surface, so a second set would split its ceilings.
-	mcpLimits := newMCPLimiters()
+	mcpLimits := newMCPLimitersWithClock(srv.mcpClock())
 	if mcp := srv.mcpHandler(pool, identitySvc, log, mcpLimits); mcp != nil {
 		mux.Handle("/mcp", httpserver.Correlate(httpserver.AccessLog(log, mcpEdge(mcp, mcpLimits, srv.mcpAllowedOrigin))))
 		// The AS endpoints live outside the generated resource surface but

@@ -229,6 +229,7 @@ asks "is this diff good?", and runs because a diff exists.
 | frontend clock drift | daily | The Vitest tests run as if it were 200 days from now, with the same result | A fixture whose fixed date a page part compares to `now` breaks on a calendar date, with no diff. |
 | every story renders | daily | `make fe-uat ARGS=--all-stories`: every story the Storybook build registers renders clean | `make fe-uat` on a branch renders only the stories the diff reaches, so a story that fails on `main` stays hidden until a change reaches it. |
 | backend clock drift | daily | The Go tests, unit and real-Postgres, run on a runner whose clock is 200 days later, with the same result | The same calendar break on the backend, where a test can read the clock of Go or the `now()` of Postgres. |
+| `make backend-race-shuffle` | daily | The Go tests, unit and real-Postgres, with `-race` and `-shuffle=<seed>`. The seed is the run number, or the `seed` input of a manual run | Two tests that share state, or a data race, fail only in some orders. On a PR that failure comes and goes, in a test the diff did not touch. |
 | PERF-3/PERF-7 budgets | weekly | `make bench-perf BENCH_PERF_TIER=smb`: the budgets on the SMB tier (10,000 test contacts), writing a record | Weekly is enough for a budget that no merge needs. |
 | `MOBILE-AC-2` budget | weekly | `make bench-mobile`: record open `p95` on a throttled Fast-3G profile at 390px, writing a record | The browser half of the PERF-1 budget, which no merge gate measures. |
 | vendor live check (`make vendor-live`) | daily | `GET /v1/credits` on Surfe, through the production adapter, against the fields `surfe/testdata/vendor-wire.json` records | The offline tests read a recording, which stays green when the vendor changes its API. |
@@ -238,22 +239,22 @@ asks "is this diff good?", and runs because a diff exists.
 
 Notes on the jobs:
 
-- The backend gate on `main` runs in `main-health.yml`, not as a daily job here. It runs the same
-  `make check-backend` on every health check, so a daily copy would only repeat it.
+- The backend gate on `main` runs in `main-health.yml`, so a daily copy here would only repeat it.
 - No rule a scan can apply finds the next test that needs the clock. "A fixed date in a file that never
   pins the clock" matches 129 files, and nearly all of them do no harm. So the gate is a second run.
-- Many backend test files read the wall clock, and
-  `backend/gates/testdata/wallclockfixtures.txt` holds the count. Many more compare
-  against the `now()` of Postgres, so the change must reach both clocks. Moving the clock of the
-  runner is the only change that does, and `scripts/clock-drift-host.sh` says why.
+- Many backend test files read the wall clock (`backend/gates/testdata/wallclockfixtures.txt` holds
+  the count). Many more compare against the `now()` of Postgres. So the change must reach both
+  clocks. Moving the runner clock is the only change that does; `scripts/clock-drift-host.sh` says why.
 - Every step that needs the network ends before the clock moves, because 200 days ends the TLS
   certificates those steps check. The clock is set back even on failure, so the runner does not
   return to the pool 200 days later.
 - `BACKEND_CLOCK_SKEW=database:200 make backend-clock-drift` runs the lane on a laptop with the
   weaker database applier. `backend/internal/shared/clockskew` says what each applier reaches.
+- The race lane runs one job for the unit tests and one per slice of the integration lane, all with one
+  seed. `backend/gates` runs without `-race`. The issue and each job log name the seed and the command
+  that replays the order of that job.
 - The model lane costs real tokens. It skips, and does not fail, when `CLAUDE_CODE_OAUTH_TOKEN` is
-  missing. So a lane with no money does not turn `main` red every Monday. A skipped job says "not
-  set up" where a red one says "broken".
+  missing, so a lane with no money does not turn `main` red every Monday. A skip says "not set up".
 - The vendor live check needs the `SURFE_LIVE_KEY` secret. Without it, the job reports "not checked"
   and opens one issue that says so. That issue never closes the failure issue, because no call ran.
 - The model lane does not give the same result each time: it runs each scenario three times, and
@@ -275,8 +276,7 @@ The three weekly jobs record what they measure, and none of them writes to `main
 - The model lane searches by word overlap, because no embedding key reaches the runner. Its verdicts
   say `search: lexical`, and they replace the verdicts in the same `<model>@<route>` folder.
 
-Findings become issues (`scripts/scheduled-report.sh`): one open issue per check, keyed on a fixed
-title, because a red scheduled run tells nobody.
+Findings become issues (`scripts/scheduled-report.sh`): one open issue per check, keyed on a fixed title, because a red scheduled run tells nobody.
 
 - Each finding carries one `priority:` and one `area:` per case, plus its provenance label, because
   this filer runs with no human there. `docs/reference/issue-labels.md` keeps the rule that an issue

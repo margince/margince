@@ -95,6 +95,12 @@ func WithImportPreviewWaitForTest(clock agents.WaitClock, within time.Duration) 
 	}
 }
 
+// WithMCPClockForTest counts the MCP rate-limit windows on now, so a test can
+// hold every call in one window however long the calls take.
+func WithMCPClockForTest(now func() time.Time) Option {
+	return func(s *Server, _ *pgxpool.Pool) { s.mcpNowForTest = now }
+}
+
 // WithToolChecksRecordedForTest hands sink, after each tool call, the verb that
 // ran and what the gates asked of the caller on its way.
 func WithToolChecksRecordedForTest(sink func(verb string, call auth.RecordedCall)) Option {

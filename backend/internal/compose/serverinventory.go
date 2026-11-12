@@ -9,6 +9,7 @@ import (
 	"io"
 	"log/slog"
 	"net/http"
+	"time"
 
 	"github.com/margince/margince/backend/internal/compose/attention"
 	"github.com/margince/margince/backend/internal/compose/briefs"
@@ -237,17 +238,17 @@ type Server struct {
 	// clientRegistrationLimit is the same file's limit on automatic client registration; nil allows both.
 	mcpConnectorEnabled     bool
 	clientRegistrationLimit *identity.RegistrationMethods
-	// appViews holds the MCP App documents this api is serving. Nil for the
-	// worker and for an api that composed no views — see mcpappviews.go.
+	// appViews holds the MCP App documents this api serves; nil when it composed none (mcpappviews.go).
 	appViews *apps.Provider
 
-	// mcpResource is the connector URL the discovery document names, and
-	// mcpAllowedOrigin its scheme+host, which the Origin guard admits and the 401
-	// challenge points at. WithMCPResource sets both from --public-base-url,
-	// never from a request header a caller controls.
+	// mcpResource is the connector URL the discovery document names, and mcpAllowedOrigin its
+	// scheme+host, which the Origin guard admits and the 401 challenge points at.
+	// WithMCPResource sets both from --public-base-url, never from a request header a caller controls.
 	mcpResource, mcpAllowedOrigin string
 	// mcpInputStateKey signs the questions a tool asks in the chat.
 	mcpInputStateKey string
+	// mcpNowForTest is the clock of the MCP rate limits, set by the integration harness only.
+	mcpNowForTest func() time.Time
 
 	// metricsToken gates /metrics, injected by WithMetricsToken from the
 	// deployment's --metrics-token. Empty — the default — configures no

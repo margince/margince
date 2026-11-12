@@ -43,7 +43,10 @@ lookup() {
     "$open_issues"
 }
 
-# report <title> <labels> <body>
+# report <title> <labels> <body> [note]
+#
+# `note` is added to the repeat comment, for an arm whose replay changes from
+# run to run (a shuffle seed) and so cannot stand only in the first body.
 #
 # `labels` is a comma-separated list and carries the three axes the rulebook
 # requires, not a provenance word alone: exactly one `priority:`, exactly one
@@ -59,12 +62,14 @@ lookup() {
 # what observed it. A human retriaging may move it, and moving a wrong label is a
 # different act from adding a missing one.
 report() {
-  local title="$1" labels="$2" body="$3" existing
+  local title="$1" labels="$2" body="$3" note="${4:-}" existing
   existing="$(lookup "$title")"
   if [[ -n "$existing" ]]; then
     echo "already open as #$existing — commenting"
     gh issue comment "$existing" --repo "$REPO" \
-      --body "Still failing on the $(date -u +%Y-%m-%d) scheduled run: $RUN_URL"
+      --body "Still failing on the $(date -u +%Y-%m-%d) scheduled run: $RUN_URL${note:+
+
+$note}"
     return
   fi
   echo "filing: $title"
@@ -399,6 +404,38 @@ stored column \`DEFAULT\`s keep the real date under that applier."\
     || unreported=1
 elif [[ "${BACKEND_CLOCK_RESULT:-}" = "success" ]]; then
   resolve "the backend suite's verdict depends on the calendar"
+fi
+
+# The seed is checked against its shape before it reaches the public tracker,
+# as the vendor detail is: the body is built from fields this script checked.
+race_seed="${RACE_SEED:-}"
+[[ "$race_seed" =~ ^[0-9]+$ ]] || race_seed="unrecognised"
+race_replay="Shuffle seed \`$race_seed\`. Replay the same order with
+\`make backend-race-shuffle RACE_SHUFFLE_SEED=$race_seed\` (needs \`make db-up\`). The log
+of a failed job ends with the command for its own suite and slice."
+if [[ "${RACE_RESULT:-}" = "failure" ]]; then
+  report "the backend suite fails under -race or a shuffled order" "priority: normal,area: ci-tests,bug" \
+"\`make backend-race-shuffle\` failed on the scheduled run of \`main\`: $RUN_URL
+
+$race_replay
+
+The suites pass in the merge gate, so a red here is one of two findings:
+
+- \`WARNING: DATA RACE\` in the log: two goroutines touch one value with no
+  lock. The two stacks under the warning name both sides.
+- A test that fails with no race warning: it depends on the order, on state an
+  earlier test left (a package variable, \`http.DefaultTransport\`, an env
+  var). \`go test -v -shuffle=$race_seed\` on that package lists the tests that
+  ran before it.
+
+If a step before \`make backend-race-shuffle\` failed, the suites did not run
+and the job log names the step.
+
+Fix the state the tests share. A retry or a fixed order hides the next one too."\
+    "$race_replay" ||
+    unreported=1
+elif [[ "${RACE_RESULT:-}" = "success" ]]; then
+  resolve "the backend suite fails under -race or a shuffled order"
 fi
 
 if [[ "${ROLE_SWEEP_RESULT:-}" = "failure" ]]; then

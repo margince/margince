@@ -50,7 +50,12 @@ case "$1 ${2:-}" in
 			if (page != "") print "[" page "]"
 		}' <<<"$OPEN_TITLES"
 	;;
-"issue comment") echo "comment $3" >>"$ACTION_LOG" ;;
+"issue comment")
+	echo "comment $3" >>"$ACTION_LOG"
+	for i in $(seq 1 $#); do
+		if [ "${!i}" = "--body" ] && [ -n "${BODY_LOG:-}" ]; then j=$((i + 1)); printf '%s' "${!j}" >>"$BODY_LOG"; fi
+	done
+	;;
 "issue close")
 	[[ "$3" == "${CLOSE_FAILS:-}" ]] && exit 1
 	echo "close $3" >>"$ACTION_LOG"
@@ -617,6 +622,45 @@ expect_surfe_body "surfe/a planted key in the detail never reaches gh" "unrecogn
 	VENDOR_LIVE_RESULT=failure VENDOR_LIVE_OUTCOME=drift "VENDOR_LIVE_DETAIL=status=401 sk-live-PLANTED"
 expect_surfe_body "surfe/no verdict says so" "\`no-verdict\`" "unrecognised" \
 	VENDOR_LIVE_RESULT=failure
+
+# --- the race and shuffle lane ---------------------------------------------------
+#
+# The seed changes every run, so a repeat comment carries it too: a reader of the
+# tenth red must replay the tenth order, not the first.
+readonly RACE_TITLE="the backend suite fails under -race or a shuffled order"
+race_open="$(printf '40\t%s\n' "$RACE_TITLE")"
+expect_actions "race/a failure files the issue" \
+	"create $RACE_TITLE" "" RACE_RESULT=failure RACE_SEED=4711
+expect_actions "race/green closes it" \
+	"close 40" "$race_open" RACE_RESULT=success RACE_SEED=4712
+expect_actions "race/a skipped job neither files nor closes" \
+	"" "$race_open" RACE_RESULT=skipped
+
+# expect_race_body <name> <open-issues-tsv> <seed> <must-contain> <must-not-contain>
+expect_race_body() {
+	local name="$1" open="$2" seed="$3" want="$4" never="$5" body
+	export BODY_LOG="$stub_dir/body"
+	: >"$BODY_LOG"
+	OPEN_TITLES="$open" GH_TOKEN=stub REPO=owner/repo RUN_URL=https://example.test/run/1 \
+		RACE_RESULT=failure RACE_SEED="$seed" \
+		"$root/scripts/scheduled-report.sh" >/dev/null 2>&1 || true
+	body="$(cat "$BODY_LOG")"
+	unset BODY_LOG
+	if [[ "$body" != *"$want"* ]] || [[ "$body" == *"$never"* ]]; then
+		echo "FAIL: $name"
+		echo "  body must contain '$want' and not '$never'"
+		failures=$((failures + 1))
+		return
+	fi
+	echo "ok: $name"
+}
+
+expect_race_body "race/the issue names the replay command" "" 4711 \
+	"make backend-race-shuffle RACE_SHUFFLE_SEED=4711" "unrecognised"
+expect_race_body "race/a repeat comment names this run's seed" "$race_open" 4713 \
+	"RACE_SHUFFLE_SEED=4713" "unrecognised"
+expect_race_body "race/a seed that is not a number never reaches gh" "" '1; rm -rf /' \
+	"unrecognised" "rm -rf"
 
 # --- the census -----------------------------------------------------------------
 #
