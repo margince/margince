@@ -4,7 +4,7 @@
 /** @vitest-environment happy-dom */
 import { act, cleanup, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { installFetchStub, jsonResponse } from "../../testing/story-utils";
 import { render } from "./analytics.testkit";
 import {
@@ -15,6 +15,11 @@ import {
 import { reportingTargets } from "./reporting.scenarios";
 import { reportingStoryRoutes } from "./reporting.story-fixtures";
 import { ReportingTargets } from "./reporting.targets";
+
+// The fixtures are the plans of 2026 and 2027, whatever the calendar says.
+beforeEach(() => {
+  vi.useFakeTimers({ toFake: ["Date"], now: new Date("2026-06-15T12:00:00Z") });
+});
 
 afterEach(() => {
   cleanup();
@@ -58,7 +63,12 @@ describe("ReportingTargets", () => {
       return stubbed(input, init);
     });
     render(<ReportingTargets />);
-    const [thisYear, nextYear] = await screen.findAllByText("Sam Okafor");
+    // Each year's plan arrives from its own read.
+    const [thisYear, nextYear] = await waitFor(() => {
+      const plans = screen.getAllByText("Sam Okafor");
+      expect(plans).toHaveLength(2);
+      return plans;
+    });
     const row = thisYear?.closest("tr");
     if (!(row instanceof HTMLElement)) throw new Error("no row for the goals");
     // With no month picked, the plan already published for next year is listed too.
@@ -95,7 +105,7 @@ describe("ReportingTargets", () => {
   });
 
   it("keeps loading while only next year's goals are still unread", async () => {
-    vi.useFakeTimers();
+    vi.useFakeTimers({ now: new Date("2026-06-15T12:00:00Z") });
     noTargets();
     answerNextYear(() => new Promise<Response>(() => {}));
     render(<ReportingTargets />);
