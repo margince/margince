@@ -103,6 +103,6 @@ func followUpTaskInput(
 		SourceSystem: &sourceSystem,
 		SourceID:     &sourceID,
 		Source:       provenance.OvernightReconcileSource,
-		Links:        []activities.ActivityLinkInput{{EntityType: "deal", EntityID: proposal.DealID.UUID}},
+		Links:        []activities.ActivityLinkInput{{EntityType: string(recordTypeDeal), EntityID: proposal.DealID.UUID}},
 	}, nil
 }
