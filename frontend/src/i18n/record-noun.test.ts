@@ -82,6 +82,7 @@ const HUMAN_SENSE_KEYS: Record<string, readonly string[]> = {
   en: [
     // A duplicate case asks whether two contacts are the same human being.
     "contactCase.intro",
+    "privacy.possibleDuplicates",
     "contactCase.pair.notSame",
     "contactCase.member.dismissedWith",
     "contactCase.evidence.different",
@@ -175,6 +176,7 @@ const HUMAN_SENSE_KEYS: Record<string, readonly string[]> = {
     "analytics.team.targetBasis",
     // A duplicate case asks whether two contacts are the same human being; an owner is a human too.
     "contactCase.intro",
+    "privacy.possibleDuplicates",
     "contactCase.pair.notSame",
     "contactCase.member.dismissedWith",
     "contactCase.evidence.different",
@@ -341,6 +343,7 @@ const HUMAN_SENSE_KEYS: Record<string, readonly string[]> = {
 
     // A duplicate case asks whether two contacts are the same human being; an owner is a human too.
     "contactCase.intro",
+    "privacy.possibleDuplicates",
     "contactCase.pair.notSame",
     "contactCase.member.dismissedWith",
     "contactCase.evidence.different",

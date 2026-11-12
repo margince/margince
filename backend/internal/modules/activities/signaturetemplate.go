@@ -88,7 +88,8 @@ func markupText(markup string) (string, error) {
 	}
 	var lines []string
 	for line := range strings.SplitSeq(out.String(), "\n") {
-		if line = strings.TrimSpace(line); line != "" {
+		// Runs of spaces collapse to one, as a reader of the markup sees them.
+		if line = strings.Join(strings.Fields(line), " "); line != "" {
 			lines = append(lines, line)
 		}
 	}
@@ -113,7 +114,15 @@ func writeText(out *strings.Builder, node *xhtml.Node) {
 		}
 	case node.DataAtom == atom.Br || node.DataAtom == atom.Hr:
 		out.WriteString("\n")
+	case node.DataAtom == atom.Img:
+		if alt := imageAlt(node); alt != "" {
+			out.WriteString(" " + alt + " ")
+		}
 	default:
+		// Two cells of a row are two words, not one run of letters.
+		if node.DataAtom == atom.Td || node.DataAtom == atom.Th {
+			out.WriteString(" ")
+		}
 		if textBlocks[node.DataAtom] {
 			out.WriteString("\n")
 		}
@@ -124,6 +133,15 @@ func writeText(out *strings.Builder, node *xhtml.Node) {
 			out.WriteString("\n")
 		}
 	}
+}
+
+func imageAlt(node *xhtml.Node) string {
+	for _, attr := range node.Attr {
+		if attr.Key == "alt" {
+			return strings.TrimSpace(attr.Val)
+		}
+	}
+	return ""
 }
 
 // SignatureMarkup renders retained markup through the send path's sanitizer.

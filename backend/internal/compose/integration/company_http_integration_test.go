@@ -42,6 +42,7 @@ type companyProblem struct {
 		Errors []struct {
 			Field string `json:"field"`
 			Code  string `json:"code"`
+			Max   int    `json:"max"`
 		} `json:"errors"`
 	} `json:"details"`
 }

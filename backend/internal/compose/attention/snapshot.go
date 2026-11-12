@@ -21,7 +21,7 @@ import (
 // the feed without standing a database up.
 type Snapshots interface {
 	// InSnapshot runs fn against one snapshot every read beneath it joins.
-	InSnapshot(ctx context.Context, fn func(context.Context) error) error
+	InSnapshot(ctx context.Context, read string, fn func(context.Context) error) error
 	// Detached answers a ctx with no snapshot on it, for the one write a
 	// composed read makes. The caller says why at its call site.
 	Detached(ctx context.Context) context.Context
@@ -48,7 +48,7 @@ func (s *Service) inSnapshot(ctx context.Context, read string, fn func(context.C
 		if s.snapshots == nil {
 			return fn(ctx)
 		}
-		return s.snapshots.InSnapshot(ctx, fn)
+		return s.snapshots.InSnapshot(ctx, read, fn)
 	})
 }
 

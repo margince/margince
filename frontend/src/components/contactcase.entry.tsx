@@ -2,11 +2,17 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import { useState } from "react";
-import { ContactCaseReview } from "../../components/contactcase";
-import { useContactCase } from "../../components/contactcase.queries";
-import { Button } from "../../design-system/atoms";
-import { formatNumber } from "../../format/format";
-import { useLocale, usePlural } from "../../i18n";
+import { Button } from "../design-system/atoms";
+import { formatNumber } from "../format/format";
+import { useLocale, usePlural } from "../i18n";
+import { ContactCaseReview } from "./contactcase";
+import { type ContactCase, useContactCase } from "./contactcase.queries";
+
+/** How many other contacts an open case pairs this one with; 0 when it is in none. */
+export function otherCaseMembers(contactCase: ContactCase | null | undefined) {
+  if (contactCase?.status !== "open") return 0;
+  return Math.max((contactCase.members?.length ?? 0) - 1, 0);
+}
 
 /** The door to this contact's open duplicate case, drawn only while one exists. */
 export function ContactCaseEntry({
@@ -15,9 +21,8 @@ export function ContactCaseEntry({
   const plural = usePlural();
   const { locale } = useLocale();
   const [open, setOpen] = useState(false);
-  const contactCase = useContactCase(contactId).data;
-  const others = (contactCase?.members?.length ?? 0) - 1;
-  if (contactCase?.status !== "open" || others < 1) return null;
+  const others = otherCaseMembers(useContactCase(contactId).data);
+  if (others < 1) return null;
   return (
     <>
       <Button onClick={() => setOpen(true)} data-testid="contact-case-entry">

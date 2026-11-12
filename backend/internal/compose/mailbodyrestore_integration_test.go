@@ -11,6 +11,8 @@ package compose
 
 import (
 	"context"
+	"fmt"
+	"log/slog"
 	"testing"
 	"time"
 
@@ -18,6 +20,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/compose/integration"
 	"github.com/margince/margince/backend/internal/modules/activities"
+	"github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/platform/clocktest"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -423,4 +426,74 @@ func (o *owedEnv) captureLabelStamp(t *testing.T, message ids.UUID) *time.Time {
 		t.Fatalf("reading the label stamp: %v", err)
 	}
 	return stamped
+}
+
+// A reply verdict judged on the header-only text is about that text, as the
+// label is. Only an empty verdict is written, so a restore that left it would let a refusal
+// read from a partial body close the deal. A verdict a human gave stays.
+func TestARestoredBodyIsJudgedAgainForItsReply(t *testing.T) {
+	for _, human := range []bool{false, true} {
+		t.Run(fmt.Sprintf("set by a human: %v", human), func(t *testing.T) {
+			o := setupOwed(t)
+			o.now = clocktest.Now(t)
+			o.contact(t, "Pat Buyer", "pat@customer.example")
+			answer := "Thanks, we will wait for your answer."
+			headerOnly := "From: pat@customer.example\nTo: " + o.seat
+			message := o.capture(t, owedMail{
+				from: "pat@customer.example", to: o.seat, subject: "Signing", messageID: fmt.Sprintf("restore-reply-%v@customer.example", human),
+				body: readInFull(answer), encoding: "base64", authenticated: true, at: o.now.Add(-48 * time.Hour),
+			})
+			o.asLegacy(t, message, headerOnly)
+			if applied, err := o.e.Activities.SetCaptureLabelAndReply(o.judge(), message, "noise",
+				activityVersion(t, o.e, message), activities.ReplyVerdictNegative, "test-model"); err != nil || !applied {
+				t.Fatalf("judging the header-only body → %t, %v", applied, err)
+			}
+			if human {
+				negative := activities.ReplyVerdictNegative
+				if err := o.e.Activities.CorrectReplyVerdict(o.e.Admin(), message, &negative); err != nil {
+					t.Fatalf("a human confirming the verdict: %v", err)
+				}
+			}
+
+			restoration := activities.MailBodyRestoration{
+				Activity: message, StoredBody: headerOnly, Body: headerOnly + "\n\n" + answer, Completeness: "complete",
+				Version: activityVersion(t, o.e, message),
+			}
+			system := principal.SystemActing(o.e.Admin(), "system:datatask-test")
+			var restored bool
+			if err := database.WithWorkspaceTx(system, o.e.Pool, func(tx pgx.Tx) error {
+				var err error
+				restored, _, err = activities.RestoreMailBodyTx(system, tx, restoration)
+				return err
+			}); err != nil || !restored {
+				t.Fatalf("restoring the body → %t, %v", restored, err)
+			}
+			// The classify pass reads only mail from a sender the workspace decided on.
+			pending := o.e.WsScalar(t, `SELECT id::text FROM capture_pending_counterparty WHERE email = 'pat@customer.example'`)
+			verdicts := NewCounterpartyVerdictEngine(o.e.Pool, &scriptedVerdictBrain{verdicts: map[string]string{pending: capture.KindContact}},
+				CaptureConfig{}, slog.New(slog.DiscardHandler))
+			if err := verdicts.RunWorkspace(principal.WithWorkspaceID(context.Background(), o.e.WS), 0); err != nil {
+				t.Fatalf("deciding the sender: %v", err)
+			}
+			brain := &scriptedClassifyBrain{replies: map[string]string{"Signing": activities.ReplyVerdictNeutral}}
+			if err := NewCaptureClassifier(o.e.Pool, brain, slog.New(slog.DiscardHandler)).RunWorkspace(asClassifyPass(o.e), 0); err != nil {
+				t.Fatalf("classifying the restored body: %v", err)
+			}
+
+			want := activities.ReplyVerdictNeutral
+			if human {
+				want = activities.ReplyVerdictNegative
+			}
+			if got := replyVerdictOf(t, o.e, message); got == nil || *got != want {
+				t.Fatalf("reply verdict after the restore = %s, want %s", derefOr(got, "none"), want)
+			}
+		})
+	}
+}
+
+func derefOr(value *string, fallback string) string {
+	if value == nil {
+		return fallback
+	}
+	return *value
 }

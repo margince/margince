@@ -14,10 +14,10 @@ import { ErrorLine } from "../../design-system/errorline";
 import { Heading } from "../../design-system/heading";
 import { HelpPopover } from "../../design-system/helppopover";
 import { Select } from "../../design-system/select";
-import { useT } from "../../i18n";
+import { useLocale, useT } from "../../i18n";
 import { useCan } from "../../lib/capability";
 import {
-  problemFieldErrorsOf,
+  problemFieldSentencesOf,
   problemMessageOf,
   unwrap,
 } from "../../lib/problem";
@@ -188,6 +188,7 @@ export function WebhookSubscriptionDrawer({
   onCreated?: (secret: string) => void;
 }>) {
   const t = useT();
+  const { locale } = useLocale();
   const titleId = useId();
   const queryClient = useQueryClient();
   const [form, setForm] = useState<WebhookForm>(() => formFor(subscription));
@@ -203,12 +204,7 @@ export function WebhookSubscriptionDrawer({
       onClose();
     },
   });
-  const fieldErrors = new Map(
-    problemFieldErrorsOf(save.error).map((problem) => [
-      problem.field,
-      problem.message,
-    ]),
-  );
+  const fieldErrors = problemFieldSentencesOf(save.error, locale);
   const fieldError = (name: string) => fieldErrors.get(name);
   // A refusal on a field the drawer has no slot for is said once, at the foot.
   const unplaced = [...fieldErrors.entries()].filter(

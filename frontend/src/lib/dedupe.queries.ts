@@ -9,7 +9,7 @@ import {
 import { api } from "../api/client";
 import { problemCodeOf, problemStatus, unwrap } from "./problem";
 import { invalidateRecord } from "./recordwritekeys";
-import { contactCasesKey, worklistKey } from "./workkeys";
+import { contactCasesKey, dsrsKey, worklistKey } from "./workkeys";
 
 export type PairDisposition = "merge" | "not_a_duplicate";
 
@@ -25,7 +25,8 @@ function invalidatePairReads(client: QueryClient): Promise<unknown> {
 /**
  * The reads a contact merge reshapes: each named contact's own pages, the
  * contact lists that showed the merged-away record, and the pair reads. The
- * case merge and a merge of one contact pair both end here.
+ * subject requests that named it go stale too. The case merge and a merge of
+ * one contact pair both end here.
  */
 export function invalidateAfterContactMerge(
   client: QueryClient,
@@ -34,6 +35,7 @@ export function invalidateAfterContactMerge(
   return Promise.all([
     invalidatePairReads(client),
     client.invalidateQueries({ queryKey: ["contacts"] }),
+    client.invalidateQueries({ queryKey: dsrsKey }),
     ...[...new Set(contactIds)].map((id) =>
       invalidateRecord(client, "contact", id),
     ),

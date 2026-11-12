@@ -83,6 +83,23 @@ func Validation(field, code, message string) *DetailedError {
 	}
 }
 
+// TooLong is the 422 for text past its limit. It carries the limit, so a
+// screen can say the number in the reader's language. A limit of 0 or less is
+// a caller's bug: the wire would carry no max, so it panics.
+func TooLong(field string, limit, actual int) *DetailedError {
+	if limit <= 0 {
+		panic(fmt.Sprintf("httperr.TooLong: %s has limit %d; a length limit is positive", field, limit))
+	}
+	return withMax(Validation(field, "too_long",
+		fmt.Sprintf("%s holds at most %d characters; this one has %d", field, limit, actual)), limit)
+}
+
+// withMax states the limit on a one-field refusal.
+func withMax(refusal *DetailedError, limit int) *DetailedError {
+	refusal.Fields[0].Max = limit
+	return refusal
+}
+
 // RequirePair refuses a filter that names half of a discriminated reference.
 // Ignoring the half would list rows the caller did not ask for. A type alone
 // matches every record of that type, and an id alone every type carrying it.
@@ -109,8 +126,8 @@ func RequireNonBlank(field, raw string) (string, error) {
 // characters, not bytes, so a German or Vietnamese sentence is not refused for
 // its accents.
 func RequireWithin(field, text string, limit int) error {
-	if utf8.RuneCountInString(text) > limit {
-		return Validation(field, "too_long", fmt.Sprintf("%s holds at most %d characters", field, limit))
+	if n := utf8.RuneCountInString(text); n > limit {
+		return TooLong(field, limit, n)
 	}
 	return nil
 }
@@ -158,14 +175,17 @@ func RequireBodyID(field string, id ids.UUID) error {
 const fieldErrorsKey = "errors"
 
 func fieldDetails(fields []FieldError) map[string]any {
-	errs := make([]map[string]string, 0, len(fields))
+	errs := make([]map[string]any, 0, len(fields))
 	for _, f := range fields {
-		entry := map[string]string{"field": f.Field, "code": f.Code}
+		entry := map[string]any{"field": f.Field, "code": f.Code}
 		// A multi-field validator may have no per-entry prose (the code IS the
 		// reason). Omitting the key beats shipping "message": "", which reads
 		// as an explanation that came out blank.
 		if f.Message != "" {
 			entry["message"] = f.Message
+		}
+		if f.Max > 0 {
+			entry["max"] = f.Max
 		}
 		errs = append(errs, entry)
 	}

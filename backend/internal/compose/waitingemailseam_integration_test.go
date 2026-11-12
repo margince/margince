@@ -170,6 +170,23 @@ func TestAWaitingBadgeUsesTheReadTimeAcrossTheHorizon(t *testing.T) {
 	if tailCard == nil || tailCard.EmailSummary == nil || tailCard.EmailSummary.Move != crmcontracts.EmailSummaryMoveNeedsReply {
 		t.Fatalf("waiting tail at %v with server clock %v = %+v, want the same needs-reply badge", asOf, serverNow, tailCard)
 	}
+	if err := database.WithWorkspaceSnapshot(e.Admin(), e.Pool, func(ctx context.Context) error {
+		return database.ReuseGenericPlans(ctx, func(ctx context.Context) error {
+			cards, err := seam.WaitingAfter(ctx, asOf, attention.WaitingFor{}, "", 10)
+			if err != nil {
+				return err
+			}
+			for _, card := range cards.Cards {
+				if card.Row.ActivityID == mail {
+					return nil
+				}
+			}
+			t.Error("the generic-plan waiting tail omitted the judged message")
+			return nil
+		})
+	}); err != nil {
+		t.Fatal(err)
+	}
 }
 
 // A message whose content this reader may not read produces no waiting row at

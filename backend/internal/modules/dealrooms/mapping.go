@@ -155,6 +155,7 @@ func refuseOverlongName(name string) error {
 		return &fieldError{
 			field: "full_name",
 			code:  codeTooLong,
+			max:   nameLimit,
 			msg:   "full_name is longer than 255 characters",
 		}
 	}

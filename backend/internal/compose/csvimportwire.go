@@ -21,7 +21,6 @@ import (
 	"sort"
 	"strconv"
 	"strings"
-	"unicode/utf8"
 
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
@@ -252,9 +251,8 @@ func runOptionsFrom(req crmcontracts.CreateImportRunRequest) (migration.RunMappi
 	if req.FileName != nil {
 		fileName = *req.FileName
 	}
-	if utf8.RuneCountInString(fileName) > maxImportFileName {
-		return migration.RunMapping{}, httperr.Validation("file_name", "too_long",
-			fmt.Sprintf("A file name is at most %d characters.", maxImportFileName))
+	if err := httperr.RequireWithin("file_name", fileName, maxImportFileName); err != nil {
+		return migration.RunMapping{}, err
 	}
 	presets, err := presetLinksFrom(req.PresetLinks)
 	if err != nil {

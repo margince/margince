@@ -210,7 +210,7 @@ func newAttentionService(pool *pgxpool.Pool, svc *approvals.Service, now attenti
 	return attention.NewService(
 		attentionApprovals{svc: svc},
 		attentionDuplicates{store: newContactsStore(db)},
-		attentionTasks{store: activities.NewStore(db), claims: newContactsStore(db)},
+		attentionTasks{store: activities.NewStore(db), claims: newContactsStore(db), db: db},
 		attentionReceipts{tasks: activities.NewStore(db).WithRecordZone(installationZoneTx), svc: svc, deals: deals.NewStore(db, DealsInstallation())},
 		attentionBriefing{
 			engine: briefs.NewBriefEngine(pool, newContactsStore(db)),
@@ -460,27 +460,6 @@ func (a attentionDealStandings) CachedStandings(
 		}
 	}
 	return out, nil
-}
-
-// attentionSnapshots binds the feed's composed reads to the database seam.
-//
-// The adapter exists because attention takes readers and never a driver: this
-// is the one place the pool and that package meet, which is the same shape
-// every other seam in this file has.
-type attentionSnapshots struct{ pool *pgxpool.Pool }
-
-func (a attentionSnapshots) InSnapshot(ctx context.Context, fn func(context.Context) error) error {
-	return database.WithWorkspaceSnapshot(ctx, a.pool, fn)
-}
-
-func (a attentionSnapshots) Degradable(
-	ctx context.Context, budget time.Duration, fn func(context.Context) error,
-) error {
-	return database.WithDegradableRead(ctx, budget, fn)
-}
-
-func (a attentionSnapshots) Detached(ctx context.Context) context.Context {
-	return database.Detached(ctx)
 }
 
 func (a attentionDomainQuestions) OwnsDomainQuestion(ctx context.Context, domain string) (bool, error) {

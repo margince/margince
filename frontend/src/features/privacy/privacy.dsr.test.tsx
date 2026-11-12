@@ -40,92 +40,109 @@ describe("opening a DSR (G-2)", () => {
     ).not.toBeInTheDocument();
   });
 
-  it("allows a free-text subject for an access request — the subject may not be in the CRM", async () => {
+  // The package an access request downloads is assembled for a contact id,
+  // so the form names one the same way an erasure does.
+  it("offers the contact picker for an access request and says the package downloads from it", async () => {
     stubRoutes();
     render(<RequestsPanel />);
     await userEvent.click(
       await screen.findByRole("button", { name: /new request/i }),
     );
     await choose(screen.getByLabelText(/kind/i), "Access");
-    expect(screen.getByLabelText(/subject reference/i)).toBeInTheDocument();
+    expect(screen.getByLabelText(/contact/i)).toBeInTheDocument();
+    expect(
+      screen.queryByLabelText(/subject reference/i),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.getByText(en["privacy.accessPicksContact"]),
+    ).toBeInTheDocument();
   });
 
-  it("says an access request is fulfilled by hand — nothing is exported", async () => {
+  it("allows a free-text subject for a correction — the subject may not be in the CRM", async () => {
     stubRoutes();
     render(<RequestsPanel />);
     await userEvent.click(
       await screen.findByRole("button", { name: /new request/i }),
     );
-    await choose(screen.getByLabelText(/kind/i), "Access");
-    expect(screen.getByText(/fulfilled manually/i)).toBeInTheDocument();
+    await choose(screen.getByLabelText(/kind/i), "Correction");
+    expect(screen.getByLabelText(/subject reference/i)).toBeInTheDocument();
   });
 
   // The erasure fulfiller resolves subject_ref to a contact id (BE-2). So an
   // erasure request must never name a subject the server cannot erase. The
   // form holds this only by its shape: a RecordPicker and no text input.
   // This proves the picked contact's uuid reaches the wire, not its name.
-  it("sends the picked contact's uuid as subject_ref for an erasure request", async () => {
-    // Pinned to a zone behind UTC, since the suite never controls the host's
-    // own zone. due_at must mint at the end of the day in that zone, not at
-    // UTC midnight. The two disagree on which calendar day Aug 1 is.
-    vi.spyOn(Intl.DateTimeFormat.prototype, "resolvedOptions").mockReturnValue({
-      timeZone: "America/New_York",
-    } as Intl.ResolvedDateTimeFormatOptions);
-    const sent = stubRoutes({
-      "GET /contacts": () =>
-        jsonResponse({
-          data: [
+  it.each([
+    ["erasure", "Erasure"],
+    ["access", "Access"],
+  ] as const)(
+    "sends the picked contact's uuid as subject_ref for an %s request",
+    async (kind, label) => {
+      // Pinned to a zone behind UTC, since the suite never controls the host's
+      // own zone. due_at must mint at the end of the day in that zone, not at
+      // UTC midnight. The two disagree on which calendar day Aug 1 is.
+      vi.spyOn(
+        Intl.DateTimeFormat.prototype,
+        "resolvedOptions",
+      ).mockReturnValue({
+        timeZone: "America/New_York",
+      } as Intl.ResolvedDateTimeFormatOptions);
+      const sent = stubRoutes({
+        "GET /contacts": () =>
+          jsonResponse({
+            data: [
+              {
+                id: "3fa85f64-5717-4562-b3fc-2c963f66afa6",
+                full_name: "Anna Weber",
+              },
+            ],
+            page: { next_cursor: null, has_more: false },
+          }),
+        "POST /data-subject-requests": () =>
+          jsonResponse(
             {
-              id: "3fa85f64-5717-4562-b3fc-2c963f66afa6",
-              full_name: "Anna Weber",
+              id: "d3",
+              kind,
+              subject_ref: "3fa85f64-5717-4562-b3fc-2c963f66afa6",
+              status: "open",
+              due_at: "2026-08-02T03:59:59.999Z",
+              due_overridden: false,
+              dispute_open: false,
+              created_at: "2026-07-15T00:00:00Z",
             },
-          ],
-          page: { next_cursor: null, has_more: false },
-        }),
-      "POST /data-subject-requests": () =>
-        jsonResponse(
-          {
-            id: "d3",
-            kind: "erasure",
-            subject_ref: "3fa85f64-5717-4562-b3fc-2c963f66afa6",
-            status: "open",
-            due_at: "2026-08-02T03:59:59.999Z",
-            due_overridden: false,
-            dispute_open: false,
-            created_at: "2026-07-15T00:00:00Z",
-          },
-          201,
-        ),
-    });
-    render(<RequestsPanel />);
-    await userEvent.click(
-      await screen.findByRole("button", { name: /new request/i }),
-    );
-    await choose(screen.getByLabelText(/kind/i), "Erasure");
-    await userEvent.type(screen.getByLabelText(/contact/i), "anna");
-    await userEvent.click(await screen.findByText("Anna Weber"));
-    await screen.findByText(/GDPR, one calendar month/);
-    await userEvent.click(
-      screen.getByRole("button", { name: /open request/i }),
-    );
-    await waitFor(() =>
-      expect(
-        sent.filter((s) => s.key === "POST /data-subject-requests"),
-      ).toHaveLength(1),
-    );
-    const posts = sent.filter((s) => s.key === "POST /data-subject-requests");
-    // toEqual, not objectContaining: subject_ref is the picked uuid, never
-    // "Anna Weber", and no due date rode along, because the server computes it.
-    expect(posts[0]?.body).toEqual({
-      kind: "erasure",
-      subject_ref: "3fa85f64-5717-4562-b3fc-2c963f66afa6",
-    });
-  });
+            201,
+          ),
+      });
+      render(<RequestsPanel />);
+      await userEvent.click(
+        await screen.findByRole("button", { name: /new request/i }),
+      );
+      await choose(screen.getByLabelText(/kind/i), label);
+      await userEvent.type(screen.getByLabelText(/contact/i), "anna");
+      await userEvent.click(await screen.findByText("Anna Weber"));
+      await screen.findByText(/GDPR, one calendar month/);
+      await userEvent.click(
+        screen.getByRole("button", { name: /open request/i }),
+      );
+      await waitFor(() =>
+        expect(
+          sent.filter((s) => s.key === "POST /data-subject-requests"),
+        ).toHaveLength(1),
+      );
+      const posts = sent.filter((s) => s.key === "POST /data-subject-requests");
+      // toEqual, not objectContaining: subject_ref is the picked uuid, never
+      // "Anna Weber", and no due date rode along, because the server computes it.
+      expect(posts[0]?.body).toEqual({
+        kind,
+        subject_ref: "3fa85f64-5717-4562-b3fc-2c963f66afa6",
+      });
+    },
+  );
 
-  // The other side of the test above: access and rectify keep the free-text
+  // The other side of the test above: a correction keeps the free-text
   // field. This proves the two kinds differ on the wire. A shared code path
   // must not reuse the contact picker's value.
-  it("sends the typed free text as subject_ref for an access request", async () => {
+  it("sends the typed free text as subject_ref for a correction request", async () => {
     vi.spyOn(Intl.DateTimeFormat.prototype, "resolvedOptions").mockReturnValue({
       timeZone: "America/New_York",
     } as Intl.ResolvedDateTimeFormatOptions);
@@ -134,7 +151,7 @@ describe("opening a DSR (G-2)", () => {
         jsonResponse(
           {
             id: "d4",
-            kind: "access",
+            kind: "rectify",
             subject_ref: "anna@acme.test",
             status: "open",
             due_at: "2026-08-02T03:59:59.999Z",
@@ -149,7 +166,7 @@ describe("opening a DSR (G-2)", () => {
     await userEvent.click(
       await screen.findByRole("button", { name: /new request/i }),
     );
-    await choose(screen.getByLabelText(/kind/i), "Access");
+    await choose(screen.getByLabelText(/kind/i), "Correction");
     await userEvent.type(
       screen.getByLabelText(/subject reference/i),
       "anna@acme.test",
@@ -165,7 +182,7 @@ describe("opening a DSR (G-2)", () => {
     );
     const posts = sent.filter((s) => s.key === "POST /data-subject-requests");
     expect(posts[0]?.body).toEqual({
-      kind: "access",
+      kind: "rectify",
       subject_ref: "anna@acme.test",
     });
   });
@@ -180,7 +197,7 @@ describe("opening a DSR (G-2)", () => {
     } as Intl.ResolvedDateTimeFormatOptions);
     const created = {
       id: "d5",
-      kind: "access",
+      kind: "rectify",
       subject_ref: "anna@acme.test",
       status: "open",
       due_at: "2026-07-16T03:59:59.999Z",
@@ -200,7 +217,7 @@ describe("opening a DSR (G-2)", () => {
     await userEvent.click(
       await screen.findByRole("button", { name: /new request/i }),
     );
-    await choose(screen.getByLabelText(/kind/i), "Access");
+    await choose(screen.getByLabelText(/kind/i), "Correction");
     await userEvent.type(
       screen.getByLabelText(/subject reference/i),
       "anna@acme.test",
@@ -220,7 +237,7 @@ describe("opening a DSR (G-2)", () => {
     );
     const posts = sent.filter((s) => s.key === "POST /data-subject-requests");
     expect(posts[0]?.body).toEqual({
-      kind: "access",
+      kind: "rectify",
       subject_ref: "anna@acme.test",
       due_at: "2026-07-16T03:59:59.999Z",
     });

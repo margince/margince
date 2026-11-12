@@ -79,7 +79,6 @@ article
 as
 ascending
 ask
-assemble
 assign
 assignee
 assistant
@@ -662,7 +661,6 @@ manage
 management
 manager's
 manager’s
-manually
 many
 map
 march

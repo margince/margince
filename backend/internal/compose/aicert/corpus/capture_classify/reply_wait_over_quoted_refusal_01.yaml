@@ -1,0 +1,28 @@
+name: a_short_reply_over_a_quoted_refusal_is_not_a_refusal
+task: capture_classify
+site: classify
+source: hand_authored
+sanitized_by: hand_authored/claude-opus-5-5
+fixture:
+  - subject: 'Re: Re: phase two proposal'
+    inbound: true
+    body: |
+      Thanks, we will wait for your answer.
+expect:
+  outcome: accepted
+  answer:
+    - not_reply: negative
+  rubric: >
+    The customer's whole message is one line: they will wait for our answer.
+    In the mailbox this line sat on top of a quoted older mail that said "we
+    will not go ahead with this project"; the backlog read cuts that quote
+    away, so the model sees only the sender's current words, which is the
+    body here. Any label is acceptable. Score the reply verdict: "neutral" or
+    "positive" scores high, and null is acceptable. "negative" is the failure
+    this scenario exists to catch, because a negative verdict on the newest
+    customer mail closes the deal as lost overnight, and this customer is
+    waiting on us.
+  bands:
+    certified_min: 70
+    degraded_min: 50
+    floor: 40

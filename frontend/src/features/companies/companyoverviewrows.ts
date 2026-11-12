@@ -3,8 +3,6 @@
 
 import type { components } from "../../api/schema";
 import { activityHasHappened } from "../../format/activitywhen";
-import { calendarDaysUntil } from "../../format/daysuntil";
-import { calendarLateness } from "../../format/lateness";
 
 // What the four Overview cards list, read off the 360 alone and dated by its
 // `as_of`, never by the clock.
@@ -20,42 +18,6 @@ type Pipeline = components["schemas"]["Pipeline"];
 // Each card is a glance; its link opens the tab that holds the whole list.
 export const OVERVIEW_ROWS = 3;
 export const OVERVIEW_CONTACTS = 2;
-// A task due within this many days reads in warning ink.
-const SOON_DAYS = 7;
-
-/**
- * Where an open task stands at `as_of`: late by calendar days, due soon, due
- * later on a named day, or undated. The Tasks tab's table and the Overview
- * card read the same answer.
- */
-export type TaskStanding =
-  | { kind: "late"; days?: number }
-  | { kind: "today" }
-  | { kind: "soon"; days: number }
-  | { kind: "later"; days: number; due: string }
-  | { kind: "undated" };
-
-export function taskStanding(
-  step: NextStep,
-  asOf: string,
-  zone: string,
-): TaskStanding {
-  if (!step.due_at) {
-    return { kind: "undated" };
-  }
-  if (step.overdue) {
-    const { days } = calendarLateness(step.due_at, asOf, zone);
-    return { kind: "late", days: days > 0 ? days : undefined };
-  }
-  const days = calendarDaysUntil(step.due_at, zone, new Date(asOf));
-  if (days <= 0) {
-    return { kind: "today" };
-  }
-  return days <= SOON_DAYS
-    ? { kind: "soon", days }
-    : { kind: "later", days, due: step.due_at };
-}
-
 /** The open tasks the Next bar does not already draw. */
 export function otherOpenTasks(
   view: Company360,

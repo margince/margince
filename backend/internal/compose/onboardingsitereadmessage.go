@@ -94,8 +94,8 @@ func (e *deepReadEngine) messageCompanySiteRead(w http.ResponseWriter, r *http.R
 		httperr.Write(w, r, httperr.Validation("message", "empty", "write a message for Margince"))
 		return
 	}
-	if len([]rune(message)) > companyReadMessageMaxRunes {
-		httperr.Write(w, r, httperr.Validation("message", "too_long", "message must be at most 2000 characters"))
+	if err := httperr.RequireWithin("message", message, companyReadMessageMaxRunes); err != nil {
+		httperr.Write(w, r, err)
 		return
 	}
 	read, _, err := e.contacts.GetCompanySiteRead(r.Context(), ids.UUID(readID))

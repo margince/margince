@@ -23,6 +23,7 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/compose/integration"
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/agents"
 	"github.com/margince/margince/backend/internal/modules/consent"
@@ -31,6 +32,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/kernel/signature"
 	"github.com/margince/margince/backend/internal/shared/ports/connector"
 )
 
@@ -209,13 +211,13 @@ func TestPersonalMarkupAndItsClearingReachBothAlternativesThroughTheRealSend(t *
 	if _, err := signatures.SaveSignatureTemplate(e.Admin(), "<p>Company template</p>"); err != nil {
 		t.Fatal(err)
 	}
-	own := `<p onclick="bad()"><b>Personal HTML</b><br>{name}</p><script>bad()</script><img src="https://tracker.test/pixel">`
+	own := `<p onclick="bad()"><b>Personal HTML</b><br>{name}</p><table><tr><td><img src="https://cdn.example/logo.png" width="96" alt="Company A"></td><td style="color:rgb(255,107,0)">Member A</td></tr><tr><td>Sales</td></tr></table><script>bad()</script><img src="http://tracker.test/pixel">`
 	if _, err := signatures.SaveMyEmailSignature(ctx, contacts.SaveSignatureInput{Body: "Saved plain", HTML: &own}); err != nil {
 		t.Fatal(err)
 	}
 	for _, test := range []struct{ body, markup, text string }{
-		{signOffBody, "", "Personal HTML\n{name}"},
-		{signOffBody, "<p>Body with markup</p>", "Personal HTML\n{name}"},
+		{signOffBody, "", "Personal HTML\n{name}\nCompany A Member A\nSales"},
+		{signOffBody, "<p>Body with markup</p>", "Personal HTML\n{name}\nCompany A Member A\nSales"},
 	} {
 		if _, err := adapter.store.SendEmail(ctx, activities.FromActivity(ids.From[ids.ActivityKind](anchorID)), activities.SendEmailInput{Recipients: []string{recipient}, Subject: "Angebot", Body: test.body, HTMLBody: test.markup, ConsentPurpose: "transactional"}, adapter.gate, adapter.stager); err != nil {
 			t.Fatal(err)
@@ -227,7 +229,13 @@ func TestPersonalMarkupAndItsClearingReachBothAlternativesThroughTheRealSend(t *
 		if strings.Count(sent.HTMLBody, "<b>Personal HTML</b>") != 1 {
 			t.Errorf("markup = %q", sent.HTMLBody)
 		}
-		for _, denied := range []string{"Company template", "Saved plain", "onclick", "bad()", "tracker.test", "Viele Grüße"} {
+		// The send carries the image's address; only a preview draws a copy.
+		for _, kept := range []string{`<img src="https://cdn.example/logo.png" width="96" alt="Company A">`, `<td style="color:rgb(255,107,0)">Member A</td>`} {
+			if !strings.Contains(sent.HTMLBody, kept) {
+				t.Errorf("markup lacks %s: %q", kept, sent.HTMLBody)
+			}
+		}
+		for _, denied := range []string{"Company template", "Saved plain", "onclick", "bad()", "tracker.test", "Viele Grüße", "data:"} {
 			if strings.Contains(sent.HTMLBody, denied) || strings.Contains(sent.Body, denied) {
 				t.Errorf("send kept %q: %+v", denied, sent)
 			}
@@ -250,7 +258,7 @@ func TestPersonalMarkupOmissionClearingAndUnicodeLimitsUseTheSignatureStore(t *t
 	e := integration.Setup(t)
 	ctx := e.As(e.Rep1, []ids.UUID{e.Team1}, integration.SchedulerPerms)
 	signatures := contacts.NewStore(InstallationDB(e.Pool))
-	own := "<p>" + strings.Repeat("界", contacts.SignatureMaxRunes-7) + "</p>"
+	own := "<p>" + strings.Repeat("界", signature.MaxHTMLRunes-7) + "</p>"
 	saved, err := signatures.SaveMyEmailSignature(ctx, contacts.SaveSignatureInput{Body: "Saved plain", HTML: &own})
 	if err != nil || saved.HTML != own {
 		t.Fatalf("boundary save = %+v, %v", saved, err)
@@ -262,8 +270,12 @@ func TestPersonalMarkupOmissionClearingAndUnicodeLimitsUseTheSignatureStore(t *t
 	tooLong := own + "界"
 	_, err = signatures.SaveMyEmailSignature(ctx, contacts.SaveSignatureInput{Body: "New plain", HTML: &tooLong})
 	var limit *contacts.SignatureTooLongError
-	if !errors.As(err, &limit) || limit.Field != "html" || limit.Runes != contacts.SignatureMaxRunes+1 {
+	if !errors.As(err, &limit) || limit.Field != "html" || limit.Runes != signature.MaxHTMLRunes+1 {
 		t.Fatalf("limit error = %v", err)
+	}
+	longBody := strings.Repeat("界", contacts.SignatureMaxRunes+1)
+	if _, err = signatures.SaveMyEmailSignature(ctx, contacts.SaveSignatureInput{Body: longBody}); !errors.As(err, &limit) || limit.Field != "body" || limit.Max != contacts.SignatureMaxRunes {
+		t.Fatalf("plain body limit error = %v", err)
 	}
 	payload, err := json.Marshal(map[string]string{"body": "New plain", "html": tooLong})
 	if err != nil {
@@ -313,7 +325,7 @@ func TestSignatureDraftAndSaveRefuseInvalidOptionalMarkup(t *testing.T) {
 		preview bool
 		body    string
 	}{
-		{true, `{"body":"","draft":{"html":"` + strings.Repeat("界", contacts.SignatureMaxRunes+1) + `"}}`},
+		{true, `{"body":"","draft":{"html":"` + strings.Repeat("界", signature.MaxHTMLRunes+1) + `"}}`},
 		{false, `{"body":"","html":null}`},
 	} {
 		request := httptest.NewRequest(http.MethodPost, "/v1/emails:sign-off", strings.NewReader(test.body)).WithContext(ctx)
@@ -327,6 +339,23 @@ func TestSignatureDraftAndSaveRefuseInvalidOptionalMarkup(t *testing.T) {
 		if response.Code != http.StatusUnprocessableEntity {
 			t.Fatalf("invalid markup accepted: %d %s", response.Code, response.Body.String())
 		}
+	}
+}
+
+func TestASignOffPreviewDrawsTheDraftsHttpsImageFromACopy(t *testing.T) {
+	e := integration.Setup(t)
+	ctx := e.As(e.Rep1, []ids.UUID{e.Team1}, integration.SchedulerPerms)
+	body := `{"body":"","draft":{"html":"<p>Anna</p><img src=\"https://cdn.example/logo.png\" alt=\"Company A\">"}}`
+	request := httptest.NewRequest(http.MethodPost, "/v1/emails:sign-off", strings.NewReader(body)).WithContext(ctx)
+	request.Header.Set("Content-Type", "application/json")
+	response := httptest.NewRecorder()
+	newActivitiesHandlers(e.Pool).WithSignatureImages(newSignaturePreviewImages(newFakeAssets(t), previewClock(t))).PreviewEmailSignOff(response, request)
+	var sign crmcontracts.EmailSignOff
+	if err := json.Unmarshal(response.Body.Bytes(), &sign); err != nil || response.Code != http.StatusOK || sign.Html == nil {
+		t.Fatalf("preview = %d %s", response.Code, response.Body.String())
+	}
+	if !strings.Contains(*sign.Html, `<img src="data:image/png;base64,`) || strings.Contains(*sign.Html, "cdn.example") || sign.Text != "Anna\nCompany A" {
+		t.Fatalf("the preview does not draw the image from a copy: %+v", sign)
 	}
 }
 
