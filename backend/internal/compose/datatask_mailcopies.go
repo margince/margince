@@ -53,11 +53,11 @@ func carryMailImportsTx(ctx context.Context, tx pgx.Tx, duplicate, survivor ids.
 	arg := func(value any) string { args = append(args, value); return fmt.Sprintf("$%d", len(args)) }
 	duplicateArg, survivorArg := arg(duplicate), arg(survivor)
 	var conflict bool
-	err := tx.QueryRow(ctx, `SELECT EXISTS (SELECT 1 FROM activity a WHERE a.archived_at IS NULL AND a.restricted_at IS NULL AND a.id=`+duplicateArg+` AND (a.audience='selected' OR a.audience_reason='manual' OR (`+"NOT ("+auth.WorkspaceAudienceSQL("a")+")"+` AND NOT EXISTS (SELECT 1 FROM capture_import i WHERE i.activity_id=a.id)))) OR EXISTS (SELECT 1 FROM capture_import other JOIN capture_import kept ON kept.activity_id=`+survivorArg+` AND kept.user_id=other.user_id WHERE other.activity_id=`+duplicateArg+` AND NOT `+sameImportAccess+`)`, args...).Scan(&conflict)
+	err := tx.QueryRow(ctx, `SELECT EXISTS (SELECT 1 FROM activity a WHERE a.archived_at IS NULL AND a.restricted_at IS NULL AND a.id=`+duplicateArg+` AND (a.audience='selected' OR a.audience_reason='manual' OR (`+"NOT ("+auth.WorkspaceAudienceSQL("a")+")"+` AND NOT EXISTS (SELECT 1 FROM capture_import i WHERE i.activity_id=a.id)))) OR EXISTS (SELECT 1 FROM capture_import other JOIN capture_import kept ON kept.activity_id=`+survivorArg+` AND `+sameImporter+` WHERE other.activity_id=`+duplicateArg+` AND NOT `+sameImportAccess+`)`, args...).Scan(&conflict)
 	if err != nil || conflict {
 		return false, err
 	}
-	rows, err := tx.Query(ctx, `SELECT user_id FROM capture_import WHERE activity_id=$1 ORDER BY user_id`, duplicate)
+	rows, err := tx.Query(ctx, `SELECT user_id FROM capture_import WHERE activity_id=$1 AND user_id IS NOT NULL ORDER BY user_id`, duplicate)
 	if err != nil {
 		return false, err
 	}
@@ -67,6 +67,19 @@ func carryMailImportsTx(ctx context.Context, tx pgx.Tx, duplicate, survivor ids.
 	}
 	for _, seat := range seats {
 		if err := capture.CarryImportTx(ctx, tx, duplicate, survivor, seat); err != nil {
+			return false, err
+		}
+	}
+	rows, err = tx.Query(ctx, `SELECT connection_id FROM capture_import WHERE activity_id=$1 AND user_id IS NULL ORDER BY connection_id`, duplicate)
+	if err != nil {
+		return false, err
+	}
+	mailboxes, err := pgx.CollectRows(rows, pgx.RowTo[ids.UUID])
+	if err != nil {
+		return false, err
+	}
+	for _, mailbox := range mailboxes {
+		if err := capture.CarrySharedImportTx(ctx, tx, duplicate, survivor, mailbox); err != nil {
 			return false, err
 		}
 	}

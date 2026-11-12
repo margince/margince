@@ -132,11 +132,28 @@ func appendWaitingReplyClause(ctx context.Context, in ListActivitiesInput, arg f
 	if in.WaitingReplyAsOf == nil {
 		return where, nil
 	}
-	clause, err := waitingReplyExistsClause(ctx, arg, *in.WaitingReplyAsOf, in.EntityType, in.EntityID, in.ownDomains, in.readerAddresses, in.horizonDays, "", neverRelaxed)
+	readersOwn := ""
+	if recordWaitingRead(in) {
+		readersOwn = readerResponsibilitySQL(ctx, in, arg)
+	}
+	clause, err := waitingReplyExistsClause(ctx, arg, *in.WaitingReplyAsOf, in.EntityType, in.EntityID, in.ownDomains, in.readerAddresses, in.horizonDays, readersOwn, neverRelaxed)
 	if err != nil {
 		return nil, err
 	}
 	return append(where, clause), nil
+}
+
+// recordWaitingRead is a waiting_reply read narrowed to one record, the read
+// behind a record page's "Just in" line.
+func recordWaitingRead(in ListActivitiesInput) bool {
+	return in.WaitingReplyAsOf != nil && in.EntityType != nil && in.EntityID != nil
+}
+
+// readerResponsibilitySQL hides a colleague's unanswered mail on the record,
+// which is the colleague's next step and never this reader's.
+func readerResponsibilitySQL(ctx context.Context, in ListActivitiesInput, arg func(any) int) string {
+	identities := fmt.Sprintf("$%d::jsonb", arg(in.mailIdentities))
+	return notAColleaguesOwnMailSQL(identities, fmt.Sprintf("$%d::uuid", arg(readerOrNobody(ctx))))
 }
 
 func appendRequestReviewClause(ctx context.Context, in ListActivitiesInput, arg func(any) int, where []string) ([]string, error) {

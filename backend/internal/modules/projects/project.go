@@ -38,14 +38,19 @@ const PhaseInitiative = "initiative"
 // later.
 const PhaseClosed = "closed"
 
-// CreateProjectInput is one new body of work. Phase and captured_by are
-// absent by design: both are the server's to decide.
+// CreateProjectInput is one new body of work. captured_by is absent by design:
+// it is the signed-in principal's.
 type CreateProjectInput struct {
 	Name string
-	// Key is NOT an input: the server mints it from the name (keymint.go) and
-	// createProjectTx fills this in for the response. A caller-chosen key is a
-	// subject-line matcher a caller can get wrong.
-	Key           *string
+	// Key is the key the creator chose, nil to have the server mint one
+	// (keymint.go). createProjectTx fills in the stored key for the response.
+	Key *string
+	// Phase is where the project starts; empty means initiative. A project
+	// is never born closed, because closing needs a reason (startPhase).
+	Phase string
+	// DealID is the deal this project comes from, attached in the create's
+	// transaction under the deal-side link's own check (AttachDeal).
+	DealID        *ids.DealID
 	CompanyID     ids.CompanyID
 	OwnerID       *ids.UserID
 	Description   *string
@@ -82,7 +87,7 @@ func (s *Store) CreateProject(ctx context.Context, in CreateProjectInput) (crmco
 	var out crmcontracts.Project
 	err = s.Tx(ctx, func(tx pgx.Tx) error {
 		var err error
-		out, err = createProjectTx(ctx, tx, in, by, active, s.attachCompany, s.projectCompanies)
+		out, err = createProjectTx(ctx, tx, in, by, active, s.createSeams())
 		return err
 	})
 	return out, err
@@ -92,7 +97,7 @@ func (s *Store) CreateProject(ctx context.Context, in CreateProjectInput) (crmco
 // runs the write shape, all inside the caller's transaction.
 func createProjectTx(
 	ctx context.Context, tx pgx.Tx, in CreateProjectInput, by string,
-	active []fieldcatalog.Column, attachCompany AttachCompany, companies ProjectCompanies,
+	active []fieldcatalog.Column, seams createSeams,
 ) (crmcontracts.Project, error) {
 	if err := refuseTargetEndBeforeStart(in.StartedAt, in.TargetEndDate, targetEndDateColumn); err != nil {
 		return crmcontracts.Project{}, err
@@ -113,7 +118,7 @@ func createProjectTx(
 	// The company rides the SAME transaction as the row, so a project whose
 	// company edge failed to land cannot commit alone — a project no company
 	// page shows is a project a reader cannot find.
-	if err := attachCompany(ctx, tx, id, in.CompanyID, CompanyRoleCustomer, by); err != nil {
+	if err := seams.attachCompany(ctx, tx, id, in.CompanyID, CompanyRoleCustomer, by); err != nil {
 		return crmcontracts.Project{}, fmt.Errorf("put the project's company on it: %w", err)
 	}
 
@@ -128,13 +133,13 @@ func createProjectTx(
 	if _, err := tx.Exec(ctx,
 		`INSERT INTO project_phase_history (project_id, from_phase, to_phase, changed_by, audit_log_id)
 		 VALUES ($1, NULL, $2, $3, $4)`,
-		id, PhaseInitiative, by, auditID); err != nil {
+		id, in.StartPhase(), by, auditID); err != nil {
 		return crmcontracts.Project{}, fmt.Errorf("record project phase history: %w", err)
 	}
 	created := crmcontracts.PublicEventProjectCreated{
 		Name:      in.Name,
 		CompanyId: openapi_types.UUID(in.CompanyID.UUID),
-		Phase:     PhaseInitiative,
+		Phase:     in.StartPhase(),
 	}
 	if in.Key != nil {
 		created.Key = in.Key
@@ -145,6 +150,13 @@ func createProjectTx(
 	}
 	if err := storekit.EmitEvent(ctx, tx, auditID, id.UUID, created); err != nil {
 		return crmcontracts.Project{}, fmt.Errorf("emit project.created: %w", err)
+	}
+	// After the project's own write shape, so the deal's update audit row
+	// names a project that already exists in this transaction.
+	if in.DealID != nil {
+		if err := seams.attachDeal(ctx, tx, *in.DealID, id); err != nil {
+			return crmcontracts.Project{}, err
+		}
 	}
 	out, err := readProject(ctx, tx, id, storekit.LiveOnly, active)
 	if err != nil {
@@ -157,7 +169,7 @@ func createProjectTx(
 	if err := maskProjects(ctx, tx, one); err != nil {
 		return crmcontracts.Project{}, err
 	}
-	return fillCompanies(ctx, tx, one[0], companies)
+	return fillCompanies(ctx, tx, one[0], seams.projectCompanies)
 }
 
 // RefuseArchiveProject answers every authority refusal ArchiveProject would

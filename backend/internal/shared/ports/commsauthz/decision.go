@@ -141,6 +141,9 @@ type Request struct {
 	// never the principal the dispatcher runs as. Zero means unknown, and then
 	// nothing that is scoped to an entity can allow the message.
 	SendingEntity ids.UUID
+	// DeliveryID is the delivery being decided. The engine sets it from its own
+	// argument at staging and from the transmit request; a caller's is replaced.
+	DeliveryID ids.UUID
 }
 
 // ExistingCustomerGround is the sale and the collection-notice declaration a

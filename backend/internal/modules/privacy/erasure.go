@@ -307,10 +307,7 @@ func anonymizeSubjectRows(
 		contactID).Scan(&keptHashes, &keptKey); err != nil {
 		return nil, fmt.Errorf("privacy: reading the anonymized address hashes: %w", err)
 	}
-	if _, err := tx.Exec(ctx, `
-		INSERT INTO erasure_suppression (kind, value_hash, key_id)
-		SELECT 'email', kept, $2 FROM unnest($1::text[]) AS kept
-		ON CONFLICT DO NOTHING`, keptHashes, keptKey); err != nil {
+	if err := armSuppression(ctx, tx, "email", keptHashes, keptKey); err != nil {
 		return nil, fmt.Errorf("privacy: keeping the anonymized addresses on the erasure list: %w", err)
 	}
 	// Only a row that still holds something is written. An already-anonymised

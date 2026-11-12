@@ -53,6 +53,10 @@ type CloseLostInput struct {
 	// SourceActivityID is the message the close was judged on, zero for a
 	// close on silence. The receipt links it to readers who may open it.
 	SourceActivityID ids.UUID
+	// HoldEvidence locks the rows StillDue reads, before the deal row lock.
+	// Their writers lock the activity first and the deal after, so the close
+	// takes its locks in that order too.
+	HoldEvidence func(ctx context.Context, tx pgx.Tx) error
 	// StillDue asks again, under the deal row lock, whether the deal should
 	// close. The evidence it reads is not this module's.
 	StillDue func(ctx context.Context, tx pgx.Tx) (bool, error)
@@ -75,13 +79,17 @@ func (s *Store) CloseAsLost(ctx context.Context, in CloseLostInput) (bool, error
 		return false, err
 	}
 	var closed bool
-	err = s.Tx(ctx, func(tx pgx.Tx) error {
-		actor, ok, err := actAsOwnerNow(ctx, tx, in.AsOwner, requireDealUpdate)
-		if err != nil || !ok {
+	// A lock cycle with a writer that took the deal before its activity is
+	// retried, and the close re-reads everything.
+	err = storekit.RetryLockCycles(ctx, func() error {
+		return s.Tx(ctx, func(tx pgx.Tx) error {
+			actor, ok, err := actAsOwnerNow(ctx, tx, in.AsOwner, requireDealUpdate)
+			if err != nil || !ok {
+				return err
+			}
+			closed, err = s.closeAsLostTx(actor, tx, in, active)
 			return err
-		}
-		closed, err = s.closeAsLostTx(actor, tx, in, active)
-		return err
+		})
 	})
 	return closed, err
 }
@@ -127,6 +135,9 @@ const CorrectionKindEvidenceKey = "margince_change"
 // closeStillDue locks the deal and re-asks every condition the decision rested
 // on. The decision and this write are separate transactions.
 func (s *Store) closeStillDue(ctx context.Context, tx pgx.Tx, in CloseLostInput) (bool, error) {
+	if err := in.HoldEvidence(ctx, tx); err != nil {
+		return false, err
+	}
 	if _, err := storekit.LockRow(ctx, tx, dealTable, in.DealID.UUID, storekit.LiveOnly); err != nil {
 		if errors.Is(err, apperrors.ErrNotFound) {
 			return false, nil

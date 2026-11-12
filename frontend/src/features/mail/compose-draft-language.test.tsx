@@ -230,7 +230,7 @@ describe("the language of an AI draft", () => {
 
     writeMessage("Body", "Hello Dana, and my own line.");
 
-    expect(screen.queryByRole("button", { name: "Shorter" })).toBeNull();
+    expect(screen.getByRole("button", { name: "Shorter" })).toBeTruthy();
     await pickOption(user, languagePicker(), "Deutsch");
     await waitFor(() =>
       expect(messageText("Body")).toBe("Hallo Dana, mit meiner Zeile."),

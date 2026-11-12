@@ -55,6 +55,10 @@ func (s *Store) Lift(ctx context.Context, in LiftInput) error {
 	})
 }
 
+// suppressionIDField is the wire field every refusal to lift a stop or a
+// restriction points at.
+const suppressionIDField = "suppression_id"
+
 // admitLift settles what is decidable before a connection is taken.
 func admitLift(ctx context.Context, in LiftInput) (subject, lifter, error) {
 	sub, err := consentSubject(RecordInput{ContactID: in.ContactID, LeadID: in.LeadID})
@@ -63,7 +67,7 @@ func admitLift(ctx context.Context, in LiftInput) (subject, lifter, error) {
 	}
 	if in.SuppressionID.IsZero() {
 		return subject{}, lifter{}, &ValidationError{
-			Field:  "suppression_id",
+			Field:  suppressionIDField,
 			Reason: "name the suppression to lift; a subject may carry more than one",
 		}
 	}
@@ -173,9 +177,6 @@ func (s *Store) liftAdmittedTx(
 	if err := lockSubjectSuppressions(ctx, tx, sub.id); err != nil {
 		return err
 	}
-	if err := storekit.LockSubjectsStopAddresses(ctx, tx, sub.id); err != nil {
-		return err
-	}
 	// EnsureRetractable, which IS EnsureWritable and says so: this is a write
 	// that RELEASES rather than adds, and it reaches an archived subject on
 	// purpose. The named spelling is what distinguishes that deliberate reach
@@ -183,11 +184,6 @@ func (s *Store) liftAdmittedTx(
 	if err := auth.EnsureRetractable(ctx, tx, sub.entityType, sub.id); err != nil {
 		return err
 	}
-	by, err := storekit.CapturedBy(ctx)
-	if err != nil {
-		return err
-	}
-
 	// BY ID, NOT BY PURPOSE — deliberately. A row's purpose_id (nil for a
 	// broad stop, a consent_purpose id for a narrow one) is not asked here at
 	// all, because LiftInput already names the one row to take back: whatever
@@ -196,7 +192,7 @@ func (s *Store) liftAdmittedTx(
 	// exactly one — there is nothing left for a purpose filter to do except
 	// occasionally answer not-found for a row that does exist.
 	var decided, kind, through string
-	err = tx.QueryRow(ctx, `
+	err := tx.QueryRow(ctx, `
 		SELECT s.decided_by_level, s.kind, s.recorded_through
 		  FROM communication_suppression s
 		 WHERE s.id = $1 AND s.`+sub.column+` = $2 AND s.revoked_at IS NULL
@@ -219,10 +215,40 @@ func (s *Store) liftAdmittedTx(
 			fmt.Errorf("%s: %w", liftRefusal(verdict.blockedBy), apperrors.ErrPermissionDenied))
 	}
 
+	basis := ""
+	if verdict.correction {
+		basis = liftBasisCorrection
+	}
+	return s.revokeStopTx(ctx, tx, sub, revocation{
+		stopID: in.SuppressionID, recordedAt: decided, by: caller.level, reason: in.Reason, basis: basis,
+	})
+}
+
+// revocation is one stop being taken back, and on what authority.
+type revocation struct {
+	stopID     ids.UUID
+	recordedAt string
+	by         commsauthz.AuthorityLevel
+	reason     string
+	// basis marks a lift that is not the ordinary outranking one.
+	basis string
+}
+
+// revokeStopTx writes a lift: the revoke, its audit row and its outbox event.
+// The caller has locked the subject's stops and judged the lift. The address
+// keys order the revoke against a send check on one of the subject's addresses.
+func (s *Store) revokeStopTx(ctx context.Context, tx pgx.Tx, sub subject, rev revocation) error {
+	if err := storekit.LockSubjectsStopAddresses(ctx, tx, sub.id); err != nil {
+		return err
+	}
+	by, err := storekit.CapturedBy(ctx)
+	if err != nil {
+		return err
+	}
 	if _, err = tx.Exec(ctx, `
 		UPDATE communication_suppression
 		   SET revoked_at = now()
-		 WHERE id = $1 AND revoked_at IS NULL`, in.SuppressionID); err != nil {
+		 WHERE id = $1 AND revoked_at IS NULL`, rev.stopID); err != nil {
 		return fmt.Errorf("consent: revoking the suppression: %w", err)
 	}
 
@@ -277,16 +303,16 @@ func (s *Store) liftAdmittedTx(
 	}
 
 	audit := map[string]any{
-		"lifted_suppression": in.SuppressionID.String(),
-		"recorded_at_level":  decided,
-		"lifted_by_level":    string(caller.level),
+		"lifted_suppression": rev.stopID.String(),
+		"recorded_at_level":  rev.recordedAt,
+		"lifted_by_level":    string(rev.by),
 		"lifted_by":          by,
 		// The lifter's words. Suppress keeps the subject's words off the
 		// audit payload; this reason is the installation explaining itself.
-		fieldReason: in.Reason,
+		fieldReason: rev.reason,
 	}
-	if verdict.correction {
-		audit[auditFieldLiftBasis] = liftBasisCorrection
+	if rev.basis != "" {
+		audit[auditFieldLiftBasis] = rev.basis
 	}
 	auditID, err := storekit.AuditEvent(ctx, tx, "update", sub.entityType, sub.id, audit)
 	if err != nil {
@@ -299,7 +325,7 @@ func (s *Store) liftAdmittedTx(
 		return nil
 	}
 	return storekit.EmitEvent(ctx, tx, auditID, sub.id,
-		suppressionLiftedPayload(in.SuppressionID, decided, caller.level, remaining))
+		suppressionLiftedPayload(rev.stopID, rev.recordedAt, rev.by, remaining))
 }
 
 // liveStopsOf answers the predicate that selects the live stops of one subject,
@@ -337,7 +363,7 @@ const (
 func liftRefusal(blockedBy crmcontracts.ContactStopLiftBlockedBy) string {
 	switch blockedBy {
 	case crmcontracts.ContactStopLiftBlockedByRestriction:
-		return "a processing restriction is lifted only after the contact is told in advance, which Margince cannot do yet"
+		return "a processing restriction is lifted only after the contact is told in advance: an admin lifts it with the notice"
 	case crmcontracts.ContactStopLiftBlockedBySubjectDecision:
 		return "the contact set this stop themselves; only they can change it"
 	case crmcontracts.ContactStopLiftBlockedByPermission:

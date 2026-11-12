@@ -5,14 +5,7 @@ package ai
 
 import (
 	"context"
-	"crypto"
-	"crypto/rand"
-	"crypto/rsa"
-	"crypto/sha256"
-	"crypto/x509"
-	"encoding/base64"
 	"encoding/json"
-	"encoding/pem"
 	"errors"
 	"fmt"
 	"io"
@@ -22,18 +15,19 @@ import (
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/margince/margince/backend/internal/platform/googlejwt"
+	"github.com/margince/margince/backend/internal/platform/netguard"
 )
 
 // vertexTokenURI is the one token endpoint a service-account assertion is
-// ever posted to. A key naming any other is refused: the signed assertion is
-// a bearer credential for an hour, and the key file is operator-supplied.
-const vertexTokenURI = "https://oauth2.googleapis.com/token" //nolint:gosec // G101: an endpoint address, not a credential
+// ever posted to.
+const vertexTokenURI = googlejwt.TokenURI
 
 const (
 	vertexScope          = "https://www.googleapis.com/auth/cloud-platform"
 	vertexAssertionTTL   = time.Hour
 	vertexRefreshHeadway = 5 * time.Minute
-	vertexJWTBearerGrant = "urn:ietf:params:oauth:grant-type:jwt-bearer" //nolint:gosec // G101: an OAuth grant type name, not a credential
 	vertexExchangeBudget = 30 * time.Second
 )
 
@@ -43,95 +37,32 @@ var vertexProjectID = regexp.MustCompile(`^[a-z][a-z0-9-]{4,28}[a-z0-9]$`)
 
 // errInvalidServiceAccount marks a key file that cannot be used. Its
 // messages name the field at fault and never the value.
-var errInvalidServiceAccount = errors.New("ai: gemini_vertex: invalid service account key")
+var errInvalidServiceAccount = googlejwt.ErrInvalidKey
 
-// vertexServiceAccount is the part of a Google service-account key file this
-// adapter uses.
+// vertexServiceAccount is a parsed key whose project id passed the path rule.
 type vertexServiceAccount struct {
-	clientEmail string
-	projectID   string
-	key         *rsa.PrivateKey
+	googlejwt.ServiceAccount
 }
 
 func parseVertexServiceAccount(keyFile string) (vertexServiceAccount, error) {
-	var file struct {
-		Type        string `json:"type"`
-		ProjectID   string `json:"project_id"`
-		PrivateKey  string `json:"private_key"`
-		ClientEmail string `json:"client_email"`
-		TokenURI    string `json:"token_uri"`
-	}
-	if err := json.Unmarshal([]byte(keyFile), &file); err != nil {
-		return vertexServiceAccount{}, fmt.Errorf("%w: the key file is not a JSON object", errInvalidServiceAccount)
-	}
-	switch {
-	case file.Type != "service_account":
-		return vertexServiceAccount{}, fmt.Errorf("%w: type must be service_account", errInvalidServiceAccount)
-	case !strings.Contains(file.ClientEmail, "@"):
-		return vertexServiceAccount{}, fmt.Errorf("%w: client_email is missing or not an address", errInvalidServiceAccount)
-	case !vertexProjectID.MatchString(file.ProjectID):
-		return vertexServiceAccount{}, fmt.Errorf("%w: project_id is missing or not a Google project id", errInvalidServiceAccount)
-	case file.TokenURI != "" && file.TokenURI != vertexTokenURI:
-		return vertexServiceAccount{}, fmt.Errorf("%w: token_uri must be %s", errInvalidServiceAccount, vertexTokenURI)
-	}
-	key, err := parseRSAPrivateKey(file.PrivateKey)
+	account, err := googlejwt.ParseServiceAccount(keyFile)
 	if err != nil {
-		return vertexServiceAccount{}, err
+		return vertexServiceAccount{}, fmt.Errorf("ai: gemini_vertex: %w", err)
 	}
-	return vertexServiceAccount{clientEmail: file.ClientEmail, projectID: file.ProjectID, key: key}, nil
+	if !vertexProjectID.MatchString(account.ProjectID) {
+		return vertexServiceAccount{}, fmt.Errorf("ai: gemini_vertex: %w: project_id is missing or not a Google project id", errInvalidServiceAccount)
+	}
+	return vertexServiceAccount{ServiceAccount: account}, nil
 }
 
-// parseRSAPrivateKey reads a PEM key in either encoding Google has issued.
-// The parser's own error is dropped: it describes the bytes it was given.
-func parseRSAPrivateKey(pemText string) (*rsa.PrivateKey, error) {
-	unreadable := fmt.Errorf("%w: private_key is not a PEM-encoded RSA key", errInvalidServiceAccount)
-	block, _ := pem.Decode([]byte(pemText))
-	if block == nil {
-		return nil, unreadable
-	}
-	switch block.Type {
-	case "RSA PRIVATE KEY":
-		key, err := x509.ParsePKCS1PrivateKey(block.Bytes)
-		if err != nil {
-			return nil, unreadable
-		}
-		return key, nil
-	case "PRIVATE KEY":
-		parsed, err := x509.ParsePKCS8PrivateKey(block.Bytes)
-		if err != nil {
-			return nil, unreadable
-		}
-		key, ok := parsed.(*rsa.PrivateKey)
-		if !ok {
-			return nil, unreadable
-		}
-		return key, nil
-	default:
-		return nil, unreadable
-	}
-}
-
-// assertion is the RS256-signed JWT the token endpoint exchanges for an
-// access token.
+// assertion is the Vertex assertion: the service account acts as itself, so
+// it names no subject.
 func (a vertexServiceAccount) assertion(issuedAt time.Time) (string, error) {
-	header := base64.RawURLEncoding.EncodeToString([]byte(`{"alg":"RS256","typ":"JWT"}`))
-	claims, err := json.Marshal(struct {
-		Issuer   string `json:"iss"`
-		Audience string `json:"aud"`
-		Scope    string `json:"scope"`
-		IssuedAt int64  `json:"iat"`
-		Expires  int64  `json:"exp"`
-	}{a.clientEmail, vertexTokenURI, vertexScope, issuedAt.Unix(), issuedAt.Add(vertexAssertionTTL).Unix()})
+	jwt, err := a.Assertion(googlejwt.Claims{Scope: vertexScope, IssuedAt: issuedAt, TTL: vertexAssertionTTL})
 	if err != nil {
-		return "", fmt.Errorf("ai: gemini_vertex: encode assertion claims: %w", err)
+		return "", fmt.Errorf("ai: gemini_vertex: %w", err)
 	}
-	signingInput := header + "." + base64.RawURLEncoding.EncodeToString(claims)
-	digest := sha256.Sum256([]byte(signingInput))
-	signature, err := rsa.SignPKCS1v15(rand.Reader, a.key, crypto.SHA256, digest[:]) // NOSONAR(go:S5542) a signature, not encryption: Google's jwt-bearer grant accepts only RS256
-	if err != nil {
-		return "", errors.New("ai: gemini_vertex: signing the token assertion failed")
-	}
-	return signingInput + "." + base64.RawURLEncoding.EncodeToString(signature), nil
+	return jwt, nil
 }
 
 // vertexTokenSource mints and caches the access token one service account
@@ -151,7 +82,7 @@ type vertexTokenSource struct {
 func newVertexTokenSource(account vertexServiceAccount, httpc *http.Client, clock Clock) *vertexTokenSource {
 	// No redirect is followed: a redirected exchange would carry the
 	// assertion to a host this code never named.
-	return &vertexTokenSource{account: account, http: noRedirect(httpc), clock: clock}
+	return &vertexTokenSource{account: account, http: netguard.NoRedirect(httpc), clock: clock}
 }
 
 type tokenExchange struct {
@@ -221,7 +152,7 @@ func (s *vertexTokenSource) exchange(ctx context.Context, issuedAt time.Time) (s
 	if err != nil {
 		return "", 0, err
 	}
-	form := url.Values{"grant_type": {vertexJWTBearerGrant}, "assertion": {assertion}}
+	form := url.Values{"grant_type": {googlejwt.JWTBearerGrant}, "assertion": {assertion}}
 	req, err := http.NewRequestWithContext(ctx, http.MethodPost, vertexTokenURI, strings.NewReader(form.Encode()))
 	if err != nil {
 		return "", 0, errors.New("ai: gemini_vertex: building the token request failed")

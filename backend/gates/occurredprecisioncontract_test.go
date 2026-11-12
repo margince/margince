@@ -78,6 +78,7 @@ var precisionlessTimes = gatekit.Waive(map[string]string{
 	"api/crm.yaml AutomationRun.occurred_at":                              "when an automation ran, the run's own instant",
 	"api/crm.yaml CaptureConnection.last_synced_at":                       "when a mailbox sync last ran, the sync's own instant",
 	"api/crm.yaml CaptureConnectionConcern.last_success_at":               "when this mailbox last synced successfully, the observer's clock",
+	"api/crm.yaml CaptureSharedMailboxConcern.last_success_at":            "when this shared mailbox last synced successfully, the observer's clock",
 	"api/crm.yaml CaptureConnection.last_success_at":                      "when this mailbox last synced successfully, the observer's clock",
 	"api/crm.yaml MailCaptureCoverage.last_success_at":                    "a successful sync checkpoint, not the time of a mail activity",
 	"api/crm.yaml CaptureSweepHealth.last_succeeded_at":                   "when a capture pass last finished, the pass's own instant",
@@ -182,6 +183,7 @@ const (
 // schema declares them, each with the reason.
 var instantTimeNames = gatekit.Waive(map[string]string{
 	"expected_updated_at": rowStamp,
+	"queued_at":           rowStamp,
 	"enrolled_at":         "server timestamp of source enrollment, never an activity occurrence",
 	"opened_at":           actStamp, "enabled_at": actStamp, "suspended_at": actStamp,
 	"created_at": rowStamp, "updated_at": rowStamp, "archived_at": rowStamp, "restricted_at": rowStamp,

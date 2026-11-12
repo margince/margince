@@ -7,6 +7,7 @@ import { api } from "../api/client";
 import type { components } from "../api/schema";
 import type { useT } from "../i18n";
 import { unwrap } from "../lib/problem";
+import { listedSocial } from "../lib/socialplatforms";
 import { addressPatch } from "./companyform";
 import type { CreateField, FormRows } from "./create";
 import type { NameOffer } from "./create.offered";
@@ -165,13 +166,11 @@ function stringField(value: unknown): string {
 export function mapContactUpdate(
   values: Record<string, unknown>,
   rows?: FormRows,
-  opened: Record<string, unknown> = {},
 ): UpdateContactRequest {
   const scalar = (key: string) =>
     Object.hasOwn(values, key)
       ? stringField(values[key]).trim() || null
       : undefined;
-  const social = opened.social;
   return {
     full_name: stringField(values.full_name).trim() || undefined,
     first_name: scalar("first_name"),
@@ -182,14 +181,13 @@ export function mapContactUpdate(
       values.visibility === "workspace" || values.visibility === "owner"
         ? values.visibility
         : undefined,
+    // The server merges `social` key by key, so a cleared link goes as "",
+    // which removes it.
     social: Object.hasOwn(values, "social.linkedin")
       ? {
-          ...(social && typeof social === "object" && !Array.isArray(social)
-            ? social
-            : {}),
           linkedin: scalar("social.linkedin")
             ? normalizeProfileUrl(stringField(values["social.linkedin"]))
-            : null,
+            : "",
         }
       : undefined,
     address: addressPatch(values),
@@ -288,6 +286,7 @@ export function contactEditComparison(
 ) {
   return {
     ...record,
+    social: listedSocial(record.social),
     emails: (record.emails ?? []).map((row, position) => ({
       email: row.email,
       email_type: row.email_type ?? "work",

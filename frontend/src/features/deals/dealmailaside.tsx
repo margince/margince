@@ -58,6 +58,8 @@ function useDealMail(dealId: string) {
               entity_id: dealId,
               kind: ["email"],
               limit: MAIL_ASIDE_ROWS,
+              // One mail several colleagues received takes one row, not two.
+              collapse_copies: true,
             },
           },
         }),

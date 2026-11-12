@@ -119,6 +119,8 @@ const audienceParticipants = "participants"
 const (
 	// The mailbox asked for it, and a verdict on the thread can clear it.
 	audienceReasonPosture = "posture"
+	// A held shared mailbox: its reader team and the message's parties read it.
+	audienceReasonSharedMailbox = "shared_mailbox"
 	// Nothing has judged the thread yet.
 	audienceReasonPendingVerdict = "pending_verdict"
 	// The message is filed under no record at all, because something JUDGED

@@ -197,10 +197,15 @@ func ownerAsAssignee(owner *ids.UUID) *ids.UserID {
 }
 
 // logSystemTaskTx writes the task. An owner who can no longer hold work costs
-// the task its assignee, not its existence, as logQualifyReminder rules. The
-// first try runs under a savepoint, so its refusal leaves tx usable.
+// the task its assignee, not its existence, as logQualifyReminder rules.
 func (w leadWorkTasks) logSystemTaskTx(ctx context.Context, tx pgx.Tx, in activities.LogActivityInput) error {
-	store := activities.NewStore(w.db)
+	return logTaskOrUnassignedTx(ctx, tx, activities.NewStore(w.db), in)
+}
+
+// logTaskOrUnassignedTx writes an automatic task for its assignee, or
+// unassigned when the store refuses that seat. The first try runs under a
+// savepoint, so its refusal leaves tx usable.
+func logTaskOrUnassignedTx(ctx context.Context, tx pgx.Tx, store *activities.Store, in activities.LogActivityInput) error {
 	attempt, err := tx.Begin(ctx)
 	if err != nil {
 		return fmt.Errorf("compose: opening the task savepoint: %w", err)

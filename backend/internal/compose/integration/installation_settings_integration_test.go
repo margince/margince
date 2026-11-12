@@ -27,6 +27,7 @@ import (
 	"errors"
 	"fmt"
 	"maps"
+	"reflect"
 	"strings"
 	"testing"
 	"time"
@@ -398,11 +399,11 @@ func TestBaseCurrencyFreezesOnceADealHasConvertedAgainstIt(t *testing.T) {
 	if !got.BaseCurrencyLocked {
 		t.Fatal("the base currency is still reported changeable after a deal froze a rate against it")
 	}
-	if want := (currencylock.Lock{Reason: currencylock.RatesFrozen, Count: 1}); got.BaseCurrencyLock != want {
+	if want := (currencylock.Lock{Reason: currencylock.RatesFrozen, Count: 1}); !reflect.DeepEqual(withoutBreakdown(got.BaseCurrencyLock), want) {
 		t.Errorf("lock = %+v, want %+v", got.BaseCurrencyLock, want)
 	}
-	if !strings.Contains(got.BaseCurrencyLock.Prose(), "1 record") {
-		t.Errorf("lock reason = %q, want it to name how many records converted", got.BaseCurrencyLock.Prose())
+	if prose := got.BaseCurrencyLock.Prose(); !strings.Contains(prose, "1 record(s) (closed deals: 1) have") {
+		t.Errorf("lock reason = %q, want it to name how many records converted, and only the deal", prose)
 	}
 
 	// And the write is refused, as a field fault naming the setting.
@@ -519,7 +520,7 @@ func TestBaseCurrencyWillNotMoveOutFromUnderAPricedRateSheet(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if want := (currencylock.Lock{Reason: currencylock.RateSheet, Count: 1, BaseCurrency: base.BaseCurrency}); read.BaseCurrencyLock != want {
+	if want := (currencylock.Lock{Reason: currencylock.RateSheet, Count: 1, BaseCurrency: base.BaseCurrency}); !reflect.DeepEqual(withoutBreakdown(read.BaseCurrencyLock), want) {
 		t.Errorf("lock = %+v, want %+v", read.BaseCurrencyLock, want)
 	}
 
@@ -569,9 +570,21 @@ func TestTheFrozenRateCountSumsEveryKindOfRecord(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if want := (currencylock.Lock{Reason: currencylock.RatesFrozen, Count: 5}); got.BaseCurrencyLock != want {
+	if want := (currencylock.Lock{Reason: currencylock.RatesFrozen, Count: 5}); !reflect.DeepEqual(withoutBreakdown(got.BaseCurrencyLock), want) {
 		t.Errorf("lock = %+v, want one count over all five kinds: %+v", got.BaseCurrencyLock, want)
 	}
+	for _, kind := range []string{"closed deals: 1", "sent offers: 1", "mirrored invoices: 1", "contracts: 1", "commission entries: 1"} {
+		if !strings.Contains(got.BaseCurrencyLock.Prose(), kind) {
+			t.Errorf("lock reason = %q, want it to name %q", got.BaseCurrencyLock.Prose(), kind)
+		}
+	}
+}
+
+// withoutBreakdown is a lock without the per-table counts, so a test can
+// compare the facts it states as a whole.
+func withoutBreakdown(lock currencylock.Lock) currencylock.Lock {
+	lock.Frozen = nil
+	return lock
 }
 
 // A sheet with no stored base still locks the currency. The facts leave the
@@ -597,7 +610,7 @@ func TestARateSheetWithNoStoredBaseLocksWithoutNamingOne(t *testing.T) {
 	if !got.BaseCurrencyLocked {
 		t.Fatal("a priced sheet with no stored base left the currency changeable")
 	}
-	if want := (currencylock.Lock{Reason: currencylock.RateSheet, Count: 2}); got.BaseCurrencyLock != want {
+	if want := (currencylock.Lock{Reason: currencylock.RateSheet, Count: 2}); !reflect.DeepEqual(withoutBreakdown(got.BaseCurrencyLock), want) {
 		t.Errorf("lock = %+v, want %+v", got.BaseCurrencyLock, want)
 	}
 }

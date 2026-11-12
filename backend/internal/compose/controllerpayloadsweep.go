@@ -31,6 +31,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/comms"
+	"github.com/margince/margince/backend/internal/modules/consent"
 	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/platform/jobs"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -66,8 +67,11 @@ type controllerPayloadSweepWorker struct {
 	// to "whose vault is this".
 	vault controllerPayloads
 	alarm receiptAlarm
-	clock func() time.Time
-	log   *slog.Logger
+	// restrictions ends a restriction whose lift notice went out while the
+	// receipt's own effect did not apply.
+	restrictions *consent.Store
+	clock        func() time.Time
+	log          *slog.Logger
 }
 
 func newControllerPayloadSweepWorker(
@@ -75,10 +79,23 @@ func newControllerPayloadSweepWorker(
 	store *comms.Store,
 	vault controllerPayloads,
 	alarm receiptAlarm,
+	restrictions *consent.Store,
 	log *slog.Logger,
 ) *controllerPayloadSweepWorker {
 	return &controllerPayloadSweepWorker{
-		identity: idsvc, store: store, vault: vault, alarm: alarm, clock: time.Now, log: log,
+		identity: idsvc, store: store, vault: vault, alarm: alarm, restrictions: restrictions, clock: time.Now, log: log,
+	}
+}
+
+// liftSentRestrictions ends each restriction whose lift notice was sent. Best
+// effort, like the receipts above: a failure is logged and the next pass retries.
+func (w *controllerPayloadSweepWorker) liftSentRestrictions(ctx context.Context) {
+	lifted, err := w.restrictions.LiftSentRestrictions(ctx)
+	if err != nil {
+		w.log.ErrorContext(ctx, "reading restrictions whose lift notice was sent failed", "err", err)
+	}
+	if lifted > 0 {
+		w.log.WarnContext(ctx, "restrictions whose lift notice was sent were ended by the sweep", "count", lifted)
 	}
 }
 
@@ -138,6 +155,7 @@ func (w *controllerPayloadSweepWorker) Work(ctx context.Context, _ *river.Job[Co
 	if err := w.alarmMissedReceipts(ctx); err != nil {
 		return jobs.FaultContext(ctx, err)
 	}
+	w.liftSentRestrictions(ctx)
 
 	// Paged past what this run already attempted, so a batch that will never
 	// delete costs one batch rather than the whole backlog: without it the same
@@ -241,6 +259,7 @@ func addControllerPayloadSweepJob(reg *jobRegistry, pool *pgxpool.Pool, cfg JobR
 		comms.NewStore(db, time.Now, activities.NewStore(db)),
 		controllerPayloads{v: cfg.ControllerVault},
 		receiptAlarm{db: db},
+		consent.NewStore(db),
 		log)
 	addDeclaredWorker[ControllerPayloadSweepArgs](reg, worker)
 	return periodicFor(cfg, ControllerPayloadSweepArgs{})

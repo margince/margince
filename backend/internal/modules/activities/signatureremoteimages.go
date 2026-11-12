@@ -12,6 +12,11 @@ import (
 	"golang.org/x/net/html/atom"
 )
 
+// RemoteImageBoxAttribute marks the box an undrawn image becomes, so the
+// approval card knows to offer the drawn read. frontend/src/features/automations/remoteimagebox.ts
+// mirrors it.
+const RemoteImageBoxAttribute = "data-remote-image"
+
 // The box an image with no size of its own takes.
 const remoteImageBoxWidth, remoteImageBoxHeight = "96", "32"
 
@@ -84,7 +89,9 @@ func remoteImagePlaceholder(img *html.Node) *html.Node {
 	style := fmt.Sprintf("display:inline-block;box-sizing:border-box;width:%s;height:%s;overflow:hidden;"+
 		"border:1px dashed #9aa3ad;color:#5f6b76;font:11px sans-serif;padding:2px",
 		boxLength(attribute(img, "width"), remoteImageBoxWidth), boxLength(attribute(img, "height"), remoteImageBoxHeight))
-	box := &html.Node{Type: html.ElementNode, Data: "span", DataAtom: atom.Span, Attr: []html.Attribute{{Key: "style", Val: style}}}
+	box := &html.Node{Type: html.ElementNode, Data: "span", DataAtom: atom.Span, Attr: []html.Attribute{
+		{Key: "style", Val: style}, {Key: RemoteImageBoxAttribute, Val: ""},
+	}}
 	box.AppendChild(&html.Node{Type: html.TextNode, Data: label})
 	return box
 }

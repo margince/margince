@@ -306,6 +306,7 @@ func stagedRequestFor(req commsauthz.TransmitRequest, r connector.Recipient, cla
 	}
 	return commsauthz.Request{
 		Recipients:       []connector.Recipient{r},
+		DeliveryID:       req.DeliveryID,
 		Context:          staged.category,
 		LegacyPurposeKey: purposeKey,
 		MarketingPurpose: deliveryKey,

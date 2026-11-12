@@ -4,8 +4,12 @@
 package company360
 
 // The account card asks "Done?" over a promise read out of a message when we
-// wrote to its recipient on that thread afterwards. A task row on this page
-// names no source message, so only a claim can be asked about here.
+// wrote to its recipient on that thread afterwards. Only a claim is asked about
+// on the card; a promise task asks in its next-steps row (askTasksDone).
+//
+// momentaction decides which claim is asked, for this card and the contact
+// page alike. Both keep its Not yet in the contact page's store, so an answer
+// on one page holds on the other.
 
 import (
 	"context"
@@ -13,31 +17,60 @@ import (
 	"time"
 
 	"github.com/jackc/pgx/v5"
-	openapi_types "github.com/oapi-codegen/runtime/types"
 
 	"github.com/margince/margince/backend/internal/compose/momentaction"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
-	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/modules/identity"
-	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/deadline"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/owedwork"
 )
 
+// DoneAnswers stores a reader's Not yet to a may-be-done question. The contact
+// page's service is the one store; WithDoneAnswers binds it.
+type DoneAnswers interface {
+	DismissMoment(ctx context.Context, contactID ids.ContactID, in crmcontracts.DismissContactMomentRequest) error
+	RestoreMoment(ctx context.Context, contactID ids.ContactID, in crmcontracts.DismissContactMomentRequest) error
+}
+
+// WithDoneAnswers binds where the card's Not yet is stored.
+func (s *Service) WithDoneAnswers(answers DoneAnswers) *Service {
+	s.doneAnswers = answers
+	return s
+}
+
+// errNoDoneAnswers is a Not yet on a service built without WithDoneAnswers.
+var errNoDoneAnswers = errors.New("company360: no store is bound for a Not yet to Done?")
+
+// doneAsk is the question one claim raises and the contact it was made to,
+// whose page keeps the answer.
+type doneAsk struct {
+	moment  crmcontracts.ContactMoment
+	contact ids.ContactID
+}
+
+// answer is the Not yet the question takes.
+func (q doneAsk) answer() crmcontracts.DismissContactMomentRequest {
+	return crmcontracts.DismissContactMomentRequest{ClaimKey: q.moment.ClaimKey, EvidenceFingerprint: q.moment.EvidenceFingerprint}
+}
+
 // doneQuestions is, per claim on the card, the question its later mail raises.
-func doneQuestions(ctx context.Context, tx pgx.Tx, now time.Time, said momentCopy, items []owedwork.Item) (map[string]crmcontracts.ContactMoment, error) {
-	var bases []activities.PromiseBasis
-	claims := map[ids.UUID]owedwork.Item{}
+func doneQuestions(ctx context.Context, tx pgx.Tx, now time.Time, said momentCopy, items []owedwork.Item) (map[string]doneAsk, error) {
+	var promises []momentaction.DonePromise
+	byClaim := map[ids.UUID]owedwork.Item{}
 	for _, item := range items {
-		if claim, ok := item.Ref.(contacts.CompanyCommitment); ok {
-			claims[claim.ID] = item
-			bases = append(bases, activities.PromiseBasis{PromiseID: claim.ID, SourceActivityID: claim.ActivityID, RecipientContactID: claim.ContactID.UUID})
+		claim, ok := item.Ref.(contacts.CompanyCommitment)
+		if !ok {
+			continue
+		}
+		// The account read leaves out a claim that became a task.
+		if promise, ok := momentaction.ClaimDone(claim.ID, claim.ActivityID, claim.ContactID.UUID, nil); ok {
+			promises, byClaim[claim.ID] = append(promises, promise), item
 		}
 	}
-	followUps, err := activities.PromiseFollowUpsTx(ctx, tx, bases, now)
+	followUps, err := momentaction.DoneFollowUpsTx(ctx, tx, promises, now)
 	if err != nil || len(followUps) == 0 {
 		return nil, err
 	}
@@ -47,24 +80,20 @@ func doneQuestions(ctx context.Context, tx pgx.Tx, now time.Time, said momentCop
 	if err != nil {
 		return nil, err
 	}
-	asked := map[string]crmcontracts.ContactMoment{}
-	for id, sent := range followUps {
-		item := claims[id]
+	asked := map[string]doneAsk{}
+	for _, promise := range promises {
+		item := byClaim[promise.ID]
 		plain := said.promiseCard(now, item, deadline.Passed(item.DueAt, now))
-		q := momentaction.DoneQuestion{
-			Plain: plain, Kind: crmcontracts.ContactMomentMayBeDonePromiseTypeClaim, PromiseID: openapi_types.UUID(id), Sent: sent,
-			Key: momentKey("moment:account_may_be_done", openapi_types.UUID(id)),
+		if moment, ok := momentaction.AskPromiseDone(said.Spoken, loc, plain, promise, followUps); ok {
+			asked[plain.ClaimKey] = doneAsk{moment: moment, contact: ids.From[ids.ContactKind](promise.Contact)}
 		}
-		evidence := momentaction.DoneEvidence(said.Spoken, q)
-		fingerprint := accountFingerprint(evidence, owedwork.Mark{Kind: "claim", ID: id.String(), At: item.DueAt})
-		asked[plain.ClaimKey] = momentaction.AskDone(said.Spoken, loc, q, evidence, fingerprint)
 	}
 	return asked, nil
 }
 
 // askDone swaps the card for its question unless this reader answered Not
-// yet to it. A caller with no screen of their own has no answer to honour.
-func (s *Service) askDone(ctx context.Context, tx pgx.Tx, companyID ids.CompanyID, now time.Time, said momentCopy, items []owedwork.Item, moment crmcontracts.ContactMoment) (crmcontracts.ContactMoment, error) {
+// yet to it on either page.
+func askDone(ctx context.Context, tx pgx.Tx, now time.Time, said momentCopy, items []owedwork.Item, moment crmcontracts.ContactMoment) (crmcontracts.ContactMoment, error) {
 	asked, err := doneQuestions(ctx, tx, now, said, items)
 	if errors.Is(err, apperrors.ErrPermissionDenied) {
 		return moment, nil
@@ -76,14 +105,50 @@ func (s *Service) askDone(ctx context.Context, tx pgx.Tx, companyID ids.CompanyI
 	if !ok {
 		return moment, nil
 	}
-	if auth.RequireHumanOrItsAgent(ctx) == nil {
-		dismissed, err := s.dismissedFingerprints(ctx, tx, companyID, []string{question.EvidenceFingerprint})
-		if err != nil {
-			return moment, err
-		}
-		if dismissed[question.EvidenceFingerprint] {
-			return moment, nil
+	setAside, err := momentaction.DoneSetAsidesTx(ctx, tx, []string{question.moment.ClaimKey})
+	if err != nil {
+		return moment, err
+	}
+	if setAside[momentaction.DoneSetAside{Contact: question.contact.UUID, Key: question.moment.ClaimKey, Fingerprint: question.moment.EvidenceFingerprint}] {
+		return moment, nil
+	}
+	return question.moment, nil
+}
+
+// doneQuestionWith is the question on this account whose fingerprint the
+// reader answered, when one is asked.
+func (s *Service) doneQuestionWith(
+	ctx context.Context, tx pgx.Tx, companyID ids.CompanyID, now time.Time, within *ids.ProjectID, fingerprint string,
+) (doneAsk, bool, error) {
+	items, _, err := s.openPromises(ctx, tx, companyID, now, AssembleOptions{ProjectID: within})
+	if errors.Is(err, apperrors.ErrPermissionDenied) {
+		return doneAsk{}, false, nil
+	}
+	if err != nil {
+		return doneAsk{}, false, err
+	}
+	asked, err := doneQuestions(ctx, tx, now, momentCopyFor("en"), items)
+	if errors.Is(err, apperrors.ErrPermissionDenied) {
+		return doneAsk{}, false, nil
+	}
+	if err != nil {
+		return doneAsk{}, false, err
+	}
+	for _, question := range asked {
+		if question.moment.EvidenceFingerprint == fingerprint {
+			return question, true, nil
 		}
 	}
-	return question, nil
+	return doneAsk{}, false, nil
+}
+
+// answerDone stores or clears a Not yet where the contact page keeps it.
+func (s *Service) answerDone(ctx context.Context, question doneAsk, notYet bool) error {
+	if s.doneAnswers == nil {
+		return errNoDoneAnswers
+	}
+	if notYet {
+		return s.doneAnswers.DismissMoment(ctx, question.contact, question.answer())
+	}
+	return s.doneAnswers.RestoreMoment(ctx, question.contact, question.answer())
 }

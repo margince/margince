@@ -6,7 +6,7 @@
     "required_only_as_one_of_a_set": 2,
     "never_driven": 9,
     "permitted_but_never_required": 4,
-    "tokens_served_but_never_driven": 4998,
+    "tokens_served_but_never_driven": 5192,
     "use_case_cases": 71,
     "acceptance_criteria_named": 118,
     "tools_added_by_shipped_units": 0,
@@ -3818,6 +3818,18 @@
       "measured_by_model": {}
     },
     {
+      "name": "change_record_parts",
+      "tokens": 815,
+      "agents": [],
+      "required_by_cases": [],
+      "required_as_one_of_a_set_by_cases": [],
+      "permitted_in_cases": [],
+      "driven": false,
+      "required_only_as_one_of_a_set": false,
+      "graded_by_certification_tasks": null,
+      "measured_by_model": {}
+    },
+    {
       "name": "run_research",
       "tokens": 776,
       "agents": [],
@@ -3845,18 +3857,6 @@
         "case91_add_a_review_stage",
         "case94_a_field_for_the_region"
       ],
-      "driven": false,
-      "required_only_as_one_of_a_set": false,
-      "graded_by_certification_tasks": null,
-      "measured_by_model": {}
-    },
-    {
-      "name": "change_record_parts",
-      "tokens": 621,
-      "agents": [],
-      "required_by_cases": [],
-      "required_as_one_of_a_set_by_cases": [],
-      "permitted_in_cases": [],
       "driven": false,
       "required_only_as_one_of_a_set": false,
       "graded_by_certification_tasks": null,
@@ -3932,7 +3932,7 @@
     },
     {
       "name": "read_record",
-      "tokens": 324,
+      "tokens": 336,
       "agents": [
         "morning_brief",
         "overnight_at_risk_sweep"
@@ -4107,7 +4107,7 @@
     },
     {
       "name": "read_workspace",
-      "tokens": 2747,
+      "tokens": 2750,
       "agents": [],
       "required_by_cases": [
         "case111_how_is_the_workspace_doing",

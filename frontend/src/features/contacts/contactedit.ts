@@ -56,7 +56,7 @@ export function useContactEdit(contact: Contact): RailEdit {
     },
     resolveExisting: (_code, id) => ({ screen: "contacts", id }),
     save: async (values, rows, opened, extra) => {
-      const patch = { ...mapContactUpdate(values, rows, opened), ...extra };
+      const patch = { ...mapContactUpdate(values, rows), ...extra };
       const saved = await saveRecordEdit("contact", rawRecord(opened), patch);
       // Handing a private contact to a colleague can take it out of the
       // giver's reach; the page would then fail on its own refetch.

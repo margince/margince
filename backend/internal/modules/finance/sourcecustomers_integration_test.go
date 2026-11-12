@@ -131,7 +131,8 @@ func TestTheDirectoryPagesInNameOrderAndNamesTheLinkedCompany(t *testing.T) {
 }
 
 // Relinking moves the customer, linking it where it already is writes nothing,
-// and unlinking takes it off. Each change is one audit row.
+// and unlinking takes it off. A move archives the old link and makes a new one,
+// two audit rows, because a link never changes its company.
 func TestLinkingMovesACustomerAndUnlinkingTakesItOff(t *testing.T) {
 	a := setupSourceAdmin(t)
 	a.syncDirectory(t)
@@ -160,8 +161,8 @@ func TestLinkingMovesACustomerAndUnlinkingTakesItOff(t *testing.T) {
 		t.Errorf("BETA-02 is still on %q after the unlink", got)
 	}
 	expect(t, a.unlink(ctx, "BETA-02"), http.StatusNoContent, "")
-	if got := linkAudits(); got != 3 {
-		t.Errorf("%d link audit rows, want create, update and archive", got)
+	if got := linkAudits(); got != 4 {
+		t.Errorf("%d link audit rows, want create, archive and create for the move, and archive", got)
 	}
 }
 

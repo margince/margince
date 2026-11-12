@@ -217,24 +217,6 @@ func phonesMergedOnto(current []byte, mapped []contacts.ContactPhoneInput) ([]co
 	return merged, true, nil
 }
 
-// socialMergedOnto lays the file's handles over the stored ones, because the
-// store replaces the whole social set it is given.
-func socialMergedOnto(current []byte, mapped map[string]any) (map[string]any, bool, error) {
-	if len(mapped) == 0 {
-		return nil, false, nil
-	}
-	var record struct {
-		Social map[string]any `json:"social"`
-	}
-	if err := json.Unmarshal(current, &record); err != nil {
-		return nil, false, fmt.Errorf("import: reading the stored social links: %w", err)
-	}
-	merged := make(map[string]any, len(record.Social)+len(mapped))
-	maps.Copy(merged, record.Social)
-	maps.Copy(merged, mapped)
-	return merged, true, nil
-}
-
 // storedPrimaryPhone reads the `phone` target: a lead's column, or a contact's
 // primary work number.
 func storedPrimaryPhone(current map[string]json.RawMessage) json.RawMessage {

@@ -268,6 +268,23 @@ BEGIN
     RETURNING id INTO conn;
   END IF;
 
+  -- A link names an entry of the source's directory, so the finance-demo
+  -- directory (DEMO-0001 to DEMO-0050) is written first, with the create audit
+  -- row the sync writes. The next sync replaces each name with the source's.
+  WITH entry AS (
+    INSERT INTO finance_external_customer
+           (connection_id, external_customer_id, display_name, sync_hash, source, captured_by)
+    SELECT conn, d.external_id, d.external_id, '', 'system', 'system:seed'
+      FROM (SELECT 'DEMO-' || lpad(g::text, 4, '0') AS external_id
+              FROM generate_series(1, 50) g) d
+    ON CONFLICT (connection_id, external_customer_id) DO NOTHING
+    RETURNING id, display_name, sync_hash
+  )
+  INSERT INTO audit_log (actor_type, actor_id, action, entity_type, entity_id, after)
+  SELECT 'system', 'system:seed', 'create', 'finance_external_customer', id,
+         jsonb_build_object('display_name', display_name, 'sync_hash', sync_hash)
+    FROM entry;
+
   -- Customers only. A target or a prospect has never been invoiced, and the
   -- card is absent for them by design (FIN-AC-3) — linking one would put a
   -- ledger behind a company we have never billed.

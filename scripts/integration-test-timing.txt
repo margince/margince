@@ -80,6 +80,7 @@ backend|./internal/compose/briefs|TestTheQueueRanksTheReadersOwnWorkRatherThanEv
 backend|./internal/compose/briefs|TestTheRankingDoesNotRestOnAnActivityTheRepIsNotInTheAudienceOf|3.19
 backend|./internal/compose/briefs|TestTheRevenueNormIsTakenOverAmountsTheReaderMayRead|4.21
 backend|./internal/compose/briefs|TestTwoBriefAssembliesOnOneMorningProduceOneRun|3.16
+backend|./internal/compose/channelaxis|TestNoContractEnumSpellsARegisteredTransport|1.00
 backend|./internal/compose/companyscan|TestACanceledMeetingIsNotAnExchangeTheScanReads|5.76
 backend|./internal/compose/companyscan|TestAReaderWhoCannotSeePartnersGetsNoDealAdvice|1.37
 backend|./internal/compose/companyscan|TestBudgetRecoveryPreservesTheAccountScanRequest|1.61
@@ -1486,6 +1487,7 @@ backend|./internal/compose/integration|TestAWorkerWithNoObjectStoreFailsTheRun|2
 backend|./internal/compose/integration|TestAWorkerWithNoObjectStoreFailsTheValidation|2.49
 backend|./internal/compose/integration|TestAWorklistDoneBreakingItsDeclaredLimitsIsA422NamingRows|2.37
 backend|./internal/compose/integration|TestAWorklistReadTimesEachOfItsStages|5.97
+backend|./internal/compose/integration|TestAWorklistReadsStatementsAddUpToWhatThePoolSaw|1.71
 backend|./internal/compose/integration|TestAWorksWithEdgeHidesWithItsFarEnd|1.20
 backend|./internal/compose/integration|TestAWorkspaceContactListsEveryReaderAndOnlyThem|3.09
 backend|./internal/compose/integration|TestAWriteGrantIsRefusedToAReadSeat|2.66
@@ -3983,7 +3985,6 @@ backend|./internal/compose|TestAWeeklyPreferenceReadFailureDefersWithoutSpending
 backend|./internal/compose|TestAWeeksCloseStampsTheBasisAndIsNoPrediction|2.99
 backend|./internal/compose|TestAWithdrawnMeetingClaimComesBackWhenTheMeetingProvesItAgain|1.93
 backend|./internal/compose|TestAWithheldCellExplainsToWithheldRatherThanToNothing|1.11
-backend|./internal/compose|TestAWorklistReadsStatementsAddUpToWhatThePoolSaw|3.27
 backend|./internal/compose|TestAWorkspaceBotsChannelMessageRecordsNoImport|1.01
 backend|./internal/compose|TestAWorkspacePurgeKeepsMailWhereTheSubjectWasOnlyCopied|2.98
 backend|./internal/compose|TestAWriteAllowanceSavedByAnAdminBindsTheAgent|1.22
@@ -4666,7 +4667,6 @@ backend|./internal/compose|TestNewMailOnAnOpenVendorQuestionReadsNoSiteAgain|6.9
 backend|./internal/compose|TestNewerMailInTheSameConversationSuppliesReplyLanguage|1.93
 backend|./internal/compose|TestNewerMailReturnsADeferredQuestionToADeciderWithNoReaderRow|1.50
 backend|./internal/compose|TestNewerUnchangedAdmissionPreventsAnOlderResultFromReplacingIt|2.26
-backend|./internal/compose|TestNoContractEnumSpellsARegisteredTransport|1.00
 backend|./internal/compose|TestNoDimensionAnswersAJSONNumberWithAServerFault|1.08
 backend|./internal/compose|TestNoDimensionAnswersAStringItCannotHoldWithAServerFault|3.41
 backend|./internal/compose|TestNoNextMeetingPastTheWindowOrBesideOneLeftToday|9.22

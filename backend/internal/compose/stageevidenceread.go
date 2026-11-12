@@ -41,6 +41,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/kernel/textlang"
 	"github.com/margince/margince/backend/internal/shared/kernel/values"
+	"github.com/margince/margince/backend/internal/shared/ports/model"
 )
 
 // stageEvidenceReadActor is what the audit trail names as the writer of these
@@ -102,7 +103,7 @@ func (r *StageEvidenceReader) Read(
 	// reaches these payloads through the deal it names. No label: this reading
 	// is queued from an activity and never loads the deal's name, and a second
 	// query for one would spend a round trip on a word the rail can do without.
-	claims, err := r.ask(ai.WithSubject(actorCtx, dealID.Ref(), ""), criteria, facts.spans)
+	claims, err := r.ask(ai.WithSubject(actorCtx, dealID.Ref(), ""), activityID, criteria, facts.spans)
 	if err != nil {
 		return 0, err
 	}
@@ -209,9 +210,10 @@ func (r *StageEvidenceReader) criteriaOf(
 // reading of a later message can settle the same criterion, and faulting the
 // job would re-ask the same question of the same words on every retry.
 func (r *StageEvidenceReader) ask(
-	ctx context.Context, criteria []stageEvidenceCriterion, spans []stageEvidenceSpan,
+	ctx context.Context, activity ids.UUID, criteria []stageEvidenceCriterion, spans []stageEvidenceSpan,
 ) ([]stageEvidenceClaim, error) {
 	req := stageEvidenceRequest(criteria, spans, identity.BaseLanguageForPrompt(ctx, r.pool))
+	req.Subjects = model.AboutActivities(activity)
 	validate := stageEvidenceValid(criteria, spans)
 	resp, err := ai.Ask(ctx, r.brain, req, validate)
 	if err != nil {

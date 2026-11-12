@@ -79,7 +79,7 @@ func (a *assembly) readMoment() error {
 		return err
 	}
 	said := momentCopyFor(string(a.recordLanguage()))
-	moment, err := a.svc.askDone(a.ctx, a.tx, a.companyID, a.now, said, items, said.momentOf(a.now, items))
+	moment, err := askDone(a.ctx, a.tx, a.now, said, items, said.momentOf(a.now, items))
 	if err != nil {
 		return err
 	}

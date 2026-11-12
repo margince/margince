@@ -6,7 +6,7 @@ The 22 tables owned by `identity`, as the migrations build them. [Back to the en
 
 ## app_user
 
-39 columns · primary key `(id)` · referenced by 155 foreign keys
+39 columns · primary key `(id)` · referenced by 156 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
@@ -651,7 +651,7 @@ The 22 tables owned by `identity`, as the migrations build them. [Back to the en
 
 ## team
 
-6 columns · primary key `(id)` · referenced by 9 foreign keys
+6 columns · primary key `(id)` · referenced by 10 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
@@ -675,6 +675,7 @@ The 22 tables owned by `identity`, as the migrations build them. [Back to the en
 
 **Triggers**
 
+- `home_read_fence_team_archived`: `AFTER UPDATE OF archived_at FOR EACH ROW WHEN (((old.archived_at IS NULL) AND (new.archived_at IS NOT NULL))) EXECUTE FUNCTION advance_home_read_fence()`
 - `report_authority_team_change`: `BEFORE UPDATE OF archived_at FOR EACH STATEMENT EXECUTE FUNCTION advance_report_projection_authority()`
 - `report_authority_team_delete`: `BEFORE DELETE FOR EACH STATEMENT EXECUTE FUNCTION advance_report_projection_authority()`
 - `trg_team_updated`: `BEFORE UPDATE FOR EACH ROW EXECUTE FUNCTION set_updated_at()`
@@ -710,6 +711,8 @@ The 22 tables owned by `identity`, as the migrations build them. [Back to the en
 
 **Triggers**
 
+- `home_read_fence_team_membership_moved`: `AFTER UPDATE OF team_id, user_id FOR EACH STATEMENT EXECUTE FUNCTION advance_home_read_fence()`
+- `home_read_fence_team_membership_removed`: `AFTER DELETE FOR EACH STATEMENT EXECUTE FUNCTION advance_home_read_fence()`
 - `report_authority_team_membership`: `BEFORE INSERT OR DELETE OR UPDATE FOR EACH STATEMENT EXECUTE FUNCTION advance_report_projection_authority()`
 - `trg_team_membership_updated`: `BEFORE UPDATE FOR EACH ROW EXECUTE FUNCTION set_updated_at()`
 
