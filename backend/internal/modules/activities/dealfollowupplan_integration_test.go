@@ -48,6 +48,12 @@ func TestTheDealFollowUpBatchReadsEachMeetingOnceWhateverTheStatisticsSay(t *tes
 	if _, err := tx.Exec(ctx, "SET LOCAL jit = off"); err != nil {
 		t.Fatal(err)
 	}
+	// A database that earlier tests in this process wrote to and vacuumed holds
+	// small, analyzed statistics, not the none a fresh one holds; pin the
+	// never-analyzed state so the plan does not depend on what ran before.
+	if _, err := tx.Exec(ctx, "UPDATE pg_class SET reltuples = -1, relpages = 0 WHERE relkind = 'r' AND relnamespace = 'public'::regnamespace"); err != nil {
+		t.Fatal(err)
+	}
 	statement, args, err := meetingFollowUpsByDealStatement(e.as(), asOf, 3, deals)
 	if err != nil {
 		t.Fatal(err)
