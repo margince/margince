@@ -132,7 +132,7 @@ Put `-- pgmigrate:no-transaction` on a line by itself in the up file for a `CREA
 The [runner](../../backend/internal/platform/dbmigrate/notransaction.go) records the version after
 all statements finish, so each statement must be safe to run again.
 
-A failed build can leave a half-built index behind. The
+A failed build can leave behind an index that Postgres marks `INVALID`. The
 [migration that adds the delete indexes](../../backend/migrations/core/1794471014_parent_deletes_find_their_children.up.sql)
 puts `DROP INDEX CONCURRENTLY IF EXISTS` before each build, so a retry builds it again.
 The down file drops with `CONCURRENTLY` too.
