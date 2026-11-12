@@ -94,16 +94,16 @@ func readZones(lines []icalLine) statedZones {
 }
 
 // read takes one property of a STANDARD or DAYLIGHT block into the rule.
-func (rule *zoneRule) read(line icalLine, value string) {
+func (r *zoneRule) read(line icalLine, value string) {
 	switch {
 	case line.is("DTSTART"):
 		if start, err := time.Parse(icalDateTime, value); err == nil {
-			rule.start = start
+			r.start = start
 		}
 	case line.is("TZOFFSETTO"):
-		rule.offset, rule.stated = utcOffset(value)
+		r.offset, r.stated = utcOffset(value)
 	case line.is("RRULE"):
-		readYearlyRule(rule, value)
+		readYearlyRule(r, value)
 	}
 }
 
