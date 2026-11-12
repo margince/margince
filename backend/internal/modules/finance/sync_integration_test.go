@@ -123,11 +123,9 @@ func setupFinance(t *testing.T) *financeEnv {
 		t.Fatal(err)
 	}
 	// The directory entry first: a link names one (finance_customer_link_directory_fk).
-	if _, err := owner.Exec(ctx, `
-		INSERT INTO finance_external_customer
-		       (connection_id, external_customer_id, display_name, sync_hash, source, captured_by)
-		VALUES ($1, $2, $2, '', 'system', 'system:test')`,
-		connID, e.external); err != nil {
+	if _, err := owner.Exec(ctx, `INSERT INTO finance_external_customer
+		(connection_id, external_customer_id, display_name, sync_hash, source, captured_by)
+		VALUES ($1, $2, $2, '', 'system', 'system:test')`, connID, e.external); err != nil {
 		t.Fatal(err)
 	}
 	if _, err := owner.Exec(ctx, `

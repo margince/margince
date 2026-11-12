@@ -53,10 +53,10 @@ func CountUnlinkedMirrorRows(ctx context.Context, q datatask.Querier, t MirrorTa
 // names the customer link on each that names none. It answers every id it
 // inspected, for the cursor, and how many it named.
 //
-// A row carries no source customer id, so the link is one that maps the row's
+// A row carries no source customer id. Its link is one that maps the row's
 // connection onto the row's company: the live one first, then the newest
-// archived one. That is the company the row already sits on, so attribution
-// does not move. A row whose connection never mapped its company keeps NULL.
+// archived one. Attribution does not move, and a row whose connection never
+// mapped its company keeps NULL.
 func BackfillCustomerLinksTx(ctx context.Context, tx pgx.Tx, t MirrorTable, after ids.UUID, limit int) ([]ids.UUID, int, error) {
 	if err := auth.RequireSystem(ctx); err != nil {
 		return nil, 0, err

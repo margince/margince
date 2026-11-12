@@ -278,7 +278,7 @@ func archiveLiveLink(ctx context.Context, tx pgx.Tx, link liveLink) error {
 // is none. Linking to the company it already names writes nothing.
 //
 // Moving a customer archives its link and makes a new one, because a link never
-// changes its company: every mirrored row names its link and carries that
+// changes its company. Every mirrored row names its link and carries that
 // link's company (finance_invoice_customer_link_fk). The rows stay on the
 // archived link until the next sync moves them onto the new one.
 func writeLink(ctx context.Context, tx pgx.Tx, connectionID ids.UUID, externalID string, companyID ids.CompanyID) error {
