@@ -34,7 +34,7 @@ func SlowStatement(t *testing.T, after time.Duration) func() string {
 	t.Cleanup(stop)
 	return func() string {
 		stop()
-		return longest.describe(conn)
+		return longest.describe(conn, after)
 	}
 }
 
@@ -70,7 +70,7 @@ type slowSeen struct {
 	cut     bool
 }
 
-func (s slowSeen) describe(conn *pgx.Conn) string {
+func (s slowSeen) describe(conn *pgx.Conn, limit time.Duration) string {
 	if s.query == "" {
 		return "no statement was seen running long"
 	}
@@ -83,7 +83,10 @@ func (s slowSeen) describe(conn *pgx.Conn) string {
 	}
 	// Sent raw: the text holds $n placeholders that GENERIC_PLAN leaves unbound,
 	// and pgx would refuse them with no arguments.
-	results, err := conn.PgConn().Exec(context.Background(), "EXPLAIN (GENERIC_PLAN) "+s.query).ReadAll()
+	// Planning locks each relation the statement reads, so a held lock must not stall the report.
+	ctx, cancel := context.WithTimeout(context.Background(), limit)
+	defer cancel()
+	results, err := conn.PgConn().Exec(ctx, "EXPLAIN (GENERIC_PLAN) "+s.query).ReadAll()
 	if err != nil {
 		return fmt.Sprintf("%s\n(no plan: %v)", head, err)
 	}
