@@ -1,10 +1,8 @@
 <!-- prose:plain -->
 # The workflows next to the merge gate
 
-`ci.yml` is the merge gate, and `_lane-integration.yml` / `_lane-frontend.yml` are part of it:
-`ci.yml` calls them, and nothing else starts them (see
-[Two lanes are called](../explanation/ci-pipeline.md#two-lanes-are-called-not-inlined)). Every other
-workflow is outside the gate:
+`ci.yml` is the merge gate, and `_lane-integration.yml` / `_lane-frontend.yml` are part of it: `ci.yml` calls them, and nothing else starts them
+(see [Two lanes are called](../explanation/ci-pipeline.md#two-lanes-are-called-not-inlined)). Every other workflow is outside the gate:
 
 | Workflow | What starts it | Blocks a merge? |
 |---|---|---|
@@ -331,8 +329,10 @@ What a run does:
    release on its line. It cuts the patch from the git commit of that release, and uploads it with `draft-release --patch-base <version>`. The first release has no base: its patch is
    the whole tree, sent with `--first-release`. With the patch go the three SBOM files for the source
    tree, generated again at the release commit (`make sbom`).
-   The dist service checks that the SBOM files cover every file the patch makes. So the
-   committed `sboms/` files, which may be behind, are never uploaded.
+   The dist service checks that the SBOM files cover every file the patch makes. So the committed `sboms/` files, which may be behind, are never uploaded.
+
+   The changelog goes with the patch too. It lists every non-merge commit subject since the patch base, from
+   [`scripts/release-changelog.sh`](../../scripts/release-changelog.sh) (`make test-release-changelog`).
 2. The three role images are built through the bake file (`docker-bake.hcl`, `linux/amd64` +
    `linux/arm64`, with `mode=max` provenance records).
    - The builder stages compile for each target on the host; only runtime layers run under

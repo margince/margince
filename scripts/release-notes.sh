@@ -15,14 +15,19 @@
 # WHAT IT READS: subjects on stdin and its arguments. No git, no network, so its
 # own test can feed subjects and judge the answer.
 #
+# The compare link needs git refs. A reader may know the previous release by
+# another name, a dist version such as 2026.1.0 for a git revision, so an
+# optional fifth argument names it in the sentence; it defaults to the ref.
+#
 # Usage: git log --first-parent --format=%s v1.0.0..v1.1.0 |
-#          bash scripts/release-notes.sh v1.0.0 v1.1.0 margince/margince [budget]
+#          bash scripts/release-notes.sh v1.0.0 v1.1.0 margince/margince [budget [previous-name]]
 set -euo pipefail
 
 previous="${1:-}"
 tag="${2:-}"
 repo="${3:-}"
 budget="${4:-100000}"
+previous_name="${5:-$previous}"
 
 if [[ -z "$previous" || -z "$tag" || -z "$repo" ]]; then
 	echo "release-notes: pass the previous tag, this tag and owner/repo; subjects on stdin." >&2
@@ -60,7 +65,7 @@ render() {
 	section Added "$added"
 	section Fixed "$fixed"
 	section Faster "$faster"
-	printf 'Every change since %s: %s\n' "$previous" "$compare"
+	printf 'Every change since %s: %s\n' "$previous_name" "$compare"
 }
 
 # collapsed <count> prints the line a shortened section keeps, or nothing.
