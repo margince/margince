@@ -820,6 +820,7 @@ gen: mcp-apps-vocab handbook-embed ## Regenerate everything derived from the con
 		-out internal/compose/agentbundle/agentcontract_gen.yaml -index internal/compose/agentbundle/agentindex_gen.txt
 	$(GOWORK_ROOT) $(GO) run ./tools/gen-recordfields -in api/crm.yaml -out internal/modules/agents/recordshapes_gen.go
 	$(GOWORK_ROOT) $(GO) run ./tools/gen-aitasks -contract api/ai-tasks.yaml -out-go internal/modules/ai/tasks_gen.go
+	$(GOWORK_ROOT) $(GO) run ./tools/gen-textbounds
 	$(GOWORK_ROOT) $(GO) run ./tools/gen-config
 	$(GOWORK_ROOT) $(GO) run ./tools/gen-jobs -contract api/jobs.yaml \
 		-out-specs internal/platform/jobs/specs_gen.go \
