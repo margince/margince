@@ -54,7 +54,7 @@ Each operation is in one group. Ask first is a part of Open, so leave it out of 
 | [The user's own account and security](#the-users-own-account-and-security) | My account | 31 | 18 | 5 | 0 | 11 | 1 | 28 | 60.7% | 58.0% |
 | [Agent governance](#agent-governance) | every passport, in no area | 27 | 8 | 0 | 0 | 18 | 1 | 27 | 29.6% | 29.6% |
 | [Operator and system](#operator-and-system) | Admin settings, held as that area | 24 | 17 | 3 | 0 | 7 | 0 | 21 | 71.4% | 70.8% |
-| [Public, with no signed-in user](#public-with-no-signed-in-user) | none: no agent acts here | 43 | 0 | 0 | 0 | 0 | 0 | 33 | n/a | n/a |
+| [Public, with no signed-in user](#public-with-no-signed-in-user) | none: no agent acts here | 43 | 0 | 0 | 0 | 0 | 0 | 34 | n/a | n/a |
 
 ## Business operations
 
@@ -212,7 +212,7 @@ Passport area: none: no agent acts here.
 | Sign-in and password reset | 9 | 0 | 0 | 0 | 0 | 0 | 7 | n/a | n/a |
 | Provider sign-in returns | 2 | 0 | 0 | 0 | 0 | 0 | 0 | n/a | n/a |
 | Buyer deal rooms | 10 | 0 | 0 | 0 | 0 | 0 | 9 | n/a | n/a |
-| Booking and meeting pages | 14 | 0 | 0 | 0 | 0 | 0 | 11 | n/a | n/a |
+| Booking and meeting pages | 14 | 0 | 0 | 0 | 0 | 0 | 12 | n/a | n/a |
 | Forms, confirmations and preference links | 8 | 0 | 0 | 0 | 0 | 0 | 6 | n/a | n/a |
 
 ## How an operation gets its group

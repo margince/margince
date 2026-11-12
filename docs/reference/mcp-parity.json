@@ -1693,7 +1693,7 @@
       "covered": 0,
       "sign_in": 0,
       "no_signed_in_user": 43,
-      "web_app_calls": 33,
+      "web_app_calls": 34,
       "web_app_calls_open": 0,
       "web_app_calls_ask_first": 0,
       "web_app_calls_pending": 0,
@@ -1773,7 +1773,7 @@
           "covered": 0,
           "sign_in": 0,
           "no_signed_in_user": 14,
-          "web_app_calls": 11,
+          "web_app_calls": 12,
           "web_app_calls_open": 0,
           "web_app_calls_ask_first": 0,
           "web_app_calls_pending": 0,
@@ -15294,7 +15294,8 @@
       ],
       "group": "public",
       "area": "booking_pages",
-      "state": "no_signed_in_user"
+      "state": "no_signed_in_user",
+      "web_app": "direct"
     },
     {
       "method": "POST",

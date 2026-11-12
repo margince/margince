@@ -12638,7 +12638,12 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "book.returnAction": "Lưu lại thông tin của tôi",
   "book.returnDone": "Thông tin của quý khách đã được lưu lại.",
   "book.returnSpent":
-    "Liên kết này đã được dùng hoặc đã hết hạn. Hãy yêu cầu liên kết mới trên trang đặt lịch.",
+    "Liên kết này đã được dùng hoặc đã hết hạn. Hãy yêu cầu liên kết mới tại trang quý khách đã dùng để yêu cầu liên kết này.",
+  "book.returnRequestBody":
+    "Thông tin của quý khách đã được xóa theo yêu cầu. Để được lưu lại, hãy nhập họ tên và địa chỉ email đã bị xóa. Một liên kết sẽ được gửi đến địa chỉ đó, và thông tin chỉ được lưu khi quý khách xác nhận.",
+  "book.returnRequestAction": "Gửi liên kết cho tôi",
+  "book.returnRequestSent":
+    "Hãy kiểm tra hộp thư. Nếu địa chỉ này có thể được lưu lại, một liên kết xác nhận đang được gửi đến.",
   "book.attendee": "Email người tham dự",
   "book.subject": "Cuộc họp qua Margince",
   "book.name": "Họ và tên",

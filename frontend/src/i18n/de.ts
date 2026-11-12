@@ -12983,7 +12983,12 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "book.returnAction": "Meine Daten wieder speichern",
   "book.returnDone": "Deine Daten sind wieder gespeichert.",
   "book.returnSpent":
-    "Dieser Link wurde schon benutzt oder ist abgelaufen. Fordere auf der Buchungsseite einen neuen an.",
+    "Dieser Link wurde schon benutzt oder ist abgelaufen. Fordere dort einen neuen an, wo du diesen angefordert hast.",
+  "book.returnRequestBody":
+    "Deine Daten wurden auf deinen Wunsch gelöscht. Damit sie wieder gespeichert werden, gib deinen Namen und die gelöschte E-Mail-Adresse ein. An diese Adresse geht ein Link, und gespeichert wird erst, wenn du dort bestätigst.",
+  "book.returnRequestAction": "Link senden",
+  "book.returnRequestSent":
+    "Schau in dein Postfach. Wenn diese Adresse wieder gespeichert werden kann, ist ein Link zum Bestätigen unterwegs.",
   "book.attendee": "E-Mail des Gasts",
   "book.subject": "Termin über Margince",
   "book.name": "Name",

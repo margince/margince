@@ -12957,7 +12957,12 @@ export const en = {
   "book.returnAction": "Store my details again",
   "book.returnDone": "Your details are stored again.",
   "book.returnSpent":
-    "This link was used already or has expired. Ask for a new one on the booking page.",
+    "This link was used already or has expired. Ask for a new one where you asked for this one.",
+  "book.returnRequestBody":
+    "Your details were erased at your request. To be stored again, enter your name and the email address that was erased. A link goes to that address, and nothing is stored until you confirm it there.",
+  "book.returnRequestAction": "Send me the link",
+  "book.returnRequestSent":
+    "Check your inbox. If this address can be stored again, a link to confirm is on its way.",
   "book.attendee": "Attendee email",
   "book.subject": "Meeting via Margince",
   "book.name": "Your name",
