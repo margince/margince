@@ -544,8 +544,8 @@ func TestAShareExportSaysWhetherItsChancesCorrectedThemselves(t *testing.T) {
 	}
 }
 
-// A file limited to the reader's own rows says why on every row, and on the
-// one summary row a reader who owns none of its deals gets.
+// A file limited to the reader's own rows says why on every row. A reader who
+// owns none of its deals gets one summary row, which says it too.
 func TestAShareExportSaysWhyItsRowsAreTheReadersOwn(t *testing.T) {
 	reason := reportingCoverageWords.IndividualOff.En
 	for name, rows := range map[string][]SharedContribution{"own rows": {{DealName: "Mine"}}, "summary row": nil} {
