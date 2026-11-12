@@ -88,7 +88,8 @@ export const taskFromCall = {
   }),
   due_at: "2026-07-06T13:00:00Z",
   source_activity_id: loggedCall.id,
-  task_type: "reach_out",
+  task_type: "reply",
+  reply_channel: "call",
 };
 
 export const typedTask = {

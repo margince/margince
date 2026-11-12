@@ -3638,7 +3638,7 @@ test.describe("calling a contact", () => {
       return { opener, dialog };
     }
 
-    test("a task to call offers its number, its chats, Copy number and Call, in tab order", async ({
+    test("a reply to a call offers its number, its chats, Copy number and Call, in tab order", async ({
       page,
     }) => {
       const { opener, dialog } = await openTask(page, taskFromCall.subject);
@@ -3651,12 +3651,13 @@ test.describe("calling a contact", () => {
       await expect(number).toBeVisible();
       await expect(copy).toBeVisible();
       await expect(call).toHaveAttribute("href", tel);
+      // Mail is the other way, offered after the call.
       await expect(
         dialog.getByRole("button", {
           name: de["task.next.draftEmail"],
           exact: true,
         }),
-      ).toHaveCount(0);
+      ).toBeVisible();
       await settleAnimations(page);
       await expectNoAaViolations(page, "home (task to call open)");
 
@@ -3682,7 +3683,7 @@ test.describe("calling a contact", () => {
       await expect(opener).toBeFocused();
     });
 
-    test("a task typed by hand is a mail to write: Draft email and Open contact, no Call", async ({
+    test("a task typed by hand reaches out: Draft email, Call and Open contact", async ({
       page,
     }) => {
       const { dialog } = await openTask(page, typedTask.subject);
@@ -3695,7 +3696,7 @@ test.describe("calling a contact", () => {
           exact: true,
         }),
       ).toBeVisible();
-      await expect(callVerb(dialog)).toHaveCount(0);
+      await expect(callVerb(dialog)).toHaveAttribute("href", tel);
     });
   });
 });

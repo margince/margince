@@ -15,9 +15,9 @@ input and output schema in folds below it. What a tool may do and whether a huma
 |---|---:|
 | Tools | 48 |
 | Resources | 14 |
-| Tool catalog | 230.4 KB |
+| Tool catalog | 230.5 KB |
 | Resource catalog | 5.5 KB |
-| Approx. wire tokens | 60392 |
+| Approx. wire tokens | 60402 |
 | Largest tool | `read_context` (11.5 KB) |
 | Scopes rendered | `read`, `draft`, `write`, `send`, `enrich` |
 
@@ -68,7 +68,7 @@ descriptions and input schemas are what each step pays for.
 | [`archive_record`](#archive_record) | Archive a record |  |  | 300 |
 | [`bulk_update_records`](#bulk_update_records) | Change many records at once |  |  | 798 |
 | [`change_access`](#change_access) | Share records and set up members and teams |  |  | 706 |
-| [`change_activities`](#change_activities) | Log, plan and file activities |  |  | 2032 |
+| [`change_activities`](#change_activities) | Log, plan and file activities |  |  | 2042 |
 | [`change_attention`](#change_attention) | Act on proposals, notices and the weekly plan |  |  | 899 |
 | [`change_capture`](#change_capture) | Decide what comes into the CRM |  |  | 1080 |
 | [`change_compliance`](#change_compliance) | Record consent, stops, holds and privacy work |  |  | 879 |
@@ -1605,11 +1605,10 @@ it before calling, unless they asked for this call themselves; requires passport
       "type": "string"
     },
     "task_type": {
-      "description": "task only: The work it asks for; it decides the one button the task shows. reply answers a message, write sends a mail, do is work outside Margince.",
+      "description": "task only: The work it asks for; it decides the one button the task shows. reply answers a message the way it came in, reach_out contacts someone by email or phone, do is work outside Margince.",
       "enum": [
         "reply",
-        "write",
-        "call",
+        "reach_out",
         "meet",
         "review",
         "decide",
