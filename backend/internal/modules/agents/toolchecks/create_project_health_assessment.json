@@ -1,0 +1,9 @@
+{
+  "verb": "create_project_health_assessment",
+  "checks": [
+    "project.update"
+  ],
+  "takes": [
+    "project"
+  ]
+}

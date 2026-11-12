@@ -281,7 +281,7 @@ describe("two lists on one route", () => {
   });
 });
 
-describe("listFetchLimit — one read carries several rendered pages", () => {
+describe("listFetchLimit — one read carries the page shown and the next", () => {
   it("fetches whole rendered pages, never a remainder, for every offered size", () => {
     for (const perPage of LIST_PAGE_SIZES) {
       const limit = listFetchLimit(perPage);
@@ -290,12 +290,11 @@ describe("listFetchLimit — one read carries several rendered pages", () => {
       // with no rows behind them.
       expect(limit % perPage).toBe(0);
       expect(limit).toBeLessThanOrEqual(200);
-      expect(limit).toBeGreaterThan(200 - perPage);
     }
   });
 
-  it("fills the default page size's strip in one read", () => {
-    expect(listFetchLimit(25) / 25).toBe(8);
+  it("reads the page shown and the one Next opens, at every offered size", () => {
+    expect(LIST_PAGE_SIZES.map(listFetchLimit)).toEqual([50, 100, 200]);
   });
 });
 

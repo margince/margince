@@ -1,0 +1,15 @@
+{
+  "tool": "change_settings",
+  "action": "create_partner_stage",
+  "verb": "create_partner_stage",
+  "allowed_for": [
+    "admin",
+    "ops"
+  ],
+  "refused_for": [
+    "management",
+    "manager",
+    "read_only",
+    "rep"
+  ]
+}

@@ -1,0 +1,12 @@
+{
+  "verb": "get_team_weekly_review",
+  "checks": [
+    "company.read",
+    "deal.read",
+    "scope:team",
+    "team_oversight.read,team_lead.read"
+  ],
+  "takes": [
+    "review_team"
+  ]
+}

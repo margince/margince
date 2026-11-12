@@ -1,0 +1,15 @@
+{
+  "tool": "change_tags",
+  "action": "merge",
+  "verb": "merge_tags",
+  "allowed_for": [
+    "admin",
+    "ops"
+  ],
+  "refused_for": [
+    "management",
+    "manager",
+    "read_only",
+    "rep"
+  ]
+}

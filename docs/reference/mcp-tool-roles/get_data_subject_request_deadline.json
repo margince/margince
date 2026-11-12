@@ -1,0 +1,15 @@
+{
+  "tool": "read_workspace",
+  "action": "data_subject_request_deadline",
+  "verb": "get_data_subject_request_deadline",
+  "allowed_for": [
+    "admin"
+  ],
+  "refused_for": [
+    "management",
+    "manager",
+    "ops",
+    "read_only",
+    "rep"
+  ]
+}

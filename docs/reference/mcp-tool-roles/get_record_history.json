@@ -1,0 +1,18 @@
+{
+  "tool": "read_workspace",
+  "action": "record_history",
+  "verb": "get_record_history",
+  "allowed_for": [
+    "admin",
+    "management",
+    "manager",
+    "ops",
+    "read_only",
+    "rep"
+  ],
+  "refused_for": [],
+  "colleague_record": {
+    "manager": "ran",
+    "rep": "ran"
+  }
+}

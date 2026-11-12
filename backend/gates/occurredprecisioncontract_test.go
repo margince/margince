@@ -54,6 +54,8 @@ const storedClock = "stored clock without a precision column, issue #8910"
 // place, each with the reason. Keyed "<spec> <schema path>.<property>" as the
 // census prints it.
 var precisionlessTimes = gatekit.Waive(map[string]string{
+	"api/crm.yaml EmailCalendarChange.ends_at":                            "a meeting's end, read with the same starts_precision: an all-day meeting's end is a date as its start is",
+	"api/crm.yaml EmailCalendarBefore.ends_at":                            "the earlier send's end, read with the same starts_precision as EmailCalendarChange.ends_at",
 	"api/crm.yaml MarginceChangeBundle.latest_at":                         "when Margince last changed the deal, the correction row's own write instant, not an activity time",
 	"api/crm.yaml ReportingForecastBasis.call_at":                         "when a manager submitted a forecast call, the call row's exact write instant",
 	"api/crm.yaml SalesProgress.planned_valued_at":                        "the evaluation instant the open deals were converted at, not an activity time",

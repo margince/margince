@@ -1,0 +1,6 @@
+{
+  "verb": "get_sdr_summary",
+  "checks": [
+    "installation_settings.read"
+  ]
+}

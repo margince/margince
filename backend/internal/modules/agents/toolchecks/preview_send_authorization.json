@@ -1,0 +1,11 @@
+{
+  "verb": "preview_send_authorization",
+  "checks": [
+    "activity.create",
+    "activity.read",
+    "relationship.read"
+  ],
+  "takes": [
+    "activity"
+  ]
+}

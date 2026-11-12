@@ -21,6 +21,7 @@ import {
 import { MayBeDone } from "../../components/maybedone";
 import { RECORD_CHIP_ICONS } from "../../components/recordlinks";
 import { useTaskDone } from "../../components/taskactions";
+import { TaskTypeChip } from "../../components/tasktype";
 import { Badge, Card } from "../../design-system/atoms";
 import { Avatar } from "../../design-system/avatar";
 import { IconAction } from "../../design-system/iconaction";
@@ -40,8 +41,10 @@ import {
   type Words,
 } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
+import { changeBadge, changeSentence } from "../../lib/calendarchange";
 import { useCompanyZone } from "../../lib/companyzone";
 import { useMe } from "../../lib/session";
+import type { TaskType } from "../../lib/tasktype";
 import { useViewerZone } from "../../lib/viewerzone";
 import { worklistKey } from "../../lib/workkeys";
 import {
@@ -73,6 +76,9 @@ export function taskName(
   const sender = partyName(item);
   // A message waiting on the reader is named by the move it asks for.
   // An invitation's subject already names the event it asks about.
+  // A later calendar mail is named for its meeting, as the box draws it.
+  if (mail?.calendar_change)
+    return mail.calendar_change.title ?? mail.subject ?? t("email.noSubject");
   if (mail?.calendar_invitation && mail.subject) return mail.subject;
   if (mail?.move === "needs_reply" && sender && mail.subject)
     return t("brief.task.reply", { name: sender, subject: mail.subject });
@@ -100,6 +106,9 @@ export function taskLine(
   zone: string,
   event: string | null = null,
 ): string | null {
+  // A meeting's change is the line: what moved, or who answered.
+  const change = item.email_summary?.calendar_change;
+  if (change) return changeSentence(change, t, locale, zone);
   // The meta row's badges carry the clock, so the line leaves it out.
   const reason = phrasedReasons(item, true)
     .map((entry) => reasonText(entry, t, locale, zone, partyName(item)))
@@ -217,7 +226,13 @@ export function TaskCard({
 export function TaskMeta({
   item,
   link,
-}: Readonly<{ item: WorklistItem; link?: (href: string) => string }>) {
+  taskType,
+}: Readonly<{
+  item: WorklistItem;
+  link?: (href: string) => string;
+  /** The task's type, once its read is in; it names the kind of work. */
+  taskType?: TaskType;
+}>) {
   const t = useT();
   const plural = usePlural();
   const { locale } = useLocale();
@@ -240,9 +255,13 @@ export function TaskMeta({
           {when}
         </Badge>
       )}
-      <Chip dense icon={kindIcon(item)}>
-        {t(kindKey(item))}
-      </Chip>
+      {taskType ? (
+        <TaskTypeChip type={taskType} />
+      ) : (
+        <Chip dense icon={kindIcon(item)}>
+          {t(kindKey(item))}
+        </Chip>
+      )}
       <TaskRecords item={item} link={link} />
       {status && (
         <span className="brief-task-status">
@@ -270,22 +289,26 @@ const CATEGORY_ICONS: Record<WorklistItem["category"], LucideIcon> = {
 // A waiting message is named for what it is, an email; its category moves to
 // the state at the end of the line.
 function kindKey(item: WorklistItem): MessageKey {
+  if (item.email_summary?.calendar_change) return "timeline.kind.meeting";
   return item.email_summary ? "timeline.kind.email" : eyebrowKeyFor(item);
 }
 
 function kindIcon(item: WorklistItem): LucideIcon {
+  if (item.email_summary?.calendar_change) return CalendarClock;
   return item.email_summary ? Mail : CATEGORY_ICONS[item.category];
 }
 
 type CardStatus = Readonly<{
   key: MessageKey;
-  tone: "danger" | "warning" | "info";
+  tone: "danger" | "warning" | "info" | "success";
 }>;
 
 /** Late first, then why a message is waiting; any other row has no state. */
 function statusOf(item: WorklistItem, titled: boolean): CardStatus | null {
   if (item.overdue === true)
     return titled ? null : { key: "worklist.overdue", tone: "danger" };
+  const change = item.email_summary?.calendar_change;
+  if (change) return changeBadge(change);
   if (item.email_summary?.calendar_invitation)
     return { key: eyebrowKeyFor(item), tone: "info" };
   if (item.email_summary && item.band === "now")

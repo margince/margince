@@ -1,0 +1,15 @@
+{
+  "tool": "read_details",
+  "action": "mail_deal_repair_preview",
+  "verb": "preview_mail_deal_repair",
+  "allowed_for": [
+    "admin",
+    "ops"
+  ],
+  "refused_for": [
+    "management",
+    "manager",
+    "read_only",
+    "rep"
+  ]
+}

@@ -1,0 +1,15 @@
+{
+  "tool": "change_activities",
+  "action": "cancel_send",
+  "verb": "cancel_scheduled_send",
+  "allowed_for": [
+    "admin",
+    "management",
+    "manager",
+    "ops",
+    "rep"
+  ],
+  "refused_for": [
+    "read_only"
+  ]
+}

@@ -1,0 +1,9 @@
+{
+  "verb": "get_latest_weekly_review",
+  "checks": [
+    "deal.read"
+  ],
+  "takes": [
+    "weekly_review"
+  ]
+}

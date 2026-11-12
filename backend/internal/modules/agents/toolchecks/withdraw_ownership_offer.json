@@ -1,0 +1,8 @@
+{
+  "verb": "withdraw_ownership_offer",
+  "checks": [],
+  "takes": [
+    "company",
+    "offered_company"
+  ]
+}

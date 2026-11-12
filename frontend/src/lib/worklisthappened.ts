@@ -15,7 +15,7 @@ import { type Locale, useLocale } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import { useCompanyZone } from "./companyzone";
 import { useViewerZone } from "./viewerzone";
-import { askKey } from "./worklistask";
+import { askKey, meetingAsk } from "./worklistask";
 import { dealFactsText, partyName, type T } from "./worklistcopy";
 import type { WorklistItem } from "./worklisttypes";
 
@@ -236,6 +236,9 @@ const WHOLE_ASKS: ReadonlySet<MessageKey> = new Set<MessageKey>([
  * check, stays whole.
  */
 export function todoLine(item: WorklistItem, t: T, told: boolean): string {
+  // A changed meeting's ask names who changed it, so it stays whole.
+  const meeting = meetingAsk(item, t);
+  if (meeting) return meeting;
   const ask = askKey(item);
   const keys =
     item.source === "capture_health"

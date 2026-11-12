@@ -1,0 +1,18 @@
+{
+  "tool": "bulk_update_records",
+  "verb": "bulk_update_records",
+  "allowed_for": [
+    "admin",
+    "management",
+    "manager",
+    "ops",
+    "rep"
+  ],
+  "refused_for": [
+    "read_only"
+  ],
+  "colleague_record": {
+    "manager": "ran",
+    "rep": "ran"
+  }
+}

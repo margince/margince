@@ -1,0 +1,19 @@
+{
+  "tool": "change_state",
+  "action": "promote",
+  "verb": "promote_lead",
+  "allowed_for": [
+    "admin",
+    "management",
+    "manager",
+    "ops",
+    "rep"
+  ],
+  "refused_for": [
+    "read_only"
+  ],
+  "colleague_record": {
+    "manager": "refused",
+    "rep": "refused"
+  }
+}

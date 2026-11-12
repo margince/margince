@@ -1,0 +1,9 @@
+{
+  "verb": "attach_document",
+  "checks": [
+    "activity.update,company.update,contact.update,deal.update,lead.update,project.update"
+  ],
+  "takes": [
+    "company"
+  ]
+}

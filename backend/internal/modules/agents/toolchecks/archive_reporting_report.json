@@ -1,0 +1,10 @@
+{
+  "verb": "archive_reporting_report",
+  "checks": [
+    "report_definition.delete",
+    "report_definition.read"
+  ],
+  "takes": [
+    "report"
+  ]
+}

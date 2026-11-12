@@ -103,6 +103,7 @@ var enumBindings = map[string]struct{ pkgDir, typeName string }{
 	// and mean different things. The census finds every value match; this line
 	// records which type the column actually means.
 	"activity.audience":                       {"internal/contracts", "ActivityAudience"},
+	"activity.task_type":                      {"internal/contracts", "TaskType"},
 	"capture_counterparty_hold.kind":          {"internal/contracts", "CaptureCounterpartyHoldKind"},
 	"capture_exclusion.kind":                  {"internal/contracts", "CaptureExclusionKind"},
 	"capture_exclusion.scope":                 {"internal/contracts", "CaptureExclusionScope"},

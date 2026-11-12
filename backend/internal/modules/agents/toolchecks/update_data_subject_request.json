@@ -1,0 +1,9 @@
+{
+  "verb": "update_data_subject_request",
+  "checks": [
+    "privacy_request.update"
+  ],
+  "takes": [
+    "subject_request"
+  ]
+}

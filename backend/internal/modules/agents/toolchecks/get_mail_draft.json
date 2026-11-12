@@ -1,0 +1,9 @@
+{
+  "verb": "get_mail_draft",
+  "checks": [
+    "activity.read"
+  ],
+  "takes": [
+    "mail_draft"
+  ]
+}

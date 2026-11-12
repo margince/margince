@@ -1,0 +1,9 @@
+{
+  "verb": "get_company_scan",
+  "checks": [
+    "installation_settings.read"
+  ],
+  "takes": [
+    "company"
+  ]
+}

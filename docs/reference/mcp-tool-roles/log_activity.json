@@ -1,0 +1,15 @@
+{
+  "tool": "change_activities",
+  "action": "log",
+  "verb": "log_activity",
+  "allowed_for": [
+    "admin",
+    "management",
+    "manager",
+    "ops",
+    "rep"
+  ],
+  "refused_for": [
+    "read_only"
+  ]
+}

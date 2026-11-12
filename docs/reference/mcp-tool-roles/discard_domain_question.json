@@ -1,0 +1,14 @@
+{
+  "tool": "change_capture",
+  "action": "discard_domain",
+  "verb": "discard_domain_question",
+  "allowed_for": [
+    "admin",
+    "management",
+    "manager",
+    "ops",
+    "read_only",
+    "rep"
+  ],
+  "refused_for": []
+}

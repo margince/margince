@@ -1,26 +1,37 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
+import { CalendarPlus, ClipboardCheck } from "lucide-react";
 import { type ReactNode, useId } from "react";
 import type { components } from "../api/schema";
-import { Button, Skeleton } from "../design-system/atoms";
+import { Skeleton } from "../design-system/atoms";
 import { CallAction, linkVerb } from "../design-system/callaction";
-import { ContactLink } from "../design-system/contactlink";
+import { CopyAction } from "../design-system/clipboardcopy";
 import { primaryPhone } from "../format/contacturi";
-import { type Translator, useT } from "../i18n";
+import { useT } from "../i18n";
+import type { MessageKey } from "../i18n/en";
 import { intentAbout } from "../lib/compose.intent";
 import { ENTITY } from "../lib/entity";
-import { routeHash } from "../lib/router";
+import { valueFor } from "../lib/labelfor";
+import { type Route, routeHash } from "../lib/router";
 import { useTaskContact } from "../lib/taskcontact";
+import { taskTypeOf } from "../lib/tasktype";
 import { useWriteTo } from "../lib/writeto";
+import { mostSpecificFirst } from "./recordlinks";
 import "./tasknextsteps.css";
+import {
+  CallVerb,
+  EmailVerb,
+  RecordDraftStep,
+  refusalOf,
+} from "./tasknextsteps.verbs";
+import { asksWhichDeal, WhichDealChoice } from "./whichdealchoice";
 
-// What a rep does next about the contact a task is owed to. Nothing here
-// writes the task, so a done or read-only task still offers it.
+// The one step a task's type asks for. Nothing here writes the task, so a
+// done or read-only task still offers it.
 
 type Activity = components["schemas"]["Activity"];
 type Contact = components["schemas"]["Contact"];
-type EmailTarget = components["schemas"]["ActivityEmailTarget"];
 
 /** The room the next steps take while the reads behind them are out, so the
  *  verbs arrive without pushing the row they sit in. One Email verb wide. */
@@ -42,42 +53,332 @@ export function TaskCallAction({
 }
 
 /**
- * Call, Draft email and Open contact. A task owed to a contact is work for that
- * contact, so mail to them is drafted from the task rather than offered blank.
- * Who the mail goes to is the server's answer (`email_target`): a contact, a
- * live lead or a company. `className` wraps the verbs in a row
- * of their own, which is left out when there is nothing to act on.
+ * The step the task's type asks for. A reply answers the way its message came
+ * in: a mail drafts a mail, a call shows the number and Call. Reach out offers
+ * both, and a meeting offers Book a meeting.
+ * A review opens the record and a decision shows the choice. A task to do has
+ * none: Done is it.
+ * `className` wraps the step in a row of its own, which is left out when
+ * there is nothing to act on.
  */
 export function TaskNextSteps({
   task,
   offerOpen = true,
   className,
 }: Readonly<{ task: Activity; offerOpen?: boolean; className?: string }>) {
+  // With no menu here, the other ways stand after the type's step.
+  const { steps, others } = useTaskNextSteps(task, offerOpen);
+  if (steps === null && !others) return null;
+  const all = (
+    <>
+      {steps}
+      {others}
+    </>
+  );
+  return className ? <div className={className}>{all}</div> : all;
+}
+
+/** The type's step, and whether it is a filled button, so Done can step back
+ *  and the card keeps one filled verb. */
+export function useTaskNextSteps(
+  task: Activity | undefined,
+  offerOpen: boolean,
+): Steps {
+  const { contact, pending } = useTaskContact(task);
+  const writeTo = useWriteTo();
+  if (!task) return NO_STEP;
+  const ways = taskWays(task, contact, pending, offerOpen, writeTo !== null);
+  const shown = shownWays(task);
+  const target = task.email_target;
+  const mail = !shown.includes("mail") && Boolean(target && !target.refusal);
+  const call = !shown.includes("call") && ways.phone !== undefined;
+  return {
+    ...typedSteps(ways),
+    others:
+      mail || call ? (
+        <OtherWays
+          task={task}
+          contact={ways.reachable}
+          phone={call ? ways.phone : undefined}
+          mail={mail}
+        />
+      ) : null,
+  };
+}
+
+function taskWays(
+  task: Activity,
+  contact: Contact | undefined,
+  pending: boolean,
+  offerOpen: boolean,
+  composes: boolean,
+): Ways {
+  const reachable = contact && !contact.archived_at ? contact : undefined;
+  const target = task.email_target;
+  return {
+    task,
+    offerOpen,
+    pending,
+    reachable,
+    mailFills: Boolean(target && (composes || target.refusal)),
+    mailWorks: Boolean(target && composes && !target.refusal),
+    phone: reachable && primaryPhone(reachable.phones) ? reachable : undefined,
+  };
+}
+
+type Way = "mail" | "call";
+
+/** The ways a task's own step already offers, which its menu leaves out. */
+function shownWays(task: Activity): readonly Way[] {
+  switch (taskTypeOf(task)) {
+    case "reply":
+      if (task.reply_channel === "email") return ["mail"];
+      return task.reply_channel === "call" ? ["call"] : ["mail", "call"];
+    case "reach_out":
+      return ["mail", "call"];
+    default:
+      return [];
+  }
+}
+
+function typedSteps(ways: Ways): Omit<Steps, "others"> {
+  const { task, reachable } = ways;
+  switch (taskTypeOf(task)) {
+    case "reply":
+      return replySteps(ways);
+    case "reach_out":
+      return reachOutSteps(ways);
+    case "meet":
+      return reachable
+        ? { steps: <MeetStep contactId={reachable.id} />, fills: true }
+        : NO_STEP;
+    case "review": {
+      const record = reviewRecord(task);
+      return record
+        ? { steps: <ReviewStep record={record} />, fills: true }
+        : NO_STEP;
+    }
+    case "decide":
+      return {
+        steps: <WhichDealChoice task={task} />,
+        fills: asksWhichDeal(task),
+      };
+    default:
+      return NO_STEP;
+  }
+}
+
+type Steps = Readonly<{
+  steps: ReactNode;
+  fills: boolean;
+  /** The other ways to reach the contact, for the task's menu: always open,
+   *  whatever way the type picked. */
+  others?: ReactNode;
+}>;
+const NO_STEP: Steps = { steps: null, fills: false };
+
+/** What reaching the task's contact can use: a mail target, a number. */
+type Ways = Readonly<{
+  task: Activity;
+  offerOpen: boolean;
+  pending: boolean;
+  reachable: Contact | undefined;
+  mailFills: boolean;
+  // A refused mail still holds its slot, but Call is then the verb that works.
+  mailWorks: boolean;
+  phone: Contact | undefined;
+}>;
+
+/** A reply goes back the way its message came in. A message Margince cannot
+ *  answer in kind, or none, offers both ways. */
+function replySteps(ways: Ways): Omit<Steps, "others"> {
+  const { task, offerOpen, pending, mailFills, phone } = ways;
+  if (task.reply_channel === "email") {
+    return {
+      steps: <MailSteps task={task} offerOpen={offerOpen} />,
+      fills: mailFills,
+    };
+  }
+  if (task.reply_channel !== "call") return reachOutSteps(ways);
+  if (pending) return { steps: <TaskNextStepsPending />, fills: true };
+  return phone
+    ? { steps: <CallSteps contact={phone} filled />, fills: true }
+    : NO_STEP;
+}
+
+/** Email first, filled when it can be drafted; else Call is the filled one. */
+function reachOutSteps(ways: Ways): Omit<Steps, "others"> {
+  const { task, offerOpen, mailFills, mailWorks, phone } = ways;
+  return {
+    steps: (
+      <MailSteps
+        task={task}
+        offerOpen={offerOpen}
+        after={phone && <CallSteps contact={phone} filled={!mailWorks} />}
+      />
+    ),
+    fills: mailFills || Boolean(phone),
+  };
+}
+
+/** The ways the type's step leaves out, as menu lines: a mail to draft when
+ *  one can be, and the call. */
+function OtherWays({
+  task,
+  contact,
+  phone,
+  mail,
+}: Readonly<{
+  task: Activity;
+  // The contact that can still be reached: an archived one offers no mail.
+  contact: Contact | undefined;
+  phone: Contact | undefined;
+  mail: boolean;
+}>) {
+  const t = useT();
+  const target = task.email_target;
+  const intent = intentAbout(t("task.next.draftIntent"), task.subject);
+  const number = phone && primaryPhone(phone.phones)?.phone;
+  return (
+    <>
+      {mail &&
+        target &&
+        (target.entity_type === "contact" ? (
+          contact && (
+            <EmailVerb contact={contact} intent={intent} reasonId={undefined} />
+          )
+        ) : (
+          <RecordDraftStep target={target} intent={intent} />
+        ))}
+      {phone && number && (
+        <CallAction
+          appearance="button"
+          label={t("record.verb.call")}
+          number={number}
+          record={{ entityType: "contact", entityId: phone.id }}
+        />
+      )}
+    </>
+  );
+}
+
+/**
+ * Draft email. A task owed to a contact is work for that contact, so mail to
+ * them is drafted from the task rather than offered blank. Who the mail goes
+ * to is the server's answer (`email_target`): a contact, a live lead or a
+ * company.
+ */
+function MailSteps({
+  task,
+  offerOpen,
+  after = null,
+}: Readonly<{ task: Activity; offerOpen: boolean; after?: ReactNode }>) {
   const t = useT();
   const { contact, pending } = useTaskContact(task);
   const target = task.email_target;
   const intent = intentAbout(t("task.next.draftIntent"), task.subject);
-  let steps: ReactNode;
   if (pending) {
     // In the row the verbs will stand in, so they land where it stood.
-    steps = <TaskNextStepsPending />;
-  } else if (target?.entity_type === "contact") {
+    return <TaskNextStepsPending />;
+  }
+  if (target?.entity_type === "contact") {
     // A contact the reader can no longer read takes its verbs with it.
     if (!contact) return null;
-    steps = (
+    return (
       <ContactSteps
         contact={contact}
         intent={intent}
         offerOpen={offerOpen}
         refusal={refusalOf(target, t)}
+        after={after}
       />
     );
-  } else if (target) {
-    steps = <RecordDraftStep target={target} intent={intent} />;
-  } else {
-    return null;
   }
-  return className ? <div className={className}>{steps}</div> : steps;
+  return (
+    <>
+      {target && <RecordDraftStep target={target} intent={intent} />}
+      {after}
+    </>
+  );
+}
+
+/** The number to read or copy, for a reader at a desk, and Call to dial it. */
+function CallSteps({
+  contact,
+  filled,
+}: Readonly<{ contact: Contact; filled: boolean }>) {
+  const t = useT();
+  const number = primaryPhone(contact.phones)?.phone;
+  if (!number || contact.archived_at) return null;
+  const record = { entityType: "contact", entityId: contact.id } as const;
+  return (
+    <>
+      <span className="task-next-number">
+        <CallAction appearance="value" number={number} record={record} />
+        <CopyAction
+          text={number}
+          labels={{
+            copy: t("task.next.copyNumber"),
+            copied: t("task.next.numberCopied"),
+            remedy: t("task.next.copyNumberRemedy"),
+          }}
+        />
+      </span>
+      <CallAction
+        appearance="button"
+        filled={filled}
+        label={t("record.verb.call")}
+        number={number}
+        record={record}
+      />
+    </>
+  );
+}
+
+/** The booking flow, opened on the contact the task is owed to. */
+function MeetStep({ contactId }: Readonly<{ contactId: string }>) {
+  const t = useT();
+  return linkVerb(
+    routeHash({ screen: "book", id: `contact-${contactId}` }),
+    <CalendarPlus aria-hidden="true" />,
+    t("scheduling.bookContact"),
+    undefined,
+    "btn btn-primary",
+  );
+}
+
+const REVIEW_VERBS: Readonly<
+  Record<components["schemas"]["ActivityLink"]["entity_type"], MessageKey>
+> = {
+  lead: "task.next.reviewLead",
+  deal: "task.next.reviewDeal",
+  project: "task.next.reviewProject",
+  contact: "task.next.reviewContact",
+  company: "task.next.reviewCompany",
+};
+
+type ReviewRecord = Readonly<{ verb: MessageKey; route: Route }>;
+
+/** The most specific record the task is filed on, the one to check. */
+function reviewRecord(task: Activity): ReviewRecord | undefined {
+  const record = mostSpecificFirst(task.links ?? [])[0];
+  if (!record) return undefined;
+  const verb = valueFor(REVIEW_VERBS, record.entity_type, undefined);
+  const entity = valueFor(ENTITY, record.entity_type, undefined);
+  return verb && entity
+    ? { verb, route: entity.route(record.entity_id) }
+    : undefined;
+}
+
+function ReviewStep({ record }: Readonly<{ record: ReviewRecord }>) {
+  const t = useT();
+  return linkVerb(
+    routeHash(record.route),
+    <ClipboardCheck aria-hidden="true" />,
+    t(record.verb),
+    undefined,
+    "btn btn-primary",
+  );
 }
 
 function ContactSteps({
@@ -85,22 +386,24 @@ function ContactSteps({
   intent,
   offerOpen,
   refusal,
+  after,
 }: Readonly<{
   contact: Contact;
   intent: string;
   offerOpen: boolean;
   refusal: string | undefined;
+  after: ReactNode;
 }>) {
   const t = useT();
   const reasonId = useId();
   return (
     <>
-      <CallVerb contact={contact} />
       <EmailVerb
         contact={contact}
         intent={intent}
         reasonId={refusal === undefined ? undefined : reasonId}
       />
+      {after}
       {offerOpen &&
         linkVerb(
           routeHash(ENTITY.contact.route(contact.id)),
@@ -115,107 +418,5 @@ function ContactSteps({
         </p>
       )}
     </>
-  );
-}
-
-/**
- * Draft email to a lead or a company. The lead's draft fills To with the lead's
- * address. The company's composer asks which of its contacts the mail is for.
- * Neither has an address to hand a mail client, so with no composer to open
- * there is no verb.
- */
-function RecordDraftStep({
-  target,
-  intent,
-}: Readonly<{ target: EmailTarget; intent: string }>) {
-  const t = useT();
-  const reasonId = useId();
-  const writeTo = useWriteTo();
-  const refusal = refusalOf(target, t);
-  if (refusal !== undefined) {
-    return (
-      <>
-        <Button variant="ai" reasonId={reasonId}>
-          {t("task.next.draftEmail")}
-        </Button>
-        <p id={reasonId} className="t-caption task-next-reason">
-          {refusal}
-        </p>
-      </>
-    );
-  }
-  if (!writeTo || target.entity_type === "contact") return null;
-  return (
-    <Button
-      variant="ai"
-      onClick={() =>
-        writeTo({
-          entityType: target.entity_type,
-          entityId: target.entity_id,
-          draftIntent: intent,
-        })
-      }
-    >
-      {t("task.next.draftEmail")}
-    </Button>
-  );
-}
-
-/** Why the server refuses the email, in the reader's words. */
-function refusalOf(target: EmailTarget, t: Translator): string | undefined {
-  switch (target.refusal) {
-    case "archived":
-      return t("contact.rail.archivedReadOnly");
-    case "lead_closed":
-      return t("lead.terminalReadOnly");
-    case "no_address":
-      return target.entity_type === "lead"
-        ? t("task.next.noLeadAddress")
-        : t("task.next.noAddress");
-    default:
-      return undefined;
-  }
-}
-function CallVerb({ contact }: Readonly<{ contact: Contact | undefined }>) {
-  const t = useT();
-  if (!contact || contact.archived_at) {
-    return null;
-  }
-  return (
-    <CallAction
-      appearance="button"
-      label={t("record.verb.call")}
-      number={primaryPhone(contact.phones)?.phone}
-      record={{ entityType: "contact", entityId: contact.id }}
-    />
-  );
-}
-
-function EmailVerb({
-  contact,
-  intent,
-  reasonId,
-}: Readonly<{
-  contact: Contact;
-  intent: string;
-  reasonId: string | undefined;
-}>) {
-  const t = useT();
-  if (reasonId !== undefined) {
-    return (
-      <Button variant="ai" reasonId={reasonId}>
-        {t("task.next.draftEmail")}
-      </Button>
-    );
-  }
-  return (
-    <ContactLink
-      kind="email"
-      appearance="button"
-      label={t("record.verb.email")}
-      draft={{ label: t("task.next.draftEmail"), intent }}
-      address={contact.primary_email ?? undefined}
-      record={{ entityType: "contact", entityId: contact.id }}
-    />
   );
 }

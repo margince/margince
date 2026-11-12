@@ -1,0 +1,8 @@
+{
+  "verb": "propose_report_setup",
+  "checks": [
+    "product.read",
+    "report_definition.read",
+    "sales_initiative.create"
+  ]
+}

@@ -1,0 +1,9 @@
+{
+  "verb": "get_deal_win_evidence",
+  "checks": [
+    "deal.read"
+  ],
+  "takes": [
+    "deal"
+  ]
+}
