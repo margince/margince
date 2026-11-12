@@ -24,6 +24,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/margince/margince/backend/internal/compose/carddoer"
+	"github.com/margince/margince/backend/internal/compose/stillowed"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/approvals"
@@ -350,7 +351,7 @@ func NewFollowUpReconciler(pool *pgxpool.Pool, log *slog.Logger) *deals.FollowUp
 // reaches the generic mapper and reads as 500 internal, which tells the rep
 // their approval broke the server rather than that the date needs fixing —
 // leaving them nothing to act on and no reason to try again.
-func followUpPrecheck(db *database.DB) approvals.ReleasePrecheck {
+func followUpPrecheck(db *database.DB, now func() time.Time) approvals.ReleasePrecheck {
 	return func(ctx context.Context, staged, edited json.RawMessage) error {
 		payload := staged
 		if len(edited) > 0 {
@@ -365,11 +366,17 @@ func followUpPrecheck(db *database.DB) approvals.ReleasePrecheck {
 				"the due date %q is not a date — write it as YYYY-MM-DD", proposal.DueDate)}
 		}
 		doer, err := carddoer.Chosen(proposal.DoerID)
-		if err != nil || doer == nil {
+		if err != nil {
 			return err
 		}
 		deal := []activities.ActivityLinkInput{{EntityType: "deal", EntityID: proposal.DealID.UUID}}
 		return db.Tx(ctx, func(tx pgx.Tx) error {
+			if gone, err := stillowed.FollowUpTx(ctx, tx, proposal.DealID.UUID, now().UTC()); err != nil || gone != "" {
+				return obsoleteOr(gone, err)
+			}
+			if doer == nil {
+				return nil
+			}
 			return carddoer.EnsureMayHold(ctx, tx, *doer, deal, colleagueAuthority(db))
 		})
 	}
@@ -410,7 +417,7 @@ func followUpDoer(ctx context.Context, tx pgx.Tx, proposal deals.FollowUpProposa
 // agent on behalf of the deciding human: captured_by=agent:overnight
 // (the follow-up is the agent's suggestion), the human is on the
 // decision's own audit row.
-func followUpConfirmEffect(svc *approvals.Service, store *activities.Store) approvals.ApprovedEffect {
+func followUpConfirmEffect(svc *approvals.Service, store *activities.Store, now func() time.Time) approvals.ApprovedEffect {
 	return func(ctx context.Context, approvalID ids.ApprovalID, proposedChange json.RawMessage, diffHash string) error {
 		proposal, err := deals.UnmarshalFollowUpProposal(proposedChange)
 		if err != nil {
@@ -450,8 +457,17 @@ func followUpConfirmEffect(svc *approvals.Service, store *activities.Store) appr
 		// The rollback also keeps a failed effect re-drivable: the approval is
 		// still unconsumed, so deciding it again runs this effect again
 		// (approvals.effectIsStillOwed).
-		return svc.RedeemAndApply(ctx, approvalID, deals.FollowUpReconcileKind, diffHash,
+		var gone string
+		err = svc.RedeemAndApply(ctx, approvalID, deals.FollowUpReconcileKind, diffHash,
 			func(tx pgx.Tx) error {
+				// Asked again here: a next step or a close landing between the
+				// precheck and this write makes the follow-up unneeded. The
+				// redemption commits with nothing written, and the decider is
+				// told why.
+				var err error
+				if gone, err = stillowed.FollowUpTx(ctx, tx, proposal.DealID.UUID, now().UTC()); err != nil || gone != "" {
+					return err
+				}
 				doer, err := followUpDoer(ctx, tx, proposal, decider.UserID)
 				if err != nil {
 					return err
@@ -476,5 +492,6 @@ func followUpConfirmEffect(svc *approvals.Service, store *activities.Store) appr
 				_, _, err = store.LogActivityTx(execCtx, tx, in)
 				return err
 			})
+		return obsoleteOr(gone, err)
 	}
 }
