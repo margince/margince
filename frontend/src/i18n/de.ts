@@ -7800,6 +7800,12 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "compose.scheduleAfternoon": "Morgen Nachmittag",
   "compose.draftLanguage": "Sprache des Entwurfs",
   "compose.rewrite": "Umschreiben",
+  "compose.rewritePolish": "Glätten",
+  "compose.rewritePolishAsk":
+    "Wortwahl und Lesefluss verbessern. Bedeutung, Fakten und Länge beibehalten.",
+  "compose.rewriteFormatted":
+    "Umschreiben geht nur bei reinem Text. Entfernen Sie Formatierung und Links.",
+  "compose.rewriteTooLong": "Diese Mail ist zu lang zum Umschreiben.",
   "compose.rewriteShorter": "Kürzer",
   "compose.rewriteShorterAsk":
     "Die Bedeutung beibehalten und weniger Wörter verwenden.",

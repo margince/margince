@@ -7613,6 +7613,12 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "compose.scheduleAfternoon": "Chiều mai",
   "compose.draftLanguage": "Ngôn ngữ của bản nháp",
   "compose.rewrite": "Viết lại",
+  "compose.rewritePolish": "Trau chuốt",
+  "compose.rewritePolishAsk":
+    "Cải thiện cách diễn đạt và mạch văn. Giữ nguyên ý, các dữ kiện và độ dài.",
+  "compose.rewriteFormatted":
+    "Chỉ viết lại được văn bản thuần. Hãy bỏ định dạng và liên kết.",
+  "compose.rewriteTooLong": "Thư này quá dài để viết lại.",
   "compose.rewriteShorter": "Ngắn hơn",
   "compose.rewriteShorterAsk": "Giữ nguyên ý, dùng ít chữ hơn.",
   "compose.rewriteWarmer": "Ấm áp hơn",

@@ -7801,6 +7801,12 @@ export const en = {
   "compose.scheduleAfternoon": "Tomorrow afternoon",
   "compose.draftLanguage": "Draft language",
   "compose.rewrite": "Rewrite",
+  "compose.rewritePolish": "Polish",
+  "compose.rewritePolishAsk":
+    "Improve the wording and flow. Keep the meaning, the facts and the length.",
+  "compose.rewriteFormatted":
+    "Rewrites work on plain text. Remove the formatting and links to use them.",
+  "compose.rewriteTooLong": "This mail is too long to rewrite.",
   "compose.rewriteShorter": "Shorter",
   "compose.rewriteShorterAsk": "Keep the meaning and use fewer words.",
   "compose.rewriteWarmer": "Warmer",
