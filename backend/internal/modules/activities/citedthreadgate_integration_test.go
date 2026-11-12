@@ -61,8 +61,9 @@ func (c *citedThreads) limit(t *testing.T, activity ids.UUID) {
 // no verdict at all.
 func TestACitedThreadSettlesOnlyOnEvidenceTheReaderMayRead(t *testing.T) {
 	e := setupLoad(t)
-	c := &citedThreads{e: e, store: NewStore(database.BindTo(e.pool, ids.From[ids.WorkspaceKind](e.ws))),
-		at: requestInstant}
+	c := &citedThreads{
+		e: e, store: NewStore(database.BindTo(e.pool, ids.From[ids.WorkspaceKind](e.ws))), at: requestInstant,
+	}
 	thread := func() string { return "cited-" + ids.NewV7().String() }
 
 	answeredThread, hiddenAnswerThread := thread(), thread()
