@@ -2,11 +2,10 @@ import { useQueries, useQuery } from "@tanstack/react-query";
 import { api } from "../../api/client";
 import { searchCompanyTargets } from "../../components/companyform";
 import type { CreateField } from "../../components/create";
+import { currencyField } from "../../components/currencyfield";
 import type { ProjectOwnerPicker } from "../../components/projectownerfield";
-import {
-  currencyOptions,
-  type LeadingCurrencies,
-} from "../../format/currencychoices";
+import type { LeadingCurrencies } from "../../format/currencychoices";
+import type { Locale } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
 import type { AcquisitionSource } from "../../lib/acquisitionsources.queries";
 import { useCan } from "../../lib/capability";
@@ -334,6 +333,7 @@ export function dealEditFields(
     currentOwner: string | null;
     currency: string;
     leadingCurrencies: LeadingCurrencies;
+    locale: Locale;
   },
 ): CreateField[] {
   const ownerOptions = [
@@ -356,13 +356,7 @@ export function dealEditFields(
       type: "number",
       step: "any",
     },
-    {
-      key: "currency",
-      label: "create.currency",
-      type: "select",
-      required: true,
-      options: currencyOptions(opts.leadingCurrencies, opts.currency),
-    },
+    currencyField(opts.leadingCurrencies, opts.locale, opts.currency),
     {
       key: "owner_id",
       label: "deal.ownerMe",
