@@ -115,7 +115,6 @@ func WithLicensePosture(posture func() licensecheck.Posture) Option {
 func WithInstallationTrial(env runtimeenv.Environment, posture func() licensecheck.Posture, now func() time.Time) Option {
 	return func(s *Server, pool *pgxpool.Pool) {
 		trial := installtrial.New(pool, env, posture, now)
-		s.trialLockEnded = trial.Ended
 		s.authHandlers = s.WithTrialLock(trial.Ended)
 		s.trial = trial
 	}
