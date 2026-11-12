@@ -11,6 +11,7 @@
 import { ArrowDown, Lock } from "lucide-react";
 import { useId, useRef, useState } from "react";
 import type { components } from "../../api/schema";
+import { TranslationsLine } from "../../components/labeltranslations";
 import { Badge, EmptyState } from "../../design-system/atoms";
 import { CellStack } from "../../design-system/cellstack";
 import { DataTable, type DataTableColumn } from "../../design-system/datatable";
@@ -181,12 +182,16 @@ function stageColumns(of: ColumnsOf): DataTableColumn<Stage>[] {
       header: t("stage.colStage"),
       fold: "title",
       grow: true,
-      render: (stage) =>
-        stage.semantic === "open" ? (
-          <OpenName stage={stage} above={open[open.indexOf(stage) - 1]} />
-        ) : (
-          <ClosingName stage={stage} />
-        ),
+      render: (stage) => (
+        <CellStack>
+          {stage.semantic === "open" ? (
+            <OpenName stage={stage} above={open[open.indexOf(stage) - 1]} />
+          ) : (
+            <ClosingName stage={stage} />
+          )}
+          <TranslationsLine translations={stage.name_translations} />
+        </CellStack>
+      ),
     },
     {
       key: "odds",

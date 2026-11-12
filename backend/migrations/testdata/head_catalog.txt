@@ -4100,7 +4100,9 @@ public.custom_field.custom_field_type_check CHECK ((type = ANY (ARRAY['text'::te
 public.custom_field.custom_field_version_js_safe CHECK (((version >= '-9007199254740991'::bigint) AND (version <= '9007199254740991'::bigint)))
 public.custom_field.id uuid NOT NULL gen=- def=uuidv7()
 public.custom_field.label text NOT NULL gen=- def=-
+public.custom_field.label_translations jsonb NOT NULL gen=- def='{}'::jsonb
 public.custom_field.object text NOT NULL gen=- def=-
+public.custom_field.option_translations jsonb NOT NULL gen=- def='{}'::jsonb
 public.custom_field.options jsonb gen=- def=-
 public.custom_field.reportable boolean NOT NULL gen=- def=false
 public.custom_field.show_in_create boolean NOT NULL gen=- def=true
@@ -8923,6 +8925,7 @@ public.stage.archived_at timestamp with time zone gen=- def=-
 public.stage.created_at timestamp with time zone NOT NULL gen=- def=now()
 public.stage.id uuid NOT NULL gen=- def=uuidv7()
 public.stage.name text NOT NULL gen=- def=-
+public.stage.name_translations jsonb NOT NULL gen=- def='{}'::jsonb
 public.stage.pipeline_id uuid NOT NULL gen=- def=-
 public.stage.position integer NOT NULL gen=- def=-
 public.stage.semantic text NOT NULL gen=- def='open'::text

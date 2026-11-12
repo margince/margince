@@ -40237,6 +40237,7 @@ export interface components {
             archived_at?: string | null;
             version?: components["schemas"]["RowVersion"];
             exit_criteria?: components["schemas"]["StageExitCriteriaCounts"];
+            name_translations?: components["schemas"]["LabelTranslations"];
             /** @description Live deals on this stage that the caller may see. Absent when the caller may not read deals, because a zero would claim the stage is empty. `archiveStage` refuses with `stage_occupied` on every live deal, counted whether or not the caller may see it, so a zero here does not promise the removal succeeds. */
             readonly deal_count?: number;
         };
@@ -40259,6 +40260,7 @@ export interface components {
             semantic: "open" | "won" | "lost";
             /** @default 0 */
             win_probability: number;
+            name_translations?: components["schemas"]["LabelTranslations"];
         };
         UpdateStageRequest: {
             name?: string;
@@ -40266,6 +40268,27 @@ export interface components {
             /** @enum {string} */
             semantic?: "open" | "won" | "lost";
             win_probability?: number;
+            name_translations?: components["schemas"]["LabelTranslations"];
+        };
+        /**
+         * @description An admin-named label in further UI languages, keyed by language. A reader whose UI
+         *     language has an entry sees it; any other reader sees the stored label. On a write the
+         *     map replaces the stored one, an empty text drops its language, and a language outside
+         *     en, de and vi is 422 `invalid_translation`.
+         */
+        LabelTranslations: {
+            en?: string;
+            de?: string;
+            vi?: string;
+        };
+        /**
+         * @description Each picklist option's name in further UI languages, keyed by the option as stored. The
+         *     stored option stays the value written on records; only its display changes. On a write
+         *     the map replaces the stored one, and an option the field does not offer is 422
+         *     `invalid_translation`.
+         */
+        OptionTranslations: {
+            [key: string]: components["schemas"]["LabelTranslations"];
         };
         /**
          * @description One observation about a deal against one of its stage's exit criteria.
@@ -49310,6 +49333,8 @@ export interface components {
             currency?: string | null;
             /** @description Allowed picklist values; present (non-empty) when `type=picklist`, null otherwise. */
             options?: string[] | null;
+            label_translations?: components["schemas"]["LabelTranslations"];
+            option_translations?: components["schemas"]["OptionTranslations"];
             /** @description Whether the field is offered in the create dialog of its object. Off keeps it out of create dialogs only: the record page still shows the field and edits its value. */
             show_in_create: boolean;
             /** @description Whether reports may group and filter by this field. Off by default, and only a picklist or boolean field can be on: one value per record keeps a grouped total from counting a record twice. On publishes the field's label and choices to every reader of the reports over its object. */
@@ -49371,9 +49396,11 @@ export interface components {
             /** @description The activity kinds the field applies to. Only an activity field may name any; omitted or empty means every kind. An unknown kind, or kinds on another object's field, is refused with a 422. */
             activity_kinds?: ("call" | "email" | "meeting" | "message" | "note" | "task")[];
         };
-        /** @description Merge-PATCH of the settings a live field may change: `label`, `show_in_create`, `reportable` and `activity_kinds`. At least one is required. `column_name`, `object`, and `type` are absent from this request schema entirely (immutable, not just ignored if sent). `reportable` true on a field that is not a picklist or boolean is refused. `activity_kinds` replaces the kinds an activity field applies to, and an empty array means every kind again; it is refused on another object's field. */
+        /** @description Merge-PATCH of the settings a live field may change: `label`, `label_translations`, `option_translations`, `show_in_create`, `reportable` and `activity_kinds`. At least one is required. `column_name`, `object`, and `type` are absent from this request schema entirely (immutable, not just ignored if sent). `reportable` true on a field that is not a picklist or boolean is refused. `activity_kinds` replaces the kinds an activity field applies to, and an empty array means every kind again; it is refused on another object's field. */
         RenameCustomFieldRequest: {
             label?: string;
+            label_translations?: components["schemas"]["LabelTranslations"];
+            option_translations?: components["schemas"]["OptionTranslations"];
             show_in_create?: boolean;
             reportable?: boolean;
             activity_kinds?: ("call" | "email" | "meeting" | "message" | "note" | "task")[];

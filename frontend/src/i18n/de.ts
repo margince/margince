@@ -11250,6 +11250,10 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "stage.createRefused":
     "Deine Rolle darf keine Phasen hinzufügen. Frage einen Admin.",
   "stage.edit": "Phase bearbeiten",
+  "translation.nameIn.en": "Name auf Englisch",
+  "translation.nameIn.de": "Name auf Deutsch",
+  "translation.nameIn.vi": "Name auf Vietnamesisch",
+  "translation.given": "{language}: {name}",
   "stage.name": "Name",
   "stage.semantic": "Phasentyp",
   "stage.winProb": "Gewinnwahrscheinlichkeit",
@@ -13467,6 +13471,9 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "cf.writing": "Wird gespeichert…",
   "cf.added":
     "Feld „{label}“ hinzugefügt. Es erscheint in Datensätzen, Filtern, Exporten und der API.",
+  "cf.translate": "Namen in anderen Sprachen",
+  "cf.translated": "Namen von „{label}“ gespeichert",
+  "cf.translateOption": "{option}: {language}",
   "cf.edit": "Bezeichnung bearbeiten",
   "cf.archive": "Feld archivieren",
   "cf.archived":

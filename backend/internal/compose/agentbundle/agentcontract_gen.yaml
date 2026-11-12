@@ -38426,6 +38426,7 @@ components:
         archived_at: {type: [string, 'null'], format: date-time}
         version: {$ref: '#/components/schemas/RowVersion'}
         exit_criteria: {$ref: '#/components/schemas/StageExitCriteriaCounts'}
+        name_translations: {$ref: '#/components/schemas/LabelTranslations'}
         deal_count:
           type: integer
           readOnly: true
@@ -38449,6 +38450,7 @@ components:
         position: {type: integer}
         semantic: {type: string, enum: [open, won, lost], default: open}
         win_probability: {type: integer, minimum: 0, maximum: 100, default: 0}
+        name_translations: {$ref: '#/components/schemas/LabelTranslations'}
     UpdateStageRequest:
       type: object
       properties:
@@ -38456,6 +38458,27 @@ components:
         position: {type: integer}
         semantic: {type: string, enum: [open, won, lost]}
         win_probability: {type: integer, minimum: 0, maximum: 100}
+        name_translations: {$ref: '#/components/schemas/LabelTranslations'}
+    LabelTranslations:
+      type: object
+      description: |-
+        An admin-named label in further UI languages, keyed by language. A reader whose UI
+        language has an entry sees it; any other reader sees the stored label. On a write the
+        map replaces the stored one, an empty text drops its language, and a language outside
+        en, de and vi is 422 `invalid_translation`.
+      properties:
+        en: {type: string, maxLength: 200}
+        de: {type: string, maxLength: 200}
+        vi: {type: string, maxLength: 200}
+      additionalProperties: false
+    OptionTranslations:
+      type: object
+      description: |-
+        Each picklist option's name in further UI languages, keyed by the option as stored. The
+        stored option stays the value written on records; only its display changes. On a write
+        the map replaces the stored one, and an option the field does not offer is 422
+        `invalid_translation`.
+      additionalProperties: {$ref: '#/components/schemas/LabelTranslations'}
     StageEvidence:
       type: object
       description: |-
@@ -47915,6 +47938,8 @@ components:
           type: [array, 'null']
           items: {type: string}
           description: Allowed picklist values; present (non-empty) when `type=picklist`, null otherwise.
+        label_translations: {$ref: '#/components/schemas/LabelTranslations'}
+        option_translations: {$ref: '#/components/schemas/OptionTranslations'}
         show_in_create:
           type: boolean
           description: >-
@@ -47996,9 +48021,11 @@ components:
     RenameCustomFieldRequest:
       type: object
       description: >-
-        Merge-PATCH of the settings a live field may change: `label`, `show_in_create`, `reportable` and `activity_kinds`. At least one is required. `column_name`, `object`, and `type` are absent from this request schema entirely (immutable, not just ignored if sent). `reportable` true on a field that is not a picklist or boolean is refused. `activity_kinds` replaces the kinds an activity field applies to, and an empty array means every kind again; it is refused on another object's field.
+        Merge-PATCH of the settings a live field may change: `label`, `label_translations`, `option_translations`, `show_in_create`, `reportable` and `activity_kinds`. At least one is required. `column_name`, `object`, and `type` are absent from this request schema entirely (immutable, not just ignored if sent). `reportable` true on a field that is not a picklist or boolean is refused. `activity_kinds` replaces the kinds an activity field applies to, and an empty array means every kind again; it is refused on another object's field.
       properties:
         label: {type: string}
+        label_translations: {$ref: '#/components/schemas/LabelTranslations'}
+        option_translations: {$ref: '#/components/schemas/OptionTranslations'}
         show_in_create: {type: boolean}
         reportable: {type: boolean}
         activity_kinds:
