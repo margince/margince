@@ -1,12 +1,3 @@
-import {
-  CalendarClock,
-  CheckSquare,
-  Mail,
-  MessageCircle,
-  PencilLine,
-  Phone,
-  StickyNote,
-} from "lucide-react";
 import type { ReactNode } from "react";
 import type { components } from "../api/schema";
 import type { OccurredPrecision } from "../format/activitywhen";
@@ -63,7 +54,20 @@ export type TimelineEntry = {
   // what was changed about it are one chronology to the reader. Kept apart, a
   // rep comparing "we told them X" against "someone set stage to Y" had to
   // hold two orderings in their head.
-  kind: "email" | "meeting" | "note" | "call" | "task" | "message" | "change";
+  //
+  // `extension` and `signal` are a row of an installed extension's own kind and
+  // one of its signals. Core builds them from a declaration, so the extension
+  // draws no entry of its own.
+  kind:
+    | "email"
+    | "meeting"
+    | "note"
+    | "call"
+    | "task"
+    | "message"
+    | "change"
+    | "extension"
+    | "signal";
   title: string;
   isDone?: boolean;
   atIso: string;
@@ -218,6 +222,8 @@ export const TIMELINE_KIND_LABEL = {
   task: "timeline.kind.task",
   message: "timeline.kind.message",
   change: "timeline.kind.change",
+  extension: "timeline.kind.extension",
+  signal: "timeline.kind.signal",
 } as const satisfies Record<TimelineEntry["kind"], MessageKey>;
 
 /**
@@ -239,15 +245,7 @@ export function dotClass(entry: TimelineEntry): string {
     : "tl-dot tl-dot-quiet";
 }
 
-export const TIMELINE_ICON = {
-  email: Mail,
-  meeting: CalendarClock,
-  note: StickyNote,
-  call: Phone,
-  task: CheckSquare,
-  message: MessageCircle,
-  change: PencilLine,
-} as const;
+export { TIMELINE_ICON } from "./timelineicons";
 
 // A link inside a captured message, rendered as an element rather than as
 // markup: the body is escaped text and stays that way. The visible label is

@@ -96,10 +96,12 @@ type unitManifest struct {
 	// Entries are the places on core screens that offer a way into the unit.
 	Entries []declaredEntry `json:"entries,omitempty"`
 
-	// Settings are the values an admin can change for the unit, drawn by the
-	// core on the unit's card of the Extensions page.
-	Settings []declaredSetting `json:"settings,omitempty"`
-
+	// Settings are the values an admin can change, drawn on the unit's card.
+	Settings     []declaredSetting     `json:"settings,omitempty"`
+	CompanyTypes []declaredCompanyType `json:"company_types,omitempty"`
+	RecordKinds  []declaredRecordKind  `json:"record_kinds,omitempty"`
+	LinkTypes    []declaredLinkType    `json:"link_types,omitempty"`
+	reportDecls
 	// Panels are the places on core pages that draw the unit's own component.
 	Panels []declaredPanel `json:"panels,omitempty"`
 

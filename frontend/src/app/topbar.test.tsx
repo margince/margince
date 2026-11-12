@@ -240,6 +240,26 @@ describe("Top bar at phone width", () => {
     expect(recordReads(phoneFetch)).toEqual([]);
   });
 
+  it("reads the record kinds only on the Filters pages that name them", async () => {
+    const kindReads = (fetch: ReturnType<typeof vi.fn>) =>
+      fetch.mock.calls.filter(([request]) =>
+        String(request instanceof Request ? request.url : request).includes(
+          "/record-kinds",
+        ),
+      );
+    const otherFetch = vi.fn(async () => new Response(null, { status: 404 }));
+    vi.stubGlobal("fetch", otherFetch);
+    renderTopBar({ screen: "deals" });
+    await waitFor(() => expect(otherFetch).toHaveBeenCalled());
+    expect(kindReads(otherFetch)).toEqual([]);
+    cleanup();
+
+    const filtersFetch = vi.fn(async () => new Response(null, { status: 404 }));
+    vi.stubGlobal("fetch", filtersFetch);
+    renderTopBar({ screen: "filters" });
+    await waitFor(() => expect(kindReads(filtersFetch)).not.toEqual([]));
+  });
+
   it("keeps the trail and no mark on a wide screen", () => {
     renderTopBar({ screen: "deals" });
     expect(trail()).toBeTruthy();

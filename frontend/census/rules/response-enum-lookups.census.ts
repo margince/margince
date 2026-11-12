@@ -701,7 +701,7 @@ export function readWaivers(text: string): Waivers {
 
 // The sum of the waiver list's counts. It may only fall: a fix lowers a count
 // and this number in the same change.
-export const WAIVED_LOOKUPS = 87;
+export const WAIVED_LOOKUPS = 78;
 
 /**
  * The findings left once the waivers are applied. A waived file must hold its

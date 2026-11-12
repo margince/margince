@@ -132,7 +132,7 @@ func (r *callRuntime) Tx(ctx context.Context, fn func(ctx context.Context, tx ex
 			return fn(ctx, extensionTx{
 				sql: sql,
 				core: extensionCore{
-					tx: tx, unattended: r.unattended, deps: r.deps, authority: r.scoped, unit: r.unit, audit: audit,
+					tx: tx, unattended: r.unattended, notifies: r.deliversNotices, deps: r.deps, authority: r.scoped, unit: r.unit, audit: audit,
 				},
 				ledger: extensionLedger{tx: tx, namespace: namespace, authority: r.scoped},
 			})

@@ -20,7 +20,7 @@ import { type ListColumn, ListTable } from "../../design-system/listtable";
 import { INDUSTRY_FIELD, industryWords } from "../../format/industry";
 import { useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
-import { ENTITY } from "../../lib/entity";
+import { ENTITY, type EntityKind, isEntityKind } from "../../lib/entity";
 import {
   type FilterPreview,
   type FilterResource,
@@ -113,6 +113,8 @@ export type FilterResultsProps = Readonly<{
   named: readonly string[];
   /** The plural noun for these rows — "contacts". Translated by the caller. */
   unit: string;
+  /** Headings by column name, for a record type whose labels the vocabulary lacks. */
+  columnLabels?: Readonly<Record<string, string>>;
   /** Names this table for the column widths it remembers between visits. */
   widthsKey: string;
   /** What an empty answer says, worded by the caller from the filter it ran. */
@@ -133,6 +135,7 @@ export function FilterResults({
   fields,
   named,
   unit,
+  columnLabels,
   widthsKey,
   emptyNote,
   pending,
@@ -166,7 +169,7 @@ export function FilterResults({
     const reference = referenceOf(name);
     return {
       key: name,
-      header: headerFor(name, fields, t),
+      header: columnLabels?.[name] ?? headerFor(name, fields, t),
       // The identity column is fixed, because it makes a row recognisable. The
       // picker may not hide it, and a phone shows it as the card's heading.
       fixed: index === 0,
@@ -187,7 +190,10 @@ export function FilterResults({
   });
 
   // A row opens the record it is, through the route every record link uses.
-  const route = (row: PreviewRow) => ENTITY[resource].route(String(row.id));
+  // An extension kind has no record page yet, so its rows do not link.
+  const kind = isEntityKind(resource) ? resource : null;
+  const route = (row: PreviewRow) =>
+    ENTITY[kind as EntityKind].route(String(row.id));
 
   return (
     <ListTable<PreviewRow>
@@ -197,8 +203,8 @@ export function FilterResults({
       rows={rows}
       columns={columns}
       rowKey={rowKey}
-      onRowClick={(row) => navigate(route(row))}
-      rowHref={(row) => routeHash(route(row))}
+      onRowClick={kind ? (row) => navigate(route(row)) : undefined}
+      rowHref={kind ? (row) => routeHash(route(row)) : undefined}
       unit={unit}
       widthsKey={widthsKey}
       emptyNote={emptyNote}

@@ -6,12 +6,12 @@ import type { Meta, StoryObj } from "@storybook/react-vite";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import type { ReactNode } from "react";
 import { expect, within } from "storybook/test";
-import { Card } from "../../design-system/atoms";
-import { Stack } from "../../design-system/stack";
-import { LocaleProvider } from "../../i18n";
-import { en } from "../../i18n/en";
-import type { ExtensionPanelProps } from "../../lib/extensions";
-import { meFixture } from "../../testing/mefixture";
+import { Card } from "../design-system/atoms";
+import { Stack } from "../design-system/stack";
+import { LocaleProvider } from "../i18n";
+import { en } from "../i18n/en";
+import type { ExtensionPanelProps } from "../lib/extensions";
+import { meFixture } from "../testing/mefixture";
 import { ExtensionPanels } from "./extensionpanels";
 
 // Two units' panels as a deal page's side column stacks them, and a third that

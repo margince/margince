@@ -1,12 +1,102 @@
 {
   "schema": 1,
   "name": "finance-demo",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "risk_tiers": [],
   "finance_sources": [
     {
       "provider": "offline_demo",
       "documents": true
+    }
+  ],
+  "company_types": [
+    {
+      "type": "ledger_customer",
+      "label": "Ledger customer"
+    }
+  ],
+  "record_kinds": [
+    {
+      "kind": "ledger_account",
+      "display_name": "Ledger account",
+      "table": "ext_finance_demo_ledger_account",
+      "fields": [
+        {
+          "name": "account_code",
+          "label": "Account code"
+        },
+        {
+          "name": "name",
+          "label": "Name"
+        }
+      ],
+      "natural_key": [
+        "account_code"
+      ],
+      "defaults": [
+        {
+          "role": "admin",
+          "actions": [
+            "read",
+            "create",
+            "update",
+            "delete"
+          ]
+        },
+        {
+          "role": "manager",
+          "actions": [
+            "read"
+          ]
+        }
+      ]
+    }
+  ],
+  "link_types": [
+    {
+      "type": "follow_up_of",
+      "label": "Follow-up of",
+      "from": [
+        "deal"
+      ],
+      "to": [
+        "deal"
+      ]
+    }
+  ],
+  "report_counts": [
+    {
+      "name": "ledger_accounts",
+      "label": "Ledger accounts",
+      "population": "ledger_account"
+    }
+  ],
+  "report_breakdowns": [
+    {
+      "name": "accounts_by_name",
+      "label": "Ledger accounts by name",
+      "population": "ledger_account",
+      "by": "name"
+    }
+  ],
+  "signal_types": [
+    {
+      "kind": "ledger_loss",
+      "label": "Loss reported on a ledger account",
+      "evidence": [
+        {
+          "name": "amount",
+          "label": "Amount",
+          "type": "number",
+          "required": true
+        },
+        {
+          "name": "reporter",
+          "label": "Reporter",
+          "type": "text",
+          "personal": true
+        }
+      ]
     }
   ],
   "oauth_apps": [

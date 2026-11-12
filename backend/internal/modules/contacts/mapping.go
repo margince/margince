@@ -3,10 +3,9 @@
 
 package contacts
 
-// Contract request → store input mappings, in ONE place: the HTTP
-// handlers and the SoR provider (the MCP surface's door) both decode the
-// same crm.yaml shapes, and a defaulting rule that lived in only one of
-// them would make the two surfaces silently disagree.
+// Contract request → store input mappings, in one place. The HTTP handlers and
+// the SoR provider (the MCP surface's door) both decode the same crm.yaml
+// shapes. A rule kept in only one of them would make the surfaces disagree.
 
 import (
 	"bytes"
@@ -355,6 +354,7 @@ func companyUpdateInput(req crmcontracts.UpdateCompanyRequest, ifVersion *int64)
 		}
 		in.RelationshipTypes = &desired
 	}
+	in.ExtensionRelationshipTypes = req.ExtensionRelationshipTypes
 	return in
 }
 

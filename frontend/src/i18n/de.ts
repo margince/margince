@@ -2687,6 +2687,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "history.field.cohort_promoted": "Zugeordnete Nachrichten",
   "history.field.corrected": "Ergebnis korrigiert",
   "history.field.disposition": "Einstufung",
+  "history.field.link_suggestion": "Verknüpfungsvorschlag",
+  "history.field.record_link": "Verknüpfung",
   "history.field.domain": "Domain",
   "history.field.merged_from_id": "Zusammengeführt aus",
   "history.field.merged_into_id": "Zusammengeführt in",
@@ -2728,6 +2730,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "history.field.display_name": "Name",
   "history.field.domains": "Domains",
   "history.field.due_at": "Fällig",
+  "history.field.extension_relationship_types": "Erweiterungs-Beziehungstypen",
   "history.field.email": "E-Mail",
   "history.field.ended_at": "Beendet",
   "history.field.expected_close_date": "Voraussichtlicher Abschluss",
@@ -4850,6 +4853,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "timeline.kind.task": "Aufgabe",
   "timeline.kind.message": "Nachricht",
   "timeline.kind.change": "Datensatz",
+  "timeline.kind.extension": "Erweiterung",
+  "timeline.kind.signal": "Signal",
   "timeline.withheld": "Inhalt nur für Teilnehmende",
   "compose.deadRecipients":
     "E-Mails an {addresses} kommen nicht an: Die letzte Zustellung wurde abgelehnt, und seitdem war keine erfolgreich. Sende trotzdem oder verwende eine andere Adresse.",
@@ -6443,6 +6448,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "deals.filterAcquisitionAll": "Alle Quellen",
   "deals.filterProbability": "Abschlusschance",
   "deals.filterProbabilityAll": "Jede Abschlusschance",
+  "deals.filterLinkType": "Verknüpft als",
+  "deals.filterLinkTypeAll": "Jede Verknüpfungsart",
   "deals.filterStatus": "Status",
   "deals.filterStatusAll": "Jeder Status",
   "deals.statusOpen": "Offen",
@@ -6986,6 +6993,15 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "brief.readings.leadsDue": "Nächste Fälligkeit {value}",
   "brief.rail": "Kontext",
   "brief.rail.numbers": "Kennzahlen",
+  "extensionReports.withheld":
+    "Zurückgehalten: zu wenige Datensätze für eine Anzeige",
+  "extensionReports.noValue": "Kein Wert",
+  "extensionReports.excluded_one":
+    "{count} Datensatz ist für dich durch eine Feldberechtigung ausgeblendet.",
+  "extensionReports.excluded_other":
+    "{count} Datensätze sind für dich durch eine Feldberechtigung ausgeblendet.",
+  "extensionReports.failed":
+    "Die Berichte deiner Erweiterungen konnten nicht geladen werden.",
   "brief.deck.later": "Später",
   "brief.deck.showMore": "Ganze Nachricht anzeigen",
   "brief.deck.showLess": "Weniger anzeigen",
@@ -8438,6 +8454,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "analytics.field.host_user_id": "Organisiert von",
   "analytics.field.kind": "Aktivitätstyp",
   "analytics.field.last_activity_at": "Letzte Aktivität",
+  "analytics.field.link_type": "Verknüpft als",
   "analytics.field.lost_reason": "Verlustgrund",
   "analytics.field.loss_reason": "Verlustgrund aus der Liste",
   "analytics.field.loss_reason_state": "Wie der Verlustgrund gesetzt wurde",
@@ -13443,6 +13460,9 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "cf.type.multiselect": "Mehrfachauswahl",
   "cf.type.picklist": "Auswahlliste",
   "cf.type.boolean": "Ja/Nein",
+  "cf.type.record": "Datensatz wählen",
+  "cf.recordKind": "Art des Datensatzes",
+  "cf.recordKindPlaceholder": "Art wählen",
   "cf.builder.addTo": "Feld zu {object} hinzufügen",
   "cf.builder.open": "Neues Feld",
   "cf.builder.noCode": "Ohne Code",
@@ -17181,6 +17201,26 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Worklist-Eintrag als erledigt markiert",
   "webhooks.event.activity.marked_handled.when":
     "Jemand markiert einen Worklist-Eintrag als erledigt, da er auf anderem Weg bearbeitet wurde.",
+  "webhooks.event.activity.link_suggestion_changed.label":
+    "Verknüpfungsvorschlag gemacht oder entschieden",
+  "webhooks.event.activity.link_suggestion_changed.when":
+    "Eine Erweiterung schlägt vor, zu welchem Datensatz eine Nachricht gehört, oder jemand nimmt einen Vorschlag an oder lehnt ihn ab.",
+  "webhooks.event.record_link.changed.label":
+    "Verknüpfung hinzugefügt oder entfernt",
+  "webhooks.event.record_link.changed.when":
+    "Jemand verknüpft einen Deal, ein Unternehmen oder einen Kontakt mit einem anderen Datensatz oder entfernt eine Verknüpfung.",
+  "linkSuggestions.title": "Verknüpfungsvorschläge",
+  "linkSuggestions.reason": "{unit}: {reason}",
+  "linkSuggestions.target": "{subject} zu {record} ({kind})",
+  "linkSuggestions.noSubject": "Eine Nachricht ohne Betreff",
+  "linkSuggestions.kind.contact": "Kontakt",
+  "linkSuggestions.kind.company": "Unternehmen",
+  "linkSuggestions.kind.deal": "Deal",
+  "linkSuggestions.kind.project": "Projekt",
+  "linkSuggestions.accept": "Dort ablegen",
+  "linkSuggestions.reject": "Nicht dort",
+  "linkSuggestions.unavailable":
+    "Die Verknüpfungsvorschläge konnten nicht gelesen werden. Versuche es später erneut.",
   "webhooks.event.activity.readiness_recorded.label":
     "Bereitschaft für einen Termin geändert",
   "webhooks.event.activity.readiness_recorded.when":
@@ -18567,6 +18607,12 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "filters.tab.leads": "Leads",
   "filters.matchLeads_one": "Passender Lead: {count}",
   "filters.matchLeads_other": "Passende Leads: {count}",
+  "filters.matchExtension_one": "Passender Datensatz ({kind}): {count}",
+  "filters.matchExtension_other": "Passende Datensätze ({kind}): {count}",
+  "filters.new.extension": "Neuer Filter: {kind}",
+  "filters.switch.body.extension":
+    "Die Bedingungen werden gelöscht, da sie Felder einer Datensatzart nennen.",
+  "unit.extension": "Datensätze ({kind})",
   "filters.date.on": "An einem Datum",
   "filters.date.daysAgo": "Vor Tagen",
   "filters.date.mode": "Wie das Datum angegeben wird",
@@ -19226,6 +19272,17 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Dieser Deal hat noch kein Unternehmen. Trage es unter „Details bearbeiten“ ein, um einen Termin zu buchen.",
   "deal.committee.card": "Gremium",
   "deal.committee.change": "Stakeholder ändern oder entfernen",
+  "deal.links.card": "Verknüpfungen",
+  "deal.links.add": "Verknüpfung hinzufügen",
+  "deal.links.none": "Dieser Deal ist mit keinem anderen Datensatz verknüpft.",
+  "deal.links.unavailable": "Die Verknüpfungen konnten nicht geladen werden.",
+  "deal.links.outgoing": "Von diesem Deal: {type}",
+  "deal.links.incoming": "Zu diesem Deal: {type}",
+  "deal.links.remove": "Entfernen",
+  "deal.links.type": "Verknüpfungsart",
+  "deal.links.typePlaceholder": "Art wählen",
+  "deal.links.search": "Datensatz zum Verknüpfen suchen",
+  "deal.links.cancel": "Abbrechen",
 
   // The Worklist's own words: the ranked queue, its dials, and the phrase
   // for every fact the server sends as a closed vocabulary.

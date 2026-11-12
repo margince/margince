@@ -1911,6 +1911,13 @@ paths:
           schema: {type: string, enum: [customer, partner, supplier, investor, portfolio_company, competitor, other]}
           description: >-
             Accounts carrying this relationship type. Multi-valued per account, so this selects accounts that are AT LEAST this — a partner that is also a customer matches both.
+        - name: extension_relationship_type
+          in: query
+          schema:
+            type: string
+            pattern: '^ext:[a-z0-9]+(-[a-z0-9]+)*:[a-z0-9]+(_[a-z0-9]+)*$'
+          description: >-
+            Accounts carrying this extension type (`ext:<unit>:<type>`, from `extension_relationship_types`). It is a separate parameter so the closed `relationship_type` list stays as it is. A value no installed extension declares answers 422. Both parameters together select accounts that carry both.
         - name: owner_team_id
           in: query
           schema: {type: string, format: uuid}
@@ -4273,6 +4280,11 @@ paths:
           description: >-
             An acquisition-source key, or `unset` for unclassified deals. A retired key still filters, so history stays reachable after the source leaves the picker.
           schema: {type: string}
+        - name: link_type
+          in: query
+          description: >-
+            A link type, core's or an extension's `ext:<unit>:<type>`. Keeps the deals that hold at least one link of that type to another live deal, from either end. Links to a company or a contact are not read by this filter.
+          schema: {type: string, maxLength: 68}
         - name: tag_id
           in: query
           schema:
@@ -10360,8 +10372,8 @@ paths:
         - name: resource
           in: query
           required: true
-          description: The record type whose vocabulary to read.
-          schema: {type: string, enum: [contact, company, deal, lead, project]}
+          description: The record type whose vocabulary to read, or `ext:<unit>:<kind>` for a kind an extension declared.
+          schema: {$ref: '#/components/schemas/FilterResource'}
       responses:
         '200':
           description: The vocabulary for this resource.
@@ -12141,7 +12153,7 @@ paths:
       parameters:
         - name: resource
           in: query
-          schema: {$ref: '#/components/schemas/SavedViewResource'}
+          schema: {$ref: '#/components/schemas/SavedViewTarget'}
         - $ref: '#/components/parameters/IncludeArchived'
       responses:
         '200':
@@ -13150,10 +13162,20 @@ paths:
           in: query
           schema:
             type: array
-            items: {type: string, enum: [contact, company, deal, activity, lead, project, product, offer_template, tag]}
+            items: {type: string, pattern: '^(contact|company|deal|activity|lead|project|product|offer_template|tag)$|^ext:[a-z0-9]+(-[a-z0-9]+)*:[a-z][a-z0-9_]{0,31}$'}
           style: form
           explode: false
-          description: Restrict to these object types (default all).
+          description: >-
+            Restrict to these object types (default all). Besides the core types, a kind an extension declared is a type, spelled `ext:<unit>:<kind>`. It answers only a caller who may read that kind.
+        - name: exclude_ids
+          in: query
+          schema:
+            type: array
+            items: {type: string, format: uuid}
+            maxItems: 100
+          style: form
+          description: >-
+            Record ids, of any type, to leave out of the answer. They are dropped before ranking, so a page is full and `types_with_more` counts only the records that remain. Use it to keep a record's own author out of the matches suggested for that record.
         - name: per_type
           in: query
           schema: {type: integer, minimum: 1, maximum: 20}
@@ -31502,6 +31524,11 @@ components:
           items: {type: string, enum: [customer, partner, supplier, investor, portfolio_company, competitor, other]}
           description: >-
             WHAT THE COMPANY IS to us. Multi-valued, because a company is legitimately several things at once — the partner program is built on companies that are simultaneously partners and customers. A company IS a partner iff it carries `partner` here AND has a `partner` row; removing the type while that row lives is refused (422).
+        extension_relationship_types:
+          type: array
+          items: {type: string, pattern: '^ext:[a-z0-9]+(-[a-z0-9]+)*:[a-z0-9]+(_[a-z0-9]+)*$'}
+          description: >-
+            The types an installed extension adds, as `ext:<unit>:<type>`. Kept apart from `relationship_types`, whose list stays the closed set above. Each value is declared by the extension it names; a value no extension declares is refused (422, `invalid_enum`).
         logo_url:
           type: [string, 'null']
           readOnly: true
@@ -31638,6 +31665,11 @@ components:
           description: >-
             Replace-set of what the company is to us (add new, archive removed), the same shape as `domains`. Absent = untouched; an empty array clears every type. Removing `partner` while the company still has a `partner` extension row is refused with 422 — the invariant binds both ways, and an invariant nothing enforces is a comment.
           items: {type: string, enum: [customer, partner, supplier, investor, portfolio_company, competitor, other]}
+        extension_relationship_types:
+          type: array
+          description: >-
+            Replace-set of the types an installed extension adds (`ext:<unit>:<type>`), applied like `relationship_types`. Absent = untouched; an empty array clears them. A value no extension declares is refused with 422.
+          items: {type: string, pattern: '^ext:[a-z0-9]+(-[a-z0-9]+)*:[a-z0-9]+(_[a-z0-9]+)*$'}
       additionalProperties: true
     CompanyListResponse:
       type: object
@@ -42144,17 +42176,14 @@ components:
         id: {type: string, format: uuid}
         kind:
           type: string
-          enum: [stalled_deal, champion_left, reengagement, buying_intent, risk, other, contract_ended, new_opportunity, commitment_made, ghosted_thread, project_gone_quiet, funding, leadership_change, expansion, product_launch, technical_change]
+          pattern: '^([a-z_]+|ext:[a-z0-9]+(-[a-z0-9]+)*:[a-z][a-z0-9_]{0,31})$'
           description: |-
-            The first six are what a human files by hand. The rest are what the producers
-            raise: `contract_ended`, `new_opportunity` and `commitment_made` are read
-            out of a settled conversation by the `signal_extract` site, each citing the message
-            it is stated in; `ghosted_thread` is a comparison rather than a judgment — the newest
-            interaction is ours, nobody answered it, and the account is one worth chasing;
-            `project_gone_quiet` is the same kind of comparison on a project — it is being
-            pursued or delivered and nothing has been filed against it for 30 days (the
-            `projects-gone-quiet` report's own rule). Its subject is the project
-            (`entity_type: project`), attributed to the project's company.
+            One of core's sixteen kinds, or `ext:<unit>:<kind>` for a kind an extension declares.
+            A client must treat a value it does not know as a kind of its own, never as an error.
+            Core's kinds are `stalled_deal`, `champion_left`, `reengagement`, `buying_intent`,
+            `risk`, `other`, `contract_ended`, `new_opportunity`, `commitment_made`,
+            `ghosted_thread`, `project_gone_quiet`, `funding`, `leadership_change`, `expansion`,
+            `product_launch` and `technical_change`.
         source_channel:
           type: string
           enum: [derived, inbound, web, social, deal_room_engagement]
@@ -42246,6 +42275,21 @@ components:
         workstream:
           type: string
           description: The engagement named in the cited words, when present. Never inferred from the company name.
+        fields:
+          type: object
+          additionalProperties: true
+          description: |-
+            The members of an extension signal type's evidence layout. Only core writes it, when an
+            extension files a signal. A request that carries it is refused.
+        provenance:
+          $ref: '#/components/schemas/SignalProvenance'
+    SignalProvenance:
+      type: object
+      required: [unit, captured_by]
+      description: Where an extension signal came from. Core stamps it from the filing extension and the signed-in seat. A request that carries it is refused.
+      properties:
+        unit: {type: string, description: The extension that filed the signal.}
+        captured_by: {type: string, description: The user or agent whose invocation filed it.}
     RecordCommunicationContextRequest:
       type: object
       additionalProperties: false
@@ -42349,12 +42393,20 @@ components:
     UpdateSignalRequest:
       type: object
       description: |-
-        Triage. `resolution_state` and the
+        Triage and correction. `resolution_state` and the
         resolved ids are resolver-owned and not writable here.
       properties:
         status: {type: string, enum: [open, acknowledged, resolved, dismissed]}
         note: {type: [string, 'null'], description: Optional outcome note recorded with a status change.}
         severity: {type: string, enum: [info, warn, urgent]}
+        kind:
+          type: string
+          enum: [stalled_deal, champion_left, reengagement, buying_intent, risk, other]
+          description: Corrects the signal's type. Only the kinds a human files by hand are accepted. The audit row keeps the old kind.
+        evidence:
+          type: array
+          items: {$ref: '#/components/schemas/SignalEvidence'}
+          description: Replaces the signal's evidence. The audit row keeps the old evidence.
     SignalListResponse:
       type: object
       required: [data, page]
@@ -42433,7 +42485,7 @@ components:
         id: {type: string, format: uuid}
         name: {type: string}
         purpose: {type: [string, 'null'], description: 'What the list is for, in the words of its steward.'}
-        entity_type: {type: string, enum: [contact, company, deal, lead, project]}
+        entity_type: {$ref: '#/components/schemas/FilterResource'}
         list_type: {type: string, enum: [static, dynamic], default: static}
         definition: {type: [object, 'null'], additionalProperties: true, description: 'A Live List''s filter tree; null for a Shortlist.'}
         sharing:
@@ -42560,7 +42612,7 @@ components:
       properties:
         id: {type: string, format: uuid}
         list_id: {type: string, format: uuid}
-        entity_type: {type: string, enum: [contact, company, deal, lead, project]}
+        entity_type: {$ref: '#/components/schemas/FilterResource'}
         entity_id: {type: string, format: uuid}
         added_by: {type: string, description: 'The principal that added a Shortlist member; `dynamic` for a Live List member.'}
         added_by_name: {type: [string, 'null'], description: 'For a Shortlist member, the display name of the user who added it; null for any other principal.'}
@@ -42596,7 +42648,7 @@ components:
       required: [name, entity_type]
       properties:
         name: {type: string, minLength: 1}
-        entity_type: {type: string, enum: [contact, company, deal, lead, project]}
+        entity_type: {$ref: '#/components/schemas/FilterResource'}
         list_type: {type: string, enum: [static, dynamic], default: static}
         definition: {type: [object, 'null'], additionalProperties: true}
         purpose: {type: [string, 'null']}
@@ -42618,7 +42670,7 @@ components:
       type: object
       required: [entity_type, entity_id]
       properties:
-        entity_type: {type: string, enum: [contact, company, deal, lead, project]}
+        entity_type: {$ref: '#/components/schemas/FilterResource'}
         entity_id: {type: string, format: uuid}
         note: {type: [string, 'null'], maxLength: 500, description: 'Why, in the words of whoever made the change.'}
     ListListResponse:
@@ -42706,14 +42758,17 @@ components:
       properties:
         data: {type: array, items: {$ref: '#/components/schemas/ListHistoryEntry'}}
         page: {$ref: '#/components/schemas/PageInfo'}
+    FilterResource:
+      type: string
+      description: >-
+        A record type a filter may be built over: one of core's five, or `ext:<unit>:<kind>` for a kind an extension declared. A kind no installed extension declares answers 404 on the vocabulary and 422 on a preview.
+      pattern: '^(contact|company|deal|lead|project)$|^ext:[a-z0-9]+(-[a-z0-9]+)*:[a-z][a-z0-9_]{0,31}$'
     FilterPreviewRequest:
       type: object
       description: A candidate filter to evaluate without saving it.
       required: [resource, filter]
       properties:
-        resource:
-          type: string
-          enum: [contact, company, deal, lead, project]
+        resource: {$ref: '#/components/schemas/FilterResource'}
         filter:
           type: object
           additionalProperties: true
@@ -42746,9 +42801,7 @@ components:
         What a candidate filter would select for this caller.
       required: [resource, match_count, columns, rows, truncated]
       properties:
-        resource:
-          type: string
-          enum: [contact, company, deal, lead, project]
+        resource: {$ref: '#/components/schemas/FilterResource'}
         match_count:
           type: integer
           description: |-
@@ -42870,9 +42923,7 @@ components:
         accepts are the same set.
       required: [resource, fields]
       properties:
-        resource:
-          type: string
-          enum: [contact, company, deal, lead, project]
+        resource: {$ref: '#/components/schemas/FilterResource'}
         fields:
           type: array
           description: |-
@@ -42896,7 +42947,7 @@ components:
             since the catalog owns labels and this vocabulary does not.
         type:
           type: string
-          enum: [text, number, date, currency, picklist, multiselect, boolean, id, domain, distance]
+          enum: [text, number, date, currency, picklist, multiselect, boolean, record, id, domain, distance]
           description: |-
             The six custom-field types, plus `id` for a reference to another record,
             `domain` for a host column and `distance` for a place on the earth. A `distance`
@@ -43154,10 +43205,11 @@ components:
       properties:
         data: {type: array, items: {$ref: '#/components/schemas/Tag'}}
         page: {$ref: '#/components/schemas/PageInfo'}
-    SavedViewResource:
+    SavedViewTarget:
       type: string
-      description: The list a saved view is over. One schema for the record, the create and update bodies and the list filter, so the four cannot drift.
-      enum: [contacts, companies, deals, activities, leads, partners, projects]
+      description: >-
+        The list a saved view is over: one of core's lists, or `ext:<unit>:<kind>` for a kind an extension declared. One schema for the record, the create body and the list filter, so the three cannot drift.
+      pattern: '^(contacts|companies|deals|activities|leads|partners|projects)$|^ext:[a-z0-9]+(-[a-z0-9]+)*:[a-z][a-z0-9_]{0,31}$'
     ReportingMetricID:
       type: string
       enum:
@@ -45160,7 +45212,7 @@ components:
         id: {type: string, format: uuid}
         owner_id: {type: string, format: uuid}
         shared_scope: {type: string, enum: [private, team, workspace], default: private, description: V1 enforces private.}
-        resource: {$ref: '#/components/schemas/SavedViewResource'}
+        resource: {$ref: '#/components/schemas/SavedViewTarget'}
         name: {type: string}
         query:
           type: object
@@ -45174,7 +45226,7 @@ components:
       type: object
       required: [resource, name, query]
       properties:
-        resource: {$ref: '#/components/schemas/SavedViewResource'}
+        resource: {$ref: '#/components/schemas/SavedViewTarget'}
         name: {type: string}
         query: {type: object, additionalProperties: true}
     UpdateSavedViewRequest:
@@ -47983,8 +48035,8 @@ components:
         slug: {type: string, description: Admin-facing key the column_name derives from.}
         type:
           type: string
-          enum: [text, number, date, currency, picklist, multiselect, boolean]
-          description: The supported field types. Multiselect values are JSON string arrays; empty arrays clear the selection. Immutable once created.
+          enum: [text, number, date, currency, picklist, multiselect, boolean, record]
+          description: The supported field types. Multiselect values are JSON string arrays; empty arrays clear the selection. A record field holds the id of one record of the kind named by its single option, and that option must be a record kind a unit declared. Immutable once created.
         status:
           type: string
           enum: [active, retired]
@@ -48066,7 +48118,7 @@ components:
         label: {type: string}
         type:
           type: string
-          enum: [text, number, date, currency, picklist, multiselect, boolean]
+          enum: [text, number, date, currency, picklist, multiselect, boolean, record]
         currency: {type: [string, 'null'], pattern: '^[A-Z]{3}$'}
         options: {type: [array, 'null'], items: {type: string}}
         source: {type: string}
@@ -48343,7 +48395,7 @@ components:
       type: object
       required: [type, id]
       properties:
-        type: {type: string, enum: [contact, company, deal, activity, lead, project, product, offer_template, tag]}
+        type: {type: string, pattern: '^(contact|company|deal|activity|lead|project|product|offer_template|tag)$|^ext:[a-z0-9]+(-[a-z0-9]+)*:[a-z][a-z0-9_]{0,31}$'}
         id: {type: string, format: uuid}
         title: {type: [string, 'null'], description: Display label (name/subject).}
         snippet: {type: [string, 'null']}
@@ -48400,7 +48452,7 @@ components:
         page: {$ref: '#/components/schemas/PageInfo'}
         types_with_more:
           type: array
-          items: {type: string, enum: [contact, company, deal, activity, lead, project, product, offer_template, tag]}
+          items: {type: string, pattern: '^(contact|company|deal|activity|lead|project|product|offer_template|tag)$|^ext:[a-z0-9]+(-[a-z0-9]+)*:[a-z][a-z0-9_]{0,31}$'}
           description: >-
             On a `per_type` answer only: the types that matched more hits than the page carries for them. Absent on a ranked answer, whose `page.has_more` says the same thing for the list as a whole.
         near_matches:
