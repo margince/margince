@@ -28,7 +28,22 @@ import (
 func TestPersonalWaitingRequiresTheAddressedSeatNotTheRecordOwner(t *testing.T) {
 	e := integration.Setup(t)
 	at := time.Date(2026, 10, 21, 8, 0, 0, 0, time.UTC)
-	addresses := connectSeatMailboxes(t, e, e.AdminUser, e.Rep1)
+	addresses := map[ids.UUID]string{}
+	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+		for _, seat := range []ids.UUID{e.AdminUser, e.Rep1} {
+			var address string
+			if err := tx.QueryRow(context.Background(), `SELECT email FROM app_user WHERE id=$1`, seat).Scan(&address); err != nil {
+				return err
+			}
+			addresses[seat] = address
+			if _, err := tx.Exec(context.Background(), `INSERT INTO capture_connection (user_id, provider, mail_posture, account_label) VALUES ($1,'gmail','shared',$2)`, seat, address); err != nil {
+				return err
+			}
+		}
+		return nil
+	}); err != nil {
+		t.Fatal(err)
+	}
 	aliasReader := e.As(e.Rep1, []ids.UUID{e.Team1}, integration.AdminPerms)
 	if _, err := capture.NewOwnerIdentityStore(e.DB()).Add(aliasReader, "address", "sales-alias@ourco.test"); err != nil {
 		t.Fatal(err)

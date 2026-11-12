@@ -3,7 +3,7 @@
 
 //go:build integration
 
-package compose
+package justin_test
 
 import (
 	"context"
@@ -13,6 +13,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/compose"
 	"github.com/margince/margince/backend/internal/compose/integration"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/activities"
@@ -107,7 +108,7 @@ func TestJustInShowsOnlyTheReadersOwnUnansweredMail(t *testing.T) {
 	repsMail := f.inbound(t, contact, "email", f.at, []ids.UUID{f.e.Rep1}, nil)
 	unaddressed := f.inbound(t, contact, "email", f.at, nil, nil)
 	chat := f.inbound(t, contact, "message", f.at, nil, nil)
-	feed := newAttentionService(f.e.Pool, approvals.NewService(f.e.DB()), func() time.Time { return f.at.Add(time.Hour) })
+	feed := compose.NewAttentionService(f.e.Pool, approvals.NewService(f.e.DB()), func() time.Time { return f.at.Add(time.Hour) })
 	for reader, own := range map[ids.UUID]bool{f.e.Rep1: true, f.e.AdminUser: false} {
 		shown := f.justIn(t, reader, contact)
 		page, err := feed.Worklist(f.reader(reader), "mine", "all", ids.Nil, 100, "")
