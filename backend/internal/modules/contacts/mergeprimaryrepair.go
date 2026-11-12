@@ -5,7 +5,6 @@ package contacts
 
 import (
 	"context"
-	"errors"
 	"fmt"
 
 	"github.com/jackc/pgx/v5"
@@ -88,37 +87,20 @@ func ReconcileMergeDroppedPrimariesTx(ctx context.Context, tx pgx.Tx, after ids.
 	return page, nil
 }
 
+// restoreMergeDroppedPrimary hands the slot on through the succession rule. The
+// contact's one current employment is its merge heir, so the rule picks it.
 func restoreMergeDroppedPrimary(ctx context.Context, tx pgx.Tx, contact ids.ContactID, runID string) (bool, error) {
 	if err := storekit.LockWriteIdentity(ctx, tx, employmentKind, contact.String()); err != nil {
 		return false, err
 	}
-	var heir ids.UUID
-	var version int64
-	err := tx.QueryRow(ctx, `SELECT h.id, h.version FROM contact c, LATERAL (`+mergeDroppedHeir+` LIMIT 1) h
- WHERE c.id = $1 AND `+mergeDroppedPrimary, contact).Scan(&heir, &version)
-	if errors.Is(err, pgx.ErrNoRows) {
-		return false, nil
-	}
-	if err != nil {
+	var dropped bool
+	if err := tx.QueryRow(ctx, `SELECT EXISTS (SELECT 1 FROM contact c WHERE c.id = $1 AND `+mergeDroppedPrimary+`)`, contact).Scan(&dropped); err != nil {
 		return false, fmt.Errorf("contacts: re-reading a contact a merge left without an employer: %w", err)
 	}
-	promoted, err := scanRelationship(tx.QueryRow(ctx, `UPDATE relationship a SET is_current_primary = true
- WHERE a.id = $1 AND a.version = $2 AND a.archived_at IS NULL AND NOT a.is_current_primary
- AND NOT EXISTS (SELECT 1 FROM relationship b WHERE `+mergePrimarySlotWitness+`)
- RETURNING `+relationshipColumns, heir, version))
-	if errors.Is(err, pgx.ErrNoRows) {
+	if !dropped {
 		return false, nil
 	}
-	if err != nil {
-		return false, fmt.Errorf("contacts: restoring a primary employer a merge dropped: %w", err)
-	}
-	before := relationshipFieldImage(promoted)
-	before["is_current_primary"] = false
-	evidence := map[string]any{evidenceKeyDataTaskRun: runID, auditKeyReason: "merge_dropped_primary"}
-	if err := emitRelationshipChangeWithEvidence(ctx, tx, "update", before, promoted, evidence); err != nil {
-		return false, fmt.Errorf("contacts: recording a restored primary employer: %w", err)
-	}
-	return true, nil
+	return promoteLoneSurvivor(ctx, tx, contact, map[string]any{evidenceKeyDataTaskRun: runID, auditKeyReason: "merge_dropped_primary"})
 }
 
 // CountMergeDroppedPrimaries counts, up to maximum+1, the contacts the repair

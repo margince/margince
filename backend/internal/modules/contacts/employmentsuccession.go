@@ -45,11 +45,19 @@ func lockContactForEmployment(ctx context.Context, tx pgx.Tx, id ids.UUID) error
 // Retiring an employment fills an empty primary slot only when no choice remains.
 // Explicitly clearing the primary flag does not invoke this succession rule.
 func promoteLoneSurvivingEmployment(ctx context.Context, tx pgx.Tx, contactID ids.ContactID) error {
-	if err := flipCurrentPrimary(ctx, tx, `UPDATE relationship SET is_current_primary = true
- WHERE NOT is_current_primary AND id = (`+employmentSuccessorSQL()+`)`, pgx.StrictNamedArgs{contactEntity: contactID, "excluded": nil}); err != nil {
-		return fmt.Errorf("contacts: promoting the surviving employment for contact %s: %w", contactID, err)
+	_, err := promoteLoneSurvivor(ctx, tx, contactID, nil)
+	return err
+}
+
+// promoteLoneSurvivor is the succession rule with evidence for its audit row. It
+// reports whether an edge took the slot.
+func promoteLoneSurvivor(ctx context.Context, tx pgx.Tx, contactID ids.ContactID, evidence map[string]any) (bool, error) {
+	flipped, err := flipCurrentPrimaryWithEvidence(ctx, tx, evidence, `UPDATE relationship SET is_current_primary = true
+ WHERE NOT is_current_primary AND id = (`+employmentSuccessorSQL()+`)`, pgx.StrictNamedArgs{contactEntity: contactID, "excluded": nil})
+	if err != nil {
+		return false, fmt.Errorf("contacts: promoting the surviving employment for contact %s: %w", contactID, err)
 	}
-	return nil
+	return flipped > 0, nil
 }
 
 // flipCurrentPrimary runs an UPDATE that moves only is_current_primary on edges
@@ -57,23 +65,30 @@ func promoteLoneSurvivingEmployment(ctx context.Context, tx pgx.Tx, contactID id
 // event, like any other edge update. The statement must match only rows holding
 // the opposite value, which is what makes the before image exact.
 func flipCurrentPrimary(ctx context.Context, tx pgx.Tx, update string, args ...any) error {
+	_, err := flipCurrentPrimaryWithEvidence(ctx, tx, nil, update, args...)
+	return err
+}
+
+// flipCurrentPrimaryWithEvidence is flipCurrentPrimary that puts evidence on
+// each audit row and counts the edges it moved.
+func flipCurrentPrimaryWithEvidence(ctx context.Context, tx pgx.Tx, evidence map[string]any, update string, args ...any) (int, error) {
 	rows, err := tx.Query(ctx, update+" RETURNING "+relationshipColumns, args...)
 	if err != nil {
-		return err
+		return 0, err
 	}
 	defer rows.Close()
 	flipped, err := scanRelationships(rows)
 	if err != nil {
-		return err
+		return 0, err
 	}
 	for _, rel := range flipped {
 		before := relationshipFieldImage(rel)
 		before["is_current_primary"] = !rel.IsCurrentPrimary
-		if err := emitRelationshipChange(ctx, tx, "update", before, rel); err != nil {
-			return err
+		if err := emitRelationshipChangeWithEvidence(ctx, tx, "update", before, rel, evidence); err != nil {
+			return 0, err
 		}
 	}
-	return nil
+	return len(flipped), nil
 }
 
 // The candidate is date-aware; slot occupancy follows the date-blind unique index.

@@ -289,8 +289,7 @@ func readCurrentEmployer(ctx context.Context, tx pgx.Tx, contact ids.UUID) (*ids
 		       coalesce((SELECT array_agg(od.domain) FROM company_domain od
 		                  WHERE od.company_id = r.company_id AND od.archived_at IS NULL), '{}')
 		  FROM relationship r
-		 WHERE r.contact_id = $1 AND r.kind = 'employment' AND r.archived_at IS NULL
-		   AND `+employment.CurrentPrimarySQL("r")+`
+		 WHERE r.contact_id = $1 AND `+employment.LiveCurrentPrimarySQL("r")+`
 		 ORDER BY r.company_id LIMIT 1`, contact).Scan(&company, &domains)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return nil, nil, nil
