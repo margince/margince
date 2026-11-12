@@ -102,8 +102,8 @@ func (s *Store) servesDocuments(provider string) bool {
 // readDocumentTarget reads the invoice on the workspace's live connection, and
 // only for a caller who can see its live company. An invoice left behind by an
 // earlier connection is not found: its source is no longer the one read.
-// Archiving a company leaves its invoices live, and its card answers not found,
-// so its documents do too.
+// Archiving a company or unlinking its customers leaves its invoices in the
+// mirror. The card then lists none of them, so their documents are not found.
 func readDocumentTarget(ctx context.Context, tx pgx.Tx, invoiceID ids.UUID) (documentTarget, error) {
 	conn, connected, err := readConnection(ctx, tx)
 	if err != nil {
@@ -129,6 +129,13 @@ func readDocumentTarget(ctx context.Context, tx pgx.Tx, invoiceID ids.UUID) (doc
 	}
 	if err := auth.EnsureVisibleLive(ctx, tx, "company", target.companyID); err != nil {
 		return documentTarget{}, err
+	}
+	linked, err := companyIsLinked(ctx, tx, ids.CompanyID{UUID: target.companyID}, conn.id)
+	if err != nil {
+		return documentTarget{}, err
+	}
+	if !linked {
+		return documentTarget{}, apperrors.ErrNotFound
 	}
 	return target, nil
 }

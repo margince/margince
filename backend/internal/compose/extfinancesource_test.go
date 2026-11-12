@@ -39,6 +39,10 @@ func (r *recordingSource) declare(provider string) extension.FinanceSource {
 			r.conn, r.kept, r.customer = conn, rt, customer
 			return accounting.Ledger{}, r.fail
 		},
+		InvoiceDocument: func(_ context.Context, rt extension.Runtime, conn accounting.Connection, invoice string) (accounting.Document, error) {
+			r.conn, r.kept = conn, rt
+			return accounting.Document{ContentType: "application/pdf", Body: []byte(invoice)}, r.fail
+		},
 	}
 }
 
@@ -79,25 +83,21 @@ func TestThePreflightHoldsFinanceSourcesToTheComposedSet(t *testing.T) {
 	}
 }
 
-func TestComposedSourcesOfferEveryUnitsProviderWithItsDescription(t *testing.T) {
+func TestComposedSourcesOfferEveryUnitsProviderWithItsDescriptionAndDocuments(t *testing.T) {
 	source := &recordingSource{}
-	documented := source.declare("zeta_books")
-	documented.InvoiceDocument = func(_ context.Context, _ extension.Runtime, _ accounting.Connection, invoice string) (accounting.Document, error) {
-		return accounting.Document{ContentType: "application/pdf", Body: []byte(invoice)}, nil
-	}
-	composeBooks(t, documented, source.declare("alpha_books"))
+	bare := source.declare("alpha_books")
+	bare.InvoiceDocument = nil
+	composeBooks(t, source.declare("zeta_books"), bare)
 
 	offered := composedFinanceSources{}.Providers()
 	if len(offered) != 2 || offered[0].Provider != "alpha_books" || offered[1].Provider != "zeta_books" ||
-		offered[0].Documents || !offered[1].Documents {
-		t.Fatalf("offered %+v, want both providers sorted and documents on zeta_books alone", offered)
+		offered[0].Documents || !offered[1].Documents || offered[0].Description != "Reads the books." {
+		t.Fatalf("offered %+v, want both providers sorted with the unit's description, and documents on zeta_books alone", offered)
 	}
-	zeta, _ := composedFinanceSources{}.Open("zeta_books", accounting.Connection{})
-	if document, err := zeta.InvoiceDocument(context.Background(), "INV-7"); err != nil || string(document.Body) != "INV-7" {
-		t.Errorf("InvoiceDocument() = %q, %v; want the unit's document for INV-7", document.Body, err)
-	}
-	if offered[0].Description != "Reads the books." {
-		t.Errorf("description = %q, want the unit's own", offered[0].Description)
+	if alpha, ok := (composedFinanceSources{}).Open("alpha_books", accounting.Connection{}); !ok {
+		t.Fatal("alpha_books was not opened")
+	} else if _, err := alpha.InvoiceDocument(context.Background(), "INV-7"); !errors.Is(err, apperrors.ErrUnsupportedBySoR) {
+		t.Errorf("a source without documents answered %v, want ErrUnsupportedBySoR", err)
 	}
 	if _, ok := (composedFinanceSources{}).Open("not_composed", accounting.Connection{}); ok {
 		t.Error("a provider no unit supplies was opened")
@@ -124,6 +124,10 @@ func TestAnOpenedSourceReadsWithTheConnectionAndAShortLivedRuntime(t *testing.T)
 	if source.conn != conn || source.customer != "C-1" {
 		t.Errorf("the unit was handed %+v / %q, want %+v / C-1", source.conn, source.customer, conn)
 	}
+	source.conn = accounting.Connection{}
+	if document, err := provider.InvoiceDocument(context.Background(), "INV-7"); err != nil || string(document.Body) != "INV-7" || source.conn != conn {
+		t.Errorf("InvoiceDocument() = %q, %v with %+v; want the unit's document for INV-7 on %+v", document.Body, err, source.conn, conn)
+	}
 	err := source.kept.Tx(context.Background(), func(context.Context, extension.Tx) error { return nil })
 	if !errors.Is(err, extension.ErrRuntimeExpired) {
 		t.Errorf("a Runtime kept past its call answered %v, want ErrRuntimeExpired", err)
@@ -138,7 +142,8 @@ func TestASourceFailureNamesTheUnitAndKeepsItsCause(t *testing.T) {
 
 	_, customersErr := provider.Customers(context.Background())
 	_, invoicesErr := provider.InvoicesFor(context.Background(), "C-1")
-	for call, err := range map[string]error{"Check": provider.Check(context.Background()), "Customers": customersErr, "InvoicesFor": invoicesErr} {
+	_, documentErr := provider.InvoiceDocument(context.Background(), "INV-7")
+	for call, err := range map[string]error{"Check": provider.Check(context.Background()), "Customers": customersErr, "InvoicesFor": invoicesErr, "InvoiceDocument": documentErr} {
 		if !errors.Is(err, cause) || !strings.Contains(err.Error(), `"books"`) {
 			t.Errorf("%s() = %v, want the cause wrapped with the unit's name", call, err)
 		}
@@ -159,8 +164,5 @@ func TestAnOpenedSourceAnswersItsCheckAndDirectory(t *testing.T) {
 	}
 	if source.conn.ID != "conn-2" {
 		t.Errorf("the unit was handed connection %q, want conn-2", source.conn.ID)
-	}
-	if _, err := provider.InvoiceDocument(context.Background(), "INV-7"); !errors.Is(err, apperrors.ErrUnsupportedBySoR) {
-		t.Errorf("a source without documents answered %v, want ErrUnsupportedBySoR", err)
 	}
 }

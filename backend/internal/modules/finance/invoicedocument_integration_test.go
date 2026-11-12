@@ -98,6 +98,18 @@ func TestAnInvoiceOfAnArchivedCompanyIsNotFound(t *testing.T) {
 		http.StatusNotFound, "not_found")
 }
 
+// Unlinking the customer takes its invoices off the company's card, and their
+// documents with them, though the mirror keeps the rows.
+func TestAnInvoiceOfAnUnlinkedCustomerIsNotFound(t *testing.T) {
+	a := setupSourceAdmin(t)
+	invoice := a.mirroredInvoice(t)
+
+	// The fixture's ledger lists no customers, so the unlink is written as it lands.
+	a.ownerExec(t, `UPDATE finance_customer_link SET archived_at = now() WHERE company_id = $1`, a.company)
+	expect(t, download(a.documentReader(principal.RowScopeAll), a.handlers, ids.UUID(invoice.Id)),
+		http.StatusNotFound, "not_found")
+}
+
 // makeOwnerPrivate gives the fixture company an owner and restricts it to them,
 // so a reader with only their own rows cannot see it.
 func (a *sourceAdmin) makeOwnerPrivate(t *testing.T) {
