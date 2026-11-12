@@ -180,6 +180,7 @@ export function ComposeFoot({
   held,
   onPickMoment,
   sendAt,
+  timezone,
   savedDraft,
   busy,
   addressRefused,
@@ -194,6 +195,7 @@ export function ComposeFoot({
   held: boolean;
   onPickMoment: () => void;
   sendAt: string;
+  timezone?: string;
   savedDraft: ReturnType<typeof useSavedDraft>;
   /** A send or a rejection is in flight. */
   busy: boolean;
@@ -205,7 +207,8 @@ export function ComposeFoot({
   const readerZone = useViewerZone();
   const t = useT();
   const { locale } = useLocale();
-  const scheduled = momentOf(sendAt);
+  const zone = timezone ?? readerZone;
+  const scheduled = momentOf(sendAt, zone);
   const holdId = useId();
   // The address sentence has its own place under the button; the hold line
   // speaks only when no address is in the way.
@@ -242,7 +245,7 @@ export function ComposeFoot({
         <span className="t-caption compose-foot-status" role="status">
           {scheduled
             ? t("compose.willGoOut", {
-                when: momentLabel(scheduled, locale, readerZone),
+                when: momentLabel(scheduled, locale, zone),
               })
             : savedDraftStatus(savedDraft, t)}
         </span>

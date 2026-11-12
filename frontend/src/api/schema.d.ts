@@ -41812,6 +41812,13 @@ export interface components {
              */
             basis_id?: string | null;
         };
+        /** @description A chosen local date and time with an IANA timezone. Resolve it with current timezone rules. A missing local time moves to the first valid time after the gap; a repeated local time uses its first occurrence. */
+        IntentTime: {
+            /** @description Local ISO date and time with no offset, up to microsecond precision. */
+            wall_clock: string;
+            /** @description The IANA zone name governing the local time. */
+            timezone: string;
+        };
         SendEmailRequest: {
             /** @description The subject line. Blank or only white space is refused with 422 `required`. */
             subject: string;
@@ -41929,10 +41936,12 @@ export interface components {
              *     key authorizes nothing.
              */
             consent_purpose?: string;
+            scheduled_intent?: components["schemas"]["IntentTime"];
             /**
              * Format: date-time
-             * @description Send this message at this instant instead of now (ADR-0104). Absolute
-             *     and unambiguous; `scheduled_tz` records the zone the human picked it in.
+             * @description Legacy instant-based schedule. When `scheduled_intent` is present, its
+             *     local time and current timezone rules govern the send; this field is a
+             *     compatibility cache. Without it, the supplied instant remains authoritative.
              *
              *     A scheduled message writes NO activity and NO delivery row until it fires —
              *     the timeline stays silent about a message nobody has sent. The response is
@@ -42004,6 +42013,7 @@ export interface components {
              * @enum {string}
              */
             status: "scheduled" | "released" | "sent" | "cancelled" | "held";
+            scheduled_intent?: components["schemas"]["IntentTime"];
             /** Format: date-time */
             scheduled_at: string;
             /** @description The IANA zone the human picked the moment in, kept so it re-renders as meant. */
@@ -42177,6 +42187,7 @@ export interface components {
              *     reserved for the installation's own notices is refused 422. Omit it for none.
              */
             communication_context?: components["schemas"]["CommunicationContext"];
+            scheduled_intent?: components["schemas"]["IntentTime"];
             /**
              * Format: date-time
              * @description The moment the rep picked to send at, checked as the send checks it: with
@@ -42220,6 +42231,7 @@ export interface components {
             attachments_unavailable?: number;
             /** @description The reason for contact the author chose. Absent when none was. */
             communication_context?: components["schemas"]["CommunicationContext"];
+            scheduled_intent?: components["schemas"]["IntentTime"];
             /**
              * Format: date-time
              * @description The moment the author picked to send at, as saved. It may have passed since; the
@@ -42238,6 +42250,7 @@ export interface components {
          *     approval bound to, so changing it is cancel-and-recompose (ADR-0104 §5).
          */
         RescheduleSendRequest: {
+            scheduled_intent?: components["schemas"]["IntentTime"];
             /** Format: date-time */
             scheduled_at: string;
             scheduled_tz: string;
@@ -42549,10 +42562,12 @@ export interface components {
              *     key authorizes nothing.
              */
             consent_purpose?: string;
+            scheduled_intent?: components["schemas"]["IntentTime"];
             /**
              * Format: date-time
-             * @description Send this message at this instant instead of now (ADR-0104). Absolute
-             *     and unambiguous; `scheduled_tz` records the zone the human picked it in.
+             * @description Legacy instant-based schedule. When `scheduled_intent` is present, its
+             *     local time and current timezone rules govern the send; this field is a
+             *     compatibility cache. Without it, the supplied instant remains authoritative.
              *
              *     A scheduled message writes NO activity and NO delivery row until it fires —
              *     the timeline stays silent about a message nobody has sent. The response is

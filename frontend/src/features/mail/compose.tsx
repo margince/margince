@@ -334,7 +334,7 @@ export function ComposeWindow({
       <ScheduleDialog
         open={pickingMoment}
         onClose={() => setPickingMoment(false)}
-        sendAt={fields.sendAt}
+        {...fields.scheduleControl}
         onChoose={fields.setSendAt}
         now={new Date()}
       />
@@ -458,7 +458,7 @@ export function ComposeWindow({
             // name them. A rejection or a draft save in flight holds it.
             held={held}
             onPickMoment={() => setPickingMoment(true)}
-            sendAt={fields.sendAt}
+            {...fields.scheduleControl}
             savedDraft={savedDraft}
             busy={busy}
             addressRefused={fields.addressRefused}
