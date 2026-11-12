@@ -15,10 +15,9 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
-// An approved follow-up, staged before the pass filed tasks itself, is the deal
-// owner's next step as the task is written: it reaches their own Worklist, not
-// the shared unassigned queue. An owner who can no longer hold work leaves it
-// unassigned rather than failing the approval.
+// A legacy follow-up proposal, once approved, is the deal owner's next step as
+// the task is written. It reaches their own Worklist, not the unassigned queue.
+// An owner who can no longer hold work leaves it unassigned instead.
 func TestAnApprovedFollowUpIsTheDealOwnersOwnTask(t *testing.T) {
 	for name, c := range map[string]struct {
 		handOverTo func(e *reconcileEnv) *ids.UUID
