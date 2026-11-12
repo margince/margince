@@ -129,4 +129,15 @@ describe("ComposeModal rewrites over the rep's words", () => {
     ).toBeTruthy();
     expect(calls()).toHaveLength(0);
   });
+
+  it("bars the rewrites past the 20,000-character cap, counted in characters, not UTF-16 units", async () => {
+    const calls = await openReply("Unused.");
+    writeMessage("Body", "😀".repeat(20_000));
+    expect(polish()).toHaveProperty("disabled", false);
+
+    writeMessage("Body", "😀".repeat(20_001));
+    await waitFor(() => expect(polish()).toHaveProperty("disabled", true));
+    expect(screen.getByText("This mail is too long to rewrite.")).toBeTruthy();
+    expect(calls()).toHaveLength(0);
+  });
 });

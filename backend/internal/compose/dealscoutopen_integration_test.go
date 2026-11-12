@@ -6,6 +6,7 @@
 package compose
 
 import (
+	"context"
 	"errors"
 	"log/slog"
 	"strconv"
@@ -275,10 +276,10 @@ func TestAnAmountNeedsTheDocumentsOwnWords(t *testing.T) {
 	}
 }
 
-// archive archives the deal by hand and dates the archive at.
-func (e *scoutEnv) archive(t *testing.T, deal ids.DealID, at time.Time) {
+// archive archives the deal as the principal in ctx and dates the archive at.
+func (e *scoutEnv) archive(ctx context.Context, t *testing.T, deal ids.DealID, at time.Time) {
 	t.Helper()
-	if _, err := e.Deals.ArchiveDeal(e.Admin(), deal, nil); err != nil {
+	if _, err := e.Deals.ArchiveDeal(ctx, deal, nil); err != nil {
 		t.Fatalf("archiving the deal: %v", err)
 	}
 	e.WsExec(t, `UPDATE deal SET archived_at = $2 WHERE id = $1`, deal, at)
@@ -298,7 +299,7 @@ func TestArchivingADealKeepsItsOlderEvidenceFromOpeningAnother(t *testing.T) {
 		t.Fatalf("opening the deal: %v", err)
 	}
 	e.buyerPair(t, acme, e.daysAgo(5))
-	e.archive(t, ids.From[ids.DealKind](ids.UUID(created.Id)), e.daysAgo(3))
+	e.archive(e.Admin(), t, ids.From[ids.DealKind](ids.UUID(created.Id)), e.daysAgo(3))
 
 	if opened := e.openScouted(t); opened != 0 {
 		t.Fatalf("evidence from before the archive opened %d deals, want none", opened)
@@ -321,7 +322,7 @@ func TestALostDealArchivedSinceSetsTheFloorAndStaysArchived(t *testing.T) {
 	acme := e.SeedCompany(t, "Acme GmbH", &e.AdminUser)
 	lost := e.lostDeal(t, acme, e.AdminUser, e.daysAgo(40))
 	e.buyerPair(t, acme, e.daysAgo(5))
-	e.archive(t, lost, e.daysAgo(3))
+	e.archive(e.Admin(), t, lost, e.daysAgo(3))
 
 	if opened := e.openScouted(t); opened != 0 {
 		t.Fatalf("evidence from before the archive opened %d deals, want none", opened)
@@ -336,5 +337,43 @@ func TestALostDealArchivedSinceSetsTheFloorAndStaysArchived(t *testing.T) {
 	}
 	if n := e.WsCount(t, `SELECT count(*) FROM deal WHERE company_id = $1 AND id <> $2 AND status = 'open' AND archived_at IS NULL`, acme, lost); n != 1 {
 		t.Error("no new open deal beside the archived lost one")
+	}
+}
+
+// A system archive, as retention and an import undo make, judges nothing:
+// evidence from before it still opens a deal.
+func TestASystemArchiveSetsNoFloor(t *testing.T) {
+	e := setupScout(t)
+	e.GrantRole(t, e.AdminUser, "admin")
+	acme := e.SeedCompany(t, "Acme GmbH", &e.AdminUser)
+	lost := e.lostDeal(t, acme, e.AdminUser, e.daysAgo(40))
+	e.buyerPair(t, acme, e.daysAgo(5))
+	e.archive(e.system(), t, lost, e.daysAgo(3))
+
+	if opened := e.openScouted(t); opened != 1 {
+		t.Errorf("evidence from before a system archive opened %d deals, want one", opened)
+	}
+}
+
+// A suggestion raised before a person archives a deal no longer stands: the
+// opener supersedes it and opens nothing.
+func TestASuggestionRaisedBeforeAnArchiveOpensNothing(t *testing.T) {
+	e := setupScout(t)
+	e.GrantRole(t, e.AdminUser, "admin")
+	acme := e.SeedCompany(t, "Acme GmbH", &e.AdminUser)
+	lost := e.lostDeal(t, acme, e.AdminUser, e.daysAgo(40))
+	e.buyerPair(t, acme, e.daysAgo(5))
+	e.pass(t)
+	if n := e.stored(t, acme, deals.SuggestionOpen); n != 1 {
+		t.Fatalf("the pass raised %d suggestions, want one", n)
+	}
+	e.archive(e.Admin(), t, lost, e.daysAgo(3))
+
+	opened, err := newScoutDealOpener(e.Pool, slog.New(slog.DiscardHandler)).OpenWorkspace(e.system())
+	if err != nil || opened != 0 {
+		t.Fatalf("opened %d deals (%v) from a suggestion older than the archive, want none", opened, err)
+	}
+	if n := e.stored(t, acme, deals.SuggestionSuperseded); n != 1 {
+		t.Errorf("%d superseded suggestions, want the one the archive outdated", n)
 	}
 }

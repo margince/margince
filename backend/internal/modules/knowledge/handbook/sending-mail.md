@@ -139,11 +139,9 @@ A saved draft also keeps the deal and project you chose. Margince checks that yo
 
 ### The rewrites
 
-The AI line above the message offers five rewrites: **Polish**, **Shorter**, **Warmer**, **More formal** and **Add a deadline**. **Polish** improves the wording and flow, and keeps the meaning, the facts and the length.
+The AI line above the message offers **Polish**, **Shorter**, **Warmer**, **More formal** and **Add a deadline**. **Polish** makes the words clear and keeps what the mail says. They work on any text in the message, whether AI drafted it or you wrote it. After a rewrite, the AI line says that AI wrote the words, and undo in the message brings your text back.
 
-The rewrites work on any text in the message, whether the AI drafted it, you edited it, or you wrote it yourself. After a rewrite of your own text, the AI line notes that AI wrote the words. Undo in the message brings your text back.
-
-With a link or format you added, or a very long message, the rewrites stay greyed out, and the line says why.
+If you added a link or a format, or the message is too long, the rewrites are greyed out and the line says why.
 
 ### How do I change the language of an AI draft?
 To change the language of an AI draft, pick another language in the list on the AI line above the message. The list shows the language the draft is in, and names each language in its own words, such as **Deutsch**. Margince writes the words in the message again in that language, for the same purpose.

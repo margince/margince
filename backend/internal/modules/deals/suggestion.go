@@ -127,10 +127,11 @@ func validDraft(d SuggestionDraft) error {
 
 // SuggestionFloorExpr is the instant a company's evidence must be newer than:
 // the latest dismissal of a suggestion about it, the latest close of a deal on
-// it, and the latest archive of a deal on it. Evidence from before a dismissal
-// or an archive was judged "not a deal" by a human, and evidence from before a
-// close was about the deal that closed. It is NULL while none exists. company
-// is the SQL expression naming the company.
+// it, and the latest archive of a deal on it by a person or their agent.
+// Evidence from before a dismissal or such an archive was judged "not a deal"
+// by a human, and evidence from before a close was about the deal that closed.
+// A system archive (retention, an import undo) judges nothing. It is NULL while
+// none exists. company is the SQL expression naming the company.
 //
 // The scout filters its evidence by it and the writer below re-checks every
 // item against it.
@@ -140,7 +141,11 @@ func SuggestionFloorExpr(company string) string {
 	    WHERE fs.company_id = ` + company + ` AND fs.state = 'dismissed'),
 	  (SELECT max(fd.closed_at) FROM deal fd
 	    WHERE fd.company_id = ` + company + ` AND fd.status <> 'open' AND fd.archived_at IS NULL),
-	  (SELECT max(ad.archived_at) FROM deal ad WHERE ad.company_id = ` + company + `))`
+	  (SELECT max(ad.archived_at) FROM deal ad
+	    WHERE ad.company_id = ` + company + ` AND ad.archived_at IS NOT NULL
+	      AND (SELECT aa.actor_type FROM audit_log aa
+	            WHERE aa.entity_type = 'deal' AND aa.entity_id = ad.id AND aa.action = 'archive'
+	            ORDER BY aa.occurred_at DESC, aa.id DESC LIMIT 1) IN ('human', 'agent')))`
 }
 
 // SuggestionCompanyFreeClause says the company has no open deal. The scout, the
