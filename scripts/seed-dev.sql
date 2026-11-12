@@ -268,6 +268,19 @@ BEGIN
     RETURNING id INTO conn;
   END IF;
 
+  -- The directory the links name, as the finance-demo unit lists it and with
+  -- the source the sync writes, which it never rewrites. A link
+  -- must name an entry of its connection's directory; the first sync then
+  -- restates each entry, since the empty sync_hash never matches its own.
+  INSERT INTO finance_external_customer
+         (connection_id, external_customer_id, display_name, sync_hash, source, captured_by)
+  SELECT conn, 'DEMO-' || lpad(g::text, 4, '0'), 'Demo customer ' || lpad(g::text, 2, '0'),
+         '', 'offline_demo', 'system:seed'
+    FROM generate_series(1, 50) g
+   WHERE NOT EXISTS (SELECT 1 FROM finance_external_customer c
+                      WHERE c.connection_id = conn
+                        AND c.external_customer_id = 'DEMO-' || lpad(g::text, 4, '0'));
+
   -- Customers only. A target or a prospect has never been invoiced, and the
   -- card is absent for them by design (FIN-AC-3) — linking one would put a
   -- ledger behind a company we have never billed.
