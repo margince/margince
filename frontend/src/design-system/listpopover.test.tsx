@@ -12,6 +12,7 @@ import {
 } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { SEARCH_DEBOUNCE_MS } from "./debouncedsearch";
 import { ListPopover, type ListPopoverOption } from "./listpopover";
 
 afterEach(() => {
@@ -493,7 +494,7 @@ describe("ListPopover over a server search", () => {
       { id: "c-1", name: "Ines Brandt" },
       { id: "c-2", name: "Jonas Keller" },
     ]);
-    const user = userEvent.setup();
+    vi.useFakeTimers();
     render(
       <ListPopover
         label="Book a meeting"
@@ -506,11 +507,10 @@ describe("ListPopover over a server search", () => {
     );
     expect(search).not.toHaveBeenCalled();
 
-    await user.click(screen.getByRole("button", { name: "Book a meeting" }));
+    fireEvent.click(screen.getByRole("button", { name: "Book a meeting" }));
+    await act(() => vi.advanceTimersByTimeAsync(SEARCH_DEBOUNCE_MS));
 
-    expect(
-      await screen.findByRole("option", { name: "Ines Brandt" }),
-    ).toBeTruthy();
+    expect(screen.getByRole("option", { name: "Ines Brandt" })).toBeTruthy();
     expect(screen.getByRole("option", { name: "Jonas Keller" })).toBeTruthy();
     expect(search).toHaveBeenCalledWith("");
   });

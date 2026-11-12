@@ -2,6 +2,8 @@
 
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import {
+  act,
+  fireEvent,
   render,
   renderHook,
   screen,
@@ -13,6 +15,7 @@ import { type ReactNode, useState } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../../api/schema";
 import { useActivityGate } from "../../components/activitygate";
+import { SEARCH_DEBOUNCE_MS } from "../../design-system/debouncedsearch";
 import { UTC_ZONE } from "../../format/timezone";
 import { LocaleProvider } from "../../i18n";
 import { en } from "../../i18n/en";
@@ -426,6 +429,7 @@ describe("Add task writes only tasks", () => {
 describe("Book a meeting from the account", () => {
   afterEach(() => {
     globalThis.location.hash = "";
+    vi.useRealTimers();
   });
 
   it("asks which of the account's contacts, then opens that contact's booking screen", async () => {
@@ -462,15 +466,16 @@ describe("Book a meeting from the account", () => {
   it("opens on the account's contacts, the best route in first, before a word is typed", async () => {
     const read: URL[] = [];
     stubWritableAccount({ posted: [], read });
-    const user = userEvent.setup();
     renderInApp(<ActionsHost view={TWO_CONTACTS} />);
 
     const book = () =>
       screen.getByRole("button", { name: en["scheduling.bookContact"] });
     await waitFor(() => expect(book().hasAttribute("disabled")).toBe(false));
-    await user.click(book());
+    vi.useFakeTimers();
+    fireEvent.click(book());
+    await act(() => vi.advanceTimersByTimeAsync(SEARCH_DEBOUNCE_MS));
 
-    const listed = await screen.findAllByRole("option");
+    const listed = screen.getAllByRole("option");
     expect(listed.map((row) => row.textContent)).toEqual([
       expect.stringContaining("Jonas Keller"),
       expect.stringContaining("Mara Lenz"),
@@ -478,7 +483,7 @@ describe("Book a meeting from the account", () => {
     // The roster in hand answers the empty box; the server is not asked.
     expect(read.some((url) => url.pathname.endsWith("/contacts"))).toBe(false);
 
-    await user.click(listed[0]);
+    fireEvent.click(listed[0]);
     expect(globalThis.location.hash).toBe(
       routeHash({ screen: "book", id: "contact-c-jonas" }),
     );

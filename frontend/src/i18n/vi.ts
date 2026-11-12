@@ -4659,7 +4659,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   // The review queue and the reach table (ADR-0078 §2.1b).
   "companyReach.title": "Ai c\u00f3 th\u1ec3 gi\u1edbi thi\u1ec7u b\u1ea1n",
   "companyReach.help":
-    "Những đồng nghiệp có quen biết trên LinkedIn đang làm việc tại công ty này, chỉ hiển thị số lượng. Hãy nhờ một đồng nghiệp trong số đó giới thiệu bạn.",
+    "Những đồng nghiệp quen biết nhân viên của công ty này qua LinkedIn, chỉ hiển thị số lượng. Hãy nhờ một đồng nghiệp trong số đó giới thiệu bạn.",
   "companyReach.sub":
     "Những đồng nghiệp có người quen trên LinkedIn đang làm việc tại công ty này. Chỉ hiển thị số người quen, không hiển thị tên của họ. Bạn có thể nhờ đồng nghiệp giới thiệu.",
   "companyReach.colleaguesLabel":

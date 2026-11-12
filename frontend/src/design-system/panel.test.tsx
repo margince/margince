@@ -36,6 +36,7 @@ function tokensCss(): string {
 // it, by pointer and by keyboard alike.
 describe("a panel's help", () => {
   it("shows what the section is for on focus, and hides it on Escape", async () => {
+    const user = userEvent.setup();
     render(
       <LocaleProvider initial="en">
         <Panel title="Growth fit" help="How well this company fits.">
@@ -50,13 +51,13 @@ describe("a panel's help", () => {
     // The title still names the region alone.
     expect(within(region).getByRole("heading").textContent).toBe("Growth fit");
 
-    await userEvent.tab();
+    await user.tab();
     expect(document.activeElement).toBe(mark);
     expect(screen.getByRole("tooltip").textContent).toContain(
       "How well this company fits.",
     );
 
-    await userEvent.keyboard("{Escape}");
+    await user.keyboard("{Escape}");
     expect(screen.queryByRole("tooltip")).toBeNull();
   });
 
