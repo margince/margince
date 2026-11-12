@@ -3819,6 +3819,8 @@ export const en = {
   "timeline.automatic.bulk": "Sent to a mailing list",
   "timeline.group.bulk_other": "sent to {count} people",
   "timeline.group.bulk_one": "sent to {count} person",
+  "timeline.copies_other": "Also in {count} other mailboxes",
+  "timeline.copies_one": "Also in {count} other mailbox",
   "timeline.group.expand": "Open",
   "timeline.group.collapse": "Close",
   "timeline.group.openThread": "View full thread",
@@ -4826,6 +4828,7 @@ export const en = {
   "compose.threadStillHeld_other":
     "{count} other seats have not shared this thread",
   "compose.reason.posture": "Held by your setting",
+  "compose.reason.sharedMailbox": "In a shared mailbox",
   "compose.reason.workspaceFloor": "Held by the company",
   "compose.reason.noRecord": "Held: no record",
   "compose.reason.pendingVerdict": "Held until checked",
@@ -7849,6 +7852,12 @@ export const en = {
   "compose.scheduleAfternoon": "Tomorrow afternoon",
   "compose.draftLanguage": "Draft language",
   "compose.rewrite": "Rewrite",
+  "compose.rewritePolish": "Polish",
+  "compose.rewritePolishAsk":
+    "Improve the wording and flow. Keep the meaning, the facts and the length.",
+  "compose.rewriteFormatted":
+    "Rewrites work on plain text. Remove the formatting and links to use them.",
+  "compose.rewriteTooLong": "This mail is too long to rewrite.",
   "compose.rewriteShorter": "Shorter",
   "compose.rewriteShorterAsk": "Keep the meaning and use fewer words.",
   "compose.rewriteWarmer": "Warmer",
@@ -20626,6 +20635,7 @@ export const en = {
   "captureConcern.connections": "Connections needing attention",
   "captureConcern.sinceLabel": "Since",
   "captureConcern.member": "Member",
+  "captureConcern.sharedMailbox": "Shared mailbox",
   "captureConcern.provider": "Provider",
   "captureConcern.mailbox": "Mailbox",
   "captureConcern.condition": "Condition",

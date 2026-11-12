@@ -9,6 +9,9 @@
 // provider-specific consent parameters, whether the token forms carry the
 // scope, and its own error sentinels (returned verbatim so the connector's
 // registry classification and log identity are preserved).
+//
+// The grants with no refresh token, for an app reading a shared mailbox, sit
+// beside it in appgrant.go.
 package oauthflow
 
 import (
@@ -31,7 +34,11 @@ const httpTimeout = 30 * time.Second
 
 // paramClientID is the OAuth2 client-id form/query key, used in the consent
 // URL and both token forms.
-const paramClientID = "client_id"
+const (
+	paramClientID     = "client_id"
+	paramClientSecret = "client_secret"
+	paramGrantType    = "grant_type"
+)
 
 // Config wires the handshake for one provider. AuthRejected and Unreachable
 // are the connector's own sentinels — the flow returns them verbatim, never
@@ -188,11 +195,11 @@ type TokenGrant struct {
 // the connector cannot sync later, so it is a rejected authorization.
 func (c *Client) Exchange(ctx context.Context, code, redirectURI string) (TokenGrant, error) {
 	form := url.Values{
-		"grant_type":    {"authorization_code"},
-		"code":          {code},
-		"redirect_uri":  {redirectURI},
-		paramClientID:   {c.cfg.ClientID},
-		"client_secret": {c.cfg.ClientSecret},
+		paramGrantType:    {"authorization_code"},
+		"code":            {code},
+		"redirect_uri":    {redirectURI},
+		paramClientID:     {c.cfg.ClientID},
+		paramClientSecret: {c.cfg.ClientSecret},
 	}
 	c.addScope(form)
 	tok, err := c.token(ctx, form)
@@ -271,10 +278,10 @@ func (c *Client) AccessToken(ctx context.Context, refreshToken string) (string, 
 // it was.
 func (c *Client) Refresh(ctx context.Context, refreshToken string, granted []string) (TokenRefresh, error) {
 	form := url.Values{
-		"grant_type":    {"refresh_token"},
-		"refresh_token": {refreshToken},
-		paramClientID:   {c.cfg.ClientID},
-		"client_secret": {c.cfg.ClientSecret},
+		paramGrantType:    {"refresh_token"},
+		"refresh_token":   {refreshToken},
+		paramClientID:     {c.cfg.ClientID},
+		paramClientSecret: {c.cfg.ClientSecret},
 	}
 	// Deliberately NOT addScope: that spells the deployment's configured
 	// consent, which is the right answer for an exchange and the wrong one

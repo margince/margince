@@ -88,7 +88,7 @@ func WeWroteSQL(activity string) string {
 // what TheyWroteSQL, InteractionUnitSQL and the occurredday predicates ask of
 // the activity. A derived table projects these, never a whole row.
 func FoldColumnsSQL(activity string) string {
-	columns := []string{"id", "kind", "thread_key", "occurred_at", "occurred_precision", "direction", "counterparty_email"}
+	columns := []string{"id", "kind", "thread_key", "source_system", "source_id", "occurred_at", "occurred_precision", "direction", "counterparty_email"}
 	for i, column := range columns {
 		columns[i] = activity + "." + column
 	}

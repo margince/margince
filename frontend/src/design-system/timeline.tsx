@@ -13,6 +13,7 @@ import "./composed.css";
 import {
   AutomaticFlag,
   CommitmentReviewFlag,
+  CopiesFlag,
   dotClass,
   groupCountLabel,
   MoveFlag,
@@ -302,6 +303,7 @@ export function TimelineRow({
           />
           <RelayTag entry={entry} />
           <AutomaticFlag entry={entry} />
+          <CopiesFlag entry={entry} />
           <CommitmentReviewFlag
             count={entry.withheld ? 0 : entry.commitmentReviewCount}
           />
@@ -370,6 +372,7 @@ export function TimelineRow({
             )
           )}
           <AutomaticFlag entry={entry} />
+          <CopiesFlag entry={entry} />
           <CommitmentReviewFlag
             count={entry.withheld ? 0 : entry.commitmentReviewCount}
           />

@@ -271,6 +271,10 @@ The 28 tables owned by `capture`, as the migrations build them. [Back to the ent
 - `idx_capture_connection`: `btree (provider, status) WHERE (archived_at IS NULL)`
 - `idx_capture_watch_renew`: `btree (watch_expires_at) WHERE ((watch_expires_at IS NOT NULL) AND (status = 'connected'))`
 
+**Triggers**
+
+- `home_read_fence_shared_mailbox_readers`: `AFTER UPDATE OF reader_team_id, mail_posture FOR EACH ROW WHEN (((old.reader_team_id IS DISTINCT FROM new.reader_team_id) OR (old.mail_posture IS DISTINCT FROM new.mail_posture))) EXECUTE FUNCTION advance_home_read_fence()`
+
 ## capture_counterparty_hold
 
 6 columns · primary key `(id)` · referenced by 0 foreign keys

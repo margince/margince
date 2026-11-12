@@ -3761,6 +3761,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "timeline.automatic.bulk": "Gửi tới danh sách thư",
   "timeline.group.bulk_other": "gửi tới {count} người",
   "timeline.group.bulk_one": "gửi tới {count} người",
+  "timeline.copies_other": "Cũng có trong {count} hộp thư khác",
+  "timeline.copies_one": "Cũng có trong {count} hộp thư khác",
   "timeline.group.expand": "Mở",
   "timeline.group.collapse": "Đóng",
   "timeline.group.openThread": "Xem toàn bộ chuỗi thư",
@@ -4750,6 +4752,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "compose.threadStillHeld_other":
     "{count} thành viên khác chưa chia sẻ chuỗi thư này",
   "compose.reason.posture": "Giữ lại theo thiết lập của bạn",
+  "compose.reason.sharedMailbox": "Trong hộp thư dùng chung",
   "compose.reason.workspaceFloor": "Giữ lại theo thiết lập công ty",
   "compose.reason.noRecord": "Giữ lại: chưa có hồ sơ",
   "compose.reason.pendingVerdict": "Giữ lại cho đến khi kiểm tra",
@@ -7661,6 +7664,12 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "compose.scheduleAfternoon": "Chiều mai",
   "compose.draftLanguage": "Ngôn ngữ của bản nháp",
   "compose.rewrite": "Viết lại",
+  "compose.rewritePolish": "Trau chuốt",
+  "compose.rewritePolishAsk":
+    "Cải thiện cách diễn đạt và mạch văn. Giữ nguyên ý, các dữ kiện và độ dài.",
+  "compose.rewriteFormatted":
+    "Chỉ viết lại được văn bản thuần. Hãy bỏ định dạng và liên kết.",
+  "compose.rewriteTooLong": "Thư này quá dài để viết lại.",
   "compose.rewriteShorter": "Ngắn hơn",
   "compose.rewriteShorterAsk": "Giữ nguyên ý, dùng ít chữ hơn.",
   "compose.rewriteWarmer": "Ấm áp hơn",
@@ -20316,6 +20325,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "captureConcern.connections": "Kết nối cần chú ý",
   "captureConcern.sinceLabel": "Từ",
   "captureConcern.member": "Thành viên",
+  "captureConcern.sharedMailbox": "Hộp thư dùng chung",
   "captureConcern.provider": "Nhà cung cấp",
   "captureConcern.mailbox": "Hộp thư",
   "captureConcern.condition": "Tình trạng",

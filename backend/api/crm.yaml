@@ -9012,6 +9012,13 @@ paths:
             Restrict the list to the caller's own due reminders: open, live tasks assigned to the
             caller whose `remind_at` has passed, at most 30 days ago. The latest reminder comes
             first. It reads content, so a task whose content the caller may not read is left out.
+        - name: collapse_copies
+          in: query
+          schema: { type: boolean, default: false }
+          description: >-
+            Show one row per email when several colleagues' mailboxes each hold a copy of it.
+            Only copies the caller may read are joined, and the row shown says how many in
+            `copies`. Off by default, so an export or sync client still reads every row.
       responses:
         '200':
           description: A page of activities (newest first by default).
@@ -28880,7 +28887,8 @@ paths:
         Renaming needs `team_admin.update`. Archiving or restoring switches every member's
         team reach off or on, so it is admin only, like every other change to who is on a
         team: a holder of `team_admin` who is not an admin gets 403
-        `team_membership_requires_admin`.
+        `team_membership_requires_admin`. A team that reads a shared mailbox is not archived:
+        409, naming the mailbox, until the mailbox has another reader team.
       requestBody:
         required: true
         content:
@@ -28917,6 +28925,10 @@ paths:
 
         Only an admin changes who is on a team. A holder of `team_admin.update` who is not an
         admin gets 403 `team_membership_requires_admin`, for themselves as for anybody else.
+
+        A team that reads a shared mailbox grants its members that mailbox's mail. An agent
+        adding a member to such a team gets 403, naming the mailbox; an admin adds them in the
+        app, and the audit row names the mailbox the member can now read.
       responses:
         '204': { description: On the team. }
         '401': { $ref: '#/components/responses/Unauthorized' }
@@ -41230,6 +41242,22 @@ components:
         error_class:
           type: [string, 'null']
           description: The class of the last failed sync (as `CaptureConnection.last_sync_error_class`), so a `forbidden` mailbox reads as a role problem and not a broken connection. Null while none failed.
+
+    CaptureSharedMailboxConcern:
+      type: object
+      additionalProperties: false
+      description: A shared mailbox with an active concern. No member owns it, so `account_label` names it.
+      required: [connection_id, provider, account_label, concern, since, last_success_at]
+      properties:
+        connection_id: { type: string, format: uuid }
+        provider: { type: string }
+        account_label: { type: [string, 'null'] }
+        concern: { $ref: '#/components/schemas/CaptureConcernKind' }
+        since: { type: [string, 'null'], format: date-time }
+        last_success_at: { type: [string, 'null'], format: date-time }
+        error_class:
+          type: [string, 'null']
+          description: The class of the last failed sync, as on `CaptureConnectionConcern`.
 
     CaptureConnection:
       type: object
@@ -56608,6 +56636,23 @@ components:
             and a deal say. Every read that returns an activity answers the same links: the
             list, one activity, and a contact's 360.
           items: { $ref: '#/components/schemas/ActivityLink' }
+        copies:
+          type: integer
+          minimum: 2
+          readOnly: true
+          description: >-
+            How many colleagues' mailboxes hold a copy of this email that the caller may read,
+            this one included. Set only on a timeline that shows one row per email (the 360
+            pages, or `collapse_copies=true`); absent when there is one copy. `links` is the
+            union over those copies.
+        copy_ids:
+          type: array
+          readOnly: true
+          items: { type: string, format: uuid }
+          description: >-
+            The other copies this row stands for, each readable by the caller through
+            `GET /activities/{id}`. Set exactly when `copies` is. Copies join only when they
+            agree on Message-ID, sender, subject, body, direction and the second they occurred.
         offers_email:
           type: boolean
           description: >-
@@ -66782,6 +66827,10 @@ components:
           type: array
           description: Active connection concerns for live members. Names account state, never correspondence.
           items: { $ref: '#/components/schemas/CaptureConnectionConcern' }
+        shared_mailbox_concerns:
+          type: array
+          description: Active connection concerns for shared mailboxes. Names account state, never correspondence.
+          items: { $ref: '#/components/schemas/CaptureSharedMailboxConcern' }
         generated_at: { type: string, format: date-time }
         mailboxes:
           type: array

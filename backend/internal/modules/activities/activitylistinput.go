@@ -138,6 +138,9 @@ type ListActivitiesInput struct {
 	// caller then discards, so a full page of a colleague's held meetings hides
 	// the reader's own meeting sitting behind them.
 	ReadableOnly bool
+	// CollapseSeatCopies shows one row per email that several colleagues'
+	// mailboxes each hold a copy of (seatcopies.go), before the page is cut.
+	CollapseSeatCopies bool
 	// WithinProjectID narrows to one body of work, EXCLUDING what belongs to
 	// another project and keeping what belongs to none.
 	//

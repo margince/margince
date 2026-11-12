@@ -114,9 +114,8 @@ export const MachineWroteItDark: Story = {
   render: band(WROTE_IT, "building"),
 };
 
-// The four rewrites sit beside the disclosure over the machine's own untouched
-// words. They are offered only while the body is still what the model wrote,
-// which is the caller's condition. These two frames are the row's own states.
+// The rewrites sit beside the disclosure, and stand over any body on screen,
+// whoever wrote it. These three frames are the row's own states.
 
 /** Ready: one press each, and each is an instruction for ONE call. */
 export const RewritesReady: Story = {
@@ -135,6 +134,23 @@ export const RewritesBarred: Story = {
       <RewriteRow onRewrite={() => {}} disabled />
     </StoryProviders>
   ),
+};
+
+/** A body the rep formatted: a plain-text revision would drop the links, so
+ *  the row stays and says why it cannot act. */
+export const RewritesRefused: Story = {
+  render: () => (
+    <StoryProviders>
+      <RewriteRow
+        onRewrite={() => {}}
+        disabled={false}
+        refusal="Rewrites work on plain text. Remove the formatting and links to use them."
+      />
+    </StoryProviders>
+  ),
+  play: async () => {
+    await expect(screen.getByRole("button", { name: "Polish" })).toBeDisabled();
+  },
 };
 
 export const Dark: Story = {

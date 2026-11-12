@@ -74,11 +74,15 @@ func discoverGateFor(p principal.Principal, alias string, arg func(any) int) str
 }
 
 // activityReachArms is discovery through the row's own links or its attendance.
+// A link-less row is open to discovery, except one only shared mailboxes
+// imported and held: its reader team and its parties find it through
+// attendance.
 func activityReachArms(p principal.Principal, alias string, arg func(any) int) string {
 	return fmt.Sprintf(`coalesce((SELECT bool_or(%[2]s)
-	   FROM activity_link l WHERE l.activity_id = %[1]s.id), true)
+	   FROM activity_link l WHERE l.activity_id = %[1]s.id), NOT %[4]s)
 	   OR %[3]s`,
-		alias, linkTargetVisible(p, "l", arg, everyLinkTarget), activityAttendanceArm(p, alias, arg))
+		alias, linkTargetVisible(p, "l", arg, everyLinkTarget), activityAttendanceArm(p, alias, arg),
+		heldByOnlySharedMailboxesSQL(alias))
 }
 
 // assignedCommitmentArm lets the holder of a promise's task find it. Every
@@ -135,12 +139,13 @@ func activityAttendanceArm(p principal.Principal, alias string, arg func(any) in
 
 func activityAttendanceForMemberSQL(alias, members string) string {
 	return fmt.Sprintf(`(EXISTS (SELECT 1 FROM capture_import ci WHERE ci.activity_id = %[1]s.id AND ci.user_id IN (%[2]s))
+    OR %[5]s
     OR EXISTS (SELECT 1 FROM activity_participant ap
                 WHERE ap.activity_id = %[1]s.id AND ap.user_id IN (%[2]s) AND ap.address IS NOT NULL)
     OR (%[1]s.sent_by_colleague IN (%[2]s) AND EXISTS (SELECT 1 FROM data_task_run sender_check
          WHERE sender_check.step = '%[3]s' AND sender_check.status = 'done')
         AND %[4]s))`,
-		alias, members, SenderStampsCheckedStep, senderAtOwnDomain(alias))
+		alias, members, SenderStampsCheckedStep, senderAtOwnDomain(alias), sharedMailboxReaderInSQL(alias, members))
 }
 
 // senderAtOwnDomain re-asks at read time that the stamped seat's login address
@@ -183,8 +188,9 @@ const SenderStampsCheckedStep = "recheck_colleague_sender_domains"
 func activityMembershipArm(p principal.Principal, alias string, arg func(any) int) string {
 	me := arg(p.UserID)
 	return fmt.Sprintf(`(EXISTS (SELECT 1 FROM capture_import ci WHERE ci.activity_id = %[1]s.id AND ci.user_id IN (%[2]s))
+	   OR %[4]s
 	   OR EXISTS (SELECT 1 FROM activity_participant ap WHERE ap.activity_id = %[1]s.id AND ap.user_id IN (%[2]s) AND %[3]s))`,
-		alias, memberIdentitySQL(me), ParticipantStandsSQL("ap", alias))
+		alias, memberIdentitySQL(me), ParticipantStandsSQL("ap", alias), sharedMailboxReaderInSQL(alias, memberIdentitySQL(me)))
 }
 
 func contentGateFor(p principal.Principal, alias string, arg func(any) int) string {

@@ -1911,7 +1911,13 @@ type Activity struct {
 
 	// ControllerSend Present only on a mail sent through the installation's own relay. Absent on every other row.
 	ControllerSend *ControllerSend `json:"controller_send,omitempty"`
-	CreatedAt      time.Time       `json:"created_at"`
+
+	// Copies How many colleagues' mailboxes hold a copy of this email that the caller may read, this one included. Set only on a timeline that shows one row per email (the 360 pages, or `collapse_copies=true`); absent when there is one copy. `links` is the union over those copies.
+	Copies *int `json:"copies,omitempty" minimum:"2"`
+
+	// CopyIds The other copies this row stands for, each readable by the caller through `GET /activities/{id}`. Set exactly when `copies` is. Copies join only when they agree on Message-ID, sender, subject, body, direction and the second they occurred.
+	CopyIds   *[]string `json:"copy_ids,omitempty"`
+	CreatedAt time.Time `json:"created_at"`
 
 	// CreatedBy Who recorded the activity, from its earliest create audit row, read the way
 	// `Contact360.created_by` is: for an agent, the colleague it worked for and the
@@ -3715,6 +3721,22 @@ func (a *Activity) UnmarshalJSON(b []byte) error {
 		delete(object, "controller_send")
 	}
 
+	if raw, found := object["copies"]; found {
+		err = json.Unmarshal(raw, &a.Copies)
+		if err != nil {
+			return fmt.Errorf("error reading 'copies': %w", err)
+		}
+		delete(object, "copies")
+	}
+
+	if raw, found := object["copy_ids"]; found {
+		err = json.Unmarshal(raw, &a.CopyIds)
+		if err != nil {
+			return fmt.Errorf("error reading 'copy_ids': %w", err)
+		}
+		delete(object, "copy_ids")
+	}
+
 	if raw, found := object["created_at"]; found {
 		err = json.Unmarshal(raw, &a.CreatedAt)
 		if err != nil {
@@ -4211,6 +4233,20 @@ func (a Activity) MarshalJSON() ([]byte, error) {
 		object["controller_send"], err = json.Marshal(a.ControllerSend)
 		if err != nil {
 			return nil, fmt.Errorf("error marshaling 'controller_send': %w", err)
+		}
+	}
+
+	if a.Copies != nil {
+		object["copies"], err = json.Marshal(a.Copies)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'copies': %w", err)
+		}
+	}
+
+	if a.CopyIds != nil {
+		object["copy_ids"], err = json.Marshal(a.CopyIds)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'copy_ids': %w", err)
 		}
 	}
 

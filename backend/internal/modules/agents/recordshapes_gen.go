@@ -183,6 +183,7 @@ var listRecordFilters = map[string][]listFilter{
 		{Name: "assignee_id", Type: "string"},
 		{Name: "call_outcome", Type: "string", Enum: []string{"reached", "not_reached", "voicemail", "call_back_later", "put_through"}},
 		{Name: "channel_provider", Type: "string"},
+		{Name: "collapse_copies", Type: "boolean"},
 		{Name: "entity_id", Type: "string"},
 		{Name: "entity_type", Type: "string", Enum: []string{"contact", "company", "deal", "lead", "project"}},
 		{Name: "include_archived", Type: "boolean"},

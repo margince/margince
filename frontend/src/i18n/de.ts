@@ -3877,6 +3877,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "timeline.automatic.bulk": "An einen Verteiler gesendet",
   "timeline.group.bulk_other": "an {count} Personen gesendet",
   "timeline.group.bulk_one": "an {count} Person gesendet",
+  "timeline.copies_other": "Auch in {count} weiteren Postfächern",
+  "timeline.copies_one": "Auch in {count} weiteren Postfach",
   "timeline.group.expand": "Öffnen",
   "timeline.group.collapse": "Schließen",
   "timeline.group.openThread": "Vollständigen Thread anzeigen",
@@ -4873,6 +4875,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "compose.threadStillHeld_other":
     "{count} weitere Nutzerkonten haben diesen Thread nicht geteilt",
   "compose.reason.posture": "Durch deine Einstellung zurückgehalten",
+  "compose.reason.sharedMailbox": "In einem gemeinsamen Postfach",
   "compose.reason.workspaceFloor": "Durch das Unternehmen zurückgehalten",
   "compose.reason.noRecord": "Zurückgehalten: kein Datensatz",
   "compose.reason.pendingVerdict": "Bis zur Prüfung zurückgehalten",
@@ -7849,6 +7852,12 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "compose.scheduleAfternoon": "Morgen Nachmittag",
   "compose.draftLanguage": "Sprache des Entwurfs",
   "compose.rewrite": "Umschreiben",
+  "compose.rewritePolish": "Glätten",
+  "compose.rewritePolishAsk":
+    "Wortwahl und Lesefluss verbessern. Bedeutung, Fakten und Länge beibehalten.",
+  "compose.rewriteFormatted":
+    "Umschreiben geht nur bei reinem Text. Entferne Formatierung und Links.",
+  "compose.rewriteTooLong": "Diese Mail ist zu lang zum Umschreiben.",
   "compose.rewriteShorter": "Kürzer",
   "compose.rewriteShorterAsk":
     "Die Bedeutung beibehalten und weniger Wörter verwenden.",
@@ -20869,6 +20878,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "captureConcern.connections": "Verbindungen mit Handlungsbedarf",
   "captureConcern.sinceLabel": "Seit",
   "captureConcern.member": "Mitglied",
+  "captureConcern.sharedMailbox": "Gemeinsames Postfach",
   "captureConcern.provider": "Anbieter",
   "captureConcern.mailbox": "Postfach",
   "captureConcern.condition": "Zustand",

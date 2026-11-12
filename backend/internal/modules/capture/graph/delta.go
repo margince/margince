@@ -244,7 +244,7 @@ func (a *httpAPI) anchorStart(folder string, after time.Time, resume *DeltaResum
 		if resume.Anchor == nil || resume.Anchor.seen == nil || resume.NextLink == "" {
 			return nil, "", fmt.Errorf("graph: a stored %s anchor round names no census or link: %w", folder, ErrUnreachable)
 		}
-		if err := a.sameAPIOrigin(resume.NextLink); err != nil {
+		if err := a.sameMailbox(resume.NextLink); err != nil {
 			return nil, "", err
 		}
 		return resume.Anchor, resume.NextLink, nil
@@ -257,7 +257,7 @@ func (a *httpAPI) anchorStart(folder string, after time.Time, resume *DeltaResum
 		paramSelect: {"id,receivedDateTime"},
 	}
 	return newAnchorCensus(after, time.Now().UTC()),
-		a.base + "/me/mailFolders/" + url.PathEscape(folder) + "/messages/delta?" + q.Encode(), nil
+		a.root() + "/mailFolders/" + url.PathEscape(folder) + "/messages/delta?" + q.Encode(), nil
 }
 
 // countInFolder reports how many messages one folder holds for a filter, so a
@@ -282,7 +282,7 @@ func (a *httpAPI) countInFolder(ctx context.Context, accessToken, folder, filter
 	}
 	// $count=true needs the eventual-consistency header on Graph.
 	hdr := http.Header{"ConsistencyLevel": {"eventual"}}
-	u := a.base + "/me/mailFolders/" + url.PathEscape(folder) + "/messages?" + q.Encode()
+	u := a.root() + "/mailFolders/" + url.PathEscape(folder) + "/messages?" + q.Encode()
 	if _, err := a.get(ctx, accessToken, u, hdr, &out); err != nil {
 		return 0, err
 	}
@@ -300,7 +300,7 @@ func (a *httpAPI) Delta(ctx context.Context, accessToken, deltaLink string, resu
 	if resume != nil {
 		start = resume.NextLink
 	}
-	if err := a.sameAPIOrigin(start); err != nil {
+	if err := a.sameMailbox(start); err != nil {
 		return "", err
 	}
 	// Folder tombstones include archive moves, which change even immutable ids.
@@ -335,7 +335,7 @@ func (a *httpAPI) deltaWalk(ctx context.Context, accessToken, startURL string, c
 			// The deltaLink is stored, so it gets the origin check too. An
 			// off-origin one would fail every later cycle with no 410 to
 			// re-anchor on.
-			if err := a.sameAPIOrigin(page.DeltaLink); err != nil {
+			if err := a.sameMailbox(page.DeltaLink); err != nil {
 				return "", err
 			}
 			if err := visit(ctx, DeltaPage{Messages: messages, Resume: DeltaResume{Anchor: census}}); err != nil {
@@ -343,7 +343,7 @@ func (a *httpAPI) deltaWalk(ctx context.Context, accessToken, startURL string, c
 			}
 			return page.DeltaLink, nil
 		}
-		if err := a.sameAPIOrigin(page.NextLink); err != nil {
+		if err := a.sameMailbox(page.NextLink); err != nil {
 			return "", err
 		}
 		if err := visit(ctx, DeltaPage{Messages: messages, Resume: DeltaResume{NextLink: page.NextLink, Anchor: census}}); err != nil {

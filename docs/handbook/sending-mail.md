@@ -137,18 +137,18 @@ Margince keeps a message you have not finished as a draft while you type. The fo
 
 A saved draft also keeps the deal and project you chose. Margince checks that you can still use them when you open the draft again.
 
-### The four rewrites
+### The rewrites
 
-The AI draft offers four rewrites on its line, beside the note that AI wrote it. They work on text the model wrote that you have not edited yet. They are **Shorter**, **Warmer**, **More formal** and **Add a deadline**.
+The AI line above the message offers **Polish**, **Shorter**, **Warmer**, **More formal** and **Add a deadline**. **Polish** makes the words clear and keeps what the mail says. They work on any text in the message, whether AI drafted it or you wrote it. After a rewrite, the AI line says that AI wrote the words, and undo in the message brings your text back.
 
-They are gone the moment you type, because they rewrite the model's text, not yours.
+If you added a link or a format, or the message is too long, the rewrites are greyed out and the line says why.
 
 ### How do I change the language of an AI draft?
 To change the language of an AI draft, pick another language in the list on the AI line above the message. The list shows the language the draft is in, and names each language in its own words, such as **Deutsch**. Margince writes the words in the message again in that language, for the same purpose.
 
 If you edited the words, only an AI model writes your edited words again. With no model set up, or with a link or format you added, your words and the language stay as they are. The composer then says "Your edits were kept. Draft again when ready."
 
-Once you pick a language, **Draft email**, **Change the ask**, the four rewrites and a saved draft keep it. Until then, the language of a subject you wrote yourself decides it, when Margince can tell that language. If it cannot, Margince takes it from the mail on the thread, then from your settings. If the new draft fails, your words and the language stay. When Margince cannot tell the language of a draft, it shows no list.
+Once you pick a language, **Draft email**, **Change the ask**, the rewrites and a saved draft keep it. Until then, the language of a subject you wrote yourself decides it, when Margince can tell that language. If it cannot, Margince takes it from the mail on the thread, then from your settings. If the new draft fails, your words and the language stay. When Margince cannot tell the language of a draft, it shows no list.
 Also called: draft in another language, write the email in German, change the email language.
 
 ### Why are you writing?
