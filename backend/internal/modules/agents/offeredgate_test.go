@@ -56,6 +56,11 @@ func TestAToolTheListingLeavesOutIsRefusedAtTheDoor(t *testing.T) {
 	if answer := callOverMCP(t, "change_tags"); strings.Contains(answer, "unknown tool") {
 		t.Errorf("the router the listing offers was refused at the door: %s", answer)
 	}
+	// A listed tool this caller's grants trim from its list still passes the
+	// door, and its gate gives the real answer.
+	if answer := callOverMCP(t, "read_record"); strings.Contains(answer, "unknown tool") {
+		t.Errorf("a listed tool was refused at the door instead of by its gate: %s", answer)
+	}
 }
 
 // unavailableVerbs is a feature policy that switches off one verb a router
@@ -67,9 +72,11 @@ func (unavailableVerbs) Admits(verb, _ string) bool {
 }
 func (unavailableVerbs) Context(ctx context.Context) context.Context { return ctx }
 
-// The door asks one tool what tools/list asks every tool. For every declared
-// tool, under each registry wiring and each kind of caller, the two answer alike.
-func TestTheDoorAndTheListingAgreeOnEveryTool(t *testing.T) {
+// The door holds surface membership and nothing else, under each wiring and
+// each kind of caller. It passes every name tools/list shows, and every listed
+// tool the caller's list trims. It refuses every hidden tool the gate does not
+// admit, and follows the gate for a Gated one.
+func TestTheDoorAdmitsExactlyThePublicSurface(t *testing.T) {
 	registries := map[string]*Registry{
 		"plain":          fullRegistry(t),
 		"gate admits":    fullRegistry(t, WithToolGate(func(context.Context) bool { return true })),
@@ -91,14 +98,16 @@ func TestTheDoorAndTheListingAgreeOnEveryTool(t *testing.T) {
 	for wiring, r := range registries {
 		specs := r.Specs()
 		if len(specs) == 0 {
-			t.Fatalf("%s: no tool is declared, so nothing was compared", wiring)
+			t.Fatalf("%s: no tool is declared, so nothing was checked", wiring)
 		}
 		for who, ctx := range callers {
 			offered := r.Offered(ctx)
 			for _, spec := range specs {
 				listed := slices.ContainsFunc(offered, func(o mcp.ToolSpec) bool { return o.Name == spec.Name })
-				if got := r.OffersName(ctx, spec.Name); got != listed {
-					t.Errorf("%s, %s: %s is listed %v, but the door answers %v", wiring, who, spec.Name, listed, got)
+				want := !spec.Unlisted || (spec.Gated && listed)
+				if got := r.OnSurface(ctx, spec.Name); got != want || (listed && !got) {
+					t.Errorf("%s, %s: %s (unlisted %v, gated %v, listed %v) is on the surface %v, want %v",
+						wiring, who, spec.Name, spec.Unlisted, spec.Gated, listed, got, want)
 				}
 			}
 		}

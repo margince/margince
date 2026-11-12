@@ -59,10 +59,10 @@ func mustReadToolChecks() map[string][]auth.Check {
 }
 
 // grantedTo is spec as far as an agent's grants and its passport's work areas
-// reach. A tool is not offered when the caller lacks its recorded checks or its
-// areas are off. An agent's call by its name is then refused at the MCP door.
-// A router offers only the actions whose verbs pass both. A verb with no
-// recorded row stays offered, and the gate still decides each call. Humans and the system are not narrowed, since
+// reach. A tool whose recorded checks the caller lacks, or whose areas are off,
+// is not offered. A router offers only the actions whose verbs pass both. A
+// verb with no recorded row stays offered: the
+// gate still decides each call. Humans and the system are not narrowed, since
 // their authority is enforced at the store and never listed. A self-describing
 // tool is never narrowed, for the reason invocableByCaller keeps it.
 func (r *Registry) grantedTo(ctx context.Context, spec mcp.ToolSpec) (mcp.ToolSpec, bool) {

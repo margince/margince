@@ -30,9 +30,9 @@ import (
 // surface that lies, and the client's only way to discover the truth is to
 // call and be denied.
 //
-// Registry.Offered and Registry.OffersName call it, through listedFor and
-// gateAdmits. The tools/list a client is shown and the door that refuses a
-// name it leaves out narrow alike.
+// Registry.Offered is its only caller, and every narrowing of the TOOL catalog
+// goes through there — the external tools/list and the tool listing a Surface-B
+// run is shown alike.
 //
 // The resources catalogue is the one sibling that does not: readableByCaller
 // spells the same three branches over mcp.Resource. One rule, two spellings,

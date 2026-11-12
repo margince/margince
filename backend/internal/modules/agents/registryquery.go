@@ -147,16 +147,18 @@ func outsideToolName(c rune) bool {
 
 // Offered is the tools/list this caller is shown. It narrows by the passport's
 // scopes, the seat and the checks each verb was measured to ask (grantedTo).
-// For an agent over MCP it is also the door: tools/call refuses a name it
-// leaves out (OffersName). Invoke still admits every call it lets through. An
-// Unlisted tool is offered only when it is Gated and the tool gate admits this
-// caller. Each description names a routed verb by the router action this
-// listing offers.
+// Invoke remains the authority on every one of them: this narrows what is
+// advertised and enforces nothing. An Unlisted tool is offered only when it is
+// Gated and the tool gate admits this caller. Each description names a routed
+// verb by the router action this listing offers.
 func (r *Registry) Offered(ctx context.Context) []mcp.ToolSpec {
 	all := r.availableSpecs(r.Specs())
 	out := make([]mcp.ToolSpec, 0, len(all))
 	for _, spec := range all {
-		if granted, ok := r.listedFor(ctx, spec); ok {
+		if spec.Unlisted || !invocableByCaller(ctx, spec) {
+			continue
+		}
+		if granted, ok := r.grantedTo(ctx, spec); ok {
 			out = append(out, r.asSeenBy(ctx, granted))
 		}
 	}
@@ -169,32 +171,13 @@ func (r *Registry) Offered(ctx context.Context) []mcp.ToolSpec {
 	return out
 }
 
-// OffersName reports whether tools/list offers name to this caller. It asks one
-// tool what Offered asks every tool, through listedFor and gateAdmits, so a
-// call does not pay for the whole listing.
-func (r *Registry) OffersName(ctx context.Context, name string) bool {
+// OnSurface reports whether name is on the public MCP surface for this caller:
+// a listed tool or router, or a Gated tool the gate admits. A router's target
+// and a superseded tool are not. It decides nothing about the caller's grants,
+// which each tool's gate holds.
+func (r *Registry) OnSurface(ctx context.Context, name string) bool {
 	spec, ok := r.Spec(name)
-	if !ok {
-		return false
-	}
-	if r.callAvailability != nil {
-		if spec, ok = r.availableSpec(spec); !ok {
-			return false
-		}
-	}
-	if _, listed := r.listedFor(ctx, spec); listed {
-		return true
-	}
-	return r.gateAdmits(ctx, spec)
-}
-
-// listedFor is a listed tool as this caller is granted it, and false for one
-// the listing leaves out.
-func (r *Registry) listedFor(ctx context.Context, spec mcp.ToolSpec) (mcp.ToolSpec, bool) {
-	if spec.Unlisted || !invocableByCaller(ctx, spec) {
-		return spec, false
-	}
-	return r.grantedTo(ctx, spec)
+	return ok && (!spec.Unlisted || r.gateAdmits(ctx, spec))
 }
 
 // Runnable is what a Surface-B run may choose among: every tool this caller may

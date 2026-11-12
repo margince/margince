@@ -15,14 +15,15 @@ import (
 // verb by name. A shipped binary always refuses such a name at the door.
 var servesUnoffered atomic.Bool
 
-// unoffered reports a name an agent calls that its tools/list leaves out. The
-// listing is a client's whole surface. Such a name answers as one that does not
-// exist, so the refusal names nothing the listing hid. The door binds only
-// agents, and a caller of another kind meets each tool's own gate.
+// unoffered reports a name an agent calls that is not on the public MCP
+// surface. It answers as a name that does not exist, so the refusal reveals
+// nothing hidden. Whether the caller may use a surface tool is its gate's
+// answer, not the door's. The door binds only agents; another caller meets each
+// tool's own gate.
 func (s *Dispatcher) unoffered(ctx context.Context, name string) bool {
 	p, ok := principal.Actor(ctx)
 	if !ok || p.Type != principal.PrincipalAgent || servesUnoffered.Load() {
 		return false
 	}
-	return !s.registry.OffersName(ctx, name)
+	return !s.registry.OnSurface(ctx, name)
 }
