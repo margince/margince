@@ -175,18 +175,18 @@ func (s *Store) UpdateForm(ctx context.Context, id ids.UUID, in UpdateInput) (Fo
 		return Form{}, err
 	}
 	if s.fence == nil {
-		return s.updateForm(ctx, id, in)
+		return s.writeFormUpdate(ctx, id, in)
 	}
 	var out Form
 	err := s.fence.Within(ctx, id, func(bound context.Context) error {
 		var err error
-		out, err = s.updateForm(bound, id, in)
+		out, err = s.writeFormUpdate(bound, id, in)
 		return err
 	})
 	return out, err
 }
 
-func (s *Store) updateForm(ctx context.Context, id ids.UUID, in UpdateInput) (Form, error) {
+func (s *Store) writeFormUpdate(ctx context.Context, id ids.UUID, in UpdateInput) (Form, error) {
 	if err := refuseAgentSecretChange(ctx, in); err != nil {
 		return Form{}, err
 	}
@@ -208,17 +208,8 @@ func (s *Store) updateForm(ctx context.Context, id ids.UUID, in UpdateInput) (Fo
 		if err != nil {
 			return err
 		}
-		next, err := in.merged(current)
-		if err == nil {
-			err = refuseAgentPromiseChange(ctx, current, next)
-		}
+		next, err := checkedFormUpdate(ctx, tx, id, in, current)
 		if err != nil {
-			return err
-		}
-		if err := checkReferences(ctx, tx, in.LeadOrigin, in.OwnerID, in.ProductID); err != nil {
-			return err
-		}
-		if err := checkHandlingPolicy(ctx, tx, id, current, next); err != nil {
 			return err
 		}
 		p := patchFor(current, next)
@@ -251,6 +242,22 @@ func (s *Store) updateForm(ctx context.Context, id ids.UUID, in UpdateInput) (Fo
 	}
 	s.dropSecret(ctx, replacedRef, "web form secret replaced")
 	return out, nil
+}
+
+// checkedFormUpdate is the form after the update, once the caller may make the
+// change and every record it names is one they may use.
+func checkedFormUpdate(ctx context.Context, tx pgx.Tx, id ids.UUID, in UpdateInput, current Form) (Form, error) {
+	next, err := in.merged(current)
+	if err == nil {
+		err = refuseAgentPromiseChange(ctx, current, next)
+	}
+	if err != nil {
+		return next, err
+	}
+	if err := checkReferences(ctx, tx, in.LeadOrigin, in.OwnerID, in.ProductID); err != nil {
+		return next, err
+	}
+	return next, checkHandlingPolicy(ctx, tx, id, current, next)
 }
 
 // replacementSecret seals a builder's new secret before the update's
@@ -355,18 +362,18 @@ func (s *Store) ArchiveForm(ctx context.Context, id ids.UUID) (Form, error) {
 		return Form{}, err
 	}
 	if s.fence == nil {
-		return s.archiveForm(ctx, id)
+		return s.retireForm(ctx, id)
 	}
 	var out Form
 	err := s.fence.Within(ctx, id, func(bound context.Context) error {
 		var err error
-		out, err = s.archiveForm(bound, id)
+		out, err = s.retireForm(bound, id)
 		return err
 	})
 	return out, err
 }
 
-func (s *Store) archiveForm(ctx context.Context, id ids.UUID) (Form, error) {
+func (s *Store) retireForm(ctx context.Context, id ids.UUID) (Form, error) {
 	if err := auth.Require(ctx, rbacObject, principal.ActionDelete); err != nil {
 		return Form{}, err
 	}

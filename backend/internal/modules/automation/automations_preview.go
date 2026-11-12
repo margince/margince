@@ -211,7 +211,7 @@ func resolvePreviewRecipe(ctx context.Context, catalog fieldcatalog.Reader, stor
 	}
 	entry, ok := CatalogEntryByKey(key)
 	if !ok {
-		return previewDef{}, 0, &ParamError{Field: "key", Reason: "not a catalog automation type"}
+		return previewDef{}, 0, &ParamError{Field: keyCatalogKey, Reason: "not a catalog automation type"}
 	}
 	if in.Params != nil {
 		if err := entry.Validate(in.Params); err != nil {
@@ -234,7 +234,7 @@ func resolvePreviewRecipe(ctx context.Context, catalog fieldcatalog.Reader, stor
 		return previewDef{}, 0, fmt.Errorf("crmagents: catalog key %q has no preview definition", key)
 	}
 	if def.unsupported != "" {
-		return previewDef{}, 0, &ParamError{Field: "key", Reason: def.unsupported}
+		return previewDef{}, 0, &ParamError{Field: keyCatalogKey, Reason: def.unsupported}
 	}
 	return def, window, nil
 }

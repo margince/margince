@@ -23,12 +23,16 @@ type InquirySettings interface {
 	Save(context.Context, ids.UUID, int64, crmcontracts.WebsiteInquiryHandlingRequest) (crmcontracts.WebsiteInquiryHandling, error)
 }
 
+// WithInquirySettings is a copy of the store that saves and runs inquiry
+// policies through settings.
 func (s *Store) WithInquirySettings(settings InquirySettings) *Store {
 	clone := *s
 	clone.settings = settings
 	return &clone
 }
 
+// SaveHandling stores the inquiry policy of form id. The policy must name the
+// same form.
 func (s *Store) SaveHandling(ctx context.Context, id ids.UUID, version int64, in crmcontracts.WebsiteInquiryHandlingRequest) (crmcontracts.WebsiteInquiryHandling, error) {
 	if err := auth.Require(ctx, rbacObject, principal.ActionUpdate); err != nil {
 		return crmcontracts.WebsiteInquiryHandling{}, err
@@ -42,6 +46,7 @@ func (s *Store) SaveHandling(ctx context.Context, id ids.UUID, version int64, in
 	return s.settings.Save(ctx, id, version, in)
 }
 
+// SaveWebFormHandling serves a form's inquiry policy save. It needs If-Match.
 func (h Handlers) SaveWebFormHandling(w http.ResponseWriter, r *http.Request, id crmcontracts.Id, _ crmcontracts.SaveWebFormHandlingParams) {
 	version, ok := httperr.IfMatchVersion(w, r)
 	if !ok {
@@ -59,6 +64,8 @@ func (h Handlers) SaveWebFormHandling(w http.ResponseWriter, r *http.Request, id
 	httperr.WriteJSON(w, http.StatusOK, out)
 }
 
+// PreviewHandling shows what an inquiry policy would do on form id, and writes
+// nothing.
 func (s *Store) PreviewHandling(ctx context.Context, id ids.UUID, in crmcontracts.WebsiteInquiryPreviewRequest, now time.Time) (crmcontracts.WebsiteInquiryHandlingPreview, error) {
 	if err := auth.Require(ctx, rbacObject, principal.ActionRead); err != nil {
 		return crmcontracts.WebsiteInquiryHandlingPreview{}, err
@@ -72,6 +79,7 @@ func (s *Store) PreviewHandling(ctx context.Context, id ids.UUID, in crmcontract
 	return s.settings.Preview(ctx, id, in, now)
 }
 
+// PreviewWebFormHandling serves a form's inquiry policy preview.
 func (h Handlers) PreviewWebFormHandling(w http.ResponseWriter, r *http.Request, id crmcontracts.Id) {
 	var request crmcontracts.WebsiteInquiryPreviewRequest
 	if !httperr.Decode(w, r, &request) {
@@ -85,6 +93,8 @@ func (h Handlers) PreviewWebFormHandling(w http.ResponseWriter, r *http.Request,
 	httperr.WriteJSON(w, http.StatusOK, out)
 }
 
+// HandleExisting runs the saved policy of form id over submissions accepted
+// earlier.
 func (s *Store) HandleExisting(ctx context.Context, id ids.UUID, in crmcontracts.WebsiteInquiryExistingRequest) (crmcontracts.WebsiteInquiryHandlingResults, error) {
 	if err := auth.Require(ctx, rbacObject, principal.ActionUpdate); err != nil {
 		return crmcontracts.WebsiteInquiryHandlingResults{}, err
@@ -95,6 +105,7 @@ func (s *Store) HandleExisting(ctx context.Context, id ids.UUID, in crmcontracts
 	return s.settings.HandleExisting(ctx, id, in)
 }
 
+// HandleExistingWebFormInquiries serves the run over a form's earlier submissions.
 func (h Handlers) HandleExistingWebFormInquiries(w http.ResponseWriter, r *http.Request, id crmcontracts.Id) {
 	var request crmcontracts.WebsiteInquiryExistingRequest
 	if !httperr.Decode(w, r, &request) {

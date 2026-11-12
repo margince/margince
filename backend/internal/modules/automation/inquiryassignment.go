@@ -13,6 +13,8 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
+// InquiryAssignment is why a task went to its holder, and the field that names
+// the request type.
 type InquiryAssignment struct {
 	Reason           string
 	RequestTypeField *string

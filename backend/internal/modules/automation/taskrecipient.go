@@ -11,12 +11,18 @@ import (
 	"github.com/margince/margince/backend/internal/shared/ports/workflow"
 )
 
+// The two recipients a configured task can go to.
+const (
+	recipientRecordOwner = "record_owner"
+	recipientAuthorizer  = "authorizer"
+)
+
 func validateTaskRecipientParam(params map[string]any) error {
-	value, present := params["recipient"]
+	value, present := params[paramRecipient]
 	if !present {
 		return nil
 	}
-	if value != "record_owner" && value != "authorizer" {
+	if value != recipientRecordOwner && value != recipientAuthorizer {
 		return &ParamError{Field: "params.recipient", Reason: "choose the record owner or the person authorizing the automation"}
 	}
 	return nil
@@ -31,7 +37,7 @@ func configuredTaskEffect(ctx context.Context, ex Executors, ev workflow.Event, 
 			return workflow.Effect{}, err
 		}
 	}
-	if params.Recipient == "authorizer" {
+	if params.Recipient == recipientAuthorizer {
 		if ev.OwnerID.IsZero() {
 			return workflow.Effect{}, workflow.Declined("the person authorizing the automation is unavailable")
 		}
@@ -43,7 +49,7 @@ func configuredTaskEffect(ctx context.Context, ex Executors, ev workflow.Event, 
 func taskRecipientSchema() map[string]any {
 	return map[string]any{
 		schemaKeyType:        schemaTypeString,
-		schemaKeyEnum:        []string{"record_owner", "authorizer"},
+		schemaKeyEnum:        []string{recipientRecordOwner, recipientAuthorizer},
 		schemaKeyDescription: "Who receives the task.",
 	}
 }

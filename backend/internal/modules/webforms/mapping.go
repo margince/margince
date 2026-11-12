@@ -14,6 +14,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
+// WireForm turns a stored form into its API shape.
 func WireForm(f Form) crmcontracts.WebForm {
 	fieldMap := f.FieldMap
 	if fieldMap == nil {

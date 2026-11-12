@@ -23,6 +23,7 @@ const (
 	defaultFormRefreshSeconds, defaultFormExpirySeconds                = 30, 120
 )
 
+// The throttle settings an operator may tune, each with its key and bounds.
 var (
 	ThrottlePerAddress = config.Define(config.Spec[int]{
 		Key: "webforms.throttle.per_address_per_minute", Env: "MARGINCE_WEBFORMS_THROTTLE_PER_ADDRESS_PER_MINUTE", Type: config.Int,

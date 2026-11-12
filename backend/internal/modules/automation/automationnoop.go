@@ -4,9 +4,16 @@
 package automation
 
 import (
+	"context"
 	"encoding/json"
 	"reflect"
 )
+
+// nothingToWrite reports an update that writes nothing: it changes nothing,
+// and it does not take an agent's rule over either.
+func nothingToWrite(ctx context.Context, before Automation, in UpdateAutomationInput) bool {
+	return updateChangesNothing(before, in) && !takesOverAgentsRule(ctx, before)
+}
 
 // updateChangesNothing answers whether the update leaves the automation as it
 // is. Such a save must not move the version. It must not clear the reason a

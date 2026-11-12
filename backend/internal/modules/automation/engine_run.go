@@ -103,6 +103,12 @@ func (e *WorkflowEngine) runUnfenced(ctx context.Context, h workflow.Handler, ev
 		}
 		return e.recordFailedBeforeApply(ctx, h, ev, "planning the effect: "+sanitizedReason(err), err)
 	}
+	return e.gateAndApply(ctx, h, ev, effect)
+}
+
+// gateAndApply runs a planned effect past the owner's grants and audience,
+// claims the run, and applies it.
+func (e *WorkflowEngine) gateAndApply(ctx context.Context, h workflow.Handler, ev workflow.Event, effect workflow.Effect) error {
 	plannedJSON, err := json.Marshal(effect.Actions)
 	if err != nil {
 		return e.recordFailedBeforeApply(ctx, h, ev, "encoding the planned actions: "+sanitizedReason(err), err)
@@ -146,11 +152,16 @@ func (e *WorkflowEngine) runUnfenced(ctx context.Context, h workflow.Handler, ev
 		}
 		return e.passedOverForLapsedSetter(ctx, h, ev)
 	}
-	claimed, err := e.claimRun(ctx, h, ev, plannedJSON, "applied", nil)
+	claimed, err := e.claimRun(ctx, h, ev, plannedJSON, runStatusApplied, nil)
 	if err != nil || !claimed {
 		return err
 	}
+	return e.applyClaimed(ctx, h, ev, effect)
+}
 
+// applyClaimed applies the effect of a run this firing claimed, and records
+// the outcome before any apply error surfaces.
+func (e *WorkflowEngine) applyClaimed(ctx context.Context, h workflow.Handler, ev workflow.Event, effect workflow.Effect) error {
 	// Stamped after the claim rather than in Plan: the effect-level dedupe
 	// (applyCreate) is the ENGINE's obligation, and a handler cannot be
 	// trusted to remember it — every Plan that forgot would silently

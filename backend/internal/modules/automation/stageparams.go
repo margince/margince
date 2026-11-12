@@ -14,6 +14,14 @@ import (
 	"github.com/margince/margince/backend/internal/shared/ports/workflow"
 )
 
+// The params a stage rule reads, and the field its stage refusals name.
+const (
+	paramPipelineID = "pipeline_id"
+	paramStageIDs   = "stage_ids"
+	fieldStageIDs   = "params." + paramStageIDs
+)
+
+// StageLookup reads a stage's meaning and the pipeline it belongs to.
 type StageLookup interface {
 	StageSemantic(context.Context, ids.UUID) (string, ids.UUID, error)
 }
@@ -26,18 +34,18 @@ type stageChangeParams struct {
 
 func stageChangeSchema(task bool) map[string]any {
 	properties := map[string]any{
-		"pipeline_id": map[string]any{schemaKeyType: schemaTypeString, schemaKeyFormat: "pipeline"},
-		"stage_ids": map[string]any{
-			schemaKeyType: "array", schemaKeyFormat: "stages",
-			"items": map[string]any{schemaKeyType: schemaTypeString, schemaKeyFormat: "uuid"}, "minItems": 1,
+		paramPipelineID: map[string]any{schemaKeyType: schemaTypeString, schemaKeyFormat: "pipeline"},
+		paramStageIDs: map[string]any{
+			schemaKeyType: schemaTypeArray, schemaKeyFormat: "stages",
+			schemaKeyItems: map[string]any{schemaKeyType: schemaTypeString, schemaKeyFormat: schemaFormatUUID}, "minItems": 1,
 		},
 	}
-	required := []string{"pipeline_id", "stage_ids"}
+	required := []string{paramPipelineID, paramStageIDs}
 	if task {
-		properties["task_title"] = map[string]any{schemaKeyType: schemaTypeString, "minLength": 1, "maxLength": maxTaskTitleCharacters}
+		properties[paramTaskTitle] = map[string]any{schemaKeyType: schemaTypeString, schemaKeyMinLength: 1, schemaKeyMaxLength: maxTaskTitleCharacters}
 		properties[paramDueInDays] = intParamProperty(2, 30, "Days until the next task is due.")
 		properties[paramTaskTimezone] = taskTimezoneSchema()
-		required = append(required, "task_title", paramDueInDays)
+		required = append(required, paramTaskTitle, paramDueInDays)
 	}
 	return map[string]any{
 		schemaKeyType: schemaTypeObject, schemaKeyAdditionalProps: false,
@@ -52,7 +60,7 @@ func decodeStageParams(params map[string]any) (stageChangeParams, error) {
 	}
 	var scope stageChangeParams
 	if err := json.Unmarshal(raw, &scope); err != nil {
-		return scope, &ParamError{Field: "params.stage_ids", Reason: "choose a pipeline and valid stages"}
+		return scope, &ParamError{Field: fieldStageIDs, Reason: "choose a pipeline and valid stages"}
 	}
 	return scope, nil
 }
@@ -61,8 +69,8 @@ func validateStageChangeParams(task bool) func(map[string]any) error {
 	return func(params map[string]any) error {
 		for key := range params {
 			switch key {
-			case "pipeline_id", "stage_ids":
-			case "task_title", paramDueInDays, paramTaskTimezone:
+			case paramPipelineID, paramStageIDs:
+			case paramTaskTitle, paramDueInDays, paramTaskTimezone:
 				if !task {
 					return &ParamError{Field: "params." + key, Reason: errNotAParameter}
 				}
@@ -78,7 +86,7 @@ func validateStageChangeParams(task bool) func(map[string]any) error {
 			return &ParamError{Field: "params.pipeline_id", Reason: "choose a pipeline"}
 		}
 		if len(scope.StageIDs) == 0 || slices.Contains(scope.StageIDs, ids.Nil) {
-			return &ParamError{Field: "params.stage_ids", Reason: "choose at least one stage"}
+			return &ParamError{Field: fieldStageIDs, Reason: "choose at least one stage"}
 		}
 		if task {
 			if !validTaskTitle(scope.TaskTitle) {
@@ -103,7 +111,7 @@ func validateStageScope(ctx context.Context, lookup StageLookup, params map[stri
 		return nil
 	}
 	if lookup == nil {
-		return &ParamError{Field: "params.stage_ids", Reason: "stage selection is not available"}
+		return &ParamError{Field: fieldStageIDs, Reason: "stage selection is not available"}
 	}
 	for _, stage := range scope.StageIDs {
 		_, pipeline, err := lookup.StageSemantic(ctx, stage)
@@ -111,7 +119,7 @@ func validateStageScope(ctx context.Context, lookup StageLookup, params map[stri
 			return err
 		}
 		if err != nil || pipeline != scope.PipelineID {
-			return &ParamError{Field: "params.stage_ids", Reason: "choose current stages from the selected pipeline"}
+			return &ParamError{Field: fieldStageIDs, Reason: "choose current stages from the selected pipeline"}
 		}
 	}
 	return nil

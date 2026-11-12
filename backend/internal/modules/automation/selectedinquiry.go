@@ -27,6 +27,8 @@ func selectedInquiryAllowed(ctx context.Context, ev workflow.Event) bool {
 	return ok && scope.automation == ev.AutomationID && scope.source == ev.Entity.ID
 }
 
+// SelectedInquiryRun is the run a selected submission produced, and whether it
+// applied any effect.
 type SelectedInquiryRun struct {
 	ID         ids.UUID
 	Status     string
@@ -35,21 +37,9 @@ type SelectedInquiryRun struct {
 
 // RunSelectedInquiry executes a reviewed source event without activating future handling.
 func (e *WorkflowEngine) RunSelectedInquiry(ctx context.Context, id ids.AutomationID, version int64, envelope kevents.Envelope) (SelectedInquiryRun, error) {
-	if err := auth.Require(ctx, "automation", principal.ActionUpdate); err != nil {
-		return SelectedInquiryRun{}, err
-	}
-	if err := auth.Require(ctx, "activity", principal.ActionCreate); err != nil {
-		return SelectedInquiryRun{}, err
-	}
-	saved, err := NewAutomationStore(e.db).Get(ctx, id)
+	saved, err := e.selectedInquiryPolicy(ctx, id, version)
 	if err != nil {
 		return SelectedInquiryRun{}, err
-	}
-	if saved.Version != version {
-		return SelectedInquiryRun{}, apperrors.ErrVersionSkew
-	}
-	if saved.Key != inquiryRecipeName || saved.OwnerID == nil {
-		return SelectedInquiryRun{}, apperrors.ErrConflict
 	}
 	handler := e.handlerNamed(inquiryRecipeName)
 	if handler == nil || !handler.Spec().Trigger.MatchesEventType(envelope.Type) {
@@ -66,7 +56,7 @@ func (e *WorkflowEngine) RunSelectedInquiry(ctx context.Context, id ids.Automati
 	if err != nil {
 		return existing, err
 	}
-	if found && ((existing.Status == "applied" && existing.HasEffects) || existing.Status == runStatusRequiresApproval) {
+	if found && ((existing.Status == runStatusApplied && existing.HasEffects) || existing.Status == runStatusRequiresApproval) {
 		return existing, nil
 	}
 	if found {
@@ -89,13 +79,35 @@ func (e *WorkflowEngine) RunSelectedInquiry(ctx context.Context, id ids.Automati
 	return result, runErr
 }
 
+// selectedInquiryPolicy is the saved inquiry policy, at the version the caller
+// reviewed, with the owner it runs as.
+func (e *WorkflowEngine) selectedInquiryPolicy(ctx context.Context, id ids.AutomationID, version int64) (Automation, error) {
+	if err := auth.Require(ctx, "automation", principal.ActionUpdate); err != nil {
+		return Automation{}, err
+	}
+	if err := auth.Require(ctx, "activity", principal.ActionCreate); err != nil {
+		return Automation{}, err
+	}
+	saved, err := NewAutomationStore(e.db).Get(ctx, id)
+	if err != nil {
+		return Automation{}, err
+	}
+	if saved.Version != version {
+		return Automation{}, apperrors.ErrVersionSkew
+	}
+	if saved.Key != inquiryRecipeName || saved.OwnerID == nil {
+		return Automation{}, apperrors.ErrConflict
+	}
+	return saved, nil
+}
+
 func (e *WorkflowEngine) selectedInquiryRun(ctx context.Context, key string) (SelectedInquiryRun, bool, error) {
 	if err := auth.Require(ctx, "automation", principal.ActionRead); err != nil {
 		return SelectedInquiryRun{}, false, err
 	}
 	var out SelectedInquiryRun
 	err := e.db.Tx(ctx, func(tx pgx.Tx) error {
-		return tx.QueryRow(ctx, `SELECT id,status,COALESCE(jsonb_array_length(applied),0)>0 FROM workflow_run WHERE handler=@handler AND idempotency_key=@key`, pgx.NamedArgs{"handler": inquiryRecipeName, "key": key}).Scan(&out.ID, &out.Status, &out.HasEffects)
+		return tx.QueryRow(ctx, `SELECT id,status,COALESCE(jsonb_array_length(applied),0)>0 FROM workflow_run WHERE handler=@handler AND idempotency_key=@run_key`, pgx.NamedArgs{argHandler: inquiryRecipeName, argRunKey: key}).Scan(&out.ID, &out.Status, &out.HasEffects)
 	})
 	if errors.Is(err, pgx.ErrNoRows) {
 		return out, false, nil
@@ -109,7 +121,7 @@ func (e *WorkflowEngine) nextSelectedInquiryAttempt(ctx context.Context, key str
 	}
 	var latest int
 	err := e.db.Tx(ctx, func(tx pgx.Tx) error {
-		return tx.QueryRow(ctx, `SELECT `+retryOrdinalSQL("")+` FROM workflow_run WHERE handler=@handler AND `+runAutomationIDSQL+`=@automation AND `+baseRunKeySQL("")+`=@key`, pgx.NamedArgs{"handler": inquiryRecipeName, "automation": id.String(), "key": key}).Scan(&latest)
+		return tx.QueryRow(ctx, `SELECT `+retryOrdinalSQL("")+` FROM workflow_run WHERE handler=@handler AND `+runAutomationIDSQL+`=@automation AND `+baseRunKeySQL("")+`=@run_key`, pgx.NamedArgs{argHandler: inquiryRecipeName, "automation": id.String(), argRunKey: key}).Scan(&latest)
 	})
 	return latest + 1, err
 }

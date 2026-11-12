@@ -223,7 +223,7 @@ func (s *AutomationStore) Create(ctx context.Context, in CreateAutomationInput) 
 	}
 	entry, ok := CatalogEntryByKey(in.Key)
 	if !ok {
-		return Automation{}, &ParamError{Field: "key", Reason: "not a catalog automation type"}
+		return Automation{}, &ParamError{Field: keyCatalogKey, Reason: "not a catalog automation type"}
 	}
 	if err := requireAuthorCeiling(ctx, entry); err != nil {
 		return Automation{}, err
@@ -271,7 +271,7 @@ func (s *AutomationStore) Create(ctx context.Context, in CreateAutomationInput) 
 			return err
 		}
 		_, err = storekit.Audit(ctx, tx, "create", "automation", a.ID.UUID, nil, map[string]any{
-			"key": a.Key, keyName: a.Name, keyParams: in.Params, keyStatus: "paused", keySetterPassport: storekit.UUIDOrNil(setter),
+			keyCatalogKey: a.Key, keyName: a.Name, keyParams: in.Params, keyStatus: "paused", keySetterPassport: storekit.UUIDOrNil(setter),
 		})
 		return err
 	})
@@ -281,9 +281,9 @@ func (s *AutomationStore) Create(ctx context.Context, in CreateAutomationInput) 
 	return a, nil
 }
 
-// Update re-parameterizes, renames, or flips enabled/paused, honoring
+// updateRule re-parameterizes, renames, or flips enabled/paused, honoring
 // If-Match version skew.
-func (s *AutomationStore) update(ctx context.Context, id ids.AutomationID, in UpdateAutomationInput) (Automation, error) {
+func (s *AutomationStore) updateRule(ctx context.Context, id ids.AutomationID, in UpdateAutomationInput) (Automation, error) {
 	if err := auth.Require(ctx, "automation", principal.ActionUpdate); err != nil {
 		return Automation{}, err
 	}
@@ -306,7 +306,7 @@ func (s *AutomationStore) update(ctx context.Context, id ids.AutomationID, in Up
 		if in.IfVersion != nil && *in.IfVersion != before.Version {
 			return apperrors.ErrVersionSkew
 		}
-		if updateChangesNothing(before, in) && !takesOverAgentsRule(ctx, before) {
+		if nothingToWrite(ctx, before, in) {
 			a = before
 			return nil
 		}
@@ -323,16 +323,7 @@ func (s *AutomationStore) update(ctx context.Context, id ids.AutomationID, in Up
 				return err
 			}
 		}
-		if err := s.revalidate(ctx, before, in); err != nil {
-			return err
-		}
-		var paramsJSON []byte
-		if in.Params != nil {
-			if paramsJSON, err = json.Marshal(in.Params); err != nil {
-				return err
-			}
-		}
-		setter, err := setterAfterUpdate(ctx, tx, before, in)
+		paramsJSON, setter, err := s.checkedUpdate(ctx, tx, before, in)
 		if err != nil {
 			return err
 		}
@@ -351,8 +342,8 @@ func (s *AutomationStore) update(ctx context.Context, id ids.AutomationID, in Up
 			  updated_at = @changed
 			WHERE id = @id
 			RETURNING %s`, automationColumns), pgx.NamedArgs{
-			"id": id, "name": in.Name, "params": paramsJSON, "enabled": in.Enabled,
-			"changed": s.now().UTC(), "owner": in.OwnerID, "setter": setter,
+			"id": id, "name": in.Name, keyParams: paramsJSON, "enabled": in.Enabled,
+			"changed": s.now().UTC(), argOwner: in.OwnerID, "setter": setter,
 		}))
 		if err != nil {
 			return err
@@ -367,10 +358,27 @@ func (s *AutomationStore) update(ctx context.Context, id ids.AutomationID, in Up
 	return a, nil
 }
 
-// Archive soft-deletes: the instance stops firing on the next event and
+// checkedUpdate revalidates the change and works out the params and setter
+// the rule is written with.
+func (s *AutomationStore) checkedUpdate(ctx context.Context, tx pgx.Tx, before Automation, in UpdateAutomationInput) ([]byte, *ids.UUID, error) {
+	if err := s.revalidate(ctx, before, in); err != nil {
+		return nil, nil, err
+	}
+	var paramsJSON []byte
+	if in.Params != nil {
+		var err error
+		if paramsJSON, err = json.Marshal(in.Params); err != nil {
+			return nil, nil, err
+		}
+	}
+	setter, err := setterAfterUpdate(ctx, tx, before, in)
+	return paramsJSON, setter, err
+}
+
+// archiveRule soft-deletes: the instance stops firing on the next event and
 // vanishes from the surface, while its run records keep their referent.
 // Audited as `archive` — the vocabulary has no `delete` verb.
-func (s *AutomationStore) archive(ctx context.Context, id ids.AutomationID) error {
+func (s *AutomationStore) archiveRule(ctx context.Context, id ids.AutomationID) error {
 	if err := auth.Require(ctx, "automation", principal.ActionDelete); err != nil {
 		return err
 	}
@@ -392,7 +400,7 @@ func (s *AutomationStore) archive(ctx context.Context, id ids.AutomationID) erro
 			return err
 		}
 		_, err = storekit.Audit(ctx, tx, "archive", "automation", id.UUID,
-			map[string]any{"key": before.Key, keyName: before.Name, auditEnabled: before.Enabled}, nil)
+			map[string]any{keyCatalogKey: before.Key, keyName: before.Name, auditEnabled: before.Enabled}, nil)
 		return err
 	})
 }
@@ -418,7 +426,7 @@ func SeedStarterAutomationsTx(ctx context.Context, tx pgx.Tx) error {
 			INSERT INTO automation (key, name, origin, trigger, action, params, enabled, tier)
 			VALUES (@key, @name, 'catalog', @trigger, @action, @params, @enabled, @tier)`,
 			pgx.NamedArgs{
-				"key": entry.Key, keyName: entry.Name, "trigger": triggerJSON,
+				keyCatalogKey: entry.Key, keyName: entry.Name, "trigger": triggerJSON,
 				"action": actionJSON, keyParams: paramsJSON, "tier": entry.Tier,
 				auditEnabled: ready && entry.Action != string(ActionTypeDraftEmail),
 			}); err != nil {

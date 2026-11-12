@@ -14,6 +14,7 @@ type FiringFence interface {
 	Within(context.Context, workflow.Spec, workflow.Event, func(context.Context) error) error
 }
 
+// WithFiringFence runs every firing inside fence.
 func (e *WorkflowEngine) WithFiringFence(fence FiringFence) *WorkflowEngine {
 	e.fence = fence
 	return e
