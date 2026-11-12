@@ -44,7 +44,7 @@
 // parameter from the component that read it — never by importing the fallback
 // below, which is a different value that only happens to agree.
 
-import { isRealCalendarDay } from "./calendarday";
+import { isRealCalendarDay, shiftCalendarDay } from "./calendarday";
 
 // The zone a record's dates are read in when the installation's own answer is
 // missing. It is only the last resort. `useCompanyZone` in
@@ -304,11 +304,19 @@ export function dueTimeOf(
 }
 
 /** `HH:MM` on `zone`'s wall clock at the instant `at`. */
-export function wallClockTime(at: number, zone: string): string {
+export function wallClockTime(
+  at: number,
+  zone: string,
+  precision: "minute" | "millisecond" = "minute",
+): string {
   const timeOfDay = ((wallClockMs(at, zone) % DAY_MS) + DAY_MS) % DAY_MS;
   const minutes = Math.floor(timeOfDay / 60_000);
   const pad = (value: number) => String(value).padStart(2, "0");
-  return `${pad(Math.floor(minutes / 60))}:${pad(minutes % 60)}`;
+  const clock = `${pad(Math.floor(minutes / 60))}:${pad(minutes % 60)}`;
+  if (precision === "minute") return clock;
+  const second = Math.floor(timeOfDay / 1000) % 60;
+  const fraction = String(new Date(at).getUTCMilliseconds()).padStart(3, "0");
+  return `${clock}:${pad(second)}.${fraction}`;
 }
 
 /**
@@ -400,12 +408,7 @@ export function startOfDayInZone(
   zone: string,
   daysLater = 0,
 ): string {
-  const [year = Number.NaN, month = Number.NaN, day = Number.NaN] = dateOnly
-    .split("-")
-    .map(Number);
-  const shifted = new Date(Date.UTC(year, month - 1, day + daysLater))
-    .toISOString()
-    .slice(0, 10);
+  const shifted = shiftCalendarDay(dateOnly, daysLater);
   return new Date(startOfDayInstant(shifted, zone)).toISOString();
 }
 

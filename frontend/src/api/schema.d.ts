@@ -41187,6 +41187,7 @@ export interface components {
             questions_closed: number;
         };
         SetActivityDispositionRequest: {
+            snoozed_intent?: components["schemas"]["IntentTime"];
             /**
              * @description What the reader decided. `not_sales` binds the thread for everybody; `handled`,
              *     `snooze` and `not_mine` bind only the caller. `handled` says the caller dealt with the
@@ -55042,6 +55043,7 @@ export interface components {
          *     deterministic candidate set, so it is not necessarily descending in `composite`.
          */
         MorningBriefItem: {
+            snoozed_intent?: components["schemas"]["IntentTime"];
             /** Format: uuid */
             id: string;
             /** Format: uuid */
@@ -56028,6 +56030,7 @@ export interface components {
          *     on the clock, the customer writing back, or a named meeting being over.
          */
         BriefSnoozeRequest: {
+            snoozed_intent?: components["schemas"]["IntentTime"];
             reopen_on?: components["schemas"]["ReopenCondition"];
             /**
              * Format: date-time

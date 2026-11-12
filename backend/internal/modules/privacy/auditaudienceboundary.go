@@ -171,7 +171,8 @@ var auditImageGovernanceKeys = map[string]func(json.RawMessage) bool{
 	"kind": anyValue, "direction": anyValue, "source_system": anyValue,
 	"occurred_at": anyValue, "due_at": anyValue, "remind_at": anyValue,
 	"due_intent": anyValue, "remind_intent": anyValue,
-	"assignee_id": anyValue, "is_done": anyValue,
+	"snoozed_intent": anyValue,
+	"assignee_id":    anyValue, "is_done": anyValue,
 	// Presence only, and enforced HERE rather than trusted from the writer.
 	"body": isJSONBool,
 }

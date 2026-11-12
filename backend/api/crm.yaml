@@ -57109,6 +57109,7 @@ components:
       additionalProperties: false
       required: [disposition]
       properties:
+        snoozed_intent: { $ref: '#/components/schemas/IntentTime' }
         disposition:
           type: string
           enum: [handled, snooze, not_mine, not_sales]
@@ -74577,6 +74578,7 @@ components:
         deterministic candidate set, so it is not necessarily descending in `composite`.
       required: [id, deal_id, rank, composite, feature_vector, evidence_ids, state]
       properties:
+        snoozed_intent: { $ref: '#/components/schemas/IntentTime' }
         id: { type: string, format: uuid }
         deal_id: { type: string, format: uuid }
         rank: { type: integer, minimum: 1, description: 'Position in the queue (1 = top), after the L2 re-order.' }
@@ -75703,6 +75705,7 @@ components:
         Set a brief item aside until something happens. The something is `reopen_on`: a moment
         on the clock, the customer writing back, or a named meeting being over.
       properties:
+        snoozed_intent: { $ref: '#/components/schemas/IntentTime' }
         reopen_on:
           $ref: '#/components/schemas/ReopenCondition'
         snoozed_until:

@@ -4,28 +4,21 @@
 package activities
 
 import (
-	crmcontracts "github.com/margince/margince/backend/internal/contracts"
-	"github.com/margince/margince/backend/internal/shared/kernel/values"
 	"time"
+
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 )
 
 func applyPickedTime(field string, wire *crmcontracts.IntentTime, target **time.Time) error {
 	if wire == nil {
 		return nil
 	}
-	zone, err := values.ParseTimezone(wire.Timezone)
-	if err != nil {
-		return &values.ParseError{Field: field + ".timezone", Code: "invalid", Message: "choose an IANA timezone"}
-	}
-	intent, err := values.ParseIntentTime(wire.WallClock, zone)
-	if err != nil {
-		return &values.ParseError{Field: field + ".wall_clock", Code: "invalid", Message: "choose a valid local date and time"}
-	}
-	instant, err := intent.Resolve()
+	instant, err := storekit.ResolveIntentTime(field, wire)
 	if err != nil {
 		return err
 	}
-	*target = &instant
+	*target = instant
 	return nil
 }
 

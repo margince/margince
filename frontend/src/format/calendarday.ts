@@ -116,6 +116,14 @@ export function sameCalendarDay(a: Date, b: Date, zone: string): boolean {
   return calendarDay(a, zone) === calendarDay(b, zone);
 }
 
+export function shiftCalendarDay(day: string, days: number): ISODate {
+  if (!isRealCalendarDay(day))
+    throw new RangeError(`not a calendar day: ${day}`);
+  const carrier = new Date(`${day}T12:00:00Z`);
+  carrier.setUTCDate(carrier.getUTCDate() + days);
+  return calendarDay(carrier, "UTC");
+}
+
 // The day it is now in `zone`, for a form whose date box opens on it and
 // refuses anything earlier. The zone is the one the form's server counts its
 // days in, so the floor the form offers is a day the server takes.

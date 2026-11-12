@@ -37149,6 +37149,9 @@ type BriefSnoozeRequest struct {
 	// "after the meeting" names nothing without saying which meeting.
 	ReopenRef *openapi_types.UUID `json:"reopen_ref,omitempty"`
 
+	// SnoozedIntent A chosen local date and time with an IANA timezone. Resolve it with current timezone rules. A missing local time moves to the first valid time after the gap; a repeated local time uses its first occurrence.
+	SnoozedIntent *IntentTime `json:"snoozed_intent,omitempty"`
+
 	// SnoozedUntil When the item re-surfaces. REQUIRED for `time` and refused for the other two — a
 	// snooze waiting on a reply lifts when the reply arrives, not on a date. Must be in
 	// the future.
@@ -55085,6 +55088,9 @@ type MorningBriefItem struct {
 	// ReopenRef The meeting being waited for; set exactly while reopen_on=meeting.
 	ReopenRef *openapi_types.UUID `json:"reopen_ref,omitempty"`
 
+	// SnoozedIntent A chosen local date and time with an IANA timezone. Resolve it with current timezone rules. A missing local time moves to the first valid time after the gap; a repeated local time uses its first occurrence.
+	SnoozedIntent *IntentTime `json:"snoozed_intent,omitempty"`
+
 	// SnoozedUntil When a snoozed item re-surfaces; set exactly while reopen_on=time, null otherwise — the other conditions lift on an event rather than a date.
 	SnoozedUntil *time.Time `json:"snoozed_until,omitempty"`
 
@@ -63006,6 +63012,9 @@ type SetActivityDispositionRequest struct {
 	// ReopenRef The meeting to wait for. REQUIRED for `snooze` with `reopen_on: meeting` and
 	// refused otherwise.
 	ReopenRef *openapi_types.UUID `json:"reopen_ref,omitempty"`
+
+	// SnoozedIntent A chosen local date and time with an IANA timezone. Resolve it with current timezone rules. A missing local time moves to the first valid time after the gap; a repeated local time uses its first occurrence.
+	SnoozedIntent *IntentTime `json:"snoozed_intent,omitempty"`
 
 	// SnoozedUntil When a snooze lifts. REQUIRED for `snooze` with `reopen_on: time`, and refused
 	// everywhere else — a snooze waiting on a reply lifts when the reply arrives, and a

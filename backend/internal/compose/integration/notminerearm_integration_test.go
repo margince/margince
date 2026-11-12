@@ -122,7 +122,7 @@ func TestAHandOffLeavesASnoozeAlone(t *testing.T) {
 
 	twoDays := waitingInstant.Add(48 * time.Hour)
 	if err := atWaitingInstant(e).SnoozeMessage(
-		e.As(e.Rep1, nil, AdminPerms), id, values.ReopenOnTime, &twoDays, nil); err != nil {
+		e.As(e.Rep1, nil, AdminPerms), id, values.ReopenOnTime, &twoDays, nil, nil); err != nil {
 		t.Fatalf("the rep snoozing the message: %v", err)
 	}
 

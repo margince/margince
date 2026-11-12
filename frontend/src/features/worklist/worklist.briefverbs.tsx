@@ -13,19 +13,13 @@ import type { ReactNode } from "react";
 import { Button } from "../../design-system/atoms";
 import { useToast } from "../../design-system/toast";
 import { formatDateTime } from "../../format/format";
-import {
-  dayInZone,
-  instantAtWallClock,
-  startOfDayInZone,
-} from "../../format/timezone";
 import { useLocale, useT } from "../../i18n";
 import { problemMessageOf } from "../../lib/problem";
+import { calendarSnooze } from "../../lib/snoozetime";
 import { useViewerZone } from "../../lib/viewerzone";
 import type { BriefMarkRequest } from "../brief/brief.queries";
 import { useBriefItemMark } from "../brief/brief.queries";
 import type { WorklistItem } from "./worklist.queries";
-
-const EIGHT_HOURS_MS = 8 * 60 * 60 * 1000;
 
 /**
  * When a set-aside item returns: tomorrow at eight, in the reader's own zone.
@@ -35,18 +29,8 @@ const EIGHT_HOURS_MS = 8 * 60 * 60 * 1000;
  * verbs now, so the policy lives with them rather than in a module kept alive
  * to hold it.
  */
-export function tomorrowMorning(nowMs: number, zone: string): string {
-  // The next calendar day on the reader's clock, then 08:00 on that clock, so
-  // the stored moment is the "08:00 tomorrow" the toast names, whatever zone
-  // the browser runs in.
-  const today = dayInZone(nowMs, zone);
-  const tomorrow = dayInZone(
-    Date.parse(startOfDayInZone(today, zone, 1)),
-    zone,
-  );
-  return new Date(
-    instantAtWallClock(tomorrow, EIGHT_HOURS_MS, zone),
-  ).toISOString();
+export function tomorrowMorning(nowMs: number, zone: string) {
+  return calendarSnooze(nowMs, 1, zone, "08:00");
 }
 
 // A brief item's three verbs, answered where the row sits — and the ONE write
@@ -177,11 +161,11 @@ export function BriefSetAsides({
   // button's promise and the hour is the fact behind it — and carries the undo
   // that was missing, which posts the take-back the server now serves.
   const setAside = () => {
-    const until = tomorrowMorning(Date.now(), readerZone);
-    brief.answer({ itemId: item.id, mark: "snooze", snoozedUntil: until }, () =>
+    const selected = tomorrowMorning(Date.now(), readerZone);
+    brief.answer({ itemId: item.id, mark: "snooze", ...selected }, () =>
       toast.show(
         t("brief.snooze.done", {
-          at: formatDateTime(until, locale, readerZone),
+          at: formatDateTime(selected.snoozedUntil, locale, readerZone),
         }),
         {
           action: {

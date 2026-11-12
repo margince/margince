@@ -110,3 +110,4 @@
 1794449421_the_scheduled_mail_intent_pairs_are_validated.down.sql | * | rollback retains the validated intent pairs and changes no row
 
 1794454333_the_task_intent_pairs_are_validated.down.sql | * | SELECT 1 changes no rows
+1794459491_the_snooze_intent_pairs_are_validated.down.sql | * | SELECT 1 changes no rows
