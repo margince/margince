@@ -27,14 +27,14 @@ func SlowStatement(t *testing.T, after time.Duration) func() string {
 	seen := make(chan slowSeen, 1)
 	go watchSlow(ctx, conn, after, seen)
 	var once sync.Once
-	var report string
+	var longest slowSeen
 	// The watcher shares conn, which is not safe for two goroutines. Cleanups
 	// run last-in first-out, so this stops it before the conn is closed.
-	stop := func() { once.Do(func() { cancel(); report = (<-seen).describe(conn) }) }
+	stop := func() { once.Do(func() { cancel(); longest = <-seen }) }
 	t.Cleanup(stop)
 	return func() string {
 		stop()
-		return report
+		return longest.describe(conn)
 	}
 }
 
