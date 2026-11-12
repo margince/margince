@@ -564,6 +564,7 @@ var agentPolicies = map[string]agentPolicy{
 	"GET /v1/products/{id}":                                                    {Op: "getProduct", Access: "tool", Tool: "read_record", RecordType: "product", Tier: "auto_execute", Scope: "read"},
 	"GET /v1/products/{id}/translations":                                       {Op: "listProductTranslations", Access: "tool", Tool: "list_product_translations", RecordType: "", Tier: "auto_execute", Scope: "read", ServedBy: "route", Router: "read_details", Action: "product_translations"},
 	"GET /v1/projects":                                                         {Op: "listProjects", Access: "tool", Tool: "list_records", RecordType: "project", Tier: "auto_execute", Scope: "read"},
+	"GET /v1/projects/key-preview":                                             {Op: "getProjectKeyPreview", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: "", HumanOnlyReason: "covered"},
 	"GET /v1/projects/{id}":                                                    {Op: "getProject", Access: "tool", Tool: "read_record", RecordType: "project", Tier: "auto_execute", Scope: "read"},
 	"GET /v1/projects/{id}/360":                                                {Op: "getProject360", Access: "tool", Tool: "read_project_360", RecordType: "project", Tier: "auto_execute", Scope: "read"},
 	"GET /v1/projects/{id}/handoff":                                            {Op: "prepareProjectHandoff", Access: "tool", Tool: "prepare_handoff", RecordType: "project", Tier: "auto_execute", Scope: "read", ServedBy: "registry"},

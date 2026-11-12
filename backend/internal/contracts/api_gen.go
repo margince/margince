@@ -9892,6 +9892,27 @@ func (e CreateProductRequestTaxCategory) Valid() bool {
 	}
 }
 
+// Defines values for CreateProjectRequestPhase.
+const (
+	CreateProjectRequestPhaseDelivering CreateProjectRequestPhase = "delivering"
+	CreateProjectRequestPhaseInitiative CreateProjectRequestPhase = "initiative"
+	CreateProjectRequestPhasePursuing   CreateProjectRequestPhase = "pursuing"
+)
+
+// Valid indicates whether the value is a known member of the CreateProjectRequestPhase enum.
+func (e CreateProjectRequestPhase) Valid() bool {
+	switch e {
+	case CreateProjectRequestPhaseDelivering:
+		return true
+	case CreateProjectRequestPhaseInitiative:
+		return true
+	case CreateProjectRequestPhasePursuing:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for CreateRecordGrantRequestAccess.
 const (
 	CreateRecordGrantRequestAccessRead  CreateRecordGrantRequestAccess = "read"
@@ -45119,11 +45140,20 @@ type CreateProjectHealthCorrectionRequest struct {
 
 // CreateProjectRequest defines model for CreateProjectRequest.
 type CreateProjectRequest struct {
-	CompanyId   openapi_types.UUID  `json:"company_id"`
+	CompanyId openapi_types.UUID `json:"company_id"`
+
+	// DealId The deal this project comes from. The deal is pointed at the new project in the same transaction.
+	DealId      *openapi_types.UUID `json:"deal_id,omitempty"`
 	Description *string             `json:"description,omitempty"`
-	Name        string              `json:"name"`
-	OwnerId     *openapi_types.UUID `json:"owner_id,omitempty"`
-	Source      string              `json:"source"`
+
+	// Key The key the creator chose; omitted or null to have the server mint one. Read-only after create.
+	Key     *string             `json:"key,omitempty"`
+	Name    string              `json:"name"`
+	OwnerId *openapi_types.UUID `json:"owner_id,omitempty"`
+
+	// Phase The phase the project starts in; initiative when omitted.
+	Phase  *CreateProjectRequestPhase `json:"phase,omitempty"`
+	Source string                     `json:"source"`
 
 	// SourceAuthorId Who wrote this record in the system it came from, when the author holds a seat here. Written only by a declared importer (a signed-in human holding import_run:create), only beside a source_system; either author field or both may be sent, and the seat's current name wins on read. captured_by still names the caller.
 	SourceAuthorId *openapi_types.UUID `json:"source_author_id,omitempty"`
@@ -45140,6 +45170,9 @@ type CreateProjectRequest struct {
 	TargetEndDate        *openapi_types.Date    `json:"target_end_date,omitempty"`
 	AdditionalProperties map[string]interface{} `json:"-"`
 }
+
+// CreateProjectRequestPhase The phase the project starts in; initiative when omitted.
+type CreateProjectRequestPhase string
 
 // CreateRecordAssignmentRequest A responsibility may name an agent seat as well as a human member. It grants no record access. The web picker lists active human colleagues.
 type CreateRecordAssignmentRequest struct {
@@ -57582,6 +57615,12 @@ type ProjectHealthAssessmentListResponse struct {
 // ProjectHealthState How a project is going, as somebody judged it.
 type ProjectHealthState string
 
+// ProjectKeyPreview defines model for ProjectKeyPreview.
+type ProjectKeyPreview struct {
+	// Key The key a project of this name would be given if it were created now.
+	Key string `json:"key"`
+}
+
 // ProjectListResponse defines model for ProjectListResponse.
 type ProjectListResponse struct {
 	Data []Project `json:"data"`
@@ -66394,11 +66433,10 @@ type UpdateProductRequestComponentKind string
 type UpdateProductRequestTaxCategory string
 
 // UpdateProjectRequest Note `phase` is absent by design — it moves only through advanceProjectPhase.
-// `key` is absent for a different reason: the server mints it from the name and
-// it is read-only thereafter. A key is what a human writes in a subject line to
-// file mail under a project, so a caller-chosen one is a matcher a caller can
-// get wrong — a project keyed after a contact's name would claim every bracketed
-// mention of that word.
+// `key` is absent for a different reason: it is set on create and read-only
+// thereafter (422 `read_only`). A key is what a human writes in a subject line to
+// file mail under a project, so changing it would stop mail already sent with it
+// from filing.
 type UpdateProjectRequest struct {
 	Description          *string                `json:"description,omitempty"`
 	EndedAt              *openapi_types.Date    `json:"ended_at,omitempty"`
@@ -76248,6 +76286,11 @@ type CreateProjectParams struct {
 	XApprovalToken *ApprovalToken `json:"X-Approval-Token,omitempty"`
 }
 
+// GetProjectKeyPreviewParams defines parameters for GetProjectKeyPreview.
+type GetProjectKeyPreviewParams struct {
+	Name string `form:"name" json:"name"`
+}
+
 // TransferProjectOwnershipParams defines parameters for TransferProjectOwnership.
 type TransferProjectOwnershipParams struct {
 	// IdempotencyKey Client-supplied key making a mutation safe to retry — an update exactly as much as a
@@ -84946,12 +84989,28 @@ func (a *CreateProjectRequest) UnmarshalJSON(b []byte) error {
 		delete(object, "company_id")
 	}
 
+	if raw, found := object["deal_id"]; found {
+		err = json.Unmarshal(raw, &a.DealId)
+		if err != nil {
+			return fmt.Errorf("error reading 'deal_id': %w", err)
+		}
+		delete(object, "deal_id")
+	}
+
 	if raw, found := object["description"]; found {
 		err = json.Unmarshal(raw, &a.Description)
 		if err != nil {
 			return fmt.Errorf("error reading 'description': %w", err)
 		}
 		delete(object, "description")
+	}
+
+	if raw, found := object["key"]; found {
+		err = json.Unmarshal(raw, &a.Key)
+		if err != nil {
+			return fmt.Errorf("error reading 'key': %w", err)
+		}
+		delete(object, "key")
 	}
 
 	if raw, found := object["name"]; found {
@@ -84968,6 +85027,14 @@ func (a *CreateProjectRequest) UnmarshalJSON(b []byte) error {
 			return fmt.Errorf("error reading 'owner_id': %w", err)
 		}
 		delete(object, "owner_id")
+	}
+
+	if raw, found := object["phase"]; found {
+		err = json.Unmarshal(raw, &a.Phase)
+		if err != nil {
+			return fmt.Errorf("error reading 'phase': %w", err)
+		}
+		delete(object, "phase")
 	}
 
 	if raw, found := object["source"]; found {
@@ -85050,10 +85117,24 @@ func (a CreateProjectRequest) MarshalJSON() ([]byte, error) {
 		return nil, fmt.Errorf("error marshaling 'company_id': %w", err)
 	}
 
+	if a.DealId != nil {
+		object["deal_id"], err = json.Marshal(a.DealId)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'deal_id': %w", err)
+		}
+	}
+
 	if a.Description != nil {
 		object["description"], err = json.Marshal(a.Description)
 		if err != nil {
 			return nil, fmt.Errorf("error marshaling 'description': %w", err)
+		}
+	}
+
+	if a.Key != nil {
+		object["key"], err = json.Marshal(a.Key)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'key': %w", err)
 		}
 	}
 
@@ -85066,6 +85147,13 @@ func (a CreateProjectRequest) MarshalJSON() ([]byte, error) {
 		object["owner_id"], err = json.Marshal(a.OwnerId)
 		if err != nil {
 			return nil, fmt.Errorf("error marshaling 'owner_id': %w", err)
+		}
+	}
+
+	if a.Phase != nil {
+		object["phase"], err = json.Marshal(a.Phase)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'phase': %w", err)
 		}
 	}
 
@@ -95089,6 +95177,9 @@ type ServerInterface interface {
 	// Create a project on a company.
 	// (POST /projects)
 	CreateProject(w http.ResponseWriter, r *http.Request, params CreateProjectParams)
+	// The key a new project of this name would be given.
+	// (GET /projects/key-preview)
+	GetProjectKeyPreview(w http.ResponseWriter, r *http.Request, params GetProjectKeyPreviewParams)
 	// Move every live project one user owns to another user, in one transaction.
 	// (POST /projects/transfer-ownership)
 	TransferProjectOwnership(w http.ResponseWriter, r *http.Request, params TransferProjectOwnershipParams)
@@ -100711,6 +100802,12 @@ func (_ Unimplemented) ListProjects(w http.ResponseWriter, r *http.Request, para
 // Create a project on a company.
 // (POST /projects)
 func (_ Unimplemented) CreateProject(w http.ResponseWriter, r *http.Request, params CreateProjectParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// The key a new project of this name would be given.
+// (GET /projects/key-preview)
+func (_ Unimplemented) GetProjectKeyPreview(w http.ResponseWriter, r *http.Request, params GetProjectKeyPreviewParams) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -138113,6 +138210,45 @@ func (siw *ServerInterfaceWrapper) CreateProject(w http.ResponseWriter, r *http.
 	handler.ServeHTTP(w, r)
 }
 
+// GetProjectKeyPreview operation middleware
+func (siw *ServerInterfaceWrapper) GetProjectKeyPreview(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params GetProjectKeyPreviewParams
+
+	// ------------- Required query parameter "name" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, true, "name", r.URL.Query(), &params.Name, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "name"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "name", Err: err})
+		}
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetProjectKeyPreview(w, r, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // TransferProjectOwnership operation middleware
 func (siw *ServerInterfaceWrapper) TransferProjectOwnership(w http.ResponseWriter, r *http.Request) {
 
@@ -151835,6 +151971,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/projects", wrapper.CreateProject)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/projects/key-preview", wrapper.GetProjectKeyPreview)
 	})
 	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/projects/transfer-ownership", wrapper.TransferProjectOwnership)

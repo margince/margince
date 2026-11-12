@@ -5292,12 +5292,20 @@ paths:
         `company_id` names the project's CUSTOMER — the company the work is for. A project is
         work several companies do together, and the others are put on with
         `PUT /projects/{id}/companies`; this one is required because a project starts with a client.
-        The `key` is MINTED BY THE SERVER from the name (initials plus the lowest free
-        number, e.g. `ERA-1`) and is read-only thereafter: it is what a human writes in a
-        subject line to file mail under this project, so a caller-chosen one is a matcher
-        a caller can get wrong. A collision is resolved by taking the next number, never
-        reported.
-        The project starts in `initiative` and its creation row is appended to the phase history.
+        `key` is optional. Without it the server mints one from the name: the initials alone
+        (`ERA`) when no live project uses those letters, else the letters plus the lowest free
+        number from 2 (`ERA-2`). `getProjectKeyPreview` answers the key a create would mint.
+        A sent key is stored in upper case and is refused with 422 naming `key` when it does not
+        fit the key shape (`invalid_key`), is a word often bracketed in subject lines
+        (`key_is_common_word`), is a word of a colleague's name (`key_is_colleague_name`), or is
+        held by a live project (`key_taken`). The key is read-only after create: it is what a
+        human writes in a subject line to file mail under this project.
+        `phase` is the starting phase, `initiative` when omitted; a project cannot start
+        `closed` (422 `invalid_phase`). The creation row is appended to the phase history.
+        `deal_id` points that deal at the new project in the same transaction, under the check
+        `updateDeal.project_id` takes: the caller must be able to write the deal, and the deal
+        must be on the project's company (422 `project_company_mismatch` naming `deal_id`). Only
+        an open deal that names no project is taken (422 `deal_not_open`, `deal_has_project`).
         A `company_id` that names a company the caller cannot read answers 422 naming `company_id`,
         the same for a missing record and for one hidden by row scope.
 
@@ -5323,7 +5331,7 @@ paths:
         '401': {$ref: '#/components/responses/Unauthorized'}
         '403': {$ref: '#/components/responses/Forbidden'}
         '409':
-          description: A live project already holds this key.
+          description: Another project already has this source_system and source_id.
           content:
             application/problem+json:
               schema: {$ref: '#/components/schemas/Problem'}
@@ -38098,6 +38106,9 @@ components:
         source_system: {type: [string, 'null'], maxLength: 128, description: 'Which external system this record came from, when a caller imported it.'}
         source_author_id: {type: [string, 'null'], format: uuid, description: 'Who wrote this record in the system it came from, when the author holds a seat here. Written only by a declared importer, only beside a source_system; either author field or both may be sent, and the seat''s current name wins on read. captured_by still names the caller.'}
         source_author_name: {type: [string, 'null'], maxLength: 200, description: 'The source system''s own spelling of who wrote this record. Same door as source_author_id: a declared importer only, beside a source_system. Kept when a seat is also named, so the name survives the seat.'}
+        key: {type: [string, 'null'], maxLength: 24, description: 'The key the creator chose; omitted or null to have the server mint one. Read-only after create.'}
+        phase: {type: [string, 'null'], enum: [initiative, pursuing, delivering, null], description: 'The phase the project starts in; initiative when omitted.'}
+        deal_id: {type: [string, 'null'], format: uuid, description: 'The deal this project comes from. The deal is pointed at the new project in the same transaction.'}
       additionalProperties: true
     SetProjectCompanyRequest:
       type: object
@@ -38132,11 +38143,10 @@ components:
       type: object
       description: |-
         Note `phase` is absent by design — it moves only through advanceProjectPhase.
-        `key` is absent for a different reason: the server mints it from the name and
-        it is read-only thereafter. A key is what a human writes in a subject line to
-        file mail under a project, so a caller-chosen one is a matcher a caller can
-        get wrong — a project keyed after a contact's name would claim every bracketed
-        mention of that word.
+        `key` is absent for a different reason: it is set on create and read-only
+        thereafter (422 `read_only`). A key is what a human writes in a subject line to
+        file mail under a project, so changing it would stop mail already sent with it
+        from filing.
       properties:
         name: {type: string}
         owner_id: {type: [string, 'null'], format: uuid}
