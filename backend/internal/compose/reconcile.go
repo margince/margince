@@ -107,6 +107,10 @@ func (s followUpStager) StageFollowUp(ctx context.Context, dealID ids.UUID, prop
 			return err
 		}
 		if draft != nil {
+			filed, err := followUpAlreadyFiled(ctx, tx, proposal)
+			if err != nil || filed {
+				return err
+			}
 			return stageFollowUpDraft(onBehalfOf(ctx, owner), tx, s.svc, draft.summary,
 				dealID, proposal.EvidenceActivityID.UUID, draft.proposal)
 		}

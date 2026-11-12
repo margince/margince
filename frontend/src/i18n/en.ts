@@ -19357,7 +19357,7 @@ export const en = {
   "worklist.ask.brief.no_next_step":
     "No next step is recorded on this deal. Review it and agree on the next step.",
   "worklist.ask.brief.no_champion":
-    "Nobody at the customer is championing this deal. Review it and find someone who will.",
+    "Nobody at the customer is actively championing this deal. Review it and find someone who will.",
   "worklist.ask.brief.signal.closing_soon":
     "The close date of this deal is near. Review it and make sure the next step is planned.",
   "worklist.ask.brief.signal.stalled":
@@ -19365,7 +19365,7 @@ export const en = {
   "worklist.ask.brief.signal.opportunity":
     "This deal is worth pursuing now. Review it and plan the next step.",
   "worklist.ask.brief.signal.moved":
-    "Something changed on this deal since you last looked. Review what happened.",
+    "There is new activity on this deal. Review what happened.",
   "worklist.ask.conversation_claim":
     "You committed to this in a conversation. Do it, then mark it done.",
   "worklist.ask.invitation":

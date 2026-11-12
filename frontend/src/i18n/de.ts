@@ -19583,7 +19583,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "worklist.ask.brief.no_next_step":
     "Für diesen Deal ist kein nächster Schritt erfasst. Prüfe ihn und vereinbare den nächsten Schritt.",
   "worklist.ask.brief.no_champion":
-    "Beim Kunden setzt sich niemand für diesen Deal ein. Prüfe ihn und finde jemanden, der es tut.",
+    "Beim Kunden setzt sich niemand aktiv für diesen Deal ein. Prüfe ihn und finde jemanden, der es tut.",
   "worklist.ask.brief.signal.closing_soon":
     "Das Abschlussdatum dieses Deals rückt näher. Prüfe ihn und sorge dafür, dass der nächste Schritt geplant ist.",
   "worklist.ask.brief.signal.stalled":
@@ -19591,7 +19591,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "worklist.ask.brief.signal.opportunity":
     "Dieser Deal lohnt sich jetzt. Prüfe ihn und plane den nächsten Schritt.",
   "worklist.ask.brief.signal.moved":
-    "Seit deinem letzten Blick hat sich bei diesem Deal etwas geändert. Sieh dir an, was passiert ist.",
+    "Bei diesem Deal gibt es neue Aktivität. Sieh dir an, was passiert ist.",
   "worklist.ask.conversation_claim":
     "Du hast das in einem Gespräch zugesagt. Erledige es und markiere es dann als erledigt.",
   "worklist.ask.invitation":

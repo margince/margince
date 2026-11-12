@@ -282,6 +282,28 @@ func TestAThreadWithNoReplyAddressFallsBackToTheTaskProposal(t *testing.T) {
 	}
 }
 
+// A thread that already has its task gets no drafted reply once an address
+// shows up: the rep has the follow-up, done or not.
+func TestAThreadThatGotItsTaskIsNotDraftedLater(t *testing.T) {
+	e := setupReconcile(t)
+	deal := e.SeedDeal(t, "Address found later", e.pipeline, e.open, &e.Rep1)
+	anchor := e.seedInteraction(t, deal, "email", "From a stranger", 1)
+	e.WsExec(t, `UPDATE activity SET direction = 'inbound' WHERE id = $1`, anchor)
+	if err := e.reconcile(); err != nil {
+		t.Fatal(err)
+	}
+	e.WsExec(t, `UPDATE activity SET is_done = true, done_at = now() WHERE source_system = 'overnight-reconcile'`)
+	e.attachReachableCounterparty(t, anchor, "found.later@example.test")
+
+	if err := e.reconcile(); err != nil {
+		t.Fatal(err)
+	}
+	if n := e.WsCount(t, `SELECT count(*) FROM approval
+		WHERE kind = 'held_draft' AND target_entity_id = $1`, deal); n != 0 {
+		t.Errorf("the pass drafted %d replies for a thread whose task the rep finished, want 0", n)
+	}
+}
+
 // A rejected draft is not redrafted the next night.
 func TestARejectedDraftedReplyIsNotOfferedAgain(t *testing.T) {
 	e := setupReconcile(t)

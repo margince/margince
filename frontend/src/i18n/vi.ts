@@ -19078,7 +19078,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "worklist.ask.brief.no_next_step":
     "Deal này chưa ghi nhận bước tiếp theo nào. Hãy xem lại và thống nhất bước tiếp theo.",
   "worklist.ask.brief.no_champion":
-    "Không ai phía khách hàng ủng hộ deal này. Hãy xem lại và tìm ai đó sẽ ủng hộ.",
+    "Không ai phía khách hàng đang tích cực ủng hộ deal này. Hãy xem lại và tìm ai đó sẽ ủng hộ.",
   "worklist.ask.brief.signal.closing_soon":
     "Ngày chốt của deal này đã gần. Hãy xem lại và bảo đảm bước tiếp theo đã được lên kế hoạch.",
   "worklist.ask.brief.signal.stalled":
@@ -19086,7 +19086,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "worklist.ask.brief.signal.opportunity":
     "Deal này đáng theo đuổi ngay bây giờ. Hãy xem lại và lên kế hoạch cho bước tiếp theo.",
   "worklist.ask.brief.signal.moved":
-    "Deal này đã có thay đổi kể từ lần cuối bạn xem. Hãy xem lại điều đã xảy ra.",
+    "Deal này có hoạt động mới. Hãy xem lại điều đã xảy ra.",
   "worklist.ask.conversation_claim":
     "Bạn đã cam kết việc này trong một cuộc trao đổi. Làm xong rồi đánh dấu là xong.",
   "worklist.ask.invitation":

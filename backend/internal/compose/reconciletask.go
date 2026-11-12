@@ -78,6 +78,16 @@ func followUpAlreadyAnswered(
 	return false, nil
 }
 
+// followUpAlreadyFiled reports a task an earlier pass filed for this
+// interaction, done or deleted included. The rep already has it, so a reply
+// address that resolves later does not add a drafted reply on top.
+func followUpAlreadyFiled(ctx context.Context, tx pgx.Tx, proposal deals.FollowUpProposal) (bool, error) {
+	var filed bool
+	err := tx.QueryRow(ctx, `SELECT EXISTS (SELECT 1 FROM activity WHERE source_system = $1 AND source_id = $2)`,
+		provenance.OvernightReconcileSource, followUpSourceID(proposal)).Scan(&filed)
+	return filed, err
+}
+
 // followUpSourceID names one follow-up by its deal and the interaction behind it.
 func followUpSourceID(proposal deals.FollowUpProposal) string {
 	return proposal.DealID.String() + "/" + proposal.EvidenceActivityID.String()
