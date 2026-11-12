@@ -17,15 +17,25 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
+// CheckDeal refuses a deal a project on company could not be created from,
+// and writes nothing. The approval preview runs it; AttachDeal runs it too.
+type CheckDeal func(ctx context.Context, tx pgx.Tx, dealID ids.DealID, company ids.CompanyID) error
+
 // AttachDeal points a deal at a project inside the caller's transaction, under
 // the same write check and audit a deal-side link takes.
-type AttachDeal func(ctx context.Context, tx pgx.Tx, dealID ids.DealID, projectID ids.ProjectID) error
+type AttachDeal func(ctx context.Context, tx pgx.Tx, dealID ids.DealID, projectID ids.ProjectID, company ids.CompanyID) error
 
-// refusingAttachDeal is what an un-injected seam becomes: a create naming a
+// errDealSeamUnwired is what an un-injected seam answers: a create naming a
 // deal fails rather than committing a project the deal does not point at.
+var errDealSeamUnwired = errors.New("projects: the deal link seam was not injected; build this store with WithDealLink")
+
+func refusingCheckDeal() CheckDeal {
+	return func(context.Context, pgx.Tx, ids.DealID, ids.CompanyID) error { return errDealSeamUnwired }
+}
+
 func refusingAttachDeal() AttachDeal {
-	return func(context.Context, pgx.Tx, ids.DealID, ids.ProjectID) error {
-		return errors.New("projects: the AttachDeal seam was not injected; build this store with WithDealLink")
+	return func(context.Context, pgx.Tx, ids.DealID, ids.ProjectID, ids.CompanyID) error {
+		return errDealSeamUnwired
 	}
 }
 
@@ -82,9 +92,12 @@ func (s *Store) createSeams() createSeams {
 	return createSeams{attachCompany: s.attachCompany, projectCompanies: s.projectCompanies, attachDeal: s.attachDeal}
 }
 
-// WithDealLink wires the seam that points a deal at the project being created.
-// Compose binds it to modules/deals, which owns the deal row.
-func (s *Store) WithDealLink(attach AttachDeal) *Store {
+// WithDealLink wires the seams that check and point a deal at the project
+// being created. Compose binds them to modules/deals, which owns the deal row.
+func (s *Store) WithDealLink(check CheckDeal, attach AttachDeal) *Store {
+	if check != nil {
+		s.checkDeal = check
+	}
 	if attach != nil {
 		s.attachDeal = attach
 	}
