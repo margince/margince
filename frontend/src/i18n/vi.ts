@@ -2122,6 +2122,9 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "brief.schedule.connect": "Kết nối lịch",
   "brief.schedule.reconnect": "Kết nối lại lịch",
   "brief.schedule.nextAt": "Cuộc họp tiếp theo lúc {time}",
+  "brief.schedule.now": "Bây giờ",
+  "brief.schedule.freeUntil": "Rảnh đến {time}",
+  "brief.schedule.clearRest": "Hôm nay không còn lịch nào khác",
   "brief.readings.riskPartial": "Chỉ tính deal đã có giá",
   "brief.readings.unpricedCount_one": "{count} deal chưa định giá · không tính",
   "brief.readings.unpricedCount_other":
@@ -6761,7 +6764,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "worklist.source.failed_approval": "Đã duyệt nhưng chưa thực hiện",
   "brief.panel.decisions": "Phê duyệt",
   "brief.rail.quietSchedule": "Không có lịch hẹn",
-  "brief.panel.schedule": "Cuộc họp sắp tới",
+  "brief.panel.schedule": "Ngày của bạn",
   "brief.readings.label": "Số liệu hôm nay",
   "brief.readings.floorTip":
     "Một nguồn đã chạm giới hạn, nên con số này là mức tối thiểu.",
