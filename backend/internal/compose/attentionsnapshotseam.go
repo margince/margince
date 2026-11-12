@@ -20,7 +20,7 @@ type attentionSnapshots struct{ pool *pgxpool.Pool }
 
 func (a attentionSnapshots) InSnapshot(ctx context.Context, read string, fn func(context.Context) error) error {
 	return database.WithWorkspaceSnapshot(ctx, a.pool, func(ctx context.Context) error {
-		if read == attention.ReadWorklist {
+		if read == attention.ReadWorklist || read == attention.ReadWorklistDone {
 			return database.ReuseGenericPlans(ctx, func(ctx context.Context) error {
 				return database.WithWorkspaceTx(ctx, a.pool, func(tx pgx.Tx) error {
 					prepared, err := storekit.WithMailSeatIdentitySnapshot(ctx, tx)
