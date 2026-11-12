@@ -13,8 +13,8 @@
 //
 // One line per Go package and lane, or per vitest file:
 //
-//	go-unit         <count>  backend/<dir>    ^(TestA|TestB)$
-//	go-integration  <count>  backend/<dir>    ^(TestC)$
+//	go-unit         <count>  backend/<dir>    ^(<test>|<test>)$
+//	go-integration  <count>  backend/<dir>    ^(<test>)$
 //	vitest          <count>  src/<file>.test.ts
 //
 // The lines are separated by tabs. What the budget left out goes to stderr.
