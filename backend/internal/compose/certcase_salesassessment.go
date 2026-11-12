@@ -35,8 +35,8 @@ type salesAssessmentFixture struct {
 }
 
 // salesAssessmentCellFixture is one cell. A label holding a colon is the
-// cell's whole id, as a Progress figure's is, and Name is what the reader
-// calls it when that differs from the label.
+// cell's whole id, as a Progress figure's is. Name is what the reader calls
+// it when that differs from the label.
 type salesAssessmentCellFixture struct {
 	Label    string `json:"label"`
 	Name     string `json:"name"`

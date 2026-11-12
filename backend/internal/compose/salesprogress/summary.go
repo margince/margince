@@ -140,7 +140,7 @@ func (f *summaryFigures) goal(id, label string, goal crmcontracts.SalesProgressG
 }
 
 // comparison adds what the page compares: the amount missing to the goal or
-// above it, and the share reached as the whole percent the page prints.
+// above it. The share reached is the whole percent the page prints.
 func (f *summaryFigures) comparison(progress crmcontracts.SalesProgress, words langcopy.Spoken) {
 	if delta := progress.DeltaMinor; delta != nil && *delta < 0 {
 		f.money("progress:missing", words.Say(summaryWords.Missing), -*delta, f.period, string(crmcontracts.ReportingStatusOk))

@@ -5,9 +5,6 @@ package compose
 
 import (
 	"context"
-	"crypto/sha256"
-	"encoding/hex"
-	"encoding/json"
 	"fmt"
 	"log/slog"
 	"sync"
@@ -89,7 +86,7 @@ func (s *salesAssessments) AssessView(ctx context.Context, selection crmcontract
 	if err != nil {
 		return crmcontracts.SalesAssessment{}, err
 	}
-	return s.answer(ctx, actor.UserID, selection, evaluation.EvaluationKey, in, refresh)
+	return s.answer(ctx, actor.UserID, salesassessment.KeyPart(selection), evaluation.EvaluationKey, in, refresh)
 }
 
 // AssessProgress answers the summary of one Progress reading for the reader,
@@ -103,14 +100,14 @@ func (s *salesAssessments) AssessProgress(ctx context.Context, period crmcontrac
 	if !ok {
 		return crmcontracts.SalesAssessment{}, apperrors.ErrPermissionDenied
 	}
-	return s.answer(ctx, actor.UserID, period, evaluationKey, in, refresh)
+	return s.answer(ctx, actor.UserID, salesassessment.KeyPart(period), evaluationKey, in, refresh)
 }
 
 // answer serves what is kept for this reader and subject, joins a call in
 // flight for the same key, or writes anew. Refresh forces a new call.
-func (s *salesAssessments) answer(ctx context.Context, reader ids.UUID, subject any, evaluationKey string, in salesassessment.Input, refresh bool) (crmcontracts.SalesAssessment, error) {
+func (s *salesAssessments) answer(ctx context.Context, reader ids.UUID, subject []byte, evaluationKey string, in salesassessment.Input, refresh bool) (crmcontracts.SalesAssessment, error) {
 	lang := identity.BaseLanguageForPrompt(ctx, s.db.Pool())
-	key := assessmentKey(reader.String(), lang, s.routingVersion, subject, in)
+	key := salesassessment.Key(reader.String(), lang, s.routingVersion, subject, in)
 	if !refresh {
 		if out, found := s.cached(key); found {
 			out.EvaluationKey = evaluationKey
@@ -293,27 +290,6 @@ func foldAssessment(out crmcontracts.SalesAssessment, written salesassessment.Wr
 		out.ModelUsed = &served
 	}
 	return out
-}
-
-// assessmentKey is what one written assessment answers for: this reader,
-// this selection or Progress period, everything the model read, this prompt and this model
-// binding. The evaluation's own instant is left out, so the same figures
-// read a minute later are the same assessment.
-func assessmentKey(reader, lang, routingVersion string, subject any, in salesassessment.Input) string {
-	hash := sha256.New()
-	for _, part := range []string{reader, lang, routingVersion, salesassessment.PromptVersion} {
-		hash.Write([]byte(part))
-		hash.Write([]byte{0})
-	}
-	for _, read := range []any{subject, in} {
-		encoded, err := json.Marshal(read)
-		if err != nil {
-			encoded = []byte(fmt.Sprint(read))
-		}
-		hash.Write(encoded)
-		hash.Write([]byte{0})
-	}
-	return hex.EncodeToString(hash.Sum(nil))
 }
 
 // gather turns the evaluation into what the model reads. That is the cells

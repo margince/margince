@@ -42,8 +42,8 @@ type YearIn struct {
 	Months []*int64 `json:"months"`
 }
 
-// Input is what the model reads: the plan year, the closed revenue of that
-// year and the year before, and the yearly goal when the reader set one.
+// Input is what the model reads: the plan year and the closed revenue of
+// that year and the year before. A yearly goal is in it when the reader set one.
 type Input struct {
 	Year       int      `json:"year"`
 	Currency   string   `json:"currency"`
@@ -121,9 +121,9 @@ type replyShape struct {
 	Reason string        `json:"reason"`
 }
 
-// Parse reads the reply into a proposal. Anything but twelve whole months of
-// zero or more with at least one above it is refused, as is a reason that is
-// blank, too long or carries a digit. A yearly goal is spread over the months
+// Parse reads the reply into a proposal. It wants twelve whole months of zero
+// or more, with at least one above zero. It refuses a reason that is blank,
+// too long or carries a digit. A yearly goal is spread over the months
 // as weights, so the proposal adds up to it to the minor unit.
 func Parse(reply string, in Input) (Proposal, error) {
 	var parsed replyShape

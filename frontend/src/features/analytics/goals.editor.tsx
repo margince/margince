@@ -232,8 +232,8 @@ export function GoalEditor({
   );
 }
 
-// The year in one figure, and the two ways to turn it into twelve months:
-// spread it equally, or take a proposal read from the sales won so far.
+// The year in one figure, and the two ways to turn it into twelve months.
+// One spreads it equally, the other proposes from the sales won so far.
 function YearlyGoal({
   plan,
   yearly,

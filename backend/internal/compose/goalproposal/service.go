@@ -105,8 +105,8 @@ func (h Handlers) propose(ctx context.Context, owner ids.UUID, year int, req crm
 	return out, nil
 }
 
-// gather reads what the model reads in one snapshot: the plan year's closed
-// revenue and the year before's, once the reader may set this seller's goals.
+// gather reads the plan year's closed revenue and the year before's in one
+// snapshot. It first asks that the reader may set this seller's goals.
 func (h Handlers) gather(ctx context.Context, owner ids.UUID, year int, req crmcontracts.SalesGoalProposalRequest) (Input, error) {
 	if req.YearlyTotalMinor != nil && *req.YearlyTotalMinor <= 0 {
 		return Input{}, httperr.Validation("yearly_total_minor", "out_of_range", "enter a yearly goal above zero, or leave it out")
