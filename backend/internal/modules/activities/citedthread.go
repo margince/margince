@@ -45,17 +45,17 @@ func SettledCitations(
 	}
 	// An unjudged message has a NULL verdict, and unknown never settles.
 	rows, err := tx.Query(ctx, fmt.Sprintf(`WITH cited AS MATERIALIZED (
-  SELECT a.* FROM activity a WHERE a.id = ANY($%[1]d) AND a.archived_at IS NULL),
+  SELECT a.id FROM activity a WHERE a.id = ANY($%[1]d) AND a.archived_at IS NULL),
 cited_answer AS MATERIALIZED (
   SELECT a.id AS cited_id, answer_found.id
-    FROM cited a
+    FROM cited JOIN activity a ON a.id = cited.id
    CROSS JOIN LATERAL (%[2]s) answer_found
     JOIN activity readable_answer ON readable_answer.id = answer_found.id
    WHERE a.direction = 'inbound' AND a.kind IN ('email', 'message')
      AND readable_answer.restricted_at IS NULL),
 follow_up AS MATERIALIZED (
   SELECT a.id AS cited_id, kept.id
-    FROM cited a
+    FROM cited JOIN activity a ON a.id = cited.id
     JOIN activity kept ON %[3]s
    WHERE a.direction = 'outbound' AND a.kind = 'email'
      AND EXISTS (SELECT 1 FROM activity_participant promised
@@ -71,8 +71,8 @@ SELECT a.id, coalesce(
          THEN EXISTS (SELECT 1 FROM follow_up
                 WHERE follow_up.cited_id = a.id AND follow_up.id IN (SELECT id FROM readable_activity))
        ELSE false END, false)
-  FROM cited a
- WHERE a.id IN (SELECT id FROM readable_activity)`,
+  FROM activity a
+ WHERE a.id IN (SELECT id FROM cited) AND a.id IN (SELECT id FROM readable_activity)`,
 		citedPos, answerIDsSQL("a", until), promiseFollowUpSQL("kept", "a", until), recipientsPos,
 		promiseRecipientAddressedSQL("kept", "promised.contact_id"), readable,
 		requestOpenSQL, confirmedRequestSQL), args...)
