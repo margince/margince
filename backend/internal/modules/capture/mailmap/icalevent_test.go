@@ -75,8 +75,8 @@ func TestAGoogleUpdateNamesItsMeeting(t *testing.T) {
 	if guest := event.Attendees[0]; guest.Name != "Anna Weber" || guest.Answer != calendarevent.AnswerAccepted {
 		t.Errorf("first guest = %+v, want Anna Weber, accepted", guest)
 	}
-	if guest := event.Attendees[1]; guest.Label() != "owner@myco.com" || guest.Answer != "" {
-		t.Errorf("second guest = %+v, want the address as label and no answer yet", guest)
+	if guest := event.Attendees[1]; guest.Email != "owner@myco.com" || guest.Answer != "" {
+		t.Errorf("second guest = %+v, want owner@myco.com with no answer yet", guest)
 	}
 }
 

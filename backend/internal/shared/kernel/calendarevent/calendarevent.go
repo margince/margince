@@ -47,15 +47,6 @@ type Attendee struct {
 	Answer string `json:"answer,omitempty"`
 }
 
-// Label is how a guest is named to a reader: the calendar's name, else the
-// address.
-func (a Attendee) Label() string {
-	if name := strings.TrimSpace(a.Name); name != "" && !strings.EqualFold(name, a.Email) {
-		return name
-	}
-	return a.Email
-}
-
 // Answers are the guest answers a reader is told, from RFC 5545 PARTSTAT.
 const (
 	AnswerAccepted  = "accepted"
