@@ -41,6 +41,7 @@ func stagedPromiseCard(t *testing.T) (*integration.Env, ids.ApprovalID, map[stri
 // it. The task is the teammate's, and the card is spent.
 func TestTheAccepterHandsAPromiseToAColleague(t *testing.T) {
 	e, id, change := stagedPromiseCard(t)
+	e.GrantRole(t, e.Rep1, "rep")
 	change[approvals.DoerField] = e.Rep1.String()
 	edited, err := json.Marshal(change)
 	if err != nil {
@@ -78,27 +79,62 @@ func TestAPromiseCannotBeHandedToAColleagueWhoLeft(t *testing.T) {
 	}
 }
 
+// teamDealPolicy is a colleague whose stored role reads deals of their own
+// team only.
+const teamDealPolicy = `{"objects":{"activity":{"create":true,"read":true,"update":true},
+	  "deal":{"read":true},"contact":{"read":true},"company":{"read":true}},"row_scope":"team"}`
+
 // The deal owner may hand an overnight follow-up to a teammate as they approve.
+// A colleague who cannot open the deal is refused. The task carries the deal's
+// name and its latest conversation. One not signed in yet is refused too.
 func TestTheDealOwnerHandsAFollowUpToAColleague(t *testing.T) {
-	e := setupReconcile(t)
-	deal := e.SeedDeal(t, "Handed on", e.pipeline, e.open, &e.Rep1)
-	e.seedInteraction(t, deal, "call", "Discovery", 1)
-	if err := e.reconcile(); err != nil {
-		t.Fatal(err)
-	}
-	id, proposal := e.followUpApproval(t, deal)
-	proposal.DoerID = e.Rep2.String()
-	edited, err := json.Marshal(proposal)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if _, err := e.svc.DecideEdited(e.As(e.Rep1, []ids.UUID{e.Team1}, reconcilePerms), id, edited); err != nil {
-		t.Fatalf("approving with a chosen colleague: %v", err)
-	}
-	if got := e.WsScalar(t, `SELECT coalesce(a.assignee_id::text, '') FROM activity a
-		JOIN activity_link l ON l.activity_id = a.id AND l.deal_id = $1
-		WHERE a.kind = 'task' AND a.source = 'overnight-reconcile'`, deal); got != e.Rep2.String() {
-		t.Errorf("the follow-up is held by %q, want the chosen colleague %s", got, e.Rep2)
+	for name, c := range map[string]struct {
+		prepare func(e *reconcileEnv) ids.UUID
+		refused bool
+	}{
+		"a teammate": {prepare: func(e *reconcileEnv) ids.UUID {
+			e.grantOwner(t, e.Rep2, teamDealPolicy)
+			return e.Rep2
+		}},
+		"an invited teammate": {refused: true, prepare: func(e *reconcileEnv) ids.UUID {
+			e.grantOwner(t, e.Rep2, teamDealPolicy)
+			e.WsExec(t, `UPDATE app_user SET status = 'invited' WHERE id = $1`, e.Rep2)
+			return e.Rep2
+		}},
+		"a colleague with no grant to read deals": {refused: true, prepare: func(e *reconcileEnv) ids.UUID {
+			e.WsExec(t, `DELETE FROM role_assignment WHERE user_id = $1`, e.Rep3)
+			e.grantOwner(t, e.Rep3, `{"objects":{"activity":{"create":true,"read":true}},"row_scope":"own"}`)
+			return e.Rep3
+		}},
+	} {
+		t.Run(name, func(t *testing.T) {
+			e := setupReconcile(t)
+			deal := e.SeedDeal(t, "Handed on", e.pipeline, e.open, &e.Rep1)
+			e.seedInteraction(t, deal, "call", "Discovery", 1)
+			if err := e.reconcile(); err != nil {
+				t.Fatal(err)
+			}
+			doer := c.prepare(e)
+			id, proposal := e.followUpApproval(t, deal)
+			proposal.DoerID = doer.String()
+			edited, err := json.Marshal(proposal)
+			if err != nil {
+				t.Fatal(err)
+			}
+			_, err = e.svc.DecideEdited(e.As(e.Rep1, []ids.UUID{e.Team1}, reconcilePerms), id, edited)
+			got := e.WsScalar(t, `SELECT coalesce(string_agg(a.assignee_id::text, ','), '') FROM activity a
+				JOIN activity_link l ON l.activity_id = a.id AND l.deal_id = $1
+				WHERE a.kind = 'task' AND a.source = 'overnight-reconcile'`, deal)
+			if c.refused {
+				if _, ok := errors.AsType[*approvals.InvalidEditError](err); !ok || got != "" {
+					t.Fatalf("handing the follow-up to %s answered %v and wrote %q, want a refusal and no task", name, err, got)
+				}
+				return
+			}
+			if err != nil || got != doer.String() {
+				t.Fatalf("the follow-up is held by %q (err %v), want the chosen colleague %s", got, err, doer)
+			}
+		})
 	}
 }
 

@@ -1,5 +1,10 @@
 import { useId } from "react";
 import { useAssignableUserOptions } from "../../components/assigneepicker";
+import {
+  RosterFailedLine,
+  useRosterPartial,
+  useRosterPartialHint,
+} from "../../components/entityref";
 import { ActionRow } from "../../design-system/actionrow";
 import { AppLink } from "../../design-system/applink";
 import {
@@ -383,21 +388,30 @@ export function StagedEditor({
   const t = useT();
   return (
     <div className="form-stack approval-editor" data-date-scope>
-      {fields.map((entry) => (
-        <Field
-          key={entry.field}
-          label={entry.label ? t(entry.label) : entry.field}
-        >
-          {(control) => (
-            <EditorControl
-              entry={entry}
-              control={control}
-              value={draft[entry.field] ?? ""}
-              onChange={(value) => onChange(entry.field, value)}
-            />
-          )}
-        </Field>
-      ))}
+      {fields.map((entry) =>
+        entry.as === "doer" ? (
+          <DoerField
+            key={entry.field}
+            label={entry.label ? t(entry.label) : entry.field}
+            value={draft[entry.field] ?? ""}
+            onChange={(value) => onChange(entry.field, value)}
+          />
+        ) : (
+          <Field
+            key={entry.field}
+            label={entry.label ? t(entry.label) : entry.field}
+          >
+            {(control) => (
+              <EditorControl
+                entry={entry}
+                control={control}
+                value={draft[entry.field] ?? ""}
+                onChange={(value) => onChange(entry.field, value)}
+              />
+            )}
+          </Field>
+        ),
+      )}
       <ActionRow
         primary={
           /* The edited approve is the same write as the plain one and was the
@@ -429,26 +443,35 @@ export function StagedEditor({
 
 /**
  * Who does the accepted work: the reader by default, or a colleague. Agent
- * seats are left out, as in every picker that hands work to somebody.
+ * seats are left out, and a failed or partial roster says so, as in every
+ * picker that hands work to somebody (`TaskAssigneeField`).
  */
-function DoerSelect({
-  control,
+function DoerField({
+  label,
   value,
   onChange,
 }: Readonly<{
-  control: FieldControl;
+  label: string;
   value: string;
   onChange: (next: string) => void;
 }>) {
   const t = useT();
-  const { options } = useAssignableUserOptions();
+  const { options, roster } = useAssignableUserOptions();
+  const partialHint = useRosterPartialHint(useRosterPartial("user", true));
   return (
-    <Select
-      {...control}
-      options={[{ value: "", label: t("approval.doerMe") }, ...options]}
-      value={value}
-      onChange={onChange}
-    />
+    <>
+      <Field label={label} hint={partialHint}>
+        {(control) => (
+          <Select
+            {...control}
+            options={[{ value: "", label: t("approval.doerMe") }, ...options]}
+            value={value}
+            onChange={onChange}
+          />
+        )}
+      </Field>
+      <RosterFailedLine kind="user" roster={roster} />
+    </>
   );
 }
 
@@ -465,8 +488,6 @@ function EditorControl({
   onChange: (next: string) => void;
 }>) {
   switch (entry.as) {
-    case "doer":
-      return <DoerSelect control={control} value={value} onChange={onChange} />;
     case "choice":
       return (
         <ChoiceSelect

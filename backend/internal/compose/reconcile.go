@@ -368,7 +368,10 @@ func followUpPrecheck(db *database.DB) approvals.ReleasePrecheck {
 		if err != nil || doer == nil {
 			return err
 		}
-		return db.Tx(ctx, func(tx pgx.Tx) error { return carddoer.EnsureCanHoldWork(ctx, tx, *doer) })
+		deal := []activities.ActivityLinkInput{{EntityType: "deal", EntityID: proposal.DealID.UUID}}
+		return db.Tx(ctx, func(tx pgx.Tx) error {
+			return carddoer.EnsureMayHold(ctx, tx, *doer, deal, colleagueAuthority(db))
+		})
 	}
 }
 
@@ -453,7 +456,7 @@ func followUpConfirmEffect(svc *approvals.Service, store *activities.Store) appr
 				if err != nil {
 					return err
 				}
-				return logTaskOrUnassignedTx(execCtx, tx, store, activities.LogActivityInput{
+				in := activities.LogActivityInput{
 					Kind:         "task",
 					AssigneeID:   doer,
 					SystemText:   metadata,
@@ -464,7 +467,14 @@ func followUpConfirmEffect(svc *approvals.Service, store *activities.Store) appr
 					SourceID:     &sourceID,
 					Source:       "overnight-reconcile",
 					Links:        []activities.ActivityLinkInput{{EntityType: "deal", EntityID: proposal.DealID.UUID}},
-				})
+				}
+				if proposal.DoerID == "" {
+					return logTaskOrUnassignedTx(execCtx, tx, store, in)
+				}
+				// A chosen colleague is the accepter's word: refused, the
+				// approval stays unspent rather than landing on nobody.
+				_, _, err = store.LogActivityTx(execCtx, tx, in)
+				return err
 			})
 	}
 }

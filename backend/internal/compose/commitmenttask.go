@@ -368,7 +368,7 @@ func commitmentTaskPrecheck(db *database.DB, tasks *activities.Store) approvals.
 		var privateTo *ids.UUID
 		if err := db.Tx(ctx, func(tx pgx.Tx) error {
 			if holder != decider {
-				if err := carddoer.EnsureCanHoldWork(ctx, tx, holder); err != nil {
+				if err := carddoer.EnsureMayHold(ctx, tx, holder, proposal.Links, colleagueAuthority(db)); err != nil {
 					return err
 				}
 			}

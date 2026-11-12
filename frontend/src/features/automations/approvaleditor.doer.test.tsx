@@ -7,22 +7,35 @@ import { afterEach, expect, it, vi } from "vitest";
 import { LocaleProvider } from "../../i18n";
 import { editableStrings, StagedEditor } from "./approvaleditor";
 
+const roster = vi.hoisted(() => ({ isError: false }));
+
 vi.mock("../../components/assigneepicker", () => ({
   useAssignableUserOptions: () => ({
-    options: [{ value: "seat-priya", label: "Priya Raman" }],
-    roster: { data: [], isError: false },
+    options: roster.isError
+      ? []
+      : [{ value: "seat-priya", label: "Priya Raman" }],
+    roster: { data: [], isError: roster.isError },
   }),
 }));
 
-afterEach(cleanup);
+vi.mock("../../components/entityref", () => ({
+  useRosterPartial: () => false,
+  useRosterPartialHint: () => undefined,
+  RosterFailedLine: ({ roster: read }: { roster: { isError: boolean } }) =>
+    read.isError ? <p>Colleagues could not be loaded</p> : null,
+}));
 
-it("offers who does an accepted promise, kept with the reader by default", async () => {
+afterEach(() => {
+  cleanup();
+  roster.isError = false;
+});
+
+function renderDoerEditor(onChange = vi.fn()) {
   const fields = editableStrings("commitment_task", {
     summary: "Send the pricing",
     due_date: "2026-11-20",
     doer_id: "",
   });
-  const onChange = vi.fn();
   render(
     <LocaleProvider initial="en">
       <StagedEditor
@@ -39,6 +52,17 @@ it("offers who does an accepted promise, kept with the reader by default", async
       />
     </LocaleProvider>,
   );
+  return onChange;
+}
+
+it("says so when the colleagues could not be loaded, instead of offering only Me", () => {
+  roster.isError = true;
+  renderDoerEditor();
+  expect(screen.getByText("Colleagues could not be loaded")).toBeVisible();
+});
+
+it("offers who does an accepted promise, kept with the reader by default", async () => {
+  const onChange = renderDoerEditor();
   const picker = screen.getByRole("combobox", { name: "Who does this" });
   expect(picker).toHaveTextContent("Me");
   await userEvent.click(picker);
