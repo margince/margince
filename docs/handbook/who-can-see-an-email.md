@@ -1,5 +1,5 @@
 <!-- prose:plain -->
-<!-- describes: frontend/src/features/capture/connection-settings.tsx frontend/src/components/mail-sharing.tsx frontend/src/features/capture/emailaccesseditor.tsx frontend/src/features/capture/held-threads.tsx backend/internal/modules/capture/mailposture.go backend/internal/modules/capture/sinkaudience.go backend/internal/modules/activities/audience.go backend/internal/modules/activities/audienceholds.go backend/internal/compose/readerrendering frontend/src/features/settings/internalmailsettings.tsx frontend/src/features/settings/internalmailhistoryscope.tsx frontend/src/features/capture/internalmailhistorychoice.tsx backend/internal/modules/capture/internalmailpolicy.go backend/internal/modules/capture/internalmailcapture.go backend/internal/modules/capture/internalmailhistory.go backend/internal/modules/activities/internalmail.go backend/internal/modules/capture/sharedmailbox.go backend/internal/platform/auth/sharedmailboxreader.go -->
+<!-- describes: frontend/src/features/capture/connection-settings.tsx frontend/src/components/mail-sharing.tsx frontend/src/features/capture/emailaccesseditor.tsx frontend/src/features/settings/sharedmailboxes.tsx frontend/src/features/capture/held-threads.tsx backend/internal/modules/capture/mailposture.go backend/internal/modules/capture/sinkaudience.go backend/internal/modules/activities/audience.go backend/internal/modules/activities/audienceholds.go backend/internal/compose/readerrendering frontend/src/features/settings/internalmailsettings.tsx frontend/src/features/settings/internalmailhistoryscope.tsx frontend/src/features/capture/internalmailhistorychoice.tsx backend/internal/modules/capture/internalmailpolicy.go backend/internal/modules/capture/internalmailcapture.go backend/internal/modules/capture/internalmailhistory.go backend/internal/modules/activities/internalmail.go backend/internal/modules/capture/sharedmailbox.go backend/internal/platform/auth/sharedmailboxreader.go -->
 # Who can see an email
 
 Two things decide who can read an email in Margince, and **a "no" from either is a
@@ -313,6 +313,16 @@ That is how it is different from sharing, above. **Share with the company** on a
 thread "Applies to the whole thread." and lets go of your own hold on all of it.
 Changing a message's visibility changes that one message.
 
+### How do I connect a shared mailbox?
+<!-- opens: settings/integrations -->
+To connect a shared mailbox in Margince, an administrator opens **Settings → Integrations → Shared mailboxes** and presses **Connect a shared mailbox**.
+1. Choose the mail service: **IMAP**, **Microsoft 365** or **Google Workspace**.
+2. Enter the **Mailbox address**, choose the **Team that reads it**, and choose **Held** or **Shared**.
+3. Enter the login of the mail service, then press **Connect a shared mailbox**.
+
+**Change** on its row changes the team or the visibility, for all mail it already captured. **Import older mail** and **Disconnect** are in the row's menu.
+Also called: sales@ inbox, team mailbox, group mailbox.
+
 ## Shared mailboxes
 
 A shared mailbox, such as sales@ or support@, belongs to no one user. An
@@ -363,4 +373,5 @@ never shows mail from another seat's own mailbox.
 | Hold mail with one contact or company | Private correspondence, on the contact's or company's page |
 | Share one thread | The message itself, or Settings → Connections → Activity → Mail not shared with the team |
 | One logged message's audience | Change visibility, under More actions on its row |
+| A shared mailbox and who reads it | Settings → Integrations → Shared mailboxes |
 | Who can see the *record* | The contact or company header |

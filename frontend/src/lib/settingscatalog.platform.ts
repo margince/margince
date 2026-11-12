@@ -80,6 +80,7 @@ export const PLATFORM_PAGES = [
       { id: "accounting" },
       { id: "webhooks" },
       { id: "telegram" },
+      { id: "shared-mailboxes" },
       { id: "units", requires: composedUnits("workspace") },
     ],
   },

@@ -13343,6 +13343,50 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "settings.part.integrations.accounting": "Kế toán",
   "settings.part.integrations.webhooks": "Webhook",
   "settings.part.integrations.telegram": "Bot Telegram",
+  "settings.part.integrations.sharedMailboxes": "Hộp thư dùng chung",
+  "sharedMailboxes.title": "Hộp thư dùng chung",
+  "sharedMailboxes.intro":
+    "Hộp thư không thuộc về riêng ai, như sales@. Mỗi hộp thư do một nhóm đọc.",
+  "sharedMailboxes.connect": "Kết nối hộp thư dùng chung",
+  "sharedMailboxes.connectTitle": "Kết nối hộp thư dùng chung",
+  "sharedMailboxes.adminOnlyTitle":
+    "Chỉ quản trị viên quản lý hộp thư dùng chung",
+  "sharedMailboxes.adminOnly":
+    "Liên hệ quản trị viên để kết nối hộp thư dùng chung hoặc đổi nhóm đọc.",
+  "sharedMailboxes.emptyTitle": "Chưa có hộp thư dùng chung",
+  "sharedMailboxes.empty":
+    "Kết nối một hộp thư để một nhóm đọc thư của nó trong Margince.",
+  "sharedMailboxes.unknownTeam": "Một nhóm bạn không xem được",
+  "sharedMailboxes.readBy": "Do {team} đọc · {visibility}",
+  "sharedMailboxes.provider": "Dịch vụ thư",
+  "sharedMailboxes.address": "Địa chỉ hộp thư",
+  "sharedMailboxes.readerTeam": "Nhóm đọc hộp thư",
+  "sharedMailboxes.readerTeamPlaceholder": "Chọn nhóm",
+  "sharedMailboxes.visibility": "Ai xem được thư",
+  "sharedMailboxes.visibilityHeld": "Giữ riêng",
+  "sharedMailboxes.visibilityShared": "Chia sẻ",
+  "sharedMailboxes.visibilityHeldHint":
+    "Chỉ nhóm và những ai có trong mỗi email đọc được.",
+  "sharedMailboxes.visibilitySharedHint":
+    "Ai mở được các hồ sơ liên kết đều đọc được.",
+  "sharedMailboxes.graphTenant": "Mã tenant (Tenant ID)",
+  "sharedMailboxes.graphClient": "Mã ứng dụng (Client ID)",
+  "sharedMailboxes.graphSecret": "Khóa bí mật (client secret)",
+  "sharedMailboxes.gmailKey": "Khóa tài khoản dịch vụ (JSON)",
+  "sharedMailboxes.change": "Thay đổi",
+  "sharedMailboxes.changeTitle": "Đổi nhóm đọc {address}",
+  "sharedMailboxes.changeConfirm": "Áp dụng cho mọi thư",
+  "sharedMailboxes.changeWarning":
+    "Thay đổi này áp dụng cho mọi thư hộp thư đã ghi nhận, không chỉ thư mới.",
+  "sharedMailboxes.narrowHistory": "Giữ riêng cả thư đã ghi nhận",
+  "sharedMailboxes.importHistory": "Nhập thư cũ",
+  "sharedMailboxes.historyTitle": "Nhập thư cũ vào {address}",
+  "sharedMailboxes.historyIntro":
+    "Chọn lùi lại bao xa. Nhóm sẽ đọc những thư được nhập.",
+  "sharedMailboxes.historyStart": "Bắt đầu nhập",
+  "sharedMailboxes.disconnectTitle": "Ngắt kết nối {address}?",
+  "sharedMailboxes.disconnectBody":
+    "Thư mới sẽ không đến nữa. Thư đã ghi nhận vẫn còn, và nhóm vẫn đọc được.",
   "settings.part.integrations.units": "Dịch vụ khác",
   "settings.part.models.providers": "Nhà cung cấp",
   "settings.part.models.tiers": "Cấp mô hình",
