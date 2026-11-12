@@ -137,7 +137,6 @@ func (h licenseHandlers) GetSeatUsage(w http.ResponseWriter, r *http.Request) {
 // installation is warned for as long before expiry as it keeps working after it.
 // The two are NOT one constant — the module owns its grace and does not report
 // it — so if upstream ever changes that window, this stops matching silently.
-// Asking for a `grace_until` is tracked on issue #1190.
 const renewalWindow = 90 * 24 * time.Hour
 
 // toContractLicenseEntitlement renders one posture and one count onto the wire.

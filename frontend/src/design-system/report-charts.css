@@ -207,19 +207,29 @@
   border-radius: var(--r-sm);
   background: var(--bgInset);
 }
+/* The bullet is a pill track the fill runs along; its row keeps the taller
+   line box above, so the target's tick overhangs the track on both sides. */
+.report-chart-bullet {
+  align-self: center;
+  height: 10px;
+  border-radius: var(--r-full);
+  corner-shape: round;
+}
 .report-chart-bullet-fill {
   position: absolute;
-  inset-block: var(--space-1);
-  height: calc(100% - 2 * var(--space-1));
+  inset-block: 0;
   left: 0;
   width: var(--report-mark-width);
-  background: var(--accent);
-  border-radius: var(--r-sm);
+  background: linear-gradient(90deg, var(--accentFade), var(--accent));
+  border-radius: var(--r-full);
+  corner-shape: round;
 }
 .report-chart-bullet-target {
   position: absolute;
-  inset-block: 0;
+  inset-block: calc(-1 * var(--space-1));
   width: 2px;
+  border-radius: var(--r-full);
+  corner-shape: round;
   background: var(--textPrimary);
 }
 .report-chart-row[data-tone="success"] .report-chart-bullet-fill {
@@ -247,7 +257,9 @@
   height: 6px;
   width: var(--report-mark-width);
   left: var(--report-mark-left);
-  background: color-mix(in srgb, var(--accent) 35%, var(--bgElevated));
+  background: linear-gradient(90deg, var(--accentFade), var(--accent));
+  border-radius: var(--r-full);
+  corner-shape: round;
 }
 .report-chart-range-dot {
   position: absolute;
@@ -326,7 +338,7 @@
   display: block;
   position: relative;
   /* A bar keeps a bar's width on a wide card instead of filling its week. */
-  width: min(50%, 3.5rem);
+  width: min(40%, 2rem);
   text-align: center;
   text-decoration: none;
   color: var(--textPrimary);
@@ -335,9 +347,9 @@
   height: 100%;
   position: absolute;
   bottom: 0;
-  inset-inline: var(--space-1);
-  background: var(--accent);
-  border-radius: var(--r-sm) var(--r-sm) 0 0;
+  inset-inline: 0;
+  background: linear-gradient(180deg, var(--accent), var(--accentFade));
+  border-radius: var(--r-sm) var(--r-sm) var(--r-xs) var(--r-xs);
 }
 .report-chart-column-secondary .report-chart-column-fill {
   height: 100%;
@@ -349,7 +361,10 @@
   bottom: 100%;
   left: 0;
   right: 0;
+  font: var(--fontBodySmall);
+  font-weight: var(--fontWeightMedium);
   font-variant-numeric: tabular-nums;
+  color: var(--textSecondary);
 }
 .report-chart-column-label {
   display: block;
