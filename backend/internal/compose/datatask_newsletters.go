@@ -22,7 +22,7 @@ import (
 // counting as a touch. That is a stored clock it moved, a quiet reminder it
 // closed and a ghosted-thread signal it raised.
 func newslettersDataTask(pool *pgxpool.Pool) datatask.Task {
-	audit := datatask.AuditPolicy{Reason: "the last-activity triggers move the same derived clock without an audit"}
+	audit := datatask.AuditPolicy{Reason: clockRefoldAuditReason}
 	return datatask.Task{
 		ID: "core/1794448710_newsletters_stop_counting", Version: 1,
 		Title: systemtext.Literal("datatask.title.core.1794448710_newsletters_stop_counting"), Requires: []string{"core/1794448710"},

@@ -37,7 +37,7 @@ func (e *recencyEnv) seedNewsletter(t *testing.T, deal ids.UUID, at time.Time) i
 
 // closeAs ticks the reminder through the store's update, the write the engine's
 // completion and a member's tick both take.
-func (e *recencyEnv) closeAs(t *testing.T, ctx context.Context, reminder ids.UUID) {
+func (e *recencyEnv) closeAs(ctx context.Context, t *testing.T, reminder ids.UUID) {
 	t.Helper()
 	done := true
 	store := NewStore(database.BindTo(e.pool, ids.From[ids.WorkspaceKind](e.ws)))
@@ -71,7 +71,7 @@ func TestTheRepairReopensAReminderTheEngineClosedOnANewsletter(t *testing.T) {
 	deal := e.seedQuietDeal(t, pinnedQuiet)
 	reminder := e.seedQuietReminder(t, deal, pinnedQuiet)
 	e.seedNewsletter(t, deal, pinnedQuiet.AddDate(0, 0, 89))
-	e.closeAs(t, e.asEngine(), reminder)
+	e.closeAs(e.asEngine(), t, reminder)
 
 	if got := e.repairNewsletterReminders(t); got != 1 {
 		t.Fatalf("the repair reopened %d reminders, want 1", got)
@@ -91,15 +91,15 @@ func TestTheRepairLeavesEveryOtherClosedReminderAlone(t *testing.T) {
 	}{
 		{"a member ticked it", func(e *recencyEnv, t *testing.T, deal, reminder ids.UUID) {
 			e.seedNewsletter(t, deal, pinnedQuiet.AddDate(0, 0, 89))
-			e.closeAs(t, e.asResolver(), reminder)
+			e.closeAs(e.asResolver(), t, reminder)
 		}},
 		{"another system writer closed it", func(e *recencyEnv, t *testing.T, deal, reminder ids.UUID) {
 			e.seedNewsletter(t, deal, pinnedQuiet.AddDate(0, 0, 89))
-			e.closeAs(t, principal.SystemActing(principal.WithWorkspaceID(context.Background(), e.ws), "system:review-close"), reminder)
+			e.closeAs(principal.SystemActing(principal.WithWorkspaceID(context.Background(), e.ws), "system:review-close"), t, reminder)
 		}},
 		{"a member worked on it after the engine closed it", func(e *recencyEnv, t *testing.T, deal, reminder ids.UUID) {
 			e.seedNewsletter(t, deal, pinnedQuiet.AddDate(0, 0, 89))
-			e.closeAs(t, e.asEngine(), reminder)
+			e.closeAs(e.asEngine(), t, reminder)
 			subject := "Followed up by phone"
 			store := NewStore(database.BindTo(e.pool, ids.From[ids.WorkspaceKind](e.ws)))
 			if _, err := store.UpdateActivity(e.asResolver(), ids.From[ids.ActivityKind](reminder), UpdateActivityInput{Subject: &subject}); err != nil {
@@ -108,18 +108,18 @@ func TestTheRepairLeavesEveryOtherClosedReminderAlone(t *testing.T) {
 		}},
 		{"a call reached the record after the anchor", func(e *recencyEnv, t *testing.T, deal, reminder ids.UUID) {
 			e.seedNewsletter(t, deal, pinnedQuiet.AddDate(0, 0, 88))
-			e.closeAs(t, e.asEngine(), reminder)
+			e.closeAs(e.asEngine(), t, reminder)
 			e.seedCall(t, deal, pinnedQuiet.AddDate(0, 0, 89))
 		}},
 		{"no newsletter reached the record", func(e *recencyEnv, t *testing.T, _, reminder ids.UUID) {
-			e.closeAs(t, e.asEngine(), reminder)
+			e.closeAs(e.asEngine(), t, reminder)
 		}},
 		{"the newsletter came before the anchor", func(e *recencyEnv, t *testing.T, deal, reminder ids.UUID) {
 			e.seedNewsletter(t, deal, pinnedQuiet.AddDate(0, 0, -1))
-			e.closeAs(t, e.asEngine(), reminder)
+			e.closeAs(e.asEngine(), t, reminder)
 		}},
 		{"the newsletter was captured after the close", func(e *recencyEnv, t *testing.T, deal, reminder ids.UUID) {
-			e.closeAs(t, e.asEngine(), reminder)
+			e.closeAs(e.asEngine(), t, reminder)
 			e.seedNewsletter(t, deal, pinnedQuiet.AddDate(0, 0, 89))
 		}},
 	} {
@@ -183,7 +183,7 @@ func TestTheRepairReopensAnAccountReminderANewsletterReachedThroughItsContact(t 
 		VALUES ($1, 'email', 'inbound', 'Our autumn newsletter', $2, 'workspace', 'gmail', 'connector:gmail', 'human', true)`,
 		mail, pinnedQuiet.AddDate(0, 0, 89))
 	e.exec(t, `INSERT INTO activity_link (id, activity_id, entity_type, contact_id) VALUES ($1, $2, 'contact', $3)`, ids.NewV7(), mail, contact)
-	e.closeAs(t, e.asEngine(), reminder)
+	e.closeAs(e.asEngine(), t, reminder)
 
 	if got := e.repairNewsletterReminders(t); got != 1 || e.reminderIsDone(t, reminder) {
 		t.Errorf("the repair reopened %d account reminders, want the one the newsletter closed", got)
