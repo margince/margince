@@ -70,6 +70,7 @@ const JOB_KIND_NAME: Readonly<Record<string, MessageKey>> = {
   import_run_sweep: "systemJob.import_run_sweep",
   import_undo: "jobs.kind.import_undo",
   import_validate: "jobs.kind.import_validate",
+  initiative_enrolment_sweep: "jobs.kind.initiative_enrolment_sweep",
   intro_expiry: "jobs.kind.intro_expiry",
   knowledge_ingest: "jobs.kind.knowledge_ingest",
   link_reconcile: "systemJob.link_reconcile",

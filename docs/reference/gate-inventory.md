@@ -112,6 +112,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `frontendproblemcodecopy_test.go` | H3 | Every problem code an httperr builder sends for a reader has catalog copy on the screen, keyed by the wire code (PROBLEM\_CODE\_COPY in problemcodecopy.ts). |
 | `frontendprofilevocabulary_test.go` | H3 | The browser spells the company-profile vocabulary five more times, and every one of them fails silently when it falls short. |
 | `frontendproviders_test.go` | H3 | The routing form offers the adapters and profiles the server accepts, and no others. |
+| `frontendremoteimagebox_test.go` | H3 | The approval card offers the drawn signature only where the list's markup carries the box marker. |
 | `frontendrolekeys_test.go` | H2 | The screens ask what a seat may do rather than which role it holds. |
 | `frontendrowtagcap_test.go` | H3 | The browser and the server must agree on how many tags one list row carries, or the chip strip's "+N" counts a number nobody has. |
 | `frontendrunreasons_test.go` | H2 | The browser puts a troubled run's reason code into words. |
@@ -119,6 +120,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `frontendsendpermissionreasons_test.go` | H3 | The composer has its own sentence for every code the send engine refuses with, and no other. |
 | `frontendsetupproviders_test.go` | H3 | Onboarding offers a first-time admin a provider and a model, and the server has to be able to price and serve whatever it offered. |
 | `frontendsignaturecap_test.go` | H3 | The personal HTML signature cap is one rule with three spellings. |
+| `frontendsocialplatforms_test.go` | H3 | The keys a contact's social map takes are decided on both sides of the wire. |
 | `frontendtaskorigins_test.go` | H3 | Every automatic task source has a sentence in the browser saying what made the task. |
 | `frontendthreadingfloor_test.go` | H3 | The deal page names the seat a single-threaded deal is missing. |
 | `frontendunitspellings_test.go` | H3 | The browser and the server must read a unit's spelling as the same key. |
@@ -184,6 +186,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `publicevents_test.go` | H3 | The outbound-webhook surface has three moving parts that must stay in lock-step, and nothing in the build forces them to. |
 | `queryparamexplode_test.go` | H2 | Every query parameter in crm.yaml is encoded the way the frontend client sends it. |
 | `rbacvocabulary_test.go` | H3 | The RBAC vocabulary is declared in the contract and restated in Go, and the two must not drift. |
+| `recordkindopenlist_test.go` | H3 | A column that names a kind of record accepts an extension's kind. |
 | `regionalformats_test.go` | H3 | The store validates through the generated read enum. |
 | `reopenconditionparity_test.go` | H3 | What a snooze may wait for is spelled in four places, and all four must agree. |
 | `requestkeyconflict_test.go` | H2 | A row keyed by a client's request id is written conflict-first. |
@@ -261,6 +264,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `cachedtestinputs_test.go` | H2 | A cached test file that runs a process to read the tree for it declares what that process read through gatekit. |
 | `calendaroccurrenceexpansion_test.go` | H2 | Every calendar pull lists occurrences, never recurring series masters. |
 | `capturecontainers_test.go` | H2 | Every mail connector tells the sink where the provider filed a message. |
+| `captureseatlessrows_test.go` | H2 | A shared mailbox is a capture\_connection with no user, and its import rows name the connection instead of a seat. |
 | `capturesinkseams_test.go` | H3 | Every optional seam the capture Sink offers is wired by the composition root. |
 | `catalogoptionsreaders_test.go` | H2 | Who may read a custom field's options. |
 | `checklegsplit_test.go` | H3 | CI splits the backend gate's fan-out over two jobs: deterministic-gates runs `make check-backend CHECK\_LEGS="…"` and backend-lint runs `make check-static`. |
@@ -278,6 +282,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `contactprofilefieldwriter_test.go` | H2 | contacts.writeContactProfileField is the one writer of contact\_profile\_field, and the one place the precedence rule lives: a machine fill claims an unanswered field, a human's acceptance replaces what is there. |
 | `contactprosecoverage_test.go` | H3 | Every table with a foreign key to contact and a column prose fits in is registered or carries a reason. |
 | `contactreaders_test.go` | H2 | `contact` is an RBAC object, and until this gate nothing held the object half of that anywhere outside the module that owns it. |
+| `containershell_test.go` | H2 | Every workflow job that runs in a container names bash as its steps' shell. |
 | `contractlistpaging_test.go` | H2 | A list that can be cut says where it was cut. |
 | `contractnullable_test.go` | H3 | `nullable:` in a document that declares OpenAPI 3.1, where the keyword does not exist. |
 | `contractproducers_test.go` | H2 | A field the contract promises and nobody writes is invisible. |
@@ -320,6 +325,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `entitymodelowners_test.go` | H3 | The ownership map and the schema name the same tables. |
 | `envcontract_test.go` | H3 | The MARGINCE\_\* variables the code reads, the reference pages name and an entrypoint requires agree with each other. |
 | `erasurecascadereach_test.go` | H2 | Every file the Art. 17 cascade executes SQL from is one the PII censuses read. |
+| `erasurelistlift_test.go` | H2 | Every statement on the erasure list names lifted\_at. |
 | `errtaxonomy_test.go` | H2 | Every error sentinel must have a verdict, on every surface. |
 | `eventtimefacts_test.go` | H2 | Every writer of a stage move records the stage order it happened in. |
 | `eventtypeownership_test.go` | H3 | One module owns an event type. |
@@ -428,15 +434,18 @@ The eight shapes, what each is for, and how each one silently passes:
 | `ratparsebound_test.go` | H2 | A decimal string is shape-checked before math/big parses it. |
 | `readersetaside_test.go` | H1 | Every read that hides a message a reader set aside goes through one predicate, activities.readerSetAsideSQL. |
 | `recencyorigins_test.go` | H2 | Every reading of "when was this record last touched" excludes the origins the system wrote itself. |
+| `recordpagefields_test.go` | H2 | Every sidecar field the company and contact pages render is one an agent can read through read\_record and find in record\_fields. |
 | `recordsourcespelling_test.go` | H2 | A record's `source` names where the row came from, and whoever uses this product is one origin with one spelling. |
 | `recordwritekeys_test.go` | H3 | A record write names the fields the record has, or a cf\_ key. |
 | `registrarparity_test.go` | H2 | A registry that claims to be complete must be. |
 | `relayentrypoints_test.go` | H2 | _(no doc comment)_ |
 | `remediationnotbuyeractivity_test.go` | H2 | Remediation work must never read as buyer engagement. |
 | `reportasof_test.go` | H2 | A report's answer is labelled with the instant it was computed at. |
+| `requestsite_test.go` | H2 | Every site a model request names is one api/ai-tasks.yaml declares. |
 | `requiredbodyids_test.go` | H3 | Every contract request body that declares a required id must be accounted for. |
 | `requiredsourcebodies_test.go` | H2 | Every contract request body that requires a `source` must be refused when it names none. |
 | `restrictedreaders_test.go` | H2 | A record held under a statutory retention obligation is unavailable in every ordinary read path: lists, timelines, search, exports, embeddings, agent grounding. |
+| `restrictionreach_test.go` | H2 | Every AI task declares how it treats a restriction of processing (GDPR Art. 18), read from the generated task table, never from a list typed here. |
 | `retentionactionset_test.go` | H2 | One set of retention actions, spelled in three places. |
 | `rightscasewriters_test.go` | H2 | Every proposal a data subject sends opens a case somebody owes an answer to. |
 | `rlsclaimsprose_test.go` | H2 | The prose says what bounds a read, and it is not row-level security. |
@@ -498,6 +507,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `contactscrub_test.go` | H2 | Erasing a contact and anonymizing one are the same act with one difference: the erased subject goes on a suppression list, and the anonymized subject may lawfully return. |
 | `dedupespine_test.go` | H2 | Every INSERT site for contacts, companies and leads is derived from the tree and must ask the duplicate-matching engine with full inputs. |
 | `effectredemption_test.go` | H2 | Every approval effect redeems the approval it ran. |
+| `erasureliftauthority_test.go` | H2 | Only the erased subject lifts an erasure, and only by answering the link mailed to the address. |
 | `erasuresuppressionreach_test.go` | H2 | Every writer of an address or channel account asks the erasure list. |
 | `erasuretallysavepoint_test.go` | H2 | The erasure counts its work on a tallyTx (privacy/erasuretally.go), and a savepoint opened on it runs on the wrapped transaction, where nothing counts. |
 | `gopinsrenovatereach_test.go` | H3 | Every Go pin this tree holds is one Renovate can move, and it moves them together. |

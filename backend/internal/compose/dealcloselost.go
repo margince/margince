@@ -102,11 +102,15 @@ func (c silentDealCloser) CloseWorkspace(ctx context.Context) (int, error) {
 
 // closeOne closes one deal as its owner's agent. The close reads the owner's
 // grants in its own transaction, before the deal row lock. Under that lock the
-// owner's switch must be on and the deal still due.
+// owner's switch must be on and the deal still due. The re-check reads the
+// deal's activities under their lock, so no verdict can change before commit.
 func (c silentDealCloser) closeOne(ctx context.Context, decision closeDecision, now time.Time) (bool, error) {
 	return c.deals.CloseAsLost(ctx, deals.CloseLostInput{
 		DealID: decision.deal, Owner: decision.owner, ReasonCode: decision.code, Reason: decision.reason,
 		SourceActivityID: decision.refusal,
+		HoldEvidence: func(ctx context.Context, tx pgx.Tx) error {
+			return activities.LockDealActivitiesTx(ctx, tx, decision.deal.UUID)
+		},
 		StillDue: func(ctx context.Context, tx pgx.Tx) (bool, error) {
 			mode, err := approvals.AutoApplyModeTx(ctx, tx, decision.owner, deals.DealCloseLostKind)
 			if err != nil || mode != approvals.ModeAuto {

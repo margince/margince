@@ -38,6 +38,9 @@ import (
 // resolver exists for raw signals that arrive naming nobody.
 const resolutionResolved = "resolved"
 
+// sourceChannelField is the audit key naming the channel a signal came by.
+const sourceChannelField = "source_channel"
+
 // DerivedSignal is one finding a producer computed, in the words the reader
 // will see. The producer owns the RULE; this module owns the row.
 type DerivedSignal struct {

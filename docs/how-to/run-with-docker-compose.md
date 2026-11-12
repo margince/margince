@@ -35,9 +35,10 @@ empty. Make the passwords with `openssl rand -hex 24` and the vault root key wit
 from the data: [back-up-an-installation.md](back-up-an-installation.md).
 
 Edit `margince.yaml` as [Write the first-boot config](deploy-margince.md#write-the-first-boot-config)
-says. Its `password_file` already points where the api writes the first admin's password. Any other
-setting goes in a file named `margince.env` in this folder, one `NAME=value` on each line; every
-setting is in [configuration.md](../reference/configuration.md).
+says. Its `password_file` already points where the api writes the first admin's password. A setting that
+`.env.example` lists works only in `.env`. Put any other setting in a file named `margince.env` in
+this folder, one `NAME=value` on each line. Every setting is in
+[configuration.md](../reference/configuration.md).
 
 ## Start it
 

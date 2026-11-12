@@ -36,6 +36,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/ai"
 	"github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/modules/identity"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/promptfence"
 	"github.com/margince/margince/backend/internal/shared/ports/model"
 	"github.com/margince/margince/backend/internal/shared/schema"
@@ -375,6 +376,7 @@ func owedRequest(batch []owedCandidate) model.Request {
 		MaxTokens:      ai.ReasoningOutputMaxTokens,
 		ResponseSchema: owedSchema(owedIDs(batch)),
 		SecretStripper: ai.NewSecretStripper(),
+		Subjects:       model.AboutActivities(owedActivityIDs(batch)...),
 	}
 }
 
@@ -453,4 +455,12 @@ func owedSchema(requested []string) json.RawMessage {
 				"id", owedVerdictKey, extractionConfidenceKey)),
 		},
 		owedResultsKey))
+}
+
+func owedActivityIDs(batch []owedCandidate) []ids.UUID {
+	out := make([]ids.UUID, len(batch))
+	for i, c := range batch {
+		out[i] = c.ID
+	}
+	return out
 }

@@ -96,7 +96,7 @@ func (p *TranscriptProposer) readTranscript(ctx context.Context, store transcrip
 	if err != nil {
 		return err
 	}
-	steps, err := p.ask(ai.WithSubject(ctx, activityID.Ref(), ""),
+	steps, err := p.ask(ai.WithSubject(ctx, activityID.Ref(), ""), activityID.UUID,
 		reading.Lines, reading.OccurredAt.Format(time.DateOnly), parties)
 	if err != nil {
 		if errors.Is(err, errRefusedTranscript) {

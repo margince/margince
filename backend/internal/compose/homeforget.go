@@ -15,9 +15,10 @@ import (
 )
 
 // forgetHomeOnWrite ends the writer's cached Home answers when a write they
-// made succeeds, before its status is sent. A client that refetches on the
-// answer must not read the day as it was. Many of a reader's own writes emit no
-// event and no audit row, so the door they all pass is where this is asked.
+// made succeeds or meets a conflict, before its status is sent. A client that
+// refetches on the answer must not read the day as it was. Many of a reader's
+// own writes emit no event and no audit row, so the door they all pass is where
+// this is asked.
 func forgetHomeOnWrite(cache *homecache.Cache, log *slog.Logger) crmcontracts.MiddlewareFunc {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -60,7 +61,12 @@ func writersOf(r *http.Request) []ids.UUID {
 	return out
 }
 
-// forgettingWriter runs forget once, as a successful status is first written.
+// forgettingWriter runs forget once, as a success or a 409 is first written.
+//
+// A 409 (version_skew among them) says the row moved under the version the
+// writer read, often by a worker write that never ends their cache. Their
+// refetch must read the moved row, or every retry meets the same old version.
+// Ending the cache here covers every write that can skew, with no client change.
 type forgettingWriter struct {
 	http.ResponseWriter
 	forget  func()
@@ -70,7 +76,7 @@ type forgettingWriter struct {
 func (f *forgettingWriter) WriteHeader(status int) {
 	if !f.settled {
 		f.settled = true
-		if status >= http.StatusOK && status < http.StatusMultipleChoices {
+		if status >= http.StatusOK && status < http.StatusMultipleChoices || status == http.StatusConflict {
 			f.forget()
 		}
 	}

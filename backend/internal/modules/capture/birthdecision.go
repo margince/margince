@@ -236,7 +236,7 @@ func decideBirthTx(
 		// stricter already decided. It outlives any one counterparty hold, so a
 		// widening that did not know about it would publish mail from a mailbox
 		// that never asked for its mail to be shared.
-		decision = decision.hold(audienceReasonPosture)
+		decision = decision.hold(postureReason(ctx))
 		decision.posture = posture
 		return decision, nil
 	}
@@ -303,6 +303,9 @@ func holdingVerdict(status string) bool {
 // what they want mid-sync, and a message whose provenance the product cannot
 // establish is the last one to publish on a guess.
 func mailboxPostureTx(ctx context.Context, tx pgx.Tx) (string, error) {
+	if shared, ok := sharedMailboxOf(ctx); ok {
+		return connectionPostureTx(ctx, tx, `id = $1`, shared)
+	}
 	actor, ok := principal.Actor(ctx)
 	if !ok || actor.UserID == ids.Nil {
 		return PostureHeld, nil
@@ -332,11 +335,14 @@ func mailboxPostureForTx(ctx context.Context, tx pgx.Tx, user ids.UUID, provider
 	if user == ids.Nil || provider == "" {
 		return PostureHeld, nil
 	}
+	return connectionPostureTx(ctx, tx, `user_id = $1 AND provider = $2`, user, provider)
+}
+
+// connectionPostureTx reads the posture of the one live connection match
+// names: a seat's mailbox by (user, provider), a shared mailbox by its id.
+func connectionPostureTx(ctx context.Context, tx pgx.Tx, match string, args ...any) (string, error) {
 	var posture string
-	err := tx.QueryRow(ctx, `
-		SELECT mail_posture FROM capture_connection
-		 WHERE user_id = $1 AND provider = $2 AND archived_at IS NULL`,
-		user, provider).Scan(&posture)
+	err := tx.QueryRow(ctx, `SELECT mail_posture FROM capture_connection WHERE `+match+` AND archived_at IS NULL`, args...).Scan(&posture)
 	if err != nil {
 		if err == pgx.ErrNoRows {
 			return PostureHeld, nil

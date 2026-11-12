@@ -185,6 +185,9 @@ func (s *Store) finalizeLeadPromotion(ctx context.Context, tx pgx.Tx, id ids.Lea
 	if err != nil {
 		return crmcontracts.Contact{}, err
 	}
+	if err := s.witnessPromotionTx(ctx, tx, id, now); err != nil {
+		return crmcontracts.Contact{}, err
+	}
 	tag, err := tx.Exec(ctx,
 		`UPDATE lead SET status = 'promoted', status_set_by = $4, promoted_contact_id = $2, promoted_at = $3, archived_at = $3,
 		        qualified_deal_id = $5, `+firstResponseSet+`

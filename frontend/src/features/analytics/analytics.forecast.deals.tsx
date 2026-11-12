@@ -198,7 +198,7 @@ export function ForecastDeals({
                       kind="standing"
                       title={t("forecast.deals.limitedTitle")}
                     >
-                      {t("forecast.deals.limited")}
+                      {data.contributions_limited_reason}
                     </Callout>
                   )}
                   <Disclosure summary={t("forecast.deals.open")}>

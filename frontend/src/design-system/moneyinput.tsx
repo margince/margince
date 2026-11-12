@@ -33,6 +33,8 @@ export function MoneyInput({
   onBlur,
   blankWhenZero = false,
   onClear,
+  display,
+  onFocus,
   ...rest
 }: Readonly<
   Omit<InputHTMLAttributes<HTMLInputElement>, "value" | "onChange" | "type"> & {
@@ -52,6 +54,9 @@ export function MoneyInput({
     // the reader is taking back. Without it an emptied box keeps the last
     // amount, which is right for a priced record (see onChange below).
     onClear?: () => void;
+    // The amount as the page writes money, shown while the box is not being
+    // edited. Focus brings back the plain number, which is what a reader types.
+    display?: (minor: number) => string;
   }
 >) {
   const digits = minorUnitDigits(currency);
@@ -94,11 +99,35 @@ export function MoneyInput({
     lastRenderedCurrency.current = currency;
   }, [valueMinor, currency, blankWhenZero]);
 
+  const [editing, setEditing] = useState(false);
+  if (display && !editing && text !== "") {
+    return (
+      <TextInput
+        {...rest}
+        type="text"
+        inputMode="decimal"
+        value={display(lastShownMinor(text, valueMinor, currency))}
+        // Only focus brings a key press here, and focus has already swapped
+        // this face for the editor.
+        onChange={() => setEditing(true)}
+        onFocus={(event) => {
+          setEditing(true);
+          onFocus?.(event);
+        }}
+      />
+    );
+  }
   return (
     <TextInput
       type="number"
       value={text}
+      onFocus={(event) => {
+        setEditing(true);
+        onFocus?.(event);
+      }}
       onChange={(event) => {
+        // A box that started empty has no display face to focus through.
+        setEditing(true);
         setText(event.target.value);
         // An empty or unparseable buffer (mid-edit, e.g. a lone "-" or a
         // cleared field) is never committed as 0 — the last valid minor
@@ -143,6 +172,7 @@ export function MoneyInput({
         setText(
           cleared.current ? "" : asText(lastCommittedMinor.current, currency),
         );
+        setEditing(false);
         onBlur?.(event);
       }}
       {...rest}
@@ -159,6 +189,13 @@ export function MoneyInput({
       step={digits === 0 ? "1" : `0.${"0".repeat(digits - 1)}1`}
     />
   );
+}
+
+// The amount the display form names: what the text on screen says, so a
+// figure held mid-edit is never shown as the stored one.
+function lastShownMinor(text: string, valueMinor: number, currency: string) {
+  const parsed = Number(text);
+  return Number.isFinite(parsed) ? toMinorUnits(parsed, currency) : valueMinor;
 }
 
 // exceedsPrecision reports whether an amount needs finer division than its

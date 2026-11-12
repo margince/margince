@@ -18,6 +18,16 @@ func TestPanelValidateAdmitsAWholeDeclaration(t *testing.T) {
 	}
 }
 
+func TestPanelValidateAdmitsEveryRecordPageSlot(t *testing.T) {
+	for _, slot := range []PanelSlot{SlotContactPanel, SlotCompanyPanel, SlotDealPanel} {
+		panel := validPanel()
+		panel.Slot = slot
+		if err := panel.Validate("visit-log"); err != nil {
+			t.Errorf("slot %q was refused: %v", slot, err)
+		}
+	}
+}
+
 func TestPanelValidateRefusesWhatNoCorePageCanDraw(t *testing.T) {
 	for name, edit := range map[string]func(*Panel){
 		"an entry slot":           func(p *Panel) { p.Slot = "record_header.deal" },

@@ -24,39 +24,11 @@ import (
 	"github.com/margince/margince/backend/internal/shared/ports/fieldcatalog"
 )
 
-//nolint:unparam // all four child writers here take (ctx, tx, wsID, contactID, …); dropping wsID from the two that do not spend it would make a reader check which is which at every call site.
-func replaceContactSocial(ctx context.Context, tx pgx.Tx, wsID ids.WorkspaceID, contactID ids.ContactID, social map[string]any, converting []ids.LeadID) error {
-	rows, err := contactSocialInputs(social)
-	if social == nil || err != nil {
-		return err
-	}
-	if err := refuseLeadHeldLinkedIn(ctx, tx, contactID, social, converting); err != nil {
-		return err
-	}
-	if _, err := tx.Exec(ctx,
-		`DELETE FROM contact_social WHERE contact_id = $1`, contactID); err != nil {
-		return fmt.Errorf("clear contact social rows: %w", err)
-	}
-	for _, row := range rows {
-		if _, err := tx.Exec(ctx,
-			`INSERT INTO contact_social (contact_id, platform, handle) VALUES ($1, $2, $3)`,
-			contactID, row.Platform, row.Handle); err != nil {
-			return fmt.Errorf("insert contact social row: %w", err)
-		}
-		if row.Platform == SocialLinkedIn {
-			if err := fileLinkedInTwinsAtWrite(ctx, tx, contactID, row.Handle); err != nil {
-				return err
-			}
-		}
-	}
-	return nil
-}
-
 // replaceContactEmails makes the contact's LIVE addresses mirror the given set.
 // nil means "not supplied": existing rows stand.
 //
 // It ARCHIVES rather than deletes, which is the one place this differs from
-// replaceContactSocial above. contact_social carries no cross-record uniqueness
+// writeContactSocial above. contact_social carries no cross-record uniqueness
 // and no history; contact_email carries both. uq_contact_email_dedupe is what
 // makes an address name exactly one contact, and the dedupe ladder, the merge
 // trail and every audit read filter on archived_at IS NULL. A hard DELETE would
@@ -213,7 +185,7 @@ func parseContactContacts(emails []ContactEmailInput, phones []ContactPhoneInput
 	})
 }
 
-//nolint:unparam // the same shape as its siblings; see replaceContactSocial.
+//nolint:unparam // the same shape as its siblings; see writeContactSocial.
 func insertContactEmails(ctx context.Context, tx pgx.Tx, wsID ids.WorkspaceID, contactID ids.ContactID, source, by string, emails []ContactEmailInput, erasure storekit.ErasureAdmission, converting []ids.LeadID) error {
 	// Every address a contact gains is written here, so every create and
 	// update door meets the erasure list without asking for it.
@@ -444,6 +416,9 @@ func attachContactSocial(ctx context.Context, tx pgx.Tx, idx map[openapi_types.U
 			p.Social = &map[string]any{}
 		}
 		(*p.Social)[platform] = handle
+		if platform == SocialLinkedIn {
+			p.LinkedinUrl = &handle
+		}
 	}
 	return socialRows.Err()
 }

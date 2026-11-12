@@ -25,6 +25,7 @@ type localOpts struct {
 	harness         harnessClient
 	fakeDecider     decision.Client
 	everyCertified  bool
+	restrictions    model.SubjectRestrictions
 }
 
 // harnessClient is WithHarnessClient's pairing: the provider name a binding
@@ -201,6 +202,7 @@ func NewLocalRouter(cfg RoutingConfig, opts ...LocalOption) (*Router, error) {
 		return nil, err
 	}
 	router.install(router.binding().withConfig(cfg, decisions))
+	router.restrictions = o.restrictions
 	return router, nil
 }
 
@@ -256,4 +258,21 @@ func (m *memoryMeter) MonthTokens(context.Context) (int64, error) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 	return m.tokens, nil
+}
+
+// WithRestrictionCheck sets the restriction check a DB-less router asks, and
+// with it the rule that an honouring task's request declares its subjects.
+// Without it the router asks nothing: the certification lane reads corpus
+// data, which names no contact.
+func WithRestrictionCheck(check model.SubjectRestrictions) LocalOption {
+	return func(o *localOpts) { o.restrictions = check }
+}
+
+// NoRestrictionData is a check that holds no stops: it admits every subject and
+// still refuses an honouring request that declares none.
+type NoRestrictionData struct{}
+
+// AnyRestricted reports that no subject is restricted.
+func (NoRestrictionData) AnyRestricted(context.Context, model.Subjects) (bool, error) {
+	return false, nil
 }

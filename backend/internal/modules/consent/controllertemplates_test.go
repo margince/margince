@@ -196,6 +196,9 @@ var pinnedWording = map[string]string{
 	"optout_acknowledgement@2@de": "e7c1a1b705acc9fc43860cff63f4de049a694ca8d66734d9ecec54e489f54b8f",
 	"optout_acknowledgement@2@en": "1e536284d3200b99a38a349e55aa65cdc8b7e0482e1b2f4559c546830751500b",
 	"optout_acknowledgement@2@vi": "4ce293fb0948756cc75f2b27a1ba054e7364c347a6e6ab71f250de5a922c32b8",
+	"restriction_lift@1@de":       "34752802be82b4a703cb52a4ca5d02eece3595ea71d955bb6ecebf0436fd0e0d",
+	"restriction_lift@1@en":       "4e31b4aad01b43dce8700ef8abdbdbda4989e72138e7b9ad76a5bb3f3915e538",
+	"restriction_lift@1@vi":       "3903eb642861db8d8a8f30329aff02a23d64577e4146435ce26dca84868bc257",
 }
 
 // TestEveryControllerTemplateIsPinnedToItsWording fails when a registered

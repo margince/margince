@@ -16,6 +16,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/modules/ai"
 	"github.com/margince/margince/backend/internal/modules/contacts"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/promptfence"
 	"github.com/margince/margince/backend/internal/shared/kernel/promptref"
 	"github.com/margince/margince/backend/internal/shared/kernel/textlang"
@@ -62,6 +63,7 @@ func signatureEnrichRequest(cand contacts.SignatureCandidate, lines string) mode
 		MaxTokens:      ai.ReasoningOutputMaxTokens,
 		ResponseSchema: signatureEnrichSchema(),
 		SecretStripper: ai.NewSecretStripper(),
+		Subjects:       &model.Subjects{Contacts: []ids.UUID{cand.ContactID.UUID}, Activities: []ids.UUID{cand.ActivityID}},
 	}
 }
 

@@ -110,7 +110,7 @@ func (r *Registry) BuildDigests(ctx context.Context, digestDate time.Time) error
 func connectedUsers(ctx context.Context, tx pgx.Tx) ([]ids.UUID, error) {
 	rows, err := tx.Query(ctx, `
 		SELECT DISTINCT user_id FROM capture_connection
-		WHERE status IN ('connected','error') AND archived_at IS NULL`)
+		WHERE status IN ('connected','error') AND archived_at IS NULL AND user_id IS NOT NULL`)
 	if err != nil {
 		return nil, fmt.Errorf("capture: listing digest users: %w", err)
 	}

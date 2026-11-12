@@ -107,7 +107,7 @@ Also called: contacts made from notification mail, automatic senders.
 ### How do I filter by date?
 **Deals** has a **Close date** filter, shown in the next question. The other lists have no date filter, so sort them by date.
 
-Last activity is the date of the newest email, chat message, meeting, call or note. A task never changes it. **Filters and views** has the date choices **is after**, **is on or after**, **is before** and **is on or before**. They show only for date custom fields your company has added, so created and expected close dates are not there.
+Last activity is the date of the newest email, chat message, meeting, call or note. A task never changes it, and neither does a newsletter. **Filters and views** has the date choices **is after**, **is on or after**, **is before** and **is on or before**. They show only for date custom fields your company has added, so created and expected close dates are not there.
 Also called: created this month, filter by created date, date range.
 
 ### How do I find deals closing this month?

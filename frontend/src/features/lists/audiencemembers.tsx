@@ -86,6 +86,7 @@ export const AUDIENCE_HINT: Record<ActivityAudience, MessageKey> = {
 // drawer naming a held message the same way.
 export const AUDIENCE_REASON_LABEL: Record<string, MessageKey> = {
   posture: "compose.reason.posture",
+  shared_mailbox: "compose.reason.sharedMailbox",
   workspace_floor: "compose.reason.workspaceFloor",
   no_record: "compose.reason.noRecord",
   pending_verdict: "compose.reason.pendingVerdict",

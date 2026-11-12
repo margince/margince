@@ -32,6 +32,10 @@ func (r *recordedRechecks) LiveMailboxesTx(context.Context, pgx.Tx, []ids.UUID) 
 	return r.counts, nil
 }
 
+func (*recordedRechecks) SharedMailboxesReadByTx(context.Context, pgx.Tx, ids.UUID) ([]string, error) {
+	return nil, nil
+}
+
 func (r *recordedRechecks) RecheckSeatsTx(_ context.Context, _ pgx.Tx, userIDs []ids.UUID) error {
 	r.asked = append(r.asked, userIDs...)
 	return nil

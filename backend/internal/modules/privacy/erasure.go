@@ -140,7 +140,7 @@ func (e *Eraser) EraseContactCounted(ctx context.Context, contactID ids.UUID, re
 		if err := eraseDealRoomSeats(ctx, tx, emails, reason); err != nil {
 			return err
 		}
-		if err := tombstoneCollateralScrubs(ctx, tx, "lead", leadsWiped, reason, causeContactErasure); err != nil {
+		if err := tombstoneLeadsAndSignals(ctx, tx, subject, leadsWiped, reason); err != nil {
 			return err
 		}
 		activitiesRedacted, activitiesHeld, err := e.redactSubjectActivities(ctx, tx, subject, keys, floor, reason)
@@ -307,10 +307,7 @@ func anonymizeSubjectRows(
 		contactID).Scan(&keptHashes, &keptKey); err != nil {
 		return nil, fmt.Errorf("privacy: reading the anonymized address hashes: %w", err)
 	}
-	if _, err := tx.Exec(ctx, `
-		INSERT INTO erasure_suppression (kind, value_hash, key_id)
-		SELECT 'email', kept, $2 FROM unnest($1::text[]) AS kept
-		ON CONFLICT DO NOTHING`, keptHashes, keptKey); err != nil {
+	if err := armSuppression(ctx, tx, "email", keptHashes, keptKey); err != nil {
 		return nil, fmt.Errorf("privacy: keeping the anonymized addresses on the erasure list: %w", err)
 	}
 	// Only a row that still holds something is written. An already-anonymised
@@ -387,9 +384,7 @@ func anonymizeSubjectRows(
 }
 
 // purgeContactDerivedRows deletes what the system DERIVED about the subject and
-// keyed on their contact id.
-//
-// The five tables share a posture that makes them one step rather than five:
+// keyed on their contact id. The five tables share a posture that makes them one step rather than five:
 // none is anonymizable. An embedding is an opaque vector of the text, a
 // provenance row says where a now-erased field came from, an enrichment row
 // holds the subject's title and employer with the verbatim sentence it was
@@ -419,6 +414,9 @@ func purgeContactDerivedRows(ctx context.Context, tx pgx.Tx, contactID ids.Conta
 	}
 	if _, err := tx.Exec(ctx,
 		`DELETE FROM ai_feedback WHERE subject_type = 'contact' AND subject_id = $1`, contactID); err != nil {
+		return err
+	}
+	if err := deleteSubjectRecordLinks(ctx, tx, contactID.UUID); err != nil {
 		return err
 	}
 	return purgeProvidedValues(ctx, tx, subjects)

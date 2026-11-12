@@ -926,3 +926,39 @@ func TestQueryPlanAndFilterEngineAnswerTheSameCompaniesForOneRadius(t *testing.T
 		}
 	}
 }
+
+// A contact is found by its LinkedIn link, which lives in contact_social. It
+// is found as stored, and by the profile it names in another spelling. The
+// contact's own row scope still decides what comes back, so a second rep's
+// private contact holding the same profile does not.
+func TestQueryPlanFindsAContactByItsLinkedInProfile(t *testing.T) {
+	q := setupQuery(t)
+	const stored = "https://www.linkedin.com/in/query-profile"
+	withLink := func(owner ids.UUID, name, visibility string) ids.UUID {
+		t.Helper()
+		id := q.SeedID(t, `INSERT INTO contact (id, owner_id, full_name, visibility, source, captured_by)
+			VALUES ($1, $2, $3, $4, 'manual', 'human:x')`, owner, name, visibility)
+		q.SeedID(t, `INSERT INTO contact_social (id, contact_id, platform, handle) VALUES ($1, $2, 'linkedin', $3)`, id, stored)
+		return id
+	}
+	shared := withLink(q.Rep1, "Query Profile", "workspace")
+	private := withLink(q.Rep3, "Query Profile Private", "owner")
+	other := q.SeedID(t, `INSERT INTO contact (id, full_name, source, captured_by) VALUES ($1, 'No Profile', 'manual', 'human:x')`)
+
+	reader := q.teamRep(q.Rep1, q.Team1)
+	for _, spelling := range []string{stored, "https://linkedin.com/in/query-profile/"} {
+		got := idSet(q.run(reader, t, fmt.Sprintf(`{"version": "v1", "target": "contact",
+			"where": [{"field": "linkedin_url", "op": "eq", "value": %q}]}`, spelling)))
+		if !got[shared] || got[other] {
+			t.Errorf("linkedin_url eq %q answered %v, want the contact holding that profile", spelling, got)
+		}
+		if got[private] {
+			t.Errorf("linkedin_url eq %q returned a second rep's private contact", spelling)
+		}
+	}
+	unlike := idSet(q.run(reader, t, `{"version": "v1", "target": "contact",
+		"where": [{"field": "linkedin_url", "op": "neq", "value": "`+stored+`"}]}`))
+	if unlike[shared] || !unlike[other] {
+		t.Errorf("linkedin_url neq answered %v, want the contact with no profile and not the one holding it", unlike)
+	}
+}

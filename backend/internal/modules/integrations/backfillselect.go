@@ -23,6 +23,7 @@ import (
 	"fmt"
 
 	"github.com/jackc/pgx/v5"
+	"github.com/margince/margince/backend/internal/platform/auth"
 )
 
 // sweepRetryAfter is how long a refused contact waits before the sweep tries
@@ -81,6 +82,7 @@ func (s *Store) uncoveredSubjects(ctx context.Context, tx pgx.Tx, name string, l
 		  FROM contact p
 		 WHERE p.archived_at IS NULL
 		   AND p.merged_into_id IS NULL
+		   AND NOT `+auth.ContactRestrictedSQL("p.id")+`
 		   AND NOT EXISTS (
 		       SELECT 1 FROM provider_run r
 		        WHERE r.contact_id = p.id AND r.provider = $1
@@ -231,6 +233,14 @@ func (s *Store) applyOneStored(ctx context.Context, tx pgx.Tx, runID, contactID 
 		// stay unapplied and the run says so, the same answer the hand-off
 		// gives for the same reason.
 		return s.discardClaims(ctx, tx, runID)
+	}
+	restricted, err := contactRestricted(ctx, tx, contactID)
+	if err != nil {
+		return err
+	}
+	if restricted {
+		// Kept and left unstamped: the next tick after the lift applies it.
+		return nil
 	}
 	applied, err := s.applyStoredClaims(ctx, tx, contactID, runID)
 	if err != nil {

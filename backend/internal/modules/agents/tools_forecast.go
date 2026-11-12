@@ -138,9 +138,11 @@ type ForecastReadingsResult struct {
 	RangeHighMinor *int64 `json:"range_high_minor,omitempty"`
 	// Contributions are the per-deal rows, present only when asked for.
 	// ContributionsLimited says they hold only the caller's own deals, while
-	// the installation switched off individual performance.
-	Contributions        []ForecastContributionResult `json:"contributions,omitempty"`
-	ContributionsLimited *bool                        `json:"contributions_limited,omitempty"`
+	// the installation switched off individual performance, and
+	// ContributionsLimitedReason is the sentence that says why.
+	Contributions              []ForecastContributionResult `json:"contributions,omitempty"`
+	ContributionsLimited       *bool                        `json:"contributions_limited,omitempty"`
+	ContributionsLimitedReason *string                      `json:"contributions_limited_reason,omitempty"`
 }
 
 // ForecastLandingResult mirrors ForecastLanding on GET /forecast. A manager's

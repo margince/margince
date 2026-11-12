@@ -14,6 +14,7 @@ import (
 	"time"
 
 	"github.com/margince/margince/backend/internal/platform/config"
+	"github.com/margince/margince/backend/internal/platform/netguard"
 	"github.com/margince/margince/backend/internal/shared/ports/model"
 )
 
@@ -99,12 +100,12 @@ func selectVertex(cfg ProviderConfig, keys config.Lookup, httpc *http.Client) (m
 	if err != nil {
 		return nil, err
 	}
-	strict := noRedirect(httpc)
+	strict := netguard.NoRedirect(httpc)
 	return &geminiClient{
 		http: strict,
 		transport: vertexTransport{
 			host:      vertexHost(cfg.Location),
-			projectID: account.projectID,
+			projectID: account.ProjectID,
 			location:  cfg.Location,
 			tokens:    newVertexTokenSource(account, strict, wallClock{}),
 		},

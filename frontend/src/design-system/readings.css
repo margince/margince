@@ -209,10 +209,14 @@
   background: var(--accentLight);
   border: 1px dashed var(--accentText);
 }
+/* The track is drawn, so a mark past the parts stands on the bar it measures. */
 .segbar-track {
   position: relative;
   display: flex;
   height: 10px;
+  border-radius: var(--r-full);
+  corner-shape: round;
+  background: var(--bgWell);
   color: var(--textPrimary);
 }
 /* Parts are pills with air between them rather than a stroke. The air is a
@@ -263,6 +267,8 @@
   font-weight: var(--fontWeightMedium);
 }
 .segbar-swatch {
+  display: inline-block;
+  flex: none;
   width: 10px;
   height: 10px;
   border-radius: var(--r-xs);

@@ -48,8 +48,10 @@ concurrency:
   # collide. Saying so explicitly beats relying on that.
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
+# A job in the CI image runs `sh` unless told otherwise, and the steps use bash.
 defaults:
   run:
+    shell: bash
     working-directory: backend
 
 # A module the proxy cannot serve is not a broken build: the PIPE falls through
@@ -506,6 +508,13 @@ jobs:
       - name: Gate binaries on PATH
         if: needs.ci-image.outputs.pinned-image == ''
         uses: ./.github/actions/gate-binaries
+      # In the image pnpm is on PATH, so the contract drift gate regenerates
+      # the frontend's types and needs its packages; on the runner it skips.
+      - name: Frontend packages for the contract drift gate
+        if: matrix.part == 'unit' && needs.ci-image.outputs.pinned-image != ''
+        working-directory: frontend
+        timeout-minutes: 5
+        run: pnpm install --frozen-lockfile --ignore-scripts
       # The backend half of the merge gate in one pass:
       # check-craft-doc, image pins, contract-breaking, migration-versions,
       # test-lanes, file-length,
@@ -1384,6 +1393,73 @@ jobs:
         if: failure()
         run: cat "$RUNNER_TEMP/api.log" || true
 
+  # Every Go and vitest test the pull request adds or changes, run many times
+  # (scripts/repeat-changed-tests.sh), so a test that fails at random fails the
+  # pull request that brings it and not the next one. The three lanes run at the
+  # same time, so each runs on a loaded runner. A diff with no test file ends
+  # after the first step.
+  # ADVISORY: it is not in the `ci` fan-in, and a red run stops no merge. A pull
+  # request only: the merge queue's entry is a tree this job already judged.
+  repeat-changed-tests:
+    name: repeat-changed-tests (advisory)
+    timeout-minutes: 60
+    if: github.event_name == 'pull_request' && github.event.pull_request.draft == false
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    defaults:
+      run:
+        working-directory: .
+    env:
+      BASE_REF: origin/${{ github.base_ref }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          # The plan diffs against the merge base with the base branch.
+          fetch-depth: 0
+          filter: blob:none
+      - name: Find the changed test files
+        id: scope
+        run: scripts/repeat-changed-tests.sh scope "$BASE_REF"
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        if: steps.scope.outputs.run == 'true'
+        with:
+          go-version-file: backend/go.mod
+          cache-dependency-path: backend/go.sum
+      - name: Restore the Go build cache
+        if: steps.scope.outputs.run == 'true'
+        uses: ./.github/actions/go-build-cache
+        with:
+          flavor: plain
+      - name: Choose the tests and how often each runs
+        id: plan
+        if: steps.scope.outputs.run == 'true'
+        run: scripts/repeat-changed-tests.sh plan "$BASE_REF" "$RUNNER_TEMP/repeat-plan.tsv"
+      - name: Start the dev infra stack (compose + app role)
+        if: steps.plan.outputs.integration == 'true'
+        run: make db-up
+      - name: Build the migrated template
+        if: steps.plan.outputs.integration == 'true'
+        run: make test-db-up
+      # No version input: the pin is package.json's "packageManager".
+      - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
+        if: steps.plan.outputs.vitest == 'true'
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        if: steps.plan.outputs.vitest == 'true'
+        with:
+          node-version: 24
+          cache: pnpm
+          cache-dependency-path: pnpm-lock.yaml
+      - name: Install deps
+        if: steps.plan.outputs.vitest == 'true'
+        working-directory: frontend
+        timeout-minutes: 5
+        run: pnpm install --frozen-lockfile --ignore-scripts
+      - name: Run each changed test many times
+        if: steps.plan.outputs.go == 'true' || steps.plan.outputs.integration == 'true' || steps.plan.outputs.vitest == 'true'
+        run: scripts/repeat-changed-tests.sh run "$RUNNER_TEMP/repeat-plan.tsv"
+
   # The SPA lane. Its four jobs live in
   # .github/workflows/_lane-frontend.yml (fe-quality, fe-unit, fe-bundle and the
   # fan-in that carries their verdict).
@@ -1496,6 +1572,8 @@ jobs:
   #                                advisory here. See below.
   #   home-budget                — advisory while its budgets are measured
   #                                for feasibility; it joins as its own change.
+  #   repeat-changed-tests       — advisory until its false alarms are known;
+  #                                it joins as its own change.
   #
   # WHAT THE REPOSITORY ACTUALLY REQUIRES, said once and only here so the file
   # cannot answer it twice with different answers: `ci` — this job — is the ONE

@@ -94,6 +94,8 @@ type Store struct {
 	// grantCarrier moves the shares on a retiring record; nil refuses a merge
 	// that would strand one (grantcarry.go).
 	grantCarrier GrantCarrier
+	// promotionWitness dates what a promoted lead belonged to; nil records nothing.
+	promotionWitness PromotionWitness
 	// shareRequests files the request a held address raises; nil asks nobody.
 	shareRequests ShareRequests
 	// leadArrivals tells a contact's owner about a lead refused for them; nil tells nobody.

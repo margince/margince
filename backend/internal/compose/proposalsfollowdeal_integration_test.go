@@ -6,10 +6,9 @@
 package compose
 
 // A pending proposal follows its deal to the new owner, over real migrated
-// Postgres. Every card here is staged by the real writer — the nightly sweep or
-// the transcript reader — and every reassignment goes through a real deal owner
-// writer, because a card seeded by hand would prove the move against a row
-// production does not write.
+// Postgres. Every card here is staged through the approvals service, as its
+// writer stages it. Every reassignment goes through a real deal owner writer. A
+// card seeded by hand would prove the move against a row production never writes.
 
 import (
 	"context"
@@ -99,11 +98,8 @@ func wantSeat(t *testing.T, what string, got *ids.UUID, want *ids.UUID) {
 func TestAFollowUpFollowsTheDealToItsNewOwner(t *testing.T) {
 	e := setupReconcile(t)
 	deal := e.SeedDeal(t, "Handed over", e.pipeline, e.open, &e.Rep1)
-	e.seedInteraction(t, deal, "call", "Discovery call", 3)
-	if err := e.reconcile(); err != nil {
-		t.Fatal(err)
-	}
-	id, _ := e.followUpApproval(t, deal)
+	call := e.seedInteraction(t, deal, "call", "Discovery call", 3)
+	id, _ := e.stageLegacyFollowUp(t, deal, call)
 	wantSeat(t, "the staged card", e.seatOf(t, id), &e.Rep1)
 
 	e.reassign(t, deal, e.Rep2)
@@ -141,11 +137,8 @@ func TestAFollowUpFollowsTheDealToItsNewOwner(t *testing.T) {
 func TestAReassignmentThatFailsLeavesTheCardWithThePreviousOwner(t *testing.T) {
 	e := setupReconcile(t)
 	deal := e.SeedDeal(t, "Reassignment rolled back", e.pipeline, e.open, &e.Rep1)
-	e.seedInteraction(t, deal, "call", "Discovery call", 3)
-	if err := e.reconcile(); err != nil {
-		t.Fatal(err)
-	}
-	id, _ := e.followUpApproval(t, deal)
+	call := e.seedInteraction(t, deal, "call", "Discovery call", 3)
+	id, _ := e.stageLegacyFollowUp(t, deal, call)
 
 	admin := e.Admin()
 	active, err := e.Deals.ActiveDealColumns(admin)
@@ -189,14 +182,9 @@ func TestAReassignmentThatFailsLeavesTheCardWithThePreviousOwner(t *testing.T) {
 func TestADecidedOrExpiredCardStaysWithTheSeatItWasAskedOf(t *testing.T) {
 	e := setupReconcile(t)
 	rejected := e.SeedDeal(t, "Declined before the handover", e.pipeline, e.open, &e.Rep1)
-	e.seedInteraction(t, rejected, "call", "Discovery call", 3)
+	rejectedID, _ := e.stageLegacyFollowUp(t, rejected, e.seedInteraction(t, rejected, "call", "Discovery call", 3))
 	lapsed := e.SeedDeal(t, "Lapsed before the handover", e.pipeline, e.open, &e.Rep1)
-	e.seedInteraction(t, lapsed, "call", "Scoping call", 3)
-	if err := e.reconcile(); err != nil {
-		t.Fatal(err)
-	}
-	rejectedID, _ := e.followUpApproval(t, rejected)
-	lapsedID, _ := e.followUpApproval(t, lapsed)
+	lapsedID, _ := e.stageLegacyFollowUp(t, lapsed, e.seedInteraction(t, lapsed, "call", "Scoping call", 3))
 
 	rep1 := e.As(e.Rep1, []ids.UUID{e.Team1}, reconcilePerms)
 	if _, err := e.svc.Decide(rep1, rejectedID, false, nil); err != nil {
@@ -393,11 +381,8 @@ func TestEveryDealOwnerWriterHandsOnThePendingProposals(t *testing.T) {
 			if w.owner == nil {
 				e.WsExec(t, `UPDATE deal SET owner_id = NULL WHERE id = $1`, deal)
 			}
-			e.seedInteraction(t, deal, "call", "Call before "+w.name, 3)
-			if err := e.reconcile(); err != nil {
-				t.Fatal(err)
-			}
-			id, _ := e.followUpApproval(t, deal)
+			call := e.seedInteraction(t, deal, "call", "Call before "+w.name, 3)
+			id, _ := e.stageLegacyFollowUp(t, deal, call)
 			wantSeat(t, "the staged card", e.seatOf(t, id), w.owner)
 			if err := w.write(deal); err != nil {
 				t.Fatalf("the owner write: %v", err)
@@ -413,13 +398,12 @@ func TestEveryDealOwnerWriterHandsOnThePendingProposals(t *testing.T) {
 	}
 }
 
-// The staging race: a reassignment in flight when the sweep reads the owner.
+// The filing race: a reassignment in flight when the sweep reads the owner.
 //
-// The reassignment holds the deal row, uncommitted. The sweep must wait for it
-// rather than read the owner it is replacing — so the test proves the sweep
-// BLOCKED, then lets the reassignment commit, and the card names the new owner.
-// A sweep that read the owner in a transaction of its own would finish without
-// blocking and file the card for the seat the deal was leaving.
+// The reassignment holds the deal row, uncommitted, and the sweep must wait for
+// it. So the test proves the sweep blocked, then lets the reassignment commit.
+// The task then names the new owner. A sweep that read the owner in its own
+// transaction would not block, and would file the task for the leaving seat.
 func TestTheSweepWaitsForAReassignmentInFlightAndFilesForTheNewOwner(t *testing.T) {
 	e := setupReconcile(t)
 	deal := e.SeedDeal(t, "Reassigned mid-sweep", e.pipeline, e.open, &e.Rep1)
@@ -463,8 +447,12 @@ func TestTheSweepWaitsForAReassignmentInFlightAndFilesForTheNewOwner(t *testing.
 		t.Fatalf("the sweep: %v", err)
 	}
 
-	id, _ := e.followUpApproval(t, deal)
-	wantSeat(t, "the card the sweep staged across the reassignment", e.seatOf(t, id), &e.Rep2)
+	var assignee *ids.UUID
+	if err := e.owner.QueryRow(context.Background(),
+		`SELECT assignee_id FROM activity WHERE source_system = 'overnight-reconcile'`).Scan(&assignee); err != nil {
+		t.Fatalf("reading the follow-up task: %v", err)
+	}
+	wantSeat(t, "the task the sweep filed across the reassignment", assignee, &e.Rep2)
 }
 
 // Two reassignments without If-Match, the second arriving while the first is
@@ -474,11 +462,8 @@ func TestTheSweepWaitsForAReassignmentInFlightAndFilesForTheNewOwner(t *testing.
 func TestConcurrentReassignmentsHandTheCardOnFromTheOwnerEachFinds(t *testing.T) {
 	e := setupReconcile(t)
 	deal := e.SeedDeal(t, "Reassigned twice at once", e.pipeline, e.open, &e.Rep1)
-	e.seedInteraction(t, deal, "call", "Discovery call", 3)
-	if err := e.reconcile(); err != nil {
-		t.Fatal(err)
-	}
-	id, _ := e.followUpApproval(t, deal)
+	call := e.seedInteraction(t, deal, "call", "Discovery call", 3)
+	id, _ := e.stageLegacyFollowUp(t, deal, call)
 
 	admin := e.Admin()
 	active, err := e.Deals.ActiveDealColumns(admin)
@@ -562,16 +547,17 @@ func (d reassigningDrafter) DraftEmail(ctx context.Context, anchor ids.UUID, int
 	return d.followUpReplySeam.DraftEmail(ctx, anchor, intent)
 }
 
-// A draft composed for the owner the deal has just left is dropped, and
-// nothing takes its place: a task staged instead would keep the next sweep from
-// drafting for the new owner until somebody decided it.
+// A draft composed for the owner the deal has just left is dropped, and nothing
+// takes its place. A task filed instead would be an open next step. It would
+// keep the next sweep from drafting for the new owner.
 func TestADraftComposedForAnOwnerWhoLeftIsDroppedAndRedraftedNextSweep(t *testing.T) {
 	e := setupReconcile(t)
 	e.grantOwner(t, e.Rep2, reconcileOwnerPolicy)
 	deal := e.SeedDeal(t, "Handed over mid-draft", e.pipeline, e.open, &e.Rep1)
 	e.seedAnswerableThread(t, deal, "Kickoff")
 	stager := followUpStager{
-		svc: e.svc,
+		svc:   e.svc,
+		tasks: e.Activities,
 		draft: reassigningDrafter{
 			followUpReplySeam: newCommsAdapter(e.Pool, nil, SendPath{}),
 			during:            func() { e.reassign(t, deal, e.Rep2) },
@@ -600,15 +586,12 @@ func TestADraftComposedForAnOwnerWhoLeftIsDroppedAndRedraftedNextSweep(t *testin
 	wantSeat(t, "the draft the next sweep composed", e.seatOf(t, fresh), &e.Rep2)
 }
 
-// stagedFollowUp seeds a deal owned by Rep1 whose nightly card is waiting.
+// stagedFollowUp seeds a deal owned by Rep1 whose follow-up card is waiting.
 func (e *reconcileEnv) stagedFollowUp(t *testing.T, name string) (ids.UUID, ids.ApprovalID) {
 	t.Helper()
 	deal := e.SeedDeal(t, name, e.pipeline, e.open, &e.Rep1)
-	e.seedInteraction(t, deal, "call", "Call on "+name, 3)
-	if err := e.reconcile(); err != nil {
-		t.Fatal(err)
-	}
-	id, _ := e.followUpApproval(t, deal)
+	call := e.seedInteraction(t, deal, "call", "Call on "+name, 3)
+	id, _ := e.stageLegacyFollowUp(t, deal, call)
 	return deal, id
 }
 
@@ -706,15 +689,15 @@ func (failingDrafter) DraftEmail(context.Context, ids.UUID, string) (string, str
 	return "", "", errors.New("the drafting engine is unavailable")
 }
 
-// A drafting failure fails the pass for that deal. It is not quietly turned
-// into a task proposal, which would hide the fault and — through the pending
-// check — keep the reply from ever being drafted.
+// A drafting failure fails the pass for that deal. A task in its place would hide
+// the fault. As an open next step, it would also keep the reply from being drafted.
 func TestADraftingFailureStagesNothingInsteadOfATask(t *testing.T) {
 	e := setupReconcile(t)
 	deal := e.SeedDeal(t, "Drafter down", e.pipeline, e.open, &e.Rep1)
 	e.seedAnswerableThread(t, deal, "Kickoff")
 	stager := followUpStager{
 		svc:   e.svc,
+		tasks: e.Activities,
 		draft: failingDrafter{followUpReplySeam: newCommsAdapter(e.Pool, nil, SendPath{})},
 		owner: dealOwnerAuthority{db: e.DB(), users: identity.NewServiceFor(e.DB())},
 		pool:  e.Pool,

@@ -321,7 +321,6 @@ internal/modules/activities/meetingreplay_integration_test.go 3
 internal/modules/activities/owedverdict_integration_test.go 3
 internal/modules/activities/remediationrecency_integration_test.go 1
 internal/modules/activities/requestaging_integration_test.go 1
-internal/modules/activities/responsehorizonplan_integration_test.go 1
 internal/modules/activities/responsemetrics_integration_test.go 2
 internal/modules/activities/ruleset_unit_test.go 2
 internal/modules/activities/threadlessrequest_integration_test.go 2

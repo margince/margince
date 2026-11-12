@@ -150,9 +150,13 @@ func mergedBody(base, over map[string]any) map[string]any {
 
 // schemaProp is the part of a property's JSON schema the filler reads.
 type schemaProp struct {
-	Type       any                        `json:"type"`
-	Format     string                     `json:"format"`
-	Enum       []any                      `json:"enum"`
+	Type   any    `json:"type"`
+	Format string `json:"format"`
+	Enum   []any  `json:"enum"`
+	// Extensible is a flag beside an enum, or the closed part of an open set.
+	// A saved view's core lists sit beside the extension kinds its pattern
+	// admits. Only the list form names a value.
+	Extensible json.RawMessage            `json:"x-extensible-enum"` //nolint:tagliatelle // OpenAPI extension keyword, fixed by the contract
 	Default    any                        `json:"default"`
 	Examples   []any                      `json:"examples"`
 	MinItems   int                        `json:"minItems"` //nolint:tagliatelle // JSON Schema spec keyword, must be camelCase
@@ -243,6 +247,10 @@ func fillValue(name string, raw json.RawMessage, pattern string, pool *recordPoo
 		return prop.Default
 	case len(prop.Enum) > 0:
 		return prop.Enum[0]
+	}
+	var open []any
+	if json.Unmarshal(prop.Extensible, &open) == nil && len(open) > 0 {
+		return open[0]
 	}
 	return fillTyped(name, prop, raw, pool)
 }

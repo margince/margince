@@ -32,6 +32,10 @@ func withoutRecorder(ctx context.Context) context.Context {
 // probe is Require recording nothing. A branch uses it, because its refusal is
 // not the call's answer, and a recorded check hides a tool from its lacker.
 func probe(ctx context.Context, object string, action principal.Action) error {
+	object, err := gateObject(object)
+	if err != nil {
+		return err
+	}
 	return probeCheck(ctx, Check{Object: object, Actions: []principal.Action{action}})
 }
 

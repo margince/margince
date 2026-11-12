@@ -12,7 +12,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../api/schema";
 import { LocaleProvider } from "../i18n";
 import { installFetchStub, jsonResponse } from "../testing/story-utils";
-import { ContactStops, LeadStops } from "./stops";
+import { ContactRestrictedMark, ContactStops, LeadStops } from "./stops";
 
 // The stops on a contact. The server says per stop whether this reader may take
 // it back; the panel offers that, with a required reason.
@@ -118,6 +118,117 @@ describe("the stops on a contact", () => {
   });
 });
 
+describe("lifting a restriction", () => {
+  it("lets an admin lift it, which queues the notice", async () => {
+    const user = userEvent.setup();
+    const asked = vi.fn(
+      (_body: unknown) => new Response(null, { status: 202 }),
+    );
+    installFetchStub({
+      [STOPS_ROUTE]: () =>
+        jsonResponse({
+          stops: [{ ...RESTRICTION, may_lift_restriction: true }],
+        }),
+      [`POST /contacts/p-1/consent/suppress/${RESTRICTION.id}/lift-restriction`]:
+        asked,
+    });
+    render(<ContactStops contactId="p-1" />);
+
+    await user.click(
+      await screen.findByRole("button", { name: "Lift the restriction" }),
+    );
+    expect(
+      await screen.findByText(/first sends the contact a notice/),
+    ).toBeTruthy();
+    await user.type(screen.getByRole("textbox"), "the dispute is settled");
+    const confirm = Array.from(
+      (await screen.findByRole("dialog")).querySelectorAll("button"),
+    ).find((button) => button.textContent === "Lift the restriction");
+    if (!confirm) throw new Error("the dialog has no confirm button");
+    await user.click(confirm);
+
+    await waitFor(() => expect(asked).toHaveBeenCalledTimes(1));
+    expect(asked.mock.calls[0]?.[0]).toEqual({
+      reason: "the dispute is settled",
+    });
+  });
+
+  it("says the restriction stays while the notice waits or after it failed", async () => {
+    installFetchStub({
+      [STOPS_ROUTE]: () =>
+        jsonResponse({
+          stops: [
+            {
+              ...RESTRICTION,
+              lift_notice: {
+                status: "queued",
+                queued_at: "2026-11-12T09:00:00Z",
+              },
+            },
+            {
+              ...RESTRICTION,
+              id: "0193a5c0-0000-7000-8000-00000000a004",
+              lift_notice: {
+                status: "failed",
+                reason: "the mailbox refused the address",
+                queued_at: "2026-11-12T09:00:00Z",
+              },
+            },
+          ],
+        }),
+    });
+    render(<ContactStops contactId="p-1" />);
+
+    expect(
+      await screen.findByText(/waiting to be sent\. The restriction stays/),
+    ).toBeTruthy();
+    expect(
+      screen.getByText(
+        "The notice did not go out, so the restriction stays: the mailbox refused the address",
+      ),
+    ).toBeTruthy();
+  });
+});
+
+describe("a lift already underway", () => {
+  it("offers no second lift while the notice waits or after it was sent", async () => {
+    installFetchStub({
+      [STOPS_ROUTE]: () =>
+        jsonResponse({
+          stops: [
+            {
+              ...RESTRICTION,
+              may_lift_restriction: true,
+              lift_notice: {
+                status: "queued",
+                queued_at: "2026-11-12T09:00:00Z",
+              },
+            },
+            {
+              ...RESTRICTION,
+              id: "0193a5c0-0000-7000-8000-00000000a005",
+              may_lift_restriction: true,
+              lift_notice: {
+                status: "sent",
+                queued_at: "2026-11-12T09:00:00Z",
+              },
+            },
+          ],
+        }),
+    });
+    render(<ContactStops contactId="p-1" />);
+
+    expect(
+      await screen.findByText(
+        "The notice was sent. The restriction is ending.",
+      ),
+    ).toBeTruthy();
+    expect(
+      screen.queryByRole("button", { name: "Lift the restriction" }),
+    ).toBeNull();
+  });
+});
+
 describe("the stops on a lead", () => {
   it("lists the lead's stops and lifts one through the lead's route", async () => {
     const user = userEvent.setup();
@@ -147,5 +258,24 @@ describe("the stops on a lead", () => {
     expect(lifted.mock.calls[0]?.[0]).toEqual({
       reason: "typed on the wrong lead",
     });
+  });
+});
+
+describe("the restriction mark on a contact", () => {
+  it("shows while the contact holds a restriction", async () => {
+    installFetchStub({
+      [STOPS_ROUTE]: () =>
+        jsonResponse({ stops: [TYPED_OBJECTION, RESTRICTION] }),
+    });
+    render(<ContactRestrictedMark contactId="p-1" />);
+    expect(await screen.findByText("Processing is restricted")).toBeTruthy();
+  });
+
+  it("stays away for a stop that is not a restriction", async () => {
+    const stops = vi.fn(() => jsonResponse({ stops: [TYPED_OBJECTION] }));
+    installFetchStub({ [STOPS_ROUTE]: stops });
+    render(<ContactRestrictedMark contactId="p-1" />);
+    await waitFor(() => expect(stops).toHaveBeenCalled());
+    expect(screen.queryByText("Processing is restricted")).toBeNull();
   });
 });

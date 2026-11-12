@@ -125,6 +125,23 @@ func TestANamedTypeTheCallerCannotReadIsRefused(t *testing.T) {
 	}
 }
 
+func TestExcludedIdsReachTheEngineAndABadOneIsRefused(t *testing.T) {
+	skip := ids.NewV7()
+	engine := &rankingProbe{}
+	if _, err := searchRecordsOver(nil, engine).Handle(searchReader("contact"),
+		json.RawMessage(`{"q":"Acme","exclude_ids":["`+skip.String()+`"]}`)); err != nil {
+		t.Fatal(err)
+	}
+	if got := engine.asked.Exclude; len(got) != 1 || got[0] != skip {
+		t.Errorf("the engine was asked to exclude %v, want [%v]", got, skip)
+	}
+	_, err := searchRecordsOver(nil, &rankingProbe{}).Handle(searchReader("contact"),
+		json.RawMessage(`{"q":"Acme","exclude_ids":["not-an-id"]}`))
+	if badArgs, ok := errors.AsType[*BadArgsError](err); !ok || badArgs.Field != "exclude_ids" {
+		t.Errorf("a malformed id → %v, want a refusal of exclude_ids", err)
+	}
+}
+
 func TestTheArgumentsReachTheEngine(t *testing.T) {
 	perType := 3
 	for _, tc := range []struct {

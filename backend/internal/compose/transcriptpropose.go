@@ -176,7 +176,7 @@ var errRefusedTranscript = errors.New("compose: the reading could not be used")
 // hand-rewritten prompt certifies nothing about what runs.
 //
 //promptvoice:exempt returns next steps and commitments as structured rows quoted from the transcript; the task list that renders them is the surface a reader reads.
-func transcriptRequest(lines []string, meetingDay string, lang string, parties []commitmentParty) model.Request {
+func transcriptRequest(meeting ids.UUID, lines []string, meetingDay string, lang string, parties []commitmentParty) model.Request {
 	fence := promptfence.New()
 	var prompt strings.Builder
 	prompt.WriteString(fence.Wrap(commitmentPartyHeader+commitmentPartyPrompt(parties, strings.Join(lines, "\n"), commitmentPartyRefs(parties))) + "\n")
@@ -215,7 +215,18 @@ func transcriptRequest(lines []string, meetingDay string, lang string, parties [
 		MaxTokens:      ai.ReasoningOutputMaxTokens,
 		ResponseSchema: transcriptSchema(),
 		SecretStripper: ai.NewSecretStripper(),
+		Subjects:       &model.Subjects{Activities: []ids.UUID{meeting}, Contacts: partyContacts(parties)},
 	}
+}
+
+func partyContacts(parties []commitmentParty) []ids.UUID {
+	var out []ids.UUID
+	for _, party := range parties {
+		if party.Contact != nil {
+			out = append(out, *party.Contact)
+		}
+	}
+	return out
 }
 
 // transcriptSchema is the generation-time shape guardrail. A cited line is an
@@ -345,8 +356,8 @@ func validProposedDueDate(day string) bool {
 }
 
 // ask puts one transcript to the model and returns what it may act on.
-func (p *TranscriptProposer) ask(ctx context.Context, lines []string, meetingDay string, parties []commitmentParty) ([]proposedStep, error) {
-	req := transcriptRequest(lines, meetingDay, string(p.said.Lang()), parties)
+func (p *TranscriptProposer) ask(ctx context.Context, meeting ids.UUID, lines []string, meetingDay string, parties []commitmentParty) ([]proposedStep, error) {
+	req := transcriptRequest(meeting, lines, meetingDay, string(p.said.Lang()), parties)
 	validate := transcriptShapeValid(lines, parties)
 	resp, err := ai.Ask(ctx, p.brain, req, validate)
 	if err != nil {

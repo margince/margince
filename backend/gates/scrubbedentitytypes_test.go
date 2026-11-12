@@ -113,6 +113,10 @@ var scrubbedEntityTypes = map[string]bool{
 	"deal_stage_evidence": true,
 	// Notice history reads stored text directly; no restore surface may replay its erased images.
 	"notice": true,
+	// A signal about the erased contact, tombstoned so its audit images, which
+	// keep a corrected kind and evidence, are withheld. The weekly review
+	// rebuilds a DEAL from its own audit images and never reads a signal's.
+	"signal": true,
 	// An extension's own table. Core has no restore or undo for a unit's row.
 	// The weekly review reads deals. The compliance log is the one reader, and it
 	// hides these images.

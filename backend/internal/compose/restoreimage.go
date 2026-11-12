@@ -96,15 +96,11 @@ var addressColumns = map[string]string{
 // that accepts an address spells it this way.
 const addressField = "address"
 
-// objectFieldsClearedByAnEmptyObject are fields the record holds in their own
-// table or document rather than in a column, and whose update shape takes a
-// whole object. A null image means "there was none", and the way to say that is
-// an EMPTY object: it is supplied, so the module replaces the contents with
-// nothing, where a bare null would decode to "not supplied" and change nothing.
-//
-// This is the same reason the address folds. The difference is only that an
-// address arrives as columns and these arrive already whole.
-var objectFieldsClearedByAnEmptyObject = map[string]bool{
+// mergedObjectFields are fields kept in their own table. Their update merges
+// the object key by key, and a key it does not name stays. So a restore names
+// every key the entry wrote. A key the before-image lacks goes back as null,
+// which removes it.
+var mergedObjectFields = map[string]bool{
 	"social": true,
 }
 
@@ -147,8 +143,12 @@ var namedByTheShapeButNotWrittenByThePatch = map[string]map[string]bool{
 // Derived columns and the keys a record type's shape names but its mapper never
 // writes are dropped SILENTLY and on purpose: neither was a contact's decision,
 // and neither is missing from the restore in any sense a reader would care about.
-func filterImage(entityType string, before json.RawMessage) (map[string]json.RawMessage, []string, error) {
+func filterImage(entityType string, before, after json.RawMessage) (map[string]json.RawMessage, []string, error) {
 	image, err := imageObject(before)
+	if err != nil {
+		return nil, nil, err
+	}
+	wrote, err := imageObject(after)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -171,8 +171,10 @@ func filterImage(entityType string, before json.RawMessage) (map[string]json.Raw
 			unspellable = append(unspellable, key)
 		case spelledIntoAddress:
 			address[addressColumns[key]] = value
-		case spelledAsEmptyObject:
-			patch[key] = json.RawMessage(`{}`)
+		case spelledAsMergedObject:
+			if patch[key], err = mergedRestore(value, wrote[key]); err != nil {
+				return nil, nil, err
+			}
 		default:
 			patch[key] = value
 		}
@@ -204,9 +206,9 @@ const (
 	spelledUnspellable
 	// spelledIntoAddress: one column of the structured address.
 	spelledIntoAddress
-	// spelledAsEmptyObject: a whole-object field whose image says "there was
-	// none", which an empty object says and a null cannot.
-	spelledAsEmptyObject
+	// spelledAsMergedObject: an object the update merges, which the restore
+	// sends with every key the entry wrote.
+	spelledAsMergedObject
 )
 
 // spell decides how one image key reaches the update path, so filterImage reads
@@ -219,8 +221,8 @@ func spell(entityType, key string, value json.RawMessage, allowed map[string]boo
 	if _, isAddress := addressColumns[key]; isAddress && allowed[addressField] {
 		return spelledIntoAddress
 	}
-	if objectFieldsClearedByAnEmptyObject[key] && allowed[key] && string(value) == jsonNull {
-		return spelledAsEmptyObject
+	if mergedObjectFields[key] && allowed[key] {
+		return spelledAsMergedObject
 	}
 	// A cf_* key is a custom field: the catalog decides whether it is still
 	// writable, and that is a live-state question the value check owns. The
@@ -231,6 +233,43 @@ func spell(entityType, key string, value json.RawMessage, allowed map[string]boo
 	return spelledAsItself
 }
 
+// mergedRestore is the object a restore sends for a merged field. It holds the
+// keys the before-image held, and a null for each key only the after-image
+// names. A null or absent side reads as no keys, so "there was none" removes
+// what was added.
+func mergedRestore(before, after json.RawMessage) (json.RawMessage, error) {
+	was, err := objectKeys(before)
+	if err != nil {
+		return nil, err
+	}
+	wrote, err := objectKeys(after)
+	if err != nil {
+		return nil, err
+	}
+	for key := range wrote {
+		if _, held := was[key]; !held {
+			was[key] = json.RawMessage(jsonNull)
+		}
+	}
+	restored, err := json.Marshal(was)
+	if err != nil {
+		return nil, fmt.Errorf("compose: spell the restored object: %w", err)
+	}
+	return restored, nil
+}
+
+// objectKeys decodes one image value as an object, a null as an empty one.
+func objectKeys(raw json.RawMessage) (map[string]json.RawMessage, error) {
+	keys := map[string]json.RawMessage{}
+	if len(raw) == 0 || string(raw) == jsonNull {
+		return keys, nil
+	}
+	if err := json.Unmarshal(raw, &keys); err != nil {
+		return nil, fmt.Errorf("compose: an object field's image is not a JSON object: %w", err)
+	}
+	return keys, nil
+}
+
 // imageObject decodes an audit image, treating an absent one as empty.
 func imageObject(raw json.RawMessage) (map[string]json.RawMessage, error) {
 	var image map[string]json.RawMessage
@@ -238,7 +277,7 @@ func imageObject(raw json.RawMessage) (map[string]json.RawMessage, error) {
 		return image, nil
 	}
 	if err := json.Unmarshal(raw, &image); err != nil {
-		return nil, fmt.Errorf("compose: undoability: before-image is not a JSON object: %w", err)
+		return nil, fmt.Errorf("compose: undoability: an audit image is not a JSON object: %w", err)
 	}
 	return image, nil
 }

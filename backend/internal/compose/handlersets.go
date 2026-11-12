@@ -18,6 +18,7 @@ import (
 	"github.com/margince/margince/backend/internal/compose/contactdraft"
 	"github.com/margince/margince/backend/internal/compose/contactresearch"
 	"github.com/margince/margince/backend/internal/compose/dealstatus"
+	"github.com/margince/margince/backend/internal/compose/erasurereturn"
 	"github.com/margince/margince/backend/internal/compose/leaddraft"
 	"github.com/margince/margince/backend/internal/compose/meetingbrief"
 	"github.com/margince/margince/backend/internal/compose/pipelinetrace"
@@ -49,6 +50,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/notices"
 	"github.com/margince/margince/backend/internal/modules/privacy"
 	"github.com/margince/margince/backend/internal/modules/projects"
+	"github.com/margince/margince/backend/internal/modules/recordlinks"
 	"github.com/margince/margince/backend/internal/modules/search"
 	"github.com/margince/margince/backend/internal/modules/signals"
 	"github.com/margince/margince/backend/internal/modules/webforms"
@@ -83,6 +85,7 @@ type (
 	webhooksHandlers        = webhooks.Handlers
 	webFormsHandlers        = webforms.Handlers
 	company360Handlers      = company360.Handlers
+	erasureReturnHandlers   = erasurereturn.Handlers
 	contact360Handlers      = contact360.Handlers
 	project360Handlers      = project360.Handlers
 	contactBriefHandlers    = contactbrief.Handlers
@@ -99,6 +102,7 @@ type (
 	aiActivityHandlers      = aiactivity.Handlers
 	noticesHandlers         = notices.Handlers
 	weeklyPlanHandlers      = weeklyplan.Handlers
+	recordLinksHandlers     = recordlinks.Handlers
 	forecastHandlers        = forecasting.Handlers
 	assuranceHandlers       = assurance.Handlers
 	introductionHandlers    = introductions.Handlers

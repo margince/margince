@@ -359,8 +359,28 @@ const waitingGroupSQL = `
 // over the messages before any link is joined, so Postgres stops at the cap.
 // An ARRAY, built once, so the primary key fetches the capped set. As a join
 // or an IN, the planner joined the whole table first and filtered afterwards.
+//
+// The horizon's two arms are capped apart and merged (waitingCappedArmsSQL).
 var waitingRepliesSQL = waitingSelectSQL + `
-	 WHERE a.id = ANY (ARRAY(` + waitingEligibleSQL + `
+	 WHERE a.id = ANY (ARRAY(` + waitingCappedArmsSQL + `))` + waitingGroupSQL + `
+	 ORDER BY a.occurred_at DESC, a.id DESC`
+
+// waitingCappedArmsSQL is the newest eligible messages up to the cap. Its arms
+// are young mail and held requests past the horizon, which no row is in both.
+// Apart, young mail walks the date index newest first and stops at the cap.
+// Together, the `OR` with the held ids needs a bitmap that judges every message.
+// `NOT MATERIALIZED` inlines the eligibility into each arm, so the statement
+// carries its text once.
+var waitingCappedArmsSQL = `WITH eligible AS NOT MATERIALIZED (
+	 SELECT a.id, a.occurred_at, ` + waitingYoungSQL("$%[1]d::timestamptz", "%[5]d") + ` AS young ` + waitingEligibleFromSQL + `)
+	 SELECT capped.id FROM (
+	   (SELECT eligible.id, eligible.occurred_at FROM eligible WHERE eligible.young
+	     ORDER BY eligible.occurred_at DESC, eligible.id DESC LIMIT %[4]s)
+	   UNION ALL
+	   (SELECT eligible.id, eligible.occurred_at FROM eligible
+	     WHERE eligible.id = ANY (` + heldRequestIDsSQL() + `) AND eligible.young IS NOT TRUE
+	     ORDER BY eligible.occurred_at DESC, eligible.id DESC LIMIT %[4]s)
+	 ) capped
 	 -- NEWEST first, which is the opposite of how the rows are then shown.
 	 --
 	 -- The cap has to spend its budget on the rows most likely to matter, and
@@ -378,9 +398,7 @@ var waitingRepliesSQL = waitingSelectSQL + `
 	 -- caller folds conversations and drops sending systems after the cap, so
 	 -- it asks for another page when too much of one went. The cap bounds ONE
 	 -- page; the caller bounds how many it will ask for.
-		 ORDER BY a.occurred_at DESC, a.id DESC
-	 LIMIT %[4]s))` + waitingGroupSQL + `
-	 ORDER BY a.occurred_at DESC, a.id DESC`
+	 ORDER BY capped.occurred_at DESC, capped.id DESC LIMIT %[4]s`
 
 func waitingLimitSQL(arg func(any) int, limit int) string {
 	return fmt.Sprintf("$%d", arg(limit))

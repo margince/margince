@@ -21,6 +21,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/kernel/workforce"
 	"github.com/margince/margince/backend/internal/shared/ports/authz"
 	"github.com/margince/margince/backend/pkg/extension"
 )
@@ -105,32 +106,54 @@ func extensionMemberConsented(ctx context.Context, pool *pgxpool.Pool, unit stri
 	if pool == nil {
 		return false, errExtensionRuntimeUnwired
 	}
-	declared := declaredUserSecretKeys(unit)
-	if len(declared) == 0 {
-		// A unit that declares no user-scoped secret has no way for a member to
-		// consent to it at all, so there is nothing to read and nobody it may
-		// act for.
+	if len(declaredUserSecretKeys(unit)) == 0 {
 		return false, nil
 	}
 	var consented bool
 	err := database.WithWorkspaceTx(ctx, pool, func(tx pgx.Tx) error {
-		// A service member consents for the unit it was declared for and no
-		// other. Without the join, a unit could name another unit's service
-		// member and borrow the authority the operator gave that feed.
-		return tx.QueryRow(ctx, `
-			SELECT EXISTS (
-				SELECT 1 FROM extension_secret s
-				JOIN app_user u ON u.id = s.user_id
-				WHERE s.extension_name = $1
-				  AND s.user_id = $2
-				  AND s.key = ANY($3)
-				  AND (u.service_extension IS NULL OR u.service_extension = $1)
-			)`, unit, member, declared).Scan(&consented)
+		var err error
+		consented, err = memberConsentedTx(ctx, tx, unit, member)
+		return err
 	})
 	if err != nil {
 		return false, fmt.Errorf("compose: reading whether a member has deposited a credential with %s: %w", unit, err)
 	}
 	return consented, nil
+}
+
+// memberConsentedTx is extensionMemberConsented on a transaction already held,
+// for a door that may not take a second connection. A service member consents
+// for the unit it was declared for and no other. Without the join, a unit could
+// name another unit's service member and borrow the authority the operator gave
+// that feed.
+func memberConsentedTx(ctx context.Context, tx pgx.Tx, unit string, member ids.UUID) (bool, error) {
+	declared := declaredUserSecretKeys(unit)
+	if len(declared) == 0 {
+		// Such a unit gives a member no way to consent. Nobody is left to act for.
+		return false, nil
+	}
+	var consented bool
+	err := tx.QueryRow(ctx, `
+		SELECT EXISTS (
+			SELECT 1 FROM extension_secret s
+			JOIN app_user u ON u.id = s.user_id
+			WHERE s.extension_name = $1
+			  AND s.user_id = $2
+			  AND s.key = ANY($3)
+			  AND (u.service_extension IS NULL OR u.service_extension = $1)
+		)`, unit, member, declared).Scan(&consented)
+	return consented, err
+}
+
+// memberConnectedTx reports whether the member is active now and holds one of
+// the unit's user-scoped secrets. A member who has left keeps the credential
+// they deposited. A door that acts for a named member asks this, not the deposit.
+func memberConnectedTx(ctx context.Context, tx pgx.Tx, unit string, member ids.UUID) (bool, error) {
+	var live bool
+	if err := tx.QueryRow(ctx, `SELECT EXISTS (SELECT 1 FROM app_user u WHERE u.id = $1 AND `+workforce.LiveMemberSQL("u")+`)`, member).Scan(&live); err != nil || !live {
+		return false, err
+	}
+	return memberConsentedTx(ctx, tx, unit, member)
 }
 
 // liveMemberAuthority resolves what the member may do RIGHT NOW.

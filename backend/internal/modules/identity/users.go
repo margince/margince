@@ -361,6 +361,12 @@ func (s *Service) revokeBorrowedAuthority(ctx context.Context, tx pgx.Tx, userID
 // principal for a caller with no live Identity): the audit rows this writes
 // and the passport.revoked event both name who ended the authority.
 func endCredentialAuthority(ctx context.Context, tx pgx.Tx, userID ids.UserID, reason string) error {
+	// Held first, against holdConsentAgainstRevocation. A consent for this member
+	// either commits first and its code is ended below, or waits and finds its
+	// session gone.
+	if _, err := tx.Exec(ctx, `SELECT pg_advisory_xact_lock(`+credentialAuthorityLock+`)`, userID.String()); err != nil {
+		return err
+	}
 	if err := revokeGrantsOfUserTx(ctx, tx, userID, reason); err != nil {
 		return err
 	}

@@ -45,6 +45,9 @@ const replyActivityMaxRunes = 12_000
 // same rule (draftfloor.Envelope), which is also what ai-operational-spec.md
 // §2.4 pins.
 type replyActivityData struct {
+	// Anchor is the activity replied to, for a restriction of processing; the
+	// prompt never shows it.
+	Anchor ids.UUID `json:"-"`
 	// The envelope is embedded rather than nested so its fields sit flat
 	// beside the activity's, which is the shape the bound check reads.
 	draftfloor.Envelope
@@ -168,6 +171,7 @@ func (d replyDrafter) DraftEmailWithProvenance(ctx context.Context, anchor ids.U
 		// Already bounded: NewEnvelope caps the two identity fields, which are
 		// the only ones that come from a text column rather than being
 		// server-derived and fixed-shape.
+		Anchor:            anchor,
 		Envelope:          envelope,
 		Thread:            threadFlag(threaded),
 		Recipient:         textcut.Runes(recipient, recipientMaxRunes),

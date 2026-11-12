@@ -46,7 +46,10 @@ type UpdateContactInput struct {
 	// setter is read from the signed-in principal, never from the caller.
 	RelationshipMark *relationshipmark.Mark
 	Social           map[string]any
-	Address          *crmcontracts.Address
+	// LinkedInURL is the top-level spelling of Social's linkedin key; a
+	// cleared linkedin_url in Clear removes the link.
+	LinkedInURL *string
+	Address     *crmcontracts.Address
 	// Emails replaces the contact's live addresses when non-nil. nil is "not
 	// supplied" and leaves the stored rows standing, exactly as Social is —
 	// the distinction matters for an import whose file carried no email
@@ -96,6 +99,10 @@ func (s *Store) updateContactInTx(
 ) (crmcontracts.Contact, error) {
 	var out crmcontracts.Contact
 	if err := auth.EnsureChangeable(ctx, tx, "contact", id.UUID); err != nil {
+		return out, err
+	}
+	in, err := linkedInURLFolded(in)
+	if err != nil {
 		return out, err
 	}
 	if err := s.lockConvertStops(ctx, tx, id, in.ConvertLeadIDs); err != nil {
@@ -168,13 +175,8 @@ func (s *Store) updateContactInTx(
 	if err := s.carryHistoryIfPublished(ctx, tx, id, current, in); err != nil {
 		return out, err
 	}
-	before, after := contactChangeImages(p, current, in)
-	auditID, err := storekit.AuditWithTrail(ctx, tx, in.Trail, "contact", id.UUID, before, after)
-	if err != nil {
-		return out, fmt.Errorf("audit contact update: %w", err)
-	}
-	if err := storekit.EmitEvent(ctx, tx, auditID, id.UUID, crmcontracts.PublicEventContactUpdated{ChangedFields: after}); err != nil {
-		return out, fmt.Errorf("emit contact.updated: %w", err)
+	if err := recordContactUpdate(ctx, tx, id, p, current, in, setsChanged); err != nil {
+		return out, err
 	}
 	if err := recheckIfEdited(ctx, tx, id, current.FullName, in, setsChanged.emails || setsChanged.phones); err != nil {
 		return out, err
@@ -188,14 +190,33 @@ func (s *Store) updateContactInTx(
 	return out, s.followShareOwnerTx(ctx, tx, entityContact, id.UUID, (*ids.UUID)(current.OwnerId), (*ids.UUID)(out.OwnerId))
 }
 
-// Child sets are separate rows, so their audit images supplement the column patch.
+// recordContactUpdate writes the audit row and the contact.updated event of
+// one edit, in the edit's transaction.
+func recordContactUpdate(
+	ctx context.Context, tx pgx.Tx, id ids.ContactID, p *storekit.Patch, current crmcontracts.Contact,
+	in UpdateContactInput, sets replaceSetsChange,
+) error {
+	before, after := contactChangeImages(p, current, in, sets)
+	auditID, err := storekit.AuditWithTrail(ctx, tx, in.Trail, "contact", id.UUID, before, after)
+	if err != nil {
+		return fmt.Errorf("audit contact update: %w", err)
+	}
+	if err := storekit.EmitEvent(ctx, tx, auditID, id.UUID, crmcontracts.PublicEventContactUpdated{ChangedFields: after}); err != nil {
+		return fmt.Errorf("emit contact.updated: %w", err)
+	}
+	return nil
+}
+
+// Child sets are separate rows, so their audit images supplement the column
+// patch. Social is merged, so its images hold only the keys that moved.
 func contactChangeImages(
-	p *storekit.Patch, current crmcontracts.Contact, in UpdateContactInput,
+	p *storekit.Patch, current crmcontracts.Contact, in UpdateContactInput, sets replaceSetsChange,
 ) (before, after map[string]any) {
 	before, after = p.Before(), p.After()
-	if in.Social != nil {
-		before["social"] = current.Social
-		after["social"] = in.Social
+	if in.Social != nil && sets.any {
+		if was, now := socialKeysThatMoved(current.Social, sets.social); len(now) > 0 {
+			before["social"], after["social"] = was, now
+		}
 	}
 	if in.Emails != nil {
 		before["emails"] = current.Emails
@@ -206,6 +227,19 @@ func contactChangeImages(
 		after["phones"] = in.Phones
 	}
 	return before, after
+}
+
+// linkedInURLFolded moves the update's linkedin_url, set or cleared, into its
+// social map, which writes the LinkedIn row.
+func linkedInURLFolded(in UpdateContactInput) (UpdateContactInput, error) {
+	cleared := slices.Contains(in.Clear, linkedinURLField)
+	social, err := socialWithLinkedInURL(in.Social, in.LinkedInURL, cleared)
+	if err != nil {
+		return in, err
+	}
+	in.Social, in.LinkedInURL = social, nil
+	in.Clear = slices.DeleteFunc(slices.Clone(in.Clear), func(field string) bool { return field == linkedinURLField })
+	return in, nil
 }
 
 // readContactToEdit reads the row the edit decides on. An edit that moves a name

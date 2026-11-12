@@ -5,7 +5,6 @@ package activities
 
 import (
 	"context"
-	"strings"
 	"time"
 
 	"github.com/jackc/pgx/v5"
@@ -24,31 +23,19 @@ func ListActivitiesTx(ctx context.Context, tx pgx.Tx, in ListActivitiesInput) ([
 		return nil, storekit.Page{}, err
 	}
 	var err error
-	if in.mailIdentities, err = currentTaskMailIdentities(ctx, tx, in); err != nil {
+	if in.mailIdentities, err = listMailSeatIdentities(ctx, tx, in); err != nil {
 		return nil, storekit.Page{}, err
 	}
 	if in.WithOutsideParty {
 		in.outsideParty = outsidePartyClause(ctx, tx)
 	}
 	limit := storekit.ClampLimit(in.Limit)
-	where, content, sorted, args, err := listActivitiesFilter(ctx, in)
+	query, err := timelinePageSQL(ctx, in, limit)
 	if err != nil {
 		return nil, storekit.Page{}, err
 	}
-	order := sorted.OrderBy()
-	if in.RequestReviewAsOf != nil || in.RequestCurrentAsOf != nil {
-		order = requestPriorityOrder
-	}
-
-	columns, err := activityColumns(ctx, content, func(v any) int { args = append(args, v); return len(args) })
-	if err != nil {
-		return nil, storekit.Page{}, err
-	}
-	rows, err := tx.Query(ctx,
-		`SELECT `+columns+sorted.CursorKeySuffix()+
-			` FROM activity a WHERE `+strings.Join(where, " AND ")+
-			order+sprintf(" LIMIT %d", limit+1),
-		waitingListArgs(ctx, in, args)...)
+	sorted := query.sorted
+	rows, err := tx.Query(ctx, query.sql, waitingListArgs(ctx, in, query.args)...)
 	if err != nil {
 		return nil, storekit.Page{}, err
 	}
@@ -57,10 +44,13 @@ func ListActivitiesTx(ctx context.Context, tx pgx.Tx, in ListActivitiesInput) ([
 	type pagedRow struct {
 		activity crmcontracts.Activity
 		key      *string
+		copies   SeatCopies
 	}
 	paged, err := pgx.CollectRows(rows, func(row pgx.CollectableRow) (pagedRow, error) {
-		activity, key, err := scanActivityPage(ctx, row, sorted)
-		return pagedRow{activity, key}, err
+		var copies SeatCopies
+		activity, key, err := scanActivityPage(ctx, row, sorted, query.copyDest(&copies)...)
+		copies.stamp(&activity)
+		return pagedRow{activity, key, copies}, err
 	})
 	if err != nil {
 		return nil, storekit.Page{}, err
@@ -92,6 +82,13 @@ func ListActivitiesTx(ctx context.Context, tx pgx.Tx, in ListActivitiesInput) ([
 		// Request priority has no resumable cursor; its count still includes later rows.
 	}
 	if err := FinishActivityRows(ctx, tx, in.Columns, activities, listClock(in)); err != nil {
+		return nil, storekit.Page{}, err
+	}
+	copies := make([]SeatCopies, len(activities))
+	for i := range activities {
+		copies[i] = paged[i].copies
+	}
+	if err := AttachCopyLinks(ctx, tx, activities, copies); err != nil {
 		return nil, storekit.Page{}, err
 	}
 	return activities, page, nil

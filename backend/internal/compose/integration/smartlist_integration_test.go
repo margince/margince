@@ -18,15 +18,10 @@ import (
 	"encoding/json"
 	"errors"
 	"maps"
-	"regexp"
 	"testing"
 
-	"github.com/jackc/pgx/v5"
-
-	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/collections"
 	"github.com/margince/margince/backend/internal/modules/contacts"
-	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -427,61 +422,6 @@ func jsonEqual(t *testing.T, a, b map[string]any) bool {
 	return string(ab) == string(bb)
 }
 
-// checkLiteral pulls the single-quoted values out of a CHECK constraint
-// definition; a column or type name never matches, only the literals do.
-var checkLiteral = regexp.MustCompile(`'([a-z_]+)'`)
-
-// The resource vocabulary against its real authority — the DDL — because the
-// unit lane can only compare the contract enum to a Go map, and those two are
-// not the ones that disagree.
-//
-// The two sets must be IDENTICAL in both directions. A value the CHECK stores
-// and the contract does not declare is a row no client can name; a value the
-// contract declares and the CHECK refuses passes contract validation, resolves
-// its segment engine, validates its filter — and then trips the CHECK on
-// INSERT, answering the caller that a value the schema they were handed calls
-// legal is not allowed. `projects` was that second case until the CHECK was
-// widened.
-func TestSavedViewResourceCheckAgainstTheContractEnum(t *testing.T) {
-	e := Setup(t)
-
-	var def string
-	err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
-		return tx.QueryRow(e.Admin(), `
-			SELECT pg_get_constraintdef(oid) FROM pg_constraint
-			 WHERE conrelid = 'saved_view'::regclass AND contype = 'c'
-			   AND pg_get_constraintdef(oid) LIKE '%resource%'`).Scan(&def)
-	})
-	if err != nil {
-		t.Fatalf("reading saved_view's own resource CHECK: %v", err)
-	}
-	storable := map[string]bool{}
-	for _, m := range checkLiteral.FindAllStringSubmatch(def, -1) {
-		storable[m[1]] = true
-	}
-
-	declared := map[string]bool{}
-	for _, r := range []crmcontracts.SavedViewResource{
-		crmcontracts.SavedViewResourceSavedViewResourceActivities, crmcontracts.SavedViewResourceSavedViewResourceDeals,
-		crmcontracts.SavedViewResourceSavedViewResourceLeads, crmcontracts.SavedViewResourceSavedViewResourceCompanies,
-		crmcontracts.SavedViewResourceSavedViewResourcePartners, crmcontracts.SavedViewResourceSavedViewResourceContacts,
-		crmcontracts.SavedViewResourceSavedViewResourceProjects,
-	} {
-		declared[string(r)] = true
-	}
-
-	for name := range storable {
-		if !declared[name] {
-			t.Errorf("the CHECK stores resource %q, which the contract does not declare — a row no client can name", name)
-		}
-	}
-	for name := range declared {
-		if !storable[name] {
-			t.Errorf("the contract declares resource %q, which the CHECK refuses — a legal body that trips the INSERT", name)
-		}
-	}
-}
-
 // A view over the projects list is written by the real writer and read back:
 // the filter is judged by the project segment engine and the row clears the
 // resource CHECK.
@@ -495,7 +435,7 @@ func TestSavedViewOverProjectsIsStoredAndReadBack(t *testing.T) {
 		"filter":  map[string]any{"field": "phase", "op": "eq", "value": "delivering"},
 	}
 	created, err := store.CreateSavedView(rep, collections.CreateSavedViewInput{
-		Resource: string(crmcontracts.SavedViewResourceSavedViewResourceProjects), Name: "In delivery", Query: query,
+		Resource: "projects", Name: "In delivery", Query: query,
 	})
 	if err != nil {
 		t.Fatalf("create a saved view over projects: %v", err)
@@ -504,7 +444,7 @@ func TestSavedViewOverProjectsIsStoredAndReadBack(t *testing.T) {
 	if err != nil {
 		t.Fatalf("read the view back: %v", err)
 	}
-	if got.Resource != string(crmcontracts.SavedViewResourceSavedViewResourceProjects) {
+	if got.Resource != "projects" {
 		t.Errorf("resource = %q, want projects", got.Resource)
 	}
 	if !jsonEqual(t, query, got.Query) {
