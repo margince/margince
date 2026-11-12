@@ -2,7 +2,7 @@ import type { components } from "../../api/schema";
 import { StatCard } from "../../design-system/atoms";
 import { Callout } from "../../design-system/callout";
 import { Panel, PanelBody } from "../../design-system/panel";
-import { SegmentBar } from "../../design-system/readings";
+import { SegmentBar } from "../../design-system/segmentbar";
 import { StatStrip } from "../../design-system/statstrip";
 import {
   formatAnalyticsMoney,

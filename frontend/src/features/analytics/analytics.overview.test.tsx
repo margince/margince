@@ -108,8 +108,8 @@ describe("Sales review", () => {
     expect(strip.getByText("€420,000")).toBeVisible();
     expect(strip.getByText("€760,000")).toBeVisible();
     // The shortfall stands under the projection, short, as a warning.
-    expect(hero.getByText("€40k short of target")).toBeVisible();
-    expect(hero.getByText("of €800,000 target")).toBeVisible();
+    expect(hero.getByText("€40k short of goal")).toBeVisible();
+    expect(hero.getByText("of €800,000 goal")).toBeVisible();
     expect(strip.getByText("Pipeline due this quarter")).toBeVisible();
 
     expect(screen.queryByRole("region", { name: "Summary" })).toBeNull();
@@ -164,8 +164,8 @@ describe("Sales review", () => {
     );
     const strip = await readings();
     expect(strip.queryByText("Closed win rate")).toBeNull();
-    expect(strip.queryByText("Gap to target")).toBeNull();
-    expect(screen.getByRole("link", { name: "Set targets" })).toBeVisible();
+    expect(strip.queryByText("Gap to goal")).toBeNull();
+    expect(screen.getByRole("link", { name: "Set sales goals" })).toBeVisible();
     expect(screen.queryByText(/No sales target is set for/)).toBeNull();
   });
 
@@ -178,9 +178,9 @@ describe("Sales review", () => {
           }),
     );
     expect(
-      await screen.findByText(/A colleague who manages targets/),
+      await screen.findByText(/A colleague who manages sales goals/),
     ).toBeVisible();
-    expect(screen.queryByRole("button", { name: "Set targets" })).toBeNull();
+    expect(screen.queryByRole("link", { name: "Set sales goals" })).toBeNull();
   });
 
   it("offers one click to the quarter on another period", async () => {

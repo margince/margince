@@ -40,6 +40,16 @@ describe("readsTeamProgress", () => {
     expect(readsTeamProgress(context(own, [own, team]))).toBe(false);
   });
 
+  it("names a reader by their own figures while no team is theirs to measure", () => {
+    const unread: Scope = { ...team, measurable: false };
+    expect(readsTeamProgress(context(managed, [own, unread]))).toBe(false);
+  });
+
+  it("names a reader by their own figures when the answer is no frame", () => {
+    const page: unknown = { data: [] };
+    expect(readsTeamProgress(page as AnalyticsContext)).toBe(false);
+  });
+
   it("names a reader whose context has not arrived by their own figures", () => {
     expect(readsTeamProgress(undefined)).toBe(false);
   });

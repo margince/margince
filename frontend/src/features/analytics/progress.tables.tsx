@@ -21,7 +21,7 @@ import type {
   SalesProgressMember,
   SalesProgressMonth,
 } from "./progress.queries";
-import { amountText, DeltaBadge, goalText } from "./progress.result";
+import { amountText, goalText, ProgressDelta } from "./progress.result";
 
 /** Each team member's goal, closed and planned revenue, in name order. */
 export function ProgressMembers({
@@ -86,6 +86,7 @@ export function ProgressMembers({
                       member.goal.amount_minor > 0 && (
                         <Meter
                           dense
+                          flat
                           value={Math.min(
                             member.closed.amount_minor,
                             member.goal.amount_minor,
@@ -102,7 +103,11 @@ export function ProgressMembers({
                 header: t("progress.delta"),
                 align: "end",
                 render: (member) => (
-                  <DeltaBadge delta={member.delta_minor} currency={currency} />
+                  <ProgressDelta
+                    delta={member.delta_minor}
+                    currency={currency}
+                    open={progress.state !== "ended"}
+                  />
                 ),
               },
               {
@@ -171,7 +176,11 @@ export function ProgressMonths({
                 row.state === "not_started" ? (
                   <span className="t-caption">{t("progress.notStarted")}</span>
                 ) : (
-                  <DeltaBadge delta={row.delta_minor} currency={currency} />
+                  <ProgressDelta
+                    delta={row.delta_minor}
+                    currency={currency}
+                    open={row.state !== "ended"}
+                  />
                 ),
             },
           ]}

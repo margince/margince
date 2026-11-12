@@ -6,6 +6,12 @@
   cursor: pointer;
 }
 
+/* The row a pane beside the table shows keeps the ground a pointer gives a
+   row: where the reader is, never a call to press. */
+.table > tbody > tr.is-selected > td {
+  background: var(--groundHover);
+}
+
 /* A column of figures, heading and cells alike: set against the end so the
    digits of every row stack, and tabular so each digit takes one width. */
 .table .datatable-end {

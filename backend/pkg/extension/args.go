@@ -40,6 +40,15 @@ import (
 // non-struct T declares no names, so every member is unknown and the document
 // is refused, which is the safe direction for a programming error.
 func DecodeArgs[T any](in json.RawMessage) (T, error) {
+	out, err := readArgs[T](in)
+	if err != nil {
+		// The caller sent it, so the answer is theirs to fix: a 422, never a 500.
+		return out, fmt.Errorf("%w: %w", ErrInvalid, err)
+	}
+	return out, nil
+}
+
+func readArgs[T any](in json.RawMessage) (T, error) {
 	var out T
 	if err := checkArgumentObject[T](in); err != nil {
 		return out, err
