@@ -3,6 +3,7 @@ import { useState } from "react";
 import { api } from "../../api/client";
 import { ifMatch, requireVersion } from "../../api/version";
 import { SUBMIT_COPY, type SubmitIntent } from "../../components/create";
+import { LogActivityAction } from "../../components/logactivity.action";
 import {
   Button,
   EmptyState,
@@ -10,7 +11,6 @@ import {
   SectionHeader,
   TextInput,
 } from "../../design-system/atoms";
-import { DateInput, isoOrBlank } from "../../design-system/dateinput";
 import { ErrorLine } from "../../design-system/errorline";
 import { refuseUnreadableField } from "../../design-system/formvalidity";
 import { Panel, PanelBody } from "../../design-system/panel";
@@ -69,8 +69,6 @@ type PartnerFormValues = {
   margin_tier: "" | MarginTier;
   // Empty on a new programme: the server starts it on the first candidate stage.
   relationship_stage: string;
-  next_step: string;
-  next_step_due_at: string;
   served_segments: string;
 };
 
@@ -80,14 +78,13 @@ function defaultFormValues(partner?: Partner): PartnerFormValues {
     cert_status: partner?.cert_status ?? "applied",
     margin_tier: partner?.margin_tier ?? "",
     relationship_stage: partner?.relationship_stage ?? "",
-    next_step: partner?.next_step ?? "",
-    next_step_due_at: partner?.next_step_due_at ?? "",
     served_segments: (partner?.served_segments ?? []).join(", "),
   };
 }
 
 // A seat without the partner grant leaves the tier out of the body. The server
-// takes the grant for any tier the body names, a null included.
+// takes the grant for any tier the body names, a null included. The old
+// free-text next step is never sent, so a save keeps what is stored.
 function buildUpsertBody(
   values: PartnerFormValues,
   setsTier: boolean,
@@ -101,8 +98,6 @@ function buildUpsertBody(
     cert_status: values.cert_status,
     ...(setsTier ? { margin_tier: values.margin_tier || null } : {}),
     relationship_stage: values.relationship_stage || undefined,
-    next_step: values.next_step.trim() || undefined,
-    next_step_due_at: values.next_step_due_at || undefined,
     served_segments: segments.length > 0 ? segments : undefined,
   };
 }
@@ -253,28 +248,6 @@ function PartnerForm({
           />
         )}
       </Field>
-      <Field label={t("partner.nextStep")}>
-        {(control) => (
-          <TextInput
-            {...control}
-            value={values.next_step}
-            onChange={(event) =>
-              setValues({ ...values, next_step: event.target.value })
-            }
-          />
-        )}
-      </Field>
-      <Field label={t("partner.nextStepDue")}>
-        {(control) => (
-          <DateInput
-            {...control}
-            value={isoOrBlank(values.next_step_due_at)}
-            onChange={(event) =>
-              setValues({ ...values, next_step_due_at: event.target.value })
-            }
-          />
-        )}
-      </Field>
       <Field
         label={t("partner.servedSegments")}
         hint={t("partner.servedSegmentsHint")}
@@ -373,12 +346,10 @@ function PartnerDetail({
             {partnerStageLabel(partner, t)}
             <ActivationNote partner={partner} locale={locale} zone={zone} />
           </dd>
-          {partner.next_step && (
-            <>
-              <dt>{t("partner.nextStep")}</dt>
-              <dd>{partner.next_step}</dd>
-            </>
-          )}
+          <dt>{t("partner.nextStep")}</dt>
+          <dd>
+            <PartnerNextStep companyId={companyId} partner={partner} />
+          </dd>
           {partner.served_segments && partner.served_segments.length > 0 && (
             <>
               <dt>{t("partner.servedSegments")}</dt>
@@ -469,5 +440,39 @@ export function PartnerTab({ companyId }: Readonly<{ companyId: string }>) {
         )
       }
     </QueryGate>
+  );
+}
+
+/**
+ * The partner's next step is a task on its company, with a colleague who does
+ * it and a due date. So it reaches that colleague's Home and Worklist. Text
+ * written before that stays readable here until someone turns it into a task.
+ */
+function PartnerNextStep({
+  companyId,
+  partner,
+}: Readonly<{ companyId: string; partner: Partner }>) {
+  const t = useT();
+  const canFileTask = useCanWrite("activity", "create");
+  return (
+    <div className="form-stack">
+      {partner.next_step && (
+        <p>
+          <span>{partner.next_step}</span>
+          {partner.next_step_due_at && (
+            <span> · {partner.next_step_due_at}</span>
+          )}
+          <br />
+          <span className="t-caption">{t("partner.nextStepOld")}</span>
+        </p>
+      )}
+      {canFileTask && (
+        <LogActivityAction
+          entityType="company"
+          entityId={companyId}
+          askedKind="task"
+        />
+      )}
+    </div>
   );
 }

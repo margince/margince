@@ -71062,8 +71062,8 @@ components:
         partner_fit_override_reason: { type: [string, 'null'], readOnly: true, description: 'Non-null ⇒ partner_fit_score is a human Commercial Judgement override and recompute is suppressed until cleared.' }
         relationship_health: { type: [string, 'null'], description: 'Decimal-as-string 0..1 computed by the partner relationship-health formula; basis for 30/60/90 partner dormancy flags.' }
         last_contact_at: { type: [string, 'null'], format: date-time }
-        next_step: { type: [string, 'null'] }
-        next_step_due_at: { type: [string, 'null'], format: date }
+        next_step: { type: [string, 'null'], deprecated: true, description: 'Deprecated: a partner''s next step is a task on its company, with a colleague who does it and a due date. Text written here before stays readable.' }
+        next_step_due_at: { type: [string, 'null'], format: date, deprecated: true, description: 'Deprecated: the due date of the old free-text `next_step`; a task carries its own.' }
         served_segments: { type: [array, 'null'], items: { type: string } }
         version: { $ref: '#/components/schemas/RowVersion' }
         created_at: { type: string, format: date-time }
@@ -71092,8 +71092,8 @@ components:
             `unknown_partner_stage` or `inactive_partner_stage`). A stage meaning `active` is 422
             `partner_not_activated` until the partner was activated by an accepted partner lead or
             a won customer it sourced.
-        next_step: { type: [string, 'null'] }
-        next_step_due_at: { type: [string, 'null'], format: date }
+        next_step: { type: [string, 'null'], deprecated: true, description: 'Deprecated: a partner''s next step is a task on its company, with a colleague who does it and a due date. Text written here before stays readable.' }
+        next_step_due_at: { type: [string, 'null'], format: date, deprecated: true, description: 'Deprecated: the due date of the old free-text `next_step`; a task carries its own.' }
         served_segments: { type: [array, 'null'], items: { type: string } }
 
     SetUpPartnerRequest:
@@ -71111,8 +71111,8 @@ components:
           items: { $ref: '#/components/schemas/PartnerKind' }
         partner_role: { type: string, enum: [hosting, consulting, strategic], deprecated: true, description: 'Deprecated: send `partner_kinds`.' }
         relationship_stage: { type: string, description: 'An active key from `/partner-stages`.' }
-        next_step: { type: string }
-        next_step_due_at: { type: string, format: date }
+        next_step: { type: string, deprecated: true, description: 'Deprecated: a partner''s next step is a task on its company, with a colleague who does it and a due date. Text written here before stays readable.' }
+        next_step_due_at: { type: string, format: date, deprecated: true, description: 'Deprecated: the due date of the old free-text `next_step`; a task carries its own.' }
 
     PartnerKind:
       type: string

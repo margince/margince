@@ -2882,9 +2882,15 @@ type Partner struct {
 	MarginTier *PartnerMarginTier `json:"margin_tier,omitempty"`
 
 	// MaskedFields The fields of THIS row the caller's role withholds (a field mask — e.g. `margin_tier` for a seat that reads partners but not their commercial terms). A named field is null because it is withheld, not because it is empty; absent or empty means nothing is withheld.
-	MaskedFields  *[]string `json:"masked_fields,omitempty"`
-	NextStep      *string   `json:"next_step,omitempty"`
-	NextStepDueAt *string   `json:"next_step_due_at,omitempty"`
+	MaskedFields *[]string `json:"masked_fields,omitempty"`
+
+	// NextStep Deprecated: a partner's next step is a task on its company, with a colleague who does it and a due date. Text written here before stays readable.
+	// Deprecated: this property has been marked as deprecated upstream, but no `x-deprecated-reason` was set
+	NextStep *string `json:"next_step,omitempty"`
+
+	// NextStepDueAt Deprecated: the due date of the old free-text `next_step`; a task carries its own.
+	// Deprecated: this property has been marked as deprecated upstream, but no `x-deprecated-reason` was set
+	NextStepDueAt *string `json:"next_step_due_at,omitempty"`
 
 	// PartnerFitOverrideReason Non-null ⇒ partner_fit_score is a human Commercial Judgement override and recompute is suppressed until cleared.
 	PartnerFitOverrideReason *string `json:"partner_fit_override_reason,omitempty"`

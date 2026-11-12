@@ -3259,6 +3259,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "partner.stage": "Beziehungsphase",
   "partner.nextStep": "Nächster Schritt",
   "partner.nextStepDue": "Nächster Schritt fällig",
+  "partner.nextStepOld":
+    "Notiert, bevor nächste Schritte Aufgaben wurden. Lege eine Aufgabe an, damit jemand aus dem Team sie mit Fälligkeit übernimmt.",
   "partner.servedSegments": "Betreute Segmente",
   "partner.servedSegmentsHint":
     "An wen der Partner verkauft, zum Beispiel mittelständische Hersteller. Mehrere durch Kommas trennen.",
