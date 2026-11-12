@@ -12615,8 +12615,6 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "book.returnRequestAction": "Gửi liên kết cho tôi",
   "book.returnRequestSent":
     "Hãy kiểm tra hộp thư. Nếu địa chỉ này có thể được lưu lại, một liên kết xác nhận đang được gửi đến.",
-  "book.returnRequestRecent":
-    "Quý khách đã yêu cầu gần đây. Hãy kiểm tra hộp thư hoặc thử lại vào ngày mai.",
   "book.attendee": "Email người tham dự",
   "book.subject": "Cuộc họp qua Margince",
   "book.name": "Họ và tên",

@@ -12934,8 +12934,6 @@ export const en = {
   "book.returnRequestAction": "Send me the link",
   "book.returnRequestSent":
     "Check your inbox. If this address can be stored again, a link to confirm is on its way.",
-  "book.returnRequestRecent":
-    "You asked recently. Check your inbox, or try again tomorrow.",
   "book.attendee": "Attendee email",
   "book.subject": "Meeting via Margince",
   "book.name": "Your name",

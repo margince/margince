@@ -63,7 +63,7 @@ it("sends the name and address to the host's return path and says only to check 
   expect(screen.queryByLabelText(en["book.email"])).toBeNull();
 });
 
-it("answers a spent daily budget calmly and keeps the form", async () => {
+it("answers a spent daily budget exactly as it answers any address", async () => {
   installFetchStub({
     "POST /public/booking/ada-lovelace/return": () =>
       jsonResponse({ status: 429, title: "Too many requests" }, 429),
@@ -72,10 +72,9 @@ it("answers a spent daily budget calmly and keeps the form", async () => {
 
   ask("Wieder Da", "wieder@example.com");
 
-  expect(await screen.findByText(en["book.returnRequestRecent"])).toBeTruthy();
-  expect(screen.queryByText(en["book.returnRequestSent"])).toBeNull();
+  expect(await screen.findByText(en["book.returnRequestSent"])).toBeTruthy();
   expect(screen.queryByRole("alert")).toBeNull();
-  expect(screen.getByLabelText(en["book.email"])).toBeTruthy();
+  expect(screen.queryByLabelText(en["book.email"])).toBeNull();
 });
 
 it("shows any other refusal as an error, not as sent", async () => {
@@ -92,7 +91,6 @@ it("shows any other refusal as an error, not as sent", async () => {
 
   expect(await screen.findByRole("alert")).toBeTruthy();
   expect(screen.queryByText(en["book.returnRequestSent"])).toBeNull();
-  expect(screen.queryByText(en["book.returnRequestRecent"])).toBeNull();
 });
 
 it("leaves the booking page itself without a way to the return page", async () => {

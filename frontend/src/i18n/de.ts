@@ -12959,8 +12959,6 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "book.returnRequestAction": "Link senden",
   "book.returnRequestSent":
     "Schau in dein Postfach. Wenn diese Adresse wieder gespeichert werden kann, ist ein Link zum Bestätigen unterwegs.",
-  "book.returnRequestRecent":
-    "Du hast vor Kurzem schon gefragt. Schau in dein Postfach oder versuch es morgen noch einmal.",
   "book.attendee": "E-Mail des Gasts",
   "book.subject": "Termin über Margince",
   "book.name": "Name",

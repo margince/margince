@@ -31,10 +31,9 @@ export function BookingReturnRequestScreen({
         "/public/booking/{host_slug}/return",
         { params: { path: { host_slug: hostSlug } }, body },
       );
-      // This address asked already today. That is an answer to show calmly,
-      // not a failure.
-      if (response.status === 429) return "recent";
-      if (error) throwBookingProblem(error, t);
+      // A spent daily budget answers like any other request: a different
+      // message would tell a stranger that someone asked for this address.
+      if (response.status !== 429 && error) throwBookingProblem(error, t);
       return "sent";
     },
   });
@@ -95,13 +94,6 @@ export function BookingReturnRequestScreen({
                     {t("book.returnRequestAction")}
                   </Button>
                 </div>
-                {request.data === "recent" && (
-                  <Callout
-                    tone="info"
-                    kind="outcome"
-                    title={t("book.returnRequestRecent")}
-                  />
-                )}
                 <ErrorLine error={request.isError && request.error} />
               </form>
             )}
