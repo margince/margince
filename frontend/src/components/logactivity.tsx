@@ -38,6 +38,7 @@ import { ActivityBodyField } from "./activitybodyfield";
 import { TaskAssigneeField } from "./assigneepicker";
 import { LogActivityEntries } from "./extensionentries";
 import { TaskCompletionChoice } from "./logactivity.taskcompletion";
+import { assignedRecord } from "./recordassignments.queries";
 import "./logactivity.css";
 import { useViewerZone } from "../lib/viewerzone";
 import { FollowUpTaskFields, TaskTimeField } from "./followuptaskfields";
@@ -382,6 +383,7 @@ export function LogActivityForm({
         active={draft.kind === "task"}
         value={draft.assigneeId}
         onChange={(value) => setField({ assigneeId: value })}
+        records={assignedRecord(entityType, entityId)}
       />
       {asksAttendees && entityType && entityId && (
         <MeetingAttendeeFields
@@ -432,6 +434,7 @@ export function LogActivityForm({
         <FollowUpTaskFields
           value={draft.followUp}
           onChange={(followUp) => setField({ followUp })}
+          records={assignedRecord(entityType, entityId)}
         />
       )}
       {transcript && (

@@ -5,17 +5,24 @@ import { cleanup, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, expect, it, vi } from "vitest";
 import { LocaleProvider } from "../../i18n";
-import { editableStrings, StagedEditor } from "./approvaleditor";
+import { cardRecords, editableStrings, StagedEditor } from "./approvaleditor";
 
 const roster = vi.hoisted(() => ({ isError: false }));
 
+const pickerRecords = vi.hoisted((): { last: unknown } => ({
+  last: undefined,
+}));
+
 vi.mock("../../components/assigneepicker", () => ({
-  useAssignableUserOptions: () => ({
-    options: roster.isError
-      ? []
-      : [{ value: "seat-priya", label: "Priya Raman" }],
-    roster: { data: [], isError: roster.isError },
-  }),
+  useAssignableUserOptions: (_enabled: boolean, records: unknown) => {
+    pickerRecords.last = records;
+    return {
+      options: roster.isError
+        ? []
+        : [{ value: "seat-priya", label: "Priya Raman" }],
+      roster: { data: [], isError: roster.isError },
+    };
+  },
 }));
 
 vi.mock("../../components/entityref", () => ({
@@ -93,4 +100,32 @@ it("offers no doer on a card staged before the doer existed", () => {
     due_date: "2026-11-20",
   });
   expect(fields.map((field) => field.field)).not.toContain("doer_id");
+});
+
+it("hands the card's own records to the doer picker, so their named colleagues lead it", () => {
+  const records = cardRecords({
+    links: [
+      { EntityType: "contact", EntityID: "c-1" },
+      { EntityType: "company", EntityID: "co-1" },
+    ],
+  });
+  expect(records).toEqual([{ type: "company", id: "co-1" }]);
+  expect(cardRecords({ deal_id: "deal-1" })).toEqual([
+    { type: "deal", id: "deal-1" },
+  ]);
+  const fields = editableStrings("commitment_task", { doer_id: "" });
+  render(
+    <LocaleProvider initial="en">
+      <StagedEditor
+        fields={fields}
+        records={records}
+        draft={{ doer_id: "" }}
+        onChange={() => undefined}
+        pending={false}
+        onApprove={() => undefined}
+        onCancel={() => undefined}
+      />
+    </LocaleProvider>,
+  );
+  expect(pickerRecords.last).toEqual(records);
 });
