@@ -41,7 +41,6 @@ func TestMarkAssertableNeedsTheForecastGrants(t *testing.T) {
 			if scope.Assertable == nil || *scope.Assertable != tc.want {
 				t.Fatalf("assertable = %v, want %v", scope.Assertable, tc.want)
 			}
-			// Reading a scope inside the lens takes no forecast grant.
 			if scope.Measurable == nil || !*scope.Measurable {
 				t.Fatalf("measurable = %v, want true", scope.Measurable)
 			}
@@ -50,7 +49,8 @@ func TestMarkAssertableNeedsTheForecastGrants(t *testing.T) {
 }
 
 func TestMarkAssertableFollowsTheWriteRoutesRule(t *testing.T) {
-	mine, foreign := ids.NewV7(), ids.NewV7()
+	self := actorWithScope(principal.RowScopeOwn)
+	mine, foreign := self.UserID, ids.NewV7()
 	scope := func(kind crmcontracts.AnalyticsScopeKind, id *ids.UUID) crmcontracts.AnalyticsScope {
 		out := crmcontracts.AnalyticsScope{Kind: kind}
 		if id != nil {
@@ -58,8 +58,6 @@ func TestMarkAssertableFollowsTheWriteRoutesRule(t *testing.T) {
 		}
 		return out
 	}
-	self := actorWithScope(principal.RowScopeOwn)
-	self.UserID = mine
 	cases := []struct {
 		name  string
 		actor principal.Principal
@@ -84,9 +82,7 @@ func TestMarkAssertableFollowsTheWriteRoutesRule(t *testing.T) {
 			if tc.scope.Assertable == nil || *tc.scope.Assertable != tc.want {
 				t.Fatalf("assertable = %v, want %v", tc.scope.Assertable, tc.want)
 			}
-			// A manager's teams are theirs to read, though no call is made about them.
-			measurable := tc.want || tc.scope.Kind == crmcontracts.AnalyticsScopeKindManagedTeams
-			if tc.scope.Measurable == nil || *tc.scope.Measurable != measurable {
+			if measurable := tc.want || tc.scope.Kind == crmcontracts.AnalyticsScopeKindManagedTeams; tc.scope.Measurable == nil || *tc.scope.Measurable != measurable {
 				t.Fatalf("measurable = %v, want %v", tc.scope.Measurable, measurable)
 			}
 		})
