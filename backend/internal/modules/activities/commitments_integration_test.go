@@ -22,10 +22,8 @@ import (
 	"context"
 	"errors"
 	"os"
-	"strconv"
 	"strings"
 	"testing"
-	"time"
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -45,10 +43,6 @@ const (
 	visibleContactNam = "Ada Lovelace"
 	hiddenProjectNam  = "Confidential Zeta rollout"
 )
-
-// ownerStatementCeiling bounds each statement the owner connection sends: far
-// above a bounded plan over any seed here, far below the package's budget.
-const ownerStatementCeiling = time.Minute
 
 // promiseEnv is one workspace with two reps, and records owned by each.
 type promiseEnv struct {
@@ -89,8 +83,7 @@ func setupPromises(t *testing.T) *promiseEnv {
 	// A plan that walks the seeded mail can outrun the package's whole budget,
 	// and then go test kills the package with no test named. Capped, it fails
 	// as the test that ran it.
-	if _, err := owner.Exec(ctx, "SELECT set_config('statement_timeout', $1, false)",
-		strconv.FormatInt(ownerStatementCeiling.Milliseconds(), 10)); err != nil {
+	if err := testdb.CapStatements(ctx, owner); err != nil {
 		t.Fatal(err)
 	}
 
@@ -120,15 +113,8 @@ func setupPromises(t *testing.T) *promiseEnv {
 
 func TestARunawayStatementFailsAsTheTestThatSentIt(t *testing.T) {
 	e := setupPromises(t)
-	var ceiling string
-	var capped bool
-	if err := e.owner.QueryRow(context.Background(),
-		"SELECT current_setting('statement_timeout'), current_setting('statement_timeout')::interval = make_interval(secs => $1)",
-		ownerStatementCeiling.Seconds()).Scan(&ceiling, &capped); err != nil {
-		t.Fatal(err)
-	}
-	if !capped {
-		t.Fatalf("the owner connection's statement_timeout is %q, want %v", ceiling, ownerStatementCeiling)
+	if capped, setting, err := testdb.StatementsCapped(context.Background(), e.owner); err != nil || !capped {
+		t.Fatalf("the owner connection's statement_timeout is %q (%v), want %v", setting, err, testdb.OwnerStatementCeiling)
 	}
 }
 
