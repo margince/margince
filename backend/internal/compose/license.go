@@ -113,8 +113,8 @@ func WithLicensePosture(posture func() licensecheck.Posture) Option {
 func WithInstallationTrial(trial *InstallationTrial) Option {
 	return func(s *Server, _ *pgxpool.Pool) {
 		s.installationTrial = trial
-		s.authHandlers = s.authHandlers.WithTrialLock(trial.Ended)
-		s.licenseHandlers.trial = trial
+		s.authHandlers = s.WithTrialLock(trial.Ended)
+		s.trial = trial
 	}
 }
 
