@@ -11,9 +11,9 @@ package collections
 import (
 	"context"
 	"errors"
+	"slices"
 	"testing"
 
-	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/ports/fieldcatalog"
 )
@@ -96,25 +96,12 @@ func TestASavedViewFilterThatIsNotATreeIsRefused(t *testing.T) {
 // have no segment engine: they are not predicate-leaf resources, so a view over
 // one carries view state without a filter this module can check. Named here so
 // the gate below can tell "intentionally unfilterable" from "forgotten".
-var nonFilterableViewResources = map[string]bool{
-	string(crmcontracts.SavedViewResourceSavedViewResourceActivities): true,
-	string(crmcontracts.SavedViewResourceSavedViewResourcePartners):   true,
-}
+var nonFilterableViewResources = map[string]bool{"activities": true, "partners": true}
 
-// contractViewResources is the SavedViewResource enum as the contract declares
-// it. Hand-listed, which is a snapshot rather than a derivation: an eighth
-// member added to crm.yaml and forgotten here leaves this test green. The
-// derived form belongs in the backend-root suite, where contractSchema already
-// parses api/crm.yaml — tracked separately rather than half-built here.
-var contractViewResources = []crmcontracts.SavedViewResource{
-	crmcontracts.SavedViewResourceSavedViewResourceActivities,
-	crmcontracts.SavedViewResourceSavedViewResourceDeals,
-	crmcontracts.SavedViewResourceSavedViewResourceLeads,
-	crmcontracts.SavedViewResourceSavedViewResourceCompanies,
-	crmcontracts.SavedViewResourceSavedViewResourcePartners,
-	crmcontracts.SavedViewResourceSavedViewResourceContacts,
-	crmcontracts.SavedViewResourceSavedViewResourceProjects,
-}
+// coreViewResources are the core lists a saved view may be over, as the
+// contract's SavedViewTarget names them. The list is a snapshot, not a derivation.
+// TestSavedViewTargetIsTheResourceCheck holds the contract to the schema's CHECK.
+var coreViewResources = []string{"activities", "deals", "leads", "companies", "partners", "contacts", "projects"}
 
 // Every contract member is either filterable or declared deliberately not, in
 // the direction that can actually fail.
@@ -130,8 +117,7 @@ var contractViewResources = []crmcontracts.SavedViewResource{
 // separate authorities, and they disagree today — the saved_view.resource CHECK
 // is the authority, and the integration lane compares against it.
 func TestEveryViewResourceIsFilterableOrDeclaredOtherwise(t *testing.T) {
-	for _, resource := range contractViewResources {
-		name := string(resource)
+	for _, name := range coreViewResources {
 		key, filterable := viewResourceToEngine[name]
 		switch {
 		case filterable && nonFilterableViewResources[name]:
@@ -151,7 +137,7 @@ func TestEveryViewResourceIsFilterableOrDeclaredOtherwise(t *testing.T) {
 // ever reach, and it would sit there reading as coverage.
 func TestEveryMappedViewResourceIsAContractMember(t *testing.T) {
 	for name := range viewResourceToEngine {
-		if !crmcontracts.SavedViewResource(name).Valid() {
+		if !slices.Contains(coreViewResources, name) {
 			t.Errorf("viewResourceToEngine maps %q, which the contract's resource enum does not declare", name)
 		}
 	}

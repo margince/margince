@@ -31,6 +31,7 @@ const (
 	TypePicklist    = "picklist"
 	TypeMultiselect = "multiselect"
 	TypeBoolean     = "boolean"
+	TypeRecord      = "record"
 )
 
 // Types answers the closed set above, so a consumer handling EVERY field type
@@ -41,7 +42,7 @@ const (
 //
 // A fresh slice per call, so no consumer can reorder it for every other.
 func Types() []string {
-	return []string{TypeText, TypeNumber, TypeDate, TypeCurrency, TypePicklist, TypeMultiselect, TypeBoolean}
+	return []string{TypeText, TypeNumber, TypeDate, TypeCurrency, TypePicklist, TypeMultiselect, TypeBoolean, TypeRecord}
 }
 
 // Column is one custom-field column for a (workspace, object) pair. Whether it

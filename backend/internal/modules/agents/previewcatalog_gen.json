@@ -129,11 +129,11 @@
   "format/weekstart.ts":
    "504a0f7101ddccc7a917819967f39e6dfafb07952180fbccc7e00c7e1b1de1e7",
   "i18n/de.ts":
-   "98b65ddb4759ab19de8ef7be33fbfe5b9248140b30364882393c2f7d317c05e6",
+   "60105604de9e9c62a9312c5f1a3814c093b06aa73b84038ea68f5193d6e69091",
   "i18n/en.ts":
-   "be34c66e389467088b88e728b1941cff7b98b670801b0048ee3764bd6160fce4",
+   "e07e4b7458c0c4b9f6d522144dbfed13fce4bbca1845490fbc585974d49c959a",
   "i18n/vi.ts":
-   "0790ad567ad333bb3f686f4b9eb468d82119ad09850271296c75c568c44f334c",
+   "782a141bd97613455846c3ad5104d914724c2e176979d4d93ec62f529dda4d10",
   "lib/acquisitionkinds.ts":
    "c5dd117a1d2e9f0b79cde5aa9ef6e2cc34c1f8aad27f48ca914935fdf4879a54",
   "lib/approvallifecycle.ts":
@@ -155,7 +155,7 @@
   "lib/factview.ts":
    "db074f07af5e3a75aca6c7c269ef71529a6078f9f1c03e4c5f4e03b7ab076d0c",
   "lib/historyfieldlabels.ts":
-   "51124bd1634aeca505681fbdd728b141173d2ec9d5f529066975e08be18f81ae",
+   "79ca6bf31676df5204f15dc8c92fad45adc050b248217fb44bbb08f6a36d0f80",
   "lib/labelfor.ts":
    "26f540eedc3dcbe98e9c831bd25e752c17b8c3c183a056150da4907d396428bf",
   "lib/memberretirement.ts":
@@ -526,6 +526,8 @@
      "Expected ARR",
     "expected_close_date":
      "Expected close",
+    "extension_relationship_types":
+     "Extension relationship types",
     "failed":
      "failed",
     "field":
@@ -660,6 +662,8 @@
      "Line total",
     "link":
      "link",
+    "link_suggestion":
+     "Suggested link",
     "linkedin_url":
      "LinkedIn URL",
     "locale":
@@ -1206,6 +1210,8 @@
      "record confirmation only",
     "record_contact_acquisition":
      "record contact acquisition",
+    "record_link":
+     "Link",
     "record_meeting_only":
      "record meeting only",
     "record_meeting_with_consent":
@@ -5106,6 +5112,26 @@
      "Unknown",
     "expected_close_date/boolean/true":
      "Yes",
+    "extension_relationship_types/lifecycle/customer":
+     "Customer",
+    "extension_relationship_types/lifecycle/disqualified":
+     "Disqualified",
+    "extension_relationship_types/lifecycle/former_customer":
+     "Former customer",
+    "extension_relationship_types/lifecycle/live":
+     "Live",
+    "extension_relationship_types/lifecycle/onboarding":
+     "Onboarding",
+    "extension_relationship_types/lifecycle/opportunity":
+     "Opportunity",
+    "extension_relationship_types/lifecycle/prospect":
+     "Prospect",
+    "extension_relationship_types/lifecycle/target":
+     "Target",
+    "extension_relationship_types/lifecycle/unknown":
+     "Unknown",
+    "extension_relationship_types/boolean/true":
+     "Yes",
     "failed/lifecycle/customer":
      "Customer",
     "failed/lifecycle/disqualified":
@@ -6447,6 +6473,26 @@
     "link/lifecycle/unknown":
      "Unknown",
     "link/boolean/true":
+     "Yes",
+    "link_suggestion/lifecycle/customer":
+     "Customer",
+    "link_suggestion/lifecycle/disqualified":
+     "Disqualified",
+    "link_suggestion/lifecycle/former_customer":
+     "Former customer",
+    "link_suggestion/lifecycle/live":
+     "Live",
+    "link_suggestion/lifecycle/onboarding":
+     "Onboarding",
+    "link_suggestion/lifecycle/opportunity":
+     "Opportunity",
+    "link_suggestion/lifecycle/prospect":
+     "Prospect",
+    "link_suggestion/lifecycle/target":
+     "Target",
+    "link_suggestion/lifecycle/unknown":
+     "Unknown",
+    "link_suggestion/boolean/true":
      "Yes",
     "linkedin_url/lifecycle/customer":
      "Customer",
@@ -9176,6 +9222,8 @@
      "Expected ARR",
     "merge_profile_field/text/expected_close_date":
      "Expected close",
+    "merge_profile_field/text/extension_relationship_types":
+     "Extension relationship types",
     "merge_profile_field/text/filled":
      "Fields filled in",
     "merge_profile_field/text/first_name":
@@ -9216,6 +9264,8 @@
      "Lifted at level",
     "merge_profile_field/text/lifted_suppression":
      "Lifted suppression",
+    "merge_profile_field/text/link_suggestion":
+     "Suggested link",
     "merge_profile_field/text/linkedin_url":
      "LinkedIn URL",
     "merge_profile_field/text/lost_reason":
@@ -9278,6 +9328,8 @@
      "Ready for the meeting",
     "merge_profile_field/text/reason":
      "Reason",
+    "merge_profile_field/text/record_link":
+     "Link",
     "merge_profile_field/text/recorded_at_level":
      "Recorded at level",
     "merge_profile_field/text/relationship_mark":
@@ -9460,6 +9512,8 @@
      "Expected ARR",
     "merge_profile_field/lifecycle/expected_close_date":
      "Expected close",
+    "merge_profile_field/lifecycle/extension_relationship_types":
+     "Extension relationship types",
     "merge_profile_field/lifecycle/filled":
      "Fields filled in",
     "merge_profile_field/lifecycle/first_name":
@@ -9500,6 +9554,8 @@
      "Lifted at level",
     "merge_profile_field/lifecycle/lifted_suppression":
      "Lifted suppression",
+    "merge_profile_field/lifecycle/link_suggestion":
+     "Suggested link",
     "merge_profile_field/lifecycle/linkedin_url":
      "LinkedIn URL",
     "merge_profile_field/lifecycle/lost_reason":
@@ -9562,6 +9618,8 @@
      "Ready for the meeting",
     "merge_profile_field/lifecycle/reason":
      "Reason",
+    "merge_profile_field/lifecycle/record_link":
+     "Link",
     "merge_profile_field/lifecycle/recorded_at_level":
      "Recorded at level",
     "merge_profile_field/lifecycle/relationship_mark":
@@ -12943,6 +13001,26 @@
     "record_contact_acquisition/lifecycle/unknown":
      "Unknown",
     "record_contact_acquisition/boolean/true":
+     "Yes",
+    "record_link/lifecycle/customer":
+     "Customer",
+    "record_link/lifecycle/disqualified":
+     "Disqualified",
+    "record_link/lifecycle/former_customer":
+     "Former customer",
+    "record_link/lifecycle/live":
+     "Live",
+    "record_link/lifecycle/onboarding":
+     "Onboarding",
+    "record_link/lifecycle/opportunity":
+     "Opportunity",
+    "record_link/lifecycle/prospect":
+     "Prospect",
+    "record_link/lifecycle/target":
+     "Target",
+    "record_link/lifecycle/unknown":
+     "Unknown",
+    "record_link/boolean/true":
      "Yes",
     "record_meeting_only/lifecycle/customer":
      "Customer",
@@ -16838,6 +16916,12 @@
      "Not set",
     "expected_close_date/execution":
      "Set when applied",
+    "extension_relationship_types/boolean":
+     "No",
+    "extension_relationship_types/empty":
+     "Not set",
+    "extension_relationship_types/execution":
+     "Set when applied",
     "failed/boolean":
      "No",
     "failed/empty":
@@ -17239,6 +17323,12 @@
     "link/empty":
      "Not set",
     "link/execution":
+     "Set when applied",
+    "link_suggestion/boolean":
+     "No",
+    "link_suggestion/empty":
+     "Not set",
+    "link_suggestion/execution":
      "Set when applied",
     "linkedin_url/boolean":
      "No",
@@ -18942,6 +19032,12 @@
      "Not set",
     "record_contact_acquisition/execution":
      "Set when applied",
+    "record_link/boolean":
+     "No",
+    "record_link/empty":
+     "Not set",
+    "record_link/execution":
+     "Set when applied",
     "record_meeting_only/boolean":
      "No",
     "record_meeting_only/empty":
@@ -20122,6 +20218,8 @@
      "Erwarteter ARR",
     "expected_close_date":
      "Voraussichtlicher Abschluss",
+    "extension_relationship_types":
+     "Erweiterungs-Beziehungstypen",
     "failed":
      "failed",
     "field":
@@ -20256,6 +20354,8 @@
      "Positionssumme",
     "link":
      "link",
+    "link_suggestion":
+     "Verknüpfungsvorschlag",
     "linkedin_url":
      "LinkedIn-URL",
     "locale":
@@ -20802,6 +20902,8 @@
      "record confirmation only",
     "record_contact_acquisition":
      "record contact acquisition",
+    "record_link":
+     "Verknüpfung",
     "record_meeting_only":
      "record meeting only",
     "record_meeting_with_consent":
@@ -24702,6 +24804,26 @@
      "Unbekannt",
     "expected_close_date/boolean/true":
      "Ja",
+    "extension_relationship_types/lifecycle/customer":
+     "Kunde",
+    "extension_relationship_types/lifecycle/disqualified":
+     "Disqualifiziert",
+    "extension_relationship_types/lifecycle/former_customer":
+     "Ehemaliger Kunde",
+    "extension_relationship_types/lifecycle/live":
+     "Live",
+    "extension_relationship_types/lifecycle/onboarding":
+     "Onboarding",
+    "extension_relationship_types/lifecycle/opportunity":
+     "Chance",
+    "extension_relationship_types/lifecycle/prospect":
+     "Interessent",
+    "extension_relationship_types/lifecycle/target":
+     "Zielunternehmen",
+    "extension_relationship_types/lifecycle/unknown":
+     "Unbekannt",
+    "extension_relationship_types/boolean/true":
+     "Ja",
     "failed/lifecycle/customer":
      "Kunde",
     "failed/lifecycle/disqualified":
@@ -26043,6 +26165,26 @@
     "link/lifecycle/unknown":
      "Unbekannt",
     "link/boolean/true":
+     "Ja",
+    "link_suggestion/lifecycle/customer":
+     "Kunde",
+    "link_suggestion/lifecycle/disqualified":
+     "Disqualifiziert",
+    "link_suggestion/lifecycle/former_customer":
+     "Ehemaliger Kunde",
+    "link_suggestion/lifecycle/live":
+     "Live",
+    "link_suggestion/lifecycle/onboarding":
+     "Onboarding",
+    "link_suggestion/lifecycle/opportunity":
+     "Chance",
+    "link_suggestion/lifecycle/prospect":
+     "Interessent",
+    "link_suggestion/lifecycle/target":
+     "Zielunternehmen",
+    "link_suggestion/lifecycle/unknown":
+     "Unbekannt",
+    "link_suggestion/boolean/true":
      "Ja",
     "linkedin_url/lifecycle/customer":
      "Kunde",
@@ -28772,6 +28914,8 @@
      "Erwarteter ARR",
     "merge_profile_field/text/expected_close_date":
      "Voraussichtlicher Abschluss",
+    "merge_profile_field/text/extension_relationship_types":
+     "Erweiterungs-Beziehungstypen",
     "merge_profile_field/text/filled":
      "Ergänzte Felder",
     "merge_profile_field/text/first_name":
@@ -28812,6 +28956,8 @@
      "Aufgehoben auf Ebene",
     "merge_profile_field/text/lifted_suppression":
      "Aufgehobene Sperre",
+    "merge_profile_field/text/link_suggestion":
+     "Verknüpfungsvorschlag",
     "merge_profile_field/text/linkedin_url":
      "LinkedIn-URL",
     "merge_profile_field/text/lost_reason":
@@ -28874,6 +29020,8 @@
      "Bereit für den Termin",
     "merge_profile_field/text/reason":
      "Grund",
+    "merge_profile_field/text/record_link":
+     "Verknüpfung",
     "merge_profile_field/text/recorded_at_level":
      "Erfasst auf Ebene",
     "merge_profile_field/text/relationship_mark":
@@ -29056,6 +29204,8 @@
      "Erwarteter ARR",
     "merge_profile_field/lifecycle/expected_close_date":
      "Voraussichtlicher Abschluss",
+    "merge_profile_field/lifecycle/extension_relationship_types":
+     "Erweiterungs-Beziehungstypen",
     "merge_profile_field/lifecycle/filled":
      "Ergänzte Felder",
     "merge_profile_field/lifecycle/first_name":
@@ -29096,6 +29246,8 @@
      "Aufgehoben auf Ebene",
     "merge_profile_field/lifecycle/lifted_suppression":
      "Aufgehobene Sperre",
+    "merge_profile_field/lifecycle/link_suggestion":
+     "Verknüpfungsvorschlag",
     "merge_profile_field/lifecycle/linkedin_url":
      "LinkedIn-URL",
     "merge_profile_field/lifecycle/lost_reason":
@@ -29158,6 +29310,8 @@
      "Bereit für den Termin",
     "merge_profile_field/lifecycle/reason":
      "Grund",
+    "merge_profile_field/lifecycle/record_link":
+     "Verknüpfung",
     "merge_profile_field/lifecycle/recorded_at_level":
      "Erfasst auf Ebene",
     "merge_profile_field/lifecycle/relationship_mark":
@@ -32539,6 +32693,26 @@
     "record_contact_acquisition/lifecycle/unknown":
      "Unbekannt",
     "record_contact_acquisition/boolean/true":
+     "Ja",
+    "record_link/lifecycle/customer":
+     "Kunde",
+    "record_link/lifecycle/disqualified":
+     "Disqualifiziert",
+    "record_link/lifecycle/former_customer":
+     "Ehemaliger Kunde",
+    "record_link/lifecycle/live":
+     "Live",
+    "record_link/lifecycle/onboarding":
+     "Onboarding",
+    "record_link/lifecycle/opportunity":
+     "Chance",
+    "record_link/lifecycle/prospect":
+     "Interessent",
+    "record_link/lifecycle/target":
+     "Zielunternehmen",
+    "record_link/lifecycle/unknown":
+     "Unbekannt",
+    "record_link/boolean/true":
      "Ja",
     "record_meeting_only/lifecycle/customer":
      "Kunde",
@@ -36434,6 +36608,12 @@
      "Nicht gesetzt",
     "expected_close_date/execution":
      "Wird beim Anwenden festgelegt",
+    "extension_relationship_types/boolean":
+     "Nein",
+    "extension_relationship_types/empty":
+     "Nicht gesetzt",
+    "extension_relationship_types/execution":
+     "Wird beim Anwenden festgelegt",
     "failed/boolean":
      "Nein",
     "failed/empty":
@@ -36835,6 +37015,12 @@
     "link/empty":
      "Nicht gesetzt",
     "link/execution":
+     "Wird beim Anwenden festgelegt",
+    "link_suggestion/boolean":
+     "Nein",
+    "link_suggestion/empty":
+     "Nicht gesetzt",
+    "link_suggestion/execution":
      "Wird beim Anwenden festgelegt",
     "linkedin_url/boolean":
      "Nein",
@@ -38538,6 +38724,12 @@
      "Nicht gesetzt",
     "record_contact_acquisition/execution":
      "Wird beim Anwenden festgelegt",
+    "record_link/boolean":
+     "Nein",
+    "record_link/empty":
+     "Nicht gesetzt",
+    "record_link/execution":
+     "Wird beim Anwenden festgelegt",
     "record_meeting_only/boolean":
      "Nein",
     "record_meeting_only/empty":
@@ -39718,6 +39910,8 @@
      "ARR dự kiến",
     "expected_close_date":
      "Ngày chốt dự kiến",
+    "extension_relationship_types":
+     "Loại quan hệ từ tiện ích mở rộng",
     "failed":
      "failed",
     "field":
@@ -39852,6 +40046,8 @@
      "Thành tiền",
     "link":
      "link",
+    "link_suggestion":
+     "Liên kết gợi ý",
     "linkedin_url":
      "Liên kết LinkedIn",
     "locale":
@@ -40398,6 +40594,8 @@
      "record confirmation only",
     "record_contact_acquisition":
      "record contact acquisition",
+    "record_link":
+     "Liên kết",
     "record_meeting_only":
      "record meeting only",
     "record_meeting_with_consent":
@@ -44298,6 +44496,26 @@
      "Chưa rõ",
     "expected_close_date/boolean/true":
      "Có",
+    "extension_relationship_types/lifecycle/customer":
+     "Khách hàng",
+    "extension_relationship_types/lifecycle/disqualified":
+     "Đã loại",
+    "extension_relationship_types/lifecycle/former_customer":
+     "Khách hàng cũ",
+    "extension_relationship_types/lifecycle/live":
+     "Đang vận hành",
+    "extension_relationship_types/lifecycle/onboarding":
+     "Đang triển khai",
+    "extension_relationship_types/lifecycle/opportunity":
+     "Cơ hội",
+    "extension_relationship_types/lifecycle/prospect":
+     "Tiềm năng",
+    "extension_relationship_types/lifecycle/target":
+     "Mục tiêu",
+    "extension_relationship_types/lifecycle/unknown":
+     "Chưa rõ",
+    "extension_relationship_types/boolean/true":
+     "Có",
     "failed/lifecycle/customer":
      "Khách hàng",
     "failed/lifecycle/disqualified":
@@ -45639,6 +45857,26 @@
     "link/lifecycle/unknown":
      "Chưa rõ",
     "link/boolean/true":
+     "Có",
+    "link_suggestion/lifecycle/customer":
+     "Khách hàng",
+    "link_suggestion/lifecycle/disqualified":
+     "Đã loại",
+    "link_suggestion/lifecycle/former_customer":
+     "Khách hàng cũ",
+    "link_suggestion/lifecycle/live":
+     "Đang vận hành",
+    "link_suggestion/lifecycle/onboarding":
+     "Đang triển khai",
+    "link_suggestion/lifecycle/opportunity":
+     "Cơ hội",
+    "link_suggestion/lifecycle/prospect":
+     "Tiềm năng",
+    "link_suggestion/lifecycle/target":
+     "Mục tiêu",
+    "link_suggestion/lifecycle/unknown":
+     "Chưa rõ",
+    "link_suggestion/boolean/true":
      "Có",
     "linkedin_url/lifecycle/customer":
      "Khách hàng",
@@ -48368,6 +48606,8 @@
      "ARR dự kiến",
     "merge_profile_field/text/expected_close_date":
      "Ngày chốt dự kiến",
+    "merge_profile_field/text/extension_relationship_types":
+     "Loại quan hệ từ tiện ích mở rộng",
     "merge_profile_field/text/filled":
      "Các trường được điền thêm",
     "merge_profile_field/text/first_name":
@@ -48408,6 +48648,8 @@
      "Cấp gỡ",
     "merge_profile_field/text/lifted_suppression":
      "Lệnh chặn đã gỡ",
+    "merge_profile_field/text/link_suggestion":
+     "Liên kết gợi ý",
     "merge_profile_field/text/linkedin_url":
      "Liên kết LinkedIn",
     "merge_profile_field/text/lost_reason":
@@ -48470,6 +48712,8 @@
      "Sẵn sàng cho cuộc họp",
     "merge_profile_field/text/reason":
      "Lý do",
+    "merge_profile_field/text/record_link":
+     "Liên kết",
     "merge_profile_field/text/recorded_at_level":
      "Ghi nhận ở cấp",
     "merge_profile_field/text/relationship_mark":
@@ -48652,6 +48896,8 @@
      "ARR dự kiến",
     "merge_profile_field/lifecycle/expected_close_date":
      "Ngày chốt dự kiến",
+    "merge_profile_field/lifecycle/extension_relationship_types":
+     "Loại quan hệ từ tiện ích mở rộng",
     "merge_profile_field/lifecycle/filled":
      "Các trường được điền thêm",
     "merge_profile_field/lifecycle/first_name":
@@ -48692,6 +48938,8 @@
      "Cấp gỡ",
     "merge_profile_field/lifecycle/lifted_suppression":
      "Lệnh chặn đã gỡ",
+    "merge_profile_field/lifecycle/link_suggestion":
+     "Liên kết gợi ý",
     "merge_profile_field/lifecycle/linkedin_url":
      "Liên kết LinkedIn",
     "merge_profile_field/lifecycle/lost_reason":
@@ -48754,6 +49002,8 @@
      "Sẵn sàng cho cuộc họp",
     "merge_profile_field/lifecycle/reason":
      "Lý do",
+    "merge_profile_field/lifecycle/record_link":
+     "Liên kết",
     "merge_profile_field/lifecycle/recorded_at_level":
      "Ghi nhận ở cấp",
     "merge_profile_field/lifecycle/relationship_mark":
@@ -52135,6 +52385,26 @@
     "record_contact_acquisition/lifecycle/unknown":
      "Chưa rõ",
     "record_contact_acquisition/boolean/true":
+     "Có",
+    "record_link/lifecycle/customer":
+     "Khách hàng",
+    "record_link/lifecycle/disqualified":
+     "Đã loại",
+    "record_link/lifecycle/former_customer":
+     "Khách hàng cũ",
+    "record_link/lifecycle/live":
+     "Đang vận hành",
+    "record_link/lifecycle/onboarding":
+     "Đang triển khai",
+    "record_link/lifecycle/opportunity":
+     "Cơ hội",
+    "record_link/lifecycle/prospect":
+     "Tiềm năng",
+    "record_link/lifecycle/target":
+     "Mục tiêu",
+    "record_link/lifecycle/unknown":
+     "Chưa rõ",
+    "record_link/boolean/true":
      "Có",
     "record_meeting_only/lifecycle/customer":
      "Khách hàng",
@@ -56030,6 +56300,12 @@
      "Chưa đặt",
     "expected_close_date/execution":
      "Được xác định khi áp dụng",
+    "extension_relationship_types/boolean":
+     "Không",
+    "extension_relationship_types/empty":
+     "Chưa đặt",
+    "extension_relationship_types/execution":
+     "Được xác định khi áp dụng",
     "failed/boolean":
      "Không",
     "failed/empty":
@@ -56431,6 +56707,12 @@
     "link/empty":
      "Chưa đặt",
     "link/execution":
+     "Được xác định khi áp dụng",
+    "link_suggestion/boolean":
+     "Không",
+    "link_suggestion/empty":
+     "Chưa đặt",
+    "link_suggestion/execution":
      "Được xác định khi áp dụng",
     "linkedin_url/boolean":
      "Không",
@@ -58133,6 +58415,12 @@
     "record_contact_acquisition/empty":
      "Chưa đặt",
     "record_contact_acquisition/execution":
+     "Được xác định khi áp dụng",
+    "record_link/boolean":
+     "Không",
+    "record_link/empty":
+     "Chưa đặt",
+    "record_link/execution":
      "Được xác định khi áp dụng",
     "record_meeting_only/boolean":
      "Không",

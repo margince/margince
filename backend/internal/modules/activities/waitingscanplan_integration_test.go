@@ -16,6 +16,8 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/jackc/pgx/v5"
+
 	"github.com/margince/margince/backend/internal/platform/clocktest"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/platform/testdb"
@@ -46,6 +48,7 @@ func explainOnMailbox(t *testing.T, extra, setting, explain, statement string, a
 		}
 	}()
 	seedMailbox(ctx, t, tx, busyMailbox)
+	pinNeverAnalyzed(ctx, t, tx)
 	if extra != "" {
 		if _, err := tx.Exec(ctx, extra); err != nil {
 			t.Fatalf("seeding %s: %v", extra, err)
@@ -59,6 +62,16 @@ func explainOnMailbox(t *testing.T, extra, setting, explain, statement string, a
 		t.Fatalf("planning %s: %v", statement, err)
 	}
 	return decodePlan(t, raw)
+}
+
+// pinNeverAnalyzed gives the planner the table sizes of a database nothing has
+// analyzed. Earlier tests in the same process may have left small statistics.
+// Those steer a plan test to a scan the seeded rows do not warrant.
+func pinNeverAnalyzed(ctx context.Context, t *testing.T, tx pgx.Tx) {
+	t.Helper()
+	if _, err := tx.Exec(ctx, "UPDATE pg_class SET reltuples = -1, relpages = 0 WHERE relkind = 'r' AND relnamespace = 'public'::regnamespace"); err != nil {
+		t.Fatal(err)
+	}
 }
 
 // decodePlan reads the one plan an EXPLAIN (FORMAT JSON) answered.

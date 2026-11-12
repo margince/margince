@@ -171,7 +171,7 @@ func TestAFirstNameAndPartOfTheCompanyFindAContactMadeThroughTheApp(t *testing.T
 	}
 	found := map[string]bool{}
 	for _, hit := range page.Data {
-		if hit.Type == crmcontracts.SearchResultTypeContact {
+		if hit.Type == "contact" {
 			found[hit.Id.String()] = true
 		}
 	}

@@ -203,6 +203,9 @@ var catalog = map[string]struct {
 	"list.member_added":   {contactStreamEntity, 1},
 	"list.member_removed": {contactStreamEntity, 1},
 	"list.evaluated":      {contactStreamEntity, 1},
+	// A typed link was made or removed. Its subject is the record it starts on,
+	// a deal, company or contact. It rides the contact stream as list events do.
+	"record_link.changed": {contactStreamEntity, 1},
 
 	"reporting.changed":    {identityStreamEntity, 1},
 	"booking_page.updated": {identityStreamEntity, 1},
@@ -246,6 +249,10 @@ var catalog = map[string]struct {
 	// One reader answered a calendar invitation that came by email. Its own
 	// type because the answer went to the organizer, not into the message.
 	"activity.invitation_answered": {activityStreamEntity, 1},
+	// An extension proposed a record a message may belong to, or a reader decided
+	// one. Its own type because activity.updated carries a closed set of changed
+	// fields, and a proposal changes none of the message.
+	"activity.link_suggestion_changed": {activityStreamEntity, 1},
 	// One attendee said they are ready for a meeting, or took it back. Its
 	// own type because it is one attendee's state, not a change to the meeting.
 	"activity.readiness_recorded": {activityStreamEntity, 1},
