@@ -15,6 +15,7 @@ import { useNow } from "../../format/now";
 import { type Locale, useLocale, useT } from "../../i18n";
 import { useCan, useCanWrite } from "../../lib/capability";
 import {
+  LICENSE_ENTITLEMENT_KEY,
   trialStandingOf,
   useLicenseEntitlement,
 } from "../../lib/license-posture";
@@ -209,7 +210,7 @@ export function LicenseCheck() {
     mutationFn: async () =>
       unwrap(await api.POST("/installation/license/check")),
     onSuccess: (entitlement) =>
-      queryClient.setQueryData(["installation-license"], entitlement),
+      queryClient.setQueryData(LICENSE_ENTITLEMENT_KEY, entitlement),
   });
   return (
     <CellStack>

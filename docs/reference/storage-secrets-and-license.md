@@ -240,7 +240,7 @@ A production installation with no token runs on a trial of 14 days. `MARGINCE_EN
 an installation that names nothing is production. The trial starts when the installation's
 workspace is created: the earliest `created_at` in `workspace`, archived rows included. There is no
 grace period. Nothing about the trial is signed and nothing calls out: a changed date or changed
-code breaks the license terms, not a check (`compose.InstallationTrial`,
+code breaks the license terms, not a check (`installtrial.Trial`,
 `licensecheck.TrialLength`).
 
 While the trial runs, everything works and seats are not capped. A seat with `license:read` sees how
@@ -256,8 +256,8 @@ When the trial ends, the installation stops working until a token is set up:
   is lost. While it waits, it reads the token again every 5 minutes;
 - `/me` answers `trial_ended: true`, and the app shows every seat the screen that says so.
 
-To end the lock, set up the token and start the api again, or replace a token file and click
-**Check now**.
+To end the lock, set up the token and start the api again. The lock screen takes the place of the
+whole app, so **Check now** in Settings is out of reach while it shows.
 
 A refused license refuses the boot in *every* posture. To name yourself as not
 production says you have no license. It does not let you run one the module has refused.

@@ -294,8 +294,8 @@
   flex: 0 1 auto;
 }
 
-/* The trial's count, its own row under the spend: a link the rail's hit area
-   leaves alone, lifted over the hit like the row above it. */
+/* The trial's count, its own row under the spend, lifted over the hit like the
+   row above it. */
 .artrial {
   position: relative;
   z-index: 1;

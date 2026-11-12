@@ -49,12 +49,25 @@ func TestAPausedSubscriberDeliversNothingUntilItResumes(t *testing.T) {
 		}
 	})
 
-	<-asked
+	// Run's error goes back on done for the cleanup to read.
+	awaitAsk := func() {
+		t.Helper()
+		select {
+		case <-asked:
+		case err := <-done:
+			done <- err
+			t.Fatalf("Run returned before asking whether it is held: %v", err)
+		case <-time.After(10 * time.Second):
+			t.Fatal("a running subscriber never asked whether it is held")
+		}
+	}
+
+	awaitAsk()
 	publishProbe(ctx, t, rdb, group.Streams[0])
 	// Three more asks after the publish: the loop went round while held and
 	// read nothing on any of those turns.
 	for range 3 {
-		<-asked
+		awaitAsk()
 	}
 	select {
 	case env := <-delivered:

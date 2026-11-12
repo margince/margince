@@ -2,7 +2,6 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import { trialTone } from "../components/trialcontact";
-import { AppLink } from "../design-system/applink";
 import { Badge } from "../design-system/atoms";
 import { formatNumber } from "../format/format";
 import {
@@ -14,15 +13,10 @@ import {
   useT,
 } from "../i18n";
 import { type TrialStanding, useTrialStanding } from "../lib/license-posture";
-import { routeHash } from "../lib/router";
-import { settingsHref } from "../lib/settingsrouting";
-
-const LICENSE_SETTINGS_HREF = routeHash(settingsHref("seats"));
 
 /**
- * The trial's count under the orb, for a seat that may read the licence. It is
- * a link, because the rail's hit area leaves links alone. The licence card it
- * opens is where the reader writes to the Margince team.
+ * The trial's count under the orb, for a seat that may read the licence. A
+ * label only: the banner on every page holds the way to the Margince team.
  */
 export function TrialPill() {
   const t = useT();
@@ -35,11 +29,9 @@ export function TrialPill() {
   const tone = trialTone(standing);
   return (
     <span className="artrial">
-      <AppLink href={LICENSE_SETTINGS_HREF}>
-        <Badge tone={tone === "info" ? "success" : tone}>
-          {trialPillText(standing, t, plural, locale)}
-        </Badge>
-      </AppLink>
+      <Badge tone={tone === "info" ? "success" : tone}>
+        {trialPillText(standing, t, plural, locale)}
+      </Badge>
     </span>
   );
 }

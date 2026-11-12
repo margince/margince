@@ -15195,7 +15195,7 @@ export const en = {
   "trial.locked.body":
     "Margince has stopped working until it has a license. Your data stays as it is, and nothing is deleted.",
   "trial.locked.admin":
-    "Once the Margince team sends a license key, set it as license.token in this installation’s configuration and restart it.",
+    "Once the Margince team sends a license key, set it as license.token in this installation’s configuration, or as the MARGINCE_LICENSE variable, and restart it.",
   "trial.locked.member":
     "Your admin can get a license from the Margince team. You can also write to them yourself.",
   "common.trialEnded":

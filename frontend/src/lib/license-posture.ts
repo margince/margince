@@ -1,9 +1,14 @@
-import { useQuery } from "@tanstack/react-query";
+import {
+  type QueryClient,
+  useQuery,
+  useQueryClient,
+} from "@tanstack/react-query";
+import { useEffect } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
 import { useNow } from "../format/now";
 import { useCan } from "./capability";
-import { throwProblem } from "./problem";
+import { logUnexpectedError, throwProblem } from "./problem";
 
 // The installation's licence, and the one thing the chrome does with it.
 //
@@ -37,6 +42,20 @@ type LicenseEntitlement = components["schemas"]["LicenseEntitlement"];
  */
 export type LicensePosture = "ok" | "grace" | "refused" | "none" | "trial";
 
+export const LICENSE_ENTITLEMENT_KEY = ["installation-license"] as const;
+
+/**
+ * Reads again what the trial lock shows: /me, which holds every seat to the
+ * lock screen, and the entitlement the trial notices count from.
+ */
+export function refreshTrialLock(client: QueryClient): void {
+  for (const queryKey of [["me"], LICENSE_ENTITLEMENT_KEY]) {
+    client
+      .invalidateQueries({ queryKey, exact: true })
+      .catch(logUnexpectedError);
+  }
+}
+
 /**
  * What the license grants and how much of it is used.
  *
@@ -45,7 +64,7 @@ export type LicensePosture = "ok" | "grace" | "refused" | "none" | "trial";
  */
 export function useLicenseEntitlement(enabled = true) {
   return useQuery({
-    queryKey: ["installation-license"],
+    queryKey: LICENSE_ENTITLEMENT_KEY,
     // A principal without `license:read` would get a 403 on every route. The
     // caller that knows the grant passes it, and the request is never made.
     enabled,
@@ -145,8 +164,28 @@ export function useTrialStanding(): TrialStanding | undefined {
   // Once a minute is plenty for a count in whole days.
   const now = useNow(60_000);
   const trial = query.data?.trial;
+  useRefreshAtTrialEnd(trial);
   if (!mayRead || !trial) {
     return undefined;
   }
   return trialStandingOf(trial, now);
+}
+
+// The longest delay a browser timer keeps; a longer one fires at once.
+const MAX_TIMER_MS = 2 ** 31 - 1;
+
+// A session left open past the end reads the lock once, at the end. An ended
+// trial schedules nothing, so no tick after it reads again.
+function useRefreshAtTrialEnd(trial: LicenseTrial | undefined): void {
+  const client = useQueryClient();
+  const endsAt =
+    trial === undefined || trial.ended ? undefined : Date.parse(trial.ends_at);
+  useEffect(() => {
+    if (endsAt === undefined || Number.isNaN(endsAt)) {
+      return;
+    }
+    const delay = Math.min(Math.max(0, endsAt - Date.now()), MAX_TIMER_MS);
+    const timer = setTimeout(() => refreshTrialLock(client), delay);
+    return () => clearTimeout(timer);
+  }, [client, endsAt]);
 }

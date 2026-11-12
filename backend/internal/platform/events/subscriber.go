@@ -115,11 +115,14 @@ func (s *Subscriber) Run(ctx context.Context) error {
 	}
 
 	for ctx.Err() == nil {
-		if s.paused != nil && s.paused(ctx) {
+		if s.held(ctx) {
 			s.wait(ctx, s.pauseEvery)
 			continue
 		}
-		s.reclaim(ctx)
+		// The reclaim pass can run many pages, so the hold may begin during it.
+		if s.reclaim(ctx); s.held(ctx) {
+			continue
+		}
 
 		res, err := s.rdb.XReadGroup(ctx, &redis.XReadGroupArgs{
 			Group:    s.group.Name,
@@ -164,6 +167,11 @@ func (s *Subscriber) Run(ctx context.Context) error {
 	return ctx.Err()
 }
 
+// held reports whether WithPause's check holds the group now.
+func (s *Subscriber) held(ctx context.Context) bool {
+	return s.paused != nil && s.paused(ctx)
+}
+
 // backoff pauses briefly for a retryable transport failure, or returns
 // immediately once ctx is done.
 func (s *Subscriber) backoff(ctx context.Context) {
@@ -201,6 +209,10 @@ func (s *Subscriber) reclaim(ctx context.Context) {
 	for _, stream := range s.group.Streams {
 		start := "0-0"
 		for {
+			// A held pass stops between pages; what it leaves stays pending for the next.
+			if s.held(ctx) {
+				return
+			}
 			claimed, next, err := s.rdb.XAutoClaim(ctx, &redis.XAutoClaimArgs{
 				Stream:   stream,
 				Group:    s.group.Name,

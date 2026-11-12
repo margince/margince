@@ -2,6 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import { useId, useState } from "react";
+import { AppLink } from "../design-system/applink";
 import { Button, Field, Modal, Textarea } from "../design-system/atoms";
 import { Callout, type CalloutTone } from "../design-system/callout";
 import { ChoiceList } from "../design-system/choicelist";
@@ -173,9 +174,9 @@ export function TrialContactDialog({
         <Button onClick={copy.copy} pending={copy.pending}>
           {copy.label}
         </Button>
-        <a className="btn btn-primary" href={trialMailtoHref(mail)}>
+        <AppLink className="btn btn-primary" href={trialMailtoHref(mail)}>
           {t("trial.contact.open")}
-        </a>
+        </AppLink>
       </div>
     </Modal>
   );

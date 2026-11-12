@@ -14,7 +14,7 @@ type LicenseEntitlement = components["schemas"]["LicenseEntitlement"];
 const NOW = Date.parse("2026-11-12T10:00:00Z");
 const DAY = 86_400_000;
 
-function entitlement(endsIn: number): LicenseEntitlement {
+function entitlement(endsIn: number, ended = false): LicenseEntitlement {
   return {
     state: "absent",
     seats_used: 12,
@@ -23,18 +23,21 @@ function entitlement(endsIn: number): LicenseEntitlement {
     trial: {
       started_at: new Date(NOW + endsIn - 14 * DAY).toISOString(),
       ends_at: new Date(NOW + endsIn).toISOString(),
-      ended: false,
+      ended,
     },
   };
 }
 
-function mount(answer: LicenseEntitlement) {
+// Each read of the licence takes the next answer, and the last one stays.
+function mount(...answers: LicenseEntitlement[]) {
   vi.stubGlobal(
     "fetch",
     vi.fn(async (input: RequestInfo | URL) => {
       const url = input instanceof Request ? input.url : String(input);
       const body = url.includes("/installation/license")
-        ? answer
+        ? answers.length > 1
+          ? answers.shift()
+          : answers[0]
         : meFixture({ allow: { license: ["read"] } });
       return new Response(JSON.stringify(body), {
         headers: { "Content-Type": "application/json" },
@@ -107,4 +110,11 @@ it("writes the email the reader chose, with the facts the team needs to answer",
   expect(body).toContain("Seats in use: 12");
   expect(body).toContain("We onboard a second team next month.");
   expect(body.endsWith("Best regards,\nTest User")).toBe(true);
+});
+
+it("reads the licence again once the trial's end passes under an open page", async () => {
+  // The server's clock is a little behind the reader's. At the end the licence
+  // still says the trial runs, and the next read says it has ended.
+  mount(entitlement(-1_000), entitlement(-1_000, true));
+  expect(await screen.findByText(en["trial.notice.endedTitle"])).toBeTruthy();
 });

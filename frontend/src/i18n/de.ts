@@ -15278,9 +15278,9 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "trial.locked.body":
     "Margince arbeitet nicht mehr, bis eine Lizenz da ist. Deine Daten bleiben, wie sie sind, und nichts wird gelöscht.",
   "trial.locked.admin":
-    "Sobald das Margince-Team einen Lizenzschlüssel schickt, trage ihn als license.token in die Konfiguration dieser Installation ein und starte sie neu.",
+    "Sobald das Margince-Team einen Lizenzschlüssel schickt, trage ihn als license.token in die Konfiguration dieser Installation oder als Variable MARGINCE_LICENSE ein und starte sie neu.",
   "trial.locked.member":
-    "Deine Admins bekommen eine Lizenz vom Margince-Team. Du kannst dem Team auch selbst schreiben.",
+    "Deine Admins können eine Lizenz vom Margince-Team bekommen. Du kannst dem Team auch selbst schreiben.",
   "common.trialEnded":
     "Die Testphase dieser Installation ist beendet. Bis eine Lizenz da ist, lässt sich nichts ändern.",
   "licensebanner.link": "{tab} öffnen",

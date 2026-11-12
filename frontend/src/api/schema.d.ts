@@ -27056,9 +27056,11 @@ export interface components {
          *     `state` is `absent` on a production installation that has been set up; a development or
          *     test installation runs unlicensed with no trial.
          *
-         *     The trial starts when the installation's workspace is created and lasts 14 days, with no
-         *     grace period. Once `ended` is true the installation stops working: every change, agent
-         *     tool call and background job is refused with `trial_ended` until a license is entered.
+         *     The trial starts when the installation's oldest workspace was created, archived ones
+         *     included, and lasts 14 days, with no grace period. Once `ended` is true every agent tool
+         *     call and background job is refused with `trial_ended` until a license is entered, and so
+         *     is every HTTP change except these: the license routes, `POST /v1/exports`, the
+         *     data-subject request routes, and a seat's own credential routes.
          */
         LicenseTrial: {
             /**
@@ -47463,7 +47465,7 @@ export interface components {
             pipelines?: components["schemas"]["Pipeline"][];
         };
         MeResponse: {
-            /** @description True when this installation runs with no license and its 14-day trial is over. Every seat gets it, not only those who may read the license, because every seat is locked: changes, agent tool calls and background work are refused with `trial_ended` until an admin enters a license. Absent while the installation is licensed or still on its trial. */
+            /** @description True when this installation runs with no license and its 14-day trial is over. Every seat gets it, not only those who may read the license, because every seat is locked until an admin enters a license. `LicenseTrial` lists what the lock refuses. Absent while the installation is licensed or still on its trial. */
             trial_ended?: boolean;
             /** @description Whether this human caller may use the configured activity reader-rendering lane. Absent or false keeps generated text original until an explicit request. */
             reader_rendering_available?: boolean;

@@ -88,7 +88,8 @@ down, rebuild the index as `margince_owner`, for example `REINDEX INDEX CONCURRE
 
 ## Get a license token
 
-Outside `dev` and `test` mode, an installation with no license token runs for 14 days. Then it stops
+Outside `dev` and `test` mode, an installation with no license token runs for 14 days, counted from
+the day its oldest workspace was created. Then it stops
 working until a token is set up ([what it still does](../reference/storage-secrets-and-license.md#the-trial)).
 A dev stack needs no token and no such limit. To get a token:
 
