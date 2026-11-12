@@ -1,0 +1,30 @@
+name: a_plain_refusal_is_negative
+task: capture_classify
+site: classify
+source: hand_authored
+sanitized_by: hand_authored/claude-opus-5-5
+fixture:
+  - subject: 'Re: phase two proposal'
+    inbound: true
+    body: |
+      Hi Jana, thank you for the proposal and the time you put into it. We have
+      decided not to go ahead with phase two this year, so please close this on
+      your side.
+
+      Best regards,
+      Marco
+expect:
+  outcome: accepted
+  answer:
+    - label: noise
+      reply: negative
+  rubric: >
+    The customer declines the proposal in plain words and asks us to close
+    it. Nothing is promised or requested of us and no time is proposed, so
+    the label is "noise". The reply verdict is "negative": the sender says
+    no to going ahead. "neutral" or null misses a refusal the owner needs to
+    see; "positive" is the worst answer.
+  bands:
+    certified_min: 70
+    degraded_min: 50
+    floor: 40

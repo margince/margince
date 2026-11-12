@@ -71,7 +71,18 @@ func (s *Service) DecideEditedWire(ctx context.Context, id ids.ApprovalID, edite
 	return s.committedWire(ctx, a), nil
 }
 
+// oneApprovalKey marks a preview built for one approval's own read.
+type oneApprovalKey struct{}
+
+// ReadsOneApproval says the preview is built for one approval, not a list. A
+// builder may spend a fetch on one approval that a list of rows cannot.
+func ReadsOneApproval(ctx context.Context) bool {
+	one, _ := ctx.Value(oneApprovalKey{}).(bool)
+	return one
+}
+
 func (s *Service) contextWire(ctx context.Context, a row) (crmcontracts.Approval, error) {
+	ctx = context.WithValue(ctx, oneApprovalKey{}, true)
 	out := []crmcontracts.Approval{wire(ctx, a, s.now())}
 	if err := s.readDecisionContext(ctx, out, []row{a}); err != nil {
 		return crmcontracts.Approval{}, err

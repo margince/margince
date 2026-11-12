@@ -375,7 +375,7 @@ func tooLong(field, text string, limit int) error {
 		return nil
 	}
 	return &values.ParseError{
-		Field: field, Code: "too_long",
+		Field: field, Code: "too_long", Max: limit,
 		Message: fmt.Sprintf("%s is at most %d characters; shorten it", field, limit),
 	}
 }

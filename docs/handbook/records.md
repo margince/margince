@@ -74,7 +74,6 @@ Also called: update a contact, change a phone number, rename.
 A contact or company in Margince takes no edits when it is archived ("This contact is archived and takes no changes."). It also takes none when it is not yours to change: "You cannot edit this contact. Ask the owner to hand it over or share it, or ask an administrator."
 
 Fields you cannot edit show as plain text with no box or mark, and other actions are greyed out. The page states the reason once, at the foot of the **Details** panel, or in the band at the top of an archived contact. If someone else changed the same field while you were editing, your edit is refused: "This record changed after you opened it. Reload it to see the change, then make yours again."
-
 Also called: read-only record, edit greyed out, cannot change.
 
 ### How do I link a contact to a company?
@@ -181,11 +180,7 @@ Two fields describe a company, and many users mix them up.
 
 **Relationship types**: what the company *is* to you. Many at once: **customer, partner, supplier, investor, portfolio company, competitor, other.** A customer and a partner show as marks under the company's name; see [Partners and commission](partners.md). An extension your admin turned on can add types of its own, such as **Reseller**. They show beside the others in the **Relationship type** column and the **Relationship type** filter, and you cannot change them in **Details**. The extension sets them.
 
-So a company can be a customer *and* a supplier. It cannot be both a prospect and a customer, because that is one question with one answer.
-
-Size bands are: 1-10, 11-50, 51-200, 201-500, 501-1000, 1001-5000, 5000+.
-
-A company may have a parent company, one level only: a parent has no parent of its own, and no company is its own parent. The website address comes from the main domain; you do not type it.
+So a company can be a customer *and* a supplier. It cannot be both a prospect and a customer, because that is one question with one answer. Size bands are: 1-10, 11-50, 51-200, 201-500, 501-1000, 1001-5000, 5000+. A company may have a parent company, one level only: a parent has no parent of its own, and no company is its own parent. The website address comes from the main domain; you do not type it.
 
 One company in your Margince is marked as the **anchor**: your own company, the one Margince knows things about for you.
 
@@ -229,9 +224,7 @@ Its email addresses, phone numbers, links, list members and tags come back too, 
 
 Margince archives some records on its own, such as emails it judged to be of no use. Those are listed in the **Since your last brief** panel on Home. That panel says what Margince has done while you were away. A contact, company or deal there has its own **Undo**.
 
- You cannot bring back an archived email or meeting yet. You cannot bring back a project from the app; create it again, or ask an admin. An archived record takes no edits or merges.
-
-Tags and pipelines do have a **Restore**; an archived team comes back with **Undo** on its archived notice. You can open a disqualified lead again with **Reopen**.
+ You cannot bring back an archived email or meeting yet. You cannot bring back a project from the app; create it again, or ask an admin. An archived record takes no edits or merges. Tags and pipelines do have a **Restore**; an archived team comes back with **Undo** on its archived notice. You can open a disqualified lead again with **Reopen**.
 Also called: unarchive, undelete, bring back a record.
 
 ### Can I undo a record Margince created?
@@ -278,9 +271,17 @@ Also called: create a to-do, follow-up, reminder.
 
 On a contact's or company's **Overview**, the **Next** bar shows a task's subject and the email it came from, with **View full thread**. A past meeting is never the next step. On a deal, lead or project with nothing next, the last exchange shows above the bar, such as **Last meeting** with **View meeting**. It adds **Waiting on them** if you wrote last, or **Your turn to answer** if they did. A contact shows that exchange under **What was said**, and a company under **Last contact**. With no open task, a contact's bar offers **Add follow-up** if you may log activity, under **No follow-up task recorded.**
 
+Under the bar, a contact's **Overview** has an **Open tasks** card. It lists the other open tasks, soonest due first, with who holds each one and when it is due. Tick a task to mark it done. A task you may not change has no tick. **All tasks** opens the whole task list. With none open, the card says **No open tasks** and offers **Add task** if you may log activity.
+
 ### What does "New email" in the Next bar mean?
 A mail, chat message or website form nobody has replied to shows in the record's **Next** bar for up to 7 days. **Read email** (or **Read message**, **Read form**) opens it. **Create task** makes it a task, and finishing a task for a request marks the request as done. When a late task or something else urgent is next, it is one line above the bar, and clicking the line opens it. It goes away once you reply or a task stands for it, and **Noticed** hides it in this browser.
 Also called: just in, new mail on a record, email with no reply, website form lead.
+
+### What does Done do on "Waiting for their reply"?
+When you wrote last and the contact has not answered, the contact's **Next** bar says **Waiting for their reply**. From day 7 it says they have gone quiet. **Done** says you need no answer to that message. It hides both cards, and the Worklist row for the same message. It is your choice alone: colleagues still see the card.
+Also called: no reply needed, stop waiting, mark answered.
+
+A message a colleague sent shows no **Done**. A new message from either side brings the card back, and **Undo** brings it back at once. **Done** shows only where it changes something. **Not now** hides the card you see until what it shows changes.
 
 One activity can link to many records at once, such as a contact and a deal. Everyone can see one you log with no links. A *captured* message with nothing to link to stays held, because nothing has judged who it belongs to. A call or meeting logged from a contact or company also goes on the company's one open deal. With several open deals, choose one or **No deal**. A call with an outcome counts as contact only for **Reached** and **Put through**; a call with no outcome also counts.
 

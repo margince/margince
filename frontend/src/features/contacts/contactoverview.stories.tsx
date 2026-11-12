@@ -200,6 +200,79 @@ export const OpenTask: Story = {
   },
 };
 
+// The bar waits on their reply and offers Done; the Open tasks card under it
+// lists the three tasks, the colleague's without a tick.
+export const OpenTasksUnderAWait: Story = {
+  render: () => {
+    const task = (
+      id: string,
+      subject: string,
+      due: string,
+      writable = true,
+    ) => ({
+      occurred_precision: "instant" as const,
+      offers_email: false,
+      id,
+      kind: "task" as const,
+      subject,
+      occurred_at: sparse.as_of,
+      due_at: due,
+      is_done: false,
+      writable,
+      version: 1,
+      source: "manual",
+      captured_by: "human:u-1",
+      created_at: sparse.as_of,
+      updated_at: sparse.as_of,
+    });
+    const view: View = {
+      ...sparse,
+      last_outbound_at: "2026-09-12T09:00:00Z",
+      last_outbound_activity_id: "a-sent",
+      next_steps: {
+        data: [
+          task("t-1", "Send the pricing sheet", "2026-09-13T12:00:00Z"),
+          task("t-2", "Book the site visit", "2026-09-18T12:00:00Z"),
+          task(
+            "t-3",
+            "Colleague's reference call",
+            "2026-10-02T12:00:00Z",
+            false,
+          ),
+        ],
+        page: { has_more: false },
+      },
+      moment: {
+        rule: "awaiting_reply",
+        headline: "Waiting for their reply",
+        why_now:
+          "Your last message went out 2 days ago. The rule flags a missing reply after 7 days.",
+        confidence: "observed_fact",
+        claim_key: "moment:awaiting_reply",
+        evidence_fingerprint: "fp",
+        evidence: [],
+        recommended_action: {
+          kind: "draft_reply",
+          label: "Draft a follow-up",
+          state: "available",
+        },
+        done: { activity_id: "a-sent" },
+      },
+    };
+    install(view);
+    return (
+      <StoryProviders>
+        <ContactOverview
+          view={view}
+          onAction={() => undefined}
+          onOpenEmail={() => undefined}
+          onOpenTab={() => undefined}
+          onAddTask={() => undefined}
+        />
+      </StoryProviders>
+    );
+  },
+};
 export const FreshContactPhone: Story = {
   ...FreshContact,
   tags: ["uat-phone"],

@@ -7,7 +7,7 @@ import { Popover } from "../../design-system/popover";
 import { Select } from "../../design-system/select";
 import { formatNumber } from "../../format/format";
 import { useLocale, useT } from "../../i18n";
-import { problemFieldErrorsOf, problemMessageOf } from "../../lib/problem";
+import { problemFieldSentencesOf, problemMessageOf } from "../../lib/problem";
 import { eventLabelKey } from "./webhookevents";
 import {
   ENVELOPE_VARIABLES,
@@ -56,11 +56,12 @@ function TemplatePreview({
     return <p className="t-caption">{t("webhooks.body.previewEmpty")}</p>;
   }
   if (preview.isError) {
-    const fieldError = problemFieldErrorsOf(preview.error)[0];
+    const [fieldError] = problemFieldSentencesOf(
+      preview.error,
+      locale,
+    ).values();
     return (
-      <ErrorLine>
-        {fieldError?.message ?? problemMessageOf(preview.error, t)}
-      </ErrorLine>
+      <ErrorLine>{fieldError ?? problemMessageOf(preview.error, t)}</ErrorLine>
     );
   }
   if (!preview.data) {

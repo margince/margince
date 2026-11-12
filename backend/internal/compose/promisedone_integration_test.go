@@ -83,7 +83,7 @@ func TestALaterReplyOnThePromiseThreadToItsRecipientAsksDone(t *testing.T) {
 		ids.UUID(got.MayBeDone.PromiseId) != ids.UUID(p.claim.Id) || ids.UUID(got.MayBeDone.EmailActivityId) != reply {
 		t.Fatalf("may_be_done = %+v, want the claim and the reply behind it", got.MayBeDone)
 	}
-	if got.Headline != "You may have done this — you wrote to them on 2026-09-13" {
+	if got.Headline != "This may be done: an email went to them on 2026-09-13" {
 		t.Fatalf("headline = %q", got.Headline)
 	}
 	if page.Claims == nil || len(*page.Claims) != 1 || (*page.Claims)[0].Status != crmcontracts.ConversationClaimStatusOpen {

@@ -147,6 +147,18 @@ func admitSuppress(ctx context.Context, in SuppressInput) (subject, commsauthz.A
 	return sub, levelFor(ctx, in.Kind), nil
 }
 
+// survivingContact is survivingSubject in a transaction of its own, for a
+// caller that holds none.
+func (s *Store) survivingContact(ctx context.Context, id ids.UUID) (ids.UUID, error) {
+	var surviving ids.UUID
+	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
+		var err error
+		surviving, err = survivingSubject(ctx, tx, id)
+		return err
+	})
+	return surviving, err
+}
+
 // survivingSubject resolves a contact to whichever record survives them, so a
 // stop always lands where the send path will read it.
 //

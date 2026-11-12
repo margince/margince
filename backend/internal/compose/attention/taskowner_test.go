@@ -95,3 +95,14 @@ func TestAnUnheldTaskCarriesNoHolderRatherThanAZeroOne(t *testing.T) {
 		t.Fatalf("an unheld task names %v as its holder", *item.AssigneeId)
 	}
 }
+
+// A reminder Margince cannot check carries that fact from the task, through
+// the lane's item, onto the worklist row the reader sees.
+func TestARequestCheckReachesTheWorklistRow(t *testing.T) {
+	check := &crmcontracts.TaskRequestCheck{State: crmcontracts.TaskRequestCheckStateTextNotChecked}
+	item := taskItem(Task{ID: ids.NewV7(), Subject: "Reply to the price question", RequestCheck: check}, rankInstant, rankInstant, time.UTC)
+	row := classifyTask(item, rankInstant)
+	if row.item.RequestCheck != check {
+		t.Fatalf("worklist row request check = %+v, want the task's", row.item.RequestCheck)
+	}
+}

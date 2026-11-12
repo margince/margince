@@ -10,7 +10,7 @@ import { useLocale, useT } from "../../i18n";
 import { useCompanyZone } from "../../lib/companyzone";
 import { isUnprepared } from "../../lib/meetingreadiness";
 import { useMe } from "../../lib/session";
-import { askKey } from "../../lib/worklistask";
+import { askKey, saysOpen } from "../../lib/worklistask";
 import {
   briefContextTitle,
   briefSubjectLabel,
@@ -396,11 +396,14 @@ function RowAsk({
   const t = useT();
   const clock = useHappenedClock();
   if (!framed) return null;
+  // A reminder Margince cannot check says so in place of its event. A row
+  // asking whether it may be done has its question below, not the stock ask.
+  const event = item.request_check ? null : cardLine(item, t, clock);
+  const ask = saysOpen(item) ? t(askKey(item)) : null;
+  const line = event ?? ask;
   return (
     <>
-      <p className="t-body worklist-row-ask">
-        {cardLine(item, t, clock) ?? t(askKey(item))}
-      </p>
+      {line && <p className="t-body worklist-row-ask">{line}</p>}
       <RowProposal item={item} />
     </>
   );

@@ -1593,7 +1593,7 @@ Return ONLY a JSON object {"order":["d1",...]} listing EVERY given deal referenc
 
 ### `capture_classify` / `classify`
 
-`system 1,769 B (~442 tok)`: rules 1,497 B · boundary 272 B · after boundary 0 B · **cacheable 84%**
+`system 2,192 B (~548 tok)`: rules 1,920 B · boundary 272 B · after boundary 0 B · **cacheable 87%**
 
 <details><summary>system prompt</summary>
 
@@ -1605,13 +1605,17 @@ as a call, a visit or a slot, or follow-through on one), or "noise" (neither). A
 "meeting", not a request to act. Labels route attention; they change no data. If a message both
 promises or requests something of the first kind AND asks for time, choose commitment.
 
-A message marked "inbound: yes" was sent TO us by someone outside. For those, ALSO judge how
-they answered: "positive" (interest, a question worth answering, a request to meet or to hear
-more), "negative" (not interested, the wrong recipient with no referral, a request to stop
-writing), or "neutral" (neither — an out-of-office, a bare acknowledgement, a redirect with no
-view of its own). Set "reply" to null for a message marked "inbound: no": we wrote it, so it
-answers nobody. Set it to null too when the message does not read as an answer at all. A guess
-here becomes a number somebody is measured on, so give null when you cannot tell.
+Each message opens with its subject line, then the text under "Sender's own words:", which is
+what its sender wrote in that mail; the older mails it quoted have been cut away. The subject
+helps the label only. In a reply it is usually the old subject of the thread, which anybody may
+have written. A message marked "inbound: yes" was sent TO us by someone outside. For those, ALSO
+judge how the sender answered, from their own words alone and never from the subject: "positive" (interest, a question worth
+answering, a request to meet or to hear more), "negative" (the sender declines to go ahead, or
+asks us to stop writing), or "neutral" (neither — an out-of-office, a bare acknowledgement, a
+request to wait, the wrong recipient, a redirect). Set "reply" to null for a message marked
+"inbound: no": we wrote it, so it answers nobody. Set it to null too when the message has no
+text of its own or does not read as an answer at all. A "negative" can close the customer's deal
+as lost, so give it only when the sender says no plainly, and null when you cannot tell.
 
 "confidence" covers EVERY judgement you emit for that message — the label and, when you give
 one, the reply. Report the LOWEST of the two, not the label's alone. If you are sure of the

@@ -111,12 +111,19 @@ migrations_at() {
 # runs its DDL a second time on every database that applied the old version.
 # The fifth column, the old digest, is held by a Go test in backend/migrations.
 renumbers_declared() {
-  local name="$1" declarations="$MIGRATIONS_DIR/renumbered.txt"
-  if [[ "$name" = extension/* ]]; then
-    declarations="$(migration_dir "$name")/renumbered.txt"
-    name="ext_$(printf '%s' "${name#extension/}" | tr '-' '_')"
+  local declarations="$MIGRATIONS_DIR/renumbered.txt"
+  [[ "$1" != extension/* ]] || declarations="$(migration_dir "$1")/renumbered.txt"
+  awk -v ns="$(ledger_namespace "$1")" '$1==ns && NF==5 {print $2, $3, $4}' "$declarations" 2>/dev/null || true
+}
+
+# ledger_namespace NAMESPACE — the name the migrator records NAMESPACE under:
+# core and custom as they are, an extension as ext_<name>.
+ledger_namespace() {
+  if [[ "$1" = extension/* ]]; then
+    printf 'ext_%s' "$(printf '%s' "${1#extension/}" | tr '-' '_')"
+  else
+    printf '%s' "$1"
   fi
-  awk -v ns="$name" '$1==ns && NF==5 {print $2, $3, $4}' "$declarations" 2>/dev/null || true
 }
 
 # same_sql REF NAMESPACE OLD NEW NAME — both halves of OLD_NAME at REF are the
@@ -129,6 +136,33 @@ same_sql() {
     now="$(git hash-object "$(migration_dir "$ns")/${new}_$name.$half.sql" 2>/dev/null)" || return 1
     [[ "$was" = "$now" ]] || return 1
   done
+}
+
+# equivalent_move REF NAMESPACE OLD NEW NAME — the migrator admits a database
+# that applied OLD_NAME at REF as having NEW_NAME in the tree, through a checked
+# entry in backend/internal/platform/dbmigrate/equivalence.go. The migrator's
+# own check answers, so this gate holds no second list. Anything but a yes,
+# a tool that did not build included, is a no.
+equivalent_move() {
+  local ref="$1" ns="$2" old="$3" new="$4" name="$5" dir scratch verdict rc=0
+  dir="$(migration_dir "$ns")"
+  scratch="$(mktemp -d)"
+  if git show "$ref:$dir/${old}_$name.up.sql" >"$scratch/up.sql" 2>/dev/null &&
+    git show "$ref:$dir/${old}_$name.down.sql" >"$scratch/down.sql" 2>/dev/null; then
+    verdict="$(cd "$ROOT/backend" && GOWORK="$ROOT/go.work" go run ./tools/check-equivalentmove \
+      -namespace "$(ledger_namespace "$ns")" -name "$name" -old "$old" -new "$new" \
+      -old-up "$scratch/up.sql" -old-down "$scratch/down.sql" \
+      -new-up "$ROOT/$dir/${new}_$name.up.sql" -new-down "$ROOT/$dir/${new}_$name.down.sql" 2>&1)" || rc=$?
+  else
+    verdict="$ref has no ${old}_$name to compare"
+    rc=1
+  fi
+  rm -rf "$scratch"
+  if [[ "$rc" -ne 0 ]]; then
+    equivalence_verdict="$verdict"
+    return 1
+  fi
+  echo "note: $verdict"
 }
 
 # renamed_between REF_ROWS TREE_ROWS — "<old> <new> <name>" for each migration
@@ -188,6 +222,7 @@ fi
 
 failed=0
 checked=0
+equivalence_verdict=""
 
 # A BASELINE CONSOLIDATION is the one change this gate cannot judge on version
 # numbers alone.
@@ -280,7 +315,8 @@ fail() {
 }
 
 # check_renumbers REF RENAMED — fail each "<old> <new> <name>" in RENAMED that
-# renumbered.txt does not declare, or whose SQL changed since REF.
+# renumbered.txt does not declare, or whose SQL changed since REF to content no
+# checked equivalence admits.
 check_renumbers() {
   local ref="$1" renamed="$2" old new name declarations="backend/migrations/renumbered.txt"
   [[ "$ns" != extension/* ]] || declarations="$(migration_dir "$ns")/renumbered.txt"
@@ -293,8 +329,8 @@ check_renumbers() {
     fi
     if ! grep -qxF "$old $new $name" <<<"$declared_renumbers"; then
       fail "$ns migration '$name' moved from $old to $new, but $declarations does not declare it. A database that applied $old would run it again. Keep the old version, or declare the move there once the SQL is byte-identical: '$ns $old $new $name <old digest>'"
-    elif ! same_sql "$ref" "$ns" "$old" "$new" "$name"; then
-      fail "$ns migration '$name' is declared moved from $old to $new, but its SQL changed since $ref. The migrator would record SQL as run that this database never ran. Keep the old bytes, or ship the change as a new migration"
+    elif ! same_sql "$ref" "$ns" "$old" "$new" "$name" && ! equivalent_move "$ref" "$ns" "$old" "$new" "$name"; then
+      fail "$ns migration '$name' is declared moved from $old to $new, but its SQL changed since $ref. The migrator would record SQL as run that this database never ran. Keep the old bytes, ship the change as a new migration, or record the checked pair in backend/internal/platform/dbmigrate/equivalence.go ($equivalence_verdict)"
     fi
   done <<<"$renamed"
 }
@@ -392,7 +428,8 @@ for ns in $all_namespaces; do
   # A RENUMBER: a name the base (as this branch forked from it) or the synced
   # base carries under a version the tree has moved it off. Judged even when
   # the SQL is identical, because the ledger records versions. A declared one
-  # passes only when its SQL is byte-identical to the old file at that ref.
+  # passes only when its SQL is byte-identical to the old file at that ref, or
+  # the migrator's checked equivalences admit the edit.
   declared_renumbers="$(renumbers_declared "$ns")"
   from_base="$(renamed_between "$(comm -12 <(echo "$base_rows") <(echo "$fork_rows"))" "$tree_rows" | sort -u)"
   from_sync="$(comm -13 <(echo "$from_base") <(renamed_between "$sync_rows" "$tree_rows" | sort -u))"
@@ -427,10 +464,11 @@ for ns in $all_namespaces; do
   if [[ -n "$vanished" ]]; then
     for v in $vanished; do
       vname="$(echo "$base_rows" | awk -v v="$v" '$1==v {print $2}' | head -n1)"
-      # A declared renumber with unchanged SQL is moved forward by `migrate up`,
-      # so it has not vanished.
+      # A declared renumber whose SQL is unchanged, or changed to a checked
+      # equivalent, is moved forward by `migrate up`, so it has not vanished.
       vnew="$(echo "$tree_rows" | awk -v n="$vname" '$2==n {print $1}' | tail -n1)"
-      if grep -qxF "$v $vnew $vname" <<<"$declared_renumbers" && same_sql "$BASE_REF" "$ns" "$v" "$vnew" "$vname"; then
+      if grep -qxF "$v $vnew $vname" <<<"$declared_renumbers" &&
+        { same_sql "$BASE_REF" "$ns" "$v" "$vnew" "$vname" || equivalent_move "$BASE_REF" "$ns" "$v" "$vnew" "$vname"; }; then
         continue
       fi
       fail "$ns/$v ('$vname') is on $BASE_REF but this branch no longer has it — a migration a deployed database may already have applied cannot be renamed or removed; add a new one instead of renumbering it. MIGRATION_VERSIONS_BASELINE_RESET=1 will not admit this on its own: the namespace must also end with FEWER migrations than $BASE_REF has, which a rename alone never does — see reset_admitted"

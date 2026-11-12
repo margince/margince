@@ -382,7 +382,7 @@ func NewLinkReconcileWorkspaceWorkerForTest(pool *pgxpool.Pool) *linkReconcileWo
 
 // linkReconcileStore is the contacts store the sweep repairs through. It runs
 // the cohort repair the capture paths run, so it carries their audience
-// derivation. A meeting it files then no longer counts as naming no record.
+// derivation and proven-sender rule.
 func linkReconcileStore(pool *pgxpool.Pool) *contacts.Store {
 	return newContactsStore(InstallationDB(pool)).WithAudienceRecompute(activities.RecomputeAudienceTx)
 }

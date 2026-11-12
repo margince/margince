@@ -6315,7 +6315,10 @@ export interface paths {
          *     still see it. The Worklist offers `not_mine` only on a row whose owner is not the reader.
          *
          *     `handled` names no moment and nothing lifts it: the reader dealt with the message another
-         *     way. The customer's next message is new work, so it comes back on its own.
+         *     way. The customer's next message is new work, so it comes back on its own. `handled` also
+         *     takes a message we sent, when it is the reader's own newest message to a contact and nobody
+         *     has written since: the reader needs no reply to it. Any other message we sent is refused with
+         *     `not_your_waiting_message`, and a note, task or meeting with `not_a_message`.
          *
          *     A snooze names a moment still ahead and lifts on its own. `not_mine` names no moment: it
          *     stands until the reader picks the message back up, or until the record it is filed under
@@ -30602,6 +30605,8 @@ export interface components {
             code: string;
             /** @description What is wrong and what to write instead. */
             message: string;
+            /** @description The limit a `too_long` refusal names, in characters. Absent when the refusal states none. */
+            max?: number;
         };
         /** @description AI usage + budget (AIRT-WIRE-1): the AIRT-PARAM-33 meter aggregated per day × task × tier, plus the budget band. Token-denominated; cost_est_minor is computed on read from the workspace's ai_model_rate price sheet as of each call's day (ADR-0067, price-on-read) — omitted, never a fabricated 0, when a task line's window carries no priced call, and accompanied by unpriced_calls when it is a partial total. */
         AiUsage: {
@@ -31732,7 +31737,8 @@ export interface components {
             instance?: string;
             /**
              * @description Structured machine context — e.g. `existing_id` on 409 duplicate, or an
-             *     `errors` array of `{ field, code, message }` on 422 validation.
+             *     `errors` array of `{ field, code, message }` on 422 validation. A `too_long`
+             *     entry also carries `max`, the limit in characters.
              *
              *     A 429 that an agent's limit answers carries `limit`: `kind` names it (`calls`,
              *     `writes` or `egress` for a window allowance, `pacing` for the per-minute limit),
@@ -34220,8 +34226,8 @@ export interface components {
             /**
              * @description Present on a promise task when we wrote to one of its recipients on its thread after the
              *     promise. The task then asks whether that mail kept it, as the Worklist does, with the
-             *     same key and fingerprint. Absent when the reader answered Not yet to that mail, and for an
-             *     agent, which answers no such question.
+             *     same key and fingerprint, and `overdue` is false while it asks. Absent when the reader
+             *     answered Not yet to that mail, and for an agent, which answers no such question.
              */
             may_be_done?: components["schemas"]["WorklistMayBeDone"];
             /**
@@ -36001,6 +36007,22 @@ export interface components {
             recommended_action: components["schemas"]["ContactMomentAction"];
             secondary_actions?: components["schemas"]["ContactMomentAction"][];
             may_be_done?: components["schemas"]["ContactMomentMayBeDone"];
+            done?: components["schemas"]["ContactMomentDone"];
+        };
+        /**
+         * @description Present on an `awaiting_reply` or `gone_quiet` moment when a Done would change something
+         *     for this reader: they may mark the message, and have not set it aside yet. `Done` puts
+         *     `handled` on the message through `PUT /activities/{id}/disposition`, the state the
+         *     Worklist's Done writes, so the card and the Worklist row leave together for this reader.
+         *     `DELETE /activities/{id}/disposition` takes it back. A newer message either way brings the
+         *     card back. Absent on every other moment.
+         */
+        ContactMomentDone: {
+            /**
+             * Format: uuid
+             * @description The message we sent last, which the card rests on and a Done marks.
+             */
+            activity_id: string;
         };
         /**
          * @description Present when the moment is a promise we owe AND we wrote to the contact after it was
@@ -37167,8 +37189,9 @@ export interface components {
              *     `{phone}`, `{logo}` and `{imprint}`. `{logo}` embeds the logo of the legal entity the
              *     sender works for, sized for mail, in the message itself; the default entity's logo is
              *     the company's own, and an entity with no logo shows none. `{imprint}` is that entity's
-             *     imprint, escaped, with its line breaks kept. A send keeps paragraphs, line breaks, bold, italic, underline, links
-             *     and spans with a colour and a pixel size, and drops everything else. Empty means
+             *     imprint, escaped, with its line breaks kept. A send keeps paragraphs, line breaks, bold, italic, underline, links,
+             *     tables, divs, layout styles and `https` images with their width and height. It drops scripts, event
+             *     handlers, forms, frames, `javascript:` and `data:` addresses and `url()` in styles. Empty means
              *     none: each member uses personal HTML, plain text or the closing line.
              */
             template: string;
@@ -56872,6 +56895,29 @@ export interface components {
             claim_key: string;
             evidence_fingerprint: string;
         };
+        /**
+         * @description Why a reminder taken from a customer's request will not close by itself. Margince judges
+         *     whether a request was answered only from mail it read in full. When the request or the
+         *     mail that would answer it can no longer be read, no pass judges it, and the reminder stays
+         *     open until somebody marks it done.
+         */
+        TaskRequestCheck: {
+            /**
+             * @description `text_not_checked`: the text of the request or of a mail that may answer it can no longer be checked.
+             * @enum {string}
+             */
+            state: "text_not_checked";
+            /** @description The newest reply from our side that the request check would have read. Absent when there is none, or when the reader may not read it. */
+            our_last_reply?: components["schemas"]["TaskRequestCheckReply"];
+        };
+        /** @description One reply from our side to a customer's request, named so the reader can open it. */
+        TaskRequestCheckReply: {
+            /** Format: uuid */
+            activity_id: string;
+            /** Format: date-time */
+            occurred_at: string;
+            occurred_precision: components["schemas"]["OccurredPrecision"];
+        };
         /** @description A visible recipient's own claim on a shared deliverable. Other recipients may be outside the reader's scope. */
         WorklistPromiseRecipient: {
             /** Format: uuid */
@@ -56892,8 +56938,10 @@ export interface components {
             system_display?: components["schemas"]["SystemDisplay"];
             /** @description Sent as true on a task whose reminder is due for the reader, who is its assignee and reads their own work. Absent otherwise. */
             reminder_due?: boolean;
-            /** @description Our later mail on the promise's thread to one of its recipients, which may have kept it. The row then asks whether it is done instead of listing it as open. Absent when there is no such mail or the reader answered Not yet to this mail. */
+            /** @description Our later mail on the promise's thread to one of its recipients, which may have kept it. The row then asks whether it is done instead of listing it as open, and `overdue` is false while it asks. Its `claim_key` is the one the contact page and the company page use, so one Not yet holds on all three. Absent when there is no such mail, when the task is closed, or when the reader answered Not yet to this mail; the row is then overdue again if its date has passed. */
             may_be_done?: components["schemas"]["WorklistMayBeDone"];
+            /** @description On a reminder taken from a customer's request, why Margince cannot tell whether the request was answered. Absent on every other row. */
+            request_check?: components["schemas"]["TaskRequestCheck"];
             /** @description Visible recipient claims represented by this task; each keeps its own settlement state. Absent when unavailable. */
             promise_recipients?: components["schemas"]["WorklistPromiseRecipient"][];
             /** @description The evidence record behind this work, distinct from its account or counterparty. Its label is resolved under current read permissions; the reference grants no access. */
@@ -58562,8 +58610,10 @@ export interface components {
             system_display?: components["schemas"]["SystemDisplay"];
             /** @description On an approval, its title taken apart, so the row shows the sentence as its title and the proposed values as its supporting line. Absent when the title is a sentence alone. */
             summary_parts?: components["schemas"]["ApprovalSummaryParts"];
-            /** @description Our later mail on the promise's thread to one of its recipients, which may have kept it. The row then asks whether it is done instead of listing it as open. Absent when there is no such mail or the reader answered Not yet to this mail. */
+            /** @description Our later mail on the promise's thread to one of its recipients, which may have kept it. The row then asks whether it is done instead of listing it as open, and `overdue` is false while it asks. Its `claim_key` is the one the contact page and the company page use, so one Not yet holds on all three. Absent when there is no such mail, when the task is closed, or when the reader answered Not yet to this mail; the row is then overdue again if its date has passed. */
             may_be_done?: components["schemas"]["WorklistMayBeDone"];
+            /** @description On a reminder taken from a customer's request, why Margince cannot tell whether the request was answered. Absent on every other row. */
+            request_check?: components["schemas"]["TaskRequestCheck"];
             /** @description Visible recipient claims represented by this task; each keeps its own settlement state. Absent when unavailable. */
             promise_recipients?: components["schemas"]["WorklistPromiseRecipient"][];
             /** @description The evidence record behind this work, distinct from its account or counterparty. Its label is resolved under current read permissions; the reference grants no access. */

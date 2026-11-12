@@ -106,8 +106,8 @@ func (e *deepReadEngine) confirmCompanySiteRead(w http.ResponseWriter, r *http.R
 	if !httperr.Decode(w, r, &req) {
 		return
 	}
-	if code, why := values.CompanyNameFault(req.Profile.DisplayName); code != "" {
-		httperr.Write(w, r, httperr.Validation("profile.display_name", code, why))
+	if refused := values.CompanyNameFault("profile.display_name", req.Profile.DisplayName); refused != nil {
+		httperr.Write(w, r, refused)
 		return
 	}
 	for _, required := range []struct {

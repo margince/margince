@@ -167,7 +167,9 @@ Otherwise it stops, names the move and applies nothing. That happens when the ro
 when the checksum differs, or when the ledger already holds the new version with other SQL. It prints how many rows it moved.
 
 `scripts/check-migration-versions.sh` fails a move that `renumbered.txt` does not declare. It matches by
-name, so a move fails even when the SQL stayed the same.
+name, so a move fails even when the SQL stayed the same. It also fails a declared move whose SQL
+changed, unless an `equivalentContent` entry accepts the old text at the new version. It asks
+`backend/tools/check-equivalentmove`, which reads that list the way `migrate up` does.
 
 An older binary started after this move runs the moved migrations again and stops with an error. To go
 back to an older binary, restore the database from a copy taken before the upgrade.

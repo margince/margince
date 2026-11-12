@@ -28,6 +28,7 @@ import (
 	"unicode/utf8"
 
 	"github.com/margince/margince/backend/internal/compose/aitasks"
+	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/ai"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/ports/model"
@@ -93,11 +94,9 @@ func (captureClassifyCases) Prepare(fixture, expected json.RawMessage) (aitasks.
 	if err := refuseUnreadableBatch(messages); err != nil {
 		return nil, err
 	}
-	// A correct reply differs from an incorrect one in the label tokens alone, so
-	// the expectation IS those tokens rather than a wrapper carrying them.
-	var want []string
-	if err := json.Unmarshal(expected, &want); err != nil {
-		return nil, fmt.Errorf("capture_classify/classify: the expected answer is not a list of labels: %w", err)
+	var want []classifyExpected
+	if err := json.Unmarshal(expected, &want); err != nil || want == nil {
+		return nil, fmt.Errorf("capture_classify/classify: the expected answer is not a list of labels: %s", expected)
 	}
 	if err := refuseUnreachableLabels(want, len(messages)); err != nil {
 		return nil, err
@@ -129,6 +128,11 @@ func refuseUnreadableBatch(messages captureClassifyFixture) error {
 				"capture_classify/classify: message %d carries a body of %d characters, but the backlog read truncates every body to %d",
 				i+1, n, classifyBodyLimit)
 		}
+		if activities.ClassifyBody(m.Body, classifyBodyLimit) != strings.TrimSpace(m.Body) {
+			return fmt.Errorf(
+				"capture_classify/classify: message %d carries quoted mail, but the backlog read sends only the sender's current message",
+				i+1)
+		}
 	}
 	return nil
 }
@@ -138,27 +142,67 @@ func refuseUnreadableBatch(messages captureClassifyFixture) error {
 // not one label per message asserts about a message this batch does not carry or
 // leaves one unasserted. Each would measure nothing for as long as it stayed in
 // the corpus. Naming it here costs a parse; finding it later costs a paid run.
-func refuseUnreachableLabels(want []string, messages int) error {
+func refuseUnreachableLabels(want []classifyExpected, messages int) error {
 	if len(want) != messages {
 		return fmt.Errorf(
 			"capture_classify/classify: the scenario expects %d labels for %d messages, and this site answers one label per message",
 			len(want), messages)
 	}
-	for i, label := range want {
-		if !classifyLabels[label] {
+	for i, expect := range want {
+		if (expect.Label != "" || !expect.judgesReply()) && !classifyLabels[expect.Label] {
 			return fmt.Errorf(
 				"capture_classify/classify: the scenario expects %q for message %d, which is not commitment|meeting|noise",
-				label, i+1)
+				expect.Label, i+1)
+		}
+		for _, verdict := range []string{expect.Reply, expect.NotReply} {
+			if verdict != "" && !replyVerdicts[verdict] {
+				return fmt.Errorf(
+					"capture_classify/classify: the scenario expects reply %q for message %d, which is not positive|negative|neutral",
+					verdict, i+1)
+			}
 		}
 	}
 	return nil
+}
+
+// classifyExpected is what a scenario expects of one message. A bare string
+// is a label. An object may also name the reply verdict wanted, or one the
+// reply must not be, and may then leave the label open.
+type classifyExpected struct {
+	Label    string `json:"label"`
+	Reply    string `json:"reply"`
+	NotReply string `json:"not_reply"`
+}
+
+func (e *classifyExpected) UnmarshalJSON(raw []byte) error {
+	if err := json.Unmarshal(raw, &e.Label); err == nil {
+		return nil
+	}
+	type fields classifyExpected
+	return json.Unmarshal(raw, (*fields)(e))
+}
+
+func (e classifyExpected) judgesReply() bool { return e.Reply != "" || e.NotReply != "" }
+
+// disagreement names how one answer differs from the expectation, "" when
+// it does not.
+func (e classifyExpected) disagreement(answered classifyResult) string {
+	switch {
+	case e.Label != "" && answered.Label != e.Label:
+		return fmt.Sprintf("is labeled %q where the scenario expects %q", answered.Label, e.Label)
+	case e.Reply != "" && answered.Reply != e.Reply:
+		return fmt.Sprintf("has reply %q where the scenario expects %q", answered.Reply, e.Reply)
+	case e.NotReply != "" && answered.Reply == e.NotReply:
+		return fmt.Sprintf("has reply %q, which the scenario rules out", answered.Reply)
+	}
+	return ""
 }
 
 // captureClassifyCase is one batch ready to be labeled, closed over the minted
 // ids and the label the scenario expects for each message.
 type captureClassifyCase struct {
 	batch    []unlabeledMessage
-	expected []string
+	expected []classifyExpected
 }
 
 // Run issues the one request this site sends. It sends it bare: production wraps
@@ -216,15 +260,14 @@ func (c *captureClassifyCase) Evaluate(trace aitasks.Trace) aitasks.Outcome {
 // could look up, and the subject is captured text that has no business being
 // echoed into a record.
 func (c *captureClassifyCase) disagreements(payload classifyPayload) []string {
-	labeled := make(map[string]string, len(payload.Results))
+	answered := make(map[string]classifyResult, len(payload.Results))
 	for _, r := range resolveClassifyRefs(payload.Results, c.batch) {
-		labeled[r.ID] = r.Label
+		answered[r.ID] = r
 	}
 	var out []string
 	for i, m := range c.batch {
-		if answered := labeled[m.ID.String()]; answered != c.expected[i] {
-			out = append(out, fmt.Sprintf(
-				"message %d is labeled %q where the scenario expects %q", i+1, answered, c.expected[i]))
+		if differs := c.expected[i].disagreement(answered[m.ID.String()]); differs != "" {
+			out = append(out, fmt.Sprintf("message %d %s", i+1, differs))
 		}
 	}
 	return out

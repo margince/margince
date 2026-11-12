@@ -20,6 +20,7 @@ import (
 const (
 	worklistStageFamily      = "margince_worklist_stage_duration_seconds"
 	worklistStatementsFamily = "margince_worklist_stage_statements_total"
+	worklistExchangesFamily  = "margince_worklist_stage_exchanges_total"
 	worklistFailedFamily     = "margince_worklist_stage_statement_errors_total"
 	worklistClippedFamily    = "margince_worklist_stage_app_clipped_total"
 	worklistDBFamily         = "margince_worklist_stage_db_seconds"
@@ -50,6 +51,10 @@ func writeWorklistStageMetrics(w io.Writer, r worklistStageReadings) {
 		{
 			worklistStatementsFamily, "pgx statements each stage ran, since process start.",
 			func(c attention.StageCost) int64 { return c.Statements },
+		},
+		{
+			worklistExchangesFamily, "pgx query, batch and transaction calls each stage used, since process start.",
+			func(c attention.StageCost) int64 { return c.Exchanges },
 		},
 		{
 			worklistFailedFamily, "pgx statements each stage ran that ended in an error, since process start.",

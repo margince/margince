@@ -2983,6 +2983,9 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "action.booking": "Buchungsseite",
 
   "common.fieldInvalid": "Prüfe diesen Wert und versuche es erneut.",
+  "common.fieldTooLongMax": "{field}: höchstens {max} Zeichen.",
+  "common.valueTooLongMax": "Dieser Wert darf höchstens {max} Zeichen haben.",
+  "common.valueTooLong": "Dieser Wert ist zu lang.",
   "common.undo": "Rückgängig",
   "common.close": "Schließen",
   "common.unknownValue": "Sonstiges",
@@ -8899,15 +8902,17 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "signatureTemplate.label": "Vorlage (HTML)",
   "signatureTemplate.placeholder": "<p><b>{name}</b><br>{title}<br>{phone}</p>",
   "signatureTemplate.hint":
-    "Nutze {name}, {title}, {phone}, {logo} und {imprint}. {logo} ist das in die E-Mail eingebettete Logo des Rechtsträgers, für den das Mitglied arbeitet, {imprint} sein Impressum. Ein Rechtsträger mit eigener Vorlage nutzt diese. Absätze, Zeilenumbrüche, fett, kursiv, unterstrichen, Links sowie Farbe und Pixelgröße auf einem span bleiben erhalten. Ein leeres Feld deaktiviert die Vorlage.",
+    "Nutze {name}, {title}, {phone}, {logo} und {imprint}. {logo} ist das in die E-Mail eingebettete Logo des Rechtsträgers, für den das Mitglied arbeitet, {imprint} sein Impressum. Ein Rechtsträger mit eigener Vorlage nutzt diese. Absätze, Zeilenumbrüche, fett, kursiv, unterstrichen, Links, Tabellen, Layout-Stile und Bilder von https-Adressen bleiben erhalten. Skripte und Formulare werden entfernt. Ein leeres Feld deaktiviert die Vorlage.",
   "settings.signatureFormat": "Format",
   "settings.signatureFormatText": "Nur Text",
   "settings.signatureFormatHtml": "HTML",
   "settings.signatureHtmlLabel": "HTML-Signatur",
   "settings.signatureHtmlHintTemplate":
-    "Diese Signatur ersetzt die Unternehmensvorlage. Leere das Feld, um wieder die Unternehmensvorlage zu verwenden. Externe Bilder und Skripte werden entfernt.",
+    "Diese Signatur ersetzt die Unternehmensvorlage. Leere das Feld, um wieder die Unternehmensvorlage zu verwenden. Bis zu {max} Zeichen. Tabellen, Layout und Bilder von https-Adressen bleiben erhalten; Skripte und Formulare werden entfernt.",
   "settings.signatureHtmlHintPlain":
-    "Leere das Feld, um wieder deinen Text zu verwenden. Externe Bilder und Skripte werden entfernt.",
+    "Leere das Feld, um wieder deinen Text zu verwenden. Bis zu {max} Zeichen. Tabellen, Layout und Bilder von https-Adressen bleiben erhalten; Skripte und Formulare werden entfernt.",
+  "settings.signatureHtmlCount_one": "{count} von {max} Zeichen",
+  "settings.signatureHtmlCount_other": "{count} von {max} Zeichen",
   "settings.signatureOwnHtml": "Deine HTML-Signatur",
   "settings.signatureReviewTitle": "Gespeicherte Signatur von {name} prüfen",
   "settings.signatureReviewIntro":
@@ -11063,8 +11068,11 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "privacy.openRequest": "Anfrage erstellen",
   "privacy.erasureNeedsContact":
     "Eine Löschanfrage muss einen Kontakt in diesem Unternehmen nennen, da beim Erfüllen der Anfrage genau dieser Datensatz gelöscht wird. Betroffene, die nur als Freitext erfasst sind, lassen sich nicht löschen.",
-  "privacy.accessManual":
-    "Eine Auskunftsanfrage wird manuell erfüllt: Halte im Ergebnis fest, was du gesendet hast. Dieses System stellt die Daten nicht für dich zusammen und exportiert sie nicht.",
+  "privacy.accessPicksContact":
+    "Wähle den Kontakt, um den es in dieser Anfrage geht. In der Anfrage kannst du dann alles herunterladen, was über ihn gespeichert ist.",
+  "privacy.downloadPackage": "Datenpaket herunterladen",
+  "privacy.possibleDuplicates":
+    "Andere Datensätze könnten dieselbe Person sein. Prüfe sie, bevor du antwortest.",
   "privacy.fulfilErasureTitle": "Löschanfrage erfüllen",
   "privacy.erasureIrreversible":
     "Damit wird der Kontakt im gesamten System dauerhaft gelöscht: Datensatz, erfasste Aktivitäten und abgeleitete Werte. Das lässt sich nicht rückgängig machen. Die Löschung selbst wird im Audit-Log festgehalten.",
@@ -19509,6 +19517,9 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Für diesen Datensatz wurde ein Tag vorgeschlagen. Übernimm ihn oder verwirf den Vorschlag.",
   "worklist.ask.task":
     "Diese Aufgabe ist offen. Erledige sie und markiere sie als erledigt, oder verschiebe sie auf einen anderen Tag.",
+  "worklist.ask.task_unchecked":
+    "Margince kann nicht prüfen, ob dies beantwortet wurde: Der Text der Mail lässt sich nicht mehr lesen. Markiere die Aufgabe als erledigt, sobald sie es ist.",
+  "worklist.ask.task_unchecked_reply": "Zuletzt gesendete Antwort: {date}",
   "worklist.ask.brief_item":
     "Die nächtliche Prüfung hat diesen Deal markiert. Reagiere darauf, stelle ihn zurück oder verwirf ihn.",
   "worklist.ask.conversation_claim":
@@ -20013,7 +20024,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "worklist.untitled.task": "Aufgabe ohne Titel",
   "worklist.untitled.brief_item": "Zu prüfender Deal",
   "worklist.mayBeDone.asked":
-    "Vielleicht schon erledigt: Du hast am {date} geschrieben.",
+    "Vielleicht schon erledigt: Am {date} ging eine E-Mail an sie.",
   "worklist.mayBeDone.done": "Erledigt",
   "worklist.mayBeDone.notYet": "Noch nicht",
   "worklist.recipients.label": "Empfangende",
@@ -20487,6 +20498,10 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Bis du „Weiter“ wählst, wird nichts an den Anbieter gesendet.",
   "contact.card.dealTitle": "Deal von {name}",
   "contact.card.deals": "Deals",
+  "contact.card.openTasks": "Offene Aufgaben",
+  "contact.card.noOpenTasks": "Keine offenen Aufgaben",
+  "contact.moment.doneToast":
+    "Als erledigt markiert. Es kommt wieder, sobald eine Seite erneut schreibt.",
   "contact.card.understandingTitle": "{name} verstehen",
   "contact.card.correct": "Etwas korrigieren",
   "contact.card.said": "Was gesagt wurde",

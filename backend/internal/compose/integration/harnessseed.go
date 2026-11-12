@@ -20,6 +20,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/modules/deals"
 	"github.com/margince/margince/backend/internal/modules/identity"
@@ -77,6 +78,30 @@ func (e *Env) SeedCompany(t *testing.T, name string, owner *ids.UUID) ids.UUID {
 		t.Fatal(err)
 	}
 	return ids.UUID(company.Id)
+}
+
+// SeedEmployedAccount creates an account owned by owner that employs contact,
+// with an open deal on it and mail filed under both of them.
+func (e *Env) SeedEmployedAccount(t *testing.T, contact, owner ids.UUID, pipeline ids.PipelineID, stage ids.StageID, mail activities.LogActivityInput) ids.UUID {
+	t.Helper()
+	company := e.SeedCompany(t, "Employed Account", &owner)
+	companyID := ids.From[ids.CompanyKind](company)
+	if _, err := e.Contacts.CreateRelationship(e.Admin(), contacts.CreateRelationshipInput{
+		Kind: "employment", ContactID: new(ids.From[ids.ContactKind](contact)), CompanyID: &companyID, Source: "manual",
+	}); err != nil {
+		t.Fatalf("employing the contact at the account: %v", err)
+	}
+	if _, err := e.Deals.CreateDeal(e.Admin(), deals.CreateDealInput{
+		Name: "Account rollout", PipelineID: pipeline, StageID: stage, CompanyID: &companyID, OwnerID: new(ids.From[ids.UserKind](owner)),
+	}); err != nil {
+		t.Fatalf("opening the account's deal: %v", err)
+	}
+	mail.Links = append(mail.Links, activities.ActivityLinkInput{EntityType: objContact, EntityID: contact},
+		activities.ActivityLinkInput{EntityType: objCompany, EntityID: company})
+	if _, _, err := e.Activities.LogActivity(e.Admin(), mail); err != nil {
+		t.Fatalf("logging the account's mail: %v", err)
+	}
+	return company
 }
 
 // SeedPartnerCompany creates a company and gives it a partner programme, so

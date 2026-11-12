@@ -20,15 +20,18 @@ export function useSetAside<Item>({
   restore,
   refresh,
   idOf,
+  removed: removedWords,
 }: Readonly<{
   setAside: (item: Item) => Promise<void>;
   restore: (item: Item) => Promise<void>;
   refresh: () => Promise<unknown>;
   idOf: (item: Item) => string;
+  // The toast for a verb that says more than "set aside".
+  removed?: string;
 }>) {
   const t = useT();
   const toasts = useUndoableRemoval<Item>({
-    removed: t("record.setAside.done"),
+    removed: removedWords ?? t("record.setAside.done"),
     restored: t("record.setAside.restored"),
   });
   // The callbacks live on the hooks rather than on `mutate`. The Undo runs

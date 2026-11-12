@@ -9,7 +9,6 @@ import (
 	"slices"
 	"strings"
 	"time"
-	"unicode/utf8"
 
 	"github.com/jackc/pgx/v5"
 	openapi_types "github.com/oapi-codegen/runtime/types"
@@ -224,8 +223,8 @@ func (s *Service) validateTarget(ctx context.Context, tx pgx.Tx, in *crmcontract
 	if !values.HasVisibleText(in.Reason) {
 		return checkedTarget{}, refuse("reason", "required", "enter a revision reason")
 	}
-	if utf8.RuneCountInString(in.Reason) > 1000 {
-		return checkedTarget{}, refuse("reason", "too_long", "a revision reason holds at most 1000 characters")
+	if err := refuseLongReason(in.Reason); err != nil {
+		return checkedTarget{}, err
 	}
 	catalog, err := s.evaluator.Catalog(ctx, textlang.English)
 	if err != nil {

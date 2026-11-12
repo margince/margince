@@ -19,7 +19,11 @@ import { displayedSubject } from "../../lib/systemdisplay";
 import { taskDetail } from "../../lib/taskdetail";
 import { MoveButton } from "../records/movebutton";
 import { basisAddsARecord } from "../records/record360";
-import { MayBeDoneVerbs, useMomentSetAside } from "./contactmaybedone";
+import {
+  MayBeDoneVerbs,
+  MomentDoneVerb,
+  useMomentSetAside,
+} from "./contactmaybedone";
 import { momentTask, owedLateness, recordsTheMoveNames } from "./contactowed";
 import { momentDrafts } from "./contactpage.drawers";
 import "../records/record360/record360.css";
@@ -43,6 +47,27 @@ function actionableMoment(moment: ContactMoment | undefined): boolean {
   );
 }
 
+/**
+ * What the Next bar draws: the server's move, else the most urgent open task.
+ * `rest` is every other open task, the ones behind "+N tasks" and on the Open
+ * tasks card, so no task is listed twice.
+ */
+export function nextBarChoice(
+  moment: ContactMoment | undefined,
+  view: Contact360,
+): Readonly<{ move?: ContactMoment; task?: Activity; rest: Activity[] }> {
+  const move = moment && actionableMoment(moment) ? moment : undefined;
+  const named = recordsTheMoveNames(move);
+  const open = (view.next_steps?.data ?? []).filter(
+    (task) => !task.is_done && !named.has(task.id),
+  );
+  if (move) {
+    return { move, rest: open };
+  }
+  const [task, ...rest] = open;
+  return { task, rest };
+}
+
 export function ContactToday({
   moment,
   view,
@@ -63,11 +88,7 @@ export function ContactToday({
   const plural = usePlural();
   const { locale } = useLocale();
   const zone = useViewerZone();
-  const move = moment && actionableMoment(moment) ? moment : undefined;
-  const named = recordsTheMoveNames(move);
-  const tasks = (view.next_steps?.data ?? []).filter(
-    (task) => !task.is_done && !named.has(task.id),
-  );
+  const { move, task, rest } = nextBarChoice(moment, view);
   // The tasks behind "+N tasks": a row leads to the queue, which holds them all.
   const more = (rows: readonly Activity[]) =>
     onOpenTasks
@@ -96,11 +117,10 @@ export function ContactToday({
         view={view}
         onAction={onAction}
         onOpenEmail={onOpenEmail}
-        more={more(tasks)}
+        more={more(rest)}
       />
     );
   }
-  const [task, ...rest] = tasks;
   if (task) {
     return <TaskBar task={task} view={view} more={more(rest)} />;
   }
@@ -186,6 +206,9 @@ function MomentBar({
               primary
               onAction={onAction}
             />
+            {moment.done && (
+              <MomentDoneVerb done={moment.done} contactId={view.contact.id} />
+            )}
             {call}
             {notNow.failure && <ErrorLine error={notNow.failure} inline />}
           </>
@@ -196,7 +219,13 @@ function MomentBar({
       snooze={
         moment.may_be_done || moment.rule === "privacy_notice_due"
           ? undefined
-          : { onSnooze: defer.onDefer, pending: defer.pending }
+          : {
+              onSnooze: defer.onDefer,
+              pending: defer.pending,
+              // The dismissal holds until the card's evidence changes, not to
+              // a date, so it is no snooze.
+              label: t("worklist.disposition.verb.notNow"),
+            }
       }
       more={more}
     />

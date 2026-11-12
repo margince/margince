@@ -1371,7 +1371,7 @@ A check is `object.action`, or `object.a|b` for any one of them. `*.action` is t
 | Brief, worklist, weekly plan and notices | `read_details.response_metrics` | `get_response_metrics` | `activity.read` `deal.read` `installation_settings.read` `scope:team` |
 | Brief, worklist, weekly plan and notices | `read_details.team_board` | `get_team_board` | `activity.read` `company.read` `contact.read` `deal.read` `installation_settings.read` `project.read` `relationship.read` `scope:team` |
 | Brief, worklist, weekly plan and notices | `read_details.team_exceptions` | `get_team_exceptions` | `activity.read` `automation.read` `company.read` `contact.read` `deal.read` `installation_settings.read` `introduction.read` `lead.read` `project.read` `relationship.read` `scope:team` `tag.read` |
-| Brief, worklist, weekly plan and notices | `read_details.team_margince_changes` | `get_team_margince_changes` | `deal.read` `scope:team` |
+| Brief, worklist, weekly plan and notices | `read_details.team_margince_changes` | `get_team_margince_changes` | `deal.read` `pipeline.read` `scope:team` |
 | Brief, worklist, weekly plan and notices | `read_details.team_weekly_review` | `get_team_weekly_review` | `company.read` `deal.read` `scope:team` `team_oversight.read,team_lead.read` |
 | Brief, worklist, weekly plan and notices | `read_details.teammate_weekly_plan` | `get_teammate_weekly_plan` | `installation_settings.read` `scope:team` `weekly_plan.read` |
 | Brief, worklist, weekly plan and notices | `read_details.weekly_plan` | `get_current_weekly_plan` | `installation_settings.read` `weekly_plan.read` |

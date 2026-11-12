@@ -68,4 +68,4 @@ e79906fc8ea528d9fc4a3dbcf1269d24d6db1100 b1ace03e3b7da348ba8f51d71b97d770f5fec04
 472011d59073aaab07be30e1a292928e149cb4d8 858d10b30af483c12e6e8bc0bfb698092a5e8dfb ratified-a-product-save-refuses-a-stale-read-in-the-sync
 7362262ebf70d503b9ee6bab78541daa4df14490 a3bf4437d5a293567515f4feb8ec6d7d45996aa2 ratified-timeline-kind-repeats-and-one-value-reads-as-before
 22140e16ec45f2632e8e327b1e237663adc98bcb 71752a0721a2f9a1d114b02ca70b3bb752dd09af ratified-main-s-timeline-kind-repeats-carried-into-develop-in-the-sync
-8f3e408bc97f3f01ad9fdcbf45b0e37361317859 85eae340c3375c7e6da5f272908c3dcf53ca236a ratified-extension-record-kinds-request-enums-take-an-open-pattern-that-still-accepts-every-core-value
+192852523f3347298b9089a6f2b941fd1ad87cd5 7a63ac41f4e658ee73f45b27b859b237b68dfc6c ratified-extension-record-kinds-request-enums-take-an-open-pattern-that-still-accepts-every-core-value

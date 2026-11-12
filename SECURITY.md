@@ -75,8 +75,9 @@ Out of scope:
 
 ## Supported versions
 
-Margince is an early proof of concept: **only the `main` branch is supported**. There are no release
-branches yet, and we do not copy fixes to older versions. Fixes go to `main`.
+We fix security holes only in the last release. To change to it is free, and it needs no new
+machine. Each version gets support for 5 years or more. The rules and the reasons are in
+[docs/compliance/cra/support-period.md](docs/compliance/cra/support-period.md).
 
 ## No bounty
 

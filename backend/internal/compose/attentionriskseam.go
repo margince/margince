@@ -69,6 +69,9 @@ func (a attentionAtRisk) RiskAmong(
 
 // risky draws each candidate as the queue's at-risk deal, in order.
 func (a attentionAtRisk) risky(ctx context.Context, candidates []agents.SlippingDeal, now time.Time) ([]attention.RiskyDeal, error) {
+	if len(candidates) == 0 {
+		return []attention.RiskyDeal{}, nil
+	}
 	cover, err := a.championCover(ctx, candidates, now)
 	if err != nil {
 		return nil, err

@@ -4,6 +4,7 @@
 package contacts
 
 import (
+	"context"
 	"net/http"
 
 	openapi_types "github.com/oapi-codegen/runtime/types"
@@ -11,6 +12,7 @@ import (
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/signature"
 )
 
 // WithPrivacyReviewer passes the privacy reviewer check to the store.
@@ -27,7 +29,7 @@ func (h Handlers) GetRetainedEmailSignature(w http.ResponseWriter, r *http.Reque
 		writeStoreErr(w, r, err)
 		return
 	}
-	httperr.WriteJSON(w, http.StatusOK, retainedSignatureWire(saved))
+	httperr.WriteJSON(w, http.StatusOK, h.retainedSignatureWire(r.Context(), saved))
 }
 
 // SaveRetainedEmailSignature requires body and expected_version to be sent,
@@ -54,12 +56,17 @@ func (h Handlers) SaveRetainedEmailSignature(w http.ResponseWriter, r *http.Requ
 		writeStoreErr(w, r, err)
 		return
 	}
-	httperr.WriteJSON(w, http.StatusOK, retainedSignatureWire(saved))
+	httperr.WriteJSON(w, http.StatusOK, h.retainedSignatureWire(r.Context(), saved))
 }
 
-func retainedSignatureWire(saved RetainedSignature) crmcontracts.RetainedEmailSignature {
+// retainedSignatureWire draws the preview's images here, after the store's
+// transaction has ended, so no fetch runs while a row is locked.
+func (h Handlers) retainedSignatureWire(ctx context.Context, saved RetainedSignature) crmcontracts.RetainedEmailSignature {
 	version := crmcontracts.RowVersion(saved.Version)
 	preview := saved.PreviewHTML
+	if h.signatureImages != nil {
+		preview = h.signatureImages.Inline(ctx, preview)
+	}
 	return crmcontracts.RetainedEmailSignature{
 		Id: openapi_types.UUID(saved.ID), OwnerId: openapi_types.UUID(saved.OwnerID), OwnerName: saved.OwnerName,
 		Version: &version, PreviewHtml: &preview, Signature: emailSignatureWire(saved.Signature),
@@ -69,5 +76,11 @@ func retainedSignatureWire(saved RetainedSignature) crmcontracts.RetainedEmailSi
 // WithRetainedSignaturePreview passes the preview renderer to the store.
 func (h Handlers) WithRetainedSignaturePreview(preview func(string) (string, error)) Handlers {
 	h.store.WithRetainedSignaturePreview(preview)
+	return h
+}
+
+// WithSignatureImages wires the drawing of the retained preview's https images.
+func (h Handlers) WithSignatureImages(images signature.PreviewImages) Handlers {
+	h.signatureImages = images
 	return h
 }

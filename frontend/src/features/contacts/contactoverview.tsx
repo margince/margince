@@ -9,6 +9,7 @@ import {
 import { contactFirstName } from "./contactfirstname";
 import { ContactHowItStands } from "./contacthowitstands";
 import { ContactMemory } from "./contactmemory";
+import { ContactOpenTasks } from "./contactopentasks";
 import { ContactToday } from "./contacttoday";
 
 type Contact360 = components["schemas"]["Contact360"];
@@ -44,6 +45,11 @@ export function ContactOverview({
         onAction={onAction}
         onOpenEmail={onOpenEmail}
         onOpenTasks={openQueue}
+        onAddTask={onAddTask}
+      />
+      <ContactOpenTasks
+        view={view}
+        onAllTasks={openQueue}
         onAddTask={onAddTask}
       />
       <ContactHowItStands view={view} />

@@ -5,7 +5,6 @@ package contacts
 
 import (
 	"errors"
-	"fmt"
 	"net/http"
 	"strings"
 
@@ -318,9 +317,8 @@ func (h Handlers) RejectCompany(w http.ResponseWriter, r *http.Request, id crmco
 	// The contract says maxLength: 500 and the generated type does not enforce
 	// it. Unchecked, one caller stores a megabyte on the domain and every
 	// reader of the blocked list is served it back in full.
-	if len([]rune(reason)) > maxRejectReason {
-		httperr.Write(w, r, httperr.Validation(fieldKeyReason, "too_long",
-			fmt.Sprintf("a reason is at most %d characters; this one is %d", maxRejectReason, len([]rune(reason)))))
+	if err := httperr.RequireWithin(fieldKeyReason, reason, maxRejectReason); err != nil {
+		httperr.Write(w, r, err)
 		return
 	}
 	ifVersion, ok := httperr.IfMatchVersion(w, r)

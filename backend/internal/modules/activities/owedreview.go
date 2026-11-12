@@ -64,7 +64,7 @@ func owedReviewReadTx(ctx context.Context, tx pgx.Tx, after ids.UUID, exact *ids
 	if err != nil {
 		return nil, err
 	}
-	body, prior := arg(bodyLimit), arg(priorBodyLimit)
+	body, prior := arg(storedBodyReadRunes), arg(priorBodyLimit)
 	columns := storekit.SQLf(candidateColumns, body, 0, 0, prior)
 	join := storekit.SQLf(priorOutboundVisibleJoin("%[5]s"), body, 0, 0, prior, priorScope)
 	exactArg := arg(exact)
@@ -95,6 +95,7 @@ func owedReviewReadTx(ctx context.Context, tx pgx.Tx, after ids.UUID, exact *ids
 	return pgx.CollectRows(rows, func(row pgx.CollectableRow) (OwedReviewCandidate, error) {
 		var item OwedReviewCandidate
 		candidate, err := scanOwedCandidate(row, &item.PriorID, &item.Version, &item.Verdict, &item.Ruleset, &item.JudgedAt, &item.Snapshot, &item.Pristine, &item.ContextReadable, &item.EvidenceComplete)
+		candidate.Body = ClassifyBody(candidate.Body, bodyLimit)
 		item.Candidate = candidate
 		return item, err
 	})

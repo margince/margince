@@ -61,6 +61,7 @@ func newContactsHandlers(pool *pgxpool.Pool) contactsHandlers {
 			markup, _, err := activities.SignatureMarkup(source)
 			return markup, err
 		}).
+		WithSignatureImages(sharedSignaturePreviewImages()).
 		WithFloorCarry(EntityFloorCarry(pool)).
 		WithFieldCatalog(customfields.NewService(pool, nil)).
 		WithMatchStager(linkedInMatchStager(pool)).
@@ -89,6 +90,7 @@ func newActivitiesHandlers(pool *pgxpool.Pool) activitiesHandlers {
 		WithLocks(loadedLocks).
 		WithConsent(gate).
 		WithSendPreview(gate).
+		WithSignatureImages(sharedSignaturePreviewImages()).
 		// The SAME seam the check_availability tool reads, so the two doors
 		// answer one question one way: whether a window was read off the host's
 		// own diary or derived from this CRM's records.

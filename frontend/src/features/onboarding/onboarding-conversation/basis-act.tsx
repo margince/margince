@@ -9,10 +9,10 @@ import { ErrorLine } from "../../../design-system/errorline";
 import { Heading } from "../../../design-system/heading";
 import { QueryGate } from "../../../design-system/querystates";
 import { ordinalNumber } from "../../../format/format";
-import { useT } from "../../../i18n";
+import { useLocale, useT } from "../../../i18n";
 import { useCanWrite } from "../../../lib/capability";
 import { useCurrencyNote } from "../../../lib/installation-settings.currency";
-import { problemFieldErrorsOf } from "../../../lib/problem";
+import { problemFieldSentencesOf } from "../../../lib/problem";
 import { useInstallationSettings } from "../../../lib/uploadlimit";
 import { useUpdateInstallationSettings } from "../../sign-in/installation-settings";
 import type {
@@ -63,6 +63,7 @@ function reportingPatch(
 
 export function BasisAct({ state, dispatch }: BasisActProps) {
   const t = useT();
+  const { locale } = useLocale();
   const currencyNote = useCurrencyNote();
   const canManage = useCanWrite("installation_settings", "update");
   const settings = useInstallationSettings(canManage);
@@ -86,12 +87,7 @@ export function BasisAct({ state, dispatch }: BasisActProps) {
         .filter((need): need is [true, string] => need[0] === true)
         .map(([, why]) => why)
     : [];
-  const refused = new Map(
-    problemFieldErrorsOf(update.error).map((problem) => [
-      problem.field,
-      problem.message,
-    ]),
-  );
+  const refused = problemFieldSentencesOf(update.error, locale);
 
   const leave = async () => {
     setLeaving(true);

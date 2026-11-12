@@ -199,3 +199,27 @@ export const OnlyRanked: Story = {
     await expect(canvas.queryByText(en["worklist.why.happened"])).toBeNull();
   },
 };
+
+/** A request reminder Margince cannot check says why, and names our reply. */
+export const RequestNotChecked: Story = {
+  args: {
+    item: {
+      ...TASK,
+      request_check: {
+        state: "text_not_checked",
+        our_last_reply: {
+          activity_id: "reply-1",
+          occurred_at: "2026-09-05T10:00:00Z",
+          occurred_precision: "day",
+        },
+      },
+    },
+  },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await expect(
+      canvas.getByText(en["worklist.ask.task_unchecked"]),
+    ).toBeVisible();
+    await expect(canvas.getByText(/^Latest reply sent: /)).toBeVisible();
+  },
+};
