@@ -19,27 +19,25 @@ both lanes, plus the craftsmanship gate, the license gate and the frontend lane,
 - an error that code drops without a trace;
 - a UI regression.
 
-Four lanes run without blocking: `vuln`, the SonarCloud scan, `live-boot` and `home-budget`. `scheduled.yml` checks
-`vuln` and the scan again daily on `main`. See [the workflows beside the merge gate](../reference/ci-workflows.md)
-for why a gate that does not block needs that second check. Why they do not block yet is under
-[The `ci` aggregate](#the-ci-aggregate-is-the-only-required-build-context).
+Five lanes run without blocking: `vuln`, the SonarCloud scan, `live-boot`, `home-budget` and
+`repeat-changed-tests`. `scheduled.yml` checks `vuln` and the scan again daily on `main`. See
+[the workflows beside the merge gate](../reference/ci-workflows.md) for why a gate that does not block needs that
+second check. Why they do not block yet is under [The `ci` aggregate](#the-ci-aggregate-is-the-only-required-build-context).
 
-`scheduled.yml` also calls each data vendor once a day, through the production adapter. For Surfe that
-call is `GET /v1/credits` (`make vendor-live`), which costs nothing. It proves that the key works, and
-that the answer still has the fields the adapter and `surfe/testdata/vendor-wire.json` name. It does
-not reach the calls that cost money.
-
-The key is the repository secret `SURFE_LIVE_KEY`. Without it the job reports "not checked", which is
-not a pass. The job is not required, so a vendor that is down blocks no merge.
+`scheduled.yml` also calls each data vendor once a day, through the production adapter. For Surfe that call is
+`GET /v1/credits` (`make vendor-live`), which costs nothing. It proves that the key works, and that the answer
+still has the fields the adapter and `surfe/testdata/vendor-wire.json` name. It does not reach the calls that
+cost money. The key is the repository secret `SURFE_LIVE_KEY`. Without it the job reports "not checked", which
+is not a pass. The job is not required, so a vendor that is down blocks no merge.
 
 `scheduled.yml` also renders every story on `main` once a day (`make fe-uat ARGS=--all-stories`). On a branch,
 `make fe-uat` renders only the stories the diff reaches, so a story that fails on `main` stays hidden until
 some change reaches it.
 
-Once a week `scheduled.yml` also measures the PERF budgets and the use cases a model drives, and
-records the results. It never writes them to `main`. It opens one pull request with the
-records and the pages they feed, and a record is published when a maintainer merges that pull request. See
-[the workflows beside the merge gate](../reference/ci-workflows.md#scheduledyml).
+Once a week `scheduled.yml` also measures the PERF budgets and the use cases a model drives, and records the
+results. It never writes them to `main`. It opens one pull request with the records and the pages they feed,
+and a record is published when a maintainer merges that pull request. See [the workflows beside the merge
+gate](../reference/ci-workflows.md#scheduledyml).
 
 **The merge queue is a ruleset setting**, not a file in this tree. Both required checks, `ci` and `cla`,
 run on `merge_group`. `backend/gates/mergequeuereach_test.go` fails a pull request workflow that does not,
@@ -93,31 +91,29 @@ pass on its own.
 replaces the review under way, and a merge verdict can never be cancelled. Each queue entry has its own
 ref, so entries never get in each other's way in that group.
 
-`release.yml` and `sbom.yml` do not take from the runner budget. A merge triggers neither: `sbom.yml`
-starts by hand, and `release.yml` starts on a `v*` tag or by hand. They keep their job groups for the case of two dispatch runs at once. There, a
-cancel must reach the costly steps that generate output. It must never reach the step that publishes or
-signs; see [the workflows beside the merge gate](../reference/ci-workflows.md).
+`release.yml` and `sbom.yml` do not take from the runner budget. A merge triggers neither: `sbom.yml` starts
+by hand, and `release.yml` starts on a `v*` tag or by hand. They keep their job groups for the case of two
+dispatch runs at once. There, a cancel must reach the costly steps that generate output. It must never reach
+the step that publishes or signs; see [the workflows beside the merge gate](../reference/ci-workflows.md).
 
-`scheduled.yml` groups without
-cancelling, because nothing replaces a daily run. `cache-warm.yml` groups without cancelling, because a
-cancelled run saves no cache.
+`scheduled.yml` groups without cancelling, because nothing replaces a daily run. `cache-warm.yml` groups
+without cancelling, because a cancelled run saves no cache.
 
 A pull request workflow that also starts with no new commit groups without cancelling, because Renovate
 never merges a head with a `cancelled` check. `backend/gates/samecommitcancel_test.go` holds this.
 
-A skipped required check counts as *passing* on GitHub. That is why the build checks are put together
-in one `ci` job that refuses a skip on `merge_group`; see
-[The `ci` aggregate](#the-ci-aggregate-is-the-only-required-build-context).
+A skipped required check counts as *passing* on GitHub. That is why the build checks are put together in one
+`ci` job that refuses a skip on `merge_group`; see [The `ci` aggregate](#the-ci-aggregate-is-the-only-required-build-context).
 
 ## Run only the checks a change can reach
 
 The first job, **`changes`**, sorts the diff (dorny/paths-filter, pinned to a SHA) into the scopes in the
 table below. Every later job gates on the output it needs.
 
-**This applies to `pull_request` only.** On `merge_group` every scope is set to `true`, so the queue
-lane covers the full tree and nothing can be skipped there. Scoping to the diff is good for what the author
-learns, and wrong for a merge verdict. A skip on the PR side is safe only while the queue lane covers
-the ground it skipped.
+**This applies to `pull_request` only.** On `merge_group` every scope is set to `true`, so the queue lane
+covers the full tree and nothing can be skipped there. Scoping to the diff is good for what the author learns,
+and wrong for a merge verdict. A skip on the PR side is safe only while the queue lane covers the ground it
+skipped.
 
 With the queue off, the PR run is the verdict, so a skip on a PR is a gap. The override sits in the
 outputs of the `changes` job, where nobody can forget it. It is not in the `if:` of each reader.
@@ -243,12 +239,13 @@ changes ──┬─> deterministic-gates *
  deterministic-gates + integration + frontend ──> sonarcloud
   craft-residue  (every non-draft change, independent)
   secret-scan    (every non-draft change, independent — + the image-pin gate)
+  repeat-changed-tests  (every non-draft pull request, independent, advisory)
 
   ci  ── the ONE required context. needs: ci-image, deterministic-gates,
          test-budget, backend-lint, craftsmanship, craft-residue,
          secret-scan, integration, frontend, uat, license-gate, images
-         (twelve — vuln, live-boot and home-budget stay advisory and are
-         NOT in the fan-in)
+         (twelve — vuln, live-boot, home-budget and repeat-changed-tests
+         stay advisory and are NOT in the fan-in)
 ```
 
 ### Two lanes are called, not inlined
@@ -355,6 +352,8 @@ These jobs are not in `needs`:
     fails the whole group it was checked in, and every entry in that group is queued again.
   - Nothing has tested these two under a blocking gate. Make them block once the queue has a measured
     baseline, each as its own change, so a regression has one cause.
+- `repeat-changed-tests`: advisory until a week of runs shows which of its reds are real flakes, so a
+  false alarm stops no merge. It skips on the merge queue, where `scripts/ci-verdict.sh` fails a skip.
 
 `uat` is in the aggregate. It reads no clock. PERF-1 holds a request, and checks that the heading did not
 wait on it; the budget for opening a record belongs to `make bench-mobile`. So a busy runner cannot turn
