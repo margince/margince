@@ -68,6 +68,26 @@ var catalogTextColumn = regexp.MustCompile(`^public\.([a-z_][a-z0-9_]*)\.([a-z_]
 var wholeVocabularyCheck = regexp.MustCompile(
 	`^\((?:\(\(([a-z_][a-z0-9_]*) IS NULL\) OR )?\(([a-z_][a-z0-9_]*) = ANY \(ARRAY\[([^\]]*)\]\)\)\)?\)$`)
 
+// extensionArm is the open arm an extension-widened CHECK carries beside its
+// closed list: the `ext:` spelling an extension kind uses. The closed list is
+// the column's vocabulary, so the arm is set aside before the list is read.
+var extensionArm = regexp.MustCompile(` OR \([a-z_][a-z0-9_]* ~ '\^ext:[^']*'::text\)`)
+
+// readWholeVocabulary reads a CHECK body that is a whole vocabulary, behind
+// an extension arm or not. It returns the submatches of wholeVocabularyCheck,
+// or nil when the body is a list inside a wider rule.
+func readWholeVocabulary(body string) []string {
+	if stripped := extensionArm.ReplaceAllString(body, ""); stripped != body {
+		body = stripped
+		if v := wholeVocabularyCheck.FindStringSubmatch(body); v != nil {
+			return v
+		}
+		// Dropping the arm leaves one pair of parentheses too many.
+		body = strings.TrimSuffix(strings.TrimPrefix(body, "("), ")")
+	}
+	return wholeVocabularyCheck.FindStringSubmatch(body)
+}
+
 // catalogTextLiteral reads one 'value'::text element of a catalog ARRAY.
 var catalogTextLiteral = regexp.MustCompile(`'((?:[^']|'')*)'::text`)
 
@@ -92,7 +112,7 @@ var catalogVocabularies = sync.OnceValues(func() (map[string][]string, error) {
 		if m == nil {
 			continue
 		}
-		v := wholeVocabularyCheck.FindStringSubmatch(m[2])
+		v := readWholeVocabulary(m[2])
 		if v == nil || (v[1] != "" && v[1] != v[2]) {
 			continue
 		}
@@ -451,6 +471,7 @@ var repeatedVocabularies = gatekit.Waive(map[string]string{
 		"column's contract enum is narrower than its CHECK (namedVocabularyDrift), so the three cannot " +
 		"bind to it until that drift is settled",
 	"kind: capture_counterparty_hold, capture_owner_identity, capture_owner_identity_withdrawn": sharedByOwnBinding,
+	"entity_type: activity_link_suggestion, signal":                                             sharedByOwnBinding,
 	"state: deal_suggestion, tag_suggestion":                                                    sharedByOwnBinding,
 	"state: web_form, webhook_subscription":                                                     sharedByOwnBinding,
 	"status: assurance_run, close_date_run": "no Go type spells this vocabulary as typed constants, so " +
@@ -463,7 +484,7 @@ var repeatedVocabularies = gatekit.Waive(map[string]string{
 
 // repeatedVocabulariesCeiling only moves down: bind a group to one type,
 // delete its waiver, then lower it.
-const repeatedVocabulariesCeiling = 9
+const repeatedVocabulariesCeiling = 10
 
 // unreadArrayCheckCeiling is how many catalog CHECKs hold an `= ANY (ARRAY[…])`
 // list this census does not read as a column's vocabulary. Each states a
@@ -485,7 +506,7 @@ func TestNoVocabularyCheckHidesFromTheCensus(t *testing.T) {
 		if m == nil || !strings.Contains(m[2], " = ANY (ARRAY[") {
 			continue
 		}
-		if v := wholeVocabularyCheck.FindStringSubmatch(m[2]); v == nil || (v[1] != "" && v[1] != v[2]) {
+		if v := readWholeVocabulary(m[2]); v == nil || (v[1] != "" && v[1] != v[2]) {
 			unread = append(unread, line)
 		}
 	}

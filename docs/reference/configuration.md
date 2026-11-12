@@ -597,7 +597,7 @@ moment falls on two different days. The sweep and the report disagree about
 which day it is, and neither reports a fault.
 
 `TestGoAndPostgresBucketAnInstantAlike` in
-`backend/internal/compose/tzdataskew_integration_test.go` holds the pair. It
+`backend/internal/compose/integration/tzdataskew_integration_test.go` holds the pair. It
 asks both engines for every 15 minutes of the next 14 months, in zones
 whose rules have moved. It fails naming the first moment they place
 differently.

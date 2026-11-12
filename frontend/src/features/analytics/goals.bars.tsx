@@ -6,10 +6,12 @@ import { useLocale, useT } from "../../i18n";
 
 type Months = readonly (number | null)[];
 
-/** The twelve monthly goals as bars, so an uneven year shows at a glance. */
+/** The twelve monthly goals as bars, drawn only for an uneven year. */
 export function GoalBars({ months }: Readonly<{ months: Months }>) {
   const { locale } = useLocale();
   const top = Math.max(...months.map((month) => month ?? 0), 1);
+  // Twelve equal bars say nothing the amounts below do not.
+  if (months.every((month) => month === months[0])) return null;
   return (
     <div className="goal-bars" aria-hidden="true">
       {months.map((month, index) => (

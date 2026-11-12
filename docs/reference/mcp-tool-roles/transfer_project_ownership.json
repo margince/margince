@@ -1,0 +1,15 @@
+{
+  "tool": "change_state",
+  "action": "transfer_projects",
+  "verb": "transfer_project_ownership",
+  "allowed_for": [
+    "admin",
+    "management",
+    "manager",
+    "ops",
+    "rep"
+  ],
+  "refused_for": [
+    "read_only"
+  ]
+}

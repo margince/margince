@@ -41,6 +41,8 @@ type UpdateActivityInput struct {
 	// DueHasTime says whether DueAt names a time of day. Sent only with DueAt;
 	// a DueAt without it is a day (admitPatchTime).
 	DueHasTime *bool
+	// TaskType retypes a task; refused on another kind.
+	TaskType   *crmcontracts.TaskType
 	RemindAt   *time.Time
 	AssigneeID *ids.UserID
 	IsDone     *bool
@@ -128,6 +130,7 @@ func activityColumnImage(a crmcontracts.Activity) map[string]any {
 		"meeting_status": derefOrNil(a.MeetingStatus),
 		// How a call ended: writable on the patch, so the diff must see it.
 		fieldCallOutcome: derefOrNil(a.CallOutcome),
+		fieldTaskType:    derefOrNil(a.TaskType),
 	}
 }
 

@@ -194,12 +194,12 @@ var queryEnumTable = map[string][]queryEnum{
 	"GET /v1/dedupe/contact-cases": {
 		{Name: "scope", Values: []string{"mine", "unassigned", "all"}, Array: false, Explode: true},
 	},
+	"GET /v1/extension-history": {
+		{Name: "entity_type", Values: []string{"contact", "company", "deal"}, Array: false, Explode: true},
+	},
 	"GET /v1/field-history": {
 		{Name: "actor_type", Values: []string{"human", "agent", "system", "connector", "buyer"}, Array: false, Explode: true},
 		{Name: "entity_type", Values: []string{"contact", "company", "deal", "lead", "project", "activity"}, Array: false, Explode: true},
-	},
-	"GET /v1/filters/vocabulary": {
-		{Name: "resource", Values: []string{"contact", "company", "deal", "lead", "project"}, Array: false, Explode: true},
 	},
 	"GET /v1/forecast": {
 		{Name: "period", Values: []string{"quarter", "month", "week"}, Array: false, Explode: true},
@@ -277,6 +277,9 @@ var queryEnumTable = map[string][]queryEnum{
 		{Name: "record_type", Values: []string{"deal", "contact", "company", "lead", "project"}, Array: false, Explode: true},
 		{Name: "subject_type", Values: []string{"user", "team"}, Array: false, Explode: true},
 	},
+	"GET /v1/record-links": {
+		{Name: "record_type", Values: []string{"deal", "company", "contact"}, Array: false, Explode: true},
+	},
 	"GET /v1/relationships": {
 		{Name: "kind", Values: []string{"employment", "deal_stakeholder", "project_stakeholder", "project_company", "partner_of", "referred_by", "co_sell_with", "works_with", "billing_contact"}, Array: false, Explode: true},
 	},
@@ -290,9 +293,6 @@ var queryEnumTable = map[string][]queryEnum{
 	"GET /v1/scheduling/calendars": {
 		{Name: "provider", Values: []string{"gcal", "graphcal"}, Array: false, Explode: true},
 	},
-	"GET /v1/search": {
-		{Name: "types", Values: []string{"contact", "company", "deal", "activity", "lead", "project", "product", "offer_template", "tag"}, Array: true, Explode: false},
-	},
 	"GET /v1/signals": {
 		{Name: "kind", Values: []string{"stalled_deal", "champion_left", "reengagement", "buying_intent", "risk", "other", "contract_ended", "new_opportunity", "commitment_made", "ghosted_thread", "project_gone_quiet", "funding", "leadership_change", "expansion", "product_launch", "technical_change"}, Array: false, Explode: true},
 		{Name: "resolution_state", Values: []string{"resolved", "low_confidence", "unresolved", "dropped"}, Array: false, Explode: true},
@@ -300,9 +300,6 @@ var queryEnumTable = map[string][]queryEnum{
 	},
 	"GET /v1/users/{id}/retirement-preview": {
 		{Name: "mode", Values: []string{"merge", "remove"}, Array: false, Explode: true},
-	},
-	"GET /v1/views": {
-		{Name: "resource", Values: []string{"contacts", "companies", "deals", "activities", "leads", "partners", "projects"}, Array: false, Explode: true},
 	},
 	"GET /v1/worklist": {
 		{Name: "filter", Values: []string{"all", "urgent", "customer_waiting", "leads", "prospecting", "deals_at_risk", "meetings", "tasks", "decisions", "relationships", "system", "except_decisions", "changed_since_brief", "upcoming", "website_inquiries"}, Array: false, Explode: true},

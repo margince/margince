@@ -1,0 +1,8 @@
+{
+  "verb": "preview_ai_routing",
+  "checks": [
+    "ai_budget.read",
+    "ai_routing.read",
+    "ai_routing.update"
+  ]
+}

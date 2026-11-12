@@ -1,0 +1,14 @@
+{
+  "tool": "change_my_settings",
+  "action": "save_onboarding_state",
+  "verb": "save_my_onboarding_state",
+  "allowed_for": [
+    "admin",
+    "management",
+    "manager",
+    "ops",
+    "read_only",
+    "rep"
+  ],
+  "refused_for": []
+}

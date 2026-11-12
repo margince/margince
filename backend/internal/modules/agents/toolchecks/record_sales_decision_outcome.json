@@ -1,0 +1,11 @@
+{
+  "verb": "record_sales_decision_outcome",
+  "checks": [
+    "activity.read",
+    "activity.update",
+    "relationship.read"
+  ],
+  "takes": [
+    "sales_decision"
+  ]
+}

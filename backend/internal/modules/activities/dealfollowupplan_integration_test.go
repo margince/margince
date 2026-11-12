@@ -48,6 +48,7 @@ func TestTheDealFollowUpBatchReadsEachMeetingOnceWhateverTheStatisticsSay(t *tes
 	if _, err := tx.Exec(ctx, "SET LOCAL jit = off"); err != nil {
 		t.Fatal(err)
 	}
+	pinNeverAnalyzed(ctx, t, tx)
 	statement, args, err := meetingFollowUpsByDealStatement(e.as(), asOf, 3, deals)
 	if err != nil {
 		t.Fatal(err)
@@ -66,7 +67,7 @@ func TestTheDealFollowUpBatchReadsEachMeetingOnceWhateverTheStatisticsSay(t *tes
 			}
 			var raw string
 			if err := tx.QueryRow(ctx, "EXPLAIN (ANALYZE, FORMAT JSON) "+statement, args...).Scan(&raw); err != nil {
-				t.Fatalf("running the deal follow-up batch: %v", err)
+				t.Fatalf("%s statistics, reuse %s: running the deal follow-up batch: %v", stats, reuse, err)
 			}
 			assertBoundedDealFollowUpPlan(t, stats+" reuse "+reuse, decodePlan(t, raw))
 		}

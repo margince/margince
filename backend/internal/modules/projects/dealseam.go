@@ -71,12 +71,16 @@ func (e *DealNotLinkableError) FieldFault() (field, code, message string) {
 // off a project its caller cannot see.
 func RefuseDealForNewProject(status string, namesProject bool, masked *[]string) error {
 	if namesProject || (masked != nil && slices.Contains(*masked, "project_id")) {
-		return &DealNotLinkableError{Code: "deal_has_project",
-			Message: "the deal already belongs to a project; change its project on the deal instead"}
+		return &DealNotLinkableError{
+			Code:    "deal_has_project",
+			Message: "the deal already belongs to a project; change its project on the deal instead",
+		}
 	}
 	if status != "open" {
-		return &DealNotLinkableError{Code: "deal_not_open",
-			Message: "only an open deal can start a project here; create the project, then attach the deal on the deal page"}
+		return &DealNotLinkableError{
+			Code:    "deal_not_open",
+			Message: "only an open deal can start a project here; create the project, then attach the deal on the deal page",
+		}
 	}
 	return nil
 }

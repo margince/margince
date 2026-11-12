@@ -68,6 +68,10 @@ export function code(path: string, source: string): string {
 // cannot stand in for.
 const pinnedZones: { file: string; why: string }[] = [
   {
+    file: "lib/calendarchange.test.ts",
+    why: "Pins the reader's zone so a meeting's times read the same on every runner: the lines under test print hours, and the runner's own zone would move them.",
+  },
+  {
     file: "features/mail/schedulededit.test.ts",
     why: "Pins the zones a scheduled send was chosen in, so a reopened send proves it keeps the chosen clock and zone, not the runner's.",
   },
@@ -330,6 +334,10 @@ const pinnedZones: { file: string; why: string }[] = [
   },
   {
     file: "features/worklist/taskactions.test.tsx",
+    why: "The task dialog renders its logged and due dates; the suite names the reader's zone so a snapshot of the dialog does not move with the machine it runs on.",
+  },
+  {
+    file: "features/worklist/taskactions.due.test.tsx",
     why: "The due line is asserted to the hour, and that hour exists only in a named zone; the suite names the reader's zone so the hour does not move with the machine it runs on.",
   },
   {

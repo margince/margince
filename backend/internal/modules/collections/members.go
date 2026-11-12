@@ -16,6 +16,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/ports/recordkinds"
 )
 
 type memberRow struct {
@@ -116,12 +117,27 @@ func (s *Store) readMembers(ctx context.Context, listID ids.ListID, read MemberR
 // pass for this reader, over list_member aliased lm: live, and inside the
 // reader's scope for the list's record type.
 func visibleMemberClause(ctx context.Context, entityType string, arg func(any) int) (string, error) {
+	if recordkinds.IsExtensionName(entityType) {
+		return extensionMemberClause(ctx, entityType)
+	}
 	scope, err := recordScope(ctx, entityType, "e", arg)
 	if err != nil {
 		return "", err
 	}
 	return fmt.Sprintf("EXISTS (SELECT 1 FROM %s e WHERE e.id = lm.entity_id AND e.archived_at IS NULL AND %s)",
 		pgx.Identifier{entityType}.Sanitize(), scope), nil
+}
+
+// extensionMemberClause is visibleMemberClause for a kind an extension declared.
+// Its rows have no owner to scope by, so the kind's read right is the whole
+// scope. A reader without it sees no member. One with it sees the live rows.
+func extensionMemberClause(ctx context.Context, kind string) (string, error) {
+	declared, ok := recordkinds.Lookup(kind)
+	if !ok || !auth.Allows(ctx, kind, principal.ActionRead) {
+		return "FALSE", nil
+	}
+	return fmt.Sprintf("EXISTS (SELECT 1 FROM %s e WHERE e.id = lm.entity_id AND e.archived_at IS NULL)",
+		pgx.Identifier{"ext", declared.Table}.Sanitize()), nil
 }
 
 // recordScope is the reader's row scope over a record of table aliased alias,

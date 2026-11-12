@@ -1,0 +1,8 @@
+{
+  "verb": "review_commitments",
+  "checks": [
+    "activity.read",
+    "contact.read",
+    "installation_settings.read"
+  ]
+}

@@ -21,7 +21,7 @@ import (
 func Task(store *initiatives.Store) datatask.Task {
 	return datatask.Task{
 		ID: "core/1794449739_initiative_enrolment", Version: 1,
-		Title: systemtext.Literal("datatask.title.core.1794449739_initiative_enrolment"), Requires: []string{"core/1794449739"},
+		Title: systemtext.Literal("datatask.title.core.1794449739_initiative_enrolment"), Requires: []string{"core/1794470107"},
 		Steps: []datatask.Step{{
 			Name: "date_live_initiative_members", Limit: 20, MinLimit: 1,
 			Audit:    datatask.AuditPolicy{PerRecord: true},

@@ -1,0 +1,14 @@
+{
+  "tool": "read_reports",
+  "action": "question_card_answer",
+  "verb": "answer_reporting_question_card",
+  "allowed_for": [
+    "admin",
+    "management",
+    "manager",
+    "ops",
+    "read_only",
+    "rep"
+  ],
+  "refused_for": []
+}

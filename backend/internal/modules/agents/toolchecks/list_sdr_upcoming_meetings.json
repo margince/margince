@@ -1,0 +1,6 @@
+{
+  "verb": "list_sdr_upcoming_meetings",
+  "checks": [
+    "installation_settings.read"
+  ]
+}

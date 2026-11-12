@@ -1,0 +1,13 @@
+{
+  "verb": "get_tag",
+  "checks": [
+    "company.read",
+    "contact.read",
+    "deal.read",
+    "lead.read",
+    "tag.read"
+  ],
+  "takes": [
+    "tag"
+  ]
+}

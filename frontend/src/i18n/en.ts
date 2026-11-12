@@ -888,6 +888,9 @@ export const en = {
   "reporting.pinnedSettings": "Previously saved settings",
   "reporting.unallocated": "Unallocated",
   "reporting.overallocated": "Overallocated",
+  "reporting.goalsRow": "Sales goals {year} · 12 months",
+  "reporting.openGoals": "Open sales goals",
+  "reporting.allocatedCover": "Team members’ goals cover {amount}",
   "reporting.targetFor": "Target for",
   "reporting.targetStatus": "Target status",
   "reporting.activeTargets": "Active targets",
@@ -1403,7 +1406,7 @@ export const en = {
   "reporting.writtenNoneWon": "No sales won in {period}.",
   "reporting.writtenWon": "Won in {period}: {amount}.",
   "reporting.writtenTarget":
-    "Target for {targetPeriod}: {target}, {percent}% reached with {actual}.",
+    "Goal for {targetPeriod}: {target}, {percent}% reached with {actual}.",
   "reporting.writtenLanding":
     "Forecast for the end of the fiscal quarter, as of {date}: {amount}.",
   "reporting.writtenOpen_one": "Open on {date}: {amount} in {count} deal.",
@@ -1411,16 +1414,16 @@ export const en = {
   "reporting.writtenSomeFailed":
     "Some figures could not be read just now, so this summary leaves them out.",
   "reporting.writtenTargetReached":
-    "Sales won in {quarter} have reached the {target} target.",
+    "Sales won in {quarter} have reached the {target} goal.",
   "reporting.writtenNoTarget":
-    "No sales target is set for {quarter}, so there is no gap to show.",
+    "No sales goal is set for {quarter}, so there is no gap to show.",
   "reporting.writtenFinish": "Expected finish for {quarter}: {amount}.",
   "reporting.writtenFinishShort":
-    "Expected finish for {quarter}: {amount}, {gap} short of the {target} target.",
+    "Expected finish for {quarter}: {amount}, {gap} short of the {target} goal.",
   "reporting.writtenFinishAhead":
     "Expected finish for {quarter}: {amount}, {gap} above the {target} target.",
   "reporting.writtenFinishOnTarget":
-    "Expected finish for {quarter}: {amount}, exactly the {target} target.",
+    "Expected finish for {quarter}: {amount}, exactly the {target} goal.",
   "reporting.writtenCoverage":
     "Open deals expected to close this quarter cover {ratio}× of the {remaining} still to win.",
   "reporting.writtenAccepted_one": "{count} handoff accepted in {period}.",
@@ -1477,7 +1480,7 @@ export const en = {
   "reporting.openPipelineBasis_other": "Open deals: {count} · as of {at}",
   "reporting.forecastLandingBasis":
     "This fiscal quarter, from the deal forecast",
-  "reporting.compare.atTarget": "At the {target} target",
+  "reporting.compare.atTarget": "At the {target} goal",
   "reporting.compare.colleague_withheld":
     "This would show one colleague’s own results",
   "reporting.compare.colleague_withheldBody":
@@ -1490,24 +1493,24 @@ export const en = {
   "reporting.compare.apply.scope": "Show one team",
   "reporting.compare.apply.pipeline": "Show all pipelines",
   "reporting.compare.apply.manager_call_pipeline": "Show all pipelines",
-  "reporting.compare.title": "This quarter against its target",
-  "reporting.compare.gap": "Gap to target",
-  "reporting.compare.short": "Short of the {target} target",
-  "reporting.compare.ahead": "Ahead of the {target} target",
+  "reporting.compare.title": "This quarter against its goal",
+  "reporting.compare.gap": "Gap to goal",
+  "reporting.compare.short": "Short of the {target} goal",
+  "reporting.compare.ahead": "Ahead of the {target} goal",
   "reporting.compare.gapBasis": "Expected landing {landing}, from {basis}",
   "reporting.compare.basis.likely": "the Likely deals",
   "reporting.compare.basis.weighted": "the weighted pipeline",
   "reporting.compare.basis.manager_call": "the manager’s call",
   "reporting.compare.remaining": "Left to win",
   "reporting.compare.remainingBasis": "{won} won of {target}",
-  "reporting.compare.reached": "Target reached",
+  "reporting.compare.reached": "Goal reached",
   "reporting.compare.coverageAll": "Coverage, deals closing this quarter",
   "reporting.compare.coverageBasis":
     "{open} eligible to close this quarter / {remaining} still to win",
   "reporting.compare.ratio": "{ratio}×",
-  "reporting.compare.no_target": "No sales target for this quarter",
+  "reporting.compare.no_target": "No sales goal for this quarter",
   "reporting.compare.no_targetBody":
-    "Set a sales won target for this scope and quarter under Targets to see the gap and coverage. No target is not a target of zero.",
+    "Publish sales goals for this scope and quarter, or set a sales won target under Targets, to see the gap and coverage. No goal is not a goal of zero.",
   "reporting.compare.fx_missing": "Some deal amounts have no exchange rate",
   "reporting.compare.fx_missingBody":
     "The totals would be too low, so no gap or coverage is shown. Add the missing exchange rate to see them.",
@@ -1516,25 +1519,23 @@ export const en = {
   "reporting.compare.partial_visibilityBody":
     "Some deals or deal amounts in this scope are hidden from you, so your figures are not held against the target for the whole scope.",
   "reporting.compare.incompatible.period":
-    "Pick this fiscal quarter to compare with a target",
+    "Pick this fiscal quarter to compare with a goal",
   "reporting.compare.incompatible.periodBody":
     "The comparison covers the current fiscal quarter only.",
   "reporting.compare.incompatible.scope":
-    "Pick one team to compare with a target",
+    "Pick one team to compare with a goal",
   "reporting.compare.incompatible.scopeBody":
     "The forecast reads one team or the whole company, not several teams together.",
-  "reporting.compare.incompatible.pipeline":
-    "No target is set for this pipeline",
+  "reporting.compare.incompatible.pipeline": "No goal is set for this pipeline",
   "reporting.compare.incompatible.pipelineBody":
-    "The target covers all pipelines and is not split across them. Pick All pipelines to compare.",
+    "The goal covers all pipelines and is not split across them. Pick All pipelines to compare.",
   "reporting.compare.incompatible.manager_call_pipeline":
     "Pick All pipelines to compare the manager’s call",
   "reporting.compare.incompatible.manager_call_pipelineBody":
     "The expected landing is the manager’s call, and a call covers all pipelines.",
-  "reporting.compare.incompatible.currency":
-    "The target is in another currency",
+  "reporting.compare.incompatible.currency": "The goal is in another currency",
   "reporting.compare.incompatible.currencyBody":
-    "It was set in a currency that is no longer the base currency. Set the target again to compare.",
+    "It was set in a currency that is no longer the base currency. Set the goal again to compare.",
   "reporting.this_week": "This week",
   "reporting.this_month": "This month",
   "reporting.last_month": "Last month",
@@ -1545,7 +1546,7 @@ export const en = {
   "reporting.end": "End date (exclusive)",
   "reporting.bookings_trend": "Sales won over time",
   "reporting.stage_distribution": "Open pipeline by stage",
-  "reporting.owner_attainment": "Sales won by salesperson",
+  "reporting.owner_attainment": "Sales won by team member",
   "reporting.stage_age": "Time in current stage",
   "reporting.sdr_outcomes": "Meetings and accepted handoffs",
   "reporting.target_progress": "Progress against target",
@@ -2090,6 +2091,9 @@ export const en = {
   "brief.schedule.connect": "Connect a calendar",
   "brief.schedule.reconnect": "Reconnect your calendar",
   "brief.schedule.nextAt": "Next meeting at {time}",
+  "brief.schedule.now": "Now",
+  "brief.schedule.freeUntil": "Free until {time}",
+  "brief.schedule.clearRest": "Nothing else booked today",
   "brief.readings.riskPartial": "Known value only · not all checked",
   "brief.readings.unpricedCount_one": "{count} deal not priced · excluded",
   "brief.readings.unpricedCount_other": "{count} deals not priced · excluded",
@@ -2575,6 +2579,8 @@ export const en = {
   "history.field.cohort_promoted": "Messages attributed",
   "history.field.corrected": "Result corrected",
   "history.field.disposition": "Disposition",
+  "history.field.link_suggestion": "Suggested link",
+  "history.field.record_link": "Link",
   "history.field.domain": "Domain",
   "history.field.merged_from_id": "Merged in from",
   "history.field.merged_into_id": "Merged into",
@@ -2617,6 +2623,7 @@ export const en = {
   "history.field.display_name": "Name",
   "history.field.domains": "Domains",
   "history.field.due_at": "Due",
+  "history.field.extension_relationship_types": "Extension relationship types",
   "history.field.due_intent": "Due (local time)",
   "history.field.email": "Email",
   "history.field.ended_at": "Ended",
@@ -2687,6 +2694,7 @@ export const en = {
   "history.field.recorded_at_level": "Recorded at level",
   "history.field.relationship_types": "Relationship types",
   "history.field.due_has_time": "Due at a set time",
+  "history.field.task_type": "Task type",
   "history.field.call_outcome": "Call outcome",
   "history.field.remind_at": "Reminder",
   "history.field.remind_intent": "Reminder (local time)",
@@ -4006,6 +4014,8 @@ export const en = {
   "standing.exchange.view.meeting": "View meeting",
   "standing.exchange.view.other": "View activity",
   "record.tabs": "Record tabs",
+  "record.tabs.more": "More",
+  "record.tabs.moreLabel": "More sections",
   "record.panel.showDetails": "Show details",
   "record.panel.hideDetails": "Hide details",
   // The Deal Room aside on a deal. `room.` rather than `dealroom.` for the
@@ -4210,6 +4220,7 @@ export const en = {
   "finance.col.amount": "Amount",
   "finance.col.status": "Status",
   "finance.unnumbered": "No number",
+  "finance.openInvoicePdf": "Open invoice {number} as PDF",
   "finance.moreInvoices": "More invoices in the accounting system",
   "finance.syncedFrom": "From {provider} · synced {when}",
   "finance.fromNeverSynced": "From {provider} · not yet synced",
@@ -4818,6 +4829,8 @@ export const en = {
   "timeline.kind.task": "Task",
   "timeline.kind.message": "Message",
   "timeline.kind.change": "Record",
+  "timeline.kind.extension": "Extension",
+  "timeline.kind.signal": "Signal",
   "timeline.withheld": "Content for participants only",
   "compose.deadRecipients":
     "Mail to {addresses} is bouncing: the last delivery was refused and none has succeeded since. Send anyway, or use another address.",
@@ -4938,6 +4951,30 @@ export const en = {
   "email.access.unnamedMember": "Former user",
   "email.invitation.badge": "Invitation",
   "email.invitation.startsAt": "Starts {when}",
+  "meetingChange.badge.updated": "Meeting changed",
+  "meetingChange.badge.canceled": "Canceled",
+  "meetingChange.badge.proposed": "New time proposed",
+  "meetingChange.badge.accepted": "Accepted",
+  "meetingChange.badge.tentative": "Maybe",
+  "meetingChange.badge.declined": "Declined",
+  "meetingChange.line.canceled": "Was set for {when}",
+  "meetingChange.line.proposed": "{name} proposes {when}",
+  "meetingChange.line.accepted": "{name} accepted",
+  "meetingChange.line.tentative": "{name} answered maybe",
+  "meetingChange.line.declined": "{name} declined",
+  "meetingChange.line.moved": "Moved from {was} to {when}",
+  "meetingChange.line.movedTo": "Moved to {when}",
+  "meetingChange.line.placed": "Now at {place}",
+  "meetingChange.line.unplaced": "No longer has a place",
+  "meetingChange.line.renamed": "Renamed to {title}",
+  "meetingChange.line.added": "Added {names}",
+  "meetingChange.line.removed": "Removed {names}",
+  "meetingChange.line.details": "The organizer changed the details",
+  "meetingChange.was.time": "Was",
+  "meetingChange.was.current": "Booked for",
+  "meetingChange.was.location": "Place was",
+  "meetingChange.was.noPlace": "no place",
+  "meetingChange.was.title": "Title was",
   "email.move.needsReply": "Needs reply",
   "email.move.waitingForThem": "Awaiting their reply",
   "email.detail.loading": "Loading message…",
@@ -5975,6 +6012,17 @@ export const en = {
     "This deal has no company yet. Add one under Edit details to book a meeting.",
   "deal.committee.card": "Committee",
   "deal.committee.change": "Change or remove stakeholders",
+  "deal.links.card": "Links",
+  "deal.links.add": "Add link",
+  "deal.links.none": "This deal is not linked to another record.",
+  "deal.links.unavailable": "The links could not be loaded.",
+  "deal.links.outgoing": "From this deal: {type}",
+  "deal.links.incoming": "To this deal: {type}",
+  "deal.links.remove": "Remove",
+  "deal.links.type": "Link type",
+  "deal.links.typePlaceholder": "Choose a type",
+  "deal.links.search": "Search for the record to link",
+  "deal.links.cancel": "Cancel",
   "deal.committee.legendEngaged": "Engaged",
   "deal.committee.legendQuiet": "Not engaged",
   "deal.committee.legendGap": "Missing seat",
@@ -6403,6 +6451,8 @@ export const en = {
   "deals.filterAcquisitionAll": "Any source",
   "deals.filterProbability": "Probability",
   "deals.filterProbabilityAll": "Any probability",
+  "deals.filterLinkType": "Linked as",
+  "deals.filterLinkTypeAll": "Any link type",
   "deals.filterStatus": "Status",
   "deals.filterStatusAll": "Any status",
   "deals.statusOpen": "Open",
@@ -6934,7 +6984,7 @@ export const en = {
   // what its rows are. "Promises & tasks" named a thing the product does not
   // have and stood over a standing line of apology for it.
   "brief.rail.quietSchedule": "Nothing booked",
-  "brief.panel.schedule": "Upcoming meetings",
+  "brief.panel.schedule": "Your day",
   "brief.readings.label": "Today’s figures",
   // Why a figure on this plate wears a `+`. It rides the whole cell, because a
   // mark that explains itself only to a pointer resting on three characters is
@@ -6977,6 +7027,14 @@ export const en = {
   "brief.readings.leadsDue": "Next due {value}",
   "brief.rail": "Context",
   "brief.rail.numbers": "Numbers",
+  "extensionReports.withheld": "Withheld: too few records to show",
+  "extensionReports.noValue": "No value",
+  "extensionReports.excluded_one":
+    "{count} record is hidden from you by a field permission.",
+  "extensionReports.excluded_other":
+    "{count} records are hidden from you by a field permission.",
+  "extensionReports.failed":
+    "The reports your extensions add could not be loaded.",
   "brief.deck.later": "Later",
   "brief.deck.showMore": "Show full message",
   "brief.deck.showLess": "Show less",
@@ -7250,6 +7308,24 @@ export const en = {
   "task.next.draftIntent": "write about this task",
   "task.next.noAddress": "No email address on this contact.",
   "task.next.noLeadAddress": "No email address on this lead.",
+  "task.type.reply": "Reply",
+  "task.type.reachOut": "Reach out",
+  "task.type.meet": "Meet",
+  "task.type.review": "Review",
+  "task.type.decide": "Decide",
+  "task.type.do": "Do",
+  "task.type.label": "Task type",
+  "task.next.copyNumber": "Copy number",
+  "task.next.numberCopied": "Number copied",
+  "task.next.copyNumberRemedy": "Select the number to copy it.",
+  "task.next.reviewLead": "Review lead",
+  "task.next.reviewDeal": "Review deal",
+  "task.next.reviewProject": "Review project",
+  "task.next.reviewContact": "Review contact",
+  "task.next.reviewCompany": "Review company",
+  "tasks.whichDeal.legend": "Which deal is the email about?",
+  "tasks.whichDeal.file": "Link email thread to deal",
+  "tasks.whichDeal.filed": "Email thread linked to the deal",
   "today.withheld": "Not included: {sections}. You do not have access to them.",
   "today.source.moments": "Margince findings",
   "today.source.nextSteps": "open tasks",
@@ -8108,7 +8184,7 @@ export const en = {
   "analytics.overview.pipelineAll": "Use all pipelines",
   "analytics.overview.setTarget": "Set targets",
   "analytics.overview.targetWho":
-    "A colleague who manages targets, most often an admin or a sales manager, can set one.",
+    "A colleague who manages sales goals, most often an admin or a sales manager, can set them.",
   "analytics.overview.targetWhoShort":
     "An admin or a sales manager can usually set one.",
   "analytics.overview.sinceTitle": "Since the last capture",
@@ -8396,6 +8472,7 @@ export const en = {
   "analytics.field.host_user_id": "Meeting host",
   "analytics.field.kind": "Activity type",
   "analytics.field.last_activity_at": "Last activity",
+  "analytics.field.link_type": "Linked as",
   "analytics.field.lost_reason": "Lost reason",
   "analytics.field.loss_reason": "Loss reason from the list",
   "analytics.field.loss_reason_state": "How the loss reason was set",
@@ -8598,7 +8675,7 @@ export const en = {
   "analytics.myTargets": "My targets",
   "analytics.targetOf": "{actual} of {target}",
   "analytics.noTargetSet": "No target set",
-  "analytics.noTargetSetActual": "{actual} so far this month",
+  "analytics.noTargetSetMonth": "No target set for this month",
   "analytics.meetingsAsTheyStand":
     "Meetings you host, by current status. No date filter.",
   "analytics.meetingsBooked": "Booked",
@@ -13468,6 +13545,9 @@ export const en = {
   "cf.type.multiselect": "Multiple choice",
   "cf.type.picklist": "Picklist",
   "cf.type.boolean": "Yes/No",
+  "cf.type.record": "Pick a record",
+  "cf.recordKind": "Kind of record",
+  "cf.recordKindPlaceholder": "Choose a kind",
   "cf.builder.addTo": "Add field to {object}",
   "cf.builder.open": "New field",
   "cf.builder.noCode": "No code",
@@ -15142,6 +15222,9 @@ export const en = {
   "licensebanner.body":
     "This installation’s license token was checked and refused.",
   "licensebanner.link": "Open {tab}",
+  "licensebanner.grace.title": "License expired",
+  "licensebanner.grace.body":
+    "This installation’s license expired and is in its grace period. Margince keeps running, but it does not start again after the grace period ends. Renew the license before then.",
 
   "aicalls.title": "AI call trace",
   "aicalls.withheld":
@@ -17212,6 +17295,25 @@ export const en = {
   "webhooks.event.activity.marked_handled.label": "Worklist item marked done",
   "webhooks.event.activity.marked_handled.when":
     "Someone marks a Worklist item done because they dealt with it another way.",
+  "webhooks.event.activity.link_suggestion_changed.label":
+    "Suggested link proposed or decided",
+  "webhooks.event.activity.link_suggestion_changed.when":
+    "An extension suggests which record a message belongs to, or someone accepts or rejects a suggestion.",
+  "webhooks.event.record_link.changed.label": "Link added or removed",
+  "webhooks.event.record_link.changed.when":
+    "Someone links a deal, company or contact to another record, or removes a link.",
+  "linkSuggestions.title": "Suggested links",
+  "linkSuggestions.reason": "{unit}: {reason}",
+  "linkSuggestions.target": "{subject} to {record} ({kind})",
+  "linkSuggestions.noSubject": "A message with no subject",
+  "linkSuggestions.kind.contact": "contact",
+  "linkSuggestions.kind.company": "company",
+  "linkSuggestions.kind.deal": "deal",
+  "linkSuggestions.kind.project": "project",
+  "linkSuggestions.accept": "File it there",
+  "linkSuggestions.reject": "Not there",
+  "linkSuggestions.unavailable":
+    "The suggested links could not be read. Try again later.",
   "webhooks.event.activity.readiness_recorded.label":
     "Meeting readiness changed",
   "webhooks.event.activity.readiness_recorded.when":
@@ -18581,6 +18683,12 @@ export const en = {
   "filters.tab.leads": "Leads",
   "filters.matchLeads_one": "{count} lead matches",
   "filters.matchLeads_other": "{count} leads match",
+  "filters.matchExtension_one": "{count} {kind} record matches",
+  "filters.matchExtension_other": "{count} {kind} records match",
+  "filters.new.extension": "New {kind} filter",
+  "filters.switch.body.extension":
+    "The conditions are cleared, because they name fields of one record type.",
+  "unit.extension": "{kind} records",
   "filters.date.on": "On a date",
   "filters.date.daysAgo": "Days ago",
   "filters.date.mode": "How the date is given",
@@ -19486,6 +19594,26 @@ export const en = {
     "You committed to this in a conversation. Do it, then mark it done.",
   "worklist.ask.invitation":
     "This is a calendar invitation. Accept, say maybe or decline, and the organizer gets your answer.",
+  "worklist.ask.changedInvitation":
+    "The organizer changed this meeting. Check what changed, then accept, say maybe or decline.",
+  "worklist.ask.meeting.updated":
+    "The organizer changed this meeting. Check what changed, then mark it done.",
+  "worklist.ask.meeting.canceled":
+    "The organizer canceled this meeting. There is nothing to answer; mark it done once you have seen it.",
+  "worklist.ask.meeting.proposed":
+    "A guest proposed another time. Move the meeting in your calendar if it suits you, then mark this done.",
+  "worklist.ask.meeting.answered":
+    "A guest answered your invitation. Mark it done once you have seen it.",
+  "worklist.ask.changedInvitationNamed":
+    "{name} changed this meeting. Check what changed, then accept, say maybe or decline.",
+  "worklist.ask.meetingNamed.updated":
+    "{name} changed this meeting. Check what changed, then mark it done.",
+  "worklist.ask.meetingNamed.canceled":
+    "{name} canceled this meeting. There is nothing to answer; mark it done once you have seen it.",
+  "worklist.ask.meetingNamed.proposed":
+    "{name} proposed another time. Move the meeting in your calendar if it suits you, then mark this done.",
+  "worklist.ask.meetingNamed.answered":
+    "{name} answered your invitation. Mark it done once you have seen it.",
   "worklist.ask.customer_waiting":
     "A customer wrote and nobody has answered yet. Reply to them.",
   "worklist.ask.lead_response":
@@ -21611,19 +21739,19 @@ export const en = {
   "review.onlyType": "Showing only: {finding}.",
   "review.showAll": "Show every finding",
   "review.readOnly": "Read only",
-  "analytics.hero.attainment": "Sales won against the quarter’s target",
-  "analytics.hero.attained": "{percent}% of the {target} target",
+  "analytics.hero.attainment": "Sales won against the quarter’s goal",
+  "analytics.hero.attained": "{percent}% of the {target} goal",
   "analytics.hero.remaining": "{amount} still to win",
   "analytics.hero.shortfall": "Projected shortfall {amount}",
   "analytics.hero.surplus": "Projected surplus {amount}",
   "analytics.hero.prior": "Same point of the previous period: {amount}",
-  "analytics.hero.ofTarget": "of {target} target",
-  "analytics.hero.short": "{amount} short of target",
-  "analytics.hero.over": "{amount} over target",
+  "analytics.hero.ofTarget": "of {target} goal",
+  "analytics.hero.short": "{amount} short of goal",
+  "analytics.hero.over": "{amount} over goal",
   "analytics.trajectory.label": "Sales won through the period",
   "analytics.trajectory.today": "Today · {date}",
   "analytics.trajectory.through": "Through {date}",
-  "analytics.trajectory.target": "Target {amount}",
+  "analytics.trajectory.target": "Goal {amount}",
   "analytics.trajectory.projection": "{amount} projected",
   "analytics.trajectory.range": "Modelled finish",
   "analytics.overview.more": "More",
@@ -22066,16 +22194,23 @@ export const en = {
   "progress.yearly": "Yearly",
   "progress.month": "Month",
   "progress.year": "Year",
-  "progress.scope": "Seller or team",
+  "progress.scope": "Team member or team",
   "progress.reading": "Reading progress",
   "progress.myTitle": "Progress",
   "progress.teamTitle": "Team progress",
-  "progress.heading": "{whose} · {scope} · {period} · Figures up to {cutoff}",
-  "progress.closedRevenue": "Closed revenue",
+  "progress.closedRevenue": "Sales won",
   "progress.goal": "Goal",
   "progress.goalLine": "Goal for the period: {goal}",
+  "progress.figuresUpTo": "Figures up to {cutoff}",
+  "progress.ofGoalLine": "of {goal} goal",
+  "progress.toGo": "{amount} to go",
+  "progress.noGoalFor": "No sales goal is published for {period}.",
+  "progress.whoSetsGoals":
+    "A colleague who manages sales goals can publish one.",
+  "progress.setGoals": "Set sales goals",
+  "progress.openInAnalytics": "Open in Analytics",
   "progress.goalIncompleteTeamLine":
-    "Goals incomplete: at least one seller has no monthly goal yet, {subtotal} so far",
+    "Goals incomplete: at least one team member has no monthly goal yet, {subtotal} so far",
   "progress.goalIncompleteLine":
     "Goals incomplete: {set} of {needed} months set, {subtotal} so far",
   "progress.goal.set": "Set",
@@ -22095,11 +22230,11 @@ export const en = {
   "progress.goalMet": "Goal met",
   "progress.aboveGoal": "{amount} above goal",
   "progress.belowGoal": "{amount} below goal",
-  "progress.viewClosedDeals": "View closed deals",
+  "progress.viewClosedDeals": "View won deals",
   "progress.readings": "Revenue readings",
   "progress.productSales": "Product sales",
   "progress.serviceSales": "Services and projects",
-  "progress.planned": "Planned revenue",
+  "progress.planned": "Open pipeline",
   "progress.plannedAt": "Open deals as of {at}",
   "progress.unclassified": "Unclassified",
   "progress.unclassifiedDetail":
@@ -22117,7 +22252,7 @@ export const en = {
     "Some members are hidden, so the team goal is hidden too.",
   "progress.months": "Months of {year}",
   "progress.definition":
-    "Closed revenue is the value of deals won in the period, the same figure Analytics shows. The goal is the sum of the monthly sales goals for the period. A yearly goal needs all twelve months.",
+    "Sales won is the value of deals won in the period, the same figure Analytics shows. The goal is the sum of the published monthly sales goals for the period. A yearly goal needs all twelve months.",
   "progress.work": "Work in progress now",
   "progress.work.leads": "Leads",
   "progress.work.deals": "Deals",
@@ -22134,16 +22269,12 @@ export const en = {
   "progress.work.unnamed": "Unnamed lead",
   "progress.work.empty": "Nothing open in this list.",
   "progress.work.more": "Show more",
-  "progress.plannedAhead": "Planned, not closed yet",
+  "progress.plannedAhead": "Open pipeline, not won yet",
   "progress.rail": "Goal and definition",
-  "progress.definitionTitle": "What counts",
-  "progress.goalBasis": "Where the goal comes from",
   "progress.goalFor": "Goal for {period}",
   "progress.goalMonths": "Months with a goal",
   "progress.goalMonthsSet": "{set} of {needed}",
-  "progress.goalBasisNote":
-    "The goal adds up the published monthly sales goals.",
-  "progress.ofGoal": "Closed revenue of {name} against the goal",
+  "progress.ofGoal": "Sales won by {name} against the goal",
   "progress.yearLine": "{year} so far: {closed} of {goal} ({percent}%)",
   "progress.work.note": "Open now, whatever the period.",
   "progress.work.saleProduct": "Product",
@@ -22153,9 +22284,13 @@ export const en = {
   "progress.work.saleNone": "Unclassified",
   "progress.work.overdue": "Overdue",
   "progress.work.outside": "Outside the period",
-  "goals.controls": "Sales goal year and seller",
   "goals.viewProgress": "View progress",
-  "goals.seller": "Seller",
+  "goals.draftTotal": "{amount} draft",
+  "goals.change": "Change goals",
+  "goals.start":
+    "Enter a yearly goal and spread it, or set each month. Nothing counts until you publish.",
+  "goals.publishReason": "Reason: {reason}",
+  "goals.seller": "Team member",
   "goals.reading": "Reading sales goals",
   "goals.planTitle": "Sales goals of {name} for {year}",
   "goals.state.no_goal": "No plan",
@@ -22177,7 +22312,7 @@ export const en = {
   "goals.event.published": "{name} published the goals",
   "goals.event.discarded": "{name} discarded the draft",
   "goals.event.withdrawn": "{name} withdrew the goals",
-  "goals.roster": "Sellers",
+  "goals.roster": "Team members",
   "goals.status": "Status",
   "goals.yearly": "Yearly goal in {currency}",
   "goals.spread": "Spread equally",

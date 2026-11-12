@@ -73,7 +73,9 @@ every open deal. It may then set three things for the owner:
 
 Margince reads a deal again only when something new arrived on it, its close
 date passed, or its owner changed a switch. A deal whose price had no exchange
-rate is read again once the rate is stored.
+rate is read again once the rate is stored. It is also read again when the
+evidence for a stage changes. So is a deal with a message from an own domain
+that was just added or removed.
 
 Margince reads only what everyone in the workspace may read. A message only
 its participants can see never reaches the reason or the evidence.

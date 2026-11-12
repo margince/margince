@@ -14,7 +14,6 @@ import { ErrorLine } from "../design-system/errorline";
 import { refuseUnreadableField } from "../design-system/formvalidity";
 import { Panel, PanelBody } from "../design-system/panel";
 import { useSinglePress } from "../design-system/presslatch";
-import { Select } from "../design-system/select";
 import { useToast } from "../design-system/toast";
 import { useT } from "../i18n";
 import {
@@ -24,7 +23,6 @@ import {
   draftHoldsWork,
   draftSaysSomething,
   freshDraft,
-  isActivityKind,
   KINDS_WITH_A_CONTACT,
   type MeetingAttendees,
   NO_ATTENDEES,
@@ -37,8 +35,10 @@ import { useMe } from "../lib/session";
 import { ActivityBodyField } from "./activitybodyfield";
 import { TaskAssigneeField } from "./assigneepicker";
 import { LogActivityEntries } from "./extensionentries";
+import { ActivityKindField } from "./logactivity.kindfield";
 import { TaskCompletionChoice } from "./logactivity.taskcompletion";
 import { assignedRecord } from "./recordassignments.queries";
+import { TaskTypeField } from "./tasktype";
 import "./logactivity.css";
 import { useViewerZone } from "../lib/viewerzone";
 import { FollowUpTaskFields, TaskTimeField } from "./followuptaskfields";
@@ -325,31 +325,17 @@ export function LogActivityForm({
     >
       <div className="form-row">
         {!onlyTasks && (
-          <Field label={t("log.kind")}>
-            {(control) => (
-              <Select
-                {...control}
-                options={[
-                  { value: "note", label: t("log.kindNote") },
-                  ...(!taskToComplete
-                    ? [{ value: "task", label: t("log.kindTask") }]
-                    : []),
-                  { value: "call", label: t("log.kindCall") },
-                  { value: "meeting", label: t("log.kindMeeting") },
-                ]}
-                value={draft.kind}
-                // The clamp narrows the type and validates nothing. The Select
-                // only hands back the values above; anything else falls back
-                // to the ordinary kind rather than a refusal.
-                onChange={(value) =>
-                  setField({
-                    kind: isActivityKind(value) ? value : "note",
-                  })
-                }
-              />
-            )}
-          </Field>
+          <ActivityKindField
+            value={draft.kind}
+            offersTask={!taskToComplete}
+            onChange={(kind) => setField({ kind })}
+          />
         )}
+        <TaskTypeField
+          active={draft.kind === "task"}
+          value={draft.taskType}
+          onChange={(taskType) => setField({ taskType })}
+        />
         {/* One date box, prefilled with today: a task's due date, otherwise the
             day it happened (occurredFields), whose hint explains the cap. */}
         <Field

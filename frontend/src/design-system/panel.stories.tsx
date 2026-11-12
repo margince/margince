@@ -15,6 +15,7 @@ import {
 } from "./atoms";
 import { DataTable } from "./datatable";
 import {
+  FlatPanelHeads,
   Panel,
   PanelBody,
   PanelGroupHead,
@@ -294,6 +295,30 @@ export const RowOpensOnPress: Story = {
     canvas.getByRole("button", { name: "Open Security answers" }).focus();
     await userEvent.keyboard("{Enter}");
     await expect(canvas.getByText("Opened: Security answers")).toBeVisible();
+  },
+};
+
+// Under FlatPanelHeads every panel opens as a section of one sheet, with no
+// band. The agent's panel keeps its band, because the band says who wrote it.
+export const FlatHeadsInASheet: StoryObj = {
+  render: () => (
+    <FlatPanelHeads value>
+      <Panel title="Bookings this quarter">
+        <PanelBody>
+          <p>€420,000 booked against a target of €600,000.</p>
+        </PanelBody>
+      </Panel>
+      <Panel title="What stands out" tone="ai">
+        <PanelBody>
+          <p>Two deals moved to Negotiation this week.</p>
+        </PanelBody>
+      </Panel>
+    </FlatPanelHeads>
+  ),
+  play: async ({ canvasElement }) => {
+    const heads = canvasElement.querySelectorAll(".panel-head");
+    await expect(heads[0]).toHaveClass("panel-head-flat");
+    await expect(heads[1]).not.toHaveClass("panel-head-flat");
   },
 };
 

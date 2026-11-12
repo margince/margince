@@ -1,0 +1,15 @@
+{
+  "tool": "read_workspace",
+  "action": "extension_settings",
+  "verb": "get_extension_settings",
+  "allowed_for": [
+    "admin",
+    "ops"
+  ],
+  "refused_for": [
+    "management",
+    "manager",
+    "read_only",
+    "rep"
+  ]
+}

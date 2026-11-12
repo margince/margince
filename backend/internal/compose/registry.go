@@ -19,6 +19,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/compose/analyticsquery"
 	"github.com/margince/margince/backend/internal/compose/dealclosetasks"
+	"github.com/margince/margince/backend/internal/compose/partnersteps"
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/agents"
 	"github.com/margince/margince/backend/internal/modules/agents/runner"
@@ -115,7 +116,7 @@ func registryWithGate(db *database.DB, gate *auth.Gate, drafter activities.Email
 	agents.RegisterReadViewsTool(registry, agents.NewReadViewsResource(views))
 	agents.RegisterRouteVerbs(registry, declaredRouteVerbs(agentPolicies), routeThrough(viewDoorOf(features.served)))
 	relinker, disqualifier, demoter, advancer := lifecycleSeams(pool)
-	agents.RegisterLifecycleTools(registry, provider, relinker, disqualifier, demoter, advancer, partnerSetUpAdapter{store: newContactsStore(db).WithPartnerNextSteps(partnerNextStepTasks{tasks: activities.NewStore(db)})})
+	agents.RegisterLifecycleTools(registry, provider, relinker, disqualifier, demoter, advancer, partnerSetUpAdapter{store: newContactsStore(db).WithPartnerNextSteps(partnersteps.New(activities.NewStore(db)))})
 	agents.RegisterBulkTool(registry, bulkChangeSeam{engine: newBulkEngine(db, gate).withListsIf(features.lists)})
 	agents.RegisterEnrichTool(registry, provider, enricher)
 	agents.RegisterPipelineTool(registry, pipelineLister(pool))

@@ -1,0 +1,12 @@
+{
+  "verb": "decline_activity_deal",
+  "checks": [
+    "activity.update",
+    "deal.read"
+  ],
+  "takes": [
+    "activity",
+    "deal",
+    "inbound_email"
+  ]
+}

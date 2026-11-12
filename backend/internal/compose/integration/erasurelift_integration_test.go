@@ -31,44 +31,44 @@ const liftedAddress = "zurueck@betroffene.example"
 
 func TestALiftedAddressMayBeStoredAgain(t *testing.T) {
 	e := Setup(t)
-	armForLift(t, liftedAddress)
-	if !addressRefused(t, e, liftedAddress) {
+	armForLift(t)
+	if !addressRefused(t, e) {
 		t.Fatal("an erased address was not refused before the lift")
 	}
 
-	liftAddress(t, e, liftedAddress)
+	liftAddress(t, e)
 
-	if addressRefused(t, e, liftedAddress) {
+	if addressRefused(t, e) {
 		t.Fatal("the address is still refused after the subject lifted it")
 	}
 }
 
 func TestASecondErasureArmsALiftedAddressAgain(t *testing.T) {
 	e := Setup(t)
-	armForLift(t, liftedAddress)
-	liftAddress(t, e, liftedAddress)
-	returned := contactHolding(t, e, "Die Zurueckgekehrte", liftedAddress)
+	armForLift(t)
+	liftAddress(t, e)
+	returned := contactHolding(t, e, "Die Zurueckgekehrte")
 
 	eraseForLift(t, e, returned)
 
-	if !addressRefused(t, e, liftedAddress) {
+	if !addressRefused(t, e) {
 		t.Fatal("a second erasure left the earlier lift in place")
 	}
 }
 
 func TestALinkLiftsOneErasureOnce(t *testing.T) {
 	e := Setup(t)
-	armForLift(t, liftedAddress)
+	armForLift(t)
 	erasedAt := erasedAtOf(t, e, liftedAddress)
-	if err := tryLift(e, liftedAddress, erasedAt); err != nil {
+	if err := tryLift(e, erasedAt); err != nil {
 		t.Fatalf("lifting: %v", err)
 	}
 
-	if err := tryLift(e, liftedAddress, erasedAt); !errors.Is(err, privacy.ErrLiftNotCurrent) {
+	if err := tryLift(e, erasedAt); !errors.Is(err, privacy.ErrLiftNotCurrent) {
 		t.Fatalf("a second use of one link answered %v, want ErrLiftNotCurrent", err)
 	}
-	eraseForLift(t, e, contactHolding(t, e, "Die Zurueckgekehrte", liftedAddress))
-	if err := tryLift(e, liftedAddress, erasedAt); !errors.Is(err, privacy.ErrLiftNotCurrent) {
+	eraseForLift(t, e, contactHolding(t, e, "Die Zurueckgekehrte"))
+	if err := tryLift(e, erasedAt); !errors.Is(err, privacy.ErrLiftNotCurrent) {
 		t.Fatalf("a link mailed for the first erasure answered %v against the second, want ErrLiftNotCurrent", err)
 	}
 }
@@ -79,12 +79,12 @@ func TestALinkLiftsOneErasureOnce(t *testing.T) {
 func TestAReplayErasesWhatCameBackAndKeepsTheSignup(t *testing.T) {
 	e := Setup(t)
 	eraser := compose.ComposedEraser(e.Pool, nil, nil)
-	armForLift(t, liftedAddress)
-	restored := contactHolding(t, e, "Vor der Loeschung", liftedAddress)
-	liftAddress(t, e, liftedAddress)
+	armForLift(t)
+	restored := contactHolding(t, e, "Vor der Loeschung")
+	liftAddress(t, e)
 
 	assertReplayKeeps(t, e, eraser, restored, false)
-	signup := contactHolding(t, e, "Nach der Rueckkehr", liftedAddress)
+	signup := contactHolding(t, e, "Nach der Rueckkehr")
 	assertReplayKeeps(t, e, eraser, signup, true)
 }
 
@@ -93,9 +93,9 @@ func TestAReplayErasesWhatCameBackAndKeepsTheSignup(t *testing.T) {
 func TestTheJournalErasesWhatCameFromBeforeTheLift(t *testing.T) {
 	e := Setup(t)
 	eraser := compose.ComposedEraser(e.Pool, blobstore.NewMemory(), nil)
-	armForLift(t, liftedAddress)
-	restored := contactHolding(t, e, "Vor der Loeschung", liftedAddress)
-	liftAddress(t, e, liftedAddress)
+	armForLift(t)
+	restored := contactHolding(t, e, "Vor der Loeschung")
+	liftAddress(t, e)
 	exportAndRollBack(t, e, eraser)
 
 	assertReplayKeeps(t, e, eraser, restored, false)
@@ -104,9 +104,9 @@ func TestTheJournalErasesWhatCameFromBeforeTheLift(t *testing.T) {
 func TestTheJournalKeepsWhatCameAfterTheLift(t *testing.T) {
 	e := Setup(t)
 	eraser := compose.ComposedEraser(e.Pool, blobstore.NewMemory(), nil)
-	armForLift(t, liftedAddress)
-	liftAddress(t, e, liftedAddress)
-	signup := contactHolding(t, e, "Nach der Rueckkehr", liftedAddress)
+	armForLift(t)
+	liftAddress(t, e)
+	signup := contactHolding(t, e, "Nach der Rueckkehr")
 	exportAndRollBack(t, e, eraser)
 
 	assertReplayKeeps(t, e, eraser, signup, true)
@@ -116,12 +116,12 @@ func TestTheJournalKeepsWhatCameAfterTheLift(t *testing.T) {
 func TestAJournalOlderThanTheLiftDoesNotEraseTheSignup(t *testing.T) {
 	e := Setup(t)
 	eraser := compose.ComposedEraser(e.Pool, blobstore.NewMemory(), nil)
-	armForLift(t, liftedAddress)
+	armForLift(t)
 	if _, err := eraser.ExportSuppressions(e.Admin()); err != nil {
 		t.Fatalf("ExportSuppressions: %v", err)
 	}
-	liftAddress(t, e, liftedAddress)
-	signup := contactHolding(t, e, "Nach der Rueckkehr", liftedAddress)
+	liftAddress(t, e)
+	signup := contactHolding(t, e, "Nach der Rueckkehr")
 
 	assertReplayKeeps(t, e, eraser, signup, true)
 }
@@ -131,8 +131,8 @@ func TestAJournalOlderThanTheLiftDoesNotEraseTheSignup(t *testing.T) {
 func TestAJournalNewerThanARestoredLiftErasesAgain(t *testing.T) {
 	e := Setup(t)
 	eraser := compose.ComposedEraser(e.Pool, blobstore.NewMemory(), nil)
-	armForLift(t, liftedAddress)
-	liftAddress(t, e, liftedAddress)
+	armForLift(t)
+	liftAddress(t, e)
 	owner := OwnerConn(t)
 	var erasedAt, liftedAt time.Time
 	var consent, contact ids.UUID
@@ -142,7 +142,7 @@ func TestAJournalNewerThanARestoredLiftErasesAgain(t *testing.T) {
 		hash).Scan(&erasedAt, &liftedAt, &consent, &contact); err != nil {
 		t.Fatalf("reading the lifted row: %v", err)
 	}
-	eraseForLift(t, e, contactHolding(t, e, "Die Zurueckgekehrte", liftedAddress))
+	eraseForLift(t, e, contactHolding(t, e, "Die Zurueckgekehrte"))
 	if _, err := eraser.ExportSuppressions(e.Admin()); err != nil {
 		t.Fatalf("ExportSuppressions: %v", err)
 	}
@@ -152,7 +152,7 @@ func TestAJournalNewerThanARestoredLiftErasesAgain(t *testing.T) {
 		 WHERE value_hash = $1`, hash, erasedAt, liftedAt, consent, contact); err != nil {
 		t.Fatalf("restoring the lifted row: %v", err)
 	}
-	back := contactHolding(t, e, "Wieder da", liftedAddress)
+	back := contactHolding(t, e, "Wieder da")
 
 	assertReplayKeeps(t, e, eraser, back, false)
 }
@@ -162,8 +162,8 @@ func TestAJournalNewerThanARestoredLiftErasesAgain(t *testing.T) {
 func TestTheRekeyKeepsALift(t *testing.T) {
 	apptest.BindEnv(t, nil)
 	e := Setup(t)
-	eraseForLift(t, e, contactHolding(t, e, "Erased Subject", liftedAddress))
-	liftAddress(t, e, liftedAddress)
+	eraseForLift(t, e, contactHolding(t, e, "Erased Subject"))
+	liftAddress(t, e)
 
 	apptest.BindEnv(t, []string{"MARGINCE_KEYVAULT_ROOT_KEY=" + returnRootKey})
 	ctx := principal.SystemActing(e.Admin(), "system:datatask-test")
@@ -177,29 +177,29 @@ func TestTheRekeyKeepsALift(t *testing.T) {
 	if n := e.WsCount(t, `SELECT count(*) FROM erasure_suppression WHERE key_id IS NOT NULL AND lifted_at IS NOT NULL`); n != 1 {
 		t.Fatalf("%d keyed rows carry the lift after the rekey, want 1", n)
 	}
-	if addressRefused(t, e, liftedAddress) {
+	if addressRefused(t, e) {
 		t.Fatal("the rekey dropped the lift, and the address is refused again")
 	}
 }
 
-// armForLift puts the address on the list as an erasure from before this test.
-func armForLift(t *testing.T, email string) {
+// armForLift puts liftedAddress on the list as an erasure from before this test.
+func armForLift(t *testing.T) {
 	t.Helper()
 	if _, err := OwnerConn(t).Exec(context.Background(),
 		`INSERT INTO erasure_suppression (kind, value_hash, key_id) VALUES ('email', $1, $2)`,
-		storekit.SuppressionHash(email), storekit.SuppressionKeyID()); err != nil {
+		storekit.SuppressionHash(liftedAddress), storekit.SuppressionKeyID()); err != nil {
 		t.Fatalf("arming the erasure list: %v", err)
 	}
 }
 
-// contactHolding is a live contact holding the address, as a restore brings it back.
-func contactHolding(t *testing.T, e *Env, name, email string) ids.UUID {
+// contactHolding is a live contact holding liftedAddress, as a restore brings it back.
+func contactHolding(t *testing.T, e *Env, name string) ids.UUID {
 	t.Helper()
 	contact := e.SeedContact(t, name, nil)
 	if _, err := OwnerConn(t).Exec(context.Background(), `
 		INSERT INTO contact_email (id, contact_id, email, email_type, is_primary, source, captured_by)
 		VALUES ($1, $2, $3, 'work', true, 'manual', 'human:restore')`,
-		ids.NewV7(), contact, email); err != nil {
+		ids.NewV7(), contact, liftedAddress); err != nil {
 		t.Fatalf("seeding the address: %v", err)
 	}
 	return contact
@@ -233,10 +233,10 @@ func assertReplayKeeps(t *testing.T, e *Env, eraser *privacy.Eraser, contact ids
 	}
 }
 
-func addressRefused(t *testing.T, e *Env, email string) bool {
+func addressRefused(t *testing.T, e *Env) bool {
 	t.Helper()
 	err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
-		return storekit.RefuseErasedEmail(e.Admin(), tx, "email", email)
+		return storekit.RefuseErasedEmail(e.Admin(), tx, "email", liftedAddress)
 	})
 	if _, isErased := errors.AsType[*storekit.ErasedIdentifierError](err); err != nil && !isErased {
 		t.Fatalf("asking the erasure list: %v", err)
@@ -258,16 +258,16 @@ func erasedAtOf(t *testing.T, e *Env, email string) time.Time {
 	return erasedAt
 }
 
-func liftAddress(t *testing.T, e *Env, email string) {
+func liftAddress(t *testing.T, e *Env) {
 	t.Helper()
-	if err := tryLift(e, email, erasedAtOf(t, e, email)); err != nil {
-		t.Fatalf("lifting %s: %v", email, err)
+	if err := tryLift(e, erasedAtOf(t, e, liftedAddress)); err != nil {
+		t.Fatalf("lifting %s: %v", liftedAddress, err)
 	}
 }
 
-func tryLift(e *Env, email string, erasedAt time.Time) error {
+func tryLift(e *Env, erasedAt time.Time) error {
 	return database.WithWorkspaceTx(liftContext(e), e.Pool, func(tx pgx.Tx) error {
-		return privacy.LiftEmailSuppressionTx(liftContext(e), tx, email, erasedAt, ids.NewV7(), ids.NewV7())
+		return privacy.LiftEmailSuppressionTx(liftContext(e), tx, liftedAddress, erasedAt, ids.NewV7(), ids.NewV7())
 	})
 }
 

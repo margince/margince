@@ -1,0 +1,15 @@
+{
+  "tool": "send_outbound",
+  "action": "direct_send",
+  "verb": "direct_communication_send",
+  "allowed_for": [
+    "admin",
+    "management",
+    "manager",
+    "rep"
+  ],
+  "refused_for": [
+    "ops",
+    "read_only"
+  ]
+}

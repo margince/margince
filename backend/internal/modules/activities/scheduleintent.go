@@ -69,8 +69,8 @@ func (row ScheduledSend) IntentWire() *crmcontracts.IntentTime {
 
 func readSchedule(at *time.Time, zone *string, wall *time.Time) (*SendSchedule, error) {
 	if at == nil || zone == nil {
-		return nil, nil
-	} //nolint:nilnil // an absent schedule means send now
+		return nil, nil //nolint:nilnil // an absent schedule means send now
+	}
 	schedule := &SendSchedule{At: *at, TZ: *zone}
 	if wall != nil {
 		timezone, err := values.ParseTimezone(*zone)

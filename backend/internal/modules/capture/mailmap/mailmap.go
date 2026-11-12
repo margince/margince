@@ -20,6 +20,7 @@ import (
 	"github.com/emersion/go-message/mail"
 
 	"github.com/margince/margince/backend/internal/modules/capture"
+	"github.com/margince/margince/backend/internal/shared/kernel/calendarevent"
 	"github.com/margince/margince/backend/internal/shared/kernel/credentialmask"
 	"github.com/margince/margince/backend/internal/shared/ports/connector"
 	"github.com/margince/margince/backend/internal/shared/ports/datasource"
@@ -75,6 +76,7 @@ type Message struct {
 	hasCalendarPart bool
 	calendarMethod  string // the part's RFC 5546 method, "" when none is known
 	calendarUID     string // the UID of the event that part names, "" when none
+	calendarEvent   *calendarevent.Event
 	// deliveryReport is the RFC 3464 shape — `multipart/report` carrying
 	// `report-type=delivery-status`. Kept in its own right beside
 	// hasCalendarPart, and for the same reason: it is a fact about the message
@@ -218,6 +220,7 @@ func Parse(raw []byte, owner string) (Message, error) {
 		hasCalendarPart:  hasCalendarPart,
 		calendarMethod:   calendar.method(),
 		calendarUID:      calendar.uid(),
+		calendarEvent:    calendar.event(),
 		deliveryReport:   deliveryReport,
 		listUnsubscribe:  hasListUnsubscribe(header.Values("List-Unsubscribe"), viaGroup),
 		participants:     otherParties(toList, ccList, bccList, ownerLower, participantExclusion(counterparty, calendarNotice)),
@@ -423,6 +426,7 @@ func (m Message) ToRecord(connectorName string, raw []byte) connector.Normalized
 			HasCalendarPart:   m.hasCalendarPart,
 			CalendarMethod:    m.calendarMethod,
 			CalendarUID:       m.calendarUID,
+			CalendarEvent:     m.calendarEvent,
 			BodyCompleteness:  stored,
 			CredentialsMasked: m.masksCredentials(),
 			Envelope:          m.envelope(),

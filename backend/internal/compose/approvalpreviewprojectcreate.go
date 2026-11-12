@@ -62,7 +62,7 @@ func (r approvalPreviewReader) projectCreationDetails(ctx context.Context, in pr
 		descriptionField: in.Description, previewFieldStartedAt: in.StartedAt, previewFieldTargetEndDate: in.TargetEndDate,
 		fieldPhase: in.StartPhase(), fieldSource: in.Source, previewFieldSourceSystem: in.SourceSystem,
 		previewFieldSourceAuthorID: in.Author.AuthorID, previewFieldSourceAuthorName: in.Author.AuthorName,
-		"key": in.Key, "deal_id": in.DealID,
+		"key": in.Key, dealIDField: in.DealID,
 	}
 	maps.Copy(fields, in.CustomFields)
 	return r.creationFieldDetails(ctx, string(recordTypeProject), fields)

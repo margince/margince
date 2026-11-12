@@ -114,6 +114,45 @@ describe("CompaniesScreen — what an account is to us", () => {
     expect(screen.getByText("Prospect")).toBeTruthy();
   });
 
+  it("names an extension's type by its declared label and offers it as a filter", async () => {
+    const user = userEvent.setup();
+    const { urls } = stubFetch(
+      async () =>
+        jsonResponse({
+          data: [
+            {
+              ...company,
+              relationship_types: ["supplier"],
+              extension_relationship_types: ["ext:acme:reseller"],
+            },
+          ],
+          page: { next_cursor: null, has_more: false },
+        }),
+      {
+        companyTypes: [
+          { value: "ext:acme:reseller", label: "Reseller", unit: "acme" },
+        ],
+      },
+    );
+    render(<CompaniesScreen />);
+    await waitFor(() => expect(screen.getByText("Reseller")).toBeTruthy());
+    expect(screen.getByText("Supplier")).toBeTruthy();
+    expect(screen.queryByText("ext:acme:reseller")).toBeNull();
+
+    const values = await openFilterValues(user, "Relationship type");
+    await user.click(within(values).getByRole("radio", { name: "Reseller" }));
+    await waitFor(() =>
+      expect(
+        urls.some(
+          (url) =>
+            new URL(url, window.location.origin).searchParams.get(
+              "extension_relationship_type",
+            ) === "ext:acme:reseller",
+        ),
+      ).toBe(true),
+    );
+  });
+
   it("leaves the cell empty when the account carries none", async () => {
     stubFetch(async () =>
       jsonResponse({
@@ -315,9 +354,8 @@ describe("CompaniesScreen — list dials reach the server (P-14)", () => {
     const user = userEvent.setup();
     const { urls } = stubFetch(async () => emptyPage());
     render(<CompaniesScreen />);
-    // One read carries several rendered pages, so the limit is a multiple of
-    // the footer's size and never the size itself — that is what lets the
-    // pager offer page 2 before the reader has asked for it.
+    // One read carries two rendered pages, so the limit is a multiple of
+    // the footer's size. That lets the pager offer page 2 with no wait.
     await waitFor(() =>
       expect(
         urls.some((url) => url.includes(`limit=${listFetchLimit(25)}`)),

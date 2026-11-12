@@ -270,10 +270,9 @@ func WithRestrictionCheck(check model.SubjectRestrictions) LocalOption {
 
 // NoRestrictionData is a check that holds no stops: it admits every subject and
 // still refuses an honouring request that declares none.
-func NoRestrictionData() model.SubjectRestrictions { return noRestrictionData{} }
+type NoRestrictionData struct{}
 
-type noRestrictionData struct{}
-
-func (noRestrictionData) AnyRestricted(context.Context, model.Subjects) (bool, error) {
+// AnyRestricted reports that no subject is restricted.
+func (NoRestrictionData) AnyRestricted(context.Context, model.Subjects) (bool, error) {
 	return false, nil
 }

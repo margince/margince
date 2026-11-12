@@ -286,6 +286,7 @@
     "GET /v1/extensions/{name}/settings": "get_extension_settings",
     "GET /v1/field-history": "get_field_history",
     "GET /v1/filters/vocabulary": "read_view",
+    "GET /v1/finance/invoices/{id}/pdf": "download_finance_invoice_pdf",
     "GET /v1/finance/source": "get_finance_source",
     "GET /v1/finance/source/customers": "list_finance_source_customers",
     "GET /v1/forecast": "forecast_readings",

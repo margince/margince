@@ -52,7 +52,7 @@ func WithOperatorMail(m mailer.Mailer) Option {
 		// The relay still transmits it, one layer down, as the controller seam.
 		s.controllerRelay = newMailerRelay(m)
 		s.rewireConfirmationLane(pool)
-		s.returnMail = m
+		s.erasureReturnHandlers = s.WithMail(m)
 	}
 }
 
@@ -392,7 +392,7 @@ func WithPublicBaseURL(base string) Option {
 		s.confirmLinkBase = base
 		s.rewireConfirmationLane(pool)
 		// The erasure return link lifts an erasure, so it too is bound here.
-		s.returnLinkBase = base
+		s.erasureReturnHandlers = s.WithLinkBase(base)
 		// Reported to an operator, never enforced: the boot and send guards
 		// are what refuse an unusable origin, and a readiness check here
 		// would deadlock a rollout on its own ingress.

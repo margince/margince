@@ -1,0 +1,14 @@
+{
+  "tool": "read_workspace",
+  "action": "workspace_email_domains",
+  "verb": "list_workspace_email_domains",
+  "allowed_for": [
+    "admin",
+    "management",
+    "manager",
+    "ops",
+    "read_only",
+    "rep"
+  ],
+  "refused_for": []
+}

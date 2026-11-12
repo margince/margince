@@ -125,3 +125,203 @@
   inset-block: 0;
   height: 100%;
 }
+
+/* The view's opening section carries a faint brand light from its corner. */
+.analytics-sheet > .panel:first-child,
+.analytics-sheet > .reporting-results-part:first-child > .panel:first-child {
+  background: radial-gradient(
+    120% 70% at 0% 0%,
+    color-mix(in srgb, var(--accentLight) 55%, transparent),
+    transparent 60%
+  );
+}
+/* A plate of readings: each card spans the plate's five rows (name, figure,
+   detail, meter, door), so every name, figure and detail shares a line with
+   its neighbours however far a long name wraps. Above the fold point only:
+   folded, the plate is a column and statstrip.css lays each row out. */
+@container (width > 40rem) {
+  .analytics-body .stat-strip[data-density="plate"] {
+    grid-template-rows: repeat(5, auto);
+    row-gap: 0;
+  }
+  .analytics-body .stat-strip[data-density="plate"] > .stat-card {
+    display: grid;
+    grid-row: span 5;
+    grid-template-rows: subgrid;
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-areas: none;
+    align-content: start;
+    min-block-size: 0;
+    /* ds:ignore a plate cell sits between dividers, not inside a card edge */
+    padding: var(--space-5) var(--space-5) var(--space-4);
+  }
+  /* Size containment would make the lead its own layout root, and a subgrid
+     inside one falls back to no rows at all. The lead's figure has its own
+     size below, so it no longer needs to measure its cell. */
+  .analytics-body .stat-strip[data-density="plate"] > .stat-card:first-child {
+    container-type: normal;
+  }
+  .analytics-body .stat-strip[data-density="plate"] > .stat-card > * {
+    grid-area: auto;
+  }
+  .analytics-body .stat-strip[data-density="plate"] .stat-card-label,
+  .analytics-body .stat-strip[data-density="plate"] .stat-card-value {
+    align-self: end;
+  }
+  .analytics-body .stat-strip[data-density="plate"] .stat-card-detail,
+  .analytics-body .stat-strip[data-density="plate"] .stat-card-meter {
+    align-self: start;
+  }
+  .analytics-body .stat-strip[data-density="plate"] .stat-card-foot {
+    align-self: end;
+    padding-top: 0;
+  }
+  /* Each part keeps its own row, so a card with no detail line still draws
+     its meter level with its neighbours'. */
+  .analytics-body .stat-strip[data-density="plate"] .stat-card-meter {
+    grid-row: 4;
+  }
+  .analytics-body .stat-strip[data-density="plate"] .stat-card-foot {
+    grid-row: 5;
+  }
+}
+.analytics-body .stat-strip[data-density="plate"] .stat-card-label {
+  font: var(--fontBodySmall);
+  /* ds:ignore a plate's name sits a step above its figure */
+  margin-block-end: var(--space-2);
+}
+.analytics-body .stat-strip[data-density="plate"] .stat-card-value {
+  /* ds:ignore a plate figure reads larger than a lone stat card's */
+  font: var(--fontHeadingMedium);
+  font-weight: var(--fontWeightMedium);
+  font-variant-numeric: tabular-nums;
+  /* ds:ignore a plate figure sits a step above its detail */
+  margin-block-end: var(--space-1);
+}
+.analytics-body .stat-strip[data-lead] > :first-child .stat-card-value {
+  /* ds:ignore the lead figure is the view's headline */
+  font: var(--fontHeadingXLarge);
+  font-weight: var(--fontWeightMedium);
+  font-variant-numeric: tabular-nums;
+}
+/* A plate in a narrow column steps its figures down a rung, so a
+   seven-digit amount keeps every digit instead of an ellipsis. */
+@container (40rem < width <= 52rem) {
+  .analytics-body .stat-strip[data-density="plate"] .stat-card-value {
+    /* ds:ignore the plate's figure rung, one step down in a narrow column */
+    font: var(--fontHeadingSmall);
+    font-weight: var(--fontWeightMedium);
+  }
+  .analytics-body .stat-strip[data-lead] > :first-child .stat-card-value {
+    /* ds:ignore the lead figure, one step down in a narrow column */
+    font: var(--fontHeadingLarge);
+    font-weight: var(--fontWeightMedium);
+  }
+}
+.analytics-body .stat-card-meter {
+  margin-block: var(--space-2) 0;
+}
+.analytics-body .analytics-hero-aside .meterbar span,
+.analytics-body .meterbar-flat span {
+  background: linear-gradient(90deg, var(--accentFade), var(--accent));
+}
+/* An untoned reading is a fine one, so its fill keeps the success ink. */
+.analytics-body .stat-card-meter-fill {
+  background: linear-gradient(
+    90deg,
+    color-mix(in srgb, var(--success) 55%, var(--ground)),
+    var(--success)
+  );
+}
+.analytics-body .meterbar-dense {
+  height: 10px;
+  background: var(--bgInset);
+}
+/* The evidence mark rests until its reading is pointed at or focused. */
+.analytics-body .stat-card .stat-card-basis {
+  opacity: 0.45;
+  transition: opacity var(--dur-state) var(--ease-out);
+}
+.analytics-body .stat-card:is(:hover, :focus-within) .stat-card-basis {
+  opacity: 1;
+}
+
+/* A section's foot is one line: the chart's table door, what the figure
+   covers, and the door to its records. Opened, the table takes a line of its
+   own under them. */
+.analytics-board-main .panel-foot:has(.disclosure.report-chart-data) {
+  flex-wrap: nowrap;
+  align-items: baseline;
+  /* ds:ignore the foot's table door, coverage and records door share one line */
+  gap: var(--space-4);
+}
+.analytics-board-main .panel-foot:has(.disclosure.report-chart-data[open]) {
+  flex-wrap: wrap;
+}
+.analytics-board-main .panel-foot > .reporting-context {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+.analytics-board-rail .panel-foot:has(.disclosure.report-chart-data) {
+  flex-wrap: wrap;
+  /* ds:ignore the rail foot wraps, and its lines need a step between them */
+  row-gap: var(--space-2);
+}
+.panel-foot .disclosure.report-chart-data {
+  flex: none;
+  margin: 0;
+}
+.analytics-board-rail .panel-foot .disclosure.report-chart-data,
+.panel-foot .disclosure.report-chart-data[open] {
+  flex-basis: 100%;
+  order: 9;
+}
+.analytics-body .disclosure.report-chart-data > .disclosure-summary {
+  font: var(--fontBodySmall);
+  color: var(--textSecondary);
+}
+
+/* The rail's verbs are quiet words, not underlined links. A row's bare link
+   is named as the base sheet names it, so this rule wins whichever loads last. */
+.analytics-board-rail .btn-link,
+.analytics-board-rail .panel-foot > a,
+.analytics-attention-row > a:not([class]) {
+  text-decoration: none;
+  font-weight: var(--fontWeightMedium);
+}
+/* Icon verbs in a head or a table row stand unboxed until pointed at. */
+.analytics-body :is(.panel-head, td, th) .btn-icon:not(:hover, :focus-visible) {
+  border-color: transparent;
+  background: none;
+  box-shadow: none;
+}
+
+/* The snapshot to share: its name beside its picker, the verbs after it, all
+   on the trailing edge of one line. */
+.analytics-sheet .reporting-share-bar {
+  justify-content: flex-end;
+  align-items: center;
+  padding-block: var(--space-3);
+}
+.analytics-sheet .reporting-share-bar .field {
+  flex-direction: row;
+  align-items: center;
+  /* ds:ignore the share field's name sits beside its picker, not above it */
+  gap: var(--space-2);
+}
+.analytics-sheet .reporting-share-bar .field > .t-label {
+  color: var(--textSecondary);
+  white-space: nowrap;
+}
+.analytics-sheet .reporting-written {
+  color: var(--textSecondary);
+}
+.analytics-body .filter-bar-row {
+  align-items: center;
+}
+
+/* My targets: rows of equal length, so every reading is one size. */
+.analytics-target-rows {
+  display: grid;
+  gap: var(--space-3);
+}

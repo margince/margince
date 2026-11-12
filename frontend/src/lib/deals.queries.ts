@@ -103,6 +103,7 @@ export function dealsQueryParams(f: DealFilters) {
     partner_company_id: filters.partner_company_id || undefined,
     stalled: filters.stalled === "true" ? true : undefined,
     partner_sourced: filters.partner_sourced === "true" ? true : undefined,
+    link_type: filters.link_type || undefined,
     // Several ids and their mode, out of the one comma-joined string the
     // address carries them in. Spelled by the shared encoder rather than here,
     // so this board and the three lists cannot read one address two ways.
@@ -137,21 +138,25 @@ export function nextCursorOf(page: DealListPage): string | undefined {
   return page.page?.has_more ? (page.page.next_cursor ?? undefined) : undefined;
 }
 
-/** The deals as one keyset walk over every stage. */
-export function useDeals(f: DealFilters, enabled = true) {
+/**
+ * The deals as one keyset walk over every stage, `limit` rows a read. A table
+ * passes the size its pager slices (`listFetchLimit`); the default suits a
+ * picker that lists them all.
+ */
+export function useDeals(f: DealFilters, enabled = true, limit = 100) {
   const closeDay = useCloseDay(f.filters[CLOSE_DAY_DIAL]);
   return useInfiniteQuery({
     enabled,
     // The days, not the dial's word: a list opened after the quarter turns
     // never reuses the old quarter's cached page. Today is read at mount.
-    queryKey: ["deals", f, closeDay],
+    queryKey: ["deals", f, closeDay, limit],
     // `as` steers useInfiniteQuery's TPageParam generic to the cursor type: a
     // bare `undefined` infers TPageParam=undefined and the string cursor no
     // longer type-checks.
     initialPageParam: undefined as string | undefined,
     queryFn: ({ pageParam, signal }) =>
       readDealPage(
-        { ...dealsQueryParams({ ...f, closeDay }), cursor: pageParam },
+        { ...dealsQueryParams({ ...f, closeDay }), limit, cursor: pageParam },
         signal,
       ),
     getNextPageParam: nextCursorOf,

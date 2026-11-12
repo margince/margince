@@ -1,0 +1,15 @@
+{
+  "tool": "send_outbound",
+  "action": "deal_room_resend",
+  "verb": "resend_deal_room_invitation",
+  "allowed_for": [
+    "admin",
+    "management",
+    "manager",
+    "ops",
+    "rep"
+  ],
+  "refused_for": [
+    "read_only"
+  ]
+}

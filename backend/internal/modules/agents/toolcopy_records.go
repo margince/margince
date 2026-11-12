@@ -25,9 +25,9 @@ var searchRecordsCopy = toolCopy{
 
 var listRecordsCopy = toolCopy{
 	Purpose: "List one page of records matching record_type and filters.",
-	Limits:  "Only declared filters apply. Further pages may exist.",
+	Limits:  "Only declared record_type filters apply.",
 	Instead: "Use search_records for names, run_report for counts or totals.",
-	Retain:  "Pass next_cursor for the next page; omit it for the first. `owner` names the holder. " + sayWhoseItIs,
+	Retain:  "Pass next_cursor for the next page. `owner` names the holder. " + sayWhoseItIs,
 }
 
 var readViewCopy = toolCopy{

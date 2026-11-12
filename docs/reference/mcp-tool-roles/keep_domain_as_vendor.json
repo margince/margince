@@ -1,0 +1,15 @@
+{
+  "tool": "change_capture",
+  "action": "keep_domain_as_vendor",
+  "verb": "keep_domain_as_vendor",
+  "allowed_for": [
+    "admin",
+    "management",
+    "manager",
+    "ops",
+    "rep"
+  ],
+  "refused_for": [
+    "read_only"
+  ]
+}

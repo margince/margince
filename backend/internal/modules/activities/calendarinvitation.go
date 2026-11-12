@@ -121,13 +121,7 @@ func openInvitationsTx(
 // invitations to the reader. Only a row the projection already calls a
 // calendar mail can be one, so a page without such a row reads nothing more.
 func withCalendarInvitations(ctx context.Context, tx pgx.Tx, page []crmcontracts.Activity, asOf time.Time) error {
-	var calendarMail []ids.UUID
-	for i := range page {
-		kind := page[i].AutomaticKind
-		if page[i].EmailSummary != nil && kind != nil && *kind == crmcontracts.ActivityAutomaticKindCalendar {
-			calendarMail = append(calendarMail, ids.UUID(page[i].Id))
-		}
-	}
+	calendarMail := calendarMailOf(page)
 	if len(calendarMail) == 0 {
 		return nil
 	}
@@ -142,6 +136,18 @@ func withCalendarInvitations(ctx context.Context, tx pgx.Tx, page []crmcontracts
 		}
 	}
 	return nil
+}
+
+// calendarMailOf is the page's email rows the projection calls calendar mail.
+func calendarMailOf(page []crmcontracts.Activity) []ids.UUID {
+	var out []ids.UUID
+	for i := range page {
+		kind := page[i].AutomaticKind
+		if page[i].EmailSummary != nil && kind != nil && *kind == crmcontracts.ActivityAutomaticKindCalendar {
+			out = append(out, ids.UUID(page[i].Id))
+		}
+	}
+	return out
 }
 
 // errNotAnOpenInvitation answers a message the reader cannot RSVP to: not an

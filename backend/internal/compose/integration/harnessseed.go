@@ -26,6 +26,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/provenance"
 )
 
 // The id wideners assert a harness-seeded untyped id as the entity a contacts-store
@@ -61,7 +62,7 @@ func userIDPtr(owner *ids.UUID) *ids.UserID {
 // acting as admin.
 func (e *Env) SeedContact(t *testing.T, name string, owner *ids.UUID) ids.UUID {
 	t.Helper()
-	p, err := e.Contacts.CreateContact(e.Admin(), contacts.CreateContactInput{FullName: name, OwnerID: userIDPtr(owner), Source: "manual"})
+	p, err := e.Contacts.CreateContact(e.Admin(), contacts.CreateContactInput{FullName: name, OwnerID: userIDPtr(owner), Source: provenance.RecordSourceManual})
 	if err != nil {
 		t.Fatalf("seeding %s: %v", name, err)
 	}
@@ -87,7 +88,7 @@ func (e *Env) SeedEmployedAccount(t *testing.T, contact, owner ids.UUID, pipelin
 	company := e.SeedCompany(t, "Employed Account", &owner)
 	companyID := ids.From[ids.CompanyKind](company)
 	if _, err := e.Contacts.CreateRelationship(e.Admin(), contacts.CreateRelationshipInput{
-		Kind: "employment", ContactID: new(ids.From[ids.ContactKind](contact)), CompanyID: &companyID, Source: "manual",
+		Kind: "employment", ContactID: new(ids.From[ids.ContactKind](contact)), CompanyID: &companyID, Source: provenance.RecordSourceManual,
 	}); err != nil {
 		t.Fatalf("employing the contact at the account: %v", err)
 	}

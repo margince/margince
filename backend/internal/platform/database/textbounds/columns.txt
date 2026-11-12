@@ -34,6 +34,7 @@ public.activity.source_author_name exempt imported source attribution retains th
 public.activity.source_id document
 public.activity.source_system document
 public.activity.subject document
+public.activity.task_type document
 public.activity.thread_key document
 public.activity_audience_member.created_by document
 public.activity_audience_member.subject_type document
@@ -50,6 +51,12 @@ public.activity_identity.identity_key document
 public.activity_identity.identity_kind document
 public.activity_kind.kind document
 public.activity_link.entity_type document
+public.activity_link_suggestion.captured_by document
+public.activity_link_suggestion.decided_by document
+public.activity_link_suggestion.entity_type document
+public.activity_link_suggestion.reason line
+public.activity_link_suggestion.status document
+public.activity_link_suggestion.unit document
 public.activity_mail_reference.referenced_id document
 public.activity_meeting_attendee_repair.outcome document
 public.activity_meeting_history.actor document
@@ -1206,6 +1213,10 @@ public.record_grant.access document
 public.record_grant.reason note
 public.record_grant.record_type document
 public.record_grant.subject_type document
+public.record_link.captured_by document
+public.record_link.from_type document
+public.record_link.link_type document
+public.record_link.to_type document
 public.record_role.assignee_kinds document
 public.record_role.key document
 public.record_role.label label

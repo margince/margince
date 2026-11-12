@@ -243,6 +243,27 @@ func (e ActivityMessageMove) Valid() bool {
 	}
 }
 
+// Defines values for ActivityReplyChannel.
+const (
+	ActivityReplyChannelCall    ActivityReplyChannel = "call"
+	ActivityReplyChannelEmail   ActivityReplyChannel = "email"
+	ActivityReplyChannelMessage ActivityReplyChannel = "message"
+)
+
+// Valid indicates whether the value is a known member of the ActivityReplyChannel enum.
+func (e ActivityReplyChannel) Valid() bool {
+	switch e {
+	case ActivityReplyChannelCall:
+		return true
+	case ActivityReplyChannelEmail:
+		return true
+	case ActivityReplyChannelMessage:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for ActivityAudience.
 const (
 	ActivityAudienceParticipants ActivityAudience = "participants"
@@ -395,28 +416,28 @@ func (e ActivityReferenceContentState) Valid() bool {
 
 // Defines values for ActivityReferenceKind.
 const (
-	Call    ActivityReferenceKind = "call"
-	Email   ActivityReferenceKind = "email"
-	Meeting ActivityReferenceKind = "meeting"
-	Message ActivityReferenceKind = "message"
-	Note    ActivityReferenceKind = "note"
-	Task    ActivityReferenceKind = "task"
+	ActivityReferenceKindCall    ActivityReferenceKind = "call"
+	ActivityReferenceKindEmail   ActivityReferenceKind = "email"
+	ActivityReferenceKindMeeting ActivityReferenceKind = "meeting"
+	ActivityReferenceKindMessage ActivityReferenceKind = "message"
+	ActivityReferenceKindNote    ActivityReferenceKind = "note"
+	ActivityReferenceKindTask    ActivityReferenceKind = "task"
 )
 
 // Valid indicates whether the value is a known member of the ActivityReferenceKind enum.
 func (e ActivityReferenceKind) Valid() bool {
 	switch e {
-	case Call:
+	case ActivityReferenceKindCall:
 		return true
-	case Email:
+	case ActivityReferenceKindEmail:
 		return true
-	case Meeting:
+	case ActivityReferenceKindMeeting:
 		return true
-	case Message:
+	case ActivityReferenceKindMessage:
 		return true
-	case Note:
+	case ActivityReferenceKindNote:
 		return true
-	case Task:
+	case ActivityReferenceKindTask:
 		return true
 	default:
 		return false
@@ -848,28 +869,28 @@ func (e CreateActivityRequestMeetingStatus) Valid() bool {
 
 // Defines values for DealCommercialMotion.
 const (
-	DealCommercialMotionCrossSell        DealCommercialMotion = "cross_sell"
-	DealCommercialMotionExistingBusiness DealCommercialMotion = "existing_business"
-	DealCommercialMotionExpansion        DealCommercialMotion = "expansion"
-	DealCommercialMotionNewBusiness      DealCommercialMotion = "new_business"
-	DealCommercialMotionRenewal          DealCommercialMotion = "renewal"
-	DealCommercialMotionUpsell           DealCommercialMotion = "upsell"
+	CrossSell        DealCommercialMotion = "cross_sell"
+	ExistingBusiness DealCommercialMotion = "existing_business"
+	Expansion        DealCommercialMotion = "expansion"
+	NewBusiness      DealCommercialMotion = "new_business"
+	Renewal          DealCommercialMotion = "renewal"
+	Upsell           DealCommercialMotion = "upsell"
 )
 
 // Valid indicates whether the value is a known member of the DealCommercialMotion enum.
 func (e DealCommercialMotion) Valid() bool {
 	switch e {
-	case DealCommercialMotionCrossSell:
+	case CrossSell:
 		return true
-	case DealCommercialMotionExistingBusiness:
+	case ExistingBusiness:
 		return true
-	case DealCommercialMotionExpansion:
+	case Expansion:
 		return true
-	case DealCommercialMotionNewBusiness:
+	case NewBusiness:
 		return true
-	case DealCommercialMotionRenewal:
+	case Renewal:
 		return true
-	case DealCommercialMotionUpsell:
+	case Upsell:
 		return true
 	default:
 		return false
@@ -1047,6 +1068,72 @@ func (e EmailAccessStatus) Valid() bool {
 	}
 }
 
+// Defines values for EmailCalendarChangeAnswer.
+const (
+	EmailCalendarChangeAnswerAccepted  EmailCalendarChangeAnswer = "accepted"
+	EmailCalendarChangeAnswerDeclined  EmailCalendarChangeAnswer = "declined"
+	EmailCalendarChangeAnswerTentative EmailCalendarChangeAnswer = "tentative"
+)
+
+// Valid indicates whether the value is a known member of the EmailCalendarChangeAnswer enum.
+func (e EmailCalendarChangeAnswer) Valid() bool {
+	switch e {
+	case EmailCalendarChangeAnswerAccepted:
+		return true
+	case EmailCalendarChangeAnswerDeclined:
+		return true
+	case EmailCalendarChangeAnswerTentative:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for EmailCalendarChangeChanged.
+const (
+	Location EmailCalendarChangeChanged = "location"
+	Time     EmailCalendarChangeChanged = "time"
+	Title    EmailCalendarChangeChanged = "title"
+)
+
+// Valid indicates whether the value is a known member of the EmailCalendarChangeChanged enum.
+func (e EmailCalendarChangeChanged) Valid() bool {
+	switch e {
+	case Location:
+		return true
+	case Time:
+		return true
+	case Title:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for EmailCalendarChangeKind.
+const (
+	Answered EmailCalendarChangeKind = "answered"
+	Canceled EmailCalendarChangeKind = "canceled"
+	Proposed EmailCalendarChangeKind = "proposed"
+	Updated  EmailCalendarChangeKind = "updated"
+)
+
+// Valid indicates whether the value is a known member of the EmailCalendarChangeKind enum.
+func (e EmailCalendarChangeKind) Valid() bool {
+	switch e {
+	case Answered:
+		return true
+	case Canceled:
+		return true
+	case Proposed:
+		return true
+	case Updated:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for EmailCalendarInvitationResponse.
 const (
 	EmailCalendarInvitationResponseAccepted    EmailCalendarInvitationResponse = "accepted"
@@ -1136,22 +1223,22 @@ func (e EmailSummaryMove) Valid() bool {
 
 // Defines values for MeetingResponse.
 const (
-	MeetingResponseAccepted    MeetingResponse = "accepted"
-	MeetingResponseDeclined    MeetingResponse = "declined"
-	MeetingResponseNeedsAction MeetingResponse = "needs_action"
-	MeetingResponseTentative   MeetingResponse = "tentative"
+	Accepted    MeetingResponse = "accepted"
+	Declined    MeetingResponse = "declined"
+	NeedsAction MeetingResponse = "needs_action"
+	Tentative   MeetingResponse = "tentative"
 )
 
 // Valid indicates whether the value is a known member of the MeetingResponse enum.
 func (e MeetingResponse) Valid() bool {
 	switch e {
-	case MeetingResponseAccepted:
+	case Accepted:
 		return true
-	case MeetingResponseDeclined:
+	case Declined:
 		return true
-	case MeetingResponseNeedsAction:
+	case NeedsAction:
 		return true
-	case MeetingResponseTentative:
+	case Tentative:
 		return true
 	default:
 		return false
@@ -1425,66 +1512,6 @@ func (e SignalEntityType) Valid() bool {
 	}
 }
 
-// Defines values for SignalKind.
-const (
-	SignalKindBuyingIntent     SignalKind = "buying_intent"
-	SignalKindChampionLeft     SignalKind = "champion_left"
-	SignalKindCommitmentMade   SignalKind = "commitment_made"
-	SignalKindContractEnded    SignalKind = "contract_ended"
-	SignalKindExpansion        SignalKind = "expansion"
-	SignalKindFunding          SignalKind = "funding"
-	SignalKindGhostedThread    SignalKind = "ghosted_thread"
-	SignalKindLeadershipChange SignalKind = "leadership_change"
-	SignalKindNewOpportunity   SignalKind = "new_opportunity"
-	SignalKindOther            SignalKind = "other"
-	SignalKindProductLaunch    SignalKind = "product_launch"
-	SignalKindProjectGoneQuiet SignalKind = "project_gone_quiet"
-	SignalKindReengagement     SignalKind = "reengagement"
-	SignalKindRisk             SignalKind = "risk"
-	SignalKindStalledDeal      SignalKind = "stalled_deal"
-	SignalKindTechnicalChange  SignalKind = "technical_change"
-)
-
-// Valid indicates whether the value is a known member of the SignalKind enum.
-func (e SignalKind) Valid() bool {
-	switch e {
-	case SignalKindBuyingIntent:
-		return true
-	case SignalKindChampionLeft:
-		return true
-	case SignalKindCommitmentMade:
-		return true
-	case SignalKindContractEnded:
-		return true
-	case SignalKindExpansion:
-		return true
-	case SignalKindFunding:
-		return true
-	case SignalKindGhostedThread:
-		return true
-	case SignalKindLeadershipChange:
-		return true
-	case SignalKindNewOpportunity:
-		return true
-	case SignalKindOther:
-		return true
-	case SignalKindProductLaunch:
-		return true
-	case SignalKindProjectGoneQuiet:
-		return true
-	case SignalKindReengagement:
-		return true
-	case SignalKindRisk:
-		return true
-	case SignalKindStalledDeal:
-		return true
-	case SignalKindTechnicalChange:
-		return true
-	default:
-		return false
-	}
-}
-
 // Defines values for SignalResolutionState.
 const (
 	SignalResolutionStateDropped       SignalResolutionState = "dropped"
@@ -1716,6 +1743,36 @@ func (e SystemDisplayLocale) Valid() bool {
 	}
 }
 
+// Defines values for TaskType.
+const (
+	Decide   TaskType = "decide"
+	Do       TaskType = "do"
+	Meet     TaskType = "meet"
+	ReachOut TaskType = "reach_out"
+	Reply    TaskType = "reply"
+	Review   TaskType = "review"
+)
+
+// Valid indicates whether the value is a known member of the TaskType enum.
+func (e TaskType) Valid() bool {
+	switch e {
+	case Decide:
+		return true
+	case Do:
+		return true
+	case Meet:
+		return true
+	case ReachOut:
+		return true
+	case Reply:
+		return true
+	case Review:
+		return true
+	default:
+		return false
+	}
+}
+
 // Activity A polymorphic timeline item. Mirrors the `activity` table + `activity_link`.
 // **Per-kind field constraints** (enforced server-side to match the DB `activity_task_fields`
 // CHECK; the OpenAPI cannot express these conditionally): `due_at`/`assignee_id`/`is_done`/
@@ -1890,6 +1947,9 @@ type Activity struct {
 	// RemindIntent A chosen local time in an IANA zone, resolved with current rules. A time in a gap moves forward; a repeated time takes its first occurrence.
 	RemindIntent *IntentTime `json:"remind_intent,omitempty"`
 
+	// ReplyChannel Task only. For a `reply` task, the kind of the activity it answers (`source_activity_id`), so the answer goes back the way the message came in. Null for every other type, and for a reply with no source of one of these kinds.
+	ReplyChannel *ActivityReplyChannel `json:"reply_channel,omitempty"`
+
 	// Source Where the row came from. `manual` is anything typed, by a member or by an assistant working for one, so it never says who typed it: `captured_by` and `recorded_by_agent` do.
 	Source string `json:"source"`
 
@@ -1903,6 +1963,9 @@ type Activity struct {
 	SourceSystem  *string        `json:"source_system,omitempty"`
 	Subject       *string        `json:"subject,omitempty"`
 	SystemDisplay *SystemDisplay `json:"system_display,omitempty"`
+
+	// TaskType Task only, absent on every other kind. The type a human, an agent or the AI gave the task when it was made. A task made before types existed, or by a product rule that sets none, reads the type of its rule: an answer owed to a request is `reply`, a lead to qualify is `review`, a mail to file is `decide`. A task with neither reads `reach_out` when a human or an agent made it, else `do`. `offers_email` is false for every type but `reply` and `reach_out`.
+	TaskType *TaskType `json:"task_type,omitempty"`
 
 	// ThreadKey The provider's own conversation id (Gmail threadId, Graph conversationId, the RFC822 References root), stamped by capture. It is what makes a thread a thread: grouping by subject would merge two unrelated "Re: Update" exchanges and split one that was renamed mid-conversation. Null on anything capture did not thread — a note, a task, a message whose provider offered none.
 	ThreadKey *string   `json:"thread_key,omitempty"`
@@ -1960,6 +2023,9 @@ type ActivityMeetingStatus string
 // word with them, `none` otherwise. Past the waiting horizon, unless someone kept it,
 // a message owed our answer is `none`, as for mail.
 type ActivityMessageMove string
+
+// ActivityReplyChannel Task only. For a `reply` task, the kind of the activity it answers (`source_activity_id`), so the answer goes back the way the message came in. Null for every other type, and for a reply with no source of one of these kinds.
+type ActivityReplyChannel string
 
 // ActivityAudience Who may read an activity's content — see Activity.audience.
 type ActivityAudience string
@@ -2201,7 +2267,10 @@ type Company struct {
 
 	// Email The company's general address, for example info@example.com. It never creates or matches a contact.
 	Email *string `json:"email,omitempty"`
-	Id    string  `json:"id"`
+
+	// ExtensionRelationshipTypes The types an installed extension adds, as `ext:<unit>:<type>`. Kept apart from `relationship_types`, whose list stays the closed set above. Each value is declared by the extension it names; a value no extension declares is refused (422, `invalid_enum`).
+	ExtensionRelationshipTypes *[]string `json:"extension_relationship_types,omitempty"`
+	Id                         string    `json:"id"`
 
 	// ImportedFrom Which import wrote this record, so a screen can say "Imported from <name>" instead of "Typed by you". Null when no import wrote it. The name is the source the import was run for (`bundle`); an empty string is an import that was given none. Derived from `source_system`, whose reserved `mirror:` prefix is never shown.
 	ImportedFrom *string `json:"imported_from,omitempty"`
@@ -2449,6 +2518,9 @@ type CreateActivityRequest struct {
 	SourceSystem     *string `json:"source_system,omitempty"`
 	Subject          *string `json:"subject,omitempty"`
 
+	// TaskType Task only: the kind of work, which decides its one button.
+	TaskType *TaskType `json:"task_type,omitempty"`
+
 	// ThreadKey The conversation this message belongs to. Email only. Defaults to `rfc_message_id` when absent, which files a message under itself — the same root a captured message takes when it starts a thread. A mail logged by hand with neither starts a conversation of its own.
 	ThreadKey            *string                `json:"thread_key,omitempty"`
 	AdditionalProperties map[string]interface{} `json:"-"`
@@ -2665,6 +2737,69 @@ type DealLastEmailDirection string
 // would branch on and never reach.
 type EmailAccessStatus string
 
+// EmailCalendarBefore defines model for EmailCalendarBefore.
+type EmailCalendarBefore struct {
+	EndsAt          *time.Time         `json:"ends_at,omitempty"`
+	Location        *string            `json:"location,omitempty"`
+	StartsAt        *time.Time         `json:"starts_at,omitempty"`
+	StartsPrecision *OccurredPrecision `json:"starts_precision,omitempty"`
+	Title           *string            `json:"title,omitempty"`
+}
+
+// EmailCalendarChange What a calendar message says happened to its meeting, read against the earlier send of the
+// same event in the reader's mailbox. The event fields are the meeting as this message states
+// it; `before` holds what the earlier send said of each field in `changed`.
+type EmailCalendarChange struct {
+	// Answer The guest's answer, on `answered`.
+	Answer *EmailCalendarChangeAnswer `json:"answer,omitempty"`
+
+	// Before The earlier send's value of each field in `changed`.
+	Before *EmailCalendarBefore `json:"before,omitempty"`
+
+	// By The guest who proposed or answered. Absent on `updated` and `canceled`.
+	By *EmailCalendarGuest `json:"by,omitempty"`
+
+	// Changed What differs from the earlier send. Empty when no earlier send is known or nothing a reader sees changed.
+	Changed       []EmailCalendarChangeChanged `json:"changed"`
+	EndsAt        *time.Time                   `json:"ends_at,omitempty"`
+	GuestsAdded   *[]EmailCalendarGuest        `json:"guests_added,omitempty"`
+	GuestsRemoved *[]EmailCalendarGuest        `json:"guests_removed,omitempty"`
+
+	// Kind `updated`: the organizer sent the meeting again with changes. `canceled`: the organizer
+	// called it off. `proposed`: a guest proposed the time in `starts_at`. `answered`: a guest
+	// answered, in `answer`.
+	Kind EmailCalendarChangeKind `json:"kind"`
+
+	// Location Where the meeting is, as the calendar wrote it. Absent when it names no place.
+	Location *string `json:"location,omitempty"`
+
+	// StartsAt When the meeting starts. Absent when the message names no time it can be read in.
+	StartsAt *time.Time `json:"starts_at,omitempty"`
+
+	// StartsPrecision How to read `starts_at`, present beside it. `day` is an all-day meeting.
+	StartsPrecision *OccurredPrecision `json:"starts_precision,omitempty"`
+	Title           *string            `json:"title,omitempty"`
+}
+
+// EmailCalendarChangeAnswer The guest's answer, on `answered`.
+type EmailCalendarChangeAnswer string
+
+// EmailCalendarChangeChanged defines model for EmailCalendarChange.Changed.
+type EmailCalendarChangeChanged string
+
+// EmailCalendarChangeKind `updated`: the organizer sent the meeting again with changes. `canceled`: the organizer
+// called it off. `proposed`: a guest proposed the time in `starts_at`. `answered`: a guest
+// answered, in `answer`.
+type EmailCalendarChangeKind string
+
+// EmailCalendarGuest defines model for EmailCalendarGuest.
+type EmailCalendarGuest struct {
+	Email string `json:"email"`
+
+	// Name The name the calendar gave. Absent when it gave none.
+	Name *string `json:"name,omitempty"`
+}
+
 // EmailCalendarInvitation The reader's own answer to the event an invitation names.
 type EmailCalendarInvitation struct {
 	// Response What the reader's calendar holds. `needs_action` until they answer, and while their
@@ -2744,6 +2879,13 @@ type EmailSummary struct {
 
 	// AttachmentCount How many files came with it. Zero when withheld, like every other count.
 	AttachmentCount int `json:"attachment_count"`
+
+	// CalendarChange Present when this message tells the reader something about a meeting rather than asking
+	// for words: the organizer changed or cancelled it, or a guest proposed another time or
+	// answered. It came into the reader's own mailbox. A client draws it as the meeting,
+	// saying what changed. Absent on a first invitation, on every other message, and on a
+	// withheld one.
+	CalendarChange *EmailCalendarChange `json:"calendar_change,omitempty"`
 
 	// CalendarInvitation Present when this message is a calendar invitation the reader can still answer: it came
 	// into the reader's own mailbox, names an event, and that event has not started. A client
@@ -3120,7 +3262,14 @@ type Signal struct {
 	Evidence []SignalEvidence `json:"evidence"`
 	Id       string           `json:"id"`
 
-	// Kind The first six are what a human files by hand. The rest are what the producers
+	// Kind One of core's sixteen kinds, or `ext:<unit>:<kind>` for a kind an extension declares.
+	// A client must treat a value it does not know as a kind of its own, never as an error.
+	// Core's kinds are `stalled_deal`, `champion_left`, `reengagement`, `buying_intent`,
+	// `risk`, `other`, `contract_ended`, `new_opportunity`, `commitment_made`,
+	// `ghosted_thread`, `project_gone_quiet`, `funding`, `leadership_change`, `expansion`,
+	// `product_launch` and `technical_change`.
+	//
+	// Among core's, the first six are what a human files by hand. The rest are what the producers
 	// raise (SIG-F-3): `contract_ended`, `new_opportunity` and `commitment_made` are read
 	// out of a settled conversation by the `signal_extract` site, each citing the message
 	// it is stated in; `ghosted_thread` is a comparison rather than a judgment — the newest
@@ -3129,7 +3278,7 @@ type Signal struct {
 	// pursued or delivered and nothing has been filed against it for 30 days (the
 	// `projects-gone-quiet` report's own rule). Its subject is the project
 	// (`entity_type: project`), attributed to the project's company.
-	Kind SignalKind `json:"kind"`
+	Kind string `json:"kind"`
 
 	// RawRef Pointer to the raw source payload the resolver works from: an email address/handle, a domain, a URL, or a company mention.
 	RawRef *string `json:"raw_ref,omitempty"`
@@ -3175,17 +3324,6 @@ type Signal struct {
 // SignalEntityType The subject record the signal is about; null until a raw signal resolves (both entity fields set together).
 type SignalEntityType string
 
-// SignalKind The first six are what a human files by hand. The rest are what the producers
-// raise (SIG-F-3): `contract_ended`, `new_opportunity` and `commitment_made` are read
-// out of a settled conversation by the `signal_extract` site, each citing the message
-// it is stated in; `ghosted_thread` is a comparison rather than a judgment — the newest
-// interaction is ours, nobody answered it, and the account is one worth chasing;
-// `project_gone_quiet` is the same kind of comparison on a project — it is being
-// pursued or delivered and nothing has been filed against it for 30 days (the
-// `projects-gone-quiet` report's own rule). Its subject is the project
-// (`entity_type: project`), attributed to the project's company.
-type SignalKind string
-
 // SignalResolutionState The raw→entity match outcome: an ambiguous match is `low_confidence` (surfaced, never silently asserted); an unattributable one is `dropped`.
 type SignalResolutionState string
 
@@ -3206,10 +3344,17 @@ type SignalEvidence struct {
 	// CommercialRole The commercial role supported by the cited source, independent of recipient order.
 	CommercialRole *SignalEvidenceCommercialRole `json:"commercial_role,omitempty"`
 
+	// Fields The members of an extension signal type's evidence layout. Only core writes it, when an
+	// extension files a signal. A request that carries it is refused.
+	Fields *map[string]interface{} `json:"fields,omitempty"`
+
 	// LifecycleScope Whether the cited words end the whole account relationship or only one engagement. Missing means unknown.
 	LifecycleScope *SignalEvidenceLifecycleScope `json:"lifecycle_scope,omitempty"`
-	Snippet        string                        `json:"snippet"`
-	SourceId       *string                       `json:"source_id,omitempty"`
+
+	// Provenance Where an extension signal came from. Core stamps it from the filing extension and the signed-in seat. A request that carries it is refused.
+	Provenance *SignalProvenance `json:"provenance,omitempty"`
+	Snippet    string            `json:"snippet"`
+	SourceId   *string           `json:"source_id,omitempty"`
 
 	// SourceQuote A source span whose words are reconstructed only after source content authorization. Offsets count UTF-8 bytes after collapsing whitespace; the digest covers the entire normalized source message.
 	SourceQuote *SourceQuoteProof         `json:"source_quote,omitempty"`
@@ -3227,6 +3372,15 @@ type SignalEvidenceLifecycleScope string
 
 // SignalEvidenceSourceType defines model for SignalEvidence.SourceType.
 type SignalEvidenceSourceType string
+
+// SignalProvenance Where an extension signal came from. Core stamps it from the filing extension and the signed-in seat. A request that carries it is refused.
+type SignalProvenance struct {
+	// CapturedBy The user or agent whose invocation filed it.
+	CapturedBy string `json:"captured_by"`
+
+	// Unit The extension that filed the signal.
+	Unit string `json:"unit"`
+}
 
 // SignalResolution A human's answer on one signal. `outcome` is the status they set,
 // `note` is what they wrote, `resolved_by` is who they are.
@@ -3298,6 +3452,9 @@ type SystemDisplayGeneratedParts string
 
 // SystemDisplayLocale defines model for SystemDisplay.Locale.
 type SystemDisplayLocale string
+
+// TaskType What kind of work a task asks for, which decides the one step a screen offers for it. `reply` answers a message someone sent, the way it came in (`reply_channel`); `reach_out` contacts someone by email or phone; `meet` books a meeting; `review` checks a record; `decide` picks the deal an email is about, from the deals the task offers, and without such a question its only step is ticking it off; `do` is work outside Margince that is finished by ticking it off. A client that meets a value it does not know treats it as `do`.
+type TaskType string
 
 // WebFormConsent The consent box the form showed. Absent when the form shows none.
 type WebFormConsent struct {
@@ -3817,6 +3974,14 @@ func (a *Activity) UnmarshalJSON(b []byte) error {
 		delete(object, "remind_intent")
 	}
 
+	if raw, found := object["reply_channel"]; found {
+		err = json.Unmarshal(raw, &a.ReplyChannel)
+		if err != nil {
+			return fmt.Errorf("error reading 'reply_channel': %w", err)
+		}
+		delete(object, "reply_channel")
+	}
+
 	if raw, found := object["source"]; found {
 		err = json.Unmarshal(raw, &a.Source)
 		if err != nil {
@@ -3863,6 +4028,14 @@ func (a *Activity) UnmarshalJSON(b []byte) error {
 			return fmt.Errorf("error reading 'system_display': %w", err)
 		}
 		delete(object, "system_display")
+	}
+
+	if raw, found := object["task_type"]; found {
+		err = json.Unmarshal(raw, &a.TaskType)
+		if err != nil {
+			return fmt.Errorf("error reading 'task_type': %w", err)
+		}
+		delete(object, "task_type")
 	}
 
 	if raw, found := object["thread_key"]; found {
@@ -4296,6 +4469,13 @@ func (a Activity) MarshalJSON() ([]byte, error) {
 		}
 	}
 
+	if a.ReplyChannel != nil {
+		object["reply_channel"], err = json.Marshal(a.ReplyChannel)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'reply_channel': %w", err)
+		}
+	}
+
 	object["source"], err = json.Marshal(a.Source)
 	if err != nil {
 		return nil, fmt.Errorf("error marshaling 'source': %w", err)
@@ -4333,6 +4513,13 @@ func (a Activity) MarshalJSON() ([]byte, error) {
 		object["system_display"], err = json.Marshal(a.SystemDisplay)
 		if err != nil {
 			return nil, fmt.Errorf("error marshaling 'system_display': %w", err)
+		}
+	}
+
+	if a.TaskType != nil {
+		object["task_type"], err = json.Marshal(a.TaskType)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'task_type': %w", err)
 		}
 	}
 
@@ -4673,6 +4860,14 @@ func (a *Company) UnmarshalJSON(b []byte) error {
 		delete(object, "email")
 	}
 
+	if raw, found := object["extension_relationship_types"]; found {
+		err = json.Unmarshal(raw, &a.ExtensionRelationshipTypes)
+		if err != nil {
+			return fmt.Errorf("error reading 'extension_relationship_types': %w", err)
+		}
+		delete(object, "extension_relationship_types")
+	}
+
 	if raw, found := object["id"]; found {
 		err = json.Unmarshal(raw, &a.Id)
 		if err != nil {
@@ -5004,6 +5199,13 @@ func (a Company) MarshalJSON() ([]byte, error) {
 		object["email"], err = json.Marshal(a.Email)
 		if err != nil {
 			return nil, fmt.Errorf("error marshaling 'email': %w", err)
+		}
+	}
+
+	if a.ExtensionRelationshipTypes != nil {
+		object["extension_relationship_types"], err = json.Marshal(a.ExtensionRelationshipTypes)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'extension_relationship_types': %w", err)
 		}
 	}
 
@@ -5520,6 +5722,14 @@ func (a *CreateActivityRequest) UnmarshalJSON(b []byte) error {
 		delete(object, "subject")
 	}
 
+	if raw, found := object["task_type"]; found {
+		err = json.Unmarshal(raw, &a.TaskType)
+		if err != nil {
+			return fmt.Errorf("error reading 'task_type': %w", err)
+		}
+		delete(object, "task_type")
+	}
+
 	if raw, found := object["thread_key"]; found {
 		err = json.Unmarshal(raw, &a.ThreadKey)
 		if err != nil {
@@ -5799,6 +6009,13 @@ func (a CreateActivityRequest) MarshalJSON() ([]byte, error) {
 		object["subject"], err = json.Marshal(a.Subject)
 		if err != nil {
 			return nil, fmt.Errorf("error marshaling 'subject': %w", err)
+		}
+	}
+
+	if a.TaskType != nil {
+		object["task_type"], err = json.Marshal(a.TaskType)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'task_type': %w", err)
 		}
 	}
 

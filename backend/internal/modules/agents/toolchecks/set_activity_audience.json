@@ -1,0 +1,11 @@
+{
+  "verb": "set_activity_audience",
+  "checks": [
+    "activity.read",
+    "activity.update",
+    "relationship.read"
+  ],
+  "takes": [
+    "activity"
+  ]
+}

@@ -8,8 +8,8 @@ import { type RefObject, useEffect, useRef, useState } from "react";
 import { stable } from "../format/collate";
 
 /**
- * Page sizes the footer offers, as rendered pages. The caller fetches several
- * of them per read (`listFetchLimit`), and the table slices what it holds.
+ * Page sizes the footer offers, as rendered pages. The caller fetches a whole
+ * number of them per read (`listFetchLimit`), and the table slices what it holds.
  *
  * The fetch is always a whole multiple of this, so the two stay in step. A
  * buffer sized on its own once made a list say "1-25 of 50 loaded so far".
@@ -175,8 +175,7 @@ function usePageState<Row>(control: PagingControl<Row>) {
 
 /**
  * Slices the rows the caller holds into rendered pages. One read carries a
- * whole multiple of `perPage`, so the slices land on page boundaries the
- * reader reaches without a round trip each.
+ * whole multiple of `perPage`, so the slices land on page boundaries.
  */
 export function usePaging<Row>(
   control: PagingControl<Row>,

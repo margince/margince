@@ -1,0 +1,13 @@
+{
+  "verb": "dismiss_company_suggestion",
+  "checks": [
+    "activity.read",
+    "company.read",
+    "contact.read",
+    "installation_settings.read",
+    "relationship.read"
+  ],
+  "takes": [
+    "company"
+  ]
+}

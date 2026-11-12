@@ -238,10 +238,16 @@ if [[ -z "$(psql_one "SELECT 1 FROM finance_customer_link WHERE company_id = '$c
   fi
   # A link names an entry of the source's directory, so the entry comes first.
   # The sync that runs on boot gives it the source's own name.
-  psql_one "INSERT INTO finance_external_customer
-      (connection_id, external_customer_id, display_name, sync_hash, source, captured_by)
-    VALUES ('$conn_id', '$linked', '$linked', '', 'system', 'system:seed')
-    ON CONFLICT (connection_id, external_customer_id) DO NOTHING" >/dev/null
+  psql_one "WITH entry AS (
+      INSERT INTO finance_external_customer
+        (connection_id, external_customer_id, display_name, sync_hash, source, captured_by)
+      VALUES ('$conn_id', '$linked', '$linked', '', 'system', 'system:seed')
+      ON CONFLICT (connection_id, external_customer_id) DO NOTHING
+      RETURNING id, display_name, sync_hash)
+    INSERT INTO audit_log (actor_type, actor_id, action, entity_type, entity_id, after)
+    SELECT 'system', 'system:seed', 'create', 'finance_external_customer', id,
+           jsonb_build_object('display_name', display_name, 'sync_hash', sync_hash)
+      FROM entry" >/dev/null
   psql_one "INSERT INTO finance_customer_link
       (connection_id, company_id, external_customer_id, sync_hash, source, captured_by)
     VALUES ('$conn_id', '$company_id', '$linked', 'seed', 'system', 'system:seed')" >/dev/null

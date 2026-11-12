@@ -1,0 +1,7 @@
+{
+  "verb": "reopen_worklist_rows",
+  "checks": [],
+  "takes": [
+    "deal"
+  ]
+}

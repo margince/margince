@@ -75,9 +75,8 @@ func normalizeChosenKey(raw string) (string, error) {
 // refuseChosenKey holds a typed key to the word refusal and to uniqueness
 // among live projects. normalizeChosenKey has already checked its shape.
 func refuseChosenKey(ctx context.Context, tx pgx.Tx, key string) error {
-	refusal, err := keyWordRefusal(ctx, tx, key)
-	if err != nil || refusal != nil {
-		return firstError(err, refusal)
+	if err := keyWordRefusal(ctx, tx, key); err != nil {
+		return err
 	}
 	var taken bool
 	// Unscoped, as the uniqueness index it answers for is: a key a hidden
@@ -93,15 +92,15 @@ func refuseChosenKey(ctx context.Context, tx pgx.Tx, key string) error {
 	return nil
 }
 
-// keyWordRefusal answers why a key would misfile mail, or nil: a word senders
-// bracket in subjects, or a word of a colleague's name. Agent seats are left
-// out because nobody writes an agent's name in a subject.
-func keyWordRefusal(ctx context.Context, tx pgx.Tx, key string) (*ProjectKeyRefusedError, error) {
+// keyWordRefusal answers a *ProjectKeyRefusedError when a key would misfile
+// mail: a word senders bracket in subjects, or a word of a colleague's name.
+// Agent seats are left out because nobody writes an agent's name in a subject.
+func keyWordRefusal(ctx context.Context, tx pgx.Tx, key string) error {
 	if subjectWords[strings.ToLower(key)] {
 		return &ProjectKeyRefusedError{
 			Code:    "key_is_common_word",
 			Message: fmt.Sprintf("%s is a word often put in brackets in subject lines, so mail that is not about this project would be filed under it; choose another key", key),
-		}, nil
+		}
 	}
 	var named bool
 	if err := tx.QueryRow(ctx,
@@ -111,22 +110,15 @@ func keyWordRefusal(ctx context.Context, tx pgx.Tx, key string) (*ProjectKeyRefu
 		      AND (lower($1) = ANY (regexp_split_to_array(lower(f_unaccent(display_name)), '[^a-z0-9]+'))
 		           OR lower($1) = lower(f_unaccent(greeting_name))))`,
 		key).Scan(&named); err != nil {
-		return nil, fmt.Errorf("check the key %s against colleagues' names: %w", key, err)
+		return fmt.Errorf("check the key %s against colleagues' names: %w", key, err)
 	}
 	if named {
 		return &ProjectKeyRefusedError{
 			Code:    "key_is_colleague_name",
 			Message: fmt.Sprintf("%s is a colleague's name, so mail that only mentions them would be filed under this project; choose another key", key),
-		}, nil
+		}
 	}
-	return nil, nil
-}
-
-func firstError(err error, refusal *ProjectKeyRefusedError) error {
-	if err != nil {
-		return err
-	}
-	return refusal
+	return nil
 }
 
 // PreviewProjectKey answers the key a project of this name would get now.

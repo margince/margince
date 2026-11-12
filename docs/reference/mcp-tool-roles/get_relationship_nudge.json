@@ -1,0 +1,18 @@
+{
+  "tool": "read_details",
+  "action": "relationship_nudge",
+  "verb": "get_relationship_nudge",
+  "allowed_for": [
+    "admin",
+    "management",
+    "manager",
+    "ops",
+    "read_only",
+    "rep"
+  ],
+  "refused_for": [],
+  "colleague_record": {
+    "manager": "ran",
+    "rep": "ran"
+  }
+}

@@ -84,10 +84,10 @@ func (d *returnDoor) book(address string) string {
 	return contactIDByEmail(d.t, d.e, address)
 }
 
-// bookAndErase books as address and erases the contact the booking landed on.
-func (d *returnDoor) bookAndErase(address string) {
+// bookAndErase books as returnAddress and erases the contact the booking landed on.
+func (d *returnDoor) bookAndErase() {
 	d.t.Helper()
-	eraseBooker(d.t, d.e, d.book(address))
+	eraseBooker(d.t, d.e, d.book(returnAddress))
 }
 
 func (d *returnDoor) ask(address string) int {
@@ -95,13 +95,13 @@ func (d *returnDoor) ask(address string) int {
 	return publicCall(d.t, d.e, "POST", d.base+"/return", AnyMap{"name": "Wieder Da", "email": address}, nil, nil)
 }
 
-// link asks for the return of address and answers the token mailed to it.
-func (d *returnDoor) link(address string) string {
+// link asks for the return of returnAddress and answers the token mailed to it.
+func (d *returnDoor) link() string {
 	d.t.Helper()
-	if status := d.ask(address); status != http.StatusAccepted {
-		d.t.Fatalf("the ask for %s → %d, want 202", address, status)
+	if status := d.ask(returnAddress); status != http.StatusAccepted {
+		d.t.Fatalf("the ask for %s → %d, want 202", returnAddress, status)
 	}
-	return awaitReturnLink(d.t, d.box, address)
+	return awaitReturnLink(d.t, d.box, returnAddress)
 }
 
 func (d *returnDoor) confirm(token string) int {
@@ -119,7 +119,7 @@ func (d *returnDoor) replay() {
 
 func TestAnErasedSubjectIsStoredAgainOnlyThroughTheMailedLink(t *testing.T) {
 	d := openReturnDoor(t)
-	d.bookAndErase(returnAddress)
+	d.bookAndErase()
 
 	if clean, erased := d.ask(cleanBooker), d.ask(returnAddress); clean != http.StatusAccepted || erased != http.StatusAccepted {
 		t.Fatalf("the ask for a clean address → %d, for an erased one → %d; want 202 for both", clean, erased)
@@ -152,10 +152,10 @@ func TestAnErasedSubjectIsStoredAgainOnlyThroughTheMailedLink(t *testing.T) {
 // address, while the list still refuses it, spends the link.
 func TestASecondErasureSpendsALinkMailedBeforeIt(t *testing.T) {
 	d := openReturnDoor(t)
-	d.bookAndErase(returnAddress)
-	early := d.link(returnAddress)
+	d.bookAndErase()
+	early := d.link()
 
-	d.bookAndErase(returnAddress)
+	d.bookAndErase()
 
 	if status := d.confirm(early); status != http.StatusUnprocessableEntity {
 		t.Fatalf("a link mailed before the second erasure → %d, want 422", status)
@@ -169,7 +169,7 @@ func TestASecondErasureSpendsALinkMailedBeforeIt(t *testing.T) {
 // goes to the spelling the erasure list matches, and that is what is stored.
 func TestEverySpellingOfAnAddressSharesOneBudget(t *testing.T) {
 	d := openReturnDoor(t)
-	d.bookAndErase(returnAddress)
+	d.bookAndErase()
 
 	softHyphen := "zurueck.subject@b\u00fc\u00adcher.example"
 	fullwidth := "zurueck.subject@\uff42\u00fccher.example"
@@ -192,14 +192,16 @@ func TestEverySpellingOfAnAddressSharesOneBudget(t *testing.T) {
 // put words of its own on the subject's consent.
 func TestTheRecordedConsentIsTheServersWording(t *testing.T) {
 	d := openReturnDoor(t)
-	d.bookAndErase(returnAddress)
-	forged := AnyMap{"name": "Wieder Da", "email": returnAddress,
-		"consent": AnyMap{"wording": "I agree to everything.", "policy_version": "forged"}}
+	d.bookAndErase()
+	forged := AnyMap{
+		"name": "Wieder Da", "email": returnAddress,
+		"consent": AnyMap{"wording": "I agree to everything.", "policy_version": "forged"},
+	}
 	if status := publicCall(t, d.e, "POST", d.base+"/return", forged, nil, nil); status == http.StatusAccepted {
 		t.Fatal("an ask carrying its own consent wording was accepted")
 	}
 
-	if status := d.confirm(d.link(returnAddress)); status != http.StatusNoContent {
+	if status := d.confirm(d.link()); status != http.StatusNoContent {
 		t.Fatalf("the mailed link → %d, want 204", status)
 	}
 	var text, version string
@@ -218,10 +220,10 @@ func TestTheRecordedConsentIsTheServersWording(t *testing.T) {
 // return wrote, and the replay keeps the adopted contact.
 func TestAnAdoptedContactCitesTheReturnsOwnGrantAndOutlivesTheReplay(t *testing.T) {
 	d := openReturnDoor(t)
-	d.bookAndErase(returnAddress)
+	d.bookAndErase()
 	adopted := d.book(returnAddress)
 
-	if status := d.confirm(d.link(returnAddress)); status != http.StatusNoContent {
+	if status := d.confirm(d.link()); status != http.StatusNoContent {
 		t.Fatalf("the mailed link → %d, want 204", status)
 	}
 
@@ -245,8 +247,8 @@ func TestAnAdoptedContactCitesTheReturnsOwnGrantAndOutlivesTheReplay(t *testing.
 // restored contact from before the erasure that holds the same mailbox.
 func TestTheReplayKeepsTheReturnAndErasesWhatARestoreBroughtBack(t *testing.T) {
 	d := openReturnDoor(t)
-	d.bookAndErase(returnAddress)
-	if status := d.confirm(d.link(returnAddress)); status != http.StatusNoContent {
+	d.bookAndErase()
+	if status := d.confirm(d.link()); status != http.StatusNoContent {
 		t.Fatalf("the mailed link → %d, want 204", status)
 	}
 	restored := restoreContactFromBefore(t, d.e, returnOtherSpelled)

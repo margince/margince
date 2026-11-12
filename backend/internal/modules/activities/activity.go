@@ -110,6 +110,9 @@ type LogActivityInput struct {
 	// the day the task is due by. It needs DueAt, and on a task with no
 	// RemindAt it sets the reminder to DueAt (admitTaskTime).
 	DueHasTime bool
+	// TaskType is the work a task asks for; nil leaves the read to derive it
+	// from the task's maker (storekit.TaskTypeSQL).
+	TaskType   *crmcontracts.TaskType
 	RemindAt   *time.Time
 	AssigneeID *ids.UserID
 	HostUserID *ids.UserID
@@ -264,6 +267,9 @@ func (s *Store) logActivityAndReadTranscript(
 	ctx context.Context, tx pgx.Tx, in LogActivityInput,
 ) (crmcontracts.Activity, bool, error) {
 	if err := CheckEntryHasContent(in.Kind, in.Subject, in.Body, in.CallOutcome); err != nil {
+		return crmcontracts.Activity{}, false, err
+	}
+	if err := checkTaskTypeKind(in.Kind, in.TaskType); err != nil {
 		return crmcontracts.Activity{}, false, err
 	}
 	if in.RequestActivityID != nil {

@@ -18,13 +18,16 @@ const sharedMailboxReaderColumn = "shared_reader.user_id"
 // existence twin all compose it.
 // members is a predicate on sharedMailboxReaderColumn.
 func sharedMailboxReaderSQL(alias, members string) string {
-	return fmt.Sprintf(`EXISTS (SELECT 1 FROM capture_import shared_import
-	  JOIN team reader_team ON reader_team.archived_at IS NULL
-	  JOIN capture_connection shared_box ON shared_box.id = shared_import.connection_id AND %[4]s
+	// Every activity gate repeats this arm. As an ARRAY sublink the reader teams
+	// stay out of each copy's join, which keeps a large read cheap to plan.
+	readerTeams := fmt.Sprintf(`ANY (ARRAY(SELECT reader_team.id FROM team reader_team
 	  JOIN team_membership shared_reader ON shared_reader.team_id = reader_team.id
-	  JOIN app_user shared_seat ON shared_seat.id = shared_reader.user_id AND %[3]s
-	 WHERE shared_import.activity_id = %[1]s.id AND shared_import.user_id IS NULL AND %[2]s)`,
-		alias, members, workforce.LiveMemberSQL("shared_seat"), SharedMailboxOfTeamSQL("shared_box", "reader_team.id"))
+	  JOIN app_user shared_seat ON shared_seat.id = shared_reader.user_id AND %[2]s
+	 WHERE reader_team.archived_at IS NULL AND %[1]s))`, members, workforce.LiveMemberSQL("shared_seat"))
+	return fmt.Sprintf(`EXISTS (SELECT 1 FROM capture_import shared_import
+	  JOIN capture_connection shared_box ON shared_box.id = shared_import.connection_id AND %[2]s
+	 WHERE shared_import.activity_id = %[1]s.id AND shared_import.user_id IS NULL)`,
+		alias, SharedMailboxOfTeamSQL("shared_box", readerTeams))
 }
 
 // SharedMailboxOfTeamSQL is "connection alias is a shared mailbox the team

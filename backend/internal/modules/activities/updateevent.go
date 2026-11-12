@@ -66,6 +66,10 @@ func activityUpdatedChangedFields(in UpdateActivityInput, current crmcontracts.A
 	if in.clears(fieldCallOutcome) && current.CallOutcome != nil {
 		fields.CallOutcomeCleared = new(true)
 	}
+	if in.TaskType != nil {
+		taskType := crmcontracts.PublicEventActivityChangedFieldsTaskType(*in.TaskType)
+		fields.TaskType = &taskType
+	}
 	return fields
 }
 

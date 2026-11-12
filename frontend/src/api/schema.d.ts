@@ -3695,6 +3695,34 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/finance/invoices/{id}/pdf": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        /**
+         * Open a mirrored invoice's own PDF, fetched from the accounting source.
+         * @description The id is a mirrored invoice's, as `recent_invoices` on the finance summary carries it.
+         *     The document is read from the connected source on each request and is never stored.
+         *     The caller needs the finance read grant and must be able to see the invoice's company;
+         *     an invoice they cannot see answers 404 like one that does not exist. 422 when the
+         *     connected source serves no documents (`invoice_documents` on the summary is false),
+         *     and 502 when the source could not be reached or answered something other than a PDF.
+         */
+        get: operations["downloadFinanceInvoicePdf"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/finance/source": {
         parameters: {
             query?: never;
@@ -5968,6 +5996,113 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/company-types": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Which company types installed extensions add beside core's own.
+         * @description The values a company can carry in `extension_relationship_types`, and the label a
+         *     screen shows for each. Which extensions are installed is a fact of the binary, so the
+         *     contract cannot list the values; this operation does.
+         *
+         *     Readable by any signed-in seat, because the company list shows these types and filters
+         *     on them. Each value and label is declared in extension code, never typed by an
+         *     administrator. Empty when no installed extension declares a type.
+         */
+        get: operations["listCompanyTypes"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/record-kinds": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Which kinds of record installed extensions add beside core's own.
+         * @description The record kinds this caller may read, each named `ext:<unit>:<kind>`, with the label a
+         *     screen shows, its fields, its natural key, its delete policy and the actions this caller
+         *     holds on it. Which extensions are installed is a fact of the binary, so the contract
+         *     cannot list the kinds; this operation does.
+         *
+         *     A kind the caller holds no read right on is left out, because every right on an extension
+         *     kind is denied until a role is granted it. Empty when no installed extension declares a
+         *     kind, or none is readable by this caller.
+         */
+        get: operations["listRecordKinds"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/extension-history": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * What installed extensions add to one core record's History.
+         * @description Two kinds of entry, newest first, for one contact, company or deal. A `record` entry is a
+         *     row of an extension's own table that references the record, as far as the extension declared
+         *     a timeline for its kind. A `signal` entry is a signal of an extension kind (`ext:<unit>:<kind>`)
+         *     that is about the record. Core builds both, so an extension writes no timeline entry.
+         *
+         *     A kind the caller holds no read right on is left out, and a signal outside the caller's row
+         *     scope is left out. A record outside the caller's row scope answers 404, like every
+         *     single-record read. Each source is capped at 50 entries. Empty when nothing applies.
+         */
+        get: operations["listExtensionHistory"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/extension-reports": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * The counts and breakdowns installed extensions add to Reports and Home, answered for this caller.
+         * @description Each count and breakdown an installed extension declares, run through the report engine for
+         *     this caller. Row scope, field masks and the group floor apply as they do to a core report.
+         *     Which extensions are installed is a fact of the binary, so the contract cannot list them;
+         *     this operation does.
+         *
+         *     A report the caller may not read, or whose custom field this installation does not define,
+         *     is left out. A breakdown over a multi-select custom field splits by the combination of
+         *     values a record holds. Empty when no installed extension declares one.
+         */
+        get: operations["listExtensionReports"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/tasks": {
         parameters: {
             query?: never;
@@ -6515,6 +6650,159 @@ export interface paths {
          *     (migration 1788000100).
          */
         post: operations["relinkActivity"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/link-types": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * The types a link between two records may have.
+         * @description Core's types, then each extension's, with the records each may start and end on. An
+         *     extension's type is named `ext:<unit>:<type>`.
+         */
+        get: operations["listLinkTypes"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/record-links": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * The links of one deal, company or contact, in both directions.
+         * @description Every link that starts or ends on the record, newest first. A link is left out when the
+         *     caller may not read the record on its other end, or when that record is archived, so the
+         *     list never names a record the caller could not open. Archiving the other end hides the link
+         *     and unarchiving brings it back.
+         */
+        get: operations["listRecordLinks"];
+        put?: never;
+        /**
+         * Link one record to another with a type.
+         * @description The caller needs the right to update the record the link starts on, and to read the record
+         *     it ends on. A record the caller cannot read answers `404`. The type must allow both
+         *     records, so `follow_up_of` joins any two, and an extension's type may be narrower.
+         *     Linking a pair that already holds the type is the same success, and linking a record to
+         *     itself is refused.
+         */
+        post: operations["createRecordLink"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/record-links/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /**
+         * Remove a link.
+         * @description The caller needs the right to update the record the link starts on and must be able to read
+         *     the record it ends on. The link row is deleted and the audit log keeps what it joined.
+         */
+        delete: operations["deleteRecordLink"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/link-suggestions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * The records an extension suggests messages belong to, waiting for a reader to decide.
+         * @description An extension may suggest which deal, company, contact or project a message belongs to. A
+         *     suggestion attaches nothing. It waits here until a reader accepts or rejects it. Core makes
+         *     none of its own: this queue holds only what an extension proposed.
+         *
+         *     Oldest first, at most 50. A decided suggestion leaves the queue, so asking again shows the
+         *     next ones. A suggestion is left out when the caller may not read its message or its target,
+         *     so the queue never names a record the caller could not open.
+         */
+        get: operations["listLinkSuggestions"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/link-suggestions/{id}/accept": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Accept a suggestion, which files the message under the record it names.
+         * @description Files the message under the suggested record through the same relink as any other filing,
+         *     and closes the suggestion in the same transaction. The caller needs the right to update the
+         *     message and to attach to the target. Accepting a suggestion that is already accepted is the
+         *     same success. A rejected one answers `409`.
+         */
+        post: operations["acceptLinkSuggestion"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/link-suggestions/{id}/reject": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Reject a suggestion. The message stays where it is, and the suggestion is not offered again.
+         * @description Closes the suggestion and attaches nothing. The same target is not proposed for the same
+         *     message a second time. Rejecting a suggestion that is already rejected is the same success.
+         *     An accepted one answers `409`.
+         */
+        post: operations["rejectLinkSuggestion"];
         delete?: never;
         options?: never;
         head?: never;
@@ -19091,7 +19379,8 @@ export interface paths {
          *     It has no login: there is no password and nobody can sign in as it. It has a full seat
          *     type but is free of the licence seat limit: it is not counted, and declaring one never
          *     fails on the seat limit. It holds one role, `service_ingest`,
-         *     which can create and update activities, contacts and companies and nothing else.
+         *     which can create and update activities, contacts, companies and deals, and file a task for a
+         *     colleague, and nothing else.
          *
          *     The member serves the one extension named in `extension`. Any other extension asking
          *     to act as it is refused, so a member declared for one feed cannot be borrowed by
@@ -29201,10 +29490,71 @@ export interface components {
              */
             calendar_invitation?: components["schemas"]["EmailCalendarInvitation"];
             /**
+             * @description Present when this message tells the reader something about a meeting rather than asking
+             *     for words: the organizer changed or cancelled it, or a guest proposed another time or
+             *     answered. It came into the reader's own mailbox. A client draws it as the meeting,
+             *     saying what changed. Absent on a first invitation, on every other message, and on a
+             *     withheld one.
+             */
+            calendar_change?: components["schemas"]["EmailCalendarChange"];
+            /**
              * @description The activity's version, carried so a row can open an editor that writes with
              *     If-Match. A row without it can only read.
              */
             version: components["schemas"]["RowVersion"];
+        };
+        /**
+         * @description What a calendar message says happened to its meeting, read against the earlier send of the
+         *     same event in the reader's mailbox. The event fields are the meeting as this message states
+         *     it; `before` holds what the earlier send said of each field in `changed`.
+         */
+        EmailCalendarChange: {
+            /**
+             * @description `updated`: the organizer sent the meeting again with changes. `canceled`: the organizer
+             *     called it off. `proposed`: a guest proposed the time in `starts_at`. `answered`: a guest
+             *     answered, in `answer`.
+             * @enum {string}
+             */
+            kind: "updated" | "canceled" | "proposed" | "answered";
+            title?: string;
+            /** @description Where the meeting is, as the calendar wrote it. Absent when it names no place. */
+            location?: string;
+            /**
+             * Format: date-time
+             * @description When the meeting starts. Absent when the message names no time it can be read in.
+             */
+            starts_at?: string;
+            /** Format: date-time */
+            ends_at?: string;
+            /** @description How to read `starts_at`, present beside it. `day` is an all-day meeting. */
+            starts_precision?: components["schemas"]["OccurredPrecision"];
+            /** @description What differs from the earlier send. Empty when no earlier send is known or nothing a reader sees changed. */
+            changed: ("time" | "location" | "title")[];
+            /** @description The earlier send's value of each field in `changed`. */
+            before?: components["schemas"]["EmailCalendarBefore"];
+            guests_added?: components["schemas"]["EmailCalendarGuest"][];
+            guests_removed?: components["schemas"]["EmailCalendarGuest"][];
+            /** @description The guest who proposed or answered. Absent on `updated` and `canceled`. */
+            by?: components["schemas"]["EmailCalendarGuest"];
+            /**
+             * @description The guest's answer, on `answered`.
+             * @enum {string}
+             */
+            answer?: "accepted" | "tentative" | "declined";
+        };
+        EmailCalendarBefore: {
+            title?: string;
+            location?: string;
+            /** Format: date-time */
+            starts_at?: string;
+            /** Format: date-time */
+            ends_at?: string;
+            starts_precision?: components["schemas"]["OccurredPrecision"];
+        };
+        EmailCalendarGuest: {
+            email: string;
+            /** @description The name the calendar gave. Absent when it gave none. */
+            name?: string;
         };
         /** @description The reader's own answer to the event an invitation names. */
         EmailCalendarInvitation: {
@@ -33451,6 +33801,8 @@ export interface components {
             lifecycle?: "unknown" | "target" | "prospect" | "opportunity" | "onboarding" | "live" | "customer" | "former_customer" | "disqualified";
             /** @description WHAT THE COMPANY IS to us (PO-DDL-4b, ADR-0079). Multi-valued, because a company is legitimately several things at once — the partner program is built on companies that are simultaneously partners and customers. A company IS a partner iff it carries `partner` here AND has a `partner` row; removing the type while that row lives is refused (422). */
             relationship_types?: ("customer" | "partner" | "supplier" | "investor" | "portfolio_company" | "competitor" | "other")[];
+            /** @description The types an installed extension adds, as `ext:<unit>:<type>`. Kept apart from `relationship_types`, whose list stays the closed set above. Each value is declared by the extension it names; a value no extension declares is refused (422, `invalid_enum`). */
+            extension_relationship_types?: string[];
             /**
              * @description Where to fetch the company's logo image (A55) — the `getCompanyLogo`
              *     path for this record, cookie-authenticated and same-origin. A revision query changes
@@ -33614,6 +33966,8 @@ export interface components {
             lifecycle?: "unknown" | "target" | "prospect" | "opportunity" | "onboarding" | "live" | "customer" | "former_customer" | "disqualified";
             /** @description Replace-set of what the company is to us (add new, archive removed), the same shape as `domains`. Absent = untouched; an empty array clears every type. Removing `partner` while the company still has a `partner` extension row is refused with 422 — the invariant binds both ways, and an invariant nothing enforces is a comment. */
             relationship_types?: ("customer" | "partner" | "supplier" | "investor" | "portfolio_company" | "competitor" | "other")[];
+            /** @description Replace-set of the types an installed extension adds (`ext:<unit>:<type>`), applied like `relationship_types`. Absent = untouched; an empty array clears them. A value no extension declares is refused with 422. */
+            extension_relationship_types?: string[];
         } & {
             [key: string]: unknown;
         };
@@ -34310,6 +34664,8 @@ export interface components {
             recent_invoices?: components["schemas"]["FinanceInvoice"][];
             /** @description True when the account has more invoices than `recent_invoices` carries. */
             truncated?: boolean;
+            /** @description True when the connected source serves each invoice's own document, which `downloadFinanceInvoicePdf` opens. False or absent means the card offers none. */
+            invoice_documents?: boolean;
         };
         /**
          * @description Why the figures are what they are — the six cases a company page must keep
@@ -41505,6 +41861,13 @@ export interface components {
             readonly copy_ids?: string[];
             /** @description Whether Write email on this row opens with a recipient filled in: true exactly when `GET /activities/{id}/reply-recipient` answers a non-empty `address` for a call, meeting, note or task. Both are computed by one rule, the one `email_target` states. Always false for an email or a message, which are answered with Reply instead, for an archived row, for a task the product filed itself (`automatic_kind` product), and for a row whose content is withheld from the caller. False for a company target too, which has no single address: the composer asks which of the company's contacts the mail is for. */
             offers_email: boolean;
+            /** @description Task only, absent on every other kind. The type a human, an agent or the AI gave the task when it was made. A task made before types existed, or by a product rule that sets none, reads the type of its rule: an answer owed to a request is `reply`, a lead to qualify is `review`, a mail to file is `decide`. A task with neither reads `reach_out` when a human or an agent made it, else `do`. `offers_email` is false for every type but `reply` and `reach_out`. */
+            readonly task_type?: components["schemas"]["TaskType"];
+            /**
+             * @description Task only. For a `reply` task, the kind of the activity it answers (`source_activity_id`), so the answer goes back the way the message came in. Null for every other type, and for a reply with no source of one of these kinds.
+             * @enum {string|null}
+             */
+            readonly reply_channel?: "email" | "call" | "message" | null;
             email_target?: components["schemas"]["ActivityEmailTarget"];
             /** @description Where the row came from. `manual` is anything typed, by a member or by an assistant working for one, so it never says who typed it: `captured_by` and `recorded_by_agent` do. */
             source: string;
@@ -41553,6 +41916,109 @@ export interface components {
          *     states the invariant; `GET /v1/channel-providers` resolves the live set.
          */
         ProviderRef: string;
+        /** @description The company types installed extensions add, ordered by value. */
+        CompanyTypeDirectory: {
+            data: components["schemas"]["CompanyTypeOption"][];
+        };
+        CompanyTypeOption: {
+            /** @description The value a company carries, `ext:<unit>:<type>`. */
+            value: string;
+            /** @description What a screen shows, in English, as the extension declared it. */
+            label: string;
+            /** @description The extension that declared the type. */
+            unit: string;
+        };
+        ExtensionHistoryResponse: {
+            data: components["schemas"]["ExtensionHistoryEntry"][];
+        };
+        ExtensionHistoryEntry: {
+            /**
+             * Format: uuid
+             * @description The row's own id in the extension's table, or the signal's id.
+             */
+            id: string;
+            /** @enum {string} */
+            source: "record" | "signal";
+            /** @description The record kind of a `record` entry, or the signal kind of a `signal` entry. */
+            kind: string;
+            /** @description The declared label field of the row, or the signal's summary. */
+            title: string;
+            /**
+             * Format: date-time
+             * @description The declared time column of the row, or the signal's detection time.
+             */
+            at: string;
+        };
+        /** @description The counts and breakdowns installed extensions add that this caller may read, ordered by name. */
+        ExtensionReportDirectory: {
+            data: components["schemas"]["ExtensionReport"][];
+        };
+        ExtensionReport: {
+            /** @description The report as `ext:<unit>:<name>`. */
+            name: string;
+            /** @description The extension that declared it. */
+            unit: string;
+            /** @description What a screen shows, in English. */
+            label: string;
+            /** @enum {string} */
+            kind: "count" | "breakdown";
+            /** @description What is counted, a record kind (`ext:<unit>:<kind>`) or a core report population. */
+            population: string;
+            /** @description The field a breakdown splits by. Absent on a count. */
+            by?: string;
+            /**
+             * @description One entry per group of a breakdown, or one for a count. A group the floor withheld
+             *     carries no key and no count.
+             */
+            groups: components["schemas"]["ExtensionReportGroup"][];
+            /** @description The group floor kept a group back, and with it the total. */
+            withheld: boolean;
+            /** @description The whole count. Null once anything is withheld, because total minus the shown groups would be the withheld one. */
+            total: number | null;
+            /** @description Visible rows a field mask withheld from this run. Null when no mask applied. */
+            excluded_by_permission: number | null;
+        };
+        ExtensionReportGroup: {
+            /** @description The value of the field. Null for records with no value, and for a withheld group. */
+            key: string | null;
+            /** @description Null for a withheld group. */
+            count: number | null;
+            withheld: boolean;
+        };
+        /** @description The record kinds installed extensions add that this caller may read, ordered by name. */
+        RecordKindDirectory: {
+            data: components["schemas"]["RecordKindOption"][];
+        };
+        RecordKindOption: {
+            /**
+             * @description The kind as every table that names a kind stores it, `ext:<unit>:<kind>`. The unit is a
+             *     unit name and the kind is a lower-case letter followed by up to 31 lower-case letters,
+             *     digits or underscores.
+             */
+            name: string;
+            /** @description The extension that declared the kind. */
+            unit: string;
+            /** @description The short name inside the unit. */
+            kind: string;
+            /** @description What a screen calls one record of the kind, in English. */
+            display_name: string;
+            fields: components["schemas"]["RecordKindField"][];
+            /** @description The fields that together identify one record. The unit's table holds them unique. */
+            natural_key: string[];
+            /**
+             * @description What removing a record of the kind means. `archive_only` keeps the row.
+             * @enum {string}
+             */
+            delete_policy: "archive_only" | "erasable";
+            /** @description The actions this caller holds on the kind. Every other action is denied. */
+            actions: ("create" | "read" | "update" | "delete")[];
+        };
+        RecordKindField: {
+            /** @description The column the unit's table keeps the value in. */
+            name: string;
+            /** @description What a screen shows, in English. */
+            label: string;
+        };
         /** @description Every messaging transport this installation has registered (ADR-0107). */
         ChannelProviderDirectory: {
             data: components["schemas"]["ChannelProviderEntry"][];
@@ -41701,6 +42167,8 @@ export interface components {
              * @description Who owes it. Defaults to the caller.
              */
             assignee_id?: string | null;
+            /** @description The kind of work, which decides its one button. */
+            task_type?: components["schemas"]["TaskType"];
             /** @description The records the task is about. With a source activity, omitted or empty links inherit its visible links. Otherwise the task appears on no timeline. */
             links?: {
                 /** @enum {string} */
@@ -41737,6 +42205,8 @@ export interface components {
         };
         /** @description The workspace's active activity custom fields travel as extra top-level `cf_` keys. A key that is not `cf_`-prefixed, names no active activity field, or carries a value of the wrong shape for its field returns `422`. A value for a field that does not apply to the activity's kind returns `422 field_not_valid_for_kind`. */
         CreateActivityRequest: {
+            /** @description Task only: the kind of work, which decides its one button. */
+            task_type?: components["schemas"]["TaskType"];
             meeting_intent?: components["schemas"]["IntentTime"];
             due_intent?: components["schemas"]["IntentTime"];
             remind_intent?: components["schemas"]["IntentTime"];
@@ -41861,6 +42331,11 @@ export interface components {
          */
         ActivityAudience: "workspace" | "participants" | "selected";
         /**
+         * @description What kind of work a task asks for, which decides the one step a screen offers for it. `reply` answers a message someone sent, the way it came in (`reply_channel`); `reach_out` contacts someone by email or phone; `meet` books a meeting; `review` checks a record; `decide` picks the deal an email is about, from the deals the task offers, and without such a question its only step is ticking it off; `do` is work outside Margince that is finished by ticking it off. A client that meets a value it does not know treats it as `do`.
+         * @enum {string}
+         */
+        TaskType: "reply" | "reach_out" | "meet" | "review" | "decide" | "do";
+        /**
          * @description How much of an activity's time is known. `instant` is a real moment. `day` is a date with no time of day: the stored instant is noon UTC of that date, so its date is the UTC date, whatever the installation's zone. A meeting of this precision never holds its host's calendar slot.
          * @enum {string}
          */
@@ -41957,6 +42432,75 @@ export interface components {
              */
             permanent?: boolean;
         };
+        /** @enum {string} */
+        LinkedRecordType: "deal" | "company" | "contact";
+        LinkType: {
+            /** @description A core word, or `ext:<unit>:<type>` for an extension's. */
+            name: string;
+            label: string;
+            /** @description The extension that declared it. Absent for core's own. */
+            unit?: string | null;
+            from: components["schemas"]["LinkedRecordType"][];
+            to: components["schemas"]["LinkedRecordType"][];
+        };
+        LinkTypeList: {
+            data: components["schemas"]["LinkType"][];
+        };
+        NewRecordLink: {
+            from_type: components["schemas"]["LinkedRecordType"];
+            /** Format: uuid */
+            from_id: string;
+            to_type: components["schemas"]["LinkedRecordType"];
+            /** Format: uuid */
+            to_id: string;
+            link_type: string;
+        };
+        RecordLink: {
+            /** Format: uuid */
+            id: string;
+            from_type: components["schemas"]["LinkedRecordType"];
+            /** Format: uuid */
+            from_id: string;
+            /** @description The name of the record the link starts on, for the screen. Absent on a write's answer. */
+            from_name?: string | null;
+            to_type: components["schemas"]["LinkedRecordType"];
+            /** Format: uuid */
+            to_id: string;
+            /** @description The name of the record the link ends on, for the screen. Absent on a write's answer. */
+            to_name?: string | null;
+            link_type: string;
+            /** Format: date-time */
+            created_at: string;
+        };
+        RecordLinkList: {
+            data: components["schemas"]["RecordLink"][];
+        };
+        LinkSuggestion: {
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            activity_id: string;
+            /** @description The subject of the message. Empty when the message has none. */
+            activity_subject?: string | null;
+            /** @enum {string} */
+            entity_type: "contact" | "company" | "deal" | "project";
+            /** Format: uuid */
+            entity_id: string;
+            /** @description The name of the suggested record, for the screen. Absent on a decision's answer. */
+            entity_name?: string | null;
+            /** @description The extension that proposed it. */
+            unit: string;
+            /** @description One short sentence from the extension on why. */
+            reason: string;
+            score: number;
+            /** @enum {string} */
+            status: "pending" | "accepted" | "rejected";
+            /** Format: date-time */
+            created_at: string;
+        };
+        LinkSuggestionList: {
+            data: components["schemas"]["LinkSuggestion"][];
+        };
         DeclineActivityDealRequest: {
             /**
              * Format: uuid
@@ -42021,6 +42565,8 @@ export interface components {
         };
         /** @description A sparse patch. The workspace's active activity custom fields travel as extra top-level `cf_` keys, and an explicit `null` clears one. A key that is not `cf_`-prefixed, names no active activity field, or carries a value of the wrong shape for its field returns `422`. A value for a field that does not apply to the stored kind returns `422 field_not_valid_for_kind`; a `null` clears it all the same. */
         UpdateActivityRequest: {
+            /** @description Task only: the kind of work, which decides its one button. */
+            task_type?: components["schemas"]["TaskType"];
             meeting_intent?: components["schemas"]["IntentTime"];
             due_intent?: components["schemas"]["IntentTime"];
             remind_intent?: components["schemas"]["IntentTime"];
@@ -44637,7 +45183,14 @@ export interface components {
             /** Format: uuid */
             id: string;
             /**
-             * @description The first six are what a human files by hand. The rest are what the producers
+             * @description One of core's sixteen kinds, or `ext:<unit>:<kind>` for a kind an extension declares.
+             *     A client must treat a value it does not know as a kind of its own, never as an error.
+             *     Core's kinds are `stalled_deal`, `champion_left`, `reengagement`, `buying_intent`,
+             *     `risk`, `other`, `contract_ended`, `new_opportunity`, `commitment_made`,
+             *     `ghosted_thread`, `project_gone_quiet`, `funding`, `leadership_change`, `expansion`,
+             *     `product_launch` and `technical_change`.
+             *
+             *     Among core's, the first six are what a human files by hand. The rest are what the producers
              *     raise (SIG-F-3): `contract_ended`, `new_opportunity` and `commitment_made` are read
              *     out of a settled conversation by the `signal_extract` site, each citing the message
              *     it is stated in; `ghosted_thread` is a comparison rather than a judgment — the newest
@@ -44646,9 +45199,8 @@ export interface components {
              *     pursued or delivered and nothing has been filed against it for 30 days (the
              *     `projects-gone-quiet` report's own rule). Its subject is the project
              *     (`entity_type: project`), attributed to the project's company.
-             * @enum {string}
              */
-            kind: "stalled_deal" | "champion_left" | "reengagement" | "buying_intent" | "risk" | "other" | "contract_ended" | "new_opportunity" | "commitment_made" | "ghosted_thread" | "project_gone_quiet" | "funding" | "leadership_change" | "expansion" | "product_launch" | "technical_change";
+            kind: string;
             /**
              * @description Where the raw signal came from.
              * @default derived
@@ -44776,6 +45328,21 @@ export interface components {
             lifecycle_scope?: "company" | "workstream" | "unknown";
             /** @description The engagement named in the cited words, when present. Never inferred from the company name. */
             workstream?: string;
+            /**
+             * @description The members of an extension signal type's evidence layout. Only core writes it, when an
+             *     extension files a signal. A request that carries it is refused.
+             */
+            fields?: {
+                [key: string]: unknown;
+            };
+            provenance?: components["schemas"]["SignalProvenance"];
+        };
+        /** @description Where an extension signal came from. Core stamps it from the filing extension and the signed-in seat. A request that carries it is refused. */
+        SignalProvenance: {
+            /** @description The extension that filed the signal. */
+            unit: string;
+            /** @description The user or agent whose invocation filed it. */
+            captured_by: string;
         };
         /** @description One rep's statement about one recipient, answering one refusal. */
         RecordCommunicationContextRequest: {
@@ -44885,7 +45452,7 @@ export interface components {
             source: string;
         };
         /**
-         * @description Triage. A `status` move to acknowledged/resolved/dismissed appends the human-outcome
+         * @description Triage and correction. A `status` move to acknowledged/resolved/dismissed appends the human-outcome
          *     `signal_resolution` row; `note` travels with that outcome. `resolution_state` and the
          *     resolved ids are resolver-owned and not writable here.
          */
@@ -44896,6 +45463,13 @@ export interface components {
             note?: string | null;
             /** @enum {string} */
             severity?: "info" | "warn" | "urgent";
+            /**
+             * @description Corrects the signal's type. Only the kinds a human files by hand are accepted. The audit row keeps the old kind.
+             * @enum {string}
+             */
+            kind?: "stalled_deal" | "champion_left" | "reengagement" | "buying_intent" | "risk" | "other";
+            /** @description Replaces the signal's evidence. The audit row keeps the old evidence. */
+            evidence?: components["schemas"]["SignalEvidence"][];
         };
         SignalListResponse: {
             data: components["schemas"]["Signal"][];
@@ -44980,8 +45554,7 @@ export interface components {
             name: string;
             /** @description What the list is for, in the words of its steward. */
             purpose?: string | null;
-            /** @enum {string} */
-            entity_type: "contact" | "company" | "deal" | "lead" | "project";
+            entity_type: components["schemas"]["FilterResource"];
             /**
              * @default static
              * @enum {string}
@@ -45120,8 +45693,7 @@ export interface components {
             id: string;
             /** Format: uuid */
             list_id: string;
-            /** @enum {string} */
-            entity_type: "contact" | "company" | "deal" | "lead" | "project";
+            entity_type: components["schemas"]["FilterResource"];
             /** Format: uuid */
             entity_id: string;
             /** @description The principal that added a Shortlist member; `dynamic` for a Live List member. */
@@ -45158,8 +45730,7 @@ export interface components {
         };
         CreateListRequest: {
             name: string;
-            /** @enum {string} */
-            entity_type: "contact" | "company" | "deal" | "lead" | "project";
+            entity_type: components["schemas"]["FilterResource"];
             /**
              * @default static
              * @enum {string}
@@ -45203,8 +45774,7 @@ export interface components {
             steward_id?: string;
         };
         ListMemberChangeRequest: {
-            /** @enum {string} */
-            entity_type: "contact" | "company" | "deal" | "lead" | "project";
+            entity_type: components["schemas"]["FilterResource"];
             /** Format: uuid */
             entity_id: string;
             /** @description Why, in the words of whoever made the change. */
@@ -45299,10 +45869,11 @@ export interface components {
             data: components["schemas"]["ListHistoryEntry"][];
             page: components["schemas"]["PageInfo"];
         };
+        /** @description A record type a filter may be built over: one of core's five, or `ext:<unit>:<kind>` for a kind an extension declared. A kind no installed extension declares answers 404 on the vocabulary and 422 on a preview. */
+        FilterResource: string;
         /** @description A candidate filter to evaluate without saving it. */
         FilterPreviewRequest: {
-            /** @enum {string} */
-            resource: "contact" | "company" | "deal" | "lead" | "project";
+            resource: components["schemas"]["FilterResource"];
             /**
              * @description The canonical filter tree — the same representation a dynamic list's
              *     `definition` and a saved view's `query` carry, and untyped here for
@@ -45330,8 +45901,7 @@ export interface components {
         };
         /** @description What a candidate filter would select for this caller (LVS-EXT-9). */
         FilterPreview: {
-            /** @enum {string} */
-            resource: "contact" | "company" | "deal" | "lead" | "project";
+            resource: components["schemas"]["FilterResource"];
             /**
              * @description Every row the filter selects that this caller may see — not the
              *     length of `rows`. This is the number a builder shows a human while
@@ -45476,8 +46046,7 @@ export interface components {
          *     accepts are the same set.
          */
         FilterVocabulary: {
-            /** @enum {string} */
-            resource: "contact" | "company" | "deal" | "lead" | "project";
+            resource: components["schemas"]["FilterResource"];
             /**
              * @description Every offerable field, core and custom together — a filter names them
              *     the same way, so splitting them here would invite a caller to treat
@@ -45513,7 +46082,7 @@ export interface components {
              *     a folded value has no fragment to match against.
              * @enum {string}
              */
-            type: "text" | "number" | "date" | "currency" | "picklist" | "multiselect" | "boolean" | "id" | "domain" | "distance";
+            type: "text" | "number" | "date" | "currency" | "picklist" | "multiselect" | "boolean" | "record" | "id" | "domain" | "distance";
             /**
              * @description The operator subset this field's type admits (LVS-PARAM-1), in one
              *     stable order. An operator absent here is one the engine refuses for
@@ -45788,11 +46357,8 @@ export interface components {
             data: components["schemas"]["Tag"][];
             page: components["schemas"]["PageInfo"];
         };
-        /**
-         * @description The list a saved view is over. One schema for the record, the create and update bodies and the list filter, so the four cannot drift.
-         * @enum {string}
-         */
-        SavedViewResource: "contacts" | "companies" | "deals" | "activities" | "leads" | "partners" | "projects";
+        /** @description The list a saved view is over: one of core's lists, or `ext:<unit>:<kind>` for a kind an extension declared. One schema for the record, the create body and the list filter, so the three cannot drift. */
+        SavedViewTarget: string;
         /** @enum {string} */
         ReportingMetricID: "bookings_won" | "closed_win_rate" | "open_pipeline" | "stage_age" | "qualified_pipeline_created" | "meetings_held" | "accepted_opportunities" | "forecast_landing" | "leads_created" | "lead_status_moves" | "leads_promoted" | "leads_qualified" | "lead_first_response" | "leads_awaiting_response" | "leads_awaiting_response_now" | "partner_pipeline" | "partner_won" | "partner_commission" | "partner_activity" | "stage_conversion" | "lead_cohort_outcomes" | "bookings_mix" | "qualified_opportunities_created" | "initiative_pipeline";
         /**
@@ -46388,6 +46954,14 @@ export interface components {
             target_actual?: number;
             /** Format: int64 */
             target_revision?: number;
+            /**
+             * @description Present with `target`. `target`: a target set for this scope and
+             *     period. `sales_goals`: the figure is a seller's monthly sales
+             *     goal, or the sum of the monthly sales goals of the scope's sellers
+             *     over the target interval. A sum has no `target_revision`.
+             * @enum {string}
+             */
+            target_source?: "target" | "sales_goals";
             /** Format: double */
             attainment?: number;
             coverage: components["schemas"]["ReportingCoverage"];
@@ -46853,6 +47427,11 @@ export interface components {
              * @description The published yearly goal.
              */
             total_minor?: number;
+            /**
+             * Format: int64
+             * @description The yearly sum of a complete draft, for a reader who may read the draft.
+             */
+            draft_total_minor?: number;
             can_edit: boolean;
         };
         SalesGoalRoster: {
@@ -47124,7 +47703,7 @@ export interface components {
              * @enum {string}
              */
             shared_scope: "private" | "team" | "workspace";
-            resource: components["schemas"]["SavedViewResource"];
+            resource: components["schemas"]["SavedViewTarget"];
             name: string;
             /** @description The saved column choice, sort, and filter state, in the list-view vocabulary; persisted and restored verbatim. */
             query: {
@@ -47143,7 +47722,7 @@ export interface components {
             archived_at?: string | null;
         };
         CreateSavedViewRequest: {
-            resource: components["schemas"]["SavedViewResource"];
+            resource: components["schemas"]["SavedViewTarget"];
             name: string;
             query: {
                 [key: string]: unknown;
@@ -48286,6 +48865,8 @@ export interface components {
             label: string;
             /** @description Whether this caller may record a forecast call or issue a share about this population. Absent from a server that predates the field; a screen then offers the controls and the write route decides. */
             assertable?: boolean;
+            /** @description Whether this population is within the caller's own record access: the workspace for a seat that reads every record, a team for its members. Analytics offers the totals of a scope outside it. Progress reads only a scope inside it. */
+            measurable?: boolean;
         };
         /** @description What this caller may actually do, so a screen never offers a control the server will refuse. */
         AnalyticsCapabilities: {
@@ -49729,10 +50310,10 @@ export interface components {
             /** @description Admin-facing key the column_name derives from. */
             slug: string;
             /**
-             * @description The supported field types. Multiselect values are JSON string arrays; empty arrays clear the selection. Immutable once created.
+             * @description The supported field types. Multiselect values are JSON string arrays; empty arrays clear the selection. A record field holds the id of one record of the kind named by its single option, and that option must be a record kind a unit declared. Immutable once created.
              * @enum {string}
              */
-            type: "text" | "number" | "date" | "currency" | "picklist" | "multiselect" | "boolean";
+            type: "text" | "number" | "date" | "currency" | "picklist" | "multiselect" | "boolean" | "record";
             /**
              * @description retired = soft: hidden from the API and filtering, column and values preserved.
              * @enum {string}
@@ -49795,7 +50376,7 @@ export interface components {
             object: "contact" | "company" | "deal" | "lead" | "project" | "contract" | "activity";
             label: string;
             /** @enum {string} */
-            type: "text" | "number" | "date" | "currency" | "picklist" | "multiselect" | "boolean";
+            type: "text" | "number" | "date" | "currency" | "picklist" | "multiselect" | "boolean" | "record";
             currency?: string | null;
             options?: string[] | null;
             source: string;
@@ -50066,8 +50647,7 @@ export interface components {
             as_of_pinned?: boolean;
         };
         SearchResult: {
-            /** @enum {string} */
-            type: "contact" | "company" | "deal" | "activity" | "lead" | "project" | "product" | "offer_template" | "tag";
+            type: string;
             /** Format: uuid */
             id: string;
             /** @description Display label (name/subject). */
@@ -50106,7 +50686,7 @@ export interface components {
             data: components["schemas"]["SearchResult"][];
             page: components["schemas"]["PageInfo"];
             /** @description On a `per_type` answer only: the types that matched more hits than the page carries for them. Absent on a ranked answer, whose `page.has_more` says the same thing for the list as a whole. */
-            types_with_more?: ("contact" | "company" | "deal" | "activity" | "lead" | "project" | "product" | "offer_template" | "tag")[];
+            types_with_more?: string[];
             /** @description Present only when `data` is empty on a first page of a plain search (no cursor, no record bound, no operator syntax): up to five records whose names are spelt close to the query, closest first. They are suggestions, not matches, and only records the caller may open appear. Absent otherwise, and never on a page with a cursor. */
             near_matches?: components["schemas"]["SearchNearMatch"][];
         };
@@ -64183,6 +64763,8 @@ export interface operations {
                 lifecycle?: "unknown" | "target" | "prospect" | "opportunity" | "onboarding" | "live" | "customer" | "former_customer" | "disqualified";
                 /** @description Accounts carrying this relationship type. Multi-valued per account, so this selects accounts that are AT LEAST this — a partner that is also a customer matches both. */
                 relationship_type?: "customer" | "partner" | "supplier" | "investor" | "portfolio_company" | "competitor" | "other";
+                /** @description Accounts carrying this extension type (`ext:<unit>:<type>`, from `extension_relationship_types`). It is a separate parameter so the closed `relationship_type` list stays as it is. A value no installed extension declares answers 422. Both parameters together select accounts that carry both. */
+                extension_relationship_type?: string;
                 /**
                  * @description Rows owned by any member of this team. NARROWS the caller's row scope, never widens it:
                  *     a team the caller cannot see returns their own visible rows filtered to nothing, not a
@@ -66043,6 +66625,41 @@ export interface operations {
             422: components["responses"]["ValidationError"];
         };
     };
+    downloadFinanceInvoicePdf: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The PDF bytes; Content-Disposition names the file. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/pdf": string;
+                };
+            };
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
+            /** @description The accounting source could not be reached, or did not answer with a PDF. */
+            502: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
     getFinanceSource: {
         parameters: {
             query?: never;
@@ -67233,6 +67850,8 @@ export interface operations {
                 priority?: "low" | "medium" | "high" | "unset";
                 /** @description An acquisition-source key, or `unset` for unclassified deals. A retired key still filters, so history stays reachable after the source leaves the picker. */
                 acquisition_source?: string;
+                /** @description A link type, core's or an extension's `ext:<unit>:<type>`. Keeps the deals that hold at least one link of that type to another live deal, from either end. Links to a company or a contact are not read by this filter. */
+                link_type?: string;
                 /**
                  * @description Narrow to the records carrying these tags. Repeat the parameter for several.
                  *
@@ -70354,6 +70973,95 @@ export interface operations {
             401: components["responses"]["Unauthorized"];
         };
     };
+    listCompanyTypes: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Every declared type, ordered by value. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CompanyTypeDirectory"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+        };
+    };
+    listRecordKinds: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Every readable kind, ordered by name. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RecordKindDirectory"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+        };
+    };
+    listExtensionHistory: {
+        parameters: {
+            query: {
+                entity_type: "contact" | "company" | "deal";
+                entity_id: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The entries, newest first. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ExtensionHistoryResponse"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    listExtensionReports: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Every report this caller may read, ordered by name. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ExtensionReportDirectory"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+        };
+    };
     createTask: {
         parameters: {
             query?: never;
@@ -71173,6 +71881,186 @@ export interface operations {
                     "application/json": components["schemas"]["Activity"];
                 };
             };
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["VersionConflict"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    listLinkTypes: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Every link type. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LinkTypeList"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    listRecordLinks: {
+        parameters: {
+            query: {
+                record_type: "deal" | "company" | "contact";
+                record_id: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The links of the record the caller may see. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RecordLinkList"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    createRecordLink: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["NewRecordLink"];
+            };
+        };
+        responses: {
+            /** @description The link, new or already there. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RecordLink"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    deleteRecordLink: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The link is gone. */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    listLinkSuggestions: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The pending suggestions the caller may see. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LinkSuggestionList"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    acceptLinkSuggestion: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The suggestion, now accepted. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LinkSuggestion"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["VersionConflict"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    rejectLinkSuggestion: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The suggestion, now rejected. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LinkSuggestion"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
             409: components["responses"]["VersionConflict"];
             422: components["responses"]["ValidationError"];
@@ -77218,8 +78106,8 @@ export interface operations {
     getFilterVocabulary: {
         parameters: {
             query: {
-                /** @description The record type whose vocabulary to read. */
-                resource: "contact" | "company" | "deal" | "lead" | "project";
+                /** @description The record type whose vocabulary to read, or `ext:<unit>:<kind>` for a kind an extension declared. */
+                resource: components["schemas"]["FilterResource"];
             };
             header?: never;
             path?: never;
@@ -77973,6 +78861,8 @@ export interface operations {
                 retired?: boolean;
                 /** @description Filter by the first local day of the target period. */
                 period_start?: string;
+                /** @description Filter by whether a published sales goal plan owns the target, as one month of a seller's year. Such a target changes only through the plan. Omitted includes both. */
+                plan_owned?: boolean;
             };
             header?: never;
             path?: never;
@@ -78768,7 +79658,7 @@ export interface operations {
     listSavedViews: {
         parameters: {
             query?: {
-                resource?: components["schemas"]["SavedViewResource"];
+                resource?: components["schemas"]["SavedViewTarget"];
                 /** @description Include soft-deleted (archived) rows. Default false. */
                 include_archived?: components["parameters"]["IncludeArchived"];
             };
@@ -80509,8 +81399,10 @@ export interface operations {
             query: {
                 /** @description The search query. */
                 q: string;
-                /** @description Restrict to these object types (default all). */
-                types?: ("contact" | "company" | "deal" | "activity" | "lead" | "project" | "product" | "offer_template" | "tag")[];
+                /** @description Restrict to these object types (default all). Besides the core types, a kind an extension declared is a type, spelled `ext:<unit>:<kind>`. It answers only a caller who may read that kind. */
+                types?: string[];
+                /** @description Record ids, of any type, to leave out of the answer. They are dropped before ranking, so a page is full and `types_with_more` counts only the records that remain. Use it to keep a record's own author out of the matches suggested for that record. */
+                exclude_ids?: string[];
                 /** @description Answer GROUPED instead of as one ranked list: up to this many hits of EACH type, each type's best first. Relevance is not comparable across types — a message naming an account ten times outranks the account itself — so a short ranked list can hold nothing but messages, while a grouped answer carries every type that matched. `data` holds each type's hits together, best first. The page is the whole answer, so it takes no `cursor` and no `limit`; `types_with_more` names the types holding more than it carries, and asking again without `per_type`, with `types` set to one of them, pages through the rest. */
                 per_type?: number;
                 /** @description Also find the contacts who currently work at a company the query matches, each carrying that company as `works_at`. A contact the query matches by its own text is returned once, as itself; one found only through its employer ranks after every contact matched by its own text. Staff are read from the best-matching companies only, as many as a grouped page can show (20), so a word matching hundreds of accounts reaches the contacts at its strongest matches rather than at all of them. It needs the caller to read contacts, companies and the employment between them, and finds no one through the installation's own company or through a query using the websearch operators (`or`, `-word`, quotes), where `-acme` would reach every other company in the workspace. Honoured by both page shapes, so a contact a grouped page shows is also on the ranked list narrowed to `types=contact`. */

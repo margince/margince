@@ -1,0 +1,10 @@
+{
+  "verb": "data_coverage",
+  "checks": [
+    "data_coverage.read",
+    "forecast.read"
+  ],
+  "takes": [
+    "input_check"
+  ]
+}

@@ -1,0 +1,8 @@
+{
+  "verb": "read_card_photo",
+  "checks": [
+    "contact.create",
+    "contact.read",
+    "contact.update"
+  ]
+}

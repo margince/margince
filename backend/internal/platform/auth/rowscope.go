@@ -241,23 +241,7 @@ func scopedPredicate(p principal.Principal, table string, arg func(any) int,
 	if table == tableList {
 		return listSharingPredicate(p, arg)
 	}
-	// Customer identity is workspace-readable (tableclass.go): the own/team
-	// arm is TRUE for every principal, and only capture privacy and a grant
-	// can still say anything about the row. The owner predicate is not even
-	// rendered for it — a registered parameter the SQL never names is a
-	// Postgres error, not a no-op. asOwnerScoped is the exception (tableclass.go).
-	ownerScoped := class == asOwnerScoped || !identityTables[table]
-	everyRow := readsEveryRow(p, table)
-	if class == asOwnerScoped {
-		everyRow = Unbounded(p)
-	}
-	scope := func(string) string { return truePredicate }
-	switch {
-	case class == asOwnerScoped:
-		scope = ownerPredicate(p, arg, unownedIsNobodys)
-	case ownerScoped:
-		scope = OwnerPredicate(p, arg)
-	}
+	scope, everyRow := ownerArm(p, table, arg, class)
 	// An actor with no human behind it reads both arms away; an unbounded
 	// human still faces capture privacy.
 	private := bool(capture) && ownerPrivateTables[table] && !actsForTheInstallation(p)
@@ -298,6 +282,24 @@ func scopedPredicate(p principal.Principal, table string, arg func(any) int,
 	return func(alias string) string {
 		return fmt.Sprintf(`(%s OR %s)`, inner(alias), liveGrantSQL(table, col(alias, "id"), access, me, teams))
 	}
+}
+
+// ownerArm is the own/team arm of a row-scope predicate, and whether the
+// caller already reads every row of the table without a grant.
+//
+// Customer identity is workspace-readable (tableclass.go), so its arm is TRUE
+// for every principal. Its owner predicate is not rendered at all, because a
+// registered parameter the SQL never names is a Postgres error.
+// asOwnerScoped is the exception (tableclass.go).
+func ownerArm(p principal.Principal, table string, arg func(any) int, class readClass) (func(alias string) string, bool) {
+	if class == asOwnerScoped {
+		return ownerPredicate(p, arg, unownedIsNobodys), Unbounded(p)
+	}
+	everyRow := readsEveryRow(p, table)
+	if identityTables[table] {
+		return func(string) string { return truePredicate }, everyRow
+	}
+	return OwnerPredicate(p, arg), everyRow
 }
 
 // EnsureVisibleForSubjectRights is EnsureVisible for the GDPR engines:

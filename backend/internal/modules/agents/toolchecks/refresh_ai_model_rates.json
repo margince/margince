@@ -1,0 +1,9 @@
+{
+  "verb": "refresh_ai_model_rates",
+  "checks": [
+    "ai_model_rate.create|update",
+    "ai_model_rate.read",
+    "ai_model_rate.update",
+    "ai_routing.read"
+  ]
+}

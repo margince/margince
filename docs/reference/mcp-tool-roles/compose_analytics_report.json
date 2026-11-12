@@ -1,0 +1,14 @@
+{
+  "tool": "read_analytics",
+  "action": "compose",
+  "verb": "compose_analytics_report",
+  "allowed_for": [
+    "admin",
+    "management",
+    "manager",
+    "ops",
+    "read_only",
+    "rep"
+  ],
+  "refused_for": []
+}

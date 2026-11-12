@@ -416,6 +416,7 @@ func applyActivityPatch(ctx context.Context, tx pgx.Tx, id ids.ActivityID, in Up
 		  is_done = coalesce($%[8]d, is_done),
 		  meeting_status = coalesce($%[9]d, meeting_status),
 		  call_outcome = CASE WHEN $%[19]d THEN NULL ELSE coalesce($%[18]d, call_outcome) END,
+		  task_type = coalesce($%[27]d, task_type),
 		  duration_seconds = coalesce($%[10]d, duration_seconds),
 		  source_activity_id = coalesce($%[20]d, source_activity_id),
 		  occurred_precision = coalesce($%[14]d, occurred_precision),
@@ -440,7 +441,8 @@ func applyActivityPatch(ctx context.Context, tx pgx.Tx, id ids.ActivityID, in Up
 		arg(in.clears("due_at")), arg(in.clears("remind_at")), arg(in.clears("assignee_id")),
 		arg(in.OccurredPrecision), arg(relabelledLanguage(current, in)),
 		customAssignments(in.customColumns, in.CustomFields, arg), arg(in.DueHasTime), arg(in.CallOutcome), arg(in.clears(fieldCallOutcome)), arg(in.sourceActivityID),
-		arg(pickedWall(in.DueIntent)), arg(pickedZone(in.DueIntent)), arg(pickedWall(in.RemindIntent)), arg(pickedZone(in.RemindIntent)), arg(pickedWall(in.MeetingIntent)), arg(pickedZone(in.MeetingIntent)))
+		arg(pickedWall(in.DueIntent)), arg(pickedZone(in.DueIntent)), arg(pickedWall(in.RemindIntent)), arg(pickedZone(in.RemindIntent)), arg(pickedWall(in.MeetingIntent)), arg(pickedZone(in.MeetingIntent)),
+		arg(in.TaskType))
 	query += fmt.Sprintf(" AND version = $%d", arg(current.Version))
 	result, err := tx.Exec(ctx, query, args...)
 	if err != nil {
@@ -470,12 +472,15 @@ func replayMovedTheMeeting(
 }
 
 // admitPatchedFields checks what a patch of an unheld activity sets: its task
-// source, its task fields, its time and its duration.
+// source, its task fields and type, its time and its duration.
 func admitPatchedFields(ctx context.Context, tx pgx.Tx, current crmcontracts.Activity, in *UpdateActivityInput) error {
 	if err := preparePatchedTaskSource(ctx, tx, current, *in); err != nil {
 		return err
 	}
 	if err := checkTaskFieldsKind(string(current.Kind), taskFields{in.DueAt, in.RemindAt, in.AssigneeID, in.IsDone}); err != nil {
+		return err
+	}
+	if err := checkTaskTypeKind(string(current.Kind), in.TaskType); err != nil {
 		return err
 	}
 	if err := in.admitPatchTime(current.Kind); err != nil {

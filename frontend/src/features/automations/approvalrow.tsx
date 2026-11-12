@@ -35,8 +35,8 @@ import {
 import { navigate } from "../../lib/router";
 import { useViewerId } from "../../lib/session";
 import { useSendPermission } from "../../lib/usesendpermission";
+import { ApprovalDetailModal } from "./approvaldetail";
 import {
-  ApprovalDetailModal,
   cardRecords,
   DecideOutcome,
   editableSeed,

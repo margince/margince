@@ -129,5 +129,6 @@ func companyUpdateInput(req crmcontracts.UpdateCompanyRequest, ifVersion *int64)
 		}
 		in.RelationshipTypes = &desired
 	}
+	in.ExtensionRelationshipTypes = req.ExtensionRelationshipTypes
 	return in
 }

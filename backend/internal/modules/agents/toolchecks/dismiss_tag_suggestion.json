@@ -1,0 +1,10 @@
+{
+  "verb": "dismiss_tag_suggestion",
+  "checks": [
+    "contact.update",
+    "tag.read"
+  ],
+  "takes": [
+    "tag_suggestion"
+  ]
+}

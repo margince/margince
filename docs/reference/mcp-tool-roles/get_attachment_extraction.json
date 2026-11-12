@@ -1,0 +1,14 @@
+{
+  "tool": "read_details",
+  "action": "document_extraction",
+  "verb": "get_attachment_extraction",
+  "allowed_for": [
+    "admin",
+    "management",
+    "manager",
+    "ops",
+    "read_only",
+    "rep"
+  ],
+  "refused_for": []
+}

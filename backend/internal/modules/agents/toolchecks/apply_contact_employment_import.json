@@ -1,0 +1,13 @@
+{
+  "verb": "apply_contact_employment_import",
+  "checks": [
+    "company.read",
+    "contact.read",
+    "contact.update",
+    "relationship.create",
+    "relationship.read"
+  ],
+  "takes": [
+    "contact"
+  ]
+}

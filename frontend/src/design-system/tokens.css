@@ -64,6 +64,9 @@
   --accentText: #045647;
   --accentLight: #d7ede5;
   --accentMed: rgba(4, 86, 71, 0.17);
+  /* The far end of a chart's fill: a bar, column or meter fades from the
+     accent into this, so a run of marks reads as one light falling across. */
+  --accentFade: color-mix(in srgb, var(--accent) 55%, var(--bgElevated));
 
   /* Headings, and a record's name where that name IS the title. */
   --textPrimary: #182c28;

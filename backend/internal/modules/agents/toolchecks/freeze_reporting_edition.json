@@ -1,0 +1,11 @@
+{
+  "verb": "freeze_reporting_edition",
+  "checks": [
+    "installation_settings.read",
+    "report_edition.create",
+    "report_edition.read"
+  ],
+  "takes": [
+    "editioned_report"
+  ]
+}

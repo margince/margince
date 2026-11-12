@@ -1,0 +1,11 @@
+{
+  "verb": "request_attachment_access",
+  "checks": [
+    "activity.create",
+    "activity.read",
+    "company.read"
+  ],
+  "takes": [
+    "attachment"
+  ]
+}

@@ -145,7 +145,7 @@ func readEmailPresentation(ctx context.Context, tx pgx.Tx, id ids.ActivityID, th
 	if out.ControllerSend, err = withEmailStateOn(ctx, tx, activity.Id, &out.Summary, asOf); err != nil {
 		return crmcontracts.EmailPresentation{}, err
 	}
-	if err := markOpenInvitation(ctx, tx, id, &out.Summary, asOf); err != nil {
+	if err := markCalendarFacts(ctx, tx, id, &out.Summary, asOf); err != nil {
 		return crmcontracts.EmailPresentation{}, err
 	}
 
@@ -168,6 +168,15 @@ func readEmailPresentation(ctx context.Context, tx pgx.Tx, id ids.ActivityID, th
 
 // markOpenInvitation turns the summary into an invitation's when the reader
 // may still answer it.
+// markCalendarFacts says whether the mail is an open invitation and what it
+// changed about its meeting, as the page read does for each row.
+func markCalendarFacts(ctx context.Context, tx pgx.Tx, id ids.ActivityID, summary *crmcontracts.EmailSummary, asOf time.Time) error {
+	if err := markOpenInvitation(ctx, tx, id, summary, asOf); err != nil {
+		return err
+	}
+	return markCalendarChange(ctx, tx, id, summary)
+}
+
 func markOpenInvitation(ctx context.Context, tx pgx.Tx, id ids.ActivityID, summary *crmcontracts.EmailSummary, asOf time.Time) error {
 	open, err := openInvitationsTx(ctx, tx, []ids.UUID{id.UUID}, readerOrNobody(ctx), asOf)
 	if err != nil {

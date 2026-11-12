@@ -1,0 +1,10 @@
+{
+  "verb": "activate_home_repair",
+  "checks": [
+    "activity.read",
+    "data_task.update"
+  ],
+  "takes": [
+    "home_repair_review"
+  ]
+}

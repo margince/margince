@@ -1,0 +1,12 @@
+{
+  "verb": "render_offer",
+  "checks": [
+    "company.read",
+    "installation_settings.read",
+    "offer.read",
+    "offer.update"
+  ],
+  "takes": [
+    "offer"
+  ]
+}

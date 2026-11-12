@@ -31,6 +31,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
+	"github.com/margince/margince/backend/internal/compose/dueday"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/approvals"
@@ -420,7 +421,7 @@ func (d *CommitmentDispatcher) fileClaim(
 		Renewal: c.AdmissionSourceID != nil && reason == activities.CommitmentCurrent,
 	}
 	if c.DueDate != "" {
-		due, err := commitmentDueInstant(ctx, tx, c.DueDate, c.DueZone)
+		due, err := dueday.EndOf(ctx, tx, c.DueDate, c.DueZone)
 		if err != nil {
 			return crmcontracts.ConversationClaim{}, false, err
 		}

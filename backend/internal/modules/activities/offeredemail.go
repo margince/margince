@@ -19,7 +19,6 @@ import (
 	"github.com/margince/margince/backend/internal/platform/owndomain"
 	"github.com/margince/margince/backend/internal/shared/kernel/contactaddress"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
-	"github.com/margince/margince/backend/internal/shared/kernel/relstrength"
 )
 
 // writtenAboutKinds are the kinds a rep writes about rather than replies to.
@@ -28,16 +27,18 @@ var writtenAboutKinds = []crmcontracts.ActivityKind{
 	crmcontracts.ActivityKindNote, crmcontracts.ActivityKindTask,
 }
 
-// eligibleRowsSQL keeps the live written-about rows. A task the product filed
-// offers email only when it asks its owner to write to someone, as an answer
-// owed to a request does. The kinds are literals, so a generic plan keeps the
-// partial indexes keyed on kind.
+// eligibleRowsSQL keeps the live written-about rows. A task offers email only
+// when its type asks its owner to write: a reply or a mail they owe. The kinds
+// are literals, so a generic plan keeps the partial indexes keyed on kind.
 var eligibleRowsSQL = `
 	SELECT a.id, a.kind
 	  FROM activity a
 	 WHERE a.id = ANY($1) AND a.kind IN (` + sqlLiterals(writtenAboutKinds) + `) AND a.archived_at IS NULL
-	   AND (a.kind <> '` + string(crmcontracts.ActivityKindTask) + `' OR ` + relstrength.OriginIsEngagementSQL("a") + `
-	        OR (a.origin = '` + OriginSystemRemediation + `' AND a.source_system IN (` + sqlLiterals(storekit.OutreachTaskSources()) + `)))`
+	   AND (a.kind <> '` + string(crmcontracts.ActivityKindTask) + `' OR ` + storekit.TaskTypeSQL("a") + ` IN (` +
+	sqlLiterals(writingTaskTypes) + `))`
+
+// writingTaskTypes are the task types whose work is a mail.
+var writingTaskTypes = []crmcontracts.TaskType{crmcontracts.TaskTypeReply, crmcontracts.TaskTypeReachOut}
 
 // sqlLiterals spells compile-time values as a list of SQL literals.
 func sqlLiterals[T ~string](values []T) string {

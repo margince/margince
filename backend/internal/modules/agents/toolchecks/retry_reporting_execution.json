@@ -1,0 +1,10 @@
+{
+  "verb": "retry_reporting_execution",
+  "checks": [
+    "report_edition.read",
+    "report_edition.update"
+  ],
+  "takes": [
+    "failed_execution"
+  ]
+}

@@ -1,0 +1,9 @@
+{
+  "verb": "describe_analytics_vocabulary",
+  "checks": [
+    "activity.read",
+    "deal.read",
+    "lead.read",
+    "project.read"
+  ]
+}

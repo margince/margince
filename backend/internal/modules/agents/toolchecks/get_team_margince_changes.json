@@ -1,0 +1,8 @@
+{
+  "verb": "get_team_margince_changes",
+  "checks": [
+    "deal.read",
+    "pipeline.read",
+    "scope:team"
+  ]
+}

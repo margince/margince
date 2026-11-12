@@ -4,7 +4,7 @@
 import { describe, expect, it } from "vitest";
 import { type Locale, translate } from "../i18n";
 import type { MessageKey } from "../i18n/en";
-import { DEAL_ROLES, roleFromTyped } from "./recordlabels";
+import { DEAL_ROLES, roleFromTyped, signalKindLabel } from "./recordlabels";
 
 const LOCALES: readonly Locale[] = ["en", "de", "vi"];
 
@@ -44,5 +44,23 @@ describe("a deal role typed in a reader's words", () => {
       "Người ủng hộ nội bộ",
     );
     expect(roleFromTyped("", t, DEAL_ROLES)).toBe("");
+  });
+});
+
+describe("signalKindLabel", () => {
+  const t = (key: string) => `t:${key}`;
+
+  it("words a core kind through the catalog", () => {
+    expect(signalKindLabel("risk", t)).toBe("t:signal.kind.risk");
+  });
+
+  it("shows an extension kind by its own name, without the unit prefix", () => {
+    expect(signalKindLabel("ext:finance-demo:ledger_loss", t)).toBe(
+      "ledger loss",
+    );
+  });
+
+  it("degrades an unknown kind to its own words", () => {
+    expect(signalKindLabel("made_up_kind", t)).toBe("made up kind");
   });
 });

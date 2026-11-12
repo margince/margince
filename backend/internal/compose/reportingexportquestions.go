@@ -71,7 +71,7 @@ func keptAnswerRows(question crmcontracts.ReportingCardQuestion, answer crmcontr
 	rows := [][]string{}
 	for _, row := range answer.Rows {
 		if row[withheldColumn] == true {
-			rows = append(rows, cell(questionCell{coverage: "withheld", withheld: true}))
+			rows = append(rows, cell(questionCell{coverage: reportingWithheld, withheld: true}))
 			continue
 		}
 		label := groupLabel(asked.GroupBy, row, answer.Labels)
