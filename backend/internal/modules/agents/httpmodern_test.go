@@ -42,7 +42,8 @@ func modernServer(t *testing.T) *httptest.Server {
 			return principal.WithActor(principal.WithWorkspaceID(r.Context(), ids.NewV7()),
 				principal.Principal{
 					Type: principal.PrincipalAgent, ID: "agent:modern", OnBehalfOf: ids.NewV7(),
-					Scopes: principal.NewScopeSet(principal.ScopeRead),
+					Scopes:      principal.NewScopeSet(principal.ScopeRead),
+					Permissions: everyRecordedGrant(),
 				}), nil
 		},
 		func(*http.Request) string { return "" }, "margince-crm", "test", discardLog())

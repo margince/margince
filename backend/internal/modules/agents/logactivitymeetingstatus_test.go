@@ -35,6 +35,7 @@ func TestLogActivityDeclaresTheContractsMeetingOutcomes(t *testing.T) {
 // The tool forwards its arguments whole, so the outcome reaches the same
 // strict decode against CreateActivityRequest that the REST create runs.
 func TestLogActivityCarriesTheMeetingOutcomeToTheContractBody(t *testing.T) {
+	servingUnofferedNames(t)
 	s := idProbeDispatcher(t)
 	ctx := scopedAgentCtx(principal.ScopeWrite)
 	call := `{"name":"log_activity","arguments":{"kind":"meeting","subject":"Introductory lunch",` +

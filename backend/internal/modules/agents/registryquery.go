@@ -155,10 +155,7 @@ func (r *Registry) Offered(ctx context.Context) []mcp.ToolSpec {
 	all := r.availableSpecs(r.Specs())
 	out := make([]mcp.ToolSpec, 0, len(all))
 	for _, spec := range all {
-		if spec.Unlisted || !invocableByCaller(ctx, spec) {
-			continue
-		}
-		if granted, ok := r.grantedTo(ctx, spec); ok {
+		if granted, ok := r.listedFor(ctx, spec); ok {
 			out = append(out, r.asSeenBy(ctx, granted))
 		}
 	}
@@ -169,6 +166,34 @@ func (r *Registry) Offered(ctx context.Context) []mcp.ToolSpec {
 	out = append(out, r.gatedFor(ctx, all)...)
 	sort.Slice(out, func(i, j int) bool { return out[i].Name < out[j].Name })
 	return out
+}
+
+// OffersName reports whether tools/list offers name to this caller. It asks one
+// tool what Offered asks every tool, through listedFor and gateAdmits, so a
+// call does not pay for the whole listing.
+func (r *Registry) OffersName(ctx context.Context, name string) bool {
+	spec, ok := r.Spec(name)
+	if !ok {
+		return false
+	}
+	if r.callAvailability != nil {
+		if spec, ok = r.availableSpec(spec); !ok {
+			return false
+		}
+	}
+	if _, listed := r.listedFor(ctx, spec); listed {
+		return true
+	}
+	return r.gateAdmits(ctx, spec)
+}
+
+// listedFor is a listed tool as this caller is granted it, and false for one
+// the listing leaves out.
+func (r *Registry) listedFor(ctx context.Context, spec mcp.ToolSpec) (mcp.ToolSpec, bool) {
+	if spec.Unlisted || !invocableByCaller(ctx, spec) {
+		return spec, false
+	}
+	return r.grantedTo(ctx, spec)
 }
 
 // Runnable is what a Surface-B run may choose among: every tool this caller may
