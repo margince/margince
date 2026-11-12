@@ -1032,6 +1032,8 @@ var agentPolicies = map[string]agentPolicy{
 	"POST /v1/projects/{id}/health-assessments/{assessment_id}/corrections":    {Op: "correctProjectHealthAssessment", Access: "tool", Tool: "correct_project_health_assessment", RecordType: "", Tier: "auto_execute", Scope: "write", ServedBy: "route", Router: "change_state", Action: "correct_project_health"},
 	"POST /v1/projects/{id}/health-assessments/{assessment_id}/undo":           {Op: "undoProjectHealthAssessment", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: "", HumanOnlyReason: "security"},
 	"POST /v1/public/booking/{host_slug}":                                      {Op: "bookPublicMeeting", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
+	"POST /v1/public/booking/{host_slug}/return":                               {Op: "requestBookingReturn", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
+	"POST /v1/public/booking/{host_slug}/return/confirm":                       {Op: "confirmBookingReturn", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"POST /v1/public/confirm/{token}":                                          {Op: "submitConfirmDetails", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"POST /v1/public/forms/{form_key}":                                         {Op: "submitWebForm", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"POST /v1/public/preferences/{token}/stop":                                 {Op: "publicStopContact", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},

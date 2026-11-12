@@ -7587,6 +7587,57 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/public/booking/{host_slug}/return": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                host_slug: string;
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Ask to be stored again after an erasure (anonymous); mails a confirmation link.
+         * @description The one way an erased subject lifts their own erasure. When the address is on the erasure
+         *     list, a single-use link is mailed to it; the address is stored only when that link is
+         *     confirmed (`confirmBookingReturn`). Nothing is stored before the click.
+         *     **Always answers 202** with no body, for every well-formed request, whether or not the
+         *     address was erased, so the answer and its timing say nothing about the address.
+         */
+        post: operations["requestBookingReturn"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/public/booking/{host_slug}/return/confirm": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                host_slug: string;
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Confirm the mailed link and be stored again (anonymous).
+         * @description Spends the token `requestBookingReturn` mailed. In one transaction it lifts the erasure for
+         *     that address, stores the subject as a contact of this booking page's host, and records the
+         *     consent they gave. A token works once, for the erasure it was mailed for, until it expires.
+         *     A bad, expired, spent or foreign token is one neutral `422` (`code: link_spent`) on `token`.
+         */
+        post: operations["confirmBookingReturn"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/public/forms/{form_key}": {
         parameters: {
             query?: never;
@@ -72252,6 +72303,81 @@ export interface operations {
             };
             422: components["responses"]["ValidationError"];
             502: components["responses"]["CalendarUnavailable"];
+        };
+    };
+    requestBookingReturn: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                host_slug: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    name: string;
+                    /** Format: email */
+                    email: string;
+                    consent: components["schemas"]["CaptureConsent"];
+                };
+            };
+        };
+        responses: {
+            /** @description Accepted. If the address was erased, a confirmation link is on its way to it. */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            422: components["responses"]["ValidationError"];
+            /** @description Rate-limited. */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    confirmBookingReturn: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                host_slug: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    token: string;
+                };
+            };
+        };
+        responses: {
+            /** @description The subject is stored again. */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            422: components["responses"]["ValidationError"];
+            /** @description Rate-limited. */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
         };
     };
     submitWebForm: {

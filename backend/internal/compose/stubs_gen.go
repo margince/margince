@@ -3359,6 +3359,14 @@ func (stubs) GetPublicSchedulingProfile(w nethttp.ResponseWriter, r *nethttp.Req
 	httperr.NotImplemented(w, r, "GetPublicSchedulingProfile")
 }
 
+func (stubs) RequestBookingReturn(w nethttp.ResponseWriter, r *nethttp.Request, hostSlug string) {
+	httperr.NotImplemented(w, r, "RequestBookingReturn")
+}
+
+func (stubs) ConfirmBookingReturn(w nethttp.ResponseWriter, r *nethttp.Request, hostSlug string) {
+	httperr.NotImplemented(w, r, "ConfirmBookingReturn")
+}
+
 func (stubs) GetConfirmDetails(w nethttp.ResponseWriter, r *nethttp.Request, token string) {
 	httperr.NotImplemented(w, r, "GetConfirmDetails")
 }

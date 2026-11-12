@@ -7,11 +7,11 @@ package gates
 
 // Every statement on the erasure list names lifted_at.
 //
-// A lifted row stays on erasure_suppression, so a reader that forgets the
-// column treats a person who asked to be stored again as erased, and a writer
-// that forgets it keeps a lift through a second erasure. Naming the column is
-// the check a pattern can make: a reader filters on it or carries it, and a
-// writer clears or carries it. The corpus is every hand-written Go file.
+// A lifted row stays on erasure_suppression. A reader that forgets the column
+// treats a subject who asked to be stored again as erased. A writer that forgets
+// it keeps a lift through a second erasure. A reader filters on the column or
+// carries it, and a writer clears or carries it. The corpus is every
+// hand-written Go file.
 
 import (
 	"go/parser"

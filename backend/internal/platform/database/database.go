@@ -258,6 +258,21 @@ func WithWorkspaceSnapshot(ctx context.Context, pool *pgxpool.Pool, fn func(cont
 	})
 }
 
+// WithWorkspaceWriteTx runs fn in one read-committed transaction that every
+// store reached beneath it joins. Writes owned by several modules then commit or
+// roll back together. Nesting joins the outer transaction.
+func WithWorkspaceWriteTx(ctx context.Context, pool *pgxpool.Pool, fn func(context.Context) error) error {
+	if _, ok := principal.WorkspaceID(ctx); !ok {
+		return ErrNoWorkspace
+	}
+	if _, joined := snapshotOf(ctx); joined {
+		return fn(ctx)
+	}
+	return runTxWith(ctx, pool, pgx.TxOptions{}, func(tx pgx.Tx) error {
+		return fn(context.WithValue(ctx, snapshotKey{}, tx))
+	})
+}
+
 // Detached returns ctx with no ambient snapshot on it, so a call made with it
 // opens its own transaction and commits on its own terms.
 //

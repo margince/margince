@@ -4,8 +4,8 @@
 package privacy
 
 // The erasure list's two writes: an erasure arms an entry, and the erased
-// person alone lifts it, by answering a link mailed to the address. A lift is a
-// column, not a DELETE, so a restore still erases what the person had before.
+// subject alone lifts it, by answering a link mailed to the address. A lift is a
+// column, not a DELETE, so a restore still erases what the subject had before.
 
 import (
 	"context"
@@ -20,7 +20,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
-// ErrLiftNotCurrent refuses a lift whose link no longer matches the list: the
+// ErrLiftNotCurrent refuses a lift whose link no longer matches the list. The
 // address was lifted already, was never erased, or was erased again since the
 // link was mailed. A link lifts one erasure once.
 var ErrLiftNotCurrent = errors.New("privacy: the erasure this link was mailed for is no longer on the list")
@@ -34,9 +34,9 @@ func replayingErasure(ctx context.Context) context.Context {
 }
 
 // armSuppression puts identifier hashes on the erasure list. It is the one
-// writer every erasure uses. A hash the person lifted earlier is armed again: a
-// second erasure clears the lift and dates the row from now, so a confirmation
-// link mailed before it no longer matches the row.
+// writer every erasure uses. A second erasure arms a lifted hash again and
+// dates the row from now. A confirmation link mailed before it then no longer
+// matches the row.
 func armSuppression(ctx context.Context, tx pgx.Tx, kind string, hashes []string, keyID *string) error {
 	if len(hashes) == 0 {
 		return nil
@@ -75,7 +75,7 @@ func EmailErasedAt(ctx context.Context, tx pgx.Tx, email string) (time.Time, boo
 }
 
 // LiftEmailSuppressionTx lifts every entry that refuses the address, on the
-// person's own request. erasedAt is the time their link carries; consentEvent
+// subject's own request. erasedAt is the time their link carries; consentEvent
 // is the grant they gave in the same transaction. It takes the lock an erasure
 // takes, so an erasure and a lift of one address never interleave.
 func LiftEmailSuppressionTx(ctx context.Context, tx pgx.Tx, email string, erasedAt time.Time, consentEvent ids.UUID) error {

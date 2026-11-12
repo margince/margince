@@ -1,14 +1,22 @@
+import { useEffect, useState } from "react";
+import { forgetHashCredential, takeHashCredential } from "../../lib/router";
 import { useBookingRefused } from "../../lib/scheduling-profile-query";
 import { useMe } from "../../lib/session";
 import { BookingGuestScreen } from "./booking-guest";
 import { BookingInviteScreen } from "./booking-invite";
 import { BookingMeetingScreen } from "./booking-meeting";
 import { BookingProfileScreen } from "./booking-profile";
+import { BookingReturnScreen } from "./booking-return";
 import "./book.css";
 
 export { PUBLIC_BOOKING_CONSENT } from "./booking-guest";
 
 export function BookingScreen({ hostSlug }: Readonly<{ hostSlug?: string }>) {
+  // The return link's token, taken out of the address once and held here.
+  const [returnToken] = useState(() => takeHashCredential("book"));
+  useEffect(() => {
+    if (returnToken) forgetHashCredential("book", returnToken);
+  }, [returnToken]);
   if (!hostSlug) return <BookingProfileScreen />;
   if (hostSlug === "preview") return <BookingPreview />;
   if (hostSlug === "contact") return <BookingInviteScreen />;
@@ -20,6 +28,8 @@ export function BookingScreen({ hostSlug }: Readonly<{ hostSlug?: string }>) {
     return <BookingGuestScreen hostSlug="" proposalToken={hostSlug.slice(9)} />;
   if (hostSlug.startsWith("manage-"))
     return <BookingMeetingScreen token={hostSlug.slice(7)} />;
+  if (returnToken)
+    return <BookingReturnScreen hostSlug={hostSlug} token={returnToken} />;
   return <BookingGuestScreen hostSlug={hostSlug} />;
 }
 

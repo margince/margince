@@ -205,6 +205,12 @@ type Copy struct {
 	ResetAction  string
 	ResetIgnore  string
 
+	// The link an erased subject asked for to be stored again.
+	ReturnSubject string
+	ReturnIntro   string
+	ReturnAction  string
+	ReturnIgnore  string
+
 	// The invitation an administrator sent on somebody's behalf.
 	InviteSubject string
 	InviteIntro   string

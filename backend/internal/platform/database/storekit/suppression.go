@@ -52,8 +52,7 @@ func EscapeLikeSQL(expr string) string {
 }
 
 // EmailSuppressed reports whether an address belongs to an erased
-// subject in this INSTALLATION. A row the person lifted themselves no longer
-// refuses the address. There is no tenant predicate and there is
+// subject in this INSTALLATION. There is no tenant predicate and there is
 // nothing for one to key on: core 0217 (ADR-0091) retired every isolation
 // policy and core 0255 dropped erasure_suppression.workspace_id outright,
 // so the list is installation-wide by construction. What makes that the
@@ -62,6 +61,8 @@ func EscapeLikeSQL(expr string) string {
 // Naming the guarantee matters here more than most places: this is an
 // erasure gate, and the expensive mistake is a later reader assuming
 // something narrower already scoped it.
+//
+// A row the subject lifted no longer refuses the address.
 func EmailSuppressed(ctx context.Context, tx pgx.Tx, email string) (bool, error) {
 	suppressed, err := SuppressedEmails(ctx, tx, []string{email})
 	return suppressed[strings.ToLower(strings.TrimSpace(email))], err

@@ -79,10 +79,10 @@ var suppressionKinds = []string{"email", "channel_identity"}
 // changes nothing. Run it on a schedule and before a backup — the entries it
 // adds are the ones a restore would otherwise lose.
 //
-// The object's body is the identifier's KIND and when it was suppressed and
-// lifted (journalEntryBody), and never the identifier: the whole point of the
-// list is that the value is gone and only its fingerprint remains, so an export
-// that carried the address would reconstitute what the erasure destroyed.
+// The object's body is the identifier's kind and when it was suppressed and
+// lifted (journalEntryBody). It never holds the identifier. The list keeps only
+// a fingerprint, and an export that carried the address would restore what the
+// erasure destroyed.
 func (e *Eraser) ExportSuppressions(ctx context.Context) (int, error) {
 	ctx = corefeatures.RetainedDataContext(ctx)
 	if err := auth.Require(ctx, "contact", principal.ActionDelete); err != nil {
@@ -166,9 +166,9 @@ func journalEntryKey(kind, hash string, rowKeyed bool) string {
 }
 
 // journalEntryBody is one entry's object. The first line is the kind and the
-// day of the erasure, which every journal has held; the lines after it give the
-// erasure and the lift to the instant, so a replay can tell which of the
-// journal and the database's list is newer.
+// day of the erasure, as every journal has held it. The lines after it give the
+// erasure and the lift to the instant. A replay compares them with the list's
+// own row to tell which is newer.
 func journalEntryBody(kind string, state suppressionState) []byte {
 	body := kind + " " + state.erasedAt.UTC().Format(time.DateOnly) + "\n" +
 		journalErasedField + " " + state.erasedAt.UTC().Format(time.RFC3339Nano) + "\n"
@@ -247,14 +247,13 @@ func (e *Eraser) journalStatesInAnyForm(ctx context.Context, kind string, forms 
 
 // journalEntry reads one entry of the exported list.
 //
-// Consulted only for a candidate the database's own list did not already
-// erase, which is the case a restore creates: the rows came back and the list
-// that would have caught them went with the rollback.
+// Consulted only for a candidate the database's own list did not erase. A
+// restore makes that case: the rows came back and the list went with the
+// rollback.
 //
 // A store that cannot answer is not a "no". Reporting one would let an outage
-// read as "this subject was never erased", which is the exact failure this
-// whole path exists to prevent, so the error travels. An entry that cannot be
-// read travels as an error for the same reason.
+// read as "this subject was never erased", so the error travels. An entry that
+// cannot be read travels as an error for the same reason.
 func (e *Eraser) journalEntry(ctx context.Context, entryKey string) (suppressionState, bool, error) {
 	if e.blob == nil {
 		return suppressionState{}, false, nil

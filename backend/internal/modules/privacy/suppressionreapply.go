@@ -94,7 +94,7 @@ type suppressionEntry struct{ kind, hash string }
 
 // suppressionState is what the list says about one entry. A lifted entry still
 // erases a contact created before the lift: that contact is the erased one,
-// brought back by a restore. The person's own signup is created at the lift.
+// brought back by a restore. The subject's own signup is created at the lift.
 type suppressionState struct {
 	erasedAt time.Time
 	liftedAt *time.Time
@@ -234,9 +234,9 @@ func (e *Eraser) contactsMatchingSuppression(ctx context.Context, suppressed map
 
 // matchJournaled asks the exported journal about what the database's own list
 // did not erase. That is the restore case: the rows came back, and the list
-// that would have caught them rolled back with them. A journal entry only
-// counts when it is newer than what the database's list holds for it, so a
-// journal exported before a lift does not erase the person's own signup.
+// that would have caught them rolled back with them. A journal entry counts
+// only when it is newer than the list's own row. A journal exported before a
+// lift so does not erase the subject's own signup.
 func (e *Eraser) matchJournaled(
 	ctx context.Context, ask []suppressionCandidate, seen map[ids.UUID]struct{}, matched []ids.UUID,
 ) ([]ids.UUID, error) {
@@ -269,8 +269,7 @@ type suppressionCandidate struct {
 }
 
 // listAnswer reports whether the list erases the identifier in any of its
-// forms, keyed or unkeyed from before the key, and the newest change it holds
-// for them.
+// forms, keyed or unkeyed. It also answers the newest change it holds for them.
 func listAnswer(suppressed map[suppressionEntry]suppressionState, kind string, live liveIdentifier) (bool, time.Time) {
 	var newest time.Time
 	for _, form := range live.forms {
