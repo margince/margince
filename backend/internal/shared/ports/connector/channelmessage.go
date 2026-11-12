@@ -25,7 +25,7 @@ type MessageSender interface {
 // ChannelMessage.Validate.
 type ChannelMessage struct {
 	// ActivityID is the timeline entry this message is. A connector that keeps
-	// a record of its sends keeps this, not the recipient: the activity already
+	// a record of its sends keeps this, not the recipient. The activity already
 	// says who it went to, under the core's privacy rules.
 	ActivityID ids.ActivityID
 	// Recipient is the channel identity to deliver to (Task 8's

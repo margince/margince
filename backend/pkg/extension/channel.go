@@ -143,7 +143,7 @@ type OutboundMessage struct {
 	// installation.
 	Member UserID
 	// ActivityID is the timeline entry this send is, as a uuid. Record it in
-	// place of the recipient: the core holds who the activity went to, and its
+	// place of the recipient. The core holds who the activity went to, and its
 	// erasure and export reach a row linked to it.
 	ActivityID string
 	// Recipient is the provider account id, never the username: a username is

@@ -222,7 +222,7 @@ func unitConnectionLive(ctx context.Context, transport unitTransport, member ext
 }
 
 // activityRef is the activity as the published surface spells it, empty for
-// none, so a unit's own "no activity" check sees a zero id as missing.
+// none. A unit's own "no activity" check then sees a zero id as missing.
 func activityRef(id ids.ActivityID) string {
 	if id.IsZero() {
 		return ""

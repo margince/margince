@@ -392,8 +392,8 @@ func TestADeliveryWithNoIdIsRefusedBeforeAnythingLeaves(t *testing.T) {
 	}
 }
 
-// A delivery with no activity would leave a ledger row that links to nothing,
-// so it is refused before the row is written or anything leaves.
+// A delivery with no activity would leave a ledger row that links to nothing.
+// It is refused before the row is written or anything leaves.
 func TestADeliveryWithNoActivityIsRefusedBeforeAnythingLeaves(t *testing.T) {
 	t.Parallel()
 	rt := sendableEndpoint(registeredURL)
