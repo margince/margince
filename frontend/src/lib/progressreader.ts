@@ -1,10 +1,12 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-import { useQuery } from "@tanstack/react-query";
+import { useIsFetching, useQuery } from "@tanstack/react-query";
+import { useEffect, useState } from "react";
 import type { components } from "../api/schema";
 import { grants } from "./accessgrants";
 import { analyticsContextOptions } from "./analyticscontext";
+import { ANALYTICS_CONTEXT_KEY } from "./analyticskeys";
 import { useMe } from "./session";
 
 type AnalyticsContext = components["schemas"]["AnalyticsContext"];
@@ -30,15 +32,35 @@ export function readsTeamProgress(
   );
 }
 
+// How long the screen's own reads must stay quiet before the name asks.
+const QUIET_MS = 300;
+
+// True once every other read has rested. A cold first screen fetches before
+// the sidebar's name does, so the name never slows what the reader came for.
+function useScreenReadsRested(): boolean {
+  const reading = useIsFetching({
+    predicate: (query) => query.queryKey[0] !== ANALYTICS_CONTEXT_KEY[0],
+  });
+  const [rested, setRested] = useState(false);
+  useEffect(() => {
+    if (rested || reading > 0) return;
+    const handle = window.setTimeout(() => setRested(true), QUIET_MS);
+    return () => window.clearTimeout(handle);
+  }, [rested, reading]);
+  return rested;
+}
+
 // The frame Progress itself reads, so the name agrees with the page on any
 // first screen. A seat with neither grant is refused the frame and is not asked.
 export function useReadsTeamProgress(): boolean {
   const me = useMe(false).data;
+  const rested = useScreenReadsRested();
   const context = useQuery({
     ...analyticsContextOptions,
     // Every page asks for its name; the name does not need a read per page.
     staleTime: 5 * 60_000,
-    enabled: grants(me, "deal", "read") || grants(me, "forecast", "read"),
+    enabled:
+      rested && (grants(me, "deal", "read") || grants(me, "forecast", "read")),
   });
-  return readsTeamProgress(context.data);
+  return readsTeamProgress(context.data ?? me?.analytics_startup?.context);
 }
