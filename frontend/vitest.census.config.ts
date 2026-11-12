@@ -6,8 +6,8 @@
 // cases. No DOM and no setup file, because no case here renders anything.
 
 import { defineConfig } from "vitest/config";
-import base from "./vite.config.ts";
 import { shuffledTests } from "./scripts/vitest-shards.ts";
+import base from "./vite.config.ts";
 import { TEST_TIMEOUT_MS } from "./vitest.budget.ts";
 
 export default defineConfig({

@@ -11,7 +11,7 @@ import {
   within,
 } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { afterEach, beforeAll, expect, it, vi } from "vitest";
+import { afterEach, expect, it, vi } from "vitest";
 import * as timezone from "../../format/timezone";
 import { en } from "../../i18n/en";
 import { SourceHost } from "../../testing/sourcehost";
@@ -79,10 +79,6 @@ const duty: NoticeCase = {
   created_at: "2026-01-01T10:00:00Z",
   allowed_routes: [],
 };
-// The source drawer is a lazy chunk. Loaded once here, so the first case to
-// open it, whichever runs first, does not wait out its cold import.
-beforeAll(() => import("../voice-knowledge/activitydrawer"));
-
 afterEach(() => {
   cleanup();
   vi.unstubAllGlobals();
