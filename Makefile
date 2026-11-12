@@ -213,6 +213,7 @@ check:
 	@rm -rf "$(CHECK_LANE_LOGS)"
 	@echo "check: $(words $(CHECK_LANES)) lanes, $(CHECK_LANE_JOBS) at a time, each logs to $(CHECK_LANE_LOGS)/<lane>.log"
 	@CHECK_WRITERS_RAN=1 PHASE_TIMER_OWNED=1 $(MAKE) -j$(CHECK_LANE_JOBS) $(CHECK_LANES)
+	@$(MAKE) -s -C backend mcp-inaccessible
 	@[ -n "$$PHASE_TIMER_OWNED" ] || bash scripts/phase-timer.sh report
 
 # One lane each. PHASE_LANE puts the lane's phases in a lane of their own in

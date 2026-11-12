@@ -386,11 +386,13 @@ func (s *Dispatcher) call(ctx context.Context, params json.RawMessage, fr framin
 	}
 	callCtx = s.withChatInput(callCtx, fr, p.Name, p.Arguments, params)
 	spec, registered := s.registry.Spec(p.Name)
+	if registered && s.unoffered(callCtx, p.Name) {
+		return toolError(s.explain(p.Name, &UnknownToolError{Name: p.Name}))
+	}
 	if registered && spec.ProtocolOnly {
 		callCtx = withRequestFacts(callCtx, fr.requestFacts())
 	}
 	served, err := s.registry.InvokeServed(callCtx, p.Name, p.Arguments)
-	s.noteHiddenCall(spec, registered)
 	if err != nil {
 		if handle, minted := s.mintTask(callCtx, fr, served.Tool, err); minted {
 			return handle

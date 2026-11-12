@@ -77,12 +77,14 @@ func (s listSeam) previewDefinition(ctx context.Context, q agents.ListRead) (jso
 	if limit == 0 {
 		limit = filterPreviewDefaultRows
 	}
-	out, err := s.preview.preview(ctx, engine, pred, nil, limit, true)
+	scope, after, err := previewCursor(q.EntityType, pred, q.Cursor)
+	if err != nil {
+		return nil, &agents.BadArgsError{Cause: err}
+	}
+	out, err := s.preview.preview(ctx, engine, pred, scope, after, limit, true)
 	if err != nil {
 		return nil, err
 	}
-	// A tool reads one logged page; read_lists takes no cursor to continue it.
-	out.NextCursor = nil
 	out.Resource = q.EntityType
 	return json.Marshal(out)
 }
