@@ -17,7 +17,7 @@ input and output schema in folds below it. What a tool may do and whether a huma
 | Resources | 14 |
 | Tool catalog | 230.2 KB |
 | Resource catalog | 5.5 KB |
-| Approx. wire tokens | 60328 |
+| Approx. wire tokens | 60331 |
 | Largest tool | `read_context` (11.5 KB) |
 | Scopes rendered | `read`, `draft`, `write`, `send`, `enrich` |
 
@@ -105,7 +105,7 @@ descriptions and input schemas are what each step pays for.
 | [`read_reports`](#read_reports) | Read sales reports | yes |  | 2784 |
 | [`read_tags`](#read_tags) | Read tags | yes |  | 358 |
 | [`read_view`](#read_view) | Read a view | yes |  | 675 |
-| [`read_workspace`](#read_workspace) | Read how this workspace is set up | yes |  | 2767 |
+| [`read_workspace`](#read_workspace) | Read how this workspace is set up | yes |  | 2771 |
 | [`resolve_duplicates`](#resolve_duplicates) | Merge two records or dismiss a flagged pair |  |  | 618 |
 | [`run_research`](#run_research) | Run AI work for your user |  |  | 776 |
 | [`schedule_meeting`](#schedule_meeting) | Invite to a meeting |  |  | 420 |
@@ -11699,7 +11699,8 @@ deal. Take every name verbatim; a custom field is spelled cf_<slug>.
       "enum": [
         "access",
         "rectify",
-        "erasure"
+        "erasure",
+        "restriction"
       ],
       "type": "string"
     },

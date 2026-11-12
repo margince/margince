@@ -17658,9 +17658,10 @@ export interface paths {
          *     recorded. `marketing_objection` is Art. 21(2) and stops marketing only, so the invoice the
          *     same contact is owed still goes.
          *
-         *     A processing restriction and a hard bounce are not recordable by hand: the first is an
-         *     Art. 18 legal state with its own workflow, the second a fact about a mailbox only the mail
-         *     path observes.
+         *     `processing_restriction` is Art. 18: it stops sending, except the three notices above, and
+         *     stops the AI reading, enrichment and scoring of the contact. Only a human admin records
+         *     one, at the subject's authority. A hard bounce is not recordable by hand:
+         *     it is a fact about a mailbox only the mail path observes.
          */
         post: operations["suppressContact"];
         delete?: never;
@@ -17700,7 +17701,7 @@ export interface paths {
          *     admin makes it signed in themselves; an agent working for them cannot.
          *
          *     **No seat lifts a processing restriction here.** Lifting one owes the contact notice
-         *     first, and Margince sends no such notice yet.
+         *     first, so an admin asks `liftContactRestriction`, which sends that notice.
          *
          *     `listContactStops` answers, per stop, whether this caller may lift it and why not.
          *
@@ -17709,6 +17710,40 @@ export interface paths {
          *     touch either way.
          */
         post: operations["liftSuppression"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/contacts/{id}/consent/suppress/{suppressionId}/lift-restriction": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+                /** @description The contact's processing restriction to lift. */
+                suppressionId: string;
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Lift a restriction of processing, after telling the contact.
+         * @description GDPR Art. 18(3) owes the contact notice before their restriction is lifted. This queues
+         *     that notice and lifts nothing yet. The restriction ends once the notice is handed to the
+         *     mail provider. If the notice does not go out, the restriction stays, and
+         *     `listContactStops` shows why in the stop's `lift_notice`. Mail stored during the
+         *     restriction is then read as if it had just arrived.
+         *
+         *     Only an admin signed in to the app asks, as only one records a restriction. An agent is
+         *     refused.
+         *
+         *     A stop that is not a live restriction of this contact answers `404`.
+         */
+        post: operations["liftContactRestriction"];
         delete?: never;
         options?: never;
         head?: never;
@@ -17733,8 +17768,9 @@ export interface paths {
          *     `may_lift` is the answer `liftSuppression` would give this caller, from the same rule. An
          *     admin may correct a marketing objection a colleague recorded by mistake (`correction`);
          *     one the contact recorded themselves stays until they change it. No seat lifts a processing
-         *     restriction here, because lifting one owes the contact notice first and Margince sends no
-         *     such notice yet.
+         *     restriction here, because lifting one owes the contact notice first: `may_lift_restriction`
+         *     says whether this caller may ask `liftContactRestriction`, and `lift_notice` says where
+         *     that notice is.
          */
         get: operations["listContactStops"];
         put?: never;
@@ -52113,12 +52149,12 @@ export interface components {
             /** @description Why they decided that, when they said. */
             note?: string | null;
         };
-        /** @description A GDPR data-subject request (Art. 15/16/17) tracked to completion (B-E11.30; data-model §12.5). */
+        /** @description A GDPR data-subject request (Art. 15/16/17/18) tracked to completion. */
         DataSubjectRequest: {
             /** Format: uuid */
             id: string;
             /** @enum {string} */
-            kind: "access" | "rectify" | "erasure";
+            kind: "access" | "rectify" | "erasure" | "restriction";
             /** @description The data subject: a contact id or external identifier. */
             subject_ref: string;
             /**
@@ -52483,7 +52519,7 @@ export interface components {
         };
         CreateDataSubjectRequest: {
             /** @enum {string} */
-            kind: "access" | "rectify" | "erasure";
+            kind: "access" | "rectify" | "erasure" | "restriction";
             subject_ref: string;
             /**
              * Format: date-time
@@ -52592,7 +52628,7 @@ export interface components {
         };
         JurisdictionDeadline: {
             /** @enum {string} */
-            kind: "access" | "rectify" | "erasure";
+            kind: "access" | "rectify" | "erasure" | "restriction";
             /** @description `gdpr`, or `<jurisdiction> v<version>`. */
             rule: string;
             /** @description ISO 8601 calendar period, when the deadline counts in calendar units. */
@@ -54657,12 +54693,39 @@ export interface components {
             /**
              * @description Why `may_lift` is false. `permission`: you may not change this contact, or you are not
              *     signed in to a seat. `address`: a stop on an address clears when mail to it works
-             *     again. `restriction`: lifting it owes the contact notice first, which Margince cannot
-             *     send yet. `subject_decision`: the contact set it and only they change it. `level`: it
-             *     was recorded at your level or above. Null when `may_lift` is true.
+             *     again. `restriction`: lifting it owes the contact notice first, through
+             *     `liftContactRestriction`. `subject_decision`: the contact set it and only they change
+             *     it. `level`: it was recorded at your level or above. Null when `may_lift` is true.
              * @enum {string|null}
              */
             lift_blocked_by?: "address" | "restriction" | "subject_decision" | "level" | "permission" | null;
+            /**
+             * @description The stop is a processing restriction and this caller, an admin signed in to the app,
+             *     may ask `liftContactRestriction` to lift it. False for every other stop, and while a
+             *     lift notice is queued or sent.
+             */
+            may_lift_restriction?: boolean;
+            /**
+             * @description The newest notice a lift of this restriction queued. Absent when no lift was asked,
+             *     and for every other kind of stop.
+             */
+            lift_notice?: components["schemas"]["RestrictionLiftNotice"];
+        };
+        /** @description Where the notice that lifts a restriction of processing is. */
+        RestrictionLiftNotice: {
+            /**
+             * @description `queued`: the notice waits to be sent, and the restriction stays until it is. A
+             *     `reason` says an attempt failed and Margince tries again. `sent`: the notice went out
+             *     and the restriction is ending; a periodic pass ends it if the first attempt did not.
+             *     `failed`: Margince gave up on the notice, so the restriction stays. Ask again to send a
+             *     new notice.
+             * @enum {string}
+             */
+            status: "queued" | "sent" | "failed";
+            /** @description Why the last attempt did not go out. Null while nothing went wrong. */
+            reason?: string | null;
+            /** Format: date-time */
+            queued_at: string;
         };
         /** @description A recorded exception for one contact, message category and sending company. */
         StandingOverride: {
@@ -85234,7 +85297,7 @@ export interface operations {
     getDataSubjectRequestDeadline: {
         parameters: {
             query: {
-                kind: "access" | "rectify" | "erasure";
+                kind: "access" | "rectify" | "erasure" | "restriction";
                 /** @description When the request arrived. Absent means now. Up to five minutes ahead of the server clock reads as now; later is refused with 422 naming `received_at`. */
                 received_at?: string;
             };
@@ -87148,9 +87211,10 @@ export interface operations {
                      *     category but the three the controller owes anyway. `marketing_objection` is
                      *     Art. 21(2), reaches marketing only, and is recorded at the subject's own
                      *     authority, so only an admin correcting a mistake can lift it.
+                     *     `processing_restriction` is Art. 18 and recorded by a human admin only.
                      * @enum {string}
                      */
-                    kind: "subject_request" | "marketing_objection";
+                    kind: "subject_request" | "marketing_objection" | "processing_restriction";
                     /**
                      * @description What the contact was told, in their words. Stored because a suppression somebody
                      *     later asks to lift is only reviewable if the record says why it was made.
@@ -87203,6 +87267,40 @@ export interface operations {
         responses: {
             /** @description Lifted. */
             204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    liftContactRestriction: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+                /** @description The contact's processing restriction to lift. */
+                suppressionId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    /** @description Why the restriction is being lifted. The audit row keeps it. */
+                    reason: string;
+                };
+            };
+        };
+        responses: {
+            /** @description The notice is queued. The restriction stays until it is sent. */
+            202: {
                 headers: {
                     [name: string]: unknown;
                 };

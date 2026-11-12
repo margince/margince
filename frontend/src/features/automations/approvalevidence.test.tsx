@@ -1,7 +1,7 @@
 /** @vitest-environment happy-dom */
 import "@testing-library/jest-dom/vitest";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { cleanup, render, screen } from "@testing-library/react";
+import { cleanup, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, expect, it, vi } from "vitest";
 import type { DecisionApproval } from "../../design-system/decisioncard";
@@ -16,6 +16,7 @@ import {
   meRoute,
 } from "../../testing/story-utils";
 import { ApprovalEvidence } from "./approvalevidence";
+import { REMOTE_IMAGE_BOX } from "./remoteimagebox";
 
 const SOURCE = "22222222-2222-4222-8222-222222222222";
 const RECORD_ZONE = "Pacific/Auckland";
@@ -49,8 +50,10 @@ function show(
   approval = proposal,
   activity: typeof source & { content_state?: string } = source,
   status = 200,
+  routes: Parameters<typeof installFetchStub>[0] = {},
 ) {
   installFetchStub({
+    ...routes,
     "GET /me": meRoute({ activity: ["read"] }),
     [`GET /activities/${SOURCE}`]: () =>
       jsonResponse(
@@ -260,4 +263,97 @@ it("never renders an extension argument as message markup", () => {
   });
   expect(screen.queryByTestId("injected")).not.toBeInTheDocument();
   expect(document.querySelector("iframe")).toBeNull();
+});
+
+it("draws the signature's images from the approval's own read once the reader asks", async () => {
+  const signed = (signature: string): DecisionApproval => ({
+    ...proposal,
+    kind: "send_email",
+    preview: {
+      version: 2,
+      state: "ready",
+      changes: [],
+      details: [
+        { field: "signature_html", value: { kind: "text", text: signature } },
+      ],
+    },
+  });
+  const fetcher = show(
+    signed(
+      `<p>Anna</p><span ${REMOTE_IMAGE_BOX}="">Company A (cdn.example)</span>`,
+    ),
+    source,
+    200,
+    {
+      "GET /approvals/ap1": () =>
+        jsonResponse(
+          signed(
+            '<p>Anna</p><img src="data:image/png;base64,AAAA" alt="Company A">',
+          ),
+        ),
+    },
+  );
+  const drawn = () => document.querySelector("iframe")?.getAttribute("srcdoc");
+  const readsOne = () =>
+    fetcher.mock.calls.some(([input]) =>
+      (input instanceof Request ? input.url : String(input)).includes(
+        "/approvals/ap1",
+      ),
+    );
+  expect(drawn()).toContain("Company A (cdn.example)");
+  expect(readsOne()).toBe(false);
+
+  await userEvent.click(
+    screen.getByRole("button", { name: "Show the images" }),
+  );
+  await waitFor(() => expect(drawn()).toContain("data:image/png"));
+  expect(readsOne()).toBe(true);
+  expect(screen.queryByRole("button", { name: "Show the images" })).toBeNull();
+});
+
+it("asks for the images again after a read that failed", async () => {
+  const signed = (signature: string): DecisionApproval => ({
+    ...proposal,
+    kind: "send_email",
+    preview: {
+      version: 2,
+      state: "ready",
+      changes: [],
+      details: [
+        { field: "signature_html", value: { kind: "text", text: signature } },
+      ],
+    },
+  });
+  let reads = 0;
+  show(
+    signed(
+      `<p>Anna</p><span ${REMOTE_IMAGE_BOX}="">Company A (cdn.example)</span>`,
+    ),
+    source,
+    200,
+    {
+      "GET /approvals/ap1": () => {
+        reads += 1;
+        return reads === 1
+          ? jsonResponse({ code: "internal" }, 500)
+          : jsonResponse(
+              signed(
+                '<p>Anna</p><img src="data:image/png;base64,AAAA" alt="Company A">',
+              ),
+            );
+      },
+    },
+  );
+  const drawn = () => document.querySelector("iframe")?.getAttribute("srcdoc");
+  const showImages = () =>
+    screen.getByRole("button", { name: "Show the images" });
+
+  await userEvent.click(showImages());
+  await waitFor(() => expect(reads).toBe(1));
+  await waitFor(() => expect(showImages()).toBeEnabled());
+  expect(drawn()).not.toContain("data:image/png");
+
+  await userEvent.click(showImages());
+  await waitFor(() => expect(drawn()).toContain("data:image/png"));
+  expect(reads).toBe(2);
 });

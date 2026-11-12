@@ -118,7 +118,20 @@ func BriefRequest(in Input, lang string) model.Request {
 		Messages:       []model.Message{{Role: "user", Content: fence.Wrap(shownRefs(in).Show(encodeInput(in)))}},
 		MaxTokens:      ai.ReasoningOutputMaxTokens,
 		SecretStripper: ai.NewSecretStripper(),
+		Subjects:       in.subjects(),
 	}
+}
+
+// subjects are the contact and every activity the input quotes.
+func (in Input) subjects() *model.Subjects {
+	var activities []string
+	for _, c := range in.Claims {
+		activities = append(activities, c.SourceID)
+	}
+	for _, a := range in.Recent {
+		activities = append(activities, a.ID)
+	}
+	return model.SubjectsOf([]string{in.ID}, activities)
 }
 
 // encodeInput renders the assembled relationship as the JSON the prompt reads.

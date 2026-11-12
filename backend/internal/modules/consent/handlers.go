@@ -288,6 +288,27 @@ func (h Handlers) LiftSuppression(
 	w.WriteHeader(http.StatusNoContent)
 }
 
+// LiftContactRestriction serves POST
+// /contacts/{id}/consent/suppress/{suppressionId}/lift-restriction: an admin
+// queuing the notice whose sending lifts a restriction of processing.
+func (h Handlers) LiftContactRestriction(
+	w http.ResponseWriter, r *http.Request, id crmcontracts.Id, suppressionID openapi_types.UUID,
+) {
+	var req crmcontracts.LiftContactRestrictionJSONRequestBody
+	if !httperr.Decode(w, r, &req) {
+		return
+	}
+	if err := h.store.RequestRestrictionLift(r.Context(), LiftInput{
+		ContactID:     ids.From[ids.ContactKind](ids.UUID(id)),
+		SuppressionID: ids.UUID(suppressionID),
+		Reason:        req.Reason,
+	}); err != nil {
+		httperr.Write(w, r, err)
+		return
+	}
+	w.WriteHeader(http.StatusAccepted)
+}
+
 // RevokeOverride serves POST /contacts/{id}/consent/allow/{overrideId}/revoke:
 // somebody taking back a standing vouch their level may revoke.
 //

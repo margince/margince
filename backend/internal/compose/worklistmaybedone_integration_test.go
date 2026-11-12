@@ -33,20 +33,20 @@ import (
 // promiseTask files the task signal extraction writes for the promise. It
 // carries the commitment source and the promise mail as its source, and the
 // claim on the recipient points at it.
-func promiseTask(t *testing.T, e *integration.Env, p promiseThread) ids.UUID {
+func promiseTask(t *testing.T, e *integration.Env, p integration.PromiseThread) ids.UUID {
 	t.Helper()
-	promise := ids.UUID(p.claim.SourceActivityId)
-	due := p.sentAt.AddDate(0, 0, 2)
+	promise := ids.UUID(p.Claim.SourceActivityId)
+	due := p.SentAt.AddDate(0, 0, 2)
 	task, _, err := e.Activities.LogActivity(e.Admin(), activities.LogActivityInput{
 		Kind: "task", Subject: new("Send the listing details"), Source: "manual",
 		AssigneeID: new(ids.From[ids.UserKind](e.AdminUser)), DueAt: &due,
 		SourceSystem: new(activities.CommitmentTaskSource), SourceID: new(ids.NewV7().String()), SourceActivityID: &promise,
-		Links: []activities.ActivityLinkInput{{EntityType: "contact", EntityID: p.contact.UUID}},
+		Links: []activities.ActivityLinkInput{{EntityType: "contact", EntityID: p.Contact.UUID}},
 	})
 	if err != nil {
 		t.Fatalf("filing the promise task: %v", err)
 	}
-	e.WsExec(t, `UPDATE conversation_claim SET task_activity_id = $1 WHERE id = $2`, ids.UUID(task.Id), ids.UUID(p.claim.Id))
+	e.WsExec(t, `UPDATE conversation_claim SET task_activity_id = $1 WHERE id = $2`, ids.UUID(task.Id), ids.UUID(p.Claim.Id))
 	return ids.UUID(task.Id)
 }
 
@@ -83,12 +83,12 @@ func worklistTaskRow(t *testing.T, e *integration.Env, task ids.UUID, at time.Ti
 // The automatic completion goes first: a task it closed is asked about nowhere.
 func TestATaskTheAnsweredRuleClosedIsNotAsked(t *testing.T) {
 	e := integration.Setup(t)
-	p := seedPromiseThread(t, e)
+	p := e.SeedPromiseThread(t)
 	task := promiseTask(t, e, p)
 	// Capture wrote the task when the promise arrived, before the reply.
-	e.WsExec(t, `UPDATE activity SET created_at=$1 WHERE id=$2`, p.sentAt, task)
-	reply := logThreadMail(e.Admin(), t, e, p.contact, "thread-listing", p.address, "outbound", p.sentAt.AddDate(0, 0, 6))
-	at := p.sentAt.AddDate(0, 0, 7)
+	e.WsExec(t, `UPDATE activity SET created_at=$1 WHERE id=$2`, p.SentAt, task)
+	reply := e.LogThreadMail(e.Admin(), t, p.Contact, "thread-listing", p.Address, "outbound", p.SentAt.AddDate(0, 0, 6))
+	at := p.SentAt.AddDate(0, 0, 7)
 	if q := worklistQuestion(t, e, task, at); q == nil {
 		t.Fatal("the open task did not ask")
 	}
@@ -105,26 +105,26 @@ func TestATaskTheAnsweredRuleClosedIsNotAsked(t *testing.T) {
 	if row, ok := worklistTaskRow(t, e, task, at); ok {
 		t.Fatalf("a closed task is still on the Worklist: %+v", row.MayBeDone)
 	}
-	if moment := momentOf(e.Admin(), t, pageAsOf(e, at), p.contact); moment.MayBeDone != nil {
+	if moment := momentOf(e.Admin(), t, pageAsOf(e, at), p.Contact); moment.MayBeDone != nil {
 		t.Fatalf("the contact page asked about a closed task: %+v", moment)
 	}
 }
 
 func TestTheWorklistAsksDoneAsTheContactPageDoesAndHoldsItsNotYet(t *testing.T) {
 	e := integration.Setup(t)
-	p := seedPromiseThread(t, e)
+	p := e.SeedPromiseThread(t)
 	task := promiseTask(t, e, p)
-	at := p.sentAt.AddDate(0, 0, 7)
+	at := p.SentAt.AddDate(0, 0, 7)
 	if q := worklistQuestion(t, e, task, at); q != nil {
 		t.Fatalf("the Worklist asked before any later mail: %+v", q)
 	}
 
-	reply := logThreadMail(e.Admin(), t, e, p.contact, "thread-listing", p.address, "outbound", p.sentAt.AddDate(0, 0, 6))
+	reply := e.LogThreadMail(e.Admin(), t, p.Contact, "thread-listing", p.Address, "outbound", p.SentAt.AddDate(0, 0, 6))
 	q := worklistQuestion(t, e, task, at)
 	if q == nil {
 		t.Fatal("our later reply on the promise thread asked nothing on the Worklist")
 	}
-	if ids.UUID(q.EmailActivityId) != reply || ids.UUID(q.ContactId) != p.contact.UUID || q.ClaimKey != momentaction.DoneKey(openapi_types.UUID(task)) {
+	if ids.UUID(q.EmailActivityId) != reply || ids.UUID(q.ContactId) != p.Contact.UUID || q.ClaimKey != momentaction.DoneKey(openapi_types.UUID(task)) {
 		t.Fatalf("may_be_done = %+v, want the reply, the recipient and the shared key", q)
 	}
 	if done := readTask(t, e, task).IsDone; done != nil && *done {
@@ -133,7 +133,7 @@ func TestTheWorklistAsksDoneAsTheContactPageDoesAndHoldsItsNotYet(t *testing.T) 
 
 	// The contact page asks the same question with the same key and fingerprint.
 	page := pageAsOf(e, at)
-	moment := momentOf(e.Admin(), t, page, p.contact)
+	moment := momentOf(e.Admin(), t, page, p.Contact)
 	if moment.MayBeDone == nil || moment.MayBeDone.PromiseType != crmcontracts.ContactMomentMayBeDonePromiseTypeTask {
 		t.Fatalf("the contact page does not ask about the task: %+v", moment)
 	}
@@ -143,7 +143,7 @@ func TestTheWorklistAsksDoneAsTheContactPageDoesAndHoldsItsNotYet(t *testing.T) 
 	}
 
 	// Not yet, given through the contact page's own set-aside.
-	if err := page.DismissMoment(e.Admin(), p.contact, crmcontracts.DismissContactMomentRequest{
+	if err := page.DismissMoment(e.Admin(), p.Contact, crmcontracts.DismissContactMomentRequest{
 		ClaimKey: q.ClaimKey, EvidenceFingerprint: q.EvidenceFingerprint,
 	}); err != nil {
 		t.Fatal(err)
@@ -151,12 +151,12 @@ func TestTheWorklistAsksDoneAsTheContactPageDoesAndHoldsItsNotYet(t *testing.T) 
 	if again := worklistQuestion(t, e, task, at); again != nil {
 		t.Errorf("Not yet did not hold on the Worklist: %+v", again)
 	}
-	if after := momentOf(e.Admin(), t, page, p.contact); after.MayBeDone != nil {
+	if after := momentOf(e.Admin(), t, page, p.Contact); after.MayBeDone != nil {
 		t.Errorf("Not yet did not hold on the contact page: %+v", after)
 	}
 
 	// A newer mail asks again.
-	newer := logThreadMail(e.Admin(), t, e, p.contact, "thread-listing", p.address, "outbound", p.sentAt.AddDate(0, 0, 6).Add(3*time.Hour))
+	newer := e.LogThreadMail(e.Admin(), t, p.Contact, "thread-listing", p.Address, "outbound", p.SentAt.AddDate(0, 0, 6).Add(3*time.Hour))
 	if again := worklistQuestion(t, e, task, at); again == nil || ids.UUID(again.EmailActivityId) != newer {
 		t.Errorf("a newer mail did not ask again: %+v", again)
 	}
@@ -164,7 +164,7 @@ func TestTheWorklistAsksDoneAsTheContactPageDoesAndHoldsItsNotYet(t *testing.T) 
 
 // secondRecipient files the same promise's claim on another contact, as
 // signal extraction does for a promise made to two contacts at once.
-func secondRecipient(t *testing.T, e *integration.Env, p promiseThread, task ids.UUID) (ids.ContactID, string) {
+func secondRecipient(t *testing.T, e *integration.Env, p integration.PromiseThread, task ids.UUID) (ids.ContactID, string) {
 	t.Helper()
 	const address = "jonas@kunde.example"
 	row, err := e.Contacts.CreateContact(e.Admin(), contacts.CreateContactInput{
@@ -175,7 +175,7 @@ func secondRecipient(t *testing.T, e *integration.Env, p promiseThread, task ids
 	}
 	contact := ids.From[ids.ContactKind](ids.UUID(row.Id))
 	claim := e.RecordClaim(e.Admin(), t, contacts.ClaimInput{
-		ContactID: contact, Kind: "commitment_ours", Body: "Send the listing details", ActivityID: ids.UUID(p.claim.SourceActivityId),
+		ContactID: contact, Kind: "commitment_ours", Body: "Send the listing details", ActivityID: ids.UUID(p.Claim.SourceActivityId),
 		Quote: "I'll prepare the listing details and get those over to you shortly.", Source: "manual",
 	})
 	e.WsExec(t, `UPDATE conversation_claim SET task_activity_id = $1 WHERE id = $2`, task, ids.UUID(claim.Id))
@@ -184,19 +184,19 @@ func secondRecipient(t *testing.T, e *integration.Env, p promiseThread, task ids
 
 func TestANotYetForOneRecipientHoldsUntilWeWriteToAnyRecipientAgain(t *testing.T) {
 	e := integration.Setup(t)
-	p := seedPromiseThread(t, e)
+	p := e.SeedPromiseThread(t)
 	task := promiseTask(t, e, p)
 	jonas, jonasAddress := secondRecipient(t, e, p, task)
-	at := p.sentAt.AddDate(0, 0, 9)
-	logThreadMail(e.Admin(), t, e, jonas, "thread-listing", jonasAddress, "outbound", p.sentAt.AddDate(0, 0, 5))
-	toLena := logThreadMail(e.Admin(), t, e, p.contact, "thread-listing", p.address, "outbound", p.sentAt.AddDate(0, 0, 6))
+	at := p.SentAt.AddDate(0, 0, 9)
+	e.LogThreadMail(e.Admin(), t, jonas, "thread-listing", jonasAddress, "outbound", p.SentAt.AddDate(0, 0, 5))
+	toLena := e.LogThreadMail(e.Admin(), t, p.Contact, "thread-listing", p.Address, "outbound", p.SentAt.AddDate(0, 0, 6))
 	q := worklistQuestion(t, e, task, at)
-	if q == nil || ids.UUID(q.EmailActivityId) != toLena || ids.UUID(q.ContactId) != p.contact.UUID {
+	if q == nil || ids.UUID(q.EmailActivityId) != toLena || ids.UUID(q.ContactId) != p.Contact.UUID {
 		t.Fatalf("may_be_done = %+v, want the newest mail, to Lena", q)
 	}
 	// Not yet on Lena's page holds for the task, though Jonas had an older mail.
 	page := pageAsOf(e, at)
-	if err := page.DismissMoment(e.Admin(), p.contact, crmcontracts.DismissContactMomentRequest{
+	if err := page.DismissMoment(e.Admin(), p.Contact, crmcontracts.DismissContactMomentRequest{
 		ClaimKey: q.ClaimKey, EvidenceFingerprint: q.EvidenceFingerprint,
 	}); err != nil {
 		t.Fatal(err)
@@ -204,7 +204,7 @@ func TestANotYetForOneRecipientHoldsUntilWeWriteToAnyRecipientAgain(t *testing.T
 	if again := worklistQuestion(t, e, task, at); again != nil {
 		t.Errorf("an older mail to Jonas asked again after Not yet: %+v", again)
 	}
-	toJonas := logThreadMail(e.Admin(), t, e, jonas, "thread-listing", jonasAddress, "outbound", p.sentAt.AddDate(0, 0, 8))
+	toJonas := e.LogThreadMail(e.Admin(), t, jonas, "thread-listing", jonasAddress, "outbound", p.SentAt.AddDate(0, 0, 8))
 	if again := worklistQuestion(t, e, task, at); again == nil || ids.UUID(again.EmailActivityId) != toJonas || ids.UUID(again.ContactId) != jonas.UUID {
 		t.Errorf("a newer mail to Jonas did not ask again: %+v", again)
 	}
@@ -214,10 +214,10 @@ func TestANotYetForOneRecipientHoldsUntilWeWriteToAnyRecipientAgain(t *testing.T
 // it as it does on the contact page.
 func TestAUsersAgentIsAskedAsTheyAreAndSharesTheirNotYet(t *testing.T) {
 	e := integration.Setup(t)
-	p := seedPromiseThread(t, e)
+	p := e.SeedPromiseThread(t)
 	task := promiseTask(t, e, p)
-	logThreadMail(e.Admin(), t, e, p.contact, "thread-listing", p.address, "outbound", p.sentAt.AddDate(0, 0, 6))
-	at := p.sentAt.AddDate(0, 0, 7)
+	e.LogThreadMail(e.Admin(), t, p.Contact, "thread-listing", p.Address, "outbound", p.SentAt.AddDate(0, 0, 6))
+	at := p.SentAt.AddDate(0, 0, 7)
 	agent := e.AgentFor(t, e.AdminUser, nil, integration.AdminPerms)
 	service := newAttentionService(e.Pool, approvals.NewService(e.DB()), func() time.Time { return at })
 	question := func() *crmcontracts.WorklistMayBeDone {
@@ -238,7 +238,7 @@ func TestAUsersAgentIsAskedAsTheyAreAndSharesTheirNotYet(t *testing.T) {
 	if asked == nil {
 		t.Fatal("the agent's Worklist did not ask what its user's asks")
 	}
-	if err := pageAsOf(e, at).DismissMoment(e.Admin(), p.contact, crmcontracts.DismissContactMomentRequest{
+	if err := pageAsOf(e, at).DismissMoment(e.Admin(), p.Contact, crmcontracts.DismissContactMomentRequest{
 		ClaimKey: asked.ClaimKey, EvidenceFingerprint: asked.EvidenceFingerprint,
 	}); err != nil {
 		t.Fatal(err)
@@ -251,14 +251,14 @@ func TestAUsersAgentIsAskedAsTheyAreAndSharesTheirNotYet(t *testing.T) {
 // Automatic work has no user to answer for.
 func TestAutomaticWorkReadingTheWorklistIsAskedNothing(t *testing.T) {
 	e := integration.Setup(t)
-	p := seedPromiseThread(t, e)
+	p := e.SeedPromiseThread(t)
 	task := promiseTask(t, e, p)
-	logThreadMail(e.Admin(), t, e, p.contact, "thread-listing", p.address, "outbound", p.sentAt.AddDate(0, 0, 6))
+	e.LogThreadMail(e.Admin(), t, p.Contact, "thread-listing", p.Address, "outbound", p.SentAt.AddDate(0, 0, 6))
 	human, _ := principal.Actor(e.Admin())
 	agent := human
 	agent.Type, agent.ID = principal.PrincipalAgent, "agent:test"
 	ctx := principal.WithActor(e.Admin(), agent)
-	at := p.sentAt.AddDate(0, 0, 7)
+	at := p.SentAt.AddDate(0, 0, 7)
 	service := newAttentionService(e.Pool, approvals.NewService(e.DB()), func() time.Time { return at })
 	day, err := service.Worklist(ctx, "mine", "", ids.UUID{}, 100, "")
 	if errors.Is(err, apperrors.ErrPermissionDenied) {
@@ -279,13 +279,13 @@ func TestAutomaticWorkReadingTheWorklistIsAskedNothing(t *testing.T) {
 // It names the same contact, mail, key and fingerprint, so one Not yet holds on both.
 func TestTheCompanyPageAsksDoneAsTheWorklistDoes(t *testing.T) {
 	e := integration.Setup(t)
-	p := seedPromiseThread(t, e)
+	p := e.SeedPromiseThread(t)
 	task := promiseTask(t, e, p)
 	company := e.SeedCompany(t, "Kunde GmbH", nil)
 	e.WsExec(t, `INSERT INTO relationship (kind, contact_id, company_id, source, captured_by)
-		VALUES ('employment', $1, $2, 'manual', 'human:x')`, p.contact.UUID, company)
-	at := p.sentAt.AddDate(0, 0, 7)
-	logThreadMail(e.Admin(), t, e, p.contact, "thread-listing", p.address, "outbound", p.sentAt.AddDate(0, 0, 6))
+		VALUES ('employment', $1, $2, 'manual', 'human:x')`, p.Contact.UUID, company)
+	at := p.SentAt.AddDate(0, 0, 7)
+	e.LogThreadMail(e.Admin(), t, p.Contact, "thread-listing", p.Address, "outbound", p.SentAt.AddDate(0, 0, 6))
 
 	page, err := company360.NewService(e.Pool, e.Contacts, e.Deals, e.Projects,
 		approvals.NewService(InstallationDB(e.Pool)), func() time.Time { return at }).Assemble(e.Admin(), ids.From[ids.CompanyKind](company))

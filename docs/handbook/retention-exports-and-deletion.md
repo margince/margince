@@ -95,6 +95,15 @@ A request opened through a confirm link already has its identity check filled in
 
 Also called: subject access request, SAR, Art. 15, what do you hold about me.
 
+### How do I restrict the processing of a contact's data?
+A contact may ask you to restrict the processing of their data (GDPR Art. 18), for example while they dispute that a field is correct. Only an admin can restrict a contact. An agent cannot. Open **Settings → Privacy and retention → Requests → Privacy**, choose **New request**, set **Kind** to **Restriction** and pick the contact. Write the answer and choose **Fulfill**: that restricts the contact.
+
+While the contact is restricted, it shows "Processing is restricted". Margince keeps the contact and stores new mail, but sends them nothing except a privacy notice, a security warning or the confirmation of an opt-out. The AI does not read any mail they send or receive, and writes no brief or draft about them. Search still finds that mail by its words. Mail that arrives in that time is read once the contact is no longer restricted. No agent sees the contact or reads their mail, Margince asks no data provider about them, and no AI scores or enriches their record.
+
+To end it, an admin opens the contact's stops, chooses **Lift the restriction** and writes why. The law says the contact must be told first, so Margince sends them a notice. The contact stays restricted until that notice is sent, and the stop shows "The notice is waiting to be sent." If the notice does not go out, the contact stays restricted and the stop says why. Choose **Lift the restriction** again to send a new notice. Once the notice is sent, Margince reads the mail that arrived while the contact was restricted, as if it had just arrived.
+
+Also called: restrict processing, Art. 18, freeze a contact.
+
 ### How do I archive a record?
 To archive a contact or company, open it and choose **More actions → Archive**, then confirm "Archive this record? You can bring it back from its history." For a deal, choose **Archive deal**; for a project, **Archive project**. Leads are not archived: choose **Disqualify**. To see archived records on a list, choose **Show archived**.
 
@@ -137,11 +146,8 @@ Across the whole product, removing a record keeps it. An archived record leaves 
 
 Some examples of the difference in the product's own words:
 
-- Archiving a project "removes this project from the active list and frees its
-  key." The project is then read-only: "This project is archived and takes no
-  changes."
-- Archiving a document set stops the set, and everything filed in it, from showing up in
-  search. Nothing is destroyed.
+- Archiving a project "removes this project from the active list and frees its key." The project is then read-only: "This project is archived and takes no changes."
+- Archiving a document set stops the set, and everything filed in it, from showing up in search. Nothing is destroyed.
 - Merging two records destroys nothing either: "Merge {source} into {target}?
   This archives {source}." Both values are kept in a merge; choosing a side decides
   which record stays and which value is shown first.
@@ -259,7 +265,7 @@ Only an **Admin** or **Ops** user can change retention. Everyone else cannot eve
 
 The list of privacy requests, **Settings → Privacy and retention → Requests → Privacy**, holds "Data subject requests with their statutory deadlines." Only admins can open it by default, because the list names whoever asked. An admin can give that access to someone else by itself, without letting them manage members.
 
-A request has a kind (**Access**, **Correction** or **Erasure**), a subject, an assignee, a due date, and a resolution. Choose its subject in the list to open it. It moves through **In progress** and is closed by **Fulfill** or **Reject**. To close one you must write the answer: "Closing a request needs its answer." Fulfilling an erasure is the exception: it records its own answer. To give a request back, set **Assignee** to **Unassigned**.
+A request has a kind (**Access**, **Correction**, **Erasure** or **Restriction**), a subject, an assignee, a due date, and a resolution. Choose its subject in the list to open it. It moves through **In progress** and is closed by **Fulfill** or **Reject**. To close one you must write the answer: "Closing a request needs its answer." Fulfilling an erasure is the exception: it records its own answer. To give a request back, set **Assignee** to **Unassigned**.
 
 To close a request you also fill **How the identity was checked**. If it could not be checked, the request can only be rejected. Fill **Requester’s email address** when the request came from an address that the subject reference does not name.
 

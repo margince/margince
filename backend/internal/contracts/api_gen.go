@@ -9588,9 +9588,10 @@ func (e CreateCustomFieldRequestType) Valid() bool {
 
 // Defines values for CreateDataSubjectRequestKind.
 const (
-	CreateDataSubjectRequestKindAccess  CreateDataSubjectRequestKind = "access"
-	CreateDataSubjectRequestKindErasure CreateDataSubjectRequestKind = "erasure"
-	CreateDataSubjectRequestKindRectify CreateDataSubjectRequestKind = "rectify"
+	CreateDataSubjectRequestKindAccess      CreateDataSubjectRequestKind = "access"
+	CreateDataSubjectRequestKindErasure     CreateDataSubjectRequestKind = "erasure"
+	CreateDataSubjectRequestKindRectify     CreateDataSubjectRequestKind = "rectify"
+	CreateDataSubjectRequestKindRestriction CreateDataSubjectRequestKind = "restriction"
 )
 
 // Valid indicates whether the value is a known member of the CreateDataSubjectRequestKind enum.
@@ -9601,6 +9602,8 @@ func (e CreateDataSubjectRequestKind) Valid() bool {
 	case CreateDataSubjectRequestKindErasure:
 		return true
 	case CreateDataSubjectRequestKindRectify:
+		return true
+	case CreateDataSubjectRequestKindRestriction:
 		return true
 	default:
 		return false
@@ -10383,9 +10386,10 @@ func (e CustomFieldLiveListSharing) Valid() bool {
 
 // Defines values for DataSubjectRequestKind.
 const (
-	DataSubjectRequestKindAccess  DataSubjectRequestKind = "access"
-	DataSubjectRequestKindErasure DataSubjectRequestKind = "erasure"
-	DataSubjectRequestKindRectify DataSubjectRequestKind = "rectify"
+	DataSubjectRequestKindAccess      DataSubjectRequestKind = "access"
+	DataSubjectRequestKindErasure     DataSubjectRequestKind = "erasure"
+	DataSubjectRequestKindRectify     DataSubjectRequestKind = "rectify"
+	DataSubjectRequestKindRestriction DataSubjectRequestKind = "restriction"
 )
 
 // Valid indicates whether the value is a known member of the DataSubjectRequestKind enum.
@@ -10396,6 +10400,8 @@ func (e DataSubjectRequestKind) Valid() bool {
 	case DataSubjectRequestKindErasure:
 		return true
 	case DataSubjectRequestKindRectify:
+		return true
+	case DataSubjectRequestKindRestriction:
 		return true
 	default:
 		return false
@@ -15279,9 +15285,10 @@ func (e JobKindHealthConditionCode) Valid() bool {
 
 // Defines values for JurisdictionDeadlineKind.
 const (
-	JurisdictionDeadlineKindAccess  JurisdictionDeadlineKind = "access"
-	JurisdictionDeadlineKindErasure JurisdictionDeadlineKind = "erasure"
-	JurisdictionDeadlineKindRectify JurisdictionDeadlineKind = "rectify"
+	JurisdictionDeadlineKindAccess      JurisdictionDeadlineKind = "access"
+	JurisdictionDeadlineKindErasure     JurisdictionDeadlineKind = "erasure"
+	JurisdictionDeadlineKindRectify     JurisdictionDeadlineKind = "rectify"
+	JurisdictionDeadlineKindRestriction JurisdictionDeadlineKind = "restriction"
 )
 
 // Valid indicates whether the value is a known member of the JurisdictionDeadlineKind enum.
@@ -15292,6 +15299,8 @@ func (e JurisdictionDeadlineKind) Valid() bool {
 	case JurisdictionDeadlineKindErasure:
 		return true
 	case JurisdictionDeadlineKindRectify:
+		return true
+	case JurisdictionDeadlineKindRestriction:
 		return true
 	default:
 		return false
@@ -21010,6 +21019,27 @@ func (e RestoreLeftBehindKind) Valid() bool {
 	case RestoreLeftBehindKindRelationship:
 		return true
 	case RestoreLeftBehindKindTag:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for RestrictionLiftNoticeStatus.
+const (
+	RestrictionLiftNoticeStatusFailed RestrictionLiftNoticeStatus = "failed"
+	RestrictionLiftNoticeStatusQueued RestrictionLiftNoticeStatus = "queued"
+	RestrictionLiftNoticeStatusSent   RestrictionLiftNoticeStatus = "sent"
+)
+
+// Valid indicates whether the value is a known member of the RestrictionLiftNoticeStatus enum.
+func (e RestrictionLiftNoticeStatus) Valid() bool {
+	switch e {
+	case RestrictionLiftNoticeStatusFailed:
+		return true
+	case RestrictionLiftNoticeStatusQueued:
+		return true
+	case RestrictionLiftNoticeStatusSent:
 		return true
 	default:
 		return false
@@ -29370,14 +29400,17 @@ func (e PreviewControllerMailParamsKind) Valid() bool {
 
 // Defines values for SuppressContactJSONBodyKind.
 const (
-	SuppressContactJSONBodyKindMarketingObjection SuppressContactJSONBodyKind = "marketing_objection"
-	SuppressContactJSONBodyKindSubjectRequest     SuppressContactJSONBodyKind = "subject_request"
+	SuppressContactJSONBodyKindMarketingObjection    SuppressContactJSONBodyKind = "marketing_objection"
+	SuppressContactJSONBodyKindProcessingRestriction SuppressContactJSONBodyKind = "processing_restriction"
+	SuppressContactJSONBodyKindSubjectRequest        SuppressContactJSONBodyKind = "subject_request"
 )
 
 // Valid indicates whether the value is a known member of the SuppressContactJSONBodyKind enum.
 func (e SuppressContactJSONBodyKind) Valid() bool {
 	switch e {
 	case SuppressContactJSONBodyKindMarketingObjection:
+		return true
+	case SuppressContactJSONBodyKindProcessingRestriction:
 		return true
 	case SuppressContactJSONBodyKindSubjectRequest:
 		return true
@@ -29511,9 +29544,10 @@ func (e ListDataSubjectRequestsParamsStatus) Valid() bool {
 
 // Defines values for GetDataSubjectRequestDeadlineParamsKind.
 const (
-	GetDataSubjectRequestDeadlineParamsKindAccess  GetDataSubjectRequestDeadlineParamsKind = "access"
-	GetDataSubjectRequestDeadlineParamsKindErasure GetDataSubjectRequestDeadlineParamsKind = "erasure"
-	GetDataSubjectRequestDeadlineParamsKindRectify GetDataSubjectRequestDeadlineParamsKind = "rectify"
+	GetDataSubjectRequestDeadlineParamsKindAccess      GetDataSubjectRequestDeadlineParamsKind = "access"
+	GetDataSubjectRequestDeadlineParamsKindErasure     GetDataSubjectRequestDeadlineParamsKind = "erasure"
+	GetDataSubjectRequestDeadlineParamsKindRectify     GetDataSubjectRequestDeadlineParamsKind = "rectify"
+	GetDataSubjectRequestDeadlineParamsKindRestriction GetDataSubjectRequestDeadlineParamsKind = "restriction"
 )
 
 // Valid indicates whether the value is a known member of the GetDataSubjectRequestDeadlineParamsKind enum.
@@ -29524,6 +29558,8 @@ func (e GetDataSubjectRequestDeadlineParamsKind) Valid() bool {
 	case GetDataSubjectRequestDeadlineParamsKindErasure:
 		return true
 	case GetDataSubjectRequestDeadlineParamsKindRectify:
+		return true
+	case GetDataSubjectRequestDeadlineParamsKindRestriction:
 		return true
 	default:
 		return false
@@ -43696,13 +43732,22 @@ type ContactStop struct {
 
 	// LiftBlockedBy Why `may_lift` is false. `permission`: you may not change this contact, or you are not
 	// signed in to a seat. `address`: a stop on an address clears when mail to it works
-	// again. `restriction`: lifting it owes the contact notice first, which Margince cannot
-	// send yet. `subject_decision`: the contact set it and only they change it. `level`: it
-	// was recorded at your level or above. Null when `may_lift` is true.
+	// again. `restriction`: lifting it owes the contact notice first, through
+	// `liftContactRestriction`. `subject_decision`: the contact set it and only they change
+	// it. `level`: it was recorded at your level or above. Null when `may_lift` is true.
 	LiftBlockedBy *ContactStopLiftBlockedBy `json:"lift_blocked_by,omitempty"`
+
+	// LiftNotice The newest notice a lift of this restriction queued. Absent when no lift was asked,
+	// and for every other kind of stop.
+	LiftNotice *RestrictionLiftNotice `json:"lift_notice,omitempty"`
 
 	// MayLift This caller may take the stop back now, with a reason.
 	MayLift bool `json:"may_lift"`
+
+	// MayLiftRestriction The stop is a processing restriction and this caller, an admin signed in to the app,
+	// may ask `liftContactRestriction` to lift it. False for every other stop, and while a
+	// lift notice is queued or sent.
+	MayLiftRestriction *bool `json:"may_lift_restriction,omitempty"`
 
 	// PurposeKey The one purpose a narrow stop binds. Null for a stop on every purpose of its kind.
 	PurposeKey *string `json:"purpose_key,omitempty"`
@@ -43725,9 +43770,9 @@ type ContactStopAuthority string
 
 // ContactStopLiftBlockedBy Why `may_lift` is false. `permission`: you may not change this contact, or you are not
 // signed in to a seat. `address`: a stop on an address clears when mail to it works
-// again. `restriction`: lifting it owes the contact notice first, which Margince cannot
-// send yet. `subject_decision`: the contact set it and only they change it. `level`: it
-// was recorded at your level or above. Null when `may_lift` is true.
+// again. `restriction`: lifting it owes the contact notice first, through
+// `liftContactRestriction`. `subject_decision`: the contact set it and only they change
+// it. `level`: it was recorded at your level or above. Null when `may_lift` is true.
 type ContactStopLiftBlockedBy string
 
 // ContextEntityRef defines model for ContextEntityRef.
@@ -45464,7 +45509,7 @@ type DataCoverage struct {
 	Sources []ForecastAssuranceSource `json:"sources"`
 }
 
-// DataSubjectRequest A GDPR data-subject request (Art. 15/16/17) tracked to completion (B-E11.30; data-model §12.5).
+// DataSubjectRequest A GDPR data-subject request (Art. 15/16/17/18) tracked to completion.
 type DataSubjectRequest struct {
 	AssigneeId *openapi_types.UUID `json:"assignee_id,omitempty"`
 	CreatedAt  time.Time           `json:"created_at"`
@@ -60645,6 +60690,28 @@ type RestrictedRecord struct {
 	RestrictedUntil time.Time `json:"restricted_until"`
 }
 
+// RestrictionLiftNotice Where the notice that lifts a restriction of processing is.
+type RestrictionLiftNotice struct {
+	QueuedAt time.Time `json:"queued_at"`
+
+	// Reason Why the last attempt did not go out. Null while nothing went wrong.
+	Reason *string `json:"reason,omitempty"`
+
+	// Status `queued`: the notice waits to be sent, and the restriction stays until it is. A
+	// `reason` says an attempt failed and Margince tries again. `sent`: the notice went out
+	// and the restriction is ending; a periodic pass ends it if the first attempt did not.
+	// `failed`: Margince gave up on the notice, so the restriction stays. Ask again to send a
+	// new notice.
+	Status RestrictionLiftNoticeStatus `json:"status"`
+}
+
+// RestrictionLiftNoticeStatus `queued`: the notice waits to be sent, and the restriction stays until it is. A
+// `reason` says an attempt failed and Margince tries again. `sent`: the notice went out
+// and the restriction is ending; a periodic pass ends it if the first attempt did not.
+// `failed`: Margince gave up on the notice, so the restriction stays. Ask again to send a
+// new notice.
+type RestrictionLiftNoticeStatus string
+
 // RetainedEmailSignature defines model for RetainedEmailSignature.
 type RetainedEmailSignature struct {
 	Id        openapi_types.UUID `json:"id"`
@@ -73104,6 +73171,7 @@ type SuppressContactJSONBody struct {
 	// category but the three the controller owes anyway. `marketing_objection` is
 	// Art. 21(2), reaches marketing only, and is recorded at the subject's own
 	// authority, so only an admin correcting a mistake can lift it.
+	// `processing_restriction` is Art. 18 and recorded by a human admin only.
 	Kind SuppressContactJSONBodyKind `json:"kind"`
 
 	// Reason What the contact was told, in their words. Stored because a suppression somebody
@@ -73119,6 +73187,12 @@ type LiftSuppressionJSONBody struct {
 	// Reason Why the stop is being taken back. Required, unlike the reason for setting
 	// one: a record saying somebody asked us not to write, now overruled, is the
 	// change most worth being able to explain later.
+	Reason string `json:"reason"`
+}
+
+// LiftContactRestrictionJSONBody defines parameters for LiftContactRestriction.
+type LiftContactRestrictionJSONBody struct {
+	// Reason Why the restriction is being lifted. The audit row keeps it.
 	Reason string `json:"reason"`
 }
 
@@ -78760,6 +78834,9 @@ type SuppressContactJSONRequestBody SuppressContactJSONBody
 
 // LiftSuppressionJSONRequestBody defines body for LiftSuppression for application/json ContentType.
 type LiftSuppressionJSONRequestBody LiftSuppressionJSONBody
+
+// LiftContactRestrictionJSONRequestBody defines body for LiftContactRestriction for application/json ContentType.
+type LiftContactRestrictionJSONRequestBody LiftContactRestrictionJSONBody
 
 // DraftContactEmailJSONRequestBody defines body for DraftContactEmail for application/json ContentType.
 type DraftContactEmailJSONRequestBody DraftContactEmailJSONBody
@@ -93611,6 +93688,9 @@ type ServerInterface interface {
 	// Take back a stop, if you outrank the level that set it.
 	// (POST /contacts/{id}/consent/suppress/{suppressionId}/lift)
 	LiftSuppression(w http.ResponseWriter, r *http.Request, id Id, suppressionId openapi_types.UUID)
+	// Lift a restriction of processing, after telling the contact.
+	// (POST /contacts/{id}/consent/suppress/{suppressionId}/lift-restriction)
+	LiftContactRestriction(w http.ResponseWriter, r *http.Request, id Id, suppressionId openapi_types.UUID)
 	// Recipients copied on inbound correspondence who have no contact or live lead.
 	// (GET /contacts/{id}/conversation-suggestions)
 	ListContactConversationSuggestions(w http.ResponseWriter, r *http.Request, id Id)
@@ -97991,6 +98071,12 @@ func (_ Unimplemented) SuppressContact(w http.ResponseWriter, r *http.Request, i
 // Take back a stop, if you outrank the level that set it.
 // (POST /contacts/{id}/consent/suppress/{suppressionId}/lift)
 func (_ Unimplemented) LiftSuppression(w http.ResponseWriter, r *http.Request, id Id, suppressionId openapi_types.UUID) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Lift a restriction of processing, after telling the contact.
+// (POST /contacts/{id}/consent/suppress/{suppressionId}/lift-restriction)
+func (_ Unimplemented) LiftContactRestriction(w http.ResponseWriter, r *http.Request, id Id, suppressionId openapi_types.UUID) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -120318,6 +120404,47 @@ func (siw *ServerInterfaceWrapper) LiftSuppression(w http.ResponseWriter, r *htt
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.LiftSuppression(w, r, id, suppressionId)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// LiftContactRestriction operation middleware
+func (siw *ServerInterfaceWrapper) LiftContactRestriction(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	// ------------- Path parameter "suppressionId" -------------
+	var suppressionId openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "suppressionId", chi.URLParam(r, "suppressionId"), &suppressionId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "suppressionId", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.LiftContactRestriction(w, r, id, suppressionId)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -150189,6 +150316,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/contacts/{id}/consent/suppress/{suppressionId}/lift", wrapper.LiftSuppression)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/contacts/{id}/consent/suppress/{suppressionId}/lift-restriction", wrapper.LiftContactRestriction)
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/contacts/{id}/conversation-suggestions", wrapper.ListContactConversationSuggestions)

@@ -850,6 +850,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "approval.preview.unsignedSend":
     "Versand ohne menschlichen Anzeigenamen oder persönliche Signatur. Die Freigabe macht die prüfende Person nicht zur absendenden Person.",
   "approval.preview.senderSignature": "Signatur der absendenden Person",
+  "approval.preview.showImages": "Bilder anzeigen",
   "approval.preview.signaturePrivate":
     "Die private Signatur der absendenden Person darf dieser prüfenden Person nicht angezeigt werden. Lass die absendende Person diese Nachricht prüfen.",
   "approval.preview.recordMeeting":
@@ -2742,6 +2743,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "history.field.lifted_by": "Aufgehoben von",
   "history.field.lifted_by_level": "Aufgehoben auf Ebene",
   "history.field.lifted_suppression": "Aufgehobene Sperre",
+  "history.field.restriction_lift_requested":
+    "Aufhebung der Einschränkung angefragt",
   "history.field.linkedin_url": "LinkedIn-URL",
   "history.field.lost_reason": "Verlustgrund",
   "history.field.name": "Name",
@@ -3612,7 +3615,21 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "consent.stopBlocked.address":
     "Die Sperre endet, sobald Mails an die Adresse wieder ankommen.",
   "consent.stopBlocked.restriction":
-    "Wer eine Einschränkung aufhebt, muss den Kontakt vorher informieren. Margince kann diese Nachricht noch nicht senden, daher bleibt die Einschränkung.",
+    "Wer eine Einschränkung aufhebt, muss den Kontakt vorher informieren. Nur ein Admin hebt sie auf, und Margince sendet diese Nachricht.",
+  "consent.restrictionLift": "Einschränkung aufheben",
+  "consent.restrictionLiftTitle": "Diese Einschränkung aufheben?",
+  "consent.restrictionLiftBody":
+    "Margince schickt dem Kontakt zuerst eine Nachricht, dass die Einschränkung endet. Die Einschränkung endet, sobald diese Nachricht gesendet ist. Danach liest Margince seine E-Mails wieder, auch die, die während der Einschränkung eingegangen sind.",
+  "consent.restrictionLiftQueued":
+    "Die Nachricht wartet auf den Versand. Bis dahin bleibt die Einschränkung.",
+  "consent.restrictionLiftSent":
+    "Die Nachricht wurde gesendet. Die Einschränkung endet.",
+  "consent.restrictionLiftRetrying":
+    "Die Nachricht wurde noch nicht gesendet, Margince versucht es erneut. Bis sie gesendet ist, bleibt die Einschränkung: {reason}",
+  "consent.restrictionLiftFailed":
+    "Die Nachricht wurde nicht gesendet, daher bleibt die Einschränkung: {reason}",
+  "consent.restrictionLiftFailedNoReason":
+    "Die Nachricht wurde nicht gesendet, daher bleibt die Einschränkung. Hebe sie erneut auf, um eine neue Nachricht zu senden.",
   "consent.stopBlocked.subject_decision":
     "Der Kontakt hat diese Sperre selbst gesetzt. Nur er kann sie ändern.",
   "consent.stopCorrect": "Sperre korrigieren",
@@ -11006,6 +11023,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "privacy.kindAccess": "Auskunft",
   "privacy.kindRectify": "Berichtigung",
   "privacy.kindErasure": "Löschung",
+  "privacy.kindRestriction": "Einschränkung",
   "privacy.purpose": "Zweck",
   "privacy.purposeDoiBadge": "Double-Opt-in",
   "privacy.purposesLoading": "Zwecke werden geladen…",
@@ -11051,6 +11069,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "privacy.openRequest": "Anfrage erstellen",
   "privacy.erasureNeedsContact":
     "Eine Löschanfrage muss einen Kontakt in diesem Unternehmen nennen, da beim Erfüllen der Anfrage genau dieser Datensatz gelöscht wird. Betroffene, die nur als Freitext erfasst sind, lassen sich nicht löschen.",
+  "privacy.restrictionNeedsContact":
+    "Eine Anfrage auf Einschränkung muss einen Kontakt in diesem Unternehmen nennen, da beim Erfüllen der Anfrage die Verarbeitung genau dieses Datensatzes eingeschränkt wird. Betroffene, die nur als Freitext erfasst sind, lassen sich nicht einschränken.",
   "privacy.accessPicksContact":
     "Wähle den Kontakt, um den es in dieser Anfrage geht. In der Anfrage kannst du dann alles herunterladen, was über ihn gespeichert ist.",
   "privacy.downloadPackage": "Datenpaket herunterladen",

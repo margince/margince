@@ -84,6 +84,9 @@ func (r *Router) CompleteStructured(ctx context.Context, task Task, req model.Re
 	if _, ok := taskLadders[task]; !ok {
 		return model.Response{}, RouteInfo{}, fmt.Errorf("ai: unknown task %q", task)
 	}
+	if err := r.admitSubjects(ctx, task, req); err != nil {
+		return model.Response{}, RouteInfo{}, err
+	}
 	lc := newLogicalCall()
 	defer r.flushDetached(ctx, r.binding(), lc)
 	return r.completeStructuredOn(ctx, lc, task, req, validate, "")

@@ -16876,7 +16876,7 @@ paths:
         What the request form shows before filing: the same resolver `POST /data-subject-requests`
         applies. Gated like the queue, on `privacy_request` read.
       parameters:
-        - {name: kind, in: query, required: true, schema: {type: string, enum: [access, rectify, erasure]}}
+        - {name: kind, in: query, required: true, schema: {type: string, enum: [access, rectify, erasure, restriction]}}
         - {name: received_at, in: query, required: false, schema: {type: string, format: date-time}, description: 'When the request arrived. Absent means now. Up to five minutes ahead of the server clock reads as now; later is refused with 422 naming `received_at`.'}
       responses:
         '200':
@@ -18100,12 +18100,13 @@ paths:
               properties:
                 kind:
                   type: string
-                  enum: [subject_request, marketing_objection]
+                  enum: [subject_request, marketing_objection, processing_restriction]
                   description: |-
                     Which stop this is. `subject_request` is "stop contacting me" and reaches every
                     category but the three the controller owes anyway. `marketing_objection` is
                     Art. 21(2), reaches marketing only, and is recorded at the subject's own
                     authority, so only an admin correcting a mistake can lift it.
+                    `processing_restriction` is Art. 18 and recorded by a human admin only.
                 reason:
                   type: string
                   maxLength: 500
@@ -50520,11 +50521,11 @@ components:
           description: Why they decided that, when they said.
     DataSubjectRequest:
       type: object
-      description: A GDPR data-subject request (Art. 15/16/17) tracked to completion.
+      description: A GDPR data-subject request (Art. 15/16/17/18) tracked to completion.
       required: [id, kind, subject_ref, status, due_at, due_overridden, dispute_open, created_at]
       properties:
         id: {type: string, format: uuid}
-        kind: {type: string, enum: [access, rectify, erasure]}
+        kind: {type: string, enum: [access, rectify, erasure, restriction]}
         subject_ref: {type: string, description: 'The data subject: a contact id or external identifier.'}
         subject_label:
           type: [string, 'null']
@@ -50796,7 +50797,7 @@ components:
       type: object
       required: [kind, subject_ref]
       properties:
-        kind: {type: string, enum: [access, rectify, erasure]}
+        kind: {type: string, enum: [access, rectify, erasure, restriction]}
         subject_ref: {type: string}
         received_at:
           type: string
@@ -50913,7 +50914,7 @@ components:
       type: object
       required: [kind, rule]
       properties:
-        kind: {type: string, enum: [access, rectify, erasure]}
+        kind: {type: string, enum: [access, rectify, erasure, restriction]}
         rule: {type: string, description: '`gdpr`, or `<jurisdiction> v<version>`.'}
         period: {type: string, description: 'ISO 8601 calendar period, when the deadline counts in calendar units.'}
         hours: {type: integer, description: 'Hours, when the deadline counts in hours.'}
@@ -52287,9 +52288,38 @@ components:
           description: |-
             Why `may_lift` is false. `permission`: you may not change this contact, or you are not
             signed in to a seat. `address`: a stop on an address clears when mail to it works
-            again. `restriction`: lifting it owes the contact notice first, which Margince cannot
-            send yet. `subject_decision`: the contact set it and only they change it. `level`: it
-            was recorded at your level or above. Null when `may_lift` is true.
+            again. `restriction`: lifting it owes the contact notice first, through
+            `liftContactRestriction`. `subject_decision`: the contact set it and only they change
+            it. `level`: it was recorded at your level or above. Null when `may_lift` is true.
+        may_lift_restriction:
+          type: boolean
+          description: |-
+            The stop is a processing restriction and this caller, an admin signed in to the app,
+            may ask `liftContactRestriction` to lift it. False for every other stop, and while a
+            lift notice is queued or sent.
+        lift_notice:
+          allOf: [{$ref: '#/components/schemas/RestrictionLiftNotice'}]
+          description: |-
+            The newest notice a lift of this restriction queued. Absent when no lift was asked,
+            and for every other kind of stop.
+    RestrictionLiftNotice:
+      type: object
+      description: Where the notice that lifts a restriction of processing is.
+      required: [status, queued_at]
+      properties:
+        status:
+          type: string
+          enum: [queued, sent, failed]
+          description: |-
+            `queued`: the notice waits to be sent, and the restriction stays until it is. A
+            `reason` says an attempt failed and Margince tries again. `sent`: the notice went out
+            and the restriction is ending; a periodic pass ends it if the first attempt did not.
+            `failed`: Margince gave up on the notice, so the restriction stays. Ask again to send a
+            new notice.
+        reason:
+          type: [string, 'null']
+          description: Why the last attempt did not go out. Null while nothing went wrong.
+        queued_at: {type: string, format: date-time}
     StandingOverride:
       type: object
       description: A recorded exception for one contact, message category and sending company.

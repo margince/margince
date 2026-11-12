@@ -10,16 +10,16 @@
   "totals": {
     "tools": 48,
     "resources": 14,
-    "tool_catalog_bytes": 235690,
+    "tool_catalog_bytes": 235704,
     "resource_catalog_bytes": 5622,
-    "approx_wire_tokens_total": 60328,
+    "approx_wire_tokens_total": 60331,
     "largest_tool_bytes": 11810,
     "largest_tool": "read_context",
     "tool_catalog_composition": {
       "description_bytes": 55291,
-      "input_schema_bytes": 116453,
+      "input_schema_bytes": 116467,
       "output_schema_bytes": 51838,
-      "description_plus_input_schema_bytes": 171744
+      "description_plus_input_schema_bytes": 171758
     }
   },
   "tools": {
@@ -10798,7 +10798,8 @@
               "enum": [
                 "access",
                 "rectify",
-                "erasure"
+                "erasure",
+                "restriction"
               ],
               "type": "string"
             },

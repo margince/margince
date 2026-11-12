@@ -110,3 +110,19 @@ func collectDealActivityLists(ctx context.Context, tx pgx.Tx, rows pgx.Rows, col
 	}
 	return out, nil
 }
+
+// LockDealActivitiesTx holds every activity linked to the deal until tx ends.
+// A writer that changes one of them, such as a verdict on a mail, waits for tx.
+// tx waits for a writer that got there first, and a later read in tx sees what
+// it committed. Take it before any lock on the deal: writers lock the activity
+// first and the deal after. A new link waits on a later lock of the deal row.
+func LockDealActivitiesTx(ctx context.Context, tx pgx.Tx, deal ids.UUID) error {
+	if err := auth.Require(ctx, "activity", principal.ActionRead); err != nil {
+		return err
+	}
+	if _, err := tx.Exec(ctx, `SELECT a.id FROM activity a JOIN activity_link al ON al.activity_id = a.id
+		WHERE al.deal_id = $1 ORDER BY a.id FOR SHARE OF a`, deal); err != nil {
+		return fmt.Errorf("activities: holding the deal's activities: %w", err)
+	}
+	return nil
+}

@@ -4108,7 +4108,7 @@ public.data_subject_request.created_at timestamp with time zone NOT NULL gen=- d
 public.data_subject_request.data_subject_request_assignee_id_retirement_guard CREATE TRIGGER data_subject_request_assignee_id_retirement_guard BEFORE INSERT OR UPDATE ON public.data_subject_request FOR EACH ROW WHEN (((new.assignee_id IS NOT NULL) AND (new.status = ANY (ARRAY['open'::text, 'in_progress'::text])))) EXECUTE FUNCTION refuse_retired_member_work('assignee_id')
 public.data_subject_request.data_subject_request_channel CHECK (((channel IS NULL) OR (channel = ANY (ARRAY['confirm_link'::text, 'email'::text, 'phone'::text, 'letter'::text, 'in_person'::text, 'operator_ui'::text]))))
 public.data_subject_request.data_subject_request_contact_id_fkey FOREIGN KEY (contact_id) REFERENCES contact(id) ON DELETE SET NULL
-public.data_subject_request.data_subject_request_kind_check CHECK ((kind = ANY (ARRAY['access'::text, 'rectify'::text, 'erasure'::text])))
+public.data_subject_request.data_subject_request_kind_check CHECK ((kind = ANY (ARRAY['access'::text, 'rectify'::text, 'erasure'::text, 'restriction'::text])))
 public.data_subject_request.data_subject_request_pkey PRIMARY KEY (id)
 public.data_subject_request.data_subject_request_status_check CHECK ((status = ANY (ARRAY['open'::text, 'in_progress'::text, 'fulfilled'::text, 'rejected'::text])))
 public.data_subject_request.dispute_open boolean NOT NULL gen=- def=false
@@ -7419,7 +7419,7 @@ public.privacy_request_proof.keep_until timestamp with time zone NOT NULL gen=- 
 public.privacy_request_proof.privacy_request_proof_actor_type CHECK ((completed_by_type = ANY (ARRAY['human'::text, 'agent'::text, 'connector'::text, 'system'::text])))
 public.privacy_request_proof.privacy_request_proof_counts_object CHECK ((jsonb_typeof(erased_counts) = 'object'::text))
 public.privacy_request_proof.privacy_request_proof_identity_check CHECK ((identity_check = ANY (ARRAY['confirm_link'::text, 'address_on_file'::text, 'id_document'::text, 'in_person'::text, 'not_verified'::text, 'unknown'::text])))
-public.privacy_request_proof.privacy_request_proof_kind CHECK ((request_kind = ANY (ARRAY['access'::text, 'rectify'::text, 'erasure'::text])))
+public.privacy_request_proof.privacy_request_proof_kind CHECK ((request_kind = ANY (ARRAY['access'::text, 'rectify'::text, 'erasure'::text, 'restriction'::text])))
 public.privacy_request_proof.privacy_request_proof_one_per_request UNIQUE (request_id)
 public.privacy_request_proof.privacy_request_proof_pkey PRIMARY KEY (id)
 public.privacy_request_proof.privacy_request_proof_request_fkey FOREIGN KEY (request_id) REFERENCES data_subject_request(id) ON DELETE CASCADE

@@ -809,6 +809,7 @@ export const en = {
   "approval.preview.unsignedSend":
     "Sends without a human display name or personal signature. Approval does not make the reviewer the author.",
   "approval.preview.senderSignature": "Sender signature",
+  "approval.preview.showImages": "Show the images",
   "approval.preview.signaturePrivate":
     "The sender’s private signature cannot be shown to this reviewer. Ask the sender to review this message.",
   "approval.preview.recordMeeting":
@@ -2636,6 +2637,7 @@ export const en = {
   "history.field.lifted_by": "Lifted by",
   "history.field.lifted_by_level": "Lifted at level",
   "history.field.lifted_suppression": "Lifted suppression",
+  "history.field.restriction_lift_requested": "Restriction lift asked for",
   "history.field.linkedin_url": "LinkedIn URL",
   "history.field.lost_reason": "Lost reason",
   "history.field.name": "Name",
@@ -3551,7 +3553,21 @@ export const en = {
   "consent.stopBlocked.address":
     "This clears when mail to the address works again.",
   "consent.stopBlocked.restriction":
-    "Lifting a restriction means telling the contact first. Margince cannot send that notice yet, so the restriction stays.",
+    "Lifting a restriction means telling the contact first. Only an admin can lift it, and Margince sends that notice.",
+  "consent.restrictionLift": "Lift the restriction",
+  "consent.restrictionLiftTitle": "Lift this restriction?",
+  "consent.restrictionLiftBody":
+    "Margince first sends the contact a notice that the restriction ends. The restriction ends once that notice is sent. Then Margince reads their mail again, including the mail that arrived during the restriction.",
+  "consent.restrictionLiftQueued":
+    "The notice is waiting to be sent. The restriction stays until it is.",
+  "consent.restrictionLiftSent":
+    "The notice was sent. The restriction is ending.",
+  "consent.restrictionLiftRetrying":
+    "The notice has not gone out yet, and Margince tries again. The restriction stays until it is sent: {reason}",
+  "consent.restrictionLiftFailed":
+    "The notice did not go out, so the restriction stays: {reason}",
+  "consent.restrictionLiftFailedNoReason":
+    "The notice did not go out, so the restriction stays. Lift it again to send a new notice.",
   "consent.stopBlocked.subject_decision":
     "The contact set this stop. Only they can change it.",
   "consent.stopCorrect": "Correct this stop",
@@ -10974,6 +10990,7 @@ export const en = {
   "privacy.kindAccess": "Access",
   "privacy.kindRectify": "Correction",
   "privacy.kindErasure": "Erasure",
+  "privacy.kindRestriction": "Restriction",
   "privacy.purpose": "Purpose",
   "privacy.purposeDoiBadge": "Double opt-in",
   "privacy.purposesLoading": "Loading purposes…",
@@ -11018,6 +11035,8 @@ export const en = {
   "privacy.openRequest": "Open request",
   "privacy.erasureNeedsContact":
     "An erasure request must name a contact in this company, because fulfilling it erases that record. A free-text subject cannot be erased.",
+  "privacy.restrictionNeedsContact":
+    "A restriction request must name a contact in this company, because fulfilling it restricts the processing of that record. A free-text subject cannot be restricted.",
   "privacy.accessPicksContact":
     "Pick the contact this request is about. You can then download everything held about them from the request.",
   "privacy.downloadPackage": "Download data package",

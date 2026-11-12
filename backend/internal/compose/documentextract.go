@@ -270,6 +270,7 @@ func documentExtractRequest(src documentSource) model.Request {
 		MaxTokens:      ai.ReasoningOutputMaxTokens,
 		ResponseSchema: documentExtractSchema(),
 		SecretStripper: ai.NewSecretStripper(),
+		Subjects:       documentSubjects(src.Parent),
 	}
 	if !src.onTextLane() {
 		req.Attachments = []model.Attachment{src.Part}

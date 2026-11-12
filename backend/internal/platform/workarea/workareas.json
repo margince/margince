@@ -1428,6 +1428,7 @@
     "keepDomainQuestion": "capture_triage",
     "launchSalesInitiative": "reports",
     "learnVoiceFromSentMail": "voice",
+    "liftContactRestriction": "consent",
     "liftLeadSuppression": "consent",
     "liftLegalHold": "retention",
     "liftSuppression": "consent",

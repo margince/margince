@@ -830,6 +830,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "approval.preview.unsignedSend":
     "Gửi không kèm tên hiển thị của cá nhân hoặc chữ ký cá nhân. Việc phê duyệt không biến người xem xét thành tác giả.",
   "approval.preview.senderSignature": "Chữ ký người gửi",
+  "approval.preview.showImages": "Hiển thị hình ảnh",
   "approval.preview.signaturePrivate":
     "Không thể hiển thị chữ ký riêng của người gửi cho người xem xét này. Hãy yêu cầu người gửi xem xét tin nhắn.",
   "approval.preview.recordMeeting":
@@ -2656,6 +2657,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "history.field.lifted_by": "Người gỡ",
   "history.field.lifted_by_level": "Cấp gỡ",
   "history.field.lifted_suppression": "Lệnh chặn đã gỡ",
+  "history.field.restriction_lift_requested": "Yêu cầu bỏ hạn chế",
   "history.field.linkedin_url": "Liên kết LinkedIn",
   "history.field.lost_reason": "Lý do thua",
   "history.field.name": "Tên",
@@ -3502,7 +3504,21 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "consent.stopBlocked.address":
     "Lệnh này hết khi thư đến địa chỉ này gửi được trở lại.",
   "consent.stopBlocked.restriction":
-    "Muốn bỏ hạn chế phải báo trước cho liên hệ. Margince chưa gửi được thông báo đó, nên hạn chế vẫn giữ nguyên.",
+    "Muốn bỏ hạn chế phải báo trước cho liên hệ. Chỉ quản trị viên mới bỏ được, và Margince sẽ gửi thông báo đó.",
+  "consent.restrictionLift": "Bỏ hạn chế",
+  "consent.restrictionLiftTitle": "Bỏ hạn chế này?",
+  "consent.restrictionLiftBody":
+    "Margince sẽ gửi cho liên hệ một thông báo rằng việc hạn chế kết thúc. Hạn chế kết thúc khi thông báo đó được gửi đi. Sau đó Margince đọc lại thư của họ, kể cả thư đến trong thời gian hạn chế.",
+  "consent.restrictionLiftQueued":
+    "Thông báo đang chờ gửi. Hạn chế vẫn giữ cho đến khi gửi xong.",
+  "consent.restrictionLiftSent":
+    "Thông báo đã được gửi. Hạn chế đang kết thúc.",
+  "consent.restrictionLiftRetrying":
+    "Thông báo chưa được gửi đi, Margince sẽ thử lại. Hạn chế vẫn giữ cho đến khi gửi xong: {reason}",
+  "consent.restrictionLiftFailed":
+    "Thông báo chưa được gửi đi, nên hạn chế vẫn giữ: {reason}",
+  "consent.restrictionLiftFailedNoReason":
+    "Thông báo chưa được gửi đi, nên hạn chế vẫn giữ. Hãy bỏ hạn chế lại để gửi thông báo mới.",
   "consent.stopBlocked.subject_decision":
     "Liên hệ tự đặt lệnh dừng này. Chỉ họ mới đổi được.",
   "consent.stopCorrect": "Sửa lệnh dừng này",
@@ -10709,6 +10725,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "privacy.kindAccess": "Truy cập",
   "privacy.kindRectify": "Chỉnh sửa",
   "privacy.kindErasure": "Xóa",
+  "privacy.kindRestriction": "Hạn chế xử lý",
   "privacy.purpose": "Mục đích",
   "privacy.purposeDoiBadge": "Xác nhận kép",
   "privacy.purposesLoading": "Đang tải mục đích…",
@@ -10754,6 +10771,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "privacy.openRequest": "Mở yêu cầu",
   "privacy.erasureNeedsContact":
     "Yêu cầu xóa dữ liệu phải nêu một liên hệ trong công ty này, vì đáp ứng yêu cầu sẽ xóa hồ sơ đó. Không thể xóa chủ thể dạng văn bản tự do.",
+  "privacy.restrictionNeedsContact":
+    "Yêu cầu hạn chế xử lý phải nêu một liên hệ trong công ty này, vì đáp ứng yêu cầu sẽ hạn chế xử lý hồ sơ đó. Không thể hạn chế chủ thể dạng văn bản tự do.",
   "privacy.accessPicksContact":
     "Chọn liên hệ mà yêu cầu này nói đến. Sau đó bạn có thể tải xuống mọi dữ liệu đang lưu về họ ngay trong yêu cầu.",
   "privacy.downloadPackage": "Tải xuống gói dữ liệu",

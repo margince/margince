@@ -85,6 +85,8 @@ type Store struct {
 	// echoIdentity recovers a stamped identity the read-back could not
 	// (echoidentity.go). Nil leaves such a message on its staged identity.
 	echoIdentity EchoIdentity
+	// sentEffect is the domain change a receipt releases (sendeffect.go).
+	sentEffect SentEffect
 }
 
 // StoreOption adjusts a store after construction.
@@ -318,6 +320,7 @@ func (s *Store) RecordSent(ctx context.Context, id ids.UUID, receipt connector.S
 	}
 	s.reconcileIdentity(ctx, id, sent.activity, sent.staged, s.identityAfterReceipt(ctx, id, sent, receipt))
 	s.admitSentParties(ctx, sent.activity)
+	s.applySentEffect(ctx, sent.staged)
 	return nil
 }
 
