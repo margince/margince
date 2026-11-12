@@ -76,3 +76,10 @@ type Payment struct {
 	AmountMinor       int64
 	UpdatedAt         *time.Time
 }
+
+// Document is one invoice as the source renders it, for a reader to open.
+type Document struct {
+	// ContentType is the document's media type. The core serves only a PDF.
+	ContentType string
+	Body        []byte
+}

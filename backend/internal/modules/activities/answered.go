@@ -15,10 +15,8 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
-func answeredSQL(inbound, until string) string { return storekit.AnsweredSQL(inbound, until) }
-func answeredReadableSQL(inbound, until, readable string) string {
-	return storekit.AnsweredReadableSQL(inbound, until, readable)
-}
+func answeredSQL(inbound, until string) string  { return storekit.AnsweredSQL(inbound, until) }
+func answerIDsSQL(inbound, until string) string { return storekit.AnswerIDsSQL(inbound, until) }
 func offThreadAnswersSQL(inbound, until string) string {
 	return storekit.OffThreadAnswersSQL(inbound, until)
 }

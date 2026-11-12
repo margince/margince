@@ -34,10 +34,11 @@ func New() extension.Extension {
 		Version:     "1.0.0",
 		Description: "Demonstration accounting data for the finance card, generated rather than read from a real system.",
 		FinanceSources: []extension.FinanceSource{{
-			Provider:    "offline_demo",
-			Check:       check,
-			Customers:   customers,
-			InvoicesFor: invoicesFor,
+			Provider:        "offline_demo",
+			Check:           check,
+			Customers:       customers,
+			InvoicesFor:     invoicesFor,
+			InvoiceDocument: invoiceDocument,
 		}},
 		OAuthApps: []extension.OAuthApp{{ //nolint:gosec // G101: TokenURL is an endpoint address, not a credential
 			Provider: "offline_demo",

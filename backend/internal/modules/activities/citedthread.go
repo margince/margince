@@ -36,34 +36,44 @@ func SettledCitations(
 	citedPos := arg(cited)
 	recipientsPos := arg(recipients)
 	until := fmt.Sprintf("$%d::timestamptz", arg(asOf))
-	readable, err := auth.ActivityContentClause(ctx, "a", arg)
-	if err != nil {
-		return nil, err
-	}
-	keptReadable, err := auth.ActivityContentClause(ctx, "kept", arg)
-	if err != nil {
-		return nil, err
-	}
-	answerReadable, err := auth.ActivityContentClause(ctx, "readable_answer", arg)
+	// The cited messages, their answers and their follow-ups share one content
+	// gate. Evidence the reader may not read settles nothing.
+	readable, err := auth.ContentReadableActivitiesSQL(ctx,
+		"SELECT id FROM cited UNION ALL SELECT id FROM cited_answer UNION ALL SELECT id FROM follow_up", arg)
 	if err != nil {
 		return nil, err
 	}
 	// An unjudged message has a NULL verdict, and unknown never settles.
-	rows, err := tx.Query(ctx, fmt.Sprintf(`SELECT a.id, coalesce(
+	rows, err := tx.Query(ctx, fmt.Sprintf(`WITH cited AS MATERIALIZED (
+  SELECT a.id FROM activity a WHERE a.id = ANY($%[1]d) AND a.archived_at IS NULL),
+cited_answer AS MATERIALIZED (
+  SELECT a.id AS cited_id, answer_found.id
+    FROM cited JOIN activity a ON a.id = cited.id
+   CROSS JOIN LATERAL (%[2]s) answer_found
+   WHERE a.direction = 'inbound' AND a.kind IN ('email', 'message')),
+follow_up AS MATERIALIZED (
+  SELECT a.id AS cited_id, kept.id
+    FROM cited JOIN activity a ON a.id = cited.id
+    JOIN activity kept ON %[3]s
+   WHERE a.direction = 'outbound' AND a.kind = 'email'
+     AND EXISTS (SELECT 1 FROM activity_participant promised
+           WHERE promised.activity_id = a.id AND promised.role IN ('to', 'cc')
+             AND promised.contact_id = ANY($%[4]d) AND %[5]s)),
+readable_activity AS MATERIALIZED (%[6]s)
+SELECT a.id, coalesce(
   CASE WHEN a.direction = 'inbound' AND a.kind IN ('email', 'message')
-         THEN NOT (%[1]s AND (coalesce(%[2]s, false) OR NOT %[3]s))
+         THEN NOT (%[7]s AND (coalesce(%[8]s, false) OR NOT EXISTS (
+                SELECT 1 FROM cited_answer answer
+                 WHERE answer.cited_id = a.id AND answer.id IN (SELECT id FROM readable_activity))))
        WHEN a.direction = 'outbound' AND a.kind = 'email'
-         THEN EXISTS (SELECT 1 FROM activity kept
-                WHERE %[4]s AND (%[5]s)
-                  AND EXISTS (SELECT 1 FROM activity_participant promised
-                       WHERE promised.activity_id = a.id AND promised.role IN ('to', 'cc')
-                         AND promised.contact_id = ANY($%[9]d) AND %[6]s))
+         THEN EXISTS (SELECT 1 FROM follow_up
+                WHERE follow_up.cited_id = a.id AND follow_up.id IN (SELECT id FROM readable_activity))
        ELSE false END, false)
   FROM activity a
- WHERE a.id = ANY($%[7]d) AND a.archived_at IS NULL AND (%[8]s)`,
-		requestOpenSQL, confirmedRequestSQL, answeredReadableSQL("a", until, orUnbounded(answerReadable)),
-		promiseFollowUpSQL("kept", "a", until), orUnbounded(keptReadable),
-		promiseRecipientAddressedSQL("kept", "promised.contact_id"), citedPos, orUnbounded(readable), recipientsPos), args...)
+ WHERE a.id IN (SELECT id FROM cited) AND a.id IN (SELECT id FROM readable_activity)`,
+		citedPos, answerIDsSQL("a", until), promiseFollowUpSQL("kept", "a", until), recipientsPos,
+		promiseRecipientAddressedSQL("kept", "promised.contact_id"), readable,
+		requestOpenSQL, confirmedRequestSQL), args...)
 	if err != nil {
 		return nil, fmt.Errorf("activities: reading whether cited threads settled: %w", err)
 	}

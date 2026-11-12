@@ -164,16 +164,17 @@ func AnsweredSQL(inbound, until string) string {
 	return "(" + strings.Join(exists, "\n\t OR ") + ")"
 }
 
-// AnsweredReadableSQL is AnsweredSQL counting only an answer the caller may
-// read. readable is their content clause over the alias readable_answer.
-func AnsweredReadableSQL(inbound, until, readable string) string {
+// AnswerIDsSQL selects the id of every answer the inbound row under the given
+// alias has no later than until. Each arm that finds an answer adds a row. A caller that
+// counts only answers its reader may read gates these ids with the rest of its
+// statement's activity, under one content gate.
+func AnswerIDsSQL(inbound, until string) string {
 	arms := answerArms(inbound, until)
-	exists := make([]string, 0, len(arms))
+	selects := make([]string, 0, len(arms))
 	for _, arm := range arms {
-		exists = append(exists, "EXISTS (SELECT 1 FROM (SELECT "+arm.id+" AS id "+arm.from+") answer_found"+
-			" JOIN activity readable_answer ON readable_answer.id = answer_found.id WHERE readable_answer.restricted_at IS NULL AND "+readable+")")
+		selects = append(selects, "SELECT "+arm.id+" AS id "+arm.from)
 	}
-	return "(" + strings.Join(exists, " OR ") + ")"
+	return strings.Join(selects, "\n\t UNION ALL ")
 }
 
 // OffThreadAnswersSQL supplies the existing settlement engine with off-thread evidence.
