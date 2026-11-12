@@ -329,10 +329,10 @@ What a run does:
 
 1. The CLI asks the dist service for the patch base (`resolve-patch-base --version`): the newest published
    release on its line. It cuts the patch from the git commit of that release, and uploads it with `draft-release --patch-base <version>`. The first release has no base: its patch is
-   the whole tree, sent with `--first-release`. With the patch go the three SBOM files for the source
-   tree, generated again at the release commit (`make sbom`).
-   The dist service checks that the SBOM files cover every file the patch makes. So the
-   committed `sboms/` files, which may be behind, are never uploaded.
+   the whole tree, sent with `--first-release`. With the patch go the three SBOM files for the source tree, generated again at the release commit (`make sbom`).
+   The dist service checks that the SBOM files cover every file the patch makes. So the committed `sboms/` files, which may be behind, are never uploaded.
+
+   The changelog goes with the patch too. [`scripts/release-changelog.sh`](../../scripts/release-changelog.sh) builds it from the non-merge commit subjects since the patch base (`make test-release-changelog`). It lists the breaking, `feat`, `fix` and `perf` subjects, and the compare link shows the rest.
 2. The three role images are built through the bake file (`docker-bake.hcl`, `linux/amd64` +
    `linux/arm64`, with `mode=max` provenance records).
    - The builder stages compile for each target on the host; only runtime layers run under
