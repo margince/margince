@@ -15904,6 +15904,13 @@
                 "type": "string",
                 "format": "date-time"
               },
+              "assessment_id": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "author": {
+                "type": "string"
+              },
               "judged": {
                 "type": "boolean"
               },

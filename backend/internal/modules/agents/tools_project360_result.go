@@ -55,13 +55,17 @@ type Project360Project struct {
 
 // Project360Health is how the project is going now, from the read the page
 // uses. judged is false when nobody has judged it, or a user undid the only AI
-// reading: a project nobody looked at is not one found on track.
+// reading. A project nobody looked at is not one found on track.
 type Project360Health struct {
 	Judged bool `json:"judged"`
+	// AssessmentID is the reading correct_project_health corrects.
+	AssessmentID *ids.UUID `json:"assessment_id,omitempty"`
 	// State is on_track, at_risk or off_track.
 	State string `json:"state,omitempty"`
 	// Source is human, agent or ai.
-	Source     string     `json:"source,omitempty"`
+	Source string `json:"source,omitempty"`
+	// Author is who is on record as having judged it, as the page names them.
+	Author     string     `json:"author,omitempty"`
 	Note       string     `json:"note,omitempty"`
 	AssessedAt *time.Time `json:"assessed_at,omitempty"`
 }
@@ -277,8 +281,10 @@ func project360Health(current *crmcontracts.ProjectHealthAssessment) *Project360
 	if current == nil {
 		return &Project360Health{}
 	}
+	assessment := ids.UUID(current.Id)
 	return &Project360Health{
-		Judged: true, State: string(current.State), Source: orBlank(current.Source),
+		Judged: true, AssessmentID: &assessment, State: string(current.State),
+		Source: orBlank(current.Source), Author: orBlank(current.SourceAuthor),
 		Note: orBlank(current.Note), AssessedAt: &current.AssessedAt,
 	}
 }
