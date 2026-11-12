@@ -37,7 +37,8 @@ func TestAFollowUpNoLongerNeededIsWithdrawnWithItsReason(t *testing.T) {
 			if err := e.reconcile(); err != nil {
 				t.Fatal(err)
 			}
-			id, _ := e.followUpApproval(t, deal)
+			evidence, _, _ := e.followUpEvidence(t, deal)
+			id, _ := e.stageLegacyFollowUp(t, deal, evidence)
 			meanwhile(e, deal)
 
 			_, err := e.svc.Decide(e.As(e.Rep1, []ids.UUID{e.Team1}, reconcilePerms), id, true, nil)
@@ -59,7 +60,8 @@ func TestTheFollowUpEffectWritesNothingOnceTheDealHasANextStep(t *testing.T) {
 	if err := e.reconcile(); err != nil {
 		t.Fatal(err)
 	}
-	id, _ := e.followUpApproval(t, deal)
+	evidence, _, _ := e.followUpEvidence(t, deal)
+	id, _ := e.stageLegacyFollowUp(t, deal, evidence)
 	e.seedMeeting(t, deal, "Next Thursday", -72, 3600, "booked")
 
 	effectOnly := approvals.NewService(e.DB())

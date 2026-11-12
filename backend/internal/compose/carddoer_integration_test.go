@@ -154,7 +154,8 @@ func TestTheDealOwnerHandsAFollowUpToAColleague(t *testing.T) {
 				t.Fatal(err)
 			}
 			doer := c.prepare(e)
-			id, proposal := e.followUpApproval(t, deal)
+			evidence, _, _ := e.followUpEvidence(t, deal)
+			id, proposal := e.stageLegacyFollowUp(t, deal, evidence)
 			proposal.DoerID = doer.String()
 			edited, err := json.Marshal(proposal)
 			if err != nil {
