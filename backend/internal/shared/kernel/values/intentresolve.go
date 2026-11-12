@@ -5,6 +5,8 @@ package values
 
 import "time"
 
+// Go validates writes; SQL resolves filtered reads. Shared fixtures hold
+// their gap and fold policy together.
 func resolveIntent(wall time.Time, loc *time.Location) (time.Time, error) {
 	until := wall.Add(48 * time.Hour)
 	cursor := wall.Add(-48 * time.Hour)

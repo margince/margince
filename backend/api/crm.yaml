@@ -57937,6 +57937,24 @@ components:
           type: [string, 'null']
           format: uuid
           description: A recorded communication basis this send relies on.
+    IntentTime:
+      type: object
+      additionalProperties: false
+      required: [wall_clock, timezone]
+      description: >-
+        A chosen local date and time with an IANA timezone. Resolve it with current
+        timezone rules. A missing local time moves to the first valid time after
+        the gap; a repeated local time uses its first occurrence.
+      properties:
+        wall_clock:
+          type: string
+          maxLength: 26
+          pattern: '^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}(:[0-9]{2}(\.[0-9]{1,6})?)?$'
+          description: Local ISO date and time with no offset, up to microsecond precision.
+        timezone:
+          type: string
+          description: The IANA zone name governing the local time.
+
     SendEmailRequest:
       type: object
       required: [subject, body, to]
@@ -58062,12 +58080,14 @@ components:
             A key that is still supplied is recorded as the caller's claim and is consulted
             only where the record supports no category on its own. An unknown or archived
             key authorizes nothing.
+        scheduled_intent: { $ref: '#/components/schemas/IntentTime' }
         scheduled_at:
           type: [string, 'null']
           format: date-time
           description: |
-            Send this message at this instant instead of now (ADR-0104). Absolute
-            and unambiguous; `scheduled_tz` records the zone the human picked it in.
+            Legacy instant-based schedule. When `scheduled_intent` is present, its
+            local time and current timezone rules govern the send; this field is a
+            compatibility cache. Without it, the supplied instant remains authoritative.
 
             A scheduled message writes NO activity and NO delivery row until it fires —
             the timeline stays silent about a message nobody has sent. The response is
@@ -58141,6 +58161,7 @@ components:
             `cancelled` — withdrawn before it fired; nothing was transmitted.
             `held` — a gate refused at fire, or the window was missed. It will not send itself;
             a human reschedules or cancels it.
+        scheduled_intent: { $ref: '#/components/schemas/IntentTime' }
         scheduled_at: { type: string, format: date-time }
         scheduled_tz:
           type: string
@@ -58340,6 +58361,7 @@ components:
           description: |
             The reason for contact the rep chose, checked as the send checks it: a category
             reserved for the installation's own notices is refused 422. Omit it for none.
+        scheduled_intent: { $ref: '#/components/schemas/IntentTime' }
         scheduled_at:
           type: [string, 'null']
           format: date-time
@@ -58399,6 +58421,7 @@ components:
         communication_context:
           allOf: [{ $ref: '#/components/schemas/CommunicationContext' }]
           description: The reason for contact the author chose. Absent when none was.
+        scheduled_intent: { $ref: '#/components/schemas/IntentTime' }
         scheduled_at:
           type: string
           format: date-time
@@ -58418,6 +58441,7 @@ components:
         A new moment for a message already scheduled. TIME ONLY — the content is what the
         approval bound to, so changing it is cancel-and-recompose (ADR-0104 §5).
       properties:
+        scheduled_intent: { $ref: '#/components/schemas/IntentTime' }
         scheduled_at: { type: string, format: date-time }
         scheduled_tz: { type: string }
 
@@ -58774,12 +58798,14 @@ components:
             A key that is still supplied is recorded as the caller's claim and is consulted
             only where the record supports no category on its own. An unknown or archived
             key authorizes nothing.
+        scheduled_intent: { $ref: '#/components/schemas/IntentTime' }
         scheduled_at:
           type: [string, 'null']
           format: date-time
           description: |
-            Send this message at this instant instead of now (ADR-0104). Absolute
-            and unambiguous; `scheduled_tz` records the zone the human picked it in.
+            Legacy instant-based schedule. When `scheduled_intent` is present, its
+            local time and current timezone rules govern the send; this field is a
+            compatibility cache. Without it, the supplied instant remains authoritative.
 
             A scheduled message writes NO activity and NO delivery row until it fires —
             the timeline stays silent about a message nobody has sent. The response is

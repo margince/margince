@@ -57,7 +57,7 @@ func (h Handlers) SaveMailDraft(w http.ResponseWriter, r *http.Request, _ crmcon
 // mailDraftContentFrom reads the composer's fields, an omitted one as empty:
 // a save replaces the whole draft, so a field left out is a field cleared.
 func mailDraftContentFrom(req crmcontracts.MailDraftInput) (MailDraftContent, error) {
-	schedule, err := scheduleFrom(req.ScheduledAt, req.ScheduledTz)
+	schedule, err := ParseSendSchedule(req.ScheduledAt, req.ScheduledTz, req.ScheduledIntent)
 	if err != nil {
 		return MailDraftContent{}, err
 	}
@@ -149,6 +149,7 @@ func withDraftSending(out *crmcontracts.MailDraft, d MailDraft) {
 	if d.Content.Schedule != nil {
 		at, tz := d.Content.Schedule.At, d.Content.Schedule.TZ
 		out.ScheduledAt, out.ScheduledTz = &at, &tz
+		out.ScheduledIntent = d.Content.Schedule.IntentWire()
 	}
 }
 

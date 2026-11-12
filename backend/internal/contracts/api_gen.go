@@ -51306,6 +51306,15 @@ type IntegrationsSettings struct {
 	Locks *SettingLocks `json:"locks,omitempty"`
 }
 
+// IntentTime A chosen local date and time with an IANA timezone. Resolve it with current timezone rules. A missing local time moves to the first valid time after the gap; a repeated local time uses its first occurrence.
+type IntentTime struct {
+	// Timezone The IANA zone name governing the local time.
+	Timezone string `json:"timezone"`
+
+	// WallClock Local ISO date and time with no offset, up to microsecond precision.
+	WallClock string `json:"wall_clock"`
+}
+
 // InternalMailHistoryPreview A separate internal-mail import is allowed only within this administrator-authorized scope and only after the mailbox owner explicitly selects it when starting.
 type InternalMailHistoryPreview struct {
 	// Folders Selected provider folder names. Empty means the whole connection, subject to ordinary exclusions.
@@ -54048,6 +54057,9 @@ type MailDraft struct {
 	// draft schedules nothing. Absent when none was picked.
 	ScheduledAt *time.Time `json:"scheduled_at,omitempty"`
 
+	// ScheduledIntent A chosen local date and time with an IANA timezone. Resolve it with current timezone rules. A missing local time moves to the first valid time after the gap; a repeated local time uses its first occurrence.
+	ScheduledIntent *IntentTime `json:"scheduled_intent,omitempty"`
+
 	// ScheduledTz The IANA zone `scheduled_at` was picked in. Present exactly when it is.
 	ScheduledTz *string   `json:"scheduled_tz,omitempty"`
 	Subject     string    `json:"subject"`
@@ -54125,6 +54137,9 @@ type MailDraftInput struct {
 	// ScheduledAt The moment the rep picked to send at, checked as the send checks it: with
 	// `scheduled_tz`, at most 90 days ahead. Saving schedules nothing. Omit both for none.
 	ScheduledAt *time.Time `json:"scheduled_at,omitempty"`
+
+	// ScheduledIntent A chosen local date and time with an IANA timezone. Resolve it with current timezone rules. A missing local time moves to the first valid time after the gap; a repeated local time uses its first occurrence.
+	ScheduledIntent *IntentTime `json:"scheduled_intent,omitempty"`
 
 	// ScheduledTz The IANA zone name `scheduled_at` was picked in. Required with `scheduled_at`.
 	ScheduledTz *string   `json:"scheduled_tz,omitempty"`
@@ -60498,7 +60513,10 @@ type RequestLegalReviewRequest struct {
 // approval bound to, so changing it is cancel-and-recompose (ADR-0104 §5).
 type RescheduleSendRequest struct {
 	ScheduledAt time.Time `json:"scheduled_at"`
-	ScheduledTz string    `json:"scheduled_tz"`
+
+	// ScheduledIntent A chosen local date and time with an IANA timezone. Resolve it with current timezone rules. A missing local time moves to the first valid time after the gap; a repeated local time uses its first occurrence.
+	ScheduledIntent *IntentTime `json:"scheduled_intent,omitempty"`
+	ScheduledTz     string      `json:"scheduled_tz"`
 }
 
 // ResolveInputCheck defines model for ResolveInputCheck.
@@ -61794,6 +61812,9 @@ type ScheduledSend struct {
 	ReviewId    *openapi_types.UUID `json:"review_id,omitempty"`
 	ScheduledAt time.Time           `json:"scheduled_at"`
 
+	// ScheduledIntent A chosen local date and time with an IANA timezone. Resolve it with current timezone rules. A missing local time moves to the first valid time after the gap; a repeated local time uses its first occurrence.
+	ScheduledIntent *IntentTime `json:"scheduled_intent,omitempty"`
+
 	// ScheduledTz The IANA zone the human picked the moment in, kept so it re-renders as meant.
 	ScheduledTz string `json:"scheduled_tz"`
 
@@ -62577,8 +62598,9 @@ type SendCompanyEmailRequest struct {
 	// an allow.
 	OperatorReason *string `json:"operator_reason,omitempty"`
 
-	// ScheduledAt Send this message at this instant instead of now (ADR-0104). Absolute
-	// and unambiguous; `scheduled_tz` records the zone the human picked it in.
+	// ScheduledAt Legacy instant-based schedule. When `scheduled_intent` is present, its
+	// local time and current timezone rules govern the send; this field is a
+	// compatibility cache. Without it, the supplied instant remains authoritative.
 	//
 	// A scheduled message writes NO activity and NO delivery row until it fires —
 	// the timeline stays silent about a message nobody has sent. The response is
@@ -62593,6 +62615,9 @@ type SendCompanyEmailRequest struct {
 	// An instant already past sends immediately. Further ahead than 90 days is
 	// refused 422.
 	ScheduledAt *time.Time `json:"scheduled_at,omitempty"`
+
+	// ScheduledIntent A chosen local date and time with an IANA timezone. Resolve it with current timezone rules. A missing local time moves to the first valid time after the gap; a repeated local time uses its first occurrence.
+	ScheduledIntent *IntentTime `json:"scheduled_intent,omitempty"`
 
 	// ScheduledTz The IANA zone name (e.g. `Europe/Berlin`) the human chose `scheduled_at` in.
 	// Required with `scheduled_at`. A zone NAME, never a numeric offset, which
@@ -62759,8 +62784,9 @@ type SendEmailRequest struct {
 	// an allow.
 	OperatorReason *string `json:"operator_reason,omitempty"`
 
-	// ScheduledAt Send this message at this instant instead of now (ADR-0104). Absolute
-	// and unambiguous; `scheduled_tz` records the zone the human picked it in.
+	// ScheduledAt Legacy instant-based schedule. When `scheduled_intent` is present, its
+	// local time and current timezone rules govern the send; this field is a
+	// compatibility cache. Without it, the supplied instant remains authoritative.
 	//
 	// A scheduled message writes NO activity and NO delivery row until it fires —
 	// the timeline stays silent about a message nobody has sent. The response is
@@ -62775,6 +62801,9 @@ type SendEmailRequest struct {
 	// An instant already past sends immediately. Further ahead than 90 days is
 	// refused 422.
 	ScheduledAt *time.Time `json:"scheduled_at,omitempty"`
+
+	// ScheduledIntent A chosen local date and time with an IANA timezone. Resolve it with current timezone rules. A missing local time moves to the first valid time after the gap; a repeated local time uses its first occurrence.
+	ScheduledIntent *IntentTime `json:"scheduled_intent,omitempty"`
 
 	// ScheduledTz The IANA zone name (e.g. `Europe/Berlin`) the human chose `scheduled_at` in.
 	// Required with `scheduled_at`. A zone NAME, never a numeric offset, which

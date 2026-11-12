@@ -100,11 +100,11 @@ func (s *Store) withWhatTheDraftHolds(
 		return content, nil
 	}
 	var held MailDraftContent
-	var at *time.Time
+	var at, wall *time.Time
 	var tz, claimed *string
-	err := tx.QueryRow(ctx, `SELECT attachment_ids, communication_context, scheduled_at, scheduled_tz FROM mail_draft
-		WHERE author_id = $1 AND anchor_type = $2 AND anchor_id = $3 AND agent_drafted FOR UPDATE`,
-		author, string(anchor.Type), anchor.ID).Scan(&held.AttachmentIDs, &claimed, &at, &tz)
+	err := tx.QueryRow(ctx, `SELECT attachment_ids, communication_context, `+scheduleInstantSQL+`,scheduled_tz,scheduled_wall FROM mail_draft
+ WHERE author_id=@author AND anchor_type=@anchor_type AND anchor_id=@anchor_id AND agent_drafted FOR UPDATE`,
+		pgx.NamedArgs{"author": author, "anchor_type": string(anchor.Type), "anchor_id": anchor.ID}).Scan(&held.AttachmentIDs, &claimed, &at, &tz, &wall)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return content, nil
 	}
@@ -119,8 +119,12 @@ func (s *Store) withWhatTheDraftHolds(
 		content.Context = commsauthz.Category(*claimed)
 	}
 	content.Schedule = nil
-	if at != nil && tz != nil && at.After(s.now()) {
-		content.Schedule = &SendSchedule{At: *at, TZ: *tz}
+	if at != nil && tz != nil && (wall != nil || at.After(s.now())) {
+		schedule, err := readSchedule(at, tz, wall)
+		if err != nil {
+			return content, err
+		}
+		content.Schedule = schedule
 	}
 	return content, nil
 }
@@ -173,32 +177,33 @@ type groundedContent struct {
 
 func upsertAgentMailDraft(ctx context.Context, tx pgx.Tx, author ids.UUID, anchor MailDraftAnchor, draft groundedContent) (MailDraft, error) {
 	content := draft.content
-	at, tz := draftScheduleColumns(content.Schedule)
-	var args []any
-	arg := func(v any) int { args = append(args, v); return len(args) }
-	query := fmt.Sprintf(`
-		INSERT INTO mail_draft (id, author_id, anchor_type, anchor_id, to_addresses, cc_addresses,
-		                        bcc_addresses, subject, body, html_body, agent_drafted, grounding,
-		                        attachment_ids, communication_context, scheduled_at, scheduled_tz)
-		VALUES ($%d, $%d, $%d, $%d, $%d, $%d, $%d, $%d, $%d, $%d, true, $%d::jsonb, $%d, $%d, $%d, $%d)
-		ON CONFLICT (author_id, anchor_type, anchor_id) DO UPDATE
-		   SET to_addresses = EXCLUDED.to_addresses, cc_addresses = EXCLUDED.cc_addresses,
-		       bcc_addresses = EXCLUDED.bcc_addresses, subject = EXCLUDED.subject,
-		       body = EXCLUDED.body, html_body = EXCLUDED.html_body,
-		       grounding = CASE WHEN $%d::boolean THEN mail_draft.grounding ELSE EXCLUDED.grounding END,
-		       attachment_ids = EXCLUDED.attachment_ids,
-		       communication_context = EXCLUDED.communication_context,
-		       scheduled_at = EXCLUDED.scheduled_at, scheduled_tz = EXCLUDED.scheduled_tz,
-		       editor_state = '{}'::jsonb, version = mail_draft.version + 1, updated_at = now()
-		 WHERE mail_draft.agent_drafted AND ($%d::bigint IS NULL OR mail_draft.version = $%d)
-		RETURNING `+mailDraftColumns,
-		arg(ids.NewV7()), arg(author), arg(string(anchor.Type)), arg(anchor.ID),
-		arg(addressLine(content.To)), arg(addressLine(content.Cc)), arg(addressLine(content.Bcc)),
-		arg(content.Subject), arg(content.Body), arg(nullableText(content.HTMLBody)),
-		arg(groundingColumn(draft.grounding)), arg(content.AttachmentIDs),
-		arg(nullableText(string(content.Context))), arg(at), arg(tz),
-		arg(draft.keepsGrounding), arg(draft.expected), arg(draft.expected))
-	row := tx.QueryRow(ctx, query, args...)
+	at, tz, wall := draftScheduleColumns(content.Schedule)
+	row := tx.QueryRow(ctx, `
+ INSERT INTO mail_draft(id,author_id,anchor_type,anchor_id,to_addresses,cc_addresses,
+ bcc_addresses,subject,body,html_body,agent_drafted,grounding,attachment_ids,
+ communication_context,scheduled_at,scheduled_tz,scheduled_wall)
+ SELECT @id,@author,@anchor_type,@anchor_id,@to,@cc,@bcc,@subject,@body,@html,true,@grounding::jsonb,@attachments,
+ @context,planned.instant,COALESCE(planned.timezone,@zone),planned.wall_time
+ FROM public.update_intent_time(NULL,NULL,NULL,@wall::text::timestamp,@zone,@at) AS planned
+ WHERE true
+ ON CONFLICT(author_id,anchor_type,anchor_id) DO UPDATE
+ SET to_addresses=EXCLUDED.to_addresses,cc_addresses=EXCLUDED.cc_addresses,bcc_addresses=EXCLUDED.bcc_addresses,
+ subject=EXCLUDED.subject,body=EXCLUDED.body,html_body=EXCLUDED.html_body,
+ grounding=CASE WHEN @keep_grounding::boolean THEN mail_draft.grounding ELSE EXCLUDED.grounding END,
+ attachment_ids=EXCLUDED.attachment_ids,communication_context=EXCLUDED.communication_context,
+ (scheduled_at,scheduled_tz,scheduled_wall)=(
+ SELECT planned.instant,COALESCE(planned.timezone,EXCLUDED.scheduled_tz),planned.wall_time
+ FROM public.update_intent_time(mail_draft.scheduled_wall,mail_draft.scheduled_tz,mail_draft.scheduled_at,
+ EXCLUDED.scheduled_wall,EXCLUDED.scheduled_tz,EXCLUDED.scheduled_at) AS planned),
+ editor_state='{}'::jsonb,version=mail_draft.version+1,updated_at=now()
+ WHERE mail_draft.agent_drafted AND (@version::bigint IS NULL OR mail_draft.version=@version)
+ RETURNING `+mailDraftColumns, pgx.NamedArgs{
+		"id": ids.NewV7(), "author": author, "anchor_type": string(anchor.Type), "anchor_id": anchor.ID,
+		"to": addressLine(content.To), "cc": addressLine(content.Cc), "bcc": addressLine(content.Bcc),
+		"subject": content.Subject, "body": content.Body, "html": nullableText(content.HTMLBody),
+		"grounding": groundingColumn(draft.grounding), "attachments": content.AttachmentIDs, "context": nullableText(string(content.Context)),
+		"at": at, "zone": tz, "wall": wall, "keep_grounding": draft.keepsGrounding, "version": draft.expected,
+	})
 	saved, err := scanMailDraft(row)
 	if errors.Is(err, apperrors.ErrNotFound) {
 		return MailDraft{}, whyTheDraftStood(ctx, tx, author, anchor)

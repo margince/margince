@@ -99,10 +99,16 @@ func (h Handlers) RescheduleScheduledSend(w http.ResponseWriter, r *http.Request
 			"missing_if_match", "moving a scheduled send needs the version you last read"))
 		return
 	}
-	row, err := h.store.RescheduleScheduledSend(r.Context(), ids.UUID(id), SendSchedule{
-		At: req.ScheduledAt,
-		TZ: req.ScheduledTz,
-	}, *version, h.timer)
+	schedule, err := ParseSendSchedule(&req.ScheduledAt, &req.ScheduledTz, req.ScheduledIntent)
+	if err != nil {
+		writeStoreErr(w, r, err)
+		return
+	}
+	if schedule == nil {
+		writeStoreErr(w, r, &InvalidScheduleError{Field: FieldScheduledAt, Reason: "is required when rescheduling"})
+		return
+	}
+	row, err := h.store.RescheduleScheduledSend(r.Context(), ids.UUID(id), *schedule, *version, h.timer)
 	if err != nil {
 		writeStoreErr(w, r, err)
 		return
@@ -122,11 +128,12 @@ func (h Handlers) CancelScheduledSend(w http.ResponseWriter, r *http.Request, id
 // scheduledSendResponse renders one row onto the wire.
 func scheduledSendResponse(row ScheduledSend) crmcontracts.ScheduledSend {
 	out := crmcontracts.ScheduledSend{
-		Id:          openapi_types.UUID(row.ID),
-		Status:      crmcontracts.ScheduledSendStatus(row.Status),
-		ScheduledAt: row.ScheduledAt,
-		ScheduledTz: row.ScheduledTZ,
-		Subject:     row.Subject,
+		Id:              openapi_types.UUID(row.ID),
+		Status:          crmcontracts.ScheduledSendStatus(row.Status),
+		ScheduledAt:     row.ScheduledAt,
+		ScheduledIntent: row.IntentWire(),
+		ScheduledTz:     row.ScheduledTZ,
+		Subject:         row.Subject,
 		// The To LINE, derived the way the send derives it. row.Recipients is
 		// the merged consent superset — every To, Cc AND Bcc — so rendering it
 		// raw would put blind copies in a field the rep reads as visible.
@@ -270,14 +277,17 @@ func emailList(addresses []string) []openapi_types.Email {
 	return out
 }
 
-// scheduleFrom reads the optional scheduling fields both send requests carry.
+// ParseSendSchedule reads the optional scheduling fields both send requests carry.
 // Nil means send now, which is what every caller before ADR-0104 meant.
 //
 // One spelling for both surfaces, for the same reason sendInputFrom is: a
 // second copy would eventually validate one of them differently, and "send
 // later" would mean something subtly different depending on which button the
 // rep pressed.
-func scheduleFrom(at *time.Time, tz *string) (*SendSchedule, error) {
+func ParseSendSchedule(at *time.Time, tz *string, intent *crmcontracts.IntentTime) (*SendSchedule, error) {
+	if intent != nil {
+		return scheduleFromIntent(intent)
+	}
 	if at == nil && tz == nil {
 		// Neither field sent: send now, which is what every caller before
 		// ADR-0104 meant and what a composer that never shows the control

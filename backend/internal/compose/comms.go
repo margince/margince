@@ -189,6 +189,7 @@ func (c commsAdapter) send(
 		return agents.SendEmailResult{
 			ScheduledSendID: out.Scheduled.ID,
 			ScheduledAt:     out.Scheduled.ScheduledAt.Format(time.RFC3339),
+			ScheduledIntent: out.Scheduled.IntentWire(),
 			Status:          sendScheduled,
 		}, nil
 	}
@@ -201,20 +202,22 @@ func (c commsAdapter) send(
 // is refused before anything is staged for a human to approve — an approver
 // should never be shown a message whose moment the server cannot read.
 func agentSchedule(in agents.SendEmailArgs) (*activities.SendSchedule, error) {
-	if in.ScheduledAt == "" && in.ScheduledTZ == "" {
-		return nil, nil //nolint:nilnil // "send now" IS the answer for an optional schedule, not a missing value.
+	if in.ScheduledIntent != nil {
+		return activities.ParseSendSchedule(nil, nil, in.ScheduledIntent)
 	}
-	if in.ScheduledAt == "" {
-		return nil, &activities.InvalidScheduleError{Field: activities.FieldScheduledAt, Reason: "is required when a zone is given"}
+	var at *time.Time
+	var zone *string
+	if in.ScheduledAt != "" {
+		parsed, err := time.Parse(time.RFC3339, in.ScheduledAt)
+		if err != nil {
+			return nil, &activities.InvalidScheduleError{Field: activities.FieldScheduledAt, Reason: "is not an RFC3339 instant"}
+		}
+		at = &parsed
 	}
-	if in.ScheduledTZ == "" {
-		return nil, &activities.InvalidScheduleError{Field: activities.FieldScheduledTZ, Reason: "is required when a moment is given"}
+	if in.ScheduledTZ != "" {
+		zone = &in.ScheduledTZ
 	}
-	at, err := time.Parse(time.RFC3339, in.ScheduledAt)
-	if err != nil {
-		return nil, &activities.InvalidScheduleError{Field: activities.FieldScheduledAt, Reason: "is not an RFC3339 instant"}
-	}
-	return &activities.SendSchedule{At: at, TZ: in.ScheduledTZ}, nil
+	return activities.ParseSendSchedule(at, zone, nil)
 }
 
 // SendMessage replies on a captured channel conversation through the SAME
