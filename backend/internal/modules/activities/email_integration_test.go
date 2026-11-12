@@ -125,6 +125,9 @@ func setupSend(t *testing.T) *sendEnv {
 	if err := testdb.EnsureSchema(ctx, owner); err != nil {
 		t.Fatal(err)
 	}
+	if err := testdb.CapStatements(ctx, owner); err != nil {
+		t.Fatal(err)
+	}
 
 	// Every test in this package seeds its own workspace into ONE database, so
 	// the separation between them has to be real: reset before seeding, as
