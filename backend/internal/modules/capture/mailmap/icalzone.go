@@ -111,7 +111,7 @@ func (r *zoneRule) read(line icalLine, value string) {
 // zone rules are written in. Any other leaves the rule a one-off.
 func readYearlyRule(rule *zoneRule, value string) {
 	parts := map[string]string{}
-	for _, part := range strings.Split(value, ";") {
+	for part := range strings.SplitSeq(value, ";") {
 		key, v, _ := strings.Cut(part, "=")
 		parts[strings.ToUpper(key)] = strings.ToUpper(v)
 	}
@@ -166,8 +166,8 @@ func icalTime(line icalLine, zones statedZones) (at time.Time, allDay, ok bool) 
 		day, err := time.Parse(icalDate, value)
 		return day, true, err == nil
 	}
-	if strings.HasSuffix(value, "Z") {
-		at, err := time.Parse(icalDateTime, strings.TrimSuffix(value, "Z"))
+	if utc, ok := strings.CutSuffix(value, "Z"); ok {
+		at, err := time.Parse(icalDateTime, utc)
 		return at, false, err == nil
 	}
 	wall, err := time.Parse(icalDateTime, value)
