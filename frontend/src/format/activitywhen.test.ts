@@ -15,6 +15,7 @@ import {
   activityHasBegun,
   activityHasHappened,
   activityIsAhead,
+  activityStartsIn,
   activityTimeOfDay,
   activityTimeSpan,
   dayOccurredAt,
@@ -58,6 +59,24 @@ describe("an activity's time as a reader sees it", () => {
   it("names no time of day for a day entry", () => {
     expect(activityTimeOfDay(stored, "day", "en", WEST)).toBeNull();
     expect(activityTimeOfDay(stored, "instant", "en", "UTC")).toBe("12:00");
+  });
+
+  it("counts down to an instant and never to a day", () => {
+    const now = Date.parse("2026-09-03T11:40:00Z");
+    expect(
+      activityStartsIn(
+        { at: "2026-09-03T12:00:00Z", precision: "instant" },
+        now,
+        "en",
+      ),
+    ).toBe("in 20 minutes");
+    expect(
+      activityStartsIn(
+        { at: "2026-09-03T12:00:00Z", precision: "day" },
+        now,
+        "en",
+      ),
+    ).toBeNull();
   });
 
   it("names no span for a meeting whose day alone is known", () => {
