@@ -8,6 +8,7 @@ import {
   useId,
   useState,
 } from "react";
+import { ExtensionReports } from "../../components/extensionreports";
 import { PageAsideToggle } from "../../components/pageaside";
 import { useTaskUpdate } from "../../components/taskactions";
 import { Modal } from "../../design-system/atoms";
@@ -211,6 +212,15 @@ function WeeklyPage() {
   );
 }
 
+// The reports wait for the day's own reads, so their request never competes
+// with the paint Home is measured on. A read that failed has answered too.
+function dayAnswered(
+  state: string,
+  reads: readonly Readonly<{ isPending: boolean }>[],
+): boolean {
+  return state !== "loading" && reads.every((read) => !read.isPending);
+}
+
 function PersonalMorning({
   query,
   queueToggle,
@@ -350,6 +360,9 @@ function PersonalMorning({
                 </Panel>
               </div>
             )}
+            <ExtensionReports
+              enabled={dayAnswered(state, [brief, handled, magic])}
+            />
           </>
         }
       />

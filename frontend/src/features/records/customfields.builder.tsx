@@ -9,6 +9,7 @@ import {
   TextInput,
 } from "../../design-system/atoms";
 import { Callout } from "../../design-system/callout";
+import { Select } from "../../design-system/select";
 import { useToast } from "../../design-system/toast";
 import { AutonomyDot } from "../../design-system/trust";
 import { useT } from "../../i18n";
@@ -20,6 +21,7 @@ import {
   ddlPreview,
   looksStructural,
 } from "../../lib/customfields.logic";
+import { useRecordKindDirectory } from "../../lib/recordkinds";
 import { ActivityKindsSelect } from "./customfields.kinds";
 import { typeLabels } from "./customfields.labels";
 import "./customfields.css";
@@ -62,6 +64,12 @@ export function FieldBuilder({
   const [options, setOptions] = useState<string[]>([""]);
   const [showInCreate, setShowInCreate] = useState(true);
   const showInCreateHintId = useId();
+  // A record field points at a kind an installed extension declared, so the
+  // type is offered only when there is one to pick.
+  const kinds = useRecordKindDirectory().data?.data ?? [];
+  const offeredTypes = CF_TYPES.filter(
+    (one) => one !== "record" || kinds.length > 0,
+  );
   const [activityKinds, setActivityKinds] = useState<string[]>([]);
   const structural = looksStructural(label);
   // A picklist needs a non-blank option and a currency field a 3-letter
@@ -69,6 +77,7 @@ export function FieldBuilder({
   const typeShapeValid =
     ((type !== "picklist" && type !== "multiselect") ||
       options.some((opt) => opt.trim().length > 0)) &&
+    (type !== "record" || kinds.some((kind) => kind.name === options[0])) &&
     (type !== "currency" || /^[A-Za-z]{3}$/.test(currency.trim()));
   const canConfirm =
     !pending && label.trim().length > 0 && !structural && typeShapeValid;
@@ -138,7 +147,7 @@ export function FieldBuilder({
           <span className="t-label">{t("cf.typeLabel")}</span>
           <SegmentedControl
             label={t("cf.typeLabel")}
-            options={CF_TYPES}
+            options={offeredTypes}
             value={type}
             onChange={setType}
             labels={typeLabels(t)}
@@ -155,6 +164,23 @@ export function FieldBuilder({
                 onChange={(event) =>
                   setCurrency(event.target.value.toUpperCase())
                 }
+              />
+            )}
+          </Field>
+        )}
+
+        {type === "record" && (
+          <Field label={t("cf.recordKind")}>
+            {(control) => (
+              <Select
+                {...control}
+                options={kinds.map((kind) => ({
+                  value: kind.name,
+                  label: kind.display_name,
+                }))}
+                value={options[0] ?? ""}
+                placeholder={t("cf.recordKindPlaceholder")}
+                onChange={(kind) => setOptions([kind])}
               />
             )}
           </Field>

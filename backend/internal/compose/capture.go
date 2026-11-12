@@ -296,6 +296,7 @@ func newCaptureSink(pool *pgxpool.Pool, cfg CaptureConfig) *capture.Sink {
 		}).
 		WithClock(cfg.clock()).
 		WithStager(mergeStager{svc: NewApprovalsService(InstallationDB(pool))}).
+		WithTaskAssigneeCheck(activities.CheckNewTaskAssignee).
 		WithContactArrivals(contactArrivalTeller{
 			store: newContactsStore(InstallationDB(pool)).
 				WithLeadArrivals(newLeadWorkTasks(InstallationDB(pool), cfg.logger())),

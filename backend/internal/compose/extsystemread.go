@@ -99,6 +99,41 @@ func declaredSystemReads(unit string) []extension.SystemRead {
 	return nil
 }
 
+// systemReadTraced is the action a system read leaves in system_log.
+const systemReadTraced = "extension_system_read"
+
+// traceReadKey names which read the trace row is about.
+const traceReadKey = "read"
+
+// traceTypeKey names the type of that record.
+const traceTypeKey = "record_type"
+
+// traceRecordKey names the record the trace row is about.
+const traceRecordKey = "record_id"
+
+// traceSystemRead writes one system_log row for a read: the unit, which read,
+// the record it named and the time. It commits on its own, before the answer
+// goes back, so a unit cannot read and then roll the trace away. A read whose
+// trace cannot be written is refused: an answer nobody can account for is not
+// given.
+func (r *callRuntime) traceSystemRead(ctx context.Context, read extension.SystemRead, recordType, recordID string) error {
+	if !r.systemReads {
+		// A signed-in human asking about themselves is a read their own session
+		// already accounts for.
+		return nil
+	}
+	err := database.WithWorkspaceTx(ctx, r.deps.pool, func(tx pgx.Tx) error {
+		_, err := storekit.LogSystem(ctx, tx, systemReadTraced, map[string]any{
+			"extension": r.unit, traceReadKey: string(read), traceTypeKey: recordType, traceRecordKey: recordID,
+		})
+		return err
+	})
+	if err != nil {
+		return r.systemReadFault(ctx, err)
+	}
+	return nil
+}
+
 // errSystemReadFailed is what a unit sees of a failed system read. The core's
 // own error text would make a table or constraint name a surface it parses.
 var errSystemReadFailed = errors.New("extension: the core could not answer this read")
@@ -129,6 +164,9 @@ func (d systemDeals) Get(ctx context.Context, dealID string) (extension.DealSumm
 	if err != nil {
 		return extension.DealSummary{}, err
 	}
+	if err := d.rt.traceSystemRead(ctx, extension.SystemReadDeals, fieldmask.Deal, dealID); err != nil {
+		return extension.DealSummary{}, err
+	}
 	deal, err := readDealSummary(ctx, d.rt.deps.pool, id)
 	if err != nil && !errors.Is(err, extension.ErrNotFound) {
 		return extension.DealSummary{}, d.rt.systemReadFault(ctx, err)
@@ -143,6 +181,9 @@ func (d systemDeals) Responsible(ctx context.Context, dealID string) ([]extensio
 	}
 	id, err := unitID(dealID, "deal")
 	if err != nil {
+		return nil, err
+	}
+	if err := d.rt.traceSystemRead(ctx, extension.SystemReadDeals, fieldmask.Deal, dealID); err != nil {
 		return nil, err
 	}
 	responsible, err := readDealResponsible(ctx, d.rt.deps.pool, id)
@@ -244,6 +285,9 @@ func (a systemAuthority) CanRead(ctx context.Context, user extension.UserID, rec
 			return false, fmt.Errorf("%w: a deal has no field %q", extension.ErrInvalid, field)
 		}
 	}
+	if err := a.rt.traceSystemRead(ctx, extension.SystemReadAuthority, record.Type, record.ID); err != nil {
+		return false, err
+	}
 	shown, err := dealShownTo(ctx, a.rt.deps.pool, userID, dealID, fields)
 	if err != nil {
 		return false, a.rt.systemReadFault(ctx, err)
@@ -258,6 +302,9 @@ func (a systemAuthority) CanWrite(ctx context.Context, user extension.UserID, re
 	}
 	userID, dealID, err := dealQuestion(user, record)
 	if err != nil {
+		return false, err
+	}
+	if err := a.rt.traceSystemRead(ctx, extension.SystemReadAuthority, record.Type, record.ID); err != nil {
 		return false, err
 	}
 	writable, err := dealWritableBy(ctx, a.rt.deps.pool, userID, dealID)
@@ -377,6 +424,12 @@ func (d systemDirectory) Emails(ctx context.Context, users []extension.UserID) (
 			return nil, err
 		}
 		wanted = append(wanted, id)
+	}
+	if len(wanted) == 0 {
+		return map[extension.UserID]string{}, nil
+	}
+	if err := d.rt.traceSystemRead(ctx, extension.SystemReadDirectory, "user", fmt.Sprintf("%d users", len(wanted))); err != nil {
+		return nil, err
 	}
 	emails, err := readColleagueEmails(ctx, d.rt.deps.pool, wanted)
 	if err != nil {

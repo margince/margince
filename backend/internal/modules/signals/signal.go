@@ -16,6 +16,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"slices"
 	"strings"
 	"time"
 
@@ -28,6 +29,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/ports/signaltypes"
 )
 
 type CreateSignalInput struct {
@@ -53,6 +55,11 @@ func (s *Store) CreateSignal(ctx context.Context, in CreateSignalInput) (crmcont
 	by, err := storekit.CapturedBy(ctx)
 	if err != nil {
 		return crmcontracts.Signal{}, err
+	}
+	if signaltypes.IsExtensionName(in.Kind) {
+		// The kind check admits the spelling, so this path must refuse it: only
+		// the declaring unit's seam checks the layout, owner and fingerprint.
+		return crmcontracts.Signal{}, &InvalidExtensionSignalError{Field: signalKindArg, Reason: "an extension kind is filed only by the extension that declares it"}
 	}
 	if strings.TrimSpace(in.Summary) == "" {
 		return crmcontracts.Signal{}, &RequiredFieldError{Field: "summary"}
@@ -95,7 +102,7 @@ func (s *Store) CreateSignal(ctx context.Context, in CreateSignalInput) (crmcont
 			return fmt.Errorf("insert signal: %w", err)
 		}
 		auditID, err := storekit.Audit(ctx, tx, "create", "signal", id.UUID, nil,
-			map[string]any{"kind": in.Kind, "source_channel": sourceChannel, "resolution_state": resolutionState})
+			map[string]any{"kind": in.Kind, sourceChannelField: sourceChannel, resolutionStateField: resolutionState})
 		if err != nil {
 			return fmt.Errorf("audit signal create: %w", err)
 		}
@@ -132,7 +139,7 @@ func deriveSignalDefaults(in CreateSignalInput) (signalDefaults, error) {
 		detectedAt:      time.Now().UTC(),
 	}
 	if d.sourceChannel == "" {
-		d.sourceChannel = "derived"
+		d.sourceChannel = channelDerived
 	}
 	if d.severity == "" {
 		d.severity = "info"
@@ -142,6 +149,9 @@ func deriveSignalDefaults(in CreateSignalInput) (signalDefaults, error) {
 	}
 	if in.DetectedAt != nil {
 		d.detectedAt = in.DetectedAt.UTC()
+	}
+	if err := refuseReservedEvidence(in.Evidence); err != nil {
+		return signalDefaults{}, err
 	}
 	evidence := in.Evidence
 	if evidence == nil {
@@ -206,6 +216,8 @@ type UpdateSignalInput struct {
 	Status    *string
 	Note      *string
 	Severity  *string
+	Kind      *string
+	Evidence  *[]crmcontracts.SignalEvidence
 	IfVersion *int64
 }
 
@@ -232,6 +244,33 @@ func (s *Store) UpdateSignal(ctx context.Context, id ids.SignalID, in UpdateSign
 			return err
 		}
 		p := storekit.NewPatch()
+		// The audit before-image is where the old kind and evidence stay readable,
+		// so an erasure of the subject withholds them (privacy.tombstoneSubjectSignals).
+		// A client echoing the kind it read is not a correction, so only a move is checked.
+		// The tool that triages a signal is an agent's at its own tier. Moving
+		// a kind or replacing evidence is not triage: only a human does it.
+		if (in.Kind != nil && *in.Kind != string(current.Kind)) || in.Evidence != nil {
+			if actor, ok := principal.Actor(ctx); ok && actor.Type == principal.PrincipalAgent {
+				return fmt.Errorf("a signal's kind and evidence are a human's to change: %w", apperrors.ErrPermissionDenied)
+			}
+		}
+		if in.Kind != nil {
+			// An extension signal keeps its kind: moved to a core kind it would
+			// keep its layout members, which the erasure path finds by kind.
+			if *in.Kind != string(current.Kind) &&
+				(signaltypes.IsExtensionName(string(current.Kind)) || !slices.Contains(correctableKinds, *in.Kind)) {
+				return &InvalidSignalKindError{}
+			}
+			p.Set("kind", string(current.Kind), *in.Kind)
+		}
+		if in.Evidence != nil {
+			// An extension signal's evidence follows its declared layout and
+			// carries core's provenance, which a replacement would drop.
+			if err := refuseReservedEvidence(*in.Evidence); err != nil || signaltypes.IsExtensionName(string(current.Kind)) {
+				return &InvalidExtensionSignalError{Field: signalEvidenceArg, Reason: "the evidence of an extension signal cannot be replaced, and a request may not carry fields or provenance"}
+			}
+			p.Set(signalEvidenceArg, current.Evidence, *in.Evidence)
+		}
 		if in.Status != nil {
 			p.Set("status", string(current.Status), *in.Status)
 		}
@@ -372,7 +411,7 @@ func scanSignal(row pgx.Row) (crmcontracts.Signal, json.RawMessage, error) {
 		return sig, nil, fmt.Errorf("signal evidence is not the contract shape: %w", err)
 	}
 	sig.Id = openapi_types.UUID(id)
-	sig.Kind = crmcontracts.SignalKind(kind)
+	sig.Kind = kind
 	sig.SourceChannel = crmcontracts.SignalSourceChannel(sourceChannel)
 	sig.ResolutionState = crmcontracts.SignalResolutionState(resolutionState)
 	sig.Severity = crmcontracts.SignalSeverity(severity)

@@ -20,6 +20,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/ports/recordkinds"
 )
 
 // A saved view is per-user view state (B-E15.12, runtime-config-surface.md
@@ -65,7 +66,7 @@ func wireSavedView(v savedViewRow) crmcontracts.SavedView {
 		Id:          openapi_types.UUID(v.ID.UUID),
 		OwnerId:     openapi_types.UUID(v.OwnerID.UUID),
 		SharedScope: &scope,
-		Resource:    crmcontracts.SavedViewResource(v.Resource),
+		Resource:    v.Resource,
 		Name:        v.Name,
 		Query:       v.Query,
 		Version:     v.Version,
@@ -168,6 +169,10 @@ func (s *Store) CreateSavedView(ctx context.Context, in CreateSavedViewInput) (s
 		return savedViewRow{}, err
 	}
 	in.Name = name
+	if _, declared := recordkinds.Lookup(in.Resource); recordkinds.IsExtensionName(in.Resource) && !declared {
+		return savedViewRow{}, &BadInputError{Field: "resource", Reason: fmt.Sprintf(
+			"no installed extension declares %q; read GET /v1/record-kinds for the kinds there are", in.Resource)}
+	}
 	if in.Query == nil {
 		return savedViewRow{}, &BadInputError{Field: viewQueryField, Reason: "must not be null"}
 	}
@@ -237,6 +242,9 @@ func (s *Store) validateViewFilter(ctx context.Context, resource string, query m
 		return nil
 	}
 	engineKey, filterable := viewResourceToEngine[resource]
+	if recordkinds.IsExtensionName(resource) {
+		engineKey, filterable = resource, true
+	}
 	if !filterable {
 		return nil
 	}

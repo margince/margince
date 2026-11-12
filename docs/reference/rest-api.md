@@ -118,6 +118,46 @@ the one record. Each also works alone. `source_system` lists every record from t
 `source_id` matches that id in any system. An empty value, or one over 128 characters, is also `422`
 on the parameters.
 
+## Company types from an extension
+
+A company has core's `relationship_types`, a closed list. An installed extension can add types of its own,
+as `ext:<unit>:<type>`. They come back in the separate field `extension_relationship_types`, so the closed list
+never holds a value your client does not know.
+
+| Request | Answer |
+|---|---|
+| `PATCH /v1/companies/{id}` with `extension_relationship_types` | Replaces the extension types of the company. An empty array clears them. Leaving the field out changes nothing. |
+| A value no installed extension declares | `422` on `extension_relationship_types`, code `invalid_enum`. |
+| `GET /v1/company-types` | Every declared value with its `label` and `unit`, for any signed-in user. |
+| `GET /v1/companies?extension_relationship_type=ext:acme:reseller` | The companies that carry it. A value no extension declares is `422`. |
+| `GET /v1/companies?relationship_type=...` | Takes core types only, as before. An extension value is `422`. |
+
+A company keeps a value when its extension is later removed. A save that leaves it unchanged is still accepted.
+The steps for the extension's side are in [how-to/add-an-extension.md](../how-to/add-an-extension.md#declare-a-company-type).
+
+## Record kinds from extensions
+
+`GET /v1/record-kinds` lists the kinds of record installed extensions add, each named `ext:<unit>:<kind>`. A signed-in
+seat sees only the kinds it may read. Each entry carries the `display_name`, the `fields`, the `natural_key`, the
+`delete_policy` and the `actions` the seat holds. The list is empty when no extension declares a kind or the seat may read none.
+The steps for the extension's side are in [how-to/add-an-extension.md](../how-to/add-an-extension.md#declare-a-record-kind).
+
+## Reports from extensions
+
+`GET /v1/extension-reports` answers the counts installed extensions add, whole or split by a field, to Reports and Home, each named
+`ext:<unit>:<name>`. Each entry carries the `label`, the `kind` (`count` or `breakdown`), the `population`, the `by`
+field of a breakdown, the `groups` and the `total`. Row scope, the mask and the group floor apply as for a core report.
+
+| Field | Meaning |
+|---|---|
+| `groups` | One entry per group, or one for a count. A hidden group has `withheld: true` and no key or count. |
+| `withheld` | The floor hides a group. `total` is then `null`. |
+| `excluded_by_permission` | Visible rows a mask hides. `null` when no mask applied. |
+
+A report the seat may not read is left out. So is one whose custom field this installation has not set up. The list is
+empty when no extension declares one. The steps for the extension's side are in
+[how-to/add-an-extension.md](../how-to/add-an-extension.md#declare-a-report-count-or-breakdown).
+
 ## Events out
 
 Margince sends events to your system as signed webhooks. To register one, see

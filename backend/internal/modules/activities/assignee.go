@@ -54,6 +54,12 @@ func ensureNewTaskAssignee(ctx context.Context, tx pgx.Tx, assigneeID *ids.UserI
 	return err
 }
 
+// CheckNewTaskAssignee is ensureNewTaskAssignee for a writer outside this
+// module: the task form's rule, so a record filed by a unit meets the same one.
+func CheckNewTaskAssignee(ctx context.Context, tx pgx.Tx, seat ids.UserID) error {
+	return ensureNewTaskAssignee(ctx, tx, &seat)
+}
+
 // newTaskSeat is ensureNewTaskAssignee that also says whether the seat has
 // signed in yet.
 func newTaskSeat(ctx context.Context, tx pgx.Tx, assigneeID *ids.UserID) (string, error) {
