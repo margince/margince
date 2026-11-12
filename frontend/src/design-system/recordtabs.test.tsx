@@ -170,8 +170,8 @@ describe("RecordTabs fades only an end that hides tabs", () => {
   });
 });
 
-// Focus stays on the row as tabs fold and return: a tab that folds hands it
-// to "More", and "More" hands it to the open tab once every tab fits.
+// Focus stays on the row as tabs fold and return. A tab that folds hands it
+// to "More". "More" hands it to the open tab once every tab fits.
 describe("RecordTabs keeps focus on the row as tabs fold", () => {
   // Two tabs on a row that starts at `start` wide. The returned call resizes it.
   function sizedStrip(start: number) {
