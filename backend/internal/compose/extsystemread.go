@@ -105,6 +105,12 @@ const systemReadTraced = "extension_system_read"
 // traceReadKey names which read the trace row is about.
 const traceReadKey = "read"
 
+// traceTypeKey names the type of that record.
+const traceTypeKey = "record_type"
+
+// traceRecordKey names the record the trace row is about.
+const traceRecordKey = "record_id"
+
 // traceSystemRead writes one system_log row for a read: the unit, which read,
 // the record it named and the time. It commits on its own, before the answer
 // goes back, so a unit cannot read and then roll the trace away. A read whose
@@ -118,7 +124,7 @@ func (r *callRuntime) traceSystemRead(ctx context.Context, read extension.System
 	}
 	err := database.WithWorkspaceTx(ctx, r.deps.pool, func(tx pgx.Tx) error {
 		_, err := storekit.LogSystem(ctx, tx, systemReadTraced, map[string]any{
-			"extension": r.unit, traceReadKey: string(read), "record_type": recordType, "record_id": recordID,
+			"extension": r.unit, traceReadKey: string(read), traceTypeKey: recordType, traceRecordKey: recordID,
 		})
 		return err
 	})
