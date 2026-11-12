@@ -41,7 +41,6 @@
   "extOpenchannel.outboundList.empty": "Von diesem Endpunkt wurden noch keine Nachrichten gesendet.",
   "extOpenchannel.outboundList.noGrant": "Deine Rolle hat keinen Zugriff auf ausgehende Nachrichten.",
   "extOpenchannel.outboundList.outcome": "Ergebnis",
-  "extOpenchannel.outboundList.recipient": "Empfangsadresse",
   "extOpenchannel.outboundList.sub": "Die letzten Nachrichten, die dieser Connector an die registrierte Adresse gesendet hat, neueste zuerst. Der Inhalt jeder Nachricht steht auf dem CRM-Datensatz, aus dem sie gesendet wurde.",
   "extOpenchannel.outboundList.title": "Ausgehende Nachrichten",
   "extOpenchannel.outboundList.when": "Versucht",

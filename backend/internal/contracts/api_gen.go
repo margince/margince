@@ -20539,6 +20539,24 @@ func (e ReportingFrameworkInputTemplate) Valid() bool {
 	}
 }
 
+// Defines values for ReportingMetricTargetSource.
+const (
+	ReportingMetricTargetSourceSalesGoals ReportingMetricTargetSource = "sales_goals"
+	ReportingMetricTargetSourceTarget     ReportingMetricTargetSource = "target"
+)
+
+// Valid indicates whether the value is a known member of the ReportingMetricTargetSource enum.
+func (e ReportingMetricTargetSource) Valid() bool {
+	switch e {
+	case ReportingMetricTargetSourceSalesGoals:
+		return true
+	case ReportingMetricTargetSourceTarget:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for ReportingMetricDefinitionTemporalBasis.
 const (
 	ReportingMetricDefinitionTemporalBasisEventPeriod ReportingMetricDefinitionTemporalBasis = "event_period"
@@ -34430,6 +34448,9 @@ type AnalyticsScope struct {
 
 	// Label What to call this population on screen.
 	Label string `json:"label"`
+
+	// Measurable Whether this population is within the caller's own record access: the workspace for a seat that reads every record, a team for its members. Analytics offers the totals of a scope outside it. Progress reads only a scope inside it.
+	Measurable *bool `json:"measurable,omitempty"`
 }
 
 // AnalyticsScopeKind `managed_teams` is a team manager's own default — their teams and themselves. It is RESOLVED, never requested: a caller names one team, or names nothing and is given this.
@@ -60184,10 +60205,22 @@ type ReportingMetric struct {
 	// whole-quarter figure and is never added to `won`.
 	TargetComparison *ReportingTargetComparison `json:"target_comparison,omitempty"`
 	TargetRevision   *int64                     `json:"target_revision,omitempty"`
-	Unit             string                     `json:"unit"`
-	Value            *float64                   `json:"value"`
-	Version          string                     `json:"version"`
+
+	// TargetSource Present with `target`. `target`: a target set for this scope and
+	// period. `sales_goals`: the figure is a seller's monthly sales
+	// goal, or the sum of the monthly sales goals of the scope's sellers
+	// over the target interval. A sum has no `target_revision`.
+	TargetSource *ReportingMetricTargetSource `json:"target_source,omitempty"`
+	Unit         string                       `json:"unit"`
+	Value        *float64                     `json:"value"`
+	Version      string                       `json:"version"`
 }
+
+// ReportingMetricTargetSource Present with `target`. `target`: a target set for this scope and
+// period. `sales_goals`: the figure is a seller's monthly sales
+// goal, or the sum of the monthly sales goals of the scope's sellers
+// over the target interval. A sum has no `target_revision`.
+type ReportingMetricTargetSource string
 
 // ReportingMetricDefinition defines model for ReportingMetricDefinition.
 type ReportingMetricDefinition struct {
@@ -61337,10 +61370,13 @@ type SalesGoalRoster struct {
 
 // SalesGoalSeller defines model for SalesGoalSeller.
 type SalesGoalSeller struct {
-	CanEdit bool               `json:"can_edit"`
-	Name    string             `json:"name"`
-	OwnerId openapi_types.UUID `json:"owner_id"`
-	State   SalesGoalPlanState `json:"state"`
+	CanEdit bool `json:"can_edit"`
+
+	// DraftTotalMinor The yearly sum of a complete draft, for a reader who may read the draft.
+	DraftTotalMinor *int64             `json:"draft_total_minor,omitempty"`
+	Name            string             `json:"name"`
+	OwnerId         openapi_types.UUID `json:"owner_id"`
+	State           SalesGoalPlanState `json:"state"`
 
 	// TotalMinor The published yearly goal.
 	TotalMinor *int64 `json:"total_minor,omitempty"`
@@ -71409,6 +71445,9 @@ type ListReportingTargetsParams struct {
 
 	// PeriodStart Filter by the first local day of the target period.
 	PeriodStart *openapi_types.Date `form:"period_start,omitempty" json:"period_start,omitempty"`
+
+	// PlanOwned Filter by whether a published sales goal plan owns the target, as one month of a seller's year. Such a target changes only through the plan. Omitted includes both.
+	PlanOwned *bool `form:"plan_owned,omitempty" json:"plan_owned,omitempty"`
 }
 
 // UpdateReportingTargetParams defines parameters for UpdateReportingTarget.
@@ -110221,6 +110260,19 @@ func (siw *ServerInterfaceWrapper) ListReportingTargets(w http.ResponseWriter, r
 			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "period_start"})
 		} else {
 			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "period_start", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "plan_owned" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "plan_owned", r.URL.Query(), &params.PlanOwned, runtime.BindQueryParameterOptions{Type: "boolean", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "plan_owned"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "plan_owned", Err: err})
 		}
 		return
 	}
