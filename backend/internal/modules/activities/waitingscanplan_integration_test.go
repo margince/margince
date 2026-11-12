@@ -143,13 +143,20 @@ func TestASeatsMailCandidatesUseTimeAndHeldIDIndexes(t *testing.T) {
 	seat := ids.NewV7()
 	statement := `SELECT ` + storekit.DirectMailActivitiesSQL(
 		"jsonb_build_object($1::text, jsonb_build_array($2::text))", "$1::uuid", "$3::timestamptz", heldRequestIDsSQL())
-	plan := explainOnMailbox(t, "", "SET LOCAL enable_seqscan = off; SET LOCAL plan_cache_mode = force_generic_plan",
-		"EXPLAIN (ANALYZE, FORMAT JSON) ", statement, seat.String(), "seat@work.test", clocktest.Now(t).AddDate(0, 0, -30))
+	// Ten team addresses share the inbound mail, and the 90-day window holds a
+	// quarter of it: an empty window prices every path the same. ANALYZE fixes
+	// the statistics, so earlier tests in the shared database cannot move the plan.
+	plan := explainOnMailbox(t, `
+		UPDATE activity_participant p SET address = 'rep'||i.g % 10||'@work.test'
+		  FROM mailbox_inbound i WHERE p.activity_id = i.id AND p.role = 'to' AND i.g % 10 <> 0;
+		ANALYZE`,
+		"SET LOCAL enable_seqscan = off; SET LOCAL plan_cache_mode = force_generic_plan",
+		"EXPLAIN (ANALYZE, FORMAT JSON) ", statement, seat.String(), "seat@work.test", clocktest.Now(t).AddDate(0, 0, -90))
 	var recentByTime, heldByID int
 	var recentRows float64
 	var reads []string
 	plan.walk(func(n planNode) {
-		if n.IndexName == "idx_aparticipant_waiting_address_time" && strings.Contains(n.IndexCond, "domain_evidence_at >=") {
+		if strings.Contains(n.IndexName, "participant") && strings.Contains(n.IndexCond, "domain_evidence_at >=") {
 			recentByTime++
 			recentRows += n.ActualRows
 		}
