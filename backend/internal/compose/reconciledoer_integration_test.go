@@ -63,7 +63,7 @@ func TestAnApprovedFollowUpIsTheDealOwnersOwnTask(t *testing.T) {
 				t.Fatalf("the approved follow-up is assigned to %q, want %q", got, c.want(e))
 			}
 			if got == e.Rep1.String() {
-				assertOnlyInMine(t, e, approver, proposal.DueDate)
+				assertOnlyInMine(approver, t, e, proposal.DueDate)
 			}
 		})
 	}
@@ -71,7 +71,7 @@ func TestAnApprovedFollowUpIsTheDealOwnersOwnTask(t *testing.T) {
 
 // assertOnlyInMine checks the reader's own task lane holds the follow-up and
 // the unassigned queue does not.
-func assertOnlyInMine(t *testing.T, e *reconcileEnv, reader context.Context, dueDate string) {
+func assertOnlyInMine(reader context.Context, t *testing.T, e *reconcileEnv, dueDate string) {
 	t.Helper()
 	due, err := time.Parse(time.DateOnly, dueDate)
 	if err != nil {

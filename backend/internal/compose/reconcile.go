@@ -378,7 +378,7 @@ func followUpDoer(ctx context.Context, tx pgx.Tx, deal ids.DealID, decider ids.U
 		owner = decider
 	}
 	if owner.IsZero() {
-		return nil, nil
+		return nil, nil //nolint:nilnil // a nil assignee is how LogActivityInput files the task as unassigned
 	}
 	return new(ids.From[ids.UserKind](owner)), nil
 }

@@ -14,6 +14,7 @@ package projects
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"strings"
 	"unicode"
@@ -143,12 +144,12 @@ func mintProjectKey(ctx context.Context, tx pgx.Tx, name string, taken map[strin
 	}
 	bareHeld := bareLive || taken[stem]
 	if !bareHeld && len(inUse) == 0 {
-		refusal, err := keyWordRefusal(ctx, tx, stem)
-		if err != nil {
-			return "", err
-		}
-		if refusal == nil {
+		var refusal *ProjectKeyRefusedError
+		switch err := keyWordRefusal(ctx, tx, stem); {
+		case err == nil:
 			return stem, nil
+		case !errors.As(err, &refusal):
+			return "", err
 		}
 	}
 	// Next to a live bare `ERA` the numbers start at 2, so the two read as

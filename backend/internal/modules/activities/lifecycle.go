@@ -205,18 +205,7 @@ func admitActivityPatch(
 		}
 	}
 	if !held {
-		if err := checkTaskFieldsKind(string(current.Kind), taskFields{in.DueAt, in.RemindAt, in.AssigneeID, in.IsDone}); err != nil {
-			return crmcontracts.Activity{}, held, err
-		}
-		if err := checkTaskTypeKind(string(current.Kind), in.TaskType); err != nil {
-			return crmcontracts.Activity{}, held, err
-		}
-		if err := in.admitPatchTime(current.Kind); err != nil {
-			return crmcontracts.Activity{}, held, err
-		}
-	}
-	if !held {
-		if err := validateActivityDuration(in.DurationSeconds); err != nil {
+		if err := admitPatchTaskFields(current, in); err != nil {
 			return crmcontracts.Activity{}, held, err
 		}
 	}
@@ -234,6 +223,21 @@ func admitActivityPatch(
 		endPassedReminder(current, in)
 	}
 	return current, held, nil
+}
+
+// admitPatchTaskFields refuses task fields on a kind that has none, and a time
+// or duration the patch cannot hold.
+func admitPatchTaskFields(current crmcontracts.Activity, in *UpdateActivityInput) error {
+	if err := checkTaskFieldsKind(string(current.Kind), taskFields{in.DueAt, in.RemindAt, in.AssigneeID, in.IsDone}); err != nil {
+		return err
+	}
+	if err := checkTaskTypeKind(string(current.Kind), in.TaskType); err != nil {
+		return err
+	}
+	if err := in.admitPatchTime(current.Kind); err != nil {
+		return err
+	}
+	return validateActivityDuration(in.DurationSeconds)
 }
 
 // RefuseArchiveActivity answers every authority refusal ArchiveActivity would
