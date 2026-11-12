@@ -58,6 +58,39 @@ func TestAFindingsMoneySlotsAreMaskedOnlyOnTheTypesThatQuoteMoney(t *testing.T) 
 	}
 }
 
+// A finding's currency answers to the deal's currency mask on its own. With the
+// amount readable, a currency-only mask still withholds it. No mask leaves the
+// bare column.
+func TestAFindingsCurrencyAnswersToTheDealCurrencyMask(t *testing.T) {
+	t.Parallel()
+	for name, tc := range map[string]struct {
+		masks  []principal.FieldMask
+		masked bool
+	}{
+		"currency masked": {masks: []principal.FieldMask{{Object: "deal", Field: "currency", Condition: principal.MaskAlways}}, masked: true},
+		"no mask":         {masks: nil, masked: false},
+	} {
+		ctx := principal.WithActor(context.Background(), principal.Principal{
+			Type: principal.PrincipalHuman, ID: "human:reader",
+			Permissions: principal.Permissions{
+				Objects:    map[string]principal.ObjectGrant{"deal": {Read: true}},
+				FieldMasks: tc.masks,
+			},
+		})
+		arg := func(any) int { return 1 }
+		money, err := maskedFindingMoney(ctx, rawFindingMoney.affected, arg)
+		if err != nil {
+			t.Fatalf("%s: %v", name, err)
+		}
+		if got := money.currency != rawFindingMoney.currency; got != tc.masked {
+			t.Errorf("%s: currency = %q, want masked=%v", name, money.currency, tc.masked)
+		}
+		if money.affected != rawFindingMoney.affected {
+			t.Errorf("%s: affected = %q, want the bare column — the amount is not masked", name, money.affected)
+		}
+	}
+}
+
 // A read with no principal is refused rather than rendered raw: a slot the
 // mask cannot be asked about is never printed as it stands.
 func TestAFindingsMoneyIsNotRenderedWithoutAPrincipal(t *testing.T) {
