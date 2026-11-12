@@ -27,7 +27,7 @@ import {
 } from "./sharedmailboxes.forms";
 
 // The installation's shared mailboxes (sales@, an operations desk): mailboxes
-// no person owns, each read by one team. Every call behind this card is
+// no single user owns, each read by one team. Every call behind this card is
 // admin-only, so a reader without the role sees why rather than an error.
 
 type SharedMailbox = components["schemas"]["SharedMailbox"];
