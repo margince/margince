@@ -3764,6 +3764,7 @@ export const en = {
   "co.overview.kind.task": "task",
   "co.overview.kind.message": "message",
   "record.details.about": "About",
+  "section.help": "About this section",
   "record.details.ownership": "Ownership",
   "co.aside.size": "Employees",
   "co.aside.wayIn": "Way in",
@@ -4429,6 +4430,8 @@ export const en = {
   "co.brief.by.deterministic": "Compiled from CRM records",
   "co.brief.generatedAt": "as of {when}",
   "co.growthFit.title": "Growth fit",
+  "co.growthFit.help":
+    "An AI reading of how well this company fits what your team sells, from seven inputs such as industry, size and the technology they run. Record more of them for a firmer answer.",
   "co.growthFit.unavailable":
     "Assessment could not be loaded. The company record is unchanged.",
   "co.growthFit.assembling":
@@ -4734,6 +4737,8 @@ export const en = {
 
   // The review queue and the reach table (ADR-0078 §2.1b).
   "companyReach.title": "Who can get you in",
+  "companyReach.help":
+    "Colleagues whose LinkedIn connections work at this company, as a count. Ask one of them to introduce you.",
   "companyReach.sub":
     "Colleagues whose LinkedIn connections work here. A count, never the names. Ask them for an introduction.",
   "companyReach.colleaguesLabel": "Colleagues with connections here",
@@ -6268,6 +6273,8 @@ export const en = {
 
   "deal.monthlyApproximate": "approx.",
   "assignments.title": "Responsibilities",
+  "assignments.help":
+    "Who on your team looks after this company, by role. It does not change who can see the record; share the record for that.",
   "assignments.noAccessNote":
     "Records who looks after what. It does not grant access to this record.",
   "assignments.empty": "No one is assigned yet",
@@ -18553,6 +18560,8 @@ export const en = {
   "lists.note": "Why (optional)",
   "lists.noteHint": "Kept with the change so colleagues can see why.",
   "lists.record.title": "Lists",
+  "lists.record.help":
+    "The lists this company is on. Live Lists add it by their rules; you add it to a Shortlist yourself. Use a list to work through accounts one after another.",
   "lists.record.loading": "Loading lists",
   "lists.record.empty": "Not on any list you can find.",
   "lists.record.check": "Check a Live List",

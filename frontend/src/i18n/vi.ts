@@ -3704,6 +3704,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "co.overview.kind.task": "việc",
   "co.overview.kind.message": "tin nhắn",
   "record.details.about": "Thông tin",
+  "section.help": "Về mục này",
   "record.details.ownership": "Phụ trách",
   "co.aside.size": "Số nhân viên",
   "co.aside.wayIn": "Đường vào",
@@ -4351,6 +4352,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "co.brief.by.deterministic": "Tổng hợp từ hồ sơ CRM",
   "co.brief.generatedAt": "tính đến {when}",
   "co.growthFit.title": "Mức độ phù hợp",
+  "co.growthFit.help":
+    "Đánh giá của AI về mức độ phù hợp của công ty này với những gì nhóm bạn bán, dựa trên bảy thông tin như ngành, quy mô và công nghệ họ dùng. Ghi thêm thông tin để kết quả chắc chắn hơn.",
   "co.growthFit.unavailable":
     "Không thể tải đánh giá. Hồ sơ công ty không thay đổi.",
   "co.growthFit.assembling":
@@ -4655,6 +4658,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
 
   // The review queue and the reach table (ADR-0078 §2.1b).
   "companyReach.title": "Ai c\u00f3 th\u1ec3 gi\u1edbi thi\u1ec7u b\u1ea1n",
+  "companyReach.help":
+    "Những đồng nghiệp có quen biết trên LinkedIn đang làm việc tại công ty này, chỉ hiển thị số lượng. Hãy nhờ một đồng nghiệp trong số đó giới thiệu bạn.",
   "companyReach.sub":
     "Những đồng nghiệp có người quen trên LinkedIn đang làm việc tại công ty này. Chỉ hiển thị số người quen, không hiển thị tên của họ. Bạn có thể nhờ đồng nghiệp giới thiệu.",
   "companyReach.colleaguesLabel":
@@ -6141,6 +6146,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
 
   "deal.monthlyApproximate": "khoảng",
   "assignments.title": "Vai trò trong nhóm",
+  "assignments.help":
+    "Ai trong nhóm bạn phụ trách công ty này, theo vai trò. Mục này không thay đổi ai được xem hồ sơ; hãy chia sẻ hồ sơ nếu cần.",
   "assignments.noAccessNote":
     "Ghi nhận ai phụ trách việc gì. Không cấp quyền truy cập vào hồ sơ này.",
   "assignments.empty": "Chưa giao vai trò nào",
@@ -18240,6 +18247,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "lists.note": "L\u00fd do (kh\u00f4ng b\u1eaft bu\u1ed9c)",
   "lists.noteHint": "Lưu cùng thay đổi để đồng nghiệp biết lý do.",
   "lists.record.title": "Danh s\u00e1ch",
+  "lists.record.help":
+    "Các danh sách có công ty này. Danh sách tự cập nhật thêm công ty theo quy tắc của nó; danh sách chọn tay do bạn tự thêm. Dùng danh sách để xử lý lần lượt từng công ty.",
   "lists.record.loading": "\u0110ang t\u1ea3i danh s\u00e1ch",
   "lists.record.empty": "Hồ sơ này chưa nằm trong danh sách nào bạn xem được.",
   "lists.record.check": "Kiểm tra với danh sách tự cập nhật",

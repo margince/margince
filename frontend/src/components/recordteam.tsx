@@ -134,7 +134,11 @@ export function RecordTeam({
     return body;
   }
   return (
-    <Panel title={t("assignments.title")} actions={assign}>
+    <Panel
+      title={t("assignments.title")}
+      help={t("assignments.help")}
+      actions={assign}
+    >
       {body}
     </Panel>
   );

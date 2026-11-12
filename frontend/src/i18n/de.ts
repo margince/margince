@@ -3820,6 +3820,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "co.overview.kind.task": "Aufgabe",
   "co.overview.kind.message": "Nachricht",
   "record.details.about": "Überblick",
+  "section.help": "Über diesen Bereich",
   "record.details.ownership": "Zuständigkeit",
   "co.aside.size": "Mitarbeitende",
   "co.aside.wayIn": "Zugang",
@@ -4466,6 +4467,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "co.brief.by.deterministic": "Aus CRM-Datensätzen zusammengestellt",
   "co.brief.generatedAt": "Stand {when}",
   "co.growthFit.title": "Wachstumspotenzial",
+  "co.growthFit.help":
+    "Eine KI-Einschätzung, wie gut diese Firma zu dem passt, was dein Team verkauft, aus sieben Angaben wie Branche, Größe und eingesetzter Technik. Je mehr davon erfasst sind, desto belastbarer das Ergebnis.",
   "co.growthFit.unavailable":
     "Die Bewertung konnte nicht geladen werden. Der Unternehmensdatensatz ist unverändert.",
   "co.growthFit.assembling":
@@ -4779,6 +4782,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
 
   // Die Prüfliste und die Reichweiten-Tabelle (ADR-0078 §2.1b).
   "companyReach.title": "Wer dich vorstellen kann",
+  "companyReach.help":
+    "Kolleginnen und Kollegen, deren LinkedIn-Kontakte bei dieser Firma arbeiten, als Anzahl. Bitte eine von ihnen, dich vorzustellen.",
   "companyReach.sub":
     "Teammitglieder, deren LinkedIn-Kontakte hier arbeiten. Nur eine Anzahl, nie die Namen. Frage sie nach einer Vorstellung.",
   "companyReach.colleaguesLabel": "Teammitglieder mit Kontakten hier",
@@ -6305,6 +6310,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
 
   "deal.monthlyApproximate": "etwa",
   "assignments.title": "Zuständigkeiten",
+  "assignments.help":
+    "Wer in deinem Team sich um diese Firma kümmert, nach Rolle. Das ändert nicht, wer den Datensatz sehen darf; dafür teilst du ihn.",
   "assignments.noAccessNote":
     "Hält fest, wer sich worum kümmert. Eine Zuständigkeit gewährt keinen Zugriff auf diesen Datensatz.",
   "assignments.empty": "Noch niemand zugewiesen",
@@ -18718,6 +18725,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "lists.noteHint":
     "Wird mit der \u00c4nderung gespeichert, damit das Team den Grund sieht.",
   "lists.record.title": "Listen",
+  "lists.record.help":
+    "Die Listen, auf denen diese Firma steht. Live-Listen nehmen sie nach ihren Regeln auf; auf eine Shortlist setzt du sie selbst. Mit einer Liste arbeitest du Firmen nacheinander ab.",
   "lists.record.loading": "Listen werden geladen",
   "lists.record.empty": "Auf keiner Liste, die du finden kannst.",
   "lists.record.check": "Live-Liste pr\u00fcfen",
