@@ -89,7 +89,7 @@ func importingSeats(ctx context.Context, tx pgx.Tx, id ids.ActivityID) ([]ids.UU
 	rows, err := tx.Query(ctx, fmt.Sprintf(`
 		SELECT ci.user_id
 		  FROM capture_import ci
-		 WHERE ci.activity_id = $%d
+		 WHERE ci.activity_id = $%d AND ci.user_id IS NOT NULL
 		 ORDER BY ci.imported_at, ci.id`, len(imports)), imports...)
 	if err != nil {
 		return nil, err

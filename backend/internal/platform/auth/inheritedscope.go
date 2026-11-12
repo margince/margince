@@ -74,11 +74,15 @@ func discoverGateFor(p principal.Principal, alias string, arg func(any) int) str
 }
 
 // activityReachArms is discovery through the row's own links or its attendance.
+// A link-less row is open to discovery, except one only shared mailboxes
+// imported and held: its reader team and its parties find it through
+// attendance.
 func activityReachArms(p principal.Principal, alias string, arg func(any) int) string {
 	return fmt.Sprintf(`coalesce((SELECT bool_or(%[2]s)
-	   FROM activity_link l WHERE l.activity_id = %[1]s.id), true)
+	   FROM activity_link l WHERE l.activity_id = %[1]s.id), NOT %[4]s)
 	   OR %[3]s`,
-		alias, linkTargetVisible(p, "l", arg, everyLinkTarget), activityAttendanceArm(p, alias, arg))
+		alias, linkTargetVisible(p, "l", arg, everyLinkTarget), activityAttendanceArm(p, alias, arg),
+		heldByOnlySharedMailboxesSQL(alias))
 }
 
 // assignedCommitmentArm lets the holder of a promise's task find it. Every
@@ -135,12 +139,13 @@ func activityAttendanceArm(p principal.Principal, alias string, arg func(any) in
 
 func activityAttendanceForMemberSQL(alias, members string) string {
 	return fmt.Sprintf(`(EXISTS (SELECT 1 FROM capture_import ci WHERE ci.activity_id = %[1]s.id AND ci.user_id IN (%[2]s))
+    OR %[5]s
     OR EXISTS (SELECT 1 FROM activity_participant ap
                 WHERE ap.activity_id = %[1]s.id AND ap.user_id IN (%[2]s) AND ap.address IS NOT NULL)
     OR (%[1]s.sent_by_colleague IN (%[2]s) AND EXISTS (SELECT 1 FROM data_task_run sender_check
          WHERE sender_check.step = '%[3]s' AND sender_check.status = 'done')
         AND %[4]s))`,
-		alias, members, SenderStampsCheckedStep, senderAtOwnDomain(alias))
+		alias, members, SenderStampsCheckedStep, senderAtOwnDomain(alias), sharedMailboxReaderInSQL(alias, members))
 }
 
 // senderAtOwnDomain re-asks at read time that the stamped seat's login address
@@ -183,8 +188,9 @@ const SenderStampsCheckedStep = "recheck_colleague_sender_domains"
 func activityMembershipArm(p principal.Principal, alias string, arg func(any) int) string {
 	me := arg(p.UserID)
 	return fmt.Sprintf(`(EXISTS (SELECT 1 FROM capture_import ci WHERE ci.activity_id = %[1]s.id AND ci.user_id IN (%[2]s))
+	   OR %[4]s
 	   OR EXISTS (SELECT 1 FROM activity_participant ap WHERE ap.activity_id = %[1]s.id AND ap.user_id IN (%[2]s) AND %[3]s))`,
-		alias, memberIdentitySQL(me), ParticipantStandsSQL("ap", alias))
+		alias, memberIdentitySQL(me), ParticipantStandsSQL("ap", alias), sharedMailboxReaderInSQL(alias, memberIdentitySQL(me)))
 }
 
 func contentGateFor(p principal.Principal, alias string, arg func(any) int) string {
@@ -204,7 +210,7 @@ func activityContentAudienceArm(p principal.Principal, alias string, arg func(an
 		own, alias, provenance.EmailRequestSource, alias, arg(p.UserID))
 	// A captured request is a personal reminder of its source, not a new grant
 	// to that correspondence. Archiving or restricting the source withholds it.
-	source := discoverGateFor(p, contentGateSource, arg) + " AND " + activityAudienceArm(p, contentGateSource, arg)
+	source := discoverGateFor(p, contentGateSource, arg) + " AND " + activityAudienceArm(p, contentGateSource, arg) + agentRestrictionArm(p, contentGateSource)
 	sourceID := provenance.TaskSourceActivitySQL(alias)
 	sourceBound := own + fmt.Sprintf(` AND ((coalesce(%[1]s.source_system, '') NOT IN ('`+provenance.EmailRequestSource+`', '`+provenance.CommitmentTaskSource+`', '`+provenance.LeadRepliedSource+`') AND (%[1]s.kind <> 'task' OR %[1]s.source_activity_id IS NULL))
 	 OR EXISTS (SELECT 1 FROM activity %[4]s
@@ -212,7 +218,19 @@ func activityContentAudienceArm(p principal.Principal, alias string, arg func(an
      AND (coalesce(%[1]s.source_system, '') <> '`+provenance.EmailRequestSource+`' OR %[4]s.archived_at IS NULL)
 	     AND %[4]s.restricted_at IS NULL AND %[2]s))`, alias, source, sourceID, contentGateSource)
 	return sourceBound + fmt.Sprintf(" AND (coalesce(%s.source_system, '') <> '%s' OR %s)",
-		alias, provenance.CommitmentTaskSource, commitmentEvidenceArm(p, alias+".source_activity_id", alias+".source_id", arg))
+		alias, provenance.CommitmentTaskSource, commitmentEvidenceArm(p, alias+".source_activity_id", alias+".source_id", arg)) +
+		agentRestrictionArm(p, alias)
+}
+
+// agentRestrictionArm withholds from an agent, the product's own or one a seat
+// connected, every mail a restricted contact sent or received (GDPR Art. 18).
+// It sits in the audience arm, so a discover-gated reader's content_state and
+// a reminder whose source is such a mail both answer no.
+func agentRestrictionArm(p principal.Principal, alias string) string {
+	if p.Type != principal.PrincipalAgent {
+		return ""
+	}
+	return " AND NOT " + ActivityRestrictedSQL(alias+".id")
 }
 
 // ActivityAudienceArm renders the audience membership test alone — the

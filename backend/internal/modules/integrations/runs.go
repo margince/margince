@@ -152,7 +152,7 @@ func (s *Store) QueueRun(ctx context.Context, in provider.QueueInput) (provider.
 		if err := auth.EnsureWritableLive(ctx, tx, "contact", uuidOf(&in.ContactID)); err != nil {
 			return err
 		}
-		conn, err := s.admit(ctx, tx, name, in.Trigger)
+		conn, err := s.admit(ctx, tx, name, in.Trigger, in.ContactID)
 		if err != nil {
 			return err
 		}

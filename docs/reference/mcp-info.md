@@ -15,9 +15,9 @@ input and output schema in folds below it. What a tool may do and whether a huma
 |---|---:|
 | Tools | 48 |
 | Resources | 14 |
-| Tool catalog | 230.7 KB |
+| Tool catalog | 232.1 KB |
 | Resource catalog | 5.5 KB |
-| Approx. wire tokens | 60473 |
+| Approx. wire tokens | 60834 |
 | Largest tool | `read_context` (11.5 KB) |
 | Scopes rendered | `read`, `draft`, `write`, `send`, `enrich` |
 
@@ -32,11 +32,11 @@ tool adds to that listing, and what it costs each scheduled agent, agent by agen
 
 | Part | Bytes | Share | In a run's prompt? |
 |---|---:|---:|---|
-| Output schemas | 50.6 KB | 21% | **No**: a result's shape, never listed to a model |
-| Descriptions (incl. governance clause) | 54.0 KB | 23% | Yes, every step |
-| Input schemas | 114.3 KB | 49% | Yes, every step |
+| Output schemas | 51.2 KB | 22% | **No**: a result's shape, never listed to a model |
+| Descriptions (incl. governance clause) | 54.1 KB | 23% | Yes, every step |
+| Input schemas | 115.1 KB | 49% | Yes, every step |
 | _Names, annotations, punctuation_ | 11.8 KB | 5% | Partly |
-| **Description + input schema** | **168.3 KB** | **72%** | **the recurring cost** |
+| **Description + input schema** | **169.1 KB** | **72%** | **the recurring cost** |
 
 Output schemas are the largest part of the total and are never sent to a model;
 descriptions and input schemas are what each step pays for.
@@ -75,7 +75,7 @@ descriptions and input schemas are what each step pays for.
 | [`change_lists`](#change_lists) | Make and change lists |  |  | 620 |
 | [`change_my_settings`](#change_my_settings) | Change the user's own preferences and voice |  |  | 601 |
 | [`change_offers`](#change_offers) | Work offers, contracts and deal rooms |  |  | 678 |
-| [`change_record_parts`](#change_record_parts) | Change the parts of a record |  |  | 621 |
+| [`change_record_parts`](#change_record_parts) | Change the parts of a record |  |  | 815 |
 | [`change_relationships`](#change_relationships) | Work a company's relationships and briefs |  |  | 503 |
 | [`change_reports`](#change_reports) | Work saved reports and the forecast |  |  | 1357 |
 | [`change_settings`](#change_settings) | Change how the workspace is set up |  |  | 1710 |
@@ -99,13 +99,13 @@ descriptions and input schemas are what each step pays for.
 | [`read_forecast`](#read_forecast) | Read the forecast and how it moved | yes | [`ui://margince/forecast.html`](#forecast_view) | 978 |
 | [`read_import`](#read_import) | Read an import run or the import format | yes |  | 235 |
 | [`read_lists`](#read_lists) | Find and read lists | yes |  | 788 |
-| [`read_project`](#read_project) | Read a project or its handover | yes |  | 314 |
-| [`read_record`](#read_record) | Read a record | yes |  | 324 |
+| [`read_project`](#read_project) | Read a project or its handover | yes |  | 318 |
+| [`read_record`](#read_record) | Read a record | yes |  | 336 |
 | [`read_relationships`](#read_relationships) | Read who we know, and how well | yes |  | 359 |
 | [`read_reports`](#read_reports) | Read sales reports | yes |  | 2784 |
 | [`read_tags`](#read_tags) | Read tags | yes |  | 358 |
 | [`read_view`](#read_view) | Read a view | yes |  | 683 |
-| [`read_workspace`](#read_workspace) | Read how this workspace is set up | yes |  | 2747 |
+| [`read_workspace`](#read_workspace) | Read how this workspace is set up | yes |  | 2750 |
 | [`resolve_duplicates`](#resolve_duplicates) | Merge two records or dismiss a flagged pair |  |  | 618 |
 | [`run_research`](#run_research) | Run AI work for your user |  |  | 776 |
 | [`schedule_meeting`](#schedule_meeting) | Invite to a meeting |  |  | 420 |
@@ -2475,6 +2475,12 @@ record's own fields, and create_record with record_type offer to make an offer w
       "type": "string"
     },
     "category": {
+      "enum": [
+        "company",
+        "offering",
+        "market",
+        "signal"
+      ],
       "type": "string"
     },
     "company_id": {
@@ -2490,6 +2496,49 @@ record's own fields, and create_record with record_type offer to make an offer w
       "type": "string"
     },
     "field": {
+      "description": "A profile field for the profile field actions, a fact field for add_company_fact; record_fields lists which is which",
+      "enum": [
+        "display_name",
+        "offer_summary",
+        "icp",
+        "value_proposition",
+        "usp",
+        "customer_pains",
+        "desired_outcomes",
+        "buying_center",
+        "buying_intents",
+        "common_objections",
+        "sales_motion",
+        "legal_name",
+        "registered_address",
+        "register_vat",
+        "industry",
+        "history",
+        "legal_form",
+        "register_court",
+        "register_number",
+        "founded_year",
+        "employee_range",
+        "phone",
+        "contact_email",
+        "location",
+        "service",
+        "product",
+        "capability",
+        "served_industry",
+        "company_size",
+        "geography",
+        "language",
+        "certification",
+        "partner",
+        "named_customer",
+        "technology",
+        "quantified_outcome",
+        "mail_provider",
+        "email_security",
+        "hosting_provider",
+        "operated_service"
+      ],
       "type": "string"
     },
     "idempotency_key": {
@@ -9572,6 +9621,9 @@ Renders its result in [`ui://margince/forecast.html`](#forecast_view), visible t
         "contributions_limited": {
           "type": "boolean"
         },
+        "contributions_limited_reason": {
+          "type": "string"
+        },
         "coverage_note": {
           "type": "string"
         },
@@ -10346,11 +10398,11 @@ change, and next_cursor to read the next page.
 **Read a project or its handover**
 
 ```text
-Read one project. overview: its whole page — company, phase history (each move with its reason,
-and time per phase), deals, stakeholders, contracts, documents, open commitments, timeline, filing
-coverage, totals. handoff: what the delivery side needs from sales — who owns it, who to call at
-the client, what was sold, by when, what is already promised — with a named gap for each the
-records do not answer. overview cuts each section at 25 rows and flags it truncated;
+Read one project. overview: its whole page — company, current health, phase history (each move
+with its reason, and time per phase), deals, stakeholders, contracts, documents, open commitments,
+timeline, filing coverage, totals. handoff: what the delivery side needs from sales — who owns it,
+who to call at the client, what was sold, by when, what is already promised — with a named gap for
+each the records do not answer. overview cuts each section at 25 rows and flags it truncated;
 sections_omitted names what your grants withhold. A handoff gap means the field is empty as far as
 the caller can see. Preparing a handover is not performing one. read_record for the project's stored
 fields alone, read_context with about=catch_up for what has been happening, change_state
@@ -10392,16 +10444,16 @@ contact and task ids a follow-up acts on.
 **Read a record**
 
 ```text
-Read one record's own stored fields — the values a reader would see on its detail page — when
-you already know which record you mean. It returns that record and nothing around it: no timeline,
-no related contacts, no deals on the company. Use read_context with about=catch_up when the goal is
-what has been happening on the record rather than what it currently says, and read_details for a
-company's dossier, growth fit, scan or brief. Keep the version from the result and pass it back as
-if_version on a later update, so a write is refused rather than silently overwriting a change made
-in between. Its `owner` says who holds it. When `owner.is_you` is false, say whose it is when you
-report the record (or that its owner could not be named, when `owner.name` is absent), and treat
-contacting it as theirs to decide rather than advising an approach as though the record were
-unowned.
+Read one record's own stored fields — the values a reader would see on its detail page, a
+company's profile fields and facts included — when you already know which record you mean. It
+returns that record and nothing around it: no timeline, no related contacts, no deals on the
+company. Use read_context with about=catch_up when the goal is what has been happening on the record
+rather than what it currently says, and read_details for a company's dossier, growth fit, scan or
+brief. Keep the version from the result and pass it back as if_version on a later update, so a write
+is refused rather than silently overwriting a change made in between. Its `owner` says who holds it.
+When `owner.is_you` is false, say whose it is when you report the record (or that its owner could
+not be named, when `owner.name` is absent), and treat contacting it as theirs to decide rather than
+advising an approach as though the record were unowned.
 ```
 
 <details><summary>Input schema</summary>
@@ -10450,6 +10502,40 @@ unowned.
   "properties": {
     "data": {
       "properties": {
+        "facts": {
+          "items": {
+            "properties": {
+              "category": {
+                "type": "string"
+              },
+              "confirmed": {
+                "type": "boolean"
+              },
+              "fact_key": {
+                "type": "string"
+              },
+              "field": {
+                "type": "string"
+              },
+              "source": {
+                "type": "string"
+              },
+              "value": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "category",
+              "confirmed",
+              "fact_key",
+              "field",
+              "source",
+              "value"
+            ],
+            "type": "object"
+          },
+          "type": "array"
+        },
         "fields": {
           "type": "object"
         },
@@ -10475,6 +10561,32 @@ unowned.
             "is_you"
           ],
           "type": "object"
+        },
+        "profile_fields": {
+          "items": {
+            "properties": {
+              "confirmed": {
+                "type": "boolean"
+              },
+              "field": {
+                "type": "string"
+              },
+              "source": {
+                "type": "string"
+              },
+              "value": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "confirmed",
+              "field",
+              "source",
+              "value"
+            ],
+            "type": "object"
+          },
+          "type": "array"
         },
         "record_type": {
           "type": "string"
@@ -11730,7 +11842,8 @@ deal. Take every name verbatim; a custom field is spelled cf_<slug>.
       "enum": [
         "access",
         "rectify",
-        "erasure"
+        "erasure",
+        "restriction"
       ],
       "type": "string"
     },

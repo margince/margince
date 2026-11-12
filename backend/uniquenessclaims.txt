@@ -74,7 +74,7 @@ internal/compose/capturedomaintriage.go#func startDomainTriageRead
 internal/compose/captureofflinedemo.go#method offlineDemoDirectory.accounts
 internal/compose/certcase_fieldextract.go#method fieldExtractCases.CertifiedScope
 internal/compose/certcase_ratefx_test.go#type fxCompleterStub
-internal/compose/channelaxis_fitness_integration_test.go#func TestActivityKindTableMatchesTheContractKindEnum
+internal/compose/channelaxis/channelaxis_fitness_integration_test.go#func TestActivityKindTableMatchesTheContractKindEnum
 internal/compose/channelprovider.go#func CoreChannelProviders
 internal/compose/channelprovider.go#func reservedCoreProviders
 internal/compose/channelprovider.go#func upsertChannelProvider
@@ -449,8 +449,6 @@ internal/modules/privacy/retentionpolicystore.go#const fieldRetainDays
 internal/modules/privacy/retentionscope.go#func AuthorableScopes
 internal/modules/privacy/retentionscope.go#func ParseRetentionScope
 internal/modules/privacy/retentionscope_test.go#func TestAuthorableScopesIsTheSelectorTableInWireSpelling
-internal/modules/projects/keymint.go#const projectKeyField
-internal/modules/projects/keymint.go#func mintProjectKey
 internal/modules/projects/listfilters.go#const block at const filterKey
 internal/modules/projects/project.go#const projectObject
 internal/modules/search/binding.go#const systemPrincipalID

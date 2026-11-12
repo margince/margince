@@ -90,7 +90,7 @@ var prepareHandoffCopy = toolCopy{
 // (TestEachAgentsToolListingLeavesItsRunRoomInTheWindow), and a page that
 // assembles nine sections has nine chances to describe itself at length.
 var readProject360Copy = toolCopy{
-	Purpose: "Read one project's whole page: company, phase history with time per phase, deals, " +
+	Purpose: "Read one project's whole page: company, current health, phase history with time per phase, deals, " +
 		"stakeholders, contracts, documents, open commitments, timeline, filing coverage, totals.",
 	Limits:  "Each section is cut at 25 rows and carries a truncated flag; sections_omitted names what your grants withhold.",
 	Instead: "prepare_handoff for the delivery gaps, read_record for the project's stored fields alone.",
@@ -217,7 +217,7 @@ var readRelationshipsCopy = toolCopy{
 }
 
 var readProjectCopy = toolCopy{
-	Purpose: "Read one project. overview: its whole page — company, phase history (each move with " +
+	Purpose: "Read one project. overview: its whole page — company, current health, phase history (each move with " +
 		"its reason, and time per phase), deals, stakeholders, contracts, documents, open commitments, timeline, filing " +
 		"coverage, totals. handoff: what the delivery side needs from sales — who owns it, who " +
 		"to call at the client, what was sold, by when, what is already promised — with a named " +

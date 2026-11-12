@@ -18,7 +18,8 @@ removes the subject's personal values. These parts stay, each for its own reason
 - **The suppression list** (`erasure_suppression`) and its copy in the object store under
   `erasure-suppression/`. Each entry is a hash of an address or a channel account, keyed by the
   [root key](../reference/storage-secrets-and-license.md#keys-derived-from-the-root-key). It stays
-  so that the address is refused if it comes back.
+  so that the address is refused if it comes back. When the subject confirms a link mailed to the
+  address, the entry is lifted, not deleted (`lifted_at`). A later erasure arms it again.
 - **The tombstone.** The contact row keeps its id and a stand-in name, so records that name other
   contacts still point at it.
 - **Published outbox events** about other records stay for 30 days after they were published. The

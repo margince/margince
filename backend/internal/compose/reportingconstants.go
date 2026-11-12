@@ -42,6 +42,8 @@ const (
 	reportingSdrOutcomes                   = "sdr_outcomes"
 	reportingEditions                      = "editions"
 	reportingCurrency                      = "currency"
+	reportingMetric                        = "metric"
+	reportingWithheld                      = "withheld"
 	reportingCSVContentType                = "text/csv; charset=utf-8"
 	reportingName                          = "name"
 	reportingLeadsCreated                  = "leads_created"

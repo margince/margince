@@ -15,6 +15,7 @@ import (
 	"github.com/margince/margince/backend/internal/compose/promptvoice"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/ai"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/promptfence"
 	"github.com/margince/margince/backend/internal/shared/ports/model"
 )
@@ -76,7 +77,16 @@ func BriefRequest(in Input, lang string) model.Request {
 		Messages:       []model.Message{{Role: "user", Content: fence.Wrap(shownRefs(in).Show(encodeInput(in)))}},
 		MaxTokens:      ai.ReasoningOutputMaxTokens,
 		SecretStripper: ai.NewSecretStripper(),
+		Subjects:       &model.Subjects{Rooms: []ids.UUID{in.Room}, Addresses: buyerAddresses(in)},
 	}
+}
+
+func buyerAddresses(in Input) []string {
+	out := make([]string, 0, len(in.Buyers))
+	for _, buyer := range in.Buyers {
+		out = append(out, buyer.Email)
+	}
+	return out
 }
 
 func encodeInput(in Input) string {

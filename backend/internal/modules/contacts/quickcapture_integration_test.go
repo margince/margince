@@ -15,12 +15,14 @@ package contacts
 
 import (
 	"context"
+	"errors"
 	"testing"
 
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/kernel/values"
 )
 
 func TestQuickCaptureWritesTheContactAndTheirEmployer(t *testing.T) {
@@ -86,17 +88,13 @@ func TestQuickCaptureStoresAProfileURLTheProductCanLink(t *testing.T) {
 		t.Errorf("stored profile url = %q, want the absolute form", got)
 	}
 
-	// A scheme the caller typed is kept: quietly upgrading http to https would
-	// claim a certificate nobody has seen.
-	insecure := "http://example.com/team/sam"
-	out, err = e.store.QuickCapture(ctx, QuickCaptureInput{
-		FullName: "Sam Insecure", ProfileURL: &insecure,
-	})
-	if err != nil {
-		t.Fatalf("quick capture: %v", err)
-	}
-	if got := statedProfileURL(out.Contact.Social); got != insecure {
-		t.Errorf("stored profile url = %q, want %q unchanged", got, insecure)
+	// The slot is a LinkedIn profile, so a page off LinkedIn is refused under
+	// the field the form sent.
+	offHost := "http://example.com/team/sam"
+	_, err = e.store.QuickCapture(ctx, QuickCaptureInput{FullName: "Sam Elsewhere", ProfileURL: &offHost})
+	var parseErr *values.ParseError
+	if !errors.As(err, &parseErr) || parseErr.Code != "linkedin_url_not_linkedin" || parseErr.Field != profileURLRequestField {
+		t.Errorf("quick capture of %q answered %v, want linkedin_url_not_linkedin on %s", offHost, err, profileURLRequestField)
 	}
 }
 

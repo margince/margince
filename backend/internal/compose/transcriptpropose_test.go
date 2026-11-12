@@ -166,7 +166,7 @@ func TestEvidenceTrimsAQuotationLongerThanTheApprovalsCapAccepts(t *testing.T) {
 }
 
 func TestTheRequestNumbersEveryLineAndFencesTheTranscript(t *testing.T) {
-	req := transcriptRequest(meetingLines(), "2026-03-04", string(textlang.English), nil)
+	req := transcriptRequest(ids.UUID{}, meetingLines(), "2026-03-04", string(textlang.English), nil)
 	if len(req.Messages) != 1 {
 		t.Fatalf("want one user message, got %d", len(req.Messages))
 	}

@@ -11,7 +11,7 @@ import (
 // jobContractHash is the sha256 of api/jobs.yaml this file was generated
 // from — the same fingerprint jobs.JobContractHash carries, so a stale
 // half of the pair is visible without diffing the two tables.
-const jobContractHash = "aac56b7aa7ef4d934093f925b1903301788d3b932e85536cd6fbae74279f385c"
+const jobContractHash = "518ca95b473074f36c4d7cd353d4aafb27dc3498377ee258e5dee5321d8975fc"
 
 // declaredJobArgs requires the generated registration marker for the exact args type.
 // Handwritten markers are refused by the registration census.
@@ -84,6 +84,7 @@ func (ImportCommitArgs) declaredJobType(ImportCommitArgs)                       
 func (ImportRunSweepArgs) declaredJobType(ImportRunSweepArgs)                     {}
 func (ImportUndoArgs) declaredJobType(ImportUndoArgs)                             {}
 func (ImportValidateArgs) declaredJobType(ImportValidateArgs)                     {}
+func (InitiativeEnrolmentSweepArgs) declaredJobType(InitiativeEnrolmentSweepArgs) {}
 func (IntroExpiryArgs) declaredJobType(IntroExpiryArgs)                           {}
 func (KnowledgeIngestArgs) declaredJobType(KnowledgeIngestArgs)                   {}
 func (LinkReconcileArgs) declaredJobType(LinkReconcileArgs)                       {}
@@ -170,6 +171,7 @@ var (
 	_ jobs.FleetWide = GraphEdgeReconcileArgs{}
 	_ jobs.FleetWide = GraphWatchArgs{}
 	_ jobs.FleetWide = IdempotencyRetentionArgs{}
+	_ jobs.FleetWide = InitiativeEnrolmentSweepArgs{}
 	_ jobs.FleetWide = LinkReconcileArgs{}
 	_ jobs.FleetWide = LinkedInRematchArgs{}
 	_ jobs.FleetWide = ListEvaluateArgs{}

@@ -809,6 +809,7 @@ export const en = {
   "approval.preview.unsignedSend":
     "Sends without a human display name or personal signature. Approval does not make the reviewer the author.",
   "approval.preview.senderSignature": "Sender signature",
+  "approval.preview.showImages": "Show the images",
   "approval.preview.signaturePrivate":
     "The sender’s private signature cannot be shown to this reviewer. Ask the sender to review this message.",
   "approval.preview.recordMeeting":
@@ -966,8 +967,6 @@ export const en = {
   "forecast.signal.quiet": "Customer quiet",
   "forecast.signal.stuck": "Long in stage",
   "forecast.deals.limitedTitle": "Only your own deals are listed",
-  "forecast.deals.limited":
-    "The total includes colleagues’ deals, which are withheld here because individual performance is off. Each rep still sees their own.",
   "forecast.signal.closesNoStep_other":
     "Closes in {count} days, no next step booked",
   "forecast.signal.closesNoStep_one":
@@ -2333,6 +2332,7 @@ export const en = {
   "systemJob.graph_edge_reconcile": "Relationship strength update",
   "systemJob.handbook_corpus": "Handbook indexing",
   "systemJob.import_run_sweep": "Stopped import check",
+  "systemJob.initiative_enrolment": "Initiative membership dates",
   "systemJob.import_worker": "Import worker",
   "systemJob.installation_setup_read": "Setup check",
   "systemJob.intro_advance": "Introduction follow-up",
@@ -2643,6 +2643,7 @@ export const en = {
   "history.field.lifted_by": "Lifted by",
   "history.field.lifted_by_level": "Lifted at level",
   "history.field.lifted_suppression": "Lifted suppression",
+  "history.field.restriction_lift_requested": "Restriction lift asked for",
   "history.field.linkedin_url": "LinkedIn URL",
   "history.field.lost_reason": "Lost reason",
   "history.field.name": "Name",
@@ -3559,7 +3560,21 @@ export const en = {
   "consent.stopBlocked.address":
     "This clears when mail to the address works again.",
   "consent.stopBlocked.restriction":
-    "Lifting a restriction means telling the contact first. Margince cannot send that notice yet, so the restriction stays.",
+    "Lifting a restriction means telling the contact first. Only an admin can lift it, and Margince sends that notice.",
+  "consent.restrictionLift": "Lift the restriction",
+  "consent.restrictionLiftTitle": "Lift this restriction?",
+  "consent.restrictionLiftBody":
+    "Margince first sends the contact a notice that the restriction ends. The restriction ends once that notice is sent. Then Margince reads their mail again, including the mail that arrived during the restriction.",
+  "consent.restrictionLiftQueued":
+    "The notice is waiting to be sent. The restriction stays until it is.",
+  "consent.restrictionLiftSent":
+    "The notice was sent. The restriction is ending.",
+  "consent.restrictionLiftRetrying":
+    "The notice has not gone out yet, and Margince tries again. The restriction stays until it is sent: {reason}",
+  "consent.restrictionLiftFailed":
+    "The notice did not go out, so the restriction stays: {reason}",
+  "consent.restrictionLiftFailedNoReason":
+    "The notice did not go out, so the restriction stays. Lift it again to send a new notice.",
   "consent.stopBlocked.subject_decision":
     "The contact set this stop. Only they can change it.",
   "consent.stopCorrect": "Correct this stop",
@@ -3808,6 +3823,8 @@ export const en = {
   "timeline.automatic.bulk": "Sent to a mailing list",
   "timeline.group.bulk_other": "sent to {count} people",
   "timeline.group.bulk_one": "sent to {count} person",
+  "timeline.copies_other": "Also in {count} other mailboxes",
+  "timeline.copies_one": "Also in {count} other mailbox",
   "timeline.group.expand": "Open",
   "timeline.group.collapse": "Close",
   "timeline.group.openThread": "View full thread",
@@ -4818,6 +4835,7 @@ export const en = {
   "compose.threadStillHeld_other":
     "{count} other seats have not shared this thread",
   "compose.reason.posture": "Held by your setting",
+  "compose.reason.sharedMailbox": "In a shared mailbox",
   "compose.reason.workspaceFloor": "Held by the company",
   "compose.reason.noRecord": "Held: no record",
   "compose.reason.pendingVerdict": "Held until checked",
@@ -7862,6 +7880,12 @@ export const en = {
   "compose.scheduleAfternoon": "Tomorrow afternoon",
   "compose.draftLanguage": "Draft language",
   "compose.rewrite": "Rewrite",
+  "compose.rewritePolish": "Polish",
+  "compose.rewritePolishAsk":
+    "Improve the wording and flow. Keep the meaning, the facts and the length.",
+  "compose.rewriteFormatted":
+    "Rewrites work on plain text. Remove the formatting and links to use them.",
+  "compose.rewriteTooLong": "This mail is too long to rewrite.",
   "compose.rewriteShorter": "Shorter",
   "compose.rewriteShorterAsk": "Keep the meaning and use fewer words.",
   "compose.rewriteWarmer": "Warmer",
@@ -8102,7 +8126,7 @@ export const en = {
   "tasks.origin.analytics_decision":
     "Recorded from a sales review: a decision with an owner and a review date. Record the outcome under Decisions from the last review.",
   "tasks.origin.overnight_reconcile":
-    "Created from a follow-up that the overnight review proposed and someone approved.",
+    "Created from a follow-up that the overnight review proposed.",
   "tasks.origin.commitment":
     "Created from a commitment read out of a conversation.",
   "tasks.origin.email_request": "Created from a request in an email.",
@@ -8232,8 +8256,6 @@ export const en = {
     "Team prospecting reviews a team or the whole company. Choose one in the scope above; one colleague’s work is in My prospecting.",
   "analytics.team.todaysMembers":
     "These figures follow today’s team. A member who left takes their past work with them, and one who joined brings theirs.",
-  "analytics.team.withheld":
-    "Individual performance is off. A figure is withheld when fewer than two other members make it up, or when taking another team’s total from it would leave fewer than two.",
   "analytics.team.submitted": "Submitted",
   "analytics.team.accepted": "Accepted",
   "analytics.team.returned": "Returned",
@@ -10381,6 +10403,7 @@ export const en = {
   "jobs.kind.import_commit": "Import commit",
   "jobs.kind.import_undo": "Import undo",
   "jobs.kind.import_validate": "Import test run",
+  "jobs.kind.initiative_enrolment_sweep": "Initiative membership dates",
   "jobs.kind.intro_expiry": "Introduction expiry",
   "jobs.kind.knowledge_ingest": "Document indexing",
   "jobs.kind.list_evaluate": "Live list check",
@@ -11051,6 +11074,7 @@ export const en = {
   "privacy.kindAccess": "Access",
   "privacy.kindRectify": "Correction",
   "privacy.kindErasure": "Erasure",
+  "privacy.kindRestriction": "Restriction",
   "privacy.purpose": "Purpose",
   "privacy.purposeDoiBadge": "Double opt-in",
   "privacy.purposesLoading": "Loading purposes…",
@@ -11095,6 +11119,8 @@ export const en = {
   "privacy.openRequest": "Open request",
   "privacy.erasureNeedsContact":
     "An erasure request must name a contact in this company, because fulfilling it erases that record. A free-text subject cannot be erased.",
+  "privacy.restrictionNeedsContact":
+    "A restriction request must name a contact in this company, because fulfilling it restricts the processing of that record. A free-text subject cannot be restricted.",
   "privacy.accessPicksContact":
     "Pick the contact this request is about. You can then download everything held about them from the request.",
   "privacy.downloadPackage": "Download data package",
@@ -12981,6 +13007,19 @@ export const en = {
   "book.pageTitle": "Book a meeting with {host}",
   "book.pageTitleGeneric": "Book a meeting",
   "book.meetingTitle": "Your meeting",
+  "book.returnTitle": "Store your details again",
+  "book.returnBody":
+    "You asked for your details to be stored again after they were erased. Nothing is stored until you confirm.",
+  "book.returnStoredAs": "You will be stored as {name}, with this consent:",
+  "book.returnAction": "Store my details again",
+  "book.returnDone": "Your details are stored again.",
+  "book.returnSpent":
+    "This link was used already or has expired. Ask for a new one where you asked for this one.",
+  "book.returnRequestBody":
+    "Your details were erased at your request. To be stored again, enter your name and the email address that was erased. A link goes to that address, and nothing is stored until you confirm it there.",
+  "book.returnRequestAction": "Send me the link",
+  "book.returnRequestSent":
+    "Check your inbox. If this address can be stored again, a link to confirm is on its way.",
   "book.attendee": "Attendee email",
   "book.subject": "Meeting via Margince",
   "book.name": "Your name",
@@ -18928,6 +18967,14 @@ export const en = {
   "projectHealth.saveCorrection": "Save correction",
   "project.keyMinted":
     "Each project gets a short key. Put [{key}] in an email subject to file the mail under this project.",
+  "project.key": "Key",
+  "project.keySuggested":
+    "Leave empty to use {key}. The key goes into email subjects and cannot change later.",
+  "project.keyHint":
+    "Leave empty and Margince makes one from the name. The key goes into email subjects and cannot change later.",
+  "project.startPhase": "Starting phase",
+  "project.deal": "Deal",
+  "project.noDeal": "No deal",
   "project.company": "Company",
   "project.owner": "Owner",
   "project.ownerMe": "Me",
@@ -19351,7 +19398,21 @@ export const en = {
     "Margince cannot check whether this was answered: the mail’s text can no longer be read. Mark it done once it is handled.",
   "worklist.ask.task_unchecked_reply": "Latest reply sent: {date}",
   "worklist.ask.brief_item":
-    "The overnight review flagged this deal. Act on it, set it aside, or dismiss it.",
+    "Margince picked this deal for a review today. Look at it and plan the next step.",
+  "worklist.ask.brief.closing_soon":
+    "This deal is expected to close within 2 weeks. Review it and make sure the next step is planned.",
+  "worklist.ask.brief.no_next_step":
+    "No next step is recorded on this deal. Review it and agree on the next step.",
+  "worklist.ask.brief.no_champion":
+    "Nobody at the customer is actively championing this deal. Review it and find someone who will.",
+  "worklist.ask.brief.signal.closing_soon":
+    "The close date of this deal is near. Review it and make sure the next step is planned.",
+  "worklist.ask.brief.signal.stalled":
+    "This deal has gone quiet and may slip. Review it and plan the next step.",
+  "worklist.ask.brief.signal.opportunity":
+    "This deal is worth pursuing now. Review it and plan the next step.",
+  "worklist.ask.brief.signal.moved":
+    "There is new activity on this deal. Review what happened.",
   "worklist.ask.conversation_claim":
     "You committed to this in a conversation. Do it, then mark it done.",
   "worklist.ask.invitation":
@@ -20653,6 +20714,7 @@ export const en = {
   "captureConcern.connections": "Connections needing attention",
   "captureConcern.sinceLabel": "Since",
   "captureConcern.member": "Member",
+  "captureConcern.sharedMailbox": "Shared mailbox",
   "captureConcern.provider": "Provider",
   "captureConcern.mailbox": "Mailbox",
   "captureConcern.condition": "Condition",

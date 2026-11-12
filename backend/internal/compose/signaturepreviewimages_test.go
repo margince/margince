@@ -15,6 +15,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/platform/clocktest"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -209,7 +210,8 @@ func TestAListOfApprovalsShowsBoxesAndFetchesNothing(t *testing.T) {
 	assets := newFakeAssets(t)
 	reader := approvalPreviewReader{signatureImages: newSignaturePreviewImages(assets, previewClock(t))}
 	got := reader.signatureMarkup(context.Background(), `<p>Anna</p><img src="https://cdn.example/logo.png" alt="Company A">`)
-	if len(assets.fetches) != 0 || strings.Contains(got, "<img") || !strings.Contains(got, "Company A (cdn.example)") {
+	if len(assets.fetches) != 0 || strings.Contains(got, "<img") || !strings.Contains(got, "Company A (cdn.example)") ||
+		!strings.Contains(got, activities.RemoteImageBoxAttribute) {
 		t.Fatalf("fetches = %v, preview = %s", assets.fetches, got)
 	}
 }

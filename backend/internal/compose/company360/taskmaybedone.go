@@ -12,7 +12,6 @@ import (
 
 	"github.com/margince/margince/backend/internal/compose/momentaction"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
-	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -65,37 +64,9 @@ func (s *Service) askTasksDone(
 func (s *Service) promiseCandidates(
 	ctx context.Context, steps []crmcontracts.Company360NextStep, sources []taskSource,
 ) ([]momentaction.DoneCandidate, error) {
-	byTask := map[ids.UUID]*momentaction.DoneCandidate{}
-	var named []ids.UUID
+	tasks := make([]momentaction.PromiseTask, len(steps))
 	for i, step := range steps {
-		if sources[i].system != activities.CommitmentTaskSource || sources[i].activity == nil {
-			continue
-		}
-		id := ids.UUID(step.ActivityId)
-		byTask[id] = &momentaction.DoneCandidate{TaskID: id, SourceActivityID: *sources[i].activity, Assignee: (*ids.UUID)(step.AssigneeId)}
-		named = append(named, id)
+		tasks[i] = momentaction.PromiseTask{ID: ids.UUID(step.ActivityId), System: sources[i].system, Source: sources[i].activity, Assignee: (*ids.UUID)(step.AssigneeId)}
 	}
-	if len(named) == 0 {
-		return nil, nil
-	}
-	claims, err := s.contacts.ClaimsOnTasks(ctx, named)
-	if errors.Is(err, apperrors.ErrPermissionDenied) {
-		return nil, nil
-	}
-	if err != nil {
-		return nil, err
-	}
-	for _, claim := range claims {
-		if claim.Task == nil || !momentaction.OpenRecipient(claim.Status) {
-			continue
-		}
-		if candidate, ok := byTask[*claim.Task]; ok {
-			candidate.Recipients = append(candidate.Recipients, claim.Contact)
-		}
-	}
-	out := make([]momentaction.DoneCandidate, 0, len(named))
-	for _, id := range named {
-		out = append(out, *byTask[id])
-	}
-	return out, nil
+	return momentaction.DoneCandidates(ctx, s.contacts, tasks)
 }

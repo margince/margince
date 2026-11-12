@@ -13,7 +13,7 @@ import (
 // would fold otherwise. That is a clock a task set, and a project clock a
 // called-off or future meeting set.
 func taskActivityClocksDataTask() datatask.Task {
-	audit := datatask.AuditPolicy{Reason: "the last-activity triggers move the same derived clock without an audit"}
+	audit := datatask.AuditPolicy{Reason: clockRefoldAuditReason}
 	return datatask.Task{
 		ID: "core/1792846717_task_activity_clocks", Version: 1,
 		Title: systemtext.Literal("datatask.title.core.1792846717_task_activity_clocks"), Requires: []string{"core/1792846717"},

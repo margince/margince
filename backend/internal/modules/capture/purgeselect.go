@@ -399,7 +399,7 @@ func SelectPurgeableContactsTx(
 		     SELECT 1 FROM capture_import mine
 		       JOIN activity ma ON ma.id = mine.activity_id
 		      WHERE lower(ma.counterparty_email) = lower(pe.email)
-		        AND mine.user_id <> $1)
+		        AND mine.user_id IS DISTINCT FROM $1)
 		   -- Mail the purge keeps (a hold, the statutory floor, an open request)
 		   -- still needs its sender on file, so the contact stays with it.
 		   AND NOT EXISTS (

@@ -264,7 +264,7 @@ func (e Evaluator) Evaluate(ctx context.Context, tx pgx.Tx, row AuditRow, mode M
 	if !servesRecordType(row.EntityType) {
 		return refuse(ReasonUnsupportedRecordType, row.EntityType), nil
 	}
-	patch, unspellable, err := filterImage(row.EntityType, row.Before)
+	patch, unspellable, err := filterImage(row.EntityType, row.Before, row.After)
 	if err != nil {
 		return Undoability{}, err
 	}

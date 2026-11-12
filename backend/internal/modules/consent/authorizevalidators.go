@@ -91,7 +91,7 @@ func (g *Gate) validateCategory(ctx context.Context, tx pgx.Tx, req commsauthz.R
 		return validateQuote(ctx, tx, req, subject)
 	case commsauthz.CategoryRecordConfirmation, commsauthz.CategoryConsentConfirmation,
 		commsauthz.CategoryPrivacyNotice:
-		return validateConfirmation(ctx, tx, subject, category)
+		return validateConfirmation(ctx, tx, req.DeliveryID, subject, category)
 	case commsauthz.CategoryCustomerService, commsauthz.CategoryAccountNotice, commsauthz.CategorySecurityNotice:
 		return validateCustomerNotice(ctx, tx, subject, category)
 	case commsauthz.CategoryOptoutConfirmation:

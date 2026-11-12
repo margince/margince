@@ -277,7 +277,8 @@ the verdict for all of them: `twoWayExchange` in `compose/network/memberwrote.go
   because a customer's newsletter can carry account news. It skips a thread in which every message comes
   from a sending system, so it makes no model call and saves no signal. Such a message also reaches no
   company, so a notice never puts a finding on the sending tool's company. Such mail does not end a quiet
-  reminder either.
+  reminder either. A newsletter moves no stored `last_activity_at`
+  (`relstrength.LastActivityCountsSQL`), and raises no `ghosted_thread` signal.
 - **An archived activity.** The fold joins `activity … AND a.archived_at IS NULL`, and the prune step
   removes a pair that has lost all its evidence.
 - **A seat on a deal.** A stakeholder row is a statement about *who should take part*. Only a recorded

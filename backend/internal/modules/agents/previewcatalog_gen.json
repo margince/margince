@@ -129,11 +129,11 @@
   "format/weekstart.ts":
    "504a0f7101ddccc7a917819967f39e6dfafb07952180fbccc7e00c7e1b1de1e7",
   "i18n/de.ts":
-   "60105604de9e9c62a9312c5f1a3814c093b06aa73b84038ea68f5193d6e69091",
+   "98de91d54c3fa86832db70e337786ad60c1be699ba473d710a7e5acf0ac40583",
   "i18n/en.ts":
-   "e07e4b7458c0c4b9f6d522144dbfed13fce4bbca1845490fbc585974d49c959a",
+   "b1934e352ab98d2cf0607580e178d6c8ade23c1534a2a6fe72c4628ec9217427",
   "i18n/vi.ts":
-   "782a141bd97613455846c3ad5104d914724c2e176979d4d93ec62f529dda4d10",
+   "cc678d5607414ebbde64ebc1ae69b02e48da75b94fdedd4689038b77f98fca41",
   "lib/acquisitionkinds.ts":
    "c5dd117a1d2e9f0b79cde5aa9ef6e2cc34c1f8aad27f48ca914935fdf4879a54",
   "lib/approvallifecycle.ts":
@@ -155,7 +155,7 @@
   "lib/factview.ts":
    "db074f07af5e3a75aca6c7c269ef71529a6078f9f1c03e4c5f4e03b7ab076d0c",
   "lib/historyfieldlabels.ts":
-   "79ca6bf31676df5204f15dc8c92fad45adc050b248217fb44bbb08f6a36d0f80",
+   "c33c0d5a94fe11f0bb3cb9f0beebc231e8a27e2e287f01c25e81ae669981f014",
   "lib/labelfor.ts":
    "26f540eedc3dcbe98e9c831bd25e752c17b8c3c183a056150da4907d396428bf",
   "lib/memberretirement.ts":
@@ -1286,6 +1286,8 @@
      "restore lead archive contact",
     "restore_lead_preserve_contact":
      "restore lead preserve contact",
+    "restriction_lift_requested":
+     "Restriction lift asked for",
     "retry_delay_minutes":
      "Retry delay (minutes)",
     "reuse_contact_employer":
@@ -9356,6 +9358,8 @@
      "Research claims accepted",
     "merge_profile_field/text/resolved_category":
      "Message category",
+    "merge_profile_field/text/restriction_lift_requested":
+     "Restriction lift asked for",
     "merge_profile_field/text/revoked_by":
      "Revoked by",
     "merge_profile_field/text/revoked_by_level":
@@ -9646,6 +9650,8 @@
      "Research claims accepted",
     "merge_profile_field/lifecycle/resolved_category":
      "Message category",
+    "merge_profile_field/lifecycle/restriction_lift_requested":
+     "Restriction lift asked for",
     "merge_profile_field/lifecycle/revoked_by":
      "Revoked by",
     "merge_profile_field/lifecycle/revoked_by_level":
@@ -13765,6 +13771,26 @@
     "restore_lead_preserve_contact/lifecycle/unknown":
      "Unknown",
     "restore_lead_preserve_contact/boolean/true":
+     "Yes",
+    "restriction_lift_requested/lifecycle/customer":
+     "Customer",
+    "restriction_lift_requested/lifecycle/disqualified":
+     "Disqualified",
+    "restriction_lift_requested/lifecycle/former_customer":
+     "Former customer",
+    "restriction_lift_requested/lifecycle/live":
+     "Live",
+    "restriction_lift_requested/lifecycle/onboarding":
+     "Onboarding",
+    "restriction_lift_requested/lifecycle/opportunity":
+     "Opportunity",
+    "restriction_lift_requested/lifecycle/prospect":
+     "Prospect",
+    "restriction_lift_requested/lifecycle/target":
+     "Target",
+    "restriction_lift_requested/lifecycle/unknown":
+     "Unknown",
+    "restriction_lift_requested/boolean/true":
      "Yes",
     "retry_delay_minutes/lifecycle/customer":
      "Customer",
@@ -19260,6 +19286,12 @@
      "Not set",
     "restore_lead_preserve_contact/execution":
      "Set when applied",
+    "restriction_lift_requested/boolean":
+     "No",
+    "restriction_lift_requested/empty":
+     "Not set",
+    "restriction_lift_requested/execution":
+     "Set when applied",
     "retry_delay_minutes/boolean":
      "No",
     "retry_delay_minutes/empty":
@@ -20978,6 +21010,8 @@
      "restore lead archive contact",
     "restore_lead_preserve_contact":
      "restore lead preserve contact",
+    "restriction_lift_requested":
+     "Aufhebung der Einschränkung angefragt",
     "retry_delay_minutes":
      "Wartezeit bis zum erneuten Versuch (Minuten)",
     "reuse_contact_employer":
@@ -29048,6 +29082,8 @@
      "Übernommene Rechercheangaben",
     "merge_profile_field/text/resolved_category":
      "Nachrichtenkategorie",
+    "merge_profile_field/text/restriction_lift_requested":
+     "Aufhebung der Einschränkung angefragt",
     "merge_profile_field/text/revoked_by":
      "Widerrufen von",
     "merge_profile_field/text/revoked_by_level":
@@ -29338,6 +29374,8 @@
      "Übernommene Rechercheangaben",
     "merge_profile_field/lifecycle/resolved_category":
      "Nachrichtenkategorie",
+    "merge_profile_field/lifecycle/restriction_lift_requested":
+     "Aufhebung der Einschränkung angefragt",
     "merge_profile_field/lifecycle/revoked_by":
      "Widerrufen von",
     "merge_profile_field/lifecycle/revoked_by_level":
@@ -33457,6 +33495,26 @@
     "restore_lead_preserve_contact/lifecycle/unknown":
      "Unbekannt",
     "restore_lead_preserve_contact/boolean/true":
+     "Ja",
+    "restriction_lift_requested/lifecycle/customer":
+     "Kunde",
+    "restriction_lift_requested/lifecycle/disqualified":
+     "Disqualifiziert",
+    "restriction_lift_requested/lifecycle/former_customer":
+     "Ehemaliger Kunde",
+    "restriction_lift_requested/lifecycle/live":
+     "Live",
+    "restriction_lift_requested/lifecycle/onboarding":
+     "Onboarding",
+    "restriction_lift_requested/lifecycle/opportunity":
+     "Chance",
+    "restriction_lift_requested/lifecycle/prospect":
+     "Interessent",
+    "restriction_lift_requested/lifecycle/target":
+     "Zielunternehmen",
+    "restriction_lift_requested/lifecycle/unknown":
+     "Unbekannt",
+    "restriction_lift_requested/boolean/true":
      "Ja",
     "retry_delay_minutes/lifecycle/customer":
      "Kunde",
@@ -38952,6 +39010,12 @@
      "Nicht gesetzt",
     "restore_lead_preserve_contact/execution":
      "Wird beim Anwenden festgelegt",
+    "restriction_lift_requested/boolean":
+     "Nein",
+    "restriction_lift_requested/empty":
+     "Nicht gesetzt",
+    "restriction_lift_requested/execution":
+     "Wird beim Anwenden festgelegt",
     "retry_delay_minutes/boolean":
      "Nein",
     "retry_delay_minutes/empty":
@@ -40670,6 +40734,8 @@
      "restore lead archive contact",
     "restore_lead_preserve_contact":
      "restore lead preserve contact",
+    "restriction_lift_requested":
+     "Yêu cầu bỏ hạn chế",
     "retry_delay_minutes":
      "Thời gian chờ thử lại (phút)",
     "reuse_contact_employer":
@@ -48740,6 +48806,8 @@
      "Thông tin tìm hiểu đã chấp nhận",
     "merge_profile_field/text/resolved_category":
      "Loại tin nhắn",
+    "merge_profile_field/text/restriction_lift_requested":
+     "Yêu cầu bỏ hạn chế",
     "merge_profile_field/text/revoked_by":
      "Người thu hồi",
     "merge_profile_field/text/revoked_by_level":
@@ -49030,6 +49098,8 @@
      "Thông tin tìm hiểu đã chấp nhận",
     "merge_profile_field/lifecycle/resolved_category":
      "Loại tin nhắn",
+    "merge_profile_field/lifecycle/restriction_lift_requested":
+     "Yêu cầu bỏ hạn chế",
     "merge_profile_field/lifecycle/revoked_by":
      "Người thu hồi",
     "merge_profile_field/lifecycle/revoked_by_level":
@@ -53149,6 +53219,26 @@
     "restore_lead_preserve_contact/lifecycle/unknown":
      "Chưa rõ",
     "restore_lead_preserve_contact/boolean/true":
+     "Có",
+    "restriction_lift_requested/lifecycle/customer":
+     "Khách hàng",
+    "restriction_lift_requested/lifecycle/disqualified":
+     "Đã loại",
+    "restriction_lift_requested/lifecycle/former_customer":
+     "Khách hàng cũ",
+    "restriction_lift_requested/lifecycle/live":
+     "Đang vận hành",
+    "restriction_lift_requested/lifecycle/onboarding":
+     "Đang triển khai",
+    "restriction_lift_requested/lifecycle/opportunity":
+     "Cơ hội",
+    "restriction_lift_requested/lifecycle/prospect":
+     "Tiềm năng",
+    "restriction_lift_requested/lifecycle/target":
+     "Mục tiêu",
+    "restriction_lift_requested/lifecycle/unknown":
+     "Chưa rõ",
+    "restriction_lift_requested/boolean/true":
      "Có",
     "retry_delay_minutes/lifecycle/customer":
      "Khách hàng",
@@ -58643,6 +58733,12 @@
     "restore_lead_preserve_contact/empty":
      "Chưa đặt",
     "restore_lead_preserve_contact/execution":
+     "Được xác định khi áp dụng",
+    "restriction_lift_requested/boolean":
+     "Không",
+    "restriction_lift_requested/empty":
+     "Chưa đặt",
+    "restriction_lift_requested/execution":
      "Được xác định khi áp dụng",
     "retry_delay_minutes/boolean":
      "Không",

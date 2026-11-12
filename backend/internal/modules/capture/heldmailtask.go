@@ -61,7 +61,7 @@ const heldMailWhereSQL = `WHERE ci.id = ANY(@ids) AND ci.provider_received_at IS
  AND a.kind = 'email' AND a.direction = 'inbound'
  AND a.captured_by IN ('connector:gmail:' || ci.user_id::text, 'connector:graph:' || ci.user_id::text)
  AND NOT EXISTS (SELECT 1 FROM capture_import o
-                 WHERE o.activity_id = ci.activity_id AND o.user_id <> ci.user_id)`
+                 WHERE o.activity_id = ci.activity_id AND o.user_id IS DISTINCT FROM ci.user_id)`
 
 func stampExternalHeldMailTx(ctx context.Context, tx pgx.Tx, imports []ids.UUID) (int, error) {
 	rows, err := tx.Query(ctx, `SELECT ci.id, rc.id, `+originalstore.SQL("rc")+` `+

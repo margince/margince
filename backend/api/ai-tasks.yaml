@@ -88,6 +88,11 @@
 #                     (observed-unit and denominator functions, the work-shape
 #                     floor) is behaviour and stays in code; naming the rule
 #                     here lets the build prove the mapping is total.
+#   subject_restriction  honour | none. honour: the Router refuses a request
+#                     naming a contact under a restriction of processing (GDPR
+#                     Art. 18), and one declaring no subjects at all. none:
+#                     the task reads no contact's data, and
+#                     subject_restriction_reason says why.
 #   summary           what the task does, in plain words, for the reader of a
 #                     settings or usage screen deciding which model serves it.
 #                     Required, ends with a full stop, short enough for a
@@ -115,6 +120,7 @@ tasks:
     execution_mode: background
     on_budget_exhausted: queue
     status: shipped
+    subject_restriction: honour
     sites: [classify, deal_topic]
     company_context: none
     cost_unit: per_message
@@ -127,6 +133,7 @@ tasks:
     execution_mode: background
     on_budget_exhausted: queue
     status: shipped
+    subject_restriction: honour
     sites: [owed]
     company_context: none
     no_payload: true
@@ -139,6 +146,7 @@ tasks:
     execution_mode: background
     on_budget_exhausted: queue
     status: shipped
+    subject_restriction: honour
     sites: [request_settle]
     company_context: none
     no_payload: true
@@ -151,6 +159,7 @@ tasks:
     execution_mode: background
     on_budget_exhausted: queue
     status: shipped
+    subject_restriction: honour
     sites: [deal_verdict]
     company_context: none
     no_payload: true
@@ -163,6 +172,7 @@ tasks:
     execution_mode: background
     on_budget_exhausted: queue
     status: shipped
+    subject_restriction: honour
     sites: [interest]
     company_context: none
     no_payload: true
@@ -175,6 +185,7 @@ tasks:
     execution_mode: background
     on_budget_exhausted: queue
     status: shipped
+    subject_restriction: honour
     sites: [verdict]
     decision: true
     no_payload: true
@@ -189,6 +200,7 @@ tasks:
     execution_mode: background
     on_budget_exhausted: queue
     status: shipped
+    subject_restriction: honour
     sites: [thread]
     decision: true
     no_payload: true
@@ -203,6 +215,7 @@ tasks:
     execution_mode: background
     on_budget_exhausted: queue
     status: shipped
+    subject_restriction: honour
     sites: [thread_events]
     company_context: none
     no_payload: true
@@ -215,6 +228,7 @@ tasks:
     execution_mode: background
     on_budget_exhausted: queue
     status: shipped
+    subject_restriction: honour
     sites: [criteria]
     company_context: none
     no_payload: true
@@ -227,6 +241,7 @@ tasks:
     execution_mode: background
     on_budget_exhausted: queue
     status: shipped
+    subject_restriction: honour
     sites: [next_steps]
     company_context: none
     doc: "the reading of next steps and commitments out of a meeting transcript, each citing the 1-based transcript lines it was read from. Floor 0.7; below it the proposal is dropped, never guessed, and a transcript stating none yields no proposal at all. Each commitment goes through the shared commitment rule: a customer's promise is filed on their contact and never becomes a task; a named colleague's promise read at or above 0.85 becomes their task directly, marked as the reader's; anything else stages for a human (approval kind commitment_task)."
@@ -238,6 +253,7 @@ tasks:
     execution_mode: interactive
     on_budget_exhausted: degrade
     status: shipped
+    subject_restriction: honour
     sites: [committee]
     company_context: none
     doc: "Read the buying roles out of what a contact has actually written - who signs, who carries it inside, who can stop it. Floor 0.75, higher than enrich's 0.6 because a wrong role misdirects a whole deal while a wrong phone number is a typo. A job title is NEVER evidence: the contract says a role is recorded and never inferred from one, so a proposal citing only a title is dropped. Every proposal quotes the message it was read from, verbatim, and the contact who WROTE that message must be the contact the role is proposed for - both contacts sit in one prompt, so evidence unbound from its author lets one sender hand a role to a colleague they have never spoken for. Written DIRECTLY as a seat, attributed to agent:propose_roles and reversible, per the installation's auto-write posture; the evidence lives on the audit row so a reader can check it, and the ai_suggested mark stays until a human confirms. Degrade is the budget answer but there is no deterministic floor: with no lane the endpoint declares 501 rather than guessing a role from a title."
@@ -249,6 +265,7 @@ tasks:
     execution_mode: background
     on_budget_exhausted: queue
     status: shipped
+    subject_restriction: honour
     sites: [signature]
     company_context: none
     cost_unit: per_contact
@@ -262,6 +279,7 @@ tasks:
     on_budget_exhausted: degrade
     on_outage: degrades
     status: shipped
+    subject_restriction: honour
     sites: [company_brief, company_ask, company_dossier, meeting_plan, meeting_brief, contact_brief, deal_room_brief]
     company_context: {scopes: [identity], token_budget: 300, conditional: true}
     doc: "Seven grounded-prose sites, all over what the VIEWER can already see, assembled per viewer because visibility is per viewer. company_brief — the standing account brief: what this account is, where it stands, what changed. Its operation is deprecated and the company record page no longer renders it — the page's lead card is now the account's work in flight, spelled from the records — but the assembly stays, because company_ask is served from the same handlers. company_ask — the prepared questions behind Ask Margince: the question is chosen from a fixed list rather than typed, because each one names the records its answer must be written from, which is what lets every sentence cite a record the reader could open themselves. company_dossier — what the COMPANY is, from its own recorded facts: deliberately not the account composite, because a dossier that could see the pipeline would describe the pipeline and the separation from the brief would collapse on the first prompt revision. meeting_plan — what to DO in one booked meeting: the outcome to earn, the opener, the one risk with its response, what the other side is likely to ask and what to ask them. It rides this lane rather than its own because it is the same task — grounded prose over records the caller can already see — but it reads a different projection: the account arc with the excerpts behind it, rather than the whole assembled input, because the specificity of every question comes from what contacts actually wrote. meeting_brief — the SECTIONS beside that plan, written under the same request: what the meeting is, who is in the room, what they promised, what changed. It is a second call and a second prompt, not a rendering of the plan, which is why it is its own site rather than a variant of meeting_plan. contact_brief — the contact page's standing relationship brief: who this contact is commercially, what they have said they care about, what changed, and the one move that follows. It rides this lane for meeting_plan's reason — the same task over a different projection — and reads the claims extracted from conversations with the contact's own words behind them, what CHANGED about the relationship, and each recent message through the server's own one-line summary of what was written, rather than the timeline's subjects and directions: a brief written from transport events says only that mail was exchanged, which is true of every contact in the system. deal_room_brief — the brief on a deal's Deal Room tab: what the room's buyers did and what is waiting on the seller, written from the room's buyers, documents and threads. It rides this lane for contact_brief's reason, over the room's own projection, and is written on every request rather than cached, because a room moves with each buyer's click."
@@ -274,6 +292,8 @@ tasks:
     on_budget_exhausted: degrade
     on_outage: degrades
     status: shipped
+    subject_restriction: none
+    subject_restriction_reason: "reads the company's own recorded facts and our offering, never a contact's record or mail"
     sites: [growth_fit]
     company_context: {scopes: [offer, positioning, proof], token_budget: 1200, offering_selectable: true}
     doc: "How well one company fits what we sell. The only site on the company view that must read OUR offering as well as theirs — a fit is a claim about two companies, and judging one against a guess about the other is what the DOSS-AC-13 band cap exists to stop. Our own context is never citable: evidence is target-side only, so a factor drawn from what we sell is labelled an assessment and still cites their records, or the grounding filter drops it (DOSS-AC-6). The band the model proposes is not the band served — the deterministic completeness gate can lower it to `unknown` or cap it at `moderate`, and never raises it."
@@ -286,6 +306,7 @@ tasks:
     on_budget_exhausted: degrade
     on_outage: degrades
     status: shipped
+    subject_restriction: honour
     sites: [reply, contact, account, intro, intro_note]
     company_context: {scopes: [positioning, sales, proof, market], token_budget: 1400}
     doc: "Five sites, one task: the reply to an activity, the contact page's composer, the company page's first-touch outbound, the ask a rep sends a COLLEAGUE for an introduction (the only one written to somebody on our own side, which is why it carries its own phrasing), and the note that colleague then FORWARDS to the contact (draft_email over MCP, which names records to file under rather than records to write from). The last two are one workflow and two registers: the ask is internal and its overclaim is falsifiable by the teammate reading it, while the note goes out over that colleague's own name to a customer who cannot check it — which is why they carry separate prompts, separate wording tables and separate scenarios rather than one site with a flag. They differ in what a draft is grounded IN, and share the rules block every drafting surface writes under (compose/draftrules). The reply site and the two composers each have two system variants (voice-enabled and plain), selected per call from the sender's Voice DNA state — a variant, not a site of its own."
@@ -297,6 +318,8 @@ tasks:
     execution_mode: interactive
     on_budget_exhausted: degrade
     status: shipped
+    subject_restriction: none
+    subject_restriction_reason: "is handed a sentence and the caller's filter vocabulary, never a record"
     sites: [filter_propose]
     company_context: {scopes: [offer, market], token_budget: 600, conditional: true}
     doc: "A list described in plain words, read into filter clauses the builder shows for a human to edit and save. The model is handed the record type, the sentence, the caller's own filter vocabulary, today's date and the reader's language, and never a record: it proposes a predicate tree and the deterministic engine decides membership, exactly as for a hand-built filter. Every proposed clause is checked in code before it is answered - a field the caller cannot filter on, an operator its type refuses, a value outside a picklist's options or of the wrong type is dropped and named back as unsupported rather than failing the proposal, and so is a phrase the model could not express. The company context is our own offer and market, so 'companies in our target market' has something to be read against; it is conditional because reading it needs company read, and a caller filtering contacts without that grant still gets a proposal, just without it. Nothing is saved: Save stays a human's press. With no model bound the endpoint answers 409 ai_not_configured, because there is no deterministic reading of a sentence to fall back to."
@@ -308,6 +331,8 @@ tasks:
     execution_mode: interactive
     on_budget_exhausted: degrade
     status: shipped
+    subject_restriction: none
+    subject_restriction_reason: "reads our own company's website and what the admin types about our company"
     sites:
       - {name: company_message, kind: multi_turn, thinking: low}
       - {name: sitereadmessage, kind: multi_turn, thinking: low}
@@ -323,6 +348,7 @@ tasks:
     execution_mode: interactive
     on_budget_exhausted: degrade
     status: planned
+    subject_restriction: honour
     company_context: none
     doc: "Declared, not built (ADR-0074). Pasted transcript text is T2/untrusted per ai-operational-spec §1 when a site lands."
 
@@ -333,6 +359,8 @@ tasks:
     execution_mode: interactive
     on_budget_exhausted: degrade
     status: shipped
+    subject_restriction: none
+    subject_restriction_reason: "reads the manager's description and the report catalog, never a record"
     sites: [initiative_setup, custom_report_setup]
     company_context: none
     doc: "Turn a manager's description into a typed, catalog-resolved proposal for a sales initiative or a custom report; nothing is written until the reader confirms. Every product, industry, metric, chart and objective the reply names is checked against the catalog the reader may use, and what fails is named back with a reason. Without a model the drawers offer no proposal."
@@ -344,6 +372,8 @@ tasks:
     execution_mode: interactive
     on_budget_exhausted: degrade
     status: shipped
+    subject_restriction: none
+    subject_restriction_reason: "reads evaluated report figures and deal names, never a contact's record or mail"
     sites: [sales_assessment]
     company_context: none
     no_payload: true
@@ -356,6 +386,7 @@ tasks:
     execution_mode: interactive
     on_budget_exhausted: degrade
     status: shipped
+    subject_restriction: honour
     sites: [activity_text]
     company_context: none
     no_payload: true
@@ -369,6 +400,8 @@ tasks:
     on_budget_exhausted: degrade
     on_outage: degrades
     status: shipped
+    subject_restriction: none
+    subject_restriction_reason: "reads the documents our company filed in its knowledge base, not contact records or mail"
     sites: [corpus_ask]
     company_context: none
     doc: "corpus_ask — one bounded document corpus, asked in free text and answered only from what the workspace filed in it. Everything a REFUSAL rests on is decided before this task is reached: readiness, the embed binding, and the grounding floor are settled deterministically, so the model is asked only when passages already cleared the floor. Its whole job is prose, and its answer is a list of claims each carrying a citation and a verbatim quote checked against the retrieved text — a claim whose quote is not found is dropped, and an answer with no surviving claim is not_covered. The ladder leads premium as a PREFERENCE and not a contract, because the guardrail is verbatim quoting and cheaper tiers paraphrase; a demoted rung is not trusted, it is checked like any other and falls back only if it actually fails. A missing chat lane, or a reply the guardrail refuses, degrades to the retrieved passages themselves with generated_by saying deterministic — deal_health's rule, for deal_health's reason, and honest because the grounded part of a grounded answer was never the prose. Over budget is NOT a separate outcome: an interactive task is never refused on budget, it is pinned to the on-box rung and asked, and whichever answer survives the quote check is what generated_by reports. What is invariant, and what the test asserts, is narrower: an over-budget ask never refuses and never spends a cloud rung."
@@ -380,6 +413,7 @@ tasks:
     execution_mode: background
     on_budget_exhausted: queue
     status: shipped
+    subject_restriction: honour
     sites: [company_scan]
     company_context: {scopes: [identity], token_budget: 300, conditional: true}
     no_payload: true
@@ -393,6 +427,7 @@ tasks:
     on_budget_exhausted: degrade
     on_outage: degrades
     status: shipped
+    subject_restriction: honour
     sites: [deal_status]
     company_context: none
     doc: "deal_status — the deal page's one written card: where the deal stands, what could lose it, and why the recommended move is the right one. The model reads the deal's own facts (its fields, its timeline, its open tasks and its Deal Room conversation — all assembled under the CALLER's row scope, with a withheld row contributing its date but not its words) and writes the sentences. The VERB never moves: which action the card offers is decided by rules from records and handed to the model in recommended_move, so a reader clicking Draft the reply reaches the mail the rules picked. A missing lane, an over-budget call or a reply the grounding filter refuses degrades to the same card composed deterministically, with generated_by saying so. The card is CACHED per reader on a fingerprint of its input plus the prompt and routing versions, so a deal nobody touched costs one call ever."
@@ -404,6 +439,8 @@ tasks:
     execution_mode: background
     on_budget_exhausted: queue
     status: shipped
+    subject_restriction: none
+    subject_restriction_reason: "reads the week's counts and deal names, never a contact's record or mail"
     sites: [narrative]
     company_context: none
     doc: "weekly_review/narrative — one or two sentences over a week's own counts and deal lines, for the rep reading them on Monday. It adds nothing: every fact it may state is already in the deterministic review beside it, which is what makes the whole thing safe to lose. A rep with no lane, an exhausted budget or a provider outage reads the same counts and the same lines, and the screen says which."
@@ -415,6 +452,8 @@ tasks:
     execution_mode: background
     on_budget_exhausted: queue
     status: shipped
+    subject_restriction: none
+    subject_restriction_reason: "reads the week's results as figures, never a contact's record or mail"
     sites: [learn]
     company_context: none
     doc: "weekly_learnings/learn — what a week TEACHES, as against what it was. The narrative beside it describes a week the reader can already see, so a wrong sentence is visibly wrong; a learning is a claim about cause that a reader cannot check against anything in front of them. So every learning cites rows from the week it was shown, a reply citing anything else is refused WHOLE rather than trimmed, and a week with fewer than three citable rows never reaches the model at all. A refusal stamps insufficient_evidence, which is a different state from not_run: the rep is told whether anybody looked."
@@ -426,6 +465,8 @@ tasks:
     execution_mode: background
     on_budget_exhausted: queue
     status: shipped
+    subject_restriction: none
+    subject_restriction_reason: "ranks deals by numeric factor scores; no contact's data is in the prompt"
     sites: [rank]
     company_context: none
     doc: "the one Premium-frontier default (§1.2 RATIFY): genuinely multi-hop reasoning"
@@ -437,6 +478,8 @@ tasks:
     execution_mode: background
     on_budget_exhausted: queue
     status: shipped
+    subject_restriction: none
+    subject_restriction_reason: "an agent principal's reads are filtered below the model: the content gate and the audience arm (auth.ActivityContentClause, auth.ActivityAudienceArm) withhold the subject, body and reminders of every mail a restricted contact sent or received, discover-level listings included, and the contact row scope hides the restricted contact itself from every record read, listing and link walk. The runner binds the agent principal for every tool step, a resumed run included, so no tool step reads as the system principal"
     sites:
       - name: morning_brief
         kind: agent_loop
@@ -456,6 +499,7 @@ tasks:
     on_budget_exhausted: degrade
     on_outage: degrades
     status: shipped
+    subject_restriction: honour
     sites: [draft]
     company_context: {scopes: [offer, positioning, proof], token_budget: 1600}
 
@@ -466,6 +510,7 @@ tasks:
     execution_mode: background
     on_budget_exhausted: queue
     status: shipped
+    subject_restriction: honour
     sites: [fields, cards, chat]
     no_payload: true
     company_context: none
@@ -478,6 +523,8 @@ tasks:
     execution_mode: background
     on_budget_exhausted: queue
     status: shipped
+    subject_restriction: none
+    subject_restriction_reason: "reads a company's public website"
     sites: [profile]
     company_context: none
     doc: "premium-only BY CONTRACT: the no-guess gate demands verbatim quotes cheap tiers paraphrase; no fallback rung. Its response schema is built PER CALL (the citation enum is that call's passage ids), which is why ADR-0074 leaves answer schemas in code."
@@ -489,6 +536,8 @@ tasks:
     execution_mode: background
     on_budget_exhausted: queue
     status: shipped
+    subject_restriction: none
+    subject_restriction_reason: "reads a company's public website"
     sites: [page_facts]
     company_context: none
     doc: "the deep read's page-parallel fact lane: tiny snippet-id-cited records a fast cheap tier serves reliably — its latency IS the read time, so the fast tier leads. Its response schema varies in SHAPE per call with the page menu (ADR-0074)."
@@ -500,6 +549,8 @@ tasks:
     execution_mode: background
     on_budget_exhausted: queue
     status: shipped
+    subject_restriction: none
+    subject_restriction_reason: "reads an email domain's public website"
     sites: [triage]
     decision: true
     company_context: none
@@ -512,6 +563,8 @@ tasks:
     execution_mode: background
     on_budget_exhausted: queue
     status: shipped
+    subject_restriction: none
+    subject_restriction_reason: "grades certification corpus answers, never live records"
     sites: [judge]
     company_context: none
     doc: "the aicert quality judge — pinned to its own router in the cert lane, never the candidate's binding"
@@ -523,6 +576,8 @@ tasks:
     execution_mode: background
     on_budget_exhausted: queue
     status: shipped
+    subject_restriction: none
+    subject_restriction_reason: "learns from the user's own corpus, and loading it leaves out sent mail a restricted contact received"
     sites: [derive, eval_draft, eval_scores, demo_draft]
     company_context: none
     doc: "owner-requested or automatic durable Voice DNA candidate build; own-authored corpus only, CompanyContext none (ADR-0066). Four sites: the derive pass, the two evaluation passes, and the demonstration draft the profile card shows — a built voice nobody can read a sentence of is a voice nobody can judge."
@@ -534,6 +589,8 @@ tasks:
     execution_mode: background
     on_budget_exhausted: queue
     status: shipped
+    subject_restriction: none
+    subject_restriction_reason: "reads a published exchange-rate page"
     sites: [fx]
     company_context: none
     doc: "extract foreign-exchange rates from a fetched rates page, evidence-gated; feeds the FX refresh proposal producer. Model prices are not extracted: a broker's catalogue states them."

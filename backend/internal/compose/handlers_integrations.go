@@ -241,6 +241,13 @@ func writeRunError(w http.ResponseWriter, r *http.Request, err error) {
 		})
 		return
 	}
+	if errors.Is(err, integrations.ErrSubjectRestricted) {
+		httperr.Write(w, r, &httperr.DetailedError{
+			Status: http.StatusConflict, Code: "subject_restricted",
+			Detail: strings.TrimPrefix(err.Error(), "integrations: "),
+		})
+		return
+	}
 	if errors.Is(err, integrations.ErrNothingFreeToBuy) {
 		httperr.Write(w, r, httperr.Validation("categories", "name_what_to_buy",
 			"nothing this connection buys is free; ask the user, then name the category to buy"))

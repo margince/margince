@@ -205,7 +205,7 @@ func (r DealRepair) asMailbox(
 	if err := tx.QueryRow(ctx, `SELECT captured_by FROM activity WHERE id = $1 AND archived_at IS NULL AND restricted_at IS NULL`, mail).Scan(&capturedBy); err != nil {
 		return "", fmt.Errorf("capture: reading who captured a mail: %w", err)
 	}
-	rows, err := tx.Query(ctx, `SELECT DISTINCT user_id FROM capture_import WHERE activity_id = $1 ORDER BY user_id`, mail)
+	rows, err := tx.Query(ctx, `SELECT DISTINCT user_id FROM capture_import WHERE activity_id = $1 AND user_id IS NOT NULL ORDER BY user_id`, mail)
 	if err != nil {
 		return "", fmt.Errorf("capture: reading the mailboxes a mail came from: %w", err)
 	}

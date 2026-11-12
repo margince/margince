@@ -446,7 +446,8 @@ it.each([true, false])(
 
 it.each(["stalled", "closing_soon", "opportunity"])(
   "leads a legacy %s brief item with its deal instead of inventing an action",
-  (kind) => {
+  async (kind) => {
+    const user = userEvent.setup();
     stubApi({});
     const row = { ...legacyStalledRow(), kind };
     const { container } = render(
@@ -460,7 +461,12 @@ it.each(["stalled", "closing_soon", "opportunity"])(
     expect(container.querySelector(".worklist-row-context")).toBeNull();
     expect(card.getAllByText("Acme Expansion")).toHaveLength(1);
     expect(container.querySelector(".worklist-row-verdict")).toBeNull();
-    expect(card.getByRole("button", { name: en["brief.act"] })).toBeTruthy();
+    // Mark handled waits in the card's menu, which opens outside the card.
+    expect(card.queryByRole("button", { name: en["brief.act"] })).toBeNull();
+    await user.click(card.getByRole("button", { name: /Acme Expansion/ }));
+    expect(
+      await screen.findByRole("button", { name: en["brief.act"] }),
+    ).toBeTruthy();
     expect(
       card
         .getByRole("link", { name: en["deal.openDeal"] })

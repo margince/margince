@@ -1619,6 +1619,10 @@ func (stubs) LiftSuppression(w nethttp.ResponseWriter, r *nethttp.Request, id cr
 	httperr.NotImplemented(w, r, "LiftSuppression")
 }
 
+func (stubs) LiftContactRestriction(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id, suppressionId openapi_types.UUID) {
+	httperr.NotImplemented(w, r, "LiftContactRestriction")
+}
+
 func (stubs) ListContactConversationSuggestions(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {
 	httperr.NotImplemented(w, r, "ListContactConversationSuggestions")
 }
@@ -3283,6 +3287,10 @@ func (stubs) CreateProject(w nethttp.ResponseWriter, r *nethttp.Request, params 
 	httperr.NotImplemented(w, r, "CreateProject")
 }
 
+func (stubs) GetProjectKeyPreview(w nethttp.ResponseWriter, r *nethttp.Request, params crmcontracts.GetProjectKeyPreviewParams) {
+	httperr.NotImplemented(w, r, "GetProjectKeyPreview")
+}
+
 func (stubs) TransferProjectOwnership(w nethttp.ResponseWriter, r *nethttp.Request, params crmcontracts.TransferProjectOwnershipParams) {
 	httperr.NotImplemented(w, r, "TransferProjectOwnership")
 }
@@ -3385,6 +3393,18 @@ func (stubs) GetPublicBookingPreview(w nethttp.ResponseWriter, r *nethttp.Reques
 
 func (stubs) GetPublicSchedulingProfile(w nethttp.ResponseWriter, r *nethttp.Request, hostSlug string, params crmcontracts.GetPublicSchedulingProfileParams) {
 	httperr.NotImplemented(w, r, "GetPublicSchedulingProfile")
+}
+
+func (stubs) RequestBookingReturn(w nethttp.ResponseWriter, r *nethttp.Request, hostSlug string) {
+	httperr.NotImplemented(w, r, "RequestBookingReturn")
+}
+
+func (stubs) ConfirmBookingReturn(w nethttp.ResponseWriter, r *nethttp.Request, hostSlug string) {
+	httperr.NotImplemented(w, r, "ConfirmBookingReturn")
+}
+
+func (stubs) PreviewBookingReturn(w nethttp.ResponseWriter, r *nethttp.Request, hostSlug string) {
+	httperr.NotImplemented(w, r, "PreviewBookingReturn")
 }
 
 func (stubs) GetConfirmDetails(w nethttp.ResponseWriter, r *nethttp.Request, token string) {

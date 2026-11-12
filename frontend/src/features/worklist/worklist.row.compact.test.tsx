@@ -291,16 +291,44 @@ it.each(["normal", "compact", "framed"] as const)(
         />
       ),
     );
-    expect(
-      screen.getAllByText(en["worklist.because.no_next_step"]),
-    ).toHaveLength(1);
-    expect(container.querySelector(".worklist-row-because")).toBeVisible();
+    // A card states its leading reason as its ask, so the line under it does
+    // not say it a second time.
+    if (shape === "framed") {
+      expect(
+        screen.getByText(en["worklist.ask.brief.no_next_step"]),
+      ).toBeVisible();
+      expect(
+        screen.queryByText(en["worklist.because.no_next_step"]),
+      ).toBeNull();
+    } else {
+      expect(
+        screen.getAllByText(en["worklist.because.no_next_step"]),
+      ).toHaveLength(1);
+      expect(container.querySelector(".worklist-row-because")).toBeVisible();
+    }
     expect(container.querySelector("details")).toBeNull();
     expect(container.textContent).not.toMatch(
       /If ignored|Ranked above|typical|routine cleanup/,
     );
   },
 );
+
+it("keeps the leading reason on a card that asks whether it may be done", () => {
+  const asking = item({
+    because: [{ kind: "no_next_step" }],
+    may_be_done: {
+      contact_id: "p-1",
+      email_activity_id: "e-1",
+      wrote_at: "2026-08-12T10:00:00Z",
+      wrote_precision: "instant",
+      claim_key: "moment:may_be_done:a-9",
+      evidence_fingerprint: "fp-1",
+    },
+  });
+  render(<WorklistRow item={asking} owner="" position={1} framed />);
+  expect(screen.queryByText(en["worklist.ask.brief.no_next_step"])).toBeNull();
+  expect(screen.getByText(en["worklist.because.no_next_step"])).toBeVisible();
+});
 
 it("shows shared reply responsibility instead of an unassigned label", () => {
   render(

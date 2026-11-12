@@ -293,3 +293,22 @@ func TestALeadWithNoStandingRefusalOwesNoAcknowledgement(t *testing.T) {
 		})
 	}
 }
+
+// A live restriction is evidence for the notice of its lift alone. An ordinary
+// privacy notice to a restricted contact still needs its own live link.
+func TestARestrictionIsNoEvidenceForAnOrdinaryPrivacyNotice(t *testing.T) {
+	e := setupResolve(t)
+	if _, err := e.owner.Exec(context.Background(), `
+		INSERT INTO communication_suppression (contact_id, kind, source, captured_by, decided_by_level)
+		VALUES ($1, $2, 'test', 'human:x', $3)`,
+		e.contact, kindProcessingRestriction, string(commsauthz.LevelSubject)); err != nil {
+		t.Fatalf("planting the restriction: %v", err)
+	}
+
+	got := e.resolve(t, commsauthz.Request{Context: commsauthz.CategoryPrivacyNotice, DeliveryID: ids.NewV7()})
+
+	if got.Supported {
+		t.Fatal("a privacy notice with no link was supported by the contact's restriction; only the " +
+			"notice of the restriction's lift may rest on it")
+	}
+}

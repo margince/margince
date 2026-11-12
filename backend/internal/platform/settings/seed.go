@@ -9,6 +9,8 @@ import (
 	"fmt"
 
 	"github.com/jackc/pgx/v5"
+
+	"github.com/margince/margince/backend/internal/platform/database"
 )
 
 // Seed writes a bootstrap value once (ADR-0061). It inserts only when no row
@@ -33,6 +35,7 @@ func Seed(ctx context.Context, tx pgx.Tx, def Definition, raw json.RawMessage, s
 	if err != nil {
 		return false, fmt.Errorf("settings: seeding %s: %w", def.Key(), err)
 	}
+	database.Forget(tx, ValueMemoKey(def.Key()))
 	return tag.RowsAffected() == 1, nil
 }
 
@@ -65,6 +68,9 @@ func ResetConfig(ctx context.Context, tx pgx.Tx, reg *Registry) error {
 	}
 	if _, err := tx.Exec(ctx, `DELETE FROM setting WHERE key = ANY($1)`, keys); err != nil {
 		return fmt.Errorf("settings: restoring configuration to first-boot state: %w", err)
+	}
+	for _, key := range keys {
+		database.Forget(tx, ValueMemoKey(key))
 	}
 	return nil
 }

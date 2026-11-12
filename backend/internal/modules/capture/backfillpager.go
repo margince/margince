@@ -32,7 +32,7 @@ func (r *Registry) executeBackfillPage(ctx context.Context, backfillID ids.UUID)
 	var (
 		connID        ids.UUID
 		name          string
-		grantedBy     ids.UserID
+		grantedBy     *ids.UserID
 		credentialRef *string
 		authBytes     []byte
 		after         time.Time
@@ -45,7 +45,7 @@ func (r *Registry) executeBackfillPage(ctx context.Context, backfillID ids.UUID)
 		return tx.QueryRow(ctx, `
 			SELECT b.connection_id, b.after_date, b.cursor, b.status, c.provider, c.user_id, c.credential_ref, c.auth, c.generation, `+backfillMatchesAccount+`
 			FROM capture_backfill b JOIN capture_connection c ON c.id = b.connection_id
-			WHERE b.id = $1`, backfillID).
+			WHERE b.id = $1 AND (c.user_id IS NOT NULL OR `+sharedMailboxLiveSQL+`)`, backfillID).
 			Scan(&connID, &after, &cursor, &status, &name, &grantedBy, &credentialRef, &authBytes, &generation, &sameAccount)
 	})
 	if errors.Is(err, pgx.ErrNoRows) {
@@ -73,7 +73,7 @@ func (r *Registry) executeBackfillPage(ctx context.Context, backfillID ids.UUID)
 	if !ok {
 		return true, false, 0, errors.Join(ErrBackfillUnsupported, r.failBackfill(ctx, backfillID, ErrBackfillUnsupported))
 	}
-	runCtx, err := r.connectorContext(ctx, name, grantedBy)
+	runCtx, err := r.runContext(ctx, name, grantedBy, connID)
 	if err != nil {
 		return true, false, 0, errors.Join(err, r.failBackfill(ctx, backfillID, err))
 	}

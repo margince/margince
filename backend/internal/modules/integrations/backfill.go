@@ -208,7 +208,7 @@ func (s *Store) queueForSweep(ctx context.Context, tx pgx.Tx, name, contactID st
 	if err := auth.EnsureWritableLive(ctx, tx, entitySubject, uuidOf(&contactID)); err != nil {
 		return false, err
 	}
-	conn, err := s.admit(ctx, tx, name, provider.TriggerAutomaticBackfill)
+	conn, err := s.admit(ctx, tx, name, provider.TriggerAutomaticBackfill, contactID)
 	if err != nil {
 		return false, err
 	}

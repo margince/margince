@@ -238,11 +238,18 @@ function steering(steer: Steer) {
 // a first draft, so the route still answers and the fill keeps the body.
 const REWRITE_OF_MAX = 20_000;
 
+/** Why the body on screen cannot be sent for revision, or null when it can. */
+export function rewriteBlock(
+  body: Readonly<{ text: string; html: string }>,
+): "formatted" | "long" | null {
+  if (hasRepFormatting(body.html)) return "formatted";
+  return [...body.text.trim()].length > REWRITE_OF_MAX ? "long" : null;
+}
+
 // The words a draft call is asked to revise: the body on screen, whoever wrote
 // it. Not a body the rep formatted: a plain-text revision would drop the links.
 function rewriteOfAsk(ask: DraftAsk): string {
-  const overCap = [...ask.body.trim()].length > REWRITE_OF_MAX;
-  return hasRepFormatting(ask.html) || overCap ? "" : ask.body;
+  return rewriteBlock({ text: ask.body, html: ask.html }) ? "" : ask.body;
 }
 
 // The model's draft is paragraphs and line breaks only. Any other tag is

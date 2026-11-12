@@ -178,7 +178,7 @@ func (s *Store) LinkCustomer(
 }
 
 // UnlinkCustomer archives a customer's live link. The sync stops reading its
-// ledger; what it already mirrored stays where it is.
+// ledger; what it already mirrored stays on the archived link.
 func (s *Store) UnlinkCustomer(ctx context.Context, externalID string) error {
 	if err := auth.RequireHumanOrItsAgent(ctx); err != nil {
 		return err
@@ -195,11 +195,7 @@ func (s *Store) UnlinkCustomer(ctx context.Context, externalID string) error {
 		if err != nil || !linked {
 			return err
 		}
-		if err := updateLiveLink(ctx, tx, link, "archived_at = now()"); err != nil {
-			return err
-		}
-		_, err = storekit.Audit(ctx, tx, "archive", entityCustomerLink, link.id, link.image, nil)
-		return err
+		return archiveLiveLink(ctx, tx, link)
 	})
 }
 
@@ -261,24 +257,30 @@ func readLiveLink(
 	return link, true, nil
 }
 
-// updateLiveLink runs one guarded write of a live link: the version it was
-// read at, and never an archived row. A miss is a concurrent change.
-func updateLiveLink(ctx context.Context, tx pgx.Tx, link liveLink, set string, args ...any) error {
-	args = append([]any{link.id, link.version}, args...)
-	tag, err := tx.Exec(ctx, storekit.SQLf(`
-		UPDATE finance_customer_link SET %s
-		 WHERE id = $1 AND version = $2 AND archived_at IS NULL`, set), args...)
+// archiveLiveLink retires a link and keeps its row. The rows mirrored through
+// it go on naming it, so neither an unlink nor a move deletes payment history.
+// The write guards on the version read, and a miss is a concurrent change.
+func archiveLiveLink(ctx context.Context, tx pgx.Tx, link liveLink) error {
+	tag, err := tx.Exec(ctx, `
+		UPDATE finance_customer_link SET archived_at = now()
+		 WHERE id = $1 AND version = $2 AND archived_at IS NULL`, link.id, link.version)
 	if err != nil {
-		return fmt.Errorf("write the customer link: %w", err)
+		return fmt.Errorf("archive the customer link: %w", err)
 	}
 	if tag.RowsAffected() == 0 {
 		return fmt.Errorf("%w: the customer link changed meanwhile; reload and try again", apperrors.ErrConflict)
 	}
-	return nil
+	_, err = storekit.Audit(ctx, tx, "archive", entityCustomerLink, link.id, link.image, nil)
+	return err
 }
 
-// writeLink points the customer's live link at a company, creating it when
-// there is none. Linking to the company it already names writes nothing.
+// writeLink points the customer at a company, creating a live link when there
+// is none. Linking to the company it already names writes nothing.
+//
+// Moving a customer archives its link and makes a new one, because a link never
+// changes its company. Every mirrored row names its link and carries that
+// link's company (finance_invoice_customer_link_fk). The rows stay on the
+// archived link until the next sync moves them onto the new one.
 func writeLink(ctx context.Context, tx pgx.Tx, connectionID ids.UUID, externalID string, companyID ids.CompanyID) error {
 	link, linked, err := readLiveLink(ctx, tx, connectionID, externalID)
 	if err != nil {
@@ -289,11 +291,9 @@ func writeLink(ctx context.Context, tx pgx.Tx, connectionID ids.UUID, externalID
 		if link.image.CompanyID == companyID {
 			return nil
 		}
-		if err := updateLiveLink(ctx, tx, link, "company_id = $3", companyID); err != nil {
+		if err := archiveLiveLink(ctx, tx, link); err != nil {
 			return err
 		}
-		_, err = storekit.Audit(ctx, tx, "update", entityCustomerLink, link.id, link.image, after)
-		return err
 	}
 	by, err := storekit.CapturedBy(ctx)
 	if err != nil {

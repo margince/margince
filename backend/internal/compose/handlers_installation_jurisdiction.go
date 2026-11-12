@@ -35,10 +35,11 @@ import (
 	"github.com/margince/margince/backend/internal/shared/ports/messagingrules"
 	"github.com/margince/margince/backend/internal/shared/ports/subjectrightsrules"
 	"github.com/margince/margince/backend/pkg/extension"
+	"github.com/margince/margince/backend/pkg/extension/subjectrights"
 )
 
 // requestKinds are the kinds the page lists a deadline for, in queue order.
-var requestKinds = []subjectrightsrules.RequestKind{"access", "rectify", "erasure"}
+var requestKinds = []subjectrightsrules.RequestKind{subjectrights.Access, subjectrights.Rectify, subjectrights.Erasure, subjectrights.Restriction}
 
 // GetInstallationJurisdiction answers the page.
 func (h installationSettingsHandlers) GetInstallationJurisdiction(w http.ResponseWriter, r *http.Request) {

@@ -20,9 +20,10 @@ import (
 	"regexp"
 	"strings"
 	"testing"
-	"time"
 
 	"github.com/jackc/pgx/v5"
+
+	"github.com/margince/margince/backend/internal/platform/clocktest"
 )
 
 var planCopySuffix = regexp.MustCompile(`_\d+$`)
@@ -69,24 +70,29 @@ func seedMailbox(ctx context.Context, t *testing.T, tx pgx.Tx, shape mailboxShap
 	INSERT INTO contact_email (contact_id, email, is_primary, source, captured_by)
 	  SELECT id, 'c'||n||'@customers.example', true, 'manual', 'human:seed' FROM mailbox_customer;
 	CREATE TEMP TABLE mailbox_inbound AS
-	  SELECT gen_random_uuid() id, g, (1 + floor(random() * 400))::int n,
-	         now() - random() * 364 * interval '1 day' - interval '1 hour' at_time
+	  SELECT gen_random_uuid() id, g, (1 + (g - 1) % 400)::int n,
+	         @at::timestamptz - (g * 37 % 364) * interval '1 day' - interval '1 hour' at_time
 	    FROM generate_series(1, 1500) g;
 	INSERT INTO activity (id, kind, subject, occurred_at, direction, source, captured_by, thread_key, counterparty_email)
 	  SELECT id, 'email', 'Topic '||g, at_time, 'inbound', 'manual', 'human:seed', 'in'||g, 'c'||n||'@customers.example'
 	    FROM mailbox_inbound;
 	INSERT INTO activity_participant (activity_id, address, contact_id, role)
 	  SELECT i.id, 'c'||i.n||'@customers.example', c.id, 'from' FROM mailbox_inbound i JOIN mailbox_customer c ON c.n = i.n;
+	INSERT INTO activity_participant (activity_id, address, role)
+	  SELECT id, 'seat@work.test', 'to' FROM mailbox_inbound;
 	INSERT INTO activity_link (activity_id, entity_type, contact_id)
 	  SELECT i.id, 'contact', c.id FROM mailbox_inbound i JOIN mailbox_customer c ON c.n = i.n;
 	INSERT INTO activity (kind, subject, occurred_at, direction, source, captured_by, thread_key, counterparty_email, counterparty_outbound_attested)
 	  SELECT 'email', 'Re: Topic '||g, at_time + interval '2 days', 'outbound', 'manual', 'human:seed', 'reply'||g, 'c'||n||'@customers.example', true
-	    FROM mailbox_inbound WHERE random() < `+fmt.Sprint(shape.replyShare)+`;
+	    FROM mailbox_inbound WHERE g % 100 < @reply_percent;
 	INSERT INTO activity (kind, subject, occurred_at, direction, source, captured_by, thread_key, counterparty_email, counterparty_outbound_attested)
-	  SELECT 'email', 'Update '||g, now() - random() * 364 * interval '1 day', 'outbound', 'manual', 'human:seed', 'out'||g,
-	         'c'||(1 + floor(random() * 400))::int||'@customers.example', true
-	    FROM generate_series(1, `+fmt.Sprint(shape.strayOutbound)+`) g;
-	ANALYZE activity`); err != nil {
+	  SELECT 'email', 'Update '||g, @at::timestamptz - (g * 53 % 364) * interval '1 day', 'outbound', 'manual', 'human:seed', 'out'||g,
+	         'c'||(1 + (g - 1) % 400)::int||'@customers.example', true
+	    FROM generate_series(1, @stray) g;
+	ANALYZE activity; ANALYZE activity_participant; ANALYZE activity_link`,
+		pgx.QueryExecModeSimpleProtocol, pgx.NamedArgs{
+			"at": clocktest.Now(t), "reply_percent": int(shape.replyShare * 100), "stray": shape.strayOutbound,
+		}); err != nil {
 		t.Fatalf("seeding the mailbox: %v", err)
 	}
 }
@@ -136,7 +142,7 @@ func checkHorizonPlan(t *testing.T, shape mailboxShape) {
 		ownDomainSenderSQL("inbound", 3),
 		slowPercentile,
 		sampledMessages(4))
-	now := time.Now()
+	now := clocktest.Now(t)
 	var raw string
 	if err := tx.QueryRow(ctx, "EXPLAIN (FORMAT JSON) "+statement,
 		now.AddDate(0, 0, -waitingHorizonWindowDays), now, []string{"mine.example"}, waitingHorizonSample).Scan(&raw); err != nil {

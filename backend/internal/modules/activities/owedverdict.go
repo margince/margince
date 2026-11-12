@@ -293,6 +293,7 @@ func (s *Store) OwedBacklog(ctx context.Context, ruleset string, asOf time.Time,
 		waiting, err := waitingReplyExistsClause(ctx, arg, asOf, nil, nil, own, nil, horizon,
 			`a.owed_verdict IS NULL AND `+owedVerdictDecline.offeredSQL("a.", fmt.Sprintf("$%d", arg(ruleset)))+
 				` AND `+auth.WorkspaceAudienceSQL("a")+` AND a.restricted_at IS NULL AND `+provenance.MailBodyCompleteSQL("a")+
+				` AND NOT `+auth.ActivityRestrictedSQL("a.id")+
 				` AND `+priorContextComplete,
 			// An unjudged calendar response is off the lane until judged, and
 			// judged it must be: any sender can mark a request REPLY.
@@ -383,6 +384,7 @@ func (s *Store) OwedRestale(ctx context.Context, ruleset string, limit, bodyLimi
 			   AND a.archived_at IS NULL
 			   AND `+auth.WorkspaceAudienceSQL("a")+`
 			   AND a.restricted_at IS NULL
+			   AND NOT `+auth.ActivityRestrictedSQL("a.id")+`
 			   AND `+provenance.MailBodyCompleteSQL("a")+`
 			   AND `+priorContextComplete+`
 			   -- Declined by every rung under THESE rules (MarkOwedVerdictDeclined):

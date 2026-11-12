@@ -60,6 +60,8 @@ type Service struct {
 	// scans recognises a dismissal of advice the account scan raised, when a
 	// deployment has one. See RecogniseScanFindings.
 	scans ScanRecogniser
+	// doneAnswers keeps the card's Not yet to Done? (WithDoneAnswers).
+	doneAnswers DoneAnswers
 	// lists: the page names the Shortlists the account is on (lists.enabled).
 	lists bool
 	// activities answers the timeline's custom-field columns (WithActivityFields).
