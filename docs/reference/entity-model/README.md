@@ -31,7 +31,7 @@ module to put a change in, read [modules.md](../modules.md).
 | | |
 |---|--:|
 | Tables | 363 |
-| Columns | 4418 |
+| Columns | 4430 |
 | Foreign keys | 616 |
 | Owning areas | 38 |
 
@@ -44,7 +44,7 @@ Ranked by how many foreign keys point at them.
 | [`app_user`](identity.md#app_user) | [identity](identity.md) | 39 | 156 |
 | [`company`](contacts.md#company) | [contacts](contacts.md) | 47 | 51 |
 | [`contact`](contacts.md#contact) | [contacts](contacts.md) | 38 | 49 |
-| [`activity`](activities.md#activity) | [activities](activities.md) | 78 | 45 |
+| [`activity`](activities.md#activity) | [activities](activities.md) | 84 | 45 |
 | [`deal`](deals.md#deal) | [deals](deals.md) | 49 | 30 |
 | [`lead`](contacts.md#lead) | [contacts](contacts.md) | 48 | 19 |
 | [`project`](projects.md#project) | [projects](projects.md) | 24 | 12 |
@@ -137,7 +137,7 @@ erDiagram
 
 | Table | Area | Columns | Referenced by |
 |---|---|--:|--:|
-| [`activity`](activities.md#activity) | activities | 78 | 45 |
+| [`activity`](activities.md#activity) | activities | 84 | 45 |
 | [`activity_audience_member`](activities.md#activity_audience_member) | activities | 5 | 0 |
 | [`activity_calendar_method_backfill`](activities.md#activity_calendar_method_backfill) | activities | 5 | 0 |
 | [`activity_clock_refold_mark`](activities.md#activity_clock_refold_mark) | activities | 3 | 0 |
@@ -153,7 +153,7 @@ erDiagram
 | [`activity_own_sent_mail_repair_cutoff`](compose.md#activity_own_sent_mail_repair_cutoff) | compose | 2 | 0 |
 | [`activity_participant`](activities.md#activity_participant) | activities | 17 | 0 |
 | [`activity_participant_replay`](compose.md#activity_participant_replay) | compose | 3 | 0 |
-| [`activity_reader_state`](activities.md#activity_reader_state) | activities | 8 | 0 |
+| [`activity_reader_state`](activities.md#activity_reader_state) | activities | 10 | 0 |
 | [`activity_reminder_delivery`](activities.md#activity_reminder_delivery) | activities | 3 | 0 |
 | [`activity_reply_verdict_history`](activities.md#activity_reply_verdict_history) | activities | 6 | 0 |
 | [`activity_request_settlement`](activities.md#activity_request_settlement) | activities | 11 | 0 |
@@ -194,7 +194,7 @@ erDiagram
 | [`automation_effect_claim`](automation.md#automation_effect_claim) | automation | 7 | 0 |
 | [`booking_alias`](activities.md#booking_alias) | activities | 6 | 0 |
 | [`booking_page`](activities.md#booking_page) | activities | 7 | 1 |
-| [`brief_item`](compose.md#brief_item) | compose | 15 | 0 |
+| [`brief_item`](compose.md#brief_item) | compose | 17 | 0 |
 | [`brief_run`](compose.md#brief_run) | compose | 13 | 1 |
 | [`bulk_confirmation`](compose.md#bulk_confirmation) | compose | 7 | 0 |
 | [`bulk_operation`](compose.md#bulk_operation) | compose | 13 | 0 |
@@ -364,7 +364,7 @@ erDiagram
 | [`list_member_event`](collections.md#list_member_event) | collections | 12 | 0 |
 | [`list_revision`](collections.md#list_revision) | collections | 11 | 0 |
 | [`list_visit`](collections.md#list_visit) | collections | 4 | 0 |
-| [`mail_draft`](activities.md#mail_draft) | activities | 20 | 0 |
+| [`mail_draft`](activities.md#mail_draft) | activities | 21 | 0 |
 | [`maskable_field`](identity.md#maskable_field) | identity | 2 | 1 |
 | [`meeting_calendar_episode`](activities.md#meeting_calendar_episode) | activities | 5 | 0 |
 | [`meeting_invitation`](activities.md#meeting_invitation) | activities | 21 | 1 |
@@ -435,7 +435,7 @@ erDiagram
 | [`sales_target`](reporting.md#sales_target) | reporting | 12 | 1 |
 | [`sales_target_revision`](reporting.md#sales_target_revision) | reporting | 5 | 0 |
 | [`saved_view`](collections.md#saved_view) | collections | 10 | 0 |
-| [`scheduled_send`](activities.md#scheduled_send) | activities | 21 | 1 |
+| [`scheduled_send`](activities.md#scheduled_send) | activities | 22 | 1 |
 | [`sdr_handoff`](contacts.md#sdr_handoff) | contacts | 17 | 1 |
 | [`sdr_handoff_event`](contacts.md#sdr_handoff_event) | contacts | 10 | 0 |
 | [`sdr_handoff_reason`](contacts.md#sdr_handoff_reason) | contacts | 9 | 2 |

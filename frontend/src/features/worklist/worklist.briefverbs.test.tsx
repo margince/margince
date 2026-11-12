@@ -569,10 +569,10 @@ describe("a brief item folded into a deal at risk stays answerable", () => {
 describe("tomorrowMorning", () => {
   it("is 08:00 on the next day of the reader's zone, not the browser's", () => {
     const now = Date.parse("2026-09-10T15:00:00Z");
-    expect(tomorrowMorning(now, "America/New_York")).toBe(
+    expect(tomorrowMorning(now, "America/New_York").snoozedUntil).toBe(
       "2026-09-11T12:00:00.000Z",
     );
-    expect(tomorrowMorning(now, "Asia/Ho_Chi_Minh")).toBe(
+    expect(tomorrowMorning(now, "Asia/Ho_Chi_Minh").snoozedUntil).toBe(
       "2026-09-11T01:00:00.000Z",
     );
   });
@@ -584,7 +584,7 @@ describe("tomorrowMorning", () => {
       timeZone: "Asia/Ho_Chi_Minh",
     });
     const now = Date.parse("2026-09-10T15:00:00Z");
-    expect(tomorrowMorning(now, "America/New_York")).toBe(
+    expect(tomorrowMorning(now, "America/New_York").snoozedUntil).toBe(
       "2026-09-11T12:00:00.000Z",
     );
     vi.restoreAllMocks();

@@ -2712,6 +2712,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "history.field.attendees": "Eingeladene Teilnehmende",
   "history.field.proposal_status": "Status des Terminvorschlags",
   "history.field.meeting_status": "Ergebnis des Termins",
+  "history.field.meeting_intent": "Terminbeginn (Ortszeit)",
   "history.field.candidate_company_key": "Zugeordnetes Unternehmen",
   "history.field.communication_basis": "Rechtsgrundlage",
   "history.field.company_name": "Unternehmensname",
@@ -2722,6 +2723,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "history.field.display_name": "Name",
   "history.field.domains": "Domains",
   "history.field.due_at": "Fällig",
+  "history.field.due_intent": "Fällig (Ortszeit)",
   "history.field.email": "E-Mail",
   "history.field.ended_at": "Beendet",
   "history.field.expected_close_date": "Voraussichtlicher Abschluss",
@@ -2796,6 +2798,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "history.field.due_has_time": "Fällig zu einer Uhrzeit",
   "history.field.call_outcome": "Ergebnis des Anrufs",
   "history.field.remind_at": "Erinnerung",
+  "history.field.remind_intent": "Erinnerung (Ortszeit)",
   "history.field.resolved_category": "Nachrichtenkategorie",
   "history.field.score": "Score",
   "history.field.score_override_reason": "Grund für die Score-Anpassung",
@@ -6138,7 +6141,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Zwei Buchstaben, zum Beispiel de. Leer lassen, um die Sprache der Vorlage zu nutzen.",
   "legalEntities.imprint": "Impressum",
   "legalEntities.imprintHint":
-    "Der rechtliche Hinweis, den dieser Rechtsträger druckt, bis zu 4.000 Zeichen.",
+    "Der rechtliche Hinweis, den dieser Rechtsträger druckt, bis zu {max} Zeichen.",
   "legalEntities.signatureTemplate": "E-Mail-Signaturvorlage (HTML)",
   "legalEntities.signatureTemplateHint":
     "Mails von Mitgliedern, die für diesen Rechtsträger arbeiten, tragen diese Vorlage. Nutze {name}, {title}, {phone}, {logo} und {imprint}. Leer nutzt die Vorlage des Unternehmens.",
@@ -10142,6 +10145,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "import.reason.tag_new":
     "Noch kein Tag hat diesen Namen, daher legt der Import ihn an.",
   "import.reason.value_refused": "„{value}“ wurde abgelehnt: {detail}",
+  "import.reason.value_too_long":
+    "Der Wert hat {length} Zeichen; das Feld fasst höchstens {max}.",
   "import.reason.cannot_read_pipelines":
     "Du darfst keine Pipelines lesen, daher wird eine Zeile übersprungen, die eine Phase nennt.",
   "import.reason.stage_unnamed": "Nenne die Phase des Deals.",

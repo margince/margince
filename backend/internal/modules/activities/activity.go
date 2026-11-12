@@ -57,6 +57,9 @@ func activityCapturedPayload(ctx context.Context, in LogActivityInput) (crmcontr
 }
 
 type LogActivityInput struct {
+	DueIntent     *crmcontracts.IntentTime
+	RemindIntent  *crmcontracts.IntentTime
+	MeetingIntent *crmcontracts.IntentTime
 	// Queued mail keeps its original entity when the sender changes company.
 	correspondenceEntity ids.UUID
 	SystemText           *systemtext.Message

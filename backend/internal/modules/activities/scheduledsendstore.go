@@ -11,8 +11,10 @@ package activities
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"log/slog"
+	"time"
 
 	"github.com/jackc/pgx/v5"
 
@@ -49,7 +51,7 @@ const scheduledSendColumns = `
 	-- would be a second place for the two to disagree about one message. Reading
 	-- the delivery's own status cannot drift from it.
 	` + scheduledSendStatusExpr + ` AS status,
-	scheduled_at, scheduled_tz, origin_kind,
+	` + scheduleInstantSQL + ` AS scheduled_at, scheduled_tz, scheduled_wall, origin_kind,
 	anchor_activity_id, payload, scheduled_by, activity_id,
 	held_reason, version, created_at, updated_at, origin_links, also_links, payload_version, principal_kind`
 
@@ -224,6 +226,11 @@ func (s *Store) RescheduleScheduledSend(ctx context.Context, id ids.UUID, sched 
 	if timer == nil {
 		return ScheduledSend{}, errNoScheduleTimer
 	}
+	normalized, err := normalizeSchedule(sched)
+	if err != nil {
+		return ScheduledSend{}, err
+	}
+	sched = normalized
 	if err := validateSchedule(sched, s.now()); err != nil {
 		return ScheduledSend{}, err
 	}
@@ -251,34 +258,41 @@ func (s *Store) RescheduleScheduledSend(ctx context.Context, id ids.UUID, sched 
 // decision and losing the work — which is the exact failure a held-message card
 // exists to prevent.
 func (s *Store) RescheduleInTx(ctx context.Context, tx pgx.Tx, id ids.UUID, sched SendSchedule, expectedVersion int64, current ScheduledSend, timer ScheduleTimer) error {
+	normalized, err := normalizeSchedule(sched)
+	if err != nil {
+		return err
+	}
+	sched = normalized
+	var keptWall *time.Time
+	var keptAt time.Time
 	{
 		// held_reason is cleared with the move: the row is pending again, and a
 		// stale reason would have the surface explain a hold that is over. The
 		// state-shape CHECK enforces the pairing, so this is not optional.
-		tag, err := tx.Exec(ctx, `
-			UPDATE scheduled_send
-			   SET scheduled_at = @at, scheduled_tz = @zone,
+		err := tx.QueryRow(ctx, `
+ UPDATE scheduled_send
+ SET (scheduled_wall,scheduled_tz,scheduled_at)=(
+  SELECT planned.wall_time,COALESCE(planned.timezone,@zone),planned.instant
+  FROM public.update_intent_time(scheduled_wall,scheduled_tz,scheduled_at,@wall::text::timestamp,@zone,@at) AS planned),
 			       payload = CASE WHEN held_reason = @replied
 			         THEN jsonb_set(payload, '{replies_reviewed_at}', to_jsonb(@reviewed::timestamptz))
 			         ELSE payload END,
 			       status = 'scheduled', held_reason = NULL,
 			       version = version + 1, updated_at = now()
-			 WHERE id = @id AND status IN ('scheduled','held') AND version = @version`, pgx.NamedArgs{
-			"at": sched.At.UTC(), "zone": sched.TZ, "id": id, "version": expectedVersion,
+			 WHERE id = @id AND status IN ('scheduled','held') AND version = @version
+ RETURNING scheduled_wall,scheduled_at`, pgx.NamedArgs{
+			"at": sched.At.UTC(), "zone": sched.TZ, "wall": sched.wallClock(), "id": id, "version": expectedVersion,
 			"replied": HeldRecipientReplied, "reviewed": s.now(),
-		})
+		}).Scan(&keptWall, &keptAt)
+		if errors.Is(err, pgx.ErrNoRows) {
+			return apperrors.ErrVersionSkew
+		}
 		if err != nil {
 			return fmt.Errorf("scheduled send: moving the due moment: %w", err)
 		}
-		if tag.RowsAffected() == 0 {
-			// Either it fired, was cancelled, or somebody moved it first. All
-			// three are the same answer to this caller: the row you saw is not
-			// the row that is there.
-			return apperrors.ErrVersionSkew
-		}
 		if _, err := storekit.Audit(ctx, tx, "reschedule", "scheduled_send", id,
-			map[string]any{FieldScheduledAt: current.ScheduledAt, FieldScheduledTZ: current.ScheduledTZ},
-			map[string]any{FieldScheduledAt: sched.At.UTC(), FieldScheduledTZ: sched.TZ}); err != nil {
+			map[string]any{FieldScheduledAt: current.ScheduledAt, FieldScheduledTZ: current.ScheduledTZ, "scheduled_intent": current.IntentWire()},
+			map[string]any{FieldScheduledAt: keptAt, FieldScheduledTZ: sched.TZ, "scheduled_intent": (ScheduledSend{ScheduledWall: keptWall, ScheduledTZ: sched.TZ}).IntentWire()}); err != nil {
 			return err
 		}
 		// A FRESH timer for the new moment. The old one still wakes at the old
@@ -303,7 +317,7 @@ func (s *Store) RescheduleInTx(ctx context.Context, tx pgx.Tx, id ids.UUID, sche
 		// outstanding, the message really is still going out, and if it is
 		// refused again OpenReviewTx upserts on the live-intent index and
 		// refreshes this row's refusals rather than opening a rival.
-		return timer.ScheduleTx(ctx, tx, id, sched.At.UTC())
+		return timer.ScheduleTx(ctx, tx, id, keptAt)
 	}
 }
 
@@ -410,7 +424,7 @@ func scanScheduledSend(rows pgx.Rows) (ScheduledSend, error) {
 		additionalLinks []byte
 	)
 	if err := rows.Scan(
-		&row.ID, &row.Status, &row.ScheduledAt, &row.ScheduledTZ, &row.OriginKind,
+		&row.ID, &row.Status, &row.ScheduledAt, &row.ScheduledTZ, &row.ScheduledWall, &row.OriginKind,
 		&anchor, &payloadRaw, &row.ScheduledBy, &activityID,
 		&heldReason, &row.Version, &row.CreatedAt, &row.UpdatedAt, &originLinks, &additionalLinks, &row.PayloadVersion, &row.PrincipalKind,
 	); err != nil {

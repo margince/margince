@@ -212,12 +212,13 @@ func TestAnAgentRenamingTheAnchorIsRefusedBeforeAnyoneIsAsked(t *testing.T) {
 	}
 }
 
-// The anchor's name carries the installation name's bound on every path that
-// renames it; a customer company's name does not.
+// The anchor's name carries the label bound on every path that renames it, and
+// a refusal moves neither the anchor nor the installation. A customer company's
+// typed name carries the same label bound.
 func TestAnAnchorNameTheInstallationCannotCarryIsRefused(t *testing.T) {
 	e := oneNameApp(t)
 	anchor := saveAnchor(t, e, "Profile Name AG")
-	tooLong := strings.Repeat("a", 201)
+	tooLong := strings.Repeat("a", values.TextLabelCharacters+1)
 
 	for name, code := range map[string]string{tooLong: "too_long", "   ": "required"} {
 		body := wellFormedCompany()
@@ -248,10 +249,12 @@ func TestAnAnchorNameTheInstallationCannotCarryIsRefused(t *testing.T) {
 	}
 
 	customer := createdID(t, e, "/v1/companies", AnyMap{"display_name": "Brandt Logistik GmbH", "source": "manual"})
+	var customerProblem companyProblem
 	if status := e.Call(t, http.MethodPatch, "/v1/companies/"+customer,
-		AnyMap{"display_name": tooLong}, nil, nil); status != http.StatusOK {
-		t.Errorf("a customer's 201-character name = %d, want 200: only the anchor carries the bound", status)
+		AnyMap{"display_name": tooLong}, nil, &customerProblem); status != http.StatusUnprocessableEntity {
+		t.Fatalf("a customer's typed name past the label limit = %d, want 422", status)
 	}
+	wantNameFault(t, customerProblem, "too_long")
 }
 
 // Renaming the anchor renames the installation. So a seat that may edit the
@@ -305,7 +308,7 @@ func wantNameFault(t *testing.T, problem companyProblem, code string) {
 		t.Errorf("refusal = %+v, want one %s error on display_name", problem.Details.Errors, code)
 		return
 	}
-	if wantMax := map[string]int{"too_long": 200}[code]; problem.Details.Errors[0].Max != wantMax {
+	if wantMax := map[string]int{"too_long": values.TextLabelCharacters}[code]; problem.Details.Errors[0].Max != wantMax {
 		t.Errorf("refusal max = %d, want %d", problem.Details.Errors[0].Max, wantMax)
 	}
 }

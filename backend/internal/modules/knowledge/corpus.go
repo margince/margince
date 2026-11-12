@@ -167,13 +167,6 @@ func (s *Store) EditCorpus(ctx context.Context, id ids.UUID, in UpdateCorpus) (c
 	if err := auth.Require(ctx, "knowledge_corpus", principal.ActionUpdate); err != nil {
 		return crmcontracts.KnowledgeCorpus{}, err
 	}
-	if in.Name != nil {
-		name, err := requireCorpusText("name", *in.Name, maxCorpusName)
-		if err != nil {
-			return crmcontracts.KnowledgeCorpus{}, err
-		}
-		in.Name = &name
-	}
 	if in.TopicStatement != nil {
 		topic, err := requireCorpusText("topic_statement", *in.TopicStatement, maxCorpusTopic)
 		if err != nil {
@@ -197,6 +190,13 @@ func (s *Store) EditCorpus(ctx context.Context, id ids.UUID, in UpdateCorpus) (c
 			return err
 		}
 		current := row.wire(s.embedIdentity())
+		if in.Name != nil && *in.Name != current.Name {
+			name, err := requireCorpusText("name", *in.Name, maxCorpusName)
+			if err != nil {
+				return err
+			}
+			in.Name = &name
+		}
 		if in.DefaultAsk != nil && *in.DefaultAsk {
 			if err := clearDefaultAsk(ctx, tx, id); err != nil {
 				return err

@@ -2626,6 +2626,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "history.field.attendees": "Khách được mời",
   "history.field.proposal_status": "Trạng thái đề xuất cuộc họp",
   "history.field.meeting_status": "Kết quả cuộc họp",
+  "history.field.meeting_intent": "Giờ bắt đầu cuộc họp (giờ địa phương)",
   "history.field.candidate_company_key": "Công ty khớp",
   "history.field.communication_basis": "Căn cứ pháp lý",
   "history.field.company_name": "Tên công ty",
@@ -2636,6 +2637,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "history.field.display_name": "Tên",
   "history.field.domains": "Tên miền",
   "history.field.due_at": "Hạn",
+  "history.field.due_intent": "Hạn (giờ địa phương)",
   "history.field.email": "Email",
   "history.field.ended_at": "Kết thúc",
   "history.field.expected_close_date": "Ngày chốt dự kiến",
@@ -2707,6 +2709,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "history.field.due_has_time": "Đến hạn vào giờ cụ thể",
   "history.field.call_outcome": "Kết quả cuộc gọi",
   "history.field.remind_at": "Lời nhắc",
+  "history.field.remind_intent": "Lời nhắc (giờ địa phương)",
   "history.field.resolved_category": "Loại tin nhắn",
   "history.field.score": "Điểm",
   "history.field.score_override_reason": "Lý do chỉnh điểm",
@@ -5979,7 +5982,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "Hai chữ cái, ví dụ de. Để trống để dùng ngôn ngữ của mẫu.",
   "legalEntities.imprint": "Thông tin pháp lý",
   "legalEntities.imprintHint":
-    "Thông tin pháp lý pháp nhân này in ra, tối đa 4.000 ký tự.",
+    "Thông tin pháp lý pháp nhân này in ra, tối đa {max} ký tự.",
   "legalEntities.signatureTemplate": "Mẫu chữ ký email (HTML)",
   "legalEntities.signatureTemplateHint":
     "Thư của đồng nghiệp làm việc cho pháp nhân này dùng mẫu này. Dùng {name}, {title}, {phone}, {logo} và {imprint}. Để trống sẽ dùng mẫu của công ty.",
@@ -9858,6 +9861,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "import.reason.tag_new":
     "Chưa có thẻ nào mang tên này nên quá trình nhập sẽ tạo thẻ.",
   "import.reason.value_refused": "“{value}” bị từ chối: {detail}",
+  "import.reason.value_too_long":
+    "Giá trị dài {length} ký tự; trường này tối đa {max}.",
   "import.reason.cannot_read_pipelines":
     "Bạn không có quyền xem quy trình bán hàng nên hàng deal nêu giai đoạn bị bỏ qua.",
   "import.reason.stage_unnamed": "Hãy nêu giai đoạn của deal.",

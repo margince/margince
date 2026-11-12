@@ -54,4 +54,6 @@ The 1 table owned by `customfields`, as the migrations build them. [Back to the 
 
 **Triggers**
 
+- `text_bound_insert`: `AFTER INSERT FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL, '{"slug": 20000, "type": 20000, "label": 120, "object": 20000, "status": 20000, "column_name": 120, "activity_kinds": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"activity_kinds":20000,"column_name":120,"label":120,"object":20000,"slug":20000,"status":20000,"type":20000}')`
+- `text_bound_update`: `AFTER UPDATE FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"slug": 20000, "type": 20000, "label": 120, "object": 20000, "status": 20000, "column_name": 120, "activity_kinds": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"activity_kinds":20000,"column_name":120,"label":120,"object":20000,"slug":20000,"status":20000,"type":20000}')`
 - `trg_custom_field_updated`: `BEFORE UPDATE FOR EACH ROW EXECUTE FUNCTION set_updated_at_bump_version()`

@@ -2606,6 +2606,7 @@ export const en = {
   "history.field.attendees": "Invited attendees",
   "history.field.proposal_status": "Meeting proposal status",
   "history.field.meeting_status": "Meeting outcome",
+  "history.field.meeting_intent": "Meeting start (local time)",
   "history.field.candidate_company_key": "Matched company",
   "history.field.communication_basis": "Legal basis",
   "history.field.company_name": "Company name",
@@ -2616,6 +2617,7 @@ export const en = {
   "history.field.display_name": "Name",
   "history.field.domains": "Domains",
   "history.field.due_at": "Due",
+  "history.field.due_intent": "Due (local time)",
   "history.field.email": "Email",
   "history.field.ended_at": "Ended",
   "history.field.expected_close_date": "Expected close",
@@ -2687,6 +2689,7 @@ export const en = {
   "history.field.due_has_time": "Due at a set time",
   "history.field.call_outcome": "Call outcome",
   "history.field.remind_at": "Reminder",
+  "history.field.remind_intent": "Reminder (local time)",
   "history.field.resolved_category": "Message category",
   "history.field.score": "Score",
   "history.field.score_override_reason": "Score override reason",
@@ -6104,7 +6107,7 @@ export const en = {
     "Two letters, for example de. Leave it empty to use the template’s language.",
   "legalEntities.imprint": "Imprint",
   "legalEntities.imprintHint":
-    "The legal notice this entity prints, up to 4,000 characters.",
+    "The legal notice this entity prints, up to {max} characters.",
   "legalEntities.signatureTemplate": "Email signature template (HTML)",
   "legalEntities.signatureTemplateHint":
     "Mail from colleagues who work for this entity signs with this template. Use {name}, {title}, {phone}, {logo} and {imprint}. Empty uses the company’s template.",
@@ -10128,6 +10131,8 @@ export const en = {
   "import.reason.tag_new":
     "No tag has this name yet, so the import creates it.",
   "import.reason.value_refused": "“{value}” was refused: {detail}",
+  "import.reason.value_too_long":
+    "This value is {length} characters. The field holds at most {max}.",
   "import.reason.cannot_read_pipelines":
     "You cannot read pipelines, so a deal row naming its stage is skipped.",
   "import.reason.stage_unnamed": "Name the deal’s stage.",

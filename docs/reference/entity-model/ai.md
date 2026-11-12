@@ -88,6 +88,11 @@ The 12 tables owned by `ai`, as the migrations build them. [Back to the entity m
 - `idx_ai_call_correlation`: `btree (correlation_id)`
 - `idx_ai_call_occurred`: `btree (occurred_at DESC)`
 
+**Triggers**
+
+- `text_bound_insert`: `AFTER INSERT FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL, '{"kind": 20000, "task": 20000, "tier": 20000, "model_id": 20000, "provider": 20000, "config_hash": 20000, "secret_kinds": 20000, "served_model": 20000, "subject_type": 20000, "finish_reason": 2000, "attempt_reason": 2000, "context_scopes": 20000, "error_sentinel": 20000, "decision_choice": 20000, "served_provider": 20000, "schema_downgrade": 20000, "context_fingerprint": 20000, "request_fingerprint": 20000, "served_identity_source": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"attempt_reason":2000,"config_hash":20000,"context_fingerprint":20000,"context_scopes":20000,"decision_choice":20000,"error_sentinel":20000,"finish_reason":2000,"kind":20000,"model_id":20000,"provider":20000,"request_fingerprint":20000,"schema_downgrade":20000,"secret_kinds":20000,"served_identity_source":20000,"served_model":20000,"served_provider":20000,"subject_type":20000,"task":20000,"tier":20000}')`
+- `text_bound_update`: `AFTER UPDATE FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"kind": 20000, "task": 20000, "tier": 20000, "model_id": 20000, "provider": 20000, "config_hash": 20000, "secret_kinds": 20000, "served_model": 20000, "subject_type": 20000, "finish_reason": 2000, "attempt_reason": 2000, "context_scopes": 20000, "error_sentinel": 20000, "decision_choice": 20000, "served_provider": 20000, "schema_downgrade": 20000, "context_fingerprint": 20000, "request_fingerprint": 20000, "served_identity_source": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"attempt_reason":2000,"config_hash":20000,"context_fingerprint":20000,"context_scopes":20000,"decision_choice":20000,"error_sentinel":20000,"finish_reason":2000,"kind":20000,"model_id":20000,"provider":20000,"request_fingerprint":20000,"schema_downgrade":20000,"secret_kinds":20000,"served_identity_source":20000,"served_model":20000,"served_provider":20000,"subject_type":20000,"task":20000,"tier":20000}')`
+
 ## ai_call_config
 
 6 columns · primary key `(hash)` · referenced by 1 foreign key
@@ -104,6 +109,11 @@ The 12 tables owned by `ai`, as the migrations build them. [Back to the entity m
 **Indexes**
 
 - `ai_call_config_pkey`: `unique, btree (hash)`
+
+**Triggers**
+
+- `text_bound_insert`: `AFTER INSERT FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL, '{"hash": 20000, "prompt_version": 20000, "task_contract_hash": 20000, "routing_config_hash": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"hash":20000,"prompt_version":20000,"routing_config_hash":20000,"task_contract_hash":20000}')`
+- `text_bound_update`: `AFTER UPDATE FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"hash": 20000, "prompt_version": 20000, "task_contract_hash": 20000, "routing_config_hash": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"hash":20000,"prompt_version":20000,"routing_config_hash":20000,"task_contract_hash":20000}')`
 
 ## ai_call_payload
 
@@ -165,6 +175,11 @@ The 12 tables owned by `ai`, as the migrations build them. [Back to the entity m
 - `ai_feedback_pkey`: `unique, btree (id)`
 - `ai_feedback_subject_type_subject_id_claim_kind_key`: `unique, btree (subject_type, subject_id, claim_kind, claim_key)`
 
+**Triggers**
+
+- `text_bound_insert`: `AFTER INSERT FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL, '{"note": 2000, "source": 20000, "verdict": 20000, "claim_key": 20000, "claim_kind": 20000, "captured_by": 20000, "value_shown": 20000, "subject_type": 20000, "corrected_value": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"captured_by":20000,"claim_key":20000,"claim_kind":20000,"corrected_value":20000,"note":2000,"source":20000,"subject_type":20000,"value_shown":20000,"verdict":20000}')`
+- `text_bound_update`: `AFTER UPDATE FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"note": 2000, "source": 20000, "verdict": 20000, "claim_key": 20000, "claim_kind": 20000, "captured_by": 20000, "value_shown": 20000, "subject_type": 20000, "corrected_value": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"captured_by":20000,"claim_key":20000,"claim_kind":20000,"corrected_value":20000,"note":2000,"source":20000,"subject_type":20000,"value_shown":20000,"verdict":20000}')`
+
 ## ai_model_rate
 
 16 columns · primary key `(id)` · referenced by 0 foreign keys
@@ -209,6 +224,11 @@ The 12 tables owned by `ai`, as the migrations build them. [Back to the entity m
 - `ai_model_rate_key`: `unique, btree (provider, model_id, effective_date)`
 - `ai_model_rate_pkey`: `unique, btree (id)`
 
+**Triggers**
+
+- `text_bound_insert`: `AFTER INSERT FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL, '{"lane": 20000, "source": 20000, "model_id": 20000, "provider": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"lane":20000,"model_id":20000,"provider":20000,"source":20000}')`
+- `text_bound_update`: `AFTER UPDATE FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"lane": 20000, "source": 20000, "model_id": 20000, "provider": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"lane":20000,"model_id":20000,"provider":20000,"source":20000}')`
+
 ## ai_usage
 
 10 columns · primary key `(day, task, tier)` · referenced by 0 foreign keys
@@ -238,6 +258,11 @@ The 12 tables owned by `ai`, as the migrations build them. [Back to the entity m
 **Indexes**
 
 - `ai_usage_pkey`: `unique, btree (day, task, tier)`
+
+**Triggers**
+
+- `text_bound_insert`: `AFTER INSERT FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL, '{"task": 20000, "tier": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"task":20000,"tier":20000}')`
+- `text_bound_update`: `AFTER UPDATE FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"task": 20000, "tier": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"task":20000,"tier":20000}')`
 
 ## voice_build
 
@@ -297,6 +322,11 @@ The 12 tables owned by `ai`, as the migrations build them. [Back to the entity m
 - `voice_build_profile_version_ix`: `btree (voice_profile_id, result_version)`
 - `voice_build_requester_fk`: `btree (requested_by) WHERE (requested_by IS NOT NULL)`
 
+**Triggers**
+
+- `text_bound_insert`: `AFTER INSERT FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL, '{"stage": 20000, "reason": 2000, "status": 20000, "source_hash": 20000, "status_code": 20000, "status_detail": 20000, "candidate_action": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"candidate_action":20000,"reason":2000,"source_hash":20000,"stage":20000,"status":20000,"status_code":20000,"status_detail":20000}')`
+- `text_bound_update`: `AFTER UPDATE FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"stage": 20000, "reason": 2000, "status": 20000, "source_hash": 20000, "status_code": 20000, "status_detail": 20000, "candidate_action": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"candidate_action":20000,"reason":2000,"source_hash":20000,"stage":20000,"status":20000,"status_code":20000,"status_detail":20000}')`
+
 ## voice_corpus_source
 
 23 columns · primary key `(id)` · referenced by 0 foreign keys
@@ -351,6 +381,11 @@ The 12 tables owned by `ai`, as the migrations build them. [Back to the entity m
 - `voice_corpus_source_manifest`: `btree (voice_profile_id, created_at DESC, id DESC) WHERE (archived_at IS NULL)`
 - `voice_corpus_source_pkey`: `unique, btree (id)`
 
+**Triggers**
+
+- `text_bound_insert`: `AFTER INSERT FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL, '{"kind": 20000, "origin": 20000, "source": 20000, "register": 20000, "source_ref": 20000, "captured_by": 20000, "content_hash": 20000, "source_label": 500, "exclusion_reason": 2000, "extractor_version": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"captured_by":20000,"content_hash":20000,"exclusion_reason":2000,"extractor_version":20000,"kind":20000,"origin":20000,"register":20000,"source":20000,"source_label":500,"source_ref":20000}')`
+- `text_bound_update`: `AFTER UPDATE FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"kind": 20000, "origin": 20000, "source": 20000, "register": 20000, "source_ref": 20000, "captured_by": 20000, "content_hash": 20000, "source_label": 500, "exclusion_reason": 2000, "extractor_version": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"captured_by":20000,"content_hash":20000,"exclusion_reason":2000,"extractor_version":20000,"kind":20000,"origin":20000,"register":20000,"source":20000,"source_label":500,"source_ref":20000}')`
+
 ## voice_learning_signal
 
 19 columns · primary key `(id)` · referenced by 0 foreign keys
@@ -399,6 +434,11 @@ The 12 tables owned by `ai`, as the migrations build them. [Back to the entity m
 - `voice_learning_signal_pkey`: `unique, btree (id)`
 - `voice_learning_signal_profile_version_ix`: `btree (voice_profile_id, profile_version)`
 - `voice_learning_signal_retention`: `btree (retention_until) WHERE (content_erased_at IS NULL)`
+
+**Triggers**
+
+- `text_bound_insert`: `AFTER INSERT FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL, '{"source": 20000, "outcome": 20000, "final_text": 20000, "captured_by": 20000, "final_captured_by": 20000, "generated_original": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"captured_by":20000,"final_captured_by":20000,"final_text":20000,"generated_original":20000,"outcome":20000,"source":20000}')`
+- `text_bound_update`: `AFTER UPDATE FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"source": 20000, "outcome": 20000, "final_text": 20000, "captured_by": 20000, "final_captured_by": 20000, "generated_original": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"captured_by":20000,"final_captured_by":20000,"final_text":20000,"generated_original":20000,"outcome":20000,"source":20000}')`
 
 ## voice_profile
 
@@ -450,6 +490,8 @@ The 12 tables owned by `ai`, as the migrations build them. [Back to the entity m
 
 **Triggers**
 
+- `text_bound_insert`: `AFTER INSERT FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL, '{"scope": 20000, "source": 20000, "status": 20000, "model_ref": 20000, "captured_by": 20000, "personality_md": 20000, "voice_profile_md": 20000, "active_source_hash": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"active_source_hash":20000,"captured_by":20000,"model_ref":20000,"personality_md":20000,"scope":20000,"source":20000,"status":20000,"voice_profile_md":20000}')`
+- `text_bound_update`: `AFTER UPDATE FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"scope": 20000, "source": 20000, "status": 20000, "model_ref": 20000, "captured_by": 20000, "personality_md": 20000, "voice_profile_md": 20000, "active_source_hash": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"active_source_hash":20000,"captured_by":20000,"model_ref":20000,"personality_md":20000,"scope":20000,"source":20000,"status":20000,"voice_profile_md":20000}')`
 - `voice_profile_owner_id_retirement_guard`: `BEFORE INSERT OR UPDATE FOR EACH ROW WHEN (((new.owner_id IS NOT NULL) AND (new.archived_at IS NULL))) EXECUTE FUNCTION refuse_retired_member_work('owner_id')`
 
 ## voice_profile_delta
@@ -491,6 +533,11 @@ The 12 tables owned by `ai`, as the migrations build them. [Back to the entity m
 - `voice_profile_delta_from_version_ix`: `btree (voice_profile_id, from_version)`
 - `voice_profile_delta_history`: `btree (voice_profile_id, created_at DESC, id DESC) WHERE (archived_at IS NULL)`
 - `voice_profile_delta_pkey`: `unique, btree (id)`
+
+**Triggers**
+
+- `text_bound_insert`: `AFTER INSERT FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL, '{"classification": 20000, "activation_outcome": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"activation_outcome":20000,"classification":20000}')`
+- `text_bound_update`: `AFTER UPDATE FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"classification": 20000, "activation_outcome": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"activation_outcome":20000,"classification":20000}')`
 
 ## voice_profile_version
 
@@ -547,3 +594,8 @@ The 12 tables owned by `ai`, as the migrations build them. [Back to the entity m
 - `voice_profile_version_one_active`: `unique, btree (voice_profile_id) WHERE (status = 'active')`
 - `voice_profile_version_pkey`: `unique, btree (id)`
 - `voice_profile_version_predecessor_ix`: `btree (voice_profile_id, predecessor_version)`
+
+**Triggers**
+
+- `text_bound_insert`: `AFTER INSERT FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL, '{"reason": 2000, "source": 20000, "status": 20000, "model_name": 120, "captured_by": 20000, "source_hash": 20000, "model_provider": 20000, "review_reasons": 2000, "builder_version": 20000, "voice_profile_md": 20000, "activation_policy_version": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"activation_policy_version":20000,"builder_version":20000,"captured_by":20000,"model_name":120,"model_provider":20000,"reason":2000,"review_reasons":2000,"source":20000,"source_hash":20000,"status":20000,"voice_profile_md":20000}')`
+- `text_bound_update`: `AFTER UPDATE FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"reason": 2000, "source": 20000, "status": 20000, "model_name": 120, "captured_by": 20000, "source_hash": 20000, "model_provider": 20000, "review_reasons": 2000, "builder_version": 20000, "voice_profile_md": 20000, "activation_policy_version": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"activation_policy_version":20000,"builder_version":20000,"captured_by":20000,"model_name":120,"model_provider":20000,"reason":2000,"review_reasons":2000,"source":20000,"source_hash":20000,"status":20000,"voice_profile_md":20000}')`

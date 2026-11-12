@@ -20,7 +20,7 @@ The 22 tables owned by `identity`, as the migrations build them. [Back to the en
 | `email` | `text` | yes |  |
 | `email_domain_folded` | `text` |  |  |
 | `failed_login_count` | `integer`, default `0` | yes |  |
-| `greeting_name` | `text` |  | At most 100 characters. |
+| `greeting_name` | `text` |  | At most 120 characters. |
 | `greeting_name_chosen_at` | `timestamp with time zone` |  |  |
 | `is_agent` | `boolean`, default `false` | yes |  |
 | `last_active_at` | `timestamp with time zone` |  |  |
@@ -67,7 +67,7 @@ The 22 tables owned by `identity`, as the migrations build them. [Back to the en
 - `app_user_does_not_merge_into_itself`: `CHECK (((merged_into_user_id IS NULL) OR (merged_into_user_id <> id)))`
 - `app_user_failed_login_count_check`: `CHECK ((failed_login_count >= 0))`
 - `app_user_forced_rotation_needs_a_password`: `CHECK ((NOT (must_change_password AND (password_hash IS NULL))))`
-- `app_user_greeting_name_length`: `CHECK (((greeting_name IS NULL) OR ((char_length(greeting_name) >= 1) AND (char_length(greeting_name) <= 100))))`
+- `app_user_greeting_name_length`: `CHECK (((greeting_name IS NULL) OR ((char_length(greeting_name) >= 1) AND (char_length(greeting_name) <= 120))))`
 - `app_user_locale_shipped`: `CHECK ((locale = ANY (ARRAY['en', 'de', 'vi'])))`
 - `app_user_merge_is_retired`: `CHECK (((merged_into_user_id IS NULL) OR (removed_at IS NOT NULL)))`
 - `app_user_morning_brief_delivery_check`: `CHECK (((morning_brief_delivery IS NULL) OR (morning_brief_delivery = ANY (ARRAY['none', 'email']))))`
@@ -99,6 +99,8 @@ The 22 tables owned by `identity`, as the migrations build them. [Back to the en
 - `home_read_fence_identity`: `AFTER UPDATE OF merged_into_user_id, email_domain_folded FOR EACH STATEMENT EXECUTE FUNCTION advance_home_read_fence()`
 - `report_authority_user_change`: `BEFORE UPDATE OF status, archived_at, seat_type, is_agent FOR EACH STATEMENT EXECUTE FUNCTION advance_report_projection_authority()`
 - `report_authority_user_delete`: `BEFORE DELETE FOR EACH STATEMENT EXECUTE FUNCTION advance_report_projection_authority()`
+- `text_bound_insert`: `AFTER INSERT FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL, '{"email": 20000, "locale": 20000, "status": 20000, "timezone": 20000, "seat_type": 20000, "avatar_origin": 20000, "greeting_name": 120, "password_hash": 20000, "timezone_set_by": 20000, "weekly_delivery": 20000, "avatar_object_key": 20000, "service_extension": 20000, "routine_mail_scope": 20000, "email_domain_folded": 20000, "routine_delivery_time": 20000, "morning_brief_delivery": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"avatar_object_key":20000,"avatar_origin":20000,"email":20000,"email_domain_folded":20000,"greeting_name":120,"locale":20000,"morning_brief_delivery":20000,"password_hash":20000,"routine_delivery_time":20000,"routine_mail_scope":20000,"seat_type":20000,"service_extension":20000,"status":20000,"timezone":20000,"timezone_set_by":20000,"weekly_delivery":20000}')`
+- `text_bound_update`: `AFTER UPDATE FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"email": 20000, "locale": 20000, "status": 20000, "timezone": 20000, "seat_type": 20000, "avatar_origin": 20000, "greeting_name": 120, "password_hash": 20000, "timezone_set_by": 20000, "weekly_delivery": 20000, "avatar_object_key": 20000, "service_extension": 20000, "routine_mail_scope": 20000, "email_domain_folded": 20000, "routine_delivery_time": 20000, "morning_brief_delivery": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"avatar_object_key":20000,"avatar_origin":20000,"email":20000,"email_domain_folded":20000,"greeting_name":120,"locale":20000,"morning_brief_delivery":20000,"password_hash":20000,"routine_delivery_time":20000,"routine_mail_scope":20000,"seat_type":20000,"service_extension":20000,"status":20000,"timezone":20000,"timezone_set_by":20000,"weekly_delivery":20000}')`
 - `trg_app_user_updated`: `BEFORE UPDATE FOR EACH ROW EXECUTE FUNCTION set_updated_at()`
 
 ## auth_token
@@ -136,6 +138,11 @@ The 22 tables owned by `identity`, as the migrations build them. [Back to the en
 - `idx_auth_token_user`: `btree (user_id, purpose) WHERE (used_at IS NULL)`
 - `idx_auth_token_user_cascade`: `btree (user_id)`
 
+**Triggers**
+
+- `text_bound_insert`: `AFTER INSERT FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL, '{"purpose": 20000, "token_hash": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"purpose":20000,"token_hash":20000}')`
+- `text_bound_update`: `AFTER UPDATE FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"purpose": 20000, "token_hash": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"purpose":20000,"token_hash":20000}')`
+
 ## federated_identity
 
 6 columns · primary key `(id)` · referenced by 0 foreign keys
@@ -165,6 +172,11 @@ The 22 tables owned by `identity`, as the migrations build them. [Back to the en
 - `federated_identity_pkey`: `unique, btree (id)`
 - `federated_identity_provider_subject_key`: `unique, btree (provider, subject)`
 - `federated_identity_user_provider_key`: `unique, btree (user_id, provider)`
+
+**Triggers**
+
+- `text_bound_insert`: `AFTER INSERT FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL, '{"provider": 20000, "email_at_link": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"email_at_link":20000,"provider":20000}')`
+- `text_bound_update`: `AFTER UPDATE FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"provider": 20000, "email_at_link": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"email_at_link":20000,"provider":20000}')`
 
 ## field_mask
 
@@ -198,6 +210,8 @@ The 22 tables owned by `identity`, as the migrations build them. [Back to the en
 **Triggers**
 
 - `report_authority_field_mask`: `BEFORE INSERT OR DELETE OR UPDATE FOR EACH STATEMENT EXECUTE FUNCTION advance_report_projection_authority()`
+- `text_bound_insert`: `AFTER INSERT FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL, '{"field": 20000, "object": 20000, "role_key": 20000, "condition": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"condition":20000,"field":20000,"object":20000,"role_key":20000}')`
+- `text_bound_update`: `AFTER UPDATE FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"field": 20000, "object": 20000, "role_key": 20000, "condition": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"condition":20000,"field":20000,"object":20000,"role_key":20000}')`
 
 ## maskable_field
 
@@ -212,6 +226,11 @@ The 22 tables owned by `identity`, as the migrations build them. [Back to the en
 
 - `maskable_field_pkey`: `unique, btree (object, field)`
 
+**Triggers**
+
+- `text_bound_insert`: `AFTER INSERT FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL, '{"field": 20000, "object": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"field":20000,"object":20000}')`
+- `text_bound_update`: `AFTER UPDATE FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"field": 20000, "object": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"field":20000,"object":20000}')`
+
 ## mfa_challenge_spent
 
 2 columns · primary key `(jti)` · referenced by 0 foreign keys
@@ -225,6 +244,11 @@ The 22 tables owned by `identity`, as the migrations build them. [Back to the en
 
 - `idx_mfa_challenge_spent_expires`: `btree (expires_at)`
 - `mfa_challenge_spent_pkey`: `unique, btree (jti)`
+
+**Triggers**
+
+- `text_bound_insert`: `AFTER INSERT FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL, '{"jti": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"jti":20000}')`
+- `text_bound_update`: `AFTER UPDATE FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"jti": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"jti":20000}')`
 
 ## mfa_recovery_code
 
@@ -253,6 +277,11 @@ The 22 tables owned by `identity`, as the migrations build them. [Back to the en
 - `idx_mfa_recovery_code_user`: `btree (user_id)`
 - `mfa_recovery_code_hash_key`: `unique, btree (code_hash)`
 - `mfa_recovery_code_pkey`: `unique, btree (id)`
+
+**Triggers**
+
+- `text_bound_insert`: `AFTER INSERT FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL, '{"code_hash": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"code_hash":20000}')`
+- `text_bound_update`: `AFTER UPDATE FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"code_hash": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"code_hash":20000}')`
 
 ## oauth_authorization_code
 
@@ -293,6 +322,11 @@ The 22 tables owned by `identity`, as the migrations build them. [Back to the en
 - `oauth_code_lent_passport_ix`: `btree (lent_passport_id)`
 - `oauth_code_unique`: `unique, btree (code_hash)`
 
+**Triggers**
+
+- `text_bound_insert`: `AFTER INSERT FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL, '{"scopes": 20000, "resource": 20000, "client_id": 20000, "code_hash": 20000, "work_areas": 20000, "redirect_uri": 20000, "code_challenge": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"client_id":20000,"code_challenge":20000,"code_hash":20000,"redirect_uri":20000,"resource":20000,"scopes":20000,"work_areas":20000}')`
+- `text_bound_update`: `AFTER UPDATE FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"scopes": 20000, "resource": 20000, "client_id": 20000, "code_hash": 20000, "work_areas": 20000, "redirect_uri": 20000, "code_challenge": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"client_id":20000,"code_challenge":20000,"code_hash":20000,"redirect_uri":20000,"resource":20000,"scopes":20000,"work_areas":20000}')`
+
 ## oauth_client
 
 11 columns · primary key `(id)` · referenced by 1 foreign key
@@ -321,6 +355,11 @@ The 22 tables owned by `identity`, as the migrations build them. [Back to the en
 
 - `oauth_client_client_id_key`: `unique, btree (client_id)`
 - `oauth_client_pkey`: `unique, btree (id)`
+
+**Triggers**
+
+- `text_bound_insert`: `AFTER INSERT FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL, '{"client_id": 20000, "client_name": 120, "created_via": 20000, "redirect_uris": 20000, "client_secret_hash": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"client_id":20000,"client_name":120,"client_secret_hash":20000,"created_via":20000,"redirect_uris":20000}')`
+- `text_bound_update`: `AFTER UPDATE FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"client_id": 20000, "client_name": 120, "created_via": 20000, "redirect_uris": 20000, "client_secret_hash": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"client_id":20000,"client_name":120,"client_secret_hash":20000,"created_via":20000,"redirect_uris":20000}')`
 
 ## oauth_grant
 
@@ -354,6 +393,11 @@ The 22 tables owned by `identity`, as the migrations build them. [Back to the en
 - `oauth_grant_pkey`: `unique, btree (id)`
 - `oauth_grant_user_live_ix`: `btree (user_id, id) WHERE (revoked_at IS NULL)`
 
+**Triggers**
+
+- `text_bound_insert`: `AFTER INSERT FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL, '{"scopes": 20000, "resource": 20000, "client_id": 20000, "work_areas": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"client_id":20000,"resource":20000,"scopes":20000,"work_areas":20000}')`
+- `text_bound_update`: `AFTER UPDATE FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"scopes": 20000, "resource": 20000, "client_id": 20000, "work_areas": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"client_id":20000,"resource":20000,"scopes":20000,"work_areas":20000}')`
+
 ## oauth_refresh_token
 
 7 columns · primary key `(id)` · referenced by 0 foreign keys
@@ -384,6 +428,11 @@ The 22 tables owned by `identity`, as the migrations build them. [Back to the en
 - `oauth_refresh_token_grant_ix`: `btree (grant_id)`
 - `oauth_refresh_token_pkey`: `unique, btree (id)`
 - `oauth_refresh_unique`: `unique, btree (token_hash)`
+
+**Triggers**
+
+- `text_bound_insert`: `AFTER INSERT FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL, '{"token_hash": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"token_hash":20000}')`
+- `text_bound_update`: `AFTER UPDATE FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"token_hash": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"token_hash":20000}')`
 
 ## onboarding_wizard_state
 
@@ -429,6 +478,11 @@ The 22 tables owned by `identity`, as the migrations build them. [Back to the en
 - `onboarding_wizard_state_pkey`: `unique, btree (id)`
 - `onboarding_wizard_state_user_id_key`: `unique, btree (user_id)`
 
+**Triggers**
+
+- `text_bound_insert`: `AFTER INSERT FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL, '{"path": 20000, "step": 20000, "source_mode": 20000, "website_url": 20000, "selected_fact_keys": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"path":20000,"selected_fact_keys":20000,"source_mode":20000,"step":20000,"website_url":20000}')`
+- `text_bound_update`: `AFTER UPDATE FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"path": 20000, "step": 20000, "source_mode": 20000, "website_url": 20000, "selected_fact_keys": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"path":20000,"selected_fact_keys":20000,"source_mode":20000,"step":20000,"website_url":20000}')`
+
 ## passport
 
 12 columns · primary key `(id)` · referenced by 9 foreign keys
@@ -469,6 +523,11 @@ The 22 tables owned by `identity`, as the migrations build them. [Back to the en
 - `passport_pkey`: `unique, btree (id)`
 - `passport_token_hash_key`: `unique, btree (token_hash)`
 - `uq_passport_id_owner`: `unique, btree (id, on_behalf_of)`
+
+**Triggers**
+
+- `text_bound_insert`: `AFTER INSERT FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL, '{"label": 120, "scopes": 20000, "token_hash": 20000, "work_areas": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"label":120,"scopes":20000,"token_hash":20000,"work_areas":20000}')`
+- `text_bound_update`: `AFTER UPDATE FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"label": 120, "scopes": 20000, "token_hash": 20000, "work_areas": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"label":120,"scopes":20000,"token_hash":20000,"work_areas":20000}')`
 
 ## record_grant
 
@@ -528,6 +587,8 @@ The 22 tables owned by `identity`, as the migrations build them. [Back to the en
 **Triggers**
 
 - `home_read_fence_record_grant`: `AFTER DELETE OR UPDATE FOR EACH STATEMENT EXECUTE FUNCTION advance_home_read_fence()`
+- `text_bound_insert`: `AFTER INSERT FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL, '{"access": 20000, "reason": 2000, "record_type": 20000, "subject_type": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"access":20000,"reason":2000,"record_type":20000,"subject_type":20000}')`
+- `text_bound_update`: `AFTER UPDATE FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"access": 20000, "reason": 2000, "record_type": 20000, "subject_type": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"access":20000,"reason":2000,"record_type":20000,"subject_type":20000}')`
 
 ## role
 
@@ -558,6 +619,8 @@ The 22 tables owned by `identity`, as the migrations build them. [Back to the en
 **Triggers**
 
 - `report_authority_role`: `BEFORE INSERT OR DELETE OR UPDATE FOR EACH STATEMENT EXECUTE FUNCTION advance_report_projection_authority()`
+- `text_bound_insert`: `AFTER INSERT FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL, '{"key": 20000, "name": 120}')) EXECUTE FUNCTION refuse_oversized_text('{"key":20000,"name":120}')`
+- `text_bound_update`: `AFTER UPDATE FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"key": 20000, "name": 120}')) EXECUTE FUNCTION refuse_oversized_text('{"key":20000,"name":120}')`
 - `trg_role_updated`: `BEFORE UPDATE FOR EACH ROW EXECUTE FUNCTION set_updated_at_bump_version()`
 
 ## role_assignment
@@ -628,6 +691,11 @@ The 22 tables owned by `identity`, as the migrations build them. [Back to the en
 - `session_pkey`: `unique, btree (id)`
 - `session_token_hash_key`: `unique, btree (token_hash)`
 
+**Triggers**
+
+- `text_bound_insert`: `AFTER INSERT FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL, '{"token_hash": 20000, "user_agent": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"token_hash":20000,"user_agent":20000}')`
+- `text_bound_update`: `AFTER UPDATE FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"token_hash": 20000, "user_agent": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"token_hash":20000,"user_agent":20000}')`
+
 ## setup_token
 
 4 columns · primary key `(id)` · referenced by 0 foreign keys
@@ -648,6 +716,11 @@ The 22 tables owned by `identity`, as the migrations build them. [Back to the en
 - `setup_token_one_outstanding`: `unique, btree (((consumed_at IS NULL))) WHERE (consumed_at IS NULL)`
 - `setup_token_pkey`: `unique, btree (id)`
 - `setup_token_token_hash_key`: `unique, btree (token_hash)`
+
+**Triggers**
+
+- `text_bound_insert`: `AFTER INSERT FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL, '{"token_hash": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"token_hash":20000}')`
+- `text_bound_update`: `AFTER UPDATE FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"token_hash": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"token_hash":20000}')`
 
 ## team
 
@@ -678,6 +751,8 @@ The 22 tables owned by `identity`, as the migrations build them. [Back to the en
 - `home_read_fence_team_archived`: `AFTER UPDATE OF archived_at FOR EACH ROW WHEN (((old.archived_at IS NULL) AND (new.archived_at IS NOT NULL))) EXECUTE FUNCTION advance_home_read_fence()`
 - `report_authority_team_change`: `BEFORE UPDATE OF archived_at FOR EACH STATEMENT EXECUTE FUNCTION advance_report_projection_authority()`
 - `report_authority_team_delete`: `BEFORE DELETE FOR EACH STATEMENT EXECUTE FUNCTION advance_report_projection_authority()`
+- `text_bound_insert`: `AFTER INSERT FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL, '{"name": 120}')) EXECUTE FUNCTION refuse_oversized_text('{"name":120}')`
+- `text_bound_update`: `AFTER UPDATE FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"name": 120}')) EXECUTE FUNCTION refuse_oversized_text('{"name":120}')`
 - `trg_team_updated`: `BEFORE UPDATE FOR EACH ROW EXECUTE FUNCTION set_updated_at()`
 
 ## team_membership
@@ -737,6 +812,11 @@ The 22 tables owned by `identity`, as the migrations build them. [Back to the en
 **Indexes**
 
 - `user_mfa_pkey`: `unique, btree (user_id)`
+
+**Triggers**
+
+- `text_bound_insert`: `AFTER INSERT FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL, '{"secret_ref": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"secret_ref":20000}')`
+- `text_bound_update`: `AFTER UPDATE FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"secret_ref": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"secret_ref":20000}')`
 
 ## workspace
 

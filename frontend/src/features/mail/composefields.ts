@@ -7,6 +7,7 @@ import type { ProjectScope } from "../../design-system/projectpicker";
 import { paragraphsFrom } from "../../design-system/richtext";
 import { isLocale, type Locale } from "../../i18n/locale";
 import type { CommunicationContext } from "../../lib/compose-context";
+import { useViewerZone } from "../../lib/viewerzone";
 import type { DraftProvenance, DraftUnavailable } from "./composedraftcall";
 import {
   type DraftMarks,
@@ -17,6 +18,7 @@ import {
 } from "./composedraftmarks";
 import type { AddressLine } from "./composehead";
 import type { SavedDraftFields } from "./composesaveddraftcalls";
+import { type ScheduleFields, scheduleFields } from "./composeschedule";
 import type { EditSeed } from "./schedulededit";
 
 type DraftReason = components["schemas"]["AccountDraftReason"];
@@ -54,6 +56,7 @@ export type FieldsSnapshot = Readonly<{
   intent: string;
   context: CommunicationContext | "";
   sendAt: string;
+  sendSchedule?: ScheduleFields;
   provenance: DraftProvenance | null;
   draftRef: string | null;
   servedBody: string;
@@ -159,7 +162,22 @@ export function useComposeFields({
   );
   // The send-later moment as datetime-local text in the rep's zone. It
   // becomes an instant at submit (see scheduleFields).
-  const [sendAt, setSendAt] = useState(edit?.sendAt ?? "");
+  const [sendAt, setSendAtValue] = useState(edit?.sendAt ?? "");
+  const [sendSchedule, setSendSchedule] = useState<ScheduleFields | undefined>(
+    edit?.sendSchedule,
+  );
+  const readerZone = useViewerZone();
+  const scheduleZone =
+    sendSchedule?.scheduled_intent?.timezone ??
+    sendSchedule?.scheduled_tz ??
+    readerZone;
+  const setSendAt = useCallback(
+    (local: string) => {
+      setSendAtValue(local);
+      setSendSchedule(scheduleFields(local, undefined, scheduleZone));
+    },
+    [scheduleZone],
+  );
   const [provenance, setProvenance] = useState<DraftProvenance | null>(null);
   // The served draft the body came from, so the server can tell a sent draft
   // from a rewritten one. It may only name the text on screen.
@@ -306,7 +324,8 @@ export function useComposeFields({
     setBody(saved.body);
     setHtml(saved.html);
     setContext(saved.context);
-    setSendAt(saved.sendAt);
+    setSendAtValue(saved.sendAt);
+    setSendSchedule(saved.sendSchedule);
     const state = saved.editorState;
     setIntent(state?.intent ?? "");
     setServedBody(state?.served_body ?? "");
@@ -335,6 +354,7 @@ export function useComposeFields({
     intent,
     context,
     sendAt,
+    sendSchedule,
     provenance,
     draftRef,
     servedBody,
@@ -358,7 +378,8 @@ export function useComposeFields({
     setHtml(next.html);
     setIntent(next.intent);
     setContext(next.context);
-    setSendAt(next.sendAt);
+    setSendAtValue(next.sendAt);
+    setSendSchedule(next.sendSchedule);
     setProvenance(next.provenance);
     setDraftRef(next.draftRef);
     setServedBody(next.servedBody);
@@ -387,6 +408,8 @@ export function useComposeFields({
     context,
     setContext,
     sendAt,
+    sendSchedule,
+    scheduleControl: { sendAt, timezone: scheduleZone },
     setSendAt,
     provenance,
     setProvenance,

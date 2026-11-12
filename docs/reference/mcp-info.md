@@ -15,10 +15,10 @@ input and output schema in folds below it. What a tool may do and whether a huma
 |---|---:|
 | Tools | 48 |
 | Resources | 14 |
-| Tool catalog | 232.2 KB |
+| Tool catalog | 232.7 KB |
 | Resource catalog | 5.5 KB |
-| Approx. wire tokens | 60836 |
-| Largest tool | `read_context` (11.5 KB) |
+| Approx. wire tokens | 60980 |
+| Largest tool | `read_context` (11.7 KB) |
 | Scopes rendered | `read`, `draft`, `write`, `send`, `enrich` |
 
 Those are the bytes on the wire: they carry each tool's output schema and the
@@ -32,11 +32,11 @@ tool adds to that listing, and what it costs each scheduled agent, agent by agen
 
 | Part | Bytes | Share | In a run's prompt? |
 |---|---:|---:|---|
-| Output schemas | 51.2 KB | 22% | **No**: a result's shape, never listed to a model |
+| Output schemas | 51.5 KB | 22% | **No**: a result's shape, never listed to a model |
 | Descriptions (incl. governance clause) | 54.1 KB | 23% | Yes, every step |
-| Input schemas | 115.0 KB | 49% | Yes, every step |
+| Input schemas | 115.3 KB | 49% | Yes, every step |
 | _Names, annotations, punctuation_ | 11.8 KB | 5% | Partly |
-| **Description + input schema** | **169.1 KB** | **72%** | **the recurring cost** |
+| **Description + input schema** | **169.4 KB** | **72%** | **the recurring cost** |
 
 Output schemas are the largest part of the total and are never sent to a model;
 descriptions and input schemas are what each step pays for.
@@ -68,7 +68,7 @@ descriptions and input schemas are what each step pays for.
 | [`archive_record`](#archive_record) | Archive a record |  |  | 300 |
 | [`bulk_update_records`](#bulk_update_records) | Change many records at once |  |  | 798 |
 | [`change_access`](#change_access) | Share records and set up members and teams |  |  | 706 |
-| [`change_activities`](#change_activities) | Log, plan and file activities |  |  | 2005 |
+| [`change_activities`](#change_activities) | Log, plan and file activities |  |  | 2041 |
 | [`change_attention`](#change_attention) | Act on proposals, notices and the weekly plan |  |  | 899 |
 | [`change_capture`](#change_capture) | Decide what comes into the CRM |  |  | 1080 |
 | [`change_compliance`](#change_compliance) | Record consent, stops, holds and privacy work |  |  | 879 |
@@ -108,7 +108,7 @@ descriptions and input schemas are what each step pays for.
 | [`read_workspace`](#read_workspace) | Read how this workspace is set up | yes |  | 2776 |
 | [`resolve_duplicates`](#resolve_duplicates) | Merge two records or dismiss a flagged pair |  |  | 618 |
 | [`run_research`](#run_research) | Run AI work for your user |  |  | 776 |
-| [`schedule_meeting`](#schedule_meeting) | Invite to a meeting |  |  | 420 |
+| [`schedule_meeting`](#schedule_meeting) | Invite to a meeting |  |  | 456 |
 | [`send_outbound`](#send_outbound) | Send a message |  |  | 1695 |
 | [`update_record`](#update_record) | Update a record |  | [`ui://margince/update.html`](#update_view) | 626 |
 | [`whoami`](#whoami) | Who this passport acts for | yes |  | 129 |
@@ -1482,6 +1482,21 @@ calling, unless they asked for this call themselves; requires passport scope "wr
         },
         "due_has_time": {
           "type": "boolean"
+        },
+        "due_intent": {
+          "properties": {
+            "timezone": {
+              "type": "string"
+            },
+            "wall_clock": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "timezone",
+            "wall_clock"
+          ],
+          "type": "object"
         },
         "subject": {
           "type": "string"
@@ -7598,6 +7613,21 @@ Renders its result in [`ui://margince/attention.html`](#attention_view), visible
               "due_has_time": {
                 "type": "boolean"
               },
+              "due_intent": {
+                "properties": {
+                  "timezone": {
+                    "type": "string"
+                  },
+                  "wall_clock": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "timezone",
+                  "wall_clock"
+                ],
+                "type": "object"
+              },
               "quote": {
                 "type": "string"
               },
@@ -8722,6 +8752,21 @@ Renders its result in [`ui://margince/context.html`](#context_view), visible to 
               "reopen_ref": {
                 "format": "uuid",
                 "type": "string"
+              },
+              "snoozed_intent": {
+                "properties": {
+                  "timezone": {
+                    "type": "string"
+                  },
+                  "wall_clock": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "timezone",
+                  "wall_clock"
+                ],
+                "type": "object"
               },
               "snoozed_until": {
                 "format": "date-time",
@@ -12473,6 +12518,21 @@ a human approves every call before it runs; requires passport scope "send".)
       "description": "RFC 3339 WITH Z or the user's offset (…T14:35:00Z); never invent an offset.",
       "format": "date-time",
       "type": "string"
+    },
+    "start_intent": {
+      "properties": {
+        "timezone": {
+          "type": "string"
+        },
+        "wall_clock": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "timezone",
+        "wall_clock"
+      ],
+      "type": "object"
     },
     "subject": {
       "type": "string"

@@ -437,7 +437,7 @@ func readerSetAsideSQL(reader, wake string) string {
 // is itself the disclosure that it arrived.
 func messageSnoozeLiftedSQL(asOf, backContent string) string {
 	return fmt.Sprintf(`(CASE mine.reopen_on
-		WHEN 'time' THEN mine.snoozed_until <= %[1]s
+		WHEN 'time' THEN %[7]s <= %[1]s
 		-- The same thread identity the waiting query matches replies by: key
 		-- alone shares a namespace across kinds and providers, so a crafted
 		-- References header could otherwise lift a snooze on a conversation
@@ -458,5 +458,5 @@ func messageSnoozeLiftedSQL(asOf, backContent string) string {
 			  AND %[4]s)
 		ELSE false
 	END)`, asOf, KindMeeting, backContent, storekit.MeetingIsOverSQL("m", asOf), occurredday.BegunSQL("back", asOf),
-		correspondence.ThreadSQL("back", "a"))
+		correspondence.ThreadSQL("back", "a"), storekit.IntentInstantColumnSQL("mine", "snoozed", "snoozed_until"))
 }

@@ -16,7 +16,6 @@ import (
 	"strings"
 	"testing"
 	"time"
-	"unicode/utf8"
 
 	"github.com/jackc/pgx/v5"
 
@@ -373,19 +372,10 @@ func TestAcceptedOfferSummaryWritesTheDescriptionColumn(t *testing.T) {
 	}
 }
 
-// What an overlong summary does to the header line it renders into.
-//
-// `offer_summary` is what an installation says about what it sells and the
-// contract takes 2000 characters of it; `company_description_length` caps
-// the header at 500. The header is one RENDERING of the summary, so a value too
-// long for the line is a value to shorten — not a write to drop, which is what
-// used to happen: the summary saved, the header stayed blank, and nothing said
-// why to the caller, the audit trail or the operator.
-//
-// Both shapes, because the cut is a rule and not just a length. Spelled in
-// multibyte characters so a byte-counting cut fails this test: the CHECK counts
-// characters, and a byte cut would refuse text the column accepts.
-func TestAnOverlongOfferSummaryFillsTheHeaderWithItsFirstLine(t *testing.T) {
+// The header is one rendering of `offer_summary`, and both share the document
+// limit, so a summary at that limit reaches the header whole. Spelled in
+// multibyte characters so a byte-counting cut fails: the CHECK counts characters.
+func TestAnOfferSummaryAtTheDocumentLimitFillsTheWholeHeader(t *testing.T) {
 	e := integration.Setup(t)
 	store := contacts.NewStore(e.DB()).WithInstallationRenamer(installationRenamer(e.Pool))
 	base := principal.WithCorrelationID(principal.WithWorkspaceID(context.Background(), e.WS), ids.NewV7())
@@ -422,48 +412,13 @@ func TestAnOverlongOfferSummaryFillsTheHeaderWithItsFirstLine(t *testing.T) {
 		return description, evidenceValue
 	}
 
-	// One 501-character word: there is no boundary to cut at, and a bounded
-	// value still beats an empty one.
-	unbroken := strings.Repeat("ü", 501)
-	description, evidenceValue := apply(t, "https://unbroken.example", unbroken)
-	if description == nil {
-		t.Fatal("a 501-character summary left the header NULL — the fill it is too long for is the one a reader sees, and dropping it is the silence this replaced")
-	}
-	if got := utf8.RuneCountInString(*description); got != 500 {
-		t.Errorf("the header line is %d characters; want the 500 the column admits", got)
-	}
-	if evidenceValue != unbroken {
-		t.Error("the evidence row lost the accepted summary — the header is a rendering of it, and shortening the rendering may not shorten the record")
-	}
-
-	// The same length in words, chosen so the hard 500-rune cut lands INSIDE a
-	// word — a phrase whose repeat happens to end on 500 would pass whether the
-	// boundary rule ran or not. The assertion is then the RULE rather than a
-	// second copy of the arithmetic: the line stops on a boundary the summary
-	// itself has, so no word is cut in half.
-	spoken := strings.Repeat("Wörter ", 100)
-	description, _ = apply(t, "https://spoken.example", spoken)
-	if description == nil {
-		t.Fatal("a long spoken summary left the header NULL")
-	}
-	line := *description
-	if count := utf8.RuneCountInString(line); count > 500 || count == 0 {
-		t.Errorf("the header line is %d characters; want a non-empty line within the 500 the column admits", count)
-	}
-	rest, isPrefix := strings.CutPrefix(spoken, line)
-	if !isPrefix {
-		t.Fatalf("the header line %q is not the start of the summary it renders", line)
-	}
-	if next, _ := utf8.DecodeRuneInString(rest); next != ' ' {
-		t.Errorf("the line stops mid-word, before %q — a word cut in half reads as a bug where a clean stop reads as a summary", rest[:min(20, len(rest))])
-	}
-
-	// At the cap the value passes through untouched: the shortening is for what
-	// does not fit, and a summary that fits is not a summary to edit.
-	atCap := strings.Repeat("ü", 500)
-	description, _ = apply(t, "https://atcap.example", atCap)
+	atCap := strings.Repeat("ü", contacts.CompanyDescriptionMax)
+	description, evidenceValue := apply(t, "https://atcap.example", atCap)
 	if description == nil || *description != atCap {
-		t.Error("a summary of exactly 500 characters should reach the header unchanged")
+		t.Error("a summary at the document limit should reach the header unchanged")
+	}
+	if evidenceValue != atCap {
+		t.Error("the evidence row lost the accepted summary")
 	}
 }
 

@@ -31506,7 +31506,7 @@ export interface components {
          * @description Why a row was skipped or warned about, so a screen can say it in the reader's language with `params`. One closed list, the same one the server reports from; `reason` is the English sentence for a reader that does not know a code. `run_in_flight` is the one refusal code: it answers a commit or undo on a run another attempt holds, and no row carries it.
          * @enum {string}
          */
-        ImportReasonCode: "activity_empty" | "activity_held" | "address_erased" | "address_not_split" | "activity_link_ambiguous" | "activity_link_ambiguous_dropped" | "activity_type_unknown" | "activity_type_unnamed" | "activity_unlinked" | "amount_negative" | "author_too_long" | "cannot_create" | "cannot_create_tags" | "cannot_edit" | "cannot_edit_and_tag" | "cannot_link_stakeholders" | "cannot_read_pipelines" | "cannot_read_tags" | "cannot_write_type" | "close_date_future" | "close_date_past" | "company_duplicate_found" | "company_duplicate_skipped" | "company_link_on_meeting" | "company_name_empty" | "contact_duplicate_found" | "contact_duplicate_skipped" | "contact_email_held" | "contact_holds_lead" | "contact_not_found" | "contact_not_found_dropped" | "contact_unnamed" | "currency_not_a_code" | "currency_unset" | "deal_already_closed" | "deal_company_has_contracts" | "deal_legal_gate" | "deal_not_found" | "deal_not_found_dropped" | "deal_pipeline_fixed" | "description_too_long" | "direction_unknown" | "domain_held" | "duplicate_email" | "duration_not_valid_for_kind" | "email_names_no_contact" | "duration_out_of_range" | "employer_column_empty" | "employer_column_empty_dropped" | "employer_not_found" | "employer_not_found_dropped" | "employer_refused" | "employer_will_create" | "empty_payload" | "field_inactive" | "fx_rate_missing" | "id_not_a_company_id" | "id_not_visible" | "id_on_non_company" | "lead_not_found" | "lead_not_found_dropped" | "lead_status_not_importable" | "lead_status_unknown" | "link_ambiguous" | "link_ambiguous_dropped" | "link_contact_not_imported" | "link_edge_unsupported" | "link_malformed" | "link_not_attachable" | "link_not_found" | "link_not_found_dropped" | "link_row_not_imported" | "link_row_skipped" | "link_row_skipped_dropped" | "link_type_unknown" | "linkedin_held" | "lost_reason_missing" | "meeting_not_taken_place" | "meeting_status_not_valid_for_kind" | "meeting_status_unknown" | "message_not_importable" | "natural_key_taken" | "not_a_date" | "note_repeated" | "not_a_domain" | "not_a_number" | "not_an_amount" | "not_an_email" | "not_yes_no" | "occurred_at_future" | "occurred_at_unnamed" | "option_not_allowed" | "option_not_in_list" | "options_need_semicolons" | "owner_refused" | "owner_unknown" | "phone_needs_country" | "pipeline_no_open_stage" | "pipeline_unknown" | "pipeline_unnamed" | "record_archived" | "ref_taken_by_another_company" | "row_key_empty" | "row_key_repeated" | "run_in_flight" | "size_band_invalid" | "stage_unknown" | "stage_unnamed" | "tag_created" | "tag_name_invalid" | "tag_new" | "task_not_importable" | "timestamp_needs_zone" | "too_many_links" | "undo_edited" | "undo_failed" | "undo_grant_lost" | "undo_not_visible" | "undo_rule_protects" | "undo_still_referenced" | "value_refused" | "value_unreadable";
+        ImportReasonCode: "activity_empty" | "activity_held" | "address_erased" | "address_not_split" | "activity_link_ambiguous" | "activity_link_ambiguous_dropped" | "activity_type_unknown" | "activity_type_unnamed" | "activity_unlinked" | "amount_negative" | "author_too_long" | "cannot_create" | "cannot_create_tags" | "cannot_edit" | "cannot_edit_and_tag" | "cannot_link_stakeholders" | "cannot_read_pipelines" | "cannot_read_tags" | "cannot_write_type" | "close_date_future" | "close_date_past" | "company_duplicate_found" | "company_duplicate_skipped" | "company_link_on_meeting" | "company_name_empty" | "contact_duplicate_found" | "contact_duplicate_skipped" | "contact_email_held" | "contact_holds_lead" | "contact_not_found" | "contact_not_found_dropped" | "contact_unnamed" | "currency_not_a_code" | "currency_unset" | "deal_already_closed" | "deal_company_has_contracts" | "deal_legal_gate" | "deal_not_found" | "deal_not_found_dropped" | "deal_pipeline_fixed" | "description_too_long" | "direction_unknown" | "domain_held" | "duplicate_email" | "duration_not_valid_for_kind" | "email_names_no_contact" | "duration_out_of_range" | "employer_column_empty" | "employer_column_empty_dropped" | "employer_not_found" | "employer_not_found_dropped" | "employer_refused" | "employer_will_create" | "empty_payload" | "field_inactive" | "fx_rate_missing" | "id_not_a_company_id" | "id_not_visible" | "id_on_non_company" | "lead_not_found" | "lead_not_found_dropped" | "lead_status_not_importable" | "lead_status_unknown" | "link_ambiguous" | "link_ambiguous_dropped" | "link_contact_not_imported" | "link_edge_unsupported" | "link_malformed" | "link_not_attachable" | "link_not_found" | "link_not_found_dropped" | "link_row_not_imported" | "link_row_skipped" | "link_row_skipped_dropped" | "link_type_unknown" | "linkedin_held" | "lost_reason_missing" | "meeting_not_taken_place" | "meeting_status_not_valid_for_kind" | "meeting_status_unknown" | "message_not_importable" | "natural_key_taken" | "not_a_date" | "note_repeated" | "not_a_domain" | "not_a_number" | "not_an_amount" | "not_an_email" | "not_yes_no" | "occurred_at_future" | "occurred_at_unnamed" | "option_not_allowed" | "option_not_in_list" | "options_need_semicolons" | "owner_refused" | "owner_unknown" | "phone_needs_country" | "pipeline_no_open_stage" | "pipeline_unknown" | "pipeline_unnamed" | "record_archived" | "ref_taken_by_another_company" | "row_key_empty" | "row_key_repeated" | "run_in_flight" | "size_band_invalid" | "stage_unknown" | "stage_unnamed" | "tag_created" | "tag_name_invalid" | "tag_new" | "task_not_importable" | "timestamp_needs_zone" | "too_many_links" | "undo_edited" | "undo_failed" | "undo_grant_lost" | "undo_not_visible" | "undo_rule_protects" | "undo_still_referenced" | "value_refused" | "value_too_long" | "value_unreadable";
         /**
          * @description Exactly one of two shapes: `object` and `mapping` (and optionally
          *     `source_key`) for one CSV, or `parts` for a ZIP, each part with its own
@@ -33510,7 +33510,7 @@ export interface components {
              * @description The company's general address, for example info@example.com. It never creates or matches a contact.
              */
             email?: string | null;
-            /** @description One human-written line saying what the company does. */
+            /** @description A description of what the company does. */
             description?: string | null;
             /** @description An industry code, or text the server can map to one. Text that names no code stores no code and is kept in the description. */
             industry?: string | null;
@@ -33549,7 +33549,7 @@ export interface components {
              * @description The company's general address, for example info@example.com. It never creates or matches a contact.
              */
             email?: string | null;
-            /** @description One human-written line saying what the company does. Absent leaves it untouched; an empty string clears it, the same spelling every other nullable text field on this record uses. */
+            /** @description A description of what the company does. Absent leaves it untouched; an empty string clears it, the same spelling every other nullable text field on this record uses. */
             description?: string | null;
             /** @description An industry code, or text the server can map to one. Text that names no code stores no code and is kept in the description. */
             industry?: string | null;
@@ -34699,6 +34699,7 @@ export interface components {
             due_at?: string | null;
             /** @description True when `due_at` names an agreed time of day, as on the task itself. The snooze beside this row keeps that time. */
             due_has_time?: boolean;
+            due_intent?: components["schemas"]["IntentTime"];
             overdue: boolean;
             /** Format: uuid */
             assignee_id?: string | null;
@@ -37126,6 +37127,7 @@ export interface components {
             due_at?: string;
             /** @description True when due_at is an agreed time of day. */
             due_has_time?: boolean;
+            due_intent?: components["schemas"]["IntentTime"];
             quote?: string;
             source: string;
             /** Format: uuid */
@@ -40324,6 +40326,7 @@ export interface components {
         BulkVerb: "reassign_owner" | "archive" | "add_to_list" | "remove_from_list" | "add_tag" | "remove_tag" | "create_task" | "complete";
         /** @description The task `create_task` files under every record of the selection. */
         BulkTask: {
+            due_intent?: components["schemas"]["IntentTime"];
             /** @description What has to be done, as one line. */
             subject: string;
             /**
@@ -41103,6 +41106,7 @@ export interface components {
             alias: string;
         };
         MeetingInvitationRequest: {
+            start_intent?: components["schemas"]["IntentTime"];
             /** Format: uuid */
             contact_id: string;
             /** Format: email */
@@ -41174,6 +41178,7 @@ export interface components {
             meeting?: components["schemas"]["MeetingInvitation"];
         };
         MeetingInvitation: {
+            start_intent?: components["schemas"]["IntentTime"];
             /** Format: uuid */
             id: string;
             /** @enum {string} */
@@ -41231,6 +41236,7 @@ export interface components {
             expires_at: string;
         };
         MeetingInvitationChange: {
+            start_intent?: components["schemas"]["IntentTime"];
             /** @enum {string} */
             action: "reschedule" | "cancel" | "retry";
             /** Format: int64 */
@@ -41329,6 +41335,9 @@ export interface components {
          *     `withheld`.
          */
         Activity: {
+            meeting_intent?: components["schemas"]["IntentTime"];
+            due_intent?: components["schemas"]["IntentTime"];
+            remind_intent?: components["schemas"]["IntentTime"];
             system_display?: components["schemas"]["SystemDisplay"];
             /** @description Whether this caller may replace selected individual readers of this internal operational message. Absent for ordinary or withheld activities. */
             readonly can_share_internal?: boolean;
@@ -41638,6 +41647,7 @@ export interface components {
             };
         };
         ActivityFollowUpTask: {
+            due_intent?: components["schemas"]["IntentTime"];
             subject: string;
             body?: string | null;
             /** Format: date-time */
@@ -41648,6 +41658,7 @@ export interface components {
         };
         /** @description What a task needs. Stored as an activity of kind `task`. */
         CreateTaskRequest: {
+            due_intent?: components["schemas"]["IntentTime"];
             recommendation?: components["schemas"]["RecommendationReceipt"];
             /**
              * Format: uuid
@@ -41711,6 +41722,9 @@ export interface components {
         };
         /** @description The workspace's active activity custom fields travel as extra top-level `cf_` keys. A key that is not `cf_`-prefixed, names no active activity field, or carries a value of the wrong shape for its field returns `422`. A value for a field that does not apply to the activity's kind returns `422 field_not_valid_for_kind`. */
         CreateActivityRequest: {
+            meeting_intent?: components["schemas"]["IntentTime"];
+            due_intent?: components["schemas"]["IntentTime"];
+            remind_intent?: components["schemas"]["IntentTime"];
             /**
              * @description Call and meeting only. The contact or company the logging form started on.
              *     One open deal of its current company is added automatically. With this field,
@@ -41948,6 +41962,7 @@ export interface components {
             questions_closed: number;
         };
         SetActivityDispositionRequest: {
+            snoozed_intent?: components["schemas"]["IntentTime"];
             /**
              * @description What the reader decided. `not_sales` binds the thread for everybody; `handled`,
              *     `snooze` and `not_mine` bind only the caller. `handled` says the caller dealt with the
@@ -41991,6 +42006,9 @@ export interface components {
         };
         /** @description A sparse patch. The workspace's active activity custom fields travel as extra top-level `cf_` keys, and an explicit `null` clears one. A key that is not `cf_`-prefixed, names no active activity field, or carries a value of the wrong shape for its field returns `422`. A value for a field that does not apply to the stored kind returns `422 field_not_valid_for_kind`; a `null` clears it all the same. */
         UpdateActivityRequest: {
+            meeting_intent?: components["schemas"]["IntentTime"];
+            due_intent?: components["schemas"]["IntentTime"];
+            remind_intent?: components["schemas"]["IntentTime"];
             /** @description Optional filing choice when recording a call or meeting outcome. Existing deal links remain. */
             deal_filing?: components["schemas"]["ActivityDealFiling"];
             subject?: string | null;
@@ -42582,6 +42600,13 @@ export interface components {
              */
             basis_id?: string | null;
         };
+        /** @description A chosen local time in an IANA zone, resolved with current rules. A time in a gap moves forward; a repeated time takes its first occurrence. */
+        IntentTime: {
+            /** @description Local date and time, no offset. */
+            wall_clock: string;
+            /** @description IANA zone name. */
+            timezone: string;
+        };
         SendEmailRequest: {
             /** @description The subject line. Blank or only white space is refused with 422 `required`. */
             subject: string;
@@ -42699,10 +42724,12 @@ export interface components {
              *     key authorizes nothing.
              */
             consent_purpose?: string;
+            scheduled_intent?: components["schemas"]["IntentTime"];
             /**
              * Format: date-time
-             * @description Send this message at this instant instead of now (ADR-0104). Absolute
-             *     and unambiguous; `scheduled_tz` records the zone the human picked it in.
+             * @description Legacy instant-based schedule. When `scheduled_intent` is present, its
+             *     local time and current timezone rules govern the send; this field is a
+             *     compatibility cache. Without it, the supplied instant remains authoritative.
              *
              *     A scheduled message writes NO activity and NO delivery row until it fires —
              *     the timeline stays silent about a message nobody has sent. The response is
@@ -42774,6 +42801,7 @@ export interface components {
              * @enum {string}
              */
             status: "scheduled" | "released" | "sent" | "cancelled" | "held";
+            scheduled_intent?: components["schemas"]["IntentTime"];
             /** Format: date-time */
             scheduled_at: string;
             /** @description The IANA zone the human picked the moment in, kept so it re-renders as meant. */
@@ -42947,6 +42975,7 @@ export interface components {
              *     reserved for the installation's own notices is refused 422. Omit it for none.
              */
             communication_context?: components["schemas"]["CommunicationContext"];
+            scheduled_intent?: components["schemas"]["IntentTime"];
             /**
              * Format: date-time
              * @description The moment the rep picked to send at, checked as the send checks it: with
@@ -42990,6 +43019,7 @@ export interface components {
             attachments_unavailable?: number;
             /** @description The reason for contact the author chose. Absent when none was. */
             communication_context?: components["schemas"]["CommunicationContext"];
+            scheduled_intent?: components["schemas"]["IntentTime"];
             /**
              * Format: date-time
              * @description The moment the author picked to send at, as saved. It may have passed since; the
@@ -43008,6 +43038,7 @@ export interface components {
          *     approval bound to, so changing it is cancel-and-recompose (ADR-0104 §5).
          */
         RescheduleSendRequest: {
+            scheduled_intent?: components["schemas"]["IntentTime"];
             /** Format: date-time */
             scheduled_at: string;
             scheduled_tz: string;
@@ -43319,10 +43350,12 @@ export interface components {
              *     key authorizes nothing.
              */
             consent_purpose?: string;
+            scheduled_intent?: components["schemas"]["IntentTime"];
             /**
              * Format: date-time
-             * @description Send this message at this instant instead of now (ADR-0104). Absolute
-             *     and unambiguous; `scheduled_tz` records the zone the human picked it in.
+             * @description Legacy instant-based schedule. When `scheduled_intent` is present, its
+             *     local time and current timezone rules govern the send; this field is a
+             *     compatibility cache. Without it, the supplied instant remains authoritative.
              *
              *     A scheduled message writes NO activity and NO delivery row until it fires —
              *     the timeline stays silent about a message nobody has sent. The response is
@@ -55880,6 +55913,7 @@ export interface components {
          *     deterministic candidate set, so it is not necessarily descending in `composite`.
          */
         MorningBriefItem: {
+            snoozed_intent?: components["schemas"]["IntentTime"];
             /** Format: uuid */
             id: string;
             /** Format: uuid */
@@ -56866,6 +56900,7 @@ export interface components {
          *     on the clock, the customer writing back, or a named meeting being over.
          */
         BriefSnoozeRequest: {
+            snoozed_intent?: components["schemas"]["IntentTime"];
             reopen_on?: components["schemas"]["ReopenCondition"];
             /**
              * Format: date-time
@@ -57581,6 +57616,7 @@ export interface components {
             due_at?: string;
             /** @description On a task row: true when `due_at` names an agreed time of day, false when the task is due by that day. Absent on other rows. */
             due_has_time?: boolean;
+            due_intent?: components["schemas"]["IntentTime"];
             /** @description Past due at the read instant, resolved server-side so every surface agrees. */
             overdue?: boolean;
             /**
@@ -59269,6 +59305,7 @@ export interface components {
             due_at?: string;
             /** @description On a task row: true when `due_at` names an agreed time of day, false when the task is due by that day. Absent on other rows. */
             due_has_time?: boolean;
+            due_intent?: components["schemas"]["IntentTime"];
             /** @description Past due at the read instant, resolved server-side so every surface agrees. */
             overdue?: boolean;
             /**

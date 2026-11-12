@@ -31,9 +31,9 @@
   "catalog": {
     "tools": 48,
     "system_frame_tokens": 592,
-    "tokens": 40583,
+    "tokens": 40655,
     "median_tool_tokens": 623,
-    "mean_tool_tokens": 845
+    "mean_tool_tokens": 846
   },
   "agents": [
     {
@@ -68,11 +68,11 @@
         "whats_slipping_this_week"
       ],
       "of_served_tools": 48,
-      "tokens": 6595,
-      "listing_tokens": 3445,
-      "step_schema_tokens": 2557,
+      "tokens": 6624,
+      "listing_tokens": 3439,
+      "step_schema_tokens": 2593,
       "percent_of_ceiling": 20,
-      "headroom_tokens": 16615,
+      "headroom_tokens": 16586,
       "dangling_cross_references": [
         "at_risk_relationships → read_relationships",
         "log_activity → draft_outbound",
@@ -97,7 +97,7 @@
     },
     {
       "name": "change_activities",
-      "tokens": 2005
+      "tokens": 2041
     },
     {
       "name": "change_state",
@@ -208,12 +208,12 @@
       "tokens": 474
     },
     {
-      "name": "decide_approvals",
-      "tokens": 429
+      "name": "schedule_meeting",
+      "tokens": 456
     },
     {
-      "name": "schedule_meeting",
-      "tokens": 420
+      "name": "decide_approvals",
+      "tokens": 429
     },
     {
       "name": "annotate_brief",

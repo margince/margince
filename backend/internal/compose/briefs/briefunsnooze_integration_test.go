@@ -40,7 +40,7 @@ func TestTakingBackASnoozeReturnsTheItemToTheQueue(t *testing.T) {
 
 	if _, err := b.engine.MarkSnoozed(
 		b.repCtx, item.ID, values.ReopenOnTime, &until, nil, snoozeAt,
-	); err != nil {
+		nil); err != nil {
 		t.Fatal(err)
 	}
 
@@ -138,7 +138,7 @@ func TestTakingBackASnoozeTwiceRefusesTheSecond(t *testing.T) {
 	until := briefClock.Add(48 * time.Hour)
 	at := briefClock.Add(time.Hour)
 
-	if _, err := b.engine.MarkSnoozed(b.repCtx, item.ID, values.ReopenOnTime, &until, nil, at); err != nil {
+	if _, err := b.engine.MarkSnoozed(b.repCtx, item.ID, values.ReopenOnTime, &until, nil, at, nil); err != nil {
 		t.Fatal(err)
 	}
 	if _, err := b.engine.MarkUnsnoozed(b.repCtx, item.ID); err != nil {
@@ -165,7 +165,7 @@ func TestTakingBackAnExpiredSnoozeStillReturnsTheItem(t *testing.T) {
 
 	if _, err := b.engine.MarkSnoozed(
 		b.repCtx, item.ID, values.ReopenOnTime, &until, nil, briefClock,
-	); err != nil {
+		nil); err != nil {
 		t.Fatal(err)
 	}
 	// Well past the moment it was waiting for, and no read has run in between.

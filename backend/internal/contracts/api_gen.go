@@ -14491,6 +14491,7 @@ const (
 	ImportReasonCodeUndoRuleProtects             ImportReasonCode = "undo_rule_protects"
 	ImportReasonCodeUndoStillReferenced          ImportReasonCode = "undo_still_referenced"
 	ImportReasonCodeValueRefused                 ImportReasonCode = "value_refused"
+	ImportReasonCodeValueTooLong                 ImportReasonCode = "value_too_long"
 	ImportReasonCodeValueUnreadable              ImportReasonCode = "value_unreadable"
 )
 
@@ -14738,6 +14739,8 @@ func (e ImportReasonCode) Valid() bool {
 	case ImportReasonCodeUndoStillReferenced:
 		return true
 	case ImportReasonCodeValueRefused:
+		return true
+	case ImportReasonCodeValueTooLong:
 		return true
 	case ImportReasonCodeValueUnreadable:
 		return true
@@ -32122,6 +32125,9 @@ type Activity struct {
 	// DueHasTime Task only. True when `due_at` names an agreed time of day, such as a callback hour. False means the task is due by the end of its day and a reader shows the date alone. Every task written before this field existed reads false.
 	DueHasTime *bool `json:"due_has_time,omitempty"`
 
+	// DueIntent A chosen local time in an IANA zone, resolved with current rules. A time in a gap moves forward; a repeated time takes its first occurrence.
+	DueIntent *IntentTime `json:"due_intent,omitempty"`
+
 	// DurationSeconds Meeting/call only.
 	DurationSeconds *int `json:"duration_seconds,omitempty"`
 
@@ -32159,6 +32165,9 @@ type Activity struct {
 	// Links Every record this activity is filed under that the caller may read; a link to a record they cannot read is left out. One activity may link to several, a contact and a deal say. Every read that returns an activity answers the same links: the list, one activity, and a contact's 360.
 	Links *[]ActivityLink `json:"links,omitempty"`
 
+	// MeetingIntent A chosen local time in an IANA zone, resolved with current rules. A time in a gap moves forward; a repeated time takes its first occurrence.
+	MeetingIntent *IntentTime `json:"meeting_intent,omitempty"`
+
 	// MeetingStatus Set only when kind=meeting.
 	MeetingStatus *ActivityMeetingStatus `json:"meeting_status,omitempty"`
 
@@ -32182,6 +32191,9 @@ type Activity struct {
 
 	// RemindAt Task only. When the reminder comes due. From that instant, for up to 30 days, the task leads its assignee's own Worklist with the reason `reminder_due`, and `GET /v1/activities?reminder_due=true` lists it for them. Nobody else is reminded, and a task with no assignee reminds nobody. Moving `due_at` on a task whose reminder has passed clears this field, unless the same patch names it.
 	RemindAt *time.Time `json:"remind_at,omitempty"`
+
+	// RemindIntent A chosen local time in an IANA zone, resolved with current rules. A time in a gap moves forward; a repeated time takes its first occurrence.
+	RemindIntent *IntentTime `json:"remind_intent,omitempty"`
 
 	// Source Where the row came from. `manual` is anything typed, by a member or by an assistant working for one, so it never says who typed it: `captured_by` and `recorded_by_agent` do.
 	Source string `json:"source"`
@@ -32335,7 +32347,10 @@ type ActivityFollowUpTask struct {
 	Body       *string             `json:"body,omitempty"`
 	DueAt      *time.Time          `json:"due_at,omitempty"`
 	DueHasTime *bool               `json:"due_has_time,omitempty"`
-	Subject    string              `json:"subject"`
+
+	// DueIntent A chosen local time in an IANA zone, resolved with current rules. A time in a gap moves forward; a repeated time takes its first occurrence.
+	DueIntent *IntentTime `json:"due_intent,omitempty"`
+	Subject   string      `json:"subject"`
 }
 
 // ActivityLink defines model for ActivityLink.
@@ -32806,7 +32821,10 @@ type AgentCommitment struct {
 	DueAt        *string                  `json:"due_at,omitempty"`
 
 	// DueHasTime True when due_at is an agreed time of day.
-	DueHasTime       *bool               `json:"due_has_time,omitempty"`
+	DueHasTime *bool `json:"due_has_time,omitempty"`
+
+	// DueIntent A chosen local time in an IANA zone, resolved with current rules. A time in a gap moves forward; a repeated time takes its first occurrence.
+	DueIntent        *IntentTime         `json:"due_intent,omitempty"`
 	Quote            *string             `json:"quote,omitempty"`
 	Source           string              `json:"source"`
 	SourceActivityId *openapi_types.UUID `json:"source_activity_id,omitempty"`
@@ -36388,6 +36406,9 @@ type AttentionItem struct {
 	// DueHasTime On a task row: true when `due_at` names an agreed time of day, false when the task is due by that day. Absent on other rows.
 	DueHasTime *bool `json:"due_has_time,omitempty"`
 
+	// DueIntent A chosen local time in an IANA zone, resolved with current rules. A time in a gap moves forward; a repeated time takes its first occurrence.
+	DueIntent *IntentTime `json:"due_intent,omitempty"`
+
 	// HostUserId Whose calendar a meeting came off. Sent by `source: meeting` and
 	// `source: meeting_outcome`. It moves to the organizer, whichever calendar
 	// synced first, when the organizer is a colleague with exactly one bound seat
@@ -37736,6 +37757,9 @@ type BriefSnoozeRequest struct {
 	// "after the meeting" names nothing without saying which meeting.
 	ReopenRef *openapi_types.UUID `json:"reopen_ref,omitempty"`
 
+	// SnoozedIntent A chosen local time in an IANA zone, resolved with current rules. A time in a gap moves forward; a repeated time takes its first occurrence.
+	SnoozedIntent *IntentTime `json:"snoozed_intent,omitempty"`
+
 	// SnoozedUntil When the item re-surfaces. REQUIRED for `time` and refused for the other two — a
 	// snooze waiting on a reply lifts when the reply arrives, not on a date. Must be in
 	// the future.
@@ -38036,6 +38060,9 @@ type BulkTask struct {
 
 	// DueAt When it is due. Optional.
 	DueAt *time.Time `json:"due_at,omitempty"`
+
+	// DueIntent A chosen local time in an IANA zone, resolved with current rules. A time in a gap moves forward; a repeated time takes its first occurrence.
+	DueIntent *IntentTime `json:"due_intent,omitempty"`
 
 	// Subject What has to be done, as one line.
 	Subject string `json:"subject"`
@@ -40136,7 +40163,10 @@ type Company360NextStep struct {
 	DueAt *time.Time `json:"due_at,omitempty"`
 
 	// DueHasTime True when `due_at` names an agreed time of day, as on the task itself. The snooze beside this row keeps that time.
-	DueHasTime      *bool               `json:"due_has_time,omitempty"`
+	DueHasTime *bool `json:"due_has_time,omitempty"`
+
+	// DueIntent A chosen local time in an IANA zone, resolved with current rules. A time in a gap moves forward; a repeated time takes its first occurrence.
+	DueIntent       *IntentTime         `json:"due_intent,omitempty"`
 	LinkedContactId *openapi_types.UUID `json:"linked_contact_id,omitempty"`
 	LinkedDealId    *openapi_types.UUID `json:"linked_deal_id,omitempty"`
 
@@ -44842,7 +44872,10 @@ type CreateActivityRequest struct {
 	DueAt           *time.Time                      `json:"due_at,omitempty"`
 
 	// DueHasTime Task only. True: `due_at` is a time of day; `remind_at` defaults to it.
-	DueHasTime      *bool                 `json:"due_has_time,omitempty"`
+	DueHasTime *bool `json:"due_has_time,omitempty"`
+
+	// DueIntent A chosen local time in an IANA zone, resolved with current rules. A time in a gap moves forward; a repeated time takes its first occurrence.
+	DueIntent       *IntentTime           `json:"due_intent,omitempty"`
 	DurationSeconds *int                  `json:"duration_seconds,omitempty"`
 	FollowUpTask    *ActivityFollowUpTask `json:"follow_up_task,omitempty"`
 
@@ -44863,6 +44896,9 @@ type CreateActivityRequest struct {
 		EntityId   openapi_types.UUID                   `json:"entity_id"`
 		EntityType CreateActivityRequestLinksEntityType `json:"entity_type"`
 	} `json:"links,omitempty"`
+
+	// MeetingIntent A chosen local time in an IANA zone, resolved with current rules. A time in a gap moves forward; a repeated time takes its first occurrence.
+	MeetingIntent *IntentTime `json:"meeting_intent,omitempty"`
 
 	// MeetingStatus Meeting only. `held` records a report that the meeting took place, and `no_show` that the other side did not come. Either ends `awaiting_outcome`. `booked` is a meeting still to come, and `canceled` one called off. Leave it out when nobody said whether the meeting happened: a start in the past is not attendance, so such a meeting still asks for its outcome.
 	MeetingStatus *CreateActivityRequestMeetingStatus `json:"meeting_status,omitempty"`
@@ -44886,6 +44922,9 @@ type CreateActivityRequest struct {
 
 	// RemindAt Task only. When the reminder comes due. From that instant, for up to 30 days, the task leads its assignee's own Worklist with the reason `reminder_due`, and `GET /v1/activities?reminder_due=true` lists it for them. Nobody else is reminded, and a task with no assignee reminds nobody. Moving `due_at` on a task whose reminder has passed clears this field, unless the same patch names it.
 	RemindAt *time.Time `json:"remind_at,omitempty"`
+
+	// RemindIntent A chosen local time in an IANA zone, resolved with current rules. A time in a gap moves forward; a repeated time takes its first occurrence.
+	RemindIntent *IntentTime `json:"remind_intent,omitempty"`
 
 	// RequestActivityId Accept this inbound request for the authenticated human, with activity read and create authority. Task only; agents cannot accept and assignee_id must name the caller when provided. The server verifies source access and copies its links instead of caller-supplied links. Subject and body are honored on creation. Retries return the same personal reminder without changing it. Explicit acceptance can restore an archived unfinished reminder with update authority. Completion settles the source request; automatic reconciliation never restores a reminder.
 	RequestActivityId *openapi_types.UUID `json:"request_activity_id,omitempty"`
@@ -44987,7 +45026,7 @@ type CreateCompanyRequest struct {
 	// Address Structured postal address.
 	Address *Address `json:"address,omitempty"`
 
-	// Description One human-written line saying what the company does.
+	// Description A description of what the company does.
 	Description *string               `json:"description,omitempty"`
 	DisplayName string                `json:"display_name"`
 	Domains     *[]CompanyDomainInput `json:"domains,omitempty"`
@@ -45949,6 +45988,9 @@ type CreateTaskRequest struct {
 
 	// DueHasTime True when `due_at` names an agreed time of day, such as a callback hour. Left out or false, the task is due by the end of the day `due_at` falls on, and only the date is shown. Sent only together with `due_at`. True sets the reminder to `due_at` when the request names no `remind_at`.
 	DueHasTime *bool `json:"due_has_time,omitempty"`
+
+	// DueIntent A chosen local time in an IANA zone, resolved with current rules. A time in a gap moves forward; a repeated time takes its first occurrence.
+	DueIntent *IntentTime `json:"due_intent,omitempty"`
 
 	// Links The records the task is about. With a source activity, omitted or empty links inherit its visible links. Otherwise the task appears on no timeline.
 	Links *[]struct {
@@ -52014,6 +52056,15 @@ type IntegrationsSettings struct {
 	Locks *SettingLocks `json:"locks,omitempty"`
 }
 
+// IntentTime A chosen local time in an IANA zone, resolved with current rules. A time in a gap moves forward; a repeated time takes its first occurrence.
+type IntentTime struct {
+	// Timezone IANA zone name.
+	Timezone string `json:"timezone"`
+
+	// WallClock Local date and time, no offset.
+	WallClock string `json:"wall_clock"`
+}
+
 // InternalMailHistoryPreview A separate internal-mail import is allowed only within this administrator-authorized scope and only after the mailbox owner explicitly selects it when starting.
 type InternalMailHistoryPreview struct {
 	// Folders Selected provider folder names. Empty means the whole connection, subject to ordinary exclusions.
@@ -54789,6 +54840,9 @@ type MailDraft struct {
 	// draft schedules nothing. Absent when none was picked.
 	ScheduledAt *time.Time `json:"scheduled_at,omitempty"`
 
+	// ScheduledIntent A chosen local time in an IANA zone, resolved with current rules. A time in a gap moves forward; a repeated time takes its first occurrence.
+	ScheduledIntent *IntentTime `json:"scheduled_intent,omitempty"`
+
 	// ScheduledTz The IANA zone `scheduled_at` was picked in. Present exactly when it is.
 	ScheduledTz *string   `json:"scheduled_tz,omitempty"`
 	Subject     string    `json:"subject"`
@@ -54866,6 +54920,9 @@ type MailDraftInput struct {
 	// ScheduledAt The moment the rep picked to send at, checked as the send checks it: with
 	// `scheduled_tz`, at most 90 days ahead. Saving schedules nothing. Omit both for none.
 	ScheduledAt *time.Time `json:"scheduled_at,omitempty"`
+
+	// ScheduledIntent A chosen local time in an IANA zone, resolved with current rules. A time in a gap moves forward; a repeated time takes its first occurrence.
+	ScheduledIntent *IntentTime `json:"scheduled_intent,omitempty"`
 
 	// ScheduledTz The IANA zone name `scheduled_at` was picked in. Required with `scheduled_at`.
 	ScheduledTz *string   `json:"scheduled_tz,omitempty"`
@@ -55177,9 +55234,12 @@ type MeetingInvitation struct {
 	Provider       *MeetingInvitationProvider       `json:"provider,omitempty"`
 	ReminderStatus *MeetingInvitationReminderStatus `json:"reminder_status,omitempty"`
 	Start          time.Time                        `json:"start"`
-	Status         MeetingInvitationStatus          `json:"status"`
-	Subject        string                           `json:"subject"`
-	Version        int64                            `json:"version"`
+
+	// StartIntent A chosen local time in an IANA zone, resolved with current rules. A time in a gap moves forward; a repeated time takes its first occurrence.
+	StartIntent *IntentTime             `json:"start_intent,omitempty"`
+	Status      MeetingInvitationStatus `json:"status"`
+	Subject     string                  `json:"subject"`
+	Version     int64                   `json:"version"`
 
 	// VideoCall A video call link was requested for this meeting.
 	VideoCall *bool `json:"video_call,omitempty"`
@@ -55205,10 +55265,13 @@ type MeetingInvitationStatus string
 
 // MeetingInvitationChange defines model for MeetingInvitationChange.
 type MeetingInvitationChange struct {
-	Action  MeetingInvitationChangeAction `json:"action"`
-	End     *time.Time                    `json:"end,omitempty"`
-	Start   *time.Time                    `json:"start,omitempty"`
-	Version int64                         `json:"version"`
+	Action MeetingInvitationChangeAction `json:"action"`
+	End    *time.Time                    `json:"end,omitempty"`
+	Start  *time.Time                    `json:"start,omitempty"`
+
+	// StartIntent A chosen local time in an IANA zone, resolved with current rules. A time in a gap moves forward; a repeated time takes its first occurrence.
+	StartIntent *IntentTime `json:"start_intent,omitempty"`
+	Version     int64       `json:"version"`
 }
 
 // MeetingInvitationChangeAction defines model for MeetingInvitationChange.Action.
@@ -55231,7 +55294,10 @@ type MeetingInvitationRequest struct {
 	Links    *[]MeetingRecordLink `json:"links,omitempty"`
 	Location string               `json:"location"`
 	Start    time.Time            `json:"start"`
-	Subject  string               `json:"subject"`
+
+	// StartIntent A chosen local time in an IANA zone, resolved with current rules. A time in a gap moves forward; a repeated time takes its first occurrence.
+	StartIntent *IntentTime `json:"start_intent,omitempty"`
+	Subject     string      `json:"subject"`
 
 	// VideoCall Add a video call link from the connected calendar. Absent follows the host's profile setting.
 	VideoCall *bool `json:"video_call,omitempty"`
@@ -55780,6 +55846,9 @@ type MorningBriefItem struct {
 
 	// ReopenRef The meeting being waited for; set exactly while reopen_on=meeting.
 	ReopenRef *openapi_types.UUID `json:"reopen_ref,omitempty"`
+
+	// SnoozedIntent A chosen local time in an IANA zone, resolved with current rules. A time in a gap moves forward; a repeated time takes its first occurrence.
+	SnoozedIntent *IntentTime `json:"snoozed_intent,omitempty"`
 
 	// SnoozedUntil When a snoozed item re-surfaces; set exactly while reopen_on=time, null otherwise — the other conditions lift on an event rather than a date.
 	SnoozedUntil *time.Time `json:"snoozed_until,omitempty"`
@@ -61269,7 +61338,10 @@ type RequestLegalReviewRequest struct {
 // approval bound to, so changing it is cancel-and-recompose (ADR-0104 §5).
 type RescheduleSendRequest struct {
 	ScheduledAt time.Time `json:"scheduled_at"`
-	ScheduledTz string    `json:"scheduled_tz"`
+
+	// ScheduledIntent A chosen local time in an IANA zone, resolved with current rules. A time in a gap moves forward; a repeated time takes its first occurrence.
+	ScheduledIntent *IntentTime `json:"scheduled_intent,omitempty"`
+	ScheduledTz     string      `json:"scheduled_tz"`
 }
 
 // ResolveInputCheck defines model for ResolveInputCheck.
@@ -62565,6 +62637,9 @@ type ScheduledSend struct {
 	ReviewId    *openapi_types.UUID `json:"review_id,omitempty"`
 	ScheduledAt time.Time           `json:"scheduled_at"`
 
+	// ScheduledIntent A chosen local time in an IANA zone, resolved with current rules. A time in a gap moves forward; a repeated time takes its first occurrence.
+	ScheduledIntent *IntentTime `json:"scheduled_intent,omitempty"`
+
 	// ScheduledTz The IANA zone the human picked the moment in, kept so it re-renders as meant.
 	ScheduledTz string `json:"scheduled_tz"`
 
@@ -63351,8 +63426,9 @@ type SendCompanyEmailRequest struct {
 	// an allow.
 	OperatorReason *string `json:"operator_reason,omitempty"`
 
-	// ScheduledAt Send this message at this instant instead of now (ADR-0104). Absolute
-	// and unambiguous; `scheduled_tz` records the zone the human picked it in.
+	// ScheduledAt Legacy instant-based schedule. When `scheduled_intent` is present, its
+	// local time and current timezone rules govern the send; this field is a
+	// compatibility cache. Without it, the supplied instant remains authoritative.
 	//
 	// A scheduled message writes NO activity and NO delivery row until it fires —
 	// the timeline stays silent about a message nobody has sent. The response is
@@ -63367,6 +63443,9 @@ type SendCompanyEmailRequest struct {
 	// An instant already past sends immediately. Further ahead than 90 days is
 	// refused 422.
 	ScheduledAt *time.Time `json:"scheduled_at,omitempty"`
+
+	// ScheduledIntent A chosen local time in an IANA zone, resolved with current rules. A time in a gap moves forward; a repeated time takes its first occurrence.
+	ScheduledIntent *IntentTime `json:"scheduled_intent,omitempty"`
 
 	// ScheduledTz The IANA zone name (e.g. `Europe/Berlin`) the human chose `scheduled_at` in.
 	// Required with `scheduled_at`. A zone NAME, never a numeric offset, which
@@ -63533,8 +63612,9 @@ type SendEmailRequest struct {
 	// an allow.
 	OperatorReason *string `json:"operator_reason,omitempty"`
 
-	// ScheduledAt Send this message at this instant instead of now (ADR-0104). Absolute
-	// and unambiguous; `scheduled_tz` records the zone the human picked it in.
+	// ScheduledAt Legacy instant-based schedule. When `scheduled_intent` is present, its
+	// local time and current timezone rules govern the send; this field is a
+	// compatibility cache. Without it, the supplied instant remains authoritative.
 	//
 	// A scheduled message writes NO activity and NO delivery row until it fires —
 	// the timeline stays silent about a message nobody has sent. The response is
@@ -63549,6 +63629,9 @@ type SendEmailRequest struct {
 	// An instant already past sends immediately. Further ahead than 90 days is
 	// refused 422.
 	ScheduledAt *time.Time `json:"scheduled_at,omitempty"`
+
+	// ScheduledIntent A chosen local time in an IANA zone, resolved with current rules. A time in a gap moves forward; a repeated time takes its first occurrence.
+	ScheduledIntent *IntentTime `json:"scheduled_intent,omitempty"`
 
 	// ScheduledTz The IANA zone name (e.g. `Europe/Berlin`) the human chose `scheduled_at` in.
 	// Required with `scheduled_at`. A zone NAME, never a numeric offset, which
@@ -63721,6 +63804,9 @@ type SetActivityDispositionRequest struct {
 	// ReopenRef The meeting to wait for. REQUIRED for `snooze` with `reopen_on: meeting` and
 	// refused otherwise.
 	ReopenRef *openapi_types.UUID `json:"reopen_ref,omitempty"`
+
+	// SnoozedIntent A chosen local time in an IANA zone, resolved with current rules. A time in a gap moves forward; a repeated time takes its first occurrence.
+	SnoozedIntent *IntentTime `json:"snoozed_intent,omitempty"`
 
 	// SnoozedUntil When a snooze lifts. REQUIRED for `snooze` with `reopen_on: time`, and refused
 	// everywhere else — a snooze waiting on a reply lifts when the reply arrives, and a
@@ -66007,8 +66093,14 @@ type UpdateActivityRequest struct {
 	// DueHasTime Task only. True: `due_at` is a time of day, and the reminder moves to it unless `remind_at` is sent. A `due_at` sent without it is a day, which ends a reminder that sat on the old time. Sent only with `due_at`.
 	DueHasTime *bool `json:"due_has_time,omitempty"`
 
+	// DueIntent A chosen local time in an IANA zone, resolved with current rules. A time in a gap moves forward; a repeated time takes its first occurrence.
+	DueIntent *IntentTime `json:"due_intent,omitempty"`
+
 	// IsDone Completing a task writes one audit row + an `activity.updated` event carrying the `is_done` delta (events.md §5.5 — there is no separate `task.*` family).
 	IsDone *bool `json:"is_done,omitempty"`
+
+	// MeetingIntent A chosen local time in an IANA zone, resolved with current rules. A time in a gap moves forward; a repeated time takes its first occurrence.
+	MeetingIntent *IntentTime `json:"meeting_intent,omitempty"`
 
 	// MeetingStatus How the meeting went, set AFTER it happened. Meeting only, and 422 with a
 	// `field_not_valid_for_kind` fault on the field otherwise — the same refusal create
@@ -66030,7 +66122,10 @@ type UpdateActivityRequest struct {
 	OccurredPrecision *OccurredPrecision `json:"occurred_precision,omitempty"`
 
 	// RemindAt Task only. When the reminder comes due. From that instant, for up to 30 days, the task leads its assignee's own Worklist with the reason `reminder_due`, and `GET /v1/activities?reminder_due=true` lists it for them. Nobody else is reminded, and a task with no assignee reminds nobody. Moving `due_at` on a task whose reminder has passed clears this field, unless the same patch names it.
-	RemindAt             *time.Time             `json:"remind_at,omitempty"`
+	RemindAt *time.Time `json:"remind_at,omitempty"`
+
+	// RemindIntent A chosen local time in an IANA zone, resolved with current rules. A time in a gap moves forward; a repeated time takes its first occurrence.
+	RemindIntent         *IntentTime            `json:"remind_intent,omitempty"`
 	Subject              *string                `json:"subject,omitempty"`
 	AdditionalProperties map[string]interface{} `json:"-"`
 }
@@ -66169,7 +66264,7 @@ type UpdateCompanyRequest struct {
 	// archived answers 422 naming this field. Absent leaves it untouched.
 	AssessAgainstEntityId *openapi_types.UUID `json:"assess_against_entity_id,omitempty"`
 
-	// Description One human-written line saying what the company does. Absent leaves it untouched; an empty string clears it, the same spelling every other nullable text field on this record uses.
+	// Description A description of what the company does. Absent leaves it untouched; an empty string clears it, the same spelling every other nullable text field on this record uses.
 	Description *string `json:"description,omitempty"`
 	DisplayName *string `json:"display_name,omitempty"`
 
@@ -70253,6 +70348,9 @@ type WorklistItem struct {
 
 	// DueHasTime On a task row: true when `due_at` names an agreed time of day, false when the task is due by that day. Absent on other rows.
 	DueHasTime *bool `json:"due_has_time,omitempty"`
+
+	// DueIntent A chosen local time in an IANA zone, resolved with current rules. A time in a gap moves forward; a repeated time takes its first occurrence.
+	DueIntent *IntentTime `json:"due_intent,omitempty"`
 
 	// EmailSummary The canonical email row, on a `customer_waiting` row whose message is an EMAIL this reader may read. The waiting lane spans email and channel messages, and only an email has an email's shape — a chat drawn as one would carry a mail icon and an email's access badge over a message that never travelled on one. Null on a channel message, null on every other source, and null when the message's content is not this reader's, though such a message produces no waiting row at all. A client renders the canonical row when this is present and falls back to `title` when it is not.
 	EmailSummary *EmailSummary `json:"email_summary,omitempty"`
@@ -81141,6 +81239,14 @@ func (a *Activity) UnmarshalJSON(b []byte) error {
 		delete(object, "due_has_time")
 	}
 
+	if raw, found := object["due_intent"]; found {
+		err = json.Unmarshal(raw, &a.DueIntent)
+		if err != nil {
+			return fmt.Errorf("error reading 'due_intent': %w", err)
+		}
+		delete(object, "due_intent")
+	}
+
 	if raw, found := object["duration_seconds"]; found {
 		err = json.Unmarshal(raw, &a.DurationSeconds)
 		if err != nil {
@@ -81245,6 +81351,14 @@ func (a *Activity) UnmarshalJSON(b []byte) error {
 		delete(object, "links")
 	}
 
+	if raw, found := object["meeting_intent"]; found {
+		err = json.Unmarshal(raw, &a.MeetingIntent)
+		if err != nil {
+			return fmt.Errorf("error reading 'meeting_intent': %w", err)
+		}
+		delete(object, "meeting_intent")
+	}
+
 	if raw, found := object["meeting_status"]; found {
 		err = json.Unmarshal(raw, &a.MeetingStatus)
 		if err != nil {
@@ -81307,6 +81421,14 @@ func (a *Activity) UnmarshalJSON(b []byte) error {
 			return fmt.Errorf("error reading 'remind_at': %w", err)
 		}
 		delete(object, "remind_at")
+	}
+
+	if raw, found := object["remind_intent"]; found {
+		err = json.Unmarshal(raw, &a.RemindIntent)
+		if err != nil {
+			return fmt.Errorf("error reading 'remind_intent': %w", err)
+		}
+		delete(object, "remind_intent")
 	}
 
 	if raw, found := object["source"]; found {
@@ -81630,6 +81752,13 @@ func (a Activity) MarshalJSON() ([]byte, error) {
 		}
 	}
 
+	if a.DueIntent != nil {
+		object["due_intent"], err = json.Marshal(a.DueIntent)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'due_intent': %w", err)
+		}
+	}
+
 	if a.DurationSeconds != nil {
 		object["duration_seconds"], err = json.Marshal(a.DurationSeconds)
 		if err != nil {
@@ -81717,6 +81846,13 @@ func (a Activity) MarshalJSON() ([]byte, error) {
 		}
 	}
 
+	if a.MeetingIntent != nil {
+		object["meeting_intent"], err = json.Marshal(a.MeetingIntent)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'meeting_intent': %w", err)
+		}
+	}
+
 	if a.MeetingStatus != nil {
 		object["meeting_status"], err = json.Marshal(a.MeetingStatus)
 		if err != nil {
@@ -81764,6 +81900,13 @@ func (a Activity) MarshalJSON() ([]byte, error) {
 		object["remind_at"], err = json.Marshal(a.RemindAt)
 		if err != nil {
 			return nil, fmt.Errorf("error marshaling 'remind_at': %w", err)
+		}
+	}
+
+	if a.RemindIntent != nil {
+		object["remind_intent"], err = json.Marshal(a.RemindIntent)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'remind_intent': %w", err)
 		}
 	}
 
@@ -83919,6 +84062,14 @@ func (a *CreateActivityRequest) UnmarshalJSON(b []byte) error {
 		delete(object, "due_has_time")
 	}
 
+	if raw, found := object["due_intent"]; found {
+		err = json.Unmarshal(raw, &a.DueIntent)
+		if err != nil {
+			return fmt.Errorf("error reading 'due_intent': %w", err)
+		}
+		delete(object, "due_intent")
+	}
+
 	if raw, found := object["duration_seconds"]; found {
 		err = json.Unmarshal(raw, &a.DurationSeconds)
 		if err != nil {
@@ -83983,6 +84134,14 @@ func (a *CreateActivityRequest) UnmarshalJSON(b []byte) error {
 		delete(object, "links")
 	}
 
+	if raw, found := object["meeting_intent"]; found {
+		err = json.Unmarshal(raw, &a.MeetingIntent)
+		if err != nil {
+			return fmt.Errorf("error reading 'meeting_intent': %w", err)
+		}
+		delete(object, "meeting_intent")
+	}
+
 	if raw, found := object["meeting_status"]; found {
 		err = json.Unmarshal(raw, &a.MeetingStatus)
 		if err != nil {
@@ -84037,6 +84196,14 @@ func (a *CreateActivityRequest) UnmarshalJSON(b []byte) error {
 			return fmt.Errorf("error reading 'remind_at': %w", err)
 		}
 		delete(object, "remind_at")
+	}
+
+	if raw, found := object["remind_intent"]; found {
+		err = json.Unmarshal(raw, &a.RemindIntent)
+		if err != nil {
+			return fmt.Errorf("error reading 'remind_intent': %w", err)
+		}
+		delete(object, "remind_intent")
 	}
 
 	if raw, found := object["request_activity_id"]; found {
@@ -84209,6 +84376,13 @@ func (a CreateActivityRequest) MarshalJSON() ([]byte, error) {
 		}
 	}
 
+	if a.DueIntent != nil {
+		object["due_intent"], err = json.Marshal(a.DueIntent)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'due_intent': %w", err)
+		}
+	}
+
 	if a.DurationSeconds != nil {
 		object["duration_seconds"], err = json.Marshal(a.DurationSeconds)
 		if err != nil {
@@ -84263,6 +84437,13 @@ func (a CreateActivityRequest) MarshalJSON() ([]byte, error) {
 		}
 	}
 
+	if a.MeetingIntent != nil {
+		object["meeting_intent"], err = json.Marshal(a.MeetingIntent)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'meeting_intent': %w", err)
+		}
+	}
+
 	if a.MeetingStatus != nil {
 		object["meeting_status"], err = json.Marshal(a.MeetingStatus)
 		if err != nil {
@@ -84309,6 +84490,13 @@ func (a CreateActivityRequest) MarshalJSON() ([]byte, error) {
 		object["remind_at"], err = json.Marshal(a.RemindAt)
 		if err != nil {
 			return nil, fmt.Errorf("error marshaling 'remind_at': %w", err)
+		}
+	}
+
+	if a.RemindIntent != nil {
+		object["remind_intent"], err = json.Marshal(a.RemindIntent)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'remind_intent': %w", err)
 		}
 	}
 
@@ -91430,12 +91618,28 @@ func (a *UpdateActivityRequest) UnmarshalJSON(b []byte) error {
 		delete(object, "due_has_time")
 	}
 
+	if raw, found := object["due_intent"]; found {
+		err = json.Unmarshal(raw, &a.DueIntent)
+		if err != nil {
+			return fmt.Errorf("error reading 'due_intent': %w", err)
+		}
+		delete(object, "due_intent")
+	}
+
 	if raw, found := object["is_done"]; found {
 		err = json.Unmarshal(raw, &a.IsDone)
 		if err != nil {
 			return fmt.Errorf("error reading 'is_done': %w", err)
 		}
 		delete(object, "is_done")
+	}
+
+	if raw, found := object["meeting_intent"]; found {
+		err = json.Unmarshal(raw, &a.MeetingIntent)
+		if err != nil {
+			return fmt.Errorf("error reading 'meeting_intent': %w", err)
+		}
+		delete(object, "meeting_intent")
 	}
 
 	if raw, found := object["meeting_status"]; found {
@@ -91468,6 +91672,14 @@ func (a *UpdateActivityRequest) UnmarshalJSON(b []byte) error {
 			return fmt.Errorf("error reading 'remind_at': %w", err)
 		}
 		delete(object, "remind_at")
+	}
+
+	if raw, found := object["remind_intent"]; found {
+		err = json.Unmarshal(raw, &a.RemindIntent)
+		if err != nil {
+			return fmt.Errorf("error reading 'remind_intent': %w", err)
+		}
+		delete(object, "remind_intent")
 	}
 
 	if raw, found := object["subject"]; found {
@@ -91539,10 +91751,24 @@ func (a UpdateActivityRequest) MarshalJSON() ([]byte, error) {
 		}
 	}
 
+	if a.DueIntent != nil {
+		object["due_intent"], err = json.Marshal(a.DueIntent)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'due_intent': %w", err)
+		}
+	}
+
 	if a.IsDone != nil {
 		object["is_done"], err = json.Marshal(a.IsDone)
 		if err != nil {
 			return nil, fmt.Errorf("error marshaling 'is_done': %w", err)
+		}
+	}
+
+	if a.MeetingIntent != nil {
+		object["meeting_intent"], err = json.Marshal(a.MeetingIntent)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'meeting_intent': %w", err)
 		}
 	}
 
@@ -91571,6 +91797,13 @@ func (a UpdateActivityRequest) MarshalJSON() ([]byte, error) {
 		object["remind_at"], err = json.Marshal(a.RemindAt)
 		if err != nil {
 			return nil, fmt.Errorf("error marshaling 'remind_at': %w", err)
+		}
+	}
+
+	if a.RemindIntent != nil {
+		object["remind_intent"], err = json.Marshal(a.RemindIntent)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'remind_intent': %w", err)
 		}
 	}
 

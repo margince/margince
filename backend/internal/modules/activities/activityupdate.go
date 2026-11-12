@@ -19,6 +19,9 @@ import (
 
 // UpdateActivityInput is a sparse activity edit. A nil field stays as stored.
 type UpdateActivityInput struct {
+	DueIntent          *crmcontracts.IntentTime
+	RemindIntent       *crmcontracts.IntentTime
+	MeetingIntent      *crmcontracts.IntentTime
 	DealFiling         *crmcontracts.ActivityDealFiling
 	recordedAt         *time.Time
 	sourceActivityID   *ids.UUID
@@ -109,6 +112,9 @@ func activityColumnImage(a crmcontracts.Activity) map[string]any {
 		fieldOccurredPrecision: string(a.OccurredPrecision),
 		fieldDurationSeconds:   derefOrNil(a.DurationSeconds),
 		"due_at":               derefOrNil(a.DueAt),
+		"due_intent":           derefOrNil(a.DueIntent),
+		"remind_intent":        derefOrNil(a.RemindIntent),
+		"meeting_intent":       derefOrNil(a.MeetingIntent),
 		"source_activity_id":   derefOrNil(a.SourceActivityId),
 		fieldDueHasTime:        derefOrNil(a.DueHasTime),
 		"remind_at":            derefOrNil(a.RemindAt),

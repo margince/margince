@@ -7,6 +7,8 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/shared/kernel/values"
 	"github.com/margince/margince/backend/internal/shared/ports/fieldcatalog"
 )
 
@@ -411,5 +413,19 @@ func TestActivityKindsAreStoredSortedOnceAndNullForEveryKind(t *testing.T) {
 	}
 	if got := storedKinds([]string{"meeting", "call", "meeting"}); strings.Join(got, ",") != "call,meeting" {
 		t.Fatalf("kinds must store sorted and once, got %v", got)
+	}
+}
+
+// The longest column a slug yields still fits its named text bound. So the
+// refusal names the field, and Postgres's identifier cap cuts nothing.
+func TestANewTextColumnNamesItsBoundForTheRefusal(t *testing.T) {
+	column := ColumnName(strings.Repeat("a", maxSlugLen))
+	ddl, err := BuildDDL("contact", column, FieldSpec{Type: TypeText})
+	if err != nil {
+		t.Fatal(err)
+	}
+	name := storekit.TextMaxConstraint(column, values.TextDocumentCharacters)
+	if !validIdentifier(name) || !strings.Contains(ddl, `CONSTRAINT "`+name+`" CHECK`) {
+		t.Fatalf("ddl %q does not name its bound %q", ddl, name)
 	}
 }

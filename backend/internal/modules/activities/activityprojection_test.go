@@ -27,6 +27,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/gatekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/occurredday"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/kernel/provenance"
 	"github.com/margince/margince/backend/internal/shared/kernel/relstrength"
@@ -81,6 +82,8 @@ func (r *sentinelRow) fill(dest any, name string, index int) {
 	switch d := dest.(type) {
 	case **systemtext.Message:
 		*d = nil
+	case **crmcontracts.IntentTime:
+		*d = &crmcontracts.IntentTime{WallClock: name, Timezone: name}
 	case *string:
 		*d = name
 	case **string:
@@ -227,9 +230,9 @@ func assertProjection(t *testing.T, got crmcontracts.Activity, index map[string]
 		column string
 		got    *time.Time
 	}{
-		{"a.occurred_at", &got.OccurredAt},
+		{occurredday.BookedStartSQL("a"), &got.OccurredAt},
 		{storekit.TaskDueSQL("a"), got.DueAt},
-		{"a.remind_at", got.RemindAt},
+		{storekit.IntentInstantSQL("a", "remind"), got.RemindAt},
 		{"a.done_at", got.DoneAt},
 		{"a.created_at", &got.CreatedAt},
 		{"a.updated_at", &got.UpdatedAt},
@@ -242,6 +245,19 @@ func assertProjection(t *testing.T, got crmcontracts.Activity, index map[string]
 		if at := epoch.Add(time.Duration(index[want.column]) * time.Hour); !want.got.Equal(at) {
 			t.Errorf("%s holds %v, want %v — two timestamp destinations are transposed",
 				want.column, want.got, at)
+		}
+	}
+
+	for _, want := range []struct {
+		column string
+		got    *crmcontracts.IntentTime
+	}{
+		{storekit.IntentWireSQL("a", "due"), got.DueIntent},
+		{storekit.IntentWireSQL("a", "remind"), got.RemindIntent},
+		{storekit.IntentWireSQL("a", "meeting"), got.MeetingIntent},
+	} {
+		if want.got == nil || want.got.WallClock != want.column {
+			t.Errorf("%s landed in a field holding %+v", want.column, want.got)
 		}
 	}
 

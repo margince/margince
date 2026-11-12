@@ -1,3 +1,4 @@
+import type { components } from "../api/schema";
 import type { Locale } from "../i18n";
 import { calendarDay, middayInstant } from "./calendarday";
 import { INTL_LOCALE } from "./intllocale";
@@ -324,10 +325,14 @@ export function formatDue(
   hasTime: boolean | undefined,
   locale: Locale,
   zone: string,
+  intent?: components["schemas"]["IntentTime"],
 ): string {
-  return hasTime === true
-    ? formatDateTime(dueAt, locale, zone)
-    : formatDate(dueAt, locale, zone);
+  const clock = dueDisplayClock(dueAt, zone, intent);
+  const shown =
+    hasTime === true
+      ? formatDateTime(clock.at, locale, clock.zone)
+      : formatDate(clock.at, locale, clock.zone);
+  return shown + clock.suffix;
 }
 
 /** formatDue in the day-and-month form a row or a chip has room for. */
@@ -336,9 +341,27 @@ export function formatDueCompact(
   hasTime: boolean | undefined,
   locale: Locale,
   zone: string,
+  intent?: components["schemas"]["IntentTime"],
 ): string {
-  const day = formatDayMonth(dueAt, locale, zone);
-  return hasTime === true
-    ? `${day}, ${formatTimeOfDay(dueAt, locale, zone)}`
-    : day;
+  const clock = dueDisplayClock(dueAt, zone, intent);
+  const day = formatDayMonth(clock.at, locale, clock.zone);
+  const shown =
+    hasTime === true
+      ? `${day}, ${formatTimeOfDay(clock.at, locale, clock.zone)}`
+      : day;
+  return shown + clock.suffix;
+}
+
+function dueDisplayClock(
+  dueAt: string,
+  zone: string,
+  intent?: components["schemas"]["IntentTime"],
+) {
+  if (!intent) return { at: dueAt, zone, suffix: "" };
+  return {
+    // UTC lets Intl print the chosen clock without resolving it as an instant.
+    at: `${intent.wall_clock}Z`,
+    zone: "UTC",
+    suffix: intent.timezone === zone ? "" : ` (${intent.timezone})`,
+  };
 }

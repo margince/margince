@@ -40,6 +40,11 @@ The 29 tables owned by `deals`, as the migrations build them. [Back to the entit
 - `close_date_run_pkey`: `unique, btree (id)`
 - `uq_close_date_run_one_running`: `unique, btree (status) WHERE (status = 'running')`
 
+**Triggers**
+
+- `text_bound_insert`: `AFTER INSERT FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL, '{"status": 20000, "captured_by": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"captured_by":20000,"status":20000}')`
+- `text_bound_update`: `AFTER UPDATE FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"status": 20000, "captured_by": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"captured_by":20000,"status":20000}')`
+
 ## close_date_run_member
 
 5 columns · primary key `(run_id, deal_id)` · referenced by 0 foreign keys
@@ -69,6 +74,11 @@ The 29 tables owned by `deals`, as the migrations build them. [Back to the entit
 - `close_date_run_member_pkey`: `unique, btree (run_id, deal_id)`
 - `close_date_run_member_walk`: `btree (run_id, deal_created_at, deal_id) WHERE (outcome = 'pending')`
 - `idx_close_date_run_member_deal`: `btree (deal_id)`
+
+**Triggers**
+
+- `text_bound_insert`: `AFTER INSERT FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL, '{"outcome": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"outcome":20000}')`
+- `text_bound_update`: `AFTER UPDATE FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"outcome": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"outcome":20000}')`
 
 ## deal
 
@@ -201,6 +211,8 @@ The 29 tables owned by `deals`, as the migrations build them. [Back to the entit
 - `deal_last_activity`: `AFTER UPDATE OF company_id FOR EACH ROW WHEN ((old.company_id IS DISTINCT FROM new.company_id)) EXECUTE FUNCTION trg_deal_last_activity()`
 - `deal_owner_id_retirement_guard`: `BEFORE INSERT OR UPDATE FOR EACH ROW WHEN (((new.owner_id IS NOT NULL) AND (new.archived_at IS NULL))) EXECUTE FUNCTION refuse_retired_member_work('owner_id')`
 - `home_read_fence_deal_owner`: `AFTER UPDATE FOR EACH ROW WHEN (((old.owner_id IS DISTINCT FROM new.owner_id) OR ((old.archived_at IS NULL) AND (new.archived_at IS NOT NULL)))) EXECUTE FUNCTION advance_home_read_fence()`
+- `text_bound_insert`: `AFTER INSERT FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL, '{"name": 120, "source": 20000, "status": 20000, "priority": 20000, "captured_by": 20000, "description": 20000, "lost_reason": 2000, "source_system": 20000, "commercial_mode": 20000, "lost_reason_code": 2000, "commercial_motion": 20000, "lost_reason_basis": 2000, "acquisition_source": 20000, "partner_attribution": 20000, "win_probability_set_by": 20000, "won_without_contract_detail": 20000, "won_without_contract_reason": 2000}')) EXECUTE FUNCTION refuse_oversized_text('{"acquisition_source":20000,"captured_by":20000,"commercial_mode":20000,"commercial_motion":20000,"description":20000,"lost_reason":2000,"lost_reason_basis":2000,"lost_reason_code":2000,"name":120,"partner_attribution":20000,"priority":20000,"source":20000,"source_system":20000,"status":20000,"win_probability_set_by":20000,"won_without_contract_detail":20000,"won_without_contract_reason":2000}')`
+- `text_bound_update`: `AFTER UPDATE FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"name": 120, "source": 20000, "status": 20000, "priority": 20000, "captured_by": 20000, "description": 20000, "lost_reason": 2000, "source_system": 20000, "commercial_mode": 20000, "lost_reason_code": 2000, "commercial_motion": 20000, "lost_reason_basis": 2000, "acquisition_source": 20000, "partner_attribution": 20000, "win_probability_set_by": 20000, "won_without_contract_detail": 20000, "won_without_contract_reason": 2000}')) EXECUTE FUNCTION refuse_oversized_text('{"acquisition_source":20000,"captured_by":20000,"commercial_mode":20000,"commercial_motion":20000,"description":20000,"lost_reason":2000,"lost_reason_basis":2000,"lost_reason_code":2000,"name":120,"partner_attribution":20000,"priority":20000,"source":20000,"source_system":20000,"status":20000,"win_probability_set_by":20000,"won_without_contract_detail":20000,"won_without_contract_reason":2000}')`
 - `trg_deal_project_same_company`: `AFTER INSERT OR UPDATE OF company_id, project_id DEFERRABLE INITIALLY IMMEDIATE FOR EACH ROW EXECUTE FUNCTION assert_deal_project_same_company()`
 - `trg_deal_updated`: `BEFORE UPDATE FOR EACH ROW EXECUTE FUNCTION set_updated_at_bump_version()`
 
@@ -237,6 +249,8 @@ The 29 tables owned by `deals`, as the migrations build them. [Back to the entit
 
 **Triggers**
 
+- `text_bound_insert`: `AFTER INSERT FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL, '{"key": 20000, "label": 120, "shipped_label": 120, "shipped_label_key": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"key":20000,"label":120,"shipped_label":120,"shipped_label_key":20000}')`
+- `text_bound_update`: `AFTER UPDATE FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"key": 20000, "label": 120, "shipped_label": 120, "shipped_label_key": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"key":20000,"label":120,"shipped_label":120,"shipped_label_key":20000}')`
 - `trg_deal_acquisition_source_updated`: `BEFORE UPDATE FOR EACH ROW EXECUTE FUNCTION set_updated_at_bump_version()`
 
 ## deal_authorship_sweep_cursor
@@ -310,6 +324,11 @@ The 29 tables owned by `deals`, as the migrations build them. [Back to the entit
 - `idx_deal_correction_deal`: `btree (deal_id)`
 - `idx_deal_correction_stage_history`: `btree (stage_history_id)`
 
+**Triggers**
+
+- `text_bound_insert`: `AFTER INSERT FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL, '{"asking": 20000, "fields": 20000, "correction": 20000, "captured_by": 20000, "reversed_by": 20000, "standing_close_date": 20000, "remaining_open_stages": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"asking":20000,"captured_by":20000,"correction":20000,"fields":20000,"remaining_open_stages":20000,"reversed_by":20000,"standing_close_date":20000}')`
+- `text_bound_update`: `AFTER UPDATE FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"asking": 20000, "fields": 20000, "correction": 20000, "captured_by": 20000, "reversed_by": 20000, "standing_close_date": 20000, "remaining_open_stages": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"asking":20000,"captured_by":20000,"correction":20000,"fields":20000,"remaining_open_stages":20000,"reversed_by":20000,"standing_close_date":20000}')`
+
 ## deal_line_item
 
 22 columns · primary key `(id)` · referenced by 0 foreign keys
@@ -323,7 +342,7 @@ The 29 tables owned by `deals`, as the migrations build them. [Back to the entit
 | `component_kind` | `text` |  | One of `software`, `implementation`, `other`. |
 | `currency` | `currency_code` | yes |  |
 | `deal_id` | `uuid` | yes | Points at `deal.id`. |
-| `description` | `text` | yes | At most 2000 characters. |
+| `description` | `text` | yes | At most 20000 characters. |
 | `discount_pct` | `numeric(5,2)`, default `0` | yes |  |
 | `interval_count` | `integer` |  |  |
 | `position` | `integer` | yes |  |
@@ -351,9 +370,9 @@ The 29 tables owned by `deals`, as the migrations build them. [Back to the entit
 - `deal_line_item_billing_interval_check`: `CHECK (((billing_interval_months IS NULL) OR (billing_interval_months = ANY (ARRAY[1, 3, 6, 12]))))`
 - `deal_line_item_billing_model_check`: `CHECK (((billing_model IS NULL) OR (billing_model = ANY (ARRAY['one_time', 'recurring']))))`
 - `deal_line_item_billing_shape`: `CHECK ((((billing_model IS NULL) AND (billing_interval_months IS NULL) AND (interval_count IS NULL)) OR ((billing_model = 'one_time') AND (billing_interval_months IS NULL) AND (interval_count IS NULL)) OR ((billing_model = 'recurring') AND (billing_interval_months IS NOT NULL))))`
-- `deal_line_item_bounded`: `CHECK (((length(unit) <= 100) AND ((catalog_name IS NULL) OR (length(catalog_name) <= 500)) AND ((sku IS NULL) OR (length(sku) <= 200))))`
+- `deal_line_item_bounded`: `CHECK (((char_length(unit) <= 120) AND ((catalog_name IS NULL) OR (length(catalog_name) <= 500)) AND ((sku IS NULL) OR (char_length(sku) <= 500))))`
 - `deal_line_item_component_kind_check`: `CHECK (((component_kind IS NULL) OR (component_kind = ANY (ARRAY['software', 'implementation', 'other']))))`
-- `deal_line_item_description_present`: `CHECK (((btrim(description) <> '') AND (length(description) <= 2000)))`
+- `deal_line_item_description_present`: `CHECK (((btrim(description) <> '') AND (char_length(description) <= 20000)))`
 - `deal_line_item_discount_pct_check`: `CHECK (((discount_pct >= (0)::numeric) AND (discount_pct <= (100)::numeric)))`
 - `deal_line_item_interval_count_check`: `CHECK (((interval_count IS NULL) OR (interval_count > 0)))`
 - `deal_line_item_one_tax_source`: `CHECK (((tax_rate IS NULL) <> (tax_category IS NULL)))`
@@ -374,6 +393,8 @@ The 29 tables owned by `deals`, as the migrations build them. [Back to the entit
 
 **Triggers**
 
+- `text_bound_insert`: `AFTER INSERT FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL, '{"sku": 500, "unit": 120, "captured_by": 20000, "description": 20000, "catalog_name": 500, "tax_category": 20000, "billing_model": 20000, "component_kind": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"billing_model":20000,"captured_by":20000,"catalog_name":500,"component_kind":20000,"description":20000,"sku":500,"tax_category":20000,"unit":120}')`
+- `text_bound_update`: `AFTER UPDATE FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"sku": 500, "unit": 120, "captured_by": 20000, "description": 20000, "catalog_name": 500, "tax_category": 20000, "billing_model": 20000, "component_kind": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"billing_model":20000,"captured_by":20000,"catalog_name":500,"component_kind":20000,"description":20000,"sku":500,"tax_category":20000,"unit":120}')`
 - `trg_deal_line_item_updated`: `BEFORE UPDATE FOR EACH ROW EXECUTE FUNCTION set_updated_at_bump_version()`
 
 ## deal_loss_reason
@@ -409,6 +430,8 @@ The 29 tables owned by `deals`, as the migrations build them. [Back to the entit
 
 **Triggers**
 
+- `text_bound_insert`: `AFTER INSERT FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL, '{"key": 20000, "label": 120, "shipped_label": 120, "shipped_label_key": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"key":20000,"label":120,"shipped_label":120,"shipped_label_key":20000}')`
+- `text_bound_update`: `AFTER UPDATE FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"key": 20000, "label": 120, "shipped_label": 120, "shipped_label_key": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"key":20000,"label":120,"shipped_label":120,"shipped_label_key":20000}')`
 - `trg_deal_loss_reason_updated`: `BEFORE UPDATE FOR EACH ROW EXECUTE FUNCTION set_updated_at_bump_version()`
 
 ## deal_loss_reason_mapping
@@ -445,6 +468,8 @@ The 29 tables owned by `deals`, as the migrations build them. [Back to the entit
 
 **Triggers**
 
+- `text_bound_insert`: `AFTER INSERT FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL, '{"note_key": 20000, "decided_by": 20000, "reason_key": 2000}')) EXECUTE FUNCTION refuse_oversized_text('{"decided_by":20000,"note_key":20000,"reason_key":2000}')`
+- `text_bound_update`: `AFTER UPDATE FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"note_key": 20000, "decided_by": 20000, "reason_key": 2000}')) EXECUTE FUNCTION refuse_oversized_text('{"decided_by":20000,"note_key":20000,"reason_key":2000}')`
 - `trg_deal_loss_reason_mapping_updated`: `BEFORE UPDATE FOR EACH ROW EXECUTE FUNCTION set_updated_at_bump_version()`
 
 ## deal_product
@@ -491,6 +516,11 @@ The 29 tables owned by `deals`, as the migrations build them. [Back to the entit
 - `deal_product_pkey`: `unique, btree (deal_id, product_id)`
 - `deal_product_product_idx`: `btree (product_id)`
 
+**Triggers**
+
+- `text_bound_insert`: `AFTER INSERT FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL, '{"source": 20000, "component_kind": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"component_kind":20000,"source":20000}')`
+- `text_bound_update`: `AFTER UPDATE FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"source": 20000, "component_kind": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"component_kind":20000,"source":20000}')`
+
 ## deal_risk_day
 
 7 columns · primary key `(id)` · referenced by 1 foreign key
@@ -516,6 +546,11 @@ The 29 tables owned by `deals`, as the migrations build them. [Back to the entit
 - `deal_risk_day_pkey`: `unique, btree (id)`
 - `idx_deal_risk_day_start`: `btree (day_start)`
 - `uq_deal_risk_day`: `unique, btree (local_day)`
+
+**Triggers**
+
+- `text_bound_insert`: `AFTER INSERT FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL, '{"captured_by": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"captured_by":20000}')`
+- `text_bound_update`: `AFTER UPDATE FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"captured_by": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"captured_by":20000}')`
 
 ## deal_risk_verdict
 
@@ -592,6 +627,8 @@ The 29 tables owned by `deals`, as the migrations build them. [Back to the entit
 
 **Triggers**
 
+- `text_bound_insert`: `AFTER INSERT FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL, '{"snippet": 500, "commitment": 20000, "author_side": 20000, "source_type": 20000, "extracted_by": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"author_side":20000,"commitment":20000,"extracted_by":20000,"snippet":500,"source_type":20000}')`
+- `text_bound_update`: `AFTER UPDATE FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"snippet": 500, "commitment": 20000, "author_side": 20000, "source_type": 20000, "extracted_by": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"author_side":20000,"commitment":20000,"extracted_by":20000,"snippet":500,"source_type":20000}')`
 - `trg_deal_stage_evidence_updated`: `BEFORE UPDATE FOR EACH ROW EXECUTE FUNCTION set_updated_at_bump_version()`
 
 ## deal_stage_history
@@ -651,6 +688,11 @@ The 29 tables owned by `deals`, as the migrations build them. [Back to the entit
 - `idx_deal_stage_history_changed`: `btree (changed_at)`
 - `idx_deal_stage_history_lost_reason_code`: `btree (lost_reason_code_at_change) WHERE (lost_reason_code_at_change IS NOT NULL)`
 - `reporting_stage_events`: `btree (deal_id, changed_at, id)`
+
+**Triggers**
+
+- `text_bound_insert`: `AFTER INSERT FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL, '{"changed_by": 20000, "provenance": 20000, "semantic_at_change": 20000, "valuation_provenance": 20000, "lost_reason_code_at_change": 2000}')) EXECUTE FUNCTION refuse_oversized_text('{"changed_by":20000,"lost_reason_code_at_change":2000,"provenance":20000,"semantic_at_change":20000,"valuation_provenance":20000}')`
+- `text_bound_update`: `AFTER UPDATE FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"changed_by": 20000, "provenance": 20000, "semantic_at_change": 20000, "valuation_provenance": 20000, "lost_reason_code_at_change": 2000}')) EXECUTE FUNCTION refuse_oversized_text('{"changed_by":20000,"lost_reason_code_at_change":2000,"provenance":20000,"semantic_at_change":20000,"valuation_provenance":20000}')`
 
 ## deal_suggestion
 
@@ -718,6 +760,8 @@ The 29 tables owned by `deals`, as the migrations build them. [Back to the entit
 
 **Triggers**
 
+- `text_bound_insert`: `AFTER INSERT FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL, '{"kind": 20000, "state": 20000, "name_hint": 20000, "captured_by": 20000, "fingerprint": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"captured_by":20000,"fingerprint":20000,"kind":20000,"name_hint":20000,"state":20000}')`
+- `text_bound_update`: `AFTER UPDATE FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"kind": 20000, "state": 20000, "name_hint": 20000, "captured_by": 20000, "fingerprint": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"captured_by":20000,"fingerprint":20000,"kind":20000,"name_hint":20000,"state":20000}')`
 - `trg_deal_suggestion_updated`: `BEFORE UPDATE FOR EACH ROW EXECUTE FUNCTION set_updated_at_bump_version()`
 
 ## deal_suggestion_evidence
@@ -756,6 +800,11 @@ The 29 tables owned by `deals`, as the migrations build them. [Back to the entit
 - `idx_deal_suggestion_evidence_signal`: `btree (signal_id) WHERE (signal_id IS NOT NULL)`
 - `idx_deal_suggestion_evidence_suggestion`: `btree (suggestion_id)`
 
+**Triggers**
+
+- `text_bound_insert`: `AFTER INSERT FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL, '{"kind": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"kind":20000}')`
+- `text_bound_update`: `AFTER UPDATE FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"kind": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"kind":20000}')`
+
 ## fx_rate
 
 6 columns · primary key `(id)` · referenced by 0 foreign keys
@@ -785,12 +834,12 @@ The 29 tables owned by `deals`, as the migrations build them. [Back to the entit
 | Column | Type | Required | What it is |
 |---|---|---|---|
 | `id` | `uuid`, default `uuidv7()` | yes | Primary key. |
-| `comments` | `text` |  | At most 8000 characters. |
+| `comments` | `text` |  |  |
 | `deal_id` | `uuid` | yes | Points at `deal.id`. |
 | `decided_at` | `timestamp with time zone` |  |  |
 | `decided_by` | `uuid` |  | Points at `app_user.id`. |
 | `expected_close_date` | `date` |  |  |
-| `note` | `text` |  | At most 4000 characters. |
+| `note` | `text` |  |  |
 | `packet` | `jsonb` | yes |  |
 | `previous_review_id` | `uuid` |  | Points at `legal_review.id`. |
 | `requested_by` | `uuid` |  | Points at `app_user.id`. |
@@ -813,9 +862,7 @@ The 29 tables owned by `deals`, as the migrations build them. [Back to the entit
 
 **Rules**
 
-- `legal_review_comments_bounded`: `CHECK (((comments IS NULL) OR (length(comments) <= 8000)))`
 - `legal_review_decided_shape`: `CHECK (((status = ANY (ARRAY['approved', 'changes_needed'])) = (decided_at IS NOT NULL)))`
-- `legal_review_note_bounded`: `CHECK (((note IS NULL) OR (length(note) <= 4000)))`
 - `legal_review_status_check`: `CHECK ((status = ANY (ARRAY['requested', 'approved', 'changes_needed', 'withdrawn'])))`
 - `legal_review_value_minor_js_safe`: `CHECK (((value_minor >= '-9007199254740991'::bigint) AND (value_minor <= '9007199254740991'::bigint)))`
 - `legal_review_value_pair`: `CHECK (((value_minor IS NULL) = (value_currency IS NULL)))`
@@ -834,6 +881,8 @@ The 29 tables owned by `deals`, as the migrations build them. [Back to the entit
 
 **Triggers**
 
+- `text_bound_insert`: `AFTER INSERT FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL, '{"note": 2000, "status": 20000, "comments": 2000, "captured_by": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"captured_by":20000,"comments":2000,"note":2000,"status":20000}')`
+- `text_bound_update`: `AFTER UPDATE FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"note": 2000, "status": 20000, "comments": 2000, "captured_by": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"captured_by":20000,"comments":2000,"note":2000,"status":20000}')`
 - `trg_legal_review_updated`: `BEFORE UPDATE FOR EACH ROW EXECUTE FUNCTION set_updated_at_bump_version()`
 
 ## offer
@@ -909,6 +958,8 @@ The 29 tables owned by `deals`, as the migrations build them. [Back to the entit
 
 **Triggers**
 
+- `text_bound_insert`: `AFTER INSERT FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL, '{"source": 20000, "status": 20000, "language": 20000, "intro_text": 20000, "terms_text": 20000, "captured_by": 20000, "offer_number": 20000, "pdf_asset_ref": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"captured_by":20000,"intro_text":20000,"language":20000,"offer_number":20000,"pdf_asset_ref":20000,"source":20000,"status":20000,"terms_text":20000}')`
+- `text_bound_update`: `AFTER UPDATE FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"source": 20000, "status": 20000, "language": 20000, "intro_text": 20000, "terms_text": 20000, "captured_by": 20000, "offer_number": 20000, "pdf_asset_ref": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"captured_by":20000,"intro_text":20000,"language":20000,"offer_number":20000,"pdf_asset_ref":20000,"source":20000,"status":20000,"terms_text":20000}')`
 - `trg_offer_updated`: `BEFORE UPDATE FOR EACH ROW EXECUTE FUNCTION set_updated_at_bump_version()`
 
 ## offer_line_item
@@ -971,6 +1022,8 @@ The 29 tables owned by `deals`, as the migrations build them. [Back to the entit
 
 **Triggers**
 
+- `text_bound_insert`: `AFTER INSERT FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL, '{"unit": 20000, "description": 20000, "tax_category": 20000, "billing_model": 20000, "proposal_state": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"billing_model":20000,"description":20000,"proposal_state":20000,"tax_category":20000,"unit":20000}')`
+- `text_bound_update`: `AFTER UPDATE FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"unit": 20000, "description": 20000, "tax_category": 20000, "billing_model": 20000, "proposal_state": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"billing_model":20000,"description":20000,"proposal_state":20000,"tax_category":20000,"unit":20000}')`
 - `trg_oli_updated`: `BEFORE UPDATE FOR EACH ROW EXECUTE FUNCTION set_updated_at_bump_version()`
 
 ## offer_template
@@ -1003,6 +1056,8 @@ The 29 tables owned by `deals`, as the migrations build them. [Back to the entit
 
 **Triggers**
 
+- `text_bound_insert`: `AFTER INSERT FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL, '{"name": 120, "locale": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"locale":20000,"name":120}')`
+- `text_bound_update`: `AFTER UPDATE FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"name": 120, "locale": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"locale":20000,"name":120}')`
 - `trg_offer_template_updated`: `BEFORE UPDATE FOR EACH ROW EXECUTE FUNCTION set_updated_at_bump_version()`
 
 ## pipeline
@@ -1032,6 +1087,8 @@ The 29 tables owned by `deals`, as the migrations build them. [Back to the entit
 
 **Triggers**
 
+- `text_bound_insert`: `AFTER INSERT FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL, '{"name": 120}')) EXECUTE FUNCTION refuse_oversized_text('{"name":120}')`
+- `text_bound_update`: `AFTER UPDATE FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"name": 120}')) EXECUTE FUNCTION refuse_oversized_text('{"name":120}')`
 - `trg_pipeline_updated`: `BEFORE UPDATE FOR EACH ROW EXECUTE FUNCTION set_updated_at_bump_version()`
 
 ## product
@@ -1082,6 +1139,8 @@ The 29 tables owned by `deals`, as the migrations build them. [Back to the entit
 
 **Triggers**
 
+- `text_bound_insert`: `AFTER INSERT FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL, '{"sku": 20000, "name": 120, "unit": 20000, "source": 20000, "captured_by": 20000, "description": 20000, "tax_category": 20000, "billing_model": 20000, "component_kind": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"billing_model":20000,"captured_by":20000,"component_kind":20000,"description":20000,"name":120,"sku":20000,"source":20000,"tax_category":20000,"unit":20000}')`
+- `text_bound_update`: `AFTER UPDATE FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"sku": 20000, "name": 120, "unit": 20000, "source": 20000, "captured_by": 20000, "description": 20000, "tax_category": 20000, "billing_model": 20000, "component_kind": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"billing_model":20000,"captured_by":20000,"component_kind":20000,"description":20000,"name":120,"sku":20000,"source":20000,"tax_category":20000,"unit":20000}')`
 - `trg_product_updated`: `BEFORE UPDATE FOR EACH ROW EXECUTE FUNCTION set_updated_at_bump_version()`
 
 ## product_translation
@@ -1090,7 +1149,7 @@ The 29 tables owned by `deals`, as the migrations build them. [Back to the entit
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
-| `description` | `text` |  |  |
+| `description` | `text` |  | At most 20000 characters. |
 | `language` | `text` | yes | ISO 639-1, lower case. |
 | `name` | `text` | yes |  |
 | `product_id` | `uuid` | yes | Points at `product.id`. |
@@ -1107,7 +1166,7 @@ The 29 tables owned by `deals`, as the migrations build them. [Back to the entit
 
 **Rules**
 
-- `product_translation_bounded`: `CHECK (((length(name) <= 500) AND ((description IS NULL) OR (length(description) <= 4000))))`
+- `product_translation_bounded`: `CHECK (((description IS NULL) OR (char_length(description) <= 20000)))`
 - `product_translation_language_shape`: `CHECK ((language ~ '^[a-z]{2}$'))`
 - `product_translation_name_present`: `CHECK ((btrim(name) <> ''))`
 - `product_translation_version_js_safe`: `CHECK (((version >= '-9007199254740991'::bigint) AND (version <= '9007199254740991'::bigint)))`
@@ -1118,6 +1177,8 @@ The 29 tables owned by `deals`, as the migrations build them. [Back to the entit
 
 **Triggers**
 
+- `text_bound_insert`: `AFTER INSERT FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL, '{"name": 120, "language": 20000, "captured_by": 20000, "description": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"captured_by":20000,"description":20000,"language":20000,"name":120}')`
+- `text_bound_update`: `AFTER UPDATE FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"name": 120, "language": 20000, "captured_by": 20000, "description": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"captured_by":20000,"description":20000,"language":20000,"name":120}')`
 - `trg_product_translation_updated`: `BEFORE UPDATE FOR EACH ROW EXECUTE FUNCTION set_updated_at_bump_version()`
 
 ## stage
@@ -1161,6 +1222,8 @@ The 29 tables owned by `deals`, as the migrations build them. [Back to the entit
 
 **Triggers**
 
+- `text_bound_insert`: `AFTER INSERT FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL, '{"name": 120, "semantic": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"name":120,"semantic":20000}')`
+- `text_bound_update`: `AFTER UPDATE FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"name": 120, "semantic": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"name":120,"semantic":20000}')`
 - `trg_stage_updated`: `BEFORE UPDATE FOR EACH ROW EXECUTE FUNCTION set_updated_at_bump_version()`
 
 ## stage_exit_criterion
@@ -1205,6 +1268,8 @@ The 29 tables owned by `deals`, as the migrations build them. [Back to the entit
 
 **Triggers**
 
+- `text_bound_insert`: `AFTER INSERT FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL, '{"key": 20000, "hint": 500, "kind": 20000, "label": 120}')) EXECUTE FUNCTION refuse_oversized_text('{"hint":500,"key":20000,"kind":20000,"label":120}')`
+- `text_bound_update`: `AFTER UPDATE FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"key": 20000, "hint": 500, "kind": 20000, "label": 120}')) EXECUTE FUNCTION refuse_oversized_text('{"hint":500,"key":20000,"kind":20000,"label":120}')`
 - `trg_stage_exit_criterion_updated`: `BEFORE UPDATE FOR EACH ROW EXECUTE FUNCTION set_updated_at_bump_version()`
 
 ## stage_progression_outcome
@@ -1261,6 +1326,8 @@ The 29 tables owned by `deals`, as the migrations build them. [Back to the entit
 
 **Triggers**
 
+- `text_bound_insert`: `AFTER INSERT FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL, '{"outcome": 20000, "evidence_kinds": 20000, "rejection_reason": 2000}')) EXECUTE FUNCTION refuse_oversized_text('{"evidence_kinds":20000,"outcome":20000,"rejection_reason":2000}')`
+- `text_bound_update`: `AFTER UPDATE FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"outcome": 20000, "evidence_kinds": 20000, "rejection_reason": 2000}')) EXECUTE FUNCTION refuse_oversized_text('{"evidence_kinds":20000,"outcome":20000,"rejection_reason":2000}')`
 - `trg_stage_progression_outcome_updated`: `BEFORE UPDATE FOR EACH ROW EXECUTE FUNCTION set_updated_at_bump_version()`
 
 ## stage_progression_policy
@@ -1313,6 +1380,11 @@ The 29 tables owned by `deals`, as the migrations build them. [Back to the entit
 - `stage_progression_policy_pkey`: `unique, btree (id)`
 - `stage_progression_policy_transition_key`: `unique, btree (pipeline_id, from_stage_id, to_stage_id)`
 
+**Triggers**
+
+- `text_bound_insert`: `AFTER INSERT FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL, '{"mode": 20000, "suspended_reason": 2000}')) EXECUTE FUNCTION refuse_oversized_text('{"mode":20000,"suspended_reason":2000}')`
+- `text_bound_update`: `AFTER UPDATE FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"mode": 20000, "suspended_reason": 2000}')) EXECUTE FUNCTION refuse_oversized_text('{"mode":20000,"suspended_reason":2000}')`
+
 ## tax_rate
 
 7 columns · primary key `(id)` · referenced by 0 foreign keys
@@ -1341,4 +1413,6 @@ The 29 tables owned by `deals`, as the migrations build them. [Back to the entit
 
 **Triggers**
 
+- `text_bound_insert`: `AFTER INSERT FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL, '{"country": 20000, "category": 20000, "captured_by": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"captured_by":20000,"category":20000,"country":20000}')`
+- `text_bound_update`: `AFTER UPDATE FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"country": 20000, "category": 20000, "captured_by": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"captured_by":20000,"category":20000,"country":20000}')`
 - `trg_tax_rate_append_only`: `BEFORE DELETE OR UPDATE FOR EACH ROW EXECUTE FUNCTION tax_rate_refuse_change()`

@@ -68,6 +68,22 @@ export function code(path: string, source: string): string {
 // cannot stand in for.
 const pinnedZones: { file: string; why: string }[] = [
   {
+    file: "features/mail/schedulededit.test.ts",
+    why: "Pins the zones a scheduled send was chosen in, so a reopened send proves it keeps the chosen clock and zone, not the runner's.",
+  },
+  {
+    file: "format/dueintent.test.ts",
+    why: "Pins a chosen deadline zone against a different reader zone, so the printed clock is the chosen one and the zone suffix shows only when they differ.",
+  },
+  {
+    file: "features/worklist/snoozetime.test.ts",
+    why: "Pins the reader zone a snooze is chosen in, so a calendar-day shift and the kept clock are the same on every runner.",
+  },
+  {
+    file: "features/deals/deal360/confirmadvance.closetasks.test.tsx",
+    why: "Pins a task's chosen zone that differs from any runner's own, so the row must print that zone's clock and name it.",
+  },
+  {
     file: "features/worklist/websiteinquiryfacts.stories.tsx",
     why: "The receipt story pins the reader’s zone so the accepted submission time stays visible in a reproducible local clock.",
   },

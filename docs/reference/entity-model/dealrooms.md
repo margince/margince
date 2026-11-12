@@ -50,6 +50,8 @@ The 8 tables owned by `dealrooms`, as the migrations build them. [Back to the en
 
 - `deal_room_steward_user_id_retirement_guard`: `BEFORE INSERT OR UPDATE FOR EACH ROW WHEN (((new.steward_user_id IS NOT NULL) AND ((new.archived_at IS NULL) AND (new.state <> ALL (ARRAY['closed', 'expired'])) AND ((new.expires_at IS NULL) OR (new.expires_at > now()))))) EXECUTE FUNCTION refuse_retired_member_work('steward_user_id')`
 - `deal_room_touch`: `BEFORE UPDATE FOR EACH ROW EXECUTE FUNCTION set_updated_at_bump_version()`
+- `text_bound_insert`: `AFTER INSERT FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL, '{"state": 20000, "title": 120, "source": 20000, "captured_by": 20000, "welcome_message": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"captured_by":20000,"source":20000,"state":20000,"title":120,"welcome_message":20000}')`
+- `text_bound_update`: `AFTER UPDATE FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"state": 20000, "title": 120, "source": 20000, "captured_by": 20000, "welcome_message": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"captured_by":20000,"source":20000,"state":20000,"title":120,"welcome_message":20000}')`
 
 ## deal_room_comment
 
@@ -88,6 +90,11 @@ The 8 tables owned by `dealrooms`, as the migrations build them. [Back to the en
 - `idx_deal_room_comment_room`: `btree (room_id)`
 - `idx_deal_room_comment_thread`: `btree (thread_id, created_at)`
 - `uq_deal_room_comment_request`: `unique, btree (room_id, request_id) WHERE (request_id IS NOT NULL)`
+
+**Triggers**
+
+- `text_bound_insert`: `AFTER INSERT FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL, '{"body": 20000, "source": 20000, "captured_by": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"body":20000,"captured_by":20000,"source":20000}')`
+- `text_bound_update`: `AFTER UPDATE FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"body": 20000, "source": 20000, "captured_by": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"body":20000,"captured_by":20000,"source":20000}')`
 
 ## deal_room_document
 
@@ -134,6 +141,8 @@ The 8 tables owned by `dealrooms`, as the migrations build them. [Back to the en
 **Triggers**
 
 - `deal_room_document_touch`: `BEFORE UPDATE FOR EACH ROW EXECUTE FUNCTION set_updated_at_bump_version()`
+- `text_bound_insert`: `AFTER INSERT FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL, '{"title": 120, "source": 20000, "group_key": 20000, "captured_by": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"captured_by":20000,"group_key":20000,"source":20000,"title":120}')`
+- `text_bound_update`: `AFTER UPDATE FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"title": 120, "source": 20000, "group_key": 20000, "captured_by": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"captured_by":20000,"group_key":20000,"source":20000,"title":120}')`
 
 ## deal_room_engagement
 
@@ -167,6 +176,11 @@ The 8 tables owned by `dealrooms`, as the migrations build them. [Back to the en
 - `idx_deal_room_engagement_participant_room`: `btree (participant_id, room_id)`
 - `ix_deal_room_engagement_participant`: `btree (participant_id, occurred_at DESC)`
 - `ix_deal_room_engagement_room`: `btree (room_id, occurred_at DESC)`
+
+**Triggers**
+
+- `text_bound_insert`: `AFTER INSERT FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL, '{"kind": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"kind":20000}')`
+- `text_bound_update`: `AFTER UPDATE FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"kind": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"kind":20000}')`
 
 ## deal_room_invitation
 
@@ -207,6 +221,11 @@ The 8 tables owned by `dealrooms`, as the migrations build them. [Back to the en
 - `uq_deal_room_invitation_attempt`: `unique, btree (participant_id, attempt_no)`
 - `uq_deal_room_invitation_live`: `unique, btree (participant_id) WHERE ((consumed_at IS NULL) AND (superseded_at IS NULL))`
 - `uq_deal_room_invitation_token`: `unique, btree (token_hash)`
+
+**Triggers**
+
+- `text_bound_insert`: `AFTER INSERT FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL, '{"source": 20000, "captured_by": 20000, "failure_reason": 2000}')) EXECUTE FUNCTION refuse_oversized_text('{"captured_by":20000,"failure_reason":2000,"source":20000}')`
+- `text_bound_update`: `AFTER UPDATE FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"source": 20000, "captured_by": 20000, "failure_reason": 2000}')) EXECUTE FUNCTION refuse_oversized_text('{"captured_by":20000,"failure_reason":2000,"source":20000}')`
 
 ## deal_room_participant
 
@@ -254,6 +273,8 @@ The 8 tables owned by `dealrooms`, as the migrations build them. [Back to the en
 **Triggers**
 
 - `deal_room_participant_touch`: `BEFORE UPDATE FOR EACH ROW EXECUTE FUNCTION set_updated_at()`
+- `text_bound_insert`: `AFTER INSERT FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL, '{"email": 20000, "source": 20000, "capability": 20000, "captured_by": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"capability":20000,"captured_by":20000,"email":20000,"source":20000}')`
+- `text_bound_update`: `AFTER UPDATE FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"email": 20000, "source": 20000, "capability": 20000, "captured_by": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"capability":20000,"captured_by":20000,"email":20000,"source":20000}')`
 
 ## deal_room_session
 
@@ -291,6 +312,11 @@ The 8 tables owned by `dealrooms`, as the migrations build them. [Back to the en
 - `idx_deal_room_session_participant_room`: `btree (participant_id, room_id)`
 - `idx_deal_room_session_room`: `btree (room_id)`
 - `uq_deal_room_session_token`: `unique, btree (token_hash)`
+
+**Triggers**
+
+- `text_bound_insert`: `AFTER INSERT FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL, '{"source": 20000, "captured_by": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"captured_by":20000,"source":20000}')`
+- `text_bound_update`: `AFTER UPDATE FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"source": 20000, "captured_by": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"captured_by":20000,"source":20000}')`
 
 ## deal_room_thread
 
@@ -346,3 +372,5 @@ The 8 tables owned by `dealrooms`, as the migrations build them. [Back to the en
 **Triggers**
 
 - `deal_room_thread_touch`: `BEFORE UPDATE FOR EACH ROW EXECUTE FUNCTION set_updated_at_bump_version()`
+- `text_bound_insert`: `AFTER INSERT FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL, '{"state": 20000, "source": 20000, "captured_by": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"captured_by":20000,"source":20000,"state":20000}')`
+- `text_bound_update`: `AFTER UPDATE FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"state": 20000, "source": 20000, "captured_by": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"captured_by":20000,"source":20000,"state":20000}')`

@@ -204,20 +204,17 @@ function ActivityBody({
             locale,
             zone,
           )}
-          {activity.kind === "task" && activity.due_at && (
-            <>
-              {" "}
-              ·{" "}
-              {t("co.next.due", {
-                when: formatDue(
-                  activity.due_at,
-                  activity.due_has_time,
-                  locale,
-                  zone,
-                ),
-              })}
-            </>
-          )}
+          {activity.kind === "task" &&
+            activity.due_at &&
+            ` · ${t("co.next.due", {
+              when: formatDue(
+                activity.due_at,
+                activity.due_has_time,
+                locale,
+                zone,
+                activity.due_intent,
+              ),
+            })}`}
           <CallOutcomeNote activity={activity} />{" "}
           {activity.is_done && (
             <Badge tone="success">{t("tasks.isDone")}</Badge>

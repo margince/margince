@@ -25757,7 +25757,7 @@ paths:
               type: object
               required: [name, topic_statement]
               properties:
-                name: {type: string, maxLength: 200}
+                name: {type: string, maxLength: 120}
                 description: {type: [string, 'null'], maxLength: 2000}
                 topic_statement: {type: string, maxLength: 500}
                 min_similarity: {type: number, format: double, minimum: 0, maximum: 1}
@@ -25808,7 +25808,7 @@ paths:
             schema:
               type: object
               properties:
-                name: {type: string, maxLength: 200}
+                name: {type: string, maxLength: 120}
                 description: {type: string, maxLength: 2000}
                 topic_statement: {type: string, maxLength: 500}
                 min_similarity: {type: number, format: double, minimum: 0, maximum: 1}
@@ -26800,7 +26800,7 @@ components:
           type: [string, 'null']
           format: uuid
           description: 'Explicit conversion to a reviewed inquiry policy for this form. Clear only through a reviewed return to legacy handling.'
-        name: {type: string, minLength: 1, maxLength: 200}
+        name: {type: string, minLength: 1, maxLength: 120}
         sender_secret: {type: string, minLength: 16, maxLength: 512}
         allowed_origins:
           type: array
@@ -29028,7 +29028,7 @@ components:
     RequestLegalReviewRequest:
       type: object
       properties:
-        note: {type: [string, 'null'], maxLength: 4000}
+        note: {type: [string, 'null'], maxLength: 2000}
         previous_review_id: {type: [string, 'null'], format: uuid}
     DecideLegalReviewRequest:
       type: object
@@ -29037,7 +29037,7 @@ components:
         outcome: {$ref: '#/components/schemas/LegalReviewOutcome'}
         comments:
           type: [string, 'null']
-          maxLength: 8000
+          maxLength: 2000
           description: Required for changes_needed.
     LegalReviewSettings:
       type: object
@@ -29986,7 +29986,7 @@ components:
       description: 'What kind of problem a report issue names, so a screen can group them. One closed list, the same one the server reports from.'
     ImportReasonCode:
       type: string
-      enum: [activity_empty, activity_held, address_erased, address_not_split, activity_link_ambiguous, activity_link_ambiguous_dropped, activity_type_unknown, activity_type_unnamed, activity_unlinked, amount_negative, author_too_long, cannot_create, cannot_create_tags, cannot_edit, cannot_edit_and_tag, cannot_link_stakeholders, cannot_read_pipelines, cannot_read_tags, cannot_write_type, close_date_future, close_date_past, company_duplicate_found, company_duplicate_skipped, company_link_on_meeting, company_name_empty, contact_duplicate_found, contact_duplicate_skipped, contact_email_held, contact_holds_lead, contact_not_found, contact_not_found_dropped, contact_unnamed, currency_not_a_code, currency_unset, deal_already_closed, deal_company_has_contracts, deal_legal_gate, deal_not_found, deal_not_found_dropped, deal_pipeline_fixed, description_too_long, direction_unknown, domain_held, duplicate_email, duration_not_valid_for_kind, email_names_no_contact, duration_out_of_range, employer_column_empty, employer_column_empty_dropped, employer_not_found, employer_not_found_dropped, employer_refused, employer_will_create, empty_payload, field_inactive, fx_rate_missing, id_not_a_company_id, id_not_visible, id_on_non_company, lead_not_found, lead_not_found_dropped, lead_status_not_importable, lead_status_unknown, link_ambiguous, link_ambiguous_dropped, link_contact_not_imported, link_edge_unsupported, link_malformed, link_not_attachable, link_not_found, link_not_found_dropped, link_row_not_imported, link_row_skipped, link_row_skipped_dropped, link_type_unknown, linkedin_held, lost_reason_missing, meeting_not_taken_place, meeting_status_not_valid_for_kind, meeting_status_unknown, message_not_importable, natural_key_taken, not_a_date, note_repeated, not_a_domain, not_a_number, not_an_amount, not_an_email, not_yes_no, occurred_at_future, occurred_at_unnamed, option_not_allowed, option_not_in_list, options_need_semicolons, owner_refused, owner_unknown, phone_needs_country, pipeline_no_open_stage, pipeline_unknown, pipeline_unnamed, record_archived, ref_taken_by_another_company, row_key_empty, row_key_repeated, run_in_flight, size_band_invalid, stage_unknown, stage_unnamed, tag_created, tag_name_invalid, tag_new, task_not_importable, timestamp_needs_zone, too_many_links, undo_edited, undo_failed, undo_grant_lost, undo_not_visible, undo_rule_protects, undo_still_referenced, value_refused, value_unreadable]
+      enum: [activity_empty, activity_held, address_erased, address_not_split, activity_link_ambiguous, activity_link_ambiguous_dropped, activity_type_unknown, activity_type_unnamed, activity_unlinked, amount_negative, author_too_long, cannot_create, cannot_create_tags, cannot_edit, cannot_edit_and_tag, cannot_link_stakeholders, cannot_read_pipelines, cannot_read_tags, cannot_write_type, close_date_future, close_date_past, company_duplicate_found, company_duplicate_skipped, company_link_on_meeting, company_name_empty, contact_duplicate_found, contact_duplicate_skipped, contact_email_held, contact_holds_lead, contact_not_found, contact_not_found_dropped, contact_unnamed, currency_not_a_code, currency_unset, deal_already_closed, deal_company_has_contracts, deal_legal_gate, deal_not_found, deal_not_found_dropped, deal_pipeline_fixed, description_too_long, direction_unknown, domain_held, duplicate_email, duration_not_valid_for_kind, email_names_no_contact, duration_out_of_range, employer_column_empty, employer_column_empty_dropped, employer_not_found, employer_not_found_dropped, employer_refused, employer_will_create, empty_payload, field_inactive, fx_rate_missing, id_not_a_company_id, id_not_visible, id_on_non_company, lead_not_found, lead_not_found_dropped, lead_status_not_importable, lead_status_unknown, link_ambiguous, link_ambiguous_dropped, link_contact_not_imported, link_edge_unsupported, link_malformed, link_not_attachable, link_not_found, link_not_found_dropped, link_row_not_imported, link_row_skipped, link_row_skipped_dropped, link_type_unknown, linkedin_held, lost_reason_missing, meeting_not_taken_place, meeting_status_not_valid_for_kind, meeting_status_unknown, message_not_importable, natural_key_taken, not_a_date, note_repeated, not_a_domain, not_a_number, not_an_amount, not_an_email, not_yes_no, occurred_at_future, occurred_at_unnamed, option_not_allowed, option_not_in_list, options_need_semicolons, owner_refused, owner_unknown, phone_needs_country, pipeline_no_open_stage, pipeline_unknown, pipeline_unnamed, record_archived, ref_taken_by_another_company, row_key_empty, row_key_repeated, run_in_flight, size_band_invalid, stage_unknown, stage_unnamed, tag_created, tag_name_invalid, tag_new, task_not_importable, timestamp_needs_zone, too_many_links, undo_edited, undo_failed, undo_grant_lost, undo_not_visible, undo_rule_protects, undo_still_referenced, value_refused, value_too_long, value_unreadable]
       description: 'Why a row was skipped or warned about, so a screen can say it in the reader''s language with `params`. One closed list, the same one the server reports from; `reason` is the English sentence for a reader that does not know a code. `run_in_flight` is the one refusal code: it answers a commit or undo on a run another attempt holds, and no row carries it.'
     CreateImportRunRequest:
       type: object
@@ -31340,15 +31340,15 @@ components:
       type: object
       required: [full_name, source]
       properties:
-        full_name: {type: string}
+        full_name: {type: string, maxLength: 120}
         created_from_activity_id:
           type: [string, 'null']
           format: uuid
           description: >-
             The note, mail or quick capture this contact was read out of. An agent that creates a contact from a record names it here, so a reader can check where the name and title came from. The caller must be able to read it (404 `not_found` otherwise, never 403).
-        first_name: {type: [string, 'null']}
-        last_name: {type: [string, 'null']}
-        title: {type: [string, 'null']}
+        first_name: {type: [string, 'null'], maxLength: 120}
+        last_name: {type: [string, 'null'], maxLength: 120}
+        title: {type: [string, 'null'], maxLength: 120}
         owner_id: {type: [string, 'null'], format: uuid}
         linkedin_url:
           type: [string, 'null']
@@ -31545,10 +31545,10 @@ components:
           enum: [vendor_marketing, null]
           description: >-
             Marks the contact (`vendor_marketing`) or clears the mark (null). The mark records who set it, so a mark set by hand is never lifted by the automatic check that lifts the mark the sender check set.
-        full_name: {type: string}
-        first_name: {type: [string, 'null']}
-        last_name: {type: [string, 'null']}
-        title: {type: [string, 'null']}
+        full_name: {type: string, maxLength: 120}
+        first_name: {type: [string, 'null'], maxLength: 120}
+        last_name: {type: [string, 'null'], maxLength: 120}
+        title: {type: [string, 'null'], maxLength: 120}
         owner_id: {type: [string, 'null'], format: uuid}
         visibility:
           type: string
@@ -31809,15 +31809,15 @@ components:
       type: object
       required: [display_name, source]
       properties:
-        display_name: {type: string}
+        display_name: {type: string, maxLength: 120}
         linkedin_url:
           type: [string, 'null']
           description: Canonical LinkedIn company URL, held to the rule the update holds it to. website_url is derived and refused here.
           pattern: '^https://([a-z]{2,3}\.)?linkedin\.com/company/[^/?#]+/?$'
-        legal_name: {type: [string, 'null']}
+        legal_name: {type: [string, 'null'], maxLength: 500}
         phone: {type: [string, 'null'], description: "The company's main number. A formatted number is accepted and stored in E.164 form (for example +49301234567). It is never a contact's own number."}
         email: {type: [string, 'null'], format: email, description: "The company's general address, for example info@example.com. It never creates or matches a contact."}
-        description: {type: [string, 'null'], maxLength: 500, description: One human-written line saying what the company does.}
+        description: {type: [string, 'null'], maxLength: 20000, description: A description of what the company does.}
         industry: {type: [string, 'null'], maxLength: 2000, description: 'An industry code, or text the server can map to one. Text that names no code stores no code and is kept in the description.'}
         size_band: {type: [string, 'null'], enum: [null, '1-10', '11-50', '51-200', '201-500', '501-1000', '1001-5000', '5000+']}
         address: {$ref: '#/components/schemas/Address'}
@@ -31839,11 +31839,11 @@ components:
           type: [string, 'null']
           description: Canonical LinkedIn company URL. Null clears it. website_url is derived and refused here.
           pattern: '^https://([a-z]{2,3}\.)?linkedin\.com/company/[^/?#]+/?$'
-        display_name: {type: string}
-        legal_name: {type: [string, 'null']}
+        display_name: {type: string, maxLength: 120}
+        legal_name: {type: [string, 'null'], maxLength: 500}
         phone: {type: [string, 'null'], description: "The company's main number. A formatted number is accepted and stored in E.164 form (for example +49301234567). It is never a contact's own number."}
         email: {type: [string, 'null'], format: email, description: "The company's general address, for example info@example.com. It never creates or matches a contact."}
-        description: {type: [string, 'null'], maxLength: 500, description: 'One human-written line saying what the company does. Absent leaves it untouched; an empty string clears it, the same spelling every other nullable text field on this record uses.'}
+        description: {type: [string, 'null'], maxLength: 20000, description: 'A description of what the company does. Absent leaves it untouched; an empty string clears it, the same spelling every other nullable text field on this record uses.'}
         industry: {type: [string, 'null'], maxLength: 2000, description: 'An industry code, or text the server can map to one. Text that names no code stores no code and is kept in the description.'}
         size_band: {type: [string, 'null'], enum: [null, '1-10', '11-50', '51-200', '201-500', '501-1000', '1001-5000', '5000+']}
         address: {$ref: '#/components/schemas/Address'}
@@ -32977,6 +32977,7 @@ components:
             this field.
         due_at: {type: [string, 'null'], format: date-time}
         due_has_time: {type: boolean, description: 'True when `due_at` names an agreed time of day, as on the task itself. The snooze beside this row keeps that time.'}
+        due_intent: {$ref: '#/components/schemas/IntentTime'}
         overdue: {type: boolean}
         assignee_id: {type: [string, 'null'], format: uuid}
         assignee_name:
@@ -35507,6 +35508,7 @@ components:
         days_overdue: {type: integer}
         due_at: {type: string}
         due_has_time: {type: boolean, description: True when due_at is an agreed time of day.}
+        due_intent: {$ref: '#/components/schemas/IntentTime'}
         quote: {type: string}
         source: {type: string}
         source_activity_id: {type: string, format: uuid}
@@ -36311,7 +36313,7 @@ components:
       properties:
         greeting_name:
           type: [string, 'null']
-          maxLength: 100
+          maxLength: 120
           description: |-
             The name a colleague's greeting uses. Surrounding whitespace is
             trimmed; empty or null clears it.
@@ -37279,10 +37281,10 @@ components:
         id: {type: string, format: uuid}
         position: {type: integer}
         product_id: {type: [string, 'null'], format: uuid, description: Null on a custom item.}
-        catalog_name: {type: [string, 'null'], description: The product's name when the line was added.}
-        sku: {type: [string, 'null']}
-        description: {type: string}
-        unit: {type: string}
+        catalog_name: {type: [string, 'null'], description: The product's name when the line was added., maxLength: 500}
+        sku: {type: [string, 'null'], maxLength: 500}
+        description: {type: string, maxLength: 20000}
+        unit: {type: string, maxLength: 120}
         quantity: {type: [number, 'null'], format: double, description: 'Up to 3 decimal places, greater than 0. Null while unknown.'}
         unit_price_minor: {type: [integer, 'null'], format: int64, description: 'The selling price in minor units of `currency`. Null while unknown, or masked.'}
         currency: {type: string, pattern: '^[A-Z]{3}$'}
@@ -37337,8 +37339,8 @@ components:
         replace_estimate: {type: boolean, description: 'Replace the value a human typed with the lines. Required while the deal holds one.'}
         currency: {type: string, pattern: '^[A-Z]{3}$', description: 'The currency of the lines. Defaults to the deal''s; required on a deal with none. Every line of a deal shares one.'}
         product_id: {type: [string, 'null'], format: uuid}
-        description: {type: [string, 'null']}
-        unit: {type: [string, 'null']}
+        description: {type: [string, 'null'], maxLength: 20000}
+        unit: {type: [string, 'null'], maxLength: 120}
         quantity: {type: [number, 'null'], format: double, description: '> 0, up to 3 decimal places. Omit while unknown.'}
         unit_price_minor: {type: [integer, 'null'], format: int64, minimum: 0}
         discount_pct: {type: [number, 'null'], format: double, minimum: 0, maximum: 100}
@@ -37353,8 +37355,8 @@ components:
       required: [expected_revision]
       properties:
         expected_revision: {type: integer, format: int64, minimum: 0}
-        description: {type: string}
-        unit: {type: string}
+        description: {type: string, maxLength: 20000}
+        unit: {type: string, maxLength: 120}
         quantity: {type: [number, 'null'], format: double}
         unit_price_minor: {type: [integer, 'null'], format: int64, minimum: 0}
         discount_pct: {type: number, format: double, minimum: 0, maximum: 100}
@@ -38246,7 +38248,7 @@ components:
       required: [state]
       properties:
         state: {$ref: '#/components/schemas/ProjectHealthState'}
-        note: {type: string, maxLength: 4000}
+        note: {type: string, maxLength: 2000}
         assessed_at:
           type: string
           format: date-time
@@ -38263,7 +38265,7 @@ components:
       required: [state]
       properties:
         state: {$ref: '#/components/schemas/ProjectHealthState'}
-        note: {type: string, maxLength: 4000}
+        note: {type: string, maxLength: 2000}
         source_author: {type: string, maxLength: 200}
     Project360Section:
       type: string
@@ -38531,6 +38533,7 @@ components:
       description: The task `create_task` files under every record of the selection.
       required: [subject]
       properties:
+        due_intent: {$ref: '#/components/schemas/IntentTime'}
         subject: {type: string, minLength: 1, maxLength: 500, description: 'What has to be done, as one line.'}
         due_at: {type: string, format: date-time, description: 'When it is due. Optional.'}
         assignee_id: {type: string, format: uuid, description: 'Who owes it. Defaults to the caller; must name a colleague the caller may hand work to.'}
@@ -39151,6 +39154,7 @@ components:
       type: object
       required: [contact_id, attendee_email, start, end, subject, location, description]
       properties:
+        start_intent: {$ref: '#/components/schemas/IntentTime'}
         contact_id: {type: string, format: uuid}
         attendee_email: {type: string, format: email}
         start: {type: string, format: date-time}
@@ -39216,6 +39220,7 @@ components:
       type: object
       required: [id, status, start, end, subject, location, version]
       properties:
+        start_intent: {$ref: '#/components/schemas/IntentTime'}
         id: {type: string, format: uuid}
         status: {type: string, enum: [pending, confirmed, needs_attention, rescheduling, canceling, canceled]}
         start: {type: string, format: date-time}
@@ -39260,6 +39265,7 @@ components:
       type: object
       required: [action, version]
       properties:
+        start_intent: {$ref: '#/components/schemas/IntentTime'}
         action: {type: string, enum: [reschedule, cancel, retry]}
         version: {type: integer, format: int64}
         start: {type: string, format: date-time}
@@ -39341,6 +39347,9 @@ components:
         `withheld`.
       required: [id, kind, occurred_at, occurred_precision, source, captured_by, created_at, updated_at, offers_email]
       properties:
+        meeting_intent: {$ref: '#/components/schemas/IntentTime'}
+        due_intent: {$ref: '#/components/schemas/IntentTime'}
+        remind_intent: {$ref: '#/components/schemas/IntentTime'}
         system_display:
           $ref: '#/components/schemas/SystemDisplay'
         can_share_internal:
@@ -39690,6 +39699,7 @@ components:
       additionalProperties: false
       required: [subject]
       properties:
+        due_intent: {$ref: '#/components/schemas/IntentTime'}
         subject: {type: string, minLength: 1}
         body: {type: [string, 'null']}
         due_at: {type: [string, 'null'], format: date-time}
@@ -39700,6 +39710,7 @@ components:
       description: What a task needs. Stored as an activity of kind `task`.
       required: [subject, source]
       properties:
+        due_intent: {$ref: '#/components/schemas/IntentTime'}
         recommendation: {$ref: '#/components/schemas/RecommendationReceipt'}
         source_activity_id:
           type: string
@@ -39757,6 +39768,9 @@ components:
       type: object
       required: [kind, source]
       properties:
+        meeting_intent: {$ref: '#/components/schemas/IntentTime'}
+        due_intent: {$ref: '#/components/schemas/IntentTime'}
+        remind_intent: {$ref: '#/components/schemas/IntentTime'}
         deal_filing:
           $ref: '#/components/schemas/ActivityDealFiling'
           description: |-
@@ -40049,6 +40063,7 @@ components:
       additionalProperties: false
       required: [disposition]
       properties:
+        snoozed_intent: {$ref: '#/components/schemas/IntentTime'}
         disposition:
           type: string
           enum: [handled, snooze, not_mine, not_sales]
@@ -40095,6 +40110,9 @@ components:
     UpdateActivityRequest:
       type: object
       properties:
+        meeting_intent: {$ref: '#/components/schemas/IntentTime'}
+        due_intent: {$ref: '#/components/schemas/IntentTime'}
+        remind_intent: {$ref: '#/components/schemas/IntentTime'}
         deal_filing:
           $ref: '#/components/schemas/ActivityDealFiling'
           description: Optional filing choice when recording a call or meeting outcome. Existing deal links remain.
@@ -40637,6 +40655,21 @@ components:
           type: [string, 'null']
           format: uuid
           description: A recorded communication basis this send relies on.
+    IntentTime:
+      type: object
+      additionalProperties: false
+      required: [wall_clock, timezone]
+      description: >-
+        A chosen local time in an IANA zone, resolved with current rules. A time in a gap moves forward; a repeated time takes its first occurrence.
+      properties:
+        wall_clock:
+          type: string
+          maxLength: 26
+          pattern: '^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}(:[0-9]{2}(\.[0-9]{1,6})?)?$'
+          description: Local date and time, no offset.
+        timezone:
+          type: string
+          description: IANA zone name.
     SendEmailRequest:
       type: object
       required: [subject, body, to]
@@ -40719,12 +40752,14 @@ components:
             the record — the thread it answers, the deal or invoice it names, the evidence
             supplied in `evidence` — and a purpose key is not that. Send
             `communication_context` instead.
+        scheduled_intent: {$ref: '#/components/schemas/IntentTime'}
         scheduled_at:
           type: [string, 'null']
           format: date-time
           description: |-
-            Send this message at this instant instead of now. Absolute
-            and unambiguous; `scheduled_tz` records the zone the human picked it in.
+            Legacy instant-based schedule. When `scheduled_intent` is present, its
+            local time and current timezone rules govern the send; this field is a
+            compatibility cache. Without it, the supplied instant remains authoritative.
         scheduled_tz:
           type: [string, 'null']
           description: |-
@@ -40759,6 +40794,7 @@ components:
             `cancelled` — withdrawn before it fired; nothing was transmitted.
             `held` — a gate refused at fire, or the window was missed. It will not send itself;
             a human reschedules or cancels it.
+        scheduled_intent: {$ref: '#/components/schemas/IntentTime'}
         scheduled_at: {type: string, format: date-time}
         scheduled_tz:
           type: string
@@ -40931,6 +40967,7 @@ components:
           description: |-
             The reason for contact the rep chose, checked as the send checks it: a category
             reserved for the installation's own notices is refused 422. Omit it for none.
+        scheduled_intent: {$ref: '#/components/schemas/IntentTime'}
         scheduled_at:
           type: [string, 'null']
           format: date-time
@@ -40984,6 +41021,7 @@ components:
         communication_context:
           allOf: [{$ref: '#/components/schemas/CommunicationContext'}]
           description: The reason for contact the author chose. Absent when none was.
+        scheduled_intent: {$ref: '#/components/schemas/IntentTime'}
         scheduled_at:
           type: string
           format: date-time
@@ -41002,6 +41040,7 @@ components:
         A new moment for a message already scheduled. TIME ONLY — the content is what the
         approval bound to, so changing it is cancel-and-recompose.
       properties:
+        scheduled_intent: {$ref: '#/components/schemas/IntentTime'}
         scheduled_at: {type: string, format: date-time}
         scheduled_tz: {type: string}
     CommunicationContext:
@@ -41265,12 +41304,14 @@ components:
             the record — the thread it answers, the deal or invoice it names, the evidence
             supplied in `evidence` — and a purpose key is not that. Send
             `communication_context` instead.
+        scheduled_intent: {$ref: '#/components/schemas/IntentTime'}
         scheduled_at:
           type: [string, 'null']
           format: date-time
           description: |-
-            Send this message at this instant instead of now. Absolute
-            and unambiguous; `scheduled_tz` records the zone the human picked it in.
+            Legacy instant-based schedule. When `scheduled_intent` is present, its
+            local time and current timezone rules govern the send; this field is a
+            compatibility cache. Without it, the supplied instant remains authoritative.
         scheduled_tz:
           type: [string, 'null']
           description: |-
@@ -44566,7 +44607,7 @@ components:
         name:
           type: string
           minLength: 1
-          maxLength: 160
+          maxLength: 120
         description:
           type: string
           maxLength: 2000
@@ -45516,7 +45557,7 @@ components:
             Where the client fetches this seat's profile picture, absent when the seat has none and the client draws initials. The URL changes whenever the picture does.
         greeting_name:
           type: [string, 'null']
-          maxLength: 100
+          maxLength: 120
           description: >-
             The name a colleague's greeting uses ("Hi Sofia,"), absent or null when nobody has said. Read through one rule on both sides: this when set, else the first word of `display_name`. Present on the caller's own seat; absent on the roster.
         timezone:
@@ -45655,7 +45696,7 @@ components:
         display_name: {type: string, minLength: 1, maxLength: 255}
         greeting_name:
           type: [string, 'null']
-          maxLength: 100
+          maxLength: 120
           description: >-
             The name the member's greetings use, when the first word of `display_name` is not it. Optional; absent, empty or null leaves it unset.
         role:
@@ -48879,10 +48920,10 @@ components:
         same draft may be supplied as context to the conversational assistant.
       properties:
         display_name: {type: [string, 'null'], maxLength: 2000}
-        offer_summary: {type: [string, 'null'], maxLength: 2000}
-        icp: {type: [string, 'null'], maxLength: 2000}
-        value_proposition: {type: [string, 'null'], maxLength: 2000}
-        usp: {type: [string, 'null'], maxLength: 2000}
+        offer_summary: {type: [string, 'null'], maxLength: 20000}
+        icp: {type: [string, 'null'], maxLength: 20000}
+        value_proposition: {type: [string, 'null'], maxLength: 20000}
+        usp: {type: [string, 'null'], maxLength: 20000}
         customer_pains: {type: [string, 'null'], maxLength: 2000}
         desired_outcomes: {type: [string, 'null'], maxLength: 2000}
         buying_center: {type: [string, 'null'], maxLength: 2000}
@@ -48976,10 +49017,12 @@ components:
         bic: {type: string, nullable: true, description: 'The BIC, upper case.'}
         imprint:
           type: string
+          maxLength: 20000
           nullable: true
           description: The legal notice the entity prints, up to 4000 characters.
         signature_template:
           type: string
+          maxLength: 20000
           nullable: true
           description: |-
             The mail signature layout of a sender assigned to this entity, with the placeholders
@@ -49015,10 +49058,10 @@ components:
         them answers `legal_entity_field_on_company_form`. The offering is confirmed once the entity
         has a name, an `offer_summary` and an `icp`.
       properties:
-        offer_summary: {type: string, nullable: true, maxLength: 4000}
-        icp: {type: string, nullable: true, maxLength: 4000, description: The ideal customer profile.}
-        value_proposition: {type: string, nullable: true, maxLength: 4000}
-        usp: {type: string, nullable: true, maxLength: 4000}
+        offer_summary: {type: string, nullable: true, maxLength: 20000}
+        icp: {type: string, nullable: true, maxLength: 20000, description: The ideal customer profile.}
+        value_proposition: {type: string, nullable: true, maxLength: 20000}
+        usp: {type: string, nullable: true, maxLength: 20000}
     LegalEntityListResponse:
       type: object
       required: [data]
@@ -49030,8 +49073,8 @@ components:
       type: object
       required: [display_name, legal_name, country]
       properties:
-        display_name: {type: string, maxLength: 200}
-        legal_name: {type: string, maxLength: 300}
+        display_name: {type: string, maxLength: 120}
+        legal_name: {type: string, maxLength: 500}
         country: {type: string, description: 'Lower-case ISO 3166-1 alpha-2, for example `de`.'}
         address: {$ref: '#/components/schemas/LegalEntityAddress'}
         vat_id: {type: string, maxLength: 200}
@@ -49041,15 +49084,15 @@ components:
         bank_account_holder: {type: string, maxLength: 200}
         iban: {type: string, description: Spaces are removed and letters upper-cased before the check.}
         bic: {type: string}
-        imprint: {type: string, maxLength: 4000}
-        signature_template: {type: string, maxLength: 4000}
+        imprint: {type: string, maxLength: 20000}
+        signature_template: {type: string, maxLength: 20000}
         offering: {$ref: '#/components/schemas/LegalEntityOffering'}
     UpdateLegalEntityRequest:
       type: object
       description: A field left out keeps its value; a field sent as an empty string is cleared.
       properties:
-        display_name: {type: string, maxLength: 200}
-        legal_name: {type: string, maxLength: 300}
+        display_name: {type: string, maxLength: 120}
+        legal_name: {type: string, maxLength: 500}
         country: {type: string}
         address: {$ref: '#/components/schemas/LegalEntityAddress'}
         vat_id: {type: string, maxLength: 200}
@@ -49059,8 +49102,8 @@ components:
         bank_account_holder: {type: string, maxLength: 200}
         iban: {type: string}
         bic: {type: string}
-        imprint: {type: string, maxLength: 4000}
-        signature_template: {type: string, maxLength: 4000}
+        imprint: {type: string, maxLength: 20000}
+        signature_template: {type: string, maxLength: 20000}
         offering: {$ref: '#/components/schemas/LegalEntityOffering'}
     LegalEntityMember:
       type: object
@@ -49087,7 +49130,7 @@ components:
       properties:
         language: {type: string, description: 'ISO 639-1, lower case.'}
         name: {type: string}
-        description: {type: string, nullable: true}
+        description: {type: string, nullable: true, maxLength: 20000}
         version: {type: integer, format: int64}
         updated_at: {type: string, format: date-time}
     ProductTranslationListResponse:
@@ -49102,10 +49145,10 @@ components:
       required: [name]
       additionalProperties: false
       properties:
-        name: {type: string, minLength: 1, maxLength: 500}
+        name: {type: string, minLength: 1, maxLength: 120}
         description:
           type: string
-          maxLength: 4000
+          maxLength: 20000
           description: Left out or empty, the language has a name and no description.
     CompanyProfile:
       type: object
@@ -49151,10 +49194,10 @@ components:
         register_court: {type: [string, 'null'], description: 'The court holding the commercial register entry (e.g. Amtsgericht Charlottenburg).'}
         register_number: {type: [string, 'null'], description: 'The commercial register entry alone (e.g. HRB 12345 B) — a registry identity, unlike the VAT ID a tax authority issues.'}
         industry: {type: [string, 'null']}
-        offer_summary: {type: [string, 'null'], description: Plain-language summary of what the company sells or delivers.}
-        icp: {type: [string, 'null'], description: Ideal customer profile — who this company sells to.}
-        value_proposition: {type: [string, 'null']}
-        usp: {type: [string, 'null']}
+        offer_summary: {type: [string, 'null'], description: Plain-language summary of what the company sells or delivers., maxLength: 20000}
+        icp: {type: [string, 'null'], description: Ideal customer profile — who this company sells to., maxLength: 20000}
+        value_proposition: {type: [string, 'null'], maxLength: 20000}
+        usp: {type: [string, 'null'], maxLength: 20000}
         customer_pains: {type: [string, 'null']}
         desired_outcomes: {type: [string, 'null']}
         buying_center: {type: [string, 'null'], description: The roles that decide on a purchase.}
@@ -49191,10 +49234,10 @@ components:
         register_number: {type: [string, 'null'], description: 'The commercial register entry alone (e.g. HRB 12345 B).'}
         industry: {type: [string, 'null']}
         website: {type: [string, 'null'], description: 'The company''s own domain or full URL; stored as the bare domain.'}
-        offer_summary: {type: [string, 'null']}
-        icp: {type: [string, 'null']}
-        value_proposition: {type: [string, 'null']}
-        usp: {type: [string, 'null']}
+        offer_summary: {type: [string, 'null'], maxLength: 20000}
+        icp: {type: [string, 'null'], maxLength: 20000}
+        value_proposition: {type: [string, 'null'], maxLength: 20000}
+        usp: {type: [string, 'null'], maxLength: 20000}
         customer_pains: {type: [string, 'null']}
         desired_outcomes: {type: [string, 'null']}
         buying_center: {type: [string, 'null']}
@@ -51665,7 +51708,7 @@ components:
         kind: {type: string, enum: [email, linkedin, proposal, transcript, document, other]}
         register: {type: string, enum: [email, social, long_form, spoken, general]}
         weight: {type: number, minimum: 0, maximum: 2, default: 1}
-        source_label: {type: string, minLength: 1, maxLength: 255}
+        source_label: {type: string, minLength: 1, maxLength: 500}
         source_ref: {type: string, minLength: 1, maxLength: 512}
         format:
           type: string
@@ -51921,7 +51964,7 @@ components:
         id: {type: string, format: uuid}
         name: {type: string}
         sku: {type: [string, 'null'], description: Optional; unique per workspace while live.}
-        description: {type: [string, 'null']}
+        description: {type: [string, 'null'], maxLength: 20000}
         unit: {type: string, description: "A unit key (`piece`, `hour`, `day`, `month`, `flat_fee`) that a client shows in its reader's language, or any other unit as typed text. A row written before the keys may hold a known spelling such as `Tag`, which a client shows as its key. Display only."}
         unit_price_minor: {type: integer, format: int64, description: Integer minor units (P11); no float money.}
         billing_model: {type: [string, 'null'], enum: [one_time, recurring, null], description: 'Whether this price repeats. Null means nobody has classified it, which is NOT the same as one_time: every row written before the field existed carries null, and reading it as one-off would assert a classification nobody made.'}
@@ -51984,7 +52027,7 @@ components:
       properties:
         name: {type: string}
         sku: {type: [string, 'null']}
-        description: {type: [string, 'null']}
+        description: {type: [string, 'null'], maxLength: 20000}
         unit: {type: [string, 'null'], description: "A unit key (`piece`, `hour`, `day`, `month`, `flat_fee`), or any other unit as typed text. A known spelling such as `Stunde` or `hours` is stored as its key. Defaults to `piece`."}
         unit_price_minor: {type: integer, format: int64, minimum: 0}
         billing_model: {type: [string, 'null'], enum: [one_time, recurring, null], description: 'Whether this price repeats. Null means nobody has classified it, which is NOT the same as one_time: every row written before the field existed carries null, and reading it as one-off would assert a classification nobody made.'}
@@ -52002,7 +52045,7 @@ components:
       properties:
         name: {type: string}
         sku: {type: [string, 'null']}
-        description: {type: [string, 'null']}
+        description: {type: [string, 'null'], maxLength: 20000}
         unit: {type: string}
         unit_price_minor: {type: integer, format: int64, minimum: 0}
         billing_model: {type: [string, 'null'], enum: [one_time, recurring, not_specified, null], description: 'Whether this price repeats. Send `not_specified` to say nobody has classified it — an omitted field and a JSON null both mean "leave the classification alone", which is why clearing it needs a word of its own. Reading a product back, this field is never `not_specified`: it is one_time, recurring, or null.'}
@@ -52855,6 +52898,7 @@ components:
         deterministic candidate set, so it is not necessarily descending in `composite`.
       required: [id, deal_id, rank, composite, feature_vector, evidence_ids, state]
       properties:
+        snoozed_intent: {$ref: '#/components/schemas/IntentTime'}
         id: {type: string, format: uuid}
         deal_id: {type: string, format: uuid}
         rank: {type: integer, minimum: 1, description: 'Position in the queue (1 = top), after the L2 re-order.'}
@@ -53247,7 +53291,7 @@ components:
             differently and a reader learns the four shapes.
         text:
           type: string
-          maxLength: 400
+          maxLength: 500
           description: One sentence, in the reader's own language.
         citations:
           type: array
@@ -53768,7 +53812,7 @@ components:
       properties:
         narrative:
           type: string
-          maxLength: 600
+          maxLength: 2000
           description: |-
             One sentence about the night as a whole. An empty string is a real answer — a quiet
             night has no sentence — and is stored as null with the pass still stamped.
@@ -53788,7 +53832,7 @@ components:
           description: A brief item belonging to the caller's own current run. Anything else refuses.
         finding:
           type: string
-          maxLength: 600
+          maxLength: 500
           description: The prose the rep reads beside the rank.
         cited_evidence:
           type: array
@@ -53805,6 +53849,7 @@ components:
         Set a brief item aside until something happens. The something is `reopen_on`: a moment
         on the clock, the customer writing back, or a named meeting being over.
       properties:
+        snoozed_intent: {$ref: '#/components/schemas/IntentTime'}
         reopen_on:
           $ref: '#/components/schemas/ReopenCondition'
         snoozed_until:
@@ -55020,6 +55065,7 @@ components:
             `kind` is always `user`.
         due_at: {type: string, format: date-time, description: 'When this is due, or when the meeting starts.'}
         due_has_time: {type: boolean, description: 'On a task row: true when `due_at` names an agreed time of day, false when the task is due by that day. Absent on other rows.'}
+        due_intent: {$ref: '#/components/schemas/IntentTime'}
         overdue: {type: boolean, description: 'Past due at the read instant, resolved server-side so every surface agrees.'}
         due_group:
           type: string

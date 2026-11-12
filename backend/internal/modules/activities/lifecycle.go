@@ -158,6 +158,9 @@ func admitActivityPatch(
 		!in.asksOnlyForTheDoneItHolds(current) {
 		return crmcontracts.Activity{}, held, apperrors.ErrVersionSkew
 	}
+	if err := in.admitPickedTimes(string(current.Kind)); err != nil {
+		return crmcontracts.Activity{}, held, err
+	}
 	if err := renormalizeTranscriptPatch(current, in); err != nil {
 		return crmcontracts.Activity{}, held, err
 	}
@@ -421,6 +424,12 @@ func applyActivityPatch(ctx context.Context, tx pgx.Tx, id ids.ActivityID, in Up
 		  language = CASE
 		    WHEN $%[3]d IS NOT NULL OR $%[2]d IS NOT NULL THEN $%[15]d
 		    ELSE language END,
+		  due_wall = coalesce($%[21]d::text::timestamp, due_wall),
+		  due_zone = coalesce($%[22]d, due_zone),
+		  remind_wall = coalesce($%[23]d::text::timestamp, remind_wall),
+		  remind_zone = coalesce($%[24]d, remind_zone),
+		  meeting_wall = CASE WHEN $%[14]d = 'day' THEN NULL ELSE coalesce($%[25]d::text::timestamp, meeting_wall) END,
+		  meeting_zone = CASE WHEN $%[14]d = 'day' THEN NULL ELSE coalesce($%[26]d, meeting_zone) END,
 		  done_at = CASE
 		    WHEN $%[8]d IS TRUE AND NOT is_done THEN now()
 		    WHEN $%[8]d IS FALSE THEN NULL
@@ -430,7 +439,8 @@ func applyActivityPatch(ctx context.Context, tx pgx.Tx, id ids.ActivityID, in Up
 		arg(in.RemindAt), arg(in.AssigneeID), done, arg(in.MeetingStatus), arg(in.DurationSeconds),
 		arg(in.clears("due_at")), arg(in.clears("remind_at")), arg(in.clears("assignee_id")),
 		arg(in.OccurredPrecision), arg(relabelledLanguage(current, in)),
-		customAssignments(in.customColumns, in.CustomFields, arg), arg(in.DueHasTime), arg(in.CallOutcome), arg(in.clears(fieldCallOutcome)), arg(in.sourceActivityID))
+		customAssignments(in.customColumns, in.CustomFields, arg), arg(in.DueHasTime), arg(in.CallOutcome), arg(in.clears(fieldCallOutcome)), arg(in.sourceActivityID),
+		arg(pickedWall(in.DueIntent)), arg(pickedZone(in.DueIntent)), arg(pickedWall(in.RemindIntent)), arg(pickedZone(in.RemindIntent)), arg(pickedWall(in.MeetingIntent)), arg(pickedZone(in.MeetingIntent)))
 	query += fmt.Sprintf(" AND version = $%d", arg(current.Version))
 	result, err := tx.Exec(ctx, query, args...)
 	if err != nil {

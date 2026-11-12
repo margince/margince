@@ -49,6 +49,11 @@ The 3 tables owned by `agents`, as the migrations build them. [Back to the entit
 - `agent_run_trigger_unique`: `unique, btree (trigger_ref)`
 - `idx_agent_run_awaiting`: `btree (approval_id) WHERE (status = 'awaiting_approval')`
 
+**Triggers**
+
+- `text_bound_insert`: `AFTER INSERT FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL, '{"goal": 20000, "status": 20000, "agent_spec": 20000, "trigger_ref": 20000, "degrade_reason": 2000}')) EXECUTE FUNCTION refuse_oversized_text('{"agent_spec":20000,"degrade_reason":2000,"goal":20000,"status":20000,"trigger_ref":20000}')`
+- `text_bound_update`: `AFTER UPDATE FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"goal": 20000, "status": 20000, "agent_spec": 20000, "trigger_ref": 20000, "degrade_reason": 2000}')) EXECUTE FUNCTION refuse_oversized_text('{"agent_spec":20000,"degrade_reason":2000,"goal":20000,"status":20000,"trigger_ref":20000}')`
+
 ## agent_standing_grant
 
 8 columns · primary key `(id)` · referenced by 0 foreign keys
@@ -82,6 +87,11 @@ The 3 tables owned by `agents`, as the migrations build them. [Back to the entit
 - `agent_standing_grant_pkey`: `unique, btree (id)`
 - `idx_agent_standing_grant_live`: `btree (agent_spec, user_id) WHERE ((state = 'granted') AND (passport_id IS NOT NULL))`
 - `uq_agent_standing_grant_user_spec`: `unique, btree (user_id, agent_spec)`
+
+**Triggers**
+
+- `text_bound_insert`: `AFTER INSERT FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL, '{"state": 20000, "agent_spec": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"agent_spec":20000,"state":20000}')`
+- `text_bound_update`: `AFTER UPDATE FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"state": 20000, "agent_spec": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"agent_spec":20000,"state":20000}')`
 
 ## runner_job
 
@@ -117,3 +127,8 @@ The 3 tables owned by `agents`, as the migrations build them. [Back to the entit
 - `idx_runner_job_due`: `btree (status, due_at)`
 - `runner_job_pkey`: `unique, btree (id)`
 - `runner_job_trigger_unique`: `unique, btree (agent_spec, trigger_ref)`
+
+**Triggers**
+
+- `text_bound_insert`: `AFTER INSERT FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL, '{"status": 20000, "agent_spec": 20000, "last_error": 20000, "trigger_ref": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"agent_spec":20000,"last_error":20000,"status":20000,"trigger_ref":20000}')`
+- `text_bound_update`: `AFTER UPDATE FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"status": 20000, "agent_spec": 20000, "last_error": 20000, "trigger_ref": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"agent_spec":20000,"last_error":20000,"status":20000,"trigger_ref":20000}')`

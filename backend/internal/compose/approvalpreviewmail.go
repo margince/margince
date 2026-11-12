@@ -51,7 +51,9 @@ func (r approvalPreviewReader) mailPreview(ctx context.Context, approval crmcont
 		}
 		return nil, err
 	}
-	appendMailSchedule(message, out)
+	if err := appendMailSchedule(message, out); err != nil {
+		return nil, err
+	}
 	out.Effects = &[]string{"authorize_message_send"}
 	if err := r.appendMailPresentation(ctx, approval, origin, links, input, out); err != nil {
 		if previewUnavailable(err) {
@@ -87,19 +89,13 @@ func mailApprovalOrigin(ctx context.Context, store *activities.Store, approval c
 	return origin, links, err
 }
 
-func mailPreviewDetails(message crmcontracts.SendCompanyEmailRequest, input activities.SendEmailInput, to []string) []crmcontracts.ApprovalPreviewDetail {
+func mailPreviewDetails(input activities.SendEmailInput, to []string) []crmcontracts.ApprovalPreviewDetail {
 	details := []crmcontracts.ApprovalPreviewDetail{
 		previewDetail("to", strings.Join(to, "\n")),
 		previewDetail("cc", strings.Join(input.Cc, "\n")),
 		previewDetail("bcc", strings.Join(input.Bcc, "\n")),
 		previewDetail(activityTargetSubject, input.Subject),
 		previewDetail("body", input.Body),
-	}
-	if message.ScheduledAt != nil {
-		details = append(details, previewDetail("scheduled_at", message.ScheduledAt.Format(time.RFC3339)))
-	}
-	if message.ScheduledTz != nil {
-		details = append(details, previewDetail("scheduled_tz", *message.ScheduledTz))
 	}
 	return details
 }
@@ -120,11 +116,14 @@ func (r approvalPreviewReader) appendMailFooter(ctx context.Context, origin acti
 	return nil
 }
 
-func appendMailSchedule(message crmcontracts.SendCompanyEmailRequest, out *crmcontracts.ApprovalPreview) {
-	if message.ScheduledAt != nil {
-		*out.Details = append(*out.Details, previewDetail("scheduled_at", message.ScheduledAt.Format(time.RFC3339)))
+func appendMailSchedule(message crmcontracts.SendCompanyEmailRequest, out *crmcontracts.ApprovalPreview) error {
+	schedule, err := activities.ParseSendSchedule(message.ScheduledAt, message.ScheduledTz, message.ScheduledIntent)
+	if err != nil {
+		return err
 	}
-	if message.ScheduledTz != nil {
-		*out.Details = append(*out.Details, previewDetail("scheduled_tz", *message.ScheduledTz))
+	if schedule == nil {
+		return nil
 	}
+	*out.Details = append(*out.Details, previewDetail("scheduled_at", schedule.At.Format(time.RFC3339)), previewDetail("scheduled_tz", schedule.TZ))
+	return nil
 }

@@ -4229,7 +4229,7 @@
     },
     {
       "name": "change_activities",
-      "tokens": 2005,
+      "tokens": 2041,
       "agents": [
         "overnight_at_risk_sweep"
       ],
@@ -5111,7 +5111,7 @@
     },
     {
       "name": "schedule_meeting",
-      "tokens": 420,
+      "tokens": 456,
       "agents": [],
       "required_by_cases": [
         "case46_get_us_in_a_room"

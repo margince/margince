@@ -145,7 +145,7 @@ var unguardedByIDUpdates = gatekit.Waive(map[string]string{
 	"internal/modules/webforms:archiveForm":                "absolute idempotent archive transition; the RETURNING + archived_at IS NULL predicate makes a lost race read as already archived (intake stops at archive)",
 	"internal/modules/webhooks:ArchiveSubscription":        "absolute idempotent archive transition; the RETURNING + archived_at IS NULL predicate makes a lost race read as already archived (delivery stops at archive)",
 	"internal/compose/briefs:writeRunNarrative":            "the run's narrative, written under the FOR UPDATE briefannotate.go takes on that day's run before it composes one, so two passes reaching one rep's morning are ordered by it",
-	"internal/compose/briefs:markItem":                     "lockItemForMark reads the queue item FOR UPDATE and this fills it in, so the state the mark validated is the state it writes over",
+	"internal/compose/briefs:applyBriefMark":               "lockItemForMark reads the queue item FOR UPDATE and this fills it in, so the state the mark validated is the state it writes over",
 	"internal/compose/briefs:MarkUnsnoozed":                "the unsnooze clears what the snooze set, to constants: state, state_at, snoozed_until and the reopen stamp are assigned outright, so two passes waking one item write the same row",
 	"internal/modules/agents/runner:FinishJob":             "the job was claimed by this worker under ClaimDueJobs' FOR UPDATE SKIP LOCKED, so no second worker holds it to finish",
 	"internal/modules/agents/runner:MarkFailed":            "the run belongs to the job this worker claimed under FOR UPDATE SKIP LOCKED, and a run nobody else holds cannot be settled twice",

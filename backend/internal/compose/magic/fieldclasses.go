@@ -76,6 +76,8 @@ var internalColumns = map[string]map[string]bool{
 		"capture_label_declined_ruleset", "capture_labeled_at", "channel_provider", "claims_host_slot",
 		"counterparty_email", "counterparty_outbound_attested", "deal_topic_checked_at", "deal_topic_digest",
 		"direction", "domain_evidence_version",
+		// The chosen local clocks surface as the due, remind and meeting intent objects.
+		"due_wall", "due_zone", "meeting_wall", "meeting_zone", "remind_wall", "remind_zone",
 		"done_at", "duration_seconds", "foreign_link", "has_calendar_part", "host_user_id",
 		"inbound_sender_authenticated", "internal_mail_authorization", "invitation_sender", "kind",
 		"language", "legal_entity_id", "origin", "owed_verdict_at", "owed_verdict_declined_at",

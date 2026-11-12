@@ -49,6 +49,8 @@ The 13 tables owned by `collections`, as the migrations build them. [Back to the
 
 - `list_owner_id_retirement_guard`: `BEFORE INSERT OR UPDATE FOR EACH ROW WHEN (((new.owner_id IS NOT NULL) AND (new.archived_at IS NULL))) EXECUTE FUNCTION refuse_retired_member_work('owner_id')`
 - `list_steward_id_retirement_guard`: `BEFORE INSERT OR UPDATE FOR EACH ROW WHEN (((new.steward_id IS NOT NULL) AND (new.archived_at IS NULL))) EXECUTE FUNCTION refuse_retired_member_work('steward_id')`
+- `text_bound_insert`: `AFTER INSERT FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL, '{"name": 120, "purpose": 20000, "sharing": 20000, "list_type": 20000, "entity_type": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"entity_type":20000,"list_type":20000,"name":120,"purpose":20000,"sharing":20000}')`
+- `text_bound_update`: `AFTER UPDATE FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"name": 120, "purpose": 20000, "sharing": 20000, "list_type": 20000, "entity_type": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"entity_type":20000,"list_type":20000,"name":120,"purpose":20000,"sharing":20000}')`
 - `trg_list_updated`: `BEFORE UPDATE FOR EACH ROW EXECUTE FUNCTION set_updated_at_bump_version()`
 
 ## list_evaluation
@@ -80,6 +82,11 @@ The 13 tables owned by `collections`, as the migrations build them. [Back to the
 - `idx_list_evaluation_due`: `btree (evaluated_at)`
 - `list_evaluation_pkey`: `unique, btree (list_id)`
 
+**Triggers**
+
+- `text_bound_insert`: `AFTER INSERT FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL, '{"outcome": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"outcome":20000}')`
+- `text_bound_update`: `AFTER UPDATE FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"outcome": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"outcome":20000}')`
+
 ## list_live_member
 
 5 columns · primary key `(list_id, entity_id)` · referenced by 0 foreign keys
@@ -107,6 +114,11 @@ The 13 tables owned by `collections`, as the migrations build them. [Back to the
 
 - `idx_list_live_member_entity`: `btree (entity_type, entity_id)`
 - `list_live_member_pkey`: `unique, btree (list_id, entity_id)`
+
+**Triggers**
+
+- `text_bound_insert`: `AFTER INSERT FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL, '{"entity_type": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"entity_type":20000}')`
+- `text_bound_update`: `AFTER UPDATE FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"entity_type": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"entity_type":20000}')`
 
 ## list_member
 
@@ -138,6 +150,11 @@ The 13 tables owned by `collections`, as the migrations build them. [Back to the
 - `idx_list_member_entity`: `btree (entity_type, entity_id)`
 - `list_member_pkey`: `unique, btree (id)`
 - `list_member_unique`: `unique, btree (list_id, entity_type, entity_id)`
+
+**Triggers**
+
+- `text_bound_insert`: `AFTER INSERT FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL, '{"note": 2000, "added_by": 20000, "entity_type": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"added_by":20000,"entity_type":20000,"note":2000}')`
+- `text_bound_update`: `AFTER UPDATE FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"note": 2000, "added_by": 20000, "entity_type": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"added_by":20000,"entity_type":20000,"note":2000}')`
 
 ## list_member_event
 
@@ -177,6 +194,11 @@ The 13 tables owned by `collections`, as the migrations build them. [Back to the
 - `idx_list_member_event_list`: `btree (list_id, occurred_at DESC, id DESC)`
 - `list_member_event_pkey`: `unique, btree (id)`
 
+**Triggers**
+
+- `text_bound_insert`: `AFTER INSERT FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL, '{"note": 2000, "actor": 20000, "action": 20000, "reason": 2000, "entity_type": 20000, "member_note": 2000}')) EXECUTE FUNCTION refuse_oversized_text('{"action":20000,"actor":20000,"entity_type":20000,"member_note":2000,"note":2000,"reason":2000}')`
+- `text_bound_update`: `AFTER UPDATE FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"note": 2000, "actor": 20000, "action": 20000, "reason": 2000, "entity_type": 20000, "member_note": 2000}')) EXECUTE FUNCTION refuse_oversized_text('{"action":20000,"actor":20000,"entity_type":20000,"member_note":2000,"note":2000,"reason":2000}')`
+
 ## list_revision
 
 11 columns · primary key `(id)` · referenced by 0 foreign keys
@@ -210,6 +232,11 @@ The 13 tables owned by `collections`, as the migrations build them. [Back to the
 
 - `list_revision_pkey`: `unique, btree (id)`
 - `list_revision_version_key`: `unique, btree (list_id, version)`
+
+**Triggers**
+
+- `text_bound_insert`: `AFTER INSERT FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL, '{"name": 120, "purpose": 20000, "sharing": 20000, "changed_by": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"changed_by":20000,"name":120,"purpose":20000,"sharing":20000}')`
+- `text_bound_update`: `AFTER UPDATE FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"name": 120, "purpose": 20000, "sharing": 20000, "changed_by": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"changed_by":20000,"name":120,"purpose":20000,"sharing":20000}')`
 
 ## list_visit
 
@@ -272,6 +299,8 @@ The 13 tables owned by `collections`, as the migrations build them. [Back to the
 **Triggers**
 
 - `saved_view_owner_id_retirement_guard`: `BEFORE INSERT OR UPDATE FOR EACH ROW WHEN (((new.owner_id IS NOT NULL) AND (new.archived_at IS NULL))) EXECUTE FUNCTION refuse_retired_member_work('owner_id')`
+- `text_bound_insert`: `AFTER INSERT FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL, '{"name": 120, "resource": 20000, "shared_scope": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"name":120,"resource":20000,"shared_scope":20000}')`
+- `text_bound_update`: `AFTER UPDATE FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"name": 120, "resource": 20000, "shared_scope": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"name":120,"resource":20000,"shared_scope":20000}')`
 - `trg_saved_view_updated`: `BEFORE UPDATE FOR EACH ROW EXECUTE FUNCTION set_updated_at_bump_version()`
 
 ## tag
@@ -305,6 +334,8 @@ The 13 tables owned by `collections`, as the migrations build them. [Back to the
 
 **Triggers**
 
+- `text_bound_insert`: `AFTER INSERT FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL, '{"name": 120, "color": 20000, "description": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"color":20000,"description":20000,"name":120}')`
+- `text_bound_update`: `AFTER UPDATE FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"name": 120, "color": 20000, "description": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"color":20000,"description":20000,"name":120}')`
 - `trg_tag_updated`: `BEFORE UPDATE FOR EACH ROW EXECUTE FUNCTION set_updated_at_bump_version()`
 
 ## tag_interest_read
@@ -328,6 +359,11 @@ The 13 tables owned by `collections`, as the migrations build them. [Back to the
 **Indexes**
 
 - `tag_interest_read_pkey`: `unique, btree (activity_id)`
+
+**Triggers**
+
+- `text_bound_insert`: `AFTER INSERT FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL, '{"content_digest": 20000, "vocabulary_digest": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"content_digest":20000,"vocabulary_digest":20000}')`
+- `text_bound_update`: `AFTER UPDATE FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"content_digest": 20000, "vocabulary_digest": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"content_digest":20000,"vocabulary_digest":20000}')`
 
 ## tag_suggestion
 
@@ -377,6 +413,8 @@ The 13 tables owned by `collections`, as the migrations build them. [Back to the
 
 **Triggers**
 
+- `text_bound_insert`: `AFTER INSERT FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL, '{"state": 20000, "captured_by": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"captured_by":20000,"state":20000}')`
+- `text_bound_update`: `AFTER UPDATE FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"state": 20000, "captured_by": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"captured_by":20000,"state":20000}')`
 - `trg_tag_suggestion_updated`: `BEFORE UPDATE FOR EACH ROW EXECUTE FUNCTION set_updated_at()`
 
 ## tag_suggestion_evidence
@@ -439,3 +477,8 @@ The 13 tables owned by `collections`, as the migrations build them. [Back to the
 - `idx_taggable_entity`: `btree (entity_type, entity_id)`
 - `taggable_pkey`: `unique, btree (id)`
 - `taggable_unique`: `unique, btree (tag_id, entity_type, entity_id)`
+
+**Triggers**
+
+- `text_bound_insert`: `AFTER INSERT FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL, '{"entity_type": 20000, "assigned_by_kind": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"assigned_by_kind":20000,"entity_type":20000}')`
+- `text_bound_update`: `AFTER UPDATE FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"entity_type": 20000, "assigned_by_kind": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"assigned_by_kind":20000,"entity_type":20000}')`
