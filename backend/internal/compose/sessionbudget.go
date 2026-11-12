@@ -34,18 +34,9 @@ type sessionBudgetWorker[T river.JobArgs] struct {
 	work        jobs.WorkOnly[T]
 	slots       chan struct{}
 	withContext func(context.Context) context.Context
-	paused      func(context.Context) bool
 }
 
-// pausedSnooze is how long a job waits before asking again whether the
-// installation still does no background work. River does not count a snooze
-// as an attempt, so a job outlasts any pause.
-const pausedSnooze = 10 * time.Minute
-
 func (w sessionBudgetWorker[T]) Work(ctx context.Context, job *river.Job[T]) error {
-	if w.paused != nil && w.paused(ctx) {
-		return river.JobSnooze(pausedSnooze)
-	}
 	if w.withContext != nil {
 		ctx = w.withContext(ctx)
 	}
