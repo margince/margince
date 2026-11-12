@@ -60,8 +60,8 @@ function isServerWords(symbol: ts.Symbol | undefined): boolean {
   });
 }
 
-// The name is compared before the checker is asked, because resolving a symbol
-// forces its type and almost no name in the tree is one of the server's words.
+// The name is compared before the checker is asked. Resolving a symbol forces
+// its type, and almost no name in the tree is one of the server's words.
 function readsIn(source: ts.SourceFile, checker: ts.TypeChecker): number[] {
   const lines: number[] = [];
   const report = (node: ts.Node) =>
