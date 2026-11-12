@@ -10,9 +10,7 @@ package consent
 // both of which the gate refuses before liveOverride is ever consulted.
 //
 // Integration because the row lives in Postgres. Every override here is
-// seeded by a direct INSERT rather than through Store.Allow (override.go): this
-// file is about what liveOverride reads, not about who may write the row —
-// override_integration_test.go covers the writer door itself, end to end.
+// seeded by a direct INSERT, as one already on file: no door records one.
 
 import (
 	"context"
@@ -23,14 +21,10 @@ import (
 	"github.com/margince/margince/backend/internal/shared/ports/commsauthz"
 )
 
-// seedOverride records one live communication_override row directly, the
-// writer door's eventual shape minus its own auth/audit machinery — this test
-// is about what liveOverride reads, not about who may write the row.
+// seedOverride records one live communication_override row directly.
 //
 // Always at user level: liveOverride treats every level above machine alike
-// (levelsAboveMachine), so the read path this file exercises has no arm that
-// distinguishes user from admin — that distinction belongs to
-// override_integration_test.go, which drives the real writer.
+// (levelsAboveMachine), so the read path has no arm that tells user from admin.
 func (e *resolveEnv) seedOverride(t *testing.T, category string, revoked bool) ids.UUID {
 	t.Helper()
 	id := ids.NewV7()

@@ -46,7 +46,10 @@ const CredentialBackfillActor = "system:capture-credential-backfill"
 // constant because three writers in this package spell it — the rotation
 // ledger, the sync-state log and this one — and an operator correlating them
 // matches on it.
-const detailConnectionID = "connection_id"
+const (
+	detailConnectionID = "connection_id"
+	detailProvider     = "provider"
+)
 
 // actionCredentialRelocated is the system_log action this pass files. Named as
 // a constant because the ledger is read by matching on it, and a literal at the

@@ -19,7 +19,7 @@ const participantEvidenceIDsParam = "ids"
 // FoldParticipantEvidenceTx advances over every inspected primary key, including current rows.
 func FoldParticipantEvidenceTx(ctx context.Context, tx pgx.Tx, after ids.UUID, limit int) ([]ids.UUID, int, error) {
 	rows, err := tx.Query(ctx, `SELECT id FROM activity_participant
- WHERE id>@after ORDER BY id LIMIT @limit`, pgx.StrictNamedArgs{"limit": limit, "after": after})
+ WHERE id>@after ORDER BY id LIMIT @limit`, pgx.StrictNamedArgs{argLimit: limit, "after": after})
 	if err != nil {
 		return nil, 0, fmt.Errorf("activities: reading participant evidence: %w", err)
 	}

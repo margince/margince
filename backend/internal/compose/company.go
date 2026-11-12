@@ -154,8 +154,8 @@ func (h companyHandlers) PutAnchorCompany(w http.ResponseWriter, r *http.Request
 		httperr.Write(w, r, err)
 		return
 	}
-	if code, why := values.CompanyNameFault(req.DisplayName); code != "" {
-		httperr.Write(w, r, httperr.Validation("display_name", code, why))
+	if refused := values.CompanyNameFault("display_name", req.DisplayName); refused != nil {
+		httperr.Write(w, r, refused)
 		return
 	}
 	// New onboarding requires the three semantic answers. During the pre-live

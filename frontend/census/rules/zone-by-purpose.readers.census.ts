@@ -63,6 +63,10 @@ export const companyZoneSites: { file: string; why: string }[] = [
     why: "A row's due day is the server's bucket, counted on the company's clock (decision B1), so the day comparison and the due-day text read that clock; every other time on the row is the reader's.",
   },
   {
+    file: "lib/worklisthappened.ts",
+    why: "A task's due day is the server's bucket, counted on the company's clock (decision B1), so the due-day sentence reads that clock; every other time in the details is the reader's.",
+  },
+  {
     file: "features/brief/brief.taskcard.tsx",
     why: "A task card's due day is the server's bucket, counted on the company's clock (decision B1), so the due-day text reads that clock; every other time on the row is the reader's.",
   },

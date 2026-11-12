@@ -45,6 +45,8 @@ BEGIN {
 # `ok  <pkg>  12.345s` with an optional coverage tail. A `(cached)` line carries
 # no time: the package ran, but this log did not measure it.
 $1 == "ok" && $3 == "(cached)" { cached[$2] = 1 }
+# `FAIL  <pkg>  12.345s`: the package ran and failed, so it has no time to judge.
+$1 == "FAIL" && NF >= 3 { failed[$2] = 1 }
 $1 == "ok" && $3 ~ /^[0-9.]+s$/ {
   secs = substr($3, 1, length($3) - 1) + 0
   if (!($2 in took) || secs > took[$2]) took[$2] = secs
@@ -71,7 +73,10 @@ END {
     fail = 1
   }
   for (pkg in waived) if (!(pkg in took) && !(pkg in cached)) {
-    printf "FAIL: waiver entry for %s, which the log never ran — remove it from %s\n", pkg, waivers
+    if (pkg in failed)
+      printf "FAIL: %s failed its tests, so the log has no time to hold to its ceiling — fix that failure; keep its waiver\n", pkg
+    else
+      printf "FAIL: waiver entry for %s, which the log never ran — remove it from %s\n", pkg, waivers
     fail = 1
   }
   if (fail) {

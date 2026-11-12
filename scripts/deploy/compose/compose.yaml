@@ -1,0 +1,91 @@
+# Margince on one host with Docker Compose. The release packs this file with
+# each image pinned to the digest it pushed; the copy in the repository names
+# the images by the placeholder tag RELEASE, which pulls nothing.
+#
+# Set the values .env.example lists in .env, then: docker compose up -d
+# The api migrates the database on start; the worker restarts until it has.
+# The fixed name keeps the database volume when a new release's folder runs.
+name: margince-compose
+
+x-margince: &margince
+  restart: unless-stopped
+  # More settings, one NAME=value per line; every one is in .env.example of
+  # the repository and in docs/reference/configuration.md.
+  env_file:
+    - path: margince.env
+      required: false
+
+x-margince-env: &margince-env
+  MARGINCE_DSN: postgres://margince_app:${MARGINCE_APP_PW:?set MARGINCE_APP_PW in .env}@db:5432/margince
+  MARGINCE_REDIS: redis:6379
+  MARGINCE_PUBLIC_BASE_URL: ${MARGINCE_PUBLIC_BASE_URL:?set MARGINCE_PUBLIC_BASE_URL in .env}
+  MARGINCE_LICENSE: ${MARGINCE_LICENSE:-}
+  MARGINCE_KEYVAULT_ROOT_KEY: ${MARGINCE_KEYVAULT_ROOT_KEY:?set MARGINCE_KEYVAULT_ROOT_KEY in .env}
+
+services:
+  db:
+    image: pgvector/pgvector:pg16@sha256:0dd3149a06e4579a0d70d8fef9945636cd514005e7237deb27f9b67886f8dc4f
+    restart: unless-stopped
+    environment:
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}
+      MARGINCE_OWNER_PW: ${MARGINCE_OWNER_PW:?set MARGINCE_OWNER_PW in .env}
+      MARGINCE_APP_PW: ${MARGINCE_APP_PW:?set MARGINCE_APP_PW in .env}
+    volumes:
+      - db:/var/lib/postgresql/data
+      - ./db-bootstrap.sql:/margince/db-bootstrap.sql:ro
+      - ./db-init.sh:/docker-entrypoint-initdb.d/10-margince.sh:ro
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "postgres"]
+      interval: 2s
+      retries: 60
+
+  redis:
+    image: redis:7.2@sha256:46f15cf64fdef63e483dcda99e74e3d51c017b1175547b6bb874152ee2391aad
+    restart: unless-stopped
+
+  api:
+    <<: *margince
+    image: ghcr.io/margince/api:RELEASE
+    environment:
+      <<: *margince-env
+      MARGINCE_OWNER_DSN: postgres://margince_owner:${MARGINCE_OWNER_PW:?set MARGINCE_OWNER_PW in .env}@db:5432/margince
+      MARGINCE_ADMIN_PASSWORD: ${MARGINCE_ADMIN_PASSWORD:-}
+      MARGINCE_CONFIG: /app/config/margince.yaml
+      MARGINCE_TRUSTED_PROXIES: ${MARGINCE_SUBNET:-10.231.0.0/24}
+    volumes:
+      - ./margince.yaml:/app/config/margince.yaml:ro
+    depends_on:
+      db: { condition: service_healthy }
+      redis: { condition: service_started }
+
+  worker:
+    <<: *margince
+    image: ghcr.io/margince/worker:RELEASE
+    environment: *margince-env
+    depends_on: [api]
+
+  web:
+    image: ghcr.io/margince/web:RELEASE
+    restart: unless-stopped
+
+  # One host for the api and the web app; front.conf is the server bundle's
+  # nginx.conf, pointed at these services.
+  front:
+    image: nginxinc/nginx-unprivileged:alpine@sha256:b5047b9b76845eac124358373c6852377c52e4b05834a47647e955dd91cb8f1e
+    restart: unless-stopped
+    volumes:
+      - ./front.conf:/etc/nginx/conf.d/default.conf:ro
+      - ./proxy.conf:/opt/margince/deploy/server/proxy.conf:ro
+    ports:
+      - "${MARGINCE_PORT:-8080}:8080"
+    depends_on: [api, web]
+
+volumes:
+  db:
+
+# A fixed subnet, so the api can trust the front server's X-Forwarded-For.
+networks:
+  default:
+    ipam:
+      config:
+        - subnet: ${MARGINCE_SUBNET:-10.231.0.0/24}

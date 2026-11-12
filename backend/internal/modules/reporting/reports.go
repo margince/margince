@@ -183,10 +183,14 @@ func (s *Service) validateRevision(ctx context.Context, tx pgx.Tx, selection *cr
 	if _, err := TargetWindow(interval, string(selection.TargetBasis), calendar); err != nil {
 		return refusedField("selection.target_basis", err)
 	}
-	if selection.CloseWindow != "all_open" && selection.CloseWindow != reportingFiscalQuarter {
-		return refuse("selection.close_window", "invalid", "choose the expected-close window")
+	switch selection.CloseWindow {
+	case "all_open", reportingFiscalQuarter:
+		return nil
+	case crmcontracts.ReportingSelectionCloseWindowCustom:
+		_, err := CustomCloseWindow(selection.CloseInterval)
+		return refusedField("selection.close_interval", err)
 	}
-	return nil
+	return refuse("selection.close_window", "invalid", "choose the expected-close window")
 }
 
 func (s *Service) validateSelection(ctx context.Context, selection crmcontracts.ReportingSelection) error {

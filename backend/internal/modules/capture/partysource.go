@@ -160,4 +160,5 @@ func retainedPartyAddresses(addresses []string, erased map[string]bool) []string
 const (
 	partyActivityArg = "activity"
 	partyUserArg     = "user"
+	argGeneration    = "generation"
 )

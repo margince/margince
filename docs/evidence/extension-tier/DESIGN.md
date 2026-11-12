@@ -81,6 +81,7 @@ it holds, and three of the reasons are structural:
 - **One shared runtime role.** Every handler runs as `margince_app`, which holds DML on core tables, on
   every unit's `ext_<name>_*` tables, and on `extension_secret`. Within one tenant, the unit wall exists
   at the port (the `Secrets` interface cannot express another namespace) and not in the database.
+  Later note: `Runtime.Tx` now runs a unit's SQL as `ext_runtime`, which holds no core table.
 
 Issue #628 (a per-unit database role) is the one change that would move any of this from convention to
 enforcement. Even then it bounds only the database; the in-process root-key reach is inherent and would
@@ -455,6 +456,7 @@ tree-wide trap: an owner connection has `BYPASSRLS`, so any RLS assertion made o
   rewrite or delete unit B's rows and `vault_ref`s within a workspace. The namespace wall is real at the
   port and absent in the database. This is the worst combination on the branch. It sits inside the
   boundary §2.0 concedes, and the runtime docs say so, along with the missing core-table wall.
+  Later note: `Runtime.Tx` now runs a unit's SQL as `ext_runtime`, which holds no core table.
 
 ### 4.3 Migrations, ownership, and RLS
 

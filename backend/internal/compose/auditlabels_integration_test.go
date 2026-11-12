@@ -24,7 +24,6 @@ import (
 	"github.com/margince/margince/backend/internal/modules/collections"
 	"github.com/margince/margince/backend/internal/modules/deals"
 	"github.com/margince/margince/backend/internal/modules/identity"
-	"github.com/margince/margince/backend/internal/modules/privacy"
 	"github.com/margince/margince/backend/internal/modules/projects"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -217,7 +216,7 @@ func TestAnErasedRecordsEntriesReadNull(t *testing.T) {
 	e := integration.Setup(t)
 	admin := e.Admin()
 	erased := e.SeedContact(t, "Erika Mustermann", nil)
-	if err := privacy.NewEraser(InstallationDB(e.Pool)).EraseContact(admin, erased, "subject request"); err != nil {
+	if err := eraserWithGraph(InstallationDB(e.Pool)).EraseContact(admin, erased, "subject request"); err != nil {
 		t.Fatalf("erasing the contact: %v", err)
 	}
 	archived := e.SeedCompany(t, "Closed Holding", nil)

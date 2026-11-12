@@ -13,7 +13,6 @@ import (
 
 	"github.com/margince/margince/backend/internal/compose/integration"
 	"github.com/margince/margince/backend/internal/modules/activities"
-	"github.com/margince/margince/backend/internal/modules/privacy"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -91,7 +90,7 @@ func TestActivityArchiveUndoRefusesStaleVersionAndMissingAuthority(t *testing.T)
 func TestActivityArchiveUndoCannotCrossErasure(t *testing.T) {
 	e := integration.Setup(t)
 	id, archive, contact := archivedSourceNote(t, e)
-	if err := privacy.NewEraser(e.DB()).EraseContact(e.Admin(), contact, "Subject requested erasure"); err != nil {
+	if err := eraserWithGraph(e.DB()).EraseContact(e.Admin(), contact, "Subject requested erasure"); err != nil {
 		t.Fatal(err)
 	}
 	if err := undoEntry(t, e, entityTypeActivity, id, archive); err == nil {

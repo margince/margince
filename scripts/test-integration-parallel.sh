@@ -64,6 +64,8 @@
 #                           does this once per run, and its shards read the result
 #   INTEGRATION_BIN_DIR     shard mode only: run each package from the binary
 #                           INTEGRATION_BUILD_OUT left here instead of compiling it
+#   INTEGRATION_TEMPLATE_READY  non-empty: `make test-db-up` built the template
+#                           in this job, so check it instead of building it again
 #   INTEGRATION_TEST_TIMING the test durations to split by (default: the committed
 #                           scripts/integration-test-timing.txt). Every shard of
 #                           one run must read the same file
@@ -235,7 +237,14 @@ fi
 
 # Build the migrated template once, fresh, before fanning out. Every package
 # clones from it (CREATE DATABASE ... TEMPLATE) instead of re-migrating.
-if [[ -z "$BUILD_OUT" ]]; then
+#
+# A CI shard builds it while the binaries compile (`make test-db-up`). It then
+# sets INTEGRATION_TEMPLATE_READY, and this run checks the template and migrates
+# only what is missing instead of building it a second time.
+if [[ -n "${INTEGRATION_TEMPLATE_READY:-}" && -z "$BUILD_OUT" ]]; then
+  echo "test-integration-parallel: checking the migrated template ${TEMPLATE_NAME} built before this run…"
+  ensure_template
+elif [[ -z "$BUILD_OUT" ]]; then
   echo "test-integration-parallel: building migrated template ${TEMPLATE_NAME}…"
   build_template
 fi
@@ -826,17 +835,17 @@ if [[ -n "$SHARD_OUT" ]]; then
   printf 'shard=%s\ntotal=%s\ntiming=%s\n' "$SHARD_IDX" "$SHARD_TOTAL" "$timing_digest" > "$SHARD_OUT/meta.txt"
   # The groups a queue shard claimed, and the digest of the parts they number,
   # so the fan-in can name them and a later attempt can skip them.
-  claimed_parts=()
+  evidence_scope=()
   if [[ -n "$QUEUE" ]]; then
     cp "$CLAIMED" "$SHARD_OUT/claimed.txt"
     printf 'queue=%s\n' "$PARTS_DIGEST" >> "$SHARD_OUT/meta.txt"
-    read -r -a claimed_parts <<< "$(awk '{ for (i = 2; i <= NF; i++) printf "%s ", $i }' "$CLAIMED")"
+    read -r -a evidence_scope <<< "--only $(awk '{ for (i = 2; i <= NF; i++) printf "%s ", $i }' "$CLAIMED")"
   fi
   # Each part's lists and its failed log, under the part's own name, and the
   # tests a continuation owes (scripts/lib-integration-artifacts.sh). A queue
-  # shard keeps only the parts it claimed.
+  # shard keeps only the parts it claimed, and none when it claimed none.
   # Guarded, so the verdict below still prints: the shard is red and says why.
-  if ! keep_shard_evidence "$SHARD_OUT" "$WORK" "$REGEX_DIR" "$OUTDIR" "$FAILED_PKGS" "${claimed_parts[@]}"; then
+  if ! keep_shard_evidence "$SHARD_OUT" "$WORK" "$REGEX_DIR" "$OUTDIR" "$FAILED_PKGS" "${evidence_scope[@]}"; then
     echo "FAIL: the shard could not keep its part evidence in $SHARD_OUT"
     fail=1
   fi

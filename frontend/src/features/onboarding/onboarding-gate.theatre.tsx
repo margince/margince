@@ -65,6 +65,7 @@ function stageHead(
   scan: GateScan | undefined,
   running: boolean,
   name: string | undefined,
+  noModel: boolean,
 ): StageHead {
   if (scan === undefined) {
     // At rest before the press, the orb carries nothing worth announcing, and
@@ -75,7 +76,7 @@ function stageHead(
       core,
       coreLabel: running ? t(CORE_LABELS[core]) : undefined,
       title: name ? t("ob.gate.title", { name }) : t("ob.gate.titleAnonymous"),
-      sub: t("ob.gate.sub"),
+      sub: t(noModel ? "ob.gate.noModelSub" : "ob.gate.sub"),
     };
   }
   const settled = SETTLED.has(scan.read.status);
@@ -114,15 +115,18 @@ export function GateColumn({
   scan,
   running,
   name,
+  noModel = false,
   children,
 }: Readonly<{
   scan?: GateScan;
   running?: boolean;
   name?: string;
+  /** No model is bound, so the head promises no website read. */
+  noModel?: boolean;
   children: ReactNode;
 }>) {
   const t = useT();
-  const head = stageHead(t, scan, running === true, name);
+  const head = stageHead(t, scan, running === true, name, noModel);
   const settled = scan !== undefined && SETTLED.has(scan.read.status);
   return (
     <OnboardingStage

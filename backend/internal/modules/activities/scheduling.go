@@ -63,9 +63,14 @@ type SchedulingArgumentError struct {
 	Field   string
 	Code    string
 	Message string
+	// Max is the limit a too_long refusal names.
+	Max int
 }
 
 func (e *SchedulingArgumentError) Error() string { return e.Field + ": " + e.Message }
+
+// FieldMax is the limit the refusal names; zero states none.
+func (e *SchedulingArgumentError) FieldMax() int { return e.Max }
 
 // FieldFault names the argument, the code, and what to fix — one mapping for
 // every surface.

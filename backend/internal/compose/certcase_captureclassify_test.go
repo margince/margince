@@ -453,3 +453,55 @@ func TestTaskCensusBindsTheClassifyCase(t *testing.T) {
 		t.Errorf("the bound case serves %+v, want %+v", bound.Site(), site)
 	}
 }
+
+// A reply expectation grades the verdict and may leave the label open. The
+// case for a short reply over a quoted refusal asks only that it is not a no.
+func TestClassifyCaseGradesTheReplyWhenTheScenarioNamesOne(t *testing.T) {
+	fixture, err := json.Marshal(captureClassifyFixture{{Subject: "Re: phase two", Body: "We will wait for your answer.", Inbound: true}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	cases := []struct {
+		name, expected, reply string
+		want                  string
+	}{
+		{"a ruled-out verdict", `[{"not_reply":"negative"}]`, "negative", aitasks.OutcomeWrongAnswer},
+		{"any other verdict with the label open", `[{"not_reply":"negative"}]`, "neutral", aitasks.OutcomeAccepted},
+		{"the verdict wanted", `[{"label":"noise","reply":"neutral"}]`, "neutral", aitasks.OutcomeAccepted},
+		{"another verdict than the one wanted", `[{"label":"noise","reply":"negative"}]`, "neutral", aitasks.OutcomeWrongAnswer},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			prepared, err := captureClassifyCases{}.Prepare(fixture, json.RawMessage(tc.expected))
+			if err != nil {
+				t.Fatalf("preparing the case: %v", err)
+			}
+			answer := func(requested []string) string {
+				return classifyReplyText(fmt.Sprintf(`{"id":%q,"label":"noise","confidence":0.9,"reply":%q}`, requested[0], tc.reply))
+			}
+			trace, err := prepared.Run(context.Background(), &classifyCompleterStub{answer: answer})
+			if err != nil {
+				t.Fatalf("running the case: %v", err)
+			}
+			if got := prepared.Evaluate(trace); got.Result != tc.want {
+				t.Fatalf("outcome = %+v, want %v", got, tc.want)
+			}
+		})
+	}
+}
+
+// The backlog read sends the sender's current message only, so a fixture
+// carrying a quote certifies a prompt the product never sends.
+func TestClassifyCaseRefusesAFixtureCarryingQuotedMail(t *testing.T) {
+	fixture, err := json.Marshal(captureClassifyFixture{{
+		Subject: "Re: phase two", Inbound: true,
+		Body: "We will wait for your answer.\n\nOn Mon, Anna <anna@example.test> wrote:\n> We will not go ahead.",
+	}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	_, err = captureClassifyCases{}.Prepare(fixture, classifyExpectation(t, "noise"))
+	if err == nil || !strings.Contains(err.Error(), "current message") {
+		t.Fatalf("a fixture with quoted mail prepared: %v", err)
+	}
+}

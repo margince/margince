@@ -25,6 +25,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/modules/privacy"
+	"github.com/margince/margince/backend/internal/modules/search"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -265,7 +266,7 @@ func TestEdgeHistoryWithholdsAnErasedSubjectsEdgesFromTheOtherEnd(t *testing.T) 
 	company := e.SeedCompany(t, "Employer GmbH", nil)
 	linkEmployment(t, e, contact, company, "cto")
 
-	if err := privacy.NewEraser(e.DB()).EraseContact(e.Admin(), contact, "art-17"); err != nil {
+	if err := privacy.NewEraser(e.DB()).WithEdgeInvalidator(search.RecomputeEdgesForActivities).EraseContact(e.Admin(), contact, "art-17"); err != nil {
 		t.Fatalf("erasing the subject: %v", err)
 	}
 

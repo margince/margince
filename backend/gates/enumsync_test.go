@@ -6,13 +6,11 @@
 package gates
 
 // Where domain logic branches on a typed Go enum, its constant set equals the
-// schema's CHECK (col IN (...)) set for the column it mirrors. The valid set
-// living only in the DB is how a typo'd Go literal compiles and
-// misbehaves silently; a Go set drifting from the CHECK is how a valid
-// value 500s at insert. This gate pins the two spellings together —
-// registry-driven, so adding an enum means adding one line here, and
-// the sets themselves are DERIVED from the migration sources and the
-// Go const declarations, never restated.
+// schema's CHECK set for the column it mirrors. A typo'd Go literal compiles
+// and misbehaves silently, and a Go set drifting from the CHECK 500s at insert.
+// The registry below names each pair. Both sets are derived from the head
+// catalog and the Go const declarations, never restated here.
+// vocabularycensus_test.go finds a pair that has no line here yet.
 
 import (
 	"fmt"
@@ -100,13 +98,10 @@ var enumBindings = map[string]struct{ pkgDir, typeName string }{
 	// the document promises a value, a caller sends it, and the database
 	// refuses a request the published contract said was well-formed.
 	//
-	// Bound by hand and deliberately not derived, because the derivation is
-	// what does not work. An exact-match scan over the committed head catalog
-	// finds forty-odd pairs and most are coincidence — MeetingPlanTier and
-	// assurance_exception.severity share [high, low, medium] and have nothing
-	// to do with each other, and a gate that bound those would fail the day one
-	// of them legitimately moved. The pairs below are the ones where the schema
-	// NAMES the column's concept, which is a judgement a scan cannot make.
+	// Bound by hand, because a match by value alone is often coincidence:
+	// MeetingPlanTier and assurance_exception.severity share [high, low, medium]
+	// and mean different things. The census finds every value match; this line
+	// records which type the column actually means.
 	"activity.audience":                       {"internal/contracts", "ActivityAudience"},
 	"capture_counterparty_hold.kind":          {"internal/contracts", "CaptureCounterpartyHoldKind"},
 	"capture_exclusion.kind":                  {"internal/contracts", "CaptureExclusionKind"},
@@ -151,6 +146,139 @@ var enumBindings = map[string]struct{ pkgDir, typeName string }{
 	"company_scan.generated_by":       {"internal/contracts", "WrittenBy"},
 	"contact_brief.generated_by":      {"internal/contracts", "WrittenBy"},
 	"deal_status_card.generated_by":   {"internal/contracts", "WrittenBy"},
+
+	// Found by the vocabulary census in vocabularycensus_test.go. Each type is the one
+	// whose name says what the column means, so a match by value alone did not decide it.
+	"activity.body_completeness":                   {"internal/contracts", "BodyCompleteness"},
+	"activity.calendar_method":                     {"internal/contracts", "PublicEventActivityChangedFieldsCalendarMethod"},
+	"activity.owed_verdict":                        {"internal/contracts", "HomeRepairTaskAfterVerdict"},
+	"activity_audience_member.subject_type":        {"internal/contracts", "RecordGrantSubjectType"},
+	"activity_calendar_method_backfill.direction":  {"internal/contracts", "ActivityDirection"},
+	"activity_meeting_history.status":              {"internal/contracts", "ActivityMeetingStatus"},
+	"activity_participant.response":                {"internal/contracts", "MeetingResponse"},
+	"activity_reader_state.reopen_on":              {"internal/shared/kernel/values", "ReopenCondition"},
+	"activity_review_response.outcome":             {"internal/contracts", "ActivityReviewTemplateOutcome"},
+	"agent_task.status":                            {"internal/modules/agents", "TaskStatus"},
+	"ai_feedback.claim_kind":                       {"internal/contracts", "AIFeedbackInputClaimKind"},
+	"ai_feedback.subject_type":                     {"internal/contracts", "AIFeedbackInputSubjectType"},
+	"ai_feedback.verdict":                          {"internal/contracts", "AIFeedbackInputVerdict"},
+	"analytics_share.kind":                         {"internal/contracts", "ForecastShareKind"},
+	"analytics_share.scope_kind":                   {"internal/contracts", "ForecastCallScopeKind"},
+	"app_user.locale":                              {"internal/contracts", "SaveMyLocaleRequestLocale"},
+	"app_user.morning_brief_delivery":              {"internal/contracts", "BriefDeliveryMorningBriefDelivery"},
+	"app_user.routine_mail_scope":                  {"internal/contracts", "BriefDeliveryRoutineMailScope"},
+	"app_user.seat_type":                           {"internal/shared/kernel/principal", "SeatType"},
+	"app_user.status":                              {"internal/contracts", "UserStatus"},
+	"app_user.weekly_delivery":                     {"internal/contracts", "BriefDeliveryWeeklyDelivery"},
+	"approval.requested_decider_source":            {"internal/modules/approvals", "deciderSource"},
+	"approval_autonomy_policy.mode":                {"internal/contracts", "KindAutonomyMode"},
+	"assurance_deal_receipt.outcome":               {"internal/shared/kernel/viability", "Outcome"},
+	"assurance_exception.delivery_state":           {"internal/contracts", "DealViabilityReviewDeliveryState"},
+	"assurance_exception.subject_kind":             {"internal/contracts", "InputCheckSubjectKind"},
+	"assurance_exception.severity":                 {"internal/contracts", "AssuranceFindingCountSeverity"},
+	"assurance_resolution.outcome":                 {"internal/contracts", "PublicEventForecastExceptionResolvedOutcome"},
+	"assurance_run.readiness":                      {"internal/contracts", "ForecastAssuranceReadiness"},
+	"assurance_source_coverage.source":             {"internal/contracts", "ForecastAssuranceSourceSource"},
+	"assurance_source_coverage.state":              {"internal/contracts", "ForecastAssuranceSourceState"},
+	"audit_log.action":                             {"internal/contracts", "AuditAction"},
+	"audit_log.actor_type":                         {"internal/shared/kernel/principal", "PrincipalType"},
+	"automation.tier":                              {"pkg/extension", "Tier"},
+	"brief_item.reopen_on":                         {"internal/shared/kernel/values", "ReopenCondition"},
+	"brief_item.state":                             {"internal/contracts", "MorningBriefItemState"},
+	"bulk_operation.record_type":                   {"internal/contracts", "BulkRecordType"},
+	"bulk_operation.verb":                          {"internal/contracts", "BulkVerb"},
+	"capture_freemail_domain.kind":                 {"internal/contracts", "ConsumerMailDomainKind"},
+	"capture_import.posture_at_import":             {"internal/contracts", "CaptureConnectionMailPosture"},
+	"capture_pending_counterparty.status":          {"internal/contracts", "CaptureTraceResolutionStatus"},
+	"capture_sender_override.decision":             {"internal/contracts", "CaptureSenderDecisionDecision"},
+	"capture_sweep_run.sweep":                      {"internal/modules/capture", "Sweep"},
+	"capture_sync_state.last_error_class":          {"internal/modules/capture", "errorClass"},
+	"channel_provider.credential_model":            {"pkg/extension", "CredentialModel"},
+	"commission_entry.attribution_at_accrual":      {"internal/contracts", "CommissionAttribution"},
+	"comms_outbound.bounce_kind":                   {"internal/shared/ports/connector", "BounceKind"},
+	"communication_decision.basis":                 {"internal/shared/ports/commsauthz", "Basis"},
+	"communication_decision.mode":                  {"internal/shared/ports/commsauthz", "Mode"},
+	"communication_decision.phase":                 {"internal/shared/ports/commsauthz", "Phase"},
+	"communication_decision.resolved_category":     {"internal/shared/ports/commsauthz", "Category"},
+	"communication_decision.verdict":               {"internal/shared/ports/commsauthz", "Verdict"},
+	"communication_instruction.reason_code":        {"internal/contracts", "DirectCommunicationSendRequestReasonCode"},
+	"communication_override.category":              {"internal/shared/ports/commsauthz", "Category"},
+	"communication_suppression.decided_by_level":   {"internal/shared/ports/commsauthz", "AuthorityLevel"},
+	"company.visibility":                           {"internal/contracts", "RecordAccessVisibility"},
+	"company_domain_disposition.admission":         {"internal/contracts", "SetBlockedDomainRequestAdmission"},
+	"company_offered_value.field_key":              {"internal/contracts", "CompanyOfferedValueField"},
+	"company_relationship_type.relationship_type":  {"internal/contracts", "CompanyRelationshipTypes"},
+	"company_technical_state.lane":                 {"internal/modules/contacts", "TechnicalLane"},
+	"company_technical_state.last_outcome":         {"internal/contracts", "TechnicalEnrichLaneOutcome"},
+	"contact.narrowing_reason":                     {"internal/modules/contacts", "NarrowingReason"},
+	"contact.visibility":                           {"internal/contracts", "RecordAccessVisibility"},
+	"contact_confirm_submission.resolution":        {"internal/contracts", "ConfirmSubmissionResolution"},
+	"contact_provider_claim.claim_key":             {"internal/shared/ports/provider", "ClaimKey"},
+	"data_task_run.status":                         {"internal/contracts", "DataTaskProgressStatus"},
+	"deal_line_item.billing_model":                 {"internal/contracts", "ProductBillingModel"},
+	"deal_line_item.component_kind":                {"internal/contracts", "ProductComponentKind"},
+	"deal_line_item.tax_category":                  {"internal/contracts", "ProductTaxCategory"},
+	"deal_product.component_kind":                  {"internal/contracts", "ProductComponentKind"},
+	"deal_stage_history.semantic_at_change":        {"internal/modules/deals", "StageSemantic"},
+	"dedupe_candidate.disposition":                 {"internal/contracts", "DedupeCandidateStatus"},
+	"embed_store_binding.status":                   {"internal/contracts", "EmbedReindexStatusStatus"},
+	"field_mask.condition":                         {"internal/shared/kernel/principal", "MaskCondition"},
+	"forecast_contribution.viability_disposition":  {"internal/contracts", "DealViabilityDisposition"},
+	"forecast_snapshot.scope_kind":                 {"internal/contracts", "ForecastCallScopeKind"},
+	"forecast_snapshot.trigger":                    {"internal/contracts", "ForecastSnapshotRefTrigger"},
+	"home_read_cache.read":                         {"internal/compose/homecache", "Read"},
+	"import_record_map.origin":                     {"internal/modules/migration", "Origin"},
+	"import_run.draft_step":                        {"internal/contracts", "ImportDraftStep"},
+	"intro_request.origin":                         {"internal/modules/introductions", "Origin"},
+	"intro_request.recorded_channel":               {"internal/contracts", "IntroRecordedChannel"},
+	"lead_origin.intent":                           {"internal/contracts", "LeadSourceIntent"},
+	"lead_privacy_notice.state":                    {"internal/contracts", "InternalEventLeadPrivacyNoticeCreatedState"},
+	"list_evaluation.outcome":                      {"internal/contracts", "ListCheckOutcome"},
+	"list_live_member.entity_type":                 {"internal/shared/ports/datasource", "RecordType"},
+	"list_member_event.entity_type":                {"internal/shared/ports/datasource", "RecordType"},
+	"list_member_event.reason":                     {"internal/contracts", "ListHistoryEntryReason"},
+	"meeting_calendar_episode.provider":            {"internal/contracts", "MeetingInvitationProvider"},
+	"notification_preference.delivery":             {"internal/contracts", "NotificationDelivery"},
+	"oauth_client.created_via":                     {"internal/contracts", "AgentClientRegisteredBy"},
+	"offer_line_item.billing_model":                {"internal/contracts", "ProductBillingModel"},
+	"offer_line_item.tax_category":                 {"internal/contracts", "ProductTaxCategory"},
+	"onboarding_wizard_state.path":                 {"internal/contracts", "OnboardingStatePath"},
+	"onboarding_wizard_state.source_mode":          {"internal/contracts", "OnboardingStateSourceMode"},
+	"onboarding_wizard_state.step":                 {"internal/contracts", "OnboardingStateStep"},
+	"privacy_notice_case.rule":                     {"internal/modules/consent", "NoticeRule"},
+	"privacy_notice_case.state":                    {"internal/modules/consent", "NoticeState"},
+	"privacy_request_proof.request_kind":           {"internal/contracts", "DataSubjectRequestKind"},
+	"raw_capture.parts_slim_outcome":               {"internal/modules/capture", "partSlimOutcome"},
+	"report_definition.audience":                   {"internal/contracts", "ReportingReportAudience"},
+	"report_edition_question.reason":               {"internal/contracts", "ReportingEditionQuestionReason"},
+	"report_execution.status":                      {"internal/contracts", "ReportingExecutionStatus"},
+	"sales_goal_plan_revision.kind":                {"internal/contracts", "SalesGoalEventKind"},
+	"sales_goal_plan_revision.origin":              {"internal/contracts", "SalesGoalRevisionOrigin"},
+	"sales_target.period_kind":                     {"internal/contracts", "ReportingTargetInputPeriodKind"},
+	"sales_target.scope_kind":                      {"internal/contracts", "ForecastCallScopeKind"},
+	"sdr_handoff.status":                           {"internal/contracts", "HandoffAssigneeStatus"},
+	"sdr_handoff_event.to_status":                  {"internal/contracts", "HandoffAssigneeStatus"},
+	"sdr_handoff_reason.applies_to":                {"internal/contracts", "SdrHandoffReasonCountOutcome"},
+	"signal.visibility":                            {"internal/contracts", "RecordAccessVisibility"},
+	"site_read.phase":                              {"internal/contracts", "SiteReadReportPhase"},
+	"site_read.status":                             {"internal/contracts", "SiteReadReportStatus"},
+	"site_read.stopped_reason":                     {"internal/contracts", "SiteReadReportStoppedReason"},
+	"stage_progression_policy.mode":                {"internal/contracts", "TransitionPolicyMode"},
+	"system_log.actor_type":                        {"internal/shared/kernel/principal", "PrincipalType"},
+	"taggable.assigned_by_kind":                    {"internal/contracts", "RecordTagAssignerKind"},
+	"team_weekly_review_coverage.absent":           {"internal/contracts", "TeamWeeklyCoverageAbsent"},
+	"team_weekly_review_coverage.basis":            {"internal/modules/forecasting", "SufficiencyBasis"},
+	"team_weekly_review_coverage.period_kind":      {"internal/contracts", "TeamWeeklyCoveragePeriodKind"},
+	"team_weekly_review_outlook.period_kind":       {"internal/modules/forecasting", "PeriodKind"},
+	"team_weekly_review_rep.focus_kind":            {"internal/contracts", "TeamWeeklyRepFocusKind"},
+	"team_weekly_review_rep_pattern.kind":          {"internal/contracts", "TeamWeeklyPatternKind"},
+	"transcript_read.status":                       {"internal/contracts", "TranscriptReadReportStatus"},
+	"user_record_view.entity_type":                 {"internal/contracts", "RecordViewAckEntityType"},
+	"weekly_plan_commitment.linked_record_type":    {"internal/shared/ports/datasource", "RecordType"},
+	"weekly_review_driver.period_kind":             {"internal/modules/forecasting", "PeriodKind"},
+	"weekly_review_learning_citation.subject_type": {"internal/contracts", "WeeklyLearningCitationSubjectType"},
+	"weekly_review_movement.period_kind":           {"internal/modules/forecasting", "PeriodKind"},
+	"weekly_review_outlook.period_kind":            {"internal/modules/forecasting", "PeriodKind"},
 }
 
 // requestEnumBindings maps a create request's inline enum to the column it
@@ -158,6 +286,7 @@ var enumBindings = map[string]struct{ pkgDir, typeName string }{
 // own enum would otherwise widen apart from the row it stores.
 var requestEnumBindings = []struct{ typeName, col string }{
 	{"CreateCaptureCounterpartyHoldRequestKind", "capture_counterparty_hold.kind"},
+	{"SalesGoalDraftInputOrigin", "sales_goal_plan_revision.origin"},
 }
 
 // checkInList captures CHECK (col IN ('a','b',…)) allowing an optional
@@ -311,7 +440,10 @@ func goConstSet(t *testing.T, pkgDir, typeName string) []string {
 
 func TestEveryDomainEnumMatchesItsSchemaCheck(t *testing.T) {
 	t.Parallel()
-	checks := tableCheckSets(t)
+	checks, err := catalogVocabularies()
+	if err != nil {
+		t.Fatal(err)
+	}
 	type binding struct{ col, pkgDir, typeName string }
 	var bindings []binding
 	for col, bound := range enumBindings {
@@ -324,7 +456,7 @@ func TestEveryDomainEnumMatchesItsSchemaCheck(t *testing.T) {
 		col := binding.col
 		want, ok := checks[col]
 		if !ok {
-			t.Errorf("enumBindings[%s]: no CHECK (… IN (…)) found in the migrations — stale binding or broken derivation", col)
+			t.Errorf("enumBindings[%s]: no CHECK vocabulary found in %s — stale binding or broken derivation", col, vocabularyCatalog)
 			continue
 		}
 		got := goConstSet(t, binding.pkgDir, binding.typeName)
@@ -332,7 +464,7 @@ func TestEveryDomainEnumMatchesItsSchemaCheck(t *testing.T) {
 			t.Errorf("enumBindings[%s]: no %s constants found in %s", col, binding.typeName, binding.pkgDir)
 			continue
 		}
-		if fmt.Sprint(got) != fmt.Sprint(want) {
+		if got = asSet(got); setKey(got) != setKey(want) {
 			t.Errorf("%s: Go %s set %v != schema CHECK set %v — change both together", col, binding.typeName, got, want)
 		}
 	}

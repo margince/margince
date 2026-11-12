@@ -325,7 +325,21 @@ describe("Home's browser vitals", () => {
     dayPaints: DayPaint[],
     shifts: Shift[] = [],
     roots = 1,
-  ): Vitals => ({ dayPaints, shifts, roots });
+  ): Vitals => ({ dayPaints, shifts, roots, lcpMs: 300, settled: true });
+
+  it("keeps LCP separate from the day paint and rejects a missing reading", () => {
+    expect(vitalsReasons([{ ...load([paint(100)]), lcpMs: 1001 }])).toEqual([
+      "LCP p95 1001 ms is over 1000 ms",
+    ]);
+    for (const lcpMs of [null, -1, 0, Number.NaN, Number.POSITIVE_INFINITY])
+      expect(vitalsReasons([{ ...load([paint(100)]), lcpMs }])).toEqual([
+        "load 1: LCP was not measured",
+      ]);
+    expect(vitalsReasons([{ ...load([paint(100)]), settled: false }])).toEqual([
+      "load 1: Home did not settle",
+    ]);
+    expect(vitalsReasons([{ ...load([paint(100)]), lcpMs: 1000 }])).toEqual([]);
+  });
 
   it("takes the day content's largest paint, however early or late", () => {
     expect(dayPaint([paint(100, 50), paint(1_500, 5_000)])?.at).toBe(1_500);

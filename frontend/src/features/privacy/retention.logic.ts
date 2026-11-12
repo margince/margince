@@ -39,6 +39,7 @@ export const RETENTION_SCOPES = [
   "raw_capture",
   "deal_risk_day",
   "report_edition",
+  "extension",
 ] as const satisfies readonly RetentionScope[];
 
 // Ordered by how much they take away — archive keeps the record, erase does
@@ -63,6 +64,7 @@ export const SCOPE_LABEL_KEYS: Record<RetentionScope, MessageKey> = {
   "ai_call_payload/content": "retention.scopeAiCallPayloadContent",
   raw_capture: "retention.scopeRawCapture",
   deal_risk_day: "retention.scopeDealRiskDay",
+  extension: "retention.scopeExtension",
 };
 
 export function scopeLabelKey(scope: RetentionScope): MessageKey {

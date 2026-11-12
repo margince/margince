@@ -56,10 +56,10 @@ func TestTheWorklistCostFamiliesRenderEachStageAndThePoolWaitByRead(t *testing.T
 		durations: map[attention.StageKey]httpserver.Histogram{rank: stageSamples(0.3)},
 		costs: map[attention.StageKey]attention.StageCost{
 			rank: {
-				Statements: 7, Failed: 1, Clipped: 2,
+				Statements: 7, Exchanges: 4, Failed: 1, Clipped: 2,
 				DB: stageSamples(0.2), PoolWait: stageSamples(0.002), App: stageSamples(0.05),
 			},
-			outside: {Statements: 3, DB: stageSamples(0.01), PoolWait: stageSamples(0.004), App: stageSamples(0.01)},
+			outside: {Statements: 3, Exchanges: 2, DB: stageSamples(0.01), PoolWait: stageSamples(0.004), App: stageSamples(0.01)},
 		},
 		poolWait: map[string]httpserver.Histogram{attention.ReadWorklist: stageSamples(0.006)},
 	})
@@ -69,6 +69,9 @@ func TestTheWorklistCostFamiliesRenderEachStageAndThePoolWaitByRead(t *testing.T
 		"# TYPE margince_worklist_stage_statements_total counter",
 		`margince_worklist_stage_statements_total{read="worklist",stage="rank"} 7`,
 		`margince_worklist_stage_statements_total{read="worklist",stage="outside_stages"} 3`,
+		"# TYPE margince_worklist_stage_exchanges_total counter",
+		`margince_worklist_stage_exchanges_total{read="worklist",stage="rank"} 4`,
+		`margince_worklist_stage_exchanges_total{read="worklist",stage="outside_stages"} 2`,
 		`margince_worklist_stage_statement_errors_total{read="worklist",stage="rank"} 1`,
 		`margince_worklist_stage_statement_errors_total{read="worklist",stage="outside_stages"} 0`,
 		`margince_worklist_stage_app_clipped_total{read="worklist",stage="rank"} 2`,

@@ -1,5 +1,5 @@
 <!-- prose:plain -->
-<!-- describes: backend/internal/modules/deals/viability.go backend/internal/compose/dealcloselost.go backend/internal/modules/deals/closelost.go backend/internal/compose/dealverdictpass.go backend/internal/compose/dealverdict/guards.go backend/internal/modules/deals/verdictapply.go backend/internal/modules/deals/dealrevive.go backend/internal/compose/dealscoutrevive.go backend/internal/compose/margincecheck.go backend/internal/modules/deals/ownerless.go backend/internal/modules/deals/changemoves.go -->
+<!-- describes: backend/internal/modules/deals/viability.go backend/internal/compose/dealcloselost.go backend/internal/compose/dealclosefacts.go backend/internal/compose/captureclassify.go backend/internal/modules/deals/closelost.go backend/internal/compose/dealverdictpass.go backend/internal/compose/dealverdict/guards.go backend/internal/modules/deals/verdictapply.go backend/internal/modules/deals/dealrevive.go backend/internal/compose/dealscoutrevive.go backend/internal/compose/margincecheck.go backend/internal/modules/deals/ownerless.go backend/internal/modules/deals/changemoves.go -->
 # Deals the customer still supports
 
 The nightly check asks one more thing of every open deal: has the customer said
@@ -14,7 +14,10 @@ below, and you can undo that.
 
 After 120 days with no word from the customer, Margince closes the open deal as
 lost, with the reason **Stopped responding**. When the customer's last message
-says no, Margince closes the deal at once, with the reason **Other**. An admin
+says no, Margince closes the deal at once, with the reason **Other**. Margince
+reads only what the customer wrote in that message, not the older messages
+quoted under it. A message with no words of its own, only a quote or a forward,
+never counts as a no. An admin
 can change the number of days with the setting `deals.silent_close_days`. It
 must be 60 or more.
 
@@ -26,13 +29,18 @@ Margince closes a deal only when all of these hold:
   a colleague's included.
 - The deal is not on legal hold.
 - No wait the customer asked for, and no meeting they accepted, is still to come.
+- No message on the deal is still waiting for your reply. This is the same
+  check that shows **Team reply owed** on the deal.
 
 A message from the customer that only its participants can see also keeps the
 deal open. Margince reads only its date.
 
 Margince closes the deal for its owner. The close shows on the owner's **Home**
-under **Done for you**, with the reason and **Undo**. It stays there for 7 days
-unless the owner undoes it. The deal's timeline gets a note about the close.
+under **Done for you**, with the reason and **Undo**. When the customer said no,
+it also links the message Margince read as the no, for each reader who may open
+that message. It stays there for 7 days unless the owner undoes it. The deal's
+timeline gets a note about the close, which points to **Done for you** for that
+message.
 
 **Undo** puts the deal back in the stage it was closed from. Changes made to the
 deal since the close stay as they are. Undo is refused when someone moved the
@@ -44,6 +52,10 @@ closes the deal again at the next check.
 
 To stop it for your own deals, turn off **Close silent deals as lost** among
 the automatic changes. [Approvals](approvals.md) says where the switches are.
+
+### Why did Margince close my deal as lost, and how do I undo it?
+Margince closes an open deal as lost, with the reason **Stopped responding**, after 120 days with no word from the customer. To undo it, open **Home**, find the deal under **Done for you** and choose **Undo** within 7 days. To stop it for your own deals, turn off **Close silent deals as lost** among the automatic changes.
+Also called: deal closed automatically, auto-lost, reopen a deal Margince closed, why is my deal lost.
 
 ## When the customer names a date, a price or a decision
 

@@ -201,31 +201,83 @@ func TestDoneOnTheCardReplacesAnEarlierRequestsSnooze(t *testing.T) {
 	}
 }
 
-// Done is about a customer's message. A meeting or our own outbound mail is
-// refused with the same faults threadOf gives, and nothing is stored.
-func TestDoneIsRefusedOnAnythingButAnInboundMessage(t *testing.T) {
+// Done is about a conversation: their message waiting for our answer, or ours
+// waiting for theirs. A meeting or a note is refused with the fault threadOf
+// gives, and nothing is stored.
+func TestDoneIsRefusedOnAnythingButAMessage(t *testing.T) {
 	e := setupLoad(t)
-	meeting, outbound := ids.NewV7(), ids.NewV7()
+	meeting, note := ids.NewV7(), ids.NewV7()
 	e.exec(t, `INSERT INTO activity (id, kind, subject, occurred_at, source, captured_by)
 		VALUES ($1, 'meeting', 'Kick-off', now() - interval '1 day', 'seed', 'system')`, meeting)
-	e.exec(t, `INSERT INTO activity (id, kind, direction, subject, occurred_at, thread_key, source, captured_by)
-		VALUES ($1, 'email', 'outbound', 'Our quote', now() - interval '1 day', $2, 'seed', 'system')`,
-		outbound, "thread-"+outbound.String())
-	for activity, want := range map[ids.UUID]string{meeting: "not_a_message", outbound: "not_inbound"} {
+	e.exec(t, `INSERT INTO activity (id, kind, subject, occurred_at, source, captured_by)
+		VALUES ($1, 'note', 'Called them', now() - interval '1 day', 'seed', 'system')`, note)
+	for _, activity := range []ids.UUID{meeting, note} {
 		err := handledStore(e).MarkMessageHandled(e.asSeat(e.rep), ids.From[ids.ActivityKind](activity))
 		var refused *values.ParseError
-		if !errors.As(err, &refused) || refused.Code != want {
-			t.Errorf("Done on %v answered %v, want the %s refusal", activity, err, want)
+		if !errors.As(err, &refused) || refused.Code != "not_a_message" {
+			t.Errorf("Done on %v answered %v, want the not_a_message refusal", activity, err)
 		}
-		var stored int
-		if err := e.owner.QueryRow(context.Background(),
-			`SELECT count(*) FROM activity_reader_state WHERE activity_id = $1`, activity).Scan(&stored); err != nil {
-			t.Fatal(err)
-		}
-		if stored != 0 {
+		if stored := readerStateRows(t, e, activity); stored != 0 {
 			t.Errorf("a refused Done still stored %d state rows", stored)
 		}
 	}
+}
+
+// Done on a message we sent says the reader needs no answer to it. It takes
+// the reader's own newest message to the contact, which the contact page's
+// waiting card rests on. It lands in the state the Worklist's Done writes.
+func TestDoneTakesOurOwnWaitingMessage(t *testing.T) {
+	e := setupLoad(t)
+	sent, _ := e.sentTo(t, e.customerAt(t, "customer"), "", 24*time.Hour)
+	if err := handledStore(e).MarkMessageHandled(e.asSeat(e.rep), ids.From[ids.ActivityKind](sent)); err != nil {
+		t.Fatalf("Done on our own waiting message: %v", err)
+	}
+	var state string
+	if err := e.owner.QueryRow(context.Background(),
+		`SELECT state FROM activity_reader_state WHERE activity_id = $1 AND reader_id = $2`,
+		sent, e.rep).Scan(&state); err != nil {
+		t.Fatalf("reading the stored state: %v", err)
+	}
+	if state != stateHandled {
+		t.Errorf("Done on our sent message stored %q, want %q", state, stateHandled)
+	}
+}
+
+// A message we sent that no waiting card rests on for this reader is refused,
+// and nothing is stored. That is a colleague's message, one we wrote again
+// after, and one the contact has answered.
+func TestDoneRefusesASentMessageNoWaitingCardRestsOn(t *testing.T) {
+	e := setupLoad(t)
+	colleagues := e.customerAt(t, "customer")
+	theirs, _ := e.sentTo(t, colleagues, "", 24*time.Hour)
+	e.exec(t, `UPDATE activity_participant SET user_id = $2 WHERE activity_id = $1 AND role = 'from'`, theirs, e.other)
+	again := e.customerAt(t, "customer")
+	older, _ := e.sentTo(t, again, "", 48*time.Hour)
+	e.sentTo(t, again, "", 24*time.Hour)
+	answeredContact := e.customerAt(t, "customer")
+	answered, thread := e.sentTo(t, answeredContact, "", 24*time.Hour)
+	e.afterwards(t, answeredContact, "email", "inbound", thread)
+
+	for name, message := range map[string]ids.UUID{"a colleague's message": theirs, "an older message": older, "an answered message": answered} {
+		err := handledStore(e).MarkMessageHandled(e.asSeat(e.rep), ids.From[ids.ActivityKind](message))
+		var refused *values.ParseError
+		if !errors.As(err, &refused) || refused.Code != "not_your_waiting_message" {
+			t.Errorf("Done on %s answered %v, want the not_your_waiting_message refusal", name, err)
+		}
+		if stored := readerStateRows(t, e, message); stored != 0 {
+			t.Errorf("a refused Done on %s still stored %d state rows", name, stored)
+		}
+	}
+}
+
+func readerStateRows(t *testing.T, e *loadEnv, activity ids.UUID) int {
+	t.Helper()
+	var stored int
+	if err := e.owner.QueryRow(context.Background(),
+		`SELECT count(*) FROM activity_reader_state WHERE activity_id = $1`, activity).Scan(&stored); err != nil {
+		t.Fatal(err)
+	}
+	return stored
 }
 
 // Disposed counts only a customer's inbound message, whatever audit rows other

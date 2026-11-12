@@ -1,15 +1,11 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-import type { ReactNode } from "react";
 import type { components } from "../../api/schema";
-import {
-  TaskCompleteCheck,
-  type useTaskUpdate,
-} from "../../components/taskactions";
-import { taskLine, useTaskHolder } from "../../components/taskassignee";
+import { OpenTaskRow } from "../../components/opentaskrow";
+import type { useTaskUpdate } from "../../components/taskactions";
 import { AppLink } from "../../design-system/applink";
-import { Badge, Button } from "../../design-system/atoms";
+import { Button } from "../../design-system/atoms";
 import {
   OverviewCard,
   OverviewList,
@@ -17,9 +13,9 @@ import {
 } from "../../design-system/overviewcard";
 import { RecordCardList } from "../../design-system/recordcard";
 import { formatMoneyWhole, formatNumber } from "../../format/format";
-import { formatDayMonth, formatDueCompact } from "../../format/format.dates";
+import { formatDayMonth } from "../../format/format.dates";
 import { PHASE_LABEL } from "../../format/projectphase";
-import { useLocale, usePlural, useT } from "../../i18n";
+import { useLocale, useT } from "../../i18n";
 import type { CompanyTab } from "../../lib/companytab";
 import { useDisabledCoreFeatures } from "../../lib/corefeatures";
 import { labelFor } from "../../lib/labelfor";
@@ -34,7 +30,6 @@ import {
   otherOpenTasks,
   stageRank,
   strongestContacts,
-  taskStanding,
   type WorkRow,
   workInFlight,
 } from "./companyoverviewrows";
@@ -158,34 +153,19 @@ function TaskRow({
   taskUpdate?: TaskUpdate;
   onOpenTask: (activityId: string) => void;
 }>) {
-  const t = useT();
-  const { locale } = useLocale();
-  const zone = useViewerZone();
   const nameOf = recordNamesIn(view);
   const linked =
     (step.linked_deal_id && nameOf("deal", step.linked_deal_id)) ||
     (step.linked_contact_id && nameOf("contact", step.linked_contact_id)) ||
     undefined;
-  const holder = useTaskHolder(step.assignee_id, step.assignee_name);
-  const sub = taskLine([
-    holder,
-    step.due_at &&
-      t("co.next.due", {
-        when: formatDueCompact(step.due_at, step.due_has_time, locale, zone),
-      }),
-    linked && t("co.overview.for", { name: linked }),
-  ]);
   return (
-    <OverviewRow
-      lead={
-        taskUpdate && (
-          <TaskCompleteCheck
-            activityId={step.activity_id}
-            version={step.version}
-            update={taskUpdate}
-          />
-        )
-      }
+    <OpenTaskRow
+      // The company read carries no per-row `writable`, so every row keeps
+      // its tick.
+      task={{ ...step, id: step.activity_id, writable: true }}
+      asOf={view.as_of}
+      taskUpdate={taskUpdate}
+      forName={linked}
       title={
         <button
           type="button"
@@ -195,49 +175,8 @@ function TaskRow({
           {step.subject}
         </button>
       }
-      sub={sub}
-      right={<TaskStandingMark step={step} asOf={view.as_of} />}
     />
   );
-}
-
-/** Where a task stands, as the right end of its row: a pill while it is late
- *  or close, the day itself further out, "No date" when it has none. */
-export function TaskStandingMark({
-  step,
-  asOf,
-}: Readonly<{ step: NextStep; asOf: string }>): ReactNode {
-  const t = useT();
-  const plural = usePlural();
-  const { locale } = useLocale();
-  const zone = useViewerZone();
-  const standing = taskStanding(step, asOf, zone);
-  switch (standing.kind) {
-    case "late":
-      return (
-        <Badge tone="danger">
-          {standing.days === undefined
-            ? t("co.next.overdue")
-            : plural("co.next.daysLate", standing.days, {
-                days: formatNumber(standing.days, locale),
-              })}
-        </Badge>
-      );
-    case "today":
-      return <Badge tone="warning">{t("co.next.dueToday")}</Badge>;
-    case "soon":
-      return (
-        <Badge tone="warning">
-          {plural("co.next.inDays", standing.days, {
-            days: formatNumber(standing.days, locale),
-          })}
-        </Badge>
-      );
-    case "later":
-      return formatDayMonth(standing.due, locale, zone);
-    case "undated":
-      return t("co.overview.noDate");
-  }
 }
 
 function DealsAndProjects({

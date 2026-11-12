@@ -31,6 +31,8 @@ export function buildColumns(
   owners?: OwnerNaming,
   uncounted: ReadonlySet<string> = new Set(),
   ownerPhotos?: ReadonlyMap<string, string>,
+  // Why a card's deal has its probability, shown on hover over its ring.
+  probabilityReason?: (deal: Deal, stageName: string) => string | undefined,
 ): BoardMoneyColumn[] {
   return [...stages]
     .sort((a, b) => a.position - b.position)
@@ -47,9 +49,10 @@ export function buildColumns(
         rawMinor: stageTotals?.baseMinor ?? null,
         weightedMinor: stageTotals?.weightedBaseMinor ?? null,
         currency: stageTotals?.currency ?? null,
-        deals: stageDeals.map((deal) =>
-          toBoardDeal(deal, naming, owners, ownerPhotos),
-        ),
+        deals: stageDeals.map((deal) => ({
+          ...toBoardDeal(deal, naming, owners, ownerPhotos),
+          probabilityReason: probabilityReason?.(deal, stage.name),
+        })),
         count: columnCount(
           stageTotals,
           uncounted.has(stage.id) ? null : stageDeals.length,

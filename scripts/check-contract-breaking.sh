@@ -116,13 +116,29 @@ fi
 
 # Adding a value to an open response enum is the routine change the rule above
 # allows, so oasdiff reports it as information rather than a warning.
+# A response bound that grows breaks only a client enforcing the old bound, and
+# every client is generated from this contract, so it warns; shrinking one fails.
 SEVERITY_LEVELS="$ROOT/scripts/contract-breaking-severity.txt"
 
 notice_base="$(mktemp)"
 trap 'rm -f "$notice_base"' EXIT
 git show "$BASE_REF:$CRM_YAML" > "$notice_base"
+# An operation a maintainer ratified removing without a notice is named,
+# with its reason, in its own file. Every other removal still needs one.
+RATIFIED_REMOVALS="${CONTRACT_RATIFIED_REMOVALS:-scripts/contract-ratified-removals.txt}"
+ratified_flag=()
+oasdiff_ignore=()
+if [[ -f "$RATIFIED_REMOVALS" ]]; then
+  ratified_flag=(-ratified-removals "$RATIFIED_REMOVALS")
+  # oasdiff names a path without the /v1 base and matches one finding per line.
+  ignore_file="$(mktemp)"
+  trap 'rm -f "$notice_base" "$ignore_file"' EXIT
+  awk '!/^[[:space:]]*(#|$)/ { path = $2; sub(/^\/v1/, "", path); print toupper($1) " " path " api removed without deprecation" }' \
+    "$RATIFIED_REMOVALS" > "$ignore_file"
+  oasdiff_ignore=(--err-ignore "$ignore_file")
+fi
 GOWORK="$ROOT/go.work" go run ./backend/tools/check-apideprecation \
-  -base "$notice_base" -current "$CRM_YAML" -release "$RELEASE_VERSION"
+  -base "$notice_base" -current "$CRM_YAML" -release "$RELEASE_VERSION" ${ratified_flag[@]+"${ratified_flag[@]}"}
 
 if [[ "$CONTRACT_STABILITY" = pre-live ]] || [[ "$ALLOWLISTED_RESYNC" = 1 ]]; then
   # Advisory stance: print every change (oasdiff without --fail-on never
@@ -134,7 +150,7 @@ if [[ "$CONTRACT_STABILITY" = pre-live ]] || [[ "$ALLOWLISTED_RESYNC" = 1 ]]; th
   else
     echo "contract-breaking-check: advisory (CONTRACT_STABILITY=pre-live) — breaking change(s) printed above, if any, are deliberately permitted for this run"
   fi
-elif "${OASDIFF_CMD[@]}" breaking "$BASE_REF:$CRM_YAML" "$CRM_YAML" --severity-levels "$SEVERITY_LEVELS" --fail-on ERR -f text; then
+elif "${OASDIFF_CMD[@]}" breaking "$BASE_REF:$CRM_YAML" "$CRM_YAML" --severity-levels "$SEVERITY_LEVELS" ${oasdiff_ignore[@]+"${oasdiff_ignore[@]}"} --fail-on ERR -f text; then
   echo "contract-breaking-check: no breaking API changes since $BASE_REF"
 else
   echo "contract-breaking-check: breaking API change(s) since $BASE_REF — deprecate instead of removing, or run a deliberate re-sync with CONTRACT_STABILITY=pre-live" >&2

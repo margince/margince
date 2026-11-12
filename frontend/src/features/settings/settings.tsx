@@ -409,12 +409,28 @@ function modelsTab(tab: string): ReactNode {
 export function SettingsScreen({
   route,
   reviewActions,
-}: Readonly<{ route: Route; reviewActions?: ReviewActions }>) {
+  aiSetup,
+}: Readonly<{
+  route: Route;
+  reviewActions?: ReviewActions;
+  /** The first-run AI form, from the sign-in feature through the shell. It
+   *  opens the AI models page, so a skipped key is set where keys live. */
+  aiSetup?: ReactNode;
+}>) {
   return (
     <SettingsPage
       route={route}
       reviewActions={reviewActions}
-      content={tabContent}
+      content={(id, tab, at) =>
+        id === "models" && tab === "providers" ? (
+          <>
+            {aiSetup}
+            {tabContent(id, tab, at)}
+          </>
+        ) : (
+          tabContent(id, tab, at)
+        )
+      }
       Frame={PageFrame}
     />
   );

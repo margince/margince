@@ -11,7 +11,7 @@ import type {
   ListHistoryEntry,
   ListMember,
 } from "../lib/lists.queries";
-import { meFixture } from "./mefixture";
+import { type GrantSpec, meFixture } from "./mefixture";
 import { jsonResponse } from "./story-utils";
 
 export const LIVE_ID = "01a0f000-0000-7000-8000-000000000001";
@@ -251,16 +251,26 @@ export function visitAnswer(listID: string) {
 
 /**
  * The session probe of a reader on an installation with lists on or off, a
- * member of the given teams.
+ * member of the given teams. `seat` replaces the grants, seat and roles.
  */
-export function listsMe(on: boolean, teams: readonly string[] = []) {
+export function listsMe(
+  on: boolean,
+  teams: readonly string[] = [],
+  seat: Readonly<{
+    allow?: GrantSpec;
+    seat?: "full" | "read";
+    roles?: string[];
+  }> = {},
+) {
   return () =>
     jsonResponse({
       ...meFixture({
-        allow: {
+        allow: seat.allow ?? {
           list: ["read", "create", "update", "delete"],
           company: ["read"],
         },
+        seat: seat.seat,
+        roles: seat.roles,
         settingsAvailability: { lists: on },
       }),
       teams,

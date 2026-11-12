@@ -102,7 +102,9 @@ describe("the standing beside the step", () => {
     stub(day({ queue: [dealRow(null)] }));
     renderWorklist();
 
-    expect(await screen.findByText("Fleet retrofit")).toBeTruthy();
+    expect(
+      await screen.findByText("Fleet retrofit has gone quiet"),
+    ).toBeTruthy();
     expect(screen.queryByText(/^Earlier assessment/)).toBeNull();
     // The deterministic explanation is still there.
     expect(screen.getByText(/41/)).toBeTruthy();

@@ -198,7 +198,7 @@ and a new line is never added. The steps for a move are in
 ## The shell
 
 `src/app/nav.ts` holds the list of places that decides, and `rail.test.tsx`
-pins its order. It has 8 entries: Home on its own, then three groups with
+pins its order. It has 10 entries: Home on its own, then three groups with
 labels.
 
 | Group | Route ids |
@@ -206,7 +206,7 @@ labels.
 | *(no group)* | `home` |
 | Records | `contacts`, `companies`, `leads`, `deals` |
 | Work | `projects`, `filters` |
-| Insights | `analytics` |
+| Insights | `analytics`, `progress`, `goals` |
 
 The groups belong to the **open sidebar** alone. When the sidebar is small,
 each group title keeps its place and shows a line there. So the
@@ -257,11 +257,12 @@ wrong. So it is stated in `nav.ts`, again in `palette.tsx`, and here.
 `NavItem.screen` is the **route id**: the English name that never changes, in
 the hash, in the `switch` of `App.tsx`, and in every `href`.
 `NavItem.labelKey` is a **catalog key** whose rendered text may be different,
-and one of the 8 is:
+and two of the 10 are:
 
 | Route id | Rendered label |
 |---|---|
 | `filters` | `Filters and views` |
+| `goals` | `Sales goals` |
 
 The `⌘K` palette depends on the split. Every screen command carries its route
 id, plus any `aliases` the rail entry declares, as `keywords` the user never

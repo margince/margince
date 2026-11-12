@@ -203,6 +203,12 @@
 .btn.btn-link.segbar-step-2 {
   background: color-mix(in srgb, var(--accentText) 20%, var(--bgElevated));
 }
+/* Not yet counted: an outline in the parts' hue, so it reads as the same kind
+   of value that has not happened yet. */
+.segbar-ahead {
+  background: var(--accentLight);
+  border: 1px dashed var(--accentText);
+}
 .segbar-track {
   position: relative;
   display: flex;

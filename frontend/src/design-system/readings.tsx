@@ -393,17 +393,19 @@ export type BarListRow = Readonly<{
 // most to least certain, so their colour steps down ONE hue rather than cycling
 // through several, and three is the most a single hue tells apart.
 //
-// The track is aria-hidden and the legend carries every label and figure as
-// text, which also makes colour a second channel rather than the only one.
-// Amounts arrive formatted, for the reason `BarList`'s do.
+// The track is aria-hidden: the legend carries every label and figure as text,
+// so colour is a second channel. Amounts arrive formatted, as `BarList`'s do.
 export function SegmentBar({
   parts,
   marker,
+  ahead,
   label,
   onSelect,
 }: Readonly<{
   parts: SegmentBarParts;
   onSelect?: (key: string) => void;
+  // Not counted in the parts yet, such as open deals beside won: an outline after them.
+  ahead?: SegmentBarPart;
   // A figure the parts are read against rather than one of them: a line across
   // the track, drawn in ink so it never reads as a fourth part.
   marker?: SegmentBarPart;
@@ -411,9 +413,10 @@ export function SegmentBar({
   label: string;
 }>) {
   const total = parts.reduce((sum, part) => sum + Math.max(0, part.value), 0);
-  // The scale is the larger of the parts and the mark. A mark beyond the parts
-  // leaves recessed track between them, and that track is the gap.
-  const scale = Math.max(total, marker?.value ?? 0);
+  const open = Math.max(0, ahead?.value ?? 0);
+  // The scale is the larger of the parts with what is ahead, and the mark. A
+  // mark beyond them leaves recessed track between, and that track is the gap.
+  const scale = Math.max(total + open, marker?.value ?? 0);
   return (
     <div className="segbar">
       <div className="segbar-track" aria-hidden={onSelect ? undefined : true}>
@@ -435,6 +438,12 @@ export function SegmentBar({
             />
           ),
         )}
+        {ahead && open > 0 && (
+          <span
+            className="segbar-part segbar-ahead"
+            style={{ width: `${percentOf(ahead.value, scale)}%` }}
+          />
+        )}
         {marker && (
           <span
             className="segbar-marker"
@@ -453,6 +462,13 @@ export function SegmentBar({
             <span className="segbar-amount t-num">{part.amount}</span>
           </li>
         ))}
+        {ahead && (
+          <li className="segbar-key">
+            <span className="segbar-swatch segbar-ahead" aria-hidden="true" />
+            {ahead.label}
+            <span className="segbar-amount t-num">{ahead.amount}</span>
+          </li>
+        )}
         {marker && (
           <li className="segbar-key">
             <span className="segbar-swatch-marker" aria-hidden="true" />

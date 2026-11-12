@@ -83,7 +83,7 @@ func idempotency(pool *pgxpool.Pool, probes map[string]replayProbe, restore repl
 				return
 			}
 			if len(key) > 255 {
-				httperr.Write(w, r, httperr.Validation(idempotencyKeyHeader, "too_long", "Idempotency-Key exceeds 255 characters"))
+				httperr.Write(w, r, httperr.TooLong(idempotencyKeyHeader, 255, len(key)))
 				return
 			}
 			actor, ok := principal.Actor(r.Context())

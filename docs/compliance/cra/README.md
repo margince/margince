@@ -173,6 +173,10 @@ needs two maintainers and no infrastructure.
 
 Steps 4 and 5 are what the walk tests. The rest sets them up.
 
+## Support period
+
+Which versions get security fixes, and for how long: [support-period.md](support-period.md).
+
 ## What this package does not do
 
 - **No operator-facing page.** What a German operator reads about their own

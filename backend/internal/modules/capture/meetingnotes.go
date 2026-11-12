@@ -1,0 +1,35 @@
+// SPDX-License-Identifier: BUSL-1.1
+// SPDX-FileCopyrightText: 2026 Gradion
+
+package capture
+
+import (
+	"maps"
+	"slices"
+)
+
+// meetingNotesScopes are the grants that let a connection read the Google Docs
+// Meet writes its notes and transcripts into, keyed by provider. Held equal to
+// frontend/src/lib/connector-status.ts's MEETING_NOTES_SCOPES by a parity test.
+var meetingNotesScopes = map[string][]string{
+	providerGdocs: {"https://www.googleapis.com/auth/documents.readonly"},
+}
+
+// meetingNotesCalendars are the calendar providers whose meetings a notes
+// connection reads, keyed by the notes provider. Notes are read only while
+// both connections are on one account.
+var meetingNotesCalendars = map[string]string{
+	providerGdocs: providerGcal,
+}
+
+// MeetingNotesGranted says whether a connection's granted scopes let it read
+// meeting notes. A Docs connection whose owner unticked the scope on Google's
+// screen holds none, and reads nothing until it is reconnected.
+func MeetingNotesGranted(provider string, scopes []string) bool {
+	return scopeGranted(meetingNotesScopes, provider, scopes)
+}
+
+// MeetingNotesProviders are the providers whose connection reads meeting notes.
+func MeetingNotesProviders() []string {
+	return slices.Sorted(maps.Keys(meetingNotesScopes))
+}

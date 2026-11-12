@@ -98,7 +98,7 @@ export function InstallationProfileDialog({
   canManage: boolean;
   dirty: boolean;
   pending: boolean;
-  refused: Map<string, string>;
+  refused: ReadonlyMap<string, string>;
   blanketError: string | null;
   describe: (control: FieldControl) => string | undefined;
   onChange: (next: InstallationSettings) => void;

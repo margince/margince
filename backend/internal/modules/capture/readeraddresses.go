@@ -53,41 +53,41 @@ func (s *OwnDomainStore) ReaderAddressesTx(
 	if err := selfOnly(ctx, user); err != nil {
 		return nil, err
 	}
-	login, err := seatLoginAddressTx(ctx, tx, user)
-	if err != nil {
-		return nil, err
-	}
-	rows, err := tx.Query(ctx, `
-		SELECT value, source FROM capture_owner_identity
-		 WHERE user_id = $1 AND kind = 'address'
-		 UNION
-		SELECT account_label, '' FROM capture_connection
-		 WHERE user_id = $1 AND coalesce(account_label, '') <> '' AND archived_at IS NULL
-`, user)
-	if err != nil {
-		return nil, fmt.Errorf("capture: reading a reader's own addresses: %w", err)
-	}
-	defer rows.Close()
+	batch := &pgx.Batch{}
+	var login string
+	batch.Queue(seatLoginAddressSQL, user).QueryRow(func(row pgx.Row) error {
+		var err error
+		login, err = scanSeatLogin(row)
+		return err
+	})
 	folded := map[string]bool{}
-	// Every spelling a header may carry, since the queue compares stored addresses.
 	keep := func(address string) {
 		for _, spelling := range mailidentity.AddressSpellings(address) {
 			folded[spelling] = true
 		}
 	}
+	batch.Queue(`
+		SELECT value, source FROM capture_owner_identity
+		 WHERE user_id = $1 AND kind = 'address'
+		 UNION
+		SELECT account_label, '' FROM capture_connection
+		 WHERE user_id = $1 AND coalesce(account_label, '') <> '' AND archived_at IS NULL
+`, user).Query(func(rows pgx.Rows) error {
+		for rows.Next() {
+			var label, source string
+			if err := rows.Scan(&label, &source); err != nil {
+				return err
+			}
+			if address := ownReaderAddress(label, source); address != "" {
+				keep(address)
+			}
+		}
+		return rows.Err()
+	})
+	if err := tx.SendBatch(ctx, batch).Close(); err != nil {
+		return nil, fmt.Errorf("capture: reading a reader's own addresses: %w", err)
+	}
 	keep(login)
-	for rows.Next() {
-		var label, source string
-		if err := rows.Scan(&label, &source); err != nil {
-			return nil, err
-		}
-		if address := ownReaderAddress(label, source); address != "" {
-			keep(address)
-		}
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
 	out := make([]string, 0, len(folded))
 	for address := range folded {
 		out = append(out, address)

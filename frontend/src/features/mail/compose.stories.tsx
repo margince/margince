@@ -297,13 +297,7 @@ export const ConsentBlocked: Story = {
           // point of the refusal now — was never rendered in Storybook.
           details: {
             review_id: "01a0aaaa-bbbb-7ccc-8ddd-eeeeffff0001",
-            available_actions: ["overrule"],
-            overrulable: [
-              {
-                contact_id: "01a0aaaa-bbbb-7ccc-8ddd-eeeeffff0003",
-                category: "marketing",
-              },
-            ],
+            available_actions: ["direct_send"],
             refusals: [
               {
                 address: "buyer@acme.test",

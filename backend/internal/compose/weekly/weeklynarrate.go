@@ -12,7 +12,6 @@ package weekly
 import (
 	"context"
 	"errors"
-	"fmt"
 	"time"
 
 	"github.com/jackc/pgx/v5"
@@ -52,10 +51,8 @@ func (e *Engine) writeNarration(ctx context.Context, reviewID ids.UUID, sentence
 	// otherwise learn the ceiling from a driver error at 06:00 on a Monday.
 	// Runes, because the column counts characters — a German sentence full of
 	// umlauts is fewer characters than bytes.
-	if n := len([]rune(sentence)); n > narrative.MaxNarrativeRunes {
-		return httperr.Validation("narrative", "too_long",
-			fmt.Sprintf("the sentence is %d characters, over the %d the column holds",
-				n, narrative.MaxNarrativeRunes))
+	if err := httperr.RequireWithin("narrative", sentence, narrative.MaxNarrativeRunes); err != nil {
+		return err
 	}
 	return database.WithWorkspaceTx(ctx, e.pool, func(tx pgx.Tx) error {
 		var before *string

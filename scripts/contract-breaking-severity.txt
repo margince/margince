@@ -1,1 +1,2 @@
 response-property-enum-value-added info
+response-property-max-length-increased warn

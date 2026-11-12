@@ -137,7 +137,7 @@ func (f entityField) cleaned(isDefault bool) (value *string, sent bool, err erro
 		}
 	}
 	if utf8.RuneCountInString(text) > f.limit {
-		return nil, true, &values.ParseError{Field: f.wire, Code: codeTooLong, Message: f.wire + " is too long"}
+		return nil, true, &values.ParseError{Field: f.wire, Code: codeTooLong, Max: f.limit, Message: f.wire + " is too long"}
 	}
 	return &text, true, nil
 }

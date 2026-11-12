@@ -37,6 +37,7 @@ import { useCan } from "../../lib/capability";
 import { ENTITY, isEntityKind } from "../../lib/entity";
 import { unwrap } from "../../lib/problem";
 import { useMe } from "../../lib/session";
+import { useUrlParams } from "../../lib/urlstate";
 import { useViewerZone } from "../../lib/viewerzone";
 import {
   ACTOR_ICON,
@@ -52,7 +53,7 @@ import {
   auditLogQueryParams,
   idTail,
   isNarrowed,
-  UNFILTERED_AUDIT_LOG,
+  linkedAuditLogFilters,
 } from "./settings-audit.format";
 import "./settings-audit.css";
 
@@ -64,7 +65,16 @@ const RELATIVE_TICK_MS = 60_000;
 export function AuditLogCard() {
   const user = useMe().data?.user;
   const canSee = useCan("audit_log", "read");
-  const [filters, setFilters] = useState<AuditLogFilters>(UNFILTERED_AUDIT_LOG);
+  const [params] = useUrlParams();
+  const linked = linkedAuditLogFilters(params);
+  const link = `${linked.entityType}/${linked.entityId}`;
+  const [shownLink, setShownLink] = useState(link);
+  const [filters, setFilters] = useState<AuditLogFilters>(linked);
+  // A second notice followed while the log is open names another record.
+  if (link !== shownLink) {
+    setShownLink(link);
+    setFilters(linked);
+  }
   const asked = useSettledValue(filters);
   return (
     <>

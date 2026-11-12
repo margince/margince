@@ -26,8 +26,8 @@ func (a fixedAccount) AssembleScoped(context.Context, ids.CompanyID, company360.
 	return a.view, nil
 }
 
-// A language the rep chose outranks the account's German correspondence, and
-// the draft reports the language it is written in either way.
+// A language the rep chose, then the subject they wrote, outranks the account's
+// German correspondence. The draft reports the language it is written in.
 func TestAnAccountDraftIsWrittenInTheChosenLanguage(t *testing.T) {
 	t.Parallel()
 	for name, tc := range map[string]struct {
@@ -37,6 +37,12 @@ func TestAnAccountDraftIsWrittenInTheChosenLanguage(t *testing.T) {
 		"Vietnamese chosen over German mail": {`,"language":"vi"`, crmcontracts.CompanyEmailDraftLanguageVi},
 		"English chosen over German mail":    {`,"language":"en"`, crmcontracts.CompanyEmailDraftLanguageEn},
 		"nothing chosen follows the mail":    {``, crmcontracts.CompanyEmailDraftLanguageDe},
+		"an English subject over German mail": {
+			`,"subject":"Your proposal and our next steps"`, crmcontracts.CompanyEmailDraftLanguageEn,
+		},
+		"a chosen language over the subject": {
+			`,"subject":"Your proposal and our next steps","language":"vi"`, crmcontracts.CompanyEmailDraftLanguageVi,
+		},
 	} {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()

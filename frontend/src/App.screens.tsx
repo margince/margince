@@ -208,6 +208,22 @@ export const AnalyticsScreen = lazy(
   ),
 );
 
+export const ProgressScreen = lazy(
+  routed(() =>
+    import("./features/analytics/progress").then((m) => ({
+      default: m.ProgressScreen,
+    })),
+  ),
+);
+
+export const SalesGoalsScreen = lazy(
+  routed(() =>
+    import("./features/analytics/goals").then((m) => ({
+      default: m.SalesGoalsScreen,
+    })),
+  ),
+);
+
 export const LegalReviewsRoute = lazy(
   routed(() =>
     import("./features/privacy/legalreviews").then((m) => ({

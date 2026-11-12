@@ -62,10 +62,14 @@ var acceptedRequestSQL = `EXISTS (SELECT 1 FROM activity accepted
 // tested on every inbound message ever captured. The list holds 16 bytes per
 // open reminder a human wrote, far under any value size limit.
 func heldRequestSQL() string {
-	return `a.id = ANY (ARRAY(SELECT held.source_activity_id FROM activity held
+	return "a.id = ANY (" + heldRequestIDsSQL() + ")"
+}
+
+func heldRequestIDsSQL() string {
+	return `ARRAY(SELECT held.source_activity_id FROM activity held
  WHERE held.source_activity_id IS NOT NULL AND held.restricted_at IS NULL
  AND held.source_system = '` + EmailRequestTaskSource + `'
- AND ` + storekit.HeldTaskClause("held") + `))`
+ AND ` + storekit.HeldTaskClause("held") + `)`
 }
 
 const openRequestReminderSQL = `EXISTS (SELECT 1 FROM activity reminder
@@ -73,8 +77,9 @@ const openRequestReminderSQL = `EXISTS (SELECT 1 FROM activity reminder
  AND reminder.source_activity_id = a.id AND NOT reminder.is_done
  AND reminder.archived_at IS NULL)`
 
-// confirmedRequestSQL is a request the classifier or a human confirmed.
-var confirmedRequestSQL = `a.owed_verdict = 'asks_us' OR ` + acceptedRequestSQL
+// confirmedRequestSQL is a request a human took, or one whose asks_us verdict
+// stands (storekit.AsksUsClause).
+var confirmedRequestSQL = storekit.AsksUsClause("a") + ` OR ` + acceptedRequestSQL
 
 var outstandingRequestSQL = requestUnsettledSQL + ` AND (` + confirmedRequestSQL + `)`
 
@@ -105,9 +110,11 @@ var requestCandidateSQL = requestUnsettledSQL + ` AND (` + requestIntentSQL + `)
 // evidence first. The deal card offers these as work, and it applies no
 // sender rule, so a hand-logged note or a threadless noreply mail would
 // otherwise become a standing obligation on the deal.
+// The machine arms read the mail's text, so they hold only where that text
+// may be judged. A request a human already took stays reviewable for them.
 func reviewableRequestSQL(asOf string) string {
-	return requestUnsettledSQL + ` AND (a.owed_verdict = 'asks_us' OR ` + acceptedRequestSQL + `
- OR (a.owed_verdict IS NULL AND (` + requestCandidateSQL + `
+	return requestUnsettledSQL + ` AND (` + confirmedRequestSQL + `
+ OR (` + storekit.OwedVerdictStandsClause("a") + ` AND a.owed_verdict IS NULL AND (` + requestCandidateSQL + `
    OR (a.thread_key IS NOT NULL AND NOT ` + calendarCopySQL + `
        AND NOT ` + answeredSQL("a", asOf) + `))))`
 }

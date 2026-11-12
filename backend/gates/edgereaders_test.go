@@ -224,6 +224,8 @@ var deferredEdgeReads = gatekit.Waive(map[string]string{})
 // calleeGatedEdgeReads: a fragment whose every runner takes the edge gate by a
 // path the census cannot follow, such as a storekit.Field value.
 var calleeGatedEdgeReads = gatekit.Waive(map[string]string{
+	"internal/modules/activities/emailtarget.go:dealContactCandidatesSQL":                "a task's deal stakeholders. linkedCandidates renders auth.EdgeReadScope for the relationship alias its candidateQuery names, and reads none when the edge read is refused",
+	"internal/modules/activities/emailtarget.go:employerCandidatesSQL":                   "the companies a task's contacts work at. linkedCandidates renders auth.EdgeReadScope for the relationship alias its candidateQuery names, and reads none when the edge read is refused",
 	"internal/compose/company360/graphreads.go:readEmployment":                           "CompanyRosterEdgesSQL admits relationship reads and scopes every returned relationship id through the shared roster owner before this join reads the role; no edge outside that admitted set reaches the graph",
 	"internal/modules/contacts/unknownemploymentrepair.go:repairUnknownEmploymentLinkTx": "RepairUnknownEmploymentTx requires the system principal and relationship update before locking an internal repair candidate; the returned row passes updateRelationshipInTx authorization and only its boolean progress leaves the data task",
 	"internal/modules/collections/vocabstandardfields.go:contactEmployerLink":            "the contact list's employer filter leaf. It travels inside contactEmployerField, which is Withheld until bindEmployerScope asks auth.EdgeReadAdmitted and fills its scope with auth.EdgeReadScope",

@@ -129,7 +129,7 @@ func lockWaitBoundedStore(t *testing.T, ws ids.UUID) *Store {
 		t.Fatalf("opening the lock-bounded pool: %v", err)
 	}
 	t.Cleanup(pool.Close)
-	return NewStore(database.BindTo(pool, ids.From[ids.WorkspaceKind](ws)))
+	return NewStore(database.BindTo(pool, ids.From[ids.WorkspaceKind](ws))).WithSenderStamp(noSenderStamp)
 }
 
 // An Art. 17 erasure holds the subject's account lock from its purge until its

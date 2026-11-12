@@ -31,9 +31,9 @@
   "catalog": {
     "tools": 48,
     "system_frame_tokens": 592,
-    "tokens": 39940,
+    "tokens": 40244,
     "median_tool_tokens": 620,
-    "mean_tool_tokens": 831
+    "mean_tool_tokens": 838
   },
   "agents": [
     {
@@ -47,11 +47,11 @@
         "read_record"
       ],
       "of_served_tools": 48,
-      "tokens": 4340,
+      "tokens": 4341,
       "listing_tokens": 2131,
       "step_schema_tokens": 1617,
       "percent_of_ceiling": 13,
-      "headroom_tokens": 18870,
+      "headroom_tokens": 18869,
       "dangling_cross_references": [],
       "temptation_weight": 5
     },
@@ -68,11 +68,11 @@
         "whats_slipping_this_week"
       ],
       "of_served_tools": 48,
-      "tokens": 6576,
-      "listing_tokens": 3436,
+      "tokens": 6577,
+      "listing_tokens": 3437,
       "step_schema_tokens": 2548,
       "percent_of_ceiling": 20,
-      "headroom_tokens": 16634,
+      "headroom_tokens": 16633,
       "dangling_cross_references": [
         "at_risk_relationships → read_relationships",
         "log_activity → draft_outbound",
@@ -84,12 +84,12 @@
   ],
   "tool_cost": [
     {
-      "name": "read_workspace",
-      "tokens": 2767
+      "name": "read_reports",
+      "tokens": 2784
     },
     {
-      "name": "read_reports",
-      "tokens": 2692
+      "name": "read_workspace",
+      "tokens": 2767
     },
     {
       "name": "read_details",
@@ -101,7 +101,7 @@
     },
     {
       "name": "find_records",
-      "tokens": 1949
+      "tokens": 1952
     },
     {
       "name": "change_state",
@@ -117,11 +117,15 @@
     },
     {
       "name": "change_reports",
-      "tokens": 1264
+      "tokens": 1357
     },
     {
       "name": "change_capture",
       "tokens": 1080
+    },
+    {
+      "name": "read_analytics",
+      "tokens": 1020
     },
     {
       "name": "preview_import",
@@ -132,16 +136,12 @@
       "tokens": 978
     },
     {
-      "name": "read_analytics",
-      "tokens": 927
-    },
-    {
       "name": "change_attention",
       "tokens": 899
     },
     {
       "name": "change_compliance",
-      "tokens": 893
+      "tokens": 879
     },
     {
       "name": "create_record",
@@ -169,7 +169,7 @@
     },
     {
       "name": "read_view",
-      "tokens": 638
+      "tokens": 675
     },
     {
       "name": "update_record",

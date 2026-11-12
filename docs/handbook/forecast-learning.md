@@ -68,7 +68,7 @@ The **Landing** card on the forecast names what it counts, such as
 **Won + Likely deals**, and then the won and still-to-come amounts. A
 manager's call that the landing does not use shows on the same card as a
 figure that is not added. Next to it, **Modelled quarter finish** shows a span
-such as "€610k to €880k". **Expected finish** in Sales review and
+such as "€610k to €880k". **Modelled finish** in **Sales review** and
 **Modelled quarter finish** beside it work the same way.
 
 To find the two amounts, the forecast runs the period many times. Each

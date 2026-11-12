@@ -50,6 +50,9 @@ type CloseLostInput struct {
 	ReasonCode string
 	// Reason is the one line the deal's lost_reason and the owner's receipt show.
 	Reason string
+	// SourceActivityID is the message the close was judged on, zero for a
+	// close on silence. The receipt links it to readers who may open it.
+	SourceActivityID ids.UUID
 	// StillDue asks again, under the deal row lock, whether the deal should
 	// close. The evidence it reads is not this module's.
 	StillDue func(ctx context.Context, tx pgx.Tx) (bool, error)
@@ -93,12 +96,16 @@ func (s *Store) closeAsLostTx(ctx context.Context, tx pgx.Tx, in CloseLostInput,
 		return false, err
 	}
 	reason := in.Reason
+	evidence := map[string]any{
+		basisKey: in.Reason, basisOwnerKey: in.Owner.String(), CorrectionKindEvidenceKey: CloseLostCorrection,
+	}
+	if !in.SourceActivityID.IsZero() {
+		evidence[CitedActivitiesEvidenceKey] = []string{in.SourceActivityID.String()}
+	}
 	// The target is a lost stage, so the move claims no win.
 	moved, err := s.advanceOnTx(ctx, tx, in.DealID, AdvanceDealInput{
 		ToStageID: lost, LostReason: &reason, LostReasonCode: code, WonWithoutContractReason: nil,
-		auditEvidence: map[string]any{
-			basisKey: in.Reason, basisOwnerKey: in.Owner.String(), CorrectionKindEvidenceKey: CloseLostCorrection,
-		},
+		auditEvidence: evidence,
 	}, active)
 	if err != nil {
 		return false, err

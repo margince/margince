@@ -97,12 +97,15 @@ func deleteVisibleLinksOfType(ctx context.Context, tx pgx.Tx, id ids.ActivityID,
 // So the row is the member's from then on: no roster retires it, and none
 // records a later answer on it either. Its last answer stays as it was.
 func repointDisplacedParticipants(ctx context.Context, tx pgx.Tx, id ids.ActivityID, target ids.UUID, displaced []ids.UUID) error {
+	if err := unbindDisplacedSenders(ctx, tx, id, target, displaced); err != nil {
+		return err
+	}
 	query, args, targetPos, err := participantRelinkQuery(ctx, id, target, displaced)
 	if err != nil {
 		return err
 	}
 	_, err = tx.Exec(ctx, storekit.SQLf(`WITH planned AS (%s), promoted AS (
-  UPDATE activity_participant ap SET contact_id = $%d, roster_seat = NULL
+  UPDATE activity_participant ap SET contact_id = $%d, roster_seat = NULL, role = p.role
   FROM planned p WHERE ap.id = p.id AND p.move
   RETURNING ap.id
  ) DELETE FROM activity_participant

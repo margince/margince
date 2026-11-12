@@ -9,6 +9,7 @@ package compose
 
 import (
 	"context"
+	"errors"
 	"strings"
 
 	openapi_types "github.com/oapi-codegen/runtime/types"
@@ -16,6 +17,8 @@ import (
 	"github.com/margince/margince/backend/internal/compose/attention"
 	"github.com/margince/margince/backend/internal/compose/magic"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/modules/activities"
+	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
@@ -44,14 +47,38 @@ func (d attentionReceiptDetails) Describe(ctx context.Context, receipts []attent
 	if err != nil {
 		return nil, err
 	}
+	happened, err := d.sourcesHappened(ctx, receipts)
+	if err != nil {
+		return nil, err
+	}
 	out := make([]attention.ReceiptDetail, len(receipts))
 	for i, receipt := range receipts {
 		out[i].Actor = labelledActor(receipt.Actor, members)
 		if moved, read := changes[receipt.ID]; read {
 			out[i].Changes = &moved
 		}
+		source, moment := receipt.NewestSource(happened)
+		out[i].Source, out[i].SourceAt = source, moment.At
+		out[i].SourcePrecision = crmcontracts.OccurredPrecision(moment.Precision)
 	}
 	return out, nil
+}
+
+// sourcesHappened reads when every source on the page happened, in one read
+// under the reader's own grants. A reader with no activity grant gets none.
+func (d attentionReceiptDetails) sourcesHappened(ctx context.Context, receipts []attention.Receipt) (map[ids.UUID]activities.ActivityMoment, error) {
+	var want []ids.UUID
+	for _, receipt := range receipts {
+		want = append(want, receipt.Sources()...)
+	}
+	if len(want) == 0 || d.names.activities == nil {
+		return map[ids.UUID]activities.ActivityMoment{}, nil
+	}
+	happened, err := d.names.activities.ActivityOccurredAt(ctx, want)
+	if errors.Is(err, apperrors.ErrPermissionDenied) {
+		return map[ids.UUID]activities.ActivityMoment{}, nil
+	}
+	return happened, err
 }
 
 // membersNamed reads the name of every member who acted on the page, in one
