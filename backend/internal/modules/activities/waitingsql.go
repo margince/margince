@@ -359,8 +359,29 @@ const waitingGroupSQL = `
 // over the messages before any link is joined, so Postgres stops at the cap.
 // An ARRAY, built once, so the primary key fetches the capped set. As a join
 // or an IN, the planner joined the whole table first and filtered afterwards.
+//
+// The horizon's two arms are capped apart and merged (waitingCappedArmsSQL).
 var waitingRepliesSQL = waitingSelectSQL + `
-	 WHERE a.id = ANY (ARRAY(` + waitingEligibleSQL + `
+	 WHERE a.id = ANY (ARRAY(` + waitingCappedArmsSQL + `))` + waitingGroupSQL + `
+	 ORDER BY a.occurred_at DESC, a.id DESC`
+
+// waitingCappedArmsSQL is the newest eligible messages up to the cap, read as
+// young mail and as held requests past the horizon. The eligibility holds
+// withinWaitingHorizonSQL, which the two arms split with no row in both.
+// Apart, young mail walks the date index newest first and stops at the cap. In
+// one scan, the `OR` with the held ids needs a bitmap, which judges every message
+// in the horizon before it sorts.
+var waitingCappedArmsSQL = `SELECT capped.id FROM (
+	 (SELECT a.id, a.occurred_at ` + waitingEligibleFromSQL + `
+	   AND ` + waitingYoungSQL("$%[1]d", "%[5]d") + waitingNewestCapSQL + `)
+	 UNION ALL
+	 (SELECT a.id, a.occurred_at ` + waitingEligibleFromSQL + `
+	   AND ` + heldRequestSQL() + ` AND (` + waitingYoungSQL("$%[1]d", "%[5]d") + `) IS NOT TRUE` + waitingNewestCapSQL + `)
+	 ) capped
+	 ORDER BY capped.occurred_at DESC, capped.id DESC LIMIT %[4]s`
+
+// waitingNewestCapSQL caps one arm of the page scan.
+var waitingNewestCapSQL = `
 	 -- NEWEST first, which is the opposite of how the rows are then shown.
 	 --
 	 -- The cap has to spend its budget on the rows most likely to matter, and
@@ -379,8 +400,7 @@ var waitingRepliesSQL = waitingSelectSQL + `
 	 -- it asks for another page when too much of one went. The cap bounds ONE
 	 -- page; the caller bounds how many it will ask for.
 		 ORDER BY a.occurred_at DESC, a.id DESC
-	 LIMIT %[4]s))` + waitingGroupSQL + `
-	 ORDER BY a.occurred_at DESC, a.id DESC`
+	 LIMIT %[4]s`
 
 func waitingLimitSQL(arg func(any) int, limit int) string {
 	return fmt.Sprintf("$%d", arg(limit))
