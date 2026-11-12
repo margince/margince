@@ -54,7 +54,11 @@ func (h Handlers) WithPartnerNextSteps(steps PartnerNextSteps) Handlers {
 func takePartnerNextStep(in *UpsertPartnerInput) (*PartnerNextStep, error) {
 	step, due := in.NextStep, in.NextStepDueAt
 	in.NextStep, in.NextStepDueAt = nil, nil
-	if step == nil || !values.HasVisibleText(*step) {
+	if step != nil && !values.HasVisibleText(*step) {
+		return nil, httperr.Validation("next_step", "invalid",
+			"next_step is empty: say what is to be done, or send null to clear the old text")
+	}
+	if step == nil {
 		if due != nil {
 			return nil, httperr.Validation(partnerFieldNextStepDue, "invalid",
 				"next_step_due_at needs next_step: say what is due, and it becomes a task")

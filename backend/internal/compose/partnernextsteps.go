@@ -5,6 +5,8 @@ package compose
 
 import (
 	"context"
+	"crypto/sha256"
+	"encoding/hex"
 	"time"
 
 	"github.com/jackc/pgx/v5"
@@ -38,6 +40,22 @@ func (p partnerNextStepTasks) WriteTx(ctx context.Context, tx pgx.Tx, step conta
 	if err != nil {
 		return err
 	}
+	// Keyed on the company, the words and the day, so a retried partner write
+	// finds the task it wrote rather than writing a second.
+	source, key := partnerNextStepSource, partnerNextStepKey(step)
+	in.SourceSystem, in.SourceID = &source, &key
 	_, _, err = p.tasks.LogActivityTx(ctx, tx, in)
 	return err
+}
+
+// partnerNextStepSource names the partner write as the task's origin.
+const partnerNextStepSource = "partner-next-step"
+
+func partnerNextStepKey(step contacts.PartnerNextStep) string {
+	day := ""
+	if step.Due != nil {
+		day = step.Due.Format(time.DateOnly)
+	}
+	sum := sha256.Sum256([]byte(step.CompanyID.String() + "\x00" + step.Step + "\x00" + day))
+	return hex.EncodeToString(sum[:])
 }

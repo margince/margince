@@ -7,9 +7,11 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"strings"
 	"time"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -119,7 +121,19 @@ func decodeSetUpPartner(in json.RawMessage) (setUpPartnerArgs, error) {
 			return args, &BadArgsError{Field: "partner_kinds", Cause: errors.New("partner_kinds holds only hosting, consulting, strategic or referral")}
 		}
 	}
-	return args, nil
+	return args, refuseUnwritableNextStep(args)
+}
+
+// refuseUnwritableNextStep refuses before staging a next step its task could
+// not carry: an empty one, or a due day with no step.
+func refuseUnwritableNextStep(args setUpPartnerArgs) error {
+	if args.NextStep != nil && strings.TrimSpace(*args.NextStep) == "" {
+		return &BadArgsError{Field: "next_step", Cause: errors.New("next_step is empty; say what is to be done, or leave it out")}
+	}
+	if args.NextStep == nil && args.NextStepDueAt != nil {
+		return &BadArgsError{Field: "next_step_due_at", Cause: errors.New("next_step_due_at needs next_step: say what is due")}
+	}
+	return nil
 }
 
 // marginTierIsHumanOnly is the refusal for a call that names a tier.
@@ -134,6 +148,13 @@ func (t setUpPartner) StageInfo(ctx context.Context, in json.RawMessage) (StageI
 	args, err := decodeSetUpPartner(in)
 	if err != nil {
 		return StageInfo{}, err
+	}
+	// The step is written as a task, so the grant is asked before the card is
+	// staged rather than after its approval is spent.
+	if args.NextStep != nil {
+		if err := auth.Require(ctx, "activity", principal.ActionCreate); err != nil {
+			return StageInfo{}, err
+		}
 	}
 	return StageSubject(ctx, NewSetUpPartnerCall(t.p, t.partners, t.language,
 		SetUpPartnerCommand{CompanyID: args.CompanyID, Kinds: args.PartnerKinds, Stage: args.RelationshipStage}))
