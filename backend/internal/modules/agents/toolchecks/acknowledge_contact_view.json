@@ -1,0 +1,9 @@
+{
+  "verb": "acknowledge_contact_view",
+  "checks": [
+    "contact.read"
+  ],
+  "takes": [
+    "contact"
+  ]
+}

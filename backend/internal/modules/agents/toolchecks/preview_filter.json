@@ -1,0 +1,8 @@
+{
+  "verb": "preview_filter",
+  "checks": [
+    "contact.read",
+    "lead.read",
+    "relationship.read"
+  ]
+}

@@ -1,0 +1,8 @@
+{
+  "verb": "list_legal_reviews",
+  "checks": [
+    "company.read",
+    "deal.read",
+    "legal_review.read"
+  ]
+}

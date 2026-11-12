@@ -1,0 +1,6 @@
+{
+  "verb": "list_capture_contacts_awaiting_decision",
+  "checks": [
+    "contact.read"
+  ]
+}

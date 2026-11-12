@@ -1,0 +1,7 @@
+{
+  "verb": "withdraw_capture_sender_decision",
+  "checks": [],
+  "takes": [
+    "agent_sender_decision"
+  ]
+}

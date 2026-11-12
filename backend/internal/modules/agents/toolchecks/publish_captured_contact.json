@@ -1,0 +1,10 @@
+{
+  "verb": "publish_captured_contact",
+  "checks": [
+    "contact.update"
+  ],
+  "takes": [
+    "contact",
+    "owner_contact"
+  ]
+}

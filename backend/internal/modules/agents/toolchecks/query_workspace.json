@@ -1,0 +1,8 @@
+{
+  "verb": "query_workspace",
+  "checks": [
+    "company.read",
+    "deal.read",
+    "project.read"
+  ]
+}

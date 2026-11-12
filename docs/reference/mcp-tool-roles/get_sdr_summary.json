@@ -1,0 +1,14 @@
+{
+  "tool": "read_reports",
+  "action": "sdr_summary",
+  "verb": "get_sdr_summary",
+  "allowed_for": [
+    "admin",
+    "management",
+    "manager",
+    "ops",
+    "read_only",
+    "rep"
+  ],
+  "refused_for": []
+}

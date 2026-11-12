@@ -1,0 +1,6 @@
+{
+  "verb": "get_ai_profile",
+  "checks": [
+    "automation.update"
+  ]
+}

@@ -1,0 +1,18 @@
+{
+  "tool": "read_details",
+  "action": "ownership_offer",
+  "verb": "get_ownership_offer",
+  "allowed_for": [
+    "admin",
+    "management",
+    "manager",
+    "ops",
+    "read_only",
+    "rep"
+  ],
+  "refused_for": [],
+  "colleague_record": {
+    "manager": "ran",
+    "rep": "ran"
+  }
+}

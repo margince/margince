@@ -1,0 +1,9 @@
+{
+  "verb": "download_import_problems",
+  "checks": [
+    "import_run.read"
+  ],
+  "takes": [
+    "import_run"
+  ]
+}

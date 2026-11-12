@@ -1,0 +1,7 @@
+{
+  "verb": "read_onboarding_state",
+  "checks": [],
+  "takes": [
+    "onboarding_state"
+  ]
+}

@@ -1,0 +1,9 @@
+{
+  "verb": "dismiss_relationship_nudge",
+  "checks": [
+    "contact.read"
+  ],
+  "takes": [
+    "contact"
+  ]
+}

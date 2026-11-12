@@ -1,0 +1,10 @@
+{
+  "verb": "publish_reporting_framework",
+  "checks": [
+    "reporting_framework.read",
+    "reporting_framework.update"
+  ],
+  "takes": [
+    "framework"
+  ]
+}

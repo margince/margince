@@ -1,0 +1,15 @@
+{
+  "tool": "read_details",
+  "action": "hidden_backlog",
+  "verb": "get_hidden_backlog",
+  "allowed_for": [
+    "admin",
+    "management",
+    "manager",
+    "ops",
+    "read_only"
+  ],
+  "refused_for": [
+    "rep"
+  ]
+}

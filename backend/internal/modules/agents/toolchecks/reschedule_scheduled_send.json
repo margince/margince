@@ -1,0 +1,10 @@
+{
+  "verb": "reschedule_scheduled_send",
+  "checks": [
+    "activity.read",
+    "activity.update"
+  ],
+  "takes": [
+    "scheduled_send"
+  ]
+}

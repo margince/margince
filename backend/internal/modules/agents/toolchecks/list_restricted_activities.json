@@ -1,0 +1,6 @@
+{
+  "verb": "list_restricted_activities",
+  "checks": [
+    "retention_policy.read"
+  ]
+}

@@ -1,0 +1,8 @@
+{
+  "verb": "get_handled_for_you",
+  "checks": [
+    "activity.read",
+    "deal.read",
+    "pipeline.read"
+  ]
+}

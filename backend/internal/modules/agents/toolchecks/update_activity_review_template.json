@@ -1,0 +1,9 @@
+{
+  "verb": "update_activity_review_template",
+  "checks": [
+    "custom_field.update"
+  ],
+  "takes": [
+    "review_template"
+  ]
+}

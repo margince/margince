@@ -1,0 +1,12 @@
+{
+  "verb": "get_activity_deal_filing",
+  "checks": [
+    "activity.create",
+    "company.read",
+    "contact.read,deal.read",
+    "deal.read,relationship.read"
+  ],
+  "takes": [
+    "company"
+  ]
+}

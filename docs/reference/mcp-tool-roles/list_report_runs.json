@@ -1,0 +1,14 @@
+{
+  "tool": "read_reports",
+  "action": "report_runs",
+  "verb": "list_report_runs",
+  "allowed_for": [
+    "admin",
+    "management",
+    "manager",
+    "ops",
+    "read_only",
+    "rep"
+  ],
+  "refused_for": []
+}

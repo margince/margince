@@ -1,0 +1,7 @@
+{
+  "verb": "mark_notice_read",
+  "checks": [],
+  "takes": [
+    "notice"
+  ]
+}

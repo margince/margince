@@ -1,0 +1,10 @@
+{
+  "verb": "get_company_logo_icon",
+  "checks": [
+    "company.read"
+  ],
+  "takes": [
+    "anchor_logo",
+    "company"
+  ]
+}

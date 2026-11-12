@@ -1,0 +1,6 @@
+{
+  "verb": "get_contact_case_settings",
+  "checks": [
+    "installation_settings.read"
+  ]
+}

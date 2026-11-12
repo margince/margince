@@ -1,0 +1,6 @@
+{
+  "verb": "list_extensions",
+  "checks": [
+    "extension_access.read"
+  ]
+}

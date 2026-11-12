@@ -1,0 +1,15 @@
+{
+  "tool": "change_access",
+  "action": "hand_over_work",
+  "verb": "hand_over_user_work",
+  "allowed_for": [
+    "admin"
+  ],
+  "refused_for": [
+    "management",
+    "manager",
+    "ops",
+    "read_only",
+    "rep"
+  ]
+}

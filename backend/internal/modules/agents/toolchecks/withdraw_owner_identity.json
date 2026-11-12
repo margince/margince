@@ -1,0 +1,7 @@
+{
+  "verb": "withdraw_owner_identity",
+  "checks": [],
+  "takes": [
+    "owner_identity"
+  ]
+}

@@ -1,0 +1,11 @@
+{
+  "verb": "demote_lead",
+  "checks": [
+    "contact.update",
+    "lead.update"
+  ],
+  "takes": [
+    "lead",
+    "promoted_lead"
+  ]
+}

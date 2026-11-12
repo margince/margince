@@ -1,0 +1,10 @@
+{
+  "verb": "lift_contact_suppression",
+  "checks": [
+    "contact.update"
+  ],
+  "takes": [
+    "contact",
+    "suppression"
+  ]
+}

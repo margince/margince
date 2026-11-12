@@ -1,0 +1,9 @@
+{
+  "verb": "get_analytics_schema",
+  "checks": [
+    "activity.read",
+    "deal.read",
+    "lead.read",
+    "project.read"
+  ]
+}

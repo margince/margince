@@ -1,0 +1,14 @@
+{
+  "tool": "change_attention",
+  "action": "dismiss_brief_item",
+  "verb": "mark_brief_item_dismissed",
+  "allowed_for": [
+    "admin",
+    "management",
+    "manager",
+    "ops",
+    "read_only",
+    "rep"
+  ],
+  "refused_for": []
+}

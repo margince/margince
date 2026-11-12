@@ -1,0 +1,7 @@
+{
+  "verb": "restore_owner_identity",
+  "checks": [],
+  "takes": [
+    "agent_withdrawn_owner_identity"
+  ]
+}
