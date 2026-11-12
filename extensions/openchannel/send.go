@@ -80,7 +80,7 @@ func sendVia(ctx context.Context, rt extension.Runtime, msg extension.OutboundMe
 	}
 	if msg.ActivityID == "" {
 		// Nothing left. The ledger row names the activity in place of the
-		// person, so a send with none would be a row that links to nothing.
+		// account, so a send with none would be a row that links to nothing.
 		return extension.Receipt{}, fmt.Errorf("%w: this delivery names no activity, so its record here would link to nothing", extension.ErrInvalid)
 	}
 	target, secret, err := sendable(ctx, rt, msg.Member)

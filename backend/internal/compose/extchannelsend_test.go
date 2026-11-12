@@ -225,8 +225,8 @@ func TestTheUnitSenderHandsOverTheDeliveryTheDispatcherBuilt(t *testing.T) {
 	if got.Recipient.DisplayName != "" {
 		t.Errorf("the display handle %q crossed the seam; a re-claimable handle must not reach a routing decision", got.Recipient.DisplayName)
 	}
-	if got.ActivityID != activity.String() {
-		t.Errorf("ActivityID = %q, want the send's timeline entry %q, which a unit records in place of the recipient", got.ActivityID, activity)
+	if got.ActivityID != activity.String() || activityRef(ids.ActivityID{}) != "" {
+		t.Errorf("ActivityID = %q, want the send's timeline entry %q; a zero one crosses as none", got.ActivityID, activity)
 	}
 	if got.Body != "the reply" || got.ReplyTo != "upstream-9" || got.IdempotencyKey != "delivery-1" {
 		t.Errorf("the message was altered in transit: %+v", got)
@@ -338,17 +338,5 @@ func TestAUnitIsRefusedAMessageCarryingFilesItCannotPutAnywhere(t *testing.T) {
 	}
 	if sender.got.Body != "" {
 		t.Errorf("the unit was handed %q despite carrying none of the message's files", sender.got.Body)
-	}
-}
-
-// A zero activity crosses as none, so the unit's own check refuses it instead
-// of recording a link to the all-zero uuid.
-func TestAZeroActivityCrossesTheSeamAsNone(t *testing.T) {
-	if got := activityRef(ids.ActivityID{}); got != "" {
-		t.Errorf("a zero activity crossed as %q", got)
-	}
-	activity := ids.From[ids.ActivityKind](ids.NewV7())
-	if got := activityRef(activity); got != activity.String() {
-		t.Errorf("activity %v crossed as %q", activity, got)
 	}
 }

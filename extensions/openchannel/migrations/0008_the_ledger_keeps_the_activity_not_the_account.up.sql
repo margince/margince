@@ -7,7 +7,7 @@
 -- then live on the core's activity, where erasure and export reach them.
 --
 -- An attempt recorded before this has no activity to name, only the account,
--- so it is deleted rather than kept with a person and no link.
+-- so it is deleted rather than kept with an account and no link.
 
 DELETE FROM ext.ext_openchannel_outbound;
 

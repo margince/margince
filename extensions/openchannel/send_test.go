@@ -314,7 +314,7 @@ func TestTheAttemptIsRecordedBeforeAnythingLeaves(t *testing.T) {
 
 // The ledger is a buffer's record: it names the activity the core holds, never
 // the account the message went to.
-func TestTheLedgerNamesTheActivityAndNotThePerson(t *testing.T) {
+func TestTheLedgerNamesTheActivityAndNotTheAccount(t *testing.T) {
 	t.Parallel()
 	got := &receiver{}
 	rt := sendableEndpoint(registeredURL)

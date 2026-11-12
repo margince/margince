@@ -1207,8 +1207,8 @@ you an `OutboundMessage`. It holds the member to send as, and the address on tha
 It also holds the body, what it replies to, a key that stops copies, and the `ActivityID` of the timeline entry.
 
 If your unit keeps a record of its sends, keep the `ActivityID` and declare it as a link to `privacy.Activity`.
-Do not keep the address. The activity already says who the message went to, and core's erasure and export reach
-your row through it.
+Do not keep the address. The activity already says who the message was sent to, and core's erasure and export
+reach your row through it.
 
 Return a `Receipt` that names the provider's own message id.
 The outbound rules of the tier still apply: you may not spend an outbound scope from a tool or a job tick.
