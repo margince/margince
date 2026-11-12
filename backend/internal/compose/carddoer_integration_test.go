@@ -8,6 +8,7 @@ package compose
 import (
 	"encoding/json"
 	"errors"
+	"maps"
 	"testing"
 
 	"github.com/margince/margince/backend/internal/compose/integration"
@@ -53,6 +54,39 @@ func TestTheAccepterHandsAPromiseToAColleague(t *testing.T) {
 	}
 	if got := e.WsScalar(t, `SELECT coalesce(string_agg(assignee_id::text, ','), '') FROM activity WHERE kind = 'task'`); got != e.Rep1.String() {
 		t.Errorf("the accepted promise is held by %q, want the chosen colleague %s", got, e.Rep1)
+	}
+}
+
+// The card names the colleague it will go to, read from the doer member: the
+// chosen one once the accepter picked somebody, else the promiser.
+func TestThePromiseCardNamesTheColleagueChosenToDoIt(t *testing.T) {
+	e, id, _ := stagedPromiseCard(t)
+	promiser := e.As(e.Rep2, []ids.UUID{e.Team1}, integration.AdminPerms)
+	card, err := NewApprovalsServiceWithEffects(e.Pool).GetWire(promiser, id)
+	if err != nil {
+		t.Fatal(err)
+	}
+	ownerOf := func(change map[string]any) string {
+		card.ProposedChange = &change
+		preview, err := newApprovalPreviewReader(e.DB()).read(promiser, card)
+		if err != nil || preview == nil {
+			t.Fatalf("reading the card's preview: %v", err)
+		}
+		for _, row := range preview.Changes {
+			if row.Field == bulkParamOwner && row.After.EntityId != nil {
+				return ids.UUID(*row.After.EntityId).String()
+			}
+		}
+		return ""
+	}
+	staged := *card.ProposedChange
+	if got := ownerOf(staged); got != e.Rep2.String() {
+		t.Errorf("the staged card names %q, want the promiser %s", got, e.Rep2)
+	}
+	chosen := maps.Clone(staged)
+	chosen[approvals.DoerField] = e.Rep1.String()
+	if got := ownerOf(chosen); got != e.Rep1.String() {
+		t.Errorf("the card with a chosen doer names %q, want the chosen colleague %s", got, e.Rep1)
 	}
 }
 
