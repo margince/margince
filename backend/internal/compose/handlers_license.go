@@ -79,19 +79,13 @@ func (h licenseHandlers) GetLicenseEntitlement(w http.ResponseWriter, r *http.Re
 // writeEntitlement answers the posture as it stands now, with the trial it
 // runs on, if any.
 func (h licenseHandlers) writeEntitlement(w http.ResponseWriter, r *http.Request, used int) {
-	trial, onTrial, err := h.trial.Current(r.Context())
+	trial, err := h.trial.Contract(r.Context())
 	if err != nil {
 		httperr.Write(w, r, err)
 		return
 	}
 	out := toContractLicenseEntitlement(h.posture(), used)
-	if onTrial {
-		out.Trial = &crmcontracts.LicenseTrial{
-			StartedAt: trial.StartedAt,
-			EndsAt:    trial.EndsAt(),
-			Ended:     trial.Ended(h.trial.Now()),
-		}
-	}
+	out.Trial = trial
 	httperr.WriteJSON(w, http.StatusOK, out)
 }
 

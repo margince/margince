@@ -15,6 +15,7 @@ import (
 
 	"github.com/jackc/pgx/v5/pgxpool"
 
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/licensecheck"
 	"github.com/margince/margince/backend/internal/shared/runtimeenv"
 )
@@ -38,8 +39,15 @@ func New(pool *pgxpool.Pool, env runtimeenv.Environment, posture func() licensec
 	return &Trial{pool: pool, env: env, posture: posture, now: now}
 }
 
-// Now is the instant the trial is judged at.
-func (t *Trial) Now() time.Time { return t.now() }
+// Contract is the trial as the entitlement read reports it, or nil when the
+// installation runs on none.
+func (t *Trial) Contract(ctx context.Context) (*crmcontracts.LicenseTrial, error) {
+	trial, ok, err := t.Current(ctx)
+	if err != nil || !ok {
+		return nil, err
+	}
+	return &crmcontracts.LicenseTrial{StartedAt: trial.StartedAt, EndsAt: trial.EndsAt(), Ended: trial.Ended(t.now())}, nil
+}
 
 // Current answers the trial this installation runs on. ok is false when it runs
 // on none. That is a configured license (valid or refused), a development or
