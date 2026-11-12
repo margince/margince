@@ -132,10 +132,10 @@ func TestProjectLifecycleOverHTTP(t *testing.T) {
 	if created.Phase != "initiative" {
 		t.Fatalf("a new project opens in phase %q, want initiative", created.Phase)
 	}
-	// The key is minted by the server from the name, never sent by the caller:
-	// "Warehouse rollout" gives the stem WR and the first free number on it.
-	if created.Key == nil || *created.Key != "WR-1" {
-		t.Fatalf("key = %v, want the minted WR-1", created.Key)
+	// With no key sent the server mints one from the name: "Warehouse rollout"
+	// gives the stem WR, and unique letters carry no number.
+	if created.Key == nil || *created.Key != "WR" {
+		t.Fatalf("key = %v, want the minted WR", created.Key)
 	}
 
 	var read projectDTO
@@ -199,9 +199,9 @@ func TestProjectLifecycleOverHTTP(t *testing.T) {
 	}
 }
 
-// A caller cannot name a key, so two projects whose names give the same stem
-// must still come back with different keys — the server resolves the collision
-// by taking the next number rather than refusing the second create.
+// Two projects whose names give the same stem and send no key must still come
+// back with different keys — the server resolves the collision by taking the
+// next number rather than refusing the second create.
 func TestTwoProjectsWithOneStemGetDifferentMintedKeys(t *testing.T) {
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
@@ -226,10 +226,8 @@ func TestTwoProjectsWithOneStemGetDifferentMintedKeys(t *testing.T) {
 	if first == second {
 		t.Fatalf("both projects were minted %q; the number is what separates them", first)
 	}
-	for _, key := range []string{first, second} {
-		if !strings.HasPrefix(key, "WR-") {
-			t.Errorf("minted key %q does not carry the stem its name gives", key)
-		}
+	if first != "WR" || second != "WR-2" {
+		t.Errorf("minted keys = %q, %q; want WR, then WR-2", first, second)
 	}
 }
 

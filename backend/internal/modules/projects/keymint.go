@@ -7,16 +7,15 @@ package projects
 //
 // The key is what a human writes in a subject line to file a mail under a
 // project — `[ERP-27] status`, matched by capture/projectkeytoken.go. That makes
-// it a MATCHER, and a matcher a user types is a matcher a user gets wrong: a
-// project keyed after its owner ("Lars") reads every bracketed mention of that
-// word as an attribution, onto records that are then stamped for six years of
-// retention. Nobody sets out to build that; they name a project after
-// themselves and the consequence arrives later, invisibly.
+// it a MATCHER, and a matcher keyed after a colleague or an everyday word reads
+// every bracketed mention of that word as an attribution, onto records that are
+// then stamped for six years of retention.
 //
-// So the server mints it. The name gives the letters, a counter gives the
-// number, and the caller never chooses either: the field is absent from the
-// create and update bodies, which is what makes "read-only" a property of the
-// contract rather than a promise the UI keeps.
+// So the server suggests the key from the name, the caller may choose another
+// one on create only, and every key, chosen or minted, passes the same refusal
+// (keychoice.go): no seat's first name, no common subject word, no live key
+// twice. After create the key never changes, so mail already sent with it keeps
+// filing.
 
 import (
 	"context"
@@ -37,8 +36,8 @@ import (
 // a hyphen plus digits, so the stem stops well short of the ceiling.
 const keyStemMaxLen = 8
 
-// projectKeyField is the body field a caller may no longer send, named once so
-// the refusal and the check that raises it cannot drift apart.
+// projectKeyField is the body field a caller may send on create and never on
+// update.
 const projectKeyField = "key"
 
 // keyMintAttempts bounds the retry loop. Each attempt asks for the next free
@@ -134,55 +133,47 @@ func keyStem(name string) string {
 	return out
 }
 
-// mintProjectKey answers the key a new project gets: its stem plus the lowest
-// number that stem is not already using.
+// mintProjectKey answers the key a new project gets when its creator chose
+// none: the bare stem when no live project uses those letters and the stem is
+// a word the refusal admits, else the stem plus the lowest free number.
 //
 // The number is read from the keys that EXIST rather than from a counter,
 // because a counter is a second piece of state that can disagree with the
 // column it numbers — an archived project still holds its key (uq_project_key
 // is partial on archived_at, so archiving frees it), and a restore would then
-// collide with whatever took the number meanwhile. Reading max+1 from the live
-// rows cannot disagree with itself.
+// collide with whatever took the number meanwhile.
 //
 // The read is unscoped on purpose: the uniqueness index it feeds is unscoped,
 // so a key hidden from this caller still blocks the number. Nothing about the
-// hidden project leaves this function — only the next free integer does.
+// hidden project leaves this function — only the next free key does.
 func mintProjectKey(ctx context.Context, tx pgx.Tx, name string, taken map[string]bool) (string, error) {
 	stem := keyStem(name)
-	// Case-INSENSITIVE, because uq_project_key indexes lower(key): a live key
-	// spelled "ab-3" blocks "AB-3", so a case-sensitive read would hand back a
-	// number the index then refuses. Keys the old contract let callers choose
-	// are exactly where that mismatch lives.
-	//
-	// The suffix is capped before the cast: a key with a number larger than a
-	// Postgres int would otherwise abort this statement, and with it every
-	// create of a project whose name gives this stem.
-	rows, err := tx.Query(ctx,
-		`SELECT substring(lower(key) from '^'||lower($1)||'-([0-9]{1,6})$')::int
-		   FROM project
-		  WHERE lower(key) ~ ('^'||lower($1)||'-[0-9]{1,6}$') AND archived_at IS NULL`,
-		stem)
+	inUse, bareLive, err := stemKeysInUse(ctx, tx, stem)
 	if err != nil {
-		return "", fmt.Errorf("read the numbers in use for key stem %q: %w", stem, err)
+		return "", err
 	}
-	inUse := map[int]bool{}
-	for rows.Next() {
-		var n int
-		if err := rows.Scan(&n); err != nil {
-			rows.Close()
-			return "", fmt.Errorf("read one key number for stem %q: %w", stem, err)
+	bareHeld := bareLive || taken[stem]
+	if !bareHeld && len(inUse) == 0 {
+		refusal, err := keyWordRefusal(ctx, tx, stem)
+		if err != nil {
+			return "", err
 		}
-		inUse[n] = true
+		if refusal == nil {
+			return stem, nil
+		}
 	}
-	rows.Close()
-	if err := rows.Err(); err != nil {
-		return "", fmt.Errorf("read the numbers in use for key stem %q: %w", stem, err)
+	// A second project on the same letters starts at 2, so `ERA` and `ERA-2`
+	// read as the first and second; `ERA-1` only appears when the bare stem is
+	// a word no key may be.
+	first := 1
+	if bareHeld {
+		first = 2
 	}
 	// The LOWEST free number rather than max+1, so a number an archived project
 	// gave back is reused instead of leaving a permanent hole. The keys this
 	// same transaction already minted but has not inserted are in `taken`,
 	// which the statement above cannot see.
-	for next := 1; next <= keySuffixCeiling; next++ {
+	for next := first; next <= keySuffixCeiling; next++ {
 		candidate := fmt.Sprintf("%s-%d", stem, next)
 		if !inUse[next] && !taken[candidate] {
 			return candidate, nil
@@ -191,16 +182,53 @@ func mintProjectKey(ctx context.Context, tx pgx.Tx, name string, taken map[strin
 	return "", fmt.Errorf("every key number up to %d is in use for the stem %q", keySuffixCeiling, stem)
 }
 
-// insertProjectRow writes the project with a minted key, retrying when another
-// transaction takes the same key between the mint and the insert.
+// stemKeysInUse reads which numbers live projects hold on one stem, and
+// whether one holds the bare stem itself.
+func stemKeysInUse(ctx context.Context, tx pgx.Tx, stem string) (map[int]bool, bool, error) {
+	// Case-INSENSITIVE, because uq_project_key indexes lower(key): a live key
+	// spelled "ab-3" blocks "AB-3", so a case-sensitive read would hand back a
+	// number the index then refuses.
+	//
+	// The suffix is capped before the cast: a key with a number larger than a
+	// Postgres int would otherwise abort this statement, and with it every
+	// create of a project whose name gives this stem.
+	rows, err := tx.Query(ctx,
+		`SELECT substring(lower(key) from '^'||lower($1)||'-([0-9]{1,6})$')::int
+		   FROM project
+		  WHERE lower(key) ~ ('^'||lower($1)||'(-[0-9]{1,6})?$') AND archived_at IS NULL`,
+		stem)
+	if err != nil {
+		return nil, false, fmt.Errorf("read the keys in use for stem %q: %w", stem, err)
+	}
+	defer rows.Close()
+	inUse := map[int]bool{}
+	bare := false
+	for rows.Next() {
+		var n *int
+		if err := rows.Scan(&n); err != nil {
+			return nil, false, fmt.Errorf("read one key for stem %q: %w", stem, err)
+		}
+		if n == nil {
+			bare = true
+			continue
+		}
+		inUse[*n] = true
+	}
+	if err := rows.Err(); err != nil {
+		return nil, false, fmt.Errorf("read the keys in use for stem %q: %w", stem, err)
+	}
+	return inUse, bare, nil
+}
+
+// insertProjectRow writes the project with the key its creator chose, or with
+// a minted one, retrying a minted key when another transaction takes it between
+// the mint and the insert.
 //
 // The retry is what makes a server-minted key honest: the caller did not choose
-// it, so a collision is the server's own race to resolve, not a 409 to hand
-// back. Only the unique-key violation retries — every other refusal is about
-// what the caller sent and is returned as it stands.
-//
-// Each attempt runs in a savepoint, because a failed INSERT aborts the
-// transaction it ran in and the next attempt needs a live one.
+// it, so a collision is the server's own race to resolve, not a refusal to hand
+// back. A chosen key that loses the same race is the caller's, and is refused
+// as taken. Only the unique-key violation retries — every other refusal is
+// about what the caller sent and is returned as it stands.
 func insertProjectRow(
 	ctx context.Context, tx pgx.Tx, id ids.ProjectID,
 	in CreateProjectInput, by string, active []fieldcatalog.Column,
@@ -208,6 +236,9 @@ func insertProjectRow(
 	// Checked once, so a refused custom field never opens a savepoint.
 	if err := storekit.CheckCustomValues(active, in.CustomFields); err != nil {
 		return "", err
+	}
+	if in.Key != nil {
+		return insertChosenKey(ctx, tx, id, *in.Key, in, by, active)
 	}
 	minted := map[string]bool{}
 	var lastErr error
@@ -230,6 +261,25 @@ func insertProjectRow(
 		lastErr = err
 	}
 	return "", fmt.Errorf("mint a free key for %q after %d attempts: %w", in.Name, keyMintAttempts, lastErr)
+}
+
+// insertChosenKey writes the project under the key admitProjectCreation already
+// held to the refusal, answering a lost race on it as the key being taken.
+func insertChosenKey(
+	ctx context.Context, tx pgx.Tx, id ids.ProjectID, key string,
+	in CreateProjectInput, by string, active []fieldcatalog.Column,
+) (string, error) {
+	inserted, err := insertOnce(ctx, tx, id, key, in, by, active)
+	switch {
+	case inserted:
+		return key, nil
+	case err == nil:
+		return "", fmt.Errorf("insert project %q: the write neither succeeded nor refused", in.Name)
+	case keyRaceLost(err):
+		return "", keyTaken(key)
+	default:
+		return "", insertRefusal(err, in)
+	}
 }
 
 // insertOnce runs one INSERT attempt inside a SAVEPOINT, because a failed
@@ -261,7 +311,7 @@ func insertOnce(
 	provenanceCols, provenanceHolders, base := storekit.ProvenanceInsertFragments(in.SourceID, in.Author, []any{
 		id, in.Name, key, in.CompanyID, in.OwnerID,
 		in.Description, in.StartedAt, in.TargetEndDate, in.Source, by,
-		in.SourceSystem,
+		in.SourceSystem, in.startPhase(),
 	})
 	cfCols, cfHolders, args, cfErr := storekit.InsertFragments(active, in.CustomFields, base)
 	if cfErr != nil {
@@ -269,8 +319,8 @@ func insertOnce(
 	}
 	insertErr := storekit.ExecSourceInsert(ctx, sp, projectObject,
 		`INSERT INTO project (id, name, key, company_id, owner_id,
-		                      description, started_at, target_end_date, source, captured_by, source_system`+provenanceCols+cfCols+`)
-		 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11`+provenanceHolders+cfHolders+`)`,
+		                      description, started_at, target_end_date, source, captured_by, source_system, phase`+provenanceCols+cfCols+`)
+		 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12`+provenanceHolders+cfHolders+`)`,
 		args)
 	if insertErr != nil {
 		if rbErr := sp.Rollback(ctx); rbErr != nil {

@@ -14,6 +14,7 @@ package installseam
 
 import (
 	"context"
+	"errors"
 	"strings"
 
 	"github.com/jackc/pgx/v5"
@@ -25,6 +26,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/deals"
 	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/modules/projects"
+	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -113,4 +115,19 @@ func dealsIssuerEntity(ctx context.Context, tx pgx.Tx, id *ids.LegalEntityID) (d
 func installationCountry(ctx context.Context, tx pgx.Tx) (string, error) {
 	code, err := identity.CountryOf(ctx, tx)
 	return strings.ToLower(string(code)), err
+}
+
+// ProjectDealLink is the seam a project create uses to point the deal it comes
+// from at it. It runs the deal store's own update, so the link takes the deal
+// write check, the project attach check and the deal's audit row, as a
+// deal-side link does. Shared by compose and the integration harness.
+func ProjectDealLink(store *deals.Store) projects.AttachDeal {
+	return func(ctx context.Context, tx pgx.Tx, dealID ids.DealID, projectID ids.ProjectID) error {
+		_, err := store.UpdateDealTx(ctx, tx, dealID, deals.UpdateDealInput{ProjectID: &projectID}, deals.CustomColumns{})
+		var mismatch *deals.DealProjectCompanyMismatchError
+		if errors.As(err, &mismatch) {
+			return &projects.DealCompanyMismatchError{}
+		}
+		return auth.NameMissingReference("deal_id", err)
+	}
 }

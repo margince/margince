@@ -88,10 +88,9 @@ func TestProjectIsBornWithItsHistoryRow(t *testing.T) {
 	}
 }
 
-// The key is MINTED, not supplied: a caller cannot name one, so a collision is
-// the server's race to resolve rather than a refusal to report. Two projects
-// whose names give the same stem get different numbers, and the shape the
-// column demands holds for both.
+// A key the creator leaves empty is minted, so a collision is the server's
+// race to resolve rather than a refusal to report. Two projects whose names
+// give the same stem get different keys: the bare letters, then a number.
 func TestProjectKeysAreMintedUniquePerStem(t *testing.T) {
 	e := Setup(t)
 	company := e.SeedCompany(t, "BAER Pharma", nil)
@@ -114,10 +113,8 @@ func TestProjectKeysAreMintedUniquePerStem(t *testing.T) {
 	if firstKey == secondKey {
 		t.Fatalf("both projects were minted the key %q; the number is what separates them", firstKey)
 	}
-	for _, key := range []string{firstKey, secondKey} {
-		if !strings.HasPrefix(key, "ER-") {
-			t.Errorf("minted key %q does not carry the stem its name gives", key)
-		}
+	if firstKey != "ER" || secondKey != "ER-2" {
+		t.Errorf("minted keys = %q, %q; want ER for the unique letters, then ER-2", firstKey, secondKey)
 	}
 
 	// Archiving frees the key for reuse: the uniqueness index is partial on
@@ -673,32 +670,32 @@ func TestTheTimelineFilterKnowsEveryLinkTargetTheWriteAccepts(t *testing.T) {
 	}
 }
 
-// The minted number is the LOWEST free one for its stem, and "free" is decided
-// the way the uniqueness index decides it: case-insensitively, over live rows
-// only. Both halves have bitten before — a case-sensitive read hands back a
-// number the index then refuses, and max+1 leaves a permanent hole where an
-// archived project gave its number back.
+// A minted key carries no number while its letters are unique, and the
+// LOWEST free number once they are not. "Free" is decided the way the
+// uniqueness index decides it: case-insensitively, over live rows only — a
+// case-sensitive read hands back a number the index then refuses, and max+1
+// leaves a permanent hole where an archived project gave its number back.
 func TestTheMintedNumberIsTheLowestFreeOneForItsStem(t *testing.T) {
 	e := Setup(t)
 	company := e.SeedCompany(t, "Stemmed GmbH", nil)
 
 	first := seedProject(e.Admin(), t, e, "Warehouse rollout", company, nil)
 	second := seedProject(e.Admin(), t, e, "Warehouse refresh", company, nil)
-	if k := mintedKey(e.Admin(), t, e, first.ID); k != "WR-1" {
-		t.Fatalf("first minted key = %q, want WR-1", k)
+	if k := mintedKey(e.Admin(), t, e, first.ID); k != "WR" {
+		t.Fatalf("first minted key = %q, want WR with no number", k)
 	}
 	if k := mintedKey(e.Admin(), t, e, second.ID); k != "WR-2" {
 		t.Fatalf("second minted key = %q, want WR-2", k)
 	}
 
-	// Archiving frees WR-1, so the next project with this stem takes it back
-	// rather than starting above the highest number ever used.
+	// Archiving frees WR, but WR-2 still holds the letters, so the next project
+	// takes the lowest free number rather than the bare stem.
 	if _, err := e.Projects.ArchiveProject(e.Admin(), first.ID, nil); err != nil {
 		t.Fatal(err)
 	}
 	third := seedProject(e.Admin(), t, e, "Warehouse rebuild", company, nil)
 	if k := mintedKey(e.Admin(), t, e, third.ID); k != "WR-1" {
-		t.Errorf("after archiving WR-1 the next project minted %q, want WR-1 reused", k)
+		t.Errorf("with only WR-2 live the next project minted %q, want WR-1", k)
 	}
 
 	// A key spelled in lower case still blocks its number: uq_project_key

@@ -221,18 +221,33 @@ describe("ProjectsScreen", () => {
     ).toEqual(["Projects"]);
   });
 
-  it("posts a create with no key, because the server mints it", async () => {
+  it("shows the server's key and posts the chosen key, phase and deal", async () => {
     const user = userEvent.setup();
     let posted: unknown = null;
+    const previewed: string[] = [];
     projectsBackend({
       projects: [],
       respond: async (url, method, request) => {
-        if (method === "POST" && url.endsWith("/projects")) {
+        const read = new URL(url);
+        if (method === "POST" && read.pathname === "/v1/projects") {
           posted = JSON.parse(await request.text());
           return jsonResponse(project({ id: "pr-new" }), 201);
         }
+        // The suggestion is the server's: the form shows what it answers.
+        if (read.pathname === "/v1/projects/key-preview") {
+          previewed.push(read.searchParams.get("name") ?? "");
+          return jsonResponse({ key: "CR" });
+        }
+        if (
+          read.pathname === "/v1/deals" &&
+          read.searchParams.get("company_id") === FAR_COMPANY.id
+        ) {
+          return jsonResponse({
+            data: [{ id: "d-1", name: "Wendt renewal", project_id: null }],
+            page: { next_cursor: null, has_more: false },
+          });
+        }
         // The company sits past any first page: only a search reaches it.
-        const read = new URL(url);
         if (read.pathname === "/v1/companies" && read.searchParams.get("q")) {
           return jsonResponse({
             data: read.searchParams.get("q") === "Wendt" ? [FAR_COMPANY] : [],
@@ -245,10 +260,9 @@ describe("ProjectsScreen", () => {
     render(<ProjectsScreen />);
     await user.click(await screen.findByTestId("new-record"));
     await user.type(screen.getByLabelText("Project name *"), "CRM rollout");
-
-    // The dialog asks for no key at all: a caller-chosen key is a subject-line
-    // matcher a caller can get wrong, so the server mints it from the name.
-    expect(screen.queryByLabelText("Key")).toBeNull();
+    await screen.findByText(/Leave empty to use CR\./);
+    expect(previewed).toContain("CRM rollout");
+    await user.type(screen.getByLabelText("Key"), "crm");
 
     await user.type(screen.getByLabelText("Company *"), "Wendt");
     await user.click(
@@ -257,6 +271,18 @@ describe("ProjectsScreen", () => {
     // The pick is named by the candidate it came from, not by its bare id.
     expect(screen.getByText("Wendt Logistik")).toBeTruthy();
     expect(screen.queryByText(FAR_COMPANY.id)).toBeNull();
+    await user.click(screen.getByRole("combobox", { name: "Starting phase" }));
+    await user.click(
+      within(screen.getByRole("listbox")).getByRole("option", {
+        name: "Pursuing",
+      }),
+    );
+    await user.click(screen.getByRole("combobox", { name: "Deal" }));
+    await user.click(
+      await within(screen.getByRole("listbox")).findByRole("option", {
+        name: "Wendt renewal",
+      }),
+    );
     await user.click(screen.getByRole("button", { name: "Create" }));
 
     await waitFor(() => expect(posted).toBeTruthy());
@@ -266,6 +292,9 @@ describe("ProjectsScreen", () => {
       owner_id: null,
       description: null,
       target_end_date: null,
+      key: "crm",
+      phase: "pursuing",
+      deal_id: "d-1",
       source: "manual",
     });
     expect(window.location.hash).toBe("#/projects/pr-new");

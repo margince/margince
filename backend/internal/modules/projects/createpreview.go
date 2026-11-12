@@ -26,7 +26,52 @@ func admitProjectCreation(ctx context.Context, tx pgx.Tx, in CreateProjectInput,
 	if err := storekit.RefuseUnknownSeat(ctx, tx, in.Author); err != nil {
 		return CreateProjectInput{}, err
 	}
+	if err := refuseStartPhase(in.Phase); err != nil {
+		return CreateProjectInput{}, err
+	}
+	if in.Key != nil {
+		key, err := normalizeChosenKey(*in.Key)
+		if err != nil {
+			return CreateProjectInput{}, err
+		}
+		if err := refuseChosenKey(ctx, tx, key); err != nil {
+			return CreateProjectInput{}, err
+		}
+		in.Key = &key
+	}
 	return in, nil
+}
+
+// startPhase is the phase the project is born in.
+func (in CreateProjectInput) startPhase() string {
+	if in.Phase == "" {
+		return PhaseInitiative
+	}
+	return in.Phase
+}
+
+// refuseStartPhase admits every phase but closed: closing is a claim that the
+// work ended, which needs a reason and a project that existed to end.
+func refuseStartPhase(phase string) error {
+	switch phase {
+	case "", PhaseInitiative, PhasePursuing, PhaseDelivering:
+		return nil
+	default:
+		return &ProjectStartPhaseError{}
+	}
+}
+
+// ProjectStartPhaseError maps to 422: a project starts in initiative, pursuing
+// or delivering.
+type ProjectStartPhaseError struct{}
+
+func (e *ProjectStartPhaseError) Error() string {
+	return "a new project starts in initiative, pursuing or delivering; close it after it is created"
+}
+
+// FieldFault names the create body's phase field.
+func (e *ProjectStartPhaseError) FieldFault() (field, code, message string) {
+	return "phase", "invalid_phase", e.Error()
 }
 
 // PreviewProjectCreationForActor leaves key allocation to the writer rather than reserving it in review.
@@ -54,7 +99,6 @@ func (s *Store) PreviewProjectCreationForActor(ctx context.Context, in CreatePro
 	if err != nil {
 		return CreateProjectInput{}, err
 	}
-	out.Key = nil
 	out.CustomFields, err = storekit.CreateFieldValues(active, in.CustomFields)
 	return out, err
 }
