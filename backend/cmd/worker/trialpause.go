@@ -10,7 +10,7 @@ import (
 
 	"github.com/jackc/pgx/v5/pgxpool"
 
-	"github.com/margince/margince/backend/internal/compose"
+	"github.com/margince/margince/backend/internal/compose/installtrial"
 	"github.com/margince/margince/backend/internal/platform/licensecheck"
 	"github.com/margince/margince/backend/internal/shared/runtimeenv"
 )
@@ -25,7 +25,7 @@ type workPauseKey struct{}
 // has this unlicensed installation's trial ended? It rides the context because
 // every lane is started on it, and a parameter would thread through each one.
 func pauseAfterTrial(ctx context.Context, pool *pgxpool.Pool, license *licensecheck.Watcher, env runtimeenv.Environment, log *slog.Logger) context.Context {
-	trial := compose.NewInstallationTrial(pool, env, license.Posture, time.Now)
+	trial := installtrial.New(pool, env, license.Posture, time.Now)
 	paused := func(ctx context.Context) bool {
 		ended, err := trial.Ended(ctx)
 		if err != nil {

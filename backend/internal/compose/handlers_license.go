@@ -17,6 +17,7 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/margince/margince/backend/internal/compose/installtrial"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/platform/auth"
@@ -35,7 +36,7 @@ type licenseHandlers struct {
 	recheck func(context.Context) error
 	// trial is the installation's trial, set by WithInstallationTrial. Nil
 	// reports none.
-	trial *InstallationTrial
+	trial *installtrial.Trial
 }
 
 // withPosture adds the license half to a handler that already carries the seat
@@ -88,7 +89,7 @@ func (h licenseHandlers) writeEntitlement(w http.ResponseWriter, r *http.Request
 		out.Trial = &crmcontracts.LicenseTrial{
 			StartedAt: trial.StartedAt,
 			EndsAt:    trial.EndsAt(),
-			Ended:     trial.Ended(h.trial.now()),
+			Ended:     trial.Ended(h.trial.Now()),
 		}
 	}
 	httperr.WriteJSON(w, http.StatusOK, out)

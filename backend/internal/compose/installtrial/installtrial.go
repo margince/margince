@@ -1,11 +1,10 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-package compose
-
-// The trial of a production installation that has no license. Composed here
-// because its two inputs live in different layers: the license posture is
+// Package installtrial answers the trial of a production installation that has
+// no license. Its two inputs live in different layers: the license posture is
 // platform's, and the start is the workspace table's creation time.
+package installtrial
 
 import (
 	"context"
@@ -19,10 +18,10 @@ import (
 	"github.com/margince/margince/backend/internal/shared/runtimeenv"
 )
 
-// InstallationTrial answers whether this installation runs on its trial, and
-// whether that trial has ended. Both serving roles hold one, so the api and the
-// worker lock on the same day.
-type InstallationTrial struct {
+// Trial answers whether this installation runs on its trial, and whether that
+// trial has ended. Both serving roles hold one, so the api and the worker lock
+// on the same day.
+type Trial struct {
 	pool    *pgxpool.Pool
 	env     runtimeenv.Environment
 	posture func() licensecheck.Posture
@@ -32,16 +31,19 @@ type InstallationTrial struct {
 	started atomic.Pointer[time.Time]
 }
 
-// NewInstallationTrial reads the license posture at call time, so a key entered
-// while the process runs ends the trial without a restart.
-func NewInstallationTrial(pool *pgxpool.Pool, env runtimeenv.Environment, posture func() licensecheck.Posture, now func() time.Time) *InstallationTrial {
-	return &InstallationTrial{pool: pool, env: env, posture: posture, now: now}
+// New reads the license posture at call time, so a key entered while the
+// process runs ends the trial without a restart.
+func New(pool *pgxpool.Pool, env runtimeenv.Environment, posture func() licensecheck.Posture, now func() time.Time) *Trial {
+	return &Trial{pool: pool, env: env, posture: posture, now: now}
 }
+
+// Now is the instant the trial is judged at.
+func (t *Trial) Now() time.Time { return t.now() }
 
 // Current answers the trial this installation runs on. ok is false when it runs
 // on none. That is a configured license (valid or refused), a development or
 // test installation, or one with no workspace yet.
-func (t *InstallationTrial) Current(ctx context.Context) (licensecheck.Trial, bool, error) {
+func (t *Trial) Current(ctx context.Context) (licensecheck.Trial, bool, error) {
 	if t == nil || t.env.IsNonProduction() || t.posture().State != licensecheck.StateAbsent {
 		return licensecheck.Trial{}, false, nil
 	}
@@ -54,7 +56,7 @@ func (t *InstallationTrial) Current(ctx context.Context) (licensecheck.Trial, bo
 
 // Ended reports whether this installation's trial is over, which is the one
 // condition that locks it.
-func (t *InstallationTrial) Ended(ctx context.Context) (bool, error) {
+func (t *Trial) Ended(ctx context.Context) (bool, error) {
 	trial, ok, err := t.Current(ctx)
 	if err != nil || !ok {
 		return false, err
@@ -65,14 +67,14 @@ func (t *InstallationTrial) Ended(ctx context.Context) (bool, error) {
 // start is the creation time of the installation's first workspace, archived
 // ones included. Archiving the workspace and creating another begins no second
 // trial.
-func (t *InstallationTrial) start(ctx context.Context) (time.Time, bool, error) {
+func (t *Trial) start(ctx context.Context) (time.Time, bool, error) {
 	if cached := t.started.Load(); cached != nil {
 		return *cached, true, nil
 	}
 	var first *time.Time
 	// rls-exempt: the workspace table is not workspace-scoped; the trial belongs to the installation, before any tenant transaction.
 	if err := t.pool.QueryRow(ctx, `SELECT min(created_at) FROM workspace`).Scan(&first); err != nil {
-		return time.Time{}, false, fmt.Errorf("compose: reading when the trial started: %w", err)
+		return time.Time{}, false, fmt.Errorf("installtrial: reading when the trial started: %w", err)
 	}
 	if first == nil {
 		return time.Time{}, false, nil

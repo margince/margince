@@ -1,5 +1,5 @@
 <!-- prose:plain -->
-<!-- describes: frontend/src/app/trialpill.tsx frontend/src/app/trialended.tsx frontend/src/components/trialcontact.tsx backend/internal/compose/trial.go -->
+<!-- describes: frontend/src/app/trialpill.tsx frontend/src/app/trialended.tsx frontend/src/components/trialcontact.tsx backend/internal/compose/installtrial/installtrial.go -->
 # The trial
 
 A Margince you set up yourself runs for 14 days with no licence. The days count from the day it

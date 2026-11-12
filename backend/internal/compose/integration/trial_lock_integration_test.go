@@ -14,6 +14,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/margince/margince/backend/internal/compose"
+	"github.com/margince/margince/backend/internal/compose/installtrial"
 	"github.com/margince/margince/backend/internal/compose/integration/apptest"
 	"github.com/margince/margince/backend/internal/platform/licensecheck"
 	"github.com/margince/margince/backend/internal/shared/runtimeenv"
@@ -42,11 +43,11 @@ func TestATrialAppliesOnlyToAnUnlicensedProductionInstallation(t *testing.T) {
 	ctx := context.Background()
 	late := workspaceCreated(t, e.Pool).Add(365 * 24 * time.Hour)
 	at := func() time.Time { return late }
-	cases := map[string]*compose.InstallationTrial{
-		"licensed":          compose.NewInstallationTrial(e.Pool, runtimeenv.Production, postureOf(licensecheck.StateValid), at),
-		"refused license":   compose.NewInstallationTrial(e.Pool, runtimeenv.Production, postureOf(licensecheck.StateRejected), at),
-		"development":       compose.NewInstallationTrial(e.Pool, runtimeenv.Development, postureOf(licensecheck.StateAbsent), at),
-		"test":              compose.NewInstallationTrial(e.Pool, runtimeenv.Test, postureOf(licensecheck.StateAbsent), at),
+	cases := map[string]*installtrial.Trial{
+		"licensed":          installtrial.New(e.Pool, runtimeenv.Production, postureOf(licensecheck.StateValid), at),
+		"refused license":   installtrial.New(e.Pool, runtimeenv.Production, postureOf(licensecheck.StateRejected), at),
+		"development":       installtrial.New(e.Pool, runtimeenv.Development, postureOf(licensecheck.StateAbsent), at),
+		"test":              installtrial.New(e.Pool, runtimeenv.Test, postureOf(licensecheck.StateAbsent), at),
 		"no trial wired in": nil,
 	}
 	for name, trial := range cases {
@@ -68,10 +69,7 @@ func TestAnUnlicensedInstallationLocksWhenItsTrialEnds(t *testing.T) {
 	unlicensed := postureOf(licensecheck.StateAbsent)
 	e := apptest.SetupAppWithOptions(t,
 		compose.WithLicensePosture(unlicensed),
-		func(s *compose.Server, pool *pgxpool.Pool) {
-			trial := compose.NewInstallationTrial(pool, runtimeenv.Production, unlicensed, func() time.Time { return now })
-			compose.WithInstallationTrial(trial)(s, pool)
-		})
+		compose.WithInstallationTrial(runtimeenv.Production, unlicensed, func() time.Time { return now }))
 	e.BootstrapWorkspace(t)
 	e.DescribeCompany(t)
 	now = workspaceCreated(t, e.Pool)

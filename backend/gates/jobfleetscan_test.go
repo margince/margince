@@ -80,7 +80,7 @@ type ratifiedFleetScan struct {
 // worker, and a waiver granted on that basis would already have waved it
 // through.
 var ratifiedFleetScans = map[string]ratifiedFleetScan{
-	"internal/compose/trial.go": {
+	"internal/compose/installtrial/installtrial.go": {
 		1,
 		"reads the earliest workspace creation time once, as the start of the installation's trial; it does no tenant work and enqueues nothing",
 	},

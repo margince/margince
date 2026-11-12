@@ -19,6 +19,7 @@ import (
 
 	"github.com/jackc/pgx/v5/pgxpool"
 
+	"github.com/margince/margince/backend/internal/compose/installtrial"
 	"github.com/margince/margince/backend/internal/compose/licensereport"
 	"github.com/margince/margince/backend/internal/platform/config"
 	"github.com/margince/margince/backend/internal/platform/keyvault"
@@ -32,7 +33,7 @@ import (
 //
 // Two postures refuse the boot: a license the bundled module will not honor, and
 // a module that could not run at all. No license is not one of them. A
-// production installation without one runs on its trial (InstallationTrial),
+// production installation without one runs on its trial (installtrial.Trial),
 // and a development or test one runs unlicensed with no trial at all.
 func EnsureLicense(ctx context.Context, log *slog.Logger, pool *pgxpool.Pool, vault keyvault.Vault, cfg *config.Config, env runtimeenv.Environment) (*licensecheck.Watcher, error) {
 	// The SOURCE is handed over, not a token: the watcher re-reads it. A
@@ -110,9 +111,11 @@ func WithLicensePosture(posture func() licensecheck.Posture) Option {
 
 // WithInstallationTrial wires the trial into every surface it locks: the
 // admission doors and /me, the agent tool surface, and the entitlement read.
-func WithInstallationTrial(trial *InstallationTrial) Option {
-	return func(s *Server, _ *pgxpool.Pool) {
-		s.installationTrial = trial
+// posture is read at call time, so a key entered later ends the trial.
+func WithInstallationTrial(env runtimeenv.Environment, posture func() licensecheck.Posture, now func() time.Time) Option {
+	return func(s *Server, pool *pgxpool.Pool) {
+		trial := installtrial.New(pool, env, posture, now)
+		s.trialLockEnded = trial.Ended
 		s.authHandlers = s.WithTrialLock(trial.Ended)
 		s.trial = trial
 	}
