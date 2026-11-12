@@ -188,7 +188,7 @@ services:
     # (docs/operations/system-requirements.md): 7.4 left the BSD license
     # family. renovate.json holds this image below 7.3; digest updates
     # within the 7.2 tag still flow, which is how patch releases arrive.
-    image: redis:7.2@sha256:46f15cf64fdef63e483dcda99e74e3d51c017b1175547b6bb874152ee2391aad
+    image: redis:7.2@sha256:5b816bb37d9707a70f10ef5002ecf8ee431750d397010fc4314c93dca887962f
     # 64 logical dbs, not the default 16. The integration lane gives each package
     # its own db so two packages can never share one — several of them FLUSHDB
     # between tests, which makes a shared db a silent corruption rather than a

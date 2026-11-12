@@ -42,7 +42,7 @@ services:
       retries: 60
 
   redis:
-    image: redis:7.2@sha256:46f15cf64fdef63e483dcda99e74e3d51c017b1175547b6bb874152ee2391aad
+    image: redis:7.2@sha256:5b816bb37d9707a70f10ef5002ecf8ee431750d397010fc4314c93dca887962f
     restart: unless-stopped
 
   api:
