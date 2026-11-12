@@ -57165,11 +57165,11 @@ type Partner struct {
 	// MaskedFields The fields of THIS row the caller's role withholds (a field mask — e.g. `margin_tier` for a seat that reads partners but not their commercial terms). A named field is null because it is withheld, not because it is empty; absent or empty means nothing is withheld.
 	MaskedFields *[]string `json:"masked_fields,omitempty"`
 
-	// NextStep Deprecated: a partner's next step is a task on its company, with a colleague who does it and a due date. Text written here before stays readable.
+	// NextStep Deprecated as stored text: a value sent here is written as a task on the partner's company, held by the caller (or the human an agent acts for), and is not stored on the partner. Text stored before stays readable.
 	// Deprecated: this property has been marked as deprecated upstream, but no `x-deprecated-reason` was set
 	NextStep *string `json:"next_step,omitempty"`
 
-	// NextStepDueAt Deprecated: the due date of the old free-text `next_step`; a task carries its own.
+	// NextStepDueAt Deprecated as stored text: the day the next step's task is due. Sent without `next_step` it is refused.
 	// Deprecated: this property has been marked as deprecated upstream, but no `x-deprecated-reason` was set
 	NextStepDueAt *openapi_types.Date `json:"next_step_due_at,omitempty"`
 
@@ -63929,11 +63929,11 @@ type SetTransitionPolicyRequestMode string
 // Send `partner_kinds`, or the deprecated `partner_role`. Without `relationship_stage` the
 // program starts on the first active stage meaning `candidate`.
 type SetUpPartnerRequest struct {
-	// NextStep Deprecated: a partner's next step is a task on its company, with a colleague who does it and a due date. Text written here before stays readable.
+	// NextStep Deprecated as stored text: a value sent here is written as a task on the partner's company, held by the caller (or the human an agent acts for), and is not stored on the partner. Text stored before stays readable.
 	// Deprecated: this property has been marked as deprecated upstream, but no `x-deprecated-reason` was set
 	NextStep *string `json:"next_step,omitempty"`
 
-	// NextStepDueAt Deprecated: the due date of the old free-text `next_step`; a task carries its own.
+	// NextStepDueAt Deprecated as stored text: the day the next step's task is due. Sent without `next_step` it is refused.
 	// Deprecated: this property has been marked as deprecated upstream, but no `x-deprecated-reason` was set
 	NextStepDueAt *openapi_types.Date `json:"next_step_due_at,omitempty"`
 	PartnerKinds  *[]PartnerKind      `json:"partner_kinds,omitempty"`
@@ -67448,11 +67448,11 @@ type UpsertPartnerRequest struct {
 	GateMetrics *map[string]interface{}         `json:"gate_metrics,omitempty"`
 	MarginTier  *UpsertPartnerRequestMarginTier `json:"margin_tier,omitempty"`
 
-	// NextStep Deprecated: a partner's next step is a task on its company, with a colleague who does it and a due date. Text written here before stays readable.
+	// NextStep Deprecated as stored text: a value sent here is written as a task on the partner's company, held by the caller (or the human an agent acts for), and is not stored on the partner. Text stored before stays readable.
 	// Deprecated: this property has been marked as deprecated upstream, but no `x-deprecated-reason` was set
 	NextStep *string `json:"next_step,omitempty"`
 
-	// NextStepDueAt Deprecated: the due date of the old free-text `next_step`; a task carries its own.
+	// NextStepDueAt Deprecated as stored text: the day the next step's task is due. Sent without `next_step` it is refused.
 	// Deprecated: this property has been marked as deprecated upstream, but no `x-deprecated-reason` was set
 	NextStepDueAt *openapi_types.Date `json:"next_step_due_at,omitempty"`
 

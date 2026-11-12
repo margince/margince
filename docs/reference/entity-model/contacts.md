@@ -1709,8 +1709,8 @@ The 50 tables owned by `contacts`, as the migrations build them. [Back to the en
 | `joined_at` | `date` |  |  |
 | `last_contact_at` | `timestamp with time zone` |  |  |
 | `margin_tier` | `text` |  | The partner's margin tier; the allowed values are in the table's CHECK constraint. |
-| `next_step` | `text` |  | Deprecated: a partner's next step is a task on its company, with a colleague who does it and a due date. |
-| `next_step_due_at` | `date` |  | Deprecated: the due date of the old free-text `next_step`; a task carries its own. |
+| `next_step` | `text` |  | Deprecated as stored text: a value sent here is written as a task on the partner's company, held by the caller (or the human an agent acts for), and is not stored on the partner. |
+| `next_step_due_at` | `date` |  | Deprecated as stored text: the day the next step's task is due. |
 | `partner_fit_override_reason` | `text` |  | Non-null ⇒ partner_fit_score is a human Commercial Judgement override and recompute is suppressed until cleared. |
 | `partner_fit_score` | `smallint` |  | Current partner-fit score; if partner_fit_override_reason is non-null this is the Commercial Judgement value. |
 | `partner_fit_score_computed` | `smallint` |  | Retained machine-computed partner-fit value while a Commercial Judgement override is in force. |

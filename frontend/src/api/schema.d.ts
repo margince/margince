@@ -52010,13 +52010,13 @@ export interface components {
             last_contact_at?: string | null;
             /**
              * @deprecated
-             * @description Deprecated: a partner's next step is a task on its company, with a colleague who does it and a due date. Text written here before stays readable.
+             * @description Deprecated as stored text: a value sent here is written as a task on the partner's company, held by the caller (or the human an agent acts for), and is not stored on the partner. Text stored before stays readable.
              */
             next_step?: string | null;
             /**
              * Format: date
              * @deprecated
-             * @description Deprecated: the due date of the old free-text `next_step`; a task carries its own.
+             * @description Deprecated as stored text: the day the next step's task is due. Sent without `next_step` it is refused.
              */
             next_step_due_at?: string | null;
             served_segments?: string[] | null;
@@ -52057,13 +52057,13 @@ export interface components {
             relationship_stage?: string;
             /**
              * @deprecated
-             * @description Deprecated: a partner's next step is a task on its company, with a colleague who does it and a due date. Text written here before stays readable.
+             * @description Deprecated as stored text: a value sent here is written as a task on the partner's company, held by the caller (or the human an agent acts for), and is not stored on the partner. Text stored before stays readable.
              */
             next_step?: string | null;
             /**
              * Format: date
              * @deprecated
-             * @description Deprecated: the due date of the old free-text `next_step`; a task carries its own.
+             * @description Deprecated as stored text: the day the next step's task is due. Sent without `next_step` it is refused.
              */
             next_step_due_at?: string | null;
             served_segments?: string[] | null;
@@ -52086,13 +52086,13 @@ export interface components {
             relationship_stage?: string;
             /**
              * @deprecated
-             * @description Deprecated: a partner's next step is a task on its company, with a colleague who does it and a due date. Text written here before stays readable.
+             * @description Deprecated as stored text: a value sent here is written as a task on the partner's company, held by the caller (or the human an agent acts for), and is not stored on the partner. Text stored before stays readable.
              */
             next_step?: string;
             /**
              * Format: date
              * @deprecated
-             * @description Deprecated: the due date of the old free-text `next_step`; a task carries its own.
+             * @description Deprecated as stored text: the day the next step's task is due. Sent without `next_step` it is refused.
              */
             next_step_due_at?: string;
         };

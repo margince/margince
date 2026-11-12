@@ -38,7 +38,8 @@ type PartnerSetUp interface {
 
 var setUpPartnerCopy = toolCopy{
 	Purpose: "Set up a partner program on a company that has none, with its kinds, a relationship " +
-		"stage and a next step.",
+		"stage and a next step. The next step becomes a task on the company, held by the human " +
+		"you act for.",
 	Limits: "Waits for a human to approve. The margin tier is not an argument: it decides " +
 		"commission on every later deal, so a human sets it on the company's Partner tab. " +
 		"Refused when the company already has a partner program, and needs the company.update grant.",
@@ -80,8 +81,8 @@ func (t setUpPartner) Spec() mcp.ToolSpec {
 			"partner_kinds":{"type":"array","minItems":1,"items":{"type":"string","enum":["hosting","consulting","strategic","referral"]},"description":"Every kind the partner holds. Required unless partner_role is sent"},
 			"partner_role":{"type":"string","enum":["hosting","consulting","strategic"],"description":"Deprecated: send partner_kinds"},
 			"relationship_stage":{"type":"string","description":"An active key from the partner stage list (read_view listPartnerStages). Without one the program starts on the first candidate stage"},
-			"next_step":{"type":"string"},
-			"next_step_due_at":{"type":"string","format":"date"},
+			"next_step":{"type":"string","description":"The one next thing to do with the partner. Written as a task on the company, held by the human you act for"},
+			"next_step_due_at":{"type":"string","format":"date","description":"The day the next step is due. Needs next_step"},
 			"approval_id":{"type":"string","format":"uuid","description":"Set on approved retry"}},
 			"additionalProperties":false}`),
 		OutputSchema: schemaFor[crmcontracts.Partner](),
