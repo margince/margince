@@ -51,7 +51,7 @@ const (
 	codeFieldOnInstallation = "legal_entity_field_on_installation"
 	legalEntityNameLimit    = 200
 	legalEntityLegalLimit   = 300
-	legalEntityImprintLimit = 4000
+	legalEntityImprintLimit = values.TextDocumentCharacters
 	wireCountry             = "country"
 	wireDefaultLanguage     = "default_language"
 	wireIBAN                = "iban"

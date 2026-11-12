@@ -29,8 +29,10 @@ func TestTextPoliciesRequireAKnownLimitOrAReasonedException(t *testing.T) {
 			t.Fatalf("%s must admit the same document length", key)
 		}
 	}
-	if policies["public.activity.body"].Exception == "" {
-		t.Fatal("captured mail lost its justified exception")
+	for _, key := range []string{"public.activity.body", "public.mail_draft.body", "public.mail_draft.html_body", "public.comms_outbound.body", "public.comms_outbound.html_body", "public.consent_text_version.body", "public.knowledge_chunk.text", "public.email_signature.body", "public.email_signature.html"} {
+		if policies[key].Exception == "" {
+			t.Errorf("%s must retain its complete source text", key)
+		}
 	}
 }
 
@@ -53,7 +55,7 @@ func TestChangedTextGuardsPreserveExistingValues(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	for _, fragment := range []string{"BEFORE INSERT", "BEFORE UPDATE", `NEW."description", NULL, 20000`, `NEW."description", OLD."description", 20000`, `IS DISTINCT FROM old_value COLLATE "C"`} {
+	for _, fragment := range []string{"AFTER INSERT", "BEFORE UPDATE", `NEW."description", NULL, 20000`, `NEW."description", OLD."description", 20000`, `IS DISTINCT FROM old_value COLLATE "C"`} {
 		if !strings.Contains(up, fragment) {
 			t.Errorf("missing changed-value guard %q", fragment)
 		}

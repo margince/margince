@@ -654,6 +654,20 @@ DROP TRIGGER "text_bound_insert" ON "public"."worklist_snapshot";
 DROP TRIGGER "text_bound_update" ON "public"."worklist_snapshot";
 DROP TRIGGER "text_bound_insert" ON "public"."workspace_email_domain";
 DROP TRIGGER "text_bound_update" ON "public"."workspace_email_domain";
+DO $bounds$
+DECLARE target record;
+BEGIN
+ FOR target IN
+  SELECT c.relname, t.tgname
+  FROM pg_catalog.pg_trigger t
+  JOIN pg_catalog.pg_class c ON c.oid = t.tgrelid
+  JOIN pg_catalog.pg_namespace n ON n.oid = c.relnamespace
+  WHERE n.nspname = 'public' AND t.tgname IN ('custom_text_bound_insert', 'custom_text_bound_update')
+ LOOP
+  EXECUTE format('DROP TRIGGER %I ON public.%I', target.tgname, target.relname);
+ END LOOP;
+END
+$bounds$;
 DROP FUNCTION public.refuse_oversized_text();
 DROP FUNCTION public.text_values_exceed_bound(text[], text[], integer);
 DROP FUNCTION public.text_value_exceeds_bound(text, text, integer);

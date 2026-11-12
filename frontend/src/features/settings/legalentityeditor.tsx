@@ -23,6 +23,7 @@ import {
   useUpdateLegalEntity,
 } from "../../lib/legalentities.queries";
 import { problemMessageOf } from "../../lib/problem";
+import { TEXT_LIMITS } from "../../lib/textlimits_gen";
 import { EntityLogo } from "./legalentitylogo";
 
 // The editor's fields, flat. The contract nests the address and the offering;
@@ -386,7 +387,7 @@ function AreaField({ label, hint, value, onChange }: TextProps) {
         <Textarea
           {...control}
           rows={3}
-          maxLength={4000}
+          maxLength={TEXT_LIMITS.document}
           value={value}
           onChange={(event) => onChange(event.target.value)}
         />

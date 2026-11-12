@@ -6,6 +6,7 @@
 package gates
 
 import (
+	"fmt"
 	"strings"
 	"testing"
 
@@ -81,4 +82,64 @@ func TestCompanyAndDealDescriptionsShareTheDocumentLimit(t *testing.T) {
 			t.Errorf("%s.description has limit %d, want %d", schema, cap, values.TextDocumentCharacters)
 		}
 	}
+}
+
+func TestEveryBoundedTextColumnChecksNewAndChangedValues(t *testing.T) {
+	raw, err := gatekit.ReadFile(vocabularyCatalog)
+	if err != nil {
+		t.Fatal(err)
+	}
+	columns, err := textbounds.Columns(strings.NewReader(string(raw)))
+	if err != nil {
+		t.Fatal(err)
+	}
+	policies, err := textbounds.Policies()
+	if err != nil {
+		t.Fatal(err)
+	}
+	guards := map[string]string{}
+	for _, line := range strings.Split(string(raw), "\n") {
+		if strings.Contains(line, " CREATE TRIGGER text_bound_") {
+			key, definition, found := strings.Cut(line, " ")
+			if found {
+				guards[key] = normalizedTextGuard(definition)
+			}
+		}
+	}
+	for _, column := range columns {
+		policy := policies[column.Key]
+		if policy.Limit == 0 {
+			continue
+		}
+		function := "text_value_exceeds_bound"
+		if column.Array {
+			function = "text_values_exceed_bound"
+		}
+		for _, operation := range []string{"insert", "update"} {
+			previous := "null"
+			if operation == "update" {
+				previous = "old." + column.Name
+			}
+			predicate := fmt.Sprintf("%s(new.%s,%s,%d)", function, column.Name, previous, policy.Limit)
+			key := "public." + column.Table + ".text_bound_" + operation
+			timing := "beforeupdate"
+			if operation == "insert" {
+				timing = "afterinsert"
+			}
+			if !strings.Contains(guards[key], timing) {
+				t.Errorf("%s needs %s timing to preserve unchanged upserts", key, timing)
+			}
+			if !strings.Contains(guards[key], predicate) {
+				t.Errorf("%s lacks its %s changed-value bound of %d", column.Key, operation, policy.Limit)
+			}
+		}
+	}
+}
+
+func normalizedTextGuard(definition string) string {
+	normalized := strings.ToLower(strings.Join(strings.Fields(definition), ""))
+	for _, pair := range [][2]string{{"public.", ""}, {"null::text[]", "null"}, {"null::text", "null"}, {"\"", ""}} {
+		normalized = strings.ReplaceAll(normalized, pair[0], pair[1])
+	}
+	return normalized
 }

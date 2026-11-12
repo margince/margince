@@ -31,8 +31,8 @@ import (
 const (
 	productTranslationTable = "product_translation"
 	languageField           = "language"
-	translationNameLimit    = 500
-	translationTextLimit    = 4000
+	translationNameLimit    = values.TextLabelCharacters
+	translationTextLimit    = values.TextDocumentCharacters
 )
 
 var languageShape = regexp.MustCompile(`^[a-z]{2}$`)

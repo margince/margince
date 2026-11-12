@@ -383,6 +383,10 @@ func BuildDDL(object, columnName string, spec FieldSpec) (string, error) {
 	}
 	stmt := fmt.Sprintf("ALTER TABLE %s ADD COLUMN %s %s NULL",
 		quoteIdentifier(object), quoteIdentifier(columnName), colType)
+	if spec.Type == TypeText {
+		// A new column contains only nulls, so its bound needs no legacy-value exception.
+		stmt += fmt.Sprintf(" CHECK (%s IS NULL OR char_length(%s) <= %d)", quoteIdentifier(columnName), quoteIdentifier(columnName), values.TextDocumentCharacters)
+	}
 	if hasOptions(spec.Type) {
 		checkName, clause, err := typedCheckConstraintClause(columnName, spec.Type, spec.Options)
 		if err != nil {

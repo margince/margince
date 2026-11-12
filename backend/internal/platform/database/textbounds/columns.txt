@@ -30,7 +30,7 @@ public.activity.source document
 public.activity.source_author_name label
 public.activity.source_id document
 public.activity.source_system document
-public.activity.subject label
+public.activity.subject document
 public.activity.thread_key document
 public.activity_audience_member.created_by document
 public.activity_audience_member.subject_type document
@@ -188,7 +188,7 @@ public.approval.status document
 public.approval.summary line
 public.approval.target_entity_type document
 public.approval.target_label label
-public.approval_autonomy_policy.kind document
+public.approval_autonomy_policy.kind exempt bounded action identifiers follow the existing tool-kind grammar
 public.approval_autonomy_policy.mode document
 public.approval_preference.kind document
 public.assurance_cycle.opened_by document
@@ -236,7 +236,7 @@ public.attachment.filename document
 public.attachment.source document
 public.attachment.storage_key document
 public.attachment.title label
-public.attachment.url document
+public.attachment.url exempt bounded link identities keep the existing URL contract
 public.attachment_extraction.question document
 public.attachment_extraction.requested_by document
 public.attachment_extraction.status document
@@ -258,12 +258,12 @@ public.automation_effect_claim.handler document
 public.automation_effect_claim.occurrence_key document
 public.booking_alias.alias document
 public.booking_page.slug document
-public.brief_item.finding document
+public.brief_item.finding line
 public.brief_item.reopen_on document
 public.brief_item.state document
 public.brief_run.factors_omitted document
-public.brief_run.mail_error document
-public.brief_run.narrative document
+public.brief_run.mail_error line
+public.brief_run.narrative note
 public.brief_run.revenue_norm_currency document
 public.bulk_confirmation.requested_by document
 public.bulk_operation.record_type document
@@ -331,21 +331,21 @@ public.capture_sweep_run.error_class document
 public.capture_sweep_run.outcome document
 public.capture_sweep_run.sweep document
 public.capture_sync_state.last_error_class document
-public.capture_test_mailbox_sent.message_id document
+public.capture_test_mailbox_sent.message_id exempt bounded message identities keep the existing mailbox-test protocol limit
 public.capture_test_mailbox_sent.subject label
 public.capture_thread_verdict.disposition_reason note
 public.capture_thread_verdict.kind document
 public.capture_thread_verdict.seen_addresses document
 public.capture_thread_verdict.status document
 public.capture_thread_verdict.thread_key document
-public.capture_trace.connector document
-public.capture_trace.counterparty document
+public.capture_trace.connector exempt bounded diagnostic identities keep the existing trace format and privacy limits
+public.capture_trace.counterparty exempt bounded diagnostic identities keep the existing trace format and privacy limits
 public.capture_trace.outcome document
 public.capture_trace.reason note
-public.capture_trace.source_id document
-public.capture_trace.source_system document
+public.capture_trace.source_id exempt bounded diagnostic identities keep the existing trace format and privacy limits
+public.capture_trace.source_system exempt bounded diagnostic identities keep the existing trace format and privacy limits
 public.capture_trace.stage document
-public.capture_trace.subject label
+public.capture_trace.subject exempt bounded diagnostic copies retain their existing privacy excerpt limit
 public.channel_connection.channel_id document
 public.channel_connection.channel_label label
 public.channel_connection.credential_ref document
@@ -353,7 +353,7 @@ public.channel_connection.provider document
 public.channel_connection.status document
 public.channel_provider.credential_model document
 public.channel_provider.label label
-public.channel_provider.provider document
+public.channel_provider.provider exempt bounded provider identifiers follow the shared connector grammar
 public.channel_provider.transport document
 public.close_date_run.captured_by document
 public.close_date_run.status document
@@ -363,7 +363,7 @@ public.commission_entry.captured_by document
 public.commission_entry.margin_tier_at_accrual document
 public.commission_entry.status document
 public.commission_entry.void_reason note
-public.comms_outbound.body document
+public.comms_outbound.body exempt complete captured or authored source content must retain its original text
 public.comms_outbound.bounce_kind document
 public.comms_outbound.bounce_reason note
 public.comms_outbound.bounce_recipient document
@@ -372,7 +372,7 @@ public.comms_outbound.consent_purpose document
 public.comms_outbound.execution_authority document
 public.comms_outbound.from_address document
 public.comms_outbound.from_name label
-public.comms_outbound.html_body document
+public.comms_outbound.html_body exempt complete captured or authored source content must retain its original text
 public.comms_outbound.in_reply_to document
 public.comms_outbound.inline_logo_key document
 public.comms_outbound.list_unsubscribe document
@@ -384,7 +384,7 @@ public.comms_outbound.reason note
 public.comms_outbound.redacted_fields document
 public.comms_outbound.sender_kind document
 public.comms_outbound.status document
-public.comms_outbound.subject label
+public.comms_outbound.subject document
 public.comms_outbound.template_key document
 public.comms_outbound.thread_key document
 public.communication_basis.captured_by document
@@ -455,7 +455,7 @@ public.company.phone document
 public.company.size_band document
 public.company.source document
 public.company.source_author_name label
-public.company.source_id document
+public.company.source_id exempt bounded imported identities keep the existing indexed wire contract
 public.company.source_system document
 public.company.visibility document
 public.company_address_country.countries document
@@ -541,7 +541,7 @@ public.consent_qualifying_event.recorded_for_addresses document
 public.consent_qualifying_event.retracted_by document
 public.consent_qualifying_event.source document
 public.consent_qualifying_event.source_entity_type document
-public.consent_text_version.body document
+public.consent_text_version.body exempt complete captured or authored source content must retain its original text
 public.consent_text_version.channel document
 public.consent_text_version.content_hash document
 public.consent_text_version.jurisdiction document
@@ -568,7 +568,7 @@ public.contact.relationship_mark document
 public.contact.relationship_mark_set_by document
 public.contact.source document
 public.contact.source_author_name label
-public.contact.source_id document
+public.contact.source_id exempt bounded imported identities keep the existing indexed wire contract
 public.contact.source_system document
 public.contact.title label
 public.contact.visibility document
@@ -676,7 +676,7 @@ public.deal.partner_attribution document
 public.deal.priority document
 public.deal.source document
 public.deal.source_author_name label
-public.deal.source_id document
+public.deal.source_id exempt bounded imported identities keep the existing indexed wire contract
 public.deal.source_system document
 public.deal.status document
 public.deal.win_probability_set_by document
@@ -697,12 +697,12 @@ public.deal_correction.standing_close_date document
 public.deal_document_hide.hidden_by document
 public.deal_line_item.billing_model document
 public.deal_line_item.captured_by document
-public.deal_line_item.catalog_name label
+public.deal_line_item.catalog_name line
 public.deal_line_item.component_kind document
 public.deal_line_item.description document
-public.deal_line_item.sku document
+public.deal_line_item.sku line
 public.deal_line_item.tax_category document
-public.deal_line_item.unit document
+public.deal_line_item.unit label
 public.deal_loss_reason.key document
 public.deal_loss_reason.label label
 public.deal_loss_reason.label_key exempt generated from independently checked source columns
@@ -744,7 +744,7 @@ public.deal_room_thread.state document
 public.deal_stage_evidence.author_side document
 public.deal_stage_evidence.commitment document
 public.deal_stage_evidence.extracted_by document
-public.deal_stage_evidence.snippet document
+public.deal_stage_evidence.snippet line
 public.deal_stage_evidence.source_type document
 public.deal_stage_history.changed_by document
 public.deal_stage_history.lost_reason_code_at_change note
@@ -764,8 +764,8 @@ public.dedupe_candidate.disposition document
 public.dedupe_candidate.entity_type document
 public.dedupe_candidate.source document
 public.dedupe_scan_state.stream document
-public.email_signature.body document
-public.email_signature.html document
+public.email_signature.body exempt complete captured or authored source content must retain its original text
+public.email_signature.html exempt complete captured or authored source content must retain its original text
 public.email_signature.phone document
 public.email_signature.title label
 public.embed_store_binding.populated_identity document
@@ -900,7 +900,7 @@ public.intro_request.status document
 public.intro_request.value_for_target document
 public.knowledge_chunk.chunk_hash document
 public.knowledge_chunk.embed_identity document
-public.knowledge_chunk.text document
+public.knowledge_chunk.text exempt complete captured or authored source content must retain its original text
 public.knowledge_corpus.captured_by document
 public.knowledge_corpus.description document
 public.knowledge_corpus.managed_source document
@@ -924,7 +924,7 @@ public.lead.full_name label
 public.lead.industry document
 public.lead.linkedin_url document
 public.lead.origin document
-public.lead.origin_detail document
+public.lead.origin_detail line
 public.lead.partner_accepted_by document
 public.lead.phone document
 public.lead.score_override_reason note
@@ -983,7 +983,7 @@ public.legal_entity.value_proposition document
 public.legal_entity.vat_id document
 public.legal_entity_member.assigned_by document
 public.legal_review.captured_by document
-public.legal_review.comments document
+public.legal_review.comments note
 public.legal_review.note note
 public.legal_review.status document
 public.linkedin_account.profile_url document
@@ -1019,12 +1019,12 @@ public.list_revision.purpose document
 public.list_revision.sharing document
 public.mail_draft.anchor_type document
 public.mail_draft.bcc_addresses document
-public.mail_draft.body document
+public.mail_draft.body exempt complete captured or authored source content must retain its original text
 public.mail_draft.cc_addresses document
 public.mail_draft.communication_context document
-public.mail_draft.html_body document
+public.mail_draft.html_body exempt complete captured or authored source content must retain its original text
 public.mail_draft.scheduled_tz document
-public.mail_draft.subject label
+public.mail_draft.subject document
 public.mail_draft.to_addresses document
 public.maskable_field.field document
 public.maskable_field.object document
@@ -1045,14 +1045,14 @@ public.meeting_readiness.participants_fingerprint document
 public.meeting_readiness.revision document
 public.mfa_challenge_spent.jti document
 public.mfa_recovery_code.code_hash document
-public.notice.body document
+public.notice.body note
 public.notice.captured_by document
 public.notice.dedupe_key document
-public.notice.email_error document
+public.notice.email_error line
 public.notice.kind document
 public.notice.subject label
 public.notice.target_type document
-public.notification_digest_run.mail_error document
+public.notification_digest_run.mail_error line
 public.notification_preference.class document
 public.notification_preference.delivery document
 public.oauth_authorization_code.client_id document
@@ -1154,7 +1154,7 @@ public.project.name label
 public.project.phase document
 public.project.source document
 public.project.source_author_name label
-public.project.source_id document
+public.project.source_id exempt bounded imported identities keep the existing indexed wire contract
 public.project.source_system document
 public.project_health_assessment.captured_by document
 public.project_health_assessment.note note
@@ -1326,7 +1326,7 @@ public.site_read.stopped_reason note
 public.site_read.target_kind document
 public.stage.name label
 public.stage.semantic document
-public.stage_exit_criterion.hint document
+public.stage_exit_criterion.hint line
 public.stage_exit_criterion.key document
 public.stage_exit_criterion.kind document
 public.stage_exit_criterion.label label
@@ -1427,17 +1427,17 @@ public.voice_profile_version.voice_profile_md document
 public.web_form.allowed_origins document
 public.web_form.captured_by document
 public.web_form.consent_policy_version document
-public.web_form.consent_wording document
+public.web_form.consent_wording note
 public.web_form.form_key document
 public.web_form.lead_origin document
 public.web_form.name label
-public.web_form.privacy_notice document
-public.web_form.privacy_notice_url document
+public.web_form.privacy_notice line
+public.web_form.privacy_notice_url exempt bounded HTTPS link identities keep the existing URL contract
 public.web_form.redirect_url document
 public.web_form.secret_ref document
 public.web_form.sender document
 public.web_form.state document
-public.web_form.success_message document
+public.web_form.success_message line
 public.webhook_delivery.content_type document
 public.webhook_delivery.entity_type document
 public.webhook_delivery.event_type document
@@ -1452,17 +1452,17 @@ public.webhook_subscription.state document
 public.webhook_subscription.target_url document
 public.weekly_plan.capacity_note note
 public.weekly_plan.captured_by document
-public.weekly_plan.risks document
+public.weekly_plan.risks note
 public.weekly_plan.status document
 public.weekly_plan_commitment.captured_by document
-public.weekly_plan_commitment.help_requested document
-public.weekly_plan_commitment.label label
+public.weekly_plan_commitment.help_requested note
+public.weekly_plan_commitment.label line
 public.weekly_plan_commitment.linked_record_type document
-public.weekly_plan_commitment.manager_response document
+public.weekly_plan_commitment.manager_response note
 public.weekly_plan_commitment.state document
 public.weekly_review.learnings_state document
-public.weekly_review.mail_error document
-public.weekly_review.narrative document
+public.weekly_review.mail_error line
+public.weekly_review.narrative note
 public.weekly_review_deal.deal_label label
 public.weekly_review_deal.outcome document
 public.weekly_review_deal.to_stage_label label
@@ -1470,7 +1470,7 @@ public.weekly_review_driver.bar document
 public.weekly_review_driver.deal_label label
 public.weekly_review_driver.period_kind document
 public.weekly_review_learning.kind document
-public.weekly_review_learning.text document
+public.weekly_review_learning.text line
 public.weekly_review_learning_citation.label label
 public.weekly_review_learning_citation.subject_type document
 public.weekly_review_movement.bar document

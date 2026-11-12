@@ -10,6 +10,7 @@ import (
 	"strings"
 
 	"github.com/jackc/pgx/v5"
+	"github.com/margince/margince/backend/internal/shared/kernel/values"
 )
 
 const guardFunctions = `CREATE FUNCTION public.text_value_exceeds_bound(new_value text, old_value text, character_limit integer)
@@ -63,6 +64,8 @@ func SQL(catalog io.Reader) (string, string, error) {
 	for _, table := range names {
 		writeTableGuards(&up, &down, table, tables[table], policies)
 	}
+	up.WriteString(existingCustomTextGuards())
+	down.WriteString(dropCustomTextGuards)
 	down.WriteString("DROP FUNCTION public.refuse_oversized_text();\nDROP FUNCTION public.text_values_exceed_bound(text[], text[], integer);\nDROP FUNCTION public.text_value_exceeds_bound(text, text, integer);\n")
 	return up.String(), down.String(), nil
 }
@@ -84,7 +87,50 @@ func writeTableGuards(up, down *strings.Builder, table string, columns []Column,
 		}
 		trigger := pgx.Identifier{"text_bound_" + strings.ToLower(operation)}.Sanitize()
 		relation := pgx.Identifier{"public", table}.Sanitize()
-		fmt.Fprintf(up, "CREATE TRIGGER %s BEFORE %s ON %s FOR EACH ROW\nWHEN (%s) EXECUTE FUNCTION public.refuse_oversized_text();\n", trigger, operation, relation, strings.Join(checks, " OR\n"))
+		timing := "BEFORE"
+		if operation == "INSERT" {
+			timing = "AFTER"
+		}
+		fmt.Fprintf(up, "CREATE TRIGGER %s %s %s ON %s FOR EACH ROW\nWHEN (%s) EXECUTE FUNCTION public.refuse_oversized_text();\n", trigger, timing, operation, relation, strings.Join(checks, " OR\n"))
 		fmt.Fprintf(down, "DROP TRIGGER %s ON %s;\n", trigger, relation)
 	}
 }
+
+func existingCustomTextGuards() string {
+	return fmt.Sprintf(`DO $bounds$
+DECLARE target record;
+BEGIN
+ FOR target IN
+  SELECT f.object,
+   string_agg(format('public.text_value_exceeds_bound(NEW.%%I, NULL, %d)', f.column_name), ' OR ' ORDER BY f.column_name) AS inserted,
+   string_agg(format('public.text_value_exceeds_bound(NEW.%%I, OLD.%%I, %d)', f.column_name, f.column_name), ' OR ' ORDER BY f.column_name) AS changed
+  FROM public.custom_field f
+  JOIN pg_catalog.pg_namespace n ON n.nspname = 'public'
+  JOIN pg_catalog.pg_class c ON c.relnamespace = n.oid AND c.relname = f.object
+  JOIN pg_catalog.pg_attribute a ON a.attrelid = c.oid AND a.attname = f.column_name AND a.attnum > 0 AND NOT a.attisdropped
+  WHERE f.type = 'text' AND a.atttypid = 'text'::regtype
+  GROUP BY f.object
+ LOOP
+  EXECUTE format('CREATE TRIGGER custom_text_bound_insert AFTER INSERT ON public.%%I FOR EACH ROW WHEN (%%s) EXECUTE FUNCTION public.refuse_oversized_text()', target.object, target.inserted);
+  EXECUTE format('CREATE TRIGGER custom_text_bound_update BEFORE UPDATE ON public.%%I FOR EACH ROW WHEN (%%s) EXECUTE FUNCTION public.refuse_oversized_text()', target.object, target.changed);
+ END LOOP;
+END
+$bounds$;
+`, values.TextDocumentCharacters, values.TextDocumentCharacters)
+}
+
+const dropCustomTextGuards = `DO $bounds$
+DECLARE target record;
+BEGIN
+ FOR target IN
+  SELECT c.relname, t.tgname
+  FROM pg_catalog.pg_trigger t
+  JOIN pg_catalog.pg_class c ON c.oid = t.tgrelid
+  JOIN pg_catalog.pg_namespace n ON n.oid = c.relnamespace
+  WHERE n.nspname = 'public' AND t.tgname IN ('custom_text_bound_insert', 'custom_text_bound_update')
+ LOOP
+  EXECUTE format('DROP TRIGGER %I ON public.%I', target.tgname, target.relname);
+ END LOOP;
+END
+$bounds$;
+`

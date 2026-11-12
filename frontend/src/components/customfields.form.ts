@@ -16,6 +16,7 @@ import { browserZone } from "../format/timezone";
 import { webUrl } from "../format/weburl";
 import { type Locale, useLocale, useT } from "../i18n";
 import type { CfObject } from "../lib/customfields.logic";
+import { TEXT_LIMITS } from "../lib/textlimits_gen";
 import {
   type CreateField,
   joinMultiselectValue,
@@ -82,7 +83,7 @@ export function customFieldToFormField(
         ],
       };
     case "text":
-      return { ...base, type: "text" };
+      return { ...base, type: "text", maxLength: TEXT_LIMITS.document };
     default:
       // Exhaustive at COMPILE time over the contract's closed set of six scalar
       // types (CUSTOM-FIELDS-PARAM-1): a seventh added to crm.yaml makes this

@@ -38,7 +38,7 @@ const (
 	healthObject      = "project_health_assessment"
 	healthStateColumn = "state"
 	healthNoteColumn  = "note"
-	healthMaxNote     = 4000
+	healthMaxNote     = values.TextNoteCharacters
 )
 
 // RecordHealthInput is an appended judgement.

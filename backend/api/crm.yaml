@@ -38374,7 +38374,7 @@ components:
       type: object
       required: [name, sender]
       properties:
-        name: { type: string, minLength: 1, maxLength: 200 }
+        name: { type: string, minLength: 1, maxLength: 120 }
         sender: { $ref: '#/components/schemas/WebFormSender' }
         sender_secret: { type: string, minLength: 16, maxLength: 512, description: 'The secret a builder signs with. `typeform` and `tally` get a minted one without it; a `webflow` form refuses every post until Webflow''s secret is pasted. Refused for any other sender.' }
         allowed_origins:
@@ -38400,7 +38400,7 @@ components:
     UpdateWebFormRequest:
       type: object
       properties:
-        name: { type: string, minLength: 1, maxLength: 200 }
+        name: { type: string, minLength: 1, maxLength: 120 }
         sender_secret: { type: string, minLength: 16, maxLength: 512 }
         allowed_origins:
           type: array
@@ -43036,7 +43036,7 @@ components:
     RequestLegalReviewRequest:
       type: object
       properties:
-        note: { type: [string, 'null'], maxLength: 4000 }
+        note: { type: [string, 'null'], maxLength: 2000 }
         previous_review_id: { type: [string, 'null'], format: uuid }
 
     DecideLegalReviewRequest:
@@ -43046,7 +43046,7 @@ components:
         outcome: { $ref: '#/components/schemas/LegalReviewOutcome' }
         comments:
           type: [string, 'null']
-          maxLength: 8000
+          maxLength: 2000
           description: Required for changes_needed.
 
     LegalReviewSettings:
@@ -52382,7 +52382,7 @@ components:
       properties:
         greeting_name:
           type: [string, 'null']
-          maxLength: 100
+          maxLength: 120
           description: |
             The name a colleague's greeting uses. Surrounding whitespace is
             trimmed; empty or null clears it.
@@ -53550,10 +53550,10 @@ components:
         id: { type: string, format: uuid }
         position: { type: integer }
         product_id: { type: [string, 'null'], format: uuid, description: Null on a custom item. }
-        catalog_name: { type: [string, 'null'], description: The product's name when the line was added. }
-        sku: { type: [string, 'null'] }
-        description: { type: string }
-        unit: { type: string }
+        catalog_name: { type: [string, 'null'], description: The product's name when the line was added., maxLength: 500 }
+        sku: { type: [string, 'null'], maxLength: 500 }
+        description: { type: string, maxLength: 20000 }
+        unit: { type: string, maxLength: 120 }
         quantity: { type: [number, 'null'], format: double, description: 'Up to 3 decimal places, greater than 0. Null while unknown.' }
         unit_price_minor: { type: [integer, 'null'], format: int64, description: 'The selling price in minor units of `currency`. Null while unknown, or masked.' }
         currency: { type: string, pattern: '^[A-Z]{3}$' }
@@ -53608,8 +53608,8 @@ components:
         replace_estimate: { type: boolean, description: 'Replace the value a human typed with the lines. Required while the deal holds one.' }
         currency: { type: string, pattern: '^[A-Z]{3}$', description: 'The currency of the lines. Defaults to the deal''s; required on a deal with none. Every line of a deal shares one.' }
         product_id: { type: [string, 'null'], format: uuid }
-        description: { type: [string, 'null'] }
-        unit: { type: [string, 'null'] }
+        description: { type: [string, 'null'], maxLength: 20000 }
+        unit: { type: [string, 'null'], maxLength: 120 }
         quantity: { type: [number, 'null'], format: double, description: '> 0, up to 3 decimal places. Omit while unknown.' }
         unit_price_minor: { type: [integer, 'null'], format: int64, minimum: 0 }
         discount_pct: { type: [number, 'null'], format: double, minimum: 0, maximum: 100 }
@@ -53624,8 +53624,8 @@ components:
       required: [expected_revision]
       properties:
         expected_revision: { type: integer, format: int64, minimum: 0 }
-        description: { type: string }
-        unit: { type: string }
+        description: { type: string, maxLength: 20000 }
+        unit: { type: string, maxLength: 120 }
         quantity: { type: [number, 'null'], format: double }
         unit_price_minor: { type: [integer, 'null'], format: int64, minimum: 0 }
         discount_pct: { type: number, format: double, minimum: 0, maximum: 100 }
@@ -54804,7 +54804,7 @@ components:
       required: [state]
       properties:
         state: { $ref: '#/components/schemas/ProjectHealthState' }
-        note: { type: string, maxLength: 4000 }
+        note: { type: string, maxLength: 2000 }
         assessed_at:
           type: string
           format: date-time
@@ -54824,7 +54824,7 @@ components:
       required: [state]
       properties:
         state: { $ref: '#/components/schemas/ProjectHealthState' }
-        note: { type: string, maxLength: 4000 }
+        note: { type: string, maxLength: 2000 }
         source_author: { type: string, maxLength: 200 }
 
     Project360Section:
@@ -63582,7 +63582,7 @@ components:
             picture does.
         greeting_name:
           type: [string, 'null']
-          maxLength: 100
+          maxLength: 120
           description: >
             The name a colleague's greeting uses ("Hi Sofia,"), absent or null when nobody has said.
             Read through one rule on both sides: this when set, else the first word of
@@ -63822,7 +63822,7 @@ components:
         display_name: { type: string, minLength: 1, maxLength: 255 }
         greeting_name:
           type: [string, 'null']
-          maxLength: 100
+          maxLength: 120
           description: >-
             The name the member's greetings use, when the first word of `display_name`
             is not it. Optional; absent, empty or null leaves it unset.
@@ -68668,10 +68668,10 @@ components:
         same draft may be supplied as context to the conversational assistant.
       properties:
         display_name: { type: [string, 'null'], maxLength: 2000 }
-        offer_summary: { type: [string, 'null'], maxLength: 2000 }
-        icp: { type: [string, 'null'], maxLength: 2000 }
-        value_proposition: { type: [string, 'null'], maxLength: 2000 }
-        usp: { type: [string, 'null'], maxLength: 2000 }
+        offer_summary: { type: [string, 'null'], maxLength: 20000 }
+        icp: { type: [string, 'null'], maxLength: 20000 }
+        value_proposition: { type: [string, 'null'], maxLength: 20000 }
+        usp: { type: [string, 'null'], maxLength: 20000 }
         customer_pains: { type: [string, 'null'], maxLength: 2000 }
         desired_outcomes: { type: [string, 'null'], maxLength: 2000 }
         buying_center: { type: [string, 'null'], maxLength: 2000 }
@@ -68776,10 +68776,12 @@ components:
         bic: { type: string, nullable: true, description: 'The BIC, upper case.' }
         imprint:
           type: string
+          maxLength: 20000
           nullable: true
           description: The legal notice the entity prints, up to 4000 characters.
         signature_template:
           type: string
+          maxLength: 20000
           nullable: true
           description: |
             The mail signature layout of a sender assigned to this entity, with the placeholders
@@ -68815,10 +68817,10 @@ components:
         them answers `legal_entity_field_on_company_form`. The offering is confirmed once the entity
         has a name, an `offer_summary` and an `icp`.
       properties:
-        offer_summary: { type: string, nullable: true, maxLength: 4000 }
-        icp: { type: string, nullable: true, maxLength: 4000, description: The ideal customer profile. }
-        value_proposition: { type: string, nullable: true, maxLength: 4000 }
-        usp: { type: string, nullable: true, maxLength: 4000 }
+        offer_summary: { type: string, nullable: true, maxLength: 20000 }
+        icp: { type: string, nullable: true, maxLength: 20000, description: The ideal customer profile. }
+        value_proposition: { type: string, nullable: true, maxLength: 20000 }
+        usp: { type: string, nullable: true, maxLength: 20000 }
     LegalEntityListResponse:
       type: object
       required: [data]
@@ -68841,8 +68843,8 @@ components:
         bank_account_holder: { type: string, maxLength: 200 }
         iban: { type: string, description: Spaces are removed and letters upper-cased before the check. }
         bic: { type: string }
-        imprint: { type: string, maxLength: 4000 }
-        signature_template: { type: string, maxLength: 4000 }
+        imprint: { type: string, maxLength: 20000 }
+        signature_template: { type: string, maxLength: 20000 }
         offering: { $ref: '#/components/schemas/LegalEntityOffering' }
     UpdateLegalEntityRequest:
       type: object
@@ -68859,8 +68861,8 @@ components:
         bank_account_holder: { type: string, maxLength: 200 }
         iban: { type: string }
         bic: { type: string }
-        imprint: { type: string, maxLength: 4000 }
-        signature_template: { type: string, maxLength: 4000 }
+        imprint: { type: string, maxLength: 20000 }
+        signature_template: { type: string, maxLength: 20000 }
         offering: { $ref: '#/components/schemas/LegalEntityOffering' }
     LegalEntityMember:
       type: object
@@ -68887,7 +68889,7 @@ components:
       properties:
         language: { type: string, description: 'ISO 639-1, lower case.' }
         name: { type: string }
-        description: { type: string, nullable: true }
+        description: { type: string, nullable: true, maxLength: 20000 }
         version: { type: integer, format: int64 }
         updated_at: { type: string, format: date-time }
     ProductTranslationListResponse:
@@ -68902,10 +68904,10 @@ components:
       required: [name]
       additionalProperties: false
       properties:
-        name: { type: string, minLength: 1, maxLength: 500 }
+        name: { type: string, minLength: 1, maxLength: 120 }
         description:
           type: string
-          maxLength: 4000
+          maxLength: 20000
           description: Left out or empty, the language has a name and no description.
     CompanyProfile:
       type: object
@@ -68951,10 +68953,10 @@ components:
         register_court: { type: [string, 'null'], description: 'The court holding the commercial register entry (e.g. Amtsgericht Charlottenburg).' }
         register_number: { type: [string, 'null'], description: 'The commercial register entry alone (e.g. HRB 12345 B) — a registry identity, unlike the VAT ID a tax authority issues.' }
         industry: { type: [string, 'null'] }
-        offer_summary: { type: [string, 'null'], description: Plain-language summary of what the company sells or delivers. }
-        icp: { type: [string, 'null'], description: Ideal customer profile — who this company sells to. }
-        value_proposition: { type: [string, 'null'] }
-        usp: { type: [string, 'null'] }
+        offer_summary: { type: [string, 'null'], description: Plain-language summary of what the company sells or delivers., maxLength: 20000 }
+        icp: { type: [string, 'null'], description: Ideal customer profile — who this company sells to., maxLength: 20000 }
+        value_proposition: { type: [string, 'null'], maxLength: 20000 }
+        usp: { type: [string, 'null'], maxLength: 20000 }
         customer_pains: { type: [string, 'null'] }
         desired_outcomes: { type: [string, 'null'] }
         buying_center: { type: [string, 'null'], description: The roles that decide on a purchase. }
@@ -68992,10 +68994,10 @@ components:
         register_number: { type: [string, 'null'], description: 'The commercial register entry alone (e.g. HRB 12345 B).' }
         industry: { type: [string, 'null'] }
         website: { type: [string, 'null'], description: 'The company''s own domain or full URL; stored as the bare domain.' }
-        offer_summary: { type: [string, 'null'] }
-        icp: { type: [string, 'null'] }
-        value_proposition: { type: [string, 'null'] }
-        usp: { type: [string, 'null'] }
+        offer_summary: { type: [string, 'null'], maxLength: 20000 }
+        icp: { type: [string, 'null'], maxLength: 20000 }
+        value_proposition: { type: [string, 'null'], maxLength: 20000 }
+        usp: { type: [string, 'null'], maxLength: 20000 }
         customer_pains: { type: [string, 'null'] }
         desired_outcomes: { type: [string, 'null'] }
         buying_center: { type: [string, 'null'] }
@@ -73058,7 +73060,7 @@ components:
         id: { type: string, format: uuid }
         name: { type: string }
         sku: { type: [string, 'null'], description: Optional; unique per workspace while live. }
-        description: { type: [string, 'null'] }
+        description: { type: [string, 'null'], maxLength: 20000 }
         unit: { type: string, description: "A unit key (`piece`, `hour`, `day`, `month`, `flat_fee`) that a client shows in its reader's language, or any other unit as typed text. A row written before the keys may hold a known spelling such as `Tag`, which a client shows as its key. Display only." }
         unit_price_minor: { type: integer, format: int64, description: Integer minor units (P11); no float money. }
         billing_model: { type: [string, 'null'], enum: [one_time, recurring, null], x-extensible-enum: true, description: 'Whether this price repeats. Null means nobody has classified it, which is NOT the same as one_time: every row written before the field existed carries null, and reading it as one-off would assert a classification nobody made.' }
@@ -73124,7 +73126,7 @@ components:
       properties:
         name: { type: string }
         sku: { type: [string, 'null'] }
-        description: { type: [string, 'null'] }
+        description: { type: [string, 'null'], maxLength: 20000 }
         unit: { type: [string, 'null'], description: "A unit key (`piece`, `hour`, `day`, `month`, `flat_fee`), or any other unit as typed text. A known spelling such as `Stunde` or `hours` is stored as its key. Defaults to `piece`." }
         unit_price_minor: { type: integer, format: int64, minimum: 0 }
         billing_model: { type: [string, 'null'], enum: [one_time, recurring, null], description: 'Whether this price repeats. Null means nobody has classified it, which is NOT the same as one_time: every row written before the field existed carries null, and reading it as one-off would assert a classification nobody made.' }
@@ -73143,7 +73145,7 @@ components:
       properties:
         name: { type: string }
         sku: { type: [string, 'null'] }
-        description: { type: [string, 'null'] }
+        description: { type: [string, 'null'], maxLength: 20000 }
         unit: { type: string }
         unit_price_minor: { type: integer, format: int64, minimum: 0 }
         billing_model: { type: [string, 'null'], enum: [one_time, recurring, not_specified, null], description: 'Whether this price repeats. Send `not_specified` to say nobody has classified it — an omitted field and a JSON null both mean "leave the classification alone", which is why clearing it needs a word of its own. Reading a product back, this field is never `not_specified`: it is one_time, recurring, or null.' }
@@ -74989,7 +74991,7 @@ components:
             differently and a reader learns the four shapes.
         text:
           type: string
-          maxLength: 400
+          maxLength: 500
           description: One sentence, in the reader's own language.
         citations:
           type: array
@@ -75623,7 +75625,7 @@ components:
       properties:
         narrative:
           type: string
-          maxLength: 600
+          maxLength: 2000
           description: |
             One sentence about the night as a whole. An empty string is a real answer — a quiet
             night has no sentence — and is stored as null with the pass still stamped.
@@ -75644,7 +75646,7 @@ components:
           description: A brief item belonging to the caller's own current run. Anything else refuses.
         finding:
           type: string
-          maxLength: 600
+          maxLength: 500
           description: The prose the rep reads beside the rank.
         cited_evidence:
           type: array
