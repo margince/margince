@@ -20,6 +20,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/margince/margince/backend/internal/compose/analyticsquery"
+	"github.com/margince/margince/backend/internal/compose/goalproposal"
 	"github.com/margince/margince/backend/internal/compose/homecache"
 	"github.com/margince/margince/backend/internal/compose/magic"
 	"github.com/margince/margince/backend/internal/compose/salesprogress"
@@ -248,6 +249,7 @@ func (s *Server) wireAnalyticsSurface(pool *pgxpool.Pool) {
 		InstallationDB(pool), func() time.Time { return time.Now().UTC() },
 	)
 	s.salesProgressReading = salesprogress.Reading{DB: InstallationDB(pool), Reports: reportingService, Deals: deals.NewStore(InstallationDB(pool), DealsInstallation())}
+	s.goalProposalHandlers = goalproposal.Handlers{Progress: s.salesProgressReading, Now: time.Now}
 	s.sdrSummaryHandlers = newSdrSummaryHandlers(
 		InstallationDB(pool), func() time.Time { return time.Now().UTC() },
 	).withTargets(reportingService)
@@ -411,3 +413,6 @@ func (o ownDomainReader) MailSeatIdentitiesSQL(ctx context.Context, tx pgx.Tx, b
 
 // salesProgressReading names the Progress handlers as the inventory embeds them.
 type salesProgressReading = salesprogress.Reading
+
+// goalProposalHandlers names the Sales goals proposal the same way.
+type goalProposalHandlers = goalproposal.Handlers

@@ -327,15 +327,15 @@ tasks:
     doc: "Declared, not built (ADR-0074). Pasted transcript text is T2/untrusted per ai-operational-spec §1 when a site lands."
 
   report_setup:
-    display_name: "Setting up a report from a description"
-    summary: "Turns a described sales initiative or custom report into a setup you check before saving."
+    display_name: "Proposing a report setup or sales goals"
+    summary: "Turns a described sales initiative or custom report, or a seller's closed revenue, into a proposal you check before saving."
     ladder: [cheap_cloud, premium]
     execution_mode: interactive
     on_budget_exhausted: degrade
     status: shipped
-    sites: [initiative_setup, custom_report_setup]
+    sites: [initiative_setup, custom_report_setup, sales_goal_months]
     company_context: none
-    doc: "Turn a manager's description into a typed, catalog-resolved proposal for a sales initiative or a custom report; nothing is written until the reader confirms. Every product, industry, metric, chart and objective the reply names is checked against the catalog the reader may use, and what fails is named back with a reason. Without a model the drawers offer no proposal."
+    doc: "Turn a manager's description into a typed, catalog-resolved proposal for a sales initiative or a custom report; nothing is written until the reader confirms. Every product, industry, metric, chart and objective the reply names is checked against the catalog the reader may use, and what fails is named back with a reason. Without a model the drawers offer no proposal. sales_goal_months — twelve monthly sales goals for one seller, read from their closed revenue by month in the plan year and the year before; a yearly goal the reader gave is spread over the proposed pattern to the minor unit, and the reason carries no figure. The manager reviews the months and saves them as a draft."
 
   report_interpret:
     display_name: "Assessing a sales report"
@@ -344,10 +344,10 @@ tasks:
     execution_mode: interactive
     on_budget_exhausted: degrade
     status: shipped
-    sites: [sales_assessment]
+    sites: [sales_assessment, progress_summary]
     company_context: none
     no_payload: true
-    doc: "Read an evaluated report and write cited paragraphs for sales review, personal prospecting or team prospecting. Quantities must match supplied evidence, and action identifiers must come from the application. A proposed decision must name a supplied candidate deal. Without a supported explanation, measured figures and application actions remain usable."
+    doc: "Read an evaluated report and write cited paragraphs for sales review, personal prospecting or team prospecting. Quantities must match supplied evidence, and action identifiers must come from the application. A proposed decision must name a supplied candidate deal. Without a supported explanation, measured figures and application actions remain usable. progress_summary — the same request over the figures of one Progress reading: closed revenue against the sales goal, what is still missing to it and the open deals expected in the period."
 
   reader_rendering:
     display_name: "Showing a message in your language"

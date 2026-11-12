@@ -47,9 +47,9 @@ const (
 	TaskRateExtract Task = "rate_extract"
 	// TaskReaderRendering is activity_text — one note, email, meeting or call, written in one reader's language when that reader presses the button for it. It renders what the text means rather than its words: names, numbers, amounts, dates, addresses, links, commitments and questions are kept exactly, and a validator refuses a reply that lost a digit run, an email address or a link, or that is in another language than the target. A mail is rendered from its current message, without the quoted history. Nothing is stored and no payload is kept, because the text is a customer's correspondence and the rendering is for one reader. Text already in the target language is answered unchanged without a call; text past what one answer can carry is refused before the call. With no model bound the endpoint answers 409 ai_not_configured, because there is no deterministic rendering to fall back to.
 	TaskReaderRendering Task = "reader_rendering"
-	// TaskReportInterpret is Read an evaluated report and write cited paragraphs for sales review, personal prospecting or team prospecting. Quantities must match supplied evidence, and action identifiers must come from the application. A proposed decision must name a supplied candidate deal. Without a supported explanation, measured figures and application actions remain usable.
+	// TaskReportInterpret is Read an evaluated report and write cited paragraphs for sales review, personal prospecting or team prospecting. Quantities must match supplied evidence, and action identifiers must come from the application. A proposed decision must name a supplied candidate deal. Without a supported explanation, measured figures and application actions remain usable. progress_summary — the same request over the figures of one Progress reading: closed revenue against the sales goal, what is still missing to it and the open deals expected in the period.
 	TaskReportInterpret Task = "report_interpret"
-	// TaskReportSetup is Turn a manager's description into a typed, catalog-resolved proposal for a sales initiative or a custom report; nothing is written until the reader confirms. Every product, industry, metric, chart and objective the reply names is checked against the catalog the reader may use, and what fails is named back with a reason. Without a model the drawers offer no proposal.
+	// TaskReportSetup is Turn a manager's description into a typed, catalog-resolved proposal for a sales initiative or a custom report; nothing is written until the reader confirms. Every product, industry, metric, chart and objective the reply names is checked against the catalog the reader may use, and what fails is named back with a reason. Without a model the drawers offer no proposal. sales_goal_months — twelve monthly sales goals for one seller, read from their closed revenue by month in the plan year and the year before; a yearly goal the reader gave is spread over the proposed pattern to the minor unit, and the reason carries no figure. The manager reviews the months and saves them as a draft.
 	TaskReportSetup Task = "report_setup"
 	// TaskRequestSettlement is Whether OUR OWN reply settled the request an inbound message made — settled, still_owed or unsure. owed_verdict answers a question about one message from that message alone, so a request answered within the hour still reads as owed a week later; this is the second question, asked of the THREAD, and only askable once the workspace has written back. The candidates are requests we have since answered: our attested reply on the thread, our attested mail to the sender with the same subject, or a logged call or held meeting with the sender's contact — the answers the needs-reply check recognises. A conversation nobody has answered is never judged here and costs nothing; the off-thread answers reach the prompt marked as such, a call's or meeting's notes as its text. A REPLY IS EVIDENCE AND NOT AN ANSWER: 'thanks, I will check' is a reply that discharges nothing, which is exactly why this is a model reading of what our words did rather than a SQL test for whether words exist. A settled verdict completes the reminder the owed pass filed, through the ordinary activity writer, so it carries the audit row and the event a human ticking the box carries; still_owed may sharpen a MACHINE-FILED, undated reminder to name what is actually outstanding, and never touches a task a human accepted, dated or reopened. Below the confidence floor the verdict is unsure, which is a real answer: the request stays owed exactly as it was before this pass existed, and the watermark advances so the same thread is not re-asked until somebody writes again. No cost_unit, for owed_verdict's reason: the candidates are live requests rather than mailbox history, so the pass deliberately does not run at backfill.
 	TaskRequestSettlement Task = "request_settlement"
@@ -108,7 +108,7 @@ var taskDisplayNames = map[Task]string{
 	TaskRateExtract:                   "Exchange rate extraction",
 	TaskReaderRendering:               "Showing a message in your language",
 	TaskReportInterpret:               "Assessing a sales report",
-	TaskReportSetup:                   "Setting up a report from a description",
+	TaskReportSetup:                   "Proposing a report setup or sales goals",
 	TaskRequestSettlement:             "Checking whether the reply answered the request",
 	TaskSignalExtract:                 "Signal extraction",
 	TaskSiteExtract:                   "Website research",
@@ -154,7 +154,7 @@ var taskSummaries = map[Task]string{
 	TaskRateExtract:                   "Reads exchange rates from a published rates page for the currency refresh.",
 	TaskReaderRendering:               "Shows a note, email or meeting in the reader's own language when they ask for it.",
 	TaskReportInterpret:               "Writes an assessment beside a report's leading chart, citing the figures it rests on.",
-	TaskReportSetup:                   "Turns a described sales initiative or custom report into a setup you check before saving.",
+	TaskReportSetup:                   "Turns a described sales initiative or custom report, or a seller's closed revenue, into a proposal you check before saving.",
 	TaskRequestSettlement:             "Checks whether our reply actually answered what the other side asked for.",
 	TaskSignalExtract:                 "Picks out important events from a finished thread, such as a contract ending or a new opportunity.",
 	TaskSiteExtract:                   "Reads a company's website in depth, quoting the pages each fact comes from.",
@@ -198,7 +198,7 @@ const (
 // TaskContractHash is the sha256 of api/ai-tasks.yaml at generation
 // time: a build fingerprint the cert runner can compare against a
 // freshly hashed contract file to catch a stale generated table.
-const TaskContractHash = "0117180ee08b2783f8c9111aad8c3de026d815de0beb813e0505ba519bfee71b"
+const TaskContractHash = "a0dd1712acbd6addb0d58aa2bd96c94c14fd228a5f9a979a535aa33c57be4af0"
 
 // AllTasks returns every contract task, sorted — the completeness
 // check a certification run walks to prove it covers every routed
@@ -505,10 +505,12 @@ var taskSites = map[Task][]Site{
 	},
 	TaskReportInterpret: {
 		{Name: "sales_assessment", Kind: "one_shot"},
+		{Name: "progress_summary", Kind: "one_shot"},
 	},
 	TaskReportSetup: {
 		{Name: "initiative_setup", Kind: "one_shot"},
 		{Name: "custom_report_setup", Kind: "one_shot"},
+		{Name: "sales_goal_months", Kind: "one_shot"},
 	},
 	TaskRequestSettlement: {
 		{Name: "request_settle", Kind: "one_shot"},

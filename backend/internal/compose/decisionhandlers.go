@@ -89,7 +89,7 @@ func (s *Server) wireSalesReview(pool *pgxpool.Pool) {
 	s.initiativeHandlers = initiatives.NewHandlers(newInitiativeStore(pool))
 	decisions := newSalesDecisions(InstallationDB(pool))
 	s.salesDecisionHandlers = salesDecisionHandlers{decisions: decisions}
-	s.salesAssessmentHandlers = salesAssessmentHandlers{svc: newSalesAssessments(s.reportMetrics, decisions, InstallationDB(pool))}
+	s.salesAssessmentHandlers = salesAssessmentHandlers{svc: newSalesAssessments(s.reportMetrics, decisions, InstallationDB(pool)), progress: s.salesProgressReading}
 	s.reportSetupHandlers = reportSetupHandlers{svc: newReportSetups(s.reportMetrics, s.dealsStore, pool)}
 	s.accountCoverageHandlers = accountCoverageHandlers{svc: accountCoverage{db: InstallationDB(pool), now: time.Now}}
 }

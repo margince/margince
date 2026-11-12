@@ -10,6 +10,7 @@ package compose
 
 import (
 	"github.com/margince/margince/backend/internal/compose/aitasks"
+	"github.com/margince/margince/backend/internal/compose/goalproposal"
 	"github.com/margince/margince/backend/internal/compose/reportsetup"
 	"github.com/margince/margince/backend/internal/modules/ai"
 )
@@ -61,9 +62,11 @@ func NewTaskCensus() (*aitasks.Registry, error) {
 	oneShot(ai.TaskProposeRoles, "committee", proposeRolesCases{})
 	oneShot(ai.TaskNlSearch, "filter_propose", filterProposeCases{})
 	oneShot(ai.TaskReaderRendering, "activity_text", readerRenderingCases{})
-	oneShot(ai.TaskReportInterpret, "sales_assessment", salesAssessmentCases{})
+	oneShot(ai.TaskReportInterpret, "sales_assessment", salesReviewCases)
+	oneShot(ai.TaskReportInterpret, "progress_summary", progressSummaryCases)
 	oneShot(ai.TaskReportSetup, "initiative_setup", reportSetupCases{site: reportsetup.SiteInitiative})
 	oneShot(ai.TaskReportSetup, "custom_report_setup", reportSetupCases{site: reportsetup.SiteCustomReport})
+	oneShot(ai.TaskReportSetup, "sales_goal_months", goalproposal.Cases{})
 	oneShot(ai.TaskBriefRanking, "rank", briefRankingCases{})
 	oneShot(ai.TaskWeeklyReview, "narrative", weeklyNarrativeCases{})
 	oneShot(ai.TaskWeeklyLearnings, "learn", weeklyLearningsCases{})

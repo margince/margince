@@ -33,9 +33,12 @@ func (h reportSetupHandlers) ProposeReportSetup(w http.ResponseWriter, r *http.R
 }
 
 // WithReportSetup binds the report_setup lane that reads a description into
-// a proposal. Unbound, the endpoint answers 409 ai_not_configured.
+// a proposal, and a seller's closed revenue into proposed sales goals.
+// Unbound, both endpoints answer 409 ai_not_configured.
 func WithReportSetup(brain completer) Option {
 	return func(s *Server, _ *pgxpool.Pool) {
+		goals := s.goalProposalHandlers
+		s.goalProposalHandlers = goals.WithLane(brain)
 		if s.reportSetupHandlers.svc != nil {
 			s.reportSetupHandlers.svc = s.reportSetupHandlers.svc.withLane(brain)
 		}

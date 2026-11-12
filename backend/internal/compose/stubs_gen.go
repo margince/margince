@@ -499,6 +499,10 @@ func (stubs) ListSalesProgressDeals(w nethttp.ResponseWriter, r *nethttp.Request
 	httperr.NotImplemented(w, r, "ListSalesProgressDeals")
 }
 
+func (stubs) SummarizeSalesProgress(w nethttp.ResponseWriter, r *nethttp.Request) {
+	httperr.NotImplemented(w, r, "SummarizeSalesProgress")
+}
+
 func (stubs) RunAnalyticsQuery(w nethttp.ResponseWriter, r *nethttp.Request) {
 	httperr.NotImplemented(w, r, "RunAnalyticsQuery")
 }
@@ -621,6 +625,10 @@ func (stubs) DiscardSalesGoalDraft(w nethttp.ResponseWriter, r *nethttp.Request,
 
 func (stubs) SaveSalesGoalDraft(w nethttp.ResponseWriter, r *nethttp.Request, ownerId openapi_types.UUID, year int, params crmcontracts.SaveSalesGoalDraftParams) {
 	httperr.NotImplemented(w, r, "SaveSalesGoalDraft")
+}
+
+func (stubs) ProposeSalesGoalMonths(w nethttp.ResponseWriter, r *nethttp.Request, ownerId openapi_types.UUID, year int) {
+	httperr.NotImplemented(w, r, "ProposeSalesGoalMonths")
 }
 
 func (stubs) PublishSalesGoalPlan(w nethttp.ResponseWriter, r *nethttp.Request, ownerId openapi_types.UUID, year int, params crmcontracts.PublishSalesGoalPlanParams) {

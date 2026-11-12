@@ -36811,7 +36811,7 @@ components:
       type: object
       required: [id, label, value]
       properties:
-        id: {type: string, description: "`metric:<metric id>` or `point:<metric id>:<group key>`."}
+        id: {type: string, description: "`metric:<metric id>` or `point:<metric id>:<group key>`; a Progress summary names its own figures `progress:<figure>`."}
         label: {type: string}
         value: {type: string, description: Raw source quantity with its unit.}
         display: {type: string, description: Locale-formatted quantity for reader text.}

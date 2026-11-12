@@ -56,26 +56,6 @@ func (s *salesAssessments) upcomingFacts(ctx context.Context, evaluation crmcont
 	return cells, err
 }
 
-// displayAssessmentFigures writes each figure the way the page prints it in
-// this language. The certification case calls it too, so a model is graded
-// on the figures production shows it.
-func displayAssessmentFigures(in *salesassessment.Input, language string) {
-	for i := range in.Cells {
-		cell := &in.Cells[i]
-		number := strings.TrimSpace(strings.TrimSuffix(cell.Value, " "+cell.Unit))
-		if value, err := strconv.ParseFloat(number, 64); err == nil {
-			cell.Display = salesassessment.DisplayQuantity(value, cell.Unit, language)
-		}
-	}
-	for i := range in.Candidates {
-		candidate := &in.Candidates[i]
-		number, unit, _ := strings.Cut(candidate.Amount, " ")
-		if value, err := strconv.ParseFloat(number, 64); err == nil {
-			candidate.Display = salesassessment.DisplayQuantity(value, unit, language)
-		}
-	}
-}
-
 func assessmentWorthExplaining(in salesassessment.Input) bool {
 	if len(in.Actions) > 0 || len(in.Decisions) > 0 {
 		return true

@@ -1,11 +1,11 @@
 {
   "totals": {
-    "sites": 56,
+    "sites": 58,
     "sites_best_current": 48,
     "sites_best_partial": 0,
     "sites_best_stale": 8,
-    "sites_absent": 0,
-    "scenarios": 316,
+    "sites_absent": 2,
+    "scenarios": 320,
     "records": 355,
     "bindings": 16,
     "self_judged_records": 0
@@ -629,7 +629,7 @@
         },
         {
           "task": "report_setup",
-          "label": "Setting up a report from a description",
+          "label": "Proposing a report setup or sales goals",
           "tier": "cheap_cloud",
           "model": {
             "provider": "gemini",
@@ -1813,7 +1813,7 @@
         },
         {
           "task": "report_setup",
-          "label": "Setting up a report from a description",
+          "label": "Proposing a report setup or sales goals",
           "tier": "cheap_cloud",
           "model": {
             "provider": "gemini_vertex",
@@ -2889,7 +2889,7 @@
         },
         {
           "task": "report_setup",
-          "label": "Setting up a report from a description",
+          "label": "Proposing a report setup or sales goals",
           "tier": "cheap_cloud",
           "model": {
             "provider": "openai_compatible",
@@ -3828,7 +3828,7 @@
         },
         {
           "task": "report_setup",
-          "label": "Setting up a report from a description",
+          "label": "Proposing a report setup or sales goals",
           "tier": "cheap_cloud",
           "model": {
             "provider": "openai_compatible",
@@ -4767,7 +4767,7 @@
         },
         {
           "task": "report_setup",
-          "label": "Setting up a report from a description",
+          "label": "Proposing a report setup or sales goals",
           "tier": "cheap_cloud",
           "model": {
             "provider": "openai_compatible",
@@ -5706,7 +5706,7 @@
         },
         {
           "task": "report_setup",
-          "label": "Setting up a report from a description",
+          "label": "Proposing a report setup or sales goals",
           "tier": "cheap_cloud",
           "model": {
             "provider": "openai_compatible",
@@ -6645,7 +6645,7 @@
         },
         {
           "task": "report_setup",
-          "label": "Setting up a report from a description",
+          "label": "Proposing a report setup or sales goals",
           "tier": "cheap_cloud",
           "model": {
             "provider": "ollama",
@@ -7584,7 +7584,7 @@
         },
         {
           "task": "report_setup",
-          "label": "Setting up a report from a description",
+          "label": "Proposing a report setup or sales goals",
           "tier": "cheap_cloud",
           "model": {
             "provider": "vllm",
@@ -7928,7 +7928,7 @@
     {
       "name": "Gemini",
       "answer": "mostly",
-      "sites_shipped": 56,
+      "sites_shipped": 58,
       "sites_measured": 56,
       "ready": 41,
       "usable_with_care": 14,
@@ -8785,7 +8785,7 @@
     {
       "name": "GPT",
       "answer": "mostly",
-      "sites_shipped": 56,
+      "sites_shipped": 58,
       "sites_measured": 52,
       "ready": 35,
       "usable_with_care": 14,
@@ -9587,7 +9587,7 @@
     {
       "name": "Mistral",
       "answer": "mostly",
-      "sites_shipped": 56,
+      "sites_shipped": 58,
       "sites_measured": 44,
       "ready": 24,
       "usable_with_care": 12,
@@ -10297,7 +10297,7 @@
     {
       "name": "Gemma",
       "answer": "not_enough_tested",
-      "sites_shipped": 56,
+      "sites_shipped": 58,
       "sites_measured": 6,
       "ready": 1,
       "usable_with_care": 1,
@@ -21778,6 +21778,30 @@
     },
     {
       "task": "report_interpret",
+      "site": "progress_summary",
+      "key": "report_interpret/progress_summary",
+      "scope": "full_invocation",
+      "missing_context_scopes": [],
+      "best_state": "absent",
+      "recommended": null,
+      "scenarios": [
+        {
+          "name": "progress_summary_judges_nothing_against_a_goal_nobody_set",
+          "expects": "accepted",
+          "graded_by": "judge",
+          "file": "backend/internal/compose/aicert/corpus/report_interpret/progress_summary_judges_nothing_against_a_goal_nobody_set_01.yaml"
+        },
+        {
+          "name": "progress_summary_names_what_is_missing_to_the_goal",
+          "expects": "accepted",
+          "graded_by": "judge",
+          "file": "backend/internal/compose/aicert/corpus/report_interpret/progress_summary_names_what_is_missing_to_the_goal_01.yaml"
+        }
+      ],
+      "records": []
+    },
+    {
+      "task": "report_interpret",
       "site": "sales_assessment",
       "key": "report_interpret/sales_assessment",
       "scope": "full_invocation",
@@ -22226,6 +22250,30 @@
           "stale_reason": ""
         }
       ]
+    },
+    {
+      "task": "report_setup",
+      "site": "sales_goal_months",
+      "key": "report_setup/sales_goal_months",
+      "scope": "full_invocation",
+      "missing_context_scopes": [],
+      "best_state": "absent",
+      "recommended": null,
+      "scenarios": [
+        {
+          "name": "sales_goal_months_follows_last_years_seasons",
+          "expects": "accepted",
+          "graded_by": "judge",
+          "file": "backend/internal/compose/aicert/corpus/report_setup/sales_goal_months_follows_last_years_seasons_01.yaml"
+        },
+        {
+          "name": "sales_goal_months_spreads_a_given_yearly_goal",
+          "expects": "accepted",
+          "graded_by": "judge",
+          "file": "backend/internal/compose/aicert/corpus/report_setup/sales_goal_months_spreads_a_given_yearly_goal_01.yaml"
+        }
+      ],
+      "records": []
     },
     {
       "task": "request_settlement",

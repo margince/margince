@@ -1,5 +1,5 @@
 <!-- prose:plain -->
-<!-- describes: frontend/src/features/analytics/progress.tsx frontend/src/features/analytics/goals.tsx frontend/src/features/analytics/goals.editor.tsx backend/internal/compose/salesprogress backend/internal/modules/reporting/goalplans.go backend/internal/modules/reporting/goalreading.go backend/internal/modules/reporting/evaluationgoals.go -->
+<!-- describes: frontend/src/features/analytics/progress.tsx frontend/src/features/analytics/goals.tsx frontend/src/features/analytics/goals.editor.tsx frontend/src/features/analytics/progress.summary.tsx frontend/src/features/analytics/goals.proposal.tsx backend/internal/compose/goalproposal backend/internal/compose/salesprogress backend/internal/modules/reporting/goalplans.go backend/internal/modules/reporting/goalreading.go backend/internal/modules/reporting/evaluationgoals.go -->
 # Progress and sales goals
 
 ## Where do I see my results against my goal?
@@ -24,6 +24,8 @@ Under the result, **Product sales** and **Services and projects** split the sale
 A team view lists each team member in name order. Click a name to open the progress of that team member for the same period. Each row has a bar that shows how much of their goal that team member has reached.
 
 The **Goal** panel beside the result names the goal, how many months of the period have one, and what counts. **Open in Analytics** opens Performance on the same period and the same team member or team.
+
+When an AI model is set up, a **Summary** panel leads that side of the page. It says in a few sentences where the period stands against its goal and what is still open. Margince writes it only from the figures on the page, and you see only the figures you may read. A period with no goal gets no verdict against one. Click **Refresh summary** to have it written again. With no model set up, the panel does not show.
 
 **Work in progress now** lists what is open today, whatever the period. **Leads** has a tab for each open status with its count.
 
@@ -57,6 +59,14 @@ A published plan opens as text, with the year so far against it and a link to Pr
 You can only publish a saved draft whose 12 months are all set and add up to more than zero. If the yearly goal field holds an amount, the months must add up to it. When you change published goals, that field starts with their total. **Discard draft** removes the draft and keeps what is published; it asks for no reason. **Withdraw** removes published goals; it asks for a reason. Every step is kept in the plan history with who did it and when.
 
 Once a plan publishes the months of a team member, those months can only be changed through **Sales goals**.
+
+## Can Margince propose the months?
+
+Yes, when an AI model is set up. In the editor, click **Propose months**. Margince reads the sales this team member won in each month of the plan's year and the year before. Months that were high stay high, and months that were quiet stay quiet.
+
+A yearly goal you typed first is split over the months. With none, the proposal sets the year too. Read the reason, then click **Use these months** or **Dismiss**. A team member with no sales won in those two years gets no proposal.
+
+A proposal saves nothing. You can change every month before you save, and the draft is marked **Proposed by Margince**.
 
 ## Where else do published goals show?
 

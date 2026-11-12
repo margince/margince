@@ -2,7 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import { useRef, useState } from "react";
-import { Button, Field } from "../../design-system/atoms";
+import { Badge, Button, Field } from "../../design-system/atoms";
 import { Callout } from "../../design-system/callout";
 import { ConfirmModal } from "../../design-system/confirmmodal";
 import { ErrorLine } from "../../design-system/errorline";
@@ -17,6 +17,7 @@ import {
 import { useLocale, usePlural, useT } from "../../i18n";
 import { problemMessageOf } from "../../lib/problem";
 import { GoalBars } from "./goals.bars";
+import { type GoalProposal, GoalProposalStep } from "./goals.proposal";
 import {
   equalMonths,
   monthsTotal,
@@ -61,6 +62,8 @@ export function GoalEditor({
     () => plan.draft?.declared_total_minor ?? monthsTotal(startingMonths(plan)),
   );
   const [reason, setReason] = useState(plan.draft?.reason ?? "");
+  // Months taken from a proposal stay marked as one through every later save.
+  const [proposed, setProposed] = useState(plan.draft?.origin === "ai");
   const [confirming, setConfirming] = useState<"publish" | "withdraw" | null>(
     null,
   );
@@ -75,12 +78,13 @@ export function GoalEditor({
     months,
     ...(yearly === null ? {} : { declared_total_minor: yearly }),
     reason: reason.trim(),
-    origin: "manual" as const,
+    origin: proposed ? ("ai" as const) : ("manual" as const),
   };
   // Publishing sends the saved draft, so the yearly goal and the reason on
   // screen must be saved too.
   const unchangedDraft =
     plan.draft !== undefined &&
+    (plan.draft.origin === "ai") === proposed &&
     plan.draft.reason.trim() === reason.trim() &&
     JSON.stringify(plan.draft.months) === JSON.stringify(months) &&
     (plan.draft.declared_total_minor ?? monthsTotal(plan.draft.months)) ===
@@ -90,28 +94,21 @@ export function GoalEditor({
       {plan.state === "no_goal" && (
         <p className="t-caption goal-note">{t("goals.start")}</p>
       )}
-      <div className="goal-editor-yearly">
-        <Field label={t("goals.yearly", { currency: plan.currency })}>
-          {(field) => (
-            <MoneyInput
-              {...field}
-              valueMinor={yearly ?? 0}
-              blankWhenZero={yearly === null}
-              currency={plan.currency}
-              display={money}
-              onChangeMinor={setYearly}
-              onClear={() => setYearly(null)}
-            />
-          )}
-        </Field>
-        <Button
-          variant="ghost"
-          disabled={yearly === null || yearly <= 0}
-          onClick={() => yearly !== null && setMonths(equalMonths(yearly))}
-        >
-          {t("goals.spread")}
-        </Button>
-      </div>
+      <YearlyGoal
+        plan={plan}
+        yearly={yearly}
+        proposed={proposed}
+        onYearly={setYearly}
+        onSpread={setMonths}
+        onProposal={(proposal) => {
+          setMonths(proposal.months);
+          setYearly(proposal.total_minor);
+          setReason((written) =>
+            written.trim() === "" ? proposal.reason : written,
+          );
+          setProposed(true);
+        }}
+      />
       <GoalBars months={months} />
       <div className="goal-editor-months">
         {months.map((month, index) => (
@@ -232,6 +229,61 @@ export function GoalEditor({
         <WithdrawConfirm plan={plan} onClose={() => setConfirming(null)} />
       )}
     </div>
+  );
+}
+
+// The year in one figure, and the two ways to turn it into twelve months:
+// spread it equally, or take a proposal read from the sales won so far.
+function YearlyGoal({
+  plan,
+  yearly,
+  proposed,
+  onYearly,
+  onSpread,
+  onProposal,
+}: Readonly<{
+  plan: SalesGoalPlan;
+  yearly: number | null;
+  proposed: boolean;
+  onYearly: (minor: number | null) => void;
+  onSpread: (months: Months) => void;
+  onProposal: (proposal: GoalProposal) => void;
+}>) {
+  const t = useT();
+  const { locale } = useLocale();
+  return (
+    <>
+      <div className="goal-editor-yearly">
+        <Field label={t("goals.yearly", { currency: plan.currency })}>
+          {(field) => (
+            <MoneyInput
+              {...field}
+              valueMinor={yearly ?? 0}
+              blankWhenZero={yearly === null}
+              currency={plan.currency}
+              display={(minor) =>
+                formatAnalyticsMoney(minor, plan.currency, locale)
+              }
+              onChangeMinor={onYearly}
+              onClear={() => onYearly(null)}
+            />
+          )}
+        </Field>
+        <Button
+          variant="ghost"
+          disabled={yearly === null || yearly <= 0}
+          onClick={() => yearly !== null && onSpread(equalMonths(yearly))}
+        >
+          {t("goals.spread")}
+        </Button>
+        <GoalProposalStep plan={plan} yearly={yearly} onApply={onProposal} />
+      </div>
+      {proposed && (
+        <p className="goal-note">
+          <Badge tone="ai">{t("goals.proposedByAi")}</Badge>
+        </p>
+      )}
+    </>
   );
 }
 
