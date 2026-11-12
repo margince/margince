@@ -34431,6 +34431,34 @@ paths:
         '401': { $ref: '#/components/responses/Unauthorized' }
         '422': { $ref: '#/components/responses/ValidationError' }
 
+  /me/email-signature/gmail:
+    get:
+      tags: [Contacts]
+      operationId: getMyGmailSignature
+      security: [ { cookieAuth: [] } ]
+      x-agent-access: human-only
+      x-human-only-reason: covered
+      summary: The signature your connected Gmail mailbox holds, as Margince would keep it.
+      description: |
+        Reads the signature of the address Gmail sends from by default (Gmail keeps one per
+        send-as address) when the caller presses the button, and writes nothing. `html` is the
+        signature after the same cleaning a saved personal signature gets, and `text` its plain
+        form, so the preview shows what is kept. Saving it is `saveMyEmailSignature`.
+
+        `state` says what came back: `ready` with the signature; `empty` when Gmail holds none, or
+        one with no words (images only), which a send would skip;
+        `no_mailbox` when the caller has no live Gmail connection; `needs_reconnect` when the
+        connection's grant cannot read the send-as settings or Google refused it, so the caller
+        connects the mailbox again; `too_long` when the cleaned signature is over 10,000
+        characters. An agent saves a signature through `saveMyEmailSignature` instead.
+      responses:
+        '200':
+          description: What the mailbox holds.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/GmailSignatureImport' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+
   /me/brief-delivery:
     get:
       tags: [Identity]
@@ -52684,6 +52712,18 @@ components:
             with their name, title and phone, instead of `body`, unless effective personal `html` is set.
             An agent's send carries no sign-off.
         updated_at: { type: [string, 'null'], format: date-time }
+    GmailSignatureImport:
+      type: object
+      required: [state]
+      properties:
+        state:
+          type: string
+          enum: [ready, empty, no_mailbox, needs_reconnect, too_long]
+          x-extensible-enum: true
+        address: { type: string, description: 'The send-as address the signature belongs to.' }
+        html: { type: string, maxLength: 10000, description: 'The signature as a saved personal signature keeps it.' }
+        text: { type: string, description: 'The plain-text form of `html`.' }
+      additionalProperties: false
     EmailSignatureTemplate:
       type: object
       required: [template]

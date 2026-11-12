@@ -8897,6 +8897,21 @@ export const en = {
   "settings.signatureReviewLoading": "Loading the retained signature…",
   "settings.signatureReviewSaved": "Signature review saved",
   "settings.signatureReviewMember": "the member",
+  "settings.signatureChoicePlain":
+    "Your own signature goes under every mail you send. Without one, mail closes with a greeting and your name.",
+  "settings.signatureChoiceTemplate":
+    "Your own HTML signature goes under every mail you send. Without one, the company template is used, filled in with your name, title and phone.",
+  "settings.signatureUseGmail": "Use my Gmail signature",
+  "settings.signatureGmailTaken":
+    "The signature of {address} is below. Check the preview, then save.",
+  "settings.signatureGmailEmpty":
+    "Your Gmail signature is empty or holds only images, so Margince cannot use it.",
+  "settings.signatureGmailNoMailbox":
+    "Connect your Gmail mailbox under Settings → Connections first.",
+  "settings.signatureGmailReconnect":
+    "Margince may not read your Gmail settings. Press Reconnect under Settings → Connections and approve access, then try again.",
+  "settings.signatureGmailTooLong":
+    "Your Gmail signature is longer than 10,000 characters, so it cannot be used here.",
   "settings.signature": "Email signature",
   "settings.signatureSub":
     "Added below every message you send, above the unsubscribe footer.",

@@ -10,6 +10,7 @@ import type { Toast } from "../../design-system/toast";
 import { useT } from "../../i18n";
 import { unwrap } from "../../lib/problem";
 import { useSignOff } from "../mail/composesignoff";
+import { GmailSignatureImport } from "./gmailsignatureimport";
 import { useSaveSignature } from "./settingssignature";
 
 import {
@@ -124,6 +125,19 @@ export function SignatureSettingRow({ toast }: Readonly<{ toast: Toast }>) {
           }}
         >
           <WriteRefused titleKey="settings.saveFailed" error={save.error} />
+          <p className="t-caption">
+            {t(
+              templated
+                ? "settings.signatureChoiceTemplate"
+                : "settings.signatureChoicePlain",
+            )}
+          </p>
+          <GmailSignatureImport
+            disabled={save.isPending}
+            onImported={(html, text) =>
+              setDraft({ ...shown, html, body: text, format: "html" })
+            }
+          />
           <SegmentedControl
             options={FORMATS}
             value={shown.format}

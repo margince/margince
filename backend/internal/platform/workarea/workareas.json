@@ -1332,6 +1332,7 @@
     "getMyAiActivity": "own_profile",
     "getMyBriefDelivery": "own_profile",
     "getMyEmailSignature": "own_profile",
+    "getMyGmailSignature": "own_profile",
     "getMyLinkedInAccount": "own_profile",
     "getMyLinkedInReach": "own_profile",
     "getMyMfa": "own_security",

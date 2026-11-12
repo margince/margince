@@ -13438,6 +13438,33 @@ func (e ForecastSufficiencyBasis) Valid() bool {
 	}
 }
 
+// Defines values for GmailSignatureImportState.
+const (
+	GmailSignatureImportStateEmpty          GmailSignatureImportState = "empty"
+	GmailSignatureImportStateNeedsReconnect GmailSignatureImportState = "needs_reconnect"
+	GmailSignatureImportStateNoMailbox      GmailSignatureImportState = "no_mailbox"
+	GmailSignatureImportStateReady          GmailSignatureImportState = "ready"
+	GmailSignatureImportStateTooLong        GmailSignatureImportState = "too_long"
+)
+
+// Valid indicates whether the value is a known member of the GmailSignatureImportState enum.
+func (e GmailSignatureImportState) Valid() bool {
+	switch e {
+	case GmailSignatureImportStateEmpty:
+		return true
+	case GmailSignatureImportStateNeedsReconnect:
+		return true
+	case GmailSignatureImportStateNoMailbox:
+		return true
+	case GmailSignatureImportStateReady:
+		return true
+	case GmailSignatureImportStateTooLong:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for GrowthFitBand.
 const (
 	GrowthFitBandModerate GrowthFitBand = "moderate"
@@ -49590,6 +49617,22 @@ type FxRateListResponse struct {
 	BaseCurrency *string  `json:"base_currency,omitempty"`
 	Data         []FxRate `json:"data"`
 }
+
+// GmailSignatureImport defines model for GmailSignatureImport.
+type GmailSignatureImport struct {
+	// Address The send-as address the signature belongs to.
+	Address *string `json:"address,omitempty"`
+
+	// Html The signature as a saved personal signature keeps it.
+	Html  *string                   `json:"html,omitempty"`
+	State GmailSignatureImportState `json:"state"`
+
+	// Text The plain-text form of `html`.
+	Text *string `json:"text,omitempty"`
+}
+
+// GmailSignatureImportState defines model for GmailSignatureImport.State.
+type GmailSignatureImportState string
 
 // GrowthFitBand How well this company fits what we sell (DOSS-PARAM-8).
 //
@@ -95262,6 +95305,9 @@ type ServerInterface interface {
 	// Write or clear your own sign-off.
 	// (PUT /me/email-signature)
 	SaveMyEmailSignature(w http.ResponseWriter, r *http.Request)
+	// The signature your connected Gmail mailbox holds, as Margince would keep it.
+	// (GET /me/email-signature/gmail)
+	GetMyGmailSignature(w http.ResponseWriter, r *http.Request)
 	// Change the name colleagues greet you by.
 	// (PUT /me/greeting-name)
 	SaveMyGreetingName(w http.ResponseWriter, r *http.Request)
@@ -100641,6 +100687,12 @@ func (_ Unimplemented) GetMyEmailSignature(w http.ResponseWriter, r *http.Reques
 // Write or clear your own sign-off.
 // (PUT /me/email-signature)
 func (_ Unimplemented) SaveMyEmailSignature(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// The signature your connected Gmail mailbox holds, as Margince would keep it.
+// (GET /me/email-signature/gmail)
+func (_ Unimplemented) GetMyGmailSignature(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -134786,6 +134838,26 @@ func (siw *ServerInterfaceWrapper) SaveMyEmailSignature(w http.ResponseWriter, r
 	handler.ServeHTTP(w, r)
 }
 
+// GetMyGmailSignature operation middleware
+func (siw *ServerInterfaceWrapper) GetMyGmailSignature(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetMyGmailSignature(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // SaveMyGreetingName operation middleware
 func (siw *ServerInterfaceWrapper) SaveMyGreetingName(w http.ResponseWriter, r *http.Request) {
 
@@ -152237,6 +152309,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Put(options.BaseURL+"/me/email-signature", wrapper.SaveMyEmailSignature)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/me/email-signature/gmail", wrapper.GetMyGmailSignature)
 	})
 	r.Group(func(r chi.Router) {
 		r.Put(options.BaseURL+"/me/greeting-name", wrapper.SaveMyGreetingName)

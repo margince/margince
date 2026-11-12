@@ -8704,6 +8704,21 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "settings.signatureReviewLoading": "Đang tải chữ ký được giữ lại…",
   "settings.signatureReviewSaved": "Đã lưu kiểm tra chữ ký",
   "settings.signatureReviewMember": "thành viên",
+  "settings.signatureChoicePlain":
+    "Chữ ký riêng của bạn nằm dưới mọi email bạn gửi. Nếu không có, email kết thúc bằng lời chào và tên bạn.",
+  "settings.signatureChoiceTemplate":
+    "Chữ ký HTML riêng của bạn nằm dưới mọi email bạn gửi. Nếu không có, mẫu của công ty được dùng, điền tên, chức danh và số điện thoại của bạn.",
+  "settings.signatureUseGmail": "Dùng chữ ký Gmail của tôi",
+  "settings.signatureGmailTaken":
+    "Chữ ký của {address} ở bên dưới. Kiểm tra bản xem trước, rồi lưu.",
+  "settings.signatureGmailEmpty":
+    "Chữ ký Gmail của bạn trống hoặc chỉ có hình ảnh nên Margince không dùng được.",
+  "settings.signatureGmailNoMailbox":
+    "Hãy kết nối hộp thư Gmail trong Cài đặt → Kết nối trước.",
+  "settings.signatureGmailReconnect":
+    "Margince không được đọc cài đặt Gmail của bạn. Nhấn Kết nối lại trong Cài đặt → Kết nối, cho phép truy cập rồi thử lại.",
+  "settings.signatureGmailTooLong":
+    "Chữ ký Gmail của bạn dài hơn 10.000 ký tự nên không dùng được ở đây.",
   "settings.signature": "Chữ ký email",
   "settings.signatureSub":
     "Chèn vào dưới mỗi email bạn gửi, phía trên chân trang hủy đăng ký.",

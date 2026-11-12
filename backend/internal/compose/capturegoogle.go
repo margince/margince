@@ -10,6 +10,7 @@ package compose
 // wiring an operator supplies rather than the product deciding.
 
 import (
+	"github.com/margince/margince/backend/internal/compose/gmailsignature"
 	"log/slog"
 
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -275,8 +276,10 @@ func WithGmailCapture(c GmailConfig, cfg CaptureConfig) Option {
 		if c.canSync() {
 			gmailOAuth, gcalOAuth, gdocsOAuth = newGmailOAuth(c), newGcalOAuth(c), newGdocsOAuth(c)
 		}
+		registry := newCaptureRegistryWithGoogle(pool, s.vault, s.googleAppResolver, c, cfg)
+		s.ImportHandlers = gmailsignature.ImportHandlers{Source: registry}
 		s.connectorHandlers = connectorHandlers{
-			registry:      newCaptureRegistryWithGoogle(pool, s.vault, s.googleAppResolver, c, cfg),
+			registry:      registry,
 			authority:     identity.NewService(pool),
 			oauth:         gmailOAuth,
 			gmailAPI:      gmail.NewAPIWithQuota(nil, "", cfg.GmailMailboxQuota, cfg.GmailProjectQuota),
