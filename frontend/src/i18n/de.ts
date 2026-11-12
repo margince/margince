@@ -7804,7 +7804,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "compose.rewritePolishAsk":
     "Wortwahl und Lesefluss verbessern. Bedeutung, Fakten und Länge beibehalten.",
   "compose.rewriteFormatted":
-    "Umschreiben geht nur bei reinem Text. Entfernen Sie Formatierung und Links.",
+    "Umschreiben geht nur bei reinem Text. Entferne Formatierung und Links.",
   "compose.rewriteTooLong": "Diese Mail ist zu lang zum Umschreiben.",
   "compose.rewriteShorter": "Kürzer",
   "compose.rewriteShorterAsk":
