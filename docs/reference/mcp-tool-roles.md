@@ -1100,7 +1100,7 @@ A check is `object.action`, or `object.a|b` for any one of them. `*.action` is t
 | Companies | `change_access.share_contacts` | `share_company_contacts` | `company.read` `contact.read` `contact.update` `relationship.read` |
 | Companies | `change_attention.acknowledge_company_view` | `acknowledge_company_view` | `company.read` |
 | Companies | `change_attention.dismiss_company_suggestion` | `dismiss_company_suggestion` | `activity.read` `company.read` `contact.read` `installation_settings.read` `relationship.read` |
-| Companies | `change_attention.restore_company_suggestion` | `restore_company_suggestion` | `company.read` |
+| Companies | `change_attention.restore_company_suggestion` | `restore_company_suggestion` | `activity.read` `company.read` `contact.read` `relationship.read` |
 | Companies | `change_relationships.check_vat` | `request_company_vat_check` | `company.update` |
 | Companies | `change_relationships.link_contacts` | `link_company_contacts` | `company.read` `contact.read` `contact.update` `relationship.create` `relationship.read` |
 | Companies | `change_settings.upsert_partner` | `upsert_partner` | `company.update` |
