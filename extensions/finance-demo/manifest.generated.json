@@ -5,7 +5,8 @@
   "risk_tiers": [],
   "finance_sources": [
     {
-      "provider": "offline_demo"
+      "provider": "offline_demo",
+      "documents": true
     }
   ],
   "company_types": [

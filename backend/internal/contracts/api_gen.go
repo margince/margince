@@ -40432,6 +40432,9 @@ type CompanyFinanceSummary struct {
 	// A different question from `last_synced_at`, which answers when we last looked. A card that has only the second can say the figures are fresh and not what period they are about — and a client rendering a window label must build it from these bounds rather than from a fixed string, or the heading and the numbers end up describing different months (FIN-AC-3).
 	CoverageStart *openapi_types.Date `json:"coverage_start,omitempty"`
 
+	// InvoiceDocuments True when the connected source serves each invoice's own document, which `downloadFinanceInvoicePdf` opens. False or absent means the card offers none.
+	InvoiceDocuments *bool `json:"invoice_documents,omitempty"`
+
 	// LastSyncedAt When the last successful sync finished. Null when none has.
 	LastSyncedAt *time.Time `json:"last_synced_at,omitempty"`
 
@@ -94435,6 +94438,9 @@ type ServerInterface interface {
 	// Read what a new filter clause may name on one record type (LVS-EXT-8).
 	// (GET /filters/vocabulary)
 	GetFilterVocabulary(w http.ResponseWriter, r *http.Request, params GetFilterVocabularyParams)
+	// Open a mirrored invoice's own PDF, fetched from the accounting source.
+	// (GET /finance/invoices/{id}/pdf)
+	DownloadFinanceInvoicePdf(w http.ResponseWriter, r *http.Request, id Id)
 	// Disconnect the accounting source (admin/ops).
 	// (DELETE /finance/source)
 	DisconnectFinanceSource(w http.ResponseWriter, r *http.Request)
@@ -99310,6 +99316,12 @@ func (_ Unimplemented) ProposeFilter(w http.ResponseWriter, r *http.Request) {
 // Read what a new filter clause may name on one record type (LVS-EXT-8).
 // (GET /filters/vocabulary)
 func (_ Unimplemented) GetFilterVocabulary(w http.ResponseWriter, r *http.Request, params GetFilterVocabularyParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Open a mirrored invoice's own PDF, fetched from the accounting source.
+// (GET /finance/invoices/{id}/pdf)
+func (_ Unimplemented) DownloadFinanceInvoicePdf(w http.ResponseWriter, r *http.Request, id Id) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -127997,6 +128009,40 @@ func (siw *ServerInterfaceWrapper) GetFilterVocabulary(w http.ResponseWriter, r 
 	handler.ServeHTTP(w, r)
 }
 
+// DownloadFinanceInvoicePdf operation middleware
+func (siw *ServerInterfaceWrapper) DownloadFinanceInvoicePdf(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.DownloadFinanceInvoicePdf(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // DisconnectFinanceSource operation middleware
 func (siw *ServerInterfaceWrapper) DisconnectFinanceSource(w http.ResponseWriter, r *http.Request) {
 
@@ -151471,6 +151517,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/filters/vocabulary", wrapper.GetFilterVocabulary)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/finance/invoices/{id}/pdf", wrapper.DownloadFinanceInvoicePdf)
 	})
 	r.Group(func(r chi.Router) {
 		r.Delete(options.BaseURL+"/finance/source", wrapper.DisconnectFinanceSource)

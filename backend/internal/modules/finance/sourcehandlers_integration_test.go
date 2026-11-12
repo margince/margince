@@ -36,7 +36,7 @@ func (offeredSources) Providers() []SourceOption {
 	return []SourceOption{
 		{Provider: unreadableProvider, Description: "A source that cannot be read."},
 		{Provider: otherProvider, Description: "A second ledger."},
-		{Provider: fixtureProviderName, Description: "The suite's own ledger."},
+		{Provider: fixtureProviderName, Description: "The suite's own ledger.", Documents: true},
 	}
 }
 
