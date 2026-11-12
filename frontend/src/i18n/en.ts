@@ -4194,6 +4194,7 @@ export const en = {
   "finance.col.amount": "Amount",
   "finance.col.status": "Status",
   "finance.unnumbered": "No number",
+  "finance.openInvoicePdf": "Open invoice {number} as PDF",
   "finance.moreInvoices": "More invoices in the accounting system",
   "finance.syncedFrom": "From {provider} · synced {when}",
   "finance.fromNeverSynced": "From {provider} · not yet synced",
