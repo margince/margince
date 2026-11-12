@@ -5388,7 +5388,7 @@
     },
     {
       "name": "read_project",
-      "tokens": 314,
+      "tokens": 318,
       "agents": [],
       "required_by_cases": [
         "case41_close_the_project"
