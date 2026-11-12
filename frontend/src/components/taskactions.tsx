@@ -18,9 +18,9 @@ import { formatActivityWhen } from "../format/activitywhen";
 import { calendarDay } from "../format/calendarday";
 import { isoOrBlank } from "../format/datepattern";
 import { formatDue } from "../format/format";
-import { dueTimeOf, startOfDayInZone } from "../format/timezone";
+import { startOfDayInZone } from "../format/timezone";
 import { useLocale, useT } from "../i18n";
-import { taskDueFields } from "../lib/activitybody";
+import { taskDueChoice, taskDueFields } from "../lib/activitybody";
 import { useCanWriteRecord } from "../lib/capability";
 import { TaskTimeField } from "./followuptaskfields";
 import { mostSpecificFirst, RecordLinkChips } from "./recordlinks";
@@ -65,13 +65,18 @@ export function snoozedDueAt(
   hasTime: boolean | undefined,
   zone: string,
   now = new Date(),
-): { due_at: string; due_has_time: boolean } | null {
+  intent?: components["schemas"]["IntentTime"],
+): ReturnType<typeof taskDueFields> | null {
   if (!dueAt) return null;
-  const dueDay = calendarDay(new Date(dueAt), zone);
-  const today = calendarDay(now, zone);
+  const choice = taskDueChoice(dueAt, hasTime, zone, intent);
+  const dueDay = choice.day;
+  const today = calendarDay(now, choice.zone);
   const base = dueDay > today ? dueDay : today;
-  const next = calendarDay(new Date(startOfDayInZone(base, zone, 1)), zone);
-  return taskDueFields(next, dueTimeOf(dueAt, hasTime, zone), zone);
+  const next = calendarDay(
+    new Date(startOfDayInZone(base, choice.zone, 1)),
+    choice.zone,
+  );
+  return taskDueFields(next, choice.time, choice.zone);
 }
 
 /**
@@ -118,6 +123,7 @@ export function TaskQuickActions({
   version,
   dueAt,
   dueHasTime,
+  dueIntent,
   update,
   showComplete = true,
 }: Readonly<{
@@ -126,6 +132,7 @@ export function TaskQuickActions({
   dueAt?: string | null;
   /** The task's `due_has_time`: whether `dueAt` is a time of day. */
   dueHasTime?: boolean;
+  dueIntent?: components["schemas"]["IntentTime"];
   update: ReturnType<typeof useTaskUpdate>;
   showComplete?: boolean;
 }>) {
@@ -148,7 +155,13 @@ export function TaskQuickActions({
         <Button
           disabled={pending}
           onClick={() => {
-            const nextDue = snoozedDueAt(dueAt, dueHasTime, readerZone);
+            const nextDue = snoozedDueAt(
+              dueAt,
+              dueHasTime,
+              readerZone,
+              new Date(),
+              dueIntent,
+            );
             if (nextDue)
               update.mutate({ id: activityId, version, body: nextDue });
           }}
@@ -170,12 +183,14 @@ export function TaskDueDatePick({
   version,
   dueAt,
   dueHasTime,
+  dueIntent,
   update,
 }: Readonly<{
   activityId: string;
   version: number | undefined;
   dueAt?: string | null;
   dueHasTime?: boolean;
+  dueIntent?: components["schemas"]["IntentTime"];
   update: ReturnType<typeof useTaskUpdate>;
 }>) {
   const t = useT();
@@ -185,15 +200,14 @@ export function TaskDueDatePick({
   // matching what the meta line above reads it in: a picker opening on a
   // different day than the one displayed beside it would be two answers to
   // "when is this due".
-  const current = isoOrBlank(
-    dueAt ? calendarDay(new Date(dueAt), readerZone) : "",
-  );
-  const time = dueAt ? dueTimeOf(dueAt, dueHasTime, readerZone) : "";
+  const choice = taskDueChoice(dueAt, dueHasTime, readerZone, dueIntent);
+  const current = isoOrBlank(choice.day);
+  const time = choice.time;
   const move = (day: string, nextTime: string) =>
     update.mutate({
       id: activityId,
       version,
-      body: taskDueFields(day, nextTime, readerZone),
+      body: taskDueFields(day, nextTime, choice.zone),
     });
   return (
     <>
@@ -318,6 +332,7 @@ export function TaskDetailDialog({
                         task.due_has_time,
                         locale,
                         readerZone,
+                        task.due_intent,
                       ),
                     })}
                   </span>
@@ -404,6 +419,7 @@ function TaskDetailActions({
               version={task.version}
               dueAt={task.due_at}
               dueHasTime={task.due_has_time}
+              dueIntent={task.due_intent}
               update={update}
             />
             <Button onClick={() => setLogging(true)}>
@@ -418,6 +434,7 @@ function TaskDetailActions({
               version={task.version}
               dueAt={task.due_at}
               dueHasTime={task.due_has_time}
+              dueIntent={task.due_intent}
               update={update}
             />
           </div>

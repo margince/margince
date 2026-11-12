@@ -48280,6 +48280,7 @@ components:
             this field.
         due_at: { type: [string, 'null'], format: date-time }
         due_has_time: { type: boolean, description: 'True when `due_at` names an agreed time of day, as on the task itself. The snooze beside this row keeps that time.' }
+        due_intent: { $ref: '#/components/schemas/IntentTime' }
         overdue: { type: boolean }
         assignee_id: { type: [string, 'null'], format: uuid }
         assignee_name:
@@ -51543,6 +51544,7 @@ components:
         days_overdue: { type: integer }
         due_at: { type: string }
         due_has_time: { type: boolean, description: True when due_at is an agreed time of day. }
+        due_intent: { $ref: '#/components/schemas/IntentTime' }
         quote: { type: string }
         source: { type: string }
         source_activity_id: { type: string, format: uuid }
@@ -55121,6 +55123,7 @@ components:
       description: The task `create_task` files under every record of the selection.
       required: [subject]
       properties:
+        due_intent: { $ref: '#/components/schemas/IntentTime' }
         subject: { type: string, minLength: 1, maxLength: 500, description: 'What has to be done, as one line.' }
         due_at: { type: string, format: date-time, description: 'When it is due. Optional.' }
         assignee_id: { type: string, format: uuid, description: 'Who owes it. Defaults to the caller; must name a colleague the caller may hand work to.' }
@@ -56118,6 +56121,8 @@ components:
         `withheld`.
       required: [id, kind, occurred_at, occurred_precision, source, captured_by, created_at, updated_at, offers_email]
       properties:
+        due_intent: { $ref: '#/components/schemas/IntentTime' }
+        remind_intent: { $ref: '#/components/schemas/IntentTime' }
         system_display:
           $ref: '#/components/schemas/SystemDisplay'
         can_share_internal:
@@ -56633,6 +56638,7 @@ components:
       additionalProperties: false
       required: [subject]
       properties:
+        due_intent: { $ref: '#/components/schemas/IntentTime' }
         subject: { type: string, minLength: 1 }
         body: { type: [string, 'null'] }
         due_at: { type: [string, 'null'], format: date-time }
@@ -56644,6 +56650,7 @@ components:
       description: What a task needs. Stored as an activity of kind `task`.
       required: [subject, source]
       properties:
+        due_intent: { $ref: '#/components/schemas/IntentTime' }
         recommendation: { $ref: '#/components/schemas/RecommendationReceipt' }
         source_activity_id:
           type: string
@@ -56713,6 +56720,8 @@ components:
       type: object
       required: [kind, source]
       properties:
+        due_intent: { $ref: '#/components/schemas/IntentTime' }
+        remind_intent: { $ref: '#/components/schemas/IntentTime' }
         deal_filing:
           $ref: '#/components/schemas/ActivityDealFiling'
           description: |
@@ -57152,6 +57161,8 @@ components:
     UpdateActivityRequest:
       type: object
       properties:
+        due_intent: { $ref: '#/components/schemas/IntentTime' }
+        remind_intent: { $ref: '#/components/schemas/IntentTime' }
         deal_filing:
           $ref: '#/components/schemas/ActivityDealFiling'
           description: Optional filing choice when recording a call or meeting outcome. Existing deal links remain.
@@ -76552,6 +76563,7 @@ components:
             and the row nobody owns — the whole point of that scope — cannot say so.
         due_at: { type: string, format: date-time, description: "When this is due (tasks), or when it lapses (approvals)." }
         due_has_time: { type: boolean, description: 'On a task row: true when `due_at` names an agreed time of day, false when the task is due by that day. Absent on other rows.' }
+        due_intent: { $ref: '#/components/schemas/IntentTime' }
         overdue: { type: boolean, description: "Past due at the read instant, resolved server-side so every surface agrees." }
         due_group:
           type: string
@@ -78400,6 +78412,7 @@ components:
             `WorklistOwner.label`: absent where this caller may not resolve the name.
         due_at: { type: string, format: date-time, description: 'When this is due, or when the meeting starts.' }
         due_has_time: { type: boolean, description: 'On a task row: true when `due_at` names an agreed time of day, false when the task is due by that day. Absent on other rows.' }
+        due_intent: { $ref: '#/components/schemas/IntentTime' }
         overdue: { type: boolean, description: 'Past due at the read instant, resolved server-side so every surface agrees.' }
         due_group:
           type: string

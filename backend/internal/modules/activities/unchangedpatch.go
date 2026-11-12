@@ -17,6 +17,12 @@ func (in UpdateActivityInput) changesNothing(current crmcontracts.Activity) bool
 
 func (in UpdateActivityInput) movesAField(current crmcontracts.Activity) bool {
 	p := storekit.NewPatch()
+	if in.DueIntent != nil {
+		p.Set("due_intent", current.DueIntent, *in.DueIntent)
+	}
+	if in.RemindIntent != nil {
+		p.Set("remind_intent", current.RemindIntent, *in.RemindIntent)
+	}
 	if in.Subject != nil {
 		p.Set("subject", current.Subject, *in.Subject)
 	}

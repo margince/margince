@@ -170,6 +170,7 @@ var auditImageGovernanceKeys = map[string]func(json.RawMessage) bool{
 	// it would have this endpoint answer what the record's own read refuses.
 	"kind": anyValue, "direction": anyValue, "source_system": anyValue,
 	"occurred_at": anyValue, "due_at": anyValue, "remind_at": anyValue,
+	"due_intent": anyValue, "remind_intent": anyValue,
 	"assignee_id": anyValue, "is_done": anyValue,
 	// Presence only, and enforced HERE rather than trusted from the writer.
 	"body": isJSONBool,

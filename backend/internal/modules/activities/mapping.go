@@ -197,6 +197,8 @@ func activityUpdateInput(req crmcontracts.UpdateActivityRequest, ifVersion *int6
 		// Checked by the store, which also decides what a new time alone means.
 		OccurredPrecision: (*string)(req.OccurredPrecision),
 		DueAt:             req.DueAt,
+		DueIntent:         req.DueIntent,
+		RemindIntent:      req.RemindIntent,
 		DueHasTime:        req.DueHasTime,
 		RemindAt:          req.RemindAt,
 		AssigneeID:        idArg[ids.UserKind](req.AssigneeId),
@@ -339,6 +341,8 @@ func logActivityInput(req crmcontracts.CreateActivityRequest, adm provenanceAdmi
 		Body:           req.Body,
 		OccurredAt:     req.OccurredAt,
 		DueAt:          req.DueAt,
+		DueIntent:      req.DueIntent,
+		RemindIntent:   req.RemindIntent,
 		DueHasTime:     req.DueHasTime != nil && *req.DueHasTime,
 		RemindAt:       req.RemindAt,
 		SourceSystem:   req.SourceSystem,
@@ -351,6 +355,9 @@ func logActivityInput(req crmcontracts.CreateActivityRequest, adm provenanceAdmi
 		return LogActivityInput{}, err
 	}
 
+	if err := in.admitPickedTimes(); err != nil {
+		return LogActivityInput{}, err
+	}
 	if err := optionalFieldsFrom(req, &in); err != nil {
 		return LogActivityInput{}, err
 	}
@@ -430,7 +437,7 @@ func optionalFieldsFrom(req crmcontracts.CreateActivityRequest, in *LogActivityI
 	if err := checkMeetingStatusKind(in.Kind, meetingStatusOf(req.MeetingStatus)); err != nil {
 		return err
 	}
-	if err := checkTaskFieldsKind(in.Kind, taskFields{dueAt: req.DueAt, remindAt: req.RemindAt, assignee: idArg[ids.UserKind](req.AssigneeId)}); err != nil {
+	if err := checkTaskFieldsKind(in.Kind, taskFields{dueAt: in.DueAt, remindAt: in.RemindAt, assignee: in.AssigneeID}); err != nil {
 		return err
 	}
 	if req.MeetingStatus != nil {

@@ -38,6 +38,8 @@ func insertLoggedActivityRow(ctx context.Context, tx pgx.Tx, in LogActivityInput
 	})
 	args = append(args, entity)
 	entityHolder := storekit.SQLf("$%d", len(args))
+	args = append(args, pickedWall(in.DueIntent), pickedZone(in.DueIntent), pickedWall(in.RemindIntent), pickedZone(in.RemindIntent))
+	timeHolders := storekit.SQLf(",$%d::text::timestamp,$%d,$%d::text::timestamp,$%d", len(args)-3, len(args)-2, len(args)-1, len(args))
 	systemCol, systemHolder, args := systemTextInsert(ctx, in, args)
 	precisionCol, precisionHolder, args := precisionInsertFragment(in.OccurredPrecision, args)
 	languageCol, languageHolder, args := languageInsertFragment(in, args)
@@ -52,9 +54,9 @@ func insertLoggedActivityRow(ctx context.Context, tx pgx.Tx, in LogActivityInput
 		`INSERT INTO activity (id, kind, channel_provider, subject, body, occurred_at, direction, meeting_status,
 		                       due_at, remind_at, assignee_id, host_user_id, claims_host_slot, booking_interval_exact, source_system, source_id, source, captured_by,
 		                       thread_key, counterparty_email, counterparty_outbound_attested, origin,
-		                       source_activity_id, raw, duration_seconds, sender_is_machine, due_has_time, call_outcome`+authorCols+`, legal_entity_id`+precisionCol+languageCol+systemCol+cfCols+`)
+		                       source_activity_id, raw, duration_seconds, sender_is_machine, due_has_time, call_outcome`+authorCols+`, legal_entity_id`+precisionCol+languageCol+systemCol+cfCols+`, due_wall, due_zone, remind_wall, remind_zone)
 		 VALUES ($1, $2, NULLIF($3, ''), $4, $5, coalesce($6, now()), $7, $8, $9, $10, $11, $12, $13, $13, $14, $15, $16, $17, NULLIF($18, ''),
-		         NULLIF($19, ''), $20, $21, $22, $23, $24, $25, $26, $27`+authorHolders+`, `+entityHolder+precisionHolder+languageHolder+systemHolder+cfHolders+`) RETURNING occurred_at`,
+		         NULLIF($19, ''), $20, $21, $22, $23, $24, $25, $26, $27`+authorHolders+`, `+entityHolder+precisionHolder+languageHolder+systemHolder+cfHolders+timeHolders+`) RETURNING occurred_at`,
 		args...).Scan(&occurredAt)
 	if err != nil {
 		if storekit.IsUniqueViolation(err) {

@@ -187,6 +187,7 @@ type Task struct {
 	DueAt                  *time.Time
 	// DueHasTime is true when DueAt names an agreed time of day.
 	DueHasTime bool
+	DueIntent  *crmcontracts.IntentTime
 	// The record this task was raised for, when it names one. A follow-up task
 	// says "Follow up with the new lead" and nothing else, so without the link
 	// the row is a sentence the reader cannot act on: the lane knows which lead

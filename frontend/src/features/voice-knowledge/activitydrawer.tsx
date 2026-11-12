@@ -213,6 +213,7 @@ function ActivityBody({
                   activity.due_has_time,
                   locale,
                   zone,
+                  activity.due_intent,
                 ),
               })}
             </>

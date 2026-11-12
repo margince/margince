@@ -154,6 +154,9 @@ func admitActivityPatch(
 	if !held && in.IfVersion != nil && current.Version != nil && int64(*current.Version) != *in.IfVersion {
 		return crmcontracts.Activity{}, held, apperrors.ErrVersionSkew
 	}
+	if err := in.admitPickedTimes(); err != nil {
+		return crmcontracts.Activity{}, held, err
+	}
 	if err := renormalizeTranscriptPatch(current, in); err != nil {
 		return crmcontracts.Activity{}, held, err
 	}
@@ -424,7 +427,11 @@ func applyActivityPatch(ctx context.Context, tx pgx.Tx, id ids.ActivityID, in Up
 		  language = CASE
 		    WHEN $%[3]d IS NOT NULL OR $%[2]d IS NOT NULL THEN $%[15]d
 		    ELSE language END,
-		  done_at = CASE
+		  due_wall = coalesce($%[20]d::text::timestamp, due_wall),
+ due_zone = coalesce($%[21]d, due_zone),
+ remind_wall = coalesce($%[22]d::text::timestamp, remind_wall),
+ remind_zone = coalesce($%[23]d, remind_zone),
+ done_at = CASE
 		    WHEN $%[8]d IS TRUE AND NOT is_done THEN now()
 		    WHEN $%[8]d IS FALSE THEN NULL
 		    ELSE done_at END%[16]s
@@ -433,7 +440,7 @@ func applyActivityPatch(ctx context.Context, tx pgx.Tx, id ids.ActivityID, in Up
 		arg(in.RemindAt), arg(in.AssigneeID), done, arg(in.MeetingStatus), arg(in.DurationSeconds),
 		arg(in.clears("due_at")), arg(in.clears("remind_at")), arg(in.clears("assignee_id")),
 		arg(in.OccurredPrecision), arg(relabelledLanguage(current, in)),
-		customAssignments(in.customColumns, in.CustomFields, arg), arg(in.DueHasTime), arg(in.CallOutcome), arg(in.clears(fieldCallOutcome)))
+		customAssignments(in.customColumns, in.CustomFields, arg), arg(in.DueHasTime), arg(in.CallOutcome), arg(in.clears(fieldCallOutcome)), arg(pickedWall(in.DueIntent)), arg(pickedZone(in.DueIntent)), arg(pickedWall(in.RemindIntent)), arg(pickedZone(in.RemindIntent)))
 	query += fmt.Sprintf(" AND version = $%d", arg(current.Version))
 	result, err := tx.Exec(ctx, query, args...)
 	if err != nil {

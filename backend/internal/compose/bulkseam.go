@@ -76,7 +76,7 @@ func bulkTaskFromCommand(task *agents.BulkTask) *crmcontracts.BulkTask {
 	if task == nil {
 		return nil
 	}
-	return &crmcontracts.BulkTask{Subject: task.Subject, DueAt: task.DueAt, AssigneeId: wireOwner(task.AssigneeID)}
+	return &crmcontracts.BulkTask{Subject: task.Subject, DueAt: task.DueAt, DueIntent: task.DueIntent, AssigneeId: wireOwner(task.AssigneeID)}
 }
 
 // bulkChangeCommand decodes the bulk routes for the REST door's governance

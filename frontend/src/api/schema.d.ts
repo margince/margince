@@ -33981,6 +33981,7 @@ export interface components {
             due_at?: string | null;
             /** @description True when `due_at` names an agreed time of day, as on the task itself. The snooze beside this row keeps that time. */
             due_has_time?: boolean;
+            due_intent?: components["schemas"]["IntentTime"];
             overdue: boolean;
             /** Format: uuid */
             assignee_id?: string | null;
@@ -36408,6 +36409,7 @@ export interface components {
             due_at?: string;
             /** @description True when due_at is an agreed time of day. */
             due_has_time?: boolean;
+            due_intent?: components["schemas"]["IntentTime"];
             quote?: string;
             source: string;
             /** Format: uuid */
@@ -39581,6 +39583,7 @@ export interface components {
         BulkVerb: "reassign_owner" | "archive" | "add_to_list" | "remove_from_list" | "add_tag" | "remove_tag" | "create_task" | "complete";
         /** @description The task `create_task` files under every record of the selection. */
         BulkTask: {
+            due_intent?: components["schemas"]["IntentTime"];
             /** @description What has to be done, as one line. */
             subject: string;
             /**
@@ -40563,6 +40566,8 @@ export interface components {
          *     `withheld`.
          */
         Activity: {
+            due_intent?: components["schemas"]["IntentTime"];
+            remind_intent?: components["schemas"]["IntentTime"];
             system_display?: components["schemas"]["SystemDisplay"];
             /** @description Whether this caller may replace selected individual readers of this internal operational message. Absent for ordinary or withheld activities. */
             readonly can_share_internal?: boolean;
@@ -40868,6 +40873,7 @@ export interface components {
             };
         };
         ActivityFollowUpTask: {
+            due_intent?: components["schemas"]["IntentTime"];
             subject: string;
             body?: string | null;
             /** Format: date-time */
@@ -40878,6 +40884,7 @@ export interface components {
         };
         /** @description What a task needs. Stored as an activity of kind `task`. */
         CreateTaskRequest: {
+            due_intent?: components["schemas"]["IntentTime"];
             recommendation?: components["schemas"]["RecommendationReceipt"];
             /**
              * Format: uuid
@@ -40941,6 +40948,8 @@ export interface components {
         };
         /** @description The workspace's active activity custom fields travel as extra top-level `cf_` keys. A key that is not `cf_`-prefixed, names no active activity field, or carries a value of the wrong shape for its field returns `422`. A value for a field that does not apply to the activity's kind returns `422 field_not_valid_for_kind`. */
         CreateActivityRequest: {
+            due_intent?: components["schemas"]["IntentTime"];
+            remind_intent?: components["schemas"]["IntentTime"];
             /**
              * @description Call and meeting only. The contact or company the logging form started on.
              *     One open deal of its current company is added automatically. With this field,
@@ -41221,6 +41230,8 @@ export interface components {
         };
         /** @description A sparse patch. The workspace's active activity custom fields travel as extra top-level `cf_` keys, and an explicit `null` clears one. A key that is not `cf_`-prefixed, names no active activity field, or carries a value of the wrong shape for its field returns `422`. A value for a field that does not apply to the stored kind returns `422 field_not_valid_for_kind`; a `null` clears it all the same. */
         UpdateActivityRequest: {
+            due_intent?: components["schemas"]["IntentTime"];
+            remind_intent?: components["schemas"]["IntentTime"];
             /** @description Optional filing choice when recording a call or meeting outcome. Existing deal links remain. */
             deal_filing?: components["schemas"]["ActivityDealFiling"];
             subject?: string | null;
@@ -56731,6 +56742,7 @@ export interface components {
             due_at?: string;
             /** @description On a task row: true when `due_at` names an agreed time of day, false when the task is due by that day. Absent on other rows. */
             due_has_time?: boolean;
+            due_intent?: components["schemas"]["IntentTime"];
             /** @description Past due at the read instant, resolved server-side so every surface agrees. */
             overdue?: boolean;
             /**
@@ -58418,6 +58430,7 @@ export interface components {
             due_at?: string;
             /** @description On a task row: true when `due_at` names an agreed time of day, false when the task is due by that day. Absent on other rows. */
             due_has_time?: boolean;
+            due_intent?: components["schemas"]["IntentTime"];
             /** @description Past due at the read instant, resolved server-side so every surface agrees. */
             overdue?: boolean;
             /**

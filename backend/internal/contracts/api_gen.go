@@ -31588,6 +31588,9 @@ type Activity struct {
 	// DueHasTime Task only. True when `due_at` names an agreed time of day, such as a callback hour. False means the task is due by the end of its day and a reader shows the date alone. Every task written before this field existed reads false.
 	DueHasTime *bool `json:"due_has_time,omitempty"`
 
+	// DueIntent A chosen local date and time with an IANA timezone. Resolve it with current timezone rules. A missing local time moves to the first valid time after the gap; a repeated local time uses its first occurrence.
+	DueIntent *IntentTime `json:"due_intent,omitempty"`
+
 	// DurationSeconds Meeting/call only.
 	DurationSeconds *int `json:"duration_seconds,omitempty"`
 
@@ -31648,6 +31651,9 @@ type Activity struct {
 
 	// RemindAt Task only. When the reminder comes due. From that instant, for up to 30 days, the task leads its assignee's own Worklist with the reason `reminder_due`, and `GET /v1/activities?reminder_due=true` lists it for them. Nobody else is reminded, and a task with no assignee reminds nobody. Moving `due_at` on a task whose reminder has passed clears this field, unless the same patch names it.
 	RemindAt *time.Time `json:"remind_at,omitempty"`
+
+	// RemindIntent A chosen local date and time with an IANA timezone. Resolve it with current timezone rules. A missing local time moves to the first valid time after the gap; a repeated local time uses its first occurrence.
+	RemindIntent *IntentTime `json:"remind_intent,omitempty"`
 
 	// Source Where the row came from. `manual` is anything typed, by a member or by an assistant working for one, so it never says who typed it: `captured_by` and `recorded_by_agent` do.
 	Source string `json:"source"`
@@ -31801,7 +31807,10 @@ type ActivityFollowUpTask struct {
 	Body       *string             `json:"body,omitempty"`
 	DueAt      *time.Time          `json:"due_at,omitempty"`
 	DueHasTime *bool               `json:"due_has_time,omitempty"`
-	Subject    string              `json:"subject"`
+
+	// DueIntent A chosen local date and time with an IANA timezone. Resolve it with current timezone rules. A missing local time moves to the first valid time after the gap; a repeated local time uses its first occurrence.
+	DueIntent *IntentTime `json:"due_intent,omitempty"`
+	Subject   string      `json:"subject"`
 }
 
 // ActivityLink defines model for ActivityLink.
@@ -32272,7 +32281,10 @@ type AgentCommitment struct {
 	DueAt        *string                  `json:"due_at,omitempty"`
 
 	// DueHasTime True when due_at is an agreed time of day.
-	DueHasTime       *bool               `json:"due_has_time,omitempty"`
+	DueHasTime *bool `json:"due_has_time,omitempty"`
+
+	// DueIntent A chosen local date and time with an IANA timezone. Resolve it with current timezone rules. A missing local time moves to the first valid time after the gap; a repeated local time uses its first occurrence.
+	DueIntent        *IntentTime         `json:"due_intent,omitempty"`
 	Quote            *string             `json:"quote,omitempty"`
 	Source           string              `json:"source"`
 	SourceActivityId *openapi_types.UUID `json:"source_activity_id,omitempty"`
@@ -35849,6 +35861,9 @@ type AttentionItem struct {
 	// DueHasTime On a task row: true when `due_at` names an agreed time of day, false when the task is due by that day. Absent on other rows.
 	DueHasTime *bool `json:"due_has_time,omitempty"`
 
+	// DueIntent A chosen local date and time with an IANA timezone. Resolve it with current timezone rules. A missing local time moves to the first valid time after the gap; a repeated local time uses its first occurrence.
+	DueIntent *IntentTime `json:"due_intent,omitempty"`
+
 	// HostUserId Whose calendar a meeting came off. Sent by `source: meeting` and
 	// `source: meeting_outcome`. It moves to the organizer, whichever calendar
 	// synced first, when the organizer is a colleague with exactly one bound seat
@@ -37434,6 +37449,9 @@ type BulkTask struct {
 
 	// DueAt When it is due. Optional.
 	DueAt *time.Time `json:"due_at,omitempty"`
+
+	// DueIntent A chosen local date and time with an IANA timezone. Resolve it with current timezone rules. A missing local time moves to the first valid time after the gap; a repeated local time uses its first occurrence.
+	DueIntent *IntentTime `json:"due_intent,omitempty"`
 
 	// Subject What has to be done, as one line.
 	Subject string `json:"subject"`
@@ -39518,7 +39536,10 @@ type Company360NextStep struct {
 	DueAt *time.Time `json:"due_at,omitempty"`
 
 	// DueHasTime True when `due_at` names an agreed time of day, as on the task itself. The snooze beside this row keeps that time.
-	DueHasTime      *bool               `json:"due_has_time,omitempty"`
+	DueHasTime *bool `json:"due_has_time,omitempty"`
+
+	// DueIntent A chosen local date and time with an IANA timezone. Resolve it with current timezone rules. A missing local time moves to the first valid time after the gap; a repeated local time uses its first occurrence.
+	DueIntent       *IntentTime         `json:"due_intent,omitempty"`
 	LinkedContactId *openapi_types.UUID `json:"linked_contact_id,omitempty"`
 	LinkedDealId    *openapi_types.UUID `json:"linked_deal_id,omitempty"`
 
@@ -44209,7 +44230,10 @@ type CreateActivityRequest struct {
 	DueAt           *time.Time                      `json:"due_at,omitempty"`
 
 	// DueHasTime Task only. True: `due_at` is a time of day; `remind_at` defaults to it.
-	DueHasTime      *bool                 `json:"due_has_time,omitempty"`
+	DueHasTime *bool `json:"due_has_time,omitempty"`
+
+	// DueIntent A chosen local date and time with an IANA timezone. Resolve it with current timezone rules. A missing local time moves to the first valid time after the gap; a repeated local time uses its first occurrence.
+	DueIntent       *IntentTime           `json:"due_intent,omitempty"`
 	DurationSeconds *int                  `json:"duration_seconds,omitempty"`
 	FollowUpTask    *ActivityFollowUpTask `json:"follow_up_task,omitempty"`
 
@@ -44253,6 +44277,9 @@ type CreateActivityRequest struct {
 
 	// RemindAt Task only. When the reminder comes due. From that instant, for up to 30 days, the task leads its assignee's own Worklist with the reason `reminder_due`, and `GET /v1/activities?reminder_due=true` lists it for them. Nobody else is reminded, and a task with no assignee reminds nobody. Moving `due_at` on a task whose reminder has passed clears this field, unless the same patch names it.
 	RemindAt *time.Time `json:"remind_at,omitempty"`
+
+	// RemindIntent A chosen local date and time with an IANA timezone. Resolve it with current timezone rules. A missing local time moves to the first valid time after the gap; a repeated local time uses its first occurrence.
+	RemindIntent *IntentTime `json:"remind_intent,omitempty"`
 
 	// RequestActivityId Accept this inbound request for the authenticated human, with activity read and create authority. Task only; agents cannot accept and assignee_id must name the caller when provided. The server verifies source access and copies its links instead of caller-supplied links. Subject and body are honored on creation. Retries return the same personal reminder without changing it. Explicit acceptance can restore an archived unfinished reminder with update authority. Completion settles the source request; automatic reconciliation never restores a reminder.
 	RequestActivityId *openapi_types.UUID `json:"request_activity_id,omitempty"`
@@ -45290,6 +45317,9 @@ type CreateTaskRequest struct {
 
 	// DueHasTime True when `due_at` names an agreed time of day, such as a callback hour. Left out or false, the task is due by the end of the day `due_at` falls on, and only the date is shown. Sent only together with `due_at`. True sets the reminder to `due_at` when the request names no `remind_at`.
 	DueHasTime *bool `json:"due_has_time,omitempty"`
+
+	// DueIntent A chosen local date and time with an IANA timezone. Resolve it with current timezone rules. A missing local time moves to the first valid time after the gap; a repeated local time uses its first occurrence.
+	DueIntent *IntentTime `json:"due_intent,omitempty"`
 
 	// Links The records the task is about. With a source activity, omitted or empty links inherit its visible links. Otherwise the task appears on no timeline.
 	Links *[]struct {
@@ -65189,6 +65219,9 @@ type UpdateActivityRequest struct {
 	// DueHasTime Task only. True: `due_at` is a time of day, and the reminder moves to it unless `remind_at` is sent. A `due_at` sent without it is a day, which ends a reminder that sat on the old time. Sent only with `due_at`.
 	DueHasTime *bool `json:"due_has_time,omitempty"`
 
+	// DueIntent A chosen local date and time with an IANA timezone. Resolve it with current timezone rules. A missing local time moves to the first valid time after the gap; a repeated local time uses its first occurrence.
+	DueIntent *IntentTime `json:"due_intent,omitempty"`
+
 	// IsDone Completing a task writes one audit row + an `activity.updated` event carrying the `is_done` delta (events.md §5.5 — there is no separate `task.*` family).
 	IsDone *bool `json:"is_done,omitempty"`
 
@@ -65212,7 +65245,10 @@ type UpdateActivityRequest struct {
 	OccurredPrecision *OccurredPrecision `json:"occurred_precision,omitempty"`
 
 	// RemindAt Task only. When the reminder comes due. From that instant, for up to 30 days, the task leads its assignee's own Worklist with the reason `reminder_due`, and `GET /v1/activities?reminder_due=true` lists it for them. Nobody else is reminded, and a task with no assignee reminds nobody. Moving `due_at` on a task whose reminder has passed clears this field, unless the same patch names it.
-	RemindAt             *time.Time             `json:"remind_at,omitempty"`
+	RemindAt *time.Time `json:"remind_at,omitempty"`
+
+	// RemindIntent A chosen local date and time with an IANA timezone. Resolve it with current timezone rules. A missing local time moves to the first valid time after the gap; a repeated local time uses its first occurrence.
+	RemindIntent         *IntentTime            `json:"remind_intent,omitempty"`
 	Subject              *string                `json:"subject,omitempty"`
 	AdditionalProperties map[string]interface{} `json:"-"`
 }
@@ -69149,6 +69185,9 @@ type WorklistItem struct {
 
 	// DueHasTime On a task row: true when `due_at` names an agreed time of day, false when the task is due by that day. Absent on other rows.
 	DueHasTime *bool `json:"due_has_time,omitempty"`
+
+	// DueIntent A chosen local date and time with an IANA timezone. Resolve it with current timezone rules. A missing local time moves to the first valid time after the gap; a repeated local time uses its first occurrence.
+	DueIntent *IntentTime `json:"due_intent,omitempty"`
 
 	// EmailSummary The canonical email row, on a `customer_waiting` row whose message is an EMAIL this reader may read. The waiting lane spans email and channel messages, and only an email has an email's shape — a chat drawn as one would carry a mail icon and an email's access badge over a message that never travelled on one. Null on a channel message, null on every other source, and null when the message's content is not this reader's, though such a message produces no waiting row at all. A client renders the canonical row when this is present and falls back to `title` when it is not.
 	EmailSummary *EmailSummary `json:"email_summary,omitempty"`
@@ -79935,6 +79974,14 @@ func (a *Activity) UnmarshalJSON(b []byte) error {
 		delete(object, "due_has_time")
 	}
 
+	if raw, found := object["due_intent"]; found {
+		err = json.Unmarshal(raw, &a.DueIntent)
+		if err != nil {
+			return fmt.Errorf("error reading 'due_intent': %w", err)
+		}
+		delete(object, "due_intent")
+	}
+
 	if raw, found := object["duration_seconds"]; found {
 		err = json.Unmarshal(raw, &a.DurationSeconds)
 		if err != nil {
@@ -80101,6 +80148,14 @@ func (a *Activity) UnmarshalJSON(b []byte) error {
 			return fmt.Errorf("error reading 'remind_at': %w", err)
 		}
 		delete(object, "remind_at")
+	}
+
+	if raw, found := object["remind_intent"]; found {
+		err = json.Unmarshal(raw, &a.RemindIntent)
+		if err != nil {
+			return fmt.Errorf("error reading 'remind_intent': %w", err)
+		}
+		delete(object, "remind_intent")
 	}
 
 	if raw, found := object["source"]; found {
@@ -80410,6 +80465,13 @@ func (a Activity) MarshalJSON() ([]byte, error) {
 		}
 	}
 
+	if a.DueIntent != nil {
+		object["due_intent"], err = json.Marshal(a.DueIntent)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'due_intent': %w", err)
+		}
+	}
+
 	if a.DurationSeconds != nil {
 		object["duration_seconds"], err = json.Marshal(a.DurationSeconds)
 		if err != nil {
@@ -80544,6 +80606,13 @@ func (a Activity) MarshalJSON() ([]byte, error) {
 		object["remind_at"], err = json.Marshal(a.RemindAt)
 		if err != nil {
 			return nil, fmt.Errorf("error marshaling 'remind_at': %w", err)
+		}
+	}
+
+	if a.RemindIntent != nil {
+		object["remind_intent"], err = json.Marshal(a.RemindIntent)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'remind_intent': %w", err)
 		}
 	}
 
@@ -82684,6 +82753,14 @@ func (a *CreateActivityRequest) UnmarshalJSON(b []byte) error {
 		delete(object, "due_has_time")
 	}
 
+	if raw, found := object["due_intent"]; found {
+		err = json.Unmarshal(raw, &a.DueIntent)
+		if err != nil {
+			return fmt.Errorf("error reading 'due_intent': %w", err)
+		}
+		delete(object, "due_intent")
+	}
+
 	if raw, found := object["duration_seconds"]; found {
 		err = json.Unmarshal(raw, &a.DurationSeconds)
 		if err != nil {
@@ -82802,6 +82879,14 @@ func (a *CreateActivityRequest) UnmarshalJSON(b []byte) error {
 			return fmt.Errorf("error reading 'remind_at': %w", err)
 		}
 		delete(object, "remind_at")
+	}
+
+	if raw, found := object["remind_intent"]; found {
+		err = json.Unmarshal(raw, &a.RemindIntent)
+		if err != nil {
+			return fmt.Errorf("error reading 'remind_intent': %w", err)
+		}
+		delete(object, "remind_intent")
 	}
 
 	if raw, found := object["request_activity_id"]; found {
@@ -82974,6 +83059,13 @@ func (a CreateActivityRequest) MarshalJSON() ([]byte, error) {
 		}
 	}
 
+	if a.DueIntent != nil {
+		object["due_intent"], err = json.Marshal(a.DueIntent)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'due_intent': %w", err)
+		}
+	}
+
 	if a.DurationSeconds != nil {
 		object["duration_seconds"], err = json.Marshal(a.DurationSeconds)
 		if err != nil {
@@ -83074,6 +83166,13 @@ func (a CreateActivityRequest) MarshalJSON() ([]byte, error) {
 		object["remind_at"], err = json.Marshal(a.RemindAt)
 		if err != nil {
 			return nil, fmt.Errorf("error marshaling 'remind_at': %w", err)
+		}
+	}
+
+	if a.RemindIntent != nil {
+		object["remind_intent"], err = json.Marshal(a.RemindIntent)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'remind_intent': %w", err)
 		}
 	}
 
@@ -90120,6 +90219,14 @@ func (a *UpdateActivityRequest) UnmarshalJSON(b []byte) error {
 		delete(object, "due_has_time")
 	}
 
+	if raw, found := object["due_intent"]; found {
+		err = json.Unmarshal(raw, &a.DueIntent)
+		if err != nil {
+			return fmt.Errorf("error reading 'due_intent': %w", err)
+		}
+		delete(object, "due_intent")
+	}
+
 	if raw, found := object["is_done"]; found {
 		err = json.Unmarshal(raw, &a.IsDone)
 		if err != nil {
@@ -90158,6 +90265,14 @@ func (a *UpdateActivityRequest) UnmarshalJSON(b []byte) error {
 			return fmt.Errorf("error reading 'remind_at': %w", err)
 		}
 		delete(object, "remind_at")
+	}
+
+	if raw, found := object["remind_intent"]; found {
+		err = json.Unmarshal(raw, &a.RemindIntent)
+		if err != nil {
+			return fmt.Errorf("error reading 'remind_intent': %w", err)
+		}
+		delete(object, "remind_intent")
 	}
 
 	if raw, found := object["subject"]; found {
@@ -90229,6 +90344,13 @@ func (a UpdateActivityRequest) MarshalJSON() ([]byte, error) {
 		}
 	}
 
+	if a.DueIntent != nil {
+		object["due_intent"], err = json.Marshal(a.DueIntent)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'due_intent': %w", err)
+		}
+	}
+
 	if a.IsDone != nil {
 		object["is_done"], err = json.Marshal(a.IsDone)
 		if err != nil {
@@ -90261,6 +90383,13 @@ func (a UpdateActivityRequest) MarshalJSON() ([]byte, error) {
 		object["remind_at"], err = json.Marshal(a.RemindAt)
 		if err != nil {
 			return nil, fmt.Errorf("error marshaling 'remind_at': %w", err)
+		}
+	}
+
+	if a.RemindIntent != nil {
+		object["remind_intent"], err = json.Marshal(a.RemindIntent)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'remind_intent': %w", err)
 		}
 	}
 
