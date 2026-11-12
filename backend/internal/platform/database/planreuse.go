@@ -16,8 +16,10 @@ import (
 	"github.com/jackc/pgx/v5"
 )
 
-type genericPlanScope struct{}
-type customPlanScope struct{}
+type (
+	genericPlanScope struct{}
+	customPlanScope  struct{}
+)
 
 // GenericPlansEnabled reports whether the ambient snapshot keeps generic plans.
 // Callers with costly custom-plan fallbacks can keep named statements only here.

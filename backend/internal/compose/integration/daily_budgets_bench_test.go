@@ -76,7 +76,6 @@ var DailyKnownIssues = []KnownIssue{
 	{Flow: "worklist", Issue: 4912},
 	{Flow: "home", Row: "home_worklist", Issue: 4912},
 	{Flow: "morning_load", Issue: 7068, Allow5xx: true},
-	{Flow: "company_360", Issue: 9526},
 }
 
 // DailyResult is one row of a flow measured for one seat, as the gate judges it.

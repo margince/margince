@@ -115,6 +115,11 @@ const SAID_BY_THE_WHEN_LINE = new Set<string>([
   "meeting_soon",
 ]);
 
+/** Whether a reason restates the row's own moment, said wherever it is drawn. */
+export function saidByTheWhenLine(kind: WorklistReason["kind"]): boolean {
+  return SAID_BY_THE_WHEN_LINE.has(kind);
+}
+
 /**
  * Reasons that compare a row with the rest of the queue. They decide its rank,
  * and tell a reader nothing to act on, so no surface says them.
@@ -147,7 +152,7 @@ export function phrasedReasons(
         item.deal?.amount_minor != null &&
         item.deal.currency
       ) &&
-      !(whenDrawn && SAID_BY_THE_WHEN_LINE.has(reason.kind)),
+      !(whenDrawn && saidByTheWhenLine(reason.kind)),
   );
 }
 
