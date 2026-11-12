@@ -19298,7 +19298,7 @@ export const en = {
   "worklist.ask.brief.closing_soon":
     "This deal is expected to close within 2 weeks. Review it and make sure the next step is planned.",
   "worklist.ask.brief.no_next_step":
-    "No next step is planned on this deal. Review it and agree on the next step.",
+    "No next step is recorded on this deal. Review it and agree on the next step.",
   "worklist.ask.brief.no_champion":
     "Nobody at the customer is championing this deal. Review it and find someone who will.",
   "worklist.ask.brief.signal.closing_soon":

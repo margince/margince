@@ -110,6 +110,10 @@ func (s followUpStager) StageFollowUp(ctx context.Context, dealID ids.UUID, prop
 		if owner.IsZero() {
 			return nil
 		}
+		answered, err := followUpAlreadyAnswered(ctx, tx, s.svc, dealID, proposal)
+		if err != nil || answered {
+			return err
+		}
 		return writeOvernightFollowUp(ctx, tx, s.tasks, owner, proposal)
 	})
 }

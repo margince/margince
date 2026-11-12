@@ -19016,7 +19016,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "worklist.ask.brief.closing_soon":
     "Deal này dự kiến chốt trong vòng 2 tuần. Hãy xem lại và bảo đảm bước tiếp theo đã được lên kế hoạch.",
   "worklist.ask.brief.no_next_step":
-    "Deal này chưa có bước tiếp theo nào được lên kế hoạch. Hãy xem lại và thống nhất bước tiếp theo.",
+    "Deal này chưa ghi nhận bước tiếp theo nào. Hãy xem lại và thống nhất bước tiếp theo.",
   "worklist.ask.brief.no_champion":
     "Không ai phía khách hàng ủng hộ deal này. Hãy xem lại và tìm ai đó sẽ ủng hộ.",
   "worklist.ask.brief.signal.closing_soon":

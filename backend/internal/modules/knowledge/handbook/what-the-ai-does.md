@@ -21,7 +21,9 @@ Every send still needs recorded consent for its purpose. The Morning brief agent
 Also called: auto-send, send without asking, AI emails customers.
 
 ### What happens when a deal has no next step?
-Each night, Margince checks open deals that had a call, email or meeting in the last two days. A deal with no open task and no booked meeting gets a follow-up task on its owner's list, due in 3 days. When the last message is the customer's email, Margince drafts a reply instead, which waits for your approval. A task you completed or archived does not come back for the same conversation. A deal nobody owns, or whose owner has left, gets no task.
+Each night, Margince checks open deals that had a call, email or meeting in the last two days. A deal with no open task and no booked meeting gets a follow-up task on its owner's list, due in 3 days. When the customer's email came last and Margince can write the reply, it drafts one instead. That draft waits for your approval.
+
+A task you completed or archived does not come back for the same conversation. A deal nobody owns, or whose owner has left, gets no task.
 Also called: overnight follow-up, follow-up task, no next step.
 
 ### How do I draft an email with AI?

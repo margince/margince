@@ -716,6 +716,32 @@ func TestFollowUpRejectWritesNothing(t *testing.T) {
 	}
 }
 
+// A rep's answer to a proposal staged before tasks were filed directly still
+// stands: the next pass over the same interaction writes no task.
+func TestALegacyFollowUpTheRepAnsweredIsNotFiledAgain(t *testing.T) {
+	for name, approve := range map[string]bool{"declined": false, "approved and done": true} {
+		t.Run(name, func(t *testing.T) {
+			e := setupReconcile(t)
+			deal := e.SeedDeal(t, "Answered once", e.pipeline, e.open, &e.Rep1)
+			call := e.seedInteraction(t, deal, "call", "Sync", 1)
+			approvalID, _ := e.stageLegacyFollowUp(t, deal, call)
+			human := e.As(e.Rep1, []ids.UUID{e.Team1}, reconcilePerms)
+			if _, err := e.svc.Decide(human, approvalID, approve, nil); err != nil {
+				t.Fatalf("decide: %v", err)
+			}
+			e.WsExec(t, `UPDATE activity SET is_done = true, done_at = now() WHERE source_system = 'overnight-reconcile'`)
+			before, _, _, _ := e.dealTasks(t, deal)
+
+			if err := e.reconcile(); err != nil {
+				t.Fatal(err)
+			}
+			if after, _, _, _ := e.dealTasks(t, deal); after != before {
+				t.Errorf("tasks after the next pass = %d, want still %d", after, before)
+			}
+		})
+	}
+}
+
 // An edit the effect cannot use REFUSES the decision, rather than recording a
 // yes that produces nothing.
 //

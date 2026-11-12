@@ -19520,7 +19520,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "worklist.ask.brief.closing_soon":
     "Dieser Deal soll in den nächsten 2 Wochen abgeschlossen werden. Prüfe ihn und sorge dafür, dass der nächste Schritt geplant ist.",
   "worklist.ask.brief.no_next_step":
-    "Für diesen Deal ist kein nächster Schritt geplant. Prüfe ihn und vereinbare den nächsten Schritt.",
+    "Für diesen Deal ist kein nächster Schritt erfasst. Prüfe ihn und vereinbare den nächsten Schritt.",
   "worklist.ask.brief.no_champion":
     "Beim Kunden setzt sich niemand für diesen Deal ein. Prüfe ihn und finde jemanden, der es tut.",
   "worklist.ask.brief.signal.closing_soon":

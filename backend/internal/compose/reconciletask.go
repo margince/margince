@@ -5,6 +5,7 @@ package compose
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"time"
 
@@ -12,6 +13,7 @@ import (
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/activities"
+	"github.com/margince/margince/backend/internal/modules/approvals"
 	"github.com/margince/margince/backend/internal/modules/deals"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/provenance"
@@ -47,6 +49,33 @@ func writeOvernightFollowUp(
 	in.AssigneeID = &assignee
 	_, _, err = tasks.LogActivityTx(onBehalfOf(extractorContext(sweepCtx, overnightAgent), owner), tx, in)
 	return err
+}
+
+// followUpAlreadyAnswered reports a proposal for this interaction that a rep
+// approved or declined before tasks were filed directly. Their answer stands:
+// a declined follow-up is not filed, and an approved one already has its task.
+func followUpAlreadyAnswered(
+	ctx context.Context, tx pgx.Tx, svc *approvals.Service, dealID ids.UUID, proposal deals.FollowUpProposal,
+) (bool, error) {
+	offers, err := svc.OffersForTx(ctx, tx, deals.FollowUpReconcileKind, dealID)
+	if err != nil {
+		return false, err
+	}
+	for _, offer := range offers {
+		if !offer.Approved() && !offer.Rejected() {
+			continue
+		}
+		var staged struct {
+			EvidenceActivityID ids.ActivityID `json:"evidence_activity_id"`
+		}
+		if err := json.Unmarshal(offer.Change, &staged); err != nil {
+			return false, fmt.Errorf("compose: read a staged follow-up: %w", err)
+		}
+		if staged.EvidenceActivityID == proposal.EvidenceActivityID {
+			return true, nil
+		}
+	}
+	return false, nil
 }
 
 // followUpSourceID names one follow-up by its deal and the interaction behind it.

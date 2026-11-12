@@ -198,7 +198,6 @@ for which actions wait by default.
 
 **Selling**
 - Move a deal forward · Move a deal to the next stage · Correct a close date
-- Add a follow-up on a deal
 - Promote a lead · Disqualify a lead · Reverse a lead promotion
 - Move a project to its next phase
 
