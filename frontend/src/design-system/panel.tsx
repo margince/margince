@@ -55,6 +55,11 @@ export function usePanelEdge(): RefObject<HTMLElement | null> | null {
   return useContext(PanelEdge);
 }
 
+// Panels set on one shared ground open with flat heads, as sections of a sheet
+// rather than cards. An agent's panel keeps its band: the band says who wrote it.
+const FlatHeads = createContext(false);
+export const FlatPanelHeads = FlatHeads.Provider;
+
 // The head holds a title and its verbs, never a description; padded text goes
 // in `PanelBody` and edge-to-edge rows in `PanelRow`, as siblings.
 export function Panel({
@@ -135,6 +140,8 @@ export function Panel({
   // chosen not to name, and a nameless region in the list is worse than none.
   const titleId = useId();
   const edge = useRef<HTMLElement>(null);
+  const sheet = useContext(FlatHeads);
+  const flat = flatHead || (sheet && tone !== "ai");
   return (
     <section
       ref={edge}
@@ -146,13 +153,13 @@ export function Panel({
       <PanelEdge.Provider value={edge}>
         {title && (
           <header
-            className={flatHead ? "panel-head panel-head-flat" : "panel-head"}
+            className={flat ? "panel-head panel-head-flat" : "panel-head"}
           >
             {/* The title is the row's far-end push: it absorbs the free space, so
               a titleAction lands at the end of the band whatever the title's
               length. */}
             <Heading
-              size={flatHead ? "small" : "medium"}
+              size={flat ? "small" : "medium"}
               as={TITLE_ELEMENT[titleLevel ?? 2]}
               className="panel-title"
               id={titleId}

@@ -2178,6 +2178,9 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "brief.schedule.connect": "Kalender verbinden",
   "brief.schedule.reconnect": "Kalender neu verbinden",
   "brief.schedule.nextAt": "Nächster Termin um {time}",
+  "brief.schedule.now": "Jetzt",
+  "brief.schedule.freeUntil": "Frei bis {time}",
+  "brief.schedule.clearRest": "Heute sonst nichts gebucht",
   "brief.readings.riskPartial": "Nur bekannter Wert · nicht alles geprüft",
   "brief.readings.unpricedCount_one":
     "{count} Deal ohne Preis · nicht enthalten",
@@ -4046,6 +4049,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "standing.exchange.view.meeting": "Termin ansehen",
   "standing.exchange.view.other": "Aktivität ansehen",
   "record.tabs": "Tabs des Datensatzes",
+  "record.tabs.more": "Mehr",
+  "record.tabs.moreLabel": "Mehr Bereiche",
   "record.panel.showDetails": "Details einblenden",
   "record.panel.hideDetails": "Details ausblenden",
   "room.editorial":
@@ -6936,7 +6941,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "worklist.source.failed_approval": "Freigegeben, aber nicht ausgeführt",
   "brief.panel.decisions": "Freigaben",
   "brief.rail.quietSchedule": "Nichts gebucht",
-  "brief.panel.schedule": "Anstehende Termine",
+  "brief.panel.schedule": "Dein Tag",
   "brief.readings.label": "Zahlen von heute",
   "brief.readings.floorTip":
     "Diese Zahl ist ein Mindestwert, da eine Quelle ihr Limit erreicht hat.",
@@ -15129,6 +15134,9 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "licensebanner.body":
     "Das Lizenz-Token dieser Installation wurde geprüft und abgelehnt.",
   "licensebanner.link": "{tab} öffnen",
+  "licensebanner.grace.title": "Lizenz abgelaufen",
+  "licensebanner.grace.body":
+    "Die Lizenz dieser Installation ist abgelaufen und in der Übergangsfrist. Margince läuft weiter, startet nach dem Ende der Übergangsfrist aber nicht mehr. Erneuere die Lizenz vorher.",
 
   "aicalls.title": "KI-Aufrufprotokoll",
   "aicalls.withheld":

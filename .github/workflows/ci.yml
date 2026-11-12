@@ -1459,6 +1459,16 @@ jobs:
         uses: ./.github/actions/install-playwright-chromium
       - name: Screen-acceptance UAT (build → preview → AC + axe)
         run: make frontend-e2e E2E_ARGS=--shard=${{ matrix.shard }}/3
+      # A failure that does not repeat leaves only this: each failed test's
+      # page as the reader saw it (error-context.md) and its screenshot.
+      - name: Keep what a failed UAT test saw
+        if: failure()
+        uses: ./.github/actions/upload-artifact-retried
+        with:
+          name: uat-failures-${{ matrix.shard }}
+          path: frontend/test-results
+          if-no-files-found: ignore
+          retention-days: 7
 
   # ONE required context stands for the whole lane.
   #

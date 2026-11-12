@@ -44,11 +44,8 @@ function worklist(
   // leaves both empty, and both of those elements return null on an empty one —
   // so a weekly case built on it would assert their absence over elements that
   // were never going to appear, and would keep passing if the guard broke.
-  // A MEETING as well as the waiting customer, so the rail's first panel
-  // actually draws rows. Without it `#brief-schedule` renders its empty state
-  // and "keeps the rail on the morning" would pass over a rail that is there
-  // but says nothing — which is indistinguishable from the loading state the
-  // assertion is meant to rule out.
+  // A meeting too, so the schedule panel draws rows. An empty panel would let
+  // "keeps the rail on the morning" pass over a rail that says nothing.
   const day = readingsDay({}, [
     { ...waitingRow(), changed_since_brief: true },
     meetingRow("m1", false),
@@ -278,7 +275,7 @@ describe("the Brief's dials", () => {
     render(<BriefScreen />);
 
     const schedule = await waitFor(() => {
-      const panel = document.querySelector("#brief-schedule");
+      const panel = document.querySelector(".rail-schedule");
       if (panel === null) {
         throw new Error("the schedule panel is not on the page");
       }
@@ -290,7 +287,7 @@ describe("the Brief's dials", () => {
       ).toBeGreaterThan(0),
     );
     expect(
-      document.querySelectorAll(".page-zones-aside .brief-section").length,
+      document.querySelectorAll(".page-zones-aside .panel").length,
     ).toBeGreaterThan(0);
     expect(document.querySelector(".page-zones-aside")).not.toBeNull();
   });

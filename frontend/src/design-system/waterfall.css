@@ -28,13 +28,21 @@
   border-radius: var(--r-sm);
 }
 .waterfall-up .waterfall-fill {
-  background: var(--accent);
+  background: linear-gradient(180deg, var(--accent), var(--accentFade));
 }
 .waterfall-anchor .waterfall-fill {
-  background: var(--accentText);
+  background: linear-gradient(
+    180deg,
+    var(--accentText),
+    color-mix(in srgb, var(--accentText) 55%, var(--ground))
+  );
 }
 .waterfall-down .waterfall-fill {
-  background: var(--warning);
+  background: linear-gradient(
+    180deg,
+    var(--warning),
+    color-mix(in srgb, var(--warning) 55%, var(--ground))
+  );
 }
 .waterfall-zero,
 .waterfall-connector {
@@ -54,6 +62,8 @@
   width: 100%;
   gap: var(--space-1);
   margin-top: var(--space-3);
+  font: var(--fontBodySmall);
+  color: var(--textSecondary);
   white-space: normal;
   overflow-wrap: anywhere;
   font-variant-numeric: tabular-nums;

@@ -12,16 +12,30 @@ import {
 import { LicenseBanner } from "./licensebanner";
 
 type LicenseState = components["schemas"]["LicenseEntitlement"]["state"];
+type LicenseHolder = components["schemas"]["LicenseHolder"];
 
 const LICENSE_READER: GrantSpec = { license: ["read"] };
 
-function story(state: LicenseState, allow: GrantSpec = LICENSE_READER) {
+const IN_GRACE: LicenseHolder = {
+  id: "lic-1",
+  subject: "acme-prod",
+  expiry: "2026-07-01T00:00:00Z",
+  in_grace: true,
+  renewal_due: true,
+};
+
+function story(
+  state: LicenseState,
+  allow: GrantSpec = LICENSE_READER,
+  license?: LicenseHolder,
+) {
   return () => {
     installFetchStub({
       "GET /me": () => jsonResponse(meFixture({ allow })),
       "GET /installation/license": () =>
         jsonResponse({
           state,
+          license,
           seats_used: 12,
           over_limit: false,
           checked_at: "2026-08-01T09:00:00Z",
@@ -43,6 +57,9 @@ export default meta;
 type Story = StoryObj<typeof LicenseBanner>;
 
 export const Refused: Story = { render: story("rejected") };
+export const InGrace: Story = {
+  render: story("valid", LICENSE_READER, IN_GRACE),
+};
 
 // No licence is every dev and demo stack's state, so it draws nothing.
 export const Absent: Story = { render: story("absent") };
