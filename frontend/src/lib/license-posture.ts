@@ -174,9 +174,13 @@ export function useTrialStanding(): TrialStanding | undefined {
 // The longest delay a browser timer keeps; a longer one fires at once.
 const MAX_TIMER_MS = 2 ** 31 - 1;
 
-// A session left open past the end reads the lock once, at the end. An ended
-// trial schedules nothing, so no tick after it reads again.
-function useRefreshAtTrialEnd(trial: LicenseTrial | undefined): void {
+/** How often a session past the end asks again while the server still runs it. */
+export const TRIAL_END_RETRY_MS = 60_000;
+
+// A session left open past the end reads the lock at the end. The server's
+// clock may run behind, so it asks again each minute while the trial still
+// runs there. An ended trial schedules nothing.
+export function useRefreshAtTrialEnd(trial: LicenseTrial | undefined): void {
   const client = useQueryClient();
   const endsAt =
     trial === undefined || trial.ended ? undefined : Date.parse(trial.ends_at);
@@ -185,7 +189,14 @@ function useRefreshAtTrialEnd(trial: LicenseTrial | undefined): void {
       return;
     }
     const delay = Math.min(Math.max(0, endsAt - Date.now()), MAX_TIMER_MS);
-    const timer = setTimeout(() => refreshTrialLock(client), delay);
-    return () => clearTimeout(timer);
+    let retry: ReturnType<typeof setInterval> | undefined;
+    const timer = setTimeout(() => {
+      refreshTrialLock(client);
+      retry = setInterval(() => refreshTrialLock(client), TRIAL_END_RETRY_MS);
+    }, delay);
+    return () => {
+      clearTimeout(timer);
+      clearInterval(retry);
+    };
   }, [client, endsAt]);
 }

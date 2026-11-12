@@ -258,8 +258,11 @@ When the trial ends, the installation stops working until a token is set up:
   minutes;
 - `/me` answers `trial_ended: true`, and the app shows every seat the screen that says so.
 
-To end the lock, set up the token and start the api again. Or replace a token file and click
-**Check now** on the lock screen, which a seat that may change installation settings sees.
+To end the lock, set up the token and start the api and the worker again. A token in
+`MARGINCE_LICENSE` reaches a role only when it starts. Or replace a token file and click
+**Check now** on the lock screen, which a seat that may change installation settings sees. That
+check reads the file in the api process that answers it. Any other api process keeps the lock until
+it starts again or makes its daily check, and the worker reads the file within 5 minutes.
 
 A refused license refuses the boot in *every* posture. To name yourself as not
 production says you have no license. It does not let you run one the module has refused.

@@ -24,7 +24,7 @@ Margince trial has ended** in place of the app, with the same button to write to
 **Sign out**.
 
 Nothing is deleted, and your data is all there again once the licence is in place. Your server
-admin puts the licence key into the installation's settings and starts it again. An agent you
+admin sets the licence key in the installation's configuration and starts Margince again. An agent you
 connected stops too: every call it makes is refused. Margince sends no email until then, and that
 includes privacy notices and confirmation links.
 Also called: trial ended, trial expired, Margince stopped working, locked.
