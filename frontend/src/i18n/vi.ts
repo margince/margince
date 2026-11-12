@@ -7931,7 +7931,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "tasks.origin.analytics_decision":
     "Ghi từ một lần xem xét bán hàng: một quyết định có thành viên chịu trách nhiệm và ngày xem lại. Ghi kết quả trong Quyết định từ lần xem xét trước.",
   "tasks.origin.overnight_reconcile":
-    "Việc này được tạo từ một bước tiếp theo do lượt rà soát ban đêm đề xuất và đã được duyệt.",
+    "Việc này được tạo từ một bước tiếp theo do lượt rà soát ban đêm đề xuất.",
   "tasks.origin.commitment":
     "Việc này được tạo từ một cam kết đọc được trong một cuộc trao đổi.",
   "tasks.origin.email_request": "Việc này được tạo từ một yêu cầu trong email.",
@@ -19358,7 +19358,21 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "Margince không thể kiểm tra việc này đã được trả lời chưa: nội dung thư không còn đọc được. Hãy đánh dấu là xong khi đã xong.",
   "worklist.ask.task_unchecked_reply": "Trả lời đã gửi gần nhất: {date}",
   "worklist.ask.brief_item":
-    "Lượt rà soát ban đêm đã đánh dấu deal này. Xử lý, tạm gác, hoặc bỏ qua.",
+    "Margince đã chọn deal này để xem lại hôm nay. Hãy xem và lên kế hoạch cho bước tiếp theo.",
+  "worklist.ask.brief.closing_soon":
+    "Deal này dự kiến chốt trong vòng 2 tuần. Hãy xem lại và bảo đảm bước tiếp theo đã được lên kế hoạch.",
+  "worklist.ask.brief.no_next_step":
+    "Deal này chưa ghi nhận bước tiếp theo nào. Hãy xem lại và thống nhất bước tiếp theo.",
+  "worklist.ask.brief.no_champion":
+    "Không ai phía khách hàng đang tích cực ủng hộ deal này. Hãy xem lại và tìm ai đó sẽ ủng hộ.",
+  "worklist.ask.brief.signal.closing_soon":
+    "Ngày chốt của deal này đã gần. Hãy xem lại và bảo đảm bước tiếp theo đã được lên kế hoạch.",
+  "worklist.ask.brief.signal.stalled":
+    "Deal này đã im ắng và có thể bị trễ. Hãy xem lại và lên kế hoạch cho bước tiếp theo.",
+  "worklist.ask.brief.signal.opportunity":
+    "Deal này đáng theo đuổi ngay bây giờ. Hãy xem lại và lên kế hoạch cho bước tiếp theo.",
+  "worklist.ask.brief.signal.moved":
+    "Deal này có hoạt động mới. Hãy xem lại điều đã xảy ra.",
   "worklist.ask.conversation_claim":
     "Bạn đã cam kết việc này trong một cuộc trao đổi. Làm xong rồi đánh dấu là xong.",
   "worklist.ask.invitation":

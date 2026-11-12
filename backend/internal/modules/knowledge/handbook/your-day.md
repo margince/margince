@@ -77,7 +77,7 @@ To take an item off your Worklist in Margince, press **Done** on its row. For **
 3. Or press **More actions** and choose **Not mine** if someone else should answer, or **Not a customer**.
 4. Press **Undo** in the note if you picked wrong.
 
-A follow-up, meeting, deal risk or system problem can offer **Done** to clear your list. A deal suggestion offers its next action, or **Open deal**, plus **Mark handled**. Marking it handled clears the suggestion; it does not change the deal.
+A follow-up, meeting, deal risk or system problem can offer **Done** to clear your list. A deal suggestion opens on why it is there, such as a close date within 2 weeks. It offers its next action, or **Open deal**, plus **Mark handled**. On the open card, **Mark handled**, **Snooze** and **Dismiss** are under **More actions**. Marking it handled clears the suggestion; it does not change the deal.
 
 To clear several rows, press **Select** and tick them. **Complete** finishes ticked tasks and promises; **Take off my list** clears the rest. One **Undo** brings them all back. **Cancel** ends the choice and puts you back on **Select**.
 

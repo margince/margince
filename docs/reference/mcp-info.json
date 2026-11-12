@@ -10,16 +10,16 @@
   "totals": {
     "tools": 48,
     "resources": 14,
-    "tool_catalog_bytes": 238897,
+    "tool_catalog_bytes": 238936,
     "resource_catalog_bytes": 5622,
-    "approx_wire_tokens_total": 61129,
+    "approx_wire_tokens_total": 61139,
     "largest_tool_bytes": 11957,
     "largest_tool": "read_context",
     "tool_catalog_composition": {
       "description_bytes": 55441,
-      "input_schema_bytes": 118630,
+      "input_schema_bytes": 118669,
       "output_schema_bytes": 52718,
-      "description_plus_input_schema_bytes": 174071
+      "description_plus_input_schema_bytes": 174110
     }
   },
   "tools": {
@@ -9375,7 +9375,7 @@
           "additionalProperties": false,
           "properties": {
             "cursor": {
-              "description": "For members and history: the next_cursor a page answered",
+              "description": "For members, history and preview: the next_cursor a page answered, with the same list or filter",
               "type": "string"
             },
             "definition": {

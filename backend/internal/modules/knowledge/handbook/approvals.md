@@ -198,7 +198,6 @@ for which actions wait by default.
 
 **Selling**
 - Move a deal forward · Move a deal to the next stage · Correct a close date
-- Add a follow-up on a deal
 - Promote a lead · Disqualify a lead · Reverse a lead promotion
 - Move a project to its next phase
 
@@ -207,8 +206,8 @@ for which actions wait by default.
 - Review a drafted email · Release a stopped message
 - Book a meeting
 
-**Review refused email** shows only on older approvals in your history. Margince no longer
-raises it.
+**Review refused email** and **Add a follow-up on a deal** show only on older approvals in your
+history. Margince no longer raises them; it [adds the follow-up task itself](what-the-ai-does.md#what-happens-when-a-deal-has-no-next-step).
 
 **Filing**
 - Refile an activity · Refile a conversation · Refile several activities
