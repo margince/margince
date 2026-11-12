@@ -329,10 +329,10 @@ func openReminderHoldsEntityFrom(sourcePredicate string) string {
 // reminder from THAT handler is still open. Each clock handler passes its own
 // Spec().Name, which is also the source_system its task carries.
 func (s *Store) LastTouchBefore(ctx context.Context, cutoff time.Time, limit int, reminder string) ([]LastTouchCandidate, error) {
-	return s.lastTouchBefore(ctx, cutoff, limit, reminder, nil)
+	return s.scanLastTouch(ctx, cutoff, limit, reminder, nil)
 }
 
-func (s *Store) lastTouchBefore(ctx context.Context, cutoff time.Time, limit int, reminder string, population *QuietPopulation) ([]LastTouchCandidate, error) {
+func (s *Store) scanLastTouch(ctx context.Context, cutoff time.Time, limit int, reminder string, population *QuietPopulation) ([]LastTouchCandidate, error) {
 	var readers []principal.Principal
 	if population != nil {
 		readers = population.Readers
@@ -358,9 +358,12 @@ func (s *Store) lastTouchBefore(ctx context.Context, cutoff time.Time, limit int
 			args = append(args, s.ownerMailbox.Providers)
 			providersPos = len(args)
 		}
-		scope, err := scopedQuietQuery(ctx, population, &args)
-		if err != nil {
-			return err
+		var scope *quietQueryScope
+		if population != nil {
+			var err error
+			if scope, err = scopedQuietQuery(ctx, population, &args); err != nil {
+				return err
+			}
 		}
 		rows, err := tx.Query(ctx, lastTouchCandidateQuery(s.ownerMailbox, providersPos, scope), args...)
 		if err != nil {

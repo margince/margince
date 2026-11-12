@@ -108,7 +108,7 @@ func (s *Store) UpdateActivity(ctx context.Context, id ids.ActivityID, in Update
 // never a withheld one with its subject and body nulled out.
 func activityColumnImage(a crmcontracts.Activity) map[string]any {
 	return map[string]any{
-		"subject":              derefOrNil(a.Subject),
+		fieldSubject:           derefOrNil(a.Subject),
 		fieldBody:              derefOrNil(a.Body),
 		auditFieldOccurredAt:   a.OccurredAt,
 		fieldOccurredPrecision: string(a.OccurredPrecision),
@@ -116,7 +116,7 @@ func activityColumnImage(a crmcontracts.Activity) map[string]any {
 		"due_at":               derefOrNil(a.DueAt),
 		"due_intent":           derefOrNil(a.DueIntent),
 		"remind_intent":        derefOrNil(a.RemindIntent),
-		"meeting_intent":       derefOrNil(a.MeetingIntent),
+		fieldMeetingIntent:     derefOrNil(a.MeetingIntent),
 		"source_activity_id":   derefOrNil(a.SourceActivityId),
 		fieldDueHasTime:        derefOrNil(a.DueHasTime),
 		"remind_at":            derefOrNil(a.RemindAt),

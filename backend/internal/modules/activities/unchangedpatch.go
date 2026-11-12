@@ -32,7 +32,7 @@ func (in UpdateActivityInput) movesAField(current crmcontracts.Activity) bool {
 		p.Set("source_activity_id", current.SourceActivityId, *in.sourceActivityID)
 	}
 	if in.Subject != nil {
-		p.Set("subject", current.Subject, *in.Subject)
+		p.Set(fieldSubject, current.Subject, *in.Subject)
 	}
 	if in.Body != nil {
 		p.Set("body", current.Body, *in.Body)
