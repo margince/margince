@@ -31,7 +31,7 @@
   "catalog": {
     "tools": 48,
     "system_frame_tokens": 592,
-    "tokens": 40603,
+    "tokens": 40613,
     "median_tool_tokens": 623,
     "mean_tool_tokens": 845
   },
@@ -157,7 +157,7 @@
     },
     {
       "name": "read_lists",
-      "tokens": 788
+      "tokens": 797
     },
     {
       "name": "run_research",
