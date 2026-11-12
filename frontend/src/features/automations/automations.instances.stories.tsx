@@ -19,7 +19,7 @@ import { ConfiguredAutomations } from "./automations.instances";
 import { RulePausedReason } from "./automations.lists";
 
 const meta: Meta = {
-  title: "Settings/AI/Automations/Configured automations",
+  title: "Settings/Data/Automations/Configured automations",
   parameters: { layout: "padded" },
 };
 export default meta;

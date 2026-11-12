@@ -91,6 +91,38 @@ const WebsiteLeadSource = "siteread"
 // holds only while no client can spell it.
 const WebFormSource = "web_form"
 
+// WebsiteInquirySource binds a task and its handling run to one accepted submission.
+const WebsiteInquirySource = "website_inquiry"
+
+// WebsiteInquiryTaskSource preserves the immediate contact task's existing identity.
+func WebsiteInquiryTaskSource(submission string, contact bool) (string, string) {
+	if contact {
+		return LeadForContactSource, WebFormSource + ":" + submission
+	}
+	return WebsiteInquirySource, submission
+}
+
+func IsWebsiteInquiryTask(system, source string) bool {
+	contact, prefix := WebsiteInquiryTaskSource("", true)
+	return source != "" && (system == WebsiteInquirySource || (system == contact && strings.HasPrefix(source, prefix)))
+}
+
+func WebsiteInquirySubmission(system, source string) (string, bool) {
+	if !IsWebsiteInquiryTask(system, source) {
+		return "", false
+	}
+	contact, prefix := WebsiteInquiryTaskSource("", true)
+	if system == contact {
+		return strings.TrimPrefix(source, prefix), true
+	}
+	return source, true
+}
+
+func WebsiteInquiryTaskSQL(alias string) string {
+	contact, prefix := WebsiteInquiryTaskSource("", true)
+	return fmt.Sprintf("COALESCE((%[1]s.source_id <> '' AND (%[1]s.source_system = '%[2]s' OR (%[1]s.source_system = '%[3]s' AND starts_with(%[1]s.source_id, '%[4]s')))), FALSE)", alias, WebsiteInquirySource, contact, prefix)
+}
+
 // WebFormSourceID is a website form submission's source_id: the form, then the
 // submission's own part. WebFormIDSQL reads the form back out of it.
 func WebFormSourceID(form, submission string) string { return form + ":" + submission }
@@ -118,6 +150,7 @@ var internalSourceSystems = map[string]bool{
 	LeadRepliedSource:            true,
 	LeadForContactSource:         true,
 	WebFormSource:                true,
+	WebsiteInquirySource:         true,
 }
 
 // ReservedSourceSystem reports whether a client-supplied source system
@@ -153,6 +186,14 @@ const ReminderAnchorSeparator = ":anchor:"
 func EngineReminderSources() []string {
 	return []string{NoActivityReminderSource, CheckInCadenceSource}
 }
+
+// EngineTaskSources are the task identities admitted only for the system writer.
+// Inquiry work keeps its own lifecycle and is not a quiet-account reminder.
+func EngineTaskSources() []string {
+	return append(EngineReminderSources(), WebsiteInquirySource, LeadForContactSource)
+}
+
+func EngineTaskSource(source string) bool { return slices.Contains(EngineTaskSources(), source) }
 
 // RetiredTaskSources are automatic task families whose writers were removed.
 // Their rows remain current until a user completes them.

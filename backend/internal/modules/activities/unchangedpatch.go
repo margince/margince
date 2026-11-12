@@ -19,6 +19,9 @@ func (in UpdateActivityInput) changesNothing(current crmcontracts.Activity) bool
 
 func (in UpdateActivityInput) movesAField(current crmcontracts.Activity) bool {
 	p := storekit.NewPatch()
+	if in.sourceActivityID != nil {
+		p.Set("source_activity_id", current.SourceActivityId, *in.sourceActivityID)
+	}
 	if in.Subject != nil {
 		p.Set("subject", current.Subject, *in.Subject)
 	}

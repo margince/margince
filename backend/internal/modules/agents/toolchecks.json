@@ -310,6 +310,14 @@
         "privacy_request.update"
       ]
     },
+    "assign_website_inquiry": {
+      "checks": [
+        "activity.read",
+        "activity.update",
+        "lead.read",
+        "relationship.read"
+      ]
+    },
     "at_risk_relationships": {
       "checks": [
         "company.read",
@@ -1747,6 +1755,20 @@
         "webhook_subscription.update"
       ]
     },
+    "handle_website_inquiries": {
+      "checks": [
+        "activity.create",
+        "activity.read",
+        "activity.update",
+        "automation.read",
+        "automation.update",
+        "contact.read",
+        "integrations.read",
+        "integrations.update",
+        "lead.read",
+        "relationship.read"
+      ]
+    },
     "hide_deal_document": {
       "checks": [
         "activity.read",
@@ -2470,8 +2492,7 @@
     },
     "preview_automation": {
       "checks": [
-        "automation.read",
-        "lead.read"
+        "automation.read"
       ]
     },
     "preview_connector_backfill": {
@@ -2560,6 +2581,21 @@
     "preview_voice_source": {
       "checks": [
         "voice_profile.update"
+      ]
+    },
+    "preview_website_inquiries": {
+      "checks": [
+        "activity.create",
+        "automation.read",
+        "integrations.read"
+      ]
+    },
+    "preview_website_inquiry_assignment": {
+      "checks": [
+        "activity.read",
+        "activity.update",
+        "lead.read",
+        "relationship.read"
       ]
     },
     "progress_deal": {

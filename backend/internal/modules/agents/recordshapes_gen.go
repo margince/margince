@@ -206,6 +206,7 @@ var listRecordFilters = map[string][]listFilter{
 		{Name: "source_activity_id", Type: "string"},
 		{Name: "thread_key", Type: "string"},
 		{Name: "waiting_reply", Type: "boolean"},
+		{Name: "website_form_id", Type: "string"},
 	},
 	"offer": {
 		{Name: "deal_id", Type: "string"},

@@ -167,15 +167,26 @@ type EffectClaims interface {
 // unguarded.
 var ErrNoEffectClaims = errors.New("automation: no effect claim store configured, so a create cannot be deduplicated across instances")
 
+type RecapDraftClaims interface {
+	StageOnce(context.Context, string, string, string, func(context.Context) (ids.ApprovalID, error)) (ids.ApprovalID, error)
+}
+
+type MeetingRecapReader interface {
+	ReadyForRecap(context.Context, ids.ActivityID, time.Time) (bool, error)
+}
+
 // Executors bundles every seam ApplyActions may drive a typed action
 // through. One struct rather than a five-parameter signature: adding a
 // seam is one field here, not a break at every existing call site.
 type Executors struct {
-	Provider  datasource.SystemOfRecordProvider
-	Approvals Approvals
-	Comms     Comms
-	Notifier  Notifier // the durable notice transport — see Notifier's doc
-	Claims    EffectClaims
+	MeetingRecaps    MeetingRecapReader
+	RecapDraftClaims RecapDraftClaims
+	Inquiries        *InquiryService
+	Provider         datasource.SystemOfRecordProvider
+	Approvals        Approvals
+	Comms            Comms
+	Notifier         Notifier // the durable notice transport
+	Claims           EffectClaims
 	// Language is the installation's base language every staged summary is
 	// written in; nil writes English.
 	Language baselanguage.Resolver
@@ -213,7 +224,7 @@ type Lists interface {
 	// ObservedChanges answers the entered or left events (actions) one check
 	// recorded at checkedAt under version, of records the caller can see now:
 	// at most limit of them, and how many there are in all.
-	ObservedChanges(ctx context.Context, id ids.UUID, version int64, checkedAt time.Time, actions []string, limit int) ([]ListChange, int, error)
+	ObservedChanges(ctx context.Context, id ids.UUID, version int64, checkedAt time.Time, actions []string, limit int, includeImported ...bool) ([]ListChange, int, error)
 	// CheckShortlist says whether the caller may change the Shortlist's
 	// membership for records of entityType.
 	CheckShortlist(ctx context.Context, id ids.UUID, entityType string) error

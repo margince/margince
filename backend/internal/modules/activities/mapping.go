@@ -241,20 +241,13 @@ func LogActivityInputFrom(req crmcontracts.CreateActivityRequest) (LogActivityIn
 	return logActivityInput(req, provenanceAdmission{})
 }
 
-// provenanceAdmission says which reserved identities THIS writer may spell.
-//
-// Two writers, two disjoint sets, and neither is "the reserved names": the
-// engine stamps its quiet-account reminders, the importer stamps its own
-// namespace, and each must stay refused the other's. A single boolean would
-// have opened both sets to whichever writer asked.
-//
-// The zero value admits nothing, so a door that says nothing is the client
-// door — the safe default, and what every existing caller gets.
-type provenanceAdmission struct{ engineReminder, importer bool }
+// The engine and importer each admit only their own reserved identities.
+// Keeping these sets apart prevents either writer from impersonating the other.
+type provenanceAdmission struct{ engineTask, importer bool }
 
 // admits answers whether this writer may spell one reserved source system.
 func (a provenanceAdmission) admits(sourceSystem string) bool {
-	if a.engineReminder && provenance.EngineReminderSource(sourceSystem) {
+	if a.engineTask && provenance.EngineTaskSource(sourceSystem) {
 		return true
 	}
 	return a.importer && provenance.ImporterNamespace(sourceSystem)
@@ -272,16 +265,9 @@ func LogActivityInputFromImporter(req crmcontracts.CreateActivityRequest) (LogAc
 	return logActivityInput(req, provenanceAdmission{importer: true})
 }
 
-// logActivityInputAllowingReminderIdentity is LogActivityInputFrom for the
-// automation engine's own reminder write, which must stamp an identity no
-// client may spell. provider.go's logInputForPrincipal decides who reaches it,
-// on the principal rather than on anything in the request.
-//
-// One body behind both, because the guard is the only difference: a second
-// mapping beside this one would be a second set of rules about the reserved
-// namespace, and the two would drift.
-func logActivityInputAllowingReminderIdentity(req crmcontracts.CreateActivityRequest) (LogActivityInput, error) {
-	return logActivityInput(req, provenanceAdmission{engineReminder: true})
+// The system-only door changes admission, while the ordinary mapper keeps all other checks.
+func logActivityInputAllowingTaskIdentity(req crmcontracts.CreateActivityRequest) (LogActivityInput, error) {
+	return logActivityInput(req, provenanceAdmission{engineTask: true})
 }
 
 // refuseReservedProvenance guards the two provenance fields on a create wire.

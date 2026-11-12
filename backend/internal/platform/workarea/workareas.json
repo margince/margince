@@ -115,6 +115,7 @@
     "assignLegalEntityMember": "admin_settings",
     "assignNoticeCase": "compliance",
     "assignNoticeCaseReview": "compliance",
+    "assignWebsiteInquiry": "business",
     "backfillEmploymentImport": "business",
     "cancelConnectorBackfill": "capture",
     "cancelContract": "business",
@@ -459,6 +460,7 @@
     "getWebForm": "workspace_settings",
     "getWorklist": "business",
     "handOverUserWork": "admin_settings",
+    "handleExistingWebFormInquiries": "admin_settings",
     "hideDealDocument": "business",
     "importCardPhoto": "business",
     "importLinkedInConnections": "own_account",
@@ -669,6 +671,8 @@
     "previewNoticeSource": "compliance",
     "previewSendAuthorization": "business",
     "previewVoiceCorpusSource": "business",
+    "previewWebFormHandling": "workspace_settings",
+    "previewWebsiteInquiryAssignment": "business",
     "progressDeal": "business",
     "promoteLead": "business",
     "proposeDealRoles": "business",
@@ -975,6 +979,7 @@
     "assignLegalEntityMember": "company_profile",
     "assignNoticeCase": "privacy_notices",
     "assignNoticeCaseReview": "privacy_notices",
+    "assignWebsiteInquiry": "activities",
     "backfillEmploymentImport": "contacts",
     "bookMeeting": "scheduling",
     "bookPublicMeeting": "booking_pages",
@@ -1419,6 +1424,7 @@
     "getWebhookSubscription": "webhooks",
     "getWorklist": "worklist",
     "handOverUserWork": "members",
+    "handleExistingWebFormInquiries": "web_forms",
     "hideDealDocument": "documents",
     "importCardPhoto": "contacts",
     "importLinkedInConnections": "own_profile",
@@ -1664,7 +1670,9 @@
     "previewReportingReportAsRole": "reports",
     "previewSendAuthorization": "activities",
     "previewVoiceCorpusSource": "voice",
+    "previewWebFormHandling": "web_forms",
     "previewWebhookBody": "webhooks",
+    "previewWebsiteInquiryAssignment": "activities",
     "progressDeal": "deals",
     "promoteLead": "leads",
     "proposeAiModelRateRefresh": "rates",
@@ -1825,6 +1833,7 @@
     "saveReportingReportDraft": "reports",
     "saveRetainedEmailSignature": "privacy_notices",
     "saveSalesGoalDraft": "reports",
+    "saveWebFormHandling": "web_forms",
     "scrapeCompany": "companies",
     "search": "search",
     "searchContext": "search",
@@ -2143,6 +2152,9 @@
     ],
     "assign_notice_case_review": [
       "privacy_notices"
+    ],
+    "assign_website_inquiry": [
+      "activities"
     ],
     "at_risk_relationships": [
       "deals"
@@ -2861,6 +2873,9 @@
     "hand_over_user_work": [
       "members"
     ],
+    "handle_website_inquiries": [
+      "web_forms"
+    ],
     "hide_deal_document": [
       "documents"
     ],
@@ -3301,6 +3316,12 @@
     ],
     "preview_voice_source": [
       "voice"
+    ],
+    "preview_website_inquiries": [
+      "web_forms"
+    ],
+    "preview_website_inquiry_assignment": [
+      "activities"
     ],
     "progress_deal": [
       "deals"
@@ -4227,6 +4248,9 @@
     "assign_notice_case_review": [
       "compliance"
     ],
+    "assign_website_inquiry": [
+      "business"
+    ],
     "at_risk_relationships": [
       "business"
     ],
@@ -4936,6 +4960,9 @@
     "hand_over_user_work": [
       "admin_settings"
     ],
+    "handle_website_inquiries": [
+      "admin_settings"
+    ],
     "hide_deal_document": [
       "business"
     ],
@@ -5364,6 +5391,12 @@
       "business"
     ],
     "preview_voice_source": [
+      "business"
+    ],
+    "preview_website_inquiries": [
+      "workspace_settings"
+    ],
+    "preview_website_inquiry_assignment": [
       "business"
     ],
     "progress_deal": [

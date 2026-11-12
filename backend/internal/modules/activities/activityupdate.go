@@ -21,6 +21,7 @@ import (
 type UpdateActivityInput struct {
 	DealFiling         *crmcontracts.ActivityDealFiling
 	recordedAt         *time.Time
+	sourceActivityID   *ids.UUID
 	calendarSettlement bool
 	// recordZone dates a stored instant made a day; the store sets it (WithRecordZone).
 	recordZone RecordZone
@@ -108,6 +109,7 @@ func activityColumnImage(a crmcontracts.Activity) map[string]any {
 		fieldOccurredPrecision: string(a.OccurredPrecision),
 		fieldDurationSeconds:   derefOrNil(a.DurationSeconds),
 		"due_at":               derefOrNil(a.DueAt),
+		"source_activity_id":   derefOrNil(a.SourceActivityId),
 		fieldDueHasTime:        derefOrNil(a.DueHasTime),
 		"remind_at":            derefOrNil(a.RemindAt),
 		"assignee_id":          derefOrNil(a.AssigneeId),

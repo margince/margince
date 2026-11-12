@@ -83,6 +83,7 @@ func newActivitiesHandlers(pool *pgxpool.Pool) activitiesHandlers {
 	return activities.NewHandlers(InstallationDB(pool)).WithIdentityProver(capture.ProvedUnambiguouslyTx).
 		WithDealFiling(NewActivityDealFiling(InstallationDB(pool))).
 		WithTaskRecommendation(taskRecommendationReader(pool)).
+		WithInquiryAssignment(newInquiryAssignment(InstallationDB(pool))).
 		WithLeadQualifyTasks(newLeadWorkTasks(InstallationDB(pool), slog.Default())).
 		WithFieldCatalog(customfields.NewService(pool, nil)).
 		WithRecordZone(installationZoneTx).

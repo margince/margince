@@ -31,8 +31,8 @@ module to put a change in, read [modules.md](../modules.md).
 | | |
 |---|--:|
 | Tables | 363 |
-| Columns | 4413 |
-| Foreign keys | 615 |
+| Columns | 4418 |
+| Foreign keys | 616 |
 | Owning areas | 38 |
 
 ## The 12 records everything else hangs off
@@ -190,8 +190,8 @@ erDiagram
 | [`attachment_extraction`](activities.md#attachment_extraction) | activities | 13 | 0 |
 | [`audit_log`](platform.md#audit_log) | platform | 15 | 2 |
 | [`auth_token`](identity.md#auth_token) | identity | 10 | 0 |
-| [`automation`](automation.md#automation) | automation | 16 | 0 |
-| [`automation_effect_claim`](automation.md#automation_effect_claim) | automation | 6 | 0 |
+| [`automation`](automation.md#automation) | automation | 17 | 1 |
+| [`automation_effect_claim`](automation.md#automation_effect_claim) | automation | 7 | 0 |
 | [`booking_alias`](activities.md#booking_alias) | activities | 6 | 0 |
 | [`booking_page`](activities.md#booking_page) | activities | 7 | 1 |
 | [`brief_item`](compose.md#brief_item) | compose | 15 | 0 |
@@ -361,7 +361,7 @@ erDiagram
 | [`list_evaluation`](collections.md#list_evaluation) | collections | 6 | 0 |
 | [`list_live_member`](collections.md#list_live_member) | collections | 5 | 0 |
 | [`list_member`](collections.md#list_member) | collections | 7 | 0 |
-| [`list_member_event`](collections.md#list_member_event) | collections | 11 | 0 |
+| [`list_member_event`](collections.md#list_member_event) | collections | 12 | 0 |
 | [`list_revision`](collections.md#list_revision) | collections | 11 | 0 |
 | [`list_visit`](collections.md#list_visit) | collections | 4 | 0 |
 | [`mail_draft`](activities.md#mail_draft) | activities | 20 | 0 |
@@ -479,7 +479,7 @@ erDiagram
 | [`voice_profile`](ai.md#voice_profile) | ai | 18 | 5 |
 | [`voice_profile_delta`](ai.md#voice_profile_delta) | ai | 10 | 0 |
 | [`voice_profile_version`](ai.md#voice_profile_version) | ai | 24 | 5 |
-| [`web_form`](webforms.md#web_form) | webforms | 23 | 1 |
+| [`web_form`](webforms.md#web_form) | webforms | 25 | 1 |
 | [`web_form_last_post`](webforms.md#web_form_last_post) | webforms | 2 | 0 |
 | [`webhook_delivery`](webhooks.md#webhook_delivery) | webhooks | 19 | 0 |
 | [`webhook_subscription`](webhooks.md#webhook_subscription) | webhooks | 13 | 1 |

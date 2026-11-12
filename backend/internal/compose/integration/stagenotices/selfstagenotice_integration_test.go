@@ -3,7 +3,7 @@
 
 //go:build integration
 
-package compose
+package stagenotices
 
 import (
 	"context"
@@ -12,8 +12,11 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/compose"
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/automation"
 	"github.com/margince/margince/backend/internal/modules/deals"
+	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/modules/notices"
 	"github.com/margince/margince/backend/internal/shared/kernel/events"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -25,7 +28,9 @@ func TestStageNotificationsAgreeAcrossDeliveryHistoryAndPreview(t *testing.T) {
 	if err := f.db.Tx(f.ctx, func(tx pgx.Tx) error { return automation.SeedStarterAutomationsTx(f.ctx, tx) }); err != nil {
 		t.Fatal(err)
 	}
-	engine := NewWorkflowEngine(f.db)
+	handler := catalogStageNotifier(t)
+	automationID := reviewStageNotifier(t, f, handler)
+	engine := compose.NewWorkflowEngine(f.db)
 	for range 2 {
 		if err := engine.HandleEvent(context.Background(), f.event); err != nil {
 			t.Fatal(err)
@@ -52,15 +57,6 @@ func TestStageNotificationsAgreeAcrossDeliveryHistoryAndPreview(t *testing.T) {
 			t.Fatal(err)
 		}
 	}
-	var handler string
-	for _, entry := range automation.Catalog() {
-		if entry.Trigger == f.event.Type && entry.Action == string(automation.ActionTypeNotify) {
-			handler = entry.Key
-		}
-	}
-	if handler == "" {
-		t.Fatal("no catalog stage notifier")
-	}
 	var status, reason string
 	if err := f.conn.QueryRow(f.ctx, `SELECT status, detail->>'reason' FROM workflow_run WHERE trigger_event = @event AND handler = @handler`, pgx.NamedArgs{"event": selfMove.EventID, "handler": handler}).Scan(&status, &reason); err != nil {
 		t.Fatal(err)
@@ -82,17 +78,59 @@ func TestStageNotificationsAgreeAcrossDeliveryHistoryAndPreview(t *testing.T) {
 	if delivered != 1 {
 		t.Fatalf("self-made move created an unnecessary notice: %d deliveries", delivered)
 	}
-	var automationID ids.AutomationID
-	if err := f.conn.QueryRow(f.ctx, `SELECT id FROM automation WHERE key = @key`, pgx.NamedArgs{"key": handler}).Scan(&automationID); err != nil {
-		t.Fatal(err)
-	}
 	preview, err := automation.NewAutomationStore(f.db).SetClock(func() time.Time { return selfMove.OccurredAt.Add(time.Hour) }).Preview(f.ctx, automationID, automation.AutomationPreviewInput{})
 	if err != nil {
 		t.Fatal(err)
 	}
-	if preview.WouldHaveFired == nil || *preview.WouldHaveFired != 1 {
-		t.Fatalf("preview counted self-made moves or initial stage placement: %+v", preview)
+	if preview.Kind != crmcontracts.AutomationPreviewKindEvent || preview.HistoricalPreviewAvailable || preview.WouldHaveFired != nil {
+		t.Fatalf("an event rule's preview claimed a history count: %+v", preview)
 	}
+}
+
+func catalogStageNotifier(t *testing.T) string {
+	t.Helper()
+	for _, entry := range automation.Catalog() {
+		if entry.Trigger == "deal.stage_changed" && entry.Action == string(automation.ActionTypeNotify) {
+			return entry.Key
+		}
+	}
+	t.Fatal("no catalog stage notifier")
+	return ""
+}
+
+// A seeded notifier waits for its owner's review. It acts only on moves made
+// after it is switched on, so the review is dated before the fixture's move.
+func reviewStageNotifier(t *testing.T, f stageNoticeFixture, handler string) ids.AutomationID {
+	t.Helper()
+	var rule automation.Automation
+	if err := f.conn.QueryRow(f.ctx, `SELECT id, version FROM automation WHERE key = @key`, pgx.NamedArgs{"key": handler}).Scan(&rule.ID, &rule.Version); err != nil {
+		t.Fatal(err)
+	}
+	var pipeline ids.UUID
+	if err := f.conn.QueryRow(f.ctx, `SELECT pipeline_id FROM stage WHERE id = @stage`, pgx.NamedArgs{"stage": f.fromID}).Scan(&pipeline); err != nil {
+		t.Fatal(err)
+	}
+	// The reviewer becomes the rule's owner, whose live authority each firing re-checks.
+	f.env.GrantRole(t, f.env.AdminUser, "admin")
+	authority, err := identity.NewService(f.env.Pool).EffectiveRBAC(f.ctx, f.env.WS, f.env.AdminUser)
+	if err != nil {
+		t.Fatal(err)
+	}
+	enabled := true
+	reviewed, err := automation.NewAutomationStore(f.db).WithStageLookup(compose.NewProviderFor(f.db)).
+		SetClock(func() time.Time { return f.event.OccurredAt.Add(-time.Minute) }).
+		Update(f.env.As(f.env.AdminUser, authority.TeamIDs, authority.Permissions), rule.ID, automation.UpdateAutomationInput{
+			Enabled:   &enabled,
+			Params:    map[string]any{"pipeline_id": pipeline.String(), "stage_ids": []string{f.fromID.String(), f.toID.String()}},
+			IfVersion: &rule.Version,
+		})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !reviewed.Enabled {
+		t.Fatalf("the reviewed notifier is still paused: %+v", reviewed)
+	}
+	return rule.ID
 }
 
 func assertLegacySelfStageDeliveryHidden(t *testing.T, f stageNoticeFixture, delivered notices.Notice) {

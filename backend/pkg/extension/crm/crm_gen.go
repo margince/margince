@@ -3289,8 +3289,8 @@ type WebFormConsent struct {
 }
 
 // WebFormSubmission One website form submission as the visitor sent it. Every value is the visitor's own
-// text and nothing Margince checked, except `consent`, which is the form's own record of
-// its consent box.
+// text. `validated_picklists` records which custom picklist values passed validation;
+// `consent` records the form's own consent box.
 type WebFormSubmission struct {
 	// Campaign The `utm_` parameters the page carried.
 	Campaign []WebFormValue `json:"campaign"`
@@ -3306,6 +3306,9 @@ type WebFormSubmission struct {
 	Extra    []WebFormValue `json:"extra"`
 	FullName *string        `json:"full_name,omitempty"`
 
+	// HandlingAutomationId The policy owning this accepted occurrence; later policy changes do not transfer it to a legacy handler.
+	HandlingAutomationId *string `json:"handling_automation_id,omitempty"`
+
 	// Message The free text the visitor wrote.
 	Message *string `json:"message,omitempty"`
 
@@ -3316,6 +3319,9 @@ type WebFormSubmission struct {
 	Phone    *string `json:"phone,omitempty"`
 	Referrer *string `json:"referrer,omitempty"`
 	Title    *string `json:"title,omitempty"`
+
+	// ValidatedPicklists Custom picklist field names whose submitted values passed validation at receipt. Values remain in extra.
+	ValidatedPicklists *[]string `json:"validated_picklists,omitempty"`
 }
 
 // WebFormValue defines model for WebFormValue.

@@ -3667,6 +3667,54 @@ func (e AutomationPausedReason) Valid() bool {
 	}
 }
 
+// Defines values for AutomationSetupReason.
+const (
+	AutomationSetupReasonAuthorizerInactive      AutomationSetupReason = "authorizer_inactive"
+	AutomationSetupReasonAuthorizerMissing       AutomationSetupReason = "authorizer_missing"
+	AutomationSetupReasonConfigurationIncomplete AutomationSetupReason = "configuration_incomplete"
+	AutomationSetupReasonPausedBySystem          AutomationSetupReason = "paused_by_system"
+)
+
+// Valid indicates whether the value is a known member of the AutomationSetupReason enum.
+func (e AutomationSetupReason) Valid() bool {
+	switch e {
+	case AutomationSetupReasonAuthorizerInactive:
+		return true
+	case AutomationSetupReasonAuthorizerMissing:
+		return true
+	case AutomationSetupReasonConfigurationIncomplete:
+		return true
+	case AutomationSetupReasonPausedBySystem:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for AutomationSetupState.
+const (
+	AutomationSetupStateNeedsAttention AutomationSetupState = "needs_attention"
+	AutomationSetupStateNeedsSetup     AutomationSetupState = "needs_setup"
+	AutomationSetupStateOn             AutomationSetupState = "on"
+	AutomationSetupStatePaused         AutomationSetupState = "paused"
+)
+
+// Valid indicates whether the value is a known member of the AutomationSetupState enum.
+func (e AutomationSetupState) Valid() bool {
+	switch e {
+	case AutomationSetupStateNeedsAttention:
+		return true
+	case AutomationSetupStateNeedsSetup:
+		return true
+	case AutomationSetupStateOn:
+		return true
+	case AutomationSetupStatePaused:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for AutomationStatus.
 const (
 	AutomationStatusEnabled AutomationStatus = "enabled"
@@ -3685,6 +3733,33 @@ func (e AutomationStatus) Valid() bool {
 	}
 }
 
+// Defines values for AutomationCatalogEntryGroup.
+const (
+	AutomationCatalogEntryGroupCustomers AutomationCatalogEntryGroup = "customers"
+	AutomationCatalogEntryGroupDeals     AutomationCatalogEntryGroup = "deals"
+	AutomationCatalogEntryGroupInquiries AutomationCatalogEntryGroup = "inquiries"
+	AutomationCatalogEntryGroupLists     AutomationCatalogEntryGroup = "lists"
+	AutomationCatalogEntryGroupMeetings  AutomationCatalogEntryGroup = "meetings"
+)
+
+// Valid indicates whether the value is a known member of the AutomationCatalogEntryGroup enum.
+func (e AutomationCatalogEntryGroup) Valid() bool {
+	switch e {
+	case AutomationCatalogEntryGroupCustomers:
+		return true
+	case AutomationCatalogEntryGroupDeals:
+		return true
+	case AutomationCatalogEntryGroupInquiries:
+		return true
+	case AutomationCatalogEntryGroupLists:
+		return true
+	case AutomationCatalogEntryGroupMeetings:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for AutomationCatalogEntryTier.
 const (
 	AutomationCatalogEntryTierAutoExecute          AutomationCatalogEntryTier = "auto_execute"
@@ -3697,6 +3772,24 @@ func (e AutomationCatalogEntryTier) Valid() bool {
 	case AutomationCatalogEntryTierAutoExecute:
 		return true
 	case AutomationCatalogEntryTierConfirmationRequired:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for AutomationPreviewKind.
+const (
+	AutomationPreviewKindEvent      AutomationPreviewKind = "event"
+	AutomationPreviewKindPopulation AutomationPreviewKind = "population"
+)
+
+// Valid indicates whether the value is a known member of the AutomationPreviewKind enum.
+func (e AutomationPreviewKind) Valid() bool {
+	switch e {
+	case AutomationPreviewKindEvent:
+		return true
+	case AutomationPreviewKindPopulation:
 		return true
 	default:
 		return false
@@ -15934,6 +16027,27 @@ func (e LeadQualificationEvidenceTrigger) Valid() bool {
 	}
 }
 
+// Defines values for LeadRoutingRuleField.
+const (
+	LeadRoutingRuleFieldCandidateCompanyKey LeadRoutingRuleField = "candidate_company_key"
+	LeadRoutingRuleFieldCompanyName         LeadRoutingRuleField = "company_name"
+	LeadRoutingRuleFieldOrigin              LeadRoutingRuleField = "origin"
+)
+
+// Valid indicates whether the value is a known member of the LeadRoutingRuleField enum.
+func (e LeadRoutingRuleField) Valid() bool {
+	switch e {
+	case LeadRoutingRuleFieldCandidateCompanyKey:
+		return true
+	case LeadRoutingRuleFieldCompanyName:
+		return true
+	case LeadRoutingRuleFieldOrigin:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for LeadSourceIntent.
 const (
 	LeadSourceIntentLeadSourceIntentHigh    LeadSourceIntent = "high"
@@ -26200,6 +26314,27 @@ func (e VoiceProfileVersionStatus) Valid() bool {
 	}
 }
 
+// Defines values for WebFormIntakeState.
+const (
+	WebFormIntakeStateBlocked   WebFormIntakeState = "blocked"
+	WebFormIntakeStatePausedAll WebFormIntakeState = "paused_all"
+	WebFormIntakeStateThrottled WebFormIntakeState = "throttled"
+)
+
+// Valid indicates whether the value is a known member of the WebFormIntakeState enum.
+func (e WebFormIntakeState) Valid() bool {
+	switch e {
+	case WebFormIntakeStateBlocked:
+		return true
+	case WebFormIntakeStatePausedAll:
+		return true
+	case WebFormIntakeStateThrottled:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for WebFormState.
 const (
 	WebFormStateActive WebFormState = "active"
@@ -26212,6 +26347,27 @@ func (e WebFormState) Valid() bool {
 	case WebFormStateActive:
 		return true
 	case WebFormStatePaused:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for WebFormCreatedIntakeState.
+const (
+	WebFormCreatedIntakeStateBlocked   WebFormCreatedIntakeState = "blocked"
+	WebFormCreatedIntakeStatePausedAll WebFormCreatedIntakeState = "paused_all"
+	WebFormCreatedIntakeStateThrottled WebFormCreatedIntakeState = "throttled"
+)
+
+// Valid indicates whether the value is a known member of the WebFormCreatedIntakeState enum.
+func (e WebFormCreatedIntakeState) Valid() bool {
+	switch e {
+	case WebFormCreatedIntakeStateBlocked:
+		return true
+	case WebFormCreatedIntakeStatePausedAll:
+		return true
+	case WebFormCreatedIntakeStateThrottled:
 		return true
 	default:
 		return false
@@ -26338,6 +26494,159 @@ func (e WebhookSubscriptionState) Valid() bool {
 	case WebhookSubscriptionStateActive:
 		return true
 	case WebhookSubscriptionStatePaused:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for WebsiteInquiryAssignmentRecordType.
+const (
+	WebsiteInquiryAssignmentRecordTypeContact WebsiteInquiryAssignmentRecordType = "contact"
+	WebsiteInquiryAssignmentRecordTypeLead    WebsiteInquiryAssignmentRecordType = "lead"
+)
+
+// Valid indicates whether the value is a known member of the WebsiteInquiryAssignmentRecordType enum.
+func (e WebsiteInquiryAssignmentRecordType) Valid() bool {
+	switch e {
+	case WebsiteInquiryAssignmentRecordTypeContact:
+		return true
+	case WebsiteInquiryAssignmentRecordTypeLead:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for WebsiteInquiryAssignmentRequestMode.
+const (
+	WebsiteInquiryAssignmentRequestModeAssignAndFollowUp WebsiteInquiryAssignmentRequestMode = "assign_and_follow_up"
+	WebsiteInquiryAssignmentRequestModeTake              WebsiteInquiryAssignmentRequestMode = "take"
+)
+
+// Valid indicates whether the value is a known member of the WebsiteInquiryAssignmentRequestMode enum.
+func (e WebsiteInquiryAssignmentRequestMode) Valid() bool {
+	switch e {
+	case WebsiteInquiryAssignmentRequestModeAssignAndFollowUp:
+		return true
+	case WebsiteInquiryAssignmentRequestModeTake:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for WebsiteInquiryAssignmentRequestRecordType.
+const (
+	WebsiteInquiryAssignmentRequestRecordTypeContact WebsiteInquiryAssignmentRequestRecordType = "contact"
+	WebsiteInquiryAssignmentRequestRecordTypeLead    WebsiteInquiryAssignmentRequestRecordType = "lead"
+)
+
+// Valid indicates whether the value is a known member of the WebsiteInquiryAssignmentRequestRecordType enum.
+func (e WebsiteInquiryAssignmentRequestRecordType) Valid() bool {
+	switch e {
+	case WebsiteInquiryAssignmentRequestRecordTypeContact:
+		return true
+	case WebsiteInquiryAssignmentRequestRecordTypeLead:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for WebsiteInquiryHandlingItemStatus.
+const (
+	WebsiteInquiryHandlingItemStatusAlreadyHandled     WebsiteInquiryHandlingItemStatus = "already_handled"
+	WebsiteInquiryHandlingItemStatusChanged            WebsiteInquiryHandlingItemStatus = "changed"
+	WebsiteInquiryHandlingItemStatusFailed             WebsiteInquiryHandlingItemStatus = "failed"
+	WebsiteInquiryHandlingItemStatusSkipped            WebsiteInquiryHandlingItemStatus = "skipped"
+	WebsiteInquiryHandlingItemStatusTaskCreated        WebsiteInquiryHandlingItemStatus = "task_created"
+	WebsiteInquiryHandlingItemStatusUnavailable        WebsiteInquiryHandlingItemStatus = "unavailable"
+	WebsiteInquiryHandlingItemStatusWaitingForApproval WebsiteInquiryHandlingItemStatus = "waiting_for_approval"
+)
+
+// Valid indicates whether the value is a known member of the WebsiteInquiryHandlingItemStatus enum.
+func (e WebsiteInquiryHandlingItemStatus) Valid() bool {
+	switch e {
+	case WebsiteInquiryHandlingItemStatusAlreadyHandled:
+		return true
+	case WebsiteInquiryHandlingItemStatusChanged:
+		return true
+	case WebsiteInquiryHandlingItemStatusFailed:
+		return true
+	case WebsiteInquiryHandlingItemStatusSkipped:
+		return true
+	case WebsiteInquiryHandlingItemStatusTaskCreated:
+		return true
+	case WebsiteInquiryHandlingItemStatusUnavailable:
+		return true
+	case WebsiteInquiryHandlingItemStatusWaitingForApproval:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for WebsiteInquiryMode.
+const (
+	WebsiteInquiryModeCoordinator  WebsiteInquiryMode = "coordinator"
+	WebsiteInquiryModeOneColleague WebsiteInquiryMode = "one_colleague"
+	WebsiteInquiryModeRotate       WebsiteInquiryMode = "rotate"
+)
+
+// Valid indicates whether the value is a known member of the WebsiteInquiryMode enum.
+func (e WebsiteInquiryMode) Valid() bool {
+	switch e {
+	case WebsiteInquiryModeCoordinator:
+		return true
+	case WebsiteInquiryModeOneColleague:
+		return true
+	case WebsiteInquiryModeRotate:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for WebsiteInquiryPreviewItemStatus.
+const (
+	WebsiteInquiryPreviewItemStatusAlreadyHandled WebsiteInquiryPreviewItemStatus = "already_handled"
+	WebsiteInquiryPreviewItemStatusChanged        WebsiteInquiryPreviewItemStatus = "changed"
+	WebsiteInquiryPreviewItemStatusEligible       WebsiteInquiryPreviewItemStatus = "eligible"
+	WebsiteInquiryPreviewItemStatusFailed         WebsiteInquiryPreviewItemStatus = "failed"
+	WebsiteInquiryPreviewItemStatusUnavailable    WebsiteInquiryPreviewItemStatus = "unavailable"
+)
+
+// Valid indicates whether the value is a known member of the WebsiteInquiryPreviewItemStatus enum.
+func (e WebsiteInquiryPreviewItemStatus) Valid() bool {
+	switch e {
+	case WebsiteInquiryPreviewItemStatusAlreadyHandled:
+		return true
+	case WebsiteInquiryPreviewItemStatusChanged:
+		return true
+	case WebsiteInquiryPreviewItemStatusEligible:
+		return true
+	case WebsiteInquiryPreviewItemStatusFailed:
+		return true
+	case WebsiteInquiryPreviewItemStatusUnavailable:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for WebsiteInquiryPreviewItemTargetType.
+const (
+	WebsiteInquiryPreviewItemTargetTypeContact WebsiteInquiryPreviewItemTargetType = "contact"
+	WebsiteInquiryPreviewItemTargetTypeLead    WebsiteInquiryPreviewItemTargetType = "lead"
+)
+
+// Valid indicates whether the value is a known member of the WebsiteInquiryPreviewItemTargetType enum.
+func (e WebsiteInquiryPreviewItemTargetType) Valid() bool {
+	switch e {
+	case WebsiteInquiryPreviewItemTargetTypeContact:
+		return true
+	case WebsiteInquiryPreviewItemTargetTypeLead:
 		return true
 	default:
 		return false
@@ -26642,6 +26951,7 @@ const (
 	WorklistFilterTasks             WorklistFilter = "tasks"
 	WorklistFilterUpcoming          WorklistFilter = "upcoming"
 	WorklistFilterUrgent            WorklistFilter = "urgent"
+	WorklistFilterWebsiteInquiries  WorklistFilter = "website_inquiries"
 )
 
 // Valid indicates whether the value is a known member of the WorklistFilter enum.
@@ -26674,6 +26984,8 @@ func (e WorklistFilter) Valid() bool {
 	case WorklistFilterUpcoming:
 		return true
 	case WorklistFilterUrgent:
+		return true
+	case WorklistFilterWebsiteInquiries:
 		return true
 	default:
 		return false
@@ -31307,6 +31619,7 @@ const (
 	GetWorklistParamsFilterTasks             GetWorklistParamsFilter = "tasks"
 	GetWorklistParamsFilterUpcoming          GetWorklistParamsFilter = "upcoming"
 	GetWorklistParamsFilterUrgent            GetWorklistParamsFilter = "urgent"
+	GetWorklistParamsFilterWebsiteInquiries  GetWorklistParamsFilter = "website_inquiries"
 )
 
 // Valid indicates whether the value is a known member of the GetWorklistParamsFilter enum.
@@ -31339,6 +31652,8 @@ func (e GetWorklistParamsFilter) Valid() bool {
 	case GetWorklistParamsFilterUpcoming:
 		return true
 	case GetWorklistParamsFilterUrgent:
+		return true
+	case GetWorklistParamsFilterWebsiteInquiries:
 		return true
 	default:
 		return false
@@ -36208,6 +36523,9 @@ type AttentionItem struct {
 	// acting on one task each overwrite the other and neither is told.
 	Version *RowVersion `json:"version,omitempty"`
 
+	// WebsiteInquiry Inquiry facts under the current task and source content permissions. Missing source facts remain unknown.
+	WebsiteInquiry *WebsiteInquiryWork `json:"website_inquiry,omitempty"`
+
 	// WithContact Who a meeting is with: the first attendee by name who holds no seat here, is not
 	// employed by the installation's own company, and is a contact this caller may
 	// see. Sent by `source: meeting` and `source: meeting_outcome`. On a `meeting`
@@ -36775,6 +37093,10 @@ type Automation struct {
 	CreatedAt time.Time          `json:"created_at"`
 	Id        openapi_types.UUID `json:"id"`
 
+	// InitialRunPreviewRequired Enabling this scheduled rule or changing its active population requires an initial-run preview and explicit confirmation.
+	InitialRunPreviewRequired *bool                 `json:"initial_run_preview_required,omitempty"`
+	InquiryPolicy             *WebsiteInquiryPolicy `json:"inquiry_policy,omitempty"`
+
 	// Key The catalog type this instance is built from.
 	Key string `json:"key"`
 
@@ -36797,9 +37119,15 @@ type Automation struct {
 
 	// SetterPassportId The passport of the agent that turned this rule on, which the rule stops with. Null for a rule a user runs. It names the credential and grants nothing: `captured_by` shows the same id on what an agent writes.
 	SetterPassportId *openapi_types.UUID `json:"setter_passport_id,omitempty"`
-	Status           AutomationStatus    `json:"status"`
-	UpdatedAt        *time.Time          `json:"updated_at,omitempty"`
-	Version          *int                `json:"version,omitempty"`
+
+	// SetupReason A verified reason the configuration needs work. Record-specific refusals stay on runs.
+	SetupReason *AutomationSetupReason `json:"setup_reason,omitempty"`
+
+	// SetupState Current configuration state, separate from the result of any run.
+	SetupState *AutomationSetupState `json:"setup_state,omitempty"`
+	Status     AutomationStatus      `json:"status"`
+	UpdatedAt  *time.Time            `json:"updated_at,omitempty"`
+	Version    *int                  `json:"version,omitempty"`
 }
 
 // AutomationLastRunOutcome How the run last_run_at dates ended, in the run history's outcome vocabulary. Only GET /automations carries it, and only beside last_run_at.
@@ -36807,6 +37135,12 @@ type AutomationLastRunOutcome string
 
 // AutomationPausedReason Why a rule paused itself: the list it watches or adds to was archived, its filter stopped working, its owner can no longer find it, one check moved more than 100 records, or the agent that set the rule up no longer has a live passport or connection, whether revoked or expired. Null for a rule running or paused by hand. Resuming clears it, and a user resuming or editing a rule makes it their own.
 type AutomationPausedReason string
+
+// AutomationSetupReason A verified reason the configuration needs work. Record-specific refusals stay on runs.
+type AutomationSetupReason string
+
+// AutomationSetupState Current configuration state, separate from the result of any run.
+type AutomationSetupState string
 
 // AutomationStatus defines model for Automation.Status.
 type AutomationStatus string
@@ -36816,6 +37150,9 @@ type AutomationCatalogEntry struct {
 	// Action What it does (e.g. create_task or send_email).
 	Action      string  `json:"action"`
 	Description *string `json:"description,omitempty"`
+
+	// Group The library section for this template.
+	Group *AutomationCatalogEntryGroup `json:"group,omitempty"`
 
 	// Key Stable type key, e.g. stalled_deal_nudge.
 	Key  string `json:"key"`
@@ -36831,16 +37168,31 @@ type AutomationCatalogEntry struct {
 	Trigger string `json:"trigger"`
 }
 
+// AutomationCatalogEntryGroup The library section for this template.
+type AutomationCatalogEntryGroup string
+
 // AutomationCatalogEntryTier confirmation_required actions stage to /approvals at run time.
 type AutomationCatalogEntryTier string
 
-// AutomationPreview Read-only blast-radius result for the designer's dry-run. No side effects.
+// AutomationPreview Read-only preview. Event rules act from activation onward and do not estimate past events from current records.
 type AutomationPreview struct {
 	// ExcludedByPermission Matches the caller cannot see (masked, not silently dropped) — honest count, never widens scope.
 	ExcludedByPermission *int `json:"excluded_by_permission,omitempty"`
 
-	// MatchesNow Records matching the trigger+filter right now, bounded by the caller's Passport visibility.
+	// HistoricalPreviewAvailable False when historical execution cannot be reconstructed. Never infer historical events from record creation dates.
+	HistoricalPreviewAvailable *bool `json:"historical_preview_available,omitempty"`
+
+	// MatchesNow Current population matches within the caller's visibility. Ignore this compatibility field when matches_now_available is false.
 	MatchesNow int `json:"matches_now"`
+
+	// MatchesNowAvailable False for event previews. In that case matches_now is a compatibility placeholder, not a count of eligible work.
+	MatchesNowAvailable *bool `json:"matches_now_available,omitempty"`
+
+	// PreviewKind Whether the preview describes a current record population or a future event.
+	PreviewKind *AutomationPreviewKind `json:"preview_kind,omitempty"`
+
+	// Renewal Current visible renewal dates. Missing dates never count as due renewals.
+	Renewal *AutomationRenewalPreview `json:"renewal,omitempty"`
 
 	// Sample Up to a few matching record ids for the "affects these" preview (visibility-bounded).
 	Sample *[]openapi_types.UUID `json:"sample,omitempty"`
@@ -36851,6 +37203,9 @@ type AutomationPreview struct {
 	// WouldHaveFired Estimated firings over the trailing window (null when not computable).
 	WouldHaveFired *int `json:"would_have_fired,omitempty"`
 }
+
+// AutomationPreviewKind Whether the preview describes a current record population or a future event.
+type AutomationPreviewKind string
 
 // AutomationPreviewRequest Optional body for POST /automations/{id}/preview. Omit to preview the stored automation as-is; supply
 // an inline draft recipe (key + params) to preview a not-yet-created or edited automation from the
@@ -36864,6 +37219,20 @@ type AutomationPreviewRequest struct {
 
 	// WindowDays Trailing window for the would-have-fired estimate (default 30).
 	WindowDays *int `json:"window_days,omitempty" maximum:"90" minimum:"1"`
+}
+
+// AutomationRenewalPreview Current visible renewal dates. Missing dates never count as due renewals.
+type AutomationRenewalPreview struct {
+	MissingDates int                              `json:"missing_dates" minimum:"0"`
+	RecursYearly bool                             `json:"recurs_yearly"`
+	Samples      []AutomationRenewalPreviewSample `json:"samples"`
+}
+
+// AutomationRenewalPreviewSample defines model for AutomationRenewalPreviewSample.
+type AutomationRenewalPreviewSample struct {
+	EntityId       openapi_types.UUID `json:"entity_id"`
+	OccurrenceDate openapi_types.Date `json:"occurrence_date"`
+	ReminderDate   openapi_types.Date `json:"reminder_date"`
 }
 
 // AutomationRetryResult What a retry did, or why it did nothing. `refusal` is present exactly when `retried`
@@ -52881,6 +53250,25 @@ type LeadQualifiedField struct {
 	Value    string         `json:"value"`
 }
 
+// LeadRoutingConfig defines model for LeadRoutingConfig.
+type LeadRoutingConfig struct {
+	CapPerOwner *int `json:"cap_per_owner,omitempty" minimum:"1"`
+
+	// Owners Selected colleagues in routing order.
+	Owners *[]openapi_types.UUID `json:"owners,omitempty" unique:"items"`
+	Rules  *[]LeadRoutingRule    `json:"rules,omitempty"`
+}
+
+// LeadRoutingRule defines model for LeadRoutingRule.
+type LeadRoutingRule struct {
+	Equals  string               `json:"equals"`
+	Field   LeadRoutingRuleField `json:"field"`
+	OwnerId openapi_types.UUID   `json:"owner_id"`
+}
+
+// LeadRoutingRuleField defines model for LeadRoutingRule.Field.
+type LeadRoutingRuleField string
+
 // LeadScoreEntry One point in the retained series — what the score was, and why.
 type LeadScoreEntry struct {
 	ComputedAt time.Time          `json:"computed_at"`
@@ -65696,7 +66084,9 @@ type UpdateAttachmentMetadataRequestDocState string
 
 // UpdateAutomationRequest Any subset; omit a field to leave it unchanged. `status` flips enable/pause.
 type UpdateAutomationRequest struct {
-	Name *string `json:"name,omitempty"`
+	// InitialRunConfirmed Confirm the initial-run preview when enabling a scheduled rule or changing its active population. Existing matching records may receive work on the next scan.
+	InitialRunConfirmed *bool   `json:"initial_run_confirmed,omitempty"`
+	Name                *string `json:"name,omitempty"`
 
 	// OwnerId Hand the rule to another member, who must be a seat the caller may make an owner (an active human seat that can write, inside the caller's write scope), else `422` with `code: owner_not_assignable`. Cannot be cleared.
 	OwnerId *openapi_types.UUID            `json:"owner_id,omitempty"`
@@ -67006,11 +67396,14 @@ type UpdateVoiceProfileRequest struct {
 
 // UpdateWebFormRequest defines model for UpdateWebFormRequest.
 type UpdateWebFormRequest struct {
-	AllowedOrigins       *[]string           `json:"allowed_origins,omitempty"`
-	ConsentPolicyVersion *string             `json:"consent_policy_version,omitempty"`
-	ConsentRequired      *bool               `json:"consent_required,omitempty"`
-	ConsentWording       *string             `json:"consent_wording,omitempty"`
-	FieldMap             *map[string]string  `json:"field_map,omitempty"`
+	AllowedOrigins       *[]string          `json:"allowed_origins,omitempty"`
+	ConsentPolicyVersion *string            `json:"consent_policy_version,omitempty"`
+	ConsentRequired      *bool              `json:"consent_required,omitempty"`
+	ConsentWording       *string            `json:"consent_wording,omitempty"`
+	FieldMap             *map[string]string `json:"field_map,omitempty"`
+
+	// HandlingAutomationId Explicit conversion to a reviewed inquiry policy for this form. Clear only through a reviewed return to legacy handling.
+	HandlingAutomationId *openapi_types.UUID `json:"handling_automation_id,omitempty"`
 	LeadOrigin           *string             `json:"lead_origin,omitempty"`
 	Name                 *string             `json:"name,omitempty"`
 	OwnerId              *openapi_types.UUID `json:"owner_id,omitempty"`
@@ -67625,8 +68018,21 @@ type WebForm struct {
 	FieldMap map[string]string `json:"field_map"`
 
 	// FormKey The last segment of the intake address. Public; it is an address, not a credential.
-	FormKey string             `json:"form_key"`
-	Id      openapi_types.UUID `json:"id"`
+	FormKey string `json:"form_key"`
+
+	// HandlingAutomationId Reviewed inquiry policy. Null retains legacy handling; a paused policy never reactivates legacy handling.
+	HandlingAutomationId *openapi_types.UUID `json:"handling_automation_id,omitempty"`
+
+	// HandlingCutoverAt When the handling reference last changed; completed submissions retain their original handling.
+	HandlingCutoverAt *time.Time         `json:"handling_cutover_at,omitempty"`
+	Id                openapi_types.UUID `json:"id"`
+
+	// Intake Present only while the intake refuses posts to this form with 429. `throttled`: too many posts lately, so some are refused; `since` is when that began. `blocked`: every post is refused until `until`. `paused_all`: every form of the workspace or installation refuses posts until `until`, because all forms together receive too many. Answered on the list and on one form's read.
+	Intake *struct {
+		Since *time.Time         `json:"since,omitempty"`
+		State WebFormIntakeState `json:"state"`
+		Until *time.Time         `json:"until,omitempty"`
+	} `json:"intake,omitempty"`
 
 	// LastPostAt When the form last landed a post, stamped at most once a minute. Null until the first one since the time was tracked. A post the spam checks drop is not counted.
 	LastPostAt *time.Time `json:"last_post_at"`
@@ -67664,6 +68070,9 @@ type WebForm struct {
 	// Version Optimistic-concurrency version; echo it in If-Match on update.
 	Version int64 `json:"version"`
 }
+
+// WebFormIntakeState defines model for WebForm.Intake.State.
+type WebFormIntakeState string
 
 // WebFormState defines model for WebForm.State.
 type WebFormState string
@@ -67705,8 +68114,21 @@ type WebFormCreated struct {
 	FieldMap map[string]string `json:"field_map"`
 
 	// FormKey The last segment of the intake address. Public; it is an address, not a credential.
-	FormKey string             `json:"form_key"`
-	Id      openapi_types.UUID `json:"id"`
+	FormKey string `json:"form_key"`
+
+	// HandlingAutomationId Reviewed inquiry policy. Null retains legacy handling; a paused policy never reactivates legacy handling.
+	HandlingAutomationId *openapi_types.UUID `json:"handling_automation_id,omitempty"`
+
+	// HandlingCutoverAt When the handling reference last changed; completed submissions retain their original handling.
+	HandlingCutoverAt *time.Time         `json:"handling_cutover_at,omitempty"`
+	Id                openapi_types.UUID `json:"id"`
+
+	// Intake Present only while the intake refuses posts to this form with 429. `throttled`: too many posts lately, so some are refused; `since` is when that began. `blocked`: every post is refused until `until`. `paused_all`: every form of the workspace or installation refuses posts until `until`, because all forms together receive too many. Answered on the list and on one form's read.
+	Intake *struct {
+		Since *time.Time                `json:"since,omitempty"`
+		State WebFormCreatedIntakeState `json:"state"`
+		Until *time.Time                `json:"until,omitempty"`
+	} `json:"intake,omitempty"`
 
 	// LastPostAt When the form last landed a post, stamped at most once a minute. Null until the first one since the time was tracked. A post the spam checks drop is not counted.
 	LastPostAt *time.Time `json:"last_post_at"`
@@ -67748,6 +68170,9 @@ type WebFormCreated struct {
 	Version int64 `json:"version"`
 }
 
+// WebFormCreatedIntakeState defines model for WebFormCreated.Intake.State.
+type WebFormCreatedIntakeState string
+
 // WebFormCreatedState defines model for WebFormCreated.State.
 type WebFormCreatedState string
 
@@ -67785,8 +68210,8 @@ type WebFormReceiptStatus string
 type WebFormSender string
 
 // WebFormSubmission One website form submission as the visitor sent it. Every value is the visitor's own
-// text and nothing Margince checked, except `consent`, which is the form's own record of
-// its consent box.
+// text. `validated_picklists` records which custom picklist values passed validation;
+// `consent` records the form's own consent box.
 type WebFormSubmission struct {
 	// Campaign The `utm_` parameters the page carried.
 	Campaign []WebFormValue `json:"campaign"`
@@ -67802,6 +68227,9 @@ type WebFormSubmission struct {
 	Extra    []WebFormValue `json:"extra"`
 	FullName *string        `json:"full_name,omitempty"`
 
+	// HandlingAutomationId The policy owning this accepted occurrence; later policy changes do not transfer it to a legacy handler.
+	HandlingAutomationId *openapi_types.UUID `json:"handling_automation_id,omitempty"`
+
 	// Message The free text the visitor wrote.
 	Message *string `json:"message,omitempty"`
 
@@ -67812,6 +68240,9 @@ type WebFormSubmission struct {
 	Phone    *string `json:"phone,omitempty"`
 	Referrer *string `json:"referrer,omitempty"`
 	Title    *string `json:"title,omitempty"`
+
+	// ValidatedPicklists Custom picklist field names whose submitted values passed validation at receipt. Values remain in extra.
+	ValidatedPicklists *[]string `json:"validated_picklists,omitempty"`
 }
 
 // WebFormValue defines model for WebFormValue.
@@ -67931,6 +68362,215 @@ type WebhookSubscriptionListResponse struct {
 	// DeliveryEnabled Whether this deployment has a signing key configured. When false, subscriptions can be listed and inspected but create/rotate/replay are unavailable (they answer 503 webhooks_not_configured), so the UI renders a not-enabled state instead of controls that would only fail on click.
 	DeliveryEnabled bool     `json:"delivery_enabled"`
 	Page            PageInfo `json:"page"`
+}
+
+// WebsiteInquiryAssignment defines model for WebsiteInquiryAssignment.
+type WebsiteInquiryAssignment struct {
+	ChangesRecordOwner bool                               `json:"changes_record_owner"`
+	RecipientId        openapi_types.UUID                 `json:"recipient_id"`
+	RecordId           openapi_types.UUID                 `json:"record_id"`
+	RecordOwnerId      *openapi_types.UUID                `json:"record_owner_id,omitempty"`
+	RecordType         WebsiteInquiryAssignmentRecordType `json:"record_type"`
+
+	// RecordVersion Monotonic row version, incremented by the server on every mutation (data-model §1.3a).
+	// Echoed back as the `version` field on every mutable entity. To make a write conditional,
+	// send the last-seen value in `If-Match`; a mismatch returns `409 code: version_skew`
+	// (ErrVersionSkew) so the client re-reads before retrying.
+	RecordVersion *RowVersion `json:"record_version,omitempty" minimum:"1"`
+
+	// Task A polymorphic timeline item. Mirrors the `activity` table + `activity_link`.
+	// **Per-kind field constraints** (enforced server-side to match the DB `activity_task_fields`
+	// CHECK; the OpenAPI cannot express these conditionally): `due_at`/`assignee_id`/`is_done`/
+	// `done_at` are valid ONLY when `kind=task`; `meeting_status` ONLY when `kind=meeting`;
+	// `duration_seconds` only for meeting/call; `direction` is null for note/task. Setting a
+	// disallowed field for the kind returns `422 code: field_not_valid_for_kind` (the API rejects
+	// what the DB CHECK would reject, rather than 500-ing at write time).
+	// `channel_provider` is the same kind of constraint in both directions: non-null exactly
+	// when `kind=message` (ADR-0107).
+	// **Custom fields**: the values of the workspace's activity custom fields arrive as extra
+	// top-level `cf_` keys. They are content, so they are absent whenever `content_state` is
+	// `withheld`.
+	Task Activity `json:"task"`
+}
+
+// WebsiteInquiryAssignmentRecordType defines model for WebsiteInquiryAssignment.RecordType.
+type WebsiteInquiryAssignmentRecordType string
+
+// WebsiteInquiryAssignmentRequest defines model for WebsiteInquiryAssignmentRequest.
+type WebsiteInquiryAssignmentRequest struct {
+	Mode        WebsiteInquiryAssignmentRequestMode `json:"mode"`
+	RecipientId openapi_types.UUID                  `json:"recipient_id"`
+
+	// RecordId Required when applying; use the record ID from the preview.
+	RecordId *openapi_types.UUID `json:"record_id,omitempty"`
+
+	// RecordType Required when applying; use the record type from the preview.
+	RecordType *WebsiteInquiryAssignmentRequestRecordType `json:"record_type,omitempty"`
+
+	// RecordVersion Monotonic row version, incremented by the server on every mutation (data-model §1.3a).
+	// Echoed back as the `version` field on every mutable entity. To make a write conditional,
+	// send the last-seen value in `If-Match`; a mismatch returns `409 code: version_skew`
+	// (ErrVersionSkew) so the client re-reads before retrying.
+	RecordVersion *RowVersion `json:"record_version,omitempty" minimum:"1"`
+}
+
+// WebsiteInquiryAssignmentRequestMode defines model for WebsiteInquiryAssignmentRequest.Mode.
+type WebsiteInquiryAssignmentRequestMode string
+
+// WebsiteInquiryAssignmentRequestRecordType Required when applying; use the record type from the preview.
+type WebsiteInquiryAssignmentRequestRecordType string
+
+// WebsiteInquiryExistingRequest defines model for WebsiteInquiryExistingRequest.
+type WebsiteInquiryExistingRequest struct {
+	AutomationId openapi_types.UUID `json:"automation_id"`
+
+	// AutomationVersion Monotonic row version, incremented by the server on every mutation (data-model §1.3a).
+	// Echoed back as the `version` field on every mutable entity. To make a write conditional,
+	// send the last-seen value in `If-Match`; a mismatch returns `409 code: version_skew`
+	// (ErrVersionSkew) so the client re-reads before retrying.
+	AutomationVersion *RowVersion               `json:"automation_version,omitempty" minimum:"1"`
+	Selected          []WebsiteInquirySelection `json:"selected"`
+}
+
+// WebsiteInquiryHandling defines model for WebsiteInquiryHandling.
+type WebsiteInquiryHandling struct {
+	// Automation A configured automation instance (feedback/14).
+	Automation Automation `json:"automation"`
+
+	// Form A website form (`web_form`): a public intake address that turns a submission into a lead. No secret is ever returned here; `secret_configured` says one is stored.
+	Form WebForm `json:"form"`
+}
+
+// WebsiteInquiryHandlingItem defines model for WebsiteInquiryHandlingItem.
+type WebsiteInquiryHandlingItem struct {
+	Id     openapi_types.UUID               `json:"id"`
+	Reason *string                          `json:"reason,omitempty"`
+	RunId  *openapi_types.UUID              `json:"run_id,omitempty"`
+	Status WebsiteInquiryHandlingItemStatus `json:"status"`
+	TaskId *openapi_types.UUID              `json:"task_id,omitempty"`
+
+	// Version Monotonic row version, incremented by the server on every mutation (data-model §1.3a).
+	// Echoed back as the `version` field on every mutable entity. To make a write conditional,
+	// send the last-seen value in `If-Match`; a mismatch returns `409 code: version_skew`
+	// (ErrVersionSkew) so the client re-reads before retrying.
+	Version *RowVersion `json:"version,omitempty" minimum:"1"`
+}
+
+// WebsiteInquiryHandlingItemStatus defines model for WebsiteInquiryHandlingItem.Status.
+type WebsiteInquiryHandlingItemStatus string
+
+// WebsiteInquiryHandlingPreview defines model for WebsiteInquiryHandlingPreview.
+type WebsiteInquiryHandlingPreview struct {
+	ExampleDueAt time.Time                   `json:"example_due_at"`
+	Items        []WebsiteInquiryPreviewItem `json:"items"`
+
+	// ReceivedAt Server clock used for the deadline example.
+	ReceivedAt time.Time `json:"received_at"`
+}
+
+// WebsiteInquiryHandlingRequest defines model for WebsiteInquiryHandlingRequest.
+type WebsiteInquiryHandlingRequest struct {
+	AutomationId *openapi_types.UUID `json:"automation_id,omitempty"`
+
+	// AutomationVersion Monotonic row version, incremented by the server on every mutation (data-model §1.3a).
+	// Echoed back as the `version` field on every mutable entity. To make a write conditional,
+	// send the last-seen value in `If-Match`; a mismatch returns `409 code: version_skew`
+	// (ErrVersionSkew) so the client re-reads before retrying.
+	AutomationVersion *RowVersion          `json:"automation_version,omitempty" minimum:"1"`
+	Enabled           bool                 `json:"enabled"`
+	Name              string               `json:"name"`
+	Policy            WebsiteInquiryPolicy `json:"policy"`
+}
+
+// WebsiteInquiryHandlingResults defines model for WebsiteInquiryHandlingResults.
+type WebsiteInquiryHandlingResults struct {
+	Items []WebsiteInquiryHandlingItem `json:"items"`
+}
+
+// WebsiteInquiryMode Keep an eligible existing owner; otherwise route through selected colleagues or coordinator review.
+type WebsiteInquiryMode string
+
+// WebsiteInquiryPolicy defines model for WebsiteInquiryPolicy.
+type WebsiteInquiryPolicy struct {
+	// CoordinatorId Eligible colleague who can read unowned leads and receives inquiries needing review.
+	CoordinatorId openapi_types.UUID `json:"coordinator_id"`
+
+	// DueInDays Calendar days after receipt; due at the end of that day in timezone.
+	DueInDays int                `json:"due_in_days" maximum:"30" minimum:"1"`
+	FormId    openapi_types.UUID `json:"form_id"`
+
+	// Mode Keep an eligible existing owner; otherwise route through selected colleagues or coordinator review.
+	Mode WebsiteInquiryMode `json:"mode"`
+
+	// RequestTypeField Optional mapped picklist field identifying the request type.
+	RequestTypeField *string           `json:"request_type_field,omitempty"`
+	Routing          LeadRoutingConfig `json:"routing"`
+	TaskTitle        string            `json:"task_title"`
+
+	// Timezone Saved IANA timezone for calendar-day deadlines.
+	Timezone string `json:"timezone"`
+}
+
+// WebsiteInquiryPreviewItem defines model for WebsiteInquiryPreviewItem.
+type WebsiteInquiryPreviewItem struct {
+	DueAt       *time.Time                           `json:"due_at,omitempty"`
+	Id          openapi_types.UUID                   `json:"id"`
+	Reason      *string                              `json:"reason,omitempty"`
+	RecipientId *openapi_types.UUID                  `json:"recipient_id,omitempty"`
+	Status      WebsiteInquiryPreviewItemStatus      `json:"status"`
+	TargetId    *openapi_types.UUID                  `json:"target_id,omitempty"`
+	TargetType  *WebsiteInquiryPreviewItemTargetType `json:"target_type,omitempty"`
+
+	// Version Monotonic row version, incremented by the server on every mutation (data-model §1.3a).
+	// Echoed back as the `version` field on every mutable entity. To make a write conditional,
+	// send the last-seen value in `If-Match`; a mismatch returns `409 code: version_skew`
+	// (ErrVersionSkew) so the client re-reads before retrying.
+	Version *RowVersion `json:"version,omitempty" minimum:"1"`
+}
+
+// WebsiteInquiryPreviewItemStatus defines model for WebsiteInquiryPreviewItem.Status.
+type WebsiteInquiryPreviewItemStatus string
+
+// WebsiteInquiryPreviewItemTargetType defines model for WebsiteInquiryPreviewItem.TargetType.
+type WebsiteInquiryPreviewItemTargetType string
+
+// WebsiteInquiryPreviewRequest defines model for WebsiteInquiryPreviewRequest.
+type WebsiteInquiryPreviewRequest struct {
+	AutomationId *openapi_types.UUID `json:"automation_id,omitempty"`
+
+	// AutomationVersion Monotonic row version, incremented by the server on every mutation (data-model §1.3a).
+	// Echoed back as the `version` field on every mutable entity. To make a write conditional,
+	// send the last-seen value in `If-Match`; a mismatch returns `409 code: version_skew`
+	// (ErrVersionSkew) so the client re-reads before retrying.
+	AutomationVersion *RowVersion               `json:"automation_version,omitempty" minimum:"1"`
+	Policy            WebsiteInquiryPolicy      `json:"policy"`
+	Selected          []WebsiteInquirySelection `json:"selected"`
+}
+
+// WebsiteInquirySelection defines model for WebsiteInquirySelection.
+type WebsiteInquirySelection struct {
+	// Id Accepted website source note.
+	Id openapi_types.UUID `json:"id"`
+
+	// Version Monotonic row version, incremented by the server on every mutation (data-model §1.3a).
+	// Echoed back as the `version` field on every mutable entity. To make a write conditional,
+	// send the last-seen value in `If-Match`; a mismatch returns `409 code: version_skew`
+	// (ErrVersionSkew) so the client re-reads before retrying.
+	Version *RowVersion `json:"version,omitempty" minimum:"1"`
+}
+
+// WebsiteInquiryWork Inquiry facts under the current task and source content permissions. Missing source facts remain unknown.
+type WebsiteInquiryWork struct {
+	AssignmentReason *string `json:"assignment_reason,omitempty"`
+
+	// CanTake The reader may review taking this inquiry; the assignment operation rechecks current authority and versions.
+	CanTake          *bool               `json:"can_take,omitempty"`
+	ReceivedAt       *time.Time          `json:"received_at,omitempty"`
+	RecordOwnerId    *openapi_types.UUID `json:"record_owner_id,omitempty"`
+	RecordOwnerKnown *bool               `json:"record_owner_known,omitempty"`
+	RequestType      *string             `json:"request_type,omitempty"`
+	SourceActivityId *openapi_types.UUID `json:"source_activity_id,omitempty"`
+	SourceLabel      *string             `json:"source_label,omitempty"`
 }
 
 // WeeklyDayActivity One local day of a rep's own activity, in the installation reporting timezone.
@@ -69780,6 +70420,9 @@ type WorklistItem struct {
 	// acting on one task each overwrite the other and neither is told.
 	Version *RowVersion `json:"version,omitempty"`
 
+	// WebsiteInquiry Inquiry facts under the current task and source content permissions. Missing source facts remain unknown.
+	WebsiteInquiry *WebsiteInquiryWork `json:"website_inquiry,omitempty"`
+
 	// WithContact Whose record a `meeting` row's brief is read on, carried out from
 	// `AttentionItem.with_contact`.
 	//
@@ -70619,6 +71262,9 @@ type ValidationError = Problem
 // VersionConflict RFC 7807 problem+json with a stable machine `code` and structured `details`.
 type VersionConflict = Problem
 
+// WebsiteFormBusy RFC 7807 problem+json with a stable machine `code` and structured `details`.
+type WebsiteFormBusy = Problem
+
 // bearerAuthContextKey is the context key for bearerAuth security scheme
 type bearerAuthContextKey string
 
@@ -70736,6 +71382,9 @@ type ListActivitiesParams struct {
 
 	// ProjectId Narrow the timeline sections to one body of work: what is filed under this project or under no project; correspondence filed under another project is left out.
 	ProjectId *openapi_types.UUID `form:"project_id,omitempty" json:"project_id,omitempty"`
+
+	// WebsiteFormId Accepted website submission notes for this form, with readable content only.
+	WebsiteFormId *openapi_types.UUID `form:"website_form_id,omitempty" json:"website_form_id,omitempty"`
 
 	// SourceActivityId Tasks derived from this readable source activity, under current task visibility.
 	SourceActivityId *openapi_types.UUID `form:"source_activity_id,omitempty" json:"source_activity_id,omitempty"`
@@ -70927,6 +71576,16 @@ type ClearActivityDispositionParamsScope string
 type GetEmailPresentationParams struct {
 	// ThreadCursor Continue the thread's member page from a previous response's `thread.next_cursor`.
 	ThreadCursor *string `form:"thread_cursor,omitempty" json:"thread_cursor,omitempty"`
+}
+
+// AssignWebsiteInquiryParams defines parameters for AssignWebsiteInquiry.
+type AssignWebsiteInquiryParams struct {
+	// IfMatch Optional optimistic-concurrency precondition for a mutating request (PATCH/advance/merge):
+	// the last-seen entity `version`. If the row's current `version` differs, the write is
+	// rejected with `409 code: version_skew` (ErrVersionSkew) and no change is made — re-read,
+	// re-apply, retry. Omitting it is last-write-wins (discouraged for agent/automated writers).
+	// Accepted on every native (SoR-mode) mutating endpoint that returns a versioned entity.
+	IfMatch *IfMatch `json:"If-Match,omitempty"`
 }
 
 // GetMeetingBriefParams defines parameters for GetMeetingBrief.
@@ -78535,6 +79194,16 @@ type UpdateWebFormParams struct {
 	IfMatch *IfMatch `json:"If-Match,omitempty"`
 }
 
+// SaveWebFormHandlingParams defines parameters for SaveWebFormHandling.
+type SaveWebFormHandlingParams struct {
+	// IfMatch Optional optimistic-concurrency precondition for a mutating request (PATCH/advance/merge):
+	// the last-seen entity `version`. If the row's current `version` differs, the write is
+	// rejected with `409 code: version_skew` (ErrVersionSkew) and no change is made — re-read,
+	// re-apply, retry. Omitting it is last-write-wins (discouraged for agent/automated writers).
+	// Accepted on every native (SoR-mode) mutating endpoint that returns a versioned entity.
+	IfMatch *IfMatch `json:"If-Match,omitempty"`
+}
+
 // ListWebhookSubscriptionsParams defines parameters for ListWebhookSubscriptions.
 type ListWebhookSubscriptionsParams struct {
 	// IncludeArchived Include soft-deleted (archived) rows. Default false.
@@ -78923,6 +79592,12 @@ type SetActivityDispositionJSONRequestBody = SetActivityDispositionRequest
 
 // DraftEmailJSONRequestBody defines body for DraftEmail for application/json ContentType.
 type DraftEmailJSONRequestBody = DraftSteering
+
+// AssignWebsiteInquiryJSONRequestBody defines body for AssignWebsiteInquiry for application/json ContentType.
+type AssignWebsiteInquiryJSONRequestBody = WebsiteInquiryAssignmentRequest
+
+// PreviewWebsiteInquiryAssignmentJSONRequestBody defines body for PreviewWebsiteInquiryAssignment for application/json ContentType.
+type PreviewWebsiteInquiryAssignmentJSONRequestBody = WebsiteInquiryAssignmentRequest
 
 // UndoActivityProjectFilingJSONRequestBody defines body for UndoActivityProjectFiling for application/json ContentType.
 type UndoActivityProjectFilingJSONRequestBody = RetentionOverrideRequest
@@ -80141,6 +80816,15 @@ type CreateWebFormJSONRequestBody = CreateWebFormRequest
 
 // UpdateWebFormJSONRequestBody defines body for UpdateWebForm for application/json ContentType.
 type UpdateWebFormJSONRequestBody = UpdateWebFormRequest
+
+// SaveWebFormHandlingJSONRequestBody defines body for SaveWebFormHandling for application/json ContentType.
+type SaveWebFormHandlingJSONRequestBody = WebsiteInquiryHandlingRequest
+
+// HandleExistingWebFormInquiriesJSONRequestBody defines body for HandleExistingWebFormInquiries for application/json ContentType.
+type HandleExistingWebFormInquiriesJSONRequestBody = WebsiteInquiryExistingRequest
+
+// PreviewWebFormHandlingJSONRequestBody defines body for PreviewWebFormHandling for application/json ContentType.
+type PreviewWebFormHandlingJSONRequestBody = WebsiteInquiryPreviewRequest
 
 // CreateWebhookSubscriptionJSONRequestBody defines body for CreateWebhookSubscription for application/json ContentType.
 type CreateWebhookSubscriptionJSONRequestBody = CreateWebhookSubscriptionRequest
@@ -93225,6 +93909,12 @@ type ServerInterface interface {
 	// Everything one email needs to be read and acted on, in one read.
 	// (GET /activities/{id}/email-presentation)
 	GetEmailPresentation(w http.ResponseWriter, r *http.Request, id Id, params GetEmailPresentationParams)
+	// Take an inquiry or hand its lead and this task to a colleague in one transaction.
+	// (POST /activities/{id}/inquiry-assignment)
+	AssignWebsiteInquiry(w http.ResponseWriter, r *http.Request, id Id, params AssignWebsiteInquiryParams)
+	// Show the inquiry task and record ownership before taking or assigning it.
+	// (POST /activities/{id}/inquiry-assignment/preview)
+	PreviewWebsiteInquiryAssignment(w http.ResponseWriter, r *http.Request, id Id)
 	// The pre-meeting brief for one booked meeting — goal, commitments, where the deal stands.
 	// (GET /activities/{id}/meeting-brief)
 	GetMeetingBrief(w http.ResponseWriter, r *http.Request, id Id, params GetMeetingBriefParams)
@@ -96261,6 +96951,15 @@ type ServerInterface interface {
 	// Change a website form, pause it or resume it.
 	// (PATCH /web-forms/{id})
 	UpdateWebForm(w http.ResponseWriter, r *http.Request, id Id, params UpdateWebFormParams)
+	// Save the reviewed inquiry policy and form link together.
+	// (PUT /web-forms/{id}/handling)
+	SaveWebFormHandling(w http.ResponseWriter, r *http.Request, id Id, params SaveWebFormHandlingParams)
+	// Handle explicitly selected accepted inquiries using the reviewed saved policy.
+	// (POST /web-forms/{id}/handling/existing)
+	HandleExistingWebFormInquiries(w http.ResponseWriter, r *http.Request, id Id)
+	// Preview inquiry deadlines and explicitly selected accepted submissions without writing.
+	// (POST /web-forms/{id}/handling/preview)
+	PreviewWebFormHandling(w http.ResponseWriter, r *http.Request, id Id)
 	// Rotate a form's minted signing secret (returns the new secret once).
 	// (POST /web-forms/{id}/rotate-secret)
 	RotateWebFormSecret(w http.ResponseWriter, r *http.Request, id Id)
@@ -96510,6 +97209,18 @@ func (_ Unimplemented) DraftEmail(w http.ResponseWriter, r *http.Request, id Id)
 // Everything one email needs to be read and acted on, in one read.
 // (GET /activities/{id}/email-presentation)
 func (_ Unimplemented) GetEmailPresentation(w http.ResponseWriter, r *http.Request, id Id, params GetEmailPresentationParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Take an inquiry or hand its lead and this task to a colleague in one transaction.
+// (POST /activities/{id}/inquiry-assignment)
+func (_ Unimplemented) AssignWebsiteInquiry(w http.ResponseWriter, r *http.Request, id Id, params AssignWebsiteInquiryParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Show the inquiry task and record ownership before taking or assigning it.
+// (POST /activities/{id}/inquiry-assignment/preview)
+func (_ Unimplemented) PreviewWebsiteInquiryAssignment(w http.ResponseWriter, r *http.Request, id Id) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -102585,6 +103296,24 @@ func (_ Unimplemented) UpdateWebForm(w http.ResponseWriter, r *http.Request, id 
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
+// Save the reviewed inquiry policy and form link together.
+// (PUT /web-forms/{id}/handling)
+func (_ Unimplemented) SaveWebFormHandling(w http.ResponseWriter, r *http.Request, id Id, params SaveWebFormHandlingParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Handle explicitly selected accepted inquiries using the reviewed saved policy.
+// (POST /web-forms/{id}/handling/existing)
+func (_ Unimplemented) HandleExistingWebFormInquiries(w http.ResponseWriter, r *http.Request, id Id) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Preview inquiry deadlines and explicitly selected accepted submissions without writing.
+// (POST /web-forms/{id}/handling/preview)
+func (_ Unimplemented) PreviewWebFormHandling(w http.ResponseWriter, r *http.Request, id Id) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
 // Rotate a form's minted signing secret (returns the new secret once).
 // (POST /web-forms/{id}/rotate-secret)
 func (_ Unimplemented) RotateWebFormSecret(w http.ResponseWriter, r *http.Request, id Id) {
@@ -103139,6 +103868,19 @@ func (siw *ServerInterfaceWrapper) ListActivities(w http.ResponseWriter, r *http
 			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "project_id"})
 		} else {
 			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "project_id", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "website_form_id" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "website_form_id", r.URL.Query(), &params.WebsiteFormId, runtime.BindQueryParameterOptions{Type: "string", Format: "uuid"})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "website_form_id"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "website_form_id", Err: err})
 		}
 		return
 	}
@@ -104032,6 +104774,98 @@ func (siw *ServerInterfaceWrapper) GetEmailPresentation(w http.ResponseWriter, r
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.GetEmailPresentation(w, r, id, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// AssignWebsiteInquiry operation middleware
+func (siw *ServerInterfaceWrapper) AssignWebsiteInquiry(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params AssignWebsiteInquiryParams
+
+	headers := r.Header
+
+	// ------------- Optional header parameter "If-Match" -------------
+	if valueList, found := headers[http.CanonicalHeaderKey("If-Match")]; found {
+		var IfMatch IfMatch
+		n := len(valueList)
+		if n != 1 {
+			siw.ErrorHandlerFunc(w, r, &TooManyValuesForParamError{ParamName: "If-Match", Count: n})
+			return
+		}
+
+		err = runtime.BindStyledParameterWithOptions("simple", "If-Match", valueList[0], &IfMatch, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "string", Format: ""})
+		if err != nil {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "If-Match", Err: err})
+			return
+		}
+
+		params.IfMatch = &IfMatch
+
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.AssignWebsiteInquiry(w, r, id, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// PreviewWebsiteInquiryAssignment operation middleware
+func (siw *ServerInterfaceWrapper) PreviewWebsiteInquiryAssignment(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.PreviewWebsiteInquiryAssignment(w, r, id)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -148650,6 +149484,130 @@ func (siw *ServerInterfaceWrapper) UpdateWebForm(w http.ResponseWriter, r *http.
 	handler.ServeHTTP(w, r)
 }
 
+// SaveWebFormHandling operation middleware
+func (siw *ServerInterfaceWrapper) SaveWebFormHandling(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params SaveWebFormHandlingParams
+
+	headers := r.Header
+
+	// ------------- Optional header parameter "If-Match" -------------
+	if valueList, found := headers[http.CanonicalHeaderKey("If-Match")]; found {
+		var IfMatch IfMatch
+		n := len(valueList)
+		if n != 1 {
+			siw.ErrorHandlerFunc(w, r, &TooManyValuesForParamError{ParamName: "If-Match", Count: n})
+			return
+		}
+
+		err = runtime.BindStyledParameterWithOptions("simple", "If-Match", valueList[0], &IfMatch, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "string", Format: ""})
+		if err != nil {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "If-Match", Err: err})
+			return
+		}
+
+		params.IfMatch = &IfMatch
+
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.SaveWebFormHandling(w, r, id, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// HandleExistingWebFormInquiries operation middleware
+func (siw *ServerInterfaceWrapper) HandleExistingWebFormInquiries(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.HandleExistingWebFormInquiries(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// PreviewWebFormHandling operation middleware
+func (siw *ServerInterfaceWrapper) PreviewWebFormHandling(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.PreviewWebFormHandling(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // RotateWebFormSecret operation middleware
 func (siw *ServerInterfaceWrapper) RotateWebFormSecret(w http.ResponseWriter, r *http.Request) {
 
@@ -150229,6 +151187,12 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/activities/{id}/email-presentation", wrapper.GetEmailPresentation)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/activities/{id}/inquiry-assignment", wrapper.AssignWebsiteInquiry)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/activities/{id}/inquiry-assignment/preview", wrapper.PreviewWebsiteInquiryAssignment)
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/activities/{id}/meeting-brief", wrapper.GetMeetingBrief)
@@ -153265,6 +154229,15 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Patch(options.BaseURL+"/web-forms/{id}", wrapper.UpdateWebForm)
+	})
+	r.Group(func(r chi.Router) {
+		r.Put(options.BaseURL+"/web-forms/{id}/handling", wrapper.SaveWebFormHandling)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/web-forms/{id}/handling/existing", wrapper.HandleExistingWebFormInquiries)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/web-forms/{id}/handling/preview", wrapper.PreviewWebFormHandling)
 	})
 	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/web-forms/{id}/rotate-secret", wrapper.RotateWebFormSecret)

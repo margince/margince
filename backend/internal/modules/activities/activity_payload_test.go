@@ -28,14 +28,15 @@ import (
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/provenance"
 )
 
-// TestActivityCapturedPayload_DirectLog proves the direct-log path
-// (activity.go's logActivityInTx) sets kind only — no source_system, since
-// that field is exclusive to the capture auto-create path, and no
-// channel_provider, since a meeting travelled on no transport.
+// Ordinary direct logs carry no capture identity; website notes are checked separately.
 func TestActivityCapturedPayload_DirectLog(t *testing.T) {
-	payload := activityCapturedPayload(context.Background(), "meeting", "")
+	payload, payloadErr := activityCapturedPayload(context.Background(), LogActivityInput{Kind: "meeting"})
+	if payloadErr != nil {
+		t.Fatal(payloadErr)
+	}
 
 	if !reflect.DeepEqual(payload.EventType(), "activity.captured") {
 		t.Errorf("got %v, want %v", payload.EventType(), "activity.captured")
@@ -278,16 +279,59 @@ func TestActivityUpdatedChangedFields_MeetingStatusUntouched(t *testing.T) {
 // work can tell brought-in history from it. A live write carries neither member.
 func TestAnActivityCapturedPayloadNamesTheImportRunThatWroteIt(t *testing.T) {
 	run := ids.NewV7()
-	marked := activityCapturedPayload(storekit.WithImportRun(context.Background(), run), "note", "")
+	marked, payloadErr := activityCapturedPayload(storekit.WithImportRun(context.Background(), run), LogActivityInput{Kind: "note"})
+	if payloadErr != nil {
+		t.Fatal(payloadErr)
+	}
 	if marked.Imported == nil || !*marked.Imported ||
 		marked.ImportRunId == nil || ids.UUID(*marked.ImportRunId) != run {
 		t.Fatalf("payload = %+v, want imported with the run's id", marked)
 	}
-	raw, err := json.Marshal(activityCapturedPayload(context.Background(), "note", ""))
+	ordinary, payloadErr := activityCapturedPayload(context.Background(), LogActivityInput{Kind: "note"})
+	if payloadErr != nil {
+		t.Fatal(payloadErr)
+	}
+	raw, err := json.Marshal(ordinary)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
 	if strings.Contains(string(raw), "imported") || strings.Contains(string(raw), "import_run_id") {
 		t.Errorf("a live write's payload names an import: %s", raw)
+	}
+}
+
+func TestOnlyWebsiteNotesCarryAnAcceptedSubmissionKey(t *testing.T) {
+	formSource, key := provenance.WebFormSource, "00000000-0000-7000-8000-000000000001:accepted-submission"
+	otherSource, body := "manual", "Private text must stay out of the event"
+	for _, tc := range []struct {
+		name, kind string
+		source     *string
+		want       bool
+	}{
+		{"website note", "note", &formSource, true},
+		{"ordinary note", "note", &otherSource, false},
+		{"website task", "task", &formSource, false},
+		{"missing source", "note", nil, false},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			payload, payloadErr := activityCapturedPayload(context.Background(), LogActivityInput{Kind: tc.kind, SourceSystem: tc.source, SourceID: &key, Body: &body})
+			if payloadErr != nil {
+				t.Fatal(payloadErr)
+			}
+			raw, err := json.Marshal(payload)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if strings.Contains(string(raw), body) {
+				t.Fatal("event copied the submitted text")
+			}
+			if tc.want {
+				if payload.WebsiteSubmissionKey == nil || *payload.WebsiteSubmissionKey != key || payload.SourceSystem == nil || *payload.SourceSystem != formSource {
+					t.Fatalf("website identity missing from %+v", payload)
+				}
+			} else if payload.WebsiteSubmissionKey != nil {
+				t.Fatalf("non-website note carried a website identity: %+v", payload)
+			}
+		})
 	}
 }

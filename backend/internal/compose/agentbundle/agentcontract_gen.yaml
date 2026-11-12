@@ -6562,6 +6562,10 @@ paths:
           schema: {type: string, format: uuid}
           description: >-
             Narrow the timeline sections to one body of work: what is filed under this project or under no project; correspondence filed under another project is left out.
+        - name: website_form_id
+          in: query
+          schema: {type: string, format: uuid}
+          description: Accepted website submission notes for this form, with readable content only.
         - name: source_activity_id
           in: query
           schema: {type: string, format: uuid}
@@ -6854,6 +6858,68 @@ paths:
           content:
             application/json:
               schema: {$ref: '#/components/schemas/Activity'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '409': {$ref: '#/components/responses/VersionConflict'}
+        '422': {$ref: '#/components/responses/ValidationError'}
+        '423': {$ref: '#/components/responses/RetentionHeld'}
+  /activities/{id}/inquiry-assignment/preview:
+    parameters:
+      - $ref: '#/components/parameters/Id'
+    post:
+      tags: [Activities]
+      operationId: previewWebsiteInquiryAssignment
+      security: [{bearerAuth: []}]
+      summary: Show the inquiry task and record ownership before taking or assigning it.
+      description: |-
+        Show the inquiry task and record ownership before taking or assigning it. This read changes no records.
+
+        Needs the passport permission Change records.
+
+        Runs at once.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: '#/components/schemas/WebsiteInquiryAssignmentRequest'}
+      responses:
+        '200':
+          description: The visible task, its linked record and the selected colleague.
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/WebsiteInquiryAssignment'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '409': {$ref: '#/components/responses/VersionConflict'}
+        '422': {$ref: '#/components/responses/ValidationError'}
+        '423': {$ref: '#/components/responses/RetentionHeld'}
+  /activities/{id}/inquiry-assignment:
+    parameters:
+      - $ref: '#/components/parameters/Id'
+    post:
+      tags: [Activities]
+      operationId: assignWebsiteInquiry
+      security: [{bearerAuth: []}]
+      summary: Take an inquiry or hand its lead and this task to a colleague in one transaction.
+      description: |-
+        Take an inquiry or hand its lead and this task to a colleague in one transaction. Unrelated tasks stay unchanged. Taking a contact inquiry changes only its task; contact ownership requires a separate authorized handover.
+
+        Needs the passport permission Change records.
+
+        Runs at once.
+      parameters:
+        - $ref: '#/components/parameters/IfMatch'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: '#/components/schemas/WebsiteInquiryAssignmentRequest'}
+      responses:
+        '200':
+          description: The visible task, its linked record and the selected colleague.
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/WebsiteInquiryAssignment'}
         '403': {$ref: '#/components/responses/Forbidden'}
         '404': {$ref: '#/components/responses/NotFound'}
         '409': {$ref: '#/components/responses/VersionConflict'}
@@ -8204,6 +8270,7 @@ paths:
               schema: {$ref: '#/components/schemas/Automation'}
         '404': {$ref: '#/components/responses/NotFound'}
         '422': {$ref: '#/components/responses/ValidationError'}
+        '503': {$ref: '#/components/responses/WebsiteFormBusy'}
     delete:
       tags: [Automations]
       operationId: deleteAutomation
@@ -8213,6 +8280,7 @@ paths:
         '204': {description: Deleted.}
         '404': {$ref: '#/components/responses/NotFound'}
         '422': {$ref: '#/components/responses/ValidationError'}
+        '503': {$ref: '#/components/responses/WebsiteFormBusy'}
       description: |-
         Delete an automation instance.
 
@@ -12333,6 +12401,7 @@ paths:
         '404': {$ref: '#/components/responses/NotFound'}
         '409': {$ref: '#/components/responses/Conflict'}
         '422': {$ref: '#/components/responses/ValidationError'}
+        '503': {$ref: '#/components/responses/WebsiteFormBusy'}
     delete:
       tags: [WebForms]
       operationId: archiveWebForm
@@ -12348,12 +12417,80 @@ paths:
         '403': {$ref: '#/components/responses/Forbidden'}
         '404': {$ref: '#/components/responses/NotFound'}
         '422': {$ref: '#/components/responses/ValidationError'}
+        '503': {$ref: '#/components/responses/WebsiteFormBusy'}
       description: |-
         Archive a website form; its address stops taking submissions.
 
         Needs the passport permission Change records.
 
         Runs at once.
+  /web-forms/{id}/handling/preview:
+    parameters:
+      - $ref: '#/components/parameters/Id'
+    post:
+      tags: [WebForms]
+      operationId: previewWebFormHandling
+      security: [{bearerAuth: []}]
+      summary: Preview inquiry deadlines and explicitly selected accepted submissions without writing.
+      description: |-
+        Uses the live inquiry planner and current access checks. The caller must be allowed
+        to create activities before planning this work. Selection is limited to fifty
+        source notes with expected versions. The caller and the authorizer must both be able
+        to read each source and target. A preview never reserves a recipient or creates work.
+
+        Needs the passport permission Read records.
+
+        Runs at once.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: '#/components/schemas/WebsiteInquiryPreviewRequest'}
+      responses:
+        '200':
+          description: Current deadline example and one result per selected source.
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/WebsiteInquiryHandlingPreview'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '409': {$ref: '#/components/responses/Conflict'}
+        '422': {$ref: '#/components/responses/ValidationError'}
+  /web-forms/{id}/handling/existing:
+    parameters:
+      - $ref: '#/components/parameters/Id'
+    post:
+      tags: [WebForms]
+      operationId: handleExistingWebFormInquiries
+      security: [{bearerAuth: []}]
+      summary: Handle explicitly selected accepted inquiries using the reviewed saved policy.
+      description: |-
+        Rechecks the saved policy version and every selected source version. Each source
+        has its own durable outcome; one failure does not undo completed items. Uses the
+        live workflow, source keys and task writer. A paused policy may handle this explicit
+        selection without enabling future handling. No mail is sent.
+
+        Needs the passport permission Change records.
+
+        Runs at once.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: '#/components/schemas/WebsiteInquiryExistingRequest'}
+      responses:
+        '200':
+          description: One durable result per selected source.
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/WebsiteInquiryHandlingResults'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '409': {$ref: '#/components/responses/Conflict'}
+        '422': {$ref: '#/components/responses/ValidationError'}
+        '503': {$ref: '#/components/responses/WebsiteFormBusy'}
   /tag-suggestions/{id}:
     parameters:
       - $ref: '#/components/parameters/Id'
@@ -15041,7 +15178,7 @@ paths:
             to colleagues and call it their day.
         - name: filter
           in: query
-          schema: {type: string, enum: [all, urgent, customer_waiting, leads, prospecting, deals_at_risk, meetings, tasks, decisions, relationships, system, except_decisions, changed_since_brief, upcoming]}
+          schema: {type: string, enum: [all, urgent, customer_waiting, leads, prospecting, deals_at_risk, meetings, tasks, decisions, relationships, system, except_decisions, changed_since_brief, upcoming, website_inquiries]}
           description: |-
             Narrow the queue. Omitted means everything, which is the default view.
         - name: view
@@ -26093,6 +26230,11 @@ components:
           examples:
             denied:
               value: {type: 'https://errors.gradion.com/permission_denied', title: Permission denied, status: 403, code: permission_denied, detail: Your role does not grant permission for this action on this object.}
+    WebsiteFormBusy:
+      description: The form is being changed. Retry the same request with the same ID.
+      content:
+        application/problem+json:
+          schema: {$ref: '#/components/schemas/Problem'}
     NotFound:
       description: No such resource in this workspace (or out of RBAC scope).
       content:
@@ -26451,6 +26593,148 @@ components:
         `webflow`, `typeform`, `tally`: that builder's webhook, checked against the signature the
         builder computes with the form's stored secret: the `sender_secret` pasted, or for `typeform`
         and `tally` one this installation minted when none was.
+    LeadRoutingRule:
+      type: object
+      additionalProperties: false
+      required: [field, equals, owner_id]
+      properties:
+        field: {type: string, enum: [origin, company_name, candidate_company_key]}
+        equals: {type: string}
+        owner_id: {type: string, format: uuid}
+    LeadRoutingConfig:
+      type: object
+      additionalProperties: false
+      properties:
+        owners:
+          type: array
+          uniqueItems: true
+          items: {type: string, format: uuid}
+          description: Selected colleagues in routing order.
+        cap_per_owner: {type: integer, minimum: 1}
+        rules:
+          type: array
+          items: {$ref: '#/components/schemas/LeadRoutingRule'}
+    WebsiteInquiryMode:
+      type: string
+      enum: [one_colleague, rotate, coordinator]
+      description: Keep an eligible existing owner; otherwise route through selected colleagues or coordinator review.
+    WebsiteInquiryExistingRequest:
+      type: object
+      required: [automation_id, automation_version, selected]
+      additionalProperties: false
+      properties:
+        automation_id: {type: string, format: uuid}
+        automation_version: {$ref: '#/components/schemas/RowVersion'}
+        selected:
+          type: array
+          minItems: 1
+          maxItems: 50
+          items: {$ref: '#/components/schemas/WebsiteInquirySelection'}
+    WebsiteInquiryHandlingResults:
+      type: object
+      required: [items]
+      properties:
+        items:
+          type: array
+          items: {$ref: '#/components/schemas/WebsiteInquiryHandlingItem'}
+    WebsiteInquiryHandlingItem:
+      type: object
+      required: [id, version, status]
+      properties:
+        id: {type: string, format: uuid}
+        version: {$ref: '#/components/schemas/RowVersion'}
+        status: {type: string, enum: [task_created, already_handled, waiting_for_approval, skipped, changed, unavailable, failed]}
+        task_id: {type: string, format: uuid}
+        run_id: {type: string, format: uuid}
+        reason: {type: string}
+    WebsiteInquirySelection:
+      type: object
+      required: [id, version]
+      additionalProperties: false
+      properties:
+        id: {type: string, format: uuid, description: Accepted website source note.}
+        version: {$ref: '#/components/schemas/RowVersion'}
+    WebsiteInquiryPreviewRequest:
+      type: object
+      required: [policy, selected]
+      additionalProperties: false
+      properties:
+        policy: {$ref: '#/components/schemas/WebsiteInquiryPolicy'}
+        automation_id: {type: string, format: uuid}
+        automation_version: {$ref: '#/components/schemas/RowVersion'}
+        selected:
+          type: array
+          maxItems: 50
+          items: {$ref: '#/components/schemas/WebsiteInquirySelection'}
+    WebsiteInquiryHandlingPreview:
+      type: object
+      required: [received_at, example_due_at, items]
+      properties:
+        received_at: {type: string, format: date-time, description: Server clock used for the deadline example.}
+        example_due_at: {type: string, format: date-time}
+        items:
+          type: array
+          items: {$ref: '#/components/schemas/WebsiteInquiryPreviewItem'}
+    WebsiteInquiryPreviewItem:
+      type: object
+      required: [id, version, status]
+      properties:
+        id: {type: string, format: uuid}
+        version: {$ref: '#/components/schemas/RowVersion'}
+        status: {type: string, enum: [eligible, already_handled, changed, unavailable, failed]}
+        recipient_id: {type: string, format: uuid}
+        due_at: {type: string, format: date-time}
+        reason: {type: string}
+        target_type: {type: string, enum: [lead, contact]}
+        target_id: {type: string, format: uuid}
+    WebsiteInquiryAssignmentRequest:
+      type: object
+      additionalProperties: false
+      required: [mode, recipient_id]
+      properties:
+        mode: {type: string, enum: [take, assign_and_follow_up]}
+        recipient_id: {type: string, format: uuid}
+        record_type: {type: string, enum: [lead, contact], description: Required when applying; use the record type from the preview.}
+        record_id: {type: string, format: uuid, description: Required when applying; use the record ID from the preview.}
+        record_version:
+          $ref: '#/components/schemas/RowVersion'
+          description: Required when applying the assignment. Use the version returned by its preview.
+    WebsiteInquiryAssignment:
+      type: object
+      required: [task, record_type, record_id, record_version, recipient_id, changes_record_owner]
+      properties:
+        task: {$ref: '#/components/schemas/Activity'}
+        record_type: {type: string, enum: [lead, contact]}
+        record_id: {type: string, format: uuid}
+        record_version: {$ref: '#/components/schemas/RowVersion'}
+        record_owner_id: {type: [string, 'null'], format: uuid}
+        recipient_id: {type: string, format: uuid}
+        changes_record_owner: {type: boolean}
+    WebsiteInquiryWork:
+      type: object
+      description: Inquiry facts under the current task and source content permissions. Missing source facts remain unknown.
+      properties:
+        received_at: {type: string, format: date-time, readOnly: true}
+        source_activity_id: {type: string, format: uuid, readOnly: true}
+        source_label: {type: string, readOnly: true}
+        request_type: {type: string, readOnly: true}
+        assignment_reason: {type: string, readOnly: true}
+        record_owner_known: {type: boolean, readOnly: true}
+        record_owner_id: {type: [string, 'null'], format: uuid, readOnly: true}
+        can_take: {type: boolean, readOnly: true, description: The reader may review taking this inquiry; the assignment operation rechecks current authority and versions.}
+    WebsiteInquiryPolicy:
+      type: object
+      additionalProperties: false
+      required: [form_id, mode, routing, coordinator_id, task_title, due_in_days, timezone]
+      properties:
+        form_id: {type: string, format: uuid}
+        mode: {$ref: '#/components/schemas/WebsiteInquiryMode'}
+        routing: {$ref: '#/components/schemas/LeadRoutingConfig'}
+        coordinator_id: {type: string, format: uuid, description: 'Eligible colleague who can read unowned leads and receives inquiries needing review.'}
+        task_title: {type: string, minLength: 1, maxLength: 200}
+        due_in_days: {type: integer, minimum: 1, maximum: 30, default: 1, description: 'Calendar days after receipt; due at the end of that day in timezone.'}
+        timezone: {type: string, description: 'Saved IANA timezone for calendar-day deadlines.'}
+        request_type_field: {type: string, minLength: 1, maxLength: 100, description: 'Optional mapped picklist field identifying the request type.'}
     WebForm:
       type: object
       description: >-
@@ -26467,6 +26751,8 @@ components:
           description: The websites a `browser` form takes posts from, as origins (`https://example.com`).
         lead_origin: {type: [string, 'null'], description: 'The `/lead-origins` key every lead from this form carries.'}
         owner_id: {type: [string, 'null'], format: uuid, description: 'Who owns the leads this form creates; null leaves them in the unassigned queue.'}
+        handling_automation_id: {type: [string, 'null'], format: uuid, description: 'Reviewed inquiry policy. Null retains legacy handling; a paused policy never reactivates legacy handling.'}
+        handling_cutover_at: {type: [string, 'null'], format: date-time, description: 'When the handling reference last changed; completed submissions retain their original handling.'}
         product_id: {type: [string, 'null'], format: uuid, description: 'The product every lead this form creates is interested in; null captures leads with no product.'}
         field_map:
           type: object
@@ -26490,6 +26776,15 @@ components:
           format: date-time
           description: >-
             When the form last landed a post, stamped at most once a minute. Null until the first one since the time was tracked. A post the spam checks drop is not counted.
+        intake:
+          type: object
+          description: >-
+            Present only while the intake refuses posts to this form with 429. `throttled`: too many posts lately, so some are refused; `since` is when that began. `blocked`: every post is refused until `until`. `paused_all`: every form of the workspace or installation refuses posts until `until`, because all forms together receive too many. Answered on the list and on one form's read.
+          required: [state]
+          properties:
+            state: {type: string, enum: [throttled, blocked, paused_all]}
+            since: {type: [string, 'null'], format: date-time}
+            until: {type: [string, 'null'], format: date-time}
     WebFormListResponse:
       type: object
       required: [data, secrets_available]
@@ -26501,6 +26796,10 @@ components:
     UpdateWebFormRequest:
       type: object
       properties:
+        handling_automation_id:
+          type: [string, 'null']
+          format: uuid
+          description: 'Explicit conversion to a reviewed inquiry policy for this form. Clear only through a reviewed return to legacy handling.'
         name: {type: string, minLength: 1, maxLength: 200}
         sender_secret: {type: string, minLength: 16, maxLength: 512}
         allowed_origins:
@@ -27715,10 +28014,16 @@ components:
       type: object
       description: |-
         One website form submission as the visitor sent it. Every value is the visitor's own
-        text and nothing Margince checked, except `consent`, which is the form's own record of
-        its consent box.
+        text. `validated_picklists` records which custom picklist values passed validation;
+        `consent` records the form's own consent box.
       required: [email, extra, campaign]
       properties:
+        validated_picklists:
+          type: array
+          readOnly: true
+          description: Custom picklist field names whose submitted values passed validation at receipt. Values remain in extra.
+          items: {type: string}
+        handling_automation_id: {type: [string, 'null'], format: uuid, description: 'The policy owning this accepted occurrence; later policy changes do not transfer it to a legacy handler.'}
         message: {type: string, description: 'The free text the visitor wrote.'}
         full_name: {type: string}
         email: {type: string, description: 'The address the lead was matched or created by.'}
@@ -51069,6 +51374,10 @@ components:
       required: [key, name, trigger, action, params_schema]
       properties:
         key: {type: string, description: 'Stable type key, e.g. stalled_deal_nudge.'}
+        group:
+          type: string
+          enum: [inquiries, deals, customers, meetings, lists]
+          description: The library section for this template.
         name: {type: string}
         description: {type: string}
         trigger: {type: string, description: 'What fires it (e.g. deal.stage_changed or schedule).'}
@@ -51080,10 +51389,25 @@ components:
       description: A configured automation instance (feedback/14).
       required: [id, key, name, status, params, created_at]
       properties:
+        initial_run_preview_required:
+          type: boolean
+          readOnly: true
+          description: Enabling this scheduled rule or changing its active population requires an initial-run preview and explicit confirmation.
+        inquiry_policy: {$ref: '#/components/schemas/WebsiteInquiryPolicy', readOnly: true, description: 'Typed view of params for the combined website inquiry recipe.'}
         id: {type: string, format: uuid}
         key: {type: string, description: The catalog type this instance is built from.}
         name: {type: string}
         status: {type: string, enum: [enabled, paused]}
+        setup_state:
+          type: string
+          enum: [needs_setup, on, paused, needs_attention]
+          readOnly: true
+          description: Current configuration state, separate from the result of any run.
+        setup_reason:
+          type: string
+          enum: [configuration_incomplete, authorizer_missing, authorizer_inactive, paused_by_system]
+          readOnly: true
+          description: A verified reason the configuration needs work. Record-specific refusals stay on runs.
         owner_id:
           type: [string, 'null']
           format: uuid
@@ -51129,6 +51453,9 @@ components:
       type: object
       description: Any subset; omit a field to leave it unchanged. `status` flips enable/pause.
       properties:
+        initial_run_confirmed:
+          type: boolean
+          description: Confirm the initial-run preview when enabling a scheduled rule or changing its active population. Existing matching records may receive work on the next scan.
         name: {type: [string, 'null']}
         params: {type: [object, 'null'], additionalProperties: true}
         status: {type: [string, 'null'], enum: [enabled, paused, null]}
@@ -51147,16 +51474,39 @@ components:
         key: {type: [string, 'null'], description: Catalog type for a draft preview (defaults to the stored instance's key).}
         params: {type: [object, 'null'], additionalProperties: true, description: Draft parameters (trigger/filter/actions) to preview instead of the stored ones.}
         window_days: {type: [integer, 'null'], minimum: 1, maximum: 90, description: 'Trailing window for the would-have-fired estimate (default 30).'}
+    AutomationPreviewKind:
+      type: string
+      enum: [population, event]
+      description: Whether the preview describes a current record population or a future event.
     AutomationPreview:
       type: object
-      description: Read-only blast-radius result for the designer's dry-run. No side effects.
+      description: Read-only preview. Event rules act from activation onward and do not estimate past events from current records.
       required: [matches_now, window_days]
       properties:
-        matches_now: {type: integer, description: 'Records matching the trigger+filter right now, bounded by the caller''s Passport visibility.'}
+        preview_kind: {$ref: '#/components/schemas/AutomationPreviewKind'}
+        matches_now_available: {type: boolean, description: 'False for event previews. In that case matches_now is a compatibility placeholder, not a count of eligible work.'}
+        historical_preview_available: {type: boolean, description: 'False when historical execution cannot be reconstructed. Never infer historical events from record creation dates.'}
+        matches_now: {type: integer, description: 'Current population matches within the caller''s visibility. Ignore this compatibility field when matches_now_available is false.'}
         would_have_fired: {type: [integer, 'null'], description: 'Estimated firings over the trailing window (null when not computable).'}
         window_days: {type: integer, description: 'The trailing window used for would_have_fired.'}
         sample: {type: array, items: {type: string, format: uuid}, description: 'Up to a few matching record ids for the "affects these" preview (visibility-bounded).'}
         excluded_by_permission: {type: integer, description: 'Matches the caller cannot see (masked, not silently dropped) — honest count, never widens scope.'}
+        renewal: {$ref: '#/components/schemas/AutomationRenewalPreview'}
+    AutomationRenewalPreview:
+      type: object
+      description: Current visible renewal dates. Missing dates never count as due renewals.
+      required: [missing_dates, recurs_yearly, samples]
+      properties:
+        missing_dates: {type: integer, minimum: 0}
+        recurs_yearly: {type: boolean}
+        samples: {type: array, maxItems: 5, items: {$ref: '#/components/schemas/AutomationRenewalPreviewSample'}}
+    AutomationRenewalPreviewSample:
+      type: object
+      required: [entity_id, occurrence_date, reminder_date]
+      properties:
+        entity_id: {type: string, format: uuid}
+        occurrence_date: {type: string, format: date}
+        reminder_date: {type: string, format: date}
     AutomationRun:
       type: object
       description: |-
@@ -53698,7 +54048,7 @@ components:
           description: |-
             Deprecated: no screen opens the team week, and the operation it describes,
             `GET /weekly-reviews/team`, is deprecated too. `GET /me` carries the same answer.
-        filter: {type: string, enum: [all, urgent, customer_waiting, leads, prospecting, deals_at_risk, meetings, tasks, decisions, relationships, system, except_decisions, changed_since_brief, upcoming], description: 'The narrowing this read applied. The same vocabulary the query parameter takes.'}
+        filter: {type: string, enum: [all, urgent, customer_waiting, leads, prospecting, deals_at_risk, meetings, tasks, decisions, relationships, system, except_decisions, changed_since_brief, upcoming, website_inquiries], description: 'The narrowing this read applied. The same vocabulary the query parameter takes.'}
         view: {type: string, enum: [today, decisions, system], description: 'The view this read answered, after a `filter` alias was read as its view. Absent when the read named no view.'}
         summary: {$ref: '#/components/schemas/WorklistSummary'}
         queue:
@@ -54507,6 +54857,7 @@ components:
         One thing to do, with the reason it sits where it sits.
       required: [id, source, category, level, actions, because, consequence, occurred_precision]
       properties:
+        website_inquiry: {$ref: '#/components/schemas/WebsiteInquiryWork'}
         system_display:
           $ref: '#/components/schemas/SystemDisplay'
         summary_parts:

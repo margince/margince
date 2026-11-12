@@ -15,6 +15,7 @@ import (
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/activities"
+	"github.com/margince/margince/backend/internal/modules/automation"
 	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/modules/webforms"
 	"github.com/margince/margince/backend/internal/platform/auth"
@@ -40,17 +41,33 @@ type webFormLeads struct {
 	leads      *contacts.Store
 	activities *activities.Store
 	catalog    fieldcatalog.Reader
+	legacy     *automation.AutomationStore
 }
 
 func (l webFormLeads) Land(ctx context.Context, landing webforms.Landing) error {
-	target, err := l.lead(ctx, landing)
+	active, err := l.catalog.ActiveColumns(ctx, "lead")
+	if err != nil {
+		return fmt.Errorf("compose: reading the lead custom fields: %w", err)
+	}
+	in := webFormLeadInput(landing)
+	in.CustomFields = webFormCustomFields(active, landing.Enquiry)
+	target, err := l.lead(ctx, in)
 	if err != nil || target == nil {
 		return err
+	}
+	if landing.HandlingAutomationID != nil && target.EntityType == string(recordTypeLead) {
+		owned, err := l.legacyOwnsInquiry(ctx, target.EntityID, landing.SourceKey)
+		if err != nil {
+			return err
+		}
+		if owned {
+			landing.HandlingAutomationID = nil
+		}
 	}
 	system, key := provenance.WebFormSource, landing.SourceKey
 	subject := fmt.Sprintf(systemtext.Copy("form.subject", textlang.English), landing.FormName)
 	body := webFormNote(landing)
-	raw, err := webFormRaw(landing)
+	raw, err := webFormRaw(landing, webFormValidatedPicklists(active, in))
 	if err != nil {
 		return err
 	}
@@ -68,13 +85,7 @@ func (l webFormLeads) Land(ctx context.Context, landing webforms.Landing) error 
 // lead answers the record the note belongs on. Nil with no error means nothing
 // more is written. That is a contact this principal may not read, whose owner
 // has a task about it, or an address on the erasure list.
-func (l webFormLeads) lead(ctx context.Context, landing webforms.Landing) (*activities.ActivityLinkInput, error) {
-	active, err := l.catalog.ActiveColumns(ctx, "lead")
-	if err != nil {
-		return nil, fmt.Errorf("compose: reading the lead custom fields: %w", err)
-	}
-	in := webFormLeadInput(landing)
-	in.CustomFields = webFormCustomFields(active, landing.Enquiry)
+func (l webFormLeads) lead(ctx context.Context, in contacts.CreateLeadInput) (*activities.ActivityLinkInput, error) {
 	lead, err := l.createLead(ctx, in)
 	if duplicate, ok := errors.AsType[*contacts.DuplicateLeadError](err); ok {
 		return &activities.ActivityLinkInput{EntityType: string(recordTypeLead), EntityID: duplicate.ExistingID.UUID}, nil
@@ -127,7 +138,7 @@ func webFormLeadInput(landing webforms.Landing) contacts.CreateLeadInput {
 		CompanyName: optional(e.Company), SourceSystem: &system, SourceID: &key,
 		Source: webFormLeadSource, Origin: landing.LeadOrigin, OriginDetail: optional(originDetail(e)),
 	}
-	if landing.OwnerID != nil {
+	if landing.OwnerID != nil && landing.HandlingAutomationID == nil {
 		owner := ids.From[ids.UserKind](*landing.OwnerID)
 		in.OwnerID = &owner
 	}
@@ -166,6 +177,18 @@ func webFormCustomFields(active []fieldcatalog.Column, e webforms.Enquiry) map[s
 		}
 	}
 	return out
+}
+
+func webFormValidatedPicklists(active []fieldcatalog.Column, in contacts.CreateLeadInput) []string {
+	var names []string
+	for _, column := range active {
+		if column.Type == fieldcatalog.TypePicklist {
+			if _, valid := in.CustomFields[column.Name]; valid {
+				names = append(names, column.Name)
+			}
+		}
+	}
+	return names
 }
 
 // originDetail is the page and campaign a lead arrived from, in one line.
@@ -222,13 +245,19 @@ func webFormNote(landing webforms.Landing) string {
 // activity read answers it as `web_form`. The body says the same as text.
 //
 //craft:ignore naked-any raw is the activity's free-form source payload column
-func webFormRaw(landing webforms.Landing) (map[string]any, error) {
+func webFormRaw(landing webforms.Landing, validated []string) (map[string]any, error) {
 	e := landing.Enquiry
 	sent := crmcontracts.WebFormSubmission{
 		Message: optional(e.Message), FullName: optional(e.FullName), Email: e.Email,
 		Phone: optional(e.Phone), Company: optional(e.Company), Title: optional(e.Title),
 		Extra: webFormValues(e.Extra), PageUrl: optional(e.PageURL), Referrer: optional(e.Referrer),
 		Campaign: webFormValues(e.UTM),
+	}
+	if len(validated) != 0 {
+		sent.ValidatedPicklists = &validated
+	}
+	if landing.HandlingAutomationID != nil {
+		sent.HandlingAutomationId = new(openapi_types.UUID(*landing.HandlingAutomationID))
 	}
 	if landing.ConsentWording != nil {
 		formID := openapi_types.UUID(landing.FormID)
@@ -317,4 +346,18 @@ func quoted(text string) string {
 		lines[i] = strings.TrimRight("> "+l, " ")
 	}
 	return strings.Join(lines, "\n")
+}
+
+func (l webFormLeads) legacyOwnsInquiry(ctx context.Context, id ids.UUID, key string) (bool, error) {
+	lead, err := l.leads.GetLead(ctx, ids.From[ids.LeadKind](id), storekit.LiveOnly)
+	if err != nil {
+		return false, err
+	}
+	if lead.SourceSystem == nil || *lead.SourceSystem != provenance.WebFormSource || lead.SourceId == nil || *lead.SourceId != key {
+		return false, nil
+	}
+	if l.legacy == nil {
+		return false, errors.New("compose: legacy inquiry ownership reader is not configured")
+	}
+	return l.legacy.LegacyLeadOccurrenceOwned(ctx, id)
 }

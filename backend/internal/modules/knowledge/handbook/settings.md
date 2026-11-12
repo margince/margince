@@ -1,5 +1,5 @@
 <!-- prose:plain -->
-<!-- describes: frontend/src/features/settings frontend/src/lib/settingscatalog.ts frontend/src/lib/settingscapability.ts frontend/src/App.settings.tsx backend/internal/platform/settings backend/internal/modules/identity/internal/policy/defaults.go backend/internal/modules/contacts/contactcasesettings.go -->
+<!-- describes: frontend/src/features/automations backend/internal/modules/automation frontend/src/features/settings frontend/src/lib/settingscatalog.ts frontend/src/lib/settingscapability.ts frontend/src/App.settings.tsx backend/internal/platform/settings backend/internal/modules/identity/internal/policy/defaults.go backend/internal/modules/contacts/contactcasesettings.go -->
 # Settings
 
 Margince settings open from the **account menu** at the top right. They are not in the sidebar. Which settings pages you see follows your permissions.
@@ -11,16 +11,14 @@ Settings opens on **Overview**, which lists every page you can open. The page li
 A long page splits into tabs at its top, such as **Booking links**, **Availability** and **Guest page** on **Meetings**. Each tab has its own address, so a link can open one tab.
 To go right to one page, press ⌘K (Ctrl+K) and type its name, or the name of a setting on it. Or type into **Search settings** at the top of the settings list. When the page was found by one of its settings, **Search settings** shows that setting under the page name.
 
-Also called: preferences, admin settings, configuration, options.
-
 ### What settings pages are there?
 Margince Settings puts its pages in these groups:
 - **You**: Account, Notifications, Meetings, Writing voice, AI assistants, Connections.
 - **Company**: Company profile, Sign-in and security.
 - **People**: Members, Teams, Roles and permissions, Seats and license.
 - **Sales**: Deals, Leads, Partners, Records and fields, Products and offers.
-- **Data**: Mail capture, Integrations, Website forms, Knowledge, Data import.
-- **AI**: AI models, AI tool access, AI usage, AI call log, Automations.
+- **Data**: Mail capture, Integrations, Website forms, Knowledge, Data import, Automations.
+- **AI**: AI models, AI tool access, AI usage, AI call log.
 - **Compliance**: Privacy and retention, Jurisdiction, Audit log.
 - **System**: System health, [Configuration](configuration.md), Extensions, Reset data.
 
@@ -228,9 +226,9 @@ The Sales group in Settings has one page per subject. There are the fields a rec
 
 Every seat can read all of them. All but one are for Admin and Ops to change, so for most seats they appear on **Overview** marked with a lock. A sales seat writes **Products and offers**, which stays in its side list. A tab a seat can only read says so at its top.
 
-## AI usage, AI models, AI call log, and Automations
+## AI usage, AI models and AI call log
 
-The AI group in Settings has the pages **AI models**, **AI tool access**, **AI usage**, **AI call log** and **Automations**. **AI models** has the tabs **Providers**, **Model tiers**, **AI tasks** and **Prices**. **AI usage** has **Allowance**, **Agent limits** and **Spend**. **Automations** has **Your automations** and **Starter library**.
+The AI group in Settings has the pages **AI models**, **AI tool access**, **AI usage** and **AI call log**. **AI models** has the tabs **Providers**, **Model tiers**, **AI tasks** and **Prices**. **AI usage** has **Allowance**, **Agent limits** and **Spend**.
 
 **Model routing**, on **AI models**, shows which model does each kind of work, listed by activity. What you see is the current setting; **AI call log** shows what ran. Settings that several kinds of work share sit under **Advanced**, and changing one can move several kinds of work at once. Prices show the cost of the text sent in and the text that comes back, per million tokens. To know where data goes and what it costs, check the model and provider shown on each row, not the tier name.
 
@@ -240,7 +238,17 @@ Changes start to work in about 60 seconds; a call already running keeps its old 
 
 **Providers** lists each provider's key, and where Margince reaches it: a host, OpenRouter hosts, or a Vertex place. A second badge shows when a provider is not answering. See [AI providers](ai-providers.md).
 
-**Automations** is the list of rules that do an action when something happens. Three rules look at a Live List. When a record comes into it or leaves it, they add a task, tell the rule's owner, or add the record to a Shortlist. They run from the check every 15 minutes, once per record the owner can see. More than 100 changes in one check, an archived list or a filter that no longer works stop the rule until its owner starts it again.
+## Automations
+
+**Automations** is in the **Data** group. Its tabs are **Your automations** and **Starter library**. The person under **Authorized by** sets which actions a rule may take. Each run checks their current access.
+
+Rules show **Needs setup**, **Needs attention**, **On** or **Paused**. Their run history keeps each result. For website questions, use [questions from your site](connect-your-website.md#who-handles-questions-from-a-form). List rules are in [Lists and filters](lists-filters-and-views.md#can-an-automation-act-on-a-live-list).
+
+Choose the group, recipient and task title before turning on a rule. **Prepare for a renewal** also needs a date field and reminder days. **Repeat each year** is optional. Its preview shows dates and records missing a date.
+
+Review the first run of a date or quiet-record rule: records already in its group can get work. Preview reads only what both you and **Authorized by** may read. Event rules start **From now on**; **Historical preview unavailable** means they cannot count past events.
+
+A stage rule needs its pipeline and stages. With a saved time zone, task deadlines end on the chosen local day. Existing rules without one keep their old deadline.
 
 **Monthly AI allowance**: Admin and Ops set it; Management can read it but not change it. The default is 12 million tokens each month for each full user who is active, shared by the whole company. It is one company total measured in tokens, with no limit per user and no money limit. You can set a fixed company total instead of the sum, which does not delete the number per user under it. With no users that count, the sum counts one.
 
@@ -389,11 +397,3 @@ On that page a sales seat may only add entries, such as a consumer mail domain m
 A few things ask for the Admin role itself. Two are for most readers to know. Only an Admin may act on another Admin's account or give out the Admin role. And only an Admin reads or changes the company context.
 
 Changing who is on a team, and giving a role more, are for the Admin too. The rules are in [Seats, roles and who can see what](seats-roles-and-access.md). Some actions that fix things ask for the role too. Apart from that, nobody can move the last Admin to a lower role or turn them off, so an installation always keeps one.
-
-## Two things administrators should decide early
-
-Two Margince settings are worth deciding before anything else.
-
-**Your own email domains.** Get these right before you connect mailboxes. They decide what counts as internal, and you cannot undo all of that decision.
-
-**Your retention rules.** Your company starts with retention rules already running. Read them in **Privacy and retention** before Margince first deletes anything.

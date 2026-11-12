@@ -16,6 +16,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/assurance"
 	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/modules/projects"
+	kevents "github.com/margince/margince/backend/internal/shared/kernel/events"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -54,7 +55,8 @@ func TestPublishedEventsLeaveTheOutboxAfterTheirWindowUnlessSomethingStillNeedsT
 	for event, status := range map[ids.UUID]string{retryable: "failed", settled: "applied"} {
 		if _, err := owner.Exec(context.Background(), `INSERT INTO workflow_run
 			(handler, idempotency_key, trigger_event, status, planned, created_at)
-			VALUES ('route_lead', $1, $2, $3, '[]', now() - interval '31 days')`,
+			SELECT 'route_lead', $1, (`+kevents.OutboxEventIDSQL("o")+`)::uuid, $3, '[]', now() - interval '31 days'
+			FROM event_outbox o WHERE o.id = $2`,
 			event.String(), event, status); err != nil {
 			t.Fatal(err)
 		}

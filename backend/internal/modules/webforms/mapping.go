@@ -14,7 +14,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
-func wireForm(f Form) crmcontracts.WebForm {
+func WireForm(f Form) crmcontracts.WebForm {
 	fieldMap := f.FieldMap
 	if fieldMap == nil {
 		fieldMap = map[string]string{}
@@ -32,6 +32,8 @@ func wireForm(f Form) crmcontracts.WebForm {
 		SecretConfigured:     f.SecretConfigured(),
 		LeadOrigin:           f.LeadOrigin,
 		OwnerId:              wireUUID(f.OwnerID),
+		HandlingAutomationId: wireUUID(f.HandlingAutomationID),
+		HandlingCutoverAt:    f.HandlingCutoverAt,
 		ProductId:            wireUUID(f.ProductID),
 		FieldMap:             fieldMap,
 		ConsentRequired:      f.ConsentRequired,
@@ -53,9 +55,10 @@ func wireForm(f Form) crmcontracts.WebForm {
 // wireCreated is the form plus a server form's secret, which the caller sees
 // this once.
 func wireCreated(f Form, secret string) crmcontracts.WebFormCreated {
-	w := wireForm(f)
+	w := WireForm(f)
 	out := crmcontracts.WebFormCreated{
 		Id: w.Id, Name: w.Name, FormKey: w.FormKey, Sender: w.Sender, AllowedOrigins: w.AllowedOrigins,
+		HandlingAutomationId: w.HandlingAutomationId, HandlingCutoverAt: w.HandlingCutoverAt,
 		SecretConfigured: w.SecretConfigured, LeadOrigin: w.LeadOrigin, OwnerId: w.OwnerId, ProductId: w.ProductId, FieldMap: w.FieldMap,
 		ConsentRequired: w.ConsentRequired, ConsentPolicyVersion: w.ConsentPolicyVersion,
 		ConsentWording: w.ConsentWording, PrivacyNotice: w.PrivacyNotice, PrivacyNoticeUrl: w.PrivacyNoticeUrl,
@@ -100,6 +103,8 @@ func refusal(err error) error {
 			Status: http.StatusForbidden, Code: "origin_not_allowed",
 			Detail: "this form does not take posts from this website; add it to the form's websites in Settings",
 		}
+	case errors.Is(err, ErrHandlingBusy):
+		return HandlingUnavailable()
 	case errors.Is(err, ErrPaused):
 		return &httperr.DetailedError{Status: http.StatusGone, Code: "form_paused", Detail: "this form is not taking submissions right now"}
 	case errors.Is(err, errUnreadable), errors.Is(err, errBodyTooLarge):

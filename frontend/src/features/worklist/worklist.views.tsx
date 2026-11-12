@@ -24,6 +24,7 @@ export const VIEW_PILLS = {
     "deals_at_risk",
     "meetings",
     "tasks",
+    "website_inquiries",
     "relationships",
   ],
   decisions: [],

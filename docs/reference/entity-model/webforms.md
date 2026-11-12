@@ -6,7 +6,7 @@ The 2 tables owned by `webforms`, as the migrations build them. [Back to the ent
 
 ## web_form
 
-23 columns · primary key `(id)` · referenced by 1 foreign key
+25 columns · primary key `(id)` · referenced by 1 foreign key
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
@@ -17,6 +17,8 @@ The 2 tables owned by `webforms`, as the migrations build them. [Back to the ent
 | `consent_wording` | `text` |  | The consent wording the form shows, written on each lead's timeline as evidence. |
 | `field_map` | `jsonb`, default `'{}'::jsonb` | yes | The sender's field names mapped to lead fields, for names the defaults do not already read. |
 | `form_key` | `text` | yes | The last segment of the intake address. |
+| `handling_automation_id` | `uuid` |  | Reviewed inquiry policy. |
+| `handling_cutover_at` | `timestamp with time zone` |  | When the handling reference last changed; completed submissions retain their original handling. |
 | `lead_origin` | `text` |  | The `/lead-origins` key every lead from this form carries. |
 | `name` | `text` | yes | At most 200 characters. |
 | `owner_id` | `uuid` |  | Who owns the leads this form creates; null leaves them in the unassigned queue. |
@@ -38,6 +40,7 @@ The 2 tables owned by `webforms`, as the migrations build them. [Back to the ent
 
 | Columns | Table | When the parent goes |
 |---|---|---|
+| `handling_automation_id` | `automation` | the parent cannot be deleted while this row points at it |
 | `lead_origin` | `lead_origin` | deleting the parent keeps this row and clears the link |
 | `owner_id` | `app_user` | deleting the parent keeps this row and clears the link |
 | `product_id` | `product` | the parent cannot be deleted while this row points at it |
@@ -63,6 +66,7 @@ The 2 tables owned by `webforms`, as the migrations build them. [Back to the ent
 - `idx_web_form_lead_origin`: `btree (lead_origin) WHERE (lead_origin IS NOT NULL)`
 - `idx_web_form_owner`: `btree (owner_id) WHERE (owner_id IS NOT NULL)`
 - `web_form_form_key_key`: `unique, btree (form_key)`
+- `web_form_handling_automation`: `unique, btree (handling_automation_id) WHERE (handling_automation_id IS NOT NULL)`
 - `web_form_pkey`: `unique, btree (id)`
 - `web_form_product_idx`: `btree (product_id) WHERE (product_id IS NOT NULL)`
 

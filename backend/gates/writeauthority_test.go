@@ -100,6 +100,8 @@ const (
 // the probe is actually deciding, because that is always the answer: the probe
 // is not this mutation's own row gate.
 var readAuthorityOnAWritePath = gatekit.Waive(map[string]string{
+	"internal/modules/contacts:LockInquiryLeadTx":          "holds the lead or contact a website inquiry names while its task is assigned, so the record and task lock in one order. Nothing on the record changes here; a lead owner change is gated in the assignment plan by auth.EnsureClaimable or auth.EnsureAssignable, and the visibility probe hides a record the caller cannot see",
+	"internal/modules/contacts:LockInquiryContactTx":       "holds the lead or contact a website inquiry names while its task is assigned, so the record and task lock in one order. Nothing on the record changes here; a lead owner change is gated in the assignment plan by auth.EnsureClaimable or auth.EnsureAssignable, and the visibility probe hides a record the caller cannot see",
 	"internal/modules/contacts:readableByATeamMemberTx":    "asks whether a reader-team member may read the contact a shared mailbox's mail would be filed under. The link is the capture connector's write, behind its own gate; nothing on the contact changes",
 	"internal/modules/introductions:prepareAskRouteTx":     "the introduction writer names the contact and intermediary but changes neither. Create and Replace both write intro_request; the contact probes enforce disclosure, not authority to change either contact",
 	"internal/modules/activities:DeclineDeal":              "a decline changes the activity, behind its own write probe in lockForFilingChange. The deal only names what the message is not about and nothing on it changes; the visibility probe hides a deal the caller cannot see",

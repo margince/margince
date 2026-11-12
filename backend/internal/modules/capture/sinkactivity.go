@@ -370,9 +370,7 @@ func (s *Sink) finishNewActivity(
 }
 
 // activityCaptureEventPayload builds the activity.captured event for the
-// capture ingestion path — the one emit site (of the event's two) that
-// names an originating source system; the direct-log path
-// (activities/activity.go) sets no fields but kind.
+// capture ingestion path. Website-note metadata belongs to the direct-log writer.
 func activityCaptureEventPayload(ctx context.Context, kind, channelProvider, sourceSystem string) crmcontracts.PublicEventActivityCaptured {
 	p := crmcontracts.PublicEventActivityCaptured{Kind: kind, SourceSystem: &sourceSystem}
 	p.Imported, p.ImportRunId = storekit.ImportMark(ctx)

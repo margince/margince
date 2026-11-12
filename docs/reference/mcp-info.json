@@ -10,16 +10,16 @@
   "totals": {
     "tools": 48,
     "resources": 14,
-    "tool_catalog_bytes": 237120,
+    "tool_catalog_bytes": 237568,
     "resource_catalog_bytes": 5622,
-    "approx_wire_tokens_total": 60685,
+    "approx_wire_tokens_total": 60797,
     "largest_tool_bytes": 11810,
     "largest_tool": "read_context",
     "tool_catalog_composition": {
-      "description_bytes": 55338,
-      "input_schema_bytes": 117246,
+      "description_bytes": 55425,
+      "input_schema_bytes": 117607,
       "output_schema_bytes": 52428,
-      "description_plus_input_schema_bytes": 172584
+      "description_plus_input_schema_bytes": 173032
     }
   },
   "tools": {
@@ -888,7 +888,7 @@
           "readOnlyHint": false,
           "title": "Log, plan and file activities"
         },
-        "description": "Log, plan and file activities. log records an email, call, meeting, note or message that already happened, on its records. task creates a task for a seat. attach attaches a file to a record. relink files one activity under another record too, and relink_many a named set; with replace_existing_of_type they move it off the old record of that type instead. ready says the user is ready for a meeting they attend; unready takes it back. relink and relink_many run at once. Tell the user before you file under a project, which only a member can undo from the activity. attach checks the record first; read list_documents before attaching the same file again. A logged meeting names who takes part: leave off anyone whose invitation did not go out. Use schedule_meeting to book a meeting still to come, change_state with move_deal when the same event moves a deal, so move and note are one change, and change_reports record_decision for a sales review's decision, which a note cannot track. Keep the activity id; a relink needs it. A staged answer's approval id is what the retry carries. (Governance: runs immediately for accept_document_fields, archive_document, attach, bring_back, cancel_send, check_new_send, check_send, decline_deal, discard_draft, hide_document, log, preview_sign_off, read_document_fields, read_transcript, ready, request_document_access, reschedule_send, save_draft, set_aside, set_audience, set_document_details, set_thread_audience, show_document, task, unready; decided per call from its arguments for relink, relink_many; the user's yes is needed for the action archive_document, so tell them what the call will change and get it before calling, unless they asked for this call themselves; requires passport scope \"write\".)",
+        "description": "Log, plan and file activities. log records an email, call, meeting, note or message that already happened, on its records. task creates a task for a seat. attach attaches a file to a record. relink files one activity under another record too, and relink_many a named set; with replace_existing_of_type they move it off the old record of that type instead. ready says the user is ready for a meeting they attend; unready takes it back. relink and relink_many run at once. Tell the user before you file under a project, which only a member can undo from the activity. attach checks the record first; read list_documents before attaching the same file again. A logged meeting names who takes part: leave off anyone whose invitation did not go out. Use schedule_meeting to book a meeting still to come, change_state with move_deal when the same event moves a deal, so move and note are one change, and change_reports record_decision for a sales review's decision, which a note cannot track. Keep the activity id; a relink needs it. A staged answer's approval id is what the retry carries. (Governance: runs immediately for accept_document_fields, archive_document, assign_inquiry, attach, bring_back, cancel_send, check_new_send, check_send, decline_deal, discard_draft, hide_document, log, preview_inquiry_assignment, preview_sign_off, read_document_fields, read_transcript, ready, request_document_access, reschedule_send, save_draft, set_aside, set_audience, set_document_details, set_thread_audience, show_document, task, unready; decided per call from its arguments for relink, relink_many; the user's yes is needed for the actions archive_document, assign_inquiry, so tell them what the call will change and get it before calling, unless they asked for this call themselves; requires passport scope \"write\".)",
         "inputSchema": {
           "properties": {
             "action": {
@@ -896,6 +896,7 @@
               "enum": [
                 "accept_document_fields",
                 "archive_document",
+                "assign_inquiry",
                 "attach",
                 "bring_back",
                 "cancel_send",
@@ -905,6 +906,7 @@
                 "discard_draft",
                 "hide_document",
                 "log",
+                "preview_inquiry_assignment",
                 "preview_sign_off",
                 "read_document_fields",
                 "read_transcript",
@@ -1049,7 +1051,7 @@
               "type": "object"
             },
             "id": {
-              "description": "accept_document_fields, archive_document, bring_back, cancel_send, check_send, decline_deal, discard_draft, hide_document, read_document_fields, read_transcript, request_document_access, reschedule_send, set_aside, set_audience, set_document_details, show_document only",
+              "description": "accept_document_fields, archive_document, assign_inquiry, bring_back, cancel_send, check_send, decline_deal, discard_draft, hide_document, preview_inquiry_assignment, read_document_fields, read_transcript, request_document_access, reschedule_send, set_aside, set_audience, set_document_details, show_document only",
               "type": "string"
             },
             "idempotency_key": {
@@ -1058,7 +1060,7 @@
               "type": "string"
             },
             "if_version": {
-              "description": "reschedule_send, save_draft, set_audience only: The version the caller read; the write is refused as skew if the record moved since",
+              "description": "assign_inquiry, reschedule_send, save_draft, set_audience only: The version the caller read; the write is refused as skew if the record moved since",
               "type": "integer"
             },
             "kind": {
@@ -1135,7 +1137,7 @@
               "type": "boolean"
             },
             "request_body": {
-              "description": "accept_document_fields, check_new_send, check_send, decline_deal, preview_sign_off, read_document_fields, reschedule_send, save_draft, set_aside, set_audience, set_document_details, set_thread_audience only: The chosen action's request body; read_workspace topic actions lists its shape",
+              "description": "accept_document_fields, assign_inquiry, check_new_send, check_send, decline_deal, preview_inquiry_assignment, preview_sign_off, read_document_fields, reschedule_send, save_draft, set_aside, set_audience, set_document_details, set_thread_audience only: The chosen action's request body; read_workspace topic actions lists its shape",
               "type": "object"
             },
             "scope": {
@@ -2568,7 +2570,7 @@
           "readOnlyHint": false,
           "title": "Change how the workspace is set up"
         },
-        "description": "Change how the workspace is set up: pipelines, stages, exit criteria and partner stages; custom fields; automations and web forms; FX, tax and AI price sheets; product translations; lead sources, origins, disqualify and loss reasons and acquisition sources; lead, legal review, duplicate and follow-up settings; the review template and booking page; the workspace's own company, logos and legal entities; a partner company's terms; the accounting and contact data sources; background corrections; and the user's saved views. A workspace setting changes what every colleague sees from then on, while a saved view is the user's alone. A request about the user's own preferences never reaches this tool. Read the current value first. Ask the user first where the action is marked so: a custom field changes the database for everyone and retiring one cannot be undone, a tax rate can never be removed, a rate reprices what colleagues see, and an enabled automation acts on its own. Which model runs, the plan's budget, stage-move trust, what closes a deal, a stage's criteria and order while a transition is trusted, a seeded automation, a rule's owner, a form's secret, origins and consent, retention and permanent deletes are done in the app. Use change_my_settings for the user's own name, language, time zone, hours or voice, change_state to move one lead or deal, and update_record to change one record. (Runs immediately; the user's yes is needed for the actions activate_home_repair, apply_legacy_loss_reasons, archive_automation, archive_exit_criterion, archive_legal_entity, archive_pipeline, archive_saved_view, archive_stage, archive_web_form, control_data_task, create_custom_field, disconnect_finance_source, disconnect_provider, link_finance_customer, record_tax_rate, reorder_stages, retire_custom_field, set_ai_model_rate, set_fx_rate, update_automation, update_custom_field_options, update_exit_criterion, update_web_form, upsert_partner, so tell them what the call will change and get it before calling, unless they asked for this call themselves; requires passport scope \"write\".)",
+        "description": "Change how the workspace is set up: pipelines, stages, exit criteria and partner stages; custom fields; automations and web forms; FX, tax and AI price sheets; product translations; lead sources, origins, disqualify and loss reasons and acquisition sources; lead, legal review, duplicate and follow-up settings; the review template and booking page; the workspace's own company, logos and legal entities; a partner company's terms; the accounting and contact data sources; background corrections; and the user's saved views. A workspace setting changes what every colleague sees from then on, while a saved view is the user's alone. A request about the user's own preferences never reaches this tool. Read the current value first. Ask the user first where the action is marked so: a custom field changes the database for everyone and retiring one cannot be undone, a tax rate can never be removed, a rate reprices what colleagues see, and an enabled automation acts on its own. Which model runs, the plan's budget, stage-move trust, what closes a deal, a stage's criteria and order while a transition is trusted, a seeded automation, a rule's owner, a form's secret, origins and consent, retention and permanent deletes are done in the app. Use change_my_settings for the user's own name, language, time zone, hours or voice, change_state to move one lead or deal, and update_record to change one record. (Runs immediately; the user's yes is needed for the actions activate_home_repair, apply_legacy_loss_reasons, archive_automation, archive_exit_criterion, archive_legal_entity, archive_pipeline, archive_saved_view, archive_stage, archive_web_form, control_data_task, create_custom_field, disconnect_finance_source, disconnect_provider, handle_website_inquiries, link_finance_customer, record_tax_rate, reorder_stages, retire_custom_field, set_ai_model_rate, set_fx_rate, update_automation, update_custom_field_options, update_exit_criterion, update_web_form, upsert_partner, so tell them what the call will change and get it before calling, unless they asked for this call themselves; requires passport scope \"write\".)",
         "inputSchema": {
           "properties": {
             "action": {
@@ -2604,6 +2606,7 @@
                 "delete_lead_source",
                 "disconnect_finance_source",
                 "disconnect_provider",
+                "handle_website_inquiries",
                 "link_finance_customer",
                 "mark_booking_page_shared",
                 "propose_fx_rate_refresh",
@@ -2675,7 +2678,7 @@
               "type": "string"
             },
             "id": {
-              "description": "archive_automation, archive_exit_criterion, archive_legal_entity, archive_pipeline, archive_saved_view, archive_stage, archive_web_form, create_exit_criterion, delete_disqualify_reason, delete_lead_origin, delete_lead_source, put_product_translation, remove_legal_entity_logo, rename_custom_field, reorder_stages, restore_pipeline, retire_custom_field, retry_automation_run, update_acquisition_source, update_automation, update_custom_field_options, update_disqualify_reason, update_exit_criterion, update_lead_origin, update_lead_source, update_legal_entity, update_loss_reason, update_partner_stage, update_pipeline, update_review_template, update_saved_view, update_stage, update_web_form, upload_legal_entity_logo, upsert_partner only",
+              "description": "archive_automation, archive_exit_criterion, archive_legal_entity, archive_pipeline, archive_saved_view, archive_stage, archive_web_form, create_exit_criterion, delete_disqualify_reason, delete_lead_origin, delete_lead_source, handle_website_inquiries, put_product_translation, remove_legal_entity_logo, rename_custom_field, reorder_stages, restore_pipeline, retire_custom_field, retry_automation_run, update_acquisition_source, update_automation, update_custom_field_options, update_disqualify_reason, update_exit_criterion, update_lead_origin, update_lead_source, update_legal_entity, update_loss_reason, update_partner_stage, update_pipeline, update_review_template, update_saved_view, update_stage, update_web_form, upload_legal_entity_logo, upsert_partner only",
               "type": "string"
             },
             "idempotency_key": {
@@ -2700,7 +2703,7 @@
               "type": "string"
             },
             "request_body": {
-              "description": "activate_home_repair, apply_legacy_loss_reasons, confirm_site_read, control_data_task, create_acquisition_source, create_automation, create_custom_field, create_disqualify_reason, create_exit_criterion, create_lead_origin, create_lead_source, create_legal_entity, create_loss_reason, create_partner_stage, create_pipeline, create_saved_view, create_stage, decide_legacy_loss_reason, link_finance_customer, put_product_translation, record_tax_rate, rename_custom_field, reorder_pipelines, reorder_stages, save_booking_alias, save_booking_page, save_my_linkedin, save_own_company, set_ai_model_rate, set_ai_price_sync, set_fx_rate, update_acquisition_source, update_automation, update_custom_field_options, update_disqualify_reason, update_duplicate_settings, update_exit_criterion, update_follow_up_settings, update_lead_origin, update_lead_settings, update_lead_source, update_legal_entity, update_legal_review_settings, update_loss_reason, update_partner_stage, update_pipeline, update_review_template, update_saved_view, update_stage, update_web_form, upsert_partner only: The chosen action's request body; read_workspace topic actions lists its shape",
+              "description": "activate_home_repair, apply_legacy_loss_reasons, confirm_site_read, control_data_task, create_acquisition_source, create_automation, create_custom_field, create_disqualify_reason, create_exit_criterion, create_lead_origin, create_lead_source, create_legal_entity, create_loss_reason, create_partner_stage, create_pipeline, create_saved_view, create_stage, decide_legacy_loss_reason, handle_website_inquiries, link_finance_customer, put_product_translation, record_tax_rate, rename_custom_field, reorder_pipelines, reorder_stages, save_booking_alias, save_booking_page, save_my_linkedin, save_own_company, set_ai_model_rate, set_ai_price_sync, set_fx_rate, update_acquisition_source, update_automation, update_custom_field_options, update_disqualify_reason, update_duplicate_settings, update_exit_criterion, update_follow_up_settings, update_lead_origin, update_lead_settings, update_lead_source, update_legal_entity, update_legal_review_settings, update_loss_reason, update_partner_stage, update_pipeline, update_review_template, update_saved_view, update_stage, update_web_form, upsert_partner only: The chosen action's request body; read_workspace topic actions lists its shape",
               "type": "object"
             },
             "text_hash": {
@@ -4330,6 +4333,9 @@
                   "type": "string"
                 },
                 "waiting_reply": {
+                  "type": "string"
+                },
+                "website_form_id": {
                   "type": "string"
                 },
                 "win_probability_max": {
@@ -8279,6 +8285,7 @@
                 "team_margince_changes",
                 "teammate_weekly_plan",
                 "voice_source_preview",
+                "website_inquiry_preview",
                 "weekly_plan",
                 "weekly_reviews",
                 "win_evidence"
@@ -8386,7 +8393,7 @@
               "type": "boolean"
             },
             "id": {
-              "description": "activity_pipeline, automation_preview, capture_triage, communication_review, company_brief, company_contracts, company_linkedin_reach, company_logo, company_logo_icon, company_scan, contact_brief, contact_consent, contact_consent_guard, contact_overrides, contact_profile_fields, contact_stops, contract, controller_mail_preview, deal_legal_reviews, deal_lines, deal_margince_changes, deal_products, deal_room_brief, deal_suggestion, document_extraction, dossier, enrichment_run, evidence, growth_fit, handoff_assignee, import_problems, intro_requests, knowledge_document, lead_promotion_preview, lead_score, lead_signals, lead_stops, legal_entity_logo, legal_review, link_candidates, magic_line_records, meeting_availability, notice_case, notice_case_review, notice_source_evidence, notice_source_preview, offer_pdf, offered_values, ownership_offer, ownership_offer_candidates, ownership_request, product_translations, project_filing, relationship_nudge, scheduled_send, tag_suggestion, voice_source_preview, win_evidence only",
+              "description": "activity_pipeline, automation_preview, capture_triage, communication_review, company_brief, company_contracts, company_linkedin_reach, company_logo, company_logo_icon, company_scan, contact_brief, contact_consent, contact_consent_guard, contact_overrides, contact_profile_fields, contact_stops, contract, controller_mail_preview, deal_legal_reviews, deal_lines, deal_margince_changes, deal_products, deal_room_brief, deal_suggestion, document_extraction, dossier, enrichment_run, evidence, growth_fit, handoff_assignee, import_problems, intro_requests, knowledge_document, lead_promotion_preview, lead_score, lead_signals, lead_stops, legal_entity_logo, legal_review, link_candidates, magic_line_records, meeting_availability, notice_case, notice_case_review, notice_source_evidence, notice_source_preview, offer_pdf, offered_values, ownership_offer, ownership_offer_candidates, ownership_request, product_translations, project_filing, relationship_nudge, scheduled_send, tag_suggestion, voice_source_preview, website_inquiry_preview, win_evidence only",
               "type": "string"
             },
             "kind": {
@@ -8460,7 +8467,7 @@
               "type": "string"
             },
             "request_body": {
-              "description": "ai_budget_preview, ai_routing_preview, ai_task_overrides_preview, automation_preview, backfill_preview, filter_preview, mail_deal_repair_preview, notice_source_preview, voice_source_preview only: The chosen action's request body; read_workspace topic actions lists its shape",
+              "description": "ai_budget_preview, ai_routing_preview, ai_task_overrides_preview, automation_preview, backfill_preview, filter_preview, mail_deal_repair_preview, notice_source_preview, voice_source_preview, website_inquiry_preview only: The chosen action's request body; read_workspace topic actions lists its shape",
               "type": "object"
             },
             "rule": {
@@ -10868,7 +10875,8 @@
                 "system",
                 "except_decisions",
                 "changed_since_brief",
-                "upcoming"
+                "upcoming",
+                "website_inquiries"
               ],
               "type": "string"
             },

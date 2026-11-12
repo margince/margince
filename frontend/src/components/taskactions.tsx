@@ -22,6 +22,7 @@ import { dueTimeOf, startOfDayInZone } from "../format/timezone";
 import { useLocale, useT } from "../i18n";
 import { taskDueFields } from "../lib/activitybody";
 import { useCanWriteRecord } from "../lib/capability";
+import { isWebsiteInquiryTask } from "../lib/websiteinquiries";
 import { TaskTimeField } from "./followuptaskfields";
 import { mostSpecificFirst, RecordLinkChips } from "./recordlinks";
 import { TaskAssignee } from "./taskassignee";
@@ -120,6 +121,7 @@ export function TaskQuickActions({
   dueHasTime,
   update,
   showComplete = true,
+  completeLabel,
 }: Readonly<{
   activityId: string;
   version: number | undefined;
@@ -128,6 +130,7 @@ export function TaskQuickActions({
   dueHasTime?: boolean;
   update: ReturnType<typeof useTaskUpdate>;
   showComplete?: boolean;
+  completeLabel?: string;
 }>) {
   const t = useT();
   const readerZone = useViewerZone();
@@ -141,7 +144,7 @@ export function TaskQuickActions({
           disabled={pending}
           onClick={() => complete(activityId, version)}
         >
-          {t("tasks.complete")}
+          {completeLabel ?? t("tasks.complete")}
         </Button>
       )}
       {dueAt && (
@@ -400,6 +403,11 @@ function TaskDetailActions({
         <div ref={verbs} className="task-detail-verbs">
           <div className="task-detail-buttons">
             <TaskQuickActions
+              completeLabel={
+                isWebsiteInquiryTask(task)
+                  ? t("inquiry.markHandled")
+                  : undefined
+              }
               activityId={task.id}
               version={task.version}
               dueAt={task.due_at}

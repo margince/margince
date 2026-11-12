@@ -3,7 +3,7 @@
 
 //go:build integration
 
-package compose
+package stagenotices
 
 import (
 	"context"
@@ -25,6 +25,7 @@ import (
 const stageNoticeRepair = "1789335792_stage_notices_recover_the_change_they_report.up.sql"
 
 type stageNoticeFixture struct {
+	env                  *integration.Env
 	db                   *database.DB
 	conn                 *pgx.Conn
 	ctx, human           context.Context
@@ -77,7 +78,7 @@ func newStageNoticeFixture(t *testing.T, fromName, toName, dealName string) stag
 	if err := conn.QueryRow(ctx, `SELECT envelope FROM event_outbox WHERE envelope->>'type' = 'deal.stage_changed'`).Scan(&event); err != nil {
 		t.Fatal(err)
 	}
-	return stageNoticeFixture{db: db, fromID: ids.UUID(from.Id), conn: conn, ctx: ctx, human: human, actor: actor, store: notices.NewStore(db), event: event, dealID: ids.UUID(deal.Id), toID: ids.UUID(to.Id)}
+	return stageNoticeFixture{env: e, db: db, fromID: ids.UUID(from.Id), conn: conn, ctx: ctx, human: human, actor: actor, store: notices.NewStore(db), event: event, dealID: ids.UUID(deal.Id), toID: ids.UUID(to.Id)}
 }
 
 func TestStageNoticeRecoversItsExactMoveAndLeavesUnlinkedNoticesAlone(t *testing.T) {
@@ -135,7 +136,7 @@ func TestStageNoticeRecoversItsExactMoveAndLeavesUnlinkedNoticesAlone(t *testing
 
 func (f stageNoticeFixture) repair(t *testing.T) {
 	t.Helper()
-	repair, err := os.ReadFile("../../migrations/core/" + stageNoticeRepair)
+	repair, err := os.ReadFile("../../../../migrations/core/" + stageNoticeRepair)
 	if err != nil {
 		t.Fatal(err)
 	}

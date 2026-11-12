@@ -1920,6 +1920,7 @@
   "elapsed.days": "{days} d ago",
   "aiRouting.lane.embeddings": "Search and retrieval across records",
   "aiTasks.whatItDoes": "{task}: what it does",
+  "webForms.handlingBusy": "This form is busy. Try again.",
   "reindexbanner.needed": "Reindex needed",
   "reindexbanner.link": "Review in settings",
   "contact.strip.never": "Never",

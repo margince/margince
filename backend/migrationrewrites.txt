@@ -111,3 +111,5 @@
 1794449001_a_mailbox_may_belong_to_no_person.down.sql | * | runs only on a rollback, drops what the up added and sets user_id NOT NULL again, which reads the table but rewrites no row; it fails while a shared mailbox exists
 1794461023_a_team_change_drops_home_answers.up.sql | * | creates four triggers whose bodies run only on later writes; no existing row is read or rewritten
 1794458739_the_finance_mirror_keys_are_validated.up.sql | *, audit_log, finance_external_customer | inserts one directory entry and its create audit row per customer link that names no entry, which only a link seeded before its first sync has; links are human decisions, a few per customer at most
+1794483980_a_website_form_names_its_reviewed_inquiry_policy.down.sql | * | read-only existence check refuses rollback after a cutover; no row is rewritten
+1794483981_an_inquiry_effect_keeps_its_planned_assignment.down.sql | * | read-only existence check refuses rollback after an assignment; no row is rewritten

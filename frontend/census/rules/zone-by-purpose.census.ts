@@ -68,6 +68,26 @@ export function code(path: string, source: string): string {
 // cannot stand in for.
 const pinnedZones: { file: string; why: string }[] = [
   {
+    file: "features/worklist/websiteinquiryfacts.stories.tsx",
+    why: "The receipt story pins the reader’s zone so the accepted submission time stays visible in a reproducible local clock.",
+  },
+  {
+    file: "features/automations/automations.deadline-form.test.tsx",
+    why: "The deadline editor test pins the saved policy's IANA zone to verify that reviewing and saving preserve its calendar-day meaning.",
+  },
+  {
+    file: "features/automations/automations.deadline.test.ts",
+    why: "The deadline parameter test pins the configured IANA zone to distinguish saved calendar-day handling from the legacy duration fallback.",
+  },
+  {
+    file: "features/automations/automations.form.stories.tsx",
+    why: "The automation deadline story shows the policy's saved IANA zone so the calendar-day configuration is visible independently of the viewer's settings.",
+  },
+  {
+    file: "components/websiteinquiry.fixtures.ts",
+    why: "The inquiry policy fixture pins Berlin so its deadline example covers a change to daylight saving time independently of the reader's zone.",
+  },
+  {
     file: "features/worklist/worklist.happened.test.ts",
     why: "Pins the reader and record zone to UTC, so a fact at a fixed instant names the same day on every runner, whatever its own zone.",
   },

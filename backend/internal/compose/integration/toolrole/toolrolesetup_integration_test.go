@@ -66,16 +66,27 @@ var setupFixtures = map[string]func(p *recordPool) map[string]any{
 	"build_voice_profile": func(p *recordPool) map[string]any {
 		return map[string]any{"id": p.take("voice_ready"), "request_body": map[string]any{"reason": "manual"}}
 	},
-	"get_voice_profile":           byID("voice_profile"),
-	"list_voice_corpus_sources":   byID("voice_profile"),
-	"get_voice_learning_summary":  byID("voice_profile"),
-	"list_voice_profile_deltas":   byID("voice_profile"),
-	"list_voice_profile_versions": byID("voice_profile"),
-	"archive_automation":          byID("automation"),
+	"get_voice_profile":                  byID("voice_profile"),
+	"list_voice_corpus_sources":          byID("voice_profile"),
+	"get_voice_learning_summary":         byID("voice_profile"),
+	"list_voice_profile_deltas":          byID("voice_profile"),
+	"list_voice_profile_versions":        byID("voice_profile"),
+	"archive_automation":                 byID("automation"),
+	"preview_website_inquiry_assignment": func(p *recordPool) map[string]any { return inquiryAssignmentArgs(p, false) },
+	"assign_website_inquiry":             func(p *recordPool) map[string]any { return inquiryAssignmentArgs(p, true) },
 	"update_automation": func(p *recordPool) map[string]any {
 		return versioned(p, "automation", map[string]any{"name": "Sweep rule"})
 	},
 	"preview_automation": func(p *recordPool) map[string]any { return map[string]any{"id": p.take("automation")} },
+	"handle_website_inquiries": func(p *recordPool) map[string]any {
+		form := p.take("existing_website_inquiry")
+		source := p.fact(form, "source")
+		return map[string]any{"id": form, "request_body": map[string]any{"automation_id": p.fact(form, "policy"), "automation_version": versionOf(p, form), "selected": []map[string]any{{"id": source, "version": versionOf(p, source)}}}}
+	},
+	"preview_website_inquiries": func(p *recordPool) map[string]any {
+		form := p.take("versioned_web_form")
+		return map[string]any{"id": form, "request_body": map[string]any{"policy": map[string]any{"form_id": form, "mode": "coordinator", "routing": map[string]any{}, "coordinator_id": p.take("user"), "task_title": "Review the website inquiry", "due_in_days": 1, "timezone": "Etc/UTC"}, "selected": []any{}}}
+	},
 	"create_automation": func(*recordPool) map[string]any {
 		return map[string]any{"request_body": map[string]any{"key": "assign_lead_owner", "name": "Sweep rule", "params": map[string]any{}}}
 	},
@@ -334,6 +345,8 @@ func setupSeeders(s sweepSeed) map[string]func() string {
 		"automation": func() string {
 			return versioned("/v1/automations", integration.AnyMap{"key": "assign_lead_owner", "name": uniqueName(), "params": integration.AnyMap{}})
 		},
+		"existing_website_inquiry":   func() string { return seedExistingWebsiteInquiry(s) },
+		"assignable_website_inquiry": func() string { return seedAssignableWebsiteInquiry(s) },
 		"versioned_web_form": func() string {
 			return versioned("/v1/web-forms", integration.AnyMap{"name": uniqueName(), "sender": "browser", "allowed_origins": []string{"https://example.test"}})
 		},

@@ -1920,6 +1920,7 @@
   "elapsed.days": "vor {days} T",
   "aiRouting.lane.embeddings": "Suche und Abruf über Datensätze hinweg",
   "aiTasks.whatItDoes": "{task}: was die Aufgabe tut",
+  "webForms.handlingBusy": "Dieses Formular wird gerade bearbeitet. Versuche es erneut.",
   "reindexbanner.needed": "Neuindexierung erforderlich",
   "reindexbanner.link": "In den Einstellungen prüfen",
   "contact.strip.never": "Nie",

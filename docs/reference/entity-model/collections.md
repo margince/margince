@@ -141,7 +141,7 @@ The 13 tables owned by `collections`, as the migrations build them. [Back to the
 
 ## list_member_event
 
-11 columns · primary key `(id)` · referenced by 0 foreign keys
+12 columns · primary key `(id)` · referenced by 0 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
@@ -151,6 +151,7 @@ The 13 tables owned by `collections`, as the migrations build them. [Back to the
 | `definition_version` | `bigint` |  |  |
 | `entity_id` | `uuid` | yes |  |
 | `entity_type` | `text` | yes | One of `contact`, `company`, `deal`, `lead`, `project`. |
+| `imported` | `boolean`, default `false` | yes |  |
 | `list_id` | `uuid` | yes | Points at `list.id`. |
 | `member_note` | `text` |  |  |
 | `note` | `text` |  |  |

@@ -38,6 +38,7 @@ import type { MessageKey } from "../../i18n/en";
 import { labelFor } from "../../lib/labelfor";
 import { problemCodeOf } from "../../lib/problem";
 import { useMe } from "../../lib/session";
+import { InquiryAssignmentDialog } from "./worklist.inquiryassignment";
 import {
   subjectAcceptsAnOwner,
   type TeamException,
@@ -130,14 +131,24 @@ function useAssigneeOptions(
   };
 }
 
-// Hand one task to somebody else, in a form the row opens from its menu.
-//
-// The row leaves this queue when the refetch lands, not on the press. The queue
-// is ranked and counted server-side — a row removed locally would leave the
-// summary above it counting work that is no longer here, and the rank numbers
-// beside every remaining row wrong. So the press reports itself through the
-// toast, and the list reconciles.
-export function ReassignForm({
+// Hand one task to somebody else, in a form the row opens from its menu. The row
+// leaves when the refetch lands, not on the press. The server ranks and counts
+// the queue, so a row removed here would leave the summary and ranks wrong.
+export function ReassignForm(
+  props: Readonly<{ item: WorklistItem; owner: string; onClose: () => void }>,
+) {
+  return props.item.kind === "website_inquiry" ? (
+    <InquiryAssignmentDialog
+      item={props.item}
+      mode="assign_and_follow_up"
+      onClose={props.onClose}
+    />
+  ) : (
+    <TaskReassignForm {...props} />
+  );
+}
+
+function TaskReassignForm({
   item,
   owner,
   onClose,
