@@ -9,8 +9,9 @@
 package statedreason
 
 import (
-	"github.com/margince/margince/backend/internal/shared/kernel/values"
 	"strings"
+
+	"github.com/margince/margince/backend/internal/shared/kernel/values"
 )
 
 // Max is RetentionOverrideRequest.reason's maxLength, in characters.
