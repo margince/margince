@@ -10,16 +10,16 @@
   "totals": {
     "tools": 48,
     "resources": 14,
-    "tool_catalog_bytes": 237568,
+    "tool_catalog_bytes": 237723,
     "resource_catalog_bytes": 5622,
-    "approx_wire_tokens_total": 60797,
+    "approx_wire_tokens_total": 60836,
     "largest_tool_bytes": 11810,
     "largest_tool": "read_context",
     "tool_catalog_composition": {
       "description_bytes": 55425,
-      "input_schema_bytes": 117607,
+      "input_schema_bytes": 117762,
       "output_schema_bytes": 52428,
-      "description_plus_input_schema_bytes": 173032
+      "description_plus_input_schema_bytes": 173187
     }
   },
   "tools": {
@@ -2852,11 +2852,11 @@
               "type": "string"
             },
             "next_step": {
-              "description": "set_up_partner only",
+              "description": "set_up_partner only: The one next thing to do with the partner. Written as a task on the company, held by the human you act for",
               "type": "string"
             },
             "next_step_due_at": {
-              "description": "set_up_partner only",
+              "description": "set_up_partner only: The day the next step is due. Needs next_step",
               "format": "date",
               "type": "string"
             },
