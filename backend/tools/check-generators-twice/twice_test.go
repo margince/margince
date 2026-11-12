@@ -7,24 +7,25 @@ import (
 	"io"
 	"log"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"strings"
 	"testing"
 )
 
-// repository makes a git repository holding files, all committed.
+// repository makes a git repository holding files, all committed. Git reads
+// no config of the caller's, so a global commit.gpgsign cannot fail it.
 func repository(t *testing.T, files map[string]string) string {
 	t.Helper()
+	t.Setenv("GIT_CONFIG_GLOBAL", os.DevNull)
+	t.Setenv("GIT_CONFIG_SYSTEM", os.DevNull)
 	root := t.TempDir()
 	writeFiles(t, root, files)
 	for _, args := range [][]string{
 		{"init", "-q"}, {"add", "."},
-		{"-c", "user.name=gate", "-c", "user.email=gate@example.invalid", "-c", "commit.gpgsign=false",
-			"-c", "core.hooksPath=/dev/null", "commit", "-q", "-m", "fixture"},
+		{"-c", "user.name=gate", "-c", "user.email=gate@example.invalid", "commit", "-q", "-m", "fixture"},
 	} {
-		if out, err := exec.Command("git", append([]string{"-C", root}, args...)...).CombinedOutput(); err != nil {
-			t.Fatalf("git %v: %v: %s", args, err, out)
+		if _, err := gitOut(root, nil, args...); err != nil {
+			t.Fatal(err)
 		}
 	}
 	return root

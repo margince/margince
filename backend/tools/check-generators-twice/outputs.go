@@ -31,7 +31,7 @@ const headLines = 8
 // than a short one.
 const headBytes = 16 * 1024
 
-// generatedOutputs is every tracked file that says a generator wrote it.
+// generatedOutputs lists the tracked files that say a generator wrote them.
 func generatedOutputs(root string, tracked []string) ([]string, error) {
 	var outputs []string
 	for _, path := range tracked {
