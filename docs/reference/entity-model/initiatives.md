@@ -111,6 +111,7 @@ The 5 tables owned by `initiatives`, as the migrations build them. [Back to the 
 
 **Indexes**
 
+- `sales_initiative_enrolment_initiative_idx`: `btree (initiative_id)`
 - `sales_initiative_enrolment_open_idx`: `unique, btree (initiative_id, record_type, record_id) WHERE (left_at IS NULL)`
 - `sales_initiative_enrolment_pkey`: `unique, btree (id)`
 - `sales_initiative_enrolment_record_idx`: `btree (record_type, record_id)`

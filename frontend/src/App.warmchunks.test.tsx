@@ -2,7 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 /** @vitest-environment happy-dom */
-import { cleanup, renderHook, waitFor } from "@testing-library/react";
+import { act, cleanup, renderHook } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { useWarmRouteChunks } from "./App.warmchunks";
 
@@ -34,10 +34,13 @@ function stubIdle() {
   vi.stubGlobal("cancelIdleCallback", cancel);
   return {
     cancel,
-    goIdle: () => {
-      for (const callback of pending.values()) {
-        callback();
-      }
+    goIdle: async () => {
+      await act(async () => {
+        for (const [handle, callback] of [...pending]) {
+          pending.delete(handle);
+          callback();
+        }
+      });
     },
   };
 }
@@ -50,6 +53,7 @@ afterEach(() => {
   cleanup();
   vi.unstubAllGlobals();
   vi.restoreAllMocks();
+  vi.useRealTimers();
 });
 
 describe("useWarmRouteChunks", () => {
@@ -68,12 +72,14 @@ describe("useWarmRouteChunks", () => {
     renderHook(() => useWarmRouteChunks());
     expect(first).not.toHaveBeenCalled();
 
-    idle.goIdle();
-    await waitFor(() => expect(first).toHaveBeenCalledOnce());
+    await idle.goIdle();
+    expect(first).toHaveBeenCalledOnce();
     expect(second).not.toHaveBeenCalled();
 
-    finishFirst();
-    await waitFor(() => expect(second).toHaveBeenCalledOnce());
+    await act(async () => finishFirst());
+    expect(second).not.toHaveBeenCalled();
+    await idle.goIdle();
+    expect(second).toHaveBeenCalledOnce();
   });
 
   it("logs a chunk that fails and goes on to the next", async () => {
@@ -84,20 +90,22 @@ describe("useWarmRouteChunks", () => {
     chunks.loaders = [() => Promise.reject(broken), next];
 
     renderHook(() => useWarmRouteChunks());
-    idle.goIdle();
+    await idle.goIdle();
 
-    await waitFor(() => expect(next).toHaveBeenCalledOnce());
+    expect(next).not.toHaveBeenCalled();
+    await idle.goIdle();
+    expect(next).toHaveBeenCalledOnce();
     expect(warn).toHaveBeenCalledWith("route chunk warm-up failed", broken);
   });
 
-  it("cancels the idle request when the shell unmounts first", () => {
+  it("cancels the idle request when the shell unmounts first", async () => {
     const idle = stubIdle();
     const load = vi.fn(() => Promise.resolve());
     chunks.loaders = [load];
 
     const { unmount } = renderHook(() => useWarmRouteChunks());
     unmount();
-    idle.goIdle();
+    await idle.goIdle();
 
     expect(idle.cancel).toHaveBeenCalledOnce();
     expect(load).not.toHaveBeenCalled();
@@ -116,23 +124,24 @@ describe("useWarmRouteChunks", () => {
     chunks.loaders = [first, second];
 
     const { unmount } = renderHook(() => useWarmRouteChunks());
-    idle.goIdle();
-    await waitFor(() => expect(first).toHaveBeenCalledOnce());
+    await idle.goIdle();
+    expect(first).toHaveBeenCalledOnce();
     unmount();
-    finishFirst();
-    await Promise.resolve();
-    await Promise.resolve();
+    await act(async () => finishFirst());
+    await idle.goIdle();
 
     expect(second).not.toHaveBeenCalled();
   });
 
   it("falls back to a timer where the browser has no idle callback", async () => {
+    vi.useFakeTimers();
     vi.stubGlobal("requestIdleCallback", undefined);
     const load = vi.fn(() => Promise.resolve());
     chunks.loaders = [load];
 
     renderHook(() => useWarmRouteChunks());
 
-    await waitFor(() => expect(load).toHaveBeenCalledOnce());
+    await act(async () => vi.runAllTimersAsync());
+    expect(load).toHaveBeenCalledOnce();
   });
 });

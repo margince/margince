@@ -99,5 +99,6 @@ func abandonLane(ctx context.Context, tx pgx.Tx) error {
 	if _, err := tx.Exec(ctx, `ROLLBACK TO SAVEPOINT degradable_read; RELEASE SAVEPOINT degradable_read`); err != nil {
 		return fmt.Errorf("pg: rolling back a degradable read: %w", err)
 	}
+	Forget(tx, "")
 	return nil
 }

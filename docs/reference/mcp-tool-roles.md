@@ -1082,7 +1082,7 @@ A check is `object.action`, or `object.a|b` for any one of them. `*.action` is t
 | Contacts and relationships | `change_relationships.restore_profile_field` | `restore_contact_profile_field` | `contact.update` |
 | Contacts and relationships | `change_relationships.save_research` | `save_contact_research` | `contact.update` |
 | Contacts and relationships | `change_relationships.settle_promise` | `settle_conversation_claim` | `contact.update` |
-| Contacts and relationships | `change_relationships.take_over_promise` | `take_over_conversation_claim` | `activity.create` `activity.read` `contact.read` |
+| Contacts and relationships | `change_relationships.take_over_promise` | `take_over_conversation_claim` | `activity.create` `activity.read` `contact.read` `relationship.read` |
 | Contacts and relationships | `change_state.publish_contact` | `publish_captured_contact` | `contact.update` |
 | Contacts and relationships | `read_details.company_linkedin_reach` | `get_company_linked_in_reach` | `company.read` |
 | Contacts and relationships | `read_details.contact_brief` | `get_contact_brief` | `activity.read` `company.read` `contact.read` `deal.read` `project.read` `relationship.read` |
@@ -1099,7 +1099,7 @@ A check is `object.action`, or `object.a|b` for any one of them. `*.action` is t
 | Companies | `change_access.share_contacts` | `share_company_contacts` | `company.read` `contact.read` `contact.update` `relationship.read` |
 | Companies | `change_attention.acknowledge_company_view` | `acknowledge_company_view` | `company.read` |
 | Companies | `change_attention.dismiss_company_suggestion` | `dismiss_company_suggestion` | `activity.read` `company.read` `contact.read` `installation_settings.read` `relationship.read` |
-| Companies | `change_attention.restore_company_suggestion` | `restore_company_suggestion` | `company.read` |
+| Companies | `change_attention.restore_company_suggestion` | `restore_company_suggestion` | `activity.read` `company.read` `contact.read` `relationship.read` |
 | Companies | `change_relationships.check_vat` | `request_company_vat_check` | `company.update` |
 | Companies | `change_relationships.link_contacts` | `link_company_contacts` | `company.read` `contact.read` `contact.update` `relationship.create` `relationship.read` |
 | Companies | `change_settings.upsert_partner` | `upsert_partner` | `company.update` |
@@ -1187,24 +1187,24 @@ A check is `object.action`, or `object.a|b` for any one of them. `*.action` is t
 | Activities, mail and tasks | `change_activities.bring_back` | `clear_activity_disposition` | `activity.read` |
 | Activities, mail and tasks | `change_activities.cancel_send` | `cancel_scheduled_send` | `activity.read` `activity.update` |
 | Activities, mail and tasks | `change_activities.check_new_send` | `preview_account_send_authorization` | `activity.create` `company.create` `company.read` `contact.create` `relationship.read` |
-| Activities, mail and tasks | `change_activities.check_send` | `preview_send_authorization` | `activity.create` `activity.read` |
+| Activities, mail and tasks | `change_activities.check_send` | `preview_send_authorization` | `activity.create` `activity.read` `relationship.read` |
 | Activities, mail and tasks | `change_activities.decline_deal` | `decline_activity_deal` | `activity.update` `deal.read` |
 | Activities, mail and tasks | `change_activities.discard_draft` | `discard_mail_draft` | `activity.create` |
 | Activities, mail and tasks | `change_activities.log` | `log_activity` | `activity.create` `activity.read` |
 | Activities, mail and tasks | `change_activities.preview_sign_off` | `preview_email_sign_off` |  |
 | Activities, mail and tasks | `change_activities.read_transcript` | `read_transcript_for_next_steps` | `activity.create` `activity.read` |
-| Activities, mail and tasks | `change_activities.relink` | `relink_activity` | `activity.read` `activity.update` |
+| Activities, mail and tasks | `change_activities.relink` | `relink_activity` | `activity.read` `activity.update` `relationship.read` |
 | Activities, mail and tasks | `change_activities.relink_many` | `relink_activities` | `activity.update` |
 | Activities, mail and tasks | `change_activities.reschedule_send` | `reschedule_scheduled_send` | `activity.read` `activity.update` |
 | Activities, mail and tasks | `change_activities.save_draft` | `save_mail_draft` | `activity.create` |
 | Activities, mail and tasks | `change_activities.set_aside` | `set_activity_disposition` | `activity.read` |
-| Activities, mail and tasks | `change_activities.set_audience` | `set_activity_audience` | `activity.read` `activity.update` |
+| Activities, mail and tasks | `change_activities.set_audience` | `set_activity_audience` | `activity.read` `activity.update` `relationship.read` |
 | Activities, mail and tasks | `change_activities.set_thread_audience` | `set_thread_audience` | `activity.update` |
-| Activities, mail and tasks | `change_activities.task` | `create_task` | `activity.create` `activity.read` |
+| Activities, mail and tasks | `change_activities.task` | `create_task` | `activity.create` `activity.read` `relationship.read` |
 | Activities, mail and tasks | `draft_outbound.one_message` | `draft_email` | `activity.create` `activity.read` `company.read` `contact.read` `deal.read` `project.read` `relationship.read` |
 | Activities, mail and tasks | `read_attention.commitments` | `review_commitments` | `activity.read` `contact.read` `installation_settings.read` |
 | Activities, mail and tasks | `read_details.activity_deal_filing` | `get_activity_deal_filing` | `activity.create` `company.read` `contact.read,deal.read` `deal.read,relationship.read` |
-| Activities, mail and tasks | `read_details.activity_pipeline` | `read_activity_pipeline_trace` | `activity.read` |
+| Activities, mail and tasks | `read_details.activity_pipeline` | `read_activity_pipeline_trace` | `activity.read` `relationship.read` |
 | Activities, mail and tasks | `read_details.mail_draft` | `get_mail_draft` | `activity.read` |
 | Activities, mail and tasks | `read_details.project_filing` | `get_activity_project_filing` | `activity.read` |
 | Activities, mail and tasks | `read_details.scheduled_send` | `get_scheduled_send` | `activity.read` |
@@ -1255,8 +1255,8 @@ A check is `object.action`, or `object.a|b` for any one of them. `*.action` is t
 | Reports and analytics | `change_reports.launch_initiative` | `launch_sales_initiative` | `deal.read` `sales_initiative.update` |
 | Reports and analytics | `change_reports.publish_draft` | `publish_reporting_report_draft` | `installation_settings.read` `report_definition.read` `report_definition.update` |
 | Reports and analytics | `change_reports.publish_framework` | `publish_reporting_framework` | `reporting_framework.read` `reporting_framework.update` |
-| Reports and analytics | `change_reports.record_decision` | `record_sales_decision` | `activity.create` `activity.read` `installation_settings.read` |
-| Reports and analytics | `change_reports.record_decision_outcome` | `record_sales_decision_outcome` | `activity.read` `activity.update` |
+| Reports and analytics | `change_reports.record_decision` | `record_sales_decision` | `activity.create` `activity.read` `installation_settings.read` `relationship.read` |
+| Reports and analytics | `change_reports.record_decision_outcome` | `record_sales_decision_outcome` | `activity.read` `activity.update` `relationship.read` |
 | Reports and analytics | `change_reports.replace_initiative_members` | `replace_sales_initiative_members` | `sales_initiative.read` `sales_initiative.update` |
 | Reports and analytics | `change_reports.restore_revision` | `restore_reporting_report_revision` | `installation_settings.read` `report_definition.read` `report_definition.update` |
 | Reports and analytics | `change_reports.retry_execution` | `retry_reporting_execution` | `report_edition.read` `report_edition.update` |
@@ -1271,7 +1271,7 @@ A check is `object.action`, or `object.a|b` for any one of them. `*.action` is t
 | Reports and analytics | `read_reports.analytics_context` | `get_analytics_context` | `forecast.read` `installation_settings.read` |
 | Reports and analytics | `read_reports.analytics_schema` | `get_analytics_schema` | `activity.read` `deal.read` `lead.read` `project.read` |
 | Reports and analytics | `read_reports.company_coverage` | `get_company_coverage` | `activity.read` `company.read` `contact.read` `deal.read` `relationship.read` |
-| Reports and analytics | `read_reports.evidence` | `search_report_evidence` | `activity.read` `deal.read` `installation_settings.read` `lead.read` `project.read` |
+| Reports and analytics | `read_reports.evidence` | `search_report_evidence` | `activity.read` `deal.read` `installation_settings.read` `lead.read` `project.read` `relationship.read` |
 | Reports and analytics | `read_reports.question_card_answer` | `answer_reporting_question_card` | `activity.read` `company.read` `deal.read` `installation_settings.read` `lead.read` `project.read` `report_definition.read` |
 | Reports and analytics | `read_reports.question_card_records` | `explain_reporting_question_card` | `activity.read` `deal.read` `installation_settings.read` `lead.read` `project.read` `report_definition.read` |
 | Reports and analytics | `read_reports.report_revisions` | `list_reporting_report_revisions` | `report_definition.read` `report_definition.update` |
@@ -1279,7 +1279,7 @@ A check is `object.action`, or `object.a|b` for any one of them. `*.action` is t
 | Reports and analytics | `read_reports.report_run_cell_records` | `explain_report_run_cell` | `activity.read` `deal.read` `installation_settings.read` `lead.read` `project.read` |
 | Reports and analytics | `read_reports.report_runs` | `list_report_runs` | `activity.read` `deal.read` `lead.read` `project.read` |
 | Reports and analytics | `read_reports.run` | `run_report` | `activity.read` `installation_settings.read` `project.read` |
-| Reports and analytics | `read_reports.sales_decisions` | `list_sales_decisions` | `activity.read` |
+| Reports and analytics | `read_reports.sales_decisions` | `list_sales_decisions` | `activity.read` `relationship.read` |
 | Reports and analytics | `read_reports.sales_initiative` | `get_sales_initiative` | `sales_initiative.read` |
 | Reports and analytics | `read_reports.sales_initiative_members` | `list_sales_initiative_members` | `sales_initiative.read` |
 | Reports and analytics | `read_reports.sales_initiatives` | `list_sales_initiatives` | `sales_initiative.read` |
@@ -1329,7 +1329,7 @@ A check is `object.action`, or `object.a|b` for any one of them. `*.action` is t
 | Tags | `read_tags.list` | `list_tags` | `tag.read` |
 | Tags | `read_tags.record` | `get_record_tags` | `company.read,contact.read,deal.read,lead.read` |
 | Search and record context | `find_records.identify` | `resolve_entities` | `company.read` |
-| Search and record context | `find_records.meaning` | `search_context` | `activity.read` `company.read` |
+| Search and record context | `find_records.meaning` | `search_context` | `activity.read` `company.read` `relationship.read` |
 | Search and record context | `find_records.query` | `query_workspace` | `company.read` `deal.read` `project.read` |
 | Search and record context | `find_records.search` | `search_records` | `company.read` `contact.read` `relationship.read` |
 | Search and record context | `read_context.catch_up` | `catch_me_up_on` | `activity.read,company.read,contact.read,lead.read,project.read` `company.read,contact.read,lead.read,project.read,relationship.read` |
@@ -1766,9 +1766,9 @@ A check is `object.action`, or `object.a|b` for any one of them. `*.action` is t
 |  | `decide_approvals.bundle` | `decide_approval_bundle` | `company.read` `company.update` |
 |  | `decide_approvals.one` | `decide_approval` | `company.read` `company.update` |
 |  | `enrich` | `enrich` | `company.read` `company.update` |
-|  | `find_records.list` | `list_records` | `activity.read,commission.read,company.read,deal_room.read,offer_template.read,product.read` `activity.read,commission.read,company.read,deal_room.update,offer_template.read,product.read` `activity.read,commission.read,contact.read,deal_room.read,lead.read,offer_template.read,partner.read,product.read,project.read` `activity.read,commission.read,contact.read,deal_room.update,lead.read,offer_template.read,partner.read,product.read,project.read` `activity.read,commission.read,deal_room.read,lead.read,offer_template.read,partner.read,product.read,project.read,relationship.read` `activity.read,commission.read,deal_room.update,lead.read,offer_template.read,partner.read,product.read,project.read,relationship.read` `activity.read,company.read,deal.read,deal_room.read,offer_template.read,product.read` `activity.read,company.read,deal.read,deal_room.update,offer_template.read,product.read` `activity.read,contact.read,deal.read,deal_room.read,lead.read,offer_template.read,partner.read,product.read,project.read` `activity.read,contact.read,deal.read,deal_room.update,lead.read,offer_template.read,partner.read,product.read,project.read` `activity.read,deal.read,deal_room.read,lead.read,offer_template.read,partner.read,product.read,project.read,relationship.read` `activity.read,deal.read,deal_room.update,lead.read,offer_template.read,partner.read,product.read,project.read,relationship.read` |
+|  | `find_records.list` | `list_records` | `activity.read,commission.read,company.read,deal_room.read,offer_template.read,product.read` `activity.read,commission.read,company.read,deal_room.update,offer_template.read,product.read` `activity.read,commission.read,contact.read,deal_room.read,lead.read,offer_template.read,partner.read,product.read,project.read` `activity.read,commission.read,contact.read,deal_room.update,lead.read,offer_template.read,partner.read,product.read,project.read` `activity.read,company.read,deal.read,deal_room.read,offer_template.read,product.read` `activity.read,company.read,deal.read,deal_room.update,offer_template.read,product.read` `activity.read,contact.read,deal.read,deal_room.read,lead.read,offer_template.read,partner.read,product.read,project.read` `activity.read,contact.read,deal.read,deal_room.update,lead.read,offer_template.read,partner.read,product.read,project.read` `commission.read,company.read,deal_room.read,offer_template.read,product.read,relationship.read` `commission.read,company.read,deal_room.update,offer_template.read,product.read,relationship.read` `commission.read,deal_room.read,lead.read,offer_template.read,partner.read,product.read,project.read,relationship.read` `commission.read,deal_room.update,lead.read,offer_template.read,partner.read,product.read,project.read,relationship.read` `company.read,deal.read,deal_room.read,offer_template.read,product.read,relationship.read` `company.read,deal.read,deal_room.update,offer_template.read,product.read,relationship.read` `deal.read,deal_room.read,lead.read,offer_template.read,partner.read,product.read,project.read,relationship.read` `deal.read,deal_room.update,lead.read,offer_template.read,partner.read,product.read,project.read,relationship.read` |
 |  | `read_lists` | `read_lists` | `company.read` `list.read` |
-|  | `read_record` | `read_record` | `activity.read,company.read,deal_room.read,lead.read,product.read` `activity.read,company.read,deal_room.update,lead.read,product.read` `activity.read,contact.read,deal_room.read,lead.read,offer.read,product.read,project.read` `activity.read,contact.read,deal_room.update,lead.read,offer.read,product.read,project.read` `activity.read,deal.read,deal_room.read,lead.read,offer.read,product.read,relationship.read` `activity.read,deal.read,deal_room.update,lead.read,offer.read,product.read,relationship.read` `activity.read,deal_room.read,lead.read,offer.read,product.read,project.read,relationship.read` `activity.read,deal_room.update,lead.read,offer.read,product.read,project.read,relationship.read` |
+|  | `read_record` | `read_record` | `activity.read,company.read,deal_room.read,lead.read,product.read` `activity.read,company.read,deal_room.update,lead.read,product.read` `activity.read,contact.read,deal_room.read,lead.read,offer.read,product.read,project.read` `activity.read,contact.read,deal_room.update,lead.read,offer.read,product.read,project.read` `company.read,deal_room.read,lead.read,product.read,relationship.read` `company.read,deal_room.update,lead.read,product.read,relationship.read` `deal.read,deal_room.read,lead.read,offer.read,product.read,relationship.read` `deal.read,deal_room.update,lead.read,offer.read,product.read,relationship.read` `deal_room.read,lead.read,offer.read,product.read,project.read,relationship.read` `deal_room.update,lead.read,offer.read,product.read,project.read,relationship.read` |
 |  | `read_reports.standard` | `read_reporting` | `report_definition.read` |
 |  | `read_view` | `read_view` | `custom_field.read` `deal.read` |
 |  | `resolve_duplicates.dismiss` | `decide_duplicate` | `company.read` `company.update` |
