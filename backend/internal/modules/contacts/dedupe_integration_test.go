@@ -93,7 +93,7 @@ func setupDedupe(t *testing.T) *dedupeEnv {
 	// would go on writing into the database the NEXT test just reset.
 	testdb.AssertPoolsQuiesced(t)
 	e.store = NewStore(database.BindTo(pool, ids.From[ids.WorkspaceKind](e.ws))).
-		WithInstallationRenamer(ignoreInstallationName)
+		WithInstallationRenamer(ignoreInstallationName).WithSenderStamp(noSenderStamp)
 	return e
 }
 

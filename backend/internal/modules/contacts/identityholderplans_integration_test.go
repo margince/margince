@@ -113,11 +113,12 @@ func TestIdentityHolderPlansReadOnlyTheRequestedMailboxes(t *testing.T) {
 }
 
 func identityMailPlanIsBounded(node mailboxPlanNode, matches, leads int) bool {
-	// An address is looked up by its dedupe key or by its mailbox base, so
-	// either index on contact_email reads only the matching mailbox.
+	// An address is looked up by its dedupe key, its every-holder key or its
+	// mailbox base. Each of those indexes reads only the matching mailbox.
 	indexes := map[string][]string{
-		"contact": {"contact_pkey"}, "contact_email": {"uq_contact_email_dedupe", "idx_contact_email_mailbox_base"},
-		"lead": {"uq_lead_email_dedupe"},
+		"contact":       {"contact_pkey"},
+		"contact_email": {"uq_contact_email_dedupe", "idx_contact_email_every_holder", "idx_contact_email_mailbox_base"},
+		"lead":          {"uq_lead_email_dedupe"},
 	}
 	limit := matches
 	if node.RelationName == "lead" {

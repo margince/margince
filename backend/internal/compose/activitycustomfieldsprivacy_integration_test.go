@@ -78,7 +78,7 @@ func TestErasureEmptiesAnActivitysCustomFieldValues(t *testing.T) {
 		t.Fatalf("the logged value was not stored: %q", got)
 	}
 
-	if err := privacy.NewEraser(e.DB()).EraseContact(e.Admin(), contact.UUID, "subject request"); err != nil {
+	if err := eraserWithGraph(e.DB()).EraseContact(e.Admin(), contact.UUID, "subject request"); err != nil {
 		t.Fatalf("EraseContact: %v", err)
 	}
 	if got := storedVisitNote(t, e, activityID, column); got != "" {
@@ -106,7 +106,7 @@ func TestReleasingAHeldActivityEmptiesItsCustomFieldValues(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	eraser := privacy.NewEraser(e.DB()).WithRawCapturePurger(RawCapturePurgerFor(e.DB()))
+	eraser := eraserWithGraph(e.DB()).WithRawCapturePurger(RawCapturePurgerFor(e.DB()))
 	if err := eraser.ReleaseRestriction(releaseControllerCtx(e), held, reason); err != nil {
 		t.Fatalf("ReleaseRestriction: %v", err)
 	}

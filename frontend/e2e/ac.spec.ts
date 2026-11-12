@@ -288,6 +288,8 @@ const primaryDestinations = [
   "Projekte",
   "Filter und Ansichten",
   "Analytics",
+  "Mein Fortschritt",
+  "Umsatzziele",
 ];
 
 // settleAnimations' own case, because the gap it closes is invisible to every
@@ -405,8 +407,7 @@ test("AC-shell-1k: one h1 per railed page, and on a record it is the record's ow
 test("AC-shell-3/4/5: ⌘K opens focused+empty, filters, Enter navigates", async ({
   page,
 }) => {
-  await page.goto("/#/home");
-  await page.locator("body").click();
+  await openForKeys(page, "home");
   await page.keyboard.press("ControlOrMeta+k");
   const input = page.getByRole("searchbox", { name: "Befehlspalette" });
   await expect(input).toBeFocused();
@@ -3637,47 +3638,52 @@ test.describe("calling a contact", () => {
       return { opener, dialog };
     }
 
-    test("a task from a call offers Call, Draft email and Open contact, in tab order", async ({
+    test("a reply to a call offers its number, its chats, Copy number and Call, in tab order", async ({
       page,
     }) => {
       const { opener, dialog } = await openTask(page, taskFromCall.subject);
+      const number = dialog.locator(`a[href="${tel}"]`).first();
+      const copy = dialog.getByRole("button", {
+        name: de["task.next.copyNumber"],
+        exact: true,
+      });
       const call = callVerb(dialog);
-      const email = dialog.getByRole("button", {
-        name: de["task.next.draftEmail"],
-        exact: true,
-      });
-      const open = dialog.getByRole("link", {
-        name: de["task.next.openContact"],
-        exact: true,
-      });
+      await expect(number).toBeVisible();
+      await expect(copy).toBeVisible();
       await expect(call).toHaveAttribute("href", tel);
-      await expect(email).toBeVisible();
-      await expect(open).toHaveAttribute(
-        "href",
-        `/#/contacts/${CALLED_CONTACT}`,
-      );
+      // Mail is the other way, offered after the call.
+      await expect(
+        dialog.getByRole("button", {
+          name: de["task.next.draftEmail"],
+          exact: true,
+        }),
+      ).toBeVisible();
       await settleAnimations(page);
-      await expectNoAaViolations(page, "home (task from a call open)");
+      await expectNoAaViolations(page, "home (task to call open)");
 
       await dialog.locator("a[href], button:not([disabled])").first().focus();
       for (let press = 0; press < 12; press += 1) {
-        if (await call.evaluate((node) => node === document.activeElement)) {
+        if (await number.evaluate((node) => node === document.activeElement)) {
           break;
         }
         await page.keyboard.press("Tab");
       }
+      await expect(number).toBeFocused();
+      await page.keyboard.press("Tab");
+      await expect(
+        dialog.getByRole("button", { name: de["callAction.chats"] }),
+      ).toBeFocused();
+      await page.keyboard.press("Tab");
+      await expect(copy).toBeFocused();
+      await page.keyboard.press("Tab");
       await expect(call).toBeFocused();
-      await page.keyboard.press("Tab");
-      await expect(email).toBeFocused();
-      await page.keyboard.press("Tab");
-      await expect(open).toBeFocused();
 
       await page.keyboard.press("Escape");
       await expect(dialog).toBeHidden();
       await expect(opener).toBeFocused();
     });
 
-    test("a task typed by hand offers Call, Draft email and Open contact", async ({
+    test("a task typed by hand reaches out: Draft email, Call and Open contact", async ({
       page,
     }) => {
       const { dialog } = await openTask(page, typedTask.subject);

@@ -1,0 +1,15 @@
+{
+  "tool": "change_reports",
+  "action": "create_schedule",
+  "verb": "create_reporting_schedule",
+  "allowed_for": [
+    "admin",
+    "management",
+    "manager",
+    "rep"
+  ],
+  "refused_for": [
+    "ops",
+    "read_only"
+  ]
+}

@@ -174,14 +174,16 @@ func settlementAnswersSQL() string {
 //
 // Held by: TestOurOwnOutboundIsAskedTheSameWayEverywhere
 // (backend/internal/modules/activities/ourownoutbound_test.go)
-var newestAnswerSince = newestAnswer("newest.id")
+var newestAnswerSince = newestAnswer("newest.id", "")
 
 // newestAnswerRow is that newest answer's id and time, read by the same walk,
 // for the candidate read to select and order by without walking twice.
-var newestAnswerRow = newestAnswer("newest.id, newest.occurred_at")
+var newestAnswerRow = newestAnswer("newest.id, newest.occurred_at", "")
 
-func newestAnswer(column string) string {
-	return `SELECT ` + column + ` FROM (` + settlementAnswersSQL() + `) newest
+// newestAnswer selects column from the newest answer that `join` keeps; an
+// empty join keeps every answer.
+func newestAnswer(column, join string) string {
+	return `SELECT ` + column + ` FROM (` + settlementAnswersSQL() + `) newest ` + join + `
         ORDER BY newest.occurred_at DESC, newest.id DESC LIMIT 1`
 }
 

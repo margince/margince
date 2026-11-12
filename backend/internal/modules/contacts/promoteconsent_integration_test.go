@@ -101,7 +101,7 @@ func setupPromoteConsent(t *testing.T) *promoteConsentEnv {
 	// The pool outlives the test now, so a goroutine still holding a connection
 	// would go on writing into the database the NEXT test just reset.
 	testdb.AssertPoolsQuiesced(t)
-	e.store = NewStore(database.BindTo(pool, ids.From[ids.WorkspaceKind](e.ws))).
+	e.store = NewStore(database.BindTo(pool, ids.From[ids.WorkspaceKind](e.ws))).WithSenderStamp(noSenderStamp).
 		WithSettings(configtest.StoredOver(t, pool, ConfigSettings())).
 		// The grant read compose binds to identity. Spelled here over the same
 		// role tables rather than stubbed to true: a stub would make every

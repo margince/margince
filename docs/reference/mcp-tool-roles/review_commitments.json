@@ -1,0 +1,14 @@
+{
+  "tool": "read_attention",
+  "action": "commitments",
+  "verb": "review_commitments",
+  "allowed_for": [
+    "admin",
+    "management",
+    "manager",
+    "ops",
+    "read_only",
+    "rep"
+  ],
+  "refused_for": []
+}

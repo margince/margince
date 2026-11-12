@@ -24,6 +24,7 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 
+	"github.com/margince/margince/backend/internal/compose/capturetimeline"
 	"github.com/margince/margince/backend/internal/compose/integration"
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/capture"
@@ -360,7 +361,7 @@ func TestARefusedFileLeavesAnObservableReason(t *testing.T) {
 // the real wiring was free to rot, because nothing under test was the thing
 // that ships.
 func fileKeeper(pool *pgxpool.Pool, blob blobstore.Store) capture.FileKeeper {
-	return capturedFileKeeper{store: activities.NewStore(InstallationDB(pool)).WithBlobstore(blob)}
+	return capturetimeline.FileKeeper{Store: activities.NewStore(InstallationDB(pool)).WithBlobstore(blob)}
 }
 
 // A captured file carries no company stamp, whether its message is filed

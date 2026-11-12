@@ -1,0 +1,7 @@
+{
+  "verb": "preview_ai_task_overrides",
+  "checks": [
+    "ai_routing.read",
+    "ai_routing.update"
+  ]
+}

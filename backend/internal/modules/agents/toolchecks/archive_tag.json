@@ -1,0 +1,9 @@
+{
+  "verb": "archive_tag",
+  "checks": [
+    "tag.delete"
+  ],
+  "takes": [
+    "tag"
+  ]
+}

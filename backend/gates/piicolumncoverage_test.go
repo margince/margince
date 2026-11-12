@@ -197,7 +197,7 @@ var erasureColumnBaseline = map[string][]string{
 		"channel_provider",
 		"direction",
 		"kind",
-		"meeting_status",
+		"meeting_status", "task_type",
 		// How a call ended: a closed list (reached, voicemail, ...) about
 		// the call, never words the subject wrote, so erasure has nothing to
 		// clear here.
@@ -577,7 +577,7 @@ func cascadeStatements(t *testing.T, consts map[string]string) []string {
 			})
 		}
 	}
-	return out
+	return append(out, declaredErasureStatements(t)...)
 }
 
 // executedSQL answers the argument a pgx call EXECUTES, if the node is one.

@@ -1,0 +1,15 @@
+{
+  "tool": "change_my_settings",
+  "action": "create_voice_profile",
+  "verb": "create_voice_profile",
+  "allowed_for": [
+    "admin",
+    "management",
+    "manager",
+    "ops",
+    "rep"
+  ],
+  "refused_for": [
+    "read_only"
+  ]
+}

@@ -34,8 +34,8 @@ trap cleanup EXIT
 	echo "MARGINCE_KEYVAULT_ROOT_KEY=$(openssl rand -base64 32)"
 	echo "MARGINCE_ADMIN_PASSWORD=$(openssl rand -hex 24)"
 	echo "MARGINCE_PORT=$port"
+	echo "MARGINCE_ENV=dev"
 } >.env
-echo "MARGINCE_ENV=dev" >margince.env
 
 docker compose up -d --quiet-pull
 

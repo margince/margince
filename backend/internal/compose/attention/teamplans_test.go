@@ -206,7 +206,7 @@ func TestASlowTeamReadStopsAtOneLaneBudgetAndNamesWhoWasNotAsked(t *testing.T) {
 // read was given.
 type budgetsSeen struct{ budgets *[]time.Duration }
 
-func (b budgetsSeen) InSnapshot(ctx context.Context, fn func(context.Context) error) error {
+func (b budgetsSeen) InSnapshot(ctx context.Context, _ string, fn func(context.Context) error) error {
 	return fn(ctx)
 }
 

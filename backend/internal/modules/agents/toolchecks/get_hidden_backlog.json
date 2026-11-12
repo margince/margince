@@ -1,0 +1,7 @@
+{
+  "verb": "get_hidden_backlog",
+  "checks": [
+    "activity.read",
+    "scope:team"
+  ]
+}

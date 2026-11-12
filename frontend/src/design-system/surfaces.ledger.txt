@@ -39,7 +39,6 @@ src/design-system/readings.css: .btn.btn-link.segbar-step-2 { background: color-
 src/design-system/readings.css: .chip { background: var(--bgElevated) }
 src/design-system/readings.css: .meterbar.meterbar-has-part > span { background: color-mix(in srgb, var(--accentText) 40%, var(--bgElevated)) }
 src/design-system/readings.css: .segbar-marker { border-inline: 2px solid var(--bgElevated) }
-src/design-system/readings.css: .segbar-part + .segbar-part { border-left: 2px solid var(--bgElevated) }
 src/design-system/readings.css: .segbar-step-1 { background: color-mix(in srgb, var(--accentText) 55%, var(--bgElevated)) }
 src/design-system/readings.css: .segbar-step-2 { background: color-mix(in srgb, var(--accentText) 20%, var(--bgElevated)) }
 src/design-system/recordchip.css: .record-chip { background: var(--bgElevated) }
@@ -47,7 +46,6 @@ src/design-system/relationshipmap.css: .rmap-box { fill: var(--bgElevated) }
 src/design-system/report-charts.css: .report-chart-column-secondary .report-chart-column-fill { background: color-mix(in srgb, var(--accent) 38%, var(--bgElevated)) }
 src/design-system/report-charts.css: .report-chart-dot { border: 2px solid var(--bgElevated) }
 src/design-system/report-charts.css: .report-chart-key-range::before { border-color: color-mix(in srgb, var(--accent) 35%, var(--bgElevated)) }
-src/design-system/report-charts.css: .report-chart-range-band { background: color-mix(in srgb, var(--accent) 35%, var(--bgElevated)) }
 src/design-system/richtext.css: .richtext { background: var(--bgElevated) }
 src/design-system/richtext.css: .richtext-foot { background: var(--bgElevated) }
 src/design-system/setpicker.css: .set-picker-frame { background: var(--bgElevated) }
@@ -58,7 +56,7 @@ src/design-system/switch.css: .switchcontrol:disabled[aria-checked="true"] .swit
 src/design-system/switch.css: .switchknob { background: var(--bgElevated) }
 src/design-system/visibility.css: .visibility { background: var(--bgElevated) }
 src/design-system/visibility.css: .visibility-withheld { background: linear-gradient(var(--warningBg), var(--warningBg)), var(--bgElevated) }
-src/features/contacts/contact360.css: .pe-meeting-date { background: var(--bgElevated) }
+src/components/meetingrows.css: .meetingrows-date { background: var(--bgElevated) }
 src/design-system/documenttile.css: .board-doc-kind { background: var(--bgElevated) }
 src/design-system/documenttile.css: .board-doc-page { background: var(--bgElevated) }
 src/features/mail/compose.css: .schedule-hour { background: var(--bgElevated) }

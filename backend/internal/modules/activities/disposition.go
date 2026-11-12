@@ -261,12 +261,13 @@ func (s *Store) SetMessageNotMine(ctx context.Context, id ids.ActivityID) error 
 }
 
 // MarkMessageHandled records that this reader dealt with the message another
-// way: by phone, in a meeting, or with no reply owed.
+// way: by phone, in a meeting, or with no reply owed. On a message we sent it
+// says the reader needs no answer to it (ensureDoneMessage).
 //
-// It carries no moment and nothing lifts it. The customer's next message is a
+// It carries no moment and nothing lifts it. The next message either way is a
 // new activity with no state, so it reaches the list on its own.
 func (s *Store) MarkMessageHandled(ctx context.Context, id ids.ActivityID) error {
-	return s.judgeMessage(ctx, id, s.writeReaderState(id, stateHandled, nil, "", nil, ensureInboundMessage))
+	return s.judgeMessage(ctx, id, s.writeReaderState(id, stateHandled, nil, "", nil, s.ensureDoneMessage))
 }
 
 // ClearMessageDisposition picks a message back up — the undo behind every

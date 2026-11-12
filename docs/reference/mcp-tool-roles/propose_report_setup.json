@@ -1,0 +1,15 @@
+{
+  "tool": "run_research",
+  "action": "propose_report_setup",
+  "verb": "propose_report_setup",
+  "allowed_for": [
+    "admin",
+    "management",
+    "manager"
+  ],
+  "refused_for": [
+    "ops",
+    "read_only",
+    "rep"
+  ]
+}

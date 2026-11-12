@@ -101,7 +101,7 @@ func clientInputValidation(err error) (error, bool) {
 	// carrying its own field and machine code — the parse-don't-validate
 	// seam's single wire mapping.
 	if badValue, ok := errors.AsType[*values.ParseError](err); ok {
-		return Validation(badValue.Field, badValue.Code, badValue.Message), true
+		return withMax(Validation(badValue.Field, badValue.Code, badValue.Message), badValue.Max), true
 	}
 
 	// A payload the datasource seam refused to decode is a 422, never a 500. A
@@ -211,7 +211,11 @@ func moduleDeclaredFault(err error) (error, bool) {
 
 	if fieldFault, ok := errors.AsType[apperrors.FieldFault](err); ok {
 		field, code, message := fieldFault.FieldFault()
-		return Validation(boundFaultText(field), boundFaultText(code), boundFaultText(message)), true
+		refusal := Validation(boundFaultText(field), boundFaultText(code), boundFaultText(message))
+		if limited, ok := fieldFault.(fieldMaxer); ok {
+			return withMax(refusal, limited.FieldMax()), true
+		}
+		return refusal, true
 	}
 
 	// A refusal with no field to name: it still must classify, or the MCP
@@ -447,6 +451,15 @@ type FieldError struct {
 	Field   string `json:"field"`
 	Code    string `json:"code"`
 	Message string `json:"message"`
+	// Max is the limit a too_long refusal names, so a screen can say the
+	// number in the reader's language. Zero is "not stated".
+	Max int `json:"max,omitempty"`
+}
+
+// fieldMaxer is a FieldFault that also states the limit it refused at. It is
+// declared here rather than in apperrors because only this mapping reads it.
+type fieldMaxer interface {
+	FieldMax() int
 }
 
 // DetailedError carries a non-sentinel wire shape: validation errors

@@ -1,0 +1,10 @@
+{
+  "verb": "request_company_vat_check",
+  "checks": [
+    "company.update"
+  ],
+  "takes": [
+    "company",
+    "profile_field"
+  ]
+}

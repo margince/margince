@@ -243,8 +243,23 @@ type owedPredictionSink struct {
 	decline  func(context.Context, owedCandidate, error) error
 }
 
+// judgeBatch sends the model only messages with words of their own. One that is
+// only a quote or a forward asks nothing of us: it is stamped declined, unjudged.
 func (c *OwedClassifier) judgeBatch(ctx context.Context, batch []owedCandidate, readAt time.Time, calls *sweepCalls) (int, error) {
-	return c.predictBatch(ctx, batch, calls, owedPredictionSink{
+	worded := make([]owedCandidate, 0, len(batch))
+	for _, msg := range batch {
+		if msg.Body != "" {
+			worded = append(worded, msg)
+			continue
+		}
+		if _, err := c.store.MarkOwedVerdictDeclined(ctx, msg.ID, owedverdict.Ruleset); err != nil {
+			return 0, err
+		}
+	}
+	if len(worded) == 0 {
+		return len(batch), nil
+	}
+	judged, err := c.predictBatch(ctx, worded, calls, owedPredictionSink{
 		accept: func(ctx context.Context, msg owedCandidate, result owedResult) (bool, error) {
 			return c.store.SetOwedVerdict(ctx, msg.ID, result.Verdict, owedverdict.Ruleset, readAt)
 		},
@@ -257,6 +272,7 @@ func (c *OwedClassifier) judgeBatch(ctx context.Context, batch []owedCandidate, 
 			return nil
 		},
 	})
+	return judged + len(batch) - len(worded), err
 }
 
 func (c *OwedClassifier) predictBatch(ctx context.Context, batch []owedCandidate, calls *sweepCalls, sink owedPredictionSink) (int, error) {

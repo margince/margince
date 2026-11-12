@@ -1,0 +1,6 @@
+{
+  "verb": "read_job_health",
+  "checks": [
+    "job_health.read"
+  ]
+}

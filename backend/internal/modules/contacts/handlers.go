@@ -23,6 +23,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/extprivacy"
 	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/signature"
 	"github.com/margince/margince/backend/internal/shared/ports/fieldcatalog"
 )
 
@@ -63,6 +64,9 @@ type Handlers struct {
 	// tightLogos is the legacy keys this process has seen need no crop, shared
 	// across With* copies for the same reason as the map above.
 	tightLogos *tightLogoKeys
+	// signatureImages draws a retained signature preview's https images; nil
+	// leaves them as addresses the app's page will not load.
+	signatureImages signature.PreviewImages
 }
 
 // NewHandlers builds the module's HTTP surface over a workspace-bound handle.

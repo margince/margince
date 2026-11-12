@@ -1,0 +1,13 @@
+{
+  "verb": "accept_attachment_extraction",
+  "checks": [
+    "company.read",
+    "deal.read",
+    "deal.update",
+    "project.read"
+  ],
+  "takes": [
+    "attachment",
+    "read_attachment"
+  ]
+}

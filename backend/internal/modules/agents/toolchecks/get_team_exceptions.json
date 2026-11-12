@@ -1,0 +1,17 @@
+{
+  "verb": "get_team_exceptions",
+  "checks": [
+    "activity.read",
+    "automation.read",
+    "company.read",
+    "contact.read",
+    "deal.read",
+    "installation_settings.read",
+    "introduction.read",
+    "lead.read",
+    "project.read",
+    "relationship.read",
+    "scope:team",
+    "tag.read"
+  ]
+}

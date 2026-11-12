@@ -12,6 +12,9 @@ package privacy
 // SupportsRetentionAction reports whether the engine can perform this action on
 // this object type. The authoring surface refuses a pair it answers false for.
 func SupportsRetentionAction(objectType, action string) bool {
+	if objectType == extensionObjectType {
+		return supportsExtensionAction(action)
+	}
 	_, ok := retentionActions[objectType+"/"+action]
 	return ok
 }

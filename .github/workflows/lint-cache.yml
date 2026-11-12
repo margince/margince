@@ -33,8 +33,10 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: false
 
+# A job in the CI image runs `sh` unless told otherwise, and the steps use bash.
 defaults:
   run:
+    shell: bash
     working-directory: backend
 
 env:

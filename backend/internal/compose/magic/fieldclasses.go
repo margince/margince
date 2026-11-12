@@ -18,7 +18,7 @@ var syntheticAuditFields = setOf(
 	"guest_answers_changed", "guest_links_added", "guests_added", "guests_left_out", "guests_retired",
 	"invitation_status", "legal_entity_id", "lifted_by", "lifted_by_level", "lifted_suppression",
 	"meeting_documents_added", "meeting_guests_removed", "merged_from_id", "merged_into_id", "note",
-	"nudge_dismissal", "override_category", "overrides_carried", "proposal_status",
+	"nudge_dismissal", "overrides_carried", "proposal_status",
 	"provider_claims_received", "qualifying_event", "qualifying_event_retracted", "reachability",
 	"readiness", "reason", "recorded_at_level", "relinked_activity_links", "relinked_emails",
 	"relinked_phones", "relinked_relationships", "reminder_status", "reply_verdict", "reply_verdict_by",
@@ -72,7 +72,7 @@ var internalColumns = map[string]map[string]bool{
 	typeActivity: setOf(
 		"system_text",
 		"agenda_fingerprint", "audience", "body_completeness", "booking_interval_exact",
-		"bulk_mail_attested", "calendar_method", "calendar_uid", "capture_label", "capture_label_declined_at",
+		"bulk_mail_attested", "calendar_event", "calendar_method", "calendar_uid", "capture_label", "capture_label_declined_at",
 		"capture_label_declined_ruleset", "capture_labeled_at", "channel_provider", "claims_host_slot",
 		"counterparty_email", "counterparty_outbound_attested", "deal_topic_checked_at", "deal_topic_digest",
 		"direction", "domain_evidence_version",

@@ -15,6 +15,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 // rulesetColumn names the verdict's ruleset in the audit images.
@@ -82,8 +83,10 @@ func RestoreMailBodyTx(ctx context.Context, tx pgx.Tx, r MailBodyRestoration) (b
 		ruleset      *string
 	}
 	var threadKey *string
+	var replyCleared bool
 	err := tx.QueryRow(ctx, `
-		WITH old AS (SELECT body_completeness, owed_verdict_ruleset FROM activity WHERE id = $1 AND restricted_at IS NULL)
+		WITH old AS (SELECT body_completeness, owed_verdict_ruleset, reply_verdict FROM activity
+		              WHERE id = $1 AND restricted_at IS NULL)
 		UPDATE activity a SET body = $2, body_completeness = $3, language = NULL,
 		       -- A cleared label returns the row to the classify backlog. The stamp
 		       -- goes with it: activity_capture_label_stamped holds the two together.
@@ -92,25 +95,38 @@ func RestoreMailBodyTx(ctx context.Context, tx pgx.Tx, r MailBodyRestoration) (b
 		       -- out of the backlog the cleared label returns it to.
 		       capture_label_declined_at = NULL, capture_label_declined_ruleset = NULL,
 		       owed_verdict_declined_at = NULL, owed_verdict_declined_ruleset = NULL,
+		       -- The classifier's reply verdict judged the old text and is written
+		       -- once, so it is cleared for the pass to judge again. A human's stays.
+		       reply_verdict = CASE WHEN `+humanJudgedReplySQL+` THEN a.reply_verdict END,
+		       reply_verdict_at = CASE WHEN `+humanJudgedReplySQL+` THEN a.reply_verdict_at END,
+		       reply_verdict_by = CASE WHEN `+humanJudgedReplySQL+` THEN a.reply_verdict_by END,
 		       subject = COALESCE($6, a.subject),
 		       owed_verdict_ruleset = CASE WHEN `+humanReviewedOwedSQL("a")+` THEN a.owed_verdict_ruleset END
 		  FROM old
 		 WHERE a.id = $1 AND a.version = $4 AND a.body = $5
 		   AND `+mailTextIsTheirsSQL(r.Subject != nil)+`
-		RETURNING old.body_completeness, old.owed_verdict_ruleset, a.body_completeness, a.owed_verdict_ruleset, a.thread_key`,
+		RETURNING old.body_completeness, old.owed_verdict_ruleset, a.body_completeness, a.owed_verdict_ruleset, a.thread_key,
+		          old.reply_verdict IS NOT NULL AND a.reply_verdict IS NULL`,
 		r.Activity, r.Body, r.Completeness, r.Version, r.StoredBody, r.Subject).
-		Scan(&before.completeness, &before.ruleset, &after.completeness, &after.ruleset, &threadKey)
+		Scan(&before.completeness, &before.ruleset, &after.completeness, &after.ruleset, &threadKey, &replyCleared)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return false, nil, nil
 	}
 	if err != nil {
 		return false, nil, fmt.Errorf("activities: restoring a mail body from its original: %w", err)
 	}
+	if err := recordReplyVerdictCleared(ctx, tx, r.Activity, replyCleared); err != nil {
+		return false, nil, err
+	}
 	// The body itself stays out of the audit row, as at capture; the trail
 	// records that it was restored and what that changed.
+	image := restoredImage(after.completeness, after.ruleset, r.Subject != nil)
+	if replyCleared {
+		image["reply_verdict"] = nil
+	}
 	auditID, err := storekit.Audit(ctx, tx, "update", "activity", r.Activity,
 		map[string]any{"body_completeness": before.completeness, rulesetColumn: before.ruleset},
-		restoredImage(after.completeness, after.ruleset, r.Subject != nil))
+		image)
 	if err != nil {
 		return false, nil, err
 	}
@@ -121,4 +137,22 @@ func RestoreMailBodyTx(ctx context.Context, tx pgx.Tx, r MailBodyRestoration) (b
 		return false, nil, err
 	}
 	return true, threadKey, nil
+}
+
+// humanJudgedReplySQL is true when the newest reply verdict on the row a came
+// from a human; a restore keeps that one.
+const humanJudgedReplySQL = `COALESCE((SELECT h.is_human FROM activity_reply_verdict_history h
+	WHERE h.activity_id = a.id ORDER BY h.decided_at DESC, h.id DESC LIMIT 1), false)`
+
+// recordReplyVerdictCleared appends the restore's clear to the verdict
+// history, so the history still ends in the row's current answer.
+func recordReplyVerdictCleared(ctx context.Context, tx pgx.Tx, id ids.UUID, cleared bool) error {
+	if !cleared {
+		return nil
+	}
+	actor, ok := principal.Actor(ctx)
+	if !ok {
+		return errNoActorForCorrection
+	}
+	return appendReplyVerdictHistory(ctx, tx, id, nil, actor.ID, false)
 }

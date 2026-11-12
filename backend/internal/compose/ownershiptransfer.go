@@ -85,6 +85,9 @@ func (e *ownershipNoteError) FieldFault() (field, code, message string) {
 	return bulkParamNote, "too_long", e.Error()
 }
 
+// FieldMax is the note's limit.
+func (e *ownershipNoteError) FieldMax() int { return ownershipNoteMaxRunes }
+
 var errOwnerUnavailable = &contacts.TransferRefusal{
 	Code:    "owner_unavailable",
 	Message: "The owner of this record cannot be asked, because they are suspended or have left. Ask an administrator to hand it over.",

@@ -1,0 +1,11 @@
+{
+  "verb": "refresh_company_growth_fit",
+  "checks": [
+    "company.read",
+    "contact.read",
+    "relationship.read"
+  ],
+  "takes": [
+    "company"
+  ]
+}

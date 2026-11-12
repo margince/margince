@@ -1,0 +1,15 @@
+{
+  "tool": "read_workspace",
+  "action": "ai_task_flow",
+  "verb": "get_ai_task_flow",
+  "allowed_for": [
+    "admin",
+    "management",
+    "ops"
+  ],
+  "refused_for": [
+    "manager",
+    "read_only",
+    "rep"
+  ]
+}

@@ -22,7 +22,6 @@ import (
 	"github.com/margince/margince/backend/internal/compose/integration"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/contacts"
-	"github.com/margince/margince/backend/internal/modules/privacy"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -168,7 +167,7 @@ func TestErasingTheSubjectClearsTheAuthorTheImporterWrote(t *testing.T) {
 		}
 	}
 
-	if err := privacy.NewEraser(e.DB()).EraseContact(e.Admin(), subject, "test"); err != nil {
+	if err := eraserWithGraph(e.DB()).EraseContact(e.Admin(), subject, "test"); err != nil {
 		t.Fatalf("erasing the subject: %v", err)
 	}
 

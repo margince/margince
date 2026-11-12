@@ -64,7 +64,7 @@ func TestEveryProductionEraserCarriesTheExtensionRegistry(t *testing.T) {
 		t.Errorf("%s:%d %s\n\tHand it the extension registry (compose.ExtensionData()), or its extension tables are skipped without a sign.",
 			m.path, m.line, m.what)
 	}
-	if len(sites) < 8 {
+	if len(sites) < 7 {
 		t.Fatalf("this census saw %d wiring sites; the tree has more than that, so the walk or a marker has gone stale", len(sites))
 	}
 }

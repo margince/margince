@@ -153,6 +153,36 @@ func (e PublicEventActivityChangedFieldsOccurredPrecision) Valid() bool {
 	}
 }
 
+// Defines values for PublicEventActivityChangedFieldsTaskType.
+const (
+	TaskBecameDecide   PublicEventActivityChangedFieldsTaskType = "decide"
+	TaskBecameDo       PublicEventActivityChangedFieldsTaskType = "do"
+	TaskBecameMeet     PublicEventActivityChangedFieldsTaskType = "meet"
+	TaskBecameReachOut PublicEventActivityChangedFieldsTaskType = "reach_out"
+	TaskBecameReply    PublicEventActivityChangedFieldsTaskType = "reply"
+	TaskBecameReview   PublicEventActivityChangedFieldsTaskType = "review"
+)
+
+// Valid indicates whether the value is a known member of the PublicEventActivityChangedFieldsTaskType enum.
+func (e PublicEventActivityChangedFieldsTaskType) Valid() bool {
+	switch e {
+	case TaskBecameDecide:
+		return true
+	case TaskBecameDo:
+		return true
+	case TaskBecameMeet:
+		return true
+	case TaskBecameReachOut:
+		return true
+	case TaskBecameReply:
+		return true
+	case TaskBecameReview:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for PublicEventActivityDispositionRecordedDisposition.
 const (
 	NotMine    PublicEventActivityDispositionRecordedDisposition = "not_mine"
@@ -1187,6 +1217,9 @@ type PublicEventActivityChangedFields struct {
 	// Subject The activity's new subject (absent when this update did not touch it).
 	Subject *string `json:"subject,omitempty"`
 
+	// TaskType The task's new type, which decides its one step (absent when this update did not touch it). Task rows only.
+	TaskType *PublicEventActivityChangedFieldsTaskType `json:"task_type,omitempty"`
+
 	// ThreadKey The activity's new conversation key, when its thread grouping changed.
 	ThreadKey *string `json:"thread_key,omitempty"`
 }
@@ -1208,6 +1241,9 @@ type PublicEventActivityChangedFieldsMeetingStatus string
 
 // PublicEventActivityChangedFieldsOccurredPrecision How to read the activity's occurred_at from now on: `day` when only its date is known, its UTC date. Carried whenever this update names occurred_at, and when it changed the precision alone.
 type PublicEventActivityChangedFieldsOccurredPrecision string
+
+// PublicEventActivityChangedFieldsTaskType The task's new type, which decides its one step (absent when this update did not touch it). Task rows only.
+type PublicEventActivityChangedFieldsTaskType string
 
 // PublicEventActivityDispositionRecorded Payload for activity.disposition_recorded. Somebody decided what to do about a waiting message, and the Worklist stopped showing it (activities/disposition.go). Who it stopped showing it to is not on the wire. `not_sales` settles what the message is and holds for everybody. `snoozed` and `not_mine` belong to the one reader who set them. A reader marking a message done is announced as activity.marked_handled, since this enum is closed at v1. A consumer reading this as a workspace-wide fact would report a colleague's private set-aside as the thread's own state. The reader stays on the row, for a caller entitled to it.
 type PublicEventActivityDispositionRecorded struct {
@@ -1536,15 +1572,15 @@ type PublicEventConsentOverrideLifted struct {
 	RevokedByLevel string `json:"revoked_by_level"`
 }
 
-// PublicEventConsentOverrideRecorded Payload for consent.override_recorded. A rep recorded a standing vouch that a machine-level refusal for one category may be overruled for this contact (consent/override.go's Allow). It is its own event rather than a consent.changed. An override is neither consent nor a lawful basis. It outranks only a machine-level, non-absolute refusal, and a subject-level stop still wins at the gate regardless of this row. The subject is always a contact, because the write door names that object as a literal. So this is a static entity, and the fan-out gate proves its delivery scope mechanically rather than by hand-ratification. It names what category was vouched for and at which authority. It never names the reason the rep gave. That explanation belongs to the audit trail a rep reviewing the contact reads, and not to every subscriber the event reaches.
+// PublicEventConsentOverrideRecorded Payload for consent.override_recorded. A merge carried a standing exception onto the surviving contact under a new id (consent/overridecarry.go). No route records a new standing exception, so this event announces a carried copy only. An exception is neither consent nor a lawful basis. It outranks only a machine-level, non-absolute refusal, and a subject-level stop still wins at the gate. It is its own event rather than a consent.changed. The event names the category the exception covers and the authority it was first recorded at. It never names the reason the rep gave, which stays on the row for the audit trail.
 type PublicEventConsentOverrideRecorded struct {
 	// Category Which category of send this vouch covers. The engine resolves every send to a single category, and the override applies to that one only.
 	Category string `json:"category"`
 
-	// DecidedByLevel Whose decision it is (user | admin) — always the recording seat's own authority, never a value the request body could name.
+	// DecidedByLevel Whose decision it is (user | admin): the authority of the seat that recorded the original exception.
 	DecidedByLevel string `json:"decided_by_level"`
 
-	// OverrideId Which row was recorded. It is the handle the revoke door takes (POST /contacts/{id}/consent/allow/{overrideId}/revoke). A contact can hold several live vouches at once: one per category, and after a merge more than one for a single category. So a consumer with no id cannot say which of them a later consent.override_lifted describes.
+	// OverrideId Which row the merge wrote. It is the handle the revoke door takes (POST /contacts/{id}/consent/allow/{overrideId}/revoke). A contact can hold several live vouches at once: one per category, and after a merge more than one for a single category. So a consumer with no id cannot say which of them a later consent.override_lifted describes.
 	OverrideId openapi_types.UUID `json:"override_id"`
 }
 
@@ -3778,7 +3814,7 @@ var PublicEventSamples = map[string]string{
 	"activity.invitation_answered":              "{\"activity_id\":\"0190a7f2-0000-7000-8000-000000000010\",\"response\":\"accepted\"}",
 	"activity.marked_handled":                   "{\"activity_id\":\"0190a7f2-0000-7000-8000-000000000010\"}",
 	"activity.readiness_recorded":               "{\"activity_id\":\"0190a7f2-0000-7000-8000-000000000010\",\"preparation_revision\":\"Sample preparation revision\",\"state\":\"ready\"}",
-	"activity.updated":                          "{\"changed_fields\":{\"agenda_changed\":true,\"assignee_id\":\"0190a7f2-0000-7000-8000-000000000010\",\"audience\":\"workspace\",\"automatic_task_repaired\":true,\"body\":true,\"calendar_method\":\"PUBLISH\",\"call_outcome\":\"reached\",\"call_outcome_cleared\":true,\"commitment_admissions_changed\":true,\"direction\":\"outbound\",\"due_at\":\"2026-10-14T09:12:00Z\",\"due_has_time\":true,\"host_user_id\":\"0190a7f2-0000-7000-8000-000000000010\",\"is_done\":true,\"meeting_status\":\"booked\",\"meeting_status_cleared\":true,\"occurred_at\":\"2026-10-14T09:12:00Z\",\"occurred_precision\":\"instant\",\"outbound_attested\":true,\"project_filing_undone\":true,\"relinked\":{\"entity_id\":\"0190a7f2-0000-7000-8000-000000000010\",\"entity_type\":\"Sample entity type\"},\"remind_at\":\"2026-10-14T09:12:00Z\",\"remind_at_cleared\":true,\"request_settlement_changed\":true,\"restored\":true,\"subject\":\"Sample subject\",\"thread_key\":\"Sample thread key\"},\"import_run_id\":\"0190a7f2-0000-7000-8000-000000000010\",\"imported\":true}",
+	"activity.updated":                          "{\"changed_fields\":{\"agenda_changed\":true,\"assignee_id\":\"0190a7f2-0000-7000-8000-000000000010\",\"audience\":\"workspace\",\"automatic_task_repaired\":true,\"body\":true,\"calendar_method\":\"PUBLISH\",\"call_outcome\":\"reached\",\"call_outcome_cleared\":true,\"commitment_admissions_changed\":true,\"direction\":\"outbound\",\"due_at\":\"2026-10-14T09:12:00Z\",\"due_has_time\":true,\"host_user_id\":\"0190a7f2-0000-7000-8000-000000000010\",\"is_done\":true,\"meeting_status\":\"booked\",\"meeting_status_cleared\":true,\"occurred_at\":\"2026-10-14T09:12:00Z\",\"occurred_precision\":\"instant\",\"outbound_attested\":true,\"project_filing_undone\":true,\"relinked\":{\"entity_id\":\"0190a7f2-0000-7000-8000-000000000010\",\"entity_type\":\"Sample entity type\"},\"remind_at\":\"2026-10-14T09:12:00Z\",\"remind_at_cleared\":true,\"request_settlement_changed\":true,\"restored\":true,\"subject\":\"Sample subject\",\"task_type\":\"reply\",\"thread_key\":\"Sample thread key\"},\"import_run_id\":\"0190a7f2-0000-7000-8000-000000000010\",\"imported\":true}",
 	"approval.decided":                          "{\"decided_by\":\"0190a7f2-0000-7000-8000-000000000010\",\"decided_by_system\":true,\"diff_hash\":\"Sample diff hash\",\"edited\":true,\"edited_change\":{},\"kind\":\"Sample kind\",\"verdict\":\"approved\"}",
 	"approval.failure_acknowledged":             "{\"failed_at\":\"2026-10-14T09:12:00Z\",\"kind\":\"Sample kind\"}",
 	"approval.preference_changed":               "{\"kind\":\"Sample kind\"}",

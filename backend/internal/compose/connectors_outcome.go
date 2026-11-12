@@ -108,7 +108,7 @@ func writeConnectorUnavailable(w http.ResponseWriter, r *http.Request, provider 
 // happened to reuse one of those code names must not be answered with Google's
 // remedy.
 func disabledProviderAPI(provider string, err error) bool {
-	if provider != providerGmail && provider != providerGcal {
+	if provider != providerGmail && provider != providerGcal && provider != providerGdocs {
 		return false
 	}
 	return googleconn.Misconfigured(err)

@@ -1,0 +1,9 @@
+{
+  "verb": "whats_slipping_this_week",
+  "checks": [
+    "company.read",
+    "deal.read",
+    "installation_settings.read",
+    "project.read"
+  ]
+}

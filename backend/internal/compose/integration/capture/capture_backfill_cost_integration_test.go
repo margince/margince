@@ -30,7 +30,10 @@ func TestHistoryImportReportsItsDatabaseWork(t *testing.T) {
 	if os.Getenv("MARGINCE_IMPORT_BENCH_SQL") != "" {
 		pool = profileHistoryPool(e.Admin(), t, pool)
 	}
-	registry := compose.NewCaptureRegistry(pool, newTestKeyvault(t, e), compose.CaptureConfig{})
+	// The tally write and the ownership check tick on wall time. A slow runner
+	// would add work this report counts, so both are held off, as below.
+	registry := compose.NewCaptureRegistry(pool, newTestKeyvault(t, e), compose.CaptureConfig{}).
+		WithProgressPacing(24 * time.Hour).WithOwnershipWatch(24 * time.Hour)
 	page := &mailPageConnector{nextToken: "next", sent: make(map[string]bool, count)}
 	for i := range count {
 		messageID := fmt.Sprintf("cost-%d@myco.example", i)
@@ -69,9 +72,9 @@ func TestHistoryImportReportsItsDatabaseWork(t *testing.T) {
 	}
 
 	page.raws, page.nextToken = nil, ""
-	done, completed, _, err = registry.RunBackfillStep(ctx, run.ID)
+	done, completed, retry, err := registry.RunBackfillStep(ctx, run.ID)
 	if err != nil || !done || !completed {
-		t.Fatalf("completion: done=%v completed=%v error=%v", done, completed, err)
+		t.Fatalf("completion: done=%v completed=%v retry=%v error=%v", done, completed, retry, err)
 	}
 	cost := meter.Cost()
 	if cost.Statements == 0 || cost.Acquires == 0 {
@@ -86,8 +89,10 @@ func TestHistoryImportReportsItsDatabaseWork(t *testing.T) {
 // that adds round trips to every message. Lower it when a change removes
 // some; never raise it to make a change pass.
 // Thread membership and mailbox generation are checked before each message write.
+// It includes one statement per filed message that names the linked contact as
+// the sender when the stated address proves them (stampProvenSenders).
 const (
-	historyExchangesPerMessage    = 186
+	historyExchangesPerMessage    = 187
 	historyTransactionsPerMessage = 6.15
 )
 

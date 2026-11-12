@@ -1,0 +1,15 @@
+{
+  "tool": "change_attention",
+  "action": "answer_teammate",
+  "verb": "answer_weekly_plan_commitment",
+  "allowed_for": [
+    "admin",
+    "management",
+    "manager",
+    "ops"
+  ],
+  "refused_for": [
+    "read_only",
+    "rep"
+  ]
+}

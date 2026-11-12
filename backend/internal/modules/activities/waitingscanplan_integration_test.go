@@ -12,10 +12,12 @@ package activities
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"strings"
 	"testing"
 
 	"github.com/margince/margince/backend/internal/platform/clocktest"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/platform/testdb"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -137,6 +139,30 @@ func TestTheWaitingHorizonReadsAHeldRequestByItsID(t *testing.T) {
 	}
 }
 
+func TestASeatsMailCandidatesUseTimeAndHeldIDIndexes(t *testing.T) {
+	seat := ids.NewV7()
+	statement := `SELECT ` + storekit.DirectMailActivitiesSQL(
+		"jsonb_build_object($1::text, jsonb_build_array($2::text))", "$1::uuid", "$3::timestamptz", heldRequestIDsSQL())
+	plan := explainOnMailbox(t, "", "SET LOCAL enable_seqscan = off; SET LOCAL plan_cache_mode = force_generic_plan",
+		"EXPLAIN (FORMAT JSON) ", statement, seat.String(), "seat@work.test", clocktest.Now(t))
+	var recentByTime, heldByID int
+	var reads []string
+	plan.walk(func(n planNode) {
+		if n.IndexName == "idx_aparticipant_waiting_address_time" && strings.Contains(n.IndexCond, "domain_evidence_at >=") {
+			recentByTime++
+		}
+		if strings.Contains(n.IndexName, "participant") && strings.Contains(n.IndexCond, "activity_id =") {
+			heldByID++
+		}
+		if n.IndexName != "" {
+			reads = append(reads, n.IndexName+" "+n.IndexCond)
+		}
+	})
+	if recentByTime == 0 || heldByID == 0 {
+		t.Errorf("seat mail plan misses a time-bound or held-id participant lookup (recent=%d held=%d): %v", recentByTime, heldByID, reads)
+	}
+}
+
 // Old mail never reaches a per-message subquery: the horizon is a cheap
 // top-level test, and Postgres runs it first. The probe stands in for the
 // subqueries a full waiting scan carries.
@@ -161,5 +187,39 @@ func TestTheWaitingHorizonRunsBeforeAnyPerMessageSubquery(t *testing.T) {
 	}
 	if probed > kept {
 		t.Errorf("the per-message probe ran %v times for %v messages inside the horizon: mail past the horizon is judged by every subquery before its age", probed, kept)
+	}
+}
+
+// The page reads young mail newest first and stops near its cap, under the
+// generic plan the Worklist reuses. The probe stands in for the per-message
+// rules, so the times it ran are the messages the page judged. A message at
+// the index's raw bound can still fail its day test, so the bound is loose.
+func TestThePageScanJudgesNoMoreYoungMailThanItsCap(t *testing.T) {
+	const pageCap = 3
+	eligible := `FROM activity a
+		WHERE a.kind IN ('email', 'message') AND a.direction = 'inbound' AND a.archived_at IS NULL
+		  AND (SELECT count(*) FROM activity_participant probe WHERE probe.activity_id = a.id) >= 0
+		  AND ` + withinWaitingHorizonSQL("$%[1]d::timestamptz", "%[5]d")
+	probed := func(statement string) float64 {
+		t.Helper()
+		plan := explainOnMailbox(t, "", "SET LOCAL plan_cache_mode = force_generic_plan; SET LOCAL max_parallel_workers_per_gather = 0",
+			"EXPLAIN (ANALYZE, FORMAT JSON) ", fmt.Sprintf(statement, 1, nil, nil, "$2::int", 30), clocktest.Now(t), pageCap)
+		var loops float64
+		plan.walk(func(n planNode) {
+			if n.Alias == "probe" {
+				loops += n.ActualLoops
+			}
+		})
+		return loops
+	}
+	if carried := strings.Count(waitingCappedArmsSQL, waitingEligibleFromSQL); carried != 1 {
+		t.Fatalf("the page carries the eligibility %d times, want once for both arms", carried)
+	}
+	whole := probed(`SELECT a.id ` + eligible + ` ORDER BY a.occurred_at DESC, a.id DESC LIMIT %[4]s`)
+	if whole <= 4*pageCap {
+		t.Fatalf("one scan over the horizon judged %v messages: the mailbox holds too little young mail to show a cap of %d", whole, pageCap)
+	}
+	if split := probed(strings.ReplaceAll(waitingCappedArmsSQL, waitingEligibleFromSQL, eligible)); split > 2*pageCap {
+		t.Errorf("the page judged %v messages for a cap of %d (one scan judges %v): it reads the whole horizon before it sorts", split, pageCap, whole)
 	}
 }

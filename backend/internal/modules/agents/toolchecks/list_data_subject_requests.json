@@ -1,0 +1,6 @@
+{
+  "verb": "list_data_subject_requests",
+  "checks": [
+    "privacy_request.read"
+  ]
+}

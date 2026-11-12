@@ -265,7 +265,7 @@ func TestAnOwnerWhoseAmountIsMaskedSeesTheChangeButNoAmount(t *testing.T) {
 	if amount == nil {
 		t.Fatalf("changes = %+v, want the amount change listed", rows)
 	}
-	shown := attention.WireReceipt(correctionReceipt(*amount))
+	shown := attention.WireReceipt(attention.CorrectionReceipt(*amount))
 	wire, err := json.Marshal(shown)
 	if err != nil {
 		t.Fatal(err)

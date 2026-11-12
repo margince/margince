@@ -1,0 +1,9 @@
+{
+  "verb": "get_saved_view",
+  "checks": [
+    "saved_view.read"
+  ],
+  "takes": [
+    "saved_view"
+  ]
+}

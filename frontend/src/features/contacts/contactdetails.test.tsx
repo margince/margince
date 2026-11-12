@@ -307,12 +307,12 @@ describe("a postal address whose country does not fit", () => {
     expect(
       await screen.findByText("Postal code and city are in Germany"),
     ).toBeInTheDocument();
-    expect(screen.getByText("Berlin, AT")).toBeInTheDocument();
+    expect(screen.getByText("10115 Berlin AT")).toBeInTheDocument();
   });
 
   it("shows no flag when the server reports no mismatch", async () => {
     show({ ...view.contact, address: berlin });
-    expect(await screen.findByText("Berlin, AT")).toBeInTheDocument();
+    expect(await screen.findByText("10115 Berlin AT")).toBeInTheDocument();
     expect(screen.queryByText(/Postal code and city are in/)).toBeNull();
   });
 });

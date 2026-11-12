@@ -79,7 +79,13 @@ func (f *calendarFeed) serve(t *testing.T, owner string) *httptest.Server {
 // answers a sync of it.
 func connectFeed(t *testing.T, env captureEnv, feed *calendarFeed) func() {
 	t.Helper()
-	stub := feed.serve(t, captureOwner)
+	return connectFeedAs(t, env, feed, captureOwner)
+}
+
+// connectFeedAs is connectFeed for a calendar on the account owner.
+func connectFeedAs(t *testing.T, env captureEnv, feed *calendarFeed, owner string) func() {
+	t.Helper()
+	stub := feed.serve(t, owner)
 	oauth := gmail.NewOAuth(gmail.OAuthConfig{ClientID: "cid", ClientSecret: "sec", TokenURL: stub.URL + "/token"})
 	api := gcal.NewAPI(stub.Client(), stub.URL)
 	env.registry.Register(gcal.New(oauth, api))
@@ -115,7 +121,7 @@ func seatFor(t *testing.T, e *integration.SearchEnv, address string) ids.UUID {
 
 func ensureGuestContact(t *testing.T, e *integration.SearchEnv, address string) ids.ContactID {
 	t.Helper()
-	contact, err := contacts.NewStore(e.DB()).EnsureContactByEmail(contactCreator(e), "", address, "manual", storekit.RefuseErased)
+	contact, err := contacts.NewStore(e.DB()).WithSenderStamp(activities.StampProvenSendersTx).EnsureContactByEmail(contactCreator(e), "", address, "manual", storekit.RefuseErased)
 	if err != nil {
 		t.Fatalf("creating the contact %s: %v", address, err)
 	}
@@ -247,7 +253,7 @@ func TestEveryGuestOnAnInvitationIsOnTheMeeting(t *testing.T) {
 	}
 
 	later := ensureGuestContact(t, e, guestLater)
-	store := contacts.NewStore(e.DB())
+	store := contacts.NewStore(e.DB()).WithSenderStamp(activities.StampProvenSendersTx)
 	if _, err := store.RepairContactCohort(contactCreator(e), later); err != nil {
 		t.Fatal(err)
 	}

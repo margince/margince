@@ -31,6 +31,7 @@ import (
 
 	"github.com/jackc/pgx/v5/pgxpool"
 
+	"github.com/margince/margince/backend/internal/compose/oidctoken"
 	"github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -155,10 +156,10 @@ func apiV1Base(base string) string {
 // email_verified is deliberately NOT checked here — identity's own callback
 // handler does that, and the Pub/Sub push caller has no such requirement, so it
 // is not baked into the shared contract.
-func audienceIs(clientID string) func(oidcClaims) error {
-	return func(c oidcClaims) error {
+func audienceIs(clientID string) func(oidctoken.Claims) error {
+	return func(c oidctoken.Claims) error {
 		if c.Aud != clientID {
-			return fmt.Errorf("%w: aud mismatch", errOIDCRejected)
+			return fmt.Errorf("%w: aud mismatch", oidctoken.ErrRejected)
 		}
 		return nil
 	}
@@ -167,8 +168,8 @@ func audienceIs(clientID string) func(oidcClaims) error {
 // allOf runs every claim check and stops at the first refusal, so a provider
 // that binds a token to a directory AND to a client spells the two as one
 // identity check rather than remembering to call both.
-func allOf(checks ...func(oidcClaims) error) func(oidcClaims) error {
-	return func(c oidcClaims) error {
+func allOf(checks ...func(oidctoken.Claims) error) func(oidctoken.Claims) error {
+	return func(c oidctoken.Claims) error {
 		for _, check := range checks {
 			if err := check(c); err != nil {
 				return err

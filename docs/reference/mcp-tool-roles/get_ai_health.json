@@ -1,0 +1,15 @@
+{
+  "tool": "read_workspace",
+  "action": "ai_health",
+  "verb": "get_ai_health",
+  "allowed_for": [
+    "admin",
+    "management",
+    "ops"
+  ],
+  "refused_for": [
+    "manager",
+    "read_only",
+    "rep"
+  ]
+}

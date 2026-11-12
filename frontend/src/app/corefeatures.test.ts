@@ -27,7 +27,10 @@ describe("disabled main-menu features", () => {
     expect(NAV.map((item) => item.screen)).toEqual(
       expect.arrayContaining([...FEATURES]),
     );
-    expect(NAV).toHaveLength(FEATURES.length);
+    for (const item of NAV)
+      expect(
+        FEATURES.some((feature) => !screenEnabled(item.screen, [feature])),
+      ).toBe(true);
   });
   it.each(FEATURES)(
     "removes %s from the real rail while keeping the other destinations",

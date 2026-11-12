@@ -10,7 +10,7 @@ An area with no inbound key is a candidate for a separate module. Its outbound k
 
 | Area | Tables | Columns | Inbound keys | Outbound keys | Outbound cascades |
 |---|--:|--:|--:|--:|--:|
-| [activities](activities.md) | 33 | 397 | 25 | 38 | 18 |
+| [activities](activities.md) | 33 | 399 | 25 | 38 | 18 |
 | [agents](agents.md) | 3 | 35 | 0 | 5 | 1 |
 | [ai](ai.md) | 12 | 207 | 0 | 3 | 0 |
 | [aiactivity](aiactivity.md) | 1 | 25 | 0 | 2 | 0 |
@@ -32,7 +32,7 @@ An area with no inbound key is a candidate for a separate module. Its outbound k
 | [deals](deals.md) | 29 | 421 | 25 | 19 | 5 |
 | [finance](finance.md) | 5 | 84 | 0 | 3 | 0 |
 | [forecasting](forecasting.md) | 4 | 98 | 1 | 2 | 0 |
-| [identity](identity.md) | 22 | 204 | 153 | 6 | 5 |
+| [identity](identity.md) | 22 | 204 | 155 | 6 | 5 |
 | [initiatives](initiatives.md) | 4 | 36 | 0 | 2 | 1 |
 | [integrations](integrations.md) | 5 | 61 | 3 | 3 | 1 |
 | [introductions](introductions.md) | 1 | 31 | 0 | 6 | 1 |
@@ -42,7 +42,7 @@ An area with no inbound key is a candidate for a separate module. Its outbound k
 | [platform](platform.md) | 13 | 95 | 2 | 3 | 1 |
 | [privacy](privacy.md) | 2 | 11 | 0 | 0 | 0 |
 | [projects](projects.md) | 3 | 42 | 10 | 3 | 0 |
-| [reporting](reporting.md) | 12 | 104 | 0 | 8 | 0 |
+| [reporting](reporting.md) | 14 | 124 | 0 | 10 | 0 |
 | [search](search.md) | 4 | 41 | 0 | 4 | 2 |
 | [signals](signals.md) | 2 | 42 | 2 | 9 | 4 |
 | [webforms](webforms.md) | 2 | 25 | 0 | 3 | 0 |
@@ -163,6 +163,8 @@ No outbound foreign keys.
 - `report_execution.report_execution_owner_id_fkey`: `FOREIGN KEY (owner_id) REFERENCES app_user(id)`
 - `report_schedule.report_schedule_owner_id_fkey`: `FOREIGN KEY (owner_id) REFERENCES app_user(id)`
 - `reporting_framework_revision.reporting_framework_revision_created_by_fkey`: `FOREIGN KEY (created_by) REFERENCES app_user(id)`
+- `sales_goal_plan.sales_goal_plan_owner_id_fkey`: `FOREIGN KEY (owner_id) REFERENCES app_user(id) ON DELETE RESTRICT`
+- `sales_goal_plan_revision.sales_goal_plan_revision_created_by_fkey`: `FOREIGN KEY (created_by) REFERENCES app_user(id) ON DELETE RESTRICT`
 - `sales_target.sales_target_pipeline_id_fkey`: `FOREIGN KEY (pipeline_id) REFERENCES pipeline(id)`
 - `sales_target_revision.sales_target_revision_created_by_fkey`: `FOREIGN KEY (created_by) REFERENCES app_user(id)`
 

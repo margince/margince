@@ -1,0 +1,18 @@
+{
+  "tool": "read_context",
+  "action": "catch_up",
+  "verb": "catch_me_up_on",
+  "allowed_for": [
+    "admin",
+    "management",
+    "manager",
+    "ops",
+    "read_only",
+    "rep"
+  ],
+  "refused_for": [],
+  "colleague_record": {
+    "manager": "ran",
+    "rep": "ran"
+  }
+}

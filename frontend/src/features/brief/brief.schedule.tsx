@@ -1,18 +1,19 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-import { Fragment, useId } from "react";
+import { Fragment } from "react";
 import { EntityRef } from "../../components/entityref";
 import { MeetingOthers } from "../../components/meetingothers";
 import { AppLink } from "../../design-system/applink";
 import { Badge, Button } from "../../design-system/atoms";
-import { Eyebrow } from "../../design-system/eyebrow";
-import { PanelRow } from "../../design-system/panel";
+import { Panel, PanelRow } from "../../design-system/panel";
 import {
   type SectionState,
   SurfaceState,
 } from "../../design-system/surfacestate";
-import { activityTimeOfDay } from "../../format/activitywhen";
+import { activityStartsIn, activityTimeOfDay } from "../../format/activitywhen";
+import { formatTimeOfDay } from "../../format/format";
+import { useNow } from "../../format/now";
 import { type Locale, useLocale, useT } from "../../i18n";
 import { isUnprepared } from "../../lib/meetingreadiness";
 import { routeHash } from "../../lib/router";
@@ -23,9 +24,11 @@ import type { Worklist, WorklistItem } from "../worklist/worklist.queries";
 import {
   type CalendarDay,
   calendarDay,
+  meetingsCounted,
   nextMeetingDay,
   sourceComplete,
 } from "./brief.facts";
+import "./brief.css";
 
 type NextMeeting = NonNullable<Worklist["next_meeting"]>;
 
@@ -33,25 +36,17 @@ type NextMeeting = NonNullable<Worklist["next_meeting"]>;
 const MEETING = "meeting";
 
 /**
- * Whether the day's schedule has nothing to draw.
- *
- * Exported because two surfaces turn on this one answer — the panel, which
- * draws nothing, and the rail's quiet panel, which prints the line standing in
- * for it. Spelled twice they would eventually disagree, and a reader would meet
- * an empty panel and the line announcing its absence on the same rail.
+ * Whether the calendar answered and holds nothing more for today, which is
+ * what lets the Now stop say the rest of the day is clear.
  */
-export function scheduleIsEmpty(
-  day: Worklist | undefined,
-  state: SectionState,
-): boolean {
+function dayIsClear(day: Worklist): boolean {
+  if (rowsFrom(day, MEETING).length > 0) return false;
+  const calendar = calendarDay(day).state;
   return (
-    answered(state) &&
-    day !== undefined &&
-    sourceComplete(day, MEETING) &&
-    rowsFrom(day, MEETING).length === 0 &&
-    // A day whose calendar could not count, or whose next meeting is known,
-    // still has something to say.
-    calendarDay(day).state === "counted"
+    calendar === "quiet" ||
+    (calendar === "counted" &&
+      meetingsCounted(day) === 0 &&
+      sourceComplete(day, MEETING))
   );
 }
 
@@ -64,7 +59,9 @@ function answered(state: SectionState): boolean {
 }
 
 /**
- * The day's schedule, in the order the server ranked it.
+ * The day as one line: the meetings already under way, a Now stop, and the
+ * meetings still ahead, by start time. The first timed meeting ahead is the
+ * next one, set apart with how soon it starts and the way into its brief.
  *
  * A meeting not confirmed ready carries the badge here as well as in the queue.
  * All three places read `isUnprepared`, so the strip's figure and both badges
@@ -74,70 +71,187 @@ export function SchedulePanel({
   day,
   state,
   onOpenMeeting,
+  onPrepareMeeting,
+  now,
 }: Readonly<{
   day: Worklist | undefined;
   state: SectionState;
   /** Opens one meeting by its activity id; without it the title is text. */
   onOpenMeeting?: (id: string) => void;
+  /** Has Margince write the next meeting's brief; without it there is no button. */
+  onPrepareMeeting?: (id: string) => void;
+  /** The clock the Now stop is read against; the live minute when absent. */
+  now?: number;
+}>) {
+  const t = useT();
+  const liveNow = useNow(now === undefined ? 60_000 : 0);
+  const at = now ?? liveNow;
+  const { started, ahead } = splitAtNow(rowsFrom(day, MEETING), at);
+  const next = ahead.find((item) => item.occurred_precision !== "day");
+  return (
+    <Panel title={t("brief.panel.schedule")} flatHead className="rail-schedule">
+      <SurfaceState
+        loadingLabel={t("brief.panel.schedule")}
+        state={state}
+        emptyLabel={t("brief.rail.quietSchedule")}
+      >
+        {answered(state) && day && (
+          <>
+            {started.map((item) => (
+              <MeetingRow
+                key={item.id}
+                item={item}
+                onOpenMeeting={onOpenMeeting}
+              />
+            ))}
+            <NowRow
+              at={at}
+              freeUntil={started.length === 0 ? next : undefined}
+              clear={dayIsClear(day)}
+            />
+            {ahead.map((item) => (
+              <MeetingRow
+                key={item.id}
+                item={item}
+                onOpenMeeting={onOpenMeeting}
+                onPrepare={item === next ? onPrepareMeeting : undefined}
+                countdownFrom={item === next ? at : undefined}
+              />
+            ))}
+            {rowsFrom(day, MEETING).length === 0 && (
+              <NoMeetingRows
+                clear={dayIsClear(day)}
+                calendar={calendarDay(day)}
+                onOpenMeeting={onOpenMeeting}
+              />
+            )}
+          </>
+        )}
+      </SurfaceState>
+    </Panel>
+  );
+}
+
+/**
+ * Today's meetings by start, cut at `now`. A meeting known only by its day
+ * has no start to cut at, so it waits at the end of the ones ahead.
+ */
+function splitAtNow(
+  meetings: WorklistItem[],
+  now: number,
+): { started: WorklistItem[]; ahead: WorklistItem[] } {
+  const startOf = (item: WorklistItem) =>
+    item.occurred_precision === "day" || !item.due_at
+      ? Number.POSITIVE_INFINITY
+      : Date.parse(item.due_at);
+  const sorted = [...meetings].sort((a, b) => startOf(a) - startOf(b));
+  return {
+    started: sorted.filter((item) => startOf(item) <= now),
+    ahead: sorted.filter((item) => startOf(item) > now),
+  };
+}
+
+/** Where the reader stands on the day's line, and what the next hour holds. */
+function NowRow({
+  at,
+  freeUntil,
+  clear,
+}: Readonly<{ at: number; freeUntil?: WorklistItem; clear: boolean }>) {
+  const t = useT();
+  const { locale } = useLocale();
+  const zone = useViewerZone();
+  const nowIso = new Date(at).toISOString();
+  const until = freeUntil && whenOf(freeUntil, locale, zone);
+  const caption = until
+    ? t("brief.schedule.freeUntil", { time: until })
+    : clear
+      ? t("brief.schedule.clearRest")
+      : undefined;
+  return (
+    <PanelRow className="rail-schedule-row rail-schedule-now">
+      <time className="t-caption rail-schedule-when" dateTime={nowIso}>
+        {formatTimeOfDay(nowIso, locale, zone)}
+      </time>
+      <span className="rail-schedule-what">
+        <span className="t-body rail-schedule-title">
+          {t("brief.schedule.now")}
+        </span>
+        {caption && <span className="t-caption">{caption}</span>}
+      </span>
+    </PanelRow>
+  );
+}
+
+/**
+ * One meeting on the line. The next one also says how soon it starts and,
+ * where the row names whose page the brief is read on, opens that brief.
+ */
+function MeetingRow({
+  item,
+  onOpenMeeting,
+  onPrepare,
+  countdownFrom,
+}: Readonly<{
+  item: WorklistItem;
+  onOpenMeeting?: (id: string) => void;
+  onPrepare?: (id: string) => void;
+  /** The clock to count down from; set only on the next meeting. */
+  countdownFrom?: number;
 }>) {
   const t = useT();
   const { locale } = useLocale();
   const zone = useViewerZone();
-  const titleId = useId();
-  if (scheduleIsEmpty(day, state)) {
-    return null;
-  }
-  const meetings = rowsFrom(day, MEETING);
+  const isNext = countdownFrom !== undefined;
+  const startsIn =
+    isNext && item.due_at
+      ? activityStartsIn(
+          { at: item.due_at, precision: item.occurred_precision },
+          countdownFrom,
+          locale,
+        )
+      : null;
   return (
-    <section
-      id="brief-schedule"
-      className="brief-section"
-      aria-labelledby={titleId}
+    <PanelRow
+      className={
+        isNext ? "rail-schedule-row rail-schedule-next" : "rail-schedule-row"
+      }
     >
-      <Eyebrow as="h2" id={titleId} className="brief-section-label">
-        {t("brief.panel.schedule")}
-      </Eyebrow>
-      <SurfaceState
-        loadingLabel={t("brief.panel.schedule")}
-        state={state}
-        // The words the rail prints for this absence, so the panel and the
-        // quiet line cannot report one morning in two vocabularies.
-        emptyLabel={t("brief.rail.quietSchedule")}
-      >
-        {meetings.length === 0 && answered(state) && day && (
-          <NoMeetingRows
-            calendar={calendarDay(day)}
-            onOpenMeeting={onOpenMeeting}
-          />
+      <span className="t-caption rail-schedule-when">
+        {whenOf(item, locale, zone)}
+      </span>
+      <span className="rail-schedule-what">
+        <Title item={item} onOpenMeeting={onOpenMeeting} />
+        {(startsIn || isUnprepared(item)) && (
+          <span className="rail-schedule-meta">
+            {startsIn && <span className="t-caption">{startsIn}</span>}
+            {isUnprepared(item) && (
+              <Badge tone="warning">{t("worklist.needsPrep")}</Badge>
+            )}
+          </span>
         )}
-        {meetings.map((item) => (
-          <PanelRow key={item.id} className="rail-schedule-row">
-            <span className="t-caption rail-schedule-when">
-              {whenOf(item, locale, zone)}
-            </span>
-            {/* The stop on the day's line. Decorative: the time beside it is
-                  the fact, and the line the dots hang on is the panel's way of
-                  reading as a schedule rather than as a list of sentences. */}
-            <span className="rail-schedule-dot" aria-hidden="true" />
-            <span className="rail-schedule-what">
-              <Title item={item} onOpenMeeting={onOpenMeeting} />
-              {isUnprepared(item) && (
-                <Badge tone="warning">{t("worklist.needsPrep")}</Badge>
-              )}
-            </span>
-          </PanelRow>
-        ))}
-      </SurfaceState>
-    </section>
+        {onPrepare && (
+          <Button
+            variant="ai"
+            className="rail-schedule-prep"
+            onClick={() => onPrepare(item.id)}
+          >
+            {t("worklist.verb.open_meeting_brief")}
+          </Button>
+        )}
+      </span>
+    </PanelRow>
   );
 }
 
 /** What the panel says on a day it has no meeting rows to draw. */
 function NoMeetingRows({
   calendar,
+  clear,
   onOpenMeeting,
 }: Readonly<{
   calendar: CalendarDay;
+  /** The Now stop already says the day is clear. */
+  clear: boolean;
   onOpenMeeting?: (id: string) => void;
 }>) {
   const t = useT();
@@ -179,7 +293,7 @@ function NoMeetingRows({
     case "unread":
       return <PanelRow>{t("brief.schedule.unavailable")}</PanelRow>;
     case "counted":
-      return <PanelRow>{t("brief.schedule.more")}</PanelRow>;
+      return clear ? null : <PanelRow>{t("brief.schedule.more")}</PanelRow>;
   }
 }
 
@@ -224,12 +338,13 @@ function NextMeetingRow({
       <span className="t-caption rail-schedule-when">
         {nextMeetingDay(next, locale, zone)}
       </span>
-      <span className="rail-schedule-dot" aria-hidden="true" />
       <span className="rail-schedule-what">
         {/* The title opens the meeting itself; its deal is one click on. */}
         {onOpenMeeting ? (
           <Button
             variant="link"
+            align="start"
+            className="btn-valuelabel"
             onClick={() => onOpenMeeting(next.activity_id)}
           >
             {subject}
@@ -242,21 +357,24 @@ function NextMeetingRow({
             {t("brief.schedule.nextAt", { time })}
           </span>
         )}
-        {next.participants?.map((participant, index) => (
-          <Fragment key={participant.contact_id}>
-            {index > 0 && ", "}
-            <EntityRef
-              kind="contact"
-              id={participant.contact_id}
-              name={participant.full_name}
-            />
-          </Fragment>
-        ))}
-        <MeetingOthers
-          others={next.other_participants}
-          more={next.participants_more}
-          afterContacts={(next.participants?.length ?? 0) > 0}
-        />
+        {/* One run of text, so the commas wrap with the names they follow. */}
+        <span className="t-caption rail-schedule-attendees">
+          {next.participants?.map((participant, index) => (
+            <Fragment key={participant.contact_id}>
+              {index > 0 && ", "}
+              <EntityRef
+                kind="contact"
+                id={participant.contact_id}
+                name={participant.full_name}
+              />
+            </Fragment>
+          ))}
+          <MeetingOthers
+            others={next.other_participants}
+            more={next.participants_more}
+            afterContacts={(next.participants?.length ?? 0) > 0}
+          />
+        </span>
       </span>
     </PanelRow>
   );
@@ -273,7 +391,12 @@ function Title({
   // A meeting row's title opens the meeting itself; its record is a click on.
   if (item.source === MEETING && onOpenMeeting) {
     return (
-      <Button variant="link" onClick={() => onOpenMeeting(item.id)}>
+      <Button
+        variant="link"
+        align="start"
+        className="btn-valuelabel"
+        onClick={() => onOpenMeeting(item.id)}
+      >
         {title}
       </Button>
     );

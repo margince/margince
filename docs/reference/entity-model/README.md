@@ -30,9 +30,9 @@ module to put a change in, read [modules.md](../modules.md).
 
 | | |
 |---|--:|
-| Tables | 360 |
-| Columns | 4373 |
-| Foreign keys | 603 |
+| Tables | 362 |
+| Columns | 4395 |
+| Foreign keys | 606 |
 | Owning areas | 38 |
 
 ## The 12 records everything else hangs off
@@ -41,10 +41,10 @@ Ranked by how many foreign keys point at them.
 
 | Record | Lives in | Columns | Foreign keys pointing at it |
 |---|---|--:|--:|
-| [`app_user`](identity.md#app_user) | [identity](identity.md) | 39 | 153 |
+| [`app_user`](identity.md#app_user) | [identity](identity.md) | 39 | 155 |
 | [`company`](contacts.md#company) | [contacts](contacts.md) | 47 | 51 |
 | [`contact`](contacts.md#contact) | [contacts](contacts.md) | 38 | 49 |
-| [`activity`](activities.md#activity) | [activities](activities.md) | 78 | 45 |
+| [`activity`](activities.md#activity) | [activities](activities.md) | 80 | 45 |
 | [`deal`](deals.md#deal) | [deals](deals.md) | 49 | 30 |
 | [`lead`](contacts.md#lead) | [contacts](contacts.md) | 48 | 19 |
 | [`project`](projects.md#project) | [projects](projects.md) | 24 | 12 |
@@ -126,7 +126,7 @@ erDiagram
 | [platform](platform.md) | 13 |
 | [privacy](privacy.md) | 2 |
 | [projects](projects.md) | 3 |
-| [reporting](reporting.md) | 12 |
+| [reporting](reporting.md) | 14 |
 | [search](search.md) | 4 |
 | [signals](signals.md) | 2 |
 | [webforms](webforms.md) | 2 |
@@ -137,7 +137,7 @@ erDiagram
 
 | Table | Area | Columns | Referenced by |
 |---|---|--:|--:|
-| [`activity`](activities.md#activity) | activities | 78 | 45 |
+| [`activity`](activities.md#activity) | activities | 80 | 45 |
 | [`activity_audience_member`](activities.md#activity_audience_member) | activities | 5 | 0 |
 | [`activity_calendar_method_backfill`](activities.md#activity_calendar_method_backfill) | activities | 5 | 0 |
 | [`activity_clock_refold_mark`](activities.md#activity_clock_refold_mark) | activities | 3 | 0 |
@@ -173,7 +173,7 @@ erDiagram
 | [`ai_task_run`](aiactivity.md#ai_task_run) | aiactivity | 25 | 0 |
 | [`ai_usage`](ai.md#ai_usage) | ai | 10 | 0 |
 | [`analytics_share`](compose.md#analytics_share) | compose | 16 | 0 |
-| [`app_user`](identity.md#app_user) | identity | 39 | 153 |
+| [`app_user`](identity.md#app_user) | identity | 39 | 155 |
 | [`approval`](approvals.md#approval) | approvals | 38 | 4 |
 | [`approval_autonomy_policy`](approvals.md#approval_autonomy_policy) | approvals | 12 | 0 |
 | [`approval_preference`](approvals.md#approval_preference) | approvals | 3 | 0 |
@@ -425,6 +425,8 @@ erDiagram
 | [`role`](identity.md#role) | identity | 9 | 1 |
 | [`role_assignment`](identity.md#role_assignment) | identity | 6 | 0 |
 | [`runner_job`](agents.md#runner_job) | agents | 10 | 0 |
+| [`sales_goal_plan`](reporting.md#sales_goal_plan) | reporting | 10 | 1 |
+| [`sales_goal_plan_revision`](reporting.md#sales_goal_plan_revision) | reporting | 10 | 0 |
 | [`sales_initiative`](initiatives.md#sales_initiative) | initiatives | 18 | 3 |
 | [`sales_initiative_baseline`](initiatives.md#sales_initiative_baseline) | initiatives | 6 | 0 |
 | [`sales_initiative_member`](initiatives.md#sales_initiative_member) | initiatives | 6 | 0 |

@@ -25,6 +25,17 @@ export function contactTabCounts(
   if (roles && !omitted(view, "deal_roles") && !roles.page.has_more) {
     counts.deals = dealCards(view).length;
   }
+  const employments = view.employments;
+  if (
+    employments &&
+    !omitted(view, "employments") &&
+    !employments.page.has_more
+  ) {
+    // Two jobs at one firm are one company.
+    counts.companies = new Set(
+      employments.data.map((role) => role.company_id),
+    ).size;
+  }
   if (files !== undefined) {
     counts.documents = files;
   }

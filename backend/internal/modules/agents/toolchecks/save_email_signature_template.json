@@ -1,0 +1,6 @@
+{
+  "verb": "save_email_signature_template",
+  "checks": [
+    "installation_settings.update"
+  ]
+}

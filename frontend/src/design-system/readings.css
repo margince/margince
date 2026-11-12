@@ -203,26 +203,33 @@
 .btn.btn-link.segbar-step-2 {
   background: color-mix(in srgb, var(--accentText) 20%, var(--bgElevated));
 }
+/* Not yet counted: an outline in the parts' hue, so it reads as the same kind
+   of value that has not happened yet. */
+.segbar-ahead {
+  background: var(--accentLight);
+  border: 1px dashed var(--accentText);
+}
 .segbar-track {
   position: relative;
   display: flex;
-  height: 12px;
-  background: var(--bgChip);
+  height: 10px;
   color: var(--textPrimary);
-  border-radius: 0 var(--r-xs) var(--r-xs) 0;
 }
-/* Parts meet on a 2px rule of the ground rather than a stroke: the gap is what
-   separates them, and a border drawn round a part is ink that is not data. */
+/* Parts are pills with air between them rather than a stroke. The air is a
+   clip at each part's start, so it takes no width and the parts keep the
+   scale the marker is placed on. */
 .segbar-part {
   flex: none;
   box-sizing: border-box;
   height: 100%;
+  border-radius: var(--r-full);
+  corner-shape: round;
 }
 .segbar-part + .segbar-part {
-  border-left: 2px solid var(--bgElevated);
+  clip-path: inset(0 0 0 3px round var(--r-full));
 }
-.segbar-part:last-of-type {
-  border-radius: 0 var(--r-xs) var(--r-xs) 0;
+.segbar-part + .segbar-part:dir(rtl) {
+  clip-path: inset(0 3px 0 0 round var(--r-full));
 }
 /* The mark overhangs the track so it reads as a line ACROSS the parts. Its
    flanks are ground, so it stays legible where it lands inside a filled part:

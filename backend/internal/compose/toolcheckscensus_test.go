@@ -21,7 +21,7 @@ const toolChecksRerun = "add the seed or fixture its call needs in backend/inter
 func TestEveryServedVerbHasItsToolChecksRow(t *testing.T) {
 	table, err := agents.EmbeddedToolChecks()
 	if err != nil {
-		t.Fatalf("the embedded toolchecks.json does not read: %v", err)
+		t.Fatalf("the embedded toolchecks folder does not read: %v", err)
 	}
 	served := map[string]bool{}
 	for _, spec := range NewRegistry(nil, SendPath{}).Specs() {
@@ -39,13 +39,33 @@ func TestEveryServedVerbHasItsToolChecksRow(t *testing.T) {
 		t.Fatal("the registry serves no verb, so this checked nothing")
 	}
 	for _, verb := range slices.Sorted(maps.Keys(served)) {
-		if _, has := table.Verbs[verb]; !has {
-			t.Errorf("%s is served and toolchecks.json has no row for it: %s", verb, toolChecksRerun)
+		if _, has := table[verb]; !has {
+			t.Errorf("%s is served and toolchecks/ has no file for it: %s", verb, toolChecksRerun)
 		}
 	}
-	for _, verb := range slices.Sorted(maps.Keys(table.Verbs)) {
+	for _, verb := range slices.Sorted(maps.Keys(table)) {
 		if !served[verb] {
-			t.Errorf("toolchecks.json has a row for %s, which the registry no longer serves: %s", verb, toolChecksRerun)
+			t.Errorf("toolchecks/ has a file for %s, which the registry no longer serves: %s", verb, toolChecksRerun)
+		}
+	}
+}
+
+// The sweep writes each verb's checks and its row in one pass. A verb with one
+// file and not the other is half an answer.
+func TestEveryVerbHasBothItsChecksAndItsRow(t *testing.T) {
+	_, rows := readToolRoles(t)
+	checks := readToolChecks(t)
+	if len(rows) == 0 || len(checks) == 0 {
+		t.Fatalf("read %d rows and %d checks, so this checked nothing", len(rows), len(checks))
+	}
+	for _, verb := range slices.Sorted(maps.Keys(rows)) {
+		if _, has := checks[verb]; !has {
+			t.Errorf("%s has a row and no checks file: %s", verb, toolChecksRerun)
+		}
+	}
+	for _, verb := range slices.Sorted(maps.Keys(checks)) {
+		if _, has := rows[verb]; !has {
+			t.Errorf("%s has a checks file and no row: %s", verb, toolChecksRerun)
 		}
 	}
 }

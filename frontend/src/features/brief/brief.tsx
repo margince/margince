@@ -12,12 +12,12 @@ import { PageAsideToggle } from "../../components/pageaside";
 import { useTaskUpdate } from "../../components/taskactions";
 import { Modal } from "../../design-system/atoms";
 import { DrawerBody, DrawerHead } from "../../design-system/drawerbands";
-import { Eyebrow } from "../../design-system/eyebrow";
 import { Heading } from "../../design-system/heading";
 import { PageZones } from "../../design-system/pagezones";
+import { Panel, PanelBody } from "../../design-system/panel";
 import { greetingNameOf } from "../../format/greetingname";
 import { useNow } from "../../format/now";
-import { useT } from "../../i18n";
+import { useLocale, useT } from "../../i18n";
 import { useCanWrite } from "../../lib/capability";
 import { markJourney } from "../../lib/journeymarks";
 import { useMagic } from "../../lib/magic.queries";
@@ -67,10 +67,12 @@ import { BriefQueue } from "./brief.queue";
 import { BriefReadingsPending, BriefReadingsStrip } from "./brief.readings";
 import { SchedulePanel } from "./brief.schedule";
 import { BriefSuggestions } from "./brief.suggestions";
+import { taskName } from "./brief.taskcard";
 import { addressFrom, type BriefAddress, paramsFor } from "./brief.view";
 import { WeeklySection, WeekStepper } from "./brief.weekly";
 import { useWeeklyRailShown, WeeklyRail } from "./brief.weekly.rail";
 import { BriefCoverage } from "./briefcoverage";
+import { ContactMeetingBrief } from "./meetingbrief";
 import "./brief.css";
 
 // The dials that narrow the drawer. The Home button clears them, so it always
@@ -318,26 +320,34 @@ function PersonalMorning({
             {/* The day's meetings first: the work is read against them. */}
             <ScheduleWithMeetings day={day} state={state} />
             {day && (
-              <div className="brief-overview">
-                <Eyebrow as="h2" className="brief-section-label">
-                  {t("brief.rail.numbers")}
-                </Eyebrow>
-                <BriefReadingsStrip day={day} />
-                <BriefCoverage
-                  day={day}
-                  run={brief.data}
-                  onRetry={() => void query.refetch()}
-                />
-              </div>
+              <Panel
+                title={t("brief.rail.numbers")}
+                flatHead
+                className="brief-overview"
+              >
+                <PanelBody>
+                  <BriefReadingsStrip day={day} />
+                  <BriefCoverage
+                    day={day}
+                    run={brief.data}
+                    onRetry={() => void query.refetch()}
+                  />
+                </PanelBody>
+              </Panel>
             )}
             {/* Hidden from a screen reader: the meetings above already
                 announce the wait. */}
             {state === "loading" && (
-              <div className="brief-overview" aria-hidden="true">
-                <Eyebrow as="h2" className="brief-section-label">
-                  {t("brief.rail.numbers")}
-                </Eyebrow>
-                <BriefReadingsPending />
+              <div aria-hidden="true">
+                <Panel
+                  title={t("brief.rail.numbers")}
+                  flatHead
+                  className="brief-overview"
+                >
+                  <PanelBody>
+                    <BriefReadingsPending />
+                  </PanelBody>
+                </Panel>
               </div>
             )}
           </>
@@ -378,6 +388,8 @@ function FocusDetails({
   onClose: () => void;
 }>) {
   const t = useT();
+  const { locale } = useLocale();
+  const viewer = useMe(false).data?.user;
   const titleId = useId();
   if (item.source === "meeting_outcome") {
     return <MeetingDetailModal item={item} onClose={onClose} />;
@@ -387,6 +399,7 @@ function FocusDetails({
       <TaskDetailModal
         activityId={item.id}
         item={item}
+        title={taskName(item, viewer, t, locale)}
         readOnly={!item.actions.includes("complete")}
         update={update}
         onClose={onClose}
@@ -396,8 +409,9 @@ function FocusDetails({
   return (
     <Modal open onClose={onClose} labelledBy={titleId} intent="drawer" fit>
       <DrawerHead>
+        {/* Named as the card names it, so the drawer says what it is about. */}
         <Heading size="large" id={titleId} className="t-h2">
-          {t("brief.focus.context")}
+          {taskName(item, viewer, t, locale)}
         </Heading>
       </DrawerHead>
       <DrawerBody className="form-stack">
@@ -408,15 +422,28 @@ function FocusDetails({
   );
 }
 
-// The schedule, whose meeting titles open the meeting over Home.
+// The schedule, whose meeting titles open the meeting over Home and whose
+// next meeting's brief opens there too.
 function ScheduleWithMeetings({
   day,
   state,
 }: Readonly<Omit<ComponentProps<typeof SchedulePanel>, "onOpenMeeting">>) {
   const [meeting, setMeeting] = useState<string | null>(null);
+  const [prepFor, setPrepFor] = useState<string | null>(null);
   return (
     <>
-      <SchedulePanel day={day} state={state} onOpenMeeting={setMeeting} />
+      <SchedulePanel
+        day={day}
+        state={state}
+        onOpenMeeting={setMeeting}
+        onPrepareMeeting={setPrepFor}
+      />
+      {/* Opening it is what has Margince write the brief. */}
+      <ContactMeetingBrief
+        activityId={prepFor}
+        open={prepFor !== null}
+        onClose={() => setPrepFor(null)}
+      />
       {meeting && (
         <ActivityDetailModal
           activityId={meeting}

@@ -85,7 +85,7 @@ func jobHistoryFilterError(cursor jobHistoryCursor) error {
 	case cursor.Days < 1 || cursor.Days > 7:
 		return httperr.Validation("days", "out_of_range", "choose a window from one to seven days")
 	case len(cursor.Kind) > 200:
-		return httperr.Validation("kind", "too_long", "use a job kind of at most 200 characters")
+		return httperr.TooLong("kind", 200, len(cursor.Kind))
 	case cursor.State != "" && cursor.State != string(crmcontracts.GetJobHealthHistoryParamsStateRetryable) && cursor.State != string(crmcontracts.GetJobHealthHistoryParamsStateDiscarded) && cursor.State != string(crmcontracts.GetJobHealthHistoryParamsStateCancelled):
 		return httperr.Validation("state", "invalid_state", "choose retryable, discarded or cancelled")
 	default:

@@ -11,6 +11,7 @@ import {
   problemExistingId,
   problemFieldErrors,
   problemFieldErrorsOf,
+  problemFieldSentencesOf,
   problemMessage,
   problemMessageOf,
   throwProblem,
@@ -552,3 +553,86 @@ for (const locale of ["de", "vi"] as const) {
     );
   });
 }
+
+describe("a field refusal read in the reader's language", () => {
+  const german = Object.assign(
+    (key: Parameters<typeof translate>[1]) => translate("de", key),
+    { locale: "de" as const },
+  );
+  const refusal = (fault: Record<string, unknown>) =>
+    new ProblemError({
+      status: 422,
+      code: "validation_error",
+      detail: "an English sentence from the server",
+      details: { errors: [fault] },
+    });
+
+  it("never says no cause was reported when the server named a field and a code", () => {
+    const line = problemMessageOf(
+      refusal({ field: "note", code: "not_a_known_code", message: "bad note" }),
+      german,
+    );
+    expect(line).toBe(german("common.fieldInvalid"));
+    expect(line).not.toBe(german("common.errorNoCause"));
+  });
+
+  it("names the field and its limit, with the number in the reader's grouping", () => {
+    const line = problemMessageOf(
+      refusal({
+        field: "html",
+        code: "too_long",
+        message: "html is too long",
+        max: 10000,
+      }),
+      german,
+      undefined,
+      { html: "HTML-Signatur" },
+    );
+    expect(line).toBe("HTML-Signatur: höchstens 10.000 Zeichen.");
+  });
+
+  it("says the limit without a field name when the screen has no label for it", () => {
+    const line = problemMessageOf(
+      refusal({ field: "html", code: "too_long", message: "x", max: 2000 }),
+      german,
+    );
+    expect(line).toBe("Dieser Wert darf höchstens 2.000 Zeichen haben.");
+  });
+
+  it("says too long, without a number, for a server that sends no limit", () => {
+    const line = problemMessageOf(
+      refusal({ field: "html", code: "too_long", message: "x" }),
+      german,
+    );
+    expect(line).toBe(german("common.valueTooLong"));
+  });
+
+  it("gives an English reader the same catalog copy for a length refusal", () => {
+    const english = Object.assign(t, { locale: "en" as const });
+    const line = problemMessageOf(
+      refusal({ field: "html", code: "too_long", message: "x", max: 2000 }),
+      english,
+    );
+    expect(line).toBe("This value is at most 2,000 characters.");
+  });
+
+  it("words the callout and the line under the field the same way", () => {
+    const error = refusal({
+      field: "note",
+      code: "not_a_known_code",
+      message: "bad note",
+    });
+    expect(problemFieldSentencesOf(error, "de").get("note")).toBe(
+      problemMessageOf(error, german),
+    );
+  });
+
+  it("still says no cause was reported for a body with no field and no known code", () => {
+    expect(
+      problemMessageOf(
+        new ProblemError({ status: 500, code: "internal", detail: "x" }),
+        german,
+      ),
+    ).toBe(german("common.errorNoCause"));
+  });
+});

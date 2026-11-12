@@ -1,0 +1,7 @@
+{
+  "verb": "lift_capture_exclusion",
+  "checks": [],
+  "takes": [
+    "agent_capture_exclusion"
+  ]
+}

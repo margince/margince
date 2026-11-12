@@ -1,0 +1,15 @@
+{
+  "tool": "change_capture",
+  "action": "import_vcards",
+  "verb": "import_vcards",
+  "allowed_for": [
+    "admin",
+    "management",
+    "manager",
+    "ops",
+    "rep"
+  ],
+  "refused_for": [
+    "read_only"
+  ]
+}

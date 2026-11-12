@@ -1,0 +1,9 @@
+{
+  "verb": "forecast_movement",
+  "checks": [
+    "forecast.read"
+  ],
+  "takes": [
+    "forecast_snapshot"
+  ]
+}

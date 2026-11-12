@@ -55,6 +55,9 @@ export const PINNED_RUNGS = [
 // A host with a layer under its panes: a ring, a glow, the waves, a gradient.
 // Level 1's paint is see-through in dark, so a pane on it paints its ground.
 export const UNDERLAY_HOSTS = [
+  ".analytics-body .analytics-hero-aside .meterbar span",
+  ".analytics-body .meterbar-flat span",
+  ".analytics-body .stat-card-meter-fill",
   ".arhit",
   ".arphead",
   ".avatar-mesh",
@@ -69,8 +72,14 @@ export const UNDERLAY_HOSTS = [
   ".ob-stage-flash",
   ".ob-stage-light",
   ".rail .arhit",
+  ".report-chart-bullet-fill",
+  ".report-chart-column-fill",
+  ".report-chart-range-band",
   ".standing-sheet > .standing-sheet-pane",
   ".voiceprint-bars span",
+  ".waterfall-anchor .waterfall-fill",
+  ".waterfall-down .waterfall-fill",
+  ".waterfall-up .waterfall-fill",
   ":has(> .ambient-waves)",
   '[data-ai-reveal="run"]',
 ] as const;

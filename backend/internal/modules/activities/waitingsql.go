@@ -16,11 +16,13 @@ package activities
 // waiting.go holds what READS it; this holds what it says.
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/platform/auth"
+	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/correspondence"
 	"github.com/margince/margince/backend/internal/shared/kernel/occurredday"
@@ -141,7 +143,10 @@ var waitingSelectSQL = `
 	       -- engaged for one colleague and cold for another.
 	       -- The classifier's answer, or empty when nobody has judged this
 	       -- message. Uncertain intent remains reviewable without claiming priority.
-	       coalesce(a.owed_verdict, ''), coalesce(a.capture_label, ''),
+	       -- An asks_us that does not stand reads as unjudged.
+	       CASE WHEN coalesce(` + storekit.AsksUsClause("a") + `, false) THEN '` + OwedVerdictAsksUs + `'
+	            WHEN a.owed_verdict = '` + OwedVerdictInformsUs + `' THEN '` + OwedVerdictInformsUs + `'
+	            ELSE '' END, coalesce(a.capture_label, ''),
 	       -- Whether every header recipient names somebody OTHER than the
 	       -- reader — a thread they can see because it reached their mailbox,
 	       -- addressed to a colleague.
@@ -354,8 +359,28 @@ const waitingGroupSQL = `
 // over the messages before any link is joined, so Postgres stops at the cap.
 // An ARRAY, built once, so the primary key fetches the capped set. As a join
 // or an IN, the planner joined the whole table first and filtered afterwards.
+//
+// The horizon's two arms are capped apart and merged (waitingCappedArmsSQL).
 var waitingRepliesSQL = waitingSelectSQL + `
-	 WHERE a.id = ANY (ARRAY(` + waitingEligibleSQL + `
+	 WHERE a.id = ANY (ARRAY(` + waitingCappedArmsSQL + `))` + waitingGroupSQL + `
+	 ORDER BY a.occurred_at DESC, a.id DESC`
+
+// waitingCappedArmsSQL is the newest eligible messages up to the cap. Its arms
+// are young mail and held requests past the horizon, which no row is in both.
+// Apart, young mail walks the date index newest first and stops at the cap.
+// Together, the `OR` with the held ids needs a bitmap that judges every message.
+// `NOT MATERIALIZED` inlines the eligibility into each arm, so the statement
+// carries its text once.
+var waitingCappedArmsSQL = `WITH eligible AS NOT MATERIALIZED (
+	 SELECT a.id, a.occurred_at, ` + waitingYoungSQL("$%[1]d::timestamptz", "%[5]d") + ` AS young ` + waitingEligibleFromSQL + `)
+	 SELECT capped.id FROM (
+	   (SELECT eligible.id, eligible.occurred_at FROM eligible WHERE eligible.young
+	     ORDER BY eligible.occurred_at DESC, eligible.id DESC LIMIT %[4]s)
+	   UNION ALL
+	   (SELECT eligible.id, eligible.occurred_at FROM eligible
+	     WHERE eligible.id = ANY (` + heldRequestIDsSQL() + `) AND eligible.young IS NOT TRUE
+	     ORDER BY eligible.occurred_at DESC, eligible.id DESC LIMIT %[4]s)
+	 ) capped
 	 -- NEWEST first, which is the opposite of how the rows are then shown.
 	 --
 	 -- The cap has to spend its budget on the rows most likely to matter, and
@@ -373,25 +398,28 @@ var waitingRepliesSQL = waitingSelectSQL + `
 	 -- caller folds conversations and drops sending systems after the cap, so
 	 -- it asks for another page when too much of one went. The cap bounds ONE
 	 -- page; the caller bounds how many it will ask for.
-		 ORDER BY a.occurred_at DESC, a.id DESC
-	 LIMIT %[4]d))` + waitingGroupSQL + `
-	 ORDER BY a.occurred_at DESC, a.id DESC`
+	 ORDER BY capped.occurred_at DESC, capped.id DESC LIMIT %[4]s`
 
-// planEachBind runs a statement carrying waitingRepliesSQL unnamed, so Postgres
-// plans it at each Bind with the values. A reused named statement turns generic
-// after five runs, and the generic plan walks the whole horizon instead of
-// stopping at the cap.
-func planEachBind(args []any) []any {
+func waitingLimitSQL(arg func(any) int, limit int) string {
+	return fmt.Sprintf("$%d", arg(limit))
+}
+
+// Outside a generic-plan snapshot, the waiting walk needs its bound values to
+// stop at the cap. Within one, the stable named statement keeps its plan.
+func planEachBind(ctx context.Context, args []any) []any {
+	if database.GenericPlansEnabled(ctx) {
+		return args
+	}
 	return append([]any{pgx.QueryExecModeDescribeExec}, args...)
 }
 
 // waitingListArgs is planEachBind for the activity list, which carries the walk
 // only when it is filtered to messages waiting for a reply.
-func waitingListArgs(in ListActivitiesInput, args []any) []any {
+func waitingListArgs(ctx context.Context, in ListActivitiesInput, args []any) []any {
 	if in.WaitingReplyAsOf == nil {
 		return args
 	}
-	return planEachBind(args)
+	return planEachBind(ctx, args)
 }
 
 // readerSetAsideSQL is whether one reader has set message `a` aside: marked it

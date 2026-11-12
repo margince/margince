@@ -56,6 +56,9 @@ type LogActivityInput struct {
 	recordedAt           *time.Time
 	// Internal creation policy; public activity input cannot set an audience.
 	audienceMembers []AudienceMember
+	// audienceOf gives the new activity the audience, members and parties of
+	// the activity it records. Nil leaves the audience it is born with.
+	audienceOf *ids.ActivityID
 	// invitedAssignee admits an invited colleague as the task's assignee. The
 	// HTTP create handler sets it for an assignee the caller NAMED, and
 	// AdmitInvitedAssignee for a promiser's own task. Every other automatic
@@ -92,12 +95,18 @@ type LogActivityInput struct {
 	// the day the task is due by. It needs DueAt, and on a task with no
 	// RemindAt it sets the reminder to DueAt (admitTaskTime).
 	DueHasTime bool
+	// TaskType is the work a task asks for; nil leaves the read to derive it
+	// from the task's maker (storekit.TaskTypeSQL).
+	TaskType   *crmcontracts.TaskType
 	RemindAt   *time.Time
 	AssigneeID *ids.UserID
 	HostUserID *ids.UserID
 	// AttendeeUserIDs are the colleagues who were in a meeting or call besides
 	// whoever logged it; each is stamped as an our-side participant.
 	AttendeeUserIDs []ids.UserID
+	// SenderContactID is the linked contact who wrote an inbound activity. Nil
+	// leaves the sender to stampLoggedCounterparties' rule for the link count.
+	SenderContactID *ids.UUID
 	// ClaimsHostSlot marks a meeting that HOLDS its host's hour, which is what
 	// activity_meeting_no_overlap refuses a second of. Only BookMeeting sets
 	// it: a booking door takes a slot on somebody's calendar, and taking one
@@ -243,6 +252,9 @@ func (s *Store) logActivityAndReadTranscript(
 	ctx context.Context, tx pgx.Tx, in LogActivityInput,
 ) (crmcontracts.Activity, bool, error) {
 	if err := CheckEntryHasContent(in.Kind, in.Subject, in.Body, in.CallOutcome); err != nil {
+		return crmcontracts.Activity{}, false, err
+	}
+	if err := checkTaskTypeKind(in.Kind, in.TaskType); err != nil {
 		return crmcontracts.Activity{}, false, err
 	}
 	if in.RequestActivityID != nil {

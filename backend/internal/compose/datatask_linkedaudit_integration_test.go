@@ -48,7 +48,7 @@ func TestLinkedAuditTaskCorrectsBothPhasesAndReplaysSafely(t *testing.T) {
 	e := integration.Setup(t)
 	request := legacyRequestAuditCopies(t, e)
 	ctx := principal.SystemActing(e.Admin(), "system:datatask-test")
-	task := linkedAuditRedactionDataTask()
+	task := linkedAuditRedactionDataTask(e.Pool)
 	for i := range task.Steps {
 		task.Steps[i].Limit = 1
 	}
@@ -76,7 +76,7 @@ func TestLinkedAuditTaskRollsBackPayloadsAndStopsBeforeIdentityRemoval(t *testin
 	e := integration.Setup(t)
 	request := legacyRequestAuditCopies(t, e)
 	ctx := principal.SystemActing(e.Admin(), "system:datatask-test")
-	task := linkedAuditRedactionDataTask()
+	task := linkedAuditRedactionDataTask(e.Pool)
 	batch := task.Steps[0].Batch
 	task.Steps[0].Batch = func(ctx context.Context, tx pgx.Tx, in datatask.BatchIn) (datatask.BatchOut, error) {
 		out, err := batch(ctx, tx, in)

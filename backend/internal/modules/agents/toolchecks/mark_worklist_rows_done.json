@@ -1,0 +1,19 @@
+{
+  "verb": "mark_worklist_rows_done",
+  "checks": [
+    "activity.read",
+    "automation.read",
+    "company.read",
+    "contact.read",
+    "deal.read",
+    "installation_settings.read",
+    "introduction.read",
+    "lead.read",
+    "project.read",
+    "relationship.read",
+    "weekly_plan.read"
+  ],
+  "takes": [
+    "worklist_meeting"
+  ]
+}

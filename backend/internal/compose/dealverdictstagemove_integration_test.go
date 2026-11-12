@@ -18,8 +18,11 @@ import (
 	"testing"
 	"time"
 
+	"github.com/margince/margince/backend/internal/compose/attention"
 	"github.com/margince/margince/backend/internal/compose/integration"
+	"github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/modules/deals"
+	"github.com/margince/margince/backend/internal/platform/owndomain"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/ports/model"
 )
@@ -134,7 +137,7 @@ func TestMarginceMovesADealForwardAndUndoMovesItBack(t *testing.T) {
 	if len(changes) != 1 {
 		t.Fatalf("changes = %d, want the one move", len(changes))
 	}
-	summary := stageMoveReceipt(changes[0]).Summary
+	summary := attention.StageMoveReceipt(changes[0]).Summary
 	if !strings.Contains(summary, "They asked for the contract draft") || !strings.Contains(summary, "Probability now") {
 		t.Fatalf("receipt = %q, want the reason and the stage's probability", summary)
 	}
@@ -276,7 +279,8 @@ func (v *stageMoveEnv) seedDealActivity(t *testing.T, kind, direction, from, sta
 	integration.LinkActivity(t, owner, id, "deal", v.deal)
 	if from != "" {
 		if _, err := owner.Exec(context.Background(),
-			`INSERT INTO activity_participant (activity_id, address, role) VALUES ($1, $2, 'from')`, id, from); err != nil {
+			`INSERT INTO activity_participant (activity_id, address, address_domain_folded, role) VALUES ($1, $2, $3, 'from')`,
+			id, from, owndomain.StoredOfAddress(from)); err != nil {
 			t.Fatal(err)
 		}
 	}
@@ -296,15 +300,20 @@ func (v *stageMoveEnv) seedBuyer(t *testing.T, address string) {
 
 func TestABuyerMilestoneNeedsMailFromABuyerOfTheDeal(t *testing.T) {
 	for _, tc := range []struct {
-		name, from string
-		moves      bool
+		name, from   string
+		moves, moved bool
 	}{
-		{"the deal's stakeholder wrote it", "buyer@customer.example", true},
-		{"somebody who is no contact of the deal wrote it", "stranger@elsewhere.example", false},
+		{"the deal's stakeholder wrote it", "buyer@customer.example", true, false},
+		{"somebody who is no contact of the deal wrote it", "stranger@elsewhere.example", false, false},
+		{"the address was another contact's before the stakeholder's", "buyer@customer.example", false, true},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			v := setupStageMove(t)
 			v.seedBuyer(t, "buyer@customer.example")
+			if tc.moved {
+				v.WsExec(t, `INSERT INTO contact_email (contact_id, email, source, captured_by, archived_at)
+					VALUES ($1, 'buyer@customer.example', 'manual', 'human:x', now())`, v.SeedContact(t, "Former Holder", &v.Rep1))
+			}
 			mail := v.seedDealActivity(t, "email", "inbound", tc.from, "", "Please send us the contract draft.")
 			v.buyerCriterion(t, deals.CriterionBuyerConfirmed, mail, "send us the contract draft")
 			v.run(t)
@@ -334,6 +343,48 @@ func TestACustomCriterionTheLedgerDoesNotRecordMovesNothing(t *testing.T) {
 	v.run(t)
 	if got := v.field(t, "stage_id"); got != v.stage.String() {
 		t.Fatalf("stage = %s, want it left at %s: only the quote matched (outcomes %s)", got, v.stage, v.outcomes(t))
+	}
+}
+
+// A buyer's mail under a mistaken own domain reads as ours, so the row lock
+// refuses the move. Taking the domain away changes nothing the deal's own
+// rows hold, and the next pass must read the deal again all the same.
+func TestRemovingAMistakenOwnDomainLetsTheNextPassMoveTheDeal(t *testing.T) {
+	v := setupStageMove(t)
+	own := capture.NewOwnDomainStore(v.DB())
+	if _, err := own.Add(v.Admin(), "customer.example"); err != nil {
+		t.Fatal(err)
+	}
+	v.seedBuyer(t, "buyer@customer.example")
+	mail := v.seedDealActivity(t, "email", "inbound", "buyer@customer.example", "", "Please send us the contract draft.")
+	v.buyerCriterion(t, deals.CriterionBuyerConfirmed, mail, "send us the contract draft")
+	v.run(t)
+	if got := v.outcomes(t); got != "move_stage="+deals.VerdictDroppedStageRefused {
+		t.Fatalf("outcomes = %s, want the row lock to read the buyer's mail as ours", got)
+	}
+
+	if err := own.Remove(v.Admin(), "customer.example"); err != nil {
+		t.Fatal(err)
+	}
+	v.run(t)
+	if got := v.field(t, "stage_id"); got != v.next.String() {
+		t.Fatalf("stage after the domain went = %s, want the next stage %s (outcomes %s)", got, v.next, v.outcomes(t))
+	}
+}
+
+// The ledger settles a custom criterion. An entry recorded after a pass found
+// none changes nothing on the deal's own rows, and still makes it due.
+func TestALedgerEntryRecordedAfterAPassLetsTheNextPassMoveTheDeal(t *testing.T) {
+	v := setupStageMoveLedger(t, false)
+	v.run(t)
+	if got := v.field(t, "stage_id"); got != v.stage.String() {
+		t.Fatalf("stage = %s, want it left at %s with no ledger entry (outcomes %s)", got, v.stage, v.outcomes(t))
+	}
+
+	recordLedger(t, v.dealVerdictEnv, v.move.criterion, v.note)
+	v.run(t)
+	if got := v.field(t, "stage_id"); got != v.next.String() {
+		t.Fatalf("stage after the ledger entry = %s, want the next stage %s (outcomes %s)", got, v.next, v.outcomes(t))
 	}
 }
 

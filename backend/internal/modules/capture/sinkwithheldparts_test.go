@@ -37,6 +37,14 @@ func (k *withheldOnlyKeeper) RecordLinks(context.Context, pgx.Tx, ids.ActivityID
 	return 0, nil
 }
 
+func (k *withheldOnlyKeeper) RetireLinks(context.Context, pgx.Tx, ids.ActivityID, FileSource, []string) (int, error) {
+	return 0, nil
+}
+
+func (k *withheldOnlyKeeper) RestoreLinks(context.Context, pgx.Tx, ids.ActivityID, FileSource, []string) (int, error) {
+	return 0, nil
+}
+
 // AdoptWithheld is never reached from a new activity, which is all this double
 // stands in for, so it refuses rather than pretending to adopt.
 func (k *withheldOnlyKeeper) AdoptWithheld(

@@ -34,7 +34,10 @@ here: put it in the area's word list instead. A name that no plain page uses mus
 | dev | The development mode of a local install, set by `MARGINCE_ENV`. |
 | Diátaxis | A way to sort docs into tutorials, how-to guides, reference and explanation. |
 | dmy | The date order day, month, year, as a setting value. |
+| Doc | One Google Docs file, such as the notes Google Meet writes for a meeting. |
+| Docs | Google Docs, the Google editor where Meet writes meeting notes and transcripts. |
 | Docker | The container tool used to run the local stack and the images. |
+| Drive | Google Drive, where a Google account keeps its files. |
 | English | The language the docs and the source catalog are written in. |
 | entity | A legal entity: one of the companies an installation trades as, each with its own name and address. |
 | EU | The European Union, whose laws several pages refer to. |
@@ -46,6 +49,7 @@ here: put it in the area's word list instead. A name that no plain page uses mus
 | Gmail | Google's mail service, one of the mailboxes Margince connects to. |
 | Go | The programming language of the server. |
 | Google | The company behind Gmail and the Gemini models. |
+| grace | The grace period: the time after a licence expires in which Margince still runs. |
 | Gradion | The company that builds Margince and licenses it. |
 | handoff | An SDR passing a prospect to an account executive, who accepts or returns it. |
 | handoffs | SDRs passing prospects to account executives, who accept or return them. |

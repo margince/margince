@@ -60,8 +60,12 @@ it.each(["task", "meeting", "meeting_outcome", "conversation_claim"] as const)(
         />
       </StoryProviders>,
     );
+    // A meeting that needs its outcome is named by what it asks.
     const title = screen.getByRole("button", {
-      name: "Discuss pricing · Mira",
+      name:
+        source === "meeting_outcome"
+          ? "Record the outcome of Discuss pricing · Mira"
+          : "Discuss pricing · Mira",
     });
     title.focus();
     await user.keyboard("{Enter}");

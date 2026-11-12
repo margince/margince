@@ -6,7 +6,7 @@
     "required_only_as_one_of_a_set": 2,
     "never_driven": 9,
     "permitted_but_never_required": 4,
-    "tokens_served_but_never_driven": 4860,
+    "tokens_served_but_never_driven": 4990,
     "use_case_cases": 71,
     "acceptance_criteria_named": 118,
     "tools_added_by_shipped_units": 0,
@@ -3803,7 +3803,7 @@
   "tools": [
     {
       "name": "read_analytics",
-      "tokens": 927,
+      "tokens": 1020,
       "agents": [],
       "required_by_cases": [],
       "required_as_one_of_a_set_by_cases": [],
@@ -3833,7 +3833,7 @@
     },
     {
       "name": "read_view",
-      "tokens": 638,
+      "tokens": 675,
       "agents": [],
       "required_by_cases": [],
       "required_as_one_of_a_set_by_cases": [],
@@ -4069,6 +4069,43 @@
       "measured_by_model": {}
     },
     {
+      "name": "read_reports",
+      "tokens": 2784,
+      "agents": [],
+      "required_by_cases": [
+        "case49_who_can_introduce_us",
+        "case62_held_meetings_to_opportunities"
+      ],
+      "required_as_one_of_a_set_by_cases": [],
+      "permitted_in_cases": [
+        "case20_put_it_in_the_board_pack",
+        "case22_can_i_trust_the_numbers"
+      ],
+      "driven": true,
+      "required_only_as_one_of_a_set": false,
+      "graded_by_certification_tasks": null,
+      "measured_by_model": {
+        "claude-sonnet-5-5@claude-cli": {
+          "runs": 5,
+          "passed": 4,
+          "reliability": 0.8,
+          "cases_below_their_bar": []
+        },
+        "gemini-3.8-flash-medium@agy-cli": {
+          "runs": 4,
+          "passed": 4,
+          "reliability": 1,
+          "cases_below_their_bar": []
+        },
+        "gpt-5.6-sol@codex-cli": {
+          "runs": 5,
+          "passed": 4,
+          "reliability": 0.8,
+          "cases_below_their_bar": []
+        }
+      }
+    },
+    {
       "name": "read_workspace",
       "tokens": 2767,
       "agents": [],
@@ -4147,43 +4184,6 @@
       }
     },
     {
-      "name": "read_reports",
-      "tokens": 2692,
-      "agents": [],
-      "required_by_cases": [
-        "case49_who_can_introduce_us",
-        "case62_held_meetings_to_opportunities"
-      ],
-      "required_as_one_of_a_set_by_cases": [],
-      "permitted_in_cases": [
-        "case20_put_it_in_the_board_pack",
-        "case22_can_i_trust_the_numbers"
-      ],
-      "driven": true,
-      "required_only_as_one_of_a_set": false,
-      "graded_by_certification_tasks": null,
-      "measured_by_model": {
-        "claude-sonnet-5-5@claude-cli": {
-          "runs": 5,
-          "passed": 4,
-          "reliability": 0.8,
-          "cases_below_their_bar": []
-        },
-        "gemini-3.8-flash-medium@agy-cli": {
-          "runs": 4,
-          "passed": 4,
-          "reliability": 1,
-          "cases_below_their_bar": []
-        },
-        "gpt-5.6-sol@codex-cli": {
-          "runs": 5,
-          "passed": 4,
-          "reliability": 0.8,
-          "cases_below_their_bar": []
-        }
-      }
-    },
-    {
       "name": "read_details",
       "tokens": 2200,
       "agents": [],
@@ -4229,7 +4229,7 @@
     },
     {
       "name": "change_activities",
-      "tokens": 1968,
+      "tokens": 2042,
       "agents": [
         "overnight_at_risk_sweep"
       ],
@@ -4478,7 +4478,7 @@
     },
     {
       "name": "change_reports",
-      "tokens": 1264,
+      "tokens": 1357,
       "agents": [],
       "required_by_cases": [
         "case113_after_the_sales_review"
@@ -4657,7 +4657,7 @@
     },
     {
       "name": "change_compliance",
-      "tokens": 893,
+      "tokens": 879,
       "agents": [],
       "required_by_cases": [
         "case77_record_her_yes",

@@ -25,6 +25,7 @@ import (
 // Eraser executes the shared erase path both the DSR surface and the
 // retention engine's 'erase' action ride.
 type Eraser struct {
+	invalidateEdges EdgeInvalidator
 	// db binds the installation's workspace itself (ADR-0091 §9 step 3).
 	db *database.DB
 	// blob purges the subject's attachment objects (Art. 17 reaches the

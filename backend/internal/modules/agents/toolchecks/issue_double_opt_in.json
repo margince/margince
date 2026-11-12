@@ -1,0 +1,13 @@
+{
+  "verb": "issue_double_opt_in",
+  "checks": [
+    "activity.create",
+    "activity.read",
+    "contact.update"
+  ],
+  "takes": [
+    "contact",
+    "double_opt_in_purpose",
+    "mail_contact"
+  ]
+}

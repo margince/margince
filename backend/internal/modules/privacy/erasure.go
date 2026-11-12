@@ -174,7 +174,7 @@ func (e *Eraser) EraseContactCounted(ctx context.Context, contactID ids.UUID, re
 		}
 		// Where the subject's name stands inside somebody else's working record:
 		// an automation's run, a colleague's voice sample or weekly plan
-		// (erasure_commitments.go).
+		// (erasure_declared.go).
 		if err := e.redactWorkingRecords(ctx, tx, subject, keys); err != nil {
 			return err
 		}

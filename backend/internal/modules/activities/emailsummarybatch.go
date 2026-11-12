@@ -17,17 +17,22 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
-// EmailSummariesByID is EmailSummariesByIDBatch for a caller with no
-// transaction of its own to lend — the who-is-waiting seam, whose rows come
-// back from a read that has already committed. Same reader, same gate; only
-// the transaction differs.
+// EmailSummariesByID reads for a caller without a transaction, including brief
+// evidence. Its store clock supplies the instant for request-time readers.
 func (s *Store) EmailSummariesByID(
 	ctx context.Context, activityIDs []ids.UUID,
+) (map[ids.UUID]crmcontracts.EmailSummary, error) {
+	return s.EmailSummariesByIDAt(ctx, activityIDs, s.now())
+}
+
+// EmailSummariesByIDAt judges each row at the caller's read instant.
+func (s *Store) EmailSummariesByIDAt(
+	ctx context.Context, activityIDs []ids.UUID, asOf time.Time,
 ) (map[ids.UUID]crmcontracts.EmailSummary, error) {
 	var out map[ids.UUID]crmcontracts.EmailSummary
 	err := s.tx(ctx, func(tx pgx.Tx) error {
 		var readErr error
-		out, readErr = EmailSummariesByIDBatch(ctx, tx, activityIDs, s.now())
+		out, readErr = EmailSummariesByIDBatch(ctx, tx, activityIDs, asOf)
 		return readErr
 	})
 	return out, err

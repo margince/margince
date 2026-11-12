@@ -62,6 +62,9 @@
   border-radius: var(--r-lg);
   box-shadow: var(--shadow-rest);
 }
+.brief-task-ask {
+  grid-column: 2;
+}
 .brief-task-tick {
   display: grid;
   place-items: center;
@@ -321,10 +324,35 @@
   display: none;
 }
 
+/* Next task ends the title line, apart from the verbs that answer the task. */
+.brief-triage-title {
+  order: 1;
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-4);
+  inline-size: 100%;
+}
+.brief-triage-title > .heading {
+  min-width: 0;
+}
+/* Outranks the title's own link ink: this is a way on, not the task's name. */
+.brief-triage-lead .btn.btn-link.brief-triage-next {
+  flex: none;
+  margin-inline-start: auto;
+  font: var(--fontBody);
+  color: var(--accentText);
+}
+
 /* THE NAME OF THE ROW IN HAND, one rung over the cards behind it. */
 .brief-triage-lead p.worklist-row-title {
   margin: 0;
   font: var(--fontHeadingSmall);
+  inline-size: 100%;
+  flex-wrap: nowrap;
+  align-items: baseline;
+}
+.brief-triage-lead p.worklist-row-title > * {
+  min-width: 0;
 }
 .brief-triage-lead p.worklist-row-title,
 .brief-triage-lead-head > .heading {
@@ -390,11 +418,6 @@
   .brief-triage-lead {
     padding-inline-end: var(--space-4);
   }
-  /* Too narrow for three verbs on a line: Next task takes its own, last. */
-  .brief-triage-lead .brief-triage-next {
-    order: 9;
-    flex-basis: 100%;
-  }
 }
 
 /* The tick is round, as a to-do's is; the verb under it is the house glyph. */
@@ -418,4 +441,18 @@
   .brief-triage-lead {
     padding: var(--padCard);
   }
+}
+
+/* On the open card the deal cards lead the verb row, and their two verbs join
+   it, so Link email to deal is the row's last and only filled verb. */
+.brief-triage-lead .which-deal-choice,
+.brief-triage-lead .which-deal-verbs {
+  display: contents;
+}
+.brief-triage-lead .which-deal-choice > fieldset {
+  order: -2;
+  flex-basis: 100%;
+}
+.brief-triage-lead .which-deal-verbs > .btn-primary {
+  order: 2;
 }

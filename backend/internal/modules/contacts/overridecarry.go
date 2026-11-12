@@ -7,13 +7,10 @@ package contacts
 // StopCarrier's other half, split out of stopcarry.go so each carry's own
 // reasoning stays legible on its own rather than doubling one file.
 //
-// A standing override (consent/override.go's Allow) is a rep vouching that a
-// machine-level refusal may be overruled for one category. Left uncarried, it
-// is exactly as quiet a loss as an uncarried stop: the merge moves everything
-// else that points at the retiring record, the override stays attached to an
-// id the send engine no longer evaluates, and the next send to the survivor
-// for that category is refused again — with nothing on file saying a rep
-// already vouched for it.
+// A standing override is a rep's earlier vouch that a machine-level refusal
+// may be overruled for one category. Left on the retiring record, it sits on
+// an id the send engine no longer evaluates. The next send to the survivor in
+// that category is then refused, with nothing saying a rep vouched for it.
 
 import (
 	"context"

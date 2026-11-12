@@ -1,0 +1,15 @@
+{
+  "tool": "change_relationships",
+  "action": "settle_promise",
+  "verb": "settle_conversation_claim",
+  "allowed_for": [
+    "admin",
+    "management",
+    "manager",
+    "ops",
+    "rep"
+  ],
+  "refused_for": [
+    "read_only"
+  ]
+}

@@ -1,0 +1,15 @@
+{
+  "tool": "read_workspace",
+  "action": "restricted_records",
+  "verb": "list_restricted_activities",
+  "allowed_for": [
+    "admin",
+    "ops"
+  ],
+  "refused_for": [
+    "management",
+    "manager",
+    "read_only",
+    "rep"
+  ]
+}

@@ -315,9 +315,8 @@ describe("CompaniesScreen — list dials reach the server (P-14)", () => {
     const user = userEvent.setup();
     const { urls } = stubFetch(async () => emptyPage());
     render(<CompaniesScreen />);
-    // One read carries several rendered pages, so the limit is a multiple of
-    // the footer's size and never the size itself — that is what lets the
-    // pager offer page 2 before the reader has asked for it.
+    // One read carries two rendered pages, so the limit is a multiple of
+    // the footer's size. That lets the pager offer page 2 with no wait.
     await waitFor(() =>
       expect(
         urls.some((url) => url.includes(`limit=${listFetchLimit(25)}`)),

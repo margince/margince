@@ -27,7 +27,9 @@ var stageBounds = []float64{0.001, 0.005, 0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 0.7
 // The composed reads that meter their stages, one per entry point that opens
 // a snapshot. A read nested in another is charged to the outer one.
 const (
-	ReadWorklist       = "worklist"
+	ReadWorklist = "worklist"
+	// ReadWorklistDone is the day a Done check assembles to find its rows.
+	ReadWorklistDone   = "worklist_done"
 	ReadAttention      = "attention"
 	ReadTeamExceptions = "team_exceptions"
 	// ReadUnmetered is a stage timed outside every composed read.
@@ -47,6 +49,7 @@ type StageKey struct{ Read, Stage string }
 // those added up to more than the stage's time, so App read zero.
 type StageCost struct {
 	Statements int64
+	Exchanges  int64
 	Failed     int64
 	Clipped    int64
 	DB         httpserver.Histogram
@@ -55,8 +58,8 @@ type StageCost struct {
 }
 
 type stageCost struct {
-	statements, failed, clipped int64
-	db, poolWait, app           *httpserver.Histogram
+	statements, exchanges, failed, clipped int64
+	db, poolWait, app                      *httpserver.Histogram
 }
 
 var stageTimings = struct {
@@ -120,6 +123,7 @@ func recordStageCost(key StageKey, spent stageSpend) {
 		stageTimings.costs[key] = c
 	}
 	c.statements += spent.own.Statements
+	c.exchanges += spent.own.Exchanges
 	c.failed += spent.own.Failed
 	if spent.clipped {
 		c.clipped++
@@ -225,7 +229,7 @@ func StageCosts() map[StageKey]StageCost {
 	out := make(map[StageKey]StageCost, len(stageTimings.costs))
 	for key, c := range maps.All(stageTimings.costs) {
 		out[key] = StageCost{
-			Statements: c.statements, Failed: c.failed, Clipped: c.clipped,
+			Statements: c.statements, Exchanges: c.exchanges, Failed: c.failed, Clipped: c.clipped,
 			DB: c.db.Snapshot(), PoolWait: c.poolWait.Snapshot(), App: c.app.Snapshot(),
 		}
 	}

@@ -282,3 +282,26 @@ func (s *Service) EvaluatedReceipt(ctx context.Context, selection crmcontracts.R
 	})
 	return out, err
 }
+
+// EvaluateFactsTx evaluates a selection and keeps the facts behind it. A
+// reading that splits the figure by month, owner or category then adds up the
+// rows Analytics counted.
+func (s *Service) EvaluateFactsTx(ctx context.Context, tx pgx.Tx, selection crmcontracts.ReportingSelection) (Evaluation, error) {
+	if err := auth.Require(ctx, "report_definition", principal.ActionRead); err != nil {
+		return Evaluation{}, err
+	}
+	framework, err := s.framework(ctx, tx)
+	if err != nil {
+		return Evaluation{}, err
+	}
+	return s.evaluateSelection(ctx, tx, selection, framework)
+}
+
+// Calendar reads the installation's reporting zone, currency and fiscal start.
+func (s *Service) Calendar(ctx context.Context, tx pgx.Tx) (Calendar, error) {
+	return s.calendar(ctx, tx)
+}
+
+// Now is the service clock, so a reading built beside it cuts off where its
+// evaluation does.
+func (s *Service) Now() time.Time { return s.now() }

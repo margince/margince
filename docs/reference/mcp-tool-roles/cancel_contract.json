@@ -1,0 +1,15 @@
+{
+  "tool": "change_offers",
+  "action": "cancel_contract",
+  "verb": "cancel_contract",
+  "allowed_for": [
+    "admin",
+    "management",
+    "manager",
+    "ops",
+    "rep"
+  ],
+  "refused_for": [
+    "read_only"
+  ]
+}

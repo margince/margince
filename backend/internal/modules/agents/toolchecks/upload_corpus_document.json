@@ -1,0 +1,9 @@
+{
+  "verb": "upload_corpus_document",
+  "checks": [
+    "knowledge_document.create"
+  ],
+  "takes": [
+    "corpus"
+  ]
+}

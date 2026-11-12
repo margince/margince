@@ -34,7 +34,7 @@ func probeUnit(t *testing.T, version extension.Version, personal ...string) exte
 		`GRANT USAGE ON SCHEMA ext TO margince_app`,
 		`CREATE TABLE IF NOT EXISTS ext.ext_probe_note (
 			id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-			contact_id uuid, company_id uuid, lead_id uuid, body text)`,
+			contact_id uuid, company_id uuid, lead_id uuid, body text, noted_at timestamptz NOT NULL DEFAULT now())`,
 		`GRANT SELECT, INSERT, UPDATE, DELETE ON ext.ext_probe_note TO margince_app`,
 	} {
 		if _, err := owner.Exec(t.Context(), stmt); err != nil {
@@ -267,8 +267,13 @@ func TestBootLeavesAUnitTheTablesOfALongerNamedUnit(t *testing.T) {
 
 func TestBootRefusesAPersonalTableWhoseRowsTheCoreCannotAuditByID(t *testing.T) {
 	for name, table := range map[string]string{
-		"no id column": `CREATE TABLE ext.ext_probe_log (contact_id uuid, body text)`,
-		"id not uuid":  `CREATE TABLE ext.ext_probe_log (id bigint PRIMARY KEY, contact_id uuid, body text)`,
+		"no id column":  `CREATE TABLE ext.ext_probe_log (contact_id uuid, body text)`,
+		"id not uuid":   `CREATE TABLE ext.ext_probe_log (id bigint PRIMARY KEY, contact_id uuid, body text)`,
+		"id not unique": `CREATE TABLE ext.ext_probe_log (id uuid NOT NULL, contact_id uuid, body text)`,
+		"id nullable":   `CREATE TABLE ext.ext_probe_log (id uuid UNIQUE, contact_id uuid, body text)`,
+		"id under an invalid unique index": `CREATE TABLE ext.ext_probe_log (id uuid NOT NULL, contact_id uuid, body text);
+			CREATE UNIQUE INDEX ext_probe_log_id ON ext.ext_probe_log (id);
+			UPDATE pg_index SET indisvalid = false WHERE indexrelid = 'ext.ext_probe_log_id'::regclass`,
 	} {
 		t.Run(name, func(t *testing.T) {
 			env := Setup(t)
@@ -302,5 +307,103 @@ func TestBootRefusesALinkColumnTheTableLacks(t *testing.T) {
 	err := compose.VerifyExtensionPrivacy(t.Context(), env.Pool, []extension.Extension{unit})
 	if err == nil || !strings.Contains(err.Error(), "ext_probe_note.deal_ref") {
 		t.Errorf("boot answered %v; want a refusal naming the missing link column", err)
+	}
+}
+
+func TestBootRefusesAnAgeColumnARetentionWindowCannotCountFrom(t *testing.T) {
+	for name, column := range map[string]struct{ name, add string }{
+		"missing":             {name: "kept_at"},
+		"not a point in time": {name: "body"},
+		"nullable":            {name: "aged_at", add: `aged_at timestamptz`},
+		"without a time zone": {name: "aged_at", add: `aged_at timestamp NOT NULL DEFAULT now()`},
+	} {
+		t.Run(name, func(t *testing.T) {
+			env := Setup(t)
+			unit := probeUnit(t, "1.0.0")
+			if column.add != "" {
+				probeExec(t, `ALTER TABLE ext.ext_probe_note ADD COLUMN `+column.add)
+			}
+			unit.Privacy[0].AgeColumn = column.name
+
+			err := compose.VerifyExtensionPrivacy(t.Context(), env.Pool, []extension.Extension{unit})
+			if err == nil || !strings.Contains(err.Error(), "age column") {
+				t.Errorf("age column %q booted (err=%v); a retention sweep could not count every row's age from it", column.name, err)
+			}
+		})
+	}
+}
+
+func TestBootAcceptsADeclaredAgeColumn(t *testing.T) {
+	for name, column := range map[string]string{"timestamptz": "noted_at", "date": "noted_on"} {
+		t.Run(name, func(t *testing.T) {
+			env := Setup(t)
+			unit := probeUnit(t, "1.0.0", "body")
+			probeExec(t, `ALTER TABLE ext.ext_probe_note ADD COLUMN noted_on date NOT NULL DEFAULT current_date`)
+			unit.Privacy[0].AgeColumn = column
+
+			if err := compose.VerifyExtensionPrivacy(t.Context(), env.Pool, []extension.Extension{unit}); err != nil {
+				t.Errorf("a %s age column was refused: %v", name, err)
+			}
+		})
+	}
+}
+
+func TestBootFollowsACascadeToTheReferenceThatWouldStopIt(t *testing.T) {
+	for clause, refused := range map[string]bool{"ON DELETE RESTRICT": true, "ON DELETE CASCADE": false} {
+		t.Run(clause, func(t *testing.T) {
+			env := Setup(t)
+			unit := probeUnit(t, "1.0.0", "body")
+			unit.Privacy[0].AgeColumn = "noted_at"
+			t.Cleanup(func() {
+				if _, err := OwnerConn(t).Exec(context.Background(), `DROP TABLE IF EXISTS ext.ext_probe_quote, ext.ext_probe_reply`); err != nil {
+					t.Errorf("removing the referencing tables: %v", err)
+				}
+			})
+			probeExec(t,
+				`CREATE TABLE ext.ext_probe_reply (id uuid PRIMARY KEY, note_id uuid REFERENCES ext.ext_probe_note (id) ON DELETE CASCADE)`,
+				`CREATE TABLE ext.ext_probe_quote (id uuid PRIMARY KEY, reply_id uuid REFERENCES ext.ext_probe_reply (id) `+clause+`)`,
+				`GRANT SELECT, INSERT, UPDATE, DELETE ON ext.ext_probe_reply, ext.ext_probe_quote TO margince_app`)
+			unit.Privacy = append(unit.Privacy,
+				privacy.Table{Name: "ext_probe_reply", Retention: jurisdiction.CommercialCorrespondence},
+				privacy.Table{Name: "ext_probe_quote", Retention: jurisdiction.CommercialCorrespondence})
+
+			err := compose.VerifyExtensionPrivacy(t.Context(), env.Pool, []extension.Extension{unit})
+			if refused && (err == nil || !strings.Contains(err.Error(), "ext_probe_quote") || !strings.Contains(err.Error(), "ext_probe_reply")) {
+				t.Errorf("boot answered %v; want a refusal that names the cascade path to the blocking reference", err)
+			}
+			if !refused && err != nil {
+				t.Errorf("boot refused an all-cascade chain: %v", err)
+			}
+		})
+	}
+}
+
+func TestBootLetsOnlyACascadeReferenceASweptTable(t *testing.T) {
+	for clause, refused := range map[string]bool{
+		"": true, "ON DELETE RESTRICT": true, "ON DELETE SET NULL": true, "ON DELETE SET DEFAULT": true,
+		"ON DELETE CASCADE": false,
+	} {
+		t.Run(clause, func(t *testing.T) {
+			column := "note_id uuid REFERENCES ext.ext_probe_note (id) " + clause
+			env := Setup(t)
+			unit := probeUnit(t, "1.0.0", "body")
+			unit.Privacy[0].AgeColumn = "noted_at"
+			t.Cleanup(func() {
+				if _, err := OwnerConn(t).Exec(context.Background(), `DROP TABLE IF EXISTS ext.ext_probe_reply`); err != nil {
+					t.Errorf("removing the referencing table: %v", err)
+				}
+			})
+			probeExec(t, `CREATE TABLE ext.ext_probe_reply (id uuid PRIMARY KEY, `+column+`)`,
+				`GRANT SELECT, INSERT, UPDATE, DELETE ON ext.ext_probe_reply TO margince_app`)
+			unit.Privacy = append(unit.Privacy, privacy.Table{Name: "ext_probe_reply", Retention: jurisdiction.CommercialCorrespondence})
+
+			err := compose.VerifyExtensionPrivacy(t.Context(), env.Pool, []extension.Extension{unit})
+			if refused && (err == nil || !strings.Contains(err.Error(), "ext_probe_reply") || !strings.Contains(err.Error(), "ON DELETE CASCADE")) {
+				t.Errorf("boot answered %v; want a refusal that names the referencing table and asks for ON DELETE CASCADE", err)
+			}
+			if !refused && err != nil {
+				t.Errorf("boot refused a cascading reference: %v", err)
+			}
+		})
 	}
 }

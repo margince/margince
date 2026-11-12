@@ -1,0 +1,10 @@
+{
+  "verb": "list_contact_overrides",
+  "checks": [
+    "contact.read"
+  ],
+  "takes": [
+    "consent_override",
+    "contact"
+  ]
+}

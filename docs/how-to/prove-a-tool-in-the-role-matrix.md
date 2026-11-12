@@ -5,8 +5,9 @@ Use this page when a new or changed MCP tool or router action turns one of these
 run on every PR. The last two are the role sweep, which runs weekly and with `make test-roles`.
 
 - `TestEveryServedVerbHasItsToolChecksRow` in `backend/internal/compose/toolcheckscensus_test.go`. It runs in
-  `make check` with no database, and holds `backend/internal/modules/agents/toolchecks.json` to the tools the
-  registry serves.
+  `make check` with no database, and holds `backend/internal/modules/agents/toolchecks/`, one file per verb, to the
+  tools the registry serves. `TestEveryVerbHasBothItsChecksAndItsRow` beside it fails a verb with a checks file and
+  no row, or a row and no checks file.
 - `TestTheMCPParityCatalogIsPublished` in `backend/gates/`. It draws
   [mcp-tool-roles.md](../reference/mcp-tool-roles.md) in the catalog's groups, and fails where the two files the
   sweep writes disagree about the `rep` role.
@@ -14,7 +15,8 @@ run on every PR. The last two are the role sweep, which runs weekly and with `ma
   It holds each seeded role's `tools/list` to the ✓ cells of the committed matrix: no ✗ call is offered and
   every ✓ call is. It also fails when the matrix and the database name other roles.
 - `TestTheToolRoleMatrixIsPublished` in the same folder. It calls every tool and action as each seeded role and
-  writes [mcp-tool-roles.json](../reference/mcp-tool-roles.json) and `toolchecks.json`.
+  writes one file per verb in [mcp-tool-roles/](../reference/mcp-tool-roles/_head.json) and in `toolchecks/`.
+  Two changes to different verbs touch different files, so they merge without a conflict.
 - `TestToolsListAgreesWithTheGateForAnOperatorsRoles`, beside it. It holds an operator's own roles'
   `tools/list` to the gate.
 
@@ -38,7 +40,9 @@ the colleague pass's subject.
 
 1. **Read the failure.** The sweep names each open cell as `verb as role: reason`, and each verb whose admin
    call stopped before a gate decided it. The census names a verb with no row, and a row nothing serves.
-   The reasons are under `reasons` in [mcp-tool-roles.json](../reference/mcp-tool-roles.json).
+   The reasons are under `reasons` in [mcp-tool-roles/_head.json](../reference/mcp-tool-roles/_head.json).
+   [seedmap.md](../../backend/internal/compose/integration/toolrole/seedmap.md) names the seed of each kind of
+   record. It also lists the routes each seed calls.
 
 2. **Fix the call by its reason.** A seed goes through the app's own routes.
    Where no route makes the state, it calls the writer a background job calls.
@@ -84,9 +88,9 @@ the colleague pass's subject.
    `UPDATE_MCP_TOOL_ROLES=1`, `make test-roles` checks the committed files and writes nothing. It
    measures the extension verbs first, so their `measured.json` is current when the sweep reads it.
 
-5. **Commit** `docs/reference/mcp-tool-roles.json`, `docs/reference/mcp-tool-roles.md`,
-   `docs/reference/mcp-parity.json`, `docs/reference/mcp-parity.md`,
-   `backend/internal/modules/agents/toolchecks.json` and `extensionrole/measured.json` with the change.
+5. **Commit** `docs/reference/mcp-tool-roles/`, `docs/reference/mcp-tool-roles.md`,
+   `docs/reference/mcp-parity.json`, `docs/reference/mcp-parity.md`, `backend/internal/modules/agents/toolchecks/`,
+   `toolrole/seedmap.md` and `extensionrole/measured.json` with the change.
 
 Never add a skip or a list of verbs the tests pass over. A cell no seed can reach needs a decision. Open an
 issue labelled `status: needs-decision` that names the verb and why it cannot run.

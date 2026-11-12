@@ -1,0 +1,10 @@
+{
+  "verb": "cancel_intro_request",
+  "checks": [
+    "introduction.read",
+    "introduction.update"
+  ],
+  "takes": [
+    "intro_request"
+  ]
+}

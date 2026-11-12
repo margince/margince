@@ -15,6 +15,7 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 
+	"github.com/margince/margince/backend/internal/compose/corereach"
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/modules/contracts"
@@ -116,6 +117,10 @@ func Setup(t *testing.T) *Env {
 		t.Fatal(err)
 	}
 	seedInstallationIdentity(ctx, t, owner)
+	// The boot seals these in RegisterExtensions, which no test here runs.
+	if err := corereach.Install(nil); err != nil {
+		t.Fatal(err)
+	}
 	for i, user := range []ids.UUID{e.Rep1, e.Rep2, e.Rep3, e.AdminUser} {
 		address := string(rune('a'+i)) + "@authz.test"
 		if _, err := owner.Exec(ctx,

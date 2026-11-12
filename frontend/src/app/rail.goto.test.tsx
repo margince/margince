@@ -56,6 +56,16 @@ describe("the destinations' go-to keys", () => {
     expect(window.location.hash).toBe(routeHash({ screen: "projects" }));
   });
 
+  // G is both the lead and the letter for Sales goals.
+  it("take the reader to Sales goals on G twice", async () => {
+    const user = userEvent.setup();
+    renderHook(() => useShortcutDispatcher());
+    render(<WorkspaceRail route={{ screen: "home" }} />);
+
+    await user.keyboard("gg");
+    expect(window.location.hash).toBe(routeHash({ screen: "goals" }));
+  });
+
   it("leave a collapsed tip with the label alone while single keys are off", async () => {
     act(() => setSingleKeyShortcutsOn(false));
     render(<WorkspaceRail route={{ screen: "home" }} collapsed />);

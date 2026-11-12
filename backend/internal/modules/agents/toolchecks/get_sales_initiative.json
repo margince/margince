@@ -1,0 +1,9 @@
+{
+  "verb": "get_sales_initiative",
+  "checks": [
+    "sales_initiative.read"
+  ],
+  "takes": [
+    "initiative"
+  ]
+}

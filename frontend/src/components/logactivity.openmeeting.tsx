@@ -438,6 +438,8 @@ export async function recordOnMeeting(
     await post("follow-up", {
       ...draft.followUp,
       kind: "task",
+      // What the server reads for an untyped task a rep files.
+      taskType: "reach_out",
       asTranscript: false,
       callOutcome: "",
       sourceActivityId: meeting.id,

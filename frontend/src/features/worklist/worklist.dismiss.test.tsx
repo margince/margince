@@ -88,7 +88,9 @@ describe("a contact the reader is not chasing", () => {
 
     // Waited for, not asked once: the row arrives asynchronously, so a bare
     // absence check passes against a queue that has not rendered yet.
-    expect(await screen.findByText("Kirsten Vogel")).toBeTruthy();
+    expect(
+      await screen.findByText("No recent contact with Kirsten Vogel"),
+    ).toBeTruthy();
     expect(
       screen.queryByRole("button", { name: en["worklist.verb.dismiss"] }),
     ).toBeNull();
@@ -117,7 +119,9 @@ describe("a contact the reader is not chasing", () => {
     // The row is gone: the second read answers an empty day, which is what
     // unmounts the component the callback would have hung off.
     await waitFor(() => {
-      expect(screen.queryByText("Kirsten Vogel")).toBeNull();
+      expect(
+        screen.queryByText("No recent contact with Kirsten Vogel"),
+      ).toBeNull();
     });
 
     await user.click(
@@ -209,7 +213,9 @@ describe("dismissing every optional reconnection shown", () => {
     );
     renderUnderAToastRegion();
 
-    expect(await screen.findByText("Quiet one")).toBeTruthy();
+    expect(
+      await screen.findByText("No recent contact with Quiet one"),
+    ).toBeTruthy();
     expect(
       screen.queryByRole("button", { name: en["worklist.verb.dismissAll"] }),
     ).toBeNull();

@@ -1,0 +1,15 @@
+{
+  "tool": "read_details",
+  "action": "meeting_availability",
+  "verb": "get_meeting_availability",
+  "allowed_for": [
+    "admin",
+    "management",
+    "manager",
+    "ops",
+    "rep"
+  ],
+  "refused_for": [
+    "read_only"
+  ]
+}

@@ -95,7 +95,7 @@ func createRoomTx(ctx context.Context, tx pgx.Tx, in CreateRoomInput, by string)
 		 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
 		id, in.DealID, in.Title, in.WelcomeMessage, stewardArg, expiresAt, stateLive, in.Source, by)
 	if err != nil {
-		if storekit.IsUniqueViolation(err) {
+		if isOneOpenRoomClash(err) {
 			return crmcontracts.DealRoom{}, errRoomAlreadyOpen
 		}
 		if storekit.IsForeignKeyViolation(err) {
@@ -346,6 +346,9 @@ func (s *Store) SetExpiry(ctx context.Context, id ids.DealRoomID, expiresAt *tim
 		}
 		p := storekit.NewPatch()
 		p.Set("expires_at", current.ExpiresAt, stored)
+		if err := dropRetiredSteward(ctx, tx, p, current, stored, now); err != nil {
+			return err
+		}
 		if p.Empty() {
 			if err := storekit.EnsureIfMatch(ctx, tx, roomObject, id.UUID, ifVersion); err != nil {
 				return err
@@ -354,6 +357,9 @@ func (s *Store) SetExpiry(ctx context.Context, id ids.DealRoomID, expiresAt *tim
 			return nil
 		}
 		if err := p.ApplyGuarded(ctx, tx, roomObject, id.UUID, ifVersion); err != nil {
+			if isOneOpenRoomClash(err) {
+				return errNewerRoomOpen
+			}
 			return fmt.Errorf("set deal room expiry: %w", err)
 		}
 		auditID, err := storekit.Audit(ctx, tx, "update", roomObject, id.UUID, p.Before(), p.After())
@@ -371,6 +377,34 @@ func (s *Store) SetExpiry(ctx context.Context, id ids.DealRoomID, expiresAt *tim
 		return err
 	})
 	return out, err
+}
+
+// dropRetiredSteward clears a retired steward from an expired room that a
+// later end makes live again. The steward retirement guard refuses a live room
+// that names a retired member, and an expired room takes no edit to change its
+// steward first. So the later end takes the steward off in the same write. The
+// room then reads as needing a contact, as any room without one does.
+func dropRetiredSteward(ctx context.Context, tx pgx.Tx, p *storekit.Patch, current crmcontracts.DealRoom, stored *time.Time, now time.Time) error {
+	if string(current.State) != stateExpired || current.StewardUserId == nil {
+		return nil
+	}
+	if stored != nil && !stored.After(now) {
+		return nil
+	}
+	var retired bool
+	err := tx.QueryRow(ctx,
+		`SELECT removed_at IS NOT NULL FROM app_user WHERE id = $1`,
+		*current.StewardUserId).Scan(&retired)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return nil
+	}
+	if err != nil {
+		return fmt.Errorf("check the room's steward: %w", err)
+	}
+	if retired {
+		p.Set("steward_user_id", current.StewardUserId, nil)
+	}
+	return nil
 }
 
 // storedExpiry writes an expiry at or before the room's creation, which

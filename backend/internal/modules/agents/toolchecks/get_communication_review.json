@@ -1,0 +1,7 @@
+{
+  "verb": "get_communication_review",
+  "checks": [],
+  "takes": [
+    "communication_review"
+  ]
+}

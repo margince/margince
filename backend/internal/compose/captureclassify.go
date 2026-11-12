@@ -235,9 +235,10 @@ func (c *CaptureClassifier) classifyEach(ctx context.Context, msgs []unlabeledMe
 // commitLabel writes one label and the reply verdict this call also produced,
 // in one transaction. A label that did not apply takes no reply verdict,
 // because both are about the text read. The reply rides the label's confidence,
-// so a message below the floor stores neither.
+// so a message below the floor stores neither. A mail with no words of its own
+// answers nothing, so it takes no reply verdict whatever the model said.
 func (c *CaptureClassifier) commitLabel(ctx context.Context, msg unlabeledMessage, v classifyResult, judge string) (bool, error) {
-	if v.Reply == "" {
+	if v.Reply == "" || msg.Body == "" {
 		return c.store.SetCaptureLabel(ctx, msg.ID, v.Label, msg.Version)
 	}
 	return c.store.SetCaptureLabelAndReply(ctx, msg.ID, v.Label, msg.Version, v.Reply, judge)

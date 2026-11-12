@@ -334,4 +334,4 @@ Do not leave it next to the others without a commit.
 ## 9. Run the role sweep with every pass
 
 A pass also needs `make test-roles` green. It calls every tool and action as every seeded role, costs no tokens and needs `make db-up`.
-It checks `mcp-tool-roles.json`, `mcp-tool-roles.md` and `toolchecks.json`. A change in those files means a role is now allowed or refused a call, so `tools/list` offers the wrong tools: follow [prove-a-tool-in-the-role-matrix.md](prove-a-tool-in-the-role-matrix.md). `make e2e-llm` does not run it, as that lane costs money. The weekly scheduled run does both.
+It checks the `mcp-tool-roles/` and `toolchecks/` folders and `mcp-tool-roles.md`. A change in those files means a role is now allowed or refused a call, so `tools/list` offers the wrong tools: follow [prove-a-tool-in-the-role-matrix.md](prove-a-tool-in-the-role-matrix.md). `make e2e-llm` does not run it, as that lane costs money. The weekly scheduled run does both.

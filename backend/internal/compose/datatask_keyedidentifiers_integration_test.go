@@ -21,7 +21,6 @@ import (
 	"github.com/margince/margince/backend/internal/modules/consent"
 	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/modules/identity"
-	"github.com/margince/margince/backend/internal/modules/privacy"
 	"github.com/margince/margince/backend/internal/platform/blobstore"
 	"github.com/margince/margince/backend/internal/platform/config"
 	"github.com/margince/margince/backend/internal/platform/database"
@@ -196,7 +195,7 @@ func TestAPreferenceLinkMailedBeforeTheKeyKeepsOpeningAfterItIsHashed(t *testing
 func TestAKeyedExportRemovesTheUnkeyedJournalAndStillCatchesARestore(t *testing.T) {
 	e := integration.Setup(t)
 	store := blobstore.NewMemory()
-	eraser := privacy.NewEraser(InstallationDB(e.Pool)).WithBlobstore(store)
+	eraser := eraserWithGraph(InstallationDB(e.Pool)).WithBlobstore(store)
 	useRootKey(t, "")
 	seedSuppressedEmail(t, resurrectedAddress)
 	unkeyedEntry := "erasure-suppression/email/" + storekit.SuppressionHash(resurrectedAddress)

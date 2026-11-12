@@ -19,6 +19,7 @@ import (
 	"github.com/margince/margince/backend/internal/compose"
 	"github.com/margince/margince/backend/internal/compose/integration/apptest"
 	"github.com/margince/margince/backend/internal/shared/ports/mcp"
+	"github.com/margince/margince/backend/internal/shared/toolroles"
 )
 
 // listingPass is one operator's holding of roles, checked against the gate.
@@ -37,7 +38,7 @@ func TestToolsListOffersEachSeededRoleItsAllowedCells(t *testing.T) {
 		keys = append(keys, role.Key)
 	}
 	if doc := publishedMatrix(t); !slices.Equal(doc.Roles, keys) {
-		t.Errorf("%s publishes the roles %v and the database seeds %v", toolRolesFile, doc.Roles, keys)
+		t.Errorf("%s publishes the roles %v and the database seeds %v", toolRolesDir, doc.Roles, keys)
 	}
 	holdCellsAreOffered(t, d, "tool-role-cells@fable.test")
 }
@@ -123,22 +124,22 @@ func callHolding(t *testing.T, e *apptest.AppEnv, email string, client *apptest.
 	return client.Call(t, call.verb, args), args
 }
 
-// publishedMatrix is docs/reference/mcp-tool-roles.json as committed.
+// publishedMatrix is docs/reference/mcp-tool-roles/ as committed.
 func publishedMatrix(t *testing.T) toolRolesFileShape {
 	t.Helper()
-	raw, err := os.ReadFile(toolRolesFile)
+	head, rows, err := toolroles.Read[toolroles.Row](os.DirFS(toolRolesDir))
 	if err != nil {
-		t.Fatal(err)
+		t.Fatalf("%s does not read: %v", toolRolesDir, err)
 	}
-	var doc toolRolesFileShape
-	if err := json.Unmarshal(raw, &doc); err != nil {
-		t.Fatalf("%s does not read: %v", toolRolesFile, err)
+	doc := toolRolesFileShape{Head: head}
+	for _, verb := range slices.Sorted(maps.Keys(rows)) {
+		doc.Rows = append(doc.Rows, rows[verb])
 	}
 	return doc
 }
 
 // publishedRow is a published row's name as the sweep's calls name it.
-func publishedRow(row toolRoleRow) string {
+func publishedRow(row toolroles.Row) string {
 	return strings.TrimSuffix(row.Tool+"."+row.Action, ".")
 }
 
@@ -179,7 +180,7 @@ func holdCellsAreOffered(t *testing.T, d *apptest.TwoDoors, email string) {
 // the matrix refuses it, or hides while the matrix allows it. A router that
 // picks its action by the arguments named has no enum to narrow. It is held as
 // one tool, allowed where any of its rows is.
-func cellDisagreements(role string, rows []toolRoleRow, specs []mcp.ToolSpec, offered map[string]bool) []string {
+func cellDisagreements(role string, rows []toolroles.Row, specs []mcp.ToolSpec, offered map[string]bool) []string {
 	byArguments := map[string]bool{}
 	for _, spec := range specs {
 		byArguments[spec.Name] = len(spec.Actions) > 0 && spec.ActionField == ""

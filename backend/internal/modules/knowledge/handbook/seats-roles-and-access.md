@@ -1,5 +1,5 @@
 <!-- prose:plain -->
-<!-- describes: frontend/src/features/analytics/handoffassignee.tsx backend/internal/compose/memberhandoff/handlers.go frontend/src/features/settings/users-handover.tsx backend/internal/compose/handover.go frontend/src/features/settings/users-rolecell.tsx backend/internal/modules/capture/captureauthority.go frontend/src/features/settings/users-admin.tsx frontend/src/features/settings/users-memberverbs.tsx backend/internal/modules/identity/invitemail.go frontend/src/features/settings/roles-settings.tsx frontend/src/features/records/share.body.tsx backend/internal/modules/identity/internal/policy/defaults.go backend/internal/modules/identity/memberedit.go backend/internal/modules/identity/memberretirement.go backend/internal/modules/identity/seatceiling.go backend/internal/modules/identity/invite.go backend/internal/platform/auth/rowscope.go backend/internal/platform/auth/fieldmask.go backend/internal/modules/identity/roster.go frontend/src/components/recordteamassign.tsx backend/internal/modules/assignments/assignments_read.go backend/internal/modules/identity/ownercarry.go backend/internal/modules/contacts/contactcasesettings.go backend/internal/modules/contacts/contactcasedecide.go frontend/src/features/settings/sharedmergereviews.tsx backend/internal/modules/contacts/duplicatepairmerge.go -->
+<!-- describes: frontend/src/features/analytics/handoffassignee.tsx backend/internal/compose/memberhandoff/handlers.go frontend/src/features/settings/users-handover.tsx backend/internal/compose/handover.go frontend/src/features/settings/users-rolecell.tsx backend/internal/modules/capture/captureauthority.go frontend/src/features/settings/users-admin.tsx frontend/src/features/settings/users-memberverbs.tsx backend/internal/modules/identity/invitemail.go frontend/src/features/settings/roles-settings.tsx frontend/src/features/records/share.body.tsx backend/internal/modules/identity/internal/policy/defaults.go backend/internal/modules/identity/memberedit.go backend/internal/modules/identity/memberretirement.go backend/internal/modules/identity/seatceiling.go backend/internal/modules/identity/invite.go backend/internal/platform/auth/rowscope.go backend/internal/platform/auth/fieldmask.go backend/internal/modules/identity/roster.go frontend/src/components/recordteamassign.tsx backend/internal/modules/assignments/assignments_read.go backend/internal/modules/identity/ownercarry.go backend/internal/modules/contacts/contactcasesettings.go backend/internal/modules/contacts/contactcasedecide.go frontend/src/features/settings/sharedmergereviews.tsx backend/internal/modules/contacts/duplicatepairmerge.go frontend/src/app/licensebanner.tsx -->
 # Seats, roles and who can see what
 
 What you can do in Margince is decided by three things, and one cannot stand in for another:
@@ -151,7 +151,7 @@ When more seats are in use than the licence allows, Margince says:
 
 > No one loses access and no seat is removed, but no new member can be invited until the count is within the entitlement. Deactivate a member or raise the entitlement.
 
-Nobody loses a role. Nobody is signed out. Only the *next* seat is refused.
+In the grace period after the licence expires, members who may read the licence see a warning on every page. Admin and Ops hold that right by default. **Open Seats and license** in the warning comes to this page. You cannot close the warning, and it stays until a renewed licence is in place. Margince keeps running, but does not start again after the grace period, which has no end date on screen. Also called: licence expired, grace period.
 
 Margince checks the licence itself when it starts, and again once a day. The licence check never calls out or reports back to anyone. When your server admin replaces the licence file, an admin or ops member can press **Check now** on this page to check it at once. You cannot type a licence into Margince.
 
@@ -211,7 +211,7 @@ A contact, company, lead, deal or project can have one **owner**. When it has on
 
 The owner also decides who else may change it. Row scope reads the owner: a User changes the records they own, and a Team lead changes the records of their team. The owner can share the record with a colleague or a team. Someone who holds it through a share cannot change its owner or its sharing.
 
-A **responsibility role** is a label for what someone looks after on a company, deal or project, such as **Account manager** or **Technical contact**. You set them on a record under **Responsibilities**. Admin and Ops keep the list in **Settings → Responsibility roles**.
+A **responsibility role** is a label for what someone looks after on a company, deal or project, such as **Account manager** or **Technical contact**. You set them on a record under **Responsibilities**. Admin and Ops keep the list in **Settings → Records and fields → Responsibility roles**.
 
 A responsibility role controls nothing:
 

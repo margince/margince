@@ -62,7 +62,7 @@ func repairCohort(t *testing.T, e *integration.Env, contact ids.ContactID) {
 	t.Helper()
 	// The store as the reconciliation worker builds it, re-deriving the
 	// audience of what it files (cohortpromotegen.go).
-	store := contacts.NewStore(e.DB()).WithAudienceRecompute(activities.RecomputeAudienceTx)
+	store := contacts.NewStore(e.DB()).WithSenderStamp(activities.StampProvenSendersTx).WithAudienceRecompute(activities.RecomputeAudienceTx)
 	if _, err := store.RepairContactCohort(e.Admin(), contact); err != nil {
 		t.Fatalf("repairing the cohort: %v", err)
 	}

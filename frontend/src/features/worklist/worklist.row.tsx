@@ -10,6 +10,7 @@ import { useLocale, useT } from "../../i18n";
 import { useCompanyZone } from "../../lib/companyzone";
 import { isUnprepared } from "../../lib/meetingreadiness";
 import { useMe } from "../../lib/session";
+import { askSentence, saysOpen } from "../../lib/worklistask";
 import {
   briefContextTitle,
   briefSubjectLabel,
@@ -29,7 +30,7 @@ import {
   eyebrowKeyFor,
   kindClass,
 } from "../../lib/worklisteyebrow";
-import { askKey } from "./worklist.ask";
+import { cardLine, useHappenedClock } from "../../lib/worklisthappened";
 import { useBriefAnswer, withFoldedBrief } from "./worklist.briefverbs";
 import { DepartedOwnerCaption } from "./worklist.departedowner";
 import {
@@ -116,9 +117,11 @@ export function WorklistRow({
   onReview,
   onOpenEmail,
   context,
+  menu,
   framed = false,
   quiet = false,
   pick,
+  titleEnd,
 }: Readonly<{
   item: WorklistItem;
   /** The row's selection checkbox, drawn beside its rank where the list
@@ -127,8 +130,12 @@ export function WorklistRow({
   /** The way into what this row is ABOUT, drawn among its verbs. The Brief
    *  has no pane beside its list, so its focus rows open a drawer instead. */
   context?: ReactNode;
+  /** Lines the surface adds at the top of the row's menu. */
+  menu?: ReactNode;
   /** The card already holds a filled verb, so the row's own is outlined. */
   quiet?: boolean;
+  /** Drawn at the end of the title line. */
+  titleEnd?: ReactNode;
   /** A CARD around this row says whose it is, why it is here and where it
    *  stands, so the row withholds those captions and the verb that only
    *  reaches its record. The Brief's card is the only frame there is. */
@@ -320,6 +327,7 @@ export function WorklistRow({
               readings={readings}
               emailOpener={emailOpener}
               badged={badged}
+              titleEnd={titleEnd}
             />
           )}
           <RowAsk item={item} framed={framed} />
@@ -353,6 +361,7 @@ export function WorklistRow({
             equals={answer.equals}
             onReview={onReview}
             context={context}
+            menu={menu}
             framed={framed}
             titled={titleLinks(emailOpener, href, source.open)}
           />
@@ -386,17 +395,24 @@ function framedName(
   };
 }
 
-// The card is read on its own, so it says what the row asks. A queue row leaves
-// that to the details its reader opens.
+// The card is read on its own, so it says what happened and what to do about
+// it. A queue row leaves that to the details its reader opens.
 function RowAsk({
   item,
   framed,
 }: Readonly<{ item: WorklistItem; framed: boolean }>) {
   const t = useT();
-  return framed ? (
+  const clock = useHappenedClock();
+  if (!framed) return null;
+  // A reminder Margince cannot check says so in place of its event. A row
+  // asking whether it may be done has its question below, not the stock ask.
+  const event = item.request_check ? null : cardLine(item, t, clock);
+  const ask = saysOpen(item) ? askSentence(item, t) : null;
+  const line = event ?? ask;
+  return (
     <>
-      <p className="t-body worklist-row-ask">{t(askKey(item))}</p>
+      {line && <p className="t-body worklist-row-ask">{line}</p>}
       <RowProposal item={item} />
     </>
-  ) : null;
+  );
 }

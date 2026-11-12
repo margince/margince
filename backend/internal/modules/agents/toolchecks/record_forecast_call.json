@@ -1,0 +1,11 @@
+{
+  "verb": "record_forecast_call",
+  "checks": [
+    "forecast.create",
+    "forecast.read",
+    "installation_settings.read"
+  ],
+  "takes": [
+    "me"
+  ]
+}

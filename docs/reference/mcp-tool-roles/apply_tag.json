@@ -1,0 +1,19 @@
+{
+  "tool": "change_tags",
+  "action": "apply",
+  "verb": "apply_tag",
+  "allowed_for": [
+    "admin",
+    "management",
+    "manager",
+    "ops",
+    "rep"
+  ],
+  "refused_for": [
+    "read_only"
+  ],
+  "colleague_record": {
+    "manager": "refused",
+    "rep": "refused"
+  }
+}

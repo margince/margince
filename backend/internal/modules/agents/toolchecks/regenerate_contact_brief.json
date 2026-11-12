@@ -1,0 +1,14 @@
+{
+  "verb": "regenerate_contact_brief",
+  "checks": [
+    "activity.read",
+    "company.read",
+    "contact.read",
+    "deal.read",
+    "project.read",
+    "relationship.read"
+  ],
+  "takes": [
+    "contact"
+  ]
+}

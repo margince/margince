@@ -1,0 +1,6 @@
+{
+  "verb": "read_recovery_health",
+  "checks": [
+    "job_health.read"
+  ]
+}

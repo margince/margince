@@ -2,6 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { ReactNode } from "react";
+import { RecordListsActions } from "../../components/addtoshortlist";
 import { useEmployerSummary } from "../../components/contactemployersummary";
 import {
   customFieldHref,
@@ -64,7 +65,7 @@ export function DealAside(props: AsideProps) {
   return listsOn ? (
     <DealAsideWithLists {...props} />
   ) : (
-    <DealAsideBody {...props} lists={[]} />
+    <DealAsideBody {...props} />
   );
 }
 
@@ -77,7 +78,7 @@ function DealAsideBody({
   deal,
   stages,
   lists,
-}: AsideProps & Readonly<{ lists: readonly { id: string; name: string }[] }>) {
+}: AsideProps & Readonly<{ lists?: readonly { id: string; name: string }[] }>) {
   const t = useT();
   const { locale } = useLocale();
   const viewerId = useViewerId();
@@ -142,7 +143,7 @@ function DealAsideBody({
       label: t("record.registration"),
       rows: registrationRows(facts, reads),
     },
-    ...listSection(lists, t),
+    ...(lists ? [listSection(deal.id, lists, t)] : []),
   ];
   return (
     <RecordDetails
@@ -417,31 +418,32 @@ function optionLabel(
 }
 
 function listSection(
+  dealId: string,
   lists: readonly { id: string; name: string }[],
   t: Translator,
-): DetailSection[] {
-  if (lists.length === 0) {
-    return [];
-  }
-  return [
-    {
-      key: "lists",
-      label: t("lists.record.title"),
-      children: (
-        <span className="deal-aside-chips">
-          {lists.map((list) => (
-            <AppLink
-              key={list.id}
-              className="deal-aside-chip"
-              href={routeHash({ screen: "lists", id: list.id })}
-            >
-              {list.name}
-            </AppLink>
-          ))}
-        </span>
-      ),
-    },
-  ];
+): DetailSection {
+  return {
+    key: "lists",
+    label: t("lists.record.title"),
+    children: (
+      <>
+        {lists.length > 0 && (
+          <span className="deal-aside-chips">
+            {lists.map((list) => (
+              <AppLink
+                key={list.id}
+                className="deal-aside-chip"
+                href={routeHash({ screen: "lists", id: list.id })}
+              >
+                {list.name}
+              </AppLink>
+            ))}
+          </span>
+        )}
+        <RecordListsActions entityType="deal" entityId={dealId} />
+      </>
+    ),
+  };
 }
 
 // The account is the same card as a contact in Way in. Mark and name are one

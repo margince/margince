@@ -1,5 +1,5 @@
 <!-- prose:plain -->
-<!-- describes: backend/internal/compose/contact360 frontend/src/features/contacts/contactpage.tsx frontend/src/features/contacts/contactoverview.tsx frontend/src/features/contacts/contacttoday.tsx frontend/src/features/contacts/contactsourcereview.tsx frontend/src/components/sourcereviewdialog.tsx frontend/src/features/contacts/contactconsentpanel.tsx frontend/src/features/contacts/contactstanding.ts frontend/src/components/latestinbound.tsx backend/internal/modules/activities/latestinbound.go frontend/src/features/contacts/contactcaseentry.tsx frontend/src/design-system/timelineentry.tsx frontend/src/design-system/verbvolume.tsx -->
+<!-- describes: backend/internal/compose/contact360 frontend/src/features/contacts/contactpage.tsx frontend/src/features/contacts/contactoverview.tsx frontend/src/features/contacts/contacttoday.tsx frontend/src/features/contacts/contactsourcereview.tsx frontend/src/components/sourcereviewdialog.tsx frontend/src/features/contacts/contactconsentpanel.tsx frontend/src/features/contacts/contactstanding.ts frontend/src/components/latestinbound.tsx backend/internal/modules/activities/latestinbound.go frontend/src/components/contactcase.entry.tsx frontend/src/design-system/timelineentry.tsx frontend/src/design-system/verbvolume.tsx -->
 # The contact record page
 
 The Overview tab puts recorded context and real work first. A new contact must not look like an old relationship that is now silent.
@@ -28,7 +28,7 @@ A relationship is marked inbound only, outbound only, or both ways. A pulse, col
 
 Editing identity, choosing the default address and resolving where the contact works stay with the parts that already do them.
 
-While the contact is in an open duplicate case, the record header shows a **Possible duplicates** button with a count (`contactcaseentry.tsx`). The count is the number of other contacts of the case that the reader can see. The button opens the same review the Worklist case row opens, so both places merge through one decision. It does not show when the contact is in no case, or when the case is merged or gone.
+While the contact is in an open duplicate case, the record header shows a **Possible duplicates** button with a count (`components/contactcase.entry.tsx`). The count is the number of other contacts of the case that the reader can see. The button opens the same review the Worklist case row opens, so both places merge through one decision. It does not show when the contact is in no case, or when the case is merged or gone.
 
 ## Permission to write
 
@@ -54,6 +54,17 @@ The Next bar shows open privacy notice work before relationship suggestions. It 
 contact-scoped queue as Home, with the same grants and row scope. **Review privacy duty** opens the
 case itself in Settings → Privacy, so the Worklist page limit does not hide it. Closed cases and
 notices already queued for delivery do not ask for another notice.
+
+The waiting and gone-quiet cards rest on our last message (`last_outbound_activity_id`). Their
+**Done** writes `handled` on it through `PUT /activities/{id}/disposition`, the reader state the
+Worklist's Done writes. `activities.OwnMessageDoneState` says whether this reader has hidden the
+message, and whether the writer would take a Done from them. The writer takes it when the reader
+sent the message and it is still the newest one either way with a contact it went to.
+`momentsSection` leaves out both cards when the message is hidden, and sets `moment.done` only where a press changes something
+(`backend/internal/compose/contact360/momentowndone.go`).
+
+The **Open tasks** card under the bar lists `next_steps` without what the bar draws. `nextBarChoice` in `contacttoday.tsx` answers both,
+so no task shows twice.
 
 The last-touch fields (`last_inbound_at`, `last_outbound_at`, `relationship_direction` and the rest)
 come from `contact360.LastTouchFor` in `backend/internal/compose/contact360/lasttouch.go`. It counts

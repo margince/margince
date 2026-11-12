@@ -1,0 +1,14 @@
+{
+  "tool": "read_workspace",
+  "action": "notification_preferences",
+  "verb": "list_notification_preferences",
+  "allowed_for": [
+    "admin",
+    "management",
+    "manager",
+    "ops",
+    "read_only",
+    "rep"
+  ],
+  "refused_for": []
+}

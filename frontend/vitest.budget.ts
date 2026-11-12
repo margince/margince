@@ -78,14 +78,14 @@ export const ASYNC_UTIL_TIMEOUT_MS = 2_782;
 export const MAX_DEFAULT_WAITER_BUDGET_MS = ASYNC_UTIL_TIMEOUT_MS * 7;
 
 /**
- * The slowest single test measured under deliberate load, in milliseconds —
- * `read-conclusion.test.tsx`'s "a long multi-snapshot run converges on the
- * review". Used whole as the allowance for the work BETWEEN the waits, which
+ * The slowest single test measured, in milliseconds: census `dialogrows`, 5,624 ms
+ * locally, walking 8,575 scopes with no repeated (scope, node) work to cache.
+ * Used whole as the allowance for the work BETWEEN the waits, which
  * deliberately over-counts: that figure already contains its own waits. An
  * over-estimate is the safe direction here, since a ceiling that is too high
  * costs a slower red and one too low costs this bug.
  */
-export const SLOWEST_MEASURED_TEST_MS = 3_437;
+export const SLOWEST_MEASURED_TEST_MS = 5_624;
 
 /**
  * The per-test ceiling. Not a round number on purpose: a round one silently

@@ -42,3 +42,10 @@ it("opens a retained-review notice at its signature instead of the reader's own 
   expect(action?.href).toContain("privacy");
   expect(action?.href).not.toContain("account");
 });
+
+it("opens an approval-history review on the audit log narrowed to that approval", () => {
+  const action = noticeAction({ type: "approval_history", id: "approval-id" });
+  expect(action?.href).toContain("settings/audit");
+  expect(action?.href).toContain("entity_type=approval");
+  expect(action?.href).toContain("entity_id=approval-id");
+});

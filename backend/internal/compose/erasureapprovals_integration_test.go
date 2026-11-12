@@ -59,7 +59,7 @@ func TestErasureEmptiesAStagedDraftAndMakesItUnapprovable(t *testing.T) {
 	e := integration.Setup(t)
 	subject, approvalID := erasureSubject(t, e)
 
-	if err := privacy.NewEraser(e.DB()).EraseContact(e.Admin(), subject.UUID, "subject request"); err != nil {
+	if err := eraserWithGraph(e.DB()).EraseContact(e.Admin(), subject.UUID, "subject request"); err != nil {
 		t.Fatalf("EraseContact → %v", err)
 	}
 
@@ -93,7 +93,7 @@ func TestErasureKeepsTheVerdictOnAnAlreadyDecidedApproval(t *testing.T) {
 	subject, approvalID := erasureSubject(t, e)
 	e.WsExec(t, `UPDATE approval SET status = 'rejected', decided_at = now() WHERE id = $1`, approvalID)
 
-	if err := privacy.NewEraser(e.DB()).EraseContact(e.Admin(), subject.UUID, "subject request"); err != nil {
+	if err := eraserWithGraph(e.DB()).EraseContact(e.Admin(), subject.UUID, "subject request"); err != nil {
 		t.Fatal(err)
 	}
 
@@ -120,7 +120,7 @@ func TestErasureEmptiesTheAutomationRunThatComposedTheDraft(t *testing.T) {
 		[]byte(`{"actions":[{"Kind":"draft_email"}]}`),
 		[]byte(`[{"Kind":"draft_email","Args":{"draft_body":"Hi Anna - anna.erasure@example.com"}}]`))
 
-	if err := privacy.NewEraser(e.DB()).EraseContact(e.Admin(), subject.UUID, "subject request"); err != nil {
+	if err := eraserWithGraph(e.DB()).EraseContact(e.Admin(), subject.UUID, "subject request"); err != nil {
 		t.Fatal(err)
 	}
 	if n := e.WsCount(t, `SELECT count(*) FROM workflow_run
@@ -173,7 +173,7 @@ func TestErasureBlocksTheRunWaitingOnTheApprovalItWithdraws(t *testing.T) {
 		VALUES ($1, $2, $3, '[]'::jsonb, 'requires_approval', jsonb_build_object('approval_id', $4::text))`,
 		handler, handler+":1", ids.NewV7(), approvalID.String())
 
-	if err := privacy.NewEraser(e.DB()).EraseContact(e.Admin(), subject.UUID, "subject request"); err != nil {
+	if err := eraserWithGraph(e.DB()).EraseContact(e.Admin(), subject.UUID, "subject request"); err != nil {
 		t.Fatalf("EraseContact → %v", err)
 	}
 
@@ -211,7 +211,7 @@ func TestErasureLeavesALookalikeAddressAlone(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if err := privacy.NewEraser(e.DB()).EraseContact(e.Admin(),
+	if err := eraserWithGraph(e.DB()).EraseContact(e.Admin(),
 		ids.From[ids.ContactKind](subject).UUID, "subject request"); err != nil {
 		t.Fatal(err)
 	}
@@ -251,7 +251,7 @@ func TestErasureLeavesAnAddressThatMerelyContainsTheSubjectsAlone(t *testing.T) 
 		t.Fatal(err)
 	}
 
-	if err := privacy.NewEraser(e.DB()).EraseContact(e.Admin(),
+	if err := eraserWithGraph(e.DB()).EraseContact(e.Admin(),
 		ids.From[ids.ContactKind](subject).UUID, "subject request"); err != nil {
 		t.Fatal(err)
 	}
@@ -270,7 +270,7 @@ func TestErasureStillReachesTheSubjectsOwnStagedMessage(t *testing.T) {
 	e := integration.Setup(t)
 	subject, approvalID := erasureSubject(t, e)
 
-	if err := privacy.NewEraser(e.DB()).EraseContact(e.Admin(), subject.UUID, "subject request"); err != nil {
+	if err := eraserWithGraph(e.DB()).EraseContact(e.Admin(), subject.UUID, "subject request"); err != nil {
 		t.Fatal(err)
 	}
 	if n := e.WsCount(t, `SELECT count(*) FROM approval
@@ -294,7 +294,7 @@ func TestAnAutomationRunIsReachedByAddressAndNothingElse(t *testing.T) {
 		handler, handler+":1", ids.NewV7(),
 		[]byte(`[{"Kind":"draft_email","Args":{"note":"about No Address At All"}}]`))
 
-	if err := privacy.NewEraser(e.DB()).EraseContact(e.Admin(),
+	if err := eraserWithGraph(e.DB()).EraseContact(e.Admin(),
 		ids.From[ids.ContactKind](subject).UUID, "subject request"); err != nil {
 		t.Fatal(err)
 	}
@@ -326,7 +326,7 @@ func TestErasureSpendsTheTokenOnAnApprovedButUnredeemedStaging(t *testing.T) {
 		   SET status = 'approved', decided_at = now(), passport_id = $2, consumed_at = NULL
 		 WHERE id = $1`, approvalID, passport)
 
-	if err := privacy.NewEraser(e.DB()).EraseContact(e.Admin(), subject.UUID, "subject request"); err != nil {
+	if err := eraserWithGraph(e.DB()).EraseContact(e.Admin(), subject.UUID, "subject request"); err != nil {
 		t.Fatal(err)
 	}
 

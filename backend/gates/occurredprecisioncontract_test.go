@@ -54,8 +54,11 @@ const storedClock = "stored clock without a precision column, issue #8910"
 // place, each with the reason. Keyed "<spec> <schema path>.<property>" as the
 // census prints it.
 var precisionlessTimes = gatekit.Waive(map[string]string{
+	"api/crm.yaml EmailCalendarChange.ends_at":                            "a meeting's end, read with the same starts_precision: an all-day meeting's end is a date as its start is",
+	"api/crm.yaml EmailCalendarBefore.ends_at":                            "the earlier send's end, read with the same starts_precision as EmailCalendarChange.ends_at",
 	"api/crm.yaml MarginceChangeBundle.latest_at":                         "when Margince last changed the deal, the correction row's own write instant, not an activity time",
 	"api/crm.yaml ReportingForecastBasis.call_at":                         "when a manager submitted a forecast call, the call row's exact write instant",
+	"api/crm.yaml SalesProgress.planned_valued_at":                        "the evaluation instant the open deals were converted at, not an activity time",
 	"api/crm.yaml AssessNoticeSource.obtained_at":                         "The privacy user enters a source date; this does not copy a captured activity timestamp.",
 	"api/crm.yaml NoticeCase.source_obtained_at":                          "The saved human source date is used for a calendar deadline, without an activity timestamp or its precision.",
 	"api/crm.yaml NoticeCaseReview.source_obtained_at":                    "This view reads the same human source date as NoticeCase, not a captured activity timestamp.",

@@ -57,6 +57,7 @@ import {
 } from "../../lib/problem";
 import { useMe } from "../../lib/session";
 import { useViewerZone } from "../../lib/viewerzone";
+import { dsrsKey } from "../../lib/workkeys";
 import { LinkedCaseNotice } from "./privacy.caselink.notice";
 import {
   type DeadlineDraft,
@@ -144,7 +145,7 @@ export function NewDsrForm({ onDone }: Readonly<{ onDone: () => void }>) {
       );
     },
     onSuccess: () => {
-      void queryClient.invalidateQueries({ queryKey: ["dsrs"] });
+      void queryClient.invalidateQueries({ queryKey: dsrsKey });
       setDraft(EMPTY_DSR);
       onDone();
     },
@@ -200,10 +201,14 @@ export function NewDsrForm({ onDone }: Readonly<{ onDone: () => void }>) {
           )}
         </Field>
 
-        {draft.kind === "erasure" ? (
+        {draft.kind === "erasure" || draft.kind === "access" ? (
           <Field
             label={t("privacy.contact")}
-            hint={t("privacy.erasureNeedsContact")}
+            hint={t(
+              draft.kind === "erasure"
+                ? "privacy.erasureNeedsContact"
+                : "privacy.accessPicksContact",
+            )}
           >
             {(control) => (
               <RecordPicker
@@ -218,12 +223,7 @@ export function NewDsrForm({ onDone }: Readonly<{ onDone: () => void }>) {
             )}
           </Field>
         ) : (
-          <Field
-            label={t("privacy.subjectRef")}
-            hint={
-              draft.kind === "access" ? t("privacy.accessManual") : undefined
-            }
-          >
+          <Field label={t("privacy.subjectRef")}>
             {(control) => (
               <TextInput
                 {...control}
@@ -298,13 +298,13 @@ function FulfilErasureModal({
     },
     onSuccess: async () => {
       // The queue first, so focus lands on a drawer that already reads fulfilled.
-      await queryClient.invalidateQueries({ queryKey: ["dsrs"] });
+      await queryClient.invalidateQueries({ queryKey: dsrsKey });
       setTyped("");
       onClose();
     },
     onError: (error) => {
       if (error instanceof ProblemError && isIllegalTransition(error.problem)) {
-        void queryClient.invalidateQueries({ queryKey: ["dsrs"] });
+        void queryClient.invalidateQueries({ queryKey: dsrsKey });
       }
     },
   });
@@ -382,7 +382,7 @@ export function PrivacyInboxCard() {
 
   // Server-side facet: a client re-slice would break the pager's has_more.
   const query = useInfiniteQuery({
-    queryKey: ["dsrs", facet],
+    queryKey: [...dsrsKey, facet],
     enabled: canSee,
     initialPageParam: FIRST_PAGE,
     queryFn: async ({ pageParam }) => {

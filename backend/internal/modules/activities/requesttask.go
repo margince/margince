@@ -19,6 +19,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/occurredday"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/kernel/relstrength"
 	"github.com/margince/margince/backend/internal/shared/kernel/systemtext"
 )
 
@@ -78,7 +79,7 @@ func (s *Store) takeEmailRequest(ctx context.Context, tx pgx.Tx, in LogActivityI
 	if in.Subject != nil && strings.TrimSpace(*in.Subject) != "" {
 		request.Subject = in.Subject
 	}
-	request.Body = in.Body
+	request.Body, request.TaskType = in.Body, in.TaskType
 	request.DueAt, request.DueHasTime, request.RemindAt = in.DueAt, in.DueHasTime, in.RemindAt
 	request.CustomFields, request.customColumns, request.customChecked = in.CustomFields, in.customColumns, in.customChecked
 	return s.LogActivityTx(ctx, tx, request)
@@ -183,7 +184,8 @@ func readRequestFiling(ctx context.Context, tx pgx.Tx, message ids.UUID, seat pr
 	rows, err := tx.Query(ctx, fmt.Sprintf(`
 		SELECT l.entity_type, %[1]s,
 		       EXISTS (SELECT 1 FROM activity_participant p
-		                WHERE p.activity_id = l.activity_id AND p.role = 'from' AND p.contact_id = l.contact_id),
+		                WHERE p.activity_id = l.activity_id AND p.role = 'from'
+		                  AND `+relstrength.ParticipantNamesSQL("l.contact_id", "p")+`),
 		       EXISTS (SELECT 1 FROM activity_participant p WHERE p.activity_id = l.activity_id AND p.role = 'from')
 		  FROM activity_link l
 		 WHERE l.activity_id = $%[2]d AND %[3]s AND %[4]s
