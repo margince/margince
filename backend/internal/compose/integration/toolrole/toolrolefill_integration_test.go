@@ -153,9 +153,9 @@ type schemaProp struct {
 	Type   any    `json:"type"`
 	Format string `json:"format"`
 	Enum   []any  `json:"enum"`
-	// Extensible is either a flag beside an enum, or the closed part of an
-	// open set, such as a saved view's core lists beside the extension kinds
-	// its pattern admits. Only the list form names a value.
+	// Extensible is a flag beside an enum, or the closed part of an open set.
+	// A saved view's core lists sit beside the extension kinds its pattern
+	// admits. Only the list form names a value.
 	Extensible json.RawMessage            `json:"x-extensible-enum"`
 	Default    any                        `json:"default"`
 	Examples   []any                      `json:"examples"`
