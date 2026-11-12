@@ -29,6 +29,8 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"io"
+	"strings"
 	"time"
 
 	"github.com/jackc/pgx/v5"
@@ -77,10 +79,10 @@ var suppressionKinds = []string{"email", "channel_identity"}
 // changes nothing. Run it on a schedule and before a backup — the entries it
 // adds are the ones a restore would otherwise lose.
 //
-// The object's body is the identifier's KIND and the date it was suppressed,
-// and never the identifier: the whole point of the list is that the value is
-// gone and only its fingerprint remains, so an export that carried the address
-// would reconstitute what the erasure destroyed.
+// The object's body is the identifier's KIND and when it was suppressed and
+// lifted (journalEntryBody), and never the identifier: the whole point of the
+// list is that the value is gone and only its fingerprint remains, so an export
+// that carried the address would reconstitute what the erasure destroyed.
 func (e *Eraser) ExportSuppressions(ctx context.Context) (int, error) {
 	ctx = corefeatures.RetainedDataContext(ctx)
 	if err := auth.Require(ctx, "contact", principal.ActionDelete); err != nil {
@@ -93,27 +95,28 @@ func (e *Eraser) ExportSuppressions(ctx context.Context) (int, error) {
 		return 0, errors.New("privacy: exporting the suppression list needs an object store")
 	}
 	type entry struct {
-		kind, hash, when string
-		keyID            *string
+		kind, hash string
+		state      suppressionState
+		keyID      *string
 	}
 	var entries []entry
 	var newest *time.Time
 	if err := e.db.Tx(ctx, func(tx pgx.Tx) error {
-		// The newest erasure the list knows, not the clock: a list read from a
+		// The newest change the list knows, not the clock: a list read from a
 		// restored database is older than the moment it is exported.
 		if err := tx.QueryRow(ctx,
-			`SELECT max(created_at) FROM erasure_suppression`).Scan(&newest); err != nil {
+			`SELECT max(greatest(created_at, lifted_at)) FROM erasure_suppression`).Scan(&newest); err != nil {
 			return err
 		}
 		rows, err := tx.Query(ctx,
-			`SELECT kind, value_hash, created_at::date::text, key_id FROM erasure_suppression`)
+			`SELECT kind, value_hash, created_at, lifted_at, key_id FROM erasure_suppression`)
 		if err != nil {
 			return err
 		}
 		defer rows.Close()
 		for rows.Next() {
 			var row entry
-			if err := rows.Scan(&row.kind, &row.hash, &row.when, &row.keyID); err != nil {
+			if err := rows.Scan(&row.kind, &row.hash, &row.state.erasedAt, &row.state.liftedAt, &row.keyID); err != nil {
 				return err
 			}
 			entries = append(entries, row)
@@ -124,7 +127,7 @@ func (e *Eraser) ExportSuppressions(ctx context.Context) (int, error) {
 	}
 	keyed := storekit.SuppressionKeyID() != nil
 	for _, row := range entries {
-		body := []byte(row.kind + " " + row.when + "\n")
+		body := journalEntryBody(row.kind, row.state)
 		if err := e.blob.Put(ctx, journalEntryKey(row.kind, row.hash, row.keyID != nil),
 			bytes.NewReader(body), int64(len(body)), "text/plain"); err != nil {
 			return 0, fmt.Errorf("privacy: exporting suppression %s: %w", row.hash, err)
@@ -162,47 +165,115 @@ func journalEntryKey(kind, hash string, rowKeyed bool) string {
 	return suppressionJournalKey(kind, hash)
 }
 
-// journalSuppressedInAnyForm asks the journal about each stored form of one
-// identifier (storekit.SuppressionForms). The keyed form is under its prefix.
-// A journal exported before the key may still hold the unkeyed one.
-func (e *Eraser) journalSuppressedInAnyForm(ctx context.Context, kind string, forms []string) (bool, error) {
+// journalEntryBody is one entry's object. The first line is the kind and the
+// day of the erasure, which every journal has held; the lines after it give the
+// erasure and the lift to the instant, so a replay can tell which of the
+// journal and the database's list is newer.
+func journalEntryBody(kind string, state suppressionState) []byte {
+	body := kind + " " + state.erasedAt.UTC().Format(time.DateOnly) + "\n" +
+		journalErasedField + " " + state.erasedAt.UTC().Format(time.RFC3339Nano) + "\n"
+	if state.liftedAt != nil {
+		body += journalLiftedField + " " + state.liftedAt.UTC().Format(time.RFC3339Nano) + "\n"
+	}
+	return []byte(body)
+}
+
+// The fields of a journal entry after its first line.
+const (
+	journalErasedField = "erased_at"
+	journalLiftedField = "lifted_at"
+)
+
+// maxJournalEntryBody bounds what a replay reads of one entry. An entry is a
+// few dozen bytes; anything larger is not one this code wrote.
+const maxJournalEntryBody = 512
+
+// parseJournalEntry reads journalEntryBody. An entry from before the lift
+// existed has only its first line: it is an erasure from the start of that day,
+// never lifted.
+func parseJournalEntry(body string) (suppressionState, error) {
+	lines := strings.Split(strings.TrimRight(body, "\n"), "\n")
+	_, day, ok := strings.Cut(lines[0], " ")
+	if !ok {
+		return suppressionState{}, fmt.Errorf("privacy: a suppression journal entry has no date: %q", lines[0])
+	}
+	erased, err := time.Parse(time.DateOnly, day)
+	if err != nil {
+		return suppressionState{}, fmt.Errorf("privacy: a suppression journal entry has a bad date: %w", err)
+	}
+	state := suppressionState{erasedAt: erased}
+	for _, line := range lines[1:] {
+		field, stamp, _ := strings.Cut(line, " ")
+		at, err := time.Parse(time.RFC3339Nano, stamp)
+		if err != nil {
+			return suppressionState{}, fmt.Errorf("privacy: a suppression journal entry has a bad %s: %w", field, err)
+		}
+		switch field {
+		case journalErasedField:
+			state.erasedAt = at
+		case journalLiftedField:
+			state.liftedAt = &at
+		default:
+			return suppressionState{}, fmt.Errorf("privacy: a suppression journal entry has an unknown field %q", field)
+		}
+	}
+	return state, nil
+}
+
+// journalStatesInAnyForm asks the journal about each stored form of one
+// identifier (storekit.SuppressionForms), and answers the entries it holds. The
+// keyed form is under its prefix. A journal exported before the key may still
+// hold the unkeyed one.
+func (e *Eraser) journalStatesInAnyForm(ctx context.Context, kind string, forms []string) ([]suppressionState, error) {
 	if len(forms) == 0 {
-		return false, nil
+		return nil, nil
 	}
 	keys := []string{suppressionJournalKey(kind, forms[len(forms)-1])}
 	if len(forms) > 1 {
 		keys = append(keys, keyedJournalKey(kind, forms[0]))
 	}
+	var states []suppressionState
 	for _, key := range keys {
-		journaled, err := e.journalSuppressed(ctx, key)
-		if err != nil || journaled {
-			return journaled, err
+		state, journaled, err := e.journalEntry(ctx, key)
+		if err != nil {
+			return nil, err
+		}
+		if journaled {
+			states = append(states, state)
 		}
 	}
-	return false, nil
+	return states, nil
 }
 
-// journalSuppressed reports whether the exported list holds this entry.
+// journalEntry reads one entry of the exported list.
 //
 // Consulted only for a candidate the database's own list did not already
-// name, which is the case a restore creates: the rows came back and the list
+// erase, which is the case a restore creates: the rows came back and the list
 // that would have caught them went with the rollback.
 //
 // A store that cannot answer is not a "no". Reporting one would let an outage
 // read as "this subject was never erased", which is the exact failure this
-// whole path exists to prevent, so the error travels.
-func (e *Eraser) journalSuppressed(ctx context.Context, entryKey string) (bool, error) {
+// whole path exists to prevent, so the error travels. An entry that cannot be
+// read travels as an error for the same reason.
+func (e *Eraser) journalEntry(ctx context.Context, entryKey string) (suppressionState, bool, error) {
 	if e.blob == nil {
-		return false, nil
+		return suppressionState{}, false, nil
 	}
 	reader, _, err := e.blob.Get(ctx, entryKey)
 	if err != nil {
 		if errors.Is(err, blobstore.ErrNotFound) {
-			return false, nil
+			return suppressionState{}, false, nil
 		}
-		return false, fmt.Errorf("privacy: asking the exported suppression list about %s: %w", entryKey, err)
+		return suppressionState{}, false, fmt.Errorf("privacy: asking the exported suppression list about %s: %w", entryKey, err)
 	}
-	//craft:ignore swallowed-errors the body is not read; the object's existence is the whole answer
-	_ = reader.Close()
-	return true, nil
+	body, readErr := io.ReadAll(io.LimitReader(reader, maxJournalEntryBody))
+	closeErr := reader.Close()
+	if err := errors.Join(readErr, closeErr); err != nil {
+		return suppressionState{}, false, fmt.Errorf("privacy: reading the exported suppression entry %s: %w", entryKey, err)
+	}
+	state, err := parseJournalEntry(string(body))
+	if err != nil {
+		return suppressionState{}, false, fmt.Errorf("%s: %w", entryKey, err)
+	}
+	return state, true, nil
 }

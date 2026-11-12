@@ -52,7 +52,8 @@ func EscapeLikeSQL(expr string) string {
 }
 
 // EmailSuppressed reports whether an address belongs to an erased
-// subject in this INSTALLATION. There is no tenant predicate and there is
+// subject in this INSTALLATION. A row the person lifted themselves no longer
+// refuses the address. There is no tenant predicate and there is
 // nothing for one to key on: core 0217 (ADR-0091) retired every isolation
 // policy and core 0255 dropped erasure_suppression.workspace_id outright,
 // so the list is installation-wide by construction. What makes that the
@@ -72,8 +73,8 @@ func SuppressedEmails(ctx context.Context, tx pgx.Tx, emails []string) (map[stri
 	if len(emails) == 0 {
 		return result, nil
 	}
-	args := []any{SuppressionForms(EmailLookups(emails...)...)}
-	rows, err := tx.Query(ctx, fmt.Sprintf(`SELECT value_hash FROM erasure_suppression WHERE kind='email' AND value_hash=ANY($%d::text[])`, len(args)), args...)
+	args := []any{EmailSuppressionForms(emails...)}
+	rows, err := tx.Query(ctx, fmt.Sprintf(`SELECT value_hash FROM erasure_suppression WHERE kind='email' AND value_hash=ANY($%d::text[]) AND lifted_at IS NULL`, len(args)), args...)
 	if err != nil {
 		return nil, err
 	}
@@ -87,13 +88,19 @@ func SuppressedEmails(ctx context.Context, tx pgx.Tx, emails []string) (map[stri
 	}
 	// An address erased in one spelling of its domain is erased in the other.
 	for _, email := range emails {
-		for _, form := range SuppressionForms(EmailLookups(email)...) {
+		for _, form := range EmailSuppressionForms(email) {
 			if held[form] {
 				result[strings.ToLower(strings.TrimSpace(email))] = true
 			}
 		}
 	}
 	return result, nil
+}
+
+// EmailSuppressionForms is every hash the erasure list can hold the addresses
+// under: each spelling of the domain, keyed and unkeyed.
+func EmailSuppressionForms(emails ...string) []string {
+	return SuppressionForms(EmailLookups(emails...)...)
 }
 
 // ErasedIdentifierCode is the contract's machine code for a write refused
@@ -195,7 +202,7 @@ func channelIdentityValue(provider, channelUserID string) string {
 func ChannelIdentitySuppressed(ctx context.Context, tx pgx.Tx, provider, channelUserID string) (bool, error) {
 	var suppressed bool
 	err := tx.QueryRow(ctx,
-		`SELECT EXISTS (SELECT 1 FROM erasure_suppression WHERE kind = 'channel_identity' AND value_hash = ANY($1))`,
+		`SELECT EXISTS (SELECT 1 FROM erasure_suppression WHERE kind = 'channel_identity' AND value_hash = ANY($1) AND lifted_at IS NULL)`,
 		ChannelIdentityForms(provider, channelUserID)).Scan(&suppressed)
 	return suppressed, err
 }

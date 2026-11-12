@@ -342,13 +342,12 @@ func purgeDerivedTraces(ctx context.Context, tx pgx.Tx, contactID ids.ContactID,
 		}
 		aiPayloadsPurged += tag.RowsAffected()
 	}
+	hashes := make([]string, 0, len(emails))
 	for _, email := range emails {
-		if _, err := tx.Exec(ctx, `
-			INSERT INTO erasure_suppression (kind, value_hash, key_id)
-			VALUES ('email', $1, $2)
-			ON CONFLICT DO NOTHING`, storekit.SuppressionHash(email), storekit.SuppressionKeyID()); err != nil {
-			return 0, 0, err
-		}
+		hashes = append(hashes, storekit.SuppressionHash(email))
+	}
+	if err := armSuppression(ctx, tx, "email", hashes, storekit.SuppressionKeyID()); err != nil {
+		return 0, 0, err
 	}
 	return rawPurged, aiPayloadsPurged, nil
 }

@@ -4939,9 +4939,12 @@ public.embedding_pkey CREATE UNIQUE INDEX embedding_pkey ON public.embedding USI
 public.erasure_suppression acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.erasure_suppression.created_at timestamp with time zone NOT NULL gen=- def=now()
 public.erasure_suppression.erasure_suppression_kind_check CHECK ((kind = ANY (ARRAY['email'::text, 'channel_identity'::text])))
+public.erasure_suppression.erasure_suppression_lift_has_consent CHECK (((lifted_at IS NULL) = (lift_consent_event_id IS NULL)))
 public.erasure_suppression.erasure_suppression_pkey PRIMARY KEY (kind, value_hash)
 public.erasure_suppression.key_id text gen=- def=-
 public.erasure_suppression.kind text NOT NULL gen=- def=-
+public.erasure_suppression.lift_consent_event_id uuid gen=- def=-
+public.erasure_suppression.lifted_at timestamp with time zone gen=- def=-
 public.erasure_suppression.value_hash text NOT NULL gen=- def=-
 public.erasure_suppression_pkey CREATE UNIQUE INDEX erasure_suppression_pkey ON public.erasure_suppression USING btree (kind, value_hash)
 public.event_outbox acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
