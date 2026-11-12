@@ -6,7 +6,7 @@
 
 The Worklist is the ranked to-do list in Margince: one list of everything waiting on you, in the order Margince ranks them. That is buyers to answer, tasks due, promises made, deals at risk and items to check. It lives on **Home**. Press **Show Worklist** to open it as a panel over the page; **Hide Worklist** closes it. It has no sidebar row of its own.
 
-Under **Needs you**, every task is its own card, and the first one is open. Press another card to open it in its place. **Next task** on the open card opens the one after it, and after the last card it goes back to the first. Opening a card changes only which task you see.
+Under **Needs you**, every task is its own card, and the first one is open. Press another card to open it in its place. **Next task**, at the top right of the open card, opens the one after it. After the last card it goes back to the first. Opening a card changes only which task you see.
 
 When you email a task's contact after the task was created, Margince marks the task done and shows a receipt in **Done for you**. Bulk mail and a contact named only in Bcc do not count. **Undo** reopens the task; the same email will not close it again. This includes tasks from website requests. After an upgrade, Margince applies this rule once to the email it already holds, and those tasks show in **Done for you** with **Undo** too.
 
@@ -106,8 +106,7 @@ A task more than 30 days late leaves the Worklist and its counts. A pin keeps it
 To complete a task in Margince, press **Done** on its Worklist row, or on the task in the record's list of next steps.
 1. Open **Home** → **Show Worklist**, or open the contact, company or deal the task is on.
 2. Press **Done**. The task is marked "Task completed".
-3. Not ready yet? Press **Snooze 1 day** to move its due date a day later. Or open the task and pick
-   a day under **Move to**.
+3. Not ready yet? Press **Snooze 1 day** to move its due date a day later. Or open the task and pick a day under **Move to**.
 
 **Snooze 1 day** moves the due date one day later, or to tomorrow if that is later, keeping its time. A task with no date does not show it. If it fails: "Task was not completed. Retry." Also called: tick off, mark done, close a task.
 
@@ -119,19 +118,29 @@ A meeting that starts within 2 hours is urgent until you are ready. Then it stay
 When the start time, the guests or the invite's agenda change, the row asks again. It names what changed, for example "Changed since you were ready: start time". A note you type into the meeting does not ask again. If it fails: "You were not marked ready. Retry." Also called: prepared, meeting prep, ready for the call.
 
 ### What can I do from a task?
-A task linked to one contact offers **Draft email** and **Open contact**. **Draft email** opens the composer already drafting a message about the task; with no connected mailbox it is **Email** and opens your own mail app. A task with no single contact drafts to its one open lead, or with none, to its one linked company. For a company the composer asks which contact it is for; a task on two open leads offers none. A closed lead with no linked company, or a lead with no email address, gets **Draft email** refused with the reason. The task's row on a timeline offers **Write email** to the same contact, lead or company.
+Every task has a type, and the type decides its one step. The type shows as a chip on the open task card on **Home**. Pick it under **Task type** when you add a task; **Reach out** is chosen until you change it. Tasks Margince makes get the type of the work that made them. An email request is a **Reply**; a new lead to check is a **Review**. A task made before types existed gets one the same way, and a task you typed by hand is a **Reach out**.
 
-Where a task offers **Draft email**, one filed on a deal alone drafts to the deal's one contact, else to the deal's company. One on several contacts and no open lead drafts to the company they all work at now. Of the tasks Margince files, only those that ask you to write offer it. Examples are answering an email request or following up a new lead. A task filed on no record has no one to write to and offers none.
+| Type | The step |
+| --- | --- |
+| **Reply** | Answers the way the message came in: **Draft email** for an email, the number and **Call** for a call. Any other reply offers both, as **Reach out** does. The other way is always there too: under the card's **More actions**, and in the task's details |
+| **Reach out** | **Draft email** to the task's contact, lead or company, then the contact's number with **Copy number** and **Call**. **Call** is the colour button when no email can be drafted |
+| **Meet** | **Book a meeting** with the task's contact |
+| **Review** | Opens the record to check, such as **Review lead** |
+| **Decide** | The deals the email may be about, as cards, and **Link email thread to deal** |
+| **Do** | No step of its own: **Done** is the step |
 
-It offers **Call** whenever the contact has a phone number, including on a task typed by hand. A done or read-only task offers the same steps. **Draft email** is refused with a reason when the contact has no email address or is archived. **Call** dials and opens **Log activity** on **Call** under the task, which does not complete the task; an archived contact gets no **Call**. The open card under **Needs you** on **Home** offers **Call** and **Draft email** the same way, beside **Done**, with no **Open contact**. With **Draft email** on the card, **Done** is a plain button, so the card has one colour button.
+**Draft email** opens the composer already drafting a message about the task. With no connected mailbox it is **Email** and opens your own mail app. A task with no single contact drafts to its one open lead, or with none, to its one linked company. For a company the composer asks which contact it is for; a task on two open leads offers none. A task filed on a deal alone drafts to the deal's one contact, else to the deal's company. One on several contacts and no open lead drafts to the company they all work at now.
+
+A task filed on no record has no one to write to and offers none. **Draft email** is refused with the reason for a closed lead with no linked company, and for a lead or contact with no email address. An archived contact is refused too. A task linked to one contact also offers **Open contact**. The task's row on a timeline offers **Write email** to the same contact, lead or company.
+
+**Call** and **Book a meeting** go to the first contact the task is filed on, and an archived contact gets neither. **Call** dials. If you may log activity, it also opens **Log activity** on **Call** under the task, which does not complete the task. A done or read-only task offers the same steps. On the open card under **Needs you** on **Home**, the step is the colour button and **Done** is a plain one. A **Do** task, or one whose step has nothing to act on, keeps **Done** as the colour button.
 
 ### How do I plan my week?
 To plan your week in Margince, open **Home**, switch the view to **Weekly** and add items under
 **This week’s commitments**.
 1. Click **Home**, then **Weekly**.
 2. Under **This week’s commitments**, press **Add commitment** and fill in **Commitment**.
-3. If you like, add a **Due date** and a linked deal, lead, contact, company or project, then press
-   **Add**.
+3. If you like, add a **Due date** and a linked deal, lead, contact, company or project, then press **Add**.
 4. Tick commitments to mark them, then press **Save {count} changes**.
 5. Fill in **Constraints this week**: **Risks** and **Available capacity**.
 
@@ -149,8 +158,7 @@ Margince writes the review on the Monday after the week, and then it is **Frozen
 Each item names its record and shows the facts that call for action. A badge says when Margince made the brief.
 - **Needs you**: at most 6 cards in Worklist order, each with its kind of work and who it is with, if Margince has that.
   A dated task also shows its due day. The round mark marks a task done; a press opens the card where it stands.
-- Proposals, commitments due today and meetings in the next 24 hours sit there too. A task due later shows once its
-  reminder is due. A quiet day says "No immediate priorities. The full Worklist is available."
+- Proposals, commitments due today and meetings in the next 24 hours sit there too. A task due later shows once its reminder is due. A quiet day says "No immediate priorities. The full Worklist is available."
 - **Review N deal suggestions** opens the saved brief. Its deals stay separate from the work that needs action now. A brief with no deals shows no opener.
 - **Show Worklist**, under the list: the whole list, with its own filters and pages, and work that
   is not due yet. Stage change notices stay in the notification center.
@@ -163,17 +171,13 @@ A greeting covers the page on the day's first visit, once per browser, unless yo
 Also called: morning brief, daily brief, today, priorities, top cards, welcome screen.
 
 ### What comes first on Today?
-A customer who waits for your reply, and a reply deadline that comes close, come first on Today
-and in the Worklist.
-- A message that waited more than 14 days is old work to recover, not today's. On an open deal, it
-  keeps the rank of a deal at real risk.
+A customer who waits for your reply, and a reply deadline that comes close, come first on Today and in the Worklist.
+- A message that waited more than 14 days is old work to recover, not today's. On an open deal, it keeps the rank of a deal at real risk.
 - A privacy duty joins the day 7 days before its deadline; the legal deadline does not move.
 - A privacy duty recorded more than a day after its deadline came from imported history. It reads
-  "recorded after its deadline, from imported history", ranks as normal work and never sits under
-  **Needs you**.
+  "recorded after its deadline, from imported history", ranks as normal work and never sits under **Needs you**.
 - A task due today or late is urgent, unless it is prospecting work.
-- A deal at risk is urgent when its value is high next to the risk on all deals. It is also urgent
-  when its expected close is past or within 14 days.
+- A deal at risk is urgent when its value is high next to the risk on all deals. It is also urgent when its expected close is past or within 14 days.
 - A deal at risk with a task due within 7 days shows once, as that task with the risk on it.
 - Work for current customers comes before prospecting.
 - A close date Margince set for now asks you to confirm the forecast; it is not a customer promise.
@@ -213,14 +217,11 @@ by who made it.
   **Overview** lists open ones under **Customer commitments**, with **Open message**. **Dismiss**
   removes a wrong reading, if you may change the contact. Past its due day a promise asks **Overdue:
   did it happen?** (**Done**, **No longer true**). Another total price shows **Differs from the deal value**.
-- A promise a named colleague made becomes their task. When Margince reads it clearly, it writes the
-  task at once. If not, the colleague gets an **Add commitment task** proposal.
-- A promise nobody can be given stays on the contact with nobody asked. Press **I’ll take this** to
-  make it your task. The contact then shows who took it and when.
+- A promise a named colleague made becomes their task. When Margince reads it clearly, it writes the task at once. If not, the colleague gets an **Add commitment task** proposal.
+- A promise nobody can be given stays on the contact with nobody asked. Press **I’ll take this** to make it your task. The contact then shows who took it and when.
 - A promise in private mail stays with the owner of that mail. Its task is visible to its holder alone.
 - In an email, only the words the sender wrote count, not text quoted from earlier mail.
-- The task has a due date only when the conversation named a day. If not, it waits in today's list
-  with **No due date**.
+- The task has a due date only when the conversation named a day. If not, it waits in today's list with **No due date**.
 - Marking the task **Done** marks the promise kept, and the other way round. Opening the task again
   leaves the promise kept.
 - A task you archived, a proposal you refused and a customer promise you dismissed do not come back
@@ -228,9 +229,7 @@ by who made it.
 
 When Margince reads old mail, it checks newer messages before it creates work. Work already done and offers to help create no new task. Neither does work that depends on something which has not happened yet. A request alone does not mean someone agreed to do it. **Commitment review** on the source shows why no task was made. Words such as "next week" set no due day; "this week" sets the last day the promiser works that week.
 
-A future deadline can keep an old promise current. If later context has not been read, Margince does not create the task.
-
-Check the quoted words and any later replies before adding a follow-up from the linked record. A task linked to the contact follows the automatic rule above, with **Undo**.
+A future deadline can keep an old promise current. If later context has not been read, Margince does not create the task. Check the quoted words and any later replies before adding a follow-up from the linked record. A task linked to the contact follows the automatic rule above, with **Undo**.
 
 A later reply on the promise's thread may keep a promise that rule did not close, such as a colleague's reply. Margince then asks **This may be done**, naming the day the email went out. Home, the Worklist, the contact page and the company page ask the same question. While they ask, the task is not shown as overdue. Choose **Done** or **Not yet**. **Not yet** shows the task as before on every page, until someone writes on the thread again.
 

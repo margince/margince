@@ -298,6 +298,10 @@ const pinnedZones: { file: string; why: string }[] = [
   },
   {
     file: "features/worklist/taskactions.test.tsx",
+    why: "The task dialog renders its logged and due dates; the suite names the reader's zone so a snapshot of the dialog does not move with the machine it runs on.",
+  },
+  {
+    file: "features/worklist/taskactions.due.test.tsx",
     why: "The due line is asserted to the hour, and that hour exists only in a named zone; the suite names the reader's zone so the hour does not move with the machine it runs on.",
   },
   {

@@ -1,0 +1,10 @@
+{
+  "verb": "cancel_import_run",
+  "checks": [
+    "import_run.read",
+    "import_run.update"
+  ],
+  "takes": [
+    "draft_import_run"
+  ]
+}

@@ -1,0 +1,15 @@
+{
+  "tool": "change_capture",
+  "action": "add_workspace_email_domain",
+  "verb": "add_workspace_email_domain",
+  "allowed_for": [
+    "admin",
+    "ops"
+  ],
+  "refused_for": [
+    "management",
+    "manager",
+    "read_only",
+    "rep"
+  ]
+}

@@ -1,0 +1,9 @@
+{
+  "verb": "save_my_onboarding_state",
+  "checks": [
+    "company.read"
+  ],
+  "takes": [
+    "onboarding_state"
+  ]
+}

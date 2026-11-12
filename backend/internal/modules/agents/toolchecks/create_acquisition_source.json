@@ -1,0 +1,6 @@
+{
+  "verb": "create_acquisition_source",
+  "checks": [
+    "custom_field.create"
+  ]
+}

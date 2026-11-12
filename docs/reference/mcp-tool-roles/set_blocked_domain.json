@@ -1,0 +1,15 @@
+{
+  "tool": "change_capture",
+  "action": "set_blocked_domain",
+  "verb": "set_blocked_domain",
+  "allowed_for": [
+    "admin",
+    "management",
+    "manager",
+    "ops",
+    "rep"
+  ],
+  "refused_for": [
+    "read_only"
+  ]
+}

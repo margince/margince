@@ -1,0 +1,15 @@
+{
+  "tool": "change_reports",
+  "action": "record_decision_outcome",
+  "verb": "record_sales_decision_outcome",
+  "allowed_for": [
+    "admin",
+    "management",
+    "manager",
+    "ops",
+    "rep"
+  ],
+  "refused_for": [
+    "read_only"
+  ]
+}

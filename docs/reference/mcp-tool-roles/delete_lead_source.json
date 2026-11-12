@@ -1,0 +1,15 @@
+{
+  "tool": "change_settings",
+  "action": "delete_lead_source",
+  "verb": "delete_lead_source",
+  "allowed_for": [
+    "admin",
+    "ops"
+  ],
+  "refused_for": [
+    "management",
+    "manager",
+    "read_only",
+    "rep"
+  ]
+}

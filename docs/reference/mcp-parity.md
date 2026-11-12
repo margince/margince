@@ -227,7 +227,7 @@ Passport area: none: no agent acts here.
 
 The answer for `rep` comes from these places, in this order:
 
-- `decided_by: measured`: [mcp-tool-roles.json](mcp-tool-roles.json) ran the real tool on that role. Only a verb that
+- `decided_by: measured`: [mcp-tool-roles](mcp-tool-roles.md) ran the real tool on that role. Only a verb that
   serves one operation counts, because a row for a shared verb says nothing about any one route. `refused_by` is then the
   first grant in the sweep's tool checks table that the rep lacks, or every alternative of a check the rep holds none of.
   A row-scope check is no grant, so it is never named there.

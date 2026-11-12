@@ -1,0 +1,6 @@
+{
+  "verb": "list_tags",
+  "checks": [
+    "tag.read"
+  ]
+}

@@ -1,0 +1,9 @@
+{
+  "verb": "archive_automation",
+  "checks": [
+    "automation.delete"
+  ],
+  "takes": [
+    "automation"
+  ]
+}

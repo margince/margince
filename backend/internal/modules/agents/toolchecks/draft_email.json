@@ -1,0 +1,15 @@
+{
+  "verb": "draft_email",
+  "checks": [
+    "activity.create",
+    "activity.read",
+    "company.read",
+    "contact.read",
+    "deal.read",
+    "project.read",
+    "relationship.read"
+  ],
+  "takes": [
+    "contact"
+  ]
+}

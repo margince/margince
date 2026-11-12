@@ -1,0 +1,9 @@
+{
+  "verb": "discard_mail_draft",
+  "checks": [
+    "activity.create"
+  ],
+  "takes": [
+    "agent_mail_draft"
+  ]
+}

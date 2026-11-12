@@ -1,0 +1,7 @@
+{
+  "verb": "set_connector_context_tag",
+  "checks": [],
+  "takes": [
+    "tag"
+  ]
+}

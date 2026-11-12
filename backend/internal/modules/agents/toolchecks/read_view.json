@@ -1,0 +1,7 @@
+{
+  "verb": "read_view",
+  "checks": [
+    "custom_field.read",
+    "deal.read"
+  ]
+}

@@ -1,0 +1,9 @@
+{
+  "verb": "import_linkedin_connections",
+  "checks": [
+    "company.read",
+    "contact.create",
+    "contact.read",
+    "relationship.read"
+  ]
+}

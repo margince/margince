@@ -1,0 +1,15 @@
+{
+  "tool": "read_workspace",
+  "action": "legal_holds",
+  "verb": "list_legal_holds",
+  "allowed_for": [
+    "admin",
+    "ops"
+  ],
+  "refused_for": [
+    "management",
+    "manager",
+    "read_only",
+    "rep"
+  ]
+}

@@ -1,0 +1,15 @@
+{
+  "tool": "change_settings",
+  "action": "refresh_ai_model_rates",
+  "verb": "refresh_ai_model_rates",
+  "allowed_for": [
+    "admin",
+    "ops"
+  ],
+  "refused_for": [
+    "management",
+    "manager",
+    "read_only",
+    "rep"
+  ]
+}

@@ -1,0 +1,10 @@
+{
+  "verb": "preview_lead_promotion",
+  "checks": [
+    "deal.read",
+    "lead.read"
+  ],
+  "takes": [
+    "lead"
+  ]
+}

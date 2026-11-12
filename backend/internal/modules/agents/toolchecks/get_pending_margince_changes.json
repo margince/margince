@@ -1,0 +1,6 @@
+{
+  "verb": "get_pending_margince_changes",
+  "checks": [
+    "deal.read"
+  ]
+}

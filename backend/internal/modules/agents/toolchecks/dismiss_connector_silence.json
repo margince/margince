@@ -1,0 +1,7 @@
+{
+  "verb": "dismiss_connector_silence",
+  "checks": [],
+  "takes": [
+    "silent_mailbox"
+  ]
+}

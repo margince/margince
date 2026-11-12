@@ -1,0 +1,10 @@
+{
+  "verb": "restore_pipeline",
+  "checks": [
+    "deal.read",
+    "pipeline.update"
+  ],
+  "takes": [
+    "archived_pipeline"
+  ]
+}

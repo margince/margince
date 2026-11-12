@@ -1,0 +1,11 @@
+{
+  "verb": "restore_reporting_report_revision",
+  "checks": [
+    "installation_settings.read",
+    "report_definition.read",
+    "report_definition.update"
+  ],
+  "takes": [
+    "revised_report"
+  ]
+}

@@ -1,0 +1,10 @@
+{
+  "verb": "change_user_role",
+  "checks": [
+    "user_admin.read|create|update|delete",
+    "user_admin.update"
+  ],
+  "takes": [
+    "user"
+  ]
+}

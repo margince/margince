@@ -1,0 +1,10 @@
+{
+  "verb": "confirm_anchor_company_site_read",
+  "checks": [
+    "admin"
+  ],
+  "takes": [
+    "anchor_name",
+    "finished_site_read"
+  ]
+}

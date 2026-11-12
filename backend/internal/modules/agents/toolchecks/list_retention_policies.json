@@ -1,0 +1,6 @@
+{
+  "verb": "list_retention_policies",
+  "checks": [
+    "retention_policy.read"
+  ]
+}

@@ -25,7 +25,7 @@ func newslettersDataTask(pool *pgxpool.Pool) datatask.Task {
 	audit := datatask.AuditPolicy{Reason: clockRefoldAuditReason}
 	return datatask.Task{
 		ID: "core/1794448710_newsletters_stop_counting", Version: 1,
-		Title: systemtext.Literal("datatask.title.core.1794448710_newsletters_stop_counting"), Requires: []string{"core/1794458742"},
+		Title: systemtext.Literal("datatask.title.core.1794448710_newsletters_stop_counting"), Requires: []string{"core/1794469002"},
 		Steps: []datatask.Step{
 			clockRefoldStep("contacts", storekit.ClockContacts, storekit.ClockNotFolded, audit),
 			clockRefoldStep("companies", storekit.ClockCompanies, storekit.ClockNotFolded, audit),

@@ -1,0 +1,15 @@
+{
+  "tool": "change_relationships",
+  "action": "take_over_promise",
+  "verb": "take_over_conversation_claim",
+  "allowed_for": [
+    "admin",
+    "management",
+    "manager",
+    "ops",
+    "rep"
+  ],
+  "refused_for": [
+    "read_only"
+  ]
+}

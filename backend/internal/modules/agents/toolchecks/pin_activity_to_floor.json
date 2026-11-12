@@ -1,0 +1,9 @@
+{
+  "verb": "pin_activity_to_floor",
+  "checks": [
+    "retention_policy.update"
+  ],
+  "takes": [
+    "contact_note"
+  ]
+}

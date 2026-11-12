@@ -1,0 +1,6 @@
+{
+  "verb": "start_weekly_plan",
+  "checks": [
+    "weekly_plan.create"
+  ]
+}

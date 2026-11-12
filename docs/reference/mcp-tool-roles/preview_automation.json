@@ -1,0 +1,14 @@
+{
+  "tool": "read_details",
+  "action": "automation_preview",
+  "verb": "preview_automation",
+  "allowed_for": [
+    "admin",
+    "management",
+    "manager",
+    "ops",
+    "read_only",
+    "rep"
+  ],
+  "refused_for": []
+}

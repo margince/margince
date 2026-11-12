@@ -1,0 +1,14 @@
+{
+  "tool": "read_workspace",
+  "action": "my_email_signature",
+  "verb": "get_my_email_signature",
+  "allowed_for": [
+    "admin",
+    "management",
+    "manager",
+    "ops",
+    "read_only",
+    "rep"
+  ],
+  "refused_for": []
+}

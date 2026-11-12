@@ -1,0 +1,15 @@
+{
+  "tool": "send_outbound",
+  "action": "change_invitation",
+  "verb": "change_meeting_invitation",
+  "allowed_for": [
+    "admin",
+    "management",
+    "manager",
+    "ops",
+    "rep"
+  ],
+  "refused_for": [
+    "read_only"
+  ]
+}

@@ -1,0 +1,8 @@
+{
+  "verb": "search_records",
+  "checks": [
+    "company.read",
+    "contact.read",
+    "relationship.read"
+  ]
+}
