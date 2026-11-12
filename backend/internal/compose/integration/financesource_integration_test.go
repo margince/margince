@@ -59,6 +59,10 @@ func (s testBooksSource) InvoicesFor(_ context.Context, customer string) (financ
 	}}}, nil
 }
 
+func (testBooksSource) InvoiceDocument(context.Context, string) (finance.SourceDocument, error) {
+	return finance.SourceDocument{}, apperrors.ErrUnsupportedBySoR
+}
+
 // testBooksSources offers testBooks, and nothing else.
 type testBooksSources struct{ source testBooksSource }
 

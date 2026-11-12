@@ -175,7 +175,7 @@ Also called: connect finance, link accounting, sync invoices, connect a ledger, 
   the **due** date to payment rather than from the invoice date. A small line
   chart shows the days late per paid invoice, oldest first.
 - **Recent invoices**: number, issued and due dates, amount, status. When the
-  accounting system provides invoice files, the number is a link: select it to
+  accounting system has invoice files, the number is a link: select it to
   open that invoice's PDF in a new tab. Margince fetches it from the accounting
   system each time and keeps no copy.
 - **Billing contacts**, read from your own records rather than from the
