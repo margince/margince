@@ -59,19 +59,33 @@ func (w worktree) changed(from, to string) ([][2]string, error) {
 	return paths, nil
 }
 
-// restore puts the work tree back to tree: a changed or deleted file gets its
-// old bytes, and a file the generators added is removed.
-func (w worktree) restore(tree string) error {
+// restore puts back what the generators changed between tree and generated,
+// the snapshot after their last run. A file that differs from generated now was
+// changed by someone else while the gate ran: it is left as it is and named.
+func (w worktree) restore(tree, generated string) error {
 	current, err := w.snapshot()
 	if err != nil {
 		return err
 	}
-	paths, err := w.changed(tree, current)
+	moved, err := w.changed(generated, current)
+	if err != nil {
+		return err
+	}
+	edited := map[string]bool{}
+	var names []string
+	for _, p := range moved {
+		edited[p[1]] = true
+		names = append(names, p[1])
+	}
+	paths, err := w.changed(tree, generated)
 	if err != nil {
 		return err
 	}
 	var checkout []string
 	for _, p := range paths {
+		if edited[p[1]] {
+			continue
+		}
 		if p[0] == "A" {
 			if err := os.Remove(filepath.Join(w.root, p[1])); err != nil {
 				return err
@@ -80,7 +94,18 @@ func (w worktree) restore(tree string) error {
 		}
 		checkout = append(checkout, p[1])
 	}
-	if len(checkout) == 0 {
+	if err := w.checkout(tree, checkout); err != nil {
+		return err
+	}
+	if len(names) > 0 {
+		return fmt.Errorf("left as they are, changed while the generators ran:\n  %s", strings.Join(names, "\n  "))
+	}
+	return nil
+}
+
+// checkout writes paths as tree holds them.
+func (w worktree) checkout(tree string, paths []string) error {
+	if len(paths) == 0 {
 		return nil
 	}
 	env := []string{"GIT_INDEX_FILE=" + w.index + ".restore"}
@@ -89,7 +114,7 @@ func (w worktree) restore(tree string) error {
 	}
 	cmd := exec.Command("git", "-C", w.root, "checkout-index", "-f", "-z", "--stdin") // #nosec G204 -- git with literal args and the repository root
 	cmd.Env = append(os.Environ(), env...)
-	cmd.Stdin = strings.NewReader(strings.Join(checkout, "\x00"))
+	cmd.Stdin = strings.NewReader(strings.Join(paths, "\x00"))
 	if out, err := cmd.CombinedOutput(); err != nil {
 		return fmt.Errorf("git checkout-index: %w: %s", err, out)
 	}

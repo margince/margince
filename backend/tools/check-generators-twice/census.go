@@ -48,7 +48,9 @@ func census(root string) (plan, error) {
 	if err != nil {
 		return plan{}, err
 	}
-	if _, err := exec.LookPath("pnpm"); err != nil {
+	_, noPnpm := exec.LookPath("pnpm")
+	_, noModules := os.Stat(filepath.Join(root, "frontend", "node_modules"))
+	if noPnpm != nil || noModules != nil {
 		p.skipped = frontend
 	} else {
 		p.generators = append(p.generators, frontend...)

@@ -88,21 +88,23 @@ func twice(root string, p plan, out *log.Logger) (err error) {
 	if err != nil {
 		return err
 	}
+	generated := before
 	stamps, err := stampOutputs(root, p.outputs)
 	if err == nil {
-		err = judge(p, stamps, tree, out)
+		err = judge(p, stamps, tree, out, &generated)
 	}
 	// The bytes go back first. A file with its old time over new bytes of the
 	// same size would replay a cached test result that no longer holds.
-	if restoreErr := tree.restore(before); restoreErr != nil {
+	if restoreErr := tree.restore(before, generated); restoreErr != nil {
 		return errors.Join(err, fmt.Errorf("putting the work tree back: %w", restoreErr))
 	}
 	return errors.Join(err, stamps.restore())
 }
 
-// judge runs both passes and names what disagreed.
-func judge(p plan, stamps stamps, tree worktree, out *log.Logger) error {
-	first, err := pass(tree.root, p.generators, tree, out, 1)
+// judge runs both passes and names what disagreed. generated is kept at the
+// snapshot after the last generator that ran.
+func judge(p plan, stamps stamps, tree worktree, out *log.Logger, generated *string) error {
+	first, err := pass(tree.root, p.generators, tree, out, 1, generated)
 	if err != nil {
 		return err
 	}
@@ -117,15 +119,18 @@ func judge(p plan, stamps stamps, tree worktree, out *log.Logger) error {
 		}
 		unwritten = append(unwritten, output)
 	}
-	if len(unwritten) > 0 && len(p.skipped) > 0 {
-		out.Printf("check-generators-twice: NOT CHECKED, no pnpm on PATH to run the frontend generators:\n  %s\n",
-			strings.Join(unwritten, "\n  "))
-	} else if len(unwritten) > 0 {
+	var notChecked []string
+	unwritten, notChecked = splitBySkipped(unwritten, p.skipped)
+	if len(notChecked) > 0 {
+		out.Printf("check-generators-twice: NOT CHECKED, the frontend generators did not run:\n  %s\n",
+			strings.Join(notChecked, "\n  "))
+	}
+	if len(unwritten) > 0 {
 		return fmt.Errorf("no generator this gate runs wrote %d file(s) that say a generator wrote them:\n  %s\n"+
 			"Give the generator an -update… flag in a test, a gen:* script in %s, or a place in `make gen`",
 			len(unwritten), strings.Join(unwritten, "\n  "), frontendPackage)
 	}
-	second, err := pass(tree.root, p.generators, tree, out, 2)
+	second, err := pass(tree.root, p.generators, tree, out, 2, generated)
 	if err != nil {
 		return err
 	}
@@ -147,19 +152,27 @@ func judge(p plan, stamps stamps, tree worktree, out *log.Logger) error {
 	return nil
 }
 
-// pass runs every generator once and snapshots what they left.
-func pass(root string, generators []generator, tree worktree, out *log.Logger, number int) (string, error) {
+// pass runs every generator once and snapshots what they left, also after a
+// generator failed, so the restore knows what the generators wrote.
+func pass(root string, generators []generator, tree worktree, out *log.Logger, number int, generated *string) (string, error) {
+	var failed error
 	for _, g := range generators {
 		started := time.Now()
 		cmd := exec.Command(g.Argv[0], g.Argv[1:]...) // #nosec G204 -- argv comes from the tree's own Makefile, package.json and tests
 		cmd.Dir = filepath.Join(root, g.Dir)
 		cmd.Env = append(os.Environ(), g.Env...)
 		if output, err := cmd.CombinedOutput(); err != nil {
-			return "", fmt.Errorf("pass %d: %s: %w\n%s", number, g.Name, err, output)
+			failed = fmt.Errorf("pass %d: %s: %w\n%s", number, g.Name, err, output)
+			break
 		}
 		out.Printf("pass %d: %-90s %6.1fs\n", number, g.Name, time.Since(started).Seconds())
 	}
-	return tree.snapshot()
+	snapshot, err := tree.snapshot()
+	if err != nil {
+		return "", errors.Join(failed, err)
+	}
+	*generated = snapshot
+	return snapshot, failed
 }
 
 func printCensus(root string, out *log.Logger) error {
@@ -183,7 +196,7 @@ func details(p plan, out *log.Logger) {
 		out.Printf("  not run, needs build tags %s: %s %s\n", g.Tags, g.Dir, strings.Join(g.Tests, " "))
 	}
 	for _, g := range p.skipped {
-		out.Printf("  NOT RUN, no pnpm on PATH: %s\n", g.Name)
+		out.Printf("  NOT RUN, no pnpm or frontend/node_modules: %s\n", g.Name)
 	}
 	for _, output := range slices.Sorted(maps.Keys(p.verified)) {
 		out.Printf("  not rewritten, named by tools/%s: %s\n", p.verified[output], output)

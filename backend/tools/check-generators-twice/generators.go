@@ -22,6 +22,9 @@ type generator struct {
 	Dir  string // the working directory, relative to the repository root
 	Argv []string
 	Env  []string
+	// Source is a frontend script's command and the script files it runs: the
+	// text that names the paths it writes.
+	Source string
 }
 
 // driftMakefile holds the drift gate, whose $(MAKE) line names what it
@@ -78,8 +81,13 @@ func frontendGenerators(root string) ([]generator, error) {
 	var generators []generator
 	for _, name := range slices.Sorted(maps.Keys(manifest.Scripts)) {
 		if strings.HasPrefix(name, "gen:") && !called[name] {
+			source, err := scriptSource(root, manifest.Scripts, name)
+			if err != nil {
+				return nil, err
+			}
 			generators = append(generators, generator{
 				Name: "pnpm run " + name, Dir: "frontend", Argv: []string{"pnpm", "run", "--silent", name},
+				Source: source,
 			})
 		}
 	}
@@ -87,6 +95,50 @@ func frontendGenerators(root string) ([]generator, error) {
 		return nil, fmt.Errorf("%s has no gen:* script", frontendPackage)
 	}
 	return generators, nil
+}
+
+// scriptFile is a script file a command runs, relative to frontend/.
+var scriptFile = regexp.MustCompile(`scripts/[\w./-]+\.(?:mjs|js|ts)`)
+
+// scriptSource joins a script's command, the scripts it calls and the files
+// they run.
+func scriptSource(root string, scripts map[string]string, name string) (string, error) {
+	var source strings.Builder
+	source.WriteString(scripts[name])
+	for _, match := range scriptCall.FindAllStringSubmatch(scripts[name], -1) {
+		source.WriteString("\n" + scripts[match[1]])
+	}
+	commands := source.String()
+	for _, file := range scriptFile.FindAllString(commands, -1) {
+		raw, err := os.ReadFile(filepath.Join(root, "frontend", file)) // #nosec G304 -- a script path package.json names
+		if err != nil {
+			return "", err
+		}
+		source.WriteString("\n" + string(raw))
+	}
+	return source.String(), nil
+}
+
+// splitBySkipped separates the outputs a skipped frontend script names, by
+// path or by folder, from the rest.
+func splitBySkipped(outputs []string, skipped []generator) (rest, owned []string) {
+	for _, output := range outputs {
+		rel := "../" + output
+		if after, ok := strings.CutPrefix(output, "frontend/"); ok {
+			rel = after
+		}
+		named := false
+		for _, g := range skipped {
+			named = named || strings.Contains(g.Source, rel) || strings.Contains(g.Source, filepath.Dir(rel)+"/") ||
+				strings.Contains(g.Source, filepath.Dir(rel)+`"`)
+		}
+		if named {
+			owned = append(owned, output)
+		} else {
+			rest = append(rest, output)
+		}
+	}
+	return rest, owned
 }
 
 // goTestGenerator runs one package's golden tests in their rewrite mode, from

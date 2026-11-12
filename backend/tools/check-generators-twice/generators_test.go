@@ -50,7 +50,7 @@ func TestEachFrontendScriptRunsOnceEvenWhenAnotherCallsIt(t *testing.T) {
 		"gen:events": "openapi-typescript b.yaml -o b.ts",
 		"gen:copy": "node scripts/copy.mjs",
 		"build": "vite build"
-	}}`})
+	}}`, "frontend/scripts/copy.mjs": "writeFileSync(\"src/copy_gen.json\", copy);\n"})
 	got, err := frontendGenerators(root)
 	if err != nil {
 		t.Fatal(err)
@@ -74,5 +74,21 @@ func TestAToolNamesAnOutputByAnyTrailingPartOfItsPath(t *testing.T) {
 		if _, got := namedBy(output, named); got != want {
 			t.Errorf("namedBy(%s) = %v, want %v", output, got, want)
 		}
+	}
+}
+
+func TestOnlyTheOutputsASkippedScriptNamesGoUnchecked(t *testing.T) {
+	skipped := []generator{{Source: "openapi-typescript a.yaml -o src/api/schema.d.ts\n" +
+		`join(root, "src/i18n/essential", locale + "_gen.json")` + "\n" +
+		`join(root, "../backend/internal/modules/agents/previewcatalog_gen.json")`}}
+	rest, owned := splitBySkipped([]string{
+		"frontend/src/api/schema.d.ts", "frontend/src/i18n/essential/de_gen.json",
+		"backend/internal/modules/agents/previewcatalog_gen.json", "backend/internal/compose/new_gen.go",
+	}, skipped)
+	if want := []string{"backend/internal/compose/new_gen.go"}; !reflect.DeepEqual(rest, want) {
+		t.Errorf("still required = %v, want %v", rest, want)
+	}
+	if len(owned) != 3 {
+		t.Errorf("not checked = %v, want the three the script names", owned)
 	}
 }
