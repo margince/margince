@@ -248,15 +248,14 @@ func TestACanceledMeetingIsNoFollowUpEvidence(t *testing.T) {
 	if err := e.reconcile(); err != nil {
 		t.Fatal(err)
 	}
-	if got := e.pendingFollowUps(t, deal); got != 1 {
-		t.Fatalf("%d follow-ups staged, want 1 for the call", got)
+	if got := e.followUps(t, deal); got != 1 {
+		t.Fatalf("%d follow-ups filed, want 1 for the call", got)
 	}
-	if _, proposal := e.followUpApproval(t, deal); proposal.EvidenceKind != "call" {
-		t.Errorf("the follow-up cites a %q, want the call — a canceled meeting left no conversation behind",
-			proposal.EvidenceKind)
+	if _, kind, _ := e.followUpEvidence(t, deal); kind != "call" {
+		t.Errorf("the follow-up cites a %q, want the call — a canceled meeting left no conversation behind", kind)
 	}
-	if _, proposal := e.followUpApproval(t, kept); proposal.EvidenceKind != "meeting" {
-		t.Errorf("the follow-up on the held meeting cites a %q, want the meeting", proposal.EvidenceKind)
+	if _, kind, _ := e.followUpEvidence(t, kept); kind != "meeting" {
+		t.Errorf("the follow-up on the held meeting cites a %q, want the meeting", kind)
 	}
 }
 

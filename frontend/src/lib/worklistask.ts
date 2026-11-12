@@ -46,6 +46,21 @@ const ASK_BY_SOURCE: Readonly<Record<WorklistItem["source"], MessageKey>> = {
   batch: "worklist.ask.batch",
 };
 
+// A brief item opens on the fact that put the deal on the queue. The most
+// actionable fact comes first, so the card leads with a reason, not a source.
+const BRIEF_ASK_BY_REASON = [
+  ["closing_soon", "worklist.ask.brief.closing_soon"],
+  ["no_next_step", "worklist.ask.brief.no_next_step"],
+  ["no_champion", "worklist.ask.brief.no_champion"],
+] as const satisfies readonly (readonly [string, MessageKey])[];
+
+const BRIEF_ASK_BY_SIGNAL: Readonly<Record<string, MessageKey>> = {
+  closing_soon: "worklist.ask.brief.signal.closing_soon",
+  stalled: "worklist.ask.brief.signal.stalled",
+  opportunity: "worklist.ask.brief.signal.opportunity",
+  moved: "worklist.ask.brief.signal.moved",
+};
+
 const ASK_BY_MEETING_CHANGE: Readonly<
   Record<CalendarChange["kind"], MessageKey>
 > = {
@@ -93,6 +108,19 @@ export function meetingAsk(
     : t(labelFor(ASK_BY_MEETING_CHANGE, change.kind));
 }
 
+/**
+ * The reason a brief item's ask already says, so the row does not repeat it.
+ * Only a card says its ask; a queue row leaves it to its details.
+ */
+export function askedReason(
+  item: WorklistItem,
+  said = true,
+): string | undefined {
+  if (!said || item.source !== "brief_item") return undefined;
+  const kinds = new Set(item.because.map((reason) => reason.kind));
+  return BRIEF_ASK_BY_REASON.find(([kind]) => kinds.has(kind))?.[0];
+}
+
 /** The sentence saying what this row asks of its reader. */
 export function askKey(item: WorklistItem): MessageKey {
   // An invitation waits on an RSVP, not on a written answer.
@@ -104,7 +132,16 @@ export function askKey(item: WorklistItem): MessageKey {
     item.connection?.medium === "calendar"
   )
     return "worklist.ask.capture_health.calendar";
+  if (item.source === "brief_item") return briefAskKey(item);
   return labelFor(ASK_BY_SOURCE, item.source);
+}
+
+function briefAskKey(item: WorklistItem): MessageKey {
+  const stated = askedReason(item);
+  const byReason = BRIEF_ASK_BY_REASON.find(([kind]) => kind === stated);
+  if (byReason) return byReason[1];
+  const bySignal = item.kind ? BRIEF_ASK_BY_SIGNAL[item.kind] : undefined;
+  return bySignal ?? "worklist.ask.brief_item";
 }
 
 /**

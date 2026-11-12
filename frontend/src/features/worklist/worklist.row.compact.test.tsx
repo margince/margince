@@ -291,10 +291,21 @@ it.each(["normal", "compact", "framed"] as const)(
         />
       ),
     );
-    expect(
-      screen.getAllByText(en["worklist.because.no_next_step"]),
-    ).toHaveLength(1);
-    expect(container.querySelector(".worklist-row-because")).toBeVisible();
+    // A card states its leading reason as its ask, so the line under it does
+    // not say it a second time.
+    if (shape === "framed") {
+      expect(
+        screen.getByText(en["worklist.ask.brief.no_next_step"]),
+      ).toBeVisible();
+      expect(
+        screen.queryByText(en["worklist.because.no_next_step"]),
+      ).toBeNull();
+    } else {
+      expect(
+        screen.getAllByText(en["worklist.because.no_next_step"]),
+      ).toHaveLength(1);
+      expect(container.querySelector(".worklist-row-because")).toBeVisible();
+    }
     expect(container.querySelector("details")).toBeNull();
     expect(container.textContent).not.toMatch(
       /If ignored|Ranked above|typical|routine cleanup/,

@@ -19294,7 +19294,21 @@ export const en = {
     "Margince cannot check whether this was answered: the mail’s text can no longer be read. Mark it done once it is handled.",
   "worklist.ask.task_unchecked_reply": "Latest reply sent: {date}",
   "worklist.ask.brief_item":
-    "The overnight review flagged this deal. Act on it, set it aside, or dismiss it.",
+    "Margince picked this deal for a review today. Look at it and plan the next step.",
+  "worklist.ask.brief.closing_soon":
+    "This deal is expected to close within 2 weeks. Review it and make sure the next step is planned.",
+  "worklist.ask.brief.no_next_step":
+    "No next step is planned on this deal. Review it and agree on the next step.",
+  "worklist.ask.brief.no_champion":
+    "Nobody at the customer is championing this deal. Review it and find someone who will.",
+  "worklist.ask.brief.signal.closing_soon":
+    "The close date of this deal is near. Review it and make sure the next step is planned.",
+  "worklist.ask.brief.signal.stalled":
+    "This deal has gone quiet and may slip. Review it and plan the next step.",
+  "worklist.ask.brief.signal.opportunity":
+    "This deal is worth pursuing now. Review it and plan the next step.",
+  "worklist.ask.brief.signal.moved":
+    "Something changed on this deal since you last looked. Review what happened.",
   "worklist.ask.conversation_claim":
     "You committed to this in a conversation. Do it, then mark it done.",
   "worklist.ask.invitation":
