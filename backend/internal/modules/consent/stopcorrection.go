@@ -22,8 +22,8 @@ import (
 const passportAgentPrefix = "agent:"
 
 // kindProcessingRestriction is the Art. 18 stop. Lifting one owes the contact
-// notice before it happens, and Margince has no such notice, so no seat lifts
-// one here at any level.
+// notice before it happens, so no seat lifts one here at any level: the sent
+// notice does (restrictionlift.go).
 const kindProcessingRestriction = "processing_restriction"
 
 // recordedThroughOf names how the signed-in principal records a stop through

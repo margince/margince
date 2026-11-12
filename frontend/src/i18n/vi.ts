@@ -830,6 +830,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "approval.preview.unsignedSend":
     "Gửi không kèm tên hiển thị của cá nhân hoặc chữ ký cá nhân. Việc phê duyệt không biến người xem xét thành tác giả.",
   "approval.preview.senderSignature": "Chữ ký người gửi",
+  "approval.preview.showImages": "Hiển thị hình ảnh",
   "approval.preview.signaturePrivate":
     "Không thể hiển thị chữ ký riêng của người gửi cho người xem xét này. Hãy yêu cầu người gửi xem xét tin nhắn.",
   "approval.preview.recordMeeting":
@@ -1001,8 +1002,6 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "forecast.signal.closesNoStep_one":
     "Chốt sau {count} ngày, chưa đặt bước tiếp theo",
   "forecast.deals.limitedTitle": "Chỉ hiện giao dịch của bạn",
-  "forecast.deals.limited":
-    "Tổng có cả giao dịch của đồng nghiệp, được ẩn ở đây vì hiệu suất cá nhân đang tắt. Mỗi thành viên vẫn thấy giao dịch của chính họ.",
   "forecast.signal.closesNoStep_other":
     "Chốt sau {count} ngày, chưa đặt bước tiếp theo",
   "forecast.signal.closesTomorrow": "Chốt ngày mai, chưa đặt bước tiếp theo",
@@ -2355,6 +2354,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "systemJob.graph_edge_reconcile": "Cập nhật độ mạnh của quan hệ",
   "systemJob.handbook_corpus": "Lập chỉ mục sổ tay",
   "systemJob.import_run_sweep": "Kiểm tra lượt nhập bị dừng",
+  "systemJob.initiative_enrolment": "Ngày tham gia sáng kiến",
   "systemJob.import_worker": "Xử lý lượt nhập",
   "systemJob.installation_setup_read": "Kiểm tra thiết lập",
   "systemJob.intro_advance": "Việc tiếp theo cho lời giới thiệu",
@@ -2666,6 +2666,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "history.field.lifted_by": "Người gỡ",
   "history.field.lifted_by_level": "Cấp gỡ",
   "history.field.lifted_suppression": "Lệnh chặn đã gỡ",
+  "history.field.restriction_lift_requested": "Yêu cầu bỏ hạn chế",
   "history.field.linkedin_url": "Liên kết LinkedIn",
   "history.field.lost_reason": "Lý do thua",
   "history.field.name": "Tên",
@@ -3513,7 +3514,21 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "consent.stopBlocked.address":
     "Lệnh này hết khi thư đến địa chỉ này gửi được trở lại.",
   "consent.stopBlocked.restriction":
-    "Muốn bỏ hạn chế phải báo trước cho liên hệ. Margince chưa gửi được thông báo đó, nên hạn chế vẫn giữ nguyên.",
+    "Muốn bỏ hạn chế phải báo trước cho liên hệ. Chỉ quản trị viên mới bỏ được, và Margince sẽ gửi thông báo đó.",
+  "consent.restrictionLift": "Bỏ hạn chế",
+  "consent.restrictionLiftTitle": "Bỏ hạn chế này?",
+  "consent.restrictionLiftBody":
+    "Margince sẽ gửi cho liên hệ một thông báo rằng việc hạn chế kết thúc. Hạn chế kết thúc khi thông báo đó được gửi đi. Sau đó Margince đọc lại thư của họ, kể cả thư đến trong thời gian hạn chế.",
+  "consent.restrictionLiftQueued":
+    "Thông báo đang chờ gửi. Hạn chế vẫn giữ cho đến khi gửi xong.",
+  "consent.restrictionLiftSent":
+    "Thông báo đã được gửi. Hạn chế đang kết thúc.",
+  "consent.restrictionLiftRetrying":
+    "Thông báo chưa được gửi đi, Margince sẽ thử lại. Hạn chế vẫn giữ cho đến khi gửi xong: {reason}",
+  "consent.restrictionLiftFailed":
+    "Thông báo chưa được gửi đi, nên hạn chế vẫn giữ: {reason}",
+  "consent.restrictionLiftFailedNoReason":
+    "Thông báo chưa được gửi đi, nên hạn chế vẫn giữ. Hãy bỏ hạn chế lại để gửi thông báo mới.",
   "consent.stopBlocked.subject_decision":
     "Liên hệ tự đặt lệnh dừng này. Chỉ họ mới đổi được.",
   "consent.stopCorrect": "Sửa lệnh dừng này",
@@ -3753,6 +3768,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "timeline.automatic.bulk": "Gửi tới danh sách thư",
   "timeline.group.bulk_other": "gửi tới {count} người",
   "timeline.group.bulk_one": "gửi tới {count} người",
+  "timeline.copies_other": "Cũng có trong {count} hộp thư khác",
+  "timeline.copies_one": "Cũng có trong {count} hộp thư khác",
   "timeline.group.expand": "Mở",
   "timeline.group.collapse": "Đóng",
   "timeline.group.openThread": "Xem toàn bộ chuỗi thư",
@@ -4745,6 +4762,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "compose.threadStillHeld_other":
     "{count} thành viên khác chưa chia sẻ chuỗi thư này",
   "compose.reason.posture": "Giữ lại theo thiết lập của bạn",
+  "compose.reason.sharedMailbox": "Trong hộp thư dùng chung",
   "compose.reason.workspaceFloor": "Giữ lại theo thiết lập công ty",
   "compose.reason.noRecord": "Giữ lại: chưa có hồ sơ",
   "compose.reason.pendingVerdict": "Giữ lại cho đến khi kiểm tra",
@@ -7666,6 +7684,12 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "compose.scheduleAfternoon": "Chiều mai",
   "compose.draftLanguage": "Ngôn ngữ của bản nháp",
   "compose.rewrite": "Viết lại",
+  "compose.rewritePolish": "Trau chuốt",
+  "compose.rewritePolishAsk":
+    "Cải thiện cách diễn đạt và mạch văn. Giữ nguyên ý, các dữ kiện và độ dài.",
+  "compose.rewriteFormatted":
+    "Chỉ viết lại được văn bản thuần. Hãy bỏ định dạng và liên kết.",
+  "compose.rewriteTooLong": "Thư này quá dài để viết lại.",
   "compose.rewriteShorter": "Ngắn hơn",
   "compose.rewriteShorterAsk": "Giữ nguyên ý, dùng ít chữ hơn.",
   "compose.rewriteWarmer": "Ấm áp hơn",
@@ -8024,8 +8048,6 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "Tìm khách của nhóm xem một nhóm hoặc cả công ty. Hãy chọn ở phạm vi phía trên; công việc của một thành viên nằm trong Tìm khách của tôi.",
   "analytics.team.todaysMembers":
     "Các số liệu này theo nhóm hiện tại. Thành viên đã rời nhóm mang theo những gì họ đã làm trước đây, và thành viên mới mang theo phần của họ.",
-  "analytics.team.withheld":
-    "Hiệu suất của từng thành viên đang tắt. Một số liệu bị ẩn khi có ít hơn hai thành viên khác đóng góp, hoặc khi trừ đi tổng của một nhóm khác sẽ còn ít hơn hai thành viên.",
   "analytics.team.submitted": "Đã bàn giao",
   "analytics.team.accepted": "Được chấp nhận",
   "analytics.team.returned": "Được trả lại",
@@ -10102,6 +10124,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "jobs.kind.import_commit": "Ghi dữ liệu nhập",
   "jobs.kind.import_undo": "Hoàn tác lượt nhập",
   "jobs.kind.import_validate": "Chạy thử dữ liệu nhập",
+  "jobs.kind.initiative_enrolment_sweep": "Ngày tham gia sáng kiến",
   "jobs.kind.intro_expiry": "Hết hạn lời giới thiệu",
   "jobs.kind.knowledge_ingest": "Lập chỉ mục tài liệu",
   "jobs.kind.list_evaluate": "Kiểm tra danh sách tự cập nhật",
@@ -10778,6 +10801,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "privacy.kindAccess": "Truy cập",
   "privacy.kindRectify": "Chỉnh sửa",
   "privacy.kindErasure": "Xóa",
+  "privacy.kindRestriction": "Hạn chế xử lý",
   "privacy.purpose": "Mục đích",
   "privacy.purposeDoiBadge": "Xác nhận kép",
   "privacy.purposesLoading": "Đang tải mục đích…",
@@ -10823,6 +10847,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "privacy.openRequest": "Mở yêu cầu",
   "privacy.erasureNeedsContact":
     "Yêu cầu xóa dữ liệu phải nêu một liên hệ trong công ty này, vì đáp ứng yêu cầu sẽ xóa hồ sơ đó. Không thể xóa chủ thể dạng văn bản tự do.",
+  "privacy.restrictionNeedsContact":
+    "Yêu cầu hạn chế xử lý phải nêu một liên hệ trong công ty này, vì đáp ứng yêu cầu sẽ hạn chế xử lý hồ sơ đó. Không thể hạn chế chủ thể dạng văn bản tự do.",
   "privacy.accessPicksContact":
     "Chọn liên hệ mà yêu cầu này nói đến. Sau đó bạn có thể tải xuống mọi dữ liệu đang lưu về họ ngay trong yêu cầu.",
   "privacy.downloadPackage": "Tải xuống gói dữ liệu",
@@ -12653,6 +12679,20 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "book.pageTitle": "Đặt lịch họp với {host}",
   "book.pageTitleGeneric": "Đặt lịch họp",
   "book.meetingTitle": "Cuộc họp của quý khách",
+  "book.returnTitle": "Lưu lại thông tin của quý khách",
+  "book.returnBody":
+    "Quý khách đã yêu cầu lưu lại thông tin sau khi đã xóa. Thông tin chỉ được lưu khi quý khách xác nhận.",
+  "book.returnStoredAs":
+    "Quý khách sẽ được lưu với tên {name}, kèm sự đồng ý này:",
+  "book.returnAction": "Lưu lại thông tin của tôi",
+  "book.returnDone": "Thông tin của quý khách đã được lưu lại.",
+  "book.returnSpent":
+    "Liên kết này đã được dùng hoặc đã hết hạn. Hãy yêu cầu liên kết mới tại trang quý khách đã dùng để yêu cầu liên kết này.",
+  "book.returnRequestBody":
+    "Thông tin của quý khách đã được xóa theo yêu cầu. Để được lưu lại, hãy nhập họ tên và địa chỉ email đã bị xóa. Một liên kết sẽ được gửi đến địa chỉ đó, và thông tin chỉ được lưu khi quý khách xác nhận.",
+  "book.returnRequestAction": "Gửi liên kết cho tôi",
+  "book.returnRequestSent":
+    "Hãy kiểm tra hộp thư. Nếu địa chỉ này có thể được lưu lại, một liên kết xác nhận đang được gửi đến.",
   "book.attendee": "Email người tham dự",
   "book.subject": "Cuộc họp qua Margince",
   "book.name": "Họ và tên",
@@ -18597,6 +18637,14 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "projectHealth.saveCorrection": "Lưu bản sửa",
   "project.keyMinted":
     "Mỗi dự án có một mã ngắn. Ghi [{key}] trong tiêu đề email để xếp thư vào dự án này.",
+  "project.key": "Mã",
+  "project.keySuggested":
+    "Để trống để dùng {key}. Mã nằm trong tiêu đề email và không thể đổi sau này.",
+  "project.keyHint":
+    "Để trống thì Margince tạo mã từ tên. Mã nằm trong tiêu đề email và không thể đổi sau này.",
+  "project.startPhase": "Giai đoạn bắt đầu",
+  "project.deal": "Deal liên quan",
+  "project.noDeal": "Không có deal",
   "project.company": "Công ty",
   "project.owner": "Người chịu trách nhiệm",
   "project.ownerMe": "Tôi",
@@ -20359,6 +20407,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "captureConcern.connections": "Kết nối cần chú ý",
   "captureConcern.sinceLabel": "Từ",
   "captureConcern.member": "Thành viên",
+  "captureConcern.sharedMailbox": "Hộp thư dùng chung",
   "captureConcern.provider": "Nhà cung cấp",
   "captureConcern.mailbox": "Hộp thư",
   "captureConcern.condition": "Tình trạng",

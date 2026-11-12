@@ -83,6 +83,7 @@ func (g *Gate) stageDecisions(ctx context.Context, tx pgx.Tx, deliveryID ids.UUI
 		return commsauthz.DecisionSet{}, fmt.Errorf(
 			"consent: a staging decision needs at least one recipient: %w", apperrors.ErrInvalidArgument)
 	}
+	req.DeliveryID = deliveryID
 
 	// The posture, read on the caller's transaction — the same one the
 	// decision rows commit on, so a row's stamped mode is the one that was

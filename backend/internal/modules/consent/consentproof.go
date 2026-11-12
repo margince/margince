@@ -86,7 +86,7 @@ func (s *Store) resolveDOIConfirmation(ctx context.Context, tx pgx.Tx, in Record
 // append-only consent_event that says when, how, and by whom. The upsert
 // targets the subject arm's own unique key (contact×purpose or
 // lead×purpose); the other arm's column stays NULL.
-func upsertConsentWithProof(ctx context.Context, tx pgx.Tx, in RecordInput, sub subject, doiConfirmedAt *time.Time, capturedAt time.Time, actorID string) error {
+func upsertConsentWithProof(ctx context.Context, tx pgx.Tx, in RecordInput, sub subject, doiConfirmedAt *time.Time, capturedAt time.Time, actorID string) (ids.UUID, error) {
 	if _, err := tx.Exec(ctx, `
 		INSERT INTO contact_consent (`+sub.column+`, purpose_id, state, lawful_basis, captured_at, source)
 		VALUES ($1, $2, $3, $4, $5, $6)
@@ -94,7 +94,7 @@ func upsertConsentWithProof(ctx context.Context, tx pgx.Tx, in RecordInput, sub 
 		DO UPDATE SET state = EXCLUDED.state, lawful_basis = EXCLUDED.lawful_basis,
 		              captured_at = EXCLUDED.captured_at, source = EXCLUDED.source`,
 		sub.id, in.PurposeID, in.NewState, in.LawfulBasis, capturedAt, in.Source); err != nil {
-		return err
+		return ids.Nil, err
 	}
 	// issuance_trigger names the mailbox proof this grant rests on, so the chain
 	// is readable from the proof row alone. Set only where a mailbox proof
@@ -121,13 +121,15 @@ func upsertConsentWithProof(ctx context.Context, tx pgx.Tx, in RecordInput, sub 
 	// The published row this rests on, where the door knew which one. Written
 	// BESIDE policy_text rather than instead of it: the text stays readable
 	// without a join, and the id is what a reader checks it against.
-	_, err := tx.Exec(ctx, `
+	var proofID ids.UUID
+	err := tx.QueryRow(ctx, `
 		INSERT INTO consent_event (`+sub.column+`, purpose_id, new_state, lawful_basis, source,
 		                           policy_text, policy_version, double_opt_in_confirmed_at, captured_at, captured_by,
 		                           issuance_trigger, consent_text_version_id)
-		VALUES ($1, $2, $3, $4, coalesce($5, 'api'), $6, $7, $8, $9, $10, $11, $12)`,
+		VALUES ($1, $2, $3, $4, coalesce($5, 'api'), $6, $7, $8, $9, $10, $11, $12)
+		RETURNING id`,
 		sub.id, in.PurposeID, in.NewState, in.LawfulBasis, in.Source,
 		text, version, doiConfirmedAt, capturedAt, actorID, trigger,
-		zeroUUIDAsNull(in.TextVersionID))
-	return err
+		zeroUUIDAsNull(in.TextVersionID)).Scan(&proofID)
+	return proofID, err
 }

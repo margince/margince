@@ -100,58 +100,56 @@ function VendorAppFields({
         provider={vendor}
         redirects={<RedirectUris uris={app.data?.redirect_uris} />}
       >
-        <>
-          <Field
-            label={t("oauthApp.clientId")}
-            error={needed(clientId.trim() === "")}
-          >
-            {(control) => (
-              <TextInput
-                {...control}
-                value={clientId}
-                disabled={save.isPending}
-                autoComplete="off"
-                placeholder={t(vendorCopy[vendor].clientIdPlaceholder)}
-                onChange={(e) => setClientId(e.target.value)}
-              />
-            )}
-          </Field>
-          <Field
-            label={t("oauthApp.clientSecret")}
-            error={needed(clientSecret.trim() === "")}
-          >
-            {(control) => (
-              <TextInput
-                {...control}
-                type="password"
-                autoComplete="off"
-                value={clientSecret}
-                disabled={save.isPending}
-                onChange={(e) => setClientSecret(e.target.value)}
-              />
-            )}
-          </Field>
-          {vendor === "microsoft" && (
-            <Field
-              label={t("oauthApp.tenant")}
-              // Required here, unlike Settings, so the hint says why: without a
-              // pin there is no sign-in, and nothing else on screen says so.
-              hint={`${t("firstRun.microsoft.tenantHint")} ${t("firstRun.microsoft.helpSignIn")}`}
-              error={needed(tenant.trim() === "")}
-            >
-              {(control) => (
-                <TextInput
-                  {...control}
-                  value={tenant}
-                  autoComplete="off"
-                  disabled={save.isPending}
-                  placeholder={t("oauthApp.tenantPlaceholder")}
-                  onChange={(e) => setTenant(e.target.value)}
-                />
-              )}
-            </Field>
+        <Field
+          label={t("oauthApp.clientId")}
+          error={needed(clientId.trim() === "")}
+        >
+          {(control) => (
+            <TextInput
+              {...control}
+              value={clientId}
+              disabled={save.isPending}
+              autoComplete="off"
+              placeholder={t(vendorCopy[vendor].clientIdPlaceholder)}
+              onChange={(e) => setClientId(e.target.value)}
+            />
           )}
-        </>
+        </Field>
+        <Field
+          label={t("oauthApp.clientSecret")}
+          error={needed(clientSecret.trim() === "")}
+        >
+          {(control) => (
+            <TextInput
+              {...control}
+              type="password"
+              autoComplete="off"
+              value={clientSecret}
+              disabled={save.isPending}
+              onChange={(e) => setClientSecret(e.target.value)}
+            />
+          )}
+        </Field>
+        {vendor === "microsoft" && (
+          <Field
+            label={t("oauthApp.tenant")}
+            // Required here, unlike Settings, so the hint says why: without a
+            // pin there is no sign-in, and nothing else on screen says so.
+            hint={`${t("firstRun.microsoft.tenantHint")} ${t("firstRun.microsoft.helpSignIn")}`}
+            error={needed(tenant.trim() === "")}
+          >
+            {(control) => (
+              <TextInput
+                {...control}
+                value={tenant}
+                autoComplete="off"
+                disabled={save.isPending}
+                placeholder={t("oauthApp.tenantPlaceholder")}
+                onChange={(e) => setTenant(e.target.value)}
+              />
+            )}
+          </Field>
+        )}
       </OAuthAppSteps>
       <WriteRefused titleKey="oauthApp.saveFailed" error={save.error} />
       <StageActions>

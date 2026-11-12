@@ -276,28 +276,55 @@ func NewOAuth(cfg OAuthConfig) OAuth {
 type httpAPI struct {
 	client *http.Client
 	base   string
+	// mailbox is the path root every mailbox call hangs off: personalMailbox,
+	// or /users/{address} for a shared mailbox. Set once, never per call.
+	mailbox string
 }
+
+// personalMailbox is the signed-in user's own mailbox. It is the one place the
+// root is spelled; a test fails if a literal spelling of it comes back.
+const personalMailbox = "/me"
 
 // NewAPI builds the Graph REST client over the given HTTP client and base
 // URL (default Microsoft when base is empty; tests pass an httptest base).
 //
 //nolint:ireturn // returns the API seam by design — the connector holds it as an interface so tests substitute a stub
 func NewAPI(client *http.Client, base string) API {
+	return newHTTPAPI(client, base, personalMailbox)
+}
+
+// NewSharedAPI builds the client for a shared mailbox the app reads with
+// application permission. Every call goes to /users/{address}, because /me
+// has no meaning for an app token.
+//
+//nolint:ireturn // returns the API seam by design, as NewAPI does
+func NewSharedAPI(client *http.Client, base, address string) (API, error) {
+	mailbox, err := oauthflow.MailboxAddress(address)
+	if err != nil {
+		return nil, fmt.Errorf("graph: %w", err)
+	}
+	return newHTTPAPI(client, base, "/users/"+url.PathEscape(mailbox)), nil
+}
+
+func newHTTPAPI(client *http.Client, base, mailbox string) *httpAPI {
 	if client == nil {
 		client = boundedHTTPClient()
 	}
 	if base == "" {
 		base = graphAPIBase
 	}
-	return &httpAPI{client: client, base: base}
+	return &httpAPI{client: client, base: base, mailbox: mailbox}
 }
+
+// root is the absolute URL of the mailbox this client reads.
+func (a *httpAPI) root() string { return a.base + a.mailbox }
 
 func (a *httpAPI) Profile(ctx context.Context, accessToken string) (string, error) {
 	var out struct {
 		Mail              string `json:"mail"`
 		UserPrincipalName string `json:"userPrincipalName"` //nolint:tagliatelle // Microsoft's wire format (camelCase); must match to decode
 	}
-	if _, err := a.get(ctx, accessToken, a.base+"/me", nil, &out); err != nil {
+	if _, err := a.get(ctx, accessToken, a.root(), nil, &out); err != nil {
 		return "", err
 	}
 	if out.Mail != "" {
@@ -313,10 +340,35 @@ func (a *httpAPI) sameAPIOrigin(link string) error {
 	return nil
 }
 
+// sameMailbox is sameAPIOrigin for a link that walks this mailbox. A shared
+// client also refuses a link under another mailbox, because the app token
+// reads every mailbox the admin granted.
+func (a *httpAPI) sameMailbox(link string) error {
+	if err := a.sameAPIOrigin(link); err != nil || a.mailbox == personalMailbox {
+		return err
+	}
+	parsed, err := url.Parse(link)
+	if err != nil || dotSegment(parsed.Path) || !strings.HasPrefix(strings.ToLower(link), strings.ToLower(a.root()+"/")) {
+		return fmt.Errorf("graph: a continuation link left the shared mailbox: %w", ErrUnreachable)
+	}
+	return nil
+}
+
+// dotSegment reports a "." or ".." path segment, which would climb out of
+// the mailbox root after the prefix check passed.
+func dotSegment(path string) bool {
+	for segment := range strings.SplitSeq(path, "/") {
+		if segment == "." || segment == ".." {
+			return true
+		}
+	}
+	return false
+}
+
 func (a *httpAPI) GetMIME(ctx context.Context, accessToken, folderID, msgID string) ([]byte, error) {
-	u := a.base + "/me/messages/" + url.PathEscape(msgID) + "/$value"
+	u := a.root() + "/messages/" + url.PathEscape(msgID) + "/$value"
 	if folderID != "" {
-		u = a.base + "/me/mailFolders/" + url.PathEscape(folderID) + "/messages/" + url.PathEscape(msgID) + "/$value"
+		u = a.root() + "/mailFolders/" + url.PathEscape(folderID) + "/messages/" + url.PathEscape(msgID) + "/$value"
 	}
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, u, nil)
 	if err != nil {
@@ -375,8 +427,8 @@ func (a *httpAPI) ListAfter(ctx context.Context, accessToken string, after time.
 			paramSelect: {"id,parentFolderId,receivedDateTime"},
 			paramTop:    {strconv.Itoa(pageSize)},
 		}
-		u = a.base + "/me/messages?" + q.Encode()
-	} else if err := a.sameAPIOrigin(u); err != nil {
+		u = a.root() + "/messages?" + q.Encode()
+	} else if err := a.sameMailbox(u); err != nil {
 		return nil, "", err
 	}
 	var out struct {
@@ -414,7 +466,7 @@ func (a *httpAPI) FolderID(ctx context.Context, accessToken, wellKnown string) (
 		ID string `json:"id"`
 	}
 	q := url.Values{paramSelect: {"id"}}
-	if _, err := a.get(ctx, accessToken, a.base+"/me/mailFolders/"+url.PathEscape(wellKnown)+"?"+q.Encode(), nil, &out); err != nil {
+	if _, err := a.get(ctx, accessToken, a.root()+"/mailFolders/"+url.PathEscape(wellKnown)+"?"+q.Encode(), nil, &out); err != nil {
 		return "", err
 	}
 	if out.ID == "" {

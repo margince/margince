@@ -207,6 +207,7 @@ func (s *Store) SetRawTxReceipt(ctx context.Context, tx pgx.Tx, key string, next
 			key, next); err != nil {
 			return WriteReceipt{}, fmt.Errorf("settings: writing %s: %w", key, err)
 		}
+		database.Forget(tx, ValueMemoKey(key))
 		// Through the entry's own image, so a setting holding the address of a
 		// secret is redacted here rather than at each writer — there is only one
 		// writer today, and the next one would not know to.

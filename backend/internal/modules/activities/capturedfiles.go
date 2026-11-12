@@ -71,6 +71,9 @@ type StagedFile struct {
 	id       ids.UUID
 	key      string
 	checksum string
+	// reused is a key another row already names, so no put was made for it.
+	// Its row must find the object still held before it points at it.
+	reused bool
 }
 
 // StagedFile satisfies capture's marker, so a staged file crosses the seam as
@@ -114,11 +117,20 @@ func (s *Store) StageCapturedFiles(
 	// concurrent captures would take the pool with it.
 	ctx, cancel := context.WithTimeout(ctx, capturedFileStoreTimeout)
 	defer cancel()
+	held, err := s.storedCopies(ctx, workspace, files)
+	if err != nil {
+		return nil, err
+	}
 	staged := make([]StagedFile, 0, len(files))
 	for _, file := range files {
+		sum := sha256.Sum256(file.Body)
+		copyOf := storedCopy{checksum: hex.EncodeToString(sum[:]), size: len(file.Body)}
+		if key, ok := held[copyOf]; ok {
+			staged = append(staged, StagedFile{file: file, id: ids.NewV7(), key: key, checksum: copyOf.checksum, reused: true})
+			continue
+		}
 		id := ids.NewV7()
 		key := blobstore.WorkspaceKey(workspace, string(storedobjects.KindAttachment), id.String())
-		sum := sha256.Sum256(file.Body)
 		// Declared provisional BEFORE the bytes exist, on its own transaction,
 		// so the declaration survives the failure of the caller's — which is
 		// exactly the failure that leaves an object nothing references, and an
@@ -131,9 +143,8 @@ func (s *Store) StageCapturedFiles(
 			int64(len(file.Body)), file.ContentType); err != nil {
 			return nil, fmt.Errorf("store a captured file: %w", err)
 		}
-		staged = append(staged, StagedFile{
-			file: file, id: id, key: key, checksum: hex.EncodeToString(sum[:]),
-		})
+		held[copyOf] = key
+		staged = append(staged, StagedFile{file: file, id: id, key: key, checksum: copyOf.checksum})
 	}
 	return staged, nil
 }
@@ -172,8 +183,14 @@ func (s *Store) RecordCapturedFiles(
 	for _, file := range staged {
 		checksum := file.checksum
 		row := capturedFileRow{id: file.id, file: file.file, byteSize: len(file.file.Body), key: file.key, checksum: &checksum}
+		if err := holdReusedObjectTx(ctx, tx, file); err != nil {
+			return err
+		}
 		if _, err := insertCapturedAttachment(ctx, tx, activityID, from, row); err != nil {
 			return err
+		}
+		if file.reused {
+			continue
 		}
 		// On the CALLER's transaction, the one that just gave the key a row:
 		// the pair commits together or neither does.

@@ -144,6 +144,15 @@ func (h Handlers) UpdateDataSubjectRequest(w http.ResponseWriter, r *http.Reques
 			h.writeDSR(w, r, http.StatusOK, updated)
 			return
 		}
+		if current.Kind == dsrKindRestriction {
+			updated, err := h.store.FulfilRestriction(r.Context(), ids.UUID(id), in)
+			if err != nil {
+				writeConsentErr(w, r, err)
+				return
+			}
+			h.writeDSR(w, r, http.StatusOK, updated)
+			return
+		}
 	}
 	updated, err := h.store.UpdateDSR(r.Context(), ids.UUID(id), in)
 	if err != nil {

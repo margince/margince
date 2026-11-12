@@ -14,10 +14,10 @@ import (
 	"github.com/jackc/pgx/v5"
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
+	"github.com/margince/margince/backend/internal/compose/capturehealth"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/platform/jobs"
-	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
 // readCaptureHealth answers what every mailbox is waiting on, and the sender
@@ -33,25 +33,35 @@ func readCaptureHealth(ctx context.Context, tx pgx.Tx, now time.Time) (crmcontra
 	if err != nil {
 		return crmcontracts.CaptureHealth{}, err
 	}
+	shared := []crmcontracts.CaptureSharedMailboxConcern{}
 	for _, concern := range concerns {
 		v := concern.Connection
+		if concern.Shared || concern.UserID == nil {
+			shared = append(shared, crmcontracts.CaptureSharedMailboxConcern{
+				ConnectionId: openapi_types.UUID(v.ID), Provider: v.Provider, AccountLabel: v.AccountLabel,
+				Concern: crmcontracts.CaptureConcernKind(v.Concern), Since: v.ConcernSince,
+				LastSuccessAt: v.LastSuccessAt, ErrorClass: v.LastErrorClass,
+			})
+			continue
+		}
 		out.ConnectionConcerns = append(out.ConnectionConcerns, crmcontracts.CaptureConnectionConcern{
-			UserId: openapi_types.UUID(concern.UserID), DisplayName: concern.DisplayName, ConnectionId: openapi_types.UUID(v.ID),
+			UserId: openapi_types.UUID(*concern.UserID), DisplayName: concern.DisplayName, ConnectionId: openapi_types.UUID(v.ID),
 			Provider: v.Provider, AccountLabel: v.AccountLabel, Concern: crmcontracts.CaptureConcernKind(v.Concern),
 			Since: v.ConcernSince, LastSuccessAt: v.LastSuccessAt, ErrorClass: v.LastErrorClass,
 		})
 	}
-	mailboxes, err := captureMailboxHealth(ctx, tx, now)
+	out.SharedMailboxConcerns = &shared
+	mailboxes, err := capturehealth.MailboxHealth(ctx, tx, now)
 	if err != nil {
 		return crmcontracts.CaptureHealth{}, err
 	}
 	out.Mailboxes = mailboxes
-	owners, err := captureOwnerReviews(ctx, tx)
+	owners, err := capturehealth.OwnerReviews(ctx, tx)
 	if err != nil {
 		return crmcontracts.CaptureHealth{}, err
 	}
 	out.OwnerReviews = &owners
-	classifier, err := captureClassifierHealth(ctx, tx, now)
+	classifier, err := capturehealth.ClassifierHealth(ctx, tx, now)
 	if err != nil {
 		return crmcontracts.CaptureHealth{}, err
 	}
@@ -93,7 +103,7 @@ func captureHeldMeetings(
 		return crmcontracts.CaptureHeldMeetings{}, fmt.Errorf(
 			"compose: counting the filed meetings still held: %w", err)
 	}
-	out.OldestAgeSeconds = ageSeconds(now, oldest)
+	out.OldestAgeSeconds = capturehealth.AgeSeconds(now, oldest)
 	return out, nil
 }
 
@@ -114,7 +124,7 @@ func captureSweepHealth(ctx context.Context, tx pgx.Tx) ([]crmcontracts.CaptureS
 	for _, state := range states {
 		row := crmcontracts.CaptureSweepHealth{
 			Sweep:           crmcontracts.CaptureSweepHealthSweep(state.Sweep),
-			LastSucceededAt: utcOrNil(state.LastSucceededAt),
+			LastSucceededAt: capturehealth.UTCOrNil(state.LastSucceededAt),
 		}
 		if spec, ok := jobs.SpecFor(sweepJobKinds[state.Sweep]); ok && spec.Cadence.Fixed > 0 {
 			seconds := int(spec.Cadence.Fixed.Seconds())
@@ -135,158 +145,4 @@ func captureSweepHealth(ctx context.Context, tx pgx.Tx) ([]crmcontracts.CaptureS
 		out = append(out, row)
 	}
 	return out, nil
-}
-
-func utcOrNil(at *time.Time) *time.Time {
-	if at == nil {
-		return nil
-	}
-	utc := at.UTC()
-	return &utc
-}
-
-// captureMailboxHealth counts what is waiting per mailbox owner.
-//
-// A FULL JOIN of two independent backlogs, so a mailbox appearing in either is
-// reported: a seat with contacts waiting and no held threads is exactly as
-// stuck as one with both, and an inner join would hide it.
-//
-// Contacts are counted as owner-private rows with no settled answer in the
-// sender ledger. That is the same pair of facts the promotion reads — a contact
-// stays `owner` until a verdict widens it — and the same clause the owner's own
-// list reads, so the count is exactly what each owner is shown.
-func captureMailboxHealth(
-	ctx context.Context, tx pgx.Tx, now time.Time,
-) ([]crmcontracts.CaptureMailboxHealth, error) {
-	rows, err := tx.Query(ctx, `
-		WITH waiting_contacts AS (
-		  SELECT p.owner_id AS user_id, count(*) AS n, min(p.created_at) AS oldest
-		    FROM contact p
-		   WHERE `+capture.AwaitingSenderDecisionClause("p")+`
-		   GROUP BY p.owner_id),
-		unread_periods AS (
-		  SELECT user_id, min(unread_from) AS unread_from, max(unread_to) AS unread_to
-		    FROM capture_connection
-		   WHERE unread_from IS NOT NULL
-		   GROUP BY user_id),
-		waiting_threads AS (
-		  SELECT v.user_id, count(*) AS n, min(v.created_at) AS oldest
-		    FROM capture_thread_verdict v
-		   WHERE v.status = 'pending' AND v.attempts >= `+fmt.Sprint(capture.PendingMaxAttempts)+` AND EXISTS (SELECT 1 FROM activity m WHERE `+capture.HeldMessageSQL("v", "m")+`)
-		   GROUP BY v.user_id)
-		SELECT coalesce(c.user_id, t.user_id, g.user_id),
-		       u.display_name,
-		       coalesce(c.n, 0), c.oldest,
-		       coalesce(t.n, 0), t.oldest,
-		       g.unread_from, g.unread_to
-		  FROM waiting_contacts c
-		  FULL JOIN waiting_threads t ON t.user_id = c.user_id
-		  FULL JOIN unread_periods g ON g.user_id = coalesce(c.user_id, t.user_id)
-		  LEFT JOIN app_user u ON u.id = coalesce(c.user_id, t.user_id, g.user_id)
-		 ORDER BY coalesce(c.n, 0) + coalesce(t.n, 0) DESC,
-		          coalesce(c.user_id, t.user_id, g.user_id)`)
-	if err != nil {
-		return nil, fmt.Errorf("compose: reading what each mailbox is waiting on: %w", err)
-	}
-	defer rows.Close()
-
-	// Empty rather than nil: the wire field is a required array, and null
-	// would make a client refuse the whole report on a calm installation.
-	out := []crmcontracts.CaptureMailboxHealth{}
-	for rows.Next() {
-		var (
-			userID                 ids.UUID
-			name                   *string
-			contacts, threads      int
-			oldestContact, oldestT *time.Time
-			unreadFrom, unreadTo   *time.Time
-		)
-		if err := rows.Scan(&userID, &name, &contacts, &oldestContact, &threads, &oldestT,
-			&unreadFrom, &unreadTo); err != nil {
-			return nil, err
-		}
-		row := crmcontracts.CaptureMailboxHealth{
-			UserId:                   openapi_types.UUID(userID),
-			ContactsAwaitingDecision: contacts,
-			ThreadsAwaitingVerdict:   threads,
-			OldestContactAgeSeconds:  ageSeconds(now, oldestContact),
-			OldestThreadAgeSeconds:   ageSeconds(now, oldestT),
-		}
-		row.DisplayName = name
-		row.UnreadPeriod = unreadPeriodOf(unreadFrom, unreadTo)
-		out = append(out, row)
-	}
-	return out, rows.Err()
-}
-
-// captureClassifierHealth counts the sender queue across every mailbox.
-//
-// `exhausted` is separate from `unsure` on purpose: both need a human, but one
-// is the machine saying it cannot tell and the other is the machine having
-// stopped asking. An installation with no model retires everything to `unsure`,
-// so a large `unsure` beside a small `pending` says the classifier is not
-// running rather than that the mail is hard — which is the reading an
-// administrator most needs and cannot get from a single total.
-func captureClassifierHealth(
-	ctx context.Context, tx pgx.Tx, now time.Time,
-) (crmcontracts.CaptureClassifierHealth, error) {
-	var (
-		out           crmcontracts.CaptureClassifierHealth
-		oldestPending *time.Time
-	)
-	if err := tx.QueryRow(ctx, `
-		SELECT count(*) FILTER (WHERE status = 'pending' AND next_attempt_at IS NOT NULL),
-		       count(*) FILTER (WHERE status = 'unsure'),
-		       count(*) FILTER (WHERE status = 'pending' AND next_attempt_at IS NULL),
-		       min(created_at) FILTER (WHERE status = 'pending')
-		  FROM capture_pending_counterparty`).
-		Scan(&out.Pending, &out.Unsure, &out.Exhausted, &oldestPending); err != nil {
-		return crmcontracts.CaptureClassifierHealth{}, fmt.Errorf(
-			"compose: reading the sender queue: %w", err)
-	}
-	out.OldestPendingAgeSeconds = ageSeconds(now, oldestPending)
-	return out, nil
-}
-
-// ageSeconds renders how long something has been waiting, or absent when
-// nothing is. Absent and zero are different answers — one is an empty queue,
-// the other a queue that just filled — and a page reading zero as empty would
-// report the busiest moment as the calmest.
-// unreadPeriodOf is the gap a mailbox was never read for, or nil when there is
-// none to report.
-//
-// Both ends or neither, which the column CHECK holds. Read for it anyway. A
-// half period on the wire is one a client cannot choose a backfill window
-// from, and this is where that shape would reach it.
-func unreadPeriodOf(from, to *time.Time) *crmcontracts.CaptureUnreadPeriod {
-	if from == nil || to == nil {
-		return nil
-	}
-	return &crmcontracts.CaptureUnreadPeriod{From: from.UTC(), To: to.UTC()}
-}
-
-func ageSeconds(now time.Time, since *time.Time) *int {
-	if since == nil {
-		return nil
-	}
-	seconds := max(int(now.UTC().Sub(since.UTC()).Seconds()), 0)
-	return &seconds
-}
-
-func captureOwnerReviews(ctx context.Context, tx pgx.Tx) ([]crmcontracts.CaptureOwnerReview, error) {
-	rows, err := tx.Query(ctx, `SELECT r.user_id, u.display_name, r.sender_decisions, r.thread_decisions
- FROM (`+capture.OwnerReviewCountsSQL()+`) r LEFT JOIN app_user u ON u.id=r.user_id ORDER BY (r.sender_decisions+r.thread_decisions) DESC, u.display_name, r.user_id`)
-	if err != nil {
-		return nil, fmt.Errorf("read mailbox decision owners: %w", err)
-	}
-	defer rows.Close()
-	out := []crmcontracts.CaptureOwnerReview{}
-	for rows.Next() {
-		var owner crmcontracts.CaptureOwnerReview
-		if err := rows.Scan(&owner.UserId, &owner.DisplayName, &owner.SenderDecisions, &owner.ThreadDecisions); err != nil {
-			return nil, fmt.Errorf("reading mailbox review owner: %w", err)
-		}
-		out = append(out, owner)
-	}
-	return out, rows.Err()
 }

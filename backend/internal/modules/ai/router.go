@@ -57,6 +57,10 @@ func sameRoute(a, b routeMeta) bool { return a.provider != "" && a == b }
 // before the call, and every call lands in the meter. This is the one
 // place routing policy lives — callers never pick a model.
 type Router struct {
+	// restrictions answers whether a request's subjects are restricted; nil
+	// refuses every honouring call that names one.
+	restrictions         model.SubjectRestrictions
+	restrictionsRequired bool
 	// bound is the current binding. Load it once per call — see the type's
 	// comment for why a second load mid-call is a correctness bug, not a
 	// performance one.
@@ -126,6 +130,7 @@ func NewRouter(cfg RoutingConfig, meter *Meter, budget BudgetPolicy, calls callS
 	}
 	meta := embedInclusiveMeta(cfg)
 	router := assembleRouter(clients, embedder, cfg.Profile, meter, budget, calls, meta, capturePayloads, log)
+	router.restrictionsRequired = true
 	router.install(router.binding().withConfig(cfg, decisions))
 	return router, nil
 }
@@ -162,6 +167,9 @@ func (r *Router) Complete(ctx context.Context, task Task, req model.Request) (mo
 	ladder, ok := taskLadders[task]
 	if !ok {
 		return model.Response{}, RouteInfo{}, fmt.Errorf("ai: unknown task %q", task)
+	}
+	if err := r.admitSubjects(ctx, task, req); err != nil {
+		return model.Response{}, RouteInfo{}, err
 	}
 	return r.serveCompletion(ctx, task, ladder, req)
 }

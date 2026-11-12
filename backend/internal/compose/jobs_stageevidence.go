@@ -70,7 +70,7 @@ func (w *stageEvidenceReadWorker) Work(ctx context.Context, job *river.Job[Stage
 	written, err := w.reader.Read(wsCtx,
 		ids.From[ids.DealKind](args.DealID), args.ActivityID)
 	if err != nil {
-		return jobs.FaultContext(ctx, err)
+		return jobs.FaultContext(ctx, snoozeWhileRestricted(err))
 	}
 	if written == 0 {
 		// The common outcome, and worth a line at debug rather than silence:

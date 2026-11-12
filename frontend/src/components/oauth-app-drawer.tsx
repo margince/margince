@@ -191,71 +191,66 @@ function SetupForm({
             </QueryGate>
           }
         >
-          <>
-            {lockReason !== undefined && (
-              <p id={lockId} className="t-caption">
-                {lockReason}
-              </p>
-            )}
-            <Field label={t("oauthApp.clientId")}>
-              {(control) => (
-                <TextInput
-                  {...control}
-                  aria-describedby={describedByIds(
-                    control["aria-describedby"],
-                    lockReason === undefined ? undefined : lockId,
-                  )}
-                  value={id}
-                  autoComplete="off"
-                  disabled={locked}
-                  placeholder={t(vendorCopy[provider].clientIdPlaceholder)}
-                  onChange={(e) => setClientId(e.target.value)}
-                />
-              )}
-            </Field>
-            <Field
-              label={t("oauthApp.clientSecret")}
-              hint={t("oauthApp.drawer.secretHint")}
-            >
-              {(control) => (
-                <TextInput
-                  {...control}
-                  aria-describedby={describedByIds(
-                    control["aria-describedby"],
-                    lockReason === undefined ? undefined : lockId,
-                  )}
-                  type="password"
-                  autoComplete="off"
-                  value={clientSecret}
-                  disabled={locked}
-                  onChange={(e) => setClientSecret(e.target.value)}
-                />
-              )}
-            </Field>
-            {/* Google has no directories, and a field that silently does
-                nothing is worse than none. */}
-            {provider === "microsoft" && (
-              <Field
-                label={t("oauthApp.tenant")}
-                hint={t("oauthApp.tenantHint")}
-              >
-                {(control) => (
-                  <TextInput
-                    {...control}
-                    aria-describedby={describedByIds(
-                      control["aria-describedby"],
-                      lockReason === undefined ? undefined : lockId,
-                    )}
-                    value={directory}
-                    autoComplete="off"
-                    disabled={locked}
-                    placeholder={t("oauthApp.tenantPlaceholder")}
-                    onChange={(e) => setTenant(e.target.value)}
-                  />
+          {lockReason !== undefined && (
+            <p id={lockId} className="t-caption">
+              {lockReason}
+            </p>
+          )}
+          <Field label={t("oauthApp.clientId")}>
+            {(control) => (
+              <TextInput
+                {...control}
+                aria-describedby={describedByIds(
+                  control["aria-describedby"],
+                  lockReason === undefined ? undefined : lockId,
                 )}
-              </Field>
+                value={id}
+                autoComplete="off"
+                disabled={locked}
+                placeholder={t(vendorCopy[provider].clientIdPlaceholder)}
+                onChange={(e) => setClientId(e.target.value)}
+              />
             )}
-          </>
+          </Field>
+          <Field
+            label={t("oauthApp.clientSecret")}
+            hint={t("oauthApp.drawer.secretHint")}
+          >
+            {(control) => (
+              <TextInput
+                {...control}
+                aria-describedby={describedByIds(
+                  control["aria-describedby"],
+                  lockReason === undefined ? undefined : lockId,
+                )}
+                type="password"
+                autoComplete="off"
+                value={clientSecret}
+                disabled={locked}
+                onChange={(e) => setClientSecret(e.target.value)}
+              />
+            )}
+          </Field>
+          {/* Google has no directories, and a field that silently does
+                nothing is worse than none. */}
+          {provider === "microsoft" && (
+            <Field label={t("oauthApp.tenant")} hint={t("oauthApp.tenantHint")}>
+              {(control) => (
+                <TextInput
+                  {...control}
+                  aria-describedby={describedByIds(
+                    control["aria-describedby"],
+                    lockReason === undefined ? undefined : lockId,
+                  )}
+                  value={directory}
+                  autoComplete="off"
+                  disabled={locked}
+                  placeholder={t("oauthApp.tenantPlaceholder")}
+                  onChange={(e) => setTenant(e.target.value)}
+                />
+              )}
+            </Field>
+          )}
         </OAuthAppSteps>
         {/* Last in the body, so a refusal lands beside the Save that drew it. */}
         <WriteRefused titleKey="oauthApp.saveFailed" error={save.error} />

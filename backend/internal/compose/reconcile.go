@@ -277,6 +277,23 @@ func followUpPrecheck() approvals.ReleasePrecheck {
 	}
 }
 
+// followUpDoer is who does an approved follow-up: the deal's owner as the
+// effect writes, so a handover after the decision still reaches the new owner.
+// A deal with no owner falls back to the human who approved the card.
+func followUpDoer(ctx context.Context, tx pgx.Tx, deal ids.DealID, decider ids.UUID) (*ids.UserID, error) {
+	owner, err := lockedDealOwner(ctx, tx, deal.UUID)
+	if err != nil {
+		return nil, err
+	}
+	if owner.IsZero() {
+		owner = decider
+	}
+	if owner.IsZero() {
+		return nil, nil //nolint:nilnil // a nil assignee is how LogActivityInput files the task as unassigned
+	}
+	return new(ids.From[ids.UserKind](owner)), nil
+}
+
 // followUpConfirmEffect executes a follow-up proposal staged before the pass
 // filed its tasks directly. It redeems, then creates, like every 🟡 executor.
 // The task goes through the activities store, the RBAC-gated write a rep's own
@@ -322,8 +339,12 @@ func followUpConfirmEffect(svc *approvals.Service, store *activities.Store) appr
 		// (approvals.effectIsStillOwed).
 		return svc.RedeemAndApply(ctx, approvalID, deals.FollowUpReconcileKind, diffHash,
 			func(tx pgx.Tx) error {
-				_, _, err := store.LogActivityTx(execCtx, tx, task)
-				return err
+				doer, err := followUpDoer(ctx, tx, proposal.DealID, decider.UserID)
+				if err != nil {
+					return err
+				}
+				task.AssigneeID = doer
+				return logTaskOrUnassignedTx(execCtx, tx, store, task)
 			})
 	}
 }
@@ -354,8 +375,7 @@ func writeOvernightFollowUp(
 	}
 	assignee := ids.From[ids.UserKind](owner)
 	in.AssigneeID = &assignee
-	_, _, err = tasks.LogActivityTx(onBehalfOf(extractorContext(sweepCtx, overnightAgent), owner), tx, in)
-	return err
+	return logTaskOrUnassignedTx(onBehalfOf(extractorContext(sweepCtx, overnightAgent), owner), tx, tasks, in)
 }
 
 // followUpAlreadyAnswered reports a proposal for this interaction that a rep

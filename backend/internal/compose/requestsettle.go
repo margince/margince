@@ -9,6 +9,7 @@ package compose
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"log/slog"
 	"strings"
@@ -284,7 +285,7 @@ func (s *RequestSettler) judgeBatch(ctx context.Context, batch []settleCandidate
 		return 0, nil
 	}
 	verdicts, err := s.ask(ctx, batch)
-	if declinedByTheModels(err) {
+	if declinedByTheModels(err) || errors.Is(err, ai.ErrSubjectRestricted) {
 		return s.judgeEach(ctx, batch, calls)
 	}
 	if err != nil {
@@ -331,6 +332,9 @@ func (s *RequestSettler) judgeEach(ctx context.Context, candidates []settleCandi
 			s.log.WarnContext(ctx, "request settle: the models declined one conversation, recorded unsure",
 				"request_id", candidate.Request.RequestID, "err", err)
 			solo.judge = settleDeclinedBy
+		case errors.Is(err, ai.ErrSubjectRestricted):
+			// Left unjudged: the conversation is read once the restriction lifts.
+			continue
 		case err != nil:
 			return judged, err
 		case len(solo.results) == 1 && solo.results[0].Confidence >= settleConfidenceFloor:

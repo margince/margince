@@ -93,6 +93,18 @@ var recordPartActions = map[string][]string{
 	"remove_project_stakeholder":    {partProjectID, partContactID},
 }
 
+// recordPartFields is what `field` admits: a company profile field, or the
+// field of a fact to add. One argument carries both, so its enum is the union.
+func recordPartFields() []string {
+	fields := slices.Clone(companyProfileFieldKeys)
+	for _, fact := range companyFactFields {
+		if !slices.Contains(fields, fact) {
+			fields = append(fields, fact)
+		}
+	}
+	return fields
+}
+
 func (t changeRecordParts) Spec() mcp.ToolSpec {
 	actions := make([]string, 0, len(recordPartActions))
 	for action := range recordPartActions {
@@ -128,8 +140,8 @@ func (t changeRecordParts) Spec() mcp.ToolSpec {
 			"project_id":{"type":"string","format":"uuid"},
 			"contact_id":{"type":"string","format":"uuid"},
 			"fact_key":{"type":"string","description":"One fact of the company, spelled <field>:<value_key> from its read"},
-			"category":{"type":"string"},
-			"field":{"type":"string"},
+			"category":{"type":"string","enum":` + mustJSON(companyFactCategories) + `},
+			"field":{"type":"string","enum":` + mustJSON(recordPartFields()) + `,"description":"A profile field for the profile field actions, a fact field for add_company_fact; record_fields lists which is which"},
 			"value":{"type":"string"},
 			"role":{"type":"string"},
 			"if_version":{"type":"integer","description":"The version you read, so a change made since is refused rather than overwritten"}},

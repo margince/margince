@@ -126,6 +126,7 @@ func cardPhotoReading(img model.Attachment) ai.ImageReading {
 		Instruction: cardPhotoInstruction,
 		Schema:      cardPhotoSchema(),
 		Validate:    cardPhotoShapeValid,
+		About:       model.AboutNoContact("the card names someone who is not a contact yet"),
 	}
 }
 

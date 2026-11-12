@@ -123,14 +123,15 @@ var exempt = gatekit.Waive(map[string]string{
 	// Microsoft's authority alias: `companies` is a literal path segment at
 	// login.microsoftonline.com beside `common` and `consumers`, and renaming
 	// it stops sign-in working.
-	"backend/internal/compose/microsoftsignin.go":           "Microsoft's `companies` authority alias",
-	"backend/internal/compose/microsoftsignin_test.go":      "Microsoft's `companies` authority alias",
-	"backend/internal/compose/capturegraph.go":              "Microsoft's `common` authority, which admits any tenant",
-	"backend/internal/modules/capture/connectorapp.go":      "Microsoft's `companies` authority alias",
-	"backend/internal/modules/capture/connectorapp_test.go": "Microsoft's `companies` authority alias",
-	"backend/internal/modules/capture/graph/client.go":      "Microsoft's `common` authority, which admits any tenant",
-	"backend/cmd/api/config.go":                             "flag help for the Microsoft authority aliases",
-	"docs/reference/connectors-and-sign-in.md":              "the Microsoft authority aliases",
+	"backend/internal/compose/microsoftsignin.go":                  "Microsoft's `companies` authority alias",
+	"backend/internal/compose/microsoftsignin_test.go":             "Microsoft's `companies` authority alias",
+	"backend/internal/compose/capturegraph.go":                     "Microsoft's `common` authority, which admits any tenant",
+	"backend/internal/modules/capture/connectorapp.go":             "Microsoft's `companies` authority alias",
+	"backend/internal/modules/capture/connectorapp_test.go":        "Microsoft's `companies` authority alias",
+	"backend/internal/modules/capture/graph/client.go":             "Microsoft's `common` authority, which admits any tenant",
+	"backend/internal/modules/capture/graph/sharedmailbox_test.go": "Microsoft's multi-tenant authority aliases, which a shared mailbox's tenant must never be",
+	"backend/cmd/api/config.go":                                    "flag help for the Microsoft authority aliases",
+	"docs/reference/connectors-and-sign-in.md":                     "the Microsoft authority aliases",
 
 	"backend/internal/platform/licensecheck/host.go": "the licence payload's `company` key. The Go " +
 		"name is ours; the key belongs to whoever signs the licence, and renaming it would stop " +

@@ -62,7 +62,7 @@ func TestAnInitiativeIsDefinedByItsRulesPicksAndExclusions(t *testing.T) {
 	start := clocktest.Now(t).UTC().Truncate(time.Second)
 	_, _, open := seedInitiativeDeals(t, e, start)
 	ctx := initiativeManager(e)
-	store := newInitiativeStore(e.Pool)
+	store := NewInitiativeStore(e.Pool)
 	target := int64(5)
 	draft, err := store.Create(ctx, initiatives.Definition{Name: "Manufacturing expansion", Objective: reportingQualifiedOpportunitiesCreated, Target: &target, Deadline: start.AddDate(0, 3, 0), DealRule: &initiativeRulePredicate})
 	if err != nil {
@@ -157,7 +157,7 @@ func TestAnExclusionTheEditorCannotReadDoesNotFailTheirSave(t *testing.T) {
 	start := clocktest.Now(t).UTC().Truncate(time.Second)
 	_, _, open := seedInitiativeDeals(t, e, start)
 	manager := initiativeManager(e)
-	store := newInitiativeStore(e.Pool)
+	store := NewInitiativeStore(e.Pool)
 	draft, err := store.Create(manager, initiatives.Definition{Name: "Portal push", Objective: reportingQualifiedOpportunitiesCreated, Deadline: start.AddDate(0, 3, 0)})
 	if err != nil {
 		t.Fatalf("defining the initiative: %v", err)
@@ -193,7 +193,7 @@ func TestSavingMembersKeepsThePicksTheEditorCannotRead(t *testing.T) {
 	start := clocktest.Now(t).UTC().Truncate(time.Second)
 	_, _, open := seedInitiativeDeals(t, e, start)
 	manager := initiativeManager(e)
-	store := newInitiativeStore(e.Pool)
+	store := NewInitiativeStore(e.Pool)
 	draft, err := store.Create(manager, initiatives.Definition{Name: "Portal push", Objective: reportingQualifiedOpportunitiesCreated, Deadline: start.AddDate(0, 3, 0)})
 	if err != nil {
 		t.Fatalf("defining the initiative: %v", err)

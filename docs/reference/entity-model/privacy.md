@@ -6,18 +6,22 @@ The 2 tables owned by `privacy`, as the migrations build them. [Back to the enti
 
 ## erasure_suppression
 
-4 columns · primary key `(kind, value_hash)` · referenced by 0 foreign keys
+7 columns · primary key `(kind, value_hash)` · referenced by 0 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
 | `key_id` | `text` |  |  |
 | `kind` | `text` | yes | One of `email`, `channel_identity`. |
+| `lift_consent_event_id` | `uuid` |  |  |
+| `lift_contact_id` | `uuid` |  |  |
+| `lifted_at` | `timestamp with time zone` |  |  |
 | `value_hash` | `text` | yes |  |
 | `created_at` | `timestamp with time zone`, default `now()` | yes | When the row was created. Set once. |
 
 **Rules**
 
 - `erasure_suppression_kind_check`: `CHECK ((kind = ANY (ARRAY['email', 'channel_identity'])))`
+- `erasure_suppression_lift_is_whole`: `CHECK ((((lifted_at IS NULL) = (lift_consent_event_id IS NULL)) AND ((lifted_at IS NULL) = (lift_contact_id IS NULL))))`
 
 **Indexes**
 

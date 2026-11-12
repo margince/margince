@@ -170,7 +170,7 @@ func bundleableFindings(
 		  FROM assurance_exception e
 		  JOIN assurance_run_finding f ON f.exception_id = e.id AND f.run_id = $1
 		  JOIN deal d ON d.id = e.subject_id
-		  `+findingPricedJoin(rawFindingMoney.affected)+`
+		  `+findingPricedJoin(rawFindingMoney)+`
 		 WHERE e.status = 'open'
 		   AND e.subject_kind = 'deal'
 		   AND NOT EXISTS (SELECT 1 FROM assurance_resolution r

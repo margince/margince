@@ -118,7 +118,7 @@ func (w *transcriptProposeWorker) Work(ctx context.Context, job *river.Job[Trans
 			"transcript_read_id", args.TranscriptReadID)
 		return nil
 	}
-	return jobs.FaultContext(ctx, err)
+	return jobs.FaultContext(ctx, snoozeWhileRestricted(err))
 }
 
 // declineUnread closes a reading no configured lane can perform. Failing it

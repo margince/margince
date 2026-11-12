@@ -113,7 +113,7 @@ func readDealTopicDeals(ctx context.Context, tx pgx.Tx, mail ids.ActivityID, dea
 		       coalesce((SELECT array_agg(recent.subject) FROM (
 		         SELECT a.subject FROM activity a JOIN activity_link l ON l.activity_id = a.id AND l.deal_id = d.id
 		          WHERE a.id <> $%[1]d AND a.kind = 'email' AND a.subject IS NOT NULL
-		            AND a.restricted_at IS NULL AND (%[5]s)
+		            AND a.restricted_at IS NULL AND (%[5]s) AND NOT `+auth.ActivityRestrictedSQL("a.id")+`
 		          ORDER BY a.occurred_at DESC, a.id DESC LIMIT $%[3]d) recent), '{}')
 		  FROM deal d LEFT JOIN project p ON p.id = d.project_id
 		 WHERE d.id = ANY($%[2]d) AND (%[4]s)

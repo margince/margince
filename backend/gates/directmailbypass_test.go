@@ -90,6 +90,11 @@ var directMailHolders = gatekit.Waive(map[string]string{
 		"granted access to: the link IS the act the operator performed, not a message about the " +
 		"relationship, and the recipient cannot use the room without receiving it",
 
+	"internal/compose/erasurereturn/erasurereturn.go": "a single-use link an erased subject asked for, to be stored " +
+		"again. The lane would write the address to comms_outbound before the click, which is the data " +
+		"the erasure removed, and its consent check refuses an erased address by design. The send is " +
+		"not audited or exported; the click that follows is, through the write shape",
+
 	"internal/compose/controllermailwiring.go": "the TRANSPORT UNDER the lane, not a way around it. " +
 		"This is the adapter the dispatcher's controller seam calls to put a message on the wire, and " +
 		"it runs only after comms_outbound holds the row, consent has recorded the staging decision and " +
@@ -120,6 +125,10 @@ const (
 	// around it: it runs only after the delivery row exists and the gate has
 	// answered.
 	purposeLaneTransport directMailPurpose = "lane_transport"
+	// purposeErasureReturn is the link an erased subject asked for to be
+	// stored again. It is the one message to a data subject here, because
+	// the lane cannot hold an erased address before the subject confirms.
+	purposeErasureReturn directMailPurpose = "erasure_return"
 )
 
 // admissibleDirectMailPurposes is what the enum admits, read by the gate below
@@ -129,6 +138,7 @@ var admissibleDirectMailPurposes = map[directMailPurpose]bool{
 	purposeOperatorDigest:      true,
 	purposeBuyerRoomCredential: true,
 	purposeLaneTransport:       true,
+	purposeErasureReturn:       true,
 }
 
 // directMailPurposes says which category each ratified sender falls under.
@@ -140,17 +150,19 @@ var admissibleDirectMailPurposes = map[directMailPurpose]bool{
 //
 // A DATA SUBJECT IS NEVER A PURPOSE. The rule these categories serve is that a
 // message to a data subject about the relationship goes through the consent
-// engine — every entry here is addressed to a colleague, or is a credential the
-// recipient asked for, or is the transport itself.
+// engine. Every entry here is addressed to a colleague, is a credential the
+// recipient asked for, or is the transport itself. The erasure return link is
+// a credential the erased subject asked for.
 var directMailPurposes = map[string]directMailPurpose{
-	"internal/compose/weeklymailjobs.go":          purposeOperatorDigest,
-	"internal/compose/briefmailjobs.go":           purposeOperatorDigest,
-	"internal/compose/notificationmailjobs.go":    purposeOperatorDigest,
-	"internal/compose/notificationdigestjobs.go":  purposeOperatorDigest,
-	"internal/modules/identity/handlers_users.go": purposeSeatCredential,
-	"internal/modules/identity/reset.go":          purposeSeatCredential,
-	"internal/modules/dealrooms/invitemail.go":    purposeBuyerRoomCredential,
-	"internal/compose/controllermailwiring.go":    purposeLaneTransport,
+	"internal/compose/weeklymailjobs.go":              purposeOperatorDigest,
+	"internal/compose/briefmailjobs.go":               purposeOperatorDigest,
+	"internal/compose/notificationmailjobs.go":        purposeOperatorDigest,
+	"internal/compose/notificationdigestjobs.go":      purposeOperatorDigest,
+	"internal/modules/identity/handlers_users.go":     purposeSeatCredential,
+	"internal/modules/identity/reset.go":              purposeSeatCredential,
+	"internal/modules/dealrooms/invitemail.go":        purposeBuyerRoomCredential,
+	"internal/compose/controllermailwiring.go":        purposeLaneTransport,
+	"internal/compose/erasurereturn/erasurereturn.go": purposeErasureReturn,
 }
 
 func TestOnlyRatifiedCodeMailsWithoutTheDeliveryLane(t *testing.T) {

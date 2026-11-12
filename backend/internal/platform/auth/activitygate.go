@@ -3,7 +3,9 @@
 
 package auth
 
-import "context"
+import (
+	"context"
+)
 
 // ActivityDiscoverClause is the weaker activity gate. It answers whether the
 // caller may learn that an activity exists (its date, direction, kind and

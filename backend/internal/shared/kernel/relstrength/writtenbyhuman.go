@@ -76,10 +76,17 @@ func OriginIsEngagementSQL(alias string) string {
 // WrittenByHumanSQL admits an activity row a human wrote. A call, meeting or
 // chat message passes unless the product wrote it. An email also needs no
 // calendar method, a sender that is not a sending system, and no
-// List-Unsubscribe header.
+// List-Unsubscribe header (BulkMailSQL).
 func WrittenByHumanSQL(alias string) string {
-	return "(" + OriginIsEngagementSQL(alias) + " AND (" + alias + ".kind <> '" + kindEmail + "' OR (NOT " +
-		alias + ".sender_is_machine AND " + alias + ".calendar_method IS NULL AND NOT " + alias + ".bulk_mail_attested)))"
+	return "(" + OriginIsEngagementSQL(alias) + " AND NOT " + BulkMailSQL(alias) + " AND (" + alias + ".kind <> '" + kindEmail +
+		"' OR (NOT " + alias + ".sender_is_machine AND " + alias + ".calendar_method IS NULL)))"
+}
+
+// BulkMailSQL admits an email that carried a List-Unsubscribe header
+// (AutomaticBulk). The exchange readers and the last-activity clocks both
+// refuse it through this one text.
+func BulkMailSQL(alias string) string {
+	return "(" + alias + ".kind = '" + kindEmail + "' AND " + alias + ".bulk_mail_attested)"
 }
 
 // DirectionClockSQL admits a row to a "they last wrote" or "we last wrote"

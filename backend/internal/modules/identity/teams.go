@@ -129,6 +129,13 @@ func (s *Service) UpdateTeam(ctx context.Context, actor Identity, id ids.UUID, i
 			change, set := "restored", `archived_at = NULL`
 			if *in.Archived {
 				change, set = "archived", `archived_at = now()`
+				mailboxes, err := s.sharedMailboxesReadByTx(ctx, tx, id)
+				if err != nil {
+					return err
+				}
+				if err := refuseArchivingAReaderTeam(mailboxes); err != nil {
+					return err
+				}
 			}
 			err := tx.QueryRow(ctx, `UPDATE team SET `+set+` WHERE id = $1 RETURNING archived_at`, id).Scan(&out.ArchivedAt)
 			if storekit.IsUniqueViolation(err) {
@@ -201,6 +208,12 @@ func (s *Service) setTeamMemberTx(ctx context.Context, tx pgx.Tx, actor Identity
 	if on && status != userStatusActive && status != userStatusInvited {
 		return fmt.Errorf("%w: a suspended or deactivated member does not join a team; reactivate them first", apperrors.ErrConflict)
 	}
+	after := map[string]any{teamAuditKeyMember: userID, "on": on}
+	if on {
+		if after, err = s.memberJoinsTx(ctx, tx, teamID, userID); err != nil {
+			return err
+		}
+	}
 	var tag pgconn.CommandTag
 	change := "member_removed"
 	if on {
@@ -217,8 +230,7 @@ func (s *Service) setTeamMemberTx(ctx context.Context, tx pgx.Tx, actor Identity
 		return nil
 	}
 	return s.recordTeamChange(ctx, tx, actor, teamID, &userID, change,
-		map[string]any{teamAuditKeyMember: userID, "on": !on},
-		map[string]any{teamAuditKeyMember: userID, "on": on})
+		map[string]any{teamAuditKeyMember: userID, "on": !on}, after)
 }
 
 // errTeamMembershipRequiresAdmin refuses a change to who is on a team by a

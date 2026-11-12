@@ -135,6 +135,10 @@ func TestAMaskedReaderIsListedNoFindingMoneyOnADealTheyCannotChange(t *testing.T
 			t.Errorf("%s on a colleague's deal listed affected_minor %d — deal.amount_minor is masked "+
 				"outside the reader's write authority", kind, *row.AffectedMinor)
 		}
+		if row.Currency != "" {
+			t.Errorf("%s on a colleague's deal listed currency %q — a mask on the amount withholds "+
+				"the currency beside it", kind, row.Currency)
+		}
 	}
 	if money := colleague[assurance.TypeAmountVsOffer]; money.Claim != nil || money.Observed != nil {
 		t.Errorf("amount_vs_offer on a colleague's deal listed claim %s and observed %s — both "+
@@ -149,6 +153,9 @@ func TestAMaskedReaderIsListedNoFindingMoneyOnADealTheyCannotChange(t *testing.T
 	own := seen[myDeal]
 	if got := own[assurance.TypeAmountVsOffer].AffectedMinor; got == nil || *got != 200000 {
 		t.Errorf("the reader's own amount_vs_offer listed affected_minor %v, want 200000", got)
+	}
+	if got := own[assurance.TypeAmountVsOffer].Currency; got != "EUR" {
+		t.Errorf("the reader's own amount_vs_offer listed currency %q, want EUR", got)
 	}
 	if got := string(own[assurance.TypeAmountVsOffer].Claim); !strings.Contains(got, "500000") {
 		t.Errorf("the reader's own amount_vs_offer listed claim %s, want the amount", got)

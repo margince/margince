@@ -195,6 +195,9 @@ const HASH_CREDENTIALS: ReadonlyArray<{ screen: Screen; param: string }> = [
   // as SCREENS above spells it. Importing a screen from the router would be a
   // cycle, and the `Screen` type still fails a rename.
   { screen: "reset-password", param: "token" },
+  // The link an erased subject asked for to be stored again:
+  // `#/book/<slug>?return=<token>`.
+  { screen: "book", param: "return" },
 ];
 
 const held = new Map<Screen, string>();

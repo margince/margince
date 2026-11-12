@@ -24,8 +24,23 @@ func TestTheJurisdictionPageReadsBackAChange(t *testing.T) {
 	if status := e.Call(t, http.MethodGet, "/v1/installation/jurisdiction", nil, nil, &page); status != http.StatusOK {
 		t.Fatalf("GET jurisdiction → %d", status)
 	}
-	if page.Selected != nil || !page.Floor.Known || len(page.Deadlines) != 3 || page.Deadlines[0].Rule != "gdpr" {
+	if page.Selected != nil || !page.Floor.Known {
 		t.Fatalf("unset page = %+v, want nothing selected, the strictest compiled-in floor and GDPR deadlines", page)
+	}
+	wantKinds := map[crmcontracts.JurisdictionDeadlineKind]bool{
+		crmcontracts.JurisdictionDeadlineKindAccess:      true,
+		crmcontracts.JurisdictionDeadlineKindRectify:     true,
+		crmcontracts.JurisdictionDeadlineKindErasure:     true,
+		crmcontracts.JurisdictionDeadlineKindRestriction: true,
+	}
+	if len(page.Deadlines) != len(wantKinds) {
+		t.Fatalf("deadlines = %+v, want one per request kind", page.Deadlines)
+	}
+	for _, deadline := range page.Deadlines {
+		if !wantKinds[deadline.Kind] || deadline.Rule != "gdpr" || deadline.Period == nil || *deadline.Period != "P1M" || deadline.Hours != nil {
+			t.Fatalf("deadline = %+v, want a distinct request kind with the GDPR calendar month", deadline)
+		}
+		delete(wantKinds, deadline.Kind)
 	}
 
 	if status := e.Call(t, http.MethodPatch, "/v1/installation/settings", AnyMap{"country": "zj"}, nil, nil); status != http.StatusUnprocessableEntity {

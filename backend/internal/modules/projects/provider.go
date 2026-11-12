@@ -114,9 +114,6 @@ func (p *Provider) Create(ctx context.Context, in datasource.CreateInput) (datas
 		return datasource.EntityRef{}, err
 	}
 	var req crmcontracts.CreateProjectRequest
-	if err := datasource.ClaimKeys(raw, claimCallerChosenKey); err != nil {
-		return datasource.EntityRef{}, err
-	}
 	if err := datasource.StrictDecode(raw, &req); err != nil {
 		return datasource.EntityRef{}, err
 	}
