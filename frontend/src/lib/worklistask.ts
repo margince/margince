@@ -110,13 +110,14 @@ export function meetingAsk(
 
 /**
  * The reason a brief item's ask already says, so the row does not repeat it.
- * Only a card says its ask; a queue row leaves it to its details.
+ * Only a card says its ask, and not while it asks whether it may be done.
  */
 export function askedReason(
   item: WorklistItem,
   said = true,
 ): string | undefined {
-  if (!said || item.source !== "brief_item") return undefined;
+  if (!said || !saysOpen(item) || item.source !== "brief_item")
+    return undefined;
   const kinds = new Set(item.because.map((reason) => reason.kind));
   return BRIEF_ASK_BY_REASON.find(([kind]) => kinds.has(kind))?.[0];
 }

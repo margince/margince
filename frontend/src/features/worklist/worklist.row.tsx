@@ -203,7 +203,7 @@ export function WorklistRow({
   // hour a rep is racing, and "due today" underneath it is that clock said
   // again in a coarser register.
   // A card's ask already states its leading reason as a sentence.
-  const asked = askedReason(item, framed && saysOpen(item));
+  const asked = askedReason(item, framed);
   const reasons = phrasedReasons(item, when !== null)
     .filter((reason) => reason.kind !== asked)
     .map((reason) => reasonText(reason, t, locale, zone, partyName(item)))
