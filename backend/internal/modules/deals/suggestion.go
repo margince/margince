@@ -125,13 +125,10 @@ func validDraft(d SuggestionDraft) error {
 	return nil
 }
 
-// SuggestionFloorExpr is the instant a company's evidence must be newer than:
-// the latest dismissal of a suggestion about it, the latest close of a deal on
-// it, and the latest archive of a deal on it by a user or their agent.
-// Evidence from before a dismissal or such an archive was judged "not a deal"
-// by a human, and evidence from before a close was about the deal that closed.
-// A system archive (retention, an import undo) judges nothing. It is NULL while
-// none exists. company is the SQL expression naming the company.
+// SuggestionFloorExpr is the instant a company's evidence must be newer than.
+// That is the latest dismissal of a suggestion, close of a live deal, or
+// archive of a deal by a user or their agent. A system archive judges nothing.
+// It is NULL while none exists; company is the SQL naming the company.
 //
 // The scout filters its evidence by it and the writer below re-checks every
 // item against it.
