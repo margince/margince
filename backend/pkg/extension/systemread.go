@@ -34,16 +34,20 @@ const (
 	SystemReadAuthority SystemRead = "authority"
 	// SystemReadDirectory admits Directory().Emails.
 	SystemReadDirectory SystemRead = "directory"
+	// SystemReadActivities admits Activities().Mail.
+	SystemReadActivities SystemRead = "activities"
+	// SystemReadSetAside admits SetAside().Contact and SetAside().Contacts.
+	SystemReadSetAside SystemRead = "set_aside"
 )
 
 // Validate refuses a value that names no group of system reads.
 func (r SystemRead) Validate() error {
 	switch r {
-	case SystemReadDeals, SystemReadAuthority, SystemReadDirectory:
+	case SystemReadDeals, SystemReadAuthority, SystemReadDirectory, SystemReadActivities, SystemReadSetAside:
 		return nil
 	}
-	return fmt.Errorf("extension: %q is not a system read; declare %q, %q or %q",
-		string(r), SystemReadDeals, SystemReadAuthority, SystemReadDirectory)
+	return fmt.Errorf("extension: %q is not a system read; declare %q, %q, %q, %q or %q",
+		string(r), SystemReadDeals, SystemReadAuthority, SystemReadDirectory, SystemReadActivities, SystemReadSetAside)
 }
 
 // MaxResponsible bounds what Deals().Responsible answers and how many users one
@@ -128,4 +132,84 @@ type Directory interface {
 	// MaxResponsible users, or an id that is not a canonical UUID, answers
 	// ErrInvalid.
 	Emails(ctx context.Context, users []UserID) (map[UserID]string, error)
+}
+
+// MailSummary is one email on a deal as a background reader sees it.
+//
+// It is not the contract's Activity, which answers per caller (masked_fields,
+// writable). It holds no subject, body, address or attachment, so a unit that
+// needs the words reads them as a user with their own rights.
+type MailSummary struct {
+	ID string
+	// Direction is inbound or outbound.
+	Direction  string
+	OccurredAt time.Time
+	// AutomaticKind says what sent an email no human wrote: product, calendar
+	// or sending_system. Empty when a human wrote it.
+	AutomaticKind string
+	DealID        string
+}
+
+// MailQuery pages the emails of one deal, newest first.
+type MailQuery struct {
+	ReadPage
+	// IncludeArchived adds the emails that were archived. They are left out
+	// unless asked for.
+	IncludeArchived bool
+}
+
+// Activities reads the emails linked to a deal for a job tick or a bus delivery.
+type Activities interface {
+	// Mail answers the emails of one deal as actAs may see the deal, under that
+	// member's own grants and row scope, the way Authority.CanRead answers. A
+	// deal actAs cannot open answers ErrNotFound. It answers the emails of the
+	// deal that the deal's team may read. An
+	// email private to its participants is left out, and so is one held back
+	// from reading. A reply that sits only in a private mailbox is therefore
+	// invisible here. A unit that decides "no reply yet" from this read is
+	// reminding a user to check. It must not act on it alone, such as by
+	// sending a message.
+	//
+	// A deal that does not exist answers ErrNotFound; an id that is not a
+	// canonical UUID, ErrInvalid. A page holds at most MaxReadPage emails.
+	Mail(ctx context.Context, actAs UserID, dealID string, q MailQuery) (Page[MailSummary], error)
+}
+
+// SetAsideKind is how one user stands towards one contact they were nudged to
+// follow up.
+type SetAsideKind string
+
+const (
+	// SetAsideNone is: not set aside, or the dismissal has run out.
+	SetAsideNone SetAsideKind = "none"
+	// SetAsideUntil is: set aside until SetAsideState.Until.
+	SetAsideUntil SetAsideKind = "until"
+	// SetAsidePermanent is: set aside for good.
+	SetAsidePermanent SetAsideKind = "permanent"
+)
+
+// SetAsideState is one user's choice about one contact, and nothing else
+// about the contact.
+type SetAsideState struct {
+	Kind SetAsideKind
+	// Until is set only when Kind is SetAsideUntil.
+	Until *time.Time
+}
+
+// SetAside reads whether a user has set a lapsed contact aside, for a job tick
+// or a bus delivery. It reads only: a user changes the choice through the
+// product's own routes.
+type SetAside interface {
+	// Contact answers one user's choice about one contact right now. It is
+	// the user's own choice and never a colleague's. It answers only for an
+	// active user who connected the unit, and any other user answers ErrForbidden. A contact or a user
+	// that does not exist answers none, so an id cannot be used to probe. An id
+	// that is not a canonical UUID answers ErrInvalid.
+	Contact(ctx context.Context, user UserID, contact string) (SetAsideState, error)
+
+	// Contacts is Contact for up to MaxResponsible contacts in one call, so a
+	// nightly job does not ask once per contact. Every contact asked about is in
+	// the answer, keyed by the id as given. More than MaxResponsible answers
+	// ErrInvalid.
+	Contacts(ctx context.Context, user UserID, contacts []string) (map[string]SetAsideState, error)
 }

@@ -58,6 +58,8 @@ Records, deals and mail in Margince, by page:
 - Where is my Worklist, and how do I snooze or pin? → [Your day](your-day.md)
 - How do I see all my tasks? → [Your day](your-day.md)
 - How do I see my weekly review or plan my week? → [Your week](your-week.md)
+- An extension suggested a record for a message. What do I do? → [Suggested links](suggested-links.md)
+- How do I link a deal to another deal, a company or a contact? → [Links between records](deal-links.md)
 - How do I attach or upload a file to a contact, company or deal? → [Documents and files](documents-and-files.md)
 - How do I import, export, archive or delete? → [What is kept, what is destroyed](retention-exports-and-deletion.md)
 - What does the import preview show, and how do I correct companies with a spreadsheet? → [Importing data](importing-data.md)
@@ -111,6 +113,10 @@ Records, deals and mail in Margince, by page:
   lead sees.
 - [Your week](your-week.md): the frozen weekly review, what it counts and will
   not claim, and planning a week.
+- [Suggested links](suggested-links.md): the queue of records an extension
+  suggests for a message, and how to accept or decline one.
+- [Links between records](deal-links.md): linking a deal to a deal, a company
+  or a contact with a type, and finding deals by link.
 - [Performance and saved reports](sales-reporting.md): graphs, targets, scheduled editions, comparisons and exports.
 - [Progress and sales goals](progress-and-sales-goals.md): closed revenue against
   the goal of a seller or a team, and how a manager drafts and publishes the goals.

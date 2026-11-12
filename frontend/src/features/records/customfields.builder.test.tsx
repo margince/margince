@@ -1,8 +1,10 @@
 /** @vitest-environment happy-dom */
 import "@testing-library/jest-dom/vitest";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { cleanup, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { pickOption } from "../../design-system/select-testing";
 import { ToastProvider, ToastRegion } from "../../design-system/toast";
 import { LocaleProvider } from "../../i18n";
 import { en } from "../../i18n/en";
@@ -24,17 +26,25 @@ function builder(
   const onCancel = vi.fn();
   // The real region, not a spy. The builder owes a reader a sentence on screen
   // with no completion mark beside it, and a `vi.fn()` would prove only a call.
+  // The kinds an installed extension declared, seeded where the directory reads
+  // them so the builder offers the record type without a request.
+  const kinds = new QueryClient();
+  kinds.setQueryData(["record-kinds"], {
+    data: [{ name: "ext:alpha:visit", display_name: "Visit" }],
+  });
   wrap(
-    <ToastProvider>
-      <FieldBuilder
-        object="company"
-        pending={false}
-        onSubmit={onSubmit}
-        onCancel={onCancel}
-        {...overrides}
-      />
-      <ToastRegion />
-    </ToastProvider>,
+    <QueryClientProvider client={kinds}>
+      <ToastProvider>
+        <FieldBuilder
+          object="company"
+          pending={false}
+          onSubmit={onSubmit}
+          onCancel={onCancel}
+          {...overrides}
+        />
+        <ToastRegion />
+      </ToastProvider>
+    </QueryClientProvider>,
   );
   return { user, onSubmit, onCancel };
 }
@@ -117,6 +127,25 @@ describe("FieldBuilder", () => {
         label: "Renewal date",
         type: "date",
       }),
+    );
+  });
+
+  it("submits a record field with the one kind it points at", async () => {
+    const { user, onSubmit } = builder();
+    await user.type(screen.getByLabelText(/Label/i), "Last visit");
+    await user.click(
+      screen.getByRole("button", { name: en["cf.type.record"] }),
+    );
+    const add = screen.getByRole("button", { name: "Add field" });
+    expect(add).toBeDisabled();
+    await pickOption(
+      user,
+      screen.getByRole("combobox", { name: en["cf.recordKind"] }),
+      "Visit",
+    );
+    await user.click(add);
+    expect(onSubmit).toHaveBeenCalledWith(
+      expect.objectContaining({ type: "record", options: ["ext:alpha:visit"] }),
     );
   });
 

@@ -935,6 +935,9 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "reporting.pinnedSettings": "Zuvor gespeicherte Einstellungen",
   "reporting.unallocated": "Nicht zugewiesen",
   "reporting.overallocated": "Zu viel zugewiesen",
+  "reporting.goalsRow": "Umsatzziele {year} · 12 Monate",
+  "reporting.openGoals": "Umsatzziele öffnen",
+  "reporting.allocatedCover": "Ziele der Mitglieder decken {amount}",
   "reporting.targetFor": "Ziel für",
   "reporting.targetStatus": "Zielstatus",
   "reporting.activeTargets": "Aktive Ziele",
@@ -1570,7 +1573,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "reporting.compare.ratio": "{ratio}×",
   "reporting.compare.no_target": "Kein Umsatzziel für dieses Quartal",
   "reporting.compare.no_targetBody":
-    "Leg unter Ziele ein Ziel für gewonnenen Umsatz für diesen Bereich und dieses Quartal fest, um Abstand und Deckung zu sehen. Kein Ziel ist kein Ziel von null.",
+    "Veröffentliche Umsatzziele für diesen Bereich und dieses Quartal oder leg unter Ziele ein Ziel für gewonnenen Umsatz fest, um Abstand und Deckung zu sehen. Kein Ziel ist kein Ziel von null.",
   "reporting.compare.fx_missing":
     "Für einige Deal-Beträge fehlt ein Wechselkurs",
   "reporting.compare.fx_missingBody":
@@ -1609,7 +1612,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "reporting.end": "Enddatum (nicht eingeschlossen)",
   "reporting.bookings_trend": "Gewonnener Umsatz im Verlauf",
   "reporting.stage_distribution": "Offene Pipeline nach Phase",
-  "reporting.owner_attainment": "Gewonnener Umsatz nach Verantwortung",
+  "reporting.owner_attainment": "Gewonnener Umsatz nach Mitglied",
   "reporting.stage_age": "Zeit in der aktuellen Phase",
   "reporting.sdr_outcomes": "Termine und angenommene Übergaben",
   "reporting.target_progress": "Fortschritt zum Ziel",
@@ -2684,6 +2687,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "history.field.cohort_promoted": "Zugeordnete Nachrichten",
   "history.field.corrected": "Ergebnis korrigiert",
   "history.field.disposition": "Einstufung",
+  "history.field.link_suggestion": "Verknüpfungsvorschlag",
+  "history.field.record_link": "Verknüpfung",
   "history.field.domain": "Domain",
   "history.field.merged_from_id": "Zusammengeführt aus",
   "history.field.merged_into_id": "Zusammengeführt in",
@@ -2725,6 +2730,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "history.field.display_name": "Name",
   "history.field.domains": "Domains",
   "history.field.due_at": "Fällig",
+  "history.field.extension_relationship_types": "Erweiterungs-Beziehungstypen",
   "history.field.email": "E-Mail",
   "history.field.ended_at": "Beendet",
   "history.field.expected_close_date": "Voraussichtlicher Abschluss",
@@ -4847,6 +4853,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "timeline.kind.task": "Aufgabe",
   "timeline.kind.message": "Nachricht",
   "timeline.kind.change": "Datensatz",
+  "timeline.kind.extension": "Erweiterung",
+  "timeline.kind.signal": "Signal",
   "timeline.withheld": "Inhalt nur für Teilnehmende",
   "compose.deadRecipients":
     "E-Mails an {addresses} kommen nicht an: Die letzte Zustellung wurde abgelehnt, und seitdem war keine erfolgreich. Sende trotzdem oder verwende eine andere Adresse.",
@@ -6440,6 +6448,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "deals.filterAcquisitionAll": "Alle Quellen",
   "deals.filterProbability": "Abschlusschance",
   "deals.filterProbabilityAll": "Jede Abschlusschance",
+  "deals.filterLinkType": "Verknüpft als",
+  "deals.filterLinkTypeAll": "Jede Verknüpfungsart",
   "deals.filterStatus": "Status",
   "deals.filterStatusAll": "Jeder Status",
   "deals.statusOpen": "Offen",
@@ -6983,6 +6993,15 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "brief.readings.leadsDue": "Nächste Fälligkeit {value}",
   "brief.rail": "Kontext",
   "brief.rail.numbers": "Kennzahlen",
+  "extensionReports.withheld":
+    "Zurückgehalten: zu wenige Datensätze für eine Anzeige",
+  "extensionReports.noValue": "Kein Wert",
+  "extensionReports.excluded_one":
+    "{count} Datensatz ist für dich durch eine Feldberechtigung ausgeblendet.",
+  "extensionReports.excluded_other":
+    "{count} Datensätze sind für dich durch eine Feldberechtigung ausgeblendet.",
+  "extensionReports.failed":
+    "Die Berichte deiner Erweiterungen konnten nicht geladen werden.",
   "brief.deck.later": "Später",
   "brief.deck.showMore": "Ganze Nachricht anzeigen",
   "brief.deck.showLess": "Weniger anzeigen",
@@ -8128,7 +8147,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "analytics.overview.pipelineAll": "Alle Pipelines nutzen",
   "analytics.overview.setTarget": "Ziele setzen",
   "analytics.overview.targetWho":
-    "Wer Ziele verwalten darf, meist Admins oder die Vertriebsleitung, kann eines setzen.",
+    "Wer Umsatzziele verwaltet, meist Admins oder die Vertriebsleitung, kann sie festlegen.",
   "analytics.overview.targetWhoShort":
     "Das können meist Admins oder die Vertriebsleitung.",
   "analytics.overview.sinceTitle": "Seit der letzten Erfassung",
@@ -8435,6 +8454,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "analytics.field.host_user_id": "Organisiert von",
   "analytics.field.kind": "Aktivitätstyp",
   "analytics.field.last_activity_at": "Letzte Aktivität",
+  "analytics.field.link_type": "Verknüpft als",
   "analytics.field.lost_reason": "Verlustgrund",
   "analytics.field.loss_reason": "Verlustgrund aus der Liste",
   "analytics.field.loss_reason_state": "Wie der Verlustgrund gesetzt wurde",
@@ -8644,7 +8664,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "analytics.myTargets": "Meine Ziele",
   "analytics.targetOf": "{actual} von {target}",
   "analytics.noTargetSet": "Kein Ziel festgelegt",
-  "analytics.noTargetSetActual": "{actual} bisher in diesem Monat",
+  "analytics.noTargetSetMonth": "Kein Ziel für diesen Monat festgelegt",
   "analytics.meetingsAsTheyStand":
     "Von dir organisierte Termine nach aktuellem Status. Ohne Datumsfilter.",
   "analytics.meetingsBooked": "Gebucht",
@@ -13440,6 +13460,9 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "cf.type.multiselect": "Mehrfachauswahl",
   "cf.type.picklist": "Auswahlliste",
   "cf.type.boolean": "Ja/Nein",
+  "cf.type.record": "Datensatz wählen",
+  "cf.recordKind": "Art des Datensatzes",
+  "cf.recordKindPlaceholder": "Art wählen",
   "cf.builder.addTo": "Feld zu {object} hinzufügen",
   "cf.builder.open": "Neues Feld",
   "cf.builder.noCode": "Ohne Code",
@@ -17178,6 +17201,26 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Worklist-Eintrag als erledigt markiert",
   "webhooks.event.activity.marked_handled.when":
     "Jemand markiert einen Worklist-Eintrag als erledigt, da er auf anderem Weg bearbeitet wurde.",
+  "webhooks.event.activity.link_suggestion_changed.label":
+    "Verknüpfungsvorschlag gemacht oder entschieden",
+  "webhooks.event.activity.link_suggestion_changed.when":
+    "Eine Erweiterung schlägt vor, zu welchem Datensatz eine Nachricht gehört, oder jemand nimmt einen Vorschlag an oder lehnt ihn ab.",
+  "webhooks.event.record_link.changed.label":
+    "Verknüpfung hinzugefügt oder entfernt",
+  "webhooks.event.record_link.changed.when":
+    "Jemand verknüpft einen Deal, ein Unternehmen oder einen Kontakt mit einem anderen Datensatz oder entfernt eine Verknüpfung.",
+  "linkSuggestions.title": "Verknüpfungsvorschläge",
+  "linkSuggestions.reason": "{unit}: {reason}",
+  "linkSuggestions.target": "{subject} zu {record} ({kind})",
+  "linkSuggestions.noSubject": "Eine Nachricht ohne Betreff",
+  "linkSuggestions.kind.contact": "Kontakt",
+  "linkSuggestions.kind.company": "Unternehmen",
+  "linkSuggestions.kind.deal": "Deal",
+  "linkSuggestions.kind.project": "Projekt",
+  "linkSuggestions.accept": "Dort ablegen",
+  "linkSuggestions.reject": "Nicht dort",
+  "linkSuggestions.unavailable":
+    "Die Verknüpfungsvorschläge konnten nicht gelesen werden. Versuche es später erneut.",
   "webhooks.event.activity.readiness_recorded.label":
     "Bereitschaft für einen Termin geändert",
   "webhooks.event.activity.readiness_recorded.when":
@@ -18564,6 +18607,12 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "filters.tab.leads": "Leads",
   "filters.matchLeads_one": "Passender Lead: {count}",
   "filters.matchLeads_other": "Passende Leads: {count}",
+  "filters.matchExtension_one": "Passender Datensatz ({kind}): {count}",
+  "filters.matchExtension_other": "Passende Datensätze ({kind}): {count}",
+  "filters.new.extension": "Neuer Filter: {kind}",
+  "filters.switch.body.extension":
+    "Die Bedingungen werden gelöscht, da sie Felder einer Datensatzart nennen.",
+  "unit.extension": "Datensätze ({kind})",
   "filters.date.on": "An einem Datum",
   "filters.date.daysAgo": "Vor Tagen",
   "filters.date.mode": "Wie das Datum angegeben wird",
@@ -19223,6 +19272,17 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Dieser Deal hat noch kein Unternehmen. Trage es unter „Details bearbeiten“ ein, um einen Termin zu buchen.",
   "deal.committee.card": "Gremium",
   "deal.committee.change": "Stakeholder ändern oder entfernen",
+  "deal.links.card": "Verknüpfungen",
+  "deal.links.add": "Verknüpfung hinzufügen",
+  "deal.links.none": "Dieser Deal ist mit keinem anderen Datensatz verknüpft.",
+  "deal.links.unavailable": "Die Verknüpfungen konnten nicht geladen werden.",
+  "deal.links.outgoing": "Von diesem Deal: {type}",
+  "deal.links.incoming": "Zu diesem Deal: {type}",
+  "deal.links.remove": "Entfernen",
+  "deal.links.type": "Verknüpfungsart",
+  "deal.links.typePlaceholder": "Art wählen",
+  "deal.links.search": "Datensatz zum Verknüpfen suchen",
+  "deal.links.cancel": "Abbrechen",
 
   // The Worklist's own words: the ranked queue, its dials, and the phrase
   // for every fact the server sends as a closed vocabulary.
@@ -22192,10 +22252,17 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "progress.reading": "Fortschritt wird gelesen",
   "progress.myTitle": "Fortschritt",
   "progress.teamTitle": "Team-Fortschritt",
-  "progress.heading": "{whose} · {scope} · {period} · Zahlen bis {cutoff}",
-  "progress.closedRevenue": "Abgeschlossener Umsatz",
+  "progress.closedRevenue": "Gewonnener Umsatz",
   "progress.goal": "Ziel",
   "progress.goalLine": "Ziel für den Zeitraum: {goal}",
+  "progress.figuresUpTo": "Zahlen bis {cutoff}",
+  "progress.ofGoalLine": "Ziel von {goal}",
+  "progress.toGo": "Noch {amount} offen",
+  "progress.noGoalFor": "Für {period} ist kein Umsatzziel veröffentlicht.",
+  "progress.whoSetsGoals":
+    "Wer Umsatzziele verwaltet, kann eines veröffentlichen.",
+  "progress.setGoals": "Umsatzziele festlegen",
+  "progress.openInAnalytics": "In Analytics öffnen",
   "progress.goalIncompleteTeamLine":
     "Ziele unvollständig: Mindestens einem Teammitglied fehlt ein Monatsziel, bisher {subtotal}",
   "progress.goalIncompleteLine":
@@ -22217,11 +22284,11 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "progress.goalMet": "Ziel erreicht",
   "progress.aboveGoal": "{amount} über dem Ziel",
   "progress.belowGoal": "{amount} unter dem Ziel",
-  "progress.viewClosedDeals": "Abgeschlossene Deals ansehen",
+  "progress.viewClosedDeals": "Gewonnene Deals ansehen",
   "progress.readings": "Umsatzwerte",
   "progress.productSales": "Produktverkäufe",
   "progress.serviceSales": "Services und Projekte",
-  "progress.planned": "Geplanter Umsatz",
+  "progress.planned": "Offene Pipeline",
   "progress.plannedAt": "Offene Deals, Stand {at}",
   "progress.unclassified": "Nicht zugeordnet",
   "progress.unclassifiedDetail":
@@ -22239,7 +22306,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Einige Mitglieder sind ausgeblendet, darum ist auch das Teamziel ausgeblendet.",
   "progress.months": "Monate {year}",
   "progress.definition":
-    "Abgeschlossener Umsatz ist der Wert der im Zeitraum gewonnenen Deals, dieselbe Zahl wie in Analytics. Das Ziel ist die Summe der monatlichen Umsatzziele im Zeitraum. Ein Jahresziel braucht alle zwölf Monate.",
+    "Gewonnener Umsatz ist der Wert der im Zeitraum gewonnenen Deals, dieselbe Zahl wie in Analytics. Das Ziel ist die Summe der veröffentlichten monatlichen Umsatzziele im Zeitraum. Ein Jahresziel braucht alle zwölf Monate.",
   "progress.work": "Aktuelle Arbeit",
   "progress.work.leads": "Leads",
   "progress.work.deals": "Deals",
@@ -22256,16 +22323,12 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "progress.work.unnamed": "Lead ohne Namen",
   "progress.work.empty": "In dieser Liste ist nichts offen.",
   "progress.work.more": "Mehr anzeigen",
-  "progress.plannedAhead": "Geplant, noch nicht abgeschlossen",
+  "progress.plannedAhead": "Offene Pipeline, noch nicht gewonnen",
   "progress.rail": "Ziel und Definition",
-  "progress.definitionTitle": "Was zählt",
-  "progress.goalBasis": "Woher das Ziel kommt",
   "progress.goalFor": "Ziel für {period}",
   "progress.goalMonths": "Monate mit Ziel",
   "progress.goalMonthsSet": "{set} von {needed}",
-  "progress.goalBasisNote":
-    "Das Ziel ist die Summe der veröffentlichten Monatsziele.",
-  "progress.ofGoal": "Abgeschlossener Umsatz von {name} gegenüber dem Ziel",
+  "progress.ofGoal": "Gewonnener Umsatz von {name} gegenüber dem Ziel",
   "progress.yearLine": "{year} bisher: {closed} von {goal} ({percent} %)",
   "progress.work.note": "Jetzt offen, unabhängig vom Zeitraum.",
   "progress.work.saleProduct": "Produkt",
@@ -22275,8 +22338,12 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "progress.work.saleNone": "Nicht zugeordnet",
   "progress.work.overdue": "Überfällig",
   "progress.work.outside": "Außerhalb des Zeitraums",
-  "goals.controls": "Jahr und Mitglied",
   "goals.viewProgress": "Fortschritt ansehen",
+  "goals.draftTotal": "{amount} im Entwurf",
+  "goals.change": "Ziele ändern",
+  "goals.start":
+    "Gib ein Jahresziel ein und verteile es, oder leg jeden Monat einzeln fest. Erst die Veröffentlichung zählt.",
+  "goals.publishReason": "Grund: {reason}",
   "goals.seller": "Mitglied",
   "goals.reading": "Umsatzziele werden gelesen",
   "goals.planTitle": "Umsatzziele von {name} für {year}",

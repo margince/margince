@@ -46,6 +46,7 @@ Every delivery with the standard body is this envelope, with the event's own fie
 | [`activity.captured`](#activitycaptured) | activity | 1 |
 | [`activity.disposition_recorded`](#activitydisposition_recorded) | activity | 1 |
 | [`activity.invitation_answered`](#activityinvitation_answered) | activity | 1 |
+| [`activity.link_suggestion_changed`](#activitylink_suggestion_changed) | activity | 1 |
 | [`activity.marked_handled`](#activitymarked_handled) | activity | 1 |
 | [`activity.readiness_recorded`](#activityreadiness_recorded) | activity | 1 |
 | [`activity.updated`](#activityupdated) | activity | 1 |
@@ -157,6 +158,7 @@ Every delivery with the standard body is this envelope, with the event's own fie
 | [`project.health_assessed`](#projecthealth_assessed) | project | 1 |
 | [`project.phase_changed`](#projectphase_changed) | project | 1 |
 | [`project.updated`](#projectupdated) | project | 1 |
+| [`record_link.changed`](#record_linkchanged) | dynamic | 1 |
 | [`relationship_nudge.decided`](#relationship_nudgedecided) | contact | 1 |
 | [`retention.applied`](#retentionapplied) | dynamic | 1 |
 | [`retention.restricted`](#retentionrestricted) | activity | 1 |
@@ -237,6 +239,20 @@ Payload for activity.invitation_answered. One reader answered a calendar invitat
 |---|---|---|---|
 | `data.activity_id` | string (uuid) | yes |  |
 | `data.response` | string: `accepted`, `tentative`, `declined` | yes |  |
+
+### `activity.link_suggestion_changed`
+
+Record: `activity` · version 1
+
+Payload for activity.link_suggestion_changed. An extension proposed a record a message may belong to, or a reader accepted or rejected one (activities/linksuggestion.go). A proposal attaches nothing. Accepting it files the message through the ordinary relink, which announces activity.updated as well. Who decided is on the audit row, not on the wire.
+
+| Field | Type | Always present | What it is |
+|---|---|---|---|
+| `data.activity_id` | string (uuid) | yes |  |
+| `data.status` | string | yes | One of proposed, accepted or rejected. |
+| `data.suggestion_id` | string (uuid) | yes |  |
+| `data.target_id` | string (uuid) | yes |  |
+| `data.target_type` | string | yes | The kind of record the suggestion names, one of contact, company, deal or project. |
 
 ### `activity.marked_handled`
 
@@ -1544,6 +1560,18 @@ Payload for project.updated, a column patch on the project row. It is not emitte
 | Field | Type | Always present | What it is |
 |---|---|---|---|
 | `data.changed_fields` | object | yes | What this update touched, incl. runtime cf_* custom fields. |
+
+### `record_link.changed`
+
+Record: `dynamic` · version 1
+
+Payload for record_link.changed. A typed link was made or removed. The subject is the record the link starts on (deal, company or contact), so only a subscriber who may see that record gets the event. It names the link and its type. It does not name the record on the other end, which that subscriber may not be allowed to see.
+
+| Field | Type | Always present | What it is |
+|---|---|---|---|
+| `data.link_id` | string (uuid) | yes |  |
+| `data.link_type` | string | yes | A core type word, or `ext:<unit>:<type>`. |
+| `data.status` | string | yes | One of added or removed. |
 
 ### `relationship_nudge.decided`
 

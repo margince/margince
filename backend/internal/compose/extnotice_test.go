@@ -19,6 +19,26 @@ func TestAJobTickCannotSendANotice(t *testing.T) {
 	}
 }
 
+// A delivery has nobody behind it and may still send, so a flag found while a
+// mail is delivered reaches someone. The send gets past the refusal and meets
+// the rate limit, which an unattended send is held to like any other.
+func TestADeliveryMaySendANoticeAndATickMayNot(t *testing.T) {
+	const unit = "delivery-unit"
+	for range extensionNoticesPerMinute {
+		extensionNotices.Allow(unit)
+	}
+	authority := func(ctx context.Context) (context.Context, error) { return ctx, nil }
+	delivery := deliveryRuntimeFor(context.Background(), unit, "1.0.0", "subscription/flag", extensionRuntimeBinding{})
+	core := extensionCore{unit: unit, unattended: delivery.unattended, notifies: delivery.deliversNotices, authority: authority}
+	if _, err := core.Notices().Send(context.Background(), validNotice()); !errors.Is(err, extension.ErrRateLimited) {
+		t.Errorf("a delivery's send = %v, want it past the refusal and on to ErrRateLimited", err)
+	}
+	tick := jobRuntimeFor(context.Background(), unit, "1.0.0", "job/nightly", extensionRuntimeBinding{})
+	if tick.deliversNotices {
+		t.Error("a job tick may send a notice")
+	}
+}
+
 func TestANoticeNamesOneRecipientAndAKnownRecord(t *testing.T) {
 	good := validNotice()
 	for name, mutate := range map[string]func(*extension.NoticeRequest){

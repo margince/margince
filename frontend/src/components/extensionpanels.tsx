@@ -4,17 +4,17 @@
 import type { ExtensionDescriptor } from "@composition/extensions";
 import { Puzzle } from "lucide-react";
 import { useId } from "react";
-import { CardBoundary } from "../../design-system/cardboundary";
-import { Eyebrow } from "../../design-system/eyebrow";
-import { Stack } from "../../design-system/stack";
-import { useT } from "../../i18n";
-import { grants } from "../../lib/capability";
-import type { EntityKind } from "../../lib/entity";
+import { CardBoundary } from "../design-system/cardboundary";
+import { Eyebrow } from "../design-system/eyebrow";
+import { Stack } from "../design-system/stack";
+import { useT } from "../i18n";
+import { grants } from "../lib/capability";
+import type { EntityKind } from "../lib/entity";
 import {
   type ExtensionPanelRegistry,
   isExtensionRbacObject,
-} from "../../lib/extensions";
-import { useMe } from "../../lib/session";
+} from "../lib/extensions";
+import { useMe } from "../lib/session";
 import {
   type ExtensionPanelSlot,
   panelsForSlot,

@@ -3,7 +3,10 @@
 
 import type { components } from "../../api/schema";
 import { ErrorLine } from "../../design-system/errorline";
-import { SegmentBar, type SegmentBarParts } from "../../design-system/readings";
+import {
+  SegmentBar,
+  type SegmentBarParts,
+} from "../../design-system/segmentbar";
 import { formatNumber, formatPercent } from "../../format/format";
 import { type Locale, useLocale, usePlural, useT } from "../../i18n";
 import { formatSeconds, switchedSentence } from "./ai-call-figures";

@@ -235,6 +235,9 @@ func anonymizeContactRecord(ctx context.Context, tx pgx.Tx, id ids.UUID, eraser 
 		err = scrubContactGraphTraces(ctx, tx, id, subjectEmails, subjectAccounts, subjectName, linkedInHandles)
 	}
 	if err == nil {
+		err = redactSubjectExtensionSignals(ctx, tx, ids.From[ids.ContactKind](id))
+	}
+	if err == nil {
 		err = clearExtensionRows(ctx, tx, eraser.extensions, "retention", causeRetention, map[extdecl.RecordKind][]ids.UUID{extdecl.Contact: {id}})
 	}
 	return err
@@ -249,6 +252,9 @@ func purgeAnonymizedContactJudgments(ctx context.Context, tx pgx.Tx, id ids.UUID
 	}
 	// The cached brief is the broadest judgement of the set: a model's prose.
 	if err := purgeSubjectBriefCache(ctx, tx, ids.From[ids.ContactKind](id)); err != nil {
+		return err
+	}
+	if err := deleteSubjectRecordLinks(ctx, tx, id); err != nil {
 		return err
 	}
 	var err error

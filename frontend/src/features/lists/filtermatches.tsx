@@ -11,15 +11,16 @@ import { Panel, PanelBody } from "../../design-system/panel";
 import { QueryStates } from "../../design-system/querystates";
 import { formatNumber } from "../../format/format";
 import { type PluralBase, useLocale, usePlural, useT } from "../../i18n";
-import type { MessageKey } from "../../i18n/en";
 import { useFilterPreview, type VocabularyField } from "../../lib/filterdata";
 import {
-  MATCH_LABEL,
   type ObjectTab,
-  RESOURCE_OF,
-  UNIT_LABEL,
+  resourceOf,
+  useTabWords,
 } from "../../lib/filtersaddress";
-import { labelFor } from "../../lib/labelfor";
+import {
+  kindColumnLabels,
+  useRecordKindDirectory,
+} from "../../lib/recordkinds";
 import {
   encode,
   fieldsNamed,
@@ -56,11 +57,14 @@ type Preview = ReturnType<typeof useFilterPreview>;
  */
 export function MatchCount({
   label,
+  params = {},
   count,
   stale,
   failed,
 }: Readonly<{
   label: PluralBase;
+  /** What the label interpolates besides the count. */
+  params?: Readonly<Record<string, string>>;
   count: number | undefined;
   stale: boolean;
   failed: boolean;
@@ -92,7 +96,7 @@ export function MatchCount({
       aria-busy={stale}
       data-stale={stale ? "true" : undefined}
     >
-      {plural(label, count, { count: formatNumber(count, locale) })}
+      {plural(label, count, { ...params, count: formatNumber(count, locale) })}
     </span>
   );
 }
@@ -145,15 +149,18 @@ export function FilterMatches({
   const t = useT();
   const exportRun = useFilterExport();
   const answer = preview.data;
-  const unit = t(labelFor(UNIT_LABEL, tab));
-  const resource = RESOURCE_OF[tab];
+  const words = useTabWords()(tab);
+  const directory = useRecordKindDirectory().data?.data ?? [];
+  const unit = words.unit;
+  const resource = resourceOf(tab);
   return (
     <Panel
       title={t("filters.resultsTitle")}
       titleAction={
         <span className="filters-result-head">
           <MatchCount
-            label={MATCH_LABEL[tab]}
+            label={words.match}
+            params={words.matchParams}
             count={answer?.match_count}
             stale={preview.isFetching && !preview.isFetchingNextPage}
             failed={preview.isError}
@@ -188,6 +195,7 @@ export function FilterMatches({
                 fields={fields}
                 named={named}
                 unit={unit}
+                columnLabels={kindColumnLabels(resourceOf(tab), directory)}
                 emptyNote={t(
                   andJoined ? "filters.noMatches" : "filters.noMatchesLoosen",
                   { records: unit },
@@ -222,8 +230,9 @@ export function FilterOutcome({
   tree: Group;
   vocabulary: VocabularyRead;
 }>) {
-  const preview = useFilterPreview(RESOURCE_OF[tab], tree);
+  const preview = useFilterPreview(resourceOf(tab), tree);
   const shown = useResultsShown(tree, preview);
+  const wordsOf = useTabWords();
   return (
     <>
       {/* Only beside an editor the reader can use: while the fields are
@@ -233,7 +242,7 @@ export function FilterOutcome({
           shown={shown}
           empty={tree.children.length === 0}
           complete={isComplete(tree)}
-          records={labelFor(UNIT_LABEL, tab)}
+          records={wordsOf(tab).unit}
         />
       )}
       {shown && (
@@ -273,7 +282,7 @@ function WaitingLine({
   shown: boolean;
   empty: boolean;
   complete: boolean;
-  records: MessageKey;
+  records: string;
 }>) {
   const t = useT();
   if (shown && complete) {
@@ -284,7 +293,7 @@ function WaitingLine({
       {shown
         ? t("filters.hint.update")
         : t(empty ? "filters.hint.start" : "filters.hint.finish", {
-            records: t(records),
+            records,
           })}
     </p>
   );

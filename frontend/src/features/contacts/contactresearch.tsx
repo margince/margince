@@ -1,4 +1,5 @@
 import type { components } from "../../api/schema";
+import { ExtensionPanels } from "../../components/extensionpanels";
 import { Panel, PanelBody } from "../../design-system/panel";
 import { SurfaceState, sectionState } from "../../design-system/surfacestate";
 import { useT } from "../../i18n";
@@ -134,6 +135,10 @@ function ContactRecordKeepingStack({ view }: Readonly<{ view: Contact360 }>) {
         entityType="contact"
         entityId={view.contact.id}
         actions={false}
+      />
+      <ExtensionPanels
+        slot="record_panel.contact"
+        record={{ type: "contact", id: view.contact.id }}
       />
     </>
   );
