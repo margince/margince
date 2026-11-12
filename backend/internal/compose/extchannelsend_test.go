@@ -340,3 +340,15 @@ func TestAUnitIsRefusedAMessageCarryingFilesItCannotPutAnywhere(t *testing.T) {
 		t.Errorf("the unit was handed %q despite carrying none of the message's files", sender.got.Body)
 	}
 }
+
+// A zero activity crosses as none, so the unit's own check refuses it instead
+// of recording a link to the all-zero uuid.
+func TestAZeroActivityCrossesTheSeamAsNone(t *testing.T) {
+	if got := activityRef(ids.ActivityID{}); got != "" {
+		t.Errorf("a zero activity crossed as %q", got)
+	}
+	activity := ids.From[ids.ActivityKind](ids.NewV7())
+	if got := activityRef(activity); got != activity.String() {
+		t.Errorf("activity %v crossed as %q", activity, got)
+	}
+}

@@ -8,6 +8,8 @@ UPDATE ext.ext_openchannel_inbound SET body = '\x'::bytea WHERE body IS NULL;
 
 ALTER TABLE ext.ext_openchannel_inbound ALTER COLUMN body SET NOT NULL;
 
+ALTER TABLE ext.ext_openchannel_inbound DROP COLUMN body_bytes;
+
 DELETE FROM ext.ext_openchannel_outbound;
 
 ALTER TABLE ext.ext_openchannel_outbound DROP COLUMN activity_id;

@@ -102,7 +102,7 @@ func (s unitChannelSender) SendMessage(ctx context.Context, _ connector.Auth, ms
 	}
 	receipt, err := s.transport.channel.Send(ctx, rt, extension.OutboundMessage{
 		Member:     s.member,
-		ActivityID: msg.ActivityID.String(),
+		ActivityID: activityRef(msg.ActivityID),
 		// The provider plus the account id ARE the recipient key, exactly as the
 		// dispatcher built them. The display handle is deliberately not carried:
 		// a handle can be released and re-claimed, so nothing may route on it.
@@ -219,4 +219,13 @@ func unitConnectionLive(ctx context.Context, transport unitTransport, member ext
 			transport.unit, transport.channel.Provider, err)
 	}
 	return live, nil
+}
+
+// activityRef is the activity as the published surface spells it, empty for
+// none, so a unit's own "no activity" check sees a zero id as missing.
+func activityRef(id ids.ActivityID) string {
+	if id.IsZero() {
+		return ""
+	}
+	return id.String()
 }

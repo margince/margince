@@ -16,6 +16,13 @@ ALTER TABLE ext.ext_openchannel_outbound DROP COLUMN recipient;
 -- The timeline entry this attempt sent, as the core handed it over.
 ALTER TABLE ext.ext_openchannel_outbound ADD COLUMN activity_id uuid NOT NULL;
 
+-- The size a listing shows, kept apart from the body so it outlives it.
+ALTER TABLE ext.ext_openchannel_inbound ADD COLUMN body_bytes integer;
+
+UPDATE ext.ext_openchannel_inbound SET body_bytes = octet_length(body);
+
+ALTER TABLE ext.ext_openchannel_inbound ALTER COLUMN body_bytes SET NOT NULL;
+
 -- A landed message's body is the core's now.
 ALTER TABLE ext.ext_openchannel_inbound ALTER COLUMN body DROP NOT NULL;
 
