@@ -114,7 +114,7 @@ func TestTheHandlerReadsOnlyTheSignedInHumansOwnGmail(t *testing.T) {
 	human := principal.WithActor(context.Background(), principal.Principal{Type: principal.PrincipalHuman, UserID: me})
 	agent := principal.WithActor(context.Background(), principal.Principal{Type: principal.PrincipalAgent, UserID: me})
 
-	source := &askedFor{heldSignature: heldSignature{html: "<b>Rep</b>", granted: []string{readonlyScope}}}
+	source := &askedFor{html: "<b>Rep</b>", granted: []string{readonlyScope}}
 	h := ImportHandlers{Source: source}
 	w := httptest.NewRecorder()
 	h.GetMyGmailSignature(w, httptest.NewRequestWithContext(human, http.MethodGet, "/v1/me/email-signature/gmail", nil))
@@ -122,7 +122,7 @@ func TestTheHandlerReadsOnlyTheSignedInHumansOwnGmail(t *testing.T) {
 		t.Fatalf("status %d, read user %s provider %q; want 200 for the caller's own gmail", w.Code, source.user.UUID, source.provider)
 	}
 
-	refused := &askedFor{heldSignature: heldSignature{html: "<b>Rep</b>", granted: []string{readonlyScope}}}
+	refused := &askedFor{html: "<b>Rep</b>", granted: []string{readonlyScope}}
 	w = httptest.NewRecorder()
 	ImportHandlers{Source: refused}.GetMyGmailSignature(w, httptest.NewRequestWithContext(agent, http.MethodGet, "/v1/me/email-signature/gmail", nil))
 	if w.Code != http.StatusForbidden || refused.reads != 0 {

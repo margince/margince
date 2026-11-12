@@ -1,4 +1,3 @@
-import { useId } from "react";
 import { useAssignableUserOptions } from "../../components/assigneepicker";
 import {
   RosterFailedLine,
@@ -10,51 +9,26 @@ import {
   assignedRecord,
 } from "../../components/recordassignments.queries";
 import { ActionRow } from "../../design-system/actionrow";
-import { AppLink } from "../../design-system/applink";
-import {
-  SummaryFields,
-  summaryPartsWithout,
-  summarySentence,
-} from "../../design-system/approvalsummary";
 import {
   Button,
-  Disclosure,
   Field,
   type FieldControl,
-  Modal,
   Textarea,
   TextInput,
 } from "../../design-system/atoms";
 import { DateInput, isoOrBlank } from "../../design-system/dateinput";
-import { DecisionEvidence } from "../../design-system/decisioncard.content";
-import {
-  decisionEvidence,
-  withoutRepeatedLead,
-} from "../../design-system/decisioncard.payload";
-import { DrawerBody, DrawerHead } from "../../design-system/drawerbands";
 import { ErrorLine } from "../../design-system/errorline";
 import { refuseUnreadableField } from "../../design-system/formvalidity";
-import { Heading } from "../../design-system/heading";
 import { Select } from "../../design-system/select";
 import { isRealCalendarDay } from "../../format/calendarday";
-import { formatDateTime } from "../../format/format";
-import { useLocale, useT } from "../../i18n";
+import { useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
-import { approvalHref } from "../../lib/approvalhref";
-import { summaryWords } from "../../lib/approvalpreviewfields";
-import { useApproval } from "../../lib/approvalread";
-import type { Approval } from "../../lib/approvals.queries";
-import { resolveDisplay, stagedDayFormatter } from "./approvaldisplay";
 import {
   EDITABLE_FIELDS,
   type EditableField,
   humanizeKind,
 } from "./approvalkind";
-import { useApprovalNames } from "./approvalresponsibility";
-import { ApprovalDecider, ApprovalTarget } from "./approvaltarget";
 import "./approvalrow.css";
-import { QueryGate } from "../../design-system/querystates";
-import { useViewerZone } from "../../lib/viewerzone";
 import "../../design-system/querystates.css";
 
 // The two slots an ApprovalRow hands to `DecisionCard`: the "view everything"
@@ -95,214 +69,6 @@ export function editableStrings(
   return Object.entries(change)
     .filter((entry): entry is [string, string] => typeof entry[1] === "string")
     .map(([field]) => ({ field, as: "text" }) as const);
-}
-
-/**
- * AC-2: the row's "view everything" affordance — the proposal's own fields, the
- * evidence behind them and the timestamps the summary/evidence-chip row
- * necessarily elides.
- */
-export function ApprovalDetailModal({
-  approvalId,
-  open,
-  onClose,
-}: Readonly<{ approvalId: string; open: boolean; onClose: () => void }>) {
-  const t = useT();
-  const { locale } = useLocale();
-  // An approval is a thing the reader must act on, so its timestamps belong on
-  // the reader's own clock rather than the record's.
-  const zone = useViewerZone();
-  const headingId = useId();
-  const detail = useApproval(approvalId, open);
-  return (
-    <Modal open={open} onClose={onClose} labelledBy={headingId} intent="drawer">
-      <DrawerHead>
-        <Heading size="large" id={headingId} className="t-h2">
-          {t("decision.detail")}
-        </Heading>
-      </DrawerHead>
-      <DrawerBody>
-        {open && (
-          <QueryGate query={detail} pendingLabel={t("decision.detailLoading")}>
-            {(approval) => (
-              <>
-                <ApprovalDetailBody
-                  approval={approval}
-                  locale={locale}
-                  zone={zone}
-                />
-                {/* A pending request is answered on its decision card; the
-                    detail only reads it. */}
-                {approval.status === "pending" && (
-                  <AppLink
-                    href={approvalHref(approval.id)}
-                    className="link-button"
-                    onClick={onClose}
-                  >
-                    {t("decision.openToDecide")}
-                  </AppLink>
-                )}
-              </>
-            )}
-          </QueryGate>
-        )}
-      </DrawerBody>
-    </Modal>
-  );
-}
-
-/**
- * What "view everything" shows.
- *
- * Ordered the way a reader reads a decision rather than the way the row is
- * stored: the sentence saying what is being asked, then what the proposal says
- * in named fields, then when it was asked, then the quoted evidence behind it.
- *
- * The summary leads and used to be absent entirely. It is the one field the
- * server documents as prose ("the sentence a human reads before deciding"), and
- * a dialog that opened on `deal_id` while omitting it was showing the reader
- * everything except the question.
- *
- * Only the raw payload stays behind the disclosure, and only for a kind that has
- * already said what its fields mean — there it is reference material for
- * somebody checking what the server actually staged. The target version and the
- * `agent:<id>` that proposed it are gone from this surface entirely: neither
- * names a contact or describes a change, so a reader can do nothing with them,
- * and one click away rather than zero does not make them useful.
- */
-function ApprovalDetailBody({
-  approval,
-  locale,
-  zone,
-}: Readonly<{
-  approval: Approval;
-  locale: ReturnType<typeof useLocale>["locale"];
-  zone: string;
-}>) {
-  const t = useT();
-  const change = (approval.proposed_change ?? {}) as Record<string, unknown>;
-  const approvalNames = useApprovalNames([approval]);
-  const readerZone = useViewerZone();
-  const display = resolveDisplay(
-    approval.kind,
-    change,
-    t,
-    stagedDayFormatter(locale, readerZone),
-    approvalNames,
-    approval.requested_decider_id,
-    approval.assignee_inactive,
-    approval.preview,
-    locale,
-    readerZone,
-  );
-  const sentence = summarySentence(approval);
-  const named = withoutRepeatedLead(display, sentence).filter(
-    (entry) => entry.value !== null,
-  );
-  // The raw payload is shown ONCE, and where it goes says what it is. A kind
-  // that named its fields has already told the reader what the proposal says,
-  // so the keys behind that are reference material; a kind that named none has
-  // nothing else to show, so they are the content.
-  const rawPayload = <RawPayload change={change} />;
-  return (
-    <div className="form-stack">
-      {sentence && <p className="t-body">{sentence}</p>}
-      <SummaryFields
-        parts={summaryPartsWithout(
-          approval.summary_parts,
-          new Set(named.map((entry) => entry.field)),
-        )}
-        words={summaryWords(t)}
-      />
-      <ApprovalTarget approval={approval} />
-      <ApprovalDecider approval={approval} />
-      {named.length > 0
-        ? named.map((entry) => (
-            <FieldLine
-              key={entry.field}
-              name={entry.label}
-              value={entry.value ?? ""}
-            />
-          ))
-        : rawPayload}
-      {askedOn(approval, locale, zone, t).map(([label, value]) => (
-        <FieldLine key={label} name={label} value={value} />
-      ))}
-      <DecisionEvidence
-        evidence={decisionEvidence(approval)}
-        collapsed={false}
-      />
-      {named.length > 0 && (
-        <Disclosure summary={t("decision.detailTechnical")}>
-          <div className="form-stack">{rawPayload}</div>
-        </Disclosure>
-      )}
-    </div>
-  );
-}
-
-// The payload as the wire spells it. A nested document prints as its JSON
-// rather than as "[object Object]".
-function RawPayload({
-  change,
-}: Readonly<{ change: Readonly<Record<string, unknown>> }>) {
-  return (
-    <>
-      {Object.entries(change).map(([key, value]) => (
-        <FieldLine
-          key={key}
-          name={key}
-          value={typeof value === "string" ? value : JSON.stringify(value)}
-        />
-      ))}
-    </>
-  );
-}
-
-/**
- * When the question was raised, and when it was settled.
- *
- * These two used to sit behind the technical disclosure, labelled `created_at`
- * and `decided_at` beside a uuid. They are not technical: how long a proposal
- * has been waiting is one of the few things on this dialog a reader actually
- * weighs, and it was filed with the debugging material because it arrived on
- * the wire next to it.
- *
- * The rest of that block is gone from this surface rather than moved. A target
- * version and a `proposed_by` of `agent:<id>` name no contact and describe no
- * change — there is nothing a reader can do with either, and putting them one
- * click away rather than zero does not make them useful.
- */
-function askedOn(
-  approval: Approval,
-  locale: ReturnType<typeof useLocale>["locale"],
-  zone: string,
-  t: ReturnType<typeof useT>,
-): [string, string][] {
-  const asked: [string, string][] = [
-    [
-      t("decision.detailAsked"),
-      formatDateTime(approval.created_at, locale, zone),
-    ],
-  ];
-  if (approval.decided_at) {
-    asked.push([
-      t("decision.detailDecided"),
-      formatDateTime(approval.decided_at, locale, zone),
-    ]);
-  }
-  return asked;
-}
-
-// One label over one value, set as prose whether the value is a contact's own
-// words or a uuid the wire spells.
-function FieldLine({ name, value }: Readonly<{ name: string; value: string }>) {
-  return (
-    <div className="field">
-      <span className="t-label">{name}</span>
-      <p className="approval-detail-value t-body">{value}</p>
-    </div>
-  );
 }
 
 /** Outcomes that keep the row mounted. Already-decided is not one: its refetch

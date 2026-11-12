@@ -1,0 +1,6 @@
+{
+  "verb": "get_scheduling_calendars",
+  "checks": [
+    "activity.create"
+  ]
+}

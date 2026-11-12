@@ -1,0 +1,10 @@
+{
+  "verb": "decide_approval_bundle",
+  "checks": [
+    "company.read",
+    "company.update"
+  ],
+  "takes": [
+    "approval_bundle"
+  ]
+}

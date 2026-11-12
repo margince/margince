@@ -1,0 +1,15 @@
+{
+  "tool": "change_offers",
+  "action": "archive_room",
+  "verb": "archive_deal_room",
+  "allowed_for": [
+    "admin",
+    "management",
+    "manager",
+    "ops"
+  ],
+  "refused_for": [
+    "read_only",
+    "rep"
+  ]
+}

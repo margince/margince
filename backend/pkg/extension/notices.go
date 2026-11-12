@@ -14,11 +14,11 @@ import "context"
 type NoticeRepo interface {
 	// Send raises one notice about a record and answers how many members it newly told.
 	//
-	// The recipient is resolved when the call is made, against live rights. A
-	// member who has left, was erased, or cannot open the record is left out,
-	// so zero is a normal answer and not an error. A record the caller cannot
-	// see answers ErrNotFound. A unit that sends too often answers
-	// ErrRateLimited, and the same call works later.
+	// Recipients are resolved at the call, against live rights. A member who
+	// left, was erased, or cannot open the record is left out, so zero is a
+	// normal answer. A record the caller cannot see answers ErrNotFound. A bus
+	// delivery acts as the unit's service member or as ActAs, and with neither
+	// answers ErrForbidden. Sending too often answers ErrRateLimited.
 	Send(ctx context.Context, in NoticeRequest) (NoticeSent, error)
 }
 
@@ -28,6 +28,12 @@ type NoticeRequest struct {
 	// who holds it.
 	Member string
 	Role   string
+	// ActAs is the member a bus delivery sends for. Leave it empty to send as
+	// the unit's service member, which stays when a colleague leaves. A unit
+	// with none declared answers ErrForbidden. A named member must be active and
+	// hold one of the unit's user-scoped secrets. The notice is judged under
+	// their rights, as an ingest is. A send with a caller leaves it empty.
+	ActAs UserID
 	// Record is what the notice is about. The body the reader sees is a link to
 	// it. What a reader may see of the record is decided when they open it.
 	// No personal data is copied into the notice.
@@ -39,7 +45,16 @@ type NoticeRequest struct {
 	Key string
 }
 
-// RecordRef names one core record. Type is "contact", "company" or "deal".
+// contactRecord is a contact in the words core stores.
+const contactRecord = "contact"
+
+// NoticeRecordTypes are the record types a notice may be about: the identity
+// records a reader opens by id.
+func NoticeRecordTypes() []string {
+	return []string{contactRecord, string(KindCompany), string(KindDeal)}
+}
+
+// RecordRef names one core record. Type is one of NoticeRecordTypes.
 type RecordRef struct {
 	Type string
 	ID   string

@@ -1,0 +1,15 @@
+{
+  "tool": "read_workspace",
+  "action": "ai_model_rates",
+  "verb": "list_ai_model_rates",
+  "allowed_for": [
+    "admin",
+    "ops"
+  ],
+  "refused_for": [
+    "management",
+    "manager",
+    "read_only",
+    "rep"
+  ]
+}

@@ -1,0 +1,9 @@
+{
+  "verb": "archive_deal_room",
+  "checks": [
+    "deal_room.delete"
+  ],
+  "takes": [
+    "deal_room"
+  ]
+}

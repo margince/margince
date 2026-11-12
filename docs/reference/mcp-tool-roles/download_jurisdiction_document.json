@@ -1,0 +1,14 @@
+{
+  "tool": "read_details",
+  "action": "jurisdiction_document",
+  "verb": "download_jurisdiction_document",
+  "allowed_for": [
+    "admin",
+    "management",
+    "manager",
+    "ops",
+    "read_only",
+    "rep"
+  ],
+  "refused_for": []
+}

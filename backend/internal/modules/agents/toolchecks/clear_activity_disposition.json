@@ -1,0 +1,9 @@
+{
+  "verb": "clear_activity_disposition",
+  "checks": [
+    "activity.read"
+  ],
+  "takes": [
+    "activity"
+  ]
+}

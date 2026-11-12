@@ -244,6 +244,7 @@
     "disqualifyLead": "business",
     "downloadAttachment": "business",
     "downloadCorpusDocument": "business",
+    "downloadFinanceInvoicePdf": "capture",
     "downloadImportProblems": "business",
     "downloadImportTemplate": "business",
     "downloadJurisdictionDocument": "workspace_settings",
@@ -916,6 +917,7 @@
     "acceptAppliedDealChange": "deals",
     "acceptAttachmentExtraction": "documents",
     "acceptDealSuggestion": "deals",
+    "acceptLinkSuggestion": "activities",
     "acceptOffer": "offers",
     "acceptPartnerLead": "leads",
     "acceptPublicMeetingProposal": "booking_pages",
@@ -1065,6 +1067,7 @@
     "createProjectHealthAssessment": "projects",
     "createRecordAssignment": "sharing",
     "createRecordGrant": "sharing",
+    "createRecordLink": "search",
     "createRecordRole": "members",
     "createRelationship": "contacts",
     "createReportingReport": "reports",
@@ -1116,6 +1119,7 @@
     "deletePartnerStage": "pipelines",
     "deleteProductTranslation": "catalog",
     "deleteProviderData": "connectors",
+    "deleteRecordLink": "search",
     "deleteRetentionPolicy": "retention",
     "deleteVoiceCorpusSource": "voice",
     "deleteVoiceProfile": "voice",
@@ -1156,6 +1160,7 @@
     "downloadCorpusDocument": "knowledge",
     "downloadDataSubjectPackage": "privacy_requests",
     "downloadExportBundle": "exports",
+    "downloadFinanceInvoicePdf": "finance_source",
     "downloadImportProblems": "imports",
     "downloadImportTemplate": "imports",
     "downloadJurisdictionDocument": "installation",
@@ -1485,6 +1490,7 @@
     "listCompanyLinkCandidates": "companies",
     "listCompanyOfferedValues": "companies",
     "listCompanyProfileFields": "companies",
+    "listCompanyTypes": "companies",
     "listConfirmSubmissions": "consent",
     "listConnectorContainers": "connectors",
     "listConnectors": "connectors",
@@ -1518,6 +1524,8 @@
     "listDedupeCandidates": "duplicates",
     "listDomainQuestions": "capture_triage",
     "listExistingCustomerNotices": "consent",
+    "listExtensionHistory": "extensions",
+    "listExtensionReports": "extensions",
     "listExtensions": "extensions",
     "listFinanceSourceCustomers": "finance_source",
     "listForecastCalls": "forecast",
@@ -1542,6 +1550,8 @@
     "listLegalEntityMembers": "company_profile",
     "listLegalHolds": "retention",
     "listLegalReviews": "legal_reviews",
+    "listLinkSuggestions": "activities",
+    "listLinkTypes": "search",
     "listListHistory": "lists",
     "listListMembers": "lists",
     "listLists": "lists",
@@ -1571,6 +1581,8 @@
     "listProviderLocations": "ai_models",
     "listRecordAssignments": "sharing",
     "listRecordGrants": "sharing",
+    "listRecordKinds": "extensions",
+    "listRecordLinks": "search",
     "listRecordRoles": "members",
     "listRelationships": "contacts",
     "listReportRuns": "reports",
@@ -1724,6 +1736,7 @@
     "rejectApproval": "agent_limits",
     "rejectApprovalBundle": "agent_limits",
     "rejectCompany": "companies",
+    "rejectLinkSuggestion": "activities",
     "rejectOffer": "offers",
     "rejectVoiceDraft": "voice",
     "rejectVoiceProfileVersion": "voice",
@@ -2494,6 +2507,9 @@
     ],
     "download_corpus_document": [
       "knowledge"
+    ],
+    "download_finance_invoice_pdf": [
+      "finance_source"
     ],
     "download_import_problems": [
       "imports"
@@ -4581,6 +4597,9 @@
     ],
     "download_corpus_document": [
       "business"
+    ],
+    "download_finance_invoice_pdf": [
+      "capture"
     ],
     "download_import_problems": [
       "business"

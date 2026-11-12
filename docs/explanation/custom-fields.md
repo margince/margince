@@ -24,7 +24,7 @@ extra metadata layer on the path every read takes. One governed DDL path is the 
 
 ## What a custom field may be: the closed sets
 
-The types are `text`, `number`, `date`, `currency`, `picklist`, `multiselect` and `boolean`
+The types are `text`, `number`, `date`, `currency`, `picklist`, `multiselect`, `boolean` and `record`
 (`FieldTypes` in `engine.go`). The objects are `contact`, `company`, `deal`, `lead`, `project` and
 `contract` (`FieldObjects` in `engine.go`). The catalog's `CHECK` on `object` allows more than that
 list. The engine is the only writer of the table, so the list is what binds. There is no cap on how many
@@ -38,6 +38,10 @@ Each type maps to one column type:
   instead of the column.
 - `picklist` → `text` plus a generated `CHECK` constraint.
 - `multiselect` → a `text[]` that may be `NULL` (see [Fields with more than one choice](#fields-with-more-than-one-choice)).
+- `record` → a `text` that holds the id of one record. The field's single option names the record kind an
+  extension declared, such as `ext:<unit>:<kind>`. Creating the field is refused with `invalid_record_kind`
+  on `options` unless it names one registered kind and no other. A write is refused with `invalid_value` unless
+  the value is a UUID. Core does not yet check that the row exists, and the lists filter the value as text.
 
 The type names are written in three places: the engine's constants, the catalog's `CHECK` constraints
 (in `migrations/core/`), and `ports/fieldcatalog`. They must never drift apart. The port carries its own

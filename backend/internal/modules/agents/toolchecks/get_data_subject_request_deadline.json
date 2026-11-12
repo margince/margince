@@ -1,0 +1,6 @@
+{
+  "verb": "get_data_subject_request_deadline",
+  "checks": [
+    "privacy_request.read"
+  ]
+}

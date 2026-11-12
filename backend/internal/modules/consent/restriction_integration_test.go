@@ -58,7 +58,7 @@ func (e *dsrEnv) restrictions(t *testing.T, contact ids.ContactID) (rows int, le
 	return rows, level, through
 }
 
-func (e *dsrEnv) fulfilOverHTTP(t *testing.T, ctx context.Context, request ids.UUID) *httptest.ResponseRecorder {
+func (e *dsrEnv) fulfilOverHTTP(ctx context.Context, t *testing.T, request ids.UUID) *httptest.ResponseRecorder {
 	t.Helper()
 	h := NewHandlers(database.BindTo(e.pool, ids.From[ids.WorkspaceKind](e.ws)))
 	body := `{"status":"fulfilled","resolution":"restricted while the address is disputed","identity_check":"id_document"}`
@@ -75,11 +75,11 @@ func TestFulfillingARestrictionRequestRecordsOneRestriction(t *testing.T) {
 	contact := e.seedContact(t)
 	req := e.mustCreate(t, dsrKindRestriction, contact.String())
 
-	if w := e.fulfilOverHTTP(t, e.ctx, req.ID); w.Code != http.StatusOK {
+	if w := e.fulfilOverHTTP(e.ctx, t, req.ID); w.Code != http.StatusOK {
 		t.Fatalf("fulfilling a restriction request: %d %s", w.Code, w.Body)
 	}
 	// A replayed fulfil answers the closed request and records nothing more.
-	if w := e.fulfilOverHTTP(t, e.ctx, req.ID); w.Code != http.StatusOK {
+	if w := e.fulfilOverHTTP(e.ctx, t, req.ID); w.Code != http.StatusOK {
 		t.Fatalf("replaying the fulfilment: %d %s", w.Code, w.Body)
 	}
 
@@ -124,7 +124,7 @@ func TestOnlyAnAdminInTheAppFulfilsARestriction(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			contact := e.seedContact(t)
 			req := e.mustCreate(t, dsrKindRestriction, contact.String())
-			if w := e.fulfilOverHTTP(t, ctx, req.ID); w.Code != http.StatusForbidden {
+			if w := e.fulfilOverHTTP(ctx, t, req.ID); w.Code != http.StatusForbidden {
 				t.Fatalf("want 403, got %d %s", w.Code, w.Body)
 			}
 			if rows, _, _ := e.restrictions(t, contact); rows != 0 {
@@ -149,7 +149,7 @@ func TestARestrictionRequestIsNotClosedByHand(t *testing.T) {
 func TestARestrictionRequestNamingNoContactIsRefused(t *testing.T) {
 	e := setupDSR(t)
 	req := e.mustCreate(t, dsrKindRestriction, "anna.weber@brandt-automotive.de")
-	w := e.fulfilOverHTTP(t, e.ctx, req.ID)
+	w := e.fulfilOverHTTP(e.ctx, t, req.ID)
 	if w.Code != http.StatusUnprocessableEntity || validationField(t, w.Body.Bytes()) != fieldSubjectRef {
 		t.Fatalf("want 422 on subject_ref, got %d %s", w.Code, w.Body)
 	}

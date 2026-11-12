@@ -186,11 +186,16 @@ const SenderStampsCheckedStep = "recheck_colleague_sender_domains"
 // one seat's provenance and the second is a statement about the audience rather
 // than about who was present.
 func activityMembershipArm(p principal.Principal, alias string, arg func(any) int) string {
-	me := arg(p.UserID)
+	return activityMembershipForMemberSQL(alias, memberIdentitySQL(arg(p.UserID)))
+}
+
+// activityMembershipForMemberSQL is activityMembershipArm for a member set
+// given as SQL.
+func activityMembershipForMemberSQL(alias, members string) string {
 	return fmt.Sprintf(`(EXISTS (SELECT 1 FROM capture_import ci WHERE ci.activity_id = %[1]s.id AND ci.user_id IN (%[2]s))
 	   OR %[4]s
 	   OR EXISTS (SELECT 1 FROM activity_participant ap WHERE ap.activity_id = %[1]s.id AND ap.user_id IN (%[2]s) AND %[3]s))`,
-		alias, memberIdentitySQL(me), ParticipantStandsSQL("ap", alias), sharedMailboxReaderInSQL(alias, memberIdentitySQL(me)))
+		alias, members, ParticipantStandsSQL("ap", alias), sharedMailboxReaderInSQL(alias, members))
 }
 
 func contentGateFor(p principal.Principal, alias string, arg func(any) int) string {

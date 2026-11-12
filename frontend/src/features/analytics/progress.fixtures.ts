@@ -3,6 +3,7 @@
 
 import { deal } from "../../testing/brief.fixtures";
 import { REPORTING_FIXTURE_ZONE } from "../../testing/reporting.fixtures";
+import { jsonResponse } from "../../testing/story-utils";
 import type { WorkDeal } from "./progress.deals";
 import type {
   SalesGoalPlan,
@@ -223,6 +224,48 @@ export const goalRoster: SalesGoalRoster = {
     },
   ],
 };
+
+/** The year after: one plan is already published for it. */
+export const nextGoalRoster: SalesGoalRoster = {
+  year: goalRoster.year + 1,
+  currency: "EUR",
+  data: [
+    {
+      owner_id: "0194f8a0-0000-7000-8000-000000000002",
+      name: "Sam Okafor",
+      state: "published",
+      total_minor: 126000000,
+      can_edit: true,
+    },
+  ],
+};
+
+/**
+ * Answers the goals roster by the year asked: `current` for this calendar
+ * year, `next` for the one after, and an empty roster for any other. Call it
+ * after `installFetchStub`, whose routes cannot see the query.
+ */
+export function answerGoalRosters(
+  current: SalesGoalRoster,
+  next?: SalesGoalRoster,
+): void {
+  const routed = globalThis.fetch;
+  const thisYear = new Date().getFullYear();
+  globalThis.fetch = (input: RequestInfo | URL, init?: RequestInit) => {
+    const url = new URL(
+      input instanceof Request ? input.url : String(input),
+      globalThis.location.origin,
+    );
+    if (!url.pathname.endsWith("/analytics/sales-goals"))
+      return routed(input, init);
+    const year = Number(url.searchParams.get("year"));
+    const roster =
+      year === thisYear ? current : year === thisYear + 1 ? next : undefined;
+    return Promise.resolve(
+      jsonResponse(roster ?? { year, currency: current.currency, data: [] }),
+    );
+  };
+}
 
 /** What a seller reads: their published, seasonal year. */
 export const publishedPlan: SalesGoalPlan = {

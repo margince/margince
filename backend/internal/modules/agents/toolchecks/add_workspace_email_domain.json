@@ -1,0 +1,6 @@
+{
+  "verb": "add_workspace_email_domain",
+  "checks": [
+    "capture_settings.update"
+  ]
+}

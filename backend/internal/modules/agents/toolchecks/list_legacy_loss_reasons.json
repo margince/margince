@@ -1,0 +1,7 @@
+{
+  "verb": "list_legacy_loss_reasons",
+  "checks": [
+    "custom_field.update",
+    "deal.read"
+  ]
+}

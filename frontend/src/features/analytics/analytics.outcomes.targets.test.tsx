@@ -154,17 +154,12 @@ describe("the seat's figures against its own targets", () => {
     ).toBeTruthy();
   });
 
-  it("says no target is set, and still shows the month so far", async () => {
+  it("leads with the month so far and says below it that no target is set", async () => {
     showTargets({ bookings_won: { actual: 2_500_000 } });
 
     const text = await card(reportingMetricNames.bookings_won);
-    expect(text).toContain(en["analytics.noTargetSet"]);
-    expect(text).toContain(
-      en["analytics.noTargetSetActual"].replace(
-        "{actual}",
-        formatAnalyticsMoney(2_500_000, "EUR", "en"),
-      ),
-    );
+    expect(text).toContain(formatAnalyticsMoney(2_500_000, "EUR", "en"));
+    expect(text).toContain(en["analytics.noTargetSetMonth"]);
   });
 
   it("asks for the seat's own figures, per basis, for every targetable metric", async () => {
@@ -226,4 +221,27 @@ it("does not present incomplete first-qualification credit as exact attainment",
   expect(card.detail).toContain(
     "Some qualification ownership was not recorded.",
   );
+});
+
+it("reads a figure held against the published sales goals as a goal", () => {
+  const card = targetCard(
+    {
+      id: "bookings_won",
+      version: "1",
+      unit: "EUR",
+      value: 6_000_000,
+      target: 10_000_000,
+      target_actual: 6_000_000,
+      attainment: 60,
+      target_source: "sales_goals",
+      coverage: { status: "ok", withheld: false },
+      evidence: { metric: "bookings_won", context_id: "interval" },
+    },
+    reportingStoryEvaluation.context,
+    "Sales won",
+    (key, params) => translate("en", key, params),
+    "en",
+  );
+  expect(card.goal).toBe(true);
+  expect(card.detail).toContain("60% of the goal");
 });

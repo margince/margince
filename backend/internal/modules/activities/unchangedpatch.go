@@ -67,6 +67,9 @@ func (in UpdateActivityInput) movesAField(current crmcontracts.Activity) bool {
 	if in.CallOutcome != nil {
 		p.Set(fieldCallOutcome, callOutcomeOf(current), *in.CallOutcome)
 	}
+	if in.TaskType != nil {
+		p.Set(fieldTaskType, current.TaskType, *in.TaskType)
+	}
 	return !p.Empty()
 }
 

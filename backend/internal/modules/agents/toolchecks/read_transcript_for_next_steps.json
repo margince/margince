@@ -1,0 +1,11 @@
+{
+  "verb": "read_transcript_for_next_steps",
+  "checks": [
+    "activity.create",
+    "activity.read"
+  ],
+  "takes": [
+    "activity",
+    "transcript"
+  ]
+}

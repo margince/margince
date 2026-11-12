@@ -88,6 +88,8 @@ export function customFieldToFormField(
       };
     case "text":
       return { ...base, type: "text", maxLength: TEXT_LIMITS.document };
+    case "record":
+      return { ...base, type: "text" };
     default:
       // Exhaustive at COMPILE time over the contract's closed set of six scalar
       // types (CUSTOM-FIELDS-PARAM-1): a seventh added to crm.yaml makes this

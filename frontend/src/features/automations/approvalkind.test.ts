@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { stable } from "../../format/collate";
 import { LOCALES, translate, translatePlural } from "../../i18n";
 import {
   approvalAcceptLabel,
@@ -95,7 +96,7 @@ describe("what a reader may change before accepting", () => {
     const withDoer = Object.entries(EDITABLE_FIELDS)
       .filter(([, fields]) => fields.some((field) => field.as === "doer"))
       .map(([kind]) => kind)
-      .sort();
+      .sort(stable);
     expect(withDoer).toEqual(["commitment_task", "deal_follow_up"]);
   });
 

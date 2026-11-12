@@ -48,7 +48,7 @@ func armSuppression(ctx context.Context, tx pgx.Tx, kind string, hashes []string
 		ON CONFLICT (kind, value_hash) DO UPDATE
 		   SET lifted_at = NULL, lift_consent_event_id = NULL, lift_contact_id = NULL, created_at = now()
 		 WHERE NOT @replaying`,
-		pgx.StrictNamedArgs{"kind": kind, "hashes": hashes, "key": keyID, "replaying": replaying}); err != nil {
+		pgx.StrictNamedArgs{sqlArgKind: kind, "hashes": hashes, sqlArgKey: keyID, "replaying": replaying}); err != nil {
 		return fmt.Errorf("privacy: putting %s identifiers on the erasure list: %w", kind, err)
 	}
 	return nil
@@ -93,7 +93,7 @@ func LiftEmailSuppressionTx(ctx context.Context, tx pgx.Tx, email string, erased
 	if _, err := tx.Exec(ctx, `
 		UPDATE erasure_suppression SET lifted_at = now(), lift_consent_event_id = @consent, lift_contact_id = @contact
 		 WHERE kind = 'email' AND value_hash = ANY(@forms) AND lifted_at IS NULL`,
-		pgx.StrictNamedArgs{"forms": storekit.EmailSuppressionForms(email), "consent": consentEvent, "contact": contact}); err != nil {
+		pgx.StrictNamedArgs{"forms": storekit.EmailSuppressionForms(email), "consent": consentEvent, sqlArgContact: contact}); err != nil {
 		return fmt.Errorf("privacy: lifting an address from the erasure list: %w", err)
 	}
 	return nil

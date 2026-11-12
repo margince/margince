@@ -1,0 +1,15 @@
+{
+  "tool": "change_settings",
+  "action": "save_booking_alias",
+  "verb": "put_scheduling_alias",
+  "allowed_for": [
+    "admin",
+    "management",
+    "manager",
+    "ops",
+    "rep"
+  ],
+  "refused_for": [
+    "read_only"
+  ]
+}

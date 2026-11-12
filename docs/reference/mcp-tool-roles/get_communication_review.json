@@ -1,0 +1,14 @@
+{
+  "tool": "read_details",
+  "action": "communication_review",
+  "verb": "get_communication_review",
+  "allowed_for": [
+    "admin",
+    "management",
+    "manager",
+    "ops",
+    "read_only",
+    "rep"
+  ],
+  "refused_for": []
+}

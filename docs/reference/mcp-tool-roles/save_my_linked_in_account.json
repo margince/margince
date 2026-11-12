@@ -1,0 +1,14 @@
+{
+  "tool": "change_settings",
+  "action": "save_my_linkedin",
+  "verb": "save_my_linked_in_account",
+  "allowed_for": [
+    "admin",
+    "management",
+    "manager",
+    "ops",
+    "read_only",
+    "rep"
+  ],
+  "refused_for": []
+}

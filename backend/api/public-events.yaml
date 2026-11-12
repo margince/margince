@@ -48,6 +48,7 @@ components:
         - list.member_added
         - list.member_removed
         - list.evaluated
+        - record_link.changed
         - commission.accrued
         - commission.decided
         - contract.created
@@ -122,6 +123,7 @@ components:
         - activity.disposition_recorded
         - activity.marked_handled
         - activity.invitation_answered
+        - activity.link_suggestion_changed
         - activity.readiness_recorded
         - relationship_nudge.decided
         - notice.read
@@ -945,6 +947,27 @@ components:
       required: [reason]
       properties:
         reason: { type: string, description: 'chosen or bulk.' }
+      additionalProperties: false
+
+    PublicEventRecordLinkChanged:
+      type: object
+      x-event-type: record_link.changed
+      x-entity-type: dynamic
+      x-version: 1
+      description: >-
+        Payload for record_link.changed. A typed link was made or removed. The subject is the
+        record the link starts on (deal, company or contact), so only a subscriber who may see
+        that record gets the event. It names the link and its type. It does not name the record
+        on the other end, which that subscriber may not be allowed to see.
+      required: [link_id, link_type, status]
+      properties:
+        link_id: { type: string, format: uuid }
+        link_type:
+          type: string
+          description: A core type word, or `ext:<unit>:<type>`.
+        status:
+          type: string
+          description: One of added or removed.
       additionalProperties: false
 
     PublicEventListEvaluated:
@@ -2396,6 +2419,11 @@ components:
         call_outcome_cleared:
           type: boolean
           description: True when this update removed the call's outcome, so the call has none again and counts as contact as before.
+        task_type:
+          type: string
+          enum: [reply, reach_out, meet, review, decide, do]
+          x-enum-varnames: [TaskBecameReply, TaskBecameReachOut, TaskBecameMeet, TaskBecameReview, TaskBecameDecide, TaskBecameDo]
+          description: The task's new type, which decides its one step (absent when this update did not touch it). Task rows only.
         relinked:
           $ref: '#/components/schemas/PublicEventActivityRelinkedRef'
         direction:
@@ -2904,6 +2932,42 @@ components:
         response:
           type: string
           enum: [accepted, tentative, declined]
+      additionalProperties: false
+
+    PublicEventActivityLinkSuggestionChanged:
+      type: object
+      x-event-type: activity.link_suggestion_changed
+      x-entity-type: activity
+      x-version: 1
+      description: >-
+        Payload for activity.link_suggestion_changed. An extension proposed a
+        record a message may belong to, or a reader accepted or rejected one
+        (activities/linksuggestion.go). A proposal attaches nothing. Accepting
+        it files the message through the ordinary relink, which announces
+        activity.updated as well. Who decided is on the audit row, not on the
+        wire.
+      required:
+        - activity_id
+        - suggestion_id
+        - status
+        - target_type
+        - target_id
+      properties:
+        activity_id:
+          type: string
+          format: uuid
+        suggestion_id:
+          type: string
+          format: uuid
+        status:
+          type: string
+          description: One of proposed, accepted or rejected.
+        target_type:
+          type: string
+          description: The kind of record the suggestion names, one of contact, company, deal or project.
+        target_id:
+          type: string
+          format: uuid
       additionalProperties: false
 
     PublicEventActivityReadinessRecorded:

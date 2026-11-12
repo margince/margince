@@ -1,0 +1,15 @@
+{
+  "tool": "change_reports",
+  "action": "record_forecast_call",
+  "verb": "record_forecast_call",
+  "allowed_for": [
+    "admin",
+    "management",
+    "manager",
+    "ops"
+  ],
+  "refused_for": [
+    "read_only",
+    "rep"
+  ]
+}

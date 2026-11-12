@@ -48,6 +48,7 @@ import { DealBulkBar } from "./dealbulk";
 import { admittedDealFilters, useAppliedCompanyName } from "./dealdials";
 import type { Deal, Pipeline, Stage } from "./deals";
 import { dealRangeChips } from "./deals.rangefilters";
+import { useLinkTypes } from "./recordlinks.queries";
 
 // Bespoke selects for the filters whose option labels are runtime strings
 // (pipeline/stage/company names). A chip's option label is a MessageKey, so
@@ -420,6 +421,7 @@ export function useDealChips({
     withheld.has("company_id") ? undefined : query.filters.company_id,
   );
   const leading = useLeadingCurrencies();
+  const linkTypes = useLinkTypes().data;
   const offered = (chip: { key: string }) => !withheld.has(chip.key);
   const everyDealChip = dealFilterChips(stages, t, companyName);
   const rangeOf = (held: ReadonlySet<string>) =>
@@ -435,6 +437,7 @@ export function useDealChips({
       partnerOptions,
       partnerApplied,
       acquisitionSources,
+      linkTypes,
       retiredSuffix: t("deal.acquisitionRetired"),
     });
   return {

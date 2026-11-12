@@ -14,7 +14,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"time"
 
 	"github.com/jackc/pgx/v5"
 
@@ -86,6 +85,9 @@ func (s *Sink) captureActivity(ctx context.Context, tx pgx.Tx, rec connector.Nor
 	// prevent.
 	id, created := known, false
 	if !alreadyFiled {
+		if err := s.checkTaskAssignee(ctx, tx, rec, fields); err != nil {
+			return datasource.EntityRef{}, false, counterpartyDecision{}, err
+		}
 		id, created, err = s.upsertActivity(ctx, tx, rec, fields, birth)
 		if err != nil {
 			return s.upsertRefused(ctx, tx, id, err, rec, fields, birth, memberBound)
@@ -442,33 +444,6 @@ func (s *Sink) upsertActivity(
 	return id, false, nil
 }
 
-// settledFields fills in what the capture does not take as sent. That is the
-// time and its day anchor, the storable length, and the envelope's judgement.
-func settledFields(ctx context.Context, tx pgx.Tx, rec connector.NormalizedRecord, fields ActivityFields) (ActivityFields, error) {
-	var err error
-	if fields.DateOnly {
-		if fields.OccurredAt, err = dayAnchor(fields.OccurredAt); err != nil {
-			return fields, err
-		}
-	}
-	fields.OccurredAt = defaultOccurredAt(fields.OccurredAt)
-	fields.DurationSeconds = StorableDuration(fields.DurationSeconds)
-	fields.judged, err = judgeEnvelopeTx(ctx, tx, rec, fields)
-	return fields, err
-}
-
-// defaultOccurredAt fills a provider payload that carried no timestamp:
-// capture time is the honest fallback — better a coarse "when we saw
-// it" than a zero time sorting the record to the beginning of history.
-// A stamp outside the storable range is no timestamp either: no zone can
-// render it.
-func defaultOccurredAt(occurredAt time.Time) time.Time {
-	if occurredAt.IsZero() || !datasource.InstantInRange(occurredAt) {
-		return time.Now().UTC()
-	}
-	return occurredAt
-}
-
 func capturedActivityInsert(ctx context.Context, rec connector.NormalizedRecord, fields ActivityFields, birth birthDecision) (string, []any) {
 	occurredAt := fields.OccurredAt
 	audience, audienceReason := birth.bornAudience()
@@ -481,9 +456,11 @@ func capturedActivityInsert(ctx context.Context, rec connector.NormalizedRecord,
 		fields.occurredPrecision(),
 		nullableID(fields.InvitationFromSeat),
 		nullableString(fields.AgendaFingerprint),
+		nullableID(fields.AssigneeID), nullableTime(fields.DueAt),
 		nullableString(fields.CalendarUID),
+		fields.CalendarEvent,
 	}
-	query := `INSERT INTO activity(kind,channel_provider,subject,body,occurred_at,direction,source_system,source_id,source,captured_by,thread_key,counterparty_email,counterparty_outbound_attested,bulk_mail_attested,audience,audience_reason,has_calendar_part,host_user_id,language,raw_capture_id,duration_seconds,sent_by_colleague,calendar_method,foreign_link,sender_was_stranger,inbound_sender_authenticated,body_completeness,sender_is_machine,occurred_precision,invitation_sender,agenda_fingerprint,calendar_uid)
+	query := `INSERT INTO activity(kind,channel_provider,subject,body,occurred_at,direction,source_system,source_id,source,captured_by,thread_key,counterparty_email,counterparty_outbound_attested,bulk_mail_attested,audience,audience_reason,has_calendar_part,host_user_id,language,raw_capture_id,duration_seconds,sent_by_colleague,calendar_method,foreign_link,sender_was_stranger,inbound_sender_authenticated,body_completeness,sender_is_machine,occurred_precision,invitation_sender,agenda_fingerprint,assignee_id,due_at,calendar_uid,calendar_event)
  VALUES (` + storekit.Placeholders(args) + `) ON CONFLICT(source_system,source_id) WHERE source_system IS NOT NULL AND source_id IS NOT NULL DO NOTHING RETURNING id`
 	return query, args
 }

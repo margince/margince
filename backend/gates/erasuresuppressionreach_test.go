@@ -160,7 +160,7 @@ var selfBookingAdmissionSites = map[string]int{
 	"internal/platform/database/storekit/suppression.go": 1,
 	"internal/modules/contacts/contact_children.go":      1,
 	"internal/modules/activities/scheduling_public.go":   1,
-	"internal/compose/erasurereturn.go":                  1,
+	"internal/compose/erasurereturn/erasurereturn.go":    1,
 }
 
 func TestOnlyThePublicBookingPagePassesTheSelfBookingAdmission(t *testing.T) {

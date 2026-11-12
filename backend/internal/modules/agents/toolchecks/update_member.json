@@ -1,0 +1,9 @@
+{
+  "verb": "update_member",
+  "checks": [
+    "user_admin.update"
+  ],
+  "takes": [
+    "user"
+  ]
+}

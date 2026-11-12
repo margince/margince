@@ -1,0 +1,15 @@
+{
+  "tool": "change_relationships",
+  "action": "replace_intro_request",
+  "verb": "replace_intro_request",
+  "allowed_for": [
+    "admin",
+    "management",
+    "manager",
+    "ops",
+    "rep"
+  ],
+  "refused_for": [
+    "read_only"
+  ]
+}

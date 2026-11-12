@@ -117,6 +117,7 @@ type ListDealsInput struct {
 	CommercialMotion  *string
 	Priority          *string
 	AcquisitionSource *string
+	LinkType          *string
 	// SourceSystem and SourceID narrow, together, to the deal holding that id
 	// in the outside system.
 	SourceSystem *string

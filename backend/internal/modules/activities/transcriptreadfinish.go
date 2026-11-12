@@ -102,7 +102,7 @@ func finishTranscriptReadTx(ctx context.Context, tx pgx.Tx, readID ids.UUID, out
 	// progress rather than a field a contact edited, and nothing would ever
 	// be restored to it.
 	if _, err := storekit.AuditEvent(ctx, tx, "update", "transcript_read", readID, map[string]any{
-		"status": outcome.Status, "proposals": len(proposals),
+		fieldStatus: outcome.Status, "proposals": len(proposals),
 	}); err != nil {
 		return fmt.Errorf("audit transcript read finish: %w", err)
 	}

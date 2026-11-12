@@ -8,6 +8,7 @@ import { Button } from "../../design-system/atoms";
 import { Callout } from "../../design-system/callout";
 import { useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
+import { labelFor } from "../../lib/labelfor";
 import { problemMessageOf, unwrap } from "../../lib/problem";
 
 type GmailSignature = components["schemas"]["GmailSignatureImport"];
@@ -71,7 +72,7 @@ export function GmailSignatureImport({
           tone="warning"
           kind="outcome"
           live="status"
-          title={t(NOT_TAKEN[answer.state])}
+          title={t(labelFor(NOT_TAKEN, answer.state))}
         />
       )}
       {read.isError && (

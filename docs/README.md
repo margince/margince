@@ -190,6 +190,10 @@ ready before we need it, because the first date comes 24 hours after we learn of
   limit on it, and who it is for.
 - [agent-tools.md](reference/agent-tools.md): every agent tool, whether a human must approve it, and the pages
   that go with it.
+- [extension-record-kinds-links-signals-and-reports.md](reference/extension-record-kinds-links-signals-and-reports.md): the
+  what an extension can add to Margince: its own record kinds, links and reports.
+- [record-links.md](reference/record-links.md): typed links for deals, companies and contacts: types,
+  rights and routes.
 - [extension-privacy-and-retention.md](reference/extension-privacy-and-retention.md): how an extension's data
   follows core's privacy and retention rules, feature by feature.
 - [mcp-protocol.md](reference/mcp-protocol.md): how `/mcp` works: message forms, limits and client sign-in.
@@ -352,6 +356,7 @@ A generated page, and each `perfbench/` record, says so in its first line. Do no
 
 #### Extensions
 
+- [extensions-at-a-glance.md](explanation/extensions-at-a-glance.md): what an extension can add, in one table.
 - [extensibility.md](explanation/extensibility.md): how an extension adds to Margince, and the checks
   that keep it in line.
 

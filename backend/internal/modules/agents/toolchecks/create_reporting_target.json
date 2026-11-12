@@ -1,0 +1,11 @@
+{
+  "verb": "create_reporting_target",
+  "checks": [
+    "installation_settings.read",
+    "sales_target.create",
+    "sales_target.read"
+  ],
+  "takes": [
+    "me"
+  ]
+}

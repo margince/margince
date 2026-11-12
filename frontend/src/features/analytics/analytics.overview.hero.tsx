@@ -2,10 +2,12 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { ReactNode } from "react";
+import { AppLink } from "../../design-system/applink";
 import { Meter } from "../../design-system/readings";
 import { formatAnalyticsNumber } from "../../format/format";
 import { useLocale, useT } from "../../i18n";
 import { metricOf } from "./analytics.overview.readings";
+import { useProgressDoor } from "./progress.links";
 import {
   type ReportingEvaluation,
   type ReportingSelection,
@@ -18,8 +20,9 @@ type Comparison = NonNullable<
 >;
 
 /**
- * The one line under Sales won: the target it is read against. A target that
- * cannot be compared says why, with its fix, in place.
+ * The one line under Sales won: the goal it is read against, with the door to
+ * Progress when the goal is the sales goals. A goal that cannot be compared
+ * says why, with its fix, in place.
  */
 export function HeroAside({
   evaluation,
@@ -28,11 +31,12 @@ export function HeroAside({
 }: Readonly<{
   evaluation: ReportingEvaluation;
   onApply: (selection: ReportingSelection) => void;
-  // Who can set a target, for a quarter that has none.
+  // Who can set the goal, for a quarter that has none.
   targetSetup: ReactNode;
 }>) {
   const t = useT();
   const { locale } = useLocale();
+  const progress = useProgressDoor(evaluation.context.scope);
   const forecast = metricOf(evaluation, "forecast_landing");
   if (forecast?.coverage.withheld) return null;
   const comparison = forecast?.target_comparison;
@@ -42,6 +46,9 @@ export function HeroAside({
     comparison?.status === "target_reached"
   ) {
     const { currency } = evaluation.context;
+    // A goal summed from the sales goals is no stored target, and Progress
+    // reads the same sum month by month.
+    const door = comparison.target_id == null ? progress : undefined;
     return (
       <span>
         {comparison.status === "target_reached"
@@ -54,6 +61,12 @@ export function HeroAside({
                 locale,
               ),
             })}
+        {door && (
+          <>
+            {" · "}
+            <AppLink href={door.href}>{t(door.label)}</AppLink>
+          </>
+        )}
       </span>
     );
   }

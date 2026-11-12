@@ -1,0 +1,15 @@
+{
+  "tool": "read_workspace",
+  "action": "ai_routing",
+  "verb": "read_ai_routing",
+  "allowed_for": [
+    "admin",
+    "ops"
+  ],
+  "refused_for": [
+    "management",
+    "manager",
+    "read_only",
+    "rep"
+  ]
+}

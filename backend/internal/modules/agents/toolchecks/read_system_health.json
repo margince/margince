@@ -1,0 +1,9 @@
+{
+  "verb": "read_system_health",
+  "checks": [
+    "ai_diagnostics.read",
+    "data_task.read",
+    "job_health.read",
+    "job_health.read,data_task.read,embedding_reindex.read,installation_settings.update"
+  ]
+}

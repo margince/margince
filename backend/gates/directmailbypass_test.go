@@ -90,7 +90,7 @@ var directMailHolders = gatekit.Waive(map[string]string{
 		"granted access to: the link IS the act the operator performed, not a message about the " +
 		"relationship, and the recipient cannot use the room without receiving it",
 
-	"internal/compose/erasurereturn.go": "a single-use link an erased subject asked for, to be stored " +
+	"internal/compose/erasurereturn/erasurereturn.go": "a single-use link an erased subject asked for, to be stored " +
 		"again. The lane would write the address to comms_outbound before the click, which is the data " +
 		"the erasure removed, and its consent check refuses an erased address by design. The send is " +
 		"not audited or exported; the click that follows is, through the write shape",
@@ -154,15 +154,15 @@ var admissibleDirectMailPurposes = map[directMailPurpose]bool{
 // recipient asked for, or is the transport itself. The erasure return link is
 // a credential the erased subject asked for.
 var directMailPurposes = map[string]directMailPurpose{
-	"internal/compose/weeklymailjobs.go":          purposeOperatorDigest,
-	"internal/compose/briefmailjobs.go":           purposeOperatorDigest,
-	"internal/compose/notificationmailjobs.go":    purposeOperatorDigest,
-	"internal/compose/notificationdigestjobs.go":  purposeOperatorDigest,
-	"internal/modules/identity/handlers_users.go": purposeSeatCredential,
-	"internal/modules/identity/reset.go":          purposeSeatCredential,
-	"internal/modules/dealrooms/invitemail.go":    purposeBuyerRoomCredential,
-	"internal/compose/controllermailwiring.go":    purposeLaneTransport,
-	"internal/compose/erasurereturn.go":           purposeErasureReturn,
+	"internal/compose/weeklymailjobs.go":              purposeOperatorDigest,
+	"internal/compose/briefmailjobs.go":               purposeOperatorDigest,
+	"internal/compose/notificationmailjobs.go":        purposeOperatorDigest,
+	"internal/compose/notificationdigestjobs.go":      purposeOperatorDigest,
+	"internal/modules/identity/handlers_users.go":     purposeSeatCredential,
+	"internal/modules/identity/reset.go":              purposeSeatCredential,
+	"internal/modules/dealrooms/invitemail.go":        purposeBuyerRoomCredential,
+	"internal/compose/controllermailwiring.go":        purposeLaneTransport,
+	"internal/compose/erasurereturn/erasurereturn.go": purposeErasureReturn,
 }
 
 func TestOnlyRatifiedCodeMailsWithoutTheDeliveryLane(t *testing.T) {

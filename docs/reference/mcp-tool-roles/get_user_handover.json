@@ -1,0 +1,15 @@
+{
+  "tool": "read_workspace",
+  "action": "user_handover",
+  "verb": "get_user_handover",
+  "allowed_for": [
+    "admin"
+  ],
+  "refused_for": [
+    "management",
+    "manager",
+    "ops",
+    "read_only",
+    "rep"
+  ]
+}

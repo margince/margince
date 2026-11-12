@@ -1,0 +1,9 @@
+{
+  "verb": "preview_website_inquiry_assignment",
+  "checks": [
+    "activity.read",
+    "activity.update",
+    "lead.read",
+    "relationship.read"
+  ]
+}

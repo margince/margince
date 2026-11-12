@@ -89,6 +89,7 @@ func TestErasureSeesTheDeliveryWhoseSubjectLockItWaitedFor(t *testing.T) {
 				t.Fatal("erasure missed the delivery admitted before it obtained the subject key")
 			}
 			if incoming.ref != nil {
+				reapPastGrace(t, e, blob)
 				if _, _, err := blob.Get(ctx, incoming.ref.Key); !errors.Is(err, blobstore.ErrNotFound) {
 					t.Fatal("erasure retained incoming evidence", err)
 				}

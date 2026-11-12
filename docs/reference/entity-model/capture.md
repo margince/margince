@@ -227,7 +227,7 @@ The 28 tables owned by `capture`, as the migrations build them. [Back to the ent
 
 ## capture_connection
 
-33 columns · primary key `(id)` · referenced by 3 foreign keys
+34 columns · primary key `(id)` · referenced by 3 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
@@ -235,6 +235,7 @@ The 28 tables owned by `capture`, as the migrations build them. [Back to the ent
 | `account_bound_at` | `timestamp with time zone` |  |  |
 | `account_label` | `text` |  | Display-only name of the connected account (e.g. the mailbox address). |
 | `auth` | `bytea` |  |  |
+| `backup_owner_id` | `uuid` |  | Points at `app_user.id`. |
 | `connected_at` | `timestamp with time zone`, default `now()` | yes |  |
 | `connected_by` | `uuid` |  | Points at `app_user.id`. |
 | `context_tag_id` | `uuid` |  | Points at `tag.id`. |
@@ -269,6 +270,7 @@ The 28 tables owned by `capture`, as the migrations build them. [Back to the ent
 
 | Columns | Table | When the parent goes |
 |---|---|---|
+| `backup_owner_id` | `app_user` | deleting the parent keeps this row and clears the link |
 | `connected_by` | `app_user` | deleting the parent keeps this row and clears the link |
 | `context_tag_id` | `tag` | deleting the parent keeps this row and clears the link |
 | `legal_entity_id` | `legal_entity` | the parent cannot be deleted while this row points at it |
@@ -277,6 +279,7 @@ The 28 tables owned by `capture`, as the migrations build them. [Back to the ent
 
 **Rules**
 
+- `capture_connection_backup_owner_is_shared`: `CHECK (((backup_owner_id IS NULL) OR (user_id IS NULL)))`
 - `capture_connection_history_baseline_check`: `CHECK ((((history_baseline_date IS NULL) = (history_baseline_tz IS NULL)) AND ((history_baseline_date IS NULL) = (history_baseline_set_by IS NULL)) AND ((history_baseline_date IS NULL) = (history_baseline_set_at IS NULL))))`
 - `capture_connection_mail_posture_check`: `CHECK ((mail_posture = ANY (ARRAY['shared', 'classified', 'held'])))`
 - `capture_connection_provider_check`: `CHECK ((provider = ANY (ARRAY['gmail', 'gcal', 'gdocs', 'imap', 'graph', 'graphcal', 'whatsapp', 'telegram', 'offline_demo', 'test_mailbox'])))`

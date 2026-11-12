@@ -6,11 +6,12 @@
 package activities
 
 import (
+	"testing"
+	"time"
+
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
-	"testing"
-	"time"
 )
 
 func TestTaskIntentSurvivesAnUnrelatedEditAndClearsWithTheDeadline(t *testing.T) {

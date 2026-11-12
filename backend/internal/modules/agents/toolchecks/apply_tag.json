@@ -1,0 +1,11 @@
+{
+  "verb": "apply_tag",
+  "checks": [
+    "company.update,contact.update,deal.update,lead.update,project.update",
+    "tag.read"
+  ],
+  "takes": [
+    "company",
+    "tag"
+  ]
+}

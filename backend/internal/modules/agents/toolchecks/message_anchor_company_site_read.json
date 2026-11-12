@@ -1,0 +1,9 @@
+{
+  "verb": "message_anchor_company_site_read",
+  "checks": [
+    "company.read"
+  ],
+  "takes": [
+    "site_read"
+  ]
+}

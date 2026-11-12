@@ -1,0 +1,11 @@
+{
+  "verb": "enrich_contact_from_provider",
+  "checks": [
+    "company.read",
+    "contact.update"
+  ],
+  "takes": [
+    "contact",
+    "enrichable_contact"
+  ]
+}

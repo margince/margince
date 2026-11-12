@@ -21,6 +21,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/ports/connector"
 )
 
 // searchBranches declares one UNION branch per searchable entity: the
@@ -99,6 +100,32 @@ func snippetIsEvidence(entity string) bool {
 // corpus this was measured on, the top mail hit was kept for every prefix.
 const activityRankSample = 2000
 
+// rowSource renders the `FROM` the ranked branch reads its matches from.
+//
+// Mail several mailboxes captured is one hit, through the grouping every
+// timeline uses. where already holds the content gate, so every candidate is
+// readable.
+func (b searchBranch) rowSource(ctx context.Context, where string, arg func(any) int) string {
+	rows, mail := b.table, b.table == entityActivity
+	switch {
+	case b.rankSample > 0 && mail:
+		// A scoped copy samples apart from the rest, so copies cannot crowd
+		// distinct mail out; the read stays within twice the sample. One lateral
+		// read per part keeps a single copy of the gate in the statement.
+		rows = fmt.Sprintf("(SELECT sample.* FROM (VALUES (false), (true)) part(scoped)"+
+			" CROSS JOIN LATERAL (SELECT t.* FROM %s t WHERE %s AND %s = part.scoped LIMIT $%d) sample)",
+			b.table, where, connector.ScopedMailCopySQL("t"), arg(b.rankSample))
+		where = sqlTrue
+	case b.rankSample > 0:
+		rows = fmt.Sprintf("(SELECT t.* FROM %s t WHERE %s LIMIT $%d)", b.table, where, arg(b.rankSample))
+		where = sqlTrue
+	}
+	if mail {
+		return connector.MailCopyGroupFrom(ctx, rows, "t", where, sqlTrue, arg)
+	}
+	return fmt.Sprintf("%s t WHERE %s", rows, where)
+}
+
 // ownMatch is the predicate that finds a record by its own text: the name index,
 // or an identifier (whole or a fragment) the record carries. identifierPos
 // binds the query the first time an identifier arm asks for it.
@@ -113,6 +140,7 @@ func (b searchBranch) ownMatch(alias, tsquery string, identifierPos identifierBi
 // Identifier tiers exceed the bounded text rank; the cursor carries the complete score.
 const (
 	sqlFalse                = "false"
+	sqlTrue                 = "true"
 	companyAssociationScore = 4
 	identifierPrefixScore   = 8
 	identifierExactScore    = 16

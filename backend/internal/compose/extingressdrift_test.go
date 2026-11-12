@@ -38,6 +38,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/shared/gatekit"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/ports/connector"
 	"github.com/margince/margince/backend/pkg/extension"
 )
@@ -133,6 +134,8 @@ var waivedActivityFields = gatekit.Waive(map[string]string{
 	"CalendarMethod": "empty is the right answer for a unit, for the reason HasCalendarPart's is: the method " +
 		"is read from a calendar part of a raw RFC822 message, and a unit hands over no parts to read it from",
 	"CalendarUID": "empty is the right answer for a unit, for the reason CalendarMethod's is: the UID is read " +
+		"from the same calendar part, which a unit never hands over",
+	"CalendarEvent": "nil is the right answer for a unit, for the reason CalendarUID's is: the event is read " +
 		"from the same calendar part, which a unit never hands over",
 	"BodyCompleteness": "zero, stored as complete, is the right answer for a unit, for the reason HasCalendarPart's is: the " +
 		"fact comes from the core's MIME walk over a raw RFC822 message, and a unit hands over text it " +
@@ -321,6 +324,12 @@ func TestThePublishedActivityTypesMatchTheCores(t *testing.T) {
 		mirrored, ok := published.FieldByName(field.Name)
 		if !ok {
 			continue // reported by the mirror test above
+		}
+		// A user id is the one pair whose published type is a named string and
+		// whose core type is a UUID. The extingress.go's namedAssignee carries it over.
+		// The sink refuses an id that is not a UUID or not a colleague.
+		if mirrored.Type == reflect.TypeFor[extension.UserID]() && field.Type == reflect.TypeFor[ids.UUID]() {
+			continue
 		}
 		if mirrored.Type != field.Type {
 			t.Errorf("ActivityFields.%s is %s on the published surface and %s in the core", field.Name, mirrored.Type, field.Type)

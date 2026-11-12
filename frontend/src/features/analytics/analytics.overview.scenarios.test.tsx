@@ -226,10 +226,10 @@ const SIGNATURES: Readonly<
     team: shows(/Of the 0 rounds/),
   },
   noTarget: {
-    sales: shows("No sales target for this quarter"),
+    sales: shows("No sales goal for this quarter"),
     prospecting: shows(/^No monthly target set\./),
   },
-  wrongTargetScope: { sales: shows("Pick one team to compare with a target") },
+  wrongTargetScope: { sales: shows("Pick one team to compare with a goal") },
   notEnoughHistory: {
     sales: shows(/^History starts with the next capture, /),
     prospecting: async () => {
@@ -331,7 +331,7 @@ const SIGNATURES: Readonly<
       ).toBeNull();
     },
   },
-  targetReached: { sales: shows("Target reached") },
+  targetReached: { sales: shows("Goal reached") },
   landingBases: { sales: shows("Won + Likely deals") },
   legacyLanding: { sales: shows("Landing") },
   noForecast: { sales: shows("Unavailable") },

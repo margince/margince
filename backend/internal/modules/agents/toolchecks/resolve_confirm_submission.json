@@ -1,0 +1,11 @@
+{
+  "verb": "resolve_confirm_submission",
+  "checks": [
+    "company.read",
+    "contact.update",
+    "relationship.read"
+  ],
+  "takes": [
+    "confirm_submission"
+  ]
+}

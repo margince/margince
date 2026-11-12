@@ -1,0 +1,15 @@
+{
+  "tool": "read_details",
+  "action": "team_exceptions",
+  "verb": "get_team_exceptions",
+  "allowed_for": [
+    "admin",
+    "management",
+    "manager",
+    "ops",
+    "read_only"
+  ],
+  "refused_for": [
+    "rep"
+  ]
+}

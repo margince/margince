@@ -20,8 +20,10 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/margince/margince/backend/internal/compose/analyticsquery"
+	"github.com/margince/margince/backend/internal/compose/erasurereturn"
 	"github.com/margince/margince/backend/internal/compose/homecache"
 	"github.com/margince/margince/backend/internal/compose/magic"
+	"github.com/margince/margince/backend/internal/compose/partnersteps"
 	"github.com/margince/margince/backend/internal/compose/salesprogress"
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/ai"
@@ -72,7 +74,7 @@ func newContactsHandlers(pool *pgxpool.Pool) contactsHandlers {
 		WithDealOpener(leadDealOpener{deals: deals.NewStore(InstallationDB(pool), DealsInstallation())}).
 		WithShareRequests(contactShareRequests(pool)).
 		WithLeadArrivals(newLeadWorkTasks(InstallationDB(pool), slog.Default())).
-		WithPartnerNextSteps(partnerNextStepTasks{tasks: activities.NewStore(InstallationDB(pool))}).
+		WithPartnerNextSteps(partnersteps.New(activities.NewStore(InstallationDB(pool)))).
 		WithInstallationRenamer(installationRenamer(pool)).
 		WithConsumerMail(capture.MatcherTx)
 }
@@ -182,6 +184,17 @@ func newCollectionsHandlers(pool *pgxpool.Pool) collectionsHandlers {
 	return collections.NewHandlers(NewCollectionsStore(pool))
 }
 
+// newErasureReturnHandlers builds the return door with the booking page's own
+// contacts store and purpose, so a returned subject is stored as a booker is.
+func newErasureReturnHandlers(pool *pgxpool.Pool) erasureReturnHandlers {
+	db := InstallationDB(pool)
+	consentStore := consent.NewStore(db)
+	bookingPurpose := func(ctx context.Context) (ids.UUID, error) {
+		return bookingConsentAdapter{store: consentStore}.ScopedPurpose(ctx, nil)
+	}
+	return erasurereturn.NewHandlers(pool, db, newContactsStore(db), consentStore, bookingPurpose)
+}
+
 // wireSurfaces binds the handler sets built after the literal, each over a
 // dependency the literal had to build first.
 func (s *Server) wireSurfaces(pool *pgxpool.Pool, log *slog.Logger) {
@@ -250,7 +263,7 @@ func (s *Server) wireAnalyticsSurface(pool *pgxpool.Pool) {
 	s.analyticsContextHandlers = newAnalyticsContextHandlers(
 		InstallationDB(pool), func() time.Time { return time.Now().UTC() },
 	)
-	s.salesProgressReading = salesprogress.Reading{DB: InstallationDB(pool), Reports: reportingService, Members: reportingMembers, Measurable: readerMeasurableOwners, Deals: deals.NewStore(InstallationDB(pool), DealsInstallation())}
+	s.salesProgressReading = salesprogress.Reading{DB: InstallationDB(pool), Reports: reportingService, Deals: deals.NewStore(InstallationDB(pool), DealsInstallation())}
 	s.sdrSummaryHandlers = newSdrSummaryHandlers(
 		InstallationDB(pool), func() time.Time { return time.Now().UTC() },
 	).withTargets(reportingService)

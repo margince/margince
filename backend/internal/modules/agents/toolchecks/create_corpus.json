@@ -1,0 +1,6 @@
+{
+  "verb": "create_corpus",
+  "checks": [
+    "knowledge_corpus.create"
+  ]
+}

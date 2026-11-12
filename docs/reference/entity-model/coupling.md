@@ -10,7 +10,7 @@ An area with no inbound key is a candidate for a separate module. Its outbound k
 
 | Area | Tables | Columns | Inbound keys | Outbound keys | Outbound cascades |
 |---|--:|--:|--:|--:|--:|
-| [activities](activities.md) | 33 | 407 | 25 | 38 | 18 |
+| [activities](activities.md) | 34 | 423 | 25 | 38 | 18 |
 | [agents](agents.md) | 3 | 35 | 0 | 5 | 1 |
 | [ai](ai.md) | 12 | 207 | 0 | 3 | 0 |
 | [aiactivity](aiactivity.md) | 1 | 25 | 0 | 2 | 0 |
@@ -18,13 +18,13 @@ An area with no inbound key is a candidate for a separate module. Its outbound k
 | [assignments](assignments.md) | 2 | 27 | 0 | 5 | 3 |
 | [assurance](assurance.md) | 9 | 108 | 0 | 7 | 5 |
 | [automation](automation.md) | 3 | 34 | 1 | 2 | 0 |
-| [capture](capture.md) | 28 | 271 | 4 | 27 | 15 |
+| [capture](capture.md) | 28 | 272 | 4 | 28 | 15 |
 | [collections](collections.md) | 13 | 108 | 1 | 10 | 6 |
 | [commissions](commissions.md) | 1 | 18 | 0 | 2 | 2 |
 | [comms](comms.md) | 1 | 44 | 4 | 4 | 1 |
 | [compose](compose.md) | 48 | 433 | 3 | 39 | 36 |
 | [consent](consent.md) | 22 | 303 | 2 | 38 | 20 |
-| [contacts](contacts.md) | 50 | 701 | 75 | 34 | 12 |
+| [contacts](contacts.md) | 50 | 703 | 75 | 34 | 12 |
 | [continuity](continuity.md) | 1 | 8 | 0 | 0 | 0 |
 | [contracts](contracts.md) | 1 | 29 | 2 | 3 | 0 |
 | [customfields](customfields.md) | 1 | 19 | 0 | 1 | 0 |
@@ -32,7 +32,7 @@ An area with no inbound key is a candidate for a separate module. Its outbound k
 | [deals](deals.md) | 29 | 422 | 25 | 19 | 5 |
 | [finance](finance.md) | 5 | 86 | 0 | 3 | 0 |
 | [forecasting](forecasting.md) | 4 | 98 | 1 | 2 | 0 |
-| [identity](identity.md) | 22 | 204 | 157 | 6 | 5 |
+| [identity](identity.md) | 22 | 204 | 158 | 6 | 5 |
 | [initiatives](initiatives.md) | 5 | 45 | 0 | 2 | 1 |
 | [integrations](integrations.md) | 5 | 61 | 3 | 3 | 1 |
 | [introductions](introductions.md) | 1 | 31 | 0 | 6 | 1 |
@@ -42,6 +42,7 @@ An area with no inbound key is a candidate for a separate module. Its outbound k
 | [platform](platform.md) | 13 | 95 | 2 | 3 | 1 |
 | [privacy](privacy.md) | 2 | 14 | 0 | 0 | 0 |
 | [projects](projects.md) | 3 | 42 | 10 | 3 | 0 |
+| [recordlinks](recordlinks.md) | 1 | 8 | 0 | 0 | 0 |
 | [reporting](reporting.md) | 14 | 124 | 0 | 10 | 0 |
 | [search](search.md) | 4 | 41 | 0 | 4 | 2 |
 | [signals](signals.md) | 2 | 42 | 2 | 9 | 4 |
@@ -147,6 +148,10 @@ No outbound foreign keys.
 - `notification_preference.notification_preference_user_id_fkey`: `FOREIGN KEY (user_id) REFERENCES app_user(id) ON DELETE CASCADE`
 
 ### privacy
+
+No outbound foreign keys.
+
+### recordlinks
 
 No outbound foreign keys.
 

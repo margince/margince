@@ -140,7 +140,7 @@ func (e *Eraser) EraseContactCounted(ctx context.Context, contactID ids.UUID, re
 		if err := eraseDealRoomSeats(ctx, tx, emails, reason); err != nil {
 			return err
 		}
-		if err := tombstoneCollateralScrubs(ctx, tx, "lead", leadsWiped, reason, causeContactErasure); err != nil {
+		if err := tombstoneLeadsAndSignals(ctx, tx, subject, leadsWiped, reason); err != nil {
 			return err
 		}
 		activitiesRedacted, activitiesHeld, err := e.redactSubjectActivities(ctx, tx, subject, keys, floor, reason)
@@ -181,10 +181,9 @@ func (e *Eraser) EraseContactCounted(ctx context.Context, contactID ids.UUID, re
 		if err := e.flagManualSubjectMentions(ctx, tx, subject, keys); err != nil {
 			return err
 		}
-		// Purge the subject's attachment bytes and rows together, inside the
-		// transaction (objects first). A failure here — including a
-		// misconfigured store — rolls the whole erasure back, so it stays
-		// retryable and never commits a half-erasure.
+		// Delete the subject's attachment rows and queue their objects for the
+		// stored-object reap, both inside the transaction. A failure here,
+		// including no configured store, rolls the whole erasure back.
 		if err := e.eraseAttachments(ctx, tx, reason, causeContactErasure, subjectAttachmentsWhere, subject, floorCurrent, floorCarried); err != nil {
 			return err
 		}
@@ -384,9 +383,7 @@ func anonymizeSubjectRows(
 }
 
 // purgeContactDerivedRows deletes what the system DERIVED about the subject and
-// keyed on their contact id.
-//
-// The five tables share a posture that makes them one step rather than five:
+// keyed on their contact id. The five tables share a posture that makes them one step rather than five:
 // none is anonymizable. An embedding is an opaque vector of the text, a
 // provenance row says where a now-erased field came from, an enrichment row
 // holds the subject's title and employer with the verbatim sentence it was
@@ -416,6 +413,9 @@ func purgeContactDerivedRows(ctx context.Context, tx pgx.Tx, contactID ids.Conta
 	}
 	if _, err := tx.Exec(ctx,
 		`DELETE FROM ai_feedback WHERE subject_type = 'contact' AND subject_id = $1`, contactID); err != nil {
+		return err
+	}
+	if err := deleteSubjectRecordLinks(ctx, tx, contactID.UUID); err != nil {
 		return err
 	}
 	return purgeProvidedValues(ctx, tx, subjects)

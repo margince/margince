@@ -1,0 +1,10 @@
+{
+  "verb": "get_record_history",
+  "checks": [
+    "company.read",
+    "relationship.read"
+  ],
+  "takes": [
+    "company"
+  ]
+}

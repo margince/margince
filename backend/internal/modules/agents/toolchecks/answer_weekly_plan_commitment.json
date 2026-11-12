@@ -1,0 +1,11 @@
+{
+  "verb": "answer_weekly_plan_commitment",
+  "checks": [
+    "scope:team",
+    "weekly_plan.update"
+  ],
+  "takes": [
+    "commitment",
+    "teammate_commitment"
+  ]
+}

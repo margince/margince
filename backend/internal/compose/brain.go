@@ -319,7 +319,7 @@ func seedEmbedBinding(ctx context.Context, store *search.Store, router *ai.Route
 func NewLocalModelPath(cfg ai.RoutingConfig, opts ...ai.LocalOption) (ModelPath, error) {
 	// First, so a caller's own check replaces it: every lane still has to
 	// declare its subjects, as it does in production.
-	opts = append([]ai.LocalOption{ai.WithRestrictionCheck(ai.NoRestrictionData())}, opts...)
+	opts = append([]ai.LocalOption{ai.WithRestrictionCheck(ai.NoRestrictionData{})}, opts...)
 	router, err := ai.NewLocalRouter(cfg, opts...)
 	if err != nil {
 		return ModelPath{}, err

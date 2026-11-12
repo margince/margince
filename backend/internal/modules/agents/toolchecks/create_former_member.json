@@ -1,0 +1,7 @@
+{
+  "verb": "create_former_member",
+  "checks": [
+    "user_admin.create",
+    "user_admin.read|create|update|delete"
+  ]
+}

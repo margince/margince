@@ -103,9 +103,14 @@ var audienceLiteralMarkers = []*regexp.Regexp{
 // covers one reader and not every reader added to that file afterwards.
 const heldMailMaintenanceReader = "system-only maintenance reads bounded original headers to restore provider arrival evidence on capture_import, including held rows. No content or row is returned to a reader, and no activity is changed. Filtering by a viewer would leave privacy-notice history dependent on that viewer; the cost is internal parsing of restricted mail headers inside the batch transaction."
 
+// mailCopyGroupReader is why the mailbox-copy grouping composes no gate of its
+// own: it lives in a shared port, which may not import platform/auth.
+const mailCopyGroupReader = "renders a FROM over the caller's candidates and reads only rows that pass them. Every caller puts the content gate in candidates: activities.SeatCopyFrom (listActivitiesFilter's discover and audience clauses, with the audience arm as contentArm), search searchBranch.rowSource (branchScope's auth.ActivityContentClause) and search anchorTimelineSQL (auth.ActivityContentClause). Copies join only when contentArm admits each. The cost: a new caller that passes ungated candidates is not caught here, so each caller composes the gate in its own function, where this census checks it"
+
 const credentialRepairReader = "the credential repair, which reads every mail because a password stored in a members-only thread is stored in clear just the same. An audience test here would leave the credential in the rows the repair exists to reach, and no principal is served: the task runs as the system and returns no row to a caller. Statutory holds ARE refused, by the restricted_at predicate in the same statement"
 
 var audienceReadersAdmitted = gatekit.Waive(map[string]string{
+	"internal/shared/ports/connector/mailcopygroup.go:MailCopyGroupFrom":             mailCopyGroupReader,
 	"internal/compose/credentialrepair/credentialrepair.go:estimateMaskableMailText": credentialRepairReader,
 	"internal/compose/credentialrepair/credentialrepair.go:maskMailTextBatch":        credentialRepairReader,
 	"internal/modules/activities/credentialrepair.go:MaskStoredMailTextTx":           credentialRepairReader,

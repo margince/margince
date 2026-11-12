@@ -60,7 +60,7 @@ func editionCSV(edition crmcontracts.ReportingEdition) ([]byte, error) {
 }
 
 func reportingCSVRows(evaluation crmcontracts.ReportingEvaluation) [][]string {
-	rows := [][]string{{"metric", "block", "label", extractionValueKey, reportingTarget, "comparison", "upper", "unit", reportingCurrency, "context", "coverage", "withheld", "coverage_reason", "captured_at"}}
+	rows := [][]string{{reportingMetric, "block", "label", extractionValueKey, reportingTarget, "comparison", "upper", "unit", reportingCurrency, "context", "coverage", reportingWithheld, "coverage_reason", "captured_at"}}
 	appendRow := func(metric, block, label string, value, target, comparison, upper *float64, unit, context string, coverage csvCoverage) {
 		// A count or a duration has no currency; naming one would read as money.
 		currency := ""

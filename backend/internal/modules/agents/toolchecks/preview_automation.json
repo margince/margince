@@ -1,0 +1,9 @@
+{
+  "verb": "preview_automation",
+  "checks": [
+    "automation.read"
+  ],
+  "takes": [
+    "automation"
+  ]
+}

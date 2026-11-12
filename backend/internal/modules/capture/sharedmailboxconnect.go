@@ -27,7 +27,10 @@ type SharedConnect struct {
 	// Posture is held or shared. Empty starts a new mailbox held and keeps a
 	// reconnected one as it is.
 	Posture string
-	Auth    connector.Auth
+	// BackupOwner holds the work of mail whose sender no reader owns. Nil
+	// names none on a new mailbox and keeps a reconnected one's.
+	BackupOwner *ids.UUID
+	Auth        connector.Auth
 }
 
 // SharedReconnectError refuses a reconnect that would also move the mailbox.
@@ -133,6 +136,7 @@ type sharedPrior struct {
 	status  string
 	readers ids.UUID
 	posture string
+	backup  *ids.UUID
 }
 
 // upsertSharedConnectionTx writes the shared row, or points the stored one at
@@ -141,9 +145,9 @@ type sharedPrior struct {
 func upsertSharedConnectionTx(ctx context.Context, tx pgx.Tx, in sharedUpsert) (ids.UUID, *string, error) {
 	var prior sharedPrior
 	err := tx.QueryRow(ctx, `
-		SELECT id, credential_ref, status, reader_team_id, mail_posture FROM capture_connection
+		SELECT id, credential_ref, status, reader_team_id, mail_posture, backup_owner_id FROM capture_connection
 		 WHERE user_id IS NULL AND provider = $1 AND lower(account_label) = lower($2)
-		   FOR UPDATE`, in.Provider, in.address).Scan(&prior.id, &prior.ref, &prior.status, &prior.readers, &prior.posture)
+		   FOR UPDATE`, in.Provider, in.address).Scan(&prior.id, &prior.ref, &prior.status, &prior.readers, &prior.posture, &prior.backup)
 	found := err == nil
 	if err != nil && !errors.Is(err, pgx.ErrNoRows) {
 		return ids.Nil, nil, err
@@ -158,27 +162,36 @@ func upsertSharedConnectionTx(ctx context.Context, tx pgx.Tx, in sharedUpsert) (
 	if err := refuseSharedWithoutOptInTx(ctx, tx, posture); err != nil {
 		return ids.Nil, nil, err
 	}
+	backup := in.BackupOwner
+	if backup == nil {
+		backup = prior.backup
+	}
+	if err := refuseBackupOutsideTeamTx(ctx, tx, in.ReaderTeam, in.BackupOwner); err != nil {
+		return ids.Nil, nil, err
+	}
 	var id ids.UUID
 	if err := tx.QueryRow(ctx, `
 		INSERT INTO capture_connection (provider, user_id, connected_by, reader_team_id, account_label, mail_posture,
-		                                scopes, credential_ref, status, share_acknowledged_at)
-		VALUES (@provider, NULL, @by, @readers, @address, @visibility, @scopes, @ref, 'connected', now())
+		                                scopes, credential_ref, status, share_acknowledged_at, backup_owner_id)
+		VALUES (@provider, NULL, @by, @readers, @address, @visibility, @scopes, @ref, 'connected', now(), @backup)
 		ON CONFLICT (provider, lower(account_label)) WHERE user_id IS NULL
 		DO UPDATE SET credential_ref = EXCLUDED.credential_ref, auth = NULL, status = 'connected', archived_at = NULL,
 		              connected_at = now(), connected_by = EXCLUDED.connected_by, scopes = EXCLUDED.scopes,
-		              generation = capture_connection.generation + 1
+		              backup_owner_id = EXCLUDED.backup_owner_id, generation = capture_connection.generation + 1
 		RETURNING id`, pgx.StrictNamedArgs{
 		sqlArgProvider: in.Provider, "by": in.by, "readers": in.ReaderTeam, "address": in.address,
-		"visibility": posture, "scopes": in.scopes, "ref": string(in.ref),
+		"visibility": posture, "scopes": in.scopes, "ref": string(in.ref), "backup": backup,
 	}).Scan(&id); err != nil {
 		return ids.Nil, nil, err
 	}
 	database.Forget(tx, ownerIdentitiesMemo)
-	after := sharedMailboxImage(in.Provider, in.address, "connected", in.ReaderTeam, posture)
+	view := SharedMailboxView{Provider: in.Provider, Address: in.address, Status: "connected", ReaderTeam: in.ReaderTeam, Posture: posture, BackupOwner: backup}
+	after := sharedMailboxImage(view)
 	verb, change, before := auditVerbCreate, sharedChangeConnected, map[string]any(nil)
 	if found {
 		verb, change = auditVerbUpdate, sharedChangeReconnected
-		before = sharedMailboxImage(in.Provider, in.address, prior.status, prior.readers, prior.posture)
+		view.Status, view.ReaderTeam, view.Posture, view.BackupOwner = prior.status, prior.readers, prior.posture, prior.backup
+		before = sharedMailboxImage(view)
 	}
 	if err := announceSharedMailboxTx(ctx, tx, verb, change, id, before, after); err != nil {
 		return ids.Nil, nil, err

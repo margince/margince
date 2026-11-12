@@ -1,0 +1,9 @@
+{
+  "verb": "pause_deal_room",
+  "checks": [
+    "deal_room.update"
+  ],
+  "takes": [
+    "deal_room"
+  ]
+}

@@ -32,7 +32,7 @@ const migrationsLayer = "migrations"
 func New() extension.Extension {
 	return extension.Extension{
 		Name:        "openchannel",
-		Version:     "1.3.0",
+		Version:     "1.4.0",
 		Description: "An anonymous, signed endpoint an outside party can post to, with its own records and a job that drains arrivals into the CRM.",
 		Privacy: []privacy.Table{
 			{
@@ -47,9 +47,13 @@ func New() extension.Extension {
 				Links:     []privacy.Link{{Column: "activity_id", Record: privacy.Activity}},
 				Retention: jurisdiction.CommercialCorrespondence,
 			},
-			// No record kind the core resolves: an endpoint names a member, outbound a channel account.
+			// No record kind the core resolves: an endpoint names a member.
 			{Name: "ext_openchannel_endpoint", Retention: jurisdiction.CommercialCorrespondence},
-			{Name: "ext_openchannel_outbound", Retention: jurisdiction.CommercialCorrespondence},
+			{
+				Name:      "ext_openchannel_outbound",
+				Links:     []privacy.Link{{Column: "activity_id", Record: privacy.Activity}},
+				Retention: jurisdiction.CommercialCorrespondence,
+			},
 		},
 		Tools: []extension.Tool{
 			{Name: "openchannel_open", Handle: open},

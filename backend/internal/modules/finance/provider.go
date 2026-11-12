@@ -25,6 +25,9 @@ type Provider interface {
 	Customers(ctx context.Context) ([]SourceCustomer, error)
 	// InvoicesFor answers one customer's invoices and payments.
 	InvoicesFor(ctx context.Context, externalCustomerID string) (SourceLedger, error)
+	// InvoiceDocument answers one invoice's own document. A source that has
+	// none answers apperrors.ErrUnsupportedBySoR.
+	InvoiceDocument(ctx context.Context, externalInvoiceID string) (SourceDocument, error)
 }
 
 // Sources resolves the providers this build can read. The composition
@@ -43,6 +46,8 @@ type Sources interface {
 type SourceOption struct {
 	Provider    string
 	Description string
+	// Documents says the source serves each invoice's own document.
+	Documents bool
 }
 
 // The source records are the published accounting types, aliased so a unit's
@@ -58,4 +63,6 @@ type (
 	SourceInvoice = accounting.Invoice
 	// SourcePayment is accounting.Payment.
 	SourcePayment = accounting.Payment
+	// SourceDocument is accounting.Document.
+	SourceDocument = accounting.Document
 )

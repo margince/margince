@@ -83,7 +83,7 @@ func RekeySuppressionListPageTx(ctx context.Context, tx pgx.Tx, after Suppressio
 		       AS u(kind, hash, at, lifted, consent, contact)
 		ON CONFLICT (kind, value_hash) DO UPDATE SET lifted_at = NULL, lift_consent_event_id = NULL, lift_contact_id = NULL
 		 WHERE EXCLUDED.lifted_at IS NULL AND erasure_suppression.lifted_at IS NOT NULL`,
-		pgx.StrictNamedArgs{"kinds": kinds, "keyed": keyed, "at": erasedAt, "lifted": liftedAt, "consents": liftConsents, "contacts": liftContacts, "key": *keyID}); err != nil {
+		pgx.StrictNamedArgs{"kinds": kinds, "keyed": keyed, "at": erasedAt, "lifted": liftedAt, "consents": liftConsents, "contacts": liftContacts, sqlArgKey: *keyID}); err != nil {
 		return nil, fmt.Errorf("privacy: writing the keyed erasure list rows: %w", err)
 	}
 	if _, err := tx.Exec(ctx, `DELETE FROM erasure_suppression s
@@ -137,7 +137,7 @@ func RekeyAnonymizedAddressesPageTx(ctx context.Context, tx pgx.Tx, after ids.UU
 		}
 		if _, err := tx.Exec(ctx, `UPDATE contact SET anonymized_address_hashes = @hashes,
 			anonymized_address_key_id = @key WHERE id = @id`,
-			pgx.StrictNamedArgs{"hashes": rekeyed, "key": *keyID, "id": contact.id}); err != nil {
+			pgx.StrictNamedArgs{"hashes": rekeyed, sqlArgKey: *keyID, "id": contact.id}); err != nil {
 			return nil, fmt.Errorf("privacy: re-keying anonymized address hashes: %w", err)
 		}
 		scanned = append(scanned, contact.id)

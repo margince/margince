@@ -1,0 +1,9 @@
+{
+  "verb": "ask_for_weekly_plan_help",
+  "checks": [
+    "weekly_plan.update"
+  ],
+  "takes": [
+    "commitment"
+  ]
+}

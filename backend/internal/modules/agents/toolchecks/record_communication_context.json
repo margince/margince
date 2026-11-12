@@ -1,0 +1,10 @@
+{
+  "verb": "record_communication_context",
+  "checks": [
+    "contact.update"
+  ],
+  "takes": [
+    "correspondence_review",
+    "user"
+  ]
+}

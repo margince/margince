@@ -25,12 +25,16 @@ const (
 	sharedChangeReconnected   = "reconnected"
 	sharedChangeReaders       = "readers_changed"
 	sharedChangeVisibility    = "visibility_changed"
+	sharedChangeBackupOwner   = "backup_owner_changed"
 	sharedChangeDisconnected  = "disconnected"
 	sharedChangeHistoryImport = "history_import_started"
 )
 
 // fieldReaderTeam names the reader team on the wire and on the audit trail.
 const fieldReaderTeam = "reader_team_id"
+
+// fieldBackupOwner names the backup owner on the wire and on the audit trail.
+const fieldBackupOwner = "backup_owner_id"
 
 // The audit verbs a shared mailbox's changes take.
 const (
@@ -51,11 +55,11 @@ func announceSharedMailboxTx(ctx context.Context, tx pgx.Tx, verb, change string
 }
 
 // sharedMailboxImage is one side of a shared mailbox's audit trail. It names
-// the readers and the visibility, never the credential.
-func sharedMailboxImage(provider, address, status string, readers ids.UUID, posture string) map[string]any {
+// the readers, the backup owner and the visibility, never the credential.
+func sharedMailboxImage(v SharedMailboxView) map[string]any {
 	return map[string]any{
-		auditKeyProvider: provider, "account_label": address, columnStatus: status,
-		fieldReaderTeam: readers, auditKeyPosture: posture,
+		auditKeyProvider: v.Provider, "account_label": v.Address, columnStatus: v.Status,
+		fieldReaderTeam: v.ReaderTeam, auditKeyPosture: v.Posture, fieldBackupOwner: v.BackupOwner,
 	}
 }
 

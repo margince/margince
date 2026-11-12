@@ -1,0 +1,6 @@
+{
+  "verb": "put_scheduling_profile",
+  "checks": [
+    "activity.create"
+  ]
+}

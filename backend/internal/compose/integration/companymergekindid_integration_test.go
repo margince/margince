@@ -40,6 +40,8 @@ var kindIDPairsTheMergeLeaves = gatekit.Waive(map[string]string{
 	"ai_task_run.subject_id":                        "a task run is the record of what the assistant did to the retired record, with its own subject label; it stays addressable through merged_into",
 	"report_edition_contribution.source_id":         "a published edition is frozen evidence of what the report counted when it was published; moving a source would change a number already shown",
 	"report_edition_question_source.source_id":      "a kept question answer is frozen evidence of the records a sent edition counted; its sources are the question's population, a deal, lead, project or activity, and a reader is shown the answer only while each still answers to it",
+	"record_link.from_id":                           "moved, but not by an UPDATE: the table is insert and delete only, so moveRecordLinks copies each end onto the survivor, keeps the survivor's own link where the pair already holds one, and deletes the retired record's rows",
+	"record_link.to_id":                             "the second end of the same link, moved by the same copy and delete in moveRecordLinks",
 	"field_provenance.object_id":                    "carried field by field for exactly the values the survivor inherits, in carryFieldAuthors, through the stamp writer every other path uses",
 })
 

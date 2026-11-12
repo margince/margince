@@ -239,6 +239,11 @@ const HUMAN_SENSE_KEYS: Record<string, readonly string[]> = {
     // These name the human making a promise or decision, not a contact record.
     "approval.commitment.unresolved",
 
+    // The meeting's organizer is a human, not the CRM contact record type.
+    "meetingChange.line.details",
+    "worklist.ask.changedInvitation",
+    "worklist.ask.meeting.updated",
+    "worklist.ask.meeting.canceled",
     // The meeting host is a human, not the CRM contact record type.
     "scheduling.windowHorizon",
     "scheduling.windowLimits",
@@ -339,6 +344,11 @@ const HUMAN_SENSE_KEYS: Record<string, readonly string[]> = {
     "health.setup.recovery.todo",
   ],
   vi: [
+    // "Người tổ chức" is the meeting's organizer, a person.
+    "meetingChange.line.details",
+    "worklist.ask.changedInvitation",
+    "worklist.ask.meeting.updated",
+    "worklist.ask.meeting.canceled",
     // Automation authority and assignments name human account holders.
     "auto.setup.noAuthorizer",
     "auto.setup.inactive",

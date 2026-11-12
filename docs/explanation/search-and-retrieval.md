@@ -79,6 +79,9 @@ comes from is in [ai-runtime.md](ai-runtime.md); who may see a row is in
   `Müller`). They also match the parse with apostrophes removed (`oreilly` finds `O'Reilly`). The
   activity branch also matches German and English stems, so `Vertrag` reaches a row that holds
   `Verträge`.
+- **A mail is one hit.** A mail that several mailboxes captured is one activity hit, the reader's
+  own copy where they have one. The timelines group copies the same way
+  (`connector.MailCopyGroupFrom`).
 - **A whole word ranks above a prefix.** The word still being typed matches as a prefix, so `philip`
   reaches both Philip and Philipp, and `ts_rank_cd` scores them the same. So `scoreExpression` scales
   the rank into `[0, 1)` and adds 1 when the record holds that word whole, not stemmed, in any field
@@ -352,6 +355,9 @@ activities. The first hop is split into `recent_touches` and `open_tasks`. The s
 `related_contacts`, `related_companies`, `related_deals` and `related_projects`. Every step reads at most 50 rows
 before ranking cuts the list to `max_items` (default 5, capped at 25). So an anchor with 5,000 links
 costs about what one with 50 costs.
+
+Mail that several mailboxes captured is one touch in the first step. The second step walks the links
+of every copy the reader may open, also one filed under another record.
 
 The anchor types are the types search can find that are not activities and not `textOnly`, named by the path enum
 in the contract. They come from `searchBranches`, not from a second list kept beside it. An activity

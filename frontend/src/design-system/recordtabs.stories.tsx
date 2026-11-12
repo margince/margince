@@ -3,7 +3,7 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { useState } from "react";
-import { expect, waitFor, within } from "storybook/test";
+import { expect, userEvent, waitFor, within } from "storybook/test";
 import { LocaleProvider } from "../i18n";
 import { Button } from "./atoms";
 import { RecordTabs } from "./recordtabs";
@@ -130,10 +130,10 @@ export const WithTrailingControl: Story = {
   ),
 };
 
-// Analytics' own tabs at 390px: more than the phone holds. The far end fades
-// over the cut tab to say more follow. The start has nothing scrolled past it
-// yet, so it does not fade.
-export const ScrollsAtPhoneWidth: Story = {
+// Analytics' own tabs at 390px: more than the phone holds. The tabs after the
+// last one that fits fold behind More, and the open tab stays on the row even
+// when it comes last.
+export const FoldsAtPhoneWidth: Story = {
   tags: ["uat-phone"],
   parameters: { layout: "fullscreen" },
   globals: { viewport: { value: "phone" } },
@@ -141,7 +141,7 @@ export const ScrollsAtPhoneWidth: Story = {
     <RecordTabs
       label="Analytics"
       options={["performance", "outcomes", "delivery", "pipeline", "team"]}
-      value="performance"
+      value="team"
       onChange={() => undefined}
       labels={{
         performance: "Performance",
@@ -153,10 +153,82 @@ export const ScrollsAtPhoneWidth: Story = {
     />
   ),
   play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await waitFor(() =>
+      expect(
+        canvas.getByRole("button", { name: "More sections" }),
+      ).toBeVisible(),
+    );
+    await expect(canvas.getByRole("button", { name: "Team" })).toBeVisible();
     const strip = canvasElement.querySelector(".recordtabs-strip");
     if (!(strip instanceof HTMLElement)) throw new Error("no tab strip drawn");
-    await expect(strip.scrollWidth).toBeGreaterThan(strip.clientWidth);
-    await waitFor(() => expect(strip).toHaveClass("is-clipped-end"));
-    await expect(strip).not.toHaveClass("is-clipped-start");
+    await expect(strip.scrollWidth).toBeLessThanOrEqual(strip.clientWidth);
+  },
+};
+
+const ANALYTICS_LABELS = {
+  performance: "Performance",
+  outcomes: "My outcomes",
+  delivery: "Delivery",
+  pipeline: "Pipeline",
+  team: "Team",
+};
+
+// The folded tabs as the menu lists them, opened from "More".
+export const MoreMenuOpen: Story = {
+  tags: ["uat-phone"],
+  parameters: { layout: "fullscreen" },
+  globals: { viewport: { value: "phone" } },
+  render: () => (
+    <RecordTabs
+      label="Analytics"
+      options={["performance", "outcomes", "delivery", "pipeline", "team"]}
+      value="performance"
+      onChange={() => undefined}
+      labels={ANALYTICS_LABELS}
+    />
+  ),
+  play: async ({ canvasElement }) => {
+    const more = await within(canvasElement).findByRole("button", {
+      name: "More sections",
+    });
+    await waitFor(() => expect(more).toBeVisible());
+    await userEvent.click(more);
+    const page = within(canvasElement.ownerDocument.body);
+    await expect(
+      await page.findByRole("button", { name: "Team" }),
+    ).toBeVisible();
+  },
+};
+
+// The row narrows until tabs fold, then widens until they all return.
+export const FoldsAndReturnsWithWidth: Story = {
+  render: () => (
+    <div data-testid="frame" style={{ inlineSize: "100%" }}>
+      <RecordTabs
+        label="Analytics"
+        options={["performance", "outcomes", "delivery", "pipeline", "team"]}
+        value="team"
+        onChange={() => undefined}
+        labels={ANALYTICS_LABELS}
+      />
+    </div>
+  ),
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    const frame = canvas.getByTestId("frame");
+    frame.style.inlineSize = "260px";
+    await waitFor(() =>
+      expect(
+        canvas.getByRole("button", { name: "More sections" }),
+      ).toBeVisible(),
+    );
+    frame.style.inlineSize = "100%";
+    await waitFor(() =>
+      expect(canvas.getByRole("button", { name: "Performance" })).toBeVisible(),
+    );
+    await expect(
+      canvas.queryByRole("button", { name: "More sections" }),
+    ).toBeNull();
   },
 };

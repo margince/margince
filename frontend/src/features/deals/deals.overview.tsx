@@ -18,6 +18,7 @@ import { DealCommitmentsCard } from "./deal360/dealcommitments";
 import { DealCommitteeCard } from "./deal360/dealcommitteecard";
 import { DealHowItStands } from "./deal360/dealhowitstands";
 import { useDealLines } from "./deal360/deallines";
+import { DealLinksCard } from "./deal360/deallinkscard";
 import { DealMarginceChangesCard } from "./deal360/dealmarginchanges";
 import { offerRow, otherOpenTaskRows } from "./deal360/dealoverviewrows";
 import { DealProductsCard } from "./deal360/dealproducts";
@@ -258,6 +259,7 @@ export function DealOverviewPane({
               roleLabel={(role) => dealRoleLabel(role, t)}
             />
           )}
+          <DealLinksCard deal={deal} />
         </div>
         <div className="deal-overview-column">
           <DealBrief

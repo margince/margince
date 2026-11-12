@@ -1,0 +1,15 @@
+{
+  "tool": "change_capture",
+  "action": "set_sender_decision",
+  "verb": "set_capture_sender_decision",
+  "allowed_for": [
+    "admin",
+    "management",
+    "manager",
+    "ops",
+    "rep"
+  ],
+  "refused_for": [
+    "read_only"
+  ]
+}

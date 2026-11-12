@@ -1391,6 +1391,10 @@ func (stubs) PutAnchorCompany(w nethttp.ResponseWriter, r *nethttp.Request) {
 	httperr.NotImplemented(w, r, "PutAnchorCompany")
 }
 
+func (stubs) ListCompanyTypes(w nethttp.ResponseWriter, r *nethttp.Request) {
+	httperr.NotImplemented(w, r, "ListCompanyTypes")
+}
+
 func (stubs) GetAnchorCompanyContext(w nethttp.ResponseWriter, r *nethttp.Request, params crmcontracts.GetAnchorCompanyContextParams) {
 	httperr.NotImplemented(w, r, "GetAnchorCompanyContext")
 }
@@ -2203,6 +2207,14 @@ func (stubs) ConnectExtOauth(w nethttp.ResponseWriter, r *nethttp.Request, provi
 	httperr.NotImplemented(w, r, "ConnectExtOauth")
 }
 
+func (stubs) ListExtensionHistory(w nethttp.ResponseWriter, r *nethttp.Request, params crmcontracts.ListExtensionHistoryParams) {
+	httperr.NotImplemented(w, r, "ListExtensionHistory")
+}
+
+func (stubs) ListExtensionReports(w nethttp.ResponseWriter, r *nethttp.Request) {
+	httperr.NotImplemented(w, r, "ListExtensionReports")
+}
+
 func (stubs) ListExtensions(w nethttp.ResponseWriter, r *nethttp.Request) {
 	httperr.NotImplemented(w, r, "ListExtensions")
 }
@@ -2229,6 +2241,10 @@ func (stubs) ProposeFilter(w nethttp.ResponseWriter, r *nethttp.Request) {
 
 func (stubs) GetFilterVocabulary(w nethttp.ResponseWriter, r *nethttp.Request, params crmcontracts.GetFilterVocabularyParams) {
 	httperr.NotImplemented(w, r, "GetFilterVocabulary")
+}
+
+func (stubs) DownloadFinanceInvoicePdf(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {
+	httperr.NotImplemented(w, r, "DownloadFinanceInvoicePdf")
 }
 
 func (stubs) DisconnectFinanceSource(w nethttp.ResponseWriter, r *nethttp.Request) {
@@ -2761,6 +2777,22 @@ func (stubs) DecideLegalReview(w nethttp.ResponseWriter, r *nethttp.Request, id 
 
 func (stubs) WithdrawLegalReview(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {
 	httperr.NotImplemented(w, r, "WithdrawLegalReview")
+}
+
+func (stubs) ListLinkSuggestions(w nethttp.ResponseWriter, r *nethttp.Request) {
+	httperr.NotImplemented(w, r, "ListLinkSuggestions")
+}
+
+func (stubs) AcceptLinkSuggestion(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {
+	httperr.NotImplemented(w, r, "AcceptLinkSuggestion")
+}
+
+func (stubs) RejectLinkSuggestion(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {
+	httperr.NotImplemented(w, r, "RejectLinkSuggestion")
+}
+
+func (stubs) ListLinkTypes(w nethttp.ResponseWriter, r *nethttp.Request) {
+	httperr.NotImplemented(w, r, "ListLinkTypes")
 }
 
 func (stubs) DescribeListFilters(w nethttp.ResponseWriter, r *nethttp.Request) {
@@ -3505,6 +3537,22 @@ func (stubs) CreateRecordGrant(w nethttp.ResponseWriter, r *nethttp.Request, par
 
 func (stubs) RevokeRecordGrant(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id, params crmcontracts.RevokeRecordGrantParams) {
 	httperr.NotImplemented(w, r, "RevokeRecordGrant")
+}
+
+func (stubs) ListRecordKinds(w nethttp.ResponseWriter, r *nethttp.Request) {
+	httperr.NotImplemented(w, r, "ListRecordKinds")
+}
+
+func (stubs) ListRecordLinks(w nethttp.ResponseWriter, r *nethttp.Request, params crmcontracts.ListRecordLinksParams) {
+	httperr.NotImplemented(w, r, "ListRecordLinks")
+}
+
+func (stubs) CreateRecordLink(w nethttp.ResponseWriter, r *nethttp.Request) {
+	httperr.NotImplemented(w, r, "CreateRecordLink")
+}
+
+func (stubs) DeleteRecordLink(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {
+	httperr.NotImplemented(w, r, "DeleteRecordLink")
 }
 
 func (stubs) ListRecordRoles(w nethttp.ResponseWriter, r *nethttp.Request) {

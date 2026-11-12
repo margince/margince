@@ -144,6 +144,9 @@ type ListActivitiesInput struct {
 	// CollapseSeatCopies shows one row per email that several colleagues'
 	// mailboxes each hold a copy of (seatcopies.go), before the page is cut.
 	CollapseSeatCopies bool
+	// WithoutCopiesOf leaves out, on a collapsed page, the row that stands for
+	// this activity or any mailbox copy of it, whatever filter the copy passes.
+	WithoutCopiesOf *ids.UUID
 	// WithinProjectID narrows to one body of work, EXCLUDING what belongs to
 	// another project and keeping what belongs to none.
 	//

@@ -9,6 +9,7 @@ import { type Locale, type Translator, useT } from "../../i18n";
 import { useCan } from "../../lib/capability";
 import { unwrap } from "../../lib/problem";
 import { REPORTING_EVALUATION_KEY } from "../../lib/reportingfigures";
+import { useProgressDoor } from "./progress.links";
 import {
   type ReportingEvaluation,
   type ReportingMetricID,
@@ -71,6 +72,7 @@ function TargetReadings({
 }>) {
   const t = useT();
   const metricName = useMetricNames();
+  const progress = useProgressDoor({ kind: "owner", id: self });
   const query = useQuery({
     queryKey: [...REPORTING_EVALUATION_KEY, "my-targets", self, metrics],
     queryFn: async (): Promise<Readings> => {
@@ -84,22 +86,40 @@ function TargetReadings({
   return (
     <QueryGate query={query} pendingLabel={t("analytics.myTargets")}>
       {(readings) => (
-        <StatStrip>
-          {metrics.flatMap((id) =>
-            targetCards(id, metricName(id), readings, t, locale).map((card) => (
-              <StatCard
-                key={card.key}
-                narrow="row"
-                label={card.label}
-                value={card.value}
-                detail={card.detail}
-                meter={card.meter}
-              />
-            )),
-          )}
-        </StatStrip>
+        <div className="analytics-target-rows">
+          {evenRows(
+            metrics.flatMap((id) =>
+              targetCards(id, metricName(id), readings, t, locale),
+            ),
+          ).map((row) => (
+            <StatStrip key={row[0]?.key}>
+              {row.map((card) => (
+                <StatCard
+                  key={card.key}
+                  narrow="row"
+                  label={card.label}
+                  value={card.value}
+                  detail={card.detail}
+                  meter={card.meter}
+                  // Sales won against the sales goals opens My progress.
+                  href={card.goal ? progress?.href : undefined}
+                />
+              ))}
+            </StatStrip>
+          ))}
+        </div>
       )}
     </QueryGate>
+  );
+}
+
+// A strip holds six readings a row and stretches the last one over the rest.
+// Rows of equal length keep every card one size: eight read as four and four.
+function evenRows(cards: readonly Card[]): Card[][] {
+  const rows = Math.ceil(cards.length / 6);
+  const size = Math.ceil(cards.length / Math.max(rows, 1));
+  return Array.from({ length: rows }, (_, row) =>
+    cards.slice(row * size, (row + 1) * size),
   );
 }
 
@@ -129,6 +149,8 @@ type Card = Readonly<{
   value: string;
   detail?: string;
   meter?: { filled: number; total: number };
+  // The figure stands against the published sales goals, not a typed target.
+  goal?: boolean;
 }>;
 
 // One card per target the seat holds for this figure. With none, one card says
@@ -176,15 +198,17 @@ export function targetCard(
   const period = context.target_interval
     ? reportingPeriodLabel(context.target_interval, context.timezone, locale)
     : null;
+  const goal = metric.target_source === "sales_goals";
   const share =
     metric.attainment == null
       ? null
-      : t("reporting.attainment", {
+      : t(goal ? "progress.completion" : "reporting.attainment", {
           percent: formatAnalyticsNumber(Math.round(metric.attainment), locale),
         });
   return {
     key: metric.id,
     label,
+    goal,
     value:
       actual == null
         ? t(`reporting.status.${metric.coverage.status}`)
@@ -226,21 +250,24 @@ function untargeted(
       detail: t("reporting.withheld"),
     };
   }
+  // The figure that exists leads; that nothing is set for it is its caption.
+  if (metric.value == null) {
+    return {
+      key: metric.id,
+      label,
+      value: t(`reporting.status.${metric.coverage.status}`),
+      detail: t("analytics.noTargetSet"),
+    };
+  }
   return {
     key: metric.id,
     label,
-    value: t("analytics.noTargetSet"),
-    // No figure means the metric could not be read, and the status says why.
-    detail:
-      metric.value == null
-        ? t(`reporting.status.${metric.coverage.status}`)
-        : t("analytics.noTargetSetActual", {
-            actual: reportingCompactAmount(
-              metric.value,
-              metric.unit,
-              readings.month.context.currency,
-              locale,
-            ),
-          }),
+    value: reportingCompactAmount(
+      metric.value,
+      metric.unit,
+      readings.month.context.currency,
+      locale,
+    ),
+    detail: t("analytics.noTargetSetMonth"),
   };
 }

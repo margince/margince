@@ -269,17 +269,23 @@ BEGIN
   END IF;
 
   -- The directory the links name, as the finance-demo unit lists it and with
-  -- the source the sync writes, which it never rewrites. A link
-  -- must name an entry of its connection's directory; the first sync then
-  -- restates each entry, since the empty sync_hash never matches its own.
-  INSERT INTO finance_external_customer
-         (connection_id, external_customer_id, display_name, sync_hash, source, captured_by)
-  SELECT conn, 'DEMO-' || lpad(g::text, 4, '0'), 'Demo customer ' || lpad(g::text, 2, '0'),
-         '', 'offline_demo', 'system:seed'
-    FROM generate_series(1, 50) g
-   WHERE NOT EXISTS (SELECT 1 FROM finance_external_customer c
-                      WHERE c.connection_id = conn
-                        AND c.external_customer_id = 'DEMO-' || lpad(g::text, 4, '0'));
+  -- the source the sync writes, which it never rewrites. A link must name an
+  -- entry of its connection's directory. Each new entry gets the create audit
+  -- row the sync writes. The first sync restates each entry, since the empty
+  -- sync_hash never matches its own.
+  WITH entry AS (
+    INSERT INTO finance_external_customer
+           (connection_id, external_customer_id, display_name, sync_hash, source, captured_by)
+    SELECT conn, 'DEMO-' || lpad(g::text, 4, '0'), 'Demo customer ' || lpad(g::text, 2, '0'),
+           '', 'offline_demo', 'system:seed'
+      FROM generate_series(1, 50) g
+    ON CONFLICT (connection_id, external_customer_id) DO NOTHING
+    RETURNING id, display_name, sync_hash
+  )
+  INSERT INTO audit_log (actor_type, actor_id, action, entity_type, entity_id, after)
+  SELECT 'system', 'system:seed', 'create', 'finance_external_customer', id,
+         jsonb_build_object('display_name', display_name, 'sync_hash', sync_hash)
+    FROM entry;
 
   -- Customers only. A target or a prospect has never been invoiced, and the
   -- card is absent for them by design (FIN-AC-3) — linking one would put a
