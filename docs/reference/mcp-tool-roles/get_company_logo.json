@@ -1,0 +1,18 @@
+{
+  "tool": "read_details",
+  "action": "company_logo",
+  "verb": "get_company_logo",
+  "allowed_for": [
+    "admin",
+    "management",
+    "manager",
+    "ops",
+    "read_only",
+    "rep"
+  ],
+  "refused_for": [],
+  "colleague_record": {
+    "manager": "ran",
+    "rep": "ran"
+  }
+}

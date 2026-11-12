@@ -1,0 +1,10 @@
+{
+  "verb": "download_import_template",
+  "checks": [
+    "custom_field.read",
+    "deal.read",
+    "import_run.read",
+    "installation_settings.read",
+    "pipeline.read"
+  ]
+}

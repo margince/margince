@@ -1,0 +1,10 @@
+{
+  "verb": "relink_activities",
+  "checks": [
+    "activity.update"
+  ],
+  "takes": [
+    "activity",
+    "company"
+  ]
+}

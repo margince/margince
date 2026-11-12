@@ -23,10 +23,12 @@ export type DealDeclineInput = { activityId: string; dealId?: string };
  */
 export function useDealDecline(
   onDeclined?: (answer: DealDecline) => Promise<unknown>,
+  mutationKey?: readonly unknown[],
 ) {
   const t = useT();
   const queryClient = useQueryClient();
   return useMutation({
+    mutationKey,
     mutationFn: async (input: DealDeclineInput) =>
       unwrap(
         await api.POST("/activities/{id}/deal-decline", {

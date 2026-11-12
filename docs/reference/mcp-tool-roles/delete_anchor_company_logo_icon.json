@@ -1,0 +1,15 @@
+{
+  "tool": "change_settings",
+  "action": "remove_own_logo_icon",
+  "verb": "delete_anchor_company_logo_icon",
+  "allowed_for": [
+    "admin"
+  ],
+  "refused_for": [
+    "management",
+    "manager",
+    "ops",
+    "read_only",
+    "rep"
+  ]
+}

@@ -39,10 +39,10 @@ func TestEveryDealKeepsItsNextFollowUpBeyondTheFeedScanCap(t *testing.T) {
 		}
 	}
 	reader := e.As(e.Rep1, []ids.UUID{e.Team1}, integration.AdminPerms)
-	cards := newDealStatusService(e.Pool, func() time.Time { return at })
+	cards, slow := newDealStatusService(e.Pool, func() time.Time { return at }), integration.SlowStatement(t, 5*time.Second)
 	moves, err := cards.CurrentMoves(reader, []ids.UUID{deal, otherDeal})
 	if err != nil || len(moves) != 2 || moves[deal].Action != dealstatus.ActionDraftEmail || moves[otherDeal].Action != dealstatus.ActionDraftEmail {
-		t.Fatalf("the feed cap hid a deal's current follow-up: %+v, %v", moves, err)
+		t.Fatalf("the feed cap hid a deal's current follow-up: %+v, %v\nslowest statement: %s", moves, err, slow())
 	}
 	record, err := cards.ReadFacts(reader, ids.From[ids.DealKind](deal))
 	if err != nil || record.Next == nil || record.Next.Recommendation.BasisFingerprint != moves[deal].Recommendation.BasisFingerprint {

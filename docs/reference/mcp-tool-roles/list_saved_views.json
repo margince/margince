@@ -1,0 +1,14 @@
+{
+  "tool": "read_workspace",
+  "action": "saved_views",
+  "verb": "list_saved_views",
+  "allowed_for": [
+    "admin",
+    "management",
+    "manager",
+    "ops",
+    "read_only",
+    "rep"
+  ],
+  "refused_for": []
+}

@@ -1,0 +1,15 @@
+{
+  "tool": "change_settings",
+  "action": "create_automation",
+  "verb": "create_automation",
+  "allowed_for": [
+    "admin",
+    "ops"
+  ],
+  "refused_for": [
+    "management",
+    "manager",
+    "read_only",
+    "rep"
+  ]
+}

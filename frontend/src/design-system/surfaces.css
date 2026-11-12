@@ -1529,6 +1529,9 @@
   --groundEdge: var(--ladder2Edge);
 }
 :where(
+    .analytics-body .analytics-hero-aside .meterbar span,
+    .analytics-body .meterbar-flat span,
+    .analytics-body .stat-card-meter-fill,
     .arhit,
     .arphead,
     .avatar-mesh,
@@ -1543,8 +1546,14 @@
     .ob-stage-flash,
     .ob-stage-light,
     .rail .arhit,
+    .report-chart-bullet-fill,
+    .report-chart-column-fill,
+    .report-chart-range-band,
     .standing-sheet > .standing-sheet-pane,
     .voiceprint-bars span,
+    .waterfall-anchor .waterfall-fill,
+    .waterfall-down .waterfall-fill,
+    .waterfall-up .waterfall-fill,
     :has(> .ambient-waves),
     [data-ai-reveal="run"]
   )

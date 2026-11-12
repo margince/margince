@@ -1,0 +1,14 @@
+{
+  "tool": "read_workspace",
+  "action": "voice_profile",
+  "verb": "get_voice_profile",
+  "allowed_for": [
+    "admin",
+    "management",
+    "manager",
+    "ops",
+    "read_only",
+    "rep"
+  ],
+  "refused_for": []
+}

@@ -1,0 +1,12 @@
+{
+  "verb": "create_deal_outcome_review",
+  "checks": [
+    "activity.create",
+    "activity.read",
+    "deal.read"
+  ],
+  "takes": [
+    "deal",
+    "lost_deal"
+  ]
+}

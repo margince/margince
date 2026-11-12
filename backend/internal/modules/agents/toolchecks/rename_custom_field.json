@@ -1,0 +1,9 @@
+{
+  "verb": "rename_custom_field",
+  "checks": [
+    "custom_field.update"
+  ],
+  "takes": [
+    "custom_field"
+  ]
+}

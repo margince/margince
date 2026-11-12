@@ -1,0 +1,9 @@
+{
+  "verb": "preview_voice_source",
+  "checks": [
+    "voice_profile.update"
+  ],
+  "takes": [
+    "voice_profile"
+  ]
+}

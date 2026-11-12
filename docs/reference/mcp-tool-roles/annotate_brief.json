@@ -1,0 +1,13 @@
+{
+  "tool": "annotate_brief",
+  "verb": "annotate_brief",
+  "allowed_for": [
+    "admin",
+    "management",
+    "manager",
+    "ops",
+    "read_only",
+    "rep"
+  ],
+  "refused_for": []
+}

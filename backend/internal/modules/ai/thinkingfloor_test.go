@@ -42,7 +42,7 @@ type redirectTo struct{ target *url.URL }
 
 func (r redirectTo) RoundTrip(req *http.Request) (*http.Response, error) {
 	req.URL.Scheme, req.URL.Host = r.target.Scheme, r.target.Host
-	return http.DefaultTransport.RoundTrip(req)
+	return fixtureTransport.RoundTrip(req)
 }
 
 func newBrokerClient(t *testing.T, stub *brokerStub, modelID string, routing *OpenRouterRouting) model.Client {

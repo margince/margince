@@ -1,0 +1,15 @@
+{
+  "tool": "read_import",
+  "action": "report",
+  "verb": "read_import_report",
+  "allowed_for": [
+    "admin",
+    "ops"
+  ],
+  "refused_for": [
+    "management",
+    "manager",
+    "read_only",
+    "rep"
+  ]
+}

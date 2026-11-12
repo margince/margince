@@ -6,6 +6,7 @@ import { useState } from "react";
 import { expect, userEvent, waitFor, within } from "storybook/test";
 import { Eyebrow } from "../../design-system/eyebrow";
 import { en } from "../../i18n/en";
+import type { TaskType } from "../../lib/tasktype";
 import {
   failedApprovalRow,
   legacyStalledRow,
@@ -168,7 +169,21 @@ const callBack: WorklistItem = {
   contact: { id: "c-alice", label: "Alice Brandt" },
 };
 
-function callBackPanel(primaryEmail: string | null) {
+type TypedTask = Readonly<{
+  type: TaskType;
+  title?: string;
+  primaryEmail?: string | null;
+  extra?: Record<string, unknown>;
+  routes?: Parameters<typeof installFetchStub>[0];
+}>;
+
+function typedPanel({
+  type,
+  title = callBack.title,
+  primaryEmail = "alice@brandt.example",
+  extra = {},
+  routes = {},
+}: TypedTask) {
   return () => {
     installFetchStub({
       "GET /me": meRoute({ activity: ["read"] }, { roles: ["rep"] }),
@@ -176,16 +191,23 @@ function callBackPanel(primaryEmail: string | null) {
         jsonResponse({
           id: "call-back",
           kind: "task",
-          subject: callBack.title,
+          subject: title,
           occurred_at: "2026-09-08T09:00:00Z",
           is_done: false,
+          task_type: type,
           source_activity_id: "call-1",
           links: [{ entity_type: "contact", entity_id: "c-alice" }],
-          email_target: {
-            entity_type: "contact",
-            entity_id: "c-alice",
-            ...(primaryEmail ? {} : { refusal: "no_address" }),
-          },
+          // The server names a mail target for a mail task only.
+          ...(type === "reach_out" || type === "reply"
+            ? {
+                email_target: {
+                  entity_type: "contact",
+                  entity_id: "c-alice",
+                  ...(primaryEmail ? {} : { refusal: "no_address" }),
+                },
+              }
+            : {}),
+          ...extra,
         }),
       "GET /activities/call-1": () =>
         jsonResponse({
@@ -201,37 +223,83 @@ function callBackPanel(primaryEmail: string | null) {
           primary_email: primaryEmail,
           phones: [{ id: "ph-1", phone: "+491517654321", is_primary: true }],
         }),
+      ...routes,
     });
     return (
       <StoryProviders>
-        <Chosen rows={[callBack, taskRow("one", "Call the buyer")]} start={0} />
+        <Chosen
+          rows={[{ ...callBack, title }, taskRow("one", "Call the buyer")]}
+          start={0}
+        />
       </StoryProviders>
     );
   };
 }
 
-/** A task read out of a call, in hand: Call and Email beside Show details,
-    and the contact linked once, in the card's head. */
-export const TaskFromCallInHand: Story = {
-  render: callBackPanel("alice@brandt.example"),
+/** A reply to a call in hand: the number to copy, a filled Call, Done
+    outlined, and Next task at the end of the title. */
+export const CallTaskInHand: Story = {
+  render: typedPanel({ type: "reply", extra: { reply_channel: "call" } }),
   play: async ({ canvasElement }) => {
     const card = await focusedCard(canvasElement);
-    await card.findByRole("link", { name: en["record.verb.call"] });
+    await card.findByRole("button", { name: en["task.next.copyNumber"] });
     await expect(
-      card.getByRole("link", { name: en["record.verb.email"] }),
+      card.getByRole("link", { name: en["record.verb.call"] }),
     ).toBeTruthy();
   },
 };
+export const CallTaskInHandDark: Story = {
+  ...CallTaskInHand,
+  globals: { theme: "dark" },
+};
 
-/** The same task to a contact with no address: Email refused, and the reason
-    one line under every verb on the card. */
-export const TaskFromCallNoAddressInHand: Story = {
-  render: callBackPanel(null),
+/** Reach out to a contact with no address: Email refused, the reason one
+    line under every verb, and Call is the filled verb. */
+export const ReachOutNoAddressInHand: Story = {
+  render: typedPanel({ type: "reach_out", primaryEmail: null }),
   play: async ({ canvasElement }) => {
     const card = await focusedCard(canvasElement);
-    await card.findByRole("link", { name: en["record.verb.call"] });
-    await expect(card.getByText(en["task.next.noAddress"])).toBeTruthy();
+    await card.findByText(en["task.next.noAddress"]);
   },
+};
+
+const offeredDeal = (id: string, name: string, amount: number) => () =>
+  jsonResponse({
+    id,
+    name,
+    status: "open",
+    amount_minor: amount,
+    currency: "EUR",
+    expected_close_date: "2026-12-15",
+  });
+
+/** A deal question in hand: the deals as cards, then Link email thread to deal. */
+export const DecideTaskInHand: Story = {
+  render: typedPanel({
+    type: "decide",
+    title: "Which deal is the Nordwind mail about?",
+    extra: {
+      source_system: "which_deal",
+      raw: { offered_deal_ids: ["d-1", "d-2"] },
+    },
+    routes: {
+      "GET /deals/d-1": offeredDeal("d-1", "Nordwind renewal 2027", 42_000_000),
+      "GET /deals/d-2": offeredDeal("d-2", "Nordwind pilot", 8_500_000),
+    },
+  }),
+  play: async ({ canvasElement }) => {
+    const card = await focusedCard(canvasElement);
+    await card.findByRole("radio", { name: /renewal 2027/ });
+  },
+};
+export const DecideTaskInHandDark: Story = {
+  ...DecideTaskInHand,
+  globals: { theme: "dark" },
+};
+
+/** A task to do: no step of its own, so Done is the filled button. */
+export const DoTaskInHand: Story = {
+  render: typedPanel({ type: "do", title: "Print the signed contract" }),
 };
 
 /** The last row of a short day: the one before it is listed under the card. */

@@ -1,0 +1,6 @@
+{
+  "verb": "list_weekly_reviews",
+  "checks": [
+    "deal.read"
+  ]
+}

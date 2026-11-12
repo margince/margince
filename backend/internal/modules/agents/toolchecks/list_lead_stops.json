@@ -1,0 +1,9 @@
+{
+  "verb": "list_lead_stops",
+  "checks": [
+    "lead.read"
+  ],
+  "takes": [
+    "lead"
+  ]
+}

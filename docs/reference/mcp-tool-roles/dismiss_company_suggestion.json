@@ -1,0 +1,18 @@
+{
+  "tool": "change_attention",
+  "action": "dismiss_company_suggestion",
+  "verb": "dismiss_company_suggestion",
+  "allowed_for": [
+    "admin",
+    "management",
+    "manager",
+    "ops",
+    "read_only",
+    "rep"
+  ],
+  "refused_for": [],
+  "colleague_record": {
+    "manager": "ran",
+    "rep": "ran"
+  }
+}

@@ -2091,6 +2091,9 @@ export const en = {
   "brief.schedule.connect": "Connect a calendar",
   "brief.schedule.reconnect": "Reconnect your calendar",
   "brief.schedule.nextAt": "Next meeting at {time}",
+  "brief.schedule.now": "Now",
+  "brief.schedule.freeUntil": "Free until {time}",
+  "brief.schedule.clearRest": "Nothing else booked today",
   "brief.readings.riskPartial": "Known value only · not all checked",
   "brief.readings.unpricedCount_one": "{count} deal not priced · excluded",
   "brief.readings.unpricedCount_other": "{count} deals not priced · excluded",
@@ -2684,6 +2687,7 @@ export const en = {
   "history.field.recorded_at_level": "Recorded at level",
   "history.field.relationship_types": "Relationship types",
   "history.field.due_has_time": "Due at a set time",
+  "history.field.task_type": "Task type",
   "history.field.call_outcome": "Call outcome",
   "history.field.remind_at": "Reminder",
   "history.field.resolved_category": "Message category",
@@ -3984,6 +3988,8 @@ export const en = {
   "standing.exchange.view.meeting": "View meeting",
   "standing.exchange.view.other": "View activity",
   "record.tabs": "Record tabs",
+  "record.tabs.more": "More",
+  "record.tabs.moreLabel": "More sections",
   "record.panel.showDetails": "Show details",
   "record.panel.hideDetails": "Hide details",
   // The Deal Room aside on a deal. `room.` rather than `dealroom.` for the
@@ -4910,6 +4916,30 @@ export const en = {
   "email.access.unnamedMember": "Former user",
   "email.invitation.badge": "Invitation",
   "email.invitation.startsAt": "Starts {when}",
+  "meetingChange.badge.updated": "Meeting changed",
+  "meetingChange.badge.canceled": "Canceled",
+  "meetingChange.badge.proposed": "New time proposed",
+  "meetingChange.badge.accepted": "Accepted",
+  "meetingChange.badge.tentative": "Maybe",
+  "meetingChange.badge.declined": "Declined",
+  "meetingChange.line.canceled": "Was set for {when}",
+  "meetingChange.line.proposed": "{name} proposes {when}",
+  "meetingChange.line.accepted": "{name} accepted",
+  "meetingChange.line.tentative": "{name} answered maybe",
+  "meetingChange.line.declined": "{name} declined",
+  "meetingChange.line.moved": "Moved from {was} to {when}",
+  "meetingChange.line.movedTo": "Moved to {when}",
+  "meetingChange.line.placed": "Now at {place}",
+  "meetingChange.line.unplaced": "No longer has a place",
+  "meetingChange.line.renamed": "Renamed to {title}",
+  "meetingChange.line.added": "Added {names}",
+  "meetingChange.line.removed": "Removed {names}",
+  "meetingChange.line.details": "The organizer changed the details",
+  "meetingChange.was.time": "Was",
+  "meetingChange.was.current": "Booked for",
+  "meetingChange.was.location": "Place was",
+  "meetingChange.was.noPlace": "no place",
+  "meetingChange.was.title": "Title was",
   "email.move.needsReply": "Needs reply",
   "email.move.waitingForThem": "Awaiting their reply",
   "email.detail.loading": "Loading message…",
@@ -6906,7 +6936,7 @@ export const en = {
   // what its rows are. "Promises & tasks" named a thing the product does not
   // have and stood over a standing line of apology for it.
   "brief.rail.quietSchedule": "Nothing booked",
-  "brief.panel.schedule": "Upcoming meetings",
+  "brief.panel.schedule": "Your day",
   "brief.readings.label": "Today’s figures",
   // Why a figure on this plate wears a `+`. It rides the whole cell, because a
   // mark that explains itself only to a pointer resting on three characters is
@@ -7222,6 +7252,24 @@ export const en = {
   "task.next.draftIntent": "write about this task",
   "task.next.noAddress": "No email address on this contact.",
   "task.next.noLeadAddress": "No email address on this lead.",
+  "task.type.reply": "Reply",
+  "task.type.reachOut": "Reach out",
+  "task.type.meet": "Meet",
+  "task.type.review": "Review",
+  "task.type.decide": "Decide",
+  "task.type.do": "Do",
+  "task.type.label": "Task type",
+  "task.next.copyNumber": "Copy number",
+  "task.next.numberCopied": "Number copied",
+  "task.next.copyNumberRemedy": "Select the number to copy it.",
+  "task.next.reviewLead": "Review lead",
+  "task.next.reviewDeal": "Review deal",
+  "task.next.reviewProject": "Review project",
+  "task.next.reviewContact": "Review contact",
+  "task.next.reviewCompany": "Review company",
+  "tasks.whichDeal.legend": "Which deal is the email about?",
+  "tasks.whichDeal.file": "Link email thread to deal",
+  "tasks.whichDeal.filed": "Email thread linked to the deal",
   "today.withheld": "Not included: {sections}. You do not have access to them.",
   "today.source.moments": "Margince findings",
   "today.source.nextSteps": "open tasks",
@@ -15024,6 +15072,9 @@ export const en = {
   "licensebanner.body":
     "This installation’s license token was checked and refused.",
   "licensebanner.link": "Open {tab}",
+  "licensebanner.grace.title": "License expired",
+  "licensebanner.grace.body":
+    "This installation’s license expired and is in its grace period. Margince keeps running, but it does not start again after the grace period ends. Renew the license before then.",
 
   "aicalls.title": "AI call trace",
   "aicalls.withheld":
@@ -19248,6 +19299,26 @@ export const en = {
     "You committed to this in a conversation. Do it, then mark it done.",
   "worklist.ask.invitation":
     "This is a calendar invitation. Accept, say maybe or decline, and the organizer gets your answer.",
+  "worklist.ask.changedInvitation":
+    "The organizer changed this meeting. Check what changed, then accept, say maybe or decline.",
+  "worklist.ask.meeting.updated":
+    "The organizer changed this meeting. Check what changed, then mark it done.",
+  "worklist.ask.meeting.canceled":
+    "The organizer canceled this meeting. There is nothing to answer; mark it done once you have seen it.",
+  "worklist.ask.meeting.proposed":
+    "A guest proposed another time. Move the meeting in your calendar if it suits you, then mark this done.",
+  "worklist.ask.meeting.answered":
+    "A guest answered your invitation. Mark it done once you have seen it.",
+  "worklist.ask.changedInvitationNamed":
+    "{name} changed this meeting. Check what changed, then accept, say maybe or decline.",
+  "worklist.ask.meetingNamed.updated":
+    "{name} changed this meeting. Check what changed, then mark it done.",
+  "worklist.ask.meetingNamed.canceled":
+    "{name} canceled this meeting. There is nothing to answer; mark it done once you have seen it.",
+  "worklist.ask.meetingNamed.proposed":
+    "{name} proposed another time. Move the meeting in your calendar if it suits you, then mark this done.",
+  "worklist.ask.meetingNamed.answered":
+    "{name} answered your invitation. Mark it done once you have seen it.",
   "worklist.ask.customer_waiting":
     "A customer wrote and nobody has answered yet. Reply to them.",
   "worklist.ask.lead_response":

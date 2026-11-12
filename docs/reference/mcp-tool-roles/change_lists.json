@@ -1,0 +1,14 @@
+{
+  "tool": "change_lists",
+  "verb": "change_lists",
+  "allowed_for": [
+    "admin",
+    "management",
+    "manager",
+    "ops",
+    "rep"
+  ],
+  "refused_for": [
+    "read_only"
+  ]
+}

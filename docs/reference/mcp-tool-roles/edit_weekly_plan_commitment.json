@@ -1,0 +1,15 @@
+{
+  "tool": "change_attention",
+  "action": "edit_commitment",
+  "verb": "edit_weekly_plan_commitment",
+  "allowed_for": [
+    "admin",
+    "management",
+    "manager",
+    "ops",
+    "rep"
+  ],
+  "refused_for": [
+    "read_only"
+  ]
+}

@@ -1,0 +1,6 @@
+{
+  "verb": "create_loss_reason",
+  "checks": [
+    "custom_field.create"
+  ]
+}

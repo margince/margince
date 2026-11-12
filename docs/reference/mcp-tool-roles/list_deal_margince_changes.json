@@ -1,0 +1,18 @@
+{
+  "tool": "read_details",
+  "action": "deal_margince_changes",
+  "verb": "list_deal_margince_changes",
+  "allowed_for": [
+    "admin",
+    "management",
+    "manager",
+    "ops",
+    "read_only",
+    "rep"
+  ],
+  "refused_for": [],
+  "colleague_record": {
+    "manager": "ran",
+    "rep": "ran"
+  }
+}

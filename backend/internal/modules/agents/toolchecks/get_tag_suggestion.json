@@ -1,0 +1,9 @@
+{
+  "verb": "get_tag_suggestion",
+  "checks": [
+    "tag.read"
+  ],
+  "takes": [
+    "tag_suggestion"
+  ]
+}

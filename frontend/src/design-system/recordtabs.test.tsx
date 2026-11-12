@@ -18,6 +18,7 @@ import { RecordTabs } from "./recordtabs";
 afterEach(() => {
   cleanup();
   vi.restoreAllMocks();
+  vi.unstubAllGlobals();
 });
 
 type Body = "overview" | "contacts";
@@ -166,5 +167,132 @@ describe("RecordTabs fades only an end that hides tabs", () => {
     const tabs = sized(300, 300);
     expect(tabs).not.toHaveClass("is-clipped-start");
     expect(tabs).not.toHaveClass("is-clipped-end");
+  });
+});
+
+// Focus stays on the row as tabs fold and return. A tab that folds hands it
+// to "More". "More" hands it to the open tab once every tab fits.
+describe("RecordTabs keeps focus on the row as tabs fold", () => {
+  // Two tabs on a row that starts at `start` wide. The returned call resizes it.
+  function sizedStrip(start: number) {
+    // The open menu watches its own size too, so every observer hears a resize.
+    const watchers: (() => void)[] = [];
+    vi.stubGlobal(
+      "ResizeObserver",
+      class {
+        constructor(changed: () => void) {
+          watchers.push(changed);
+        }
+        observe() {}
+        disconnect() {}
+      },
+    );
+    let room = start;
+    vi.spyOn(HTMLElement.prototype, "offsetWidth", "get").mockReturnValue(100);
+    vi.spyOn(HTMLElement.prototype, "clientWidth", "get").mockImplementation(
+      () => room,
+    );
+    strip();
+    return (next: number) => {
+      room = next;
+      act(() => {
+        for (const changed of watchers) changed();
+      });
+    };
+  }
+
+  // Two tabs on a row too narrow for both. The returned call widens it.
+  function foldedStrip() {
+    const resize = sizedStrip(150);
+    return () => resize(400);
+  }
+
+  it("moves focus from a tab that folds to More", () => {
+    const resize = sizedStrip(400);
+    act(() => screen.getByRole("button", { name: "Contacts" }).focus());
+    resize(150);
+
+    expect(screen.getByRole("button", { name: "More sections" })).toHaveFocus();
+  });
+
+  it("moves focus from More to the open tab", () => {
+    const grow = foldedStrip();
+    const more = screen.getByRole("button", { name: "More sections" });
+    expect(screen.queryByRole("button", { name: "Contacts" })).toBeNull();
+
+    act(() => more.focus());
+    grow();
+
+    expect(screen.getByRole("button", { name: "Overview" })).toHaveFocus();
+  });
+
+  it("moves focus from an entry in the open menu to the open tab", () => {
+    const grow = foldedStrip();
+    const more = screen.getByRole("button", { name: "More sections" });
+    act(() => more.focus());
+    fireEvent.click(more);
+    act(() => screen.getByRole("button", { name: "Contacts" }).focus());
+    grow();
+
+    expect(screen.getByRole("button", { name: "Overview" })).toHaveFocus();
+  });
+});
+
+// Widths here depend on where a tab stands: the first one drops its start
+// padding. The fold must settle on one row, not flip between two.
+describe("RecordTabs folds to one stable row", () => {
+  it("keeps the same tabs when the first tab's padding moves", () => {
+    let resized: () => void = () => undefined;
+    vi.stubGlobal(
+      "ResizeObserver",
+      class {
+        constructor(changed: () => void) {
+          resized = changed;
+        }
+        observe() {}
+        disconnect() {}
+      },
+    );
+    const base: Record<string, number> = { a: 92, b: 100, c: 200 };
+    const first = (el: Element) => el.parentElement?.firstElementChild === el;
+    vi.spyOn(HTMLElement.prototype, "offsetWidth", "get").mockImplementation(
+      function (this: HTMLElement) {
+        const tab = this.dataset.tab;
+        if (tab === undefined) return 80;
+        return (base[tab] ?? 0) - (first(this) ? 12 : 0);
+      },
+    );
+    vi.spyOn(HTMLElement.prototype, "clientWidth", "get").mockReturnValue(254);
+    const computed = window.getComputedStyle.bind(window);
+    vi.spyOn(window, "getComputedStyle").mockImplementation((el) => {
+      const style = computed(el);
+      if (!(el instanceof HTMLElement) || el.dataset.tab === undefined) {
+        return style;
+      }
+      return {
+        ...style,
+        paddingInlineStart: first(el) ? "0px" : "12px",
+        paddingInlineEnd: "12px",
+      };
+    });
+    render(
+      <LocaleProvider initial="en">
+        <RecordTabs
+          options={["a", "b", "c"]}
+          value="b"
+          onChange={() => undefined}
+          labels={{ a: "Alpha", b: "Beta", c: "Gamma" }}
+        />
+      </LocaleProvider>,
+    );
+    const shown = () =>
+      [...document.querySelectorAll<HTMLElement>("[data-tab]")].map(
+        (tab) => tab.dataset.tab,
+      );
+
+    act(() => resized());
+    expect(shown()).toEqual(["b"]);
+    act(() => resized());
+    expect(shown()).toEqual(["b"]);
   });
 });
