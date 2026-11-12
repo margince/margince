@@ -15903,6 +15903,37 @@
               "unattributed_nearby"
             ]
           },
+          "health": {
+            "type": "object",
+            "properties": {
+              "assessed_at": {
+                "type": "string",
+                "format": "date-time"
+              },
+              "assessment_id": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "author": {
+                "type": "string"
+              },
+              "judged": {
+                "type": "boolean"
+              },
+              "note": {
+                "type": "string"
+              },
+              "source": {
+                "type": "string"
+              },
+              "state": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "judged"
+            ]
+          },
           "phase_history": {
             "type": "object",
             "properties": {

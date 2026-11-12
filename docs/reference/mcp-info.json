@@ -10,16 +10,16 @@
   "totals": {
     "tools": 48,
     "resources": 14,
-    "tool_catalog_bytes": 237700,
+    "tool_catalog_bytes": 237716,
     "resource_catalog_bytes": 5622,
-    "approx_wire_tokens_total": 60830,
+    "approx_wire_tokens_total": 60834,
     "largest_tool_bytes": 11810,
     "largest_tool": "read_context",
     "tool_catalog_composition": {
-      "description_bytes": 55338,
+      "description_bytes": 55354,
       "input_schema_bytes": 117826,
       "output_schema_bytes": 52428,
-      "description_plus_input_schema_bytes": 173164
+      "description_plus_input_schema_bytes": 173180
     }
   },
   "tools": {
@@ -9569,7 +9569,7 @@
           "readOnlyHint": true,
           "title": "Read a project or its handover"
         },
-        "description": "Read one project. overview: its whole page — company, phase history (each move with its reason, and time per phase), deals, stakeholders, contracts, documents, open commitments, timeline, filing coverage, totals. handoff: what the delivery side needs from sales — who owns it, who to call at the client, what was sold, by when, what is already promised — with a named gap for each the records do not answer. overview cuts each section at 25 rows and flags it truncated; sections_omitted names what your grants withhold. A handoff gap means the field is empty as far as the caller can see. Preparing a handover is not performing one. read_record for the project's stored fields alone, read_context with about=catch_up for what has been happening, change_state record_project_health to say how it is going. The project_id, each gap's source field, and the deal, contact and task ids a follow-up acts on.",
+        "description": "Read one project. overview: its whole page — company, current health, phase history (each move with its reason, and time per phase), deals, stakeholders, contracts, documents, open commitments, timeline, filing coverage, totals. handoff: what the delivery side needs from sales — who owns it, who to call at the client, what was sold, by when, what is already promised — with a named gap for each the records do not answer. overview cuts each section at 25 rows and flags it truncated; sections_omitted names what your grants withhold. A handoff gap means the field is empty as far as the caller can see. Preparing a handover is not performing one. read_record for the project's stored fields alone, read_context with about=catch_up for what has been happening, change_state record_project_health to say how it is going. The project_id, each gap's source field, and the deal, contact and task ids a follow-up acts on.",
         "inputSchema": {
           "properties": {
             "project_id": {

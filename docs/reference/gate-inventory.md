@@ -441,6 +441,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `relayentrypoints_test.go` | H2 | _(no doc comment)_ |
 | `remediationnotbuyeractivity_test.go` | H2 | Remediation work must never read as buyer engagement. |
 | `reportasof_test.go` | H2 | A report's answer is labelled with the instant it was computed at. |
+| `requestsite_test.go` | H2 | Every site a model request names is one api/ai-tasks.yaml declares. |
 | `requiredbodyids_test.go` | H3 | Every contract request body that declares a required id must be accounted for. |
 | `requiredsourcebodies_test.go` | H2 | Every contract request body that requires a `source` must be refused when it names none. |
 | `restrictedreaders_test.go` | H2 | A record held under a statutory retention obligation is unavailable in every ordinary read path: lists, timelines, search, exports, embeddings, agent grounding. |
