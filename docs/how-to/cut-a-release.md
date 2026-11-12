@@ -137,10 +137,11 @@ The patch of `release.yml` starts at the patch base. The patch base is the newes
 the release's line, as the dist service records it. The line is `main` or one `lts/YYYY` branch. A withdrawn
 release was published, so it can be the base: an installation that runs it still gets the next patch.
 
-The release CLI reads the base from the dist service with `resolve-patch-base --version`, given the version of
+The release CLI reads the base from the dist service with `resolve-patch-base --release`, given the version of
 the new release. It names the version and the git revision of one release. The lane cuts the patch from that
 revision, and `draft-release` names that version as `--patch-base`. So the patch and its base come from one
-record and cannot disagree.
+record and cannot disagree. The publisher selects the release with `--release <version>` for
+`draft-release`, `add-artifacts` and `publish-release`.
 
 A lane that was cancelled or failed published nothing. So the next patch starts at the newest published release
 on the line, and it also carries the files of the lane that was skipped.
