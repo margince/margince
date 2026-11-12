@@ -3,7 +3,7 @@
 
 //go:build integration
 
-package compose
+package channelaxis_test
 
 // The transport axis is separate from the interaction axis, asserted against the
 // schema rather than against anyone's memory of it. The behavioural halves live
