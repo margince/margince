@@ -223,7 +223,7 @@ func (h erasureReturnHandlers) ConfirmBookingReturn(w http.ResponseWriter, r *ht
 // bad signature, an expired, spent or foreign link all read the same.
 func writeReturnLinkSpent(w http.ResponseWriter, r *http.Request) {
 	httperr.Write(w, r, httperr.Validation("token", "link_spent",
-		"This link was used already or has expired. Ask for a new one on the booking page."))
+		"This link was used already or has expired. Ask for a new one where you asked for this one."))
 }
 
 // storeReturned lifts the erasure, stores the contact and records the consent

@@ -70,6 +70,11 @@ describe("the address dispatch", () => {
     ["#/share/deal/d1", screens.ShareRoute, { id: "deal", id2: "d1" }],
     ["#/client", screens.ClientSurfaceScreen, {}],
     ["#/book/host", screens.BookingScreen, { hostSlug: "host" }],
+    [
+      "#/book/host/return",
+      screens.BookingScreen,
+      { hostSlug: "host", page: "return" },
+    ],
     ["#/preferences/tok", screens.PreferenceCenterScreen, { token: "tok" }],
     [
       "#/unsubscribe/tok/news",

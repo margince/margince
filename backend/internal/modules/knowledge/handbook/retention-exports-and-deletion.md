@@ -59,7 +59,7 @@ Also called: right to be forgotten, Art. 17, delete my data, data subject reques
 
 The audit details and stored event copies of the records being erased lose their personal values too. The audit still keeps who acted, what happened and when.
 
-An erased contact can come back only on their own request. Margince keeps a coded copy of each erased address and does not store that address again. No admin can lift that block. It lifts only when the contact confirms a link that Margince mailed to that address. Margince then stores them again, with the consent from their request, and a new erasure blocks the address again.
+An erased contact can come back only on their own request. Margince keeps a coded copy of each erased address and does not store that address again. No admin can lift that block. It lifts only when the contact confirms a link that Margince mailed to that address. Margince then stores them again, with the consent from their request, and a new erasure blocks the address again. To send someone the page where they ask for that link, see [Someone whose data was erased wants to come back](meetings-and-booking.md#someone-whose-data-was-erased-wants-to-come-back).
 
 ### What still needs a human review after erasure?
 
