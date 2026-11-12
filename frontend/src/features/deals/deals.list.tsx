@@ -194,10 +194,9 @@ function DealCreateAction({
           formCompany,
           projectOwner,
         ),
-        // Who works the deal, where it came from and the partner who brought
-        // it are set at birth, not by editing afterwards: a deal left without
-        // its source stays without it, and the win that pays a partner can
-        // come before anybody revisits the record.
+        // Owner, source and partner are set at birth. A deal left without its
+        // source stays without it, and the win that pays a partner can come
+        // before anybody revisits the record.
         ...projectOwnerField(t, projectOwner, {
           key: "owner_id",
           label: "list.owner",

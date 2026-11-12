@@ -44,9 +44,9 @@ export function currencyCodes(
 
 /**
  * The options of a currency `<Select>`. With a `locale`, each code is followed
- * by its name in the reader's language, from the platform's currency table
- * ("VND – Vietnamese dong"), so a reader who knows the money and not its code
- * can find it. Without one, a code is its own label.
+ * by its name in the reader's language ("VND – Vietnamese dong"). A reader who
+ * knows the money and not its code can then find it. Without one, a code is
+ * its own label.
  */
 export function currencyOptions(
   leading: LeadingCurrencies,
