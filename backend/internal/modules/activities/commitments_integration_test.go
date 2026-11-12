@@ -80,6 +80,12 @@ func setupPromises(t *testing.T) *promiseEnv {
 	if err := testdb.EnsureSchema(ctx, owner); err != nil {
 		t.Fatal(err)
 	}
+	// A plan that walks the seeded mail can outrun the package's whole budget,
+	// and then go test kills the package with no test named. Capped, it fails
+	// as the test that ran it.
+	if err := testdb.CapStatements(ctx, owner); err != nil {
+		t.Fatal(err)
+	}
 
 	e := &promiseEnv{owner: owner, ws: ids.NewV7(), rep: ids.NewV7(), other: ids.NewV7()}
 	if _, err := owner.Exec(ctx,
@@ -103,6 +109,13 @@ func setupPromises(t *testing.T) *promiseEnv {
 	testdb.AssertPoolsQuiesced(t)
 	e.pool = pool
 	return e
+}
+
+func TestARunawayStatementFailsAsTheTestThatSentIt(t *testing.T) {
+	e := setupPromises(t)
+	if capped, setting, err := testdb.StatementsCapped(context.Background(), e.owner); err != nil || !capped {
+		t.Fatalf("the owner connection's statement_timeout is %q (%v), want %v", setting, err, testdb.OwnerStatementCeiling)
+	}
 }
 
 // as binds the rep at OWN row scope — the narrowest real caller, and the one
