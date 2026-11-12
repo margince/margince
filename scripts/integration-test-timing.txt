@@ -4666,7 +4666,7 @@ backend|./internal/compose|TestNewMailOnAnOpenVendorQuestionReadsNoSiteAgain|6.9
 backend|./internal/compose|TestNewerMailInTheSameConversationSuppliesReplyLanguage|1.93
 backend|./internal/compose|TestNewerMailReturnsADeferredQuestionToADeciderWithNoReaderRow|1.50
 backend|./internal/compose|TestNewerUnchangedAdmissionPreventsAnOlderResultFromReplacingIt|2.26
-backend|./internal/compose|TestNoContractEnumSpellsARegisteredTransport|1.00
+backend|./internal/compose/channelaxis|TestNoContractEnumSpellsARegisteredTransport|1.00
 backend|./internal/compose|TestNoDimensionAnswersAJSONNumberWithAServerFault|1.08
 backend|./internal/compose|TestNoDimensionAnswersAStringItCannotHoldWithAServerFault|3.41
 backend|./internal/compose|TestNoNextMeetingPastTheWindowOrBesideOneLeftToday|9.22
