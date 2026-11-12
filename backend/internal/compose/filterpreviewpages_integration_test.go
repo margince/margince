@@ -56,9 +56,13 @@ func walkPreview(ctx context.Context, t *testing.T, e *integration.Env, pageSize
 		t.Fatalf("contact engine: ok=%v err=%v", ok, err)
 	}
 	var walked []ids.UUID
-	var after *ids.UUID
+	var token string
 	for page := 0; ; page++ {
-		got, err := handlers.preview(ctx, engine, previewPagedFilter, after, pageSize, false)
+		scope, after, err := previewCursor("contact", previewPagedFilter, token)
+		if err != nil {
+			t.Fatalf("page %d cursor %q: %v", page, token, err)
+		}
+		got, err := handlers.preview(ctx, engine, previewPagedFilter, scope, after, pageSize, false)
 		if err != nil {
 			t.Fatalf("page %d: %v", page, err)
 		}
@@ -78,9 +82,40 @@ func walkPreview(ctx context.Context, t *testing.T, e *integration.Env, pageSize
 		if got.NextCursor == nil {
 			return walked
 		}
-		if after, err = storekit.DecodeIDCursor(*got.NextCursor); err != nil {
-			t.Fatalf("page %d next_cursor %q: %v", page, *got.NextCursor, err)
+		token = *got.NextCursor
+	}
+}
+
+// A preview cursor continues only the filter that minted it. One from another
+// filter or another record type is refused, not read as a place to resume.
+func TestAFilterPreviewCursorContinuesOnlyItsOwnFilter(t *testing.T) {
+	e := integration.Setup(t)
+	seedPagedContacts(t, e, e.Rep1, 3)
+	handlers := filterPreviewHandlers{pool: e.Pool, collections: NewCollectionsStore(e.Pool)}
+	engine, ok, err := handlers.collections.SegmentEngine(e.Admin(), "contact")
+	if err != nil || !ok {
+		t.Fatalf("contact engine: ok=%v err=%v", ok, err)
+	}
+	scope, _, err := previewCursor("contact", previewPagedFilter, "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	first, err := handlers.preview(e.Admin(), engine, previewPagedFilter, scope, nil, 1, false)
+	if err != nil || first.NextCursor == nil {
+		t.Fatalf("the first page answered %+v, %v; want a cursor", first, err)
+	}
+	other := storekit.Predicate{Field: "name", Op: "contains", Value: "Another Subject"}
+	var malformed *storekit.MalformedCursorError
+	for name, attempt := range map[string]func() error{
+		"another filter": func() error { _, _, err := previewCursor("contact", other, *first.NextCursor); return err },
+		"another type":   func() error { _, _, err := previewCursor("company", previewPagedFilter, *first.NextCursor); return err },
+	} {
+		if err := attempt(); !errors.As(err, &malformed) {
+			t.Errorf("a cursor read under %s gave %v, want a malformed cursor", name, err)
 		}
+	}
+	if _, after, err := previewCursor("contact", previewPagedFilter, *first.NextCursor); err != nil || after == nil {
+		t.Fatalf("the minting filter refused its own cursor: %v", err)
 	}
 }
 
@@ -150,7 +185,7 @@ func TestAFilterPreviewReadsItsRowsInTheSnapshotOfItsPage(t *testing.T) {
 	answered, returned := make(chan answer, 1), make(chan struct{})
 	go func() {
 		defer close(returned)
-		got, err := handlers.preview(e.Admin(), engine, previewPagedFilter, nil, 10, false)
+		got, err := handlers.preview(e.Admin(), engine, previewPagedFilter, "", nil, 10, false)
 		answered <- answer{got, err}
 	}()
 	observer := integration.OwnerConn(t)

@@ -166,12 +166,16 @@ func (s *Store) listStaticMembers(ctx context.Context, tx pgx.Tx, list listRow, 
 		sql += fmt.Sprintf(" AND lm.entity_id = ANY($%d)", arg(read.Only))
 	}
 	limit := read.Limit
-	if read.Cursor != "" {
-		after, err := ids.Parse(read.Cursor)
-		if err != nil {
-			return nil, storekit.Page{}, &storekit.MalformedCursorError{}
-		}
-		sql += fmt.Sprintf(" AND lm.id > $%d", arg(after))
+	scope, err := storekit.CursorScope("shortlist", list.ID)
+	if err != nil {
+		return nil, storekit.Page{}, err
+	}
+	after, err := storekit.DecodeIDCursor(scope, read.Cursor)
+	if err != nil {
+		return nil, storekit.Page{}, err
+	}
+	if after != nil {
+		sql += fmt.Sprintf(" AND lm.id > $%d", arg(*after))
 	}
 	sql += fmt.Sprintf(" ORDER BY lm.id LIMIT $%d", arg(limit+1))
 	rows, err := tx.Query(ctx, sql, args...)
@@ -186,11 +190,16 @@ func (s *Store) listStaticMembers(ctx context.Context, tx pgx.Tx, list listRow, 
 	if err != nil {
 		return nil, storekit.Page{}, err
 	}
-	if len(out) > limit {
+	more := len(out) > limit
+	if more {
 		out = out[:limit]
-		return out, storekit.Page{HasMore: true, NextCursor: out[limit-1].ID.String()}, nil
 	}
-	return out, storekit.Page{}, nil
+	memberIDs := make([]ids.UUID, len(out))
+	for i, m := range out {
+		memberIDs[i] = m.ID
+	}
+	page, err := storekit.IDPage(scope, memberIDs, more)
+	return out, page, err
 }
 
 // CountMembers answers how many members of the list this reader may see:
@@ -225,7 +234,8 @@ func (s *Store) CountMembers(ctx context.Context, listID ids.ListID) (int, error
 			return err
 		}
 		query := fmt.Sprintf(
-			"SELECT count(*) FROM list_member lm WHERE lm.list_id = $%d AND %s", arg(listID), visible)
+			"SELECT count(*) FROM list_member lm WHERE lm.list_id = $%d AND %s", arg(listID), visible,
+		)
 		return tx.QueryRow(ctx, query, args...).Scan(&n)
 	})
 	return n, err
@@ -273,7 +283,13 @@ func (s *Store) evaluateSegment(ctx context.Context, list listRow, read MemberRe
 	if err != nil {
 		return nil, storekit.Page{}, err
 	}
-	after, err := storekit.DecodeIDCursor(read.Cursor)
+	// A changed filter is another paging, so a cursor from before the change
+	// is refused rather than continuing a walk over a different set.
+	scope, err := storekit.CursorScope("live_list", list.ID, list.Definition)
+	if err != nil {
+		return nil, storekit.Page{}, err
+	}
+	after, err := storekit.DecodeIDCursor(scope, read.Cursor)
 	if err != nil {
 		return nil, storekit.Page{}, err
 	}
@@ -309,7 +325,8 @@ func (s *Store) evaluateSegment(ctx context.Context, list listRow, read MemberRe
 	if read.Only != nil {
 		slices.SortFunc(out, func(a, b memberRow) int { return strings.Compare(a.ID.String(), b.ID.String()) })
 	}
-	return out, storekit.IDPage(matched, more), nil
+	page, err := storekit.IDPage(scope, matched, more)
+	return out, page, err
 }
 
 // MemberFilter resolves a list into the narrowing a record list read applies
