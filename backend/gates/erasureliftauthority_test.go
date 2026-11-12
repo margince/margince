@@ -13,6 +13,7 @@ package gates
 // statement fails here, and so does a second caller of the lift.
 
 import (
+	"cmp"
 	"go/ast"
 	"go/parser"
 	"path/filepath"
@@ -33,12 +34,13 @@ var (
 
 // The chain from the lift to the route, one call at a time.
 const (
-	liftFunction      = "LiftEmailSuppressionTx"
-	liftSeat          = "internal/modules/privacy/suppressionlift.go:" + liftFunction
-	returnStore       = "storeReturned"
-	returnStoreSeat   = "internal/compose/erasurereturn.go:" + returnStore
-	returnConfirmSeat = "internal/compose/erasurereturn.go:ConfirmBookingReturn"
-	returnConfirmOp   = "confirmBookingReturn"
+	liftFunction         = "LiftEmailSuppressionTx"
+	liftSeat             = "internal/modules/privacy/suppressionlift.go:" + liftFunction
+	returnStore          = "storeReturned"
+	returnStoreSeat      = "internal/compose/erasurereturn.go:" + returnStore
+	returnConfirmHandler = "ConfirmBookingReturn"
+	returnConfirmSeat    = "internal/compose/erasurereturn.go:" + returnConfirmHandler
+	returnConfirmOp      = "confirmBookingReturn"
 )
 
 // erasureListMovers write lifted_at or remove rows without lifting an armed
@@ -72,8 +74,10 @@ func TestOnlyTheMailedLinkLiftsAnErasure(t *testing.T) {
 		t.Fatalf("%s holds no lifting statement; the census no longer sees the lift", liftSeat)
 	}
 
-	assertOnlyCaller(t, files, liftFunction, returnStoreSeat)
-	assertOnlyCaller(t, files, returnStore, returnConfirmSeat)
+	assertOnlyReferrer(t, files, liftFunction, returnStoreSeat)
+	assertOnlyReferrer(t, files, returnStore, returnConfirmSeat)
+	// The confirm handler is reached through the generated router alone.
+	assertOnlyReferrer(t, files, returnConfirmHandler, "")
 	if _, humanOnly := humanOnlyOperationsInContract(t)[returnConfirmOp]; !humanOnly {
 		t.Errorf("%s is not x-agent-access: human-only in api/crm.yaml, so an agent tool could lift an erasure", returnConfirmOp)
 	}
@@ -108,32 +112,42 @@ func liftsAnEntry(sql string) bool {
 	return false
 }
 
-// assertOnlyCaller fails unless every call of callee in the tree sits in want.
-func assertOnlyCaller(t *testing.T, files []gatekit.ParsedFile, callee, want string) {
+// assertOnlyReferrer fails unless every reference to name in the tree sits in
+// want: a call, a function value or a method value alike. An empty want
+// admits none. The declaration's own name is not a reference.
+func assertOnlyReferrer(t *testing.T, files []gatekit.ParsedFile, name, want string) {
 	t.Helper()
-	var callers []string
+	referrers := nameReferrers(files, name)
+	if want != "" && len(referrers) == 0 {
+		t.Errorf("nothing refers to %s; the census no longer sees the chain from the route to the lift", name)
+	}
+	for _, referrer := range referrers {
+		if referrer != want {
+			t.Errorf("%s refers to %s. Only %s may, so the mailed link stays the one way to lift an erasure",
+				referrer, name, cmp.Or(want, "the generated router"))
+		}
+	}
+}
+
+// nameReferrers answers each declaration that refers to name, by file and
+// declaration. A package-level reference is filed under "package scope".
+func nameReferrers(files []gatekit.ParsedFile, name string) []string {
+	var referrers []string
 	for _, file := range files {
 		for _, decl := range file.File.Decls {
-			fn, ok := decl.(*ast.FuncDecl)
-			if !ok || fn.Body == nil {
-				continue
+			site, declared := file.Path+":package scope", (*ast.Ident)(nil)
+			if fn, ok := decl.(*ast.FuncDecl); ok {
+				site, declared = file.Path+":"+fn.Name.Name, fn.Name
 			}
-			ast.Inspect(fn.Body, func(n ast.Node) bool {
-				if call, isCall := n.(*ast.CallExpr); isCall && calledName(call) == callee {
-					callers = append(callers, file.Path+":"+fn.Name.Name)
+			ast.Inspect(decl, func(n ast.Node) bool {
+				if ident, ok := n.(*ast.Ident); ok && ident != declared && ident.Name == name {
+					referrers = append(referrers, site)
 				}
 				return true
 			})
 		}
 	}
-	if len(callers) == 0 {
-		t.Errorf("nothing calls %s; the census no longer sees the chain from the route to the lift", callee)
-	}
-	for _, caller := range callers {
-		if caller != want {
-			t.Errorf("%s calls %s. Only %s may, so the mailed link stays the one way to lift an erasure", caller, callee, want)
-		}
-	}
+	return referrers
 }
 
 // productionGoFiles parses every hand-written, non-test Go file outside gates/.

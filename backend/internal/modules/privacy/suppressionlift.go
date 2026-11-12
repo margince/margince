@@ -26,7 +26,8 @@ import (
 var ErrLiftNotCurrent = errors.New("privacy: the erasure this link was mailed for is no longer on the list")
 
 // replayingErasureKey marks an erasure that ReapplySuppressions runs again on a
-// record from before a lift. It repeats the old erasure, so it keeps the lift.
+// record the list already names. It repeats the old erasure, so it leaves the
+// row as it stands, lift included.
 type replayingErasureKey struct{}
 
 func replayingErasure(ctx context.Context) context.Context {
@@ -34,8 +35,8 @@ func replayingErasure(ctx context.Context) context.Context {
 }
 
 // armSuppression puts identifier hashes on the erasure list for an erasure.
-// A second erasure arms a lifted hash again and dates the row from now. A
-// confirmation link mailed before it then no longer matches the row.
+// Every erasure dates the row from now and clears any lift, so a confirmation
+// link mailed before it no longer matches the row.
 func armSuppression(ctx context.Context, tx pgx.Tx, kind string, hashes []string, keyID *string) error {
 	if len(hashes) == 0 {
 		return nil
@@ -45,8 +46,8 @@ func armSuppression(ctx context.Context, tx pgx.Tx, kind string, hashes []string
 		INSERT INTO erasure_suppression (kind, value_hash, key_id)
 		SELECT DISTINCT @kind::text, hash, @key::text FROM unnest(@hashes::text[]) AS hash
 		ON CONFLICT (kind, value_hash) DO UPDATE
-		   SET lifted_at = NULL, lift_consent_event_id = NULL, created_at = now()
-		 WHERE erasure_suppression.lifted_at IS NOT NULL AND NOT @replaying`,
+		   SET lifted_at = NULL, lift_consent_event_id = NULL, lift_contact_id = NULL, created_at = now()
+		 WHERE NOT @replaying`,
 		pgx.StrictNamedArgs{"kind": kind, "hashes": hashes, "key": keyID, "replaying": replaying}); err != nil {
 		return fmt.Errorf("privacy: putting %s identifiers on the erasure list: %w", kind, err)
 	}
@@ -74,10 +75,11 @@ func EmailErasedAt(ctx context.Context, tx pgx.Tx, email string) (time.Time, boo
 }
 
 // LiftEmailSuppressionTx lifts every entry that refuses the address, on the
-// subject's own request. erasedAt is the time their link carries; consentEvent
-// is the grant they gave in the same transaction. It takes the lock an erasure
-// takes, so an erasure and a lift of one address never interleave.
-func LiftEmailSuppressionTx(ctx context.Context, tx pgx.Tx, email string, erasedAt time.Time, consentEvent ids.UUID) error {
+// subject's own request. erasedAt is the time their link carries. consentEvent
+// is the grant they gave in the same transaction, and contact is the record
+// that request stored, which a replay never erases. It takes the lock an
+// erasure takes, so an erasure and a lift of one address never interleave.
+func LiftEmailSuppressionTx(ctx context.Context, tx pgx.Tx, email string, erasedAt time.Time, consentEvent, contact ids.UUID) error {
 	if err := storekit.LockSubjectKeys(ctx, tx, nil, []string{email}); err != nil {
 		return err
 	}
@@ -89,9 +91,9 @@ func LiftEmailSuppressionTx(ctx context.Context, tx pgx.Tx, email string, erased
 		return ErrLiftNotCurrent
 	}
 	if _, err := tx.Exec(ctx, `
-		UPDATE erasure_suppression SET lifted_at = now(), lift_consent_event_id = @consent
+		UPDATE erasure_suppression SET lifted_at = now(), lift_consent_event_id = @consent, lift_contact_id = @contact
 		 WHERE kind = 'email' AND value_hash = ANY(@forms) AND lifted_at IS NULL`,
-		pgx.StrictNamedArgs{"forms": storekit.EmailSuppressionForms(email), "consent": consentEvent}); err != nil {
+		pgx.StrictNamedArgs{"forms": storekit.EmailSuppressionForms(email), "consent": consentEvent, "contact": contact}); err != nil {
 		return fmt.Errorf("privacy: lifting an address from the erasure list: %w", err)
 	}
 	return nil

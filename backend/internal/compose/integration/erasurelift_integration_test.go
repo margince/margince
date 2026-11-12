@@ -135,11 +135,11 @@ func TestAJournalNewerThanARestoredLiftErasesAgain(t *testing.T) {
 	liftAddress(t, e, liftedAddress)
 	owner := OwnerConn(t)
 	var erasedAt, liftedAt time.Time
-	var consent ids.UUID
+	var consent, contact ids.UUID
 	hash := storekit.SuppressionHash(liftedAddress)
 	if err := owner.QueryRow(context.Background(),
-		`SELECT created_at, lifted_at, lift_consent_event_id FROM erasure_suppression WHERE value_hash = $1`,
-		hash).Scan(&erasedAt, &liftedAt, &consent); err != nil {
+		`SELECT created_at, lifted_at, lift_consent_event_id, lift_contact_id FROM erasure_suppression WHERE value_hash = $1`,
+		hash).Scan(&erasedAt, &liftedAt, &consent, &contact); err != nil {
 		t.Fatalf("reading the lifted row: %v", err)
 	}
 	eraseForLift(t, e, contactHolding(t, e, "Die Zurueckgekehrte", liftedAddress))
@@ -148,8 +148,8 @@ func TestAJournalNewerThanARestoredLiftErasesAgain(t *testing.T) {
 	}
 	// The restore: the list is back at the lift, and the contact is back.
 	if _, err := owner.Exec(context.Background(), `
-		UPDATE erasure_suppression SET created_at = $2, lifted_at = $3, lift_consent_event_id = $4 WHERE value_hash = $1`,
-		hash, erasedAt, liftedAt, consent); err != nil {
+		UPDATE erasure_suppression SET created_at = $2, lifted_at = $3, lift_consent_event_id = $4, lift_contact_id = $5
+		 WHERE value_hash = $1`, hash, erasedAt, liftedAt, consent, contact); err != nil {
 		t.Fatalf("restoring the lifted row: %v", err)
 	}
 	back := contactHolding(t, e, "Wieder da", liftedAddress)
@@ -267,7 +267,7 @@ func liftAddress(t *testing.T, e *Env, email string) {
 
 func tryLift(e *Env, email string, erasedAt time.Time) error {
 	return database.WithWorkspaceTx(liftContext(e), e.Pool, func(tx pgx.Tx) error {
-		return privacy.LiftEmailSuppressionTx(liftContext(e), tx, email, erasedAt, ids.NewV7())
+		return privacy.LiftEmailSuppressionTx(liftContext(e), tx, email, erasedAt, ids.NewV7(), ids.NewV7())
 	})
 }
 

@@ -42,7 +42,7 @@ func RekeySuppressionListPageTx(ctx context.Context, tx pgx.Tx, after Suppressio
 	if keyID == nil {
 		return nil, nil
 	}
-	rows, err := tx.Query(ctx, `SELECT kind, value_hash, created_at, lifted_at, lift_consent_event_id FROM erasure_suppression
+	rows, err := tx.Query(ctx, `SELECT kind, value_hash, created_at, lifted_at, lift_consent_event_id, lift_contact_id FROM erasure_suppression
 		WHERE key_id IS NULL AND (kind, value_hash) > (@kind, @hash)
 		ORDER BY kind, value_hash LIMIT @limit FOR UPDATE`,
 		pgx.StrictNamedArgs{rekeyKindParameter: after.Kind, "hash": after.Hash, rekeyLimitParameter: limit})
@@ -55,20 +55,21 @@ func RekeySuppressionListPageTx(ctx context.Context, tx pgx.Tx, after Suppressio
 		erasedAt              []time.Time
 		liftedAt              []*time.Time
 		liftConsents          []*ids.UUID
+		liftContacts          []*ids.UUID
 	)
 	for rows.Next() {
 		var row SuppressionCursor
 		var at time.Time
 		var lifted *time.Time
-		var consent *ids.UUID
-		if err := rows.Scan(&row.Kind, &row.Hash, &at, &lifted, &consent); err != nil {
+		var consent, contact *ids.UUID
+		if err := rows.Scan(&row.Kind, &row.Hash, &at, &lifted, &consent, &contact); err != nil {
 			rows.Close()
 			return nil, err
 		}
 		hash, _ := storekit.RekeySuppressionHash(row.Hash)
 		page, kinds, unkeyed, keyed, erasedAt = append(page, row), append(kinds, row.Kind),
 			append(unkeyed, row.Hash), append(keyed, hash), append(erasedAt, at)
-		liftedAt, liftConsents = append(liftedAt, lifted), append(liftConsents, consent)
+		liftedAt, liftConsents, liftContacts = append(liftedAt, lifted), append(liftConsents, consent), append(liftContacts, contact)
 	}
 	rows.Close()
 	if err := rows.Err(); err != nil || len(page) == 0 {
@@ -76,13 +77,13 @@ func RekeySuppressionListPageTx(ctx context.Context, tx pgx.Tx, after Suppressio
 	}
 	// The keyed row carries the unkeyed row's lift. When both forms exist and
 	// either is armed, the keyed row ends armed: a lift never wins a merge.
-	if _, err := tx.Exec(ctx, `INSERT INTO erasure_suppression (kind, value_hash, key_id, created_at, lifted_at, lift_consent_event_id)
-		SELECT kind, hash, @key, at, lifted, consent
-		  FROM unnest(@kinds::text[], @keyed::text[], @at::timestamptz[], @lifted::timestamptz[], @consents::uuid[])
-		       AS u(kind, hash, at, lifted, consent)
-		ON CONFLICT (kind, value_hash) DO UPDATE SET lifted_at = NULL, lift_consent_event_id = NULL
+	if _, err := tx.Exec(ctx, `INSERT INTO erasure_suppression (kind, value_hash, key_id, created_at, lifted_at, lift_consent_event_id, lift_contact_id)
+		SELECT kind, hash, @key, at, lifted, consent, contact
+		  FROM unnest(@kinds::text[], @keyed::text[], @at::timestamptz[], @lifted::timestamptz[], @consents::uuid[], @contacts::uuid[])
+		       AS u(kind, hash, at, lifted, consent, contact)
+		ON CONFLICT (kind, value_hash) DO UPDATE SET lifted_at = NULL, lift_consent_event_id = NULL, lift_contact_id = NULL
 		 WHERE EXCLUDED.lifted_at IS NULL AND erasure_suppression.lifted_at IS NOT NULL`,
-		pgx.StrictNamedArgs{"kinds": kinds, "keyed": keyed, "at": erasedAt, "lifted": liftedAt, "consents": liftConsents, "key": *keyID}); err != nil {
+		pgx.StrictNamedArgs{"kinds": kinds, "keyed": keyed, "at": erasedAt, "lifted": liftedAt, "consents": liftConsents, "contacts": liftContacts, "key": *keyID}); err != nil {
 		return nil, fmt.Errorf("privacy: writing the keyed erasure list rows: %w", err)
 	}
 	if _, err := tx.Exec(ctx, `DELETE FROM erasure_suppression s

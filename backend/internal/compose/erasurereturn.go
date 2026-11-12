@@ -200,51 +200,29 @@ func (h erasureReturnHandlers) storeReturned(ctx context.Context, request return
 		if err != nil {
 			return err
 		}
-		subject := ids.From[ids.ContactKind](contactID)
-		if _, err := h.consent.Record(ctx, returnConsentRecord(subject, request)); err != nil {
+		granted, err := h.consent.Record(ctx, returnConsentRecord(ids.From[ids.ContactKind](contactID), request))
+		if err != nil {
 			return err
 		}
 		return InstallationDB(h.pool).Tx(ctx, func(tx pgx.Tx) error {
-			evidence, err := h.grantEvidence(ctx, tx, subject, request.PurposeID)
-			if err != nil {
-				return err
-			}
-			return privacy.LiftEmailSuppressionTx(ctx, tx, request.Email, request.ErasedAt, evidence)
+			return privacy.LiftEmailSuppressionTx(ctx, tx, request.Email, request.ErasedAt, granted.ProofEventID, contactID)
 		})
 	})
 }
 
 // returnConsentRecord is the grant the subject gave on the booking page. The
 // mailbox answered the link, so the grant may replace a withdrawal on record,
-// which an anonymous booking may not.
+// which an anonymous booking may not. It always writes its own proof row, which
+// the lift names.
 func returnConsentRecord(subject ids.ContactID, request returnlink.Request) consent.RecordInput {
 	source := returnSource
 	return consent.RecordInput{
-		ContactID:     subject,
-		PurposeID:     ids.From[ids.PurposeKind](request.PurposeID),
-		NewState:      "granted",
-		Source:        &source,
-		PolicyText:    &request.Wording,
-		PolicyVersion: &request.PolicyVersion,
+		ContactID:        subject,
+		PurposeID:        ids.From[ids.PurposeKind](request.PurposeID),
+		NewState:         "granted",
+		Source:           &source,
+		PolicyText:       &request.Wording,
+		PolicyVersion:    &request.PolicyVersion,
+		ProveReassertion: true,
 	}
-}
-
-// grantEvidence is the proof row of the grant now standing for the purpose.
-// That is the row just written, or the earlier one a re-assertion kept.
-func (h erasureReturnHandlers) grantEvidence(ctx context.Context, tx pgx.Tx, subject ids.ContactID, purpose ids.UUID) (ids.UUID, error) {
-	_, events, err := h.consent.ContactConsentTx(ctx, tx, subject)
-	if err != nil {
-		return ids.Nil, err
-	}
-	var newest *consent.ProofEvent
-	for i, event := range events {
-		if event.PurposeID.UUID == purpose && event.NewState == "granted" &&
-			(newest == nil || event.OccurredAt.After(newest.OccurredAt)) {
-			newest = &events[i]
-		}
-	}
-	if newest == nil {
-		return ids.Nil, errors.New("erasure return: the consent grant left no proof row")
-	}
-	return newest.ID, nil
 }

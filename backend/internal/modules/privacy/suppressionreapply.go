@@ -94,10 +94,12 @@ type suppressionEntry struct{ kind, hash string }
 
 // suppressionState is what the list says about one entry. A lifted entry still
 // erases a contact created before the lift: that contact is the erased one,
-// brought back by a restore. The subject's own signup is created at the lift.
+// brought back by a restore. It never erases liftContact, the record the
+// subject's return stored, whenever that record was created.
 type suppressionState struct {
-	erasedAt time.Time
-	liftedAt *time.Time
+	erasedAt    time.Time
+	liftedAt    *time.Time
+	liftContact *ids.UUID
 }
 
 // changedAt is when the entry last changed, to tell the newer of two answers.
@@ -108,16 +110,22 @@ func (s suppressionState) changedAt() time.Time {
 	return s.erasedAt
 }
 
-// erases reports whether the entry erases a contact created at created.
-func (s suppressionState) erases(created time.Time) bool {
-	return s.liftedAt == nil || created.Before(*s.liftedAt)
+// erases reports whether the entry erases the live contact.
+func (s suppressionState) erases(live liveIdentifier) bool {
+	if s.liftedAt == nil {
+		return true
+	}
+	if s.liftContact != nil && *s.liftContact == live.contact {
+		return false
+	}
+	return live.created.Before(*s.liftedAt)
 }
 
 // suppressedHashes reads the standing instruction, every kind of it.
 func (e *Eraser) suppressedHashes(ctx context.Context) (map[suppressionEntry]suppressionState, error) {
 	hashes := map[suppressionEntry]suppressionState{}
 	if err := e.db.Tx(ctx, func(tx pgx.Tx) error {
-		rows, err := tx.Query(ctx, `SELECT kind, value_hash, created_at, lifted_at FROM erasure_suppression`)
+		rows, err := tx.Query(ctx, `SELECT kind, value_hash, created_at, lifted_at, lift_contact_id FROM erasure_suppression`)
 		if err != nil {
 			return err
 		}
@@ -125,7 +133,7 @@ func (e *Eraser) suppressedHashes(ctx context.Context) (map[suppressionEntry]sup
 		for rows.Next() {
 			var entry suppressionEntry
 			var state suppressionState
-			if err := rows.Scan(&entry.kind, &entry.hash, &state.erasedAt, &state.liftedAt); err != nil {
+			if err := rows.Scan(&entry.kind, &entry.hash, &state.erasedAt, &state.liftedAt, &state.liftContact); err != nil {
 				return err
 			}
 			hashes[entry] = state
@@ -170,7 +178,7 @@ func (e *Eraser) contactsMatchingSuppression(ctx context.Context, suppressed map
 				var live liveIdentifier
 				var email string
 				err := rows.Scan(&live.contact, &live.created, &email)
-				live.forms = storekit.SuppressionForms(email)
+				live.forms = storekit.EmailSuppressionForms(email)
 				return live, err
 			},
 		},
@@ -249,7 +257,7 @@ func (e *Eraser) matchJournaled(
 			return nil, err
 		}
 		if !slices.ContainsFunc(states, func(state suppressionState) bool {
-			return state.changedAt().After(c.listChanged) && state.erases(c.created)
+			return state.changedAt().After(c.listChanged) && state.erases(c.liveIdentifier)
 		}) {
 			continue
 		}
@@ -277,7 +285,7 @@ func listAnswer(suppressed map[suppressionEntry]suppressionState, kind string, l
 		if !ok {
 			continue
 		}
-		if state.erases(live.created) {
+		if state.erases(live) {
 			return true, newest
 		}
 		if state.changedAt().After(newest) {

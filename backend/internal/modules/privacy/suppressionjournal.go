@@ -39,6 +39,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/blobstore"
 	"github.com/margince/margince/backend/internal/platform/corefeatures"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
@@ -109,14 +110,14 @@ func (e *Eraser) ExportSuppressions(ctx context.Context) (int, error) {
 			return err
 		}
 		rows, err := tx.Query(ctx,
-			`SELECT kind, value_hash, created_at, lifted_at, key_id FROM erasure_suppression`)
+			`SELECT kind, value_hash, created_at, lifted_at, lift_contact_id, key_id FROM erasure_suppression`)
 		if err != nil {
 			return err
 		}
 		defer rows.Close()
 		for rows.Next() {
 			var row entry
-			if err := rows.Scan(&row.kind, &row.hash, &row.state.erasedAt, &row.state.liftedAt, &row.keyID); err != nil {
+			if err := rows.Scan(&row.kind, &row.hash, &row.state.erasedAt, &row.state.liftedAt, &row.state.liftContact, &row.keyID); err != nil {
 				return err
 			}
 			entries = append(entries, row)
@@ -175,13 +176,17 @@ func journalEntryBody(kind string, state suppressionState) []byte {
 	if state.liftedAt != nil {
 		body += journalLiftedField + " " + state.liftedAt.UTC().Format(time.RFC3339Nano) + "\n"
 	}
+	if state.liftContact != nil {
+		body += journalLiftContactField + " " + state.liftContact.String() + "\n"
+	}
 	return []byte(body)
 }
 
 // The fields of a journal entry after its first line.
 const (
-	journalErasedField = "erased_at"
-	journalLiftedField = "lifted_at"
+	journalErasedField      = "erased_at"
+	journalLiftedField      = "lifted_at"
+	journalLiftContactField = "lift_contact_id"
 )
 
 // maxJournalEntryBody bounds what a replay reads of one entry. An entry is a
@@ -203,34 +208,47 @@ func parseJournalEntry(body string) (suppressionState, error) {
 	}
 	state := suppressionState{erasedAt: erased}
 	for _, line := range lines[1:] {
-		field, stamp, _ := strings.Cut(line, " ")
-		at, err := time.Parse(time.RFC3339Nano, stamp)
-		if err != nil {
-			return suppressionState{}, fmt.Errorf("privacy: a suppression journal entry has a bad %s: %w", field, err)
-		}
-		switch field {
-		case journalErasedField:
-			state.erasedAt = at
-		case journalLiftedField:
-			state.liftedAt = &at
-		default:
-			return suppressionState{}, fmt.Errorf("privacy: a suppression journal entry has an unknown field %q", field)
+		field, value, _ := strings.Cut(line, " ")
+		if err := state.readJournalField(field, value); err != nil {
+			return suppressionState{}, err
 		}
 	}
 	return state, nil
 }
 
-// journalStatesInAnyForm asks the journal about each stored form of one
-// identifier (storekit.SuppressionForms), and answers the entries it holds. The
-// keyed form is under its prefix. A journal exported before the key may still
-// hold the unkeyed one.
-func (e *Eraser) journalStatesInAnyForm(ctx context.Context, kind string, forms []string) ([]suppressionState, error) {
-	if len(forms) == 0 {
-		return nil, nil
+// readJournalField sets one field of a journal entry from its line.
+func (s *suppressionState) readJournalField(field, value string) error {
+	if field == journalLiftContactField {
+		contact, err := ids.Parse(value)
+		if err != nil {
+			return fmt.Errorf("privacy: a suppression journal entry has a bad %s: %w", field, err)
+		}
+		s.liftContact = &contact
+		return nil
 	}
-	keys := []string{suppressionJournalKey(kind, forms[len(forms)-1])}
-	if len(forms) > 1 {
-		keys = append(keys, keyedJournalKey(kind, forms[0]))
+	at, err := time.Parse(time.RFC3339Nano, value)
+	if err != nil {
+		return fmt.Errorf("privacy: a suppression journal entry has a bad %s: %w", field, err)
+	}
+	switch field {
+	case journalErasedField:
+		s.erasedAt = at
+	case journalLiftedField:
+		s.liftedAt = &at
+	default:
+		return fmt.Errorf("privacy: a suppression journal entry has an unknown field %q", field)
+	}
+	return nil
+}
+
+// journalStatesInAnyForm asks the journal about each stored form of one
+// identifier, and answers the entries it holds. A form may be filed under the
+// keyed prefix. A journal exported before the key files it under the unkeyed
+// one, so each form is asked under both.
+func (e *Eraser) journalStatesInAnyForm(ctx context.Context, kind string, forms []string) ([]suppressionState, error) {
+	keys := make([]string, 0, 2*len(forms))
+	for _, form := range forms {
+		keys = append(keys, keyedJournalKey(kind, form), suppressionJournalKey(kind, form))
 	}
 	var states []suppressionState
 	for _, key := range keys {
