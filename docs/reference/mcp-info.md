@@ -17,7 +17,7 @@ input and output schema in folds below it. What a tool may do and whether a huma
 | Resources | 14 |
 | Tool catalog | 230.7 KB |
 | Resource catalog | 5.5 KB |
-| Approx. wire tokens | 60473 |
+| Approx. wire tokens | 60477 |
 | Largest tool | `read_context` (11.5 KB) |
 | Scopes rendered | `read`, `draft`, `write`, `send`, `enrich` |
 
@@ -99,7 +99,7 @@ descriptions and input schemas are what each step pays for.
 | [`read_forecast`](#read_forecast) | Read the forecast and how it moved | yes | [`ui://margince/forecast.html`](#forecast_view) | 978 |
 | [`read_import`](#read_import) | Read an import run or the import format | yes |  | 235 |
 | [`read_lists`](#read_lists) | Find and read lists | yes |  | 788 |
-| [`read_project`](#read_project) | Read a project or its handover | yes |  | 314 |
+| [`read_project`](#read_project) | Read a project or its handover | yes |  | 318 |
 | [`read_record`](#read_record) | Read a record | yes |  | 324 |
 | [`read_relationships`](#read_relationships) | Read who we know, and how well | yes |  | 359 |
 | [`read_reports`](#read_reports) | Read sales reports | yes |  | 2784 |
@@ -10346,11 +10346,11 @@ change, and next_cursor to read the next page.
 **Read a project or its handover**
 
 ```text
-Read one project. overview: its whole page — company, phase history (each move with its reason,
-and time per phase), deals, stakeholders, contracts, documents, open commitments, timeline, filing
-coverage, totals. handoff: what the delivery side needs from sales — who owns it, who to call at
-the client, what was sold, by when, what is already promised — with a named gap for each the
-records do not answer. overview cuts each section at 25 rows and flags it truncated;
+Read one project. overview: its whole page — company, current health, phase history (each move
+with its reason, and time per phase), deals, stakeholders, contracts, documents, open commitments,
+timeline, filing coverage, totals. handoff: what the delivery side needs from sales — who owns it,
+who to call at the client, what was sold, by when, what is already promised — with a named gap for
+each the records do not answer. overview cuts each section at 25 rows and flags it truncated;
 sections_omitted names what your grants withhold. A handoff gap means the field is empty as far as
 the caller can see. Preparing a handover is not performing one. read_record for the project's stored
 fields alone, read_context with about=catch_up for what has been happening, change_state
