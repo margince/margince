@@ -154,9 +154,9 @@ func (s *Dispatcher) explain(tool string, err error) string {
 		// A name that is not on the surface at all — the model invented it, or
 		// is working from a stale tool list. Saying so discloses nothing: the
 		// name came from the caller, and tools/list already names every tool
-		// its passport admits, while a real tool it may not use answers
-		// ErrScopeExceeded above. What the generic branch cost instead was
-		// real — "retry" against a tool that will never exist is a loop.
+		// its passport admits. An agent's call to a real tool its listing
+		// leaves out gets this answer too, at the door. The generic branch told
+		// it to retry a tool that will never exist, which is a loop.
 		//
 		// Worth a line for operators, at the level it is: a client working
 		// from a stale tool list is a client mistake, not our outage.

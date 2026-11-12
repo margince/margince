@@ -147,10 +147,11 @@ func outsideToolName(c rune) bool {
 
 // Offered is the tools/list this caller is shown. It narrows by the passport's
 // scopes, the seat and the checks each verb was measured to ask (grantedTo).
-// Invoke remains the authority on every one of them: this narrows what is
-// advertised and enforces nothing. An Unlisted tool is offered only when it is
-// Gated and the tool gate admits this caller. Each description names a routed
-// verb by the router action this listing offers.
+// For an agent over MCP it is also the door: tools/call refuses a name it
+// leaves out (OffersName). Invoke still admits every call it lets through. An
+// Unlisted tool is offered only when it is Gated and the tool gate admits this
+// caller. Each description names a routed verb by the router action this
+// listing offers.
 func (r *Registry) Offered(ctx context.Context) []mcp.ToolSpec {
 	all := r.availableSpecs(r.Specs())
 	out := make([]mcp.ToolSpec, 0, len(all))
