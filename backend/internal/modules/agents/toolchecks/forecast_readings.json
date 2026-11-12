@@ -1,0 +1,7 @@
+{
+  "verb": "forecast_readings",
+  "checks": [
+    "forecast.read",
+    "installation_settings.read"
+  ]
+}

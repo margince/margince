@@ -1,0 +1,15 @@
+{
+  "tool": "change_reports",
+  "action": "create_forecast_share",
+  "verb": "create_forecast_share",
+  "allowed_for": [
+    "admin",
+    "management",
+    "manager",
+    "ops"
+  ],
+  "refused_for": [
+    "read_only",
+    "rep"
+  ]
+}

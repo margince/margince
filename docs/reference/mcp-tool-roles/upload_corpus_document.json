@@ -1,0 +1,15 @@
+{
+  "tool": "change_capture",
+  "action": "upload_corpus_document",
+  "verb": "upload_corpus_document",
+  "allowed_for": [
+    "admin",
+    "ops"
+  ],
+  "refused_for": [
+    "management",
+    "manager",
+    "read_only",
+    "rep"
+  ]
+}

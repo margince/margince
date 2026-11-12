@@ -1,0 +1,7 @@
+{
+  "verb": "update_legal_review_settings",
+  "checks": [
+    "admin",
+    "installation_settings.update"
+  ]
+}

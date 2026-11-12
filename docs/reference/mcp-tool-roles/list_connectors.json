@@ -1,0 +1,14 @@
+{
+  "tool": "read_workspace",
+  "action": "connectors",
+  "verb": "list_connectors",
+  "allowed_for": [
+    "admin",
+    "management",
+    "manager",
+    "ops",
+    "read_only",
+    "rep"
+  ],
+  "refused_for": []
+}

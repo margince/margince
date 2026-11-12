@@ -1,0 +1,10 @@
+{
+  "verb": "restore_tag",
+  "checks": [
+    "tag.update"
+  ],
+  "takes": [
+    "archived_tag",
+    "tag"
+  ]
+}

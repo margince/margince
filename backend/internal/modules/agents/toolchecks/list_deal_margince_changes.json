@@ -1,0 +1,9 @@
+{
+  "verb": "list_deal_margince_changes",
+  "checks": [
+    "deal.read"
+  ],
+  "takes": [
+    "deal"
+  ]
+}

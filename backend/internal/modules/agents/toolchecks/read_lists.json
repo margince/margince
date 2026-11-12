@@ -1,0 +1,7 @@
+{
+  "verb": "read_lists",
+  "checks": [
+    "company.read",
+    "list.read"
+  ]
+}

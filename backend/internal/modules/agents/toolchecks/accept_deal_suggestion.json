@@ -1,0 +1,13 @@
+{
+  "verb": "accept_deal_suggestion",
+  "checks": [
+    "company.read",
+    "deal.create",
+    "deal.read",
+    "pipeline.read",
+    "project.read"
+  ],
+  "takes": [
+    "deal_suggestion"
+  ]
+}

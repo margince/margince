@@ -1,0 +1,10 @@
+{
+  "verb": "update_web_form",
+  "checks": [
+    "integrations.update"
+  ],
+  "takes": [
+    "versioned_web_form",
+    "web_form"
+  ]
+}

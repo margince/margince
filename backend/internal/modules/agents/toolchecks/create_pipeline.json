@@ -1,0 +1,7 @@
+{
+  "verb": "create_pipeline",
+  "checks": [
+    "deal.read",
+    "pipeline.create"
+  ]
+}

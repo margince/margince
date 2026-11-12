@@ -1,0 +1,15 @@
+{
+  "tool": "change_settings",
+  "action": "delete_disqualify_reason",
+  "verb": "delete_lead_disqualify_reason",
+  "allowed_for": [
+    "admin",
+    "ops"
+  ],
+  "refused_for": [
+    "management",
+    "manager",
+    "read_only",
+    "rep"
+  ]
+}

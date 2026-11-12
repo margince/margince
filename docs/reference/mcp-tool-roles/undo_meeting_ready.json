@@ -1,0 +1,14 @@
+{
+  "tool": "change_activities",
+  "action": "unready",
+  "verb": "undo_meeting_ready",
+  "allowed_for": [
+    "admin",
+    "management",
+    "manager",
+    "ops",
+    "read_only",
+    "rep"
+  ],
+  "refused_for": []
+}

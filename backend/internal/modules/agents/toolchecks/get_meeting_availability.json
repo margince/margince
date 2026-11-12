@@ -1,0 +1,10 @@
+{
+  "verb": "get_meeting_availability",
+  "checks": [
+    "activity.create",
+    "activity.read"
+  ],
+  "takes": [
+    "confirmed_invitation"
+  ]
+}

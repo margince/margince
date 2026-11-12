@@ -1,0 +1,6 @@
+{
+  "verb": "create_tag",
+  "checks": [
+    "tag.create"
+  ]
+}

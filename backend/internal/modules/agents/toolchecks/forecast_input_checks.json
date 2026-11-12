@@ -1,0 +1,9 @@
+{
+  "verb": "forecast_input_checks",
+  "checks": [
+    "forecast.read"
+  ],
+  "takes": [
+    "input_check"
+  ]
+}

@@ -1,0 +1,6 @@
+{
+  "verb": "disconnect_finance_source",
+  "checks": [
+    "integrations.delete"
+  ]
+}

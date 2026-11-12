@@ -1,0 +1,14 @@
+{
+  "tool": "read_details",
+  "action": "offer_pdf",
+  "verb": "download_offer_pdf",
+  "allowed_for": [
+    "admin",
+    "management",
+    "manager",
+    "ops",
+    "read_only",
+    "rep"
+  ],
+  "refused_for": []
+}

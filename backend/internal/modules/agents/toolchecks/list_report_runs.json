@@ -1,0 +1,9 @@
+{
+  "verb": "list_report_runs",
+  "checks": [
+    "activity.read",
+    "deal.read",
+    "lead.read",
+    "project.read"
+  ]
+}

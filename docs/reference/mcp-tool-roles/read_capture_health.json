@@ -1,0 +1,15 @@
+{
+  "tool": "read_workspace",
+  "action": "capture_health",
+  "verb": "read_capture_health",
+  "allowed_for": [
+    "admin",
+    "ops"
+  ],
+  "refused_for": [
+    "management",
+    "manager",
+    "read_only",
+    "rep"
+  ]
+}

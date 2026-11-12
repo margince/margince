@@ -1,0 +1,9 @@
+{
+  "verb": "read_site_read_logo",
+  "checks": [
+    "company.read"
+  ],
+  "takes": [
+    "logo_site_read"
+  ]
+}

@@ -1,0 +1,9 @@
+{
+  "verb": "list_product_translations",
+  "checks": [
+    "product.read"
+  ],
+  "takes": [
+    "product"
+  ]
+}

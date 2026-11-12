@@ -1,0 +1,7 @@
+{
+  "verb": "list_ownership_offer_candidates",
+  "checks": [],
+  "takes": [
+    "company"
+  ]
+}

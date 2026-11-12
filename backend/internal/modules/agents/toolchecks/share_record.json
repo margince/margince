@@ -1,0 +1,10 @@
+{
+  "verb": "share_record",
+  "checks": [
+    "company.update"
+  ],
+  "takes": [
+    "company",
+    "user"
+  ]
+}

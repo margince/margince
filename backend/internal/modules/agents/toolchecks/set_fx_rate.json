@@ -1,0 +1,8 @@
+{
+  "verb": "set_fx_rate",
+  "checks": [
+    "fx_rate.create",
+    "fx_rate.create|update",
+    "installation_settings.read"
+  ]
+}

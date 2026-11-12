@@ -1,0 +1,14 @@
+{
+  "tool": "read_reports",
+  "action": "evidence",
+  "verb": "search_report_evidence",
+  "allowed_for": [
+    "admin",
+    "management",
+    "manager",
+    "ops",
+    "read_only",
+    "rep"
+  ],
+  "refused_for": []
+}

@@ -1,0 +1,14 @@
+{
+  "tool": "read_details",
+  "action": "mail_draft",
+  "verb": "get_mail_draft",
+  "allowed_for": [
+    "admin",
+    "management",
+    "manager",
+    "ops",
+    "read_only",
+    "rep"
+  ],
+  "refused_for": []
+}

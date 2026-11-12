@@ -1,0 +1,14 @@
+{
+  "tool": "read_workspace",
+  "action": "held_threads",
+  "verb": "list_held_threads",
+  "allowed_for": [
+    "admin",
+    "management",
+    "manager",
+    "ops",
+    "read_only",
+    "rep"
+  ],
+  "refused_for": []
+}

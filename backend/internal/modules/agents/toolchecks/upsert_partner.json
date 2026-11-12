@@ -1,0 +1,10 @@
+{
+  "verb": "upsert_partner",
+  "checks": [
+    "company.update"
+  ],
+  "takes": [
+    "company",
+    "live_partner"
+  ]
+}

@@ -1,0 +1,15 @@
+{
+  "tool": "change_settings",
+  "action": "update_lead_settings",
+  "verb": "update_lead_settings",
+  "allowed_for": [
+    "admin",
+    "ops"
+  ],
+  "refused_for": [
+    "management",
+    "manager",
+    "read_only",
+    "rep"
+  ]
+}
