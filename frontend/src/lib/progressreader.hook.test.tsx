@@ -6,13 +6,13 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { act, renderHook } from "@testing-library/react";
 import type { ReactNode } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { useReadsTeamProgress } from "./progressreader";
+import { useWarmProgressName } from "./progressreader";
 
 const get = vi.hoisted(() => vi.fn(() => new Promise<never>(() => {})));
 vi.mock("../api/client", () => ({ api: { GET: get } }));
 vi.mock("./accessgrants", () => ({ grants: () => true }));
 
-describe("useReadsTeamProgress", () => {
+describe("useWarmProgressName", () => {
   beforeEach(() => {
     vi.useFakeTimers();
     get.mockClear();
@@ -34,11 +34,10 @@ describe("useReadsTeamProgress", () => {
     const wrapper = ({ children }: { children: ReactNode }) => (
       <QueryClientProvider client={client}>{children}</QueryClientProvider>
     );
-    const { result } = renderHook(() => useReadsTeamProgress(), { wrapper });
+    renderHook(() => useWarmProgressName(), { wrapper });
 
     await act(() => vi.advanceTimersByTimeAsync(2_000));
     expect(get).not.toHaveBeenCalled();
-    expect(result.current).toBe(false);
 
     finishScreenRead([]);
     await screenRead;

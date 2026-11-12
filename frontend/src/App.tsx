@@ -34,7 +34,6 @@ import { Shell, useRoute } from "./app/shell";
 import { SourceHost } from "./app/sourcehost";
 import { CallLogHost } from "./components/calllog.host";
 import { useJourneyProgress } from "./features/onboarding/onboarding-journey";
-
 import { WriteToHost } from "./features/settings/writetohost";
 import type { AuthNotice } from "./features/sign-in/auth";
 import { RESET_ROUTE } from "./features/sign-in/auth.route";
@@ -50,6 +49,7 @@ import { screenEnabled, useDisabledCoreFeatures } from "./lib/corefeatures";
 import { useInstallationDescribed } from "./lib/installationcompany";
 import { notifyNavigate } from "./lib/instruments";
 import { markJourney } from "./lib/journeymarks";
+import { useWarmProgressName } from "./lib/progressreader";
 import { SPA_RELEASE } from "./lib/release";
 import { routePattern } from "./lib/routepattern";
 import { navigateReplacing, type Screen } from "./lib/router";
@@ -476,6 +476,7 @@ function AuthedShell({
   onOpenSearch,
 }: Readonly<{ children: ReactNode; onOpenSearch: () => void }>) {
   useWarmRouteChunks();
+  useWarmProgressName();
   return <Shell onOpenSearch={onOpenSearch}>{children}</Shell>;
 }
 

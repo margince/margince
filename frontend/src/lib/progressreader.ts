@@ -1,12 +1,11 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-import { useIsFetching, useQuery } from "@tanstack/react-query";
-import { useEffect, useState } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useEffect } from "react";
 import type { components } from "../api/schema";
 import { grants } from "./accessgrants";
 import { analyticsContextOptions } from "./analyticscontext";
-import { ANALYTICS_CONTEXT_KEY } from "./analyticskeys";
 import { useMe } from "./session";
 
 type AnalyticsContext = components["schemas"]["AnalyticsContext"];
@@ -34,33 +33,45 @@ export function readsTeamProgress(
 
 // How long the screen's own reads must stay quiet before the name asks.
 const QUIET_MS = 300;
+const NAME_STALE_MS = 5 * 60_000;
 
-// True once every other read has rested. A cold first screen fetches before
-// the sidebar's name does, so the name never slows what the reader came for.
-function useScreenReadsRested(): boolean {
-  const reading = useIsFetching({
-    predicate: (query) => query.queryKey[0] !== ANALYTICS_CONTEXT_KEY[0],
-  });
-  const [rested, setRested] = useState(false);
+/**
+ * Reads the frame Progress itself reads, once, after the first screen's own
+ * reads have rested. It listens to the query cache instead of rendering, so
+ * the wait costs the open screen no render. A seat with neither grant is
+ * refused the frame and is not asked.
+ */
+export function useWarmProgressName(): void {
+  const client = useQueryClient();
+  const me = useMe(false).data;
+  const asks = grants(me, "deal", "read") || grants(me, "forecast", "read");
   useEffect(() => {
-    if (rested || reading > 0) return;
-    const handle = window.setTimeout(() => setRested(true), QUIET_MS);
-    return () => window.clearTimeout(handle);
-  }, [rested, reading]);
-  return rested;
+    if (!asks) return;
+    let handle: number | undefined;
+    const stop = client.getQueryCache().subscribe(() => settle());
+    const settle = () => {
+      window.clearTimeout(handle);
+      if (client.isFetching() > 0) return;
+      handle = window.setTimeout(() => {
+        stop();
+        void client.prefetchQuery({
+          ...analyticsContextOptions,
+          staleTime: NAME_STALE_MS,
+        });
+      }, QUIET_MS);
+    };
+    settle();
+    return () => {
+      stop();
+      window.clearTimeout(handle);
+    };
+  }, [client, asks]);
 }
 
-// The frame Progress itself reads, so the name agrees with the page on any
-// first screen. A seat with neither grant is refused the frame and is not asked.
+// The name reads the cache and never asks: useWarmProgressName fills it, and
+// so does Analytics. The session's own frame names it until then.
 export function useReadsTeamProgress(): boolean {
   const me = useMe(false).data;
-  const rested = useScreenReadsRested();
-  const context = useQuery({
-    ...analyticsContextOptions,
-    // Every page asks for its name; the name does not need a read per page.
-    staleTime: 5 * 60_000,
-    enabled:
-      rested && (grants(me, "deal", "read") || grants(me, "forecast", "read")),
-  });
+  const context = useQuery({ ...analyticsContextOptions, enabled: false });
   return readsTeamProgress(context.data ?? me?.analytics_startup?.context);
 }
