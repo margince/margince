@@ -77,8 +77,12 @@ export function ChartDetails({
   const { timezone, currency } = evaluation.context;
   return (
     <div className="reporting-details">
+      {/* An empty period is a fact about the period, not a fault in the
+          reading, so it carries no warning tone. */}
       {chart.coverage.status !== "ok" && (
-        <Badge tone="warning">
+        <Badge
+          tone={chart.coverage.status === "no_data" ? "default" : "warning"}
+        >
           {t(`reporting.status.${chart.coverage.status}`)}
         </Badge>
       )}

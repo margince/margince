@@ -976,6 +976,8 @@
   "co.brief.nature.assessment": "Assessment",
   "co.brief.nature.recommendation": "Suggested",
   "record.tabs": "Record tabs",
+  "record.tabs.more": "More",
+  "record.tabs.moreLabel": "More sections",
   "record.panel.showDetails": "Show details",
   "record.panel.hideDetails": "Hide details",
   "co.brief.by.model": "Written by Margince",
