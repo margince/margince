@@ -167,7 +167,7 @@ func (h Handlers) DownloadFinanceInvoicePdf(w http.ResponseWriter, r *http.Reque
 	// An invoice is read under the caller's own grant, so no shared cache may keep it.
 	w.Header().Set("Cache-Control", "no-store")
 	httperr.StreamObject(w, r, httperr.StreamedObject{
-		Download: httperr.Download{ContentType: pdfMediaType, Filename: document.Filename, Inline: true, Size: int64(len(document.Body))},
-		Body:     io.NopCloser(bytes.NewReader(document.Body)),
+		ContentType: pdfMediaType, Filename: document.Filename, Inline: true, Size: int64(len(document.Body)),
+		Body: io.NopCloser(bytes.NewReader(document.Body)),
 	}, "finance invoice pdf "+id.String())
 }
