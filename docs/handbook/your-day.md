@@ -163,9 +163,13 @@ Each item names its record and shows the facts that call for action. A badge say
   A dated task also shows its due day. The round mark marks a task done; a press opens the card where it stands.
 - Proposals, commitments due today and meetings in the next 24 hours sit there too. A task due later shows once its reminder is due. A quiet day says "No immediate priorities. The full Worklist is available."
 - **Review N deal suggestions** opens the saved brief. Its deals stay separate from the work that needs action now. A brief with no deals shows no opener.
-- **Show Worklist**, under the list: the whole list, with its own filters and pages, and work that is not due yet. Stage change notices stay in the notification center.
-- **Since your last brief**: what Margince did since your last brief, what waits on you, what it could not finish and what needs restoring.
-- **Done for you**, the deals Margince changed, to keep or undo, and the other work it finished; beside them **Upcoming meetings** and **Numbers**.
+- **Show Worklist**, under the list: the whole list, with its own filters and pages, and work that
+  is not due yet. Stage change notices stay in the notification center.
+- **Since your last brief**: what Margince did since your last brief, what waits on you, what it
+  could not finish and what needs restoring.
+- **Done for you**, the deals Margince changed, to keep or undo, and the other work it finished; beside them **Your day** and **Numbers**.
+- **Your day** is a line through today. **Now** sits at your clock and says "Free until" the next meeting, or "Nothing else booked today". The next meeting says how soon it starts and offers **Prepare for meeting**. Margince then writes the brief for that meeting and opens it on Home.
+
 A greeting covers the page on the day's first visit, once per browser, unless your settings turn motion off. It shows the date and the emails synced overnight. It also counts the items waiting on you in Today, how many of them are urgent and how many meetings you have. It stands at least 1.5 seconds and lifts once your page is ready, or after 4.5 seconds; any key or click ends it sooner.
 Also called: morning brief, daily brief, today, priorities, top cards, welcome screen.
 

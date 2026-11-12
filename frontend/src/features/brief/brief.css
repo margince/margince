@@ -156,14 +156,6 @@
  * readings as the house's reading cards, each a door into its lane with its
  * basis under the figure, the way a record's band draws its readings — with
  * the strip's own footnotes under them. */
-/* The readings band, under the work: its own section's air above it, the
-   same interval every section of this page takes. */
-.brief-overview {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-2);
-  margin: var(--space-6) 0 0;
-}
 .brief-readings {
   margin: 0;
 }
@@ -211,9 +203,6 @@
   vertical-align: top;
   min-block-size: 1lh;
 }
-.brief-morning .brief-overview {
-  margin: 0;
-}
 /* A section's name on this page is a quiet label over its rows, not a title:
    the greeting is the page's one headline and the card in hand its second. */
 .t-eyebrow.brief-section-label,
@@ -238,7 +227,7 @@
 .brief-rail {
   display: flex;
   flex-direction: column;
-  gap: var(--space-6);
+  gap: var(--space-4);
 }
 /* A reading in the rail is one line: the name, its basis quiet at the end,
    the figure, and an arrow into its lane. Context, so it stays smaller than
@@ -372,83 +361,93 @@
   gap: var(--space-2);
 }
 
-/* ── The day's own line, in the rail ───────────────────────────────────────
- * A schedule row is read as a COLUMN of times hung on one line: the hour on
- * its own rail, a stop on the line beside it, the meeting after. The eye runs
- * down the times and the stops rather than hunting for each hour at the head
- * of a sentence of different length. The panel's own hairlines between rows
- * go: the line through the stops is the connector. */
+/* ── Your day, in the rail ─────────────────────────────────────────────────
+ * One card: each row is a time and what fills it, the title over its caption.
+ * The card owns the time column and every row takes it as a subgrid, so a date
+ * in one row and an hour in the next start their titles on one edge.
+ * minmax(0, …) lets a long title wrap instead of widening its column. */
+.rail-schedule {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+}
+.rail-schedule > * {
+  grid-column: 1 / -1;
+}
 .rail-schedule-row {
   display: grid;
-  grid-template-columns: auto auto 1fr;
-  gap: var(--space-3);
+  grid-template-columns: subgrid;
+  column-gap: var(--space-3);
   align-items: baseline;
 }
-.rail-schedule-row::before {
-  content: none;
-}
-
-/* Tabular figures so 09:30 and 11:00 occupy the same width — a column of times
-   that shifts by a digit reads as a ragged edge rather than as a rail. The
-   hour is set a weight up in the primary ink: it is what the eye runs down. */
 .rail-schedule-when {
-  color: var(--textPrimary);
   font-variant-numeric: tabular-nums;
-  font-weight: var(--fontWeightMedium);
   white-space: nowrap;
-  min-width: 3rem;
 }
-
-/* The stop, and the line through it: an accent disc on its own column, with
-   the line drawn from the row's top edge to its bottom so one stop's line
-   meets the next's. The first row's line starts at its stop and the last
-   row's ends at its own, so the line reads as the day and not as a rule that
-   runs off the panel. */
-.rail-schedule-dot {
-  position: relative;
-  align-self: stretch;
-  inline-size: var(--space-3);
+.rail-schedule-what {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-1);
+  min-width: 0;
+  overflow-wrap: anywhere;
 }
-.rail-schedule-dot::before {
+/* A meeting's title reads as the row's subject; it still opens the meeting. */
+.rail-schedule-what > .btn.btn-link,
+.rail-schedule-title {
+  color: var(--textPrimary);
+  font-weight: var(--fontWeightMedium);
+}
+/* Now is marked by a filled disc ahead of the word. */
+.rail-schedule-now .rail-schedule-title::before {
   content: "";
-  position: absolute;
-  inset-block: 0;
-  inset-inline-start: calc(50% - 0.5px);
-  inline-size: 1px;
-  background: var(--borderStrong);
-}
-.rail-schedule-row:first-child .rail-schedule-dot::before,
-.panel-head + .rail-schedule-row .rail-schedule-dot::before {
-  inset-block-start: var(--space-3);
-}
-.rail-schedule-row:last-child .rail-schedule-dot::before {
-  inset-block-end: calc(100% - var(--space-3));
-}
-.rail-schedule-dot::after {
-  content: "";
-  position: absolute;
-  inset-block-start: var(--space-2);
-  inset-inline-start: 0;
-  inline-size: var(--space-3);
-  block-size: var(--space-3);
-  box-sizing: border-box;
+  display: inline-block;
+  inline-size: var(--space-2);
+  block-size: var(--space-2);
+  margin-inline-end: var(--space-2);
   border-radius: var(--r-full);
   corner-shape: round;
   background: var(--accent);
-  /* A rim in the pane's own ground, so the disc sits ON the line rather than
-     being cut by it. A border rather than a spread shadow: depth here is the
-     three tokens', and this is not depth. */
-  border: 2px solid var(--ground);
 }
-
-/* The badge sits WITH the title rather than after it, so a meeting whose name
-   wraps keeps its warning attached to it. */
-.rail-schedule-what {
+/* How soon it starts, and the prep badge beside it. */
+.rail-schedule-meta {
   display: flex;
   flex-wrap: wrap;
-  align-items: baseline;
+  align-items: center;
   gap: var(--space-2);
+}
+/* The attendees take the full width and wrap as a sentence. */
+.rail-schedule-attendees {
   min-width: 0;
+}
+
+/* The next meeting is set apart by an outline on the card's own ground.
+   The plate keeps the row's inset, so its time and title stay on the columns
+   above and below. */
+.rail-schedule-next {
+  /* Half the card's inset outside the outline and half inside, at any width. */
+  margin: var(--space-1) calc(var(--padPanel) / 2);
+  padding: var(--space-3) calc(var(--padPanel) / 2 - 1px);
+  border: 1px solid var(--groundEdge);
+  border-radius: var(--r-md);
+}
+/* As the card's last row, the plate keeps the same air below it as beside it. */
+.rail-schedule-next:last-child {
+  margin-block-end: calc(var(--padPanel) / 2);
+}
+.rail-schedule-next::before,
+.rail-schedule-next + .panel-row::before {
+  content: none;
+}
+.rail-schedule-next .rail-schedule-what > :first-child {
+  font: var(--fontHeadingSmall);
+  color: var(--textPrimary);
+}
+.rail-schedule-prep {
+  margin-block-start: var(--space-2);
+}
+/* The readings sit right under the card's title, as Your day's rows do. */
+.brief-overview > .panel-body {
+  padding-block-start: 0;
 }
 
 /* What the panel cannot tell you, under what it can. Quiet like every other
@@ -723,8 +722,9 @@
 
 /* ── The work column ──────────────────────────────────────────────────────
  * The cards stand on the page itself: a pane around them would be a card
- * holding cards. The rail keeps its pane. */
-.brief-morning > .brief-main.page-pane {
+ * holding cards. The rail's cards stand on the page the same way. */
+.brief-morning > .page-pane {
+  --padPane: 0px;
   border-color: transparent;
   background: none;
   box-shadow: none;
