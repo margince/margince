@@ -1,13 +1,13 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-package compose
-
-// The one door that undoes an erasure. An erased subject asks on a booking page
-// to be stored again. They are stored only when they answer a link mailed to
-// the address. The ask answers every caller the same way, before any lookup, so
-// its answer and timing say nothing about the address. The confirm lifts the
-// erasure, stores the contact and records the consent in one transaction.
+// Package erasurereturn is the one door that undoes an erasure. An erased
+// subject asks on a booking page to be stored again. They are stored only when
+// they answer a link mailed to the address. The ask answers every caller the
+// same way, before any lookup, so its answer and timing say nothing about the
+// address. The confirm lifts the erasure, stores the contact and records the
+// consent in one transaction.
+package erasurereturn
 
 import (
 	"context"
@@ -50,13 +50,15 @@ const returnSource = "erasure_return"
 // returnSendTimeout bounds the lookup and the mail that run after the answer.
 const returnSendTimeout = 30 * time.Second
 
-// erasureReturnHandlers serves requestBookingReturn and confirmBookingReturn.
+// Handlers serves requestBookingReturn and confirmBookingReturn.
 // The booking edge in front of them has already resolved the slug, throttled
 // the caller and bound a system principal.
-type erasureReturnHandlers struct {
+type Handlers struct {
 	pool           *pgxpool.Pool
+	db             *database.DB
 	contacts       *contacts.Store
 	consent        *consent.Store
+	bookingPurpose func(context.Context) (ids.UUID, error)
 	returnMail     mailer.Mailer
 	returnLinkBase string
 	perAddress     *ratelimit.Limiter
@@ -65,15 +67,36 @@ type erasureReturnHandlers struct {
 	sendDone func()
 }
 
-func newErasureReturnHandlers(pool *pgxpool.Pool) erasureReturnHandlers {
-	return erasureReturnHandlers{
-		pool:     pool,
-		contacts: newContactsStore(InstallationDB(pool)),
-		consent:  consent.NewStore(InstallationDB(pool)),
+// NewHandlers builds the door over the installation's database handle. The
+// contacts store and the booking purpose come from compose, which wires them
+// as the booking page does, so both doors store one way.
+func NewHandlers(pool *pgxpool.Pool, db *database.DB, contactsStore *contacts.Store, consentStore *consent.Store,
+	bookingPurpose func(context.Context) (ids.UUID, error),
+) Handlers {
+	return Handlers{
+		pool:           pool,
+		db:             db,
+		contacts:       contactsStore,
+		consent:        consentStore,
+		bookingPurpose: bookingPurpose,
 		// Each link goes to someone who asked to be forgotten: one a day.
 		perAddress: ratelimit.New("erasure-return/per-address", ratelimit.FailClosed, 1, 24*time.Hour),
 		now:        time.Now,
 	}
+}
+
+// WithMail is the relay the link goes out on. Without one the ask still
+// answers, and mails nothing.
+func (h Handlers) WithMail(m mailer.Mailer) Handlers {
+	h.returnMail = m
+	return h
+}
+
+// WithLinkBase is the canonical public origin the link opens on, never one
+// taken from a request.
+func (h Handlers) WithLinkBase(base string) Handlers {
+	h.returnLinkBase = base
+	return h
 }
 
 // returnLinkSignerNow is the signer under the installation's current root key.
@@ -85,7 +108,7 @@ func returnLinkSignerNow() returnlink.Signer {
 const returnNameLimit = 200
 
 // RequestBookingReturn implements (POST /public/booking/{host_slug}/return).
-func (h erasureReturnHandlers) RequestBookingReturn(w http.ResponseWriter, r *http.Request, hostSlug string) {
+func (h Handlers) RequestBookingReturn(w http.ResponseWriter, r *http.Request, hostSlug string) {
 	var body crmcontracts.RequestBookingReturnJSONRequestBody
 	if !httperr.Decode(w, r, &body) {
 		return
@@ -100,7 +123,7 @@ func (h erasureReturnHandlers) RequestBookingReturn(w http.ResponseWriter, r *ht
 		httperr.Write(w, r, httperr.Validation("name", "invalid", "a name of at most 200 characters is required"))
 		return
 	}
-	purpose, err := bookingConsentAdapter{store: h.consent}.ScopedPurpose(r.Context(), nil)
+	purpose, err := h.bookingPurpose(r.Context())
 	if err != nil {
 		httperr.Write(w, r, err)
 		return
@@ -133,12 +156,12 @@ func (h erasureReturnHandlers) RequestBookingReturn(w http.ResponseWriter, r *ht
 // mailReturnLink mails the link when the address is erased, and does nothing
 // otherwise. The link carries the consent wording this installation shows, in
 // its language, so what the subject confirms is server text.
-func (h erasureReturnHandlers) mailReturnLink(ctx context.Context, request returnlink.Request) error {
+func (h Handlers) mailReturnLink(ctx context.Context, request returnlink.Request) error {
 	if h.returnMail == nil || h.returnLinkBase == "" {
 		return nil
 	}
 	var erased bool
-	if err := InstallationDB(h.pool).Tx(ctx, func(tx pgx.Tx) error {
+	if err := h.db.Tx(ctx, func(tx pgx.Tx) error {
 		var err error
 		request.ErasedAt, erased, err = privacy.EmailErasedAt(ctx, tx, request.Email)
 		return err
@@ -162,7 +185,7 @@ func (h erasureReturnHandlers) mailReturnLink(ctx context.Context, request retur
 // PreviewBookingReturn implements (POST /public/booking/{host_slug}/return/preview):
 // what the link will store, shown before the subject confirms it. It stores
 // nothing.
-func (h erasureReturnHandlers) PreviewBookingReturn(w http.ResponseWriter, r *http.Request, hostSlug string) {
+func (h Handlers) PreviewBookingReturn(w http.ResponseWriter, r *http.Request, hostSlug string) {
 	var body crmcontracts.PreviewBookingReturnJSONRequestBody
 	if !httperr.Decode(w, r, &body) {
 		return
@@ -179,14 +202,14 @@ func (h erasureReturnHandlers) PreviewBookingReturn(w http.ResponseWriter, r *ht
 
 // currentLink answers the request a link carries while it still works. It must
 // be signed here, unexpired, for this page, and for the erasure that stands now.
-func (h erasureReturnHandlers) currentLink(ctx context.Context, token, hostSlug string) (returnlink.Request, bool) {
+func (h Handlers) currentLink(ctx context.Context, token, hostSlug string) (returnlink.Request, bool) {
 	request, err := returnLinkSignerNow().Verify(token, h.now())
 	if err != nil || !strings.EqualFold(request.Slug, hostSlug) {
 		return returnlink.Request{}, false
 	}
 	var current time.Time
 	var erased bool
-	if err := InstallationDB(h.pool).Tx(ctx, func(tx pgx.Tx) error {
+	if err := h.db.Tx(ctx, func(tx pgx.Tx) error {
 		var readErr error
 		current, erased, readErr = privacy.EmailErasedAt(ctx, tx, request.Email)
 		return readErr
@@ -197,7 +220,7 @@ func (h erasureReturnHandlers) currentLink(ctx context.Context, token, hostSlug 
 }
 
 // ConfirmBookingReturn implements (POST /public/booking/{host_slug}/return/confirm).
-func (h erasureReturnHandlers) ConfirmBookingReturn(w http.ResponseWriter, r *http.Request, hostSlug string) {
+func (h Handlers) ConfirmBookingReturn(w http.ResponseWriter, r *http.Request, hostSlug string) {
 	var body crmcontracts.ConfirmBookingReturnJSONRequestBody
 	if !httperr.Decode(w, r, &body) {
 		return
@@ -230,7 +253,7 @@ func writeReturnLinkSpent(w http.ResponseWriter, r *http.Request) {
 // in one transaction. The contact is written while the address is still on the
 // list, under the booking page's admission. The lift comes last and checks that
 // the link still names the current erasure. Its refusal rolls all of it back.
-func (h erasureReturnHandlers) storeReturned(ctx context.Context, request returnlink.Request) error {
+func (h Handlers) storeReturned(ctx context.Context, request returnlink.Request) error {
 	return database.WithWorkspaceWriteTx(ctx, h.pool, func(ctx context.Context) error {
 		contactID, err := h.contacts.EnsureContactByEmail(ctx, request.Name, request.Email, returnSource, storekit.AdmitSelfBooking)
 		if err != nil {
@@ -243,7 +266,7 @@ func (h erasureReturnHandlers) storeReturned(ctx context.Context, request return
 		if granted.ProofEventID.IsZero() {
 			return apperrors.ErrConsentNotGranted
 		}
-		return InstallationDB(h.pool).Tx(ctx, func(tx pgx.Tx) error {
+		return h.db.Tx(ctx, func(tx pgx.Tx) error {
 			return privacy.LiftEmailSuppressionTx(ctx, tx, request.Email, request.ErasedAt, granted.ProofEventID, contactID)
 		})
 	})

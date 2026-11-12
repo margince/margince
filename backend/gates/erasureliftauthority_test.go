@@ -37,9 +37,9 @@ const (
 	liftFunction         = "LiftEmailSuppressionTx"
 	liftSeat             = "internal/modules/privacy/suppressionlift.go:" + liftFunction
 	returnStore          = "storeReturned"
-	returnStoreSeat      = "internal/compose/erasurereturn.go:" + returnStore
+	returnStoreSeat      = "internal/compose/erasurereturn/erasurereturn.go:" + returnStore
 	returnConfirmHandler = "ConfirmBookingReturn"
-	returnConfirmSeat    = "internal/compose/erasurereturn.go:" + returnConfirmHandler
+	returnConfirmSeat    = "internal/compose/erasurereturn/erasurereturn.go:" + returnConfirmHandler
 	returnConfirmOp      = "confirmBookingReturn"
 )
 

@@ -20,6 +20,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/margince/margince/backend/internal/compose/analyticsquery"
+	"github.com/margince/margince/backend/internal/compose/erasurereturn"
 	"github.com/margince/margince/backend/internal/compose/homecache"
 	"github.com/margince/margince/backend/internal/compose/magic"
 	"github.com/margince/margince/backend/internal/compose/salesprogress"
@@ -178,6 +179,17 @@ const installationBaseCurrencySQL = "(SELECT (bc.value #>> '{}')::text FROM sett
 // cannot be refused here while an export of the same list accepts it.
 func newCollectionsHandlers(pool *pgxpool.Pool) collectionsHandlers {
 	return collections.NewHandlers(NewCollectionsStore(pool))
+}
+
+// newErasureReturnHandlers builds the return door with the booking page's own
+// contacts store and purpose, so a returned subject is stored as a booker is.
+func newErasureReturnHandlers(pool *pgxpool.Pool) erasureReturnHandlers {
+	db := InstallationDB(pool)
+	consentStore := consent.NewStore(db)
+	bookingPurpose := func(ctx context.Context) (ids.UUID, error) {
+		return bookingConsentAdapter{store: consentStore}.ScopedPurpose(ctx, nil)
+	}
+	return erasurereturn.NewHandlers(pool, db, newContactsStore(db), consentStore, bookingPurpose)
 }
 
 // wireSurfaces binds the handler sets built after the literal, each over a
