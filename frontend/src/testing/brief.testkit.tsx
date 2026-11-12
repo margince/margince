@@ -79,6 +79,8 @@ export type Routes = Record<
 // accident is named rather than quietly served an empty page.
 const DEFAULTS: Routes = {
   "GET /teams": () => jsonResponse({ data: [], page: { has_more: false } }),
+  "GET /extension-reports": () => jsonResponse({ data: [] }),
+  "GET /link-suggestions": () => jsonResponse({ data: [] }),
   "GET /me": () => jsonResponse(meFixture()),
   "GET /brief": () => jsonResponse({ title: "Not Found" }, 404),
   "GET /digest": () =>

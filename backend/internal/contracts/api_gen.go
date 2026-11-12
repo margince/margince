@@ -9582,6 +9582,7 @@ const (
 	CreateCustomFieldRequestTypeMultiselect CreateCustomFieldRequestType = "multiselect"
 	CreateCustomFieldRequestTypeNumber      CreateCustomFieldRequestType = "number"
 	CreateCustomFieldRequestTypePicklist    CreateCustomFieldRequestType = "picklist"
+	CreateCustomFieldRequestTypeRecord      CreateCustomFieldRequestType = "record"
 	CreateCustomFieldRequestTypeText        CreateCustomFieldRequestType = "text"
 )
 
@@ -9599,6 +9600,8 @@ func (e CreateCustomFieldRequestType) Valid() bool {
 	case CreateCustomFieldRequestTypeNumber:
 		return true
 	case CreateCustomFieldRequestTypePicklist:
+		return true
+	case CreateCustomFieldRequestTypeRecord:
 		return true
 	case CreateCustomFieldRequestTypeText:
 		return true
@@ -9733,33 +9736,6 @@ func (e CreateLeadRequestStatus) Valid() bool {
 	case CreateLeadRequestStatusNew:
 		return true
 	case CreateLeadRequestStatusPromoted:
-		return true
-	default:
-		return false
-	}
-}
-
-// Defines values for CreateListRequestEntityType.
-const (
-	CreateListRequestEntityTypeCompany CreateListRequestEntityType = "company"
-	CreateListRequestEntityTypeContact CreateListRequestEntityType = "contact"
-	CreateListRequestEntityTypeDeal    CreateListRequestEntityType = "deal"
-	CreateListRequestEntityTypeLead    CreateListRequestEntityType = "lead"
-	CreateListRequestEntityTypeProject CreateListRequestEntityType = "project"
-)
-
-// Valid indicates whether the value is a known member of the CreateListRequestEntityType enum.
-func (e CreateListRequestEntityType) Valid() bool {
-	switch e {
-	case CreateListRequestEntityTypeCompany:
-		return true
-	case CreateListRequestEntityTypeContact:
-		return true
-	case CreateListRequestEntityTypeDeal:
-		return true
-	case CreateListRequestEntityTypeLead:
-		return true
-	case CreateListRequestEntityTypeProject:
 		return true
 	default:
 		return false
@@ -10356,6 +10332,7 @@ const (
 	CustomFieldTypeMultiselect CustomFieldType = "multiselect"
 	CustomFieldTypeNumber      CustomFieldType = "number"
 	CustomFieldTypePicklist    CustomFieldType = "picklist"
+	CustomFieldTypeRecord      CustomFieldType = "record"
 	CustomFieldTypeText        CustomFieldType = "text"
 )
 
@@ -10373,6 +10350,8 @@ func (e CustomFieldType) Valid() bool {
 	case CustomFieldTypeNumber:
 		return true
 	case CustomFieldTypePicklist:
+		return true
+	case CustomFieldTypeRecord:
 		return true
 	case CustomFieldTypeText:
 		return true
@@ -12370,6 +12349,24 @@ func (e ExcuseNoticeCaseState) Valid() bool {
 	}
 }
 
+// Defines values for ExtensionHistoryEntrySource.
+const (
+	ExtensionHistoryEntrySourceRecord ExtensionHistoryEntrySource = "record"
+	ExtensionHistoryEntrySourceSignal ExtensionHistoryEntrySource = "signal"
+)
+
+// Valid indicates whether the value is a known member of the ExtensionHistoryEntrySource enum.
+func (e ExtensionHistoryEntrySource) Valid() bool {
+	switch e {
+	case ExtensionHistoryEntrySourceRecord:
+		return true
+	case ExtensionHistoryEntrySourceSignal:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for ExtensionIngestRefusalRefusal.
 const (
 	ExtensionIngestRefusalRefusalActivity     ExtensionIngestRefusalRefusal = "activity"
@@ -12394,6 +12391,24 @@ func (e ExtensionIngestRefusalRefusal) Valid() bool {
 	case ExtensionIngestRefusalRefusalParticipants:
 		return true
 	case ExtensionIngestRefusalRefusalSize:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ExtensionReportKind.
+const (
+	ExtensionReportKindBreakdown ExtensionReportKind = "breakdown"
+	ExtensionReportKindCount     ExtensionReportKind = "count"
+)
+
+// Valid indicates whether the value is a known member of the ExtensionReportKind enum.
+func (e ExtensionReportKind) Valid() bool {
+	switch e {
+	case ExtensionReportKindBreakdown:
+		return true
+	case ExtensionReportKindCount:
 		return true
 	default:
 		return false
@@ -12469,60 +12484,6 @@ func (e FieldHistoryEntryEntityType) Valid() bool {
 	case FieldHistoryEntryEntityTypeLead:
 		return true
 	case FieldHistoryEntryEntityTypeProject:
-		return true
-	default:
-		return false
-	}
-}
-
-// Defines values for FilterPreviewResource.
-const (
-	FilterPreviewResourceCompany FilterPreviewResource = "company"
-	FilterPreviewResourceContact FilterPreviewResource = "contact"
-	FilterPreviewResourceDeal    FilterPreviewResource = "deal"
-	FilterPreviewResourceLead    FilterPreviewResource = "lead"
-	FilterPreviewResourceProject FilterPreviewResource = "project"
-)
-
-// Valid indicates whether the value is a known member of the FilterPreviewResource enum.
-func (e FilterPreviewResource) Valid() bool {
-	switch e {
-	case FilterPreviewResourceCompany:
-		return true
-	case FilterPreviewResourceContact:
-		return true
-	case FilterPreviewResourceDeal:
-		return true
-	case FilterPreviewResourceLead:
-		return true
-	case FilterPreviewResourceProject:
-		return true
-	default:
-		return false
-	}
-}
-
-// Defines values for FilterPreviewRequestResource.
-const (
-	FilterPreviewRequestResourceCompany FilterPreviewRequestResource = "company"
-	FilterPreviewRequestResourceContact FilterPreviewRequestResource = "contact"
-	FilterPreviewRequestResourceDeal    FilterPreviewRequestResource = "deal"
-	FilterPreviewRequestResourceLead    FilterPreviewRequestResource = "lead"
-	FilterPreviewRequestResourceProject FilterPreviewRequestResource = "project"
-)
-
-// Valid indicates whether the value is a known member of the FilterPreviewRequestResource enum.
-func (e FilterPreviewRequestResource) Valid() bool {
-	switch e {
-	case FilterPreviewRequestResourceCompany:
-		return true
-	case FilterPreviewRequestResourceContact:
-		return true
-	case FilterPreviewRequestResourceDeal:
-		return true
-	case FilterPreviewRequestResourceLead:
-		return true
-	case FilterPreviewRequestResourceProject:
 		return true
 	default:
 		return false
@@ -12628,33 +12589,6 @@ func (e FilterProposalUnsupportedCode) Valid() bool {
 	}
 }
 
-// Defines values for FilterVocabularyResource.
-const (
-	FilterVocabularyResourceCompany FilterVocabularyResource = "company"
-	FilterVocabularyResourceContact FilterVocabularyResource = "contact"
-	FilterVocabularyResourceDeal    FilterVocabularyResource = "deal"
-	FilterVocabularyResourceLead    FilterVocabularyResource = "lead"
-	FilterVocabularyResourceProject FilterVocabularyResource = "project"
-)
-
-// Valid indicates whether the value is a known member of the FilterVocabularyResource enum.
-func (e FilterVocabularyResource) Valid() bool {
-	switch e {
-	case FilterVocabularyResourceCompany:
-		return true
-	case FilterVocabularyResourceContact:
-		return true
-	case FilterVocabularyResourceDeal:
-		return true
-	case FilterVocabularyResourceLead:
-		return true
-	case FilterVocabularyResourceProject:
-		return true
-	default:
-		return false
-	}
-}
-
 // Defines values for FilterVocabularyFieldOperators.
 const (
 	FilterVocabularyFieldOperatorsContains     FilterVocabularyFieldOperators = "contains"
@@ -12744,6 +12678,7 @@ const (
 	FilterVocabularyFieldTypeMultiselect FilterVocabularyFieldType = "multiselect"
 	FilterVocabularyFieldTypeNumber      FilterVocabularyFieldType = "number"
 	FilterVocabularyFieldTypePicklist    FilterVocabularyFieldType = "picklist"
+	FilterVocabularyFieldTypeRecord      FilterVocabularyFieldType = "record"
 	FilterVocabularyFieldTypeText        FilterVocabularyFieldType = "text"
 )
 
@@ -12767,6 +12702,8 @@ func (e FilterVocabularyFieldType) Valid() bool {
 	case FilterVocabularyFieldTypeNumber:
 		return true
 	case FilterVocabularyFieldTypePicklist:
+		return true
+	case FilterVocabularyFieldTypeRecord:
 		return true
 	case FilterVocabularyFieldTypeText:
 		return true
@@ -16069,6 +16006,51 @@ func (e LifecyclePreviewEvidenceScope) Valid() bool {
 	}
 }
 
+// Defines values for LinkSuggestionEntityType.
+const (
+	LinkSuggestionEntityTypeCompany LinkSuggestionEntityType = "company"
+	LinkSuggestionEntityTypeContact LinkSuggestionEntityType = "contact"
+	LinkSuggestionEntityTypeDeal    LinkSuggestionEntityType = "deal"
+	LinkSuggestionEntityTypeProject LinkSuggestionEntityType = "project"
+)
+
+// Valid indicates whether the value is a known member of the LinkSuggestionEntityType enum.
+func (e LinkSuggestionEntityType) Valid() bool {
+	switch e {
+	case LinkSuggestionEntityTypeCompany:
+		return true
+	case LinkSuggestionEntityTypeContact:
+		return true
+	case LinkSuggestionEntityTypeDeal:
+		return true
+	case LinkSuggestionEntityTypeProject:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for LinkSuggestionStatus.
+const (
+	LinkSuggestionStatusAccepted LinkSuggestionStatus = "accepted"
+	LinkSuggestionStatusPending  LinkSuggestionStatus = "pending"
+	LinkSuggestionStatusRejected LinkSuggestionStatus = "rejected"
+)
+
+// Valid indicates whether the value is a known member of the LinkSuggestionStatus enum.
+func (e LinkSuggestionStatus) Valid() bool {
+	switch e {
+	case LinkSuggestionStatusAccepted:
+		return true
+	case LinkSuggestionStatusPending:
+		return true
+	case LinkSuggestionStatusRejected:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for LinkedInReachFunction.
 const (
 	LinkedInReachFunctionFinance     LinkedInReachFunction = "finance"
@@ -16105,27 +16087,21 @@ func (e LinkedInReachFunction) Valid() bool {
 	}
 }
 
-// Defines values for ListEntityType.
+// Defines values for LinkedRecordType.
 const (
-	ListEntityTypeCompany ListEntityType = "company"
-	ListEntityTypeContact ListEntityType = "contact"
-	ListEntityTypeDeal    ListEntityType = "deal"
-	ListEntityTypeLead    ListEntityType = "lead"
-	ListEntityTypeProject ListEntityType = "project"
+	LinkedRecordTypeCompany LinkedRecordType = "company"
+	LinkedRecordTypeContact LinkedRecordType = "contact"
+	LinkedRecordTypeDeal    LinkedRecordType = "deal"
 )
 
-// Valid indicates whether the value is a known member of the ListEntityType enum.
-func (e ListEntityType) Valid() bool {
+// Valid indicates whether the value is a known member of the LinkedRecordType enum.
+func (e LinkedRecordType) Valid() bool {
 	switch e {
-	case ListEntityTypeCompany:
+	case LinkedRecordTypeCompany:
 		return true
-	case ListEntityTypeContact:
+	case LinkedRecordTypeContact:
 		return true
-	case ListEntityTypeDeal:
-		return true
-	case ListEntityTypeLead:
-		return true
-	case ListEntityTypeProject:
+	case LinkedRecordTypeDeal:
 		return true
 	default:
 		return false
@@ -16354,60 +16330,6 @@ func (e ListHistoryEntryReason) Valid() bool {
 	case ListHistoryEntryReasonRecordArchived:
 		return true
 	case ListHistoryEntryReasonRecordRestored:
-		return true
-	default:
-		return false
-	}
-}
-
-// Defines values for ListMemberEntityType.
-const (
-	ListMemberEntityTypeCompany ListMemberEntityType = "company"
-	ListMemberEntityTypeContact ListMemberEntityType = "contact"
-	ListMemberEntityTypeDeal    ListMemberEntityType = "deal"
-	ListMemberEntityTypeLead    ListMemberEntityType = "lead"
-	ListMemberEntityTypeProject ListMemberEntityType = "project"
-)
-
-// Valid indicates whether the value is a known member of the ListMemberEntityType enum.
-func (e ListMemberEntityType) Valid() bool {
-	switch e {
-	case ListMemberEntityTypeCompany:
-		return true
-	case ListMemberEntityTypeContact:
-		return true
-	case ListMemberEntityTypeDeal:
-		return true
-	case ListMemberEntityTypeLead:
-		return true
-	case ListMemberEntityTypeProject:
-		return true
-	default:
-		return false
-	}
-}
-
-// Defines values for ListMemberChangeRequestEntityType.
-const (
-	ListMemberChangeRequestEntityTypeCompany ListMemberChangeRequestEntityType = "company"
-	ListMemberChangeRequestEntityTypeContact ListMemberChangeRequestEntityType = "contact"
-	ListMemberChangeRequestEntityTypeDeal    ListMemberChangeRequestEntityType = "deal"
-	ListMemberChangeRequestEntityTypeLead    ListMemberChangeRequestEntityType = "lead"
-	ListMemberChangeRequestEntityTypeProject ListMemberChangeRequestEntityType = "project"
-)
-
-// Valid indicates whether the value is a known member of the ListMemberChangeRequestEntityType enum.
-func (e ListMemberChangeRequestEntityType) Valid() bool {
-	switch e {
-	case ListMemberChangeRequestEntityTypeCompany:
-		return true
-	case ListMemberChangeRequestEntityTypeContact:
-		return true
-	case ListMemberChangeRequestEntityTypeDeal:
-		return true
-	case ListMemberChangeRequestEntityTypeLead:
-		return true
-	case ListMemberChangeRequestEntityTypeProject:
 		return true
 	default:
 		return false
@@ -19672,6 +19594,48 @@ func (e RecordGrantSubjectType) Valid() bool {
 	}
 }
 
+// Defines values for RecordKindOptionActions.
+const (
+	RecordKindOptionActionsCreate RecordKindOptionActions = "create"
+	RecordKindOptionActionsDelete RecordKindOptionActions = "delete"
+	RecordKindOptionActionsRead   RecordKindOptionActions = "read"
+	RecordKindOptionActionsUpdate RecordKindOptionActions = "update"
+)
+
+// Valid indicates whether the value is a known member of the RecordKindOptionActions enum.
+func (e RecordKindOptionActions) Valid() bool {
+	switch e {
+	case RecordKindOptionActionsCreate:
+		return true
+	case RecordKindOptionActionsDelete:
+		return true
+	case RecordKindOptionActionsRead:
+		return true
+	case RecordKindOptionActionsUpdate:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for RecordKindOptionDeletePolicy.
+const (
+	RecordKindOptionDeletePolicyArchiveOnly RecordKindOptionDeletePolicy = "archive_only"
+	RecordKindOptionDeletePolicyErasable    RecordKindOptionDeletePolicy = "erasable"
+)
+
+// Valid indicates whether the value is a known member of the RecordKindOptionDeletePolicy enum.
+func (e RecordKindOptionDeletePolicy) Valid() bool {
+	switch e {
+	case RecordKindOptionDeletePolicyArchiveOnly:
+		return true
+	case RecordKindOptionDeletePolicyErasable:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for RecordQualifyingEventRequestKind.
 const (
 	RecordQualifyingEventRequestKindInPerson           RecordQualifyingEventRequestKind = "in_person"
@@ -21850,39 +21814,6 @@ func (e SavedViewSharedScope) Valid() bool {
 	}
 }
 
-// Defines values for SavedViewResource.
-const (
-	SavedViewResourceSavedViewResourceActivities SavedViewResource = "activities"
-	SavedViewResourceSavedViewResourceCompanies  SavedViewResource = "companies"
-	SavedViewResourceSavedViewResourceContacts   SavedViewResource = "contacts"
-	SavedViewResourceSavedViewResourceDeals      SavedViewResource = "deals"
-	SavedViewResourceSavedViewResourceLeads      SavedViewResource = "leads"
-	SavedViewResourceSavedViewResourcePartners   SavedViewResource = "partners"
-	SavedViewResourceSavedViewResourceProjects   SavedViewResource = "projects"
-)
-
-// Valid indicates whether the value is a known member of the SavedViewResource enum.
-func (e SavedViewResource) Valid() bool {
-	switch e {
-	case SavedViewResourceSavedViewResourceActivities:
-		return true
-	case SavedViewResourceSavedViewResourceCompanies:
-		return true
-	case SavedViewResourceSavedViewResourceContacts:
-		return true
-	case SavedViewResourceSavedViewResourceDeals:
-		return true
-	case SavedViewResourceSavedViewResourceLeads:
-		return true
-	case SavedViewResourceSavedViewResourcePartners:
-		return true
-	case SavedViewResourceSavedViewResourceProjects:
-		return true
-	default:
-		return false
-	}
-}
-
 // Defines values for ScheduledAgentName.
 const (
 	ScheduledAgentNameMorningBrief         ScheduledAgentName = "morning_brief"
@@ -22228,45 +22159,6 @@ func (e SearchNearMatchType) Valid() bool {
 	}
 }
 
-// Defines values for SearchResponseTypesWithMore.
-const (
-	SearchResponseTypesWithMoreActivity      SearchResponseTypesWithMore = "activity"
-	SearchResponseTypesWithMoreCompany       SearchResponseTypesWithMore = "company"
-	SearchResponseTypesWithMoreContact       SearchResponseTypesWithMore = "contact"
-	SearchResponseTypesWithMoreDeal          SearchResponseTypesWithMore = "deal"
-	SearchResponseTypesWithMoreLead          SearchResponseTypesWithMore = "lead"
-	SearchResponseTypesWithMoreOfferTemplate SearchResponseTypesWithMore = "offer_template"
-	SearchResponseTypesWithMoreProduct       SearchResponseTypesWithMore = "product"
-	SearchResponseTypesWithMoreProject       SearchResponseTypesWithMore = "project"
-	SearchResponseTypesWithMoreTag           SearchResponseTypesWithMore = "tag"
-)
-
-// Valid indicates whether the value is a known member of the SearchResponseTypesWithMore enum.
-func (e SearchResponseTypesWithMore) Valid() bool {
-	switch e {
-	case SearchResponseTypesWithMoreActivity:
-		return true
-	case SearchResponseTypesWithMoreCompany:
-		return true
-	case SearchResponseTypesWithMoreContact:
-		return true
-	case SearchResponseTypesWithMoreDeal:
-		return true
-	case SearchResponseTypesWithMoreLead:
-		return true
-	case SearchResponseTypesWithMoreOfferTemplate:
-		return true
-	case SearchResponseTypesWithMoreProduct:
-		return true
-	case SearchResponseTypesWithMoreProject:
-		return true
-	case SearchResponseTypesWithMoreTag:
-		return true
-	default:
-		return false
-	}
-}
-
 // Defines values for SearchResultIdentifierMatch.
 const (
 	SearchResultIdentifierMatchExact  SearchResultIdentifierMatch = "exact"
@@ -22300,45 +22192,6 @@ func (e SearchResultTrustTier) Valid() bool {
 	case SearchResultTrustTierSearchResultTrustTierExternal:
 		return true
 	case SearchResultTrustTierSearchResultTrustTierUnverified:
-		return true
-	default:
-		return false
-	}
-}
-
-// Defines values for SearchResultType.
-const (
-	SearchResultTypeActivity      SearchResultType = "activity"
-	SearchResultTypeCompany       SearchResultType = "company"
-	SearchResultTypeContact       SearchResultType = "contact"
-	SearchResultTypeDeal          SearchResultType = "deal"
-	SearchResultTypeLead          SearchResultType = "lead"
-	SearchResultTypeOfferTemplate SearchResultType = "offer_template"
-	SearchResultTypeProduct       SearchResultType = "product"
-	SearchResultTypeProject       SearchResultType = "project"
-	SearchResultTypeTag           SearchResultType = "tag"
-)
-
-// Valid indicates whether the value is a known member of the SearchResultType enum.
-func (e SearchResultType) Valid() bool {
-	switch e {
-	case SearchResultTypeActivity:
-		return true
-	case SearchResultTypeCompany:
-		return true
-	case SearchResultTypeContact:
-		return true
-	case SearchResultTypeDeal:
-		return true
-	case SearchResultTypeLead:
-		return true
-	case SearchResultTypeOfferTemplate:
-		return true
-	case SearchResultTypeProduct:
-		return true
-	case SearchResultTypeProject:
-		return true
-	case SearchResultTypeTag:
 		return true
 	default:
 		return false
@@ -22867,66 +22720,6 @@ func (e SignalEntityType) Valid() bool {
 	case SignalEntityTypeDeal:
 		return true
 	case SignalEntityTypeProject:
-		return true
-	default:
-		return false
-	}
-}
-
-// Defines values for SignalKind.
-const (
-	SignalKindBuyingIntent     SignalKind = "buying_intent"
-	SignalKindChampionLeft     SignalKind = "champion_left"
-	SignalKindCommitmentMade   SignalKind = "commitment_made"
-	SignalKindContractEnded    SignalKind = "contract_ended"
-	SignalKindExpansion        SignalKind = "expansion"
-	SignalKindFunding          SignalKind = "funding"
-	SignalKindGhostedThread    SignalKind = "ghosted_thread"
-	SignalKindLeadershipChange SignalKind = "leadership_change"
-	SignalKindNewOpportunity   SignalKind = "new_opportunity"
-	SignalKindOther            SignalKind = "other"
-	SignalKindProductLaunch    SignalKind = "product_launch"
-	SignalKindProjectGoneQuiet SignalKind = "project_gone_quiet"
-	SignalKindReengagement     SignalKind = "reengagement"
-	SignalKindRisk             SignalKind = "risk"
-	SignalKindStalledDeal      SignalKind = "stalled_deal"
-	SignalKindTechnicalChange  SignalKind = "technical_change"
-)
-
-// Valid indicates whether the value is a known member of the SignalKind enum.
-func (e SignalKind) Valid() bool {
-	switch e {
-	case SignalKindBuyingIntent:
-		return true
-	case SignalKindChampionLeft:
-		return true
-	case SignalKindCommitmentMade:
-		return true
-	case SignalKindContractEnded:
-		return true
-	case SignalKindExpansion:
-		return true
-	case SignalKindFunding:
-		return true
-	case SignalKindGhostedThread:
-		return true
-	case SignalKindLeadershipChange:
-		return true
-	case SignalKindNewOpportunity:
-		return true
-	case SignalKindOther:
-		return true
-	case SignalKindProductLaunch:
-		return true
-	case SignalKindProjectGoneQuiet:
-		return true
-	case SignalKindReengagement:
-		return true
-	case SignalKindRisk:
-		return true
-	case SignalKindStalledDeal:
-		return true
-	case SignalKindTechnicalChange:
 		return true
 	default:
 		return false
@@ -25174,6 +24967,36 @@ func (e UpdateRoleRequestRowScope) Valid() bool {
 	case UpdateRoleRequestRowScopeOwn:
 		return true
 	case UpdateRoleRequestRowScopeTeam:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for UpdateSignalRequestKind.
+const (
+	UpdateSignalRequestKindBuyingIntent UpdateSignalRequestKind = "buying_intent"
+	UpdateSignalRequestKindChampionLeft UpdateSignalRequestKind = "champion_left"
+	UpdateSignalRequestKindOther        UpdateSignalRequestKind = "other"
+	UpdateSignalRequestKindReengagement UpdateSignalRequestKind = "reengagement"
+	UpdateSignalRequestKindRisk         UpdateSignalRequestKind = "risk"
+	UpdateSignalRequestKindStalledDeal  UpdateSignalRequestKind = "stalled_deal"
+)
+
+// Valid indicates whether the value is a known member of the UpdateSignalRequestKind enum.
+func (e UpdateSignalRequestKind) Valid() bool {
+	switch e {
+	case UpdateSignalRequestKindBuyingIntent:
+		return true
+	case UpdateSignalRequestKindChampionLeft:
+		return true
+	case UpdateSignalRequestKindOther:
+		return true
+	case UpdateSignalRequestKindReengagement:
+		return true
+	case UpdateSignalRequestKindRisk:
+		return true
+	case UpdateSignalRequestKindStalledDeal:
 		return true
 	default:
 		return false
@@ -29908,6 +29731,27 @@ func (e ListContactCasesParamsScope) Valid() bool {
 	}
 }
 
+// Defines values for ListExtensionHistoryParamsEntityType.
+const (
+	ListExtensionHistoryParamsEntityTypeCompany ListExtensionHistoryParamsEntityType = "company"
+	ListExtensionHistoryParamsEntityTypeContact ListExtensionHistoryParamsEntityType = "contact"
+	ListExtensionHistoryParamsEntityTypeDeal    ListExtensionHistoryParamsEntityType = "deal"
+)
+
+// Valid indicates whether the value is a known member of the ListExtensionHistoryParamsEntityType enum.
+func (e ListExtensionHistoryParamsEntityType) Valid() bool {
+	switch e {
+	case ListExtensionHistoryParamsEntityTypeCompany:
+		return true
+	case ListExtensionHistoryParamsEntityTypeContact:
+		return true
+	case ListExtensionHistoryParamsEntityTypeDeal:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for GetFieldHistoryParamsEntityType.
 const (
 	GetFieldHistoryParamsEntityTypeActivity GetFieldHistoryParamsEntityType = "activity"
@@ -29959,33 +29803,6 @@ func (e GetFieldHistoryParamsActorType) Valid() bool {
 	case GetFieldHistoryParamsActorTypeHuman:
 		return true
 	case GetFieldHistoryParamsActorTypeSystem:
-		return true
-	default:
-		return false
-	}
-}
-
-// Defines values for GetFilterVocabularyParamsResource.
-const (
-	GetFilterVocabularyParamsResourceCompany GetFilterVocabularyParamsResource = "company"
-	GetFilterVocabularyParamsResourceContact GetFilterVocabularyParamsResource = "contact"
-	GetFilterVocabularyParamsResourceDeal    GetFilterVocabularyParamsResource = "deal"
-	GetFilterVocabularyParamsResourceLead    GetFilterVocabularyParamsResource = "lead"
-	GetFilterVocabularyParamsResourceProject GetFilterVocabularyParamsResource = "project"
-)
-
-// Valid indicates whether the value is a known member of the GetFilterVocabularyParamsResource enum.
-func (e GetFilterVocabularyParamsResource) Valid() bool {
-	switch e {
-	case GetFilterVocabularyParamsResourceCompany:
-		return true
-	case GetFilterVocabularyParamsResourceContact:
-		return true
-	case GetFilterVocabularyParamsResourceDeal:
-		return true
-	case GetFilterVocabularyParamsResourceLead:
-		return true
-	case GetFilterVocabularyParamsResourceProject:
 		return true
 	default:
 		return false
@@ -30847,6 +30664,27 @@ func (e ListRecordGrantsParamsSubjectType) Valid() bool {
 	}
 }
 
+// Defines values for ListRecordLinksParamsRecordType.
+const (
+	ListRecordLinksParamsRecordTypeCompany ListRecordLinksParamsRecordType = "company"
+	ListRecordLinksParamsRecordTypeContact ListRecordLinksParamsRecordType = "contact"
+	ListRecordLinksParamsRecordTypeDeal    ListRecordLinksParamsRecordType = "deal"
+)
+
+// Valid indicates whether the value is a known member of the ListRecordLinksParamsRecordType enum.
+func (e ListRecordLinksParamsRecordType) Valid() bool {
+	switch e {
+	case ListRecordLinksParamsRecordTypeCompany:
+		return true
+	case ListRecordLinksParamsRecordTypeContact:
+		return true
+	case ListRecordLinksParamsRecordTypeDeal:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for ListRelationshipsParamsKind.
 const (
 	ListRelationshipsParamsKindBillingContact     ListRelationshipsParamsKind = "billing_contact"
@@ -30961,45 +30799,6 @@ func (e GetSchedulingCalendarsParamsProvider) Valid() bool {
 	case GetSchedulingCalendarsParamsProviderGcal:
 		return true
 	case GetSchedulingCalendarsParamsProviderGraphcal:
-		return true
-	default:
-		return false
-	}
-}
-
-// Defines values for SearchParamsTypes.
-const (
-	SearchParamsTypesActivity      SearchParamsTypes = "activity"
-	SearchParamsTypesCompany       SearchParamsTypes = "company"
-	SearchParamsTypesContact       SearchParamsTypes = "contact"
-	SearchParamsTypesDeal          SearchParamsTypes = "deal"
-	SearchParamsTypesLead          SearchParamsTypes = "lead"
-	SearchParamsTypesOfferTemplate SearchParamsTypes = "offer_template"
-	SearchParamsTypesProduct       SearchParamsTypes = "product"
-	SearchParamsTypesProject       SearchParamsTypes = "project"
-	SearchParamsTypesTag           SearchParamsTypes = "tag"
-)
-
-// Valid indicates whether the value is a known member of the SearchParamsTypes enum.
-func (e SearchParamsTypes) Valid() bool {
-	switch e {
-	case SearchParamsTypesActivity:
-		return true
-	case SearchParamsTypesCompany:
-		return true
-	case SearchParamsTypesContact:
-		return true
-	case SearchParamsTypesDeal:
-		return true
-	case SearchParamsTypesLead:
-		return true
-	case SearchParamsTypesOfferTemplate:
-		return true
-	case SearchParamsTypesProduct:
-		return true
-	case SearchParamsTypesProject:
-		return true
-	case SearchParamsTypesTag:
 		return true
 	default:
 		return false
@@ -39110,7 +38909,10 @@ type Company struct {
 
 	// Email The company's general address, for example info@example.com. It never creates or matches a contact.
 	Email *openapi_types.Email `json:"email,omitempty"`
-	Id    openapi_types.UUID   `json:"id"`
+
+	// ExtensionRelationshipTypes The types an installed extension adds, as `ext:<unit>:<type>`. Kept apart from `relationship_types`, whose list stays the closed set above. Each value is declared by the extension it names; a value no extension declares is refused (422, `invalid_enum`).
+	ExtensionRelationshipTypes *[]string          `json:"extension_relationship_types,omitempty"`
+	Id                         openapi_types.UUID `json:"id"`
 
 	// ImportedFrom Which import wrote this record, so a screen can say "Imported from <name>" instead of "Typed by you". Null when no import wrote it. The name is the source the import was run for (`bundle`); an empty string is an import that was given none. Derived from `source_system`, whose reserved `mirror:` prefix is never shown.
 	ImportedFrom *string `json:"imported_from,omitempty"`
@@ -41688,6 +41490,23 @@ type CompanyTriagedDomain struct {
 	// Domain The mail domain, lower-cased as the ledger stores it.
 	Domain string            `json:"domain"`
 	Rung   PipelineStageRung `json:"rung"`
+}
+
+// CompanyTypeDirectory The company types installed extensions add, ordered by value.
+type CompanyTypeDirectory struct {
+	Data []CompanyTypeOption `json:"data"`
+}
+
+// CompanyTypeOption defines model for CompanyTypeOption.
+type CompanyTypeOption struct {
+	// Label What a screen shows, in English, as the extension declared it.
+	Label string `json:"label"`
+
+	// Unit The extension that declared the type.
+	Unit string `json:"unit"`
+
+	// Value The value a company carries, `ext:<unit>:<type>`.
+	Value string `json:"value"`
 }
 
 // CompanyVatCheck One company's current VAT standing, and the evidence for it. The row keeps only the
@@ -44991,18 +44810,17 @@ type CreateLegalEntityRequest struct {
 
 // CreateListRequest defines model for CreateListRequest.
 type CreateListRequest struct {
-	Definition *map[string]interface{}     `json:"definition,omitempty"`
-	EntityType CreateListRequestEntityType `json:"entity_type"`
-	ListType   *CreateListRequestListType  `json:"list_type,omitempty"`
-	Name       string                      `json:"name"`
-	Purpose    *string                     `json:"purpose,omitempty"`
-	Sharing    *CreateListRequestSharing   `json:"sharing,omitempty"`
-	StewardId  *openapi_types.UUID         `json:"steward_id,omitempty"`
-	TeamId     *openapi_types.UUID         `json:"team_id,omitempty"`
-}
+	Definition *map[string]interface{} `json:"definition,omitempty"`
 
-// CreateListRequestEntityType defines model for CreateListRequest.EntityType.
-type CreateListRequestEntityType string
+	// EntityType A record type a filter may be built over: one of core's five, or `ext:<unit>:<kind>` for a kind an extension declared. A kind no installed extension declares answers 404 on the vocabulary and 422 on a preview.
+	EntityType FilterResource             `json:"entity_type"`
+	ListType   *CreateListRequestListType `json:"list_type,omitempty"`
+	Name       string                     `json:"name"`
+	Purpose    *string                    `json:"purpose,omitempty"`
+	Sharing    *CreateListRequestSharing  `json:"sharing,omitempty"`
+	StewardId  *openapi_types.UUID        `json:"steward_id,omitempty"`
+	TeamId     *openapi_types.UUID        `json:"team_id,omitempty"`
+}
 
 // CreateListRequestListType defines model for CreateListRequest.ListType.
 type CreateListRequestListType string
@@ -45316,8 +45134,8 @@ type CreateSavedViewRequest struct {
 	Name  string                 `json:"name"`
 	Query map[string]interface{} `json:"query"`
 
-	// Resource The list a saved view is over. One schema for the record, the create and update bodies and the list filter, so the four cannot drift.
-	Resource SavedViewResource `json:"resource"`
+	// Resource The list a saved view is over: one of core's lists, or `ext:<unit>:<kind>` for a kind an extension declared. One schema for the record, the create body and the list filter, so the three cannot drift.
+	Resource SavedViewTarget `json:"resource"`
 }
 
 // CreateSignalRequest defines model for CreateSignalRequest.
@@ -45549,7 +45367,7 @@ type CustomField struct {
 	// Status retired = soft: hidden from the API and filtering, column and values preserved.
 	Status CustomFieldStatus `json:"status"`
 
-	// Type The supported field types. Multiselect values are JSON string arrays; empty arrays clear the selection. Immutable once created.
+	// Type The supported field types. Multiselect values are JSON string arrays; empty arrays clear the selection. A record field holds the id of one record of the kind named by its single option, and that option must be a record kind a unit declared. Immutable once created.
 	Type      CustomFieldType `json:"type"`
 	UpdatedAt time.Time       `json:"updated_at"`
 
@@ -45569,7 +45387,7 @@ type CustomFieldObject string
 // CustomFieldStatus retired = soft: hidden from the API and filtering, column and values preserved.
 type CustomFieldStatus string
 
-// CustomFieldType The supported field types. Multiselect values are JSON string arrays; empty arrays clear the selection. Immutable once created.
+// CustomFieldType The supported field types. Multiselect values are JSON string arrays; empty arrays clear the selection. A record field holds the id of one record of the kind named by its single option, and that option must be a record kind a unit declared. Immutable once created.
 type CustomFieldType string
 
 // CustomFieldListResponse defines model for CustomFieldListResponse.
@@ -48480,6 +48298,30 @@ type ExtensionDirectory struct {
 	Extensions []ComposedExtension `json:"extensions"`
 }
 
+// ExtensionHistoryEntry defines model for ExtensionHistoryEntry.
+type ExtensionHistoryEntry struct {
+	// At The declared time column of the row, or the signal's detection time.
+	At time.Time `json:"at"`
+
+	// Id The row's own id in the extension's table, or the signal's id.
+	Id openapi_types.UUID `json:"id"`
+
+	// Kind The record kind of a `record` entry, or the signal kind of a `signal` entry.
+	Kind   string                      `json:"kind"`
+	Source ExtensionHistoryEntrySource `json:"source"`
+
+	// Title The declared label field of the row, or the signal's summary.
+	Title string `json:"title"`
+}
+
+// ExtensionHistoryEntrySource defines model for ExtensionHistoryEntry.Source.
+type ExtensionHistoryEntrySource string
+
+// ExtensionHistoryResponse defines model for ExtensionHistoryResponse.
+type ExtensionHistoryResponse struct {
+	Data []ExtensionHistoryEntry `json:"data"`
+}
+
 // ExtensionIngestHealth Which composed units are handing the core records it cannot express, for an
 // administrator asking whether a connector is broken or merely quiet.
 //
@@ -48516,6 +48358,56 @@ type ExtensionIngestRefusal struct {
 // names the mapping to fix: "every record fails its participants" is a different
 // bug from "every record fails its key".
 type ExtensionIngestRefusalRefusal string
+
+// ExtensionReport defines model for ExtensionReport.
+type ExtensionReport struct {
+	// By The field a breakdown splits by. Absent on a count.
+	By *string `json:"by,omitempty"`
+
+	// ExcludedByPermission Visible rows a field mask withheld from this run. Null when no mask applied.
+	ExcludedByPermission *int `json:"excluded_by_permission"`
+
+	// Groups One entry per group of a breakdown, or one for a count. A group the floor withheld
+	// carries no key and no count.
+	Groups []ExtensionReportGroup `json:"groups"`
+	Kind   ExtensionReportKind    `json:"kind"`
+
+	// Label What a screen shows, in English.
+	Label string `json:"label"`
+
+	// Name The report as `ext:<unit>:<name>`.
+	Name string `json:"name"`
+
+	// Population What is counted, a record kind (`ext:<unit>:<kind>`) or a core report population.
+	Population string `json:"population"`
+
+	// Total The whole count. Null once anything is withheld, because total minus the shown groups would be the withheld one.
+	Total *int `json:"total"`
+
+	// Unit The extension that declared it.
+	Unit string `json:"unit"`
+
+	// Withheld The group floor kept a group back, and with it the total.
+	Withheld bool `json:"withheld"`
+}
+
+// ExtensionReportKind defines model for ExtensionReport.Kind.
+type ExtensionReportKind string
+
+// ExtensionReportDirectory The counts and breakdowns installed extensions add that this caller may read, ordered by name.
+type ExtensionReportDirectory struct {
+	Data []ExtensionReport `json:"data"`
+}
+
+// ExtensionReportGroup defines model for ExtensionReportGroup.
+type ExtensionReportGroup struct {
+	// Count Null for a withheld group.
+	Count *int `json:"count"`
+
+	// Key The value of the field. Null for records with no value, and for a withheld group.
+	Key      *string `json:"key"`
+	Withheld bool    `json:"withheld"`
+}
 
 // ExtensionSettings The governance settings of one composed extension unit.
 type ExtensionSettings struct {
@@ -48663,8 +48555,10 @@ type FilterPreview struct {
 	MatchCount int `json:"match_count"`
 
 	// NextCursor Opaque cursor for the next page, or null if none.
-	NextCursor *string               `json:"next_cursor,omitempty"`
-	Resource   FilterPreviewResource `json:"resource"`
+	NextCursor *string `json:"next_cursor,omitempty"`
+
+	// Resource A record type a filter may be built over: one of core's five, or `ext:<unit>:<kind>` for a kind an extension declared. A kind no installed extension declares answers 404 on the vocabulary and 422 on a preview.
+	Resource FilterResource `json:"resource"`
 
 	// Rows Up to `limit` matching rows as column→value maps, ordered by id,
 	// after the request's `cursor` when it names one.
@@ -48677,9 +48571,6 @@ type FilterPreview struct {
 	// `next_cursor` is set.
 	Truncated bool `json:"truncated"`
 }
-
-// FilterPreviewResource defines model for FilterPreview.Resource.
-type FilterPreviewResource string
 
 // FilterPreviewRequest A candidate filter to evaluate without saving it.
 type FilterPreviewRequest struct {
@@ -48699,12 +48590,11 @@ type FilterPreviewRequest struct {
 
 	// Limit The page size. The COUNT is unaffected by this — it is the full match
 	// count for the caller on every page, not the size of the page.
-	Limit    *int                         `json:"limit,omitempty" maximum:"100" minimum:"1"`
-	Resource FilterPreviewRequestResource `json:"resource"`
-}
+	Limit *int `json:"limit,omitempty" maximum:"100" minimum:"1"`
 
-// FilterPreviewRequestResource defines model for FilterPreviewRequest.Resource.
-type FilterPreviewRequestResource string
+	// Resource A record type a filter may be built over: one of core's five, or `ext:<unit>:<kind>` for a kind an extension declared. A kind no installed extension declares answers 404 on the vocabulary and 422 on a preview.
+	Resource FilterResource `json:"resource"`
+}
 
 // FilterProposal Filter clauses proposed from plain words, already checked against the
 // caller's vocabulary. Not saved.
@@ -48777,6 +48667,9 @@ type FilterProposalUnsupported struct {
 // client can say it in its own words.
 type FilterProposalUnsupportedCode string
 
+// FilterResource A record type a filter may be built over: one of core's five, or `ext:<unit>:<kind>` for a kind an extension declared. A kind no installed extension declares answers 404 on the vocabulary and 422 on a preview.
+type FilterResource = string
+
 // FilterVocabulary What a filter may say about one record type (LVS-EXT-8). Read from the
 // engine that evaluates filters, so the set here and the set the engine
 // accepts are the same set.
@@ -48786,12 +48679,11 @@ type FilterVocabulary struct {
 	// one kind as second class. A retired field of either kind is absent
 	// (see `custom`); a core field retired by an ADR is absent for the same
 	// reason and has no catalog row a client could learn that from.
-	Fields   []FilterVocabularyField  `json:"fields"`
-	Resource FilterVocabularyResource `json:"resource"`
-}
+	Fields []FilterVocabularyField `json:"fields"`
 
-// FilterVocabularyResource defines model for FilterVocabulary.Resource.
-type FilterVocabularyResource string
+	// Resource A record type a filter may be built over: one of core's five, or `ext:<unit>:<kind>` for a kind an extension declared. A kind no installed extension declares answers 404 on the vocabulary and 422 on a preview.
+	Resource FilterResource `json:"resource"`
+}
 
 // FilterVocabularyField One field a filter clause may name, with what it accepts.
 type FilterVocabularyField struct {
@@ -53390,6 +53282,58 @@ type LinkLeadCompanyRequest struct {
 	CompanyId openapi_types.UUID `json:"company_id"`
 }
 
+// LinkSuggestion defines model for LinkSuggestion.
+type LinkSuggestion struct {
+	ActivityId openapi_types.UUID `json:"activity_id"`
+
+	// ActivitySubject The subject of the message. Empty when the message has none.
+	ActivitySubject *string            `json:"activity_subject,omitempty"`
+	CreatedAt       time.Time          `json:"created_at"`
+	EntityId        openapi_types.UUID `json:"entity_id"`
+
+	// EntityName The name of the suggested record, for the screen. Absent on a decision's answer.
+	EntityName *string                  `json:"entity_name,omitempty"`
+	EntityType LinkSuggestionEntityType `json:"entity_type"`
+	Id         openapi_types.UUID       `json:"id"`
+
+	// Reason One short sentence from the extension on why.
+	Reason string               `json:"reason"`
+	Score  float32              `json:"score" maximum:"1" minimum:"0"`
+	Status LinkSuggestionStatus `json:"status"`
+
+	// Unit The extension that proposed it.
+	Unit string `json:"unit"`
+}
+
+// LinkSuggestionEntityType defines model for LinkSuggestion.EntityType.
+type LinkSuggestionEntityType string
+
+// LinkSuggestionStatus defines model for LinkSuggestion.Status.
+type LinkSuggestionStatus string
+
+// LinkSuggestionList defines model for LinkSuggestionList.
+type LinkSuggestionList struct {
+	Data []LinkSuggestion `json:"data"`
+}
+
+// LinkType defines model for LinkType.
+type LinkType struct {
+	From  []LinkedRecordType `json:"from"`
+	Label string             `json:"label"`
+
+	// Name A core word, or `ext:<unit>:<type>` for an extension's.
+	Name string             `json:"name"`
+	To   []LinkedRecordType `json:"to"`
+
+	// Unit The extension that declared it. Absent for core's own.
+	Unit *string `json:"unit,omitempty"`
+}
+
+// LinkTypeList defines model for LinkTypeList.
+type LinkTypeList struct {
+	Data []LinkType `json:"data"`
+}
+
 // LinkedInAccount defines model for LinkedInAccount.
 type LinkedInAccount struct {
 	// Connected Whether this member has authorized LinkedIn.
@@ -53476,6 +53420,9 @@ type LinkedInReachResponse struct {
 	UnresolvedConnections int `json:"unresolved_connections" minimum:"0"`
 }
 
+// LinkedRecordType defines model for LinkedRecordType.
+type LinkedRecordType string
+
 // List A Live List (list_type dynamic: its members are its filter's current result) or a Shortlist (static: members chosen by hand). Mirrors the `list` table.
 type List struct {
 	ArchivedAt *time.Time `json:"archived_at,omitempty"`
@@ -53490,7 +53437,9 @@ type List struct {
 
 	// Dependencies What uses this list: the active automation rules that watch or add to it, then its filtered exports. Neither blocks a change; a rule pauses itself when its list is archived.
 	Dependencies *[]ListDependency `json:"dependencies,omitempty"`
-	EntityType   ListEntityType    `json:"entity_type"`
+
+	// EntityType A record type a filter may be built over: one of core's five, or `ext:<unit>:<kind>` for a kind an extension declared. A kind no installed extension declares answers 404 on the vocabulary and 422 on a preview.
+	EntityType FilterResource `json:"entity_type"`
 
 	// Health `ownerless` when nobody looks after the list — no steward, or one who can no longer sign in — so somebody should take it over. `invalid` when a Live List's filter no longer compiles. `retired_field` when a Live List's filter names a custom field that has been retired: the list still evaluates on the kept values, and its steward should replace the clause. `retired_tag` when a Live List's filter names a tag that has been archived or merged away: that tag no longer matches any record, so a clause on it selects nothing, and its steward should name the tag that took its place. `invalid` outranks `ownerless`, which outranks `retired_field`, which outranks `retired_tag`.
 	Health ListHealth         `json:"health"`
@@ -53530,9 +53479,6 @@ type List struct {
 	// VisibleCount How many members this caller may see. Null when the list's filter can no longer be evaluated (health `invalid`). Never the list's whole size.
 	VisibleCount *int `json:"visible_count,omitempty"`
 }
-
-// ListEntityType defines model for List.EntityType.
-type ListEntityType string
 
 // ListHealth `ownerless` when nobody looks after the list — no steward, or one who can no longer sign in — so somebody should take it over. `invalid` when a Live List's filter no longer compiles. `retired_field` when a Live List's filter names a custom field that has been retired: the list still evaluates on the kept values, and its steward should replace the clause. `retired_tag` when a Live List's filter names a tag that has been archived or merged away: that tag no longer matches any record, so a clause on it selects nothing, and its steward should name the tag that took its place. `invalid` outranks `ownerless`, which outranks `retired_field`, which outranks `retired_tag`.
 type ListHealth string
@@ -53738,32 +53684,30 @@ type ListMember struct {
 	AddedBy *string `json:"added_by,omitempty"`
 
 	// AddedByName For a Shortlist member, the display name of the user who added it; null for any other principal.
-	AddedByName *string              `json:"added_by_name,omitempty"`
-	CreatedAt   *time.Time           `json:"created_at,omitempty"`
-	EntityId    openapi_types.UUID   `json:"entity_id"`
-	EntityType  ListMemberEntityType `json:"entity_type"`
-	Id          openapi_types.UUID   `json:"id"`
-	ListId      openapi_types.UUID   `json:"list_id"`
-	Note        *string              `json:"note,omitempty"`
+	AddedByName *string            `json:"added_by_name,omitempty"`
+	CreatedAt   *time.Time         `json:"created_at,omitempty"`
+	EntityId    openapi_types.UUID `json:"entity_id"`
+
+	// EntityType A record type a filter may be built over: one of core's five, or `ext:<unit>:<kind>` for a kind an extension declared. A kind no installed extension declares answers 404 on the vocabulary and 422 on a preview.
+	EntityType FilterResource     `json:"entity_type"`
+	Id         openapi_types.UUID `json:"id"`
+	ListId     openapi_types.UUID `json:"list_id"`
+	Note       *string            `json:"note,omitempty"`
 
 	// Values For a Live List member: each field the list's filter names, by field name, with what it holds on this record for this caller. Absent for a Shortlist member.
 	Values *map[string]ListFieldValue `json:"values,omitempty"`
 }
 
-// ListMemberEntityType defines model for ListMember.EntityType.
-type ListMemberEntityType string
-
 // ListMemberChangeRequest defines model for ListMemberChangeRequest.
 type ListMemberChangeRequest struct {
-	EntityId   openapi_types.UUID                `json:"entity_id"`
-	EntityType ListMemberChangeRequestEntityType `json:"entity_type"`
+	EntityId openapi_types.UUID `json:"entity_id"`
+
+	// EntityType A record type a filter may be built over: one of core's five, or `ext:<unit>:<kind>` for a kind an extension declared. A kind no installed extension declares answers 404 on the vocabulary and 422 on a preview.
+	EntityType FilterResource `json:"entity_type"`
 
 	// Note Why, in the words of whoever made the change.
 	Note *string `json:"note,omitempty"`
 }
-
-// ListMemberChangeRequestEntityType defines model for ListMemberChangeRequest.EntityType.
-type ListMemberChangeRequestEntityType string
 
 // ListMemberExplanation defines model for ListMemberExplanation.
 type ListMemberExplanation struct {
@@ -55502,6 +55446,15 @@ type NewForecastShareKind string
 
 // NewForecastShareScopeKind defines model for NewForecastShare.ScopeKind.
 type NewForecastShareScopeKind string
+
+// NewRecordLink defines model for NewRecordLink.
+type NewRecordLink struct {
+	FromId   openapi_types.UUID `json:"from_id"`
+	FromType LinkedRecordType   `json:"from_type"`
+	LinkType string             `json:"link_type"`
+	ToId     openapi_types.UUID `json:"to_id"`
+	ToType   LinkedRecordType   `json:"to_type"`
+}
 
 // NewWeeklyPlanCommitment defines model for NewWeeklyPlanCommitment.
 type NewWeeklyPlanCommitment struct {
@@ -58883,6 +58836,75 @@ type RecordIntroductionInput struct {
 	IntroducerUserId openapi_types.UUID `json:"introducer_user_id"`
 }
 
+// RecordKindDirectory The record kinds installed extensions add that this caller may read, ordered by name.
+type RecordKindDirectory struct {
+	Data []RecordKindOption `json:"data"`
+}
+
+// RecordKindField defines model for RecordKindField.
+type RecordKindField struct {
+	// Label What a screen shows, in English.
+	Label string `json:"label"`
+
+	// Name The column the unit's table keeps the value in.
+	Name string `json:"name"`
+}
+
+// RecordKindOption defines model for RecordKindOption.
+type RecordKindOption struct {
+	// Actions The actions this caller holds on the kind. Every other action is denied.
+	Actions []RecordKindOptionActions `json:"actions"`
+
+	// DeletePolicy What removing a record of the kind means. `archive_only` keeps the row.
+	DeletePolicy RecordKindOptionDeletePolicy `json:"delete_policy"`
+
+	// DisplayName What a screen calls one record of the kind, in English.
+	DisplayName string            `json:"display_name"`
+	Fields      []RecordKindField `json:"fields"`
+
+	// Kind The short name inside the unit.
+	Kind string `json:"kind"`
+
+	// Name The kind as every table that names a kind stores it, `ext:<unit>:<kind>`. The unit is a
+	// unit name and the kind is a lower-case letter followed by up to 31 lower-case letters,
+	// digits or underscores.
+	Name string `json:"name"`
+
+	// NaturalKey The fields that together identify one record. The unit's table holds them unique.
+	NaturalKey []string `json:"natural_key"`
+
+	// Unit The extension that declared the kind.
+	Unit string `json:"unit"`
+}
+
+// RecordKindOptionActions defines model for RecordKindOption.Actions.
+type RecordKindOptionActions string
+
+// RecordKindOptionDeletePolicy What removing a record of the kind means. `archive_only` keeps the row.
+type RecordKindOptionDeletePolicy string
+
+// RecordLink defines model for RecordLink.
+type RecordLink struct {
+	CreatedAt time.Time          `json:"created_at"`
+	FromId    openapi_types.UUID `json:"from_id"`
+
+	// FromName The name of the record the link starts on, for the screen. Absent on a write's answer.
+	FromName *string            `json:"from_name,omitempty"`
+	FromType LinkedRecordType   `json:"from_type"`
+	Id       openapi_types.UUID `json:"id"`
+	LinkType string             `json:"link_type"`
+	ToId     openapi_types.UUID `json:"to_id"`
+
+	// ToName The name of the record the link ends on, for the screen. Absent on a write's answer.
+	ToName *string          `json:"to_name,omitempty"`
+	ToType LinkedRecordType `json:"to_type"`
+}
+
+// RecordLinkList defines model for RecordLinkList.
+type RecordLinkList struct {
+	Data []RecordLink `json:"data"`
+}
+
 // RecordListsResponse defines model for RecordListsResponse.
 type RecordListsResponse struct {
 	Data []List `json:"data"`
@@ -61878,8 +61900,8 @@ type SavedView struct {
 	// Query The saved column choice, sort, and filter state, in the list-view vocabulary; persisted and restored verbatim.
 	Query map[string]interface{} `json:"query"`
 
-	// Resource The list a saved view is over. One schema for the record, the create and update bodies and the list filter, so the four cannot drift.
-	Resource SavedViewResource `json:"resource"`
+	// Resource The list a saved view is over: one of core's lists, or `ext:<unit>:<kind>` for a kind an extension declared. One schema for the record, the create body and the list filter, so the three cannot drift.
+	Resource SavedViewTarget `json:"resource"`
 
 	// SharedScope V1 enforces private.
 	SharedScope *SavedViewSharedScope `json:"shared_scope,omitempty"`
@@ -61898,8 +61920,8 @@ type SavedViewListResponse struct {
 	Page PageInfo    `json:"page"`
 }
 
-// SavedViewResource The list a saved view is over. One schema for the record, the create and update bodies and the list filter, so the four cannot drift.
-type SavedViewResource string
+// SavedViewTarget The list a saved view is over: one of core's lists, or `ext:<unit>:<kind>` for a kind an extension declared. One schema for the record, the create body and the list filter, so the three cannot drift.
+type SavedViewTarget = string
 
 // ScheduledAgentName A scheduled agent a rep can grant standing authority to. The set matches
 // runner.Catalog() — the catalog is code, so adding an agent is a reviewed change
@@ -62460,11 +62482,8 @@ type SearchResponse struct {
 	Page        PageInfo           `json:"page"`
 
 	// TypesWithMore On a `per_type` answer only: the types that matched more hits than the page carries for them. Absent on a ranked answer, whose `page.has_more` says the same thing for the list as a whole.
-	TypesWithMore *[]SearchResponseTypesWithMore `json:"types_with_more,omitempty"`
+	TypesWithMore *[]string `json:"types_with_more,omitempty"`
 }
-
-// SearchResponseTypesWithMore defines model for SearchResponse.TypesWithMore.
-type SearchResponseTypesWithMore string
 
 // SearchResult defines model for SearchResult.
 type SearchResult struct {
@@ -62493,7 +62512,7 @@ type SearchResult struct {
 
 	// TrustTier Provenance tier of the underlying record. EVERY hit this server returns carries `authoritative`, with no exception: search reads the store the record lives in, so a hit is never a copy of somebody else's. `external` and `unverified` are declared for connector-sourced rows and nothing emits either yet, and `null` means UNKNOWN rather than authoritative — this field is never guessed. A client must accept all four and must not expect any but the first.
 	TrustTier *SearchResultTrustTier `json:"trust_tier,omitempty"`
-	Type      SearchResultType       `json:"type"`
+	Type      string                 `json:"type"`
 
 	// WorksAt On a `contact` hit found through `with_employees`: the company it currently works at that the query matched, which is why the hit is here — the contact's own text did not match. When the contact works at several matching companies, the best-matching one. Null on every other hit, a contact the query matched by its own text included.
 	WorksAt *SearchHitEmployer `json:"works_at,omitempty"`
@@ -62504,9 +62523,6 @@ type SearchResultIdentifierMatch string
 
 // SearchResultTrustTier Provenance tier of the underlying record. EVERY hit this server returns carries `authoritative`, with no exception: search reads the store the record lives in, so a hit is never a copy of somebody else's. `external` and `unverified` are declared for connector-sourced rows and nothing emits either yet, and `null` means UNKNOWN rather than authoritative — this field is never guessed. A client must accept all four and must not expect any but the first.
 type SearchResultTrustTier string
-
-// SearchResultType defines model for SearchResult.Type.
-type SearchResultType string
 
 // SeatCapture Whether the caller's own role and seat let capture write, asked by the same check connect
 // and every sync ask. False hides every connect button; a connected mailbox stops at its
@@ -63546,7 +63562,14 @@ type Signal struct {
 	Evidence []SignalEvidence   `json:"evidence"`
 	Id       openapi_types.UUID `json:"id"`
 
-	// Kind The first six are what a human files by hand. The rest are what the producers
+	// Kind One of core's sixteen kinds, or `ext:<unit>:<kind>` for a kind an extension declares.
+	// A client must treat a value it does not know as a kind of its own, never as an error.
+	// Core's kinds are `stalled_deal`, `champion_left`, `reengagement`, `buying_intent`,
+	// `risk`, `other`, `contract_ended`, `new_opportunity`, `commitment_made`,
+	// `ghosted_thread`, `project_gone_quiet`, `funding`, `leadership_change`, `expansion`,
+	// `product_launch` and `technical_change`.
+	//
+	// Among core's, the first six are what a human files by hand. The rest are what the producers
 	// raise (SIG-F-3): `contract_ended`, `new_opportunity` and `commitment_made` are read
 	// out of a settled conversation by the `signal_extract` site, each citing the message
 	// it is stated in; `ghosted_thread` is a comparison rather than a judgment — the newest
@@ -63555,7 +63578,7 @@ type Signal struct {
 	// pursued or delivered and nothing has been filed against it for 30 days (the
 	// `projects-gone-quiet` report's own rule). Its subject is the project
 	// (`entity_type: project`), attributed to the project's company.
-	Kind SignalKind `json:"kind"`
+	Kind string `json:"kind"`
 
 	// RawRef Pointer to the raw source payload the resolver works from: an email address/handle, a domain, a URL, or a company mention.
 	RawRef *string `json:"raw_ref,omitempty"`
@@ -63601,17 +63624,6 @@ type Signal struct {
 // SignalEntityType The subject record the signal is about; null until a raw signal resolves (both entity fields set together).
 type SignalEntityType string
 
-// SignalKind The first six are what a human files by hand. The rest are what the producers
-// raise (SIG-F-3): `contract_ended`, `new_opportunity` and `commitment_made` are read
-// out of a settled conversation by the `signal_extract` site, each citing the message
-// it is stated in; `ghosted_thread` is a comparison rather than a judgment — the newest
-// interaction is ours, nobody answered it, and the account is one worth chasing;
-// `project_gone_quiet` is the same kind of comparison on a project — it is being
-// pursued or delivered and nothing has been filed against it for 30 days (the
-// `projects-gone-quiet` report's own rule). Its subject is the project
-// (`entity_type: project`), attributed to the project's company.
-type SignalKind string
-
 // SignalResolutionState The raw→entity match outcome: an ambiguous match is `low_confidence` (surfaced, never silently asserted); an unattributable one is `dropped`.
 type SignalResolutionState string
 
@@ -63632,10 +63644,17 @@ type SignalEvidence struct {
 	// CommercialRole The commercial role supported by the cited source, independent of recipient order.
 	CommercialRole *SignalEvidenceCommercialRole `json:"commercial_role,omitempty"`
 
+	// Fields The members of an extension signal type's evidence layout. Only core writes it, when an
+	// extension files a signal. A request that carries it is refused.
+	Fields *map[string]interface{} `json:"fields,omitempty"`
+
 	// LifecycleScope Whether the cited words end the whole account relationship or only one engagement. Missing means unknown.
 	LifecycleScope *SignalEvidenceLifecycleScope `json:"lifecycle_scope,omitempty"`
-	Snippet        string                        `json:"snippet"`
-	SourceId       *string                       `json:"source_id,omitempty"`
+
+	// Provenance Where an extension signal came from. Core stamps it from the filing extension and the signed-in seat. A request that carries it is refused.
+	Provenance *SignalProvenance `json:"provenance,omitempty"`
+	Snippet    string            `json:"snippet"`
+	SourceId   *string           `json:"source_id,omitempty"`
 
 	// SourceQuote A source span whose words are reconstructed only after source content authorization. Offsets count UTF-8 bytes after collapsing whitespace; the digest covers the entire normalized source message.
 	SourceQuote *SourceQuoteProof         `json:"source_quote,omitempty"`
@@ -63693,6 +63712,15 @@ type SignalIntroPathNextMoveKind string
 type SignalListResponse struct {
 	Data []Signal `json:"data"`
 	Page PageInfo `json:"page"`
+}
+
+// SignalProvenance Where an extension signal came from. Core stamps it from the filing extension and the signed-in seat. A request that carries it is refused.
+type SignalProvenance struct {
+	// CapturedBy The user or agent whose invocation filed it.
+	CapturedBy string `json:"captured_by"`
+
+	// Unit The extension that filed the signal.
+	Unit string `json:"unit"`
 }
 
 // SignalResolution A human's answer on one signal. `outcome` is the status they set,
@@ -65540,6 +65568,9 @@ type UpdateCompanyRequest struct {
 	// Email The company's general address, for example info@example.com. It never creates or matches a contact.
 	Email *openapi_types.Email `json:"email,omitempty"`
 
+	// ExtensionRelationshipTypes Replace-set of the types an installed extension adds (`ext:<unit>:<type>`), applied like `relationship_types`. Absent = untouched; an empty array clears them. A value no extension declares is refused with 422.
+	ExtensionRelationshipTypes *[]string `json:"extension_relationship_types,omitempty"`
+
 	// Industry An industry code, or text the server can map to one. Text that names no code stores no code and is kept in the description.
 	Industry  *string `json:"industry,omitempty"`
 	LegalName *string `json:"legal_name,omitempty"`
@@ -66648,15 +66679,24 @@ type UpdateSavedViewRequest struct {
 	Query *map[string]interface{} `json:"query,omitempty"`
 }
 
-// UpdateSignalRequest Triage. A `status` move to acknowledged/resolved/dismissed appends the human-outcome
+// UpdateSignalRequest Triage and correction. A `status` move to acknowledged/resolved/dismissed appends the human-outcome
 // `signal_resolution` row; `note` travels with that outcome. `resolution_state` and the
 // resolved ids are resolver-owned and not writable here.
 type UpdateSignalRequest struct {
+	// Evidence Replaces the signal's evidence. The audit row keeps the old evidence.
+	Evidence *[]SignalEvidence `json:"evidence,omitempty"`
+
+	// Kind Corrects the signal's type. Only the kinds a human files by hand are accepted. The audit row keeps the old kind.
+	Kind *UpdateSignalRequestKind `json:"kind,omitempty"`
+
 	// Note Optional outcome note recorded with a status change.
 	Note     *string                      `json:"note,omitempty"`
 	Severity *UpdateSignalRequestSeverity `json:"severity,omitempty"`
 	Status   *UpdateSignalRequestStatus   `json:"status,omitempty"`
 }
+
+// UpdateSignalRequestKind Corrects the signal's type. Only the kinds a human files by hand are accepted. The audit row keeps the old kind.
+type UpdateSignalRequestKind string
 
 // UpdateSignalRequestSeverity defines model for UpdateSignalRequest.Severity.
 type UpdateSignalRequestSeverity string
@@ -72164,6 +72204,9 @@ type ListCompaniesParams struct {
 	// RelationshipType Accounts carrying this relationship type. Multi-valued per account, so this selects accounts that are AT LEAST this — a partner that is also a customer matches both.
 	RelationshipType *ListCompaniesParamsRelationshipType `form:"relationship_type,omitempty" json:"relationship_type,omitempty"`
 
+	// ExtensionRelationshipType Accounts carrying this extension type (`ext:<unit>:<type>`, from `extension_relationship_types`). It is a separate parameter so the closed `relationship_type` list stays as it is. A value no installed extension declares answers 422. Both parameters together select accounts that carry both.
+	ExtensionRelationshipType *string `form:"extension_relationship_type,omitempty" json:"extension_relationship_type,omitempty"`
+
 	// OwnerTeamId Rows owned by any member of this team. NARROWS the caller's row scope, never widens it:
 	// a team the caller cannot see returns their own visible rows filtered to nothing, not a
 	// wider set. Distinct from the `team` row scope itself, which also admits unassigned rows
@@ -74111,6 +74154,9 @@ type ListDealsParams struct {
 	// AcquisitionSource An acquisition-source key, or `unset` for unclassified deals. A retired key still filters, so history stays reachable after the source leaves the picker.
 	AcquisitionSource *string `form:"acquisition_source,omitempty" json:"acquisition_source,omitempty"`
 
+	// LinkType A link type, core's or an extension's `ext:<unit>:<type>`. Keeps the deals that hold at least one link of that type to another live deal, from either end. Links to a company or a contact are not read by this filter.
+	LinkType *string `form:"link_type,omitempty" json:"link_type,omitempty"`
+
 	// TagId Narrow to the records carrying these tags. Repeat the parameter for several.
 	//
 	// By ID, not by name: a name is what a human types and an admin can rename, so a
@@ -74535,6 +74581,15 @@ type ExtOauthCallbackParams struct {
 	Error *string `form:"error,omitempty" json:"error,omitempty"`
 }
 
+// ListExtensionHistoryParams defines parameters for ListExtensionHistory.
+type ListExtensionHistoryParams struct {
+	EntityType ListExtensionHistoryParamsEntityType `form:"entity_type" json:"entity_type"`
+	EntityId   openapi_types.UUID                   `form:"entity_id" json:"entity_id"`
+}
+
+// ListExtensionHistoryParamsEntityType defines parameters for ListExtensionHistory.
+type ListExtensionHistoryParamsEntityType string
+
 // GetFieldHistoryParams defines parameters for GetFieldHistory.
 type GetFieldHistoryParams struct {
 	// Cursor Opaque keyset cursor from a prior response's `page.next_cursor`. The cursor encodes the
@@ -74567,12 +74622,9 @@ type GetFieldHistoryParamsActorType string
 
 // GetFilterVocabularyParams defines parameters for GetFilterVocabulary.
 type GetFilterVocabularyParams struct {
-	// Resource The record type whose vocabulary to read.
-	Resource GetFilterVocabularyParamsResource `form:"resource" json:"resource"`
+	// Resource The record type whose vocabulary to read, or `ext:<unit>:<kind>` for a kind an extension declared.
+	Resource FilterResource `form:"resource" json:"resource"`
 }
-
-// GetFilterVocabularyParamsResource defines parameters for GetFilterVocabulary.
-type GetFilterVocabularyParamsResource string
 
 // ListFinanceSourceCustomersParams defines parameters for ListFinanceSourceCustomers.
 type ListFinanceSourceCustomersParams struct {
@@ -76938,6 +76990,15 @@ type RevokeRecordGrantParams struct {
 	IfMatch *IfMatch `json:"If-Match,omitempty"`
 }
 
+// ListRecordLinksParams defines parameters for ListRecordLinks.
+type ListRecordLinksParams struct {
+	RecordType ListRecordLinksParamsRecordType `form:"record_type" json:"record_type"`
+	RecordId   openapi_types.UUID              `form:"record_id" json:"record_id"`
+}
+
+// ListRecordLinksParamsRecordType defines parameters for ListRecordLinks.
+type ListRecordLinksParamsRecordType string
+
 // CreateRecordRoleParams defines parameters for CreateRecordRole.
 type CreateRecordRoleParams struct {
 	// IdempotencyKey Client-supplied key making a mutation safe to retry — an update exactly as much as a
@@ -77439,8 +77500,11 @@ type SearchParams struct {
 	// Q The search query.
 	Q string `form:"q" json:"q"`
 
-	// Types Restrict to these object types (default all).
-	Types *[]SearchParamsTypes `form:"types,omitempty" json:"types,omitempty"`
+	// Types Restrict to these object types (default all). Besides the core types, a kind an extension declared is a type, spelled `ext:<unit>:<kind>`. It answers only a caller who may read that kind.
+	Types *[]string `form:"types,omitempty" json:"types,omitempty"`
+
+	// ExcludeIds Record ids, of any type, to leave out of the answer. They are dropped before ranking, so a page is full and `types_with_more` counts only the records that remain. Use it to keep a record's own author out of the matches suggested for that record.
+	ExcludeIds *[]openapi_types.UUID `form:"exclude_ids,omitempty" json:"exclude_ids,omitempty"`
 
 	// PerType Answer GROUPED instead of as one ranked list: up to this many hits of EACH type, each type's best first. Relevance is not comparable across types — a message naming an account ten times outranks the account itself — so a short ranked list can hold nothing but messages, while a grouped answer carries every type that matched. `data` holds each type's hits together, best first. The page is the whole answer, so it takes no `cursor` and no `limit`; `types_with_more` names the types holding more than it carries, and asking again without `per_type`, with `types` set to one of them, pages through the rest.
 	PerType *int `form:"per_type,omitempty" json:"per_type,omitempty" maximum:"20" minimum:"1"`
@@ -77461,9 +77525,6 @@ type SearchParams struct {
 	// Limit Max items in the page. A value below 1 is refused with `422`; a value above 200 is served as 200.
 	Limit *Limit `form:"limit,omitempty" json:"limit,omitempty" maximum:"200" minimum:"1"`
 }
-
-// SearchParamsTypes defines parameters for Search.
-type SearchParamsTypes string
 
 // ListSignalsParams defines parameters for ListSignals.
 type ListSignalsParams struct {
@@ -77888,7 +77949,7 @@ type PreviewMemberRetirementParamsMode string
 
 // ListSavedViewsParams defines parameters for ListSavedViews.
 type ListSavedViewsParams struct {
-	Resource *SavedViewResource `form:"resource,omitempty" json:"resource,omitempty"`
+	Resource *SavedViewTarget `form:"resource,omitempty" json:"resource,omitempty"`
 
 	// IncludeArchived Include soft-deleted (archived) rows. Default false.
 	IncludeArchived *IncludeArchived `form:"include_archived,omitempty" json:"include_archived,omitempty"`
@@ -79626,6 +79687,9 @@ type ReplyBuyerRoomThreadJSONRequestBody = PostDealRoomCommentRequest
 // CreateRecordGrantJSONRequestBody defines body for CreateRecordGrant for application/json ContentType.
 type CreateRecordGrantJSONRequestBody = CreateRecordGrantRequest
 
+// CreateRecordLinkJSONRequestBody defines body for CreateRecordLink for application/json ContentType.
+type CreateRecordLinkJSONRequestBody = NewRecordLink
+
 // CreateRecordRoleJSONRequestBody defines body for CreateRecordRole for application/json ContentType.
 type CreateRecordRoleJSONRequestBody = CreateRecordRoleRequest
 
@@ -81128,6 +81192,14 @@ func (a *Company) UnmarshalJSON(b []byte) error {
 		delete(object, "email")
 	}
 
+	if raw, found := object["extension_relationship_types"]; found {
+		err = json.Unmarshal(raw, &a.ExtensionRelationshipTypes)
+		if err != nil {
+			return fmt.Errorf("error reading 'extension_relationship_types': %w", err)
+		}
+		delete(object, "extension_relationship_types")
+	}
+
 	if raw, found := object["id"]; found {
 		err = json.Unmarshal(raw, &a.Id)
 		if err != nil {
@@ -81459,6 +81531,13 @@ func (a Company) MarshalJSON() ([]byte, error) {
 		object["email"], err = json.Marshal(a.Email)
 		if err != nil {
 			return nil, fmt.Errorf("error marshaling 'email': %w", err)
+		}
+	}
+
+	if a.ExtensionRelationshipTypes != nil {
+		object["extension_relationship_types"], err = json.Marshal(a.ExtensionRelationshipTypes)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'extension_relationship_types': %w", err)
 		}
 	}
 
@@ -90587,6 +90666,14 @@ func (a *UpdateCompanyRequest) UnmarshalJSON(b []byte) error {
 		delete(object, "email")
 	}
 
+	if raw, found := object["extension_relationship_types"]; found {
+		err = json.Unmarshal(raw, &a.ExtensionRelationshipTypes)
+		if err != nil {
+			return fmt.Errorf("error reading 'extension_relationship_types': %w", err)
+		}
+		delete(object, "extension_relationship_types")
+	}
+
 	if raw, found := object["industry"]; found {
 		err = json.Unmarshal(raw, &a.Industry)
 		if err != nil {
@@ -90725,6 +90812,13 @@ func (a UpdateCompanyRequest) MarshalJSON() ([]byte, error) {
 		object["email"], err = json.Marshal(a.Email)
 		if err != nil {
 			return nil, fmt.Errorf("error marshaling 'email': %w", err)
+		}
+	}
+
+	if a.ExtensionRelationshipTypes != nil {
+		object["extension_relationship_types"], err = json.Marshal(a.ExtensionRelationshipTypes)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'extension_relationship_types': %w", err)
 		}
 	}
 
@@ -93777,6 +93871,9 @@ type ServerInterface interface {
 	// Save the installation's own company.
 	// (PUT /company)
 	PutAnchorCompany(w http.ResponseWriter, r *http.Request)
+	// Which company types installed extensions add beside core's own.
+	// (GET /company-types)
+	ListCompanyTypes(w http.ResponseWriter, r *http.Request)
 	// The deterministic, typed context assembled from the anchor company.
 	// (GET /company/context)
 	GetAnchorCompanyContext(w http.ResponseWriter, r *http.Request, params GetAnchorCompanyContextParams)
@@ -94383,6 +94480,12 @@ type ServerInterface interface {
 	// Start an admin's consent to an extension unit's OAuth app.
 	// (POST /ext-oauth/{provider}/connect)
 	ConnectExtOauth(w http.ResponseWriter, r *http.Request, provider ExtOAuthProvider)
+	// What installed extensions add to one core record's History.
+	// (GET /extension-history)
+	ListExtensionHistory(w http.ResponseWriter, r *http.Request, params ListExtensionHistoryParams)
+	// The counts and breakdowns installed extensions add to Reports and Home, answered for this caller.
+	// (GET /extension-reports)
+	ListExtensionReports(w http.ResponseWriter, r *http.Request)
 	// List the composed extension units and what each contributes. Read-only; needs the extension_access read grant.
 	// (GET /extensions)
 	ListExtensions(w http.ResponseWriter, r *http.Request)
@@ -94806,6 +94909,18 @@ type ServerInterface interface {
 	// Take back an open request.
 	// (POST /legal-reviews/{id}/withdraw)
 	WithdrawLegalReview(w http.ResponseWriter, r *http.Request, id Id)
+	// The records an extension suggests messages belong to, waiting for a reader to decide.
+	// (GET /link-suggestions)
+	ListLinkSuggestions(w http.ResponseWriter, r *http.Request)
+	// Accept a suggestion, which files the message under the record it names.
+	// (POST /link-suggestions/{id}/accept)
+	AcceptLinkSuggestion(w http.ResponseWriter, r *http.Request, id Id)
+	// Reject a suggestion. The message stays where it is, and the suggestion is not offered again.
+	// (POST /link-suggestions/{id}/reject)
+	RejectLinkSuggestion(w http.ResponseWriter, r *http.Request, id Id)
+	// The types a link between two records may have.
+	// (GET /link-types)
+	ListLinkTypes(w http.ResponseWriter, r *http.Request)
 	// The filters a record list may be narrowed by, for each record type.
 	// (GET /list-filters)
 	DescribeListFilters(w http.ResponseWriter, r *http.Request)
@@ -95349,6 +95464,18 @@ type ServerInterface interface {
 	// Revoke a manual record grant.
 	// (DELETE /record-grants/{id})
 	RevokeRecordGrant(w http.ResponseWriter, r *http.Request, id Id, params RevokeRecordGrantParams)
+	// Which kinds of record installed extensions add beside core's own.
+	// (GET /record-kinds)
+	ListRecordKinds(w http.ResponseWriter, r *http.Request)
+	// The links of one deal, company or contact, in both directions.
+	// (GET /record-links)
+	ListRecordLinks(w http.ResponseWriter, r *http.Request, params ListRecordLinksParams)
+	// Link one record to another with a type.
+	// (POST /record-links)
+	CreateRecordLink(w http.ResponseWriter, r *http.Request)
+	// Remove a link.
+	// (DELETE /record-links/{id})
+	DeleteRecordLink(w http.ResponseWriter, r *http.Request, id Id)
 	// List responsibility roles, active and retired, in display order.
 	// (GET /record-roles)
 	ListRecordRoles(w http.ResponseWriter, r *http.Request)
@@ -97989,6 +98116,12 @@ func (_ Unimplemented) PutAnchorCompany(w http.ResponseWriter, r *http.Request) 
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
+// Which company types installed extensions add beside core's own.
+// (GET /company-types)
+func (_ Unimplemented) ListCompanyTypes(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
 // The deterministic, typed context assembled from the anchor company.
 // (GET /company/context)
 func (_ Unimplemented) GetAnchorCompanyContext(w http.ResponseWriter, r *http.Request, params GetAnchorCompanyContextParams) {
@@ -99201,6 +99334,18 @@ func (_ Unimplemented) ConnectExtOauth(w http.ResponseWriter, r *http.Request, p
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
+// What installed extensions add to one core record's History.
+// (GET /extension-history)
+func (_ Unimplemented) ListExtensionHistory(w http.ResponseWriter, r *http.Request, params ListExtensionHistoryParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// The counts and breakdowns installed extensions add to Reports and Home, answered for this caller.
+// (GET /extension-reports)
+func (_ Unimplemented) ListExtensionReports(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
 // List the composed extension units and what each contributes. Read-only; needs the extension_access read grant.
 // (GET /extensions)
 func (_ Unimplemented) ListExtensions(w http.ResponseWriter, r *http.Request) {
@@ -100044,6 +100189,30 @@ func (_ Unimplemented) DecideLegalReview(w http.ResponseWriter, r *http.Request,
 // Take back an open request.
 // (POST /legal-reviews/{id}/withdraw)
 func (_ Unimplemented) WithdrawLegalReview(w http.ResponseWriter, r *http.Request, id Id) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// The records an extension suggests messages belong to, waiting for a reader to decide.
+// (GET /link-suggestions)
+func (_ Unimplemented) ListLinkSuggestions(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Accept a suggestion, which files the message under the record it names.
+// (POST /link-suggestions/{id}/accept)
+func (_ Unimplemented) AcceptLinkSuggestion(w http.ResponseWriter, r *http.Request, id Id) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Reject a suggestion. The message stays where it is, and the suggestion is not offered again.
+// (POST /link-suggestions/{id}/reject)
+func (_ Unimplemented) RejectLinkSuggestion(w http.ResponseWriter, r *http.Request, id Id) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// The types a link between two records may have.
+// (GET /link-types)
+func (_ Unimplemented) ListLinkTypes(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -101130,6 +101299,30 @@ func (_ Unimplemented) CreateRecordGrant(w http.ResponseWriter, r *http.Request,
 // Revoke a manual record grant.
 // (DELETE /record-grants/{id})
 func (_ Unimplemented) RevokeRecordGrant(w http.ResponseWriter, r *http.Request, id Id, params RevokeRecordGrantParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Which kinds of record installed extensions add beside core's own.
+// (GET /record-kinds)
+func (_ Unimplemented) ListRecordKinds(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// The links of one deal, company or contact, in both directions.
+// (GET /record-links)
+func (_ Unimplemented) ListRecordLinks(w http.ResponseWriter, r *http.Request, params ListRecordLinksParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Link one record to another with a type.
+// (POST /record-links)
+func (_ Unimplemented) CreateRecordLink(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Remove a link.
+// (DELETE /record-links/{id})
+func (_ Unimplemented) DeleteRecordLink(w http.ResponseWriter, r *http.Request, id Id) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -114909,6 +115102,19 @@ func (siw *ServerInterfaceWrapper) ListCompanies(w http.ResponseWriter, r *http.
 		return
 	}
 
+	// ------------- Optional query parameter "extension_relationship_type" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "extension_relationship_type", r.URL.Query(), &params.ExtensionRelationshipType, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "extension_relationship_type"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "extension_relationship_type", Err: err})
+		}
+		return
+	}
+
 	// ------------- Optional query parameter "owner_team_id" -------------
 
 	err = runtime.BindQueryParameterWithOptions("form", true, false, "owner_team_id", r.URL.Query(), &params.OwnerTeamId, runtime.BindQueryParameterOptions{Type: "string", Format: "uuid"})
@@ -118244,6 +118450,26 @@ func (siw *ServerInterfaceWrapper) PutAnchorCompany(w http.ResponseWriter, r *ht
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.PutAnchorCompany(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// ListCompanyTypes operation middleware
+func (siw *ServerInterfaceWrapper) ListCompanyTypes(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ListCompanyTypes(w, r)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -124513,6 +124739,19 @@ func (siw *ServerInterfaceWrapper) ListDeals(w http.ResponseWriter, r *http.Requ
 		return
 	}
 
+	// ------------- Optional query parameter "link_type" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "link_type", r.URL.Query(), &params.LinkType, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "link_type"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "link_type", Err: err})
+		}
+		return
+	}
+
 	// ------------- Optional query parameter "tag_id" -------------
 
 	err = runtime.BindQueryParameterWithOptions("form", true, false, "tag_id", r.URL.Query(), &params.TagId, runtime.BindQueryParameterOptions{Type: "array", Format: ""})
@@ -127492,6 +127731,78 @@ func (siw *ServerInterfaceWrapper) ConnectExtOauth(w http.ResponseWriter, r *htt
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.ConnectExtOauth(w, r, provider)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// ListExtensionHistory operation middleware
+func (siw *ServerInterfaceWrapper) ListExtensionHistory(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params ListExtensionHistoryParams
+
+	// ------------- Required query parameter "entity_type" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, true, "entity_type", r.URL.Query(), &params.EntityType, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "entity_type"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "entity_type", Err: err})
+		}
+		return
+	}
+
+	// ------------- Required query parameter "entity_id" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, true, "entity_id", r.URL.Query(), &params.EntityId, runtime.BindQueryParameterOptions{Type: "string", Format: "uuid"})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "entity_id"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "entity_id", Err: err})
+		}
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ListExtensionHistory(w, r, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// ListExtensionReports operation middleware
+func (siw *ServerInterfaceWrapper) ListExtensionReports(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ListExtensionReports(w, r)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -132902,6 +133213,110 @@ func (siw *ServerInterfaceWrapper) WithdrawLegalReview(w http.ResponseWriter, r 
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.WithdrawLegalReview(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// ListLinkSuggestions operation middleware
+func (siw *ServerInterfaceWrapper) ListLinkSuggestions(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ListLinkSuggestions(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// AcceptLinkSuggestion operation middleware
+func (siw *ServerInterfaceWrapper) AcceptLinkSuggestion(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.AcceptLinkSuggestion(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// RejectLinkSuggestion operation middleware
+func (siw *ServerInterfaceWrapper) RejectLinkSuggestion(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.RejectLinkSuggestion(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// ListLinkTypes operation middleware
+func (siw *ServerInterfaceWrapper) ListLinkTypes(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ListLinkTypes(w, r)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -140541,6 +140956,130 @@ func (siw *ServerInterfaceWrapper) RevokeRecordGrant(w http.ResponseWriter, r *h
 	handler.ServeHTTP(w, r)
 }
 
+// ListRecordKinds operation middleware
+func (siw *ServerInterfaceWrapper) ListRecordKinds(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ListRecordKinds(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// ListRecordLinks operation middleware
+func (siw *ServerInterfaceWrapper) ListRecordLinks(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params ListRecordLinksParams
+
+	// ------------- Required query parameter "record_type" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, true, "record_type", r.URL.Query(), &params.RecordType, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "record_type"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "record_type", Err: err})
+		}
+		return
+	}
+
+	// ------------- Required query parameter "record_id" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, true, "record_id", r.URL.Query(), &params.RecordId, runtime.BindQueryParameterOptions{Type: "string", Format: "uuid"})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "record_id"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "record_id", Err: err})
+		}
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ListRecordLinks(w, r, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// CreateRecordLink operation middleware
+func (siw *ServerInterfaceWrapper) CreateRecordLink(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.CreateRecordLink(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// DeleteRecordLink operation middleware
+func (siw *ServerInterfaceWrapper) DeleteRecordLink(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.DeleteRecordLink(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // ListRecordRoles operation middleware
 func (siw *ServerInterfaceWrapper) ListRecordRoles(w http.ResponseWriter, r *http.Request) {
 
@@ -143389,6 +143928,19 @@ func (siw *ServerInterfaceWrapper) Search(w http.ResponseWriter, r *http.Request
 			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "types"})
 		} else {
 			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "types", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "exclude_ids" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "exclude_ids", r.URL.Query(), &params.ExcludeIds, runtime.BindQueryParameterOptions{Type: "array", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "exclude_ids"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "exclude_ids", Err: err})
 		}
 		return
 	}
@@ -150413,6 +150965,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 		r.Put(options.BaseURL+"/company", wrapper.PutAnchorCompany)
 	})
 	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/company-types", wrapper.ListCompanyTypes)
+	})
+	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/company/context", wrapper.GetAnchorCompanyContext)
 	})
 	r.Group(func(r chi.Router) {
@@ -151019,6 +151574,12 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 		r.Post(options.BaseURL+"/ext-oauth/{provider}/connect", wrapper.ConnectExtOauth)
 	})
 	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/extension-history", wrapper.ListExtensionHistory)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/extension-reports", wrapper.ListExtensionReports)
+	})
+	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/extensions", wrapper.ListExtensions)
 	})
 	r.Group(func(r chi.Router) {
@@ -151440,6 +152001,18 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/legal-reviews/{id}/withdraw", wrapper.WithdrawLegalReview)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/link-suggestions", wrapper.ListLinkSuggestions)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/link-suggestions/{id}/accept", wrapper.AcceptLinkSuggestion)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/link-suggestions/{id}/reject", wrapper.RejectLinkSuggestion)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/link-types", wrapper.ListLinkTypes)
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/list-filters", wrapper.DescribeListFilters)
@@ -151983,6 +152556,18 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Delete(options.BaseURL+"/record-grants/{id}", wrapper.RevokeRecordGrant)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/record-kinds", wrapper.ListRecordKinds)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/record-links", wrapper.ListRecordLinks)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/record-links", wrapper.CreateRecordLink)
+	})
+	r.Group(func(r chi.Router) {
+		r.Delete(options.BaseURL+"/record-links/{id}", wrapper.DeleteRecordLink)
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/record-roles", wrapper.ListRecordRoles)

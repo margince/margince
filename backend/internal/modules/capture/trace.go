@@ -25,6 +25,7 @@ import (
 	"strings"
 	"sync"
 	"sync/atomic"
+	"time"
 
 	"github.com/jackc/pgx/v5"
 
@@ -429,6 +430,13 @@ func nonEmpty(text string) *string {
 // nullableID renders a zero id as SQL NULL. A zero user id is not a member with
 // no name — it is a workspace-owned connection, which the read distinguishes by
 // exactly this NULL.
+func nullableTime(t time.Time) *time.Time {
+	if t.IsZero() {
+		return nil
+	}
+	return &t
+}
+
 func nullableID(id ids.UUID) *ids.UUID {
 	if id.IsZero() {
 		return nil

@@ -2602,6 +2602,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "history.field.cohort_promoted": "Tin nhắn đã quy về",
   "history.field.corrected": "Đã sửa kết quả",
   "history.field.disposition": "Kết quả xử lý",
+  "history.field.link_suggestion": "Liên kết gợi ý",
+  "history.field.record_link": "Liên kết",
   "history.field.domain": "Tên miền",
   "history.field.merged_from_id": "Gộp vào từ",
   "history.field.merged_into_id": "Đã gộp vào",
@@ -2642,6 +2644,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "history.field.display_name": "Tên",
   "history.field.domains": "Tên miền",
   "history.field.due_at": "Hạn",
+  "history.field.extension_relationship_types":
+    "Loại quan hệ từ tiện ích mở rộng",
   "history.field.email": "Email",
   "history.field.ended_at": "Kết thúc",
   "history.field.expected_close_date": "Ngày chốt dự kiến",
@@ -4728,6 +4732,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "timeline.kind.task": "Việc cần làm",
   "timeline.kind.message": "Tin nhắn",
   "timeline.kind.change": "Hồ sơ",
+  "timeline.kind.extension": "Tiện ích mở rộng",
+  "timeline.kind.signal": "Tín hiệu",
   "timeline.withheld": "Nội dung chỉ dành cho người tham gia",
   "compose.deadRecipients":
     "Thư gửi đến {addresses} đang bị trả lại: lần gửi gần nhất bị từ chối và từ đó chưa lần nào thành công. Vẫn gửi, hoặc dùng địa chỉ khác.",
@@ -6279,6 +6285,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "deals.filterAcquisitionAll": "Mọi nguồn",
   "deals.filterProbability": "Xác suất",
   "deals.filterProbabilityAll": "Mọi xác suất",
+  "deals.filterLinkType": "Liên kết dạng",
+  "deals.filterLinkTypeAll": "Mọi loại liên kết",
   "deals.filterStatus": "Trạng thái",
   "deals.filterStatusAll": "Mọi trạng thái",
   "deals.statusOpen": "Đang mở",
@@ -6817,6 +6825,14 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "brief.readings.leadsDue": "Hạn tiếp theo {value}",
   "brief.rail": "Ngữ cảnh",
   "brief.rail.numbers": "Số liệu",
+  "extensionReports.withheld": "Đã ẩn: quá ít bản ghi để hiển thị",
+  "extensionReports.noValue": "Không có giá trị",
+  "extensionReports.excluded_one":
+    "{count} bản ghi bị ẩn với bạn do quyền trên trường.",
+  "extensionReports.excluded_other":
+    "{count} bản ghi bị ẩn với bạn do quyền trên trường.",
+  "extensionReports.failed":
+    "Không tải được các báo cáo do tiện ích mở rộng thêm vào.",
   "brief.deck.later": "Để sau",
   "brief.deck.showMore": "Hiển thị toàn bộ tin nhắn",
   "brief.deck.showLess": "Thu gọn",
@@ -8216,6 +8232,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "analytics.field.host_user_id": "Chủ trì cuộc họp",
   "analytics.field.kind": "Loại hoạt động",
   "analytics.field.last_activity_at": "Hoạt động gần nhất",
+  "analytics.field.link_type": "Liên kết dạng",
   "analytics.field.lost_reason": "Lý do thua",
   "analytics.field.loss_reason": "Lý do thua theo danh sách",
   "analytics.field.loss_reason_state": "Cách đặt lý do thua",
@@ -13084,6 +13101,9 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "cf.type.multiselect": "Chọn nhiều",
   "cf.type.picklist": "Danh sách lựa chọn",
   "cf.type.boolean": "Có/Không",
+  "cf.type.record": "Chọn một bản ghi",
+  "cf.recordKind": "Loại bản ghi",
+  "cf.recordKindPlaceholder": "Chọn một loại",
   "cf.builder.addTo": "Thêm trường vào {object}",
   "cf.builder.open": "Trường mới",
   "cf.builder.noCode": "Không cần viết mã",
@@ -16797,6 +16817,25 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "Đã đánh dấu xong việc trong Danh sách công việc",
   "webhooks.event.activity.marked_handled.when":
     "Có ai đó đánh dấu một việc trong Danh sách công việc là đã xong vì đã xử lý theo cách khác.",
+  "webhooks.event.activity.link_suggestion_changed.label":
+    "Đã đề xuất hoặc quyết định một liên kết gợi ý",
+  "webhooks.event.activity.link_suggestion_changed.when":
+    "Một tiện ích mở rộng gợi ý thư thuộc bản ghi nào, hoặc có ai đó chấp nhận hay từ chối một gợi ý.",
+  "webhooks.event.record_link.changed.label": "Liên kết được thêm hoặc gỡ",
+  "webhooks.event.record_link.changed.when":
+    "Có ai đó liên kết một deal, công ty hoặc liên hệ với bản ghi khác, hoặc gỡ một liên kết.",
+  "linkSuggestions.title": "Liên kết gợi ý",
+  "linkSuggestions.reason": "{unit} cho biết: {reason}",
+  "linkSuggestions.target": "{subject} vào {record} ({kind})",
+  "linkSuggestions.noSubject": "Thư không có tiêu đề",
+  "linkSuggestions.kind.contact": "liên hệ",
+  "linkSuggestions.kind.company": "công ty",
+  "linkSuggestions.kind.deal": "giao dịch",
+  "linkSuggestions.kind.project": "dự án",
+  "linkSuggestions.accept": "Gắn vào đó",
+  "linkSuggestions.reject": "Không phải đó",
+  "linkSuggestions.unavailable":
+    "Không đọc được các liên kết gợi ý. Hãy thử lại sau.",
   "webhooks.event.activity.readiness_recorded.label":
     "Thay đổi trạng thái sẵn sàng cho cuộc họp",
   "webhooks.event.activity.readiness_recorded.when":
@@ -18141,6 +18180,12 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "filters.tab.leads": "Lead",
   "filters.matchLeads_one": "{count} lead khớp",
   "filters.matchLeads_other": "{count} lead khớp",
+  "filters.matchExtension_one": "{count} bản ghi {kind} khớp",
+  "filters.matchExtension_other": "{count} bản ghi {kind} khớp",
+  "filters.new.extension": "Bộ lọc {kind} mới",
+  "filters.switch.body.extension":
+    "Các điều kiện sẽ bị xóa vì đang dùng trường của một loại bản ghi.",
+  "unit.extension": "bản ghi {kind}",
   "filters.date.on": "Vào ngày cụ thể",
   "filters.date.daysAgo": "S\u1ed1 ng\u00e0y tr\u01b0\u1edbc",
   "filters.date.mode": "C\u00e1ch nh\u1eadp ng\u00e0y",
@@ -18799,6 +18844,17 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "Deal này chưa có công ty. Thêm công ty trong “Sửa chi tiết” để đặt lịch họp.",
   "deal.committee.card": "Hội đồng mua",
   "deal.committee.change": "Sửa hoặc gỡ bên liên quan",
+  "deal.links.card": "Liên kết",
+  "deal.links.add": "Thêm liên kết",
+  "deal.links.none": "Deal này chưa liên kết với bản ghi nào khác.",
+  "deal.links.unavailable": "Không tải được các liên kết.",
+  "deal.links.outgoing": "Từ deal này: {type}",
+  "deal.links.incoming": "Tới deal này: {type}",
+  "deal.links.remove": "Gỡ",
+  "deal.links.type": "Loại liên kết",
+  "deal.links.typePlaceholder": "Chọn loại",
+  "deal.links.search": "Tìm bản ghi cần liên kết",
+  "deal.links.cancel": "Hủy",
 
   // The Worklist's own words: the ranked queue, its dials, and the phrase
   // for every fact the server sends as a closed vocabulary.
