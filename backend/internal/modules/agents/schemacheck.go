@@ -63,7 +63,40 @@ func readSchema(schema json.RawMessage) (jsonSchema, error) {
 	if err := json.Unmarshal(schema, &declared); err != nil {
 		return declared, fmt.Errorf("the advertised schema is not readable: %w", err)
 	}
+	if unknown := unknownType(&declared); unknown != "" {
+		return declared, fmt.Errorf("the advertised schema names an unknown type %q", unknown)
+	}
 	return declared, nil
+}
+
+// checkedTypes are the type names checkValue has a rule for; it reads this set
+// too, so the boot check and the per-answer check cannot disagree.
+var checkedTypes = map[string]bool{
+	schemaObject: true, schemaArray: true, schemaString: true,
+	schemaBoolean: true, schemaNumber: true, schemaInteger: true,
+}
+
+// unknownType answers the first type name below schema that checkedTypes does
+// not hold, or "". A node without a type states nothing and passes.
+func unknownType(schema *jsonSchema) string {
+	if schema == nil {
+		return ""
+	}
+	if schema.Type != "" && !checkedTypes[schema.Type] {
+		return schema.Type
+	}
+	for _, member := range schema.Properties {
+		if unknown := unknownType(member); unknown != "" {
+			return unknown
+		}
+	}
+	if unknown := unknownType(schema.Items); unknown != "" {
+		return unknown
+	}
+	if schema.AdditionalProperties != nil {
+		return unknownType(schema.AdditionalProperties.Schema)
+	}
+	return ""
 }
 
 // checkValue walks one node of the declared schema against the same node of the
@@ -81,6 +114,9 @@ func checkValue(schema *jsonSchema, value json.RawMessage, at string) string {
 	// refused explicitly or a hole would satisfy every scalar rule below. The
 	// ONE legitimate null — an optional member spelled out rather than omitted —
 	// never gets this far; checkObject passes over it.
+	if !checkedTypes[schema.Type] {
+		return fmt.Sprintf("%s: the advertised schema names an unknown type %q", pathOr(at), schema.Type)
+	}
 	if isNull(value) {
 		return fmt.Sprintf("%s: declared %s, got null", pathOr(at), schema.Type)
 	}
@@ -98,7 +134,7 @@ func checkValue(schema *jsonSchema, value json.RawMessage, at string) string {
 	case schemaInteger:
 		return checkInteger(value, at)
 	}
-	return fmt.Sprintf("%s: the advertised schema names an unknown type %q", pathOr(at), schema.Type)
+	return ""
 }
 
 // checkObject holds what an object schema promises, in the three separate

@@ -288,3 +288,21 @@ func TestAnEnumOfAnyTypeLeavesTheSchemaReadable(t *testing.T) {
 		}
 	}
 }
+
+// A type name the checker has no rule for would turn every answer into a
+// logged defect, so the boot check refuses it at any depth.
+func TestAnUnknownTypeNameLeavesTheSchemaUnreadable(t *testing.T) {
+	for name, schema := range map[string]string{
+		"at the top":             `{"type":"widget"}`,
+		"in a property":          `{"type":"object","properties":{"n":{"type":"widget"}}}`,
+		"in array items":         `{"type":"array","items":{"type":"widget"}}`,
+		"in a map's value shape": `{"type":"object","additionalProperties":{"type":"widget"}}`,
+	} {
+		if err := SchemaReadable(json.RawMessage(schema)); err == nil || !strings.Contains(err.Error(), "widget") {
+			t.Errorf("%s: SchemaReadable = %v, want a refusal naming the type", name, err)
+		}
+	}
+	if err := SchemaReadable(json.RawMessage(`{"properties":{"n":{"type":"integer"}},"additionalProperties":false}`)); err != nil {
+		t.Errorf("a schema without a top type was refused: %v", err)
+	}
+}
