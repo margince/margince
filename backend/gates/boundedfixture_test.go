@@ -78,6 +78,9 @@ var suitesWithNoBoundedActor = gatekit.Waive(map[string]string{
 		"in the parent package rather than here",
 	"extensionrole": "one extension read measured per seeded role through a passport; the roles " +
 		"come from the database, so their row scopes are the seeded ones, not a fixture's",
+	"stagenotices": "which notice a deal's stage move makes, and the repair migration that " +
+		"links old notices to their move; the mover and reader are workspace-wide admins, " +
+		"because the cases are about the move and the repair, not about who may read a notice",
 	"humanonlyext": "the human-only door, which refuses an agent before any row is reached — " +
 		"the refusal is the subject and a bounded seat would not change it",
 	"jobfanout": "fan-out from the scheduler, whose actor is a system principal by construction; " +

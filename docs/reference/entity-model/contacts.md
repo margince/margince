@@ -71,7 +71,7 @@ The 50 tables owned by `contacts`, as the migrations build them. [Back to the en
 **Rules**
 
 - `company_anchor_is_permanent`: `CHECK (((NOT is_anchor) OR ((archived_at IS NULL) AND (merged_into_id IS NULL))))`
-- `company_description_length`: `CHECK (((description IS NULL) OR (length(description) <= 500)))`
+- `company_description_length`: `CHECK (((description IS NULL) OR (length(description) <= 20000)))`
 - `company_geocode_resolved_has_a_point`: `CHECK (((geocode_status IS DISTINCT FROM 'ok') OR ((geocode_lat IS NOT NULL) AND (geocode_lon IS NOT NULL) AND ((geocode_lat >= ('-90'::integer)::double precision) AND (geocode_lat <= (90)::double precision)) AND ((geocode_lon >= ('-180'::integer)::double precision) AND (geocode_lon <= (180)::double precision)))))`
 - `company_geocode_status_check`: `CHECK (((geocode_status IS NULL) OR (geocode_status = ANY (ARRAY['ok', 'failed', 'no_match', 'stale']))))`
 - `company_lifecycle_check`: `CHECK ((lifecycle = ANY (ARRAY['unknown', 'target', 'prospect', 'opportunity', 'onboarding', 'live', 'customer', 'former_customer', 'disqualified'])))`
@@ -118,6 +118,8 @@ The 50 tables owned by `contacts`, as the migrations build them. [Back to the en
 - `company_owner_id_retirement_guard`: `BEFORE INSERT OR UPDATE FOR EACH ROW WHEN (((new.owner_id IS NOT NULL) AND (new.archived_at IS NULL))) EXECUTE FUNCTION refuse_retired_member_work('owner_id')`
 - `company_refuse_anchor_retirement`: `BEFORE INSERT OR UPDATE OF merged_into_id, is_anchor FOR EACH ROW EXECUTE FUNCTION company_refuse_anchor_retirement()`
 - `home_read_fence_company_reach`: `AFTER UPDATE FOR EACH ROW WHEN (((old.owner_id IS DISTINCT FROM new.owner_id) OR (old.visibility IS DISTINCT FROM new.visibility) OR (old.is_anchor IS DISTINCT FROM new.is_anchor) OR ((old.archived_at IS NULL) AND (new.archived_at IS NOT NULL)))) EXECUTE FUNCTION advance_home_read_fence()`
+- `text_bound_insert`: `AFTER INSERT FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL, '{"email": 20000, "phone": 20000, "source": 20000, "industry": 20000, "lifecycle": 20000, "size_band": 20000, "legal_name": 500, "visibility": 20000, "captured_by": 20000, "description": 20000, "logo_origin": 20000, "name_source": 20000, "address_city": 20000, "linkedin_url": 20000, "address_line1": 500, "address_line2": 500, "source_system": 20000, "address_region": 20000, "geocode_status": 20000, "address_country": 20000, "logo_object_key": 20000, "geocode_provider": 20000, "logo_icon_origin": 20000, "geocode_input_hash": 20000, "address_postal_code": 20000, "logo_icon_object_key": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"address_city":20000,"address_country":20000,"address_line1":500,"address_line2":500,"address_postal_code":20000,"address_region":20000,"captured_by":20000,"description":20000,"email":20000,"geocode_input_hash":20000,"geocode_provider":20000,"geocode_status":20000,"industry":20000,"legal_name":500,"lifecycle":20000,"linkedin_url":20000,"logo_icon_object_key":20000,"logo_icon_origin":20000,"logo_object_key":20000,"logo_origin":20000,"name_source":20000,"phone":20000,"size_band":20000,"source":20000,"source_system":20000,"visibility":20000}')`
+- `text_bound_update`: `AFTER UPDATE FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"email": 20000, "phone": 20000, "source": 20000, "industry": 20000, "lifecycle": 20000, "size_band": 20000, "legal_name": 500, "visibility": 20000, "captured_by": 20000, "description": 20000, "logo_origin": 20000, "name_source": 20000, "address_city": 20000, "linkedin_url": 20000, "address_line1": 500, "address_line2": 500, "source_system": 20000, "address_region": 20000, "geocode_status": 20000, "address_country": 20000, "logo_object_key": 20000, "geocode_provider": 20000, "logo_icon_origin": 20000, "geocode_input_hash": 20000, "address_postal_code": 20000, "logo_icon_object_key": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"address_city":20000,"address_country":20000,"address_line1":500,"address_line2":500,"address_postal_code":20000,"address_region":20000,"captured_by":20000,"description":20000,"email":20000,"geocode_input_hash":20000,"geocode_provider":20000,"geocode_status":20000,"industry":20000,"legal_name":500,"lifecycle":20000,"linkedin_url":20000,"logo_icon_object_key":20000,"logo_icon_origin":20000,"logo_object_key":20000,"logo_origin":20000,"name_source":20000,"phone":20000,"size_band":20000,"source":20000,"source_system":20000,"visibility":20000}')`
 - `trg_company_address_country_stale`: `AFTER UPDATE OF address_postal_code, address_city, address_country FOR EACH ROW WHEN (((old.address_postal_code IS DISTINCT FROM new.address_postal_code) OR (old.address_city IS DISTINCT FROM new.address_city) OR (old.address_country IS DISTINCT FROM new.address_country))) EXECUTE FUNCTION company_address_country_goes_stale()`
 - `trg_company_geocode_state_stale`: `AFTER UPDATE OF address_line1, address_line2, address_city, address_region, address_postal_code, address_country FOR EACH ROW WHEN (((old.address_line1 IS DISTINCT FROM new.address_line1) OR (old.address_line2 IS DISTINCT FROM new.address_line2) OR (old.address_city IS DISTINCT FROM new.address_city) OR (old.address_region IS DISTINCT FROM new.address_region) OR (old.address_postal_code IS DISTINCT FROM new.address_postal_code) OR (old.address_country IS DISTINCT FROM new.address_country))) EXECUTE FUNCTION company_geocode_state_goes_stale()`
 - `trg_company_no_cycle`: `BEFORE INSERT OR UPDATE OF parent_company_id FOR EACH ROW WHEN ((new.parent_company_id IS NOT NULL)) EXECUTE FUNCTION company_no_ancestor_cycle()`
@@ -146,6 +148,11 @@ The 50 tables owned by `contacts`, as the migrations build them. [Back to the en
 **Indexes**
 
 - `company_address_country_pkey`: `unique, btree (company_id)`
+
+**Triggers**
+
+- `text_bound_insert`: `AFTER INSERT FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL, '{"countries": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"countries":20000}')`
+- `text_bound_update`: `AFTER UPDATE FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"countries": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"countries":20000}')`
 
 ## company_domain
 
@@ -189,6 +196,8 @@ The 50 tables owned by `contacts`, as the migrations build them. [Back to the en
 
 - `home_read_fence_company_domain`: `AFTER UPDATE FOR EACH ROW WHEN (((old.domain_folded IS DISTINCT FROM new.domain_folded) OR (old.company_id IS DISTINCT FROM new.company_id) OR ((old.archived_at IS NULL) AND (new.archived_at IS NOT NULL)))) EXECUTE FUNCTION advance_home_read_fence()`
 - `home_read_fence_company_domain_removed`: `AFTER DELETE FOR EACH STATEMENT EXECUTE FUNCTION advance_home_read_fence()`
+- `text_bound_insert`: `AFTER INSERT FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL, '{"domain": 20000, "source": 20000, "captured_by": 20000, "domain_folded": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"captured_by":20000,"domain":20000,"domain_folded":20000,"source":20000}')`
+- `text_bound_update`: `AFTER UPDATE FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"domain": 20000, "source": 20000, "captured_by": 20000, "domain_folded": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"captured_by":20000,"domain":20000,"domain_folded":20000,"source":20000}')`
 - `trg_company_domain_updated`: `BEFORE UPDATE FOR EACH ROW EXECUTE FUNCTION set_updated_at_bump_version()`
 
 ## company_domain_disposition
@@ -253,6 +262,11 @@ The 50 tables owned by `contacts`, as the migrations build them. [Back to the en
 - `idx_domain_disposition_unevidenced`: `btree (updated_at DESC) WHERE (pending_reason = 'unevidenced')`
 - `uq_company_domain_disposition`: `unique, btree (domain)`
 
+**Triggers**
+
+- `text_bound_insert`: `AFTER INSERT FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL, '{"domain": 20000, "source": 20000, "status": 20000, "evidence": 20000, "admission": 20000, "pending_reason": 2000, "admission_reason": 2000, "admission_source": 20000, "admission_reason_code": 2000, "admission_sender_kind": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"admission":20000,"admission_reason":2000,"admission_reason_code":2000,"admission_sender_kind":20000,"admission_source":20000,"domain":20000,"evidence":20000,"pending_reason":2000,"source":20000,"status":20000}')`
+- `text_bound_update`: `AFTER UPDATE FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"domain": 20000, "source": 20000, "status": 20000, "evidence": 20000, "admission": 20000, "pending_reason": 2000, "admission_reason": 2000, "admission_source": 20000, "admission_reason_code": 2000, "admission_sender_kind": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"admission":20000,"admission_reason":2000,"admission_reason_code":2000,"admission_sender_kind":20000,"admission_source":20000,"domain":20000,"evidence":20000,"pending_reason":2000,"source":20000,"status":20000}')`
+
 ## company_domain_question_reader
 
 3 columns · primary key `(domain, reader_id)` · referenced by 0 foreign keys
@@ -274,6 +288,11 @@ The 50 tables owned by `contacts`, as the migrations build them. [Back to the en
 
 - `company_domain_question_reader_pkey`: `unique, btree (domain, reader_id)`
 - `company_domain_question_reader_reader_idx`: `btree (reader_id, domain)`
+
+**Triggers**
+
+- `text_bound_insert`: `AFTER INSERT FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL, '{"domain": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"domain":20000}')`
+- `text_bound_update`: `AFTER UPDATE FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"domain": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"domain":20000}')`
 
 ## company_fact
 
@@ -329,6 +348,8 @@ The 50 tables owned by `contacts`, as the migrations build them. [Back to the en
 
 **Triggers**
 
+- `text_bound_insert`: `AFTER INSERT FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL, '{"field": 20000, "value": 20000, "source": 20000, "category": 20000, "value_key": 20000, "source_url": 20000, "captured_by": 20000, "evidence_snippet": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"captured_by":20000,"category":20000,"evidence_snippet":20000,"field":20000,"source":20000,"source_url":20000,"value":20000,"value_key":20000}')`
+- `text_bound_update`: `AFTER UPDATE FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"field": 20000, "value": 20000, "source": 20000, "category": 20000, "value_key": 20000, "source_url": 20000, "captured_by": 20000, "evidence_snippet": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"captured_by":20000,"category":20000,"evidence_snippet":20000,"field":20000,"source":20000,"source_url":20000,"value":20000,"value_key":20000}')`
 - `trg_company_fact_count_revision`: `AFTER INSERT OR DELETE OR UPDATE FOR EACH ROW EXECUTE FUNCTION company_fact_count_revision()`
 - `trg_company_fact_updated`: `BEFORE UPDATE FOR EACH ROW EXECUTE FUNCTION set_updated_at_bump_version()`
 
@@ -388,6 +409,11 @@ The 50 tables owned by `contacts`, as the migrations build them. [Back to the en
 - `company_geocode_state_pkey`: `unique, btree (company_id)`
 - `idx_company_geocode_state_point`: `btree (lat, lon) WHERE (status = 'ok')`
 
+**Triggers**
+
+- `text_bound_insert`: `AFTER INSERT FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL, '{"status": 20000, "provider": 20000, "input_hash": 20000, "last_outcome": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"input_hash":20000,"last_outcome":20000,"provider":20000,"status":20000}')`
+- `text_bound_update`: `AFTER UPDATE FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"status": 20000, "provider": 20000, "input_hash": 20000, "last_outcome": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"input_hash":20000,"last_outcome":20000,"provider":20000,"status":20000}')`
+
 ## company_offered_value
 
 5 columns · primary key `(company_id, source_system, field_key)` · referenced by 0 foreign keys
@@ -413,6 +439,11 @@ The 50 tables owned by `contacts`, as the migrations build them. [Back to the en
 **Indexes**
 
 - `company_offered_value_pkey`: `unique, btree (company_id, source_system, field_key)`
+
+**Triggers**
+
+- `text_bound_insert`: `AFTER INSERT FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL, '{"field_key": 20000, "offered_value": 20000, "source_system": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"field_key":20000,"offered_value":20000,"source_system":20000}')`
+- `text_bound_update`: `AFTER UPDATE FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"field_key": 20000, "offered_value": 20000, "source_system": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"field_key":20000,"offered_value":20000,"source_system":20000}')`
 
 ## company_profile_field
 
@@ -459,6 +490,8 @@ The 50 tables owned by `contacts`, as the migrations build them. [Back to the en
 
 **Triggers**
 
+- `text_bound_insert`: `AFTER INSERT FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL, '{"field": 20000, "value": 20000, "source": 20000, "source_url": 20000, "captured_by": 20000, "evidence_snippet": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"captured_by":20000,"evidence_snippet":20000,"field":20000,"source":20000,"source_url":20000,"value":20000}')`
+- `text_bound_update`: `AFTER UPDATE FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"field": 20000, "value": 20000, "source": 20000, "source_url": 20000, "captured_by": 20000, "evidence_snippet": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"captured_by":20000,"evidence_snippet":20000,"field":20000,"source":20000,"source_url":20000,"value":20000}')`
 - `trg_company_profile_field_updated`: `BEFORE UPDATE FOR EACH ROW EXECUTE FUNCTION set_updated_at_bump_version()`
 
 ## company_relationship_type
@@ -496,6 +529,8 @@ The 50 tables owned by `contacts`, as the migrations build them. [Back to the en
 
 **Triggers**
 
+- `text_bound_insert`: `AFTER INSERT FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL, '{"source": 20000, "captured_by": 20000, "relationship_type": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"captured_by":20000,"relationship_type":20000,"source":20000}')`
+- `text_bound_update`: `AFTER UPDATE FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"source": 20000, "captured_by": 20000, "relationship_type": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"captured_by":20000,"relationship_type":20000,"source":20000}')`
 - `trg_company_relationship_type_updated`: `BEFORE UPDATE FOR EACH ROW EXECUTE FUNCTION set_updated_at_bump_version()`
 
 ## company_technical_state
@@ -527,6 +562,11 @@ The 50 tables owned by `contacts`, as the migrations build them. [Back to the en
 
 - `company_technical_state_pkey`: `unique, btree (company_id, lane)`
 - `idx_company_technical_state_due`: `btree (next_attempt_at) WHERE (next_attempt_at IS NOT NULL)`
+
+**Triggers**
+
+- `text_bound_insert`: `AFTER INSERT FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL, '{"lane": 20000, "last_outcome": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"lane":20000,"last_outcome":20000}')`
+- `text_bound_update`: `AFTER UPDATE FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"lane": 20000, "last_outcome": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"lane":20000,"last_outcome":20000}')`
 
 ## company_vat_check
 
@@ -564,6 +604,11 @@ The 50 tables owned by `contacts`, as the migrations build them. [Back to the en
 
 - `company_vat_check_one_per_company`: `unique, btree (company_id)`
 - `company_vat_check_pkey`: `unique, btree (id)`
+
+**Triggers**
+
+- `text_bound_insert`: `AFTER INSERT FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL, '{"status": 20000, "vat_number": 20000, "captured_by": 20000, "registered_name": 120, "registered_address": 20000, "consultation_number": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"captured_by":20000,"consultation_number":20000,"registered_address":20000,"registered_name":120,"status":20000,"vat_number":20000}')`
+- `text_bound_update`: `AFTER UPDATE FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"status": 20000, "vat_number": 20000, "captured_by": 20000, "registered_name": 120, "registered_address": 20000, "consultation_number": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"captured_by":20000,"consultation_number":20000,"registered_address":20000,"registered_name":120,"status":20000,"vat_number":20000}')`
 
 ## contact
 
@@ -660,6 +705,8 @@ The 50 tables owned by `contacts`, as the migrations build them. [Back to the en
 
 - `contact_owner_id_retirement_guard`: `BEFORE INSERT OR UPDATE FOR EACH ROW WHEN (((new.owner_id IS NOT NULL) AND (new.archived_at IS NULL))) EXECUTE FUNCTION refuse_retired_member_work('owner_id')`
 - `home_read_fence_contact_reach`: `AFTER UPDATE FOR EACH ROW WHEN (((old.owner_id IS DISTINCT FROM new.owner_id) OR (old.visibility IS DISTINCT FROM new.visibility) OR ((old.archived_at IS NULL) AND (new.archived_at IS NOT NULL)))) EXECUTE FUNCTION advance_home_read_fence()`
+- `text_bound_insert`: `AFTER INSERT FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL, '{"title": 120, "source": 20000, "visibility": 20000, "captured_by": 20000, "address_city": 20000, "photo_origin": 20000, "address_line1": 500, "address_line2": 500, "source_system": 20000, "address_region": 20000, "address_country": 20000, "narrowing_reason": 2000, "photo_object_key": 20000, "relationship_mark": 20000, "address_postal_code": 20000, "relationship_mark_set_by": 20000, "anonymized_address_hashes": 20000, "anonymized_address_key_id": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"address_city":20000,"address_country":20000,"address_line1":500,"address_line2":500,"address_postal_code":20000,"address_region":20000,"anonymized_address_hashes":20000,"anonymized_address_key_id":20000,"captured_by":20000,"narrowing_reason":2000,"photo_object_key":20000,"photo_origin":20000,"relationship_mark":20000,"relationship_mark_set_by":20000,"source":20000,"source_system":20000,"title":120,"visibility":20000}')`
+- `text_bound_update`: `AFTER UPDATE FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"title": 120, "source": 20000, "visibility": 20000, "captured_by": 20000, "address_city": 20000, "photo_origin": 20000, "address_line1": 500, "address_line2": 500, "source_system": 20000, "address_region": 20000, "address_country": 20000, "narrowing_reason": 2000, "photo_object_key": 20000, "relationship_mark": 20000, "address_postal_code": 20000, "relationship_mark_set_by": 20000, "anonymized_address_hashes": 20000, "anonymized_address_key_id": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"address_city":20000,"address_country":20000,"address_line1":500,"address_line2":500,"address_postal_code":20000,"address_region":20000,"anonymized_address_hashes":20000,"anonymized_address_key_id":20000,"captured_by":20000,"narrowing_reason":2000,"photo_object_key":20000,"photo_origin":20000,"relationship_mark":20000,"relationship_mark_set_by":20000,"source":20000,"source_system":20000,"title":120,"visibility":20000}')`
 - `trg_contact_address_country_stale`: `AFTER UPDATE OF address_postal_code, address_city, address_country FOR EACH ROW WHEN (((old.address_postal_code IS DISTINCT FROM new.address_postal_code) OR (old.address_city IS DISTINCT FROM new.address_city) OR (old.address_country IS DISTINCT FROM new.address_country))) EXECUTE FUNCTION contact_address_country_goes_stale()`
 - `trg_contact_updated`: `BEFORE UPDATE FOR EACH ROW EXECUTE FUNCTION set_updated_at_bump_version()`
 
@@ -701,6 +748,11 @@ The 50 tables owned by `contacts`, as the migrations build them. [Back to the en
 - `contact_acquisition_evidence_by_contact`: `btree (contact_id, captured_at DESC)`
 - `contact_acquisition_evidence_pkey`: `unique, btree (id)`
 
+**Triggers**
+
+- `text_bound_insert`: `AFTER INSERT FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL, '{"kind": 20000, "note": 2000, "captured_by": 20000, "purpose_claimed": 20000, "source_entity_type": 20000, "request_retracted_by": 20000, "recorded_for_addresses": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"captured_by":20000,"kind":20000,"note":2000,"purpose_claimed":20000,"recorded_for_addresses":20000,"request_retracted_by":20000,"source_entity_type":20000}')`
+- `text_bound_update`: `AFTER UPDATE FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"kind": 20000, "note": 2000, "captured_by": 20000, "purpose_claimed": 20000, "source_entity_type": 20000, "request_retracted_by": 20000, "recorded_for_addresses": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"captured_by":20000,"kind":20000,"note":2000,"purpose_claimed":20000,"recorded_for_addresses":20000,"request_retracted_by":20000,"source_entity_type":20000}')`
+
 ## contact_address_country
 
 3 columns · primary key `(contact_id)` · referenced by 0 foreign keys
@@ -724,6 +776,11 @@ The 50 tables owned by `contacts`, as the migrations build them. [Back to the en
 **Indexes**
 
 - `contact_address_country_pkey`: `unique, btree (contact_id)`
+
+**Triggers**
+
+- `text_bound_insert`: `AFTER INSERT FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL, '{"countries": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"countries":20000}')`
+- `text_bound_update`: `AFTER UPDATE FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"countries": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"countries":20000}')`
 
 ## contact_channel_identity
 
@@ -765,6 +822,8 @@ The 50 tables owned by `contacts`, as the migrations build them. [Back to the en
 
 **Triggers**
 
+- `text_bound_insert`: `AFTER INSERT FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL, '{"source": 20000, "provider": 20000, "username": 20000, "captured_by": 20000, "channel_user_id": 20000, "membership_bot_id": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"captured_by":20000,"channel_user_id":20000,"membership_bot_id":20000,"provider":20000,"source":20000,"username":20000}')`
+- `text_bound_update`: `AFTER UPDATE FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"source": 20000, "provider": 20000, "username": 20000, "captured_by": 20000, "channel_user_id": 20000, "membership_bot_id": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"captured_by":20000,"channel_user_id":20000,"membership_bot_id":20000,"provider":20000,"source":20000,"username":20000}')`
 - `trg_contact_channel_identity_updated`: `BEFORE UPDATE FOR EACH ROW EXECUTE FUNCTION set_updated_at_bump_version()`
 
 ## contact_email
@@ -817,6 +876,8 @@ The 50 tables owned by `contacts`, as the migrations build them. [Back to the en
 
 - `bind_requests_on_address_move`: `BEFORE UPDATE OF contact_id FOR EACH ROW WHEN ((old.contact_id IS DISTINCT FROM new.contact_id)) EXECUTE FUNCTION bind_requests_on_address_move()`
 - `settlement_evidence_share`: `BEFORE INSERT OR DELETE OR UPDATE FOR EACH ROW EXECUTE FUNCTION settlement_evidence_share_contact_email()`
+- `text_bound_insert`: `AFTER INSERT FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL, '{"email": 20000, "source": 20000, "email_type": 20000, "captured_by": 20000, "email_domain_folded": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"captured_by":20000,"email":20000,"email_domain_folded":20000,"email_type":20000,"source":20000}')`
+- `text_bound_update`: `AFTER UPDATE FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"email": 20000, "source": 20000, "email_type": 20000, "captured_by": 20000, "email_domain_folded": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"captured_by":20000,"email":20000,"email_domain_folded":20000,"email_type":20000,"source":20000}')`
 - `trg_contact_email_updated`: `BEFORE UPDATE FOR EACH ROW EXECUTE FUNCTION set_updated_at_bump_version()`
 
 ## contact_phone
@@ -863,6 +924,8 @@ The 50 tables owned by `contacts`, as the migrations build them. [Back to the en
 
 **Triggers**
 
+- `text_bound_insert`: `AFTER INSERT FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL, '{"phone": 20000, "source": 20000, "phone_type": 20000, "captured_by": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"captured_by":20000,"phone":20000,"phone_type":20000,"source":20000}')`
+- `text_bound_update`: `AFTER UPDATE FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"phone": 20000, "source": 20000, "phone_type": 20000, "captured_by": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"captured_by":20000,"phone":20000,"phone_type":20000,"source":20000}')`
 - `trg_contact_phone_updated`: `BEFORE UPDATE FOR EACH ROW EXECUTE FUNCTION set_updated_at_bump_version()`
 
 ## contact_profile_field
@@ -910,6 +973,8 @@ The 50 tables owned by `contacts`, as the migrations build them. [Back to the en
 
 **Triggers**
 
+- `text_bound_insert`: `AFTER INSERT FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL, '{"field": 20000, "value": 20000, "source": 20000, "value_key": 20000, "source_ref": 20000, "captured_by": 20000, "evidence_snippet": 20000, "superseded_value": 20000, "superseded_captured_by": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"captured_by":20000,"evidence_snippet":20000,"field":20000,"source":20000,"source_ref":20000,"superseded_captured_by":20000,"superseded_value":20000,"value":20000,"value_key":20000}')`
+- `text_bound_update`: `AFTER UPDATE FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"field": 20000, "value": 20000, "source": 20000, "value_key": 20000, "source_ref": 20000, "captured_by": 20000, "evidence_snippet": 20000, "superseded_value": 20000, "superseded_captured_by": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"captured_by":20000,"evidence_snippet":20000,"field":20000,"source":20000,"source_ref":20000,"superseded_captured_by":20000,"superseded_value":20000,"value":20000,"value_key":20000}')`
 - `trg_contact_profile_field_updated`: `BEFORE UPDATE FOR EACH ROW EXECUTE FUNCTION set_updated_at_bump_version()`
 
 ## contact_provider_claim
@@ -954,6 +1019,11 @@ The 50 tables owned by `contacts`, as the migrations build them. [Back to the en
 - `contact_provider_claim_pkey`: `unique, btree (id)`
 - `contact_provider_claim_run_id_claim_key_key`: `unique, btree (run_id, claim_key)`
 - `provider_employment_pending`: `btree (contact_id) WHERE ((employment_processed_at IS NULL) AND (claim_key = ANY (ARRAY['current_employment', 'job_history'])))`
+
+**Triggers**
+
+- `text_bound_insert`: `AFTER INSERT FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL, '{"source": 20000, "provider": 20000, "claim_key": 20000, "captured_by": 20000, "validation_status": 20000, "employment_processing_error": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"captured_by":20000,"claim_key":20000,"employment_processing_error":20000,"provider":20000,"source":20000,"validation_status":20000}')`
+- `text_bound_update`: `AFTER UPDATE FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"source": 20000, "provider": 20000, "claim_key": 20000, "captured_by": 20000, "validation_status": 20000, "employment_processing_error": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"captured_by":20000,"claim_key":20000,"employment_processing_error":20000,"provider":20000,"source":20000,"validation_status":20000}')`
 
 ## contact_signature_enrich_state
 
@@ -1021,6 +1091,11 @@ The 50 tables owned by `contacts`, as the migrations build them. [Back to the en
 - `contact_social_pkey`: `unique, btree (id)`
 - `idx_contact_social_linkedin_profile`: `btree ("substring"(lower(handle), '^(?:https?://)?(?:[a-z0-9-]+\.)*linkedin\.com/in/([^/?#]+)')) WHERE (platform = 'linkedin')`
 
+**Triggers**
+
+- `text_bound_insert`: `AFTER INSERT FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL, '{"handle": 20000, "platform": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"handle":20000,"platform":20000}')`
+- `text_bound_update`: `AFTER UPDATE FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"handle": 20000, "platform": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"handle":20000,"platform":20000}')`
+
 ## conversation_claim
 
 21 columns · primary key `(id)` · referenced by 0 foreign keys
@@ -1076,6 +1151,8 @@ The 50 tables owned by `contacts`, as the migrations build them. [Back to the en
 
 **Triggers**
 
+- `text_bound_insert`: `AFTER INSERT FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL, '{"body": 20000, "kind": 20000, "source": 20000, "status": 20000, "captured_by": 20000, "source_quote": 20000, "evidence_fingerprint": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"body":20000,"captured_by":20000,"evidence_fingerprint":20000,"kind":20000,"source":20000,"source_quote":20000,"status":20000}')`
+- `text_bound_update`: `AFTER UPDATE FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"body": 20000, "kind": 20000, "source": 20000, "status": 20000, "captured_by": 20000, "source_quote": 20000, "evidence_fingerprint": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"body":20000,"captured_by":20000,"evidence_fingerprint":20000,"kind":20000,"source":20000,"source_quote":20000,"status":20000}')`
 - `trg_conversation_claim_updated`: `BEFORE UPDATE FOR EACH ROW EXECUTE FUNCTION set_updated_at_bump_version()`
 
 ## dedupe_candidate
@@ -1144,6 +1221,8 @@ The 50 tables owned by `contacts`, as the migrations build them. [Back to the en
 
 **Triggers**
 
+- `text_bound_insert`: `AFTER INSERT FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL, '{"source": 20000, "captured_by": 20000, "disposition": 20000, "entity_type": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"captured_by":20000,"disposition":20000,"entity_type":20000,"source":20000}')`
+- `text_bound_update`: `AFTER UPDATE FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"source": 20000, "captured_by": 20000, "disposition": 20000, "entity_type": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"captured_by":20000,"disposition":20000,"entity_type":20000,"source":20000}')`
 - `trg_dedupe_candidate_updated`: `BEFORE UPDATE FOR EACH ROW EXECUTE FUNCTION set_updated_at()`
 
 ## dedupe_scan_state
@@ -1163,6 +1242,11 @@ The 50 tables owned by `contacts`, as the migrations build them. [Back to the en
 **Indexes**
 
 - `dedupe_scan_state_pkey`: `unique, btree (stream)`
+
+**Triggers**
+
+- `text_bound_insert`: `AFTER INSERT FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL, '{"stream": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"stream":20000}')`
+- `text_bound_update`: `AFTER UPDATE FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"stream": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"stream":20000}')`
 
 ## email_signature
 
@@ -1199,6 +1283,8 @@ The 50 tables owned by `contacts`, as the migrations build them. [Back to the en
 
 **Triggers**
 
+- `text_bound_insert`: `AFTER INSERT FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL, '{"phone": 20000, "title": 120}')) EXECUTE FUNCTION refuse_oversized_text('{"phone":20000,"title":120}')`
+- `text_bound_update`: `AFTER UPDATE FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"phone": 20000, "title": 120}')) EXECUTE FUNCTION refuse_oversized_text('{"phone":20000,"title":120}')`
 - `trg_email_signature_updated`: `BEFORE UPDATE FOR EACH ROW EXECUTE FUNCTION set_updated_at_bump_version()`
 
 ## geocode_cache
@@ -1216,6 +1302,11 @@ The 50 tables owned by `contacts`, as the migrations build them. [Back to the en
 **Indexes**
 
 - `geocode_cache_pkey`: `unique, btree (query)`
+
+**Triggers**
+
+- `text_bound_insert`: `AFTER INSERT FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL, '{"query": 20000, "provider": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"provider":20000,"query":20000}')`
+- `text_bound_update`: `AFTER UPDATE FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"query": 20000, "provider": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"provider":20000,"query":20000}')`
 
 ## geocode_country_cache
 
@@ -1235,6 +1326,11 @@ The 50 tables owned by `contacts`, as the migrations build them. [Back to the en
 **Indexes**
 
 - `geocode_country_cache_pkey`: `unique, btree (query)`
+
+**Triggers**
+
+- `text_bound_insert`: `AFTER INSERT FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL, '{"query": 20000, "provider": 20000, "country_codes": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"country_codes":20000,"provider":20000,"query":20000}')`
+- `text_bound_update`: `AFTER UPDATE FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"query": 20000, "provider": 20000, "country_codes": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"country_codes":20000,"provider":20000,"query":20000}')`
 
 ## lead
 
@@ -1355,6 +1451,8 @@ The 50 tables owned by `contacts`, as the migrations build them. [Back to the en
 
 - `home_read_fence_lead_owner`: `AFTER UPDATE FOR EACH ROW WHEN (((old.owner_id IS DISTINCT FROM new.owner_id) OR ((old.archived_at IS NULL) AND (new.archived_at IS NOT NULL)))) EXECUTE FUNCTION advance_home_read_fence()`
 - `lead_owner_id_retirement_guard`: `BEFORE INSERT OR UPDATE FOR EACH ROW WHEN (((new.owner_id IS NOT NULL) AND (new.archived_at IS NULL))) EXECUTE FUNCTION refuse_retired_member_work('owner_id')`
+- `text_bound_insert`: `AFTER INSERT FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL, '{"email": 20000, "phone": 20000, "title": 120, "origin": 20000, "source": 20000, "status": 20000, "industry": 20000, "source_id": 20000, "captured_by": 20000, "company_name": 120, "linkedin_url": 20000, "origin_detail": 500, "source_system": 20000, "status_set_by": 20000, "disqualify_note": 2000, "email_domain_folded": 20000, "partner_accepted_by": 20000, "candidate_company_key": 20000, "score_override_reason": 2000}')) EXECUTE FUNCTION refuse_oversized_text('{"candidate_company_key":20000,"captured_by":20000,"company_name":120,"disqualify_note":2000,"email":20000,"email_domain_folded":20000,"industry":20000,"linkedin_url":20000,"origin":20000,"origin_detail":500,"partner_accepted_by":20000,"phone":20000,"score_override_reason":2000,"source":20000,"source_id":20000,"source_system":20000,"status":20000,"status_set_by":20000,"title":120}')`
+- `text_bound_update`: `AFTER UPDATE FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"email": 20000, "phone": 20000, "title": 120, "origin": 20000, "source": 20000, "status": 20000, "industry": 20000, "source_id": 20000, "captured_by": 20000, "company_name": 120, "linkedin_url": 20000, "origin_detail": 500, "source_system": 20000, "status_set_by": 20000, "disqualify_note": 2000, "email_domain_folded": 20000, "partner_accepted_by": 20000, "candidate_company_key": 20000, "score_override_reason": 2000}')) EXECUTE FUNCTION refuse_oversized_text('{"candidate_company_key":20000,"captured_by":20000,"company_name":120,"disqualify_note":2000,"email":20000,"email_domain_folded":20000,"industry":20000,"linkedin_url":20000,"origin":20000,"origin_detail":500,"partner_accepted_by":20000,"phone":20000,"score_override_reason":2000,"source":20000,"source_id":20000,"source_system":20000,"status":20000,"status_set_by":20000,"title":120}')`
 - `trg_lead_updated`: `BEFORE UPDATE FOR EACH ROW EXECUTE FUNCTION set_updated_at_bump_version()`
 
 ## lead_disqualify_reason
@@ -1387,6 +1485,8 @@ The 50 tables owned by `contacts`, as the migrations build them. [Back to the en
 
 **Triggers**
 
+- `text_bound_insert`: `AFTER INSERT FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL, '{"label": 120, "shipped_label": 120, "shipped_label_key": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"label":120,"shipped_label":120,"shipped_label_key":20000}')`
+- `text_bound_update`: `AFTER UPDATE FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"label": 120, "shipped_label": 120, "shipped_label_key": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"label":120,"shipped_label":120,"shipped_label_key":20000}')`
 - `trg_lead_disqualify_reason_updated`: `BEFORE UPDATE FOR EACH ROW EXECUTE FUNCTION set_updated_at_bump_version()`
 
 ## lead_manual_signal
@@ -1431,6 +1531,11 @@ The 50 tables owned by `contacts`, as the migrations build them. [Back to the en
 - `lead_manual_signal_pkey`: `unique, btree (id)`
 - `uq_lead_manual_signal_live`: `unique, btree (lead_id, factor) WHERE (superseded_at IS NULL)`
 
+**Triggers**
+
+- `text_bound_insert`: `AFTER INSERT FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL, '{"band": 20000, "factor": 20000, "reason": 2000, "signal_kind": 20000, "superseded_by": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"band":20000,"factor":20000,"reason":2000,"signal_kind":20000,"superseded_by":20000}')`
+- `text_bound_update`: `AFTER UPDATE FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"band": 20000, "factor": 20000, "reason": 2000, "signal_kind": 20000, "superseded_by": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"band":20000,"factor":20000,"reason":2000,"signal_kind":20000,"superseded_by":20000}')`
+
 ## lead_origin
 
 13 columns · primary key `(id)` · referenced by 2 foreign keys
@@ -1466,6 +1571,8 @@ The 50 tables owned by `contacts`, as the migrations build them. [Back to the en
 
 **Triggers**
 
+- `text_bound_insert`: `AFTER INSERT FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL, '{"key": 20000, "label": 120, "intent": 20000, "shipped_label": 120, "shipped_label_key": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"intent":20000,"key":20000,"label":120,"shipped_label":120,"shipped_label_key":20000}')`
+- `text_bound_update`: `AFTER UPDATE FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"key": 20000, "label": 120, "intent": 20000, "shipped_label": 120, "shipped_label_key": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"intent":20000,"key":20000,"label":120,"shipped_label":120,"shipped_label_key":20000}')`
 - `trg_lead_origin_updated`: `BEFORE UPDATE FOR EACH ROW EXECUTE FUNCTION set_updated_at_bump_version()`
 
 ## lead_score_history
@@ -1502,6 +1609,11 @@ The 50 tables owned by `contacts`, as the migrations build them. [Back to the en
 - `idx_lead_score_history_series`: `btree (lead_id, computed_at DESC, id DESC)`
 - `lead_score_history_pkey`: `unique, btree (id)`
 
+**Triggers**
+
+- `text_bound_insert`: `AFTER INSERT FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL, '{"override_reason": 2000}')) EXECUTE FUNCTION refuse_oversized_text('{"override_reason":2000}')`
+- `text_bound_update`: `AFTER UPDATE FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"override_reason": 2000}')) EXECUTE FUNCTION refuse_oversized_text('{"override_reason":2000}')`
+
 ## lead_source
 
 10 columns · primary key `(id)` · referenced by 0 foreign keys
@@ -1533,6 +1645,8 @@ The 50 tables owned by `contacts`, as the migrations build them. [Back to the en
 
 **Triggers**
 
+- `text_bound_insert`: `AFTER INSERT FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL, '{"key": 20000, "label": 120, "intent": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"intent":20000,"key":20000,"label":120}')`
+- `text_bound_update`: `AFTER UPDATE FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"key": 20000, "label": 120, "intent": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"intent":20000,"key":20000,"label":120}')`
 - `trg_lead_source_updated`: `BEFORE UPDATE FOR EACH ROW EXECUTE FUNCTION set_updated_at_bump_version()`
 
 ## legal_entity
@@ -1580,11 +1694,11 @@ The 50 tables owned by `contacts`, as the migrations build them. [Back to the en
 - `legal_entity_default_reads_the_anchor`: `CHECK (((NOT is_default) OR ((display_name IS NULL) AND (legal_name IS NULL) AND (address_line1 IS NULL) AND (address_line2 IS NULL) AND (address_postal_code IS NULL) AND (address_city IS NULL) AND (address_region IS NULL) AND (vat_id IS NULL) AND (register_court IS NULL) AND (register_number IS NULL) AND (logo_object_key IS NULL))))`
 - `legal_entity_default_signs_with_the_installation`: `CHECK (((NOT is_default) OR (signature_template IS NULL)))`
 - `legal_entity_iban_shape`: `CHECK (((iban IS NULL) OR (iban ~ '^[A-Z]{2}[0-9]{2}[A-Z0-9]{11,30}$')))`
-- `legal_entity_imprint_bounded`: `CHECK (((imprint IS NULL) OR (length(imprint) <= 4000)))`
+- `legal_entity_imprint_bounded`: `CHECK (((imprint IS NULL) OR (char_length(imprint) <= 20000)))`
 - `legal_entity_language_shape`: `CHECK (((default_language IS NULL) OR (default_language ~ '^[a-z]{2}$')))`
 - `legal_entity_names_itself`: `CHECK ((is_default OR ((btrim(COALESCE(display_name, '')) <> '') AND (btrim(COALESCE(legal_name, '')) <> '') AND (country IS NOT NULL))))`
-- `legal_entity_offering_bounded`: `CHECK (((length(offer_summary) <= 4000) AND (length(icp) <= 4000) AND (length(value_proposition) <= 4000) AND (length(usp) <= 4000)))`
-- `legal_entity_signature_template_bounded`: `CHECK (((signature_template IS NULL) OR (length(signature_template) <= 4000)))`
+- `legal_entity_offering_bounded`: `CHECK (((char_length(offer_summary) <= 20000) AND (char_length(icp) <= 20000) AND (char_length(value_proposition) <= 20000) AND (char_length(usp) <= 20000)))`
+- `legal_entity_signature_template_bounded`: `CHECK (((signature_template IS NULL) OR (char_length(signature_template) <= 20000)))`
 - `legal_entity_version_js_safe`: `CHECK (((version >= '-9007199254740991'::bigint) AND (version <= '9007199254740991'::bigint)))`
 
 **Indexes**
@@ -1595,6 +1709,8 @@ The 50 tables owned by `contacts`, as the migrations build them. [Back to the en
 
 **Triggers**
 
+- `text_bound_insert`: `AFTER INSERT FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL, '{"bic": 20000, "icp": 20000, "usp": 20000, "iban": 20000, "vat_id": 20000, "country": 20000, "imprint": 20000, "legal_name": 500, "captured_by": 20000, "address_city": 20000, "address_line1": 500, "address_line2": 500, "offer_summary": 20000, "address_region": 20000, "register_court": 20000, "logo_object_key": 20000, "register_number": 20000, "default_language": 20000, "value_proposition": 20000, "signature_template": 20000, "address_postal_code": 20000, "bank_account_holder": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"address_city":20000,"address_line1":500,"address_line2":500,"address_postal_code":20000,"address_region":20000,"bank_account_holder":20000,"bic":20000,"captured_by":20000,"country":20000,"default_language":20000,"iban":20000,"icp":20000,"imprint":20000,"legal_name":500,"logo_object_key":20000,"offer_summary":20000,"register_court":20000,"register_number":20000,"signature_template":20000,"usp":20000,"value_proposition":20000,"vat_id":20000}')`
+- `text_bound_update`: `AFTER UPDATE FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"bic": 20000, "icp": 20000, "usp": 20000, "iban": 20000, "vat_id": 20000, "country": 20000, "imprint": 20000, "legal_name": 500, "captured_by": 20000, "address_city": 20000, "address_line1": 500, "address_line2": 500, "offer_summary": 20000, "address_region": 20000, "register_court": 20000, "logo_object_key": 20000, "register_number": 20000, "default_language": 20000, "value_proposition": 20000, "signature_template": 20000, "address_postal_code": 20000, "bank_account_holder": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"address_city":20000,"address_line1":500,"address_line2":500,"address_postal_code":20000,"address_region":20000,"bank_account_holder":20000,"bic":20000,"captured_by":20000,"country":20000,"default_language":20000,"iban":20000,"icp":20000,"imprint":20000,"legal_name":500,"logo_object_key":20000,"offer_summary":20000,"register_court":20000,"register_number":20000,"signature_template":20000,"usp":20000,"value_proposition":20000,"vat_id":20000}')`
 - `trg_legal_entity_default_is_permanent`: `BEFORE DELETE OR UPDATE FOR EACH ROW EXECUTE FUNCTION legal_entity_refuse_default_retirement()`
 - `trg_legal_entity_updated`: `BEFORE UPDATE FOR EACH ROW EXECUTE FUNCTION set_updated_at_bump_version()`
 
@@ -1621,6 +1737,11 @@ The 50 tables owned by `contacts`, as the migrations build them. [Back to the en
 - `idx_legal_entity_member_entity`: `btree (legal_entity_id)`
 - `legal_entity_member_pkey`: `unique, btree (user_id)`
 
+**Triggers**
+
+- `text_bound_insert`: `AFTER INSERT FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL, '{"assigned_by": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"assigned_by":20000}')`
+- `text_bound_update`: `AFTER UPDATE FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"assigned_by": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"assigned_by":20000}')`
+
 ## linkedin_account
 
 6 columns · primary key `(user_id)` · referenced by 0 foreign keys
@@ -1643,6 +1764,11 @@ The 50 tables owned by `contacts`, as the migrations build them. [Back to the en
 **Indexes**
 
 - `linkedin_account_pkey`: `unique, btree (user_id)`
+
+**Triggers**
+
+- `text_bound_insert`: `AFTER INSERT FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL, '{"profile_url": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"profile_url":20000}')`
+- `text_bound_update`: `AFTER UPDATE FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"profile_url": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"profile_url":20000}')`
 
 ## linkedin_connection
 
@@ -1695,6 +1821,11 @@ The 50 tables owned by `contacts`, as the migrations build them. [Back to the en
 - `uq_linkedin_connection_natural`: `unique, btree (owner_user_id, normalized_name, normalized_company, connected_on) NULLS NOT DISTINCT WHERE (provider_member_ref IS NULL)`
 - `uq_linkedin_connection_provider`: `unique, btree (owner_user_id, provider_member_ref) WHERE (provider_member_ref IS NOT NULL)`
 
+**Triggers**
+
+- `text_bound_insert`: `AFTER INSERT FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL, '{"email": 20000, "source": 20000, "position": 20000, "profile_url": 20000, "company_name": 120, "match_status": 20000, "normalized_name": 120, "normalized_company": 20000, "provider_member_ref": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"company_name":120,"email":20000,"match_status":20000,"normalized_company":20000,"normalized_name":120,"position":20000,"profile_url":20000,"provider_member_ref":20000,"source":20000}')`
+- `text_bound_update`: `AFTER UPDATE FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"email": 20000, "source": 20000, "position": 20000, "profile_url": 20000, "company_name": 120, "match_status": 20000, "normalized_name": 120, "normalized_company": 20000, "provider_member_ref": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"company_name":120,"email":20000,"match_status":20000,"normalized_company":20000,"normalized_name":120,"position":20000,"profile_url":20000,"provider_member_ref":20000,"source":20000}')`
+
 ## partner
 
 29 columns · primary key `(id)` · referenced by 0 foreign keys
@@ -1713,8 +1844,8 @@ The 50 tables owned by `contacts`, as the migrations build them. [Back to the en
 | `joined_at` | `date` |  |  |
 | `last_contact_at` | `timestamp with time zone` |  |  |
 | `margin_tier` | `text` |  | The partner's margin tier; the allowed values are in the table's CHECK constraint. |
-| `next_step` | `text` |  |  |
-| `next_step_due_at` | `date` |  |  |
+| `next_step` | `text` |  | Deprecated as stored text: a value sent here is written as a task on the partner's company, held by the caller (or the human an agent acts for), and is not stored on the partner. |
+| `next_step_due_at` | `date` |  | Deprecated as stored text: the day the next step's task is due. |
 | `partner_fit_override_reason` | `text` |  | Non-null ⇒ partner_fit_score is a human Commercial Judgement override and recompute is suppressed until cleared. |
 | `partner_fit_score` | `smallint` |  | Current partner-fit score; if partner_fit_override_reason is non-null this is the Commercial Judgement value. |
 | `partner_fit_score_computed` | `smallint` |  | Retained machine-computed partner-fit value while a Commercial Judgement override is in force. |
@@ -1764,6 +1895,8 @@ The 50 tables owned by `contacts`, as the migrations build them. [Back to the en
 
 **Triggers**
 
+- `text_bound_insert`: `AFTER INSERT FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL, '{"source": 20000, "next_step": 20000, "captured_by": 20000, "cert_status": 20000, "margin_tier": 20000, "activated_by": 20000, "partner_kinds": 20000, "served_segments": 20000, "activation_basis": 20000, "relationship_stage": 20000, "partner_fit_override_reason": 2000}')) EXECUTE FUNCTION refuse_oversized_text('{"activated_by":20000,"activation_basis":20000,"captured_by":20000,"cert_status":20000,"margin_tier":20000,"next_step":20000,"partner_fit_override_reason":2000,"partner_kinds":20000,"relationship_stage":20000,"served_segments":20000,"source":20000}')`
+- `text_bound_update`: `AFTER UPDATE FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"source": 20000, "next_step": 20000, "captured_by": 20000, "cert_status": 20000, "margin_tier": 20000, "activated_by": 20000, "partner_kinds": 20000, "served_segments": 20000, "activation_basis": 20000, "relationship_stage": 20000, "partner_fit_override_reason": 2000}')) EXECUTE FUNCTION refuse_oversized_text('{"activated_by":20000,"activation_basis":20000,"captured_by":20000,"cert_status":20000,"margin_tier":20000,"next_step":20000,"partner_fit_override_reason":2000,"partner_kinds":20000,"relationship_stage":20000,"served_segments":20000,"source":20000}')`
 - `trg_partner_updated`: `BEFORE UPDATE FOR EACH ROW EXECUTE FUNCTION set_updated_at_bump_version()`
 
 ## partner_stage
@@ -1801,6 +1934,8 @@ The 50 tables owned by `contacts`, as the migrations build them. [Back to the en
 
 **Triggers**
 
+- `text_bound_insert`: `AFTER INSERT FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL, '{"key": 20000, "label": 120, "meaning": 20000, "shipped_label": 120, "shipped_label_key": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"key":20000,"label":120,"meaning":20000,"shipped_label":120,"shipped_label_key":20000}')`
+- `text_bound_update`: `AFTER UPDATE FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"key": 20000, "label": 120, "meaning": 20000, "shipped_label": 120, "shipped_label_key": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"key":20000,"label":120,"meaning":20000,"shipped_label":120,"shipped_label_key":20000}')`
 - `trg_partner_stage_updated`: `BEFORE UPDATE FOR EACH ROW EXECUTE FUNCTION set_updated_at_bump_version()`
 
 ## provider_applied_field
@@ -1841,6 +1976,11 @@ The 50 tables owned by `contacts`, as the migrations build them. [Back to the en
 - `provider_applied_field_once`: `unique, btree (run_id, target_table, target_field, COALESCE(target_row_id, contact_id))`
 - `provider_applied_field_pkey`: `unique, btree (id)`
 
+**Triggers**
+
+- `text_bound_insert`: `AFTER INSERT FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL, '{"provider": 20000, "captured_by": 20000, "target_field": 20000, "target_table": 20000, "applied_value": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"applied_value":20000,"captured_by":20000,"provider":20000,"target_field":20000,"target_table":20000}')`
+- `text_bound_update`: `AFTER UPDATE FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"provider": 20000, "captured_by": 20000, "target_field": 20000, "target_table": 20000, "applied_value": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"applied_value":20000,"captured_by":20000,"provider":20000,"target_field":20000,"target_table":20000}')`
+
 ## provider_employment_resolution
 
 9 columns · primary key `(id)` · referenced by 0 foreign keys
@@ -1876,6 +2016,11 @@ The 50 tables owned by `contacts`, as the migrations build them. [Back to the en
 - `provider_employment_contact`: `btree (contact_id, episode_key)`
 - `provider_employment_resolution_claim_id_episode_key_key`: `unique, btree (claim_id, episode_key)`
 - `provider_employment_resolution_pkey`: `unique, btree (id)`
+
+**Triggers**
+
+- `text_bound_insert`: `AFTER INSERT FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL, '{"state": 20000, "episode_key": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"episode_key":20000,"state":20000}')`
+- `text_bound_update`: `AFTER UPDATE FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"state": 20000, "episode_key": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"episode_key":20000,"state":20000}')`
 
 ## relationship
 
@@ -1958,6 +2103,8 @@ The 50 tables owned by `contacts`, as the migrations build them. [Back to the en
 **Triggers**
 
 - `relationship_last_activity`: `AFTER INSERT OR DELETE OR UPDATE FOR EACH ROW EXECUTE FUNCTION trg_relationship_last_activity()`
+- `text_bound_insert`: `AFTER INSERT FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL, '{"kind": 20000, "role": 20000, "source": 20000, "captured_by": 20000, "ended_precision": 20000, "employment_status": 20000, "started_precision": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"captured_by":20000,"employment_status":20000,"ended_precision":20000,"kind":20000,"role":20000,"source":20000,"started_precision":20000}')`
+- `text_bound_update`: `AFTER UPDATE FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"kind": 20000, "role": 20000, "source": 20000, "captured_by": 20000, "ended_precision": 20000, "employment_status": 20000, "started_precision": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"captured_by":20000,"employment_status":20000,"ended_precision":20000,"kind":20000,"role":20000,"source":20000,"started_precision":20000}')`
 - `trg_relationship_updated`: `BEFORE UPDATE FOR EACH ROW EXECUTE FUNCTION set_updated_at_bump_version()`
 
 ## relationship_nudge_dismissal
@@ -1987,6 +2134,11 @@ The 50 tables owned by `contacts`, as the migrations build them. [Back to the en
 
 - `relationship_nudge_dismissal_by_reader`: `btree (reader_id, contact_id)`
 - `relationship_nudge_dismissal_pkey`: `unique, btree (contact_id, reader_id)`
+
+**Triggers**
+
+- `text_bound_insert`: `AFTER INSERT FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL, '{"set_by": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"set_by":20000}')`
+- `text_bound_update`: `AFTER UPDATE FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"set_by": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"set_by":20000}')`
 
 ## sdr_handoff
 
@@ -2046,6 +2198,8 @@ The 50 tables owned by `contacts`, as the migrations build them. [Back to the en
 **Triggers**
 
 - `sdr_handoff_assigned_to_retirement_guard`: `BEFORE INSERT OR UPDATE FOR EACH ROW WHEN (((new.assigned_to IS NOT NULL) AND (new.status = 'submitted'))) EXECUTE FUNCTION refuse_retired_member_work('assigned_to')`
+- `text_bound_insert`: `AFTER INSERT FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL, '{"note": 2000, "status": 20000, "captured_by": 20000, "reason_applies_to": 2000}')) EXECUTE FUNCTION refuse_oversized_text('{"captured_by":20000,"note":2000,"reason_applies_to":2000,"status":20000}')`
+- `text_bound_update`: `AFTER UPDATE FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"note": 2000, "status": 20000, "captured_by": 20000, "reason_applies_to": 2000}')) EXECUTE FUNCTION refuse_oversized_text('{"captured_by":20000,"note":2000,"reason_applies_to":2000,"status":20000}')`
 
 ## sdr_handoff_event
 
@@ -2083,6 +2237,11 @@ The 50 tables owned by `contacts`, as the migrations build them. [Back to the en
 - `reporting_primary_credit`: `btree (deal_id_at_change, occurred_at, id) WHERE (to_status = 'accepted')`
 - `sdr_handoff_event_pkey`: `unique, btree (id)`
 
+**Triggers**
+
+- `text_bound_insert`: `AFTER INSERT FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL, '{"note": 2000, "actor": 20000, "to_status": 20000, "reason_applies_to": 2000}')) EXECUTE FUNCTION refuse_oversized_text('{"actor":20000,"note":2000,"reason_applies_to":2000,"to_status":20000}')`
+- `text_bound_update`: `AFTER UPDATE FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"note": 2000, "actor": 20000, "to_status": 20000, "reason_applies_to": 2000}')) EXECUTE FUNCTION refuse_oversized_text('{"actor":20000,"note":2000,"reason_applies_to":2000,"to_status":20000}')`
+
 ## sdr_handoff_reason
 
 9 columns · primary key `(id)` · referenced by 2 foreign keys
@@ -2111,6 +2270,11 @@ The 50 tables owned by `contacts`, as the migrations build them. [Back to the en
 - `sdr_handoff_reason_id_kind`: `unique, btree (id, applies_to)`
 - `sdr_handoff_reason_label_once`: `unique, btree (applies_to, lower(btrim(label)))`
 - `sdr_handoff_reason_pkey`: `unique, btree (id)`
+
+**Triggers**
+
+- `text_bound_insert`: `AFTER INSERT FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL, '{"label": 120, "applies_to": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"applies_to":20000,"label":120}')`
+- `text_bound_update`: `AFTER UPDATE FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"label": 120, "applies_to": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"applies_to":20000,"label":120}')`
 
 ## site_read
 
@@ -2181,6 +2345,11 @@ The 50 tables owned by `contacts`, as the migrations build them. [Back to the en
 - `uq_site_read_onboarding_inflight`: `unique, btree (seed_url) WHERE ((target_kind = 'onboarding') AND (status = ANY (ARRAY['queued', 'deferred', 'running'])))`
 - `uq_site_read_triage_inflight`: `unique, btree (seed_url) WHERE ((target_kind = 'domain_triage') AND (status = ANY (ARRAY['queued', 'deferred', 'running'])))`
 
+**Triggers**
+
+- `text_bound_insert`: `AFTER INSERT FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL, '{"phase": 20000, "status": 20000, "seed_url": 20000, "logo_origin": 20000, "status_code": 20000, "target_kind": 20000, "requested_by": 20000, "proposal_hash": 20000, "status_detail": 20000, "stopped_reason": 2000, "logo_object_key": 20000, "logo_icon_origin": 20000, "logo_icon_object_key": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"logo_icon_object_key":20000,"logo_icon_origin":20000,"logo_object_key":20000,"logo_origin":20000,"phase":20000,"proposal_hash":20000,"requested_by":20000,"seed_url":20000,"status":20000,"status_code":20000,"status_detail":20000,"stopped_reason":2000,"target_kind":20000}')`
+- `text_bound_update`: `AFTER UPDATE FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"phase": 20000, "status": 20000, "seed_url": 20000, "logo_origin": 20000, "status_code": 20000, "target_kind": 20000, "requested_by": 20000, "proposal_hash": 20000, "status_detail": 20000, "stopped_reason": 2000, "logo_object_key": 20000, "logo_icon_origin": 20000, "logo_icon_object_key": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"logo_icon_object_key":20000,"logo_icon_origin":20000,"logo_object_key":20000,"logo_origin":20000,"phase":20000,"proposal_hash":20000,"requested_by":20000,"seed_url":20000,"status":20000,"status_code":20000,"status_detail":20000,"stopped_reason":2000,"target_kind":20000}')`
+
 ## technical_lookup_cache
 
 6 columns · primary key `(query, record_kind)` · referenced by 0 foreign keys
@@ -2203,3 +2372,8 @@ The 50 tables owned by `contacts`, as the migrations build them. [Back to the en
 
 - `idx_technical_lookup_cache_expiry`: `btree (expires_at)`
 - `technical_lookup_cache_pkey`: `unique, btree (query, record_kind)`
+
+**Triggers**
+
+- `text_bound_insert`: `AFTER INSERT FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL, '{"query": 20000, "record_kind": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"query":20000,"record_kind":20000}')`
+- `text_bound_update`: `AFTER UPDATE FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"query": 20000, "record_kind": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"query":20000,"record_kind":20000}')`

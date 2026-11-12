@@ -3,10 +3,12 @@ import { CalendarClock, Zap } from "lucide-react";
 import { type ReactNode, useEffect, useId, useState } from "react";
 import { api } from "../../api/client";
 import type { components } from "../../api/schema";
+import { WebsiteInquiryDialog } from "../../components/websiteinquirydialog";
 import { EmptyState } from "../../design-system/atoms";
 import { CellStack } from "../../design-system/cellstack";
 import { DataTable, type DataTableColumn } from "../../design-system/datatable";
 import { ErrorLine } from "../../design-system/errorline";
+import { Heading } from "../../design-system/heading";
 import { Panel, PanelBody, PanelIntro } from "../../design-system/panel";
 import { type QueryLike, QueryStates } from "../../design-system/querystates";
 import { Chip } from "../../design-system/readings";
@@ -16,6 +18,7 @@ import { type Locale, type Translator, useLocale, useT } from "../../i18n";
 import { useCan, useCanWrite } from "../../lib/capability";
 import { unwrap } from "../../lib/problem";
 import { useMe } from "../../lib/session";
+import { WEBSITE_INQUIRY_RECIPE } from "../../lib/websiteinquiries";
 import { AutomationDialog } from "./automations.form";
 import { ConfiguredAutomations, shut } from "./automations.instances";
 import { triggerLabel } from "./automations.recipe";
@@ -34,7 +37,7 @@ type StagedTemplate = { entry: CatalogEntry; seq: number; open: boolean };
 /** Which tab of the Automations page is open. */
 export type AutomationsView = "mine" | "library";
 
-// One section of Settings → AI: the page owns the reading column and the h1.
+// The settings page owns the reading column and its heading.
 export function AutomationsAdmin({
   view = "mine",
 }: Readonly<{ view?: AutomationsView }>) {
@@ -115,6 +118,7 @@ export function AutomationsAdmin({
             intro={
               <>
                 <PanelIntro>{t("auto.sub")}</PanelIntro>
+                <PanelIntro>{t("auto.ownerHint")}</PanelIntro>
                 {/* Bound to `update`, the grant the row's Switch asks for. */}
                 {me.isSuccess && !canEdit && (
                   <PanelIntro>{t("auto.readOnly")}</PanelIntro>
@@ -153,7 +157,10 @@ export function AutomationsAdmin({
           )}
         </Panel>
       )}
-      {staged && (
+      {staged?.open && staged.entry.key === WEBSITE_INQUIRY_RECIPE && (
+        <WebsiteInquiryDialog onClose={() => setStaged(shut)} />
+      )}
+      {staged && staged.entry.key !== WEBSITE_INQUIRY_RECIPE && (
         <AutomationDialog
           key={staged.seq}
           open={staged.open}
@@ -251,17 +258,49 @@ function StarterLibrary({
       </PanelBody>
     );
   }
-  return (
+  const columns = libraryColumns(t, locale, canCreate ? onUse : undefined);
+  const groups = [
+    ["inquiries", t("auto.group.inquiries")],
+    ["deals", t("auto.group.deals")],
+    ["customers", t("auto.group.customers")],
+    ["meetings", t("auto.group.meetings")],
+    ["lists", t("auto.group.lists")],
+  ] as const;
+  const knownGroups = new Set<string>(groups.map(([key]) => key));
+  const fallback = entries.filter(
+    (entry) => !knownGroups.has(entry.group ?? ""),
+  );
+  const table = (rows: CatalogEntry[], label: string) => (
     <DataTable
       bleed
       fold
-      label={t("auto.catalog")}
-      columns={libraryColumns(t, locale, canCreate ? onUse : undefined)}
-      rows={entries}
+      label={label}
+      columns={columns}
+      rows={rows}
       rowKey={(entry) => entry.key}
       rowTestId={(entry) => `template-${entry.key}`}
       onRowClick={canCreate ? onUse : undefined}
     />
+  );
+  return (
+    <>
+      {groups.map(([key, label]) => {
+        const rows = entries.filter((entry) => entry.group === key);
+        return (
+          rows.length > 0 && (
+            <div key={key}>
+              <PanelBody>
+                <Heading size="small" as="h3">
+                  {label}
+                </Heading>
+              </PanelBody>
+              {table(rows, label)}
+            </div>
+          )
+        );
+      })}
+      {fallback.length > 0 && table(fallback, t("auto.catalog"))}
+    </>
   );
 }
 

@@ -5,6 +5,7 @@ import { useToast } from "../design-system/toast";
 import { useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import { unwrap } from "../lib/problem";
+import { TEXT_LIMITS } from "../lib/textlimits_gen";
 import {
   companyChoice,
   contactCompanyField,
@@ -24,8 +25,17 @@ type Contact = components["schemas"]["Contact"];
 // On a company's page the company is already chosen, so the box is left out.
 function quickCaptureFields(askCompany: boolean): CreateField[] {
   return [
-    { key: "full_name", label: "create.fullName", required: true },
-    { key: "title", label: "create.contactTitle" },
+    {
+      key: "full_name",
+      label: "create.fullName",
+      required: true,
+      maxLength: TEXT_LIMITS.label,
+    },
+    {
+      key: "title",
+      label: "create.contactTitle",
+      maxLength: TEXT_LIMITS.label,
+    },
     ...(askCompany ? [contactCompanyField] : []),
     { key: "profile_url", label: "create.linkedin" },
     { key: "email", label: "create.email", type: "email" },

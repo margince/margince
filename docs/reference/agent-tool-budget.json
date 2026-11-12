@@ -31,9 +31,9 @@
   "catalog": {
     "tools": 48,
     "system_frame_tokens": 592,
-    "tokens": 40603,
+    "tokens": 40804,
     "median_tool_tokens": 623,
-    "mean_tool_tokens": 845
+    "mean_tool_tokens": 849
   },
   "agents": [
     {
@@ -47,11 +47,11 @@
         "read_record"
       ],
       "of_served_tools": 48,
-      "tokens": 4373,
-      "listing_tokens": 2144,
-      "step_schema_tokens": 1637,
+      "tokens": 4389,
+      "listing_tokens": 2150,
+      "step_schema_tokens": 1646,
       "percent_of_ceiling": 13,
-      "headroom_tokens": 18837,
+      "headroom_tokens": 18821,
       "dangling_cross_references": [],
       "temptation_weight": 5
     },
@@ -68,11 +68,11 @@
         "whats_slipping_this_week"
       ],
       "of_served_tools": 48,
-      "tokens": 6609,
+      "tokens": 6654,
       "listing_tokens": 3449,
-      "step_schema_tokens": 2568,
+      "step_schema_tokens": 2613,
       "percent_of_ceiling": 20,
-      "headroom_tokens": 16601,
+      "headroom_tokens": 16556,
       "dangling_cross_references": [
         "at_risk_relationships → read_relationships",
         "log_activity → draft_outbound",
@@ -89,27 +89,27 @@
     },
     {
       "name": "read_workspace",
-      "tokens": 2750
+      "tokens": 2755
     },
     {
       "name": "read_details",
-      "tokens": 2211
+      "tokens": 2230
     },
     {
       "name": "change_activities",
-      "tokens": 2042
+      "tokens": 2116
     },
     {
       "name": "find_records",
-      "tokens": 2024
+      "tokens": 2033
     },
     {
       "name": "change_state",
-      "tokens": 1930
+      "tokens": 1969
     },
     {
       "name": "change_settings",
-      "tokens": 1710
+      "tokens": 1730
     },
     {
       "name": "send_outbound",
@@ -208,12 +208,12 @@
       "tokens": 474
     },
     {
-      "name": "decide_approvals",
-      "tokens": 429
+      "name": "schedule_meeting",
+      "tokens": 456
     },
     {
-      "name": "schedule_meeting",
-      "tokens": 420
+      "name": "decide_approvals",
+      "tokens": 429
     },
     {
       "name": "annotate_brief",

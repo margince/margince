@@ -71,6 +71,7 @@ func (h Handlers) ListAutomationCatalog(w http.ResponseWriter, r *http.Request) 
 		}
 		entry := crmcontracts.AutomationCatalogEntry{
 			Key:          e.Key,
+			Group:        &e.Group,
 			Name:         e.Name,
 			Trigger:      e.Trigger,
 			Action:       e.Action,
@@ -95,7 +96,7 @@ func (h Handlers) ListAutomations(w http.ResponseWriter, r *http.Request, params
 	}
 	data := make([]crmcontracts.Automation, 0, len(page.Items))
 	for _, a := range page.Items {
-		wire, err := wireAutomation(a)
+		wire, err := WireAutomation(a)
 		if err != nil {
 			httperr.Write(w, r, err)
 			return
@@ -125,7 +126,7 @@ func (h Handlers) CreateAutomation(w http.ResponseWriter, r *http.Request) {
 		writeAutomationErr(w, r, err)
 		return
 	}
-	wire, err := wireAutomation(created)
+	wire, err := WireAutomation(created)
 	if err != nil {
 		httperr.Write(w, r, err)
 		return
@@ -140,7 +141,7 @@ func (h Handlers) GetAutomation(w http.ResponseWriter, r *http.Request, id crmco
 		writeAutomationErr(w, r, err)
 		return
 	}
-	wire, err := wireAutomation(a)
+	wire, err := WireAutomation(a)
 	if err != nil {
 		httperr.Write(w, r, err)
 		return
@@ -166,6 +167,9 @@ func (h Handlers) UpdateAutomation(w http.ResponseWriter, r *http.Request, id cr
 		return
 	}
 	in := UpdateAutomationInput{Name: req.Name, IfVersion: ifVersion}
+	if req.InitialRunConfirmed != nil {
+		in.InitialRunConfirmed = *req.InitialRunConfirmed
+	}
 	if req.OwnerId != nil {
 		owner := ids.From[ids.UserKind](ids.UUID(*req.OwnerId))
 		in.OwnerID = &owner
@@ -191,7 +195,7 @@ func (h Handlers) UpdateAutomation(w http.ResponseWriter, r *http.Request, id cr
 		writeAutomationErr(w, r, err)
 		return
 	}
-	wire, err := wireAutomation(updated)
+	wire, err := WireAutomation(updated)
 	if err != nil {
 		httperr.Write(w, r, err)
 		return
@@ -230,9 +234,13 @@ func (h Handlers) PreviewAutomation(w http.ResponseWriter, r *http.Request, id c
 		return
 	}
 	wire := crmcontracts.AutomationPreview{
-		MatchesNow:     res.MatchesNow,
-		WindowDays:     res.WindowDays,
-		WouldHaveFired: res.WouldHaveFired,
+		Renewal:                    res.Renewal,
+		PreviewKind:                &res.Kind,
+		MatchesNowAvailable:        &res.MatchesNowAvailable,
+		HistoricalPreviewAvailable: &res.HistoricalPreviewAvailable,
+		MatchesNow:                 res.MatchesNow,
+		WindowDays:                 res.WindowDays,
+		WouldHaveFired:             res.WouldHaveFired,
 	}
 	// The masked count ships even at zero: "nothing was hidden from you"
 	// is information, not noise.
@@ -379,7 +387,7 @@ func wireSetter(setter *ids.UUID) *openapi_types.UUID {
 	return &id
 }
 
-func wireAutomation(a Automation) (crmcontracts.Automation, error) {
+func WireAutomation(a Automation) (crmcontracts.Automation, error) {
 	status := crmcontracts.AutomationStatus("paused")
 	if a.Enabled {
 		status = crmcontracts.AutomationStatus("enabled")
@@ -397,17 +405,31 @@ func wireAutomation(a Automation) (crmcontracts.Automation, error) {
 		paused = &reason
 	}
 	wire := crmcontracts.Automation{
-		PausedReason:     paused,
-		SetterPassportId: wireSetter(a.SetterPassportID),
-		Id:               openapi_types.UUID(a.ID.UUID),
-		Key:              a.Key,
-		Name:             a.Name,
-		Status:           status,
-		Params:           params,
-		OwnerId:          wireOwner(a.OwnerID),
-		Version:          &version,
-		CreatedAt:        a.CreatedAt,
-		UpdatedAt:        a.UpdatedAt,
+		InitialRunPreviewRequired: new(scheduledPopulationRule(a.Key)),
+		PausedReason:              paused,
+		SetterPassportId:          wireSetter(a.SetterPassportID),
+		Id:                        openapi_types.UUID(a.ID.UUID),
+		Key:                       a.Key,
+		Name:                      a.Name,
+		Status:                    status,
+		Params:                    params,
+		OwnerId:                   wireOwner(a.OwnerID),
+		Version:                   &version,
+		CreatedAt:                 a.CreatedAt,
+		UpdatedAt:                 a.UpdatedAt,
+	}
+	if a.Configuration != nil {
+		wire.SetupState = new(crmcontracts.AutomationSetupState(a.Configuration.State))
+		if a.Configuration.Reason != "" {
+			wire.SetupReason = new(crmcontracts.AutomationSetupReason(a.Configuration.Reason))
+		}
+	}
+	if a.Key == inquiryRecipeName {
+		policy, err := ParseInquiryPolicy(a.Params)
+		if err != nil {
+			return crmcontracts.Automation{}, err
+		}
+		wire.InquiryPolicy = &policy
 	}
 	if a.Runs != nil {
 		wire.LastRunAt = a.Runs.LastRunAt
@@ -424,6 +446,9 @@ func wireAutomation(a Automation) (crmcontracts.Automation, error) {
 // which is the honest reply from an installation where no run can exist.
 func (h Handlers) WithRetryEngine(engine *WorkflowEngine) Handlers {
 	h.retries = engine
+	if engine != nil {
+		h.automations.WithPreviewAuthority(engine.resolver)
+	}
 	return h
 }
 

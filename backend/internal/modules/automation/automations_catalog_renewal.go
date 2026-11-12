@@ -85,7 +85,9 @@ func renewalReminderSchema() map[string]any {
 	return map[string]any{
 		schemaKeyType:            schemaTypeObject,
 		schemaKeyAdditionalProps: false,
+		schemaKeyRequired:        []string{"object", paramKeyDateField, "days_before", "recipient"},
 		schemaKeyProperties: map[string]any{
+			"recipient": taskRecipientSchema(),
 			"days_before": intParamProperty(defaultRenewalDaysBefore, 365,
 				"How many days ahead of the renewal date to remind."),
 			"object": map[string]any{
@@ -140,20 +142,8 @@ func validateRenewalObjectParam(params map[string]any) error {
 	return nil
 }
 
-// validateRenewalDateFieldParam checks date_field for non-emptiness only —
-// whether it actually names a REAL, date-typed column on the chosen
-// object is a save-time check against the workspace's own
-// customfields.Service.ActiveColumns, and this function has no DB handle
-// to run it with (Validate's signature takes only the decoded params
-// map). AutomationStore.Create/Update (automations.go) is where such a
-// check would run if a later ticket grows one; today an instance can be
-// saved naming a column the workspace hasn't created yet, or one that is
-// later retired out from under it (customfields.Retire) — both reach
-// scanDateFieldInstanceCandidates (timescan.go) as
-// automation.ErrDateFieldUnavailable via compose's adapter translation
-// (compose/timescan.go), and TimeScanner's own honest no-op skips that
-// ONE instance rather than failing the workspace's whole scan pass: never
-// a fabricated read, just no candidates until the field exists again.
+// Field existence and type need the live catalog; AutomationStore checks both
+// through the same validation used by preview.
 func validateRenewalDateFieldParam(params map[string]any) error {
 	v, ok := params[paramKeyDateField]
 	if !ok {
@@ -188,12 +178,13 @@ func validateRenewalRecursYearlyParam(params map[string]any) error {
 func validateRenewalReminderParams(params map[string]any) error {
 	for k := range params {
 		switch k {
-		case "days_before", "object", paramKeyDateField, "recurs_yearly":
+		case "days_before", "object", paramKeyDateField, "recurs_yearly", "recipient":
 		default:
 			return &ParamError{Field: "params." + k, Reason: errNotAParameter}
 		}
 	}
 	for _, validate := range []func(map[string]any) error{
+		validateTaskRecipientParam,
 		validateRenewalDaysBeforeParam,
 		validateRenewalObjectParam,
 		validateRenewalDateFieldParam,

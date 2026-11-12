@@ -17,6 +17,7 @@ import (
 	"maps"
 	"math"
 
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -53,7 +54,10 @@ const (
 	formatShortlist = "shortlist"
 )
 
-const defaultListTaskDueInDays = 2
+const (
+	defaultListTaskDueInDays    = 2
+	paramIncludeImportedChanges = "include_imported_changes"
+)
 
 // listRuleDescription is what every list rule says about when it fires.
 const listRuleDescription = " It fires from the list's check every 15 minutes, once for each record seen" +
@@ -64,22 +68,26 @@ const listRuleDescription = " It fires from the list's check every 15 minutes, o
 func listRuleEntries() []CatalogEntry {
 	entry := func(key, name, description string, action ActionType, extra map[string]any) CatalogEntry {
 		return CatalogEntry{
-			Key: key, Name: name, Description: description + listRuleDescription,
+			Group: crmcontracts.AutomationCatalogEntryGroupLists,
+			Key:   key, Name: name, Description: description + listRuleDescription,
 			Trigger: eventListEvaluated, Action: string(action), Tier: tierAutoExecute,
 			ParamsSchema: listRuleSchema(extra), Validate: validateListRuleParams(extra),
 			ValidateRefs: validateListRuleRefs,
 		}
 	}
 	return []CatalogEntry{
-		entry(listTaskName, "Follow up when a record joins or leaves a Live List",
-			"Mints a follow-up task on each record that joins or leaves the list, for the record's owner.",
+		entry(listTaskName, "Create a task when someone joins this list",
+			"Creates a task for the chosen recipient when a record joins or leaves the list.",
 			ActionTypeCreateTask, map[string]any{
-				paramDueInDays: intParamProperty(defaultListTaskDueInDays, 30, "How many days out the follow-up task is due."),
+				paramDueInDays:    intParamProperty(defaultListTaskDueInDays, 30, "How many days out the follow-up task is due."),
+				paramTaskTimezone: taskTimezoneSchema(),
+				"recipient":       taskRecipientSchema(),
+				"task_title":      map[string]any{schemaKeyType: schemaTypeString, "minLength": 1, "maxLength": maxTaskTitleCharacters},
 			}),
-		entry(listNotifyName, "Tell me when a record joins or leaves a Live List",
+		entry(listNotifyName, "Tell me when this list changes",
 			"Sends the rule's owner a notice for each record that joins or leaves the list.",
 			ActionTypeNotify, nil),
-		entry(listShortlistName, "Add to a Shortlist when a record joins or leaves a Live List",
+		entry(listShortlistName, "Save matching records to a list",
 			"Adds each record that joins or leaves the list to a Shortlist of the same record type. A record already on it stays as it is.",
 			ActionTypeAddToShortlist, map[string]any{
 				paramShortlistID: map[string]any{
@@ -94,6 +102,7 @@ func listRuleEntries() []CatalogEntry {
 // plus what its action needs.
 func listRuleSchema(extra map[string]any) map[string]any {
 	properties := map[string]any{
+		paramIncludeImportedChanges: map[string]any{schemaKeyType: schemaTypeBoolean, schemaKeyDefault: false},
 		paramListID: map[string]any{
 			schemaKeyType: schemaTypeString, schemaKeyFormat: formatLiveList,
 			schemaKeyDescription: "The Live List this rule watches.",
@@ -114,6 +123,9 @@ func requiredListParams(extra map[string]any) []string {
 	required := []string{paramListID}
 	if _, ok := extra[paramShortlistID]; ok {
 		required = append(required, paramShortlistID)
+	}
+	if extra["recipient"] != nil {
+		required = append(required, "recipient", "task_title")
 	}
 	return required
 }
@@ -139,6 +151,11 @@ func validateListRuleParams(extra map[string]any) func(map[string]any) error {
 func validateListRuleParam(params map[string]any, key string, extra map[string]any) error {
 	field := "params." + key
 	switch key {
+	case paramIncludeImportedChanges:
+		if _, ok := params[key].(bool); !ok {
+			return &ParamError{Field: field, Reason: "must be a boolean"}
+		}
+		return nil
 	case paramListID:
 		return validateListRef(params, key)
 	case paramShortlistID:
@@ -151,6 +168,22 @@ func validateListRuleParam(params map[string]any, key string, extra map[string]a
 			return &ParamError{Field: field, Reason: "must be entered, left or either"}
 		}
 		return nil
+	case "recipient":
+		if extra[key] == nil {
+			return &ParamError{Field: field, Reason: errNotAParameter}
+		}
+		return validateTaskRecipientParam(params)
+	case "task_title":
+		value, ok := params[key].(string)
+		if extra[key] == nil || !ok || !validTaskTitle(value) {
+			return &ParamError{Field: field, Reason: "enter a task title of up to 200 characters"}
+		}
+		return nil
+	case paramTaskTimezone:
+		if extra[paramTaskTimezone] == nil {
+			return &ParamError{Field: field, Reason: errNotAParameter}
+		}
+		return validateTaskTimezone(params)
 	case paramDueInDays:
 		if extra[paramDueInDays] == nil {
 			return &ParamError{Field: field, Reason: errNotAParameter}
@@ -251,10 +284,12 @@ func validateShortlistRef(ctx context.Context, lists Lists, id ids.UUID, entityT
 
 // listRuleParams is a list rule's params, decoded.
 type listRuleParams struct {
-	ListID      ids.UUID  `json:"list_id"`
-	Direction   string    `json:"direction"`
-	DueInDays   *int      `json:"due_in_days"`
-	ShortlistID *ids.UUID `json:"shortlist_id"`
+	IncludeImported *bool     `json:"include_imported_changes"`
+	TaskTitle       string    `json:"task_title"`
+	ListID          ids.UUID  `json:"list_id"`
+	Direction       string    `json:"direction"`
+	DueInDays       *int      `json:"due_in_days"`
+	ShortlistID     *ids.UUID `json:"shortlist_id"`
 }
 
 func decodeListRuleParams(raw json.RawMessage) (listRuleParams, error) {
@@ -322,15 +357,18 @@ func (r listRule) Plan(ctx context.Context, ev workflow.Event) (workflow.Effect,
 	}
 	switch r.action {
 	case ActionTypeCreateTask:
-		days := defaultListTaskDueInDays
-		if rule.DueInDays != nil {
-			days = *rule.DueInDays
+		dueAt, err := taskDueAt(ev.Params, ev.OccurredAt, defaultListTaskDueInDays)
+		if err != nil {
+			return workflow.Effect{}, err
 		}
 		// The task is read by whoever may read the record, so it names no
 		// list: a list's name and membership stay with the list's own sharing.
-		ctx = systemtext.WithMessage(ctx, &systemtext.Message{Subject: systemtext.Sentence(firing.taskCode())})
-		return ownedTaskEffectNoKey(ctx, r.ex, ev, firing.taskSubject(),
-			ev.OccurredAt.AddDate(0, 0, days))
+		subject := rule.TaskTitle
+		if subject == "" {
+			subject = firing.taskSubject()
+			ctx = systemtext.WithMessage(ctx, &systemtext.Message{Subject: systemtext.Sentence(firing.taskCode())})
+		}
+		return configuredTaskEffect(ctx, r.ex, ev, subject, dueAt)
 	case ActionTypeNotify:
 		return r.planNotice(ev, firing)
 	case ActionTypeAddToShortlist:

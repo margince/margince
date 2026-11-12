@@ -15,15 +15,15 @@ package automation
 import (
 	"context"
 	"fmt"
-	"maps"
+	"strings"
 	"time"
 
 	"github.com/jackc/pgx/v5"
 
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
-	"github.com/margince/margince/backend/internal/shared/kernel/occurredday"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/ports/fieldcatalog"
 )
@@ -57,11 +57,15 @@ type AutomationPreviewInput struct {
 // dropped), a small visible sample, and the trailing-window firing
 // estimate (nil when the window count is not computable for the type).
 type AutomationPreviewResult struct {
-	MatchesNow           int
-	ExcludedByPermission int
-	Sample               []ids.UUID
-	WindowDays           int
-	WouldHaveFired       *int
+	Renewal                    *crmcontracts.AutomationRenewalPreview
+	Kind                       crmcontracts.AutomationPreviewKind
+	MatchesNowAvailable        bool
+	HistoricalPreviewAvailable bool
+	MatchesNow                 int
+	ExcludedByPermission       int
+	Sample                     []ids.UUID
+	WindowDays                 int
+	WouldHaveFired             *int
 }
 
 // previewDef is one catalog type's dry-run definition: the record table
@@ -70,10 +74,14 @@ type AutomationPreviewResult struct {
 // a DOCUMENTED gap instead (see its own doc) — exactly one of
 // (table+fields+match+firedCount) or unsupported is set.
 type previewDef struct {
-	table     string
-	baseWhere string
-	fields    map[string]storekit.Field
-	match     storekit.Predicate
+	dateWindow            *previewDateWindow
+	historicalUnavailable bool
+	readers               []principal.Principal
+	eventOnly             bool
+	table                 string
+	baseWhere             string
+	fields                map[string]storekit.Field
+	match                 storekit.Predicate
 	// firedCount counts trigger occurrences since the window start —
 	// workspace-level (workspace-bounded), an estimate of event volume rather
 	// than a per-row visibility question.
@@ -104,138 +112,16 @@ func previewNotYetSupported(reason string) previewDef {
 	return previewDef{unsupported: reason}
 }
 
-// previewDefs maps every catalog key to its dry-run definition; the
-// catalog is closed, so a key without ANY entry here is a programming
-// error a fitness test catches, never a silent empty preview
-// (TestEveryCatalogKeyHasAPreviewDefinition). Merged from smaller,
-// per-table builders rather than one long literal.
+// Event previews describe future occurrences, never a count of stored records.
+// Scheduled previews retain their population-specific readers.
 func previewDefs() map[string]previewDef {
-	defs := map[string]previewDef{}
-	for _, group := range []map[string]previewDef{
-		leadPreviewDefs(), dealPreviewDefs(), activityPreviewDefs(), unsupportedPreviewDefs(),
-	} {
-		maps.Copy(defs, group)
+	defs := unsupportedPreviewDefs()
+	for _, entry := range Catalog() {
+		if !strings.HasPrefix(entry.Trigger, "clock:") {
+			defs[entry.Key] = previewDef{eventOnly: true}
+		}
 	}
 	return defs
-}
-
-// leadPreviewDefs are the catalog entries whose When/If ranges over the
-// lead table.
-func leadPreviewDefs() map[string]previewDef {
-	return map[string]previewDef{
-		assignLeadOwnerName: {
-			table:     "lead",
-			baseWhere: previewBaseWhereNotArchived,
-			fields: map[string]storekit.Field{
-				keyStatus:  {Expr: "t.status", Type: storekit.FieldPicklist},
-				keyOwnerID: {Expr: "t.owner_id", Type: storekit.FieldID},
-			},
-			// When: lead.created. If: the router only assigns where no
-			// owner is set — so the blast radius now is the open, unrouted
-			// lead pool.
-			match: storekit.Predicate{And: []storekit.Predicate{
-				{Field: keyStatus, Op: storekit.OpIn, Value: []any{"new", "contacted", "engaged"}},
-				{Field: keyOwnerID, Op: storekit.OpExists, Value: false},
-			}},
-			firedCount: func(ctx context.Context, tx pgx.Tx, since time.Time) (int, error) {
-				// Every lead created in the window was one firing —
-				// including leads since archived or routed.
-				var n int
-				err := tx.QueryRow(ctx,
-					`SELECT count(*) FROM lead WHERE created_at >= $1`, since).Scan(&n)
-				return n, err
-			},
-		},
-		routeLeadName: {
-			table:     "lead",
-			baseWhere: previewBaseWhereNotArchived,
-			fields: map[string]storekit.Field{
-				// No "if" narrows this starter — every new lead gets the
-				// follow-up task; "id exists" is the always-true leaf
-				// previewDef's Predicate shape needs (a zero-value
-				// Predicate has no defined meaning, storekit's groupShape).
-				"id": {Expr: "t.id", Type: storekit.FieldID},
-			},
-			match: storekit.Predicate{Field: "id", Op: storekit.OpExists, Value: true},
-			firedCount: func(ctx context.Context, tx pgx.Tx, since time.Time) (int, error) {
-				var n int
-				err := tx.QueryRow(ctx, `SELECT count(*) FROM lead WHERE created_at >= $1`, since).Scan(&n)
-				return n, err
-			},
-		},
-	}
-}
-
-// dealPreviewDefs are the catalog entries whose When/If ranges over the
-// deal table.
-func dealPreviewDefs() map[string]previewDef {
-	return map[string]previewDef{
-		stageChangeCreateTaskName: {
-			table:     "deal",
-			baseWhere: previewBaseWhereNotArchived,
-			fields: map[string]storekit.Field{
-				keyStatus: {Expr: "t.status", Type: storekit.FieldPicklist},
-			},
-			// When: deal.stage_changed. If: only OPEN destinations mint a
-			// follow-up — so the records in range now are the open deals.
-			// dealStatusOpen is the SAME value the runtime Match tests
-			// (handlers_event.go), so the dry-run and the firing agree.
-			match: storekit.Predicate{Field: keyStatus, Op: storekit.OpEq, Value: dealStatusOpen},
-			firedCount: func(ctx context.Context, tx pgx.Tx, since time.Time) (int, error) {
-				var n int
-				err := tx.QueryRow(ctx, `
-					SELECT count(*) FROM deal_stage_history h
-					JOIN stage s ON s.id = h.to_stage_id
-					WHERE h.changed_at >= $1 AND s.semantic = $2`, since, dealStatusOpen).Scan(&n)
-				return n, err
-			},
-		},
-		stageChangeNotifyName: {
-			table:     "deal",
-			baseWhere: previewBaseWhereNotArchived + " AND t.owner_id IS NOT NULL",
-			fields: map[string]storekit.Field{
-				// Both open and closed deals can receive a move by another actor.
-				"id": {Expr: "t.id", Type: storekit.FieldID},
-			},
-			match: storekit.Predicate{Field: "id", Op: storekit.OpExists, Value: true},
-			firedCount: func(ctx context.Context, tx pgx.Tx, since time.Time) (int, error) {
-				var n int
-				// Preview applies the current recipient rule to recorded moves;
-				// creation establishes a stage but does not emit deal.stage_changed.
-				err := tx.QueryRow(ctx, `
-					SELECT count(*) FROM deal_stage_history h JOIN deal d ON d.id = h.deal_id
-					 WHERE h.changed_at >= @since AND h.from_stage_id IS NOT NULL
-					   AND d.owner_id IS NOT NULL
-					   AND lower(h.changed_by) NOT IN (d.owner_id::text, @human_prefix || d.owner_id::text)`,
-					pgx.NamedArgs{"since": since, "human_prefix": principal.HumanIDPrefix}).Scan(&n)
-				return n, err
-			},
-		},
-	}
-}
-
-// activityPreviewDefs are the catalog entries whose When/If ranges over
-// the activity table.
-func activityPreviewDefs() map[string]previewDef {
-	return map[string]previewDef{
-		postMeetingRecapName: {
-			table:     "activity",
-			baseWhere: previewBaseWhereNotArchived,
-			fields: map[string]storekit.Field{
-				"kind": {Expr: "t.kind", Type: storekit.FieldPicklist},
-			},
-			// When: activity.captured. If: kind = meeting — the records in
-			// range now are every captured meeting activity.
-			match: storekit.Predicate{Field: "kind", Op: storekit.OpEq, Value: activityKindMeeting},
-			firedCount: func(ctx context.Context, tx pgx.Tx, since time.Time) (int, error) {
-				var n int
-				err := tx.QueryRow(ctx,
-					`SELECT count(*) FROM activity a WHERE `+occurredday.FromSQL("a", "$1")+` AND a.kind = $2`,
-					since, activityKindMeeting).Scan(&n)
-				return n, err
-			},
-		},
-	}
 }
 
 // unsupportedPreviewDefs are the catalog entries previewNotYetSupported
@@ -251,10 +137,7 @@ func unsupportedPreviewDefs() map[string]previewDef {
 			"preview is not yet supported for check_in_cadence: its candidate set spans every linked entity type with no single row-scoped resource to preview against",
 		),
 	}
-	for _, key := range listRuleKeys {
-		defs[key] = previewNotYetSupported("preview is not yet supported for " + key +
-			": who joins or leaves a Live List is known only when its check runs; the list's own history shows past changes")
-	}
+
 	return defs
 }
 
@@ -267,21 +150,38 @@ func (s *AutomationStore) Preview(ctx context.Context, id ids.AutomationID, in A
 	if err != nil {
 		return AutomationPreviewResult{}, err
 	}
+	readers, err := s.previewReaders(ctx, stored, in)
+	if err != nil {
+		return AutomationPreviewResult{}, err
+	}
+	if result, handled, err := s.quietPreview(ctx, stored, in, readers...); handled || err != nil {
+		return result, err
+	}
 	now := s.now().UTC()
 	def, window, err := resolvePreviewRecipe(ctx, s.catalog, stored, in, now)
 	if err != nil {
 		return AutomationPreviewResult{}, err
 	}
+	res := AutomationPreviewResult{WindowDays: window, Kind: crmcontracts.AutomationPreviewKindPopulation, MatchesNowAvailable: true, HistoricalPreviewAvailable: true}
+	if def.eventOnly {
+		res.Kind = crmcontracts.AutomationPreviewKindEvent
+		res.MatchesNowAvailable = false
+		res.HistoricalPreviewAvailable = false
+		return res, nil
+	}
+	def.readers = readers
 	// The dry-run reads the target records, so it carries their read
 	// gate — the same admission a list over the same table demands.
-	if err := auth.Require(ctx, def.table, principal.ActionRead); err != nil {
+	if err := auth.RequireReadForReaders(ctx, def.table, readers...); err != nil {
 		return AutomationPreviewResult{}, err
 	}
 
 	since := now.AddDate(0, 0, -window)
-	res := AutomationPreviewResult{WindowDays: window}
 	err = s.db.Tx(ctx, func(tx pgx.Tx) error {
-		return def.measure(ctx, tx, since, &res)
+		if err := def.measure(ctx, tx, since, &res); err != nil {
+			return err
+		}
+		return def.renewalDetails(ctx, tx, &res)
 	})
 	if err != nil {
 		return AutomationPreviewResult{}, err
@@ -318,23 +218,14 @@ func resolvePreviewRecipe(ctx context.Context, catalog fieldcatalog.Reader, stor
 			return previewDef{}, 0, err
 		}
 	}
-	window := previewDefaultWindowDays
-	if in.WindowDays != nil {
-		window = *in.WindowDays
-		if window < 1 || window > previewMaxWindowDays {
-			return previewDef{}, 0, &ParamError{
-				Field:  "window_days",
-				Reason: fmt.Sprintf("must be between 1 and %d days", previewMaxWindowDays),
-			}
-		}
+	window, err := previewWindow(in.WindowDays)
+	if err != nil {
+		return previewDef{}, 0, err
 	}
 	if key == renewalReminderName {
 		p, err := renewalPreviewParams(ctx, catalog, stored, in)
 		if err != nil {
 			return previewDef{}, 0, err
-		}
-		if p.RecursYearly {
-			return previewDef{}, 0, &ParamError{Field: "key", Reason: recurringPreviewUnsupportedReason}
 		}
 		return renewalPreviewDef(now, p), window, nil
 	}
@@ -348,81 +239,94 @@ func resolvePreviewRecipe(ctx context.Context, catalog fieldcatalog.Reader, stor
 	return def, window, nil
 }
 
-// scopeClause resolves the RIGHT row-visibility clause for def.table:
-// activity carries no owner_id (auth.ScopeClauseFor's ownerScopedTables
-// does not — and must not — include it), its visibility instead
-// inheriting from whatever it links to (auth.ActivityContentClause's own
-// doc) — the SAME link-walk rule the activities timeline and contacts's
-// promotion-evidence check both enforce (ADR-0054 §8: one spelling).
-// Every other previewed table is a plain owner-scoped resource.
-func (def previewDef) scopeClause(ctx context.Context, alias string, arg func(any) int) (string, error) {
-	if def.table == "activity" {
-		return auth.ActivityContentClause(ctx, alias, arg)
+func previewWindow(days *int) (int, error) {
+	if days == nil {
+		return previewDefaultWindowDays, nil
 	}
-	return auth.ScopeClauseFor(ctx, def.table, alias, arg)
+	if *days < 1 || *days > previewMaxWindowDays {
+		return 0, &ParamError{Field: "window_days", Reason: fmt.Sprintf("must be between 1 and %d days", previewMaxWindowDays)}
+	}
+	return *days, nil
 }
 
-// measure computes the blast radius inside the caller's workspace-bound
-// read transaction: total matches, visible matches + sample under the
-// caller's row scope, and the trailing-window firing count.
-func (def previewDef) measure(ctx context.Context, tx pgx.Tx, since time.Time, res *AutomationPreviewResult) error {
-	// Workspace-wide matches: the honest denominator behind
-	// excluded_by_permission — there is nothing further to scope it to,
-	// since an installation holds exactly one workspace (ADR-0061).
-	var totalArgs []any
-	matchSQL, err := storekit.CompilePredicate(def.match, def.fields, registerArg(&totalArgs))
-	if err != nil {
-		return err
-	}
-	var total int
-	if err := tx.QueryRow(ctx, storekit.SQLf(
-		`SELECT count(*) FROM %s t WHERE %s AND %s`, def.table, def.baseWhere, matchSQL,
-	),
-		totalArgs...).Scan(&total); err != nil {
-		return err
-	}
+func (def previewDef) scopeClause(ctx context.Context, alias string, arg func(any) int) (string, error) {
+	return auth.ScopeClauseForReaders(ctx, def.table, alias, arg, def.readers...)
+}
 
-	// Visible matches + sample: the same predicate AND the caller's row
-	// scope — a preview never widens what its caller may see.
+func (def previewDef) matchWhere() (string, []any, error) {
 	var args []any
-	visibleSQL, err := storekit.CompilePredicate(def.match, def.fields, registerArg(&args))
+	if def.dateWindow != nil {
+		w := def.dateWindow
+		return def.baseWhere + " AND " + storekit.DateWindowSQL(w.column, w.from, w.to, w.recurring, registerArg(&args)), args, nil
+	}
+	match, err := storekit.CompilePredicate(def.match, def.fields, registerArg(&args))
+	return def.baseWhere + " AND " + match, args, err
+}
+
+func (def previewDef) visibleWhere(ctx context.Context) (string, []any, error) {
+	where, args, err := def.matchWhere()
 	if err != nil {
-		return err
+		return "", nil, err
 	}
 	scope, err := def.scopeClause(ctx, "t", registerArg(&args))
 	if err != nil {
+		return "", nil, err
+	}
+	if scope != "" {
+		where += " AND " + scope
+	}
+	return where, args, nil
+}
+
+func (def previewDef) countRows(ctx context.Context, tx pgx.Tx, where string, args []any) (int, error) {
+	var count int
+	err := tx.QueryRow(ctx, storekit.SQLf(`SELECT count(*) FROM %s t WHERE %s`, def.table, where), args...).Scan(&count)
+	return count, err
+}
+
+func (def previewDef) measure(ctx context.Context, tx pgx.Tx, since time.Time, res *AutomationPreviewResult) error {
+	totalWhere, totalArgs, err := def.matchWhere()
+	if len(def.readers) > 0 {
+		authorizer := def
+		authorizer.readers = def.readers[1:]
+		totalWhere, totalArgs, err = authorizer.visibleWhere(principal.WithActor(ctx, def.readers[0]))
+	}
+	if err != nil {
 		return err
 	}
-	visibleWhere := def.baseWhere + " AND " + visibleSQL
-	if scope != "" {
-		visibleWhere += " AND " + scope
+	total, err := def.countRows(ctx, tx, totalWhere, totalArgs)
+	if err != nil {
+		return err
 	}
-	if err := tx.QueryRow(ctx, storekit.SQLf(
-		`SELECT count(*) FROM %s t WHERE %s`, def.table, visibleWhere,
-	), args...).Scan(&res.MatchesNow); err != nil {
+	where, args, err := def.visibleWhere(ctx)
+	if err != nil {
+		return err
+	}
+	res.MatchesNow, err = def.countRows(ctx, tx, where, args)
+	if err != nil {
 		return err
 	}
 	res.ExcludedByPermission = total - res.MatchesNow
-
-	rows, err := tx.Query(ctx, storekit.SQLf(
-		`SELECT t.id FROM %s t WHERE %s ORDER BY t.id LIMIT %d`,
-		def.table, visibleWhere, previewSampleLimit,
-	), args...)
+	rows, err := tx.Query(ctx, storekit.SQLf(`SELECT t.id FROM %s t WHERE %s ORDER BY t.id LIMIT %d`,
+		def.table, where, previewSampleLimit), args...)
 	if err != nil {
 		return err
 	}
 	defer rows.Close()
 	for rows.Next() {
-		var sid ids.UUID
-		if err := rows.Scan(&sid); err != nil {
+		var id ids.UUID
+		if err := rows.Scan(&id); err != nil {
 			return err
 		}
-		res.Sample = append(res.Sample, sid)
+		res.Sample = append(res.Sample, id)
 	}
 	if err := rows.Err(); err != nil {
 		return err
 	}
-
+	if len(def.readers) > 0 || def.historicalUnavailable {
+		res.HistoricalPreviewAvailable = false
+		return nil
+	}
 	fired, err := def.firedCount(ctx, tx, since)
 	if err != nil {
 		return err

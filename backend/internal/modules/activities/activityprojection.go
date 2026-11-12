@@ -28,6 +28,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/occurredday"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/kernel/provenance"
 	"github.com/margince/margince/backend/internal/shared/kernel/relstrength"
@@ -124,14 +125,17 @@ var activityProjection = []activityColumn{
 	{"a.channel_provider", func(s *activityScan) any { return &s.channelProvider }},
 	{"a.subject", func(s *activityScan) any { return &s.a.Subject }},
 	{"a.body", func(s *activityScan) any { return &s.a.Body }},
-	{"a.occurred_at", func(s *activityScan) any { return &s.a.OccurredAt }},
+	{occurredday.BookedStartSQL("a"), func(s *activityScan) any { return &s.a.OccurredAt }},
 	{"a.occurred_precision", func(s *activityScan) any { return &s.occurredPrecision }},
 	{"a.direction", func(s *activityScan) any { return &s.direction }},
 	{storekit.TaskDueSQL("a"), func(s *activityScan) any { return &s.a.DueAt }},
 	{"a.due_has_time", func(s *activityScan) any { return &s.dueHasTime }},
 	{storekit.TaskTypeSQL("a"), func(s *activityScan) any { return &s.taskType }},
 	{storekit.ReplyChannelSQL("a"), func(s *activityScan) any { return &s.replyChannel }},
-	{"a.remind_at", func(s *activityScan) any { return &s.a.RemindAt }},
+	{storekit.IntentInstantSQL("a", "remind"), func(s *activityScan) any { return &s.a.RemindAt }},
+	{storekit.IntentWireSQL("a", "due"), func(s *activityScan) any { return &s.a.DueIntent }},
+	{storekit.IntentWireSQL("a", "remind"), func(s *activityScan) any { return &s.a.RemindIntent }},
+	{storekit.IntentWireSQL("a", "meeting"), func(s *activityScan) any { return &s.a.MeetingIntent }},
 	{"a.assignee_id", func(s *activityScan) any { return &s.assigneeID }},
 	{"a.is_done", func(s *activityScan) any { return &s.a.IsDone }},
 	{"a.done_at", func(s *activityScan) any { return &s.a.DoneAt }},

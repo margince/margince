@@ -19,6 +19,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database"
@@ -33,11 +34,12 @@ import (
 // writers spell them and a typo in one produces an audit row whose before and
 // after describe different fields — which reads as a change nobody made.
 const (
-	auditFieldState        = "state"
-	auditFieldStateAt      = "state_at"
-	auditFieldSnoozedUntil = "snoozed_until"
-	auditFieldReopenOn     = "reopen_on"
-	auditFieldReopenRef    = "reopen_ref"
+	auditFieldState         = "state"
+	auditFieldStateAt       = "state_at"
+	auditFieldSnoozedUntil  = "snoozed_until"
+	auditFieldSnoozedIntent = "snoozed_intent"
+	auditFieldReopenOn      = "reopen_on"
+	auditFieldReopenRef     = "reopen_ref"
 )
 
 // snooze is what a rep is waiting for, carried as one value because the three
@@ -45,9 +47,10 @@ const (
 // may name. Passing them separately is how a caller writes two of the three and
 // hits a CHECK the client cannot read.
 type snooze struct {
-	on    values.ReopenCondition
-	until *time.Time
-	ref   *ids.UUID
+	on     values.ReopenCondition
+	until  *time.Time
+	ref    *ids.UUID
+	intent *crmcontracts.IntentTime
 }
 
 // MarkActed records that the rep acted on a queue item; the next run's
@@ -73,8 +76,16 @@ func (e *BriefEngine) MarkDismissed(ctx context.Context, itemID ids.UUID, now ti
 func (e *BriefEngine) MarkSnoozed(
 	ctx context.Context, itemID ids.UUID, on values.ReopenCondition,
 	until *time.Time, ref *ids.UUID, now time.Time,
+	intent *crmcontracts.IntentTime,
 ) (BriefRunItem, error) {
-	held := snooze{on: on, ref: ref}
+	if intent != nil {
+		resolved, err := storekit.ResolveIntentTime("snoozed_intent", intent)
+		if err != nil {
+			return BriefRunItem{}, err
+		}
+		until = resolved
+	}
+	held := snooze{on: on, ref: ref, intent: intent}
 	if on.WantsInstant() {
 		if until == nil {
 			return BriefRunItem{}, &values.ParseError{
@@ -83,6 +94,9 @@ func (e *BriefEngine) MarkSnoozed(
 			}
 		}
 		utc := until.UTC()
+		if !utc.After(now.UTC()) {
+			return BriefRunItem{}, &values.ParseError{Field: "snoozed_until", Code: "not_in_future", Message: "snoozed_until must lie in the future"}
+		}
 		held.until = &utc
 	} else if until != nil {
 		return BriefRunItem{}, &values.ParseError{
@@ -140,29 +154,20 @@ func (e *BriefEngine) markItem(ctx context.Context, itemID ids.UUID, state strin
 		}
 
 		markedAt := now.UTC()
-		// NULL rather than the empty string when the mark is not a snooze: the
-		// column's CHECK pairs its presence with the snoozed state, and an
-		// empty string is present.
-		var storedOn *string
-		if held.on != "" {
-			on := string(held.on)
-			storedOn = &on
-		}
-		if _, err := tx.Exec(ctx, `
-			UPDATE brief_item SET state = $2, state_at = $3, snoozed_until = $4,
-			       reopen_on = $5, reopen_ref = $6 WHERE id = $1`,
-			itemID, state, markedAt, held.until, storedOn, held.ref); err != nil {
+		if err := applyBriefMark(ctx, tx, itemID, state, markedAt, held); err != nil {
 			return err
 		}
 		before := map[string]any{
 			auditFieldState: item.State, auditFieldStateAt: item.StateAt,
-			auditFieldSnoozedUntil: item.SnoozedUntil,
-			auditFieldReopenOn:     item.ReopenOn, auditFieldReopenRef: item.ReopenRef,
+			auditFieldSnoozedUntil:  item.SnoozedUntil,
+			auditFieldSnoozedIntent: item.SnoozedIntent,
+			auditFieldReopenOn:      item.ReopenOn, auditFieldReopenRef: item.ReopenRef,
 		}
 		after := map[string]any{
 			auditFieldState: state, auditFieldStateAt: markedAt,
-			auditFieldSnoozedUntil: held.until,
-			auditFieldReopenOn:     held.on, auditFieldReopenRef: held.ref,
+			auditFieldSnoozedUntil:  held.until,
+			auditFieldSnoozedIntent: held.intent,
+			auditFieldReopenOn:      held.on, auditFieldReopenRef: held.ref,
 		}
 		if _, err := storekit.Audit(ctx, tx, "update", "brief_item", itemID, before, after); err != nil {
 			return err
@@ -170,6 +175,7 @@ func (e *BriefEngine) markItem(ctx context.Context, itemID ids.UUID, state strin
 		item.State = state
 		item.StateAt = &markedAt
 		item.SnoozedUntil = held.until
+		item.SnoozedIntent = held.intent
 		item.ReopenOn = held.on
 		item.ReopenRef = held.ref
 		return nil
@@ -253,14 +259,14 @@ func lockItemForMark(ctx context.Context, tx pgx.Tx, itemID ids.UUID, item *Brie
 		return ids.UUID{}, err
 	}
 	err = tx.QueryRow(ctx, fmt.Sprintf(`%s
-		SELECT bi.id, bi.deal_id, bi.rank, bi.composite, bi.feature_vector, %s, bi.state, bi.state_at, bi.snoozed_until, %s,
-		       bi.reopen_on, bi.reopen_ref, bi.returned_after_dismissal_on, %s, br.user_id
+		SELECT bi.id, bi.deal_id, bi.rank, bi.composite, bi.feature_vector, %s, bi.state, bi.state_at, `+storekit.IntentInstantColumnSQL("bi", "snoozed", "snoozed_until")+`, %s,
+		       bi.reopen_on, bi.reopen_ref, bi.returned_after_dismissal_on, %s, br.user_id, `+storekit.IntentWireSQL("bi", "snoozed")+`
 		FROM brief_item bi
 		JOIN brief_run br ON br.id = bi.brief_run_id
 		WHERE bi.id = $%d
 		FOR UPDATE OF bi`, withSQL, evidenceSQL, servedFindingSQL(evidenceSQL), returnedWithSQL, itemPos), args...).Scan(&item.ID, &item.DealID, &item.Rank, &item.Composite, &featuresRaw,
 		&item.EvidenceIDs, &item.State, &item.StateAt, &item.SnoozedUntil, &item.Finding,
-		&wasOn, &item.ReopenRef, &dismissedOn, &returnedWith, &owner)
+		&wasOn, &item.ReopenRef, &dismissedOn, &returnedWith, &owner, &item.SnoozedIntent)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return ids.UUID{}, apperrors.ErrNotFound
 	}

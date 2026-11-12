@@ -38,6 +38,7 @@ export const PROBLEM_CODE_COPY = new Map<string, MessageKey>([
   ["contact_holds_email", "common.duplicate.contactHolds"],
   ["slot_taken", "common.duplicate.slotTaken"],
   ["import_source_busy", "import.sourceBusy"],
+  ["website_form_busy", "webForms.handlingBusy"],
   // The server's detail lists the closed vocabulary by its wire spellings.
   ["win_evidence_required", "deals.winEvidenceRequired"],
   ["run_in_flight", "import.reason.run_in_flight"],

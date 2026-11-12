@@ -268,15 +268,17 @@ BEGIN
     RETURNING id INTO conn;
   END IF;
 
-  -- A link names an entry of the source's directory, so the finance-demo
-  -- directory (DEMO-0001 to DEMO-0050) is written first, with the create audit
-  -- row the sync writes. The next sync replaces each name with the source's.
+  -- The directory the links name, as the finance-demo unit lists it and with
+  -- the source the sync writes, which it never rewrites. A link must name an
+  -- entry of its connection's directory. Each new entry gets the create audit
+  -- row the sync writes. The first sync restates each entry, since the empty
+  -- sync_hash never matches its own.
   WITH entry AS (
     INSERT INTO finance_external_customer
            (connection_id, external_customer_id, display_name, sync_hash, source, captured_by)
-    SELECT conn, d.external_id, d.external_id, '', 'system', 'system:seed'
-      FROM (SELECT 'DEMO-' || lpad(g::text, 4, '0') AS external_id
-              FROM generate_series(1, 50) g) d
+    SELECT conn, 'DEMO-' || lpad(g::text, 4, '0'), 'Demo customer ' || lpad(g::text, 2, '0'),
+           '', 'offline_demo', 'system:seed'
+      FROM generate_series(1, 50) g
     ON CONFLICT (connection_id, external_customer_id) DO NOTHING
     RETURNING id, display_name, sync_hash
   )
@@ -386,6 +388,35 @@ BEGIN
   VALUES (activity_row, 'from', counterparty, contact_row);
 
   RAISE NOTICE 'seed-dev.sql: a customer is waiting on the Worklist';
+END $$;
+
+
+-- One shared mailbox, so every demo runs with one present: sales@demo.test,
+-- owned by no seat, read by DACH Sales, and held. The admin connect accepts
+-- imap only, so this row is written here. Its test_mailbox credential names no
+-- seat, so a sync where operations.allow_test_mailbox registered the
+-- connector brings in nothing. Idempotent on the provider and address.
+DO $$
+DECLARE
+  admin_id uuid;
+  dach_team_id uuid;
+BEGIN
+  IF pg_temp.installation_workspace() IS NULL THEN
+    RAISE NOTICE 'seed-dev.sql: no live workspace — run make seed-dev first';
+    RETURN;
+  END IF;
+  SELECT id INTO admin_id FROM app_user WHERE lower(email) = lower('admin@demo.test');
+  SELECT id INTO dach_team_id FROM team WHERE name = 'DACH Sales' AND archived_at IS NULL;
+  IF admin_id IS NULL OR dach_team_id IS NULL THEN
+    RAISE NOTICE 'seed-dev.sql: no admin or DACH Sales team yet — skipping the shared mailbox';
+    RETURN;
+  END IF;
+  INSERT INTO capture_connection (provider, user_id, connected_by, reader_team_id, account_label,
+                                  mail_posture, status, scopes, auth, share_acknowledged_at)
+  VALUES ('test_mailbox', NULL, admin_id, dach_team_id, 'sales@demo.test', 'held', 'connected', '{read}',
+          convert_to('{"user_id":"00000000-0000-0000-0000-000000000000"}', 'UTF8'), now())
+  ON CONFLICT (provider, lower(account_label)) WHERE user_id IS NULL DO NOTHING;
+  RAISE NOTICE 'seed-dev.sql: shared mailbox sales@demo.test, read by DACH Sales';
 END $$;
 
 COMMIT;

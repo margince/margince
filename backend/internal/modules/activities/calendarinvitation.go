@@ -208,7 +208,7 @@ func (s *Store) AnswerCalendarInvitation(
 		if err := recordInvitationAnswerTx(ctx, tx, id, current, reader, response); err != nil {
 			return err
 		}
-		return s.writeReaderState(id, stateHandled, nil, "", nil, ensureInboundMessage)(ctx, tx, capturedBy)
+		return s.writeReaderState(id, stateHandled, nil, "", nil, ensureInboundMessage, nil)(ctx, tx, capturedBy)
 	})
 	invitation.response = crmcontracts.EmailCalendarInvitationResponse(response)
 	return invitation.wire(), err

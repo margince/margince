@@ -1,0 +1,15 @@
+{
+  "verb": "handle_website_inquiries",
+  "checks": [
+    "activity.create",
+    "activity.read",
+    "activity.update",
+    "automation.read",
+    "automation.update",
+    "contact.read",
+    "integrations.read",
+    "integrations.update",
+    "lead.read",
+    "relationship.read"
+  ]
+}

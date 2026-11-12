@@ -153,7 +153,7 @@ func (s *Store) readHeldRow(ctx context.Context, tx pgx.Tx, id ids.UUID) (claime
 func (s *Store) heldRow(ctx context.Context, tx pgx.Tx, id ids.UUID, lock string) (claimedSend, bool, error) {
 	var c claimedSend
 	err := tx.QueryRow(ctx, `
-		SELECT scheduled_at, origin_kind, anchor_activity_id,
+		SELECT `+scheduleInstantSQL+`, origin_kind, anchor_activity_id,
 		       origin_links, also_links, payload, payload_version, version,
 		       scheduled_by, nullif(payload->>'pending_draft_id', '')::uuid, created_at
 		  FROM scheduled_send

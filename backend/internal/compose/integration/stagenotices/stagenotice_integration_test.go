@@ -3,13 +3,14 @@
 
 //go:build integration
 
-package compose
+package stagenotices
 
 import (
 	"context"
 	"os"
 	"strings"
 	"testing"
+	"unicode/utf8"
 
 	"github.com/jackc/pgx/v5"
 
@@ -20,11 +21,13 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/events"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/kernel/values"
 )
 
 const stageNoticeRepair = "1789335792_stage_notices_recover_the_change_they_report.up.sql"
 
 type stageNoticeFixture struct {
+	env                  *integration.Env
 	db                   *database.DB
 	conn                 *pgx.Conn
 	ctx, human           context.Context
@@ -56,14 +59,16 @@ func newStageNoticeFixture(t *testing.T, fromName, toName, dealName string) stag
 	if err != nil {
 		t.Fatal(err)
 	}
-	from, err := store.CreateStage(ctx, deals.CreateStageInput{PipelineID: ids.From[ids.PipelineKind](ids.UUID(pipeline.Id)), Name: fromName, Position: 1, Semantic: "open"})
+	from, err := store.CreateStage(ctx, deals.CreateStageInput{PipelineID: ids.From[ids.PipelineKind](ids.UUID(pipeline.Id)), Name: storableStageName(fromName), Position: 1, Semantic: "open"})
 	if err != nil {
 		t.Fatal(err)
 	}
-	to, err := store.CreateStage(ctx, deals.CreateStageInput{PipelineID: ids.From[ids.PipelineKind](ids.UUID(pipeline.Id)), Name: toName, Position: 2, Semantic: "open"})
+	to, err := store.CreateStage(ctx, deals.CreateStageInput{PipelineID: ids.From[ids.PipelineKind](ids.UUID(pipeline.Id)), Name: storableStageName(toName), Position: 2, Semantic: "open"})
 	if err != nil {
 		t.Fatal(err)
 	}
+	writeEarlierStageName(t, conn, ids.UUID(from.Id), fromName)
+	writeEarlierStageName(t, conn, ids.UUID(to.Id), toName)
 	deal, err := store.CreateDeal(ctx, deals.CreateDealInput{Name: dealName, PipelineID: ids.From[ids.PipelineKind](ids.UUID(pipeline.Id)), StageID: ids.From[ids.StageKind](ids.UUID(from.Id)), OwnerID: &actor, Source: "manual"})
 	if err != nil {
 		t.Fatal(err)
@@ -77,7 +82,7 @@ func newStageNoticeFixture(t *testing.T, fromName, toName, dealName string) stag
 	if err := conn.QueryRow(ctx, `SELECT envelope FROM event_outbox WHERE envelope->>'type' = 'deal.stage_changed'`).Scan(&event); err != nil {
 		t.Fatal(err)
 	}
-	return stageNoticeFixture{db: db, fromID: ids.UUID(from.Id), conn: conn, ctx: ctx, human: human, actor: actor, store: notices.NewStore(db), event: event, dealID: ids.UUID(deal.Id), toID: ids.UUID(to.Id)}
+	return stageNoticeFixture{env: e, db: db, fromID: ids.UUID(from.Id), conn: conn, ctx: ctx, human: human, actor: actor, store: notices.NewStore(db), event: event, dealID: ids.UUID(deal.Id), toID: ids.UUID(to.Id)}
 }
 
 func TestStageNoticeRecoversItsExactMoveAndLeavesUnlinkedNoticesAlone(t *testing.T) {
@@ -133,9 +138,46 @@ func TestStageNoticeRecoversItsExactMoveAndLeavesUnlinkedNoticesAlone(t *testing
 	}
 }
 
+// storableStageName is the name a stage is created with: the fixture's own when
+// it fits the label limit, else a stand-in that writeEarlierStageName replaces.
+func storableStageName(name string) string {
+	if utf8.RuneCountInString(name) <= values.TextLabelCharacters {
+		return name
+	}
+	return "Earlier"
+}
+
+// writeEarlierStageName models a name stored before stage names had a length
+// bound, which the guard now refuses for a new write. A name that fits is
+// left to the create, so the stage keeps its first version.
+func writeEarlierStageName(t *testing.T, conn *pgx.Conn, id ids.UUID, name string) {
+	t.Helper()
+	if utf8.RuneCountInString(name) <= values.TextLabelCharacters {
+		return
+	}
+	ctx := context.Background()
+	if err := pgx.BeginFunc(ctx, conn, func(tx pgx.Tx) error {
+		for _, step := range []struct {
+			sql  string
+			args []any
+		}{
+			{`ALTER TABLE stage DISABLE TRIGGER text_bound_update`, nil},
+			{`UPDATE stage SET name = $1 WHERE id = $2`, []any{name, id}},
+			{`ALTER TABLE stage ENABLE TRIGGER text_bound_update`, nil},
+		} {
+			if _, err := tx.Exec(ctx, step.sql, step.args...); err != nil {
+				return err
+			}
+		}
+		return nil
+	}); err != nil {
+		t.Fatal(err)
+	}
+}
+
 func (f stageNoticeFixture) repair(t *testing.T) {
 	t.Helper()
-	repair, err := os.ReadFile("../../migrations/core/" + stageNoticeRepair)
+	repair, err := os.ReadFile("../../../../migrations/core/" + stageNoticeRepair)
 	if err != nil {
 		t.Fatal(err)
 	}

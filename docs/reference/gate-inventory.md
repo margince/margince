@@ -142,6 +142,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `labelinstructions_test.go` | H2 | Every label the docs put in front of a session is one `.github/labels.yml` declares. |
 | `languageset_test.go` | H3 | The languages the product speaks are declared in more than one place, and they have to agree. |
 | `lastactivitymeetingrule_test.go` | H2 | last\_activity\_at on deal, contact, company and project skips a task and a canceled or no-show meeting, and counts only what has happened. |
+| `leadroutingfields_test.go` | H2 | _(no doc comment)_ |
 | `linkceilingparity_test.go` | H2 | The per-activity link ceiling is one number, wherever it is spelled. |
 | `listsortdeclared_test.go` | H2 | An operation that declares the shared `Sort` parameter has a handler that reads it. |
 | `listsortvocabulary_test.go` | H3 | A sort the list offers is a sort the server accepts. |
@@ -349,6 +350,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `ifmatchversion_test.go` | H2 | Every route taking `If-Match` is checked for a read that publishes the record's version, with the routes having none ratified by name. |
 | `importedeventconsumers_test.go` | H3 | Every consumer of a stream an import writes has decided what it does with an imported event. |
 | `insertattemptcaps_test.go` | H2 | An insert that names no MaxAttempts still has a retry ladder: River's default of 25, on attempt-to-the-fourth backoff, which reaches days. |
+| `intenttimecolumns_test.go` | H2 | The second form leaves a zone that also describes a legacy instant free while no wall clock is stored. |
 | `interactionunit_test.go` | H3 | Every count that becomes a relationship-strength number counts the shared unit, not rows. |
 | `jobbinding_test.go` | H2 | workspaceBindFloor guards against a vacuous pass. |
 | `jobcensus_test.go` | H3 | Every job kind api/jobs.yaml declares is wired in internal/compose, and every wired kind is declared. |
@@ -425,6 +427,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `presetcertdisclosure_test.go` | H2 | A shipped preset binds a model to every task, and the certification records grade each of those bindings. |
 | `profilefieldreaders_test.go` | H2 | contact\_profile\_field holds what a machine asserted about a contact, and ai\_feedback holds what a human then decided about that assertion. |
 | `projectionedgereaders_test.go` | H2 | The projection tier's read census. |
+| `projectkeyshape_test.go` | H1 | A project key has one shape, projectkey.CheckPattern, and Go reads it through projectkey.Shaped. |
 | `promptcertified_test.go` | H3 | Every prompt this build sends must be measured by a certification case. |
 | `promptlanguage_test.go` | H1 | Every prompt this product sends says what language to answer in, or says plainly why it does not need to. |
 | `promptvoice_test.go` | H1 | Every prompt either speaks in Margince's one voice or says why it does not. |
@@ -468,6 +471,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `sonarbinaryexclusions_test.go` | H3 | The scan's file-encoding obligation. |
 | `sonarwaivers_test.go` | H3 | A rule waiver in sonar-project.properties has to keep pointing at something, and there are two ways one stops, neither of which announces itself. |
 | `sourcecensus_test.go` | H2 | The two source censuses written in Go, and the corpus that holds both halves of each of them to the same cases. |
+| `stagenamereads_test.go` | H1 | A stage's name reaches a reader in their UI language. |
 | `stagingdecision_test.go` | H3 | Every path that stages a delivery records why it was allowed to. |
 | `statutoryfloorsingle_test.go` | H2 | The statutory retention floor is spelled once, and every destructive activity path applies that one spelling. |
 | `storedobjectdeclaration_test.go` | H2 | A writer that puts bytes into the object store declares them first, or says why its key needs no declaration. |
@@ -476,6 +480,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `tablelistpointer_test.go` | H1 | Every module names its entity-model page as its table list, and no Go comment copies that list. |
 | `tableownershipdiscovery_test.go` | H2 | Which packages the ownership gate walks, derived rather than remembered. |
 | `taskdeadlinereaders_test.go` | H2 | _(no doc comment)_ |
+| `textbounds_test.go` | H2 | The column must sit in the condition's bounds and in the refusal's. |
 | `toolongcarriesmax_test.go` | H2 | Every too\_long field refusal states the limit it refused at, so the screen can say "at most 2,000 characters" in the reader's language. |
 | `uiautonomyclaims_test.go` | H2 | No shipped UI string promises that nothing sends without a human's approval while the generated policy table says the send verbs auto-execute. |
 | `undoreasoncensus_test.go` | H2 | One refusal set, three spellings. |

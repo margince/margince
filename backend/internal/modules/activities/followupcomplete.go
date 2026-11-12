@@ -43,6 +43,8 @@ func (s *Store) CompleteFollowUpsTouchingLead(ctx context.Context, leadID ids.Le
 			WHERE l.activity_id = a.id AND l.%s = $%d)
 			AND a.source_system IS DISTINCT FROM $%d`,
 		leadLinkColumn, arg(leadID.UUID), arg(provenance.LeadRepliedSource))
+	// A new touch does not prove that a specific accepted inquiry was handled.
+	where += " AND NOT " + provenance.WebsiteInquiryTaskSQL("a")
 	return s.completeOpenSystemTasks(ctx, where, arg, &args)
 }
 
@@ -74,18 +76,8 @@ func (s *Store) CompleteOpenSystemTasksForContact(ctx context.Context, contactID
 	return s.completeOpenSystemTasksLinkedBy(ctx, contactLinkColumn, contactID.UUID)
 }
 
-// CompleteCarriedSystemTasks completes the open system-minted tasks among a
-// NAMED set of activities. A promotion names the ones it moved from the lead
-// onto the contact, which the lead.promoted payload carries. The review pass
-// names the review tasks whose findings are all settled.
-//
-// Named ids rather than a link column, which is what makes it exact for a
-// MERGE. The contact-keyed reading answers "every open system task on this
-// contact", and on a survivor that includes reminders the promotion never
-// touched; this answers "the tasks this promotion carried", which is a fact
-// about the promotion. The same system-minted predicate applies — source AND
-// captured_by together — so a task a caller planted is no more completable
-// through this door than through the other.
+// CompleteCarriedSystemTasks finishes carried follow-ups answered by promotion.
+// Accepted inquiries follow their contact until explicitly handled.
 func (s *Store) CompleteCarriedSystemTasks(ctx context.Context, activityIDs []ids.UUID) (int, error) {
 	if len(activityIDs) == 0 {
 		return 0, nil
@@ -95,7 +87,7 @@ func (s *Store) CompleteCarriedSystemTasks(ctx context.Context, activityIDs []id
 	// No link join: the ids ARE the selection. Which record they hang off is
 	// what the promotion just changed, so filtering on it would ask the
 	// question this door exists to stop asking.
-	where := storekit.SQLf("a.id = ANY($%d)", arg(activityIDs))
+	where := storekit.SQLf("a.id = ANY($%d)", arg(activityIDs)) + " AND NOT " + provenance.WebsiteInquiryTaskSQL("a")
 	return s.completeOpenSystemTasks(ctx, where, arg, &args)
 }
 
@@ -232,6 +224,7 @@ func (s *Store) completeOpenSystemTasksLinkedBy(ctx context.Context, column stri
 	where := storekit.SQLf(`EXISTS (SELECT 1 FROM activity_link l
 			WHERE l.activity_id = a.id AND l.%s = $%d)`, column, linkPos)
 	if column == contactLinkColumn {
+		where += " AND NOT " + provenance.WebsiteInquiryTaskSQL("a")
 		// Both sides are Postgres's clock: contact.created_at and
 		// activity.created_at are each DEFAULT now(), and reading them in one
 		// statement leaves no second clock for a caller to introduce. A contact

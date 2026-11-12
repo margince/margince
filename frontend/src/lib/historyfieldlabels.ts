@@ -37,6 +37,7 @@ const HISTORY_FIELD_LABELS = new Map<string, MessageKey>([
   ["display_name", "history.field.display_name"],
   ["domains", "history.field.domains"],
   ["due_at", "history.field.due_at"],
+  ["due_intent", "history.field.due_intent"],
   ["email", "history.field.email"],
   ["emails", "history.field.emails"],
   // A lead's one number, beside the contact's `phones` list below.
@@ -56,6 +57,7 @@ const HISTORY_FIELD_LABELS = new Map<string, MessageKey>([
   ["linkedin_url", "history.field.linkedin_url"],
   ["lost_reason", "history.field.lost_reason"],
   ["meeting_status", "history.field.meeting_status"],
+  ["meeting_intent", "history.field.meeting_intent"],
   ["call_outcome", "history.field.call_outcome"],
   ["name", "history.field.name"],
   ["occurred_at", "history.field.occurred_at"],
@@ -73,6 +75,7 @@ const HISTORY_FIELD_LABELS = new Map<string, MessageKey>([
   ["due_has_time", "history.field.due_has_time"],
   ["task_type", "history.field.task_type"],
   ["remind_at", "history.field.remind_at"],
+  ["remind_intent", "history.field.remind_intent"],
   ["score", "history.field.score"],
   ["score_override_reason", "history.field.score_override_reason"],
   ["size_band", "history.field.size_band"],

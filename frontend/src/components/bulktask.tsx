@@ -11,8 +11,8 @@ import { Button, Field, TextInput } from "../design-system/atoms";
 import { ConfirmModal } from "../design-system/confirmmodal";
 import { DateInput, type ISODate } from "../design-system/dateinput";
 import { Select } from "../design-system/select";
-import { dueInstant } from "../format/calendarday";
 import { useT } from "../i18n";
+import { taskDueFields } from "../lib/activitybody";
 import { useViewerZone } from "../lib/viewerzone";
 import { useRoster, useRosterHint, useRosterPartial } from "./entityref";
 
@@ -56,7 +56,7 @@ export function TaskVerb({
           setOpen(false);
           onReady({
             subject: subject.trim(),
-            due_at: due === "" ? undefined : dueInstant(due, readerZone),
+            ...(due === "" ? {} : taskDueFields(due, "", readerZone)),
             assignee_id: assigneeId === "" ? undefined : assigneeId,
           });
         }}

@@ -2,6 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import { useState } from "react";
+import type { components } from "../../api/schema";
 import { Button } from "../../design-system/atoms";
 import {
   DateInput,
@@ -28,6 +29,7 @@ export type Move = Readonly<{
   at: string;
   /** The zone to store; the reader's own when absent. */
   tz?: string;
+  intent?: components["schemas"]["IntentTime"];
 }>;
 
 /**
@@ -57,10 +59,23 @@ export function RescheduleMenu({
   const [time, setTime] = useState<ClockTime | "">("");
   // Empty or unparseable yields neither field, and the wire requires both. The
   // button refuses rather than sending half a schedule the server would 422.
-  const fields = scheduleFields(day && time ? `${day}T${time}` : "");
+  const choiceZone =
+    send.scheduled_intent?.timezone ?? send.scheduled_tz ?? readerZone;
+  const fields = scheduleFields(
+    day && time ? `${day}T${time}` : "",
+    undefined,
+    choiceZone,
+  );
 
-  const move = (at: string) => {
-    onMove({ id: send.id, version: send.version, at });
+  const move = (chosen: ReturnType<typeof scheduleFields>) => {
+    if (chosen.scheduled_at === undefined) return;
+    onMove({
+      id: send.id,
+      version: send.version,
+      at: chosen.scheduled_at,
+      tz: chosen.scheduled_tz,
+      intent: chosen.scheduled_intent,
+    });
     setOpen(false);
   };
 
@@ -72,8 +87,9 @@ export function RescheduleMenu({
       open={open}
       onOpenChange={(next) => {
         if (next) {
-          const [shownDay, shownTime] = localDateTimeValue(
-            send.scheduled_at,
+          const [shownDay, shownTime] = (
+            send.scheduled_intent?.wall_clock ??
+            localDateTimeValue(send.scheduled_at, choiceZone)
           ).split("T");
           setDay(isoOrBlank(shownDay));
           setTime(clockOrBlank(shownTime));
@@ -91,11 +107,19 @@ export function RescheduleMenu({
       }
     >
       <div className="scheduledsends-presets">
-        {schedulePresets(now).map((preset) => (
+        {schedulePresets(now, choiceZone).map((preset) => (
           <Button
             key={preset.key}
             variant="ghost"
-            onClick={() => move(preset.at.toISOString())}
+            onClick={() =>
+              move(
+                scheduleFields(
+                  localDateTimeValue(preset.at.toISOString(), choiceZone),
+                  undefined,
+                  choiceZone,
+                ),
+              )
+            }
           >
             <span>{t(preset.key)}</span>
             <span className="t-caption">
@@ -120,7 +144,7 @@ export function RescheduleMenu({
           disabled={fields.scheduled_at === undefined}
           pending={pending}
           onClick={() => {
-            if (fields.scheduled_at !== undefined) move(fields.scheduled_at);
+            if (fields.scheduled_at !== undefined) move(fields);
           }}
         >
           {t("sched.moveSave")}

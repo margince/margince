@@ -226,3 +226,19 @@ uploads:
 
 web:
   security_txt: null
+
+webforms:
+  throttle:
+    block_after_minutes: 5
+    cooldown_minutes: 15
+    form_expiry_seconds: 120
+    form_refresh_seconds: 30
+    max_cooldown_hours: 24
+    min_senders: 10
+    per_address_per_minute: 10
+    per_form_per_minute: 30
+    per_installation_per_minute: 600
+    per_ip_per_minute: 5
+    per_workspace_per_minute: 120
+    preflights_per_minute: 20
+    unknown_keys_per_minute: 60

@@ -7,9 +7,11 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"strings"
 	"time"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -38,7 +40,8 @@ type PartnerSetUp interface {
 
 var setUpPartnerCopy = toolCopy{
 	Purpose: "Set up a partner program on a company that has none, with its kinds, a relationship " +
-		"stage and a next step.",
+		"stage and a next step. The next step becomes a task on the company, held by the human " +
+		"you act for.",
 	Limits: "Waits for a human to approve. The margin tier is not an argument: it decides " +
 		"commission on every later deal, so a human sets it on the company's Partner tab. " +
 		"Refused when the company already has a partner program, and needs the company.update grant.",
@@ -80,8 +83,8 @@ func (t setUpPartner) Spec() mcp.ToolSpec {
 			"partner_kinds":{"type":"array","minItems":1,"items":{"type":"string","enum":["hosting","consulting","strategic","referral"]},"description":"Every kind the partner holds. Required unless partner_role is sent"},
 			"partner_role":{"type":"string","enum":["hosting","consulting","strategic"],"description":"Deprecated: send partner_kinds"},
 			"relationship_stage":{"type":"string","description":"An active key from the partner stage list (read_view listPartnerStages). Without one the program starts on the first candidate stage"},
-			"next_step":{"type":"string"},
-			"next_step_due_at":{"type":"string","format":"date"},
+			"next_step":{"type":"string","description":"The one next thing to do with the partner. Written as a task on the company, held by the human you act for"},
+			"next_step_due_at":{"type":"string","format":"date","description":"The day the next step is due. Needs next_step"},
 			"approval_id":{"type":"string","format":"uuid","description":"Set on approved retry"}},
 			"additionalProperties":false}`),
 		OutputSchema: schemaFor[crmcontracts.Partner](),
@@ -118,7 +121,19 @@ func decodeSetUpPartner(in json.RawMessage) (setUpPartnerArgs, error) {
 			return args, &BadArgsError{Field: "partner_kinds", Cause: errors.New("partner_kinds holds only hosting, consulting, strategic or referral")}
 		}
 	}
-	return args, nil
+	return args, refuseUnwritableNextStep(args)
+}
+
+// refuseUnwritableNextStep refuses before staging a next step its task could
+// not carry: an empty one, or a due day with no step.
+func refuseUnwritableNextStep(args setUpPartnerArgs) error {
+	if args.NextStep != nil && strings.TrimSpace(*args.NextStep) == "" {
+		return &BadArgsError{Field: "next_step", Cause: errors.New("next_step is empty; say what is to be done, or leave it out")}
+	}
+	if args.NextStep == nil && args.NextStepDueAt != nil {
+		return &BadArgsError{Field: "next_step_due_at", Cause: errors.New("next_step_due_at needs next_step: say what is due")}
+	}
+	return nil
 }
 
 // marginTierIsHumanOnly is the refusal for a call that names a tier.
@@ -133,6 +148,13 @@ func (t setUpPartner) StageInfo(ctx context.Context, in json.RawMessage) (StageI
 	args, err := decodeSetUpPartner(in)
 	if err != nil {
 		return StageInfo{}, err
+	}
+	// The step is written as a task, so the grant is asked before the card is
+	// staged rather than after its approval is spent.
+	if args.NextStep != nil {
+		if err := auth.Require(ctx, "activity", principal.ActionCreate); err != nil {
+			return StageInfo{}, err
+		}
 	}
 	return StageSubject(ctx, NewSetUpPartnerCall(t.p, t.partners, t.language,
 		SetUpPartnerCommand{CompanyID: args.CompanyID, Kinds: args.PartnerKinds, Stage: args.RelationshipStage}))

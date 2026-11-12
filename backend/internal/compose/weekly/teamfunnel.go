@@ -19,6 +19,7 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/platform/auth"
+	"github.com/margince/margince/backend/internal/platform/labeltranslation"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/stagemove"
 )
@@ -66,8 +67,8 @@ type stageEntries struct {
 // another system is left out, as the stage cohort leaves it out of its rate.
 var teamFunnelSQL = `
 	WITH entries AS (` + StageEntriesSQL("$%[1]d", "$%[2]d", "h.owner_id_at_change = ANY($%[3]d) AND (%[4]s)") + `)
-	SELECT e.owner_id, e.pipeline_id, p.name, e.stage_id, s.name,
-	       coalesce((SELECT n.name FROM stage n
+	SELECT e.owner_id, e.pipeline_id, p.name, e.stage_id, %[5]s,
+	       coalesce((SELECT %[6]s FROM stage n
 	                  WHERE n.pipeline_id = s.pipeline_id AND n."position" > s."position"
 	                  ORDER BY n."position", n.id LIMIT 1), ''),
 	       count(*),
@@ -89,7 +90,7 @@ var teamFunnelSQL = `
 	                           AND ` + StageMoveOrder("x") + ` > ` + StageMoveOrder("eh") + ` AND x.changed_at < $%[2]d
 	                         ORDER BY ` + StageMoveOrder("x") + ` LIMIT 1) nx
 	          WHERE ` + stagemove.MadeElsewhereSQL("nx.provenance") + `)
-	 GROUP BY e.owner_id, e.pipeline_id, p.name, e.stage_id, s.name, s.pipeline_id, s."position"`
+	 GROUP BY e.owner_id, e.pipeline_id, p.name, e.stage_id, s.name, s.name_translations, s.pipeline_id, s."position"`
 
 // measureTeamFunnel attaches each measured rep's top deviations.
 //
@@ -108,7 +109,10 @@ func measureTeamFunnel(ctx context.Context, tx pgx.Tx, review *TeamReview, end t
 	if err != nil {
 		return err
 	}
-	rows, err := tx.Query(ctx, fmt.Sprintf(teamFunnelSQL, from, to, who, orUnbounded(scope)), args...)
+	// The review is frozen in its recipient's language, so its stage names are too.
+	stageName := labeltranslation.SQLIn(review.Language, "s.name", "s.name_translations", arg)
+	nextName := labeltranslation.SQLIn(review.Language, "n.name", "n.name_translations", arg)
+	rows, err := tx.Query(ctx, fmt.Sprintf(teamFunnelSQL, from, to, who, orUnbounded(scope), stageName, nextName), args...)
 	if err != nil {
 		return fmt.Errorf("weekly: reading the team's funnel: %w", err)
 	}

@@ -15,10 +15,10 @@ input and output schema in folds below it. What a tool may do and whether a huma
 |---|---:|
 | Tools | 48 |
 | Resources | 14 |
-| Tool catalog | 232.1 KB |
+| Tool catalog | 233.3 KB |
 | Resource catalog | 5.5 KB |
-| Approx. wire tokens | 60834 |
-| Largest tool | `read_context` (11.5 KB) |
+| Approx. wire tokens | 61129 |
+| Largest tool | `read_context` (11.7 KB) |
 | Scopes rendered | `read`, `draft`, `write`, `send`, `enrich` |
 
 Those are the bytes on the wire: they carry each tool's output schema and the
@@ -32,11 +32,11 @@ tool adds to that listing, and what it costs each scheduled agent, agent by agen
 
 | Part | Bytes | Share | In a run's prompt? |
 |---|---:|---:|---|
-| Output schemas | 51.2 KB | 22% | **No**: a result's shape, never listed to a model |
+| Output schemas | 51.5 KB | 22% | **No**: a result's shape, never listed to a model |
 | Descriptions (incl. governance clause) | 54.1 KB | 23% | Yes, every step |
-| Input schemas | 115.1 KB | 49% | Yes, every step |
+| Input schemas | 115.8 KB | 49% | Yes, every step |
 | _Names, annotations, punctuation_ | 11.8 KB | 5% | Partly |
-| **Description + input schema** | **169.1 KB** | **72%** | **the recurring cost** |
+| **Description + input schema** | **170.0 KB** | **72%** | **the recurring cost** |
 
 Output schemas are the largest part of the total and are never sent to a model;
 descriptions and input schemas are what each step pays for.
@@ -68,7 +68,7 @@ descriptions and input schemas are what each step pays for.
 | [`archive_record`](#archive_record) | Archive a record |  |  | 300 |
 | [`bulk_update_records`](#bulk_update_records) | Change many records at once |  |  | 798 |
 | [`change_access`](#change_access) | Share records and set up members and teams |  |  | 706 |
-| [`change_activities`](#change_activities) | Log, plan and file activities |  |  | 2042 |
+| [`change_activities`](#change_activities) | Log, plan and file activities |  |  | 2116 |
 | [`change_attention`](#change_attention) | Act on proposals, notices and the weekly plan |  |  | 899 |
 | [`change_capture`](#change_capture) | Decide what comes into the CRM |  |  | 1080 |
 | [`change_compliance`](#change_compliance) | Record consent, stops, holds and privacy work |  |  | 879 |
@@ -78,8 +78,8 @@ descriptions and input schemas are what each step pays for.
 | [`change_record_parts`](#change_record_parts) | Change the parts of a record |  |  | 815 |
 | [`change_relationships`](#change_relationships) | Work a company's relationships and briefs |  |  | 503 |
 | [`change_reports`](#change_reports) | Work saved reports and the forecast |  |  | 1357 |
-| [`change_settings`](#change_settings) | Change how the workspace is set up |  |  | 1710 |
-| [`change_state`](#change_state) | Move a lead, deal, project or partner |  |  | 1930 |
+| [`change_settings`](#change_settings) | Change how the workspace is set up |  |  | 1730 |
+| [`change_state`](#change_state) | Move a lead, deal, project or partner |  |  | 1969 |
 | [`change_tags`](#change_tags) | Change tags |  |  | 562 |
 | [`check_availability`](#check_availability) | Check calendar availability | yes |  | 342 |
 | [`commit_import`](#commit_import) | Commit an import |  |  | 275 |
@@ -87,7 +87,7 @@ descriptions and input schemas are what each step pays for.
 | [`decide_approvals`](#decide_approvals) | Approve or reject staged actions |  |  | 429 |
 | [`draft_outbound`](#draft_outbound) | Draft an email or follow-ups |  |  | 517 |
 | [`enrich`](#enrich) | Enrich a company from its website |  |  | 395 |
-| [`find_records`](#find_records) | Find records | yes |  | 2024 |
+| [`find_records`](#find_records) | Find records | yes |  | 2033 |
 | [`list_approvals`](#list_approvals) | List what is waiting for a decision | yes | [`ui://margince/approval-queue.html`](#approval_queue_view) | 474 |
 | [`list_documents`](#list_documents) | List a record's documents or read one | yes |  | 331 |
 | [`preview_import`](#preview_import) | Preview an import |  |  | 1012 |
@@ -95,7 +95,7 @@ descriptions and input schemas are what each step pays for.
 | [`read_approval`](#read_approval) | Read one staged action in full | yes | [`ui://margince/approval.html`](#approval_view) | 154 |
 | [`read_attention`](#read_attention) | See what needs attention | yes | [`ui://margince/attention.html`](#attention_view) | 365 |
 | [`read_context`](#read_context) | Get the story so far | yes | [`ui://margince/context.html`](#context_view) | 413 |
-| [`read_details`](#read_details) | Read a record's panels and the day's lists | yes |  | 2211 |
+| [`read_details`](#read_details) | Read a record's panels and the day's lists | yes |  | 2230 |
 | [`read_forecast`](#read_forecast) | Read the forecast and how it moved | yes | [`ui://margince/forecast.html`](#forecast_view) | 978 |
 | [`read_import`](#read_import) | Read an import run or the import format | yes |  | 235 |
 | [`read_lists`](#read_lists) | Find and read lists | yes |  | 788 |
@@ -105,10 +105,10 @@ descriptions and input schemas are what each step pays for.
 | [`read_reports`](#read_reports) | Read sales reports | yes |  | 2784 |
 | [`read_tags`](#read_tags) | Read tags | yes |  | 358 |
 | [`read_view`](#read_view) | Read a view | yes |  | 683 |
-| [`read_workspace`](#read_workspace) | Read how this workspace is set up | yes |  | 2750 |
+| [`read_workspace`](#read_workspace) | Read how this workspace is set up | yes |  | 2755 |
 | [`resolve_duplicates`](#resolve_duplicates) | Merge two records or dismiss a flagged pair |  |  | 618 |
 | [`run_research`](#run_research) | Run AI work for your user |  |  | 776 |
-| [`schedule_meeting`](#schedule_meeting) | Invite to a meeting |  |  | 420 |
+| [`schedule_meeting`](#schedule_meeting) | Invite to a meeting |  |  | 456 |
 | [`send_outbound`](#send_outbound) | Send a message |  |  | 1695 |
 | [`update_record`](#update_record) | Update a record |  | [`ui://margince/update.html`](#update_view) | 626 |
 | [`whoami`](#whoami) | Who this passport acts for | yes |  | 129 |
@@ -1318,13 +1318,14 @@ names who takes part: leave off anyone whose invitation did not go out. Use sche
 a meeting still to come, change_state with move_deal when the same event moves a deal, so move and
 note are one change, and change_reports record_decision for a sales review's decision, which a note
 cannot track. Keep the activity id; a relink needs it. A staged answer's approval id is what the
-retry carries. (Governance: runs immediately for accept_document_fields, archive_document, attach,
-bring_back, cancel_send, check_new_send, check_send, decline_deal, discard_draft, hide_document,
-log, preview_sign_off, read_document_fields, read_transcript, ready, request_document_access,
-reschedule_send, save_draft, set_aside, set_audience, set_document_details, set_thread_audience,
-show_document, task, unready; decided per call from its arguments for relink, relink_many; the
-user's yes is needed for the action archive_document, so tell them what the call will change and get
-it before calling, unless they asked for this call themselves; requires passport scope "write".)
+retry carries. (Governance: runs immediately for accept_document_fields, archive_document,
+assign_inquiry, attach, bring_back, cancel_send, check_new_send, check_send, decline_deal,
+discard_draft, hide_document, log, preview_inquiry_assignment, preview_sign_off,
+read_document_fields, read_transcript, ready, request_document_access, reschedule_send, save_draft,
+set_aside, set_audience, set_document_details, set_thread_audience, show_document, task, unready;
+decided per call from its arguments for relink, relink_many; the user's yes is needed for the
+actions archive_document, assign_inquiry, so tell them what the call will change and get it before
+calling, unless they asked for this call themselves; requires passport scope "write".)
 ```
 
 <details><summary>Input schema</summary>
@@ -1337,6 +1338,7 @@ it before calling, unless they asked for this call themselves; requires passport
       "enum": [
         "accept_document_fields",
         "archive_document",
+        "assign_inquiry",
         "attach",
         "bring_back",
         "cancel_send",
@@ -1346,6 +1348,7 @@ it before calling, unless they asked for this call themselves; requires passport
         "discard_draft",
         "hide_document",
         "log",
+        "preview_inquiry_assignment",
         "preview_sign_off",
         "read_document_fields",
         "read_transcript",
@@ -1480,6 +1483,21 @@ it before calling, unless they asked for this call themselves; requires passport
         "due_has_time": {
           "type": "boolean"
         },
+        "due_intent": {
+          "properties": {
+            "timezone": {
+              "type": "string"
+            },
+            "wall_clock": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "timezone",
+            "wall_clock"
+          ],
+          "type": "object"
+        },
         "subject": {
           "type": "string"
         }
@@ -1490,7 +1508,7 @@ it before calling, unless they asked for this call themselves; requires passport
       "type": "object"
     },
     "id": {
-      "description": "accept_document_fields, archive_document, bring_back, cancel_send, check_send, decline_deal, discard_draft, hide_document, read_document_fields, read_transcript, request_document_access, reschedule_send, set_aside, set_audience, set_document_details, show_document only",
+      "description": "accept_document_fields, archive_document, assign_inquiry, bring_back, cancel_send, check_send, decline_deal, discard_draft, hide_document, preview_inquiry_assignment, read_document_fields, read_transcript, request_document_access, reschedule_send, set_aside, set_audience, set_document_details, show_document only",
       "type": "string"
     },
     "idempotency_key": {
@@ -1499,7 +1517,7 @@ it before calling, unless they asked for this call themselves; requires passport
       "type": "string"
     },
     "if_version": {
-      "description": "reschedule_send, save_draft, set_audience only: The version the caller read; the write is refused as skew if the record moved since",
+      "description": "assign_inquiry, reschedule_send, save_draft, set_audience only: The version the caller read; the write is refused as skew if the record moved since",
       "type": "integer"
     },
     "kind": {
@@ -1576,7 +1594,7 @@ it before calling, unless they asked for this call themselves; requires passport
       "type": "boolean"
     },
     "request_body": {
-      "description": "accept_document_fields, check_new_send, check_send, decline_deal, preview_sign_off, read_document_fields, reschedule_send, save_draft, set_aside, set_audience, set_document_details, set_thread_audience only: The chosen action's request body; read_workspace topic actions lists its shape",
+      "description": "accept_document_fields, assign_inquiry, check_new_send, check_send, decline_deal, preview_inquiry_assignment, preview_sign_off, read_document_fields, reschedule_send, save_draft, set_aside, set_audience, set_document_details, set_thread_audience only: The chosen action's request body; read_workspace topic actions lists its shape",
       "type": "object"
     },
     "scope": {
@@ -3130,10 +3148,10 @@ update_record to change one record. (Runs immediately; the user's yes is needed 
 activate_home_repair, apply_legacy_loss_reasons, archive_automation, archive_exit_criterion,
 archive_legal_entity, archive_pipeline, archive_saved_view, archive_stage, archive_web_form,
 control_data_task, create_custom_field, disconnect_finance_source, disconnect_provider,
-link_finance_customer, record_tax_rate, reorder_stages, retire_custom_field, set_ai_model_rate,
-set_fx_rate, update_automation, update_custom_field_options, update_exit_criterion, update_web_form,
-upsert_partner, so tell them what the call will change and get it before calling, unless they asked
-for this call themselves; requires passport scope "write".)
+handle_website_inquiries, link_finance_customer, record_tax_rate, reorder_stages,
+retire_custom_field, set_ai_model_rate, set_fx_rate, update_automation, update_custom_field_options,
+update_exit_criterion, update_web_form, upsert_partner, so tell them what the call will change and
+get it before calling, unless they asked for this call themselves; requires passport scope "write".)
 ```
 
 <details><summary>Input schema</summary>
@@ -3174,6 +3192,7 @@ for this call themselves; requires passport scope "write".)
         "delete_lead_source",
         "disconnect_finance_source",
         "disconnect_provider",
+        "handle_website_inquiries",
         "link_finance_customer",
         "mark_booking_page_shared",
         "propose_fx_rate_refresh",
@@ -3245,7 +3264,7 @@ for this call themselves; requires passport scope "write".)
       "type": "string"
     },
     "id": {
-      "description": "archive_automation, archive_exit_criterion, archive_legal_entity, archive_pipeline, archive_saved_view, archive_stage, archive_web_form, create_exit_criterion, delete_disqualify_reason, delete_lead_origin, delete_lead_source, put_product_translation, remove_legal_entity_logo, rename_custom_field, reorder_stages, restore_pipeline, retire_custom_field, retry_automation_run, update_acquisition_source, update_automation, update_custom_field_options, update_disqualify_reason, update_exit_criterion, update_lead_origin, update_lead_source, update_legal_entity, update_loss_reason, update_partner_stage, update_pipeline, update_review_template, update_saved_view, update_stage, update_web_form, upload_legal_entity_logo, upsert_partner only",
+      "description": "archive_automation, archive_exit_criterion, archive_legal_entity, archive_pipeline, archive_saved_view, archive_stage, archive_web_form, create_exit_criterion, delete_disqualify_reason, delete_lead_origin, delete_lead_source, handle_website_inquiries, put_product_translation, remove_legal_entity_logo, rename_custom_field, reorder_stages, restore_pipeline, retire_custom_field, retry_automation_run, update_acquisition_source, update_automation, update_custom_field_options, update_disqualify_reason, update_exit_criterion, update_lead_origin, update_lead_source, update_legal_entity, update_loss_reason, update_partner_stage, update_pipeline, update_review_template, update_saved_view, update_stage, update_web_form, upload_legal_entity_logo, upsert_partner only",
       "type": "string"
     },
     "idempotency_key": {
@@ -3270,7 +3289,7 @@ for this call themselves; requires passport scope "write".)
       "type": "string"
     },
     "request_body": {
-      "description": "activate_home_repair, apply_legacy_loss_reasons, confirm_site_read, control_data_task, create_acquisition_source, create_automation, create_custom_field, create_disqualify_reason, create_exit_criterion, create_lead_origin, create_lead_source, create_legal_entity, create_loss_reason, create_partner_stage, create_pipeline, create_saved_view, create_stage, decide_legacy_loss_reason, link_finance_customer, put_product_translation, record_tax_rate, rename_custom_field, reorder_pipelines, reorder_stages, save_booking_alias, save_booking_page, save_my_linkedin, save_own_company, set_ai_model_rate, set_ai_price_sync, set_fx_rate, update_acquisition_source, update_automation, update_custom_field_options, update_disqualify_reason, update_duplicate_settings, update_exit_criterion, update_follow_up_settings, update_lead_origin, update_lead_settings, update_lead_source, update_legal_entity, update_legal_review_settings, update_loss_reason, update_partner_stage, update_pipeline, update_review_template, update_saved_view, update_stage, update_web_form, upsert_partner only: The chosen action's request body; read_workspace topic actions lists its shape",
+      "description": "activate_home_repair, apply_legacy_loss_reasons, confirm_site_read, control_data_task, create_acquisition_source, create_automation, create_custom_field, create_disqualify_reason, create_exit_criterion, create_lead_origin, create_lead_source, create_legal_entity, create_loss_reason, create_partner_stage, create_pipeline, create_saved_view, create_stage, decide_legacy_loss_reason, handle_website_inquiries, link_finance_customer, put_product_translation, record_tax_rate, rename_custom_field, reorder_pipelines, reorder_stages, save_booking_alias, save_booking_page, save_my_linkedin, save_own_company, set_ai_model_rate, set_ai_price_sync, set_fx_rate, update_acquisition_source, update_automation, update_custom_field_options, update_disqualify_reason, update_duplicate_settings, update_exit_criterion, update_follow_up_settings, update_lead_origin, update_lead_settings, update_lead_source, update_legal_entity, update_legal_review_settings, update_loss_reason, update_partner_stage, update_pipeline, update_review_template, update_saved_view, update_stage, update_web_form, upsert_partner only: The chosen action's request body; read_workspace topic actions lists its shape",
       "type": "object"
     },
     "text_hash": {
@@ -3444,11 +3463,11 @@ requires passport scope "write".)
       "type": "string"
     },
     "next_step": {
-      "description": "set_up_partner only",
+      "description": "set_up_partner only: The one next thing to do with the partner. Written as a task on the company, held by the human you act for",
       "type": "string"
     },
     "next_step_due_at": {
-      "description": "set_up_partner only",
+      "description": "set_up_partner only: The day the next step is due. Needs next_step",
       "format": "date",
       "type": "string"
     },
@@ -5062,6 +5081,9 @@ next_cursor to read on.
           "type": "string"
         },
         "waiting_reply": {
+          "type": "string"
+        },
+        "website_form_id": {
           "type": "string"
         },
         "win_probability_max": {
@@ -7618,6 +7640,21 @@ Renders its result in [`ui://margince/attention.html`](#attention_view), visible
               "due_has_time": {
                 "type": "boolean"
               },
+              "due_intent": {
+                "properties": {
+                  "timezone": {
+                    "type": "string"
+                  },
+                  "wall_clock": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "timezone",
+                  "wall_clock"
+                ],
+                "type": "object"
+              },
               "quote": {
                 "type": "string"
               },
@@ -8743,6 +8780,21 @@ Renders its result in [`ui://margince/context.html`](#context_view), visible to 
                 "format": "uuid",
                 "type": "string"
               },
+              "snoozed_intent": {
+                "properties": {
+                  "timezone": {
+                    "type": "string"
+                  },
+                  "wall_clock": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "timezone",
+                  "wall_clock"
+                ],
+                "type": "object"
+              },
               "snoozed_until": {
                 "format": "date-time",
                 "type": "string"
@@ -9096,6 +9148,7 @@ needs the user now, and read_record for a record's own fields.
         "team_margince_changes",
         "teammate_weekly_plan",
         "voice_source_preview",
+        "website_inquiry_preview",
         "weekly_plan",
         "weekly_reviews",
         "win_evidence"
@@ -9203,7 +9256,7 @@ needs the user now, and read_record for a record's own fields.
       "type": "boolean"
     },
     "id": {
-      "description": "activity_pipeline, automation_preview, capture_triage, communication_review, company_brief, company_contracts, company_linkedin_reach, company_logo, company_logo_icon, company_scan, contact_brief, contact_consent, contact_consent_guard, contact_overrides, contact_profile_fields, contact_stops, contract, controller_mail_preview, deal_legal_reviews, deal_lines, deal_margince_changes, deal_products, deal_room_brief, deal_suggestion, document_extraction, dossier, enrichment_run, evidence, finance_invoice_pdf, growth_fit, handoff_assignee, import_problems, intro_requests, knowledge_document, lead_promotion_preview, lead_score, lead_signals, lead_stops, legal_entity_logo, legal_review, link_candidates, magic_line_records, meeting_availability, notice_case, notice_case_review, notice_source_evidence, notice_source_preview, offer_pdf, offered_values, ownership_offer, ownership_offer_candidates, ownership_request, product_translations, project_filing, relationship_nudge, scheduled_send, tag_suggestion, voice_source_preview, win_evidence only",
+      "description": "activity_pipeline, automation_preview, capture_triage, communication_review, company_brief, company_contracts, company_linkedin_reach, company_logo, company_logo_icon, company_scan, contact_brief, contact_consent, contact_consent_guard, contact_overrides, contact_profile_fields, contact_stops, contract, controller_mail_preview, deal_legal_reviews, deal_lines, deal_margince_changes, deal_products, deal_room_brief, deal_suggestion, document_extraction, dossier, enrichment_run, evidence, finance_invoice_pdf, growth_fit, handoff_assignee, import_problems, intro_requests, knowledge_document, lead_promotion_preview, lead_score, lead_signals, lead_stops, legal_entity_logo, legal_review, link_candidates, magic_line_records, meeting_availability, notice_case, notice_case_review, notice_source_evidence, notice_source_preview, offer_pdf, offered_values, ownership_offer, ownership_offer_candidates, ownership_request, product_translations, project_filing, relationship_nudge, scheduled_send, tag_suggestion, voice_source_preview, website_inquiry_preview, win_evidence only",
       "type": "string"
     },
     "kind": {
@@ -9277,7 +9330,7 @@ needs the user now, and read_record for a record's own fields.
       "type": "string"
     },
     "request_body": {
-      "description": "ai_budget_preview, ai_routing_preview, ai_task_overrides_preview, automation_preview, backfill_preview, filter_preview, mail_deal_repair_preview, notice_source_preview, voice_source_preview only: The chosen action's request body; read_workspace topic actions lists its shape",
+      "description": "ai_budget_preview, ai_routing_preview, ai_task_overrides_preview, automation_preview, backfill_preview, filter_preview, mail_deal_repair_preview, notice_source_preview, voice_source_preview, website_inquiry_preview only: The chosen action's request body; read_workspace topic actions lists its shape",
       "type": "object"
     },
     "rule": {
@@ -11800,7 +11853,8 @@ deal. Take every name verbatim; a custom field is spelled cf_<slug>.
         "system",
         "except_decisions",
         "changed_since_brief",
-        "upcoming"
+        "upcoming",
+        "website_inquiries"
       ],
       "type": "string"
     },
@@ -12486,6 +12540,21 @@ a human approves every call before it runs; requires passport scope "send".)
       "description": "RFC 3339 WITH Z or the user's offset (…T14:35:00Z); never invent an offset.",
       "format": "date-time",
       "type": "string"
+    },
+    "start_intent": {
+      "properties": {
+        "timezone": {
+          "type": "string"
+        },
+        "wall_clock": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "timezone",
+        "wall_clock"
+      ],
+      "type": "object"
     },
     "subject": {
       "type": "string"

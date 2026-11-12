@@ -5,6 +5,8 @@ package storekit
 
 import (
 	"errors"
+	"regexp"
+	"strconv"
 	"strings"
 
 	"github.com/jackc/pgx/v5/pgconn"
@@ -143,6 +145,43 @@ func ExclusionViolation(err error) (constraint string, ok bool) {
 func CheckViolation(err error) (constraint string, ok bool) {
 	return pgViolation(err, pgCheckViolation)
 }
+
+// TextBoundViolation reads a refusal of a text bound: the shared guard, which
+// names the column and its limit, or a CHECK named by TextMaxConstraint.
+func TextBoundViolation(err error) (column string, limit int, ok bool) {
+	var pgErr *pgconn.PgError
+	if !errors.As(err, &pgErr) {
+		return "", 0, false
+	}
+	column, detail := pgErr.ColumnName, pgErr.Detail
+	switch {
+	case pgErr.Code == pgStringDataRightTruncation && pgErr.ConstraintName == TextBoundConstraint:
+	case pgErr.Code == pgCheckViolation:
+		match := textMaxConstraint.FindStringSubmatch(pgErr.ConstraintName)
+		if match == nil {
+			return "", 0, false
+		}
+		column, detail = match[1], match[2]
+	default:
+		return "", 0, false
+	}
+	limit, parseErr := strconv.Atoi(detail)
+	if parseErr != nil {
+		return "", 0, false
+	}
+	return column, limit, true
+}
+
+// TextMaxConstraint names a CHECK that bounds column to limit characters, so
+// its refusal reports the field and the limit.
+func TextMaxConstraint(column string, limit int) string {
+	return column + "_text_max_" + strconv.Itoa(limit)
+}
+
+var textMaxConstraint = regexp.MustCompile(`^([a-z_][a-z0-9_]*)_text_max_([0-9]+)$`)
+
+// TextBoundConstraint is the constraint name refuse_oversized_text() reports.
+const TextBoundConstraint = "text_character_bound"
 
 // IsQueryCanceled detects the 57014 a statement raises when it stops before
 // answering: a spent statement_timeout, an operator's pg_cancel_backend, or

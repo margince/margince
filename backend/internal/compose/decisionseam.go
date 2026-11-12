@@ -13,9 +13,9 @@ import (
 	"github.com/jackc/pgx/v5"
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
+	"github.com/margince/margince/backend/internal/compose/dueday"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/activities"
-	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/modules/initiatives"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database"
@@ -272,15 +272,7 @@ func isDone(task crmcontracts.Activity) bool {
 // reviewDue is the end of the review day in the installation's calendar, as
 // a task picked for a day falls due.
 func reviewDue(ctx context.Context, tx pgx.Tx, day time.Time) (time.Time, error) {
-	zone, err := identity.TimezoneOf(ctx, tx)
-	if err != nil {
-		return time.Time{}, err
-	}
-	loc, err := time.LoadLocation(zone)
-	if err != nil {
-		return time.Time{}, fmt.Errorf("the installation's time zone %q: %w", zone, err)
-	}
-	return time.Date(day.Year(), day.Month(), day.Day(), 23, 59, 59, 0, loc), nil
+	return dueday.EndOf(ctx, tx, day.Format(time.DateOnly), "")
 }
 
 // splitOutcome reads the expected result and, after the marker, the

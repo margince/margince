@@ -116,7 +116,14 @@ func (s *Service) runDecisionEffect(ctx context.Context, id ids.ApprovalID, a ro
 		return nil
 	}
 	if effect, ok := s.effects[a.Kind]; ok && approve && serverProposed(a) {
-		if err := effect(storekit.WithReleasingApproval(releasing(ctx, id), id.UUID), id, a.ProposedChange, a.DiffHash); err != nil {
+		err := effect(storekit.WithReleasingApproval(releasing(ctx, id), id.UUID), id, a.ProposedChange, a.DiffHash)
+		if obsolete, ok := errors.AsType[*ObsoleteError](err); ok {
+			// The effect redeemed the card and found its work gone: it ran,
+			// wrote nothing, and the decider is told why.
+			s.recordEffectRan(ctx, id)
+			return obsolete
+		}
+		if err != nil {
 			return s.recordEffectFailure(ctx, a, effectFailureSentence(err),
 				fmt.Errorf("approved, but executing the %s effect failed: %w", a.Kind, err))
 		}

@@ -20,6 +20,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
@@ -75,15 +76,16 @@ type BriefRun struct {
 
 // BriefRunItem is one persisted queue entry with its per-rep state.
 type BriefRunItem struct {
-	ID           ids.UUID
-	DealID       ids.UUID
-	Rank         int
-	Composite    float64
-	Features     BriefFeatureVector
-	EvidenceIDs  []ids.UUID
-	State        string
-	StateAt      *time.Time
-	SnoozedUntil *time.Time
+	ID            ids.UUID
+	DealID        ids.UUID
+	Rank          int
+	Composite     float64
+	Features      BriefFeatureVector
+	EvidenceIDs   []ids.UUID
+	State         string
+	StateAt       *time.Time
+	SnoozedUntil  *time.Time
+	SnoozedIntent *crmcontracts.IntentTime
 	// ReopenOn is what the rep is waiting for, set only while snoozed. ReopenRef
 	// names the meeting when they are waiting for one.
 	ReopenOn  values.ReopenCondition

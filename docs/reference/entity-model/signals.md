@@ -90,6 +90,8 @@ The 2 tables owned by `signals`, as the migrations build them. [Back to the enti
 **Triggers**
 
 - `signal_owner_id_retirement_guard`: `BEFORE INSERT OR UPDATE FOR EACH ROW WHEN (((new.owner_id IS NOT NULL) AND ((new.archived_at IS NULL) AND (new.status = 'open')))) EXECUTE FUNCTION refuse_retired_member_work('owner_id')`
+- `text_bound_insert`: `AFTER INSERT FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL, '{"kind": 20000, "source": 20000, "status": 20000, "raw_ref": 20000, "summary": 500, "severity": 20000, "visibility": 20000, "captured_by": 20000, "entity_type": 20000, "fingerprint": 20000, "source_channel": 20000, "resolution_state": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"captured_by":20000,"entity_type":20000,"fingerprint":20000,"kind":20000,"raw_ref":20000,"resolution_state":20000,"severity":20000,"source":20000,"source_channel":20000,"status":20000,"summary":500,"visibility":20000}')`
+- `text_bound_update`: `AFTER UPDATE FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"kind": 20000, "source": 20000, "status": 20000, "raw_ref": 20000, "summary": 500, "severity": 20000, "visibility": 20000, "captured_by": 20000, "entity_type": 20000, "fingerprint": 20000, "source_channel": 20000, "resolution_state": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"captured_by":20000,"entity_type":20000,"fingerprint":20000,"kind":20000,"raw_ref":20000,"resolution_state":20000,"severity":20000,"source":20000,"source_channel":20000,"status":20000,"summary":500,"visibility":20000}')`
 - `trg_signal_entity_keys`: `BEFORE INSERT OR UPDATE FOR EACH ROW EXECUTE FUNCTION trg_signal_entity_keys()`
 - `trg_signal_updated`: `BEFORE UPDATE FOR EACH ROW WHEN (((NOT (((((old.entity_unkeyed IS DISTINCT FROM new.entity_unkeyed) OR (old.entity_deal_id IS DISTINCT FROM new.entity_deal_id)) OR (old.entity_company_id IS DISTINCT FROM new.entity_company_id)) OR (old.entity_contact_id IS DISTINCT FROM new.entity_contact_id)) OR (old.entity_project_id IS DISTINCT FROM new.entity_project_id))) OR ((to_jsonb(old.*) - ARRAY['entity_unkeyed', 'entity_deal_id', 'entity_company_id', 'entity_contact_id', 'entity_project_id']) IS DISTINCT FROM (to_jsonb(new.*) - ARRAY['entity_unkeyed', 'entity_deal_id', 'entity_company_id', 'entity_contact_id', 'entity_project_id'])))) EXECUTE FUNCTION set_updated_at_bump_version()`
 
@@ -130,3 +132,8 @@ The 2 tables owned by `signals`, as the migrations build them. [Back to the enti
 
 - `idx_sigres_signal`: `btree (signal_id, created_at DESC)`
 - `signal_resolution_pkey`: `unique, btree (id)`
+
+**Triggers**
+
+- `text_bound_insert`: `AFTER INSERT FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL, '{"note": 2000, "source": 20000, "outcome": 20000, "matched_on": 20000, "captured_by": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"captured_by":20000,"matched_on":20000,"note":2000,"outcome":20000,"source":20000}')`
+- `text_bound_update`: `AFTER UPDATE FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"note": 2000, "source": 20000, "outcome": 20000, "matched_on": 20000, "captured_by": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"captured_by":20000,"matched_on":20000,"note":2000,"outcome":20000,"source":20000}')`

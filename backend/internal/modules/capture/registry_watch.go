@@ -89,8 +89,7 @@ func (r *Registry) RenewWatch(ctx context.Context, connectionID ids.UUID, topic 
 	if err != nil {
 		return err
 	}
-	watcher, ok := c.(connector.Watcher)
-	if !ok {
+	if _, ok := c.(connector.Watcher); !ok {
 		return fmt.Errorf("capture: connector %q does not support push-watch renewal", name)
 	}
 	runCtx, err := r.runContext(ctx, name, grantedBy, connectionID)
@@ -98,9 +97,13 @@ func (r *Registry) RenewWatch(ctx context.Context, connectionID ids.UUID, topic 
 		return err
 	}
 	// A member who may no longer capture keeps no push subscription alive.
-	auth, err := r.syncCredential(runCtx, credentialRef, authBytes)
+	c, auth, err := r.runCredential(runCtx, c, grantedBy, credentialRef, authBytes)
 	if err != nil {
 		return err
+	}
+	watcher, ok := c.(connector.Watcher)
+	if !ok {
+		return fmt.Errorf("capture: connector %q does not support push-watch renewal", name)
 	}
 	// BY THE HANDLE, where there is one and the connector renews that way.
 	//

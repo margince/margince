@@ -1,5 +1,5 @@
 <!-- prose:plain -->
-<!-- describes: backend/internal/shared/ports/connector/calendarinterval.go backend/internal/modules/activities/scheduling_policy.go backend/internal/modules/capture/gcal/scheduling_lookup.go backend/internal/modules/activities/workinghours.go backend/internal/modules/activities/scheduling_occupancy.go backend/internal/modules/activities/scheduling_invitation.go backend/internal/modules/activities/scheduling_roster.go backend/internal/modules/activities/scheduling_park.go backend/internal/modules/activities/handlers_proposal.go backend/internal/modules/activities/booking_invitee.go backend/internal/compose/schedulingattendees.go backend/internal/modules/activities/scheduling_secrets.go backend/internal/modules/activities/scheduling_erasure.go backend/internal/modules/activities/scheduling_reminder.go backend/internal/modules/activities/meetingoutcomestart.go backend/internal/modules/activities/meetingmove.go backend/internal/modules/capture/gcal/scheduling.go backend/internal/modules/capture/graphcal/scheduling.go -->
+<!-- describes: backend/internal/shared/ports/connector/calendarinterval.go backend/internal/modules/activities/scheduling_policy.go backend/internal/modules/capture/gcal/scheduling_lookup.go backend/internal/modules/activities/workinghours.go backend/internal/modules/activities/scheduling_occupancy.go backend/internal/modules/activities/scheduling_invitation.go backend/internal/modules/activities/scheduling_roster.go backend/internal/modules/activities/scheduling_park.go backend/internal/modules/activities/handlers_proposal.go backend/internal/modules/activities/booking_invitee.go backend/internal/compose/schedulingattendees.go backend/internal/modules/activities/scheduling_secrets.go backend/internal/modules/activities/scheduling_erasure.go backend/internal/modules/activities/scheduling_reminder.go backend/internal/modules/activities/meetingoutcomestart.go backend/internal/modules/activities/meetingmove.go backend/internal/modules/capture/gcal/scheduling.go backend/internal/modules/capture/graphcal/scheduling.go backend/internal/modules/activities/activityintent.go -->
 # Scheduling
 
 What a meeting host sees is in the handbook page
@@ -58,6 +58,19 @@ Each request or move checks hours, notice, horizon, length and the live calendar
 host puts local holds in a line. The delivery worker checks the provider once more right before it
 writes. The provider calendar is not part of the database transaction. So another client can still
 take the time between that check and the write: the gap is narrowed, not closed.
+
+## A booked time keeps the clock it was picked in
+
+A booking or a move can send the local time and IANA zone the host or guest picked the time in
+(`start_intent`). That clock decides the start, and the meeting keeps the length the request gave
+it. The meeting stores the clock beside `occurred_at`. `occurred_at` keeps the start worked out
+with the zone rules of the day it was saved. The rule that stops two holds sharing time needs that
+fixed moment. A read of a meeting that is still booked works the start out again with current
+rules.
+
+Google gets the zone with the event times, so the event keeps the same local time there. Microsoft
+still gets the start in UTC. A move the provider reports, or a move that names only a UTC time,
+drops the clock. A whole-day meeting never keeps one.
 
 ## Delivery is a command, not a call
 

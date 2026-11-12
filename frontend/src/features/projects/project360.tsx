@@ -321,7 +321,13 @@ function useNextTaskVerbs(
     snooze: next.dueAt
       ? {
           onSnooze: () => {
-            const nextDue = snoozedDueAt(next.dueAt, task.due_has_time, zone);
+            const nextDue = snoozedDueAt(
+              next.dueAt,
+              task.due_has_time,
+              zone,
+              new Date(),
+              task.due_intent,
+            );
             if (nextDue)
               update.mutate({
                 id: next.activityId,

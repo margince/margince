@@ -1,0 +1,131 @@
+/** @vitest-environment happy-dom */
+
+import "@testing-library/jest-dom/vitest";
+import { cleanup, render, screen } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
+import { afterEach, expect, it, vi } from "vitest";
+import { LocaleProvider } from "../../i18n";
+import { cardRecords, editableStrings, StagedEditor } from "./approvaleditor";
+
+const roster = vi.hoisted(() => ({ isError: false }));
+
+const pickerRecords = vi.hoisted((): { last: unknown } => ({
+  last: undefined,
+}));
+
+vi.mock("../../components/assigneepicker", () => ({
+  useAssignableUserOptions: (_enabled: boolean, records: unknown) => {
+    pickerRecords.last = records;
+    return {
+      options: roster.isError
+        ? []
+        : [{ value: "seat-priya", label: "Priya Raman" }],
+      roster: { data: [], isError: roster.isError },
+    };
+  },
+}));
+
+vi.mock("../../components/entityref", () => ({
+  useRosterPartial: () => false,
+  useRosterPartialHint: () => undefined,
+  RosterFailedLine: ({ roster: read }: { roster: { isError: boolean } }) =>
+    read.isError ? <p>Colleagues could not be loaded</p> : null,
+}));
+
+afterEach(() => {
+  cleanup();
+  roster.isError = false;
+});
+
+function renderDoerEditor(onChange = vi.fn()) {
+  const fields = editableStrings("commitment_task", {
+    summary: "Send the pricing",
+    due_date: "2026-11-20",
+    doer_id: "",
+  });
+  render(
+    <LocaleProvider initial="en">
+      <StagedEditor
+        fields={fields}
+        draft={{
+          summary: "Send the pricing",
+          due_date: "2026-11-20",
+          doer_id: "",
+        }}
+        onChange={onChange}
+        pending={false}
+        onApprove={() => undefined}
+        onCancel={() => undefined}
+      />
+    </LocaleProvider>,
+  );
+  return onChange;
+}
+
+it("says so when the colleagues could not be loaded, instead of offering only Me", () => {
+  roster.isError = true;
+  renderDoerEditor();
+  expect(screen.getByText("Colleagues could not be loaded")).toBeVisible();
+});
+
+it("offers who does an accepted promise, kept with the reader by default", async () => {
+  const onChange = renderDoerEditor();
+  const picker = screen.getByRole("combobox", { name: "Who does this" });
+  expect(picker).toHaveTextContent("Me");
+  await userEvent.click(picker);
+  await userEvent.click(screen.getByRole("option", { name: "Priya Raman" }));
+  expect(onChange).toHaveBeenCalledWith("doer_id", "seat-priya");
+});
+
+it("offers a follow-up's words, day and doer, never its deal or evidence", () => {
+  const fields = editableStrings("deal_follow_up", {
+    deal_id: "0192f0a0-0000-7000-8000-000000000001",
+    subject: "Follow up",
+    body: "Ask about the pilot",
+    due_date: "2026-11-20",
+    evidence_kind: "call",
+    doer_id: "",
+  });
+  expect(fields.map((field) => field.field)).toEqual([
+    "subject",
+    "body",
+    "due_date",
+    "doer_id",
+  ]);
+});
+
+it("offers no doer on a card staged before the doer existed", () => {
+  const fields = editableStrings("commitment_task", {
+    summary: "Send the pricing",
+    due_date: "2026-11-20",
+  });
+  expect(fields.map((field) => field.field)).not.toContain("doer_id");
+});
+
+it("hands the card's own records to the doer picker, so their named colleagues lead it", () => {
+  const records = cardRecords({
+    links: [
+      { EntityType: "contact", EntityID: "c-1" },
+      { EntityType: "company", EntityID: "co-1" },
+    ],
+  });
+  expect(records).toEqual([{ type: "company", id: "co-1" }]);
+  expect(cardRecords({ deal_id: "deal-1" })).toEqual([
+    { type: "deal", id: "deal-1" },
+  ]);
+  const fields = editableStrings("commitment_task", { doer_id: "" });
+  render(
+    <LocaleProvider initial="en">
+      <StagedEditor
+        fields={fields}
+        records={records}
+        draft={{ doer_id: "" }}
+        onChange={() => undefined}
+        pending={false}
+        onApprove={() => undefined}
+        onCancel={() => undefined}
+      />
+    </LocaleProvider>,
+  );
+  expect(pickerRecords.last).toEqual(records);
+});

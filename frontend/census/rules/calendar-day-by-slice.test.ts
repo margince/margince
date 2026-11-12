@@ -69,7 +69,7 @@ describe("the calendar-day-by-slice rule", () => {
     expect(findings).toEqual([
       "screens/planted.tsx#today:1",
       "features/ai/aiusage.tsx#monthAround: ratified 2, found 0",
-      "format/timezone.ts#shifted: ratified 1, found 0",
+      "format/calendarday.ts#shifted: ratified 1, found 0",
       "mcp-apps/values.ts#day: ratified 1, found 2",
     ]);
   });

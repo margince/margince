@@ -65,6 +65,8 @@ type CreateContactInput struct {
 	// gap visible instead of leaving the question unasked.
 	Acquisition Acquisition
 	FullName    string
+	// Source names retain the complete imported identity rather than a typed label.
+	sourceNames bool
 	// CreatedFromActivityID is the record this create was read out of.
 	CreatedFromActivityID *ids.UUID
 	FirstName             *string
@@ -157,6 +159,11 @@ func (s *Store) CreateContactTx(ctx context.Context, tx pgx.Tx, in CreateContact
 // attribution the write shape stamps. Both entry points call it, so neither
 // can drift from the other's validation.
 func (s *Store) readyContactCreate(ctx context.Context, in *CreateContactInput) (string, error) {
+	if !in.sourceNames && storekit.ImportRunOf(ctx) == nil && !storekit.Synced(ctx) {
+		if err := checkTypedContactNames(in.FullName, in.FirstName, in.LastName); err != nil {
+			return "", err
+		}
+	}
 	if err := parseContactContacts(in.Emails, in.Phones); err != nil {
 		return "", err
 	}
@@ -342,10 +349,11 @@ func (s *Store) EnsureContactByEmail(ctx context.Context, fullName, email, sourc
 		return id, err
 	}
 	created, err := s.CreateContact(ctx, CreateContactInput{
-		FullName: fullName,
-		Emails:   []ContactEmailInput{{Email: email, EmailType: emailTypeWork, IsPrimary: true}},
-		Source:   source,
-		erasure:  erasure,
+		FullName:    fullName,
+		sourceNames: true,
+		Emails:      []ContactEmailInput{{Email: email, EmailType: emailTypeWork, IsPrimary: true}},
+		Source:      source,
+		erasure:     erasure,
 	})
 	if err == nil {
 		return ids.UUID(created.Id), nil

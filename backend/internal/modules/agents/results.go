@@ -443,7 +443,8 @@ type SendEmailResult struct {
 	// a caller can read, move or cancel it. Zero for a message sent now.
 	ScheduledSendID ids.UUID `json:"scheduled_send_id,omitempty"`
 	// ScheduledAt is when a deferred message is due. Empty for one sent now.
-	ScheduledAt string `json:"scheduled_at,omitempty"`
+	ScheduledAt     string                   `json:"scheduled_at,omitempty"`
+	ScheduledIntent *crmcontracts.IntentTime `json:"scheduled_intent,omitempty"`
 	// Status is what the path accepted, not what the recipient did: "accepted"
 	// means it left, "scheduled" means it will leave at ScheduledAt and every
 	// gate will be asked again then. Neither means it arrived.

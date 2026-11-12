@@ -5,6 +5,7 @@ package compose
 
 import (
 	"reflect"
+	"strconv"
 	"strings"
 	"testing"
 
@@ -141,7 +142,8 @@ func TestADescriptionOverTheColumnsLengthIsAProblemOfItsCell(t *testing.T) {
 	}
 	over := atCap + "x"
 	_, problem := checkRow(migration.ObjectCompany, map[string]string{fieldDisplayName: "Acme", descriptionField: over}, importCatalog{})
-	if problem == nil || problem.Target != descriptionField || !strings.Contains(problem.Message, "501") {
+	if problem == nil || problem.Target != descriptionField || problem.Why.Code != migration.ReasonDescriptionTooLong ||
+		!strings.Contains(problem.Message, strconv.Itoa(contacts.CompanyDescriptionMax+1)) {
 		t.Fatalf("problem = %+v, want the description refused with its length", problem)
 	}
 }

@@ -1,0 +1,8 @@
+{
+  "verb": "preview_website_inquiries",
+  "checks": [
+    "activity.create",
+    "automation.read",
+    "integrations.read"
+  ]
+}

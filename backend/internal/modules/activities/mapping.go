@@ -197,14 +197,16 @@ func activityUpdateInput(req crmcontracts.UpdateActivityRequest, ifVersion *int6
 		// Checked by the store, which also decides what a new time alone means.
 		OccurredPrecision: (*string)(req.OccurredPrecision),
 		DueAt:             req.DueAt,
+		DueIntent:         req.DueIntent,
+		RemindIntent:      req.RemindIntent,
+		MeetingIntent:     req.MeetingIntent,
 		DueHasTime:        req.DueHasTime,
 		TaskType:          req.TaskType,
 		RemindAt:          req.RemindAt,
 		AssigneeID:        idArg[ids.UserKind](req.AssigneeId),
 		IsDone:            req.IsDone,
-		// Carried, not checked here: the kind this must pair with belongs to the
-		// stored row, and only the store has read it. UpdateActivity refuses the
-		// mismatch with the same MeetingStatusKindError create raises.
+		// Carried, not checked: the kind it pairs with is on the stored row. The
+		// store refuses a mismatch with create's MeetingStatusKindError.
 		MeetingStatus:    meetingStatusArg(req.MeetingStatus),
 		CallOutcome:      callOutcomeArg(req.CallOutcome),
 		IfVersion:        ifVersion,
@@ -242,20 +244,13 @@ func LogActivityInputFrom(req crmcontracts.CreateActivityRequest) (LogActivityIn
 	return logActivityInput(req, provenanceAdmission{})
 }
 
-// provenanceAdmission says which reserved identities THIS writer may spell.
-//
-// Two writers, two disjoint sets, and neither is "the reserved names": the
-// engine stamps its quiet-account reminders, the importer stamps its own
-// namespace, and each must stay refused the other's. A single boolean would
-// have opened both sets to whichever writer asked.
-//
-// The zero value admits nothing, so a door that says nothing is the client
-// door — the safe default, and what every existing caller gets.
-type provenanceAdmission struct{ engineReminder, importer bool }
+// The engine and importer each admit only their own reserved identities.
+// Keeping these sets apart prevents either writer from impersonating the other.
+type provenanceAdmission struct{ engineTask, importer bool }
 
 // admits answers whether this writer may spell one reserved source system.
 func (a provenanceAdmission) admits(sourceSystem string) bool {
-	if a.engineReminder && provenance.EngineReminderSource(sourceSystem) {
+	if a.engineTask && provenance.EngineTaskSource(sourceSystem) {
 		return true
 	}
 	return a.importer && provenance.ImporterNamespace(sourceSystem)
@@ -273,16 +268,9 @@ func LogActivityInputFromImporter(req crmcontracts.CreateActivityRequest) (LogAc
 	return logActivityInput(req, provenanceAdmission{importer: true})
 }
 
-// logActivityInputAllowingReminderIdentity is LogActivityInputFrom for the
-// automation engine's own reminder write, which must stamp an identity no
-// client may spell. provider.go's logInputForPrincipal decides who reaches it,
-// on the principal rather than on anything in the request.
-//
-// One body behind both, because the guard is the only difference: a second
-// mapping beside this one would be a second set of rules about the reserved
-// namespace, and the two would drift.
-func logActivityInputAllowingReminderIdentity(req crmcontracts.CreateActivityRequest) (LogActivityInput, error) {
-	return logActivityInput(req, provenanceAdmission{engineReminder: true})
+// The system-only door changes admission, while the ordinary mapper keeps all other checks.
+func logActivityInputAllowingTaskIdentity(req crmcontracts.CreateActivityRequest) (LogActivityInput, error) {
+	return logActivityInput(req, provenanceAdmission{engineTask: true})
 }
 
 // refuseReservedProvenance guards the two provenance fields on a create wire.
@@ -353,7 +341,6 @@ func logActivityInput(req crmcontracts.CreateActivityRequest, adm provenanceAdmi
 	if err := validateDealFiling(in.Kind, in.DealFiling); err != nil {
 		return LogActivityInput{}, err
 	}
-
 	if err := optionalFieldsFrom(req, &in); err != nil {
 		return LogActivityInput{}, err
 	}
@@ -416,10 +403,7 @@ func optionalFieldsFrom(req crmcontracts.CreateActivityRequest, in *LogActivityI
 		id := ids.UUID(*req.RequestActivityId)
 		in.RequestActivityID = &id
 	}
-	// The caller states the transport; nothing infers it. The predecessor of this
-	// read the provider back out of the kind, which was only ever a translation of
-	// an input shape that could not say what it meant — and since ADR-0107/A158 the
-	// kind does not name a transport at all.
+	// The caller states the transport; the kind does not name one.
 	if req.ChannelProvider != nil {
 		in.ChannelProvider = *req.ChannelProvider
 	}
@@ -430,10 +414,15 @@ func optionalFieldsFrom(req crmcontracts.CreateActivityRequest, in *LogActivityI
 	if req.OccurredPrecision != nil {
 		in.OccurredPrecision = string(*req.OccurredPrecision)
 	}
+	// After the precision: a chosen meeting start refuses a whole-day meeting.
+	in.DueIntent, in.RemindIntent, in.MeetingIntent = req.DueIntent, req.RemindIntent, req.MeetingIntent
+	if err := in.admitPickedTimes(); err != nil {
+		return err
+	}
 	if err := checkMeetingStatusKind(in.Kind, meetingStatusOf(req.MeetingStatus)); err != nil {
 		return err
 	}
-	if err := checkTaskFieldsKind(in.Kind, taskFields{dueAt: req.DueAt, remindAt: req.RemindAt, assignee: idArg[ids.UserKind](req.AssigneeId)}); err != nil {
+	if err := checkTaskFieldsKind(in.Kind, taskFields{dueAt: in.DueAt, remindAt: in.RemindAt, assignee: in.AssigneeID}); err != nil {
 		return err
 	}
 	if req.MeetingStatus != nil {

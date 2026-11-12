@@ -21,7 +21,7 @@ function Delete() {
 }
 
 const meta = {
-  title: "Settings/AI/Automations/Delete an automation",
+  title: "Settings/Data/Automations/Delete an automation",
   component: Delete,
 } satisfies Meta<typeof Delete>;
 export default meta;

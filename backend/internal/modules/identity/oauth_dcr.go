@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"slices"
+	"strings"
 )
 
 // oauthGrantTypesSupported is what discovery advertises and what a
@@ -60,6 +61,7 @@ func parseDCR(members map[string]json.RawMessage) (dcrRequest, *dcrRefusal) {
 	if req.ResponseTypes, err = dcrMember[[]string](members, "response_types"); err != nil {
 		return dcrRequest{}, err
 	}
+	req.ClientName = strings.TrimSpace(req.ClientName)
 	return req, req.validate()
 }
 
@@ -80,6 +82,9 @@ func (req dcrRequest) validate() *dcrRefusal {
 		return &dcrRefusal{
 			oauthErrInvalidClientMetadata, "client_name and redirect_uris are required", "client_name, redirect_uris",
 		}
+	}
+	if !validAgentClientName(req.ClientName) {
+		return &dcrRefusal{oauthErrInvalidClientMetadata, fmt.Sprintf("client_name must use at most %d characters", maxAgentClientNameRunes), "client_name"}
 	}
 	for _, raw := range req.RedirectURIs {
 		if !validRedirectURI(raw) {
