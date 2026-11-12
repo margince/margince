@@ -243,6 +243,7 @@
     "disqualifyLead": "business",
     "downloadAttachment": "business",
     "downloadCorpusDocument": "business",
+    "downloadFinanceInvoicePdf": "capture",
     "downloadImportProblems": "business",
     "downloadImportTemplate": "business",
     "downloadJurisdictionDocument": "workspace_settings",
@@ -1149,6 +1150,7 @@
     "downloadCorpusDocument": "knowledge",
     "downloadDataSubjectPackage": "privacy_requests",
     "downloadExportBundle": "exports",
+    "downloadFinanceInvoicePdf": "finance_source",
     "downloadImportProblems": "imports",
     "downloadImportTemplate": "imports",
     "downloadJurisdictionDocument": "installation",
@@ -2476,6 +2478,9 @@
     ],
     "download_corpus_document": [
       "knowledge"
+    ],
+    "download_finance_invoice_pdf": [
+      "finance_source"
     ],
     "download_import_problems": [
       "imports"
@@ -4551,6 +4556,9 @@
     ],
     "download_corpus_document": [
       "business"
+    ],
+    "download_finance_invoice_pdf": [
+      "capture"
     ],
     "download_import_problems": [
       "business"

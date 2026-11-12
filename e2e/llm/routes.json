@@ -485,6 +485,7 @@
         "evidence": "get_claim_evidence",
         "field_history": "get_field_history",
         "filter_preview": "preview_filter",
+        "finance_invoice_pdf": "download_finance_invoice_pdf",
         "forecast_assurance_preview": "preview_forecast_assurance",
         "forecast_share_csv": "export_forecast_share",
         "forecast_shared_reading": "open_forecast_share",

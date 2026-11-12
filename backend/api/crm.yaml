@@ -5499,6 +5499,36 @@ paths:
         '404': { $ref: '#/components/responses/NotFound' }
         '422': { $ref: '#/components/responses/ValidationError' }
 
+  /finance/invoices/{id}/pdf:
+    parameters:
+      - $ref: '#/components/parameters/Id'
+    get:
+      tags: [Finance]
+      operationId: downloadFinanceInvoicePdf
+      security: [ { bearerAuth: [] }, { cookieAuth: [] } ]
+      x-mcp-tool: { verb: download_finance_invoice_pdf, router: read_details, action: finance_invoice_pdf, tier: auto_execute, scope: read, served_by: route }
+      summary: Open a mirrored invoice's own PDF, fetched from the accounting source.
+      description: |
+        The id is a mirrored invoice's, as `recent_invoices` on the finance summary carries it.
+        The document is read from the connected source on each request and is never stored.
+        The caller needs the finance read grant and must be able to see the invoice's company;
+        an invoice they cannot see answers 404 like one that does not exist. 422 when the
+        connected source serves no documents (`invoice_documents` on the summary is false),
+        and 502 when the source could not be reached or answered something other than a PDF.
+      responses:
+        '200':
+          description: The PDF bytes; Content-Disposition names the file.
+          content:
+            application/pdf:
+              schema: { type: string, format: binary }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+        '502':
+          description: The accounting source could not be reached, or did not answer with a PDF.
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
   /finance/source:
     get:
       tags: [Finance]
@@ -15649,6 +15679,10 @@ paths:
         in: query
         schema: { type: string, format: date }
         description: Filter by the first local day of the target period.
+      - name: plan_owned
+        in: query
+        schema: { type: boolean }
+        description: Filter by whether a published sales goal plan owns the target, as one month of a seller's year. Such a target changes only through the plan. Omitted includes both.
     post:
       tags:
       - Reports
@@ -47971,6 +48005,11 @@ components:
         truncated:
           type: boolean
           description: True when the account has more invoices than `recent_invoices` carries.
+        invoice_documents:
+          type: boolean
+          description: >-
+            True when the connected source serves each invoice's own document, which
+            `downloadFinanceInvoicePdf` opens. False or absent means the card offers none.
 
     FinanceSummaryState:
       type: string
@@ -62646,6 +62685,15 @@ components:
         target_revision:
           type: integer
           format: int64
+        target_source:
+          type: string
+          enum: [target, sales_goals]
+          x-extensible-enum: true
+          description: |
+            Present with `target`. `target`: a target set for this scope and
+            period. `sales_goals`: the figure is a seller's monthly sales
+            goal, or the sum of the monthly sales goals of the scope's sellers
+            over the target interval. A sum has no `target_revision`.
         attainment: *id003
         coverage:
           $ref: '#/components/schemas/ReportingCoverage'
@@ -63298,6 +63346,7 @@ components:
         name: { type: string }
         state: { $ref: '#/components/schemas/SalesGoalPlanState' }
         total_minor: { type: integer, format: int64, description: 'The published yearly goal.' }
+        draft_total_minor: { type: integer, format: int64, description: 'The yearly sum of a complete draft, for a reader who may read the draft.' }
         can_edit: { type: boolean }
     SalesGoalRoster:
       type: object
@@ -65644,6 +65693,12 @@ components:
             Whether this caller may record a forecast call or issue a share about this
             population. Absent from a server that predates the field; a screen then offers the
             controls and the write route decides.
+        measurable:
+          type: boolean
+          description: >-
+            Whether this population is within the caller's own record access: the workspace
+            for a seat that reads every record, a team for its members. Analytics offers the
+            totals of a scope outside it. Progress reads only a scope inside it.
       additionalProperties: false
     AnalyticsCapabilities:
       type: object

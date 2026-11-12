@@ -454,8 +454,8 @@ checked against the full budget for names, so a name a unit takes today stays go
   workspace. It would be the same message from a different sender, with nothing different on screen.
 
 - **An accounting source to read**: a `FinanceSource` declares a provider and three read functions:
-  `Check`, `Customers` and `InvoicesFor`. The core ships no source of its own. The demo source is the
-  unit `extensions/finance-demo`, and a real accounting system is one more unit of the same shape.
+  `Check`, `Customers` and `InvoicesFor`. An optional `InvoiceDocument` returns an invoice's PDF.
+  The core ships no source of its own. The demo source is the unit `extensions/finance-demo`, and a real accounting system is one more unit of the same shape.
 
   The core owns everything that is the same for every vendor. An admin connects a source and links its
   customers to companies on the **Integrations** settings page. The sync, the mirror and the figures on

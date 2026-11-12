@@ -197,6 +197,9 @@ func (s *Service) applyTargets(ctx context.Context, tx pgx.Tx, evaluation *Evalu
 	if err != nil {
 		return err
 	}
+	if err := s.holdGoals(ctx, tx, reach, out.Context, keys, held); err != nil {
+		return err
+	}
 	applyMetricTargets(ctx, out, evaluation.Forecast, held)
 	if len(pointOwners) > 0 && !reached {
 		if reach.owners, err = s.authority.MeasurableOwnerSet(ctx, tx); err != nil {
@@ -236,7 +239,11 @@ func applyMetricTargets(ctx context.Context, out *crmcontracts.ReportingEvaluati
 		}
 		value := float64(target.Definition.Value)
 		metric.Target = &value
-		metric.TargetRevision = &target.Revision
+		source := targetSource(target)
+		if !fromGoals(target) {
+			metric.TargetRevision = &target.Revision
+		}
+		metric.TargetSource = &source
 		if value > 0 && metric.TargetActual != nil {
 			attainment := *metric.TargetActual / value * 100
 			metric.Attainment = &attainment
@@ -362,7 +369,8 @@ func (s *Service) ownerTargetAllocation(
 			return invalid("allocated targets exceed the exact reporting range")
 		}
 		chart.AllocatedTarget = &total
-		if target, ok := held[keyFor(frame.Scope, chart.Metric)]; ok {
+		// A scope held against its sellers' goals has nothing left to split.
+		if target, ok := held[keyFor(frame.Scope, chart.Metric)]; ok && !fromGoals(target) {
 			difference := float64(target.Definition.Value) - total
 			chart.AllocationDifference = &difference
 		}

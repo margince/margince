@@ -29,6 +29,7 @@ export function DataTable<Row>({
   fold,
   stickyFirst,
   reorder,
+  selectedKey,
 }: Readonly<{
   columns: DataTableColumn<Row>[];
   rows: Row[];
@@ -50,6 +51,8 @@ export function DataTable<Row>({
   stickyFirst?: boolean;
   /** The reader puts the rows in order by hand; see `DataTableReorder`. */
   reorder?: DataTableReorder<Row>;
+  /** The row whose record a pane beside the table shows, by its `rowKey`. */
+  selectedKey?: string;
 }>) {
   const tableId = useId();
   const disclosure = useDisclosure(rows, rowKey, detail);
@@ -108,7 +111,9 @@ export function DataTable<Row>({
                     opens !== undefined,
                     disclosure?.isOpen(row) === true,
                     sortable.lifted === key,
+                    selectedKey === key,
                   )}
+                  aria-current={selectedKey === key ? "true" : undefined}
                   onClick={
                     opens
                       ? (event) => {
@@ -286,11 +291,13 @@ function rowClass(
   opens: boolean,
   open: boolean,
   lifted: boolean,
+  selected: boolean,
 ): string | undefined {
   const classes = [
     opens ? "rowlink" : "",
     open ? "datatable-open" : "",
     lifted ? "is-lifted" : "",
+    selected ? "is-selected" : "",
   ];
   return classes.filter(Boolean).join(" ") || undefined;
 }

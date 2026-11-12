@@ -3695,6 +3695,34 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/finance/invoices/{id}/pdf": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        /**
+         * Open a mirrored invoice's own PDF, fetched from the accounting source.
+         * @description The id is a mirrored invoice's, as `recent_invoices` on the finance summary carries it.
+         *     The document is read from the connected source on each request and is never stored.
+         *     The caller needs the finance read grant and must be able to see the invoice's company;
+         *     an invoice they cannot see answers 404 like one that does not exist. 422 when the
+         *     connected source serves no documents (`invoice_documents` on the summary is false),
+         *     and 502 when the source could not be reached or answered something other than a PDF.
+         */
+        get: operations["downloadFinanceInvoicePdf"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/finance/source": {
         parameters: {
             query?: never;
@@ -33775,6 +33803,8 @@ export interface components {
             recent_invoices?: components["schemas"]["FinanceInvoice"][];
             /** @description True when the account has more invoices than `recent_invoices` carries. */
             truncated?: boolean;
+            /** @description True when the connected source serves each invoice's own document, which `downloadFinanceInvoicePdf` opens. False or absent means the card offers none. */
+            invoice_documents?: boolean;
         };
         /**
          * @description Why the figures are what they are — the six cases a company page must keep
@@ -45805,6 +45835,14 @@ export interface components {
             target_actual?: number;
             /** Format: int64 */
             target_revision?: number;
+            /**
+             * @description Present with `target`. `target`: a target set for this scope and
+             *     period. `sales_goals`: the figure is a seller's monthly sales
+             *     goal, or the sum of the monthly sales goals of the scope's sellers
+             *     over the target interval. A sum has no `target_revision`.
+             * @enum {string}
+             */
+            target_source?: "target" | "sales_goals";
             /** Format: double */
             attainment?: number;
             coverage: components["schemas"]["ReportingCoverage"];
@@ -46270,6 +46308,11 @@ export interface components {
              * @description The published yearly goal.
              */
             total_minor?: number;
+            /**
+             * Format: int64
+             * @description The yearly sum of a complete draft, for a reader who may read the draft.
+             */
+            draft_total_minor?: number;
             can_edit: boolean;
         };
         SalesGoalRoster: {
@@ -47703,6 +47746,8 @@ export interface components {
             label: string;
             /** @description Whether this caller may record a forecast call or issue a share about this population. Absent from a server that predates the field; a screen then offers the controls and the write route decides. */
             assertable?: boolean;
+            /** @description Whether this population is within the caller's own record access: the workspace for a seat that reads every record, a team for its members. Analytics offers the totals of a scope outside it. Progress reads only a scope inside it. */
+            measurable?: boolean;
         };
         /** @description What this caller may actually do, so a screen never offers a control the server will refuse. */
         AnalyticsCapabilities: {
@@ -65363,6 +65408,41 @@ export interface operations {
             422: components["responses"]["ValidationError"];
         };
     };
+    downloadFinanceInvoicePdf: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The PDF bytes; Content-Disposition names the file. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/pdf": string;
+                };
+            };
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
+            /** @description The accounting source could not be reached, or did not answer with a PDF. */
+            502: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
     getFinanceSource: {
         parameters: {
             query?: never;
@@ -77215,6 +77295,8 @@ export interface operations {
                 retired?: boolean;
                 /** @description Filter by the first local day of the target period. */
                 period_start?: string;
+                /** @description Filter by whether a published sales goal plan owns the target, as one month of a seller's year. Such a target changes only through the plan. Omitted includes both. */
+                plan_owned?: boolean;
             };
             header?: never;
             path?: never;

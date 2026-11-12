@@ -74,8 +74,14 @@ func (e *storeEnv) inFlightAt(t *testing.T, id ids.UUID) *time.Time {
 // customer opened, which is the only channel send V1 permits.
 func (e *storeEnv) stageReply(t *testing.T) ids.UUID {
 	t.Helper()
+	return e.stageReplyOn(t, e.telegramActivity(t))
+}
+
+// stageReplyOn is stageReply on an activity the case already holds.
+func (e *storeEnv) stageReplyOn(t *testing.T, activity ids.ActivityID) ids.UUID {
+	t.Helper()
 	return e.stageChannel(t, StageChannelInput{
-		ActivityID: e.telegramActivity(t),
+		ActivityID: activity,
 		Provider:   "telegram",
 		Recipient: connector.ChannelIdentity{
 			Provider: "telegram", ChannelUserID: channelRecipient, Username: "buyer",
@@ -109,7 +115,8 @@ func (e *storeEnv) channelDispatcher(channel *fakeChannelSender, mail *fakeSende
 // the seam with a reason that names an RFC822 rule the rep never invoked.
 func TestDispatcherRoutesAChannelDeliveryToMessageSender(t *testing.T) {
 	e := setupStore(t)
-	id := e.stageReply(t)
+	activity := e.telegramActivity(t)
+	id := e.stageReplyOn(t, activity)
 
 	channel := &fakeChannelSender{}
 	mail := &fakeSender{}
@@ -143,6 +150,9 @@ func TestDispatcherRoutesAChannelDeliveryToMessageSender(t *testing.T) {
 	}
 	if got.IdempotencyKey != id.String() {
 		t.Errorf("idempotency key = %q, want the delivery id %q", got.IdempotencyKey, id)
+	}
+	if got.ActivityID != activity {
+		t.Errorf("activity = %v, want the timeline entry the reply was staged on, %v", got.ActivityID, activity)
 	}
 	// Load counted this attempt before the dispatcher reached the seam, so a
 	// FIRST transmission must still report zero prior ones.

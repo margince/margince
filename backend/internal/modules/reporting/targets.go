@@ -159,6 +159,8 @@ func (s *Service) writeReaches(ctx context.Context, tx pgx.Tx, scope crmcontract
 type TargetFilter struct {
 	Retired     *bool
 	PeriodStart *openapi_types.Date
+	// PlanOwned keeps or drops the months a published sales goal plan owns.
+	PlanOwned *bool
 }
 
 // ListTargets exposes only targets within the reader’s live scope.
@@ -184,6 +186,9 @@ func (s *Service) ListTargets(ctx context.Context, after *ids.UUID, limit int, f
 		if filter.PeriodStart != nil {
 			// The filter is a local calendar date; t.period_start is its zoned instant.
 			where += " AND r.definition->>'period_start'=" + b.add(filter.PeriodStart.Format("2006-01-02"))
+		}
+		if filter.PlanOwned != nil {
+			where += " AND " + planOwnedSQL + "=" + b.add(*filter.PlanOwned)
 		}
 		query := "SELECT " + targetColumns + targetFrom + " WHERE " + where + " ORDER BY t.id LIMIT " + b.add(limit+1)
 		rows, err := tx.Query(ctx, query, b.values...)

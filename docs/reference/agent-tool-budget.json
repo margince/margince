@@ -31,9 +31,9 @@
   "catalog": {
     "tools": 48,
     "system_frame_tokens": 592,
-    "tokens": 40529,
+    "tokens": 40548,
     "median_tool_tokens": 623,
-    "mean_tool_tokens": 843
+    "mean_tool_tokens": 844
   },
   "agents": [
     {
@@ -93,7 +93,7 @@
     },
     {
       "name": "read_details",
-      "tokens": 2200
+      "tokens": 2211
     },
     {
       "name": "change_activities",
@@ -168,12 +168,12 @@
       "tokens": 706
     },
     {
-      "name": "change_offers",
-      "tokens": 678
+      "name": "read_view",
+      "tokens": 683
     },
     {
-      "name": "read_view",
-      "tokens": 675
+      "name": "change_offers",
+      "tokens": 678
     },
     {
       "name": "update_record",

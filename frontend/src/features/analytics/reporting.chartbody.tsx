@@ -1,12 +1,13 @@
 import { Button, EmptyState } from "../../design-system/atoms";
 import { DataTable } from "../../design-system/datatable";
-import { BarList, SegmentBar } from "../../design-system/readings";
+import { BarList } from "../../design-system/readings";
 import {
   BulletChart,
   CumulativeChart,
   RangeChart,
 } from "../../design-system/report-charts";
 import { ChartTableDoor } from "../../design-system/report-charts.tabledoor";
+import { SegmentBar } from "../../design-system/segmentbar";
 import { Waterfall } from "../../design-system/waterfall";
 import {
   formatAnalyticsMoney,
@@ -35,6 +36,11 @@ import { TargetProgress } from "./reporting.summary";
 import "./reporting.css";
 
 type EvidenceAction = (reference: ReportingEvidenceRef) => void;
+
+// Revenue is measured against a goal, every other figure against a target.
+function targetWord(chart: ReportingChart) {
+  return chart.metric === "bookings_won" ? "progress.goal" : "reporting.target";
+}
 
 export function ChartBody({
   chart,
@@ -105,7 +111,7 @@ export function ChartBody({
               : {
                   value: target,
                   amount: compact(target),
-                  label: t("reporting.target"),
+                  label: t(targetWord(chart)),
                 }
           }
           size={trendSize}
@@ -113,7 +119,7 @@ export function ChartBody({
       );
     }
     case "owner_attainment":
-      return <BulletChart {...shared} targetLabel={t("reporting.target")} />;
+      return <BulletChart {...shared} targetLabel={t(targetWord(chart))} />;
     case "stage_age":
       return (
         <RangeChart

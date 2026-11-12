@@ -20569,6 +20569,24 @@ func (e ReportingFrameworkInputTemplate) Valid() bool {
 	}
 }
 
+// Defines values for ReportingMetricTargetSource.
+const (
+	ReportingMetricTargetSourceSalesGoals ReportingMetricTargetSource = "sales_goals"
+	ReportingMetricTargetSourceTarget     ReportingMetricTargetSource = "target"
+)
+
+// Valid indicates whether the value is a known member of the ReportingMetricTargetSource enum.
+func (e ReportingMetricTargetSource) Valid() bool {
+	switch e {
+	case ReportingMetricTargetSourceSalesGoals:
+		return true
+	case ReportingMetricTargetSourceTarget:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for ReportingMetricDefinitionTemporalBasis.
 const (
 	ReportingMetricDefinitionTemporalBasisEventPeriod ReportingMetricDefinitionTemporalBasis = "event_period"
@@ -34493,6 +34511,9 @@ type AnalyticsScope struct {
 
 	// Label What to call this population on screen.
 	Label string `json:"label"`
+
+	// Measurable Whether this population is within the caller's own record access: the workspace for a seat that reads every record, a team for its members. Analytics offers the totals of a scope outside it. Progress reads only a scope inside it.
+	Measurable *bool `json:"measurable,omitempty"`
 }
 
 // AnalyticsScopeKind `managed_teams` is a team manager's own default — their teams and themselves. It is RESOLVED, never requested: a caller names one team, or names nothing and is given this.
@@ -40717,6 +40738,9 @@ type CompanyFinanceSummary struct {
 	// CoverageStart The issue date of the OLDEST invoice this connection has mirrored for the customer, and with `coverage_end` the period every figure on this card describes. Null when the mirror holds none.
 	// A different question from `last_synced_at`, which answers when we last looked. A card that has only the second can say the figures are fresh and not what period they are about — and a client rendering a window label must build it from these bounds rather than from a fixed string, or the heading and the numbers end up describing different months (FIN-AC-3).
 	CoverageStart *openapi_types.Date `json:"coverage_start,omitempty"`
+
+	// InvoiceDocuments True when the connected source serves each invoice's own document, which `downloadFinanceInvoicePdf` opens. False or absent means the card offers none.
+	InvoiceDocuments *bool `json:"invoice_documents,omitempty"`
 
 	// LastSyncedAt When the last successful sync finished. Null when none has.
 	LastSyncedAt *time.Time `json:"last_synced_at,omitempty"`
@@ -60310,10 +60334,22 @@ type ReportingMetric struct {
 	// whole-quarter figure and is never added to `won`.
 	TargetComparison *ReportingTargetComparison `json:"target_comparison,omitempty"`
 	TargetRevision   *int64                     `json:"target_revision,omitempty"`
-	Unit             string                     `json:"unit"`
-	Value            *float64                   `json:"value"`
-	Version          string                     `json:"version"`
+
+	// TargetSource Present with `target`. `target`: a target set for this scope and
+	// period. `sales_goals`: the figure is a seller's monthly sales
+	// goal, or the sum of the monthly sales goals of the scope's sellers
+	// over the target interval. A sum has no `target_revision`.
+	TargetSource *ReportingMetricTargetSource `json:"target_source,omitempty"`
+	Unit         string                       `json:"unit"`
+	Value        *float64                     `json:"value"`
+	Version      string                       `json:"version"`
 }
+
+// ReportingMetricTargetSource Present with `target`. `target`: a target set for this scope and
+// period. `sales_goals`: the figure is a seller's monthly sales
+// goal, or the sum of the monthly sales goals of the scope's sellers
+// over the target interval. A sum has no `target_revision`.
+type ReportingMetricTargetSource string
 
 // ReportingMetricDefinition defines model for ReportingMetricDefinition.
 type ReportingMetricDefinition struct {
@@ -61485,10 +61521,13 @@ type SalesGoalRoster struct {
 
 // SalesGoalSeller defines model for SalesGoalSeller.
 type SalesGoalSeller struct {
-	CanEdit bool               `json:"can_edit"`
-	Name    string             `json:"name"`
-	OwnerId openapi_types.UUID `json:"owner_id"`
-	State   SalesGoalPlanState `json:"state"`
+	CanEdit bool `json:"can_edit"`
+
+	// DraftTotalMinor The yearly sum of a complete draft, for a reader who may read the draft.
+	DraftTotalMinor *int64             `json:"draft_total_minor,omitempty"`
+	Name            string             `json:"name"`
+	OwnerId         openapi_types.UUID `json:"owner_id"`
+	State           SalesGoalPlanState `json:"state"`
 
 	// TotalMinor The published yearly goal.
 	TotalMinor *int64 `json:"total_minor,omitempty"`
@@ -71567,6 +71606,9 @@ type ListReportingTargetsParams struct {
 
 	// PeriodStart Filter by the first local day of the target period.
 	PeriodStart *openapi_types.Date `form:"period_start,omitempty" json:"period_start,omitempty"`
+
+	// PlanOwned Filter by whether a published sales goal plan owns the target, as one month of a seller's year. Such a target changes only through the plan. Omitted includes both.
+	PlanOwned *bool `form:"plan_owned,omitempty" json:"plan_owned,omitempty"`
 }
 
 // UpdateReportingTargetParams defines parameters for UpdateReportingTarget.
@@ -94671,6 +94713,9 @@ type ServerInterface interface {
 	// Read what a new filter clause may name on one record type (LVS-EXT-8).
 	// (GET /filters/vocabulary)
 	GetFilterVocabulary(w http.ResponseWriter, r *http.Request, params GetFilterVocabularyParams)
+	// Open a mirrored invoice's own PDF, fetched from the accounting source.
+	// (GET /finance/invoices/{id}/pdf)
+	DownloadFinanceInvoicePdf(w http.ResponseWriter, r *http.Request, id Id)
 	// Disconnect the accounting source (admin/ops).
 	// (DELETE /finance/source)
 	DisconnectFinanceSource(w http.ResponseWriter, r *http.Request)
@@ -99522,6 +99567,12 @@ func (_ Unimplemented) ProposeFilter(w http.ResponseWriter, r *http.Request) {
 // Read what a new filter clause may name on one record type (LVS-EXT-8).
 // (GET /filters/vocabulary)
 func (_ Unimplemented) GetFilterVocabulary(w http.ResponseWriter, r *http.Request, params GetFilterVocabularyParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Open a mirrored invoice's own PDF, fetched from the accounting source.
+// (GET /finance/invoices/{id}/pdf)
+func (_ Unimplemented) DownloadFinanceInvoicePdf(w http.ResponseWriter, r *http.Request, id Id) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -110603,6 +110654,19 @@ func (siw *ServerInterfaceWrapper) ListReportingTargets(w http.ResponseWriter, r
 			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "period_start"})
 		} else {
 			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "period_start", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "plan_owned" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "plan_owned", r.URL.Query(), &params.PlanOwned, runtime.BindQueryParameterOptions{Type: "boolean", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "plan_owned"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "plan_owned", Err: err})
 		}
 		return
 	}
@@ -128112,6 +128176,40 @@ func (siw *ServerInterfaceWrapper) GetFilterVocabulary(w http.ResponseWriter, r 
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.GetFilterVocabulary(w, r, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// DownloadFinanceInvoicePdf operation middleware
+func (siw *ServerInterfaceWrapper) DownloadFinanceInvoicePdf(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.DownloadFinanceInvoicePdf(w, r, id)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -151465,6 +151563,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/filters/vocabulary", wrapper.GetFilterVocabulary)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/finance/invoices/{id}/pdf", wrapper.DownloadFinanceInvoicePdf)
 	})
 	r.Group(func(r chi.Router) {
 		r.Delete(options.BaseURL+"/finance/source", wrapper.DisconnectFinanceSource)
