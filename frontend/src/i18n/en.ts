@@ -3990,6 +3990,8 @@ export const en = {
   "standing.exchange.view.meeting": "View meeting",
   "standing.exchange.view.other": "View activity",
   "record.tabs": "Record tabs",
+  "record.tabs.more": "More",
+  "record.tabs.moreLabel": "More sections",
   "record.panel.showDetails": "Show details",
   "record.panel.hideDetails": "Hide details",
   // The Deal Room aside on a deal. `room.` rather than `dealroom.` for the

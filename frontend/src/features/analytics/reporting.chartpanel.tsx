@@ -1,7 +1,8 @@
-import { type ReactNode, Suspense } from "react";
+import { type ReactNode, Suspense, useState } from "react";
 import { Button, EmptyState, PendingBody } from "../../design-system/atoms";
 import { CardBoundary } from "../../design-system/cardboundary";
 import { Panel, PanelBody } from "../../design-system/panel";
+import { ChartTableSlotProvider } from "../../design-system/report-charts.tabledoor";
 import { useT } from "../../i18n";
 import { lazy } from "../../i18n/lazy";
 import { ChartContext, ChartDetails } from "./reporting.chartcontext";
@@ -48,62 +49,68 @@ export function ChartPanel({
   const t = useT();
   const metricName = useMetricNames();
   const drawn = chart.points.length > 0 && chart.coverage.status !== "no_data";
+  const [tableSlot, setTableSlot] = useState<HTMLSpanElement | null>(null);
   return (
-    <Panel
-      flatHead={section}
-      className={
-        wide ? "reporting-panel reporting-panel-wide" : "reporting-panel"
-      }
-      title={chartTitle(chart, evaluation, t, metricName)}
-      titleAction={
-        <>
-          {meta}
-          <ChartDetails chart={chart} evaluation={evaluation} />
-        </>
-      }
-      footer={
-        <>
-          <ChartContext
-            chart={chart}
-            evaluation={evaluation}
-            editionId={editionId}
-          />
-          {drawn && (
-            <Button
-              variant="link"
-              onClick={() =>
-                onEvidence({
-                  metric: chart.metric,
-                  context_id: chart.context_id,
-                })
-              }
-            >
-              {t("reporting.viewRecords")}
-            </Button>
-          )}
-        </>
-      }
-    >
-      <PanelBody>
-        {/* A chart drawn from the reader's own figures alone says so above its
-            bars: one bar on a team chart otherwise reads as a team of one. */}
-        {drawn && chart.coverage.withheld && chart.coverage.reason && (
-          <p className="t-caption">{chart.coverage.reason}</p>
-        )}
-        {drawn && note}
-        {drawn ? (
-          <Suspense fallback={<PendingBody label={t("common.loading")} />}>
-            <ChartBody
+    <ChartTableSlotProvider value={tableSlot}>
+      <Panel
+        flatHead={section}
+        className={
+          wide ? "reporting-panel reporting-panel-wide" : "reporting-panel"
+        }
+        title={chartTitle(chart, evaluation, t, metricName)}
+        titleAction={
+          <>
+            {meta}
+            <ChartDetails chart={chart} evaluation={evaluation} />
+          </>
+        }
+        footer={
+          <>
+            <span className="reporting-table-slot" ref={setTableSlot} />
+            <ChartContext
               chart={chart}
               evaluation={evaluation}
-              onEvidence={onEvidence}
-              headline={meta == null}
+              editionId={editionId}
             />
-          </Suspense>
-        ) : (
-          <EmptyState>{chart.coverage.reason ?? t("common.empty")}</EmptyState>
-        )}
-      </PanelBody>
-    </Panel>
+            {drawn && (
+              <Button
+                variant="link"
+                onClick={() =>
+                  onEvidence({
+                    metric: chart.metric,
+                    context_id: chart.context_id,
+                  })
+                }
+              >
+                {t("reporting.viewRecords")}
+              </Button>
+            )}
+          </>
+        }
+      >
+        <PanelBody>
+          {/* A chart drawn from the reader's own figures alone says so above its
+            bars: one bar on a team chart otherwise reads as a team of one. */}
+          {drawn && chart.coverage.withheld && chart.coverage.reason && (
+            <p className="t-caption">{chart.coverage.reason}</p>
+          )}
+          {drawn && note}
+          {drawn ? (
+            <Suspense fallback={<PendingBody label={t("common.loading")} />}>
+              <ChartBody
+                chart={chart}
+                evaluation={evaluation}
+                onEvidence={onEvidence}
+                headline={meta == null}
+              />
+            </Suspense>
+          ) : (
+            <EmptyState>
+              {chart.coverage.reason ?? t("common.empty")}
+            </EmptyState>
+          )}
+        </PanelBody>
+      </Panel>
+    </ChartTableSlotProvider>
   );
 }

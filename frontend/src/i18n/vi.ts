@@ -3923,6 +3923,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "standing.exchange.view.meeting": "Xem cuộc họp",
   "standing.exchange.view.other": "Xem hoạt động",
   "record.tabs": "Tab hồ sơ",
+  "record.tabs.more": "Xem thêm",
+  "record.tabs.moreLabel": "Xem thêm các mục",
   "record.panel.showDetails": "Hiển thị chi tiết",
   "record.panel.hideDetails": "Ẩn chi tiết",
   "room.editorial": "Tài liệu và bình luận hiển thị ngay với bên mua.",

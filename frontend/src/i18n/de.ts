@@ -4036,6 +4036,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "standing.exchange.view.meeting": "Termin ansehen",
   "standing.exchange.view.other": "Aktivität ansehen",
   "record.tabs": "Tabs des Datensatzes",
+  "record.tabs.more": "Mehr",
+  "record.tabs.moreLabel": "Mehr Bereiche",
   "record.panel.showDetails": "Details einblenden",
   "record.panel.hideDetails": "Details ausblenden",
   "room.editorial":
