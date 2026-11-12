@@ -1,0 +1,9 @@
+{
+  "verb": "get_handoff_assignee",
+  "checks": [
+    "lead.read"
+  ],
+  "takes": [
+    "sdr_handoff"
+  ]
+}

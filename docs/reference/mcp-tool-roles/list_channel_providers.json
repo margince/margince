@@ -1,0 +1,14 @@
+{
+  "tool": "read_workspace",
+  "action": "channel_providers",
+  "verb": "list_channel_providers",
+  "allowed_for": [
+    "admin",
+    "management",
+    "manager",
+    "ops",
+    "read_only",
+    "rep"
+  ],
+  "refused_for": []
+}

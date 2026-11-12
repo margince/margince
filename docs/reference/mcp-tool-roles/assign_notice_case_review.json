@@ -1,0 +1,15 @@
+{
+  "tool": "change_compliance",
+  "action": "assign_notice_case_review",
+  "verb": "assign_notice_case_review",
+  "allowed_for": [
+    "admin"
+  ],
+  "refused_for": [
+    "management",
+    "manager",
+    "ops",
+    "read_only",
+    "rep"
+  ]
+}

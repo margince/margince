@@ -1,0 +1,7 @@
+{
+  "verb": "create_automation",
+  "checks": [
+    "automation.create",
+    "lead.update"
+  ]
+}

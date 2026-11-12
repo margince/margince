@@ -6,19 +6,17 @@
 package toolrole
 
 import (
-	"encoding/json"
-	"os"
 	"strings"
 	"testing"
 
 	"github.com/margince/margince/backend/internal/compose"
 	"github.com/margince/margince/backend/internal/compose/integration/apptest"
-	"github.com/margince/margince/backend/internal/modules/agents"
+	"github.com/margince/margince/backend/internal/shared/toolroles"
 )
 
 // TestTheToolRoleMatrixIsPublished measures, for every seeded role, which tools
-// a passport on that role is refused, and holds docs/reference/mcp-tool-roles.json
-// to the answer. The roles come from the database and the tools from the registry,
+// a passport on that role is refused, and holds docs/reference/mcp-tool-roles/,
+// one file per verb, to the answer. The roles come from the database and the tools from the registry,
 // so neither is a second list. A cell holds what the gate says, not what the seed
 // document claims.
 func TestTheToolRoleMatrixIsPublished(t *testing.T) {
@@ -38,7 +36,7 @@ func TestTheToolRoleMatrixIsPublished(t *testing.T) {
 	measured := newToolChecksMeasure()
 	elsewhere := measuredElsewhere(t, roles)
 	for verb, row := range elsewhere {
-		measured.control[verb] = agents.ToolChecksRow{Checks: row.Checks}
+		measured.control[verb] = toolroles.Checks{Verb: verb, Checks: row.Checks}
 	}
 	for _, call := range calls {
 		if row, ok := elsewhere[call.verb]; ok {
@@ -82,24 +80,11 @@ func TestTheToolRoleMatrixIsPublished(t *testing.T) {
 	}
 	rows, partial := measured.rows()
 	holdTheToolChecksTable(t, provenBy(rows, roles, calls, verdicts), partial)
-	rendered, err := json.MarshalIndent(doc, "", "  ")
+	files, err := doc.published()
 	if err != nil {
 		t.Fatal(err)
 	}
-	rendered = append(rendered, '\n')
-	if os.Getenv("UPDATE_MCP_TOOL_ROLES") != "" {
-		if err := os.WriteFile(toolRolesFile, rendered, 0o600); err != nil {
-			t.Fatal(err)
-		}
-		return
-	}
-	committed, err := os.ReadFile(toolRolesFile)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if string(committed) != string(rendered) {
-		t.Errorf("%s is not what the roles are refused. Run: UPDATE_MCP_TOOL_ROLES=1 make test-roles, then go test ./gates -run TestTheMCPParityCatalogIsPublished -update-mcp-parity", toolRolesFile)
-	}
+	holdTheFolder(t, toolRolesDir, files, "UPDATE_MCP_TOOL_ROLES=1 make test-roles, then go test ./gates -run TestTheMCPParityCatalogIsPublished -update-mcp-parity")
 }
 
 // A passport is offered a tool or action when, and only when, the gate admits

@@ -1,0 +1,14 @@
+{
+  "tool": "change_attention",
+  "action": "mark_rows_done",
+  "verb": "mark_worklist_rows_done",
+  "allowed_for": [
+    "admin",
+    "management",
+    "manager",
+    "ops",
+    "read_only",
+    "rep"
+  ],
+  "refused_for": []
+}

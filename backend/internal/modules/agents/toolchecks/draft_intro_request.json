@@ -1,0 +1,14 @@
+{
+  "verb": "draft_intro_request",
+  "checks": [
+    "activity.read",
+    "company.read",
+    "contact.read",
+    "relationship.read"
+  ],
+  "takes": [
+    "company",
+    "routed_contact",
+    "user"
+  ]
+}

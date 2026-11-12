@@ -1,0 +1,14 @@
+{
+  "tool": "read_details",
+  "action": "filter_preview",
+  "verb": "preview_filter",
+  "allowed_for": [
+    "admin",
+    "management",
+    "manager",
+    "ops",
+    "read_only",
+    "rep"
+  ],
+  "refused_for": []
+}

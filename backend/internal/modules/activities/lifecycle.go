@@ -207,6 +207,9 @@ func admitActivityPatch(
 		if err := checkTaskFieldsKind(string(current.Kind), taskFields{in.DueAt, in.RemindAt, in.AssigneeID, in.IsDone}); err != nil {
 			return crmcontracts.Activity{}, held, err
 		}
+		if err := checkTaskTypeKind(string(current.Kind), in.TaskType); err != nil {
+			return crmcontracts.Activity{}, held, err
+		}
 		if err := in.admitPatchTime(current.Kind); err != nil {
 			return crmcontracts.Activity{}, held, err
 		}
@@ -417,6 +420,7 @@ func applyActivityPatch(ctx context.Context, tx pgx.Tx, id ids.ActivityID, in Up
 		  is_done = coalesce($%[8]d, is_done),
 		  meeting_status = coalesce($%[9]d, meeting_status),
 		  call_outcome = CASE WHEN $%[19]d THEN NULL ELSE coalesce($%[18]d, call_outcome) END,
+		  task_type = coalesce($%[20]d, task_type),
 		  duration_seconds = coalesce($%[10]d, duration_seconds),
 		  occurred_precision = coalesce($%[14]d, occurred_precision),
 		  -- The language was READ from the text, so an edit to the text reads
@@ -433,7 +437,8 @@ func applyActivityPatch(ctx context.Context, tx pgx.Tx, id ids.ActivityID, in Up
 		arg(in.RemindAt), arg(in.AssigneeID), done, arg(in.MeetingStatus), arg(in.DurationSeconds),
 		arg(in.clears("due_at")), arg(in.clears("remind_at")), arg(in.clears("assignee_id")),
 		arg(in.OccurredPrecision), arg(relabelledLanguage(current, in)),
-		customAssignments(in.customColumns, in.CustomFields, arg), arg(in.DueHasTime), arg(in.CallOutcome), arg(in.clears(fieldCallOutcome)))
+		customAssignments(in.customColumns, in.CustomFields, arg), arg(in.DueHasTime), arg(in.CallOutcome), arg(in.clears(fieldCallOutcome)),
+		arg(in.TaskType))
 	query += fmt.Sprintf(" AND version = $%d", arg(current.Version))
 	result, err := tx.Exec(ctx, query, args...)
 	if err != nil {

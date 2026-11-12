@@ -1,0 +1,18 @@
+{
+  "verb": "archive_record",
+  "checks": [
+    "activity.delete|update,company.delete|update,company.read,product.delete",
+    "activity.delete|update,company.delete|update,contact.delete|update,deal.delete|update,offer.delete,product.delete,project.delete",
+    "activity.delete|update,company.delete|update,contact.delete|update,offer.delete,product.delete,project.delete,project.read",
+    "activity.delete|update,company.delete|update,deal.delete|update,offer.delete,product.delete,relationship.read",
+    "activity.delete|update,company.delete|update,offer.delete,product.delete,project.read,relationship.read",
+    "activity.read,company.delete|update,company.read,product.delete",
+    "activity.read,company.delete|update,contact.delete|update,deal.delete|update,offer.delete,product.delete,project.delete",
+    "activity.read,company.delete|update,contact.delete|update,offer.delete,product.delete,project.delete,project.read",
+    "activity.read,company.delete|update,deal.delete|update,offer.delete,product.delete,relationship.read",
+    "activity.read,company.delete|update,offer.delete,product.delete,project.read,relationship.read"
+  ],
+  "takes": [
+    "company"
+  ]
+}

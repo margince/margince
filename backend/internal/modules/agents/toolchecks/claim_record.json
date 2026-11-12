@@ -1,0 +1,9 @@
+{
+  "verb": "claim_record",
+  "checks": [
+    "company.update"
+  ],
+  "takes": [
+    "company"
+  ]
+}

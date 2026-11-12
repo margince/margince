@@ -1,0 +1,9 @@
+{
+  "verb": "archive_corpus",
+  "checks": [
+    "knowledge_corpus.delete"
+  ],
+  "takes": [
+    "corpus"
+  ]
+}

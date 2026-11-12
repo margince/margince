@@ -1,0 +1,15 @@
+{
+  "tool": "change_reports",
+  "action": "resolve_input_check",
+  "verb": "resolve_input_check",
+  "allowed_for": [
+    "admin",
+    "management",
+    "manager",
+    "ops",
+    "rep"
+  ],
+  "refused_for": [
+    "read_only"
+  ]
+}

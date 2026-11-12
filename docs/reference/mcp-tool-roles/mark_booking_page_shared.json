@@ -1,0 +1,15 @@
+{
+  "tool": "change_settings",
+  "action": "mark_booking_page_shared",
+  "verb": "mark_booking_page_shared",
+  "allowed_for": [
+    "admin",
+    "management",
+    "manager",
+    "ops",
+    "rep"
+  ],
+  "refused_for": [
+    "read_only"
+  ]
+}

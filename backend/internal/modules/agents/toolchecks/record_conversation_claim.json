@@ -1,0 +1,10 @@
+{
+  "verb": "record_conversation_claim",
+  "checks": [
+    "contact.update"
+  ],
+  "takes": [
+    "activity",
+    "contact"
+  ]
+}

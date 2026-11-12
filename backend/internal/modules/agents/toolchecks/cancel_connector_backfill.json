@@ -1,0 +1,7 @@
+{
+  "verb": "cancel_connector_backfill",
+  "checks": [],
+  "takes": [
+    "running_backfill"
+  ]
+}

@@ -1,0 +1,10 @@
+{
+  "verb": "revoke_forecast_share",
+  "checks": [
+    "forecast.create",
+    "forecast.read"
+  ],
+  "takes": [
+    "forecast_share_id"
+  ]
+}

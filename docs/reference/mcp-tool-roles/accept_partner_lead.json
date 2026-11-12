@@ -1,0 +1,19 @@
+{
+  "tool": "change_state",
+  "action": "accept_partner_lead",
+  "verb": "accept_partner_lead",
+  "allowed_for": [
+    "admin",
+    "management",
+    "manager",
+    "ops"
+  ],
+  "refused_for": [
+    "read_only",
+    "rep"
+  ],
+  "colleague_record": {
+    "manager": "refused",
+    "rep": "refused"
+  }
+}

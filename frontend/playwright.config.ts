@@ -66,6 +66,8 @@ export default defineConfig({
     colorScheme: "light",
     // the SW would compete with the network-edge seed mocks
     serviceWorkers: "block",
+    // Kept only for a failed test, and uploaded by CI beside its page snapshot.
+    screenshot: "only-on-failure",
   },
   webServer: process.env.BASE_URL
     ? undefined

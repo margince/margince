@@ -1,0 +1,15 @@
+{
+  "tool": "change_activities",
+  "action": "discard_draft",
+  "verb": "discard_mail_draft",
+  "allowed_for": [
+    "admin",
+    "management",
+    "manager",
+    "ops",
+    "rep"
+  ],
+  "refused_for": [
+    "read_only"
+  ]
+}

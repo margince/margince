@@ -1,0 +1,14 @@
+{
+  "tool": "draft_outbound",
+  "action": "slipping_deals",
+  "verb": "draft_follow_ups_for",
+  "allowed_for": [
+    "admin",
+    "management",
+    "manager",
+    "ops",
+    "read_only",
+    "rep"
+  ],
+  "refused_for": []
+}

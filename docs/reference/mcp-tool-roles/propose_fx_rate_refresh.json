@@ -1,0 +1,15 @@
+{
+  "tool": "change_settings",
+  "action": "propose_fx_rate_refresh",
+  "verb": "propose_fx_rate_refresh",
+  "allowed_for": [
+    "admin",
+    "ops"
+  ],
+  "refused_for": [
+    "management",
+    "manager",
+    "read_only",
+    "rep"
+  ]
+}

@@ -1,0 +1,9 @@
+{
+  "verb": "list_voice_corpus_sources",
+  "checks": [
+    "voice_profile.read"
+  ],
+  "takes": [
+    "voice_profile"
+  ]
+}

@@ -1,0 +1,7 @@
+{
+  "verb": "generate_morning_brief",
+  "checks": [
+    "activity.read",
+    "deal.read"
+  ]
+}

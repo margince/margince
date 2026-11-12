@@ -1,0 +1,11 @@
+{
+  "verb": "send_email",
+  "checks": [
+    "activity.create",
+    "activity.read"
+  ],
+  "takes": [
+    "activity",
+    "consented_contact"
+  ]
+}

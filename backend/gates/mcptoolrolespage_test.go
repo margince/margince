@@ -10,63 +10,62 @@ package gates
 
 import (
 	"bytes"
-	"encoding/json"
 	"fmt"
 	"maps"
+	"os"
 	"slices"
 	"strings"
 	"testing"
 
-	"github.com/margince/margince/backend/internal/shared/gatekit"
+	"github.com/margince/margince/backend/internal/shared/toolroles"
 )
 
 const (
-	toolRolesPage   = "../docs/reference/mcp-tool-roles.md"
-	toolChecksTable = "internal/modules/agents/toolchecks.json"
+	toolRolesPage = "../docs/reference/mcp-tool-roles.md"
+	toolChecksDir = "internal/modules/agents/toolchecks"
 	// unplacedGroup holds the calls whose verb serves no one operation, such as
 	// a native tool or one that reads any route.
 	unplacedGroup = "no_one_operation"
 )
 
-// toolRolesFile is the sweep's published matrix, as this page reads it.
+// toolRolesFile is the sweep's published rows, as this page reads them: the
+// head of the folder and every verb's row, ordered by call.
 type toolRolesFile struct {
-	Note    string            `json:"note"`
-	Reasons map[string]string `json:"reasons"`
-	Roles   []string          `json:"roles"`
-	Rows    []toolRoleCell    `json:"rows"`
+	toolroles.Head
+	Rows []toolRoleCell
 }
 
-type toolRoleCell struct {
-	Tool            string            `json:"tool"`
-	Action          string            `json:"action"`
-	Verb            string            `json:"verb"`
-	Allowed         []string          `json:"allowed_for"`
-	Refused         []string          `json:"refused_for"`
-	ColleagueRecord map[string]string `json:"colleague_record"`
-}
+type toolRoleCell struct{ toolroles.Row }
 
 func (c toolRoleCell) call() string { return strings.TrimSuffix(c.Tool+"."+c.Action, ".") }
 
 // toolChecksFile is the checks table the binary embeds.
 type toolChecksFile struct {
-	Note  string `json:"note"`
-	Verbs map[string]struct {
-		Checks []string `json:"checks"`
-	} `json:"verbs"`
+	toolroles.Head
+	Verbs map[string]toolroles.Checks
 }
 
-// readSweepFile reads one of the files the role sweep writes.
-func readSweepFile[T toolRolesFile | toolChecksFile](t *testing.T, path string) T {
+func readToolRoles(t *testing.T) toolRolesFile {
 	t.Helper()
-	var into T
-	raw, err := gatekit.ReadFile(path)
+	head, rows, err := toolroles.Read[toolroles.Row](os.DirFS(toolRolesDir))
 	if err != nil {
-		t.Fatalf("reading %s: %v", path, err)
+		t.Fatalf("reading %s: %v", toolRolesDir, err)
 	}
-	if err := json.Unmarshal(raw, &into); err != nil {
-		t.Fatalf("decoding %s: %v", path, err)
+	doc := toolRolesFile{Head: head}
+	for _, row := range rows {
+		doc.Rows = append(doc.Rows, toolRoleCell{row})
 	}
-	return into
+	slices.SortFunc(doc.Rows, func(a, b toolRoleCell) int { return strings.Compare(a.call(), b.call()) })
+	return doc
+}
+
+func readToolChecks(t *testing.T) toolChecksFile {
+	t.Helper()
+	head, verbs, err := toolroles.Read[toolroles.Checks](os.DirFS(toolChecksDir))
+	if err != nil {
+		t.Fatalf("reading %s: %v", toolChecksDir, err)
+	}
+	return toolChecksFile{Head: head, Verbs: verbs}
 }
 
 // callPlace is where one swept call sits on the page.
@@ -137,22 +136,22 @@ func placedSections(report parityReport, doc toolRolesFile) []placedSection {
 
 func syncToolRolesPage(t *testing.T, report parityReport) {
 	t.Helper()
-	doc := readSweepFile[toolRolesFile](t, toolRolesJSON)
-	checks := readSweepFile[toolChecksFile](t, toolChecksTable)
+	doc := readToolRoles(t)
+	checks := readToolChecks(t)
 	syncMCPParity(t, toolRolesPage, renderToolRolesPage(placedSections(report, doc), doc, checks))
 }
 
 const toolRolesPageHead = `# Which role can use which MCP tool
 
-<!-- Generated together with mcp-tool-roles.json; do not edit by hand. -->
+<!-- Generated together with the mcp-tool-roles folder; do not edit by hand. -->
 
 An agent has the access of the user it acts for. This page shows what that gives on each role a new
 workspace starts with. [rbac-matrix.md](rbac-matrix.md) lists the grants themselves;
 [agent-tools.md](agent-tools.md) lists the tools.
 
-Nobody types this page. It is drawn from [mcp-tool-roles.json](mcp-tool-roles.json), and the test that
-writes the file fails when the answers change and the file does not. The file's note says how it is
-measured:
+Nobody types this page. It is drawn from [the mcp-tool-roles folder](mcp-tool-roles/_head.json), one file per
+verb, and the test that writes the folder fails when the answers change and a file does not. The note says how it
+is measured:
 
 `
 
@@ -285,8 +284,8 @@ func renderColleagueRecord(b *bytes.Buffer, doc toolRolesFile) {
 func renderCallNeeds(b *bytes.Buffer, sections []placedSection, checks toolChecksFile) {
 	b.WriteString("\n## What each call needs\n\n" +
 		"tools/list offers a passport a tool, or a router's action, only when its user holds every check below. " +
-		"The checks come from [the tool checks table](../../backend/internal/modules/agents/toolchecks.json), " +
-		"which the same test writes:\n\n> " + checks.Note + "\n\n")
+		"The checks come from [the tool checks folder](../../backend/internal/modules/agents/toolchecks/_head.json), " +
+		"one file per verb, which the same test writes:\n\n> " + checks.Note + "\n\n")
 	b.WriteString("A check is `object.action`, or `object.a|b` for any one of them. `*.action` is the action on any " +
 		"object, `admin` is the admin role key, `scope:team` is a row scope at least that wide, and " +
 		"`scope-narrower-than:all` is a row scope short of all.\n")

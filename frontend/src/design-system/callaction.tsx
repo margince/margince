@@ -31,6 +31,8 @@ type CallActionProps = { record: CallRecord } & (
       appearance: "button";
       number: string | undefined;
       label: string;
+      /** The card's one filled verb, where calling is the work. */
+      filled?: boolean;
     }
   | {
       appearance: "icon";
@@ -78,10 +80,7 @@ export function CallAction(props: Readonly<CallActionProps>) {
     );
   }
   if (props.appearance === "button") {
-    if (!href) {
-      return null;
-    }
-    return linkVerb(href, <Phone aria-hidden="true" />, props.label, onClick);
+    return href && callVerb(href, props.label, props.filled, onClick);
   }
   const icon = <Phone aria-hidden="true" />;
   if (props.reasonId !== undefined || !href) {
@@ -106,6 +105,16 @@ export function CallAction(props: Readonly<CallActionProps>) {
   );
 }
 
+function callVerb(
+  href: string,
+  label: string,
+  filled: boolean | undefined,
+  onClick: ((event: MouseEvent<HTMLAnchorElement>) => void) | undefined,
+) {
+  const look = filled ? "btn btn-primary" : undefined;
+  return linkVerb(href, <Phone aria-hidden="true" />, label, onClick, look);
+}
+
 // A labelled verb that goes somewhere: `Button`'s ghost look on an anchor, which
 // `Button` cannot render.
 export function linkVerb(
@@ -113,9 +122,10 @@ export function linkVerb(
   glyph: ReactNode,
   label: string,
   onClick?: (event: MouseEvent<HTMLAnchorElement>) => void,
+  className = "btn btn-ghost",
 ) {
   return (
-    <AppLink className="btn btn-ghost" href={href} onClick={onClick}>
+    <AppLink className={className} href={href} onClick={onClick}>
       {glyph}
       {label}
     </AppLink>

@@ -1,0 +1,15 @@
+{
+  "verb": "get_magic_line_records",
+  "checks": [
+    "activity.read",
+    "company.read",
+    "contact.read",
+    "deal.read",
+    "lead.read",
+    "project.read",
+    "relationship.read"
+  ],
+  "takes": [
+    "magic_line"
+  ]
+}

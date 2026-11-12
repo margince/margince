@@ -1,0 +1,6 @@
+{
+  "verb": "get_ai_budget",
+  "checks": [
+    "ai_budget.read"
+  ]
+}

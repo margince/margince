@@ -1,0 +1,14 @@
+{
+  "tool": "read_workspace",
+  "action": "legal_entity_members",
+  "verb": "list_legal_entity_members",
+  "allowed_for": [
+    "admin",
+    "management",
+    "manager",
+    "ops",
+    "read_only",
+    "rep"
+  ],
+  "refused_for": []
+}

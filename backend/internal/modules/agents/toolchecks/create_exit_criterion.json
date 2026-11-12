@@ -1,0 +1,9 @@
+{
+  "verb": "create_exit_criterion",
+  "checks": [
+    "pipeline.update"
+  ],
+  "takes": [
+    "stage"
+  ]
+}
