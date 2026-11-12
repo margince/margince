@@ -23,12 +23,14 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 
+	"github.com/margince/margince/backend/internal/compose/carddoer"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/approvals"
 	"github.com/margince/margince/backend/internal/modules/automation"
 	"github.com/margince/margince/backend/internal/modules/deals"
 	"github.com/margince/margince/backend/internal/modules/identity"
+	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/diffhash"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -348,8 +350,8 @@ func NewFollowUpReconciler(pool *pgxpool.Pool, log *slog.Logger) *deals.FollowUp
 // reaches the generic mapper and reads as 500 internal, which tells the rep
 // their approval broke the server rather than that the date needs fixing —
 // leaving them nothing to act on and no reason to try again.
-func followUpPrecheck() approvals.ReleasePrecheck {
-	return func(_ context.Context, staged, edited json.RawMessage) error {
+func followUpPrecheck(db *database.DB) approvals.ReleasePrecheck {
+	return func(ctx context.Context, staged, edited json.RawMessage) error {
 		payload := staged
 		if len(edited) > 0 {
 			payload = edited
@@ -362,15 +364,30 @@ func followUpPrecheck() approvals.ReleasePrecheck {
 			return &approvals.InvalidEditError{Cause: fmt.Errorf(
 				"the due date %q is not a date — write it as YYYY-MM-DD", proposal.DueDate)}
 		}
-		return nil
+		doer, err := carddoer.Chosen(proposal.DoerID)
+		if err != nil || doer == nil {
+			return err
+		}
+		deal := []activities.ActivityLinkInput{{EntityType: "deal", EntityID: proposal.DealID.UUID}}
+		return db.Tx(ctx, func(tx pgx.Tx) error {
+			return carddoer.EnsureMayHold(ctx, tx, *doer, deal, colleagueAuthority(db))
+		})
 	}
 }
 
-// followUpDoer is who does an approved follow-up: the deal's owner as the
-// effect writes, so a handover after the decision still reaches the new owner.
-// A deal with no owner falls back to the human who approved the card.
-func followUpDoer(ctx context.Context, tx pgx.Tx, deal ids.DealID, decider ids.UUID) (*ids.UserID, error) {
-	owner, err := lockedDealOwner(ctx, tx, deal.UUID)
+// followUpDoer is who does an approved follow-up: the colleague the accepter
+// chose, else the deal's owner as the effect writes. So a handover after the
+// decision still reaches the new owner. A deal nobody owns falls back to the
+// human who approved the card.
+func followUpDoer(ctx context.Context, tx pgx.Tx, proposal deals.FollowUpProposal, decider ids.UUID) (*ids.UserID, error) {
+	chosen, err := carddoer.Chosen(proposal.DoerID)
+	if err != nil {
+		return nil, err
+	}
+	if chosen != nil {
+		return new(ids.From[ids.UserKind](*chosen)), nil
+	}
+	owner, err := lockedDealOwner(ctx, tx, proposal.DealID.UUID)
 	if err != nil {
 		return nil, err
 	}
@@ -435,11 +452,11 @@ func followUpConfirmEffect(svc *approvals.Service, store *activities.Store) appr
 		// (approvals.effectIsStillOwed).
 		return svc.RedeemAndApply(ctx, approvalID, deals.FollowUpReconcileKind, diffHash,
 			func(tx pgx.Tx) error {
-				doer, err := followUpDoer(ctx, tx, proposal.DealID, decider.UserID)
+				doer, err := followUpDoer(ctx, tx, proposal, decider.UserID)
 				if err != nil {
 					return err
 				}
-				return logTaskOrUnassignedTx(execCtx, tx, store, activities.LogActivityInput{
+				in := activities.LogActivityInput{
 					Kind:         "task",
 					AssigneeID:   doer,
 					SystemText:   metadata,
@@ -450,7 +467,14 @@ func followUpConfirmEffect(svc *approvals.Service, store *activities.Store) appr
 					SourceID:     &sourceID,
 					Source:       "overnight-reconcile",
 					Links:        []activities.ActivityLinkInput{{EntityType: "deal", EntityID: proposal.DealID.UUID}},
-				})
+				}
+				if proposal.DoerID == "" {
+					return logTaskOrUnassignedTx(execCtx, tx, store, in)
+				}
+				// A chosen colleague is the accepter's word: refused, the
+				// approval stays unspent rather than landing on nobody.
+				_, _, err = store.LogActivityTx(execCtx, tx, in)
+				return err
 			})
 	}
 }

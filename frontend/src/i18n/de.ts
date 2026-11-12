@@ -4653,6 +4653,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "approval.field.previous_close_date": "Aktuelles Abschlussdatum",
   "approval.field.expected_close_date": "Vorgeschlagenes Datum",
   "approval.field.due_date": "Fällig",
+  "approval.field.doer": "Wer erledigt das",
+  "approval.doerMe": "Ich",
   "approval.field.scheduled_at": "Geplant für",
   "approval.field.flags": "Probleme",
   "approval.field.closeDateFlag.overdue": "Datum verstrichen",

@@ -38,7 +38,7 @@ func applyEditedPayload(ctx context.Context, tx pgx.Tx, id ids.ApprovalID, edite
 	// and the version pin above were both evaluated against the records the
 	// STAGED payload named, and the effect resolves what it writes from the
 	// payload rather than from the approval's target. See editscope.go.
-	if err := assertSameEntityRefs(a.ProposedChange, canonical); err != nil {
+	if err := assertSameEntityRefs(a.Kind, a.ProposedChange, canonical); err != nil {
 		return err
 	}
 	// The same rule for the half entityRefs cannot see: a record named inside the

@@ -34,6 +34,15 @@ export type EditableField =
   | {
       readonly field: string;
       /**
+       * The colleague who will do the work. Empty keeps it with whoever is
+       * accepting; the server checks the chosen colleague can hold tasks.
+       */
+      readonly as: "doer";
+      readonly label?: MessageKey;
+    }
+  | {
+      readonly field: string;
+      /**
        * A date-only wire value. It gets the calendar control rather than a text
        * box: the payload wants `2026-09-27`, and a reader typing the date the
        * way they say it out loud writes something the server refuses.
@@ -115,6 +124,15 @@ export const EDITABLE_FIELDS: Readonly<
   commitment_task: [
     { field: "summary", as: "text", label: "approval.field.step" },
     { field: "due_date", as: "date", label: "approval.field.due_date" },
+    { field: "doer_id", as: "doer", label: "approval.field.doer" },
+  ],
+  // The overnight follow-up task: its words, its day and who does it. The deal
+  // and the evidence are what the reader agrees to, not fields to retype.
+  deal_follow_up: [
+    { field: "subject", as: "text", label: "approval.field.task" },
+    { field: "body", as: "textarea", label: "approval.field.note" },
+    { field: "due_date", as: "date", label: "approval.field.due_date" },
+    { field: "doer_id", as: "doer", label: "approval.field.doer" },
   ],
   // The date is the entire question, and it is the only thing here a contact may
   // change. Undeclared, the generic editor offered every string in the payload:

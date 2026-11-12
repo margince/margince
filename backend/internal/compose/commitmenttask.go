@@ -18,6 +18,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/compose/carddoer"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/approvals"
@@ -65,6 +66,9 @@ type CommitmentTaskProposal struct {
 	// PrivateTo is the one member the source mail answers to. The task is read
 	// by them and its holder alone. Nil for a shared conversation.
 	PrivateTo *ids.UUID `json:"private_to,omitempty"`
+	// DoerID is the colleague the accepter hands the task to; empty keeps it
+	// with the accepter (approvals.DoerField).
+	DoerID string `json:"doer_id"`
 }
 
 // commitmentTask is what the writer needs to know about one promise.
@@ -192,7 +196,11 @@ func commitmentTaskEffect(
 			return fmt.Errorf("compose: unmarshal commitment proposal: %w", err)
 		}
 
-		assignee, err := commitmentDecider(ctx, proposedChange)
+		decider, err := commitmentDecider(ctx, proposedChange)
+		if err != nil {
+			return err
+		}
+		assignee, err := carddoer.ForPromise(proposal.DoerID, proposal.ExistingTaskID != nil, decider)
 		if err != nil {
 			return err
 		}
@@ -341,12 +349,29 @@ func commitmentTaskPrecheck(db *database.DB, tasks *activities.Store) approvals.
 		if err := json.Unmarshal(staged, &proposal); err != nil {
 			return fmt.Errorf("compose: unmarshal staged commitment proposal: %w", err)
 		}
-		holder, err := commitmentDecider(ctx, staged)
+		decider, err := commitmentDecider(ctx, staged)
+		if err != nil {
+			return err
+		}
+		if err := refuseCommitmentEdit(staged, edited); err != nil {
+			return err
+		}
+		if len(edited) > 0 {
+			if err := json.Unmarshal(edited, &proposal); err != nil {
+				return &approvals.InvalidEditError{Cause: err}
+			}
+		}
+		holder, err := carddoer.ForPromise(proposal.DoerID, proposal.ExistingTaskID != nil, decider)
 		if err != nil {
 			return err
 		}
 		var privateTo *ids.UUID
 		if err := db.Tx(ctx, func(tx pgx.Tx) error {
+			if holder != decider {
+				if err := carddoer.EnsureMayHold(ctx, tx, holder, proposal.Links, colleagueAuthority(db)); err != nil {
+					return err
+				}
+			}
 			var heldErr error
 			privateTo, heldErr = privateWorkHeldNow(ctx, tx, proposal, holder)
 			return heldErr
@@ -358,7 +383,7 @@ func commitmentTaskPrecheck(db *database.DB, tasks *activities.Store) approvals.
 				return err
 			}
 		}
-		return refuseCommitmentEdit(staged, edited)
+		return nil
 	}
 }
 
@@ -387,6 +412,10 @@ func refuseCommitmentEdit(staged, edited json.RawMessage) error {
 	if before.ExistingTaskID == nil {
 		after.Summary, after.DueDate = before.Summary, before.DueDate
 	}
+	if _, err := carddoer.ForPromise(after.DoerID, after.ExistingTaskID != nil, ids.Nil); err != nil {
+		return err
+	}
+	after.DoerID = before.DoerID
 	pinned, err := json.Marshal(after)
 	if err != nil {
 		return fmt.Errorf("compose: marshal edited commitment proposal: %w", err)
@@ -396,7 +425,7 @@ func refuseCommitmentEdit(staged, edited json.RawMessage) error {
 		return fmt.Errorf("compose: marshal staged commitment proposal: %w", err)
 	}
 	if string(pinned) != string(original) {
-		return &approvals.InvalidEditError{Cause: errors.New("only the promise's wording and its due date may be edited")}
+		return &approvals.InvalidEditError{Cause: errors.New("only the promise's wording, its due date and who does it may be edited")}
 	}
 	return nil
 }

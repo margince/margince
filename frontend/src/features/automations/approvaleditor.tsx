@@ -1,4 +1,10 @@
 import { useId } from "react";
+import { useAssignableUserOptions } from "../../components/assigneepicker";
+import {
+  RosterFailedLine,
+  useRosterPartial,
+  useRosterPartialHint,
+} from "../../components/entityref";
 import { ActionRow } from "../../design-system/actionrow";
 import { AppLink } from "../../design-system/applink";
 import {
@@ -10,6 +16,7 @@ import {
   Button,
   Disclosure,
   Field,
+  type FieldControl,
   Modal,
   Textarea,
   TextInput,
@@ -381,54 +388,30 @@ export function StagedEditor({
   const t = useT();
   return (
     <div className="form-stack approval-editor" data-date-scope>
-      {fields.map((entry) => (
-        <Field
-          key={entry.field}
-          label={entry.label ? t(entry.label) : entry.field}
-        >
-          {(control) =>
-            entry.as === "choice" ? (
-              <Select
-                {...control}
-                options={entry.options.map((option) => {
-                  // The VALUE stays the wire enum — it is what gets submitted.
-                  // Only what the reader sees is translated, and an option the
-                  // kind declared no label for degrades to its own words rather
-                  // than to an identifier.
-                  const label = entry.optionLabels?.[option];
-                  return {
-                    value: option,
-                    label: label ? t(label) : humanizeKind(option),
-                  };
-                })}
+      {fields.map((entry) =>
+        entry.as === "doer" ? (
+          <DoerField
+            key={entry.field}
+            label={entry.label ? t(entry.label) : entry.field}
+            value={draft[entry.field] ?? ""}
+            onChange={(value) => onChange(entry.field, value)}
+          />
+        ) : (
+          <Field
+            key={entry.field}
+            label={entry.label ? t(entry.label) : entry.field}
+          >
+            {(control) => (
+              <EditorControl
+                entry={entry}
+                control={control}
                 value={draft[entry.field] ?? ""}
                 onChange={(value) => onChange(entry.field, value)}
               />
-            ) : entry.as === "date" ? (
-              <DateInput
-                {...control}
-                // A staged date that is not a day shows as an empty box the
-                // reader can fill, not as text the field would refuse.
-                value={isoOrBlank(draft[entry.field])}
-                onChange={(event) => onChange(entry.field, event.target.value)}
-              />
-            ) : entry.as === "textarea" ? (
-              <Textarea
-                {...control}
-                rows={12}
-                value={draft[entry.field] ?? ""}
-                onChange={(event) => onChange(entry.field, event.target.value)}
-              />
-            ) : (
-              <TextInput
-                {...control}
-                value={draft[entry.field] ?? ""}
-                onChange={(event) => onChange(entry.field, event.target.value)}
-              />
-            )
-          }
-        </Field>
-      ))}
+            )}
+          </Field>
+        ),
+      )}
       <ActionRow
         primary={
           /* The edited approve is the same write as the plain one and was the
@@ -455,5 +438,123 @@ export function StagedEditor({
         </Button>
       </ActionRow>
     </div>
+  );
+}
+
+/**
+ * Who does the accepted work: the reader by default, or a colleague. Agent
+ * seats are left out, and a failed or partial roster says so, as in every
+ * picker that hands work to somebody (`TaskAssigneeField`).
+ */
+function DoerField({
+  label,
+  value,
+  onChange,
+}: Readonly<{
+  label: string;
+  value: string;
+  onChange: (next: string) => void;
+}>) {
+  const t = useT();
+  const { options, roster } = useAssignableUserOptions();
+  const partialHint = useRosterPartialHint(useRosterPartial("user", true));
+  return (
+    <>
+      <Field label={label} hint={partialHint}>
+        {(control) => (
+          <Select
+            {...control}
+            options={[{ value: "", label: t("approval.doerMe") }, ...options]}
+            value={value}
+            onChange={onChange}
+          />
+        )}
+      </Field>
+      <RosterFailedLine kind="user" roster={roster} />
+    </>
+  );
+}
+
+/** One staged field's control, in the shape its kind declared. */
+function EditorControl({
+  entry,
+  control,
+  value,
+  onChange,
+}: Readonly<{
+  entry: EditableField;
+  control: FieldControl;
+  value: string;
+  onChange: (next: string) => void;
+}>) {
+  switch (entry.as) {
+    case "choice":
+      return (
+        <ChoiceSelect
+          entry={entry}
+          control={control}
+          value={value}
+          onChange={onChange}
+        />
+      );
+    case "date":
+      // A staged date that is not a day shows as an empty box the reader can
+      // fill, not as text the field would refuse.
+      return (
+        <DateInput
+          {...control}
+          value={isoOrBlank(value)}
+          onChange={(event) => onChange(event.target.value)}
+        />
+      );
+    case "textarea":
+      return (
+        <Textarea
+          {...control}
+          rows={12}
+          value={value}
+          onChange={(event) => onChange(event.target.value)}
+        />
+      );
+    default:
+      return (
+        <TextInput
+          {...control}
+          value={value}
+          onChange={(event) => onChange(event.target.value)}
+        />
+      );
+  }
+}
+
+/**
+ * A wire enum offered by its labels. The VALUE stays the enum, which is what
+ * gets submitted; an option with no label degrades to its own words.
+ */
+function ChoiceSelect({
+  entry,
+  control,
+  value,
+  onChange,
+}: Readonly<{
+  entry: Extract<EditableField, { as: "choice" }>;
+  control: FieldControl;
+  value: string;
+  onChange: (next: string) => void;
+}>) {
+  const t = useT();
+  return (
+    <Select
+      {...control}
+      options={entry.options.map((option) => {
+        const label = entry.optionLabels?.[option];
+        return {
+          value: option,
+          label: label ? t(label) : humanizeKind(option),
+        };
+      })}
+      value={value}
+      onChange={onChange}
+    />
   );
 }

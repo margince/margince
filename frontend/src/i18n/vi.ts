@@ -4536,6 +4536,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "approval.field.previous_close_date": "Ngày chốt hiện tại",
   "approval.field.expected_close_date": "Ngày đề xuất",
   "approval.field.due_date": "Hạn",
+  "approval.field.doer": "Ai thực hiện",
+  "approval.doerMe": "Tôi",
   "approval.field.scheduled_at": "Lên lịch vào",
   "approval.field.flags": "Vấn đề",
   "approval.field.closeDateFlag.overdue": "ngày đã qua",
