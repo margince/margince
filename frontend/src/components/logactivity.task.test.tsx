@@ -58,6 +58,29 @@ describe("assigning a task at create time", () => {
     expect(post?.body).toMatchObject({ kind: "task", assignee_id: "u2" });
   });
 
+  it("carries the type picked, and Reach out when none is", async () => {
+    const captured: Captured[] = [];
+    renderTaskComposer(captured);
+    const user = userEvent.setup();
+    expect(await screen.findByLabelText("Task type")).toHaveProperty(
+      "textContent",
+      expect.stringContaining("Reach out"),
+    );
+    await user.type(
+      screen.getByLabelText("Subject *"),
+      "Meet Dana at the fair",
+    );
+    await user.click(screen.getByLabelText("Task type"));
+    await user.click(await screen.findByRole("option", { name: "Meet" }));
+    await user.click(screen.getByRole("button", { name: "Log" }));
+
+    await waitFor(() =>
+      expect(captured.some((e) => e.key === "POST /activities")).toBe(true),
+    );
+    const post = captured.find((e) => e.key === "POST /activities");
+    expect(post?.body).toMatchObject({ kind: "task", task_type: "meet" });
+  });
+
   it("posts no assignee when the task is left unassigned", async () => {
     const captured: Captured[] = [];
     renderTaskComposer(captured);

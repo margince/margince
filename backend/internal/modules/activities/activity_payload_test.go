@@ -291,3 +291,15 @@ func TestAnActivityCapturedPayloadNamesTheImportRunThatWroteIt(t *testing.T) {
 		t.Errorf("a live write's payload names an import: %s", raw)
 	}
 }
+
+// A retyped task changes its one step, so a type-only patch must say so.
+func TestActivityUpdatedChangedFields_TaskType(t *testing.T) {
+	meet := crmcontracts.TaskTypeMeet
+	fields := activityUpdatedChangedFields(UpdateActivityInput{TaskType: &meet}, crmcontracts.Activity{})
+	if fields.TaskType == nil || string(*fields.TaskType) != string(meet) {
+		t.Fatalf("a type-only patch carried task type %v, want meet", fields.TaskType)
+	}
+	if fields.Subject != nil || fields.IsDone != nil {
+		t.Errorf("a type-only patch claimed other fields moved: %+v", fields)
+	}
+}

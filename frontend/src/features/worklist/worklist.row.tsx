@@ -117,9 +117,11 @@ export function WorklistRow({
   onReview,
   onOpenEmail,
   context,
+  menu,
   framed = false,
   quiet = false,
   pick,
+  titleEnd,
 }: Readonly<{
   item: WorklistItem;
   /** The row's selection checkbox, drawn beside its rank where the list
@@ -128,8 +130,12 @@ export function WorklistRow({
   /** The way into what this row is ABOUT, drawn among its verbs. The Brief
    *  has no pane beside its list, so its focus rows open a drawer instead. */
   context?: ReactNode;
+  /** Lines the surface adds at the top of the row's menu. */
+  menu?: ReactNode;
   /** The card already holds a filled verb, so the row's own is outlined. */
   quiet?: boolean;
+  /** Drawn at the end of the title line. */
+  titleEnd?: ReactNode;
   /** A CARD around this row says whose it is, why it is here and where it
    *  stands, so the row withholds those captions and the verb that only
    *  reaches its record. The Brief's card is the only frame there is. */
@@ -321,6 +327,7 @@ export function WorklistRow({
               readings={readings}
               emailOpener={emailOpener}
               badged={badged}
+              titleEnd={titleEnd}
             />
           )}
           <RowAsk item={item} framed={framed} />
@@ -354,6 +361,7 @@ export function WorklistRow({
             equals={answer.equals}
             onReview={onReview}
             context={context}
+            menu={menu}
             framed={framed}
             titled={titleLinks(emailOpener, href, source.open)}
           />

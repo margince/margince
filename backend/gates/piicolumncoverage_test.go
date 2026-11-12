@@ -197,7 +197,7 @@ var erasureColumnBaseline = map[string][]string{
 		"channel_provider",
 		"direction",
 		"kind",
-		"meeting_status",
+		"meeting_status", "task_type",
 		// How a call ended: a closed list (reached, voicemail, ...) about
 		// the call, never words the subject wrote, so erasure has nothing to
 		// clear here.

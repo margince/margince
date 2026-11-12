@@ -21,6 +21,7 @@ import {
 import { MayBeDone } from "../../components/maybedone";
 import { RECORD_CHIP_ICONS } from "../../components/recordlinks";
 import { useTaskDone } from "../../components/taskactions";
+import { TaskTypeChip } from "../../components/tasktype";
 import { Badge, Card } from "../../design-system/atoms";
 import { Avatar } from "../../design-system/avatar";
 import { IconAction } from "../../design-system/iconaction";
@@ -43,6 +44,7 @@ import type { MessageKey } from "../../i18n/en";
 import { changeBadge, changeSentence } from "../../lib/calendarchange";
 import { useCompanyZone } from "../../lib/companyzone";
 import { useMe } from "../../lib/session";
+import type { TaskType } from "../../lib/tasktype";
 import { useViewerZone } from "../../lib/viewerzone";
 import { worklistKey } from "../../lib/workkeys";
 import {
@@ -224,7 +226,13 @@ export function TaskCard({
 export function TaskMeta({
   item,
   link,
-}: Readonly<{ item: WorklistItem; link?: (href: string) => string }>) {
+  taskType,
+}: Readonly<{
+  item: WorklistItem;
+  link?: (href: string) => string;
+  /** The task's type, once its read is in; it names the kind of work. */
+  taskType?: TaskType;
+}>) {
   const t = useT();
   const plural = usePlural();
   const { locale } = useLocale();
@@ -247,9 +255,13 @@ export function TaskMeta({
           {when}
         </Badge>
       )}
-      <Chip dense icon={kindIcon(item)}>
-        {t(kindKey(item))}
-      </Chip>
+      {taskType ? (
+        <TaskTypeChip type={taskType} />
+      ) : (
+        <Chip dense icon={kindIcon(item)}>
+          {t(kindKey(item))}
+        </Chip>
+      )}
       <TaskRecords item={item} link={link} />
       {status && (
         <span className="brief-task-status">
