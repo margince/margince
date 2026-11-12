@@ -23,6 +23,8 @@ import (
 // rendered again, so a replay cannot render text that merely looks like HTML.
 const MeetingDescriptionRenderedFlag = "description_rendered"
 
+const meetingBodyAuthoredSQL = `(edit.actor_type IN ('human','agent') AND (edit.after ? 'body' OR edit.before ? 'body'))`
+
 // MeetingBodyRender is a calendar meeting body rendered from its stored HTML
 // description, and the row it was rendered from as it was read.
 type MeetingBodyRender struct {
@@ -61,7 +63,7 @@ func RenderMeetingBodyTx(ctx context.Context, tx pgx.Tx, r MeetingBodyRender) (b
 		 WHERE a.id = $1 AND a.version = $4 AND a.body = $5 AND a.kind = 'meeting' AND a.restricted_at IS NULL
 		   AND NOT EXISTS (SELECT 1 FROM audit_log edit
 		         WHERE edit.entity_type = 'activity' AND edit.entity_id = a.id
-		           AND (edit.actor_type = 'human' AND (edit.after ? 'body' OR edit.before ? 'body')
+		           AND (`+meetingBodyAuthoredSQL+`
 		             OR edit.after ? '`+MeetingDescriptionRenderedFlag+`'))`,
 		r.Activity, r.Body, language, r.Version, r.StoredBody)
 	if err != nil {

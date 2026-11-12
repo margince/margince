@@ -103,7 +103,7 @@ func (r listRule) expand(ctx context.Context, resolver authz.Resolver, ev workfl
 		return nil, nil, err
 	}
 	changes, total, err := r.ex.Lists.ObservedChanges(owner, list.ID, check.DefinitionVersion, check.EvaluatedAt,
-		actionsFor(rule.Direction), burstCap)
+		actionsFor(rule.Direction), burstCap, rule.IncludeImported == nil || *rule.IncludeImported)
 	switch {
 	case errors.Is(err, apperrors.ErrNotFound), errors.Is(err, apperrors.ErrPermissionDenied):
 		// The owner can no longer find or read the list: what it holds is no

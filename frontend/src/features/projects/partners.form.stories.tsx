@@ -2,7 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { screen, userEvent } from "storybook/test";
+import { screen } from "storybook/test";
 import {
   installFetchStub,
   jsonResponse,
@@ -32,16 +32,6 @@ export const Setup: Story = {
     );
   },
   play: async () => {
-    await screen.findByRole("textbox", { name: "Next step due" });
-  },
-};
-
-/** The calendar behind "Next step due", open on today with nothing chosen. */
-export const PickingTheNextStepDay: Story = {
-  ...Setup,
-  play: async () => {
-    await screen.findByRole("textbox", { name: "Next step due" });
-    await userEvent.click(screen.getByRole("button", { name: /^Choose date/ }));
-    await screen.findByRole("dialog", { name: /^Choose date/ });
+    await screen.findByRole("textbox", { name: "Served segments" });
   },
 };

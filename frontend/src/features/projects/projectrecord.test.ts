@@ -120,7 +120,7 @@ describe("the project tag a subject carries", () => {
   });
 
   it("clears a key carrying the underscore the CHECK admits", () => {
-    // project_key_shape is `^[A-Za-z][A-Za-z0-9_-]{1,23}$`, so `alpha_two` is a
+    // project_key_shape admits the underscore, so `alpha_two` is a
     // key the capture matcher reads. Left standing it is a SECOND live key
     // beside the one written here — and a subject naming two files under
     // neither, which is the exact outcome this function exists to prevent.

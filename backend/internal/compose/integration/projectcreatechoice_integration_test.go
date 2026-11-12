@@ -134,8 +134,7 @@ func TestAProjectStartsInTheChosenPhaseButNeverClosed(t *testing.T) {
 	_, err = e.Projects.CreateProject(e.Admin(), projects.CreateProjectInput{
 		Name: "Closed at birth", CompanyID: companyIDOf(company), Source: "manual", Phase: projects.PhaseClosed,
 	})
-	var phase *projects.ProjectStartPhaseError
-	if !errors.As(err, &phase) {
+	if _, refused := errors.AsType[*projects.ProjectStartPhaseError](err); !refused {
 		t.Fatalf("a closed start answered %v, want the start-phase refusal", err)
 	}
 }
@@ -218,5 +217,35 @@ func TestAProjectCreatedFromADealLinksItUnderTheDealsWriteCheck(t *testing.T) {
 	}
 	if _, err := create("After the win", closed, company); !errors.As(err, &notLinkable) || notLinkable.Code != "deal_not_open" {
 		t.Errorf("a won deal answered %v, want deal_not_open", err)
+	}
+}
+
+// The approval preview runs the create's own deal check. It never offers a
+// create that would take a deal from its project.
+func TestTheApprovalPreviewRefusesTheDealsTheCreateRefuses(t *testing.T) {
+	e := Setup(t)
+	company := e.SeedCompany(t, "Globex", nil)
+	deal := ids.From[ids.DealKind](e.SeedOpenDealOn(t, "Globex deal", company))
+	creator, ok := principal.Actor(e.Admin())
+	if !ok {
+		t.Fatal("the admin context carries no principal")
+	}
+	preview := func() error {
+		_, err := e.Projects.PreviewProjectCreationForActor(e.Admin(), projects.CreateProjectInput{
+			Name: "Globex rollout", CompanyID: companyIDOf(company), Source: "manual", DealID: &deal,
+		}, creator)
+		return err
+	}
+	if err := preview(); err != nil {
+		t.Fatalf("an open, unlinked deal was refused in preview: %v", err)
+	}
+	if _, err := e.Projects.CreateProject(e.Admin(), projects.CreateProjectInput{
+		Name: "First rollout", CompanyID: companyIDOf(company), Source: "manual", DealID: &deal,
+	}); err != nil {
+		t.Fatal(err)
+	}
+	var notLinkable *projects.DealNotLinkableError
+	if err := preview(); !errors.As(err, &notLinkable) || notLinkable.Code != "deal_has_project" {
+		t.Errorf("preview over a linked deal answered %v, want deal_has_project", err)
 	}
 }

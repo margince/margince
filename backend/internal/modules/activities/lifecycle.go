@@ -105,6 +105,9 @@ func updateActivityInTx(
 		return crmcontracts.Activity{}, err
 	}
 	updated := crmcontracts.PublicEventActivityUpdated{ChangedFields: activityUpdatedChangedFields(in, current)}
+	if !meetingReadyForRecap(current) && meetingReadyForRecap(out) {
+		updated.ChangedFields.MeetingRecapBecameReady = new(true)
+	}
 	updated.Imported, updated.ImportRunId = storekit.ImportMark(ctx)
 	if err := storekit.EmitEvent(ctx, tx, auditID, id.UUID, updated); err != nil {
 		return crmcontracts.Activity{}, err
@@ -154,6 +157,9 @@ func admitActivityPatch(
 	if !held && in.IfVersion != nil && current.Version != nil && int64(*current.Version) != *in.IfVersion &&
 		!in.asksOnlyForTheDoneItHolds(current) {
 		return crmcontracts.Activity{}, held, apperrors.ErrVersionSkew
+	}
+	if err := in.admitPickedTimes(string(current.Kind)); err != nil {
+		return crmcontracts.Activity{}, held, err
 	}
 	if err := renormalizeTranscriptPatch(current, in); err != nil {
 		return crmcontracts.Activity{}, held, err
@@ -205,15 +211,7 @@ func admitActivityPatch(
 		}
 	}
 	if !held {
-		if err := checkTaskFieldsKind(string(current.Kind), taskFields{in.DueAt, in.RemindAt, in.AssigneeID, in.IsDone}); err != nil {
-			return crmcontracts.Activity{}, held, err
-		}
-		if err := in.admitPatchTime(current.Kind); err != nil {
-			return crmcontracts.Activity{}, held, err
-		}
-	}
-	if !held {
-		if err := validateActivityDuration(in.DurationSeconds); err != nil {
+		if err := admitPatchedFields(ctx, tx, current, in); err != nil {
 			return crmcontracts.Activity{}, held, err
 		}
 	}
@@ -419,12 +417,19 @@ func applyActivityPatch(ctx context.Context, tx pgx.Tx, id ids.ActivityID, in Up
 		  meeting_status = coalesce($%[9]d, meeting_status),
 		  call_outcome = CASE WHEN $%[19]d THEN NULL ELSE coalesce($%[18]d, call_outcome) END,
 		  duration_seconds = coalesce($%[10]d, duration_seconds),
+		  source_activity_id = coalesce($%[20]d, source_activity_id),
 		  occurred_precision = coalesce($%[14]d, occurred_precision),
 		  -- The language was READ from the text, so an edit to the text reads
 		  -- it again, from the words as they now stand.
 		  language = CASE
 		    WHEN $%[3]d IS NOT NULL OR $%[2]d IS NOT NULL THEN $%[15]d
 		    ELSE language END,
+		  due_wall = coalesce($%[21]d::text::timestamp, due_wall),
+		  due_zone = coalesce($%[22]d, due_zone),
+		  remind_wall = coalesce($%[23]d::text::timestamp, remind_wall),
+		  remind_zone = coalesce($%[24]d, remind_zone),
+		  meeting_wall = CASE WHEN $%[14]d = 'day' THEN NULL ELSE coalesce($%[25]d::text::timestamp, meeting_wall) END,
+		  meeting_zone = CASE WHEN $%[14]d = 'day' THEN NULL ELSE coalesce($%[26]d, meeting_zone) END,
 		  done_at = CASE
 		    WHEN $%[8]d IS TRUE AND NOT is_done THEN now()
 		    WHEN $%[8]d IS FALSE THEN NULL
@@ -434,7 +439,8 @@ func applyActivityPatch(ctx context.Context, tx pgx.Tx, id ids.ActivityID, in Up
 		arg(in.RemindAt), arg(in.AssigneeID), done, arg(in.MeetingStatus), arg(in.DurationSeconds),
 		arg(in.clears("due_at")), arg(in.clears("remind_at")), arg(in.clears("assignee_id")),
 		arg(in.OccurredPrecision), arg(relabelledLanguage(current, in)),
-		customAssignments(in.customColumns, in.CustomFields, arg), arg(in.DueHasTime), arg(in.CallOutcome), arg(in.clears(fieldCallOutcome)))
+		customAssignments(in.customColumns, in.CustomFields, arg), arg(in.DueHasTime), arg(in.CallOutcome), arg(in.clears(fieldCallOutcome)), arg(in.sourceActivityID),
+		arg(pickedWall(in.DueIntent)), arg(pickedZone(in.DueIntent)), arg(pickedWall(in.RemindIntent)), arg(pickedZone(in.RemindIntent)), arg(pickedWall(in.MeetingIntent)), arg(pickedZone(in.MeetingIntent)))
 	query += fmt.Sprintf(" AND version = $%d", arg(current.Version))
 	result, err := tx.Exec(ctx, query, args...)
 	if err != nil {
@@ -461,4 +467,19 @@ func replayMovedTheMeeting(
 		recordedAt:    in.recordedAt,
 		MeetingStatus: in.MeetingStatus,
 	})
+}
+
+// admitPatchedFields checks what a patch of an unheld activity sets: its task
+// source, its task fields, its time and its duration.
+func admitPatchedFields(ctx context.Context, tx pgx.Tx, current crmcontracts.Activity, in *UpdateActivityInput) error {
+	if err := preparePatchedTaskSource(ctx, tx, current, *in); err != nil {
+		return err
+	}
+	if err := checkTaskFieldsKind(string(current.Kind), taskFields{in.DueAt, in.RemindAt, in.AssigneeID, in.IsDone}); err != nil {
+		return err
+	}
+	if err := in.admitPatchTime(current.Kind); err != nil {
+		return err
+	}
+	return validateActivityDuration(in.DurationSeconds)
 }

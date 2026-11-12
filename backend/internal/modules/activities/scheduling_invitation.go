@@ -91,6 +91,7 @@ func invitationView(row invitationRow) crmcontracts.MeetingInvitation {
 	out := crmcontracts.MeetingInvitation{
 		Id: crmcontracts.Id(row.ID), Status: crmcontracts.MeetingInvitationStatus(row.Status),
 		Start: row.Appointment.Start, End: row.Appointment.End, Subject: row.Appointment.Subject, Location: row.Appointment.Location, Version: row.Version,
+		StartIntent: bookedStartIntent(row.Appointment),
 	}
 	reminder := crmcontracts.MeetingInvitationReminderStatus(row.ReminderStatus)
 	out.ReminderStatus = &reminder
@@ -159,6 +160,9 @@ func (s *Store) CreateInvitation(ctx context.Context, in crmcontracts.MeetingInv
 
 func (s *Store) reserveAndQueueInvitation(ctx context.Context, host ids.UserID, in crmcontracts.MeetingInvitationRequest, intent invitationIntent) (crmcontracts.MeetingInvitation, error) {
 	if err := validateInvitee(in, intent); err != nil {
+		return crmcontracts.MeetingInvitation{}, err
+	}
+	if err := admitBookedStart(in.StartIntent, &in.Start, &in.End); err != nil {
 		return crmcontracts.MeetingInvitation{}, err
 	}
 	profile, err := s.validateInvitationTime(ctx, host, in.Start, in.End)
@@ -234,7 +238,12 @@ func readInvitation(ctx context.Context, tx pgx.Tx, id ids.UUID, lock bool) (inv
 	if errors.Is(err, pgx.ErrNoRows) {
 		return row, apperrors.ErrNotFound
 	}
-	return row, err
+	if err != nil {
+		return row, err
+	}
+	// Every read, delivery and settlement sees the chosen clock under current
+	// zone rules, as the meeting's own read does (occurredday.BookedStartSQL).
+	return row, admitBookedStart(bookedStartIntent(row.Appointment), &row.Appointment.Start, &row.Appointment.End)
 }
 
 func auditInvitation(ctx context.Context, tx pgx.Tx, before *invitationRow, after invitationRow) error {
@@ -298,7 +307,7 @@ func (s *Store) insertInvitation(ctx context.Context, row *invitationRow, in crm
 		activity, _, err := s.LogActivityTx(ctx, tx, LogActivityInput{
 			SystemText: &systemtext.Message{Subject: systemtext.Prose(systemtext.Quote, ""), Body: systemtext.Prose(systemtext.Quote, "")},
 			Kind:       KindMeeting, Subject: &in.Subject, Body: &in.Description,
-			OccurredAt: &in.Start, DurationSeconds: &seconds, HostUserID: &host, ClaimsHostSlot: true,
+			OccurredAt: &in.Start, MeetingIntent: in.StartIntent, DurationSeconds: &seconds, HostUserID: &host, ClaimsHostSlot: true,
 			Links: invitationLinks(in, intent), LinksFromRequest: in.Links != nil, Source: invitationSource(ctx),
 		})
 		if err != nil {

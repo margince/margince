@@ -4107,7 +4107,7 @@
     },
     {
       "name": "read_workspace",
-      "tokens": 2771,
+      "tokens": 2776,
       "agents": [],
       "required_by_cases": [
         "case111_how_is_the_workspace_doing",
@@ -4185,7 +4185,7 @@
     },
     {
       "name": "read_details",
-      "tokens": 2200,
+      "tokens": 2219,
       "agents": [],
       "required_by_cases": [
         "case112_my_plan_and_the_dossier",
@@ -4229,7 +4229,7 @@
     },
     {
       "name": "change_activities",
-      "tokens": 1968,
+      "tokens": 2041,
       "agents": [
         "overnight_at_risk_sweep"
       ],
@@ -4273,8 +4273,45 @@
       }
     },
     {
+      "name": "change_state",
+      "tokens": 1969,
+      "agents": [],
+      "required_by_cases": [
+        "case40_sort_the_queue",
+        "case41_close_the_project",
+        "case45_move_the_deal_on",
+        "case47_tidy_the_fair_list",
+        "case85_the_pilot_slipped"
+      ],
+      "required_as_one_of_a_set_by_cases": [],
+      "permitted_in_cases": [],
+      "driven": true,
+      "required_only_as_one_of_a_set": false,
+      "graded_by_certification_tasks": null,
+      "measured_by_model": {
+        "claude-sonnet-5-5@claude-cli": {
+          "runs": 10,
+          "passed": 10,
+          "reliability": 1,
+          "cases_below_their_bar": []
+        },
+        "gemini-3.8-flash-medium@agy-cli": {
+          "runs": 10,
+          "passed": 10,
+          "reliability": 1,
+          "cases_below_their_bar": []
+        },
+        "gpt-5.6-sol@codex-cli": {
+          "runs": 10,
+          "passed": 10,
+          "reliability": 1,
+          "cases_below_their_bar": []
+        }
+      }
+    },
+    {
       "name": "find_records",
-      "tokens": 1952,
+      "tokens": 1961,
       "agents": [
         "morning_brief",
         "overnight_at_risk_sweep"
@@ -4369,45 +4406,8 @@
       }
     },
     {
-      "name": "change_state",
-      "tokens": 1930,
-      "agents": [],
-      "required_by_cases": [
-        "case40_sort_the_queue",
-        "case41_close_the_project",
-        "case45_move_the_deal_on",
-        "case47_tidy_the_fair_list",
-        "case85_the_pilot_slipped"
-      ],
-      "required_as_one_of_a_set_by_cases": [],
-      "permitted_in_cases": [],
-      "driven": true,
-      "required_only_as_one_of_a_set": false,
-      "graded_by_certification_tasks": null,
-      "measured_by_model": {
-        "claude-sonnet-5-5@claude-cli": {
-          "runs": 10,
-          "passed": 10,
-          "reliability": 1,
-          "cases_below_their_bar": []
-        },
-        "gemini-3.8-flash-medium@agy-cli": {
-          "runs": 10,
-          "passed": 10,
-          "reliability": 1,
-          "cases_below_their_bar": []
-        },
-        "gpt-5.6-sol@codex-cli": {
-          "runs": 10,
-          "passed": 10,
-          "reliability": 1,
-          "cases_below_their_bar": []
-        }
-      }
-    },
-    {
       "name": "change_settings",
-      "tokens": 1710,
+      "tokens": 1730,
       "agents": [],
       "required_by_cases": [
         "case116_the_rate_and_the_logo",
@@ -5111,7 +5111,7 @@
     },
     {
       "name": "schedule_meeting",
-      "tokens": 420,
+      "tokens": 456,
       "agents": [],
       "required_by_cases": [
         "case46_get_us_in_a_room"

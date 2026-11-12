@@ -101,8 +101,10 @@ func (e *rateEnv) insertRate(ctx context.Context, t *testing.T, r ModelRate) {
 		  long_context_above_tokens, long_context_input_per_mtok_microusd, long_context_output_per_mtok_microusd,
 		  long_context_cache_read_per_mtok_microusd, long_context_cache_write_per_mtok_microusd)
 		VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12)`,
-		append([]any{r.Provider, r.ModelID, r.InputPerMTokMicroUSD, r.OutputPerMTokMicroUSD,
-			r.CacheReadPerMTokMicroUSD, r.CacheWritePerMTokMicroUSD, r.EffectiveDate}, bandArgs(r.LongContext)...)...); err != nil {
+		append([]any{
+			r.Provider, r.ModelID, r.InputPerMTokMicroUSD, r.OutputPerMTokMicroUSD,
+			r.CacheReadPerMTokMicroUSD, r.CacheWritePerMTokMicroUSD, r.EffectiveDate,
+		}, bandArgs(r.LongContext)...)...); err != nil {
 		t.Fatalf("insert rate %+v: %v", r, err)
 	}
 }

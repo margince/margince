@@ -3,13 +3,16 @@
 
 package knowledge
 
-import "github.com/margince/margince/backend/internal/platform/httperr"
+import (
+	"github.com/margince/margince/backend/internal/platform/httperr"
+	"github.com/margince/margince/backend/internal/shared/kernel/values"
+)
 
 // The contract's caps on a corpus's text, in characters.
 const (
-	maxCorpusName        = 200
-	maxCorpusTopic       = 500
-	maxCorpusDescription = 2000
+	maxCorpusName        = values.TextLabelCharacters
+	maxCorpusTopic       = values.TextLineCharacters
+	maxCorpusDescription = values.TextNoteCharacters
 	maxAskQuestion       = 1000
 )
 

@@ -10,26 +10,26 @@ An area with no inbound key is a candidate for a separate module. Its outbound k
 
 | Area | Tables | Columns | Inbound keys | Outbound keys | Outbound cascades |
 |---|--:|--:|--:|--:|--:|
-| [activities](activities.md) | 33 | 397 | 25 | 38 | 18 |
+| [activities](activities.md) | 33 | 407 | 25 | 38 | 18 |
 | [agents](agents.md) | 3 | 35 | 0 | 5 | 1 |
 | [ai](ai.md) | 12 | 207 | 0 | 3 | 0 |
 | [aiactivity](aiactivity.md) | 1 | 25 | 0 | 2 | 0 |
 | [approvals](approvals.md) | 3 | 53 | 4 | 8 | 2 |
 | [assignments](assignments.md) | 2 | 27 | 0 | 5 | 3 |
 | [assurance](assurance.md) | 9 | 108 | 0 | 7 | 5 |
-| [automation](automation.md) | 3 | 32 | 0 | 2 | 0 |
+| [automation](automation.md) | 3 | 34 | 1 | 2 | 0 |
 | [capture](capture.md) | 28 | 271 | 4 | 27 | 15 |
-| [collections](collections.md) | 13 | 107 | 1 | 10 | 6 |
+| [collections](collections.md) | 13 | 108 | 1 | 10 | 6 |
 | [commissions](commissions.md) | 1 | 18 | 0 | 2 | 2 |
 | [comms](comms.md) | 1 | 44 | 4 | 4 | 1 |
-| [compose](compose.md) | 48 | 431 | 3 | 39 | 36 |
+| [compose](compose.md) | 48 | 433 | 3 | 39 | 36 |
 | [consent](consent.md) | 22 | 303 | 2 | 38 | 20 |
 | [contacts](contacts.md) | 50 | 701 | 75 | 34 | 12 |
 | [continuity](continuity.md) | 1 | 8 | 0 | 0 | 0 |
 | [contracts](contracts.md) | 1 | 29 | 2 | 3 | 0 |
-| [customfields](customfields.md) | 1 | 17 | 0 | 1 | 0 |
+| [customfields](customfields.md) | 1 | 19 | 0 | 1 | 0 |
 | [dealrooms](dealrooms.md) | 8 | 95 | 0 | 8 | 1 |
-| [deals](deals.md) | 29 | 421 | 25 | 19 | 5 |
+| [deals](deals.md) | 29 | 422 | 25 | 19 | 5 |
 | [finance](finance.md) | 5 | 86 | 0 | 3 | 0 |
 | [forecasting](forecasting.md) | 4 | 98 | 1 | 2 | 0 |
 | [identity](identity.md) | 22 | 204 | 157 | 6 | 5 |
@@ -45,7 +45,7 @@ An area with no inbound key is a candidate for a separate module. Its outbound k
 | [reporting](reporting.md) | 14 | 124 | 0 | 10 | 0 |
 | [search](search.md) | 4 | 41 | 0 | 4 | 2 |
 | [signals](signals.md) | 2 | 42 | 2 | 9 | 4 |
-| [webforms](webforms.md) | 2 | 25 | 0 | 3 | 0 |
+| [webforms](webforms.md) | 2 | 27 | 0 | 4 | 0 |
 | [webhooks](webhooks.md) | 2 | 32 | 0 | 1 | 1 |
 | [weeklyplan](weeklyplan.md) | 2 | 35 | 0 | 7 | 1 |
 
@@ -87,11 +87,6 @@ An area with no inbound key is a candidate for a separate module. Its outbound k
 - `assurance_task_item.assurance_task_item_subject_offer_id_fkey`: `FOREIGN KEY (subject_offer_id) REFERENCES offer(id) ON DELETE CASCADE`
 - `assurance_task_item.assurance_task_item_subject_signal_id_fkey`: `FOREIGN KEY (subject_signal_id) REFERENCES signal(id) ON DELETE CASCADE`
 - `assurance_task_item.assurance_task_item_task_activity_id_fkey`: `FOREIGN KEY (task_activity_id) REFERENCES activity(id) ON DELETE CASCADE`
-
-### automation
-
-- `automation.automation_owner_fkey`: `FOREIGN KEY (owner_id) REFERENCES app_user(id) ON DELETE SET NULL (owner_id)`
-- `automation.automation_setter_passport_id_fkey`: `FOREIGN KEY (setter_passport_id) REFERENCES passport(id) ON DELETE SET NULL`
 
 ### commissions
 
@@ -177,6 +172,7 @@ No outbound foreign keys.
 
 ### webforms
 
+- `web_form.web_form_handling_automation_id_fkey`: `FOREIGN KEY (handling_automation_id) REFERENCES automation(id) ON DELETE RESTRICT`
 - `web_form.web_form_lead_origin_fkey`: `FOREIGN KEY (lead_origin) REFERENCES lead_origin(key) ON UPDATE RESTRICT ON DELETE SET NULL`
 - `web_form.web_form_owner_id_fkey`: `FOREIGN KEY (owner_id) REFERENCES app_user(id) ON DELETE SET NULL`
 - `web_form.web_form_product_id_fkey`: `FOREIGN KEY (product_id) REFERENCES product(id) ON DELETE RESTRICT`

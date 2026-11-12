@@ -89,6 +89,7 @@ var taskSourceFamilies = map[string]taskSourcePolicy{
 	provenance.CommitmentTaskSource:         {currency: currentByCommitment, undated: true},
 	provenance.EmailRequestSource:           {currency: currentByRequest, undated: true, outreach: true},
 	provenance.NoActivityReminderSource:     {currency: currentByItsWriter},
+	provenance.WebsiteInquirySource:         {currency: currentByItsWriter},
 	provenance.CheckInCadenceSource:         {currency: currentByItsWriter},
 	provenance.LeadSLATaskSource:            {currency: currentByItsWriter, outreach: true},
 	provenance.LeadQualifyTaskSource:        {currency: currentByItsWriter},

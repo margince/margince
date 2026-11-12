@@ -111,6 +111,14 @@ func (stubs) GetEmailPresentation(w nethttp.ResponseWriter, r *nethttp.Request, 
 	httperr.NotImplemented(w, r, "GetEmailPresentation")
 }
 
+func (stubs) AssignWebsiteInquiry(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id, params crmcontracts.AssignWebsiteInquiryParams) {
+	httperr.NotImplemented(w, r, "AssignWebsiteInquiry")
+}
+
+func (stubs) PreviewWebsiteInquiryAssignment(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {
+	httperr.NotImplemented(w, r, "PreviewWebsiteInquiryAssignment")
+}
+
 func (stubs) GetMeetingBrief(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id, params crmcontracts.GetMeetingBriefParams) {
 	httperr.NotImplemented(w, r, "GetMeetingBrief")
 }
@@ -2907,6 +2915,10 @@ func (stubs) SaveMyEmailSignature(w nethttp.ResponseWriter, r *nethttp.Request) 
 	httperr.NotImplemented(w, r, "SaveMyEmailSignature")
 }
 
+func (stubs) GetMyGmailSignature(w nethttp.ResponseWriter, r *nethttp.Request) {
+	httperr.NotImplemented(w, r, "GetMyGmailSignature")
+}
+
 func (stubs) SaveMyGreetingName(w nethttp.ResponseWriter, r *nethttp.Request) {
 	httperr.NotImplemented(w, r, "SaveMyGreetingName")
 }
@@ -4153,6 +4165,18 @@ func (stubs) GetWebForm(w nethttp.ResponseWriter, r *nethttp.Request, id crmcont
 
 func (stubs) UpdateWebForm(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id, params crmcontracts.UpdateWebFormParams) {
 	httperr.NotImplemented(w, r, "UpdateWebForm")
+}
+
+func (stubs) SaveWebFormHandling(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id, params crmcontracts.SaveWebFormHandlingParams) {
+	httperr.NotImplemented(w, r, "SaveWebFormHandling")
+}
+
+func (stubs) HandleExistingWebFormInquiries(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {
+	httperr.NotImplemented(w, r, "HandleExistingWebFormInquiries")
+}
+
+func (stubs) PreviewWebFormHandling(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {
+	httperr.NotImplemented(w, r, "PreviewWebFormHandling")
 }
 
 func (stubs) RotateWebFormSecret(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {

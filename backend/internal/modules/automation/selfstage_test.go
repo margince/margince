@@ -39,7 +39,7 @@ func TestStageNotificationNeedsAChangeTheOwnerDidNotMake(t *testing.T) {
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			effect, err := handler.Plan(context.Background(), workflow.Event{ID: ids.NewV7(), Actor: tc.actor})
-			var declined declinedFiring
+			var declined *workflow.DeclinedError
 			if tc.skip {
 				if !errors.As(err, &declined) || len(effect.Actions) != 0 {
 					t.Fatalf("self-made move must decline without delivery: %+v, %v", effect, err)

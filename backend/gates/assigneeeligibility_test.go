@@ -30,34 +30,11 @@ import (
 // live seat AND the human AND the seat type together.
 var eligibilityColumns = []string{"is_agent", "seat_type", "archived_at"}
 
-// gatekit:fixture the two places that ask whether a seat may receive work,
-// each with what it is — a classification of the tree, not a cost this gate is
-// paying.
-//
-// assigneeEligibilityWriters are the two places allowed to ask whether a seat
-// may RECEIVE work, each with why it is not the other.
-//
-// auth.AssigneeEligibleSQL is the rule itself, asked of a destination a caller
-// named. contacts/leadrouting.go asks the same question of a configured pool
-// under the system principal, where the caller-scope half of the rule has no
-// meaning — routing has no caller to be scoped to. They are kept in step by
-// this gate rather than by a shared helper because the platform package cannot
-// reach into a module and the module must not import the predicate's private
-// half.
+// gatekit:fixture the defining predicate; every other reader calls it.
 var assigneeEligibilityWriters = map[string]string{
 	"internal/platform/auth/assignscope.go": "the rule itself: an active human seat that can write",
-	"internal/modules/contacts/leadrouting.go": "the routing pool's own eligibility, system-principal so the scope half " +
-		"does not apply; kept in step with the rule by this gate",
 }
 
-// A seat's fitness to receive work is spelled in exactly two places, and both
-// ask the same thing.
-//
-// The claim in auth.AssigneeEligibleSQL's comment is what this holds: the rule has
-// one spelling. Before it, routing checked status and archival while
-// the manual path checked status, archival, agent and seat type, so the
-// machine could place a lead on a seat a colleague was forbidden to assign to.
-// That divergence passed every gate in the tree.
 func TestSeatEligibilityIsAskedTheSameWayEverywhereItIsAsked(t *testing.T) {
 	t.Parallel()
 	found := map[string][]string{}

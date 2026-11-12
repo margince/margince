@@ -278,14 +278,21 @@ func lockChangedRecords(ctx context.Context, tx pgx.Tx, entityType string, came,
 	return err
 }
 
+// An import's batch is durable proof even after its published events are purged.
+const importedChangeSQL = `EXISTS (
+ SELECT 1 FROM audit_log a JOIN import_run r ON r.id=a.batch_id
+ WHERE a.entity_type=c.entity_type AND a.entity_id=c.entity_id
+ AND a.occurred_at > coalesce((SELECT evaluated_at FROM list_evaluation WHERE list_id=@list_id), '-infinity')
+ AND a.occurred_at <= @at)`
+
 // leaveStatement drops the held members the filter no longer selects and,
 // past the first check, records each as having left.
 const leaveStatement = `WITH gone AS (
 		DELETE FROM list_live_member s WHERE s.list_id = @list_id AND s.entity_id = ANY(@changed::uuid[])
 		RETURNING s.entity_type, s.entity_id),
 	logged AS (
-		INSERT INTO list_member_event (list_id, entity_type, entity_id, action, reason, actor, occurred_at, definition_version)
-		SELECT @list_id, g.entity_type, g.entity_id, 'left', @reason, @actor, @at, @version FROM gone g WHERE @record::boolean)
+		INSERT INTO list_member_event (list_id, entity_type, entity_id, action, reason, actor, occurred_at, definition_version, imported)
+		SELECT @list_id, c.entity_type, c.entity_id, 'left', @reason, @actor, @at, @version, ` + importedChangeSQL + ` FROM gone c WHERE @record::boolean)
 	SELECT count(*) FROM gone`
 
 // enterStatement holds the members the filter newly selects and, past the
@@ -296,8 +303,8 @@ const enterStatement = `WITH came AS (
 		ON CONFLICT (list_id, entity_id) DO NOTHING
 		RETURNING entity_type, entity_id),
 	logged AS (
-		INSERT INTO list_member_event (list_id, entity_type, entity_id, action, reason, actor, occurred_at, definition_version)
-		SELECT @list_id, c.entity_type, c.entity_id, 'entered', @reason, @actor, @at, @version FROM came c WHERE @record::boolean)
+		INSERT INTO list_member_event (list_id, entity_type, entity_id, action, reason, actor, occurred_at, definition_version, imported)
+		SELECT @list_id, c.entity_type, c.entity_id, 'entered', @reason, @actor, @at, @version, ` + importedChangeSQL + ` FROM came c WHERE @record::boolean)
 	SELECT count(*) FROM came`
 
 // readSnapshotVersion answers the version the held members were taken under;

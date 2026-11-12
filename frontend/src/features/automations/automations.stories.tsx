@@ -3,6 +3,7 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect, userEvent, within } from "storybook/test";
+import type { components } from "../../api/schema";
 import { en } from "../../i18n/en";
 import {
   installFetchStub,
@@ -20,12 +21,29 @@ import {
 // starter library.
 
 const meta: Meta = {
-  title: "Settings/AI/Automations/Automations",
+  title: "Settings/Data/Automations/Automations",
   parameters: { layout: "padded" },
 };
 export default meta;
 
 type Story = StoryObj;
+
+const CONFIGURATION_STATES: Readonly<
+  Record<
+    string,
+    Pick<components["schemas"]["Automation"], "setup_state" | "setup_reason">
+  >
+> = {
+  "au-1": { setup_state: "on" },
+  "au-2": { setup_state: "on" },
+  "au-3": {
+    setup_state: "needs_attention",
+    setup_reason: "authorizer_inactive",
+  },
+  "au-4": { setup_state: "on" },
+  "au-5": { setup_state: "needs_setup", setup_reason: "authorizer_missing" },
+  "au-6": { setup_state: "paused" },
+};
 
 const CARD_ROUTES = {
   "GET /me": meRoute({ automation: ["create", "read", "update", "delete"] }),
@@ -41,14 +59,32 @@ function Card({
   readOnly = false,
   none = false,
   view = "mine",
-}: Readonly<{ readOnly?: boolean; none?: boolean; view?: AutomationsView }>) {
+  setupStates = false,
+}: Readonly<{
+  readOnly?: boolean;
+  none?: boolean;
+  view?: AutomationsView;
+  setupStates?: boolean;
+}>) {
   const routes = none
     ? {
         ...CARD_ROUTES,
         "GET /automations": () =>
           jsonResponse({ data: [], page: { next_cursor: null } }),
       }
-    : CARD_ROUTES;
+    : setupStates
+      ? {
+          ...CARD_ROUTES,
+          "GET /automations": () =>
+            jsonResponse({
+              data: configuredAutomations(Date.now()).map((row) => ({
+                ...row,
+                ...CONFIGURATION_STATES[row.id],
+              })),
+              page: { next_cursor: null },
+            }),
+        }
+      : CARD_ROUTES;
   installFetchStub(
     readOnly
       ? { ...routes, "GET /me": meRoute({ automation: ["read"] }) }
@@ -64,6 +100,7 @@ function Card({
 const cardRendered: NonNullable<Story["play"]> = async ({ canvasElement }) => {
   const canvas = within(canvasElement);
   await canvas.findByTestId("automation-au-6");
+  await canvas.findByRole("columnheader", { name: "Authorized by" });
 };
 
 export const AdminCard: Story = {
@@ -135,4 +172,19 @@ export const EditingInADialog: Story = {
     await body.findByRole("dialog");
   },
   render: () => <Card />,
+};
+
+export const ConfigurationStates: Story = {
+  render: () => <Card setupStates />,
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await canvas.findByText("Needs setup");
+    await canvas.findByText("Needs attention");
+    await expect(canvas.getAllByText("On").length).toBeGreaterThan(0);
+  },
+};
+
+export const ConfigurationStatesDark: Story = {
+  ...ConfigurationStates,
+  globals: { theme: "dark" },
 };

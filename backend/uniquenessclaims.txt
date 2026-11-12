@@ -308,7 +308,6 @@ internal/modules/automation/handlers_clock.go#func renewalAnchor
 internal/modules/automation/handlers_clock.go#func touchAnchor
 internal/modules/automation/handlers_event.go#const block at const dealStageStatusField
 internal/modules/automation/handlers_event.go#const fieldKind
-internal/modules/automation/handlers_event.go#const purposeBusinessCorrespondence
 internal/modules/automation/rundetail.go#func stagedApprovalDetail
 internal/modules/capture/backfill.go#func latestBackfill
 internal/modules/capture/channelconn.go#const channelConnectionColumns

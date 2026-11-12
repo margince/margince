@@ -19,6 +19,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/approvals"
 	"github.com/margince/margince/backend/internal/modules/contacts"
@@ -118,24 +119,45 @@ func installationCountry(ctx context.Context, tx pgx.Tx) (string, error) {
 	return strings.ToLower(string(code)), err
 }
 
-// ProjectDealLink points the deal a new project comes from at the project.
-// It runs the deal store's own update: the same write check,
-// attach check and audit row as a link made from the deal.
-func ProjectDealLink(store *deals.Store) projects.AttachDeal {
-	return func(ctx context.Context, tx pgx.Tx, dealID ids.DealID, projectID ids.ProjectID) error {
-		deal, err := store.GetDealTx(ctx, tx, dealID, storekit.LiveOnly, deals.CustomColumns{})
+// ProjectDealLink answers the two halves of linking the deal a new project
+// comes from. The check is what the approval preview and the create both run.
+// The link runs that check, then the deal store's own update with its write
+// check, attach check and audit row.
+func ProjectDealLink(store *deals.Store) (projects.CheckDeal, projects.AttachDeal) {
+	check := func(ctx context.Context, tx pgx.Tx, dealID ids.DealID, company ids.CompanyID) error {
+		_, err := dealForNewProject(ctx, tx, store, dealID, company)
+		return err
+	}
+	attach := func(ctx context.Context, tx pgx.Tx, dealID ids.DealID, projectID ids.ProjectID, company ids.CompanyID) error {
+		deal, err := dealForNewProject(ctx, tx, store, dealID, company)
 		if err != nil {
-			return auth.NameMissingReference("deal_id", err)
-		}
-		if refusal := projects.RefuseDealForNewProject(string(deal.Status), deal.ProjectId != nil, deal.MaskedFields); refusal != nil {
-			return refusal
+			return err
 		}
 		// The version read above, so a link made in between is not overwritten.
 		_, err = store.UpdateDealTx(ctx, tx, dealID, deals.UpdateDealInput{ProjectID: &projectID, IfVersion: deal.Version}, deals.CustomColumns{})
-		var mismatch *deals.DealProjectCompanyMismatchError
-		if errors.As(err, &mismatch) {
+		if _, mismatch := errors.AsType[*deals.DealProjectCompanyMismatchError](err); mismatch {
 			return &projects.DealCompanyMismatchError{}
 		}
 		return auth.NameMissingReference("deal_id", err)
 	}
+	return check, attach
+}
+
+// dealForNewProject reads the deal and refuses it for the create. The caller
+// must be able to write it, and it must be open, unlinked and on company.
+func dealForNewProject(ctx context.Context, tx pgx.Tx, store *deals.Store, dealID ids.DealID, company ids.CompanyID) (crmcontracts.Deal, error) {
+	deal, err := store.GetDealTx(ctx, tx, dealID, storekit.LiveOnly, deals.CustomColumns{})
+	if err != nil {
+		return deal, auth.NameMissingReference("deal_id", err)
+	}
+	if err := auth.EnsureWritable(ctx, tx, "deal", dealID.UUID); err != nil {
+		return deal, err
+	}
+	if refusal := projects.RefuseDealForNewProject(string(deal.Status), deal.ProjectId != nil, deal.MaskedFields); refusal != nil {
+		return deal, refusal
+	}
+	if deal.CompanyId != nil && ids.UUID(*deal.CompanyId) != company.UUID {
+		return deal, &projects.DealCompanyMismatchError{}
+	}
+	return deal, nil
 }

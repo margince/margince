@@ -8,10 +8,13 @@
 // answer here; a gate ties Max to the contract's maxLength.
 package statedreason
 
-import "strings"
+import (
+	"github.com/margince/margince/backend/internal/shared/kernel/values"
+	"strings"
+)
 
 // Max is RetentionOverrideRequest.reason's maxLength, in characters.
-const Max = 2000
+const Max = values.TextNoteCharacters
 
 // Trim answers the reason as stated and whether it is admissible.
 //

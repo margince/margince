@@ -11,6 +11,7 @@ import { Modal } from "../../design-system/modal";
 import { Select } from "../../design-system/select";
 import { useT } from "../../i18n";
 import { throwProblem, unwrap } from "../../lib/problem";
+import { TEXT_LIMITS } from "../../lib/textlimits_gen";
 import { ReportComposition, useComposition } from "./reporting.composition";
 import { blocksOf } from "./reporting.layout";
 import type { ReportingReport, ReportingSelection } from "./reporting.model";
@@ -136,7 +137,7 @@ export function SaveReportingDialog({
               value={name}
               disabled={draftOpen}
               onChange={(event) => setName(event.target.value)}
-              maxLength={160}
+              maxLength={TEXT_LIMITS.label}
             />
           )}
         </Field>

@@ -18,6 +18,8 @@
 import { useQuery } from "@tanstack/react-query";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
+import { useLocale } from "../i18n";
+import { translatedLabel } from "../lib/labeltranslation";
 import { unwrap } from "../lib/problem";
 import { useMemberFilterOptions } from "./assigneepicker";
 import { type RosterKind, useRoster, useRosterPartial } from "./entityref";
@@ -105,6 +107,7 @@ function rosterKindOf(reference: Reference | undefined): RosterKind | null {
  * resources already does.
  */
 export function useReferenceOptions(reference: Reference | undefined) {
+  const { locale } = useLocale();
   const kind = rosterKindOf(reference);
   // `enabled` is what decides whether either read runs, so the kind handed over
   // when the target is not a roster one is inert — a disabled query fetches
@@ -115,12 +118,13 @@ export function useReferenceOptions(reference: Reference | undefined) {
   const roster = useRoster("team", kind === "team");
   const rosterPartial = useRosterPartial("team", kind === "team");
   const query = useQuery({
-    queryKey: ["filter-reference", reference],
+    queryKey: ["filter-reference", reference, locale],
     enabled: boundedReference(reference) && kind === null,
     // Configuration changes rarely and a builder reads it on every clause, so a
     // minute of staleness saves a request per keystroke-adjacent render.
     staleTime: 60_000,
-    queryFn: async (): Promise<ReferenceOption[]> => readOptions(reference),
+    queryFn: async (): Promise<ReferenceOption[]> =>
+      readOptions(reference, locale),
   });
   if (kind === "user") {
     return members;
@@ -165,6 +169,7 @@ export function useReferenceOptions(reference: Reference | undefined) {
 // and its query is disabled for them.
 async function readOptions(
   reference: Reference | undefined,
+  locale: string,
 ): Promise<ReferenceOption[]> {
   switch (reference) {
     case "tag": {
@@ -180,7 +185,10 @@ async function readOptions(
     }
     case "stage": {
       const data = unwrap(await api.GET("/stages"));
-      return data.data.map((stage) => ({ value: stage.id, label: stage.name }));
+      return data.data.map((stage) => ({
+        value: stage.id,
+        label: translatedLabel(stage.name, stage.name_translations, locale),
+      }));
     }
     case "project": {
       const data = unwrap(

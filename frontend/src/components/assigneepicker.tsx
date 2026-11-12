@@ -11,6 +11,10 @@ import {
   useRosterPartial,
   useRosterPartialHint,
 } from "./entityref";
+import {
+  type AssignedRecord,
+  useNamedColleagues,
+} from "./recordassignments.queries";
 import { useEveryMember } from "./roster";
 
 /** A workspace user as a picker option. */
@@ -130,15 +134,43 @@ export function useMemberFilterOptions(enabled: boolean) {
  * list — a composer whose assignee picker only applies to a task has no reason
  * to walk `/users` while a note is being written.
  */
-export function useAssignableUserOptions(enabled = true): UserOptions {
+export function useAssignableUserOptions(
+  enabled = true,
+  records: readonly AssignedRecord[] = NO_RECORDS,
+): UserOptions {
   const roster = useRoster("user", enabled);
+  const named = useNamedColleagues(enabled ? records : NO_RECORDS);
   const options = (roster.data ?? [])
     .filter((entry) => !("is_agent" in entry && entry.is_agent))
     .map((entry) => ({
       value: entry.id,
       label: ("display_name" in entry ? entry.display_name : null) ?? entry.id,
     }));
-  return { options, roster };
+  return { options: namedColleaguesFirst(options, named), roster };
+}
+
+const NO_RECORDS: readonly AssignedRecord[] = [];
+
+/**
+ * The colleagues named on the record first, each labelled with the roles they
+ * hold there, then everyone else in roster order. The role is a label only:
+ * nothing is chosen for the reader, and no role limits who may be picked.
+ */
+export function namedColleaguesFirst(
+  options: readonly UserOption[],
+  named: ReadonlyMap<string, readonly string[]>,
+): UserOption[] {
+  const first: UserOption[] = [];
+  const rest: UserOption[] = [];
+  for (const option of options) {
+    const roles = named.get(option.value);
+    if (roles) {
+      first.push({ ...option, label: `${option.label} · ${roles.join(", ")}` });
+    } else {
+      rest.push(option);
+    }
+  }
+  return [...first, ...rest];
 }
 
 /**
@@ -156,13 +188,16 @@ export function TaskAssigneeField({
   active,
   value,
   onChange,
+  records,
 }: Readonly<{
   active: boolean;
   value: string;
   onChange: (next: string) => void;
+  /** The records the task is about; colleagues named on them come first. */
+  records?: readonly AssignedRecord[];
 }>) {
   const t = useT();
-  const { options, roster } = useAssignableUserOptions(active);
+  const { options, roster } = useAssignableUserOptions(active, records);
   const partialHint = useRosterPartialHint(useRosterPartial("user", active));
   if (!active) {
     return null;

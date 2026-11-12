@@ -18,15 +18,13 @@ package compose
 
 import (
 	"context"
-	"fmt"
 	"time"
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 
-	"github.com/margince/margince/backend/internal/modules/deals"
+	"github.com/margince/margince/backend/internal/compose/stillowed"
 	"github.com/margince/margince/backend/internal/platform/database"
-	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -66,43 +64,11 @@ import (
 func dealsWithNoOpenNextStep(
 	ctx context.Context, pool *pgxpool.Pool, candidates []ids.UUID, asOf time.Time,
 ) (map[ids.UUID]bool, error) {
-	none := map[ids.UUID]bool{}
-	if len(candidates) == 0 {
-		return none, nil
-	}
-	for _, id := range candidates {
-		none[id] = true
-	}
-	// Selected FROM deal rather than from the activity rows, because the shared
-	// predicate asks about a deal and answers over two different tables: a
-	// statement shaped around one of them could not see the other.
-	args := []any{candidates, asOf}
-	arg := func(v any) int { args = append(args, v); return len(args) }
+	var none map[ids.UUID]bool
 	err := database.WithWorkspaceTx(ctx, pool, func(tx pgx.Tx) error {
-		identities, err := storekit.MailSeatIdentitiesSQL(ctx, tx, arg)
-		if err != nil {
-			return err
-		}
-		current := storekit.CurrentTaskClause("t", asOf, identities, arg)
-		query := fmt.Sprintf(`
-		SELECT d.id FROM deal d
-		 WHERE d.id = ANY($1) AND %s`, deals.OpenNextStepSQL("d.id", "$2", current))
-		rows, err := tx.Query(ctx, query, args...)
-		if err != nil {
-			return err
-		}
-		defer rows.Close()
-		for rows.Next() {
-			var dealID ids.UUID
-			if err := rows.Scan(&dealID); err != nil {
-				return err
-			}
-			delete(none, dealID)
-		}
-		return rows.Err()
+		var err error
+		none, err = stillowed.DealsWithoutNextStepTx(ctx, tx, candidates, asOf)
+		return err
 	})
-	if err != nil {
-		return nil, err
-	}
-	return none, nil
+	return none, err
 }

@@ -14,6 +14,8 @@ import (
 
 	"github.com/margince/margince/backend/internal/compose/integration/apptest"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/shared/ports/subjectrightsrules"
+	"github.com/margince/margince/backend/pkg/extension/subjectrights"
 )
 
 func TestTheJurisdictionPageReadsBackAChange(t *testing.T) {
@@ -41,6 +43,25 @@ func TestTheJurisdictionPageReadsBackAChange(t *testing.T) {
 			t.Fatalf("deadline = %+v, want a distinct request kind with the GDPR calendar month", deadline)
 		}
 		delete(wantKinds, deadline.Kind)
+	}
+
+	wanted := map[subjectrights.RequestKind]bool{
+		subjectrights.Access: true, subjectrights.Rectify: true,
+		subjectrights.Erasure: true, subjectrights.Restriction: true,
+	}
+	for _, row := range page.Deadlines {
+		kind := subjectrights.RequestKind(row.Kind)
+		if !wanted[kind] {
+			t.Fatalf("unexpected or repeated deadline kind %q", kind)
+		}
+		deadline, rule := subjectrightsrules.Resolve("", kind)
+		if row.Rule != rule || row.Period == nil || *row.Period != deadline.Period.String() {
+			t.Fatalf("deadline for %s = %+v, want %s from %s", kind, row, deadline.Period.String(), rule)
+		}
+		delete(wanted, kind)
+	}
+	if len(wanted) != 0 {
+		t.Fatalf("missing request deadlines: %v", wanted)
 	}
 
 	if status := e.Call(t, http.MethodPatch, "/v1/installation/settings", AnyMap{"country": "zj"}, nil, nil); status != http.StatusUnprocessableEntity {

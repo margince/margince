@@ -503,6 +503,24 @@ admin can also change under Settings. One that also says kept by a reset keeps i
 |---|---|---|---|---|---|---|
 | `web.security_txt` | `MARGINCE_WEB_SECURITY_TXT` | — | `object` | `null` | api | RFC 9116 security.txt: one or more contact URIs and an RFC 3339 end time, with an optional policy link and `preferred_languages`. |
 
+### `webforms`
+
+| Key | Env | Flag | Type | Default | Programs | Doc |
+|---|---|---|---|---|---|---|
+| `webforms.throttle.block_after_minutes` | `MARGINCE_WEBFORMS_THROTTLE_BLOCK_AFTER_MINUTES` | — | `int`, 1 to 60 | `5` | api | Minutes in a row over a limit after which every post is refused for a while (a block). |
+| `webforms.throttle.cooldown_minutes` | `MARGINCE_WEBFORMS_THROTTLE_COOLDOWN_MINUTES` | — | `int`, 1 to 1440 | `15` | api | Minutes a first block lasts. Each block that follows soon after another lasts twice as long. |
+| `webforms.throttle.form_expiry_seconds` | `MARGINCE_WEBFORMS_THROTTLE_FORM_EXPIRY_SECONDS` | — | `int`, 1 to 86400 | `120` | api | Seconds a known form address is used without reading it again, even while loads fail. |
+| `webforms.throttle.form_refresh_seconds` | `MARGINCE_WEBFORMS_THROTTLE_FORM_REFRESH_SECONDS` | — | `int`, 1 to 3600 | `30` | api | Seconds between loads of every form address the intake knows. A form made on another server is taken within it. |
+| `webforms.throttle.max_cooldown_hours` | `MARGINCE_WEBFORMS_THROTTLE_MAX_COOLDOWN_HOURS` | — | `int`, 1 to 168 | `24` | api | Longest a block lasts, in hours. A block always ends on its own. |
+| `webforms.throttle.min_senders` | `MARGINCE_WEBFORMS_THROTTLE_MIN_SENDERS` | — | `int`, 1 to 100000 | `10` | api | Distinct addresses a minute over the workspace or installation limit must hold before all forms are blocked. Fewer only get 429. |
+| `webforms.throttle.per_address_per_minute` | `MARGINCE_WEBFORMS_THROTTLE_PER_ADDRESS_PER_MINUTE` | — | `int`, 1 to 10000 | `10` | api | Posts one address may send to all web forms together in a minute before it gets 429. |
+| `webforms.throttle.per_form_per_minute` | `MARGINCE_WEBFORMS_THROTTLE_PER_FORM_PER_MINUTE` | — | `int`, 1 to 100000 | `30` | api | Posts one web form takes in a minute, from every address together, before it gets 429. |
+| `webforms.throttle.per_installation_per_minute` | `MARGINCE_WEBFORMS_THROTTLE_PER_INSTALLATION_PER_MINUTE` | — | `int`, 1 to 10000000 | `600` | api | Posts all web forms of the installation take in a minute before they get 429. |
+| `webforms.throttle.per_ip_per_minute` | `MARGINCE_WEBFORMS_THROTTLE_PER_IP_PER_MINUTE` | — | `int`, 1 to 10000 | `5` | api | Posts one address may send to one web form in a minute before it gets 429. |
+| `webforms.throttle.per_workspace_per_minute` | `MARGINCE_WEBFORMS_THROTTLE_PER_WORKSPACE_PER_MINUTE` | — | `int`, 1 to 1000000 | `120` | api | Posts all web forms of one workspace take in a minute before they get 429. |
+| `webforms.throttle.preflights_per_minute` | `MARGINCE_WEBFORMS_THROTTLE_PREFLIGHTS_PER_MINUTE` | — | `int`, 1 to 10000 | `20` | api | OPTIONS requests a browser asks before a post, that one address may send to all web forms in a minute before it gets 429. |
+| `webforms.throttle.unknown_keys_per_minute` | `MARGINCE_WEBFORMS_THROTTLE_UNKNOWN_KEYS_PER_MINUTE` | — | `int`, 1 to 100000 | `60` | api | Lookups of form addresses not yet known, from all senders together, in a minute. Past it such an address is answered as one that names no form. |
+
 <!-- generated:config:end -->
 
 ### Settings a boot source can set

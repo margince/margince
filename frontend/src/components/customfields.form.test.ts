@@ -118,6 +118,33 @@ describe("customFieldToFormField", () => {
     expect(field.required).toBeFalsy();
   });
 
+  it("names the label and options in the reader's language, keeping stored values", () => {
+    const services = cf({
+      label: "Services",
+      type: "picklist",
+      options: ["Consulting", "Support"],
+      label_translations: { vi: "Dịch vụ" },
+      option_translations: { Consulting: { vi: "Tư vấn" } },
+    });
+    const vi = customFieldToFormField(services, BOOL_LABELS, TOO_PRECISE, "vi");
+    expect(vi.labelText).toBe("Dịch vụ");
+    expect(vi.options).toEqual([
+      { value: "Consulting", label: "Tư vấn" },
+      { value: "Support", label: "Support" },
+    ]);
+    const viReading = customFieldDisplay(services, "Consulting", {
+      locale: "vi",
+      boolLabels: BOOL_LABELS,
+    });
+    expect(viReading).toBe("Tư vấn");
+    const en = customFieldToFormField(services, BOOL_LABELS, TOO_PRECISE, "en");
+    expect(en.labelText).toBe("Services");
+    expect(en.options?.[0]).toEqual({
+      value: "Consulting",
+      label: "Consulting",
+    });
+  });
+
   it("maps number to a number control", () => {
     expect(
       customFieldToFormField(cf({ type: "number" }), BOOL_LABELS, TOO_PRECISE)

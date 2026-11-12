@@ -47,7 +47,7 @@ func TestTheCutoffReadDatesTheWindowWithoutOpeningTheBrief(t *testing.T) {
 	}
 	snoozed := run.Items[0]
 	until := briefClock.Add(2 * time.Hour)
-	if _, err := b.engine.MarkSnoozed(b.repCtx, snoozed.ID, values.ReopenOnTime, &until, nil, briefClock.Add(time.Hour)); err != nil {
+	if _, err := b.engine.MarkSnoozed(b.repCtx, snoozed.ID, values.ReopenOnTime, &until, nil, briefClock.Add(time.Hour), nil); err != nil {
 		t.Fatal(err)
 	}
 	afterExpiry := until.Add(time.Hour)

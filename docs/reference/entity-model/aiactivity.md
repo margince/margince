@@ -68,4 +68,6 @@ The 1 table owned by `aiactivity`, as the migrations build them. [Back to the en
 
 **Triggers**
 
+- `text_bound_insert`: `AFTER INSERT FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL, '{"kind": 20000, "state": 20000, "source": 20000, "ai_task": 20000, "summary": 500, "actor_scope": 20000, "subject_type": 20000, "quantity_unit": 20000, "subject_label": 120, "degrade_reason": 2000, "occurrence_key": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"actor_scope":20000,"ai_task":20000,"degrade_reason":2000,"kind":20000,"occurrence_key":20000,"quantity_unit":20000,"source":20000,"state":20000,"subject_label":120,"subject_type":20000,"summary":500}')`
+- `text_bound_update`: `AFTER UPDATE FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"kind": 20000, "state": 20000, "source": 20000, "ai_task": 20000, "summary": 500, "actor_scope": 20000, "subject_type": 20000, "quantity_unit": 20000, "subject_label": 120, "degrade_reason": 2000, "occurrence_key": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"actor_scope":20000,"ai_task":20000,"degrade_reason":2000,"kind":20000,"occurrence_key":20000,"quantity_unit":20000,"source":20000,"state":20000,"subject_label":120,"subject_type":20000,"summary":500}')`
 - `trg_ai_task_run_updated`: `BEFORE UPDATE FOR EACH ROW EXECUTE FUNCTION set_updated_at()`

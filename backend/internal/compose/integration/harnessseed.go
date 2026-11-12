@@ -156,6 +156,21 @@ func (e *Env) SeedDeal(t *testing.T, name string, pipeline ids.PipelineID, stage
 	return ids.UUID(d.Id)
 }
 
+// SeedOpenDealOn creates an open deal on a company, in the default pipeline,
+// acting as admin.
+func (e *Env) SeedOpenDealOn(t *testing.T, name string, company ids.UUID) ids.UUID {
+	t.Helper()
+	pipeline, open, _ := DealFixture(t, e)
+	companyID := ids.From[ids.CompanyKind](company)
+	d, err := e.Deals.CreateDeal(e.Admin(), deals.CreateDealInput{
+		Name: name, PipelineID: pipeline, StageID: open, CompanyID: &companyID,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	return ids.UUID(d.Id)
+}
+
 // MakeCapturePrivate turns a seeded contact or company into a
 // capture-private row — `visibility='owner'`, owned by the given user — the
 // state a connector leaves an unpromoted contact in. Contact, company,

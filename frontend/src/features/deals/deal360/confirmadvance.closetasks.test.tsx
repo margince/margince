@@ -370,3 +370,30 @@ it("lists the first five tasks and counts the rest", async () => {
   expect(within(list).getAllByRole("listitem")).toHaveLength(5);
   expect(screen.getByText("and 2 more")).toBeInTheDocument();
 });
+
+it("prints a task's chosen clock and names its zone when it is not the reader's", async () => {
+  stubServer({
+    activities: () =>
+      json({
+        data: [
+          {
+            ...task("t-call", "Call the buyer"),
+            due_at: "2026-11-04T12:00:00Z",
+            due_has_time: true,
+            due_intent: {
+              wall_clock: "2026-11-05T09:00:00",
+              timezone: "Asia/Tokyo",
+            },
+          },
+        ],
+        page: { has_more: false },
+      }),
+  });
+  renderClose(async () => ({ id: "deal-1", version: 4 }));
+  const question = await screen.findByRole("group", {
+    name: /What happens to the/,
+  });
+  expect(within(question).getByRole("listitem")).toHaveTextContent(
+    /Call the buyerDue .*\(Asia\/Tokyo\)/,
+  );
+});

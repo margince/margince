@@ -18,6 +18,8 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/compose/carddoer"
+	"github.com/margince/margince/backend/internal/compose/stillowed"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/approvals"
@@ -65,6 +67,9 @@ type CommitmentTaskProposal struct {
 	// PrivateTo is the one member the source mail answers to. The task is read
 	// by them and its holder alone. Nil for a shared conversation.
 	PrivateTo *ids.UUID `json:"private_to,omitempty"`
+	// DoerID is the colleague the accepter hands the task to; empty keeps it
+	// with the accepter (approvals.DoerField).
+	DoerID string `json:"doer_id"`
 }
 
 // commitmentTask is what the writer needs to know about one promise.
@@ -192,7 +197,11 @@ func commitmentTaskEffect(
 			return fmt.Errorf("compose: unmarshal commitment proposal: %w", err)
 		}
 
-		assignee, err := commitmentDecider(ctx, proposedChange)
+		decider, err := commitmentDecider(ctx, proposedChange)
+		if err != nil {
+			return err
+		}
+		assignee, err := carddoer.ForPromise(proposal.DoerID, proposal.ExistingTaskID != nil, decider)
 		if err != nil {
 			return err
 		}
@@ -205,7 +214,17 @@ func commitmentTaskEffect(
 		// The write runs as the deciding human, so each staged link meets the
 		// visibility check a link they typed would. One they cannot see refuses
 		// the whole acceptance, and the approval stays unspent.
-		return svc.RedeemAndApply(ctx, approvalID, CommitmentTaskKind, diffHash, func(tx pgx.Tx) error {
+		gone := ""
+		err = svc.RedeemAndApply(ctx, approvalID, CommitmentTaskKind, diffHash, func(tx pgx.Tx) error {
+			// Asked again here. A promise settled or dismissed since the
+			// precheck redeems the card with nothing written. The decider is
+			// told why.
+			if open, err := commitmentStillOpenTx(ctx, tx, claims, proposal); err != nil || !open {
+				if err == nil {
+					gone = promiseClosedReason
+				}
+				return err
+			}
 			privateTo, err := privateWorkHeldNow(ctx, tx, proposal, assignee)
 			if err != nil {
 				return err
@@ -233,6 +252,7 @@ func commitmentTaskEffect(
 			_, err = writeCommitmentTask(writer, tx, tasks, claims, task)
 			return err
 		})
+		return obsoleteOr(gone, err)
 	}
 }
 
@@ -341,12 +361,32 @@ func commitmentTaskPrecheck(db *database.DB, tasks *activities.Store) approvals.
 		if err := json.Unmarshal(staged, &proposal); err != nil {
 			return fmt.Errorf("compose: unmarshal staged commitment proposal: %w", err)
 		}
-		holder, err := commitmentDecider(ctx, staged)
+		decider, err := commitmentDecider(ctx, staged)
+		if err != nil {
+			return err
+		}
+		if err := refuseCommitmentEdit(staged, edited); err != nil {
+			return err
+		}
+		if len(edited) > 0 {
+			if err := json.Unmarshal(edited, &proposal); err != nil {
+				return &approvals.InvalidEditError{Cause: err}
+			}
+		}
+		holder, err := carddoer.ForPromise(proposal.DoerID, proposal.ExistingTaskID != nil, decider)
 		if err != nil {
 			return err
 		}
 		var privateTo *ids.UUID
 		if err := db.Tx(ctx, func(tx pgx.Tx) error {
+			if open, err := commitmentStillOpenTx(ctx, tx, contacts.NewStore(db), proposal); err != nil || !open {
+				return obsoleteOr(promiseClosedReason, err)
+			}
+			if holder != decider {
+				if err := carddoer.EnsureMayHold(ctx, tx, holder, proposal.Links, colleagueAuthority(db)); err != nil {
+					return err
+				}
+			}
 			var heldErr error
 			privateTo, heldErr = privateWorkHeldNow(ctx, tx, proposal, holder)
 			return heldErr
@@ -358,7 +398,7 @@ func commitmentTaskPrecheck(db *database.DB, tasks *activities.Store) approvals.
 				return err
 			}
 		}
-		return refuseCommitmentEdit(staged, edited)
+		return nil
 	}
 }
 
@@ -387,6 +427,10 @@ func refuseCommitmentEdit(staged, edited json.RawMessage) error {
 	if before.ExistingTaskID == nil {
 		after.Summary, after.DueDate = before.Summary, before.DueDate
 	}
+	if _, err := carddoer.ForPromise(after.DoerID, after.ExistingTaskID != nil, ids.Nil); err != nil {
+		return err
+	}
+	after.DoerID = before.DoerID
 	pinned, err := json.Marshal(after)
 	if err != nil {
 		return fmt.Errorf("compose: marshal edited commitment proposal: %w", err)
@@ -396,7 +440,7 @@ func refuseCommitmentEdit(staged, edited json.RawMessage) error {
 		return fmt.Errorf("compose: marshal staged commitment proposal: %w", err)
 	}
 	if string(pinned) != string(original) {
-		return &approvals.InvalidEditError{Cause: errors.New("only the promise's wording and its due date may be edited")}
+		return &approvals.InvalidEditError{Cause: errors.New("only the promise's wording, its due date and who does it may be edited")}
 	}
 	return nil
 }
@@ -431,4 +475,22 @@ func commitmentRecipientTarget(ctx context.Context, tx pgx.Tx, tasks *activities
 		return ids.Nil, apperrors.ErrVersionSkew
 	}
 	return target.ID, nil
+}
+
+// promiseClosedReason tells the decider why an accepted promise wrote nothing.
+const promiseClosedReason = "This promise was settled or dismissed since the card was made, so there is nothing to accept."
+
+// commitmentStillOpenTx is stillowed.PromiseTx for one staged proposal.
+func commitmentStillOpenTx(ctx context.Context, tx pgx.Tx, claims *contacts.Store, proposal CommitmentTaskProposal) (bool, error) {
+	return stillowed.PromiseTx(ctx, tx, claims, commitmentClaimIDs(proposal.ClaimID, proposal.ClaimIDs),
+		proposal.SourceActivityID, proposal.Locator)
+}
+
+// obsoleteOr is the answer for a card's work. It is the read error when there
+// is one, else the reason the work is no longer owed. It is nil while it is.
+func obsoleteOr(reason string, err error) error {
+	if err != nil || reason == "" {
+		return err
+	}
+	return &approvals.ObsoleteError{Reason: reason}
 }

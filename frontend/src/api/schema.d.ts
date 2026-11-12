@@ -4891,7 +4891,8 @@ export interface paths {
          *     A sent key is stored in upper case and is refused with 422 naming `key` when it does not
          *     fit the key shape (`invalid_key`), is a word often bracketed in subject lines
          *     (`key_is_common_word`), is a word of a colleague's name (`key_is_colleague_name`), or is
-         *     held by a live project (`key_taken`). The key is read-only after create: it is what a
+         *     held by a live project (`key_taken`, worded "not available" because a project the caller
+         *     cannot read holds keys too). The key is read-only after create: it is what a
          *     human writes in a subject line to file mail under this project.
          *     `phase` is the starting phase, `initiative` when omitted; a project cannot start
          *     `closed` (422 `invalid_phase`). The creation row is appended to the phase history.
@@ -6211,6 +6212,52 @@ export interface paths {
          *     about, not the subject or body.
          */
         patch: operations["setActivityAudience"];
+        trace?: never;
+    };
+    "/activities/{id}/inquiry-assignment/preview": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Show the inquiry task and record ownership before taking or assigning it.
+         * @description Show the inquiry task and record ownership before taking or assigning it. This read changes no records.
+         */
+        post: operations["previewWebsiteInquiryAssignment"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/activities/{id}/inquiry-assignment": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Take an inquiry or hand its lead and this task to a colleague in one transaction.
+         * @description Take an inquiry or hand its lead and this task to a colleague in one transaction. Unrelated tasks stay unchanged. Taking a contact inquiry changes only its task; contact ownership requires a separate authorized handover.
+         */
+        post: operations["assignWebsiteInquiry"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
         trace?: never;
     };
     "/activities/{id}/disposition": {
@@ -8227,9 +8274,9 @@ export interface paths {
          *
          *     This re-dispatches the ORIGINAL event down the ordinary engine path, so every gate
          *     the first firing passed it passes again — the owner's live permissions, the audience
-         *     check, the run claim, the effect claim. It never replays the stored plan: that plan
-         *     was computed against a database which has since moved, and re-applying it would
-         *     write yesterday's answer over today's records.
+         *     check, the run claim, the effect claim. It checks current records and authority again.
+         *     A website inquiry whose routing already committed keeps its saved assignment and task
+         *     wording, so retrying a failed task does not rotate the inquiry again.
          *
          *     Three states refuse, and each says which in `refusal` rather than failing:
          *
@@ -10709,6 +10756,84 @@ export interface paths {
          *     points at keeps its address. `sender_secret` replaces a builder form's stored secret.
          */
         patch: operations["updateWebForm"];
+        trace?: never;
+    };
+    "/web-forms/{id}/handling": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Save the reviewed inquiry policy and form link together.
+         * @description Saves one policy and its link to this form under the same form lock as intake.
+         *     The form version and, for an edit, the automation version must still match the
+         *     review. Enabling handles future accepted submissions; it does not scan old leads.
+         *     A paused linked policy keeps legacy handling stopped. No outbound mail is sent.
+         */
+        put: operations["saveWebFormHandling"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/web-forms/{id}/handling/preview": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Preview inquiry deadlines and explicitly selected accepted submissions without writing.
+         * @description Uses the live inquiry planner and current access checks. The caller must be allowed
+         *     to create activities before planning this work. Selection is limited to fifty
+         *     source notes with expected versions. The caller and the authorizer must both be able
+         *     to read each source and target. A preview never reserves a recipient or creates work.
+         */
+        post: operations["previewWebFormHandling"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/web-forms/{id}/handling/existing": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Handle explicitly selected accepted inquiries using the reviewed saved policy.
+         * @description Rechecks the saved policy version and every selected source version. Each source
+         *     has its own durable outcome; one failure does not undo completed items. Uses the
+         *     live workflow, source keys and task writer. A paused policy may handle this explicit
+         *     selection without enabling future handling. No mail is sent.
+         */
+        post: operations["handleExistingWebFormInquiries"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
         trace?: never;
     };
     "/web-forms/{id}/rotate-secret": {
@@ -23432,6 +23557,36 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/me/email-signature/gmail": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * The signature your connected Gmail mailbox holds, as Margince would keep it.
+         * @description Reads the signature of the address Gmail sends from by default (Gmail keeps one per
+         *     send-as address) when the caller presses the button, and writes nothing. `html` is the
+         *     signature after the same cleaning a saved personal signature gets, and `text` its plain
+         *     form, so the preview shows what is kept. Saving it is `saveMyEmailSignature`.
+         *
+         *     `state` says what came back: `ready` with the signature; `empty` when Gmail holds none, or
+         *     one with no words (images only), which a send would skip;
+         *     `no_mailbox` when the caller has no live Gmail connection; `needs_reconnect` when the
+         *     connection's grant cannot read the send-as settings or Google refused it, so the caller
+         *     connects the mailbox again; `too_long` when the cleaned signature is over 10,000
+         *     characters. An agent saves a signature through `saveMyEmailSignature` instead.
+         */
+        get: operations["getMyGmailSignature"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/me/brief-delivery": {
         parameters: {
             query?: never;
@@ -26060,6 +26215,165 @@ export interface components {
          * @enum {string}
          */
         WebFormSender: "browser" | "server" | "webflow" | "typeform" | "tally";
+        LeadRoutingRule: {
+            /** @enum {string} */
+            field: "origin" | "company_name" | "candidate_company_key";
+            equals: string;
+            /** Format: uuid */
+            owner_id: string;
+        };
+        LeadRoutingConfig: {
+            /** @description Selected colleagues in routing order. */
+            owners?: string[];
+            cap_per_owner?: number;
+            rules?: components["schemas"]["LeadRoutingRule"][];
+        };
+        /**
+         * @description Keep an eligible existing owner; otherwise route through selected colleagues or coordinator review.
+         * @enum {string}
+         */
+        WebsiteInquiryMode: "one_colleague" | "rotate" | "coordinator";
+        WebsiteInquiryExistingRequest: {
+            /** Format: uuid */
+            automation_id: string;
+            automation_version: components["schemas"]["RowVersion"];
+            selected: components["schemas"]["WebsiteInquirySelection"][];
+        };
+        WebsiteInquiryHandlingResults: {
+            items: components["schemas"]["WebsiteInquiryHandlingItem"][];
+        };
+        WebsiteInquiryHandlingItem: {
+            /** Format: uuid */
+            id: string;
+            version: components["schemas"]["RowVersion"];
+            /** @enum {string} */
+            status: "task_created" | "already_handled" | "waiting_for_approval" | "skipped" | "changed" | "unavailable" | "failed";
+            /** Format: uuid */
+            task_id?: string;
+            /** Format: uuid */
+            run_id?: string;
+            reason?: string;
+        };
+        WebsiteInquirySelection: {
+            /**
+             * Format: uuid
+             * @description Accepted website source note.
+             */
+            id: string;
+            version: components["schemas"]["RowVersion"];
+        };
+        WebsiteInquiryPreviewRequest: {
+            policy: components["schemas"]["WebsiteInquiryPolicy"];
+            /** Format: uuid */
+            automation_id?: string;
+            automation_version?: components["schemas"]["RowVersion"];
+            selected: components["schemas"]["WebsiteInquirySelection"][];
+        };
+        WebsiteInquiryHandlingPreview: {
+            /**
+             * Format: date-time
+             * @description Server clock used for the deadline example.
+             */
+            received_at: string;
+            /** Format: date-time */
+            example_due_at: string;
+            items: components["schemas"]["WebsiteInquiryPreviewItem"][];
+        };
+        WebsiteInquiryPreviewItem: {
+            /** Format: uuid */
+            id: string;
+            version: components["schemas"]["RowVersion"];
+            /** @enum {string} */
+            status: "eligible" | "already_handled" | "changed" | "unavailable" | "failed";
+            /** Format: uuid */
+            recipient_id?: string;
+            /** Format: date-time */
+            due_at?: string;
+            reason?: string;
+            /** @enum {string} */
+            target_type?: "lead" | "contact";
+            /** Format: uuid */
+            target_id?: string;
+        };
+        WebsiteInquiryHandlingRequest: {
+            name: string;
+            policy: components["schemas"]["WebsiteInquiryPolicy"];
+            enabled: boolean;
+            /** Format: uuid */
+            automation_id?: string;
+            automation_version?: components["schemas"]["RowVersion"];
+        };
+        WebsiteInquiryHandling: {
+            form: components["schemas"]["WebForm"];
+            automation: components["schemas"]["Automation"];
+        };
+        WebsiteInquiryAssignmentRequest: {
+            /** @enum {string} */
+            mode: "take" | "assign_and_follow_up";
+            /** Format: uuid */
+            recipient_id: string;
+            /**
+             * @description Required when applying; use the record type from the preview.
+             * @enum {string}
+             */
+            record_type?: "lead" | "contact";
+            /**
+             * Format: uuid
+             * @description Required when applying; use the record ID from the preview.
+             */
+            record_id?: string;
+            /** @description Required when applying the assignment. Use the version returned by its preview. */
+            record_version?: components["schemas"]["RowVersion"];
+        };
+        WebsiteInquiryAssignment: {
+            task: components["schemas"]["Activity"];
+            /** @enum {string} */
+            record_type: "lead" | "contact";
+            /** Format: uuid */
+            record_id: string;
+            record_version: components["schemas"]["RowVersion"];
+            /** Format: uuid */
+            record_owner_id?: string | null;
+            /** Format: uuid */
+            recipient_id: string;
+            changes_record_owner: boolean;
+        };
+        /** @description Inquiry facts under the current task and source content permissions. Missing source facts remain unknown. */
+        WebsiteInquiryWork: {
+            /** Format: date-time */
+            readonly received_at?: string;
+            /** Format: uuid */
+            readonly source_activity_id?: string;
+            readonly source_label?: string;
+            readonly request_type?: string;
+            readonly assignment_reason?: string;
+            readonly record_owner_known?: boolean;
+            /** Format: uuid */
+            readonly record_owner_id?: string | null;
+            /** @description The reader may review taking this inquiry; the assignment operation rechecks current authority and versions. */
+            readonly can_take?: boolean;
+        };
+        WebsiteInquiryPolicy: {
+            /** Format: uuid */
+            form_id: string;
+            mode: components["schemas"]["WebsiteInquiryMode"];
+            routing: components["schemas"]["LeadRoutingConfig"];
+            /**
+             * Format: uuid
+             * @description Eligible colleague who can read unowned leads and receives inquiries needing review.
+             */
+            coordinator_id: string;
+            task_title: string;
+            /**
+             * @description Calendar days after receipt; due at the end of that day in timezone.
+             * @default 1
+             */
+            due_in_days: number;
+            /** @description Saved IANA timezone for calendar-day deadlines. */
+            timezone: string;
+            /** @description Optional mapped picklist field identifying the request type. */
+            request_type_field?: string;
+        };
         /** @description A website form (`web_form`): a public intake address that turns a submission into a lead. No secret is ever returned here; `secret_configured` says one is stored. */
         WebForm: {
             /** Format: uuid */
@@ -26077,6 +26391,16 @@ export interface components {
              * @description Who owns the leads this form creates; null leaves them in the unassigned queue.
              */
             owner_id?: string | null;
+            /**
+             * Format: uuid
+             * @description Reviewed inquiry policy. Null retains legacy handling; a paused policy never reactivates legacy handling.
+             */
+            handling_automation_id?: string | null;
+            /**
+             * Format: date-time
+             * @description When the handling reference last changed; completed submissions retain their original handling.
+             */
+            handling_cutover_at?: string | null;
             /**
              * Format: uuid
              * @description The product every lead this form creates is interested in; null captures leads with no product.
@@ -26120,6 +26444,15 @@ export interface components {
              * @description When the form last landed a post, stamped at most once a minute. Null until the first one since the time was tracked. A post the spam checks drop is not counted.
              */
             last_post_at: string | null;
+            /** @description Present only while the intake refuses posts to this form with 429. `throttled`: too many posts lately, so some are refused; `since` is when that began. `blocked`: every post is refused until `until`. `paused_all`: every form of the workspace or installation refuses posts until `until`, because all forms together receive too many. Answered on the list and on one form's read. */
+            intake?: {
+                /** @enum {string} */
+                state: "throttled" | "blocked" | "paused_all";
+                /** Format: date-time */
+                since?: string | null;
+                /** Format: date-time */
+                until?: string | null;
+            };
         };
         WebFormCreated: components["schemas"]["WebForm"] & {
             /** @description The signing secret this installation minted for a `server`, `typeform` or `tally` form, shown this once. */
@@ -26159,6 +26492,11 @@ export interface components {
             success_message?: string | null;
         };
         UpdateWebFormRequest: {
+            /**
+             * Format: uuid
+             * @description Explicit conversion to a reviewed inquiry policy for this form. Clear only through a reviewed return to legacy handling.
+             */
+            handling_automation_id?: string | null;
             name?: string;
             sender_secret?: string;
             allowed_origins?: string[];
@@ -28665,10 +29003,17 @@ export interface components {
         };
         /**
          * @description One website form submission as the visitor sent it. Every value is the visitor's own
-         *     text and nothing Margince checked, except `consent`, which is the form's own record of
-         *     its consent box.
+         *     text. `validated_picklists` records which custom picklist values passed validation;
+         *     `consent` records the form's own consent box.
          */
         WebFormSubmission: {
+            /** @description Custom picklist field names whose submitted values passed validation at receipt. Values remain in extra. */
+            readonly validated_picklists?: string[];
+            /**
+             * Format: uuid
+             * @description The policy owning this accepted occurrence; later policy changes do not transfer it to a legacy handler.
+             */
+            handling_automation_id?: string | null;
             /** @description The free text the visitor wrote. */
             message?: string;
             full_name?: string;
@@ -31174,7 +31519,7 @@ export interface components {
          * @description Why a row was skipped or warned about, so a screen can say it in the reader's language with `params`. One closed list, the same one the server reports from; `reason` is the English sentence for a reader that does not know a code. `run_in_flight` is the one refusal code: it answers a commit or undo on a run another attempt holds, and no row carries it.
          * @enum {string}
          */
-        ImportReasonCode: "activity_empty" | "activity_held" | "address_erased" | "address_not_split" | "activity_link_ambiguous" | "activity_link_ambiguous_dropped" | "activity_type_unknown" | "activity_type_unnamed" | "activity_unlinked" | "amount_negative" | "author_too_long" | "cannot_create" | "cannot_create_tags" | "cannot_edit" | "cannot_edit_and_tag" | "cannot_link_stakeholders" | "cannot_read_pipelines" | "cannot_read_tags" | "cannot_write_type" | "close_date_future" | "close_date_past" | "company_duplicate_found" | "company_duplicate_skipped" | "company_link_on_meeting" | "company_name_empty" | "contact_duplicate_found" | "contact_duplicate_skipped" | "contact_email_held" | "contact_holds_lead" | "contact_not_found" | "contact_not_found_dropped" | "contact_unnamed" | "currency_not_a_code" | "currency_unset" | "deal_already_closed" | "deal_company_has_contracts" | "deal_legal_gate" | "deal_not_found" | "deal_not_found_dropped" | "deal_pipeline_fixed" | "description_too_long" | "direction_unknown" | "domain_held" | "duplicate_email" | "duration_not_valid_for_kind" | "email_names_no_contact" | "duration_out_of_range" | "employer_column_empty" | "employer_column_empty_dropped" | "employer_not_found" | "employer_not_found_dropped" | "employer_refused" | "employer_will_create" | "empty_payload" | "field_inactive" | "fx_rate_missing" | "id_not_a_company_id" | "id_not_visible" | "id_on_non_company" | "lead_not_found" | "lead_not_found_dropped" | "lead_status_not_importable" | "lead_status_unknown" | "link_ambiguous" | "link_ambiguous_dropped" | "link_contact_not_imported" | "link_edge_unsupported" | "link_malformed" | "link_not_attachable" | "link_not_found" | "link_not_found_dropped" | "link_row_not_imported" | "link_row_skipped" | "link_row_skipped_dropped" | "link_type_unknown" | "linkedin_held" | "lost_reason_missing" | "meeting_not_taken_place" | "meeting_status_not_valid_for_kind" | "meeting_status_unknown" | "message_not_importable" | "natural_key_taken" | "not_a_date" | "note_repeated" | "not_a_domain" | "not_a_number" | "not_an_amount" | "not_an_email" | "not_yes_no" | "occurred_at_future" | "occurred_at_unnamed" | "option_not_allowed" | "option_not_in_list" | "options_need_semicolons" | "owner_refused" | "owner_unknown" | "phone_needs_country" | "pipeline_no_open_stage" | "pipeline_unknown" | "pipeline_unnamed" | "record_archived" | "ref_taken_by_another_company" | "row_key_empty" | "row_key_repeated" | "run_in_flight" | "size_band_invalid" | "stage_unknown" | "stage_unnamed" | "tag_created" | "tag_name_invalid" | "tag_new" | "task_not_importable" | "timestamp_needs_zone" | "too_many_links" | "undo_edited" | "undo_failed" | "undo_grant_lost" | "undo_not_visible" | "undo_rule_protects" | "undo_still_referenced" | "value_refused" | "value_unreadable";
+        ImportReasonCode: "activity_empty" | "activity_held" | "address_erased" | "address_not_split" | "activity_link_ambiguous" | "activity_link_ambiguous_dropped" | "activity_type_unknown" | "activity_type_unnamed" | "activity_unlinked" | "amount_negative" | "author_too_long" | "cannot_create" | "cannot_create_tags" | "cannot_edit" | "cannot_edit_and_tag" | "cannot_link_stakeholders" | "cannot_read_pipelines" | "cannot_read_tags" | "cannot_write_type" | "close_date_future" | "close_date_past" | "company_duplicate_found" | "company_duplicate_skipped" | "company_link_on_meeting" | "company_name_empty" | "contact_duplicate_found" | "contact_duplicate_skipped" | "contact_email_held" | "contact_holds_lead" | "contact_not_found" | "contact_not_found_dropped" | "contact_unnamed" | "currency_not_a_code" | "currency_unset" | "deal_already_closed" | "deal_company_has_contracts" | "deal_legal_gate" | "deal_not_found" | "deal_not_found_dropped" | "deal_pipeline_fixed" | "description_too_long" | "direction_unknown" | "domain_held" | "duplicate_email" | "duration_not_valid_for_kind" | "email_names_no_contact" | "duration_out_of_range" | "employer_column_empty" | "employer_column_empty_dropped" | "employer_not_found" | "employer_not_found_dropped" | "employer_refused" | "employer_will_create" | "empty_payload" | "field_inactive" | "fx_rate_missing" | "id_not_a_company_id" | "id_not_visible" | "id_on_non_company" | "lead_not_found" | "lead_not_found_dropped" | "lead_status_not_importable" | "lead_status_unknown" | "link_ambiguous" | "link_ambiguous_dropped" | "link_contact_not_imported" | "link_edge_unsupported" | "link_malformed" | "link_not_attachable" | "link_not_found" | "link_not_found_dropped" | "link_row_not_imported" | "link_row_skipped" | "link_row_skipped_dropped" | "link_type_unknown" | "linkedin_held" | "lost_reason_missing" | "meeting_not_taken_place" | "meeting_status_not_valid_for_kind" | "meeting_status_unknown" | "message_not_importable" | "natural_key_taken" | "not_a_date" | "note_repeated" | "not_a_domain" | "not_a_number" | "not_an_amount" | "not_an_email" | "not_yes_no" | "occurred_at_future" | "occurred_at_unnamed" | "option_not_allowed" | "option_not_in_list" | "options_need_semicolons" | "owner_refused" | "owner_unknown" | "phone_needs_country" | "pipeline_no_open_stage" | "pipeline_unknown" | "pipeline_unnamed" | "record_archived" | "ref_taken_by_another_company" | "row_key_empty" | "row_key_repeated" | "run_in_flight" | "size_band_invalid" | "stage_unknown" | "stage_unnamed" | "tag_created" | "tag_name_invalid" | "tag_new" | "task_not_importable" | "timestamp_needs_zone" | "too_many_links" | "undo_edited" | "undo_failed" | "undo_grant_lost" | "undo_not_visible" | "undo_rule_protects" | "undo_still_referenced" | "value_refused" | "value_too_long" | "value_unreadable";
         /**
          * @description Exactly one of two shapes: `object` and `mapping` (and optionally
          *     `source_key`) for one CSV, or `parts` for a ZIP, each part with its own
@@ -33178,7 +33523,7 @@ export interface components {
              * @description The company's general address, for example info@example.com. It never creates or matches a contact.
              */
             email?: string | null;
-            /** @description One human-written line saying what the company does. */
+            /** @description A description of what the company does. */
             description?: string | null;
             /** @description An industry code, or text the server can map to one. Text that names no code stores no code and is kept in the description. */
             industry?: string | null;
@@ -33217,7 +33562,7 @@ export interface components {
              * @description The company's general address, for example info@example.com. It never creates or matches a contact.
              */
             email?: string | null;
-            /** @description One human-written line saying what the company does. Absent leaves it untouched; an empty string clears it, the same spelling every other nullable text field on this record uses. */
+            /** @description A description of what the company does. Absent leaves it untouched; an empty string clears it, the same spelling every other nullable text field on this record uses. */
             description?: string | null;
             /** @description An industry code, or text the server can map to one. Text that names no code stores no code and is kept in the description. */
             industry?: string | null;
@@ -34367,6 +34712,7 @@ export interface components {
             due_at?: string | null;
             /** @description True when `due_at` names an agreed time of day, as on the task itself. The snooze beside this row keeps that time. */
             due_has_time?: boolean;
+            due_intent?: components["schemas"]["IntentTime"];
             overdue: boolean;
             /** Format: uuid */
             assignee_id?: string | null;
@@ -36794,6 +37140,7 @@ export interface components {
             due_at?: string;
             /** @description True when due_at is an agreed time of day. */
             due_has_time?: boolean;
+            due_intent?: components["schemas"]["IntentTime"];
             quote?: string;
             source: string;
             /** Format: uuid */
@@ -37338,6 +37685,16 @@ export interface components {
             template_active: boolean;
             /** Format: date-time */
             updated_at?: string | null;
+        };
+        GmailSignatureImport: {
+            /** @enum {string} */
+            state: "ready" | "empty" | "no_mailbox" | "needs_reconnect" | "too_long";
+            /** @description The send-as address the signature belongs to. */
+            address?: string;
+            /** @description The signature as a saved personal signature keeps it. */
+            html?: string;
+            /** @description The plain-text form of `html`. */
+            text?: string;
         };
         EmailSignatureTemplate: {
             readonly locks?: components["schemas"]["SettingLocks"];
@@ -39982,6 +40339,7 @@ export interface components {
         BulkVerb: "reassign_owner" | "archive" | "add_to_list" | "remove_from_list" | "add_tag" | "remove_tag" | "create_task" | "complete";
         /** @description The task `create_task` files under every record of the selection. */
         BulkTask: {
+            due_intent?: components["schemas"]["IntentTime"];
             /** @description What has to be done, as one line. */
             subject: string;
             /**
@@ -40250,6 +40608,7 @@ export interface components {
             archived_at?: string | null;
             version?: components["schemas"]["RowVersion"];
             exit_criteria?: components["schemas"]["StageExitCriteriaCounts"];
+            name_translations?: components["schemas"]["LabelTranslations"];
             /** @description Live deals on this stage that the caller may see. Absent when the caller may not read deals, because a zero would claim the stage is empty. `archiveStage` refuses with `stage_occupied` on every live deal, counted whether or not the caller may see it, so a zero here does not promise the removal succeeds. */
             readonly deal_count?: number;
         };
@@ -40272,6 +40631,7 @@ export interface components {
             semantic: "open" | "won" | "lost";
             /** @default 0 */
             win_probability: number;
+            name_translations?: components["schemas"]["LabelTranslations"];
         };
         UpdateStageRequest: {
             name?: string;
@@ -40279,6 +40639,27 @@ export interface components {
             /** @enum {string} */
             semantic?: "open" | "won" | "lost";
             win_probability?: number;
+            name_translations?: components["schemas"]["LabelTranslations"];
+        };
+        /**
+         * @description An admin-named label in further UI languages, keyed by language. A reader whose UI
+         *     language has an entry sees it; any other reader sees the stored label. On a write the
+         *     map replaces the stored one, an empty text drops its language, and a language outside
+         *     en, de and vi is 422 `invalid_translation`.
+         */
+        LabelTranslations: {
+            en?: string;
+            de?: string;
+            vi?: string;
+        };
+        /**
+         * @description Each picklist option's name in further UI languages, keyed by the option as stored. The
+         *     stored option stays the value written on records; only its display changes. On a write
+         *     the map replaces the stored one, and an option the field does not offer is 422
+         *     `invalid_translation`.
+         */
+        OptionTranslations: {
+            [key: string]: components["schemas"]["LabelTranslations"];
         };
         /**
          * @description One observation about a deal against one of its stage's exit criteria.
@@ -40738,6 +41119,7 @@ export interface components {
             alias: string;
         };
         MeetingInvitationRequest: {
+            start_intent?: components["schemas"]["IntentTime"];
             /** Format: uuid */
             contact_id: string;
             /** Format: email */
@@ -40809,6 +41191,7 @@ export interface components {
             meeting?: components["schemas"]["MeetingInvitation"];
         };
         MeetingInvitation: {
+            start_intent?: components["schemas"]["IntentTime"];
             /** Format: uuid */
             id: string;
             /** @enum {string} */
@@ -40866,6 +41249,7 @@ export interface components {
             expires_at: string;
         };
         MeetingInvitationChange: {
+            start_intent?: components["schemas"]["IntentTime"];
             /** @enum {string} */
             action: "reschedule" | "cancel" | "retry";
             /** Format: int64 */
@@ -40964,6 +41348,9 @@ export interface components {
          *     `withheld`.
          */
         Activity: {
+            meeting_intent?: components["schemas"]["IntentTime"];
+            due_intent?: components["schemas"]["IntentTime"];
+            remind_intent?: components["schemas"]["IntentTime"];
             system_display?: components["schemas"]["SystemDisplay"];
             /** @description Whether this caller may replace selected individual readers of this internal operational message. Absent for ordinary or withheld activities. */
             readonly can_share_internal?: boolean;
@@ -41273,6 +41660,7 @@ export interface components {
             };
         };
         ActivityFollowUpTask: {
+            due_intent?: components["schemas"]["IntentTime"];
             subject: string;
             body?: string | null;
             /** Format: date-time */
@@ -41283,6 +41671,7 @@ export interface components {
         };
         /** @description What a task needs. Stored as an activity of kind `task`. */
         CreateTaskRequest: {
+            due_intent?: components["schemas"]["IntentTime"];
             recommendation?: components["schemas"]["RecommendationReceipt"];
             /**
              * Format: uuid
@@ -41346,6 +41735,9 @@ export interface components {
         };
         /** @description The workspace's active activity custom fields travel as extra top-level `cf_` keys. A key that is not `cf_`-prefixed, names no active activity field, or carries a value of the wrong shape for its field returns `422`. A value for a field that does not apply to the activity's kind returns `422 field_not_valid_for_kind`. */
         CreateActivityRequest: {
+            meeting_intent?: components["schemas"]["IntentTime"];
+            due_intent?: components["schemas"]["IntentTime"];
+            remind_intent?: components["schemas"]["IntentTime"];
             /**
              * @description Call and meeting only. The contact or company the logging form started on.
              *     One open deal of its current company is added automatically. With this field,
@@ -41583,6 +41975,7 @@ export interface components {
             questions_closed: number;
         };
         SetActivityDispositionRequest: {
+            snoozed_intent?: components["schemas"]["IntentTime"];
             /**
              * @description What the reader decided. `not_sales` binds the thread for everybody; `handled`,
              *     `snooze` and `not_mine` bind only the caller. `handled` says the caller dealt with the
@@ -41626,6 +42019,9 @@ export interface components {
         };
         /** @description A sparse patch. The workspace's active activity custom fields travel as extra top-level `cf_` keys, and an explicit `null` clears one. A key that is not `cf_`-prefixed, names no active activity field, or carries a value of the wrong shape for its field returns `422`. A value for a field that does not apply to the stored kind returns `422 field_not_valid_for_kind`; a `null` clears it all the same. */
         UpdateActivityRequest: {
+            meeting_intent?: components["schemas"]["IntentTime"];
+            due_intent?: components["schemas"]["IntentTime"];
+            remind_intent?: components["schemas"]["IntentTime"];
             /** @description Optional filing choice when recording a call or meeting outcome. Existing deal links remain. */
             deal_filing?: components["schemas"]["ActivityDealFiling"];
             subject?: string | null;
@@ -42217,6 +42613,13 @@ export interface components {
              */
             basis_id?: string | null;
         };
+        /** @description A chosen local time in an IANA zone, resolved with current rules. A time in a gap moves forward; a repeated time takes its first occurrence. */
+        IntentTime: {
+            /** @description Local date and time, no offset. */
+            wall_clock: string;
+            /** @description IANA zone name. */
+            timezone: string;
+        };
         SendEmailRequest: {
             /** @description The subject line. Blank or only white space is refused with 422 `required`. */
             subject: string;
@@ -42334,10 +42737,12 @@ export interface components {
              *     key authorizes nothing.
              */
             consent_purpose?: string;
+            scheduled_intent?: components["schemas"]["IntentTime"];
             /**
              * Format: date-time
-             * @description Send this message at this instant instead of now (ADR-0104). Absolute
-             *     and unambiguous; `scheduled_tz` records the zone the human picked it in.
+             * @description Legacy instant-based schedule. When `scheduled_intent` is present, its
+             *     local time and current timezone rules govern the send; this field is a
+             *     compatibility cache. Without it, the supplied instant remains authoritative.
              *
              *     A scheduled message writes NO activity and NO delivery row until it fires —
              *     the timeline stays silent about a message nobody has sent. The response is
@@ -42409,6 +42814,7 @@ export interface components {
              * @enum {string}
              */
             status: "scheduled" | "released" | "sent" | "cancelled" | "held";
+            scheduled_intent?: components["schemas"]["IntentTime"];
             /** Format: date-time */
             scheduled_at: string;
             /** @description The IANA zone the human picked the moment in, kept so it re-renders as meant. */
@@ -42582,6 +42988,7 @@ export interface components {
              *     reserved for the installation's own notices is refused 422. Omit it for none.
              */
             communication_context?: components["schemas"]["CommunicationContext"];
+            scheduled_intent?: components["schemas"]["IntentTime"];
             /**
              * Format: date-time
              * @description The moment the rep picked to send at, checked as the send checks it: with
@@ -42625,6 +43032,7 @@ export interface components {
             attachments_unavailable?: number;
             /** @description The reason for contact the author chose. Absent when none was. */
             communication_context?: components["schemas"]["CommunicationContext"];
+            scheduled_intent?: components["schemas"]["IntentTime"];
             /**
              * Format: date-time
              * @description The moment the author picked to send at, as saved. It may have passed since; the
@@ -42643,6 +43051,7 @@ export interface components {
          *     approval bound to, so changing it is cancel-and-recompose (ADR-0104 §5).
          */
         RescheduleSendRequest: {
+            scheduled_intent?: components["schemas"]["IntentTime"];
             /** Format: date-time */
             scheduled_at: string;
             scheduled_tz: string;
@@ -42954,10 +43363,12 @@ export interface components {
              *     key authorizes nothing.
              */
             consent_purpose?: string;
+            scheduled_intent?: components["schemas"]["IntentTime"];
             /**
              * Format: date-time
-             * @description Send this message at this instant instead of now (ADR-0104). Absolute
-             *     and unambiguous; `scheduled_tz` records the zone the human picked it in.
+             * @description Legacy instant-based schedule. When `scheduled_intent` is present, its
+             *     local time and current timezone rules govern the send; this field is a
+             *     compatibility cache. Without it, the supplied instant remains authoritative.
              *
              *     A scheduled message writes NO activity and NO delivery row until it fires —
              *     the timeline stays silent about a message nobody has sent. The response is
@@ -47920,7 +48331,7 @@ export interface components {
         AnalyticsCustomField: {
             /** @description The field as `group_by` and a filter name it. */
             name: string;
-            /** @description The name an administrator gave the field. */
+            /** @description The name an administrator gave the field, in the caller's UI language when one was given. */
             label: string;
             /**
              * @description The record the field belongs to. A company field is read through the deal's company,
@@ -47947,6 +48358,14 @@ export interface components {
              *     choice an administrator has since removed.
              */
             options: string[];
+            /**
+             * @description Each choice as the caller reads it: its name in the caller's UI language when an
+             *     administrator gave one. A choice not named here reads as itself. Filters and groups
+             *     still carry the choice as `options` lists it.
+             */
+            option_labels?: {
+                [key: string]: string;
+            };
         };
         /** @description One question, in the vocabulary the schema returned. */
         AnalyticsQuery: {
@@ -49323,6 +49742,8 @@ export interface components {
             currency?: string | null;
             /** @description Allowed picklist values; present (non-empty) when `type=picklist`, null otherwise. */
             options?: string[] | null;
+            label_translations?: components["schemas"]["LabelTranslations"];
+            option_translations?: components["schemas"]["OptionTranslations"];
             /** @description Whether the field is offered in the create dialog of its object. Off keeps it out of create dialogs only: the record page still shows the field and edits its value. */
             show_in_create: boolean;
             /** @description Whether reports may group and filter by this field. Off by default, and only a picklist or boolean field can be on: one value per record keeps a grouped total from counting a record twice. On publishes the field's label and choices to every reader of the reports over its object. */
@@ -49384,9 +49805,11 @@ export interface components {
             /** @description The activity kinds the field applies to. Only an activity field may name any; omitted or empty means every kind. An unknown kind, or kinds on another object's field, is refused with a 422. */
             activity_kinds?: ("call" | "email" | "meeting" | "message" | "note" | "task")[];
         };
-        /** @description Merge-PATCH of the settings a live field may change: `label`, `show_in_create`, `reportable` and `activity_kinds`. At least one is required. `column_name`, `object`, and `type` are absent from this request schema entirely (immutable, not just ignored if sent). `reportable` true on a field that is not a picklist or boolean is refused. `activity_kinds` replaces the kinds an activity field applies to, and an empty array means every kind again; it is refused on another object's field. */
+        /** @description Merge-PATCH of the settings a live field may change: `label`, `label_translations`, `option_translations`, `show_in_create`, `reportable` and `activity_kinds`. At least one is required. `column_name`, `object`, and `type` are absent from this request schema entirely (immutable, not just ignored if sent). `reportable` true on a field that is not a picklist or boolean is refused. `activity_kinds` replaces the kinds an activity field applies to, and an empty array means every kind again; it is refused on another object's field. */
         RenameCustomFieldRequest: {
             label?: string;
+            label_translations?: components["schemas"]["LabelTranslations"];
+            option_translations?: components["schemas"]["OptionTranslations"];
             show_in_create?: boolean;
             reportable?: boolean;
             activity_kinds?: ("call" | "email" | "meeting" | "message" | "note" | "task")[];
@@ -51639,8 +52062,16 @@ export interface components {
             relationship_health?: string | null;
             /** Format: date-time */
             last_contact_at?: string | null;
+            /**
+             * @deprecated
+             * @description Deprecated as stored text: a value sent here is written as a task on the partner's company, held by the caller (or the human an agent acts for), and is not stored on the partner. Text stored before stays readable.
+             */
             next_step?: string | null;
-            /** Format: date */
+            /**
+             * Format: date
+             * @deprecated
+             * @description Deprecated as stored text: the day the next step's task is due. Sent without `next_step` it is refused.
+             */
             next_step_due_at?: string | null;
             served_segments?: string[] | null;
             version?: components["schemas"]["RowVersion"];
@@ -51678,8 +52109,16 @@ export interface components {
              *     a won customer it sourced.
              */
             relationship_stage?: string;
+            /**
+             * @deprecated
+             * @description Deprecated as stored text: a value sent here is written as a task on the partner's company, held by the caller (or the human an agent acts for), and is not stored on the partner. Text stored before stays readable.
+             */
             next_step?: string | null;
-            /** Format: date */
+            /**
+             * Format: date
+             * @deprecated
+             * @description Deprecated as stored text: the day the next step's task is due. Sent without `next_step` it is refused.
+             */
             next_step_due_at?: string | null;
             served_segments?: string[] | null;
         };
@@ -51699,8 +52138,16 @@ export interface components {
             partner_role?: "hosting" | "consulting" | "strategic";
             /** @description An active key from `/partner-stages`. */
             relationship_stage?: string;
+            /**
+             * @deprecated
+             * @description Deprecated as stored text: a value sent here is written as a task on the partner's company, held by the caller (or the human an agent acts for), and is not stored on the partner. Text stored before stays readable.
+             */
             next_step?: string;
-            /** Format: date */
+            /**
+             * Format: date
+             * @deprecated
+             * @description Deprecated as stored text: the day the next step's task is due. Sent without `next_step` it is refused.
+             */
             next_step_due_at?: string;
         };
         /**
@@ -53408,6 +53855,11 @@ export interface components {
         AutomationCatalogEntry: {
             /** @description Stable type key, e.g. stalled_deal_nudge. */
             key: string;
+            /**
+             * @description The library section for this template.
+             * @enum {string}
+             */
+            group?: "inquiries" | "deals" | "customers" | "meetings" | "lists";
             name: string;
             description?: string;
             /** @description What fires it (e.g. deal.stage_changed or schedule). */
@@ -53426,6 +53878,10 @@ export interface components {
         };
         /** @description A configured automation instance (feedback/14). */
         Automation: {
+            /** @description Enabling this scheduled rule or changing its active population requires an initial-run preview and explicit confirmation. */
+            readonly initial_run_preview_required?: boolean;
+            /** @description Typed view of params for the combined website inquiry recipe. */
+            readonly inquiry_policy?: components["schemas"]["WebsiteInquiryPolicy"];
             /** Format: uuid */
             id: string;
             /** @description The catalog type this instance is built from. */
@@ -53433,6 +53889,16 @@ export interface components {
             name: string;
             /** @enum {string} */
             status: "enabled" | "paused";
+            /**
+             * @description Current configuration state, separate from the result of any run.
+             * @enum {string}
+             */
+            readonly setup_state?: "needs_setup" | "on" | "paused" | "needs_attention";
+            /**
+             * @description A verified reason the configuration needs work. Record-specific refusals stay on runs.
+             * @enum {string}
+             */
+            readonly setup_reason?: "configuration_incomplete" | "authorizer_missing" | "authorizer_inactive" | "paused_by_system";
             /**
              * Format: uuid
              * @description The member the rule runs as. Null until the rule is first enabled, and after its owner's seat is removed. Firings of a rule whose owner is no longer active are blocked until the owner is changed.
@@ -53478,6 +53944,8 @@ export interface components {
         };
         /** @description Any subset; omit a field to leave it unchanged. `status` flips enable/pause. */
         UpdateAutomationRequest: {
+            /** @description Confirm the initial-run preview when enabling a scheduled rule or changing its active population. Existing matching records may receive work on the next scan. */
+            initial_run_confirmed?: boolean;
             name?: string | null;
             params?: {
                 [key: string]: unknown;
@@ -53505,9 +53973,19 @@ export interface components {
             /** @description Trailing window for the would-have-fired estimate (default 30). */
             window_days?: number | null;
         };
-        /** @description Read-only blast-radius result for the designer's dry-run. No side effects. */
+        /**
+         * @description Whether the preview describes a current record population or a future event.
+         * @enum {string}
+         */
+        AutomationPreviewKind: "population" | "event";
+        /** @description Read-only preview. Event rules act from activation onward and do not estimate past events from current records. */
         AutomationPreview: {
-            /** @description Records matching the trigger+filter right now, bounded by the caller's Passport visibility. */
+            preview_kind?: components["schemas"]["AutomationPreviewKind"];
+            /** @description False for event previews. In that case matches_now is a compatibility placeholder, not a count of eligible work. */
+            matches_now_available?: boolean;
+            /** @description False when historical execution cannot be reconstructed. Never infer historical events from record creation dates. */
+            historical_preview_available?: boolean;
+            /** @description Current population matches within the caller's visibility. Ignore this compatibility field when matches_now_available is false. */
             matches_now: number;
             /** @description Estimated firings over the trailing window (null when not computable). */
             would_have_fired?: number | null;
@@ -53517,6 +53995,21 @@ export interface components {
             sample?: string[];
             /** @description Matches the caller cannot see (masked, not silently dropped) — honest count, never widens scope. */
             excluded_by_permission?: number;
+            renewal?: components["schemas"]["AutomationRenewalPreview"];
+        };
+        /** @description Current visible renewal dates. Missing dates never count as due renewals. */
+        AutomationRenewalPreview: {
+            missing_dates: number;
+            recurs_yearly: boolean;
+            samples: components["schemas"]["AutomationRenewalPreviewSample"][];
+        };
+        AutomationRenewalPreviewSample: {
+            /** Format: uuid */
+            entity_id: string;
+            /** Format: date */
+            occurrence_date: string;
+            /** Format: date */
+            reminder_date: string;
         };
         /**
          * @description One firing of an automation, reconstructed from audit_log/automation_run (data-model §12.5). Runs of
@@ -55433,6 +55926,7 @@ export interface components {
          *     deterministic candidate set, so it is not necessarily descending in `composite`.
          */
         MorningBriefItem: {
+            snoozed_intent?: components["schemas"]["IntentTime"];
             /** Format: uuid */
             id: string;
             /** Format: uuid */
@@ -56419,6 +56913,7 @@ export interface components {
          *     on the clock, the customer writing back, or a named meeting being over.
          */
         BriefSnoozeRequest: {
+            snoozed_intent?: components["schemas"]["IntentTime"];
             reopen_on?: components["schemas"]["ReopenCondition"];
             /**
              * Format: date-time
@@ -56959,6 +57454,7 @@ export interface components {
          *     adds none.
          */
         AttentionItem: {
+            website_inquiry?: components["schemas"]["WebsiteInquiryWork"];
             system_display?: components["schemas"]["SystemDisplay"];
             /** @description Sent as true on a task whose reminder is due for the reader, who is its assignee and reads their own work. Absent otherwise. */
             reminder_due?: boolean;
@@ -57133,6 +57629,7 @@ export interface components {
             due_at?: string;
             /** @description On a task row: true when `due_at` names an agreed time of day, false when the task is due by that day. Absent on other rows. */
             due_has_time?: boolean;
+            due_intent?: components["schemas"]["IntentTime"];
             /** @description Past due at the read instant, resolved server-side so every surface agrees. */
             overdue?: boolean;
             /**
@@ -57510,7 +58007,7 @@ export interface components {
              * @description The narrowing this read applied. The same vocabulary the query parameter takes.
              * @enum {string}
              */
-            filter?: "all" | "urgent" | "customer_waiting" | "leads" | "prospecting" | "deals_at_risk" | "meetings" | "tasks" | "decisions" | "relationships" | "system" | "except_decisions" | "changed_since_brief" | "upcoming";
+            filter?: "all" | "urgent" | "customer_waiting" | "leads" | "prospecting" | "deals_at_risk" | "meetings" | "tasks" | "decisions" | "relationships" | "system" | "except_decisions" | "changed_since_brief" | "upcoming" | "website_inquiries";
             /**
              * @description The view this read answered, after a `filter` alias was read as its view. Absent when the read named no view.
              * @enum {string}
@@ -58631,6 +59128,7 @@ export interface components {
          *     browser does not.
          */
         WorklistItem: {
+            website_inquiry?: components["schemas"]["WebsiteInquiryWork"];
             system_display?: components["schemas"]["SystemDisplay"];
             /** @description On an approval, its title taken apart, so the row shows the sentence as its title and the proposed values as its supporting line. Absent when the title is a sentence alone. */
             summary_parts?: components["schemas"]["ApprovalSummaryParts"];
@@ -58820,6 +59318,7 @@ export interface components {
             due_at?: string;
             /** @description On a task row: true when `due_at` names an agreed time of day, false when the task is due by that day. Absent on other rows. */
             due_has_time?: boolean;
+            due_intent?: components["schemas"]["IntentTime"];
             /** @description Past due at the read instant, resolved server-side so every surface agrees. */
             overdue?: boolean;
             /**
@@ -60094,6 +60593,15 @@ export interface components {
         };
         /** @description A list member's entity type does not match the list's declared `entity_type` (`code: entity_type_mismatch`; data-model §10.1). */
         EntityTypeMismatch: {
+            headers: {
+                [name: string]: unknown;
+            };
+            content: {
+                "application/problem+json": components["schemas"]["Problem"];
+            };
+        };
+        /** @description The form is being changed. Retry the same request with the same ID. */
+        WebsiteFormBusy: {
             headers: {
                 [name: string]: unknown;
             };
@@ -69956,6 +70464,8 @@ export interface operations {
                 q?: string;
                 /** @description Narrow the timeline sections to one body of work: what is filed under this project or under no project; correspondence filed under another project is left out. */
                 project_id?: string;
+                /** @description Accepted website submission notes for this form, with readable content only. */
+                website_form_id?: string;
                 /** @description Tasks derived from this readable source activity, under current task visibility. */
                 source_activity_id?: string;
                 /** @description One provider conversation. The company view's timeline groups by thread client-side over the page it holds, so a group cut off by that page completes itself through this rather than by widening the page for every account that has no long thread. */
@@ -70326,6 +70836,79 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Activity"];
+                };
+            };
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["VersionConflict"];
+            422: components["responses"]["ValidationError"];
+            423: components["responses"]["RetentionHeld"];
+        };
+    };
+    previewWebsiteInquiryAssignment: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["WebsiteInquiryAssignmentRequest"];
+            };
+        };
+        responses: {
+            /** @description The visible task, its linked record and the selected colleague. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WebsiteInquiryAssignment"];
+                };
+            };
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["VersionConflict"];
+            422: components["responses"]["ValidationError"];
+            423: components["responses"]["RetentionHeld"];
+        };
+    };
+    assignWebsiteInquiry: {
+        parameters: {
+            query?: never;
+            header?: {
+                /**
+                 * @description Optional optimistic-concurrency precondition for a mutating request (PATCH/advance/merge):
+                 *     the last-seen entity `version`. If the row's current `version` differs, the write is
+                 *     rejected with `409 code: version_skew` (ErrVersionSkew) and no change is made — re-read,
+                 *     re-apply, retry. Omitting it is last-write-wins (discouraged for agent/automated writers).
+                 *     Accepted on every native (SoR-mode) mutating endpoint that returns a versioned entity.
+                 */
+                "If-Match"?: components["parameters"]["IfMatch"];
+            };
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["WebsiteInquiryAssignmentRequest"];
+            };
+        };
+        responses: {
+            /** @description The visible task, its linked record and the selected colleague. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WebsiteInquiryAssignment"];
                 };
             };
             403: components["responses"]["Forbidden"];
@@ -72887,6 +73470,7 @@ export interface operations {
                     "application/problem+json": components["schemas"]["Problem"];
                 };
             };
+            503: components["responses"]["WebsiteFormBusy"];
         };
     };
     peekDealRoomCredential: {
@@ -73593,6 +74177,7 @@ export interface operations {
             };
             404: components["responses"]["NotFound"];
             422: components["responses"]["ValidationError"];
+            503: components["responses"]["WebsiteFormBusy"];
         };
     };
     updateAutomation: {
@@ -73631,6 +74216,7 @@ export interface operations {
             };
             404: components["responses"]["NotFound"];
             422: components["responses"]["ValidationError"];
+            503: components["responses"]["WebsiteFormBusy"];
         };
     };
     previewAutomation: {
@@ -78652,6 +79238,7 @@ export interface operations {
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
             422: components["responses"]["ValidationError"];
+            503: components["responses"]["WebsiteFormBusy"];
         };
     };
     updateWebForm: {
@@ -78693,6 +79280,114 @@ export interface operations {
             404: components["responses"]["NotFound"];
             409: components["responses"]["Conflict"];
             422: components["responses"]["ValidationError"];
+            503: components["responses"]["WebsiteFormBusy"];
+        };
+    };
+    saveWebFormHandling: {
+        parameters: {
+            query?: never;
+            header?: {
+                /**
+                 * @description Optional optimistic-concurrency precondition for a mutating request (PATCH/advance/merge):
+                 *     the last-seen entity `version`. If the row's current `version` differs, the write is
+                 *     rejected with `409 code: version_skew` (ErrVersionSkew) and no change is made — re-read,
+                 *     re-apply, retry. Omitting it is last-write-wins (discouraged for agent/automated writers).
+                 *     Accepted on every native (SoR-mode) mutating endpoint that returns a versioned entity.
+                 */
+                "If-Match"?: components["parameters"]["IfMatch"];
+            };
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["WebsiteInquiryHandlingRequest"];
+            };
+        };
+        responses: {
+            /** @description The saved form and policy. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WebsiteInquiryHandling"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+            422: components["responses"]["ValidationError"];
+            503: components["responses"]["WebsiteFormBusy"];
+        };
+    };
+    previewWebFormHandling: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["WebsiteInquiryPreviewRequest"];
+            };
+        };
+        responses: {
+            /** @description Current deadline example and one result per selected source. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WebsiteInquiryHandlingPreview"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    handleExistingWebFormInquiries: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["WebsiteInquiryExistingRequest"];
+            };
+        };
+        responses: {
+            /** @description One durable result per selected source. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WebsiteInquiryHandlingResults"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+            422: components["responses"]["ValidationError"];
+            503: components["responses"]["WebsiteFormBusy"];
         };
     };
     rotateWebFormSecret: {
@@ -82715,7 +83410,7 @@ export interface operations {
                  *     A filter sent with a view it does not belong to returns
                  *     `422 code: filter_outside_view`, whose message names the filter's view.
                  */
-                filter?: "all" | "urgent" | "customer_waiting" | "leads" | "prospecting" | "deals_at_risk" | "meetings" | "tasks" | "decisions" | "relationships" | "system" | "except_decisions" | "changed_since_brief" | "upcoming";
+                filter?: "all" | "urgent" | "customer_waiting" | "leads" | "prospecting" | "deals_at_risk" | "meetings" | "tasks" | "decisions" | "relationships" | "system" | "except_decisions" | "changed_since_brief" | "upcoming" | "website_inquiries";
                 /**
                  * @description Which work view to answer. `today` is work a seller executes: every category
                  *     except `decisions` and `system`. `decisions` is judgements somebody owes, and
@@ -96138,6 +96833,27 @@ export interface operations {
             };
             401: components["responses"]["Unauthorized"];
             422: components["responses"]["ValidationError"];
+        };
+    };
+    getMyGmailSignature: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description What the mailbox holds. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GmailSignatureImport"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
         };
     };
     getMyBriefDelivery: {

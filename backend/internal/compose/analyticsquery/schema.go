@@ -53,6 +53,9 @@ type Field struct {
 	// of values. Offered, not enforced: a record may still hold a choice an
 	// administrator has since removed.
 	Options []string
+	// OptionLabels names each option in the reader's language, where an
+	// administrator gave it a name; a missing option reads as itself.
+	OptionLabels map[string]string
 	// Coverage is how many records hold a value in a field the installation
 	// defined. Nil where nobody counted, which every question run leaves it.
 	Coverage *Coverage

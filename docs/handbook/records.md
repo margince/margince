@@ -354,7 +354,7 @@ Also called: custom property, extra column, new attribute, hide a field on new r
 
 **A custom field on activities** is offered on every call, meeting, note and task you log, unless you pick types under **Shows on**. You can pick them when you add the field, or in its row later. You fill the field in **Log activity**, and it shows only for the types it is on. On a meeting you change it in **Add notes**. A value saved before you changed **Shows on** stays, and **Add notes** still shows it so you can clear it. A colleague who may not read the activity does not see the field.
 
-Renaming a field changes its label and keeps your reports working. To take a field out of create forms later, turn off its switch under **In create forms**. The record page still shows it, and you can edit it there.
+Renaming a field changes its label and keeps your reports working. To name a field and its choices per language, choose **Names in other languages** in its row menu. A colleague whose Margince is in that language sees those names in forms and on records. To take a field out of create forms later, turn off its switch under **In create forms**. The record page still shows it, and you can edit it there.
 
 A deal or company picklist or yes/no field has a switch under **In reports**. Turn it on to group and filter deal reports by that field. A company field groups each deal by its company's value. Everyone who reads deal reports then sees the field's name and choices.
 

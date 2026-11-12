@@ -7506,6 +7506,21 @@
             "type": "string",
             "format": "date-time"
           },
+          "start_intent": {
+            "type": "object",
+            "properties": {
+              "timezone": {
+                "type": "string"
+              },
+              "wall_clock": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "timezone",
+              "wall_clock"
+            ]
+          },
           "status": {
             "type": "string"
           },
@@ -10823,6 +10838,21 @@
                 "due_has_time": {
                   "type": "boolean"
                 },
+                "due_intent": {
+                  "type": "object",
+                  "properties": {
+                    "timezone": {
+                      "type": "string"
+                    },
+                    "wall_clock": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "timezone",
+                    "wall_clock"
+                  ]
+                },
                 "quote": {
                   "type": "string"
                 },
@@ -12956,6 +12986,21 @@
                 "due_has_time": {
                   "type": "boolean"
                 },
+                "due_intent": {
+                  "properties": {
+                    "timezone": {
+                      "type": "string"
+                    },
+                    "wall_clock": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "timezone",
+                    "wall_clock"
+                  ],
+                  "type": "object"
+                },
                 "quote": {
                   "type": "string"
                 },
@@ -13289,6 +13334,21 @@
                 "reopen_ref": {
                   "type": "string",
                   "format": "uuid"
+                },
+                "snoozed_intent": {
+                  "type": "object",
+                  "properties": {
+                    "timezone": {
+                      "type": "string"
+                    },
+                    "wall_clock": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "timezone",
+                    "wall_clock"
+                  ]
                 },
                 "snoozed_until": {
                   "type": "string",
@@ -14228,6 +14288,21 @@
                 "reopen_ref": {
                   "format": "uuid",
                   "type": "string"
+                },
+                "snoozed_intent": {
+                  "properties": {
+                    "timezone": {
+                      "type": "string"
+                    },
+                    "wall_clock": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "timezone",
+                    "wall_clock"
+                  ],
+                  "type": "object"
                 },
                 "snoozed_until": {
                   "format": "date-time",
@@ -15682,6 +15757,21 @@
                     },
                     "due_has_time": {
                       "type": "boolean"
+                    },
+                    "due_intent": {
+                      "type": "object",
+                      "properties": {
+                        "timezone": {
+                          "type": "string"
+                        },
+                        "wall_clock": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "timezone",
+                        "wall_clock"
+                      ]
                     },
                     "quote": {
                       "type": "string"
@@ -17301,6 +17391,21 @@
                 "due_has_time": {
                   "type": "boolean"
                 },
+                "due_intent": {
+                  "type": "object",
+                  "properties": {
+                    "timezone": {
+                      "type": "string"
+                    },
+                    "wall_clock": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "timezone",
+                    "wall_clock"
+                  ]
+                },
                 "quote": {
                   "type": "string"
                 },
@@ -18371,6 +18476,21 @@
           "scheduled_at": {
             "type": "string"
           },
+          "scheduled_intent": {
+            "type": "object",
+            "properties": {
+              "timezone": {
+                "type": "string"
+              },
+              "wall_clock": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "timezone",
+              "wall_clock"
+            ]
+          },
           "scheduled_send_id": {
             "type": "string",
             "format": "uuid"
@@ -18476,6 +18596,21 @@
           },
           "scheduled_at": {
             "type": "string"
+          },
+          "scheduled_intent": {
+            "type": "object",
+            "properties": {
+              "timezone": {
+                "type": "string"
+              },
+              "wall_clock": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "timezone",
+              "wall_clock"
+            ]
           },
           "scheduled_send_id": {
             "type": "string",

@@ -12,6 +12,7 @@ import {
 } from "lucide-react";
 import type { components } from "../../api/schema";
 import { EntityRef } from "../../components/entityref";
+import { TranslationsLine } from "../../components/labeltranslations";
 import { Badge, Button, OverflowMenu } from "../../design-system/atoms";
 import { CellStack } from "../../design-system/cellstack";
 import { DataTable, type DataTableColumn } from "../../design-system/datatable";
@@ -28,6 +29,7 @@ import { useViewerZone } from "../../lib/viewerzone";
 import { AuditEntryLine } from "../settings/audit";
 import { ActivityKindsSelect } from "./customfields.kinds";
 import { objectLabels } from "./customfields.labels";
+import { CustomFieldTranslate } from "./customfields.translations";
 import "./customfields.css";
 
 export type CustomField = components["schemas"]["CustomField"];
@@ -233,7 +235,10 @@ function FieldName({ field }: Readonly<{ field: CustomField }>) {
       <span className="cf-fieldicon" aria-hidden>
         <Icon />
       </span>
-      <span>{field.label}</span>
+      <CellStack>
+        <span>{field.label}</span>
+        <TranslationsLine translations={field.label_translations} />
+      </CellStack>
       {field.status === "retired" && <Badge>{t("cf.retired")}</Badge>}
     </span>
   );
@@ -297,6 +302,7 @@ function FieldMenu({
         <Button aria-haspopup="dialog" onClick={onRename}>
           {t("cf.edit")}
         </Button>
+        <CustomFieldTranslate field={field} />
         <Button aria-haspopup="dialog" onClick={onArchive}>
           {t("cf.archive")}
         </Button>

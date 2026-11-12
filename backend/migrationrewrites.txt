@@ -111,3 +111,19 @@
 1794449001_a_mailbox_may_belong_to_no_person.down.sql | * | runs only on a rollback, drops what the up added and sets user_id NOT NULL again, which reads the table but rewrites no row; it fails while a shared mailbox exists
 1794461023_a_team_change_drops_home_answers.up.sql | * | creates four triggers whose bodies run only on later writes; no existing row is read or rewritten
 1794458739_the_finance_mirror_keys_are_validated.up.sql | *, audit_log, finance_external_customer | inserts one directory entry and its create audit row per customer link that names no entry, which only a link seeded before its first sync has; links are human decisions, a few per customer at most
+1794489411_the_scheduled_mail_intent_pairs_are_validated.down.sql | * | rollback retains the validated intent pairs and changes no row
+1794489414_the_task_intent_pairs_are_validated.down.sql | * | SELECT 1 changes no rows
+1794489416_the_snooze_intent_pairs_are_validated.down.sql | * | SELECT 1 changes no rows
+1794489418_the_meeting_intent_pair_is_validated.down.sql | * | SELECT 1 changes no rows
+1794489413_task_deadlines_keep_the_chosen_clock.up.sql | * | adds four nullable columns, two NOT VALID checks and two triggers on activity; the triggers act on later writes only, and it changes no existing row
+1794489415_snoozes_keep_the_chosen_clock.up.sql | * | the DO block adds two nullable columns, a NOT VALID check and two triggers each to activity_reader_state and brief_item; it changes no existing row
+1794489415_snoozes_keep_the_chosen_clock.down.sql | * | runs only on a rollback; the DO block drops the triggers, the check and the two added columns, and changes no remaining value
+1794489417_booked_meetings_keep_the_chosen_clock.up.sql | * | adds two nullable columns, two NOT VALID checks and two triggers on activity; the triggers act on later writes only, and it changes no existing row
+1794489405_the_company_description_limit_is_validated.down.sql | * | rollback retains the validated bound and changes no row
+1794489408_the_shared_text_checks_are_validated.down.sql | * | rollback retains validation and changes no row
+1794489406_new_text_values_follow_the_shared_limits.up.sql | * | the block reads the custom-field schema catalog, bounded by PostgreSQL physical columns per core table, and creates two guards per affected table; it never reads or rewrites domain rows
+1794489406_new_text_values_follow_the_shared_limits.down.sql | * | the block drops only the two named custom-field guards from the schema catalog and changes no domain rows
+1794489419_chosen_clock_zones_follow_the_text_limits.up.sql | * | drops and re-creates the two text guards on activity, activity_reader_state and brief_item; the guards act on later writes only, and it changes no existing row
+1794489419_chosen_clock_zones_follow_the_text_limits.down.sql | * | runs only on a rollback; drops and re-creates the same six guards without the zone columns, and changes no existing row
+1794483980_a_website_form_names_its_reviewed_inquiry_policy.down.sql | * | read-only existence check refuses rollback after a cutover; no row is rewritten
+1794483981_an_inquiry_effect_keeps_its_planned_assignment.down.sql | * | read-only existence check refuses rollback after an assignment; no row is rewritten

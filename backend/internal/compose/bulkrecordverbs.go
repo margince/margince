@@ -250,7 +250,7 @@ func taskRequestFor(change bulkChange, record openapi_types.UUID) crmcontracts.C
 		EntityType crmcontracts.CreateTaskRequestLinksEntityType `json:"entity_type"`
 	}{{EntityId: record, EntityType: crmcontracts.CreateTaskRequestLinksEntityType(change.recordType)}}
 	return crmcontracts.CreateTaskRequest{
-		Subject: change.task.Subject, DueAt: change.task.DueAt, AssigneeId: change.task.AssigneeId,
+		Subject: change.task.Subject, DueAt: change.task.DueAt, DueIntent: change.task.DueIntent, AssigneeId: change.task.AssigneeId,
 		Links: &links, Source: "manual",
 	}
 }

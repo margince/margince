@@ -14,6 +14,7 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/values"
 	"github.com/margince/margince/backend/internal/shared/ports/datasource"
 	"github.com/margince/margince/backend/internal/shared/ports/fieldcatalog"
@@ -144,6 +145,9 @@ const (
 	fieldKinds    = "activity_kinds"
 	codeRequired  = "required"
 
+	fieldLabelTranslations  = "label_translations"
+	fieldOptionTranslations = "option_translations"
+
 	// codeInvalidCharacters flags a picklist option carrying a NUL byte or
 	// invalid UTF-8 — the same class of malformed input the identifier path
 	// already refuses (pgx.Identifier.Sanitize strips NULs). An option value
@@ -240,8 +244,8 @@ func storedKinds(kinds []string) []string {
 
 var nonAlnum = regexp.MustCompile(`[^a-z0-9]+`)
 
-// maxSlugLen keeps `cf_<slug>_check` (the longest identifier this package
-// generates) safely under Postgres's 63-byte identifier cap.
+// maxSlugLen keeps `cf_<slug>_text_max_20000` (the longest identifier this
+// package generates) safely under Postgres's 63-byte identifier cap.
 const maxSlugLen = 40
 
 // DeriveSlug turns a display label into the admin-facing key the physical
@@ -383,6 +387,13 @@ func BuildDDL(object, columnName string, spec FieldSpec) (string, error) {
 	}
 	stmt := fmt.Sprintf("ALTER TABLE %s ADD COLUMN %s %s NULL",
 		quoteIdentifier(object), quoteIdentifier(columnName), colType)
+	if spec.Type == TypeText {
+		// A new column contains only nulls, so its bound needs no legacy-value
+		// exception. The name carries the column and limit a refusal reports.
+		stmt += fmt.Sprintf(" CONSTRAINT %s CHECK (%s IS NULL OR char_length(%s) <= %d)",
+			quoteIdentifier(storekit.TextMaxConstraint(columnName, values.TextDocumentCharacters)),
+			quoteIdentifier(columnName), quoteIdentifier(columnName), values.TextDocumentCharacters)
+	}
 	if hasOptions(spec.Type) {
 		checkName, clause, err := typedCheckConstraintClause(columnName, spec.Type, spec.Options)
 		if err != nil {

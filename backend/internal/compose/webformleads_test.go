@@ -74,7 +74,7 @@ func TestTheNotesRawKeepsTheSubmissionFieldByField(t *testing.T) {
 			Email: "ada@visitor.example", Message: "Please call me", Consent: true, PageURL: "https://www.example.com/",
 			Extra: []webforms.Field{{Name: "budget", Value: "10k"}},
 		},
-	})
+	}, nil)
 	if err != nil {
 		t.Fatal(err)
 	}

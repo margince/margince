@@ -39,11 +39,11 @@ Each cell counts the calls in the group that ran for the role, and those a gate 
 
 | Group | Calls | admin | management | manager | ops | read_only | rep |
 |---|---:|---|---|---|---|---|---|
-| [Business operations](#business-operations) | 380 | 379✓ 1✗ | 353✓ 27✗ | 354✓ 26✗ | 353✓ 27✗ | 178✓ 202✗ | 324✓ 56✗ |
+| [Business operations](#business-operations) | 382 | 381✓ 1✗ | 355✓ 27✗ | 356✓ 26✗ | 355✓ 27✗ | 178✓ 204✗ | 326✓ 56✗ |
 | [Compliance and privacy](#compliance-and-privacy) | 47 | 47✓ 0✗ | 27✓ 20✗ | 27✓ 20✗ | 31✓ 16✗ | 10✓ 37✗ | 26✓ 21✗ |
 | [Capture and connectors](#capture-and-connectors) | 38 | 38✓ 0✗ | 32✓ 6✗ | 32✓ 6✗ | 38✓ 0✗ | 26✓ 12✗ | 31✓ 7✗ |
-| [Workspace settings a non-admin can reach](#workspace-settings-a-non-admin-can-reach) | 38 | 38✓ 0✗ | 38✓ 0✗ | 38✓ 0✗ | 38✓ 0✗ | 34✓ 4✗ | 38✓ 0✗ |
-| [Admin settings](#admin-settings) | 114 | 114✓ 0✗ | 10✓ 104✗ | 0✓ 114✗ | 81✓ 33✗ | 0✓ 114✗ | 0✓ 114✗ |
+| [Workspace settings a non-admin can reach](#workspace-settings-a-non-admin-can-reach) | 39 | 39✓ 0✗ | 39✓ 0✗ | 39✓ 0✗ | 39✓ 0✗ | 34✓ 5✗ | 39✓ 0✗ |
+| [Admin settings](#admin-settings) | 115 | 115✓ 0✗ | 10✓ 105✗ | 0✓ 115✗ | 82✓ 33✗ | 0✓ 115✗ | 0✓ 115✗ |
 | [The user's own account and security](#the-users-own-account-and-security) | 18 | 18✓ 0✗ | 18✓ 0✗ | 18✓ 0✗ | 18✓ 0✗ | 17✓ 1✗ | 18✓ 0✗ |
 | [Agent governance](#agent-governance) | 4 | 4✓ 0✗ | 4✓ 0✗ | 4✓ 0✗ | 4✓ 0✗ | 3✓ 1✗ | 4✓ 0✗ |
 | [Operator and system](#operator-and-system) | 16 | 16✓ 0✗ | 0✓ 16✗ | 0✓ 16✗ | 16✓ 0✗ | 0✓ 16✗ | 0✓ 16✗ |
@@ -206,6 +206,7 @@ Each cell counts the calls in the group that ran for the role, and those a gate 
 
 | Call | admin | management | manager | ops | read_only | rep |
 |---|---|---|---|---|---|---|
+| `change_activities.assign_inquiry` | ✓ | ✓ | ✓ | ✓ | ✗ | ✓ |
 | `change_activities.bring_back` | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
 | `change_activities.cancel_send` | ✓ | ✓ | ✓ | ✓ | ✗ | ✓ |
 | `change_activities.check_new_send` | ✓ | ✓ | ✓ | ✓ | ✗ | ✓ |
@@ -213,6 +214,7 @@ Each cell counts the calls in the group that ran for the role, and those a gate 
 | `change_activities.decline_deal` | ✓ | ✓ | ✓ | ✓ | ✗ | ✓ |
 | `change_activities.discard_draft` | ✓ | ✓ | ✓ | ✓ | ✗ | ✓ |
 | `change_activities.log` | ✓ | ✓ | ✓ | ✓ | ✗ | ✓ |
+| `change_activities.preview_inquiry_assignment` | ✓ | ✓ | ✓ | ✓ | ✗ | ✓ |
 | `change_activities.preview_sign_off` | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
 | `change_activities.read_transcript` | ✓ | ✓ | ✓ | ✓ | ✗ | ✓ |
 | `change_activities.relink` | ✓ | ✓ | ✓ | ✓ | ✗ | ✓ |
@@ -765,6 +767,7 @@ Each cell counts the calls in the group that ran for the role, and those a gate 
 
 | Call | admin | management | manager | ops | read_only | rep |
 |---|---|---|---|---|---|---|
+| `read_details.website_inquiry_preview` | ✓ | ✓ | ✓ | ✓ | ✗ | ✓ |
 | `read_workspace.web_form` | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
 | `read_workspace.web_forms` | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
 
@@ -942,6 +945,7 @@ Each cell counts the calls in the group that ran for the role, and those a gate 
 | Call | admin | management | manager | ops | read_only | rep |
 |---|---|---|---|---|---|---|
 | `change_settings.archive_web_form` | ✓ | ✗ | ✗ | ✓ | ✗ | ✗ |
+| `change_settings.handle_website_inquiries` | ✓ | ✗ | ✗ | ✓ | ✗ | ✗ |
 | `change_settings.update_web_form` | ✓ | ✗ | ✗ | ✓ | ✗ | ✗ |
 
 ### Extensions
@@ -1184,6 +1188,7 @@ A check is `object.action`, or `object.a|b` for any one of them. `*.action` is t
 | Leads | `read_details.lead_promotion_preview` | `preview_lead_promotion` | `deal.read` `lead.read` |
 | Leads | `read_details.lead_score` | `explain_lead_score` | `lead.read` |
 | Leads | `read_details.lead_signals` | `list_lead_manual_signals` | `lead.read` |
+| Activities, mail and tasks | `change_activities.assign_inquiry` | `assign_website_inquiry` | `activity.read` `activity.update` `lead.read` `relationship.read` |
 | Activities, mail and tasks | `change_activities.bring_back` | `clear_activity_disposition` | `activity.read` |
 | Activities, mail and tasks | `change_activities.cancel_send` | `cancel_scheduled_send` | `activity.read` `activity.update` |
 | Activities, mail and tasks | `change_activities.check_new_send` | `preview_account_send_authorization` | `activity.create` `company.create` `company.read` `contact.create` `relationship.read` |
@@ -1191,6 +1196,7 @@ A check is `object.action`, or `object.a|b` for any one of them. `*.action` is t
 | Activities, mail and tasks | `change_activities.decline_deal` | `decline_activity_deal` | `activity.update` `deal.read` |
 | Activities, mail and tasks | `change_activities.discard_draft` | `discard_mail_draft` | `activity.create` |
 | Activities, mail and tasks | `change_activities.log` | `log_activity` | `activity.create` `activity.read` |
+| Activities, mail and tasks | `change_activities.preview_inquiry_assignment` | `preview_website_inquiry_assignment` | `activity.read` `activity.update` `lead.read` `relationship.read` |
 | Activities, mail and tasks | `change_activities.preview_sign_off` | `preview_email_sign_off` |  |
 | Activities, mail and tasks | `change_activities.read_transcript` | `read_transcript_for_next_steps` | `activity.create` `activity.read` |
 | Activities, mail and tasks | `change_activities.relink` | `relink_activity` | `activity.read` `activity.update` `relationship.read` |
@@ -1560,7 +1566,7 @@ A check is `object.action`, or `object.a|b` for any one of them. `*.action` is t
 | Products and offer templates | `change_settings.put_product_translation` | `put_product_translation` | `product.update` |
 | Products and offer templates | `read_details.product_translations` | `list_product_translations` | `product.read` |
 | Exchange, tax and model rates | `read_workspace.fx_rate_currencies` | `list_fx_rate_currencies` | `deal.read` |
-| Automations | `read_details.automation_preview` | `preview_automation` | `automation.read` `lead.read` |
+| Automations | `read_details.automation_preview` | `preview_automation` | `automation.read` |
 | Automations | `read_workspace.automation_runs` | `list_automation_runs` | `automation.read` |
 | Members, teams and roles | `read_workspace.colleagues` | `list_colleagues` |  |
 | Capture and integration rules | `change_capture.add_consumer_mail_domain` | `add_consumer_mail_domain` | `capture_settings.create` `capture_settings.create|update` |
@@ -1577,6 +1583,7 @@ A check is `object.action`, or `object.a|b` for any one of them. `*.action` is t
 | Capture and integration rules | `read_workspace.consumer_mail_domains` | `list_consumer_mail_domains` | `capture_settings.read` |
 | Capture and integration rules | `read_workspace.owner_identities` | `list_capture_owner_identities` |  |
 | Capture and integration rules | `read_workspace.workspace_email_domains` | `list_workspace_email_domains` | `capture_settings.read` |
+| Web forms | `read_details.website_inquiry_preview` | `preview_website_inquiries` | `activity.create` `automation.read` `integrations.read` |
 | Web forms | `read_workspace.web_form` | `get_web_form` | `integrations.read` |
 | Web forms | `read_workspace.web_forms` | `list_web_forms` | `integrations.read` |
 | Installation settings | `read_details.jurisdiction_document` | `download_jurisdiction_document` | `installation_settings.read` |
@@ -1697,6 +1704,7 @@ A check is `object.action`, or `object.a|b` for any one of them. `*.action` is t
 | Capture and integration rules | `change_capture.remove_consumer_mail_domain` | `remove_consumer_mail_domain` | `capture_settings.update` |
 | Capture and integration rules | `change_capture.remove_workspace_email_domain` | `remove_workspace_email_domain` | `capture_settings.update` |
 | Web forms | `change_settings.archive_web_form` | `archive_web_form` | `integrations.delete` |
+| Web forms | `change_settings.handle_website_inquiries` | `handle_website_inquiries` | `activity.create` `activity.read` `activity.update` `automation.read` `automation.update` `contact.read` `integrations.read` `integrations.update` `lead.read` `relationship.read` |
 | Web forms | `change_settings.update_web_form` | `update_web_form` | `integrations.update` |
 | Extensions | `read_workspace.extension_settings` | `get_extension_settings` | `extension_access.read` `installation_settings.read` |
 | Extensions | `read_workspace.extensions` | `list_extensions` | `extension_access.read` |

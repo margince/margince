@@ -28,6 +28,11 @@ The 28 tables owned by `capture`, as the migrations build them. [Back to the ent
 
 - `capture_alias_refused_pkey`: `unique, btree (user_id, value)`
 
+**Triggers**
+
+- `text_bound_insert`: `AFTER INSERT FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL, '{"value": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"value":20000}')`
+- `text_bound_update`: `AFTER UPDATE FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"value": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"value":20000}')`
+
 ## capture_alias_sighting
 
 5 columns · primary key `(id)` · referenced by 0 foreign keys
@@ -55,6 +60,11 @@ The 28 tables owned by `capture`, as the migrations build them. [Back to the ent
 
 - `capture_alias_sighting_once_per_message`: `unique, btree (user_id, value, source)`
 - `capture_alias_sighting_pkey`: `unique, btree (id)`
+
+**Triggers**
+
+- `text_bound_insert`: `AFTER INSERT FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL, '{"value": 20000, "source": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"source":20000,"value":20000}')`
+- `text_bound_update`: `AFTER UPDATE FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"value": 20000, "source": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"source":20000,"value":20000}')`
 
 ## capture_answered_sweep_cursor
 
@@ -116,6 +126,11 @@ The 28 tables owned by `capture`, as the migrations build them. [Back to the ent
 - `capture_auto_enrich_state_pkey`: `unique, btree (company_id)`
 - `idx_capture_auto_enrich_due`: `btree (next_attempt_at) WHERE (next_attempt_at IS NOT NULL)`
 
+**Triggers**
+
+- `text_bound_insert`: `AFTER INSERT FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL, '{"last_outcome": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"last_outcome":20000}')`
+- `text_bound_update`: `AFTER UPDATE FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"last_outcome": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"last_outcome":20000}')`
+
 ## capture_backfill
 
 31 columns · primary key `(id)` · referenced by 5 foreign keys
@@ -176,6 +191,8 @@ The 28 tables owned by `capture`, as the migrations build them. [Back to the ent
 
 **Triggers**
 
+- `text_bound_insert`: `AFTER INSERT FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL, '{"status": 20000, "last_error_class": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"last_error_class":20000,"status":20000}')`
+- `text_bound_update`: `AFTER UPDATE FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"status": 20000, "last_error_class": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"last_error_class":20000,"status":20000}')`
 - `trg_capture_backfill_updated`: `BEFORE UPDATE FOR EACH ROW EXECUTE FUNCTION set_updated_at()`
 
 ## capture_backfill_creation
@@ -202,6 +219,11 @@ The 28 tables owned by `capture`, as the migrations build them. [Back to the ent
 **Indexes**
 
 - `capture_backfill_creation_pkey`: `unique, btree (backfill_id, kind, subject)`
+
+**Triggers**
+
+- `text_bound_insert`: `AFTER INSERT FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL, '{"kind": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"kind":20000}')`
+- `text_bound_update`: `AFTER UPDATE FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"kind": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"kind":20000}')`
 
 ## capture_connection
 
@@ -274,6 +296,8 @@ The 28 tables owned by `capture`, as the migrations build them. [Back to the ent
 **Triggers**
 
 - `home_read_fence_shared_mailbox_readers`: `AFTER UPDATE OF reader_team_id, mail_posture FOR EACH ROW WHEN (((old.reader_team_id IS DISTINCT FROM new.reader_team_id) OR (old.mail_posture IS DISTINCT FROM new.mail_posture))) EXECUTE FUNCTION advance_home_read_fence()`
+- `text_bound_insert`: `AFTER INSERT FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL, '{"scopes": 20000, "status": 20000, "provider": 20000, "watch_ref": 20000, "mail_posture": 20000, "account_label": 120, "credential_ref": 20000, "provider_scopes": 20000, "history_baseline_tz": 20000, "history_baseline_set_by": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"account_label":120,"credential_ref":20000,"history_baseline_set_by":20000,"history_baseline_tz":20000,"mail_posture":20000,"provider":20000,"provider_scopes":20000,"scopes":20000,"status":20000,"watch_ref":20000}')`
+- `text_bound_update`: `AFTER UPDATE FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"scopes": 20000, "status": 20000, "provider": 20000, "watch_ref": 20000, "mail_posture": 20000, "account_label": 120, "credential_ref": 20000, "provider_scopes": 20000, "history_baseline_tz": 20000, "history_baseline_set_by": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"account_label":120,"credential_ref":20000,"history_baseline_set_by":20000,"history_baseline_tz":20000,"mail_posture":20000,"provider":20000,"provider_scopes":20000,"scopes":20000,"status":20000,"watch_ref":20000}')`
 
 ## capture_counterparty_hold
 
@@ -304,6 +328,11 @@ The 28 tables owned by `capture`, as the migrations build them. [Back to the ent
 
 - `capture_counterparty_hold_pkey`: `unique, btree (id)`
 - `capture_counterparty_hold_user_value_key`: `unique, btree (user_id, kind, value)`
+
+**Triggers**
+
+- `text_bound_insert`: `AFTER INSERT FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL, '{"kind": 20000, "value": 20000, "created_by": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"created_by":20000,"kind":20000,"value":20000}')`
+- `text_bound_update`: `AFTER UPDATE FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"kind": 20000, "value": 20000, "created_by": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"created_by":20000,"kind":20000,"value":20000}')`
 
 ## capture_digest
 
@@ -367,6 +396,11 @@ The 28 tables owned by `capture`, as the migrations build them. [Back to the ent
 - `idx_capture_exclusion_value`: `btree (kind, value)`
 - `uq_capture_exclusion`: `unique, btree (scope, user_id, kind, value) NULLS NOT DISTINCT`
 
+**Triggers**
+
+- `text_bound_insert`: `AFTER INSERT FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL, '{"kind": 20000, "scope": 20000, "value": 20000, "created_by": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"created_by":20000,"kind":20000,"scope":20000,"value":20000}')`
+- `text_bound_update`: `AFTER UPDATE FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"kind": 20000, "scope": 20000, "value": 20000, "created_by": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"created_by":20000,"kind":20000,"scope":20000,"value":20000}')`
+
 ## capture_freemail_domain
 
 5 columns · primary key `(id)` · referenced by 0 foreign keys
@@ -394,6 +428,11 @@ The 28 tables owned by `capture`, as the migrations build them. [Back to the ent
 
 - `capture_freemail_domain_pkey`: `unique, btree (id)`
 - `uq_capture_freemail_domain`: `unique, btree (domain)`
+
+**Triggers**
+
+- `text_bound_insert`: `AFTER INSERT FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL, '{"kind": 20000, "domain": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"domain":20000,"kind":20000}')`
+- `text_bound_update`: `AFTER UPDATE FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"kind": 20000, "domain": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"domain":20000,"kind":20000}')`
 
 ## capture_import
 
@@ -445,6 +484,8 @@ The 28 tables owned by `capture`, as the migrations build them. [Back to the ent
 
 - `home_read_fence_capture_import`: `AFTER UPDATE FOR EACH ROW WHEN (((old.user_id IS DISTINCT FROM new.user_id) OR (old.activity_id IS DISTINCT FROM new.activity_id) OR (old.connection_id IS DISTINCT FROM new.connection_id))) EXECUTE FUNCTION advance_home_read_fence()`
 - `home_read_fence_capture_import_removed`: `AFTER DELETE FOR EACH STATEMENT EXECUTE FUNCTION advance_home_read_fence()`
+- `text_bound_insert`: `AFTER INSERT FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL, '{"delivered_by": 20000, "verdict_reason": 2000, "verdict_status": 20000, "verdict_reasons": 2000, "posture_at_import": 20000, "provider_message_ids": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"delivered_by":20000,"posture_at_import":20000,"provider_message_ids":20000,"verdict_reason":2000,"verdict_reasons":2000,"verdict_status":20000}')`
+- `text_bound_update`: `AFTER UPDATE FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"delivered_by": 20000, "verdict_reason": 2000, "verdict_status": 20000, "verdict_reasons": 2000, "posture_at_import": 20000, "provider_message_ids": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"delivered_by":20000,"posture_at_import":20000,"provider_message_ids":20000,"verdict_reason":2000,"verdict_reasons":2000,"verdict_status":20000}')`
 
 ## capture_owner_identity
 
@@ -477,6 +518,11 @@ The 28 tables owned by `capture`, as the migrations build them. [Back to the ent
 
 - `capture_owner_identity_pkey`: `unique, btree (id)`
 - `capture_owner_identity_user_value_key`: `unique, btree (user_id, kind, value)`
+
+**Triggers**
+
+- `text_bound_insert`: `AFTER INSERT FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL, '{"kind": 20000, "value": 20000, "source": 20000, "created_by": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"created_by":20000,"kind":20000,"source":20000,"value":20000}')`
+- `text_bound_update`: `AFTER UPDATE FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"kind": 20000, "value": 20000, "source": 20000, "created_by": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"created_by":20000,"kind":20000,"source":20000,"value":20000}')`
 
 ## capture_owner_identity_withdrawn
 
@@ -512,6 +558,11 @@ The 28 tables owned by `capture`, as the migrations build them. [Back to the ent
 - `capture_owner_identity_withdrawn_at_idx`: `btree (withdrawn_at)`
 - `capture_owner_identity_withdrawn_pkey`: `unique, btree (id)`
 - `capture_owner_identity_withdrawn_user_idx`: `btree (user_id)`
+
+**Triggers**
+
+- `text_bound_insert`: `AFTER INSERT FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL, '{"kind": 20000, "value": 20000, "source": 20000, "created_by": 20000, "withdrawn_by": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"created_by":20000,"kind":20000,"source":20000,"value":20000,"withdrawn_by":20000}')`
+- `text_bound_update`: `AFTER UPDATE FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"kind": 20000, "value": 20000, "source": 20000, "created_by": 20000, "withdrawn_by": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"created_by":20000,"kind":20000,"source":20000,"value":20000,"withdrawn_by":20000}')`
 
 ## capture_party_admission_cursor
 
@@ -567,6 +618,11 @@ The 28 tables owned by `capture`, as the migrations build them. [Back to the ent
 - `capture_party_source_recipients`: `gin (recipients) WHERE sent_by_owner`
 - `capture_party_source_user`: `btree (user_id)`
 
+**Triggers**
+
+- `text_bound_insert`: `AFTER INSERT FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL, '{"provider": 20000, "containers": 20000, "recipients": 20000, "policy_addresses": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"containers":20000,"policy_addresses":20000,"provider":20000,"recipients":20000}')`
+- `text_bound_update`: `AFTER UPDATE FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"provider": 20000, "containers": 20000, "recipients": 20000, "policy_addresses": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"containers":20000,"policy_addresses":20000,"provider":20000,"recipients":20000}')`
+
 ## capture_party_source_replay
 
 2 columns · primary key `(activity_id)` · referenced by 0 foreign keys
@@ -585,6 +641,11 @@ The 28 tables owned by `capture`, as the migrations build them. [Back to the ent
 **Indexes**
 
 - `capture_party_source_replay_pkey`: `unique, btree (activity_id)`
+
+**Triggers**
+
+- `text_bound_insert`: `AFTER INSERT FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL, '{"outcome": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"outcome":20000}')`
+- `text_bound_update`: `AFTER UPDATE FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"outcome": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"outcome":20000}')`
 
 ## capture_pending_counterparty
 
@@ -642,6 +703,11 @@ The 28 tables owned by `capture`, as the migrations build them. [Back to the ent
 - `idx_capture_pending_counterparty_owner`: `btree (owner_id)`
 - `idx_capture_pending_counterparty_suppressed`: `unique, btree (email) WHERE (status = 'suppressed')`
 
+**Triggers**
+
+- `text_bound_insert`: `AFTER INSERT FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL, '{"kind": 20000, "email": 20000, "domain": 20000, "status": 20000, "served_model": 20000, "disposition_reason": 2000}')) EXECUTE FUNCTION refuse_oversized_text('{"disposition_reason":2000,"domain":20000,"email":20000,"kind":20000,"served_model":20000,"status":20000}')`
+- `text_bound_update`: `AFTER UPDATE FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"kind": 20000, "email": 20000, "domain": 20000, "status": 20000, "served_model": 20000, "disposition_reason": 2000}')) EXECUTE FUNCTION refuse_oversized_text('{"disposition_reason":2000,"domain":20000,"email":20000,"kind":20000,"served_model":20000,"status":20000}')`
+
 ## capture_sender_override
 
 8 columns · primary key `(id)` · referenced by 0 foreign keys
@@ -674,6 +740,11 @@ The 28 tables owned by `capture`, as the migrations build them. [Back to the ent
 - `capture_sender_override_user_address_key`: `unique, btree (user_id, address)`
 - `capture_sender_override_user_idx`: `btree (user_id, created_at DESC)`
 
+**Triggers**
+
+- `text_bound_insert`: `AFTER INSERT FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL, '{"address": 20000, "decision": 20000, "captured_by": 20000, "overruled_kind": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"address":20000,"captured_by":20000,"decision":20000,"overruled_kind":20000}')`
+- `text_bound_update`: `AFTER UPDATE FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"address": 20000, "decision": 20000, "captured_by": 20000, "overruled_kind": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"address":20000,"captured_by":20000,"decision":20000,"overruled_kind":20000}')`
+
 ## capture_sweep_run
 
 8 columns · primary key `(id)` · referenced by 0 foreign keys
@@ -704,6 +775,11 @@ The 28 tables owned by `capture`, as the migrations build them. [Back to the ent
 
 - `capture_sweep_run_latest`: `btree (sweep, finished_at DESC, id DESC)`
 - `capture_sweep_run_pkey`: `unique, btree (id)`
+
+**Triggers**
+
+- `text_bound_insert`: `AFTER INSERT FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL, '{"sweep": 20000, "outcome": 20000, "error_class": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"error_class":20000,"outcome":20000,"sweep":20000}')`
+- `text_bound_update`: `AFTER UPDATE FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"sweep": 20000, "outcome": 20000, "error_class": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"error_class":20000,"outcome":20000,"sweep":20000}')`
 
 ## capture_sync_state
 
@@ -740,6 +816,8 @@ The 28 tables owned by `capture`, as the migrations build them. [Back to the ent
 
 **Triggers**
 
+- `text_bound_insert`: `AFTER INSERT FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL, '{"last_error_class": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"last_error_class":20000}')`
+- `text_bound_update`: `AFTER UPDATE FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"last_error_class": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"last_error_class":20000}')`
 - `trg_capture_sync_state_updated`: `BEFORE UPDATE FOR EACH ROW EXECUTE FUNCTION set_updated_at()`
 
 ## capture_test_mailbox_sent
@@ -767,6 +845,11 @@ The 28 tables owned by `capture`, as the migrations build them. [Back to the ent
 - `capture_test_mailbox_sent_pkey`: `unique, btree (id)`
 - `capture_test_mailbox_sent_user_message_unique`: `unique, btree (user_id, message_id)`
 - `idx_capture_test_mailbox_sent_unechoed`: `btree (user_id, sent_at) WHERE (echoed_at IS NULL)`
+
+**Triggers**
+
+- `text_bound_insert`: `AFTER INSERT FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL, '{"subject": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"subject":20000}')`
+- `text_bound_update`: `AFTER UPDATE FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"subject": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"subject":20000}')`
 
 ## capture_thread_verdict
 
@@ -810,6 +893,11 @@ The 28 tables owned by `capture`, as the migrations build them. [Back to the ent
 - `capture_thread_verdict_held_by_seat_idx`: `btree (user_id, status) WHERE (status <> ALL (ARRAY['cleared', 'shared_by_owner']))`
 - `capture_thread_verdict_pkey`: `unique, btree (id)`
 - `capture_thread_verdict_thread_user_key`: `unique, btree (thread_key, user_id)`
+
+**Triggers**
+
+- `text_bound_insert`: `AFTER INSERT FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL, '{"kind": 20000, "status": 20000, "thread_key": 20000, "seen_addresses": 20000, "disposition_reason": 2000}')) EXECUTE FUNCTION refuse_oversized_text('{"disposition_reason":2000,"kind":20000,"seen_addresses":20000,"status":20000,"thread_key":20000}')`
+- `text_bound_update`: `AFTER UPDATE FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"kind": 20000, "status": 20000, "thread_key": 20000, "seen_addresses": 20000, "disposition_reason": 2000}')) EXECUTE FUNCTION refuse_oversized_text('{"disposition_reason":2000,"kind":20000,"seen_addresses":20000,"status":20000,"thread_key":20000}')`
 
 ## capture_trace
 
@@ -886,6 +974,8 @@ The 28 tables owned by `capture`, as the migrations build them. [Back to the ent
 
 **Triggers**
 
+- `text_bound_insert`: `AFTER INSERT FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL, '{"status": 20000, "provider": 20000, "channel_id": 20000, "channel_label": 120, "credential_ref": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"channel_id":20000,"channel_label":120,"credential_ref":20000,"provider":20000,"status":20000}')`
+- `text_bound_update`: `AFTER UPDATE FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"status": 20000, "provider": 20000, "channel_id": 20000, "channel_label": 120, "credential_ref": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"channel_id":20000,"channel_label":120,"credential_ref":20000,"provider":20000,"status":20000}')`
 - `trg_channel_connection_updated`: `BEFORE UPDATE FOR EACH ROW WHEN (((to_jsonb(old.*) - 'poll_offset') IS DISTINCT FROM (to_jsonb(new.*) - 'poll_offset'))) EXECUTE FUNCTION set_updated_at_bump_version()`
 
 ## raw_capture
@@ -948,3 +1038,5 @@ The 28 tables owned by `capture`, as the migrations build them. [Back to the ent
 
 - `home_read_fence_workspace_domain`: `AFTER UPDATE FOR EACH ROW WHEN (((old.domain IS DISTINCT FROM new.domain) OR (old.verified AND (NOT new.verified)))) EXECUTE FUNCTION advance_home_read_fence()`
 - `home_read_fence_workspace_domain_removed`: `AFTER DELETE FOR EACH STATEMENT EXECUTE FUNCTION advance_home_read_fence()`
+- `text_bound_insert`: `AFTER INSERT FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL, '{"domain": 20000, "source": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"domain":20000,"source":20000}')`
+- `text_bound_update`: `AFTER UPDATE FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"domain": 20000, "source": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"domain":20000,"source":20000}')`

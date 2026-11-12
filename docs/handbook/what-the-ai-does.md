@@ -225,7 +225,7 @@ the evidence behind them. The reasons are how likely a win is, the money, the
 timing, how quickly things move, and how warm the contact is.
 
 The **AI** group in Settings holds four pages: **AI usage**, **AI models**,
-**AI call log** and **Automations**.
+**AI call log**. **Automations** is in the **Data** group.
 
 In **Settings → AI assistants** you connect your AI tool. Under **For developers**
 there, you create your own passports on **API keys** and switch **Automatic changes** on or off on **Agent rules**.

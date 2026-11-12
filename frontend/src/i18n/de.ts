@@ -2712,6 +2712,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "history.field.attendees": "Eingeladene Teilnehmende",
   "history.field.proposal_status": "Status des Terminvorschlags",
   "history.field.meeting_status": "Ergebnis des Termins",
+  "history.field.meeting_intent": "Terminbeginn (Ortszeit)",
   "history.field.candidate_company_key": "Zugeordnetes Unternehmen",
   "history.field.communication_basis": "Rechtsgrundlage",
   "history.field.company_name": "Unternehmensname",
@@ -2722,6 +2723,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "history.field.display_name": "Name",
   "history.field.domains": "Domains",
   "history.field.due_at": "Fällig",
+  "history.field.due_intent": "Fällig (Ortszeit)",
   "history.field.email": "E-Mail",
   "history.field.ended_at": "Beendet",
   "history.field.expected_close_date": "Voraussichtlicher Abschluss",
@@ -2796,6 +2798,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "history.field.due_has_time": "Fällig zu einer Uhrzeit",
   "history.field.call_outcome": "Ergebnis des Anrufs",
   "history.field.remind_at": "Erinnerung",
+  "history.field.remind_intent": "Erinnerung (Ortszeit)",
   "history.field.resolved_category": "Nachrichtenkategorie",
   "history.field.score": "Score",
   "history.field.score_override_reason": "Grund für die Score-Anpassung",
@@ -3259,6 +3262,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "partner.stage": "Beziehungsphase",
   "partner.nextStep": "Nächster Schritt",
   "partner.nextStepDue": "Nächster Schritt fällig",
+  "partner.nextStepOld":
+    "Als Text gespeichert, ohne jemanden aus dem Team, der es erledigt. Lege eine Aufgabe an, damit jemand sie mit Fälligkeit übernimmt.",
   "partner.servedSegments": "Betreute Segmente",
   "partner.servedSegmentsHint":
     "An wen der Partner verkauft, zum Beispiel mittelständische Hersteller. Mehrere durch Kommas trennen.",
@@ -4653,6 +4658,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "approval.field.previous_close_date": "Aktuelles Abschlussdatum",
   "approval.field.expected_close_date": "Vorgeschlagenes Datum",
   "approval.field.due_date": "Fällig",
+  "approval.field.doer": "Wer erledigt das",
+  "approval.doerMe": "Ich",
   "approval.field.scheduled_at": "Geplant für",
   "approval.field.flags": "Probleme",
   "approval.field.closeDateFlag.overdue": "Datum verstrichen",
@@ -6136,7 +6143,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Zwei Buchstaben, zum Beispiel de. Leer lassen, um die Sprache der Vorlage zu nutzen.",
   "legalEntities.imprint": "Impressum",
   "legalEntities.imprintHint":
-    "Der rechtliche Hinweis, den dieser Rechtsträger druckt, bis zu 4.000 Zeichen.",
+    "Der rechtliche Hinweis, den dieser Rechtsträger druckt, bis zu {max} Zeichen.",
   "legalEntities.signatureTemplate": "E-Mail-Signaturvorlage (HTML)",
   "legalEntities.signatureTemplateHint":
     "Mails von Mitgliedern, die für diesen Rechtsträger arbeiten, tragen diese Vorlage. Nutze {name}, {title}, {phone}, {logo} und {imprint}. Leer nutzt die Vorlage des Unternehmens.",
@@ -8050,6 +8057,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Erstellt, weil dieser Lead innerhalb seiner Antwortfrist keine Antwort bekam. Antworte dem Lead und markiere die Aufgabe dann als erledigt.",
   "tasks.origin.lead_qualify":
     "Erstellt, weil dieser Lead ohne Entscheidung offen geblieben ist. Qualifiziere den Lead oder schließe ihn.",
+  "tasks.origin.website_inquiry":
+    "Diese Aufgabe gehört zu einer Website-Anfrage.",
   "tasks.origin.lead_for_contact":
     "Erstellt, weil für diesen Kontakt ein neuer Lead eingegangen ist. Es wurde kein Lead angelegt; die Aufgabe nennt, was eingegangen ist und woher.",
   "tasks.origin.lead_replied":
@@ -8941,6 +8950,21 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "settings.signatureReviewLoading": "Gespeicherte Signatur wird geladen…",
   "settings.signatureReviewSaved": "Signaturprüfung gespeichert",
   "settings.signatureReviewMember": "dem Mitglied",
+  "settings.signatureChoicePlain":
+    "Deine eigene Signatur steht unter jeder E-Mail, die du sendest. Ohne sie endet die E-Mail mit einem Gruß und deinem Namen.",
+  "settings.signatureChoiceTemplate":
+    "Deine eigene HTML-Signatur steht unter jeder E-Mail, die du sendest. Ohne sie gilt die Firmenvorlage mit deinem Namen, Titel und Telefon.",
+  "settings.signatureUseGmail": "Meine Gmail-Signatur verwenden",
+  "settings.signatureGmailTaken":
+    "Unten steht die Signatur von {address}. Prüfe die Vorschau und speichere dann.",
+  "settings.signatureGmailEmpty":
+    "Deine Gmail-Signatur ist leer oder enthält nur Bilder, daher kann Margince sie nicht verwenden.",
+  "settings.signatureGmailNoMailbox":
+    "Verbinde zuerst dein Gmail-Postfach unter Einstellungen → Verbindungen.",
+  "settings.signatureGmailReconnect":
+    "Margince darf deine Gmail-Einstellungen nicht lesen. Drücke unter Einstellungen → Verbindungen auf Neu verbinden, erlaube den Zugriff und versuche es erneut.",
+  "settings.signatureGmailTooLong":
+    "Deine Gmail-Signatur ist länger als 10.000 Zeichen und kann hier nicht verwendet werden.",
   "settings.signature": "E-Mail-Signatur",
   "settings.signatureSub":
     "Steht unter jeder Nachricht, die du sendest, oberhalb der Fußzeile zum Abbestellen.",
@@ -10123,6 +10147,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "import.reason.tag_new":
     "Noch kein Tag hat diesen Namen, daher legt der Import ihn an.",
   "import.reason.value_refused": "„{value}“ wurde abgelehnt: {detail}",
+  "import.reason.value_too_long":
+    "Der Wert hat {length} Zeichen; das Feld fasst höchstens {max}.",
   "import.reason.cannot_read_pipelines":
     "Du darfst keine Pipelines lesen, daher wird eine Zeile übersprungen, die eine Phase nennt.",
   "import.reason.stage_unnamed": "Nenne die Phase des Deals.",
@@ -11252,6 +11278,10 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "stage.createRefused":
     "Deine Rolle darf keine Phasen hinzufügen. Frage einen Admin.",
   "stage.edit": "Phase bearbeiten",
+  "translation.nameIn.en": "Name auf Englisch",
+  "translation.nameIn.de": "Name auf Deutsch",
+  "translation.nameIn.vi": "Name auf Vietnamesisch",
+  "translation.given": "{language}: {name}",
   "stage.name": "Name",
   "stage.semantic": "Phasentyp",
   "stage.winProb": "Gewinnwahrscheinlichkeit",
@@ -13258,6 +13288,30 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "auto.readOnly":
     "Nur Lesezugriff: Du hast keine Berechtigung, Automatisierungen zu ändern.",
   "auto.catalog": "Vorlagenbibliothek",
+  "auto.setup.needsSetup": "Einrichtung nötig",
+  "auto.setup.needsAttention": "Prüfung nötig",
+  "auto.setup.on": "An",
+  "auto.setup.incomplete":
+    "Wähle die nötigen Einstellungen vor dem Einschalten.",
+  "auto.setup.noAuthorizer":
+    "Wähle eine Person, die diese Automatisierung autorisiert.",
+  "auto.setup.inactive":
+    "Das Konto der autorisierenden Person ist inaktiv. Wähle eine andere Person.",
+  "auto.stages.loadError": "Vertriebspipelines konnten nicht geladen werden.",
+  "auto.stages.choosePipeline": "Pipeline wählen",
+  "auto.stages.chooseStages": "Phasen wählen",
+  "auto.quiet.customerList": "Kundenliste",
+  "auto.quiet.days": "Tage ohne Kontakt",
+  "auto.lists.noCustomers":
+    "Noch keine Kontakt- oder Firmenlisten. Speichere zuerst eine Liste.",
+  "auto.stages.taskTitle": "Aufgabentitel",
+  "auto.stages.pipeline": "Pipeline",
+  "auto.stages.destinations": "Zielphasen",
+  "auto.group.inquiries": "Neue Anfragen",
+  "auto.group.deals": "Deals",
+  "auto.group.customers": "Kunden",
+  "auto.group.meetings": "Besprechungen",
+  "auto.group.lists": "Listen",
   "auto.instances": "Eingerichtete Automatisierungen",
   "auto.instances.empty":
     "Noch keine Automatisierungen. Starte eine aus der Vorlagenbibliothek.",
@@ -13302,11 +13356,12 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "auto.enabledFor": "{name} ist aktiv",
   "auto.colLastRun": "Letzter Lauf",
   "auto.colRuns30": "Läufe (30 Tage)",
-  "auto.colOwner": "Läuft als",
-  "auto.ownerFor": "Läuft als {name}",
+  "auto.colOwner": "Autorisiert durch",
+  "auto.ownerFor": "Autorisierung für {name}",
   "auto.ownerNone": "Niemand zugeordnet",
   "auto.ownerHint":
-    "Eine Regel ist blockiert, solange das Mitglied, als das sie läuft, keinen Zugriff hat. Wähle ein anderes Mitglied, damit sie wieder läuft.",
+    "Aktionen nutzen die aktuellen Zugriffsrechte dieser Person.",
+  "auto.deadlineTimezone": "Zeitzone für die Frist",
   "auto.colStatus": "Status",
   "auto.colActions": "Aktionen",
   "auto.lastRunNever": "Nie",
@@ -13375,12 +13430,37 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "eine Berechtigungsprüfung oder eine abgelehnte Freigabe hat sie gestoppt",
   "auto.runs.outcome": "Ergebnis",
 
+  "auto.initialRun.title": "Aufgaben für bestehende Datensätze zulassen?",
+  "auto.initialRun.confirm": "Speichern und Aufgaben zulassen",
+  "auto.initialRun.body":
+    "Der nächste geplante Lauf von {name} kann Aufgaben für bereits passende Datensätze anlegen. Spätere Läufe berücksichtigen auch neue Treffer.",
   "auto.preview.open": "Vorschau",
   "auto.preview.title": "Auswirkung des Probelaufs",
+  "auto.lists.includeImports":
+    "Auch auf durch Importe geänderte Datensätze reagieren",
+  "auto.recipient.tasks": "Aufgaben gehen an",
+  "auto.recipient.notices": "Hinweise gehen an",
+  "auto.renewal.recipient": "Erinnerungsaufgabe zuweisen an",
+  "auto.renewal.recordOwner": "Die für den Datensatz zuständige Person",
+  "auto.renewal.authorizer": "Die Person, die diese Automatisierung freigibt",
+  "auto.renewal.object": "Datensatztyp",
+  "auto.renewal.dateField": "Datumsfeld für die Verlängerung",
+  "auto.renewal.leadTime": "Tage vor der Verlängerung",
+  "auto.renewal.annual": "Jedes Jahr wiederholen",
+  "auto.renewal.once": "Eine Erinnerung für dieses Datum",
+  "auto.renewal.missingDates":
+    "{n} sichtbare Datensätze haben kein Verlängerungsdatum",
+  "auto.renewal.dates":
+    "Erinnerung am {reminder} für die Verlängerung am {renewal}",
   "auto.preview.window": "Zeitfenster",
   "auto.preview.window7": "7 Tage",
   "auto.preview.window30": "30 Tage",
   "auto.preview.window90": "90 Tage",
+  "auto.preview.fromNowOn": "Ab jetzt",
+  "auto.preview.historyUnavailable":
+    "Keine Vorschau vergangener Ereignisse verfügbar",
+  "auto.preview.futureEventsOnly":
+    "Beim Einschalten verarbeitet diese Regel neue Ereignisse. Bestehende Datensätze werden nicht nachträglich verarbeitet.",
   "auto.preview.matchesNow": "Aktuelle Treffer: {n}",
   "auto.preview.wouldFire": "Würde auslösen: etwa {n} in {days} Tagen",
   "auto.preview.notComputable": "Rückblickende Schätzung nicht verfügbar",
@@ -13469,6 +13549,9 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "cf.writing": "Wird gespeichert…",
   "cf.added":
     "Feld „{label}“ hinzugefügt. Es erscheint in Datensätzen, Filtern, Exporten und der API.",
+  "cf.translate": "Namen in anderen Sprachen",
+  "cf.translated": "Namen von „{label}“ gespeichert",
+  "cf.translateOption": "{option}: {language}",
   "cf.edit": "Bezeichnung bearbeiten",
   "cf.archive": "Feld archivieren",
   "cf.archived":
@@ -16777,6 +16860,10 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "webForms.senderLine.tally": "Signierter Webhook von Tally",
   "webForms.row.consent": "Einwilligung nötig",
   "webForms.row.lastPost": "Letzte Sendung {when}",
+  "webForms.row.intake.throttled": "Gebremst seit {when}, zu viele Sendungen",
+  "webForms.row.intake.blocked": "Gesperrt bis {when}",
+  "webForms.row.intake.pausedAll":
+    "Für alle Formulare angehalten: zu viel Verkehr",
   "webForms.row.noPost": "Noch keine Sendung erfasst",
   "webForms.setup": "Einrichtung zeigen",
   "webForms.edit": "Bearbeiten",
@@ -16857,6 +16944,117 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "webForms.field.productClear": "Leads ohne Produkt erfassen",
   "webForms.field.productLoading": "Produkt wird geladen…",
   "webForms.field.owner": "Verantwortlich für neue Leads",
+  "inquiry.needsSetup": "Einrichtung nötig",
+  "inquiry.trigger":
+    "Wenn eine Website-Anfrage eingeht, bekommt die gewählte Person eine Aufgabe.",
+  "inquiry.form": "Website-Formular",
+  "inquiry.chooseForm": "Website-Formular wählen",
+  "inquiry.formAccess":
+    "Du brauchst Zugriff auf Website-Formulare, um die Bearbeitung einzurichten.",
+  "inquiry.mode": "Wer bearbeitet neue Anfragen?",
+  "inquiry.mode.one": "Eine Person",
+  "inquiry.mode.rotate": "Abwechselnd ausgewählte Personen",
+  "inquiry.mode.coordinator": "Zuerst durch die Koordination prüfen",
+  "inquiry.colleague": "Person",
+  "inquiry.colleagues": "Ausgewählte Personen",
+  "inquiry.chooseColleague": "Person wählen",
+  "inquiry.chooseColleagues": "Personen wählen",
+  "inquiry.colleagueUnavailable": "Person nicht mehr verfügbar",
+  "inquiry.keepOwner":
+    "Eine berechtigte zuständige Person behält ihre Anfragen. Nur neue oder nicht zugewiesene Datensätze werden verteilt.",
+  "inquiry.coordinator": "Koordination",
+  "inquiry.coordinatorHint":
+    "Prüft nicht zugewiesene Leads und Anfragen mit Klärungsbedarf. Diese Person braucht Zugriff auf die Datensätze.",
+  "inquiry.taskTitle": "Aufgabentitel",
+  "inquiry.taskTitleDefault": "Website-Anfrage beantworten",
+  "inquiry.dueDays": "Kalendertage nach Eingang",
+  "inquiry.dueHint":
+    "Fällig am Ende dieses Tages in der gespeicherten Zeitzone.",
+  "inquiry.requestTypeField": "Feld für die Anfrageart (optional)",
+  "inquiry.requestTypeHint":
+    "Wähle die Lead-Auswahlliste, deren Feldname dein Website-Formular sendet. Andere Werte bleiben in der Notiz.",
+  "inquiry.notSpecified": "Nicht angegeben",
+  "inquiry.fieldUnavailable": "Feld nicht mehr verfügbar",
+  "inquiry.fieldsFailed":
+    "Die Felder für die Anfrageart konnten nicht geladen werden. Du kannst diese optionale Einstellung unverändert lassen.",
+  "inquiry.deadlinePreview": "Frist wird berechnet…",
+  "inquiry.deadlineExample":
+    "Für eine Anfrage vom {received} ist die Aufgabe am {due} fällig ({zone}).",
+  "inquiry.record": "CRM-Eintrag",
+  "inquiry.assignmentReason": "Grund für die Zuweisung",
+  "inquiry.reason.legacyHandling":
+    "Die bisherige Lead-Bearbeitung ist für diese Anfrage zuständig. Prüfe das Ergebnis, bevor du eine weitere Aufgabe erstellst.",
+  "inquiry.reason.owner": "Bleibt bei der zuständigen Person",
+  "inquiry.reason.ownerReview": "Zuständigkeit muss geprüft werden",
+  "inquiry.reason.recipientChanged": "Ausgewählte Person nicht mehr geeignet",
+  "inquiry.reason.coordinator": "Koordination prüft zuerst",
+  "inquiry.reason.rotation": "Nächste geeignete Person im Pool",
+  "inquiry.reason.selected": "Nach der gespeicherten Regel gewählt",
+  "inquiry.existing": "Vorhandene Anfragen bearbeiten",
+  "inquiry.policyUnavailable":
+    "Gespeicherte Regel neu laden und erneut versuchen.",
+  "inquiry.existingScope":
+    "Angenommene Anfragen von {name}. Es gelten die gespeicherten Regeln. Künftige Bearbeitung bleibt unverändert.",
+  "inquiry.existingLimit":
+    "Bis zu 50 Anfragen wählen. Vor dem Anlegen die zuständige Person und Frist prüfen.",
+  "inquiry.reviewSelection": "Ausgewählte Anfragen prüfen",
+  "inquiry.loadingSources": "Anfragen werden geladen…",
+  "inquiry.chooseAgain": "Anfragen erneut wählen",
+  "inquiry.handleSelected": "Geprüfte Aufgaben anlegen",
+  "inquiry.submissions": "Anfragen",
+  "inquiry.selectSource": "{subject} auswählen",
+  "inquiry.untitled": "Website-Anfrage",
+  "inquiry.submission": "Anfrage",
+  "inquiry.receivedValue": "Eingegangen: {received}",
+  "inquiry.receivedUnavailable": "Eingangsdetails nicht verfügbar",
+  "inquiry.requestTypeValue": "Art der Anfrage: {type}",
+  "inquiry.initialHandlingValue": "Erste Bearbeitung: {reason}",
+  "inquiry.sourceValue": "Quelle: {source}",
+  "inquiry.assignment.reviewAgain": "Aktuelle Zuweisung prüfen",
+  "inquiry.assignment.unsupported":
+    "Diese Version kann die Anfrage nicht zuweisen. Lade die Seite neu.",
+  "inquiry.assignment.take": "Anfrage übernehmen",
+  "inquiry.assignment.assign": "Zuweisen und nachfassen",
+  "inquiry.assignment.chooseColleague": "Person wählen",
+  "inquiry.assignment.done": "Anfrage zugewiesen",
+  "inquiry.assignment.record": "Datensatz",
+  "inquiry.assignment.taskHolder": "Aktuell zuständig für die Aufgabe",
+  "inquiry.assignment.newHolder": "Neu zuständig für die Aufgabe",
+  "inquiry.assignment.movesLead":
+    "Der Lead und diese Anfrageaufgabe gehen an diese Person.",
+  "inquiry.assignment.taskOnly":
+    "Dies ändert die Zuständigkeit für die Anfrageaufgabe. Der Datensatz behält seine verantwortliche Person.",
+  "inquiry.currentRecordOwner": "Aktuell verantwortlich für den Datensatz",
+  "inquiry.markHandled": "Als bearbeitet markieren",
+  "inquiry.openSubmission": "Anfrage öffnen",
+  "inquiry.reason.notRecorded": "Grund nicht erfasst",
+  "inquiry.received": "Eingegangen",
+  "inquiry.result": "Ergebnis",
+  "inquiry.deadline": "Fällig",
+  "inquiry.task": "Aufgabe",
+  "inquiry.openTask": "Aufgabe öffnen",
+  "inquiry.result.eligible": "Bereit zur Bearbeitung",
+  "inquiry.result.alreadyHandled": "Bereits bearbeitet",
+  "inquiry.result.taskCreated": "Aufgabe angelegt",
+  "inquiry.result.waiting": "Wartet auf Freigabe",
+  "inquiry.result.changed": "Seit der Auswahl geändert. Erneut lesen.",
+  "inquiry.result.unavailable": "Nicht verfügbar oder nicht mehr lesbar",
+  "inquiry.result.skipped": "Keine Aufgabe angelegt. Lauf prüfen.",
+  "inquiry.result.failed":
+    "Bearbeitung fehlgeschlagen. Vor dem Wiederholen den Lauf prüfen.",
+  "inquiry.handling": "Anfragen bearbeiten",
+  "inquiry.review": "Bearbeitung prüfen",
+  "inquiry.pausedConversionWarning":
+    "Wenn du diesen Plan speicherst, ersetzt er die bisherige Lead-Bearbeitung dieses Formulars. Mit „Pausiert speichern“ bleibt der Plan aus: Neue Anfragen erhalten erst nach dem Einschalten automatisch eine Aufgabe.",
+  "inquiry.savePaused": "Pausiert speichern",
+  "inquiry.enable": "Diese Bearbeitung einschalten",
+  "inquiry.futureOnly":
+    "Bestehende Anfragen bleiben unverändert. Dies gilt für künftig angenommene Einsendungen.",
+  "inquiry.conversion":
+    "Prüfe diese Änderung, bevor sie die bisherige Bearbeitung des Formulars ersetzt.",
+  "inquiry.back": "Zurück zu den Einstellungen",
+  "webForms.handlingBusy":
+    "Dieses Formular wird gerade bearbeitet. Versuche es erneut.",
   "webForms.field.ownerHint":
     "Jeder neue Lead aus diesem Formular geht an dieses Teammitglied. Ohne Zuweisung kann ihn jedes Teammitglied übernehmen.",
   "webForms.field.ownerNone": "Nicht zugewiesen",
@@ -19938,6 +20136,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "worklist.filter.leads": "Akquise",
   "worklist.filter.deals_at_risk": "Gefährdete Deals",
   "worklist.filter.meetings": "Termine",
+  "worklist.filter.website_inquiries": "Website-Anfragen",
   "worklist.filter.tasks": "Aufgaben",
   "worklist.filter.decisions": "Freigaben",
   "worklist.filter.relationships": "Ruhende Beziehungen",

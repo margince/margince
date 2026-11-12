@@ -100,13 +100,35 @@ func (r *Registry) ReconnectedSince(ctx context.Context, userID ids.UserID, prov
 // the PROVIDER says the grant holds. It is the send path's entry point, which
 // knows a user and a provider rather than a connection id.
 //
-// Everything this cannot answer is returned as the failure it is. Only the two
-// sentinels above are facts about the deployment; a vault outage or a database
-// timeout must never be mistaken for one, because the caller's response to a
-// fact is to stop trying.
-//
 //nolint:ireturn // returns the optional connector.EmailSender seam by design (the same posture Registry.connector takes for connector.Connector)
 func (r *Registry) SenderFor(ctx context.Context, userID ids.UserID, provider string) (connector.EmailSender, connector.Auth, []string, error) {
+	// Two-value form: EmailSender is optional (connector.go), so a capture-only
+	// connector is reported rather than silently treated as absent.
+	var sender connector.EmailSender
+	auth, granted, err := r.liveConnection(ctx, userID, provider, func(c connector.Connector) error {
+		var sends bool
+		if sender, sends = c.(connector.EmailSender); !sends {
+			return fmt.Errorf("capture: connector %q: %w", provider, ErrConnectorCannotSend)
+		}
+		return nil
+	})
+	if err != nil {
+		return nil, nil, nil, err
+	}
+	return sender, auth, granted, nil
+}
+
+// liveConnection is the user's live connection to provider: its unsealed
+// credential and granted scopes. admit refuses a connector that lacks the
+// caller's capability before any credential is opened, so a permanent
+// refusal is never hidden behind a vault outage.
+//
+// Every failure is returned as it is. Only the two sentinels above are facts
+// about the deployment. A vault outage or a database timeout is never one,
+// because a caller stops trying on a fact.
+func (r *Registry) liveConnection(ctx context.Context, userID ids.UserID, provider string,
+	admit func(connector.Connector) error,
+) (connector.Auth, []string, error) {
 	var (
 		credentialRef *string
 		authBytes     []byte
@@ -118,29 +140,25 @@ func (r *Registry) SenderFor(ctx context.Context, userID ids.UserID, provider st
 			userID, provider).Scan(&credentialRef, &authBytes, &granted)
 	})
 	if errors.Is(err, pgx.ErrNoRows) {
-		return nil, nil, nil, ErrNoConnection
+		return nil, nil, ErrNoConnection
 	}
 	if err != nil {
-		return nil, nil, nil, fmt.Errorf("capture: resolving the sending connection: %w", err)
+		return nil, nil, fmt.Errorf("capture: resolving the user's connection: %w", err)
 	}
 	c, err := r.connector(provider)
 	if err != nil {
-		// The registry's only failure here is a provider this role did not
-		// compile in, and the send path must be able to tell that from an
-		// outage — see ErrConnectorNotConfigured.
-		return nil, nil, nil, fmt.Errorf("%w: %w", ErrConnectorNotConfigured, err)
+		// The only failure here is a provider this role did not compile in.
+		// The caller tells that from an outage by ErrConnectorNotConfigured.
+		return nil, nil, fmt.Errorf("%w: %w", ErrConnectorNotConfigured, err)
 	}
-	// Two-value form: EmailSender is optional (connector.go), so a capture-only
-	// connector is reported rather than silently treated as absent.
-	sender, sends := c.(connector.EmailSender)
-	if !sends {
-		return nil, nil, nil, fmt.Errorf("capture: connector %q: %w", provider, ErrConnectorCannotSend)
+	if err := admit(c); err != nil {
+		return nil, nil, err
 	}
 	auth, err := r.resolveCredential(ctx, credentialRef, authBytes)
 	if err != nil {
-		return nil, nil, nil, err
+		return nil, nil, err
 	}
-	return sender, auth, granted, nil
+	return auth, granted, nil
 }
 
 // Connections lists the caller's own mailbox connections, for a user or their

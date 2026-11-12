@@ -12,12 +12,13 @@ import { type Locale, useLocale, useT } from "../../i18n";
 import { isImeCommit } from "../../lib/imecommit";
 import { problemMessageOf, unwrap } from "../../lib/problem";
 import { useMe } from "../../lib/session";
+import { TEXT_LIMITS } from "../../lib/textlimits_gen";
 
 // The two names on the Profile card: the one colleagues see you by and the one
 // they greet you by. They commit together through the page's save bar.
 
-const DISPLAY_MAX_RUNES = 255;
-const GREETING_MAX_RUNES = 100;
+const DISPLAY_MAX_RUNES = TEXT_LIMITS.label;
+const GREETING_MAX_RUNES = TEXT_LIMITS.label;
 
 type NameDraft = Readonly<{
   shown: string;
@@ -77,8 +78,9 @@ export function useAccountNames(toast: Toast): AccountNames {
     },
   });
 
-  const displayInvalid =
-    display === ""
+  const displayInvalid = !displayChanged
+    ? undefined
+    : display === ""
       ? t("record.fieldRequired")
       : tooLong(display, DISPLAY_MAX_RUNES, t, locale);
   const greetingInvalid = tooLong(greeting, GREETING_MAX_RUNES, t, locale);

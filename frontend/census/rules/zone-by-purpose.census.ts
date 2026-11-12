@@ -68,6 +68,42 @@ export function code(path: string, source: string): string {
 // cannot stand in for.
 const pinnedZones: { file: string; why: string }[] = [
   {
+    file: "features/mail/schedulededit.test.ts",
+    why: "Pins the zones a scheduled send was chosen in, so a reopened send proves it keeps the chosen clock and zone, not the runner's.",
+  },
+  {
+    file: "format/dueintent.test.ts",
+    why: "Pins a chosen deadline zone against a different reader zone, so the printed clock is the chosen one and the zone suffix shows only when they differ.",
+  },
+  {
+    file: "features/worklist/snoozetime.test.ts",
+    why: "Pins the reader zone a snooze is chosen in, so a calendar-day shift and the kept clock are the same on every runner.",
+  },
+  {
+    file: "features/deals/deal360/confirmadvance.closetasks.test.tsx",
+    why: "Pins a task's chosen zone that differs from any runner's own, so the row must print that zone's clock and name it.",
+  },
+  {
+    file: "features/worklist/websiteinquiryfacts.stories.tsx",
+    why: "The receipt story pins the reader’s zone so the accepted submission time stays visible in a reproducible local clock.",
+  },
+  {
+    file: "features/automations/automations.deadline-form.test.tsx",
+    why: "The deadline editor test pins the saved policy's IANA zone to verify that reviewing and saving preserve its calendar-day meaning.",
+  },
+  {
+    file: "features/automations/automations.deadline.test.ts",
+    why: "The deadline parameter test pins the configured IANA zone to distinguish saved calendar-day handling from the legacy duration fallback.",
+  },
+  {
+    file: "features/automations/automations.form.stories.tsx",
+    why: "The automation deadline story shows the policy's saved IANA zone so the calendar-day configuration is visible independently of the viewer's settings.",
+  },
+  {
+    file: "components/websiteinquiry.fixtures.ts",
+    why: "The inquiry policy fixture pins Berlin so its deadline example covers a change to daylight saving time independently of the reader's zone.",
+  },
+  {
     file: "features/worklist/worklist.happened.test.ts",
     why: "Pins the reader and record zone to UTC, so a fact at a fixed instant names the same day on every runner, whatever its own zone.",
   },

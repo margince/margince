@@ -17,6 +17,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/modules/integrations"
 	"github.com/margince/margince/backend/internal/modules/privacy"
+	"github.com/margince/margince/backend/internal/modules/webforms"
 	"github.com/margince/margince/backend/internal/platform/blobstore"
 	"github.com/margince/margince/backend/internal/platform/config"
 	"github.com/margince/margince/backend/internal/platform/database/dbsettings"
@@ -49,6 +50,7 @@ func allSettings() []config.Any {
 		contacts.ConfigSettings(),
 		deals.ConfigSettings(),
 		privacy.ConfigSettings(),
+		webforms.ConfigSettings(),
 	)
 }
 

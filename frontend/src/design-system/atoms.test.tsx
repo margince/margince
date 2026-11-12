@@ -440,6 +440,16 @@ it("names a Checkbox by its label, and the label text toggles it", async () => {
   expect((box as HTMLInputElement).checked).toBe(true);
 });
 
+it("keeps an inline Checkbox named when its label is visually hidden", () => {
+  render(<Checkbox label="Select this row" labelHidden />);
+  expect(
+    screen.getByRole("checkbox", { name: "Select this row" }),
+  ).toBeDefined();
+  expect(
+    screen.getByText("Select this row").classList.contains("sr-only"),
+  ).toBe(true);
+});
+
 // Radios group by `name`, which the atom must forward untouched — drop it and
 // every option becomes independently selectable, which looks like working UI
 // until two are on at once.

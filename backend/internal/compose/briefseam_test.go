@@ -5,6 +5,7 @@ package compose
 
 import (
 	"encoding/json"
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"reflect"
 	"strings"
 	"testing"
@@ -74,7 +75,8 @@ func TestEveryPersistedBriefFieldIsServedOrNamedAsWithheld(t *testing.T) {
 			},
 			EvidenceIDs: []ids.UUID{evidence}, State: "snoozed",
 			StateAt: &stateAt, SnoozedUntil: &snoozedUntil,
-			ReopenOn: values.ReopenOnMeeting, ReopenRef: &meetingID,
+			SnoozedIntent: &crmcontracts.IntentTime{WallClock: "2026-08-09T10:44:00", Timezone: "Europe/Zurich"},
+			ReopenOn:      values.ReopenOnMeeting, ReopenRef: &meetingID,
 			Finding:      "He asked about the delivery date yesterday.",
 			PreviousRank: &previousRank,
 			Lineage: &briefs.ItemLineage{
@@ -133,6 +135,8 @@ func TestEveryPersistedBriefFieldIsServedOrNamedAsWithheld(t *testing.T) {
 		"PreviousRank": `"previous_rank":5`,
 		"EvidenceIDs":  `"evidence_ids":["` + evidence.String(), "State": `"state":"snoozed"`,
 		"StateAt": `"state_at":"2026-08-08T07:33:00Z"`, "SnoozedUntil": `"snoozed_until":"2026-08-09T08:44:00Z"`,
+		// Served: the reader's chosen clock, so an agent repeats the snooze it was given.
+		"SnoozedIntent": `"snoozed_intent":{"timezone":"Europe/Zurich","wall_clock":"2026-08-09T10:44:00"}`,
 		// Served, not withheld: without the condition a snooze carrying no
 		// moment reads to an agent as one that never lifts, and it would report
 		// a deal as abandoned when the contact is waiting for a reply.

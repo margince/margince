@@ -80,6 +80,12 @@ const RETIRED_NOUN: Record<string, RegExp> = {
 // catalog is judged against the retired noun.
 const HUMAN_SENSE_KEYS: Record<string, readonly string[]> = {
   en: [
+    // Automation authority and assignments name human account holders.
+    "auto.setup.noAuthorizer",
+    "auto.setup.inactive",
+    "auto.ownerFor",
+    "auto.ownerHint",
+    "auto.renewal.authorizer",
     // A duplicate case asks whether two contacts are the same human being.
     "contactCase.intro",
     "privacy.possibleDuplicates",
@@ -167,6 +173,29 @@ const HUMAN_SENSE_KEYS: Record<string, readonly string[]> = {
     "contact.card.committee_other",
   ],
   de: [
+    // Automation authority and assignments name human account holders.
+    "auto.setup.noAuthorizer",
+    "auto.setup.inactive",
+    "auto.ownerHint",
+    "auto.renewal.recordOwner",
+    "auto.renewal.authorizer",
+    "inquiry.trigger",
+    "inquiry.mode.one",
+    "inquiry.mode.rotate",
+    "inquiry.colleague",
+    "inquiry.colleagues",
+    "inquiry.chooseColleague",
+    "inquiry.chooseColleagues",
+    "inquiry.colleagueUnavailable",
+    "inquiry.keepOwner",
+    "inquiry.coordinatorHint",
+    "inquiry.reason.owner",
+    "inquiry.reason.recipientChanged",
+    "inquiry.reason.rotation",
+    "inquiry.existingLimit",
+    "inquiry.assignment.chooseColleague",
+    "inquiry.assignment.movesLead",
+    "inquiry.assignment.taskOnly",
     // The room names a colleague who answers buyers, not a contact record.
     "room.stewardNeeded.body",
     // The signature belongs to a human member, not a contact record.
@@ -310,6 +339,25 @@ const HUMAN_SENSE_KEYS: Record<string, readonly string[]> = {
     "health.setup.recovery.todo",
   ],
   vi: [
+    // Automation authority and assignments name human account holders.
+    "auto.setup.noAuthorizer",
+    "auto.setup.inactive",
+    "auto.colOwner",
+    "auto.ownerFor",
+    "auto.ownerHint",
+    "auto.renewal.recordOwner",
+    "auto.renewal.authorizer",
+    "inquiry.keepOwner",
+    "inquiry.assignmentReason",
+    "inquiry.reason.owner",
+    "inquiry.reason.ownerReview",
+    "inquiry.reason.recipientChanged",
+    "inquiry.reason.rotation",
+    "inquiry.existingLimit",
+    "inquiry.assignment.taskHolder",
+    "inquiry.assignment.newHolder",
+    "inquiry.assignment.taskOnly",
+    "inquiry.currentRecordOwner",
     "directSend.correctionScope",
     // These messages name actual readers and participants, not contact records.
     "internalMail.historyImportNote",

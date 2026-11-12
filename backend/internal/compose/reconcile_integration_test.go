@@ -28,6 +28,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/approvals"
 	"github.com/margince/margince/backend/internal/modules/deals"
 	"github.com/margince/margince/backend/internal/modules/identity"
+	"github.com/margince/margince/backend/internal/platform/clocktest"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -65,8 +66,8 @@ func setupReconcile(t *testing.T) *reconcileEnv {
 	e.pipeline, e.open, _ = integration.DealFixture(t, e.Env)
 	quiet := slog.New(slog.NewTextHandler(os.Stderr, nil))
 	e.svc = approvals.NewService(e.DB())
-	e.svc.WithEffect(deals.FollowUpReconcileKind, followUpConfirmEffect(e.svc, e.Activities))
-	e.svc.WithPrecheck(deals.FollowUpReconcileKind, followUpPrecheck())
+	e.svc.WithEffect(deals.FollowUpReconcileKind, followUpConfirmEffect(e.svc, e.Activities, func() time.Time { return clocktest.Now(t) }))
+	e.svc.WithPrecheck(deals.FollowUpReconcileKind, followUpPrecheck(e.DB(), func() time.Time { return clocktest.Now(t) }))
 	// The stager production builds, drafter included. A harness that omitted
 	// the drafting seam would exercise a stager that can only ever propose a
 	// task, and would report the drafted-reply branch as working while nothing

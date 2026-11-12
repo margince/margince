@@ -2606,6 +2606,7 @@ export const en = {
   "history.field.attendees": "Invited attendees",
   "history.field.proposal_status": "Meeting proposal status",
   "history.field.meeting_status": "Meeting outcome",
+  "history.field.meeting_intent": "Meeting start (local time)",
   "history.field.candidate_company_key": "Matched company",
   "history.field.communication_basis": "Legal basis",
   "history.field.company_name": "Company name",
@@ -2616,6 +2617,7 @@ export const en = {
   "history.field.display_name": "Name",
   "history.field.domains": "Domains",
   "history.field.due_at": "Due",
+  "history.field.due_intent": "Due (local time)",
   "history.field.email": "Email",
   "history.field.ended_at": "Ended",
   "history.field.expected_close_date": "Expected close",
@@ -2687,6 +2689,7 @@ export const en = {
   "history.field.due_has_time": "Due at a set time",
   "history.field.call_outcome": "Call outcome",
   "history.field.remind_at": "Reminder",
+  "history.field.remind_intent": "Reminder (local time)",
   "history.field.resolved_category": "Message category",
   "history.field.score": "Score",
   "history.field.score_override_reason": "Score override reason",
@@ -3166,6 +3169,8 @@ export const en = {
   "partner.stage": "Relationship stage",
   "partner.nextStep": "Next step",
   "partner.nextStepDue": "Next step due",
+  "partner.nextStepOld":
+    "Kept as text, with no colleague who does it. Add a task to give it a colleague and a due date.",
   "partner.servedSegments": "Served segments",
   "partner.servedSegmentsHint":
     "Who the partner sells to, for example mid-size manufacturers. Separate several with commas.",
@@ -4616,6 +4621,8 @@ export const en = {
   "approval.field.previous_close_date": "Current close date",
   "approval.field.expected_close_date": "Proposed date",
   "approval.field.due_date": "Due",
+  "approval.field.doer": "Who does this",
+  "approval.doerMe": "Me",
   "approval.field.scheduled_at": "Scheduled for",
   "approval.field.flags": "Issues",
   "approval.field.closeDateFlag.overdue": "date has passed",
@@ -6102,7 +6109,7 @@ export const en = {
     "Two letters, for example de. Leave it empty to use the template’s language.",
   "legalEntities.imprint": "Imprint",
   "legalEntities.imprintHint":
-    "The legal notice this entity prints, up to 4,000 characters.",
+    "The legal notice this entity prints, up to {max} characters.",
   "legalEntities.signatureTemplate": "Email signature template (HTML)",
   "legalEntities.signatureTemplateHint":
     "Mail from colleagues who work for this entity signs with this template. Use {name}, {title}, {phone}, {logo} and {imprint}. Empty uses the company’s template.",
@@ -8046,6 +8053,7 @@ export const en = {
     "Created because this lead had no answer within its response time. Answer the lead, then mark the task done.",
   "tasks.origin.lead_qualify":
     "Created because this lead stayed open without a decision. Qualify the lead or close it.",
+  "tasks.origin.website_inquiry": "This task follows a website inquiry.",
   "tasks.origin.lead_for_contact":
     "Created because a new lead arrived for this contact. No lead was made; the task says what arrived and where from.",
   "tasks.origin.lead_replied":
@@ -8897,6 +8905,21 @@ export const en = {
   "settings.signatureReviewLoading": "Loading the retained signature…",
   "settings.signatureReviewSaved": "Signature review saved",
   "settings.signatureReviewMember": "the member",
+  "settings.signatureChoicePlain":
+    "Your own signature goes under every mail you send. Without one, mail closes with a greeting and your name.",
+  "settings.signatureChoiceTemplate":
+    "Your own HTML signature goes under every mail you send. Without one, the company template is used, filled in with your name, title and phone.",
+  "settings.signatureUseGmail": "Use my Gmail signature",
+  "settings.signatureGmailTaken":
+    "The signature of {address} is below. Check the preview, then save.",
+  "settings.signatureGmailEmpty":
+    "Your Gmail signature is empty or holds only images, so Margince cannot use it.",
+  "settings.signatureGmailNoMailbox":
+    "Connect your Gmail mailbox under Settings → Connections first.",
+  "settings.signatureGmailReconnect":
+    "Margince may not read your Gmail settings. Press Reconnect under Settings → Connections and approve access, then try again.",
+  "settings.signatureGmailTooLong":
+    "Your Gmail signature is longer than 10,000 characters, so it cannot be used here.",
   "settings.signature": "Email signature",
   "settings.signatureSub":
     "Added below every message you send, above the unsubscribe footer.",
@@ -10110,6 +10133,8 @@ export const en = {
   "import.reason.tag_new":
     "No tag has this name yet, so the import creates it.",
   "import.reason.value_refused": "“{value}” was refused: {detail}",
+  "import.reason.value_too_long":
+    "This value is {length} characters. The field holds at most {max}.",
   "import.reason.cannot_read_pipelines":
     "You cannot read pipelines, so a deal row naming its stage is skipped.",
   "import.reason.stage_unnamed": "Name the deal’s stage.",
@@ -11211,6 +11236,10 @@ export const en = {
   "stage.new": "New stage",
   "stage.createRefused": "Your role cannot add stages. Ask an admin.",
   "stage.edit": "Edit stage",
+  "translation.nameIn.en": "Name in English",
+  "translation.nameIn.de": "Name in German",
+  "translation.nameIn.vi": "Name in Vietnamese",
+  "translation.given": "{language}: {name}",
   "stage.name": "Name",
   "stage.semantic": "Stage type",
   "stage.winProb": "Win probability",
@@ -13224,6 +13253,29 @@ export const en = {
   "auto.readOnly":
     "Read-only: you do not have permission to change automations.",
   "auto.catalog": "Starter library",
+  "auto.setup.needsSetup": "Needs setup",
+  "auto.setup.needsAttention": "Needs attention",
+  "auto.setup.on": "On",
+  "auto.setup.incomplete":
+    "Choose the required settings before turning this on.",
+  "auto.setup.noAuthorizer": "Choose a person to authorize this automation.",
+  "auto.setup.inactive":
+    "The authorizer’s account is inactive. Choose another person.",
+  "auto.stages.loadError": "Could not load pipelines.",
+  "auto.stages.choosePipeline": "Choose a pipeline",
+  "auto.stages.chooseStages": "Choose stages",
+  "auto.quiet.customerList": "Customer list",
+  "auto.quiet.days": "Days without contact",
+  "auto.lists.noCustomers":
+    "No contact or company lists yet. Save a list first.",
+  "auto.stages.taskTitle": "Task title",
+  "auto.stages.pipeline": "Pipeline",
+  "auto.stages.destinations": "Destination stages",
+  "auto.group.inquiries": "New inquiries",
+  "auto.group.deals": "Deals",
+  "auto.group.customers": "Customers",
+  "auto.group.meetings": "Meetings",
+  "auto.group.lists": "Lists",
   "auto.instances": "Configured automations",
   "auto.instances.empty":
     "No automations yet. Start one from the starter library.",
@@ -13265,11 +13317,11 @@ export const en = {
   "auto.enabledFor": "{name} is enabled",
   "auto.colLastRun": "Last run",
   "auto.colRuns30": "Runs (30 days)",
-  "auto.colOwner": "Runs as",
-  "auto.ownerFor": "Runs as {name}",
+  "auto.colOwner": "Authorized by",
+  "auto.ownerFor": "Person authorizing {name}",
   "auto.ownerNone": "No owner",
-  "auto.ownerHint":
-    "A rule is blocked while its owner has no access. Pick a member to run it again.",
+  "auto.ownerHint": "Actions use this person’s current access.",
+  "auto.deadlineTimezone": "Deadline timezone",
   "auto.colStatus": "Status",
   "auto.colActions": "Actions",
   "auto.lastRunNever": "Never",
@@ -13335,12 +13387,33 @@ export const en = {
     "a permission check or a declined approval stopped it",
   "auto.runs.outcome": "Outcome",
 
+  "auto.initialRun.title": "Allow work for existing records?",
+  "auto.initialRun.confirm": "Save and allow work",
+  "auto.initialRun.body":
+    "The next scheduled run of {name} can create work for records that already match. Later runs also handle new matches.",
   "auto.preview.open": "Preview",
   "auto.preview.title": "Dry-run impact",
+  "auto.lists.includeImports": "Also act on records changed by imports",
+  "auto.recipient.tasks": "Tasks go to",
+  "auto.recipient.notices": "Notices go to",
+  "auto.renewal.recipient": "Send the reminder task to",
+  "auto.renewal.recordOwner": "The record owner",
+  "auto.renewal.authorizer": "The person authorizing this automation",
+  "auto.renewal.object": "Record type",
+  "auto.renewal.dateField": "Renewal date field",
+  "auto.renewal.leadTime": "Days before the renewal",
+  "auto.renewal.annual": "Repeat each year",
+  "auto.renewal.once": "One reminder for this date",
+  "auto.renewal.missingDates": "{n} visible records have no renewal date",
+  "auto.renewal.dates": "Remind on {reminder} for the renewal on {renewal}",
   "auto.preview.window": "Window",
   "auto.preview.window7": "7 days",
   "auto.preview.window30": "30 days",
   "auto.preview.window90": "90 days",
+  "auto.preview.fromNowOn": "From now on",
+  "auto.preview.historyUnavailable": "Historical preview unavailable",
+  "auto.preview.futureEventsOnly":
+    "Turning this rule on handles new events. It does not process existing records.",
   "auto.preview.matchesNow": "Matches now: {n}",
   "auto.preview.wouldFire": "Would fire: about {n} in {days} days",
   "auto.preview.notComputable": "Trailing estimate unavailable",
@@ -13427,6 +13500,9 @@ export const en = {
   "cf.writing": "Saving…",
   "cf.added":
     "Field “{label}” added. It appears on records and in filters, exports and the API.",
+  "cf.translate": "Names in other languages",
+  "cf.translated": "Names of “{label}” saved",
+  "cf.translateOption": "{option}: {language}",
   "cf.edit": "Edit label",
   "cf.archive": "Archive field",
   "cf.archived":
@@ -16649,6 +16725,10 @@ export const en = {
   "webForms.senderLine.tally": "Signed webhook from Tally",
   "webForms.row.consent": "Consent required",
   "webForms.row.lastPost": "Last post {when}",
+  "webForms.row.intake.throttled":
+    "Throttled since {when}, too many submissions",
+  "webForms.row.intake.blocked": "Blocked until {when}",
+  "webForms.row.intake.pausedAll": "Paused for all forms: too much traffic",
   "webForms.row.noPost": "No post recorded yet",
   "webForms.setup": "Show setup",
   "webForms.edit": "Edit",
@@ -16726,6 +16806,114 @@ export const en = {
   "webForms.field.productClear": "Capture leads with no product",
   "webForms.field.productLoading": "Reading the product…",
   "webForms.field.owner": "Owner of new leads",
+  "inquiry.needsSetup": "Needs setup",
+  "inquiry.trigger":
+    "When a website inquiry is accepted, give its chosen colleague one task.",
+  "inquiry.form": "Website form",
+  "inquiry.chooseForm": "Choose a website form",
+  "inquiry.formAccess":
+    "You need access to website forms to set up inquiry handling.",
+  "inquiry.mode": "Who handles new inquiries?",
+  "inquiry.mode.one": "One colleague",
+  "inquiry.mode.rotate": "Rotate between selected colleagues",
+  "inquiry.mode.coordinator": "Coordinator reviews first",
+  "inquiry.colleague": "Colleague",
+  "inquiry.colleagues": "Selected colleagues",
+  "inquiry.chooseColleague": "Choose a colleague",
+  "inquiry.chooseColleagues": "Choose colleagues",
+  "inquiry.colleagueUnavailable": "Colleague no longer available",
+  "inquiry.keepOwner":
+    "An eligible existing owner keeps their inquiries. Only new or unowned records are routed.",
+  "inquiry.coordinator": "Coordinator",
+  "inquiry.coordinatorHint":
+    "Reviews unowned leads and inquiries that need attention. This colleague needs access to those records.",
+  "inquiry.taskTitle": "Task title",
+  "inquiry.taskTitleDefault": "Answer the website inquiry",
+  "inquiry.dueDays": "Calendar days after receipt",
+  "inquiry.dueHint": "Due at the end of that local day in the saved timezone.",
+  "inquiry.requestTypeField": "Request type field (optional)",
+  "inquiry.requestTypeHint":
+    "Choose the lead picklist whose field name your website form submits. Values outside its choices stay on the note.",
+  "inquiry.notSpecified": "Not specified",
+  "inquiry.fieldUnavailable": "Field no longer available",
+  "inquiry.fieldsFailed":
+    "Request type fields could not be loaded. You can keep this optional setting unchanged.",
+  "inquiry.deadlinePreview": "Calculating the deadline…",
+  "inquiry.deadlineExample":
+    "A question received at {received} has a task due at {due} ({zone}).",
+  "inquiry.record": "CRM record",
+  "inquiry.assignmentReason": "Why this colleague",
+  "inquiry.reason.legacyHandling":
+    "The earlier lead handling still owns this submission. Review its result before creating another task.",
+  "inquiry.reason.owner": "Keeps the current owner",
+  "inquiry.reason.ownerReview": "Current owner needs review",
+  "inquiry.reason.recipientChanged": "Recipient no longer eligible",
+  "inquiry.reason.coordinator": "Coordinator reviews first",
+  "inquiry.reason.rotation": "Next eligible colleague in the pool",
+  "inquiry.reason.selected": "Selected by the saved handling policy",
+  "inquiry.existing": "Handle existing inquiries",
+  "inquiry.policyUnavailable":
+    "Reload the saved handling policy and try again.",
+  "inquiry.existingScope":
+    "Accepted submissions from {name}. This uses the saved settings and leaves future handling unchanged.",
+  "inquiry.existingLimit":
+    "Choose up to 50 submissions. Review the recipient and deadline before creating tasks.",
+  "inquiry.reviewSelection": "Review selected inquiries",
+  "inquiry.loadingSources": "Loading accepted submissions…",
+  "inquiry.chooseAgain": "Choose submissions again",
+  "inquiry.handleSelected": "Create the reviewed tasks",
+  "inquiry.submissions": "submissions",
+  "inquiry.selectSource": "Select {subject}",
+  "inquiry.untitled": "Website inquiry",
+  "inquiry.submission": "Submission",
+  "inquiry.receivedValue": "Received: {received}",
+  "inquiry.receivedUnavailable": "Receipt details unavailable",
+  "inquiry.requestTypeValue": "Request type: {type}",
+  "inquiry.initialHandlingValue": "Initial handling: {reason}",
+  "inquiry.sourceValue": "Source: {source}",
+  "inquiry.assignment.reviewAgain": "Review current assignment",
+  "inquiry.assignment.unsupported":
+    "This version cannot assign this inquiry. Reload the page.",
+  "inquiry.assignment.take": "Take inquiry",
+  "inquiry.assignment.assign": "Assign and follow up",
+  "inquiry.assignment.chooseColleague": "Choose a colleague",
+  "inquiry.assignment.done": "Inquiry assigned",
+  "inquiry.assignment.record": "Record",
+  "inquiry.assignment.taskHolder": "Current task holder",
+  "inquiry.assignment.newHolder": "New task holder",
+  "inquiry.assignment.movesLead":
+    "The lead and this inquiry task go to this colleague.",
+  "inquiry.assignment.taskOnly":
+    "This changes the inquiry task holder. The record keeps its owner.",
+  "inquiry.currentRecordOwner": "Current record owner",
+  "inquiry.markHandled": "Mark handled",
+  "inquiry.openSubmission": "Open submission",
+  "inquiry.reason.notRecorded": "Reason not recorded",
+  "inquiry.received": "Received",
+  "inquiry.result": "Result",
+  "inquiry.deadline": "Due",
+  "inquiry.task": "Task",
+  "inquiry.openTask": "Open task",
+  "inquiry.result.eligible": "Ready to handle",
+  "inquiry.result.alreadyHandled": "Already handled",
+  "inquiry.result.taskCreated": "Task created",
+  "inquiry.result.waiting": "Waiting for approval",
+  "inquiry.result.changed": "Changed since selection. Read it again.",
+  "inquiry.result.unavailable": "Unavailable or no longer readable",
+  "inquiry.result.skipped": "No task was created. Review the run.",
+  "inquiry.result.failed": "Handling failed. Review the run before retrying.",
+  "inquiry.handling": "Inquiry handling",
+  "inquiry.review": "Review handling",
+  "inquiry.pausedConversionWarning":
+    "Saving this plan replaces the old lead handling for this form. Save paused keeps the plan off: new submissions get no automatic task until you turn it on.",
+  "inquiry.savePaused": "Save paused",
+  "inquiry.enable": "Turn on this handling",
+  "inquiry.futureOnly":
+    "Existing inquiries stay as they are. This handles future accepted submissions.",
+  "inquiry.conversion":
+    "Review this change before replacing the form’s current handling.",
+  "inquiry.back": "Back to settings",
+  "webForms.handlingBusy": "This form is busy. Try again.",
   "webForms.field.ownerHint":
     "Each new lead from this form goes to this colleague. Leave it unassigned for anyone on the team to pick up.",
   "webForms.field.ownerNone": "Unassigned",
@@ -19699,6 +19887,7 @@ export const en = {
   "worklist.filter.leads": "Prospecting",
   "worklist.filter.deals_at_risk": "Deals at risk",
   "worklist.filter.meetings": "Meetings",
+  "worklist.filter.website_inquiries": "Website inquiries",
   "worklist.filter.tasks": "Tasks",
   "worklist.filter.decisions": "Approvals",
   "worklist.filter.relationships": "Quiet relationships",
