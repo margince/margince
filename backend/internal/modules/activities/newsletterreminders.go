@@ -21,11 +21,12 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/relstrength"
 )
 
-// quietReminderScope is every quiet reminder. It reads uq_activity_source, so
-// a page stays bounded however large the activity table is.
+// quietReminderScope selects the quiet reminders the repair reads, held rows
+// left alone. It reads uq_activity_source, so a page stays bounded.
 func quietReminderScope(sourcesPos int) string {
 	return storekit.SQLf(`FROM activity a
-		 WHERE a.source_system = ANY($%d) AND a.source_id IS NOT NULL AND a.kind = 'task'`, sourcesPos)
+		 WHERE a.source_system = ANY($%d) AND a.source_id IS NOT NULL AND a.kind = 'task'
+		   AND `+auth.ActivityAvailableClause("a"), sourcesPos)
 }
 
 // CountQuietReminders counts the quiet reminders the repair inspects, reading
@@ -44,7 +45,7 @@ func CountQuietReminders(ctx context.Context, q datatask.Querier, maximum int64)
 //
 // The engine's actor wrote the completion's audit row, after a newsletter past
 // the anchor was captured. No touch genuineEngagement admits has reached the
-// record since the anchor. A reminder a person or agent worked on stays.
+// record since the anchor. A reminder a human or agent worked on stays.
 func (s *Store) ReopenNewsletterClosedRemindersTx(ctx context.Context, tx pgx.Tx, after ids.UUID, limit int) ([]ids.UUID, int, error) {
 	if err := auth.RequireSystem(ctx); err != nil {
 		return nil, 0, err
@@ -65,13 +66,14 @@ func (s *Store) ReopenNewsletterClosedRemindersTx(ctx context.Context, tx pgx.Tx
 		 AND NOT EXISTS (SELECT 1 FROM audit_log w
 		   WHERE w.entity_type = 'activity' AND w.entity_id = a.id AND w.actor_type = ANY($%[6]d))
 		 AND NOT EXISTS (SELECT 1 FROM activity x WHERE x.id IN (%[3]s) AND %[7]s
-		   AND x.occurred_at > coalesce(%[5]s, '-infinity')) -- occurred_at raw: past the reminder's anchor, a window's lower edge`,
+		   AND x.occurred_at > coalesce(%[5]s, '-infinity')) -- occurred_at raw: past the reminder's anchor, a window's lower edge
+		`,
 		arg(string(principal.PrincipalSystem)), arg(systemCapturedBy),
 		reminderReachSet("a"), relstrength.BulkMailSQL("x"), anchor,
 		arg([]string{string(principal.PrincipalHuman), string(principal.PrincipalAgent)}),
 		genuineEngagement("x", arg(systemSource), arg(systemCapturedBy), arg(systemCapturedByPattern)))
 	// The page is locked, so this statement's fresh snapshot sees every edit a
-	// person committed before the lock, and none can land before the reopen.
+	// user committed before the lock, and none can land before the reopen.
 	query := storekit.SQLf(`SELECT a.id FROM activity a WHERE a.id = ANY($%d) AND a.is_done AND %s`,
 		arg(inspected), closedByNewsletter)
 	rows, err := tx.Query(ctx, query, args...)
