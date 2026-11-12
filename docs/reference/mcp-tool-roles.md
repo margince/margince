@@ -41,7 +41,7 @@ Each cell counts the calls in the group that ran for the role, and those a gate 
 |---|---:|---|---|---|---|---|---|
 | [Business operations](#business-operations) | 380 | 379✓ 1✗ | 353✓ 27✗ | 354✓ 26✗ | 353✓ 27✗ | 178✓ 202✗ | 324✓ 56✗ |
 | [Compliance and privacy](#compliance-and-privacy) | 47 | 47✓ 0✗ | 27✓ 20✗ | 27✓ 20✗ | 31✓ 16✗ | 10✓ 37✗ | 26✓ 21✗ |
-| [Capture and connectors](#capture-and-connectors) | 38 | 38✓ 0✗ | 32✓ 6✗ | 32✓ 6✗ | 38✓ 0✗ | 26✓ 12✗ | 31✓ 7✗ |
+| [Capture and connectors](#capture-and-connectors) | 39 | 39✓ 0✗ | 33✓ 6✗ | 33✓ 6✗ | 39✓ 0✗ | 27✓ 12✗ | 32✓ 7✗ |
 | [Workspace settings a non-admin can reach](#workspace-settings-a-non-admin-can-reach) | 38 | 38✓ 0✗ | 38✓ 0✗ | 38✓ 0✗ | 38✓ 0✗ | 34✓ 4✗ | 38✓ 0✗ |
 | [Admin settings](#admin-settings) | 114 | 114✓ 0✗ | 10✓ 104✗ | 0✓ 114✗ | 81✓ 33✗ | 0✓ 114✗ | 0✓ 114✗ |
 | [The user's own account and security](#the-users-own-account-and-security) | 18 | 18✓ 0✗ | 18✓ 0✗ | 18✓ 0✗ | 18✓ 0✗ | 17✓ 1✗ | 18✓ 0✗ |
@@ -677,6 +677,7 @@ Each cell counts the calls in the group that ran for the role, and those a gate 
 | `change_settings.link_finance_customer` | ✓ | ✗ | ✗ | ✓ | ✗ | ✗ |
 | `change_settings.sync_finance_source` | ✓ | ✗ | ✗ | ✓ | ✗ | ✗ |
 | `change_settings.unlink_finance_customer` | ✓ | ✗ | ✗ | ✓ | ✗ | ✗ |
+| `read_details.finance_invoice_pdf` | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
 | `read_workspace.finance_source` | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
 | `read_workspace.finance_source_customers` | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
 
@@ -1536,6 +1537,7 @@ A check is `object.action`, or `object.a|b` for any one of them. `*.action` is t
 | Accounting source | `change_settings.link_finance_customer` | `link_finance_customer` | `company.read` `integrations.update` |
 | Accounting source | `change_settings.sync_finance_source` | `sync_finance_source` | `integrations.update` |
 | Accounting source | `change_settings.unlink_finance_customer` | `unlink_finance_customer` | `integrations.update` |
+| Accounting source | `read_details.finance_invoice_pdf` | `download_finance_invoice_pdf` | `finance.read` |
 | Accounting source | `read_workspace.finance_source` | `get_finance_source` | `integrations.read` |
 | Accounting source | `read_workspace.finance_source_customers` | `list_finance_source_customers` | `integrations.read` |
 
