@@ -2122,6 +2122,9 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "brief.schedule.connect": "Kết nối lịch",
   "brief.schedule.reconnect": "Kết nối lại lịch",
   "brief.schedule.nextAt": "Cuộc họp tiếp theo lúc {time}",
+  "brief.schedule.now": "Bây giờ",
+  "brief.schedule.freeUntil": "Rảnh đến {time}",
+  "brief.schedule.clearRest": "Hôm nay không còn lịch nào khác",
   "brief.readings.riskPartial": "Chỉ tính deal đã có giá",
   "brief.readings.unpricedCount_one": "{count} deal chưa định giá · không tính",
   "brief.readings.unpricedCount_other":
@@ -3916,6 +3919,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "standing.exchange.view.meeting": "Xem cuộc họp",
   "standing.exchange.view.other": "Xem hoạt động",
   "record.tabs": "Tab hồ sơ",
+  "record.tabs.more": "Xem thêm",
+  "record.tabs.moreLabel": "Xem thêm các mục",
   "record.panel.showDetails": "Hiển thị chi tiết",
   "record.panel.hideDetails": "Ẩn chi tiết",
   "room.editorial": "Tài liệu và bình luận hiển thị ngay với bên mua.",
@@ -6777,7 +6782,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "worklist.source.failed_approval": "Đã duyệt nhưng chưa thực hiện",
   "brief.panel.decisions": "Phê duyệt",
   "brief.rail.quietSchedule": "Không có lịch hẹn",
-  "brief.panel.schedule": "Cuộc họp sắp tới",
+  "brief.panel.schedule": "Ngày của bạn",
   "brief.readings.label": "Số liệu hôm nay",
   "brief.readings.floorTip":
     "Một nguồn đã chạm giới hạn, nên con số này là mức tối thiểu.",
@@ -14737,6 +14742,9 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "licensebanner.body":
     "Token giấy phép của bản cài đặt này đã được kiểm tra và bị từ chối.",
   "licensebanner.link": "Mở {tab}",
+  "licensebanner.grace.title": "Giấy phép đã hết hạn",
+  "licensebanner.grace.body":
+    "Giấy phép của bản cài đặt này đã hết hạn và đang trong thời gian ân hạn. Margince vẫn tiếp tục chạy, nhưng sẽ không khởi động lại được sau khi thời gian ân hạn kết thúc. Hãy gia hạn giấy phép trước thời điểm đó.",
 
   "aicalls.title": "Dấu vết lượt gọi AI",
   "aicalls.withheld":

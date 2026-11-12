@@ -60,8 +60,6 @@ function isServerWords(symbol: ts.Symbol | undefined): boolean {
   });
 }
 
-// The name is compared before the checker is asked. Resolving a symbol forces
-// its type, and almost no name in the tree is one of the server's words.
 function readsIn(source: ts.SourceFile, checker: ts.TypeChecker): number[] {
   const lines: number[] = [];
   const report = (node: ts.Node) =>
@@ -76,6 +74,7 @@ function readsIn(source: ts.SourceFile, checker: ts.TypeChecker): number[] {
     }
     if (ts.isBindingElement(node) && ts.isObjectBindingPattern(node.parent)) {
       const key = node.propertyName ?? node.name;
+      // The name test comes first: asking the checker for a type is the costly step.
       if (ts.isIdentifier(key) && SERVER_WORDS.has(key.text)) {
         const owner = checker.getTypeAtLocation(node.parent);
         const unions = owner.isUnion() ? owner.types : [owner];

@@ -156,9 +156,10 @@ Each item names its record and shows the facts that call for action. A badge say
   is not due yet. Stage change notices stay in the notification center.
 - **Since your last brief**: what Margince did since your last brief, what waits on you, what it
   could not finish and what needs restoring.
-- **Done for you**, the deals Margince changed, to keep or undo, and the other work it finished; beside them **Upcoming meetings** and **Numbers**.
-A greeting covers the page on the day's first visit, once per browser, unless your settings turn motion off. It shows the date and the emails synced overnight. It also counts the items waiting on you
-in Today, how many of them are urgent and how many meetings you have. It stands at least 1.5 seconds and lifts once your page is ready, or after 4.5 seconds; any key or click ends it sooner.
+- **Done for you**, the deals Margince changed, to keep or undo, and the other work it finished; beside them **Your day** and **Numbers**.
+- **Your day** is a line through today. **Now** sits at your clock and says "Free until" the next meeting, or "Nothing else booked today". The next meeting says how soon it starts and offers **Prepare for meeting**. Margince then writes the brief for that meeting and opens it on Home.
+
+A greeting covers the page on the day's first visit, once per browser, unless your settings turn motion off. It shows the date and the emails synced overnight. It also counts the items waiting on you in Today, how many of them are urgent and how many meetings you have. It stands at least 1.5 seconds and lifts once your page is ready, or after 4.5 seconds; any key or click ends it sooner.
 Also called: morning brief, daily brief, today, priorities, top cards, welcome screen.
 
 ### What comes first on Today?
@@ -253,8 +254,7 @@ Also called: customer request, email nobody answered, email to-do.
 An email that invites you to a meeting shows **Accept**, **Maybe** and **Decline** in place of **Reply**. That is on Home, in the Worklist, in a record's **History** and in the email reader.
 - Your answer goes out through your own connected calendar, which lets the sender know. Without a connected calendar, Margince says so under the answers.
 - The card is tagged **Invitation** and shows when the meeting starts. It stays under **Needs you** until you answer, and Margince files no reminder task for it.
-- You can change your answer later: your current answer shows pressed.
-- **Reply** stays in the email reader, for proposing another time.
+- You can change your answer later: your current answer shows pressed. **Reply** stays in the email reader, for proposing another time.
 - A later email that moves or calls off the meeting shows the meeting and what changed, such as **Was 13 Nov, 13:00–14:00** or **Added Ben Ito**. Its tag says what happened, such as **Meeting changed** or **Canceled**. An update with nothing to answer you mark done.
 Also called: meeting invite, accept an invite, decline a meeting, rescheduled meeting, canceled meeting.
 

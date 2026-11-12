@@ -212,11 +212,14 @@
 
 /* One underline that travels to the tab a reader picks, so the eye follows
    the move. Anchored in CSS: no script measures the tabs, and a browser
-   without anchor positioning keeps each tab's own underline above. */
+   without anchor positioning keeps each tab's own underline above. It is
+   placed by its start and its width, so a strip that changes width does not
+   stretch it on the way. */
 @supports (anchor-name: --a) and
   (anchor-scope: all) and
   (position-anchor: --a) and
-  (inset-inline-start: anchor(start)) {
+  (inset-inline-start: anchor(start)) and
+  (inline-size: anchor-size(width)) {
   .recordtabs-strip {
     anchor-scope: --recordtabs-open;
   }
@@ -230,7 +233,7 @@
     position: absolute;
     position-anchor: --recordtabs-open;
     inset-inline-start: anchor(start);
-    inset-inline-end: anchor(end);
+    inline-size: anchor-size(width);
     inset-block-end: anchor(bottom);
     block-size: 2px;
     border-radius: var(--r-full);
@@ -239,7 +242,7 @@
     pointer-events: none;
     transition:
       inset-inline-start var(--dur-move) var(--ease-out),
-      inset-inline-end var(--dur-move) var(--ease-out);
+      inline-size var(--dur-move) var(--ease-out);
   }
 }
 @media (prefers-reduced-motion: reduce) {
@@ -289,4 +292,33 @@
 .recordtabs-trailing {
   flex: none;
   margin-inline-start: auto;
+}
+
+/* The tabs the row has no room for fold behind "More", drawn as one more tab
+   with its chevron after the word. Idle, it is laid out but unseen, so the
+   strip can measure the room it would take. */
+.recordtabs-more {
+  display: inline-flex;
+  flex: none;
+}
+.recordtabs-more[data-idle] {
+  position: absolute;
+  visibility: hidden;
+  pointer-events: none;
+}
+.recordtabs-more .overflow-menu-labelled {
+  flex-direction: row-reverse;
+  gap: var(--space-1);
+  padding: var(--space-3);
+  border: 0;
+  border-block-end: 2px solid transparent;
+  border-radius: 0;
+  background: none;
+  box-shadow: none;
+  color: inherit;
+  font: inherit;
+  font-weight: var(--fontWeightMedium);
+}
+.recordtabs-more .overflow-menu-labelled:hover {
+  border-block-end-color: var(--borderStrong);
 }
