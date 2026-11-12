@@ -88,6 +88,9 @@ type FollowUpProposal struct {
 	// us. Only the first can be replied to.
 	EvidenceDirection  string    `json:"evidence_direction,omitempty"`
 	EvidenceOccurredAt time.Time `json:"evidence_occurred_at"`
+	// DoerID is the colleague the accepter hands the follow-up to; empty
+	// leaves it with the deal's owner.
+	DoerID string `json:"doer_id"`
 }
 
 // UnmarshalFollowUpProposal decodes a staged (possibly human-edited)

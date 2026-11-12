@@ -66,7 +66,7 @@ func setupReconcile(t *testing.T) *reconcileEnv {
 	quiet := slog.New(slog.NewTextHandler(os.Stderr, nil))
 	e.svc = approvals.NewService(e.DB())
 	e.svc.WithEffect(deals.FollowUpReconcileKind, followUpConfirmEffect(e.svc, e.Activities))
-	e.svc.WithPrecheck(deals.FollowUpReconcileKind, followUpPrecheck())
+	e.svc.WithPrecheck(deals.FollowUpReconcileKind, followUpPrecheck(e.DB()))
 	// The stager production builds, drafter included. A harness that omitted
 	// the drafting seam would exercise a stager that can only ever propose a
 	// task, and would report the drafted-reply branch as working while nothing

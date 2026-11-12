@@ -4616,6 +4616,8 @@ export const en = {
   "approval.field.previous_close_date": "Current close date",
   "approval.field.expected_close_date": "Proposed date",
   "approval.field.due_date": "Due",
+  "approval.field.doer": "Who does this",
+  "approval.doerMe": "Me",
   "approval.field.scheduled_at": "Scheduled for",
   "approval.field.flags": "Issues",
   "approval.field.closeDateFlag.overdue": "date has passed",
