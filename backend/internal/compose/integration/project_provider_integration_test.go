@@ -46,8 +46,8 @@ func dealProvider(e *Env) *deals.Provider {
 	return deals.NewProvider(e.DB(), installseam.Deals())
 }
 
-// The agent seam takes a key the way the New project form does: a chosen one
-// is held to the same refusal, and none sent means one minted from the name.
+// The agent seam takes a key the way the New project form does. A chosen key
+// passes the same refusal, and no key means one minted from the name.
 func TestTheAgentSeamChoosesAKeyUnderTheSameRefusal(t *testing.T) {
 	e := Setup(t)
 	p := projectProvider(e)
@@ -128,10 +128,9 @@ func TestProjectThroughTheAgentSeam(t *testing.T) {
 	}
 }
 
-// Only cf_ keys may ride in the create body's extension map: a key naming a
-// project column the contract does not accept is refused by name. A starting
-// phase is a contract field, and the agent seam holds it to the REST rule that
-// no project is born closed.
+// Only cf_ keys may ride in the create body's extension map, so an unknown
+// project column is refused by name. A starting phase is a contract field,
+// and the seam keeps the REST rule that no project starts closed.
 func TestTheAgentSeamCannotSetPhaseThroughAnUnrecognisedField(t *testing.T) {
 	e := Setup(t)
 	p := projectProvider(e)

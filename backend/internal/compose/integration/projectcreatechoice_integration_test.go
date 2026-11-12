@@ -6,7 +6,7 @@
 package integration
 
 // What the New project form may decide at create: the key, the starting phase
-// and the deal the project comes from — each through the store compose builds.
+// and the deal the project comes from. Each runs through the store compose builds.
 
 import (
 	"context"

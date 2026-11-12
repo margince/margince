@@ -117,10 +117,9 @@ func installationCountry(ctx context.Context, tx pgx.Tx) (string, error) {
 	return strings.ToLower(string(code)), err
 }
 
-// ProjectDealLink is the seam a project create uses to point the deal it comes
-// from at it. It runs the deal store's own update, so the link takes the deal
-// write check, the project attach check and the deal's audit row, as a
-// deal-side link does. Shared by compose and the integration harness.
+// ProjectDealLink points the deal a new project comes from at the project.
+// It runs the deal store's own update: the same write check,
+// attach check and audit row as a link made from the deal.
 func ProjectDealLink(store *deals.Store) projects.AttachDeal {
 	return func(ctx context.Context, tx pgx.Tx, dealID ids.DealID, projectID ids.ProjectID) error {
 		_, err := store.UpdateDealTx(ctx, tx, dealID, deals.UpdateDealInput{ProjectID: &projectID}, deals.CustomColumns{})

@@ -670,11 +670,9 @@ func TestTheTimelineFilterKnowsEveryLinkTargetTheWriteAccepts(t *testing.T) {
 	}
 }
 
-// A minted key carries no number while its letters are unique, and the
-// LOWEST free number once they are not. "Free" is decided the way the
-// uniqueness index decides it: case-insensitively, over live rows only — a
-// case-sensitive read hands back a number the index then refuses, and max+1
-// leaves a permanent hole where an archived project gave its number back.
+// A minted key carries no number while its letters are unique, and the lowest
+// free number once they are not. "Free" follows the uniqueness index: it is
+// case-insensitive and counts live rows only.
 func TestTheMintedNumberIsTheLowestFreeOneForItsStem(t *testing.T) {
 	e := Setup(t)
 	company := e.SeedCompany(t, "Stemmed GmbH", nil)

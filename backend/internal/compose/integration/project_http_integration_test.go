@@ -199,9 +199,8 @@ func TestProjectLifecycleOverHTTP(t *testing.T) {
 	}
 }
 
-// Two projects whose names give the same stem and send no key must still come
-// back with different keys — the server resolves the collision by taking the
-// next number rather than refusing the second create.
+// Two projects whose names give the same stem and send no key still get
+// different keys. The server takes the next number instead of refusing.
 func TestTwoProjectsWithOneStemGetDifferentMintedKeys(t *testing.T) {
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)

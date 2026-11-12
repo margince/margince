@@ -3,9 +3,8 @@
 
 package projects
 
-// Which keys a project may carry. One refusal for a key the creator chose and
-// for one the server suggests, so the suggestion never offers what a chosen key
-// would be refused for.
+// Which keys a project may carry. A chosen key and a suggested key pass one
+// refusal, so the form never suggests a key it would refuse.
 
 import (
 	"context"
@@ -23,10 +22,9 @@ import (
 // refused with a reason before the INSERT rather than by the constraint net.
 var projectKeyShape = regexp.MustCompile(`^[A-Za-z][A-Za-z0-9_-]{1,23}$`)
 
-// subjectWords are words senders put in square brackets in a subject for
-// reasons of their own: reply and forward markers in the languages the product
-// ships, the tags mail gateways stamp, and everyday labels. A key spelled as
-// one of them would file every such mail under the project.
+// subjectWords are words senders put in square brackets for reasons of their
+// own. They are reply and forward markers, gateway tags and everyday labels.
+// A key spelled as one of them would file every such mail under the project.
 var subjectWords = map[string]bool{
 	"re": true, "fw": true, "fwd": true, "aw": true, "wg": true, "sv": true, "tr": true,
 	"tl": true, "ext": true, "extern": true, "external": true, "internal": true,
@@ -75,8 +73,8 @@ func normalizeChosenKey(raw string) (string, error) {
 	return key, nil
 }
 
-// refuseChosenKey holds a key the creator typed to every rule a key obeys:
-// the shape, the words no key may be, and no live project holding it.
+// refuseChosenKey holds a typed key to the word refusal and to uniqueness
+// among live projects. normalizeChosenKey has already checked its shape.
 func refuseChosenKey(ctx context.Context, tx pgx.Tx, key string) error {
 	refusal, err := keyWordRefusal(ctx, tx, key)
 	if err != nil || refusal != nil {
@@ -132,10 +130,9 @@ func firstError(err error, refusal *ProjectKeyRefusedError) error {
 	return refusal
 }
 
-// PreviewProjectKey answers the key a project of this name would get if it
-// were created now. It runs the mint the create runs, so the form never
-// computes a key of its own; a create that lands between the preview and the
-// save can still move the number on.
+// PreviewProjectKey answers the key a project of this name would get now.
+// It runs the mint the create runs, so the form never computes a key itself.
+// A create that lands before the save can still move the number on.
 func (s *Store) PreviewProjectKey(ctx context.Context, name string) (string, error) {
 	if err := auth.Require(ctx, projectObject, principal.ActionCreate); err != nil {
 		return "", err

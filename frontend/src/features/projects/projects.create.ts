@@ -17,10 +17,9 @@ import {
   projectFields,
 } from "./projects.form";
 
-// The one create-project form both call sites open: the core fields, the key
-// the server suggests, the starting phase, the deal it comes from, the
-// workspace's project custom fields, and the body they become. A company
-// pinned by the company page drops the picker and rides the body instead.
+// The one create-project form both call sites open. It holds the core fields,
+// the suggested key, the starting phase, the deal and the custom fields.
+// A company pinned by the company page drops the picker and rides the body.
 export function useProjectCreateForm({
   pinned,
 }: Readonly<{ pinned?: string }> = {}): {

@@ -5,17 +5,12 @@ package projects
 
 // Where a project's key comes from.
 //
-// The key is what a human writes in a subject line to file a mail under a
-// project — `[ERP-27] status`, matched by capture/projectkeytoken.go. That makes
-// it a MATCHER, and a matcher keyed after a colleague or an everyday word reads
-// every bracketed mention of that word as an attribution, onto records that are
-// then stamped for six years of retention.
+// A human writes the key in a subject line to file mail under a project, as
+// in `[ERP-27] status` (capture/projectkeytoken.go). A key spelled as a
+// colleague's name or an everyday word would file unrelated mail.
 //
-// So the server suggests the key from the name, the caller may choose another
-// one on create only, and every key, chosen or minted, passes the same refusal
-// (keychoice.go): no seat's first name, no common subject word, no live key
-// twice. After create the key never changes, so mail already sent with it keeps
-// filing.
+// So every key, chosen on create or minted from the name, passes one refusal
+// (keychoice.go). After create the key never changes, so sent mail keeps filing.
 
 import (
 	"context"
@@ -134,18 +129,12 @@ func keyStem(name string) string {
 }
 
 // mintProjectKey answers the key a new project gets when its creator chose
-// none: the bare stem when no live project uses those letters and the stem is
-// a word the refusal admits, else the stem plus the lowest free number.
+// none. It is the bare stem when no live project uses those letters and the
+// refusal admits the stem. Otherwise it is the stem plus the lowest free number.
 //
-// The number is read from the keys that EXIST rather than from a counter,
-// because a counter is a second piece of state that can disagree with the
-// column it numbers — an archived project still holds its key (uq_project_key
-// is partial on archived_at, so archiving frees it), and a restore would then
-// collide with whatever took the number meanwhile.
-//
-// The read is unscoped on purpose: the uniqueness index it feeds is unscoped,
-// so a key hidden from this caller still blocks the number. Nothing about the
-// hidden project leaves this function — only the next free key does.
+// The numbers are read from the live keys, not from a counter, because
+// archiving frees a key (uq_project_key is partial on archived_at).
+// The read is unscoped, as the uniqueness index is; only the free key leaves.
 func mintProjectKey(ctx context.Context, tx pgx.Tx, name string, taken map[string]bool) (string, error) {
 	stem := keyStem(name)
 	inUse, bareLive, err := stemKeysInUse(ctx, tx, stem)
@@ -162,17 +151,14 @@ func mintProjectKey(ctx context.Context, tx pgx.Tx, name string, taken map[strin
 			return stem, nil
 		}
 	}
-	// A second project on the same letters starts at 2, so `ERA` and `ERA-2`
-	// read as the first and second; `ERA-1` only appears when the bare stem is
-	// a word no key may be.
+	// Next to a live bare `ERA` the numbers start at 2, so the two read as
+	// first and second.
 	first := 1
 	if bareHeld {
 		first = 2
 	}
-	// The LOWEST free number rather than max+1, so a number an archived project
-	// gave back is reused instead of leaving a permanent hole. The keys this
-	// same transaction already minted but has not inserted are in `taken`,
-	// which the statement above cannot see.
+	// The lowest free number, so a number an archived project gave back is
+	// reused. `taken` holds keys this transaction minted but has not inserted.
 	for next := first; next <= keySuffixCeiling; next++ {
 		candidate := fmt.Sprintf("%s-%d", stem, next)
 		if !inUse[next] && !taken[candidate] {
@@ -185,13 +171,8 @@ func mintProjectKey(ctx context.Context, tx pgx.Tx, name string, taken map[strin
 // stemKeysInUse reads which numbers live projects hold on one stem, and
 // whether one holds the bare stem itself.
 func stemKeysInUse(ctx context.Context, tx pgx.Tx, stem string) (map[int]bool, bool, error) {
-	// Case-INSENSITIVE, because uq_project_key indexes lower(key): a live key
-	// spelled "ab-3" blocks "AB-3", so a case-sensitive read would hand back a
-	// number the index then refuses.
-	//
-	// The suffix is capped before the cast: a key with a number larger than a
-	// Postgres int would otherwise abort this statement, and with it every
-	// create of a project whose name gives this stem.
+	// Case-insensitive, because uq_project_key indexes lower(key).
+	// The suffix is capped at six digits so the int cast cannot overflow.
 	rows, err := tx.Query(ctx,
 		`SELECT substring(lower(key) from '^'||lower($1)||'-([0-9]{1,6})$')::int
 		   FROM project
@@ -221,14 +202,11 @@ func stemKeysInUse(ctx context.Context, tx pgx.Tx, stem string) (map[int]bool, b
 }
 
 // insertProjectRow writes the project with the key its creator chose, or with
-// a minted one, retrying a minted key when another transaction takes it between
-// the mint and the insert.
+// a minted one.
 //
-// The retry is what makes a server-minted key honest: the caller did not choose
-// it, so a collision is the server's own race to resolve, not a refusal to hand
-// back. A chosen key that loses the same race is the caller's, and is refused
-// as taken. Only the unique-key violation retries — every other refusal is
-// about what the caller sent and is returned as it stands.
+// A minted key that another transaction takes first is retried with the next
+// key, because the caller never chose it. A chosen key that loses the same race
+// is refused as taken. Every other refusal is returned as it stands.
 func insertProjectRow(
 	ctx context.Context, tx pgx.Tx, id ids.ProjectID,
 	in CreateProjectInput, by string, active []fieldcatalog.Column,
