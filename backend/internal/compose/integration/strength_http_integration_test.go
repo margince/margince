@@ -15,8 +15,10 @@ import (
 	"math"
 	"net/http"
 	"testing"
+	"time"
 
 	"github.com/margince/margince/backend/internal/compose/integration/apptest"
+	"github.com/margince/margince/backend/internal/platform/clocktest"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -47,14 +49,13 @@ func seedStrengthContactWithActivities(t *testing.T, e *apptest.AppEnv) string {
 		t.Fatalf("create contact → %d", status)
 	}
 
-	// Two fresh qualifying interactions (kind email, within the 90-day
-	// window since occurred_at defaults to now), one of each direction —
-	// a live recency/frequency/reciprocity signal rather than a bare
-	// zero-interaction "none" bucket.
+	// Keep both fixtures behind the read's clock; a future message contributes no touch.
+	occurred := clocktest.Now(t).Add(-time.Hour).Format(time.RFC3339Nano)
 	for _, direction := range []string{"inbound", "outbound"} {
 		if status := e.Call(t, "POST", "/v1/activities", AnyMap{
 			"kind": "email", "subject": "Touch", "source": "manual", "direction": direction,
-			"links": []AnyMap{{"entity_id": contact.ID, "entity_type": "contact"}},
+			"occurred_at": occurred,
+			"links":       []AnyMap{{"entity_id": contact.ID, "entity_type": "contact"}},
 		}, nil, nil); status != http.StatusCreated {
 			t.Fatalf("log %s activity → %d", direction, status)
 		}
