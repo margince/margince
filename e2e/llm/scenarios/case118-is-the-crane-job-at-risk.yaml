@@ -31,7 +31,7 @@ may_call:
 
 must_mention:
   - "Hafenkran"
-  # The state, in the words a person would use for at_risk.
+  # The state, in the words a user would use for at_risk.
   - "(?i)at[ _-]?risk|risk"
 
 judge:
