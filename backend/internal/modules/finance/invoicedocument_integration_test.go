@@ -87,6 +87,17 @@ func TestAnInvoiceOfAHiddenCompanyAnswersAsIfItDidNotExist(t *testing.T) {
 	expect(t, download(noGrant, a.handlers, ids.UUID(invoice.Id)), http.StatusForbidden, "permission_denied")
 }
 
+// An archived company's card is not found, and neither are the documents it
+// listed, though archiving leaves its invoices in place.
+func TestAnInvoiceOfAnArchivedCompanyIsNotFound(t *testing.T) {
+	a := setupSourceAdmin(t)
+	invoice := a.mirroredInvoice(t)
+
+	a.ownerExec(t, `UPDATE company SET archived_at = now() WHERE id = $1`, a.company)
+	expect(t, download(a.documentReader(principal.RowScopeAll), a.handlers, ids.UUID(invoice.Id)),
+		http.StatusNotFound, "not_found")
+}
+
 // makeOwnerPrivate gives the fixture company an owner and restricts it to them,
 // so a reader with only their own rows cannot see it.
 func (a *sourceAdmin) makeOwnerPrivate(t *testing.T) {

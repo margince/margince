@@ -131,6 +131,7 @@ function InvoiceNumber({
   }
   return (
     <a
+      className="link-button"
       href={`/v1/finance/invoices/${invoice.id}/pdf`}
       target="_blank"
       rel="noreferrer"

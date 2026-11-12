@@ -100,8 +100,10 @@ func (s *Store) servesDocuments(provider string) bool {
 }
 
 // readDocumentTarget reads the invoice on the workspace's live connection, and
-// only for a caller who can see its company. An invoice left behind by an
+// only for a caller who can see its live company. An invoice left behind by an
 // earlier connection is not found: its source is no longer the one read.
+// Archiving a company leaves its invoices live, and its card answers not found,
+// so its documents do too.
 func readDocumentTarget(ctx context.Context, tx pgx.Tx, invoiceID ids.UUID) (documentTarget, error) {
 	conn, connected, err := readConnection(ctx, tx)
 	if err != nil {
@@ -125,7 +127,7 @@ func readDocumentTarget(ctx context.Context, tx pgx.Tx, invoiceID ids.UUID) (doc
 	if err != nil {
 		return documentTarget{}, fmt.Errorf("read the invoice: %w", err)
 	}
-	if err := auth.EnsureVisible(ctx, tx, "company", target.companyID); err != nil {
+	if err := auth.EnsureVisibleLive(ctx, tx, "company", target.companyID); err != nil {
 		return documentTarget{}, err
 	}
 	return target, nil

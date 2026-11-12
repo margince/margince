@@ -1266,8 +1266,8 @@ the sync reads `InvoicesFor` for each linked customer. It writes only what chang
   same provider: the boot refuses it.
 - **Offer each invoice's PDF.** If the vendor has one, set the optional `InvoiceDocument`. The core
   calls it with the `ExternalID` your ledger gave the invoice when a reader opens that invoice, and
-  serves what it returns. It must be an `application/pdf` of at most 20 MiB, or the reader gets an
-  error. The core stores nothing. Without it, the card shows plain invoice numbers.
+  serves what it returns. It must be an `application/pdf` of at most 20 MiB whose bytes start with
+  `%PDF-`, or the reader gets an error. The core stores nothing. Without it, the card shows plain invoice numbers.
 
 Test the three functions against answers you recorded from the vendor's own API docs, so the test needs
 no network. A check against the live vendor runs on a schedule, outside the merge gate.
