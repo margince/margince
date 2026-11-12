@@ -18,6 +18,7 @@ package integration
 
 import (
 	"errors"
+	"maps"
 	"strings"
 	"testing"
 
@@ -127,25 +128,29 @@ func TestProjectThroughTheAgentSeam(t *testing.T) {
 	}
 }
 
-// Only cf_ keys may ride in the create body's extension map. A key naming a
-// project column the contract does not accept is refused by name. `phase` moves
-// only through advanceProjectPhase, which keeps the move, its history row and its
-// event in one transaction. The agent seam must not reach it.
+// Only cf_ keys may ride in the create body's extension map: a key naming a
+// project column the contract does not accept is refused by name. A starting
+// phase is a contract field, and the agent seam holds it to the REST rule that
+// no project is born closed.
 func TestTheAgentSeamCannotSetPhaseThroughAnUnrecognisedField(t *testing.T) {
 	e := Setup(t)
 	p := projectProvider(e)
 	company := e.SeedCompany(t, "Strict GmbH", nil)
+	create := func(extra map[string]any) error {
+		fields := map[string]any{"name": "Typo carrier", "company_id": company.String()}
+		maps.Copy(fields, extra)
+		_, err := p.Create(e.Admin(), datasource.CreateInput{
+			EntityType: datasource.EntityProject, Fields: fields, Source: "agent",
+		})
+		return err
+	}
 
-	_, err := p.Create(e.Admin(), datasource.CreateInput{
-		EntityType: datasource.EntityProject,
-		Fields: map[string]any{
-			"name": "Typo carrier", "company_id": company.String(),
-			"phase": "delivering",
-		},
-		Source: "agent",
-	})
-	if err == nil || !strings.Contains(err.Error(), `unknown field "phase"`) {
-		t.Fatalf("create naming phase answered %v, want a refusal naming the field", err)
+	if err := create(map[string]any{"closed_reason": "done"}); err == nil || !strings.Contains(err.Error(), `unknown field "closed_reason"`) {
+		t.Fatalf("create naming closed_reason answered %v, want a refusal naming the field", err)
+	}
+	var closed *projects.ProjectStartPhaseError
+	if err := create(map[string]any{"phase": "closed"}); !errors.As(err, &closed) {
+		t.Fatalf("create starting closed answered %v, want the start-phase refusal", err)
 	}
 	if n := e.WsCount(t, `SELECT count(*) FROM project WHERE name = 'Typo carrier'`); n != 0 {
 		t.Fatalf("%d projects were written by a refused create", n)
