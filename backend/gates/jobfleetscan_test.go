@@ -80,6 +80,10 @@ type ratifiedFleetScan struct {
 // worker, and a waiver granted on that basis would already have waved it
 // through.
 var ratifiedFleetScans = map[string]ratifiedFleetScan{
+	"internal/compose/trial.go": {
+		1,
+		"reads the earliest workspace creation time once, as the start of the installation's trial; it does no tenant work and enqueues nothing",
+	},
 	"internal/compose/dispatch.go": {
 		2,
 		"the dispatch enumerations: the live fleet every pass on behalf of an active tenant fans out over, and the archived-inclusive one BOTH retention passes need — GDPR retention and idempotency claim retention — because archiving a workspace does not un-store the data inside it. Both read the fleet only to enqueue one workspace-scoped job per tenant, and do no tenant work themselves",

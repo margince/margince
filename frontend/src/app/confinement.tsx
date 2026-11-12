@@ -87,9 +87,9 @@ export function useConfinement(
 }
 
 /**
- * The one screen a signed-in seat is held to, or null when it reaches the app:
- * an account confined until it does one thing, then an installation whose
- * trial has ended, where no screen can do its work and this one says why.
+ * The one screen a signed-in seat is held to, or null when it reaches the app.
+ * First an account confined until it does one thing. Then an installation
+ * whose trial has ended: no screen can do its work, and this one says why.
  */
 export function lockScreen(
   confinement: ReturnType<typeof useConfinement>,

@@ -18,16 +18,16 @@ function standing(daysLeft: number, closing: boolean): TrialStanding {
 }
 
 it("says the trial's state in the words of each stage", () => {
-  expect(trialPillText(standing(10, false), t, plural)).toBe(
+  expect(trialPillText(standing(10, false), t, plural, "en")).toBe(
     "Trial · 10 days left",
   );
-  expect(trialPillText(standing(6, true), t, plural)).toBe(
+  expect(trialPillText(standing(6, true), t, plural, "en")).toBe(
     "6 days left of your trial",
   );
-  expect(trialPillText(standing(1, true), t, plural)).toBe(
+  expect(trialPillText(standing(1, true), t, plural, "en")).toBe(
     "Last day of your trial",
   );
-  expect(trialPillText({ ...standing(0, true), ended: true }, t, plural)).toBe(
-    "Trial ended · Contact Margince",
-  );
+  expect(
+    trialPillText({ ...standing(0, true), ended: true }, t, plural, "en"),
+  ).toBe("Trial ended · Contact Margince");
 });

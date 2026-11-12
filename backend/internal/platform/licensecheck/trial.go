@@ -10,9 +10,9 @@ import "time"
 const TrialLength = 14 * 24 * time.Hour
 
 // Trial is the free period of a production installation that has no license.
-// Nothing is signed: the start is the workspace's own creation time, and an
-// operator who changes it or the code is outside the license terms, not
-// outside a check this type could make.
+// Nothing is signed: the start is the workspace's own creation time. An
+// operator who changes it, or the code, breaks the license terms; no check
+// here could stop it.
 type Trial struct {
 	StartedAt time.Time
 }

@@ -18,9 +18,9 @@ import "../components/auth-core.css";
 
 /**
  * What every seat sees once the installation's trial has ended. The server
- * refuses every change by then; this screen says why instead of letting each
- * screen fail on its own, and it holds the one way out: the email to the
- * Margince team. An admin is also told where the license goes.
+ * refuses every change by then, and this screen says why. It holds the one
+ * way out, the email to the Margince team. An admin is also told where the
+ * license goes.
  */
 export function TrialEndedScreen() {
   const t = useT();

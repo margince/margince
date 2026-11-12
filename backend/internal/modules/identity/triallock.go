@@ -53,9 +53,9 @@ func (h Handlers) trialEndedForMe(ctx context.Context) *bool {
 	return &ended
 }
 
-// The mutations an ended trial still admits: a seat's own credentials (the
-// read-seat list), the license that ends the lock, a data export, and the
-// data-subject requests an installation owes whether or not it pays.
+// The mutations an ended trial still admits. A seat's own credentials (the
+// read-seat list) and the license that ends the lock keep a way out. A data
+// export and data-subject requests are owed whether or not it pays.
 var (
 	licensePathPrefix            = httpserver.BaseURL + "/installation/license"
 	exportPath                   = httpserver.BaseURL + "/exports"

@@ -17,8 +17,8 @@ func endedTrial(ended bool, err error) Handlers {
 	return Handlers{}.WithTrialLock(func(context.Context) (bool, error) { return ended, err })
 }
 
-// Once the trial has ended every change is refused, except the few that keep a
-// seat able to sign in, end the lock, or answer for the data it holds.
+// Once the trial has ended every change is refused. The few left open let a
+// seat sign in, end the lock, or answer for the data it holds.
 func TestAnEndedTrialRefusesEveryChangeButTheOnesThatEndOrSurviveIt(t *testing.T) {
 	h := endedTrial(true, nil)
 	cases := []struct {
@@ -52,8 +52,8 @@ func TestATrialStillRunningRefusesNothing(t *testing.T) {
 	}
 }
 
-// A trial that cannot be read is a server fault, not a pass: the mutation is
-// refused with the read's own error rather than admitted on a guess.
+// A trial that cannot be read is a server fault, not a pass. The mutation is
+// refused with the read's own error, never admitted on a guess.
 func TestATrialThatCannotBeReadRefusesTheChangeWithThatError(t *testing.T) {
 	broken := errors.New("database unreachable")
 	err := endedTrial(false, broken).refuseAfterTrial(context.Background(), httptest.NewRequest(http.MethodPost, "/v1/contacts", nil))

@@ -199,7 +199,7 @@ Records, deals and mail in Margince, by page:
   template, and the steps. The test run, the problems that skip a row, deals,
   and importing the same file again. Undo and the limits.
 - [The trial](the-trial.md): the 14 days a new installation runs with no
-  licence, how to ask the Margince team for a licence or more time, and what
+  licence. How to ask the Margince team for a licence or more time, and what
   stops when the trial ends.
 - [Report a problem](report-a-problem.md): how to tell the Margince team that
   something is wrong. What to leave out of the mail, and where a security

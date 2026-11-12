@@ -254,7 +254,7 @@ When the trial ends, the installation stops working until a token is set up:
   is lost. While it waits, it reads the token again every 5 minutes;
 - `/me` answers `trial_ended: true`, and the app shows every seat the screen that says so.
 
-To end the lock, set up the token and start the api again, or replace a token file and press
+To end the lock, set up the token and start the api again, or replace a token file and click
 **Check now**.
 
 A refused license refuses the boot in *every* posture. To name yourself as not

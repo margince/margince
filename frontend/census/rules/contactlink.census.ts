@@ -13,6 +13,9 @@ export const BUILDERS: ReadonlySet<string> = new Set([
   "src/design-system/contactlink.tsx",
   // A link the writer puts in their own message, opened by the recipient.
   "src/design-system/richtext-html.ts",
+  // The email a trial installation sends the Margince team. Once the trial has
+  // ended the composer is locked with the rest, so the reader's own app sends it.
+  "src/lib/trialcontact.ts",
 ]);
 
 const isProductSource = (file: CensusFile) =>

@@ -104,8 +104,8 @@ func run(ctx context.Context, args []string, stdout io.Writer) error {
 
 	// Before this role does any work, so an operator mistake never leaves a
 	// worker running on a license the api refuses to boot on. The daily re-check
-	// is the api's; this role re-reads the license only while an ended trial
-	// pauses it (trialpause.go), so a key entered through the api resumes it.
+	// is the api's. This role re-reads the license only while an ended trial
+	// pauses it (trialpause.go). A key entered through the api then resumes it.
 	//
 	// After the pool rather than before it, which it used to be: an installation
 	// that has sealed its token holds it in the key vault, and the vault is a

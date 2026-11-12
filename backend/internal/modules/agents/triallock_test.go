@@ -12,8 +12,8 @@ import (
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 )
 
-// Once the trial has ended no tool runs, a read included: the refusal comes
-// before the tool is even looked up, so nothing it would touch is reached.
+// Once the trial has ended no tool runs, a read included. The refusal comes
+// before the tool is looked up, so nothing it would touch is reached.
 func TestAnEndedTrialRefusesEveryToolCall(t *testing.T) {
 	registry := NewRegistry(nil, nil, WithTrialLock(func(context.Context) (bool, error) { return true, nil }))
 	registry.Register(plainTool{})

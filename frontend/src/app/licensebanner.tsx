@@ -25,8 +25,8 @@ const COPY = {
 // stands in the shell's chrome and not on the rail's live line. Not `none`:
 // every dev and demo stack has no licence, and a notice on all of them is noise.
 //
-// The trial is the one sales surface here, on purpose: an installation on it
-// stops working when it ends, and every day it says so is a day to act.
+// The trial is the one sales surface here. An installation on it stops working
+// when it ends, and every day it says so is a day to act.
 export function LicenseBanner() {
   const t = useT();
   const posture = useLicensePosture();

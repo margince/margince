@@ -7,6 +7,7 @@ import { Callout, type CalloutTone } from "../design-system/callout";
 import { ChoiceList } from "../design-system/choicelist";
 import { CopyableText, useClipboardCopy } from "../design-system/clipboardcopy";
 import { Heading } from "../design-system/heading";
+import { formatNumber } from "../format/format";
 import { formatDayLong } from "../format/format.dates";
 import { type Translator, useLocale, usePlural, useT } from "../i18n";
 import type { TrialStanding } from "../lib/license-posture";
@@ -37,6 +38,7 @@ export function TrialNotice({
   seatsUsed,
 }: Readonly<{ standing: TrialStanding; seatsUsed?: number }>) {
   const t = useT();
+  const { locale } = useLocale();
   const plural = usePlural();
   const [open, setOpen] = useState(false);
   const day = useTrialDay(standing.endsAt);
@@ -49,7 +51,7 @@ export function TrialNotice({
           standing.ended
             ? t("trial.notice.endedTitle")
             : plural("trial.notice.daysLeft", standing.daysLeft, {
-                count: String(standing.daysLeft),
+                count: formatNumber(standing.daysLeft, locale),
               })
         }
         actions={
@@ -98,6 +100,7 @@ export function TrialContactDialog({
   onClose: () => void;
 }>) {
   const t = useT();
+  const { locale } = useLocale();
   const heading = useId();
   const me = useMe();
   const day = useTrialDay(standing?.endsAt);
@@ -111,7 +114,8 @@ export function TrialContactDialog({
     name: me.data?.user.display_name ?? "",
     day,
     ended,
-    seatsUsed,
+    seatsUsed:
+      seatsUsed === undefined ? undefined : formatNumber(seatsUsed, locale),
   });
   const copy = useClipboardCopy(`${mail.subject}\n\n${mail.body}`, {
     copy: t("trial.contact.copy"),
@@ -220,7 +224,8 @@ export function trialMail(
     name: string;
     day: string;
     ended: boolean;
-    seatsUsed?: number;
+    /** Already formatted for the reader, absent when they may not see it. */
+    seatsUsed?: string;
   }>,
 ): Readonly<{ subject: string; body: string }> {
   const lines = [
@@ -238,7 +243,7 @@ export function trialMail(
     );
   }
   if (facts.seatsUsed !== undefined) {
-    lines.push(t("trial.mail.seats", { seats: String(facts.seatsUsed) }));
+    lines.push(t("trial.mail.seats", { seats: facts.seatsUsed }));
   }
   const note = facts.note.trim();
   if (note !== "") {

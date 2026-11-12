@@ -37,7 +37,7 @@ function story(daysLeft: number | undefined) {
 }
 
 const meta: Meta<typeof TrialContactDialog> = {
-  title: "Components/Trial contact dialog",
+  title: "Components/Overlays and layering/Trial contact dialog",
   component: TrialContactDialog,
 };
 export default meta;

@@ -41,34 +41,20 @@ func TestSessionSlotsAreSharedAndReturned(t *testing.T) {
 	again()
 }
 
-type pausedProbeArgs struct{}
+type pausedProbe struct{ ran *bool } // the job's args and its work at once
 
-func (pausedProbeArgs) Kind() string { return "paused_probe" }
+func (pausedProbe) Kind() string                                          { return "paused_probe" }
+func (p pausedProbe) Work(context.Context, *river.Job[pausedProbe]) error { *p.ran = true; return nil }
 
-type pausedProbeWork struct{ ran *bool }
-
-func (w pausedProbeWork) Work(context.Context, *river.Job[pausedProbeArgs]) error {
-	*w.ran = true
-	return nil
-}
-
-// While the installation is paused a job is snoozed, not worked, and a snooze
-// spends none of its attempts; once the pause lifts the same job runs.
 func TestAPausedInstallationSnoozesJobsInsteadOfWorkingThem(t *testing.T) {
-	paused := true
-	var ran bool
-	worker := sessionBudgetWorker[pausedProbeArgs]{
-		work:   pausedProbeWork{ran: &ran},
-		paused: func(context.Context) bool { return paused },
-	}
-	job := &river.Job[pausedProbeArgs]{}
-
+	paused, ran := true, false
+	worker := sessionBudgetWorker[pausedProbe]{work: pausedProbe{ran: &ran}, paused: func(context.Context) bool { return paused }}
 	var snooze *river.JobSnoozeError
-	if err := worker.Work(context.Background(), job); !errors.As(err, &snooze) || ran {
+	if err := worker.Work(context.Background(), &river.Job[pausedProbe]{}); !errors.As(err, &snooze) || ran {
 		t.Fatalf("paused: Work = %v, ran = %v; want a snooze and no work", err, ran)
 	}
 	paused = false
-	if err := worker.Work(context.Background(), job); err != nil || !ran {
+	if err := worker.Work(context.Background(), &river.Job[pausedProbe]{}); err != nil || !ran {
 		t.Fatalf("resumed: Work = %v, ran = %v; want the job worked", err, ran)
 	}
 }

@@ -39,8 +39,8 @@ func NewInstallationTrial(pool *pgxpool.Pool, env runtimeenv.Environment, postur
 }
 
 // Current answers the trial this installation runs on. ok is false when it runs
-// on none: a license is configured (valid or refused), the installation is a
-// development or test one, or no workspace has been set up yet.
+// on none. That is a configured license (valid or refused), a development or
+// test installation, or one with no workspace yet.
 func (t *InstallationTrial) Current(ctx context.Context) (licensecheck.Trial, bool, error) {
 	if t == nil || t.env.IsNonProduction() || t.posture().State != licensecheck.StateAbsent {
 		return licensecheck.Trial{}, false, nil
@@ -63,8 +63,8 @@ func (t *InstallationTrial) Ended(ctx context.Context) (bool, error) {
 }
 
 // start is the creation time of the installation's first workspace, archived
-// ones included, so archiving the workspace and creating another does not
-// begin a second trial.
+// ones included. Archiving the workspace and creating another begins no second
+// trial.
 func (t *InstallationTrial) start(ctx context.Context) (time.Time, bool, error) {
 	if cached := t.started.Load(); cached != nil {
 		return *cached, true, nil

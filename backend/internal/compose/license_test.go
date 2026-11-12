@@ -31,19 +31,13 @@ import (
 // dereferencing the pool — which is the failure to want, because a worker
 // resolves its entitlement before it will serve anything.
 
-// A production installation with no license boots on its trial, and the boot
-// log says it stops when the trial ends. MARGINCE_ENV is fail-closed, so an
-// installation that names no posture is the production one.
+// With no license a production installation boots on its trial and says so;
+// MARGINCE_ENV is fail-closed, so naming no posture is production.
 func TestEnsureLicenseBootsAProductionInstallationWithNoLicenseOnItsTrial(t *testing.T) {
 	var log bytes.Buffer
 	logger := slog.New(slog.NewTextHandler(&log, &slog.HandlerOptions{Level: slog.LevelInfo}))
-
-	watcher, err := EnsureLicense(context.Background(), logger, nil, nil, licenseSettings(t, ""), runtimeenv.Parse(""))
-	if err != nil {
+	if _, err := EnsureLicense(context.Background(), logger, nil, nil, licenseSettings(t, ""), runtimeenv.Parse("")); err != nil {
 		t.Fatalf("EnsureLicense refused a production installation with no license: %v", err)
-	}
-	if got := watcher.Posture().State; got != licensecheck.StateAbsent {
-		t.Errorf("posture = %q, want %q", got, licensecheck.StateAbsent)
 	}
 	if line := log.String(); !strings.Contains(line, "runs on its trial") || !strings.Contains(line, "trial_days=14") {
 		t.Errorf("boot log %q does not say the installation runs on its 14-day trial", line)

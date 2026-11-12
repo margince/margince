@@ -116,7 +116,7 @@ export const TRIAL_WARNING_DAYS = 7;
 
 /**
  * The trial counted at `now`. The days round up, so the last afternoon still
- * reads as a day left; whether it has ended is the server's word, so a reader
+ * reads as a day left. Whether it has ended is the server's word, so a reader
  * with a wrong clock sees the state the installation acts on.
  */
 export function trialStandingOf(

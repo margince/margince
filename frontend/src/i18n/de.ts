@@ -15202,7 +15202,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Wir möchten Margince weiter nutzen. Könnt ihr uns ein Angebot für eine Lizenz schicken?",
   "trial.mail.ask.call":
     "Wir möchten vor der Entscheidung über Margince sprechen. Können wir ein kurzes Gespräch vereinbaren?",
-  "trial.mail.company": "Firma: {company}",
+  "trial.mail.company": "Unternehmen: {company}",
   "trial.mail.ends": "Testphase endet: {date}",
   "trial.mail.ended": "Testphase endete: {date}",
   "trial.mail.seats": "Genutzte Zugänge: {seats}",

@@ -8,8 +8,8 @@ import (
 	"time"
 )
 
-// The trial covers fourteen whole days and not one instant more: there is no
-// grace period, so the lock begins exactly at EndsAt.
+// The trial covers fourteen whole days and not one instant more. There is no
+// grace period, so the lock begins at EndsAt.
 func TestTrialEndsFourteenDaysAfterItStartsWithNoGrace(t *testing.T) {
 	start := time.Date(2026, 11, 2, 9, 30, 0, 0, time.UTC)
 	trial := Trial{StartedAt: start}
