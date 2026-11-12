@@ -42,7 +42,7 @@ func (h *heldSignature) SendAsSignature(context.Context, connector.Auth) (connec
 	return connector.SendAsSignature{Address: "rep@myco.com", HTML: h.html}, nil
 }
 
-func read(t *testing.T, source Source) crmcontracts.GmailSignatureImport {
+func readSignature(t *testing.T, source Source) crmcontracts.GmailSignatureImport {
 	t.Helper()
 	out, err := Read(context.Background(), source, ids.From[ids.UserKind](ids.NewV7()))
 	if err != nil {
@@ -56,7 +56,7 @@ func TestTheGmailSignatureIsAnsweredAsASavedSignatureKeepsIt(t *testing.T) {
 		html:    `<div><b>Ana Weber</b><br>Demo GmbH<script>alert(1)</script></div>`,
 		granted: []string{readonlyScope},
 	}
-	out := read(t, held)
+	out := readSignature(t, held)
 	if out.State != crmcontracts.GmailSignatureImportStateReady || out.Html == nil || out.Text == nil {
 		t.Fatalf("answer = %+v, want a ready signature with markup and text", out)
 	}
@@ -73,7 +73,7 @@ func TestTheGmailSignatureIsAnsweredAsASavedSignatureKeepsIt(t *testing.T) {
 
 func TestAGmailSignatureTheGrantCannotReadAsksToReconnect(t *testing.T) {
 	held := &heldSignature{html: "<b>x</b>", granted: []string{sendScope}}
-	if out := read(t, held); out.State != crmcontracts.GmailSignatureImportStateNeedsReconnect {
+	if out := readSignature(t, held); out.State != crmcontracts.GmailSignatureImportStateNeedsReconnect {
 		t.Errorf("state = %q, want needs_reconnect", out.State)
 	}
 	if held.reads != 0 {
@@ -82,17 +82,17 @@ func TestAGmailSignatureTheGrantCannotReadAsksToReconnect(t *testing.T) {
 }
 
 func TestNoMailboxAndAnEmptySignatureAreSaidSo(t *testing.T) {
-	if out := read(t, nil); out.State != crmcontracts.GmailSignatureImportStateNoMailbox {
+	if out := readSignature(t, nil); out.State != crmcontracts.GmailSignatureImportStateNoMailbox {
 		t.Errorf("no registry: state = %q, want no_mailbox", out.State)
 	}
-	if out := read(t, &heldSignature{err: capture.ErrNoConnection}); out.State != crmcontracts.GmailSignatureImportStateNoMailbox {
+	if out := readSignature(t, &heldSignature{err: capture.ErrNoConnection}); out.State != crmcontracts.GmailSignatureImportStateNoMailbox {
 		t.Errorf("no connection: state = %q, want no_mailbox", out.State)
 	}
-	if out := read(t, &heldSignature{html: "  ", granted: []string{readonlyScope}}); out.State != crmcontracts.GmailSignatureImportStateEmpty {
+	if out := readSignature(t, &heldSignature{html: "  ", granted: []string{readonlyScope}}); out.State != crmcontracts.GmailSignatureImportStateEmpty {
 		t.Errorf("blank signature: state = %q, want empty", out.State)
 	}
 	imageOnly := `<img src="https://cdn.example.test/logo.png" width="120">`
-	if out := read(t, &heldSignature{html: imageOnly, granted: []string{readonlyScope}}); out.State != crmcontracts.GmailSignatureImportStateEmpty {
+	if out := readSignature(t, &heldSignature{html: imageOnly, granted: []string{readonlyScope}}); out.State != crmcontracts.GmailSignatureImportStateEmpty {
 		t.Errorf("image-only signature: state = %q, want empty, because a send skips it", out.State)
 	}
 }

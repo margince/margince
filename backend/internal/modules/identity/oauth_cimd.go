@@ -201,7 +201,7 @@ func (s *Service) upsertCIMDClient(ctx context.Context, doc cimdDocument, ttl ti
 			var unchanged bool
 			if err := tx.QueryRow(ctx, `SELECT EXISTS (SELECT 1 FROM oauth_client
     WHERE client_id = @client AND client_name = @name AND created_via = 'cimd')`,
-				pgx.NamedArgs{"client": doc.ClientID, "name": doc.ClientName}).Scan(&unchanged); err != nil {
+				pgx.NamedArgs{"client": doc.ClientID, memberNameArgument: doc.ClientName}).Scan(&unchanged); err != nil {
 				return err
 			}
 			if !unchanged {

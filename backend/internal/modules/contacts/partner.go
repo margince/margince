@@ -297,7 +297,7 @@ func recordPartnerWrite(ctx context.Context, tx pgx.Tx, company ids.CompanyID, k
 	return storekit.EmitEvent(ctx, tx, auditID, company.UUID, crmcontracts.PublicEventCompanyUpdated{
 		ChangedFields: map[string]any{
 			eventKeyDelta: map[string]any{eventKeyPartner: map[string]any{
-				"role": legacyPartnerRole(kinds), "kinds": kinds, "cert_status": written.row.CertStatus,
+				"role": legacyPartnerRole(kinds), eventKeyPartnerKinds: kinds, "cert_status": written.row.CertStatus,
 			}},
 		},
 	})

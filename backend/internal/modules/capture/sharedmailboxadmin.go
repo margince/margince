@@ -151,35 +151,12 @@ func (r *Registry) changeSharedMailboxTx(ctx context.Context, tx pgx.Tx, id ids.
 	}
 	next := prior
 	if in.ReaderTeam != nil && *in.ReaderTeam != prior.ReaderTeam {
-		if err := refuseUnreadableTeamTx(ctx, tx, *in.ReaderTeam); err != nil {
-			return prior, err
-		}
-		tag, err := tx.Exec(ctx, `UPDATE capture_connection SET reader_team_id = $2
-		  WHERE id = $1 AND reader_team_id = $3 AND archived_at IS NULL`, id, *in.ReaderTeam, prior.ReaderTeam)
-		if err != nil {
-			return prior, fmt.Errorf("capture: moving the shared mailbox to other readers: %w", err)
-		}
-		if tag.RowsAffected() != 1 {
-			return prior, fmt.Errorf("capture: the shared mailbox's readers changed under this move: %w", apperrors.ErrConflict)
-		}
-		next.ReaderTeam = *in.ReaderTeam
-		if err := announceSharedChangeTx(ctx, tx, sharedChangeReaders, prior, next); err != nil {
-			return prior, err
-		}
-		if next, err = dropBackupOutsideTeamTx(ctx, tx, next); err != nil {
+		if next, err = moveSharedReadersTx(ctx, tx, prior, *in.ReaderTeam); err != nil {
 			return prior, err
 		}
 	}
 	if in.Posture != nil && *in.Posture != prior.Posture {
-		if err := refuseSharedWithoutOptInTx(ctx, tx, *in.Posture); err != nil {
-			return prior, err
-		}
-		if _, err := replacePostureTx(ctx, tx, sharedConnection(id), *in.Posture); err != nil {
-			return prior, fmt.Errorf("capture: setting the shared mailbox's visibility: %w", err)
-		}
-		before := next
-		next.Posture = *in.Posture
-		if err := announceSharedChangeTx(ctx, tx, sharedChangeVisibility, before, next); err != nil {
+		if next, err = changeSharedPostureTx(ctx, tx, next, *in.Posture); err != nil {
 			return prior, err
 		}
 	}
@@ -192,6 +169,41 @@ func (r *Registry) changeSharedMailboxTx(ctx context.Context, tx pgx.Tx, id ids.
 		return next, r.narrowSharedHistoryTx(ctx, tx, next)
 	}
 	return next, nil
+}
+
+// moveSharedReadersTx hands the mailbox to another reader team, and drops a
+// backup owner who is not in it.
+func moveSharedReadersTx(ctx context.Context, tx pgx.Tx, prior SharedMailboxView, team ids.UUID) (SharedMailboxView, error) {
+	if err := refuseUnreadableTeamTx(ctx, tx, team); err != nil {
+		return prior, err
+	}
+	tag, err := tx.Exec(ctx, `UPDATE capture_connection SET reader_team_id = $2
+	  WHERE id = $1 AND reader_team_id = $3 AND archived_at IS NULL`, prior.ID, team, prior.ReaderTeam)
+	if err != nil {
+		return prior, fmt.Errorf("capture: moving the shared mailbox to other readers: %w", err)
+	}
+	if tag.RowsAffected() != 1 {
+		return prior, fmt.Errorf("capture: the shared mailbox's readers changed under this move: %w", apperrors.ErrConflict)
+	}
+	next := prior
+	next.ReaderTeam = team
+	if err := announceSharedChangeTx(ctx, tx, sharedChangeReaders, prior, next); err != nil {
+		return prior, err
+	}
+	return dropBackupOutsideTeamTx(ctx, tx, next)
+}
+
+// changeSharedPostureTx sets who may read the mailbox's mail from now on.
+func changeSharedPostureTx(ctx context.Context, tx pgx.Tx, before SharedMailboxView, posture string) (SharedMailboxView, error) {
+	if err := refuseSharedWithoutOptInTx(ctx, tx, posture); err != nil {
+		return before, err
+	}
+	if _, err := replacePostureTx(ctx, tx, sharedConnection(before.ID), posture); err != nil {
+		return before, fmt.Errorf("capture: setting the shared mailbox's visibility: %w", err)
+	}
+	next := before
+	next.Posture = posture
+	return next, announceSharedChangeTx(ctx, tx, sharedChangeVisibility, before, next)
 }
 
 // narrowSharedHistoryTx applies the mailbox's visibility to the mail it already

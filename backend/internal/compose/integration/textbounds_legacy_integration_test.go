@@ -22,7 +22,7 @@ import (
 	"github.com/margince/margince/backend/migrations"
 )
 
-func withoutTextGuards(t *testing.T, ctx context.Context) func() {
+func withoutTextGuards(ctx context.Context, t *testing.T) func() {
 	t.Helper()
 	coreUp, coreDown := migrationPair(t, migrations.Core, "1794489406")
 	customUp, customDown := migrationPair(t, migrations.Custom, "20261112130500")
@@ -79,7 +79,7 @@ func TestATranslationUpsertKeepsItsUnchangedEarlierLongName(t *testing.T) {
 	e := Setup(t)
 	ctx := e.As(e.AdminUser, nil, offerLanguagePerms)
 	id := seedRetainer(t, e)
-	apply := withoutTextGuards(t, ctx)
+	apply := withoutTextGuards(ctx, t)
 	earlier := strings.Repeat("界", values.TextLabelCharacters+1)
 	// The fixture models a value written before the narrower label bound existed.
 	if err := database.WithWorkspaceTx(ctx, SchemaPool(t), func(tx pgx.Tx) error {
@@ -110,7 +110,7 @@ func TestACompanyEditKeepsItsUnchangedEarlierLongDescription(t *testing.T) {
 	}
 	id := companyIDOf(ids.UUID(created.Id))
 	owner := SchemaPool(t)
-	apply := withoutTextGuards(t, f.ctx)
+	apply := withoutTextGuards(f.ctx, t)
 	// The fixture models a description written before the column had a bound.
 	earlier := strings.Repeat("界", contacts.CompanyDescriptionMax+1)
 	row := pgx.NamedArgs{"id": id, "description": earlier}

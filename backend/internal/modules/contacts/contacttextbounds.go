@@ -36,7 +36,7 @@ func checkTypedContactNames(full string, first, last *string) error {
 	for _, field := range []struct {
 		name  string
 		value *string
-	}{{contactNameColumn, &full}, {"first_name", first}, {"last_name", last}} {
+	}{{contactNameColumn, &full}, {columnFirstName, first}, {columnLastName, last}} {
 		if field.value != nil {
 			if err := httperr.RequireWithin(field.name, *field.value, values.TextLabelCharacters); err != nil {
 				return err
@@ -50,7 +50,7 @@ func checkChangedContactNames(current crmcontracts.Contact, in UpdateContactInpu
 	for _, field := range []struct {
 		name          string
 		before, after *string
-	}{{contactNameColumn, &current.FullName, in.FullName}, {"first_name", current.FirstName, in.FirstName}, {"last_name", current.LastName, in.LastName}} {
+	}{{contactNameColumn, &current.FullName, in.FullName}, {columnFirstName, current.FirstName, in.FirstName}, {columnLastName, current.LastName, in.LastName}} {
 		if field.after == nil || (field.before != nil && *field.before == *field.after) {
 			continue
 		}

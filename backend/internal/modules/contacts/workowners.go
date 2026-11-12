@@ -15,6 +15,8 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
+// WorkOwnership is who owns a record that can still carry work, and the row
+// version an assignment must match.
 type WorkOwnership struct {
 	OwnerID *ids.UUID
 	Version int64
@@ -24,10 +26,10 @@ type WorkOwnership struct {
 func (s *Store) WorkOwners(ctx context.Context, kind string, recordIDs []ids.UUID) (map[ids.UUID]WorkOwnership, error) {
 	var table string
 	switch kind {
-	case "lead":
-		table = "lead"
-	case "contact":
-		table = "contact"
+	case leadEntity:
+		table = leadEntity
+	case contactEntity:
+		table = contactEntity
 	default:
 		return nil, apperrors.ErrInvalidArgument
 	}
@@ -57,7 +59,7 @@ func (s *Store) WorkOwners(ctx context.Context, kind string, recordIDs []ids.UUI
 		}
 		query := `SELECT id,owner_id,version FROM ` + pgx.Identifier{table}.Sanitize() + ` WHERE id=ANY(@ids) AND archived_at IS NULL`
 		args := pgx.NamedArgs{"ids": allowed}
-		if table == "lead" {
+		if table == leadEntity {
 			query += ` AND status<>ALL(@closed)`
 			args["closed"] = []string{string(crmcontracts.LeadStatusPromoted), string(crmcontracts.LeadStatusDisqualified)}
 		}

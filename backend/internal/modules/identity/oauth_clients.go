@@ -34,6 +34,7 @@ const (
 	agentClientAuditEntity  = "oauth_client"
 	agentClientFieldName    = "name"
 	agentClientFieldURIs    = "redirect_uris"
+	agentClientFieldClient  = "client_name"
 	// agentClientTierSort names the cursor's leading key: admin rows and rows
 	// with a live connection (tier 0) list before the rest (tier 1).
 	agentClientTierSort = "tier"
@@ -217,7 +218,7 @@ func (s *Service) RegisterAgentClient(ctx context.Context, actor Identity, in Re
 			return err
 		}
 		if _, err := storekit.Audit(ctx, tx, "create", agentClientAuditEntity, id, nil, map[string]any{
-			"client_name": name, agentClientFieldURIs: uris,
+			agentClientFieldClient: name, agentClientFieldURIs: uris,
 		}); err != nil {
 			return err
 		}

@@ -70,7 +70,7 @@ func TestCompanyDescriptionsAdmitTheWholeDocumentWithoutTruncation(t *testing.T)
 
 func TestAnUpgradeBoundsCustomTextWithoutChangingEarlierValues(t *testing.T) {
 	f := setupCFV(t)
-	apply := withoutTextGuards(t, f.ctx)
+	apply := withoutTextGuards(f.ctx, t)
 	owner := SchemaPool(t)
 	column := f.defineField(t, customfields.FieldSpec{Object: "contact", Label: "Earlier note", Type: customfields.TypeText, Source: "manual"})
 	// Model the earlier schema, whose runtime text columns carried no length check.

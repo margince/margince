@@ -35,6 +35,7 @@ type Escalator struct {
 // Change names the step a Check moved a key into, for the caller's log line.
 type Change string
 
+// The steps a Check can report. NoChange means the key stayed where it was.
 const (
 	NoChange       Change = ""
 	StartedRefusal Change = "throttled"
@@ -124,7 +125,7 @@ func (e *Escalator) markMinuteOver(key string, minute int64, now time.Time) (Cha
 	if err := s.hold(e.meter.scoped(overKey(key, minute)), 1, span, now); err != nil {
 		return NoChange, err
 	}
-	change, err := e.noteRefusal(key, now)
+	change, err := e.recordRefusal(key, now)
 	if err != nil {
 		return NoChange, err
 	}
@@ -208,12 +209,12 @@ func (e *Escalator) NoteRefusal(key string) {
 	if !meterable(key) {
 		return
 	}
-	if _, err := e.noteRefusal(key, e.meter.now()); err != nil {
+	if _, err := e.recordRefusal(key, e.meter.now()); err != nil {
 		e.meter.noteOutage(err, "note")
 	}
 }
 
-func (e *Escalator) noteRefusal(key string, now time.Time) (Change, error) {
+func (e *Escalator) recordRefusal(key string, now time.Time) (Change, error) {
 	s := e.meter.store()
 	since, err := s.held(e.meter.scoped("since:"+key), now)
 	if err != nil {

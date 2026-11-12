@@ -23,17 +23,17 @@ import (
 // shared-mailbox mail the assignee holds the work of, or human adoption.
 // alias is a compile-time activity alias, never request input.
 func CurrentTaskClause(alias string, asOf time.Time, identities string, arg func(any) int) string {
-	return currentTaskClause(alias, asOf, identities, arg, true)
+	return scopedTaskClause(alias, asOf, identities, arg, true)
 }
 
 // CurrentTaskClauseToLineOnly is CurrentTaskClause whose reply reminders count
 // only when the To line names their assignee. A reader that leaves out every
 // task the product filed asks it: the shared-mailbox step decides none of them.
 func CurrentTaskClauseToLineOnly(alias string, asOf time.Time, identities string, arg func(any) int) string {
-	return currentTaskClause(alias, asOf, identities, arg, false)
+	return scopedTaskClause(alias, asOf, identities, arg, false)
 }
 
-func currentTaskClause(alias string, asOf time.Time, identities string, arg func(any) int, sharedMail bool) string {
+func scopedTaskClause(alias string, asOf time.Time, identities string, arg func(any) int, sharedMail bool) string {
 	pinner := pgx.Identifier{alias, "assignee_id"}.Sanitize()
 	alias = pgx.Identifier{alias}.Sanitize()
 	source := provenance.CurrentCommitmentClause(alias+".source_activity_id", alias+".source_id", alias+".due_at", asOf, arg)
