@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-package compose_test
+package ai_test
 
 // Every site a request names is one api/ai-tasks.yaml declares. The router
 // refuses an undeclared one at call time, so a typo in Request.Site is a
@@ -101,7 +101,7 @@ func TestEveryRequestSiteIsDeclaredInTheTaskContract(t *testing.T) {
 		return constsByDir[dir]
 	}
 	named := 0
-	err := filepath.WalkDir("..", func(path string, entry fs.DirEntry, err error) error {
+	err := filepath.WalkDir("../..", func(path string, entry fs.DirEntry, err error) error {
 		if err != nil || entry.IsDir() || !strings.HasSuffix(path, ".go") || strings.HasSuffix(path, "_test.go") {
 			return err
 		}

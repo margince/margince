@@ -32,9 +32,9 @@ const composeRootDir = "internal/compose"
 // change moves code out. Raising one needs a reason in the pull request.
 const (
 	composeRootProductionFiles = 1364
-	composeRootTestFiles       = 1885
+	composeRootTestFiles       = 1882
 	composeRootProductionLines = 227_800
-	composeRootTestLines       = 354_600
+	composeRootTestLines       = 354_500
 )
 
 // A read under these floors stopped early or read the wrong place, and would
