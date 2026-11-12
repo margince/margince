@@ -178,7 +178,7 @@ Two fields describe a company, and many users mix them up.
 
 **Lifecycle**: where the company stands with you. One value only: **Unknown**, **Target**, **Prospect**, **Opportunity**, **Onboarding**, **Live**, **Customer**, **Former customer** or **Disqualified**. New companies start at **Unknown**. **Onboarding** means the contract is signed and set-up runs. **Live** means the agreed first scope is in use. Only a colleague sets **Live**: an AI assistant, an automation or an approval that tries is refused.
 
-**Relationship types**: what the company *is* to you. Many at once: **customer, partner, supplier, investor, portfolio company, competitor, other.** A customer and a partner show as marks under the company's name; see [Partners and commission](partners.md).
+**Relationship types**: what the company *is* to you. Many at once: **customer, partner, supplier, investor, portfolio company, competitor, other.** A customer and a partner show as marks under the company's name; see [Partners and commission](partners.md). An extension your admin turned on can add types of its own, such as **Reseller**. They show beside the others in the **Relationship type** column and the **Relationship type** filter, and you cannot change them in **Details**. The extension sets them.
 
 So a company can be a customer *and* a supplier. It cannot be both a prospect and a customer, because that is one question with one answer. Size bands are: 1-10, 11-50, 51-200, 201-500, 501-1000, 1001-5000, 5000+. A company may have a parent company, one level only: a parent has no parent of its own, and no company is its own parent. The website address comes from the main domain; you do not type it.
 

@@ -5,6 +5,7 @@ import {
   Calendar,
   Euro,
   Hash,
+  Link2,
   List,
   type LucideIcon,
   ToggleRight,
@@ -27,7 +28,7 @@ import type { CfObject, CfType } from "../../lib/customfields.logic";
 import { useViewerZone } from "../../lib/viewerzone";
 import { AuditEntryLine } from "../settings/audit";
 import { ActivityKindsSelect } from "./customfields.kinds";
-import { objectLabels } from "./customfields.labels";
+import { objectLabels, typeLabels } from "./customfields.labels";
 import "./customfields.css";
 
 export type CustomField = components["schemas"]["CustomField"];
@@ -57,7 +58,8 @@ function reportableField(object: CfObject, field: CustomField): boolean {
 }
 
 // Decorative: every use is aria-hidden, and the Type column names the type.
-const TYPE_ICON: Record<CfType, LucideIcon> = {
+// Partial because a newer server may send a type this build has no icon for.
+const TYPE_ICON: Partial<Record<CfType, LucideIcon>> = {
   text: Type,
   number: Hash,
   date: Calendar,
@@ -65,6 +67,7 @@ const TYPE_ICON: Record<CfType, LucideIcon> = {
   picklist: List,
   multiselect: List,
   boolean: ToggleRight,
+  record: Link2,
 };
 
 // One object's fields (AC-custom-fields-1). A retired field stays listed and
@@ -101,7 +104,8 @@ export function FieldTable({
   const readerZone = useViewerZone();
 
   const typeWord = (field: CustomField): string => {
-    const base = t(`cf.type.${field.type}`);
+    // A type this build does not know prints its own name.
+    const base = typeLabels(t)[field.type] ?? field.type;
     if (field.type === "picklist" || field.type === "multiselect") {
       return `${base} · ${field.options?.length ?? 0}`;
     }
@@ -223,7 +227,7 @@ export function FieldTable({
 
 function FieldName({ field }: Readonly<{ field: CustomField }>) {
   const t = useT();
-  const Icon = TYPE_ICON[field.type];
+  const Icon = TYPE_ICON[field.type] ?? Type;
   return (
     <span
       className={

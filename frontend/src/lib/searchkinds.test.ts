@@ -3,6 +3,7 @@
 
 import { describe, expect, it } from "vitest";
 import { stable } from "../format/collate";
+import { type Translator, translate } from "../i18n";
 import { parseHash, type Route, routeHash } from "./router";
 import {
   bestIdentifierMatch,
@@ -13,8 +14,11 @@ import {
   SEARCH_HIT_ORDER,
   searchActivityRoute,
   searchEmailRoute,
+  searchFilterLabel,
+  searchGroupHeading,
   searchGroupType,
   searchHitDestination,
+  searchHitGroup,
   searchHitHasCard,
   searchHitRoute,
 } from "./searchkinds";
@@ -168,6 +172,69 @@ describe("groupSearchHits", () => {
       ["company", ["o2", "o1"]],
       ["email", ["m1"]],
     ]);
+  });
+});
+
+describe("an extension's hits", () => {
+  const ROOM = "ext:hotel:room";
+  const GUEST = "ext:hotel:guest";
+  const t: Translator = (key, params) => translate("en", key, params);
+  const directory = [{ name: ROOM, display_name: "Room" }];
+
+  it("groups after the core records and before mail, activities and tags", () => {
+    const groups = groupSearchHits([
+      { type: "tag", id: "t1" },
+      { type: GUEST, id: "g1" },
+      { type: "activity", id: "m1", email_summary: { activity_id: "m1" } },
+      { type: ROOM, id: "r1" },
+      { type: "product", id: "p1" },
+      { type: "contact", id: "c1" },
+    ]);
+    expect(groups.map(({ group }) => group)).toEqual([
+      "contact",
+      "product",
+      GUEST,
+      ROOM,
+      "email",
+      "tag",
+    ]);
+  });
+
+  it("leaves the core order as it was when no extension answers", () => {
+    expect(groupSearchHits([{ type: "contact", id: "c1" }])).toEqual([
+      { group: "contact", hits: [{ type: "contact", id: "c1" }] },
+    ]);
+  });
+
+  it("drops a type this build does not know instead of drawing it nameless", () => {
+    expect(groupSearchHits([{ type: "hologram", id: "h1" }])).toEqual([]);
+  });
+
+  it("is its own group and narrows to itself", () => {
+    expect(searchHitGroup({ type: ROOM })).toBe(ROOM);
+    expect(searchGroupType(ROOM)).toBe(ROOM);
+  });
+
+  it("has no page and no card", () => {
+    expect(searchHitRoute(ROOM, "r1")).toBeNull();
+    expect(searchHitDestination({ type: ROOM, id: "r1" }, "suite")).toBeNull();
+    expect(searchHitHasCard(ROOM)).toBe(false);
+  });
+
+  it("takes its heading and pill from the directory", () => {
+    expect(searchGroupHeading(ROOM, t, directory)).toBe("Room");
+    expect(searchFilterLabel(ROOM, t, directory)).toBe("Room");
+  });
+
+  it("names itself from the kind when the directory has not loaded", () => {
+    expect(searchGroupHeading(GUEST, t, [])).toBe("guest");
+    expect(searchFilterLabel(GUEST, t, directory)).toBe("guest");
+  });
+
+  it("leaves a core group's heading to the catalogue", () => {
+    expect(searchGroupHeading("company", t, directory)).toBe(
+      t("search.group.company"),
+    );
   });
 });
 

@@ -55,8 +55,13 @@ func jobRuntimeFor(ctx context.Context, unit, version, via string, deps extensio
 // principal is the system actor the subscriber binds (see extsubscribe.go),
 // which auth.Require does not check at all — so the unattended flag is what
 // keeps the governed core port shut for a caller nothing else would refuse.
+//
+// It may send a notice: a flag found while a mail is delivered has to reach
+// someone with nobody signed in. The notice door is the one core write it holds.
 func deliveryRuntimeFor(ctx context.Context, unit, version, via string, deps extensionRuntimeBinding) *callRuntime {
-	return systemReaderFor(ctx, unit, version, via, deps)
+	rt := systemReaderFor(ctx, unit, version, via, deps)
+	rt.deliversNotices = true
+	return rt
 }
 
 // systemReaderFor is an unattended Runtime that also answers the system reads.

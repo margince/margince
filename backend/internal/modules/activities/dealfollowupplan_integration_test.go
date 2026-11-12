@@ -48,6 +48,7 @@ func TestTheDealFollowUpBatchReadsEachMeetingOnceWhateverTheStatisticsSay(t *tes
 	if _, err := tx.Exec(ctx, "SET LOCAL jit = off"); err != nil {
 		t.Fatal(err)
 	}
+	pinNeverAnalyzed(ctx, t, tx)
 	statement, args, err := meetingFollowUpsByDealStatement(e.as(), asOf, 3, deals)
 	if err != nil {
 		t.Fatal(err)

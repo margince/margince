@@ -51,6 +51,7 @@ import { stagesOfEveryPipeline } from "./pipelinestages";
 import { VIEW_SHAPE, viewOfSection } from "./reporting.views";
 import "./analytics.css";
 
+import { ExtensionReports } from "../../components/extensionreports";
 import { SECTION_REPORTS, useReportRun } from "./analytics.reports.queries";
 
 export function AnalyticsScreen({
@@ -434,6 +435,7 @@ function PipelineSection({
         locale={locale}
         scope={scope}
       />
+      <ExtensionReports />
     </>
   );
 }

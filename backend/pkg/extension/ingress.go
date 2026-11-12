@@ -28,17 +28,6 @@ type RecordKind string
 // kind without idempotency would offer a guarantee this side cannot keep.
 const KindActivity RecordKind = "activity"
 
-// ActivityKindMessage is the timeline kind a message on a messaging channel
-// lands as, published here because a unit cannot reach the core's own
-// vocabulary and would otherwise spell the string blind.
-//
-// It is the ONE kind whose transport is separable from it (ADR-0107/A158): a
-// message names what carried it on ActivityFields.ChannelProvider, and every
-// other kind names nothing there. A fitness test outside this package holds
-// this constant equal to the core's own, so the two cannot drift into a unit
-// filing a kind the core no longer calls a message.
-const ActivityKindMessage = "message"
-
 // IngressSource is one provider a unit brings records in from: the unit's own
 // stable key for it, and which kinds it lands.
 //
@@ -97,8 +86,8 @@ func (s IngressSource) Validate() error {
 	}
 	for _, kind := range s.Lands {
 		if !slices.Contains(landableKinds, kind) {
-			return fmt.Errorf("extension: ingress source %q declares record kind %q — an ingress may land %q, %q or %q",
-				s.System, string(kind), string(KindActivity), string(KindCompany), string(KindDeal))
+			return fmt.Errorf("extension: ingress source %q declares record kind %q — an ingress may land %q, %q, %q or %q",
+				s.System, string(kind), string(KindActivity), string(KindCompany), string(KindDeal), string(KindSignal))
 		}
 	}
 	for _, key := range s.Merges {
@@ -236,14 +225,14 @@ type Record struct {
 	// answerable, and ADR-0082 §1 permits it for exactly that reason.
 	KeyNamesAContact bool
 
-	// Activity is the record itself when it is an activity. A company or a deal
-	// arrives in its own field instead. At most one of the three is set.
+	// Activity is the record when it is an activity; the other kinds use their own field.
 	Activity ActivityFields
 
-	// Company and Deal carry the other two kinds, matched by the outside id that
-	// System and Key name. They take no Counterparty, Addresses, Participants or ThreadKey.
+	// Company, Deal and Signal are matched by the outside id that System and Key
+	// name. They take no Counterparty, Addresses, Participants or ThreadKey.
 	Company *CompanyFields
 	Deal    *DealFields
+	Signal  *SignalFields
 
 	// ThreadKey is the conversation this belongs to, and it MUST be namespaced
 	// by the provider — a bare provider id shares one column with every other

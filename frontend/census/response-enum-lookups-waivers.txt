@@ -30,18 +30,13 @@ src/components/meetingrows.tsx 1
 src/features/contacts/contactmemory.rows.ts 1
 src/features/contacts/contactstanding.ts 1
 src/features/import/vcard-import.tsx 1
-src/features/lists/filterresults.tsx 1
 src/features/lists/filtersentence.ts 1
-src/features/lists/filterslibrary.reads.ts 1
 src/features/lists/listhistory.tsx 1
-src/features/lists/listlibrary.tsx 1
-src/features/lists/listmembers.tsx 1
-src/features/lists/listpage.tsx 2
 src/features/onboarding/connect-posture.tsx 1
 src/features/onboarding/onboarding.tsx 1
 src/features/privacy/controllermail.tsx 2
 src/features/projects/partnercommissions.tsx 1
-src/features/records/customfields.table.tsx 2
+src/features/records/customfields.table.tsx 1
 src/features/records/customfields.tsx 1
 src/features/settings/audit.tsx 1
 src/features/settings/jobhealth.tsx 1
@@ -62,5 +57,4 @@ src/features/worklist/worklist.writes.ts 1
 src/format/datepattern.ts 1
 src/format/format.dates.ts 1
 src/format/preferences.ts 1
-src/lib/filtersaddress.ts 2
 src/lib/magic.queries.ts 1
