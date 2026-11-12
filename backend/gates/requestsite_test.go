@@ -7,8 +7,8 @@ package gates
 
 // Every site a model request names is one api/ai-tasks.yaml declares.
 //
-// The router refuses an undeclared one at call time, so a typo in Request.Site is a
-// feature that fails on its first call rather than a gate that fails here.
+// The router refuses an undeclared site at call time. Without this gate, a typo in
+// Request.Site is a feature that fails on its first call.
 
 import (
 	"go/ast"
