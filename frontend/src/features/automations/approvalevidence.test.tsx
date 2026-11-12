@@ -272,6 +272,7 @@ it("draws the signature's images from the approval's own read once the reader as
     preview: {
       version: 2,
       state: "ready",
+      reviewer_reason: "record_authority",
       changes: [],
       details: [
         { field: "signature_html", value: { kind: "text", text: signature } },
@@ -318,6 +319,7 @@ it("asks for the images again after a read that failed", async () => {
     preview: {
       version: 2,
       state: "ready",
+      reviewer_reason: "record_authority",
       changes: [],
       details: [
         { field: "signature_html", value: { kind: "text", text: signature } },
