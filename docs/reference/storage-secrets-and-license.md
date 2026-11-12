@@ -222,7 +222,7 @@ There are three postures. This is what each one does at boot:
 
 | posture | boot | reported as |
 |---|---|---|
-| **no token set up** | **refuses to boot in production**; starts with a warning when `MARGINCE_ENV` is `dev` or `test` | `margince_license_posture{state="absent"} 1` |
+| **no token set up** | starts. In production it runs on its [trial](#the-trial); under `MARGINCE_ENV` `dev` or `test` it runs with no license and no trial, with a warning | `margince_license_posture{state="absent"} 1` |
 | **token checked and good** | starts | `margince_license_posture{state="valid"} 1`, plus `margince_license_seats` when the license grants a seat count |
 | **token refused** | **refuses to boot** (api and worker both), naming the own reason of the module and the setting to fix | (none) |
 
@@ -232,10 +232,30 @@ in the key vault is read only when nothing declares one. See
 It also covers the boot error that a vault Margince cannot reach causes, in place of an `absent`
 posture.
 
-**A production installation serves only on a license.** The posture decides it, and `MARGINCE_ENV`
-fails closed. So an installation that names nothing is production, and must have a license. When
-Margince refuses, it names both ways out: set up the token, or name the installation as not
-production.
+### The trial
+
+A production installation with no token runs on a trial of 14 days. `MARGINCE_ENV` fails closed, so
+an installation that names nothing is production. The trial starts when the installation's
+workspace is created: the earliest `created_at` in `workspace`, archived rows included. There is no
+grace period. Nothing about the trial is signed and nothing calls out: a changed date or changed
+code breaks the license terms, not a check (`compose.InstallationTrial`,
+`licensecheck.TrialLength`).
+
+While the trial runs, everything works and seats are not capped. A seat with `license:read` sees how
+many days are left in the shell and in **Settings → Seats and license**.
+
+When the trial ends, the installation stops working until a token is set up:
+
+- the api refuses every change with `403 trial_ended`. Sign-in, a seat's own password, MFA and
+  sessions, `/installation/license*`, `POST /exports` and `/data-subject-requests*` stay open, and
+  so does every read;
+- every agent tool call is refused with `trial_ended`;
+- the worker does no background work: a job is snoozed and an event lane stops reading, so nothing
+  is lost. While it waits, it reads the token again every 5 minutes;
+- `/me` answers `trial_ended: true`, and the app shows every seat the screen that says so.
+
+To end the lock, set up the token and start the api again, or replace a token file and press
+**Check now**.
 
 A refused license refuses the boot in *every* posture. To name yourself as not
 production says you have no license. It does not let you run one the module has refused.

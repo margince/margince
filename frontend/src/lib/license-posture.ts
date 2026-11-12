@@ -1,6 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
+import { useNow } from "../format/now";
 import { useCan } from "./capability";
 import { throwProblem } from "./problem";
 
@@ -26,12 +27,15 @@ type LicenseEntitlement = components["schemas"]["LicenseEntitlement"];
  * agent with a footnote, it is a standing fault, and the rail used to state it
  * as a grey row at the very bottom that nobody read.
  *
+ * `trial` is a production installation with no licence, on its free 14 days
+ * or past them. It is not a fault while it runs; `useTrialStanding` counts it.
+ *
  * `grace` is a valid licence past its expiry. It works today, but a restart
  * after the module's grace period ends refuses to boot, so the chrome warns
  * until it is renewed. Over the seat cap and renewal due stay off this type:
  * nothing stops on either, and the settings card gives the numbers.
  */
-export type LicensePosture = "ok" | "grace" | "refused" | "none";
+export type LicensePosture = "ok" | "grace" | "refused" | "none" | "trial";
 
 /**
  * What the license grants and how much of it is used.
@@ -84,8 +88,65 @@ export function licensePostureOf(
   if (entitlement.state === "rejected") {
     return "refused";
   }
+  if (entitlement.trial) {
+    return "trial";
+  }
   if (entitlement.state !== "valid") {
     return "none";
   }
   return entitlement.license?.in_grace ? "grace" : "ok";
+}
+
+type LicenseTrial = components["schemas"]["LicenseTrial"];
+
+/** Where the installation's trial stands, as the chrome counts it. */
+export type TrialStanding = Readonly<{
+  endsAt: string;
+  /** Whole days left, at least 1 while the trial runs and 0 once it ended. */
+  daysLeft: number;
+  ended: boolean;
+  /** The last days, when the chrome stops being calm about it. */
+  closing: boolean;
+}>;
+
+const DAY_MS = 86_400_000;
+
+/** How many days before the end the chrome turns from calm to a warning. */
+export const TRIAL_WARNING_DAYS = 7;
+
+/**
+ * The trial counted at `now`. The days round up, so the last afternoon still
+ * reads as a day left; whether it has ended is the server's word, so a reader
+ * with a wrong clock sees the state the installation acts on.
+ */
+export function trialStandingOf(
+  trial: LicenseTrial,
+  now: number,
+): TrialStanding {
+  const daysLeft = trial.ended
+    ? 0
+    : Math.max(1, Math.ceil((Date.parse(trial.ends_at) - now) / DAY_MS));
+  return {
+    endsAt: trial.ends_at,
+    daysLeft,
+    ended: trial.ended,
+    closing: trial.ended || daysLeft <= TRIAL_WARNING_DAYS,
+  };
+}
+
+/**
+ * The trial this installation runs on, for a seat that may read the licence.
+ * Undefined while licensed, for a development installation, and for a seat
+ * without `license:read`: the lock screen reaches everyone through /me instead.
+ */
+export function useTrialStanding(): TrialStanding | undefined {
+  const mayRead = useCan("license", "read");
+  const query = useLicenseEntitlement(mayRead);
+  // Once a minute is plenty for a count in whole days.
+  const now = useNow(60_000);
+  const trial = query.data?.trial;
+  if (!mayRead || !trial) {
+    return undefined;
+  }
+  return trialStandingOf(trial, now);
 }

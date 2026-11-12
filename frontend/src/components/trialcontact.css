@@ -1,0 +1,21 @@
+/* The email the trial dialog writes, as the reader's mail app will show it:
+   who it goes to and its subject over the text. */
+.trialmail {
+  display: grid;
+  gap: var(--space-2);
+}
+
+.trialmail-head {
+  display: grid;
+  grid-template-columns: max-content 1fr;
+  gap: var(--space-1) var(--space-3);
+  margin: 0;
+}
+
+.trialmail-head dt {
+  color: var(--textSecondary);
+}
+
+.trialmail-head dd {
+  margin: 0;
+}

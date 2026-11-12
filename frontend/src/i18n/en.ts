@@ -15071,6 +15071,64 @@ export const en = {
 
   "licensebanner.body":
     "This installation’s license token was checked and refused.",
+  "trial.pill.days_one": "Trial · {count} day left",
+  "trial.pill.days_other": "Trial · {count} days left",
+  "trial.pill.closing_one": "{count} day left of your trial",
+  "trial.pill.closing_other": "{count} days left of your trial",
+  "trial.pill.lastDay": "Last day of your trial",
+  "trial.pill.ended": "Trial ended · Contact Margince",
+  "trial.notice.daysLeft_one": "{count} day left of your trial",
+  "trial.notice.daysLeft_other": "{count} days left of your trial",
+  "trial.notice.body":
+    "Margince stops working on {date} until it has a license. Your data stays as it is.",
+  "trial.notice.endedTitle": "Your trial has ended",
+  "trial.notice.endedBody":
+    "Margince stopped working on {date} and waits for a license. Your data stays as it is, and nothing is deleted.",
+  "trial.contact.title": "Talk to the Margince team",
+  "trial.contact.endsOn": "Your trial ends on {date}",
+  "trial.contact.endedOn": "Your trial ended on {date}",
+  "trial.contact.legend": "What would help?",
+  "trial.contact.ask.time": "More time",
+  "trial.contact.ask.time.hint": "Extend the trial.",
+  "trial.contact.ask.license": "A license",
+  "trial.contact.ask.license.hint": "Keep Margince, data and all.",
+  "trial.contact.ask.call": "A short call",
+  "trial.contact.ask.call.hint": "Talk it through first.",
+  "trial.contact.note": "Anything to add?",
+  "trial.contact.optional": "Optional",
+  "trial.contact.preview": "Your email",
+  "trial.contact.to": "To",
+  "trial.contact.team": "The Margince team",
+  "trial.contact.subject": "Subject",
+  "trial.contact.copy": "Copy text",
+  "trial.contact.copied": "Text copied",
+  "trial.contact.copyRemedy": "Select the email text and copy it yourself.",
+  "trial.contact.open": "Open in my mail app",
+  "trial.mail.subject.time": "{company}: more time for the Margince trial",
+  "trial.mail.subject.license": "{company}: a Margince license",
+  "trial.mail.subject.call": "{company}: a short call about Margince",
+  "trial.mail.greeting": "Hello Margince team,",
+  "trial.mail.ask.time":
+    "We need more time to try Margince. Could you extend our trial?",
+  "trial.mail.ask.license":
+    "We would like to keep using Margince. Could you send us an offer for a license?",
+  "trial.mail.ask.call":
+    "We would like to talk Margince through before we decide. Could we book a short call?",
+  "trial.mail.company": "Company: {company}",
+  "trial.mail.ends": "Trial ends: {date}",
+  "trial.mail.ended": "Trial ended: {date}",
+  "trial.mail.seats": "Seats in use: {seats}",
+  "trial.mail.signoff": "Best regards,",
+  "trial.locked.pageTitle": "Trial ended",
+  "trial.locked.title": "Your Margince trial has ended",
+  "trial.locked.body":
+    "Margince has stopped working until it has a license. Your data stays as it is, and nothing is deleted.",
+  "trial.locked.admin":
+    "Once the Margince team sends a license key, set it as license.token in this installation’s configuration and restart it.",
+  "trial.locked.member":
+    "Your admin can get a license from the Margince team. You can also write to them yourself.",
+  "common.trialEnded":
+    "This installation’s trial has ended, so nothing can be changed until it has a license.",
   "licensebanner.link": "Open {tab}",
   "licensebanner.grace.title": "License expired",
   "licensebanner.grace.body":

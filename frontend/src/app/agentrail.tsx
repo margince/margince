@@ -38,6 +38,7 @@ import { useAgentTicker } from "./agentrail-ticker";
 import { useAiActivity } from "./ai-activity";
 import { plain, type SpokenLine, speak, spokenText } from "./ai-activity-speak";
 import { usePopoverDismiss } from "./popover";
+import { TrialPill } from "./trialpill";
 import "./agentrail.css";
 
 // The agent's place in the app: the foot of the workspace rail, under the
@@ -440,6 +441,7 @@ export function AgentRail({
             aria-hidden="true"
           />
         </span>
+        <TrialPill />
       </div>
     </section>
   );

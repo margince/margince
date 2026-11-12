@@ -294,6 +294,17 @@
   flex: 0 1 auto;
 }
 
+/* The trial's count, its own row under the spend: a link the rail's hit area
+   leaves alone, lifted over the hit like the row above it. */
+.artrial {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  justify-content: center;
+  width: 100%;
+  margin-top: var(--space-1);
+}
+
 /* What the report is ABOUT, and it is a label rather than a thing to read on its
    own: no chip border here, because a bordered chip inside a bordered block in a
    column this narrow is three frames deep. */
@@ -387,7 +398,8 @@
  * this width. The button keeps its accessible name, so nothing is lost to a
  * screen reader. */
 .rail.collapsed .arwords,
-.rail.collapsed .arlast {
+.rail.collapsed .arlast,
+.rail.collapsed .artrial {
   display: none;
 }
 .rail.collapsed .arhit {
@@ -414,7 +426,8 @@
  * lost to a screen reader.
  */
 .rail.leveled .arwords,
-.rail.leveled .arlast {
+.rail.leveled .arlast,
+.rail.leveled .artrial {
   display: none;
 }
 /* `:not(.collapsed)` rather than source order: the collapsed rail reduces the

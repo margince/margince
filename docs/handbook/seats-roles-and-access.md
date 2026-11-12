@@ -153,7 +153,7 @@ When more seats are in use than the licence allows, Margince says:
 
 In the grace period after the licence expires, members who may read the licence see a warning on every page. Admin and Ops hold that right by default. **Open Seats and license** in the warning comes to this page. You cannot close the warning, and it stays until a renewed licence is in place. Margince keeps running, but does not start again after the grace period, which has no end date on screen. Also called: licence expired, grace period.
 
-Margince checks the licence itself when it starts, and again once a day. The licence check never calls out or reports back to anyone. When your server admin replaces the licence file, an admin or ops member can press **Check now** on this page to check it at once. You cannot type a licence into Margince.
+Margince checks the licence itself when it starts, and again once a day. The licence check never calls out or reports back to anyone. When your server admin replaces the licence file, an admin or ops member can press **Check now** on this page to check it at once. You cannot type a licence into Margince. A Margince you installed yourself first runs for 14 days with no licence: see [The trial](the-trial.md).
 
 ## The six roles
 

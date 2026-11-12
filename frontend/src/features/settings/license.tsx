@@ -2,6 +2,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import type { ReactNode } from "react";
 import { api } from "../../api/client";
 import type { components } from "../../api/schema";
+import { TrialNotice } from "../../components/trialcontact";
 import { Button } from "../../design-system/atoms";
 import { Callout } from "../../design-system/callout";
 import { CellStack } from "../../design-system/cellstack";
@@ -10,9 +11,13 @@ import { QueryGate } from "../../design-system/querystates";
 import { Meter } from "../../design-system/readings";
 import { SettingList, SettingRow } from "../../design-system/settingrow";
 import { formatNumber } from "../../format/format";
+import { useNow } from "../../format/now";
 import { type Locale, useLocale, useT } from "../../i18n";
 import { useCan, useCanWrite } from "../../lib/capability";
-import { useLicenseEntitlement } from "../../lib/license-posture";
+import {
+  trialStandingOf,
+  useLicenseEntitlement,
+} from "../../lib/license-posture";
 import { throwProblem, unwrap } from "../../lib/problem";
 import { useMe } from "../../lib/session";
 import "./license.css";
@@ -235,6 +240,7 @@ export function LicenseReading({
 }: Readonly<{ entitlement: LicenseEntitlement; action?: ReactNode }>) {
   const t = useT();
   const { locale } = useLocale();
+  const now = useNow(60_000);
   const granted = entitlement.seats_granted;
   const capped = granted !== undefined && granted !== null;
   // The callout and the seat row both name the grant. One spelling keeps them
@@ -273,11 +279,17 @@ export function LicenseReading({
                 : t("license.refused.bodyUncapped")}
             </Callout>
           )}
-          {entitlement.state === "absent" && (
-            <Callout kind="standing" title={t("license.absent.title")}>
-              {t("license.absent.body")}
-            </Callout>
-          )}
+          {entitlement.state === "absent" &&
+            (entitlement.trial ? (
+              <TrialNotice
+                standing={trialStandingOf(entitlement.trial, now)}
+                seatsUsed={entitlement.seats_used}
+              />
+            ) : (
+              <Callout kind="standing" title={t("license.absent.title")}>
+                {t("license.absent.body")}
+              </Callout>
+            ))}
           {entitlement.over_limit && (
             // `live` overrides the silence `standing` derives. A breach is true on
             // render and still interrupts, because the admin has to act on it.

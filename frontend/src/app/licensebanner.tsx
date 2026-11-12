@@ -1,10 +1,15 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
+import { TrialNotice } from "../components/trialcontact";
 import { AppLink } from "../design-system/applink";
 import { Callout } from "../design-system/callout";
 import { useT } from "../i18n";
-import { useLicensePosture } from "../lib/license-posture";
+import {
+  useLicenseEntitlement,
+  useLicensePosture,
+  useTrialStanding,
+} from "../lib/license-posture";
 import { routeHash } from "../lib/router";
 import { settingsHref } from "../lib/settingsrouting";
 
@@ -19,9 +24,24 @@ const COPY = {
 // A refused or expired licence is a standing condition, not agent work. So it
 // stands in the shell's chrome and not on the rail's live line. Not `none`:
 // every dev and demo stack has no licence, and a notice on all of them is noise.
+//
+// The trial is the one sales surface here, on purpose: an installation on it
+// stops working when it ends, and every day it says so is a day to act.
 export function LicenseBanner() {
   const t = useT();
   const posture = useLicensePosture();
+  const trial = useTrialStanding();
+  const entitlement = useLicenseEntitlement(trial !== undefined);
+  if (trial) {
+    return (
+      <div className="appbanner">
+        <TrialNotice
+          standing={trial}
+          seatsUsed={entitlement.data?.seats_used}
+        />
+      </div>
+    );
+  }
   if (posture !== "refused" && posture !== "grace") {
     return null;
   }
