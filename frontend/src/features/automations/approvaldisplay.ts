@@ -11,7 +11,11 @@ import {
   stagedDealMove,
 } from "../../lib/approvalpreview";
 import { humanizeKind } from "./approvalkind";
-import { commitmentResponsibility, madeByRow } from "./approvalresponsibility";
+import {
+  commitmentResponsibility,
+  followUpDoerRow,
+  madeByRow,
+} from "./approvalresponsibility";
 
 // Typed proposals expose declared business facts; raw-argument kinds retain their fields.
 export type {
@@ -417,7 +421,7 @@ export function resolveDisplay(
           ...resolved.filter((entry) => entry.field !== "party"),
           ...commitmentResponsibility(change, names, t, assigneeInactive),
         ]
-      : resolved;
+      : [...resolved, ...followUpDoerRow(change, names, t)];
   if (requestedDecider) {
     fields.push({
       field: "requested_decider",
