@@ -12,6 +12,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/compose"
 	"github.com/margince/margince/backend/internal/compose/integration/apptest"
+	"github.com/margince/margince/backend/internal/platform/clocktest"
 )
 
 // mcpCallsPerMinute is the build's per-minute tool-call pacing, as the
@@ -25,7 +26,7 @@ const mcpCallsPerMinute = 240
 // The edge counts in fixed one-minute windows. The clock stands still, so every
 // call falls in one window however long the calls take.
 func TestAnAdminsAgentIsUnpacedAndAUsersIsPacedOnMCP(t *testing.T) {
-	at := time.Now()
+	at := clocktest.Now(t)
 	d := roleBoundDoors(t, "mcp-pacing", compose.WithMCPClockForTest(func() time.Time { return at }))
 	d.E.DescribeCompany(t)
 	const email, password = "rep@mcp-pacing.test", "mcp-pacing-password"
