@@ -50,9 +50,7 @@ cited_answer AS MATERIALIZED (
   SELECT a.id AS cited_id, answer_found.id
     FROM cited JOIN activity a ON a.id = cited.id
    CROSS JOIN LATERAL (%[2]s) answer_found
-    JOIN activity readable_answer ON readable_answer.id = answer_found.id
-   WHERE a.direction = 'inbound' AND a.kind IN ('email', 'message')
-     AND readable_answer.restricted_at IS NULL),
+   WHERE a.direction = 'inbound' AND a.kind IN ('email', 'message')),
 follow_up AS MATERIALIZED (
   SELECT a.id AS cited_id, kept.id
     FROM cited JOIN activity a ON a.id = cited.id

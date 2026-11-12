@@ -15,8 +15,9 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
-// citedThreads is a set of cited messages where each verdict turns on one row
-// limited to a colleague. A verdict that skips the content gate reads it.
+// citedThreads is a set of cited messages: each kind of evidence once in sight
+// and once limited to a colleague. A verdict that skips the content gate reads
+// the limited row.
 type citedThreads struct {
 	e     *loadEnv
 	store *Store
