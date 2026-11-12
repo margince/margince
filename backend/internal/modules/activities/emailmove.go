@@ -96,12 +96,18 @@ func moveInputs(ctx context.Context, arg func(any) int, asOf time.Time) (moveBin
 	if err != nil {
 		return moveBinding{}, err
 	}
+	return moveInputsGatedBy(ctx, arg, asOf, laterContent), nil
+}
+
+// moveInputsGatedBy is moveInputs for a statement that gates the later mail
+// itself, through laterContent over the alias later.
+func moveInputsGatedBy(ctx context.Context, arg func(any) int, asOf time.Time, laterContent string) moveBinding {
 	return moveBinding{
 		asOf:         fmt.Sprintf("$%d::timestamptz", arg(asOf)),
 		sentByReader: sentByReaderSQL(fmt.Sprintf("$%d", arg(readerOrNobody(ctx))), fmt.Sprintf("$%d", arg([]string{}))),
 		laterContent: laterContent,
 		horizon:      storekit.WaitingHorizonSQL(asOf, arg),
-	}, nil
+	}
 }
 
 // MailMoveColumnSQL is the History badge's move on the activity under alias a
@@ -131,13 +137,19 @@ func MailMovesFor(ctx context.Context, tx pgx.Tx, activityIDs []ids.UUID, asOf t
 	var args []any
 	arg := func(v any) int { args = append(args, v); return len(args) }
 	wanted := arg(activityIDs)
-	move, err := MailMoveColumnSQL(ctx, arg, asOf)
+	// The mails and every mail on their threads share one content gate, which
+	// the later mail the move walks tests membership in.
+	readable, err := auth.ContentReadableActivitiesSQL(ctx, threadNeedSQL(mailMoveCandidates), arg)
 	if err != nil {
 		return nil, err
 	}
-	rows, err := tx.Query(ctx, `SELECT a.id, move FROM (SELECT a.id, `+move+` AS move
- FROM activity a WHERE a.id = ANY(`+fmt.Sprintf("$%d", wanted)+`)) a
- WHERE move IS NOT NULL`, args...)
+	in := moveInputsGatedBy(ctx, arg, asOf, mailMoveReadableSQL("later"))
+	rows, err := tx.Query(ctx, `WITH `+mailMoveCandidates+` AS MATERIALIZED (
+  SELECT a.id, a.thread_key, a.kind, a.channel_provider FROM activity a
+   WHERE a.id = ANY(`+fmt.Sprintf("$%d", wanted)+`) AND a.kind = 'email' AND a.restricted_at IS NULL),
+`+mailMoveReadable+` AS MATERIALIZED (`+readable+`)
+SELECT a.id, `+moveSQL(in, mailKinds)+` FROM activity a
+ WHERE a.id IN (SELECT id FROM `+mailMoveCandidates+`) AND `+mailMoveReadableSQL("a"), args...)
 	if err != nil {
 		return nil, fmt.Errorf("activities: reading whose move each mail is: %w", err)
 	}
@@ -151,4 +163,15 @@ func MailMovesFor(ctx context.Context, tx pgx.Tx, activityIDs []ids.UUID, asOf t
 		out[id] = move
 	}
 	return out, rows.Err()
+}
+
+// The sets MailMovesFor reads: the mails asked about, and the ids among them
+// and their threads that the reader may read.
+const (
+	mailMoveCandidates = "mail_move_candidates"
+	mailMoveReadable   = "mail_move_readable"
+)
+
+func mailMoveReadableSQL(alias string) string {
+	return alias + ".id IN (SELECT id FROM " + mailMoveReadable + ")"
 }
