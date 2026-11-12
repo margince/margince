@@ -1,0 +1,9 @@
+{
+  "verb": "update_record_role",
+  "checks": [
+    "custom_field.update"
+  ],
+  "takes": [
+    "record_role"
+  ]
+}

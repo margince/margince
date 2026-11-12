@@ -1,0 +1,28 @@
+{
+  "verb": "update_record",
+  "checks": [
+    "company.read,lead.read",
+    "company.read,lead.update",
+    "company.update,contact.update,deal.read,lead.read,project.update",
+    "company.update,contact.update,deal.read,lead.update,project.update",
+    "company.update,contact.update,deal.update,lead.read,project.update",
+    "company.update,contact.update,deal.update,lead.update,project.update",
+    "company.update,contact.update,lead.read,project.read",
+    "company.update,contact.update,lead.update,project.read",
+    "contact.read,deal.read,lead.read,project.update",
+    "contact.read,deal.read,lead.update,project.update",
+    "contact.read,deal.update,lead.read,project.update",
+    "contact.read,deal.update,lead.update,project.update",
+    "contact.read,lead.read,project.read",
+    "contact.read,lead.update,project.read",
+    "deal.read,lead.read,relationship.read",
+    "deal.read,lead.update,relationship.read",
+    "deal.update,lead.read,relationship.read",
+    "deal.update,lead.update,relationship.read",
+    "lead.read,project.read,relationship.read",
+    "lead.update,project.read,relationship.read"
+  ],
+  "takes": [
+    "company"
+  ]
+}

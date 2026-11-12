@@ -1,0 +1,14 @@
+{
+  "tool": "change_capture",
+  "action": "lift_counterparty_hold",
+  "verb": "lift_counterparty_hold",
+  "allowed_for": [
+    "admin",
+    "management",
+    "manager",
+    "ops",
+    "read_only",
+    "rep"
+  ],
+  "refused_for": []
+}

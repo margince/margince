@@ -1,0 +1,18 @@
+{
+  "verb": "ensure_company_scan",
+  "checks": [
+    "activity.read",
+    "company.read",
+    "contact.read",
+    "deal.read",
+    "installation_settings.read",
+    "list.read",
+    "partner.read",
+    "project.read",
+    "relationship.read",
+    "tag.read"
+  ],
+  "takes": [
+    "company"
+  ]
+}

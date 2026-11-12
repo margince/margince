@@ -1,0 +1,11 @@
+{
+  "verb": "complete_intro_request",
+  "checks": [
+    "introduction.read",
+    "introduction.update"
+  ],
+  "takes": [
+    "accepted_intro_ask",
+    "intro_request"
+  ]
+}

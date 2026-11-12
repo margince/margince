@@ -1,0 +1,9 @@
+{
+  "verb": "open_deal_room_thread",
+  "checks": [
+    "deal_room.update"
+  ],
+  "takes": [
+    "deal_room"
+  ]
+}

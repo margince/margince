@@ -1,0 +1,14 @@
+{
+  "tool": "read_workspace",
+  "action": "finance_source_customers",
+  "verb": "list_finance_source_customers",
+  "allowed_for": [
+    "admin",
+    "management",
+    "manager",
+    "ops",
+    "read_only",
+    "rep"
+  ],
+  "refused_for": []
+}

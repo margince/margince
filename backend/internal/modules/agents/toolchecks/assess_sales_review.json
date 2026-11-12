@@ -1,0 +1,11 @@
+{
+  "verb": "assess_sales_review",
+  "checks": [
+    "deal.read",
+    "installation_settings.read",
+    "report_definition.read"
+  ],
+  "takes": [
+    "me"
+  ]
+}

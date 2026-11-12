@@ -1,0 +1,12 @@
+{
+  "verb": "direct_communication_send",
+  "checks": [
+    "activity.create",
+    "activity.read",
+    "communication_exception.create",
+    "contact.read"
+  ],
+  "takes": [
+    "communication_review"
+  ]
+}

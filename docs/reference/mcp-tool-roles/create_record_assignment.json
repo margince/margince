@@ -1,0 +1,19 @@
+{
+  "tool": "change_access",
+  "action": "assign",
+  "verb": "create_record_assignment",
+  "allowed_for": [
+    "admin",
+    "management",
+    "manager",
+    "ops",
+    "rep"
+  ],
+  "refused_for": [
+    "read_only"
+  ],
+  "colleague_record": {
+    "manager": "refused",
+    "rep": "refused"
+  }
+}

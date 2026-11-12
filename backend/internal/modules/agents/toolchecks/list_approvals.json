@@ -1,0 +1,6 @@
+{
+  "verb": "list_approvals",
+  "checks": [
+    "company.read"
+  ]
+}

@@ -1,0 +1,9 @@
+{
+  "verb": "read_corpus",
+  "checks": [
+    "knowledge_corpus.read"
+  ],
+  "takes": [
+    "corpus"
+  ]
+}

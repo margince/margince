@@ -1,0 +1,14 @@
+{
+  "tool": "create_record",
+  "verb": "create_record",
+  "allowed_for": [
+    "admin",
+    "management",
+    "manager",
+    "ops",
+    "rep"
+  ],
+  "refused_for": [
+    "read_only"
+  ]
+}

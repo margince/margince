@@ -1,0 +1,15 @@
+{
+  "tool": "change_access",
+  "action": "end_assignment",
+  "verb": "archive_record_assignment",
+  "allowed_for": [
+    "admin",
+    "management",
+    "manager",
+    "ops",
+    "rep"
+  ],
+  "refused_for": [
+    "read_only"
+  ]
+}

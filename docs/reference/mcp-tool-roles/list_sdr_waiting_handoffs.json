@@ -1,0 +1,14 @@
+{
+  "tool": "read_reports",
+  "action": "sdr_handoffs",
+  "verb": "list_sdr_waiting_handoffs",
+  "allowed_for": [
+    "admin",
+    "management",
+    "manager",
+    "ops",
+    "read_only",
+    "rep"
+  ],
+  "refused_for": []
+}

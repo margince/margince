@@ -1,0 +1,9 @@
+{
+  "verb": "restore_company_suggestion",
+  "checks": [
+    "company.read"
+  ],
+  "takes": [
+    "company"
+  ]
+}

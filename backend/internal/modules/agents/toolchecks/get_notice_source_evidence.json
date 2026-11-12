@@ -1,0 +1,11 @@
+{
+  "verb": "get_notice_source_evidence",
+  "checks": [
+    "activity.read",
+    "contact.read",
+    "privacy_request.read"
+  ],
+  "takes": [
+    "notice_case_review"
+  ]
+}

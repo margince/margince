@@ -1,0 +1,9 @@
+{
+  "verb": "explain_lead_score",
+  "checks": [
+    "lead.read"
+  ],
+  "takes": [
+    "lead"
+  ]
+}

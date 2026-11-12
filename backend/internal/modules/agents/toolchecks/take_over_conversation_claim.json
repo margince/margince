@@ -1,0 +1,12 @@
+{
+  "verb": "take_over_conversation_claim",
+  "checks": [
+    "activity.create",
+    "activity.read",
+    "contact.read",
+    "relationship.read"
+  ],
+  "takes": [
+    "claim"
+  ]
+}

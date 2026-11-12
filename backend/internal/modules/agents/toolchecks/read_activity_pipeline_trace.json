@@ -1,0 +1,10 @@
+{
+  "verb": "read_activity_pipeline_trace",
+  "checks": [
+    "activity.read",
+    "relationship.read"
+  ],
+  "takes": [
+    "activity"
+  ]
+}

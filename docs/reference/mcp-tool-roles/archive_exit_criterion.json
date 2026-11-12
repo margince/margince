@@ -1,0 +1,15 @@
+{
+  "tool": "change_settings",
+  "action": "archive_exit_criterion",
+  "verb": "archive_exit_criterion",
+  "allowed_for": [
+    "admin",
+    "ops"
+  ],
+  "refused_for": [
+    "management",
+    "manager",
+    "read_only",
+    "rep"
+  ]
+}

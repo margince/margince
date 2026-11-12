@@ -1,0 +1,18 @@
+{
+  "tool": "run_research",
+  "action": "refresh_dossier",
+  "verb": "refresh_company_dossier",
+  "allowed_for": [
+    "admin",
+    "management",
+    "manager",
+    "ops",
+    "read_only",
+    "rep"
+  ],
+  "refused_for": [],
+  "colleague_record": {
+    "manager": "ran",
+    "rep": "ran"
+  }
+}

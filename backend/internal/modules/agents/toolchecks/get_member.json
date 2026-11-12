@@ -1,0 +1,9 @@
+{
+  "verb": "get_member",
+  "checks": [
+    "user_admin.read|create|update|delete"
+  ],
+  "takes": [
+    "user"
+  ]
+}

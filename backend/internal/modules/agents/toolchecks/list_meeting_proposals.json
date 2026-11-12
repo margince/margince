@@ -1,0 +1,11 @@
+{
+  "verb": "list_meeting_proposals",
+  "checks": [
+    "activity.create",
+    "activity.read",
+    "contact.read"
+  ],
+  "takes": [
+    "contact"
+  ]
+}

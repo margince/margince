@@ -1,0 +1,9 @@
+{
+  "verb": "get_web_form",
+  "checks": [
+    "integrations.read"
+  ],
+  "takes": [
+    "web_form"
+  ]
+}
