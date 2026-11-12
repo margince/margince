@@ -1,5 +1,5 @@
 <!-- prose:plain -->
-<!-- describes: backend/internal/modules/capture/partslim backend/internal/modules/capture/partslimstore.go backend/internal/modules/capture/sinkoriginal.go backend/internal/compose/jobs_partslim.go backend/internal/compose/jobs_storedobject.go backend/internal/modules/capture/sinkraw.go backend/internal/compose/sarrestore.go backend/internal/modules/privacy/erasure_attachments.go backend/internal/platform/originalstore backend/internal/modules/capture/originaloffload.go backend/internal/modules/privacy/saroriginals.go backend/internal/modules/privacy/raworiginalsubjects.go backend/internal/modules/privacy/retentionrowerasure.go -->
+<!-- describes: backend/internal/modules/capture/partslim backend/internal/modules/capture/partslimstore.go backend/internal/modules/capture/sinkoriginal.go backend/internal/compose/jobs_partslim.go backend/internal/compose/jobs_storedobject.go backend/internal/modules/capture/sinkraw.go backend/internal/compose/sarrestore.go backend/internal/modules/privacy/erasure_attachments.go backend/internal/platform/originalstore backend/internal/modules/capture/originaloffload.go backend/internal/modules/privacy/saroriginals.go backend/internal/modules/privacy/raworiginalsubjects.go backend/internal/modules/privacy/retentionrowerasure.go backend/internal/modules/activities/capturedfilecopies.go -->
 # raw_capture part slimming: what the stored original promises
 
 `raw_capture` holds the provider's original for every captured message. Without slimming it would
@@ -65,6 +65,9 @@ stamps the row `slimmed`. The file's bytes never reach `raw_capture`. The cut co
 store took the bytes, and after the attachment row names that object. So the block never names
 bytes that are not there.
 
+A file whose bytes an attachment row already holds is not put again. It takes that row's key
+(`activities/capturedfilecopies.go`), so identical files share one object.
+
 The cut is not made at parse time (`mailmap.ToRecord`), because the bytes are not stored yet
 there. The original is stored whole, and the sweep below meets it as before, when:
 
@@ -105,13 +108,13 @@ Reading the message with `go-message` and writing it out again is not safe for t
 
 So the cut never reads the meaning of the message. The caller gives it bytes it has already checked
 against the attachment row. `partslim` encodes those bytes and looks for the encoded bytes in the
-payload. If they show up **once**, those bytes are cut out and the rest of the payload is copied as
-it is. If they do not show up, or show up more than once, nothing is removed.
+payload. Each part carrying those bytes needs one copy of them, and no copy may be left over. Then
+every copy is cut out and the rest of the payload is copied as it is. Otherwise nothing is removed.
 
-The sweep refuses a part whose encoding shows up more than once. A signature image is one example: it
-shows up again in the replies below the message. Bytes cannot tell one copy from another. Such images are
-small next to the attachments of many MB that the sweep is for. Refusing them means the sweep never
-cuts bytes it cannot prove.
+A signature image repeated down a quoted thread is one part per copy. Bytes cannot tell one copy
+from another. So the copies go to the parts in order, the first copy to the first part. Each copy
+must also sit under a part header that says `base64`. A copy that is not a part, such as the same
+bytes quoted as text, leaves every copy in place. So the sweep never cuts bytes it cannot prove.
 
 ## Proof before the sweep removes a part
 
@@ -122,7 +125,7 @@ Every part the sweep removes has passed all of these checks:
 2. a `storage_key` that is not empty;
 3. an object at that key whose length is the same as the row's `byte_size`;
 4. bytes whose hash matches the row's `checksum`;
-5. an encoding of those bytes that shows up once, and only once, in the payload.
+5. an encoding of those bytes that shows up once for each part that carries them, and no more.
 
 A part that fails any of them keeps its bytes. That makes the sweep safe for a part dropped for
 being over the limit, which has a number but no object. It also makes the sweep safe on an
@@ -146,8 +149,9 @@ use up rows that a store connected later must still work on. `parts_slimmed_at` 
   sweeps never read attachment parts back out of `raw_capture`. Art. 15 access and the private-thread
   files path (`capture/privatethreadfiles.go`) do, and both build the parts again first.
 - **Art. 17 erasure.** The `ILIKE` over `payload::text` never looks inside a `base64` part, since
-  the text itself is not there to match. `privacy/erasure_attachments.go` already removes the
-  objects by `storage_key`.
+  the text itself is not there to match. `privacy/erasure_attachments.go` removes the objects by
+  `storage_key`. One object holds the bytes of every row with an identical file. Erasure keeps an
+  object while a row outside the erased set still names it.
 - **Art. 15 access.** `compose/sarrestore.go` restores before it shows the data. A missing object
   holds back that one payload and keeps the row listed.
 - **The retention sweep.** It erases the whole payload when the activity's window ends, block and
@@ -200,8 +204,6 @@ boundary.
   scope does, on a clock of its own rather than on the activity's. It does not reach an original
   with no activity row (an internal-only drop). There, the `raw_capture` row is the only mark that
   stops a replay from taking in a message again that the pipeline already handled.
-- **A part that shows up more than once.** An image that shows up more than once in a message is never slimmed.
-  Fixing it needs a way to name a part that stays the same across copies. That name would be a
-  number read from the MIME tree rather than from the bytes, which means parsing, and this design
-  does not parse. Look at it again only if small images that show up more than once come to make up
-  a real share of the table.
+- A file that also shows up outside its parts: bytes quoted as text beside the parts that carry
+  them keep every copy. Fixing it needs a way to tell a part from a quote, which means
+  parsing, and this design does not parse.

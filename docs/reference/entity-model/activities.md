@@ -872,6 +872,8 @@ The 33 tables owned by `activities`, as the migrations build them. [Back to the 
 - `attachment_pkey`: `unique, btree (id)`
 - `attachment_supersedes_ix`: `btree (supersedes_id) WHERE (supersedes_id IS NOT NULL)`
 - `idx_attachment_entity`: `btree (entity_type, entity_id) WHERE (archived_at IS NULL)`
+- `idx_attachment_held_copy`: `btree (checksum, byte_size) WHERE ((checksum IS NOT NULL) AND (NOT bytes_withheld))`
+- `idx_attachment_storage_key`: `btree (storage_key) WHERE (storage_key <> '')`
 
 **Triggers**
 

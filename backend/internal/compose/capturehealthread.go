@@ -167,7 +167,7 @@ func captureMailboxHealth(
 		unread_periods AS (
 		  SELECT user_id, min(unread_from) AS unread_from, max(unread_to) AS unread_to
 		    FROM capture_connection
-		   WHERE unread_from IS NOT NULL
+		   WHERE unread_from IS NOT NULL AND user_id IS NOT NULL
 		   GROUP BY user_id),
 		waiting_threads AS (
 		  SELECT v.user_id, count(*) AS n, min(v.created_at) AS oldest

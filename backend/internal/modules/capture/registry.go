@@ -238,7 +238,7 @@ func (r *Registry) syncConnection(ctx context.Context, connectionID ids.UUID) er
 		// 'reauth_required' park a connection.
 		return tx.QueryRow(ctx, `
 			SELECT provider, user_id, credential_ref, auth, sync_cursor, generation, sync_revision, sync_anchor
-			  FROM capture_connection WHERE id = $1 AND status IN ('connected','error')`, connectionID).
+			  FROM capture_connection WHERE id = $1 AND status IN ('connected','error') AND user_id IS NOT NULL`, connectionID).
 			Scan(&name, &grantedBy, &credentialRef, &authBytes, &cursor, &generation, &revision, &heldAnchor)
 	})
 	if errors.Is(err, pgx.ErrNoRows) {

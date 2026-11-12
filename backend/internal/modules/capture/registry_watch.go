@@ -76,7 +76,7 @@ func (r *Registry) RenewWatch(ctx context.Context, connectionID ids.UUID, topic 
 	err := r.db.Tx(ctx, func(tx pgx.Tx) error {
 		return tx.QueryRow(ctx, `
 			SELECT provider, user_id, credential_ref, auth, watch_ref, generation FROM capture_connection
-			WHERE id = $1 AND status = 'connected'`, connectionID).
+			WHERE id = $1 AND status = 'connected' AND user_id IS NOT NULL`, connectionID).
 			Scan(&name, &grantedBy, &credentialRef, &authBytes, &watchRef, &generation)
 	})
 	if errors.Is(err, pgx.ErrNoRows) {

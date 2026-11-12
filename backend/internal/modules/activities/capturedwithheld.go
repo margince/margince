@@ -189,6 +189,9 @@ func (s *Store) giveWithheldBytes(
 ) (int, error) {
 	adopted := 0
 	for _, file := range staged {
+		if err := holdReusedObjectTx(ctx, tx, file); err != nil {
+			return adopted, err
+		}
 		var id ids.UUID
 		var size int
 		// byte_size is left alone: the withheld row recorded the sender's size

@@ -57,7 +57,7 @@ func carryMailImportsTx(ctx context.Context, tx pgx.Tx, duplicate, survivor ids.
 	if err != nil || conflict {
 		return false, err
 	}
-	rows, err := tx.Query(ctx, `SELECT user_id FROM capture_import WHERE activity_id=$1 ORDER BY user_id`, duplicate)
+	rows, err := tx.Query(ctx, `SELECT user_id FROM capture_import WHERE activity_id=$1 AND user_id IS NOT NULL ORDER BY user_id`, duplicate)
 	if err != nil {
 		return false, err
 	}

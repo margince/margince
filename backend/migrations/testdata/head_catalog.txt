@@ -2184,16 +2184,20 @@ public.capture_connection.account_bound_at timestamp with time zone gen=- def=-
 public.capture_connection.account_label text gen=- def=-
 public.capture_connection.archived_at timestamp with time zone gen=- def=-
 public.capture_connection.auth bytea gen=- def=-
+public.capture_connection.capture_connection_connected_by_fkey FOREIGN KEY (connected_by) REFERENCES app_user(id) ON DELETE SET NULL
 public.capture_connection.capture_connection_context_tag_id_fkey FOREIGN KEY (context_tag_id) REFERENCES tag(id) ON DELETE SET NULL
 public.capture_connection.capture_connection_history_baseline_check CHECK ((((history_baseline_date IS NULL) = (history_baseline_tz IS NULL)) AND ((history_baseline_date IS NULL) = (history_baseline_set_by IS NULL)) AND ((history_baseline_date IS NULL) = (history_baseline_set_at IS NULL))))
 public.capture_connection.capture_connection_legal_entity_id_fkey FOREIGN KEY (legal_entity_id) REFERENCES legal_entity(id) ON DELETE RESTRICT
 public.capture_connection.capture_connection_mail_posture_check CHECK ((mail_posture = ANY (ARRAY['shared'::text, 'classified'::text, 'held'::text])))
 public.capture_connection.capture_connection_provider_check CHECK ((provider = ANY (ARRAY['gmail'::text, 'gcal'::text, 'gdocs'::text, 'imap'::text, 'graph'::text, 'graphcal'::text, 'whatsapp'::text, 'telegram'::text, 'offline_demo'::text, 'test_mailbox'::text])))
+public.capture_connection.capture_connection_reader_team_id_fkey FOREIGN KEY (reader_team_id) REFERENCES team(id) ON DELETE RESTRICT
+public.capture_connection.capture_connection_shared_shape CHECK ((((user_id IS NOT NULL) AND (reader_team_id IS NULL)) OR ((user_id IS NULL) AND (reader_team_id IS NOT NULL) AND (account_label IS NOT NULL) AND (mail_posture <> 'classified'::text))))
 public.capture_connection.capture_connection_status_check CHECK ((status = ANY (ARRAY['connected'::text, 'disconnected'::text, 'error'::text, 'reauth_required'::text])))
 public.capture_connection.capture_connection_unique UNIQUE (user_id, provider)
 public.capture_connection.capture_connection_unread_period_whole CHECK ((((unread_from IS NULL) AND (unread_to IS NULL)) OR ((unread_from IS NOT NULL) AND (unread_to IS NOT NULL) AND (unread_from < unread_to))))
 public.capture_connection.capture_connection_user_id_fkey FOREIGN KEY (user_id) REFERENCES app_user(id) ON DELETE CASCADE
 public.capture_connection.connected_at timestamp with time zone NOT NULL gen=- def=now()
+public.capture_connection.connected_by uuid gen=- def=-
 public.capture_connection.connector_connection_pkey PRIMARY KEY (id)
 public.capture_connection.context_tag_id uuid gen=- def=-
 public.capture_connection.created_at timestamp with time zone NOT NULL gen=- def=now()
@@ -2208,6 +2212,7 @@ public.capture_connection.legal_entity_id uuid gen=- def=-
 public.capture_connection.mail_posture text NOT NULL gen=- def='classified'::text
 public.capture_connection.provider text NOT NULL gen=- def=-
 public.capture_connection.provider_scopes text[] gen=- def=-
+public.capture_connection.reader_team_id uuid gen=- def=-
 public.capture_connection.scopes text[] NOT NULL gen=- def='{}'::text[]
 public.capture_connection.share_acknowledged_at timestamp with time zone gen=- def=-
 public.capture_connection.signature_enrich_enabled boolean gen=- def=-
@@ -2218,9 +2223,10 @@ public.capture_connection.sync_cursor jsonb gen=- def=-
 public.capture_connection.sync_revision bigint NOT NULL gen=- def=0
 public.capture_connection.unread_from timestamp with time zone gen=- def=-
 public.capture_connection.unread_to timestamp with time zone gen=- def=-
-public.capture_connection.user_id uuid NOT NULL gen=- def=-
+public.capture_connection.user_id uuid gen=- def=-
 public.capture_connection.watch_expires_at timestamp with time zone gen=- def=-
 public.capture_connection.watch_ref text gen=- def=-
+public.capture_connection_shared_mailbox CREATE UNIQUE INDEX capture_connection_shared_mailbox ON public.capture_connection USING btree (provider, lower(account_label)) WHERE (user_id IS NULL)
 public.capture_connection_unique CREATE UNIQUE INDEX capture_connection_unique ON public.capture_connection USING btree (user_id, provider)
 public.capture_counterparty_hold acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.capture_counterparty_hold.capture_counterparty_hold_kind_check CHECK ((kind = ANY (ARRAY['address'::text, 'domain'::text])))
@@ -2279,13 +2285,16 @@ public.capture_import.activity_id uuid NOT NULL gen=- def=-
 public.capture_import.bcc_only boolean gen=- def=-
 public.capture_import.capture_import_activity_id_fkey FOREIGN KEY (activity_id) REFERENCES activity(id) ON DELETE CASCADE
 public.capture_import.capture_import_activity_user_key UNIQUE (activity_id, user_id)
+public.capture_import.capture_import_connection_id_fkey FOREIGN KEY (connection_id) REFERENCES capture_connection(id) ON DELETE RESTRICT
 public.capture_import.capture_import_legal_entity_id_fkey FOREIGN KEY (legal_entity_id) REFERENCES legal_entity(id) ON DELETE RESTRICT
+public.capture_import.capture_import_one_importer CHECK (((user_id IS NULL) <> (connection_id IS NULL)))
 public.capture_import.capture_import_pkey PRIMARY KEY (id)
 public.capture_import.capture_import_posture_check CHECK (((posture_at_import IS NULL) OR (posture_at_import = ANY (ARRAY['shared'::text, 'classified'::text, 'held'::text]))))
 public.capture_import.capture_import_user_id_fkey FOREIGN KEY (user_id) REFERENCES app_user(id) ON DELETE RESTRICT
 public.capture_import.capture_import_verdict_status_check CHECK (((verdict_status IS NULL) OR (verdict_status = ANY (ARRAY['pending'::text, 'cleared'::text, 'held'::text, 'unsure'::text, 'shared_by_owner'::text, 'held_by_owner'::text]))))
+public.capture_import.connection_id uuid gen=- def=-
 public.capture_import.delivered_by text[] NOT NULL gen=- def='{}'::text[]
-public.capture_import.home_read_fence_capture_import CREATE TRIGGER home_read_fence_capture_import AFTER UPDATE ON public.capture_import FOR EACH ROW WHEN (((old.user_id IS DISTINCT FROM new.user_id) OR (old.activity_id IS DISTINCT FROM new.activity_id))) EXECUTE FUNCTION advance_home_read_fence()
+public.capture_import.home_read_fence_capture_import CREATE TRIGGER home_read_fence_capture_import AFTER UPDATE ON public.capture_import FOR EACH ROW WHEN (((old.user_id IS DISTINCT FROM new.user_id) OR (old.activity_id IS DISTINCT FROM new.activity_id) OR (old.connection_id IS DISTINCT FROM new.connection_id))) EXECUTE FUNCTION advance_home_read_fence()
 public.capture_import.home_read_fence_capture_import_removed CREATE TRIGGER home_read_fence_capture_import_removed AFTER DELETE ON public.capture_import FOR EACH STATEMENT EXECUTE FUNCTION advance_home_read_fence()
 public.capture_import.id uuid NOT NULL gen=- def=uuidv7()
 public.capture_import.imported_at timestamp with time zone NOT NULL gen=- def=now()
@@ -2294,11 +2303,12 @@ public.capture_import.posture_at_import text gen=- def=-
 public.capture_import.provider_message_ids text[] NOT NULL gen=- def='{}'::text[]
 public.capture_import.provider_received_at timestamp with time zone gen=- def=-
 public.capture_import.source_occurred_at timestamp with time zone gen=- def=-
-public.capture_import.user_id uuid NOT NULL gen=- def=-
+public.capture_import.user_id uuid gen=- def=-
 public.capture_import.verdict_reason text gen=- def=-
 public.capture_import.verdict_reasons text[] gen=- def=-
 public.capture_import.verdict_status text gen=- def=-
 public.capture_import_activity_user_key CREATE UNIQUE INDEX capture_import_activity_user_key ON public.capture_import USING btree (activity_id, user_id)
+public.capture_import_connection_activity_key CREATE UNIQUE INDEX capture_import_connection_activity_key ON public.capture_import USING btree (connection_id, activity_id) WHERE (connection_id IS NOT NULL)
 public.capture_import_pkey CREATE UNIQUE INDEX capture_import_pkey ON public.capture_import USING btree (id)
 public.capture_import_user_idx CREATE INDEX capture_import_user_idx ON public.capture_import USING btree (user_id, activity_id)
 public.capture_owner_identity acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
@@ -5601,6 +5611,8 @@ public.idx_attachment_entity CREATE INDEX idx_attachment_entity ON public.attach
 public.idx_attachment_extraction_activity_live CREATE INDEX idx_attachment_extraction_activity_live ON public.attachment_extraction USING btree (activity_announced_at NULLS FIRST) WHERE (status = ANY (ARRAY['queued'::text, 'running'::text]))
 public.idx_attachment_extraction_activity_settled CREATE INDEX idx_attachment_extraction_activity_settled ON public.attachment_extraction USING btree (finished_at DESC) WHERE (status = ANY (ARRAY['done'::text, 'failed'::text]))
 public.idx_attachment_extraction_latest CREATE INDEX idx_attachment_extraction_latest ON public.attachment_extraction USING btree (attachment_id, created_at DESC)
+public.idx_attachment_held_copy CREATE INDEX idx_attachment_held_copy ON public.attachment USING btree (checksum, byte_size) WHERE ((checksum IS NOT NULL) AND (NOT bytes_withheld))
+public.idx_attachment_storage_key CREATE INDEX idx_attachment_storage_key ON public.attachment USING btree (storage_key) WHERE (storage_key <> ''::text)
 public.idx_audit_actor CREATE INDEX idx_audit_actor ON public.audit_log USING btree (actor_id, occurred_at DESC)
 public.idx_audit_entity CREATE INDEX idx_audit_entity ON public.audit_log USING btree (entity_type, entity_id, occurred_at DESC)
 public.idx_audit_erasure_reason CREATE INDEX idx_audit_erasure_reason ON public.audit_log USING btree (((evidence ->> 'reason'::text))) WHERE ((action = 'erase'::text) AND (entity_type = 'contact'::text))

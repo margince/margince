@@ -31,8 +31,8 @@ module to put a change in, read [modules.md](../modules.md).
 | | |
 |---|--:|
 | Tables | 362 |
-| Columns | 4393 |
-| Foreign keys | 606 |
+| Columns | 4396 |
+| Foreign keys | 609 |
 | Owning areas | 38 |
 
 ## The 12 records everything else hangs off
@@ -41,17 +41,17 @@ Ranked by how many foreign keys point at them.
 
 | Record | Lives in | Columns | Foreign keys pointing at it |
 |---|---|--:|--:|
-| [`app_user`](identity.md#app_user) | [identity](identity.md) | 39 | 155 |
+| [`app_user`](identity.md#app_user) | [identity](identity.md) | 39 | 156 |
 | [`company`](contacts.md#company) | [contacts](contacts.md) | 47 | 51 |
 | [`contact`](contacts.md#contact) | [contacts](contacts.md) | 38 | 49 |
 | [`activity`](activities.md#activity) | [activities](activities.md) | 78 | 45 |
 | [`deal`](deals.md#deal) | [deals](deals.md) | 49 | 30 |
 | [`lead`](contacts.md#lead) | [contacts](contacts.md) | 48 | 19 |
 | [`project`](projects.md#project) | [projects](projects.md) | 24 | 12 |
+| [`team`](identity.md#team) | [identity](identity.md) | 6 | 10 |
 | [`legal_entity`](contacts.md#legal_entity) | [contacts](contacts.md) | 29 | 9 |
 | [`passport`](identity.md#passport) | [identity](identity.md) | 12 | 9 |
 | [`stage`](deals.md#stage) | [deals](deals.md) | 10 | 9 |
-| [`team`](identity.md#team) | [identity](identity.md) | 6 | 9 |
 | [`consent_purpose`](consent.md#consent_purpose) | [consent](consent.md) | 7 | 8 |
 
 ```mermaid
@@ -173,7 +173,7 @@ erDiagram
 | [`ai_task_run`](aiactivity.md#ai_task_run) | aiactivity | 25 | 0 |
 | [`ai_usage`](ai.md#ai_usage) | ai | 10 | 0 |
 | [`analytics_share`](compose.md#analytics_share) | compose | 16 | 0 |
-| [`app_user`](identity.md#app_user) | identity | 39 | 155 |
+| [`app_user`](identity.md#app_user) | identity | 39 | 156 |
 | [`approval`](approvals.md#approval) | approvals | 38 | 4 |
 | [`approval_autonomy_policy`](approvals.md#approval_autonomy_policy) | approvals | 12 | 0 |
 | [`approval_preference`](approvals.md#approval_preference) | approvals | 3 | 0 |
@@ -205,12 +205,12 @@ erDiagram
 | [`capture_auto_enrich_state`](capture.md#capture_auto_enrich_state) | capture | 7 | 0 |
 | [`capture_backfill`](capture.md#capture_backfill) | capture | 31 | 5 |
 | [`capture_backfill_creation`](capture.md#capture_backfill_creation) | capture | 4 | 0 |
-| [`capture_connection`](capture.md#capture_connection) | capture | 31 | 2 |
+| [`capture_connection`](capture.md#capture_connection) | capture | 33 | 3 |
 | [`capture_counterparty_hold`](capture.md#capture_counterparty_hold) | capture | 6 | 0 |
 | [`capture_digest`](capture.md#capture_digest) | capture | 5 | 0 |
 | [`capture_exclusion`](capture.md#capture_exclusion) | capture | 7 | 0 |
 | [`capture_freemail_domain`](capture.md#capture_freemail_domain) | capture | 5 | 0 |
-| [`capture_import`](capture.md#capture_import) | capture | 14 | 0 |
+| [`capture_import`](capture.md#capture_import) | capture | 15 | 0 |
 | [`capture_owner_identity`](capture.md#capture_owner_identity) | capture | 7 | 0 |
 | [`capture_owner_identity_withdrawn`](capture.md#capture_owner_identity_withdrawn) | capture | 10 | 0 |
 | [`capture_party_admission_cursor`](capture.md#capture_party_admission_cursor) | capture | 4 | 0 |
@@ -458,7 +458,7 @@ erDiagram
 | [`tag_suggestion_evidence`](collections.md#tag_suggestion_evidence) | collections | 4 | 0 |
 | [`taggable`](collections.md#taggable) | collections | 8 | 0 |
 | [`tax_rate`](deals.md#tax_rate) | deals | 7 | 0 |
-| [`team`](identity.md#team) | identity | 6 | 9 |
+| [`team`](identity.md#team) | identity | 6 | 10 |
 | [`team_membership`](identity.md#team_membership) | identity | 5 | 0 |
 | [`team_weekly_review`](compose.md#team_weekly_review) | compose | 29 | 4 |
 | [`team_weekly_review_coverage`](compose.md#team_weekly_review_coverage) | compose | 13 | 0 |

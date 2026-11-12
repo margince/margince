@@ -45,7 +45,7 @@ func (r *Registry) executeBackfillPage(ctx context.Context, backfillID ids.UUID)
 		return tx.QueryRow(ctx, `
 			SELECT b.connection_id, b.after_date, b.cursor, b.status, c.provider, c.user_id, c.credential_ref, c.auth, c.generation, `+backfillMatchesAccount+`
 			FROM capture_backfill b JOIN capture_connection c ON c.id = b.connection_id
-			WHERE b.id = $1`, backfillID).
+			WHERE b.id = $1 AND c.user_id IS NOT NULL`, backfillID).
 			Scan(&connID, &after, &cursor, &status, &name, &grantedBy, &credentialRef, &authBytes, &generation, &sameAccount)
 	})
 	if errors.Is(err, pgx.ErrNoRows) {
