@@ -9,6 +9,7 @@ package compose
 
 import (
 	"context"
+	"errors"
 	"testing"
 	"time"
 
@@ -17,9 +18,18 @@ import (
 	"github.com/margince/margince/backend/pkg/extension"
 )
 
+// connect deposits the member's credential with the unit, the act that makes
+// them one who connected it.
+func (s *systemReadEnv) connect(t *testing.T, user ids.UUID) {
+	t.Helper()
+	s.WsExec(t, `INSERT INTO extension_secret (id, extension_name, user_id, key, vault_ref)
+		VALUES ($1, 'dealmirror', $2, 'token', 'vault/x') ON CONFLICT DO NOTHING`, ids.NewV7(), user)
+}
+
 func (s *systemReadEnv) setAside(t *testing.T, user ids.UUID, contact ids.UUID) extension.SetAsideState {
 	t.Helper()
 	var got extension.SetAsideState
+	s.connect(t, user)
 	s.onDelivery(t, func(ctx context.Context, rt extension.Runtime) error {
 		var err error
 		got, err = rt.SetAside().Contact(ctx, extension.UserID(user.String()), contact.String())
@@ -61,5 +71,18 @@ func TestASetAsideChoiceIsReadAsTheUsersOwnAndRunsOut(t *testing.T) {
 	}
 	if got := s.setAside(t, s.Rep1, ids.NewV7()); got.Kind != extension.SetAsideNone {
 		t.Errorf("a contact that does not exist read as %+v, want none", got)
+	}
+}
+
+func TestASetAsideReadIsRefusedForAMemberWhoDidNotConnectTheUnit(t *testing.T) {
+	s := setupSystemRead(t)
+	composeReader(t, extension.SystemReadSetAside)
+	var err error
+	s.onDelivery(t, func(ctx context.Context, rt extension.Runtime) error {
+		_, err = rt.SetAside().Contact(ctx, extension.UserID(s.Rep1.String()), ids.NewV7().String())
+		return nil
+	})
+	if !errors.Is(err, extension.ErrForbidden) {
+		t.Errorf("a set-aside read for a member who did not connect = %v, want ErrForbidden", err)
 	}
 }

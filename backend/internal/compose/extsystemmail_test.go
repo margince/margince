@@ -27,19 +27,19 @@ func TestTheMailReadNeedsItsDeclarationAndAnUnattendedCall(t *testing.T) {
 	composeReader(t, extension.SystemReadDeals)
 	undeclared := deliveryRuntimeFor(ctx, "dealmirror", "1.0.0", "subscription/mirror", binding)
 	defer undeclared.release()
-	if _, err := undeclared.Activities().Mail(ctx, deal, extension.MailQuery{}); !errors.Is(err, extension.ErrUndeclaredRead) {
+	if _, err := undeclared.Activities().Mail(ctx, extension.UserID(ids.NewV7().String()), deal, extension.MailQuery{}); !errors.Is(err, extension.ErrUndeclaredRead) {
 		t.Errorf("an undeclared Mail: err = %v, want ErrUndeclaredRead", err)
 	}
 
 	composeReader(t, extension.SystemReadActivities)
 	attended := runtimeFor(ctx, "dealmirror", "1.0.0", "tool/probe", binding)
 	defer attended.release()
-	if _, err := attended.Activities().Mail(ctx, deal, extension.MailQuery{}); !errors.Is(err, extension.ErrAttendedRead) {
+	if _, err := attended.Activities().Mail(ctx, extension.UserID(ids.NewV7().String()), deal, extension.MailQuery{}); !errors.Is(err, extension.ErrAttendedRead) {
 		t.Errorf("Mail on a signed-in call: err = %v, want ErrAttendedRead", err)
 	}
 	declared := deliveryRuntimeFor(ctx, "dealmirror", "1.0.0", "subscription/mirror", binding)
 	defer declared.release()
-	if _, err := declared.Activities().Mail(ctx, "not-an-id", extension.MailQuery{}); !errors.Is(err, extension.ErrInvalid) {
+	if _, err := declared.Activities().Mail(ctx, extension.UserID(ids.NewV7().String()), "not-an-id", extension.MailQuery{}); !errors.Is(err, extension.ErrInvalid) {
 		t.Errorf("Mail with a malformed deal id: err = %v, want ErrInvalid", err)
 	}
 }

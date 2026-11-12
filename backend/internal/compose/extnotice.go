@@ -68,10 +68,8 @@ func validateNotice(in extension.NoticeRequest) error {
 // the record. The caller must be able to open it too, so a unit cannot use the
 // door to learn which records exist.
 func (d extensionNoticeDoor) Send(ctx context.Context, in extension.NoticeRequest) (extension.NoticeSent, error) {
-	if !d.core.notifies {
-		if err := d.core.refuseUnattended(); err != nil {
-			return extension.NoticeSent{}, err
-		}
+	if err := d.refuseWithoutActor(in); err != nil {
+		return extension.NoticeSent{}, err
 	}
 	ctx, err := d.core.invocationCtx(ctx)
 	if err != nil {
@@ -84,10 +82,12 @@ func (d extensionNoticeDoor) Send(ctx context.Context, in extension.NoticeReques
 		return extension.NoticeSent{}, err
 	}
 	record, _ := ids.Parse(in.Record.ID)
-	if !d.core.unattended {
-		if err := d.callerCanOpen(ctx, in.Record.Type, record); err != nil {
+	if d.core.unattended {
+		if err := d.actingMemberCanOpen(ctx, in, record); err != nil {
 			return extension.NoticeSent{}, err
 		}
+	} else if err := d.callerCanOpen(ctx, in.Record.Type, record); err != nil {
+		return extension.NoticeSent{}, err
 	}
 	sent, err := d.deliver(ctx, in, record)
 	if err != nil {
@@ -96,11 +96,79 @@ func (d extensionNoticeDoor) Send(ctx context.Context, in extension.NoticeReques
 	return extension.NoticeSent{Recipients: sent}, nil
 }
 
+// refuseWithoutActor ties every send to an actor. Only a bus delivery may send
+// with no caller, and then it acts as the unit's service member, or as the
+// member ActAs names. A send with a caller acts as that caller and names nobody
+// else.
+func (d extensionNoticeDoor) refuseWithoutActor(in extension.NoticeRequest) error {
+	if !d.core.unattended {
+		if in.ActAs != "" {
+			return fmt.Errorf("%w: ActAs is for a send with no caller; this one runs as its caller", extension.ErrInvalid)
+		}
+		return nil
+	}
+	if !d.core.notifies {
+		return d.core.refuseUnattended()
+	}
+	return nil
+}
+
+// actingMemberCanOpen is the sender's boundary for an unattended send. With no
+// ActAs the sender is the unit's own service member, which stays when a
+// colleague leaves. It holds no read on a record, so only the recipients'
+// rights bound that send. A named member must hold one of the unit's
+// user-scoped secrets now, as an ingest requires, and the record must open
+// under their own live rights. A refusal says nothing more than the class, so
+// the unit learns nothing about the record.
+func (d extensionNoticeDoor) actingMemberCanOpen(ctx context.Context, in extension.NoticeRequest, record ids.UUID) error {
+	if in.ActAs == "" {
+		return d.requireServiceMember(ctx)
+	}
+	member, err := unitID(string(in.ActAs), "ActAs")
+	if err != nil {
+		return err
+	}
+	consented, err := memberConsentedTx(ctx, d.core.tx, d.core.unit, member)
+	if err != nil {
+		return portRefusal(err)
+	}
+	if !consented {
+		return fmt.Errorf("%w: ActAs names a member who has not connected this unit", extension.ErrForbidden)
+	}
+	seat, err := identity.SeatActor(ctx, d.core.tx, member)
+	if err != nil {
+		return extension.ErrForbidden
+	}
+	if !seat.Permissions.Allows(in.Record.Type, principal.ActionRead) {
+		return extension.ErrNotFound
+	}
+	if err := auth.EnsureVisibleLive(principal.WithActor(ctx, seat), d.core.tx, in.Record.Type, record); err != nil {
+		return extension.ErrNotFound
+	}
+	return nil
+}
+
+// requireServiceMember refuses a send from a unit whose operator declared no
+// live service member. The unit has no actor then, and an actor is the rule.
+func (d extensionNoticeDoor) requireServiceMember(ctx context.Context) error {
+	var found bool
+	err := d.core.tx.QueryRow(ctx, `
+		SELECT EXISTS (SELECT 1 FROM app_user u WHERE u.service_extension = $1 AND `+workforce.LiveMemberSQL("u")+`)`,
+		d.core.unit).Scan(&found)
+	if err != nil {
+		return portRefusal(err)
+	}
+	if !found {
+		return fmt.Errorf("%w: a notice sent with no caller needs the unit's service member, and none is declared", extension.ErrForbidden)
+	}
+	return nil
+}
+
 // callerCanOpen refuses a record the caller may not see. A caller without read
 // on the type is told ErrNotFound, like one who cannot see the row. Either way
-// the unit learns nothing about the record. An unattended send has no caller to
-// ask. Each recipient's own rights are still judged in deliver, so a record
-// nobody may open reaches nobody and answers zero.
+// the unit learns nothing about the record. Each recipient's own rights are
+// still judged in deliver, so a record nobody may open reaches nobody and
+// answers zero.
 func (d extensionNoticeDoor) callerCanOpen(ctx context.Context, recordType string, record ids.UUID) error {
 	seen, err := auth.VisibleTo(ctx, d.core.tx, recordType, record)
 	if err != nil {

@@ -1216,6 +1216,9 @@ own rights hide it.
 `Authority().CanRead` and `CanWrite` also answer on a route, but only about the signed-in user. See
 [Ask what a colleague may do](#ask-what-a-colleague-may-do-canread-and-canwrite).
 
+Each system read leaves one row in the system log: your unit, which read, the record and the time. A read whose row
+cannot be written is refused.
+
 The refusal guards the call, not your own tables. If you save what a read returned and show it later, ask
 `CanRead` first.
 
@@ -1240,7 +1243,7 @@ subscription that reads the deal its event names.
 deal, err := rt.Deals().Get(ctx, d.Entity.ID)            // extension.ErrNotFound once the deal is gone
 team, err := rt.Deals().Responsible(ctx, d.Entity.ID)    // owner first, then by email
 emails, err := rt.Directory().Emails(ctx, ids)           // active human members only
-mail, err := rt.Activities().Mail(ctx, d.Entity.ID, extension.MailQuery{}) // the deal's shared emails, newest first
+mail, err := rt.Activities().Mail(ctx, member, d.Entity.ID, extension.MailQuery{}) // the deal's shared emails as that member may see the deal, newest first
 ```
 
 - **`Get` reads a `DealSummary`.** It holds the name, the stage's name, the status, the value and currency,
@@ -1251,7 +1254,7 @@ mail, err := rt.Activities().Mail(ctx, d.Entity.ID, extension.MailQuery{}) // th
   teams on it. It leaves out agents, members who cannot sign in, users taken off the deal, and archived teams. It stops at
   `extension.MaxResponsible` colleagues.
 - **`Emails` takes at most `extension.MaxResponsible` users**, so the list `Responsible` gave always fits.
-- **`Mail` answers the emails of one deal.** It tells a unit if a mail is sent and if a reply is in. Each
+- **`Mail` answers the emails of one deal for one member.** It is answered under that member's own rights, so a deal they cannot open answers `ErrNotFound`. It tells a unit if a mail is sent and if a reply is in. Each
   `MailSummary` holds the id, the direction, the time, what kind of sender wrote it (empty for a human) and the
   deal id. It holds no subject, body, address or file. It leaves out mail kept private to its senders and
   receivers, archived mail unless you set `IncludeArchived`, and mail held back from reading. It gives pages,
@@ -1261,7 +1264,8 @@ mail, err := rt.Activities().Mail(ctx, d.Entity.ID, extension.MailQuery{}) // th
   whose time ran out answers `none`. `Contacts` takes up to `extension.MaxResponsible` contacts for one colleague
   in one call, so a nightly job does not ask once per contact.
 
-  It gives that colleague's own answer, never another's, and nothing else about the contact. A contact or a
+  It answers only for a colleague who connected your unit, which means they hold one of its user secrets. Any other
+  colleague answers `ErrForbidden`. It gives that colleague's own answer, never another's, and nothing else about the contact. A contact or a
   colleague that is not there answers `none`. It only reads: the colleague changes it through the product's own
   routes.
 - **A private reply is not seen.** A reply that sits only in a private mailbox is not in `Mail`. So "no reply

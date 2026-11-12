@@ -160,7 +160,10 @@ type MailQuery struct {
 
 // Activities reads the emails linked to a deal for a job tick or a bus delivery.
 type Activities interface {
-	// Mail answers the emails of one deal that the deal's team may read. An
+	// Mail answers the emails of one deal as actAs may see the deal, under that
+	// member's own grants and row scope, the way Authority.CanRead answers. A
+	// deal actAs cannot open answers ErrNotFound. It answers the emails of the
+	// deal that the deal's team may read. An
 	// email private to its participants is left out, and so is one held back
 	// from reading. A reply that sits only in a private mailbox is therefore
 	// invisible here. A unit that decides "no reply yet" from this read is
@@ -169,7 +172,7 @@ type Activities interface {
 	//
 	// A deal that does not exist answers ErrNotFound; an id that is not a
 	// canonical UUID, ErrInvalid. A page holds at most MaxReadPage emails.
-	Mail(ctx context.Context, dealID string, q MailQuery) (Page[MailSummary], error)
+	Mail(ctx context.Context, actAs UserID, dealID string, q MailQuery) (Page[MailSummary], error)
 }
 
 // SetAsideKind is how one user stands towards one contact they were nudged to
@@ -198,7 +201,9 @@ type SetAsideState struct {
 // product's own routes.
 type SetAside interface {
 	// Contact answers one user's choice about one contact right now. It is
-	// the user's own choice and never a colleague's. A contact or a user
+	// the user's own choice and never a colleague's, and only for a user who
+	// holds one of the unit's user-scoped secrets: one who connected the unit.
+	// Any other user answers ErrForbidden. A contact or a user
 	// that does not exist answers none, so an id cannot be used to probe. An id
 	// that is not a canonical UUID answers ErrInvalid.
 	Contact(ctx context.Context, user UserID, contact string) (SetAsideState, error)

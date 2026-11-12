@@ -105,32 +105,41 @@ func extensionMemberConsented(ctx context.Context, pool *pgxpool.Pool, unit stri
 	if pool == nil {
 		return false, errExtensionRuntimeUnwired
 	}
-	declared := declaredUserSecretKeys(unit)
-	if len(declared) == 0 {
-		// A unit that declares no user-scoped secret has no way for a member to
-		// consent to it at all, so there is nothing to read and nobody it may
-		// act for.
-		return false, nil
-	}
 	var consented bool
 	err := database.WithWorkspaceTx(ctx, pool, func(tx pgx.Tx) error {
-		// A service member consents for the unit it was declared for and no
-		// other. Without the join, a unit could name another unit's service
-		// member and borrow the authority the operator gave that feed.
-		return tx.QueryRow(ctx, `
-			SELECT EXISTS (
-				SELECT 1 FROM extension_secret s
-				JOIN app_user u ON u.id = s.user_id
-				WHERE s.extension_name = $1
-				  AND s.user_id = $2
-				  AND s.key = ANY($3)
-				  AND (u.service_extension IS NULL OR u.service_extension = $1)
-			)`, unit, member, declared).Scan(&consented)
+		var err error
+		consented, err = memberConsentedTx(ctx, tx, unit, member)
+		return err
 	})
 	if err != nil {
 		return false, fmt.Errorf("compose: reading whether a member has deposited a credential with %s: %w", unit, err)
 	}
 	return consented, nil
+}
+
+// memberConsentedTx is extensionMemberConsented on a transaction already held,
+// for a door that may not take a second connection. A service member consents
+// for the unit it was declared for and no other. Without the join, a unit could
+// name another unit's service member and borrow the authority the operator gave
+// that feed.
+func memberConsentedTx(ctx context.Context, tx pgx.Tx, unit string, member ids.UUID) (bool, error) {
+	declared := declaredUserSecretKeys(unit)
+	if len(declared) == 0 {
+		// A unit that declares no user-scoped secret has no way for a member to
+		// consent to it at all, so there is nobody it may act for.
+		return false, nil
+	}
+	var consented bool
+	err := tx.QueryRow(ctx, `
+		SELECT EXISTS (
+			SELECT 1 FROM extension_secret s
+			JOIN app_user u ON u.id = s.user_id
+			WHERE s.extension_name = $1
+			  AND s.user_id = $2
+			  AND s.key = ANY($3)
+			  AND (u.service_extension IS NULL OR u.service_extension = $1)
+		)`, unit, member, declared).Scan(&consented)
+	return consented, err
 }
 
 // liveMemberAuthority resolves what the member may do RIGHT NOW.

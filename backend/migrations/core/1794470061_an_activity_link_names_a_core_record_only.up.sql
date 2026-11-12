@@ -14,11 +14,11 @@ SET LOCAL lock_timeout = '3s';
 
 DELETE FROM activity_link WHERE entity_type LIKE 'ext:%';
 
-DROP INDEX uq_activity_link_ext;
-ALTER TABLE activity_link DROP CONSTRAINT activity_link_ext_id_matches_type;
-ALTER TABLE activity_link DROP CONSTRAINT activity_link_shape;
-ALTER TABLE activity_link DROP CONSTRAINT activity_link_entity_type_check;
-ALTER TABLE activity_link DROP COLUMN ext_entity_id;
+DROP INDEX IF EXISTS uq_activity_link_ext;
+ALTER TABLE activity_link DROP CONSTRAINT IF EXISTS activity_link_ext_id_matches_type;
+ALTER TABLE activity_link DROP CONSTRAINT IF EXISTS activity_link_shape;
+ALTER TABLE activity_link DROP CONSTRAINT IF EXISTS activity_link_entity_type_check;
+ALTER TABLE activity_link DROP COLUMN IF EXISTS ext_entity_id;
 ALTER TABLE activity_link
     ADD CONSTRAINT activity_link_entity_type_check CHECK (
         entity_type IN ('contact', 'company', 'deal', 'lead', 'project')

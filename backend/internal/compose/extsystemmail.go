@@ -23,6 +23,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database"
+	"github.com/margince/margince/backend/internal/shared/kernel/fieldmask"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/relstrength"
 	"github.com/margince/margince/backend/pkg/extension"
@@ -33,12 +34,16 @@ func (r *callRuntime) Activities() extension.Activities { return systemActivitie
 
 type systemActivities struct{ rt *callRuntime }
 
-func (a systemActivities) Mail(ctx context.Context, dealID string, q extension.MailQuery) (extension.Page[extension.MailSummary], error) {
+func (a systemActivities) Mail(ctx context.Context, actAs extension.UserID, dealID string, q extension.MailQuery) (extension.Page[extension.MailSummary], error) {
 	ctx, err := a.rt.systemRead(ctx, extension.SystemReadActivities)
 	if err != nil {
 		return extension.Page[extension.MailSummary]{}, err
 	}
 	deal, err := unitID(dealID, "deal")
+	if err != nil {
+		return extension.Page[extension.MailSummary]{}, err
+	}
+	member, err := unitID(string(actAs), "actAs")
 	if err != nil {
 		return extension.Page[extension.MailSummary]{}, err
 	}
@@ -49,6 +54,19 @@ func (a systemActivities) Mail(ctx context.Context, dealID string, q extension.M
 	after, err := parseMailCursor(q.Cursor)
 	if err != nil {
 		return extension.Page[extension.MailSummary]{}, err
+	}
+	if err := a.rt.traceSystemRead(ctx, extension.SystemReadActivities, fieldmask.Deal, dealID); err != nil {
+		return extension.Page[extension.MailSummary]{}, err
+	}
+	// The deal must open under the member's own grants, so a unit cannot read the
+	// mail of a deal its actor could not see. A seat that is no colleague, or a
+	// deal they cannot open, answers as a deal that does not exist.
+	visible, err := dealShownTo(ctx, a.rt.deps.pool, member, deal, nil)
+	if err != nil {
+		return extension.Page[extension.MailSummary]{}, a.rt.systemReadFault(ctx, err)
+	}
+	if !visible {
+		return extension.Page[extension.MailSummary]{}, extension.ErrNotFound
 	}
 	page, err := readDealMail(ctx, a.rt.deps.pool, deal, after, limit, q.IncludeArchived)
 	if err != nil && !errors.Is(err, extension.ErrNotFound) {

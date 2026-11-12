@@ -125,7 +125,8 @@ func TestAnAttendedCanReadAnswersOnlyItsHumanCallerAboutThemselves(t *testing.T)
 // composeReader composes the dealmirror unit declaring reads for this test.
 func composeReader(t *testing.T, reads ...extension.SystemRead) {
 	t.Helper()
-	setComposedExtensions([]extension.Extension{{Name: "dealmirror", Version: "1.0.0", SystemReads: reads}})
+	setComposedExtensions([]extension.Extension{{Name: "dealmirror", Version: "1.0.0", SystemReads: reads,
+		Secrets: []extension.SecretsRequest{{Key: "token", Scope: extension.SecretScopeUser}}}})
 	t.Cleanup(func() { setComposedExtensions(nil) })
 }
 

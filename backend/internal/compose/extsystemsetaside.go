@@ -53,6 +53,21 @@ func (s systemSetAside) Contacts(ctx context.Context, user extension.UserID, con
 			return nil, err
 		}
 	}
+	connected := false
+	err = database.WithWorkspaceTx(ctx, s.rt.deps.pool, func(tx pgx.Tx) error {
+		var err error
+		connected, err = memberConsentedTx(ctx, tx, s.rt.unit, reader)
+		return err
+	})
+	if err != nil {
+		return nil, s.rt.systemReadFault(ctx, err)
+	}
+	if !connected {
+		return nil, fmt.Errorf("%w: a set-aside choice is answered only for a member who connected this unit", extension.ErrForbidden)
+	}
+	if err := s.rt.traceSystemRead(ctx, extension.SystemReadSetAside, "contact", fmt.Sprintf("%d contacts", len(contact))); err != nil {
+		return nil, err
+	}
 	var states map[ids.UUID]contacts.NudgeState
 	err = database.WithWorkspaceTx(ctx, s.rt.deps.pool, func(tx pgx.Tx) error {
 		var err error

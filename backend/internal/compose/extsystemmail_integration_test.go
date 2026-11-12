@@ -9,8 +9,11 @@ package compose
 
 import (
 	"context"
+	"errors"
 	"testing"
 	"time"
+
+	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/platform/clocktest"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -33,7 +36,7 @@ func (s *systemReadEnv) dealMail(t *testing.T, q extension.MailQuery) extension.
 	var got extension.Page[extension.MailSummary]
 	s.onDelivery(t, func(ctx context.Context, rt extension.Runtime) error {
 		var err error
-		got, err = rt.Activities().Mail(ctx, s.deal.String(), q)
+		got, err = rt.Activities().Mail(ctx, extension.UserID(s.Rep1.String()), s.deal.String(), q)
 		return err
 	})
 	return got
@@ -91,5 +94,34 @@ func TestADealWithMoreMailThanAPageIsReadOverSeveralPages(t *testing.T) {
 	}
 	if len(want) != 0 {
 		t.Errorf("%d emails never came back over the pages", len(want))
+	}
+}
+
+func TestTheMailReadIsAnsweredUnderTheNamedMembersOwnAccessToTheDeal(t *testing.T) {
+	s := setupSystemRead(t)
+	composeReader(t, extension.SystemReadActivities)
+	s.mail(t, "outbound", "workspace", false, clocktest.Now(t).UTC().Add(-time.Hour))
+	s.WsExec(t, `UPDATE role SET permissions = '{"objects":{"company":{"read":true}},"row_scope":"all"}' WHERE id IN (SELECT role_id FROM role_assignment WHERE user_id = $1)`, s.Rep3)
+	var err error
+	s.onDelivery(t, func(ctx context.Context, rt extension.Runtime) error {
+		_, err = rt.Activities().Mail(ctx, extension.UserID(s.Rep3.String()), s.deal.String(), extension.MailQuery{})
+		return nil
+	})
+	if !errors.Is(err, extension.ErrNotFound) {
+		t.Errorf("Mail for a member who cannot open the deal = %v, want ErrNotFound", err)
+	}
+}
+
+func TestEverySystemReadLeavesOneTraceRow(t *testing.T) {
+	s := setupSystemRead(t)
+	composeReader(t, extension.SystemReadActivities)
+	s.dealMail(t, extension.MailQuery{})
+	var rows int
+	s.read(t, func(ctx context.Context, tx pgx.Tx) error {
+		return tx.QueryRow(ctx, `SELECT count(*) FROM system_log WHERE action = 'extension_system_read'
+			AND detail->>'extension' = 'dealmirror' AND detail->>'read' = 'activities' AND detail->>'record_id' = $1`, s.deal.String()).Scan(&rows)
+	})
+	if rows != 1 {
+		t.Errorf("a read left %d trace rows, want 1", rows)
 	}
 }
