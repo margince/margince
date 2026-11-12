@@ -19,6 +19,7 @@ function recordReads(options: { failPipelines?: boolean } = {}) {
   const base = stubBackend([deal({})]);
   const dealReads: URL[] = [];
   const totalsBodies: { filters?: Record<string, unknown> }[] = [];
+  const totalsAsked = { count: 0 };
   vi.stubGlobal(
     "fetch",
     vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
@@ -33,13 +34,16 @@ function recordReads(options: { failPipelines?: boolean } = {}) {
       if (url.pathname.endsWith("/deals")) {
         dealReads.push(url);
       }
+      // Counted when asked, before the body is read: a request still being
+      // parsed when a test asserts none was made must count.
       if (url.pathname.endsWith("/reports/deals-by-stage")) {
+        totalsAsked.count += 1;
         totalsBodies.push(await request.clone().json());
       }
       return base(request);
     }),
   );
-  return { dealReads, totalsBodies };
+  return { dealReads, totalsBodies, totalsAsked };
 }
 
 // The pipeline a list is scoped to arrives with the pipelines read. Asking
@@ -78,10 +82,12 @@ describe("the deals list asks only once it knows its pipeline", () => {
 
   it("asks for no stage totals while the table shows, since it draws none", async () => {
     window.location.hash = "#/deals?view=table";
-    const { totalsBodies } = recordReads();
+    const { totalsAsked } = recordReads();
     render(<DealsScreen />);
+    // The board asks for its totals in the same render that asks for its
+    // deals, so by the time the table's row is drawn any such ask was sent.
     expect(await screen.findByText("Fleet retrofit")).toBeTruthy();
-    expect(totalsBodies).toEqual([]);
+    expect(totalsAsked.count).toBe(0);
   });
 
   // The table waits on the pipelines read, so that read failing is the
