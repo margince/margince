@@ -426,7 +426,7 @@ func TestAFollowUpTaskNamesNoPrivateList(t *testing.T) {
 	f.deliver(t, "list.evaluated")
 
 	if n := f.e.WsCount(t, `SELECT count(*) FROM activity a JOIN activity_link l ON l.activity_id = a.id
-		WHERE l.contact_id = $1 AND a.subject = 'Joined a Live List'`, joins); n != 1 {
+		WHERE l.contact_id = $1 AND a.subject = 'Follow up with this customer'`, joins); n != 1 {
 		t.Fatalf("the contact that joined has %d neutral follow-up tasks, want 1", n)
 	}
 	if n := f.e.WsCount(t, `SELECT count(*) FROM activity WHERE subject LIKE '%secret targets%' OR body LIKE '%secret targets%'`); n != 0 {
