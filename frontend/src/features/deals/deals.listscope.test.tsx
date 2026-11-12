@@ -84,8 +84,8 @@ describe("the deals list asks only once it knows its pipeline", () => {
     window.location.hash = "#/deals?view=table";
     const { totalsAsked } = recordReads();
     render(<DealsScreen />);
-    // The board asks for its totals in the same render that asks for its
-    // deals, so by the time the table's row is drawn any such ask was sent.
+    // The totals and the deals are asked for in the same render. Once the
+    // table's row is drawn, any totals ask has already been sent.
     expect(await screen.findByText("Fleet retrofit")).toBeTruthy();
     expect(totalsAsked.count).toBe(0);
   });
