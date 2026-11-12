@@ -4,12 +4,12 @@
 package company360
 
 // The account card asks "Done?" over a promise read out of a message when we
-// wrote to its recipient on that thread afterwards. A task row on this page
-// names no source message, so only a claim can be asked about here.
+// wrote to its recipient on that thread afterwards. Only a claim is asked about
+// on the card; a promise task asks in its next-steps row (askTasksDone).
 //
-// The contact page asks the same question about the same claim. Both pages
-// ask it under one key and fingerprint. Both keep its Not yet in the contact
-// page's store, so an answer on one page holds on the other.
+// momentaction decides which claim is asked, for this card and the contact
+// page alike. Both keep its Not yet in the contact page's store, so an answer
+// on one page holds on the other.
 
 import (
 	"context"
@@ -17,11 +17,9 @@ import (
 	"time"
 
 	"github.com/jackc/pgx/v5"
-	openapi_types "github.com/oapi-codegen/runtime/types"
 
 	"github.com/margince/margince/backend/internal/compose/momentaction"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
-	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
@@ -60,16 +58,19 @@ func (q doneAsk) answer() crmcontracts.DismissContactMomentRequest {
 
 // doneQuestions is, per claim on the card, the question its later mail raises.
 func doneQuestions(ctx context.Context, tx pgx.Tx, now time.Time, said momentCopy, items []owedwork.Item) (map[string]doneAsk, error) {
-	var bases []activities.PromiseBasis
-	claims := map[ids.UUID]contacts.CompanyCommitment{}
+	var promises []momentaction.DonePromise
 	byClaim := map[ids.UUID]owedwork.Item{}
 	for _, item := range items {
-		if claim, ok := item.Ref.(contacts.CompanyCommitment); ok {
-			claims[claim.ID], byClaim[claim.ID] = claim, item
-			bases = append(bases, activities.PromiseBasis{PromiseID: claim.ID, SourceActivityID: claim.ActivityID, RecipientContactID: claim.ContactID.UUID})
+		claim, ok := item.Ref.(contacts.CompanyCommitment)
+		if !ok {
+			continue
+		}
+		// The account read leaves out a claim that became a task.
+		if promise, ok := momentaction.ClaimDone(claim.ID, claim.ActivityID, claim.ContactID.UUID, nil); ok {
+			promises, byClaim[claim.ID] = append(promises, promise), item
 		}
 	}
-	followUps, err := activities.PromiseFollowUpsTx(ctx, tx, bases, now)
+	followUps, err := momentaction.DoneFollowUpsTx(ctx, tx, promises, now)
 	if err != nil || len(followUps) == 0 {
 		return nil, err
 	}
@@ -80,18 +81,12 @@ func doneQuestions(ctx context.Context, tx pgx.Tx, now time.Time, said momentCop
 		return nil, err
 	}
 	asked := map[string]doneAsk{}
-	for id, sent := range followUps {
-		item, promise := byClaim[id], openapi_types.UUID(id)
+	for _, promise := range promises {
+		item := byClaim[promise.ID]
 		plain := said.promiseCard(now, item, deadline.Passed(item.DueAt, now))
-		q := momentaction.DoneQuestion{
-			Plain: plain, Kind: crmcontracts.ContactMomentMayBeDonePromiseTypeClaim, PromiseID: promise, Sent: sent,
-			Key: momentaction.DoneKey(promise),
+		if moment, ok := momentaction.AskPromiseDone(said.Spoken, loc, plain, promise, followUps); ok {
+			asked[plain.ClaimKey] = doneAsk{moment: moment, contact: ids.From[ids.ContactKind](promise.Contact)}
 		}
-		// A claim on this card has no task, so it carries no holder, as on the
-		// contact page.
-		fingerprint := momentaction.DoneFingerprint(promise, sent, "")
-		moment := momentaction.AskDone(said.Spoken, loc, q, momentaction.DoneEvidence(said.Spoken, q), fingerprint)
-		asked[plain.ClaimKey] = doneAsk{moment: moment, contact: claims[id].ContactID}
 	}
 	return asked, nil
 }

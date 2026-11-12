@@ -9,125 +9,123 @@ package contact360
 
 import (
 	"context"
+	"errors"
 	"time"
 
 	"github.com/jackc/pgx/v5"
-	openapi_types "github.com/oapi-codegen/runtime/types"
 
 	"github.com/margince/margince/backend/internal/compose/momentaction"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/activities"
+	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/owedwork"
 )
 
-// promiseFollowUps reads, per open promise on the page, our later mail on its
-// thread to this contact (activities.PromiseFollowUpsTx).
-func promiseFollowUps(ctx context.Context, tx pgx.Tx, contactID ids.ContactID, now time.Time, page *crmcontracts.Contact360) (map[ids.UUID]activities.PromiseFollowUp, error) {
-	var bases []activities.PromiseBasis
-	add := func(promise openapi_types.UUID, source *openapi_types.UUID) {
-		if source != nil {
-			bases = append(bases, activities.PromiseBasis{PromiseID: ids.UUID(promise), SourceActivityID: ids.UUID(*source), RecipientContactID: contactID.UUID})
-		}
-	}
-	if page.NextSteps != nil {
-		// Only a task written for a promise read out of a message. A reply
-		// reminder has its own judge, and a hand task names no promise.
-		for _, task := range page.NextSteps.Data {
-			if task.SourceSystem != nil && *task.SourceSystem == activities.CommitmentTaskSource {
-				add(task.Id, task.SourceActivityId)
+// doneAsks is what the page's promise cards may ask. A claim asks over our
+// later mail on its thread to this contact. A task asks the question every
+// surface asks of it (momentaction.TasksDoneTx).
+type doneAsks struct {
+	contact ids.ContactID
+	claims  map[ids.UUID]activities.PromiseFollowUp
+	tasks   map[ids.UUID]momentaction.TaskAsked
+}
+
+// doneAsksFor reads what the page's promise cards may ask. A reader who may
+// not read activity sees no mail to cite, so their cards stay as they are.
+func (s *Service) doneAsksFor(ctx context.Context, tx pgx.Tx, contactID ids.ContactID, now time.Time, page *crmcontracts.Contact360) (doneAsks, error) {
+	asks := doneAsks{contact: contactID}
+	var claims []momentaction.DonePromise
+	var tasks []momentaction.PromiseTask
+	for _, item := range owedPromises(page) {
+		switch promise := item.Ref.(type) {
+		case crmcontracts.Activity:
+			tasks = append(tasks, promiseTask(promise))
+		case crmcontracts.ConversationClaim:
+			if claim, ok := claimPromise(contactID, promise); ok {
+				claims = append(claims, claim)
 			}
 		}
 	}
-	if page.Claims != nil {
-		for _, claim := range *page.Claims {
-			if claim.Kind == crmcontracts.ConversationClaimKindCommitmentOurs && claim.Status == crmcontracts.ConversationClaimStatusOpen {
-				add(claim.Id, &claim.SourceActivityId)
+	var err error
+	if asks.claims, err = momentaction.DoneFollowUpsTx(ctx, tx, claims, now); err != nil && !errors.Is(err, apperrors.ErrPermissionDenied) {
+		return doneAsks{}, err
+	}
+	candidates, err := momentaction.DoneCandidates(ctx, s.contacts, tasks)
+	if err != nil {
+		return doneAsks{}, err
+	}
+	if asks.tasks, err = momentaction.TasksDoneTx(ctx, tx, candidates, now); err != nil && !errors.Is(err, apperrors.ErrPermissionDenied) {
+		return doneAsks{}, err
+	}
+	return asks, nil
+}
+
+func promiseTask(task crmcontracts.Activity) momentaction.PromiseTask {
+	var system string
+	if task.SourceSystem != nil {
+		system = *task.SourceSystem
+	}
+	return momentaction.PromiseTask{ID: ids.UUID(task.Id), System: system, Source: (*ids.UUID)(task.SourceActivityId), Assignee: (*ids.UUID)(task.AssigneeId)}
+}
+
+func claimPromise(contactID ids.ContactID, claim crmcontracts.ConversationClaim) (momentaction.DonePromise, bool) {
+	return momentaction.ClaimDone(ids.UUID(claim.Id), ids.UUID(claim.SourceActivityId), contactID.UUID, (*ids.UUID)(claim.TaskActivityId))
+}
+
+// itemBehind finds the owed item a promise card was built from. A card from
+// any other rung has none.
+func itemBehind(moment crmcontracts.ContactMoment, page *crmcontracts.Contact360) (owedwork.Item, bool) {
+	taskCard := (moment.ClaimKey == overdueTaskKey || moment.ClaimKey == openTaskKey) && len(moment.Evidence) > 0 && moment.Evidence[0].Id != nil
+	for _, item := range owedPromises(page) {
+		switch promise := item.Ref.(type) {
+		case crmcontracts.Activity:
+			if taskCard && promise.Id == *moment.Evidence[0].Id {
+				return item, true
+			}
+		case crmcontracts.ConversationClaim:
+			if moment.ClaimKey == claimMomentKey(overdueClaimRung, promise) || moment.ClaimKey == claimMomentKey(openClaimRung, promise) {
+				return item, true
 			}
 		}
 	}
-	return activities.PromiseFollowUpsTx(ctx, tx, bases, now)
-}
-
-// owedPromise is the promise a card speaks for.
-type owedPromise struct {
-	kind crmcontracts.ContactMomentMayBeDonePromiseType
-	id   crmcontracts.Id
-	// key is the task a claim became, else the promise itself. The Worklist
-	// keys by task, so one Not yet holds on both.
-	key crmcontracts.Id
-	// holder is the plain card's holder marker, so a Not yet given while a
-	// colleague held the task lifts once it becomes the reader's.
-	holder string
-}
-
-// promiseBehind finds the task or claim a promise card was built from. A card
-// from any other rung has none.
-func promiseBehind(ctx context.Context, moment crmcontracts.ContactMoment, page *crmcontracts.Contact360) (owedPromise, bool) {
-	if moment.ClaimKey == overdueTaskKey || moment.ClaimKey == openTaskKey {
-		if len(moment.Evidence) == 0 || moment.Evidence[0].Id == nil {
-			return owedPromise{}, false
-		}
-		task, ok := nextStep(page, *moment.Evidence[0].Id)
-		if !ok {
-			return owedPromise{}, false
-		}
-		return owedPromise{kind: crmcontracts.ContactMomentMayBeDonePromiseTypeTask, id: task.Id, key: task.Id, holder: heldMarker(ctx, task)}, true
-	}
-	if page.Claims == nil {
-		return owedPromise{}, false
-	}
-	for _, claim := range *page.Claims {
-		if moment.ClaimKey != claimMomentKey(overdueClaimRung, claim) && moment.ClaimKey != claimMomentKey(openClaimRung, claim) {
-			continue
-		}
-		promise := owedPromise{kind: crmcontracts.ContactMomentMayBeDonePromiseTypeClaim, id: claim.Id, key: claim.Id}
-		if claim.TaskActivityId != nil {
-			promise.key = *claim.TaskActivityId
-			promise.holder = momentaction.HeldMarker(ctx, nil)
-			if task, ok := nextStep(page, *claim.TaskActivityId); ok {
-				promise.holder = heldMarker(ctx, task)
-			}
-		}
-		return promise, true
-	}
-	return owedPromise{}, false
-}
-
-func nextStep(page *crmcontracts.Contact360, id openapi_types.UUID) (crmcontracts.Activity, bool) {
-	if page.NextSteps == nil {
-		return crmcontracts.Activity{}, false
-	}
-	for _, task := range page.NextSteps.Data {
-		if task.Id == id {
-			return task, true
-		}
-	}
-	return crmcontracts.Activity{}, false
+	return owedwork.Item{}, false
 }
 
 // mayBeDone turns a promise card into the question whether our later mail
 // kept it.
-func (said momentCopy) mayBeDone(ctx context.Context, moment crmcontracts.ContactMoment, page *crmcontracts.Contact360, followUps map[ids.UUID]activities.PromiseFollowUp) (crmcontracts.ContactMoment, bool) {
-	promise, ok := promiseBehind(ctx, moment, page)
+func (said momentCopy) mayBeDone(moment crmcontracts.ContactMoment, page *crmcontracts.Contact360, asks doneAsks) (crmcontracts.ContactMoment, bool) {
+	item, ok := itemBehind(moment, page)
 	if !ok {
 		return crmcontracts.ContactMoment{}, false
 	}
-	sent, ok := followUps[ids.UUID(promise.id)]
-	if !ok {
+	switch promise := item.Ref.(type) {
+	case crmcontracts.Activity:
+		// The question is asked on the page of the recipient the mail reached,
+		// because that page keeps its Not yet for every surface.
+		asked, ok := asks.tasks[ids.UUID(promise.Id)]
+		if !ok || asked.Contact != asks.contact.UUID {
+			return crmcontracts.ContactMoment{}, false
+		}
+		return momentaction.AskTaskDone(said.Spoken, said.zone, moment, ids.UUID(promise.Id), asked), true
+	case crmcontracts.ConversationClaim:
+		claim, ok := claimPromise(asks.contact, promise)
+		if !ok {
+			return crmcontracts.ContactMoment{}, false
+		}
+		return momentaction.AskPromiseDone(said.Spoken, said.zone, moment, claim, asks.claims)
+	default:
 		return crmcontracts.ContactMoment{}, false
 	}
-	q := momentaction.DoneQuestion{Plain: moment, Kind: promise.kind, PromiseID: promise.id, Sent: sent, Key: momentaction.DoneKey(promise.key)}
-	evidence := momentaction.DoneEvidence(said.Spoken, q)
-	return momentaction.AskDone(said.Spoken, said.zone, q, evidence, momentaction.DoneFingerprint(promise.key, sent, promise.holder)), true
 }
 
 // proposer asks the may-be-done question in place of a promise card. After the
 // reader answers Not yet to it, the plain card comes back.
 func (said momentCopy) proposer(
-	ctx context.Context, page *crmcontracts.Contact360, followUps map[ids.UUID]activities.PromiseFollowUp, dismissed func(crmcontracts.ContactMoment) bool,
+	page *crmcontracts.Contact360, asks doneAsks, dismissed func(crmcontracts.ContactMoment) bool,
 ) func(crmcontracts.ContactMoment) crmcontracts.ContactMoment {
 	return func(moment crmcontracts.ContactMoment) crmcontracts.ContactMoment {
-		if question, ok := said.mayBeDone(ctx, moment, page, followUps); ok && !dismissed(question) {
+		if question, ok := said.mayBeDone(moment, page, asks); ok && !dismissed(question) {
 			return question
 		}
 		return moment

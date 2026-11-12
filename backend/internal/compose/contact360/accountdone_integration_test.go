@@ -10,6 +10,8 @@ package contact360_test
 
 import (
 	"context"
+	"maps"
+	"reflect"
 	"testing"
 	"time"
 
@@ -24,6 +26,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/consent"
 	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 // contactPageAsOf is the contact page service reading as of now.
@@ -45,14 +48,22 @@ func contactMoment(as context.Context, t *testing.T, svc *contact360.Service, co
 // our later reply on the thread, read a day after it.
 func promiseAtAccount(t *testing.T) (*integration.Env, integration.PromiseThread, ids.CompanyID, ids.UUID, time.Time) {
 	t.Helper()
+	e, p, company := promiseThreadAtAccount(t)
+	reply := e.LogThreadMail(e.Admin(), t, p.Contact, "thread-listing", p.Address, "outbound", p.SentAt.AddDate(0, 0, 6))
+	return e, p, company, reply, p.SentAt.AddDate(0, 0, 7)
+}
+
+// promiseThreadAtAccount is a promise thread whose contact works at an account,
+// with no mail after the promise.
+func promiseThreadAtAccount(t *testing.T) (*integration.Env, integration.PromiseThread, ids.CompanyID) {
+	t.Helper()
 	e := integration.Setup(t)
 	p := e.SeedPromiseThread(t)
 	company := ids.From[ids.CompanyKind](e.SeedCompany(t, "Kunde GmbH", &e.AdminUser))
 	if _, err := e.Contacts.CreateRelationship(e.Admin(), contacts.CreateRelationshipInput{Kind: "employment", ContactID: &p.Contact, CompanyID: &company, IsCurrentPrimary: new(true), Source: "manual"}); err != nil {
 		t.Fatalf("employing the contact: %v", err)
 	}
-	reply := e.LogThreadMail(e.Admin(), t, p.Contact, "thread-listing", p.Address, "outbound", p.SentAt.AddDate(0, 0, 6))
-	return e, p, company, reply, p.SentAt.AddDate(0, 0, 7)
+	return e, p, company
 }
 
 // accountPageAsOf is the company page service reading as of now, keeping its
@@ -147,4 +158,104 @@ func TestNotYetToDoneOnOnePageHoldsOnTheOther(t *testing.T) {
 			}
 		})
 	}
+}
+
+// One claim, and the mail that follows it, raises the same question on both
+// pages, or none on either.
+func TestBothPagesAskDoneAboutTheSameClaims(t *testing.T) {
+	cases := []struct {
+		name  string
+		later func(t *testing.T, e *integration.Env, p integration.PromiseThread)
+		asks  bool
+	}{
+		{"our reply on the thread", func(t *testing.T, e *integration.Env, p integration.PromiseThread) {
+			e.LogThreadMail(e.Admin(), t, p.Contact, "thread-listing", p.Address, "outbound", p.SentAt.AddDate(0, 0, 6))
+		}, true},
+		{"only their reply on the thread", func(t *testing.T, e *integration.Env, p integration.PromiseThread) {
+			e.LogThreadMail(e.Admin(), t, p.Contact, "thread-listing", p.Address, "inbound", p.SentAt.AddDate(0, 0, 6))
+		}, false},
+		{"our mail on another thread", func(t *testing.T, e *integration.Env, p integration.PromiseThread) {
+			e.LogThreadMail(e.Admin(), t, p.Contact, "thread-other", p.Address, "outbound", p.SentAt.AddDate(0, 0, 6))
+		}, false},
+		{"no later mail", func(*testing.T, *integration.Env, integration.PromiseThread) {}, false},
+	}
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			e, p, company := promiseThreadAtAccount(t)
+			c.later(t, e, p)
+			now := p.SentAt.AddDate(0, 0, 7)
+			onAccount := accountMoment(e.Admin(), t, accountPageAsOf(e, now), company)
+			onContact := contactMoment(e.Admin(), t, contactPageAsOf(e, now), p.Contact)
+			if asked := onAccount.MayBeDone != nil; asked != c.asks {
+				t.Fatalf("the account card asks %v, want %v: %+v", asked, c.asks, onAccount)
+			}
+			if asked := onContact.MayBeDone != nil; asked != c.asks {
+				t.Fatalf("the contact page asks %v, want %v: %+v", asked, c.asks, onContact)
+			}
+			if c.asks && !sameQuestion(onAccount, onContact) {
+				t.Errorf("the pages ask different questions: account %+v, contact %+v", onAccount, onContact)
+			}
+		})
+	}
+}
+
+// sameQuestion is whether two pages ask one question: one key, fingerprint,
+// promise, mail evidence and Done.
+func sameQuestion(a, b crmcontracts.ContactMoment) bool {
+	return a.ClaimKey == b.ClaimKey && a.EvidenceFingerprint == b.EvidenceFingerprint && a.Headline == b.Headline &&
+		*a.MayBeDone == *b.MayBeDone && len(a.Evidence) == 2 && len(b.Evidence) == 2 &&
+		a.Evidence[0].Type == b.Evidence[0].Type && reflect.DeepEqual(a.Evidence[0].Id, b.Evidence[0].Id) &&
+		reflect.DeepEqual(a.Evidence[1], b.Evidence[1]) && reflect.DeepEqual(a.RecommendedAction, b.RecommendedAction)
+}
+
+// A promise task asks on the page of the recipient our mail reached, as the
+// company page's row asks it. It asks on no other page that lists the task,
+// and never a reader who may not complete it.
+func TestATaskAsksOnlyTheRecipientOurMailReachedAndAReaderWhoMayCompleteIt(t *testing.T) {
+	e, p, company := promiseThreadAtAccount(t)
+	jonas := e.SeedThreadContact(t, "Jonas Kunde", "jonas@kunde.example")
+	cc := e.SeedThreadContact(t, "Carla Kunde", "carla@kunde.example")
+	task := e.SeedPromiseTask(t, p, jonas, cc)
+	e.ClaimPromiseFor(t, p, task, jonas)
+	reply := e.LogThreadMail(e.Admin(), t, p.Contact, "thread-listing", p.Address, "outbound", p.SentAt.AddDate(0, 0, 6))
+	now := p.SentAt.AddDate(0, 0, 7)
+	contactPage := contactPageAsOf(e, now)
+
+	asked := contactMoment(e.Admin(), t, contactPage, p.Contact)
+	if asked.MayBeDone == nil || asked.MayBeDone.PromiseType != crmcontracts.ContactMomentMayBeDonePromiseTypeTask ||
+		ids.UUID(asked.MayBeDone.PromiseId) != task || ids.UUID(asked.MayBeDone.EmailActivityId) != reply {
+		t.Fatalf("the reached recipient's page did not ask about the task: %+v", asked)
+	}
+	account, err := accountPageAsOf(e, now).Assemble(e.Admin(), company)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var row *crmcontracts.WorklistMayBeDone
+	for _, step := range account.NextSteps.Data {
+		if ids.UUID(step.ActivityId) == task {
+			row = step.MayBeDone
+		}
+	}
+	if row == nil || row.ClaimKey != asked.ClaimKey || row.EvidenceFingerprint != asked.EvidenceFingerprint ||
+		row.EmailActivityId != asked.MayBeDone.EmailActivityId || ids.UUID(row.ContactId) != p.Contact.UUID {
+		t.Errorf("the company row asks %+v, the contact page %+v", row, asked)
+	}
+
+	for name, contact := range map[string]ids.ContactID{"a recipient the mail did not reach": jonas, "a contact only linked to the task": cc} {
+		if got := contactMoment(e.Admin(), t, contactPage, contact); got.MayBeDone != nil || !citesTask(got, task) {
+			t.Errorf("%s: the page asked, or drew no task card: %+v", name, got)
+		}
+	}
+
+	readOnly := integration.AdminPerms
+	readOnly.RoleKeys = nil
+	readOnly.Objects = maps.Clone(integration.AdminPerms.Objects)
+	readOnly.Objects["activity"] = principal.ObjectGrant{Read: true}
+	if got := contactMoment(e.As(e.Rep1, nil, readOnly), t, contactPage, p.Contact); got.MayBeDone != nil || !citesTask(got, task) {
+		t.Errorf("a reader who may not complete the task was offered Done, or drew no task card: %+v", got)
+	}
+}
+
+func citesTask(moment crmcontracts.ContactMoment, task ids.UUID) bool {
+	return len(moment.Evidence) > 0 && moment.Evidence[0].Id != nil && ids.UUID(*moment.Evidence[0].Id) == task
 }

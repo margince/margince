@@ -65,3 +65,51 @@ func (e *Env) LogThreadMail(as context.Context, t *testing.T, contact ids.Contac
 	}
 	return ids.UUID(row.Id)
 }
+
+// SeedPromiseTask files the task signal extraction writes for the promise. It
+// carries the commitment source and the promise mail as its source, and the
+// claim on the recipient points at it. The task is linked to the recipient
+// and to any other contact named.
+func (e *Env) SeedPromiseTask(t *testing.T, p PromiseThread, linked ...ids.ContactID) ids.UUID {
+	t.Helper()
+	promise := ids.UUID(p.Claim.SourceActivityId)
+	due := p.SentAt.AddDate(0, 0, 2)
+	links := []activities.ActivityLinkInput{{EntityType: "contact", EntityID: p.Contact.UUID}}
+	for _, contact := range linked {
+		links = append(links, activities.ActivityLinkInput{EntityType: "contact", EntityID: contact.UUID})
+	}
+	task, _, err := e.Activities.LogActivity(e.Admin(), activities.LogActivityInput{
+		Kind: "task", Subject: new("Send the listing details"), SystemText: &systemtext.Message{Subject: systemtext.Prose(systemtext.Quote, "")}, Source: "manual",
+		AssigneeID: new(ids.From[ids.UserKind](e.AdminUser)), DueAt: &due,
+		SourceSystem: new(activities.CommitmentTaskSource), SourceID: new(ids.NewV7().String()), SourceActivityID: &promise,
+		Links: links,
+	})
+	if err != nil {
+		t.Fatalf("filing the promise task: %v", err)
+	}
+	e.WsExec(t, `UPDATE conversation_claim SET task_activity_id = $1 WHERE id = $2`, ids.UUID(task.Id), ids.UUID(p.Claim.Id))
+	return ids.UUID(task.Id)
+}
+
+// SeedThreadContact writes one more contact at the promise's account.
+func (e *Env) SeedThreadContact(t *testing.T, name, address string) ids.ContactID {
+	t.Helper()
+	row, err := e.Contacts.CreateContact(e.Admin(), contacts.CreateContactInput{
+		FullName: name, Source: "manual", Emails: []contacts.ContactEmailInput{{Email: address, EmailType: "work", IsPrimary: true}},
+	})
+	if err != nil {
+		t.Fatalf("creating %s: %v", name, err)
+	}
+	return ids.From[ids.ContactKind](ids.UUID(row.Id))
+}
+
+// ClaimPromiseFor records the promise as made to one more recipient, on the
+// same task.
+func (e *Env) ClaimPromiseFor(t *testing.T, p PromiseThread, task ids.UUID, contact ids.ContactID) {
+	t.Helper()
+	claim := e.RecordClaim(e.Admin(), t, contacts.ClaimInput{
+		ContactID: contact, Kind: "commitment_ours", Body: "Send the listing details", ActivityID: ids.UUID(p.Claim.SourceActivityId),
+		Quote: "I'll prepare the listing details and get those over to you shortly.", Source: "manual",
+	})
+	e.WsExec(t, `UPDATE conversation_claim SET task_activity_id = $1 WHERE id = $2`, task, ids.UUID(claim.Id))
+}

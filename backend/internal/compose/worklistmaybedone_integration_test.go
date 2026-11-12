@@ -22,33 +22,11 @@ import (
 	"github.com/margince/margince/backend/internal/compose/integration"
 	"github.com/margince/margince/backend/internal/compose/momentaction"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
-	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/approvals"
-	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
-
-// promiseTask files the task signal extraction writes for the promise. It
-// carries the commitment source and the promise mail as its source, and the
-// claim on the recipient points at it.
-func promiseTask(t *testing.T, e *integration.Env, p integration.PromiseThread) ids.UUID {
-	t.Helper()
-	promise := ids.UUID(p.Claim.SourceActivityId)
-	due := p.SentAt.AddDate(0, 0, 2)
-	task, _, err := e.Activities.LogActivity(e.Admin(), activities.LogActivityInput{
-		Kind: "task", Subject: new("Send the listing details"), Source: "manual",
-		AssigneeID: new(ids.From[ids.UserKind](e.AdminUser)), DueAt: &due,
-		SourceSystem: new(activities.CommitmentTaskSource), SourceID: new(ids.NewV7().String()), SourceActivityID: &promise,
-		Links: []activities.ActivityLinkInput{{EntityType: "contact", EntityID: p.Contact.UUID}},
-	})
-	if err != nil {
-		t.Fatalf("filing the promise task: %v", err)
-	}
-	e.WsExec(t, `UPDATE conversation_claim SET task_activity_id = $1 WHERE id = $2`, ids.UUID(task.Id), ids.UUID(p.Claim.Id))
-	return ids.UUID(task.Id)
-}
 
 // worklistQuestion reads the reader's Worklist as of then and answers the
 // task row's question, nil when the row asks none. A row that asks is never
@@ -84,7 +62,7 @@ func worklistTaskRow(t *testing.T, e *integration.Env, task ids.UUID, at time.Ti
 func TestATaskTheAnsweredRuleClosedIsNotAsked(t *testing.T) {
 	e := integration.Setup(t)
 	p := e.SeedPromiseThread(t)
-	task := promiseTask(t, e, p)
+	task := e.SeedPromiseTask(t, p)
 	// Capture wrote the task when the promise arrived, before the reply.
 	e.WsExec(t, `UPDATE activity SET created_at=$1 WHERE id=$2`, p.SentAt, task)
 	reply := e.LogThreadMail(e.Admin(), t, p.Contact, "thread-listing", p.Address, "outbound", p.SentAt.AddDate(0, 0, 6))
@@ -113,7 +91,7 @@ func TestATaskTheAnsweredRuleClosedIsNotAsked(t *testing.T) {
 func TestTheWorklistAsksDoneAsTheContactPageDoesAndHoldsItsNotYet(t *testing.T) {
 	e := integration.Setup(t)
 	p := e.SeedPromiseThread(t)
-	task := promiseTask(t, e, p)
+	task := e.SeedPromiseTask(t, p)
 	at := p.SentAt.AddDate(0, 0, 7)
 	if q := worklistQuestion(t, e, task, at); q != nil {
 		t.Fatalf("the Worklist asked before any later mail: %+v", q)
@@ -162,31 +140,13 @@ func TestTheWorklistAsksDoneAsTheContactPageDoesAndHoldsItsNotYet(t *testing.T) 
 	}
 }
 
-// secondRecipient files the same promise's claim on another contact, as
-// signal extraction does for a promise made to two contacts at once.
-func secondRecipient(t *testing.T, e *integration.Env, p integration.PromiseThread, task ids.UUID) (ids.ContactID, string) {
-	t.Helper()
-	const address = "jonas@kunde.example"
-	row, err := e.Contacts.CreateContact(e.Admin(), contacts.CreateContactInput{
-		FullName: "Jonas Kunde", Source: "manual", Emails: []contacts.ContactEmailInput{{Email: address, EmailType: "work", IsPrimary: true}},
-	})
-	if err != nil {
-		t.Fatal(err)
-	}
-	contact := ids.From[ids.ContactKind](ids.UUID(row.Id))
-	claim := e.RecordClaim(e.Admin(), t, contacts.ClaimInput{
-		ContactID: contact, Kind: "commitment_ours", Body: "Send the listing details", ActivityID: ids.UUID(p.Claim.SourceActivityId),
-		Quote: "I'll prepare the listing details and get those over to you shortly.", Source: "manual",
-	})
-	e.WsExec(t, `UPDATE conversation_claim SET task_activity_id = $1 WHERE id = $2`, task, ids.UUID(claim.Id))
-	return contact, address
-}
-
 func TestANotYetForOneRecipientHoldsUntilWeWriteToAnyRecipientAgain(t *testing.T) {
 	e := integration.Setup(t)
 	p := e.SeedPromiseThread(t)
-	task := promiseTask(t, e, p)
-	jonas, jonasAddress := secondRecipient(t, e, p, task)
+	task := e.SeedPromiseTask(t, p)
+	const jonasAddress = "jonas@kunde.example"
+	jonas := e.SeedThreadContact(t, "Jonas Kunde", jonasAddress)
+	e.ClaimPromiseFor(t, p, task, jonas)
 	at := p.SentAt.AddDate(0, 0, 9)
 	e.LogThreadMail(e.Admin(), t, jonas, "thread-listing", jonasAddress, "outbound", p.SentAt.AddDate(0, 0, 5))
 	toLena := e.LogThreadMail(e.Admin(), t, p.Contact, "thread-listing", p.Address, "outbound", p.SentAt.AddDate(0, 0, 6))
@@ -215,7 +175,7 @@ func TestANotYetForOneRecipientHoldsUntilWeWriteToAnyRecipientAgain(t *testing.T
 func TestAUsersAgentIsAskedAsTheyAreAndSharesTheirNotYet(t *testing.T) {
 	e := integration.Setup(t)
 	p := e.SeedPromiseThread(t)
-	task := promiseTask(t, e, p)
+	task := e.SeedPromiseTask(t, p)
 	e.LogThreadMail(e.Admin(), t, p.Contact, "thread-listing", p.Address, "outbound", p.SentAt.AddDate(0, 0, 6))
 	at := p.SentAt.AddDate(0, 0, 7)
 	agent := e.AgentFor(t, e.AdminUser, nil, integration.AdminPerms)
@@ -252,7 +212,7 @@ func TestAUsersAgentIsAskedAsTheyAreAndSharesTheirNotYet(t *testing.T) {
 func TestAutomaticWorkReadingTheWorklistIsAskedNothing(t *testing.T) {
 	e := integration.Setup(t)
 	p := e.SeedPromiseThread(t)
-	task := promiseTask(t, e, p)
+	task := e.SeedPromiseTask(t, p)
 	e.LogThreadMail(e.Admin(), t, p.Contact, "thread-listing", p.Address, "outbound", p.SentAt.AddDate(0, 0, 6))
 	human, _ := principal.Actor(e.Admin())
 	agent := human
@@ -280,7 +240,7 @@ func TestAutomaticWorkReadingTheWorklistIsAskedNothing(t *testing.T) {
 func TestTheCompanyPageAsksDoneAsTheWorklistDoes(t *testing.T) {
 	e := integration.Setup(t)
 	p := e.SeedPromiseThread(t)
-	task := promiseTask(t, e, p)
+	task := e.SeedPromiseTask(t, p)
 	company := e.SeedCompany(t, "Kunde GmbH", nil)
 	e.WsExec(t, `INSERT INTO relationship (kind, contact_id, company_id, source, captured_by)
 		VALUES ('employment', $1, $2, 'manual', 'human:x')`, p.Contact.UUID, company)
