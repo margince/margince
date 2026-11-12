@@ -1,3 +1,4 @@
+SET LOCAL lock_timeout = '2s';
 ALTER TABLE "public"."activity_review_template" DROP CONSTRAINT "activity_review_template_label_shape";
 ALTER TABLE "public"."activity_review_template" ADD CONSTRAINT "activity_review_template_label_shape" CHECK (((btrim(label) <> ''::text))) NOT VALID;
 ALTER TABLE "public"."app_user" DROP CONSTRAINT "app_user_greeting_name_length";

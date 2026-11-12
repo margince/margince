@@ -26,7 +26,27 @@ SELECT EXISTS (SELECT 1 FROM unnest(new_values) AS item(value)
                  WHERE previous.value COLLATE "C" = item.value COLLATE "C"))
 $$;
 CREATE FUNCTION public.refuse_oversized_text() RETURNS trigger LANGUAGE plpgsql SET search_path = pg_catalog AS $$
+DECLARE
+ bound record;
+ inserted jsonb := to_jsonb(NEW);
+ previous jsonb := '{}'::jsonb;
+ oversized boolean;
 BEGIN
+ IF TG_OP = 'UPDATE' THEN previous := to_jsonb(OLD); END IF;
+ FOR bound IN SELECT key, value::integer AS maximum FROM jsonb_each_text(TG_ARGV[0]::jsonb)
+ LOOP
+  IF jsonb_typeof(inserted -> bound.key) = 'array' THEN
+   oversized := public.text_values_exceed_bound(
+    ARRAY(SELECT jsonb_array_elements_text(inserted -> bound.key)),
+    ARRAY(SELECT jsonb_array_elements_text(NULLIF(previous -> bound.key, 'null'::jsonb))), bound.maximum);
+  ELSE
+   oversized := public.text_value_exceeds_bound(inserted ->> bound.key, previous ->> bound.key, bound.maximum);
+  END IF;
+  IF oversized THEN
+   RAISE EXCEPTION 'text exceeds its character limit' USING ERRCODE = '22001',
+    CONSTRAINT = 'text_character_bound', COLUMN = bound.key, DETAIL = bound.maximum::text;
+  END IF;
+ END LOOP;
  RAISE EXCEPTION 'text exceeds its character limit' USING ERRCODE = '22001';
 END
 $$;
@@ -71,6 +91,11 @@ func SQL(catalog io.Reader) (string, string, error) {
 }
 
 func writeTableGuards(up, down *strings.Builder, table string, columns []Column, policies map[string]Policy) {
+	fields := make([]string, 0, len(columns))
+	for _, column := range columns {
+		fields = append(fields, fmt.Sprintf("%q:%d", column.Name, policies[column.Key].Limit))
+	}
+	limits := strings.ReplaceAll("{"+strings.Join(fields, ",")+"}", "'", "''")
 	for _, operation := range []string{"INSERT", "UPDATE"} {
 		checks := make([]string, 0, len(columns))
 		for _, column := range columns {
@@ -91,7 +116,7 @@ func writeTableGuards(up, down *strings.Builder, table string, columns []Column,
 		if operation == "INSERT" {
 			timing = "AFTER"
 		}
-		fmt.Fprintf(up, "CREATE TRIGGER %s %s %s ON %s FOR EACH ROW\nWHEN (%s) EXECUTE FUNCTION public.refuse_oversized_text();\n", trigger, timing, operation, relation, strings.Join(checks, " OR\n"))
+		fmt.Fprintf(up, "CREATE TRIGGER %s %s %s ON %s FOR EACH ROW\nWHEN (%s) EXECUTE FUNCTION public.refuse_oversized_text('%s');\n", trigger, timing, operation, relation, strings.Join(checks, " OR\n"), limits)
 		fmt.Fprintf(down, "DROP TRIGGER %s ON %s;\n", trigger, relation)
 	}
 }
@@ -103,7 +128,8 @@ BEGIN
  FOR target IN
   SELECT f.object,
    string_agg(format('public.text_value_exceeds_bound(NEW.%%I, NULL, %d)', f.column_name), ' OR ' ORDER BY f.column_name) AS inserted,
-   string_agg(format('public.text_value_exceeds_bound(NEW.%%I, OLD.%%I, %d)', f.column_name, f.column_name), ' OR ' ORDER BY f.column_name) AS changed
+   string_agg(format('public.text_value_exceeds_bound(NEW.%%I, OLD.%%I, %d)', f.column_name, f.column_name), ' OR ' ORDER BY f.column_name) AS changed,
+   jsonb_object_agg(f.column_name, %d)::text AS limits
   FROM public.custom_field f
   JOIN pg_catalog.pg_namespace n ON n.nspname = 'public'
   JOIN pg_catalog.pg_class c ON c.relnamespace = n.oid AND c.relname = f.object
@@ -111,12 +137,12 @@ BEGIN
   WHERE f.type = 'text' AND a.atttypid = 'text'::regtype
   GROUP BY f.object
  LOOP
-  EXECUTE format('CREATE TRIGGER custom_text_bound_insert AFTER INSERT ON public.%%I FOR EACH ROW WHEN (%%s) EXECUTE FUNCTION public.refuse_oversized_text()', target.object, target.inserted);
-  EXECUTE format('CREATE TRIGGER custom_text_bound_update BEFORE UPDATE ON public.%%I FOR EACH ROW WHEN (%%s) EXECUTE FUNCTION public.refuse_oversized_text()', target.object, target.changed);
+  EXECUTE format('CREATE TRIGGER custom_text_bound_insert AFTER INSERT ON public.%%I FOR EACH ROW WHEN (%%s) EXECUTE FUNCTION public.refuse_oversized_text(%%L)', target.object, target.inserted, target.limits);
+  EXECUTE format('CREATE TRIGGER custom_text_bound_update BEFORE UPDATE ON public.%%I FOR EACH ROW WHEN (%%s) EXECUTE FUNCTION public.refuse_oversized_text(%%L)', target.object, target.changed, target.limits);
  END LOOP;
 END
 $bounds$;
-`, values.TextDocumentCharacters, values.TextDocumentCharacters)
+`, values.TextDocumentCharacters, values.TextDocumentCharacters, values.TextDocumentCharacters)
 }
 
 const dropCustomTextGuards = `DO $bounds$

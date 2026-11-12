@@ -7,6 +7,7 @@ package gates
 
 import (
 	"fmt"
+	"regexp"
 	"strings"
 	"testing"
 
@@ -131,6 +132,10 @@ func TestEveryBoundedTextColumnChecksNewAndChangedValues(t *testing.T) {
 			}
 			if !strings.Contains(guards[key], predicate) {
 				t.Errorf("%s lacks its %s changed-value bound of %d", column.Key, operation, policy.Limit)
+			}
+			metadata := regexp.MustCompile(fmt.Sprintf(`(?:\{|,)%s:%d(?:,|\})`, regexp.QuoteMeta(column.Name), policy.Limit))
+			if !metadata.MatchString(guards[key]) {
+				t.Errorf("%s lacks its field and limit in %s refusals", column.Key, operation)
 			}
 		}
 	}

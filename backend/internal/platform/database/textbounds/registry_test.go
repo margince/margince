@@ -55,7 +55,7 @@ func TestChangedTextGuardsPreserveExistingValues(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	for _, fragment := range []string{"AFTER INSERT", "BEFORE UPDATE", `NEW."description", NULL, 20000`, `NEW."description", OLD."description", 20000`, `IS DISTINCT FROM old_value COLLATE "C"`} {
+	for _, fragment := range []string{"AFTER INSERT", "BEFORE UPDATE", `NEW."description", NULL, 20000`, `NEW."description", OLD."description", 20000`, `IS DISTINCT FROM old_value COLLATE "C"`, `refuse_oversized_text('{"description":20000}')`, `CONSTRAINT = 'text_character_bound', COLUMN = bound.key, DETAIL = bound.maximum::text`} {
 		if !strings.Contains(up, fragment) {
 			t.Errorf("missing changed-value guard %q", fragment)
 		}

@@ -11,6 +11,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/margince/margince/backend/internal/shared/kernel/values"
 	"slices"
 	"strconv"
 	"strings"
@@ -27,7 +28,7 @@ import (
 )
 
 const (
-	maxAgentClientNameRunes = 120
+	maxAgentClientNameRunes = values.TextLabelCharacters
 	maxAgentClientRedirects = 10
 	createdViaAdmin         = "admin"
 	agentClientAuditEntity  = "oauth_client"
@@ -231,7 +232,7 @@ func (s *Service) RegisterAgentClient(ctx context.Context, actor Identity, in Re
 
 func validAgentClientInput(in RegisterAgentClientInput) (string, []string, error) {
 	name := strings.TrimSpace(in.Name)
-	if name == "" || utf8.RuneCountInString(name) > maxAgentClientNameRunes {
+	if !validAgentClientName(name) {
 		return "", nil, &InvalidAgentClientFieldError{
 			Field: agentClientFieldName, Code: "invalid_name",
 			Message: fmt.Sprintf("give the client a name of 1 to %d characters", maxAgentClientNameRunes),
@@ -359,4 +360,8 @@ func auditAgentClientDisabled(ctx context.Context, tx pgx.Tx, id ids.UUID, disab
 		_, err = storekit.Audit(ctx, tx, "resume", agentClientAuditEntity, id, before, after)
 	}
 	return err
+}
+
+func validAgentClientName(name string) bool {
+	return strings.TrimSpace(name) != "" && utf8.RuneCountInString(name) <= maxAgentClientNameRunes
 }

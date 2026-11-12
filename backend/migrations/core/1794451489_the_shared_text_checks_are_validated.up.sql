@@ -1,3 +1,4 @@
+SET LOCAL lock_timeout = '2s';
 ALTER TABLE "public"."activity_review_template" VALIDATE CONSTRAINT "activity_review_template_label_shape";
 ALTER TABLE "public"."app_user" VALIDATE CONSTRAINT "app_user_greeting_name_length";
 ALTER TABLE "public"."brief_run" VALIDATE CONSTRAINT "brief_run_narrative_length";

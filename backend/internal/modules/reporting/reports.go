@@ -6,6 +6,7 @@ package reporting
 import (
 	"context"
 	"errors"
+	"fmt"
 	"slices"
 	"strings"
 	"unicode/utf8"
@@ -140,9 +141,9 @@ func (s *Service) ListReports(ctx context.Context, after *ids.UUID, limit int, s
 	return out, err
 }
 
-func (s *Service) validateReport(ctx context.Context, tx pgx.Tx, in *crmcontracts.ReportingReportInput) error {
-	if !values.HasVisibleText(in.Name) || utf8.RuneCountInString(in.Name) > 160 {
-		return refuse("name", "invalid", "name the report in at most 160 characters")
+func (s *Service) validateReport(ctx context.Context, tx pgx.Tx, in *crmcontracts.ReportingReportInput, previousName string) error {
+	if !values.HasVisibleText(in.Name) || (strings.TrimSpace(in.Name) != previousName && utf8.RuneCountInString(strings.TrimSpace(in.Name)) > values.TextLabelCharacters) {
+		return refuse("name", "invalid", fmt.Sprintf("name the report in at most %d characters", values.TextLabelCharacters))
 	}
 	if in.Description != nil && utf8.RuneCountInString(*in.Description) > 2000 {
 		return refuse("description", "invalid", "describe the report in at most 2000 characters")
@@ -251,7 +252,7 @@ func (s *Service) insertReport(ctx context.Context, in crmcontracts.ReportingRep
 	}
 	out := crmcontracts.ReportingReport{Id: openapi_types.UUID(ids.NewV7()), OwnerId: openapi_types.UUID(owner), Name: strings.TrimSpace(in.Name), Description: reportDescription(in.Description), Audience: crmcontracts.ReportingReportAudience(in.Audience), AudienceTeamId: in.AudienceTeamId, Revision: 1, Version: 1, CreatedAt: s.now()}
 	err = s.store.db.Tx(ctx, func(tx pgx.Tx) error {
-		if err := s.validateReport(ctx, tx, &in); err != nil {
+		if err := s.validateReport(ctx, tx, &in, ""); err != nil {
 			return err
 		}
 		out.Selection = in.Selection
@@ -359,7 +360,7 @@ func (s *Service) UpdateReport(ctx context.Context, id ids.UUID, version int64, 
 		if err := refuseOpenDraft(before); err != nil {
 			return err
 		}
-		if err := s.validateReport(ctx, tx, &in); err != nil {
+		if err := s.validateReport(ctx, tx, &in, before.Name); err != nil {
 			return err
 		}
 		out = before

@@ -197,6 +197,18 @@ func (s *Service) cimdCacheIsFresh(ctx context.Context, clientID string) (bool, 
 // list. The conflict target is the row this document may own or nothing.
 func (s *Service) upsertCIMDClient(ctx context.Context, doc cimdDocument, ttl time.Duration) error {
 	return s.db.Tx(ctx, func(tx pgx.Tx) error {
+		if !validAgentClientName(doc.ClientName) {
+			var unchanged bool
+			if err := tx.QueryRow(ctx, `SELECT EXISTS (SELECT 1 FROM oauth_client
+    WHERE client_id = @client AND client_name = @name AND created_via = 'cimd')`,
+				pgx.NamedArgs{"client": doc.ClientID, "name": doc.ClientName}).Scan(&unchanged); err != nil {
+				return err
+			}
+			if !unchanged {
+				return fmt.Errorf("identity: client_name must use 1 to %d characters", maxAgentClientNameRunes)
+			}
+		}
+
 		// The cache window is a DELAY on the database's clock: freshness is read
 		// as `metadata_expires_at > now()` INSIDE Postgres, so a deadline bound
 		// from this process would be a cross-clock comparison. A process running

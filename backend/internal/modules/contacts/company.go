@@ -12,8 +12,10 @@ import (
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/kernel/values"
 	"github.com/margince/margince/backend/internal/shared/ports/fieldcatalog"
 )
 
@@ -134,6 +136,11 @@ func (s *Store) geocodeANewCompany(ctx context.Context, tx pgx.Tx,
 // resolution. It answers the attribution the write shape stamps.
 // Both entry points call it, so neither can drift from the other's validation.
 func (s *Store) readyCompanyCreate(ctx context.Context, in *CreateCompanyInput) (string, error) {
+	if storekit.ImportRunOf(ctx) == nil && !storekit.Synced(ctx) && !auth.DeclaredImporter(ctx) {
+		if err := httperr.RequireWithin(companyNameColumn, in.DisplayName, values.TextLabelCharacters); err != nil {
+			return "", err
+		}
+	}
 	if err := checkCompanyDescription(in.Description); err != nil {
 		return "", err
 	}

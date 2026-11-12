@@ -178,11 +178,13 @@ export function EditEntityDialog({
             <>
               <TextField
                 label={t("legalEntities.displayName")}
+                maxLength={TEXT_LIMITS.label}
                 required
                 {...text("display_name")}
               />
               <TextField
                 label={t("legalEntities.legalName")}
+                maxLength={TEXT_LIMITS.line}
                 required
                 {...text("legal_name")}
               />

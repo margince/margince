@@ -115,6 +115,11 @@ func (s *Store) updateContactInTx(
 	// Before the patch and the lane locks, so a rename through the parts is
 	// patched, locked and re-checked as a full_name edit is.
 	in = updateAsWritten(current, in, active)
+	if storekit.ImportRunOf(ctx) == nil && !storekit.Synced(ctx) && !auth.DeclaredImporter(ctx) {
+		if err := checkChangedContactNames(current, in); err != nil {
+			return out, err
+		}
+	}
 	setter, err := relationshipMarkSetter(ctx, in)
 	if err != nil {
 		return out, err

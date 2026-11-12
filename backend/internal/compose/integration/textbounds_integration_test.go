@@ -7,10 +7,10 @@ package integration
 
 import (
 	"fmt"
-	"github.com/jackc/pgx/v5"
-	"github.com/margince/margince/backend/migrations"
 	"strings"
 	"testing"
+
+	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/modules/customfields"
@@ -69,31 +69,8 @@ func TestCompanyDescriptionsAdmitTheWholeDocumentWithoutTruncation(t *testing.T)
 
 func TestAnUpgradeBoundsCustomTextWithoutChangingEarlierValues(t *testing.T) {
 	f := setupCFV(t)
-	core, err := migrations.Core()
-	if err != nil {
-		t.Fatal(err)
-	}
-	var up, down string
-	for _, migration := range core.Migrations {
-		if migration.Version == "1794448079" {
-			up, down = migration.UpSQL, migration.DownSQL
-		}
-	}
-	if up == "" || down == "" {
-		t.Fatal("text-bound migration is absent")
-	}
+	apply := withoutTextGuards(t, f.ctx)
 	owner := SchemaPool(t)
-	if _, err := owner.Exec(f.ctx, down); err != nil {
-		t.Fatal(err)
-	}
-	restored := false
-	t.Cleanup(func() {
-		if !restored {
-			if _, err := owner.Exec(f.ctx, up); err != nil {
-				t.Errorf("restore text guards: %v", err)
-			}
-		}
-	})
 	column := f.defineField(t, customfields.FieldSpec{Object: "contact", Label: "Earlier note", Type: customfields.TypeText, Source: "manual"})
 	// Model the earlier schema, whose runtime text columns carried no length check.
 	var constraint string
@@ -110,10 +87,7 @@ func TestAnUpgradeBoundsCustomTextWithoutChangingEarlierValues(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if _, err := owner.Exec(f.ctx, up); err != nil {
-		t.Fatal(err)
-	}
-	restored = true
+	apply()
 	id := ContactIDOf(ids.UUID(created.Id))
 	renamed := "Updated contact"
 	if _, err := f.store.UpdateContact(f.ctx, id, contacts.UpdateContactInput{FullName: &renamed, CustomFields: map[string]any{column: earlier}}); err != nil {

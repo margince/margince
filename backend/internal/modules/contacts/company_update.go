@@ -17,9 +17,11 @@ import (
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/kernel/values"
 	"github.com/margince/margince/backend/internal/shared/ports/fieldcatalog"
 )
 
@@ -117,6 +119,12 @@ func (s *Store) updateCompanyInTx(
 	}
 	if err := refuseUnreadableCompany(current, in); err != nil {
 		return crmcontracts.Company{}, err
+	}
+	if in.DisplayName != nil && *in.DisplayName != current.DisplayName &&
+		storekit.ImportRunOf(ctx) == nil && !storekit.Synced(ctx) && !auth.DeclaredImporter(ctx) {
+		if err := httperr.RequireWithin(companyNameColumn, *in.DisplayName, values.TextLabelCharacters); err != nil {
+			return crmcontracts.Company{}, err
+		}
 	}
 	if err := checkCompanyDescription(in.Description); err != nil {
 		return crmcontracts.Company{}, err

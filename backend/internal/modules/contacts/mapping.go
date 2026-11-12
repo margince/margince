@@ -92,6 +92,11 @@ func contactCreateInputAdmitting(req crmcontracts.CreateContactRequest, importer
 		return CreateContactInput{}, err
 	}
 	req.FullName = fullName
+	if !importer {
+		if err := checkTypedContactNames(req.FullName, req.FirstName, req.LastName); err != nil {
+			return CreateContactInput{}, err
+		}
+	}
 	source, err := httperr.RequireNonBlank(fieldSource, req.Source)
 	if err != nil {
 		return CreateContactInput{}, err
@@ -109,6 +114,7 @@ func contactCreateInputAdmitting(req crmcontracts.CreateContactRequest, importer
 	}
 	in := CreateContactInput{
 		FullName:              req.FullName,
+		sourceNames:           importer,
 		FirstName:             req.FirstName,
 		LastName:              req.LastName,
 		Title:                 req.Title,

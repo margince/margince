@@ -27,7 +27,7 @@ public.activity.reply_verdict_by document
 public.activity.restricted_reason note
 public.activity.retention_class document
 public.activity.source document
-public.activity.source_author_name label
+public.activity.source_author_name exempt imported source attribution retains the original author identity
 public.activity.source_id document
 public.activity.source_system document
 public.activity.subject document
@@ -59,7 +59,7 @@ public.activity_own_sent_mail_repair.outcome document
 public.activity_participant.address document
 public.activity_participant.address_domain_folded document
 public.activity_participant.channel_user_id document
-public.activity_participant.display_name label
+public.activity_participant.display_name exempt complete mail participant names retain the source display text
 public.activity_participant.domain_evidence_precision document
 public.activity_participant.response document
 public.activity_participant.role document
@@ -161,7 +161,7 @@ public.analytics_share.target document
 public.analytics_share.token_hash document
 public.app_user.avatar_object_key document
 public.app_user.avatar_origin document
-public.app_user.display_name label
+public.app_user.display_name exempt provider names and earlier account names retain their identity contract
 public.app_user.email document
 public.app_user.email_domain_folded document
 public.app_user.greeting_name label
@@ -276,7 +276,7 @@ public.capture_auto_enrich_state.last_outcome document
 public.capture_backfill.last_error_class document
 public.capture_backfill.status document
 public.capture_backfill_creation.kind document
-public.capture_backfill_creation.subject label
+public.capture_backfill_creation.subject exempt progress stores the imported domain identity rather than a short label
 public.capture_connection.account_label label
 public.capture_connection.credential_ref document
 public.capture_connection.history_baseline_set_by document
@@ -316,7 +316,7 @@ public.capture_party_source.policy_addresses document
 public.capture_party_source.provider document
 public.capture_party_source.recipients document
 public.capture_party_source_replay.outcome document
-public.capture_pending_counterparty.display_name label
+public.capture_pending_counterparty.display_name exempt pending capture retains the original sender identity for review
 public.capture_pending_counterparty.disposition_reason note
 public.capture_pending_counterparty.domain document
 public.capture_pending_counterparty.email document
@@ -332,7 +332,7 @@ public.capture_sweep_run.outcome document
 public.capture_sweep_run.sweep document
 public.capture_sync_state.last_error_class document
 public.capture_test_mailbox_sent.message_id exempt bounded message identities keep the existing mailbox-test protocol limit
-public.capture_test_mailbox_sent.subject label
+public.capture_test_mailbox_sent.subject document
 public.capture_thread_verdict.disposition_reason note
 public.capture_thread_verdict.kind document
 public.capture_thread_verdict.seen_addresses document
@@ -371,7 +371,7 @@ public.comms_outbound.channel_user_id document
 public.comms_outbound.consent_purpose document
 public.comms_outbound.execution_authority document
 public.comms_outbound.from_address document
-public.comms_outbound.from_name label
+public.comms_outbound.from_name exempt sender display identities retain the existing envelope name rules
 public.comms_outbound.html_body exempt complete captured or authored source content must retain its original text
 public.comms_outbound.in_reply_to document
 public.comms_outbound.inline_logo_key document
@@ -437,13 +437,13 @@ public.company.address_postal_code document
 public.company.address_region document
 public.company.captured_by document
 public.company.description document
-public.company.display_name label
+public.company.display_name exempt imported business identities retain their source names
 public.company.email document
 public.company.geocode_input_hash document
 public.company.geocode_provider document
 public.company.geocode_status document
 public.company.industry document
-public.company.legal_name label
+public.company.legal_name line
 public.company.lifecycle document
 public.company.linkedin_url document
 public.company.logo_icon_object_key document
@@ -454,7 +454,7 @@ public.company.name_source document
 public.company.phone document
 public.company.size_band document
 public.company.source document
-public.company.source_author_name label
+public.company.source_author_name exempt imported source attribution retains the original author identity
 public.company.source_id exempt bounded imported identities keep the existing indexed wire contract
 public.company.source_system document
 public.company.visibility document
@@ -558,16 +558,16 @@ public.contact.address_region document
 public.contact.anonymized_address_hashes document
 public.contact.anonymized_address_key_id document
 public.contact.captured_by document
-public.contact.first_name label
-public.contact.full_name label
-public.contact.last_name label
+public.contact.first_name exempt captured name parts retain the existing ingestion name rules
+public.contact.full_name exempt captured names retain the existing ingestion name rules
+public.contact.last_name exempt captured name parts retain the existing ingestion name rules
 public.contact.narrowing_reason note
 public.contact.photo_object_key document
 public.contact.photo_origin document
 public.contact.relationship_mark document
 public.contact.relationship_mark_set_by document
 public.contact.source document
-public.contact.source_author_name label
+public.contact.source_author_name exempt imported source attribution retains the original author identity
 public.contact.source_id exempt bounded imported identities keep the existing indexed wire contract
 public.contact.source_system document
 public.contact.title label
@@ -675,7 +675,7 @@ public.deal.name label
 public.deal.partner_attribution document
 public.deal.priority document
 public.deal.source document
-public.deal.source_author_name label
+public.deal.source_author_name exempt imported source attribution retains the original author identity
 public.deal.source_id exempt bounded imported identities keep the existing indexed wire contract
 public.deal.source_system document
 public.deal.status document
@@ -734,7 +734,7 @@ public.deal_room_invitation.source document
 public.deal_room_participant.capability document
 public.deal_room_participant.captured_by document
 public.deal_room_participant.email document
-public.deal_room_participant.full_name label
+public.deal_room_participant.full_name exempt participant identities can be copied from an existing customer record
 public.deal_room_participant.source document
 public.deal_room_session.captured_by document
 public.deal_room_session.source document
@@ -795,7 +795,7 @@ public.extension_secret.key document
 public.extension_secret.vault_ref document
 public.federated_identity.email_at_link document
 public.federated_identity.provider document
-public.federated_identity.subject label
+public.federated_identity.subject exempt opaque provider subject keys retain the complete external identity
 public.field_mask.condition document
 public.field_mask.field document
 public.field_mask.object document
@@ -817,7 +817,7 @@ public.finance_customer_link.external_customer_id document
 public.finance_customer_link.source document
 public.finance_customer_link.sync_hash document
 public.finance_external_customer.captured_by document
-public.finance_external_customer.display_name label
+public.finance_external_customer.display_name exempt external customer identities retain the provider name
 public.finance_external_customer.external_customer_id document
 public.finance_external_customer.source document
 public.finance_external_customer.sync_hash document
@@ -920,7 +920,7 @@ public.lead.company_name label
 public.lead.disqualify_note note
 public.lead.email document
 public.lead.email_domain_folded document
-public.lead.full_name label
+public.lead.full_name exempt imported lead identities retain the source name rules
 public.lead.industry document
 public.lead.linkedin_url document
 public.lead.origin document
@@ -929,7 +929,7 @@ public.lead.partner_accepted_by document
 public.lead.phone document
 public.lead.score_override_reason note
 public.lead.source document
-public.lead.source_author_name label
+public.lead.source_author_name exempt imported source attribution retains the original author identity
 public.lead.source_id document
 public.lead.source_system document
 public.lead.status document
@@ -968,11 +968,11 @@ public.legal_entity.bic document
 public.legal_entity.captured_by document
 public.legal_entity.country document
 public.legal_entity.default_language document
-public.legal_entity.display_name label
+public.legal_entity.display_name exempt the registered entity identity can inherit an earlier company name
 public.legal_entity.iban document
 public.legal_entity.icp document
 public.legal_entity.imprint document
-public.legal_entity.legal_name label
+public.legal_entity.legal_name line
 public.legal_entity.logo_object_key document
 public.legal_entity.offer_summary document
 public.legal_entity.register_court document
@@ -989,7 +989,7 @@ public.legal_review.status document
 public.linkedin_account.profile_url document
 public.linkedin_connection.company_name label
 public.linkedin_connection.email document
-public.linkedin_connection.full_name label
+public.linkedin_connection.full_name exempt imported address book identities retain the source name
 public.linkedin_connection.match_status document
 public.linkedin_connection.normalized_company document
 public.linkedin_connection.normalized_name label
@@ -1050,7 +1050,7 @@ public.notice.captured_by document
 public.notice.dedupe_key document
 public.notice.email_error line
 public.notice.kind document
-public.notice.subject label
+public.notice.subject line
 public.notice.target_type document
 public.notification_digest_run.mail_error line
 public.notification_preference.class document
@@ -1153,7 +1153,7 @@ public.project.key document
 public.project.name label
 public.project.phase document
 public.project.source document
-public.project.source_author_name label
+public.project.source_author_name exempt imported source attribution retains the original author identity
 public.project.source_id exempt bounded imported identities keep the existing indexed wire contract
 public.project.source_system document
 public.project_health_assessment.captured_by document
@@ -1360,10 +1360,10 @@ public.team_weekly_review.team_name label
 public.team_weekly_review_coverage.absent document
 public.team_weekly_review_coverage.basis document
 public.team_weekly_review_coverage.period_kind document
-public.team_weekly_review_member.display_name label
+public.team_weekly_review_member.display_name exempt a frozen review retains the original member identity
 public.team_weekly_review_outlook.forward_measure document
 public.team_weekly_review_outlook.period_kind document
-public.team_weekly_review_rep.display_name label
+public.team_weekly_review_rep.display_name exempt a frozen review retains the original member identity
 public.team_weekly_review_rep.focus_kind document
 public.team_weekly_review_rep.focus_label label
 public.team_weekly_review_rep_funnel.next_stage_name label
@@ -1395,7 +1395,7 @@ public.voice_corpus_source.kind document
 public.voice_corpus_source.origin document
 public.voice_corpus_source.register document
 public.voice_corpus_source.source document
-public.voice_corpus_source.source_label label
+public.voice_corpus_source.source_label line
 public.voice_corpus_source.source_ref document
 public.voice_learning_signal.captured_by document
 public.voice_learning_signal.final_captured_by document

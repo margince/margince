@@ -1,3 +1,4 @@
+SET LOCAL lock_timeout = '2s';
 DROP TRIGGER "text_bound_insert" ON "public"."activity";
 DROP TRIGGER "text_bound_update" ON "public"."activity";
 DROP TRIGGER "text_bound_insert" ON "public"."activity_audience_member";
@@ -586,8 +587,6 @@ DROP TRIGGER "text_bound_insert" ON "public"."team_weekly_review";
 DROP TRIGGER "text_bound_update" ON "public"."team_weekly_review";
 DROP TRIGGER "text_bound_insert" ON "public"."team_weekly_review_coverage";
 DROP TRIGGER "text_bound_update" ON "public"."team_weekly_review_coverage";
-DROP TRIGGER "text_bound_insert" ON "public"."team_weekly_review_member";
-DROP TRIGGER "text_bound_update" ON "public"."team_weekly_review_member";
 DROP TRIGGER "text_bound_insert" ON "public"."team_weekly_review_outlook";
 DROP TRIGGER "text_bound_update" ON "public"."team_weekly_review_outlook";
 DROP TRIGGER "text_bound_insert" ON "public"."team_weekly_review_rep";

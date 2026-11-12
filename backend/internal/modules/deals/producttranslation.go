@@ -92,9 +92,6 @@ func (s *Store) PutProductTranslation(ctx context.Context, id ids.ProductID, lan
 	if !values.HasVisibleText(name) {
 		return crmcontracts.ProductTranslation{}, &RequiredFieldError{Field: dealNameColumn}
 	}
-	if err := httperr.RequireWithin(dealNameColumn, name, translationNameLimit); err != nil {
-		return crmcontracts.ProductTranslation{}, err
-	}
 	if description != nil {
 		if err := httperr.RequireWithin("description", *description, translationTextLimit); err != nil {
 			return crmcontracts.ProductTranslation{}, err
@@ -112,6 +109,11 @@ func (s *Store) PutProductTranslation(ctx context.Context, id ids.ProductID, lan
 		before, err := readProductTranslation(ctx, tx, id, language)
 		if err != nil && !errors.Is(err, apperrors.ErrNotFound) {
 			return err
+		}
+		if before == nil || before.Name != name {
+			if err := httperr.RequireWithin(dealNameColumn, name, translationNameLimit); err != nil {
+				return err
+			}
 		}
 		row := tx.QueryRow(ctx, `
 			INSERT INTO product_translation (product_id, language, name, description, captured_by)

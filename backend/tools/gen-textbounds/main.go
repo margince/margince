@@ -32,10 +32,10 @@ func generate(output string) error {
 		if err != nil {
 			return err
 		}
-		if err := writeNew(output+".up.sql", up); err != nil {
+		if err := writeNew(output+".up.sql", "SET LOCAL lock_timeout = '2s';\n"+up); err != nil {
 			return err
 		}
-		if err := writeNew(output+".down.sql", down); err != nil {
+		if err := writeNew(output+".down.sql", "SET LOCAL lock_timeout = '2s';\n"+down); err != nil {
 			return err
 		}
 	}

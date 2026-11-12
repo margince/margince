@@ -50,7 +50,7 @@ const (
 	codeFieldOnCompanyForm  = "legal_entity_field_on_company_form"
 	codeFieldOnInstallation = "legal_entity_field_on_installation"
 	legalEntityNameLimit    = 200
-	legalEntityLegalLimit   = 300
+	legalEntityLegalLimit   = values.TextLineCharacters
 	legalEntityImprintLimit = values.TextDocumentCharacters
 	wireCountry             = "country"
 	wireDefaultLanguage     = "default_language"
@@ -63,7 +63,7 @@ const (
 func (in LegalEntityInput) fields() []entityField {
 	a := in.Address
 	out := []entityField{
-		{column: companyNameColumn, value: in.DisplayName, limit: legalEntityNameLimit, anchored: true, required: true},
+		{column: companyNameColumn, value: in.DisplayName, limit: values.TextLabelCharacters, anchored: true, required: true},
 		{column: fieldLegalName, value: in.LegalName, limit: legalEntityLegalLimit, anchored: true, required: true},
 		{column: "address_line1", wire: "address.line1", value: a.Line1, limit: legalEntityNameLimit, anchored: true},
 		{column: "address_line2", wire: "address.line2", value: a.Line2, limit: legalEntityNameLimit, anchored: true},

@@ -36466,7 +36466,7 @@ paths:
               type: object
               required: [name, topic_statement]
               properties:
-                name: { type: string, maxLength: 200 }
+                name: { type: string, maxLength: 120 }
                 description: { type: [string, 'null'], maxLength: 2000 }
                 topic_statement: { type: string, maxLength: 500 }
                 min_similarity: { type: number, format: double, minimum: 0, maximum: 1 }
@@ -68832,8 +68832,8 @@ components:
       type: object
       required: [display_name, legal_name, country]
       properties:
-        display_name: { type: string, maxLength: 200 }
-        legal_name: { type: string, maxLength: 300 }
+        display_name: { type: string, maxLength: 120 }
+        legal_name: { type: string, maxLength: 500 }
         country: { type: string, description: 'Lower-case ISO 3166-1 alpha-2, for example `de`.' }
         address: { $ref: '#/components/schemas/LegalEntityAddress' }
         vat_id: { type: string, maxLength: 200 }
@@ -68851,7 +68851,7 @@ components:
       description: A field left out keeps its value; a field sent as an empty string is cleared.
       properties:
         display_name: { type: string, maxLength: 200 }
-        legal_name: { type: string, maxLength: 300 }
+        legal_name: { type: string, maxLength: 500 }
         country: { type: string }
         address: { $ref: '#/components/schemas/LegalEntityAddress' }
         vat_id: { type: string, maxLength: 200 }
