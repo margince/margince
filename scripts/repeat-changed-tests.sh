@@ -144,7 +144,8 @@ vitest_lane() {
   echo "vitest: ${#files[@]} files, $count attempts: ${files[*]}"
   for attempt in $(seq 1 "$count"); do
     log="$logs/vitest.$attempt.log"
-    if (cd "$ROOT/frontend" && pnpm exec vitest run "${files[@]}") >"$log" 2>&1; then
+    # No colour: CI forces it on, and its codes hide the ` FAIL ` the grep below reads.
+    if (cd "$ROOT/frontend" && NO_COLOR=1 FORCE_COLOR=0 pnpm exec vitest run "${files[@]}") >"$log" 2>&1; then
       continue
     fi
     failed=$((failed + 1))
