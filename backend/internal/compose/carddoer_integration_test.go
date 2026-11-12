@@ -55,6 +55,11 @@ func TestTheAccepterHandsAPromiseToAColleague(t *testing.T) {
 	if got := e.WsScalar(t, `SELECT coalesce(string_agg(assignee_id::text, ','), '') FROM activity WHERE kind = 'task'`); got != e.Rep1.String() {
 		t.Errorf("the accepted promise is held by %q, want the chosen colleague %s", got, e.Rep1)
 	}
+	// The decided card keeps the payload it was accepted with, so its history
+	// names the colleague the task went to.
+	if got := e.WsScalar(t, `SELECT proposed_change->>'doer_id' FROM approval WHERE id = $1`, id); got != e.Rep1.String() {
+		t.Errorf("the decided card names doer %q, want the chosen colleague %s", got, e.Rep1)
+	}
 }
 
 // The card names the colleague it will go to, read from the doer member: the
