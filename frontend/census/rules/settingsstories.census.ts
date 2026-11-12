@@ -52,7 +52,7 @@ const ACROSS_PAGE_STORIES = new Set([
 
 // Pinned rather than floored: a story retitled away from `Settings/` drops out
 // of the corpus, and only an exact count notices it go.
-export const SETTINGS_STORY_COUNT = 243;
+export const SETTINGS_STORY_COUNT = 244;
 
 // Read off Storybook's own globs, so a new kind of story file joins the corpus.
 const mainPath = join(frontendRoot, ".storybook", "main.ts");
