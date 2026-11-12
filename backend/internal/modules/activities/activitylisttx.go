@@ -24,7 +24,7 @@ func ListActivitiesTx(ctx context.Context, tx pgx.Tx, in ListActivitiesInput) ([
 		return nil, storekit.Page{}, err
 	}
 	var err error
-	if in.mailIdentities, err = currentTaskMailIdentities(ctx, tx, in); err != nil {
+	if in.mailIdentities, err = listMailSeatIdentities(ctx, tx, in); err != nil {
 		return nil, storekit.Page{}, err
 	}
 	if in.WithOutsideParty {
