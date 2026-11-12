@@ -287,11 +287,10 @@ func scopedPredicate(p principal.Principal, table string, arg func(any) int,
 // ownerArm is the own/team arm of a row-scope predicate, and whether the
 // caller already reads every row of the table without a grant.
 //
-// Customer identity is workspace-readable (tableclass.go): the own/team
-// arm is TRUE for every principal, and only capture privacy and a grant
-// can still say anything about the row. The owner predicate is not even
-// rendered for it, because a registered parameter the SQL never names is a
-// Postgres error. asOwnerScoped is the exception (tableclass.go).
+// Customer identity is workspace-readable (tableclass.go), so its arm is TRUE
+// for every principal. Its owner predicate is not rendered at all, because a
+// registered parameter the SQL never names is a Postgres error.
+// asOwnerScoped is the exception (tableclass.go).
 func ownerArm(p principal.Principal, table string, arg func(any) int, class readClass) (func(alias string) string, bool) {
 	if class == asOwnerScoped {
 		return ownerPredicate(p, arg, unownedIsNobodys), Unbounded(p)
