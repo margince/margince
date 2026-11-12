@@ -22,9 +22,9 @@ type generator struct {
 	Dir  string // the working directory, relative to the repository root
 	Argv []string
 	Env  []string
-	// Source is a frontend script's command and the script files it runs: the
+	// ScriptText is a frontend script's command and the script files it runs: the
 	// text that names the paths it writes.
-	Source string
+	ScriptText string
 }
 
 // driftMakefile holds the drift gate, whose $(MAKE) line names what it
@@ -87,7 +87,7 @@ func frontendGenerators(root string) ([]generator, error) {
 			}
 			generators = append(generators, generator{
 				Name: "pnpm run " + name, Dir: "frontend", Argv: []string{"pnpm", "run", "--silent", name},
-				Source: source,
+				ScriptText: source,
 			})
 		}
 	}
@@ -119,8 +119,9 @@ func scriptSource(root string, scripts map[string]string, name string) (string, 
 	return source.String(), nil
 }
 
-// splitBySkipped separates the outputs a skipped frontend script names, by
-// path or by folder, from the rest.
+// splitBySkipped separates the outputs a skipped frontend script names from
+// the rest. A script names an output by its path, or by its folder written as a
+// string of its own. A script that builds each file name does the latter.
 func splitBySkipped(outputs []string, skipped []generator) (rest, owned []string) {
 	for _, output := range outputs {
 		rel := "../" + output
@@ -129,8 +130,7 @@ func splitBySkipped(outputs []string, skipped []generator) (rest, owned []string
 		}
 		named := false
 		for _, g := range skipped {
-			named = named || strings.Contains(g.Source, rel) || strings.Contains(g.Source, filepath.Dir(rel)+"/") ||
-				strings.Contains(g.Source, filepath.Dir(rel)+`"`)
+			named = named || strings.Contains(g.ScriptText, rel) || strings.Contains(g.ScriptText, filepath.Dir(rel)+`"`)
 		}
 		if named {
 			owned = append(owned, output)

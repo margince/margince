@@ -78,14 +78,16 @@ func TestAToolNamesAnOutputByAnyTrailingPartOfItsPath(t *testing.T) {
 }
 
 func TestOnlyTheOutputsASkippedScriptNamesGoUnchecked(t *testing.T) {
-	skipped := []generator{{Source: "openapi-typescript a.yaml -o src/api/schema.d.ts\n" +
+	skipped := []generator{{ScriptText: "openapi-typescript a.yaml -o src/api/schema.d.ts\n" +
 		`join(root, "src/i18n/essential", locale + "_gen.json")` + "\n" +
 		`join(root, "../backend/internal/modules/agents/previewcatalog_gen.json")`}}
 	rest, owned := splitBySkipped([]string{
 		"frontend/src/api/schema.d.ts", "frontend/src/i18n/essential/de_gen.json",
 		"backend/internal/modules/agents/previewcatalog_gen.json", "backend/internal/compose/new_gen.go",
+		"backend/internal/modules/agents/new_gen.go",
 	}, skipped)
-	if want := []string{"backend/internal/compose/new_gen.go"}; !reflect.DeepEqual(rest, want) {
+	want := []string{"backend/internal/compose/new_gen.go", "backend/internal/modules/agents/new_gen.go"}
+	if !reflect.DeepEqual(rest, want) {
 		t.Errorf("still required = %v, want %v", rest, want)
 	}
 	if len(owned) != 3 {
