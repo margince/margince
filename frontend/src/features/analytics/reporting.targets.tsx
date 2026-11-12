@@ -102,10 +102,11 @@ export function ReportingTargets() {
     goalYear + 1,
     rosterOn && !periodFilter,
   );
-  const rosters = [
-    rosterOn ? roster.data : undefined,
-    rosterOn && !periodFilter ? nextRoster.data : undefined,
+  const reads = [
+    ...(rosterOn ? [roster] : []),
+    ...(rosterOn && !periodFilter ? [nextRoster] : []),
   ];
+  const unanswered = reads.find((read) => !read.data);
   return (
     <Panel
       title={t("reporting.targets")}
@@ -148,11 +149,17 @@ export function ReportingTargets() {
         </div>
         <QueryGate query={query} pendingLabel={t("reporting.targets")}>
           {(result) => {
-            const rows = rowsOf(result.data, rosters);
-            // An empty list is only empty once the goals have answered.
-            if (!rows.length && rosterOn && !roster.data)
+            const rows = rowsOf(
+              result.data,
+              reads.map((read) => read.data),
+            );
+            // An empty list is only empty once every goals read has answered.
+            if (!rows.length && unanswered)
               return (
-                <QueryGate query={roster} pendingLabel={t("reporting.targets")}>
+                <QueryGate
+                  query={unanswered}
+                  pendingLabel={t("reporting.targets")}
+                >
                   {() => null}
                 </QueryGate>
               );

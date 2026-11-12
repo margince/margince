@@ -60,6 +60,18 @@ describe("ReportingTargets", () => {
     );
   });
 
+  it("says the goals could not be read instead of calling the list empty", async () => {
+    installFetchStub({
+      ...reportingStoryRoutes(),
+      "GET /analytics/targets": () => jsonResponse({ data: [] }),
+      "GET /analytics/sales-goals": () =>
+        jsonResponse({ code: "internal", message: "no" }, 500),
+    });
+    render(<ReportingTargets />);
+    expect(await screen.findByRole("alert")).toBeTruthy();
+    expect(screen.queryByText("Nothing here yet.")).toBeNull();
+  });
+
   it("lists no published goals among the retired targets", async () => {
     installFetchStub({
       ...reportingStoryRoutes(),
