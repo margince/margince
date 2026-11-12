@@ -167,6 +167,30 @@ func TestTheEnrolmentSweepDatesRecordsThatJoinAndLeave(t *testing.T) {
 	}
 }
 
+func TestADeletedDealKeepsOnlyItsDatedMembership(t *testing.T) {
+	w := seedManufacturingDeals(t)
+	id := w.launch(t)
+	w.e.WsExec(t, `DELETE FROM deal WHERE id = $1`, w.line)
+	w.sweep(t)
+	closed := w.e.WsCount(t, `SELECT count(*) FROM sales_initiative_enrolment
+		WHERE initiative_id = $1 AND record_type = 'deal' AND record_id = $2 AND left_at IS NOT NULL`, id, w.line)
+	if closed != 1 {
+		t.Fatalf("deleted deal has %d closed enrolments, want its dated history retained", closed)
+	}
+	ctx := w.manager()
+	var membership initiatives.Membership
+	if err := database.WithWorkspaceTx(ctx, w.e.Pool, func(tx pgx.Tx) error {
+		var err error
+		membership, err = w.store.MembershipOf(ctx, tx, id)
+		return err
+	}); err != nil {
+		t.Fatal(err)
+	}
+	if len(membership.Deals) != 1 || membership.Deals[0] != w.press {
+		t.Fatalf("live membership = %v, want only the surviving deal", membership.Deals)
+	}
+}
+
 // The sweep reads every rule match, not one bounded page. Past the bound it
 // still enrols each match, and closes the row of a record that stopped matching.
 func TestTheSweepDatesEveryMatchPastTheReadBound(t *testing.T) {

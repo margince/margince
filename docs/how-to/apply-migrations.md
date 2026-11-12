@@ -73,7 +73,8 @@ Follow this checklist. Fitness tests check several of these rules, so a missed o
    It limits how long a statement waits for a lock before it gives up.
    Once the statement has the lock, it holds it until the transaction ends.
 
-   The runner puts each migration in one transaction. Take an `ALTER TABLE ... ADD COLUMN`, then an
+   The runner normally puts each migration in one transaction. An index built with
+   `CREATE INDEX CONCURRENTLY` runs outside it, as the section below shows. Take an `ALTER TABLE ... ADD COLUMN`, then an
    `UPDATE` of every row and a `CHECK`. The migration keeps `ACCESS EXCLUSIVE` while it fills every row.
    Every reader of that table waits that whole time. `lock_timeout` does not keep readers safe while
    you fill rows.
@@ -124,6 +125,17 @@ Run it when the app is not busy, and run `migrate up` again if it timed out.
 
 - `1790401426_bookings_reserve_their_exact_interval` builds the rule that stops two booking holds sharing
   time. It locks the whole activity table, and waits at most three seconds for that lock.
+
+## Build an index while the app still writes
+
+Put `-- pgmigrate:no-transaction` on a line by itself in the up file of such a migration.
+The [runner](../../backend/internal/platform/dbmigrate/notransaction.go) records the version after
+all statements finish, so each statement must be safe to run again.
+
+A failed build can leave behind an index Postgres never uses. The
+[indexes that let a delete find its child rows](../../backend/migrations/core/1794471014_parent_deletes_find_their_children.up.sql)
+put `DROP INDEX CONCURRENTLY IF EXISTS` before each build, so a second try builds it again.
+The down file drops its indexes with `DROP INDEX CONCURRENTLY` too.
 
 ## Why no one edits a shipped migration
 

@@ -5123,7 +5123,7 @@ public.finance_customer_link.trg_finance_customer_link_updated CREATE TRIGGER tr
 public.finance_customer_link.updated_at timestamp with time zone NOT NULL gen=- def=now()
 public.finance_customer_link.version bigint NOT NULL gen=- def=1
 public.finance_customer_link_company_ix CREATE INDEX finance_customer_link_company_ix ON public.finance_customer_link USING btree (connection_id, company_id) WHERE (archived_at IS NULL)
-public.finance_customer_link_directory_ix CREATE INDEX finance_customer_link_directory_ix ON public.finance_customer_link USING btree (connection_id, external_customer_id)
+public.finance_customer_link_directory_idx CREATE INDEX finance_customer_link_directory_idx ON public.finance_customer_link USING btree (connection_id, external_customer_id)
 public.finance_customer_link_external_ux CREATE UNIQUE INDEX finance_customer_link_external_ux ON public.finance_customer_link USING btree (connection_id, external_customer_id) WHERE (archived_at IS NULL)
 public.finance_customer_link_mapping_key CREATE UNIQUE INDEX finance_customer_link_mapping_key ON public.finance_customer_link USING btree (id, connection_id, company_id)
 public.finance_customer_link_pkey CREATE UNIQUE INDEX finance_customer_link_pkey ON public.finance_customer_link USING btree (id)
@@ -5200,9 +5200,9 @@ public.finance_invoice.version bigint NOT NULL gen=- def=1
 public.finance_invoice.void_at timestamp with time zone gen=- def=-
 public.finance_invoice_account_ix CREATE INDEX finance_invoice_account_ix ON public.finance_invoice USING btree (company_id, issued_at DESC)
 public.finance_invoice_connection_id_external_id_key CREATE UNIQUE INDEX finance_invoice_connection_id_external_id_key ON public.finance_invoice USING btree (connection_id, external_id)
+public.finance_invoice_credit_owner_idx CREATE INDEX finance_invoice_credit_owner_idx ON public.finance_invoice USING btree (credits_invoice_id, connection_id, company_id)
 public.finance_invoice_credits_ix CREATE INDEX finance_invoice_credits_ix ON public.finance_invoice USING btree (credits_invoice_id) WHERE (credits_invoice_id IS NOT NULL)
-public.finance_invoice_credits_owner_ix CREATE INDEX finance_invoice_credits_owner_ix ON public.finance_invoice USING btree (credits_invoice_id, connection_id, company_id)
-public.finance_invoice_customer_link_ix CREATE INDEX finance_invoice_customer_link_ix ON public.finance_invoice USING btree (customer_link_id, connection_id, company_id)
+public.finance_invoice_customer_owner_idx CREATE INDEX finance_invoice_customer_owner_idx ON public.finance_invoice USING btree (customer_link_id, connection_id, company_id)
 public.finance_invoice_open_ix CREATE INDEX finance_invoice_open_ix ON public.finance_invoice USING btree (company_id) WHERE ((open_minor > 0) AND (void_at IS NULL))
 public.finance_invoice_owner_key CREATE UNIQUE INDEX finance_invoice_owner_key ON public.finance_invoice USING btree (id, connection_id, company_id)
 public.finance_invoice_pkey CREATE UNIQUE INDEX finance_invoice_pkey ON public.finance_invoice USING btree (id)
@@ -5236,9 +5236,9 @@ public.finance_payment.updated_at timestamp with time zone NOT NULL gen=- def=no
 public.finance_payment.version bigint NOT NULL gen=- def=1
 public.finance_payment_account_ix CREATE INDEX finance_payment_account_ix ON public.finance_payment USING btree (company_id, paid_at DESC)
 public.finance_payment_connection_id_external_id_key CREATE UNIQUE INDEX finance_payment_connection_id_external_id_key ON public.finance_payment USING btree (connection_id, external_id)
-public.finance_payment_customer_link_ix CREATE INDEX finance_payment_customer_link_ix ON public.finance_payment USING btree (customer_link_id, connection_id, company_id)
+public.finance_payment_customer_owner_idx CREATE INDEX finance_payment_customer_owner_idx ON public.finance_payment USING btree (customer_link_id, connection_id, company_id)
 public.finance_payment_invoice_ix CREATE INDEX finance_payment_invoice_ix ON public.finance_payment USING btree (invoice_id) WHERE (invoice_id IS NOT NULL)
-public.finance_payment_invoice_owner_ix CREATE INDEX finance_payment_invoice_owner_ix ON public.finance_payment USING btree (invoice_id, connection_id, company_id)
+public.finance_payment_invoice_owner_idx CREATE INDEX finance_payment_invoice_owner_idx ON public.finance_payment USING btree (invoice_id, connection_id, company_id)
 public.finance_payment_pkey CREATE UNIQUE INDEX finance_payment_pkey ON public.finance_payment USING btree (id)
 public.forecast_call acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.forecast_call.amount_minor bigint NOT NULL gen=- def=-
