@@ -68,7 +68,7 @@ func TestAnalyticsHoldsAQuarterAgainstThePublishedSalesGoals(t *testing.T) {
 		t.Errorf("the team's quarter target = %v, want its one seller's three months", got.Target)
 	}
 
-	quarterStart := now.AddDate(0, 0, 1-now.Day()).AddDate(0, -((int(now.Month())-1)%3), 0)
+	quarterStart := now.AddDate(0, 0, 1-now.Day()).AddDate(0, -((int(now.Month()) - 1) % 3), 0)
 	explicit := AnyMap{
 		"metric": "bookings_won", "scope": AnyMap{"kind": "team", "id": team}, "period_kind": "fiscal_quarter",
 		"period_start": fmt.Sprintf("%d-%02d-01", quarterStart.Year(), int(quarterStart.Month())), "value": 7 * monthlyGoal, "reason": "Set for the team",
