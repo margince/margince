@@ -44,8 +44,9 @@ func TestThePatternIsTheOneTheDatabaseEnforces(t *testing.T) {
 	}
 	for line := range strings.SplitSeq(string(catalog), "\n") {
 		if strings.HasPrefix(line, "public.project.project_key_shape ") {
-			if !strings.Contains(line, "'"+CheckPattern+"'") {
-				t.Fatalf("the database's project_key_shape is %q, which does not carry %q", line, CheckPattern)
+			want := "public.project.project_key_shape CHECK (((key IS NULL) OR (key ~ '" + CheckPattern + "'::text)))"
+			if line != want {
+				t.Fatalf("the database's project_key_shape is\n\t%s\nwant exactly\n\t%s", line, want)
 			}
 			return
 		}

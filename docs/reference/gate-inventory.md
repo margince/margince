@@ -423,6 +423,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `presetcertdisclosure_test.go` | H2 | A shipped preset binds a model to every task, and the certification records grade each of those bindings. |
 | `profilefieldreaders_test.go` | H2 | contact\_profile\_field holds what a machine asserted about a contact, and ai\_feedback holds what a human then decided about that assertion. |
 | `projectionedgereaders_test.go` | H2 | The projection tier's read census. |
+| `projectkeyshape_test.go` | H1 | A project key has one shape, projectkey.CheckPattern, and Go reads it through projectkey.Shaped. |
 | `promptcertified_test.go` | H3 | Every prompt this build sends must be measured by a certification case. |
 | `promptlanguage_test.go` | H1 | Every prompt this product sends says what language to answer in, or says plainly why it does not need to. |
 | `promptvoice_test.go` | H1 | Every prompt either speaks in Margince's one voice or says why it does not. |
@@ -638,7 +639,6 @@ The eight shapes, what each is for, and how each one silently passes:
 | `owndomainpredicate_test.go` | H2 | Every own-domain decision compares one folded form of a domain. |
 | `phasehistoryattribution_test.go` | H2 | A history table that links its audit row names who acted through that row. |
 | `pipefailgrepq_test.go` | H2 | A shell gate does not decide its verdict through a pipe that can break. |
-| `projectkeyshape_test.go` | H1 | A project key has one shape in Go, projectkey.Shaped. |
 | `promptexcerpt_test.go` | H2 | A prompt built from a crawled page is bounded by this product, not by the site. |
 | `promptfence_test.go` | H1 | No prompt may declare a data boundary the writer of that data can spell. |
 | `promptminorunits_test.go` | H2 | No struct that is JSON-encoded into a model prompt carries a money amount in minor units. |
