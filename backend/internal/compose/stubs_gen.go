@@ -3367,6 +3367,10 @@ func (stubs) ConfirmBookingReturn(w nethttp.ResponseWriter, r *nethttp.Request, 
 	httperr.NotImplemented(w, r, "ConfirmBookingReturn")
 }
 
+func (stubs) PreviewBookingReturn(w nethttp.ResponseWriter, r *nethttp.Request, hostSlug string) {
+	httperr.NotImplemented(w, r, "PreviewBookingReturn")
+}
+
 func (stubs) GetConfirmDetails(w nethttp.ResponseWriter, r *nethttp.Request, token string) {
 	httperr.NotImplemented(w, r, "GetConfirmDetails")
 }

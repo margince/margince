@@ -108,6 +108,10 @@ func inviteLines(line writeLine) {
 		"Lời mời có hiệu lực trong bảy ngày. Nếu không chờ lời mời này, bạn có thể bỏ qua email.")
 }
 
+// ReturnConsentVersion names the wording ReturnConsentWording holds. Change it
+// with the wording.
+const ReturnConsentVersion = "erasure-return-2026-11"
+
 // returnLines is the link an erased subject asked for, to be stored again.
 func returnLines(line writeLine) {
 	line(func(c *Copy) *string { return &c.ReturnSubject },
@@ -122,6 +126,10 @@ func returnLines(line writeLine) {
 		"Store my details again",
 		"Meine Daten wieder speichern",
 		"Lưu lại thông tin của tôi")
+	line(func(c *Copy) *string { return &c.ReturnConsentWording },
+		"You agree that we store your name and email address again and contact you about your meetings.",
+		"Sie stimmen zu, dass wir Ihren Namen und Ihre E-Mail-Adresse wieder speichern und Sie zu Ihren Terminen kontaktieren.",
+		"Quý khách đồng ý để chúng tôi lưu lại tên và địa chỉ email, và liên hệ với quý khách về các cuộc hẹn.")
 	line(func(c *Copy) *string { return &c.ReturnIgnore },
 		"If you did not ask for this, ignore this email. Nothing is stored.",
 		"Wenn Sie das nicht angefragt haben, ignorieren Sie diese E-Mail. Es wird nichts gespeichert.",

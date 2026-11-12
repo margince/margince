@@ -20,6 +20,7 @@ import (
 	"github.com/margince/margince/backend/internal/compose"
 	"github.com/margince/margince/backend/internal/compose/integration/apptest"
 	"github.com/margince/margince/backend/internal/platform/blobstore"
+	"github.com/margince/margince/backend/internal/platform/mailcopy"
 )
 
 const (
@@ -91,7 +92,7 @@ func (d *returnDoor) bookAndErase(address string) {
 
 func (d *returnDoor) ask(address string) int {
 	d.t.Helper()
-	return publicCall(d.t, d.e, "POST", d.base+"/return", AnyMap{"name": "Wieder Da", "email": address, "consent": d.consent}, nil, nil)
+	return publicCall(d.t, d.e, "POST", d.base+"/return", AnyMap{"name": "Wieder Da", "email": address}, nil, nil)
 }
 
 // link asks for the return of address and answers the token mailed to it.
@@ -159,8 +160,56 @@ func TestASecondErasureSpendsALinkMailedBeforeIt(t *testing.T) {
 	if status := d.confirm(early); status != http.StatusUnprocessableEntity {
 		t.Fatalf("a link mailed before the second erasure → %d, want 422", status)
 	}
+	if liftedRows(t, d.e) != 0 {
+		t.Fatal("a link mailed before the second erasure lifted it")
+	}
+}
+
+// Every spelling of one mailbox shares one budget of one link a day. The link
+// goes to the spelling the erasure list matches, and that is what is stored.
+func TestEverySpellingOfAnAddressSharesOneBudget(t *testing.T) {
+	d := openReturnDoor(t)
+	d.bookAndErase(returnAddress)
+
+	softHyphen := "zurueck.subject@b\u00fc\u00adcher.example"
+	fullwidth := "zurueck.subject@\uff42\u00fccher.example"
+	if status := d.ask(softHyphen); status != http.StatusAccepted {
+		t.Fatalf("the first ask → %d, want 202", status)
+	}
+	token := awaitReturnLink(t, d.box, returnAddress)
+	if status := d.ask(fullwidth); status != http.StatusTooManyRequests {
+		t.Fatalf("a second spelling of the same mailbox → %d, want 429", status)
+	}
+	if status := d.confirm(token); status != http.StatusNoContent {
+		t.Fatalf("the mailed link → %d, want 204", status)
+	}
+	if storedContacts(t, d.e, returnAddress) != 1 {
+		t.Fatalf("the contact does not hold %s, the spelling the erasure list matches", returnAddress)
+	}
+}
+
+// The wording the confirm records is this installation's own. A caller cannot
+// put words of its own on the subject's consent.
+func TestTheRecordedConsentIsTheServersWording(t *testing.T) {
+	d := openReturnDoor(t)
+	d.bookAndErase(returnAddress)
+	forged := AnyMap{"name": "Wieder Da", "email": returnAddress,
+		"consent": AnyMap{"wording": "I agree to everything.", "policy_version": "forged"}}
+	if status := publicCall(t, d.e, "POST", d.base+"/return", forged, nil, nil); status == http.StatusAccepted {
+		t.Fatal("an ask carrying its own consent wording was accepted")
+	}
+
 	if status := d.confirm(d.link(returnAddress)); status != http.StatusNoContent {
-		t.Fatalf("a link mailed after the second erasure → %d, want 204", status)
+		t.Fatalf("the mailed link → %d, want 204", status)
+	}
+	var text, version string
+	if err := d.e.Owner.QueryRow(context.Background(), `
+		SELECT ce.policy_text, ce.policy_version FROM erasure_suppression s
+		  JOIN consent_event ce ON ce.id = s.lift_consent_event_id WHERE s.lifted_at IS NOT NULL`).Scan(&text, &version); err != nil {
+		t.Fatalf("reading the recorded consent: %v", err)
+	}
+	if want := mailcopy.For("en").ReturnConsentWording; text != want || version != mailcopy.ReturnConsentVersion {
+		t.Fatalf("the consent records %q (%s), want %q (%s)", text, version, want, mailcopy.ReturnConsentVersion)
 	}
 }
 

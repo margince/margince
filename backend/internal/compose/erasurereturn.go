@@ -18,6 +18,7 @@ import (
 	"net/url"
 	"strings"
 	"time"
+	"unicode/utf8"
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -36,6 +37,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/keyvault"
 	"github.com/margince/margince/backend/internal/platform/mailcopy"
 	"github.com/margince/margince/backend/internal/platform/mailer"
+	"github.com/margince/margince/backend/internal/platform/mailidentity"
 	"github.com/margince/margince/backend/internal/platform/ratelimit"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -68,8 +70,8 @@ func newErasureReturnHandlers(pool *pgxpool.Pool) erasureReturnHandlers {
 		pool:     pool,
 		contacts: newContactsStore(InstallationDB(pool)),
 		consent:  consent.NewStore(InstallationDB(pool)),
-		// One mailbox gets a few links an hour, however many callers ask.
-		perAddress: ratelimit.New("erasure-return/per-address", ratelimit.FailClosed, 3, time.Hour),
+		// Each link goes to someone who asked to be forgotten: one a day.
+		perAddress: ratelimit.New("erasure-return/per-address", ratelimit.FailClosed, 1, 24*time.Hour),
 		now:        time.Now,
 	}
 }
@@ -78,6 +80,9 @@ func newErasureReturnHandlers(pool *pgxpool.Pool) erasureReturnHandlers {
 func returnLinkSignerNow() returnlink.Signer {
 	return returnlink.NewSigner(keyvault.DerivedKey(config.Bound(), returnlink.KeyLabel))
 }
+
+// returnNameLimit is the longest name the ask takes, as the contract says.
+const returnNameLimit = 200
 
 // RequestBookingReturn implements (POST /public/booking/{host_slug}/return).
 func (h erasureReturnHandlers) RequestBookingReturn(w http.ResponseWriter, r *http.Request, hostSlug string) {
@@ -90,32 +95,24 @@ func (h erasureReturnHandlers) RequestBookingReturn(w http.ResponseWriter, r *ht
 		httperr.Write(w, r, httperr.Validation("email", "invalid_email", "a valid email address is required"))
 		return
 	}
-	if strings.TrimSpace(body.Name) == "" {
-		httperr.Write(w, r, httperr.Validation("name", "required", "the name is required"))
+	name := strings.TrimSpace(body.Name)
+	if name == "" || utf8.RuneCountInString(name) > returnNameLimit {
+		httperr.Write(w, r, httperr.Validation("name", "invalid", "a name of at most 200 characters is required"))
 		return
 	}
-	if body.Consent.PolicyVersion == "" || body.Consent.Wording == nil || strings.TrimSpace(*body.Consent.Wording) == "" {
-		httperr.Write(w, r, httperr.Validation("consent", "required", "the consent wording and its version are required"))
-		return
-	}
-	var requested *ids.UUID
-	if body.Consent.PurposeId != nil {
-		named := ids.UUID(*body.Consent.PurposeId)
-		requested = &named
-	}
-	purpose, err := bookingConsentAdapter{store: h.consent}.ScopedPurpose(r.Context(), requested)
+	purpose, err := bookingConsentAdapter{store: h.consent}.ScopedPurpose(r.Context(), nil)
 	if err != nil {
 		httperr.Write(w, r, err)
 		return
 	}
-	if !h.perAddress.Allow(strings.ToLower(email.String())) {
+	// One spelling from here on, the one the erasure list matches: the budget,
+	// the link, the recipient and the stored contact all use it.
+	address := mailidentity.FoldAddress(email.String())
+	if !h.perAddress.Allow(address) {
 		httperr.Write(w, r, apperrors.ErrBudgetExceeded)
 		return
 	}
-	request := returnlink.Request{
-		Slug: hostSlug, Name: strings.TrimSpace(body.Name), Email: email.String(), PurposeID: purpose,
-		PolicyVersion: body.Consent.PolicyVersion, Wording: *body.Consent.Wording,
-	}
+	request := returnlink.Request{Slug: hostSlug, Name: name, Email: address, PurposeID: purpose}
 	// Everything that depends on the address runs after the answer, so the
 	// answer and its timing are the same for every address. A failure there is
 	// logged for the operator and never changes what the caller saw.
@@ -134,7 +131,8 @@ func (h erasureReturnHandlers) RequestBookingReturn(w http.ResponseWriter, r *ht
 }
 
 // mailReturnLink mails the link when the address is erased, and does nothing
-// otherwise.
+// otherwise. The link carries the consent wording this installation shows, in
+// its language, so what the subject confirms is server text.
 func (h erasureReturnHandlers) mailReturnLink(ctx context.Context, request returnlink.Request) error {
 	if h.returnMail == nil || h.returnLinkBase == "" {
 		return nil
@@ -147,17 +145,55 @@ func (h erasureReturnHandlers) mailReturnLink(ctx context.Context, request retur
 	}); err != nil || !erased {
 		return err
 	}
+	words := mailcopy.For(string(identity.BaseLanguageForPrompt(ctx, h.pool)))
+	request.Wording, request.PolicyVersion = words.ReturnConsentWording, mailcopy.ReturnConsentVersion
 	token, err := returnLinkSignerNow().Sign(request, h.now().Add(returnlink.Lifetime))
 	if err != nil {
 		return err
 	}
 	link := h.returnLinkBase + "/#/book/" + url.PathEscape(request.Slug) + "?return=" + token
-	words := mailcopy.For(string(identity.BaseLanguageForPrompt(ctx, h.pool)))
 	message := words.ReturnMessage(link)
 	if err := mailer.SendProduct(ctx, h.returnMail, request.Email, message.Title, message); err != nil {
 		return fmt.Errorf("sending the erasure return link: %w", err)
 	}
 	return nil
+}
+
+// PreviewBookingReturn implements (POST /public/booking/{host_slug}/return/preview):
+// what the link will store, shown before the subject confirms it. It stores
+// nothing.
+func (h erasureReturnHandlers) PreviewBookingReturn(w http.ResponseWriter, r *http.Request, hostSlug string) {
+	var body crmcontracts.PreviewBookingReturnJSONRequestBody
+	if !httperr.Decode(w, r, &body) {
+		return
+	}
+	request, ok := h.currentLink(r.Context(), body.Token, hostSlug)
+	if !ok {
+		writeReturnLinkSpent(w, r)
+		return
+	}
+	httperr.WriteJSON(w, http.StatusOK, crmcontracts.BookingReturnPreview{
+		Name: request.Name, Wording: request.Wording, PolicyVersion: request.PolicyVersion,
+	})
+}
+
+// currentLink answers the request a link carries while it still works. It must
+// be signed here, unexpired, for this page, and for the erasure that stands now.
+func (h erasureReturnHandlers) currentLink(ctx context.Context, token, hostSlug string) (returnlink.Request, bool) {
+	request, err := returnLinkSignerNow().Verify(token, h.now())
+	if err != nil || !strings.EqualFold(request.Slug, hostSlug) {
+		return returnlink.Request{}, false
+	}
+	var current time.Time
+	var erased bool
+	if err := InstallationDB(h.pool).Tx(ctx, func(tx pgx.Tx) error {
+		var readErr error
+		current, erased, readErr = privacy.EmailErasedAt(ctx, tx, request.Email)
+		return readErr
+	}); err != nil || !erased || current.UnixMicro() != request.ErasedAt.UnixMicro() {
+		return returnlink.Request{}, false
+	}
+	return request, true
 }
 
 // ConfirmBookingReturn implements (POST /public/booking/{host_slug}/return/confirm).
@@ -204,16 +240,18 @@ func (h erasureReturnHandlers) storeReturned(ctx context.Context, request return
 		if err != nil {
 			return err
 		}
+		if granted.ProofEventID.IsZero() {
+			return apperrors.ErrConsentNotGranted
+		}
 		return InstallationDB(h.pool).Tx(ctx, func(tx pgx.Tx) error {
 			return privacy.LiftEmailSuppressionTx(ctx, tx, request.Email, request.ErasedAt, granted.ProofEventID, contactID)
 		})
 	})
 }
 
-// returnConsentRecord is the grant the subject gave on the booking page. The
-// mailbox answered the link, so the grant may replace a withdrawal on record,
-// which an anonymous booking may not. It always writes its own proof row, which
-// the lift names.
+// returnConsentRecord is the grant the subject confirmed, in the wording the
+// server signed into the link. It always writes its own proof row, which the
+// lift names.
 func returnConsentRecord(subject ids.ContactID, request returnlink.Request) consent.RecordInput {
 	source := returnSource
 	return consent.RecordInput{
@@ -224,5 +262,8 @@ func returnConsentRecord(subject ids.ContactID, request returnlink.Request) cons
 		PolicyText:       &request.Wording,
 		PolicyVersion:    &request.PolicyVersion,
 		ProveReassertion: true,
+		// A withdrawal on record stands, as for a booking. The confirm then has
+		// no grant to cite, and stores nothing.
+		NeverOverrideExisting: true,
 	}
 }

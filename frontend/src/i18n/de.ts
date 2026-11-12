@@ -12948,6 +12948,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "book.returnTitle": "Deine Daten wieder speichern",
   "book.returnBody":
     "Du hast darum gebeten, deine Daten nach der Löschung wieder zu speichern. Es wird nichts gespeichert, bevor du bestätigst.",
+  "book.returnStoredAs":
+    "Du wirst als {name} gespeichert, mit dieser Einwilligung:",
   "book.returnAction": "Meine Daten wieder speichern",
   "book.returnDone": "Deine Daten sind wieder gespeichert.",
   "book.returnSpent":

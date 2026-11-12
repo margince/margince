@@ -69,6 +69,7 @@ var humanOnlyWithoutASession = gatekit.Waive(map[string]string{
 	// An erased subject asks to be stored again, then confirms a mailed link.
 	"requestBookingReturn": "the public booking page: the answer is the same for every address, and nothing is stored until the mailed link is confirmed",
 	"confirmBookingReturn": "the signed, single-use link mailed to the address authenticates the subject, who holds no seat",
+	"previewBookingReturn": "the signed link mailed to the address authenticates the subject, who holds no seat; it stores nothing",
 	// A website form's intake: the visitor holds no seat, and the form's allowed
 	// origins, or its signature, admit the post.
 	"submitWebForm": "a website visitor holds no seat; the form key names the form, and its allowed origins or signature admit the post",

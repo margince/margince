@@ -13,6 +13,13 @@ afterEach(() => {
   history.replaceState(null, "", "/");
 });
 
+const preview = {
+  name: "Wieder Da",
+  wording: "You agree that we store your name again.",
+  policy_version: "erasure-return-2026-11",
+};
+const spent = { status: 422, code: "validation_error", detail: "spent" };
+
 function renderReturnLink(token: string) {
   history.replaceState(null, "", `/#/book/dana?return=${token}`);
   render(
@@ -24,42 +31,37 @@ function renderReturnLink(token: string) {
   );
 }
 
-it("stores the subject only when they press the button, and takes the token out of the address", async () => {
-  const sent: unknown[] = [];
+it("shows the name and the signed wording, and stores only on the button", async () => {
+  const confirmed: unknown[] = [];
   installFetchStub({
+    "POST /public/booking/dana/return/preview": () => jsonResponse(preview),
     "POST /public/booking/dana/return/confirm": (body) => {
-      sent.push(body);
+      confirmed.push(body);
       return new Response(null, { status: 204 });
     },
   });
   renderReturnLink("signed.token");
 
+  expect(await screen.findByText(preview.wording)).toBeTruthy();
+  expect(screen.getByText(/Wieder Da/)).toBeTruthy();
   expect(location.hash).toBe("#/book/dana");
-  expect(sent).toEqual([]);
+  expect(confirmed).toEqual([]);
   fireEvent.click(
     screen.getByRole("button", { name: en["book.returnAction"] }),
   );
 
   expect(await screen.findByText(en["book.returnDone"])).toBeTruthy();
-  expect(sent).toEqual([{ token: "signed.token" }]);
+  expect(confirmed).toEqual([{ token: "signed.token" }]);
 });
 
-it("says a spent link is spent and offers no second try", async () => {
+it("offers no button for a link that no longer works", async () => {
   installFetchStub({
-    "POST /public/booking/dana/return/confirm": () =>
-      jsonResponse(
-        { status: 422, code: "validation_error", detail: "spent" },
-        422,
-      ),
+    "POST /public/booking/dana/return/preview": () => jsonResponse(spent, 422),
   });
   renderReturnLink("spent.token");
 
-  fireEvent.click(
-    screen.getByRole("button", { name: en["book.returnAction"] }),
-  );
-
   expect(await screen.findByText(en["book.returnSpent"])).toBeTruthy();
   expect(
-    screen.getByRole("button", { name: en["book.returnAction"] }),
-  ).toHaveProperty("disabled", true);
+    screen.queryByRole("button", { name: en["book.returnAction"] }),
+  ).toBeNull();
 });

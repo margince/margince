@@ -12604,6 +12604,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "book.returnTitle": "Lưu lại thông tin của quý khách",
   "book.returnBody":
     "Quý khách đã yêu cầu lưu lại thông tin sau khi đã xóa. Thông tin chỉ được lưu khi quý khách xác nhận.",
+  "book.returnStoredAs":
+    "Quý khách sẽ được lưu với tên {name}, kèm sự đồng ý này:",
   "book.returnAction": "Lưu lại thông tin của tôi",
   "book.returnDone": "Thông tin của quý khách đã được lưu lại.",
   "book.returnSpent":

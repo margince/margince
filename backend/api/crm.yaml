@@ -11415,7 +11415,9 @@ paths:
         list, a single-use link is mailed to it; the address is stored only when that link is
         confirmed (`confirmBookingReturn`). Nothing is stored before the click.
         **Always answers 202** with no body, for every well-formed request, whether or not the
-        address was erased, so the answer and its timing say nothing about the address.
+        address was erased, so the answer and its timing say nothing about the address. One
+        link a day goes to one address, however it is spelled. The consent wording the link
+        carries is this installation's own, never the caller's.
       requestBody:
         required: true
         content:
@@ -11423,13 +11425,48 @@ paths:
             schema:
               type: object
               additionalProperties: false
-              required: [name, email, consent]
+              required: [name, email]
               properties:
-                name:  { type: string }
+                name:  { type: string, minLength: 1, maxLength: 200 }
                 email: { type: string, format: email }
-                consent: { $ref: '#/components/schemas/CaptureConsent' }
       responses:
         '202': { description: 'Accepted. If the address was erased, a confirmation link is on its way to it.' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+        '429':
+          description: Rate-limited.
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+
+  /public/booking/{host_slug}/return/preview:
+    parameters:
+      - { name: host_slug, in: path, required: true, schema: { type: string } }
+    post:
+      tags: [Public]
+      operationId: previewBookingReturn
+      security: []   # anonymous: the mailed token is the authority
+      x-agent-access: human-only
+      summary: Show what a mailed return link will store, before it is confirmed (anonymous).
+      description: |
+        Reads the token `requestBookingReturn` mailed and answers the name and the consent wording
+        `confirmBookingReturn` would record. Stores nothing. A link that would not work is the same
+        neutral `422` (`code: link_spent`) the confirm answers.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [token]
+              properties:
+                token: { type: string }
+      responses:
+        '200':
+          description: What the link stores.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/BookingReturnPreview' }
         '422': { $ref: '#/components/responses/ValidationError' }
         '429':
           description: Rate-limited.
@@ -72220,6 +72257,14 @@ components:
           type: boolean
           description: 'Opens (true) or closes (false) a complaint or dispute about the request. Any status takes it.'
 
+    BookingReturnPreview:
+      type: object
+      additionalProperties: false
+      required: [name, wording, policy_version]
+      properties:
+        name: { type: string }
+        wording: { type: string, description: The consent wording the confirm records. }
+        policy_version: { type: string }
     CaptureConsent:
       type: object
       description: |

@@ -1640,6 +1640,7 @@
     "previewAiRouting": "ai_models",
     "previewAiTaskOverrides": "ai_models",
     "previewAutomation": "automations",
+    "previewBookingReturn": "booking_pages",
     "previewBulkChange": "bulk",
     "previewBulkUndo": "bulk",
     "previewConnectorBackfill": "connectors",

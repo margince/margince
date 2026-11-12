@@ -210,6 +210,9 @@ type Copy struct {
 	ReturnIntro   string
 	ReturnAction  string
 	ReturnIgnore  string
+	// ReturnConsentWording is what the subject agrees to by confirming the
+	// link. The consent proof records it with ReturnConsentVersion.
+	ReturnConsentWording string
 
 	// The invitation an administrator sent on somebody's behalf.
 	InviteSubject string

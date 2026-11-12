@@ -93,7 +93,8 @@ func (s *Store) recordAdmittedTx(
 		out = State{PurposeID: in.PurposeID, PurposeKey: purposeKey, State: current, LawfulBasis: in.LawfulBasis}
 		return out, nil // idempotent re-assertion: no proof row, no event, no fresh token demanded (Changed stays false)
 	}
-	if in.NeverOverrideExisting && current != "" {
+	// A proven re-assertion moves nothing, so it overrides nothing.
+	if in.NeverOverrideExisting && current != "" && !reassertion {
 		out = State{PurposeID: in.PurposeID, PurposeKey: purposeKey, State: current}
 		return out, nil // the decision on record stands; an anonymous capture cannot flip it
 	}

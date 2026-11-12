@@ -12924,6 +12924,7 @@ export const en = {
   "book.returnTitle": "Store your details again",
   "book.returnBody":
     "You asked for your details to be stored again after they were erased. Nothing is stored until you confirm.",
+  "book.returnStoredAs": "You will be stored as {name}, with this consent:",
   "book.returnAction": "Store my details again",
   "book.returnDone": "Your details are stored again.",
   "book.returnSpent":
