@@ -101,7 +101,8 @@ func (s unitChannelSender) SendMessage(ctx context.Context, _ connector.Auth, ms
 		return connector.SendReceipt{}, connector.ErrFilesNotCarried
 	}
 	receipt, err := s.transport.channel.Send(ctx, rt, extension.OutboundMessage{
-		Member: s.member,
+		Member:     s.member,
+		ActivityID: msg.ActivityID.String(),
 		// The provider plus the account id ARE the recipient key, exactly as the
 		// dispatcher built them. The display handle is deliberately not carried:
 		// a handle can be released and re-claimed, so nothing may route on it.

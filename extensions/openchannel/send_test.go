@@ -11,6 +11,7 @@ import (
 	"log"
 	"net/http"
 	"net/http/httptest"
+	"slices"
 	"strconv"
 	"strings"
 	"testing"
@@ -25,11 +26,15 @@ import (
 // constructor refuses a loopback address by design.
 const registeredURL = "https://hooks.example.com/crm"
 
+// sentActivity is the timeline entry the product staged the delivery on.
+const sentActivity = "0193f0a4-7c2e-7b1d-9e5a-3f6b8c1d2e40"
+
 // staged is the delivery the product hands over: a rep's reply, with the id it
 // staged under and the account it resolved.
 func staged() extension.OutboundMessage {
 	return extension.OutboundMessage{
 		Member:         ownerUserID,
+		ActivityID:     sentActivity,
 		Recipient:      extension.ChannelIdentity{Provider: provider, ChannelUserID: "acct-77"},
 		Body:           "On its way today.",
 		IdempotencyKey: "5f0b7a91-2c34-4d68-91ae-7b3c0d5e6f28",
@@ -307,6 +312,24 @@ func TestTheAttemptIsRecordedBeforeAnythingLeaves(t *testing.T) {
 	}
 }
 
+// The ledger is a buffer's record: it names the activity the core holds, never
+// the account the message went to.
+func TestTheLedgerNamesTheActivityAndNotThePerson(t *testing.T) {
+	t.Parallel()
+	got := &receiver{}
+	rt := sendableEndpoint(registeredURL)
+	if _, err := sendVia(context.Background(), rt, staged(), listening(t, got), fixedClock()); err != nil {
+		t.Fatalf("sending: %v", err)
+	}
+	sql, args := rt.tx.statementMentioning(t, "INSERT INTO "+outboundTable)
+	if !strings.Contains(sql, "activity_id") || args[4] != sentActivity {
+		t.Fatalf("the attempt row does not name the activity %s:\n%s\n%v", sentActivity, sql, args)
+	}
+	if slices.Contains(args, any(staged().Recipient.ChannelUserID)) {
+		t.Fatalf("the attempt row stores the recipient's account: %v", args)
+	}
+}
+
 // The counters move only for a message a receiver ACCEPTED, and in the same
 // transaction as the row that justifies them: a counter that included refusals
 // would tell a member their connector is busier than it is.
@@ -366,6 +389,25 @@ func TestADeliveryWithNoIdIsRefusedBeforeAnythingLeaves(t *testing.T) {
 	}
 	if _, err := sendVia(context.Background(), rt, msg, dial, fixedClock()); !errors.Is(err, extension.ErrInvalid) {
 		t.Fatalf("it was answered %v", err)
+	}
+}
+
+// A delivery with no activity would leave a ledger row that links to nothing,
+// so it is refused before the row is written or anything leaves.
+func TestADeliveryWithNoActivityIsRefusedBeforeAnythingLeaves(t *testing.T) {
+	t.Parallel()
+	rt := sendableEndpoint(registeredURL)
+	msg := staged()
+	msg.ActivityID = ""
+	dial := func(string) (*sender, error) {
+		t.Fatal("a delivery with no activity reached the transport")
+		return nil, nil
+	}
+	if _, err := sendVia(context.Background(), rt, msg, dial, fixedClock()); !errors.Is(err, extension.ErrInvalid) {
+		t.Fatalf("it was answered %v", err)
+	}
+	if len(rt.tx.statements) != 0 {
+		t.Fatalf("the refused delivery wrote %d statement(s)", len(rt.tx.statements))
 	}
 }
 

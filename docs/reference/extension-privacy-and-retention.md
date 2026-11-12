@@ -34,6 +34,13 @@ does the work itself:
 A row whose link is still empty names no record, so no erasure or export can find it. A message that reached
 `openchannel` and has not yet landed as an activity is such a row. The retention sweep is what removes it.
 
+So keep a unit as a buffer, and let core hold the record:
+
+- Keep personal data only while the unit still needs it to do its work. `openchannel` keeps a message's body
+  until it lands as an activity, then clears it.
+- Link a row to the core record in place of a copy of the person. `openchannel`'s outbound attempts keep the
+  `activity_id` of the send, not the account the message went to.
+
 An erasure leaves a row alone while another record it links to is under legal hold. Its certificate does not
 count such a row, the same as for an activity a hold keeps out of an erasure.
 

@@ -41,7 +41,6 @@
   "extOpenchannel.outboundList.empty": "Chưa có tin nhắn nào gửi đi từ endpoint này.",
   "extOpenchannel.outboundList.noGrant": "Vai trò hiện tại không có quyền truy cập tin nhắn gửi đi.",
   "extOpenchannel.outboundList.outcome": "Kết quả",
-  "extOpenchannel.outboundList.recipient": "Bên nhận",
   "extOpenchannel.outboundList.sub": "Các tin nhắn gần đây nhất mà trình kết nối này đã gửi tới địa chỉ đã đăng ký, mới nhất lên đầu. Nội dung của từng tin nhắn nằm trong hồ sơ CRM nơi tin nhắn đó được gửi đi.",
   "extOpenchannel.outboundList.title": "Tin nhắn gửi đi",
   "extOpenchannel.outboundList.when": "Thử lúc",

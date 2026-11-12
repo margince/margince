@@ -199,7 +199,9 @@ func TestTheUnitSenderHandsOverTheDeliveryTheDispatcherBuilt(t *testing.T) {
 		t.Fatalf("ResolveChannel: %v", err)
 	}
 
+	activity := ids.From[ids.ActivityKind](ids.NewV7())
 	receipt, err := resolved.SendMessage(context.Background(), nil, connector.ChannelMessage{
+		ActivityID:     activity,
 		Recipient:      connector.ChannelIdentity{Provider: "mine_chat", ChannelUserID: "acct-7", Username: "handle"},
 		Body:           "the reply",
 		ReplyTo:        "upstream-9",
@@ -222,6 +224,9 @@ func TestTheUnitSenderHandsOverTheDeliveryTheDispatcherBuilt(t *testing.T) {
 	// so nothing may route on it.
 	if got.Recipient.DisplayName != "" {
 		t.Errorf("the display handle %q crossed the seam; a re-claimable handle must not reach a routing decision", got.Recipient.DisplayName)
+	}
+	if got.ActivityID != activity.String() {
+		t.Errorf("ActivityID = %q, want the send's timeline entry %q, which a unit records in place of the recipient", got.ActivityID, activity)
 	}
 	if got.Body != "the reply" || got.ReplyTo != "upstream-9" || got.IdempotencyKey != "delivery-1" {
 		t.Errorf("the message was altered in transit: %+v", got)
