@@ -42,9 +42,9 @@ func (r initiativeRules) Match(ctx context.Context, tx pgx.Tx, recordType string
 	return matched, count, nil
 }
 
-// newInitiativeStore is the one initiative store the transport and the
+// NewInitiativeStore is the one initiative store the transport and the
 // reporting engine share, so both read one membership.
-func newInitiativeStore(pool *pgxpool.Pool) *initiatives.Store {
+func NewInitiativeStore(pool *pgxpool.Pool) *initiatives.Store {
 	db := InstallationDB(pool)
 	return initiatives.NewStore(db, time.Now, initiativeRules{collections: collections.NewStore(db)})
 }

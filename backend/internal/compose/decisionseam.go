@@ -54,7 +54,7 @@ type salesDecisions struct {
 }
 
 func newSalesDecisions(db *database.DB) salesDecisions {
-	return salesDecisions{db: db, activities: activities.NewStore(db), initiatives: newInitiativeStore(db.Pool())}
+	return salesDecisions{db: db, activities: activities.NewStore(db), initiatives: NewInitiativeStore(db.Pool())}
 }
 
 // decisionFilter narrows the decision list. Selection, when it names a scope

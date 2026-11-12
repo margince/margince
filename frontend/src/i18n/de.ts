@@ -2414,6 +2414,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "systemJob.graph_edge_reconcile": "Aktualisierung der Beziehungsstärke",
   "systemJob.handbook_corpus": "Indexierung des Handbuchs",
   "systemJob.import_run_sweep": "Prüfung abgebrochener Importe",
+  "systemJob.initiative_enrolment": "Mitgliedschaftsdaten der Initiativen",
   "systemJob.import_worker": "Import-Verarbeitung",
   "systemJob.installation_setup_read": "Einrichtungsprüfung",
   "systemJob.intro_advance": "Weiterführung von Vorstellungen",
@@ -10333,6 +10334,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "jobs.kind.import_commit": "Ausführung des Imports",
   "jobs.kind.import_undo": "Rücknahme des Imports",
   "jobs.kind.import_validate": "Import-Testlauf",
+  "jobs.kind.initiative_enrolment_sweep":
+    "Mitgliedschaftsdaten der Initiativen",
   "jobs.kind.intro_expiry": "Ablauf von Vorstellungen",
   "jobs.kind.knowledge_ingest": "Indexierung von Dokumenten",
   "jobs.kind.list_evaluate": "Prüfung der Live-Listen",

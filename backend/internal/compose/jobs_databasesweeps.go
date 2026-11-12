@@ -4,14 +4,18 @@
 package compose
 
 import (
+	"context"
 	"log/slog"
 	"time"
 
 	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/riverqueue/river"
 
+	"github.com/margince/margince/backend/internal/compose/initiativeenrolment"
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/platform/corefeatures"
+	"github.com/margince/margince/backend/internal/platform/jobs"
 )
 
 // addDatabaseOnlySweepJobs registers every periodic pass that needs nothing but
@@ -45,6 +49,7 @@ func addDatabaseOnlySweepJobs(
 ) {
 	addDeclaredWorker[CapturedDealRefileArgs](reg, newCapturedDealRefileWorker(pool, topicBrain))
 	addDeclaredWorker[CapturedDealRefileSweepArgs](reg, &capturedDealRefileSweepWorker{pool: pool, now: time.Now})
+	addDeclaredWorker[InitiativeEnrolmentSweepArgs](reg, initiativeEnrolmentSweepWorker{initiativeenrolment.Sweep{Store: NewInitiativeStore(pool), Pool: pool}})
 	addDeclaredWorker[ReportScheduleSweepArgs](reg, &reportScheduleSweepWorker{pool: pool, now: time.Now, features: corefeatures.New(disabled)})
 	addDeclaredWorker[CloseDateSweepArgs](reg, &closeDateSweepWorker{
 		pool: pool, corrector: NewCloseDateCorrector(pool, log), closer: newSilentDealCloser(pool, log),
@@ -97,4 +102,20 @@ func addDatabaseOnlySweepJobs(
 	addDeclaredWorker[WaitingHorizonRefreshArgs](reg, newWaitingHorizonRefreshWorker(pool, log))
 	addDeclaredWorker[EvidenceAuthorshipArgs](reg, newEvidenceAuthorshipWorker(pool, log))
 	addBriefGenerateJobs(reg, pool, log, briefMail)
+}
+
+// InitiativeEnrolmentSweepArgs is the fleet job that dates sales initiative membership.
+type InitiativeEnrolmentSweepArgs struct{}
+
+// Kind keeps the persisted River job identity stable.
+func (InitiativeEnrolmentSweepArgs) Kind() string { return "initiative_enrolment_sweep" }
+
+// FleetWide keeps tenant work inside the per-workspace sweep.
+func (InitiativeEnrolmentSweepArgs) FleetWide() {}
+
+// initiativeEnrolmentSweepWorker hands each workspace to initiativeenrolment.Sweep.
+type initiativeEnrolmentSweepWorker struct{ initiativeenrolment.Sweep }
+
+func (w initiativeEnrolmentSweepWorker) Work(ctx context.Context, _ *river.Job[InitiativeEnrolmentSweepArgs]) error {
+	return jobs.FaultContext(ctx, runPerWorkspace(ctx, w.Pool, w.Workspace))
 }

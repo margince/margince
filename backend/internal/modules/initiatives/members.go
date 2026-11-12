@@ -419,7 +419,11 @@ func (s *Store) ReplaceMembers(ctx context.Context, id ids.UUID, picked, exclude
 		if err != nil {
 			return err
 		}
-		return recordChange(ctx, tx, after, &before, []string{"members"})
+		if err := recordChange(ctx, tx, after, &before, []string{"members"}); err != nil {
+			return err
+		}
+		_, err = s.syncEnrolmentTx(ctx, tx, after)
+		return err
 	})
 	if err != nil {
 		return crmcontracts.SalesInitiativeMembers{}, err

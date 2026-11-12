@@ -170,7 +170,11 @@ func (s *Store) Update(ctx context.Context, id ids.UUID, in Definition, ifVersio
 		if err != nil {
 			return err
 		}
-		return recordChange(ctx, tx, out, &before, []string{"definition"})
+		if err := recordChange(ctx, tx, out, &before, []string{"definition"}); err != nil {
+			return err
+		}
+		_, err = s.syncEnrolmentTx(ctx, tx, out)
+		return err
 	})
 	return out, err
 }
@@ -224,7 +228,11 @@ func (s *Store) Launch(ctx context.Context, id ids.UUID, ifVersion *int64) (crmc
 		if err != nil {
 			return err
 		}
-		return recordChange(ctx, tx, out, &before, []string{"status", "baseline"})
+		if err := recordChange(ctx, tx, out, &before, []string{"status", "baseline"}); err != nil {
+			return err
+		}
+		_, err = s.syncEnrolmentTx(ctx, tx, out)
+		return err
 	})
 	return out, err
 }

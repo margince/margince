@@ -127,6 +127,7 @@ var predicateDealReads = gatekit.Waive(map[string]string{
 // gate would admit them anyway and the entry records why asking was never the
 // point.
 var lifecycleDealReads = gatekit.Waive(map[string]string{
+	"internal/modules/initiatives/enrolment.go:enrolmentJoinedAt":               "the initiative enrolment writer reads only the created_at of a lead or deal the membership evaluation already admitted, to date its enrolment row. It runs under the initiative write or the system sweep, and no field of the record leaves the statement",
 	"internal/modules/assignments/memberwork.go:memberAssignmentParents":        memberStaffingMetadataReadVerdict,
 	"internal/modules/privacy/erasure_manualreview.go:manualMentionSourcesSQL":  "the contact-delete-authorized eraser selects only identifiers of retained text requiring manual review. The compose flagger selects live controllers with unrestricted row scope, no field masks and current object read permission before issuing any notification; no matched text is copied",
 	"internal/modules/privacy/erasuredealroom_backfill.go:lockErasedSeats":      "the system-only erased-seat purge share-locks each seat's deal and reads its legal-hold flag, so no hold lands while the batch deletes. Only seat ids and the flag leave; no commercial field is read",
