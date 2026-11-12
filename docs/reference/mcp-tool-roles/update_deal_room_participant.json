@@ -1,0 +1,15 @@
+{
+  "tool": "change_offers",
+  "action": "update_room_participant",
+  "verb": "update_deal_room_participant",
+  "allowed_for": [
+    "admin",
+    "management",
+    "manager",
+    "ops",
+    "rep"
+  ],
+  "refused_for": [
+    "read_only"
+  ]
+}

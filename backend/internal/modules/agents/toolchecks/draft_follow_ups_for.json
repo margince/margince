@@ -1,0 +1,9 @@
+{
+  "verb": "draft_follow_ups_for",
+  "checks": [
+    "company.read",
+    "deal.read",
+    "installation_settings.read",
+    "project.read"
+  ]
+}

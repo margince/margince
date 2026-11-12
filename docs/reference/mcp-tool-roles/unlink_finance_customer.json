@@ -1,0 +1,15 @@
+{
+  "tool": "change_settings",
+  "action": "unlink_finance_customer",
+  "verb": "unlink_finance_customer",
+  "allowed_for": [
+    "admin",
+    "ops"
+  ],
+  "refused_for": [
+    "management",
+    "manager",
+    "read_only",
+    "rep"
+  ]
+}

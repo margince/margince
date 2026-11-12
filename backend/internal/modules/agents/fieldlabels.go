@@ -26,6 +26,7 @@ import (
 //nolint:goconst,dupl // one row per wire field per language is the table's shape; the census holds the languages in step
 var fieldLabelsByLang = map[textlang.Lang]map[string]string{
 	textlang.English: {
+		"task_type":                    "Task type",
 		"extension_relationship_types": "Extension relationship types",
 		"deal_filing":                  "Deal filing",
 		"acquisition_source":           "Acquisition source",

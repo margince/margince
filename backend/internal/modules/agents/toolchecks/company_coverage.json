@@ -1,0 +1,11 @@
+{
+  "verb": "company_coverage",
+  "checks": [
+    "contact.read",
+    "deal.read",
+    "relationship.read"
+  ],
+  "takes": [
+    "deal"
+  ]
+}

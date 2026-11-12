@@ -1,0 +1,14 @@
+{
+  "tool": "read_attention",
+  "action": "at_risk",
+  "verb": "at_risk_relationships",
+  "allowed_for": [
+    "admin",
+    "management",
+    "manager",
+    "ops",
+    "read_only",
+    "rep"
+  ],
+  "refused_for": []
+}

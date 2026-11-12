@@ -1,0 +1,10 @@
+{
+  "verb": "read_attachment_for_fields",
+  "checks": [
+    "deal.update"
+  ],
+  "takes": [
+    "attachment",
+    "deal_attachment"
+  ]
+}

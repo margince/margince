@@ -1,0 +1,6 @@
+{
+  "verb": "read_retention_settings",
+  "checks": [
+    "retention_policy.read"
+  ]
+}

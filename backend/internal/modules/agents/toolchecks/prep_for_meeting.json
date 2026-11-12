@@ -1,0 +1,9 @@
+{
+  "verb": "prep_for_meeting",
+  "checks": [
+    "company.read,contact.read,lead.read,project.read"
+  ],
+  "takes": [
+    "company"
+  ]
+}

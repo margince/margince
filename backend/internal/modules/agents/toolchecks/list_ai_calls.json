@@ -1,0 +1,6 @@
+{
+  "verb": "list_ai_calls",
+  "checks": [
+    "ai_diagnostics.read"
+  ]
+}

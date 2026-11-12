@@ -1,0 +1,15 @@
+{
+  "verb": "get_user_handover",
+  "checks": [
+    "activity.read",
+    "company.read",
+    "contact.read",
+    "deal.read",
+    "lead.read",
+    "project.read",
+    "user_admin.update"
+  ],
+  "takes": [
+    "user"
+  ]
+}

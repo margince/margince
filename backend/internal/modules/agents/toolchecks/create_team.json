@@ -1,0 +1,6 @@
+{
+  "verb": "create_team",
+  "checks": [
+    "team_admin.create"
+  ]
+}

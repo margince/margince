@@ -1,0 +1,14 @@
+{
+  "tool": "read_forecast",
+  "action": "input_exceptions",
+  "verb": "list_input_checks",
+  "allowed_for": [
+    "admin",
+    "management",
+    "manager",
+    "ops",
+    "read_only",
+    "rep"
+  ],
+  "refused_for": []
+}

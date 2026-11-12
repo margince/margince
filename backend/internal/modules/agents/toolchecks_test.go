@@ -17,18 +17,21 @@ import (
 )
 
 func TestTheToolChecksTableReads(t *testing.T) {
-	var file ToolChecksFile
-	if err := json.Unmarshal(toolChecksJSON, &file); err != nil {
+	verbs, err := EmbeddedToolChecks()
+	if err != nil {
 		t.Fatal(err)
 	}
-	for verb, row := range file.Verbs {
+	if len(verbs) == 0 {
+		t.Fatal("the embedded checks folder holds no verb")
+	}
+	for verb, row := range verbs {
 		for _, name := range row.Checks {
 			if _, err := auth.ParseCheck(name); err != nil {
 				t.Errorf("%s: %v", verb, err)
 			}
 		}
 	}
-	mustReadToolChecks(toolChecksJSON)
+	mustReadToolChecks()
 }
 
 // everyRecordedGrant holds every grant the measured table names, so a fixture

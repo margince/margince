@@ -42082,11 +42082,107 @@ components:
             into the reader's own mailbox, names an event, and that event has not started. A client
             offers the answers here instead of a written reply, because an invitation asks for an
             RSVP. Absent on every other message, and on a withheld one.
+        calendar_change:
+          allOf: [{ $ref: '#/components/schemas/EmailCalendarChange' }]
+          description: |
+            Present when this message tells the reader something about a meeting rather than asking
+            for words: the organizer changed or cancelled it, or a guest proposed another time or
+            answered. It came into the reader's own mailbox. A client draws it as the meeting,
+            saying what changed. Absent on a first invitation, on every other message, and on a
+            withheld one.
         version:
           allOf: [{ $ref: '#/components/schemas/RowVersion' }]
           description: |
             The activity's version, carried so a row can open an editor that writes with
             If-Match. A row without it can only read.
+
+    EmailCalendarChange:
+      type: object
+      x-email-presentation: exempt
+      x-email-presentation-reason: A meeting and what changed about it, drawn as the meeting rather than as message content.
+      required: [kind, changed]
+      description: |
+        What a calendar message says happened to its meeting, read against the earlier send of the
+        same event in the reader's mailbox. The event fields are the meeting as this message states
+        it; `before` holds what the earlier send said of each field in `changed`.
+      properties:
+        kind:
+          type: string
+          enum: [updated, canceled, proposed, answered]
+          x-extensible-enum: true
+          description: |
+            `updated`: the organizer sent the meeting again with changes. `canceled`: the organizer
+            called it off. `proposed`: a guest proposed the time in `starts_at`. `answered`: a guest
+            answered, in `answer`.
+        title:
+          type: string
+        location:
+          type: string
+          description: Where the meeting is, as the calendar wrote it. Absent when it names no place.
+        starts_at:
+          type: string
+          format: date-time
+          description: When the meeting starts. Absent when the message names no time it can be read in.
+        ends_at:
+          type: string
+          format: date-time
+        starts_precision:
+          allOf: [{ $ref: '#/components/schemas/OccurredPrecision' }]
+          description: How to read `starts_at`, present beside it. `day` is an all-day meeting.
+        changed:
+          type: array
+          description: What differs from the earlier send. Empty when no earlier send is known or nothing a reader sees changed.
+          items:
+            type: string
+            enum: [time, location, title]
+            x-extensible-enum: true
+        before:
+          allOf: [{ $ref: '#/components/schemas/EmailCalendarBefore' }]
+          description: The earlier send's value of each field in `changed`.
+        guests_added:
+          type: array
+          items: { $ref: '#/components/schemas/EmailCalendarGuest' }
+        guests_removed:
+          type: array
+          items: { $ref: '#/components/schemas/EmailCalendarGuest' }
+        by:
+          allOf: [{ $ref: '#/components/schemas/EmailCalendarGuest' }]
+          description: The guest who proposed or answered. Absent on `updated` and `canceled`.
+        answer:
+          type: string
+          enum: [accepted, tentative, declined]
+          x-extensible-enum: true
+          description: The guest's answer, on `answered`.
+
+    EmailCalendarBefore:
+      type: object
+      x-email-presentation: exempt
+      x-email-presentation-reason: The earlier state of a meeting, not message content.
+      properties:
+        title:
+          type: string
+        location:
+          type: string
+        starts_at:
+          type: string
+          format: date-time
+        ends_at:
+          type: string
+          format: date-time
+        starts_precision:
+          allOf: [{ $ref: '#/components/schemas/OccurredPrecision' }]
+
+    EmailCalendarGuest:
+      type: object
+      x-email-presentation: exempt
+      x-email-presentation-reason: A meeting guest, not message content.
+      required: [email]
+      properties:
+        email:
+          type: string
+        name:
+          type: string
+          description: The name the calendar gave. Absent when it gave none.
 
     EmailCalendarInvitation:
       type: object
@@ -56701,6 +56797,25 @@ components:
             product), and for a row whose content is withheld from the caller. False for a
             company target too, which has no single address: the composer asks which of the
             company's contacts the mail is for.
+        task_type:
+          allOf: [{ $ref: '#/components/schemas/TaskType' }]
+          readOnly: true
+          description: >-
+            Task only, absent on every other kind. The type a human, an agent or the AI gave the
+            task when it was made. A task made before types existed, or by a product rule that
+            sets none, reads the type of its rule: an answer owed to a request is `reply`, a
+            lead to qualify is `review`, a mail to file is `decide`. A task with neither reads
+            `reach_out` when a human or an agent made it, else `do`. `offers_email` is false for
+            every type but `reply` and `reach_out`.
+        reply_channel:
+          type: [string, 'null']
+          enum: [email, call, message, null]
+          x-extensible-enum: true
+          readOnly: true
+          description: >-
+            Task only. For a `reply` task, the kind of the activity it answers (`source_activity_id`),
+            so the answer goes back the way the message came in. Null for every other type, and for
+            a reply with no source of one of these kinds.
         email_target:
           $ref: '#/components/schemas/ActivityEmailTarget'
         source:
@@ -57095,6 +57210,9 @@ components:
         due_at: { type: [string, 'null'], format: date-time, description: 'When it is due. Optional — a task without a date is still a task.' }
         due_has_time: { type: boolean, description: 'True when `due_at` names an agreed time of day, such as a callback hour. Left out or false, the task is due by the end of the day `due_at` falls on, and only the date is shown. Sent only together with `due_at`. True sets the reminder to `due_at` when the request names no `remind_at`.' }
         assignee_id: { type: [string, 'null'], format: uuid, description: 'Who owes it. Defaults to the caller.' }
+        task_type:
+          allOf: [{ $ref: '#/components/schemas/TaskType' }]
+          description: 'The kind of work, which decides its one button.'
         links:
           type: array
           description: The records the task is about. With a source activity, omitted or empty links inherit its visible links. Otherwise the task appears on no timeline.
@@ -57139,6 +57257,9 @@ components:
       type: object
       required: [kind, source]
       properties:
+        task_type:
+          allOf: [{ $ref: '#/components/schemas/TaskType' }]
+          description: 'Task only: the kind of work, which decides its one button.'
         deal_filing:
           $ref: '#/components/schemas/ActivityDealFiling'
           description: |
@@ -57344,6 +57465,18 @@ components:
       enum: [workspace, participants, selected]
       x-extensible-enum: true
       description: Who may read an activity's content — see Activity.audience.
+    TaskType:
+      type: string
+      enum: [reply, reach_out, meet, review, decide, do]
+      x-extensible-enum: true
+      description: >-
+        What kind of work a task asks for, which decides the one step a screen offers for it.
+        `reply` answers a message someone sent, the way it came in (`reply_channel`);
+        `reach_out` contacts someone by email or phone; `meet` books a meeting; `review` checks a record;
+        `decide` picks the deal an email is about, from the deals the task offers, and
+        without such a question its only step is ticking it off; `do` is work outside
+        Margince that is finished by ticking it off. A client that meets a value it does not
+        know treats it as `do`.
     OccurredPrecision:
       type: string
       enum: [instant, day]
@@ -57679,6 +57812,9 @@ components:
     UpdateActivityRequest:
       type: object
       properties:
+        task_type:
+          allOf: [{ $ref: '#/components/schemas/TaskType' }]
+          description: 'Task only: the kind of work, which decides its one button.'
         deal_filing:
           $ref: '#/components/schemas/ActivityDealFiling'
           description: Optional filing choice when recording a call or meeting outcome. Existing deal links remain.

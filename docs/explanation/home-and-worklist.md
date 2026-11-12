@@ -244,6 +244,9 @@ A booked meeting keeps its state, including a future meeting or one called off.
 A meeting invite still waiting on an answer keeps its band, and the meeting it books does not move it. Its move is none, not a drafted reply.
 Filing old mail keeps the source without making the advice new.
 
+A later calendar mail that moved, renamed or canceled a meeting has no move either.
+Neither does a guest's answer. Only a proposed new time keeps the drafted reply.
+
 The writer and open-task readers share this admission, so stale tasks cannot block a new reply.
 A task to review a lead or report a new arrival has no generated deadline.
 The date of an old task that no human changed is not an overdue date.

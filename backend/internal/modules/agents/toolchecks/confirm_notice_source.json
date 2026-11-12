@@ -1,0 +1,11 @@
+{
+  "verb": "confirm_notice_source",
+  "checks": [
+    "contact.read",
+    "privacy_request.read",
+    "privacy_request.update"
+  ],
+  "takes": [
+    "notice_case_review"
+  ]
+}

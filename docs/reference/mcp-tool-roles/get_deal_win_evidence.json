@@ -1,0 +1,18 @@
+{
+  "tool": "read_details",
+  "action": "win_evidence",
+  "verb": "get_deal_win_evidence",
+  "allowed_for": [
+    "admin",
+    "management",
+    "manager",
+    "ops",
+    "read_only",
+    "rep"
+  ],
+  "refused_for": [],
+  "colleague_record": {
+    "manager": "ran",
+    "rep": "ran"
+  }
+}

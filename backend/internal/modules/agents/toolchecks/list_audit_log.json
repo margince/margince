@@ -1,0 +1,10 @@
+{
+  "verb": "list_audit_log",
+  "checks": [
+    "audit_log.read",
+    "company.read"
+  ],
+  "takes": [
+    "company"
+  ]
+}

@@ -1,0 +1,9 @@
+{
+  "verb": "resolve_signal",
+  "checks": [
+    "signal.update"
+  ],
+  "takes": [
+    "unresolved_signal"
+  ]
+}

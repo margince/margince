@@ -1,0 +1,11 @@
+{
+  "verb": "reactivate_user",
+  "checks": [
+    "user_admin.delete",
+    "user_admin.read|create|update|delete"
+  ],
+  "takes": [
+    "deactivated_user",
+    "user"
+  ]
+}

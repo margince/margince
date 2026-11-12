@@ -1,0 +1,18 @@
+{
+  "tool": "read_reports",
+  "action": "question_card_records",
+  "verb": "explain_reporting_question_card",
+  "allowed_for": [
+    "admin",
+    "management",
+    "manager",
+    "ops",
+    "read_only",
+    "rep"
+  ],
+  "refused_for": [],
+  "colleague_record": {
+    "manager": "ran",
+    "rep": "ran"
+  }
+}

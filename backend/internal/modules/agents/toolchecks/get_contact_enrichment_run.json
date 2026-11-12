@@ -1,0 +1,10 @@
+{
+  "verb": "get_contact_enrichment_run",
+  "checks": [
+    "contact.read"
+  ],
+  "takes": [
+    "contact",
+    "enrichment_run"
+  ]
+}

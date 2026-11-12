@@ -1,0 +1,11 @@
+{
+  "verb": "enrich",
+  "checks": [
+    "company.read",
+    "company.update"
+  ],
+  "takes": [
+    "company",
+    "domain_company"
+  ]
+}

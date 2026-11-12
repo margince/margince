@@ -1,0 +1,18 @@
+{
+  "verb": "read_record",
+  "checks": [
+    "activity.read,company.read,deal_room.read,lead.read,product.read",
+    "activity.read,company.read,deal_room.update,lead.read,product.read",
+    "activity.read,contact.read,deal_room.read,lead.read,offer.read,product.read,project.read",
+    "activity.read,contact.read,deal_room.update,lead.read,offer.read,product.read,project.read",
+    "company.read,deal_room.read,lead.read,product.read,relationship.read",
+    "company.read,deal_room.update,lead.read,product.read,relationship.read",
+    "deal.read,deal_room.read,lead.read,offer.read,product.read,relationship.read",
+    "deal.read,deal_room.update,lead.read,offer.read,product.read,relationship.read",
+    "deal_room.read,lead.read,offer.read,product.read,project.read,relationship.read",
+    "deal_room.update,lead.read,offer.read,product.read,project.read,relationship.read"
+  ],
+  "takes": [
+    "company"
+  ]
+}

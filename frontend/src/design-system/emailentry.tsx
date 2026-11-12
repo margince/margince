@@ -10,6 +10,7 @@ import { translatePlural, useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import { useViewerZone } from "../lib/viewerzone";
 import { Badge } from "./atoms";
+import { MeetingChange } from "./meetingchange";
 import { VisibilityBadge } from "./visibility";
 import "./emailentry.css";
 
@@ -42,12 +43,15 @@ const MOVE_LABEL: Record<string, MessageKey> = {
  * cannot disagree about one message. A withheld message claims no move.
  */
 export function moveLabel(
-  summary: Pick<EmailSummary, "move"> | undefined,
+  summary: Pick<EmailSummary, "move" | "calendar_change"> | undefined,
   withheld: boolean,
 ): MessageKey | undefined {
   if (withheld || !summary) {
     return undefined;
   }
+  // A meeting change is seen, not replied to; only a proposed time may be.
+  const change = summary.calendar_change;
+  if (change && change.kind !== "proposed") return undefined;
   return MOVE_LABEL[summary.move];
 }
 
@@ -191,7 +195,13 @@ function rowFields(summary: EmailSummary, t: ReturnType<typeof useT>) {
     // An invitation names an event; its body is the calendar's boilerplate,
     // so the row draws the event instead of the words.
     invitation: withheld ? undefined : summary.calendar_invitation,
-    preview: withheld || summary.calendar_invitation ? null : summary.preview,
+    // A later calendar mail is drawn as its meeting and what changed, which
+    // takes the place of the subject and the words.
+    change: withheld ? undefined : summary.calendar_change,
+    preview:
+      withheld || summary.calendar_invitation || summary.calendar_change
+        ? null
+        : summary.preview,
     move: moveLabel(summary, withheld) ?? null,
   };
 }
@@ -338,7 +348,7 @@ export function EmailEntry({
     | { whyNotOpenable: NoOpenReason }>) {
   const t = useT();
   const row = rowFields(summary, t);
-  const Kind = row.invitation ? CalendarClock : Mail;
+  const Kind = row.invitation || row.change ? CalendarClock : Mail;
 
   const content = (
     <>
@@ -352,7 +362,11 @@ export function EmailEntry({
         <span className="emailentry__who">{row.who}</span>
         {timestamp && <span className="emailentry__when">{timestamp}</span>}
       </span>
-      <span className="emailentry__subject">{row.subject}</span>
+      {row.change ? (
+        <MeetingChange change={row.change} fallbackTitle={row.subject} />
+      ) : (
+        <span className="emailentry__subject">{row.subject}</span>
+      )}
       {/* No preview on a withheld row, and none invented when the message has
           no text of its own: the server composes this line, so an empty one
           means the sender wrote nothing rather than that the row is loading. */}

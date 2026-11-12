@@ -1,0 +1,14 @@
+{
+  "tool": "change_capture",
+  "action": "set_mail_posture",
+  "verb": "set_connector_mail_posture",
+  "allowed_for": [
+    "admin",
+    "management",
+    "manager",
+    "ops",
+    "read_only",
+    "rep"
+  ],
+  "refused_for": []
+}

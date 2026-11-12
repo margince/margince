@@ -1,0 +1,6 @@
+{
+  "verb": "list_sdr_waiting_handoffs",
+  "checks": [
+    "lead.read"
+  ]
+}

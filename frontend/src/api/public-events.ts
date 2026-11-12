@@ -1095,6 +1095,11 @@ export interface components {
             call_outcome?: "reached" | "not_reached" | "voicemail" | "call_back_later" | "put_through";
             /** @description True when this update removed the call's outcome, so the call has none again and counts as contact as before. */
             call_outcome_cleared?: boolean;
+            /**
+             * @description The task's new type, which decides its one step (absent when this update did not touch it). Task rows only.
+             * @enum {string}
+             */
+            task_type?: "reply" | "reach_out" | "meet" | "review" | "decide" | "do";
             relinked?: components["schemas"]["PublicEventActivityRelinkedRef"];
             /**
              * @description `outbound` when capture learned that a message stored as received was the seat's own sent mail. `inbound` when a copy read as a colleague's sent mail is received mail again, because that colleague's address is not at an own domain. Absent otherwise. The counterparty changes with it; a subscriber that must know re-reads the row.
@@ -2066,6 +2071,7 @@ export const publicEventLeadDisqualifyReasonChangedChangeValues: ReadonlyArray<F
 export const publicEventActivityChangedFieldsOccurred_precisionValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["PublicEventActivityChangedFields"]["occurred_precision"]> = ["instant", "day"];
 export const publicEventActivityChangedFieldsMeeting_statusValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["PublicEventActivityChangedFields"]["meeting_status"]> = ["booked", "held", "no_show", "canceled"];
 export const publicEventActivityChangedFieldsCall_outcomeValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["PublicEventActivityChangedFields"]["call_outcome"]> = ["reached", "not_reached", "voicemail", "call_back_later", "put_through"];
+export const publicEventActivityChangedFieldsTask_typeValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["PublicEventActivityChangedFields"]["task_type"]> = ["reply", "reach_out", "meet", "review", "decide", "do"];
 export const publicEventActivityChangedFieldsDirectionValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["PublicEventActivityChangedFields"]["direction"]> = ["outbound", "inbound"];
 export const publicEventActivityChangedFieldsAudienceValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["PublicEventActivityChangedFields"]["audience"]> = ["workspace", "participants", "selected"];
 export const publicEventActivityChangedFieldsCalendar_methodValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["PublicEventActivityChangedFields"]["calendar_method"]> = ["PUBLISH", "REQUEST", "REPLY", "ADD", "CANCEL", "REFRESH", "COUNTER", "DECLINECOUNTER"];

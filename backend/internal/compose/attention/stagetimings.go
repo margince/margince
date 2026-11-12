@@ -27,7 +27,9 @@ var stageBounds = []float64{0.001, 0.005, 0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 0.7
 // The composed reads that meter their stages, one per entry point that opens
 // a snapshot. A read nested in another is charged to the outer one.
 const (
-	ReadWorklist       = "worklist"
+	ReadWorklist = "worklist"
+	// ReadWorklistDone is the day a Done check assembles to find its rows.
+	ReadWorklistDone   = "worklist_done"
 	ReadAttention      = "attention"
 	ReadTeamExceptions = "team_exceptions"
 	// ReadUnmetered is a stage timed outside every composed read.

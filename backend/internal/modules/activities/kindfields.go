@@ -51,6 +51,9 @@ func checkKind(kind string) error {
 // fieldCallOutcome is how a call ended; only a call carries one.
 const fieldCallOutcome = "call_outcome"
 
+// onlyATask names the kind a task-only field belongs to, in its refusal.
+const onlyATask = "a task"
+
 // checkCallOutcomeKind refuses an outcome outside the contract's list, naming
 // the field, and an outcome on anything but a call.
 func checkCallOutcomeKind(kind string, callOutcome *string) error {
@@ -78,6 +81,36 @@ func (e *callOutcomeValueError) FieldFault() (string, string, string) {
 	return fieldCallOutcome, faultInvalid, e.Error()
 }
 
+// checkTaskTypeKind refuses a task type the fixed list does not hold, and a
+// type on anything but a task.
+func checkTaskTypeKind(kind string, taskType *crmcontracts.TaskType) error {
+	if taskType == nil {
+		return nil
+	}
+	if !taskType.Valid() {
+		return &taskTypeValueError{}
+	}
+	if kind != string(crmcontracts.ActivityKindTask) {
+		return &KindFieldError{Field: fieldTaskType, Only: onlyATask}
+	}
+	return nil
+}
+
+// taskTypeList names the values crm.yaml's TaskType holds, for the refusal.
+const taskTypeList = "reply, reach_out, meet, review, decide, do"
+
+// taskTypeValueError is a task type the fixed list does not hold.
+type taskTypeValueError struct{}
+
+func (e *taskTypeValueError) Error() string {
+	return "task_type takes one of " + taskTypeList
+}
+
+// FieldFault names task_type on every surface.
+func (e *taskTypeValueError) FieldFault() (string, string, string) {
+	return fieldTaskType, faultInvalid, e.Error()
+}
+
 func checkMeetingStatusKind(kind string, meetingStatus *string) error {
 	if meetingStatus != nil && kind != KindMeeting {
 		return &MeetingStatusKindError{Kind: kind}
@@ -88,6 +121,7 @@ func checkMeetingStatusKind(kind string, meetingStatus *string) error {
 const (
 	fieldDueAt    = "due_at"
 	fieldRemindAt = "remind_at"
+	fieldTaskType = "task_type"
 )
 
 // taskFields are the update's members that only a task carries. The
@@ -115,7 +149,7 @@ func checkTaskFieldsKind(kind string, f taskFields) error {
 		{auditFieldIsDone, f.isDone != nil && *f.isDone},
 	} {
 		if set.is {
-			return &KindFieldError{Field: set.field, Only: "a task"}
+			return &KindFieldError{Field: set.field, Only: onlyATask}
 		}
 	}
 	return nil

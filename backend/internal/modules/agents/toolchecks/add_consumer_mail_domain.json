@@ -1,0 +1,7 @@
+{
+  "verb": "add_consumer_mail_domain",
+  "checks": [
+    "capture_settings.create",
+    "capture_settings.create|update"
+  ]
+}

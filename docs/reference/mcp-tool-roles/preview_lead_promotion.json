@@ -1,0 +1,18 @@
+{
+  "tool": "read_details",
+  "action": "lead_promotion_preview",
+  "verb": "preview_lead_promotion",
+  "allowed_for": [
+    "admin",
+    "management",
+    "manager",
+    "ops",
+    "read_only",
+    "rep"
+  ],
+  "refused_for": [],
+  "colleague_record": {
+    "manager": "ran",
+    "rep": "ran"
+  }
+}

@@ -1,0 +1,14 @@
+{
+  "tool": "preview_import",
+  "verb": "preview_import",
+  "allowed_for": [
+    "admin",
+    "ops"
+  ],
+  "refused_for": [
+    "management",
+    "manager",
+    "read_only",
+    "rep"
+  ]
+}

@@ -1,0 +1,9 @@
+{
+  "verb": "withdraw_legal_review",
+  "checks": [
+    "deal.update"
+  ],
+  "takes": [
+    "legal_review"
+  ]
+}

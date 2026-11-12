@@ -38,7 +38,7 @@ const (
 	mcpParityCommand = "go test ./gates -run TestTheMCPParityCatalogIsPublished -update-mcp-parity"
 	mcpParityJSON    = "../docs/reference/mcp-parity.json"
 	mcpParityPage    = "../docs/reference/mcp-parity.md"
-	toolRolesJSON    = "../docs/reference/mcp-tool-roles.json"
+	toolRolesDir     = "../docs/reference/mcp-tool-roles"
 	// repRole is the role a plain user starts with, so a setting it passes is one
 	// a non-admin reaches.
 	repRole = "rep"
@@ -333,20 +333,7 @@ func parityStateOf(op parityContractOp) string {
 // runs the real handler, so a refusal on any action of a verb stands.
 func measuredRep(t *testing.T) map[string]bool {
 	t.Helper()
-	raw, err := gatekit.ReadFile(toolRolesJSON)
-	if err != nil {
-		t.Fatalf("reading %s: %v", toolRolesJSON, err)
-	}
-	var doc struct {
-		Rows []struct {
-			Verb    string   `json:"verb"`
-			Allowed []string `json:"allowed_for"`
-			Refused []string `json:"refused_for"`
-		} `json:"rows"`
-	}
-	if err := json.Unmarshal(raw, &doc); err != nil {
-		t.Fatalf("decoding %s: %v", toolRolesJSON, err)
-	}
+	doc := readToolRoles(t)
 	out := map[string]bool{}
 	for _, row := range doc.Rows {
 		switch {

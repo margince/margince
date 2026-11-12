@@ -1,0 +1,14 @@
+{
+  "verb": "prepare_handoff",
+  "checks": [
+    "activity.read",
+    "company.read",
+    "contact.read",
+    "deal.read",
+    "project.read",
+    "relationship.read"
+  ],
+  "takes": [
+    "project"
+  ]
+}

@@ -21,6 +21,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/deals"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/platform/owndomain"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/relstrength"
 	"github.com/margince/margince/backend/internal/shared/kernel/workforce"
@@ -34,13 +35,38 @@ const dealVerdictBodyChars = 1500
 
 // dealVerdictChecksumSQL is what a verdict read about one deal. It moves when
 // the viability evidence, the deal's own fields, an offer or a stage move
-// does. It is stored after the verdict's own writes, so those never ask for a
-// second reading. Every reader aliases the deal as d.
+// does. It also moves on what the stage move's row-lock rule reads: the
+// criterion ledger and which participants stand on an own domain. It is
+// stored after the verdict's own writes, so those never ask for a second
+// reading. Every reader aliases the deal as d.
 func dealVerdictChecksumSQL() string {
 	return `md5(concat_ws('|', ` + viabilityFingerprintSQL("d") + `, d.amount_minor, d.currency,
 		d.win_probability_override, d.win_probability_set_by, d.stage_id,
 		(SELECT concat_ws('|', count(*), max(vo.updated_at)) FROM offer vo WHERE vo.deal_id = d.id),
-		(SELECT concat_ws('|', count(*), max(vh.changed_at)) FROM deal_stage_history vh WHERE vh.deal_id = d.id)))`
+		(SELECT concat_ws('|', count(*), max(vh.changed_at)) FROM deal_stage_history vh WHERE vh.deal_id = d.id),
+		` + verdictLedgerSQL + `, ` + verdictOwnSideSQL() + `))`
+}
+
+// verdictLedgerSQL is the deal's criterion ledger as a custom criterion reads
+// it: each row, who wrote it, whether it met, and whether it was refuted. An
+// erased snippet leaves it alone. It is NULL for a deal with no ledger, which
+// concat_ws skips, so such a deal keeps its stored checksum.
+const verdictLedgerSQL = `(SELECT md5(string_agg(concat_ws(':', ev.id, ev.author_side, ev.met, ev.refuted_at), ',' ORDER BY ev.id))
+		   FROM deal_stage_evidence ev WHERE ev.deal_id = d.id)`
+
+// verdictOwnSideSQL names the participants of the deal's mail and meetings
+// that stand on a trusted own domain. A buyer milestone and a held meeting are
+// judged against those domains. An own domain added or removed has to make the
+// deal due again. The set read here holds every domain the judged set
+// does, so it can only read a deal again for nothing, never miss one. NULL
+// when no participant stands on one.
+func verdictOwnSideSQL() string {
+	return `(SELECT md5(string_agg(op.id::text, ',' ORDER BY op.id))
+		   FROM activity_link ol JOIN activity oa ON oa.id = ol.activity_id
+		   JOIN activity_participant op ON op.activity_id = oa.id
+		  WHERE ol.deal_id = d.id AND oa.archived_at IS NULL
+		    AND EXISTS (SELECT 1 FROM (` + auth.TrustedOwnDomainsFoldedSQL + `) own(domain)
+		                 WHERE ` + owndomain.CoversSQL("op.address_domain_folded", "own.domain") + `))`
 }
 
 // dealVerdictRead is one deal's input and the state the rules check.

@@ -1,0 +1,6 @@
+{
+  "verb": "list_tax_rates",
+  "checks": [
+    "tax_rate.read"
+  ]
+}

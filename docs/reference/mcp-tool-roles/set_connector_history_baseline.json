@@ -1,0 +1,14 @@
+{
+  "tool": "change_capture",
+  "action": "set_history_baseline",
+  "verb": "set_connector_history_baseline",
+  "allowed_for": [
+    "admin",
+    "management",
+    "manager",
+    "ops",
+    "read_only",
+    "rep"
+  ],
+  "refused_for": []
+}

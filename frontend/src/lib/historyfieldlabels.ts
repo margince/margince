@@ -71,6 +71,7 @@ const HISTORY_FIELD_LABELS = new Map<string, MessageKey>([
   ["product_id", "history.field.product_id"],
   ["relationship_types", "history.field.relationship_types"],
   ["due_has_time", "history.field.due_has_time"],
+  ["task_type", "history.field.task_type"],
   ["remind_at", "history.field.remind_at"],
   ["score", "history.field.score"],
   ["score_override_reason", "history.field.score_override_reason"],

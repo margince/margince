@@ -1,0 +1,10 @@
+{
+  "verb": "propose_filter",
+  "checks": [
+    "company.read",
+    "contact.read",
+    "custom_field.read",
+    "list.read",
+    "relationship.read"
+  ]
+}

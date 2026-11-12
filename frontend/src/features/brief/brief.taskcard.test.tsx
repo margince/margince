@@ -47,7 +47,7 @@ it("marks a waiting task done from its tick, without opening it", async () => {
   // The tick writes; it never puts the card in hand.
   expect(
     container.querySelector(".brief-triage-lead .worklist-row-title")
-      ?.textContent,
+      ?.firstChild?.textContent,
   ).toBe("Call Weber");
 });
 
@@ -139,7 +139,7 @@ it("keeps the next card in hand when the completed selection leaves the queue", 
   await user.click(within(nextCard).getByText("Send the sheet"));
   expect(
     view.container.querySelector(".brief-triage-lead .worklist-row-title")
-      ?.textContent,
+      ?.firstChild?.textContent,
   ).toBe("Send the sheet");
   expect(document.activeElement).toBe(frame());
   view.rerender(
@@ -147,7 +147,7 @@ it("keeps the next card in hand when the completed selection leaves the queue", 
   );
   expect(
     view.container.querySelector(".brief-triage-lead .worklist-row-title")
-      ?.textContent,
+      ?.firstChild?.textContent,
   ).toBe("Call Lumen");
   expect(document.activeElement).toBe(frame());
 });

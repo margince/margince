@@ -1,0 +1,6 @@
+{
+  "verb": "create_custom_field",
+  "checks": [
+    "custom_field.create"
+  ]
+}
