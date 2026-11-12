@@ -4925,6 +4925,8 @@ export const en = {
   "visibility.selected": "Selected",
   "visibility.private": "Private",
   "visibility.withheld": "Withheld",
+  "email.access.sharedMailbox":
+    "Came in through {mailbox}, which the {team} team reads.",
   "email.access.unnamedMember": "Former user",
   "email.invitation.badge": "Invitation",
   "email.invitation.startsAt": "Starts {when}",

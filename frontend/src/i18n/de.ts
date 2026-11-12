@@ -4961,6 +4961,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "visibility.selected": "Ausgewählte",
   "visibility.private": "Privat",
   "visibility.withheld": "Zurückgehalten",
+  "email.access.sharedMailbox":
+    "Kam über das Postfach {mailbox}, das das Team {team} liest.",
   "email.access.unnamedMember": "Ehemaliges Nutzerkonto",
   "email.invitation.badge": "Einladung",
   "email.invitation.startsAt": "Beginnt {when}",

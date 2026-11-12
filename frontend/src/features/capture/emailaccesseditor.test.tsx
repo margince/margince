@@ -99,7 +99,7 @@ function presentation(access: Partial<EmailAccess>): EmailPresentation {
  * `fetch` is stubbed to reject so a request this component should not make
  * fails loudly instead of hanging.
  */
-function draw(node: ReactNode) {
+function draw(node: ReactNode, locale: "en" | "de" | "vi" = "en") {
   vi.stubGlobal(
     "fetch",
     vi.fn(async (input: RequestInfo | URL) => {
@@ -113,12 +113,66 @@ function draw(node: ReactNode) {
   client.setQueryData(["teams"], { entries: [], partial: false });
   return render(
     <QueryClientProvider client={client}>
-      <LocaleProvider initial="en">{node}</LocaleProvider>
+      <LocaleProvider initial={locale}>{node}</LocaleProvider>
     </QueryClientProvider>,
   );
 }
 
 describe("what the drawer says about who reads a message", () => {
+  // A held message from a shared mailbox says why, and names the mailbox and
+  // the team it reads through, in each language the product ships.
+  it.each([
+    [
+      "en",
+      "In a shared mailbox",
+      "Came in through sales@demo.test, which the Sales desk team reads.",
+    ],
+    [
+      "de",
+      "In einem gemeinsamen Postfach",
+      "Kam über das Postfach sales@demo.test, das das Team Sales desk liest.",
+    ],
+    [
+      "vi",
+      "Trong hộp thư dùng chung",
+      "Đến qua hộp thư sales@demo.test, do nhóm Sales desk đọc.",
+    ],
+  ] as const)(
+    "names the shared mailbox and its reader team in %s",
+    (locale, reason, mailbox) => {
+      draw(
+        <EmailAccessEditor
+          presentation={presentation({
+            display_status: "participants",
+            audience: "participants",
+            explanation: "shared_mailbox",
+            shared_mailboxes: [
+              {
+                address: "sales@demo.test",
+                reader_team_id: "01a05500-0000-7000-8000-0000000000d1",
+                reader_team_name: "Sales desk",
+              },
+            ],
+          })}
+        />,
+        locale,
+      );
+
+      expect(screen.getByText(reason)).toBeTruthy();
+      expect(screen.getByText(mailbox)).toBeTruthy();
+    },
+  );
+
+  it("names no mailbox for mail only personal mailboxes captured", () => {
+    draw(
+      <EmailAccessEditor
+        presentation={presentation({ shared_mailboxes: [] })}
+      />,
+    );
+
+    expect(screen.queryByText(/Came in through/)).toBeNull();
+  });
+
   it("states the verdict even when the reader may change nothing", () => {
     draw(
       <EmailAccessEditor

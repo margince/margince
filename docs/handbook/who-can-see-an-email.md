@@ -1,5 +1,5 @@
 <!-- prose:plain -->
-<!-- describes: frontend/src/features/capture/connection-settings.tsx frontend/src/components/mail-sharing.tsx frontend/src/features/capture/emailaccesseditor.tsx frontend/src/features/capture/held-threads.tsx backend/internal/modules/capture/mailposture.go backend/internal/modules/capture/sinkaudience.go backend/internal/modules/activities/audience.go backend/internal/modules/activities/audienceholds.go backend/internal/compose/readerrendering frontend/src/features/settings/internalmailsettings.tsx frontend/src/features/settings/internalmailhistoryscope.tsx frontend/src/features/capture/internalmailhistorychoice.tsx backend/internal/modules/capture/internalmailpolicy.go backend/internal/modules/capture/internalmailcapture.go backend/internal/modules/capture/internalmailhistory.go backend/internal/modules/activities/internalmail.go -->
+<!-- describes: frontend/src/features/capture/connection-settings.tsx frontend/src/components/mail-sharing.tsx frontend/src/features/capture/emailaccesseditor.tsx frontend/src/features/capture/held-threads.tsx backend/internal/modules/capture/mailposture.go backend/internal/modules/capture/sinkaudience.go backend/internal/modules/activities/audience.go backend/internal/modules/activities/audienceholds.go backend/internal/compose/readerrendering frontend/src/features/settings/internalmailsettings.tsx frontend/src/features/settings/internalmailhistoryscope.tsx frontend/src/features/capture/internalmailhistorychoice.tsx backend/internal/modules/capture/internalmailpolicy.go backend/internal/modules/capture/internalmailcapture.go backend/internal/modules/capture/internalmailhistory.go backend/internal/modules/activities/internalmail.go backend/internal/modules/capture/sharedmailbox.go backend/internal/platform/auth/sharedmailboxreader.go -->
 # Who can see an email
 
 Two things decide who can read an email in Margince, and **a "no" from either is a
@@ -166,6 +166,7 @@ A held Margince message carries a reason, so you can see why it is held:
 | **Kept private** | A human decided, and that decision stays |
 | **Held: no record** | Something judged the sender, so it is filed under nothing |
 | **Held: no counterparty** | It named nobody Margince could create a record for |
+| **In a shared mailbox** | A shared mailbox brought it in, and it keeps its mail to its reader team |
 
 A later verdict clears some of these and not others:
 
@@ -306,6 +307,36 @@ only, not to the thread or the contact."
 That is how it is different from sharing, above. **Share with the company** on a
 thread "Applies to the whole thread." and lets go of your own hold on all of it.
 Changing a message's visibility changes that one message.
+
+## Shared mailboxes
+
+A shared mailbox, such as sales@ or support@, belongs to no one user. An
+administrator connects it and names one team as its readers.
+
+**Who reads it.** The members of its reader team read its mail, and so do the
+those on each message. Nobody else does, whatever their rank or the records
+they can open. When the same email also reached a colleague's own mailbox, that
+mailbox's rules count too, and the strictest of them wins.
+
+**Held or shared.** A shared mailbox is **Held** or **Shared**. **Held** keeps
+each message to the reader team and those on it. **Shared** opens its mail
+to everyone who can open the records it is filed under. An administrator must
+first allow mailboxes to share, in **Settings → Mail capture**.
+
+A change of readers or of held and shared applies to all mail the mailbox has
+already captured, not only to new mail.
+
+**Removing a team member.** A member taken off the reader team loses its mail
+at their next read. Their Home stops showing it at once, too.
+
+**A delete in the shared mailbox.** Deleting a message in the mail service
+removes nothing in Margince.
+
+Mail that came in only through a shared mailbox adds no contact, company, task
+or Worklist row. It is still filed under records that already exist.
+
+When you open such an email, the reason under its subject says **In a shared
+mailbox**. The line below it names the mailbox and the team that reads it.
 
 ## What you can see of other seats' capture
 

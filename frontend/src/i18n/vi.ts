@@ -4837,6 +4837,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "visibility.selected": "Được chọn",
   "visibility.private": "Riêng tư",
   "visibility.withheld": "Bị ẩn",
+  "email.access.sharedMailbox":
+    "Đến qua hộp thư {mailbox}, do nhóm {team} đọc.",
   "email.access.unnamedMember": "Người dùng cũ",
   "email.invitation.badge": "Lời mời",
   "email.invitation.startsAt": "Bắt đầu {when}",
