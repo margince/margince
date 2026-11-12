@@ -11,7 +11,7 @@
 -- Every other key holds on existing rows: a link's rows were written in one
 -- transaction with the link's company. A row mirrored before customer_link_id
 -- existed holds NULL, which the key leaves unchecked. The data task
--- core/1794447279_customer_link_backfill names the link on those rows, and is
+-- core/1794458739_customer_link_backfill names the link on those rows, and is
 -- the precondition for a NOT NULL check on the column in a later release.
 SET LOCAL lock_timeout = '3s';
 
