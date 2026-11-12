@@ -100,6 +100,10 @@ func TestASignedRequestLandsOneRowStampedFromTheEndpoint(t *testing.T) {
 	if args[2] != "n-1" {
 		t.Fatalf("the replay key stored is %v, not the nonce the sender signed", args[2])
 	}
+	// The size is kept apart from the body, which landing clears.
+	if !strings.Contains(sql, "body_bytes") || !strings.Contains(sql, "octet_length($4::bytea)") {
+		t.Fatalf("the queued row does not keep the body's size apart from the body:\n%s", sql)
+	}
 	if !strings.Contains(sql, "sent_at") {
 		t.Fatalf("the queued row does not record what the sender signed:\n%s", sql)
 	}
