@@ -3167,7 +3167,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "partner.nextStep": "Bước tiếp theo",
   "partner.nextStepDue": "Hạn bước tiếp theo",
   "partner.nextStepOld":
-    "Ghi trước khi bước tiếp theo trở thành nhiệm vụ. Hãy thêm nhiệm vụ để giao cho đồng nghiệp kèm hạn.",
+    "Được lưu dạng văn bản, chưa giao cho đồng nghiệp nào. Hãy thêm nhiệm vụ để giao cho đồng nghiệp kèm hạn.",
   "partner.servedSegments": "Phân khúc phục vụ",
   "partner.servedSegmentsHint":
     "Nhóm khách hàng đối tác phục vụ, ví dụ doanh nghiệp sản xuất vừa và nhỏ. Phân tách nhiều nhóm bằng dấu phẩy.",

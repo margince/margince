@@ -71,7 +71,7 @@ The relationship stage of a partner in Margince says where the relationship is. 
 
 ### How do I plan a partner's next step?
 To plan a partner's next step in Margince, open the company's **Partner** tab and choose **Add task** under **Next step**. Name the colleague who does it and the day it is due. The task then shows on that colleague's Home and Worklist, whoever owns the company.
-A next step written as plain text before stays under **Next step**, with a note that it is from before next steps were tasks. Add a task to give it a colleague and a due date.
+A next step kept as plain text shows under **Next step**, with a note that no colleague does it. An assistant that sets up a partner can still write one.
 Also called: partner next step, who follows up with a partner.
 
 ### What does activated mean?

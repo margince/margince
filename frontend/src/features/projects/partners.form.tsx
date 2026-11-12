@@ -16,6 +16,7 @@ import { refuseUnreadableField } from "../../design-system/formvalidity";
 import { Panel, PanelBody } from "../../design-system/panel";
 import { QueryGate } from "../../design-system/querystates";
 import { MultiSelect, Select } from "../../design-system/select";
+import { formatDate } from "../../format/format";
 import { useLocale, useT } from "../../i18n";
 import {
   useCanWrite,
@@ -453,15 +454,17 @@ function PartnerNextStep({
   partner,
 }: Readonly<{ companyId: string; partner: Partner }>) {
   const t = useT();
+  const { locale } = useLocale();
+  const zone = useViewerZone();
   const canFileTask = useCanWrite("activity", "create");
+  const due = partner.next_step_due_at;
   return (
     <div className="form-stack">
-      {partner.next_step && (
+      {(partner.next_step || due) && (
         <p>
-          <span>{partner.next_step}</span>
-          {partner.next_step_due_at && (
-            <span> · {partner.next_step_due_at}</span>
-          )}
+          {partner.next_step && <span>{partner.next_step}</span>}
+          {partner.next_step && due && " · "}
+          {due && <span>{formatDate(due, locale, zone)}</span>}
           <br />
           <span className="t-caption">{t("partner.nextStepOld")}</span>
         </p>

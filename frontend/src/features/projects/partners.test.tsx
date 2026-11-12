@@ -333,7 +333,7 @@ describe("PartnerTab — existing partner", () => {
 
     expect(await screen.findByText("Renew certification")).toBeTruthy();
     expect(
-      screen.getByText(/Written before next steps became tasks/),
+      screen.getByText(/Kept as text, with no colleague who does it/),
     ).toBeTruthy();
     expect(
       await screen.findByRole("button", { name: "Add task" }),
