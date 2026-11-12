@@ -12,6 +12,8 @@ package activities
 import (
 	"context"
 	"errors"
+	"maps"
+	"slices"
 	"strings"
 	"time"
 
@@ -329,16 +331,20 @@ func readActivityRow(ctx context.Context, tx pgx.Tx, id ids.ActivityID, archived
 // target is out of scope is dropped, so links[] answers "what this is about,
 // as far as you can see".
 func AttachLinks(ctx context.Context, tx pgx.Tx, activities []crmcontracts.Activity) error {
-	if len(activities) == 0 {
+	owner := make(map[ids.UUID]int, len(activities))
+	for i, a := range activities {
+		owner[ids.UUID(a.Id)] = i
+	}
+	return attachLinksFrom(ctx, tx, activities, owner, false)
+}
+
+// attachLinksFrom appends the readable links of every activity id in owner to
+// the row it maps to. union drops a link to a record that row already names.
+func attachLinksFrom(ctx context.Context, tx pgx.Tx, activities []crmcontracts.Activity, owner map[ids.UUID]int, union bool) error {
+	if len(owner) == 0 {
 		return nil
 	}
-	activityIDs := make([]ids.UUID, len(activities))
-	byID := make(map[ids.UUID]int, len(activities))
-	for i, a := range activities {
-		activityIDs[i] = ids.UUID(a.Id)
-		byID[ids.UUID(a.Id)] = i
-	}
-	args := []any{activityIDs}
+	args := []any{slices.Collect(maps.Keys(owner))}
 	arg := func(v any) int { args = append(args, v); return len(args) }
 	visible, err := auth.LinkTargetReadableClause(ctx, "al", arg)
 	if err != nil {
@@ -362,7 +368,7 @@ func AttachLinks(ctx context.Context, tx pgx.Tx, activities []crmcontracts.Activ
 		if err := rows.Scan(&linkID, &activityID, &entityType, &entityID); err != nil {
 			return err
 		}
-		i, ok := byID[activityID]
+		i, ok := owner[activityID]
 		if !ok {
 			continue
 		}
@@ -375,20 +381,25 @@ func AttachLinks(ctx context.Context, tx pgx.Tx, activities []crmcontracts.Activ
 		if activities[i].Links == nil {
 			activities[i].Links = &[]crmcontracts.ActivityLink{}
 		}
+		if union && slices.ContainsFunc(*activities[i].Links, func(l crmcontracts.ActivityLink) bool {
+			return l.EntityType == link.EntityType && l.EntityId == link.EntityId
+		}) {
+			continue
+		}
 		*activities[i].Links = append(*activities[i].Links, link)
 	}
 	return rows.Err()
 }
 
-// scanActivityPage scans one row of a sorted page: the projection every reader
-// of an activity takes, and the sort's cursor key where the sort appends one.
-func scanActivityPage(ctx context.Context, row pgx.Row, sorted *storekit.ListSort) (crmcontracts.Activity, *string, error) {
+// scanActivityPage scans one row of a sorted page. It reads the projection every
+// activity reader takes, the sort's cursor key when there is one, then after.
+func scanActivityPage(ctx context.Context, row pgx.Row, sorted *storekit.ListSort, after ...any) (crmcontracts.Activity, *string, error) {
 	var key *string
 	var dest []any
 	if sorted.CursorKeySuffix() != "" {
 		dest = append(dest, &key)
 	}
-	out, err := scanActivity(ctx, storekit.TrailingColumns{Row: row, Dest: dest})
+	out, err := scanActivity(ctx, storekit.TrailingColumns{Row: row, Dest: append(dest, after...)})
 	return out, key, err
 }
 

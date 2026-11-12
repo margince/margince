@@ -406,9 +406,9 @@ func (r *Registry) DueConnections(ctx context.Context, name string) ([]DueConnec
 			-- missing a row is that a former colleague's mail keeps arriving,
 			-- so the poll asks the question too. Same condition
 			-- seatLoginAddressTx reads one file over.
-			JOIN app_user u ON u.id = c.user_id
-			 AND `+workforce.LiveMemberSQL("u")+`
+			LEFT JOIN app_user u ON u.id = c.user_id AND `+workforce.LiveMemberSQL("u")+`
 			WHERE c.provider = $1 AND c.status IN ('connected','error') AND c.archived_at IS NULL
+			  AND (u.id IS NOT NULL OR `+sharedMailboxLiveSQL+`)
 			  AND COALESCE(s.next_sync_at, now()) <= now()`, name)
 		if err != nil {
 			return nil, err

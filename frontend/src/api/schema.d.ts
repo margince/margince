@@ -19515,7 +19515,8 @@ export interface paths {
          * @description Renaming needs `team_admin.update`. Archiving or restoring switches every member's
          *     team reach off or on, so it is admin only, like every other change to who is on a
          *     team: a holder of `team_admin` who is not an admin gets 403
-         *     `team_membership_requires_admin`.
+         *     `team_membership_requires_admin`. A team that reads a shared mailbox is not archived:
+         *     409, naming the mailbox, until the mailbox has another reader team.
          */
         patch: operations["updateTeam"];
         trace?: never;
@@ -19539,6 +19540,10 @@ export interface paths {
          *
          *     Only an admin changes who is on a team. A holder of `team_admin.update` who is not an
          *     admin gets 403 `team_membership_requires_admin`, for themselves as for anybody else.
+         *
+         *     A team that reads a shared mailbox grants its members that mailbox's mail. An agent
+         *     adding a member to such a team gets 403, naming the mailbox; an admin adds them in the
+         *     app, and the audit row names the mailbox the member can now read.
          */
         put: operations["addTeamMember"];
         post?: never;
@@ -28058,6 +28063,20 @@ export interface components {
             /** Format: date-time */
             last_success_at: string | null;
             /** @description The class of the last failed sync (as `CaptureConnection.last_sync_error_class`), so a `forbidden` mailbox reads as a role problem and not a broken connection. Null while none failed. */
+            error_class?: string | null;
+        };
+        /** @description A shared mailbox with an active concern. No member owns it, so `account_label` names it. */
+        CaptureSharedMailboxConcern: {
+            /** Format: uuid */
+            connection_id: string;
+            provider: string;
+            account_label: string | null;
+            concern: components["schemas"]["CaptureConcernKind"];
+            /** Format: date-time */
+            since: string | null;
+            /** Format: date-time */
+            last_success_at: string | null;
+            /** @description The class of the last failed sync, as on `CaptureConnectionConcern`. */
             error_class?: string | null;
         };
         /**
@@ -40786,6 +40805,10 @@ export interface components {
             readonly source_activity_id?: string | null;
             /** @description Every record this activity is filed under that the caller may read; a link to a record they cannot read is left out. One activity may link to several, a contact and a deal say. Every read that returns an activity answers the same links: the list, one activity, and a contact's 360. */
             links?: components["schemas"]["ActivityLink"][];
+            /** @description How many colleagues' mailboxes hold a copy of this email that the caller may read, this one included. Set only on a timeline that shows one row per email (the 360 pages, or `collapse_copies=true`); absent when there is one copy. `links` is the union over those copies. */
+            readonly copies?: number;
+            /** @description The other copies this row stands for, each readable by the caller through `GET /activities/{id}`. Set exactly when `copies` is. Copies join only when they agree on Message-ID, sender, subject, body, direction and the second they occurred. */
+            readonly copy_ids?: string[];
             /** @description Whether Write email on this row opens with a recipient filled in: true exactly when `GET /activities/{id}/reply-recipient` answers a non-empty `address` for a call, meeting, note or task. Both are computed by one rule, the one `email_target` states. Always false for an email or a message, which are answered with Reply instead, for an archived row, for a task the product filed itself (`automatic_kind` product), and for a row whose content is withheld from the caller. False for a company target too, which has no single address: the composer asks which of the company's contacts the mail is for. */
             offers_email: boolean;
             email_target?: components["schemas"]["ActivityEmailTarget"];
@@ -48212,6 +48235,8 @@ export interface components {
             categories?: components["schemas"]["CaptureHealthCategories"];
             /** @description Active connection concerns for live members. Names account state, never correspondence. */
             connection_concerns: components["schemas"]["CaptureConnectionConcern"][];
+            /** @description Active connection concerns for shared mailboxes. Names account state, never correspondence. */
+            shared_mailbox_concerns?: components["schemas"]["CaptureSharedMailboxConcern"][];
             /** Format: date-time */
             generated_at: string;
             /** @description One row per mailbox owner with anything waiting. A mailbox with a clear queue is absent. */
@@ -69613,6 +69638,8 @@ export interface operations {
                 waiting_reply?: boolean;
                 /** @description Restrict the list to the caller's own due reminders: open, live tasks assigned to the caller whose `remind_at` has passed, at most 30 days ago. The latest reminder comes first. It reads content, so a task whose content the caller may not read is left out. */
                 reminder_due?: boolean;
+                /** @description Show one row per email when several colleagues' mailboxes each hold a copy of it. Only copies the caller may read are joined, and the row shown says how many in `copies`. Off by default, so an export or sync client still reads every row. */
+                collapse_copies?: boolean;
             };
             header?: never;
             path?: never;

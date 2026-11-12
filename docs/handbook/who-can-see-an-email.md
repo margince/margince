@@ -143,6 +143,14 @@ domains. The mail server that received the mail must also have confirmed that it
 came from that domain.
 Also called: my own sent mail, mail I sent to a customer, copied colleague.
 
+### Why does a mail that several colleagues received show only once?
+Margince keeps one copy of a mail for each mailbox that received it. A timeline
+shows the copies you can read as one row, marked **Also in 1 other mailbox**. The
+row names every record those copies are filed under that you can see. A copy you
+cannot read stays a row of its own, marked withheld. How often you were in touch
+with a contact counts the mail once.
+Also called: duplicate email, the same email twice, one mail in two mailboxes.
+
 ## Why this one is held
 
 A held Margince message carries a reason, so you can see why it is held:

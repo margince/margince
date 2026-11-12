@@ -108,8 +108,10 @@ func actingCaptureRefusal(ctx context.Context) error {
 // syncCredential is the credential a sync or backfill page runs with, asked
 // only once the member behind runCtx may still capture.
 func (r *Registry) syncCredential(runCtx context.Context, credentialRef *string, authBytes []byte) (connector.Auth, error) {
-	if err := actingCaptureRefusal(runCtx); err != nil {
-		return nil, err
+	if _, shared := sharedMailboxOf(runCtx); !shared {
+		if err := actingCaptureRefusal(runCtx); err != nil {
+			return nil, err
+		}
 	}
 	return r.resolveCredential(runCtx, credentialRef, authBytes)
 }
@@ -186,6 +188,12 @@ func (s *Sink) mailboxRunAllowedTx(ctx context.Context, tx pgx.Tx) (context.Cont
 			return ctx, err
 		}
 	}
+	if shared, ok := sharedMailboxOf(ctx); ok {
+		return ctx, sharedMailboxAllowedTx(ctx, tx, shared)
+	}
 	_, owner := capturePrincipal(ctx)
+	if owner.IsZero() {
+		return ctx, &RoleCannotCaptureError{Missing: seatMissing}
+	}
 	return s.captureAllowedTx(ctx, tx, owner)
 }

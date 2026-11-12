@@ -120,6 +120,11 @@ func TestAVertexAssertionIsSignedForThePinnedTokenEndpoint(t *testing.T) {
 			if claims != want {
 				t.Errorf("claims = %+v, want %+v", claims, want)
 			}
+			// Vertex acts as the service account itself, never for a user.
+			var named map[string]json.RawMessage
+			if json.Unmarshal(decoded, &named) != nil || named["sub"] != nil {
+				t.Errorf("the Vertex assertion carries a sub claim: %s", decoded)
+			}
 		})
 	}
 }

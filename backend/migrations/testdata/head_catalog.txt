@@ -2207,6 +2207,7 @@ public.capture_connection.history_baseline_date date gen=- def=-
 public.capture_connection.history_baseline_set_at timestamp with time zone gen=- def=-
 public.capture_connection.history_baseline_set_by text gen=- def=-
 public.capture_connection.history_baseline_tz text gen=- def=-
+public.capture_connection.home_read_fence_shared_mailbox_readers CREATE TRIGGER home_read_fence_shared_mailbox_readers AFTER UPDATE OF reader_team_id, mail_posture ON public.capture_connection FOR EACH ROW WHEN (((old.reader_team_id IS DISTINCT FROM new.reader_team_id) OR (old.mail_posture IS DISTINCT FROM new.mail_posture))) EXECUTE FUNCTION advance_home_read_fence()
 public.capture_connection.id uuid NOT NULL gen=- def=uuidv7()
 public.capture_connection.legal_entity_id uuid gen=- def=-
 public.capture_connection.mail_posture text NOT NULL gen=- def='classified'::text
@@ -9190,6 +9191,7 @@ END;
 public.team acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.team.archived_at timestamp with time zone gen=- def=-
 public.team.created_at timestamp with time zone NOT NULL gen=- def=now()
+public.team.home_read_fence_team_archived CREATE TRIGGER home_read_fence_team_archived AFTER UPDATE OF archived_at ON public.team FOR EACH ROW WHEN (((old.archived_at IS NULL) AND (new.archived_at IS NOT NULL))) EXECUTE FUNCTION advance_home_read_fence()
 public.team.id uuid NOT NULL gen=- def=uuidv7()
 public.team.name text NOT NULL gen=- def=-
 public.team.parent_team_id uuid gen=- def=-
@@ -9201,6 +9203,8 @@ public.team.trg_team_updated CREATE TRIGGER trg_team_updated BEFORE UPDATE ON pu
 public.team.updated_at timestamp with time zone NOT NULL gen=- def=now()
 public.team_membership acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.team_membership.created_at timestamp with time zone NOT NULL gen=- def=now()
+public.team_membership.home_read_fence_team_membership_moved CREATE TRIGGER home_read_fence_team_membership_moved AFTER UPDATE OF team_id, user_id ON public.team_membership FOR EACH STATEMENT EXECUTE FUNCTION advance_home_read_fence()
+public.team_membership.home_read_fence_team_membership_removed CREATE TRIGGER home_read_fence_team_membership_removed AFTER DELETE ON public.team_membership FOR EACH STATEMENT EXECUTE FUNCTION advance_home_read_fence()
 public.team_membership.id uuid NOT NULL gen=- def=uuidv7()
 public.team_membership.report_authority_team_membership CREATE TRIGGER report_authority_team_membership BEFORE INSERT OR DELETE OR UPDATE ON public.team_membership FOR EACH STATEMENT EXECUTE FUNCTION advance_report_projection_authority()
 public.team_membership.team_id uuid NOT NULL gen=- def=-

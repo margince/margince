@@ -109,4 +109,5 @@
 1794448710_a_newsletter_moves_no_activity_clock.up.sql | * | the bodies are the six last_activity_of_* read functions, re-created to refuse a newsletter, and two triggers re-created to fire on bulk_mail_attested; it changes no existing row, and a data task refolds the stored clocks
 1794448710_a_newsletter_moves_no_activity_clock.down.sql | * | the down migration re-creates the same six read functions and two triggers as they were; it changes no existing row
 1794449001_a_mailbox_may_belong_to_no_person.down.sql | * | runs only on a rollback, drops what the up added and sets user_id NOT NULL again, which reads the table but rewrites no row; it fails while a shared mailbox exists
+1794461023_a_team_change_drops_home_answers.up.sql | * | creates four triggers whose bodies run only on later writes; no existing row is read or rewritten
 1794458739_the_finance_mirror_keys_are_validated.up.sql | *, audit_log, finance_external_customer | inserts one directory entry and its create audit row per customer link that names no entry, which only a link seeded before its first sync has; links are human decisions, a few per customer at most

@@ -67,7 +67,7 @@ func (r *Registry) DueWatches(ctx context.Context, name string, within time.Dura
 func (r *Registry) RenewWatch(ctx context.Context, connectionID ids.UUID, topic string) error {
 	var (
 		name          string
-		grantedBy     ids.UserID
+		grantedBy     *ids.UserID
 		credentialRef *string
 		authBytes     []byte
 		watchRef      *string
@@ -75,8 +75,8 @@ func (r *Registry) RenewWatch(ctx context.Context, connectionID ids.UUID, topic 
 	)
 	err := r.db.Tx(ctx, func(tx pgx.Tx) error {
 		return tx.QueryRow(ctx, `
-			SELECT provider, user_id, credential_ref, auth, watch_ref, generation FROM capture_connection
-			WHERE id = $1 AND status = 'connected' AND user_id IS NOT NULL`, connectionID).
+			SELECT provider, user_id, credential_ref, auth, watch_ref, generation FROM capture_connection c
+			WHERE id = $1 AND status = 'connected' AND (user_id IS NOT NULL OR `+sharedMailboxLiveSQL+`)`, connectionID).
 			Scan(&name, &grantedBy, &credentialRef, &authBytes, &watchRef, &generation)
 	})
 	if errors.Is(err, pgx.ErrNoRows) {
@@ -93,7 +93,7 @@ func (r *Registry) RenewWatch(ctx context.Context, connectionID ids.UUID, topic 
 	if !ok {
 		return fmt.Errorf("capture: connector %q does not support push-watch renewal", name)
 	}
-	runCtx, err := r.connectorContext(ctx, name, grantedBy)
+	runCtx, err := r.runContext(ctx, name, grantedBy, connectionID)
 	if err != nil {
 		return err
 	}
