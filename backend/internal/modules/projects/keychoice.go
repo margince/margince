@@ -9,18 +9,14 @@ package projects
 import (
 	"context"
 	"fmt"
-	"regexp"
 	"strings"
 
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/kernel/projectkey"
 )
-
-// projectKeyShape is the project_key_shape CHECK in Go, so a chosen key is
-// refused with a reason before the INSERT rather than by the constraint net.
-var projectKeyShape = regexp.MustCompile(`^[A-Za-z][A-Za-z0-9_-]{1,23}$`)
 
 // subjectWords are words senders put in square brackets for reasons of their
 // own. They are reply and forward markers, gateway tags and everyday labels.
@@ -69,7 +65,8 @@ func keyTaken(key string) error {
 // spelling every minted key has, so two projects never differ by case alone.
 func normalizeChosenKey(raw string) (string, error) {
 	key := strings.ToUpper(strings.TrimSpace(raw))
-	if !projectKeyShape.MatchString(key) {
+	// Refused here with a reason, before the INSERT's constraint net.
+	if !projectkey.Shaped(key) {
 		return "", &ProjectKeyShapeError{}
 	}
 	return key, nil

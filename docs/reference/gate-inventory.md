@@ -638,6 +638,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `owndomainpredicate_test.go` | H2 | Every own-domain decision compares one folded form of a domain. |
 | `phasehistoryattribution_test.go` | H2 | A history table that links its audit row names who acted through that row. |
 | `pipefailgrepq_test.go` | H2 | A shell gate does not decide its verdict through a pipe that can break. |
+| `projectkeyshape_test.go` | H1 | A project key has one shape in Go, projectkey.Shaped. |
 | `promptexcerpt_test.go` | H2 | A prompt built from a crawled page is bounded by this product, not by the site. |
 | `promptfence_test.go` | H1 | No prompt may declare a data boundary the writer of that data can spell. |
 | `promptminorunits_test.go` | H2 | No struct that is JSON-encoded into a model prompt carries a money amount in minor units. |
