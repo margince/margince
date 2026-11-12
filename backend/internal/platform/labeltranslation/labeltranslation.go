@@ -7,11 +7,14 @@
 package labeltranslation
 
 import (
+	"context"
 	"fmt"
 	"strings"
 	"unicode/utf8"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/kernel/systemtext"
 	"github.com/margince/margince/backend/internal/shared/kernel/textlang"
 )
 
@@ -129,4 +132,43 @@ func OptionsToWire(in map[string]map[string]string) *crmcontracts.OptionTranslat
 		out[option] = *ToWire(names)
 	}
 	return &out
+}
+
+// SQL is the SQL expression of an admin-named label in the reader's UI
+// language. It reads the translations column's name for that language, else
+// the stored label. column and translations are compile-time literals, and the
+// language binds through arg.
+func SQL(ctx context.Context, column, translations string, arg func(any) int) string {
+	return SQLIn(ReaderLanguage(ctx), column, translations, arg)
+}
+
+// ReaderLanguage is the language the reader's screen shows. That is the
+// request's display locale, which falls back to the installation's language.
+// Outside a request it is the language the principal chose.
+func ReaderLanguage(ctx context.Context) string {
+	if systemtext.HasLocale(ctx) {
+		return string(systemtext.Locale(ctx))
+	}
+	if actor, ok := principal.Actor(ctx); ok {
+		return actor.Locale
+	}
+	return ""
+}
+
+// OptionLabels names each stored option in language, for the options that
+// have a name in it.
+func OptionLabels(language string, options []string, translations map[string]map[string]string) map[string]string {
+	out := map[string]string{}
+	for _, option := range options {
+		if named := strings.TrimSpace(translations[option][language]); named != "" {
+			out[option] = named
+		}
+	}
+	return out
+}
+
+// SQLIn is SQL for text written in a stated language rather than the
+// reader's, such as a review frozen in its recipient's language.
+func SQLIn(language, column, translations string, arg func(any) int) string {
+	return fmt.Sprintf("COALESCE(NULLIF(%s ->> $%d::text, ''), %s)", translations, arg(language), column)
 }

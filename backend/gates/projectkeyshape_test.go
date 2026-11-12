@@ -47,7 +47,8 @@ func TestTheProjectKeyShapeHasOneOwnerAndDeclaredMirrors(t *testing.T) {
 				return err
 			}
 			if d.IsDir() {
-				if d.Name() == "node_modules" {
+				// Dependencies and build output are not the tree's own source.
+				if d.Name() == "node_modules" || (d.Name() != "." && strings.HasPrefix(d.Name(), ".")) {
 					return filepath.SkipDir
 				}
 				return nil

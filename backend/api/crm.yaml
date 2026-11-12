@@ -66260,7 +66260,7 @@ components:
       required: [name, label, type, options, object, records, with_value]
       properties:
         name: { type: string, description: "The field as `group_by` and a filter name it." }
-        label: { type: string, description: "The name an administrator gave the field." }
+        label: { type: string, description: "The name an administrator gave the field, in the caller's UI language when one was given." }
         object:
           type: string
           enum: [deal, company]
@@ -66289,6 +66289,13 @@ components:
           description: |
             The choices a picklist offers today, empty for a boolean. A record may still hold a
             choice an administrator has since removed.
+        option_labels:
+          type: object
+          additionalProperties: { type: string }
+          description: |
+            Each choice as the caller reads it: its name in the caller's UI language when an
+            administrator gave one. A choice not named here reads as itself. Filters and groups
+            still carry the choice as `options` lists it.
       additionalProperties: false
     AnalyticsQuery:
       type: object

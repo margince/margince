@@ -303,7 +303,7 @@ func (s *Service) assembleInput(ctx context.Context, activityID ids.UUID, reques
 				return err
 			}
 		}
-		loaded, err := s.readMeeting(ctx, tx, activityID, requested, s.now().UTC())
+		loaded, err := s.readMeeting(ctx, tx, activityID, requested, s.now().UTC(), language)
 		if err != nil {
 			return err
 		}

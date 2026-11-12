@@ -34676,7 +34676,7 @@ type AnalyticsContext struct {
 
 // AnalyticsCustomField defines model for AnalyticsCustomField.
 type AnalyticsCustomField struct {
-	// Label The name an administrator gave the field.
+	// Label The name an administrator gave the field, in the caller's UI language when one was given.
 	Label string `json:"label"`
 
 	// Name The field as `group_by` and a filter name it.
@@ -34686,6 +34686,11 @@ type AnalyticsCustomField struct {
 	// and a deal whose company the caller may not open drops out of an answer that groups
 	// or filters by it.
 	Object AnalyticsCustomFieldObject `json:"object"`
+
+	// OptionLabels Each choice as the caller reads it: its name in the caller's UI language when an
+	// administrator gave one. A choice not named here reads as itself. Filters and groups
+	// still carry the choice as `options` lists it.
+	OptionLabels *map[string]string `json:"option_labels,omitempty"`
 
 	// Options The choices a picklist offers today, empty for a boolean. A record may still hold a
 	// choice an administrator has since removed.
