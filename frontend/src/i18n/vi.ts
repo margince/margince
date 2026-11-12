@@ -18588,6 +18588,14 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "projectHealth.saveCorrection": "Lưu bản sửa",
   "project.keyMinted":
     "Mỗi dự án có một mã ngắn. Ghi [{key}] trong tiêu đề email để xếp thư vào dự án này.",
+  "project.key": "Mã",
+  "project.keySuggested":
+    "Để trống để dùng {key}. Mã nằm trong tiêu đề email và không thể đổi sau này.",
+  "project.keyHint":
+    "Để trống thì Margince tạo mã từ tên. Mã nằm trong tiêu đề email và không thể đổi sau này.",
+  "project.startPhase": "Giai đoạn bắt đầu",
+  "project.deal": "Deal liên quan",
+  "project.noDeal": "Không có deal",
   "project.company": "Công ty",
   "project.owner": "Người chịu trách nhiệm",
   "project.ownerMe": "Tôi",

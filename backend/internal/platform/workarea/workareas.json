@@ -1351,6 +1351,7 @@
     "getProduct": "catalog",
     "getProject": "projects",
     "getProject360": "projects",
+    "getProjectKeyPreview": "projects",
     "getPublicAvailability": "booking_pages",
     "getPublicBookingCompanyLogo": "booking_pages",
     "getPublicBookingPreview": "booking_pages",

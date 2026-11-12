@@ -312,7 +312,7 @@ func TestAFailedWritabilityCheckIsAFaultAndNotARefusal(t *testing.T) {
 // touched an address becomes permanently un-undoable.
 func TestAnAddressIsFoldedIntoTheFieldTheUpdatePathAccepts(t *testing.T) {
 	patch, unspellable, err := filterImage("company",
-		json.RawMessage(`{"address_city":"Hanoi","address_line1":null,"display_name":"Acme"}`))
+		json.RawMessage(`{"address_city":"Hanoi","address_line1":null,"display_name":"Acme"}`), nil)
 	if err != nil {
 		t.Fatalf("filter: %v", err)
 	}
@@ -342,7 +342,7 @@ func TestAnAddressIsFoldedIntoTheFieldTheUpdatePathAccepts(t *testing.T) {
 
 // The fold does not fire for a record type whose update shape has no address.
 func TestAnAddressIsNotFoldedForAShapeThatCannotTakeOne(t *testing.T) {
-	_, unspellable, err := filterImage("deal", json.RawMessage(`{"address_city":"Hanoi"}`))
+	_, unspellable, err := filterImage("deal", json.RawMessage(`{"address_city":"Hanoi"}`), nil)
 	if err != nil {
 		t.Fatalf("filter: %v", err)
 	}
@@ -351,23 +351,29 @@ func TestAnAddressIsNotFoldedForAShapeThatCannotTakeOne(t *testing.T) {
 	}
 }
 
-// A null on a field the record holds as a whole object becomes an EMPTY object,
-// which is how "there was none" is said. A bare null would decode to "not
-// supplied" and the restore would report success having changed nothing.
-func TestANullObjectFieldIsRestoredAsAnEmptyObject(t *testing.T) {
-	patch, unspellable, err := filterImage("contact", json.RawMessage(`{"social":null}`))
-	if err != nil {
-		t.Fatalf("filter: %v", err)
-	}
-	if len(unspellable) > 0 {
-		t.Fatalf("social reported unspellable: %v", unspellable)
-	}
-	if string(patch["social"]) != `{}` {
-		t.Errorf("social = %s, want an empty object", patch["social"])
-	}
-	// And so it is not a clear the module has to refuse.
-	if _, _, unclearable := splitNulls("contact", patch); len(unclearable) > 0 {
-		t.Errorf("social still reads as an unclearable null: %v", unclearable)
+// A merged field is put back with every key the entry wrote. The before-image
+// gives the handles, and a key the entry added goes back as null to be removed.
+func TestAMergedObjectFieldIsRestoredWithEveryKeyTheEntryWrote(t *testing.T) {
+	for _, tc := range []struct{ name, before, after, want string }{
+		{"a key the entry added", `{"social":null}`, `{"social":{"linkedin":"https://www.linkedin.com/in/ada"}}`, `{"linkedin":null}`},
+		{"a key the entry changed", `{"social":{"linkedin":"a"}}`, `{"social":{"linkedin":"b","github":"ada"}}`, `{"github":null,"linkedin":"a"}`},
+		{"a key the entry removed", `{"social":{"linkedin":"a"}}`, `{"social":{"linkedin":null}}`, `{"linkedin":"a"}`},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			patch, unspellable, err := filterImage("contact", json.RawMessage(tc.before), json.RawMessage(tc.after))
+			if err != nil {
+				t.Fatalf("filter: %v", err)
+			}
+			if len(unspellable) > 0 {
+				t.Fatalf("social reported unspellable: %v", unspellable)
+			}
+			if string(patch["social"]) != tc.want {
+				t.Errorf("social = %s, want %s", patch["social"], tc.want)
+			}
+			if _, _, unclearable := splitNulls("contact", patch); len(unclearable) > 0 {
+				t.Errorf("social still reads as an unclearable null: %v", unclearable)
+			}
+		})
 	}
 }
 
@@ -480,7 +486,7 @@ func TestSettingACustomFieldFromEmptyIsRefusedRatherThanSilentlyDropped(t *testi
 // the whole refusal set exists to prevent.
 func TestAProvenanceStampIsDroppedOnlyForTheRecordThatStampsIt(t *testing.T) {
 	companyPatch, unspellable, err := filterImage("company",
-		json.RawMessage(`{"display_name":"Weber GmbH","name_source":"domain"}`))
+		json.RawMessage(`{"display_name":"Weber GmbH","name_source":"domain"}`), nil)
 	if err != nil {
 		t.Fatalf("filter the company image: %v", err)
 	}
@@ -497,7 +503,7 @@ func TestAProvenanceStampIsDroppedOnlyForTheRecordThatStampsIt(t *testing.T) {
 	}
 
 	leadPatch, _, err := filterImage("lead",
-		json.RawMessage(`{"full_name":"Anna Weber","source":"webinar"}`))
+		json.RawMessage(`{"full_name":"Anna Weber","source":"webinar"}`), nil)
 	if err != nil {
 		t.Fatalf("filter the lead image: %v", err)
 	}

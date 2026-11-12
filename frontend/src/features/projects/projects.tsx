@@ -136,6 +136,7 @@ function NewProjectAction({ open }: Readonly<{ open: boolean }>) {
       screen="projects"
       listCreate={{ open }}
       create={form.create}
+      onValuesChange={form.onValuesChange}
       resolveExisting={(_code, id) => ({ screen: "projects", id })}
       fields={form.fields}
     />

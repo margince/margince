@@ -18910,6 +18910,14 @@ export const en = {
   "projectHealth.saveCorrection": "Save correction",
   "project.keyMinted":
     "Each project gets a short key. Put [{key}] in an email subject to file the mail under this project.",
+  "project.key": "Key",
+  "project.keySuggested":
+    "Leave empty to use {key}. The key goes into email subjects and cannot change later.",
+  "project.keyHint":
+    "Leave empty and Margince makes one from the name. The key goes into email subjects and cannot change later.",
+  "project.startPhase": "Starting phase",
+  "project.deal": "Deal",
+  "project.noDeal": "No deal",
   "project.company": "Company",
   "project.owner": "Owner",
   "project.ownerMe": "Me",

@@ -48,6 +48,16 @@ grep -q 'home_cold_digest.p95 | — | 9000 | — | not in base' "$TMP/out" ||
 if ! run "$(row home_cold_worklist 400 450)" "garbage only"; then
   fail "a base that measured nothing failed the change: $(cat "$TMP/out")"
 fi
+grep -q 'the merge base measured nothing' "$TMP/out" ||
+  fail "a base that measured nothing passed without saying so: $(cat "$TMP/out")"
+
+# A base that could not be checked out or built leaves no log at all.
+printf '%s\n' "$(row home_cold_worklist 400 450)" >"$TMP/head.log"
+if ! bash "$COMPARE" "$TMP/head.log" "$TMP/no-such-base.log" >"$TMP/out" 2>&1; then
+  fail "a base that left no log failed the change: $(cat "$TMP/out")"
+fi
+grep -q 'the merge base measured nothing' "$TMP/out" ||
+  fail "a base that left no log passed without saying so: $(cat "$TMP/out")"
 
 # A base from before p50 was printed is compared on p95 alone.
 old_base="    home-budget: row home_cold_worklist p95=450ms budget=500ms samples=10 5xx=0 422=0"

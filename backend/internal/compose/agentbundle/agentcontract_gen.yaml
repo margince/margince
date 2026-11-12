@@ -5292,12 +5292,20 @@ paths:
         `company_id` names the project's CUSTOMER — the company the work is for. A project is
         work several companies do together, and the others are put on with
         `PUT /projects/{id}/companies`; this one is required because a project starts with a client.
-        The `key` is MINTED BY THE SERVER from the name (initials plus the lowest free
-        number, e.g. `ERA-1`) and is read-only thereafter: it is what a human writes in a
-        subject line to file mail under this project, so a caller-chosen one is a matcher
-        a caller can get wrong. A collision is resolved by taking the next number, never
-        reported.
-        The project starts in `initiative` and its creation row is appended to the phase history.
+        `key` is optional. Without it the server mints one from the name: the initials alone
+        (`ERA`) when no live project uses those letters, else the letters plus the lowest free
+        number from 2 (`ERA-2`). `getProjectKeyPreview` answers the key a create would mint.
+        A sent key is stored in upper case and is refused with 422 naming `key` when it does not
+        fit the key shape (`invalid_key`), is a word often bracketed in subject lines
+        (`key_is_common_word`), is a word of a colleague's name (`key_is_colleague_name`), or is
+        held by a live project (`key_taken`). The key is read-only after create: it is what a
+        human writes in a subject line to file mail under this project.
+        `phase` is the starting phase, `initiative` when omitted; a project cannot start
+        `closed` (422 `invalid_phase`). The creation row is appended to the phase history.
+        `deal_id` points that deal at the new project in the same transaction, under the check
+        `updateDeal.project_id` takes: the caller must be able to write the deal, and the deal
+        must be on the project's company (422 `project_company_mismatch` naming `deal_id`). Only
+        an open deal that names no project is taken (422 `deal_not_open`, `deal_has_project`).
         A `company_id` that names a company the caller cannot read answers 422 naming `company_id`,
         the same for a missing record and for one hidden by row scope.
 
@@ -5323,7 +5331,7 @@ paths:
         '401': {$ref: '#/components/responses/Unauthorized'}
         '403': {$ref: '#/components/responses/Forbidden'}
         '409':
-          description: A live project already holds this key.
+          description: Another project already has this source_system and source_id.
           content:
             application/problem+json:
               schema: {$ref: '#/components/schemas/Problem'}
@@ -30986,10 +30994,13 @@ components:
           readOnly: true
           description: >-
             Whether THIS caller may archive THIS contact: the row write gate `writable` asks, plus the `contact:delete` grant or being the contact's owner with `contact:update`. An owner who named themselves owner (an edit or a claim) needs the delete grant. Server-computed per row, per caller. A UX signal, never the enforcement, exactly like `writable`; absent means NOT archivable.
+        linkedin_url:
+          type: [string, 'null']
+          description: 'The contact''s LinkedIn profile link. The same stored value as `social.linkedin`, not a second copy.'
         social:
           type: object
           additionalProperties: true
-          description: '{ linkedin, twitter, github, ... }'
+          description: 'The contact''s links by platform: github, linkedin, twitter. linkedin is a LinkedIn profile link.'
         address: {$ref: '#/components/schemas/Address'}
         address_country_mismatch:
           readOnly: true
@@ -31117,7 +31128,13 @@ components:
         last_name: {type: [string, 'null']}
         title: {type: [string, 'null']}
         owner_id: {type: [string, 'null'], format: uuid}
-        social: {type: object, additionalProperties: true}
+        linkedin_url:
+          type: [string, 'null']
+          description: 'The contact''s LinkedIn profile link (https://www.linkedin.com/in/<name>). Writes the same stored value as `social.linkedin`; a request naming both with different profiles is refused with 422 `linkedin_url_conflicts_with_social`.'
+        social:
+          type: object
+          additionalProperties: true
+          description: 'Links by platform. Only github, linkedin and twitter are taken; any other key is refused with 422 `social_platform_unknown`. linkedin takes only a LinkedIn profile link (https://www.linkedin.com/in/<name>).'
         address: {$ref: '#/components/schemas/Address'}
         emails:
           type: array
@@ -31317,7 +31334,13 @@ components:
           description: |-
             Who may see this contact: `workspace` for everyone in the company,
             `owner` for the contact named by `owner_id` alone.
-        social: {type: object, additionalProperties: true}
+        linkedin_url:
+          type: [string, 'null']
+          description: 'The contact''s LinkedIn profile link (https://www.linkedin.com/in/<name>). Writes the same stored value as `social.linkedin`; null or "" removes it. A request naming both with different profiles is refused with 422 `linkedin_url_conflicts_with_social`.'
+        social:
+          type: object
+          additionalProperties: true
+          description: 'Merged into the stored links: a key not sent keeps its link, and a key sent as "" or null removes it. Only github, linkedin and twitter are taken; any other key is refused with 422 `social_platform_unknown`. linkedin takes only a LinkedIn profile link (https://www.linkedin.com/in/<name>).'
         address: {$ref: '#/components/schemas/Address'}
         emails:
           type: array
@@ -31565,6 +31588,10 @@ components:
       required: [display_name, source]
       properties:
         display_name: {type: string}
+        linkedin_url:
+          type: [string, 'null']
+          description: Canonical LinkedIn company URL, held to the rule the update holds it to. website_url is derived and refused here.
+          pattern: '^https://([a-z]{2,3}\.)?linkedin\.com/company/[^/?#]+/?$'
         legal_name: {type: [string, 'null']}
         phone: {type: [string, 'null'], description: "The company's main number. A formatted number is accepted and stored in E.164 form (for example +49301234567). It is never a contact's own number."}
         email: {type: [string, 'null'], format: email, description: "The company's general address, for example info@example.com. It never creates or matches a contact."}
@@ -38163,6 +38190,9 @@ components:
         source_system: {type: [string, 'null'], maxLength: 128, description: 'Which external system this record came from, when a caller imported it.'}
         source_author_id: {type: [string, 'null'], format: uuid, description: 'Who wrote this record in the system it came from, when the author holds a seat here. Written only by a declared importer, only beside a source_system; either author field or both may be sent, and the seat''s current name wins on read. captured_by still names the caller.'}
         source_author_name: {type: [string, 'null'], maxLength: 200, description: 'The source system''s own spelling of who wrote this record. Same door as source_author_id: a declared importer only, beside a source_system. Kept when a seat is also named, so the name survives the seat.'}
+        key: {type: [string, 'null'], maxLength: 24, description: 'The key the creator chose; omitted or null to have the server mint one. Read-only after create.'}
+        phase: {type: [string, 'null'], enum: [initiative, pursuing, delivering, null], description: 'The phase the project starts in; initiative when omitted.'}
+        deal_id: {type: [string, 'null'], format: uuid, description: 'The deal this project comes from. The deal is pointed at the new project in the same transaction.'}
       additionalProperties: true
     SetProjectCompanyRequest:
       type: object
@@ -38197,11 +38227,10 @@ components:
       type: object
       description: |-
         Note `phase` is absent by design — it moves only through advanceProjectPhase.
-        `key` is absent for a different reason: the server mints it from the name and
-        it is read-only thereafter. A key is what a human writes in a subject line to
-        file mail under a project, so a caller-chosen one is a matcher a caller can
-        get wrong — a project keyed after a contact's name would claim every bracketed
-        mention of that word.
+        `key` is absent for a different reason: it is set on create and read-only
+        thereafter (422 `read_only`). A key is what a human writes in a subject line to
+        file mail under a project, so changing it would stop mail already sent with it
+        from filing.
       properties:
         name: {type: string}
         owner_id: {type: [string, 'null'], format: uuid}

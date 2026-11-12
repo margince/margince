@@ -161,7 +161,7 @@ func TestContactCreationApprovalOverALiveLeadReportsTheRefusal(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			fields := map[string]any{"full_name": "Confirmed Buyer", "source": "manual", "emails": []any{map[string]any{"email": "CREATED-CONTACT@EXAMPLE.TEST", "email_type": "work", "is_primary": true}}, "social": map[string]any{"linkedin": "buyer-profile"}}
+			fields := map[string]any{"full_name": "Confirmed Buyer", "source": "manual", "emails": []any{map[string]any{"email": "CREATED-CONTACT@EXAMPLE.TEST", "email_type": "work", "is_primary": true}}, "social": map[string]any{"linkedin": profileLink("buyer-profile")}}
 			payload := map[string]any{"record_type": "contact", "fields": fields}
 			if rest {
 				payload = map[string]any{"operation": "createContact", "body": fields}

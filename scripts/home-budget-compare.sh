@@ -17,7 +17,8 @@
 # both runs alike, so only the change's own cost is left in the difference.
 #
 # Prints a Markdown table. Exits 1 when any metric regressed, 0 otherwise,
-# including when the base measured nothing (it says so).
+# including when the base measured nothing or left no log, because a base that
+# cannot run is no comparison (it says so).
 
 set -euo pipefail
 
@@ -59,7 +60,8 @@ metrics() {
 }
 
 head_metrics="$(metrics "$head_log")"
-base_metrics="$(metrics "$base_log")"
+base_metrics=""
+[[ -r "$base_log" ]] && base_metrics="$(metrics "$base_log")"
 
 if [[ -z "$head_metrics" ]]; then
   echo "home-budget-compare: the change measured nothing, so nothing can be compared" >&2

@@ -192,6 +192,7 @@ function NewProjectDialog({
       invalidate="company360"
       screen="projects"
       create={form.create}
+      onValuesChange={form.onValuesChange}
       fields={form.fields}
       aboutId={companyId}
     />

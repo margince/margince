@@ -3255,6 +3255,10 @@ func (stubs) CreateProject(w nethttp.ResponseWriter, r *nethttp.Request, params 
 	httperr.NotImplemented(w, r, "CreateProject")
 }
 
+func (stubs) GetProjectKeyPreview(w nethttp.ResponseWriter, r *nethttp.Request, params crmcontracts.GetProjectKeyPreviewParams) {
+	httperr.NotImplemented(w, r, "GetProjectKeyPreview")
+}
+
 func (stubs) TransferProjectOwnership(w nethttp.ResponseWriter, r *nethttp.Request, params crmcontracts.TransferProjectOwnershipParams) {
 	httperr.NotImplemented(w, r, "TransferProjectOwnership")
 }

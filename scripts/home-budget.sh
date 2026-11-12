@@ -118,6 +118,15 @@ summary() {
   echo '```'
   grep -ho 'bench-home: vitals lcp_p95_ms=.*' "$logs/browser.log" || echo "no vitals were measured"
   echo '```'
+  if [[ -n "$base" ]]; then
+    echo
+    echo "API rows and browser vitals of the merge base on this runner:"
+    echo
+    echo '```'
+    grep -ho 'home-budget: row .*\|bench-home: vitals lcp_p95_ms=.*' "$logs/base-metrics.log" 2>/dev/null ||
+      echo "the merge base measured nothing, so this change is not compared"
+    echo '```'
+  fi
 }
 
 summary

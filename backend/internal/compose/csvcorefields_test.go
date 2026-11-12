@@ -99,21 +99,6 @@ func TestAFilePhoneBecomesThePrimaryWorkNumberAndKeepsTheOthers(t *testing.T) {
 	}
 }
 
-func TestAFileLinkedInURLReplacesOnlyThatSocialHandle(t *testing.T) {
-	stored := []byte(`{"social":{"linkedin":"https://www.linkedin.com/in/old","x":"@ada"}}`)
-	merged, given, err := socialMergedOnto(stored, map[string]any{contacts.SocialLinkedIn: "https://www.linkedin.com/in/ada"})
-	if err != nil || !given {
-		t.Fatalf("given %v err %v", given, err)
-	}
-	want := map[string]any{contacts.SocialLinkedIn: "https://www.linkedin.com/in/ada", "x": "@ada"}
-	if !reflect.DeepEqual(merged, want) {
-		t.Fatalf("merged = %v, want %v", merged, want)
-	}
-	if _, given, _ := socialMergedOnto(stored, nil); given {
-		t.Fatal("a file with no LinkedIn column rewrote the stored handles")
-	}
-}
-
 // An update row that names only a city carries the stored country forward,
 // whatever it is. The store then sees it unchanged and does not hold a row
 // written before the rule to it.

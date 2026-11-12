@@ -9913,6 +9913,27 @@ func (e CreateProductRequestTaxCategory) Valid() bool {
 	}
 }
 
+// Defines values for CreateProjectRequestPhase.
+const (
+	CreateProjectRequestPhaseDelivering CreateProjectRequestPhase = "delivering"
+	CreateProjectRequestPhaseInitiative CreateProjectRequestPhase = "initiative"
+	CreateProjectRequestPhasePursuing   CreateProjectRequestPhase = "pursuing"
+)
+
+// Valid indicates whether the value is a known member of the CreateProjectRequestPhase enum.
+func (e CreateProjectRequestPhase) Valid() bool {
+	switch e {
+	case CreateProjectRequestPhaseDelivering:
+		return true
+	case CreateProjectRequestPhaseInitiative:
+		return true
+	case CreateProjectRequestPhasePursuing:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for CreateRecordGrantRequestAccess.
 const (
 	CreateRecordGrantRequestAccessRead  CreateRecordGrantRequestAccess = "read"
@@ -42428,6 +42449,9 @@ type Contact struct {
 	// LegalHold True while a litigation or investigation hold is preserving this record. A held record is never acted on by a retention sweep and an Art. 17 erasure against it is refused, so a screen that offers either action has to know. Placed and lifted through /retention/legal-holds, never by an ordinary edit.
 	LegalHold *bool `json:"legal_hold,omitempty"`
 
+	// LinkedinUrl The contact's LinkedIn profile link. The same stored value as `social.linkedin`, not a second copy.
+	LinkedinUrl *string `json:"linkedin_url,omitempty"`
+
 	// MergedIntoId Set when this row was merged away.
 	MergedIntoId *openapi_types.UUID `json:"merged_into_id,omitempty"`
 	OwnerId      *openapi_types.UUID `json:"owner_id,omitempty"`
@@ -42449,7 +42473,7 @@ type Contact struct {
 	// RelationshipMark Set when the workspace's relationship to this contact is not an ordinary one. `vendor_marketing` is a named sender who only pitches something to this business and whom nobody here has answered. The default contact lists leave a marked contact out; a text search and a read by id still find it. Null is not marked. Written through `PATCH /contacts/{id}` or by the sender check, never by the request body of a create.
 	RelationshipMark *ContactRelationshipMark `json:"relationship_mark,omitempty"`
 
-	// Social { linkedin, twitter, github, ... }
+	// Social The contact's links by platform: github, linkedin, twitter. linkedin is a LinkedIn profile link.
 	Social *map[string]interface{} `json:"social,omitempty"`
 	Source string                  `json:"source"`
 
@@ -44523,8 +44547,11 @@ type CreateCompanyRequest struct {
 	Email *openapi_types.Email `json:"email,omitempty"`
 
 	// Industry An industry code, or text the server can map to one. Text that names no code stores no code and is kept in the description.
-	Industry        *string             `json:"industry,omitempty"`
-	LegalName       *string             `json:"legal_name,omitempty"`
+	Industry  *string `json:"industry,omitempty"`
+	LegalName *string `json:"legal_name,omitempty"`
+
+	// LinkedinUrl Canonical LinkedIn company URL, held to the rule the update holds it to. website_url is derived and refused here.
+	LinkedinUrl     *string             `json:"linkedin_url,omitempty"`
 	OwnerId         *openapi_types.UUID `json:"owner_id,omitempty"`
 	ParentCompanyId *openapi_types.UUID `json:"parent_company_id,omitempty"`
 
@@ -44592,15 +44619,20 @@ type CreateContactRequest struct {
 	ConvertLeadIds *[]openapi_types.UUID `json:"convert_lead_ids,omitempty"`
 
 	// CreatedFromActivityId The note, mail or quick capture this contact was read out of. An agent that creates a contact from a record names it here, so a reader can check where the name and title came from. The caller must be able to read it (404 `not_found` otherwise, never 403).
-	CreatedFromActivityId *openapi_types.UUID     `json:"created_from_activity_id,omitempty"`
-	Emails                *[]ContactEmailInput    `json:"emails,omitempty"`
-	FirstName             *string                 `json:"first_name,omitempty"`
-	FullName              string                  `json:"full_name"`
-	LastName              *string                 `json:"last_name,omitempty"`
-	OwnerId               *openapi_types.UUID     `json:"owner_id,omitempty"`
-	Phones                *[]ContactPhoneInput    `json:"phones,omitempty"`
-	Social                *map[string]interface{} `json:"social,omitempty"`
-	Source                string                  `json:"source"`
+	CreatedFromActivityId *openapi_types.UUID  `json:"created_from_activity_id,omitempty"`
+	Emails                *[]ContactEmailInput `json:"emails,omitempty"`
+	FirstName             *string              `json:"first_name,omitempty"`
+	FullName              string               `json:"full_name"`
+	LastName              *string              `json:"last_name,omitempty"`
+
+	// LinkedinUrl The contact's LinkedIn profile link (https://www.linkedin.com/in/<name>). Writes the same stored value as `social.linkedin`; a request naming both with different profiles is refused with 422 `linkedin_url_conflicts_with_social`.
+	LinkedinUrl *string              `json:"linkedin_url,omitempty"`
+	OwnerId     *openapi_types.UUID  `json:"owner_id,omitempty"`
+	Phones      *[]ContactPhoneInput `json:"phones,omitempty"`
+
+	// Social Links by platform. Only github, linkedin and twitter are taken; any other key is refused with 422 `social_platform_unknown`. linkedin takes only a LinkedIn profile link (https://www.linkedin.com/in/<name>).
+	Social *map[string]interface{} `json:"social,omitempty"`
+	Source string                  `json:"source"`
 
 	// SourceAuthorId Who wrote this record in the system it came from, when the author holds a seat here. Written only by a declared importer (a signed-in human holding import_run:create), only beside a source_system; either author field or both may be sent, and the seat's current name wins on read. captured_by still names the caller.
 	SourceAuthorId *openapi_types.UUID `json:"source_author_id,omitempty"`
@@ -45237,11 +45269,20 @@ type CreateProjectHealthCorrectionRequest struct {
 
 // CreateProjectRequest defines model for CreateProjectRequest.
 type CreateProjectRequest struct {
-	CompanyId   openapi_types.UUID  `json:"company_id"`
+	CompanyId openapi_types.UUID `json:"company_id"`
+
+	// DealId The deal this project comes from. The deal is pointed at the new project in the same transaction.
+	DealId      *openapi_types.UUID `json:"deal_id,omitempty"`
 	Description *string             `json:"description,omitempty"`
-	Name        string              `json:"name"`
-	OwnerId     *openapi_types.UUID `json:"owner_id,omitempty"`
-	Source      string              `json:"source"`
+
+	// Key The key the creator chose; omitted or null to have the server mint one. Read-only after create.
+	Key     *string             `json:"key,omitempty"`
+	Name    string              `json:"name"`
+	OwnerId *openapi_types.UUID `json:"owner_id,omitempty"`
+
+	// Phase The phase the project starts in; initiative when omitted.
+	Phase  *CreateProjectRequestPhase `json:"phase,omitempty"`
+	Source string                     `json:"source"`
 
 	// SourceAuthorId Who wrote this record in the system it came from, when the author holds a seat here. Written only by a declared importer (a signed-in human holding import_run:create), only beside a source_system; either author field or both may be sent, and the seat's current name wins on read. captured_by still names the caller.
 	SourceAuthorId *openapi_types.UUID `json:"source_author_id,omitempty"`
@@ -45258,6 +45299,9 @@ type CreateProjectRequest struct {
 	TargetEndDate        *openapi_types.Date    `json:"target_end_date,omitempty"`
 	AdditionalProperties map[string]interface{} `json:"-"`
 }
+
+// CreateProjectRequestPhase The phase the project starts in; initiative when omitted.
+type CreateProjectRequestPhase string
 
 // CreateRecordAssignmentRequest A responsibility may name an agent seat as well as a human member. It grants no record access. The web picker lists active human colleagues.
 type CreateRecordAssignmentRequest struct {
@@ -57773,6 +57817,12 @@ type ProjectHealthAssessmentListResponse struct {
 // ProjectHealthState How a project is going, as somebody judged it.
 type ProjectHealthState string
 
+// ProjectKeyPreview defines model for ProjectKeyPreview.
+type ProjectKeyPreview struct {
+	// Key The key a project of this name would be given if it were created now.
+	Key string `json:"key"`
+}
+
 // ProjectListResponse defines model for ProjectListResponse.
 type ProjectListResponse struct {
 	Data []Project `json:"data"`
@@ -58406,7 +58456,7 @@ type QuickCaptureContactRequest struct {
 	FullName string               `json:"full_name"`
 	Phone    *string              `json:"phone,omitempty"`
 
-	// ProfileUrl The public profile this was read from. Stored, never fetched. A LinkedIn URL must be a profile (`/in/<name>`); a company page is refused with 422 `linkedin_url_not_profile` on this field.
+	// ProfileUrl The LinkedIn profile this was read from. Stored, never fetched. It must be a LinkedIn profile (`/in/<name>`): a page off LinkedIn is refused with 422 `linkedin_url_not_linkedin` on this field, and a company page with `linkedin_url_not_profile`.
 	ProfileUrl *string `json:"profile_url,omitempty"`
 
 	// Role What they do at that employer, when it differs from `title`.
@@ -65671,7 +65721,10 @@ type UpdateContactRequest struct {
 	FirstName *string              `json:"first_name,omitempty"`
 	FullName  *string              `json:"full_name,omitempty"`
 	LastName  *string              `json:"last_name,omitempty"`
-	OwnerId   *openapi_types.UUID  `json:"owner_id,omitempty"`
+
+	// LinkedinUrl The contact's LinkedIn profile link (https://www.linkedin.com/in/<name>). Writes the same stored value as `social.linkedin`; null or "" removes it. A request naming both with different profiles is refused with 422 `linkedin_url_conflicts_with_social`.
+	LinkedinUrl *string             `json:"linkedin_url,omitempty"`
+	OwnerId     *openapi_types.UUID `json:"owner_id,omitempty"`
 
 	// Phones REPLACES the contact's numbers with exactly this list, the same way `emails`
 	// replaces addresses. A number that has been reassigned is corrected by sending
@@ -65688,8 +65741,10 @@ type UpdateContactRequest struct {
 
 	// RelationshipMark Marks the contact (`vendor_marketing`) or clears the mark (null). The mark records who set it, so a mark set by hand is never lifted by the automatic check that lifts the mark the sender check set.
 	RelationshipMark *UpdateContactRequestRelationshipMark `json:"relationship_mark,omitempty"`
-	Social           *map[string]interface{}               `json:"social,omitempty"`
-	Title            *string                               `json:"title,omitempty"`
+
+	// Social Merged into the stored links: a key not sent keeps its link, and a key sent as "" or null removes it. Only github, linkedin and twitter are taken; any other key is refused with 422 `social_platform_unknown`. linkedin takes only a LinkedIn profile link (https://www.linkedin.com/in/<name>).
+	Social *map[string]interface{} `json:"social,omitempty"`
+	Title  *string                 `json:"title,omitempty"`
 
 	// Visibility Who may see this contact: `workspace` for everyone in the company,
 	// `owner` for the contact named by `owner_id` alone.
@@ -66586,11 +66641,10 @@ type UpdateProductRequestComponentKind string
 type UpdateProductRequestTaxCategory string
 
 // UpdateProjectRequest Note `phase` is absent by design — it moves only through advanceProjectPhase.
-// `key` is absent for a different reason: the server mints it from the name and
-// it is read-only thereafter. A key is what a human writes in a subject line to
-// file mail under a project, so a caller-chosen one is a matcher a caller can
-// get wrong — a project keyed after a contact's name would claim every bracketed
-// mention of that word.
+// `key` is absent for a different reason: it is set on create and read-only
+// thereafter (422 `read_only`). A key is what a human writes in a subject line to
+// file mail under a project, so changing it would stop mail already sent with it
+// from filing.
 type UpdateProjectRequest struct {
 	Description          *string                `json:"description,omitempty"`
 	EndedAt              *openapi_types.Date    `json:"ended_at,omitempty"`
@@ -76440,6 +76494,11 @@ type CreateProjectParams struct {
 	XApprovalToken *ApprovalToken `json:"X-Approval-Token,omitempty"`
 }
 
+// GetProjectKeyPreviewParams defines parameters for GetProjectKeyPreview.
+type GetProjectKeyPreviewParams struct {
+	Name string `form:"name" json:"name"`
+}
+
 // TransferProjectOwnershipParams defines parameters for TransferProjectOwnership.
 type TransferProjectOwnershipParams struct {
 	// IdempotencyKey Client-supplied key making a mutation safe to retry — an update exactly as much as a
@@ -81963,6 +82022,14 @@ func (a *Contact) UnmarshalJSON(b []byte) error {
 		delete(object, "legal_hold")
 	}
 
+	if raw, found := object["linkedin_url"]; found {
+		err = json.Unmarshal(raw, &a.LinkedinUrl)
+		if err != nil {
+			return fmt.Errorf("error reading 'linkedin_url': %w", err)
+		}
+		delete(object, "linkedin_url")
+	}
+
 	if raw, found := object["merged_into_id"]; found {
 		err = json.Unmarshal(raw, &a.MergedIntoId)
 		if err != nil {
@@ -82260,6 +82327,13 @@ func (a Contact) MarshalJSON() ([]byte, error) {
 		object["legal_hold"], err = json.Marshal(a.LegalHold)
 		if err != nil {
 			return nil, fmt.Errorf("error marshaling 'legal_hold': %w", err)
+		}
+	}
+
+	if a.LinkedinUrl != nil {
+		object["linkedin_url"], err = json.Marshal(a.LinkedinUrl)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'linkedin_url': %w", err)
 		}
 	}
 
@@ -83561,6 +83635,14 @@ func (a *CreateCompanyRequest) UnmarshalJSON(b []byte) error {
 		delete(object, "legal_name")
 	}
 
+	if raw, found := object["linkedin_url"]; found {
+		err = json.Unmarshal(raw, &a.LinkedinUrl)
+		if err != nil {
+			return fmt.Errorf("error reading 'linkedin_url': %w", err)
+		}
+		delete(object, "linkedin_url")
+	}
+
 	if raw, found := object["owner_id"]; found {
 		err = json.Unmarshal(raw, &a.OwnerId)
 		if err != nil {
@@ -83696,6 +83778,13 @@ func (a CreateCompanyRequest) MarshalJSON() ([]byte, error) {
 		object["legal_name"], err = json.Marshal(a.LegalName)
 		if err != nil {
 			return nil, fmt.Errorf("error marshaling 'legal_name': %w", err)
+		}
+	}
+
+	if a.LinkedinUrl != nil {
+		object["linkedin_url"], err = json.Marshal(a.LinkedinUrl)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'linkedin_url': %w", err)
 		}
 	}
 
@@ -83866,6 +83955,14 @@ func (a *CreateContactRequest) UnmarshalJSON(b []byte) error {
 		delete(object, "last_name")
 	}
 
+	if raw, found := object["linkedin_url"]; found {
+		err = json.Unmarshal(raw, &a.LinkedinUrl)
+		if err != nil {
+			return fmt.Errorf("error reading 'linkedin_url': %w", err)
+		}
+		delete(object, "linkedin_url")
+	}
+
 	if raw, found := object["owner_id"]; found {
 		err = json.Unmarshal(raw, &a.OwnerId)
 		if err != nil {
@@ -84015,6 +84112,13 @@ func (a CreateContactRequest) MarshalJSON() ([]byte, error) {
 		object["last_name"], err = json.Marshal(a.LastName)
 		if err != nil {
 			return nil, fmt.Errorf("error marshaling 'last_name': %w", err)
+		}
+	}
+
+	if a.LinkedinUrl != nil {
+		object["linkedin_url"], err = json.Marshal(a.LinkedinUrl)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'linkedin_url': %w", err)
 		}
 	}
 
@@ -85138,12 +85242,28 @@ func (a *CreateProjectRequest) UnmarshalJSON(b []byte) error {
 		delete(object, "company_id")
 	}
 
+	if raw, found := object["deal_id"]; found {
+		err = json.Unmarshal(raw, &a.DealId)
+		if err != nil {
+			return fmt.Errorf("error reading 'deal_id': %w", err)
+		}
+		delete(object, "deal_id")
+	}
+
 	if raw, found := object["description"]; found {
 		err = json.Unmarshal(raw, &a.Description)
 		if err != nil {
 			return fmt.Errorf("error reading 'description': %w", err)
 		}
 		delete(object, "description")
+	}
+
+	if raw, found := object["key"]; found {
+		err = json.Unmarshal(raw, &a.Key)
+		if err != nil {
+			return fmt.Errorf("error reading 'key': %w", err)
+		}
+		delete(object, "key")
 	}
 
 	if raw, found := object["name"]; found {
@@ -85160,6 +85280,14 @@ func (a *CreateProjectRequest) UnmarshalJSON(b []byte) error {
 			return fmt.Errorf("error reading 'owner_id': %w", err)
 		}
 		delete(object, "owner_id")
+	}
+
+	if raw, found := object["phase"]; found {
+		err = json.Unmarshal(raw, &a.Phase)
+		if err != nil {
+			return fmt.Errorf("error reading 'phase': %w", err)
+		}
+		delete(object, "phase")
 	}
 
 	if raw, found := object["source"]; found {
@@ -85242,10 +85370,24 @@ func (a CreateProjectRequest) MarshalJSON() ([]byte, error) {
 		return nil, fmt.Errorf("error marshaling 'company_id': %w", err)
 	}
 
+	if a.DealId != nil {
+		object["deal_id"], err = json.Marshal(a.DealId)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'deal_id': %w", err)
+		}
+	}
+
 	if a.Description != nil {
 		object["description"], err = json.Marshal(a.Description)
 		if err != nil {
 			return nil, fmt.Errorf("error marshaling 'description': %w", err)
+		}
+	}
+
+	if a.Key != nil {
+		object["key"], err = json.Marshal(a.Key)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'key': %w", err)
 		}
 	}
 
@@ -85258,6 +85400,13 @@ func (a CreateProjectRequest) MarshalJSON() ([]byte, error) {
 		object["owner_id"], err = json.Marshal(a.OwnerId)
 		if err != nil {
 			return nil, fmt.Errorf("error marshaling 'owner_id': %w", err)
+		}
+	}
+
+	if a.Phase != nil {
+		object["phase"], err = json.Marshal(a.Phase)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'phase': %w", err)
 		}
 	}
 
@@ -90980,6 +91129,14 @@ func (a *UpdateContactRequest) UnmarshalJSON(b []byte) error {
 		delete(object, "last_name")
 	}
 
+	if raw, found := object["linkedin_url"]; found {
+		err = json.Unmarshal(raw, &a.LinkedinUrl)
+		if err != nil {
+			return fmt.Errorf("error reading 'linkedin_url': %w", err)
+		}
+		delete(object, "linkedin_url")
+	}
+
 	if raw, found := object["owner_id"]; found {
 		err = json.Unmarshal(raw, &a.OwnerId)
 		if err != nil {
@@ -91086,6 +91243,13 @@ func (a UpdateContactRequest) MarshalJSON() ([]byte, error) {
 		object["last_name"], err = json.Marshal(a.LastName)
 		if err != nil {
 			return nil, fmt.Errorf("error marshaling 'last_name': %w", err)
+		}
+	}
+
+	if a.LinkedinUrl != nil {
+		object["linkedin_url"], err = json.Marshal(a.LinkedinUrl)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'linkedin_url': %w", err)
 		}
 	}
 
@@ -95281,6 +95445,9 @@ type ServerInterface interface {
 	// Create a project on a company.
 	// (POST /projects)
 	CreateProject(w http.ResponseWriter, r *http.Request, params CreateProjectParams)
+	// The key a new project of this name would be given.
+	// (GET /projects/key-preview)
+	GetProjectKeyPreview(w http.ResponseWriter, r *http.Request, params GetProjectKeyPreviewParams)
 	// Move every live project one user owns to another user, in one transaction.
 	// (POST /projects/transfer-ownership)
 	TransferProjectOwnership(w http.ResponseWriter, r *http.Request, params TransferProjectOwnershipParams)
@@ -100903,6 +101070,12 @@ func (_ Unimplemented) ListProjects(w http.ResponseWriter, r *http.Request, para
 // Create a project on a company.
 // (POST /projects)
 func (_ Unimplemented) CreateProject(w http.ResponseWriter, r *http.Request, params CreateProjectParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// The key a new project of this name would be given.
+// (GET /projects/key-preview)
+func (_ Unimplemented) GetProjectKeyPreview(w http.ResponseWriter, r *http.Request, params GetProjectKeyPreviewParams) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -138305,6 +138478,45 @@ func (siw *ServerInterfaceWrapper) CreateProject(w http.ResponseWriter, r *http.
 	handler.ServeHTTP(w, r)
 }
 
+// GetProjectKeyPreview operation middleware
+func (siw *ServerInterfaceWrapper) GetProjectKeyPreview(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params GetProjectKeyPreviewParams
+
+	// ------------- Required query parameter "name" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, true, "name", r.URL.Query(), &params.Name, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "name"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "name", Err: err})
+		}
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetProjectKeyPreview(w, r, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // TransferProjectOwnership operation middleware
 func (siw *ServerInterfaceWrapper) TransferProjectOwnership(w http.ResponseWriter, r *http.Request) {
 
@@ -152027,6 +152239,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/projects", wrapper.CreateProject)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/projects/key-preview", wrapper.GetProjectKeyPreview)
 	})
 	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/projects/transfer-ownership", wrapper.TransferProjectOwnership)

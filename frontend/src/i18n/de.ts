@@ -19069,6 +19069,14 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "projectHealth.saveCorrection": "Korrektur speichern",
   "project.keyMinted":
     "Jedes Projekt erhält ein Kürzel. Setze [{key}] in den Betreff einer E-Mail, um sie unter diesem Projekt abzulegen.",
+  "project.key": "Kürzel",
+  "project.keySuggested":
+    "Leer lassen, um {key} zu verwenden. Das Kürzel steht im Betreff von E-Mails und lässt sich später nicht ändern.",
+  "project.keyHint":
+    "Leer lassen, dann bildet Margince es aus dem Namen. Das Kürzel steht im Betreff von E-Mails und lässt sich später nicht ändern.",
+  "project.startPhase": "Startphase",
+  "project.deal": "Deal",
+  "project.noDeal": "Kein Deal",
   "project.company": "Unternehmen",
   "project.owner": "Verantwortlich",
   "project.ownerMe": "Selbst",
