@@ -488,6 +488,33 @@ describe("ListPopover over a server search", () => {
     expect(screen.queryByText("Searching…")).toBeNull();
   });
 
+  it("lists the empty term's answer as it opens, when asked to list on open", async () => {
+    const search = vi.fn().mockResolvedValue([
+      { id: "c-1", name: "Ines Brandt" },
+      { id: "c-2", name: "Jonas Keller" },
+    ]);
+    const user = userEvent.setup();
+    render(
+      <ListPopover
+        label="Book a meeting"
+        title="Contacts"
+        searchLabel="Search contacts"
+        search={search}
+        listOnOpen
+        onPick={vi.fn()}
+      />,
+    );
+    expect(search).not.toHaveBeenCalled();
+
+    await user.click(screen.getByRole("button", { name: "Book a meeting" }));
+
+    expect(
+      await screen.findByRole("option", { name: "Ines Brandt" }),
+    ).toBeTruthy();
+    expect(screen.getByRole("option", { name: "Jonas Keller" })).toBeTruthy();
+    expect(search).toHaveBeenCalledWith("");
+  });
+
   it("tells an empty answer from a refused search", async () => {
     const search = vi
       .fn()

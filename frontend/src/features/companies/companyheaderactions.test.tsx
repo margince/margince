@@ -19,6 +19,7 @@ import { en } from "../../i18n/en";
 import { routeHash } from "../../lib/router";
 import { useShortcutDispatcher } from "../../lib/shortcuts";
 import { ViewerZoneProvider } from "../../lib/viewerzone";
+import { company360 } from "../../testing/company.fixtures";
 import { type GrantSpec, meFixture } from "../../testing/mefixture";
 import { CompanyActionBadges } from "./companyheader";
 import {
@@ -30,6 +31,7 @@ import {
 // is icon-first like every other record header's action strip.
 
 type Company = components["schemas"]["Company"];
+type Company360 = components["schemas"]["Company360"];
 
 const COMPANY: Company = {
   writable: true,
@@ -47,6 +49,45 @@ const COMPANY: Company = {
 afterEach(() => {
   vi.unstubAllGlobals();
 });
+
+function rosterRow(
+  id: string,
+  name: string,
+  score: number,
+): components["schemas"]["Company360Contact"] {
+  return {
+    contact_id: id,
+    full_name: name,
+    attachable: true,
+    strength: {
+      score,
+      bucket: "moderate",
+      factors: { recency: 0, frequency: 0, reciprocity: 0, direction: 0 },
+    },
+    deal_roles: [],
+    consent: {},
+  };
+}
+
+// Two contacts, the 360's ranking putting Mara first while the account's
+// best route in runs through Jonas.
+const TWO_CONTACTS: Company360 = {
+  ...company360,
+  contacts: {
+    data: [
+      rosterRow("c-mara", "Mara Lenz", 40),
+      rosterRow("c-jonas", "Jonas Keller", 35),
+    ],
+    page: { has_more: false, next_cursor: null },
+  },
+  strength: {
+    score: 60,
+    bucket: "moderate",
+    contact_count: 2,
+    contributor_contact_id: "c-jonas",
+    factors: { recency: 0, frequency: 0, reciprocity: 0, direction: 0 },
+  },
+};
 
 // /me answering exactly `allow`, and nothing else, for a grant read with no
 // `authorization` shape beyond it: `useCanWrite` would deny regardless of
@@ -115,9 +156,11 @@ function renderInApp(ui: ReactNode) {
 // the menu.
 function ActionsHost({
   company = COMPANY,
+  view,
   onComposerOpen = () => undefined,
 }: Readonly<{
   company?: Company;
+  view?: Company360;
   onComposerOpen?: (open: boolean) => void;
 }>) {
   const [drawer, setDrawer] = useState<ActivityDrawer>(null);
@@ -131,6 +174,7 @@ function ActionsHost({
         drawer={drawer}
         onDrawer={setDrawer}
         activity={activity}
+        view={view}
       />
       <CompanyActionBadges
         company={company}
@@ -413,6 +457,31 @@ describe("Book a meeting from the account", () => {
       url.pathname.endsWith("/contacts"),
     );
     expect(contactsAsked?.searchParams.get("company_id")).toBe(COMPANY.id);
+  });
+
+  it("opens on the account's contacts, the best route in first, before a word is typed", async () => {
+    const read: URL[] = [];
+    stubWritableAccount({ posted: [], read });
+    const user = userEvent.setup();
+    renderInApp(<ActionsHost view={TWO_CONTACTS} />);
+
+    const book = () =>
+      screen.getByRole("button", { name: en["scheduling.bookContact"] });
+    await waitFor(() => expect(book().hasAttribute("disabled")).toBe(false));
+    await user.click(book());
+
+    const listed = await screen.findAllByRole("option");
+    expect(listed.map((row) => row.textContent)).toEqual([
+      expect.stringContaining("Jonas Keller"),
+      expect.stringContaining("Mara Lenz"),
+    ]);
+    // The roster in hand answers the empty box; the server is not asked.
+    expect(read.some((url) => url.pathname.endsWith("/contacts"))).toBe(false);
+
+    await user.click(listed[0]);
+    expect(globalThis.location.hash).toBe(
+      routeHash({ screen: "book", id: "contact-c-jonas" }),
+    );
   });
 });
 
