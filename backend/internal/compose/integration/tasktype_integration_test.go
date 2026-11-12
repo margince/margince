@@ -5,8 +5,8 @@
 
 package integration
 
-// A task's type on every read, and the one step it allows: only a reply or a
-// reach out offers email, and a reply names the way its message came in.
+// A task's type on every read, and the one step it allows. Only a reply or a
+// reach out offers email. A reply names the way its message came in.
 
 import (
 	"errors"
