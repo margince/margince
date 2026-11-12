@@ -98,7 +98,7 @@ func SuppressedEmails(ctx context.Context, tx pgx.Tx, emails []string) (map[stri
 	return result, nil
 }
 
-// EmailSuppressionForms is every hash the erasure list can hold the addresses
+// EmailSuppressionForms answers the hashes the erasure list holds addresses
 // under: each spelling of the domain, keyed and unkeyed.
 func EmailSuppressionForms(emails ...string) []string {
 	return SuppressionForms(EmailLookups(emails...)...)

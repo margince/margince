@@ -150,7 +150,7 @@ var admissibleDirectMailPurposes = map[directMailPurpose]bool{
 //
 // A DATA SUBJECT IS NEVER A PURPOSE. The rule these categories serve is that a
 // message to a data subject about the relationship goes through the consent
-// engine — every entry here is addressed to a colleague, or is a credential the
+// engine. Every entry here is addressed to a colleague, is a credential the
 // recipient asked for, or is the transport itself. The erasure return link is
 // a credential the erased subject asked for.
 var directMailPurposes = map[string]directMailPurpose{

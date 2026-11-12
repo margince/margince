@@ -33,10 +33,9 @@ func replayingErasure(ctx context.Context) context.Context {
 	return context.WithValue(ctx, replayingErasureKey{}, true)
 }
 
-// armSuppression puts identifier hashes on the erasure list. It is the one
-// writer every erasure uses. A second erasure arms a lifted hash again and
-// dates the row from now. A confirmation link mailed before it then no longer
-// matches the row.
+// armSuppression puts identifier hashes on the erasure list for an erasure.
+// A second erasure arms a lifted hash again and dates the row from now. A
+// confirmation link mailed before it then no longer matches the row.
 func armSuppression(ctx context.Context, tx pgx.Tx, kind string, hashes []string, keyID *string) error {
 	if len(hashes) == 0 {
 		return nil

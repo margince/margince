@@ -22,6 +22,7 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 
+	"github.com/margince/margince/backend/internal/compose/returnlink"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/consent"
 	"github.com/margince/margince/backend/internal/modules/contacts"
@@ -74,8 +75,8 @@ func newErasureReturnHandlers(pool *pgxpool.Pool) erasureReturnHandlers {
 }
 
 // returnLinkSignerNow is the signer under the installation's current root key.
-func returnLinkSignerNow() returnLinkSigner {
-	return newReturnLinkSigner(keyvault.DerivedKey(config.Bound(), returnLinkKeyLabel))
+func returnLinkSignerNow() returnlink.Signer {
+	return returnlink.NewSigner(keyvault.DerivedKey(config.Bound(), returnlink.KeyLabel))
 }
 
 // RequestBookingReturn implements (POST /public/booking/{host_slug}/return).
@@ -111,7 +112,7 @@ func (h erasureReturnHandlers) RequestBookingReturn(w http.ResponseWriter, r *ht
 		httperr.Write(w, r, apperrors.ErrBudgetExceeded)
 		return
 	}
-	request := returnRequest{
+	request := returnlink.Request{
 		Slug: hostSlug, Name: strings.TrimSpace(body.Name), Email: email.String(), PurposeID: purpose,
 		PolicyVersion: body.Consent.PolicyVersion, Wording: *body.Consent.Wording,
 	}
@@ -134,7 +135,7 @@ func (h erasureReturnHandlers) RequestBookingReturn(w http.ResponseWriter, r *ht
 
 // mailReturnLink mails the link when the address is erased, and does nothing
 // otherwise.
-func (h erasureReturnHandlers) mailReturnLink(ctx context.Context, request returnRequest) error {
+func (h erasureReturnHandlers) mailReturnLink(ctx context.Context, request returnlink.Request) error {
 	if h.returnMail == nil || h.returnLinkBase == "" {
 		return nil
 	}
@@ -146,7 +147,7 @@ func (h erasureReturnHandlers) mailReturnLink(ctx context.Context, request retur
 	}); err != nil || !erased {
 		return err
 	}
-	token, err := returnLinkSignerNow().sign(request, h.now().Add(returnLinkLifetime))
+	token, err := returnLinkSignerNow().Sign(request, h.now().Add(returnlink.Lifetime))
 	if err != nil {
 		return err
 	}
@@ -165,7 +166,7 @@ func (h erasureReturnHandlers) ConfirmBookingReturn(w http.ResponseWriter, r *ht
 	if !httperr.Decode(w, r, &body) {
 		return
 	}
-	request, err := returnLinkSignerNow().verify(body.Token, h.now())
+	request, err := returnLinkSignerNow().Verify(body.Token, h.now())
 	if err != nil || !strings.EqualFold(request.Slug, hostSlug) {
 		writeReturnLinkSpent(w, r)
 		return
@@ -193,7 +194,7 @@ func writeReturnLinkSpent(w http.ResponseWriter, r *http.Request) {
 // in one transaction. The contact is written while the address is still on the
 // list, under the booking page's admission. The lift comes last and checks that
 // the link still names the current erasure. Its refusal rolls all of it back.
-func (h erasureReturnHandlers) storeReturned(ctx context.Context, request returnRequest) error {
+func (h erasureReturnHandlers) storeReturned(ctx context.Context, request returnlink.Request) error {
 	return database.WithWorkspaceWriteTx(ctx, h.pool, func(ctx context.Context) error {
 		contactID, err := h.contacts.EnsureContactByEmail(ctx, request.Name, request.Email, returnSource, storekit.AdmitSelfBooking)
 		if err != nil {
@@ -216,7 +217,7 @@ func (h erasureReturnHandlers) storeReturned(ctx context.Context, request return
 // returnConsentRecord is the grant the subject gave on the booking page. The
 // mailbox answered the link, so the grant may replace a withdrawal on record,
 // which an anonymous booking may not.
-func returnConsentRecord(subject ids.ContactID, request returnRequest) consent.RecordInput {
+func returnConsentRecord(subject ids.ContactID, request returnlink.Request) consent.RecordInput {
 	source := returnSource
 	return consent.RecordInput{
 		ContactID:     subject,

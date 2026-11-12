@@ -31,7 +31,7 @@ var (
 	deletesFromList = regexp.MustCompile(`(?i)\bDELETE\s+FROM\s+erasure_suppression\b`)
 )
 
-// The chain from the lift to the route, each link by its only caller.
+// The chain from the lift to the route, one call at a time.
 const (
 	liftFunction      = "LiftEmailSuppressionTx"
 	liftSeat          = "internal/modules/privacy/suppressionlift.go:" + liftFunction
