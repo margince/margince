@@ -118,7 +118,7 @@ func TestATaskOnlyFieldOnANoteNamesTheField(t *testing.T) {
 }
 
 func TestTheTaskTypeRefusalNamesOnlyTypesTheContractHolds(t *testing.T) {
-	for _, name := range strings.Split(taskTypeList, ", ") {
+	for name := range strings.SplitSeq(taskTypeList, ", ") {
 		if !crmcontracts.TaskType(name).Valid() {
 			t.Errorf("the task_type refusal offers %q, which the contract refuses", name)
 		}
