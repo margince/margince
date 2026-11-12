@@ -5,7 +5,6 @@
 // The arithmetic is a plain function here, so a test can hold to it.
 
 import {
-  type FocusEvent,
   type RefObject,
   useEffect,
   useMemo,
@@ -58,7 +57,10 @@ export function useFoldedTabs<Option extends string>(
   const subscribe = useMemo(() => watchSize(strip), [strip]);
   const key = useSyncExternalStore(
     subscribe,
-    () => (strip.current ? foldKey(strip.current, options, open) : ""),
+    () =>
+      strip.current && typeof ResizeObserver !== "undefined"
+        ? foldKey(strip.current, options, open)
+        : "",
     () => "",
   );
   return options.filter((option) => key.split(SEPARATOR).includes(option));
@@ -99,47 +101,59 @@ function watchSize(strip: RefObject<HTMLElement | null>) {
     }
     const observer = new ResizeObserver(changed);
     observer.observe(element);
-    return () => observer.disconnect();
+    // A late web font widens the tabs without resizing the strip.
+    let live = true;
+    const settled = () => {
+      if (live) changed();
+    };
+    document.fonts?.ready.then(settled, settled);
+    return () => {
+      live = false;
+      observer.disconnect();
+    };
   };
 }
 
 /**
- * When the last folded tab comes back, focus on "More" or in its menu moves
- * to the open tab. A keyboard then keeps its place on the row.
+ * Keeps keyboard focus on the row while tabs fold and come back. A focused tab
+ * that folds hands focus to "More"; focus in "More" when the last tab returns
+ * lands on the open tab.
  */
-export function useFocusKeptOnUnfold(
+export function useFocusKeptOnFold(
   strip: RefObject<HTMLElement | null>,
-  idle: boolean,
+  folded: readonly string[],
   open: string,
 ) {
-  const inMore = useRef(false);
+  const inStrip = useRef(false);
+  const foldedKey = folded.join(SEPARATOR);
   // Passive, so it runs after the closing menu's own focus restore.
   useEffect(() => {
     const element = strip.current;
-    if (!idle || !inMore.current || !element) return;
-    // Focus is lost on the page, on a removed entry, or on the unseen trigger
-    // a closing menu hands it back to.
-    const active = document.activeElement;
-    const more = element.querySelector(".recordtabs-more");
-    const lost =
-      !active ||
-      active === document.body ||
-      !active.isConnected ||
-      more?.contains(active);
-    if (!lost) return;
-    inMore.current = false;
-    element
-      .querySelector<HTMLElement>(`[data-tab="${CSS.escape(open)}"]`)
-      ?.focus();
-  }, [strip, idle, open]);
+    if (!inStrip.current || !element) return;
+    const idle = foldedKey === "";
+    const more = element.querySelector<HTMLElement>(".recordtabs-more");
+    if (!focusLost(more, idle)) return;
+    const target = idle
+      ? element.querySelector<HTMLElement>(`[data-tab="${CSS.escape(open)}"]`)
+      : more?.querySelector<HTMLElement>("button");
+    target?.focus();
+  }, [strip, foldedKey, open]);
   return {
     onFocus: () => {
-      inMore.current = true;
+      inStrip.current = true;
     },
-    // Focus moving inside the menu blurs and then focuses again; only a move
-    // to somewhere named elsewhere leaves.
-    onBlur: (event: FocusEvent) => {
-      if (event.relatedTarget) inMore.current = false;
+    // A removed element fires no blur, so focus that fold or unfold took
+    // away still counts as on the row.
+    onBlur: () => {
+      inStrip.current = false;
     },
   };
+}
+
+// Lost means on the page, on a removed tab or entry, or on the unseen trigger
+// a closing menu hands it back to.
+function focusLost(more: HTMLElement | null, idle: boolean): boolean {
+  const active = document.activeElement;
+  if (!active || active === document.body || !active.isConnected) return true;
+  return idle && more?.contains(active) === true;
 }

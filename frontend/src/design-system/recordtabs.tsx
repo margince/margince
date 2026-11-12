@@ -21,7 +21,7 @@ import { type ReactNode, useRef } from "react";
 import { useT } from "../i18n";
 import { Button, OptionCount } from "./atoms";
 import { OverflowMenu } from "./overflowmenu";
-import { useFocusKeptOnUnfold, useFoldedTabs } from "./recordtabs.fold";
+import { useFocusKeptOnFold, useFoldedTabs } from "./recordtabs.fold";
 import { type ClippedEdges, useClippedEdges } from "./scrollregion";
 import "./recordtabs.css";
 
@@ -106,7 +106,7 @@ export function RecordTabs<Option extends string>({
   // A lone body has nothing to fold, and a strip without a handler has nowhere
   // to send a folded tab.
   const folded = useFoldedTabs(stripRef, onChange ? options : [], value);
-  const keepFocus = useFocusKeptOnUnfold(stripRef, folded.length === 0, value);
+  const keepFocus = useFocusKeptOnFold(stripRef, folded, value);
   const tabBody = (option: Option) => {
     const count = counts?.[option];
     return (
@@ -132,6 +132,7 @@ export function RecordTabs<Option extends string>({
           ref={stripRef}
           className={stripClass(edges)}
           aria-label={label ?? t("record.tabs")}
+          {...keepFocus}
         >
           {options
             .filter((option) => !folded.includes(option))
@@ -167,7 +168,6 @@ export function RecordTabs<Option extends string>({
               className="recordtabs-more"
               data-idle={folded.length === 0 || undefined}
               aria-hidden={folded.length === 0 || undefined}
-              {...keepFocus}
             >
               {/* A new menu once nothing folds, so one left open closes
                   with its last entry instead of trapping focus. */}

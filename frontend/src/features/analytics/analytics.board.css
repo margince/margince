@@ -176,6 +176,14 @@
     align-self: end;
     padding-top: 0;
   }
+  /* Each part keeps its own row, so a card with no detail line still draws
+     its meter level with its neighbours'. */
+  .analytics-body .stat-strip[data-density="plate"] .stat-card-meter {
+    grid-row: 4;
+  }
+  .analytics-body .stat-strip[data-density="plate"] .stat-card-foot {
+    grid-row: 5;
+  }
 }
 .analytics-body .stat-strip[data-density="plate"] .stat-card-label {
   font: var(--fontBodySmall);

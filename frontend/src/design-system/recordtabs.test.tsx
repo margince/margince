@@ -170,11 +170,11 @@ describe("RecordTabs fades only an end that hides tabs", () => {
   });
 });
 
-// When the row grows wide enough for every tab, "More" goes. A keyboard on it
-// lands on the open tab, not on the page.
-describe("RecordTabs keeps focus when the folded tabs come back", () => {
-  // Two tabs on a row too narrow for both. The returned call widens it.
-  function foldedStrip() {
+// Focus stays on the row as tabs fold and return: a tab that folds hands it
+// to "More", and "More" hands it to the open tab once every tab fits.
+describe("RecordTabs keeps focus on the row as tabs fold", () => {
+  // Two tabs on a row that starts at `start` wide. The returned call resizes it.
+  function sizedStrip(start: number) {
     // The open menu watches its own size too, so every observer hears a resize.
     const watchers: (() => void)[] = [];
     vi.stubGlobal(
@@ -187,19 +187,33 @@ describe("RecordTabs keeps focus when the folded tabs come back", () => {
         disconnect() {}
       },
     );
-    let room = 150;
+    let room = start;
     vi.spyOn(HTMLElement.prototype, "offsetWidth", "get").mockReturnValue(100);
     vi.spyOn(HTMLElement.prototype, "clientWidth", "get").mockImplementation(
       () => room,
     );
     strip();
-    return () => {
-      room = 400;
+    return (next: number) => {
+      room = next;
       act(() => {
         for (const changed of watchers) changed();
       });
     };
   }
+
+  // Two tabs on a row too narrow for both. The returned call widens it.
+  function foldedStrip() {
+    const resize = sizedStrip(150);
+    return () => resize(400);
+  }
+
+  it("moves focus from a tab that folds to More", () => {
+    const resize = sizedStrip(400);
+    act(() => screen.getByRole("button", { name: "Contacts" }).focus());
+    resize(150);
+
+    expect(screen.getByRole("button", { name: "More sections" })).toHaveFocus();
+  });
 
   it("moves focus from More to the open tab", () => {
     const grow = foldedStrip();

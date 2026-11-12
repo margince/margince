@@ -3,7 +3,7 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { useState } from "react";
-import { expect, waitFor, within } from "storybook/test";
+import { expect, userEvent, waitFor, within } from "storybook/test";
 import { LocaleProvider } from "../i18n";
 import { Button } from "./atoms";
 import { RecordTabs } from "./recordtabs";
@@ -163,5 +163,72 @@ export const FoldsAtPhoneWidth: Story = {
     const strip = canvasElement.querySelector(".recordtabs-strip");
     if (!(strip instanceof HTMLElement)) throw new Error("no tab strip drawn");
     await expect(strip.scrollWidth).toBeLessThanOrEqual(strip.clientWidth);
+  },
+};
+
+const ANALYTICS_LABELS = {
+  performance: "Performance",
+  outcomes: "My outcomes",
+  delivery: "Delivery",
+  pipeline: "Pipeline",
+  team: "Team",
+};
+
+// The folded tabs as the menu lists them, opened from "More".
+export const MoreMenuOpen: Story = {
+  tags: ["uat-phone"],
+  parameters: { layout: "fullscreen" },
+  globals: { viewport: { value: "phone" } },
+  render: () => (
+    <RecordTabs
+      label="Analytics"
+      options={["performance", "outcomes", "delivery", "pipeline", "team"]}
+      value="performance"
+      onChange={() => undefined}
+      labels={ANALYTICS_LABELS}
+    />
+  ),
+  play: async ({ canvasElement }) => {
+    const more = await within(canvasElement).findByRole("button", {
+      name: "More sections",
+    });
+    await waitFor(() => expect(more).toBeVisible());
+    await userEvent.click(more);
+    const page = within(canvasElement.ownerDocument.body);
+    await expect(
+      await page.findByRole("button", { name: "Team" }),
+    ).toBeVisible();
+  },
+};
+
+// The row narrows until tabs fold, then widens until they all return.
+export const FoldsAndReturnsWithWidth: Story = {
+  render: () => (
+    <div data-testid="frame" style={{ inlineSize: "100%" }}>
+      <RecordTabs
+        label="Analytics"
+        options={["performance", "outcomes", "delivery", "pipeline", "team"]}
+        value="team"
+        onChange={() => undefined}
+        labels={ANALYTICS_LABELS}
+      />
+    </div>
+  ),
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    const frame = canvas.getByTestId("frame");
+    frame.style.inlineSize = "260px";
+    await waitFor(() =>
+      expect(
+        canvas.getByRole("button", { name: "More sections" }),
+      ).toBeVisible(),
+    );
+    frame.style.inlineSize = "100%";
+    await waitFor(() =>
+      expect(canvas.getByRole("button", { name: "Performance" })).toBeVisible(),
+    );
+    await expect(
+      canvas.queryByRole("button", { name: "More sections" }),
+    ).toBeNull();
   },
 };
