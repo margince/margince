@@ -4987,6 +4987,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "visibility.selected": "Ausgewählte",
   "visibility.private": "Privat",
   "visibility.withheld": "Zurückgehalten",
+  "email.access.sharedMailbox":
+    "Kam über das Postfach {mailbox}, das das Team {team} liest.",
   "email.access.unnamedMember": "Ehemaliges Nutzerkonto",
   "email.invitation.badge": "Einladung",
   "email.invitation.startsAt": "Beginnt {when}",
@@ -13863,6 +13865,50 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "settings.part.integrations.accounting": "Buchhaltung",
   "settings.part.integrations.webhooks": "Webhooks",
   "settings.part.integrations.telegram": "Telegram-Bot",
+  "settings.part.integrations.sharedMailboxes": "Gemeinsame Postfächer",
+  "sharedMailboxes.title": "Gemeinsame Postfächer",
+  "sharedMailboxes.intro":
+    "Postfächer, die niemandem allein gehören, etwa sales@. Jedes liest ein Team.",
+  "sharedMailboxes.connect": "Gemeinsames Postfach verbinden",
+  "sharedMailboxes.connectTitle": "Gemeinsames Postfach verbinden",
+  "sharedMailboxes.adminOnlyTitle":
+    "Nur Admins verwalten gemeinsame Postfächer",
+  "sharedMailboxes.adminOnly":
+    "Nur Admins verbinden gemeinsame Postfächer und ändern, welches Team sie liest.",
+  "sharedMailboxes.emptyTitle": "Noch keine gemeinsamen Postfächer",
+  "sharedMailboxes.empty":
+    "Verbinde eines, damit ein Team seine Mails in Margince liest.",
+  "sharedMailboxes.unknownTeam": "Ein Team, das du nicht siehst",
+  "sharedMailboxes.readBy": "Gelesen von {team} · {visibility}",
+  "sharedMailboxes.provider": "Maildienst",
+  "sharedMailboxes.address": "Adresse des Postfachs",
+  "sharedMailboxes.readerTeam": "Team, das es liest",
+  "sharedMailboxes.readerTeamPlaceholder": "Team wählen",
+  "sharedMailboxes.visibility": "Sichtbarkeit der Mails",
+  "sharedMailboxes.visibilityHeld": "Zurückgehalten",
+  "sharedMailboxes.visibilityShared": "Geteilt",
+  "sharedMailboxes.visibilityHeldHint":
+    "Nur das Team und die Beteiligten jeder Mail können sie lesen.",
+  "sharedMailboxes.visibilitySharedHint":
+    "Alle, die die verknüpften Datensätze öffnen können, können sie lesen.",
+  "sharedMailboxes.graphTenant": "Mandanten-ID",
+  "sharedMailboxes.graphClient": "Client-ID",
+  "sharedMailboxes.graphSecret": "Geheimer Clientschlüssel",
+  "sharedMailboxes.gmailKey": "Schlüssel des Dienstkontos (JSON)",
+  "sharedMailboxes.change": "Ändern",
+  "sharedMailboxes.changeTitle": "Lesendes Team von {address} ändern",
+  "sharedMailboxes.changeConfirm": "Auf alle Mails anwenden",
+  "sharedMailboxes.changeWarning":
+    "Das gilt für alle Mails, die das Postfach schon erfasst hat, nicht nur für neue.",
+  "sharedMailboxes.narrowHistory": "Auch schon erfasste Mails zurückhalten",
+  "sharedMailboxes.importHistory": "Ältere Mails importieren",
+  "sharedMailboxes.historyTitle": "Ältere Mails in {address} importieren",
+  "sharedMailboxes.historyIntro":
+    "Wähle, wie weit zurück. Das Team liest, was hinzukommt.",
+  "sharedMailboxes.historyStart": "Import starten",
+  "sharedMailboxes.disconnectTitle": "{address} trennen?",
+  "sharedMailboxes.disconnectBody":
+    "Neue Mails kommen nicht mehr an. Schon erfasste Mails bleiben, und das Team liest sie weiter.",
   "settings.part.integrations.units": "Weitere Dienste",
   "settings.part.models.providers": "Anbieter",
   "settings.part.models.tiers": "Modellstufen",

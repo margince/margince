@@ -28474,6 +28474,21 @@ components:
           description: |-
             Why the message is limited, when the caller may know. Always null while the content
             is withheld: the reason describes the message.
+        shared_mailboxes:
+          type: array
+          description: |-
+            The shared mailboxes that brought this message in, each with the team that reads
+            it. Absent while the content is withheld, and empty for mail only personal
+            mailboxes captured.
+          items: {$ref: '#/components/schemas/EmailSharedMailbox'}
+    EmailSharedMailbox:
+      type: object
+      description: A shared mailbox that captured a message, and the team that reads its mail.
+      required: [address, reader_team_id, reader_team_name]
+      properties:
+        address: {type: string}
+        reader_team_id: {type: string, format: uuid}
+        reader_team_name: {type: string}
     EmailThreadPage:
       type: object
       description: |-

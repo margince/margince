@@ -48260,6 +48260,11 @@ type EmailAccess struct {
 	// the content and change it — a reader with no standing to edit the set has no
 	// standing to enumerate it either.
 	SelectedMembers *[]AudienceMember `json:"selected_members,omitempty"`
+
+	// SharedMailboxes The shared mailboxes that brought this message in, each with the team that reads
+	// it. Absent while the content is withheld, and empty for mail only personal
+	// mailboxes captured.
+	SharedMailboxes *[]EmailSharedMailbox `json:"shared_mailboxes,omitempty"`
 }
 
 // EmailAccessChangeMode Which write this caller's Access control performs. `thread_contribution` changes
@@ -48565,6 +48570,13 @@ type EmailPresentationLanguage string
 // correspondence. A scheduled send and a draft awaiting approval will borrow the
 // frame when the reads that serve them land, and they are not listed until then.
 type EmailPresentationLifecycle string
+
+// EmailSharedMailbox A shared mailbox that captured a message, and the team that reads its mail.
+type EmailSharedMailbox struct {
+	Address        string             `json:"address"`
+	ReaderTeamId   openapi_types.UUID `json:"reader_team_id"`
+	ReaderTeamName string             `json:"reader_team_name"`
+}
 
 // EmailSignOff defines model for EmailSignOff.
 type EmailSignOff struct {

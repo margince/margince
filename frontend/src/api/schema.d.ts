@@ -29707,6 +29707,19 @@ export interface components {
              *     is withheld: the reason describes the message.
              */
             explanation?: string | null;
+            /**
+             * @description The shared mailboxes that brought this message in, each with the team that reads
+             *     it. Absent while the content is withheld, and empty for mail only personal
+             *     mailboxes captured.
+             */
+            shared_mailboxes?: components["schemas"]["EmailSharedMailbox"][];
+        };
+        /** @description A shared mailbox that captured a message, and the team that reads its mail. */
+        EmailSharedMailbox: {
+            address: string;
+            /** Format: uuid */
+            reader_team_id: string;
+            reader_team_name: string;
         };
         /**
          * @description The rest of the conversation, newest first, as summaries. Bounded and paged rather
