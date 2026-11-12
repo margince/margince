@@ -31568,7 +31568,13 @@ type Activity struct {
 
 	// ControllerSend Present only on a mail sent through the installation's own relay. Absent on every other row.
 	ControllerSend *ControllerSend `json:"controller_send,omitempty"`
-	CreatedAt      time.Time       `json:"created_at"`
+
+	// Copies How many colleagues' mailboxes hold a copy of this email that the caller may read, this one included. Set only on a timeline that shows one row per email (the 360 pages, or `collapse_copies=true`); absent when there is one copy. `links` is the union over those copies.
+	Copies *int `json:"copies,omitempty" minimum:"2"`
+
+	// CopyIds The other copies this row stands for, each readable by the caller through `GET /activities/{id}`. Set exactly when `copies` is. Copies join only when they agree on Message-ID, sender, subject, body, direction and the second they occurred.
+	CopyIds   *[]openapi_types.UUID `json:"copy_ids,omitempty"`
+	CreatedAt time.Time             `json:"created_at"`
 
 	// CreatedBy Who recorded the activity, from its earliest create audit row, read the way
 	// `Contact360.created_by` is: for an agent, the colleague it worked for and the
@@ -37952,6 +37958,9 @@ type CaptureHealth struct {
 	// OwnerReviews Mailbox owners with decisions ready for human review. Counts and names only.
 	OwnerReviews *[]CaptureOwnerReview `json:"owner_reviews,omitempty"`
 
+	// SharedMailboxConcerns Active connection concerns for shared mailboxes. Names account state, never correspondence.
+	SharedMailboxConcerns *[]CaptureSharedMailboxConcern `json:"shared_mailbox_concerns,omitempty"`
+
 	// Sweeps One row per repair pass, always all of them, in a fixed order. A pass that has
 	// never run is listed with no `last_run`, not left out.
 	Sweeps []CaptureSweepHealth `json:"sweeps"`
@@ -38292,6 +38301,19 @@ type CaptureSettings struct {
 	// SiteRead What one website read may fetch. Read when a read starts, so a change applies to the next
 	// one. An automatic read also runs under its own lower page ceiling.
 	SiteRead SiteReadLimits `json:"site_read"`
+}
+
+// CaptureSharedMailboxConcern A shared mailbox with an active concern. No member owns it, so `account_label` names it.
+type CaptureSharedMailboxConcern struct {
+	AccountLabel *string            `json:"account_label"`
+	Concern      CaptureConcernKind `json:"concern"`
+	ConnectionId openapi_types.UUID `json:"connection_id"`
+
+	// ErrorClass The class of the last failed sync, as on `CaptureConnectionConcern`.
+	ErrorClass    *string    `json:"error_class,omitempty"`
+	LastSuccessAt *time.Time `json:"last_success_at"`
+	Provider      string     `json:"provider"`
+	Since         *time.Time `json:"since"`
 }
 
 // CaptureSourceEntry One capture provenance id that is not a transport, as the directory publishes it.
@@ -70281,6 +70303,9 @@ type ListActivitiesParams struct {
 
 	// ReminderDue Restrict the list to the caller's own due reminders: open, live tasks assigned to the caller whose `remind_at` has passed, at most 30 days ago. The latest reminder comes first. It reads content, so a task whose content the caller may not read is left out.
 	ReminderDue *bool `form:"reminder_due,omitempty" json:"reminder_due,omitempty"`
+
+	// CollapseCopies Show one row per email when several colleagues' mailboxes each hold a copy of it. Only copies the caller may read are joined, and the row shown says how many in `copies`. Off by default, so an export or sync client still reads every row.
+	CollapseCopies *bool `form:"collapse_copies,omitempty" json:"collapse_copies,omitempty"`
 }
 
 // ListActivitiesParamsKind defines parameters for ListActivities.
@@ -79898,6 +79923,22 @@ func (a *Activity) UnmarshalJSON(b []byte) error {
 		delete(object, "controller_send")
 	}
 
+	if raw, found := object["copies"]; found {
+		err = json.Unmarshal(raw, &a.Copies)
+		if err != nil {
+			return fmt.Errorf("error reading 'copies': %w", err)
+		}
+		delete(object, "copies")
+	}
+
+	if raw, found := object["copy_ids"]; found {
+		err = json.Unmarshal(raw, &a.CopyIds)
+		if err != nil {
+			return fmt.Errorf("error reading 'copy_ids': %w", err)
+		}
+		delete(object, "copy_ids")
+	}
+
 	if raw, found := object["created_at"]; found {
 		err = json.Unmarshal(raw, &a.CreatedAt)
 		if err != nil {
@@ -80378,6 +80419,20 @@ func (a Activity) MarshalJSON() ([]byte, error) {
 		object["controller_send"], err = json.Marshal(a.ControllerSend)
 		if err != nil {
 			return nil, fmt.Errorf("error marshaling 'controller_send': %w", err)
+		}
+	}
+
+	if a.Copies != nil {
+		object["copies"], err = json.Marshal(a.Copies)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'copies': %w", err)
+		}
+	}
+
+	if a.CopyIds != nil {
+		object["copy_ids"], err = json.Marshal(a.CopyIds)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'copy_ids': %w", err)
 		}
 	}
 
@@ -102529,6 +102584,19 @@ func (siw *ServerInterfaceWrapper) ListActivities(w http.ResponseWriter, r *http
 			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "reminder_due"})
 		} else {
 			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "reminder_due", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "collapse_copies" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "collapse_copies", r.URL.Query(), &params.CollapseCopies, runtime.BindQueryParameterOptions{Type: "boolean", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "collapse_copies"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "collapse_copies", Err: err})
 		}
 		return
 	}

@@ -37,9 +37,9 @@ func (a *httpAPI) DeletionsDelta(ctx context.Context, accessToken, deltaLink str
 	start := deltaLink
 	if start == "" {
 		q := url.Values{paramSelect: {deletionsSelect}}
-		start = a.base + "/me/mailFolders/" + folderDeletions + "/messages/delta?" + q.Encode()
+		start = a.root() + "/mailFolders/" + folderDeletions + "/messages/delta?" + q.Encode()
 	}
-	if err := a.sameAPIOrigin(start); err != nil {
+	if err := a.sameMailbox(start); err != nil {
 		return "", err
 	}
 	return a.deltaWalk(ctx, accessToken, start, nil, visit)
@@ -50,7 +50,7 @@ func (a *httpAPI) DeletionsDelta(ctx context.Context, accessToken, deltaLink str
 // fails.
 func (a *httpAPI) ListDeletions(ctx context.Context, accessToken string) ([]MessageRef, error) {
 	q := url.Values{paramSelect: {deletionsSelect}, paramTop: {strconv.Itoa(deletionsListPageSize)}}
-	next := a.base + "/me/mailFolders/" + folderDeletions + "/messages?" + q.Encode()
+	next := a.root() + "/mailFolders/" + folderDeletions + "/messages?" + q.Encode()
 	var listed []MessageRef
 	for range deletionsListMaxPages {
 		var out struct {
@@ -71,7 +71,7 @@ func (a *httpAPI) ListDeletions(ctx context.Context, accessToken string) ([]Mess
 		if out.NextLink == "" {
 			break
 		}
-		if err := a.sameAPIOrigin(out.NextLink); err != nil {
+		if err := a.sameMailbox(out.NextLink); err != nil {
 			return nil, err
 		}
 		next = out.NextLink
@@ -87,7 +87,7 @@ func (a *httpAPI) MessageFolder(ctx context.Context, accessToken, msgID string) 
 		ParentFolderID string `json:"parentFolderId"` //nolint:tagliatelle // Microsoft's wire format; must match to decode
 	}
 	q := url.Values{paramSelect: {"parentFolderId"}}
-	status, err := a.get(ctx, accessToken, a.base+"/me/messages/"+url.PathEscape(msgID)+"?"+q.Encode(), nil, &out)
+	status, err := a.get(ctx, accessToken, a.root()+"/messages/"+url.PathEscape(msgID)+"?"+q.Encode(), nil, &out)
 	if status == http.StatusNotFound {
 		return "", false, nil
 	}
@@ -114,7 +114,7 @@ func (a *httpAPI) FindMessage(ctx context.Context, accessToken, internetMessageI
 			ParentFolderID string `json:"parentFolderId"` //nolint:tagliatelle // Microsoft's wire format; must match to decode
 		} `json:"value"`
 	}
-	if _, err := a.get(ctx, accessToken, a.base+"/me/messages?"+q.Encode(), nil, &out); err != nil {
+	if _, err := a.get(ctx, accessToken, a.root()+"/messages?"+q.Encode(), nil, &out); err != nil {
 		return nil, err
 	}
 	folders := make([]string, 0, len(out.Value))

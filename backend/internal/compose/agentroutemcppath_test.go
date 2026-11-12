@@ -307,6 +307,8 @@ var spelledOtherwiseByItsVerb = map[string]string{
 var answeredByAnotherVerb = gatekit.Waive(map[string]string{
 	"GET /v1/companies#id": "a screen's batch read of companies it holds ids for; an agent reads each by id " +
 		"through read_record (gates/seamfilters_test.go rules it out of list_records)",
+	"GET /v1/activities#collapse_copies": "list_records collapses mailbox copies itself whenever it lists one record's " +
+		"timeline (activities/provider.go); an unscoped list keeps every copy, as export and sync do",
 })
 
 // parameterGapsPendingParity are the route parameters no verb takes yet, as
