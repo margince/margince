@@ -82,6 +82,9 @@ type ActivityFields struct {
 	// MeetingDocuments are the notes and transcripts the provider attached to a
 	// meeting (meetingmap.NotesDocuments); empty for anything else.
 	MeetingDocuments []MeetingDocument
+	// MeetingDocumentsListed says MeetingDocuments is the whole list, so a
+	// recorded document missing from it was taken off the meeting.
+	MeetingDocumentsListed bool
 
 	// judged is what the sink concluded from Envelope. Unexported so no
 	// connector can state the conclusion for it.

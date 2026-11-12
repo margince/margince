@@ -62,7 +62,7 @@ describe("a Worklist promise our later mail may have kept", () => {
     show(ASKED);
 
     expect(
-      screen.getByText(/You may have done this: you wrote to them on/),
+      screen.getByText(/This may be done: an email went to them on/),
     ).toBeTruthy();
     await userEvent
       .setup()

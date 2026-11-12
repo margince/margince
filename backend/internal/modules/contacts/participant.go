@@ -19,11 +19,13 @@ package contacts
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/relstrength"
 )
 
 // nameContactAmongParticipants attaches a resolved contact to the participant
@@ -43,18 +45,33 @@ func nameContactAmongParticipants(ctx context.Context, tx pgx.Tx, activityID ids
 	return err
 }
 
+// errSenderStampUnwired refuses a link written by a store that cannot apply the
+// proven-sender rule. A composition that forgot it fails instead of filing mail
+// with no sender.
+var errSenderStampUnwired = errors.New("contacts: this store has no proven-sender rule; compose must wire WithSenderStamp")
+
+// stampProvenSenders names the contact the sender of the held activities whose
+// stated address proves them. It runs after the links and promotions it reads.
+func (s *Store) stampProvenSenders(ctx context.Context, tx pgx.Tx, activities []ids.UUID, contactID ids.ContactID) ([]ids.UUID, error) {
+	if s.stampSenders == nil {
+		return nil, errSenderStampUnwired
+	}
+	if len(activities) == 0 {
+		return nil, nil
+	}
+	return s.stampSenders(ctx, tx, activities, contactID.UUID)
+}
+
 // promotableParticipantSQL is the predicate, on the participant row alias, for
-// an address-only row the promotion names @cohort_contact on. Live addresses
-// only: an abandoned alias names a party who is no longer reachable there.
+// an address-only row the promotion names @cohort_contact on. The address must
+// prove the contact, as it must for a stamped sender: a live address no other
+// contact ever held.
 func promotableParticipantSQL(alias string) string {
 	return alias + `.contact_id IS NULL
 		   AND ` + alias + `.user_id IS NULL
 		   AND ` + alias + `.address IS NOT NULL
 		   AND NOT ` + alias + `.past_party_cap
-		   AND EXISTS (
-		       SELECT 1 FROM contact_email pe
-		        WHERE pe.contact_id = @cohort_contact AND pe.archived_at IS NULL
-		          AND lower(pe.email) = ` + alias + `.address)`
+		   AND ` + relstrength.AddressProvesSQL("@cohort_contact", alias+".address")
 }
 
 // promoteParticipantsToContact is that update over the given activities: the

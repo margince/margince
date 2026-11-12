@@ -21,6 +21,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/privacy"
+	"github.com/margince/margince/backend/internal/modules/search"
 	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -241,7 +242,7 @@ func TestAFilingIsNotUndoneOnceAStatutoryHoldHasStarted(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if err := privacy.NewEraser(e.DB()).PinToFloor(controllerCtx(e, principal.ObjectGrant{Read: true, Update: true}), f.email, reason); err != nil {
+	if err := privacy.NewEraser(e.DB()).WithEdgeInvalidator(search.RecomputeEdgesForActivities).PinToFloor(controllerCtx(e, principal.ObjectGrant{Read: true, Update: true}), f.email, reason); err != nil {
 		t.Fatalf("pinning the activity: %v", err)
 	}
 
@@ -310,7 +311,7 @@ func TestUndoingAFilingMovesTheErasureShieldOnlyWhereTheFilingWasAlone(t *testin
 	if _, err := alone.Activities.UndoProjectFiling(alone.Admin(), ids.ActivityID{UUID: f.email}, undoReason); err != nil {
 		t.Fatalf("undoing the sole basis: %v", err)
 	}
-	if err := privacy.NewEraser(alone.DB()).EraseContact(alone.Admin(), f.contact, "test"); err != nil {
+	if err := privacy.NewEraser(alone.DB()).WithEdgeInvalidator(search.RecomputeEdgesForActivities).EraseContact(alone.Admin(), f.contact, "test"); err != nil {
 		t.Fatalf("erasing the subject: %v", err)
 	}
 	if got := readHeldState(t, alone, f.email); got.restrictedAt != nil {
@@ -333,7 +334,7 @@ func TestACorrespondenceTheDealStillQualifiesStaysHeldWhenItsFilingIsRefused(t *
 	if _, err := e.Activities.UndoProjectFiling(e.Admin(), id, undoReason); err == nil {
 		t.Fatal("the filing was undone although a won deal still qualifies the correspondence")
 	}
-	if err := privacy.NewEraser(e.DB()).EraseContact(e.Admin(), f.contact, "test"); err != nil {
+	if err := privacy.NewEraser(e.DB()).WithEdgeInvalidator(search.RecomputeEdgesForActivities).EraseContact(e.Admin(), f.contact, "test"); err != nil {
 		t.Fatalf("erasing the subject: %v", err)
 	}
 	got := readHeldState(t, e, f.email)

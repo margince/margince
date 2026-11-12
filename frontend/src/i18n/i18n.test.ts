@@ -31,6 +31,7 @@ const KEPT_IN_ENGLISH = new Set<string>([
   // Markup with placeholders, which is the same in every language.
   // Only placeholders and punctuation, with no word to translate.
   "compose.aboutWhen",
+  "sendPermission.recipientLine",
   "changes.check.outcome",
   "captureConcern.title",
   "companyReach.functionCount",
@@ -39,6 +40,7 @@ const KEPT_IN_ENGLISH = new Set<string>([
   "signatureTemplate.placeholder",
   "agent.fact.sourceOnProvider",
   "standing.mark.label",
+  "worklist.happened.deal",
   // The promiser and stored summary are values separated by punctuation.
   "magic.action.approval_commitment_task_named",
   "magic.action.approval_commitment_task_summary",
@@ -201,6 +203,7 @@ const KEPT_IN_ENGLISH = new Set<string>([
   "worklist.partial",
   // Brand and provider names: proper nouns, not translated in any locale.
   "connectors.provGcal",
+  "connectors.provGdocs",
   "connectors.provGmail",
   "connectors.provGraph",
   "connectors.provTelegram",

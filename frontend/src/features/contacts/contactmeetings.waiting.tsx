@@ -242,9 +242,9 @@ function ProposalRow({
   return (
     <PanelRow>
       <article className="pe-proposal">
-        <div className="pe-meeting-body">
-          <div className="pe-meeting-headline">
-            <span className="pe-meeting-title">{proposal.subject}</span>
+        <div className="meetingrows-body">
+          <div className="meetingrows-headline">
+            <span className="meetingrows-title">{proposal.subject}</span>
             {proposal.options.length === 0 && (
               <Badge>{t("contact.meetings.personalLink")}</Badge>
             )}
@@ -264,14 +264,14 @@ function ProposalRow({
               ))}
             </ul>
           )}
-          <p className="t-caption pe-meeting-meta">
+          <p className="t-caption meetingrows-meta">
             {t("contact.meetings.sentExpires", {
               sent: formatDayMonth(proposal.created_at, locale, zone),
               expires: formatDayMonth(proposal.expires_at, locale, zone),
             })}
           </p>
         </div>
-        <div className="pe-meeting-verbs">
+        <div className="meetingrows-verbs">
           <Button onClick={copy.copy}>
             {t(
               copied.url === proposal.url

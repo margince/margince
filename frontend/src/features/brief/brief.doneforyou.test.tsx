@@ -13,13 +13,21 @@ import {
 } from "../../testing/brief.testkit";
 import { meFixture } from "../../testing/mefixture";
 import { automaticStageReceipt } from "../../testing/worklist.receiptreview.fixtures";
-import { DONE_PREVIEW_DEALS, DoneForYou } from "./brief.doneforyou";
+import {
+  DONE_PREVIEW_DEALS,
+  DONE_REVIEW_PARAM,
+  DoneForYou,
+} from "./brief.doneforyou";
 
 type Bundle = components["schemas"]["MarginceChangeBundle"];
 
 afterEach(() => {
   cleanup();
   vi.unstubAllGlobals();
+  // The list of all deals' dial and the last bulk Undo outlive a render, as they
+  // outlive a reload.
+  globalThis.localStorage.clear();
+  window.location.hash = "";
 });
 
 const dealId = (n: number) => `00000000-0000-4000-8000-0000000000${10 + n}`;
@@ -424,4 +432,160 @@ it("offers one Undo for every change on a deal and asks for no review", async ()
   ).toBeTruthy();
   expect(screen.queryByText(/review/i)).toBeNull();
   expect(writes(calls)).toEqual([]);
+});
+
+const undoneEach = (body: unknown) =>
+  jsonResponse({
+    results: (body as { items: { deal_id: string }[] }).items.map((item) => ({
+      deal_id: item.deal_id,
+      outcome: "undone",
+      undone: ["close_lost"],
+      kept: [],
+    })),
+  });
+
+it("undoes only the deals left ticked, and starts with every deal ticked", async () => {
+  const three = [1, 2, 3];
+  const calls = routes(
+    three.map((n) => change(n)),
+    three.map((n) => bundle(n, [auditId(n)])),
+    undoneEach,
+  );
+  const user = userEvent.setup();
+  render(<DoneForYou completed={null} />);
+  await user.click(
+    await screen.findByRole("button", { name: "See all 3 deals" }),
+  );
+  const drawer = await screen.findByRole("dialog");
+  const ticks = three.map((n) =>
+    within(drawer).getByRole("checkbox", { name: `Undo changes on Deal ${n}` }),
+  );
+  expect(ticks.map((tick) => (tick as HTMLInputElement).checked)).toEqual([
+    true,
+    true,
+    true,
+  ]);
+  const all = within(drawer).getByRole("checkbox", {
+    name: en["bulk.selectAll"],
+  }) as HTMLInputElement;
+  await user.click(all);
+  expect(
+    within(drawer).queryByRole("button", { name: /Undo changes on \d/ }),
+  ).toBeNull();
+  await user.click(all);
+  await user.click(ticks[1] as HTMLElement);
+  expect(all.indeterminate).toBe(true);
+  await user.click(
+    within(drawer).getByRole("button", { name: "Undo changes on 2 deals" }),
+  );
+  await within(drawer).findByText("Undone on 2 deals.");
+  const posted = writes(calls).find((c) => c.path === "/deal-corrections/undo");
+  expect(posted?.body).toEqual({
+    items: [1, 3].map((n) => ({
+      deal_id: dealId(n),
+      version: 7,
+      audit_log_ids: [auditId(n)],
+    })),
+  });
+});
+
+it("still says what the last Undo of many did after a reload, until the reader clears it", async () => {
+  routes(
+    [change(1), change(2)],
+    [bundle(1, [auditId(1)]), bundle(2, [auditId(2)])],
+    () =>
+      jsonResponse({
+        results: [
+          {
+            deal_id: dealId(1),
+            outcome: "refused",
+            undone: [],
+            kept: [
+              {
+                audit_log_id: auditId(1),
+                kind: "close_lost",
+                reason: "changed_since",
+              },
+            ],
+          },
+          {
+            deal_id: dealId(2),
+            outcome: "undone",
+            undone: ["close_lost"],
+            kept: [],
+          },
+        ],
+      }),
+  );
+  const user = userEvent.setup();
+  render(<DoneForYou completed={null} />);
+  await user.click(
+    await screen.findByRole("button", { name: "See all 2 deals" }),
+  );
+  await user.click(
+    within(await screen.findByRole("dialog")).getByRole("button", {
+      name: "Undo changes on 2 deals",
+    }),
+  );
+  await screen.findByText(/Undone on 1 deal\./);
+  cleanup();
+  window.location.hash = "";
+
+  // The reload: deal 1 still waits, deal 2 is gone from the list.
+  routes([change(1)], [bundle(1, [auditId(1)])]);
+  render(<DoneForYou completed={null} />);
+  await user.click(await screen.findByRole("button", { name: "See 1 deal" }));
+  const drawer = await screen.findByRole("dialog");
+  expect(within(drawer).getByText(/Undone on 1 deal\./)).toBeTruthy();
+  const unfinished = within(drawer).getByRole("list", {
+    name: "Deals not fully undone",
+  });
+  expect(
+    within(unfinished)
+      .getAllByRole("link")
+      .map((link) => link.textContent),
+  ).toEqual(["Deal 1"]);
+  await user.click(
+    within(drawer).getByRole("button", { name: en["changes.bulk.clear"] }),
+  );
+  expect(
+    await within(drawer).findByRole("button", {
+      name: "Undo changes on 1 deal",
+    }),
+  ).toBeTruthy();
+  expect(within(drawer).queryByText(/Undone on/)).toBeNull();
+});
+
+it("opens the list of all deals from the address, so Back from a deal reopens it", async () => {
+  routes(
+    [change(1), change(2)],
+    [bundle(1, [auditId(1)]), bundle(2, [auditId(2)])],
+  );
+  window.location.hash = `#/?${DONE_REVIEW_PARAM}=1`;
+  const user = userEvent.setup();
+  render(<DoneForYou completed={null} />);
+  const drawer = await screen.findByRole("dialog", {
+    name: "2 deals Margince changed",
+  });
+  expect(within(drawer).getByText("reason 2.0")).toBeTruthy();
+  await user.keyboard("{Escape}");
+  await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+  expect(window.location.hash).not.toContain(DONE_REVIEW_PARAM);
+  const trigger = screen.getByRole("button", { name: "See all 2 deals" });
+  await waitFor(() => expect(document.activeElement).toBe(trigger));
+  await user.click(trigger);
+  expect(window.location.hash).toContain(`${DONE_REVIEW_PARAM}=1`);
+});
+
+it("links Change history to the Worklist's Change history panel", async () => {
+  routes([change(1)], [bundle(1, [auditId(1)])]);
+  render(<DoneForYou completed={null} />);
+  const link = await screen.findByRole("link", {
+    name: en["brief.done.history"],
+  });
+  const dials = new URLSearchParams(
+    (link.getAttribute("href") ?? "").split("?")[1],
+  );
+  expect(dials.get("queue")).toBe("1");
+  expect(dials.get("queue_at")).toBe("history");
 });

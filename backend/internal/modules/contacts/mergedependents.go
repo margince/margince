@@ -16,8 +16,10 @@ import (
 )
 
 // DependentRecordsError refuses a merge of a record that extension rows point
-// at. A merge retires the source, and those rows would be left naming a record
-// that no longer answers; archiving the source keeps them reachable.
+// at and that the merge would not move. A merge retires the source, and those
+// rows would be left naming a record that no longer answers; archiving the
+// source keeps them reachable. A link the unit also declares in its Reach moves
+// to the survivor and never counts here.
 type DependentRecordsError struct {
 	Kind  string
 	Count int64

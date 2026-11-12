@@ -47,3 +47,27 @@
   overflow-wrap: anywhere;
   font-weight: var(--fontWeightMedium);
 }
+
+/* The panel reads top to bottom as sections, each under its own eyebrow. */
+.worklist-why {
+  display: grid;
+  gap: var(--space-5);
+}
+
+.worklist-why-section {
+  display: grid;
+  gap: var(--space-2);
+  min-width: 0;
+}
+
+.worklist-why-section > p {
+  margin: 0;
+}
+
+.worklist-why-happened {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: var(--space-1);
+}

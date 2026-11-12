@@ -45,6 +45,8 @@ export type FieldProblem = Readonly<{
   field: string;
   code: string;
   message: string;
+  // The limit a too_long refusal names. Absent from an older server.
+  max?: number;
 }>;
 
 // The top-level code every 422 carries. httperr.Validation is the only
@@ -63,13 +65,17 @@ export function problemFieldErrors(problem: unknown): FieldProblem[] {
   const out: FieldProblem[] = [];
   for (const entry of errors) {
     if (!isRecord(entry)) continue;
-    const { field, code, message } = entry;
+    const { field, code, message, max } = entry;
     if (
       typeof field === "string" &&
       typeof code === "string" &&
       typeof message === "string"
     ) {
-      out.push({ field, code, message });
+      out.push(
+        typeof max === "number" && max > 0
+          ? { field, code, message, max }
+          : { field, code, message },
+      );
     }
   }
   return out;

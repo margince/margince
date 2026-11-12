@@ -20,6 +20,7 @@ import { LocaleProvider } from "../../i18n";
 import {
   allowedPreview,
   isPreviewDoor,
+  previewedAddresses,
 } from "../../testing/sendpermission.testkit";
 import { ComposeModal } from "./compose";
 
@@ -82,7 +83,12 @@ function stubSend(status: number) {
       if (method === "POST" && url.pathname.endsWith("/send-email")) {
         return jsonResponse(ACTIVITY, status);
       }
-      if (isPreviewDoor(url.pathname)) return jsonResponse(allowedPreview([]));
+      if (isPreviewDoor(url.pathname)) {
+        const body: unknown = request
+          ? await request.clone().json()
+          : JSON.parse(String(init?.body));
+        return jsonResponse(allowedPreview(previewedAddresses(body)));
+      }
       return jsonResponse({ data: [], page: { next_cursor: null } });
     }),
   );
@@ -125,6 +131,7 @@ async function composeAndSend() {
     screen.getByRole("combobox", { name: WHY_ASK }),
     WHY_LABEL,
   );
+  await screen.findByRole("button", { name: /recipients checked/i });
   await userEvent.click(screen.getByRole("button", { name: "Send" }));
   return onClose;
 }

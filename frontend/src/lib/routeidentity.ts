@@ -31,6 +31,8 @@ const IDENTITY_DEPTH: Readonly<Record<Screen, number>> = {
   worklist: WHOLE_ADDRESS,
   // #/analytics/<section>: each section is a view of one screen.
   analytics: 1,
+  progress: WHOLE_ADDRESS,
+  goals: WHOLE_ADDRESS,
   // Not a tab, however much the sidebar looks like one: every settings entry is
   // its own page, and the admin half is a segment deeper.
   settings: WHOLE_ADDRESS,

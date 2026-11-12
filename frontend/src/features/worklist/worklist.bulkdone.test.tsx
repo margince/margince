@@ -476,7 +476,7 @@ describe("the two verbs for ticked rows", () => {
     );
     renderUnderAToastRegion();
 
-    await screen.findByText("Retrofit for the north plant");
+    await screen.findByText("Retrofit for the north plant has gone quiet");
     const user = await startSelecting();
     expect(selectBox("Send the follow-up")).toBeNull();
     await user.click(

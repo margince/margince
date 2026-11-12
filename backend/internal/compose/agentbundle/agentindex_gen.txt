@@ -514,6 +514,10 @@ Every call a passport can make, grouped by area. Find the operationId in openapi
 | `POST /analytics/targets` | createReportingTarget | Create reporting target | Change records | at once |
 | `GET /analytics/targets/{id}` | getReportingTarget | Get reporting target | Read records | at once |
 | `PATCH /analytics/targets/{id}` | updateReportingTarget | Update reporting target | Change records | at once |
+| `GET /analytics/progress` | getSalesProgress | Closed revenue against the sales goal for one seller or team, by month or calendar year. | Read records | at once |
+| `GET /analytics/progress/deals` | listSalesProgressDeals | The open deals of one seller or team as Progress lists them, each with its sale type and next task. | Read records | at once |
+| `GET /analytics/sales-goals` | listSalesGoalSellers | The sellers whose sales goals the caller may read for one calendar year. | Read records | at once |
+| `GET /analytics/sales-goals/{owner_id}/{year}` | getSalesGoalPlan | One seller's sales goal plan for a calendar year. | Read records | at once |
 | `GET /analytics/framework` | getReportingFramework | Get reporting framework | Read records | at once |
 | `PUT /analytics/framework` | publishReportingFramework | Publish reporting framework | Change records | at once |
 | `GET /analytics/reports/{id}/schedules` | listReportingSchedules | List reporting schedules | Read records | at once |
@@ -914,7 +918,6 @@ Every call a passport can make, grouped by area. Find the operationId in openapi
 | `GET /leads/{id}/consent/stops` | listLeadStops | List the stops that stand on this lead, and which ones you may take back. | Read records | at once |
 | `POST /leads/{id}/consent/suppress/{suppressionId}/lift` | liftLeadSuppression | Take back a stop on a lead, if you outrank the level that set it. | Change records | at once |
 | `GET /contacts/{id}/consent/allow` | listContactOverrides | List the contact's standing exceptions and their exact scope. | Read records | at once |
-| `POST /contacts/{id}/consent/allow` | allowContact | Record a standing vouch that a machine-level refusal for one category may be overruled. | Change records | at once |
 | `POST /contacts/{id}/consent/allow/{overrideId}/revoke` | revokeOverride | Take back a standing override, if your level may revoke the one that recorded it. | Change records | at once |
 | `POST /contacts/{id}/consent/double-opt-in` | issueDoubleOptIn | Mail the subject a single-use link that confirms one marketing purpose. | Send messages | at once |
 | `GET /contacts/{id}/consent/mail-preview` | previewControllerMail | Show the exact mail `confirm-request` or `privacy-notice` would send, without sending it. | Read records | at once |

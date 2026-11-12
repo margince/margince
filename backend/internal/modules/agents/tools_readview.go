@@ -110,10 +110,13 @@ func viewArgSchema(arg string, byType map[string][]string) string {
 	if takesList && len(byType) == 1 {
 		return `{"type":"array","items":{"type":"string"}}`
 	}
+	// A path parameter is a string only because a path spells text. operand
+	// passes a number on, so where views disagree the typed one is published.
 	jsonType := schemaString
-	for t := range byType {
-		if t != schemaArray {
+	for _, t := range slices.Sorted(maps.Keys(byType)) {
+		if t != schemaArray && t != schemaString {
 			jsonType = t
+			break
 		}
 	}
 	if takesList {

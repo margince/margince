@@ -49,6 +49,10 @@ var messageStateReaders = gatekit.Waive(map[string]string{
 		"not who on their side wrote",
 	"internal/modules/activities/lastexchange.go": "asks of one outbound mail which inbound mail came " +
 		"before it from the same correspondent, to read that mail's badge; it never counts which sides wrote",
+	"internal/modules/activities/provensender.go": "asks whether one received message names no sender yet, " +
+		"to name the contact its stated address proves; it never counts which side of a relationship wrote",
+	"internal/modules/activities/ownmessagedone.go": "asks whether one message the reader sent is still the newest " +
+		"to its contact in either direction; it never counts which side of a relationship wrote",
 })
 
 func TestEveryExchangeReaderAsksTheDirectionRule(t *testing.T) {

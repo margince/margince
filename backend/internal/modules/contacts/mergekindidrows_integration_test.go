@@ -23,8 +23,8 @@ func (e *dedupeEnv) user(ctx context.Context, t *testing.T, email string) ids.UU
 	return id
 }
 
-// A draft, a verdict, a notice and a plan line follow the survivor.
-func TestMergingACompanyMovesDraftsVerdictsNoticesAndPlanLines(t *testing.T) {
+// A draft, a verdict and a notice follow the survivor.
+func TestMergingACompanyMovesDraftsVerdictsAndNotices(t *testing.T) {
 	e := setupDedupe(t)
 	ctx := asAdmin(e)
 	source, survivor := e.companyPair(ctx, t)
@@ -44,11 +44,6 @@ func TestMergingACompanyMovesDraftsVerdictsNoticesAndPlanLines(t *testing.T) {
 	}
 	e.execAs(ctx, t, `INSERT INTO notice (kind, subject, recipient_user_id, captured_by, target_type, target_id)
 		VALUES ('automation', 'look', $1, 'human:x', 'company', $2)`, e.rep, source)
-	plan := ids.NewV7()
-	e.execAs(ctx, t, `INSERT INTO weekly_plan (id, owner_id, local_week_start, captured_by)
-		VALUES ($1, $2, '2026-10-05', 'human:x')`, plan, e.rep)
-	e.execAs(ctx, t, `INSERT INTO weekly_plan_commitment (plan_id, label, captured_by, linked_record_type, linked_record_id)
-		VALUES ($1, 'call them', 'human:x', 'company', $2)`, plan, source)
 
 	if _, err := e.store.MergeCompany(ctx, source, survivor, nil); err != nil {
 		t.Fatalf("merge: %v", err)
@@ -60,7 +55,6 @@ func TestMergingACompanyMovesDraftsVerdictsNoticesAndPlanLines(t *testing.T) {
 		{"drafts", `SELECT count(*) FROM mail_draft WHERE anchor_type = 'company' AND anchor_id = $1`, 2},
 		{"verdicts", `SELECT count(*) FROM ai_feedback WHERE subject_type = 'company' AND subject_id = $1`, 2},
 		{"notices", `SELECT count(*) FROM notice WHERE target_type = 'company' AND target_id = $1`, 1},
-		{"plan lines", `SELECT count(*) FROM weekly_plan_commitment WHERE linked_record_type = 'company' AND linked_record_id = $1`, 1},
 	} {
 		if n := e.countAs(ctx, t, c.sql, source); n != 0 {
 			t.Errorf("%d %s still name the retired company", n, c.name)

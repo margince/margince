@@ -384,7 +384,7 @@ describe("the webhook subscription drawer", () => {
 
     await user.click(await screen.findByTestId("edit-webhook-subscription"));
     await user.click(screen.getByTestId("save-webhook-subscription"));
-    expect(await screen.findByText("must be active or paused")).toBeTruthy();
+    expect(await screen.findByText("Must be active or paused.")).toBeTruthy();
   });
 
   it("shows the server's refusal at the field it names", async () => {
@@ -415,7 +415,7 @@ describe("the webhook subscription drawer", () => {
     await user.click(await screen.findByTestId("edit-webhook-subscription"));
     await user.click(screen.getByTestId("save-webhook-subscription"));
     expect(
-      await screen.findByText(/webhook-signature is reserved/),
+      await screen.findByText(/Webhook-signature is reserved/),
     ).toBeTruthy();
   });
 

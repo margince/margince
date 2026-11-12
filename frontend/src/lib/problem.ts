@@ -1,7 +1,8 @@
 import { openingCase } from "../format/collate";
+import { formatNumber } from "../format/format";
 import { type Locale, translate } from "../i18n";
 import type { MessageKey } from "../i18n/en";
-import { effectiveDisplayLocale } from "../i18n/locale";
+import { effectiveDisplayLocale, isLocale } from "../i18n/locale";
 import { ConnectivityError, writeFailureKey } from "./connectivity";
 import {
   type FieldProblem,
@@ -22,11 +23,17 @@ export {
   problemFieldErrors,
 } from "./problembody";
 
+// The words a screen holds for the fields a refusal can name, keyed by the
+// field's wire path.
+export type FieldLabels = Readonly<Record<string, string>>;
+
 // Known codes select localized copy. Compatibility API details are English;
-// other readers receive local fallback wording for an unknown code.
+// other readers receive local fallback wording for an unknown code. A field
+// fault always has words, so it never reads as a failure with no cause.
 function problemDetail(
   problem: unknown,
   t?: (key: MessageKey) => string,
+  labels?: FieldLabels,
 ): string | null {
   const copyKey =
     heldByColleagueCopy(problem) ??
@@ -34,7 +41,12 @@ function problemDetail(
     PROBLEM_CODE_COPY.get(problemCode(problem) ?? "") ??
     fieldCopyKey(problem);
   if (t && copyKey) return t(copyKey);
-  if (t && problemLocale(t) !== "en") return null;
+  const fault = problemFieldErrors(problem)[0];
+  const locale = t ? problemLocale(t) : null;
+  if (locale && fault && (locale !== "en" || fault.code === TOO_LONG)) {
+    return faultSentence(fault, locale, labels);
+  }
+  if (locale && locale !== "en") return null;
   if (isRecord(problem)) {
     // A field present but blank puts no words on the screen, like an absent one.
     // So it falls through to the title, then to the caller's own copy, instead
@@ -46,10 +58,60 @@ function problemDetail(
   return null;
 }
 
-function problemLocale(t: (key: MessageKey) => string): string {
-  return "locale" in t && typeof t.locale === "string"
+function problemLocale(t: (key: MessageKey) => string): Locale {
+  return "locale" in t && typeof t.locale === "string" && isLocale(t.locale)
     ? t.locale
     : effectiveDisplayLocale();
+}
+
+const TOO_LONG = "too_long";
+
+// The one wording of a field fault, for the callout and for the line under
+// the field alike. It opens a line and ends in a full stop.
+export function faultSentence(
+  fault: FieldProblem,
+  locale: Locale,
+  labels?: FieldLabels,
+): string {
+  const key = PROBLEM_CODE_COPY.get(fault.code);
+  const message = key
+    ? translate(locale, key)
+    : fault.code === TOO_LONG
+      ? tooLongMessage(fault, locale, labels?.[fault.field])
+      : locale === "en"
+        ? fault.message
+        : translate(
+            locale,
+            fault.code === "required"
+              ? "record.fieldRequired"
+              : "common.fieldInvalid",
+          );
+  const sentence = openingCase(message, locale);
+  return /[.!?]$/.test(sentence) ? sentence : `${sentence}.`;
+}
+
+// faultSentence in the translator's own language, for a caller holding only t.
+export function faultSentenceFor(
+  fault: FieldProblem,
+  t: (key: MessageKey) => string,
+): string {
+  return faultSentence(fault, problemLocale(t));
+}
+
+// A server older than the limit on the wire sends no max, and the copy then
+// says "too long" without a number.
+function tooLongMessage(
+  fault: FieldProblem,
+  locale: Locale,
+  label: string | undefined,
+): string {
+  if (fault.max === undefined) {
+    return translate(locale, "common.valueTooLong");
+  }
+  const max = formatNumber(fault.max, locale);
+  return label
+    ? translate(locale, "common.fieldTooLongMax", { field: label, max })
+    : translate(locale, "common.valueTooLongMax", { max });
 }
 
 // A module's own refusal reaches the wire as a `validation_error` with its code
@@ -174,11 +236,14 @@ export function problemMessageOf(
   error: unknown,
   t: (key: MessageKey) => string,
   fallback?: string,
+  labels?: FieldLabels,
 ): string {
   const refusedWrite = writeFailureKey(error);
   if (refusedWrite !== null) return t(refusedWrite);
   const detail =
-    error instanceof ProblemError ? problemDetail(error.problem, t) : null;
+    error instanceof ProblemError
+      ? problemDetail(error.problem, t, labels)
+      : null;
   return detail ?? fallback ?? t("common.errorNoCause");
 }
 
@@ -211,21 +276,10 @@ export function problemFieldSentencesOf(
   locale: Locale,
 ): ReadonlyMap<string, string> {
   return new Map(
-    problemFieldErrorsOf(error).map((fault) => {
-      const key = PROBLEM_CODE_COPY.get(fault.code);
-      const message = key
-        ? translate(locale, key)
-        : locale === "en"
-          ? fault.message
-          : translate(
-              locale,
-              fault.code === "required"
-                ? "record.fieldRequired"
-                : "common.fieldInvalid",
-            );
-      const sentence = openingCase(message, locale);
-      return [fault.field, /[.!?]$/.test(sentence) ? sentence : `${sentence}.`];
-    }),
+    problemFieldErrorsOf(error).map((fault) => [
+      fault.field,
+      faultSentence(fault, locale),
+    ]),
   );
 }
 

@@ -6,6 +6,7 @@ package dealrooms
 import (
 	"fmt"
 
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 )
 
@@ -32,14 +33,13 @@ func (e *stateError) MessageFault() (code, message string) {
 func (e *stateError) Unwrap() error { return apperrors.ErrConflict }
 
 // notPublishable refuses a publish from one of the three states where a buyer is
-// no longer meant to receive anything new. All three are terminal — there is no
-// un-close and no un-expire — so the message names opening a new room rather
-// than implying a way back that does not exist.
+// no longer meant to receive anything new. The message names opening a new
+// room. An expired room also has a way back, and names it too.
 func notPublishable(current string) error {
 	return &stateError{
 		code:    "deal_room_not_publishable",
 		current: current,
-		wanted:  "this room is finished and cannot publish again: open a new Deal Room on the deal to show the buyer anything further",
+		wanted:  finishedWanted(current, "this room is finished and cannot publish again: open a new Deal Room on the deal to show the buyer anything further"),
 	}
 }
 
@@ -50,7 +50,7 @@ func notEditable(current string) error {
 	return &stateError{
 		code:    "deal_room_not_editable",
 		current: current,
-		wanted:  "this room is finished and its text can no longer reach a buyer: open a new Deal Room on the deal",
+		wanted:  finishedWanted(current, "this room is finished and its text can no longer reach a buyer: open a new Deal Room on the deal"),
 	}
 }
 
@@ -61,8 +61,21 @@ func notAdmitting(current string) error {
 	return &stateError{
 		code:    "deal_room_not_admitting",
 		current: current,
-		wanted:  "this room is finished and admits nobody new: open a new Deal Room on the deal",
+		wanted:  finishedWanted(current, "this room is finished and admits nobody new: open a new Deal Room on the deal"),
 	}
+}
+
+// finishedWanted names the way on from a finished room. A closed or archived
+// room has one: a new room on the deal. An expired room has a second, because
+// a later end date makes it read its stored state again. A room past its end
+// no longer holds the deal's one open room, so both ways are open.
+//
+// Staff refusals only. A buyer cannot set an end date or open a room.
+func finishedWanted(current, finished string) string {
+	if current == stateExpired {
+		return "this room's access end date has passed: set a later end date, or open a new Deal Room on the deal"
+	}
+	return finished
 }
 
 // notContentEditable refuses every content change in a room that can no longer
@@ -140,11 +153,28 @@ func notClosable(current string) error {
 }
 
 // errRoomAlreadyOpen refuses a second room on a deal that still has an active
-// one. Archiving the first frees the deal, and saying so is the whole point:
-// the caller's next move is otherwise unguessable.
+// one. Archiving the first frees the deal, and so does its access end passing.
+// Saying so matters: the caller's next move is otherwise unguessable.
 var errRoomAlreadyOpen = &messageError{
 	code: "deal_room_already_open",
-	msg:  "this deal already has an active Deal Room: archive it before opening another",
+	msg:  "this deal already has an active Deal Room: archive it, or let its access end, before opening another",
+}
+
+// errNewerRoomOpen refuses a later end date on an expired room once a newer
+// room is open on the deal. The later end would make two rooms on one deal
+// read live at the same time.
+var errNewerRoomOpen = &messageError{
+	code: "deal_room_already_open",
+	msg:  "a newer Deal Room is open on this deal: this room's access cannot run past the moment that one opened",
+}
+
+// constraintOneOpenRoom is the exclusion that keeps a deal at one open room.
+const constraintOneOpenRoom = "deal_room_one_open_room_per_deal"
+
+// isOneOpenRoomClash reports whether err is that exclusion firing.
+func isOneOpenRoomClash(err error) bool {
+	name, ok := storekit.ExclusionViolation(err)
+	return ok && name == constraintOneOpenRoom
 }
 
 // errStewardUnknown refuses a steward nobody can be pointed at — an id no seat
@@ -213,9 +243,14 @@ type fieldError struct {
 	field string
 	code  string
 	msg   string
+	// max is the limit a too_long refusal names.
+	max int
 }
 
 func (e *fieldError) Error() string { return e.msg }
+
+// FieldMax is the limit the refusal names; zero states none.
+func (e *fieldError) FieldMax() int { return e.max }
 
 func (e *fieldError) FieldFault() (field, code, message string) {
 	return e.field, e.code, e.msg

@@ -640,7 +640,7 @@ describe("a lead still owed its first reply", () => {
     );
     renderWorklist();
 
-    await screen.findByText("Weber GmbH");
+    await screen.findByText("Get back to new lead Weber GmbH");
     // The category badge, and the reason — both from the catalog, so an
     // unregistered kind renders its raw key here and fails visibly.
     expect(screen.getByText(en["worklist.category.leads"])).toBeTruthy();
@@ -667,7 +667,9 @@ describe("a lead still owed its first reply", () => {
     stub(day({ queue: [leadRow()] }));
     renderWorklist();
 
-    const link = await screen.findByRole("link", { name: "Weber GmbH" });
+    const link = await screen.findByRole("link", {
+      name: "Get back to new lead Weber GmbH",
+    });
     expect(link.getAttribute("href")).toBe(
       "/#/leads/11111111-2222-4333-8444-555555555555",
     );
@@ -680,7 +682,7 @@ describe("a lead still owed its first reply", () => {
     stub(day({ queue: [leadRow()] }));
     renderWorklist();
 
-    await screen.findByText("Weber GmbH");
+    await screen.findByText("Get back to new lead Weber GmbH");
     await user.click(
       screen.getByRole("button", { name: en["worklist.filter.leads"] }),
     );

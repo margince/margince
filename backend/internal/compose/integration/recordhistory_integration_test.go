@@ -23,6 +23,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/privacy"
+	"github.com/margince/margince/backend/internal/modules/search"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
@@ -212,7 +213,7 @@ func TestRecordHistoryErasureBoundaryServesOnlyTheTombstone(t *testing.T) {
 		map[string]any{"email": "selma@example.com"},
 		map[string]any{"email": "selma.subject@example.com"}, past)
 
-	if err := privacy.NewEraser(e.DB()).EraseContact(e.Admin(), contactID, "dsr"); err != nil {
+	if err := privacy.NewEraser(e.DB()).WithEdgeInvalidator(search.RecomputeEdgesForActivities).EraseContact(e.Admin(), contactID, "dsr"); err != nil {
 		t.Fatalf("erase: %v", err)
 	}
 
@@ -372,7 +373,7 @@ func TestRecordHistoryErasureBoundsCollateralScrubs(t *testing.T) {
 		t.Fatalf("log activity: %v", err)
 	}
 
-	if err := privacy.NewEraser(e.DB()).EraseContact(e.Admin(), contactID, "dsr"); err != nil {
+	if err := privacy.NewEraser(e.DB()).WithEdgeInvalidator(search.RecomputeEdgesForActivities).EraseContact(e.Admin(), contactID, "dsr"); err != nil {
 		t.Fatalf("erase: %v", err)
 	}
 

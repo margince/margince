@@ -25,7 +25,7 @@ internal/compose/assurancejob_integration_test.go 1
 internal/compose/assurancesubjects_integration_test.go 2
 internal/compose/attention/dayboundary_test.go 2
 internal/compose/attentionboardsources_test.go 1
-internal/compose/attentiondegradelane_integration_test.go 5
+internal/compose/attentiondegradelane_integration_test.go 4
 internal/compose/attentionfeed_integration_test.go 8
 internal/compose/attentionleads_integration_test.go 5
 internal/compose/auditimagenull_integration_test.go 1
@@ -47,7 +47,7 @@ internal/compose/commitmentsettle_integration_test.go 1
 internal/compose/company360/workattentionrefusal_test.go 1
 internal/compose/company_integration_test.go 1
 internal/compose/companyautoenrich_test.go 2
-internal/compose/companyconnections_integration_test.go 2
+internal/compose/integration/companyconnections_integration_test.go 2
 internal/compose/companyrollup_handlers_test.go 1
 internal/compose/confidentialityverdict_integration_test.go 1
 internal/compose/connectors_authority_test.go 1

@@ -11,7 +11,9 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/platform/sweepreach"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/pkg/extension/reach"
 )
 
 // moveKindIDRows moves the polymorphic references of a merged-away contact or
@@ -31,14 +33,14 @@ func moveKindIDSingles(ctx context.Context, tx pgx.Tx, entityType string, source
 		`UPDATE signal SET entity_id = $2 WHERE entity_type = $3 AND entity_id = $1`,
 		`UPDATE attachment SET entity_id = $2 WHERE entity_type = $3 AND entity_id = $1`,
 		`UPDATE notice SET target_id = $2 WHERE target_type = $3 AND target_id = $1`,
-		`UPDATE weekly_plan_commitment SET linked_record_id = $2
-		 WHERE linked_record_type = $3 AND linked_record_id = $1`,
 	} {
 		if _, err := tx.Exec(ctx, stmt, sourceID, targetID, entityType); err != nil {
 			return fmt.Errorf("move the rows naming the %s by kind and id: %w", entityType, err)
 		}
 	}
-	return nil
+	// The declared tables follow every record kind the merge moves, the
+	// company's fixed links among them.
+	return sweepreach.Relink(ctx, tx, reach.Record(entityType), sourceID, targetID)
 }
 
 // moveKindIDOwned moves what one reader owns about a record: an unsent draft

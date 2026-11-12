@@ -25,7 +25,7 @@ func legacyAuditSubjectQuery(entry legacyAuditEntry) (string, pgx.StrictNamedArg
     OR (erasure.entity_type='lead' AND erasure.entity_id IN(record.left_lead_id,record.right_lead_id))
    WHERE record.id=@entity AND ` + legacyPrivacyBoundary + `
    ORDER BY erasure.occurred_at,erasure.id LIMIT 1 FOR UPDATE OF record`, args
-	case "approval":
+	case approvalEntity:
 		return legacyApprovalAuditQuery(entry)
 	case rightsRequestEntity:
 		return legacyRequestAuditQuery(entry)
@@ -56,11 +56,15 @@ func legacyBuyerAuditQuery(entry legacyAuditEntry, args pgx.StrictNamedArgs, rec
    ORDER BY erasure.occurred_at,erasure.id LIMIT 1 FOR UPDATE OF participant,room`, args
 }
 
+// blankDecidedApproval is a decided approval whose text an erasure emptied.
+// The linked correction and the manual review both select it.
+const blankDecidedApproval = `record.status<>'pending' AND record.proposed_change='{}'::jsonb
+ AND coalesce(record.summary,'')='' AND record.summary_parts IS NULL AND record.target_label IS NULL AND record.evidence IS NULL`
+
 func legacyApprovalAuditQuery(entry legacyAuditEntry) (string, pgx.StrictNamedArgs) {
 	return `SELECT erasure.entity_type,erasure.entity_id,erasure.id FROM approval record
  JOIN audit_log erasure ON erasure.entity_type=record.target_entity_type AND erasure.entity_id=record.target_entity_id
- WHERE record.id=@entity AND record.status<>'pending' AND record.proposed_change='{}'::jsonb
- AND coalesce(record.summary,'')='' AND record.summary_parts IS NULL AND record.target_label IS NULL AND record.evidence IS NULL
+ WHERE record.id=@entity AND ` + blankDecidedApproval + `
  AND ` + legacyPrivacyBoundary + `
  ORDER BY erasure.occurred_at,erasure.id LIMIT 1 FOR UPDATE OF record`, legacyAuditArgs(entry)
 }

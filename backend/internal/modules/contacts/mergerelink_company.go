@@ -53,9 +53,6 @@ func relinkCompanySatellites(ctx context.Context, tx pgx.Tx, sourceID, targetID 
 	if err := moveCompanySingletons(ctx, tx, sourceID, targetID); err != nil {
 		return err
 	}
-	if err := moveCompanyFinanceMapping(ctx, tx, sourceID, targetID); err != nil {
-		return err
-	}
 	if err := moveCompanySiteReads(ctx, tx, sourceID, targetID); err != nil {
 		return err
 	}
@@ -75,17 +72,13 @@ func relinkCompanySatellites(ctx context.Context, tx pgx.Tx, sourceID, targetID 
 // pointer itself: nothing here is unique per company, so a plain UPDATE can
 // neither collide nor lose a row.
 //
-// The money rows (contract, finance_invoice, finance_payment) are the reason
-// this is not cosmetic. They are ON DELETE RESTRICT, so a row left on the
-// merged-away company pins that company in place forever: the archived record
-// can never be erased, and the invoice reads to a finance user as having
-// vanished with the duplicate.
+// The contract row is ON DELETE RESTRICT. A row left on the merged-away
+// company pins that company in place forever, so the archived record can never
+// be erased. The finance and commission rows move through their modules'
+// declarations (sweepreach).
 func repointCompanyReferences(ctx context.Context, tx pgx.Tx, sourceID, targetID ids.CompanyID) error {
 	for _, stmt := range []string{
 		`UPDATE contract SET company_id = $2 WHERE company_id = $1`,
-		`UPDATE finance_invoice SET company_id = $2 WHERE company_id = $1`,
-		`UPDATE finance_payment SET company_id = $2 WHERE company_id = $1`,
-		`UPDATE commission_entry SET partner_company_id = $2 WHERE partner_company_id = $1`,
 		`UPDATE lead SET partner_company_id = $2 WHERE partner_company_id = $1`,
 		`UPDATE company_domain_disposition SET company_id = $2 WHERE company_id = $1`,
 		`UPDATE sdr_handoff SET company_id = $2 WHERE company_id = $1`,

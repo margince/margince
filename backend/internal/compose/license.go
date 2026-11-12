@@ -47,7 +47,7 @@ func EnsureLicense(ctx context.Context, log *slog.Logger, pool *pgxpool.Pool, va
 	// where there is none, so an installation that has sealed its token and
 	// dropped the variable keeps booting — and one whose vault it cannot open
 	// is told THAT, rather than being told it has no license.
-	source := SealedLicenseTokenSource(ctx, pool, vault, cfg, log)
+	source := SealedLicenseTokenSource(pool, vault, cfg, log)
 	watcher, err := licensecheck.NewWatcher(ctx, source, time.Now, log, env)
 	if err != nil {
 		// The setting to correct is named HERE, where the token's source is

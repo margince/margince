@@ -21,6 +21,7 @@ import (
 	"testing"
 
 	"github.com/margince/margince/backend/internal/compose/integration/apptest"
+	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/agents"
 	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/platform/database"
@@ -181,7 +182,7 @@ func capturedPrivately(t *testing.T, e *apptest.AppEnv, owner, address string) s
 	mail := createdID(t, e, "/v1/activities", AnyMap{"kind": "note", "body": "Mail from " + address})
 	ws := apptest.InstallationWorkspaceUUID(t.Context(), t, e.Owner)
 	capture := principal.SystemActing(principal.WithWorkspaceID(t.Context(), ws), "capture")
-	store := contacts.NewStore(database.BindTo(e.Pool, ids.From[ids.WorkspaceKind](ws)))
+	store := contacts.NewStore(database.BindTo(e.Pool, ids.From[ids.WorkspaceKind](ws))).WithSenderStamp(activities.StampProvenSendersTx)
 	captured, err := store.EnsureCounterparty(capture, contacts.EnsureCounterpartyInput{
 		Email: address, OwnerID: ids.MustParse(owner), ActivityID: ids.From[ids.ActivityKind](ids.MustParse(mail)),
 		Source: "gmail:" + mail, CapturedBy: "connector:gmail", SuppressCompany: true,

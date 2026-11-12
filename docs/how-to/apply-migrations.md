@@ -153,16 +153,23 @@ old version has already run that SQL. If the new version counted as not applied,
 the SQL again and fail.
 
 So every such move is declared in `backend/migrations/renumbered.txt`, one line per move:
-`core old_version new_version name`. Declare a move only when the SQL did not change at all.
+`core old_version new_version name old_checksum`. The checksum is the `content_digest` a database
+records for the old version. Declare a move only when the SQL did not change at all.
+A database may hold an earlier text of the moved SQL that builds the same schema. Then add that text's
+checksum under the old version to `equivalentContent` in `backend/internal/platform/dbmigrate/equivalence.go`,
+keyed by the new version.
 
 `migrate up` moves the ledger row of a declared old version to the new version. It does this first, under
-the migration lock, in one transaction for each folder. It moves a row only if the checksum in that row
-proves the database ran the same SQL that now ships. Otherwise it stops, names the move and applies nothing.
-That happens when the row has no checksum, when the checksum differs, or when the ledger already holds the
-new version with other SQL. It prints how many rows it moved.
+the migration lock, in one transaction for each folder. It moves a row only if its checksum proves
+the database ran the SQL that now ships, or the text such an entry names.
+
+Otherwise it stops, names the move and applies nothing. That happens when the row has no checksum,
+when the checksum differs, or when the ledger already holds the new version with other SQL. It prints how many rows it moved.
 
 `scripts/check-migration-versions.sh` fails a move that `renumbered.txt` does not declare. It matches by
-name, so a move fails even when the SQL stayed the same.
+name, so a move fails even when the SQL stayed the same. It also fails a declared move whose SQL
+changed, unless an `equivalentContent` entry accepts the old text at the new version. It asks
+`backend/tools/check-equivalentmove`, which reads that list the way `migrate up` does.
 
 An older binary started after this move runs the moved migrations again and stops with an error. To go
 back to an older binary, restore the database from a copy taken before the upgrade.

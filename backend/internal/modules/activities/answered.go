@@ -13,7 +13,6 @@ import (
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/occurredday"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
-	"github.com/margince/margince/backend/internal/shared/kernel/provenance"
 )
 
 func answeredSQL(inbound, until string) string { return storekit.AnsweredSQL(inbound, until) }
@@ -83,12 +82,10 @@ const machineSenderSQL = `EXISTS (
 
 // Captured mail needs an intent judgment before it becomes somebody's work.
 // The classifier still reads pending mail; a human can explicitly keep noise.
-// A machine verdict stands only while the mail was read in full; a human's
-// acceptance or reviewed verdict stands on its own.
+// An asks_us verdict admits by the same rule as automatic personal work.
 func capturedReplyAdmissionSQL(classifying, reviewingInformational string) string {
-	human := heldRequestSQL() + ` OR (a.owed_verdict = 'asks_us' AND ` + humanReviewedOwedSQL("a") + `)`
-	return `(` + classifying + ` OR (` + reviewingInformational + ` AND a.owed_verdict = 'informs_us') OR (` + human + `) OR (
+	return `(` + classifying + ` OR (` + reviewingInformational + ` AND a.owed_verdict = 'informs_us') OR ` + heldRequestSQL() + `
+ OR (` + storekit.AutomaticRequestIntentClause("a") + `) OR (
    a.capture_label IS DISTINCT FROM 'noise'
-   AND (NOT starts_with(a.captured_by, '` + string(principal.PrincipalConnector) + `:') OR ` + acceptedRequestSQL + `
-     OR (a.owed_verdict = 'asks_us' AND ` + provenance.MailBodyCompleteSQL("a") + `))))`
+   AND (NOT starts_with(a.captured_by, '` + string(principal.PrincipalConnector) + `:') OR ` + acceptedRequestSQL + `)))`
 }

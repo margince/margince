@@ -50,7 +50,9 @@ describe("BriefScreen — the context rail", () => {
         ),
     });
     render(<BriefScreen />);
-    expect(await screen.findByText("Ostwind refit")).toBeTruthy();
+    expect(
+      await screen.findByText("Ostwind refit has gone quiet"),
+    ).toBeTruthy();
     expect(calls.some((call) => call.path === "/deals")).toBe(false);
   });
 

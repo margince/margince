@@ -7,19 +7,18 @@ package gates
 
 // A unit's SQL addresses the unit's own tables.
 //
-// The extension runtime hands a unit a workspace-pinned transaction on the
-// SHARED application role, so its SQL can name any table that role can reach.
-// pkg/extension/runtime.go says so in the open, under "WHAT IS NOT WALLED AT
-// ALL": core's tables, another unit's tables, extension_secret. The fix for the
-// wall itself is a per-unit database role (#628), and this is not it.
+// The extension runtime runs a unit's SQL as a database role that holds nothing
+// on the core's tables. A statement naming one is refused when it runs
+// (pkg/extension/runtime.go, "Verbs only"). This gate warns earlier and
+// cheaper: it fails the build instead of the call. It still has to hold,
+// because the runtime role leaves other units' tables open. It also refuses
+// the SQL that could leave that role (extensionsqlescape_test.go).
 //
 // WHAT THIS IS: defence against mistakes, and nothing else. It reads the SQL a
-// unit's source spells out and refuses a table that is not the unit's own,
-// which is worth doing BEFORE a unit grows the habit — no shipped unit names a
-// core table today, so the narrowing costs nothing now and costs a rewrite
-// later. A unit is trusted in-process code either way, and a table name the
-// source does not spell out defeats a static reader by construction. Read it as
-// a lint; the boundary is #628's.
+// unit's source spells out and refuses a table that is not the unit's own. A
+// table name the source does not spell out defeats a static reader by
+// construction. Read it as a lint. The runtime role guards against mistakes
+// too; neither is a wall against a unit that means harm.
 //
 // WHAT IT READS. Every .go file a unit ships, tests included: a unit's test that
 // seeds a core table is the same mistake as its handler doing so, and it is
@@ -63,7 +62,7 @@ package gates
 // statement built by anything other than `+` over constants (a Sprintf whose
 // verb is the table, a strings.Builder, a query assembled in a loop) is read as
 // far as its literals go and no further. That is the same bound as the header's
-// first paragraph and the reason the wall is #628's, not this file's.
+// first paragraph, and why the runtime role checks again when the SQL runs.
 
 import (
 	"fmt"
@@ -147,7 +146,16 @@ func scanUnitSQL(t testing.TB, unit string, sources map[string]string) extSQLSca
 	for _, file := range files {
 		marked, unexplained := vendorQueryLines(fset, file, sources[fset.File(file.Pos()).Name()])
 		scan.findings = append(scan.findings, unexplained...)
-		for _, stmt := range sqlStrings(file, consts) {
+		folded := foldedStrings(file, consts)
+		for _, text := range folded {
+			if marked[fset.Position(text.pos).Line] {
+				continue
+			}
+			for _, escape := range sqlEscapes(text.text) {
+				scan.findings = append(scan.findings, fmt.Sprintf("%s: %s", fset.Position(text.pos), escape))
+			}
+		}
+		for _, stmt := range statementsOf(folded) {
 			if marked[fset.Position(stmt.pos).Line] {
 				continue
 			}
@@ -351,18 +359,37 @@ func stringBindings(file *ast.File) []stringBinding {
 	return out
 }
 
-// foldedSQL is one folded string the gate reads as a statement, already
-// stripped of the comments and literals a keyword can hide in.
+// foldedSQL is one folded string and where it is written. sqlStrings hands it
+// on stripped of the comments and literals a keyword can hide in.
 type foldedSQL struct {
 	text string
 	pos  token.Pos
 }
 
 // sqlStrings folds every string expression in the file and keeps the ones that
-// open as a statement. A folded expression is consumed whole — the walk does not
-// descend into it — so a concatenation is judged once rather than fragment by
-// fragment.
+// open as a statement.
 func sqlStrings(file *ast.File, consts map[string]string) []foldedSQL {
+	return statementsOf(foldedStrings(file, consts))
+}
+
+// statementsOf keeps the folded strings that open as a statement.
+func statementsOf(folded []foldedSQL) []foldedSQL {
+	var out []foldedSQL
+	for _, text := range folded {
+		// Stripped before the shape test: a statement that opens with its own
+		// `-- why` comment is still a statement. The raw text would read that
+		// comment as the first word and skip the query.
+		if cleaned := stripNoise(text.text); looksLikeSQL(cleaned) {
+			out = append(out, foldedSQL{text: cleaned, pos: text.pos})
+		}
+	}
+	return out
+}
+
+// foldedStrings folds every string expression in the file. A folded expression
+// is consumed whole, and the walk does not descend into it. So a concatenation
+// is judged once rather than fragment by fragment.
+func foldedStrings(file *ast.File, consts map[string]string) []foldedSQL {
 	var out []foldedSQL
 	ast.Inspect(file, func(node ast.Node) bool {
 		expr, isExpr := node.(ast.Expr)
@@ -389,12 +416,7 @@ func sqlStrings(file *ast.File, consts map[string]string) []foldedSQL {
 		if !folded {
 			return true
 		}
-		// Stripped BEFORE the shape test, not after: a statement that opens with
-		// its own `-- why` comment is still a statement, and testing the raw text
-		// would read that comment as the first word and skip the query.
-		if cleaned := stripNoise(text); looksLikeSQL(cleaned) {
-			out = append(out, foldedSQL{text: cleaned, pos: expr.Pos()})
-		}
+		out = append(out, foldedSQL{text: text, pos: expr.Pos()})
 		return false
 	})
 	return out
@@ -417,21 +439,19 @@ var sqlStatementShapes = []struct{ opener, companion string }{
 	{"alter", " table "},
 	{"drop", " table "},
 	// TRUNCATE's companion is the optional TABLE word, which makes the bare
-	// `TRUNCATE contact` spelling unread. That is the deliberate half of a trade:
-	// with no companion, every sentence opening with the word is a statement,
-	// and "truncate the note body before sending" refuses a table called `the`
-	// — a false failure with no waiver to answer it, on a statement PostgreSQL
-	// refuses anyway (the runtime role is granted SELECT, INSERT, UPDATE and
-	// DELETE, never TRUNCATE, on core tables and on a unit's own alike).
+	// `TRUNCATE contact` spelling unread. That is a trade. With no
+	// companion, "truncate the note body before sending" refuses a table called
+	// `the`, a false failure with no waiver. PostgreSQL refuses the statement
+	// anyway: the runtime role holds no TRUNCATE on any table.
 	{"truncate", " table "},
 	// A DO block's body is SQL that happens to be delimited, and its
 	// companion is the delimiter rather than a word: `do` alone opens too many
 	// English sentences to be a statement on its own.
 	{"do", "$$"},
 	{"do", "'"},
-	// COPY … TO STDOUT reads a whole table out on nothing but SELECT, which the
-	// shared runtime role holds on every core table. The direction word is the
-	// companion because it is what a statement has and a sentence does not.
+	// COPY … TO STDOUT reads a whole table out on nothing but SELECT. The
+	// direction word is the companion because it is what a statement has and a
+	// sentence does not.
 	{"copy", " to "},
 	{"copy", " from "},
 }

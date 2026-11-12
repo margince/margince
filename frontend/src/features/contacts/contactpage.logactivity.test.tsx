@@ -24,12 +24,20 @@ afterEach(() => {
 });
 
 // Add task is the first row of the header's menu, which mounts its rows on the
-// first open and portals them out of the header.
+// first open and portals them out of the header. The Open tasks card offers its
+// own Add task, so the row is the button the open adds.
 async function addTaskRow(header: HTMLElement): Promise<HTMLElement> {
+  const onPage = screen.queryAllByRole("button", { name: "Add task" });
   await userEvent.click(
     within(header).getByRole("button", { name: "More actions" }),
   );
-  return screen.findByRole("button", { name: "Add task" });
+  return waitFor(() => {
+    const row = screen
+      .getAllByRole("button", { name: "Add task" })
+      .find((button) => !onPage.includes(button));
+    if (!row) throw new Error("the header's menu opened no Add task row");
+    return row;
+  });
 }
 
 // The one thing a CRM must let a rep do on a contact is write down what

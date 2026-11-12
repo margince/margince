@@ -18,6 +18,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/modules/privacy"
+	"github.com/margince/margince/backend/internal/modules/search"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
@@ -155,7 +156,7 @@ func TestErasureReleasesALiveRunsCategoryClaims(t *testing.T) {
 	runID := seedRun(t, e, contactID, "in_progress", "fp-live-erasure", false)
 	seedCategoryClaims(t, e, runID, contactID, "professional_email")
 
-	if err := privacy.NewEraser(e.DB()).EraseContact(e.Admin(), contactID, "test"); err != nil {
+	if err := privacy.NewEraser(e.DB()).WithEdgeInvalidator(search.RecomputeEdgesForActivities).EraseContact(e.Admin(), contactID, "test"); err != nil {
 		t.Fatalf("the erasure failed on a live run holding a category claim: %v", err)
 	}
 

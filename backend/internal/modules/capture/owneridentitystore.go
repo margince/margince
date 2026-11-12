@@ -379,17 +379,25 @@ func readOwnerIdentitiesTx(ctx context.Context, tx pgx.Tx, user ids.UUID) (SelfS
 // The liveness predicate is the shared one and names both halves. Either alone
 // offers a departed colleague's address.
 func seatLoginAddressTx(ctx context.Context, tx pgx.Tx, user ids.UUID) (string, error) {
+	email, err := scanSeatLogin(tx.QueryRow(ctx, seatLoginAddressSQL, user))
+	if err != nil {
+		return "", fmt.Errorf("capture: reading the seat's own login address: %w", err)
+	}
+	return email, nil
+}
+
+func scanSeatLogin(row pgx.Row) (string, error) {
 	var email string
-	if err := tx.QueryRow(ctx, `
-		SELECT coalesce(email, '') FROM app_user
-		 WHERE id = $1 AND `+workforce.LiveMemberSQL(""), user).Scan(&email); err != nil {
+	if err := row.Scan(&email); err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return "", nil
 		}
-		return "", fmt.Errorf("capture: reading the seat's own login address: %w", err)
+		return "", err
 	}
 	return bareAddress(email), nil
 }
+
+var seatLoginAddressSQL = `SELECT coalesce(email, '') FROM app_user WHERE id = $1 AND ` + workforce.LiveMemberSQL("")
 
 // retirePendingForIdentityTx settles the seat's own open questions about an
 // address they have just claimed as theirs.

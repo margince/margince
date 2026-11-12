@@ -1,0 +1,26 @@
+name: a_refusing_subject_over_a_waiting_reply_is_not_a_refusal
+task: capture_classify
+site: classify
+source: hand_authored
+sanitized_by: hand_authored/claude-opus-5-5
+fixture:
+  - subject: 'Re: We will not go ahead with phase two'
+    inbound: true
+    body: |
+      Thanks, we will wait for your answer.
+expect:
+  outcome: accepted
+  answer:
+    - not_reply: negative
+  rubric: >
+    The subject line is the thread's old subject. It says "We will not go
+    ahead", but the customer wrote only that they will wait for our answer.
+    The prompt says the reply verdict reads the sender's own words and never
+    the subject. Any label is acceptable. "neutral" or "positive" scores high,
+    and null is acceptable. "negative" is the failure this scenario exists to
+    catch: it would close the deal as lost overnight while the customer waits
+    on us.
+  bands:
+    certified_min: 70
+    degraded_min: 50
+    floor: 40

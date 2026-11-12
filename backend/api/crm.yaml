@@ -9052,6 +9052,9 @@ paths:
         the installation's timezone): `422 code: in_future` on `meeting_status`. A meeting with no
         `occurred_at` starts now, so it has taken place. A re-run with the same `source_system` and
         `source_id` that moves the meeting's status is judged the same way, at its stored start.
+        When you log an inbound message that one contact wrote, set `sender_contact_id` to that
+        contact, above all for a group chat linked to several contacts: only the sender counts as
+        having asked us to follow up.
       x-mcp-tool: { verb: log_activity, record_type: activity, tier: auto_execute, scope: write }
       parameters:
         - $ref: '#/components/parameters/IdempotencyKey'
@@ -9391,7 +9394,10 @@ paths:
         still see it. The Worklist offers `not_mine` only on a row whose owner is not the reader.
 
         `handled` names no moment and nothing lifts it: the reader dealt with the message another
-        way. The customer's next message is new work, so it comes back on its own.
+        way. The customer's next message is new work, so it comes back on its own. `handled` also
+        takes a message we sent, when it is the reader's own newest message to a contact and nobody
+        has written since: the reader needs no reply to it. Any other message we sent is refused with
+        `not_your_waiting_message`, and a note, task or meeting with `not_a_message`.
 
         A snooze names a moment still ahead and lifts on its own. `not_mine` names no moment: it
         stands until the reader picks the message back up, or until the record it is filed under
@@ -14707,6 +14713,19 @@ paths:
           enum:
           - fiscal_quarter
           - all_open
+          - custom
+      - &closeStartAt
+        name: close_start_at
+        in: query
+        required: false
+        description: Start of the expected-close window when close_window is custom. Send it with close_end_at; the window spans at most twelve months.
+        schema: *id002
+      - &closeEndAt
+        name: close_end_at
+        in: query
+        required: false
+        description: End of the expected-close window when close_window is custom, exclusive. Send it with close_start_at.
+        schema: *id002
       - &id011
         name: metrics
         in: query
@@ -14846,6 +14865,9 @@ paths:
           enum:
           - fiscal_quarter
           - all_open
+          - custom
+      - *closeStartAt
+      - *closeEndAt
       - &id011
         name: metrics
         in: query
@@ -14940,6 +14962,8 @@ paths:
       - *id008
       - *id009
       - *id010
+      - *closeStartAt
+      - *closeEndAt
       - *id011
       - *id012
       - *dimProduct
@@ -15560,6 +15584,267 @@ paths:
           application/json:
             schema:
               $ref: '#/components/schemas/ReportingTargetInput'
+  /analytics/progress:
+    get:
+      tags: [Reports]
+      operationId: getSalesProgress
+      security: [ { bearerAuth: [] }, { cookieAuth: [] } ]
+      summary: Closed revenue against the sales goal for one seller or team, by month or calendar year.
+      description: |
+        Closed revenue is the `bookings_won` figure Analytics shows for the same scope and window:
+        won deals by actual close date and current owner, in the reporting currency. The goal is
+        the sum of each owner's active monthly `bookings_won` target with no pipeline. A yearly
+        reading runs January to December whatever the fiscal year, and needs all twelve months'
+        goals; with any missing, `goal.status` is `incomplete` and no completion or delta is given.
+
+        Actuals stop at `cutoff`, while the goal and planned revenue use the whole period. A period
+        that has not started has no `actual_window`. `evaluation` is the reading the figures came
+        from, so evidence is read with `/analytics/evidence` under its own receipt.
+      x-mcp-tool: { verb: read_view, tier: auto_execute, scope: read }
+      parameters:
+      - name: period
+        in: query
+        required: true
+        schema: { type: string, enum: [month, year] }
+      - name: year
+        in: query
+        required: true
+        schema: { type: integer, minimum: 2000, maximum: 2200 }
+      - name: month
+        in: query
+        required: false
+        description: Required with `period=month`.
+        schema: { type: integer, minimum: 1, maximum: 12 }
+      - name: scope_kind
+        in: query
+        required: false
+        description: Absent reads the caller's own figures.
+        schema: { type: string, enum: [owner, team] }
+      - name: scope_id
+        in: query
+        required: false
+        schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: The progress reading.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/SalesProgress' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+  /analytics/progress/deals:
+    get:
+      tags: [Reports]
+      operationId: listSalesProgressDeals
+      security: [ { bearerAuth: [] }, { cookieAuth: [] } ]
+      summary: The open deals of one seller or team as Progress lists them, each with its sale type and next task.
+      description: |
+        The deals are the ones `GET /deals?status=open` lists for the same owner or team, under the
+        same row scope and field masks, so a page holds no deal the caller could not open. Each adds
+        the sale type its priced lines show and the next open task a workspace reader may see.
+        The list is the work as it stands now, whatever period Progress reads.
+      x-mcp-tool: { verb: read_view, tier: auto_execute, scope: read }
+      parameters:
+      - $ref: '#/components/parameters/Cursor'
+      - $ref: '#/components/parameters/Limit'
+      - name: scope_kind
+        in: query
+        required: false
+        description: Absent reads the caller's own deals.
+        schema: { type: string, enum: [owner, team] }
+      - name: scope_id
+        in: query
+        required: false
+        schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: A page of open deals.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/SalesProgressDealPage' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+  /analytics/sales-goals:
+    get:
+      tags: [Reports]
+      operationId: listSalesGoalSellers
+      security: [ { bearerAuth: [] }, { cookieAuth: [] } ]
+      summary: The sellers whose sales goals the caller may read for one calendar year.
+      description: |
+        The caller comes first. A colleague is listed only when the caller may measure them one by
+        one, so with individual performance turned off the list holds the caller alone.
+      x-mcp-tool: { verb: read_view, tier: auto_execute, scope: read }
+      parameters:
+      - name: year
+        in: query
+        required: true
+        schema: { type: integer, minimum: 2000, maximum: 2200 }
+      responses:
+        '200':
+          description: The sellers and the state of each one's plan.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/SalesGoalRoster' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+  /analytics/sales-goals/{owner_id}/{year}:
+    parameters: &salesGoalPath
+    - name: owner_id
+      in: path
+      required: true
+      schema: { type: string, format: uuid }
+    - name: year
+      in: path
+      required: true
+      schema: { type: integer, minimum: 2000, maximum: 2200 }
+    get:
+      tags: [Reports]
+      operationId: getSalesGoalPlan
+      security: [ { bearerAuth: [] }, { cookieAuth: [] } ]
+      summary: One seller's sales goal plan for a calendar year.
+      description: |
+        The published goals, the shared draft and the plan's history. A draft is shared with the
+        seller and with readers who may set their goals, never with peers. Outside the caller's
+        reach the answer is 404 whether or not a plan exists.
+      x-mcp-tool: { verb: read_view, tier: auto_execute, scope: read }
+      responses:
+        '200':
+          description: The plan.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/SalesGoalPlan' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+  /analytics/sales-goals/{owner_id}/{year}/draft:
+    parameters: *salesGoalPath
+    put:
+      tags: [Reports]
+      operationId: saveSalesGoalDraft
+      security: [ { cookieAuth: [] } ]
+      summary: Save the shared draft of a sales goal plan.
+      description: |
+        Twelve month entries, each an amount in minor units of the plan currency or null for Not
+        set. A draft may be incomplete and its declared yearly total may differ from the months;
+        it changes no reported figure. `If-Match` is the plan version, `0` when no plan exists.
+      x-agent-access: human-only
+      x-human-only-reason: security
+      parameters:
+      - name: If-Match
+        in: header
+        required: true
+        schema: { type: string }
+      - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/SalesGoalDraftInput' }
+      responses:
+        '200':
+          description: The plan with its saved draft.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/SalesGoalPlan' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/VersionConflict' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+    delete:
+      tags: [Reports]
+      operationId: discardSalesGoalDraft
+      security: [ { cookieAuth: [] } ]
+      summary: Discard the shared draft and keep the published goals.
+      x-agent-access: human-only
+      x-human-only-reason: security
+      parameters:
+      - name: If-Match
+        in: header
+        required: true
+        schema: { type: string }
+      responses:
+        '200':
+          description: The plan without a draft.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/SalesGoalPlan' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/VersionConflict' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+  /analytics/sales-goals/{owner_id}/{year}/publish:
+    parameters: *salesGoalPath
+    post:
+      tags: [Reports]
+      operationId: publishSalesGoalPlan
+      security: [ { cookieAuth: [] } ]
+      summary: Publish the draft as the agreed goals for the year.
+      description: |
+        Writes the twelve monthly targets, the publication and its audit in one transaction. Every
+        month must be set, the months must add up to the declared yearly total, and the total must
+        be above zero. The previous publication stays in force when anything fails.
+      x-agent-access: human-only
+      x-human-only-reason: security
+      parameters:
+      - name: If-Match
+        in: header
+        required: true
+        schema: { type: string }
+      - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/SalesGoalPublishInput' }
+      responses:
+        '200':
+          description: The published plan.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/SalesGoalPlan' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/VersionConflict' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+  /analytics/sales-goals/{owner_id}/{year}/withdraw:
+    parameters: *salesGoalPath
+    post:
+      tags: [Reports]
+      operationId: withdrawSalesGoalPlan
+      security: [ { cookieAuth: [] } ]
+      summary: Withdraw a mistaken publication.
+      description: Retires the twelve published targets together, so Progress shows no goal until a new publication.
+      x-agent-access: human-only
+      x-human-only-reason: security
+      parameters:
+      - name: If-Match
+        in: header
+        required: true
+        schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/SalesGoalReasonInput' }
+      responses:
+        '200':
+          description: The withdrawn plan.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/SalesGoalPlan' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/VersionConflict' }
+        '422': { $ref: '#/components/responses/ValidationError' }
   /analytics/framework:
     get:
       tags:
@@ -26186,6 +26471,10 @@ paths:
         company. These records grant no marketing consent. Every message is checked separately.
         An older record with no sending company is shown without inferring one.
 
+        No route records a new standing exception. A rep lets one refused message go with
+        `directCommunicationSend`. An exception already on file still lets matching sends through
+        until it is revoked, and a merge carries it to the surviving contact.
+
         `may_revoke` uses the same authority and record-access checks as `revokeOverride`.
         Revocation takes back that recorded exception and its carried copies, with a reason.
       parameters:
@@ -26197,90 +26486,6 @@ paths:
           content:
             application/json:
               schema: { $ref: '#/components/schemas/StandingOverridesPage' }
-        '401': { $ref: '#/components/responses/Unauthorized' }
-        '403': { $ref: '#/components/responses/Forbidden' }
-        '404': { $ref: '#/components/responses/NotFound' }
-        '422': { $ref: '#/components/responses/ValidationError' }
-    post:
-      tags: [Compliance]
-      operationId: allowContact
-      security: [ { bearerAuth: [] }, { cookieAuth: [] } ]
-      # This RESUMES a send the engine refused, and the vouch stakes the user's
-      # name on the send, so an agent asks its user first and its row names it.
-      x-mcp-tool: { verb: allow_contact, router: change_compliance, action: allow_contact, tier: auto_execute, scope: write, served_by: route, ask_user_first: true }
-      summary: Record a standing vouch that a machine-level refusal for one category may be overruled.
-      description: |
-        Writes a `communication_override`: a rep's standing statement that a future send in the
-        named category may go out even though the engine, on its own, would refuse it for lack of
-        evidence. **It is not consent and not a lawful basis** — it sits beside the refusal and
-        outranks only a MACHINE-level, non-absolute one. A subject-level stop (a suppression, an
-        Art. 21 objection) still wins at the gate; this door cannot touch one.
-
-        **The authority is the seat's own, always.** There is no field for it: the level recorded
-        is read from the authenticated session (`user` for a rep, `admin` for an admin), never
-        from the body — a caller naming its own level would let any seat write a row that outranks
-        every future refusal in that category.
-
-        **The reason is required**, unlike `suppress`: a vouch that flips a refusal is the write
-        most worth being able to explain later, and there is no phone call it merely relays.
-
-        The override is a standing fact for the contact and category named, not a one-time
-        instruction for a single message: it remains live, and is read by every future send
-        evaluation for that pair, until it is revoked.
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              required: [category, reason]
-              properties:
-                category:
-                  type: string
-                  # NINE, not the engine's fourteen: the five that serve the subject
-                  # (security_notice, privacy_notice, record_confirmation,
-                  # consent_confirmation, optout_confirmation) pass even a hard
-                  # suppression and are never refused for lack of evidence, so a vouch
-                  # for one could never apply. The door refuses them
-                  # (commsauthz.Category.KnownForOverride); offering them here would
-                  # give a client a picker where five entries answer 422. The STORED
-                  # vocabulary stays all fourteen, because a row already written carries
-                  # its category forward. Held by
-                  # backend/gates/overridecategory_test.go.
-                  enum: [
-                    reply_to_inbound, requested_followup, precontract_quote, active_deal_followup,
-                    customer_service, account_notice, contract_notice, invoice_or_payment,
-                    marketing
-                  ]
-                  description: |
-                    Which category of send this vouch covers. The engine resolves every send to
-                    exactly one category, and the override applies to that one only — a vouch for
-                    `marketing` says nothing about `customer_service`. The five categories that
-                    serve the subject are absent on purpose: they are never refused for lack of
-                    evidence, so a vouch for one would be a row nothing could ever read.
-                reason:
-                  type: string
-                  minLength: 1
-                  maxLength: 500
-                  # A non-whitespace character, mirroring requireReason's TrimSpace on
-                  # the server: minLength alone admits "   ", which the handler then
-                  # refuses with a 422 the contract gave no way to predict.
-                  pattern: '\S'
-                  description: |
-                    Why the rep is vouching for this send, in their own words. Required: unlike a
-                    suppression, which may only relay what the subject said, this write is the
-                    rep's own judgement call and the record must say why it was made.
-      responses:
-        # 201 WITH THE ID, not the 204 suppressContact answers. The revoke door
-        # takes this id in its path and no endpoint lists a contact's standing
-        # vouches, so a door that answered 204 would leave every caller without
-        # an outbound-webhook subscription unable to ever take the vouch back.
-        # The event carries it too, for consumers rather than for the caller.
-        '201':
-          description: Recorded. The body names the row, which is what the revoke door takes.
-          content:
-            application/json:
-              schema: { $ref: '#/components/schemas/RecordedOverride' }
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/Forbidden' }
         '404': { $ref: '#/components/responses/NotFound' }
@@ -29364,8 +29569,9 @@ paths:
         Starts LIVE, and reaches nobody: the invitation is what decides who may read
         a room, so a room nobody has been invited to is private without a second gate.
         At most one active room per deal: a second create while the first is still
-        building, ready, publishing, live or paused is rejected
-        (409 `deal_room_already_open`). Archiving the first frees the deal for another.
+        building, ready, publishing, live or paused, and has not passed its access end,
+        is rejected (409 `deal_room_already_open`). Archiving the first, or its access
+        end passing, frees the deal for another.
 
         The steward defaults to the deal's owner and is the named human a buyer is
         pointed at for help; a room whose steward left the company points its buyers
@@ -29475,7 +29681,8 @@ paths:
       description: |
         A paused room refuses buyer reads while every credential stays valid, so
         resuming restores access without re-inviting anyone. Only a `live` room
-        pauses (409 `deal_room_not_pausable` otherwise).
+        pauses (409 `deal_room_not_pausable` otherwise), so an `expired` room is
+        refused.
       x-mcp-tool: { verb: pause_deal_room, router: change_offers, action: pause_room, tier: auto_execute, scope: write, served_by: route }
       responses:
         '200':
@@ -29529,7 +29736,8 @@ paths:
         Access management deliberately keeps working on a closed room — a steward can
         still revoke a participant — because being unable to remove someone from a
         room holding your signed contract is a real hazard months after the deal
-        closed. 409 `deal_room_not_closable` unless the room is live or paused.
+        closed. 409 `deal_room_not_closable` unless the room is live or paused, so
+        an `expired` room is refused: closing would serve its content again.
       x-mcp-tool: { verb: close_deal_room, router: change_offers, action: close_room, tier: auto_execute, scope: write, served_by: route }
       responses:
         '200':
@@ -29558,6 +29766,11 @@ paths:
         creation is stored as the time of the call, unless a standing expiry has
         already passed, which is kept. It decides how long a buyer can
         read the room, so an agent spends `send` on it.
+
+        An `expired` room accepts a later end, which makes it read its stored state
+        again. Once a newer room is open on the deal, that later end is refused
+        with 409 `deal_room_already_open`. If the room's steward has left the
+        workspace since, the same write clears the steward.
       x-mcp-tool: { verb: set_deal_room_expiry, router: send_outbound, action: set_room_expiry, tier: auto_execute, scope: send, served_by: route, ask_user_first: true }
       parameters:
         - $ref: '#/components/parameters/IfMatch'
@@ -37012,10 +37225,10 @@ components:
       name: provider
       in: path
       required: true
-      schema: { type: string, enum: [gmail, gcal, graph, graphcal, imap, test_mailbox] }
+      schema: { type: string, enum: [gmail, gcal, gdocs, graph, graphcal, imap, test_mailbox] }
       description: |
         The mail/calendar provider (A51 email+calendar parity). Every provider connects through
-        the same operation; gmail/gcal/graph/graphcal authorize by OAuth redirect, imap by
+        the same operation; gmail/gcal/gdocs/graph/graphcal authorize by OAuth redirect, imap by
         credential submission, and test_mailbox connects immediately with neither (a QC-only
         connector, reachable only when the deployment armed operations.allow_test_mailbox — a
         real deployment answers connector_unsupported for it, the same as for an unrecognized
@@ -37023,6 +37236,8 @@ components:
         Microsoft 365 mail+calendar (Outlook via Graph), `imap` = the self-hostable IMAP
         engine. Mail and calendar are always SEPARATE connections on either vendor: one
         consent each, so a contact can bring one without the other and disconnect either.
+        `gdocs` is a Google account's grant to read the Google Docs Meet writes its notes and
+        transcripts into (`documents.readonly`); it is its own connection beside the calendar.
         WhatsApp/Telegram connect is the messaging-channels surface, not this one.
     Id:
       name: id
@@ -39763,12 +39978,13 @@ components:
       properties:
         purpose:
           type: string
-          enum: [sign_in, mailbox_connect, calendar_connect, extension_connect]
+          enum: [sign_in, mailbox_connect, calendar_connect, documents_connect, extension_connect]
           x-extensible-enum: true
           description: >-
             Which flow uses this URL. `sign_in` is the login callback. `mailbox_connect` and
             `calendar_connect` are the per-user mail and calendar consent callbacks, which are
-            SEPARATE connectors served on different paths. `extension_connect` is the consent
+            SEPARATE connectors served on different paths. `documents_connect` is Google's
+            meeting-notes consent callback, a third connector on its own path. `extension_connect` is the consent
             callback of an extension unit's OAuth app, and the only purpose such an app lists. ONE app backs all three on either
             vendor, and registering only some of them fails the others at the consent screen —
             Google says `redirect_uri_mismatch`, Microsoft says `AADSTS50011`, and neither names
@@ -40869,7 +41085,7 @@ components:
       required: [id, provider, status, scopes, can_backfill]
       properties:
         id: { type: string, format: uuid }
-        provider: { type: string, enum: [gmail, gcal, graph, graphcal, imap, test_mailbox], x-extensible-enum: true, description: The mail/calendar provider (A51 email+calendar parity). }
+        provider: { type: string, enum: [gmail, gcal, gdocs, graph, graphcal, imap, test_mailbox], x-extensible-enum: true, description: The mail/calendar/meeting-notes provider (A51 email+calendar parity). }
         can_backfill:
           type: boolean
           description: |
@@ -42622,7 +42838,7 @@ components:
           items:
             type: object
             properties:
-              provider: { type: string, enum: [gmail, gcal, graph, graphcal, imap, test_mailbox], x-extensible-enum: true }
+              provider: { type: string, enum: [gmail, gcal, gdocs, graph, graphcal, imap, test_mailbox], x-extensible-enum: true }
               status: { type: string, enum: [connected, disconnected, error, reauth_required], x-extensible-enum: true }
               last_synced_at: { type: [string, 'null'], format: date-time }
               last_sync_error_class: { type: [string, 'null'] }
@@ -43511,6 +43727,7 @@ components:
         field: { type: string, description: 'The path of the refused key.' }
         code: { type: string }
         message: { type: string, description: 'What is wrong and what to write instead.' }
+        max: { type: integer, description: 'The limit a `too_long` refusal names, in characters. Absent when the refusal states none.' }
     AiUsage:
       type: object
       description: 'AI usage + budget (AIRT-WIRE-1): the AIRT-PARAM-33 meter aggregated per day × task × tier, plus the budget band. Token-denominated; cost_est_minor is computed on read from the workspace''s ai_model_rate price sheet as of each call''s day (ADR-0067, price-on-read) — omitted, never a fabricated 0, when a task line''s window carries no priced call, and accompanied by unpriced_calls when it is a partial total.'
@@ -44694,8 +44911,9 @@ components:
                 `knowledge_document` (download the retained file), `email_signature` (the
                 recipient's own account settings), `retained_email_signature` (the departed member's
                 signature in the controller review), `activity` (open the retained note in its
-                drawer), `legal_entity` (Company settings), or `signature_template` (Company
-                settings; `id` identifies the erasure whose review flagged the workspace template).
+                drawer), `legal_entity` (Company settings), `signature_template` (Company
+                settings; `id` identifies the erasure whose review flagged the workspace template),
+                or `approval_history` (the audit log narrowed to the approval `id`).
             id: { type: string, format: uuid }
         origin: { $ref: '#/components/schemas/NoticeOrigin' }
         summary_parts:
@@ -44760,7 +44978,8 @@ components:
           additionalProperties: true
           description: |
             Structured machine context — e.g. `existing_id` on 409 duplicate, or an
-            `errors` array of `{ field, code, message }` on 422 validation.
+            `errors` array of `{ field, code, message }` on 422 validation. A `too_long`
+            entry also carries `max`, the limit in characters.
 
             A 429 that an agent's limit answers carries `limit`: `kind` names it (`calls`,
             `writes` or `egress` for a window allowance, `pacing` for the per-minute limit),
@@ -48123,8 +48342,8 @@ components:
           description: |
             Present on a promise task when we wrote to one of its recipients on its thread after the
             promise. The task then asks whether that mail kept it, as the Worklist does, with the
-            same key and fingerprint. Absent when the reader answered Not yet to that mail, and for an
-            agent, which answers no such question.
+            same key and fingerprint, and `overdue` is false while it asks. Absent when the reader
+            answered Not yet to that mail, and for an agent, which answers no such question.
         version:
           allOf: [{ $ref: '#/components/schemas/RowVersion' }]
           description: |
@@ -50605,6 +50824,24 @@ components:
           items: { $ref: '#/components/schemas/ContactMomentAction' }
         may_be_done:
           $ref: '#/components/schemas/ContactMomentMayBeDone'
+        done:
+          $ref: '#/components/schemas/ContactMomentDone'
+
+    ContactMomentDone:
+      type: object
+      description: |
+        Present on an `awaiting_reply` or `gone_quiet` moment when a Done would change something
+        for this reader: they may mark the message, and have not set it aside yet. `Done` puts
+        `handled` on the message through `PUT /activities/{id}/disposition`, the state the
+        Worklist's Done writes, so the card and the Worklist row leave together for this reader.
+        `DELETE /activities/{id}/disposition` takes it back. A newer message either way brings the
+        card back. Absent on every other moment.
+      required: [activity_id]
+      properties:
+        activity_id:
+          type: string
+          format: uuid
+          description: The message we sent last, which the card rests on and a Done marks.
 
     ContactMomentMayBeDone:
       type: object
@@ -52049,7 +52286,7 @@ components:
             With none set, a send closes with a greeting and the member's name.
         html:
           type: string
-          maxLength: 2000
+          maxLength: 10000
           description: |
             Saved personal HTML, trimmed at both ends. Rendering sanitizes it without
             expanding placeholders. Empty sanitized content uses the usual fallback.
@@ -52080,8 +52317,9 @@ components:
             `{phone}`, `{logo}` and `{imprint}`. `{logo}` embeds the logo of the legal entity the
             sender works for, sized for mail, in the message itself; the default entity's logo is
             the company's own, and an entity with no logo shows none. `{imprint}` is that entity's
-            imprint, escaped, with its line breaks kept. A send keeps paragraphs, line breaks, bold, italic, underline, links
-            and spans with a colour and a pixel size, and drops everything else. Empty means
+            imprint, escaped, with its line breaks kept. A send keeps paragraphs, line breaks, bold, italic, underline, links,
+            tables, divs, layout styles and `https` images with their width and height. It drops scripts, event
+            handlers, forms, frames, `javascript:` and `data:` addresses and `url()` in styles. Empty means
             none: each member uses personal HTML, plain text or the closing line.
     EmailSignOffRequest:
       type: object
@@ -52109,7 +52347,7 @@ components:
           description: The workspace template as edited. Empty previews a workspace with none.
         html:
           type: string
-          maxLength: 2000
+          maxLength: 10000
           description: |
             Personal HTML as typed. Empty clears it; omitted on a write or preview
             leaves it unchanged. Rendering uses the signature sanitizer without
@@ -52158,7 +52396,7 @@ components:
             is a document riding on every message.
         html:
           type: string
-          maxLength: 2000
+          maxLength: 10000
           description: |
             Personal HTML as typed. Empty clears it; omitted on a write or preview
             leaves it unchanged. Rendering uses the signature sanitizer without
@@ -56610,6 +56848,19 @@ components:
             other kind returns `422 code: field_not_valid_for_kind`. An id that is not an
             active member of this workspace returns `422 code: not_a_colleague`, and more
             than 25 ids return `422 code: too_many_attendees`.
+        sender_contact_id:
+          type: string
+          format: uuid
+          description: >-
+            Inbound message, call, meeting or email only: the linked contact who wrote or said
+            it. Set it whenever one contact sent the message, for example the one member of a
+            group chat who asked for a follow-up. Only that contact counts as its author, so
+            only they asked to hear from us. Without it, an inbound activity linked to one
+            contact names that contact as the sender. One linked to two or more contacts names
+            no sender, and each contact is kept as copied. The stated `participants` of an email
+            win over this field. A contact that is not in `links` returns
+            `422 code: sender_not_linked`. Any other kind, or a direction other than `inbound`,
+            returns `422 code: field_not_valid_for_kind`.
         duration_seconds: { type: [integer, 'null'] }
         direction: { type: [string, 'null'], enum: [null, inbound, outbound] }
         call_outcome:
@@ -61622,7 +61873,15 @@ components:
           enum:
           - fiscal_quarter
           - all_open
+          - custom
           x-extensible-enum: true
+          description: |
+            Which open deals the open-pipeline figures count, by expected close. `fiscal_quarter`
+            is the current fiscal quarter, `all_open` is every open deal, and `custom` is
+            `close_interval`, which it requires.
+        close_interval:
+          allOf: [{ $ref: '#/components/schemas/ReportingWindow' }]
+          description: The expected-close window `close_window=custom` names, at most twelve months long.
         product_id:
           allOf: [{ $ref: '#/components/schemas/ReportingProductId' }]
         initiative_id:
@@ -62564,6 +62823,263 @@ components:
           type: integer
           format: int64
         created_at: *id001
+    SalesProgressGoal:
+      type: object
+      additionalProperties: false
+      required: [status, months_set, months_needed]
+      description: |
+        `set` is a complete, positive goal. `zero` is a complete goal of zero: a delta but no
+        completion. `incomplete` gives the known subtotal of the months that have a goal and no
+        completion or delta. `missing` means no month has one. `withheld` means the caller may not
+        read these goals. `other_currency` is a goal kept in a currency other than the reporting
+        currency, which is never converted. `changed_outside_plan` is a published plan whose
+        targets were changed by another route: monthly figures still compare, yearly ones wait
+        for a manager to review the plan.
+      properties:
+        status: { type: string, enum: [set, zero, incomplete, missing, withheld, other_currency, changed_outside_plan], x-extensible-enum: true }
+        amount_minor: { type: integer, format: int64, description: 'The goal, or the known subtotal when incomplete.' }
+        months_set: { type: integer, minimum: 0, maximum: 12 }
+        months_needed: { type: integer, minimum: 0, maximum: 12 }
+    SalesProgressAmount:
+      type: object
+      additionalProperties: false
+      required: [status]
+      description: |
+        `ok` is a complete amount. `partial` is a known amount that leaves out records whose value
+        the caller may not see or that has none. `withheld` gives no amount. `not_started` is a
+        period that has not begun.
+      properties:
+        status: { type: string, enum: [ok, partial, withheld, not_started], x-extensible-enum: true }
+        amount_minor: { type: integer, format: int64 }
+    SalesProgressCategories:
+      type: object
+      additionalProperties: false
+      required: [status, product_minor, service_minor, unresolved_minor, product_items, service_items, invalid_deals]
+      description: |
+        Closed revenue split by what each deal sold, from the category captured on its priced lines:
+        software is a product sale and implementation a service. Other kinds, products nobody
+        classified and the part no line carries are unresolved. The three parts add up to the
+        closed amount exactly. A deal whose lines add up to more than its value counts as
+        unresolved in full, in `invalid_deals`.
+      properties:
+        status: { type: string, enum: [ok, partial, withheld, not_started], x-extensible-enum: true }
+        product_minor: { type: integer, format: int64 }
+        service_minor: { type: integer, format: int64 }
+        unresolved_minor: { type: integer, format: int64 }
+        product_items: { type: array, maxItems: 50, items: { type: string }, description: 'Names of the products sold, most revenue first.' }
+        service_items: { type: array, maxItems: 50, items: { type: string }, description: 'Names of the services sold, most revenue first.' }
+        invalid_deals: { type: integer, minimum: 0 }
+    SalesProgressMonth:
+      type: object
+      additionalProperties: false
+      required: [month, window, state, goal, closed]
+      properties:
+        month: { type: integer, minimum: 1, maximum: 12 }
+        window: { $ref: '#/components/schemas/ReportingWindow' }
+        state: { type: string, enum: [not_started, current, ended], x-extensible-enum: true }
+        goal: { $ref: '#/components/schemas/SalesProgressGoal' }
+        closed: { $ref: '#/components/schemas/SalesProgressAmount' }
+        delta_minor: { type: integer, format: int64, description: 'Closed revenue minus the goal; absent before the month starts and without a complete goal.' }
+    SalesProgressMember:
+      type: object
+      additionalProperties: false
+      required: [owner_id, name, goal, closed, planned]
+      properties:
+        owner_id: { type: string, format: uuid }
+        name: { type: string }
+        goal: { $ref: '#/components/schemas/SalesProgressGoal' }
+        closed: { $ref: '#/components/schemas/SalesProgressAmount' }
+        planned: { $ref: '#/components/schemas/SalesProgressAmount' }
+        delta_minor: { type: integer, format: int64 }
+    SalesProgressDealPage:
+      type: object
+      additionalProperties: false
+      required: [data, page]
+      properties:
+        data:
+          type: array
+          items: { $ref: '#/components/schemas/SalesProgressDeal' }
+        page: { $ref: '#/components/schemas/PageInfo' }
+    SalesProgressDeal:
+      type: object
+      additionalProperties: false
+      required: [deal]
+      properties:
+        deal: { $ref: '#/components/schemas/Deal' }
+        sale_type:
+          type: string
+          enum: [product, service, product_and_service, partly_classified, unclassified]
+          x-extensible-enum: true
+          description: >-
+            What the deal's priced lines sell. `partly_classified` when lines of another kind or an
+            unpriced remainder sit beside the classified ones, `unclassified` when no line is a product
+            or a service, or the lines add up to more than the deal. Absent when the deal's amount is
+            masked from the caller.
+        next_task:
+          allOf: [{ $ref: '#/components/schemas/SalesProgressNextTask' }]
+          description: The earliest-due open task on the deal that every workspace reader may see. Absent when there is none.
+    SalesProgressNextTask:
+      type: object
+      additionalProperties: false
+      required: [subject]
+      properties:
+        subject: { type: string }
+        due_at: { type: [string, 'null'], format: date-time }
+        assignee_id:
+          type: [string, 'null']
+          format: uuid
+          description: Who the task is for. It may differ from the deal's owner.
+    SalesProgress:
+      type: object
+      additionalProperties: false
+      required: [scope, period, horizon, cutoff, timezone, currency, state, closed, goal, categories, planned, planned_valued_at, months, members, members_withheld, capabilities]
+      properties:
+        scope: { $ref: '#/components/schemas/ReportingScope' }
+        period:
+          type: object
+          additionalProperties: false
+          required: [kind, year]
+          properties:
+            kind: { type: string, enum: [month, year], x-extensible-enum: true }
+            year: { type: integer }
+            month: { type: integer, minimum: 1, maximum: 12 }
+        horizon: { $ref: '#/components/schemas/ReportingWindow' }
+        actual_window:
+          allOf: [{ $ref: '#/components/schemas/ReportingWindow' }]
+          description: From the period start to the cutoff. Absent before the period starts.
+        cutoff: { type: string, format: date-time }
+        timezone: { type: string }
+        currency: { type: string }
+        state: { type: string, enum: [not_started, current, ended], x-extensible-enum: true }
+        closed: { $ref: '#/components/schemas/SalesProgressAmount' }
+        goal: { $ref: '#/components/schemas/SalesProgressGoal' }
+        completion:
+          type: number
+          format: double
+          minimum: 0
+          description: Closed revenue divided by the goal, given only for a complete positive goal over complete revenue. It is not capped at 1.
+        delta_minor: { type: integer, format: int64, description: 'Closed revenue minus the goal, given only with a complete goal over complete revenue.' }
+        categories: { $ref: '#/components/schemas/SalesProgressCategories' }
+        planned:
+          allOf: [{ $ref: '#/components/schemas/SalesProgressAmount' }]
+          description: The face value of open deals expected to close in the whole period. It never counts toward the goal and is not weighted by probability.
+        planned_valued_at: { type: string, format: date-time, description: 'When the open deals were valued and converted.' }
+        months:
+          type: array
+          maxItems: 12
+          description: The twelve months of the selected year.
+          items: { $ref: '#/components/schemas/SalesProgressMonth' }
+        members:
+          type: array
+          maxItems: 500
+          description: A team reading's members in name order, each the caller may measure one by one.
+          items: { $ref: '#/components/schemas/SalesProgressMember' }
+        members_withheld: { type: boolean, description: 'True when a team''s members are not shown one by one.' }
+        evaluation:
+          allOf: [{ $ref: '#/components/schemas/ReportingEvaluation' }]
+          description: The Analytics reading behind closed and planned revenue, the receipt `/analytics/evidence` takes.
+        capabilities:
+          type: object
+          additionalProperties: false
+          required: [write_goals]
+          properties:
+            write_goals: { type: boolean, description: 'Whether the caller may set this scope''s goals.' }
+    SalesGoalSeller:
+      type: object
+      additionalProperties: false
+      required: [owner_id, name, state, can_edit]
+      properties:
+        owner_id: { type: string, format: uuid }
+        name: { type: string }
+        state: { $ref: '#/components/schemas/SalesGoalPlanState' }
+        total_minor: { type: integer, format: int64, description: 'The published yearly goal.' }
+        can_edit: { type: boolean }
+    SalesGoalRoster:
+      type: object
+      additionalProperties: false
+      required: [year, currency, data]
+      properties:
+        year: { type: integer }
+        currency: { type: string }
+        data: { type: array, maxItems: 500, items: { $ref: '#/components/schemas/SalesGoalSeller' } }
+    SalesGoalPlanState:
+      type: string
+      enum: [no_goal, draft, published, published_with_draft, withdrawn, changed_outside_plan]
+      x-extensible-enum: true
+    SalesGoalMonths:
+      type: array
+      minItems: 12
+      maxItems: 12
+      description: January to December, each an amount in minor units or null for Not set.
+      items: { type: [integer, 'null'], format: int64, minimum: 0 }
+    SalesGoalRevision:
+      type: object
+      additionalProperties: false
+      required: [revision, months, reason, author_name, created_at, origin]
+      properties:
+        revision: { type: integer, format: int64 }
+        months: { $ref: '#/components/schemas/SalesGoalMonths' }
+        declared_total_minor: { type: [integer, 'null'], format: int64 }
+        reason: { type: string }
+        author_name: { type: string }
+        created_at: { type: string, format: date-time }
+        origin: { type: string, enum: [manual, ai, adopted], x-extensible-enum: true }
+    SalesGoalEvent:
+      type: object
+      additionalProperties: false
+      required: [revision, kind, reason, author_name, created_at]
+      properties:
+        revision: { type: integer, format: int64 }
+        kind: { type: string, enum: [draft, published, discarded, withdrawn], x-extensible-enum: true }
+        reason: { type: string }
+        author_name: { type: string }
+        created_at: { type: string, format: date-time }
+        total_minor: { type: integer, format: int64 }
+    SalesGoalPlan:
+      type: object
+      additionalProperties: false
+      required: [owner_id, owner_name, year, currency, state, version, live_months, history, capabilities]
+      properties:
+        owner_id: { type: string, format: uuid }
+        owner_name: { type: string }
+        year: { type: integer }
+        currency: { type: string, description: 'The reporting currency the goals are kept in.' }
+        state: { $ref: '#/components/schemas/SalesGoalPlanState' }
+        version: { type: integer, format: int64, description: 'The plan version a write sends in If-Match; 0 before the first draft.' }
+        live_months:
+          allOf: [{ $ref: '#/components/schemas/SalesGoalMonths' }]
+          description: The monthly goals Progress reads today, whether a plan published them or not.
+        published: { $ref: '#/components/schemas/SalesGoalRevision' }
+        draft: { $ref: '#/components/schemas/SalesGoalRevision' }
+        history: { type: array, maxItems: 200, items: { $ref: '#/components/schemas/SalesGoalEvent' } }
+        capabilities:
+          type: object
+          additionalProperties: false
+          required: [edit]
+          properties:
+            edit: { type: boolean, description: 'Whether the caller may draft, publish, discard and withdraw this plan.' }
+    SalesGoalDraftInput:
+      type: object
+      additionalProperties: false
+      required: [months, reason]
+      properties:
+        months: { $ref: '#/components/schemas/SalesGoalMonths' }
+        declared_total_minor: { type: integer, format: int64, minimum: 0 }
+        reason: { type: string, minLength: 1, maxLength: 1000 }
+        origin: { type: string, enum: [manual, ai, adopted], default: manual }
+    SalesGoalPublishInput:
+      type: object
+      additionalProperties: false
+      required: [reason, confirm_agreed]
+      properties:
+        reason: { type: string, minLength: 1, maxLength: 1000 }
+        confirm_agreed: { type: boolean, enum: [true], description: 'The manager confirms these are the goals agreed with the seller.' }
+    SalesGoalReasonInput:
+      type: object
+      additionalProperties: false
+      required: [reason]
+      properties:
+        reason: { type: string, minLength: 1, maxLength: 1000 }
     ReportingQualification:
       type: object
       additionalProperties: false
@@ -70245,6 +70761,9 @@ components:
         evaluator has a selector for. The enum IS the authorable set, so a client cannot offer a
         scope that would be stored and then skipped every pass. `activity` is the bare object type
         (the row whose `category` is null); every other value carries its category after the slash.
+        `extension` is the rows of every extension table that declares an age column: `anonymize`
+        clears their declared personal columns, `erase` deletes them, and the table's retention
+        class is the floor.
 
         Extending this enum means adding a selector in the same change.
       enum:
@@ -70258,6 +70777,7 @@ components:
         - ai_call_payload/content
         - raw_capture
         - deal_risk_day
+        - extension
       x-extensible-enum: true
 
     RetentionAction:
@@ -72694,8 +73214,11 @@ components:
         `closed` stops the room taking new work while KEEPING access — the buyer goes
         on reading it, and neither side adds a document or a comment. It is not a
         frozen copy: what the buyer reads is the live room, so a file later removed
-        from the deal stops being served here too. `expired` is access lapsing on its
-        own. `archived` ends the room outright and frees the deal for another.
+        from the deal stops being served here too. `expired` is read, never stored:
+        a room whose access end has passed reads `expired` to staff and buyers alike,
+        unless it is archived. A later end date makes it read its stored state again.
+        `archived` ends the room outright. Archiving it or its access end passing
+        frees the deal for another room.
       enum: [draft, building, ready, publishing, live, paused, closed, expired, archived]
       x-extensible-enum: true
 
@@ -73734,23 +74257,6 @@ components:
       properties:
         data: { type: array, items: { $ref: '#/components/schemas/StandingOverride' } }
         page: { $ref: '#/components/schemas/PageInfo' }
-
-    RecordedOverride:
-      type: object
-      description: >-
-        The standing override just recorded, by id. The category and reason are
-        what the caller sent and the authority is their own session's, so the id
-        is the one fact the caller could not have known — and the handle a later
-        revoke takes.
-      required: [override_id]
-      properties:
-        override_id:
-          type: string
-          format: uuid
-          description: >-
-            The standing override that now stands. A contact can hold several at
-            once — one per category, and more than one for a single category
-            after a merge — so this names which of them this call created.
 
     ConsentRequest:
       type: object
@@ -75797,6 +76303,33 @@ components:
         claim_key: { type: string }
         evidence_fingerprint: { type: string }
 
+    TaskRequestCheck:
+      type: object
+      description: |
+        Why a reminder taken from a customer's request will not close by itself. Margince judges
+        whether a request was answered only from mail it read in full. When the request or the
+        mail that would answer it can no longer be read, no pass judges it, and the reminder stays
+        open until somebody marks it done.
+      required: [state]
+      properties:
+        state:
+          type: string
+          enum: [text_not_checked]
+          x-extensible-enum: true
+          description: '`text_not_checked`: the text of the request or of a mail that may answer it can no longer be checked.'
+        our_last_reply:
+          allOf: [{ $ref: '#/components/schemas/TaskRequestCheckReply' }]
+          description: The newest reply from our side that the request check would have read. Absent when there is none, or when the reader may not read it.
+
+    TaskRequestCheckReply:
+      type: object
+      description: One reply from our side to a customer's request, named so the reader can open it.
+      required: [activity_id, occurred_at, occurred_precision]
+      properties:
+        activity_id: { type: string, format: uuid }
+        occurred_at: { type: string, format: date-time }
+        occurred_precision: { $ref: '#/components/schemas/OccurredPrecision' }
+
     WorklistPromiseRecipient:
       type: object
       description: A visible recipient's own claim on a shared deliverable. Other recipients may be outside the reader's scope.
@@ -75825,7 +76358,10 @@ components:
             reads their own work. Absent otherwise.
         may_be_done:
           allOf: [{ $ref: '#/components/schemas/WorklistMayBeDone' }]
-          description: Our later mail on the promise's thread to one of its recipients, which may have kept it. The row then asks whether it is done instead of listing it as open. Absent when there is no such mail or the reader answered Not yet to this mail.
+          description: Our later mail on the promise's thread to one of its recipients, which may have kept it. The row then asks whether it is done instead of listing it as open, and `overdue` is false while it asks. Its `claim_key` is the one the contact page and the company page use, so one Not yet holds on all three. Absent when there is no such mail, when the task is closed, or when the reader answered Not yet to this mail; the row is then overdue again if its date has passed.
+        request_check:
+          allOf: [{ $ref: '#/components/schemas/TaskRequestCheck' }]
+          description: On a reminder taken from a customer's request, why Margince cannot tell whether the request was answered. Absent on every other row.
         promise_recipients:
           type: array
           description: Visible recipient claims represented by this task; each keeps its own settlement state. Absent when unavailable.
@@ -76802,6 +77338,15 @@ components:
             The customer's own words the change rests on, where the act recorded them, masked
             with the amount they state. Kept apart from `reason`, which is Margince's reading
             and never a quote.
+        reason_kind:
+          type: string
+          enum: [rule, inference]
+          x-extensible-enum: true
+          description: >-
+            What kind of reason the change rests on: `rule` when Margince counted what the data
+            shows (days of silence, the pace of won deals), `inference` when it read what the
+            customer wrote or said. Derived from the kind of change and the loss reason a close
+            wrote. Absent when the row cannot say, on an approval, and on older responses.
         summary_parts:
           allOf: [{ $ref: '#/components/schemas/ApprovalSummaryParts' }]
           description: The summary taken apart, as on the approval it reports. Absent when the summary is a sentence alone.
@@ -76820,7 +77365,17 @@ components:
           description: >-
             The email, thread or meeting the act was read from, where it names one. Checked
             against the reader's access on every read: a source the reader may not open is
-            left out, not named. Absent also when the act cites no message.
+            left out, not named. Absent also when the act cites no message. A change that cites
+            several names the newest the reader may open.
+        source_occurred_at:
+          type: string
+          format: date-time
+          description: >-
+            When the email, call or meeting in `source_record` happened, apart from
+            `occurred_at`, when Margince acted. Present only with `source_record`.
+        source_occurred_precision:
+          allOf: [{ $ref: '#/components/schemas/OccurredPrecision' }]
+          description: How much of `source_occurred_at` is known. Present with it.
         changes:
           type: array
           items: { $ref: '#/components/schemas/MagicFieldChange' }
@@ -77625,7 +78180,10 @@ components:
             proposed values as its supporting line. Absent when the title is a sentence alone.
         may_be_done:
           allOf: [{ $ref: '#/components/schemas/WorklistMayBeDone' }]
-          description: Our later mail on the promise's thread to one of its recipients, which may have kept it. The row then asks whether it is done instead of listing it as open. Absent when there is no such mail or the reader answered Not yet to this mail.
+          description: Our later mail on the promise's thread to one of its recipients, which may have kept it. The row then asks whether it is done instead of listing it as open, and `overdue` is false while it asks. Its `claim_key` is the one the contact page and the company page use, so one Not yet holds on all three. Absent when there is no such mail, when the task is closed, or when the reader answered Not yet to this mail; the row is then overdue again if its date has passed.
+        request_check:
+          allOf: [{ $ref: '#/components/schemas/TaskRequestCheck' }]
+          description: On a reminder taken from a customer's request, why Margince cannot tell whether the request was answered. Absent on every other row.
         promise_recipients:
           type: array
           description: Visible recipient claims represented by this task; each keeps its own settlement state. Absent when unavailable.

@@ -13,11 +13,18 @@ package activities
 //   - A remote image is a read receipt. This product refuses tracking pixels as
 //     a stated position (sequences-and-deliverability.md: "the only engagement
 //     signal is a real reply"), and a sender who embeds one has collected the
-//     signal the product declines to. So no element that loads a remote
-//     resource survives — img, script, iframe, object, link, style.
+//     signal the product declines to. So no element of a message BODY that
+//     loads a remote resource survives — img, script, iframe, object, link,
+//     style.
 //   - A javascript: or data: href is a payload wearing a link's clothes, and
 //     the recipient sees only the text it carries.
 //   - A form posts a recipient's answer to whoever the sender named.
+//
+// A signature keeps its sender's https images. The product owner decided this
+// so a pasted mail-client signature shows its logo. The image is the same for
+// every recipient of every message, so it counts opens but cannot tell one
+// recipient from another. A body is written per recipient, so it keeps the
+// strip.
 //
 // The rule is an ALLOWLIST, because the failure of a denylist is silent: an
 // element nobody thought of arrives intact, and nothing says so. What survives
@@ -35,7 +42,6 @@ package activities
 
 import (
 	"fmt"
-	"regexp"
 	"strings"
 
 	"golang.org/x/net/html"
@@ -78,17 +84,17 @@ func SanitizeOutboundHTML(markup string) (string, error) {
 }
 
 // sanitizePolicy is what one kind of outbound markup may carry beyond the
-// shared element list.
+// shared element list. The zero value is the message body's rule.
 type sanitizePolicy struct {
-	// styledSpans admits <span> with a colour and a size, which a signature
-	// template is styled with and a message body is not.
-	styledSpans bool
+	// extra are the elements kept beyond allowedElements, each with the
+	// attributes it may carry.
+	extra map[atom.Atom]attributeRules
+	// styled keeps the allowlisted declarations of a style attribute on every
+	// element kept.
+	styled bool
 }
 
-var (
-	bodyPolicy      = sanitizePolicy{}
-	signaturePolicy = sanitizePolicy{styledSpans: true}
-)
+var bodyPolicy = sanitizePolicy{}
 
 func sanitizeHTML(markup string, policy sanitizePolicy) (string, error) {
 	if strings.TrimSpace(markup) == "" {
@@ -131,30 +137,19 @@ func writeSanitizedElement(out *strings.Builder, node *html.Node, policy sanitiz
 	if droppedWholesale[node.DataAtom] {
 		return
 	}
-	styled := policy.styledSpans && node.DataAtom == atom.Span
-	if policy.styledSpans && node.DataAtom == atom.Img {
-		// The one image a signature may show is the embedded logo. Any other
-		// image, a remote one above all, is dropped with nothing to unwrap.
-		if embeddedLogo(node) {
-			out.WriteString(signatureLogoTag)
-		}
+	rules, extra := policy.extra[node.DataAtom]
+	if extra && node.DataAtom == atom.Img {
+		writeSignatureImage(out, node, rules)
 		return
 	}
-	if !allowedElements[node.DataAtom] && !styled {
+	if !allowedElements[node.DataAtom] && !extra {
 		separator := ""
-		if policy.styledSpans {
-			if textBlocks[node.DataAtom] {
-				separator = "<br>"
-			}
-			if node.DataAtom == atom.Td || node.DataAtom == atom.Th {
-				separator = " "
-			}
+		if policy.styled && textBlocks[node.DataAtom] {
+			separator = "<br>"
 		}
 		out.WriteString(separator)
 		writeChildren(out, node, policy)
-		if separator != " " {
-			out.WriteString(separator)
-		}
+		out.WriteString(separator)
 		return
 	}
 	tag := node.Data
@@ -162,8 +157,11 @@ func writeSanitizedElement(out *strings.Builder, node *html.Node, policy sanitiz
 	if href, ok := safeHref(node); ok {
 		out.WriteString(` href="` + html.EscapeString(href) + `"`)
 	}
-	if style := safeStyle(node); styled && style != "" {
-		out.WriteString(` style="` + html.EscapeString(style) + `"`)
+	writeAttributes(out, node, rules)
+	if policy.styled {
+		if style := safeStyle(node); style != "" {
+			out.WriteString(` style="` + html.EscapeString(style) + `"`)
+		}
 	}
 	out.WriteString(">")
 	if !voidElement[node.DataAtom] {
@@ -182,7 +180,7 @@ func writeChildren(out *strings.Builder, node *html.Node, policy sanitizePolicy)
 // stray </br> in the message.
 var voidElement = map[atom.Atom]bool{atom.Br: true, atom.Hr: true}
 
-// safeHref answers the one attribute that survives, and only on a link.
+// safeHref answers the one attribute a message body keeps, and only on a link.
 //
 // http and https only, and mailto because a business email links an address as
 // often as a page. Everything else — javascript:, data:, file:, a scheme
@@ -206,44 +204,4 @@ func safeHref(node *html.Node) (string, bool) {
 		return "", false
 	}
 	return "", false
-}
-
-// styleColor and styleSize are the only declarations a styled span keeps: a
-// colour as hex or a plain name, and a size in pixels. Anything else in a
-// style attribute, url() included, is dropped.
-var (
-	styleColor = regexp.MustCompile(`^#[0-9a-fA-F]{3,6}$|^[a-zA-Z]{3,20}$`)
-	styleSize  = regexp.MustCompile(`^([89]|[12][0-9]|3[0-2])px$`)
-)
-
-func safeStyle(node *html.Node) string {
-	var kept []string
-	for _, attr := range node.Attr {
-		if !strings.EqualFold(attr.Key, "style") {
-			continue
-		}
-		for decl := range strings.SplitSeq(attr.Val, ";") {
-			prop, value, ok := strings.Cut(decl, ":")
-			if !ok {
-				continue
-			}
-			prop, value = strings.ToLower(strings.TrimSpace(prop)), strings.TrimSpace(value)
-			switch {
-			case prop == "color" && !strings.EqualFold(value, "transparent") && styleColor.MatchString(value):
-				kept = append(kept, "color:"+value)
-			case prop == "font-size" && styleSize.MatchString(value):
-				kept = append(kept, "font-size:"+value)
-			}
-		}
-	}
-	return strings.Join(kept, ";")
-}
-
-func embeddedLogo(node *html.Node) bool {
-	for _, attr := range node.Attr {
-		if strings.EqualFold(attr.Key, "src") && attr.Val == signatureLogoSrc {
-			return true
-		}
-	}
-	return false
 }

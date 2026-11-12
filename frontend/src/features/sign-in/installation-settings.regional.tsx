@@ -49,7 +49,7 @@ export function RegionalSettingsFields({
   locks?: InstallationSettings["locks"];
   draft: InstallationSettings;
   canManage: boolean;
-  refused: Map<string, string>;
+  refused: ReadonlyMap<string, string>;
   onChange: (next: InstallationSettings) => void;
 }>) {
   const t = useT();

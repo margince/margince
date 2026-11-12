@@ -41,7 +41,7 @@ type BackendOptions = {
   locked?: boolean;
   lockedReason?: string;
   /** What the server refuses the PATCH with, as an RFC-7807 validation body. */
-  refuse?: { field: string; code: string; message: string }[];
+  refuse?: { field: string; code: string; message: string; max?: number }[];
   /** The settings a boot source sets, as the read reports them. */
   locks?: unknown[];
 };
@@ -477,6 +477,7 @@ describe("InstallationSettingsCard", () => {
           field: "timezone",
           code: "too_long",
           message: "That zone is too long.",
+          max: 64,
         },
       ],
     });
@@ -488,12 +489,16 @@ describe("InstallationSettingsCard", () => {
     await user.type(zone, "/Extra");
     await user.click(within(dialog).getByRole("button", { name: /^save$/i }));
 
-    const refusal = await screen.findByText("That zone is too long.");
+    const refusal = await screen.findByText(
+      "This value is at most 64 characters.",
+    );
     // One occurrence, and it is the FIELD's. A refusal drawn on the input AND
     // repeated in a paragraph below states one problem twice, and the paragraph
     // is the copy a reader learns to skip — so the blanket summary carries only
     // what no field claimed.
-    expect(screen.getAllByText("That zone is too long.")).toHaveLength(1);
+    expect(
+      screen.getAllByText("This value is at most 64 characters."),
+    ).toHaveLength(1);
     expect(refusal.className).toContain("field-error");
     expect(screen.getAllByRole("alert")).toHaveLength(1);
   });

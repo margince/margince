@@ -23,7 +23,8 @@ run() {
 }
 
 row() { echo "    home_budget_bench_test.go:90: home-budget: row $1 p50=$2ms p95=$3ms budget=500ms samples=10 5xx=0 422=0"; }
-vitals() { echo "bench-home: vitals day_paint_p50_ms=$1 day_paint_p95_ms=$2 cls_p95=$3 samples=5"; }
+vitals_lcp() { echo "bench-home: vitals lcp_p95_ms=$1 day_paint_p50_ms=$2 day_paint_p95_ms=$3 cls_p95=$4 samples=5"; }
+vitals() { vitals_lcp 800 "$1" "$2" "$3"; }
 
 base="$(row home_cold_worklist 400 450; vitals 800 900 0.010)"
 
@@ -70,6 +71,10 @@ if run "$(row home_cold_worklist 400 450; vitals 800 1300 0.010)" "$base"; then
   fail "a day paint p95 400 ms over the base passed"
 fi
 
+if run "$(row home_cold_worklist 400 450; vitals_lcp 1300 800 900 0.010)" "$base"; then
+  fail "an LCP p95 500 ms over the base passed"
+fi
+
 if run "$(row home_cold_worklist 400 450; vitals 800 900 0.080)" "$base"; then
   fail "a CLS 0.07 over the base passed"
 fi
@@ -77,6 +82,12 @@ fi
 if run "" "$base"; then
   fail "a change that measured nothing passed"
 fi
+
+if run "$(row home_cold_worklist 400 450)" "$base"; then
+  fail "a change that stopped printing browser vitals passed"
+fi
+grep -q 'lcp.p95 | 800 | — | — | \*\*missing\*\*' "$TMP/out" ||
+  fail "a base-only metric was not shown as missing: $(cat "$TMP/out")"
 
 if [[ "$FAILURES" -gt 0 ]]; then
   echo "home-budget-compare.test: $FAILURES failure(s)" >&2

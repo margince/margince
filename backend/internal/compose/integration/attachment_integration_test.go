@@ -22,6 +22,7 @@ import (
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/privacy"
+	"github.com/margince/margince/backend/internal/modules/search"
 	"github.com/margince/margince/backend/internal/platform/blobstore"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -340,7 +341,7 @@ func TestErasurePurgesAttachmentObjects(t *testing.T) {
 		t.Fatalf("precondition: uploaded object should exist: %v", gerr)
 	}
 
-	eraser := privacy.NewEraser(e.DB()).WithBlobstore(blob)
+	eraser := privacy.NewEraser(e.DB()).WithEdgeInvalidator(search.RecomputeEdgesForActivities).WithBlobstore(blob)
 	if err := eraser.EraseContact(ctx, contact, "test-erasure"); err != nil {
 		t.Fatalf("EraseContact: %v", err)
 	}
@@ -368,7 +369,7 @@ func TestErasureWithoutStoreRollsBackRatherThanHalfErasing(t *testing.T) {
 	// api stored objects but the worker running erasure has no store. Erasing
 	// a subject whose attachments have objects must FAIL and roll back, never
 	// commit a half-erasure that strands the bytes with their keys deleted.
-	eraser := privacy.NewEraser(e.DB())
+	eraser := privacy.NewEraser(e.DB()).WithEdgeInvalidator(search.RecomputeEdgesForActivities)
 	if err := eraser.EraseContact(ctx, contact, "misconfig"); err == nil {
 		t.Fatal("EraseContact succeeded with objects present but no store configured — half-erasure risk")
 	}

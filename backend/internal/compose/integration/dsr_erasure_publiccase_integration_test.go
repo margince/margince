@@ -29,6 +29,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/modules/consent"
 	"github.com/margince/margince/backend/internal/modules/privacy"
+	"github.com/margince/margince/backend/internal/modules/search"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
@@ -82,7 +83,7 @@ func TestFulfillingAnErasureCaseTheSubjectOpenedCompletes(t *testing.T) {
 	contactID := e.SeedContact(t, "Self-Requesting Subject", nil)
 	caseID := seedSubmissionBackedErasureCase(t, e, contactID)
 
-	h := consent.NewHandlers(e.DB()).WithEraser(privacy.NewEraser(e.DB()))
+	h := consent.NewHandlers(e.DB()).WithEraser(privacy.NewEraser(e.DB()).WithEdgeInvalidator(search.RecomputeEdgesForActivities))
 
 	done := make(chan int, 1)
 	go func() {

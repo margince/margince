@@ -2,11 +2,9 @@
 # Deploy Margince on your own servers
 
 Keep deployment domains, secrets and platform manifests in the repository that holds your deployment.
-For a Linux server without containers, use [install-on-a-server.md](install-on-a-server.md); for every
-role on one host, use [run-with-docker-compose.md](run-with-docker-compose.md).
+For a Linux server without containers, use [install-on-a-server.md](install-on-a-server.md); for every role on one host, use [run-with-docker-compose.md](run-with-docker-compose.md).
 For what each container image expects, use [run-from-container-images.md](run-from-container-images.md); to watch it once it runs, use [watch-an-installation](../operations/observability.md).
-See [self-hosting](../explanation/self-hosting.md) for the role layout and
-[configuration](../reference/configuration.md) for settings.
+See [self-hosting](../explanation/self-hosting.md) for the role layout and [configuration](../reference/configuration.md) for settings.
 
 ## The least production needs
 
@@ -64,13 +62,14 @@ The release workflow refuses to publish a set stamped `dev` or nothing at all (`
 
 ## Bootstrap the database once
 
-Margince needs two Postgres roles. Neither may be a superuser or hold `BYPASSRLS`: the api refuses to
-serve on an exempt runtime role.
+Margince needs two Postgres roles that serve and migrate, and a third that only limits extension SQL.
+None may be a superuser or hold `BYPASSRLS`: the api refuses to serve on an exempt runtime role.
 
 - **`margince_owner`** owns the database + tables, runs migrations (DDL) and the custom-fields runtime-DDL pool.
-- **`margince_app`** is the runtime role the api + worker connect as. Its table grants are applied by the
-  `0001_baseline` migration, which skips them unless the role already exists. So create the role *before* the
-  first migration runs.
+- **`margince_app`** is the runtime role the api + worker connect as. The `0001_baseline` migration grants
+  its tables only if the role exists, so create the role *before* the first migration runs.
+- **`ext_runtime`** (`NOLOGIN`) runs an extension's SQL and holds only the `ext` schema. An older database
+  needs it once: [Add `ext_runtime` to an older database](install-on-a-server.md#add-ext_runtime-to-an-older-database).
 
 Create the roles + database + extensions **once**, as a Postgres superuser. pgvector is not a "trusted" extension,
 so a non-superuser cannot install it from a migration:
@@ -105,26 +104,24 @@ To give the token to Margince, do one of these on both `cmd/api` and `cmd/worker
   `${file:/run/secrets/margince-license}`.
 - Set `MARGINCE_LICENSE`. A container that sets it needs no `license:` block.
 
-After the first boot, the api's `/metrics`, read with the `--metrics-token` bearer credential,
-reports `margince_license_posture{state="valid"} 1`. What each posture does at boot is in
+After the first boot, the api's `/metrics`, read with the `--metrics-token` bearer credential, reports
+`margince_license_posture{state="valid"} 1`. What each posture does at boot is in
 [License](../reference/storage-secrets-and-license.md#license).
 
 ## Set the environment
 
-The images bake in **no** instance configuration. All settings come from the runtime environment,
-and every setting has a variable, while only some have a flag. Most variables start with
-`MARGINCE_`, and the AI provider keys keep their vendor names, such as `ANTHROPIC_API_KEY`. Set at least the
-[least production needs](#the-least-production-needs). The entrypoint reads the two DSNs and the admin
-password itself; see [What the image entrypoint reads](../reference/programs.md#what-the-image-entrypoint-reads-api-and-worker).
+The images bake in **no** instance configuration. All settings come from the runtime environment, and every setting
+has a variable, while only some have a flag. Most variables start with `MARGINCE_`, and the AI provider keys keep
+their vendor names, such as `ANTHROPIC_API_KEY`. Set at least the [least production
+needs](#the-least-production-needs). The entrypoint reads the two DSNs and the admin password itself; see [What the
+image entrypoint reads](../reference/programs.md#what-the-image-entrypoint-reads-api-and-worker).
 
-The annotated env template is [`.env.example`](../../.env.example). To check the configuration before a
-rollout, and to see which settings the app shows as locked, read
-[change-a-setting.md](change-a-setting.md). Check it with the api and the worker: each checks only
-the settings it reads.
+The annotated env template is [`.env.example`](../../.env.example). To check the configuration before a rollout, and
+to see which settings the app shows as locked, read [change-a-setting.md](change-a-setting.md). Check it with the api
+and the worker: each checks only the settings it reads.
 
-Do **not** set `MARGINCE_ENV=dev` in a deployed environment. It decides which license authorities are
-honoured, and lets the installation run with no license (see
-[License](../reference/storage-secrets-and-license.md#license)).
+Do **not** set `MARGINCE_ENV=dev` in a deployed environment. It decides which license authorities are honoured, and
+lets the installation run with no license (see [License](../reference/storage-secrets-and-license.md#license)).
 
 ## Write the first-boot config
 
@@ -230,11 +227,14 @@ Both services sit behind one reverse proxy / ingress, under **one host**:
 | `/oauth/`, `/mcp`, `/.well-known/oauth-authorization-server`, `/.well-known/oauth-protected-resource` (and its `/mcp`-suffixed form) | api (present only with the MCP connector declared) |
 | everything else, `/` included | web (the SPA, port 8080) |
 
-Route the OAuth metadata documents and `security.txt` by those full paths. Do not use a
-`/.well-known/*` prefix. They are the only things the api serves under `/.well-known`, and a prefix
-rule takes `/.well-known/acme-challenge/…` away from whatever answers your certificate challenges.
-The webhook row is the api's because the caller is the provider. Each handler verifies its own push,
-so the SPA cannot stand in for it.
+Route the OAuth metadata documents and `security.txt` by those full paths. Do not use a `/.well-known/*` prefix. They
+are the only things the api serves under `/.well-known`, and a prefix rule takes `/.well-known/acme-challenge/…` away
+from whatever answers your certificate challenges. The webhook row is the api's because the caller is the provider.
+Each handler verifies its own push, so the SPA cannot stand in for it.
+
+Set [`MARGINCE_TRUSTED_PROXIES`](../reference/configuration.md) on the api to your proxies' own addresses. Left unset, every
+per-client limit, sign-in and `/mcp` included, is one limit all callers share. A caller inside a listed range is read as a
+proxy and can pick its own limit. Each proxy must add its peer to `X-Forwarded-For` (nginx `$proxy_add_x_forwarded_for`).
 
 Why a split host breaks the app, MCP discovery and the consent flow is in
 [One host](../explanation/self-hosting.md#one-host).

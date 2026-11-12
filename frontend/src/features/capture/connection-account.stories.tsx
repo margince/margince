@@ -234,6 +234,41 @@ export const ReadOnlyCalendarDark: Story = {
   render: accountStory([gmail, readOnlyGcal]),
 };
 
+// Google's meeting notes, read from Docs on their own consent: connected, and
+// granted without the Docs scope, which asks for the notes consent again.
+const gdocs: CaptureConnection = {
+  ...gcal,
+  id: "018f3a1b-0000-7000-8000-0000000000cd",
+  provider: "gdocs",
+  scopes: [
+    "https://www.googleapis.com/auth/documents.readonly",
+    "https://www.googleapis.com/auth/userinfo.email",
+  ],
+};
+
+const gdocsNoRead: CaptureConnection = {
+  ...gdocs,
+  scopes: ["https://www.googleapis.com/auth/userinfo.email"],
+};
+
+export const MeetingNotes: Story = {
+  render: accountStory([gmail, gcal, gdocs]),
+};
+
+export const MeetingNotesDark: Story = {
+  globals: { theme: "dark" },
+  render: accountStory([gmail, gcal, gdocs]),
+};
+
+export const MeetingNotesCannotRead: Story = {
+  render: accountStory([gmail, gcal, gdocsNoRead]),
+};
+
+export const MeetingNotesCannotReadDark: Story = {
+  globals: { theme: "dark" },
+  render: accountStory([gmail, gcal, gdocsNoRead]),
+};
+
 export const CalendarMissing: Story = {
   render: accountStory([{ ...gmail, backfill: { state: "none" } }]),
 };

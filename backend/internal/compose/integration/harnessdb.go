@@ -9,6 +9,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/margince/margince/backend/internal/compose/installseam"
+	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/modules/deals"
@@ -59,5 +60,5 @@ func (e *Env) DealsFor(ws ids.UUID) *deals.Store {
 // ContactsFor is DealsFor for the contacts module; see its doc for why the second
 // tenant needs a store of its own.
 func (e *Env) ContactsFor(ws ids.UUID) *contacts.Store {
-	return contacts.NewStore(e.DBFor(ws)).WithConsumerMail(capture.MatcherTx)
+	return contacts.NewStore(e.DBFor(ws)).WithSenderStamp(activities.StampProvenSendersTx).WithConsumerMail(capture.MatcherTx)
 }

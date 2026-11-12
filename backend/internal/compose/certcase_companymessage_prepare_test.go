@@ -138,7 +138,7 @@ func TestCompanyMessageCaseRefusesAFixtureProductionCouldNotProduce(t *testing.T
 			fixture := companyMessageFixture()
 			tc.mutate(&fixture)
 			_, err := onboardingCompanyMessageCases{}.Prepare(
-				companyMessageFixtureJSON(t, fixture), companyMessageNameExpectation(t),
+				fixtureJSON(t, fixture), companyMessageNameExpectation(t),
 			)
 			if err == nil {
 				t.Fatal("a fixture production could not produce prepared")
@@ -156,7 +156,7 @@ func TestCompanyMessageCaseRefusesAFixtureProductionCouldNotProduce(t *testing.T
 // mean the same thing to a corpus author.
 func TestCompanyMessageCaseTakesACompletedDraftWithNoPlanLeft(t *testing.T) {
 	prepared, err := onboardingCompanyMessageCases{}.Prepare(
-		companyMessageFixtureJSON(t, companyMessageChangeRequestFixture()),
+		fixtureJSON(t, companyMessageChangeRequestFixture()),
 		companyMessageExpectationJSON(t, "correction", map[string]string{fieldIndustry: "Robotics manufacturing"}),
 	)
 	if err != nil {
@@ -241,7 +241,7 @@ func TestCompanyMessageCaseRefusesAnUnreachableExpectation(t *testing.T) {
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
 			_, err := onboardingCompanyMessageCases{}.Prepare(
-				companyMessageFixtureJSON(t, tc.fixture), companyMessageExpectationJSON(t, tc.kind, tc.changes),
+				fixtureJSON(t, tc.fixture), companyMessageExpectationJSON(t, tc.kind, tc.changes),
 			)
 			if err == nil {
 				t.Fatal("an unreachable expectation prepared")
@@ -263,7 +263,7 @@ func TestCompanyMessageCaseRefusesAnExpectationItCannotRead(t *testing.T) {
 		json.RawMessage(`{"kind":"correction","proposed_changes":{"display_name":"Acme Robotics"}}`),
 	} {
 		_, err := onboardingCompanyMessageCases{}.Prepare(
-			companyMessageFixtureJSON(t, companyMessageFixture()), expected)
+			fixtureJSON(t, companyMessageFixture()), expected)
 		if err == nil {
 			t.Fatalf("a scenario expecting %s prepared", expected)
 		}

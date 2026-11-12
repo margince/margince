@@ -14,12 +14,15 @@ import (
 	"fmt"
 	"maps"
 	"slices"
+	"strconv"
 	"strings"
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/platform/sweepreach"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/pkg/extension/privacy"
+	"github.com/margince/margince/backend/pkg/extension/reach"
 )
 
 // Schema is where every extension table lives.
@@ -60,13 +63,30 @@ type linkedColumn struct {
 	column string
 }
 
-// CountDependents counts the rows of every declared table that name the record.
+// CountDependents counts the rows of every declared table that name the record
+// and that a merge of it would leave behind. A link column the unit also
+// declares in its Reach is one the merge moves onto the survivor
+// (sweepreach.Relink). Its moved rows are left out of the count, so they do not
+// refuse the merge. For a kind-column link, the rows of another kind still count.
 func (r Registry) CountDependents(ctx context.Context, tx pgx.Tx, kind privacy.RecordKind, id ids.UUID) (int64, error) {
+	merged := reach.Record(kind)
+	moved, err := sweepreach.MovedColumns(merged)
+	if err != nil {
+		return 0, fmt.Errorf("extprivacy: reading which columns the merge moves: %w", err)
+	}
 	var total int64
 	for _, lc := range r.linked(kind) {
-		var n int64
 		q := "SELECT count(*) FROM " + qualified(lc.table.Name) + " WHERE " + pgx.Identifier{lc.column}.Sanitize() + " = $1"
-		if err := tx.QueryRow(ctx, q, id).Scan(&n); err != nil {
+		args := []any{id}
+		if m, ok := moved[sweepreach.Column{Schema: Schema, Table: lc.table.Name, Name: lc.column}]; ok {
+			if m.KindColumn == "" {
+				continue
+			}
+			args = append(args, string(merged))
+			q += " AND " + pgx.Identifier{m.KindColumn}.Sanitize() + " IS DISTINCT FROM $" + strconv.Itoa(len(args))
+		}
+		var n int64
+		if err := tx.QueryRow(ctx, q, args...).Scan(&n); err != nil {
 			return 0, fmt.Errorf("extprivacy: counting rows of %s that name the record: %w", lc.table.Name, err)
 		}
 		total += n
@@ -92,7 +112,7 @@ func (r Registry) forEachLink(subjects map[privacy.RecordKind][]ids.UUID, visit 
 }
 
 // Clear overwrites the personal columns of every row that names one of the
-// records, and returns the rows it cleared. A nullable column becomes NULL; a
+// records, and returns the rows it cleared. A row linked to a held record stays. A nullable column becomes NULL; a
 // required one takes the empty value of its type. A row already blank is left
 // alone, so paths that reach one row twice certify it once.
 func (r Registry) Clear(ctx context.Context, tx pgx.Tx, subjects map[privacy.RecordKind][]ids.UUID) ([]Cleared, error) {
@@ -130,8 +150,9 @@ func (r Registry) Clear(ctx context.Context, tx pgx.Tx, subjects map[privacy.Rec
 // clearLinked runs the clearing UPDATE for one link column and returns the rows
 // it touched.
 func clearLinked(ctx context.Context, tx pgx.Tx, lc linkedColumn, set clearing, records []ids.UUID) ([]Cleared, error) {
-	rows, err := tx.Query(ctx, "UPDATE "+qualified(lc.table.Name)+" SET "+set.assignments+
-		" WHERE "+pgx.Identifier{lc.column}.Sanitize()+" = ANY($1) AND ("+set.notBlank+") RETURNING id", records)
+	rows, err := tx.Query(ctx, "UPDATE "+qualified(lc.table.Name)+" t SET "+set.assignments+
+		" WHERE t."+pgx.Identifier{lc.column}.Sanitize()+" = ANY($1) AND ("+set.notBlank+") AND NOT "+heldSQL(lc.table)+
+		" RETURNING t.id", records)
 	if err != nil {
 		return nil, fmt.Errorf("extprivacy: clearing %s: %w", lc.table.Name, err)
 	}

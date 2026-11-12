@@ -52,9 +52,16 @@ func ChatImageMIMEs() []string {
 
 // ChatCaptureError is one refused confirm. Field names the request field the
 // caller fixes; it is empty when nothing in the request can fix it.
-type ChatCaptureError struct{ Field, Code, Message string }
+type ChatCaptureError struct {
+	Field, Code, Message string
+	// Max is the limit a too_long refusal names.
+	Max int
+}
 
 func (e *ChatCaptureError) Error() string { return e.Message }
+
+// FieldMax is the limit the refusal names; zero states none.
+func (e *ChatCaptureError) FieldMax() int { return e.Max }
 
 // FieldFault answers 422 naming the field, when there is one.
 func (e *ChatCaptureError) FieldFault() (field, code, message string) {
@@ -118,7 +125,7 @@ func (s *Store) FileChatCapture(ctx context.Context, in ChatCaptureFiling) (ids.
 	}
 	if utf8.RuneCountInString(in.Body) > MaxChatText {
 		return ids.UUID{}, &ChatCaptureError{
-			Field: fieldBody, Code: "too_long",
+			Field: fieldBody, Code: "too_long", Max: MaxChatText,
 			Message: fmt.Sprintf("a chat holds at most %d characters; shorten the text", MaxChatText),
 		}
 	}

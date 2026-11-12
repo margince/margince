@@ -23,6 +23,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/kernel/signature"
 )
 
 func retainedSignatureFixture(t *testing.T) (*integration.Env, *contacts.Store, ids.UUID) {
@@ -160,23 +161,46 @@ func TestTheControllerReviewRouteNamesTheRetainedSignature(t *testing.T) {
 
 func TestTheRetainedSignaturePreviewUsesTheMailSanitizer(t *testing.T) {
 	e, _, id := retainedSignatureFixture(t)
-	markup := `<p>Retained words</p><img src="https://tracker.test/pixel"><script>window.alert(1)</script>`
+	markup := `<p>Retained words</p><img src="http://tracker.test/pixel"><img src="https://cdn.example/logo.png" alt="Company A"><script>window.alert(1)</script>`
 	if _, err := contacts.NewStore(InstallationDB(e.Pool)).SaveMyEmailSignature(e.As(e.Rep1, []ids.UUID{e.Team1}, integration.SchedulerPerms), contacts.SaveSignatureInput{Body: "Original personal text", HTML: &markup}); err != nil {
 		t.Fatal(err)
 	}
 	deactivateSignatureOwner(t, e)
 	read := httptest.NewRecorder()
-	server := crmcontracts.Handler(Server{contactsHandlers: newContactsHandlers(e.Pool)})
+	images := newSignaturePreviewImages(newFakeAssets(t), previewClock(t))
+	server := crmcontracts.Handler(Server{contactsHandlers: newContactsHandlers(e.Pool).WithSignatureImages(images)})
 	server.ServeHTTP(read, httptest.NewRequest(http.MethodGet, "/privacy/retained-signatures/"+id.String(), nil).WithContext(e.Admin()))
-	var signature crmcontracts.RetainedEmailSignature
-	if err := json.Unmarshal(read.Body.Bytes(), &signature); err != nil {
+	var retained crmcontracts.RetainedEmailSignature
+	if err := json.Unmarshal(read.Body.Bytes(), &retained); err != nil {
 		t.Fatal(err)
 	}
-	if read.Code != http.StatusOK || signature.Signature.Html != markup {
-		t.Fatalf("the stored source was changed: %d %+v", read.Code, signature)
+	if read.Code != http.StatusOK || retained.Signature.Html != markup {
+		t.Fatalf("the stored source was changed: %d %+v", read.Code, retained)
 	}
-	if signature.PreviewHtml == nil || !strings.Contains(*signature.PreviewHtml, "Retained words") || strings.Contains(*signature.PreviewHtml, "tracker.test") || strings.Contains(*signature.PreviewHtml, "<script") {
-		t.Fatalf("unsafe or absent preview: %+v", signature.PreviewHtml)
+	if retained.PreviewHtml == nil || !strings.Contains(*retained.PreviewHtml, "Retained words") || strings.Contains(*retained.PreviewHtml, "tracker.test") || strings.Contains(*retained.PreviewHtml, "<script") {
+		t.Fatalf("unsafe or absent preview: %+v", retained.PreviewHtml)
+	}
+	if !strings.Contains(*retained.PreviewHtml, `<img src="data:image/png;base64,`) || strings.Contains(*retained.PreviewHtml, "cdn.example") {
+		t.Fatalf("the preview does not draw the https image from a copy: %s", *retained.PreviewHtml)
+	}
+}
+
+func TestARetainedSignatureReviewTakesHTMLUpToTheSharedCap(t *testing.T) {
+	e, store, id := retainedSignatureFixture(t)
+	deactivateSignatureOwner(t, e)
+	shown, err := store.GetRetainedSignature(e.Admin(), id)
+	if err != nil {
+		t.Fatal(err)
+	}
+	atCap := "<p>" + strings.Repeat("界", signature.MaxHTMLRunes-7) + "</p>"
+	saved, err := store.SaveRetainedSignature(e.Admin(), id, shown.Version, contacts.SaveSignatureInput{Body: "Reviewed", HTML: &atCap})
+	if err != nil || saved.Signature.HTML != atCap {
+		t.Fatalf("save at the cap: %v", err)
+	}
+	overCap := atCap + "界"
+	var limit *contacts.SignatureTooLongError
+	if _, err := store.SaveRetainedSignature(e.Admin(), id, saved.Version, contacts.SaveSignatureInput{Body: "Reviewed", HTML: &overCap}); !errors.As(err, &limit) || limit.Field != "html" || limit.Runes != signature.MaxHTMLRunes+1 {
+		t.Fatalf("save over the cap: %v", err)
 	}
 }
 

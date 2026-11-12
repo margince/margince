@@ -11,6 +11,7 @@ import {
   healthBadge,
   isConnectedAtAll,
   isUnhealthy,
+  missingMeetingNotesGrant,
   missingSendGrant,
   needsReconnect,
   serviceBadge,
@@ -144,6 +145,7 @@ const FULL_GRANT = [
   "https://www.googleapis.com/auth/calendar.events",
   "Mail.Send",
   "Calendars.ReadWrite",
+  "https://www.googleapis.com/auth/documents.readonly",
 ];
 
 function service(
@@ -292,6 +294,16 @@ describe("accountHealth", () => {
     ).toBe("needs_attention");
   });
 
+  it("needs attention when the meeting notes cannot read the Docs", () => {
+    expect(
+      accountHealth({
+        mail: service("gmail"),
+        calendar: service("gcal"),
+        notes: service("gdocs", { scopes: ["email"] }),
+      }),
+    ).toBe("needs_attention");
+  });
+
   it("reads an account with no live service as not connected", () => {
     expect(accountHealth({ mail: null, calendar: null })).toBe("not_connected");
     expect(
@@ -318,6 +330,16 @@ describe("a service's one badge and one reason", () => {
     const calendar = service("gcal", { scopes: ["read"] });
     expect(serviceBadge(calendar).label).toBe("scheduling.readOnlyBadge");
     expect(serviceReason(calendar)).toBe("scheduling.readOnlyCalendar");
+  });
+
+  it("names meeting notes Google was refused the Docs for", () => {
+    const notes = service("gdocs", { scopes: ["email"] });
+    expect(serviceBadge(notes).label).toBe("connectors.cannotReadNotes");
+    expect(serviceReason(notes)).toBe("connectors.reconnectToReadNotes");
+    expect(needsReconnect(notes)).toBe(true);
+    expect(missingMeetingNotesGrant(service("gcal", { scopes: [] }))).toBe(
+      false,
+    );
   });
 
   it("lets a refused grant outrank a narrow one, and says why", () => {

@@ -72,6 +72,10 @@ const pinnedZones: { file: string; why: string }[] = [
     why: "Pins the reader's zone so a meeting's times read the same on every runner: the lines under test print hours, and the runner's own zone would move them.",
   },
   {
+    file: "features/worklist/worklist.happened.test.ts",
+    why: "Pins the reader and record zone to UTC, so a fact at a fixed instant names the same day on every runner, whatever its own zone.",
+  },
+  {
     file: "app/agentrail.month.test.tsx",
     why: "Proves the rail asks for the reader's month, not UTC's: only a reader zone already past midnight while UTC is not tells the two apart, and UTC is named to show the boundary is real.",
   },
@@ -590,7 +594,7 @@ const pinnedZones: { file: string; why: string }[] = [
     why: "A day entry's noon UTC is the next date in UTC+14; only that zone shows the tile counts from and names the date the entry holds.",
   },
   {
-    file: "features/contacts/contactmeetings.held.stories.tsx",
+    file: "components/meetingsheld.stories.tsx",
     why: "A day entry's noon UTC is the next date in UTC+14; only that zone shows the table dates a held meeting by the date it names.",
   },
 ];
