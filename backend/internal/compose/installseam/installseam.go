@@ -135,8 +135,7 @@ func ProjectDealLink(store *deals.Store) (projects.CheckDeal, projects.AttachDea
 		}
 		// The version read above, so a link made in between is not overwritten.
 		_, err = store.UpdateDealTx(ctx, tx, dealID, deals.UpdateDealInput{ProjectID: &projectID, IfVersion: deal.Version}, deals.CustomColumns{})
-		var mismatch *deals.DealProjectCompanyMismatchError
-		if errors.As(err, &mismatch) {
+		if _, mismatch := errors.AsType[*deals.DealProjectCompanyMismatchError](err); mismatch {
 			return &projects.DealCompanyMismatchError{}
 		}
 		return auth.NameMissingReference("deal_id", err)
