@@ -88,7 +88,7 @@ export const taskFromCall = {
   }),
   due_at: "2026-07-06T13:00:00Z",
   source_activity_id: loggedCall.id,
-  task_type: "call",
+  task_type: "reach_out",
 };
 
 export const typedTask = {

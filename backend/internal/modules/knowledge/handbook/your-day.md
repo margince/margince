@@ -118,19 +118,16 @@ A meeting that starts within 2 hours is urgent until you are ready. Then it stay
 When the start time, the guests or the invite's agenda change, the row asks again. It names what changed, for example "Changed since you were ready: start time". A note you type into the meeting does not ask again. If it fails: "You were not marked ready. Retry." Also called: prepared, meeting prep, ready for the call.
 
 ### What can I do from a task?
-Every task has a type, and the type decides its one step. The type shows as a chip on the open task card on **Home**. Pick it under **Task type** when you add a task; **Write** is chosen until you change it.
+Every task has a type, and the type decides its one step. The type shows as a chip on the open task card on **Home**. Pick it under **Task type** when you add a task; **Reach out** is chosen until you change it. Tasks Margince makes get the type of the work that made them. An email request is a **Reply**; a new lead to check is a **Review**. A task made before types existed gets one the same way, and a task you typed by hand is a **Reach out**.
 
 | Type | The step |
 | --- | --- |
-| **Reply** | **Draft email** to the contact, to answer their message |
-| **Write** | **Draft email** to the task's contact, lead or company |
-| **Call** | The contact's number with **Copy number**, and **Call** |
+| **Reply** | Answers the way the message came in: **Draft email** for an email, the number and **Call** for a call. Any other reply offers both, as **Reach out** does. The other way is always there too: under the card's **More actions**, and in the task's details |
+| **Reach out** | **Draft email** to the task's contact, lead or company, then the contact's number with **Copy number** and **Call**. **Call** is the colour button when no email can be drafted |
 | **Meet** | **Book a meeting** with the task's contact |
 | **Review** | Opens the record to check, such as **Review lead** |
 | **Decide** | The deals the email may be about, as cards, and **Link email thread to deal** |
 | **Do** | No step of its own: **Done** is the step |
-
-Tasks Margince makes get the type of the work that made them. An email request is a **Reply**; a new lead to check is a **Review**. A task made before types existed gets one the same way, and a task you typed by hand is a **Write**.
 
 **Draft email** opens the composer already drafting a message about the task. With no connected mailbox it is **Email** and opens your own mail app. A task with no single contact drafts to its one open lead, or with none, to its one linked company. For a company the composer asks which contact it is for; a task on two open leads offers none. A task filed on a deal alone drafts to the deal's one contact, else to the deal's company. One on several contacts and no open lead drafts to the company they all work at now.
 
@@ -232,9 +229,7 @@ by who made it.
 
 When Margince reads old mail, it checks newer messages before it creates work. Work already done and offers to help create no new task. Neither does work that depends on something which has not happened yet. A request alone does not mean someone agreed to do it. **Commitment review** on the source shows why no task was made. Words such as "next week" set no due day; "this week" sets the last day the promiser works that week.
 
-A future deadline can keep an old promise current. If later context has not been read, Margince does not create the task.
-
-Check the quoted words and any later replies before adding a follow-up from the linked record. A task linked to the contact follows the automatic rule above, with **Undo**.
+A future deadline can keep an old promise current. If later context has not been read, Margince does not create the task. Check the quoted words and any later replies before adding a follow-up from the linked record. A task linked to the contact follows the automatic rule above, with **Undo**.
 
 A later reply on the promise's thread may keep a promise that rule did not close, such as a colleague's reply. Margince then asks **This may be done**, naming the day the email went out. Home, the Worklist, the contact page and the company page ask the same question. While they ask, the task is not shown as overdue. Choose **Done** or **Not yet**. **Not yet** shows the task as before on every page, until someone writes on the thread again.
 

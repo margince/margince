@@ -501,7 +501,10 @@ const ALICE = {
 };
 
 type NextStepsCase = Readonly<{
-  taskType?: "write" | "call";
+  /** A reply to a call answers by phone; reach out offers mail and phone. */
+  taskType?: "reach_out" | "reply_by_call";
+  /** The server names a mail target; by default only for reach out. */
+  mailTarget?: boolean;
   source?: Record<string, unknown> | null;
   contact?: Record<string, unknown>;
   links?: { entity_type: string; entity_id: string }[];
@@ -527,7 +530,8 @@ function serverTarget(
 }
 
 function stubNextSteps({
-  taskType = "write",
+  taskType = "reach_out",
+  mailTarget = taskType === "reach_out",
   source = { kind: "call", content_state: "available" },
   contact = ALICE,
   links = [{ entity_type: "contact", entity_id: "c-1" }],
@@ -546,11 +550,12 @@ function stubNextSteps({
         occurred_at: "2026-09-08T09:00:00Z",
         is_done: isDone,
         source_activity_id: source ? "src-1" : null,
-        task_type: taskType,
+        ...(taskType === "reach_out"
+          ? { task_type: "reach_out" }
+          : { task_type: "reply", reply_channel: "call" }),
         links,
         // The server names a mail target for a mail task only.
-        email_target:
-          taskType === "write" ? serverTarget(links, contact) : undefined,
+        email_target: mailTarget ? serverTarget(links, contact) : undefined,
       }),
     "GET /activities/src-1": () =>
       jsonResponse({
@@ -608,7 +613,7 @@ const describedBy = (control: HTMLElement) =>
 const openContact = () =>
   screen.queryByRole("link", { name: en["task.next.openContact"] });
 
-test("a write task offers Draft email and Open contact, and no Call", async () => {
+test("reach out offers Draft email, Open contact and an outlined Call", async () => {
   const user = userEvent.setup();
   const writeTo = vi.fn();
   stubNextSteps();
@@ -618,7 +623,7 @@ test("a write task offers Draft email and Open contact, and no Call", async () =
     name: en["task.next.draftEmail"],
   });
   expect(openContact()?.getAttribute("href")).toBe("/#/contacts/c-1");
-  expect(call()).toBeNull();
+  expect(call()?.classList.contains("btn-primary")).toBe(false);
   await user.click(draft);
   // The task steers the draft, so the mail is about what was owed.
   expect(writeTo).toHaveBeenCalledWith({
@@ -641,7 +646,7 @@ test("with no composer to open, Email hands the address to the mail client", asy
 
 test("a call task dials the primary number, not the first one listed", async () => {
   stubNextSteps({
-    taskType: "call",
+    taskType: "reply_by_call",
     contact: {
       ...ALICE,
       phones: [
@@ -661,12 +666,29 @@ test("a call task dials the primary number, not the first one listed", async () 
   ).toBeNull();
 });
 
+test("a reply to a call keeps Email beside Call in its details", async () => {
+  stubNextSteps({ taskType: "reply_by_call", mailTarget: true });
+  openTaskWith();
+
+  const dial = await screen.findByRole("link", {
+    name: en["record.verb.call"],
+  });
+  expect(dial.classList.contains("btn-primary")).toBe(true);
+  const email = await screen.findByRole("link", {
+    name: en["record.verb.email"],
+  });
+  expect(email.classList.contains("btn-primary")).toBe(false);
+  expect(
+    dial.compareDocumentPosition(email) & Node.DOCUMENT_POSITION_FOLLOWING,
+  ).toBeTruthy();
+});
+
 test.each([
   ["typed by hand", null],
   ["read out of a note", { kind: "note", content_state: "available" }],
   ["read out of a withheld call", { kind: "call", content_state: "withheld" }],
 ])("a call task %s offers Call", async (_, source) => {
-  stubNextSteps({ taskType: "call", source });
+  stubNextSteps({ taskType: "reply_by_call", source });
   openTaskWith();
 
   // Source visibility does not change the contact's callable number.
@@ -702,7 +724,7 @@ function countedContact(contact: Record<string, unknown>) {
 test("a call task whose contact has no phone gets no Call", async () => {
   const contact = countedContact({ ...ALICE, phones: [] });
   stubNextSteps({
-    taskType: "call",
+    taskType: "reply_by_call",
     routes: { "GET /contacts/c-1": contact.route },
   });
   openTaskWith();
@@ -743,7 +765,7 @@ test("an archived contact gets no Call on a call task", async () => {
     archived_at: "2026-09-01T00:00:00Z",
   });
   stubNextSteps({
-    taskType: "call",
+    taskType: "reply_by_call",
     routes: { "GET /contacts/c-1": contact.route },
   });
   openTaskWith();
@@ -767,17 +789,8 @@ test("a refused Draft email is said once, after every verb in the row", async ()
   expect(row?.lastElementChild).toBe(reasons[0]);
 });
 
-test.each([
-  ["no record", []],
-  [
-    "two contacts",
-    [
-      { entity_type: "contact", entity_id: "c-1" },
-      { entity_type: "contact", entity_id: "c-2" },
-    ],
-  ],
-])("a task linking %s offers no next steps", async (_, links) => {
-  stubNextSteps({ links });
+test("a task linking no record offers no next steps", async () => {
+  stubNextSteps({ links: [] });
   openTaskWith();
 
   await screen.findByText(/^Logged/);
@@ -789,9 +802,27 @@ test.each([
   expect(call()).toBeNull();
 });
 
+// Mail to two contacts has no one recipient, but a call goes to the first.
+test("reach out on two contacts drafts no mail and calls the first", async () => {
+  stubNextSteps({
+    links: [
+      { entity_type: "contact", entity_id: "c-1" },
+      { entity_type: "contact", entity_id: "c-2" },
+    ],
+  });
+  openTaskWith();
+
+  const dial = await screen.findByRole("link", {
+    name: en["record.verb.call"],
+  });
+  expect(dial.getAttribute("href")).toBe("tel:+49301234567");
+  expect(dial.classList.contains("btn-primary")).toBe(true);
+  expect(screen.queryByText(en["task.next.draftEmail"])).toBeNull();
+});
+
 test("a contact that stops being readable takes its verbs with it", async () => {
   let refused = false;
-  stubNextSteps({ taskType: "call", contactRefused: () => refused });
+  stubNextSteps({ taskType: "reply_by_call", contactRefused: () => refused });
   const client = new QueryClient({
     defaultOptions: { queries: { retry: false } },
   });
@@ -824,7 +855,7 @@ test.each([
   ["a done task", { isDone: true }, {}],
   ["a read-only dialog", {}, { readOnly: true }],
 ])("%s still offers the next steps", async (_, task, dialog) => {
-  stubNextSteps({ ...task, taskType: "call" });
+  stubNextSteps({ ...task, taskType: "reply_by_call" });
   openTaskWith(dialog);
 
   expect(
@@ -835,7 +866,7 @@ test.each([
 
 // The task, its call source and its contact already cached when the dialog opens.
 function openWarm({ isDone = false, readOnly = false } = {}) {
-  stubNextSteps({ isDone, taskType: "call" });
+  stubNextSteps({ isDone, taskType: "reply_by_call" });
   const client = new QueryClient({
     defaultOptions: { queries: { retry: false } },
   });
@@ -848,7 +879,8 @@ function openWarm({ isDone = false, readOnly = false } = {}) {
     is_done: isDone,
     source_activity_id: "src-1",
     writable: true,
-    task_type: "call",
+    task_type: "reply",
+    reply_channel: "call",
     links: [{ entity_type: "contact", entity_id: "c-1" }],
   });
   client.setQueryData(
@@ -941,7 +973,7 @@ test("Call logs the call inside the dialog, on the task's contact, and leaves th
   const posted: unknown[] = [];
   const patched: unknown[] = [];
   stubNextSteps({
-    taskType: "call",
+    taskType: "reply_by_call",
     routes: {
       "GET /me": meRoute({ activity: ["read", "create"] }, { seat: "full" }),
       "POST /activities": (body) => {

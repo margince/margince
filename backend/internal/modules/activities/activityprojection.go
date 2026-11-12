@@ -51,6 +51,8 @@ type activityScan struct {
 	// other kind and means nothing there.
 	dueHasTime bool
 	taskType   *string
+	// replyChannel is how the message a reply task answers came in.
+	replyChannel *string
 	// sourceActivityID is the activity this one was derived from — the meeting
 	// whose transcript proposed a task. Scanned as a typed id and mapped to the
 	// contract's openapi UUID, like the two above.
@@ -128,6 +130,7 @@ var activityProjection = []activityColumn{
 	{storekit.TaskDueSQL("a"), func(s *activityScan) any { return &s.a.DueAt }},
 	{"a.due_has_time", func(s *activityScan) any { return &s.dueHasTime }},
 	{storekit.TaskTypeSQL("a"), func(s *activityScan) any { return &s.taskType }},
+	{storekit.ReplyChannelSQL("a"), func(s *activityScan) any { return &s.replyChannel }},
 	{"a.remind_at", func(s *activityScan) any { return &s.a.RemindAt }},
 	{"a.assignee_id", func(s *activityScan) any { return &s.assigneeID }},
 	{"a.is_done", func(s *activityScan) any { return &s.a.IsDone }},
@@ -265,6 +268,9 @@ func (s *activityScan) record(ctx context.Context) crmcontracts.Activity {
 		a.DueHasTime = new(s.dueHasTime)
 		if s.taskType != nil {
 			a.TaskType = new(crmcontracts.TaskType(*s.taskType))
+		}
+		if s.replyChannel != nil {
+			a.ReplyChannel = new(crmcontracts.ActivityReplyChannel(*s.replyChannel))
 		}
 	}
 	// The meeting a task was read out of. A marker, not content: which record

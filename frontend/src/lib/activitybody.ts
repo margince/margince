@@ -256,8 +256,8 @@ const EMPTY_DRAFT: ActivityDraft = {
   time: "",
   asTranscript: false,
   assigneeId: "",
-  // A task a rep files on a record is most often a mail to write.
-  taskType: "write",
+  // A task a rep files on a record most often asks them to reach out.
+  taskType: "reach_out",
   callOutcome: "",
 };
 

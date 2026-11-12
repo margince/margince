@@ -33,7 +33,7 @@ const TASK: components["schemas"]["Activity"] = {
   subject: "Send Alice the renewal terms",
   occurred_at: "2026-09-08T09:00:00Z",
   is_done: false,
-  task_type: "write",
+  task_type: "reach_out",
   source_activity_id: "call-1",
   links: [{ entity_type: "contact", entity_id: "c-1" }],
   email_target: { entity_type: "contact", entity_id: "c-1" },
@@ -97,16 +97,24 @@ const offers = (name: string) => async () => {
 const CALL: components["schemas"]["Activity"] = {
   ...TASK,
   subject: "Call back Alice about the renewal",
-  task_type: "call",
+  task_type: "reply",
+  reply_channel: "call",
   email_target: undefined,
 };
 
-export const Write: Story = {
+/** Email first and filled, then the number and an outlined Call. */
+export const ReachOut: Story = {
   render: () => <Steps />,
-  play: offers(en["record.verb.email"]),
+  play: async () => {
+    await offers(en["record.verb.email"])();
+    await within(document.body).findByRole("button", {
+      name: en["task.next.copyNumber"],
+    });
+  },
 };
 
-export const Call: Story = {
+/** A reply to a call answers by phone: the number and a filled Call. */
+export const ReplyByCall: Story = {
   render: () => <Steps task={CALL} />,
   play: async () => {
     await within(document.body).findByRole("button", {

@@ -56376,8 +56376,17 @@ components:
             task when it was made. A task made before types existed, or by a product rule that
             sets none, reads the type of its rule: an answer owed to a request is `reply`, a
             lead to qualify is `review`, a mail to file is `decide`. A task with neither reads
-            `write` when a human or an agent made it, else `do`. `offers_email` is false for
-            every type but `reply` and `write`.
+            `reach_out` when a human or an agent made it, else `do`. `offers_email` is false for
+            every type but `reply` and `reach_out`.
+        reply_channel:
+          type: [string, 'null']
+          enum: [email, call, message, null]
+          x-extensible-enum: true
+          readOnly: true
+          description: >-
+            Task only. For a `reply` task, the kind of the activity it answers (`source_activity_id`),
+            so the answer goes back the way the message came in. Null for every other type, and for
+            a reply with no source of one of these kinds.
         email_target:
           $ref: '#/components/schemas/ActivityEmailTarget'
         source:
@@ -56887,12 +56896,12 @@ components:
       description: Who may read an activity's content — see Activity.audience.
     TaskType:
       type: string
-      enum: [reply, write, call, meet, review, decide, do]
+      enum: [reply, reach_out, meet, review, decide, do]
       x-extensible-enum: true
       description: >-
         What kind of work a task asks for, which decides the one step a screen offers for it.
-        `reply` answers a message someone sent; `write` starts a mail the owner owes;
-        `call` phones a contact; `meet` books a meeting; `review` checks a record;
+        `reply` answers a message someone sent, the way it came in (`reply_channel`);
+        `reach_out` contacts someone by email or phone; `meet` books a meeting; `review` checks a record;
         `decide` picks the deal an email is about, from the deals the task offers, and
         without such a question its only step is ticking it off; `do` is work outside
         Margince that is finished by ticking it off. A client that meets a value it does not

@@ -54,6 +54,7 @@ export function RowActs({
   onReview,
   onOpenEmail,
   context,
+  menu,
   framed,
   titled,
 }: Readonly<{
@@ -77,6 +78,9 @@ export function RowActs({
   onOpenEmail?: (id: string) => void;
   /** The way into what the row is about, where the surface has one; first. */
   context?: ReactNode;
+  /** Lines the surface adds at the top of the menu, such as other ways to
+   *  reach a task's contact. */
+  menu?: ReactNode;
   /** A card around this row already names and links its record. */
   framed?: boolean;
   /** The row's title already links the record the row is about. */
@@ -142,8 +146,9 @@ export function RowActs({
           {answer}
         </>
       )}
-      {(ways.length > 0 || pins || handsOff || putsDown) && (
+      {(menu || ways.length > 0 || pins || handsOff || putsDown) && (
         <OverflowMenu label={t("worklist.rowMenu", { title })}>
+          {menu}
           <PutDownLines write={write} />
           {ways.map(({ action, destination }) => (
             <AppLink

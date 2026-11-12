@@ -21,9 +21,9 @@ it("reads the type the server sent", () => {
   }
 });
 
-it("reads a missing type as a mail to write where the server names a target", () => {
+it("reads a missing type as reach out where the server names a target", () => {
   const target = { entity_type: "contact", entity_id: "c-1" } as const;
-  expect(taskTypeOf({ email_target: target })).toBe("write");
+  expect(taskTypeOf({ email_target: target })).toBe("reach_out");
   expect(taskTypeOf(withNewerType({ email_target: target }))).toBe("do");
 });
 

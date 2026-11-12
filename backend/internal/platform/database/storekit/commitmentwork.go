@@ -89,11 +89,11 @@ var taskSourceFamilies = map[string]taskSourcePolicy{
 	// A follow-up the reader accepted from a suggestion is theirs to do even
 	// without a date, so it shows with their tasks.
 	provenance.AcceptedRecommendationSource: {currency: currentByItsWriter, undated: true},
-	provenance.CommitmentTaskSource:         {currency: currentByCommitment, undated: true, taskType: crmcontracts.TaskTypeWrite},
+	provenance.CommitmentTaskSource:         {currency: currentByCommitment, undated: true, taskType: crmcontracts.TaskTypeReachOut},
 	provenance.EmailRequestSource:           {currency: currentByRequest, undated: true, taskType: crmcontracts.TaskTypeReply},
-	provenance.NoActivityReminderSource:     {currency: currentByItsWriter, taskType: crmcontracts.TaskTypeWrite},
-	provenance.CheckInCadenceSource:         {currency: currentByItsWriter, taskType: crmcontracts.TaskTypeWrite},
-	provenance.LeadSLATaskSource:            {currency: currentByItsWriter, taskType: crmcontracts.TaskTypeWrite},
+	provenance.NoActivityReminderSource:     {currency: currentByItsWriter, taskType: crmcontracts.TaskTypeReachOut},
+	provenance.CheckInCadenceSource:         {currency: currentByItsWriter, taskType: crmcontracts.TaskTypeReachOut},
+	provenance.LeadSLATaskSource:            {currency: currentByItsWriter, taskType: crmcontracts.TaskTypeReachOut},
 	provenance.LeadQualifyTaskSource:        {currency: currentByItsWriter, taskType: crmcontracts.TaskTypeReview},
 	provenance.AssuranceTaskSource:          {currency: currentByItsWriter, taskType: crmcontracts.TaskTypeReview},
 	provenance.AnalyticsDecisionSource:      {currency: currentByItsWriter, taskType: crmcontracts.TaskTypeReview},
@@ -114,7 +114,7 @@ var taskSourceFamilies = map[string]taskSourcePolicy{
 func TaskSourceFamilies() []string { return automaticTaskSources() }
 
 // TaskTypeSQL is the type a task reads: the one it was given, else its
-// source's. Without either, a task a human or an agent made reads write, and
+// source's. Without either, a task a human or an agent made reads reach_out, and
 // the rest read do. alias is a compile-time activity alias, never request input.
 func TaskTypeSQL(alias string) string {
 	alias = pgx.Identifier{alias}.Sanitize()
@@ -126,8 +126,20 @@ func TaskTypeSQL(alias string) string {
 	}
 	return "(CASE WHEN " + alias + ".kind <> 'task' THEN NULL ELSE coalesce(" + alias + ".task_type, CASE " +
 		alias + ".source_system " + strings.Join(sources, " ") + " END, CASE WHEN " +
-		relstrength.OriginIsEngagementSQL(alias) + " THEN '" + string(crmcontracts.TaskTypeWrite) +
+		relstrength.OriginIsEngagementSQL(alias) + " THEN '" + string(crmcontracts.TaskTypeReachOut) +
 		"' ELSE '" + string(crmcontracts.TaskTypeDo) + "' END) END)"
+}
+
+// ReplyChannelSQL is the kind of the activity a reply task answers, so the
+// answer goes back the way the message came in. Null for any other task, and
+// for a held source, whose kind is not this reader's to see.
+func ReplyChannelSQL(alias string) string {
+	taskType := TaskTypeSQL(alias)
+	alias = pgx.Identifier{alias}.Sanitize()
+	return "(CASE WHEN " + taskType + " = '" + string(crmcontracts.TaskTypeReply) +
+		"' THEN (SELECT s.kind FROM activity s WHERE s.id = " + alias + ".source_activity_id AND s.restricted_at IS NULL AND s.kind IN ('" +
+		string(crmcontracts.ActivityKindEmail) + "', '" + string(crmcontracts.ActivityKindCall) + "', '" +
+		string(crmcontracts.ActivityKindMessage) + "')) END)"
 }
 
 func automaticTaskSources() []string {

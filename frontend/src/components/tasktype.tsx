@@ -5,9 +5,8 @@ import {
   CalendarPlus,
   ClipboardCheck,
   type LucideIcon,
-  PenLine,
-  Phone,
   Reply,
+  Send,
   Split,
   SquareCheck,
 } from "lucide-react";
@@ -25,8 +24,7 @@ import {
 
 const TASK_TYPE_ICONS: Readonly<Record<TaskType, LucideIcon>> = {
   reply: Reply,
-  write: PenLine,
-  call: Phone,
+  reach_out: Send,
   meet: CalendarPlus,
   review: ClipboardCheck,
   decide: Split,

@@ -11,8 +11,7 @@ type Activity = components["schemas"]["Activity"];
 /** Every type, in the order a picker lists them. */
 export const TASK_TYPES: readonly TaskType[] = [
   "reply",
-  "write",
-  "call",
+  "reach_out",
   "meet",
   "review",
   "decide",
@@ -21,8 +20,7 @@ export const TASK_TYPES: readonly TaskType[] = [
 
 const TASK_TYPE_LABELS: Readonly<Record<TaskType, MessageKey>> = {
   reply: "task.type.reply",
-  write: "task.type.write",
-  call: "task.type.call",
+  reach_out: "task.type.reachOut",
   meet: "task.type.meet",
   review: "task.type.review",
   decide: "task.type.decide",
@@ -31,7 +29,7 @@ const TASK_TYPE_LABELS: Readonly<Record<TaskType, MessageKey>> = {
 
 /**
  * The type a task's one step follows. A server too old to send one still
- * names a mail target where a mail is the work, so that reads as `write`.
+ * names a mail target where a mail is the work, so that reads as `reach_out`.
  * Anything else, or a type this build does not know, reads as `do`, since
  * Done is the step every task has.
  */
@@ -40,7 +38,7 @@ export function taskTypeOf(
 ): TaskType {
   const sent = task.task_type;
   if (sent && isTaskType(sent)) return sent;
-  return !sent && task.email_target ? "write" : "do";
+  return !sent && task.email_target ? "reach_out" : "do";
 }
 
 export function isTaskType(value: string): value is TaskType {

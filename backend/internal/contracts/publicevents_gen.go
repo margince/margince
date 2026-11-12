@@ -155,31 +155,28 @@ func (e PublicEventActivityChangedFieldsOccurredPrecision) Valid() bool {
 
 // Defines values for PublicEventActivityChangedFieldsTaskType.
 const (
-	TaskBecameCall   PublicEventActivityChangedFieldsTaskType = "call"
-	TaskBecameDecide PublicEventActivityChangedFieldsTaskType = "decide"
-	TaskBecameDo     PublicEventActivityChangedFieldsTaskType = "do"
-	TaskBecameMeet   PublicEventActivityChangedFieldsTaskType = "meet"
-	TaskBecameReply  PublicEventActivityChangedFieldsTaskType = "reply"
-	TaskBecameReview PublicEventActivityChangedFieldsTaskType = "review"
-	TaskBecameWrite  PublicEventActivityChangedFieldsTaskType = "write"
+	TaskBecameDecide   PublicEventActivityChangedFieldsTaskType = "decide"
+	TaskBecameDo       PublicEventActivityChangedFieldsTaskType = "do"
+	TaskBecameMeet     PublicEventActivityChangedFieldsTaskType = "meet"
+	TaskBecameReachOut PublicEventActivityChangedFieldsTaskType = "reach_out"
+	TaskBecameReply    PublicEventActivityChangedFieldsTaskType = "reply"
+	TaskBecameReview   PublicEventActivityChangedFieldsTaskType = "review"
 )
 
 // Valid indicates whether the value is a known member of the PublicEventActivityChangedFieldsTaskType enum.
 func (e PublicEventActivityChangedFieldsTaskType) Valid() bool {
 	switch e {
-	case TaskBecameCall:
-		return true
 	case TaskBecameDecide:
 		return true
 	case TaskBecameDo:
 		return true
 	case TaskBecameMeet:
 		return true
+	case TaskBecameReachOut:
+		return true
 	case TaskBecameReply:
 		return true
 	case TaskBecameReview:
-		return true
-	case TaskBecameWrite:
 		return true
 	default:
 		return false

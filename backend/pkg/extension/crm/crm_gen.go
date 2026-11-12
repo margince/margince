@@ -243,6 +243,27 @@ func (e ActivityMessageMove) Valid() bool {
 	}
 }
 
+// Defines values for ActivityReplyChannel.
+const (
+	ActivityReplyChannelCall    ActivityReplyChannel = "call"
+	ActivityReplyChannelEmail   ActivityReplyChannel = "email"
+	ActivityReplyChannelMessage ActivityReplyChannel = "message"
+)
+
+// Valid indicates whether the value is a known member of the ActivityReplyChannel enum.
+func (e ActivityReplyChannel) Valid() bool {
+	switch e {
+	case ActivityReplyChannelCall:
+		return true
+	case ActivityReplyChannelEmail:
+		return true
+	case ActivityReplyChannelMessage:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for ActivityAudience.
 const (
 	ActivityAudienceParticipants ActivityAudience = "participants"
@@ -1718,31 +1739,28 @@ func (e SystemDisplayLocale) Valid() bool {
 
 // Defines values for TaskType.
 const (
-	TaskTypeCall   TaskType = "call"
-	TaskTypeDecide TaskType = "decide"
-	TaskTypeDo     TaskType = "do"
-	TaskTypeMeet   TaskType = "meet"
-	TaskTypeReply  TaskType = "reply"
-	TaskTypeReview TaskType = "review"
-	TaskTypeWrite  TaskType = "write"
+	Decide   TaskType = "decide"
+	Do       TaskType = "do"
+	Meet     TaskType = "meet"
+	ReachOut TaskType = "reach_out"
+	Reply    TaskType = "reply"
+	Review   TaskType = "review"
 )
 
 // Valid indicates whether the value is a known member of the TaskType enum.
 func (e TaskType) Valid() bool {
 	switch e {
-	case TaskTypeCall:
+	case Decide:
 		return true
-	case TaskTypeDecide:
+	case Do:
 		return true
-	case TaskTypeDo:
+	case Meet:
 		return true
-	case TaskTypeMeet:
+	case ReachOut:
 		return true
-	case TaskTypeReply:
+	case Reply:
 		return true
-	case TaskTypeReview:
-		return true
-	case TaskTypeWrite:
+	case Review:
 		return true
 	default:
 		return false
@@ -1908,6 +1926,9 @@ type Activity struct {
 	// RemindAt Task only. When the reminder comes due. From that instant, for up to 30 days, the task leads its assignee's own Worklist with the reason `reminder_due`, and `GET /v1/activities?reminder_due=true` lists it for them. Nobody else is reminded, and a task with no assignee reminds nobody. Moving `due_at` on a task whose reminder has passed clears this field, unless the same patch names it.
 	RemindAt *time.Time `json:"remind_at,omitempty"`
 
+	// ReplyChannel Task only. For a `reply` task, the kind of the activity it answers (`source_activity_id`), so the answer goes back the way the message came in. Null for every other type, and for a reply with no source of one of these kinds.
+	ReplyChannel *ActivityReplyChannel `json:"reply_channel,omitempty"`
+
 	// Source Where the row came from. `manual` is anything typed, by a member or by an assistant working for one, so it never says who typed it: `captured_by` and `recorded_by_agent` do.
 	Source string `json:"source"`
 
@@ -1922,7 +1943,7 @@ type Activity struct {
 	Subject       *string        `json:"subject,omitempty"`
 	SystemDisplay *SystemDisplay `json:"system_display,omitempty"`
 
-	// TaskType Task only, absent on every other kind. The type a human, an agent or the AI gave the task when it was made. A task made before types existed, or by a product rule that sets none, reads the type of its rule: an answer owed to a request is `reply`, a lead to qualify is `review`, a mail to file is `decide`. A task with neither reads `write` when a human or an agent made it, else `do`. `offers_email` is false for every type but `reply` and `write`.
+	// TaskType Task only, absent on every other kind. The type a human, an agent or the AI gave the task when it was made. A task made before types existed, or by a product rule that sets none, reads the type of its rule: an answer owed to a request is `reply`, a lead to qualify is `review`, a mail to file is `decide`. A task with neither reads `reach_out` when a human or an agent made it, else `do`. `offers_email` is false for every type but `reply` and `reach_out`.
 	TaskType *TaskType `json:"task_type,omitempty"`
 
 	// ThreadKey The provider's own conversation id (Gmail threadId, Graph conversationId, the RFC822 References root), stamped by capture. It is what makes a thread a thread: grouping by subject would merge two unrelated "Re: Update" exchanges and split one that was renamed mid-conversation. Null on anything capture did not thread — a note, a task, a message whose provider offered none.
@@ -1981,6 +2002,9 @@ type ActivityMeetingStatus string
 // word with them, `none` otherwise. Past the waiting horizon, unless someone kept it,
 // a message owed our answer is `none`, as for mail.
 type ActivityMessageMove string
+
+// ActivityReplyChannel Task only. For a `reply` task, the kind of the activity it answers (`source_activity_id`), so the answer goes back the way the message came in. Null for every other type, and for a reply with no source of one of these kinds.
+type ActivityReplyChannel string
 
 // ActivityAudience Who may read an activity's content — see Activity.audience.
 type ActivityAudience string
@@ -3296,7 +3320,7 @@ type SystemDisplayGeneratedParts string
 // SystemDisplayLocale defines model for SystemDisplay.Locale.
 type SystemDisplayLocale string
 
-// TaskType What kind of work a task asks for, which decides the one step a screen offers for it. `reply` answers a message someone sent; `write` starts a mail the owner owes; `call` phones a contact; `meet` books a meeting; `review` checks a record; `decide` picks the deal an email is about, from the deals the task offers, and without such a question its only step is ticking it off; `do` is work outside Margince that is finished by ticking it off. A client that meets a value it does not know treats it as `do`.
+// TaskType What kind of work a task asks for, which decides the one step a screen offers for it. `reply` answers a message someone sent, the way it came in (`reply_channel`); `reach_out` contacts someone by email or phone; `meet` books a meeting; `review` checks a record; `decide` picks the deal an email is about, from the deals the task offers, and without such a question its only step is ticking it off; `do` is work outside Margince that is finished by ticking it off. A client that meets a value it does not know treats it as `do`.
 type TaskType string
 
 // WebFormConsent The consent box the form showed. Absent when the form shows none.
@@ -3771,6 +3795,14 @@ func (a *Activity) UnmarshalJSON(b []byte) error {
 		delete(object, "remind_at")
 	}
 
+	if raw, found := object["reply_channel"]; found {
+		err = json.Unmarshal(raw, &a.ReplyChannel)
+		if err != nil {
+			return fmt.Errorf("error reading 'reply_channel': %w", err)
+		}
+		delete(object, "reply_channel")
+	}
+
 	if raw, found := object["source"]; found {
 		err = json.Unmarshal(raw, &a.Source)
 		if err != nil {
@@ -4220,6 +4252,13 @@ func (a Activity) MarshalJSON() ([]byte, error) {
 		object["remind_at"], err = json.Marshal(a.RemindAt)
 		if err != nil {
 			return nil, fmt.Errorf("error marshaling 'remind_at': %w", err)
+		}
+	}
+
+	if a.ReplyChannel != nil {
+		object["reply_channel"], err = json.Marshal(a.ReplyChannel)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'reply_channel': %w", err)
 		}
 	}
 

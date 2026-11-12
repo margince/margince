@@ -165,6 +165,7 @@ export function Triage({
                         )
                       }
                       context={cardVerbs}
+                      menu={step.others}
                       titleEnd={lead.email_summary ? undefined : nextLink}
                       quiet={step.fills}
                       // The card around this row says whose it is, why it is

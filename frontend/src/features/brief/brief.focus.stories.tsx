@@ -198,7 +198,7 @@ function typedPanel({
           source_activity_id: "call-1",
           links: [{ entity_type: "contact", entity_id: "c-alice" }],
           // The server names a mail target for a mail task only.
-          ...(type === "write"
+          ...(type === "reach_out" || type === "reply"
             ? {
                 email_target: {
                   entity_type: "contact",
@@ -236,10 +236,10 @@ function typedPanel({
   };
 }
 
-/** A call task in hand: the number to copy, a filled Call, Done outlined,
-    and Next task at the end of the title. */
+/** A reply to a call in hand: the number to copy, a filled Call, Done
+    outlined, and Next task at the end of the title. */
 export const CallTaskInHand: Story = {
-  render: typedPanel({ type: "call" }),
+  render: typedPanel({ type: "reply", extra: { reply_channel: "call" } }),
   play: async ({ canvasElement }) => {
     const card = await focusedCard(canvasElement);
     await card.findByRole("button", { name: en["task.next.copyNumber"] });
@@ -253,10 +253,10 @@ export const CallTaskInHandDark: Story = {
   globals: { theme: "dark" },
 };
 
-/** A mail task to a contact with no address: Email refused, and the reason
-    one line under every verb on the card. */
-export const WriteTaskNoAddressInHand: Story = {
-  render: typedPanel({ type: "write", primaryEmail: null }),
+/** Reach out to a contact with no address: Email refused, the reason one
+    line under every verb, and Call is the filled verb. */
+export const ReachOutNoAddressInHand: Story = {
+  render: typedPanel({ type: "reach_out", primaryEmail: null }),
   play: async ({ canvasElement }) => {
     const card = await focusedCard(canvasElement);
     await card.findByText(en["task.next.noAddress"]);

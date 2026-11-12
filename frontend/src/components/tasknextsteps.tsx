@@ -49,8 +49,9 @@ export function TaskCallAction({
 }
 
 /**
- * The step the task's type asks for. A reply or a mail to write drafts a mail,
- * a call shows the number and Call, and a meeting offers Book a meeting.
+ * The step the task's type asks for. A reply answers the way its message came
+ * in: a mail drafts a mail, a call shows the number and Call. Reach out offers
+ * both, and a meeting offers Book a meeting.
  * A review opens the record and a decision shows the choice. A task to do has
  * none: Done is it.
  * `className` wraps the step in a row of its own, which is left out when
@@ -61,9 +62,16 @@ export function TaskNextSteps({
   offerOpen = true,
   className,
 }: Readonly<{ task: Activity; offerOpen?: boolean; className?: string }>) {
-  const { steps } = useTaskNextSteps(task, offerOpen);
-  if (steps === null) return null;
-  return className ? <div className={className}>{steps}</div> : steps;
+  // With no menu here, the other ways stand after the type's step.
+  const { steps, others } = useTaskNextSteps(task, offerOpen);
+  if (steps === null && !others) return null;
+  const all = (
+    <>
+      {steps}
+      {others}
+    </>
+  );
+  return className ? <div className={className}>{all}</div> : all;
 }
 
 /** The type's step, and whether it is a filled button, so Done can step back
@@ -71,34 +79,79 @@ export function TaskNextSteps({
 export function useTaskNextSteps(
   task: Activity | undefined,
   offerOpen: boolean,
-): Readonly<{ steps: ReactNode; fills: boolean }> {
+): Steps {
   const { contact, pending } = useTaskContact(task);
   const writeTo = useWriteTo();
-  if (!task) return { steps: null, fills: false };
+  if (!task) return NO_STEP;
+  const ways = taskWays(task, contact, pending, offerOpen, writeTo !== null);
+  const shown = shownWays(task);
+  const target = task.email_target;
+  const mail = !shown.includes("mail") && Boolean(target && !target.refusal);
+  const call = !shown.includes("call") && ways.phone !== undefined;
+  return {
+    ...typedSteps(ways),
+    others:
+      mail || call ? (
+        <OtherWays
+          task={task}
+          phone={call ? ways.phone : undefined}
+          mail={mail}
+        />
+      ) : null,
+  };
+}
+
+function taskWays(
+  task: Activity,
+  contact: Contact | undefined,
+  pending: boolean,
+  offerOpen: boolean,
+  composes: boolean,
+): Ways {
   const reachable = contact && !contact.archived_at ? contact : undefined;
+  const target = task.email_target;
+  return {
+    task,
+    offerOpen,
+    pending,
+    reachable,
+    mailFills: Boolean(target && (composes || target.refusal)),
+    mailWorks: Boolean(target && composes && !target.refusal),
+    phone: reachable && primaryPhone(reachable.phones) ? reachable : undefined,
+  };
+}
+
+type Way = "mail" | "call";
+
+/** The ways a task's own step already offers, which its menu leaves out. */
+function shownWays(task: Activity): readonly Way[] {
   switch (taskTypeOf(task)) {
     case "reply":
-    case "write": {
-      const target = task.email_target;
-      return {
-        steps: <MailSteps task={task} offerOpen={offerOpen} />,
-        fills: Boolean(target && (writeTo || target.refusal)),
-      };
-    }
-    case "call":
-      if (pending) return { steps: <TaskNextStepsPending />, fills: true };
-      return reachable && primaryPhone(reachable.phones)
-        ? { steps: <CallSteps contact={reachable} />, fills: true }
-        : { steps: null, fills: false };
+      if (task.reply_channel === "email") return ["mail"];
+      return task.reply_channel === "call" ? ["call"] : ["mail", "call"];
+    case "reach_out":
+      return ["mail", "call"];
+    default:
+      return [];
+  }
+}
+
+function typedSteps(ways: Ways): Omit<Steps, "others"> {
+  const { task, reachable } = ways;
+  switch (taskTypeOf(task)) {
+    case "reply":
+      return replySteps(ways);
+    case "reach_out":
+      return reachOutSteps(ways);
     case "meet":
       return reachable
         ? { steps: <MeetStep contactId={reachable.id} />, fills: true }
-        : { steps: null, fills: false };
+        : NO_STEP;
     case "review": {
       const record = reviewRecord(task);
       return record
         ? { steps: <ReviewStep record={record} />, fills: true }
-        : { steps: null, fills: false };
+        : NO_STEP;
     }
     case "decide":
       return {
@@ -106,8 +159,96 @@ export function useTaskNextSteps(
         fills: asksWhichDeal(task),
       };
     default:
-      return { steps: null, fills: false };
+      return NO_STEP;
   }
+}
+
+type Steps = Readonly<{
+  steps: ReactNode;
+  fills: boolean;
+  /** The other ways to reach the contact, for the task's menu: always open,
+   *  whatever way the type picked. */
+  others?: ReactNode;
+}>;
+const NO_STEP: Steps = { steps: null, fills: false };
+
+/** What reaching the task's contact can use: a mail target, a number. */
+type Ways = Readonly<{
+  task: Activity;
+  offerOpen: boolean;
+  pending: boolean;
+  reachable: Contact | undefined;
+  mailFills: boolean;
+  // A refused mail still holds its slot, but Call is then the verb that works.
+  mailWorks: boolean;
+  phone: Contact | undefined;
+}>;
+
+/** A reply goes back the way its message came in. A message Margince cannot
+ *  answer in kind, or none, offers both ways. */
+function replySteps(ways: Ways): Omit<Steps, "others"> {
+  const { task, offerOpen, pending, mailFills, phone } = ways;
+  if (task.reply_channel === "email") {
+    return {
+      steps: <MailSteps task={task} offerOpen={offerOpen} />,
+      fills: mailFills,
+    };
+  }
+  if (task.reply_channel !== "call") return reachOutSteps(ways);
+  if (pending) return { steps: <TaskNextStepsPending />, fills: true };
+  return phone
+    ? { steps: <CallSteps contact={phone} filled />, fills: true }
+    : NO_STEP;
+}
+
+/** Email first, filled when it can be drafted; else Call is the filled one. */
+function reachOutSteps(ways: Ways): Omit<Steps, "others"> {
+  const { task, offerOpen, mailFills, mailWorks, phone } = ways;
+  return {
+    steps: (
+      <MailSteps
+        task={task}
+        offerOpen={offerOpen}
+        after={phone && <CallSteps contact={phone} filled={!mailWorks} />}
+      />
+    ),
+    fills: mailFills || Boolean(phone),
+  };
+}
+
+/** The ways the type's step leaves out, as menu lines: a mail to draft when
+ *  one can be, and the call. */
+function OtherWays({
+  task,
+  phone,
+  mail,
+}: Readonly<{ task: Activity; phone: Contact | undefined; mail: boolean }>) {
+  const t = useT();
+  const { contact } = useTaskContact(task);
+  const target = task.email_target;
+  const intent = intentAbout(t("task.next.draftIntent"), task.subject);
+  const number = phone && primaryPhone(phone.phones)?.phone;
+  return (
+    <>
+      {mail &&
+        target &&
+        (target.entity_type === "contact" ? (
+          contact && (
+            <EmailVerb contact={contact} intent={intent} reasonId={undefined} />
+          )
+        ) : (
+          <RecordDraftStep target={target} intent={intent} />
+        ))}
+      {phone && number && (
+        <CallAction
+          appearance="button"
+          label={t("record.verb.call")}
+          number={number}
+          record={{ entityType: "contact", entityId: phone.id }}
+        />
+      )}
+    </>
+  );
 }
 
 /**
@@ -119,7 +260,8 @@ export function useTaskNextSteps(
 function MailSteps({
   task,
   offerOpen,
-}: Readonly<{ task: Activity; offerOpen: boolean }>) {
+  after = null,
+}: Readonly<{ task: Activity; offerOpen: boolean; after?: ReactNode }>) {
   const t = useT();
   const { contact, pending } = useTaskContact(task);
   const target = task.email_target;
@@ -137,14 +279,23 @@ function MailSteps({
         intent={intent}
         offerOpen={offerOpen}
         refusal={refusalOf(target, t)}
+        after={after}
       />
     );
   }
-  return target ? <RecordDraftStep target={target} intent={intent} /> : null;
+  return (
+    <>
+      {target && <RecordDraftStep target={target} intent={intent} />}
+      {after}
+    </>
+  );
 }
 
 /** The number to read or copy, for a reader at a desk, and Call to dial it. */
-function CallSteps({ contact }: Readonly<{ contact: Contact }>) {
+function CallSteps({
+  contact,
+  filled,
+}: Readonly<{ contact: Contact; filled: boolean }>) {
   const t = useT();
   const number = primaryPhone(contact.phones)?.phone;
   if (!number || contact.archived_at) return null;
@@ -164,7 +315,7 @@ function CallSteps({ contact }: Readonly<{ contact: Contact }>) {
       </span>
       <CallAction
         appearance="button"
-        filled
+        filled={filled}
         label={t("record.verb.call")}
         number={number}
         record={record}
@@ -224,11 +375,13 @@ function ContactSteps({
   intent,
   offerOpen,
   refusal,
+  after,
 }: Readonly<{
   contact: Contact;
   intent: string;
   offerOpen: boolean;
   refusal: string | undefined;
+  after: ReactNode;
 }>) {
   const t = useT();
   const reasonId = useId();
@@ -239,6 +392,7 @@ function ContactSteps({
         intent={intent}
         reasonId={refusal === undefined ? undefined : reasonId}
       />
+      {after}
       {offerOpen &&
         linkVerb(
           routeHash(ENTITY.contact.route(contact.id)),

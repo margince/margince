@@ -207,17 +207,27 @@ func TestEmailRequestFromNarrowedMailIsPersonal(t *testing.T) {
 	}
 }
 
-// Accepting a request keeps the type the human picked; with none it reads Reply.
+// Accepting a request keeps the type the human picked; with none it reads a
+// Reply by email, the way the request came in.
 func TestAcceptingARequestKeepsTheChosenTaskType(t *testing.T) {
 	e := setupLoad(t)
-	source := seedEmailRequest(t, e, "Call me about the renewal", "commitment", OwedVerdictAsksUs)
-	call := crmcontracts.TaskTypeCall
-	taken, created, err := storeKnowing(e).LogActivity(e.asSeat(e.rep), LogActivityInput{Kind: "task", Source: "manual", RequestActivityID: &source, TaskType: &call})
+	source := seedEmailRequest(t, e, "Can we meet about the renewal", "commitment", OwedVerdictAsksUs)
+	meet := crmcontracts.TaskTypeMeet
+	taken, created, err := storeKnowing(e).LogActivity(e.asSeat(e.rep), LogActivityInput{Kind: "task", Source: "manual", RequestActivityID: &source, TaskType: &meet})
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !created || taken.TaskType == nil || *taken.TaskType != call {
-		t.Fatalf("accepted request reads type %v (created=%v), want call", taken.TaskType, created)
+	if !created || taken.TaskType == nil || *taken.TaskType != meet {
+		t.Fatalf("accepted request reads type %v (created=%v), want meet", taken.TaskType, created)
+	}
+	answer := seedEmailRequest(t, e, "Please send the price list", "commitment", OwedVerdictAsksUs)
+	reply, _, err := storeKnowing(e).LogActivity(e.asSeat(e.rep), LogActivityInput{Kind: "task", Source: "manual", RequestActivityID: &answer})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if reply.TaskType == nil || *reply.TaskType != crmcontracts.TaskTypeReply ||
+		reply.ReplyChannel == nil || *reply.ReplyChannel != crmcontracts.ActivityReplyChannelEmail {
+		t.Fatalf("an untyped accepted request reads type %v by %v, want a reply by email", reply.TaskType, reply.ReplyChannel)
 	}
 }
 

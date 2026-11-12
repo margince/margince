@@ -40675,8 +40675,13 @@ export interface components {
             links?: components["schemas"]["ActivityLink"][];
             /** @description Whether Write email on this row opens with a recipient filled in: true exactly when `GET /activities/{id}/reply-recipient` answers a non-empty `address` for a call, meeting, note or task. Both are computed by one rule, the one `email_target` states. Always false for an email or a message, which are answered with Reply instead, for an archived row, for a task the product filed itself (`automatic_kind` product), and for a row whose content is withheld from the caller. False for a company target too, which has no single address: the composer asks which of the company's contacts the mail is for. */
             offers_email: boolean;
-            /** @description Task only, absent on every other kind. The type a human, an agent or the AI gave the task when it was made. A task made before types existed, or by a product rule that sets none, reads the type of its rule: an answer owed to a request is `reply`, a lead to qualify is `review`, a mail to file is `decide`. A task with neither reads `write` when a human or an agent made it, else `do`. `offers_email` is false for every type but `reply` and `write`. */
+            /** @description Task only, absent on every other kind. The type a human, an agent or the AI gave the task when it was made. A task made before types existed, or by a product rule that sets none, reads the type of its rule: an answer owed to a request is `reply`, a lead to qualify is `review`, a mail to file is `decide`. A task with neither reads `reach_out` when a human or an agent made it, else `do`. `offers_email` is false for every type but `reply` and `reach_out`. */
             readonly task_type?: components["schemas"]["TaskType"];
+            /**
+             * @description Task only. For a `reply` task, the kind of the activity it answers (`source_activity_id`), so the answer goes back the way the message came in. Null for every other type, and for a reply with no source of one of these kinds.
+             * @enum {string|null}
+             */
+            readonly reply_channel?: "email" | "call" | "message" | null;
             email_target?: components["schemas"]["ActivityEmailTarget"];
             /** @description Where the row came from. `manual` is anything typed, by a member or by an assistant working for one, so it never says who typed it: `captured_by` and `recorded_by_agent` do. */
             source: string;
@@ -41032,10 +41037,10 @@ export interface components {
          */
         ActivityAudience: "workspace" | "participants" | "selected";
         /**
-         * @description What kind of work a task asks for, which decides the one step a screen offers for it. `reply` answers a message someone sent; `write` starts a mail the owner owes; `call` phones a contact; `meet` books a meeting; `review` checks a record; `decide` picks the deal an email is about, from the deals the task offers, and without such a question its only step is ticking it off; `do` is work outside Margince that is finished by ticking it off. A client that meets a value it does not know treats it as `do`.
+         * @description What kind of work a task asks for, which decides the one step a screen offers for it. `reply` answers a message someone sent, the way it came in (`reply_channel`); `reach_out` contacts someone by email or phone; `meet` books a meeting; `review` checks a record; `decide` picks the deal an email is about, from the deals the task offers, and without such a question its only step is ticking it off; `do` is work outside Margince that is finished by ticking it off. A client that meets a value it does not know treats it as `do`.
          * @enum {string}
          */
-        TaskType: "reply" | "write" | "call" | "meet" | "review" | "decide" | "do";
+        TaskType: "reply" | "reach_out" | "meet" | "review" | "decide" | "do";
         /**
          * @description How much of an activity's time is known. `instant` is a real moment. `day` is a date with no time of day: the stored instant is noon UTC of that date, so its date is the UTC date, whatever the installation's zone. A meeting of this precision never holds its host's calendar slot.
          * @enum {string}

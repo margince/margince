@@ -61,7 +61,7 @@ func (t createTask) Spec() mcp.ToolSpec {
 			"source_activity_id":{"type":"string","format":"uuid","description":` + followUpSourceDescription + `},
 			"due_at":{"type":"string","format":"date-time"` + timestampNote + `},
 			"due_has_time":{"type":"boolean","description":"True when due_at is an agreed time of day, such as a callback hour; the reminder is then set to it. Leave out for a day."},
-			"task_type":{"type":"string","enum":["reply","write","call","meet","review","decide","do"],"description":"The work it asks for; it decides the one button the task shows. reply answers a message, write sends a mail, do is work outside Margince."},
+			"task_type":{"type":"string","enum":["reply","reach_out","meet","review","decide","do"],"description":"The work it asks for; it decides the one button the task shows. reply answers a message the way it came in, reach_out contacts someone by email or phone, do is work outside Margince."},
 			"assignee_id":{"type":"string","format":"uuid","description":"Defaults to the human you act for."},
 			"links":{"type":"array","items":{"type":"object","required":["entity_type","entity_id"],"properties":{
 				"entity_type":{"type":"string","enum":` + activityLinkEntityTypeEnum + `},

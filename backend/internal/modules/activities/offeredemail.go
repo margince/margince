@@ -38,7 +38,7 @@ var eligibleRowsSQL = `
 	sqlLiterals(writingTaskTypes) + `))`
 
 // writingTaskTypes are the task types whose work is a mail.
-var writingTaskTypes = []crmcontracts.TaskType{crmcontracts.TaskTypeReply, crmcontracts.TaskTypeWrite}
+var writingTaskTypes = []crmcontracts.TaskType{crmcontracts.TaskTypeReply, crmcontracts.TaskTypeReachOut}
 
 // sqlLiterals spells compile-time values as a list of SQL literals.
 func sqlLiterals[T ~string](values []T) string {

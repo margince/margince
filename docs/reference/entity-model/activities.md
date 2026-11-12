@@ -144,7 +144,7 @@ The 33 tables owned by `activities`, as the migrations build them. [Back to the 
 - `activity_source_author_needs_a_source`: `CHECK ((((source_author_id IS NULL) AND (source_author_name IS NULL)) OR (source_system IS NOT NULL)))`
 - `activity_system_text_shape`: `CHECK (((system_text IS NULL) OR ((jsonb_typeof(system_text) = 'object') AND (((system_text ->> 'schema_version') = '1') IS TRUE) AND (octet_length((system_text)) <= 8192))))`
 - `activity_task_fields`: `CHECK (((kind = 'task') OR ((due_at IS NULL) AND (assignee_id IS NULL) AND (is_done = false) AND (remind_at IS NULL))))`
-- `activity_task_type_check`: `CHECK ((task_type = ANY (ARRAY['reply', 'write', 'call', 'meet', 'review', 'decide', 'do'])))`
+- `activity_task_type_check`: `CHECK ((task_type = ANY (ARRAY['reply', 'reach_out', 'meet', 'review', 'decide', 'do'])))`
 - `activity_task_type_kind_check`: `CHECK (((task_type IS NULL) OR (kind = 'task')))`
 - `activity_version_js_safe`: `CHECK (((version >= '-9007199254740991'::bigint) AND (version <= '9007199254740991'::bigint)))`
 
