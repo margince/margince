@@ -21,17 +21,17 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
-// Chosen is the colleague named in a card's doer member, or nil when the
-// accepter kept the default.
-func Chosen(raw string) (*ids.UUID, error) {
+// Chosen is the colleague named in a card's doer member, or the zero id when
+// the accepter kept the default.
+func Chosen(raw string) (ids.UUID, error) {
 	if raw == "" {
-		return nil, nil
+		return ids.Nil, nil
 	}
 	doer, err := ids.Parse(raw)
 	if err != nil || doer.IsZero() {
-		return nil, &approvals.InvalidEditError{Cause: fmt.Errorf("%s %q names no colleague", approvals.DoerField, raw)}
+		return ids.Nil, &approvals.InvalidEditError{Cause: fmt.Errorf("%s %q names no colleague", approvals.DoerField, raw)}
 	}
-	return &doer, nil
+	return doer, nil
 }
 
 // EnsureMayHold refuses a chosen colleague the task writer would refuse. It
@@ -75,12 +75,12 @@ type ColleagueAuthority func(ctx context.Context, colleague ids.UUID) (context.C
 // task's holder, who hands it on from the task itself.
 func ForPromise(raw string, aboutExistingTask bool, decider ids.UUID) (ids.UUID, error) {
 	chosen, err := Chosen(raw)
-	if err != nil || chosen == nil {
+	if err != nil || chosen.IsZero() {
 		return decider, err
 	}
 	if aboutExistingTask {
 		return ids.Nil, &approvals.InvalidEditError{Cause: errors.New(
 			"this promise adds recipients to a task that already has a holder — hand the task on from the task instead")}
 	}
-	return *chosen, nil
+	return chosen, nil
 }

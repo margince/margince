@@ -8,6 +8,8 @@ import (
 	"github.com/margince/margince/backend/internal/shared/ports/workflow"
 )
 
+// AcceptedInquiryOwner is workflow.AcceptedInquiryOwner, for the callers that
+// already hold this package.
 func AcceptedInquiryOwner(raw *map[string]any) (*ids.UUID, error) {
 	return workflow.AcceptedInquiryOwner(raw)
 }

@@ -12,39 +12,52 @@ import (
 
 // RequireReadForReaders checks every principal whose access bounds a shared read.
 func RequireReadForReaders(ctx context.Context, object string, readers ...principal.Principal) error {
-	for _, reader := range readerContexts(ctx, readers) {
-		if err := Require(reader, object, principal.ActionRead); err != nil {
-			return err
-		}
-	}
-	return nil
+	return eachReader(ctx, readers, func(reader context.Context) error {
+		return Require(reader, object, principal.ActionRead)
+	})
 }
 
 // ScopeClauseForReaders intersects row visibility without changing the caller.
 func ScopeClauseForReaders(ctx context.Context, table, alias string, arg func(any) int, readers ...principal.Principal) (string, error) {
 	var clauses []string
-	for _, reader := range readerContexts(ctx, readers) {
-		var clause string
-		var err error
-		if table == "activity" {
-			clause, err = ActivityContentClause(reader, alias, arg)
-		} else {
-			clause, err = ScopeClauseFor(reader, table, alias, arg)
-		}
+	err := eachReader(ctx, readers, func(reader context.Context) error {
+		clause, err := readerScopeClause(reader, table, alias, arg)
 		if err != nil {
-			return "", err
+			return err
 		}
 		if clause != "" {
 			clauses = append(clauses, "("+clause+")")
 		}
+		return nil
+	})
+	if err != nil {
+		return "", err
 	}
 	return strings.Join(clauses, " AND "), nil
 }
 
-func readerContexts(ctx context.Context, readers []principal.Principal) []context.Context {
-	contexts := []context.Context{ctx}
-	for _, reader := range readers {
-		contexts = append(contexts, principal.WithActor(ctx, reader))
+// activityObject is the table whose reads also go through the content clause.
+const activityObject = "activity"
+
+// readerScopeClause bounds activities by the content clause, which also holds
+// the mail audience, and every other table by its row scope.
+func readerScopeClause(ctx context.Context, table, alias string, arg func(any) int) (string, error) {
+	if table == activityObject {
+		return ActivityContentClause(ctx, alias, arg)
 	}
-	return contexts
+	return ScopeClauseFor(ctx, table, alias, arg)
+}
+
+// eachReader runs check as the caller, then as each reader, and stops at the
+// first refusal.
+func eachReader(ctx context.Context, readers []principal.Principal, check func(context.Context) error) error {
+	if err := check(ctx); err != nil {
+		return err
+	}
+	for _, reader := range readers {
+		if err := check(principal.WithActor(ctx, reader)); err != nil {
+			return err
+		}
+	}
+	return nil
 }

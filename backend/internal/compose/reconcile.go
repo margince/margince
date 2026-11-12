@@ -280,15 +280,15 @@ func followUpPrecheck(db *database.DB, now func() time.Time) approvals.ReleasePr
 		if err != nil {
 			return err
 		}
-		deal := []activities.ActivityLinkInput{{EntityType: "deal", EntityID: proposal.DealID.UUID}}
+		deal := []activities.ActivityLinkInput{{EntityType: entityDeal, EntityID: proposal.DealID.UUID}}
 		return db.Tx(ctx, func(tx pgx.Tx) error {
 			if gone, err := stillowed.FollowUpTx(ctx, tx, proposal.DealID.UUID, now().UTC()); err != nil || gone != "" {
 				return obsoleteOr(gone, err)
 			}
-			if doer == nil {
+			if doer.IsZero() {
 				return nil
 			}
-			return carddoer.EnsureMayHold(ctx, tx, *doer, deal, colleagueAuthority(db))
+			return carddoer.EnsureMayHold(ctx, tx, doer, deal, colleagueAuthority(db))
 		})
 	}
 }
@@ -302,8 +302,8 @@ func followUpDoer(ctx context.Context, tx pgx.Tx, proposal deals.FollowUpProposa
 	if err != nil {
 		return nil, err
 	}
-	if chosen != nil {
-		return new(ids.From[ids.UserKind](*chosen)), nil
+	if !chosen.IsZero() {
+		return new(ids.From[ids.UserKind](chosen)), nil
 	}
 	owner, err := lockedDealOwner(ctx, tx, proposal.DealID.UUID)
 	if err != nil {

@@ -17,11 +17,11 @@ func applyPickedTime(field string, wire *crmcontracts.IntentTime, target **time.
 	if wire == nil {
 		return nil
 	}
-	instant, err := storekit.ResolveIntentTime(field, wire)
+	instant, err := storekit.ResolveIntentTime(field, *wire)
 	if err != nil {
 		return err
 	}
-	*target = instant
+	*target = &instant
 	return nil
 }
 
@@ -67,12 +67,15 @@ func (in *UpdateActivityInput) admitPatchDueTime() error {
 
 // checkMeetingIntent admits a chosen local start only on a meeting that is
 // held to an instant: a whole-day meeting has no clock to keep.
+// fieldMeetingIntent names a meeting's chosen local start in refusals and audits.
+const fieldMeetingIntent = "meeting_intent"
+
 func checkMeetingIntent(kind, precision string, intent *crmcontracts.IntentTime) error {
 	if intent != nil && kind != KindMeeting {
-		return &values.ParseError{Field: "meeting_intent", Code: "not_applicable", Message: "only a meeting has a chosen local start"}
+		return &values.ParseError{Field: fieldMeetingIntent, Code: "not_applicable", Message: "only a meeting has a chosen local start"}
 	}
 	if intent != nil && precision == PrecisionDay {
-		return &values.ParseError{Field: "meeting_intent", Code: "not_applicable", Message: "a whole-day meeting has no local start time"}
+		return &values.ParseError{Field: fieldMeetingIntent, Code: "not_applicable", Message: "a whole-day meeting has no local start time"}
 	}
 	return nil
 }
@@ -97,12 +100,15 @@ func (in *UpdateActivityInput) admitPickedTimes(kind string) error {
 // admitBookedStart lets a chosen local start govern the booked instant, and
 // the meeting keeps the length the request gave it.
 func admitBookedStart(intent *crmcontracts.IntentTime, start, end *time.Time) error {
-	instant, err := storekit.ResolveIntentTime("start_intent", intent)
-	if err != nil || instant == nil {
+	if intent == nil {
+		return nil
+	}
+	instant, err := storekit.ResolveIntentTime("start_intent", *intent)
+	if err != nil {
 		return err
 	}
 	length := end.Sub(*start)
-	*start, *end = *instant, instant.Add(length)
+	*start, *end = instant, instant.Add(length)
 	return nil
 }
 
