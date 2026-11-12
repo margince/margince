@@ -119,7 +119,7 @@ func (s *Store) RedactCapturedNoiseTx(
 	// that actually held content is audited as an erasure.
 	rows, err := tx.Query(ctx, fmt.Sprintf(`
 		WITH target AS (
-		  SELECT id, (subject IS NOT NULL OR body IS NOT NULL OR raw IS NOT NULL%s) AS had_content
+		  SELECT id, (subject IS NOT NULL OR body IS NOT NULL OR raw IS NOT NULL OR calendar_event IS NOT NULL%s) AS had_content
 		    FROM activity
 		   WHERE id = ANY($1) AND archived_at IS NOT NULL
 		     -- A record held under a statutory obligation is out of reach of

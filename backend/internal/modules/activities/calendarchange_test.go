@@ -113,3 +113,50 @@ func TestAGuestsProposalAndAnswerNameTheGuest(t *testing.T) {
 		t.Errorf("change = %+v, want none for a reply that states no answer", got)
 	}
 }
+
+func TestACancellationKeepsWhatTheInvitationSaidOfTheMeeting(t *testing.T) {
+	t.Parallel()
+	bare := calendarevent.Event{Sequence: 2, Canceled: true}
+	got := (calendarSend{method: "CANCEL", event: bare, before: new(sentMeeting(1))}).change()
+	if got == nil || got.Kind != crmcontracts.EmailCalendarChangeKindCanceled {
+		t.Fatalf("change = %+v, want canceled", got)
+	}
+	if got.Title == nil || *got.Title != "Pricing review" || got.Location == nil || *got.Location != "Teams" ||
+		got.StartsAt == nil || !got.StartsAt.Equal(*hourOf(14)) {
+		t.Errorf("canceled meeting = %+v, want the invitation's title, place and 14:00", got)
+	}
+}
+
+func TestOneMovedMeetingOfASeriesIsReadAgainstItsOwnStart(t *testing.T) {
+	t.Parallel()
+	series := sentMeeting(0)
+	moved := sentMeeting(1)
+	moved.Occurrence = hourOf(10).Format(time.RFC3339)
+	moved.Start, moved.End, moved.Location = hourOf(16), hourOf(17), "Office Berlin"
+	got := (calendarSend{method: "REQUEST", event: moved, before: &series}).change()
+	if got == nil || got.Before == nil || got.Before.StartsAt == nil {
+		t.Fatalf("change = %+v, want an update with a before time", got)
+	}
+	if !got.Before.StartsAt.Equal(*hourOf(10)) || !got.Before.EndsAt.Equal(*hourOf(11)) {
+		t.Errorf("before = %v–%v, want the meeting's own 10:00–11:00, not the series' 14:00", got.Before.StartsAt, got.Before.EndsAt)
+	}
+	if got.Before.Location == nil || *got.Before.Location != "Teams" {
+		t.Errorf("before place = %v, want the series' Teams", got.Before.Location)
+	}
+}
+
+func TestAMovedAllDayMeetingOfASeriesSaysItsOldDay(t *testing.T) {
+	t.Parallel()
+	day := func(d int) *time.Time {
+		at := time.Date(2026, 11, d, 0, 0, 0, 0, time.UTC)
+		return &at
+	}
+	moved := calendarevent.Event{Sequence: 1, Title: "Offsite", Start: day(21), AllDay: true, Occurrence: "20261120"}
+	got := (calendarSend{method: "REQUEST", event: moved}).change()
+	if got == nil || got.Before == nil || got.Before.StartsAt == nil || !got.Before.StartsAt.Equal(*day(20)) {
+		t.Fatalf("change = %+v, want the old day 20 Nov", got)
+	}
+	if *got.Before.StartsPrecision != crmcontracts.OccurredPrecisionOccurredPrecisionDay {
+		t.Errorf("before precision = %v, want day", *got.Before.StartsPrecision)
+	}
+}

@@ -18,6 +18,8 @@ import (
 const (
 	icalDateTime = "20060102T150405"
 	icalDate     = "20060102"
+	// maxZoneDates bounds the RDATE onsets one rule keeps from a sender.
+	maxZoneDates = 64
 )
 
 // zoneRule is one STANDARD or DAYLIGHT block: from its onset each year the
@@ -28,6 +30,8 @@ type zoneRule struct {
 	nth    int // BYDAY's ordinal: 2 is the second, -1 the last
 	day    time.Weekday
 	yearly bool
+	until  time.Time   // the rule's end; zero when it runs on
+	dates  []time.Time // RDATE onsets, wall clocks read as UTC
 	offset int
 	stated bool // a rule whose offset did not parse says nothing
 }
@@ -56,12 +60,19 @@ type statedZones map[string][]zoneRule
 func (z statedZones) offsetAt(tzid string, wall time.Time) (int, bool) {
 	var best time.Time
 	offset, found := 0, false
+	consider := func(onset time.Time, rule zoneRule) {
+		if !onset.After(wall) && (!found || onset.After(best)) {
+			best, offset, found = onset, rule.offset, true
+		}
+	}
 	for _, rule := range z[tzid] {
 		for _, year := range []int{wall.Year() - 1, wall.Year()} {
-			onset := rule.onsetIn(year)
-			if !onset.After(wall) && (!found || onset.After(best)) {
-				best, offset, found = onset, rule.offset, true
+			if onset := rule.onsetIn(year); rule.until.IsZero() || !onset.After(rule.until) {
+				consider(onset, rule)
 			}
+		}
+		for _, onset := range rule.dates {
+			consider(onset, rule)
 		}
 	}
 	return offset, found
@@ -104,6 +115,12 @@ func (r *zoneRule) read(line icalLine, value string) {
 		r.offset, r.stated = utcOffset(value)
 	case line.is("RRULE"):
 		readYearlyRule(r, value)
+	case line.is("RDATE"):
+		for part := range strings.SplitSeq(value, ",") {
+			if at, err := time.Parse(icalDateTime, strings.TrimSpace(part)); err == nil && len(r.dates) < maxZoneDates {
+				r.dates = append(r.dates, at)
+			}
+		}
 	}
 }
 
@@ -126,6 +143,9 @@ func readYearlyRule(rule *zoneRule, value string) {
 		return
 	}
 	rule.month, rule.nth, rule.day, rule.yearly = time.Month(month), nth, weekday, true
+	if until, err := time.Parse(icalDateTime, strings.TrimSuffix(parts["UNTIL"], "Z")); err == nil {
+		rule.until = until
+	}
 }
 
 var icalWeekdays = map[string]time.Weekday{

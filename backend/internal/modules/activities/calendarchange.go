@@ -31,6 +31,7 @@ type calendarSend struct {
 
 // calendarSendsTx reads the stored events of the reader's own messages. Each
 // comes with the latest earlier REQUEST or ADD of the same UID and occurrence.
+// Failing that, it comes with the series invitation.
 func calendarSendsTx(ctx context.Context, tx pgx.Tx, messages []ids.UUID, reader ids.UUID) (map[ids.UUID]calendarSend, error) {
 	out := map[ids.UUID]calendarSend{}
 	if len(messages) == 0 || reader.IsZero() {
@@ -44,10 +45,11 @@ func calendarSendsTx(ctx context.Context, tx pgx.Tx, messages []ids.UUID, reader
 		        WHERE p.calendar_uid = a.calendar_uid AND p.kind = 'email' AND p.id <> a.id
 		          AND p.calendar_event IS NOT NULL AND p.restricted_at IS NULL
 		          AND p.calendar_method IN ('REQUEST', 'ADD')
-		          AND coalesce(p.calendar_event->>'occurrence', '') = coalesce(a.calendar_event->>'occurrence', '')
+		          AND coalesce(p.calendar_event->>'occurrence', '') IN ('', coalesce(a.calendar_event->>'occurrence', ''))
 		          AND (p.occurred_at, p.id) < (a.occurred_at, a.id)
 		          AND EXISTS (SELECT 1 FROM capture_import ci WHERE ci.activity_id = p.id AND ci.user_id = $2)
-		        ORDER BY p.occurred_at DESC, p.id DESC
+		        ORDER BY coalesce(p.calendar_event->>'occurrence', '') = coalesce(a.calendar_event->>'occurrence', '') DESC,
+		                 p.occurred_at DESC, p.id DESC
 		        LIMIT 1) prior ON true
 		 WHERE a.id = ANY($1) AND a.kind = 'email' AND a.direction = 'inbound'
 		   AND a.restricted_at IS NULL AND a.calendar_uid IS NOT NULL
@@ -74,7 +76,7 @@ func calendarSendsTx(ctx context.Context, tx pgx.Tx, messages []ids.UUID, reader
 func (s calendarSend) change() *crmcontracts.EmailCalendarChange {
 	switch {
 	case s.method == "CANCEL" || s.event.Canceled:
-		return s.wire(crmcontracts.EmailCalendarChangeKindCanceled, calendarevent.Difference{})
+		return s.canceled()
 	case s.method == "COUNTER":
 		return s.proposed()
 	case s.method == "REPLY":
@@ -89,7 +91,7 @@ func (s calendarSend) change() *crmcontracts.EmailCalendarChange {
 // read it against. A resend that changed nothing a reader sees, at the same
 // revision, is still the invitation.
 func (s calendarSend) updated() *crmcontracts.EmailCalendarChange {
-	before := s.before
+	before := s.seriesAsOccurrence()
 	if before == nil {
 		before = s.occurrenceSlot()
 	}
@@ -112,26 +114,74 @@ func (s calendarSend) updated() *crmcontracts.EmailCalendarChange {
 // it: RECURRENCE-ID is that meeting's original start. Nil for a series or a
 // one-off, and for a meeting this send did not move.
 func (s calendarSend) occurrenceSlot() *calendarevent.Event {
-	slot, err := time.Parse(time.RFC3339, s.event.Occurrence)
-	if err != nil || s.event.Start == nil || s.event.AllDay || slot.Equal(*s.event.Start) {
+	slot, allDay, ok := occurrenceStart(s.event.Occurrence)
+	if !ok || s.event.Start == nil || allDay != s.event.AllDay || slot.Equal(*s.event.Start) {
 		return nil
 	}
 	return &calendarevent.Event{
 		Sequence: s.event.Sequence, Title: s.event.Title, Location: s.event.Location,
-		Start: &slot, Attendees: s.event.Attendees, AttendeesCut: s.event.AttendeesCut,
+		Start: &slot, AllDay: allDay, Attendees: s.event.Attendees, AttendeesCut: s.event.AttendeesCut,
 	}
+}
+
+// seriesAsOccurrence is the send before, read as this one meeting of it. A
+// series invitation starts when the series does, so the meeting's start stands in.
+func (s calendarSend) seriesAsOccurrence() *calendarevent.Event {
+	if s.before == nil || s.before.Occurrence != "" || s.event.Occurrence == "" {
+		return s.before
+	}
+	before := *s.before
+	before.Start, before.End = nil, nil
+	if slot, allDay, ok := occurrenceStart(s.event.Occurrence); ok {
+		before.Start, before.AllDay = &slot, allDay
+		if s.before.Start != nil && s.before.End != nil {
+			end := slot.Add(s.before.End.Sub(*s.before.Start))
+			before.End = &end
+		}
+	}
+	return &before
+}
+
+// occurrenceStart reads an occurrence key: an instant, or an all-day date.
+func occurrenceStart(key string) (time.Time, bool, bool) {
+	if at, err := time.Parse(time.RFC3339, key); err == nil {
+		return at, false, true
+	}
+	if day, err := time.Parse("20060102", key); err == nil {
+		return day, true, true
+	}
+	return time.Time{}, false, false
+}
+
+// canceled is the meeting called off, with what the invitation said of it
+// where the cancellation leaves a detail out.
+func (s calendarSend) canceled() *crmcontracts.EmailCalendarChange {
+	shown := s
+	if before := s.seriesAsOccurrence(); before != nil {
+		if shown.event.Title == "" {
+			shown.event.Title = before.Title
+		}
+		if shown.event.Location == "" {
+			shown.event.Location = before.Location
+		}
+		if shown.event.Start == nil {
+			shown.event.Start, shown.event.End, shown.event.AllDay = before.Start, before.End, before.AllDay
+		}
+	}
+	return shown.wire(crmcontracts.EmailCalendarChangeKindCanceled, calendarevent.Difference{})
 }
 
 // proposed is a guest's counter-proposal: the time it names, against the
 // meeting's time in the send before it.
 func (s calendarSend) proposed() *crmcontracts.EmailCalendarChange {
 	var diff calendarevent.Difference
-	if s.before != nil {
-		diff.Time = calendarevent.Compare(*s.before, s.event).Time
+	before := s.seriesAsOccurrence()
+	if before != nil {
+		diff.Time = calendarevent.Compare(*before, s.event).Time
 	}
 	out := s.wire(crmcontracts.EmailCalendarChangeKindProposed, diff)
-	if s.before != nil {
-		out.Before = beforeWire(*s.before, diff)
+	if before != nil {
+		out.Before = beforeWire(*before, diff)
 	}
 	out.By = firstGuest(s.event)
 	return out

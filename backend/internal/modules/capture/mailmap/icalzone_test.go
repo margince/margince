@@ -48,3 +48,26 @@ func TestAZoneRuleTakesOverOnItsStatedDay(t *testing.T) {
 		t.Errorf("a rule with no RRULE takes over at its own start, got %v", got)
 	}
 }
+
+func TestAZoneRulePastItsUntilAndAnRdateOnsetAreHonoured(t *testing.T) {
+	t.Parallel()
+	start := time.Date(1601, 1, 1, 2, 0, 0, 0, time.UTC)
+	zones := statedZones{"Old Zone": {
+		{start: start, month: time.March, nth: -1, day: time.Sunday, yearly: true, offset: 7200, stated: true},
+		{
+			start: start, month: time.October, nth: -1, day: time.Sunday, yearly: true, offset: 3600, stated: true,
+			until: time.Date(2006, 10, 29, 1, 0, 0, 0, time.UTC),
+		},
+		{start: start, month: time.November, nth: 1, day: time.Sunday, yearly: true, offset: 3600, stated: true},
+	}}
+	if offset, _ := zones.offsetAt("Old Zone", time.Date(2026, 10, 28, 12, 0, 0, 0, time.UTC)); offset != 7200 {
+		t.Errorf("offset on 28 Oct 2026 = %d, want 7200: the October rule ended in 2006", offset)
+	}
+	once := statedZones{"Once": {
+		{start: start, offset: 0, stated: true},
+		{start: start, dates: []time.Time{time.Date(2026, 6, 1, 0, 0, 0, 0, time.UTC)}, offset: 3600, stated: true},
+	}}
+	if offset, _ := once.offsetAt("Once", time.Date(2026, 7, 1, 0, 0, 0, 0, time.UTC)); offset != 3600 {
+		t.Errorf("offset after the RDATE onset = %d, want 3600", offset)
+	}
+}

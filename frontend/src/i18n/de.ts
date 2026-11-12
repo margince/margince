@@ -4955,7 +4955,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "meetingChange.badge.proposed": "Neue Zeit vorgeschlagen",
   "meetingChange.badge.accepted": "Zugesagt",
   "meetingChange.badge.tentative": "Vielleicht",
-  "meetingChange.badge.declined": "Abgesagt",
+  "meetingChange.badge.declined": "Abgelehnt",
   "meetingChange.line.canceled": "War für {when} geplant",
   "meetingChange.line.proposed": "{name} schlägt {when} vor",
   "meetingChange.line.accepted": "{name} hat zugesagt",
@@ -4968,7 +4968,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "meetingChange.line.renamed": "Umbenannt in {title}",
   "meetingChange.line.added": "Hinzugefügt: {names}",
   "meetingChange.line.removed": "Entfernt: {names}",
-  "meetingChange.line.details": "Der Organisator hat die Details geändert",
+  "meetingChange.line.details": "Die organisierende Person hat die Details geändert",
   "meetingChange.was.time": "Vorher",
   "meetingChange.was.current": "Gebucht für",
   "meetingChange.was.location": "Ort war",
@@ -19502,11 +19502,11 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "worklist.ask.invitation":
     "Das ist eine Kalendereinladung. Sag zu, mit Vorbehalt zu oder ab, und der Organisator erhält deine Antwort.",
   "worklist.ask.changedInvitation":
-    "Der Organisator hat diesen Termin geändert. Prüf die Änderung, dann sag zu, mit Vorbehalt zu oder ab.",
+    "Die organisierende Person hat diesen Termin geändert. Prüf die Änderung, dann sag zu, mit Vorbehalt zu oder ab.",
   "worklist.ask.meeting.updated":
-    "Der Organisator hat diesen Termin geändert. Prüf die Änderung, dann markier ihn als erledigt.",
+    "Die organisierende Person hat diesen Termin geändert. Prüf die Änderung, dann markier ihn als erledigt.",
   "worklist.ask.meeting.canceled":
-    "Der Organisator hat diesen Termin abgesagt. Es gibt nichts zu beantworten; markier ihn als erledigt, sobald du es gesehen hast.",
+    "Die organisierende Person hat diesen Termin abgesagt. Es gibt nichts zu beantworten; markier ihn als erledigt, sobald du es gesehen hast.",
   "worklist.ask.meeting.proposed":
     "Ein Gast schlägt eine andere Zeit vor. Verschieb den Termin in deinem Kalender, wenn sie passt, dann markier dies als erledigt.",
   "worklist.ask.meeting.answered":

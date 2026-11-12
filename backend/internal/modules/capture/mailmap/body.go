@@ -7,6 +7,7 @@ package mailmap
 // whether a calendar payload was among them.
 
 import (
+	"bytes"
 	"io"
 	"strings"
 
@@ -87,6 +88,17 @@ func isCalendarType(contentType string) bool {
 	return strings.HasPrefix(declared, "text/calendar") || strings.HasPrefix(declared, "application/ics")
 }
 
+// isOctetCalendar is a calendar file sent under the generic binary type, as
+// some clients attach one. Only a .ics name whose bytes open a VCALENDAR counts.
+func isOctetCalendar(contentType, name string, body []byte) bool {
+	declared := strings.ToLower(strings.TrimSpace(contentType))
+	if !strings.HasPrefix(declared, "application/octet-stream") || !strings.HasSuffix(strings.ToLower(name), ".ics") {
+		return false
+	}
+	head := bytes.TrimLeft(bytes.TrimPrefix(body[:min(len(body), 64)], []byte("\uFEFF")), " \t\r\n")
+	return len(head) >= len("BEGIN:VCALENDAR") && bytes.EqualFold(head[:len("BEGIN:VCALENDAR")], []byte("BEGIN:VCALENDAR"))
+}
+
 // contentTyped is a part header, attachment or inline alike.
 type contentTyped interface {
 	ContentType() (string, map[string]string, error)
@@ -125,7 +137,7 @@ func readInlinePart(
 	// sender chose how to render it, not whether we keep it.
 	if name := inlineFilename(inline); name != "" {
 		files.takeInline(inline, name, body)
-		if isCalendarType(contentType) {
+		if isCalendarType(contentType) || isOctetCalendar(contentType, name, files.justAdmitted()) {
 			calendar.see(params, files.justAdmitted())
 		}
 		return true

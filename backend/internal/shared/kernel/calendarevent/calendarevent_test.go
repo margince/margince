@@ -34,6 +34,8 @@ func TestASendIsComparedFieldByField(t *testing.T) {
 	renamed.Title = "Pricing and rollout"
 	guests := meeting()
 	guests.Attendees = []calendarevent.Attendee{{Email: "ANNA@partner.example"}, {Email: "ben@partner.example"}}
+	fewer := meeting()
+	fewer.Attendees = fewer.Attendees[:1]
 	for name, tc := range map[string]struct {
 		after calendarevent.Event
 		want  calendarevent.Difference
@@ -44,6 +46,7 @@ func TestASendIsComparedFieldByField(t *testing.T) {
 		"the place removed": {unplaced, calendarevent.Difference{Location: true}},
 		"renamed":           {renamed, calendarevent.Difference{Title: true}},
 		"a guest swapped":   {guests, calendarevent.Difference{Added: []calendarevent.Attendee{{Email: "ben@partner.example"}}, Removed: []calendarevent.Attendee{{Email: "owner@myco.com"}}}},
+		"a guest removed":   {fewer, calendarevent.Difference{Removed: []calendarevent.Attendee{{Email: "owner@myco.com"}}}},
 	} {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
@@ -57,7 +60,12 @@ func TestASendIsComparedFieldByField(t *testing.T) {
 					t.Errorf("added %v, want %v", got.Added, tc.want.Added)
 				}
 			}
-			if got.Any() != (tc.want.Time || tc.want.Location || tc.want.Title || len(tc.want.Added) > 0) {
+			for i := range got.Removed {
+				if got.Removed[i].Email != tc.want.Removed[i].Email {
+					t.Errorf("removed %v, want %v", got.Removed, tc.want.Removed)
+				}
+			}
+			if got.Any() != (tc.want.Time || tc.want.Location || tc.want.Title || len(tc.want.Added) > 0 || len(tc.want.Removed) > 0) {
 				t.Errorf("Any() = %v for %+v", got.Any(), got)
 			}
 		})

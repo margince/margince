@@ -5,7 +5,7 @@
 import "@testing-library/jest-dom/vitest";
 
 import { cleanup, render, screen } from "@testing-library/react";
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { CalendarChange } from "../lib/calendarchange";
 import { StoryProviders } from "../testing/story-utils";
 import { MeetingChange } from "./meetingchange";
@@ -25,6 +25,15 @@ function draw(change: CalendarChange) {
 }
 
 afterEach(cleanup);
+
+// A date is written with its year only outside now's year, so now is fixed.
+beforeEach(() => {
+  vi.useFakeTimers({ toFake: ["Date"] });
+  vi.setSystemTime(new Date("2026-11-12T12:00:00Z"));
+});
+afterEach(() => {
+  vi.useRealTimers();
+});
 
 describe("MeetingChange", () => {
   it("strikes out the old time and place of a moved meeting and names the guest added", () => {

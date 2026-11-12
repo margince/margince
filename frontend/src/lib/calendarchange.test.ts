@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-import { describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { translate } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import {
@@ -16,6 +16,15 @@ import type { WorklistItem } from "./worklisttypes";
 const t = (key: MessageKey, values?: Record<string, string>) =>
   translate("en", key, values);
 const ZONE = "Europe/Berlin";
+
+// A date is written with its year only outside now's year, so now is fixed.
+beforeEach(() => {
+  vi.useFakeTimers({ toFake: ["Date"] });
+  vi.setSystemTime(new Date("2026-11-12T12:00:00Z"));
+});
+afterEach(() => {
+  vi.useRealTimers();
+});
 
 function change(over: Partial<CalendarChange>): CalendarChange {
   return {
@@ -96,6 +105,13 @@ describe("what a meeting's later mail says in one line", () => {
     );
     expect(allDay).toMatch(/20 Nov/);
     expect(allDay).not.toMatch(/\d\d:\d\d/);
+  });
+
+  it("writes the year only for a meeting outside this year", () => {
+    const day = (starts_at: string) =>
+      meetingWhen({ starts_at, starts_precision: "day" }, "en", ZONE);
+    expect(day("2027-01-05T00:00:00Z")).toMatch(/2027/);
+    expect(day("2026-12-05T00:00:00Z")).not.toMatch(/2026/);
   });
 });
 

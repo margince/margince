@@ -4,6 +4,8 @@
 package mailmap
 
 import (
+	"encoding/json"
+	"strings"
 	"testing"
 	"time"
 
@@ -219,5 +221,56 @@ func TestALongGuestListIsCutAndSaysSo(t *testing.T) {
 	event := calendarEventOf(t, declineFrom(part...))
 	if event == nil || len(event.Attendees) != calendarevent.MaxAttendees || !event.AttendeesCut {
 		t.Errorf("event holds %d guests, cut %v; want %d and cut", len(event.Attendees), event.AttendeesCut, calendarevent.MaxAttendees)
+	}
+}
+
+func TestAnOctetStreamCalendarFileIsReadOnlyWhenItIsOne(t *testing.T) {
+	t.Parallel()
+	calendar := []string{
+		"BEGIN:VCALENDAR", "METHOD:REQUEST",
+		"BEGIN:VEVENT", "UID:octet@example.com", "SUMMARY:Kickoff", "END:VEVENT",
+		"END:VCALENDAR",
+	}
+	attached := func(name string, body ...string) []byte {
+		head := []string{
+			"Content-Type: application/octet-stream; name=\"" + name + "\"",
+			"Content-Disposition: attachment; filename=\"" + name + "\"", "",
+		}
+		return declineFrom(append(head, body...)...)
+	}
+	if event := calendarEventOf(t, attached("invite.ics", calendar...)); event == nil || event.Title != "Kickoff" {
+		t.Errorf("a .ics file sent as octet-stream reads %+v, want Kickoff", event)
+	}
+	if event := calendarEventOf(t, attached("invite.bin", calendar...)); event != nil {
+		t.Errorf("a file not named .ics reads %+v, want no event", event)
+	}
+	if event := calendarEventOf(t, attached("notes.ics", "not a calendar")); event != nil {
+		t.Errorf("a .ics name over other bytes reads %+v, want no event", event)
+	}
+}
+
+func TestAnEventsTitleAndPlaceAreMaskedAndItsSizeIsBounded(t *testing.T) {
+	t.Parallel()
+	part := []string{
+		"Content-Type: text/calendar; method=REQUEST", "",
+		"BEGIN:VCALENDAR", "METHOD:REQUEST", "BEGIN:VEVENT", "UID:big@example.com",
+		"SUMMARY:Deploy with ghp_16C7e42F292c6912E7710c838347Ae178B4a",
+		"LOCATION:Dial-in key AKIAIOSFODNN7EXAMPLE",
+	}
+	long := strings.Repeat("Ä", maxAttendeeName)
+	for i := range calendarevent.MaxAttendees {
+		part = append(part, "ATTENDEE;CN=\""+long+"\":mailto:guest"+string(rune('a'+i%26))+string(rune('a'+i/26))+"@example.com")
+	}
+	part = append(part, "END:VEVENT", "END:VCALENDAR")
+	event := calendarEventOf(t, declineFrom(part...))
+	if event == nil {
+		t.Fatal("no event read")
+	}
+	if strings.Contains(event.Title, "ghp_") || strings.Contains(event.Location, "AKIA") {
+		t.Errorf("title %q, place %q; want the credentials masked", event.Title, event.Location)
+	}
+	encoded, err := json.Marshal(event)
+	if err != nil || len(encoded) > maxEventBytes || !event.AttendeesCut {
+		t.Errorf("event is %d bytes, cut %v; want at most %d and cut", len(encoded), event.AttendeesCut, maxEventBytes)
 	}
 }
