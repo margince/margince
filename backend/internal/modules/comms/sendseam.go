@@ -94,6 +94,7 @@ func (d *Dispatcher) resolveSeam(ctx context.Context, del Delivery) (sendSeam, e
 		return sendSeam{carriage: connector.CarriageOf(sender), transmit: func(ctx context.Context, files []connector.OutboundFile, handoff connector.SendHandoff) (connector.SendReceipt, error) {
 			return handoff(ctx, func(wire context.Context) (connector.SendReceipt, error) {
 				return sender.SendMessage(wire, auth, connector.ChannelMessage{
+					ActivityID: del.ActivityID,
 					// Account IDs remain stable when a username changes owners.
 					Recipient: connector.ChannelIdentity{
 						Provider:      del.Provider,
@@ -261,7 +262,8 @@ func (d *Dispatcher) attachedFiles(ctx context.Context, del Delivery) ([]connect
 	if len(bodies) != len(del.Attachments) {
 		return nil, fmt.Errorf(
 			"comms: the store returned %d files for a message carrying %d",
-			len(bodies), len(del.Attachments))
+			len(bodies), len(del.Attachments),
+		)
 	}
 	out := make([]connector.OutboundFile, 0, len(del.Attachments))
 	for i, file := range del.Attachments {

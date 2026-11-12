@@ -41,7 +41,6 @@
   "extOpenchannel.outboundList.empty": "No messages have been sent from this endpoint yet.",
   "extOpenchannel.outboundList.noGrant": "Your role has no access to outgoing messages.",
   "extOpenchannel.outboundList.outcome": "Outcome",
-  "extOpenchannel.outboundList.recipient": "Recipient",
   "extOpenchannel.outboundList.sub": "The most recent messages this connector posted to the registered address, newest first. Each message body is on the CRM record it was sent from.",
   "extOpenchannel.outboundList.title": "Outgoing messages",
   "extOpenchannel.outboundList.when": "Attempted",

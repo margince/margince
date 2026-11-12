@@ -1457,7 +1457,11 @@ func live(ctx context.Context, rt extension.Runtime, member extension.UserID) (b
 **Your unit never sends on its own**: it declares a transport, and the core calls it. A human stages the
 message through the reply field on the timeline, and the seat gate reads them again. The dispatcher then hands
 you an `OutboundMessage`. It holds the member to send as, and the address on that channel of the contact it goes to.
-It also holds the body, what it replies to, and a key that stops copies.
+It also holds the body, what it replies to, a key that stops copies, and the `ActivityID` of the timeline entry.
+
+If your unit keeps a record of its sends, keep the `ActivityID` and declare it as a link to `privacy.Activity`.
+Do not keep the address. The activity already says who the message was sent to, and core's erasure and export
+reach your row through it.
 
 Return a `Receipt` that names the provider's own message id.
 The outbound rules of the tier still apply: you may not spend an outbound scope from a tool or a job tick.

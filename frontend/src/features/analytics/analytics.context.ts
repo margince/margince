@@ -1,9 +1,7 @@
-import { queryOptions, useQuery } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import { useCallback, useMemo } from "react";
-import { api } from "../../api/client";
 import type { components } from "../../api/schema";
-import { ANALYTICS_CONTEXT_KEY } from "../../lib/analyticskeys";
-import { unwrap } from "../../lib/problem";
+import { analyticsContextOptions } from "../../lib/analyticscontext";
 import { replaceDial, useUrlParams } from "../../lib/urlstate";
 
 export type AnalyticsContext = components["schemas"]["AnalyticsContext"];
@@ -21,19 +19,7 @@ export type AnalyticsSelection = {
   readonly scope: AnalyticsScope;
 };
 
-/**
- * The caller's frame, read once.
- *
- * The server decides which population this colleague measures by default and
- * which ones they may choose; nothing here recreates that policy. A screen
- * asking the question itself would be a second answer, and the two would
- * disagree the first time somebody's grants changed.
- */
-export const analyticsContextOptions = queryOptions({
-  queryKey: ANALYTICS_CONTEXT_KEY,
-  queryFn: async ({ signal }) =>
-    unwrap(await api.GET("/analytics/context", { signal })),
-});
+export { analyticsContextOptions };
 
 export function useAnalyticsContext() {
   return useQuery(analyticsContextOptions);

@@ -11465,6 +11465,10 @@ paths:
           in: query
           schema: {type: string, format: date}
           description: Filter by the first local day of the target period.
+        - name: plan_owned
+          in: query
+          schema: {type: boolean}
+          description: Filter by whether a published sales goal plan owns the target, as one month of a seller's year. Such a target changes only through the plan. Omitted includes both.
       description: List reporting targets
     post:
       tags:
@@ -44064,6 +44068,14 @@ components:
         target_revision:
           type: integer
           format: int64
+        target_source:
+          type: string
+          enum: [target, sales_goals]
+          description: |-
+            Present with `target`. `target`: a target set for this scope and
+            period. `sales_goals`: the figure is a seller's monthly sales
+            goal, or the sum of the monthly sales goals of the scope's sellers
+            over the target interval. A sum has no `target_revision`.
         attainment:
           type: number
           format: double
@@ -44718,6 +44730,7 @@ components:
         name: {type: string}
         state: {$ref: '#/components/schemas/SalesGoalPlanState'}
         total_minor: {type: integer, format: int64, description: 'The published yearly goal.'}
+        draft_total_minor: {type: integer, format: int64, description: 'The yearly sum of a complete draft, for a reader who may read the draft.'}
         can_edit: {type: boolean}
     SalesGoalRoster:
       type: object
@@ -46405,6 +46418,10 @@ components:
           type: boolean
           description: >-
             Whether this caller may record a forecast call or issue a share about this population. Absent from a server that predates the field; a screen then offers the controls and the write route decides.
+        measurable:
+          type: boolean
+          description: >-
+            Whether this population is within the caller's own record access: the workspace for a seat that reads every record, a team for its members. Analytics offers the totals of a scope outside it. Progress reads only a scope inside it.
       additionalProperties: false
     AnalyticsCapabilities:
       type: object

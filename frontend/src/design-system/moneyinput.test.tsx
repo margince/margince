@@ -23,6 +23,45 @@ import { MoneyInput } from "./moneyinput";
 afterEach(cleanup);
 
 describe("MoneyInput", () => {
+  it("reads in its display form at rest and as a plain number while edited", () => {
+    const onChangeMinor = vi.fn();
+    rtlRender(
+      <MoneyInput
+        currency="EUR"
+        valueMinor={1500000}
+        onChangeMinor={onChangeMinor}
+        display={(minor) => `EUR ${minor / 100}`}
+        aria-label="Goal"
+      />,
+    );
+    const input = screen.getByLabelText("Goal") as HTMLInputElement;
+    expect(input.value).toBe("EUR 15000");
+    fireEvent.focus(input);
+    expect(input.value).toBe("15000.00");
+    fireEvent.change(input, { target: { value: "20000" } });
+    expect(onChangeMinor).toHaveBeenCalledWith(2000000);
+    fireEvent.blur(input);
+    expect(input.value).toBe("EUR 20000");
+  });
+
+  it("keeps the editor while a box that started empty is typed into", () => {
+    rtlRender(
+      <MoneyInput
+        currency="EUR"
+        valueMinor={0}
+        blankWhenZero
+        onChangeMinor={vi.fn()}
+        display={(minor) => `EUR ${minor / 100}`}
+        aria-label="Goal"
+      />,
+    );
+    const input = screen.getByLabelText("Goal") as HTMLInputElement;
+    fireEvent.change(input, { target: { value: "1" } });
+    expect(input.value).toBe("1");
+    fireEvent.blur(input);
+    expect(input.value).toBe("EUR 1");
+  });
+
   it("empties for good when the caller takes a clear, and keeps the amount when it does not", () => {
     const onClear = vi.fn();
     rtlRender(

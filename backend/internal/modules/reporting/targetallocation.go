@@ -11,7 +11,9 @@ import (
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/kernel/values"
 )
 
 func (s *Service) targetAllocation(ctx context.Context, tx pgx.Tx, owners MeasurableOwners, target *crmcontracts.ReportingTarget) error {
@@ -28,16 +30,62 @@ func (s *Service) targetAllocation(ctx context.Context, tx pgx.Tx, owners Measur
 	}
 	var b bindings
 	where := activeTarget + " AND t.scope_kind='owner' AND t.scope_id=ANY(" + b.add(members) + ") AND t.metric=" + b.add(target.Definition.Metric) + " AND t.pipeline_id IS NOT DISTINCT FROM " + b.add(target.Definition.PipelineId) + "::uuid AND t.period_start=" + b.add(target.Interval.StartAt) + " AND t.period_end=" + b.add(target.Interval.EndAt) + " AND t.unit=" + b.add(target.Unit)
-	var total int64
-	if err := tx.QueryRow(ctx, "SELECT LEAST(9007199254740992,COALESCE(sum((r.definition->>'value')::numeric),0))::bigint"+targetFrom+" WHERE "+where, b.values...).Scan(&total); err != nil {
+	rows, err := tx.Query(ctx, "SELECT t.scope_id,LEAST(9007199254740992,(r.definition->>'value')::numeric)::bigint"+targetFrom+" WHERE "+where, b.values...)
+	if err != nil {
 		return err
 	}
-	if total > 9007199254740991 {
-		return invalid("allocated targets exceed the exact reporting range")
+	allocated := map[ids.UUID]int64{}
+	for rows.Next() {
+		var owner ids.UUID
+		var value int64
+		if err := rows.Scan(&owner, &value); err != nil {
+			rows.Close()
+			return err
+		}
+		allocated[owner] += value
+	}
+	rows.Close()
+	if err := rows.Err(); err != nil {
+		return err
+	}
+	if err := s.allocateGoals(ctx, tx, *target, members, allocated); err != nil {
+		return err
+	}
+	var total int64
+	for _, value := range allocated {
+		if value > values.MaxExactInteger-total {
+			return invalid("allocated targets exceed the exact reporting range")
+		}
+		total += value
 	}
 	target.AllocatedValue = &total
 	difference := target.Definition.Value - total
 	target.AllocationDifference = &difference
+	return nil
+}
+
+// allocateGoals counts a member's published sales goals over the target's
+// window as their share when they hold no target of their own for it. An
+// evaluation holds that member against the same rule.
+func (s *Service) allocateGoals(ctx context.Context, tx pgx.Tx, target crmcontracts.ReportingTarget, members []ids.UUID, allocated map[ids.UUID]int64) error {
+	if target.Definition.Metric != goalMetric || target.Definition.PipelineId != nil {
+		return nil
+	}
+	var open []ids.UUID
+	for _, member := range members {
+		if _, ok := allocated[member]; !ok {
+			open = append(open, member)
+		}
+	}
+	goals, whole, err := s.goalsOver(ctx, tx, open, target.Interval)
+	if err != nil || !whole || goals.currency != target.Unit {
+		return err
+	}
+	for _, member := range open {
+		if value, ok := goals.over([]ids.UUID{member}); ok {
+			allocated[member] = value
+		}
+	}
 	return nil
 }
 

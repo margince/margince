@@ -76,7 +76,6 @@ const OUTBOUND_ROW = {
   id: "1a2b3c4d-0000-4000-8000-000000000002",
   delivery_key: "act-91",
   attempt: 1,
-  recipient: "Someone Outside",
   outcome: "sent",
   created_at: "2026-05-04T10:00:00Z",
 };
