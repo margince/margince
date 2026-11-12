@@ -19,6 +19,7 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/compose/carddoer"
+	"github.com/margince/margince/backend/internal/compose/stillowed"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/approvals"
@@ -214,6 +215,11 @@ func commitmentTaskEffect(
 		// visibility check a link they typed would. One they cannot see refuses
 		// the whole acceptance, and the approval stays unspent.
 		return svc.RedeemAndApply(ctx, approvalID, CommitmentTaskKind, diffHash, func(tx pgx.Tx) error {
+			// Asked again here: a promise settled or dismissed between the
+			// precheck and this write redeems the card with nothing written.
+			if open, err := commitmentStillOpenTx(ctx, tx, claims, proposal); err != nil || !open {
+				return err
+			}
 			privateTo, err := privateWorkHeldNow(ctx, tx, proposal, assignee)
 			if err != nil {
 				return err
@@ -367,6 +373,9 @@ func commitmentTaskPrecheck(db *database.DB, tasks *activities.Store) approvals.
 		}
 		var privateTo *ids.UUID
 		if err := db.Tx(ctx, func(tx pgx.Tx) error {
+			if open, err := commitmentStillOpenTx(ctx, tx, contacts.NewStore(db), proposal); err != nil || !open {
+				return obsoleteOr(promiseClosedReason, err)
+			}
 			if holder != decider {
 				if err := carddoer.EnsureMayHold(ctx, tx, holder, proposal.Links, colleagueAuthority(db)); err != nil {
 					return err
@@ -460,4 +469,22 @@ func commitmentRecipientTarget(ctx context.Context, tx pgx.Tx, tasks *activities
 		return ids.Nil, apperrors.ErrVersionSkew
 	}
 	return target.ID, nil
+}
+
+// promiseClosedReason tells the decider why an accepted promise wrote nothing.
+const promiseClosedReason = "This promise was settled or dismissed since the card was made, so there is nothing to accept."
+
+// commitmentStillOpenTx is stillowed.PromiseTx for one staged proposal.
+func commitmentStillOpenTx(ctx context.Context, tx pgx.Tx, claims *contacts.Store, proposal CommitmentTaskProposal) (bool, error) {
+	return stillowed.PromiseTx(ctx, tx, claims, commitmentClaimIDs(proposal.ClaimID, proposal.ClaimIDs),
+		proposal.SourceActivityID, proposal.Locator)
+}
+
+// obsoleteOr is a precheck's answer for work that is no longer owed. It is the
+// read error when there is one, else the card's reason, which withdraws it.
+func obsoleteOr(reason string, err error) error {
+	if err != nil {
+		return err
+	}
+	return &approvals.ObsoleteError{Reason: reason}
 }

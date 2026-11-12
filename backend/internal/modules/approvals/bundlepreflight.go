@@ -61,6 +61,9 @@ func (s *Service) preflightBundle(ctx context.Context, p principal.Principal, bu
 // Membership and authority are checked again under lock; new members stay pending.
 func (s *Service) precheckMember(ctx context.Context, a row, edited json.RawMessage) error {
 	if err := s.checkPreview(ctx, a, edited); err != nil {
+		if obsolete := s.obsoleteByKind(ctx, a, edited, err); obsolete != nil {
+			return obsolete
+		}
 		return err
 	}
 	// Before the kind's own check, which reads the edit as if it were allowed.
@@ -80,6 +83,19 @@ func (s *Service) precheckMember(ctx context.Context, a row, edited json.RawMess
 		return nil
 	}
 	return check(ctx, a.ProposedChange, edited)
+}
+
+// obsoleteByKind is the kind's own reason for a card its preview found stale,
+// when that reason is that the work is no longer needed. It is the more
+// useful answer: the card closes with it instead of waiting with "version
+// skew".
+func (s *Service) obsoleteByKind(ctx context.Context, a row, edited json.RawMessage, stale error) *ObsoleteError {
+	check, ok := s.prechecks[a.Kind]
+	if !ok || !serverProposed(a) || !errors.Is(stale, apperrors.ErrVersionSkew) {
+		return nil
+	}
+	obsolete, _ := errors.AsType[*ObsoleteError](check(ctx, a.ProposedChange, edited))
+	return obsolete
 }
 
 func decisionContextRefusal(err error) bool {

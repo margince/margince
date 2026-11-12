@@ -34,6 +34,21 @@ func (e *AlreadyDecidedError) MessageFault() (code, message string) {
 
 func (e *AlreadyDecidedError) Unwrap() error { return apperrors.ErrConflict }
 
+// ObsoleteError is a precheck's answer that the card's work is no longer
+// needed: what it was staged for has happened another way. The card is
+// withdrawn with Reason, and the decider is told why rather than shown a
+// failure.
+type ObsoleteError struct{ Reason string }
+
+func (e *ObsoleteError) Error() string { return e.Reason }
+
+// MessageFault names the outcome so a caller can branch on the code.
+func (e *ObsoleteError) MessageFault() (code, message string) {
+	return "no_longer_needed", e.Reason
+}
+
+func (e *ObsoleteError) Unwrap() error { return apperrors.ErrConflict }
+
 // InvalidEditError maps to 422: an edited payload that is not a JSON
 // object cannot be canonicalized, so it cannot become an authority.
 type InvalidEditError struct{ Cause error }
@@ -163,7 +178,23 @@ func (s *Service) runPrecheck(ctx context.Context, id ids.ApprovalID, approve bo
 		}
 		return &AlreadyDecidedError{Status: st}
 	}
-	return s.precheckMember(ctx, a, edited)
+	err = s.precheckMember(ctx, a, edited)
+	if obsolete, ok := errors.AsType[*ObsoleteError](err); ok {
+		return s.withdrawObsolete(ctx, id, obsolete)
+	}
+	return err
+}
+
+// withdrawObsolete closes a card whose work is no longer needed and answers
+// the decider with the reason. A decision that landed first keeps the card.
+func (s *Service) withdrawObsolete(ctx context.Context, id ids.ApprovalID, obsolete *ObsoleteError) error {
+	if err := s.db.Tx(ctx, func(tx pgx.Tx) error {
+		_, err := withdrawInTx(ctx, tx, id, obsolete.Reason)
+		return err
+	}); err != nil {
+		return err
+	}
+	return obsolete
 }
 
 // countIfAContactDecided records the track record, and records nothing for an

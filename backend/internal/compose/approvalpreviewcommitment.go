@@ -12,7 +12,6 @@ import (
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
-	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/approvals"
 	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/platform/approvalsubject"
@@ -192,12 +191,7 @@ func (r approvalPreviewReader) promisesStillOpen(ctx context.Context, proposal C
 	var open bool
 	err := r.db.Tx(ctx, func(tx pgx.Tx) error {
 		var err error
-		claims := commitmentClaimIDs(proposal.ClaimID, proposal.ClaimIDs)
-		if len(claims) == 0 {
-			open, err = activities.CommitmentStillOpenTx(ctx, tx, proposal.SourceActivityID, proposal.Locator)
-			return err
-		}
-		open, err = contacts.NewStore(r.db).ClaimsStillOpenTx(ctx, tx, claims)
+		open, err = commitmentStillOpenTx(ctx, tx, contacts.NewStore(r.db), proposal)
 		return err
 	})
 	return open, err
