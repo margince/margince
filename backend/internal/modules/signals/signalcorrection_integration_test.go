@@ -23,6 +23,7 @@ import (
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/testdb"
+	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
@@ -108,6 +109,24 @@ func TestACorrectedSignalKeepsItsOldKindAndEvidenceInTheAudit(t *testing.T) {
 	}
 	if _, err := store.UpdateSignal(ctx, produced, UpdateSignalInput{Kind: &producerKind, Evidence: &evidence}); err != nil {
 		t.Errorf("echoing a produced signal's own kind while correcting its evidence returned %v, want it accepted", err)
+	}
+
+	// An agent triages a signal but does not rewrite what it claims or cites.
+	agentCtx := principal.WithActor(ctx, principal.Principal{
+		Type: principal.PrincipalAgent, ID: "agent:" + ids.NewV7().String(), UserID: admin, PassportID: ids.NewV7(), OnBehalfOf: admin,
+		Permissions: principal.Permissions{Objects: map[string]principal.ObjectGrant{"signal": {Read: true, Update: true}}},
+	})
+	signalID := ids.From[ids.SignalKind](ids.UUID(made.Id))
+	moved := "risk"
+	if _, err := store.UpdateSignal(agentCtx, signalID, UpdateSignalInput{Kind: &moved}); !errors.Is(err, apperrors.ErrPermissionDenied) {
+		t.Errorf("an agent moving a signal's kind returned %v, want a refusal", err)
+	}
+	if _, err := store.UpdateSignal(agentCtx, signalID, UpdateSignalInput{Evidence: &evidence}); !errors.Is(err, apperrors.ErrPermissionDenied) {
+		t.Errorf("an agent replacing a signal's evidence returned %v, want a refusal", err)
+	}
+	status := "acknowledged"
+	if _, err := store.UpdateSignal(agentCtx, produced, UpdateSignalInput{Status: &status}); err != nil {
+		t.Errorf("an agent triaging a signal returned %v, want it accepted", err)
 	}
 
 	var beforeJSON, afterJSON []byte

@@ -1,32 +1,30 @@
-# An extension cannot add its own record kinds, links, signals or reports
+# Extension record kinds, links, signals and reports
 
 This package of work lets an extension bring its own record kinds, links between records, signals and reports into
-Margince. It is for those who build or run extensions. Each feature ships on its own, and the table says which ones
-are done.
+Margince. It is for those who build or run extensions. The table lists each feature and the section with its details.
 
 ## How to read this page
 
 | Column | Meaning |
 |---|---|
 | **Feature** | One piece of the package, in build order. |
-| **What someone can do now** | What works today. A planned feature says nothing yet. |
+| **What an extension can do** | What the feature gives an extension. |
 | **Page with the details** | Where the facts are. |
-| **State** | **done** is built and merged. **planned** has not started. |
 
-| # | Feature | What someone can do now | Page with the details | State |
-|---|---|---|---|---|
-| 1 | Audited fix of signal evidence | Correct a signal's type and evidence. The old values stay in the audit log. | [Audited fix of signal evidence](#audited-fix-of-signal-evidence) | done |
-| 2 | Company type field | Declare a company type in an extension and set it on a company. See it in the company list and filter by it. | [Company type field](#company-type-field) | done |
-| 3 | Extension record kinds and link registry | Declare a record kind in an extension. Tag it, put it on a Shortlist and refuse access to it by default. Read the kinds you may see from `GET /v1/record-kinds`. | [Extension record kinds and link registry](#extension-record-kinds-and-link-registry) | done |
-| 4 | Extension report breakdowns and counts | Declare a count or a breakdown in an extension. See it on Reports and Home, under the seat's row scope, field masks and the group floor. A multi-select custom field can be split by. | [Extension report breakdowns and counts](#extension-report-breakdowns-and-counts) | done |
-| 5 | Extension signal types with structured evidence | Declare a signal type in an extension, with an evidence layout that marks personal data. File a signal of it. The same event reported twice leaves one signal. Erasing a contact removes the personal members. | [Extension signal types with structured evidence](#extension-signal-types-with-structured-evidence) | done |
-| 6 | Panels and tabs on record pages | Draw a component of the unit's own on a contact, company or deal page, with the record the page shows. A reader needs `read` on the panel's object. | [Panels and tabs on record pages](#panels-and-tabs-on-record-pages) | done |
-| 7 | "Pick a record" field type | Add a custom field of type `record` that points at one record of a kind an extension declared. Set and read it on the record pages and in the settings table. | ["Pick a record" field type](#pick-a-record-field-type) | done |
-| 8 | Record page with merged history for extension kinds | Declare a timeline for a record kind. Its rows that reference a contact, company or deal, and the unit's signals about it, show in that record's History beside activities and field changes. | [Record page with merged history for extension kinds](#record-page-with-merged-history-for-extension-kinds) | done |
-| 9 | Search and lists for extension kinds | Find a kind's rows in search. List them in a Shortlist or a Live List, filter them in the Filters screen and keep a saved view over them. | [Search and lists for extension kinds](#search-and-lists-for-extension-kinds) | done |
-| 10 | Suggested-link resolver | Propose which deal, company, contact or project a message belongs to. A reader accepts or rejects each suggestion in a queue on the Worklist. Nothing is filed until they accept. | [Suggested-link resolver](#suggested-link-resolver) | done |
-| 11 | Typed links between core records | Link a deal, company or contact to another with a type from core or from an extension. See the links on the deal page, filter the deal list by link type and group deals by it in Reports. | [Typed links between core records](#typed-links-between-core-records) | done |
-| 12 | Let an unattended extension run land a signal through Ingest | Raise a signal of a declared type about a record from a scheduled job, as the member whose credential it holds. A repeat of the event is not raised twice. | [Land a signal](../how-to/land-companies-and-deals-from-an-extension.md#land-a-signal) | done |
+| # | Feature | What an extension can do | Page with the details |
+|---|---|---|---|
+| 1 | Audited fix of signal evidence | Correct a signal's type and evidence. The old values stay in the audit log. | [Audited fix of signal evidence](#audited-fix-of-signal-evidence) |
+| 2 | Company type field | Declare a company type in an extension and set it on a company. See it in the company list and filter by it. | [Company type field](#company-type-field) |
+| 3 | Extension record kinds and link registry | Declare a record kind in an extension. Tag it, put it on a Shortlist and refuse access to it by default. Read the kinds you may see from `GET /v1/record-kinds`. | [Extension record kinds and link registry](#extension-record-kinds-and-link-registry) |
+| 4 | Extension report breakdowns and counts | Declare a count or a breakdown in an extension. See it on Reports and Home, under the seat's row scope, field masks and the group floor. A multi-select custom field can be split by. | [Extension report breakdowns and counts](#extension-report-breakdowns-and-counts) |
+| 5 | Extension signal types with structured evidence | Declare a signal type in an extension, with an evidence layout that marks personal data. File a signal of it. The same event reported twice leaves one signal. Erasing a contact removes the personal members. | [Extension signal types with structured evidence](#extension-signal-types-with-structured-evidence) |
+| 6 | Panels and tabs on record pages | Draw a component of the unit's own on a contact, company or deal page, with the record the page shows. A reader needs `read` on the panel's object. | [Panels and tabs on record pages](#panels-and-tabs-on-record-pages) |
+| 7 | "Pick a record" field type | Add a custom field of type `record` that points at one record of a kind an extension declared. Set and read it on the record pages and in the settings table. | ["Pick a record" field type](#pick-a-record-field-type) |
+| 8 | Record page with merged history for extension kinds | Declare a timeline for a record kind. Its rows that reference a contact, company or deal, and the unit's signals about it, show in that record's History beside activities and field changes. | [Record page with merged history for extension kinds](#record-page-with-merged-history-for-extension-kinds) |
+| 9 | Search and lists for extension kinds | Find a kind's rows in search. List them in a Shortlist or a Live List, filter them in the Filters screen and keep a saved view over them. | [Search and lists for extension kinds](#search-and-lists-for-extension-kinds) |
+| 10 | Suggested-link resolver | Propose which deal, company, contact or project a message belongs to. A reader accepts or rejects each suggestion in a queue on the Worklist. Nothing is filed until they accept. | [Suggested-link resolver](#suggested-link-resolver) |
+| 11 | Typed links between core records | Link a deal, company or contact to another with a type from core or from an extension. See the links on the deal page, filter the deal list by link type and group deals by it in Reports. | [Typed links between core records](#typed-links-between-core-records) |
+| 12 | Let an unattended extension run land a signal through Ingest | Raise a signal of a declared type about a record from a scheduled job, as the member whose credential it holds. A repeat of the event is not raised twice. | [Land a signal](../how-to/land-companies-and-deals-from-an-extension.md#land-a-signal) |
 
 ```mermaid
 flowchart LR
@@ -117,7 +115,6 @@ fails a new column that restates a closed list.
 
 | Table | Column |
 |---|---|
-| `activity_link` | `entity_type` (with `ext_entity_id` for the record's id) |
 | `attachment`, `embedding`, `list`, `list_member`, `list_live_member`, `list_member_event`, `taggable`, `user_record_view`, `signal` | `entity_type` |
 | `field_provenance` | `object_type` |
 | `record_grant` | `record_type` |
@@ -128,7 +125,7 @@ No column gains a foreign key to an extension table, because an extension role c
 
 What this feature does not do yet:
 
-- The activity writers still refuse an extension kind, so no activity is filed on an extension record yet. The column is ready.
+- An activity link names a core record only, so no activity is filed on an extension record.
 - The record page keeps core's kinds. Tag counts do not include extension records.
 
 ## Extension report breakdowns and counts

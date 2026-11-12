@@ -188,8 +188,8 @@ ready before we need it, because the first date comes 24 hours after we learn of
   limit on it, and who it is for.
 - [agent-tools.md](reference/agent-tools.md): every agent tool, whether a human must approve it, and the pages
   that go with it.
-- [an-extension-cannot-add-its-own-record-k.md](reference/an-extension-cannot-add-its-own-record-k.md): the
-  package of work for an extension to add its own record kinds, links and reports, and which features are built.
+- [extension-record-kinds-links-signals-and-reports.md](reference/extension-record-kinds-links-signals-and-reports.md): the
+  what an extension can add to Margince: its own record kinds, links and reports.
 - [record-links.md](reference/record-links.md): typed links for deals, companies and contacts: types,
   rights and routes.
 - [extension-privacy-and-retention.md](reference/extension-privacy-and-retention.md): how an extension's data

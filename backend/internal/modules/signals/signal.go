@@ -247,6 +247,13 @@ func (s *Store) UpdateSignal(ctx context.Context, id ids.SignalID, in UpdateSign
 		// The audit before-image is where the old kind and evidence stay readable,
 		// so an erasure of the subject withholds them (privacy.tombstoneSubjectSignals).
 		// A client echoing the kind it read is not a correction, so only a move is checked.
+		// The tool that triages a signal is an agent's at its own tier. Moving
+		// a kind or replacing evidence is not triage: only a human does it.
+		if (in.Kind != nil && *in.Kind != string(current.Kind)) || in.Evidence != nil {
+			if actor, ok := principal.Actor(ctx); ok && actor.Type == principal.PrincipalAgent {
+				return fmt.Errorf("a signal's kind and evidence are a human's to change: %w", apperrors.ErrPermissionDenied)
+			}
+		}
 		if in.Kind != nil {
 			// An extension signal keeps its kind: moved to a core kind it would
 			// keep its layout members, which the erasure path finds by kind.

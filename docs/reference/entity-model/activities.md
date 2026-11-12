@@ -341,7 +341,7 @@ The 34 tables owned by `activities`, as the migrations build them. [Back to the 
 
 ## activity_link
 
-10 columns · primary key `(id)` · referenced by 0 foreign keys
+9 columns · primary key `(id)` · referenced by 0 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
@@ -350,8 +350,7 @@ The 34 tables owned by `activities`, as the migrations build them. [Back to the 
 | `company_id` | `uuid` |  | Points at `company.id`. |
 | `contact_id` | `uuid` |  | Points at `contact.id`. |
 | `deal_id` | `uuid` |  | Points at `deal.id`. |
-| `entity_type` | `text` | yes |  |
-| `ext_entity_id` | `uuid` |  |  |
+| `entity_type` | `text` | yes | One of `contact`, `company`, `deal`, `lead`, `project`. |
 | `lead_id` | `uuid` |  | Points at `lead.id`. |
 | `project_id` | `uuid` |  | Points at `project.id`. |
 | `created_at` | `timestamp with time zone`, default `now()` | yes | When the row was created. Set once. |
@@ -369,9 +368,8 @@ The 34 tables owned by `activities`, as the migrations build them. [Back to the 
 
 **Rules**
 
-- `activity_link_entity_type_check`: `CHECK (((entity_type = ANY (ARRAY['contact', 'company', 'deal', 'lead', 'project'])) OR (entity_type ~ '^ext:[a-z0-9]+(-[a-z0-9]+)*:[a-z][a-z0-9_]{0,31}$')))`
-- `activity_link_ext_id_matches_type`: `CHECK (((entity_type ~ '^ext:') = (ext_entity_id IS NOT NULL)))`
-- `activity_link_shape`: `CHECK ((((entity_type ~ '^ext:') AND (contact_id IS NULL) AND (company_id IS NULL) AND (deal_id IS NULL) AND (lead_id IS NULL) AND (project_id IS NULL)) OR ((entity_type = 'contact') AND (contact_id IS NOT NULL) AND (company_id IS NULL) AND (deal_id IS NULL) AND (lead_id IS NULL) AND (project_id IS NULL)) OR ((entity_type = 'company') AND (company_id IS NOT NULL) AND (contact_id IS NULL) AND (deal_id IS NULL) AND (lead_id IS NULL) AND (project_id IS NULL)) OR ((entity_type = 'deal') AND (deal_id IS NOT NULL) AND (contact_id IS NULL) AND (company_id IS NULL) AND (lead_id IS NULL) AND (project_id IS NULL)) OR ((entity_type = 'lead') AND (lead_id IS NOT NULL) AND (contact_id IS NULL) AND (company_id IS NULL) AND (deal_id IS NULL) AND (project_id IS NULL)) OR ((entity_type = 'project') AND (project_id IS NOT NULL) AND (contact_id IS NULL) AND (company_id IS NULL) AND (deal_id IS NULL) AND (lead_id IS NULL))))`
+- `activity_link_entity_type_check`: `CHECK ((entity_type = ANY (ARRAY['contact', 'company', 'deal', 'lead', 'project'])))`
+- `activity_link_shape`: `CHECK ((((entity_type = 'contact') AND (contact_id IS NOT NULL) AND (company_id IS NULL) AND (deal_id IS NULL) AND (lead_id IS NULL) AND (project_id IS NULL)) OR ((entity_type = 'company') AND (company_id IS NOT NULL) AND (contact_id IS NULL) AND (deal_id IS NULL) AND (lead_id IS NULL) AND (project_id IS NULL)) OR ((entity_type = 'deal') AND (deal_id IS NOT NULL) AND (contact_id IS NULL) AND (company_id IS NULL) AND (lead_id IS NULL) AND (project_id IS NULL)) OR ((entity_type = 'lead') AND (lead_id IS NOT NULL) AND (contact_id IS NULL) AND (company_id IS NULL) AND (deal_id IS NULL) AND (project_id IS NULL)) OR ((entity_type = 'project') AND (project_id IS NOT NULL) AND (contact_id IS NULL) AND (company_id IS NULL) AND (deal_id IS NULL) AND (lead_id IS NULL))))`
 
 **Indexes**
 
@@ -382,7 +380,6 @@ The 34 tables owned by `activities`, as the migrations build them. [Back to the 
 - `idx_alink_lead`: `btree (lead_id) WHERE (lead_id IS NOT NULL)`
 - `idx_alink_project`: `btree (project_id) WHERE (project_id IS NOT NULL)`
 - `uq_activity_link`: `unique, btree (activity_id, entity_type, COALESCE(contact_id, company_id, deal_id, lead_id, project_id))`
-- `uq_activity_link_ext`: `unique, btree (activity_id, entity_type, ext_entity_id) WHERE (ext_entity_id IS NOT NULL)`
 - `uq_activity_link_project`: `unique, btree (activity_id) WHERE (entity_type = 'project')`
 
 **Triggers**

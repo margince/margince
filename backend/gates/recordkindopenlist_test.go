@@ -28,6 +28,7 @@ const extensionKindPattern = "^ext:"
 
 // notRecordKinds are the columns whose list is not core's record vocabulary.
 var notRecordKinds = gatekit.Waive(map[string]string{
+	"activity_link.entity_type":            "names a core record an activity is filed under, and no activity is filed on an extension record",
 	"activity_link_suggestion.entity_type": "names a core record a message may be filed under, and the relink that an accept runs files under core records only",
 	"bulk_operation.record_type":           "names what a bulk change may touch, and `worklist_item` is no record; an extension kind is not offered a bulk change",
 })

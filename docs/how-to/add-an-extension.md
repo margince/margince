@@ -805,7 +805,7 @@ The service reports itself unready while your table, a column or the unique inde
 `margince_app` holds fewer than the four rights on the table.
 
 `GET /v1/record-kinds` lists the kinds a seat may read. The reference page
-[an extension cannot add its own record kinds](../reference/an-extension-cannot-add-its-own-record-k.md#extension-record-kinds-and-link-registry)
+[extension record kinds, links, signals and reports](../reference/extension-record-kinds-links-signals-and-reports.md#extension-record-kinds-and-link-registry)
 says what core does with a kind today, and what it leaves out.
 
 ### Show a kind's rows in a record's History
@@ -877,7 +877,7 @@ A group below the group floor, five records by default, is held back. So are the
 A seat that may not read your kind does not see the report.
 
 The reference page
-[an extension cannot add its own record kinds](../reference/an-extension-cannot-add-its-own-record-k.md#extension-report-breakdowns-and-counts)
+[extension record kinds, links, signals and reports](../reference/extension-record-kinds-links-signals-and-reports.md#extension-report-breakdowns-and-counts)
 lists what each part does.
 
 ## Declare a signal type
@@ -921,7 +921,7 @@ Core adds a `provenance` member with the unit and the signed-in seat. You cannot
 delivery cannot file a signal, because no seat stands behind it.
 
 The reference page
-[an extension cannot add its own record kinds](../reference/an-extension-cannot-add-its-own-record-k.md#extension-signal-types-with-structured-evidence)
+[extension record kinds, links, signals and reports](../reference/extension-record-kinds-links-signals-and-reports.md#extension-signal-types-with-structured-evidence)
 lists what each part does.
 
 ## Draw a panel on a core page
@@ -1114,7 +1114,7 @@ outcome, err := tx.Core().LinkSuggestions().Propose(ctx, extension.LinkSuggestio
   the link.
 
 The details are in the
-[package overview](../reference/an-extension-cannot-add-its-own-record-k.md#suggested-link-resolver).
+[package overview](../reference/extension-record-kinds-links-signals-and-reports.md#suggested-link-resolver).
 
 ## Declare a link type
 

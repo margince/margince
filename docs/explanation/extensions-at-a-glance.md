@@ -196,7 +196,7 @@ What stops a unit, in each case:
 
 Whole new record kinds, typed links between records, signal types and report counts are declared the same way.
 The state of each feature is in
-[an-extension-cannot-add-its-own-record-k.md](../reference/an-extension-cannot-add-its-own-record-k.md).
+[extension-record-kinds-links-signals-and-reports.md](../reference/extension-record-kinds-links-signals-and-reports.md).
 
 ## What every extension gets for free
 

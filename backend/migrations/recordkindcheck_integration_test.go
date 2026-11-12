@@ -18,7 +18,6 @@ import (
 // and now also accepts `ext:<unit>:<kind>`. The schema is read back for each
 // below, so a listed column that keeps a closed list fails.
 var recordKindColumns = []struct{ table, column string }{
-	{"activity_link", "entity_type"},
 	{"attachment", "entity_type"},
 	{"embedding", "entity_type"},
 	{"field_provenance", "object_type"},
@@ -81,43 +80,6 @@ func kindCheckAccepts(t *testing.T, conn *pgx.Conn, def, column, value string) b
 		t.Fatalf("evaluating %s: %v", def, err)
 	}
 	return ok == nil || *ok
-}
-
-func seedActivityRow(t *testing.T, conn *pgx.Conn) string {
-	t.Helper()
-	var id string
-	if err := conn.QueryRow(context.Background(), `
-		INSERT INTO activity (kind, subject, occurred_at, source, captured_by)
-		VALUES ('task', 'Kind link', now(), 'manual', 'test') RETURNING id::text`).Scan(&id); err != nil {
-		t.Fatalf("seeding the activity: %v", err)
-	}
-	return id
-}
-
-func TestARecordKindLinkNeedsItsIdAndNoCoreForeignKey(t *testing.T) {
-	conn := connect(t, ownerDSNOf(t))
-	headSchema(t, conn)
-	ctx := context.Background()
-	activity := seedActivityRow(t, conn)
-
-	insert := func(entityType string, extID any) error {
-		_, err := conn.Exec(ctx, `
-			INSERT INTO activity_link (activity_id, entity_type, ext_entity_id) VALUES ($1, $2, $3)`,
-			activity, entityType, extID)
-		return err
-	}
-	if err := insert("ext:visit-log:visit", "0197a000-0000-7000-8000-000000000001"); err != nil {
-		t.Fatalf("a link to an extension record was refused: %v", err)
-	}
-	if err := insert("ext:visit-log:visit", "0197a000-0000-7000-8000-000000000001"); err == nil {
-		t.Error("the same extension record was linked to one activity twice")
-	}
-	if err := insert("ext:visit-log:visit", nil); err == nil {
-		t.Error("an extension link with no record id was accepted")
-	}
-	if err := insert("deal", "0197a000-0000-7000-8000-000000000002"); err == nil {
-		t.Error("a core link carrying an extension id was accepted")
-	}
 }
 
 func TestADedupePairOfAnExtensionKindIsOrderedAndUnique(t *testing.T) {
