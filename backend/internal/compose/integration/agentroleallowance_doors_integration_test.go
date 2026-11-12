@@ -22,13 +22,13 @@ import (
 
 // roleBoundDoors is the app under a live meter that reads the saved
 // allowances, as the API composes it, with the admin's passport on both doors.
-func roleBoundDoors(t *testing.T, slug string, extra ...compose.Option) *apptest.TwoDoors {
+func roleBoundDoors(t *testing.T, slug string) *apptest.TwoDoors {
 	t.Helper()
 	meter := agentvolume.New(redistest.Client(t), agentvolume.Limits{}, time.Hour)
 	sourced := func(s *compose.Server, pool *pgxpool.Pool) {
 		compose.WithAgentVolume(meter.WithPolicySource(compose.NewAgentAllowanceSource(pool)))(s, pool)
 	}
-	return apptest.SetupTwoDoors(t, slug, append([]compose.Option{sourced}, extra...), "read")
+	return apptest.SetupTwoDoors(t, slug, []compose.Option{sourced}, "read")
 }
 
 type limitRefusal struct {

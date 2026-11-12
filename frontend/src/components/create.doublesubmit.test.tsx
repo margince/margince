@@ -42,8 +42,8 @@ const save = () => screen.getByRole("button", { name: "Create" });
 const form = () => document.querySelector("form") as HTMLFormElement;
 
 describe("a second press while the first save is not yet drawn pending", () => {
-  // Fake timers hold the task the latch waits for, so the second click lands a
-  // commit later and never a task later, whichever case ran before this one.
+  // Fake timers hold the task the latch waits for. So the second click lands
+  // one commit later and never one task later, whatever case ran before.
   it("sends one request for two clicks a commit apart", async () => {
     vi.useFakeTimers();
     try {

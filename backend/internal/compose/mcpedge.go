@@ -253,13 +253,7 @@ const (
 	mcpStreamOpensPerMinute = 30
 )
 
-// mcpClock is the clock the MCP rate limits count their windows on.
-func (s *Server) mcpClock() func() time.Time {
-	if s.mcpNowForTest != nil {
-		return s.mcpNowForTest
-	}
-	return time.Now
-}
+func newMCPLimiters() mcpLimiters { return newMCPLimitersWithClock(time.Now) }
 
 // newMCPLimitersWithClock takes the clock for the same reason
 // ratelimit.NewWithClock offers it: a window boundary is a property a test
