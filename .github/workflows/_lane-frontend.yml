@@ -57,6 +57,11 @@ permissions:
 env:
   GOPROXY: https://proxy.golang.org|direct
 
+# A job in the CI image runs `sh` unless told otherwise, and the steps use bash.
+defaults:
+  run:
+    shell: bash
+
 jobs:
   fe-quality:
     name: fe-quality (ds gates + drift + biome + composed tsc)
