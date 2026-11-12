@@ -142,8 +142,10 @@ func TestAMeetingUpdateSaysWhatChangedSinceTheInvitation(t *testing.T) {
 	uid := "040000008200E00074C5B7101A82E008" + ids.NewV7().String()
 	guests := []string{o.seat}
 	invite := meetingSend{method: "REQUEST", start: "20261202T100000", location: "Teams", guests: guests, sentAt: now.Add(-3 * time.Hour)}
-	update := meetingSend{method: "REQUEST", start: "20261203T150000", location: "Office Berlin", sequence: 1,
-		guests: append([]string{"ben@customer.example"}, guests...), sentAt: now.Add(-2 * time.Hour)}
+	update := meetingSend{
+		method: "REQUEST", start: "20261203T150000", location: "Office Berlin", sequence: 1,
+		guests: append([]string{"ben@customer.example"}, guests...), sentAt: now.Add(-2 * time.Hour),
+	}
 	cancel := update
 	cancel.method, cancel.sequence, cancel.sentAt = "CANCEL", 2, now.Add(-time.Hour)
 

@@ -81,22 +81,30 @@ func readZones(lines []icalLine) statedZones {
 			tzid = value
 		case line.is("BEGIN") && (strings.EqualFold(value, "STANDARD") || strings.EqualFold(value, "DAYLIGHT")):
 			rule = &zoneRule{}
-		case rule != nil && line.is("DTSTART"):
-			if start, err := time.Parse(icalDateTime, value); err == nil {
-				rule.start = start
-			}
-		case rule != nil && line.is("TZOFFSETTO"):
-			rule.offset, rule.stated = utcOffset(value)
-		case rule != nil && line.is("RRULE"):
-			readYearlyRule(rule, value)
 		case rule != nil && line.is("END"):
 			if rule.stated {
 				zones[tzid] = append(zones[tzid], *rule)
 			}
 			rule = nil
+		case rule != nil:
+			rule.read(line, value)
 		}
 	}
 	return zones
+}
+
+// read takes one property of a STANDARD or DAYLIGHT block into the rule.
+func (rule *zoneRule) read(line icalLine, value string) {
+	switch {
+	case line.is("DTSTART"):
+		if start, err := time.Parse(icalDateTime, value); err == nil {
+			rule.start = start
+		}
+	case line.is("TZOFFSETTO"):
+		rule.offset, rule.stated = utcOffset(value)
+	case line.is("RRULE"):
+		readYearlyRule(rule, value)
+	}
 }
 
 // readYearlyRule reads FREQ=YEARLY;BYMONTH=10;BYDAY=-1SU, the one shape

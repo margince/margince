@@ -35,25 +35,23 @@ func eventUID(body []byte) string {
 	return ""
 }
 
-// named is the first calendar part that names an event. A disputed part
-// names none, for the reason it names no method.
-func (c calendarPart) named() (partMethods, bool) {
+// named is the first calendar part that names an event, or the zero part. A
+// disputed part names none, for the reason it names no method.
+func (c calendarPart) named() partMethods {
 	for _, part := range c.parts {
 		if !part.disputed && part.uid != "" {
-			return part, true
+			return part
 		}
 	}
-	return partMethods{}, false
+	return partMethods{}
 }
 
 // uid is the event the message's calendar parts name.
 func (c calendarPart) uid() string {
-	part, _ := c.named()
-	return part.uid
+	return c.named().uid
 }
 
 // event is what the part naming the event says of it, or nil.
 func (c calendarPart) event() *calendarevent.Event {
-	part, _ := c.named()
-	return part.event
+	return c.named().event
 }

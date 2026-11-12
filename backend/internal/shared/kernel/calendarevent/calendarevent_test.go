@@ -83,12 +83,12 @@ func TestWhatOneSideDoesNotKnowIsNoChange(t *testing.T) {
 
 func TestAPartstatIsAnAnswerOnlyWhenItAnswers(t *testing.T) {
 	t.Parallel()
-	for in, want := range map[string]string{
-		"ACCEPTED": "accepted", " tentative ": "tentative", "Declined": "declined",
-		"NEEDS-ACTION": "", "DELEGATED": "", "": "",
+	for _, tc := range []struct{ in, want string }{
+		{"ACCEPTED", "accepted"}, {" tentative ", "tentative"}, {"Declined", "declined"},
+		{"NEEDS-ACTION", ""}, {"DELEGATED", ""}, {"", ""},
 	} {
-		if got := calendarevent.AnswerOf(in); got != want {
-			t.Errorf("AnswerOf(%q) = %q, want %q", in, got, want)
+		if got := calendarevent.AnswerOf(tc.in); got != tc.want {
+			t.Errorf("AnswerOf(%q) = %q, want %q", tc.in, got, tc.want)
 		}
 	}
 }
