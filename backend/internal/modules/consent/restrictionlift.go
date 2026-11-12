@@ -49,7 +49,7 @@ func (s *Store) RequestRestrictionLift(ctx context.Context, in LiftInput) error 
 		return err
 	}
 	if sub.entityType != entityContact || in.SuppressionID.IsZero() {
-		return &ValidationError{Field: "suppression_id", Reason: "name the contact's restriction to lift"}
+		return &ValidationError{Field: suppressionIDField, Reason: "name the contact's restriction to lift"}
 	}
 	if err := requireReason(in.Reason, "lifting a restriction"); err != nil {
 		return err
@@ -58,7 +58,7 @@ func (s *Store) RequestRestrictionLift(ctx context.Context, in LiftInput) error 
 		return err
 	}
 	if s.confirmSender == nil {
-		return &ValidationError{Field: "suppression_id", Reason: "this installation sends no mail, so it cannot send the notice a lift owes; the restriction stays"}
+		return &ValidationError{Field: suppressionIDField, Reason: "this installation sends no mail, so it cannot send the notice a lift owes; the restriction stays"}
 	}
 	return s.db.Tx(ctx, func(tx pgx.Tx) error {
 		if err := lockSubjectSuppressions(ctx, tx, sub.id); err != nil {
@@ -84,7 +84,7 @@ func (s *Store) queueRestrictionLiftTx(ctx context.Context, tx pgx.Tx, sub subje
 		return err
 	}
 	if address == "" {
-		return &ValidationError{Field: "suppression_id", Reason: "the contact has no address to send the notice to, so the restriction stays"}
+		return &ValidationError{Field: suppressionIDField, Reason: "the contact has no address to send the notice to, so the restriction stays"}
 	}
 	act, err := withdrawalActTx(ctx, tx)
 	if err != nil {

@@ -580,7 +580,7 @@ func TestAWriterHeldWhileTheCloseRunsKeepsTheDealOpen(t *testing.T) {
 			writer := openWriter(t)
 			tc.hold(c, t, writer)
 			ctx := principal.SystemActing(c.Admin(), closeDateSweepActor)
-			decision := c.decisionFor(t, ctx, c.supported)
+			decision := c.decisionFor(ctx, t, c.supported)
 			var closed bool
 			var closeErr error
 			returned := make(chan struct{})
@@ -641,7 +641,7 @@ func mustExec(t *testing.T, tx pgx.Tx, statement string, args ...any) {
 }
 
 // decisionFor is the close the check decides on for deal.
-func (c *closeLostEnv) decisionFor(t *testing.T, ctx context.Context, deal ids.UUID) closeDecision {
+func (c *closeLostEnv) decisionFor(ctx context.Context, t *testing.T, deal ids.UUID) closeDecision {
 	t.Helper()
 	var due []closeDecision
 	if err := database.WithWorkspaceTx(ctx, c.Pool, func(tx pgx.Tx) error {

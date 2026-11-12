@@ -7,7 +7,6 @@ package integration
 
 import (
 	"context"
-	"github.com/margince/margince/backend/internal/shared/kernel/systemtext"
 	"testing"
 	"time"
 
@@ -15,6 +14,8 @@ import (
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/provenance"
+	"github.com/margince/margince/backend/internal/shared/kernel/systemtext"
 )
 
 // PromiseThread is one promise we made by mail, on its own thread.
@@ -31,7 +32,7 @@ func (e *Env) SeedPromiseThread(t *testing.T) PromiseThread {
 	t.Helper()
 	const address = "lena@kunde.example"
 	row, err := e.Contacts.CreateContact(e.Admin(), contacts.CreateContactInput{
-		FullName: "Lena Kunde", Source: "manual", Emails: []contacts.ContactEmailInput{{Email: address, EmailType: "work", IsPrimary: true}},
+		FullName: "Lena Kunde", Source: provenance.RecordSourceManual, Emails: []contacts.ContactEmailInput{{Email: address, EmailType: "work", IsPrimary: true}},
 	})
 	if err != nil {
 		t.Fatalf("creating the contact: %v", err)
@@ -41,7 +42,7 @@ func (e *Env) SeedPromiseThread(t *testing.T) PromiseThread {
 	promise := e.LogThreadMail(e.Admin(), t, contact, "thread-listing", address, "outbound", sentAt)
 	quote := "I'll prepare the listing details and get those over to you shortly."
 	claim := e.RecordClaim(e.Admin(), t, contacts.ClaimInput{
-		ContactID: contact, Kind: "commitment_ours", Body: "Send the listing details", ActivityID: promise, Quote: quote, Source: "manual",
+		ContactID: contact, Kind: "commitment_ours", Body: "Send the listing details", ActivityID: promise, Quote: quote, Source: provenance.RecordSourceManual,
 	})
 	return PromiseThread{Contact: contact, Address: address, Claim: claim, SentAt: sentAt}
 }
@@ -56,9 +57,9 @@ func (e *Env) LogThreadMail(as context.Context, t *testing.T, contact ids.Contac
 		from, to = counterparty, "rep@margince.example"
 	}
 	row, _, err := e.Activities.LogActivity(as, activities.LogActivityInput{
-		Kind: "email", Subject: &subject, SystemText: &systemtext.Message{Subject: systemtext.Prose(systemtext.Quote, "")}, Direction: &direction, OccurredAt: &at, Source: "manual",
+		Kind: "email", Subject: &subject, SystemText: &systemtext.Message{Subject: systemtext.Prose(systemtext.Quote, "")}, Direction: &direction, OccurredAt: &at, Source: provenance.RecordSourceManual,
 		ThreadKey: thread, CounterpartyEmail: counterparty, EmailFrom: from, EmailTo: []string{to}, CounterpartyOutboundAttested: direction == "outbound",
-		Links: []activities.ActivityLinkInput{{EntityType: "contact", EntityID: contact.UUID}},
+		Links: []activities.ActivityLinkInput{{EntityType: objContact, EntityID: contact.UUID}},
 	})
 	if err != nil {
 		t.Fatalf("logging a %s email on %s: %v", direction, thread, err)
@@ -74,12 +75,12 @@ func (e *Env) SeedPromiseTask(t *testing.T, p PromiseThread, linked ...ids.Conta
 	t.Helper()
 	promise := ids.UUID(p.Claim.SourceActivityId)
 	due := p.SentAt.AddDate(0, 0, 2)
-	links := []activities.ActivityLinkInput{{EntityType: "contact", EntityID: p.Contact.UUID}}
+	links := []activities.ActivityLinkInput{{EntityType: objContact, EntityID: p.Contact.UUID}}
 	for _, contact := range linked {
-		links = append(links, activities.ActivityLinkInput{EntityType: "contact", EntityID: contact.UUID})
+		links = append(links, activities.ActivityLinkInput{EntityType: objContact, EntityID: contact.UUID})
 	}
 	task, _, err := e.Activities.LogActivity(e.Admin(), activities.LogActivityInput{
-		Kind: "task", Subject: new("Send the listing details"), SystemText: &systemtext.Message{Subject: systemtext.Prose(systemtext.Quote, "")}, Source: "manual",
+		Kind: "task", Subject: new("Send the listing details"), SystemText: &systemtext.Message{Subject: systemtext.Prose(systemtext.Quote, "")}, Source: provenance.RecordSourceManual,
 		AssigneeID: new(ids.From[ids.UserKind](e.AdminUser)), DueAt: &due,
 		SourceSystem: new(activities.CommitmentTaskSource), SourceID: new(ids.NewV7().String()), SourceActivityID: &promise,
 		Links: links,
@@ -95,7 +96,7 @@ func (e *Env) SeedPromiseTask(t *testing.T, p PromiseThread, linked ...ids.Conta
 func (e *Env) SeedThreadContact(t *testing.T, name, address string) ids.ContactID {
 	t.Helper()
 	row, err := e.Contacts.CreateContact(e.Admin(), contacts.CreateContactInput{
-		FullName: name, Source: "manual", Emails: []contacts.ContactEmailInput{{Email: address, EmailType: "work", IsPrimary: true}},
+		FullName: name, Source: provenance.RecordSourceManual, Emails: []contacts.ContactEmailInput{{Email: address, EmailType: "work", IsPrimary: true}},
 	})
 	if err != nil {
 		t.Fatalf("creating %s: %v", name, err)
@@ -109,7 +110,7 @@ func (e *Env) ClaimPromiseFor(t *testing.T, p PromiseThread, task ids.UUID, cont
 	t.Helper()
 	claim := e.RecordClaim(e.Admin(), t, contacts.ClaimInput{
 		ContactID: contact, Kind: "commitment_ours", Body: "Send the listing details", ActivityID: ids.UUID(p.Claim.SourceActivityId),
-		Quote: "I'll prepare the listing details and get those over to you shortly.", Source: "manual",
+		Quote: "I'll prepare the listing details and get those over to you shortly.", Source: provenance.RecordSourceManual,
 	})
 	e.WsExec(t, `UPDATE conversation_claim SET task_activity_id = $1 WHERE id = $2`, task, ids.UUID(claim.Id))
 }

@@ -55,6 +55,10 @@ func (s *Store) Lift(ctx context.Context, in LiftInput) error {
 	})
 }
 
+// suppressionIDField is the wire field every refusal to lift a stop or a
+// restriction points at.
+const suppressionIDField = "suppression_id"
+
 // admitLift settles what is decidable before a connection is taken.
 func admitLift(ctx context.Context, in LiftInput) (subject, lifter, error) {
 	sub, err := consentSubject(RecordInput{ContactID: in.ContactID, LeadID: in.LeadID})
@@ -63,7 +67,7 @@ func admitLift(ctx context.Context, in LiftInput) (subject, lifter, error) {
 	}
 	if in.SuppressionID.IsZero() {
 		return subject{}, lifter{}, &ValidationError{
-			Field:  "suppression_id",
+			Field:  suppressionIDField,
 			Reason: "name the suppression to lift; a subject may carry more than one",
 		}
 	}
