@@ -94,6 +94,12 @@ func planOwnedIdentity(in crmcontracts.ReportingTargetInput) (ids.UUID, int, boo
 	return ids.UUID(*in.Scope.Id), in.PeriodStart.Year(), true
 }
 
+// planOwnedSQL is planOwnedIdentity over a published plan, asked of the
+// target a statement aliases t with its current revision r.
+const planOwnedSQL = `(t.metric='` + string(goalMetric) + `' AND t.scope_kind='owner' AND t.pipeline_id IS NULL AND t.period_kind='month' AND EXISTS (
+	SELECT 1 FROM sales_goal_plan p WHERE p.owner_id=t.scope_id AND p.published_revision IS NOT NULL
+	AND p.year=left(r.definition->>'period_start',4)::int))`
+
 // refusePlanOwned keeps the target routes off the months a published plan
 // owns, so the twelve months always add up to the plan. It takes the same lock
 // a publication takes, so the two cannot interleave.

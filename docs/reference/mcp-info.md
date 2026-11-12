@@ -17,7 +17,7 @@ input and output schema in folds below it. What a tool may do and whether a huma
 | Resources | 14 |
 | Tool catalog | 230.5 KB |
 | Resource catalog | 5.5 KB |
-| Approx. wire tokens | 60413 |
+| Approx. wire tokens | 60421 |
 | Largest tool | `read_context` (11.5 KB) |
 | Scopes rendered | `read`, `draft`, `write`, `send`, `enrich` |
 
@@ -104,7 +104,7 @@ descriptions and input schemas are what each step pays for.
 | [`read_relationships`](#read_relationships) | Read who we know, and how well | yes |  | 359 |
 | [`read_reports`](#read_reports) | Read sales reports | yes |  | 2784 |
 | [`read_tags`](#read_tags) | Read tags | yes |  | 358 |
-| [`read_view`](#read_view) | Read a view | yes |  | 675 |
+| [`read_view`](#read_view) | Read a view | yes |  | 683 |
 | [`read_workspace`](#read_workspace) | Read how this workspace is set up | yes |  | 2767 |
 | [`resolve_duplicates`](#resolve_duplicates) | Merge two records or dismiss a flagged pair |  |  | 618 |
 | [`run_research`](#run_research) | Run AI work for your user |  |  | 776 |
@@ -11384,6 +11384,9 @@ routes. Name the view, its id and filters. Unknown arguments are refused with th
     "pipeline_id": {
       "description": "comes from the workspace's pipeline list",
       "type": "string"
+    },
+    "plan_owned": {
+      "type": "boolean"
     },
     "product_id": {
       "type": "string"
