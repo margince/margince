@@ -7,6 +7,7 @@ import (
 	"net/url"
 	"strings"
 
+	"github.com/margince/margince/backend/internal/shared/kernel/socialplatform"
 	"github.com/margince/margince/backend/internal/shared/kernel/values"
 )
 
@@ -80,7 +81,7 @@ func NormalizeContactLinkedInURL(raw string) (string, error) {
 	if _, isProfile := linkedInProfileSlug(normalized); !isProfile {
 		return "", &values.ParseError{
 			Field: linkedinURLField, Code: "linkedin_url_not_profile",
-			Message: "a contact's LinkedIn is a profile URL like https://www.linkedin.com/in/<name>",
+			Message: "a contact's LinkedIn is a profile URL like " + socialplatform.LinkedInProfileExample,
 		}
 	}
 	u, err := url.Parse(normalized)

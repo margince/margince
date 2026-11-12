@@ -80,7 +80,7 @@ var taskSourceWriters = map[string][]string{
 	"compose/assurancebundletask.go:writeBundleTask":                      {provenance.AssuranceTaskSource},
 	"compose/leadworktasks.go:repliedTaskInput":                           {provenance.LeadRepliedSource},
 	"compose/leadworktasks.go:arrivalTaskInput":                           {provenance.LeadForContactSource},
-	"compose/leadworktasks.go:logSystemTaskTx":                            {writesForItsCaller},
+	"compose/leadworktasks.go:logTaskOrUnassignedTx":                      {writesForItsCaller},
 	"modules/activities/emailrequesttasks.go:captureEmailRequest":         {provenance.EmailRequestSource},
 	"modules/activities/requesttask.go:takeEmailRequest":                  {provenance.EmailRequestSource},
 	"compose/bulkrecordverbs.go:applyTask":                                {writesHumanTask},

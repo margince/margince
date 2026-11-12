@@ -4779,6 +4779,9 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "internalMail.sources": "Kết nối hộp thư vận hành",
   "internalMail.noSources": "Kết nối hộp thư trước khi chọn nguồn vận hành.",
   "internalMail.unavailableSource": "Kết nối hộp thư không khả dụng",
+  "internalMail.sharedSource": "Hộp thư chung, nhóm đọc của nó cũng đọc được",
+  "internalMail.sharedNoHistory":
+    "Hộp thư chung không có chủ sở hữu để duyệt việc nhập lịch sử, nên chỉ ghi nhận thư từ nay về sau.",
   "internalMail.needSource":
     "Chọn ít nhất một kết nối hộp thư vận hành trước khi bật.",
   "internalMail.disable":
@@ -18539,6 +18542,14 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "projectHealth.saveCorrection": "Lưu bản sửa",
   "project.keyMinted":
     "Mỗi dự án có một mã ngắn. Ghi [{key}] trong tiêu đề email để xếp thư vào dự án này.",
+  "project.key": "Mã",
+  "project.keySuggested":
+    "Để trống để dùng {key}. Mã nằm trong tiêu đề email và không thể đổi sau này.",
+  "project.keyHint":
+    "Để trống thì Margince tạo mã từ tên. Mã nằm trong tiêu đề email và không thể đổi sau này.",
+  "project.startPhase": "Giai đoạn bắt đầu",
+  "project.deal": "Deal liên quan",
+  "project.noDeal": "Không có deal",
   "project.company": "Công ty",
   "project.owner": "Người chịu trách nhiệm",
   "project.ownerMe": "Tôi",

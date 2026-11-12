@@ -79,7 +79,12 @@ can open one message, choose **Selected**, and name the colleagues who may read
 it. The participants on the message keep access. The choice replaces the named
 readers of that message.
 
-It does not share a thread or give a team access.
+A shared mailbox can be a source too. The list names it by its address. Its
+mail is also read by the mailbox's reader team, including members who are not
+on the message. Admins outside that team do not read it. A shared mailbox has
+no owner to start a history import, so it captures new mail only.
+
+Sharing one message does not share its thread or give a team access.
 Other members see no message or count. A link to a company, deal or project
 does not change that. This mail adds no contact and is not proof of a client
 reply or a reason to write to a client.

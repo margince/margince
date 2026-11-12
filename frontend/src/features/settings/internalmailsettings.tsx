@@ -75,7 +75,7 @@ function InternalMailEditor({ settings }: Readonly<{ settings: Settings }>) {
   const available = settings.available_sources.map((source) => ({
     value: source.connection_id,
     label: source.account_label || source.owner_name,
-    description: `${source.owner_name} · ${source.provider}`,
+    description: `${source.owner_user_id === null ? t("internalMail.sharedSource") : source.owner_name} · ${source.provider}`,
   }));
   const choices = [
     ...available,
@@ -148,20 +148,24 @@ function InternalMailEditor({ settings }: Readonly<{ settings: Settings }>) {
                   })
                 }
               />
-              <InternalMailHistoryScope
-                value={selection.history_since}
-                disabled={update.isPending}
-                onChange={(history_since) =>
-                  setDraft({
-                    ...value,
-                    sources: value.sources.map((item) =>
-                      item.connection_id === selection.connection_id
-                        ? { ...item, history_since }
-                        : item,
-                    ),
-                  })
-                }
-              />
+              {source.owner_user_id === null ? (
+                <p className="t-caption">{t("internalMail.sharedNoHistory")}</p>
+              ) : (
+                <InternalMailHistoryScope
+                  value={selection.history_since}
+                  disabled={update.isPending}
+                  onChange={(history_since) =>
+                    setDraft({
+                      ...value,
+                      sources: value.sources.map((item) =>
+                        item.connection_id === selection.connection_id
+                          ? { ...item, history_since }
+                          : item,
+                      ),
+                    })
+                  }
+                />
+              )}
             </section>
           ) : null;
         })}

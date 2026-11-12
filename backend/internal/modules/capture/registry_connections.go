@@ -240,13 +240,19 @@ func (r *Registry) Disconnect(ctx context.Context, name string) error {
 	if !ok || !actor.HumanOrItsAgent() {
 		return fmt.Errorf("capture: only a user or their agent disconnects a connector: %w", apperrors.ErrPermissionDenied)
 	}
+	return r.withdrawAndDestroy(ctx, name, seatConnection(actor.UserID, name))
+}
+
+// withdrawAndDestroy runs the three phases on the connection match names. Disconnect
+// is it for the caller's own mailbox, DisconnectShared for a shared one.
+func (r *Registry) withdrawAndDestroy(ctx context.Context, name string, match connectionMatch) error {
 	ws, ok := principal.WorkspaceID(ctx)
 	if !ok {
 		return errors.New("capture: disconnect without a workspace in context")
 	}
 
 	// Phase 1: stop capture.
-	ref, err := r.withdrawConnection(ctx, actor.UserID, name)
+	ref, err := r.withdrawConnection(ctx, match, name)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			// No row to flip: never connected, or already fully disconnected
@@ -284,11 +290,12 @@ func (r *Registry) Disconnect(ctx context.Context, name string) error {
 	// must not leave the row naming a blob that no longer exists.
 	refCtx, cancel := context.WithTimeout(context.WithoutCancel(ctx), keyvault.CleanupTimeout)
 	defer cancel()
+	placeholder, args := match.with(*ref)
 	return r.db.Tx(refCtx, func(tx pgx.Tx) error {
 		_, err := tx.Exec(refCtx, `
 			UPDATE capture_connection SET credential_ref = NULL
-			 WHERE user_id = $1 AND provider = $2 AND credential_ref = $3`,
-			actor.UserID, name, *ref)
+			 WHERE `+match.where+` AND credential_ref = `+placeholder,
+			args...)
 		return err
 	})
 }
@@ -323,21 +330,24 @@ func (r *Registry) Disconnect(ctx context.Context, name string) error {
 // The row is read FOR UPDATE so the audit before-image is the status being
 // withdrawn from, and a concurrent reconnect serializes behind this one. The
 // seat-address claim lock on its label comes first, as for a connect.
-func (r *Registry) withdrawConnection(ctx context.Context, userID ids.UUID, name string) (*string, error) {
+func (r *Registry) withdrawConnection(ctx context.Context, match connectionMatch, name string) (*string, error) {
 	var ref *string
 	err := r.db.Tx(ctx, func(tx pgx.Tx) error {
-		if err := lockConnectionClaimsTx(ctx, tx, userID, name, nil); err != nil {
-			return err
+		// A shared mailbox's address is no seat's claim, so it takes no claim lock.
+		if !match.shared() {
+			if err := lockConnectionClaimsTx(ctx, tx, match.seat, name, nil); err != nil {
+				return err
+			}
 		}
 		var connID ids.UUID
 		var priorStatus string
 		var priorLabel *string
 		if err := tx.QueryRow(ctx, `
 			SELECT id, status, account_label FROM capture_connection
-			 WHERE user_id = $1 AND provider = $2
+			 WHERE `+match.where+`
 			   AND (status <> 'disconnected' OR credential_ref IS NOT NULL)
 			 FOR UPDATE`,
-			userID, name).Scan(&connID, &priorStatus, &priorLabel); err != nil {
+			match.args...).Scan(&connID, &priorStatus, &priorLabel); err != nil {
 			return err
 		}
 		// A row already 'disconnected' is a retry re-driving the cleanup the
@@ -366,7 +376,7 @@ func (r *Registry) withdrawConnection(ctx context.Context, userID ids.UUID, name
 		}
 		// Withdrawing a connector is a human's deliberate act over their own
 		// mailbox and is attributed like any other record mutation.
-		return auditLifecycle(ctx, tx, "archive", captureConnectionObject, connID,
+		return match.auditTx(ctx, tx, "archive", sharedChangeDisconnected, connID,
 			connectionAuditImage(name, priorStatus, priorLabel),
 			connectionAuditImage(name, "disconnected", priorLabel))
 	})

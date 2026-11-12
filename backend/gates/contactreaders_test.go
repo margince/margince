@@ -68,6 +68,7 @@ var contactGate = objectGate{
 // grants do not cover â so a read projecting r.contact_id with the contact
 // joined for liveness and row scope has taken the grant its payload sits behind.
 var predicateContactReads = gatekit.Waive(map[string]string{
+	"internal/modules/contacts/ensurelinkonly.go:readableByATeamMemberTx":               "existence only: whether some live member of a shared mailbox's reader team may read the contact, so shared mail is filed only where its readers can find it. No contact field leaves the predicate",
 	"internal/modules/consent/pinnedsubject.go:pinnedSubjectTx":                         "Follows only the filed controller receipt's stored identity lineage, within the caller's row scope, to check its recipient and messaging rules. The result stays in the consent decision; no contact content is returned. Address lookup cannot choose an unrelated subject.",
 	"internal/shared/kernel/relationshipmark/relationshipmark.go:SenderMayRaiseWorkSQL": "Existence-only exclusion suppresses marked senders from content-authorized work. No contact field or identity leaves the predicate.",
 	"internal/modules/privacy/notementionlocks.go:lockNoteMentions":                     "the contact-delete-authorized eraser locks records linked to candidate notes so their legal-hold flags cannot change during erasure. IDs are consumed inside the transaction and no record content is disclosed",

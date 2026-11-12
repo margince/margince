@@ -74,6 +74,7 @@ The 5 tables owned by `finance`, as the migrations build them. [Back to the enti
 **Indexes**
 
 - `finance_customer_link_company_ix`: `btree (connection_id, company_id) WHERE (archived_at IS NULL)`
+- `finance_customer_link_directory_idx`: `btree (connection_id, external_customer_id)`
 - `finance_customer_link_external_ux`: `unique, btree (connection_id, external_customer_id) WHERE (archived_at IS NULL)`
 - `finance_customer_link_mapping_key`: `unique, btree (id, connection_id, company_id)`
 - `finance_customer_link_pkey`: `unique, btree (id)`
@@ -188,7 +189,9 @@ The 5 tables owned by `finance`, as the migrations build them. [Back to the enti
 
 - `finance_invoice_account_ix`: `btree (company_id, issued_at DESC)`
 - `finance_invoice_connection_id_external_id_key`: `unique, btree (connection_id, external_id)`
+- `finance_invoice_credit_owner_idx`: `btree (credits_invoice_id, connection_id, company_id)`
 - `finance_invoice_credits_ix`: `btree (credits_invoice_id) WHERE (credits_invoice_id IS NOT NULL)`
+- `finance_invoice_customer_owner_idx`: `btree (customer_link_id, connection_id, company_id)`
 - `finance_invoice_open_ix`: `btree (company_id) WHERE ((open_minor > 0) AND (void_at IS NULL))`
 - `finance_invoice_owner_key`: `unique, btree (id, connection_id, company_id)`
 - `finance_invoice_pkey`: `unique, btree (id)`
@@ -241,7 +244,9 @@ The 5 tables owned by `finance`, as the migrations build them. [Back to the enti
 
 - `finance_payment_account_ix`: `btree (company_id, paid_at DESC)`
 - `finance_payment_connection_id_external_id_key`: `unique, btree (connection_id, external_id)`
+- `finance_payment_customer_owner_idx`: `btree (customer_link_id, connection_id, company_id)`
 - `finance_payment_invoice_ix`: `btree (invoice_id) WHERE (invoice_id IS NOT NULL)`
+- `finance_payment_invoice_owner_idx`: `btree (invoice_id, connection_id, company_id)`
 - `finance_payment_pkey`: `unique, btree (id)`
 
 **Triggers**

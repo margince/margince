@@ -28,7 +28,7 @@ func (c *Connector) pullFolder(
 	sink connector.Sink, owner string,
 ) (string, error) {
 	sentByOwner := folder == folderSent
-	pages := 0
+	pages, sinceCheckpoint := 0, 0
 	visit := func(ctx context.Context, page DeltaPage) error {
 		// The owner's own deletions, reported before the page's new mail is
 		// captured. Reporting first is the safe half when a message is deleted
@@ -41,9 +41,11 @@ func (c *Connector) pullFolder(
 			return err
 		}
 		pages++
-		if page.Resume.NextLink == "" || pages%checkpointEveryPages != 0 {
+		sinceCheckpoint += len(page.Messages)
+		if page.Resume.NextLink == "" || !c.checkpointDue(pages, sinceCheckpoint) {
 			return nil
 		}
+		sinceCheckpoint = 0
 		return checkpointRound(ctx, state, folder, page.Resume)
 	}
 	var resume *DeltaResume
@@ -63,6 +65,12 @@ func (c *Connector) pullFolder(
 		next = state.link(folder) // provider closed the round without a new link; keep the prior watermark
 	}
 	return next, nil
+}
+
+// checkpointDue reports whether the page just captured closes a checkpoint
+// span, by pages or, where set, by messages.
+func (c *Connector) checkpointDue(pages, messages int) bool {
+	return pages%checkpointEveryPages == 0 || (c.checkpointMessages > 0 && messages >= c.checkpointMessages)
 }
 
 // captureMessages fetches and captures one page's messages.

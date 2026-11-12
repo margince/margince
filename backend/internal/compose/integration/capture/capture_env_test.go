@@ -75,6 +75,9 @@ type mailBatchConnector struct {
 	// parentFolderId, the IMAP mailbox a pull selected — so a fixture that
 	// wants an exclusion to match one has to arrive the same way.
 	containers map[string][]string
+	// receivedAt is when the provider says each message arrived. Internal
+	// operational mail is admitted only after its source was enrolled.
+	receivedAt time.Time
 }
 
 func (m *mailBatchConnector) Descriptor() connector.Descriptor {
@@ -113,6 +116,7 @@ func (m *mailBatchConnector) Sync(ctx context.Context, _ connector.Auth, _ conne
 			rec.Links = append(rec.Links, datasource.EntityRef{Type: datasource.EntityDeal, ID: dealID})
 		}
 		rec.Containers = m.containers[msg.ID()]
+		rec.ProviderReceivedAt = m.receivedAt
 		if kind, overridden := m.kinds[msg.ID()]; overridden {
 			fields, ok := rec.Fields.(capturemod.ActivityFields)
 			if !ok {
@@ -324,6 +328,18 @@ type captureEnv struct {
 // Date every fixture mail carries, so that mail is current.
 var captureNow = time.Date(2026, 6, 5, 8, 0, 0, 0, time.UTC)
 
+// fixtureSharedMailbox is the shared mailbox every capture env holds, so each
+// suite runs with one present. It receives no mail.
+const fixtureSharedMailbox = "desk@myco.example"
+
+func connectFixtureSharedMailbox(t *testing.T, e *integration.SearchEnv, registry *capturemod.Registry) {
+	t.Helper()
+	registry.Register(&mailBatchConnector{name: sharedMailboxProvider, accountLabel: fixtureSharedMailbox})
+	integration.ConnectSharedMailbox(t, registry, e.WS, integration.SharedMailbox{
+		Provider: sharedMailboxProvider, Address: fixtureSharedMailbox, ReaderTeam: e.Team2, ConnectedBy: e.Rep1, Posture: capturemod.PostureHeld,
+	})
+}
+
 func newCaptureEnv(t *testing.T) captureEnv {
 	t.Helper()
 	return newCaptureEnvAt(t, captureNow)
@@ -352,6 +368,7 @@ func newCaptureEnvWithBlob(t *testing.T, now time.Time, blob blobstore.Store) ca
 	if err != nil {
 		t.Fatalf("Connect: %v", err)
 	}
+	connectFixtureSharedMailbox(t, e, registry)
 	wsCtx := principal.WithWorkspaceID(context.Background(), e.WS)
 	// pull drives one sync with the connector configured exactly as this call
 	// says — every field set, so a batch never inherits the previous one's

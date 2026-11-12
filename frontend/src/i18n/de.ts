@@ -4904,6 +4904,10 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "internalMail.noSources":
     "Zuerst ein Postfach verbinden, dann eine betriebliche Quelle wählen.",
   "internalMail.unavailableSource": "Postfachverbindung nicht verfügbar",
+  "internalMail.sharedSource":
+    "Gemeinsames Postfach, das auch sein Leseteam liest",
+  "internalMail.sharedNoHistory":
+    "Für ein gemeinsames Postfach ist niemand verantwortlich, der einen Verlaufsimport freigibt. Es erfasst daher nur künftige E-Mails.",
   "internalMail.needSource":
     "Vor dem Aktivieren mindestens eine betriebliche Postfachverbindung wählen.",
   "internalMail.disable":
@@ -19019,6 +19023,14 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "projectHealth.saveCorrection": "Korrektur speichern",
   "project.keyMinted":
     "Jedes Projekt erhält ein Kürzel. Setze [{key}] in den Betreff einer E-Mail, um sie unter diesem Projekt abzulegen.",
+  "project.key": "Kürzel",
+  "project.keySuggested":
+    "Leer lassen, um {key} zu verwenden. Das Kürzel steht im Betreff von E-Mails und lässt sich später nicht ändern.",
+  "project.keyHint":
+    "Leer lassen, dann bildet Margince es aus dem Namen. Das Kürzel steht im Betreff von E-Mails und lässt sich später nicht ändern.",
+  "project.startPhase": "Startphase",
+  "project.deal": "Deal",
+  "project.noDeal": "Kein Deal",
   "project.company": "Unternehmen",
   "project.owner": "Verantwortlich",
   "project.ownerMe": "Selbst",

@@ -3,19 +3,22 @@
 
 //go:build integration
 
-package compose
+package integration
 
 import (
 	"context"
 	"testing"
 	"time"
 
+	"github.com/jackc/pgx/v5/pgxpool"
+
+	"github.com/margince/margince/backend/internal/compose"
 	"github.com/margince/margince/backend/internal/compose/attention"
-	"github.com/margince/margince/backend/internal/compose/integration"
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/approvals"
 	"github.com/margince/margince/backend/internal/platform/clocktest"
 	"github.com/margince/margince/backend/internal/platform/database"
+	"github.com/margince/margince/backend/internal/platform/testdb"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -34,17 +37,19 @@ const worklistOutsideStatements = 8
 
 // The seeded read includes every bound lane and an open task. Lower this
 // pgx-call ceiling when a batch or empty-set shortcut removes calls.
-const worklistExchangeBudget = 106
+const worklistExchangeBudget = 105
 
-// stageDelta is what one composed read added to the stage collector.
+const worklistRoundTripBudget = worklistExchangeBudget
+
+// stageDelta keeps stage totals separate from the pool meter.
 type stageDelta struct {
 	statements, exchanges, clipped int64
 	runs                           map[attention.StageKey]uint64
 	byKey                          map[attention.StageKey]int64
 }
 
-// meterRead runs read under a fresh meter and answers what the collector and
-// the meter gained.
+// meterRead keeps both meters on the same read, so statements
+// outside the stages remain visible.
 func meterRead(ctx context.Context, t *testing.T, read func(context.Context) error) (stageDelta, database.StatementCost) {
 	t.Helper()
 	ctx, meter := database.WithStatementMeter(ctx)
@@ -70,10 +75,9 @@ func meterRead(ctx context.Context, t *testing.T, read func(context.Context) err
 	}
 	return delta, meter.Cost()
 }
-
-func seedOpenTask(t *testing.T, e *integration.Env) {
+func seedOpenTask(t *testing.T, e *Env) {
 	t.Helper()
-	pipeline, stage, _ := integration.DealFixture(t, e)
+	pipeline, stage, _ := DealFixture(t, e)
 	deal := e.SeedDeal(t, "Renewal", pipeline, stage, nil)
 	if _, _, err := e.Activities.LogActivity(e.Admin(), activities.LogActivityInput{
 		Kind: "task", Subject: new("Send the renewal terms"), Source: "manual",
@@ -86,10 +90,25 @@ func seedOpenTask(t *testing.T, e *integration.Env) {
 // The stages of one worklist read account for every statement the pool's
 // tracer saw for it, and the read opens its snapshot once.
 func TestAWorklistReadsStatementsAddUpToWhatThePoolSaw(t *testing.T) {
-	e := integration.Setup(t)
+	e := Setup(t)
 	seedOpenTask(t, e)
 	at := clocktest.Now(t).UTC()
-	service := newAttentionService(e.Pool, approvals.NewService(e.DB()), func() time.Time { return at })
+	cfg := e.Pool.Config()
+	// Count request work without idle pings or connection retirement.
+	cfg.ShouldPing = func(context.Context, pgxpool.ShouldPingParams) bool { return false }
+	cfg.MaxConnLifetime = 0
+	cfg.MaxConnIdleTime = time.Hour
+	cfg.HealthCheckPeriod = time.Hour
+	// Framing is measured only on this isolated local test connection.
+	cfg.ConnConfig.TLSConfig = nil
+	cfg.ConnConfig.Fallbacks = nil
+	trips := testdb.CountRoundTrips(t, cfg)
+	pool, err := testdb.OwnPoolFromConfig(e.Admin(), cfg)
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(pool.Close)
+	service := compose.NewAttentionService(pool, approvals.NewService(database.BindTo(pool, ids.From[ids.WorkspaceKind](e.WS))), func() time.Time { return at })
 	read := func(ctx context.Context) error {
 		_, err := service.Worklist(ctx, "mine", "all", ids.UUID{}, 0, "")
 		return err
@@ -100,7 +119,13 @@ func TestAWorklistReadsStatementsAddUpToWhatThePoolSaw(t *testing.T) {
 		t.Fatal(err)
 	}
 
+	beforeTrips := trips.Load()
 	delta, seen := meterRead(e.Admin(), t, read)
+	roundTrips := trips.Load() - beforeTrips
+	t.Logf("worklist protocol round trips=%d", roundTrips)
+	if roundTrips < seen.Exchanges || roundTrips > worklistRoundTripBudget {
+		t.Errorf("worklist used %d protocol round trips for %d pgx calls, budget %d", roundTrips, seen.Exchanges, worklistRoundTripBudget)
+	}
 	t.Logf("worklist statements=%d exchanges=%d prepares=%d transactions=%d", seen.Statements, seen.Exchanges, seen.Prepares, seen.Transactions)
 
 	if seen.Statements == 0 || delta.statements != seen.Statements {
@@ -143,10 +168,10 @@ func TestAWorklistReadsStatementsAddUpToWhatThePoolSaw(t *testing.T) {
 // Team exceptions reads the assembled day inside its own snapshot. Its stages
 // are charged to it once, never to a read nested in it.
 func TestTeamExceptionsChargesTheDayItReadsToItselfOnce(t *testing.T) {
-	e := integration.Setup(t)
+	e := Setup(t)
 	seedOpenTask(t, e)
 	at := clocktest.Now(t).UTC()
-	service := newAttentionService(e.Pool, approvals.NewService(e.DB()), func() time.Time { return at })
+	service := compose.NewAttentionService(e.Pool, approvals.NewService(e.DB()), func() time.Time { return at })
 
 	delta, seen := meterRead(e.Admin(), t, func(ctx context.Context) error {
 		_, err := service.TeamExceptions(ctx)

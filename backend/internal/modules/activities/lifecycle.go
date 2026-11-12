@@ -151,7 +151,8 @@ func admitActivityPatch(
 	// held skips this: activity_refuse_restricted_mutation refuses every write
 	// to a held row regardless of version, so it owes 423, not a 409 inviting a
 	// retry the row can never accept.
-	if !held && in.IfVersion != nil && current.Version != nil && int64(*current.Version) != *in.IfVersion {
+	if !held && in.IfVersion != nil && current.Version != nil && int64(*current.Version) != *in.IfVersion &&
+		!in.asksOnlyForTheDoneItHolds(current) {
 		return crmcontracts.Activity{}, held, apperrors.ErrVersionSkew
 	}
 	if err := renormalizeTranscriptPatch(current, in); err != nil {

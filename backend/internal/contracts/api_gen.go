@@ -7351,6 +7351,48 @@ func (e ConnectConnectorRequestReturnTo) Valid() bool {
 	}
 }
 
+// Defines values for ConnectSharedMailboxRequestMailVisibility.
+const (
+	ConnectSharedMailboxRequestMailVisibilityClassified ConnectSharedMailboxRequestMailVisibility = "classified"
+	ConnectSharedMailboxRequestMailVisibilityHeld       ConnectSharedMailboxRequestMailVisibility = "held"
+	ConnectSharedMailboxRequestMailVisibilityShared     ConnectSharedMailboxRequestMailVisibility = "shared"
+)
+
+// Valid indicates whether the value is a known member of the ConnectSharedMailboxRequestMailVisibility enum.
+func (e ConnectSharedMailboxRequestMailVisibility) Valid() bool {
+	switch e {
+	case ConnectSharedMailboxRequestMailVisibilityClassified:
+		return true
+	case ConnectSharedMailboxRequestMailVisibilityHeld:
+		return true
+	case ConnectSharedMailboxRequestMailVisibilityShared:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ConnectSharedMailboxRequestProvider.
+const (
+	ConnectSharedMailboxRequestProviderGmail ConnectSharedMailboxRequestProvider = "gmail"
+	ConnectSharedMailboxRequestProviderGraph ConnectSharedMailboxRequestProvider = "graph"
+	ConnectSharedMailboxRequestProviderImap  ConnectSharedMailboxRequestProvider = "imap"
+)
+
+// Valid indicates whether the value is a known member of the ConnectSharedMailboxRequestProvider enum.
+func (e ConnectSharedMailboxRequestProvider) Valid() bool {
+	switch e {
+	case ConnectSharedMailboxRequestProviderGmail:
+		return true
+	case ConnectSharedMailboxRequestProviderGraph:
+		return true
+	case ConnectSharedMailboxRequestProviderImap:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for ConnectorAppSource.
 const (
 	ConnectorAppSourceEnvironment ConnectorAppSource = "environment"
@@ -9886,6 +9928,27 @@ func (e CreateProductRequestTaxCategory) Valid() bool {
 	case CreateProductRequestTaxCategoryReduced:
 		return true
 	case CreateProductRequestTaxCategoryStandard:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for CreateProjectRequestPhase.
+const (
+	CreateProjectRequestPhaseDelivering CreateProjectRequestPhase = "delivering"
+	CreateProjectRequestPhaseInitiative CreateProjectRequestPhase = "initiative"
+	CreateProjectRequestPhasePursuing   CreateProjectRequestPhase = "pursuing"
+)
+
+// Valid indicates whether the value is a known member of the CreateProjectRequestPhase enum.
+func (e CreateProjectRequestPhase) Valid() bool {
+	switch e {
+	case CreateProjectRequestPhaseDelivering:
+		return true
+	case CreateProjectRequestPhaseInitiative:
+		return true
+	case CreateProjectRequestPhasePursuing:
 		return true
 	default:
 		return false
@@ -22774,6 +22837,108 @@ func (e SharedForecastViewKind) Valid() bool {
 	}
 }
 
+// Defines values for SharedMailboxMailVisibility.
+const (
+	SharedMailboxMailVisibilityHeld   SharedMailboxMailVisibility = "held"
+	SharedMailboxMailVisibilityShared SharedMailboxMailVisibility = "shared"
+)
+
+// Valid indicates whether the value is a known member of the SharedMailboxMailVisibility enum.
+func (e SharedMailboxMailVisibility) Valid() bool {
+	switch e {
+	case SharedMailboxMailVisibilityHeld:
+		return true
+	case SharedMailboxMailVisibilityShared:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for SharedMailboxProvider.
+const (
+	SharedMailboxProviderGmail       SharedMailboxProvider = "gmail"
+	SharedMailboxProviderGraph       SharedMailboxProvider = "graph"
+	SharedMailboxProviderImap        SharedMailboxProvider = "imap"
+	SharedMailboxProviderTestMailbox SharedMailboxProvider = "test_mailbox"
+)
+
+// Valid indicates whether the value is a known member of the SharedMailboxProvider enum.
+func (e SharedMailboxProvider) Valid() bool {
+	switch e {
+	case SharedMailboxProviderGmail:
+		return true
+	case SharedMailboxProviderGraph:
+		return true
+	case SharedMailboxProviderImap:
+		return true
+	case SharedMailboxProviderTestMailbox:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for SharedMailboxStatus.
+const (
+	SharedMailboxStatusConnected      SharedMailboxStatus = "connected"
+	SharedMailboxStatusDisconnected   SharedMailboxStatus = "disconnected"
+	SharedMailboxStatusError          SharedMailboxStatus = "error"
+	SharedMailboxStatusReauthRequired SharedMailboxStatus = "reauth_required"
+)
+
+// Valid indicates whether the value is a known member of the SharedMailboxStatus enum.
+func (e SharedMailboxStatus) Valid() bool {
+	switch e {
+	case SharedMailboxStatusConnected:
+		return true
+	case SharedMailboxStatusDisconnected:
+		return true
+	case SharedMailboxStatusError:
+		return true
+	case SharedMailboxStatusReauthRequired:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for SharedMailboxHistoryImportRequestWindow.
+const (
+	SharedMailboxHistoryImportRequestWindowN120m SharedMailboxHistoryImportRequestWindow = "120m"
+	SharedMailboxHistoryImportRequestWindowN12m  SharedMailboxHistoryImportRequestWindow = "12m"
+	SharedMailboxHistoryImportRequestWindowN24m  SharedMailboxHistoryImportRequestWindow = "24m"
+	SharedMailboxHistoryImportRequestWindowN36m  SharedMailboxHistoryImportRequestWindow = "36m"
+	SharedMailboxHistoryImportRequestWindowN3m   SharedMailboxHistoryImportRequestWindow = "3m"
+	SharedMailboxHistoryImportRequestWindowN60m  SharedMailboxHistoryImportRequestWindow = "60m"
+	SharedMailboxHistoryImportRequestWindowN6m   SharedMailboxHistoryImportRequestWindow = "6m"
+	SharedMailboxHistoryImportRequestWindowN84m  SharedMailboxHistoryImportRequestWindow = "84m"
+)
+
+// Valid indicates whether the value is a known member of the SharedMailboxHistoryImportRequestWindow enum.
+func (e SharedMailboxHistoryImportRequestWindow) Valid() bool {
+	switch e {
+	case SharedMailboxHistoryImportRequestWindowN120m:
+		return true
+	case SharedMailboxHistoryImportRequestWindowN12m:
+		return true
+	case SharedMailboxHistoryImportRequestWindowN24m:
+		return true
+	case SharedMailboxHistoryImportRequestWindowN36m:
+		return true
+	case SharedMailboxHistoryImportRequestWindowN3m:
+		return true
+	case SharedMailboxHistoryImportRequestWindowN60m:
+		return true
+	case SharedMailboxHistoryImportRequestWindowN6m:
+		return true
+	case SharedMailboxHistoryImportRequestWindowN84m:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for SignalEntityType.
 const (
 	SignalEntityTypeCompany SignalEntityType = "company"
@@ -25069,6 +25234,27 @@ func (e UpdateRoleRequestRowScope) Valid() bool {
 	case UpdateRoleRequestRowScopeOwn:
 		return true
 	case UpdateRoleRequestRowScopeTeam:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for UpdateSharedMailboxRequestMailVisibility.
+const (
+	UpdateSharedMailboxRequestMailVisibilityClassified UpdateSharedMailboxRequestMailVisibility = "classified"
+	UpdateSharedMailboxRequestMailVisibilityHeld       UpdateSharedMailboxRequestMailVisibility = "held"
+	UpdateSharedMailboxRequestMailVisibilityShared     UpdateSharedMailboxRequestMailVisibility = "shared"
+)
+
+// Valid indicates whether the value is a known member of the UpdateSharedMailboxRequestMailVisibility enum.
+func (e UpdateSharedMailboxRequestMailVisibility) Valid() bool {
+	switch e {
+	case UpdateSharedMailboxRequestMailVisibilityClassified:
+		return true
+	case UpdateSharedMailboxRequestMailVisibilityHeld:
+		return true
+	case UpdateSharedMailboxRequestMailVisibilityShared:
 		return true
 	default:
 		return false
@@ -41904,22 +42090,7 @@ type ConnectConnectorRequest struct {
 	AlsoConnect *ConnectConnectorRequestAlsoConnect `json:"also_connect,omitempty"`
 
 	// Imap Direct IMAP credentials (the `imap` provider only).
-	Imap *struct {
-		Host string `json:"host"`
-
-		// Mailbox The mailbox to read.
-		Mailbox *string `json:"mailbox,omitempty"`
-
-		// MaxMessages Upper bound on messages pulled per sync, and on the bounded recent window a first sync re-anchors with.
-		MaxMessages *int `json:"max_messages,omitempty" maximum:"200" minimum:"1"`
-		Port        *int `json:"port,omitempty" maximum:"65535" minimum:"1"`
-
-		// Secret Password or app-specific password. Sealed to the vault; never returned.
-		Secret *string `json:"secret,omitempty"`
-
-		// Username The mailbox login — an email address on most servers.
-		Username string `json:"username"`
-	} `json:"imap,omitempty"`
+	Imap *ImapCredentials `json:"imap,omitempty"`
 
 	// ImportWindow The past-email window to import once the mail grant is stored. The callback takes
 	// the estimate then, and starts the import by itself only when that estimate is small
@@ -42003,6 +42174,33 @@ type ConnectProviderRequest struct {
 	// Configuration Omit for automatic-on-create + Full enrichment defaults.
 	Configuration *ProviderConfiguration `json:"configuration,omitempty"`
 }
+
+// ConnectSharedMailboxRequest The mailbox, its readers, and the provider's credentials. Each provider carries its own
+// credentials member, named like the provider.
+type ConnectSharedMailboxRequest struct {
+	// Address The mailbox address. Reconnecting the same address reuses its mailbox.
+	Address openapi_types.Email `json:"address"`
+
+	// Gmail A Google Workspace service account the admin delegated `gmail.readonly` to.
+	Gmail *SharedGmailCredentials `json:"gmail,omitempty"`
+
+	// Graph The customer's own Entra app registration, which reads the mailbox with application permission.
+	Graph *SharedGraphCredentials `json:"graph,omitempty"`
+
+	// Imap Direct IMAP credentials (the `imap` provider only).
+	Imap *ImapCredentials `json:"imap,omitempty"`
+
+	// MailVisibility Absent starts a new mailbox `held` and keeps a reconnected one as it is. `classified` is refused with `422`.
+	MailVisibility *ConnectSharedMailboxRequestMailVisibility `json:"mail_visibility,omitempty"`
+	Provider       ConnectSharedMailboxRequestProvider        `json:"provider"`
+	ReaderTeamId   openapi_types.UUID                         `json:"reader_team_id"`
+}
+
+// ConnectSharedMailboxRequestMailVisibility Absent starts a new mailbox `held` and keeps a reconnected one as it is. `classified` is refused with `422`.
+type ConnectSharedMailboxRequestMailVisibility string
+
+// ConnectSharedMailboxRequestProvider defines model for ConnectSharedMailboxRequest.Provider.
+type ConnectSharedMailboxRequestProvider string
 
 // ConnectorApp defines model for ConnectorApp.
 type ConnectorApp struct {
@@ -42302,6 +42500,9 @@ type Contact struct {
 	// LegalHold True while a litigation or investigation hold is preserving this record. A held record is never acted on by a retention sweep and an Art. 17 erasure against it is refused, so a screen that offers either action has to know. Placed and lifted through /retention/legal-holds, never by an ordinary edit.
 	LegalHold *bool `json:"legal_hold,omitempty"`
 
+	// LinkedinUrl The contact's LinkedIn profile link. The same stored value as `social.linkedin`, not a second copy.
+	LinkedinUrl *string `json:"linkedin_url,omitempty"`
+
 	// MergedIntoId Set when this row was merged away.
 	MergedIntoId *openapi_types.UUID `json:"merged_into_id,omitempty"`
 	OwnerId      *openapi_types.UUID `json:"owner_id,omitempty"`
@@ -42323,7 +42524,7 @@ type Contact struct {
 	// RelationshipMark Set when the workspace's relationship to this contact is not an ordinary one. `vendor_marketing` is a named sender who only pitches something to this business and whom nobody here has answered. The default contact lists leave a marked contact out; a text search and a read by id still find it. Null is not marked. Written through `PATCH /contacts/{id}` or by the sender check, never by the request body of a create.
 	RelationshipMark *ContactRelationshipMark `json:"relationship_mark,omitempty"`
 
-	// Social { linkedin, twitter, github, ... }
+	// Social The contact's links by platform: github, linkedin, twitter. linkedin is a LinkedIn profile link.
 	Social *map[string]interface{} `json:"social,omitempty"`
 	Source string                  `json:"source"`
 
@@ -44394,8 +44595,11 @@ type CreateCompanyRequest struct {
 	Email *openapi_types.Email `json:"email,omitempty"`
 
 	// Industry An industry code, or text the server can map to one. Text that names no code stores no code and is kept in the description.
-	Industry        *string             `json:"industry,omitempty"`
-	LegalName       *string             `json:"legal_name,omitempty"`
+	Industry  *string `json:"industry,omitempty"`
+	LegalName *string `json:"legal_name,omitempty"`
+
+	// LinkedinUrl Canonical LinkedIn company URL, held to the rule the update holds it to. website_url is derived and refused here.
+	LinkedinUrl     *string             `json:"linkedin_url,omitempty"`
 	OwnerId         *openapi_types.UUID `json:"owner_id,omitempty"`
 	ParentCompanyId *openapi_types.UUID `json:"parent_company_id,omitempty"`
 
@@ -44463,15 +44667,20 @@ type CreateContactRequest struct {
 	ConvertLeadIds *[]openapi_types.UUID `json:"convert_lead_ids,omitempty"`
 
 	// CreatedFromActivityId The note, mail or quick capture this contact was read out of. An agent that creates a contact from a record names it here, so a reader can check where the name and title came from. The caller must be able to read it (404 `not_found` otherwise, never 403).
-	CreatedFromActivityId *openapi_types.UUID     `json:"created_from_activity_id,omitempty"`
-	Emails                *[]ContactEmailInput    `json:"emails,omitempty"`
-	FirstName             *string                 `json:"first_name,omitempty"`
-	FullName              string                  `json:"full_name"`
-	LastName              *string                 `json:"last_name,omitempty"`
-	OwnerId               *openapi_types.UUID     `json:"owner_id,omitempty"`
-	Phones                *[]ContactPhoneInput    `json:"phones,omitempty"`
-	Social                *map[string]interface{} `json:"social,omitempty"`
-	Source                string                  `json:"source"`
+	CreatedFromActivityId *openapi_types.UUID  `json:"created_from_activity_id,omitempty"`
+	Emails                *[]ContactEmailInput `json:"emails,omitempty"`
+	FirstName             *string              `json:"first_name,omitempty"`
+	FullName              string               `json:"full_name"`
+	LastName              *string              `json:"last_name,omitempty"`
+
+	// LinkedinUrl The contact's LinkedIn profile link (https://www.linkedin.com/in/<name>). Writes the same stored value as `social.linkedin`; a request naming both with different profiles is refused with 422 `linkedin_url_conflicts_with_social`.
+	LinkedinUrl *string              `json:"linkedin_url,omitempty"`
+	OwnerId     *openapi_types.UUID  `json:"owner_id,omitempty"`
+	Phones      *[]ContactPhoneInput `json:"phones,omitempty"`
+
+	// Social Links by platform. Only github, linkedin and twitter are taken; any other key is refused with 422 `social_platform_unknown`. linkedin takes only a LinkedIn profile link (https://www.linkedin.com/in/<name>).
+	Social *map[string]interface{} `json:"social,omitempty"`
+	Source string                  `json:"source"`
 
 	// SourceAuthorId Who wrote this record in the system it came from, when the author holds a seat here. Written only by a declared importer (a signed-in human holding import_run:create), only beside a source_system; either author field or both may be sent, and the seat's current name wins on read. captured_by still names the caller.
 	SourceAuthorId *openapi_types.UUID `json:"source_author_id,omitempty"`
@@ -45108,11 +45317,20 @@ type CreateProjectHealthCorrectionRequest struct {
 
 // CreateProjectRequest defines model for CreateProjectRequest.
 type CreateProjectRequest struct {
-	CompanyId   openapi_types.UUID  `json:"company_id"`
+	CompanyId openapi_types.UUID `json:"company_id"`
+
+	// DealId The deal this project comes from. The deal is pointed at the new project in the same transaction.
+	DealId      *openapi_types.UUID `json:"deal_id,omitempty"`
 	Description *string             `json:"description,omitempty"`
-	Name        string              `json:"name"`
-	OwnerId     *openapi_types.UUID `json:"owner_id,omitempty"`
-	Source      string              `json:"source"`
+
+	// Key The key the creator chose; omitted or null to have the server mint one. Read-only after create.
+	Key     *string             `json:"key,omitempty"`
+	Name    string              `json:"name"`
+	OwnerId *openapi_types.UUID `json:"owner_id,omitempty"`
+
+	// Phase The phase the project starts in; initiative when omitted.
+	Phase  *CreateProjectRequestPhase `json:"phase,omitempty"`
+	Source string                     `json:"source"`
 
 	// SourceAuthorId Who wrote this record in the system it came from, when the author holds a seat here. Written only by a declared importer (a signed-in human holding import_run:create), only beside a source_system; either author field or both may be sent, and the seat's current name wins on read. captured_by still names the caller.
 	SourceAuthorId *openapi_types.UUID `json:"source_author_id,omitempty"`
@@ -45129,6 +45347,9 @@ type CreateProjectRequest struct {
 	TargetEndDate        *openapi_types.Date    `json:"target_end_date,omitempty"`
 	AdditionalProperties map[string]interface{} `json:"-"`
 }
+
+// CreateProjectRequestPhase The phase the project starts in; initiative when omitted.
+type CreateProjectRequestPhase string
 
 // CreateRecordAssignmentRequest A responsibility may name an agent seat as well as a human member. It grants no record access. The web picker lists active human colleagues.
 type CreateRecordAssignmentRequest struct {
@@ -49970,6 +50191,24 @@ type HomeRepairTaskBeforeVerdict string
 // HomeRepairTaskSource defines model for HomeRepairTask.Source.
 type HomeRepairTaskSource string
 
+// ImapCredentials Direct IMAP credentials (the `imap` provider only).
+type ImapCredentials struct {
+	Host string `json:"host"`
+
+	// Mailbox The mailbox to read.
+	Mailbox *string `json:"mailbox,omitempty"`
+
+	// MaxMessages Upper bound on messages pulled per sync, and on the bounded recent window a first sync re-anchors with.
+	MaxMessages *int `json:"max_messages,omitempty" maximum:"200" minimum:"1"`
+	Port        *int `json:"port,omitempty" maximum:"65535" minimum:"1"`
+
+	// Secret Password or app-specific password. Sealed to the vault; never returned.
+	Secret *string `json:"secret,omitempty"`
+
+	// Username The mailbox login — an email address on most servers.
+	Username string `json:"username"`
+}
+
 // ImportColumn One column of the uploaded file, described well enough to map it without opening the file elsewhere.
 type ImportColumn struct {
 	// FillRate Non-empty values ÷ rows profiled. A column at 0.02 is usually a mapping mistake waiting to happen, and the number is the only way to see that before committing.
@@ -51367,7 +51606,7 @@ type InternalMailSelection struct {
 	// Containers Exact provider-qualified folder identifiers. An empty list selects the whole connection, subject to ordinary exclusions.
 	Containers []string `json:"containers" unique:"items"`
 
-	// HistorySince Optional administrator authorization for a separate history import, starting at midnight UTC on this day. Omission keeps future capture only. The mailbox owner must still preview and explicitly start the import.
+	// HistorySince Optional administrator authorization for a separate history import, starting at midnight UTC on this day. Omission keeps future capture only. The mailbox owner must still preview and explicitly start the import, so a shared mailbox, which has no owner, refuses it.
 	HistorySince *openapi_types.Date `json:"history_since,omitempty"`
 }
 
@@ -51387,8 +51626,10 @@ type InternalMailSource struct {
 	EnrolledBy   string              `json:"enrolled_by"`
 	Generation   int                 `json:"generation"`
 	HistorySince *openapi_types.Date `json:"history_since,omitempty"`
-	OwnerUserId  openapi_types.UUID  `json:"owner_user_id"`
-	Provider     string              `json:"provider"`
+
+	// OwnerUserId Null for a shared mailbox, which no seat owns. Its connection and generation name it.
+	OwnerUserId *openapi_types.UUID `json:"owner_user_id"`
+	Provider    string              `json:"provider"`
 }
 
 // InternalMailSourceOption defines model for InternalMailSourceOption.
@@ -51397,8 +51638,10 @@ type InternalMailSourceOption struct {
 	ConnectionId openapi_types.UUID `json:"connection_id"`
 	Generation   int                `json:"generation"`
 	OwnerName    string             `json:"owner_name"`
-	OwnerUserId  openapi_types.UUID `json:"owner_user_id"`
-	Provider     string             `json:"provider"`
+
+	// OwnerUserId Null for a shared mailbox. Its account_label is its address, and owner_name is empty.
+	OwnerUserId *openapi_types.UUID `json:"owner_user_id"`
+	Provider    string              `json:"provider"`
 }
 
 // IntroFallbackPolicy What the requester wants to happen if the colleague says no. Stored rather than held in the drawer, so the answer survives the tab that gave it.
@@ -57583,6 +57826,12 @@ type ProjectHealthAssessmentListResponse struct {
 // ProjectHealthState How a project is going, as somebody judged it.
 type ProjectHealthState string
 
+// ProjectKeyPreview defines model for ProjectKeyPreview.
+type ProjectKeyPreview struct {
+	// Key The key a project of this name would be given if it were created now.
+	Key string `json:"key"`
+}
+
 // ProjectListResponse defines model for ProjectListResponse.
 type ProjectListResponse struct {
 	Data []Project `json:"data"`
@@ -58216,7 +58465,7 @@ type QuickCaptureContactRequest struct {
 	FullName string               `json:"full_name"`
 	Phone    *string              `json:"phone,omitempty"`
 
-	// ProfileUrl The public profile this was read from. Stored, never fetched. A LinkedIn URL must be a profile (`/in/<name>`); a company page is refused with 422 `linkedin_url_not_profile` on this field.
+	// ProfileUrl The LinkedIn profile this was read from. Stored, never fetched. It must be a LinkedIn profile (`/in/<name>`): a page off LinkedIn is refused with 422 `linkedin_url_not_linkedin` on this field, and a company page with `linkedin_url_not_profile`.
 	ProfileUrl *string `json:"profile_url,omitempty"`
 
 	// Role What they do at that employer, when it differs from `title`.
@@ -63355,6 +63604,68 @@ type SharedForecastView struct {
 // SharedForecastViewKind Which promise this view makes. A reader shown a frozen number needs to know it is frozen, and as of when.
 type SharedForecastViewKind string
 
+// SharedGmailCredentials A Google Workspace service account the admin delegated `gmail.readonly` to.
+type SharedGmailCredentials struct {
+	// ServiceAccountKey The JSON key file of the service account, as text. Sealed to the vault; never returned.
+	ServiceAccountKey *string `json:"service_account_key,omitempty"`
+}
+
+// SharedGraphCredentials The customer's own Entra app registration, which reads the mailbox with application permission.
+type SharedGraphCredentials struct {
+	// ClientId The application (client) id.
+	ClientId *string `json:"client_id,omitempty"`
+
+	// ClientSecret A client secret of the app. Sealed to the vault; never returned.
+	ClientSecret *string `json:"client_secret,omitempty"`
+
+	// TenantId The directory (tenant) id, or a verified domain of the tenant. Never a multi-tenant alias.
+	TenantId *string `json:"tenant_id,omitempty"`
+}
+
+// SharedMailbox A mailbox no one owns. One team reads what it captures.
+type SharedMailbox struct {
+	// Address The mailbox address.
+	Address     string    `json:"address"`
+	ConnectedAt time.Time `json:"connected_at"`
+
+	// ConnectedBy The admin who last connected it.
+	ConnectedBy *openapi_types.UUID `json:"connected_by,omitempty"`
+
+	// Id The connection id. It stays the same across a disconnect and a reconnect.
+	Id openapi_types.UUID `json:"id"`
+
+	// MailVisibility `held` keeps its mail to the reader team and the message's own participants; `shared` opens it to the workspace.
+	MailVisibility SharedMailboxMailVisibility `json:"mail_visibility"`
+	Provider       SharedMailboxProvider       `json:"provider"`
+
+	// ReaderTeamId The team that reads every message this mailbox captured.
+	ReaderTeamId openapi_types.UUID  `json:"reader_team_id"`
+	Status       SharedMailboxStatus `json:"status"`
+}
+
+// SharedMailboxMailVisibility `held` keeps its mail to the reader team and the message's own participants; `shared` opens it to the workspace.
+type SharedMailboxMailVisibility string
+
+// SharedMailboxProvider defines model for SharedMailbox.Provider.
+type SharedMailboxProvider string
+
+// SharedMailboxStatus defines model for SharedMailbox.Status.
+type SharedMailboxStatus string
+
+// SharedMailboxHistoryImportRequest defines model for SharedMailboxHistoryImportRequest.
+type SharedMailboxHistoryImportRequest struct {
+	// Window How far back to import. Widen-only versus a prior run.
+	Window SharedMailboxHistoryImportRequestWindow `json:"window"`
+}
+
+// SharedMailboxHistoryImportRequestWindow How far back to import. Widen-only versus a prior run.
+type SharedMailboxHistoryImportRequestWindow string
+
+// SharedMailboxList defines model for SharedMailboxList.
+type SharedMailboxList struct {
+	Items []SharedMailbox `json:"items"`
+}
+
 // ShippedLabelKey The catalog key a screen renders a built-in value from, in the reader's language. Set only on a value still worded as the product shipped it; null once an administrator relabels it, so their own words show instead of `label`'s translation. `label` keeps the English text for every reader that has no catalog, such as an export or an agent.
 type ShippedLabelKey = string
 
@@ -65475,7 +65786,10 @@ type UpdateContactRequest struct {
 	FirstName *string              `json:"first_name,omitempty"`
 	FullName  *string              `json:"full_name,omitempty"`
 	LastName  *string              `json:"last_name,omitempty"`
-	OwnerId   *openapi_types.UUID  `json:"owner_id,omitempty"`
+
+	// LinkedinUrl The contact's LinkedIn profile link (https://www.linkedin.com/in/<name>). Writes the same stored value as `social.linkedin`; null or "" removes it. A request naming both with different profiles is refused with 422 `linkedin_url_conflicts_with_social`.
+	LinkedinUrl *string             `json:"linkedin_url,omitempty"`
+	OwnerId     *openapi_types.UUID `json:"owner_id,omitempty"`
 
 	// Phones REPLACES the contact's numbers with exactly this list, the same way `emails`
 	// replaces addresses. A number that has been reassigned is corrected by sending
@@ -65492,8 +65806,10 @@ type UpdateContactRequest struct {
 
 	// RelationshipMark Marks the contact (`vendor_marketing`) or clears the mark (null). The mark records who set it, so a mark set by hand is never lifted by the automatic check that lifts the mark the sender check set.
 	RelationshipMark *UpdateContactRequestRelationshipMark `json:"relationship_mark,omitempty"`
-	Social           *map[string]interface{}               `json:"social,omitempty"`
-	Title            *string                               `json:"title,omitempty"`
+
+	// Social Merged into the stored links: a key not sent keeps its link, and a key sent as "" or null removes it. Only github, linkedin and twitter are taken; any other key is refused with 422 `social_platform_unknown`. linkedin takes only a LinkedIn profile link (https://www.linkedin.com/in/<name>).
+	Social *map[string]interface{} `json:"social,omitempty"`
+	Title  *string                 `json:"title,omitempty"`
 
 	// Visibility Who may see this contact: `workspace` for everyone in the company,
 	// `owner` for the contact named by `owner_id` alone.
@@ -66390,11 +66706,10 @@ type UpdateProductRequestComponentKind string
 type UpdateProductRequestTaxCategory string
 
 // UpdateProjectRequest Note `phase` is absent by design — it moves only through advanceProjectPhase.
-// `key` is absent for a different reason: the server mints it from the name and
-// it is read-only thereafter. A key is what a human writes in a subject line to
-// file mail under a project, so a caller-chosen one is a matcher a caller can
-// get wrong — a project keyed after a contact's name would claim every bracketed
-// mention of that word.
+// `key` is absent for a different reason: it is set on create and read-only
+// thereafter (422 `read_only`). A key is what a human writes in a subject line to
+// file mail under a project, so changing it would stop mail already sent with it
+// from filing.
 type UpdateProjectRequest struct {
 	Description          *string                `json:"description,omitempty"`
 	EndedAt              *openapi_types.Date    `json:"ended_at,omitempty"`
@@ -66486,6 +66801,24 @@ type UpdateSavedViewRequest struct {
 	Name  *string                 `json:"name,omitempty"`
 	Query *map[string]interface{} `json:"query,omitempty"`
 }
+
+// UpdateSharedMailboxRequest defines model for UpdateSharedMailboxRequest.
+type UpdateSharedMailboxRequest struct {
+	// ApplyToHistory Also narrow mail already captured when the visibility moves to `held`. Absent or false leaves it as it is.
+	ApplyToHistory *bool `json:"apply_to_history,omitempty"`
+
+	// Confirm Must be true: the change moves every message the mailbox captured to other readers.
+	Confirm bool `json:"confirm"`
+
+	// MailVisibility `classified` is refused with `422`.
+	MailVisibility *UpdateSharedMailboxRequestMailVisibility `json:"mail_visibility,omitempty"`
+
+	// ReaderTeamId The team that reads the mailbox from now on, its whole history included.
+	ReaderTeamId *openapi_types.UUID `json:"reader_team_id,omitempty"`
+}
+
+// UpdateSharedMailboxRequestMailVisibility `classified` is refused with `422`.
+type UpdateSharedMailboxRequestMailVisibility string
 
 // UpdateSignalRequest Triage. A `status` move to acknowledged/resolved/dismissed appends the human-outcome
 // `signal_resolution` row; `note` travels with that outcome. `resolution_state` and the
@@ -76244,6 +76577,11 @@ type CreateProjectParams struct {
 	XApprovalToken *ApprovalToken `json:"X-Approval-Token,omitempty"`
 }
 
+// GetProjectKeyPreviewParams defines parameters for GetProjectKeyPreview.
+type GetProjectKeyPreviewParams struct {
+	Name string `form:"name" json:"name"`
+}
+
 // TransferProjectOwnershipParams defines parameters for TransferProjectOwnership.
 type TransferProjectOwnershipParams struct {
 	// IdempotencyKey Client-supplied key making a mutation safe to retry — an update exactly as much as a
@@ -79575,6 +79913,15 @@ type CreateMeetingProposalJSONRequestBody = MeetingProposalRequest
 // ReassignHandoffJSONRequestBody defines body for ReassignHandoff for application/json ContentType.
 type ReassignHandoffJSONRequestBody = HandoffAssigneeInput
 
+// ConnectSharedMailboxJSONRequestBody defines body for ConnectSharedMailbox for application/json ContentType.
+type ConnectSharedMailboxJSONRequestBody = ConnectSharedMailboxRequest
+
+// UpdateSharedMailboxJSONRequestBody defines body for UpdateSharedMailbox for application/json ContentType.
+type UpdateSharedMailboxJSONRequestBody = UpdateSharedMailboxRequest
+
+// StartSharedMailboxHistoryImportJSONRequestBody defines body for StartSharedMailboxHistoryImport for application/json ContentType.
+type StartSharedMailboxHistoryImportJSONRequestBody = SharedMailboxHistoryImportRequest
+
 // CreateSignalJSONRequestBody defines body for CreateSignal for application/json ContentType.
 type CreateSignalJSONRequestBody = CreateSignalRequest
 
@@ -81737,6 +82084,14 @@ func (a *Contact) UnmarshalJSON(b []byte) error {
 		delete(object, "legal_hold")
 	}
 
+	if raw, found := object["linkedin_url"]; found {
+		err = json.Unmarshal(raw, &a.LinkedinUrl)
+		if err != nil {
+			return fmt.Errorf("error reading 'linkedin_url': %w", err)
+		}
+		delete(object, "linkedin_url")
+	}
+
 	if raw, found := object["merged_into_id"]; found {
 		err = json.Unmarshal(raw, &a.MergedIntoId)
 		if err != nil {
@@ -82034,6 +82389,13 @@ func (a Contact) MarshalJSON() ([]byte, error) {
 		object["legal_hold"], err = json.Marshal(a.LegalHold)
 		if err != nil {
 			return nil, fmt.Errorf("error marshaling 'legal_hold': %w", err)
+		}
+	}
+
+	if a.LinkedinUrl != nil {
+		object["linkedin_url"], err = json.Marshal(a.LinkedinUrl)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'linkedin_url': %w", err)
 		}
 	}
 
@@ -83320,6 +83682,14 @@ func (a *CreateCompanyRequest) UnmarshalJSON(b []byte) error {
 		delete(object, "legal_name")
 	}
 
+	if raw, found := object["linkedin_url"]; found {
+		err = json.Unmarshal(raw, &a.LinkedinUrl)
+		if err != nil {
+			return fmt.Errorf("error reading 'linkedin_url': %w", err)
+		}
+		delete(object, "linkedin_url")
+	}
+
 	if raw, found := object["owner_id"]; found {
 		err = json.Unmarshal(raw, &a.OwnerId)
 		if err != nil {
@@ -83455,6 +83825,13 @@ func (a CreateCompanyRequest) MarshalJSON() ([]byte, error) {
 		object["legal_name"], err = json.Marshal(a.LegalName)
 		if err != nil {
 			return nil, fmt.Errorf("error marshaling 'legal_name': %w", err)
+		}
+	}
+
+	if a.LinkedinUrl != nil {
+		object["linkedin_url"], err = json.Marshal(a.LinkedinUrl)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'linkedin_url': %w", err)
 		}
 	}
 
@@ -83625,6 +84002,14 @@ func (a *CreateContactRequest) UnmarshalJSON(b []byte) error {
 		delete(object, "last_name")
 	}
 
+	if raw, found := object["linkedin_url"]; found {
+		err = json.Unmarshal(raw, &a.LinkedinUrl)
+		if err != nil {
+			return fmt.Errorf("error reading 'linkedin_url': %w", err)
+		}
+		delete(object, "linkedin_url")
+	}
+
 	if raw, found := object["owner_id"]; found {
 		err = json.Unmarshal(raw, &a.OwnerId)
 		if err != nil {
@@ -83774,6 +84159,13 @@ func (a CreateContactRequest) MarshalJSON() ([]byte, error) {
 		object["last_name"], err = json.Marshal(a.LastName)
 		if err != nil {
 			return nil, fmt.Errorf("error marshaling 'last_name': %w", err)
+		}
+	}
+
+	if a.LinkedinUrl != nil {
+		object["linkedin_url"], err = json.Marshal(a.LinkedinUrl)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'linkedin_url': %w", err)
 		}
 	}
 
@@ -84897,12 +85289,28 @@ func (a *CreateProjectRequest) UnmarshalJSON(b []byte) error {
 		delete(object, "company_id")
 	}
 
+	if raw, found := object["deal_id"]; found {
+		err = json.Unmarshal(raw, &a.DealId)
+		if err != nil {
+			return fmt.Errorf("error reading 'deal_id': %w", err)
+		}
+		delete(object, "deal_id")
+	}
+
 	if raw, found := object["description"]; found {
 		err = json.Unmarshal(raw, &a.Description)
 		if err != nil {
 			return fmt.Errorf("error reading 'description': %w", err)
 		}
 		delete(object, "description")
+	}
+
+	if raw, found := object["key"]; found {
+		err = json.Unmarshal(raw, &a.Key)
+		if err != nil {
+			return fmt.Errorf("error reading 'key': %w", err)
+		}
+		delete(object, "key")
 	}
 
 	if raw, found := object["name"]; found {
@@ -84919,6 +85327,14 @@ func (a *CreateProjectRequest) UnmarshalJSON(b []byte) error {
 			return fmt.Errorf("error reading 'owner_id': %w", err)
 		}
 		delete(object, "owner_id")
+	}
+
+	if raw, found := object["phase"]; found {
+		err = json.Unmarshal(raw, &a.Phase)
+		if err != nil {
+			return fmt.Errorf("error reading 'phase': %w", err)
+		}
+		delete(object, "phase")
 	}
 
 	if raw, found := object["source"]; found {
@@ -85001,10 +85417,24 @@ func (a CreateProjectRequest) MarshalJSON() ([]byte, error) {
 		return nil, fmt.Errorf("error marshaling 'company_id': %w", err)
 	}
 
+	if a.DealId != nil {
+		object["deal_id"], err = json.Marshal(a.DealId)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'deal_id': %w", err)
+		}
+	}
+
 	if a.Description != nil {
 		object["description"], err = json.Marshal(a.Description)
 		if err != nil {
 			return nil, fmt.Errorf("error marshaling 'description': %w", err)
+		}
+	}
+
+	if a.Key != nil {
+		object["key"], err = json.Marshal(a.Key)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'key': %w", err)
 		}
 	}
 
@@ -85017,6 +85447,13 @@ func (a CreateProjectRequest) MarshalJSON() ([]byte, error) {
 		object["owner_id"], err = json.Marshal(a.OwnerId)
 		if err != nil {
 			return nil, fmt.Errorf("error marshaling 'owner_id': %w", err)
+		}
+	}
+
+	if a.Phase != nil {
+		object["phase"], err = json.Marshal(a.Phase)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'phase': %w", err)
 		}
 	}
 
@@ -90724,6 +91161,14 @@ func (a *UpdateContactRequest) UnmarshalJSON(b []byte) error {
 		delete(object, "last_name")
 	}
 
+	if raw, found := object["linkedin_url"]; found {
+		err = json.Unmarshal(raw, &a.LinkedinUrl)
+		if err != nil {
+			return fmt.Errorf("error reading 'linkedin_url': %w", err)
+		}
+		delete(object, "linkedin_url")
+	}
+
 	if raw, found := object["owner_id"]; found {
 		err = json.Unmarshal(raw, &a.OwnerId)
 		if err != nil {
@@ -90830,6 +91275,13 @@ func (a UpdateContactRequest) MarshalJSON() ([]byte, error) {
 		object["last_name"], err = json.Marshal(a.LastName)
 		if err != nil {
 			return nil, fmt.Errorf("error marshaling 'last_name': %w", err)
+		}
+	}
+
+	if a.LinkedinUrl != nil {
+		object["linkedin_url"], err = json.Marshal(a.LinkedinUrl)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'linkedin_url': %w", err)
 		}
 	}
 
@@ -95025,6 +95477,9 @@ type ServerInterface interface {
 	// Create a project on a company.
 	// (POST /projects)
 	CreateProject(w http.ResponseWriter, r *http.Request, params CreateProjectParams)
+	// The key a new project of this name would be given.
+	// (GET /projects/key-preview)
+	GetProjectKeyPreview(w http.ResponseWriter, r *http.Request, params GetProjectKeyPreviewParams)
 	// Move every live project one user owns to another user, in one transaction.
 	// (POST /projects/transfer-ownership)
 	TransferProjectOwnership(w http.ResponseWriter, r *http.Request, params TransferProjectOwnershipParams)
@@ -95385,6 +95840,21 @@ type ServerInterface interface {
 	// Cross-object search (contacts, companies, deals, activities, leads).
 	// (GET /search)
 	Search(w http.ResponseWriter, r *http.Request, params SearchParams)
+	// The installation's shared mailboxes, disconnected ones included.
+	// (GET /shared-mailboxes)
+	ListSharedMailboxes(w http.ResponseWriter, r *http.Request)
+	// Connect a shared mailbox, or reconnect the one stored for this address.
+	// (POST /shared-mailboxes)
+	ConnectSharedMailbox(w http.ResponseWriter, r *http.Request)
+	// Change who reads a shared mailbox, or its mail visibility.
+	// (PATCH /shared-mailboxes/{id})
+	UpdateSharedMailbox(w http.ResponseWriter, r *http.Request, id Id)
+	// Stop capturing a shared mailbox.
+	// (POST /shared-mailboxes/{id}/disconnect)
+	DisconnectSharedMailbox(w http.ResponseWriter, r *http.Request, id Id)
+	// Import a connected shared mailbox's past mail.
+	// (POST /shared-mailboxes/{id}/history-import)
+	StartSharedMailboxHistoryImport(w http.ResponseWriter, r *http.Request, id Id)
 	// List signals (cursor-paginated), newest first.
 	// (GET /signals)
 	ListSignals(w http.ResponseWriter, r *http.Request, params ListSignalsParams)
@@ -100650,6 +101120,12 @@ func (_ Unimplemented) CreateProject(w http.ResponseWriter, r *http.Request, par
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
+// The key a new project of this name would be given.
+// (GET /projects/key-preview)
+func (_ Unimplemented) GetProjectKeyPreview(w http.ResponseWriter, r *http.Request, params GetProjectKeyPreviewParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
 // Move every live project one user owns to another user, in one transaction.
 // (POST /projects/transfer-ownership)
 func (_ Unimplemented) TransferProjectOwnership(w http.ResponseWriter, r *http.Request, params TransferProjectOwnershipParams) {
@@ -101367,6 +101843,36 @@ func (_ Unimplemented) ReassignHandoff(w http.ResponseWriter, r *http.Request, i
 // Cross-object search (contacts, companies, deals, activities, leads).
 // (GET /search)
 func (_ Unimplemented) Search(w http.ResponseWriter, r *http.Request, params SearchParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// The installation's shared mailboxes, disconnected ones included.
+// (GET /shared-mailboxes)
+func (_ Unimplemented) ListSharedMailboxes(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Connect a shared mailbox, or reconnect the one stored for this address.
+// (POST /shared-mailboxes)
+func (_ Unimplemented) ConnectSharedMailbox(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Change who reads a shared mailbox, or its mail visibility.
+// (PATCH /shared-mailboxes/{id})
+func (_ Unimplemented) UpdateSharedMailbox(w http.ResponseWriter, r *http.Request, id Id) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Stop capturing a shared mailbox.
+// (POST /shared-mailboxes/{id}/disconnect)
+func (_ Unimplemented) DisconnectSharedMailbox(w http.ResponseWriter, r *http.Request, id Id) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Import a connected shared mailbox's past mail.
+// (POST /shared-mailboxes/{id}/history-import)
+func (_ Unimplemented) StartSharedMailboxHistoryImport(w http.ResponseWriter, r *http.Request, id Id) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -138049,6 +138555,45 @@ func (siw *ServerInterfaceWrapper) CreateProject(w http.ResponseWriter, r *http.
 	handler.ServeHTTP(w, r)
 }
 
+// GetProjectKeyPreview operation middleware
+func (siw *ServerInterfaceWrapper) GetProjectKeyPreview(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params GetProjectKeyPreviewParams
+
+	// ------------- Required query parameter "name" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, true, "name", r.URL.Query(), &params.Name, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "name"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "name", Err: err})
+		}
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetProjectKeyPreview(w, r, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // TransferProjectOwnership operation middleware
 func (siw *ServerInterfaceWrapper) TransferProjectOwnership(w http.ResponseWriter, r *http.Request) {
 
@@ -143403,6 +143948,142 @@ func (siw *ServerInterfaceWrapper) Search(w http.ResponseWriter, r *http.Request
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.Search(w, r, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// ListSharedMailboxes operation middleware
+func (siw *ServerInterfaceWrapper) ListSharedMailboxes(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ListSharedMailboxes(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// ConnectSharedMailbox operation middleware
+func (siw *ServerInterfaceWrapper) ConnectSharedMailbox(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ConnectSharedMailbox(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// UpdateSharedMailbox operation middleware
+func (siw *ServerInterfaceWrapper) UpdateSharedMailbox(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.UpdateSharedMailbox(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// DisconnectSharedMailbox operation middleware
+func (siw *ServerInterfaceWrapper) DisconnectSharedMailbox(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.DisconnectSharedMailbox(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// StartSharedMailboxHistoryImport operation middleware
+func (siw *ServerInterfaceWrapper) StartSharedMailboxHistoryImport(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.StartSharedMailboxHistoryImport(w, r, id)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -151773,6 +152454,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 		r.Post(options.BaseURL+"/projects", wrapper.CreateProject)
 	})
 	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/projects/key-preview", wrapper.GetProjectKeyPreview)
+	})
+	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/projects/transfer-ownership", wrapper.TransferProjectOwnership)
 	})
 	r.Group(func(r chi.Router) {
@@ -152131,6 +152815,21 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/search", wrapper.Search)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/shared-mailboxes", wrapper.ListSharedMailboxes)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/shared-mailboxes", wrapper.ConnectSharedMailbox)
+	})
+	r.Group(func(r chi.Router) {
+		r.Patch(options.BaseURL+"/shared-mailboxes/{id}", wrapper.UpdateSharedMailbox)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/shared-mailboxes/{id}/disconnect", wrapper.DisconnectSharedMailbox)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/shared-mailboxes/{id}/history-import", wrapper.StartSharedMailboxHistoryImport)
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/signals", wrapper.ListSignals)

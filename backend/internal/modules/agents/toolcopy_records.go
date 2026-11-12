@@ -49,7 +49,7 @@ var changeRecordPartsCopy = toolCopy{
 
 var readRecordCopy = toolCopy{
 	Purpose: "Read one record's own stored fields — the values a reader would see on its detail " +
-		"page — when you already know which record you mean.",
+		"page, a company's profile fields and facts included — when you already know which record you mean.",
 	Limits: "It returns that record and nothing around it: no timeline, no related contacts, no " +
 		"deals on the company.",
 	Instead: "Use catch_me_up_on when the goal is what has been happening on the record rather " +

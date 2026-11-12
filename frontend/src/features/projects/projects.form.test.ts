@@ -56,10 +56,7 @@ describe("mapProjectCreate / mapProjectUpdate", () => {
     expect(
       mapProjectCreate({
         name: " Rollout ",
-        // A key the caller somehow supplied is DROPPED, not forwarded: the
-        // server mints the key and a body carrying one would be sending a
-        // matcher nobody asked for.
-        key: "CALLER-CHOSE",
+        key: " RO ",
         company_id: "o-1",
         owner_id: "",
         description: "",
@@ -71,6 +68,9 @@ describe("mapProjectCreate / mapProjectUpdate", () => {
       owner_id: null,
       description: null,
       target_end_date: "2026-12-31",
+      key: "RO",
+      phase: null,
+      deal_id: null,
       source: "manual",
     });
   });

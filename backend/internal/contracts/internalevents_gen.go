@@ -47,6 +47,36 @@ func (e InternalEventLeadPrivacyNoticeCreatedState) Valid() bool {
 	}
 }
 
+// Defines values for InternalEventSharedMailboxChangedChange.
+const (
+	Connected            InternalEventSharedMailboxChangedChange = "connected"
+	Disconnected         InternalEventSharedMailboxChangedChange = "disconnected"
+	HistoryImportStarted InternalEventSharedMailboxChangedChange = "history_import_started"
+	ReadersChanged       InternalEventSharedMailboxChangedChange = "readers_changed"
+	Reconnected          InternalEventSharedMailboxChangedChange = "reconnected"
+	VisibilityChanged    InternalEventSharedMailboxChangedChange = "visibility_changed"
+)
+
+// Valid indicates whether the value is a known member of the InternalEventSharedMailboxChangedChange enum.
+func (e InternalEventSharedMailboxChangedChange) Valid() bool {
+	switch e {
+	case Connected:
+		return true
+	case Disconnected:
+		return true
+	case HistoryImportStarted:
+		return true
+	case ReadersChanged:
+		return true
+	case Reconnected:
+		return true
+	case VisibilityChanged:
+		return true
+	default:
+		return false
+	}
+}
+
 // InternalEventAiBudgetUpdated The shared company allowance changed; workers reconsider deferred work.
 type InternalEventAiBudgetUpdated struct {
 	AfterRevision        string `json:"after_revision"`
@@ -258,6 +288,14 @@ type InternalEventSdrHandoffCreated struct{}
 // InternalEventSdrHandoffUpdated A prospect handoff changed without changing its original authorship.
 type InternalEventSdrHandoffUpdated struct{}
 
+// InternalEventSharedMailboxChanged An admin connected, reconnected or disconnected a shared mailbox, changed who reads it, or started or continued its history import. Addresses, readers and credentials are omitted; consumers re-read the connection.
+type InternalEventSharedMailboxChanged struct {
+	Change InternalEventSharedMailboxChangedChange `json:"change"`
+}
+
+// InternalEventSharedMailboxChangedChange defines model for InternalEventSharedMailboxChanged.Change.
+type InternalEventSharedMailboxChangedChange string
+
 // InternalEventTagSuggestionAccepted A user accepted a tag suggestion. The tagging itself is audited on the tag; this records the decision.
 type InternalEventTagSuggestionAccepted struct{}
 
@@ -410,6 +448,10 @@ func (InternalEventSdrHandoffCreated) EntityType() string { return "sdr_handoff"
 func (InternalEventSdrHandoffUpdated) EventType() string { return "sdr_handoff.updated" }
 
 func (InternalEventSdrHandoffUpdated) EntityType() string { return "sdr_handoff" }
+
+func (InternalEventSharedMailboxChanged) EventType() string { return "shared_mailbox.changed" }
+
+func (InternalEventSharedMailboxChanged) EntityType() string { return "capture_connection" }
 
 func (InternalEventTagSuggestionAccepted) EventType() string { return "tag_suggestion.accepted" }
 

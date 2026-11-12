@@ -7510,12 +7510,20 @@ paths:
         `company_id` names the project's CUSTOMER — the company the work is for. A project is
         work several companies do together, and the others are put on with
         `PUT /projects/{id}/companies`; this one is required because a project starts with a client.
-        The `key` is MINTED BY THE SERVER from the name (initials plus the lowest free
-        number, e.g. `ERA-1`) and is read-only thereafter: it is what a human writes in a
-        subject line to file mail under this project, so a caller-chosen one is a matcher
-        a caller can get wrong. A collision is resolved by taking the next number, never
-        reported.
-        The project starts in `initiative` and its creation row is appended to the phase history.
+        `key` is optional. Without it the server mints one from the name: the initials alone
+        (`ERA`) when no live project uses those letters, else the letters plus the lowest free
+        number from 2 (`ERA-2`). `getProjectKeyPreview` answers the key a create would mint.
+        A sent key is stored in upper case and is refused with 422 naming `key` when it does not
+        fit the key shape (`invalid_key`), is a word often bracketed in subject lines
+        (`key_is_common_word`), is a word of a colleague's name (`key_is_colleague_name`), or is
+        held by a live project (`key_taken`). The key is read-only after create: it is what a
+        human writes in a subject line to file mail under this project.
+        `phase` is the starting phase, `initiative` when omitted; a project cannot start
+        `closed` (422 `invalid_phase`). The creation row is appended to the phase history.
+        `deal_id` points that deal at the new project in the same transaction, under the check
+        `updateDeal.project_id` takes: the caller must be able to write the deal, and the deal
+        must be on the project's company (422 `project_company_mismatch` naming `deal_id`). Only
+        an open deal that names no project is taken (422 `deal_not_open`, `deal_has_project`).
         A `company_id` that names a company the caller cannot read answers 422 naming `company_id`,
         the same for a missing record and for one hidden by row scope.
       x-mcp-tool: { verb: create_record, record_type: project, tier: auto_execute, scope: write }
@@ -7538,7 +7546,7 @@ paths:
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/Forbidden' }
         '409':
-          description: A live project already holds this key.
+          description: Another project already has this source_system and source_id.
           content:
             application/problem+json:
               schema: { $ref: '#/components/schemas/Problem' }
@@ -7746,6 +7754,34 @@ paths:
           content:
             application/json:
               schema: { $ref: '#/components/schemas/Problem' }
+
+  /projects/key-preview:
+    get:
+      tags: [Projects]
+      operationId: getProjectKeyPreview
+      security: [ { cookieAuth: [] } ]
+      x-agent-access: human-only
+      x-human-only-reason: covered
+      summary: The key a new project of this name would be given.
+      description: |
+        Runs the mint `createProject` runs when no `key` is sent, and writes nothing. A create
+        that lands in between can move the number on, so the create's answer is the key that
+        holds. Needs the grant to create projects. An agent's `create_record` mints the key the
+        same way, so it needs no preview of its own.
+      parameters:
+        - name: name
+          in: query
+          required: true
+          schema: { type: string, minLength: 1 }
+      responses:
+        '200':
+          description: The key.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ProjectKeyPreview' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '422': { $ref: '#/components/responses/ValidationError' }
 
   /projects/transfer-ownership:
     post:
@@ -20026,6 +20062,172 @@ paths:
         '204': { description: Disconnected (or already disconnected). }
         '401': { $ref: '#/components/responses/Unauthorized' }
         '404': { $ref: '#/components/responses/NotFound' }
+
+  /shared-mailboxes:
+    get:
+      tags: [Connectors]
+      operationId: listSharedMailboxes
+      summary: The installation's shared mailboxes, disconnected ones included.
+      description: |
+        A shared mailbox (sales@, an operations desk) belongs to no one. An admin connected it,
+        and one team reads what it captures. A disconnected mailbox stays listed, because its
+        captured mail stays with its readers.
+
+        Admin only, in a signed-in session: an agent never manages who reads a team's mail.
+      x-agent-access: human-only
+      x-human-only-reason: security
+      security: [ { cookieAuth: [] } ]
+      responses:
+        '200':
+          description: Every shared mailbox, ordered by address.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/SharedMailboxList' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/PermissionDenied' }
+    post:
+      tags: [Connectors]
+      operationId: connectSharedMailbox
+      summary: Connect a shared mailbox, or reconnect the one stored for this address.
+      description: |
+        Probes the credentials with the same login check a personal connect runs, seals them in the
+        key vault, and stores the mailbox. The reader team must have at least one active member.
+        `mail_visibility` starts at `held`; `shared` needs `capture.shared_posture_allowed`, and a
+        shared mailbox is never `classified`.
+
+        A second connect of the same provider and address reuses that mailbox: its id, its mail and
+        its readers stay. A reconnect naming other readers or another visibility is refused with
+        `409`; change those with `PATCH /shared-mailboxes/{id}` first.
+
+        The request names its provider and carries that provider's credentials:
+
+        - `imap`: the mailbox login, checked with a login.
+        - `graph`: the customer's own Entra app (tenant id, client id, client secret) with the
+          `Mail.Read` and `User.ReadBasic.All` application permissions. Checked by reading the
+          mailbox's user id and inbox with an app token.
+        - `gmail`: a service-account key with domain-wide delegation of `gmail.readonly`. The
+          address must be on one of the installation's own domains
+          (`422 shared_mailbox_foreign_domain`). Checked by reading the mailbox's profile with a
+          delegated token.
+
+        A refused check answers `422` with the reason class: `shared_mailbox_credentials_invalid`,
+        `shared_mailbox_grant_refused`, `shared_mailbox_mailbox_denied` or
+        `shared_mailbox_mailbox_not_found`. The provider's own message is never echoed. A provider
+        that cannot be reached answers `502 shared_mailbox_unreachable`.
+
+        Admin only, in a signed-in session.
+      x-agent-access: human-only
+      x-human-only-reason: security
+      security: [ { cookieAuth: [] } ]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/ConnectSharedMailboxRequest' }
+      responses:
+        '200':
+          description: The connected mailbox.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/SharedMailbox' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/PermissionDenied' }
+        '409': { $ref: '#/components/responses/Conflict' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+        '502':
+          description: The mail server could not be reached (`imap_unreachable`, `shared_mailbox_unreachable`).
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+
+  /shared-mailboxes/{id}:
+    parameters:
+      - $ref: '#/components/parameters/Id'
+    patch:
+      tags: [Connectors]
+      operationId: updateSharedMailbox
+      summary: Change who reads a shared mailbox, or its mail visibility.
+      description: |
+        Moves the whole captured history: the new reader team reads every message the mailbox
+        brought in, and the old one stops. So the request must carry `confirm: true`. The new team
+        must have at least one active member. `shared` needs `capture.shared_posture_allowed`;
+        `classified` is refused. `apply_to_history` also narrows mail already captured when the
+        visibility moves to `held`.
+
+        Admin only, in a signed-in session.
+      x-agent-access: human-only
+      x-human-only-reason: security
+      security: [ { cookieAuth: [] } ]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/UpdateSharedMailboxRequest' }
+      responses:
+        '200':
+          description: The mailbox as it now stands.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/SharedMailbox' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/PermissionDenied' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+
+  /shared-mailboxes/{id}/disconnect:
+    parameters:
+      - $ref: '#/components/parameters/Id'
+    post:
+      tags: [Connectors]
+      operationId: disconnectSharedMailbox
+      summary: Stop capturing a shared mailbox.
+      description: |
+        Capture stops and the stored credential is deleted from the vault. The mailbox, its captured
+        mail and its readers stay, and a later connect of the same address reuses it. Idempotent.
+
+        Admin only, in a signed-in session.
+      x-agent-access: human-only
+      x-human-only-reason: security
+      security: [ { cookieAuth: [] } ]
+      responses:
+        '204': { description: Disconnected (or already disconnected). }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/PermissionDenied' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+
+  /shared-mailboxes/{id}/history-import:
+    parameters:
+      - $ref: '#/components/parameters/Id'
+    post:
+      tags: [Connectors]
+      operationId: startSharedMailboxHistoryImport
+      summary: Import a connected shared mailbox's past mail.
+      description: |
+        Queues the history import for one window, as `POST /connectors/{provider}/backfill` does for
+        a personal mailbox. One live run per mailbox (`409 backfill_running`), widen-only
+        (`409 window_narrowing`).
+
+        Admin only, in a signed-in session.
+      x-agent-access: human-only
+      x-human-only-reason: security
+      security: [ { cookieAuth: [] } ]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/SharedMailboxHistoryImportRequest' }
+      responses:
+        '202':
+          description: The import is queued.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/BackfillStatus' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/PermissionDenied' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
+        '422': { $ref: '#/components/responses/ValidationError' }
 
   /connectors/{provider}/signature-enrichment:
     parameters:
@@ -39615,7 +39817,7 @@ components:
         history_since:
           type: string
           format: date
-          description: Optional administrator authorization for a separate history import, starting at midnight UTC on this day. Omission keeps future capture only. The mailbox owner must still preview and explicitly start the import.
+          description: Optional administrator authorization for a separate history import, starting at midnight UTC on this day. Omission keeps future capture only. The mailbox owner must still preview and explicitly start the import, so a shared mailbox, which has no owner, refuses it.
 
         connection_id: { type: string, format: uuid }
         containers:
@@ -39634,7 +39836,10 @@ components:
         containers:
           type: array
           items: { type: string }
-        owner_user_id: { type: string, format: uuid }
+        owner_user_id:
+          type: [string, 'null']
+          format: uuid
+          description: Null for a shared mailbox, which no seat owns. Its connection and generation name it.
         provider: { type: string }
         generation: { type: integer }
         enrolled_at: { type: string, format: date-time }
@@ -39644,7 +39849,10 @@ components:
       required: [connection_id, owner_user_id, provider, account_label, owner_name, generation]
       properties:
         connection_id: { type: string, format: uuid }
-        owner_user_id: { type: string, format: uuid }
+        owner_user_id:
+          type: [string, 'null']
+          format: uuid
+          description: Null for a shared mailbox. Its account_label is its address, and owner_name is empty.
         provider: { type: string }
         account_label: { type: string }
         owner_name: { type: string }
@@ -42728,22 +42936,88 @@ components:
             `422 connector_unsupported`); a window above what this installation offers
             (`BackfillStatus.offered_windows`) is refused with `422 window_invalid`. Absent means
             no import starts. A failure to start one still lands the connect as connected.
-        imap:
-          type: object
-          description: Direct IMAP credentials (the `imap` provider only).
-          required: [host, username, secret]
-          properties:
-            host: { type: string }
-            port: { type: integer, minimum: 1, maximum: 65535, default: 993 }
-            username: { type: string, description: 'The mailbox login — an email address on most servers.' }
-            secret: { type: string, writeOnly: true, description: 'Password or app-specific password. Sealed to the vault; never returned.' }
-            mailbox: { type: string, default: INBOX, description: 'The mailbox to read.' }
-            max_messages:
-              type: integer
-              minimum: 1
-              maximum: 200
-              default: 50
-              description: 'Upper bound on messages pulled per sync, and on the bounded recent window a first sync re-anchors with.'
+        imap: { $ref: '#/components/schemas/ImapCredentials' }
+    ImapCredentials:
+      type: object
+      description: Direct IMAP credentials (the `imap` provider only).
+      required: [host, username, secret]
+      properties:
+        host: { type: string }
+        port: { type: integer, minimum: 1, maximum: 65535, default: 993 }
+        username: { type: string, description: 'The mailbox login — an email address on most servers.' }
+        secret: { type: string, writeOnly: true, description: 'Password or app-specific password. Sealed to the vault; never returned.' }
+        mailbox: { type: string, default: INBOX, description: 'The mailbox to read.' }
+        max_messages:
+          type: integer
+          minimum: 1
+          maximum: 200
+          default: 50
+          description: 'Upper bound on messages pulled per sync, and on the bounded recent window a first sync re-anchors with.'
+    SharedMailbox:
+      type: object
+      description: A mailbox no one owns. One team reads what it captures.
+      required: [id, provider, address, reader_team_id, mail_visibility, status, connected_at]
+      properties:
+        id: { type: string, format: uuid, description: The connection id. It stays the same across a disconnect and a reconnect. }
+        provider: { type: string, enum: [imap, graph, gmail, test_mailbox], x-extensible-enum: true }
+        address: { type: string, description: The mailbox address. }
+        reader_team_id: { type: string, format: uuid, description: The team that reads every message this mailbox captured. }
+        mail_visibility:
+          type: string
+          enum: [held, shared]
+          x-extensible-enum: true
+          description: '`held` keeps its mail to the reader team and the message''s own participants; `shared` opens it to the workspace.'
+        status: { type: string, enum: [connected, disconnected, error, reauth_required], x-extensible-enum: true }
+        connected_by: { type: [string, 'null'], format: uuid, description: The admin who last connected it. }
+        connected_at: { type: string, format: date-time }
+    SharedMailboxList:
+      type: object
+      required: [items]
+      properties:
+        items:
+          type: array
+          items: { $ref: '#/components/schemas/SharedMailbox' }
+    ConnectSharedMailboxRequest:
+      type: object
+      description: |
+        The mailbox, its readers, and the provider's credentials. Each provider carries its own
+        credentials member, named like the provider.
+      required: [provider, address, reader_team_id]
+      properties:
+        provider: { type: string, enum: [imap, graph, gmail] }
+        address: { type: string, format: email, maxLength: 320, description: The mailbox address. Reconnecting the same address reuses its mailbox. }
+        reader_team_id: { type: string, format: uuid }
+        mail_visibility: { type: string, enum: [held, shared, classified], description: 'Absent starts a new mailbox `held` and keeps a reconnected one as it is. `classified` is refused with `422`.' }
+        imap: { $ref: '#/components/schemas/ImapCredentials' }
+        graph: { $ref: '#/components/schemas/SharedGraphCredentials' }
+        gmail: { $ref: '#/components/schemas/SharedGmailCredentials' }
+    SharedGraphCredentials:
+      type: object
+      description: The customer's own Entra app registration, which reads the mailbox with application permission.
+      required: [tenant_id, client_id, client_secret]
+      properties:
+        tenant_id: { type: string, maxLength: 253, writeOnly: true, description: 'The directory (tenant) id, or a verified domain of the tenant. Never a multi-tenant alias.' }
+        client_id: { type: string, maxLength: 128, writeOnly: true, description: The application (client) id. }
+        client_secret: { type: string, maxLength: 1024, writeOnly: true, description: 'A client secret of the app. Sealed to the vault; never returned.' }
+    SharedGmailCredentials:
+      type: object
+      description: A Google Workspace service account the admin delegated `gmail.readonly` to.
+      required: [service_account_key]
+      properties:
+        service_account_key: { type: string, maxLength: 16384, writeOnly: true, description: 'The JSON key file of the service account, as text. Sealed to the vault; never returned.' }
+    UpdateSharedMailboxRequest:
+      type: object
+      required: [confirm]
+      properties:
+        reader_team_id: { type: string, format: uuid, description: 'The team that reads the mailbox from now on, its whole history included.' }
+        mail_visibility: { type: string, enum: [held, shared, classified], description: '`classified` is refused with `422`.' }
+        apply_to_history: { type: boolean, description: 'Also narrow mail already captured when the visibility moves to `held`. Absent or false leaves it as it is.' }
+        confirm: { type: boolean, description: 'Must be true: the change moves every message the mailbox captured to other readers.' }
+    SharedMailboxHistoryImportRequest:
+      type: object
+      required: [window]
+      properties:
+        window: { type: string, enum: [3m, 6m, 12m, 24m, 36m, 60m, 84m, 120m], description: 'How far back to import. Widen-only versus a prior run.' }
     ConnectConnectorResponse:
       type: object
       description: 'An OAuth redirect target (OAuth providers).'
@@ -45972,10 +46246,13 @@ components:
             themselves owner (an edit or a claim) needs the delete grant. Server-computed per row,
             per caller. A UX signal, never the enforcement, exactly like `writable`; absent means
             NOT archivable.
+        linkedin_url:
+          type: [string, 'null']
+          description: 'The contact''s LinkedIn profile link. The same stored value as `social.linkedin`, not a second copy.'
         social:
           type: object
           additionalProperties: true
-          description: '{ linkedin, twitter, github, ... }'
+          description: 'The contact''s links by platform: github, linkedin, twitter. linkedin is a LinkedIn profile link.'
         address: { $ref: '#/components/schemas/Address' }
         address_country_mismatch:
           readOnly: true
@@ -46165,7 +46442,13 @@ components:
         last_name: { type: [string, 'null'] }
         title: { type: [string, 'null'] }
         owner_id: { type: [string, 'null'], format: uuid }
-        social: { type: object, additionalProperties: true }
+        linkedin_url:
+          type: [string, 'null']
+          description: 'The contact''s LinkedIn profile link (https://www.linkedin.com/in/<name>). Writes the same stored value as `social.linkedin`; a request naming both with different profiles is refused with 422 `linkedin_url_conflicts_with_social`.'
+        social:
+          type: object
+          additionalProperties: true
+          description: 'Links by platform. Only github, linkedin and twitter are taken; any other key is refused with 422 `social_platform_unknown`. linkedin takes only a LinkedIn profile link (https://www.linkedin.com/in/<name>).'
         address: { $ref: '#/components/schemas/Address' }
         emails:
           type: array
@@ -46220,7 +46503,7 @@ components:
           description: What they do at that employer, when it differs from `title`.
         profile_url:
           type: [string, 'null']
-          description: 'The public profile this was read from. Stored, never fetched. A LinkedIn URL must be a profile (`/in/<name>`); a company page is refused with 422 `linkedin_url_not_profile` on this field.'
+          description: 'The LinkedIn profile this was read from. Stored, never fetched. It must be a LinkedIn profile (`/in/<name>`): a page off LinkedIn is refused with 422 `linkedin_url_not_linkedin` on this field, and a company page with `linkedin_url_not_profile`.'
         email: { type: [string, 'null'], format: email, description: 'Refused with 422 `email_names_no_one` when the local part names a sending system, as ContactEmailInput.email is.' }
         phone: { type: [string, 'null'] }
         convert_lead_ids:
@@ -46520,7 +46803,13 @@ components:
             names nobody is not reachable through this field at all — an unowned
             record is nobody's to change until somebody claims it, which the write
             gate already enforces for every field on this endpoint.
-        social: { type: object, additionalProperties: true }
+        linkedin_url:
+          type: [string, 'null']
+          description: 'The contact''s LinkedIn profile link (https://www.linkedin.com/in/<name>). Writes the same stored value as `social.linkedin`; null or "" removes it. A request naming both with different profiles is refused with 422 `linkedin_url_conflicts_with_social`.'
+        social:
+          type: object
+          additionalProperties: true
+          description: 'Merged into the stored links: a key not sent keeps its link, and a key sent as "" or null removes it. Only github, linkedin and twitter are taken; any other key is refused with 422 `social_platform_unknown`. linkedin takes only a LinkedIn profile link (https://www.linkedin.com/in/<name>).'
         address: { $ref: '#/components/schemas/Address' }
         emails:
           type: array
@@ -46884,6 +47173,10 @@ components:
       required: [display_name, source]
       properties:
         display_name: { type: string }
+        linkedin_url:
+          type: [string, 'null']
+          description: Canonical LinkedIn company URL, held to the rule the update holds it to. website_url is derived and refused here.
+          pattern: '^https://([a-z]{2,3}\.)?linkedin\.com/company/[^/?#]+/?$'
         legal_name: { type: [string, 'null'] }
         phone: { type: [string, 'null'], description: "The company's main number. A formatted number is accepted and stored in E.164 form (for example +49301234567). It is never a contact's own number." }
         email: { type: [string, 'null'], format: email, description: "The company's general address, for example info@example.com. It never creates or matches a contact." }
@@ -55137,8 +55430,18 @@ components:
         source_system: { type: [string, 'null'], maxLength: 128, description: 'Which external system this record came from, when a caller imported it. The reserved mirror: namespace is refused on this wire except for a declared importer: a signed-in human holding import_run:create (an agent carrying those grants is still refused).' }
         source_author_id: { type: [string, 'null'], format: uuid, description: 'Who wrote this record in the system it came from, when the author holds a seat here. Written only by a declared importer (a signed-in human holding import_run:create), only beside a source_system; either author field or both may be sent, and the seat''s current name wins on read. captured_by still names the caller.' }
         source_author_name: { type: [string, 'null'], maxLength: 200, description: 'The source system''s own spelling of who wrote this record. Same door as source_author_id: a declared importer only, beside a source_system. Kept when a seat is also named, so the name survives the seat.' }
+        key: { type: [string, 'null'], maxLength: 24, description: 'The key the creator chose; omitted or null to have the server mint one. Read-only after create.' }
+        phase: { type: [string, 'null'], enum: [initiative, pursuing, delivering, null], description: 'The phase the project starts in; initiative when omitted.' }
+        deal_id: { type: [string, 'null'], format: uuid, description: 'The deal this project comes from. The deal is pointed at the new project in the same transaction.' }
       additionalProperties: true
       x-extension: true
+
+    ProjectKeyPreview:
+      type: object
+      required: [key]
+      properties:
+        key: { type: string, description: 'The key a project of this name would be given if it were created now.' }
+      additionalProperties: false
 
     SetProjectCompanyRequest:
       type: object
@@ -55178,11 +55481,10 @@ components:
       type: object
       description: |
         Note `phase` is absent by design — it moves only through advanceProjectPhase.
-        `key` is absent for a different reason: the server mints it from the name and
-        it is read-only thereafter. A key is what a human writes in a subject line to
-        file mail under a project, so a caller-chosen one is a matcher a caller can
-        get wrong — a project keyed after a contact's name would claim every bracketed
-        mention of that word.
+        `key` is absent for a different reason: it is set on create and read-only
+        thereafter (422 `read_only`). A key is what a human writes in a subject line to
+        file mail under a project, so changing it would stop mail already sent with it
+        from filing.
       properties:
         name: { type: string }
         owner_id: { type: [string, 'null'], format: uuid }

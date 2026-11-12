@@ -211,6 +211,7 @@ var unresolvableAuditActions = gatekit.Waive(map[string]string{
 
 	// Wrappers whose images are computed by the caller and handed in whole.
 	"internal/modules/capture/lifecycleaudit.go:auditLifecycle":                           "both images are parameters, so the verb and what it changed arrive together from a caller that has the row",
+	"internal/modules/capture/sharedmailboxaudit.go:announceSharedMailboxTx":              "both images are parameters, and every caller reads the shared row under lock first, so an update always carries its prior readers and visibility",
 	"internal/modules/identity/teams.go:recordTeamChange":                                 "the verb spans create, update, archive and restore, and every one of them is handed the team row's own images",
 	"internal/modules/identity/onboarding.go:auditOnboardingState":                        "create and update share one writer, and both pass the onboarding row as it stood before the step",
 	"internal/modules/contacts/coldstartprofile.go:applyColdStartTx":                      "a created record diffs against an explicitly empty image and an existing one against its own columns, so both verbs carry a before-image by construction",

@@ -113,6 +113,12 @@ type EnsureCounterpartyInput struct {
 	// CapturedBy. A contact that already exists is never marked here: the
 	// decision that made it, or whoever edited it, stands.
 	RelationshipMark relationshipmark.Mark
+
+	// LinkOnly files the activity under a record the address already names
+	// and creates nothing, for a mailbox no seat owns.
+	LinkOnly bool
+	// ReaderTeam reads the mailbox a link-only ensure files for.
+	ReaderTeam ids.UUID
 }
 
 // EnsureCounterpartyResult reports what the ensure did — every flag maps to
@@ -227,6 +233,9 @@ func (s *Store) ensureCapturedCounterparty(ctx context.Context, tx pgx.Tx, in En
 	}
 	if seats.Covers(in.Email, in.OwnerID) {
 		return EnsureCounterpartyResult{}, ErrCounterpartyIsSeat
+	}
+	if in.LinkOnly {
+		return s.linkExistingCounterparty(ctx, tx, in)
 	}
 	if err := s.ensureContact(ctx, tx, in, &res); err != nil {
 		return EnsureCounterpartyResult{}, err

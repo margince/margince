@@ -214,15 +214,8 @@ func (r *Registry) StartBackfillOver(ctx context.Context, provider string, userI
 }
 
 func (r *Registry) openBackfill(ctx context.Context, provider string, userID ids.UserID, windowMonths int, estimate connector.BackfillEstimate, enqueue EnqueueBackfill, options backfillStart) (BackfillRun, error) {
-	// Checked HERE as well as at the estimate, and not only there: the estimate
-	// is a preview a client may skip, and a start that trusted it would take
-	// the whole window from anyone who called this door directly.
-	if !r.admitsWindow(windowMonths) {
-		return BackfillRun{}, fmt.Errorf("%w: %d months (this installation offers %v)",
-			ErrWindowInvalid, windowMonths, r.OfferedBackfillWindows())
-	}
-	if enqueue == nil {
-		return BackfillRun{}, errors.New("capture: starting a backfill needs a scheduler — an unpaged run blocks its connection permanently")
+	if err := r.admitsBackfillStart(windowMonths, enqueue); err != nil {
+		return BackfillRun{}, err
 	}
 	if err := r.requireCapturingMember(ctx, userID); err != nil {
 		return BackfillRun{}, err
@@ -236,17 +229,36 @@ func (r *Registry) openBackfill(ctx context.Context, provider string, userID ids
 	return run, err
 }
 
+// admitsBackfillStart is what every start asks before it touches a row. The
+// estimate asks the window too, but a client may skip the estimate.
+func (r *Registry) admitsBackfillStart(windowMonths int, enqueue EnqueueBackfill) error {
+	if !r.admitsWindow(windowMonths) {
+		return fmt.Errorf("%w: %d months (this installation offers %v)",
+			ErrWindowInvalid, windowMonths, r.OfferedBackfillWindows())
+	}
+	if enqueue == nil {
+		return errors.New("capture: starting a backfill needs a scheduler — an unpaged run blocks its connection permanently")
+	}
+	return nil
+}
+
 func (r *Registry) openBackfillTx(ctx context.Context, tx pgx.Tx, provider string, userID ids.UserID, windowMonths int, estimate connector.BackfillEstimate, enqueue EnqueueBackfill, options backfillStart) (BackfillRun, error) {
-	var run BackfillRun
 	if options.internalMailToken != "" {
 		if err := settings.ShareLockForDecision(ctx, tx, internalMailPolicyKey); err != nil {
-			return run, err
+			return BackfillRun{}, err
 		}
 	}
 	connID, err := r.connectionForUser(ctx, tx, provider, userID)
 	if err != nil {
-		return run, err
+		return BackfillRun{}, err
 	}
+	return r.openConnectionBackfillTx(ctx, tx, connID, userID, windowMonths, estimate, enqueue, options)
+}
+
+// openConnectionBackfillTx opens a run on one connection. userID is the seat an
+// internal-mail history import is authorized for; a shared mailbox has none.
+func (r *Registry) openConnectionBackfillTx(ctx context.Context, tx pgx.Tx, connID ids.UUID, userID ids.UserID, windowMonths int, estimate connector.BackfillEstimate, enqueue EnqueueBackfill, options backfillStart) (BackfillRun, error) {
+	var run BackfillRun
 	// New runs and sync-triggered continuations serialize on the connection.
 	// Both paths must preserve one live run per connection.
 	if err := lockConnectionTx(ctx, tx, connID); err != nil {
@@ -257,7 +269,7 @@ func (r *Registry) openBackfillTx(ctx context.Context, tx pgx.Tx, provider strin
 	if err != nil {
 		return run, err
 	}
-	resumed, err := resumeOrNil(ctx, tx, options.resume, connID, windowMonths, widest, enqueue)
+	resumed, err := resumeOrNil(ctx, tx, options, connID, windowMonths, widest, enqueue)
 	if err != nil {
 		return run, err
 	}
@@ -283,7 +295,7 @@ func (r *Registry) openBackfillTx(ctx context.Context, tx pgx.Tx, provider strin
 	}
 	// The connection audit keeps the previous and next reach after individual runs expire.
 	// A failed schedule must leave neither a run nor an import audit.
-	if err := auditOpenedBackfillTx(ctx, tx, run, history, widest); err != nil {
+	if err := auditOpenedBackfillTx(ctx, tx, run, history, widest, options.shared); err != nil {
 		return run, err
 	}
 

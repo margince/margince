@@ -13,6 +13,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"slices"
 	"strings"
 	"testing"
 	"time"
@@ -43,15 +44,9 @@ func sharedMailbox(t *testing.T, env captureEnv, team ids.UUID, posture string) 
 		Now: func() time.Time { return captureNow },
 	})
 	registry.Register(conn)
-	var id ids.UUID
-	if err := database.WithWorkspaceTx(env.e.Admin(), env.e.Pool, func(tx pgx.Tx) error {
-		id = integration.ConnectSharedMailbox(t, tx, integration.SharedMailbox{
-			Provider: sharedMailboxProvider, Address: sharedMailboxAddress, ReaderTeam: team, ConnectedBy: env.e.Rep1, Posture: posture,
-		})
-		return nil
-	}); err != nil {
-		t.Fatal(err)
-	}
+	id := integration.ConnectSharedMailbox(t, registry, env.e.WS, integration.SharedMailbox{
+		Provider: sharedMailboxProvider, Address: sharedMailboxAddress, ReaderTeam: team, ConnectedBy: env.e.Rep1, Posture: posture,
+	})
 	wsCtx := principal.WithWorkspaceID(context.Background(), env.e.WS)
 	return id, func(t *testing.T, raws ...[]byte) {
 		t.Helper()
@@ -293,8 +288,8 @@ func TestASharedMailboxIsScheduledLikeAPersonalOne(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(due) != 1 || due[0].ID != box {
-		t.Fatalf("DueConnections answered %v, want the shared mailbox %s", due, box)
+	if !slices.ContainsFunc(due, func(d capturemod.DueConnection) bool { return d.ID == box }) {
+		t.Fatalf("DueConnections answered %v, want the shared mailbox %s among them", due, box)
 	}
 }
 

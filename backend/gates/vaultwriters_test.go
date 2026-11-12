@@ -51,9 +51,10 @@ var vaultPut = regexp.MustCompile(`\bvault\.Put\(`)
 var vaultWriters = map[string]string{
 	// The domain act is connecting or reconnecting a channel, audited under
 	// those verbs by the store that performs it.
-	"internal/modules/capture/registry_grant.go": "audit_log, under the connect/disconnect verbs",
-	"internal/modules/capture/channelconn.go":    "audit_log, under the channel-connection verbs",
-	"internal/modules/integrations/connect.go":   "audit_log, under the integration connect verbs",
+	"internal/modules/capture/registry_grant.go":       "audit_log, under the connect/disconnect verbs",
+	"internal/modules/capture/sharedmailboxconnect.go": "audit_log and event_outbox, under the shared mailbox's create/update verbs",
+	"internal/modules/capture/channelconn.go":          "audit_log, under the channel-connection verbs",
+	"internal/modules/integrations/connect.go":         "audit_log, under the integration connect verbs",
 
 	// Sealed alongside a SETTINGS write, which is what carries the audit row
 	// (settings.SetTx -> storekit.Audit, under the setting's own verb). The

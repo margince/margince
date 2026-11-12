@@ -3255,6 +3255,10 @@ func (stubs) CreateProject(w nethttp.ResponseWriter, r *nethttp.Request, params 
 	httperr.NotImplemented(w, r, "CreateProject")
 }
 
+func (stubs) GetProjectKeyPreview(w nethttp.ResponseWriter, r *nethttp.Request, params crmcontracts.GetProjectKeyPreviewParams) {
+	httperr.NotImplemented(w, r, "GetProjectKeyPreview")
+}
+
 func (stubs) TransferProjectOwnership(w nethttp.ResponseWriter, r *nethttp.Request, params crmcontracts.TransferProjectOwnershipParams) {
 	httperr.NotImplemented(w, r, "TransferProjectOwnership")
 }
@@ -3733,6 +3737,26 @@ func (stubs) ReassignHandoff(w nethttp.ResponseWriter, r *nethttp.Request, id cr
 
 func (stubs) Search(w nethttp.ResponseWriter, r *nethttp.Request, params crmcontracts.SearchParams) {
 	httperr.NotImplemented(w, r, "Search")
+}
+
+func (stubs) ListSharedMailboxes(w nethttp.ResponseWriter, r *nethttp.Request) {
+	httperr.NotImplemented(w, r, "ListSharedMailboxes")
+}
+
+func (stubs) ConnectSharedMailbox(w nethttp.ResponseWriter, r *nethttp.Request) {
+	httperr.NotImplemented(w, r, "ConnectSharedMailbox")
+}
+
+func (stubs) UpdateSharedMailbox(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {
+	httperr.NotImplemented(w, r, "UpdateSharedMailbox")
+}
+
+func (stubs) DisconnectSharedMailbox(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {
+	httperr.NotImplemented(w, r, "DisconnectSharedMailbox")
+}
+
+func (stubs) StartSharedMailboxHistoryImport(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {
+	httperr.NotImplemented(w, r, "StartSharedMailboxHistoryImport")
 }
 
 func (stubs) ListSignals(w nethttp.ResponseWriter, r *nethttp.Request, params crmcontracts.ListSignalsParams) {
