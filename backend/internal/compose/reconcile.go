@@ -387,10 +387,11 @@ func followUpAlreadyAnswered(
 
 // followUpAlreadyFiled reports a task an earlier pass filed for this
 // interaction, done or deleted included. The rep already has it, so a reply
-// address that resolves later does not add a drafted reply on top.
+// address that resolves later does not add a drafted reply on top. A held
+// (restricted) task counts as absent, as it does for every other reader.
 func followUpAlreadyFiled(ctx context.Context, tx pgx.Tx, proposal deals.FollowUpProposal) (bool, error) {
 	var filed bool
-	err := tx.QueryRow(ctx, `SELECT EXISTS (SELECT 1 FROM activity WHERE source_system = $1 AND source_id = $2)`,
+	err := tx.QueryRow(ctx, `SELECT EXISTS (SELECT 1 FROM activity WHERE source_system = $1 AND source_id = $2 AND restricted_at IS NULL)`,
 		provenance.OvernightReconcileSource, followUpSourceID(proposal)).Scan(&filed)
 	return filed, err
 }
