@@ -278,7 +278,7 @@ func TestAnAgentPagesAFilterPreview(t *testing.T) {
 	definition := map[string]any{"field": "name", "op": "contains", "value": "Preview Page"}
 	seen := map[string]bool{}
 	cursor := ""
-	for page := 0; page < 5; page++ {
+	for page := range 5 {
 		call := map[string]any{"mode": "preview", "entity_type": "contact", "definition": definition, "limit": 1}
 		if cursor != "" {
 			call["cursor"] = cursor

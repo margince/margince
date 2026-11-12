@@ -29,17 +29,13 @@ func TestAnIDCursorContinuesOnlyThePagingThatMintedIt(t *testing.T) {
 		t.Fatalf("the cursor read back %v, %v; want the page's last id %v", after, err, last)
 	}
 	var malformed *MalformedCursorError
-	for name, token := range map[string]string{
-		"another paging's cursor": page.NextCursor,
-		"a bare record id":        last.String(),
-		"not a cursor":            "x",
+	for _, refused := range []struct{ name, scope, token string }{
+		{"another paging's cursor", contacts, page.NextCursor},
+		{"a bare record id", deals, last.String()},
+		{"not a cursor", deals, "x"},
 	} {
-		scope := contacts
-		if name != "another paging's cursor" {
-			scope = deals
-		}
-		if _, err := DecodeIDCursor(scope, token); !errors.As(err, &malformed) {
-			t.Errorf("%s was read as a position: %v", name, err)
+		if _, err := DecodeIDCursor(refused.scope, refused.token); !errors.As(err, &malformed) {
+			t.Errorf("%s was read as a position: %v", refused.name, err)
 		}
 	}
 	if after, err := DecodeIDCursor(deals, ""); after != nil || err != nil {

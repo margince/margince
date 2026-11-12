@@ -182,10 +182,14 @@ func TestAFilterPreviewReadsItsRowsInTheSnapshotOfItsPage(t *testing.T) {
 		preview crmcontracts.FilterPreview
 		err     error
 	}
+	scope, _, err := previewCursor("contact", previewPagedFilter, "")
+	if err != nil {
+		t.Fatal(err)
+	}
 	answered, returned := make(chan answer, 1), make(chan struct{})
 	go func() {
 		defer close(returned)
-		got, err := handlers.preview(e.Admin(), engine, previewPagedFilter, "", nil, 10, false)
+		got, err := handlers.preview(e.Admin(), engine, previewPagedFilter, scope, nil, 10, false)
 		answered <- answer{got, err}
 	}()
 	observer := integration.OwnerConn(t)
