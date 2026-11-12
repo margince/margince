@@ -5940,6 +5940,10 @@ export const en = {
   "deal.ownerMe": "Assign to me",
   "deal.ownerUnassign": "Unassign",
   "deal.partnerCompany": "Referring partner",
+  "deal.partnerNoneYet": "No partners yet. Ask an admin to add one.",
+  "deal.referredBy": "Referred by",
+  "deal.referral.sourced": "(sourced)",
+  "deal.referral.influenced": "(influenced)",
   "deal.recordedBy": "Recorded by",
   // A reference the reader may not read, on a surface with no room for the
   // mask glyph: a Kanban card's company line, and the one entry a withheld

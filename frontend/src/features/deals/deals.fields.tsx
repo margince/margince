@@ -54,23 +54,11 @@ const ATTRIBUTION_OPTIONS: { value: string; label: MessageKey }[] = [
   { value: "influenced", label: "deal.attributionInfluenced" },
 ];
 
-/**
- * The companies a deal may name as the partner who brought it.
- *
- * Only companies that are partners. Offering every company would let a deal be
- * attributed to an ordinary customer. An attribution to a company with no
- * partner row has no margin tier behind it: it looks attributed and never earns.
- *
- * An empty list also answers "is there a partner programme here". An
- * installation that never made a company a partner has no partner question to
- * ask. The two fields stay off the form entirely.
- */
-export function usePartnerOptions(
-  companies: { id: string; display_name: string }[],
-): { value: string; label: string }[] {
-  // A partner is a company, so a reader without company.read is asked nothing.
+// The installation's partners. A partner is a company, so a reader without
+// company.read is asked nothing.
+function usePartners() {
   const readsCompanies = useCan("company", "read");
-  const partners = useQuery({
+  return useQuery({
     queryKey: ["partners", "options"],
     enabled: readsCompanies,
     queryFn: async () => {
@@ -83,6 +71,29 @@ export function usePartnerOptions(
     },
     staleTime: 60_000,
   });
+}
+
+/**
+ * True once the server has said no company is a partner yet. Still loading,
+ * refused or failed is not that answer, so it reads false.
+ */
+export function useNoPartnersYet(): boolean {
+  const partners = usePartners();
+  return partners.isSuccess && partners.data.length === 0;
+}
+
+/**
+ * The companies a deal may name as the partner who brought it.
+ *
+ * Only companies that are partners. Offering every company would let a deal be
+ * attributed to an ordinary customer. An attribution to a company with no
+ * partner row has no margin tier behind it: it looks attributed and never earns.
+ */
+export function usePartnerOptions(
+  companies: { id: string; display_name: string }[],
+): { value: string; label: string }[] {
+  const readsCompanies = useCan("company", "read");
+  const partners = usePartners();
   // The names come from a read of the partner companies rather than from
   // whatever page of companies the screen happens to hold.
   //
@@ -159,10 +170,11 @@ function usePartnerCompaniesById(
  * The two fields that record a deal coming through a partner. The create form
  * and the edit form share this one spelling, so the two cannot drift.
  *
- * Nothing at all when the installation has no partners and the deal names
- * none. An empty picker asks a question with no answers in it. A form that
- * shows partner controls to a company running no partner programme claims a
- * feature it does not have.
+ * Where the server has said no company is a partner yet (`noneYet`), the
+ * partner field still stands, with one entry that says how to get one. A
+ * field that only appears after an admin acts is one nobody learns exists.
+ * While that answer is unknown (loading, refused), and the deal names no
+ * partner, nothing is drawn: an empty picker asks a question with no answers.
  *
  * `attributed` is what keeps that from eating data. A form omits nothing a
  * record already carries. The pickable list is one capped page of companies,
@@ -178,29 +190,25 @@ function usePartnerCompaniesById(
 export function partnerFields(
   t: (k: MessageKey) => string,
   partnerOptions: { value: string; label: string }[],
-  attributed?: { id: string; label: string },
-  // The reader was not shown this deal's partner (`masked_fields` names it).
-  // Checked before the empty-list exit. A withheld partner is a fact about
-  // this deal, so it is stated whether or not the installation has partners
-  // left to offer.
-  withheld = false,
+  state: Readonly<{
+    attributed?: { id: string; label: string };
+    // The reader was not shown this deal's partner (`masked_fields` names
+    // it). Checked first: a withheld partner is a fact about this deal, so
+    // it is stated whether or not the installation has partners to offer.
+    withheld?: boolean;
+    noneYet?: boolean;
+  }> = {},
 ): CreateField[] {
+  const { attributed, withheld = false, noneYet = false } = state;
   if (withheld) {
     // One entry, and it names the field as withheld. A picker seeded blank
     // over a partner the reader never saw invites them to choose a different
     // one. The attribution travels with the partner, so there is nothing here
     // to attribute either. `mapDealUpdate` leaves both out of the patch.
-    return [
-      {
-        key: "partner_company_id",
-        label: "deal.partnerCompany",
-        type: "select",
-        options: [{ value: "", label: t("deal.partnerWithheld") }],
-      },
-    ];
+    return [onlyEntry(t("deal.partnerWithheld"))];
   }
   if (partnerOptions.length === 0 && !attributed) {
-    return [];
+    return noneYet ? [onlyEntry(t("deal.partnerNoneYet"))] : [];
   }
   // The deal's own partner is always among the choices, even when the capped
   // page of partners this form could offer does not include it. A select whose
@@ -230,6 +238,17 @@ export function partnerFields(
       })),
     },
   ];
+}
+
+// The partner field with one entry that is not a partner: it says why there is
+// nothing to pick, and picking it names nobody.
+function onlyEntry(words: string): CreateField {
+  return {
+    key: "partner_company_id",
+    label: "deal.partnerCompany",
+    type: "select",
+    options: [{ value: "", label: words }],
+  };
 }
 
 /**
@@ -296,6 +315,8 @@ export function dealEditFields(
     // The partner this deal already names, when it names one. Keeps the field
     // (and its stored value) on a form whose pickable list does not reach it.
     attributedPartner?: { id: string; label: string };
+    // The server has said no company is a partner yet.
+    noPartnersYet?: boolean;
     // The company this deal already names, so the searched picker can name it.
     currentCompany?: { id: string; label: string };
     // The administered acquisition-source catalog, and the key this deal
@@ -349,15 +370,11 @@ export function dealEditFields(
       options: ownerOptions,
     },
     companyEditField(t, opts),
-    // Both partner fields are absent where no company has been made a partner.
-    // There is no partner programme to attribute anything to, and an empty
-    // picker is a question the reader cannot answer.
-    ...partnerFields(
-      t,
-      opts.partnerOptions,
-      opts.attributedPartner,
-      opts.masked.includes("partner_company_id"),
-    ),
+    ...partnerFields(t, opts.partnerOptions, {
+      attributed: opts.attributedPartner,
+      withheld: opts.masked.includes("partner_company_id"),
+      noneYet: opts.noPartnersYet,
+    }),
     ...(opts.closed ? [] : [winProbabilityField(t)]),
     { key: "expected_close_date", label: "create.expectedClose", type: "date" },
     { key: "wait_until", label: "deal.waitUntil", type: "date" },

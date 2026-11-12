@@ -23,6 +23,7 @@ import {
   attributedPartner,
   dealEditFields,
   editProjectFields,
+  useNoPartnersYet,
   usePartnerOptions,
 } from "./deals.fields";
 import { dealEditRecord, mapDealUpdate, stringValues } from "./deals.write";
@@ -46,6 +47,7 @@ export function useDealEdit(
   Readonly<{ groups: FieldGroup[]; maskedFields: readonly string[] }> {
   const t = useT();
   const partnerOptions = usePartnerOptions([]);
+  const noPartnersYet = useNoPartnersYet();
   const acquisitionSources = useAcquisitionSources().data;
   const leadingCurrencies = useLeadingCurrencies();
   const masked = deal.masked_fields ?? [];
@@ -78,6 +80,7 @@ export function useDealEdit(
     ...dealEditFields(t, {
       partnerOptions,
       attributedPartner: attributedPartner(deal, partnerName),
+      noPartnersYet,
       currentCompany,
       masked,
       closed: deal.status === "won" || deal.status === "lost",

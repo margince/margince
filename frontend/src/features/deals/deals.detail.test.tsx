@@ -171,11 +171,63 @@ describe("DealScreen — edit, archive (A3)", () => {
 
     // One row names the partner and what it did, so both are read off its
     // text rather than off two elements.
-    const partner = await screen.findByText(/VietnamPartner JSC/);
-    expect(partner.closest("aside")).not.toBeNull();
+    const aside = await screen.findByRole("complementary");
+    const partner = await within(aside).findByText(/VietnamPartner JSC/);
     expect(partner.textContent).toContain(
       translate("en", "deal.attributionSourced"),
     );
+    // The head names the referral under the deal's name too.
+    const line = (await screen.findByText(translate("en", "deal.referredBy"), {
+      exact: false,
+    })) as HTMLElement;
+    expect(line.closest("aside")).toBeNull();
+    expect(line.textContent).toBe("Referred by VietnamPartner JSC (sourced)");
+  });
+
+  it("says where a partner would go when no company is a partner yet", async () => {
+    const d = deal({ id: "x", partner_company_id: null });
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (request: Request) => {
+        if (new URL(request.url).pathname.endsWith("/partners")) {
+          return jsonResponse({ data: [], page: { next_cursor: null } });
+        }
+        return stubBackend([d], { single: d })(request);
+      }),
+    );
+
+    render(<DealScreen id="x" />);
+
+    const aside = await screen.findByRole("complementary");
+    expect(
+      await within(aside).findByText(translate("en", "deal.partnerNoneYet")),
+    ).toBeTruthy();
+    expect(
+      screen.queryByText(translate("en", "deal.referredBy"), { exact: false }),
+    ).toBeNull();
+  });
+
+  it("says None, not the admin hint, while the partner list is refused", async () => {
+    const d = deal({ id: "x", partner_company_id: null });
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (request: Request) => {
+        if (new URL(request.url).pathname.endsWith("/partners")) {
+          return jsonResponse({ title: "Forbidden", status: 403 }, 403);
+        }
+        return stubBackend([d], { single: d })(request);
+      }),
+    );
+
+    render(<DealScreen id="x" />);
+
+    const aside = await screen.findByRole("complementary");
+    expect(
+      await within(aside).findByText(translate("en", "deal.aside.partnerNone")),
+    ).toBeTruthy();
+    expect(
+      screen.queryByText(translate("en", "deal.partnerNoneYet")),
+    ).toBeNull();
   });
 
   // A form offers nothing the record already carries as a blank. The partner
@@ -337,10 +389,15 @@ describe("DealScreen — edit, archive (A3)", () => {
 
     render(<DealScreen id="x" />);
 
-    const partner = await screen.findByText(/Xentral/);
+    const aside = await screen.findByRole("complementary");
+    const partner = await within(aside).findByText(/Xentral/);
     expect(partner.textContent).toContain(
       translate("en", "deal.attributionInfluenced"),
     );
+    const line = await screen.findByText(translate("en", "deal.referredBy"), {
+      exact: false,
+    });
+    expect(line.textContent).toBe("Referred by Xentral (influenced)");
   });
 
   it("archive confirms then DELETEs", async () => {

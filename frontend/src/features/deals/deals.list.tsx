@@ -64,7 +64,11 @@ import {
   useBoardInteractions,
 } from "./deals.board";
 import { dealColumns } from "./deals.columns";
-import { partnerFields, usePartnerOptions } from "./deals.fields";
+import {
+  partnerFields,
+  useNoPartnersYet,
+  usePartnerOptions,
+} from "./deals.fields";
 import {
   dealRowSelection,
   dealViewDials,
@@ -98,6 +102,7 @@ function DealCreateAction({
 }>) {
   const t = useT();
   const leading = useLeadingCurrencies();
+  const noPartnersYet = useNoPartnersYet();
   // The picker asks the server for one company's projects, so it is keyed on
   // the company the open form names. A create form has no record to take it
   // from, and only the server knows which projects a company is on. The form
@@ -194,7 +199,7 @@ function DealCreateAction({
         // A deal brought by a partner is attributed at birth, not by editing
         // it afterwards. The win that pays them can come before anybody
         // thinks to revisit the record.
-        ...partnerFields(t, partnerOptions),
+        ...partnerFields(t, partnerOptions, { noneYet: noPartnersYet }),
         {
           key: "expected_close_date",
           label: "create.expectedClose",
