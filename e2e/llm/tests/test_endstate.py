@@ -21,6 +21,12 @@ import mcpclient  # noqa: E402
 import transcript  # noqa: E402
 from tests.fakes import FakeMcp  # noqa: E402
 
+def _is_list_read(call):
+    """A list read, as the reader sends it: find_records with engine list."""
+    name, arguments = call
+    return name == "find_records" and (arguments or {}).get("engine") == "list"
+
+
 TOOLS = [{"name": name, "inputSchema": {"type": "object"}} for name in ("list_records", "read_record")]
 EMSLAND = 'company "Emsland Ventilbau GmbH" lifecycle=prospect'
 
@@ -547,7 +553,7 @@ class ReadersTest(unittest.TestCase):
             self.read(replies, ['company "Herzog Fertigung GmbH" records=1'], [commit])
         polls = [args for name, args in self.calls if name == "read_import"]
         self.assertEqual(len(polls), 3)
-        self.assertLess(self.calls.index(("read_import", polls[-1])), self.calls.index(next(c for c in self.calls if c[0] == "list_records")))
+        self.assertLess(self.calls.index(("read_import", polls[-1])), self.calls.index(next(c for c in self.calls if _is_list_read(c))))
 
     def test_an_import_that_never_finishes_is_a_harness_fault(self):
         ticks = iter(range(0, 1000, 60))
@@ -571,7 +577,7 @@ class ReadersTest(unittest.TestCase):
         self.read(crm_world(HERZOG), ['company "Herzog Fertigung GmbH" owner=Sofia Meier',
                                       'company "Herzog Fertigung GmbH" records=1',
                                       'company "Weserblick Logistik GmbH" records=0'])
-        self.assertEqual([name for name, _ in self.calls].count("list_records"), 1)
+        self.assertEqual(sum(1 for call in self.calls if _is_list_read(call)), 1)
 
     def test_a_malformed_special_entry_is_refused(self):
         for entry in ('company "E" records=some', 'company "E" stage=Won', 'project "P" tagged=K5',
