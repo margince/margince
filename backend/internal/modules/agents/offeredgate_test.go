@@ -109,6 +109,6 @@ func TestTheDoorAndTheListingAgreeOnEveryTool(t *testing.T) {
 // that verb's arguments does. The test above holds the door.
 func servingUnofferedNames(t *testing.T) {
 	t.Helper()
-	servesUnoffered.Store(true)
-	t.Cleanup(func() { servesUnoffered.Store(false) })
+	previous := servesUnoffered.Swap(true)
+	t.Cleanup(func() { servesUnoffered.Store(previous) })
 }
