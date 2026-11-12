@@ -37,7 +37,11 @@ export const SellerMonth: Story = {
   render: () => (
     <StoryProviders>
       <div className="progress-body">
-        <ProgressResult progress={sellerMarch} onEvidence={open} />
+        <ProgressResult
+          progress={sellerMarch}
+          onEvidence={open}
+          onGoals={open}
+        />
         <ProgressReadings progress={sellerMarch} onEvidence={open} />
         <ProgressMonths progress={sellerMarch} />
       </div>
@@ -50,8 +54,28 @@ export const TeamIncomplete: Story = {
   render: () => (
     <StoryProviders>
       <div className="progress-body">
-        <ProgressResult progress={teamMarch} onEvidence={open} />
+        <ProgressResult progress={teamMarch} onEvidence={open} onGoals={open} />
         <ProgressMembers progress={teamMarch} />
+      </div>
+    </StoryProviders>
+  ),
+};
+
+// A month nobody published a goal for: the hero says so once, with who can.
+export const SellerNoGoal: Story = {
+  render: () => (
+    <StoryProviders>
+      <div className="progress-body">
+        <ProgressResult
+          progress={{
+            ...sellerMarch,
+            goal: { status: "missing", months_set: 0, months_needed: 1 },
+            completion: undefined,
+            delta_minor: undefined,
+          }}
+          onEvidence={open}
+          onGoals={open}
+        />
       </div>
     </StoryProviders>
   ),
@@ -186,6 +210,28 @@ export const GoalsSeller: Story = {
         jsonResponse({ ...goalRoster, data: goalRoster.data.slice(0, 1) }),
       [`GET /analytics/sales-goals/${draftPlan.owner_id}/2026`]: () =>
         jsonResponse(publishedPlan),
+    });
+    window.location.hash = "#/goals?year=2026";
+    return (
+      <StoryProviders>
+        <SalesGoalsScreen />
+      </StoryProviders>
+    );
+  },
+};
+
+// A manager's view of a published year: text first, the editor on request.
+export const GoalsPublished: Story = {
+  render: () => {
+    installFetchStub({
+      "GET /analytics/sales-goals": () => jsonResponse(goalRoster),
+      [`GET /analytics/sales-goals/${draftPlan.owner_id}/2026`]: () =>
+        jsonResponse({
+          ...publishedPlan,
+          capabilities: { edit: true },
+          published: draftPlan.draft,
+        }),
+      "GET /analytics/progress": () => jsonResponse(sellerMarch),
     });
     window.location.hash = "#/goals?year=2026";
     return (

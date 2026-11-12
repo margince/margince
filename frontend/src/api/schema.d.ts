@@ -45532,6 +45532,14 @@ export interface components {
             target_actual?: number;
             /** Format: int64 */
             target_revision?: number;
+            /**
+             * @description Present with `target`. `target`: a target set for this scope and
+             *     period. `sales_goals`: the figure is a seller's monthly sales
+             *     goal, or the sum of the monthly sales goals of the scope's sellers
+             *     over the target interval. A sum has no `target_revision`.
+             * @enum {string}
+             */
+            target_source?: "target" | "sales_goals";
             /** Format: double */
             attainment?: number;
             coverage: components["schemas"]["ReportingCoverage"];
@@ -45997,6 +46005,11 @@ export interface components {
              * @description The published yearly goal.
              */
             total_minor?: number;
+            /**
+             * Format: int64
+             * @description The yearly sum of a complete draft, for a reader who may read the draft.
+             */
+            draft_total_minor?: number;
             can_edit: boolean;
         };
         SalesGoalRoster: {
@@ -47428,6 +47441,8 @@ export interface components {
             label: string;
             /** @description Whether this caller may record a forecast call or issue a share about this population. Absent from a server that predates the field; a screen then offers the controls and the write route decides. */
             assertable?: boolean;
+            /** @description Whether this population is within the caller's own record access: the workspace for a seat that reads every record, a team for its members. Analytics offers the totals of a scope outside it. Progress reads only a scope inside it. */
+            measurable?: boolean;
         };
         /** @description What this caller may actually do, so a screen never offers a control the server will refuse. */
         AnalyticsCapabilities: {
@@ -76766,6 +76781,8 @@ export interface operations {
                 retired?: boolean;
                 /** @description Filter by the first local day of the target period. */
                 period_start?: string;
+                /** @description Filter by whether a published sales goal plan owns the target, as one month of a seller's year. Such a target changes only through the plan. Omitted includes both. */
+                plan_owned?: boolean;
             };
             header?: never;
             path?: never;

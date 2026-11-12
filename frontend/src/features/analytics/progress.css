@@ -23,7 +23,6 @@
 
 .progress-definition {
   margin: 0;
-  max-inline-size: 72ch;
 }
 
 .goal-editor {
@@ -46,7 +45,7 @@
 }
 
 .goal-editor-sum {
-  margin: 0;
+  margin: calc(var(--space-2) * -1) 0 0;
   font-variant-numeric: tabular-nums;
 }
 
@@ -77,31 +76,70 @@
   gap: var(--space-4);
 }
 
-/* A refused button carries its reason below it; the others keep their height. */
-.goal-editor .card-actions {
+/* One row of actions at the end edge, above a hairline. A refused button
+   carries its reason below it; the others keep their height. */
+.goal-actions {
+  display: flex;
+  flex-wrap: wrap;
   align-items: flex-start;
-  margin-top: 0;
+  justify-content: flex-end;
+  gap: var(--gapActions);
+  padding-block-start: var(--space-4);
+  border-block-start: 1px solid var(--groundEdge);
 }
-
-/* The headline beside its bar: the figure reads first, the bar shows why. */
-.progress-hero {
-  display: grid;
-  grid-template-columns: minmax(14rem, 18rem) minmax(0, 1fr);
+.goal-note {
+  margin: 0;
+}
+.goal-head-end {
+  display: inline-flex;
   align-items: center;
-  gap: var(--space-6);
-  padding: var(--padPanel);
+  gap: var(--space-3);
+}
+/* The year so far: one line, its bar and the door to Progress. */
+.goal-sofar {
+  display: grid;
+  grid-template-columns: auto minmax(var(--space-16), 1fr) auto;
+  align-items: center;
+  gap: var(--space-2) var(--space-4);
+  padding: var(--space-3) var(--space-4);
+  border: 1px solid var(--groundEdge);
+  border-radius: var(--r-md);
+  background: var(--bgInset);
+}
+.goal-sofar > :only-child {
+  justify-self: start;
+}
+.goal-sofar-line {
+  font-weight: var(--fontWeightMedium);
+}
+.goal-sofar > .meterbar {
+  margin: 0;
 }
 @media (max-width: 720px) {
-  .progress-hero {
+  .goal-sofar {
     grid-template-columns: minmax(0, 1fr);
   }
+}
+
+/* The figure reads first; the bar under it shows why, at the full width. */
+.progress-hero {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--space-4);
+  padding: var(--padPanel);
 }
 .progress-result-label {
   color: var(--textSecondary);
   font: var(--fontBodySmall);
 }
-.progress-result-completion {
+.progress-result-line {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--space-2) var(--space-3);
   margin: 0;
+}
+.progress-result-completion {
   font-weight: var(--fontWeightMedium);
   font-variant-numeric: tabular-nums;
 }
@@ -110,10 +148,26 @@
   flex-wrap: wrap;
   align-items: center;
   gap: var(--gapActions);
-  margin-top: var(--space-2);
 }
 .progress-result-bar {
   min-width: 0;
+}
+.progress-nogoal {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2) var(--space-4);
+}
+/* A difference is a number in a column of numbers. Only a figure above the
+   goal takes a colour; an open period's amount to go is the quiet one. */
+.progress-delta {
+  white-space: nowrap;
+}
+.progress-delta[data-tone="above"] {
+  color: var(--successText);
+}
+.progress-delta[data-tone="open"] {
+  color: var(--textSecondary);
 }
 
 .progress-basis {

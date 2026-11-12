@@ -22,7 +22,6 @@ import { useSalesCharts } from "./analytics.overview.board";
 import {
   type OverviewDials,
   outboundDials,
-  scopeDials,
 } from "./analytics.overview.context";
 import { InitiativePanel } from "./analytics.overview.initiative";
 import {
@@ -40,6 +39,7 @@ import { SalesHeader } from "./analytics.overview.salesheader";
 import { SinceLastReview } from "./analytics.overview.since";
 import { AssessmentPanel, DecisionsPanel } from "./analytics.overview.work";
 import { periodCaption } from "./analytics.period";
+import { goalsHref } from "./progress.links";
 import { applyDimensions } from "./reporting.dimensions";
 import { useSelectionEvidence } from "./reporting.evidenceselection";
 import type {
@@ -137,11 +137,7 @@ function SalesReviewBody({
   // question the page no longer asks is never drawn.
   const answered = pipelineGone || query.isError ? undefined : query.data;
   const forecastHref = analyticsSectionHref("forecast", doors);
-  const targetSetup = (
-    <TargetSetup
-      href={analyticsSectionHref("targets", scopeDials(scopeKey(scope)))}
-    />
-  );
+  const targetSetup = <TargetSetup href={goalsHref(scope)} />;
   return (
     <>
       <SalesHeader
@@ -359,9 +355,9 @@ function QuarterNotes({
   );
 }
 
-// Who can give the quarter a target. A reader who may not set one is told who
-// can, rather than shown a button the server would refuse. `href` opens the
-// targets for the scope the comparison was about.
+// Who can give the quarter a goal. A reader who may not set one is told who
+// can, rather than shown a link to a page that would refuse the write. `href`
+// opens the sales goals of the team member the comparison was about.
 // One line in the lead, beside the figure it would compare.
 function TargetSetup({ href }: Readonly<{ href: string }>) {
   const t = useT();
@@ -370,7 +366,7 @@ function TargetSetup({ href }: Readonly<{ href: string }>) {
     <p className="reporting-compare-note">
       {t("reporting.compare.no_target")}{" "}
       {canSet ? (
-        <AppLink href={href}>{t("analytics.overview.setTarget")}</AppLink>
+        <AppLink href={href}>{t("progress.setGoals")}</AppLink>
       ) : (
         t("analytics.overview.targetWho")
       )}

@@ -18,6 +18,8 @@ A salesperson's target is for the month or the fiscal quarter that holds the end
 
 The monthly targets of a seller can come from a published plan on **Sales goals**. Those months change only there; see [Progress and sales goals](progress-and-sales-goals.md).
 
+With no target typed for a month or quarter, sales won are held against the published goals. A quarter adds up its three months, and a team adds up its members. Analytics calls a figure for sales won a goal, and a figure for anything else a target.
+
 “This week”, “This month” and “This quarter” follow the calendar of your Margince and start again when that time span starts.
 
 A week starts on Monday at 00:00. At that exact moment the week holds nothing yet, and Analytics says so instead of showing zeros. With “This week”, a monthly target still counts the whole month up to the cutoff.
@@ -48,17 +50,17 @@ The split keeps the kind a product had when the deal was priced. A later change 
 
 A figure that cannot follow a product, an address or an industry, such as meetings held, says so instead of answering for everything. With any of these filters chosen, no target is compared. A target is set for a whole scope.
 
-## How far is this quarter from its target?
+## How far is this quarter from its goal?
 
-With the time span set to this quarter, **This quarter against its target** sits under the row of figures. It holds the forecast landing against the sales won target of the same scope and quarter:
+With the time span set to this quarter, **This quarter against its goal** sits under the row of figures. It holds the forecast landing against the goal for sales won of the same scope and quarter:
 
-- **Gap to target** is the target minus the forecast landing. A manager's call is the whole quarter, so it is not added to what is already won.
-- **Left to win** is the target minus sales won so far, and never below zero.
+- **Gap to goal** is the goal minus the forecast landing. A manager's call is the whole quarter, so it is not added to what is already won.
+- **Left to win** is the goal minus sales won so far, and never below zero.
 - **Coverage, deals closing this quarter** is the open value eligible to close this quarter, over what is left to win. It is not all open pipeline, which also holds deals expected later.
 
-When nothing is left to win, the panel says **Target reached** and shows no coverage. When it cannot compare, it says why:
+When nothing is left to win, the panel says **Goal reached** and shows no coverage. When it cannot compare, it says why:
 
-- No sales won target is set for this scope, pipeline and quarter. A missing target is not a target of zero.
+- No sales goal is published and no sales won target is set for this scope, pipeline and quarter. A missing goal is not a goal of zero.
 - A deal amount has no exchange rate, so the totals would be too low.
 - You cannot see every deal in the scope, or the amount of one.
 - **Show individual performance** is off, and one colleague besides you makes up the figures.
@@ -75,7 +77,7 @@ This comparison is not **Deal value needed** on the **Forecast** page. That figu
 
 - **Sales won:** won value added up over time, and the time span before it when the two can be compared. It also shows a target for the full time span. The target is for the whole time span; it does not ask for the same amount each day.
 - **Pipeline stages:** open value of today for each stage in order, all measured the same way, with the number of priced deals in each stage.
-- **Sales by salesperson:** real result and target for the same target time span. A missing target and a zero
+- **Sales won by team member:** real result and goal for the same target time span. A missing target and a zero
   target are two different states; a missing target does not mean low results.
   The chart says whom it credits and how much of the target time span has passed.
 - **Stage age:** the middle age and the age that 75% of open deals stay under, for open deals of today. Small groups
@@ -188,7 +190,9 @@ Select an edition in the history to see the values, targets, graphs and records 
 
 Open **Targets** and choose a figure that takes a target: sales won, qualified pipeline created, meetings held, accepted opportunities, leads qualified or partner pipeline. Select the owner or team, and month or fiscal quarter. A sales or partner figure can also be held to one pipeline; a lead or SDR figure counts every pipeline.
 
-Choose a year and a first month; only months that can start a fiscal quarter are offered. Each new version needs a reason. Filter the list by active or retired status and by first month. The team target stays apart from the targets of each member; the difference shows as **Unallocated** or **Overallocated**.
+Choose a year and a first month; only months that can start a fiscal quarter are offered. Each new version needs a reason. Filter the list by active or retired status and by first month. The team target stays apart from the targets of each member; the difference shows as **Unallocated** or **Overallocated**. A member with no target of their own counts with their published sales goals.
+
+Published sales goals show in the list as one row per team member. **Open sales goals** opens the plan, which is the only place its months change.
 
 A team lead, management or an admin sets targets. Every other seat with access to **Targets** sees its own targets, the targets of its teams and the company targets. It sees no button to add one. When none is set yet, the list says who sets them. Your own progress shows under **Analytics** → **My outcomes**.
 

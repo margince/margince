@@ -9,6 +9,7 @@ import { FilterBar } from "../../design-system/filterbar";
 import { Panel, PanelBody } from "../../design-system/panel";
 import { QueryGate } from "../../design-system/querystates";
 import { Select } from "../../design-system/select";
+import { isoDay } from "../../format/calendarday";
 import {
   formatDateTime,
   formatNumber,
@@ -39,11 +40,14 @@ import type { ReportingEvidenceRef } from "./reporting.model";
 type Period = ProgressAsk["period"];
 const PERIODS: readonly Period[] = ["month", "year"];
 
-// The populations Progress reads: one seller, or one team. A workspace or a
-// manager's whole set has no single goal to compare against.
+// The populations Progress reads: one team member, or one team inside the
+// reader's own record access. A workspace or a manager's whole set has no
+// single goal to compare against, and the server refuses any other team.
 function progressScopes(scopes: readonly AnalyticsScope[]): AnalyticsScope[] {
   return scopes.filter(
-    (scope) => scope.kind === "owner" || scope.kind === "team",
+    (scope) =>
+      scope.kind === "owner" ||
+      (scope.kind === "team" && scope.measurable !== false),
   );
 }
 
@@ -105,7 +109,16 @@ export function ProgressScreen() {
             {t("progress.viewGoals")}
           </Button>
         }
-        caption={progress.data && <ProgressCaption progress={progress.data} />}
+        caption={
+          progress.data &&
+          t("progress.figuresUpTo", {
+            cutoff: formatDateTime(
+              progress.data.cutoff,
+              locale,
+              progress.data.timezone,
+            ),
+          })
+        }
       >
         <SegmentedControl
           label={t("progress.period")}
@@ -192,25 +205,6 @@ function goalDials(ask: ProgressAsk): Map<string, string> {
   return dials;
 }
 
-function ProgressCaption({ progress }: Readonly<{ progress: SalesProgress }>) {
-  const t = useT();
-  const { locale } = useLocale();
-  const whose =
-    progress.scope.kind === "team"
-      ? t("progress.teamTitle")
-      : t("progress.myTitle");
-  return (
-    <span>
-      {t("progress.heading", {
-        whose,
-        scope: progress.scope.label ?? "",
-        period: periodLabel(progress.period, locale),
-        cutoff: formatDateTime(progress.cutoff, locale, progress.timezone),
-      })}
-    </span>
-  );
-}
-
 function ProgressBody({ progress }: Readonly<{ progress: SalesProgress }>) {
   const t = useT();
   const [evidence, setEvidence] = useState<ReportingEvidenceRef | null>(null);
@@ -220,7 +214,13 @@ function ProgressBody({ progress }: Readonly<{ progress: SalesProgress }>) {
     <div className="analytics-board">
       <div className="analytics-board-main">
         <div className="analytics-sheet">
-          <ProgressResult progress={progress} onEvidence={open} />
+          <ProgressResult
+            progress={progress}
+            onEvidence={open}
+            onGoals={() =>
+              navigate({ screen: "goals" }, goalDials(askOf(progress)))
+            }
+          />
           <ProgressReadings progress={progress} onEvidence={open} />
           {team && <ProgressMembers progress={progress} />}
           <ProgressWork progress={progress} />
@@ -229,11 +229,6 @@ function ProgressBody({ progress }: Readonly<{ progress: SalesProgress }>) {
       </div>
       <aside className="analytics-board-rail" aria-label={t("progress.rail")}>
         <ProgressGoalBasis progress={progress} />
-        <Panel title={t("progress.definitionTitle")} flatHead>
-          <PanelBody>
-            <p className="progress-definition">{t("progress.definition")}</p>
-          </PanelBody>
-        </Panel>
       </aside>
       {evidence && progress.evaluation && (
         <ReportingEvidenceDrawer
@@ -246,45 +241,78 @@ function ProgressBody({ progress }: Readonly<{ progress: SalesProgress }>) {
   );
 }
 
-// Where the goal comes from: the published sales goals, one door away.
+// The question a reading answered, to open another screen on the same one.
+function askOf(progress: SalesProgress): ProgressAsk {
+  const { scope, period } = progress;
+  return {
+    period: period.kind === "year" ? "year" : "month",
+    year: period.year,
+    month: period.month ?? 1,
+    scope:
+      scope.id && (scope.kind === "owner" || scope.kind === "team")
+        ? { kind: scope.kind, id: scope.id }
+        : undefined,
+  };
+}
+
+// Analytics Performance on the same team member or team and the same days.
+function analyticsDials(ask: ProgressAsk): Map<string, string> {
+  const month = ask.period === "year" ? 1 : ask.month;
+  const months = ask.period === "year" ? 12 : 1;
+  const dials = new Map<string, string>([
+    ["period", "custom"],
+    ["from", isoDay(new Date(ask.year, month - 1, 1))],
+    ["through", isoDay(new Date(ask.year, month - 1 + months, 0))],
+  ]);
+  if (ask.scope) dials.set("scope", `${ask.scope.kind}:${ask.scope.id}`);
+  return dials;
+}
+
+// The goal the reading stands against, what counts towards it, and the door
+// to the Analytics view behind the figure.
 function ProgressGoalBasis({
   progress,
 }: Readonly<{ progress: SalesProgress }>) {
   const t = useT();
   const { locale } = useLocale();
   const { goal, currency } = progress;
-  const ask: ProgressAsk = {
-    period: progress.period.kind === "year" ? "year" : "month",
-    year: progress.period.year,
-    month: progress.period.month ?? 1,
-    scope:
-      progress.scope.kind === "owner" && progress.scope.id
-        ? { kind: "owner", id: progress.scope.id }
-        : undefined,
-  };
+  // Analytics opens only a scope it offers this reader. A team member opened
+  // from a team row may not be one, so the door is left out for them.
+  const offered = useAnalyticsContext().data?.allowed_scopes.some(
+    (scope) => scopeKey(scope) === scopeKey(progress.scope),
+  );
   return (
     <Panel
-      title={t("progress.goalBasis")}
+      title={t("progress.goal")}
       flatHead
       footer={
-        <Button
-          variant="link"
-          onClick={() => navigate({ screen: "goals" }, goalDials(ask))}
-        >
-          {t("progress.viewGoals")}
-        </Button>
+        offered && (
+          <Button
+            variant="link"
+            onClick={() =>
+              navigate(
+                { screen: "analytics", id: "performance" },
+                analyticsDials(askOf(progress)),
+              )
+            }
+          >
+            {t("progress.openInAnalytics")}
+          </Button>
+        )
       }
     >
       <PanelBody>
         <dl className="progress-basis">
-          <div>
-            <dt>
-              {t("progress.goalFor", {
-                period: periodLabel(progress.period, locale),
-              })}
-            </dt>
-            <dd className="t-num">{goalText(goal, currency, locale, t)}</dd>
-          </div>
+          {goal.status !== "missing" && (
+            <div>
+              <dt>
+                {t("progress.goalFor", {
+                  period: periodLabel(progress.period, locale),
+                })}
+              </dt>
+              <dd className="t-num">{goalText(goal, currency, locale, t)}</dd>
+            </div>
+          )}
           <div>
             <dt>{t("progress.goalMonths")}</dt>
             <dd className="t-num">
@@ -295,7 +323,9 @@ function ProgressGoalBasis({
             </dd>
           </div>
         </dl>
-        <p className="t-caption">{t("progress.goalBasisNote")}</p>
+        <p className="t-caption progress-definition">
+          {t("progress.definition")}
+        </p>
       </PanelBody>
     </Panel>
   );

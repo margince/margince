@@ -82,7 +82,7 @@ Two sections appear only for some seats. **My outcomes** is for a seat that sees
 
 Analytics opens on **Overview**. The opening view follows your work and the view you last chose.
 
-**Sales review** opens with one card of readings: sales won first and largest, then the applicable forecast, the modelled range and pipeline due this quarter. Each reading has one short line under it, such as the target or how far the forecast falls short of it. The small **i** beside a reading opens what it rests on. Sales won carries its target when a matching target is available. When its basis is recorded, the forecast’s label names it, such as **Manager’s call**, **Won + Likely deals** or **Won + weighted open deals**. A manager call shows its date.
+**Sales review** opens with one card of readings: sales won first and largest, then the applicable forecast, the modelled range and pipeline due this quarter. Each reading has one short line under it, such as the target or how far the forecast falls short of it. The small **i** beside a reading opens what it rests on. Sales won carries its goal when a matching target or published sales goals are available, with a link to **Progress**. When its basis is recorded, the forecast’s label names it, such as **Manager’s call**, **Won + Likely deals** or **Won + weighted open deals**. A manager call shows its date.
 
 The modelled range is separate from that forecast. A chart under the readings shows sales won so far, with the target as a line across when there is one. While the period is still running and the forecast can be shown, the chart carries it on to the period's end as a broken line. With it, the modelled range shows as a band that opens from today to its low and high ends, when both are set.
 
@@ -207,7 +207,7 @@ The default **SDR outcomes** tab follows your workflow: first qualifications wit
 
 The **My outcomes** section of Analytics shows your own work, in up to six panels.
 
-**My targets**: each figure that can take a target, against your own target for this month or this fiscal quarter. A card reads "10 of 15", with the dates the target covers and "67% of target" under it. A figure with no target says **No target set** and shows the month so far. Only targets on your own name for all pipelines show here; team, company and single-pipeline targets are listed under **Targets**. **My open deals**: deals and value, both opening the Deals section.
+**My targets**: each figure that can take a target, against your own target for this month or this fiscal quarter. A card reads "10 of 15", with the dates the target covers and "67% of target" under it. A figure with no target shows the month so far, with **No target set for this month** under it. Sales won against your published sales goals read as a goal, and the card opens **My progress**. Only targets on your own name for all pipelines show here; team, company and single-pipeline targets are listed under **Targets**. **My open deals**: deals and value, both opening the Deals section.
 
 **My meetings**: meetings *you host*, counted by where each stands today. The states are **Booked, Held, No-show, Canceled.** The line under it states the rule that readers often get wrong: "A held meeting no longer counts as booked." The count has no date filter; use **Analytics → SDR outcomes** for period totals.
 

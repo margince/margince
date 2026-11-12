@@ -5,6 +5,7 @@ import {
   jsonResponse,
   StoryProviders,
 } from "../../testing/story-utils";
+import { goalRoster } from "./progress.fixtures";
 import { reportingTargets } from "./reporting.scenarios";
 import { reportingStoryRoutes } from "./reporting.story-fixtures";
 import { ReportingTargets } from "./reporting.targets";
@@ -17,6 +18,22 @@ export const Default: Story = {
     installFetchStub({
       ...reportingStoryRoutes(),
       "GET /analytics/targets": () => jsonResponse({ data: reportingTargets }),
+    });
+    return (
+      <StoryProviders>
+        <ReportingTargets />
+      </StoryProviders>
+    );
+  },
+};
+
+// A team member's published sales goals read as one row that opens the plan.
+export const WithSalesGoals: Story = {
+  render: () => {
+    installFetchStub({
+      ...reportingStoryRoutes(),
+      "GET /analytics/targets": () => jsonResponse({ data: reportingTargets }),
+      "GET /analytics/sales-goals": () => jsonResponse(goalRoster),
     });
     return (
       <StoryProviders>

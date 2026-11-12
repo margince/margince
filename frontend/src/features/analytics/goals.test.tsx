@@ -9,7 +9,12 @@ import { installFetchStub, jsonResponse } from "../../testing/story-utils";
 import { render } from "./analytics.testkit";
 import { SalesGoalsScreen } from "./goals";
 import { GoalEditor } from "./goals.editor";
-import { draftPlan, goalRoster, publishedPlan } from "./progress.fixtures";
+import {
+  draftPlan,
+  goalRoster,
+  publishedPlan,
+  sellerMarch,
+} from "./progress.fixtures";
 import type { SalesGoalPlan } from "./progress.queries";
 
 afterEach(() => {
@@ -55,7 +60,7 @@ describe("SalesGoalsScreen", () => {
       [`GET ${PLAN}`]: () => jsonResponse(draftPlan),
     });
     render(<SalesGoalsScreen />);
-    const roster = await screen.findByRole("table", { name: "Sellers" });
+    const roster = await screen.findByRole("table", { name: "Team members" });
     expect(within(roster).getByText("Sam Okafor")).toBeTruthy();
     expect(within(roster).getByText("€1,140,000")).toBeTruthy();
     expect(within(roster).getAllByText("Not set")).toHaveLength(2);
@@ -88,6 +93,42 @@ describe("SalesGoalsScreen", () => {
     expect(window.location.hash).toContain(`seller=${SAM}`);
   });
 
+  it("names a drafted year in the list instead of calling it not set", async () => {
+    window.location.hash = "#/goals?year=2026";
+    const [alex, ...rest] = goalRoster.data;
+    installFetchStub({
+      "GET /analytics/sales-goals": () =>
+        jsonResponse({
+          ...goalRoster,
+          data: [{ ...alex, draft_total_minor: 120000000 }, ...rest],
+        }),
+      [`GET ${PLAN}`]: () => jsonResponse(draftPlan),
+    });
+    render(<SalesGoalsScreen />);
+    const roster = await screen.findByRole("table", { name: "Team members" });
+    expect(within(roster).getByText("€1,200,000 draft")).toBeTruthy();
+  });
+
+  it("reads a published plan as text until the manager asks to change it", async () => {
+    window.location.hash = "#/goals?year=2026";
+    installFetchStub({
+      "GET /analytics/sales-goals": () => jsonResponse(goalRoster),
+      [`GET ${PLAN}`]: () => jsonResponse(editablePublished),
+      "GET /analytics/progress": () => jsonResponse(sellerMarch),
+    });
+    const user = userEvent.setup();
+    render(<SalesGoalsScreen />);
+    expect(
+      await screen.findByText("2026 so far: €60,000 of €100,000 (60%)"),
+    ).toBeTruthy();
+    await user.click(
+      await screen.findByRole("button", { name: "Change goals" }),
+    );
+    expect(screen.getByRole("button", { name: "Publish" })).toBeTruthy();
+    await user.click(screen.getByRole("button", { name: "Cancel" }));
+    expect(screen.queryByRole("button", { name: "Publish" })).toBeNull();
+  });
+
   it("shows a seller their own year as text they cannot change", async () => {
     window.location.hash = "#/goals?year=2026";
     installFetchStub({
@@ -97,7 +138,7 @@ describe("SalesGoalsScreen", () => {
     });
     render(<SalesGoalsScreen />);
     expect(await screen.findByText(/^Read-only\./)).toBeTruthy();
-    expect(screen.queryByRole("table", { name: "Sellers" })).toBeNull();
+    expect(screen.queryByRole("table", { name: "Team members" })).toBeNull();
     expect(screen.queryByRole("button", { name: "Save draft" })).toBeNull();
     const months = screen.getByLabelText("Monthly goals");
     expect(within(months).getByText("January")).toBeTruthy();

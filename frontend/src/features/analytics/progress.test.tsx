@@ -5,6 +5,7 @@
 import { cleanup, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { REPORTING_FIXTURE_ZONE } from "../../testing/reporting.fixtures";
 import { installFetchStub, jsonResponse } from "../../testing/story-utils";
 import { CONTEXTS } from "./analytics.overview.fixtures";
 import { render } from "./analytics.testkit";
@@ -41,29 +42,102 @@ describe("monthsTotal", () => {
   });
 });
 
+// A month nobody published a goal for: no completion and no difference.
+const NO_GOAL = {
+  goal: { status: "missing", months_set: 0, months_needed: 1 },
+  completion: undefined,
+  delta_minor: undefined,
+} as const;
+
 describe("ProgressResult", () => {
   it("shows a shortfall in the danger tone with the completion", () => {
-    render(<ProgressResult progress={sellerMarch} onEvidence={vi.fn()} />);
+    render(
+      <ProgressResult
+        progress={sellerMarch}
+        onEvidence={vi.fn()}
+        onGoals={vi.fn()}
+      />,
+    );
     expect(screen.getByText("€60,000")).toBeTruthy();
     expect(screen.getByText("€40,000 below goal")).toBeTruthy();
     expect(screen.getAllByText("60% of the goal").length).toBeGreaterThan(0);
   });
 
   it("says a team goal is incomplete instead of comparing", () => {
-    render(<ProgressResult progress={teamMarch} onEvidence={vi.fn()} />);
+    render(
+      <ProgressResult
+        progress={teamMarch}
+        onEvidence={vi.fn()}
+        onGoals={vi.fn()}
+      />,
+    );
     expect(screen.queryByText(/below goal/)).toBeNull();
     expect(
       screen.getByText(
-        "Goals incomplete: at least one seller has no monthly goal yet, €100,000 so far",
+        "Goals incomplete: at least one team member has no monthly goal yet, €100,000 so far",
       ),
     ).toBeTruthy();
   });
 
-  it("opens the closed deals as evidence", async () => {
+  it("tells a reader without a goal who publishes one, and offers no way to set it", () => {
+    render(
+      <ProgressResult
+        progress={{ ...sellerMarch, ...NO_GOAL }}
+        onEvidence={vi.fn()}
+        onGoals={vi.fn()}
+      />,
+    );
+    expect(
+      screen.getByText(
+        /A colleague who manages sales goals can publish one\.$/,
+      ),
+    ).toBeTruthy();
+    expect(
+      screen.queryByRole("button", { name: "Set sales goals" }),
+    ).toBeNull();
+  });
+
+  it("opens the sales goals for a reader who may set the missing goal", async () => {
+    const onGoals = vi.fn();
+    const user = userEvent.setup();
+    render(
+      <ProgressResult
+        progress={{
+          ...sellerMarch,
+          ...NO_GOAL,
+          capabilities: { write_goals: true },
+        }}
+        onEvidence={vi.fn()}
+        onGoals={onGoals}
+      />,
+    );
+    await user.click(screen.getByRole("button", { name: "Set sales goals" }));
+    expect(onGoals).toHaveBeenCalled();
+  });
+
+  it("counts down an open period instead of calling it below goal", () => {
+    render(
+      <ProgressResult
+        progress={{ ...sellerMarch, state: "current" }}
+        onEvidence={vi.fn()}
+        onGoals={vi.fn()}
+      />,
+    );
+    expect(screen.getByText("€40,000 to go")).toBeTruthy();
+    expect(screen.queryByText(/below goal/)).toBeNull();
+  });
+
+  it("opens the won deals as evidence", async () => {
     const onEvidence = vi.fn();
     const user = userEvent.setup();
-    render(<ProgressResult progress={sellerMarch} onEvidence={onEvidence} />);
-    await user.click(screen.getByRole("button", { name: "View closed deals" }));
+    render(
+      <ProgressResult
+        progress={sellerMarch}
+        onEvidence={onEvidence}
+        onGoals={vi.fn()}
+      />,
+    );
+    await user.click(screen.getByRole("button", { name: "View won deals" }));
     expect(onEvidence).toHaveBeenCalledWith({
       metric: "bookings_won",
       context_id: "interval",
@@ -305,6 +379,43 @@ describe("ProgressScreen", () => {
     expect((await screen.findAllByText("Alex Brandt")).length).toBeGreaterThan(
       0,
     );
+    // Analytics does not offer this reader the one team member, so no door.
+    expect(
+      screen.queryByRole("button", { name: "Open in Analytics" }),
+    ).toBeNull();
+  });
+
+  it("offers no team the reader may not measure, and opens Analytics on the same days", async () => {
+    installFetchStub({
+      "GET /analytics/context": () =>
+        jsonResponse({
+          default_scope: { kind: "owner", id: "u1", label: "Alex Brandt" },
+          allowed_scopes: [
+            { kind: "owner", id: "u1", label: "Alex Brandt" },
+            { kind: "team", id: "t1", label: "Sales DACH", measurable: false },
+          ],
+          capabilities: {
+            view_manager_forecast: false,
+            submit_manager_forecast: false,
+          },
+          as_of: "2026-03-15T09:00:00Z",
+          timezone: REPORTING_FIXTURE_ZONE,
+          base_currency: "EUR",
+        }),
+      "GET /analytics/progress": () =>
+        jsonResponse({
+          ...sellerMarch,
+          scope: { kind: "owner", id: "u1", label: "Alex Brandt" },
+        }),
+    });
+    const user = userEvent.setup();
+    render(<ProgressScreen />);
+    expect((await screen.findAllByText("Sales won")).length).toBeGreaterThan(0);
+    expect(screen.queryByLabelText("Team member or team")).toBeNull();
+    await user.click(screen.getByRole("button", { name: "Open in Analytics" }));
+    expect(window.location.hash).toMatch(/^#\/analytics\/performance\?/);
+    expect(window.location.hash).toContain("from=2026-03-01");
+    expect(window.location.hash).toContain("through=2026-03-31");
   });
 
   it("opens the seller's sales goals for the year being read", async () => {
