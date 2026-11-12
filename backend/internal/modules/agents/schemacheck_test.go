@@ -289,8 +289,8 @@ func TestAnEnumOfAnyTypeLeavesTheSchemaReadable(t *testing.T) {
 	}
 }
 
-// A type name the checker has no rule for would turn every answer into a
-// logged defect, so the boot check refuses it at any depth.
+// A type name the checker has no rule for turns every answer into a logged
+// defect. The boot check refuses it at any depth.
 func TestAnUnknownTypeNameLeavesTheSchemaUnreadable(t *testing.T) {
 	for name, schema := range map[string]string{
 		"at the top":             `{"type":"widget"}`,
