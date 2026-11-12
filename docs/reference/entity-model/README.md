@@ -31,8 +31,8 @@ module to put a change in, read [modules.md](../modules.md).
 | | |
 |---|--:|
 | Tables | 363 |
-| Columns | 4408 |
-| Foreign keys | 610 |
+| Columns | 4410 |
+| Foreign keys | 615 |
 | Owning areas | 38 |
 
 ## The 12 records everything else hangs off
@@ -321,10 +321,10 @@ erDiagram
 | [`field_mask`](identity.md#field_mask) | identity | 6 | 0 |
 | [`field_provenance`](platform.md#field_provenance) | platform | 9 | 0 |
 | [`finance_connection`](finance.md#finance_connection) | finance | 15 | 4 |
-| [`finance_customer_link`](finance.md#finance_customer_link) | finance | 12 | 0 |
-| [`finance_external_customer`](finance.md#finance_external_customer) | finance | 12 | 0 |
-| [`finance_invoice`](finance.md#finance_invoice) | finance | 29 | 2 |
-| [`finance_payment`](finance.md#finance_payment) | finance | 16 | 0 |
+| [`finance_customer_link`](finance.md#finance_customer_link) | finance | 12 | 2 |
+| [`finance_external_customer`](finance.md#finance_external_customer) | finance | 12 | 1 |
+| [`finance_invoice`](finance.md#finance_invoice) | finance | 30 | 4 |
+| [`finance_payment`](finance.md#finance_payment) | finance | 17 | 0 |
 | [`forecast_call`](forecasting.md#forecast_call) | forecasting | 14 | 2 |
 | [`forecast_capture_status`](forecasting.md#forecast_capture_status) | forecasting | 6 | 0 |
 | [`forecast_contribution`](forecasting.md#forecast_contribution) | forecasting | 38 | 0 |

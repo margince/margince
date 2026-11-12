@@ -5105,6 +5105,8 @@ public.finance_customer_link.created_at timestamp with time zone NOT NULL gen=- 
 public.finance_customer_link.external_customer_id text NOT NULL gen=- def=-
 public.finance_customer_link.finance_customer_link_company_fk FOREIGN KEY (company_id) REFERENCES company(id) ON DELETE RESTRICT
 public.finance_customer_link.finance_customer_link_connection_fk FOREIGN KEY (connection_id) REFERENCES finance_connection(id) ON DELETE RESTRICT
+public.finance_customer_link.finance_customer_link_directory_fk FOREIGN KEY (connection_id, external_customer_id) REFERENCES finance_external_customer(connection_id, external_customer_id) ON DELETE RESTRICT
+public.finance_customer_link.finance_customer_link_mapping_key UNIQUE (id, connection_id, company_id)
 public.finance_customer_link.finance_customer_link_pkey PRIMARY KEY (id)
 public.finance_customer_link.finance_customer_link_version_js_safe CHECK (((version >= '-9007199254740991'::bigint) AND (version <= '9007199254740991'::bigint)))
 public.finance_customer_link.id uuid NOT NULL gen=- def=uuidv7()
@@ -5116,6 +5118,7 @@ public.finance_customer_link.updated_at timestamp with time zone NOT NULL gen=- 
 public.finance_customer_link.version bigint NOT NULL gen=- def=1
 public.finance_customer_link_company_ix CREATE INDEX finance_customer_link_company_ix ON public.finance_customer_link USING btree (connection_id, company_id) WHERE (archived_at IS NULL)
 public.finance_customer_link_external_ux CREATE UNIQUE INDEX finance_customer_link_external_ux ON public.finance_customer_link USING btree (connection_id, external_customer_id) WHERE (archived_at IS NULL)
+public.finance_customer_link_mapping_key CREATE UNIQUE INDEX finance_customer_link_mapping_key ON public.finance_customer_link USING btree (id, connection_id, company_id)
 public.finance_customer_link_pkey CREATE UNIQUE INDEX finance_customer_link_pkey ON public.finance_customer_link USING btree (id)
 public.finance_external_customer acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.finance_external_customer.archived_at timestamp with time zone gen=- def=-
@@ -5146,18 +5149,23 @@ public.finance_invoice.created_at timestamp with time zone NOT NULL gen=- def=no
 public.finance_invoice.credited_minor bigint NOT NULL gen=- def=0
 public.finance_invoice.credits_invoice_id uuid gen=- def=-
 public.finance_invoice.currency currency_code NOT NULL gen=- def=-
+public.finance_invoice.customer_link_id uuid gen=- def=-
 public.finance_invoice.disputed_at timestamp with time zone gen=- def=-
 public.finance_invoice.due_at date gen=- def=-
 public.finance_invoice.external_id text NOT NULL gen=- def=-
 public.finance_invoice.finance_invoice_company_fk FOREIGN KEY (company_id) REFERENCES company(id) ON DELETE RESTRICT
 public.finance_invoice.finance_invoice_connection_fk FOREIGN KEY (connection_id) REFERENCES finance_connection(id) ON DELETE RESTRICT
 public.finance_invoice.finance_invoice_connection_id_external_id_key UNIQUE (connection_id, external_id)
+public.finance_invoice.finance_invoice_credit_note_status CHECK (((credits_invoice_id IS NULL) OR (status = ANY (ARRAY['credited'::text, 'void'::text]))))
 public.finance_invoice.finance_invoice_credits_fk FOREIGN KEY (credits_invoice_id) REFERENCES finance_invoice(id) ON DELETE RESTRICT
 public.finance_invoice.finance_invoice_credits_not_self CHECK (((credits_invoice_id IS NULL) OR (credits_invoice_id <> id)))
+public.finance_invoice.finance_invoice_credits_owner_fk FOREIGN KEY (credits_invoice_id, connection_id, company_id) REFERENCES finance_invoice(id, connection_id, company_id) ON DELETE RESTRICT DEFERRABLE INITIALLY DEFERRED
+public.finance_invoice.finance_invoice_customer_link_fk FOREIGN KEY (customer_link_id, connection_id, company_id) REFERENCES finance_customer_link(id, connection_id, company_id) ON DELETE RESTRICT DEFERRABLE INITIALLY DEFERRED
 public.finance_invoice.finance_invoice_fx_pair CHECK (((fx_rate_to_base IS NULL) = (fx_rate_date IS NULL)))
 public.finance_invoice.finance_invoice_gross_minor_js_safe CHECK (((gross_minor >= '-9007199254740991'::bigint) AND (gross_minor <= '9007199254740991'::bigint)))
 public.finance_invoice.finance_invoice_net_minor_js_safe CHECK (((net_minor >= '-9007199254740991'::bigint) AND (net_minor <= '9007199254740991'::bigint)))
 public.finance_invoice.finance_invoice_open_minor_js_safe CHECK (((open_minor >= '-9007199254740991'::bigint) AND (open_minor <= '9007199254740991'::bigint)))
+public.finance_invoice.finance_invoice_owner_key UNIQUE (id, connection_id, company_id)
 public.finance_invoice.finance_invoice_paid_status CHECK (((fully_paid_at IS NULL) OR (status = ANY (ARRAY['paid'::text, 'credited'::text, 'void'::text]))))
 public.finance_invoice.finance_invoice_pkey PRIMARY KEY (id)
 public.finance_invoice.finance_invoice_status_check CHECK ((status = ANY (ARRAY['draft'::text, 'open'::text, 'partially_paid'::text, 'paid'::text, 'overdue'::text, 'disputed'::text, 'credited'::text, 'void'::text])))
@@ -5187,6 +5195,7 @@ public.finance_invoice_account_ix CREATE INDEX finance_invoice_account_ix ON pub
 public.finance_invoice_connection_id_external_id_key CREATE UNIQUE INDEX finance_invoice_connection_id_external_id_key ON public.finance_invoice USING btree (connection_id, external_id)
 public.finance_invoice_credits_ix CREATE INDEX finance_invoice_credits_ix ON public.finance_invoice USING btree (credits_invoice_id) WHERE (credits_invoice_id IS NOT NULL)
 public.finance_invoice_open_ix CREATE INDEX finance_invoice_open_ix ON public.finance_invoice USING btree (company_id) WHERE ((open_minor > 0) AND (void_at IS NULL))
+public.finance_invoice_owner_key CREATE UNIQUE INDEX finance_invoice_owner_key ON public.finance_invoice USING btree (id, connection_id, company_id)
 public.finance_invoice_pkey CREATE UNIQUE INDEX finance_invoice_pkey ON public.finance_invoice USING btree (id)
 public.finance_payment acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.finance_payment.amount_minor bigint NOT NULL gen=- def=-
@@ -5196,12 +5205,15 @@ public.finance_payment.company_id uuid NOT NULL gen=- def=-
 public.finance_payment.connection_id uuid NOT NULL gen=- def=-
 public.finance_payment.created_at timestamp with time zone NOT NULL gen=- def=now()
 public.finance_payment.currency currency_code NOT NULL gen=- def=-
+public.finance_payment.customer_link_id uuid gen=- def=-
 public.finance_payment.external_id text NOT NULL gen=- def=-
 public.finance_payment.finance_payment_amount_minor_js_safe CHECK (((amount_minor >= '-9007199254740991'::bigint) AND (amount_minor <= '9007199254740991'::bigint)))
 public.finance_payment.finance_payment_company_fk FOREIGN KEY (company_id) REFERENCES company(id) ON DELETE RESTRICT
 public.finance_payment.finance_payment_connection_fk FOREIGN KEY (connection_id) REFERENCES finance_connection(id) ON DELETE RESTRICT
 public.finance_payment.finance_payment_connection_id_external_id_key UNIQUE (connection_id, external_id)
+public.finance_payment.finance_payment_customer_link_fk FOREIGN KEY (customer_link_id, connection_id, company_id) REFERENCES finance_customer_link(id, connection_id, company_id) ON DELETE RESTRICT DEFERRABLE INITIALLY DEFERRED
 public.finance_payment.finance_payment_invoice_fk FOREIGN KEY (invoice_id) REFERENCES finance_invoice(id) ON DELETE RESTRICT
+public.finance_payment.finance_payment_invoice_owner_fk FOREIGN KEY (invoice_id, connection_id, company_id) REFERENCES finance_invoice(id, connection_id, company_id) ON DELETE RESTRICT DEFERRABLE INITIALLY DEFERRED
 public.finance_payment.finance_payment_pkey PRIMARY KEY (id)
 public.finance_payment.finance_payment_version_js_safe CHECK (((version >= '-9007199254740991'::bigint) AND (version <= '9007199254740991'::bigint)))
 public.finance_payment.id uuid NOT NULL gen=- def=uuidv7()
