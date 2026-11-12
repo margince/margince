@@ -5,6 +5,7 @@ package textbounds
 
 import (
 	"fmt"
+
 	"github.com/margince/margince/backend/internal/shared/kernel/values"
 )
 

@@ -4,9 +4,10 @@
 package activities
 
 import (
-	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"testing"
 	"time"
+
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 )
 
 func TestTheTaskClockGovernsItsLegacyInstantAndFollowingReminder(t *testing.T) {

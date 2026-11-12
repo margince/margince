@@ -127,8 +127,11 @@ func TestTheContextGraphWalksEveryReadableCopy(t *testing.T) {
 		// body, when set, makes the second copy another message reusing the Message-ID.
 		body string
 	}{
-		"a reader of a forgery": {seatCopyPostures{first: true, second: true}, func(s seatCopyEnv) ids.UUID { return s.e.Rep1 }, false,
-			"our bank details changed, pay to the new account"},
+		"a reader of a forgery": {
+			seatCopyPostures{first: true, second: true},
+			func(s seatCopyEnv) ids.UUID { return s.e.Rep1 }, false,
+			"our bank details changed, pay to the new account",
+		},
 		"a reader of both copies":         {seatCopyPostures{first: true, second: true}, func(s seatCopyEnv) ids.UUID { return s.e.Rep1 }, true, ""},
 		"a reader of the first copy only": {seatCopyPostures{first: true, second: false}, func(s seatCopyEnv) ids.UUID { return s.e.Rep1 }, false, ""},
 	} {

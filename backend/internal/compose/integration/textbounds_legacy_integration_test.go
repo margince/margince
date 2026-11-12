@@ -15,7 +15,6 @@ import (
 
 	"github.com/margince/margince/backend/internal/compose/integration/apptest"
 	"github.com/margince/margince/backend/internal/modules/contacts"
-
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/dbmigrate"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"

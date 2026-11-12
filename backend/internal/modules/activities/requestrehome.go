@@ -97,5 +97,6 @@ func (r rehomedReminder) rehomeTx(ctx context.Context, tx pgx.Tx, asOf time.Time
 	}
 	assignee := openapi_types.UUID(*r.to)
 	return storekit.EmitEvent(ctx, tx, audit, r.id, crmcontracts.PublicEventActivityUpdated{
-		ChangedFields: crmcontracts.PublicEventActivityChangedFields{AssigneeId: &assignee, AutomaticTaskRepaired: new(true)}})
+		ChangedFields: crmcontracts.PublicEventActivityChangedFields{AssigneeId: &assignee, AutomaticTaskRepaired: new(true)},
+	})
 }

@@ -10,11 +10,11 @@ package compose
 // wiring an operator supplies rather than the product deciding.
 
 import (
-	"github.com/margince/margince/backend/internal/compose/gmailsignature"
 	"log/slog"
 
 	"github.com/jackc/pgx/v5/pgxpool"
 
+	"github.com/margince/margince/backend/internal/compose/gmailsignature"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/modules/capture/gcal"

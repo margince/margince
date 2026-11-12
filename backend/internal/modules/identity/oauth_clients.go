@@ -11,7 +11,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/margince/margince/backend/internal/shared/kernel/values"
 	"slices"
 	"strconv"
 	"strings"
@@ -25,6 +24,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/bearer"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/kernel/values"
 )
 
 const (

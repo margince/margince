@@ -56,8 +56,10 @@ func (s *sharedMailboxSuite) passAgain(t *testing.T, mail ids.UUID) ids.UUID {
 }
 
 func (s *sharedMailboxSuite) requestPass() context.Context {
-	return principal.WithActor(s.e.Admin(), principal.Principal{Type: principal.PrincipalSystem, ID: "system:owed_verdict",
-		Permissions: principal.Permissions{RowScope: principal.RowScopeAll}})
+	return principal.WithActor(s.e.Admin(), principal.Principal{
+		Type: principal.PrincipalSystem, ID: "system:owed_verdict",
+		Permissions: principal.Permissions{RowScope: principal.RowScopeAll},
+	})
 }
 
 // workOwner is the seat the shared-mail rule names for mail, the one every
