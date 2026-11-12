@@ -366,6 +366,22 @@ func followUpPrecheck() approvals.ReleasePrecheck {
 	}
 }
 
+// followUpDoer is who does an approved follow-up: the human who approved it.
+// Approvals lets only the seat the card was staged for decide it, so that is
+// the deal owner, or anyone on a deal nobody owns. A decider who cannot hold
+// work leaves the task unassigned rather than refusing the approval.
+func followUpDoer(ctx context.Context, tx pgx.Tx, decider ids.UUID) (*ids.UserID, error) {
+	if decider.IsZero() {
+		return nil, nil
+	}
+	seat := ids.From[ids.UserKind](decider)
+	can, err := activities.SeatCanHoldAutomaticWork(ctx, tx, seat)
+	if err != nil || !can {
+		return nil, err
+	}
+	return &seat, nil
+}
+
 // followUpConfirmEffect executes an approved follow-up: redeem-then-
 // create like every 🟡 executor, then log the drafted (possibly human-
 // edited) follow-up task through the activities store — the same
@@ -418,8 +434,13 @@ func followUpConfirmEffect(svc *approvals.Service, store *activities.Store) appr
 		// (approvals.effectIsStillOwed).
 		return svc.RedeemAndApply(ctx, approvalID, deals.FollowUpReconcileKind, diffHash,
 			func(tx pgx.Tx) error {
-				_, _, err := store.LogActivityTx(execCtx, tx, activities.LogActivityInput{
+				doer, err := followUpDoer(ctx, tx, decider.UserID)
+				if err != nil {
+					return err
+				}
+				_, _, err = store.LogActivityTx(execCtx, tx, activities.LogActivityInput{
 					Kind:         "task",
+					AssigneeID:   doer,
 					SystemText:   metadata,
 					Subject:      &subject,
 					Body:         &body,
