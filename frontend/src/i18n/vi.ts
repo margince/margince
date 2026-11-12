@@ -8711,7 +8711,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "settings.signatureUseGmail": "Dùng chữ ký Gmail của tôi",
   "settings.signatureGmailTaken":
     "Chữ ký của {address} ở bên dưới. Kiểm tra bản xem trước, rồi lưu.",
-  "settings.signatureGmailEmpty": "Hộp thư Gmail của bạn không có chữ ký.",
+  "settings.signatureGmailEmpty":
+    "Chữ ký Gmail của bạn trống hoặc chỉ có hình ảnh nên Margince không dùng được.",
   "settings.signatureGmailNoMailbox":
     "Hãy kết nối hộp thư Gmail trong Cài đặt → Kết nối trước.",
   "settings.signatureGmailReconnect":

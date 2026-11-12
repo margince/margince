@@ -8948,7 +8948,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "settings.signatureUseGmail": "Meine Gmail-Signatur verwenden",
   "settings.signatureGmailTaken":
     "Unten steht die Signatur von {address}. Prüfe die Vorschau und speichere dann.",
-  "settings.signatureGmailEmpty": "Dein Gmail-Postfach hat keine Signatur.",
+  "settings.signatureGmailEmpty":
+    "Deine Gmail-Signatur ist leer oder enthält nur Bilder, daher kann Margince sie nicht verwenden.",
   "settings.signatureGmailNoMailbox":
     "Verbinde zuerst dein Gmail-Postfach unter Einstellungen → Verbindungen.",
   "settings.signatureGmailReconnect":

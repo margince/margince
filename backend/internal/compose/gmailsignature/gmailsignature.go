@@ -69,7 +69,9 @@ func Read(ctx context.Context, source Source, user ids.UserID) (crmcontracts.Gma
 		out.Address = &held.Address
 	}
 	switch {
-	case markup == "":
+	// A send skips personal HTML with no words in it (activities/signature.go),
+	// so an image-only signature is answered as one there is nothing to use of.
+	case markup == "" || strings.TrimSpace(text) == "":
 		out.State = crmcontracts.GmailSignatureImportStateEmpty
 	case utf8.RuneCountInString(markup) > signature.MaxHTMLRunes:
 		out.State = crmcontracts.GmailSignatureImportStateTooLong

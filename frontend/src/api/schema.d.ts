@@ -23446,7 +23446,8 @@ export interface paths {
          *     signature after the same cleaning a saved personal signature gets, and `text` its plain
          *     form, so the preview shows what is kept. Saving it is `saveMyEmailSignature`.
          *
-         *     `state` says what came back: `ready` with the signature; `empty` when Gmail holds none;
+         *     `state` says what came back: `ready` with the signature; `empty` when Gmail holds none, or
+         *     one with no words (images only), which a send would skip;
          *     `no_mailbox` when the caller has no live Gmail connection; `needs_reconnect` when the
          *     connection's grant cannot read the send-as settings or Google refused it, so the caller
          *     connects the mailbox again; `too_long` when the cleaned signature is over 10,000

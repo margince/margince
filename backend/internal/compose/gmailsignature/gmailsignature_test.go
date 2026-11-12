@@ -5,12 +5,15 @@ package gmailsignature
 
 import (
 	"context"
+	"net/http"
+	"net/http/httptest"
 	"strings"
 	"testing"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/ports/connector"
 )
 
@@ -87,5 +90,42 @@ func TestNoMailboxAndAnEmptySignatureAreSaidSo(t *testing.T) {
 	}
 	if out := read(t, &heldSignature{html: "  ", granted: []string{readonlyScope}}); out.State != crmcontracts.GmailSignatureImportStateEmpty {
 		t.Errorf("blank signature: state = %q, want empty", out.State)
+	}
+	imageOnly := `<img src="https://cdn.example.test/logo.png" width="120">`
+	if out := read(t, &heldSignature{html: imageOnly, granted: []string{readonlyScope}}); out.State != crmcontracts.GmailSignatureImportStateEmpty {
+		t.Errorf("image-only signature: state = %q, want empty, because a send skips it", out.State)
+	}
+}
+
+// askedFor records whose connection the handler resolved.
+type askedFor struct {
+	heldSignature
+	user     ids.UserID
+	provider string
+}
+
+func (a *askedFor) SignatureReaderFor(ctx context.Context, user ids.UserID, provider string) (connector.SendAsSignatureReader, connector.Auth, []string, error) {
+	a.user, a.provider = user, provider
+	return a.heldSignature.SignatureReaderFor(ctx, user, provider)
+}
+
+func TestTheHandlerReadsOnlyTheSignedInHumansOwnGmail(t *testing.T) {
+	me := ids.NewV7()
+	human := principal.WithActor(context.Background(), principal.Principal{Type: principal.PrincipalHuman, UserID: me})
+	agent := principal.WithActor(context.Background(), principal.Principal{Type: principal.PrincipalAgent, UserID: me})
+
+	source := &askedFor{heldSignature: heldSignature{html: "<b>Rep</b>", granted: []string{readonlyScope}}}
+	h := ImportHandlers{Source: source}
+	w := httptest.NewRecorder()
+	h.GetMyGmailSignature(w, httptest.NewRequestWithContext(human, http.MethodGet, "/v1/me/email-signature/gmail", nil))
+	if w.Code != http.StatusOK || source.user.UUID != me || source.provider != "gmail" {
+		t.Fatalf("status %d, read user %s provider %q; want 200 for the caller's own gmail", w.Code, source.user.UUID, source.provider)
+	}
+
+	refused := &askedFor{heldSignature: heldSignature{html: "<b>Rep</b>", granted: []string{readonlyScope}}}
+	w = httptest.NewRecorder()
+	ImportHandlers{Source: refused}.GetMyGmailSignature(w, httptest.NewRequestWithContext(agent, http.MethodGet, "/v1/me/email-signature/gmail", nil))
+	if w.Code != http.StatusForbidden || refused.reads != 0 {
+		t.Errorf("an agent got status %d after %d reads, want 403 and none", w.Code, refused.reads)
 	}
 }

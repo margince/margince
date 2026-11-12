@@ -8904,7 +8904,8 @@ export const en = {
   "settings.signatureUseGmail": "Use my Gmail signature",
   "settings.signatureGmailTaken":
     "The signature of {address} is below. Check the preview, then save.",
-  "settings.signatureGmailEmpty": "Your Gmail mailbox has no signature.",
+  "settings.signatureGmailEmpty":
+    "Your Gmail signature is empty or holds only images, so Margince cannot use it.",
   "settings.signatureGmailNoMailbox":
     "Connect your Gmail mailbox under Settings → Connections first.",
   "settings.signatureGmailReconnect":
