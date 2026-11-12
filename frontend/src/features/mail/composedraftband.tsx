@@ -1,5 +1,5 @@
 import { Sparkles } from "lucide-react";
-import type { ReactNode } from "react";
+import { type ReactNode, useId } from "react";
 import type { components } from "../../api/schema";
 import { ActionRow } from "../../design-system/actionrow";
 import { Badge, Button } from "../../design-system/atoms";
@@ -21,9 +21,8 @@ type VoiceProfile = components["schemas"]["VoiceProfile"];
 // under it. Extracted from compose.tsx unchanged.
 //
 // The two belong together: the band discloses that a machine wrote the words,
-// and every rewrite row asks that machine to write them again. A surface that
-// showed one without the other would either disclose nothing or offer a rewrite
-// of prose the reader believes they wrote themselves.
+// and a rewrite asks that machine to write them. A rewrite of the rep's own
+// words fills the body with model words, so the disclosure follows it.
 
 type DraftProvenance = Pick<
   EmailDraft,
@@ -100,7 +99,7 @@ export function DraftBand({
   );
 }
 
-// The four things a rep asks the machine to do to its own draft, as one press
+// The things a rep asks the machine to do to the body on screen, as one press
 // each. Each is an instruction for ONE call — it never becomes the standing
 // steer in the intent field.
 // The label a rep reads and the instruction the model is given are two
@@ -108,6 +107,11 @@ export function DraftBand({
 // model is asked for it in a sentence, because an instruction of one word is
 // one the model has to guess the scope of.
 export const REWRITES = [
+  {
+    key: "polish",
+    label: "compose.rewritePolish",
+    instruction: "compose.rewritePolishAsk",
+  },
   {
     key: "shorter",
     label: "compose.rewriteShorter",
@@ -134,10 +138,9 @@ export const REWRITES = [
   instruction: MessageKey;
 }[];
 
-// Offered only over the machine's OWN untouched words. Once the rep has
-// edited the body, a rewrite would throw their work away to answer a question
-// about text that is no longer there — so the row withdraws rather than
-// growing a confirm nobody would read.
+// Offered over any body on screen, whoever wrote it: the call revises the
+// words sent as `rewrite_of`, and the editor's undo brings the old ones back.
+// `refusal` names why this body cannot be sent for revision.
 // `disabled` and not `pending`: these buttons do not report a write of their
 // own, they refuse to start a second one. Named for what it does, because named
 // for a state it does not have it read as the draft button's own spinner and a
@@ -145,24 +148,35 @@ export const REWRITES = [
 export function RewriteRow({
   onRewrite,
   disabled,
+  refusal = null,
 }: Readonly<{
   onRewrite: (instruction: string) => void;
   disabled: boolean;
+  refusal?: string | null;
 }>) {
   const t = useT();
+  const refusalId = useId();
   return (
-    <fieldset className="compose-rewrite">
+    <fieldset
+      className="compose-rewrite"
+      aria-describedby={refusal ? refusalId : undefined}
+    >
       <legend className="sr-only">{t("compose.rewrite")}</legend>
       {REWRITES.map((rewrite) => (
         <Button
           key={rewrite.key}
           variant="aiQuiet"
-          disabled={disabled}
+          disabled={disabled || refusal !== null}
           onClick={() => onRewrite(t(rewrite.instruction))}
         >
           {t(rewrite.label)}
         </Button>
       ))}
+      {refusal && (
+        <p id={refusalId} className="t-caption">
+          {refusal}
+        </p>
+      )}
     </fieldset>
   );
 }
