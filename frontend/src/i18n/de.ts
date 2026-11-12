@@ -1015,8 +1015,6 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "forecast.signal.quiet": "Kunde schweigt",
   "forecast.signal.stuck": "Lange in der Phase",
   "forecast.deals.limitedTitle": "Nur deine eigenen Deals",
-  "forecast.deals.limited":
-    "Die Summe enthält Deals anderer Teammitglieder. Diese sind hier ausgeblendet, weil individuelle Leistung aus ist. Jedes Mitglied sieht weiter seine eigenen.",
   "forecast.signal.closesNoStep_other":
     "Schließt in {count} Tagen, kein nächster Schritt geplant",
   "forecast.signal.closesNoStep_one":
@@ -8185,8 +8183,6 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Die Team-Akquise zeigt ein Team oder das ganze Unternehmen. Wähle eines oben im Bereich; die Arbeit eines Mitglieds steht unter Meine Akquise.",
   "analytics.team.todaysMembers":
     "Diese Zahlen folgen dem heutigen Team. Wer gegangen ist, nimmt die frühere Arbeit mit, und wer neu dazukam, bringt die eigene mit.",
-  "analytics.team.withheld":
-    "Die Einzelleistung ist ausgeschaltet. Eine Zahl wird zurückgehalten, wenn weniger als zwei andere Mitglieder zu ihr beitragen oder wenn nach Abzug der Summe eines anderen Teams weniger als zwei übrig blieben.",
   "analytics.team.submitted": "Übergeben",
   "analytics.team.accepted": "Angenommen",
   "analytics.team.returned": "Zurückgegeben",

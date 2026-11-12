@@ -135,21 +135,21 @@ describe("ForecastDeals", () => {
     ).toBeTruthy();
   });
 
-  it("says the rows are the reader's own while individual performance is off", async () => {
+  // The reason is the server's sentence, which an owner chart limited by the
+  // same switch shows too. One no copy holds proves the page words none itself.
+  it("says the rows are the reader's own in the server's words", async () => {
+    const reason = "The server's one sentence for an owner chart.";
     serve({
       self_correcting: true,
       contributions_limited: true,
+      contributions_limited_reason: reason,
       contributions: [contribution()],
     });
     await openDeals();
     expect(
       await screen.findByText("Only your own deals are listed"),
     ).toBeTruthy();
-    expect(
-      screen.getByText(
-        "The total includes colleagues’ deals, which are withheld here because individual performance is off. Each rep still sees their own.",
-      ),
-    ).toBeTruthy();
+    expect(screen.getByText(reason)).toBeTruthy();
   });
 
   it("states the weighted figure the panel is named for", async () => {

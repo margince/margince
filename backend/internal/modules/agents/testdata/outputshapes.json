@@ -6865,6 +6865,9 @@
           "contributions_limited": {
             "type": "boolean"
           },
+          "contributions_limited_reason": {
+            "type": "string"
+          },
           "coverage_note": {
             "type": "string"
           },
@@ -14589,6 +14592,9 @@
           },
           "contributions_limited": {
             "type": "boolean"
+          },
+          "contributions_limited_reason": {
+            "type": "string"
           },
           "coverage_note": {
             "type": "string"

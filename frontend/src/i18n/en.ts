@@ -964,8 +964,6 @@ export const en = {
   "forecast.signal.quiet": "Customer quiet",
   "forecast.signal.stuck": "Long in stage",
   "forecast.deals.limitedTitle": "Only your own deals are listed",
-  "forecast.deals.limited":
-    "The total includes colleagues’ deals, which are withheld here because individual performance is off. Each rep still sees their own.",
   "forecast.signal.closesNoStep_other":
     "Closes in {count} days, no next step booked",
   "forecast.signal.closesNoStep_one":
@@ -8172,8 +8170,6 @@ export const en = {
     "Team prospecting reviews a team or the whole company. Choose one in the scope above; one colleague’s work is in My prospecting.",
   "analytics.team.todaysMembers":
     "These figures follow today’s team. A member who left takes their past work with them, and one who joined brings theirs.",
-  "analytics.team.withheld":
-    "Individual performance is off. A figure is withheld when fewer than two other members make it up, or when taking another team’s total from it would leave fewer than two.",
   "analytics.team.submitted": "Submitted",
   "analytics.team.accepted": "Accepted",
   "analytics.team.returned": "Returned",
