@@ -46,3 +46,14 @@ func heldByOnlySharedMailboxesSQL(alias string) string {
 	     AND shared_only.user_id IS NULL AND shared_only.posture_at_import IS DISTINCT FROM 'shared')
 	   AND NOT EXISTS (SELECT 1 FROM capture_import seat_import WHERE seat_import.activity_id = %[1]s.id AND seat_import.user_id IS NOT NULL))`, alias)
 }
+
+// SeatMayReadMailSQL is "the seat expression may read message alias". Mail only
+// a shared mailbox found is read two ways. It is open to the workspace, or the
+// seat is on it or in the reader team. It skips selected audiences and internal
+// mail, so it is narrower than the read gate. Work it routes never reaches a
+// seat that could not read the mail.
+func SeatMayReadMailSQL(alias, seat string) string {
+	return fmt.Sprintf(`(%[1]s AND %[2]s.internal_mail_authorization IS NULL AND (%[3]s OR %[4]s))`,
+		ActivityAvailableClause(alias), alias, WorkspaceAudienceSQL(alias),
+		activityMembershipForMemberSQL(alias, memberIdentityExpressionSQL(seat)))
+}

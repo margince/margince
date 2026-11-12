@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-package compose
+package storedobjectreap
 
 import (
 	"context"
@@ -17,13 +17,13 @@ import (
 // pass over bytes it never looked at.
 func TestAnUnownedKindIsReportedWithoutStoppingThePass(t *testing.T) {
 	t.Parallel()
-	settled, err := adjudicate(context.Background(), nil, []storedobjects.Provisional{
+	settled, err := Adjudicate(context.Background(), nil, []storedobjects.Provisional{
 		{Key: "ws/strange/one", Kind: storedobjects.Kind("strange")},
 	})
 	if err == nil {
 		t.Fatal("an unowned kind was adjudicated silently, so its keys pass as a clean sweep")
 	}
-	if len(settled.orphans) != 0 || len(settled.adopted) != 0 {
+	if len(settled.Orphans) != 0 || len(settled.Adopted) != 0 {
 		t.Errorf("settled %+v for a kind nobody owns: nothing may be deleted or retired "+
 			"on an answer no owner gave", settled)
 	}
@@ -35,11 +35,11 @@ func TestAnUnownedKindIsReportedWithoutStoppingThePass(t *testing.T) {
 // ordinary case rather than an edge one.
 func TestAnEmptyLedgerSettlesNothing(t *testing.T) {
 	t.Parallel()
-	settled, err := adjudicate(context.Background(), nil, nil)
+	settled, err := Adjudicate(context.Background(), nil, nil)
 	if err != nil {
 		t.Fatalf("adjudicating an empty ledger: %v", err)
 	}
-	if len(settled.orphans) != 0 || len(settled.adopted) != 0 {
+	if len(settled.Orphans) != 0 || len(settled.Adopted) != 0 {
 		t.Errorf("settled %+v from an empty ledger", settled)
 	}
 }

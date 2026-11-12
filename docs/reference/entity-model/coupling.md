@@ -18,7 +18,7 @@ An area with no inbound key is a candidate for a separate module. Its outbound k
 | [assignments](assignments.md) | 2 | 27 | 0 | 5 | 3 |
 | [assurance](assurance.md) | 9 | 108 | 0 | 7 | 5 |
 | [automation](automation.md) | 3 | 34 | 1 | 2 | 0 |
-| [capture](capture.md) | 28 | 271 | 4 | 27 | 15 |
+| [capture](capture.md) | 28 | 272 | 4 | 28 | 15 |
 | [collections](collections.md) | 13 | 108 | 1 | 10 | 6 |
 | [commissions](commissions.md) | 1 | 18 | 0 | 2 | 2 |
 | [comms](comms.md) | 1 | 44 | 4 | 4 | 1 |
@@ -32,7 +32,7 @@ An area with no inbound key is a candidate for a separate module. Its outbound k
 | [deals](deals.md) | 29 | 422 | 25 | 19 | 5 |
 | [finance](finance.md) | 5 | 86 | 0 | 3 | 0 |
 | [forecasting](forecasting.md) | 4 | 98 | 1 | 2 | 0 |
-| [identity](identity.md) | 22 | 204 | 157 | 6 | 5 |
+| [identity](identity.md) | 22 | 204 | 158 | 6 | 5 |
 | [initiatives](initiatives.md) | 5 | 45 | 0 | 2 | 1 |
 | [integrations](integrations.md) | 5 | 61 | 3 | 3 | 1 |
 | [introductions](introductions.md) | 1 | 31 | 0 | 6 | 1 |

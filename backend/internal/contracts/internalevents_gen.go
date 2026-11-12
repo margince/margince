@@ -49,6 +49,7 @@ func (e InternalEventLeadPrivacyNoticeCreatedState) Valid() bool {
 
 // Defines values for InternalEventSharedMailboxChangedChange.
 const (
+	BackupOwnerChanged   InternalEventSharedMailboxChangedChange = "backup_owner_changed"
 	Connected            InternalEventSharedMailboxChangedChange = "connected"
 	Disconnected         InternalEventSharedMailboxChangedChange = "disconnected"
 	HistoryImportStarted InternalEventSharedMailboxChangedChange = "history_import_started"
@@ -60,6 +61,8 @@ const (
 // Valid indicates whether the value is a known member of the InternalEventSharedMailboxChangedChange enum.
 func (e InternalEventSharedMailboxChangedChange) Valid() bool {
 	switch e {
+	case BackupOwnerChanged:
+		return true
 	case Connected:
 		return true
 	case Disconnected:
@@ -288,7 +291,7 @@ type InternalEventSdrHandoffCreated struct{}
 // InternalEventSdrHandoffUpdated A prospect handoff changed without changing its original authorship.
 type InternalEventSdrHandoffUpdated struct{}
 
-// InternalEventSharedMailboxChanged An admin connected, reconnected or disconnected a shared mailbox, changed who reads it, or started or continued its history import. Addresses, readers and credentials are omitted; consumers re-read the connection.
+// InternalEventSharedMailboxChanged An admin connected, reconnected or disconnected a shared mailbox, changed who reads it or its backup owner, or started or continued its history import. Addresses, readers and credentials are omitted; consumers re-read the connection.
 type InternalEventSharedMailboxChanged struct {
 	Change InternalEventSharedMailboxChangedChange `json:"change"`
 }

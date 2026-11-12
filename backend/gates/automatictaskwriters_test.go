@@ -258,10 +258,10 @@ func censusPackage(root string, consts packageConsts, files []*ast.File, names m
 					switch callee := x.Fun.(type) {
 					case *ast.Ident:
 						facts.calls = append(facts.calls, callee.Name)
-						facts.clause = facts.clause || callee.Name == "CurrentTaskClause"
+						facts.clause = facts.clause || isCurrentTaskClause(callee.Name)
 					case *ast.SelectorExpr:
 						facts.calls = append(facts.calls, callee.Sel.Name)
-						facts.clause = facts.clause || callee.Sel.Name == "CurrentTaskClause"
+						facts.clause = facts.clause || isCurrentTaskClause(callee.Sel.Name)
 					}
 				}
 				return true
@@ -660,4 +660,10 @@ func lastName(expr ast.Expr) string {
 		return x.Sel.Name
 	}
 	return ""
+}
+
+// isCurrentTaskClause names storekit.CurrentTaskClause or its To-line-only
+// spelling, which is the same rule without the shared-mailbox step.
+func isCurrentTaskClause(name string) bool {
+	return name == "CurrentTaskClause" || name == "CurrentTaskClauseToLineOnly"
 }

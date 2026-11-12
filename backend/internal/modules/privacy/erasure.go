@@ -181,10 +181,9 @@ func (e *Eraser) EraseContactCounted(ctx context.Context, contactID ids.UUID, re
 		if err := e.flagManualSubjectMentions(ctx, tx, subject, keys); err != nil {
 			return err
 		}
-		// Purge the subject's attachment bytes and rows together, inside the
-		// transaction (objects first). A failure here — including a
-		// misconfigured store — rolls the whole erasure back, so it stays
-		// retryable and never commits a half-erasure.
+		// Delete the subject's attachment rows and queue their objects for the
+		// stored-object reap, both inside the transaction. A failure here,
+		// including no configured store, rolls the whole erasure back.
 		if err := e.eraseAttachments(ctx, tx, reason, causeContactErasure, subjectAttachmentsWhere, subject, floorCurrent, floorCarried); err != nil {
 			return err
 		}

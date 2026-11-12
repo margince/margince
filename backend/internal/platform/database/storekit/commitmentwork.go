@@ -15,14 +15,30 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/provenance"
 )
 
-// CurrentTaskClause requires automatic evidence addressed to the assignee or human adoption.
+// CurrentTaskClause requires automatic evidence addressed to the assignee, or
+// shared-mailbox mail the assignee holds the work of, or human adoption.
 // alias is a compile-time activity alias, never request input.
 func CurrentTaskClause(alias string, asOf time.Time, identities string, arg func(any) int) string {
+	return currentTaskClause(alias, asOf, identities, arg, true)
+}
+
+// CurrentTaskClauseToLineOnly is CurrentTaskClause whose reply reminders count
+// only when the To line names their assignee. A reader that leaves out every
+// task the product filed asks it: the shared-mailbox step decides none of them.
+func CurrentTaskClauseToLineOnly(alias string, asOf time.Time, identities string, arg func(any) int) string {
+	return currentTaskClause(alias, asOf, identities, arg, false)
+}
+
+func currentTaskClause(alias string, asOf time.Time, identities string, arg func(any) int, sharedMail bool) string {
 	pinner := pgx.Identifier{alias, "assignee_id"}.Sanitize()
 	alias = pgx.Identifier{alias}.Sanitize()
 	source := provenance.CurrentCommitmentClause(alias+".source_activity_id", alias+".source_id", alias+".due_at", asOf, arg)
 	instant := fmt.Sprintf("$%d::timestamptz", arg(asOf))
 	horizon := WaitingHorizonSQL(asOf, arg)
+	held := ""
+	if sharedMail {
+		held = "\n OR " + SharedMailWorkOwnerSQL("request_source") + " = " + pinner
+	}
 	request := `EXISTS (SELECT 1 FROM activity request_source WHERE request_source.id = ` + alias + `.source_activity_id
  AND request_source.kind = 'email' AND request_source.direction = 'inbound' AND request_source.archived_at IS NULL
  AND ` + AutomaticRequestIntentClause("request_source") + `
@@ -31,7 +47,7 @@ func CurrentTaskClause(alias string, asOf time.Time, identities string, arg func
  AND successor.source_activity_id = ` + alias + `.source_activity_id AND successor.id <> ` + alias + `.id
  AND ` + HeldTaskClause("successor") + `)
  AND ` + occurredday.BegunSQL("request_source", instant) + `
- AND ` + occurredday.FromSQL("request_source", instant+` - make_interval(days => `+horizon+`)`) + ` AND ` + DirectMailRecipientSQL("request_source", MailSeatAddressesSQL(identities, pinner)) + `)`
+ AND ` + occurredday.FromSQL("request_source", instant+` - make_interval(days => `+horizon+`)`) + ` AND (` + DirectMailRecipientSQL("request_source", MailSeatAddressesSQL(identities, pinner)) + held + `))`
 	engagement := CurrentLeadEngagementClause(provenance.TaskSourceActivitySQL(alias), asOf, arg) + " AND " + latestLeadAdviceSQL(alias)
 	question := CurrentSourceMailClause(alias+".source_activity_id", asOf, arg)
 	return fmt.Sprintf(`(`+humanOrImportedTaskSQL(alias)+` OR `+HumanWroteActivityClause(alias)+`

@@ -278,6 +278,7 @@ const subjectMailReader = "composes correspondence.SubjectMailSQL, which filters
 // ClassifyBacklogPredicate, which filters archived rows. A reason a gate can
 // work out is better computed than written down.
 var restrictedReadersAdmitted = gatekit.Waive(map[string]string{
+	"internal/shared/ports/connector/mailcopygroup.go:MailCopyGroupFrom":                mailCopyGroupReader,
 	"internal/modules/consent/noticesubjectwrote.go:SubjectMailFromSQL":                 subjectMailReader,
 	"internal/compose/noticesubjectwrote.go:NoticeCaseOpen.settleWhenSubjectWrote":      subjectMailReader,
 	"internal/modules/privacy/sarretainedcopies.go:sarThreadVerdictSection":             "The authorized subject-access export includes a held thread verdict only when its seen addresses name the requested subject. Exported addresses are reduced to that subject and the existing content-disclosure predicate still applies. Cost: a held message's classification can appear in its subject's export.",

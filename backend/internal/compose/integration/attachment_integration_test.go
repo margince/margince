@@ -322,7 +322,7 @@ func TestOpenAttachmentHidesAnInvisibleParent(t *testing.T) {
 	}
 }
 
-func TestErasurePurgesAttachmentObjects(t *testing.T) {
+func TestErasureQueuesAttachmentObjectsForDeletion(t *testing.T) {
 	e := Setup(t)
 	blob := blobstore.NewMemory()
 	store := e.Activities.WithBlobstore(blob)
@@ -346,9 +346,10 @@ func TestErasurePurgesAttachmentObjects(t *testing.T) {
 		t.Fatalf("EraseContact: %v", err)
 	}
 
-	// Art. 17: the subject's attachment bytes must be gone, not only the row.
-	if _, _, gerr := blob.Get(ctx, key); !errors.Is(gerr, blobstore.ErrNotFound) {
-		t.Fatalf("erased attachment object still present: err = %v, want ErrNotFound", gerr)
+	// Art. 17: the subject's attachment bytes go too, not only the row. The
+	// erasure queues the key, and the stored-object reap deletes the bytes.
+	if got := e.WsCount(t, `SELECT count(*) FROM stored_object_intent WHERE storage_key = $1 AND kind = 'attachment'`, key); got != 1 {
+		t.Fatalf("the erased attachment's object is queued %d times, want once", got)
 	}
 }
 
