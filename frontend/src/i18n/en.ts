@@ -3166,6 +3166,8 @@ export const en = {
   "partner.stage": "Relationship stage",
   "partner.nextStep": "Next step",
   "partner.nextStepDue": "Next step due",
+  "partner.nextStepOld":
+    "Kept as text, with no colleague who does it. Add a task to give it a colleague and a due date.",
   "partner.servedSegments": "Served segments",
   "partner.servedSegmentsHint":
     "Who the partner sells to, for example mid-size manufacturers. Separate several with commas.",

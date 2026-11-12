@@ -51694,8 +51694,16 @@ export interface components {
             relationship_health?: string | null;
             /** Format: date-time */
             last_contact_at?: string | null;
+            /**
+             * @deprecated
+             * @description Deprecated: a partner's next step is a task on its company, with a colleague who does it and a due date. Text written here before stays readable.
+             */
             next_step?: string | null;
-            /** Format: date */
+            /**
+             * Format: date
+             * @deprecated
+             * @description Deprecated: the due date of the old free-text `next_step`; a task carries its own.
+             */
             next_step_due_at?: string | null;
             served_segments?: string[] | null;
             version?: components["schemas"]["RowVersion"];
@@ -51733,8 +51741,16 @@ export interface components {
              *     a won customer it sourced.
              */
             relationship_stage?: string;
+            /**
+             * @deprecated
+             * @description Deprecated: a partner's next step is a task on its company, with a colleague who does it and a due date. Text written here before stays readable.
+             */
             next_step?: string | null;
-            /** Format: date */
+            /**
+             * Format: date
+             * @deprecated
+             * @description Deprecated: the due date of the old free-text `next_step`; a task carries its own.
+             */
             next_step_due_at?: string | null;
             served_segments?: string[] | null;
         };
@@ -51754,8 +51770,16 @@ export interface components {
             partner_role?: "hosting" | "consulting" | "strategic";
             /** @description An active key from `/partner-stages`. */
             relationship_stage?: string;
+            /**
+             * @deprecated
+             * @description Deprecated: a partner's next step is a task on its company, with a colleague who does it and a due date. Text written here before stays readable.
+             */
             next_step?: string;
-            /** Format: date */
+            /**
+             * Format: date
+             * @deprecated
+             * @description Deprecated: the due date of the old free-text `next_step`; a task carries its own.
+             */
             next_step_due_at?: string;
         };
         /**
