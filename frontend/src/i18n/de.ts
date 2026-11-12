@@ -8122,7 +8122,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "tasks.origin.analytics_decision":
     "Aus einer Vertriebsbesprechung festgehalten: eine Entscheidung mit Verantwortlichem und Prüftermin. Halte das Ergebnis unter Entscheidungen aus der letzten Besprechung fest.",
   "tasks.origin.overnight_reconcile":
-    "Erstellt aus einem Follow-up, das die nächtliche Prüfung vorgeschlagen und jemand freigegeben hat.",
+    "Erstellt aus einem Follow-up, das die nächtliche Prüfung vorgeschlagen hat.",
   "tasks.origin.commitment":
     "Erstellt aus einer Zusage, die aus einem Gespräch gelesen wurde.",
   "tasks.origin.email_request": "Erstellt aus einer Anfrage in einer E-Mail.",
@@ -19627,7 +19627,21 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Margince kann nicht prüfen, ob dies beantwortet wurde: Der Text der Mail lässt sich nicht mehr lesen. Markiere die Aufgabe als erledigt, sobald sie es ist.",
   "worklist.ask.task_unchecked_reply": "Zuletzt gesendete Antwort: {date}",
   "worklist.ask.brief_item":
-    "Die nächtliche Prüfung hat diesen Deal markiert. Reagiere darauf, stelle ihn zurück oder verwirf ihn.",
+    "Margince hat diesen Deal heute zur Prüfung ausgewählt. Sieh ihn dir an und plane den nächsten Schritt.",
+  "worklist.ask.brief.closing_soon":
+    "Dieser Deal soll in den nächsten 2 Wochen abgeschlossen werden. Prüfe ihn und sorge dafür, dass der nächste Schritt geplant ist.",
+  "worklist.ask.brief.no_next_step":
+    "Für diesen Deal ist kein nächster Schritt erfasst. Prüfe ihn und vereinbare den nächsten Schritt.",
+  "worklist.ask.brief.no_champion":
+    "Beim Kunden setzt sich niemand aktiv für diesen Deal ein. Prüfe ihn und finde jemanden, der es tut.",
+  "worklist.ask.brief.signal.closing_soon":
+    "Das Abschlussdatum dieses Deals rückt näher. Prüfe ihn und sorge dafür, dass der nächste Schritt geplant ist.",
+  "worklist.ask.brief.signal.stalled":
+    "Bei diesem Deal ist es still geworden, er könnte sich verzögern. Prüfe ihn und plane den nächsten Schritt.",
+  "worklist.ask.brief.signal.opportunity":
+    "Dieser Deal lohnt sich jetzt. Prüfe ihn und plane den nächsten Schritt.",
+  "worklist.ask.brief.signal.moved":
+    "Bei diesem Deal gibt es neue Aktivität. Sieh dir an, was passiert ist.",
   "worklist.ask.conversation_claim":
     "Du hast das in einem Gespräch zugesagt. Erledige es und markiere es dann als erledigt.",
   "worklist.ask.invitation":

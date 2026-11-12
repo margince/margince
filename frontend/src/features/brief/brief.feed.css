@@ -418,6 +418,20 @@
   .brief-triage-lead {
     padding-inline-end: var(--space-4);
   }
+  /* Two lines on purpose: the ways in above, the answer and the menu below,
+     so a verb never wraps alone onto a line of its own. */
+  .brief-triage-lead
+  .worklist-row-acts:has(
+    > :not(.btn-primary, .btn-ai, .overflow-menu)
+  )::before {
+    content: "";
+    order: 1;
+    flex-basis: 100%;
+  }
+  .brief-triage-lead .worklist-row-acts > .btn-primary,
+  .brief-triage-lead .worklist-row-acts > .btn-ai {
+    flex-grow: 1;
+  }
 }
 
 /* The tick is round, as a to-do's is; the verb under it is the house glyph. */
