@@ -1,0 +1,9 @@
+{
+  "verb": "put_anchor_company",
+  "checks": [
+    "admin"
+  ],
+  "takes": [
+    "anchor_name"
+  ]
+}

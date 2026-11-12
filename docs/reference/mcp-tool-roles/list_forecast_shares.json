@@ -1,0 +1,15 @@
+{
+  "tool": "read_details",
+  "action": "forecast_shares",
+  "verb": "list_forecast_shares",
+  "allowed_for": [
+    "admin",
+    "management",
+    "manager",
+    "ops"
+  ],
+  "refused_for": [
+    "read_only",
+    "rep"
+  ]
+}

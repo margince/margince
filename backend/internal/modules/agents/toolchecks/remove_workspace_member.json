@@ -1,0 +1,20 @@
+{
+  "verb": "remove_workspace_member",
+  "checks": [
+    "activity.read",
+    "admin",
+    "company.read",
+    "contact.read",
+    "deal.read",
+    "lead.read",
+    "project.read",
+    "signal.delete",
+    "user_admin.delete",
+    "user_admin.read",
+    "user_admin.update"
+  ],
+  "takes": [
+    "retiring_user",
+    "user"
+  ]
+}

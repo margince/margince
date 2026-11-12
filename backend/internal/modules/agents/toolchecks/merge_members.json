@@ -1,0 +1,20 @@
+{
+  "verb": "merge_members",
+  "checks": [
+    "activity.read",
+    "admin",
+    "company.read",
+    "contact.read",
+    "deal.read",
+    "lead.read",
+    "project.read",
+    "signal.update",
+    "user_admin.delete",
+    "user_admin.read",
+    "user_admin.update"
+  ],
+  "takes": [
+    "merge_source",
+    "user"
+  ]
+}

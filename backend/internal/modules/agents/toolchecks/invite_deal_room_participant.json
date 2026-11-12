@@ -1,0 +1,9 @@
+{
+  "verb": "invite_deal_room_participant",
+  "checks": [
+    "deal_room.update"
+  ],
+  "takes": [
+    "deal_room"
+  ]
+}

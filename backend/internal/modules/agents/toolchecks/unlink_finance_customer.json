@@ -1,0 +1,6 @@
+{
+  "verb": "unlink_finance_customer",
+  "checks": [
+    "integrations.update"
+  ]
+}

@@ -1,0 +1,19 @@
+{
+  "tool": "change_compliance",
+  "action": "suppress_contact",
+  "verb": "suppress_contact",
+  "allowed_for": [
+    "admin",
+    "management",
+    "manager",
+    "ops",
+    "rep"
+  ],
+  "refused_for": [
+    "read_only"
+  ],
+  "colleague_record": {
+    "manager": "refused",
+    "rep": "refused"
+  }
+}

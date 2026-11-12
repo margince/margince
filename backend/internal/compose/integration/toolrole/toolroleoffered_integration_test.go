@@ -19,6 +19,7 @@ import (
 	"github.com/margince/margince/backend/internal/compose"
 	"github.com/margince/margince/backend/internal/compose/integration/apptest"
 	"github.com/margince/margince/backend/internal/shared/ports/mcp"
+	"github.com/margince/margince/backend/internal/shared/toolroles"
 )
 
 // listingPass is one operator's holding of roles, checked against the gate.
@@ -37,7 +38,7 @@ func TestToolsListOffersEachSeededRoleItsAllowedCells(t *testing.T) {
 		keys = append(keys, role.Key)
 	}
 	if doc := publishedMatrix(t); !slices.Equal(doc.Roles, keys) {
-		t.Errorf("%s publishes the roles %v and the database seeds %v", toolRolesFile, doc.Roles, keys)
+		t.Errorf("%s publishes the roles %v and the database seeds %v", toolRolesDir, doc.Roles, keys)
 	}
 	holdCellsAreOffered(t, d, "tool-role-cells@fable.test")
 }
@@ -123,16 +124,19 @@ func callHolding(t *testing.T, e *apptest.AppEnv, email string, client *apptest.
 	return client.Call(t, call.verb, args), args
 }
 
-// publishedMatrix is docs/reference/mcp-tool-roles.json as committed.
+// publishedMatrix is docs/reference/mcp-tool-roles/ as committed.
 func publishedMatrix(t *testing.T) toolRolesFileShape {
 	t.Helper()
-	raw, err := os.ReadFile(toolRolesFile)
+	head, rows, err := toolroles.Read[toolroles.Row](os.DirFS(toolRolesDir))
 	if err != nil {
-		t.Fatal(err)
+		t.Fatalf("%s does not read: %v", toolRolesDir, err)
 	}
-	var doc toolRolesFileShape
-	if err := json.Unmarshal(raw, &doc); err != nil {
-		t.Fatalf("%s does not read: %v", toolRolesFile, err)
+	doc := toolRolesFileShape{Note: head.Note, Reasons: head.Reasons, Roles: head.Roles}
+	for _, verb := range slices.Sorted(maps.Keys(rows)) {
+		row := rows[verb]
+		published := toolRoleRow{Tool: row.Tool, Action: row.Action, Verb: row.Verb, ColleagueRecord: row.ColleagueRecord}
+		published.Allowed, published.Refused = row.Allowed, row.Refused
+		doc.Rows = append(doc.Rows, published)
 	}
 	return doc
 }

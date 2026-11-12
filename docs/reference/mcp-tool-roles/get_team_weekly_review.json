@@ -1,0 +1,15 @@
+{
+  "tool": "read_details",
+  "action": "team_weekly_review",
+  "verb": "get_team_weekly_review",
+  "allowed_for": [
+    "admin",
+    "management",
+    "manager"
+  ],
+  "refused_for": [
+    "ops",
+    "read_only",
+    "rep"
+  ]
+}

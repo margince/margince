@@ -1,0 +1,11 @@
+{
+  "verb": "revoke_contact_override",
+  "checks": [
+    "admin",
+    "contact.update"
+  ],
+  "takes": [
+    "consent_override",
+    "contact"
+  ]
+}

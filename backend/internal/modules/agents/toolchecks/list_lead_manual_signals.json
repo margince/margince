@@ -1,0 +1,9 @@
+{
+  "verb": "list_lead_manual_signals",
+  "checks": [
+    "lead.read"
+  ],
+  "takes": [
+    "lead"
+  ]
+}

@@ -1,0 +1,15 @@
+{
+  "tool": "send_outbound",
+  "action": "add_room_document",
+  "verb": "add_deal_room_document",
+  "allowed_for": [
+    "admin",
+    "management",
+    "manager",
+    "ops",
+    "rep"
+  ],
+  "refused_for": [
+    "read_only"
+  ]
+}

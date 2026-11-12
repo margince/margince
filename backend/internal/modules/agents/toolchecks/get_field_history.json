@@ -1,0 +1,24 @@
+{
+  "verb": "get_field_history",
+  "checks": [
+    "activity.delete,company.delete,contact.delete,deal.delete,lead.read,project.read",
+    "activity.delete,company.delete,contact.delete,deal.read,lead.read,project.read",
+    "activity.delete,company.delete,contact.read,deal.delete,lead.read,project.read",
+    "activity.delete,company.delete,contact.read,deal.read,lead.read,project.read",
+    "activity.delete,company.read,contact.delete,deal.delete,lead.read,project.read",
+    "activity.delete,company.read,contact.delete,deal.read,lead.read,project.read",
+    "activity.delete,company.read,contact.read,deal.delete,lead.read,project.read",
+    "activity.delete,company.read,contact.read,deal.read,lead.read,project.read",
+    "activity.read,company.delete,contact.delete,deal.delete,lead.read,project.read",
+    "activity.read,company.delete,contact.delete,deal.read,lead.read,project.read",
+    "activity.read,company.delete,contact.read,deal.delete,lead.read,project.read",
+    "activity.read,company.delete,contact.read,deal.read,lead.read,project.read",
+    "activity.read,company.read,contact.delete,deal.delete,lead.read,project.read",
+    "activity.read,company.read,contact.delete,deal.read,lead.read,project.read",
+    "activity.read,company.read,contact.read,deal.delete,lead.read,project.read",
+    "activity.read,company.read,contact.read,deal.read,lead.read,project.read"
+  ],
+  "takes": [
+    "company"
+  ]
+}

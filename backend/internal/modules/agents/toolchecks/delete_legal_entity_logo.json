@@ -1,0 +1,10 @@
+{
+  "verb": "delete_legal_entity_logo",
+  "checks": [
+    "legal_entity.read",
+    "legal_entity.update"
+  ],
+  "takes": [
+    "legal_entity"
+  ]
+}

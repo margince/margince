@@ -1,0 +1,10 @@
+{
+  "verb": "get_company_coverage",
+  "checks": [
+    "activity.read",
+    "company.read",
+    "contact.read",
+    "deal.read",
+    "relationship.read"
+  ]
+}

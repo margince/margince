@@ -1,0 +1,7 @@
+{
+  "verb": "list_notice_cases",
+  "checks": [
+    "contact.read",
+    "privacy_request.read"
+  ]
+}

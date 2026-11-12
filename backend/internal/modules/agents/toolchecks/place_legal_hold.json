@@ -1,0 +1,9 @@
+{
+  "verb": "place_legal_hold",
+  "checks": [
+    "contact.delete"
+  ],
+  "takes": [
+    "contact"
+  ]
+}

@@ -1,0 +1,14 @@
+{
+  "tool": "read_workspace",
+  "action": "fx_rate_currencies",
+  "verb": "list_fx_rate_currencies",
+  "allowed_for": [
+    "admin",
+    "management",
+    "manager",
+    "ops",
+    "read_only",
+    "rep"
+  ],
+  "refused_for": []
+}

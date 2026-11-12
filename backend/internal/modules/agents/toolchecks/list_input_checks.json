@@ -1,0 +1,8 @@
+{
+  "verb": "list_input_checks",
+  "checks": [
+    "company.read",
+    "deal.read",
+    "forecast.read"
+  ]
+}

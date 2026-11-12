@@ -1,0 +1,7 @@
+{
+  "verb": "set_ai_price_sync",
+  "checks": [
+    "ai_model_rate.read",
+    "ai_model_rate.update"
+  ]
+}

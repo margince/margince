@@ -1,0 +1,10 @@
+{
+  "verb": "create_stage",
+  "checks": [
+    "deal.read",
+    "pipeline.update"
+  ],
+  "takes": [
+    "pipeline"
+  ]
+}

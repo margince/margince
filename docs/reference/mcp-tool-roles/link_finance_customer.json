@@ -1,0 +1,19 @@
+{
+  "tool": "change_settings",
+  "action": "link_finance_customer",
+  "verb": "link_finance_customer",
+  "allowed_for": [
+    "admin",
+    "ops"
+  ],
+  "refused_for": [
+    "management",
+    "manager",
+    "read_only",
+    "rep"
+  ],
+  "colleague_record": {
+    "manager": "refused",
+    "rep": "refused"
+  }
+}

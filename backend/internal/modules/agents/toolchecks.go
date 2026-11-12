@@ -5,57 +5,52 @@ package agents
 
 import (
 	"context"
-	_ "embed"
+	"embed"
 	"encoding/json"
 	"fmt"
+	"io/fs"
 	"maps"
 	"slices"
 
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/ports/mcp"
+	"github.com/margince/margince/backend/internal/shared/toolroles"
 )
 
-// toolChecksJSON is what each verb's admin call was asked by the gates on its
-// path, measured by TestTheToolRoleMatrixIsPublished and drift-gated there.
+// toolChecksFS is what each verb's admin call was asked by the gates on its
+// path, one file per verb, measured by TestTheToolRoleMatrixIsPublished and
+// drift-gated there.
 //
-//go:embed toolchecks.json
-var toolChecksJSON []byte
+//go:embed toolchecks/*.json
+var toolChecksFS embed.FS
 
-// ToolChecksFile is the generated table's shape.
-type ToolChecksFile struct {
-	Note  string                   `json:"note"`
-	Verbs map[string]ToolChecksRow `json:"verbs"`
-}
-
-// ToolChecksRow is one verb's measured checks.
-type ToolChecksRow struct {
-	Checks []string `json:"checks"`
-}
-
-var requiredChecks = mustReadToolChecks(toolChecksJSON)
+var requiredChecks = mustReadToolChecks()
 
 // EmbeddedToolChecks is the table this binary embeds, for the census that
 // holds it to the served surface.
-func EmbeddedToolChecks() (ToolChecksFile, error) {
-	var file ToolChecksFile
-	err := json.Unmarshal(toolChecksJSON, &file)
-	return file, err
+func EmbeddedToolChecks() (map[string]toolroles.Checks, error) {
+	sub, err := fs.Sub(toolChecksFS, "toolchecks")
+	if err != nil {
+		return nil, err
+	}
+	_, verbs, err := toolroles.Read[toolroles.Checks](sub)
+	return verbs, err
 }
 
-func mustReadToolChecks(raw []byte) map[string][]auth.Check {
-	var file ToolChecksFile
-	if err := json.Unmarshal(raw, &file); err != nil {
+func mustReadToolChecks() map[string][]auth.Check {
+	verbs, err := EmbeddedToolChecks()
+	if err != nil {
 		//craft:ignore panic-in-domain the table is embedded at build time, and TestTheToolChecksTableReads reads it in every unit run
-		panic(fmt.Sprintf("crmagents: toolchecks.json does not read: %v", err))
+		panic(fmt.Sprintf("crmagents: toolchecks does not read: %v", err))
 	}
-	out := make(map[string][]auth.Check, len(file.Verbs))
-	for verb, row := range file.Verbs {
+	out := make(map[string][]auth.Check, len(verbs))
+	for verb, row := range verbs {
 		for _, name := range row.Checks {
 			check, err := auth.ParseCheck(name)
 			if err != nil {
 				//craft:ignore panic-in-domain the table is embedded at build time, and TestTheToolChecksTableReads reads it in every unit run
-				panic(fmt.Sprintf("crmagents: toolchecks.json, %s: %v", verb, err))
+				panic(fmt.Sprintf("crmagents: toolchecks, %s: %v", verb, err))
 			}
 			out[verb] = append(out[verb], check)
 		}

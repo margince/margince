@@ -1,0 +1,16 @@
+{
+  "verb": "request_legal_review",
+  "checks": [
+    "activity.read",
+    "company.read",
+    "contact.read",
+    "deal.read",
+    "deal.update",
+    "installation_settings.read",
+    "offer.read",
+    "project.read"
+  ],
+  "takes": [
+    "deal"
+  ]
+}

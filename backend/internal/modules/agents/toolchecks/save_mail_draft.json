@@ -1,0 +1,9 @@
+{
+  "verb": "save_mail_draft",
+  "checks": [
+    "activity.create"
+  ],
+  "takes": [
+    "company"
+  ]
+}

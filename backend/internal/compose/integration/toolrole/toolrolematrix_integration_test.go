@@ -21,11 +21,12 @@ import (
 	"github.com/margince/margince/backend/internal/compose"
 	"github.com/margince/margince/backend/internal/compose/integration/apptest"
 	"github.com/margince/margince/backend/internal/shared/ports/mcp"
+	"github.com/margince/margince/backend/internal/shared/toolroles"
 )
 
 const (
-	toolRolesFile = "../../../../../docs/reference/mcp-tool-roles.json"
-	toolRoleUser  = "tool-role-matrix@fable.test"
+	toolRolesDir = "../../../../../docs/reference/mcp-tool-roles"
+	toolRoleUser = "tool-role-matrix@fable.test"
 	// toolRoleCallsPerPassport stays under a passport's per-window call budget.
 	toolRoleCallsPerPassport = 80
 )
@@ -310,6 +311,37 @@ func toolRolesDocument(roles []apptest.SeededRole, calls []toolRoleCall, verdict
 		doc.Rows = append(doc.Rows, published)
 	}
 	return doc, open
+}
+
+// published is the document as the rows folder holds it: one file per verb.
+func (doc toolRolesFileShape) published() (map[string][]byte, error) {
+	rows := make(map[string]toolroles.Row, len(doc.Rows))
+	for _, row := range doc.Rows {
+		rows[row.Verb] = toolroles.Row{
+			Tool: row.Tool, Action: row.Action, Verb: row.Verb,
+			Allowed: row.Allowed, Refused: row.Refused, ColleagueRecord: row.ColleagueRecord,
+		}
+	}
+	return toolroles.Render(toolroles.Head{Note: doc.Note, Reasons: doc.Reasons, Roles: doc.Roles}, rows)
+}
+
+// holdTheFolder holds dir to what the sweep rendered, file by file. Under the
+// update flag it rewrites dir, and the files of verbs no longer served go.
+func holdTheFolder(t *testing.T, dir string, files map[string][]byte, rerun string) {
+	t.Helper()
+	if os.Getenv("UPDATE_MCP_TOOL_ROLES") != "" {
+		if err := toolroles.Write(dir, files); err != nil {
+			t.Fatal(err)
+		}
+		return
+	}
+	drift, err := toolroles.Compare(dir, files)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !drift.Empty() {
+		t.Errorf("%s is not what the sweep measured (%s). Run: %s", dir, drift, rerun)
+	}
 }
 
 func sortedRoles(keys []string) []string {

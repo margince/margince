@@ -1,0 +1,9 @@
+{
+  "verb": "update_sales_initiative",
+  "checks": [
+    "sales_initiative.update"
+  ],
+  "takes": [
+    "initiative"
+  ]
+}

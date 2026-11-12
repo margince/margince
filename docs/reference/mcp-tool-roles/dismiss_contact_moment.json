@@ -1,0 +1,18 @@
+{
+  "tool": "change_attention",
+  "action": "dismiss_contact_moment",
+  "verb": "dismiss_contact_moment",
+  "allowed_for": [
+    "admin",
+    "management",
+    "manager",
+    "ops",
+    "read_only",
+    "rep"
+  ],
+  "refused_for": [],
+  "colleague_record": {
+    "manager": "ran",
+    "rep": "ran"
+  }
+}

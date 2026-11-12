@@ -1,0 +1,14 @@
+{
+  "tool": "change_capture",
+  "action": "set_context_tag",
+  "verb": "set_connector_context_tag",
+  "allowed_for": [
+    "admin",
+    "management",
+    "manager",
+    "ops",
+    "read_only",
+    "rep"
+  ],
+  "refused_for": []
+}

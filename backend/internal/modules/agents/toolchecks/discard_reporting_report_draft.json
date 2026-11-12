@@ -1,0 +1,10 @@
+{
+  "verb": "discard_reporting_report_draft",
+  "checks": [
+    "report_definition.read",
+    "report_definition.update"
+  ],
+  "takes": [
+    "drafted_report"
+  ]
+}

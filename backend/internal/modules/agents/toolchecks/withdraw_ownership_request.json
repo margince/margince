@@ -1,0 +1,8 @@
+{
+  "verb": "withdraw_ownership_request",
+  "checks": [],
+  "takes": [
+    "company",
+    "requested_company"
+  ]
+}

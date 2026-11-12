@@ -1,0 +1,15 @@
+{
+  "tool": "read_workspace",
+  "action": "embed_reindex_preview",
+  "verb": "embed_reindex_preview",
+  "allowed_for": [
+    "admin",
+    "ops"
+  ],
+  "refused_for": [
+    "management",
+    "manager",
+    "read_only",
+    "rep"
+  ]
+}

@@ -1,0 +1,7 @@
+{
+  "verb": "get_extension_settings",
+  "checks": [
+    "extension_access.read",
+    "installation_settings.read"
+  ]
+}

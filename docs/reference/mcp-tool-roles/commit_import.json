@@ -1,0 +1,14 @@
+{
+  "tool": "commit_import",
+  "verb": "commit_import",
+  "allowed_for": [
+    "admin",
+    "ops"
+  ],
+  "refused_for": [
+    "management",
+    "manager",
+    "read_only",
+    "rep"
+  ]
+}

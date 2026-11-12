@@ -1,0 +1,15 @@
+{
+  "verb": "answer_reporting_question_card",
+  "checks": [
+    "activity.read",
+    "company.read",
+    "deal.read",
+    "installation_settings.read",
+    "lead.read",
+    "project.read",
+    "report_definition.read"
+  ],
+  "takes": [
+    "question_report"
+  ]
+}

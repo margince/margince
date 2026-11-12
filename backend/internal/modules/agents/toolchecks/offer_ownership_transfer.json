@@ -1,0 +1,11 @@
+{
+  "verb": "offer_ownership_transfer",
+  "checks": [
+    "activity.read",
+    "deal.read"
+  ],
+  "takes": [
+    "company",
+    "user"
+  ]
+}
