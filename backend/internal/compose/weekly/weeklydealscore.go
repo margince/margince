@@ -79,7 +79,32 @@ const dealScoreSQL = `
 		   WHERE a.entity_type = 'deal'
 		     AND a.occurred_at >= $%[1]d AND a.occurred_at < $%[2]d
 		     AND a.before->>'win_probability_override' IS DISTINCT FROM a.after->>'win_probability_override'
-		   GROUP BY a.entity_id)
+		   GROUP BY a.entity_id),
+		-- Each open deal's live tasks as the week CLOSED, not as they stand now.
+		-- A task ticked off on Monday was still the deal's open next step on
+		-- Sunday, and reading is_done today erases it from the week that
+		-- earned it. Created-after is excluded for the mirror reason: a task
+		-- written on Monday was not Sunday's next step.
+		next_step AS MATERIALIZED (
+		  SELECT tl.deal_id, task.id
+		    FROM open_deals o
+		    JOIN activity_link tl ON tl.deal_id = o.id
+		    JOIN activity task ON task.id = tl.activity_id
+		   WHERE task.kind = 'task' AND task.archived_at IS NULL AND (%[13]s)
+		     AND task.created_at < $%[2]d
+		     AND (%[12]s IS NULL OR %[12]s >= $%[2]d)),
+		-- Each open deal's activity in the coverage window. BOUNDED AT BOTH
+		-- ENDS: the lower bound is the 30-day window; the upper is the cutoff,
+		-- without which two contacts who first spoke to the deal on Monday
+		-- would make the closed week read multi-threaded when it was not.
+		deal_touch AS MATERIALIZED (
+		  SELECT dl.deal_id, act.id
+		    FROM open_deals o
+		    JOIN activity_link dl ON dl.deal_id = o.id
+		    JOIN activity act ON act.id = dl.activity_id
+		   WHERE act.archived_at IS NULL AND %[4]s),
+		-- One content gate answers both sets above.
+		readable_activity AS MATERIALIZED (%[11]s)
 		SELECT
 		  EXISTS (SELECT 1 FROM open_deals) OR EXISTS (SELECT 1 FROM moves)
 		    -- A week whose every deal is behind an erasure still HAS a deal block.
@@ -93,30 +118,16 @@ const dealScoreSQL = `
 		     FROM dwell WHERE days IS NOT NULL),
 		  (SELECT count(*) FROM open_deals o
 		    WHERE EXISTS (
-		      SELECT 1 FROM activity_link tl
-		        JOIN activity task ON task.id = tl.activity_id
-		       WHERE tl.deal_id = o.id AND task.kind = 'task'
-		         AND task.archived_at IS NULL AND (%[11]s) AND (%[14]s)
-		         -- The task as the week CLOSED, not as it stands now. A task
-		         -- ticked off on Monday was still the deal's open next step on
-		         -- Sunday, and reading is_done today erases it from the week that
-		         -- earned it. Created-after is excluded for the mirror reason: a
-		         -- task written on Monday was not Sunday's next step.
-		         AND task.created_at < $%[2]d
-                 AND (%[13]s IS NULL OR %[13]s >= $%[2]d))),
+		      SELECT 1 FROM next_step ns
+		       WHERE ns.deal_id = o.id
+		         AND ns.id IN (SELECT id FROM readable_activity))),
 		  (SELECT count(*) FROM open_deals),
 		  (SELECT count(*) FROM open_deals o
 		    WHERE (SELECT count(DISTINCT pl.contact_id)
-		             FROM activity_link dl
-		             JOIN activity act ON act.id = dl.activity_id
-		             JOIN activity_link pl ON pl.activity_id = dl.activity_id
-		            WHERE dl.deal_id = o.id AND pl.contact_id IS NOT NULL
-		              AND act.archived_at IS NULL AND (%[12]s)
-		              -- BOUNDED AT BOTH ENDS. The lower bound is the 30-day
-		              -- coverage window; the upper is the cutoff, without which
-		              -- two contacts who first spoke to the deal on Monday would
-		              -- make the closed week read multi-threaded when it was not.
-		              AND %[4]s) >= $%[5]d),
+		             FROM deal_touch dt
+		             JOIN activity_link pl ON pl.activity_id = dt.id
+		            WHERE dt.deal_id = o.id AND pl.contact_id IS NOT NULL
+		              AND dt.id IN (SELECT id FROM readable_activity)) >= $%[5]d),
 		  (SELECT count(*) FROM open_deals o
 		    WHERE o.expected_close_date IS NOT NULL
 		      AND NOT o.close_date_provisional
