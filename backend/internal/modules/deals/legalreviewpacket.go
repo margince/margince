@@ -26,7 +26,6 @@ import (
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
-	"github.com/margince/margince/backend/internal/platform/labeltranslation"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -155,10 +154,7 @@ func packetDealOf(ctx context.Context, tx pgx.Tx, d crmcontracts.Deal) (packetDe
 	if !auth.ReadGranted(ctx, "company") {
 		out.CompanyID = nil
 	}
-	args := []any{out.StageID}
-	arg := func(v any) int { args = append(args, v); return len(args) }
-	name := labeltranslation.SQL(ctx, "s.name", "s.name_translations", arg)
-	err := tx.QueryRow(ctx, `SELECT `+name+` FROM stage s WHERE s.id = $1`, args...).Scan(&out.StageName)
+	err := tx.QueryRow(ctx, `SELECT name FROM stage WHERE id = $1`, out.StageID).Scan(&out.StageName)
 	if err != nil {
 		return out, fmt.Errorf("read the stage the review pack shows: %w", err)
 	}
@@ -192,14 +188,11 @@ func (s *Store) priceForQueue(
 // stagesEntered is the pack's short history: each stage the deal entered,
 // oldest first.
 func stagesEntered(ctx context.Context, tx pgx.Tx, dealID ids.DealID) ([]packetStage, error) {
-	args := []any{dealID}
-	arg := func(v any) int { args = append(args, v); return len(args) }
-	name := labeltranslation.SQL(ctx, "s.name", "s.name_translations", arg)
 	rows, err := tx.Query(ctx, `
-		SELECT `+name+`, h.changed_at
+		SELECT s.name, h.changed_at
 		  FROM deal_stage_history h JOIN stage s ON s.id = h.to_stage_id
 		 WHERE h.deal_id = $1
-		 ORDER BY h.changed_at, h.id`, args...)
+		 ORDER BY h.changed_at, h.id`, dealID)
 	if err != nil {
 		return nil, fmt.Errorf("read the deal's stage history: %w", err)
 	}

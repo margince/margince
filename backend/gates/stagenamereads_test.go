@@ -25,11 +25,12 @@ import (
 
 // storedStageNameReads are the files that read the stored name, with why.
 var storedStageNameReads = gatekit.Waive(map[string]string{
-	"internal/compose/captureofflinedemo.go":   "writes demo mail from the stored names; no reader's language applies",
-	"internal/compose/dealverdictinput.go":     "model input; the verdict is written in its own language from the stored names",
-	"internal/compose/extsystemread.go":        "a system read for extensions, which carry no UI language",
-	"internal/modules/deals/deal_advance.go":   "the deal.stage_changed event keeps the stored name for subscribers",
-	"internal/modules/deals/keynamedrepair.go": "matches deals by their stored stage, a comparison and not a display",
+	"internal/compose/captureofflinedemo.go":      "writes demo mail that every reader of the demo shares, so it keeps the stored names",
+	"internal/compose/dealverdictinput.go":        "model input; the verdict is stored once for every reader, so it keeps the stored names",
+	"internal/compose/extsystemread.go":           "a system read for extensions, which carry no UI language",
+	"internal/modules/deals/deal_advance.go":      "the deal.stage_changed event keeps the stored name for subscribers",
+	"internal/modules/deals/keynamedrepair.go":    "writes the stored stage into a deal name that every reader shares",
+	"internal/modules/deals/legalreviewpacket.go": "a frozen packet several reviewers read, each in their own language",
 })
 
 var (

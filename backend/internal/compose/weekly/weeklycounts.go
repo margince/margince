@@ -18,6 +18,7 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/modules/activities"
+	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/modules/privacy"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
@@ -333,7 +334,10 @@ func readWeekDeals(ctx context.Context, tx pgx.Tx, userID ids.UUID, start, end t
 	if err != nil {
 		return nil, err
 	}
-	stageName := labeltranslation.SQL(ctx, "s.name", "s.name_translations", arg)
+	// Frozen in the record language, as the team review is, so the snapshot
+	// does not depend on which path wrote it first.
+	language := string(identity.BaseLanguageForRecord(ctx, tx))
+	stageName := labeltranslation.SQLIn(language, "s.name", "s.name_translations", arg)
 	rows, err := tx.Query(ctx, fmt.Sprintf(`
 		WITH closed AS (
 			SELECT d.id, d.name, d.status AS outcome, NULL::text AS to_stage,

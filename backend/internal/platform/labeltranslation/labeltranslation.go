@@ -14,6 +14,7 @@ import (
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/kernel/systemtext"
 	"github.com/margince/margince/backend/internal/shared/kernel/textlang"
 )
 
@@ -141,8 +142,13 @@ func SQL(ctx context.Context, column, translations string, arg func(any) int) st
 	return SQLIn(ReaderLanguage(ctx), column, translations, arg)
 }
 
-// ReaderLanguage is the UI language the reader chose, empty when none.
+// ReaderLanguage is the language the reader's screen shows. That is the
+// request's display locale, which falls back to the installation's language.
+// Outside a request it is the language the principal chose.
 func ReaderLanguage(ctx context.Context) string {
+	if systemtext.HasLocale(ctx) {
+		return string(systemtext.Locale(ctx))
+	}
 	if actor, ok := principal.Actor(ctx); ok {
 		return actor.Locale
 	}

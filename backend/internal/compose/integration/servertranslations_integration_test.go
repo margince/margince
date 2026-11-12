@@ -20,6 +20,8 @@ import (
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/kernel/systemtext"
+	"github.com/margince/margince/backend/internal/shared/kernel/textlang"
 )
 
 // wonStageOf is the won stage of a pipeline.
@@ -39,15 +41,17 @@ func wonStageOf(t *testing.T, e *Env, pipeline ids.UUID) ids.StageID {
 	return ids.StageID{}
 }
 
-// reading is ctx with the signed-in reader's UI language set to locale.
+// reading is ctx as a request whose screen shows locale, as the display
+// locale middleware leaves it. The principal's own choice says English, so a
+// read that ignored the screen would answer in English.
 func reading(t *testing.T, ctx context.Context, locale string) context.Context {
 	t.Helper()
 	actor, ok := principal.Actor(ctx)
 	if !ok {
 		t.Fatal("the context carries no principal")
 	}
-	actor.Locale = locale
-	return principal.WithActor(ctx, actor)
+	actor.Locale = "en"
+	return systemtext.WithLocale(principal.WithActor(ctx, actor), textlang.Lang(locale))
 }
 
 func TestTheCompanyPageAndTheMoveConfirmationNameStagesInTheReadersLanguage(t *testing.T) {

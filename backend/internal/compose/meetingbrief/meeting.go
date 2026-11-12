@@ -128,7 +128,7 @@ func (a attendeeRow) firstTime() bool { return a.LastTouch == nil }
 // It narrows the attendees' last-touch dates only when the meeting itself is
 // filed under no project: a filed meeting's own project wins, and a request
 // that disagrees with it is refused by resolveScope after this read.
-func (s *Service) readMeeting(ctx context.Context, tx pgx.Tx, activityID ids.UUID, requested *ids.ProjectID, now time.Time) (meeting, error) {
+func (s *Service) readMeeting(ctx context.Context, tx pgx.Tx, activityID ids.UUID, requested *ids.ProjectID, now time.Time, language string) (meeting, error) {
 	if err := auth.EnsureActivityContentVisibleLive(ctx, tx, activityID); err != nil {
 		return meeting{}, err
 	}
@@ -153,7 +153,8 @@ func (s *Service) readMeeting(ctx context.Context, tx pgx.Tx, activityID ids.UUI
 	var attendees []byte
 	var project projectRow
 	var projectID *ids.UUID
-	stageName := labeltranslation.SQL(ctx, "s.name", "s.name_translations", arg)
+	// The brief's own language, as the sentences around the stage are.
+	stageName := labeltranslation.SQLIn(language, "s.name", "s.name_translations", arg)
 	err = tx.QueryRow(ctx, fmt.Sprintf(meetingQuery, clauses.deal, clauses.contact, idPos, clauses.touch, clauses.seat, clauses.project, requestedPos,
 		clauses.amount, happened, stageName), args...).
 		Scan(&out.ID, &out.StartsAt, &out.DateOnly, &subject,
