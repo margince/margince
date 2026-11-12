@@ -7,6 +7,15 @@ What each job of [`ci.yml`](../../.github/workflows/ci.yml) checks, with the job
 [ci-pipeline.md](../explanation/ci-pipeline.md). The workflows outside the gate:
 [ci-workflows.md](ci-workflows.md).
 
+Each test run below runs its tests in a mixed order that a seed sets, not in source order. The seed
+is `TEST_SHUFFLE_SEED`, which `ci.yml` and both lanes set to the run number. So all jobs of one run
+use one order, and "Re-run failed jobs" runs that order again. Each run prints the seed and a replay
+command first: [make-targets.md](make-targets.md#the-integration-lane).
+
+The unit legs and `integration unit coverage` pass `-shuffle=<seed>` to `go test`. Each integration
+shard passes `-test.shuffle=<seed>` to its binaries. vitest puts the tests inside each file in a
+mixed order. The files keep their order, so the `fe-unit` shards split the same files.
+
 | Job | What it checks |
 |---|---|
 | `changes` | The [scope classifier](../explanation/ci-pipeline.md#run-only-the-checks-a-change-can-reach) (it always runs first, when not a draft; its answer is overridden on `merge_group`) |

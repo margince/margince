@@ -56,11 +56,6 @@ name: scheduled
 #                        so the per-PR lane holds the committed matrix to the
 #                        registry and the listing, and this re-measures it.
 #
-#   race and shuffle   — the backend suites under -race, in a shuffled order,
-#                        daily. State that tests share shows only when the
-#                        detector watches or the order changes; on a PR it
-#                        reads as a flake of a test the diff did not touch.
-#
 #   slop trend         — the slop scores and the comment numbers, once a week,
 #                        beside last week's. Not a verdict: the comment checks
 #                        judge only added lines, and this is what shows whether
@@ -108,10 +103,6 @@ on:
         description: "Also run the MCP role sweep (`make test-roles`, about an hour on a runner)"
         type: boolean
         default: false
-      seed:
-        description: "Shuffle seed for the race and shuffle lane, to replay a failed run (empty: the run number)"
-        type: string
-        default: ""
 
 permissions:
   contents: read
@@ -337,72 +328,6 @@ jobs:
       - name: Restore the clock
         if: always()
         run: ./scripts/clock-drift-host.sh restore "${BACKEND_CLOCK_SKEW##*:}"
-
-  # The backend suites under the race detector, in one shuffled order. The seed
-  # is the run number, so "Re-run failed jobs" replays the same order and the
-  # next night tries a new one; the `seed` input replays another run's order.
-  #
-  # One leg for the unit tests and one per slice of the integration lane, cut by
-  # the fixed slicing the merge gate falls back to. Each leg compiles its own
-  # -race binaries, because no cache entry or lane binary of another job is
-  # instrumented.
-  backend-race-shuffle:
-    # The DAILY cadence, spelled per job: a job with no `if` runs on every
-    # trigger the workflow has, so the weekly perf cron would run this too.
-    if: github.event_name == 'workflow_dispatch' || github.event.schedule == '0 1 * * *'
-    name: backend race and shuffle (${{ matrix.suite }} ${{ matrix.shard }})
-    runs-on: ubuntu-latest
-    timeout-minutes: 150
-    permissions:
-      contents: read
-    strategy:
-      # Every leg reports: one red slice must not hide a second.
-      fail-fast: false
-      matrix:
-        include:
-          - suite: unit
-          - {suite: integration, shard: 1/8}
-          - {suite: integration, shard: 2/8}
-          - {suite: integration, shard: 3/8}
-          - {suite: integration, shard: 4/8}
-          - {suite: integration, shard: 5/8}
-          - {suite: integration, shard: 6/8}
-          - {suite: integration, shard: 7/8}
-          - {suite: integration, shard: 8/8}
-    env:
-      RACE_SHUFFLE_SEED: ${{ inputs.seed || github.run_number }}
-      RACE_SHUFFLE_SUITES: ${{ matrix.suite }}
-      INTEGRATION_SHARD: ${{ matrix.shard }}
-      # Under -race a package takes several times as long, past the per-package
-      # bound the lane sets for a slice.
-      INTEGRATION_TIMEOUT: 3600s
-    # The report job names the seed in the issue, so a reader replays it there.
-    # Every leg holds the same value.
-    outputs:
-      seed: ${{ env.RACE_SHUFFLE_SEED }}
-    defaults:
-      run:
-        working-directory: .
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          persist-credentials: false
-          # rbacbaselineerafixture_test.go reads the migration baseline commit and
-          # fails rather than degrades on a shallow checkout.
-          fetch-depth: 0
-      # No go-build-cache restore: -race instruments every package, the
-      # standard library too, so no entry the other lanes save is ever a hit.
-      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
-        with:
-          go-version-file: backend/go.mod
-          cache-dependency-path: backend/go.sum
-      - name: Gate binaries on PATH
-        uses: ./.github/actions/gate-binaries
-      - name: Start the dev infra stack (compose + app role)
-        if: matrix.suite == 'integration'
-        run: make db-up
-      - name: The suite under -race and the shuffle seed
-        run: make backend-race-shuffle
 
   # PERF-3/PERF-7 on the SMB tier, weekly. It is the only job here gated on a
   # cadence rather than running every time the workflow fires: the daily lane
@@ -1276,7 +1201,7 @@ jobs:
   # fails, so it is guarded on !cancelled() rather than needs alone.
   report:
     name: report
-    needs: [vuln, quality-gate, renovate-liveness, backend-clock-drift, backend-race-shuffle, fe-clock-drift, fe-all-stories, perf-budgets, perf-mobile, llm-use-cases, records, records-pr, reap-caches, slop-trend, vendor-live, role-sweep]
+    needs: [vuln, quality-gate, renovate-liveness, backend-clock-drift, fe-clock-drift, fe-all-stories, perf-budgets, perf-mobile, llm-use-cases, records, records-pr, reap-caches, slop-trend, vendor-live, role-sweep]
     # Every result, not only the failures — see the same condition in
     # main-health.yml for why. In short: the reporter now retracts a finding
     # whose check came back green, and a job gated on a failure is never reached
@@ -1320,8 +1245,6 @@ jobs:
           RENOVATE_OUTCOME: ${{ needs['renovate-liveness'].outputs.outcome }}
           CLOCK_RESULT: ${{ needs['fe-clock-drift'].result }}
           BACKEND_CLOCK_RESULT: ${{ needs['backend-clock-drift'].result }}
-          RACE_RESULT: ${{ needs['backend-race-shuffle'].result }}
-          RACE_SEED: ${{ needs['backend-race-shuffle'].outputs.seed }}
           STORIES_RESULT: ${{ needs['fe-all-stories'].result }}
           PERF_RESULT: ${{ needs.perf-budgets.result }}
           PERF_OUTCOME: ${{ needs.perf-budgets.outputs.outcome }}

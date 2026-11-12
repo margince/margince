@@ -160,7 +160,9 @@ func TestACloseDayCorrectionRefusesWhatItCannotHold(t *testing.T) {
 			var f *CloseDayFutureError
 			return errors.As(err, &f)
 		}},
-		{"a day before any stored rate", e.asDealWriter(), e.today.AddDate(0, 0, -40), func(err error) bool {
+		// Years back: fx_rate is not reset between tests, and another case in
+		// this package seeds rates on fixed dates months before today.
+		{"a day before any stored rate", e.asDealWriter(), e.today.AddDate(-20, 0, 0), func(err error) bool {
 			var f *MissingFxRateError
 			return errors.As(err, &f)
 		}},

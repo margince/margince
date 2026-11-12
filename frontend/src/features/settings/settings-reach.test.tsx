@@ -216,7 +216,9 @@ describe("a page the rail does not carry is still the reader's to reach", () => 
     vi.stubGlobal("fetch", settingsNavBackend(consultingRep));
     renderNav();
     await screen.findByRole("link", { name: labelOf("account") });
-    await user.type(screen.getByRole("combobox"), "pipeline");
+    // Found, not got: the search box is a lazy chunk, so it draws after the
+    // rail until an earlier case in the file has loaded it.
+    await user.type(await screen.findByRole("combobox"), "pipeline");
     expect(
       screen.getAllByRole("option").map((option) => option.textContent),
     ).toEqual([expect.stringContaining(labelOf("deals"))]);

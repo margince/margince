@@ -50,10 +50,13 @@ it("lets Home's mount use an answer the prefetch fetched", async () => {
 it("keeps the mount refetch for an answer already cached before the prefetch", async () => {
   answering(handledPage);
   const client = createQueryClient();
-  client.setQueryData(handledForYouOptions.queryKey, {
-    pages: [handledPage],
-    pageParams: [undefined],
-  });
+  // The prefetch notes are module state, and an earlier case noted this query
+  // at its own stamp. A stamp later than every earlier note cannot match one.
+  client.setQueryData(
+    handledForYouOptions.queryKey,
+    { pages: [handledPage], pageParams: [undefined] },
+    { updatedAt: Date.now() + 1 },
+  );
   prefetchHome(client, new Map());
   await new Promise((resolve) => setTimeout(resolve, 0));
   expect(liveOnMount(handledQuery(client))).toBe("always");

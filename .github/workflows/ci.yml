@@ -62,6 +62,11 @@ env:
   # adds to the branch it merges into, so one into develop is not held to all of
   # develop's lines. The develop into main pull request judges those.
   CHECK_BASE_REF: origin/${{ github.base_ref || 'main' }}
+  # Every Go and vitest battery runs its tests in the order this seed gives, so
+  # a test that needs the state an earlier test left fails in the PR that adds
+  # it. The run number is one order per run: "Re-run failed jobs" replays it,
+  # and the next run tries another. TEST_SHUFFLE_SEED=<n> replays it locally.
+  TEST_SHUFFLE_SEED: ${{ github.run_number }}
 
 jobs:
   # Classify the diff so a change runs only the checks it can affect — a

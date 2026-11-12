@@ -29,6 +29,9 @@ defaults:
 # backend/gates/buildinputfetch_test.go, which holds this line.
 env:
   GOPROXY: https://proxy.golang.org|direct
+  # The test order of the run, as ci.yml states it; a called workflow reads the
+  # caller's run number.
+  TEST_SHUFFLE_SEED: ${{ github.run_number }}
 
 jobs:
   # The lane's one compile. A shard's slice is per-TEST, so every shard runs
@@ -391,7 +394,8 @@ jobs:
           [ -n "$pkgs" ] || { echo "go list found no package with code; refusing an empty coverage pass" >&2; exit 1; }
           echo "skipped as test-only: $(go list -f '{{if not .GoFiles}}{{.ImportPath}}{{end}}' ./... | xargs)"
           # shellcheck disable=SC2086 # one argument per package
-          go test $pkgs -cover -coverpkg=./... -covermode=atomic -args -test.gocoverdir="$RUNNER_TEMP/covdata-unit"
+          echo "test order: -shuffle=$TEST_SHUFFLE_SEED; replay one package with: go test -shuffle=$TEST_SHUFFLE_SEED <package>"
+          go test $pkgs -shuffle="$TEST_SHUFFLE_SEED" -cover -coverpkg=./... -covermode=atomic -args -test.gocoverdir="$RUNNER_TEMP/covdata-unit"
       - name: Upload the unit coverage pods
         uses: ./.github/actions/upload-artifact-retried
         with:

@@ -13,7 +13,11 @@ import {
 import { serveMcpApps } from "./scripts/vite-inline-views.ts";
 import { thirdPartyNotices } from "./scripts/vite-licenses.ts";
 import { pwa } from "./scripts/vite-pwa.ts";
-import { CostSequencer, compilerTests } from "./scripts/vitest-shards.ts";
+import {
+  CostSequencer,
+  compilerTests,
+  shuffledTests,
+} from "./scripts/vitest-shards.ts";
 import { TEST_TIMEOUT_MS } from "./vitest.budget.ts";
 
 // The composition alias — the runtime half of the two-lane type story whose
@@ -374,7 +378,10 @@ export default defineConfig({
     // past it. A hook doing a test's work earns a test's ceiling.
     hookTimeout: TEST_TIMEOUT_MS,
     // Shards by expected cost and runs the costliest files first; see the file.
-    sequence: { sequencer: CostSequencer },
+    sequence: {
+      sequencer: CostSequencer,
+      ...shuffledTests(process.env.TEST_SHUFFLE_SEED),
+    },
     // Rebinds jsdom's Web Storage over the Node ≥23 global stub — see the file.
     setupFiles: ["./vitest.setup.ts"],
     // Playwright owns e2e/ — vitest must not collect its specs

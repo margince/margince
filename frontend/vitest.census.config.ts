@@ -7,6 +7,7 @@
 
 import { defineConfig } from "vitest/config";
 import base from "./vite.config.ts";
+import { shuffledTests } from "./scripts/vitest-shards.ts";
 import { TEST_TIMEOUT_MS } from "./vitest.budget.ts";
 
 export default defineConfig({
@@ -18,5 +19,6 @@ export default defineConfig({
     pool: "threads",
     testTimeout: TEST_TIMEOUT_MS,
     hookTimeout: TEST_TIMEOUT_MS,
+    sequence: shuffledTests(process.env.TEST_SHUFFLE_SEED),
   },
 });
