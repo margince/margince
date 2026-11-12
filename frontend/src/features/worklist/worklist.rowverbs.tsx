@@ -67,19 +67,15 @@ export function RowActs({
   allowPin?: boolean;
   /** The lane's one call to action, drawn last before the menu. */
   primary?: ReactNode;
-  /**
-   * The lane's verbs of equal weight, drawn before Done. None of them is the
-   * row's answer. Promoting one would tell a reader that "Held" is the expected
-   * outcome of a meeting that may have been cancelled.
-   */
+  /** The lane's verbs of equal weight, drawn before Done. None is the row's
+   *  answer: a promoted "Held" would call a cancelled meeting held. */
   equals?: ReactNode;
   /** Where a grouped row is reviewed, on the surface that has a filter. */
   onReview?: () => void;
   onOpenEmail?: (id: string) => void;
   /** The way into what the row is about, where the surface has one; first. */
   context?: ReactNode;
-  /** Lines the surface adds at the top of the menu, such as other ways to
-   *  reach a task's contact. */
+  /** Lines the surface puts first in the menu, such as other ways to call. */
   menu?: ReactNode;
   /** A card around this row already names and links its record. */
   framed?: boolean;
