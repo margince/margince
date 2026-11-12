@@ -13,8 +13,8 @@ import (
 
 // OwnerStatementCeiling bounds each statement a test sends on an owner
 // connection. A runaway plan then fails as its test, well inside the 900s an
-// integration package gets, while a healthy seed on a slow runner, under a
-// minute, stays far below it.
+// integration package gets. A healthy seed takes under a minute on a slow
+// runner, far below it.
 const OwnerStatementCeiling = 3 * time.Minute
 
 // CapStatements holds every later statement on conn to OwnerStatementCeiling,
