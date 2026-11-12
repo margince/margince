@@ -339,11 +339,8 @@ func scoreDeals(
 	}
 	scope = orUnbounded(scope)
 
-	taskScope, err := auth.ActivityContentClause(ctx, "task", arg)
-	if err != nil {
-		return nil, err
-	}
-	activityScope, err := auth.ActivityContentClause(ctx, "act", arg)
+	readable, err := auth.ContentReadableActivitiesSQL(ctx,
+		"SELECT id FROM next_step UNION ALL SELECT id FROM deal_touch", arg)
 	if err != nil {
 		return nil, err
 	}
@@ -360,7 +357,7 @@ func scoreDeals(
 	err = tx.QueryRow(ctx, fmt.Sprintf(dealScoreSQL,
 		startPos, endPos, userPos, occurredday.WithinSQL("act", fmt.Sprintf("$%d", sincePos), fmt.Sprintf("$%d", endPos)), stakeholdersPos,
 		probabilityRank("last_cat"), probabilityRank("first_cat"), scope, zonePos,
-		weekEndDealsSQL(fmt.Sprintf("$%d", endPos), fmt.Sprintf("$%d", verbsPos)), taskScope, activityScope,
+		weekEndDealsSQL(fmt.Sprintf("$%d", endPos), fmt.Sprintf("$%d", verbsPos)), readable,
 		taskCompletionAtSQL("task", fmt.Sprintf("$%d", endPos), fmt.Sprintf("$%d", verbsPos)), currentTask),
 		args...).
 		Scan(&present, &block.Advances, &block.Regressions, &median,

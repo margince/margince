@@ -10,7 +10,8 @@ name: margince-compose
 x-margince: &margince
   restart: unless-stopped
   # More settings, one NAME=value per line; every one is in .env.example of
-  # the repository and in docs/reference/configuration.md.
+  # the repository and in docs/reference/configuration.md. A name set below
+  # comes from .env instead: the environment block outranks this file.
   env_file:
     - path: margince.env
       required: false
@@ -20,6 +21,7 @@ x-margince-env: &margince-env
   MARGINCE_REDIS: redis:6379
   MARGINCE_PUBLIC_BASE_URL: ${MARGINCE_PUBLIC_BASE_URL:?set MARGINCE_PUBLIC_BASE_URL in .env}
   MARGINCE_LICENSE: ${MARGINCE_LICENSE:-}
+  MARGINCE_ENV: ${MARGINCE_ENV:-}
   MARGINCE_KEYVAULT_ROOT_KEY: ${MARGINCE_KEYVAULT_ROOT_KEY:?set MARGINCE_KEYVAULT_ROOT_KEY in .env}
 
 services:
