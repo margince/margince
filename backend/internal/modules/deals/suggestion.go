@@ -127,7 +127,7 @@ func validDraft(d SuggestionDraft) error {
 
 // SuggestionFloorExpr is the instant a company's evidence must be newer than:
 // the latest dismissal of a suggestion about it, the latest close of a deal on
-// it, and the latest archive of a deal on it by a person or their agent.
+// it, and the latest archive of a deal on it by a user or their agent.
 // Evidence from before a dismissal or such an archive was judged "not a deal"
 // by a human, and evidence from before a close was about the deal that closed.
 // A system archive (retention, an import undo) judges nothing. It is NULL while

@@ -355,7 +355,7 @@ func TestASystemArchiveSetsNoFloor(t *testing.T) {
 	}
 }
 
-// A suggestion raised before a person archives a deal no longer stands: the
+// A suggestion raised before a user archives a deal no longer stands: the
 // opener supersedes it and opens nothing.
 func TestASuggestionRaisedBeforeAnArchiveOpensNothing(t *testing.T) {
 	e := setupScout(t)
