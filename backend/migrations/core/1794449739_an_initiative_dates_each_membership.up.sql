@@ -1,8 +1,9 @@
 SET LOCAL lock_timeout = '3s';
 
 -- When each record joined and left a sales initiative. The initiatives module
--- writes it from the one membership evaluation the members list reads. A row
--- with no left_at is a current membership; at most one per record.
+-- writes it from the membership evaluation the members list reads, with every
+-- rule match read rather than one bounded page. A row with no left_at is a
+-- current membership; at most one per record.
 CREATE TABLE sales_initiative_enrolment (
     id uuid PRIMARY KEY DEFAULT uuidv7(),
     initiative_id uuid NOT NULL REFERENCES sales_initiative(id) ON DELETE CASCADE,

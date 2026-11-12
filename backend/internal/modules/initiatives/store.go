@@ -38,6 +38,9 @@ const (
 // caller's row scope. The composition root binds the list filter engine.
 type RuleMatcher interface {
 	Match(ctx context.Context, tx pgx.Tx, recordType string, rule storekit.Predicate, limit int) (matched []ids.UUID, count int, err error)
+	// Page answers up to limit matches after after (nil for the first page),
+	// id-ordered, and whether more follow.
+	Page(ctx context.Context, tx pgx.Tx, recordType string, rule storekit.Predicate, after *ids.UUID, limit int) (matched []ids.UUID, more bool, err error)
 }
 
 // Store owns the initiative tables.
@@ -201,7 +204,7 @@ func (s *Store) Launch(ctx context.Context, id ids.UUID, ifVersion *int64) (crmc
 		if before.Status != crmcontracts.SalesInitiativeStatusDraft {
 			return fmt.Errorf("the initiative is already launched: %w", apperrors.ErrConflict)
 		}
-		members, err := s.membersTx(ctx, tx, before)
+		members, err := s.membersTx(ctx, tx, before, boundedRead)
 		if err != nil {
 			return err
 		}

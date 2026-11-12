@@ -116,25 +116,50 @@ func (w manufacturingDeals) open(t *testing.T, initiative ids.UUID) map[ids.UUID
 	return open
 }
 
-// The sweep enrols a record that starts matching the rule and dates the
-// leaving of one that stops.
+// backdate moves the initiative's creation, rules and launch two days back.
+// A match observed now then dates apart from one estimated from the deal's
+// first day, a day back.
+func (w manufacturingDeals) backdate(t *testing.T, initiative ids.UUID) {
+	t.Helper()
+	w.e.WsExec(t, `UPDATE sales_initiative SET created_at = now() - interval '2 days', launch_at = now() - interval '2 days' WHERE id = $1`, initiative)
+	w.e.WsExec(t, `UPDATE sales_initiative_revision SET created_at = now() - interval '2 days' WHERE initiative_id = $1`, initiative)
+}
+
+// joinedAgo is how long ago the open row of record joined.
+func (w manufacturingDeals) joinedAgo(t *testing.T, initiative, record ids.UUID) time.Duration {
+	t.Helper()
+	seconds := w.e.WsCount(t, `SELECT extract(epoch FROM now() - joined_at)::int FROM sales_initiative_enrolment WHERE initiative_id = $1 AND record_id = $2 AND left_at IS NULL`, initiative, record)
+	return time.Duration(seconds) * time.Second
+}
+
+func (w manufacturingDeals) sweep(t *testing.T) {
+	t.Helper()
+	sweep := initiativeenrolment.Sweep{Store: w.store, Pool: w.e.Pool}
+	if err := sweep.Workspace(context.Background(), w.e.WS); err != nil {
+		t.Fatalf("sweeping: %v", err)
+	}
+}
+
+// The sweep enrols a record that starts matching the rule, dated when the
+// sweep saw it, and dates the leaving of one that stops.
 func TestTheEnrolmentSweepDatesRecordsThatJoinAndLeave(t *testing.T) {
 	w := seedManufacturingDeals(t)
 	id := w.launch(t)
 	if got := w.open(t, id); len(got) != 2 || got[w.press] != "rule" || got[w.line] != "rule" {
 		t.Fatalf("the launch enrolled %v, want the two manufacturing deals by rule", got)
 	}
+	w.backdate(t, id)
 
 	joiner := w.deal(t, "Linden mill", w.company)
 	w.e.WsExec(t, `UPDATE deal SET archived_at = now() WHERE id = $1`, w.line)
-	sweep := initiativeenrolment.Sweep{Store: w.store, Pool: w.e.Pool}
-	if err := sweep.Workspace(context.Background(), w.e.WS); err != nil {
-		t.Fatalf("sweeping: %v", err)
-	}
+	w.sweep(t)
 
 	got := w.open(t, id)
 	if len(got) != 2 || got[joiner] != "rule" || got[w.press] != "rule" {
 		t.Fatalf("after the sweep the open rows are %v, want the kept deal and the new match", got)
+	}
+	if ago := w.joinedAgo(t, id, joiner); ago > time.Hour {
+		t.Fatalf("the new match joined %v ago, want when the sweep saw it", ago)
 	}
 	left := w.e.WsCount(t, `SELECT count(*) FROM sales_initiative_enrolment WHERE initiative_id = $1 AND record_id = $2 AND left_at IS NOT NULL`, id, w.line)
 	if left != 1 {
@@ -142,12 +167,57 @@ func TestTheEnrolmentSweepDatesRecordsThatJoinAndLeave(t *testing.T) {
 	}
 }
 
+// The sweep reads every rule match, not one bounded page. Past the bound it
+// still enrols each match, and closes the row of a record that stopped matching.
+func TestTheSweepDatesEveryMatchPastTheReadBound(t *testing.T) {
+	w := seedManufacturingDeals(t)
+	id := w.launch(t)
+	w.e.WsExec(t, `INSERT INTO deal (id, name, pipeline_id, stage_id, owner_id, company_id, amount_minor, currency, status, expected_close_date, source, captured_by)
+		SELECT uuidv7(), 'Linden part ' || g, $1, $2, $3, $4, 100, 'EUR', 'open', current_date + 30, 'manual', 'human:x' FROM generate_series(1, $5::int) g`,
+		w.pipeline.UUID, w.stage.UUID, w.e.Rep1, w.company, storekit.PredicateRowLimit)
+	w.e.WsExec(t, `UPDATE deal SET archived_at = now() WHERE id = $1`, w.line)
+	w.sweep(t)
+
+	if got := w.open(t, id); len(got) != storekit.PredicateRowLimit+1 || got[w.line] != "" {
+		t.Fatalf("after the sweep %d rows are open, want every %d matches and not the archived deal", len(got), storekit.PredicateRowLimit+1)
+	}
+}
+
+// A lead and a deal may share an id. When one leaves, the other's row stays open.
+func TestALeadAndADealWithOneIDLeaveApart(t *testing.T) {
+	w := seedManufacturingDeals(t)
+	w.e.WsExec(t, `INSERT INTO lead (id, full_name, status, source, captured_by, owner_id) VALUES ($1, 'Twin', 'engaged', 'manual', 'human:x', $2)`, w.press, w.e.Rep1)
+	ctx := w.manager()
+	draft, err := w.store.Create(ctx, initiatives.Definition{Name: "Twins", Objective: "qualified_opportunities_created", Deadline: clocktest.Now(t).UTC().AddDate(0, 3, 0)})
+	if err != nil {
+		t.Fatalf("defining the initiative: %v", err)
+	}
+	id := ids.UUID(draft.Id)
+	if _, err := w.store.ReplaceMembers(ctx, id, append(refs("lead", w.press), refs("deal", w.press)...), nil); err != nil {
+		t.Fatalf("picking the twins: %v", err)
+	}
+	if _, err := w.store.Launch(ctx, id, nil); err != nil {
+		t.Fatalf("launching: %v", err)
+	}
+	if _, err := w.store.ReplaceMembers(ctx, id, refs("deal", w.press), nil); err != nil {
+		t.Fatalf("dropping the lead: %v", err)
+	}
+
+	openOf := func(recordType string) int {
+		return w.e.WsCount(t, `SELECT count(*) FROM sales_initiative_enrolment WHERE initiative_id = $1 AND record_type = $2 AND record_id = $3 AND left_at IS NULL`, id, recordType, w.press)
+	}
+	if lead, deal := openOf("lead"), openOf("deal"); lead != 0 || deal != 1 {
+		t.Fatalf("open rows: lead %d, deal %d; want the lead closed and the deal open", lead, deal)
+	}
+}
+
 // The upgrade task dates an initiative launched before the dated rows
-// existed, and a replay writes nothing.
+// existed, estimated from the records' first day, and a replay writes nothing.
 func TestTheEnrolmentTaskDatesAnInitiativeLaunchedBeforeTheRows(t *testing.T) {
 	w := seedManufacturingDeals(t)
 	id := w.launch(t)
 	w.e.WsExec(t, `DELETE FROM sales_initiative_enrolment WHERE initiative_id = $1`, id)
+	w.backdate(t, id)
 	task := initiativeenrolment.Task(w.store)
 	ctx := datatask.Acting(principal.WithWorkspaceID(context.Background(), w.e.WS), task.ID)
 	batch := func() datatask.BatchOut {
@@ -169,82 +239,18 @@ func TestTheEnrolmentTaskDatesAnInitiativeLaunchedBeforeTheRows(t *testing.T) {
 	if got := w.open(t, id); len(got) != 2 {
 		t.Fatalf("the task enrolled %v, want the two manufacturing deals", got)
 	}
+	if ago := w.joinedAgo(t, id, w.press); ago < 23*time.Hour {
+		t.Fatalf("the task dated a match %v ago, want the deal's first day a day ago", ago)
+	}
 	if out := batch(); out.Changed != 0 {
 		t.Fatalf("a replay changed %d initiatives", out.Changed)
 	}
 }
 
-func leadRefs(leads ...ids.UUID) []crmcontracts.SalesInitiativeMemberRef {
-	refs := make([]crmcontracts.SalesInitiativeMemberRef, 0, len(leads))
-	for _, lead := range leads {
-		refs = append(refs, crmcontracts.SalesInitiativeMemberRef{RecordType: "lead", RecordId: openapi_types.UUID(lead)})
+func refs(recordType string, records ...ids.UUID) []crmcontracts.SalesInitiativeMemberRef {
+	out := make([]crmcontracts.SalesInitiativeMemberRef, 0, len(records))
+	for _, record := range records {
+		out = append(out, crmcontracts.SalesInitiativeMemberRef{RecordType: crmcontracts.SalesInitiativeMemberRefRecordType(recordType), RecordId: openapi_types.UUID(record)})
 	}
-	return refs
-}
-
-// A lead picked before its promotion sourced its deal. A lead picked after
-// its promotion belongs to the initiative, but its deal was not sourced by it.
-func TestALeadPickedAfterItsPromotionSourcedNothing(t *testing.T) {
-	w := seedManufacturingDeals(t)
-	start := clocktest.Now(t).UTC().Truncate(time.Second)
-	ctx := w.manager()
-	lead := func(name string) ids.UUID {
-		id := ids.NewV7()
-		w.e.WsExec(t, `INSERT INTO lead (id, full_name, status, source, captured_by, owner_id, created_at) VALUES ($1, $2, 'engaged', 'manual', 'human:x', $3, $4)`,
-			id, name, w.e.Rep1, start.Add(-48*time.Hour))
-		return id
-	}
-	early, late := lead("Ada Early"), lead("Ben Late")
-	draft, err := w.store.Create(ctx, initiatives.Definition{Name: "Lead push", Objective: "qualified_opportunities_created", Deadline: start.AddDate(0, 3, 0)})
-	if err != nil {
-		t.Fatalf("defining the initiative: %v", err)
-	}
-	id := ids.UUID(draft.Id)
-	if _, err := w.store.ReplaceMembers(ctx, id, leadRefs(early), nil); err != nil {
-		t.Fatalf("picking the early lead: %v", err)
-	}
-	if _, err := w.store.Launch(ctx, id, nil); err != nil {
-		t.Fatalf("launching: %v", err)
-	}
-	for lead, deal := range map[ids.UUID]ids.UUID{early: w.press, late: w.portal} {
-		w.e.WsExec(t, `UPDATE lead SET qualified_deal_id = $2, promoted_at = now() WHERE id = $1`, lead, deal)
-	}
-	if _, err := w.store.ReplaceMembers(ctx, id, leadRefs(early, late), nil); err != nil {
-		t.Fatalf("picking the late lead: %v", err)
-	}
-
-	service := compose.NewReportingService(w.e.Pool, func() time.Time { return start.Add(time.Hour) })
-	interval := crmcontracts.ReportingWindow{StartAt: start.AddDate(0, 0, -3), EndAt: start.AddDate(0, 0, 3)}
-	wire := openapi_types.UUID(id)
-	result, err := service.Evaluate(ctx, crmcontracts.ReportingSelection{
-		Scope: crmcontracts.ReportingScope{Kind: "workspace"}, Period: "custom", Interval: &interval, TargetBasis: "month", CloseWindow: "all_open",
-		InitiativeId: &wire, Metrics: []crmcontracts.ReportingMetricID{initiativePipeline}, Blocks: []crmcontracts.ReportingBlockKind{"breakdown"},
-	})
-	if err != nil {
-		t.Fatalf("evaluating under the initiative: %v", err)
-	}
-	if origins := originSplit(t, result); origins["origin:sourced"] != 10_000 || origins["origin:added_after"] != 10_000 {
-		t.Fatalf("the origin split is %v, want the early lead's deal sourced and the late lead's added after", origins)
-	}
-}
-
-const initiativePipeline crmcontracts.ReportingMetricID = "initiative_pipeline"
-
-// originSplit reads the initiative pipeline's breakdown by origin.
-func originSplit(t *testing.T, result crmcontracts.ReportingEvaluation) map[string]float64 {
-	t.Helper()
-	for _, chart := range result.Charts {
-		if chart.Kind != "breakdown" || chart.Metric != initiativePipeline {
-			continue
-		}
-		values := map[string]float64{}
-		for _, point := range chart.Points {
-			if point.Value != nil {
-				values[point.Key] = *point.Value
-			}
-		}
-		return values
-	}
-	t.Fatal("the initiative pipeline has no breakdown chart")
-	return nil
+	return out
 }

@@ -16,7 +16,8 @@ import (
 )
 
 // Task dates the membership of every initiative that was live before the
-// dated rows existed, through the writer the sweep runs.
+// dated rows existed, through the writer the sweep runs. Those matches were
+// never observed, so their dates are estimated.
 func Task(store *initiatives.Store) datatask.Task {
 	return datatask.Task{
 		ID: "core/1794449739_initiative_enrolment", Version: 1,
@@ -43,7 +44,7 @@ func dateBatch(ctx context.Context, tx pgx.Tx, store *initiatives.Store, in data
 	}
 	changed := 0
 	for _, id := range page {
-		change, err := store.SyncEnrolmentTx(ctx, tx, id)
+		change, err := store.EstimateEnrolmentTx(ctx, tx, id)
 		if err != nil {
 			return datatask.BatchOut{}, err
 		}

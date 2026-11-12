@@ -166,9 +166,9 @@ Also called: campaign, sales push, sales effort, target account program, track a
 
 A deal counts as **Sourced by the initiative** when the lead it came from was in the initiative when the lead was promoted. A lead you pick after its promotion belongs to the initiative, but its deal shows as **Added after launch** or **Created after launch**.
 
-Margince records when each lead and deal joins and leaves a live initiative. A pick, or a record you take out, is recorded when you save it. A record that starts or stops matching a rule is recorded within 15 minutes. Nothing is recorded for a draft: the record starts when the initiative goes live.
+Margince records when each lead and deal joins and leaves a live initiative. A pick, or a record you take out, is recorded when you save it. A record that starts or stops matching a rule is recorded when Margince sees it, within 15 minutes. A lead is also checked at the moment it is promoted, so a lead that matched a rule only minutes before its promotion still counts. Nothing is recorded for a draft: the record starts when the initiative goes live.
 
-An initiative that was already live before this record started is dated once by a background task. A pick counts from when it was last saved. A rule match counts from the last of three days: the day the initiative went live, its last rule change, and the record's first day.
+An initiative that was already live before this record started is dated once by a background task, and those dates are estimates. A pick counts from when it was last saved. A rule match counts from the last of three days: the day the initiative went live, its last rule change, and the record's first day.
 
 ## Can I describe a report or an initiative in words?
 
