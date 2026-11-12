@@ -109,8 +109,8 @@ func TestAnOutlookUpdateIsReadInItsStatedZone(t *testing.T) {
 		}
 	}
 	for name, tc := range map[string]struct{ start, want string }{
-		"winter, standard time": {"20261202T100000", "2026-12-02T09:00:00Z"},
-		"summer, daylight time": {"20260702T100000", "2026-07-02T08:00:00Z"},
+		"winter, standard time":                          {"20261202T100000", "2026-12-02T09:00:00Z"},
+		"summer, daylight time":                          {"20260702T100000", "2026-07-02T08:00:00Z"},
 		"the day daylight time starts, after the change": {"20260329T100000", "2026-03-29T08:00:00Z"},
 		"the day before daylight time starts":            {"20260328T100000", "2026-03-28T09:00:00Z"},
 	} {
