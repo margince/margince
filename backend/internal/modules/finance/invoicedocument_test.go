@@ -17,6 +17,7 @@ func TestOnlyABoundedPDFIsServed(t *testing.T) {
 	pdf := []byte("%PDF-1.7 body")
 	for name, document := range map[string]SourceDocument{
 		"another media type":           {ContentType: "text/html", Body: pdf},
+		"no media type":                {Body: pdf},
 		"a PDF type over a page":       {ContentType: pdfMediaType, Body: []byte("<html>")},
 		"a PDF larger than an invoice": {ContentType: pdfMediaType, Body: append(pdf, bytes.Repeat([]byte{' '}, maxInvoiceDocumentBytes)...)},
 	} {
@@ -24,8 +25,10 @@ func TestOnlyABoundedPDFIsServed(t *testing.T) {
 			t.Errorf("%s: checkPDF = %v, want ErrProviderUnusable", name, err)
 		}
 	}
-	if err := checkPDF(SourceDocument{ContentType: pdfMediaType, Body: pdf}); err != nil {
-		t.Errorf("a small PDF was refused: %v", err)
+	for _, mediaType := range []string{pdfMediaType, "Application/PDF", "application/pdf; name=invoice.pdf"} {
+		if err := checkPDF(SourceDocument{ContentType: mediaType, Body: pdf}); err != nil {
+			t.Errorf("a small PDF typed %q was refused: %v", mediaType, err)
+		}
 	}
 }
 

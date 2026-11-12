@@ -9,6 +9,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"mime"
 	"net/http"
 	"regexp"
 
@@ -142,9 +143,11 @@ func readDocumentTarget(ctx context.Context, tx pgx.Tx, invoiceID ids.UUID) (doc
 
 // checkPDF refuses a document that is not a PDF within the size bound. The
 // media type alone is the source's claim; the leading bytes are the file's.
+// A media type matches in any case and with parameters, as HTTP spells it.
 func checkPDF(document SourceDocument) error {
+	mediaType, _, err := mime.ParseMediaType(document.ContentType)
 	switch {
-	case document.ContentType != pdfMediaType:
+	case err != nil || mediaType != pdfMediaType:
 		return fmt.Errorf("%w: the source sent %q, not a PDF", apperrors.ErrProviderUnusable, document.ContentType)
 	case len(document.Body) > maxInvoiceDocumentBytes:
 		return fmt.Errorf("%w: the source sent %d bytes, more than an invoice holds", apperrors.ErrProviderUnusable, len(document.Body))
