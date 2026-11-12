@@ -264,11 +264,10 @@ func countWeekMeetings(
 	// database's would otherwise miss a transition and fall back to the date
 	// somebody edited the meeting to.
 	transition := storekit.MeetingHeldAsOfSQL("m", "'infinity'::timestamptz", activities.ReversedCancellationSQL)
-	scope, err := auth.ActivityContentClause(ctx, "m", arg)
-	if err != nil {
-		return 0, 0, err
-	}
-	taskScope, err := auth.ActivityContentClause(ctx, "task", arg)
+	// Both counts read the same meetings and the second adds their tasks, so
+	// one content gate over both sets answers every row either count tests.
+	readable, err := auth.ContentReadableActivitiesSQL(ctx,
+		"SELECT id FROM held_meeting UNION ALL SELECT id FROM next_step", arg)
 	if err != nil {
 		return 0, 0, err
 	}
@@ -284,20 +283,30 @@ func countWeekMeetings(
 		" OR (" + transition.UnknownDay + " AND (" +
 		occurredday.WithinAtSQL(transition.Start, "'instant'", "$%[1]d", "$%[2]d") + " OR " +
 		occurredday.WithinAtSQL(transition.Start, "'day'", "$%[1]d", "$%[2]d") + ")))"
-	heldByRep := `m.kind = 'meeting' AND m.archived_at IS NULL
-		      AND ` + status + ` = '` + meetingoutcome.Held + `'
-		      AND ` + meetingIsTheirsSQL("$%[3]d") + `
-		      AND ` + within + `
-		      AND (%[4]s)`
 	err = tx.QueryRow(ctx, fmt.Sprintf(`
+		WITH held_meeting AS MATERIALIZED (
+		  SELECT m.id, `+transition.Began+` AS began
+		    FROM activity m `+transition.Join+`
+		   WHERE m.kind = 'meeting' AND m.archived_at IS NULL
+		     AND `+status+` = '`+meetingoutcome.Held+`'
+		     AND `+meetingIsTheirsSQL("$%[3]d")+`
+		     AND `+within+`),
+		next_step AS MATERIALIZED (
+		  SELECT task.id, held_meeting.id AS meeting_id
+		    FROM held_meeting JOIN activity task ON %[5]s
+		   WHERE task.created_at < $%[2]d),
+		readable_activity AS MATERIALIZED (%[4]s)
 		SELECT
-		  (SELECT count(*) FROM activity m `+transition.Join+` WHERE `+heldByRep+`),
-		  (SELECT count(*) FROM activity m `+transition.Join+` WHERE `+heldByRep+`
+		  (SELECT count(*) FROM held_meeting hm
+		    WHERE hm.id IN (SELECT id FROM readable_activity)),
+		  (SELECT count(*) FROM held_meeting hm
+		    WHERE hm.id IN (SELECT id FROM readable_activity)
 		      AND EXISTS (
-		        SELECT 1 FROM activity task
-		         WHERE %[6]s
-		           AND task.created_at < $%[2]d AND (%[5]s)))`,
-		startPos, endPos, hostPos, scope, taskScope, NextStepTaskAtSQL("task", "m", transition.Began)), args...).
+		        SELECT 1 FROM next_step ns
+		         WHERE ns.meeting_id = hm.id
+		           AND ns.id IN (SELECT id FROM readable_activity)))`,
+		startPos, endPos, hostPos, readable,
+		NextStepTaskAtSQL("task", "held_meeting", "held_meeting.began")), args...).
 		Scan(&held, &withNextStep)
 	if err != nil {
 		return 0, 0, fmt.Errorf("weekly: counting the week's meetings: %w", err)

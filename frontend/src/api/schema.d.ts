@@ -3695,6 +3695,34 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/finance/invoices/{id}/pdf": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        /**
+         * Open a mirrored invoice's own PDF, fetched from the accounting source.
+         * @description The id is a mirrored invoice's, as `recent_invoices` on the finance summary carries it.
+         *     The document is read from the connected source on each request and is never stored.
+         *     The caller needs the finance read grant and must be able to see the invoice's company;
+         *     an invoice they cannot see answers 404 like one that does not exist. 422 when the
+         *     connected source serves no documents (`invoice_documents` on the summary is false),
+         *     and 502 when the source could not be reached or answered something other than a PDF.
+         */
+        get: operations["downloadFinanceInvoicePdf"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/finance/source": {
         parameters: {
             query?: never;
@@ -33626,6 +33654,8 @@ export interface components {
             recent_invoices?: components["schemas"]["FinanceInvoice"][];
             /** @description True when the account has more invoices than `recent_invoices` carries. */
             truncated?: boolean;
+            /** @description True when the connected source serves each invoice's own document, which `downloadFinanceInvoicePdf` opens. False or absent means the card offers none. */
+            invoice_documents?: boolean;
         };
         /**
          * @description Why the figures are what they are — the six cases a company page must keep
@@ -65156,6 +65186,41 @@ export interface operations {
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
             422: components["responses"]["ValidationError"];
+        };
+    };
+    downloadFinanceInvoicePdf: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The PDF bytes; Content-Disposition names the file. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/pdf": string;
+                };
+            };
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
+            /** @description The accounting source could not be reached, or did not answer with a PDF. */
+            502: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
         };
     };
     getFinanceSource: {

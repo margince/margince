@@ -4116,6 +4116,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "finance.col.amount": "Số tiền",
   "finance.col.status": "Trạng thái",
   "finance.unnumbered": "Không số",
+  "finance.openInvoicePdf": "Mở hóa đơn {number} dạng PDF",
   "finance.moreInvoices": "Còn hóa đơn khác trong hệ thống kế toán",
   "finance.syncedFrom": "Từ {provider} · đồng bộ {when}",
   "finance.fromNeverSynced": "Từ {provider} · chưa đồng bộ",

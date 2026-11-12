@@ -42,6 +42,12 @@ func (fixtureSource) Customers(context.Context) ([]SourceCustomer, error) {
 	return nil, nil
 }
 
+// InvoiceDocument renders any invoice as a one-line PDF naming it, so a test
+// can tell which invoice's document it was handed.
+func (fixtureSource) InvoiceDocument(_ context.Context, externalInvoiceID string) (SourceDocument, error) {
+	return SourceDocument{ContentType: "application/pdf", Body: []byte("%PDF-1.4 " + externalInvoiceID)}, nil
+}
+
 func (fixtureSource) InvoicesFor(_ context.Context, customer string) (SourceLedger, error) {
 	var out SourceLedger
 	for period := fixtureInvoices - 1; period >= 0; period-- {
