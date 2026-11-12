@@ -181,6 +181,13 @@ jobs:
         run: |
           mkdir -p ~/.cache/golangci-lint
           touch "$RUNNER_TEMP/golangci-restored.stamp"
+      # In the image pnpm is on PATH, so the contract drift gate regenerates
+      # the frontend's types and needs its packages; on the runner it skips.
+      - name: Frontend packages for the contract drift gate
+        if: matrix.where == 'image'
+        working-directory: frontend
+        timeout-minutes: 5
+        run: pnpm install --frozen-lockfile --ignore-scripts
       - name: Compile what the gate compiles (make check-backend)
         working-directory: .
         env:
