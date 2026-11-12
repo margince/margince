@@ -45,8 +45,9 @@ func seedContentGateWeek(t *testing.T) *contentGateWeek {
 	readableMeeting := w.meeting(t, "Readable meeting", w.readableMeetingAt)
 	hiddenMeeting := w.meeting(t, "Limited meeting", hiddenMeetingAt)
 	w.limit(t, hiddenMeeting)
-	// The readable meeting's only next step is limited, and the limited one's
-	// is open to all: each count must drop the row it cannot read.
+	// The readable meeting's only next step is limited. The limited meeting's
+	// next step inherits its limit, and it is the rep's earliest task, so the
+	// task start must skip it.
 	w.limit(t, w.task(t, "Limited next step", w.readableMeetingAt.Add(time.Hour), &readableMeeting))
 	w.task(t, "Next step of a limited meeting", hiddenMeetingAt.Add(time.Hour), &hiddenMeeting)
 
