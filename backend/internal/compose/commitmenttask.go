@@ -216,9 +216,9 @@ func commitmentTaskEffect(
 		// the whole acceptance, and the approval stays unspent.
 		gone := ""
 		err = svc.RedeemAndApply(ctx, approvalID, CommitmentTaskKind, diffHash, func(tx pgx.Tx) error {
-			// Asked again here: a promise settled or dismissed between the
-			// precheck and this write redeems the card with nothing written,
-			// and the decider is told why.
+			// Asked again here. A promise settled or dismissed since the
+			// precheck redeems the card with nothing written. The decider is
+			// told why.
 			if open, err := commitmentStillOpenTx(ctx, tx, claims, proposal); err != nil || !open {
 				if err == nil {
 					gone = promiseClosedReason
@@ -486,8 +486,8 @@ func commitmentStillOpenTx(ctx context.Context, tx pgx.Tx, claims *contacts.Stor
 		proposal.SourceActivityID, proposal.Locator)
 }
 
-// obsoleteOr is the answer for a card's work: the read error when there is
-// one, else the reason it is no longer owed, else nil while it still is.
+// obsoleteOr is the answer for a card's work. It is the read error when there
+// is one, else the reason the work is no longer owed. It is nil while it is.
 func obsoleteOr(reason string, err error) error {
 	if err != nil || reason == "" {
 		return err
