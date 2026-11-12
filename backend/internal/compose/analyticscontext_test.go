@@ -38,11 +38,8 @@ func TestMarkAssertableNeedsTheForecastGrants(t *testing.T) {
 				Kind: crmcontracts.AnalyticsScopeKindOwner, Id: ptrUUID(actor.UserID),
 			}
 			markAssertable(ctx, actor, &scope)
-			if scope.Assertable == nil || *scope.Assertable != tc.want {
-				t.Fatalf("assertable = %v, want %v", scope.Assertable, tc.want)
-			}
-			if scope.Measurable == nil || !*scope.Measurable {
-				t.Fatalf("measurable = %v, want true", scope.Measurable)
+			if scope.Assertable == nil || scope.Measurable == nil || *scope.Assertable != tc.want || !*scope.Measurable {
+				t.Fatalf("assertable, measurable = %v, %v; want %v, true", scope.Assertable, scope.Measurable, tc.want)
 			}
 		})
 	}
@@ -79,11 +76,8 @@ func TestMarkAssertableFollowsTheWriteRoutesRule(t *testing.T) {
 			tc.actor.Permissions.Objects = forecastGrant(principal.ObjectGrant{Read: true, Create: true})
 			ctx := principal.WithActor(context.Background(), tc.actor)
 			markAssertable(ctx, tc.actor, &tc.scope)
-			if tc.scope.Assertable == nil || *tc.scope.Assertable != tc.want {
-				t.Fatalf("assertable = %v, want %v", tc.scope.Assertable, tc.want)
-			}
-			if measurable := tc.want || tc.scope.Kind == crmcontracts.AnalyticsScopeKindManagedTeams; tc.scope.Measurable == nil || *tc.scope.Measurable != measurable {
-				t.Fatalf("measurable = %v, want %v", tc.scope.Measurable, measurable)
+			if measurable := tc.want || tc.scope.Kind == crmcontracts.AnalyticsScopeKindManagedTeams; tc.scope.Assertable == nil || tc.scope.Measurable == nil || *tc.scope.Assertable != tc.want || *tc.scope.Measurable != measurable {
+				t.Fatalf("assertable, measurable = %v, %v; want %v, %v", tc.scope.Assertable, tc.scope.Measurable, tc.want, measurable)
 			}
 		})
 	}

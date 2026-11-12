@@ -1,0 +1,6 @@
+{
+  "verb": "download_finance_invoice_pdf",
+  "checks": [
+    "finance.read"
+  ]
+}

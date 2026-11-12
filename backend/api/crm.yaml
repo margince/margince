@@ -5499,6 +5499,36 @@ paths:
         '404': { $ref: '#/components/responses/NotFound' }
         '422': { $ref: '#/components/responses/ValidationError' }
 
+  /finance/invoices/{id}/pdf:
+    parameters:
+      - $ref: '#/components/parameters/Id'
+    get:
+      tags: [Finance]
+      operationId: downloadFinanceInvoicePdf
+      security: [ { bearerAuth: [] }, { cookieAuth: [] } ]
+      x-mcp-tool: { verb: download_finance_invoice_pdf, router: read_details, action: finance_invoice_pdf, tier: auto_execute, scope: read, served_by: route }
+      summary: Open a mirrored invoice's own PDF, fetched from the accounting source.
+      description: |
+        The id is a mirrored invoice's, as `recent_invoices` on the finance summary carries it.
+        The document is read from the connected source on each request and is never stored.
+        The caller needs the finance read grant and must be able to see the invoice's company;
+        an invoice they cannot see answers 404 like one that does not exist. 422 when the
+        connected source serves no documents (`invoice_documents` on the summary is false),
+        and 502 when the source could not be reached or answered something other than a PDF.
+      responses:
+        '200':
+          description: The PDF bytes; Content-Disposition names the file.
+          content:
+            application/pdf:
+              schema: { type: string, format: binary }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+        '502':
+          description: The accounting source could not be reached, or did not answer with a PDF.
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
   /finance/source:
     get:
       tags: [Finance]
@@ -47737,6 +47767,11 @@ components:
         truncated:
           type: boolean
           description: True when the account has more invoices than `recent_invoices` carries.
+        invoice_documents:
+          type: boolean
+          description: >-
+            True when the connected source serves each invoice's own document, which
+            `downloadFinanceInvoicePdf` opens. False or absent means the card offers none.
 
     FinanceSummaryState:
       type: string
