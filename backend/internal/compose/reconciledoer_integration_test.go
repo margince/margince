@@ -15,9 +15,9 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
-// An approved follow-up is the deal owner's next step as the task is written:
-// it reaches their own Worklist, not the shared unassigned queue. An owner who
-// can no longer hold work leaves it unassigned rather than failing the approval.
+// A legacy follow-up proposal, once approved, is the deal owner's next step as
+// the task is written. It reaches their own Worklist, not the unassigned queue.
+// An owner who can no longer hold work leaves it unassigned instead.
 func TestAnApprovedFollowUpIsTheDealOwnersOwnTask(t *testing.T) {
 	for name, c := range map[string]struct {
 		handOverTo func(e *reconcileEnv) *ids.UUID
@@ -42,11 +42,8 @@ func TestAnApprovedFollowUpIsTheDealOwnersOwnTask(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			e := setupReconcile(t)
 			deal := e.SeedDeal(t, "Owner follows up", e.pipeline, e.open, &e.Rep1)
-			e.seedInteraction(t, deal, "call", "Discovery", 1)
-			if err := e.reconcile(); err != nil {
-				t.Fatal(err)
-			}
-			approvalID, proposal := e.followUpApproval(t, deal)
+			call := e.seedInteraction(t, deal, "call", "Discovery", 1)
+			approvalID, proposal := e.stageLegacyFollowUp(t, deal, call)
 			// Written past the handover path, as a handover landing between
 			// the decision and its effect leaves the deal.
 			if to := c.handOverTo(e); to != nil {
