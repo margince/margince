@@ -56,10 +56,12 @@ func (e *ProjectKeyRefusedError) FieldFault() (field, code, message string) {
 	return projectKeyField, e.Code, e.Message
 }
 
+// keyTaken says only "not available". Uniqueness holds across the workspace,
+// so a project the caller cannot read also holds keys.
 func keyTaken(key string) error {
 	return &ProjectKeyRefusedError{
 		Code:    "key_taken",
-		Message: fmt.Sprintf("another live project already has the key %s; choose another key", key),
+		Message: fmt.Sprintf("the key %s is not available; choose another key", key),
 	}
 }
 

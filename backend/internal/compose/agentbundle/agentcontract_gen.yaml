@@ -5298,7 +5298,8 @@ paths:
         A sent key is stored in upper case and is refused with 422 naming `key` when it does not
         fit the key shape (`invalid_key`), is a word often bracketed in subject lines
         (`key_is_common_word`), is a word of a colleague's name (`key_is_colleague_name`), or is
-        held by a live project (`key_taken`). The key is read-only after create: it is what a
+        held by a live project (`key_taken`, worded "not available" because a project the caller
+        cannot read holds keys too). The key is read-only after create: it is what a
         human writes in a subject line to file mail under this project.
         `phase` is the starting phase, `initiative` when omitted; a project cannot start
         `closed` (422 `invalid_phase`). The creation row is appended to the phase history.
