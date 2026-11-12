@@ -60,8 +60,7 @@ func (e *financeEnv) ownerRefused(t *testing.T, statement string, args ...any) s
 		}
 	}()
 	_, err = owner.Exec(e.ctx, statement, args...)
-	var pgErr *pgconn.PgError
-	if errors.As(err, &pgErr) {
+	if pgErr, ok := errors.AsType[*pgconn.PgError](err); ok {
 		return pgErr.ConstraintName
 	}
 	if err != nil {
@@ -131,17 +130,29 @@ func TestTheDatabaseRefusesAMisattributedRow(t *testing.T) {
 		name, statement, want string
 		args                  []any
 	}{
-		{"an invoice on a company its link does not name", `UPDATE finance_invoice SET company_id = $2 WHERE id = $1`,
-			"finance_invoice_customer_link_fk", []any{invoice, other}},
-		{"a payment on a company its link does not name", `UPDATE finance_payment SET company_id = $2, invoice_id = NULL WHERE connection_id = $1`,
-			"finance_payment_customer_link_fk", []any{e.connection, other}},
-		{"a link to a customer the directory does not list", `INSERT INTO finance_customer_link
+		{
+			"an invoice on a company its link does not name", `UPDATE finance_invoice SET company_id = $2 WHERE id = $1`,
+			"finance_invoice_customer_link_fk",
+			[]any{invoice, other},
+		},
+		{
+			"a payment on a company its link does not name", `UPDATE finance_payment SET company_id = $2, invoice_id = NULL WHERE connection_id = $1`,
+			"finance_payment_customer_link_fk",
+			[]any{e.connection, other},
+		},
+		{
+			"a link to a customer the directory does not list", `INSERT INTO finance_customer_link
 			(connection_id, company_id, external_customer_id, sync_hash, source, captured_by)
 			VALUES ($1, $2, 'NEVER-LISTED', '', 'manual', 'human:test')`,
-			"finance_customer_link_directory_fk", []any{e.connection, other}},
-		{"a credit note that is not credited", `UPDATE finance_invoice SET credits_invoice_id = $2, status = 'open'
+			"finance_customer_link_directory_fk",
+			[]any{e.connection, other},
+		},
+		{
+			"a credit note that is not credited", `UPDATE finance_invoice SET credits_invoice_id = $2, status = 'open'
 			WHERE id = (SELECT id FROM finance_invoice WHERE connection_id = $1 AND id <> $2 AND credits_invoice_id IS NULL ORDER BY id LIMIT 1)`,
-			"finance_invoice_credit_note_status", []any{e.connection, invoice}},
+			"finance_invoice_credit_note_status",
+			[]any{e.connection, invoice},
+		},
 	} {
 		t.Run(test.name, func(t *testing.T) {
 			if got := e.ownerRefused(t, test.statement, test.args...); got != test.want {
