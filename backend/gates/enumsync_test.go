@@ -254,6 +254,8 @@ var enumBindings = map[string]struct{ pkgDir, typeName string }{
 	"report_execution.status":                      {"internal/contracts", "ReportingExecutionStatus"},
 	"sales_goal_plan_revision.kind":                {"internal/contracts", "SalesGoalEventKind"},
 	"sales_goal_plan_revision.origin":              {"internal/contracts", "SalesGoalRevisionOrigin"},
+	"sales_initiative_enrolment.record_type":       {"internal/contracts", "SalesInitiativeMemberRecordType"},
+	"sales_initiative_member.record_type":          {"internal/contracts", "SalesInitiativeMemberRecordType"},
 	"sales_target.period_kind":                     {"internal/contracts", "ReportingTargetInputPeriodKind"},
 	"sales_target.scope_kind":                      {"internal/contracts", "ForecastCallScopeKind"},
 	"sdr_handoff.status":                           {"internal/contracts", "HandoffAssigneeStatus"},

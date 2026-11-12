@@ -30,9 +30,9 @@ module to put a change in, read [modules.md](../modules.md).
 
 | | |
 |---|--:|
-| Tables | 362 |
-| Columns | 4396 |
-| Foreign keys | 609 |
+| Tables | 363 |
+| Columns | 4405 |
+| Foreign keys | 610 |
 | Owning areas | 38 |
 
 ## The 12 records everything else hangs off
@@ -117,7 +117,7 @@ erDiagram
 | [finance](finance.md) | 5 |
 | [forecasting](forecasting.md) | 4 |
 | [identity](identity.md) | 22 |
-| [initiatives](initiatives.md) | 4 |
+| [initiatives](initiatives.md) | 5 |
 | [integrations](integrations.md) | 5 |
 | [introductions](introductions.md) | 1 |
 | [knowledge](knowledge.md) | 3 |
@@ -427,8 +427,9 @@ erDiagram
 | [`runner_job`](agents.md#runner_job) | agents | 10 | 0 |
 | [`sales_goal_plan`](reporting.md#sales_goal_plan) | reporting | 10 | 1 |
 | [`sales_goal_plan_revision`](reporting.md#sales_goal_plan_revision) | reporting | 10 | 0 |
-| [`sales_initiative`](initiatives.md#sales_initiative) | initiatives | 18 | 3 |
+| [`sales_initiative`](initiatives.md#sales_initiative) | initiatives | 18 | 4 |
 | [`sales_initiative_baseline`](initiatives.md#sales_initiative_baseline) | initiatives | 6 | 0 |
+| [`sales_initiative_enrolment`](initiatives.md#sales_initiative_enrolment) | initiatives | 9 | 0 |
 | [`sales_initiative_member`](initiatives.md#sales_initiative_member) | initiatives | 6 | 0 |
 | [`sales_initiative_revision`](initiatives.md#sales_initiative_revision) | initiatives | 6 | 0 |
 | [`sales_target`](reporting.md#sales_target) | reporting | 12 | 1 |

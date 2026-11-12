@@ -14,6 +14,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/compose/credentialrepair"
 	"github.com/margince/margince/backend/internal/compose/erasedseattraces"
+	"github.com/margince/margince/backend/internal/compose/initiativeenrolment"
 	"github.com/margince/margince/backend/internal/compose/provensenders"
 	"github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/modules/identity"
@@ -111,6 +112,7 @@ func dataTaskCatalog(pool *pgxpool.Pool, now func() time.Time) []datatask.Task {
 		threadHoldClosesDataTask(pool),
 		retiredThreadSplitDataTask(),
 		mergeDroppedPrimaryDataTask(),
+		initiativeenrolment.Task(NewInitiativeStore(pool)),
 		heldContactsDataTask(pool),
 		technicalAddressDataTask(pool),
 		gmailDedupeScanDataTask(),

@@ -738,6 +738,7 @@
   "systemJob.graph_edge_reconcile": "Aktualisierung der Beziehungsstärke",
   "systemJob.handbook_corpus": "Indexierung des Handbuchs",
   "systemJob.import_run_sweep": "Prüfung abgebrochener Importe",
+  "systemJob.initiative_enrolment": "Mitgliedschaftsdaten der Initiativen",
   "systemJob.import_worker": "Import-Verarbeitung",
   "systemJob.installation_setup_read": "Einrichtungsprüfung",
   "systemJob.intro_advance": "Weiterführung von Vorstellungen",
