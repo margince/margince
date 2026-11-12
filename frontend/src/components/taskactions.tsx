@@ -23,7 +23,7 @@ import { useLocale, useT } from "../i18n";
 import { taskDueFields } from "../lib/activitybody";
 import { useCanWriteRecord } from "../lib/capability";
 import { TaskTimeField } from "./followuptaskfields";
-import { mostSpecificFirst, RecordLinks } from "./recordlinks";
+import { mostSpecificFirst, RecordLinkChips } from "./recordlinks";
 import { TaskAssignee } from "./taskassignee";
 import { TaskDetailReading, TaskDetailTitle } from "./taskdetailtext";
 import "./taskactions.css";
@@ -112,7 +112,7 @@ export function TaskCompleteCheck({
   );
 }
 
-/** Complete, snooze a dated task, or explicitly choose its next due day. */
+/** Complete, or snooze a dated task. */
 export function TaskQuickActions({
   activityId,
   version,
@@ -120,7 +120,6 @@ export function TaskQuickActions({
   dueHasTime,
   update,
   showComplete = true,
-  showDuePicker = false,
 }: Readonly<{
   activityId: string;
   version: number | undefined;
@@ -129,10 +128,6 @@ export function TaskQuickActions({
   dueHasTime?: boolean;
   update: ReturnType<typeof useTaskUpdate>;
   showComplete?: boolean;
-  // Whether the reader may name a day, rather than only step the due date on.
-  // Off by default, since a date box in every next-steps row is too heavy.
-  // The detail modal opts in: a reader came there to work on one task.
-  showDuePicker?: boolean;
 }>) {
   const t = useT();
   const readerZone = useViewerZone();
@@ -161,21 +156,16 @@ export function TaskQuickActions({
           {t("tasks.snooze")}
         </Button>
       )}
-      {showDuePicker && (
-        <TaskDueDatePick
-          activityId={activityId}
-          version={version}
-          dueAt={dueAt}
-          dueHasTime={dueHasTime}
-          update={update}
-        />
-      )}
     </>
   );
 }
 
-// The picker also dates tasks that have no deadline to snooze.
-function TaskDueDatePick({
+/**
+ * The day and time to move a task to. The detail modal draws it, where a
+ * reader came to work on one task; a date box in every row is too heavy.
+ * It also dates a task that has no deadline to snooze.
+ */
+export function TaskDueDatePick({
   activityId,
   version,
   dueAt,
@@ -250,6 +240,7 @@ export function TaskDetailDialog({
   update,
   openerFor,
   why,
+  title,
 }: Readonly<{
   activityId: string;
   // An archived company takes no new activity, so the verbs below would only
@@ -262,6 +253,8 @@ export function TaskDetailDialog({
   openerFor: SourceOpenerFor;
   // Why the task is on the list it was opened from, which only that list knows.
   why?: ReactNode;
+  // The name the opening card gave the task, so the two read alike.
+  title?: string;
 }>) {
   const t = useT();
   const { locale } = useLocale();
@@ -293,7 +286,7 @@ export function TaskDetailDialog({
     >
       <DrawerHead className="task-detail-head">
         <Heading size="large" id={titleId} className="t-h2">
-          <TaskDetailTitle task={task} />
+          {title ?? <TaskDetailTitle task={task} />}
         </Heading>
       </DrawerHead>
       <DrawerBody ref={body}>
@@ -308,8 +301,8 @@ export function TaskDetailDialog({
                 {/* In the same tab: the reader opened the panel to learn what the
                   task is about, and following its record is leaving for it. */}
                 {task.links && task.links.length > 0 && (
-                  <span>
-                    <RecordLinks links={mostSpecificFirst(task.links)} />
+                  <span className="task-detail-records">
+                    <RecordLinkChips links={mostSpecificFirst(task.links)} />
                   </span>
                 )}
                 {task.due_at ? (
@@ -401,28 +394,34 @@ function TaskDetailActions({
   return (
     <>
       {!logging && (
-        <TaskNextSteps
-          task={task}
-          className="form-actions task-detail-actions"
-        />
+        <TaskNextSteps task={task} className="task-detail-actions" />
       )}
       {canAct && (
-        <div ref={verbs} className="form-actions task-detail-actions">
-          <TaskQuickActions
-            activityId={task.id}
-            version={task.version}
-            dueAt={task.due_at}
-            dueHasTime={task.due_has_time}
-            update={update}
-            showDuePicker
-          />
-          <WhichDealDecline task={task} />
+        <div ref={verbs} className="task-detail-verbs">
+          <div className="task-detail-buttons">
+            <TaskQuickActions
+              activityId={task.id}
+              version={task.version}
+              dueAt={task.due_at}
+              dueHasTime={task.due_has_time}
+              update={update}
+            />
+            <Button onClick={() => setLogging(true)}>
+              {t("tasks.log.action")}
+            </Button>
+            <WhichDealDecline task={task} />
+          </div>
+          {/* After the buttons in reading order, as on screen. */}
+          <div className="task-detail-due">
+            <TaskDueDatePick
+              activityId={task.id}
+              version={task.version}
+              dueAt={task.due_at}
+              dueHasTime={task.due_has_time}
+              update={update}
+            />
+          </div>
         </div>
-      )}
-      {canAct && (
-        <Button onClick={() => setLogging(true)}>
-          {t("tasks.log.action")}
-        </Button>
       )}
       {logging && (
         <TaskOutcomeForm task={task} onLogged={() => setLogging(false)} />

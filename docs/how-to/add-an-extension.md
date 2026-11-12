@@ -42,7 +42,7 @@ review on its own.
    ```text
    module github.com/margince/margince/extensions/<name>
 
-   go 1.27.3
+   go 1.27.4
 
    replace github.com/margince/margince/backend => ../../backend
 
@@ -444,9 +444,31 @@ Custom fields are refused,
 not dropped. Plan the grants too. Filing needs the caller to hold your unit's object and the core `activity`
 one, and nothing declares that pair yet.
 
-**Your SQL names only your own tables**, in your tests too. `rt.Tx()` runs on the shared `margince_app` role,
-so a statement that names `contact` would work. So `TestExtensionSQLNamesOnlyTheUnitsOwnTables`
-(`backend/gates/extensionsqlscope_test.go`) reads **every `.go` file your unit ships**. It follows the string
+**Your SQL names only your own tables**, in your tests too. `rt.Tx()` runs each statement as the `ext_runtime`
+database role, which holds the `ext` schema and nothing on core tables. A statement that names `contact` is
+refused with `extension.ErrCoreTableRefused`. Reach core records through `tx.Core()`, the read calls and `Ingest`.
+
+Each call takes one statement. A string of statements, such as `RESET ROLE; DELETE ...`, is refused.
+
+The role guards against errors by trusted first-party units. It does not stop unit code that means harm. One
+statement can switch back to the login role and run a query string, and the check after it does not see that.
+So the static check below also refuses role changes (`SET ROLE`, `RESET ROLE`, `set_config('role', …)`) and
+`DO` blocks. It refuses `EXECUTE`, `PREPARE`, `CREATE FUNCTION` and functions that run a query string, such as
+`query_to_xml`.
+
+A separate database login for each unit would make the limit hold against such code. That is
+[issue 628](https://github.com/margince/margince/issues/628), closed until a unit from outside the first-party
+set is planned.
+
+`ErrCoreTableRefused` also appears when the role holds no rights on one of your own tables. That happens when a
+role other than the migrate role (`margince_owner`) created the table, because only its tables get the rights
+by default. A missing `ext_runtime` role shows as a different error that starts with
+`unitsql: confining the unit's SQL`. Fix a missing role with `make db-init`. Fix missing rights by applying
+your migrations as the migrate role.
+
+The role is the same for every unit, so the database lets your SQL name another unit's `ext` table. Only the
+static check below stops that. `TestExtensionSQLNamesOnlyTheUnitsOwnTables`
+(`backend/gates/extensionsqlscope_test.go`) also tells you earlier: it reads **every `.go` file your unit ships**. It follows the string
 values that a table name is written through in most cases, and refuses a table outside `ext.ext_<name>_…`.
 
 A unit
@@ -470,6 +492,62 @@ tables the earlier files created, and it is still its own file.
 **Index what your reads sort by.** Until an index covers that order, a list that reads the newest first and
 limits the page is a full scan. It also sorts every row the unit has ever written. That is no problem at the size a
 unit starts at, and it is at the size it reaches.
+
+## Declare the personal data in your tables
+
+Every table the unit creates needs one entry in the `Privacy` field. The core's eraser, subject export and
+merge check read it. Your unit never runs an erasure of its own, and never writes the audit entry for one.
+
+```go
+Privacy: []privacy.Table{{
+	Name:      "ext_<name>_note",
+	Links:     []privacy.Link{{Column: "activity_id", Record: privacy.Activity}},
+	Personal:  []string{"body"},
+	Retention: jurisdiction.CommercialCorrespondence,
+	AgeColumn: "received_at",
+}},
+```
+
+| Field | What to put in it |
+|---|---|
+| `Links` | The columns that hold the id of a core record: `contact`, `lead`, `company` or `activity`. |
+| `Personal` | The columns the core clears on erasure and serves in a subject export. See [what clearing does](#what-clearing-does). |
+| `Retention` | One of the core's own classes. A unit cannot add one. A retention sweep keeps a row as long as the class requires. |
+| `AgeColumn` | The `timestamptz NOT NULL` or `date NOT NULL` column a retention sweep counts from, to tell how old a row is. A table with personal columns must name one. A foreign key that names such a table, or a table its delete reaches, must be `ON DELETE CASCADE`. |
+
+A row belongs to a subject when one of its links names the subject. Erasure and export find rows by
+`contact`, `lead` or `activity`. A `company` link only feeds the merge check, so a table with personal columns
+needs one of the other three.
+
+The merge check refuses to merge away a record that a link names. Declare the same column in the unit's
+`Reach` field, and the merge moves it to the record that stays instead. `fixtures/extensions/crm-hello`
+declares its note table in both.
+
+A table with no `Links` and no `Personal` columns declares that it holds no personal data. A table with
+personal columns or an `AgeColumn` needs a `uuid` column named `id`.
+
+### What clearing does
+
+A column that can hold NULL (no value) is set to NULL. A column that must hold a value is set to the empty
+value of its type:
+
+| Column type | Cleared to |
+|---|---|
+| `text`, `varchar` | `''` |
+| `bytea` (binary data) | an empty `bytea` |
+| `jsonb` | `{}` |
+| Any other type | The boot refuses it |
+
+A `CHECK` that refuses the empty value fails the erasure. So let a personal column hold NULL.
+
+The core, not the unit, writes the audit entry. It writes one `anonymize` entry and one event for each row it
+clears.
+
+At start-up the core compares the declaration with the migrated schema and refuses to boot on a mismatch.
+Once the installation is set up, it also records a hash of the declaration against the unit's `Version`.
+A changed declaration then needs a new version. `TestEveryExtensionTableHasAPrivacyDeclaration` checks the schema
+half from source. [Extension privacy and
+retention](../reference/extension-privacy-and-retention.md#what-core-does-with-extension-rows) says what core does with a declaration.
 
 ## Own secrets
 

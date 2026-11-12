@@ -6,11 +6,15 @@
 package activities
 
 import (
+	"context"
 	"testing"
 	"time"
 
+	"github.com/jackc/pgx/v5"
+
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/platform/testdb"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -54,6 +58,39 @@ func TestARequestPastTheWaitingHorizonNeedsNoReply(t *testing.T) {
 	}
 	if got := moveAt(t, e, id, pastTheHorizon); got != crmcontracts.EmailSummaryMoveNeedsReply {
 		t.Fatalf("a request someone took reads %q past the horizon, want needs_reply", got)
+	}
+}
+
+func TestASeatsWaitingMailKeepsLegacyNullEvidence(t *testing.T) {
+	e := setupLoad(t)
+	id := seedEmailRequest(t, e, "Please send the figures", "commitment", OwedVerdictAsksUs)
+	store := storeKnowing(e)
+	listed := func(at time.Time) map[ids.UUID]bool {
+		t.Helper()
+		rows, err := store.WaitingRepliesForOwnerBefore(e.as(), at, WaitingPosition{}, e.rep)
+		if err != nil {
+			t.Fatal(err)
+		}
+		out := make(map[ids.UUID]bool, len(rows))
+		for _, row := range rows {
+			out[row.ActivityID] = true
+		}
+		return out
+	}
+	recent := requestInstant.AddDate(0, 0, 1)
+	if !listed(recent)[id] {
+		t.Fatal("recent mail addressed to the seat is missing")
+	}
+	testdb.WithFixtureTriggerDisabled(t, "activity_participant", "stamp_participant_domain_evidence", func(tx pgx.Tx) error {
+		_, err := tx.Exec(context.Background(), `UPDATE activity_participant
+ SET domain_evidence_at=NULL WHERE activity_id=$1 AND role='to'`, id)
+		return err
+	})
+	if !listed(recent)[id] {
+		t.Fatal("recent mail with legacy null evidence is missing")
+	}
+	if listed(pastTheHorizon)[id] {
+		t.Fatal("old unheld mail remains on the seat's waiting lane")
 	}
 }
 

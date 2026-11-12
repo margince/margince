@@ -12,8 +12,12 @@ config are the same. For those, this page links to [deploy-margince.md](deploy-m
 ## What the server needs
 
 - Linux with systemd, on `amd64` or `arm64`.
-- PostgreSQL with the pgvector extension, at the version `docker-compose.dev.yml` runs.
-- Redis, at the version `docker-compose.dev.yml` runs.
+- PostgreSQL 16 with the pgvector extension, the version
+  [`docker-compose.dev.yml`](../../docker-compose.dev.yml) runs. The package a Linux system ships
+  can be older: add the repository from
+  [postgresql.org](https://www.postgresql.org/download/linux/debian/) and install `postgresql-16`
+  and `postgresql-16-pgvector`. A PostgreSQL service in the cloud with pgvector works too.
+- Redis 7.
 - nginx, to serve the web app and send the api's paths to the api.
 - What each other feature needs, such as an object store or a mail relay:
   [What each feature needs](../reference/what-each-feature-needs.md).
@@ -59,10 +63,22 @@ programs answers `--version`.
 ## Set up the database once
 
 Create the two database roles, the database and the extensions as a PostgreSQL superuser, with
-`scripts/deploy/db-bootstrap.sql`. The bundle carries it in its `deploy` folder:
+`scripts/deploy/db-bootstrap.sql`. The bundle carries it in its `deploy` folder. Pick two passwords
+for the two roles; the settings below name them again.
+
+With PostgreSQL on this server, run it as the `postgres` user:
 
 ```sh
-psql "postgres://postgres:…@<host>:5432/postgres" \
+OWNER_PW="$(openssl rand -hex 24)" APP_PW="$(openssl rand -hex 24)"
+sudo -u postgres psql -v ON_ERROR_STOP=1 \
+  -v owner_pw="$OWNER_PW" -v app_pw="$APP_PW" \
+  -f /opt/margince/deploy/db-bootstrap.sql
+```
+
+With PostgreSQL on another host, connect as its superuser:
+
+```sh
+psql "postgres://postgres:…@<host>:5432/postgres" -v ON_ERROR_STOP=1 \
   -v owner_pw="$OWNER_PW" -v app_pw="$APP_PW" \
   -f /opt/margince/deploy/db-bootstrap.sql
 ```
@@ -79,12 +95,23 @@ sudo install -d -m 0750 -o root -g margince /etc/margince
 sudo install -m 0640 -o root -g margince /opt/margince/margince.env.example /etc/margince/margince.env
 ```
 
-Set [the least production needs](deploy-margince.md#the-least-production-needs). With nginx on the
-same server, also set these two:
+Set [the least production needs](deploy-margince.md#the-least-production-needs). With PostgreSQL,
+Redis and nginx on the same server, they and the two settings nginx needs read:
 
 ```sh
+MARGINCE_DSN=postgres://margince_app:<APP_PW>@127.0.0.1:5432/margince
+MARGINCE_OWNER_DSN=postgres://margince_owner:<OWNER_PW>@127.0.0.1:5432/margince
+MARGINCE_REDIS=127.0.0.1:6379
+MARGINCE_PUBLIC_BASE_URL=https://<your host>
+MARGINCE_LICENSE=<your license token>
 MARGINCE_ADDR=127.0.0.1:8080
 MARGINCE_TRUSTED_PROXIES=127.0.0.1/32
+```
+
+Add the vault root key, made once here:
+
+```sh
+echo "MARGINCE_KEYVAULT_ROOT_KEY=$(openssl rand -base64 32)" | sudo tee -a /etc/margince/margince.env >/dev/null
 ```
 
 For the first boot, start from the bundle's copy of `config/margince.example.yaml`, and point
@@ -166,3 +193,16 @@ sudo nginx -t && sudo systemctl reload nginx
 The api applies the new release's migrations when it starts. Keep the folder of the release before
 until the new one is serving. The order, and what a worker at the wrong release does, is in
 [Roll out in this order](deploy-margince.md#roll-out-in-this-order).
+
+### Add `ext_runtime` to an older database
+
+A database that ran `db-bootstrap.sql` before the `ext_runtime` role existed needs the role once, before the
+api of the new release starts. The owner role may not create roles, so run this as a superuser:
+
+```sql
+CREATE ROLE ext_runtime NOLOGIN NOINHERIT;
+GRANT ext_runtime TO margince_app;
+```
+
+If you skip it, the migrations stop with an error that prints these two statements, and the api does not
+start. Run them, then start the api again. A container install needs the same step.

@@ -57,6 +57,10 @@ An error answers `application/problem+json` (RFC 7807) with a machine `code` to 
 some: an `errors` array of `{field, code, message}` on a `422`, or `existing_id` on a duplicate. The
 statuses each operation can answer are listed with its responses in the OpenAPI document.
 
+An `errors` entry with the code `too_long` also carries `max`, the limit in characters, so a client
+can name the number in its reader's language. `httperr.TooLong` and `httperr.RequireWithin` write
+it, and `backend/gates/toolongcarriesmax_test.go` fails a `too_long` refusal that leaves it out.
+
 A path, query or header parameter whose value does not parse, or that is missing, answers
 `422 validation_error`, with `invalid_parameter` as the code of its entry. Every operation that can
 answer this declares the `422`: `backend/internal/compose/paramrefusaldeclared_test.go` sends each

@@ -13,6 +13,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/compose/attention"
 	"github.com/margince/margince/backend/internal/modules/approvals"
 	"github.com/margince/margince/backend/internal/modules/deals"
 	"github.com/margince/margince/backend/internal/platform/database"
@@ -80,7 +81,7 @@ func (e *scoutEnv) reopenReceiptsShowTheReasonToTheOwnerOnly(t *testing.T, deal 
 	if err != nil || len(owned) != 1 {
 		t.Fatalf("the owner reads %d changes (%v), want the reopen", len(owned), err)
 	}
-	if summary := dealReviveReceipt(owned[0]).Summary; !strings.HasPrefix(summary, `Reopened "Acme platform" in `) ||
+	if summary := attention.DealReviveReceipt(owned[0]).Summary; !strings.HasPrefix(summary, `Reopened "Acme platform" in `) ||
 		!strings.Contains(summary, "new_opportunity") {
 		t.Errorf("the owner's receipt = %q, want the reopen with its reason", summary)
 	}

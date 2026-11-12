@@ -4,6 +4,7 @@
 import type { ReactNode } from "react";
 import type { components } from "../../api/schema";
 import { AddressCountryMismatchBadge } from "../../components/addresscountrymismatch";
+import { RecordListsActions } from "../../components/addtoshortlist";
 import { mapCompanyUpdate } from "../../components/companyform";
 import {
   formatSizeBand,
@@ -20,7 +21,7 @@ import {
   RecordDetails,
 } from "../../design-system/recorddetails";
 import type { RecordRename } from "../../design-system/recordview";
-import { countryBeyondCity } from "../../format/address";
+import { postalLines } from "../../format/address";
 import { INDUSTRY_CODES, industryOptions } from "../../format/industry";
 import { useLocale, useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
@@ -75,15 +76,21 @@ function ListedRail(props: RailProps) {
     <RailBody
       {...props}
       lists={
-        found.length > 0 && (
-          <ul className="co-aside-chips">
-            {found.map((list) => (
-              <li key={list.id}>
-                <Badge>{list.name}</Badge>
-              </li>
-            ))}
-          </ul>
-        )
+        <>
+          {found.length > 0 && (
+            <ul className="co-aside-chips">
+              {found.map((list) => (
+                <li key={list.id}>
+                  <Badge>{list.name}</Badge>
+                </li>
+              ))}
+            </ul>
+          )}
+          <RecordListsActions
+            entityType="company"
+            entityId={props.company.id}
+          />
+        </>
       }
     />
   );
@@ -290,13 +297,18 @@ function useAboutRows(
         label: t(labelFor(LIFECYCLE_LABELS, value)),
       })),
     ),
-    compound("address", t("co.address.summary"), addressLine(company), {
-      flag: company.address_country_mismatch && (
-        <AddressCountryMismatchBadge
-          mismatch={company.address_country_mismatch}
-        />
-      ),
-    }),
+    compound(
+      "address",
+      t("co.address.summary"),
+      postalLines(company.address) || undefined,
+      {
+        flag: company.address_country_mismatch && (
+          <AddressCountryMismatchBadge
+            mismatch={company.address_country_mismatch}
+          />
+        ),
+      },
+    ),
     ...(wayIn
       ? [
           {
@@ -308,19 +320,6 @@ function useAboutRows(
         ]
       : []),
   ];
-}
-
-// "Munich, DE": the city and the country, the one line the design reads.
-function addressLine(company: Company): string | undefined {
-  const address = company.address;
-  const parts = [
-    address?.city,
-    countryBeyondCity(address?.city, address?.country),
-  ].filter((part): part is string => Boolean(part?.trim()));
-  if (parts.length > 0) {
-    return parts.join(", ");
-  }
-  return address?.line1?.trim() || undefined;
 }
 
 // The best way in: the contact the server names as the strongest route,

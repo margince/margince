@@ -23,6 +23,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/modules/consent"
 	"github.com/margince/margince/backend/internal/modules/privacy"
+	"github.com/margince/margince/backend/internal/modules/search"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -216,7 +217,7 @@ func TestErasureRemovesPIIEverywhereAndSticksViaSuppression(t *testing.T) {
 			pkg.Subject["full_name"], len(pkg.Emails), len(pkg.Activities), len(pkg.RawCapture))
 	}
 
-	if err := privacy.NewEraser(e.DB()).EraseContact(admin, contactID, "test"); err != nil {
+	if err := privacy.NewEraser(e.DB()).WithEdgeInvalidator(search.RecomputeEdgesForActivities).EraseContact(admin, contactID, "test"); err != nil {
 		t.Fatal(err)
 	}
 
@@ -253,7 +254,7 @@ func TestErasureRemovesPIIEverywhereAndSticksViaSuppression(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if err := privacy.NewEraser(e.DB()).EraseContact(admin, held, "test"); !errors.Is(err, apperrors.ErrConflict) {
+	if err := privacy.NewEraser(e.DB()).WithEdgeInvalidator(search.RecomputeEdgesForActivities).EraseContact(admin, held, "test"); !errors.Is(err, apperrors.ErrConflict) {
 		t.Fatalf("erasing a held subject → %v, want ErrConflict", err)
 	}
 }
@@ -281,7 +282,7 @@ func TestErasureRetiresTheSubjectsPreferenceToken(t *testing.T) {
 		t.Fatalf("the token resolves to contact %s, want the seeded subject %s", ref.ContactID.UUID, contactID)
 	}
 
-	if err := privacy.NewEraser(e.DB()).EraseContact(e.Admin(), contactID, "art-17"); err != nil {
+	if err := privacy.NewEraser(e.DB()).WithEdgeInvalidator(search.RecomputeEdgesForActivities).EraseContact(e.Admin(), contactID, "art-17"); err != nil {
 		t.Fatal(err)
 	}
 
@@ -357,7 +358,7 @@ func TestErasurePreservesActivityUnderTransitiveHold(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if err := privacy.NewEraser(e.DB()).EraseContact(admin, contactID, "test"); err != nil {
+	if err := privacy.NewEraser(e.DB()).WithEdgeInvalidator(search.RecomputeEdgesForActivities).EraseContact(admin, contactID, "test"); err != nil {
 		t.Fatalf("erasing an unheld contact → %v", err)
 	}
 
@@ -453,7 +454,7 @@ func TestEraseContactHonoursCommercialCorrespondenceFloor(t *testing.T) {
 	// distinction, so the deal is what the shielding now rests on.
 	e.SeedWonDealLinkedTo(t, email)
 
-	if err := privacy.NewEraser(e.DB()).EraseContact(admin, contactID, "test"); err != nil {
+	if err := privacy.NewEraser(e.DB()).WithEdgeInvalidator(search.RecomputeEdgesForActivities).EraseContact(admin, contactID, "test"); err != nil {
 		t.Fatalf("erasing the subject → %v", err)
 	}
 
@@ -528,7 +529,7 @@ func TestErasureRetiresTheSubjectsMessageIdentities(t *testing.T) {
 		t.Fatalf("claiming the subject's message identity: %v", err)
 	}
 
-	if err := privacy.NewEraser(e.DB()).EraseContact(admin, contactID, "art-17"); err != nil {
+	if err := privacy.NewEraser(e.DB()).WithEdgeInvalidator(search.RecomputeEdgesForActivities).EraseContact(admin, contactID, "art-17"); err != nil {
 		t.Fatal(err)
 	}
 

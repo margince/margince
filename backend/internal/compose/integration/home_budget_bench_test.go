@@ -21,18 +21,15 @@ import (
 
 	"github.com/margince/margince/backend/internal/compose/homecache"
 	"github.com/margince/margince/backend/internal/compose/integration/apptest"
+	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
-// Home's fixed-profile API budgets, per read, as p95. A cold read is the first
-// answer after the seat's kept Home answers are forgotten. It runs on a booted
-// app whose connections have served Home until Postgres stopped trying custom
-// plans, as on a running server. The first reads after a deploy or a pool
-// refill, on connections that hold no plan or are still trying, are not
-// measured.
+// Cold reads start without kept answers or prepared plans. The three-second
+// budget includes each fresh test app's first HTTP handshake and DB planning.
 const (
-	homeColdBudget = 500 * time.Millisecond
+	homeColdBudget = 3 * time.Second
 	homeWarmBudget = 250 * time.Millisecond
 	// homeColdRounds is how many cold reads the cold p95 is taken over.
 	homeColdRounds = 10
@@ -66,6 +63,9 @@ var (
 // corpus, cold and warm, and fails any read over its budget. Home has no
 // known-issue allowance: a slow worklist fails it like any other read.
 func TestHomeBudget(t *testing.T) {
+	if os.Getenv(database.SQLCensusDirEnv) != "" {
+		t.Fatal("SQL file capture changes latency; unset " + database.SQLCensusDirEnv + " for this gate")
+	}
 	assertHomeReadsCovered(t)
 	e := apptest.SetupApp(t)
 	if mode := e.Pool.Config().ConnConfig.DefaultQueryExecMode; mode != pgx.QueryExecModeCacheStatement {
@@ -76,6 +76,7 @@ func TestHomeBudget(t *testing.T) {
 	start := time.Now()
 	profile := seedHomeProfile(t, e, createDailySeats(t, e))
 	t.Logf("home-budget: seed %s", time.Since(start).Round(time.Millisecond))
+	database.ResetLargestSQLStatementBytes()
 
 	mode := homeBudgetModeFromEnv(t)
 	in := dailyInput{Seat: withPlantedBriefDelay(t, profile.Owner)}
@@ -89,9 +90,24 @@ func TestHomeBudget(t *testing.T) {
 		t.Logf("home-budget: row %s p50=%dms p95=%dms budget=%dms samples=%d 5xx=%d 422=%d",
 			r.Row, r.P50.Milliseconds(), r.P95.Milliseconds(), r.Budget.Milliseconds(), r.Samples, r.Status5xx, r.Status422)
 	}
-	if failures := HomeBudgetFailures(results, mode); len(failures) > 0 {
+	failures := HomeBudgetFailures(results, mode)
+	largest := database.LargestSQLStatementBytes()
+	t.Logf("home-budget: sql largest=%d bytes limit=%d bytes", largest, homeStatementBudget)
+	if failure := homeSQLSizeFailure(largest); failure != "" {
+		failures = append(failures, failure)
+	}
+	if len(failures) > 0 {
 		t.Fatalf("Home is over its budget:\n%s", strings.Join(failures, "\n"))
 	}
+}
+
+const homeStatementBudget = 160 << 10
+
+func homeSQLSizeFailure(largest int64) string {
+	if largest < int64(database.CensusMinBytes) || largest > homeStatementBudget {
+		return fmt.Sprintf("SQL size %d bytes is outside %d-%d bytes", largest, database.CensusMinBytes, homeStatementBudget)
+	}
+	return ""
 }
 
 // homePlannedSamples is how many samples each pass takes per read: one per
@@ -153,9 +169,8 @@ func homeRequired(rows []dailyRow, calls []dailyCall) []DailyResult {
 // That cache lives in the database, so a reboot alone leaves it filled.
 var homeCachedReads = map[string]homecache.Read{"worklist": homecache.Worklist, "magic": homecache.Magic}
 
-// runHomeCold boots the app afresh, warms it, and times each read's first
-// uncached answer homeColdRounds times. The probe on the warm app decides which
-// reads are timed.
+// Each cold sample uses a fresh app with no prepared plans or kept Home answer.
+// The original app is warmed separately for the warm pass.
 func runHomeCold(t *testing.T, e *apptest.AppEnv, in dailyInput) []dailyRow {
 	t.Helper()
 	f, s := homeColdFlow, in.Seat
@@ -170,22 +185,35 @@ func runHomeCold(t *testing.T, e *apptest.AppEnv, in dailyInput) []dailyRow {
 		}
 	}
 	samples := make([][]time.Duration, len(timed))
-	booted := coldBoot(t, e)
-	defer booted.Close()
-	warmHomePlans(t, e, booted, s, timed)
+	t.Log("home-budget: cold profile fresh-app=true prepared-plans=empty database-buffers=warm initial-connection-dial=excluded")
 	for range homeColdRounds {
-		since := forgetHomeAnswers(t, e, s)
 		for i, call := range timed {
+			booted := coldBoot(t, e)
+			if plans := preparedPlans(t, booted); len(plans) != 0 {
+				booted.Close()
+				t.Fatalf("cold %s already holds %d prepared plans", call.Name, len(plans))
+			}
+			since := forgetHomeAnswers(t, e, s)
+			stagesBefore := worklistStagesSoFar()
 			status, body, elapsed := s.Get(t, booted, call.Path)
+			if call.Name == "worklist" {
+				logWorklistStages(t, "cold "+s.Role, stagesBefore)
+			}
+			plans := preparedPlans(t, booted)
+			booted.Close()
+			if len(plans) == 0 {
+				t.Fatalf("cold %s used none of its fresh pool's prepared statements", call.Name)
+			}
 			if err := f.admit(dailyResponse{call, status, body}, &tallies[i]); err != nil {
 				t.Fatalf("cold %s: %v", call.Name, err)
 			}
 			samples[i] = append(samples[i], elapsed)
-		}
-		if missed := cacheHits(t, e, s, timed, since); len(missed) > 0 {
-			t.Fatalf("cold reads %v were served from home_read_cache, so they timed no assembly", missed)
+			if missed := cacheHits(t, e, s, []dailyCall{call}, since); len(missed) > 0 {
+				t.Fatalf("cold reads %v were served from home_read_cache, so they timed no assembly", missed)
+			}
 		}
 	}
+	warmHomePlans(t, e, s, timed)
 	for i, call := range timed {
 		spec := dailyRowSpec{flow: f.Name, id: f.ID, name: dailyRowName(f.Name, call), budget: f.Budget, gated: true}
 		rows = append(rows, dailyMeasuredRow(t, s, spec, samples[i], tallies[i]))
@@ -207,18 +235,18 @@ const homeWarmPasses = 20
 // every connection that holds it. Each pass forgets the kept answers first, so
 // each read assembles. A running server's connections are past the trials, so the
 // timed read pays the planning a running server pays.
-func warmHomePlans(t *testing.T, e *apptest.AppEnv, booted *apptest.AppEnv, s Seat, timed []dailyCall) {
+func warmHomePlans(t *testing.T, e *apptest.AppEnv, s Seat, timed []dailyCall) {
 	t.Helper()
-	before := preparedPlans(t, booted)
+	before := preparedPlans(t, e)
 	var trying []preparedStatement
 	for pass := 1; pass <= homeWarmPasses; pass++ {
 		forgetHomeAnswers(t, e, s)
 		for _, call := range timed {
-			if status, _, _ := s.Get(t, booted, call.Path); status != http.StatusOK {
+			if status, _, _ := s.Get(t, e, call.Path); status != http.StatusOK {
 				t.Fatalf("warming %s answered %d", call.Name, status)
 			}
 		}
-		after := preparedPlans(t, booted)
+		after := preparedPlans(t, e)
 		if trying = inCustomPlanTrials(before, after); len(trying) == 0 {
 			t.Logf("home-budget: warm after %d passes", pass)
 			return
@@ -336,9 +364,8 @@ func cacheHits(t *testing.T, e *apptest.AppEnv, s Seat, timed []dailyCall, since
 	return hits
 }
 
-// coldBoot opens a new app and pool over the seeded database. One connection
-// is dialled first, so a first read never times the dial. Every idle
-// connection is then cleared, so no plan or prepared statement survives.
+// The initial connection is dialled before timing; any on-demand pool growth
+// remains part of the cold read. Database buffers remain warm.
 func coldBoot(t *testing.T, e *apptest.AppEnv) *apptest.AppEnv {
 	t.Helper()
 	ctx := context.Background()

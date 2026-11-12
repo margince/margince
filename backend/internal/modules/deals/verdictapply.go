@@ -11,7 +11,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"maps"
 	"time"
 
 	"github.com/jackc/pgx/v5"
@@ -119,6 +118,8 @@ type VerdictInput struct {
 	// AsOwner binds the owner's agent as of the write's transaction. An
 	// owner who left or lost the deal grant since the read changes nothing.
 	AsOwner OwnerAuthorityTx
+	// moments are the cited activities as the write's transaction holds them.
+	moments map[string]CitedMoment
 }
 
 // VerdictResult is each change's outcome, in the order of the input, and
@@ -155,6 +156,10 @@ func (s *Store) ApplyVerdict(ctx context.Context, in VerdictInput) (VerdictResul
 		}
 		lock, current, ok, err := lockVerdictDeal(ctx, tx, in)
 		if err != nil || !ok {
+			return err
+		}
+		in.moments, err = lockCitedMoments(ctx, tx, in.Changes)
+		if err != nil {
 			return err
 		}
 		holds, err := in.EvidenceHolds(ctx, tx)
@@ -301,8 +306,7 @@ func applyVerdictChange(
 	} else if err != nil {
 		return "", err
 	}
-	evidence := map[string]any{CorrectionKindEvidenceKey: change.Correction, basisOwnerKey: in.Owner.String()}
-	maps.Copy(evidence, change.Evidence)
+	evidence := verdictEvidence(in, change)
 	if change.Correction == VerdictProbabilityCorrection {
 		if err := addProbabilityValuation(ctx, tx, in.DealID, current, evidence); err != nil {
 			return "", err

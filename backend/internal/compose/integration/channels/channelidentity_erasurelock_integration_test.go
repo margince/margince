@@ -36,6 +36,7 @@ import (
 	"github.com/margince/margince/backend/internal/compose/integration"
 	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/modules/privacy"
+	"github.com/margince/margince/backend/internal/modules/search"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/platform/testdb"
@@ -74,7 +75,7 @@ func lockWaitBoundedPool(t *testing.T) *pgxpool.Pool {
 // the entire erasure — no goroutine, no clock, no ordering to get lucky with.
 func eraseWhileAccountIsLocked(t *testing.T, e *integration.Env, contact ids.UUID, lockedAccount string) error {
 	t.Helper()
-	eraser := privacy.NewEraser(database.BindTo(lockWaitBoundedPool(t), ids.From[ids.WorkspaceKind](e.WS)))
+	eraser := privacy.NewEraser(database.BindTo(lockWaitBoundedPool(t), ids.From[ids.WorkspaceKind](e.WS))).WithEdgeInvalidator(search.RecomputeEdgesForActivities)
 	admin := e.Admin()
 	ctx := principal.WithWorkspaceID(context.Background(), e.WS)
 	var eraseErr error
@@ -160,7 +161,7 @@ func seedMailOnlySubject(t *testing.T, e *integration.Env, name, email string) i
 // whole erasure.
 func eraseWhileAddressIsLocked(t *testing.T, e *integration.Env, contact ids.UUID, lockedEmail string) error {
 	t.Helper()
-	eraser := privacy.NewEraser(database.BindTo(lockWaitBoundedPool(t), ids.From[ids.WorkspaceKind](e.WS)))
+	eraser := privacy.NewEraser(database.BindTo(lockWaitBoundedPool(t), ids.From[ids.WorkspaceKind](e.WS))).WithEdgeInvalidator(search.RecomputeEdgesForActivities)
 	admin := e.Admin()
 	ctx := principal.WithWorkspaceID(context.Background(), e.WS)
 	var eraseErr error

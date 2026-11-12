@@ -82,6 +82,7 @@ const HUMAN_SENSE_KEYS: Record<string, readonly string[]> = {
   en: [
     // A duplicate case asks whether two contacts are the same human being.
     "contactCase.intro",
+    "privacy.possibleDuplicates",
     "contactCase.pair.notSame",
     "contactCase.member.dismissedWith",
     "contactCase.evidence.different",
@@ -98,9 +99,7 @@ const HUMAN_SENSE_KEYS: Record<string, readonly string[]> = {
     "tab.relationships",
     // A colleague, a user, an admin, an operator — somebody with a seat here.
     "confirm.done.body",
-    "firstRun.microsoft.note",
     "firstRun.microsoft.tenantHint",
-    "firstRun.platform.redirectHint",
     "firstRun.platform.sub",
     "oauthApp.google.sub",
     "oauthApp.microsoft.sub",
@@ -177,6 +176,7 @@ const HUMAN_SENSE_KEYS: Record<string, readonly string[]> = {
     "analytics.team.targetBasis",
     // A duplicate case asks whether two contacts are the same human being; an owner is a human too.
     "contactCase.intro",
+    "privacy.possibleDuplicates",
     "contactCase.pair.notSame",
     "contactCase.member.dismissedWith",
     "contactCase.evidence.different",
@@ -233,6 +233,10 @@ const HUMAN_SENSE_KEYS: Record<string, readonly string[]> = {
     // The same refusal as the two above, for a colleague's queue.
     "worklist.owner.refused",
     "lists.audience.ownerTeams",
+    "lists.audience.ownerOnly",
+    "lists.audience.stewardOnly",
+    "lists.audience.youAndSteward",
+    "lists.audience.ownerAndSteward",
     "lists.team.allOwners",
     "ob.conv.team.body",
     "ob.conv.voice.speakerContinue",
@@ -339,6 +343,7 @@ const HUMAN_SENSE_KEYS: Record<string, readonly string[]> = {
 
     // A duplicate case asks whether two contacts are the same human being; an owner is a human too.
     "contactCase.intro",
+    "privacy.possibleDuplicates",
     "contactCase.pair.notSame",
     "contactCase.member.dismissedWith",
     "contactCase.evidence.different",
@@ -366,8 +371,7 @@ const HUMAN_SENSE_KEYS: Record<string, readonly string[]> = {
     "homeRepair.explain",
     // These name users, recipients and participants, not contact records.
     "approval.scheduled.rearm",
-    "sendPermission.appliesToAndMore_one",
-    "sendPermission.appliesToAndMore_other",
+    "compose.holdRefused",
     "sendPermission.appliesToSome_one",
     "sendPermission.appliesToSome_other",
     "sendPermission.ready",
@@ -484,9 +488,7 @@ const HUMAN_SENSE_KEYS: Record<string, readonly string[]> = {
     "common.permissionDenied",
     "deepread.sub",
     "extUnits.workspace.sub",
-    "firstRun.microsoft.note",
     "firstRun.microsoft.tenantHint",
-    "firstRun.platform.redirectHint",
     "firstRun.platform.sub",
     "ob.conv.invite.noBody",
     "ob.conv.team.body",
@@ -589,6 +591,7 @@ const HUMAN_SENSE_KEYS: Record<string, readonly string[]> = {
     "roomtab.manage.contactHint",
     "roomtab.manage.contactLabel",
     "roomtab.manage.contactOwner",
+    "roomtab.manage.expiredHint",
     "roomtab.manage.foot",
     "roomtab.manage.liveHint",
     "roomtab.manage.welcomeHint",
@@ -649,6 +652,10 @@ const HUMAN_SENSE_KEYS: Record<string, readonly string[]> = {
     "bulk.refusal.required",
     "bulk.titleReassign",
     "lists.audience.ownerTeams",
+    "lists.audience.ownerOnly",
+    "lists.audience.stewardOnly",
+    "lists.audience.youAndSteward",
+    "lists.audience.ownerAndSteward",
     "lists.team.allOwners",
     "client.sender",
     "client.unknownDetail",

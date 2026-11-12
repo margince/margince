@@ -541,7 +541,7 @@ func TestErasingAnItemDropsWhatTheModelReadOfIt(t *testing.T) {
 	if _, err := retention.PurgeActivities(e.Admin(), []ids.UUID{purged}, privacy.PurgeOwnerRule); err != nil {
 		t.Fatalf("purging the note: %v", err)
 	}
-	if err := privacy.NewEraser(e.DB()).EraseContact(e.Admin(), bea, "subject request"); err != nil {
+	if err := eraserWithGraph(e.DB()).EraseContact(e.Admin(), bea, "subject request"); err != nil {
 		t.Fatalf("erasing Bea: %v", err)
 	}
 	for name, id := range map[string]ids.UUID{"the purged note": purged, "the erased subject's note": subjects} {

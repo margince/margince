@@ -41,6 +41,7 @@ func cleanTitle(title string) (string, error) {
 		return "", &fieldError{
 			field: columnTitle,
 			code:  codeTooLong,
+			max:   titleLimit,
 			msg:   "title is longer than 255 characters",
 		}
 	}

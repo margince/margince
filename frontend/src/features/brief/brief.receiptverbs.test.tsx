@@ -82,16 +82,16 @@ it("draws no group at all when Margince changed nothing", async () => {
   });
   const { container, client } = render(<DoneForYou completed={null} />);
   // It draws nothing while loading too. So every empty answer, the receipts,
-  // Margince's changes and the done lane, has to come back before "nothing"
-  // means anything.
-  await waitFor(() =>
-    expect(
-      client
-        .getQueryCache()
-        .getAll()
-        .map((query) => query.state.status),
-    ).toEqual(["success", "success", "success"]),
-  );
+  // Margince's changes, the done lane and the viewer, has to come back before
+  // "nothing" means anything.
+  await waitFor(() => {
+    const statuses = client
+      .getQueryCache()
+      .getAll()
+      .map((query) => query.state.status);
+    expect(statuses.length).toBeGreaterThanOrEqual(3);
+    expect(statuses.every((status) => status === "success")).toBe(true);
+  });
   // An empty section would be a heading over nothing.
   expect(container.innerHTML).toBe("");
   expect(

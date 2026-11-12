@@ -1,5 +1,5 @@
 <!-- prose:plain -->
-<!-- describes: frontend/src/features/booking backend/internal/modules/activities/scheduling_occupancy.go backend/internal/modules/activities/scheduling_invitation.go backend/internal/modules/activities/scheduling_reminder.go backend/internal/modules/activities/scheduling_proposal.go backend/internal/modules/activities/scheduling_public.go backend/internal/modules/activities/scheduling_preview.go backend/internal/compose/publicbookingpreview.go backend/internal/modules/activities/scheduling_alias.go backend/internal/modules/activities/scheduling_used.go backend/internal/modules/activities/meetingmove.go backend/internal/modules/activities/meetingcancel.go backend/internal/modules/activities/meetingoutcomestart.go frontend/src/components/meetingoutcome.tsx -->
+<!-- describes: frontend/src/features/booking backend/internal/modules/activities/scheduling_occupancy.go backend/internal/modules/activities/scheduling_invitation.go backend/internal/modules/activities/scheduling_reminder.go backend/internal/modules/activities/scheduling_proposal.go backend/internal/modules/activities/scheduling_public.go backend/internal/modules/activities/scheduling_preview.go backend/internal/compose/publicbookingpreview.go backend/internal/modules/activities/scheduling_alias.go backend/internal/modules/activities/scheduling_used.go backend/internal/modules/activities/meetingmove.go backend/internal/modules/activities/meetingcancel.go backend/internal/modules/activities/meetingoutcomestart.go frontend/src/components/meetingoutcome.tsx frontend/src/components/recordmeetings.tsx -->
 # Meetings and booking
 
 Meetings and booking in Margince covers how a contact books time with you, and what happens to the invitation after that. You set your hours, calendars and booking link in **Settings → Meetings**; see [Your own settings](your-own-settings.md#meetings) for that set-up.
@@ -46,7 +46,7 @@ Also called: reschedule, change the time, postpone a meeting.
 ### How do I record what came of a meeting?
 A meeting that took place takes one press: **It happened** on its Worklist row, under
 **How did it go?**. A customer meeting that has started with no outcome also shows **It happened**
-and **Add notes** on the contact's **Meetings** tab and on the timeline. To say more, or to record a
+and **Add notes** on the timeline. The **Meetings** tab of the contact or company shows them too. To say more, or to record a
 no-show, press **Add notes**:
 1. Pick **It happened** or **No-show** and write what was said. Change any of your company's own fields
    for meetings here too.
@@ -59,6 +59,15 @@ wait for the meeting to start. A meeting with a date but no time waits until tha
 Press **Did not happen** on the row for a meeting that did not take place; it is recorded as canceled.
 A meeting with a Margince invitation takes only **It happened** or **No-show**, because its notes and date follow the invitation.
 Also called: mark a meeting held, meeting outcome, no-show, meeting happened.
+
+### Where do my Google Meet notes and transcripts go?
+Margince links the notes and transcript that Google Meet adds to a calendar event to that meeting in Margince. Google adds them after the call, so they appear after the next calendar sync. A file someone attached to the event by hand is not linked. The history of the meeting shows **Meeting notes linked from the calendar**.
+Also called: Gemini notes, meeting recording, Meet transcript, call notes.
+
+### How do I see every meeting with a company?
+To see a company's meetings in Margince, open the company's **Meetings** tab. It lists every meeting filed under the company, its deals or the contacts who work there.
+The next meeting leads, with who is in it and **Prepare brief**. **Upcoming** lists the meetings after it, and **Held** the ones already past, newest first. To book a meeting, open the contact on the **Contacts** tab and use their **Meetings** tab.
+Also called: account meetings, company calendar.
 
 ### How do I cancel a meeting?
 To cancel a Margince meeting, open it from its line on the timeline and choose **Cancel meeting**. Confirm "Cancel this meeting and notify the attendee?".

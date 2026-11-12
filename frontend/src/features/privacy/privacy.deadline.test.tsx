@@ -64,7 +64,7 @@ function stub(): Sent[] {
           return json(
             {
               id: "d1",
-              kind: "access",
+              kind: "rectify",
               subject_ref: "anna@acme.test",
               status: "open",
               due_at: COMPUTED.due_at,
@@ -82,7 +82,7 @@ function stub(): Sent[] {
   return sent;
 }
 
-async function openAccessForm(user: ReturnType<typeof userEvent.setup>) {
+async function openCorrectionForm(user: ReturnType<typeof userEvent.setup>) {
   rtlRender(
     <QueryClientProvider
       client={
@@ -95,7 +95,7 @@ async function openAccessForm(user: ReturnType<typeof userEvent.setup>) {
     </QueryClientProvider>,
   );
   await user.click(await screen.findByRole("button", { name: /new request/i }));
-  await pickOption(user, screen.getByLabelText(/kind/i), "Access");
+  await pickOption(user, screen.getByLabelText(/kind/i), "Correction");
   await user.type(
     screen.getByLabelText(/subject reference/i),
     "anna@acme.test",
@@ -120,14 +120,14 @@ describe("the deadline field", () => {
   it("shows the computed deadline and its rule, and opens without a date of its own", async () => {
     stub();
     const user = userEvent.setup();
-    await openAccessForm(user);
+    await openCorrectionForm(user);
     expect(screen.getByRole("button", { name: /open request/i })).toBeEnabled();
   });
 
   it("refuses an earlier deadline that is not earlier", async () => {
     stub();
     const user = userEvent.setup();
-    await openAccessForm(user);
+    await openCorrectionForm(user);
     await user.type(
       screen.getByRole("textbox", { name: /earlier deadline/i }),
       "20/08/2026",
@@ -142,7 +142,7 @@ describe("the deadline field", () => {
   it("sends the day a late request arrived, and asks the deadline from that day", async () => {
     const sent = stub();
     const user = userEvent.setup();
-    await openAccessForm(user);
+    await openCorrectionForm(user);
     await user.type(
       screen.getByRole("textbox", { name: /received on/i }),
       "01/07/2026",
@@ -162,7 +162,7 @@ describe("the deadline field", () => {
       expect(
         sent.find((s) => s.key === "POST /data-subject-requests")?.body,
       ).toEqual({
-        kind: "access",
+        kind: "rectify",
         subject_ref: "anna@acme.test",
         received_at: "2026-07-01T04:00:00.000Z",
       }),

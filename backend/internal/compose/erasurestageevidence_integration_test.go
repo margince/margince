@@ -97,7 +97,7 @@ func TestErasureClearsTheStageEvidenceQuotingAnErasedMessage(t *testing.T) {
 	kept := seedTranscript(t, e, "1: Tom: Terms?\n2: "+keptQuote)
 	evidenceQuoting(t, e, kept, keptQuote)
 
-	if err := privacy.NewEraser(e.DB()).EraseContact(e.Admin(), contact, "subject request"); err != nil {
+	if err := eraserWithGraph(e.DB()).EraseContact(e.Admin(), contact, "subject request"); err != nil {
 		t.Fatalf("EraseContact → %v", err)
 	}
 
@@ -136,7 +136,7 @@ func TestAQuotationWrittenAfterTheErasureIsNotStored(t *testing.T) {
 	erased := seedTranscript(t, e, "1: Tom: Where are we on terms?\n2: "+quotedAcceptance)
 	e.WsExec(t, `INSERT INTO activity_link (activity_id, entity_type, contact_id)
 		VALUES ($1, 'contact', $2)`, erased, contact)
-	if err := privacy.NewEraser(e.DB()).EraseContact(e.Admin(), contact, "subject request"); err != nil {
+	if err := eraserWithGraph(e.DB()).EraseContact(e.Admin(), contact, "subject request"); err != nil {
 		t.Fatalf("EraseContact → %v", err)
 	}
 

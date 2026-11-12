@@ -38,12 +38,6 @@ afterEach(() => {
 
 const READY = { name: /recipients checked/i };
 
-const NO_DEAL = {
-  reason_code: "no_compatible_evidence",
-  decided_by: "machine",
-  resolved_category: "active_deal_followup",
-} as const;
-
 /** The composer's routes, with the preview door answered by `engine`. */
 function stubEngine(
   engine: (addresses: string[]) => Preview | Response,
@@ -134,13 +128,22 @@ describe("a refused send and the check after it", () => {
     expect(screen.queryByRole("alert")).toBeNull();
   });
 
+  // The preview allowed it and the send-time check did not: the server's
+  // answer at the press is the newer one until the next check.
   it("clears the refusal when a newer check on the same message allows it", async () => {
-    let fixed = false;
+    let checks = 0;
     stubEngine(
-      (addresses) =>
-        fixed
-          ? allowedPreview(addresses)
-          : refusedPreview(addresses[0] ?? "", NO_DEAL),
+      (addresses) => {
+        checks += 1;
+        const preview = allowedPreview(addresses);
+        return {
+          ...preview,
+          recipients: preview.recipients.map((r) => ({
+            ...r,
+            basis: `check-${checks}`,
+          })),
+        };
+      },
       refusedSend([
         {
           address: "a@x.com",
@@ -152,7 +155,7 @@ describe("a refused send and the check after it", () => {
     const { queryClient } = openComposer();
     await screen.findByRole("combobox", { name: WHY_ASK });
     await fillSendableForm();
-    await screen.findByText("Choose the deal for this follow-up.");
+    await screen.findByRole("button", { name: /recipients checked/i });
 
     await userEvent.click(screen.getByRole("button", { name: "Send" }));
     const alert = await screen.findByRole("alert");
@@ -163,7 +166,6 @@ describe("a refused send and the check after it", () => {
       screen.getAllByText("Choose the deal for this follow-up."),
     ).toHaveLength(1);
 
-    fixed = true;
     await queryClient.invalidateQueries({ queryKey: ["send-permission"] });
     expect(
       await screen.findByRole("button", { name: /recipients checked/i }),
@@ -219,8 +221,7 @@ describe("an edited message is a different message", () => {
             title: "Conflict",
             details: {
               review_id: "r-1",
-              available_actions: ["overrule"],
-              overrulable: [{ contact_id: "c-1", category: "marketing" }],
+              available_actions: ["direct_send"],
               refusals: [
                 {
                   address: "a@x.com",
@@ -305,7 +306,7 @@ describe("several recipients", () => {
     expect(screen.queryByText(/a@x\.com\./)).toBeNull();
   });
 
-  it("counts the other refused recipients of a refused send", async () => {
+  it("gives each refused recipient of a refused send its own line", async () => {
     stubEngine(
       (addresses) => allowedPreview(addresses),
       refusedSend([
@@ -322,11 +323,12 @@ describe("several recipients", () => {
     await fillSendableForm();
     await userEvent.click(screen.getByRole("button", { name: "Send" }));
 
-    // The stop nobody here can lift is the one explained first.
     const alert = await screen.findByRole("alert");
-    expect(alert).toHaveTextContent(/objected to marketing/i);
     expect(alert).toHaveTextContent(
-      "This applies to c@x.com and 1 other recipient.",
+      "a@x.com: Choose the deal for this follow-up.",
+    );
+    expect(alert).toHaveTextContent(
+      /c@x\.com: The recipient objected to marketing/,
     );
   });
 });

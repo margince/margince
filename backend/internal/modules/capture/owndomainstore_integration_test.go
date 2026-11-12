@@ -56,6 +56,49 @@ func ownDomainWorkspace(t *testing.T) (context.Context, *database.DB) {
 	return adminOwnDomainContext(ctx, ws), database.BindTo(pool, ids.From[ids.WorkspaceKind](ws))
 }
 
+func TestReaderAddressesBatchesTheLiveSeatRead(t *testing.T) {
+	ctx, db := ownDomainWorkspace(t)
+	user := ids.NewV7()
+	if err := db.Tx(ctx, func(tx pgx.Tx) error {
+		_, err := tx.Exec(ctx, `INSERT INTO app_user (id, email, display_name, status)
+			VALUES ($1, 'Reader <reader@example.test>', 'Reader', 'active')`, user)
+		return err
+	}); err != nil {
+		t.Fatal(err)
+	}
+	ctx = principal.WithActor(ctx, principal.Principal{Type: principal.PrincipalHuman, ID: "human:" + user.String(), UserID: user})
+	ctx, meter := database.WithStatementMeter(ctx)
+	var addresses []string
+	if err := db.Tx(ctx, func(tx pgx.Tx) error {
+		var err error
+		addresses, err = capture.NewOwnDomainStore(db).ReaderAddressesTx(ctx, tx, user)
+		return err
+	}); err != nil {
+		t.Fatal(err)
+	}
+	if !slices.Contains(addresses, "reader@example.test") {
+		t.Errorf("reader addresses = %v, want the live seat's login", addresses)
+	}
+	if got := meter.Cost().Exchanges; got != 3 {
+		t.Errorf("reader address read used %d pgx calls, want BEGIN, one batch, COMMIT", got)
+	}
+	if err := db.Tx(ctx, func(tx pgx.Tx) error {
+		_, err := capture.NewOwnDomainStore(db).ReaderAddressesTx(ctx, tx, ids.NewV7())
+		return err
+	}); !errors.Is(err, apperrors.ErrPermissionDenied) {
+		t.Errorf("another seat's addresses returned %v, want permission denied", err)
+	}
+	missing := ids.NewV7()
+	ctx = principal.WithActor(ctx, principal.Principal{Type: principal.PrincipalHuman, UserID: missing})
+	if err := db.Tx(ctx, func(tx pgx.Tx) error {
+		var err error
+		addresses, err = capture.NewOwnDomainStore(db).ReaderAddressesTx(ctx, tx, missing)
+		return err
+	}); err != nil || len(addresses) != 0 {
+		t.Errorf("missing seat returned addresses %v, error %v", addresses, err)
+	}
+}
+
 // An administrator adding a domain IS the human vouching for it, so it takes
 // effect without a second confirmation — and it is what makes the drop fire.
 func TestAnAdministratorsDomainIsVerifiedAndSuppressesMail(t *testing.T) {

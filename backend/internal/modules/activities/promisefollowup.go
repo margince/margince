@@ -109,6 +109,12 @@ func promiseFollowUpSQL(later, src, until string) string {
 // contact's address on its counterparty or a To/Cc row. A Bcc copy is not mail
 // they saw, and a linked contact the headers do not name was not written to.
 func promiseRecipientAddressedSQL(row, contact string) string {
+	return recipientAddressedSQL(row, contact, "'to', 'cc'")
+}
+
+// recipientAddressedSQL is promiseRecipientAddressedSQL over the header roles
+// named in roles, a compile-time SQL list.
+func recipientAddressedSQL(row, contact, roles string) string {
 	addresses := `SELECT lower(btrim(known.email)) FROM contact_email known
 	     WHERE known.contact_id = ` + contact + ` AND known.archived_at IS NULL`
 	return `((` + row + `.counterparty_email IN (` + addresses + `)
@@ -116,6 +122,6 @@ func promiseRecipientAddressedSQL(row, contact string) string {
 	         WHERE blind.activity_id = ` + row + `.id AND blind.role = 'bcc'
 	           AND lower(btrim(blind.address)) = ` + row + `.counterparty_email))
 	  OR EXISTS (SELECT 1 FROM activity_participant told
-	       WHERE told.activity_id = ` + row + `.id AND told.role IN ('to', 'cc')
+	       WHERE told.activity_id = ` + row + `.id AND told.role IN (` + roles + `)
 	         AND lower(btrim(told.address)) IN (` + addresses + `)))`
 }

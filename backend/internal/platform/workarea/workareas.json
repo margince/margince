@@ -73,7 +73,6 @@
     "addWeeklyPlanCommitment": "business",
     "advanceDeal": "business",
     "advanceProjectPhase": "business",
-    "allowContact": "compliance",
     "annotateMorningBrief": "business",
     "answerCalendarInvitation": "business",
     "answerReportingQuestionCard": "business",
@@ -430,7 +429,9 @@
     "getReportingTarget": "business",
     "getResponseMetrics": "business",
     "getRetentionSettings": "compliance",
+    "getSalesGoalPlan": "business",
     "getSalesInitiative": "business",
+    "getSalesProgress": "business",
     "getSavedView": "business",
     "getScheduledSend": "business",
     "getSchedulingCalendars": "business",
@@ -599,8 +600,10 @@
     "listRetentionPolicies": "compliance",
     "listRoles": "admin_settings",
     "listSalesDecisions": "business",
+    "listSalesGoalSellers": "business",
     "listSalesInitiativeMembers": "business",
     "listSalesInitiatives": "business",
+    "listSalesProgressDeals": "business",
     "listSavedViews": "business",
     "listScheduledSends": "business",
     "listSdrUpcomingMeetings": "business",
@@ -926,7 +929,6 @@
     "addWeeklyPlanCommitment": "worklist",
     "advanceDeal": "deals",
     "advanceProjectPhase": "projects",
-    "allowContact": "consent",
     "annotateMorningBrief": "worklist",
     "answerCalendarInvitation": "activities",
     "answerReportingQuestionCard": "reports",
@@ -1125,6 +1127,7 @@
     "discardDomainQuestion": "capture_triage",
     "discardMailDraft": "activities",
     "discardReportingReportDraft": "reports",
+    "discardSalesGoalDraft": "reports",
     "disconnectChannel": "connectors",
     "disconnectConnector": "connectors",
     "disconnectFinanceSource": "finance_source",
@@ -1375,7 +1378,9 @@
     "getResponseMetrics": "worklist",
     "getRetainedEmailSignature": "privacy_notices",
     "getRetentionSettings": "retention",
+    "getSalesGoalPlan": "reports",
     "getSalesInitiative": "reports",
+    "getSalesProgress": "reports",
     "getSavedView": "lists",
     "getScheduledSend": "activities",
     "getSchedulingCalendars": "scheduling",
@@ -1567,8 +1572,10 @@
     "listRetentionPolicies": "retention",
     "listRoles": "members",
     "listSalesDecisions": "reports",
+    "listSalesGoalSellers": "reports",
     "listSalesInitiativeMembers": "reports",
     "listSalesInitiatives": "reports",
+    "listSalesProgressDeals": "reports",
     "listSavedViews": "lists",
     "listScheduledSends": "activities",
     "listSdrUpcomingMeetings": "reports",
@@ -1661,6 +1668,7 @@
     "publishCapturedContact": "contacts",
     "publishReportingFramework": "reports",
     "publishReportingReportDraft": "reports",
+    "publishSalesGoalPlan": "reports",
     "purgeCaptureExclusion": "capture_rules",
     "putAnchorCompany": "company_profile",
     "putOnboardingState": "own_profile",
@@ -1807,6 +1815,7 @@
     "saveNotificationPreference": "own_profile",
     "saveReportingReportDraft": "reports",
     "saveRetainedEmailSignature": "privacy_notices",
+    "saveSalesGoalDraft": "reports",
     "scrapeCompany": "companies",
     "search": "search",
     "searchContext": "search",
@@ -1955,7 +1964,8 @@
     "withdrawExistingCustomerNotice": "consent",
     "withdrawLegalReview": "legal_reviews",
     "withdrawOwnershipOffer": "sharing",
-    "withdrawOwnershipRequest": "sharing"
+    "withdrawOwnershipRequest": "sharing",
+    "withdrawSalesGoalPlan": "reports"
   },
   "verb_placements": {
     "accept_applied_deal_change": [
@@ -2023,9 +2033,6 @@
     ],
     "advance_project_phase": [
       "projects"
-    ],
-    "allow_contact": [
-      "consent"
     ],
     "annotate_brief": [
       "worklist"
@@ -4114,9 +4121,6 @@
     ],
     "advance_project_phase": [
       "business"
-    ],
-    "allow_contact": [
-      "compliance"
     ],
     "annotate_brief": [
       "business"

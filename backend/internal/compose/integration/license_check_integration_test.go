@@ -37,7 +37,7 @@ type swappableToken struct {
 	reads int
 }
 
-func (s *swappableToken) source() (string, error) {
+func (s *swappableToken) source(context.Context) (string, error) {
 	s.reads++
 	return s.token, s.err
 }
@@ -165,14 +165,14 @@ func TestCheckNowReadsATokenReplacedInTheDeclaredFile(t *testing.T) {
 			if err != nil {
 				t.Fatalf("loading the licence settings: %v", err)
 			}
-			declared := compose.SealedLicenseTokenSource(context.Background(), nil, nil, cfg, slog.New(slog.DiscardHandler))
+			declared := compose.SealedLicenseTokenSource(nil, nil, cfg, slog.New(slog.DiscardHandler))
 			booted := false
-			e := licenseCheckApp(t, func() (string, error) {
+			e := licenseCheckApp(t, func(ctx context.Context) (string, error) {
 				if !booted {
 					booted = true
 					return "", nil
 				}
-				return declared()
+				return declared(ctx)
 			})
 
 			writeToken(t, path, "a-replaced-token-the-module-refuses")
@@ -183,7 +183,7 @@ func TestCheckNowReadsATokenReplacedInTheDeclaredFile(t *testing.T) {
 			if after.State != "rejected" {
 				t.Errorf("state after Check now = %q, want rejected — the replaced file was not read", after.State)
 			}
-			got, err := declared()
+			got, err := declared(t.Context())
 			if err != nil || got != "a-replaced-token-the-module-refuses" {
 				t.Errorf("the declared source answers %q, %v; want the replaced token", got, err)
 			}

@@ -30,6 +30,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/dealrooms"
 	"github.com/margince/margince/backend/internal/modules/deals"
 	"github.com/margince/margince/backend/internal/modules/identity"
+	"github.com/margince/margince/backend/internal/modules/reporting"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/deployconfig"
@@ -80,7 +81,7 @@ func contractAPI(srv Server, pool *pgxpool.Pool, identitySvc *identity.Service) 
 		// Innermost, so it sees the handler's own status.
 		forgetHomeOnWrite(srv.homeCache, srv.log),
 		agentGate(registry, staging, provider, provider, importsFor(&srv), tagSeam(pool), leadDisqualifier{store: newContactsStore(InstallationDB(pool))}, sendStore(pool, srv.send), gate),
-		idempotency(pool, replayProbes(staging.svc, contracts.NewStore(InstallationDB(pool), ContractFreezeRate(pool), ContractTimezone()), dealrooms.NewStore(InstallationDB(pool)), deals.NewStore(InstallationDB(pool), DealsInstallation()), InstallationDB(pool)), schedulingReplayRestore(sendStore(pool, srv.send))),
+		idempotency(pool, replayProbes(staging.svc, contracts.NewStore(InstallationDB(pool), ContractFreezeRate(pool), ContractTimezone()), dealrooms.NewStore(InstallationDB(pool)), deals.NewStore(InstallationDB(pool), DealsInstallation()), srv.reportMetrics, InstallationDB(pool)), schedulingReplayRestore(sendStore(pool, srv.send))),
 		// Outermost, so the measurement covers the admission gate and the
 		// idempotency replay: a refusal that cost a database read is a slow
 		// answer worth seeing. The wrapper applies it after chi has matched,
@@ -113,7 +114,7 @@ func chiRoutePattern(r *http.Request) string {
 // retires the replay promise for that route silently instead of loudly.
 func replayProbes(
 	approvalsSvc *approvals.Service, contractsStore *contracts.Store, dealRoomsStore *dealrooms.Store,
-	dealsStore *deals.Store, db *database.DB,
+	dealsStore *deals.Store, reports *reporting.Service, db *database.DB,
 ) map[string]replayProbe {
 	return map[string]replayProbe{
 		// A Deal Room's visibility is its parent deal's, which only its own
@@ -146,6 +147,11 @@ func replayProbes(
 		probeDealSuggestion: func(ctx context.Context, id ids.UUID) error {
 			_, err := dealsStore.GetSuggestion(ctx, id)
 			return err
+		},
+		// A plan answer carries the seller's draft and history, which the
+		// reporting module alone decides who may read.
+		probeSalesGoalPlan: func(ctx context.Context, owner ids.UUID) error {
+			return reports.GoalPlanVisible(ctx, owner)
 		},
 	}
 }

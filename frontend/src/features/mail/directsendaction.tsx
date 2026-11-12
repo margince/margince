@@ -43,9 +43,19 @@ const SETTLED_STATES = ["resolved", "superseded", "cancelled"];
 export function DirectSendAction({
   review,
   onSent,
-}: Readonly<{ review: SendReview; onSent?: (activityId: string) => void }>) {
+  open: shownOpen,
+  onOpenChange,
+}: Readonly<{
+  review: SendReview;
+  onSent?: (activityId: string) => void;
+  /** Controlled: the composer opens the modal from its own Send press. */
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
+}>) {
   const t = useT();
-  const [open, setOpen] = useState(false);
+  const [ownOpen, setOwnOpen] = useState(false);
+  const open = shownOpen ?? ownOpen;
+  const setOpen = onOpenChange ?? setOwnOpen;
 
   const opened = useQuery({
     queryKey: ["communication-review", review.reviewId],

@@ -21,7 +21,7 @@ func TestConsentRoutesSplitByWhoseDecisionTheyHold(t *testing.T) {
 		asksFirst bool
 	}
 	writes := map[string]weight{
-		"recordConsent": {scopeWrite, true}, "allowContact": {scopeWrite, true}, "revokeOverride": {scopeWrite, true},
+		"recordConsent": {scopeWrite, true}, "revokeOverride": {scopeWrite, true},
 		"liftSuppression": {scopeWrite, true}, "recordQualifyingEvent": {scopeWrite, true},
 		"retractQualifyingEvent": {scopeWrite, true},
 		"issueDoubleOptIn":       {scopeSend, true}, "sendPrivacyNotice": {scopeSend, true}, "requestDetailsConfirmation": {scopeSend, true},

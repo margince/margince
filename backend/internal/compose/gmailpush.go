@@ -37,6 +37,7 @@ import (
 
 	"github.com/jackc/pgx/v5/pgxpool"
 
+	"github.com/margince/margince/backend/internal/compose/oidctoken"
 	"github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/platform/httpserver"
 	"github.com/margince/margince/backend/internal/platform/jobs"
@@ -86,23 +87,27 @@ func WithGmailPush(inserter *jobs.Runner, cfg GmailPushConfig) Option {
 		if cfg.Token == "" || inserter == nil {
 			return
 		}
-		var verifier *oidcTokenVerifier
+		var verifier *oidctoken.Verifier
 		if cfg.OIDC() {
-			verifier = newGoogleOIDCVerifier(cfg.JWKSURL, func(c oidcClaims) error {
-				if c.Aud != cfg.Audience {
-					return fmt.Errorf("%w: aud mismatch", errOIDCRejected)
-				}
-				if c.Email != cfg.ServiceAccount {
-					return fmt.Errorf("%w: email mismatch", errOIDCRejected)
-				}
-				if !c.EmailVerified {
-					return fmt.Errorf("%w: email not verified", errOIDCRejected)
-				}
-				return nil
-			})
+			verifier = oidctoken.NewGoogle(cfg.JWKSURL, cfg.pushIdentity)
 		}
 		s.gmailPush = Webhook(gmailPushSpec(pool, inserter, cfg.Token, verifier, s.log), s.log)
 	}
+}
+
+// pushIdentity admits a token only from the configured push service account,
+// for this endpoint's audience, with a verified email.
+func (c GmailPushConfig) pushIdentity(claims oidctoken.Claims) error {
+	if claims.Aud != c.Audience {
+		return fmt.Errorf("%w: aud mismatch", oidctoken.ErrRejected)
+	}
+	if claims.Email != c.ServiceAccount {
+		return fmt.Errorf("%w: email mismatch", oidctoken.ErrRejected)
+	}
+	if !claims.EmailVerified {
+		return fmt.Errorf("%w: email not verified", oidctoken.ErrRejected)
+	}
+	return nil
 }
 
 // gmailPushSpec declares Gmail's side of the chassis (design §6.5): one
@@ -110,7 +115,7 @@ func WithGmailPush(inserter *jobs.Runner, cfg GmailPushConfig) Option {
 // to one URL per subscription — there is no per-mailbox path to key on), an
 // optional Google-signed OIDC bearer as the second factor, and a Handle that
 // never persists the payload it is handed — see the file comment for why.
-func gmailPushSpec(pool *pgxpool.Pool, inserter *jobs.Runner, token string, verifier *oidcTokenVerifier, log *slog.Logger) WebhookSpec {
+func gmailPushSpec(pool *pgxpool.Pool, inserter *jobs.Runner, token string, verifier *oidctoken.Verifier, log *slog.Logger) WebhookSpec {
 	spec := WebhookSpec{
 		Provider: "gmail",
 		MaxBody:  1 << 20,

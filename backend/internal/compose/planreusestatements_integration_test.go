@@ -19,11 +19,13 @@ import (
 
 	"github.com/margince/margince/backend/internal/compose/attention"
 	"github.com/margince/margince/backend/internal/compose/briefs"
+	"github.com/margince/margince/backend/internal/compose/company360"
 	"github.com/margince/margince/backend/internal/compose/contact360"
 	"github.com/margince/margince/backend/internal/compose/integration"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/agents"
+	"github.com/margince/margince/backend/internal/modules/approvals"
 	"github.com/margince/margince/backend/internal/modules/capture/mailmap"
 	"github.com/margince/margince/backend/internal/modules/collections"
 	"github.com/margince/margince/backend/internal/modules/contacts"
@@ -122,7 +124,7 @@ func TestTheReadsThatReuseGenericPlansBindNoPartialIndexPredicate(t *testing.T) 
 		t.Fatalf("taking the rep's brief run: %v", err)
 	}
 	if err := database.WithWorkspaceSnapshot(reader, pool, func(ctx context.Context) error {
-		if _, err := emailSummariesReusingPlans(ctx, store, []ids.UUID{ids.UUID(mail.Id)}); err != nil {
+		if _, err := emailSummariesReusingPlans(ctx, store, []ids.UUID{ids.UUID(mail.Id)}, at); err != nil {
 			return err
 		}
 		if _, err := (attentionTasks{store: store}).RemindersForViewer(ctx, at); err != nil {
@@ -153,6 +155,15 @@ func TestTheReadsThatReuseGenericPlansBindNoPartialIndexPredicate(t *testing.T) 
 	}); err != nil {
 		t.Fatalf("running the reads: %v", err)
 	}
+	inbound, quote := "inbound", "Could you send the quote?"
+	account := ids.From[ids.CompanyKind](e.SeedEmployedAccount(t, contact, e.Rep1, pipeline, open, activities.LogActivityInput{
+		Kind:    "email",
+		Subject: &subject, Body: &quote, Direction: &inbound, OccurredAt: &at, Source: "manual", EmailFrom: "buyer@customer.test", EmailTo: []string{"rep@ourco.test"},
+	}))
+	page := company360.NewService(pool, e.Contacts, e.Deals, e.Projects, approvals.NewService(e.DB()), func() time.Time { return at })
+	if _, err := page.Assemble(reader, account); err != nil {
+		t.Fatalf("opening the account page: %v", err)
+	}
 	sent.sql = append(sent.sql, capturedPartyPlanStatements(t, e, pool)...)
 	boundIndexedColumn := boundIndexedColumns(t, e.Pool)
 	for _, bad := range []string{"WHERE a.kind = $3", "AND p.role IN ($2", "AND m.status = ANY($7)", "AND a.is_done = $4"} {
@@ -166,7 +177,7 @@ func TestTheReadsThatReuseGenericPlansBindNoPartialIndexPredicate(t *testing.T) 
 	for _, held := range []string{
 		"FROM activity_commitment_admission d", "FROM deal_suggestion s", "FROM tag_suggestion s",
 		"FROM brief_item bi", "'deal_stakeholder'", "wd.source = 'domain_question'", "task_claims AS MATERIALIZED",
-		"a.meeting_status IS NULL OR a.meeting_status = 'booked'",
+		"a.meeting_status IS NULL OR a.meeting_status = 'booked'", "NOT (a.captured_by = 'system'",
 	} {
 		if !slices.ContainsFunc(sent.sql, func(sql string) bool { return strings.Contains(sql, held) }) {
 			t.Fatalf("no statement %s was sent, so the check does not hold that read", held)
@@ -176,6 +187,81 @@ func TestTheReadsThatReuseGenericPlansBindNoPartialIndexPredicate(t *testing.T) 
 		if found := boundIndexedColumn.FindString(sql); found != "" {
 			t.Errorf("a statement under generic plans binds %q; spell it as a literal or leave the read out of plan reuse:\n%s", found, sql)
 		}
+	}
+}
+
+func TestAWholeWorklistReadReusesPlansWithoutBindingPartialIndexPredicates(t *testing.T) {
+	e := integration.Setup(t)
+	sent := &sentStatements{}
+	config := e.Pool.Config()
+	config.ConnConfig.Tracer = sent
+	pool, err := testdb.OwnPoolFromConfig(t.Context(), config)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer pool.Close()
+	feed := newAttentionService(pool, approvals.NewService(e.DB()), func() time.Time { return clocktest.Now(t) })
+	reader := e.As(e.Rep1, []ids.UUID{e.Team1}, integration.AdminPerms)
+	for _, view := range []string{"today", "decisions", "system"} {
+		for _, scope := range []string{"mine", "team", "unassigned", "all"} {
+			if _, err := feed.WorklistView(reader, view, scope, "all", ids.Nil, 25, ""); err != nil {
+				t.Fatalf("%s/%s: %v", view, scope, err)
+			}
+		}
+	}
+	var waitingPrepared, waitingGeneric int64
+	var statementBytes int64
+	idle := pool.AcquireAllIdle(t.Context())
+	if len(idle) == 0 {
+		t.Fatal("no connection returned to the pool after the Worklist reads")
+	}
+	defer func() {
+		for _, conn := range idle {
+			conn.Release()
+		}
+	}()
+	for i, conn := range idle {
+		var prepared, generic, sqlBytes int64
+		err = conn.QueryRow(t.Context(), `SELECT count(*), COALESCE(sum(generic_plans), 0)
+			FROM pg_prepared_statements
+			WHERE strpos(statement, 'a.id = ANY (ARRAY(SELECT a.id FROM activity a') > 0`).Scan(&prepared, &generic)
+		if err == nil {
+			err = conn.QueryRow(t.Context(), `SELECT COALESCE(sum(length(statement)), 0) FROM pg_prepared_statements`).Scan(&sqlBytes)
+		}
+		if err != nil {
+			t.Fatalf("measuring kept plans: %v", err)
+		}
+		t.Logf("connection %d: waiting prepared=%d, generic executions=%d, prepared SQL=%d bytes", i, prepared, generic, sqlBytes)
+		waitingPrepared += prepared
+		waitingGeneric += generic
+		statementBytes += sqlBytes
+	}
+	t.Logf("%d connections after 12 Worklist reads: waiting prepared=%d, generic executions=%d, prepared SQL=%d bytes", len(idle), waitingPrepared, waitingGeneric, statementBytes)
+	if waitingPrepared == 0 || waitingGeneric == 0 {
+		t.Fatalf("waiting statements have no kept generic plan: prepared=%d generic executions=%d", waitingPrepared, waitingGeneric)
+	}
+	boundIndexedColumn := boundIndexedColumns(t, e.Pool)
+	forced, custom, generic, noticeCustom := false, false, false, false
+	for _, sql := range sent.sql {
+		if strings.Contains(sql, "set_config('plan_cache_mode', 'force_generic_plan'") {
+			forced, generic = true, true
+		}
+		if strings.Contains(sql, "set_config('plan_cache_mode', 'force_custom_plan'") {
+			custom, generic = true, false
+		}
+		if custom && strings.HasPrefix(sql, "SELECT set_config('plan_cache_mode', $1") {
+			// The notice's custom-plan call restores the Worklist's generic mode.
+			generic = true
+		}
+		if strings.Contains(sql, "n.state = ANY(") && !generic {
+			noticeCustom = true
+		}
+		if found := boundIndexedColumn.FindString(sql); generic && found != "" {
+			t.Errorf("a worklist statement under generic plans binds %q; spell it as a literal or use a custom plan:\n%s", found, sql)
+		}
+	}
+	if !forced || !custom || !noticeCustom || len(sent.sql) < 240 {
+		t.Fatalf("worklist sent %d statements, generic=%t custom=%t notice custom=%t; the census did not reach the assembled read", len(sent.sql), forced, custom, noticeCustom)
 	}
 }
 

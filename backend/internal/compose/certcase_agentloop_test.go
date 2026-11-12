@@ -53,15 +53,6 @@ func agentLoopBaseFixture() agentLoopFixture {
 	}
 }
 
-func agentLoopFixtureJSON(t *testing.T, f agentLoopFixture) json.RawMessage {
-	t.Helper()
-	raw, err := json.Marshal(f)
-	if err != nil {
-		t.Fatalf("encoding the fixture: %v", err)
-	}
-	return raw
-}
-
 func agentLoopExpectationJSON(t *testing.T, step string) json.RawMessage {
 	t.Helper()
 	raw, err := json.Marshal(step)
@@ -76,7 +67,7 @@ func runAgentLoopCase(
 ) (aitasks.Outcome, aitasks.Trace) {
 	t.Helper()
 	prepared, err := agentLoopCases{agent: agentLoopAgent}.Prepare(
-		agentLoopFixtureJSON(t, fixture), agentLoopExpectationJSON(t, expected))
+		fixtureJSON(t, fixture), agentLoopExpectationJSON(t, expected))
 	if err != nil {
 		t.Fatalf("preparing the case: %v", err)
 	}
@@ -120,7 +111,7 @@ func TestEachAgentLoopSiteCertifiesThatAgentsOwnWindow(t *testing.T) {
 			}
 			fixture := agentLoopFixture{TriggerRef: spec.TriggerRef(referenceTriggerDay, referenceTriggerSeat)}
 			prepared, err := agentLoopCases{agent: declared.Name}.Prepare(
-				agentLoopFixtureJSON(t, fixture), agentLoopExpectationJSON(t, agentLoopFinalStep))
+				fixtureJSON(t, fixture), agentLoopExpectationJSON(t, agentLoopFinalStep))
 			if err != nil {
 				t.Fatalf("preparing the site's case: %v", err)
 			}
@@ -351,7 +342,7 @@ func runAgentLoopRefusalCases(t *testing.T, cases []agentLoopRefusalCase) {
 // than the model's, which is the reading a record would then carry. Naming it
 // costs a parse; finding it later costs a paid run.
 func TestAgentLoopCaseRefusesAnExpectationNoReplyCouldSatisfy(t *testing.T) {
-	base := agentLoopFixtureJSON(t, agentLoopBaseFixture())
+	base := fixtureJSON(t, agentLoopBaseFixture())
 	runAgentLoopRefusalCases(t, []agentLoopRefusalCase{
 		{
 			name:     "an expectation that is not a step name",
@@ -383,7 +374,7 @@ func TestAgentLoopCaseRefusesAWindowTheLoopIsNeverHanded(t *testing.T) {
 	withRef := func(ref string) json.RawMessage {
 		f := agentLoopBaseFixture()
 		f.TriggerRef = ref
-		return agentLoopFixtureJSON(t, f)
+		return fixtureJSON(t, f)
 	}
 	final := agentLoopExpectationJSON(t, agentLoopFinalStep)
 	runAgentLoopRefusalCases(t, []agentLoopRefusalCase{
@@ -464,7 +455,7 @@ func TestAgentLoopCaseRefusesAWindowTheLoopIsNeverHanded(t *testing.T) {
 func agentLoopRawFixture(t *testing.T, key, value string) json.RawMessage {
 	t.Helper()
 	var fields map[string]json.RawMessage
-	if err := json.Unmarshal(agentLoopFixtureJSON(t, agentLoopBaseFixture()), &fields); err != nil {
+	if err := json.Unmarshal(fixtureJSON(t, agentLoopBaseFixture()), &fields); err != nil {
 		t.Fatalf("decoding the fixture: %v", err)
 	}
 	fields[key] = json.RawMessage(value)
@@ -480,7 +471,7 @@ func agentLoopRawFixture(t *testing.T, key, value string) json.RawMessage {
 // smuggled into the input — and a later case copying this shape would inherit it.
 func TestAgentLoopFixtureCarriesOnlyWhatProductionIsGiven(t *testing.T) {
 	var fields map[string]json.RawMessage
-	if err := json.Unmarshal(agentLoopFixtureJSON(t, agentLoopBaseFixture()), &fields); err != nil {
+	if err := json.Unmarshal(fixtureJSON(t, agentLoopBaseFixture()), &fields); err != nil {
 		t.Fatalf("decoding the fixture: %v", err)
 	}
 	given := map[string]bool{"trigger_ref": true, "grounding": true}

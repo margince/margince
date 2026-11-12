@@ -61,6 +61,8 @@ export function useSendPermission(args: {
   preview: Preview | undefined;
   asking: boolean;
   unanswered: boolean;
+  /** Asks the same question again, for a surface that waits on the answer. */
+  recheck: () => void;
 } {
   const recipients = distinctAddresses(args.recipients);
   const links = args.links ?? [];
@@ -148,6 +150,9 @@ export function useSendPermission(args: {
     preview: query.data,
     asking: (query.isPending || query.isFetching) && enabled,
     unanswered: enabled && query.isError,
+    recheck: () => {
+      void query.refetch();
+    },
   };
 }
 

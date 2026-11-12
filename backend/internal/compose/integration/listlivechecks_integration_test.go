@@ -19,6 +19,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/collections"
 	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/modules/privacy"
+	"github.com/margince/margince/backend/internal/modules/search"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
@@ -329,7 +330,7 @@ func TestErasureTakesTheSubjectOutOfTheLastCheck(t *testing.T) {
 	if err != nil || len(pkg.LiveListMemberships) != 1 {
 		t.Fatalf("the access export's Live Lists = %+v (%v), want the one", pkg.LiveListMemberships, err)
 	}
-	if err := privacy.NewEraser(f.e.DB()).EraseContact(f.e.Admin(), subject, "test"); err != nil {
+	if err := privacy.NewEraser(f.e.DB()).WithEdgeInvalidator(search.RecomputeEdgesForActivities).EraseContact(f.e.Admin(), subject, "test"); err != nil {
 		t.Fatalf("erase: %v", err)
 	}
 	if n := f.e.WsCount(t, `SELECT count(*) FROM list_live_member WHERE entity_id = $1`, subject); n != 0 {

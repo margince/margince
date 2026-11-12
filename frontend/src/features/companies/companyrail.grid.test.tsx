@@ -25,7 +25,8 @@ describe("CompanyRail", () => {
     renderRail();
     expect(screen.getByText("Automotive")).toBeInTheDocument();
     expect(screen.getByText("51–200 employees")).toBeInTheDocument();
-    expect(screen.getByText("Munich, DE")).toBeInTheDocument();
+    // One line per part; the query folds the newline into a space.
+    expect(screen.getByText("Munich DE")).toBeInTheDocument();
     expect(screen.getByText("brandt.example")).toBeInTheDocument();
     // The owner resolves through the roster read: not shown until it lands.
     await waitFor(() =>
@@ -325,6 +326,24 @@ describe("CompanyRail", () => {
   });
 });
 
+describe("the Address row", () => {
+  it("writes the street and postal code, not the city alone", () => {
+    stub();
+    const aachen = {
+      ...company,
+      address: {
+        line1: "Kaiser-Friedrich-Allee 51",
+        postal_code: "52074",
+        city: "Aachen",
+      },
+    };
+    renderRail({ view: view({ company: aachen }) });
+    expect(
+      screen.getByText("Kaiser-Friedrich-Allee 51 52074 Aachen"),
+    ).toBeInTheDocument();
+  });
+});
+
 describe("a stored country that does not fit the postal code and city", () => {
   it("flags the address with the country they resolve to and keeps the stored one", () => {
     stub();
@@ -334,7 +353,7 @@ describe("a stored country that does not fit the postal code and city", () => {
       address_country_mismatch: { resolved_country: "DE" },
     };
     renderRail({ view: view({ company: misfiled }) });
-    expect(screen.getByText("Berlin, AT")).toBeInTheDocument();
+    expect(screen.getByText("10115 Berlin AT")).toBeInTheDocument();
     expect(
       screen.getByText("Postal code and city are in Germany"),
     ).toBeInTheDocument();
@@ -343,7 +362,7 @@ describe("a stored country that does not fit the postal code and city", () => {
   it("shows no flag when the server reports no mismatch", () => {
     stub();
     renderRail();
-    expect(screen.getByText("Munich, DE")).toBeInTheDocument();
+    expect(screen.getByText("Munich DE")).toBeInTheDocument();
     expect(screen.queryByText(/Postal code and city are in/)).toBeNull();
   });
 });

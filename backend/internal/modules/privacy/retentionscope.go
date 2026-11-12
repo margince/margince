@@ -17,6 +17,8 @@ package privacy
 
 import (
 	"fmt"
+	"maps"
+	"slices"
 	"sort"
 	"strings"
 )
@@ -90,10 +92,16 @@ func (e UnknownScopeError) FieldFault() (field, code, message string) {
 func ParseRetentionScope(wire string) (RetentionScope, error) {
 	objectType, category, _ := strings.Cut(wire, "/")
 	scope := RetentionScope{ObjectType: objectType, Category: category}
-	if _, known := retentionSelectors[scope.selectorKey()]; !known {
+	if !slices.Contains(authorableKeys(), scope.selectorKey()) {
 		return RetentionScope{}, UnknownScopeError{Scope: wire}
 	}
 	return scope, nil
+}
+
+// authorableKeys are the selector keys and the extension policy's key: every
+// scope the pass has a stage for.
+func authorableKeys() []string {
+	return append(slices.Collect(maps.Keys(retentionSelectors)), extensionScopeKey)
 }
 
 // AuthorableScopes is every scope an admin may author, in wire spelling, sorted
@@ -101,8 +109,9 @@ func ParseRetentionScope(wire string) (RetentionScope, error) {
 // selector table, so adding a selector widens the vocabulary and forgetting to
 // add one keeps it honest.
 func AuthorableScopes() []string {
-	out := make([]string, 0, len(retentionSelectors))
-	for key := range retentionSelectors {
+	keys := authorableKeys()
+	out := make([]string, 0, len(keys))
+	for _, key := range keys {
 		objectType, category, _ := strings.Cut(key, "/")
 		out = append(out, RetentionScope{ObjectType: objectType, Category: category}.String())
 	}

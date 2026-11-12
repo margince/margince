@@ -44,8 +44,8 @@ export function TaskCallAction({
 /**
  * Call, Draft email and Open contact. A task owed to a contact is work for that
  * contact, so mail to them is drafted from the task rather than offered blank.
- * Who the mail goes to is the server's answer (`email_target`): one contact,
- * else one live lead, else one company. `className` wraps the verbs in a row
+ * Who the mail goes to is the server's answer (`email_target`): a contact, a
+ * live lead or a company. `className` wraps the verbs in a row
  * of their own, which is left out when there is nothing to act on.
  */
 export function TaskNextSteps({

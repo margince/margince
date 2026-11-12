@@ -9,6 +9,8 @@ import (
 	"strings"
 	"sync"
 
+	"github.com/margince/margince/backend/internal/compose/corereach"
+	"github.com/margince/margince/backend/internal/compose/extensionprivacy"
 	"github.com/margince/margince/backend/internal/modules/approvals"
 	"github.com/margince/margince/backend/internal/platform/jobs"
 	kevents "github.com/margince/margince/backend/internal/shared/kernel/events"
@@ -62,6 +64,11 @@ func RegisterExtensions(exts []extension.Extension, verbs []extension.Verb, jobD
 	// jurisdiction pack is applied.
 	composedSet, err := buildExtensionJobs(exts, jobDecls)
 	if err != nil {
+		return err
+	}
+	// The last fallible step, because it also installs. It seals the set the
+	// merge and the erasure refuse to run without.
+	if err := corereach.Install(exts); err != nil {
 		return err
 	}
 	for _, e := range exts {
@@ -236,6 +243,9 @@ func validateExtensionSet(exts []extension.Extension) error {
 		}
 		if err := e.Description.Validate(); err != nil {
 			return fmt.Errorf("compose: extension %q: %w", e.Name, err)
+		}
+		if err := extensionprivacy.Preflight(e); err != nil {
+			return err
 		}
 		if err := preflightJurisdictions(e, packCodes); err != nil {
 			return err

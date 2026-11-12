@@ -1,0 +1,311 @@
+// SPDX-License-Identifier: BUSL-1.1
+// SPDX-FileCopyrightText: 2026 Gradion
+
+//go:build integration
+
+package integration
+
+// Every foreign key pointing at company is a row the company merge has to
+// decide about. This census derives them from the DATABASE and asks the merge
+// path's own source what it does with each one, so a new table carrying a
+// company_id is enrolled the moment its migration creates it — not when
+// somebody remembers to add it to a list.
+//
+// The defect it exists to catch is silent in both directions. A column the
+// merge forgets leaves its rows pointing at a record no read returns: nothing
+// errors, and to a user the data has simply vanished from the survivor. A
+// census that under-counts reports PASS over a tree it never read, which looks
+// exactly the same as a clean one — hence theCompanyFKFloor below.
+
+import (
+	"context"
+	"os"
+	"path/filepath"
+	"regexp"
+	"slices"
+	"strings"
+	"testing"
+
+	"github.com/margince/margince/backend/internal/compose/corereach"
+	"github.com/margince/margince/backend/internal/platform/testdb"
+	"github.com/margince/margince/backend/internal/shared/gatekit"
+	"github.com/margince/margince/backend/pkg/extension/reach"
+)
+
+// theCompanyFKFloor is the count below which the census has broken rather than
+// the schema having shrunk. 39 columns point at company today; a derivation
+// that suddenly sees fewer than 35 is reading a smaller tree than it thinks,
+// and would otherwise pass in silence.
+const theCompanyFKFloor = 35
+
+// mergePathFiles are the files that, between them, ARE the company merge's
+// relink. The census reads their SQL rather than a list of tables, so a
+// statement deleted from the merge fails here even though the waiver map and
+// the schema are both untouched.
+var mergePathFiles = []string{
+	"internal/modules/contacts/mergerelink_company.go",
+	"internal/modules/contacts/mergecompanycollisions.go",
+	"internal/modules/contacts/dedupemove.go",
+	"internal/modules/contacts/merge_company.go",
+	"internal/modules/contacts/merge.go",
+	"internal/modules/contacts/mergecompanyedges.go",
+	"internal/modules/contacts/mergekindid.go",
+	"internal/modules/contacts/company_relationship_types.go",
+	"internal/modules/identity/grantmerge.go",
+}
+
+// companyFKsTheMergeLeaves are the company-pointing columns the merge
+// deliberately does not move, each with the reason moving it would be wrong.
+//
+// gatekit reports an entry that stops matching, so a waiver cannot outlive the
+// column it was written for.
+var companyFKsTheMergeLeaves = gatekit.Waive(map[string]string{
+	"company_offered_value.company_id":                "a row is what ONE source last offered for ONE company field, kept beside the typed value and replaced by that source's next offer. A row moved onto the survivor would collide on (company, source, field) with the survivor's own and would put the retired record's offer over a value the survivor may have had offered since. The merge archives the retired company, and an archived company's offers are not served (ListOfferedValues answers 404), so nothing is read wrongly; the source's next offer for the survivor records it again",
+	"company_address_country.company_id":              "a derived check of the retired company's own address, not a fact about the survivor; it goes with the retired row (ON DELETE CASCADE), and the survivor gets its own check from the next sweep once its address is due",
+	"deal_suggestion.company_id":                      "a suggestion is Deal Scout's reading of ONE company's evidence, fingerprinted over that company's id and held to one open suggestion per company, so a moved row could collide with the survivor's own and would hash differently from anything the survivor is offered. The merge archives the retired company instead, which the next scout pass reads as a suggestion that no longer stands (superseded); the evidence the merge relinks raises the survivor's own suggestion",
+	"tag_suggestion.company_id":                       "a tag suggestion is the tag scout's reading of ONE record's evidence, held to one open suggestion per tag and record, so a moved row could collide with the survivor's own. The merge archives the retired company, which the next scout pass reads as a suggestion that no longer stands (superseded); the activities the merge relinks raise the survivor's own suggestion",
+	"suggestion_dismissal.company_id":                 "a dismissal is keyed by a fingerprint computed over the company's OWN id, so a row moved onto the survivor would hash differently from anything the survivor is ever offered and could never match again. The merge retires them with the company instead of moving rows that cannot work; a reader may be offered the equivalent suggestion about the survivor once, and dismissing it again sticks. Re-deriving the fingerprints belongs to the suggestion engine that defines them",
+	"signal.entity_company_id":                        "a trigger fills it from entity_type and entity_id, and moveKindIDSingles moves that pair, so the key follows it to the survivor",
+	"weekly_plan_commitment.linked_company_id":        "a trigger fills it from linked_record_type and linked_record_id, and the weekly plan's sweep reach declaration moves that pair, so the key follows it to the survivor",
+	"user_record_view.entity_company_id":              "a trigger fills it from the pair, which the merge leaves on the retired record for the reason kindIDPairsTheMergeLeaves gives user_record_view.entity_id",
+	"company_domain_disposition.candidate_company_id": "a suggestion for one open company question, never a link. The suggestion read keeps only live companies, so a merged-away candidate is never offered, and the reader still chooses the survivor by search; the question is answered or re-asked with no candidate",
+})
+
+// sqlWriteTarget matches the table a statement writes.
+var sqlWriteTarget = regexp.MustCompile(`(?i)\b(?:UPDATE|INSERT\s+INTO|DELETE\s+FROM)\s+([a-z_][a-z0-9_]*)`)
+
+// assignsToSurvivor matches a column assigned the survivor's id, in the three
+// spellings the merge path uses: a plain `SET company_id = $2`, the
+// storekit.SQLf form `SET company_id=$%d`, and a column name concatenated into
+// the statement (`SET `+column+` = $2`, which relinkLinkRows uses to serve both
+// record types from one statement).
+//
+// Matching an assignment and not merely the table name is what stops the census
+// certifying a merge that only DELETES. A relink whose UPDATE is removed leaves
+// its `DELETE FROM x WHERE company_id = $1` behind, and a census reading table
+// names alone reports that table covered while the merge destroys every row the
+// retired company held.
+//
+// The survivor arrives as `$2` in a positional statement and as `@target` in
+// one bound through pgx.NamedArgs (the merge's mergeTargetKey).
+var assignsToSurvivor = regexp.MustCompile(`(?i)([a-z_][a-z0-9_]*)\s*=\s*[^=]*?(?:\$(?:2|%d)|@target\b)`)
+
+// edgeWriteSet matches the SET clause handed to the contacts module's one edge
+// writer, which runs it as an UPDATE of relationship that no literal names.
+var edgeWriteSet = regexp.MustCompile("mergeEdgeWrite\\(\\s*ctx\\s*,\\s*tx\\s*,\\s*`([^`]*)`")
+
+// movesCompanyPairs matches the company merge's call of the shared pair mover.
+var movesCompanyPairs = regexp.MustCompile(`moveDedupeCandidates\(\s*ctx\s*,\s*tx\s*,\s*entityCompany\b`)
+
+// updateSetClause is the assignment list of an UPDATE: what follows `SET`, up
+// to its `WHERE`.
+var updateSetClause = regexp.MustCompile(`(?is)\bUPDATE\b.*?\bSET\b(.*?)(?:\bWHERE\b|$)`)
+
+// setClauseOf returns the text a statement assigns in, and nothing for a
+// DELETE. A DELETE compares columns to the survivor in its subquery, which is
+// a read. Counting it would certify a merge whose UPDATE had been removed.
+func setClauseOf(stmt string) string {
+	if m := updateSetClause.FindStringSubmatch(stmt); m != nil {
+		return m[1]
+	}
+	return ""
+}
+
+// carriesSurvivorIntoInsert matches the INSERT … SELECT $2 (or @target) form, where the
+// survivor's id arrives positionally as the first selected value rather than as
+// an assignment. The column it lands in is the first name in the INSERT's
+// column list.
+var carriesSurvivorIntoInsert = regexp.MustCompile(`(?is)INSERT\s+INTO\s+[a-z_][a-z0-9_]*\s*\(\s*([a-z_][a-z0-9_]*).*?SELECT\s+(?:\$2|@target\b)`)
+
+// concatenatedColumn matches a Go string concatenation standing where a column
+// name belongs, so a statement that assembles its column still counts as
+// covering the company column it is given.
+var concatenatedColumn = regexp.MustCompile(`SET\s+` + "`" + `\s*\+\s*[a-z]`)
+
+// TestEveryCompanyForeignKeyJoinsTheMerge is the coverage census.
+//
+// It fails when a table carrying a company_id is neither written by the merge
+// path nor declared above — which is the shape every defect in #5739 had: the
+// enrichment sidecars, the money rows and the per-reader rows were all real
+// columns in the schema that no statement in the merge had ever named.
+func TestEveryCompanyForeignKeyJoinsTheMerge(t *testing.T) {
+	defer companyFKsTheMergeLeaves.AssertAllMatched(t)
+
+	written := tablesTheMergeWrites(t)
+	// A source scan that found nothing would waive the whole census by
+	// accident: every column would read as unmoved, the waiver map would not
+	// cover them, and the failures would look like a merge defect rather than
+	// a broken derivation.
+	if len(written) == 0 {
+		t.Fatal("the merge path's source yielded no written tables — the scan is broken, not the merge")
+	}
+
+	ctx := context.Background()
+	owner := OwnerConn(t)
+	if err := testdb.EnsureSchema(ctx, owner); err != nil {
+		t.Fatal(err)
+	}
+
+	rows, err := owner.Query(ctx, `
+		SELECT c.conrelid::regclass::text AS src_table, a.attname AS src_col,
+		       ARRAY(SELECT ref.attname::text
+		               FROM pg_attrdef ad
+		               JOIN pg_depend d ON d.classid = 'pg_attrdef'::regclass AND d.objid = ad.oid
+		                               AND d.refclassid = 'pg_class'::regclass AND d.refobjid = ad.adrelid
+		               JOIN pg_attribute ref ON ref.attrelid = ad.adrelid AND ref.attnum = d.refobjsubid
+		              WHERE a.attgenerated = 's' AND ad.adrelid = c.conrelid AND ad.adnum = a.attnum
+		              ORDER BY 1) AS generated_from
+		FROM pg_constraint c
+		JOIN unnest(c.conkey) WITH ORDINALITY AS k(attnum, ord) ON true
+		JOIN pg_attribute a ON a.attrelid = c.conrelid AND a.attnum = k.attnum
+		WHERE c.contype = 'f'
+		  AND c.confrelid::regclass::text = 'company'
+		  AND a.attname <> 'workspace_id'
+		ORDER BY 1, 2`)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer rows.Close()
+
+	seen := 0
+	for rows.Next() {
+		var table, column string
+		var generatedFrom []string
+		if err := rows.Scan(&table, &column, &generatedFrom); err != nil {
+			t.Fatal(err)
+		}
+		seen++
+		if written[table+"."+column] || movesAGenerator(written, table, generatedFrom) {
+			continue
+		}
+		// Asked only once the column is already an offender: a waiver checked
+		// before that would decay into a standing permission over every future
+		// column in the same table.
+		if companyFKsTheMergeLeaves.Waived(t, table+"."+column) {
+			continue
+		}
+		t.Errorf("%s.%s points at company and the merge never writes %s.\n"+
+			"A company merge retires one record into another, so every row naming the retired "+
+			"one has to move, be dropped, or be declared. Left alone it points at a record no "+
+			"read returns — nothing errors and the data is simply gone from the survivor's view, "+
+			"until a hard delete of the archived company takes it for real. Move it in "+
+			"internal/modules/contacts/mergerelink_company.go, or declare it in "+
+			"companyFKsTheMergeLeaves with what moving it would cost.", table, column, table)
+	}
+	if err := rows.Err(); err != nil {
+		t.Fatal(err)
+	}
+	if seen < theCompanyFKFloor {
+		t.Errorf("the census found %d company foreign keys, fewer than the %d floor: it is reading "+
+			"a smaller schema than it thinks, and an under-counting census reports PASS over the "+
+			"very columns it failed to look at", seen, theCompanyFKFloor)
+	}
+}
+
+// movesAGenerator reports whether the merge moves a column a generated key is
+// computed from. No statement can assign the generated column itself, so the
+// write that moves it is the one to the column it derives from.
+func movesAGenerator(written map[string]bool, table string, generatedFrom []string) bool {
+	return slices.ContainsFunc(generatedFrom, func(column string) bool { return written[table+"."+column] })
+}
+
+// tablesTheMergeWrites reads the merge path's own source and returns the
+// "table.column" pairs it MOVES onto the survivor.
+//
+// Source-scanned rather than listed, because a list would agree with itself
+// forever: the point is to notice when a statement LEAVES the merge, and only
+// the source can say that.
+//
+// A statement counts only when it both names the table and assigns some column
+// to the survivor parameter. Table name alone was the first shape of this
+// census and it was too weak in the direction that matters: a relink reduced to
+// its DELETE still mentioned the table, so the census certified a merge that
+// destroyed the rows instead of moving them.
+func tablesTheMergeWrites(t *testing.T) map[string]bool {
+	t.Helper()
+	written := map[string]bool{}
+	for _, rel := range mergePathFiles {
+		path := filepath.Join("../../..", rel)
+		body, err := os.ReadFile(path)
+		if err != nil {
+			t.Fatalf("reading the merge path %s: %v", rel, err)
+		}
+		for _, stmt := range splitSQLStatements(string(body)) {
+			target := sqlWriteTarget.FindStringSubmatch(stmt)
+			if target == nil {
+				continue
+			}
+			table := strings.ToLower(target[1])
+			for _, moved := range assignsToSurvivor.FindAllStringSubmatch(setClauseOf(stmt), -1) {
+				written[table+"."+strings.ToLower(moved[1])] = true
+			}
+			if insert := carriesSurvivorIntoInsert.FindStringSubmatch(stmt); insert != nil {
+				written[table+"."+strings.ToLower(insert[1])] = true
+			}
+			// A statement whose column name is concatenated in cannot say
+			// WHICH column it moves, so it covers the company pointer of the
+			// table it names — that being the only company column such a
+			// statement is ever given.
+			if concatenatedColumn.MatchString(stmt) {
+				written[table+".company_id"] = true
+			}
+		}
+		// moveDedupeCandidates renders its columns from dedupePairSides, so its
+		// call on the company side is what moves the pair's two company ends.
+		if movesCompanyPairs.MatchString(string(body)) {
+			written["dedupe_candidate.left_company_id"] = true
+			written["dedupe_candidate.right_company_id"] = true
+		}
+		for _, call := range edgeWriteSet.FindAllStringSubmatch(string(body), -1) {
+			for _, moved := range assignsToSurvivor.FindAllStringSubmatch(call[1], -1) {
+				written["relationship."+strings.ToLower(moved[1])] = true
+			}
+		}
+	}
+	for column := range declaredCompanyLinks(t) {
+		written[column] = true
+	}
+	return written
+}
+
+// declaredCompanyLinks returns the "table.column" pairs core modules declare
+// for the merge to move (sweepreach). They count only while the merge path
+// still calls the registry, so dropping that call fails here too.
+func declaredCompanyLinks(t *testing.T) map[string]bool {
+	t.Helper()
+	body, err := os.ReadFile(filepath.Join("../../..", "internal/modules/contacts/mergekindid.go"))
+	if err != nil {
+		t.Fatalf("reading the merge's call into the declared tables: %v", err)
+	}
+	if !strings.Contains(string(body), "sweepreach.Relink(") {
+		return nil
+	}
+	declared := map[string]bool{}
+	for _, o := range corereach.Tables() {
+		for _, l := range o.Table.Links {
+			if l.Record == reach.Company || l.KindColumn != "" {
+				declared[o.Table.Name+"."+l.Column] = true
+			}
+		}
+	}
+	return declared
+}
+
+// splitSQLStatements cuts a Go source file into the individual SQL statements
+// its string literals hold, so a column assignment is credited to the statement
+// that actually contains it rather than to whatever table was named last in the
+// file.
+func splitSQLStatements(body string) []string {
+	chunks := sqlStatementStart.Split(body, -1)
+	// Split drops the delimiter, so re-attach it: each chunk after the first
+	// begins where a statement keyword was found.
+	for i, keyword := range sqlStatementStart.FindAllString(body, -1) {
+		if i+1 < len(chunks) {
+			chunks[i+1] = keyword + chunks[i+1]
+		}
+	}
+	return chunks
+}
+
+// sqlStatementStart marks where one SQL statement begins in a Go source file.
+var sqlStatementStart = regexp.MustCompile(`(?i)\b(?:UPDATE|INSERT\s+INTO|DELETE\s+FROM)\s+`)

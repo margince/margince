@@ -67,7 +67,7 @@ func latestQualifyingEvent(ctx context.Context, tx pgx.Tx, contactID string, sin
 	if found {
 		return event, sourceRecorded, nil
 	}
-	event, found, err = inboundQualifyingEvent(ctx, tx, contactID, since, entity)
+	event, found, err = inboundQualifyingEvent(ctx, tx, subjectRef{Kind: entityContact, ID: contactID, Address: deref(address)}, since, entity)
 	if err != nil {
 		return QualifyingEvent{}, sourceNone, err
 	}
@@ -268,18 +268,18 @@ func recordedSubjectQualifyingEvent(ctx context.Context, tx pgx.Tx, sub subject,
 // somebody else wrote is not the subject initiating correspondence, and
 // counting it would let anyone manufacture a lawful basis for writing to a
 // third party by putting them in Cc. So the participant row has to name them as
-// the author too, which is the same test authorizeevidence.go applies for the
-// same reason (authorIsTheSubject).
+// the author too, through the shared authorIsTheSubject rule. It names them by
+// record, or by address or channel account on a row that names no record.
 //
 // Both halves are load-bearing. Without the link this would count a message
 // nobody filed under the contact; without the authorship test it counts one they
 // merely received. Capture files a message under every participant it resolves
 // (capture/sinkmaillinks.go), so the link alone stopped meaning authorship the
 // moment a cc'd contact could be filed under.
-func inboundQualifyingEvent(ctx context.Context, tx pgx.Tx, contactID string, since time.Time, entity ids.UUID) (QualifyingEvent, bool, error) {
+func inboundQualifyingEvent(ctx context.Context, tx pgx.Tx, subject subjectRef, since time.Time, entity ids.UUID) (QualifyingEvent, bool, error) {
 	var event QualifyingEvent
 	var activityID string
-	args := []any{contactID, since, entity}
+	args := []any{subject.Kind, subject.ID, subject.Address, subject.ChannelProvider, subject.ChannelUserID, since, entity}
 	entityArg := storekit.SQLf("$%d", len(args))
 	visible, err := activityEvidenceSQL(ctx, entityArg, &args)
 	if err != nil {
@@ -288,11 +288,11 @@ func inboundQualifyingEvent(ctx context.Context, tx pgx.Tx, contactID string, si
 	err = tx.QueryRow(ctx, `
 		SELECT a.id, a.occurred_at
 		FROM activity a
-		JOIN activity_link l ON l.activity_id = a.id AND l.contact_id = $1
+		JOIN activity_link l ON l.activity_id = a.id AND l.contact_id = $2::uuid
 		JOIN activity_participant p ON p.activity_id = a.id
-		     AND p.role = 'from' AND p.contact_id = $1::uuid
 		WHERE a.direction = 'inbound' AND a.archived_at IS NULL
-		  AND `+occurredday.FromSQL("a", "$2")+`
+		  AND `+authorIsTheSubject+`
+		  AND `+occurredday.FromSQL("a", "$6")+`
 		  AND `+visible+`
 		ORDER BY a.occurred_at DESC
 		LIMIT 1`, args...).Scan(&activityID, &event.OccurredAt)

@@ -70,3 +70,36 @@ func TestReadViewPublishesEachArgumentsType(t *testing.T) {
 		t.Error("id is a list for seat_names and one value elsewhere, and its description does not say so")
 	}
 }
+
+// An argument one view takes in its path and another as an integer query is
+// published as the integer on every build. The path view takes that integer.
+func TestReadViewPublishesAPathAndQueryArgumentAsTheTypedOne(t *testing.T) {
+	views := []ReadView{
+		{Name: "goal_plan", Pattern: "/v1/goals/{owner_id}/{year}", PathParams: []string{"owner_id", "year"}},
+		{Name: "progress", Pattern: "/v1/progress", Query: []ViewQuery{{Name: "year", Type: "integer"}}},
+	}
+	for range 50 {
+		var schema struct {
+			Properties map[string]struct {
+				Type string `json:"type"`
+			} `json:"properties"`
+		}
+		if err := json.Unmarshal(readView{views: views}.Spec().InputSchema, &schema); err != nil {
+			t.Fatalf("the schema does not decode: %v", err)
+		}
+		if got := schema.Properties["year"].Type; got != "integer" {
+			t.Fatalf("year is published as %q, want integer", got)
+		}
+	}
+	var gotPath map[string]string
+	tool := readView{views: views, read: func(_ context.Context, _ ReadView, path map[string]string, _ url.Values) (json.RawMessage, error) {
+		gotPath = path
+		return json.RawMessage(`{}`), nil
+	}}
+	if _, err := tool.Handle(context.Background(), json.RawMessage(`{"view":"goal_plan","owner_id":"o1","year":2026}`)); err != nil {
+		t.Fatalf("reading a goal plan by an integer year: %v", err)
+	}
+	if gotPath["year"] != "2026" {
+		t.Errorf("the route read year %q, want 2026", gotPath["year"])
+	}
+}

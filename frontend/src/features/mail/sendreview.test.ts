@@ -11,18 +11,13 @@ describe("sendReviewOf", () => {
   const refusal = (details: unknown) =>
     new ProblemError({ code: "consent_not_granted", details });
 
-  it("reads the review a refusal named, and what the overrule must cover", () => {
+  it("reads the review a refusal named, and the direct send it offers", () => {
     const review = sendReviewOf(
-      refusal({
-        review_id: "r-1",
-        available_actions: ["overrule"],
-        overrulable: [{ contact_id: "c-1", category: "marketing" }],
-      }),
+      refusal({ review_id: "r-1", available_actions: ["direct_send"] }),
     );
     expect(review).toEqual({
       reviewId: "r-1",
-      actions: ["overrule"],
-      overrulable: [{ contactId: "c-1", category: "marketing" }],
+      actions: ["direct_send"],
       refusals: [],
     });
   });
@@ -65,22 +60,6 @@ describe("sendReviewOf", () => {
     ]);
   });
 
-  // An overrule that skipped one refused contact would leave the send refused,
-  // so one malformed entry drops the whole list.
-  it("drops the overrule list when any entry is malformed", () => {
-    const review = sendReviewOf(
-      refusal({
-        review_id: "r-7",
-        available_actions: ["overrule"],
-        overrulable: [
-          { contact_id: "c-1", category: "marketing" },
-          { contact_id: "" },
-        ],
-      }),
-    );
-    expect(review?.overrulable).toEqual([]);
-  });
-
   // An agent, or a refusal with no message to decide about. The reference still
   // travels so a human reading the transcript can pick the review up; what is
   // absent is the shortcut.
@@ -91,7 +70,6 @@ describe("sendReviewOf", () => {
     expect(review).toEqual({
       reviewId: "r-2",
       actions: [],
-      overrulable: [],
       refusals: [],
     });
   });
@@ -104,20 +82,20 @@ describe("sendReviewOf", () => {
     const review = sendReviewOf(
       refusal({
         review_id: "r-3",
-        available_actions: ["send_anyway", "overrule"],
+        available_actions: ["send_anyway", "direct_send"],
       }),
     );
-    expect(review?.actions).toEqual(["overrule"]);
+    expect(review?.actions).toEqual(["direct_send"]);
   });
 
   it("draws one button however often the server names it", () => {
     const review = sendReviewOf(
       refusal({
         review_id: "r-4",
-        available_actions: ["overrule", "overrule"],
+        available_actions: ["direct_send", "direct_send"],
       }),
     );
-    expect(review?.actions).toEqual(["overrule"]);
+    expect(review?.actions).toEqual(["direct_send"]);
   });
 
   // Most refusals this surface sees are not about consent at all: a
@@ -145,7 +123,6 @@ describe("sendReviewOf", () => {
     expect(oddActions).toEqual({
       reviewId: "r-5",
       actions: [],
-      overrulable: [],
       refusals: [],
     });
     const oddEntries = sendReviewOf(
@@ -154,7 +131,6 @@ describe("sendReviewOf", () => {
     expect(oddEntries).toEqual({
       reviewId: "r-6",
       actions: [],
-      overrulable: [],
       refusals: [],
     });
   });

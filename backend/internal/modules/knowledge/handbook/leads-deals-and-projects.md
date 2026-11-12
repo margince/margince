@@ -24,9 +24,7 @@ Also called: add a prospect, new lead.
 ### What if someone is already a contact?
 Someone is either a lead or a contact, never both. Open a deal when an existing contact has a new opportunity.
 
-When a new lead carries an email or LinkedIn profile already held by a contact,
-Margince creates no lead. It opens the contact when you enter the lead by hand.
-An automatic request is filed on the contact. Its owner gets a task to review it.
+When a new lead carries an email or LinkedIn profile already held by a contact, Margince creates no lead. It opens the contact when you enter the lead by hand. An automatic request is filed on the contact. Its owner gets a task to review it.
 ### The ladder
 
 A lead has five statuses. The first three are open, the last two are final.
@@ -74,14 +72,9 @@ when that is the right next step.
 
 This advice has no automatic deadline. Old imported mail creates no new task. A reply you already answered creates no new task. A task you kept remains your work.
 
-When you add or edit a contact with an email or LinkedIn profile held by a
-live lead, Margince asks whether to convert the lead. Nothing is written until
-you choose. An automatic import or enrichment does not make the second record.
+When you add or edit a contact with an email or LinkedIn profile held by a live lead, Margince asks whether to convert the lead. Nothing is written until you choose. An automatic import or enrichment does not make the second record.
 
-A warning on that preview: the matching contact may be one you are not allowed
-to see. The preview then says "Qualifying merges into an existing contact you
-cannot see." and does not show you the contact. **No contact shown does not mean
-no match.**
+A warning on that preview: the matching contact may be one you are not allowed to see. The preview then says "Qualifying merges into an existing contact you cannot see." and does not show you the contact. **No contact shown does not mean no match.**
 
 The only open deal you can change at the employer starts selected. Choose **Qualify without a deal** to create no deal. When you pick one, the contact joins its team and the lead links to it. A deal that closes or moves to another company before you confirm is refused.
 
@@ -101,16 +94,10 @@ Also called: undo a qualification, unqualify, demote a lead.
 
 What reversing does depends on how the lead was qualified:
 
-- If it **created** a contact: the contact is archived, unless other records
-  now depend on it (see the last point). The lead comes back to the queue at
-  Engaged. Activities captured since the qualification stay on
-  the contact's timeline.
+- If it **created** a contact: the contact is archived, unless other records now depend on it (see the last point). The lead comes back to the queue at Engaged. Activities captured since the qualification stay on the contact's timeline.
 - If it **merged** into an existing contact: it cannot be reversed. The contact
   keeps the history and values the qualification carried into it.
-- **A stakeholder on a live deal blocks it.** If the contact is a stakeholder
-  on a live deal, the qualification cannot be reversed, so the deal does not
-  lose its contact. Being the deal's owner does not count; being a stakeholder
-  does.
+- **A stakeholder on a live deal blocks it.** If the contact is a stakeholder on a live deal, the qualification cannot be reversed, so the deal does not lose its contact. Being the deal's owner does not count; being a stakeholder does.
 - Other records may have come to depend on the contact. Then reversing only
   removes the link to the lead, where it would have archived the contact.
 
@@ -149,12 +136,20 @@ For many leads, tick them on the **Leads** table and use **Choose owner** → **
 The new owner must be "an active colleague you may assign work to".
 Also called: assign a lead, reassign a prospect, take a lead, claim a lead.
 
+### How do I set which product a lead wants?
+To name a lead's product in Margince, open the lead and choose **Name the product** on its **Product** row, then pick it under **Search products**. **Change product** and **Clear the product** change it later. Product reports count the lead under that product.
+Also called: lead product, the product a lead asks about.
+
+### How do I see why a lead has its score?
+To see why a lead has its score in Margince, open the lead and look at its **Score** panel. Each factor lists what counted, and **{count} activities** on a factor opens **Activities behind this factor**.
+Also called: lead score explained, why is this lead hot.
+
 ### Scoring
 
 Leads carry a score from 0 to 100. You can override it by hand, but a reason is
 required. The override stops the score being updated until you clear it.
 
-The score falls over time: the screen shows it as "{base}, halved every 14
+The score falls over time: under the score the panel says "activity points halve every 14
 days".
 
 There is an optional target for the first response to a lead, **off by default**, set
@@ -221,6 +216,7 @@ To change the company or project of a deal in Margince, open the deal and click 
 A deal and its project must belong to the same company. The **Project** field offers only that company's projects, and empties when you change the company.
 
 **New project…** creates one on the chosen company; without a company it says "Select the deal’s company first. A project belongs to a company."
+Margince refuses to move a deal to another company while contracts filed on it name the old company. Move or end those contracts first, then change the company.
 Also called: move a deal to another account, attach a deal to a project.
 
 ### How do I change the owner of a deal?
@@ -231,7 +227,7 @@ The new owner must be "an active colleague you may assign work to". That is any 
 Also called: hand over a deal, change deal owner, transfer an opportunity.
 
 ### Can I edit a closed or archived deal?
-A won or lost deal in Margince can still be edited: only its **Stage** ladder is locked until you reopen it. Changing a closed deal's value or currency fixes its exchange rate again.
+A won or lost deal in Margince can still be edited: only its **Stage** ladder and its **Probability** are locked until you reopen it. Changing a closed deal's value or currency fixes its exchange rate again.
 An archived deal cannot be edited: "This deal is archived and takes no changes." Without edit rights you see "You cannot change this deal. Ask its owner to share it, or an administrator for edit rights."
 Also called: change a won deal, fix a lost deal.
 
@@ -250,8 +246,8 @@ No. A deal in Margince stays in the pipeline it was created in, and its stage ca
 Also called: change a deal's pipeline, switch pipeline.
 
 ### Can I set the win probability of one deal?
-Yes. Press **Probability** in the deal's **Details** and enter a number from 0 to 100. Leave it empty to use the stage's probability again (**Settings → Deals**, **Win probability**). Moving the deal to another stage also sets it back to that stage's.
-Also called: deal probability, likelihood, confidence.
+Yes. Press **Probability** in the deal's **Details** and enter a number from 0 to 100. Leave it empty to use the stage's probability again (**Settings → Deals**, **Win probability**). Moving the deal to another stage also sets it back to that stage's. The ⓘ beside the figure says where it comes from: the stage, who set it by hand, or why Margince lowered it.
+Also called: deal probability, likelihood, confidence, why this probability.
 
 ## Projects
 

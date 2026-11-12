@@ -173,7 +173,7 @@ func boundedText(field string, text *string, limit int) error {
 		return nil
 	}
 	return &values.ParseError{
-		Field: field, Code: "too_long",
+		Field: field, Code: "too_long", Max: limit,
 		Message: fmt.Sprintf("%s may be at most %d characters", field, limit),
 	}
 }

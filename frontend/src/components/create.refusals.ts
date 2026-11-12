@@ -1,9 +1,9 @@
 import type { MessageKey } from "../i18n/en";
-import { problemFieldErrorsOf } from "../lib/problem";
+import { faultSentenceFor, problemFieldErrorsOf } from "../lib/problem";
 import type { CreateField } from "./create.fields";
 
-// The server's field codes that have catalog copy. Any other code shows the
-// server's own sentence, which already names the field.
+// The server's field codes that have catalog copy here. Any other code reads
+// the shared wording of a field fault.
 const FIELD_CODE_COPY = new Map<string, MessageKey>([
   ["amount_negative", "create.amountNegative"],
   ["reference_not_found", "create.referenceNotFound"],
@@ -35,7 +35,7 @@ export function fieldRefusals(
     );
     if (!field) continue;
     const copy = FIELD_CODE_COPY.get(problem.code);
-    byField.set(field.key, copy ? t(copy) : problem.message);
+    byField.set(field.key, copy ? t(copy) : faultSentenceFor(problem, t));
   }
   return {
     byField,

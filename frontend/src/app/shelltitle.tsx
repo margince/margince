@@ -3,9 +3,16 @@ import { Heading } from "../design-system/heading";
 import { useSettingsSection } from "../features/settings/settingsnav";
 import { useLocale, useT } from "../i18n";
 import { EXTENSION_SCREEN, findExtension } from "../lib/extensions";
+import { useReadsTeamProgress } from "../lib/progressreader";
 import type { Route } from "../lib/router";
 import { usePhoneViewport } from "../lib/viewport";
-import { entryLabel, NAV, type NavSection, recordKindOf } from "./nav";
+import {
+  entryLabel,
+  NAV,
+  type NavSection,
+  navLabelKey,
+  recordKindOf,
+} from "./nav";
 import {
   headsItself,
   PAGE_SUB_KEYS,
@@ -80,6 +87,7 @@ export function PageTitle({
   const phone = usePhoneViewport();
 
   const navItem = NAV.find((item) => item.screen === route.screen);
+  const readsTeam = useReadsTeamProgress();
   const inSection = sectionHead(section, route);
   // On a screen that publishes a level, the page is the entry the reader
   // opened, not the section they opened it from. The trail in the top bar and
@@ -89,7 +97,9 @@ export function PageTitle({
   const entryTitle = inSection
     ? entryLabel(inSection.entry, locale, t)
     : undefined;
-  const title = entryTitle ?? resolveTitle(route.screen, navItem?.labelKey, t);
+  const title =
+    entryTitle ??
+    resolveTitle(route.screen, navLabelKey(navItem, readsTeam), t);
   // A record kind, and only then. An id segment that names no record is a
   // screen's own state (the settings tab, for one), and the page is still the
   // screen. Printing that slug as the page's name gave Settings an h1 reading

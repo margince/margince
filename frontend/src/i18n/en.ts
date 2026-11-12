@@ -2321,6 +2321,7 @@ export const en = {
   "systemJob.erasure_replay": "Erasure replay after a restore",
   "systemJob.privacy_review": "Privacy review after an erasure",
   "systemJob.extension_inventory": "Extension inventory",
+  "systemJob.extension_privacy": "Extension privacy check",
   "systemJob.extraction_activity_reannounce": "Extracted activity repair",
   "systemJob.forecast_snapshot": "Daily forecast snapshot",
   "systemJob.forecast_evaluation": "Forecast evaluation",
@@ -2601,7 +2602,6 @@ export const en = {
   "history.field.body": "Notes",
   "history.field.emails": "Email addresses",
   "history.field.nudge_dismissal": "Nudge dismissed",
-  "history.field.override_category": "Override category",
   "history.field.overrides_carried": "Overrides carried",
   "history.field.phone": "Phone",
   "history.field.phones": "Phone numbers",
@@ -2895,6 +2895,9 @@ export const en = {
   "action.booking": "Booking page",
 
   "common.fieldInvalid": "Check this value and try again.",
+  "common.fieldTooLongMax": "{field}: at most {max} characters.",
+  "common.valueTooLongMax": "This value is at most {max} characters.",
+  "common.valueTooLong": "This value is too long.",
   "common.undo": "Undo",
   "common.close": "Close",
   "common.unknownValue": "Other",
@@ -3833,6 +3836,7 @@ export const en = {
   "timeline.filters.searchOmitsLimited":
     "Search excludes threads whose content you cannot open.",
   "tab.contacts": "Contacts",
+  "tab.companies": "Companies",
   "tab.deals": "Deals",
   "tab.dealRoom": "Deal Room",
   // Shared by the account's own tab and the lead's: both hold a deal AND the
@@ -3842,7 +3846,7 @@ export const en = {
   "tab.tasks": "Tasks",
   "tab.timeline": "History",
   "tab.finance": "Finance",
-  "tab.network": "Network",
+  "tab.network": "Relationships",
   "tab.documents": "Documents",
   "tab.profile": "Profile",
   "tab.meetings": "Meetings",
@@ -4028,7 +4032,8 @@ export const en = {
     "Paused. Buyers see a paused page until you resume.",
   "roompage.banner.closed":
     "Closed. Buyers can still read the room; nothing more is accepted.",
-  "roompage.banner.expired": "Expired. Buyer links no longer work.",
+  "roompage.banner.expired":
+    "Expired. Buyer links work again once you set a later end date.",
   "roompage.banner.archived": "Archived. No one can enter this room.",
   "roompage.banner.liveUntil": "Live. Access ends on {when}.",
   "roompage.text.title": "Room text",
@@ -5986,6 +5991,23 @@ export const en = {
   "deal.winProbability.source.colleague": "set by {name}",
   "deal.winProbability.source.margince": "lowered by Margince",
   "deal.winProbability.stageValue": "stage {percent}",
+  "deal.winProbability.why": "Why this probability",
+  "deal.winProbability.reason.stage": "This is the figure {stage} gives.",
+  "deal.winProbability.reason.closed":
+    "The deal is closed, so {stage} fixes the figure.",
+  "deal.winProbability.reason.you": "You set this by hand.",
+  "deal.winProbability.reason.colleague": "{name} set this by hand.",
+  "deal.winProbability.reason.human": "A colleague set this by hand.",
+  "deal.winProbability.reason.stageGives":
+    "Without it, {stage} gives {percent}.",
+  "deal.winProbability.reason.margince": "Margince set this.",
+  "deal.winProbability.reason.marginceRule":
+    "Margince may lower a figure nobody set by hand when the deal goes quiet or its emails point lower.",
+  "deal.winProbability.reason.override": "Type your own figure to override it.",
+  "deal.winProbability.reason.clear":
+    "Clear the figure to follow the stage again.",
+  "deal.winProbability.reason.stageNamed": "the stage {name}",
+  "deal.winProbability.reason.stageUnnamed": "the deal’s stage",
   "deal.winProbability.setByStage":
     "Probability set to {percent} by the stage {stage}",
   "deal.winProbability.band.90_plus": "90% or more",
@@ -7803,10 +7825,17 @@ export const en = {
   "sendPermission.missingPermission": "Permission needed for this message",
   "sendPermission.reason.chooseDeal": "Choose the deal for this follow-up.",
   "sendPermission.appliesTo": "This applies to {address}.",
-  "sendPermission.appliesToAndMore_one":
-    "This applies to {address} and {count} other recipient.",
-  "sendPermission.appliesToAndMore_other":
-    "This applies to {address} and {count} other recipients.",
+  "sendPermission.recipientLine": "{address}: {reason}",
+  "sendPermission.unansweredHeld":
+    "The send check did not complete. Send waits until it does.",
+  "sendPermission.recheck": "Check again",
+  "compose.sendWithReason": "Send with a reason…",
+  "compose.scheduleWithReason": "Schedule with a reason…",
+  "compose.holdForCheck": "Send waits for the send check.",
+  "compose.holdRefused":
+    "Send is off. Fix what the check above names, or remove that recipient.",
+  "compose.holdWithReason":
+    "The check refused this message. Send asks for your reason, and the reason covers this one message only.",
   "sendPermission.appliesToSome_one":
     "This applies to {count} of {total} recipients.",
   "sendPermission.appliesToSome_other":
@@ -7930,15 +7959,6 @@ export const en = {
   "directSend.reason.legal_obligation": "Legal obligation",
   "directSend.reason.other": "Other",
   "compose.reviewReference": "Review",
-  "compose.overrule.open": "Overrule with a reason",
-  "compose.overrule.reasonLabel": "Why may this message go?",
-  "compose.overrule.hint":
-    "Your reason is recorded on each contact. It covers this kind of message to them until someone revokes it.",
-  "compose.overrule.confirm": "Record the overrule",
-  "compose.overrule.recording": "Recording…",
-  "compose.overrule.recorded": "Overrule recorded. Press Send again.",
-  "compose.overrule.failed":
-    "The overrule was not recorded. Retry, or open the review from the refusal above.",
   "compose.draftUnavailable":
     "AI drafting is unavailable because no model is configured. The email can still be written manually.",
   "compose.draftUnsupportedHere":
@@ -8827,15 +8847,17 @@ export const en = {
   "signatureTemplate.label": "Template (HTML)",
   "signatureTemplate.placeholder": "<p><b>{name}</b><br>{title}<br>{phone}</p>",
   "signatureTemplate.hint":
-    "Use {name}, {title}, {phone}, {logo} and {imprint}. {logo} is the logo of the sender’s legal entity, embedded in the mail, and {imprint} is its imprint. A legal entity with its own template uses that one. Paragraphs, line breaks, bold, italic, underline, links, and color and pixel size on a span are kept. Empty turns the template off.",
+    "Use {name}, {title}, {phone}, {logo} and {imprint}. {logo} is the logo of the sender’s legal entity, embedded in the mail, and {imprint} is its imprint. A legal entity with its own template uses that one. Paragraphs, line breaks, bold, italic, underline, links, tables, layout styles and images from https addresses are kept. Scripts and forms are removed. Empty turns the template off.",
   "settings.signatureFormat": "Format",
   "settings.signatureFormatText": "Plain text",
   "settings.signatureFormatHtml": "HTML",
   "settings.signatureHtmlLabel": "HTML signature",
   "settings.signatureHtmlHintTemplate":
-    "Your mail carries this instead of the company template. Leave it empty to use the company template again. Remote images and scripts are removed.",
+    "Your mail carries this instead of the company template. Leave it empty to use the company template again. Up to {max} characters. Tables, layout and images from https addresses are kept; scripts and forms are removed.",
   "settings.signatureHtmlHintPlain":
-    "Leave this empty to use your plain text again. Remote images and scripts are removed.",
+    "Leave this empty to use your plain text again. Up to {max} characters. Tables, layout and images from https addresses are kept; scripts and forms are removed.",
+  "settings.signatureHtmlCount_one": "{count} of {max} character",
+  "settings.signatureHtmlCount_other": "{count} of {max} characters",
   "settings.signatureOwnHtml": "Your HTML signature",
   "settings.signatureReviewTitle": "Review {name}’s retained signature",
   "settings.signatureReviewIntro":
@@ -9633,6 +9655,21 @@ export const en = {
   "setup.action.ai": "Connect",
   "setup.step.aiDone": "{name} is connected.",
   "setup.step.aiDoneUnnamed": "An AI tool is connected.",
+  "firstRun.ai.skip": "Not now",
+  "ob.gate.noModelSub":
+    "No AI provider is set up yet, so Margince cannot read your website. Enter your company details yourself, or add a key now.",
+  "ob.gate.addModel": "Add an AI key",
+  "aiSetup.title": "Set up AI",
+  "aiSetup.intro":
+    "Margince needs an AI provider to read websites, draft replies and research. Add a key and choose the models it uses.",
+  "aiSetup.connect": "Connect provider",
+  "aiSetup.connected":
+    "{vendor} is connected. Margince can now read, draft and research.",
+  "setup.step.model": "Set up AI",
+  "setup.caption.model":
+    "Add an AI provider key so Margince can read websites, draft replies and research.",
+  "setup.action.model": "Add key",
+  "setup.step.modelDone": "An AI provider is connected.",
   "ob.conv.connect.aiRow": "Your AI tool",
   "ob.conv.connect.aiBody":
     "Ask Claude, ChatGPT, Copilot or your editor about your deals, and let it update Margince for you.",
@@ -10984,8 +11021,11 @@ export const en = {
   "privacy.openRequest": "Open request",
   "privacy.erasureNeedsContact":
     "An erasure request must name a contact in this company, because fulfilling it erases that record. A free-text subject cannot be erased.",
-  "privacy.accessManual":
-    "An access request is fulfilled manually: record what you sent in the resolution. This system does not assemble or export the data for you.",
+  "privacy.accessPicksContact":
+    "Pick the contact this request is about. You can then download everything held about them from the request.",
+  "privacy.downloadPackage": "Download data package",
+  "privacy.possibleDuplicates":
+    "Other records may be the same person. Check them before you answer.",
   "privacy.fulfilErasureTitle": "Fulfill erasure request",
   "privacy.erasureIrreversible":
     "This permanently erases the contact across the whole system: record, captured activity and derived values. It cannot be undone. The erasure itself is audited.",
@@ -11101,6 +11141,7 @@ export const en = {
 
   "retention.scopeRawCapture": "Stored message originals",
   "retention.scopeDealRiskDay": "Daily record of material deals at risk",
+  "retention.scopeExtension": "Records kept by extensions",
   "pipeline.new": "New pipeline",
   "pipeline.createRefused": "Your role cannot create pipelines. Ask an admin.",
   "pipeline.name": "Name",
@@ -11717,6 +11758,21 @@ export const en = {
     "Connect the account you work in. Your email files itself to the right contacts and deals, and your calendar puts meetings on records and gives your booking link your free times.",
   "connectors.provGmail": "Gmail",
   "connectors.provGcal": "Google Calendar",
+  "connectors.provGdocs": "Google Docs",
+  "connectors.cannotReadNotes": "Cannot read meeting notes",
+  "connectors.reconnectToReadNotes":
+    "Reconnect to read meeting notes. Google was not given access to the notes documents.",
+  "connectors.bringsNotes": "Meeting notes",
+  "connectors.notes.name": "Meeting notes",
+  "connectors.notes.desc":
+    "The notes and transcripts Google Meet writes are read from Google Docs and kept on the meeting.",
+  "connectors.notes.connect": "Connect meeting notes",
+  "connectors.notes.stop": "Stop reading meeting notes",
+  "connectors.notes.stopTitle": "Stop reading meeting notes?",
+  "connectors.notes.stopBody":
+    "Margince stops reading the notes Google Meet writes. Mail and calendar keep running, and notes already on meetings stay.",
+  "connectors.notes.otherAccount":
+    "Meeting notes are connected with {notes}, and the calendar with {calendar}. Notes are read only for meetings in the calendar of the account that connected them, so connect meeting notes with {calendar}.",
   "connectors.provGraph": "Outlook",
   "connectors.provGraphCal": "Outlook Calendar",
   "connectors.provImap": "IMAP mailbox",
@@ -12992,6 +13048,8 @@ export const en = {
   "roomtab.manage.welcomeHint": "The first paragraph a buyer reads.",
   "roomtab.manage.foot":
     "Changes reach buyers the next time they open the room.",
+  "roomtab.manage.expiredHint":
+    "Access has ended. Set a later end date to let buyers in again.",
   "threads.conversationTitle": "Conversation",
   "threads.about": "About {title}",
   "threads.aboutRemoved": "About a document no longer in the room",
@@ -15322,6 +15380,7 @@ export const en = {
   "oauthApp.redirectCopiedFor": "Copied {purpose} URI",
   "oauthApp.redirect.mailbox_connect": "Mailbox",
   "oauthApp.redirect.calendar_connect": "Calendar",
+  "oauthApp.redirect.documents_connect": "Meeting notes",
   "oauthApp.redirect.sign_in": "Sign-in",
   "oauthApp.redirect.extension_connect": "Connect",
   "oauthApp.redirectTitle": "Authorized redirect URIs",
@@ -15339,30 +15398,28 @@ export const en = {
   "oauthApp.microsoft.save": "Save Microsoft app",
   "oauthApp.drawer.google.title": "Set up the Google app",
   "oauthApp.drawer.google.intro":
-    "Two steps in Google Cloud console, then paste the result here. You need access to your company’s Google Cloud project.",
+    "A few steps in Google Cloud console, then paste the result here. You need access to your company’s Google Cloud project.",
   "oauthApp.drawer.google.value":
     "One app for the whole company. Once it is saved, everyone at {company} can connect Gmail and Google Calendar, and Continue with Google can appear on the sign-in screen.",
   "oauthApp.drawer.google.step1Title": "Create an OAuth client in Google Cloud",
   "oauthApp.drawer.google.step1Body":
-    "Open APIs and services, then Credentials, and create an OAuth client ID of the type Web application.",
+    "Choose or create a project for Margince, open APIs and services, then Credentials, and create an OAuth client ID of the type Web application. On the consent screen, under Audience, choose Internal when all sign-ins use your company’s Google accounts: only those accounts can use the app, and Google needs no app review. Choose External only if personal Gmail accounts connect too.",
   "oauthApp.drawer.google.step1Link": "Open Google Cloud console",
   "oauthApp.drawer.google.step2Body":
     "In the client, under Authorized redirect URIs. Margince lists one for each thing this installation uses Google for. Paste them exactly; if one is missing, Google stops the connection with “redirect_uri_mismatch” and does not say which address.",
   "oauthApp.drawer.microsoft.title": "Set up the Microsoft app",
   "oauthApp.drawer.microsoft.intro":
-    "Two steps in the Microsoft Entra admin center, then paste the result here. You need access to your company’s Entra directory.",
+    "A few steps in the Microsoft Entra admin center, then paste the result here. You need access to your company’s Entra directory.",
   "oauthApp.drawer.microsoft.value":
     "One app for the whole company. Once it is saved, everyone at {company} can connect Outlook mail and calendar, and Continue with Microsoft can appear on the sign-in screen.",
   "oauthApp.drawer.microsoft.step1Title": "Register an app in Microsoft Entra",
   "oauthApp.drawer.microsoft.step1Body":
-    "Open App registrations, register a new app, then add a client secret under Certificates and secrets.",
+    "Open App registrations and select New registration. Name it Margince and, under Supported account types, choose Accounts in this organizational directory only; its Directory (tenant) ID goes in the last step. Only if mailboxes of other companies connect too, choose Accounts in any organizational directory and leave the directory empty in Settings.",
   "oauthApp.drawer.microsoft.step1Link": "Open Microsoft Entra admin center",
   "oauthApp.drawer.microsoft.step2Body":
-    "In the app registration, under Authentication, as redirect URIs of the Web platform. Margince lists one for each thing this installation uses Microsoft for. Paste them exactly; if one is missing, Microsoft stops the connection with “AADSTS50011” and does not say which address.",
+    "In the app registration, open Authentication, select Add a platform, choose Web, and paste each address below. Margince lists one for each thing this installation uses Microsoft for. Paste them exactly; if one is missing, Microsoft stops the connection with “AADSTS50011” and does not say which address.",
   "oauthApp.drawer.step2Title": "Add these redirect addresses",
   "oauthApp.drawer.step3Title": "Paste the client ID and secret",
-  "oauthApp.drawer.step3Body":
-    "{vendor} shows both once the client is created.",
   "oauthApp.drawer.secretHint":
     "Stored encrypted and never shown again. To change it later, replace the app.",
   "oauthApp.drawer.foot": "Takes effect for everyone as soon as it is saved.",
@@ -15789,7 +15846,7 @@ export const en = {
   "firstRun.continue": "Continue",
   "firstRun.ai.title": "Choose a model provider",
   "firstRun.ai.sub":
-    "Margince uses your AI provider account. All of this can be changed later in Settings under AI.",
+    "Margince uses your AI provider account. No key at hand? You can add it later in Settings under AI.",
   "firstRun.ai.provider": "Provider",
   "firstRun.ai.key": "API key",
   "firstRun.ai.keyHint": "Stored in the key vault and never shown again.",
@@ -17066,7 +17123,7 @@ export const en = {
     "Someone with the authority takes back one stop.",
   "webhooks.event.consent.override_recorded.label": "Override recorded",
   "webhooks.event.consent.override_recorded.when":
-    "A rep vouches that a machine-level refusal may be overruled for one category.",
+    "Merging contacts copies a standing exception to the contact that remains.",
   "webhooks.event.consent.override_lifted.label": "Override lifted",
   "webhooks.event.consent.override_lifted.when":
     "Someone with the authority takes back one override.",
@@ -17646,8 +17703,8 @@ export const en = {
     "This row’s current version could not be loaded. Reload and retry.",
   // The employers section: every employment edge this contact holds, current
   // one first — a contact can work at more than one company at once.
-  "contact.rail.employmentTitle": "Companies",
-  "contact.rail.noEmployment": "No employment on record.",
+  "contact.rail.employmentTitle": "Work history",
+  "contact.rail.noEmployment": "No work history recorded yet.",
   "contact.rail.noPrimaryEmployer": "No primary employer. Select one.",
   "contact.rail.addEmployment": "Add company",
   "contact.employer.contacts_one": "{count} contact",
@@ -18356,6 +18413,10 @@ export const en = {
   "lists.team.allOwners": "All the owner’s teams",
   "lists.audience.yourTeams": "Your teams",
   "lists.audience.ownerTeams": "The owner’s teams",
+  "lists.audience.ownerOnly": "Its owner",
+  "lists.audience.stewardOnly": "Its steward",
+  "lists.audience.youAndSteward": "You and its steward",
+  "lists.audience.ownerAndSteward": "Its owner and steward",
   "lists.audience.unknownTeam": "A team you cannot see",
   "lists.health.ownerless": "Needs a steward",
   "lists.health.invalid": "Filter no longer works",
@@ -18448,9 +18509,12 @@ export const en = {
   "lists.record.empty": "Not on any list you can find.",
   "lists.record.check": "Check a Live List",
   "lists.record.checkHint":
-    "A Live List updates itself from its filters. Pick one to see whether this record matches, and why.",
+    "Only Live Lists can be checked. Pick one to see whether this record matches, and why.",
+  "lists.record.checkHintAdd":
+    "Only Live Lists can be checked. To put this record on a Shortlist, use “Add to Shortlist”.",
   "lists.record.checkPick": "Pick a Live List",
   "lists.record.truncated": "And more lists not shown here.",
+  "lists.record.allLists": "All lists",
   "lists.record.takenOff": "Taken off {name}",
   "lists.record.putBack": "Back on {name}",
   "lists.addToShortlist": "Add to Shortlist",
@@ -18528,8 +18592,8 @@ export const en = {
   "filters.new.deals": "New deal filter",
   "filters.new.leads": "New lead filter",
   "filters.library.whichRecords": "Filter which records?",
-  "filters.library.mine": "Only me",
-  "filters.library.shared": "Shared",
+  "filters.library.mine": "Mine",
+  "filters.library.shared": "Shared with me",
   "filters.library.views": "Saved views",
   "filters.library.kindView": "Saved view",
   "filters.library.rowMore": "More actions for {name}",
@@ -18544,9 +18608,8 @@ export const en = {
   "filters.library.records.project_one": "{count} project",
   "filters.library.records.project_other": "{count} projects",
   "filters.library.recordsSeen": "{records} you can see",
-  "filters.library.mineEmpty": "Views you save show here.",
-  "filters.library.sharedEmpty":
-    "No shared lists yet. A list shared with a team or everyone shows here.",
+  "filters.library.mineEmpty": "Views you save and lists you own show here.",
+  "filters.library.sharedEmpty": "No one has shared a list with you yet.",
   "filters.library.noHits": "No views or lists match “{q}”.",
   "filters.library.clearSearch": "Clear search",
   "filters.library.noTypeHits.contacts": "No contact views or lists.",
@@ -18979,9 +19042,196 @@ export const en = {
   "worklist.pane.conversation": "Thread",
   "worklist.pane.openEmail": "Open email",
   "worklist.pane.deal": "Deal",
-  "worklist.why.title": "Why this needs attention",
+  "worklist.why.title": "Why this is on your list",
   "worklist.why.reasons": "Reasons",
   "worklist.why.detail": "Detail",
+  "worklist.why.happened": "What happened",
+  "worklist.why.now": "Why now",
+  "worklist.why.consequence": "If nothing is done",
+  "worklist.why.todo": "What to do",
+  "worklist.title.deal_at_risk": "{name} has gone quiet",
+  "worklist.title.deal_at_risk.close_overdue": "{name} is past its close date",
+  "worklist.title.relationship_decay": "No recent contact with {name}",
+  "worklist.title.automation_run": "{name} did not finish",
+  "worklist.title.automation_run.failed": "{name} failed",
+  "worklist.title.automation_run.blocked": "{name} was blocked",
+  "worklist.title.meeting_outcome": "Record the outcome of {name}",
+  "worklist.title.meeting_follow_up": "Follow up on {name}",
+  "worklist.title.awaiting_reply": "No reply yet: {name}",
+  "worklist.title.bounce": "Bounced: {name}",
+  "worklist.title.lead_response": "Get back to new lead {name}",
+  "worklist.title.customer_waiting": "{name} is waiting for your reply",
+  "worklist.todo.task.named":
+    "Finish the task with {name} and mark it done, or move it to another day.",
+  "worklist.todo.deal_at_risk.named": "Open {name} and plan the next step.",
+  "worklist.todo.customer_waiting.named": "Reply to {name}.",
+  "worklist.todo.awaiting_reply.named": "Send {name} a follow-up.",
+  "worklist.todo.lead_response.named":
+    "Get in touch with {name} now; a new lead cools fast.",
+  "worklist.todo.meeting.named": "Open the meeting to prepare for {name}.",
+  "worklist.todo.meeting_follow_up.named": "Send {name} a follow-up.",
+  "worklist.todo.relationship_decay.named":
+    "Get in touch with {name}, or set this aside for a month.",
+  "worklist.todo.conversation_claim.named":
+    "Do what you told {name}, then mark it done.",
+  "worklist.todo.bounce.named":
+    "Check the address you have for {name}, then send it again.",
+  "worklist.todo.undelivered.named":
+    "Open the email to {name} to see why, then send it again.",
+  "worklist.todo.automation_run.named":
+    "Open {name}, see why it stopped and fix the cause.",
+  "worklist.todo.capture_health.named":
+    "Check the connection of {name} so its mail is captured again.",
+  "worklist.todo.capture_health.backfill":
+    "Open the mailbox in Settings and continue or restart its history import.",
+  "worklist.todo.capture_health.backfill.named":
+    "Open {name} in Settings and continue or restart its history import.",
+  "worklist.todo.capture_health.calendar":
+    "Check the calendar connection so its meetings are captured again.",
+  "worklist.todo.capture_health.calendar.named":
+    "Check the connection of {name} so its meetings are captured again.",
+  "worklist.consequence.task_slips.named": "The task with {name} stays undone.",
+  "worklist.happened.customer_waiting":
+    "{name} wrote on {when}, and nobody has answered yet.",
+  "worklist.happened.customer_waiting.bare":
+    "A message came in on {when}, and nobody has answered yet.",
+  "worklist.happened.awaiting_reply":
+    "You wrote to {name} on {when}, and no reply has come in since.",
+  "worklist.happened.awaiting_reply.bare":
+    "You wrote on {when}, and no reply has come in since.",
+  "worklist.happened.lead_response":
+    "{name} came in as a lead on {when} and has had no first answer.",
+  "worklist.happened.lead_response.bare":
+    "This lead came in on {when} and has had no first answer.",
+  "worklist.happened.meeting_outcome":
+    "The meeting with {name} was on {when}, and nothing records how it went.",
+  "worklist.happened.meeting_outcome.bare":
+    "The meeting was on {when}, and nothing records how it went.",
+  "worklist.happened.meeting_follow_up":
+    "You met {name} on {when}, and nothing was sent to them afterward.",
+  "worklist.happened.meeting_follow_up.bare":
+    "The meeting was on {when}, and nothing was sent to the attendees afterward.",
+  "worklist.happened.relationship_decay":
+    "The last recorded contact with {name} was on {when}.",
+  "worklist.happened.conversation_claim":
+    "You committed to this with {name} on {when}.",
+  "worklist.happened.conversation_claim.bare":
+    "You committed to this in a conversation on {when}.",
+  "worklist.happened.bounce": "An email to {name} bounced on {when}.",
+  "worklist.happened.bounce.bare": "An email bounced on {when}.",
+  "worklist.happened.undelivered": "An email to {name} was not sent on {when}.",
+  "worklist.happened.undelivered.bare": "An email was not sent on {when}.",
+  "worklist.happened.automation_run":
+    "The automation {name} stopped on {when}.",
+  "worklist.happened.automation_run.bare": "An automation stopped on {when}.",
+  "worklist.happened.capture_health":
+    "The mailbox {name} has not synced since {when}.",
+  "worklist.happened.capture_health.bare":
+    "A mailbox has not synced since {when}.",
+  "worklist.happened.capture_health.backfill":
+    "The mail history import for {name} failed on {when}.",
+  "worklist.happened.capture_health.backfill.bare":
+    "A mail history import failed on {when}.",
+  "worklist.happened.capture_health.silent":
+    "The mailbox {name} has captured no mail since {when}.",
+  "worklist.happened.capture_health.silent.bare":
+    "A mailbox has captured no mail since {when}.",
+  "worklist.happened.capture_health.calendar":
+    "The calendar {name} has not synced since {when}.",
+  "worklist.happened.capture_health.calendar.bare":
+    "A calendar has not synced since {when}.",
+  "worklist.happened.capture_health.calendar_silent":
+    "The calendar {name} has captured no meetings since {when}.",
+  "worklist.happened.capture_health.calendar_silent.bare":
+    "A calendar has captured no meetings since {when}.",
+  "worklist.happened.ai_work_health": "The AI task {name} failed on {when}.",
+  "worklist.happened.ai_work_health.bare": "An AI task failed on {when}.",
+  "worklist.happened.ai_work_health.stalled":
+    "The AI task {name} has not finished since {when}.",
+  "worklist.happened.ai_work_health.stalled.bare":
+    "An AI task has not finished since {when}.",
+  "worklist.happened.failed_approval":
+    "An action you approved on {name} did not run on {when}.",
+  "worklist.happened.failed_approval.bare":
+    "An action you approved did not run on {when}.",
+  "worklist.happened.deal_suggestion":
+    "On {when}, activity with {name} looked like a new deal.",
+  "worklist.happened.deal_suggestion.bare":
+    "On {when}, recorded activity looked like a new deal.",
+  "worklist.happened.tag_suggestion":
+    "On {when}, Margince suggested a tag for {name}.",
+  "worklist.happened.tag_suggestion.bare":
+    "On {when}, Margince suggested a tag for this record.",
+  "worklist.happened.domain_question":
+    "On {when}, Margince could not tell which company {name} works for.",
+  "worklist.happened.domain_question.bare":
+    "On {when}, Margince could not match this contact to a company.",
+  "worklist.happened.meeting": "You meet {name} on {when}.",
+  "worklist.happened.meeting.bare": "This meeting is on {when}.",
+  "worklist.happened.task": "It is due on {due}.",
+  "worklist.happened.task.overdue": "It was due on {due} and is still open.",
+  "worklist.happened.task.undated": "It has no due date.",
+  "worklist.happened.deal": "{deal}: {figures}.",
+  "worklist.happened.lastFrom": "Last contact from {name}: {when}.",
+  "worklist.happened.lastTo": "Last contact to {name}: {when}.",
+  "worklist.happened.noneFrom": "Last contact from {name}: none you can open.",
+  "worklist.happened.noneTo": "Last contact to {name}: none you can open.",
+  "worklist.happened.neverFrom": "Last contact from {name}: never.",
+  "worklist.happened.neverTo": "Last contact to {name}: never.",
+  "worklist.consequence.buyer_waits": "They keep waiting for an answer.",
+  "worklist.consequence.buyer_waits.named":
+    "{name} keeps waiting for an answer.",
+  "worklist.consequence.promise_breaks": "A commitment you made is broken.",
+  "worklist.consequence.promise_breaks.named":
+    "A commitment you made to {name} is broken.",
+  "worklist.consequence.deal_drifts": "The deal keeps drifting.",
+  "worklist.consequence.deal_drifts.named": "{name} keeps drifting.",
+  "worklist.consequence.deal_slips_past_close":
+    "The deal slips past its expected close date.",
+  "worklist.consequence.deal_slips_past_close.named":
+    "{name} slips past its expected close date.",
+  "worklist.consequence.meeting_unprepared":
+    "You go into the meeting unprepared.",
+  "worklist.consequence.task_slips": "The task stays undone.",
+  "worklist.consequence.work_blocked":
+    "Work that depends on this decision stays blocked.",
+  "worklist.consequence.customer_never_received":
+    "The message never reaches them.",
+  "worklist.consequence.customer_never_received.named":
+    "{name} never gets the message.",
+  "worklist.consequence.you_believe_it_happened":
+    "The step looks done, but it did not happen.",
+  "worklist.consequence.legal_deadline_missed":
+    "The legal deadline passes without an answer.",
+  "worklist.consequence.mailbox_blind":
+    "Mail on this mailbox stays out of Margince.",
+  "worklist.consequence.data_drifts": "The records drift further apart.",
+  "worklist.todo.deal_at_risk": "Open the deal and plan the next step.",
+  "worklist.todo.task":
+    "Do the work and mark it done, or move it to another day.",
+  "worklist.todo.customer_waiting": "Reply to the message.",
+  "worklist.todo.awaiting_reply": "Send a follow-up.",
+  "worklist.todo.lead_response": "Get in touch now; a new lead cools fast.",
+  "worklist.todo.meeting": "Open the meeting to prepare.",
+  "worklist.todo.meeting_outcome":
+    "Record what came of it. If it did not take place, choose “Did not happen”, or cancel it through its calendar invitation.",
+  "worklist.todo.meeting_follow_up": "Send the attendees a follow-up.",
+  "worklist.todo.relationship_decay":
+    "Get in touch, or set it aside for a month.",
+  "worklist.todo.conversation_claim": "Do it, then mark it done.",
+  "worklist.todo.bounce": "Check the address, then send it again.",
+  "worklist.todo.undelivered": "Open the email to see why, then send it again.",
+  "worklist.todo.automation_run":
+    "Open the run, see why it stopped and fix the cause.",
+  "worklist.todo.capture_health":
+    "Check the mailbox connection so its mail is captured again.",
+  "worklist.todo.ai_work_health": "Check its AI provider in Settings.",
+  "worklist.todo.failed_approval": "Check what happened, then acknowledge it.",
+  "worklist.todo.deal_suggestion":
+    "Create the deal, or dismiss the suggestion.",
+  "worklist.todo.tag_suggestion": "Apply the tag, or dismiss the suggestion.",
+  "worklist.todo.domain_question":
+    "Confirm a company, choose one, or stop capturing the domain.",
   "worklist.ask.approval":
     "An agent proposed a change and is waiting for a decision. Approve it or turn it down.",
   "worklist.ask.dedupe_candidate":
@@ -18992,6 +19242,9 @@ export const en = {
     "A tag was suggested for this record. Apply it, or dismiss the suggestion.",
   "worklist.ask.task":
     "This task is open. Do the work and mark it done, or move it to another day.",
+  "worklist.ask.task_unchecked":
+    "Margince cannot check whether this was answered: the mail’s text can no longer be read. Mark it done once it is handled.",
+  "worklist.ask.task_unchecked_reply": "Latest reply sent: {date}",
   "worklist.ask.brief_item":
     "The overnight review flagged this deal. Act on it, set it aside, or dismiss it.",
   "worklist.ask.conversation_claim":
@@ -19001,7 +19254,7 @@ export const en = {
   "worklist.ask.customer_waiting":
     "A customer wrote and nobody has answered yet. Reply to them.",
   "worklist.ask.lead_response":
-    "This lead is waiting for a first answer. Get in touch before its response time runs out.",
+    "This lead is waiting for a first answer. Get in touch now; a new lead cools fast.",
   "worklist.ask.deal_at_risk":
     "This deal shows signs of slipping. Open it and plan the next step.",
   "worklist.ask.meeting": "This meeting is coming up. Open it to prepare.",
@@ -19015,6 +19268,8 @@ export const en = {
     "A privacy notice is owed to this contact. Send it, ask them to confirm their details, or end the duty.",
   "worklist.ask.booking_health":
     "Your booking page is paused, so guests cannot book. Open booking settings and connect a calendar Margince can add meetings to.",
+  "worklist.ask.capture_health.calendar":
+    "A calendar stopped capturing meetings. Reconnect it so its meetings are captured again.",
   "worklist.ask.capture_health":
     "A mailbox stopped capturing mail. Reconnect it so its mail is captured again.",
   "worklist.ask.domain_question":
@@ -19032,7 +19287,7 @@ export const en = {
   "worklist.ask.introduction_request":
     "A colleague asks you to introduce them to a contact. Accept or decline the request.",
   "worklist.ask.meeting_outcome":
-    "This meeting is over and nothing records how it went. Record what came of it, or mark it canceled if it did not take place.",
+    "This meeting is over and nothing records how it went. Record what came of it. If it did not take place, choose “Did not happen”, or cancel it through its calendar invitation.",
   "worklist.ask.weekly_commitment":
     "You planned this for the week. Do the work, or move it in your weekly plan.",
   "worklist.ask.awaiting_reply":
@@ -19249,6 +19504,12 @@ export const en = {
   "receipt.detail.by": "Done by",
   "receipt.detail.when": "When",
   "receipt.detail.source": "Source",
+  "receipt.detail.sourceAt": "Source date",
+  "receipt.detail.reasonKind": "Reason",
+  "receipt.detail.reasonKind.rule":
+    "A rule: Margince counted what the data shows",
+  "receipt.detail.reasonKind.inference":
+    "An inference: Margince read what the customer wrote or said",
   "worklist.handled.showMore": "Show more",
   "worklist.exceptions.empty": "No team exceptions.",
   "worklist.exceptions.loading": "Loading team…",
@@ -19473,7 +19734,7 @@ export const en = {
   "worklist.untitled.task": "Untitled task",
   "worklist.untitled.brief_item": "Deal to review",
   "worklist.mayBeDone.asked":
-    "You may have done this: you wrote to them on {date}.",
+    "This may be done: an email went to them on {date}.",
   "worklist.mayBeDone.done": "Done",
   "worklist.mayBeDone.notYet": "Not yet",
   "worklist.recipients.label": "Recipients",
@@ -19789,31 +20050,36 @@ export const en = {
     "Mail, calendar and sign-in through one Entra app you own.",
   "firstRun.platform.imap": "IMAP",
   "firstRun.platform.imapWhat":
-    "Each mailbox connects with its own IMAP app password. Sign-in uses email and password.",
-  "firstRun.platform.redirectTitle": "Register these redirect URIs in the app",
-  "firstRun.platform.redirectHint":
-    "Add each URI to the app before saving here. Sign-in adds the sign-in button to the login page; the mail and calendar connectors let people connect theirs. A missing URI fails at the provider’s consent screen.",
-  "firstRun.google.helpToggle": "Where to find these",
-  "firstRun.google.helpStep1":
-    "In the Google Cloud console, open a project and go to “APIs & Services”, then “Credentials”. Select “Create credentials”, then “OAuth client ID”, and choose “Web application”.",
-  "firstRun.google.helpStep2":
-    "Enable the Gmail API and add the gmail.readonly, gmail.send and userinfo.profile scopes to the consent screen (userinfo.profile supplies the Google account picture). They share one consent because Google does not add a scope to an issued refresh token; requesting one later means connecting the mailbox again.",
-  "firstRun.google.helpStep3":
-    "Under Authorized redirect URIs, add the URIs listed above. Mailbox is required for mail; Calendar and Sign-in enable those features.",
-  "firstRun.google.helpStep4":
-    "Copy the client ID and client secret into the 2 fields below. The secret is sent once, stored in the key vault and never readable again.",
-  "firstRun.google.helpConsole": "Google Cloud credentials console",
-  "firstRun.google.helpDocs":
-    "Full prerequisites, including Microsoft and IMAP: docs/how-to/connect-a-mailbox.md",
+    "Each mailbox connects over IMAP with the password its mail service gives for it, often an app password. Sign-in uses email and password.",
+  "oauthApp.steps.google.apisTitle": "Turn on Gmail and Google Calendar",
+  "oauthApp.steps.google.apisBody":
+    "In the API library, enable the Gmail API and the Google Calendar API. Then, on the consent screen under Data access, add the scopes gmail.readonly, gmail.send, calendar.readonly, calendar.events.owned and userinfo.profile. Each user approves them when connecting a mailbox and calendar.",
+  "oauthApp.steps.google.apisLink": "Open API library",
+  "oauthApp.steps.google.pasteBody":
+    "Google shows both in a dialog after you select Create. If you closed it, open the client under Credentials: the client ID is at the top, and Add secret makes a new secret.",
+  "oauthApp.steps.microsoft.permissionsTitle": "Allow mail and calendar access",
+  "oauthApp.steps.microsoft.permissionsBody":
+    "Open API permissions, select Add a permission, then Microsoft Graph, then Delegated permissions. Add openid, email, profile, offline_access, User.Read, Mail.Read, Mail.Send and Calendars.ReadWrite. Then select Grant admin consent, so nobody at your company has to approve them one by one.",
+  "oauthApp.steps.microsoft.secretTitle": "Create a client secret",
+  "oauthApp.steps.microsoft.secretBody":
+    "Open Certificates and secrets and select New client secret. Copy its Value straight away, not the Secret ID: Entra shows the value only once. Note the expiry date; when the secret expires, mailboxes stop syncing until a new one is saved here.",
+  "oauthApp.steps.microsoft.pasteTitle": "Paste the IDs and the secret",
+  "oauthApp.steps.microsoft.pasteBody":
+    "The app’s Overview page shows the Application (client) ID and the Directory (tenant) ID.",
+  "firstRun.imap.passwordTitle": "Get the password IMAP takes",
+  "firstRun.imap.passwordBody":
+    "Gmail and iCloud take an app password, made once two-step sign-in is on; the normal password is refused. Gmail: Google Account, Security, App passwords. iCloud: Apple Account, Sign-In and Security, App-Specific Passwords. Any other mail service says on its help page which password IMAP takes. Microsoft 365 mailboxes no longer accept a password over IMAP: choose Microsoft 365 above. Personal Outlook.com mailboxes cannot connect here.",
+  "firstRun.imap.serverTitle": "Look up the IMAP server",
+  "firstRun.imap.serverBody":
+    "Gmail uses imap.gmail.com and iCloud uses imap.mail.me.com, each on port 993. Any other mail service lists its server on its help page about IMAP settings.",
+  "firstRun.imap.connectTitle": "Connect your mailbox",
   "firstRun.platform.imapNote":
-    "Nothing is configured for the whole installation. Connect your own mailbox now or later; other mailboxes connect in Settings under Connections, each with its own app password.",
+    "Nothing is configured for the whole installation. Connect your own mailbox now or later; other mailboxes connect in Settings under Connections, each with its own IMAP password.",
   "firstRun.platform.skip": "Not now",
   "firstRun.needed": "Needed to continue",
   "firstRun.stillNeeded": "Still needed: {fields}",
   "firstRun.platform.foot":
     "All answers here can be changed later in Settings.",
-  "firstRun.microsoft.note":
-    "Register an app in Microsoft Entra with the redirect URIs above, then paste its client ID and secret here. Pin it to your directory: that directory’s mailboxes connect through it and its people sign in with it.",
   "firstRun.microsoft.helpSignIn":
     "The directory puts Microsoft on the login page, so it is required here. To register an app without one (any company can connect a mailbox, no one signs in with Microsoft), use Settings instead.",
   "firstRun.microsoft.tenantHint":
@@ -19955,6 +20221,10 @@ export const en = {
     "Nothing is sent to the provider until you select Continue.",
   "contact.card.dealTitle": "The deal {name} decides",
   "contact.card.deals": "Deals",
+  "contact.card.openTasks": "Open tasks",
+  "contact.card.noOpenTasks": "No open tasks",
+  "contact.moment.doneToast":
+    "Marked done. It comes back when either of you writes again.",
   "contact.card.understandingTitle": "Understanding {name}",
   "contact.card.correct": "Correct something",
   "contact.card.said": "What was said",
@@ -21526,6 +21796,7 @@ export const en = {
   "brief.done.showNew": "Show new changes",
   "brief.done.history": "Change history",
   "brief.done.dealsLabel": "Deals Margince changed",
+  "brief.done.pick": "Undo changes on {name}",
   "brief.done.noReason": "Reason unavailable",
   "brief.done.markedLost": "Marked lost",
   "brief.done.customerWrote": "The customer wrote:",
@@ -21541,10 +21812,164 @@ export const en = {
   "changes.bulk.confirm_other":
     "{count} deals need your confirmation. Undo each on its own row.",
   "changes.bulk.unsent_one": "{count} deal was not sent.",
+  "changes.bulk.settled_one": "{count} deal has no change left to undo.",
+  "changes.bulk.settled_other": "{count} deals have no change left to undo.",
   "changes.bulk.unsent_other": "{count} deals were not sent.",
   "changes.bulk.confirmOnDeal": "Open the deal to confirm its Undo.",
   "changes.bulk.retry": "Send again",
   "changes.bulk.unfinished": "Deals not fully undone",
+  "changes.bulk.clear": "Clear this result",
+  "nav.progress": "Progress",
+  "nav.myProgress": "My progress",
+  "nav.salesGoals": "Sales goals",
+  "progress.controls": "Progress period and scope",
+  "progress.viewGoals": "View sales goals",
+  "progress.period": "Period",
+  "progress.monthly": "Monthly",
+  "progress.yearly": "Yearly",
+  "progress.month": "Month",
+  "progress.year": "Year",
+  "progress.scope": "Seller or team",
+  "progress.reading": "Reading progress",
+  "progress.myTitle": "Progress",
+  "progress.teamTitle": "Team progress",
+  "progress.heading": "{whose} · {scope} · {period} · Figures up to {cutoff}",
+  "progress.closedRevenue": "Closed revenue",
+  "progress.goal": "Goal",
+  "progress.goalLine": "Goal for the period: {goal}",
+  "progress.goalIncompleteTeamLine":
+    "Goals incomplete: at least one seller has no monthly goal yet, {subtotal} so far",
+  "progress.goalIncompleteLine":
+    "Goals incomplete: {set} of {needed} months set, {subtotal} so far",
+  "progress.goal.set": "Set",
+  "progress.goal.zero": "Zero",
+  "progress.goal.missing": "No goal set",
+  "progress.goal.incomplete": "Goals incomplete",
+  "progress.goal.withheld": "Hidden",
+  "progress.goal.other_currency": "In another currency",
+  "progress.goal.changed_outside_plan": "Changed outside the plan",
+  "progress.goalChanged":
+    "A month of this goal was changed outside the sales goals. A manager should review the plan.",
+  "progress.completion": "{percent}% of the goal",
+  "progress.partial":
+    "Some deals in this figure have no converted value, so no completion is claimed.",
+  "progress.notStarted": "Not started",
+  "progress.withheld": "Hidden",
+  "progress.goalMet": "Goal met",
+  "progress.aboveGoal": "{amount} above goal",
+  "progress.belowGoal": "{amount} below goal",
+  "progress.viewClosedDeals": "View closed deals",
+  "progress.readings": "Revenue readings",
+  "progress.productSales": "Product sales",
+  "progress.serviceSales": "Services and projects",
+  "progress.planned": "Planned revenue",
+  "progress.plannedAt": "Open deals as of {at}",
+  "progress.unclassified": "Unclassified",
+  "progress.unclassifiedDetail":
+    "This revenue has no product or service classification.",
+  "progress.invalidDeals_one":
+    "{count} deal has lines worth more than the deal.",
+  "progress.invalidDeals_other":
+    "{count} deals have lines worth more than the deal.",
+  "progress.itemsMore_one": "{items} and {count} more",
+  "progress.itemsMore_other": "{items} and {count} more",
+  "progress.team": "Team",
+  "progress.member": "Team member",
+  "progress.delta": "Difference",
+  "progress.membersWithheld":
+    "Some members are hidden, so the team goal is hidden too.",
+  "progress.months": "Months of {year}",
+  "progress.definition":
+    "Closed revenue is the value of deals won in the period, the same figure Analytics shows. The goal is the sum of the monthly sales goals for the period. A yearly goal needs all twelve months.",
+  "progress.work": "Work in progress now",
+  "progress.work.leads": "Leads",
+  "progress.work.deals": "Deals",
+  "progress.work.lead": "Lead",
+  "progress.work.deal": "Deal",
+  "progress.work.status": "Status",
+  "progress.work.nextTask": "Next task",
+  "progress.work.noNextTask": "No next task",
+  "progress.work.owner": "Owner",
+  "progress.work.amount": "Planned amount",
+  "progress.work.noAmount": "No amount",
+  "progress.work.expectedClose": "Expected close",
+  "progress.work.noClose": "No date",
+  "progress.work.unnamed": "Unnamed lead",
+  "progress.work.empty": "Nothing open in this list.",
+  "progress.work.more": "Show more",
+  "progress.plannedAhead": "Planned, not closed yet",
+  "progress.rail": "Goal and definition",
+  "progress.definitionTitle": "What counts",
+  "progress.goalBasis": "Where the goal comes from",
+  "progress.goalFor": "Goal for {period}",
+  "progress.goalMonths": "Months with a goal",
+  "progress.goalMonthsSet": "{set} of {needed}",
+  "progress.goalBasisNote":
+    "The goal adds up the published monthly sales goals.",
+  "progress.ofGoal": "Closed revenue of {name} against the goal",
+  "progress.yearLine": "{year} so far: {closed} of {goal} ({percent}%)",
+  "progress.work.note": "Open now, whatever the period.",
+  "progress.work.saleProduct": "Product",
+  "progress.work.saleService": "Service",
+  "progress.work.saleBoth": "Product and service",
+  "progress.work.salePartly": "Partly classified",
+  "progress.work.saleNone": "Unclassified",
+  "progress.work.overdue": "Overdue",
+  "progress.work.outside": "Outside the period",
+  "goals.controls": "Sales goal year and seller",
+  "goals.viewProgress": "View progress",
+  "goals.seller": "Seller",
+  "goals.reading": "Reading sales goals",
+  "goals.planTitle": "Sales goals of {name} for {year}",
+  "goals.state.no_goal": "No plan",
+  "goals.state.draft": "Draft",
+  "goals.state.published": "Published",
+  "goals.state.published_with_draft": "Published, draft open",
+  "goals.state.withdrawn": "Withdrawn",
+  "goals.state.changed_outside_plan": "Changed outside the plan",
+  "goals.readOnly":
+    "Read-only. Goals are agreed together. Only a colleague who manages sales goals can create, edit or publish them.",
+  "goals.months": "Monthly goals",
+  "goals.yearTotal": "Year total",
+  "goals.notSet": "Not set",
+  "goals.history": "History",
+  "goals.history.what": "Change",
+  "goals.history.reason": "Reason",
+  "goals.history.when": "When",
+  "goals.event.draft": "{name} saved a draft",
+  "goals.event.published": "{name} published the goals",
+  "goals.event.discarded": "{name} discarded the draft",
+  "goals.event.withdrawn": "{name} withdrew the goals",
+  "goals.roster": "Sellers",
+  "goals.status": "Status",
+  "goals.yearly": "Yearly goal in {currency}",
+  "goals.spread": "Spread equally",
+  "goals.monthsSum": "The months add up to {total}.",
+  "goals.monthsMissing_one": "{count} month is not set.",
+  "goals.monthsMissing_other": "{count} months are not set.",
+  "goals.sumDiffers":
+    "The months add up to {total}, not the yearly goal of {yearly}.",
+  "goals.reason": "Reason",
+  "goals.reasonHint": "Saved with the change and shown in the history.",
+  "goals.reasonNeeded": "Write a reason first.",
+  "goals.sellerReads":
+    "{name} can read this plan, its drafts and the reason for each change.",
+  "goals.saveDraft": "Save draft",
+  "goals.discard": "Discard draft",
+  "goals.publish": "Publish",
+  "goals.withdraw": "Withdraw",
+  "goals.saveFirst": "Save the draft first.",
+  "goals.completeFirst": "Set all twelve months first.",
+  "goals.positiveFirst": "The yearly goal must be more than zero.",
+  "goals.matchFirst": "Make the months add up to the yearly goal first.",
+  "goals.publishTitle": "Publish the goals of {name} for {year}?",
+  "goals.publishBody":
+    "The twelve months, {total} in all, become the goals every report reads.",
+  "goals.agreed": "These goals were agreed together.",
+  "goals.agreeFirst": "Confirm the goals were agreed together.",
+  "goals.withdrawTitle": "Withdraw the goals of {name} for {year}?",
+  "goals.withdrawBody":
+    "All twelve months stop counting as goals. The history keeps them.",
 } as const;
 
 export type MessageKey = keyof typeof en;

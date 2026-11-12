@@ -75,7 +75,7 @@ func graphOptions(cfg apiConfig, pool *pgxpool.Pool, vault keyvault.Vault, logge
 			"and a Settings-supplied Entra app has nowhere to seal its client secret%s; surface stays 501\n",
 			envAppShortfall(cfg))
 	case cfg.graphClientID != "":
-		_, _ = fmt.Fprintln(stdout, "api graph capture connector configured but INCOMPLETE — needs --connector-state-key (>=32B) and --public-base-url; surface stays 501")
+		_, _ = fmt.Fprintln(stdout, "api graph capture connector configured but INCOMPLETE — needs --connector-state-key (>=32B) or the vault root key, and --public-base-url; surface stays 501")
 	}
 	return opts, nil
 }

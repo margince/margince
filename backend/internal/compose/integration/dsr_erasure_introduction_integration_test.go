@@ -12,6 +12,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/modules/introductions"
 	"github.com/margince/margince/backend/internal/modules/privacy"
+	"github.com/margince/margince/backend/internal/modules/search"
 	"github.com/margince/margince/backend/internal/platform/clocktest"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
@@ -69,7 +70,7 @@ func TestErasingASubjectClearsWhatAnIntroductionSaidAboutThem(t *testing.T) {
 			"proves nothing", n)
 	}
 
-	if err := privacy.NewEraser(e.DB()).EraseContact(ctx, subject, "subject request"); err != nil {
+	if err := privacy.NewEraser(e.DB()).WithEdgeInvalidator(search.RecomputeEdgesForActivities).EraseContact(ctx, subject, "subject request"); err != nil {
 		t.Fatalf("EraseContact → %v", err)
 	}
 
@@ -127,7 +128,7 @@ func TestErasingASubjectLeavesARecordedIntroductionIntroduced(t *testing.T) {
 		t.Fatalf("seeding the recorded introduction: %v", err)
 	}
 
-	if err := privacy.NewEraser(e.DB()).EraseContact(ctx, subject, "subject request"); err != nil {
+	if err := privacy.NewEraser(e.DB()).WithEdgeInvalidator(search.RecomputeEdgesForActivities).EraseContact(ctx, subject, "subject request"); err != nil {
 		t.Fatalf("EraseContact → %v", err)
 	}
 

@@ -174,7 +174,7 @@ func (e *Eraser) EraseContactCounted(ctx context.Context, contactID ids.UUID, re
 		}
 		// Where the subject's name stands inside somebody else's working record:
 		// an automation's run, a colleague's voice sample or weekly plan
-		// (erasure_commitments.go).
+		// (erasure_declared.go).
 		if err := e.redactWorkingRecords(ctx, tx, subject, keys); err != nil {
 			return err
 		}
@@ -196,7 +196,7 @@ func (e *Eraser) EraseContactCounted(ctx context.Context, contactID ids.UUID, re
 		if err != nil {
 			return err
 		}
-		if err := e.scrubDeliveryCopies(ctx, tx, subject, leadsWiped); err != nil {
+		if err := e.scrubCopiesOutsideCore(ctx, tx, subject, reason, leadsWiped, activitiesRedacted); err != nil {
 			return err
 		}
 		erased, err = certifyErasure(ctx, tx, subject, reason, identities, tx.uncounted(), contactErasureCounts{

@@ -193,7 +193,7 @@ var readAuthorityOnAWritePath = gatekit.Waive(map[string]string{
 	"internal/modules/commissions:entriesOfVisibleDeals": "the READ spelling of a commission entry's deal-derived row scope, rendered for the ledger page, the summary and the single read through VisibleClause and for the void through RetractableClause. It decides only whether a row may be SEEN: both paths that change one — Decide and ReverseForDeal — resolve the row through one of those two and then take WritableEntriesForDeal (auth.EnsureWritableLive) to approve or pay, or RetractableEntriesForDeal (auth.EnsureRetractable) to void, before writing anything",
 	"internal/modules/contacts:employerScope":            "the employer stamped on every contact a read returns, and the expression the contacts list orders by, and the bought-employment marks on the same read, flagged only because a mutation hands back the record it wrote. The company is written NOTHING — the probe decides whether this caller may be SHOWN the account their contact works at — and the contact row that IS being changed takes its own authority at the entry: contact:create on the create path, auth.EnsureWritable on the update. Narrowing it to write authority would blank the employer for a reader entitled to see the company but not to change it, which is most readers",
 	"internal/modules/contacts:CompaniesOnProjectTx":     "a READ: it lists the companies on a project and returns them, and every path that CHANGES the edges — SetProjectCompany, RemoveProjectCompany — takes auth.EnsureWritableLive on the project before it writes anything. This clause decides only which companies a reader may be SHOWN, so narrowing it to write authority would hide companies from a reader entitled to see them",
-	"internal/modules/privacy:AssembleSAR":               "an Art. 15 export is a READ, and read authority is the whole of what a read needs. It is flagged only because assembling a SAR records the request it answers; its Art. 17 sibling, which destroys rather than reads, uses auth.EnsureWritableForSubjectRights",
+	"internal/modules/privacy:AssembleSARWithExtensions": "an Art. 15 export is a READ, and read authority is the whole of what a read needs. It is flagged only because assembling a SAR records the request it answers; its Art. 17 sibling, which destroys rather than reads, uses auth.EnsureWritableForSubjectRights",
 
 	// Writes that touch a shareable record's machinery without changing the
 	// record, or anything a share can speak about.
@@ -212,7 +212,7 @@ var readAuthorityOnAWritePath = gatekit.Waive(map[string]string{
 	// imported connection — and probes the record only to decide which ones may
 	// be touched or named.
 	"internal/modules/activities:visibleRelinkPredicate": "clears an activity's links to records the caller can see, so a relink cannot silently drop an edge to a record they cannot; what it deletes is the LINK row, and its own comment already states the one bit that escapes",
-	"internal/modules/activities:participantRelinkQuery": "moves activity_participant rows from the displaced contacts to the relink target; the row written is the participant edge, never the contact",
+	"internal/modules/activities:displacedRowsSQL":       "moves activity_participant rows from the displaced contacts to the relink target; the row written is the participant edge, never the contact",
 	// The one waiver here that is a LIMIT OF THE EXTRACTOR rather than a claim
 	// about what the probe decides, and it is spelled that way on purpose.
 	//

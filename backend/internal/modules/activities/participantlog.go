@@ -18,6 +18,7 @@ package activities
 import (
 	"context"
 	"fmt"
+	"slices"
 	"strings"
 
 	"github.com/jackc/pgx/v5"
@@ -52,7 +53,7 @@ func stampLoggedParticipants(ctx context.Context, tx pgx.Tx, activityID ids.Acti
 	if !relstrength.IsParticipantKind(in.Kind) {
 		return nil
 	}
-	stamp := loggedStamp{direction: in.Direction, links: in.Links, envelope: suppliedEnvelope(in)}
+	stamp := loggedStamp{direction: in.Direction, links: in.Links, envelope: suppliedEnvelope(in), sender: in.SenderContactID}
 	ourSide := loggedOurSide(ctx, in)
 	if err := stampLoggedCounterparties(ctx, tx, activityID, stamp, ourSide); err != nil {
 		return err
@@ -97,6 +98,19 @@ type loggedStamp struct {
 	// envelope is the address headers a logged email stated; nil when it
 	// stated none.
 	envelope *mailParticipants
+	// sender is the linked contact the caller named as the author; nil when
+	// they named none.
+	sender *ids.UUID
+}
+
+// namesAsSender reports whether contact wrote an inbound activity that states
+// no headers. A group chat linked to several contacts has no author unless the
+// caller names one. A request from one member is no request from the others.
+func (s loggedStamp) namesAsSender(contact ids.UUID, linkedContacts int) bool {
+	if s.sender != nil {
+		return *s.sender == contact
+	}
+	return linkedContacts == 1
 }
 
 // suppliedEnvelope is the logged email's From/To/Cc, normalised, or nil for
@@ -126,7 +140,7 @@ func stampLoggedCounterparties(ctx context.Context, tx pgx.Tx, activityID ids.Ac
 	// their own call means, and the fold treats an undirected interaction as
 	// evidence of contact that says nothing about reciprocity.
 	ourRole, theirRole := "from", "to"
-	if direction != nil && *direction == "inbound" {
+	if direction != nil && *direction == directionInbound {
 		ourRole, theirRole = "to", "from"
 	}
 	if userID != ids.Nil {
@@ -134,21 +148,20 @@ func stampLoggedCounterparties(ctx context.Context, tx pgx.Tx, activityID ids.Ac
 			return err
 		}
 	}
-	for _, link := range stamp.links {
-		if link.EntityType != linkEntityContact {
-			continue
-		}
-		contact := link.EntityID
+	contacts := linkedContactIDs(stamp.links)
+	for _, contact := range contacts {
 		role := theirRole
-		if stamp.envelope != nil {
+		switch {
+		case stamp.envelope != nil:
 			var err error
 			if role, err = envelopeRole(ctx, tx, contact, *stamp.envelope); err != nil {
 				return err
 			}
+		case theirRole == "from" && !stamp.namesAsSender(contact, len(contacts)):
+			role = ""
 		}
-		// The logger put a contact the stated headers do not name in the
-		// conversation: keep that evidence on the receiving side, never as the
-		// sender. No reader lists it as a party to the message.
+		// The stated headers do not name this contact, or they are a group
+		// member who did not write it. Keep the evidence, never as the sender.
 		if role == "" {
 			role = unstatedRecipientRole(theirRole)
 		}
@@ -157,6 +170,17 @@ func stampLoggedCounterparties(ctx context.Context, tx pgx.Tx, activityID ids.Ac
 		}
 	}
 	return nil
+}
+
+// linkedContactIDs is each contact the links name, once, in link order.
+func linkedContactIDs(links []ActivityLinkInput) []ids.UUID {
+	var contacts []ids.UUID
+	for _, link := range links {
+		if link.EntityType == linkEntityContact && !slices.Contains(contacts, link.EntityID) {
+			contacts = append(contacts, link.EntityID)
+		}
+	}
+	return contacts
 }
 
 // unstatedRecipientRole is the role a linked contact the stated headers do not

@@ -16,6 +16,7 @@ import (
 	"github.com/margince/margince/backend/internal/compose"
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/privacy"
+	"github.com/margince/margince/backend/internal/modules/search"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
@@ -174,14 +175,14 @@ func TestRetentionControllerCanPinInternalMailWithoutReadingIt(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if err := privacy.NewEraser(e.DB()).PinToFloor(controller, id, reason); err != nil {
+	if err := privacy.NewEraser(e.DB()).WithEdgeInvalidator(search.RecomputeEdgesForActivities).PinToFloor(controller, id, reason); err != nil {
 		t.Fatal(err)
 	}
 	assertInternalMailReadable(participant, t, e, id, false)
 	if got := e.WsCount(t, `SELECT count(*) FROM activity WHERE id=$1 AND restricted_at IS NOT NULL AND internal_mail_authorization IS NOT NULL`, id); got != 1 {
 		t.Fatalf("restricted internal rows=%d", got)
 	}
-	if err := privacy.NewEraser(e.DB()).WithRawCapturePurger(compose.RawCapturePurgerFor(e.DB())).ReleaseRestriction(controller, id, reason); err != nil {
+	if err := privacy.NewEraser(e.DB()).WithEdgeInvalidator(search.RecomputeEdgesForActivities).WithRawCapturePurger(compose.RawCapturePurgerFor(e.DB())).ReleaseRestriction(controller, id, reason); err != nil {
 		t.Fatal(err)
 	}
 	if got := e.WsCount(t, `SELECT count(*) FROM activity WHERE id=$1 AND body IS NULL

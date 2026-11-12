@@ -12,27 +12,19 @@
  * this sheet is Brief's own voice — the briefing block, the readings' place,
  * the shapes inside the rail's panels, and the queue drawer's band. */
 
-/* ── Arrival ───────────────────────────────────────────────────────────────
- * The page composes itself in reading order: greeting, then the figures one
- * after another, then the work, then the rest. One movement, from a step below
- * and translucent, at the entering duration — and each block a beat after the
- * one before it, so the eye is led down the page the way the sentences are.
- * The resting state is the end state; a reader who asked for less motion gets
- * the page at rest, at once. */
+/* Content stays readable throughout arrival; motion never delays its paint. */
 @keyframes brief-arrive {
   from {
-    opacity: 0;
     transform: translateY(var(--space-2));
   }
   to {
-    opacity: 1;
     transform: none;
   }
 }
 /* The SLOT arrives, not the tile inside it: every reading's cell is the link
    or button that opens it, so a delay keyed on `.stat-card` landed on an only
    child and every slot arrived at once. */
-.arrive,
+.glance.arrive,
 .brief-readings .stat-strip > *,
 .brief-main > *,
 .brief-rail > * {
@@ -60,6 +52,10 @@
 .brief-main > * {
   animation-delay: calc(var(--dur-move) + var(--dur-tap));
 }
+/* The first decision paints when its data arrives, ahead of the surrounding motion. */
+.brief-main > .brief-first {
+  animation: none;
+}
 .brief-rail > :nth-child(1) {
   animation-delay: calc(var(--dur-move) + var(--dur-tap));
 }
@@ -70,7 +66,7 @@
   animation-delay: calc(var(--dur-move) + var(--dur-move));
 }
 @media (prefers-reduced-motion: reduce) {
-  .arrive,
+  .glance.arrive,
   .brief-readings .stat-strip > *,
   .brief-main > *,
   .brief-rail > * {
@@ -191,6 +187,10 @@
   max-width: 70rem;
   margin-inline: auto;
   padding-block-start: var(--space-6);
+}
+/* The frame contains the day's decision, which paints before its other sections move. */
+.brief-wrap > .brief-frame {
+  animation: none;
 }
 .brief-morning > .brief-main {
   gap: var(--space-12);
@@ -786,6 +786,12 @@
 }
 .brief-done-name a {
   color: var(--textPrimary);
+}
+/* The tick that puts the deal in the review list's Undo, before its name. */
+.brief-done-pick {
+  display: inline-flex;
+  margin-inline-end: var(--space-2);
+  vertical-align: middle;
 }
 .brief-done-latest,
 .brief-done-when {

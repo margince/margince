@@ -28,7 +28,7 @@ import (
 // SignatureMaxRunes bounds a signature. What one is FOR is a name, a role and a
 // way to reach the sender; past this it is a document riding on every message
 // the contact sends.
-const SignatureMaxRunes = signature.MaxRunes
+const SignatureMaxRunes = 2000
 
 // SignatureFieldMaxRunes bounds the title and the phone a template fills in.
 const SignatureFieldMaxRunes = 120

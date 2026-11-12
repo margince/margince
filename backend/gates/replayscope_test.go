@@ -106,6 +106,9 @@ var rowScopedResponses = map[string]expectedTarget{
 	// Row-scoped through its TARGET, by a rule that lives inside the approvals
 	// module; compose borrows that rule rather than keeping a second copy.
 	"Approval": {moduleProbe: "approval", pathParam: "id"},
+	// A sales goal plan answers a seller's draft and history, which only
+	// the reporting module decides who may read.
+	"SalesGoalPlan": {object: "sales_target", moduleProbe: "sales_goal_plan", pathParam: "owner_id", rowNote: "a plan carries no owner column a scope reads; it answers the seller's draft and history, so the reporting module owns the probe"},
 	// A bulk answer carries no record of its own, but it names every record
 	// the change left alone and why. Only the batch's stored result says which,
 	// so the bulk engine owns the probe.

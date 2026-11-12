@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-import { CalendarDays, Mail, Send } from "lucide-react";
+import { CalendarDays, FileText, Mail, Send } from "lucide-react";
 import { useState } from "react";
 import type { components } from "../../api/schema";
 import { Button, OverflowMenu } from "../../design-system/atoms";
@@ -39,6 +39,7 @@ import { type BringsInChange, BringsInDialog } from "./connection-bringsin";
 import { AccountServices } from "./connection-service";
 import { AccountSettings } from "./connection-settings";
 import {
+  NotesStopConfirm,
   type PendingStop,
   StopConfirm,
   servicesOf,
@@ -56,7 +57,7 @@ type Provider = CaptureConnection["provider"];
 
 /** The services the account still holds, broken or not. */
 function liveServices(account: ConnectionAccount): CaptureConnection[] {
-  return [account.mail, account.calendar].filter(
+  return [account.mail, account.calendar, account.notes].filter(
     (service): service is CaptureConnection =>
       service !== null && service.status !== "disconnected",
   );
@@ -100,6 +101,7 @@ function useAccountActions(
   const [bringsInOpen, setBringsInOpen] = useState(false);
   const [importOpen, setImportOpen] = useState(false);
   const [stop, setStop] = useState<PendingStop | null>(null);
+  const [notesStop, setNotesStop] = useState(false);
   const vendor = vendorOfAccount(account);
   const present = servicesOf(account);
 
@@ -111,8 +113,19 @@ function useAccountActions(
     }
   };
   // The account's own Reconnect asks again for everything it holds: the mail
-  // consent with its calendar chained after, or the one service alone.
+  // consent with its calendar chained after, or the one service alone. Meeting
+  // notes have their own consent, asked when they alone are broken.
   const reconnectAccount = () => {
+    const notesAlone =
+      account.notes !== null &&
+      needsReconnect(account.notes) &&
+      ![account.mail, account.calendar].some(
+        (service) => service !== null && needsReconnect(service),
+      );
+    if (notesAlone && account.notes) {
+      reconnect(account.notes.provider);
+      return;
+    }
     const input = vendor ? connectInputFor(vendor, present, "none") : null;
     if (input) connect.mutate(input);
     else if (account.mail) reconnect(account.mail.provider);
@@ -137,7 +150,11 @@ function useAccountActions(
     bringsIn: { open: bringsInOpen, set: setBringsInOpen },
     importing: { open: importOpen, set: setImportOpen },
     stop: { pending: stop, set: setStop },
-    stopAll: () => setStop({ services: present, afterwards: null }),
+    notesStop: { open: notesStop, set: setNotesStop },
+    stopAll: () =>
+      present.length === 0 && account.notes
+        ? setNotesStop(true)
+        : setStop({ services: present, afterwards: null }),
   };
 }
 
@@ -162,10 +179,14 @@ export function ConnectionAccountRow({
   canConnect?: boolean;
 }>) {
   const t = useT();
-  const { mail, calendar } = account;
+  const { mail, calendar, notes } = account;
   const vendor = vendorOfAccount(account);
   const name = t(ACCOUNT_NAME[account.key]);
-  const label = mail?.account_label ?? calendar?.account_label ?? undefined;
+  const label =
+    mail?.account_label ??
+    calendar?.account_label ??
+    notes?.account_label ??
+    undefined;
   const actions = useAccountActions(account, onImapReconnect);
   const { connect } = actions;
   const health = healthBadge(accountHealth(account));
@@ -216,6 +237,7 @@ export function ConnectionAccountRow({
         }
         onConnect={canConnect ? actions.reconnect : null}
         onImport={() => actions.importing.set(true)}
+        onStopNotes={() => actions.notesStop.set(true)}
       />
       {!actions.bringsIn.open && (
         <ConnectRefusal connect={connect} name={name} />
@@ -247,7 +269,7 @@ function AccountDialogs({
   vendorName: string;
   actions: AccountActions;
 }>) {
-  const { connect, bringsIn, importing, stop } = actions;
+  const { connect, bringsIn, importing, stop, notesStop } = actions;
   const vendor = vendorOfAccount(account);
   const mail = account.mail;
   return (
@@ -280,6 +302,11 @@ function AccountDialogs({
           onSave={actions.changeServices}
         />
       )}
+      <NotesStopConfirm
+        notes={account.notes}
+        open={notesStop.open}
+        onClose={() => notesStop.set(false)}
+      />
       <StopConfirm
         account={account}
         title={title}
@@ -341,8 +368,8 @@ function AccountFacts({ account }: Readonly<{ account: ConnectionAccount }>) {
   const readerZone = useViewerZone();
   const t = useT();
   const { locale } = useLocale();
-  const { mail, calendar } = account;
-  const createdAt = [mail?.created_at, calendar?.created_at]
+  const { mail, calendar, notes } = account;
+  const createdAt = [mail?.created_at, calendar?.created_at, notes?.created_at]
     .filter((at): at is string => typeof at === "string")
     .sort((a, b) => Date.parse(a) - Date.parse(b))[0];
   return (
@@ -355,6 +382,11 @@ function AccountFacts({ account }: Readonly<{ account: ConnectionAccount }>) {
       {calendar && (
         <Chip icon={CalendarDays} dense>
           {t("connectors.bringsCalendar")}
+        </Chip>
+      )}
+      {notes && (
+        <Chip icon={FileText} dense>
+          {t("connectors.bringsNotes")}
         </Chip>
       )}
       {vendorOfAccount(account) && mail && !missingSendGrant(mail) && (

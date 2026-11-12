@@ -29,6 +29,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/deals"
 	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/modules/privacy"
+	"github.com/margince/margince/backend/internal/modules/search"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
@@ -184,7 +185,7 @@ func TestAReadShareOpensAContactButCannotEditIt(t *testing.T) {
 func TestAReadShareCannotArchiveOrEraseTheContactItOpens(t *testing.T) {
 	f := seedSharedContact(t, "Destructible Subject")
 	store := contacts.NewStore(f.env.DB())
-	eraser := privacy.NewEraser(f.env.DB())
+	eraser := privacy.NewEraser(f.env.DB()).WithEdgeInvalidator(search.RecomputeEdgesForActivities)
 	id := ContactIDOf(f.contact)
 
 	f.share(t, "read")

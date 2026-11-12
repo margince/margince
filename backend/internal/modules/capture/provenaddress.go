@@ -26,6 +26,8 @@ import (
 const (
 	providerGmail = "gmail"
 	providerGraph = "graph"
+	providerGcal  = "gcal"
+	providerGdocs = "gdocs"
 )
 
 // SeatProvedAddressTx reports whether one seat has proven one address is a
