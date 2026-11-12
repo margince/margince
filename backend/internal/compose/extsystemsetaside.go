@@ -56,7 +56,7 @@ func (s systemSetAside) Contacts(ctx context.Context, user extension.UserID, con
 	connected := false
 	err = database.WithWorkspaceTx(ctx, s.rt.deps.pool, func(tx pgx.Tx) error {
 		var err error
-		connected, err = memberConsentedTx(ctx, tx, s.rt.unit, reader)
+		connected, err = memberConnectedTx(ctx, tx, s.rt.unit, reader)
 		return err
 	})
 	if err != nil {

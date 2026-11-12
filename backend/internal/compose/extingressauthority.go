@@ -21,6 +21,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/kernel/workforce"
 	"github.com/margince/margince/backend/internal/shared/ports/authz"
 	"github.com/margince/margince/backend/pkg/extension"
 )
@@ -125,8 +126,7 @@ func extensionMemberConsented(ctx context.Context, pool *pgxpool.Pool, unit stri
 func memberConsentedTx(ctx context.Context, tx pgx.Tx, unit string, member ids.UUID) (bool, error) {
 	declared := declaredUserSecretKeys(unit)
 	if len(declared) == 0 {
-		// A unit that declares no user-scoped secret has no way for a member to
-		// consent to it at all, so there is nobody it may act for.
+		// Such a unit gives a member no way to consent. Nobody is left to act for.
 		return false, nil
 	}
 	var consented bool
@@ -140,6 +140,17 @@ func memberConsentedTx(ctx context.Context, tx pgx.Tx, unit string, member ids.U
 			  AND (u.service_extension IS NULL OR u.service_extension = $1)
 		)`, unit, member, declared).Scan(&consented)
 	return consented, err
+}
+
+// memberConnectedTx reports whether the member is active now and holds one of
+// the unit's user-scoped secrets. A member who has left keeps the credential
+// they deposited. A door that acts for a named member asks this, not the deposit.
+func memberConnectedTx(ctx context.Context, tx pgx.Tx, unit string, member ids.UUID) (bool, error) {
+	var live bool
+	if err := tx.QueryRow(ctx, `SELECT EXISTS (SELECT 1 FROM app_user u WHERE u.id = $1 AND `+workforce.LiveMemberSQL("u")+`)`, member).Scan(&live); err != nil || !live {
+		return false, err
+	}
+	return memberConsentedTx(ctx, tx, unit, member)
 }
 
 // liveMemberAuthority resolves what the member may do RIGHT NOW.

@@ -114,12 +114,10 @@ func (d extensionNoticeDoor) refuseWithoutActor(in extension.NoticeRequest) erro
 }
 
 // actingMemberCanOpen is the sender's boundary for an unattended send. With no
-// ActAs the sender is the unit's own service member, which stays when a
-// colleague leaves. It holds no read on a record, so only the recipients'
-// rights bound that send. A named member must hold one of the unit's
-// user-scoped secrets now, as an ingest requires, and the record must open
-// under their own live rights. A refusal says nothing more than the class, so
-// the unit learns nothing about the record.
+// ActAs the sender is the unit's service member, which stays when a colleague
+// leaves. It reads no record, so only the recipients' rights bound that send.
+// A named member must be active and have connected the unit, and the record
+// must open under their rights. A refusal gives only its class.
 func (d extensionNoticeDoor) actingMemberCanOpen(ctx context.Context, in extension.NoticeRequest, record ids.UUID) error {
 	if in.ActAs == "" {
 		return d.requireServiceMember(ctx)
@@ -128,17 +126,11 @@ func (d extensionNoticeDoor) actingMemberCanOpen(ctx context.Context, in extensi
 	if err != nil {
 		return err
 	}
-	var live bool
-	if err := d.core.tx.QueryRow(ctx, `SELECT EXISTS (SELECT 1 FROM app_user u WHERE u.id = $1 AND `+workforce.LiveMemberSQL("u")+`)`, member).Scan(&live); err != nil {
-		return portRefusal(err)
-	}
-	consented, err := memberConsentedTx(ctx, d.core.tx, d.core.unit, member)
+	consented, err := memberConnectedTx(ctx, d.core.tx, d.core.unit, member)
 	if err != nil {
 		return portRefusal(err)
 	}
-	// A member who has left keeps the credential they deposited, so the deposit
-	// alone must not let a unit act as them.
-	if !live || !consented {
+	if !consented {
 		return fmt.Errorf("%w: ActAs names a member who has not connected this unit or who has left", extension.ErrForbidden)
 	}
 	seat, err := identity.SeatActor(ctx, d.core.tx, member)

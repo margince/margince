@@ -201,9 +201,8 @@ type SetAsideState struct {
 // product's own routes.
 type SetAside interface {
 	// Contact answers one user's choice about one contact right now. It is
-	// the user's own choice and never a colleague's, and only for a user who
-	// holds one of the unit's user-scoped secrets: one who connected the unit.
-	// Any other user answers ErrForbidden. A contact or a user
+	// the user's own choice and never a colleague's. It answers only for an
+	// active user who connected the unit, and any other user answers ErrForbidden. A contact or a user
 	// that does not exist answers none, so an id cannot be used to probe. An id
 	// that is not a canonical UUID answers ErrInvalid.
 	Contact(ctx context.Context, user UserID, contact string) (SetAsideState, error)

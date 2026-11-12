@@ -86,3 +86,18 @@ func TestASetAsideReadIsRefusedForAMemberWhoDidNotConnectTheUnit(t *testing.T) {
 		t.Errorf("a set-aside read for a member who did not connect = %v, want ErrForbidden", err)
 	}
 }
+
+func TestASetAsideReadIsRefusedForAMemberWhoHasLeft(t *testing.T) {
+	s := setupSystemRead(t)
+	composeReader(t, extension.SystemReadSetAside)
+	s.connect(t, s.Rep3)
+	s.WsExec(t, `UPDATE app_user SET status = 'deactivated' WHERE id = $1`, s.Rep3)
+	var err error
+	s.onDelivery(t, func(ctx context.Context, rt extension.Runtime) error {
+		_, err = rt.SetAside().Contact(ctx, extension.UserID(s.Rep3.String()), ids.NewV7().String())
+		return nil
+	})
+	if !errors.Is(err, extension.ErrForbidden) {
+		t.Errorf("a set-aside read for a member who has left = %v, want ErrForbidden", err)
+	}
+}
