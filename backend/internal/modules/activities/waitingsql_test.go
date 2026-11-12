@@ -16,7 +16,7 @@ import (
 // Every rule, the live-contact one included, sits inside that bound.
 func TestTheWaitingScanCapsTheMessagesBeforeJoiningTheirLinks(t *testing.T) {
 	sql := waitingRepliesSQL
-	candidates := strings.Index(sql, "a.id = ANY (ARRAY(SELECT a.id FROM activity a")
+	candidates := strings.Index(sql, "a.id = ANY (ARRAY(WITH eligible AS NOT MATERIALIZED (")
 	limit := strings.Index(sql, "LIMIT %[4]s))")
 	group := strings.Index(sql, "GROUP BY a.id")
 	if candidates < 0 || limit < candidates || group < limit {
