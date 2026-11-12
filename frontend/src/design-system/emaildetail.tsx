@@ -14,6 +14,7 @@ import { InvitationStarts, moveLabel } from "./emailentry";
 import { emailDetailKey, readEmailPresentation } from "./emailmessage";
 import { EmailThread, threadOrder } from "./emailthread";
 import { Heading } from "./heading";
+import { MeetingChange } from "./meetingchange";
 import type { DrawerSpan } from "./modal";
 import { SurfaceState } from "./surfacestate";
 import "./emaildetail.css";
@@ -246,29 +247,40 @@ function ThreadFacts({
     shown,
     { count },
   );
+  const change = presentation.summary.calendar_change;
   return (
-    <p className="emaildetail__facts t-caption">
-      {invitation && (
-        <>
-          <Badge tone="info">{t("email.invitation.badge")}</Badge>
-          <InvitationStarts invitation={invitation} />
-        </>
+    <>
+      {change && (
+        <MeetingChange
+          change={change}
+          fallbackTitle={presentation.summary.subject ?? ""}
+        />
       )}
-      {move && (
-        <Badge
-          tone={
-            presentation.summary.move === "needs_reply" ? "warning" : undefined
-          }
-        >
-          {t(move)}
-        </Badge>
-      )}
-      <span>{counted}</span>
-      {renderRecords && presentation.links.length > 0 && (
-        <span className="emaildetail__filed">
-          {t("email.detail.filedUnder")} {renderRecords(presentation)}
-        </span>
-      )}
-    </p>
+      <p className="emaildetail__facts t-caption">
+        {invitation && (
+          <>
+            <Badge tone="info">{t("email.invitation.badge")}</Badge>
+            <InvitationStarts invitation={invitation} />
+          </>
+        )}
+        {move && (
+          <Badge
+            tone={
+              presentation.summary.move === "needs_reply"
+                ? "warning"
+                : undefined
+            }
+          >
+            {t(move)}
+          </Badge>
+        )}
+        <span>{counted}</span>
+        {renderRecords && presentation.links.length > 0 && (
+          <span className="emaildetail__filed">
+            {t("email.detail.filedUnder")} {renderRecords(presentation)}
+          </span>
+        )}
+      </p>
+    </>
   );
 }

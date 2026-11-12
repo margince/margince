@@ -68,6 +68,10 @@ export function code(path: string, source: string): string {
 // cannot stand in for.
 const pinnedZones: { file: string; why: string }[] = [
   {
+    file: "lib/calendarchange.test.ts",
+    why: "Pins the reader's zone so a meeting's times read the same on every runner: the lines under test print hours, and the runner's own zone would move them.",
+  },
+  {
     file: "features/worklist/worklist.happened.test.ts",
     why: "Pins the reader and record zone to UTC, so a fact at a fixed instant names the same day on every runner, whatever its own zone.",
   },
