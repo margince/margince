@@ -167,8 +167,12 @@ func (s *Service) dropShown(ctx context.Context, scope string, missing map[RowRe
 			}
 		}
 	}
-	_, err := probe.worklistIn(ctx, scope, "", ids.UUID{}, worklistMaxPage, "")
-	return err
+	// In a snapshot of its own, as Worklist reads. Without one no lane gets
+	// its statement budget, and the slowest lane runs out the whole request.
+	return s.inSnapshot(ctx, ReadWorklistDone, func(ctx context.Context) error {
+		_, err := probe.worklistIn(ctx, scope, "", ids.UUID{}, worklistMaxPage, "")
+		return err
+	})
 }
 
 // readingDone returns a copy carrying what this reader marked done among the

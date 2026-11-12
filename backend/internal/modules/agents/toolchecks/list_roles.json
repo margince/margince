@@ -1,0 +1,6 @@
+{
+  "verb": "list_roles",
+  "checks": [
+    "role_admin.read"
+  ]
+}

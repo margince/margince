@@ -1162,8 +1162,8 @@ jobs:
           fi
 
   # The MCP role sweep, weekly. Every tool and action is called as every seeded
-  # role, and the answers must equal the committed mcp-tool-roles.json and
-  # toolchecks.json. It outgrew a merge-gate shard, so the per-PR lane checks the
+  # role, and the answers must equal the committed mcp-tool-roles/ and
+  # toolchecks/ folders. It outgrew a merge-gate shard, so the per-PR lane checks the
   # committed matrix against the registry and the listing, and this measures it.
   role-sweep:
     name: MCP role sweep (weekly)

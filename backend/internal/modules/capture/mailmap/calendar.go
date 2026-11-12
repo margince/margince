@@ -29,6 +29,7 @@ import (
 
 	"github.com/emersion/go-message/mail"
 
+	"github.com/margince/margince/backend/internal/shared/kernel/calendarevent"
 	"github.com/margince/margince/backend/internal/shared/kernel/calendarmethod"
 	"github.com/margince/margince/backend/internal/shared/ports/connector"
 )
@@ -145,6 +146,7 @@ type partMethods struct {
 	methods  []string
 	disputed bool
 	uid      string
+	event    *calendarevent.Event
 }
 
 // see records one calendar part. A part whose bytes the collector refused names
@@ -156,6 +158,7 @@ func (c *calendarPart) see(params map[string]string, body []byte) {
 	}
 	part := declaredMethods(params, body)
 	part.uid = eventUID(body)
+	part.event = eventOf(body)
 	c.parts = append(c.parts, part)
 }
 
@@ -213,18 +216,12 @@ func declaredMethods(params map[string]string, body []byte) partMethods {
 // bodyMethod is the raw value of the first METHOD property inside a VCALENDAR.
 func bodyMethod(body []byte) (string, bool) {
 	inCalendar := false
-	for _, line := range unfoldICalendar(body) {
-		name, value, found := strings.Cut(line, ":")
-		if !found {
-			continue
-		}
-		// A property name may carry parameters after a semicolon.
-		name, _, _ = strings.Cut(name, ";")
+	for _, line := range icalLines(body) {
 		switch {
-		case strings.EqualFold(name, "BEGIN") && strings.EqualFold(strings.TrimSpace(value), "VCALENDAR"):
+		case line.is("BEGIN") && strings.EqualFold(strings.TrimSpace(line.value), "VCALENDAR"):
 			inCalendar = true
-		case inCalendar && strings.EqualFold(name, "METHOD"):
-			return value, true
+		case inCalendar && line.is("METHOD"):
+			return line.value, true
 		}
 	}
 	return "", false

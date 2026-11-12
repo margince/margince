@@ -1,0 +1,18 @@
+{
+  "verb": "hand_over_user_work",
+  "checks": [
+    "activity.read",
+    "activity.update",
+    "company.read",
+    "contact.read",
+    "deal.read",
+    "lead.read",
+    "project.read",
+    "project.update",
+    "user_admin.update",
+    "webhook_subscription.update"
+  ],
+  "takes": [
+    "user"
+  ]
+}

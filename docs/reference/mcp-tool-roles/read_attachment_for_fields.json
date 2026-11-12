@@ -1,0 +1,15 @@
+{
+  "tool": "change_activities",
+  "action": "read_document_fields",
+  "verb": "read_attachment_for_fields",
+  "allowed_for": [
+    "admin",
+    "management",
+    "manager",
+    "ops",
+    "rep"
+  ],
+  "refused_for": [
+    "read_only"
+  ]
+}

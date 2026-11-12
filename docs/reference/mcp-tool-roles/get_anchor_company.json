@@ -1,0 +1,15 @@
+{
+  "tool": "read_workspace",
+  "action": "anchor_company",
+  "verb": "get_anchor_company",
+  "allowed_for": [
+    "admin"
+  ],
+  "refused_for": [
+    "management",
+    "manager",
+    "ops",
+    "read_only",
+    "rep"
+  ]
+}

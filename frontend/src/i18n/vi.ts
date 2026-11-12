@@ -2707,6 +2707,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "history.field.recorded_at_level": "Ghi nhận ở cấp",
   "history.field.relationship_types": "Loại quan hệ",
   "history.field.due_has_time": "Đến hạn vào giờ cụ thể",
+  "history.field.task_type": "Loại việc",
   "history.field.call_outcome": "Kết quả cuộc gọi",
   "history.field.remind_at": "Lời nhắc",
   "history.field.resolved_category": "Loại tin nhắn",
@@ -3919,6 +3920,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "standing.exchange.view.meeting": "Xem cuộc họp",
   "standing.exchange.view.other": "Xem hoạt động",
   "record.tabs": "Tab hồ sơ",
+  "record.tabs.more": "Xem thêm",
+  "record.tabs.moreLabel": "Xem thêm các mục",
   "record.panel.showDetails": "Hiển thị chi tiết",
   "record.panel.hideDetails": "Ẩn chi tiết",
   "room.editorial": "Tài liệu và bình luận hiển thị ngay với bên mua.",
@@ -4825,6 +4828,30 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "email.access.unnamedMember": "Người dùng cũ",
   "email.invitation.badge": "Lời mời",
   "email.invitation.startsAt": "Bắt đầu {when}",
+  "meetingChange.badge.updated": "Cuộc họp đã thay đổi",
+  "meetingChange.badge.canceled": "Đã hủy",
+  "meetingChange.badge.proposed": "Đề xuất giờ mới",
+  "meetingChange.badge.accepted": "Đã chấp nhận",
+  "meetingChange.badge.tentative": "Có thể",
+  "meetingChange.badge.declined": "Đã từ chối",
+  "meetingChange.line.canceled": "Trước đó đặt vào {when}",
+  "meetingChange.line.proposed": "{name} đề xuất {when}",
+  "meetingChange.line.accepted": "{name} đã chấp nhận",
+  "meetingChange.line.tentative": "{name} trả lời có thể",
+  "meetingChange.line.declined": "{name} đã từ chối",
+  "meetingChange.line.moved": "Dời từ {was} sang {when}",
+  "meetingChange.line.movedTo": "Dời sang {when}",
+  "meetingChange.line.placed": "Địa điểm mới: {place}",
+  "meetingChange.line.unplaced": "Không còn địa điểm",
+  "meetingChange.line.renamed": "Đổi tên thành {title}",
+  "meetingChange.line.added": "Đã thêm {names}",
+  "meetingChange.line.removed": "Đã bỏ {names}",
+  "meetingChange.line.details": "Người tổ chức đã đổi chi tiết",
+  "meetingChange.was.time": "Trước đó",
+  "meetingChange.was.current": "Đã đặt vào",
+  "meetingChange.was.location": "Địa điểm cũ",
+  "meetingChange.was.noPlace": "không có địa điểm",
+  "meetingChange.was.title": "Tên cũ",
   "email.move.needsReply": "Cần trả lời",
   "email.move.waitingForThem": "Đang chờ họ trả lời",
   "email.detail.loading": "Đang tải email…",
@@ -7036,6 +7063,24 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "task.next.draftIntent": "viết về nhiệm vụ này",
   "task.next.noAddress": "Liên hệ này chưa có địa chỉ email.",
   "task.next.noLeadAddress": "Lead này chưa có địa chỉ email.",
+  "task.type.reply": "Trả lời",
+  "task.type.reachOut": "Liên hệ",
+  "task.type.meet": "Gặp",
+  "task.type.review": "Xem lại",
+  "task.type.decide": "Quyết định",
+  "task.type.do": "Làm",
+  "task.type.label": "Loại việc",
+  "task.next.copyNumber": "Sao chép số",
+  "task.next.numberCopied": "Đã sao chép số",
+  "task.next.copyNumberRemedy": "Chọn số điện thoại để sao chép.",
+  "task.next.reviewLead": "Xem lại lead",
+  "task.next.reviewDeal": "Xem lại deal",
+  "task.next.reviewProject": "Xem lại dự án",
+  "task.next.reviewContact": "Xem lại liên hệ",
+  "task.next.reviewCompany": "Xem lại công ty",
+  "tasks.whichDeal.legend": "Email này nói về deal nào?",
+  "tasks.whichDeal.file": "Gắn chuỗi thư vào deal",
+  "tasks.whichDeal.filed": "Đã gắn chuỗi thư vào deal",
   "today.withheld":
     "Không bao gồm: {sections}. Bạn không có quyền truy cập các mục này.",
   "today.source.moments": "phát hiện của Margince",
@@ -14716,6 +14761,9 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "licensebanner.body":
     "Token giấy phép của bản cài đặt này đã được kiểm tra và bị từ chối.",
   "licensebanner.link": "Mở {tab}",
+  "licensebanner.grace.title": "Giấy phép đã hết hạn",
+  "licensebanner.grace.body":
+    "Giấy phép của bản cài đặt này đã hết hạn và đang trong thời gian ân hạn. Margince vẫn tiếp tục chạy, nhưng sẽ không khởi động lại được sau khi thời gian ân hạn kết thúc. Hãy gia hạn giấy phép trước thời điểm đó.",
 
   "aicalls.title": "Dấu vết lượt gọi AI",
   "aicalls.withheld":
@@ -18969,6 +19017,26 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "Bạn đã cam kết việc này trong một cuộc trao đổi. Làm xong rồi đánh dấu là xong.",
   "worklist.ask.invitation":
     "Đây là lời mời lịch. Hãy chấp nhận, trả lời có thể hoặc từ chối, và bên tổ chức sẽ nhận được câu trả lời của bạn.",
+  "worklist.ask.changedInvitation":
+    "Người tổ chức đã thay đổi cuộc họp này. Xem thay đổi, rồi chấp nhận, trả lời có thể hoặc từ chối.",
+  "worklist.ask.meeting.updated":
+    "Người tổ chức đã thay đổi cuộc họp này. Xem thay đổi, rồi đánh dấu là xong.",
+  "worklist.ask.meeting.canceled":
+    "Người tổ chức đã hủy cuộc họp này. Không cần trả lời; đánh dấu là xong sau khi bạn đã xem.",
+  "worklist.ask.meeting.proposed":
+    "Một khách mời đề xuất giờ khác. Dời cuộc họp trong lịch của bạn nếu phù hợp, rồi đánh dấu là xong.",
+  "worklist.ask.meeting.answered":
+    "Một khách mời đã trả lời lời mời của bạn. Đánh dấu là xong sau khi bạn đã xem.",
+  "worklist.ask.changedInvitationNamed":
+    "{name} đã thay đổi cuộc họp này. Xem thay đổi, rồi chấp nhận, trả lời có thể hoặc từ chối.",
+  "worklist.ask.meetingNamed.updated":
+    "{name} đã thay đổi cuộc họp này. Xem thay đổi, rồi đánh dấu là xong.",
+  "worklist.ask.meetingNamed.canceled":
+    "{name} đã hủy cuộc họp này. Không cần trả lời; đánh dấu là xong sau khi bạn đã xem.",
+  "worklist.ask.meetingNamed.proposed":
+    "{name} đề xuất giờ khác. Dời cuộc họp trong lịch của bạn nếu phù hợp, rồi đánh dấu là xong.",
+  "worklist.ask.meetingNamed.answered":
+    "{name} đã trả lời lời mời của bạn. Đánh dấu là xong sau khi bạn đã xem.",
   "worklist.ask.customer_waiting":
     "Khách hàng đã viết và chưa có ai trả lời. Trả lời khách hàng.",
   "worklist.ask.lead_response":

@@ -1,0 +1,7 @@
+{
+  "verb": "get_ai_status",
+  "checks": [
+    "ai_budget.read",
+    "ai_diagnostics.read"
+  ]
+}

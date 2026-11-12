@@ -1,0 +1,9 @@
+{
+  "verb": "archive_record_assignment",
+  "checks": [
+    "company.update"
+  ],
+  "takes": [
+    "assignment"
+  ]
+}

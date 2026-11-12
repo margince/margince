@@ -217,6 +217,8 @@ describe("the partner filter", () => {
     // The partner dial itself is the subject, so it is pressed, not addressed.
     const values = await openFilterValues(user, "Partner");
     await user.click(within(values).getByRole("radio", { name: "Acme" }));
+    // The totals are the board's: the table draws none and asks for none.
+    await showLayout(user, "Board");
 
     await waitFor(() =>
       expect(

@@ -1,0 +1,15 @@
+{
+  "tool": "change_reports",
+  "action": "start_input_check",
+  "verb": "start_forecast_assurance_run",
+  "allowed_for": [
+    "admin",
+    "management",
+    "manager",
+    "ops"
+  ],
+  "refused_for": [
+    "read_only",
+    "rep"
+  ]
+}

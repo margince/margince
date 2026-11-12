@@ -1,0 +1,16 @@
+{
+  "verb": "bulk_update_records",
+  "checks": [
+    "company.delete|update,contact.delete|update,deal.delete|update",
+    "company.delete|update,contact.delete|update,deal.read",
+    "company.delete|update,contact.read,deal.delete|update",
+    "company.delete|update,contact.read,deal.read",
+    "company.read,contact.delete|update,deal.delete|update",
+    "company.read,contact.delete|update,deal.read",
+    "company.read,contact.read,deal.delete|update",
+    "company.read,contact.read,deal.read"
+  ],
+  "takes": [
+    "company"
+  ]
+}

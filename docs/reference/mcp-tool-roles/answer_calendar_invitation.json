@@ -1,0 +1,14 @@
+{
+  "tool": "send_outbound",
+  "action": "answer_invitation",
+  "verb": "answer_calendar_invitation",
+  "allowed_for": [
+    "admin",
+    "management",
+    "manager",
+    "ops",
+    "read_only",
+    "rep"
+  ],
+  "refused_for": []
+}

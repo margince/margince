@@ -1,0 +1,9 @@
+{
+  "verb": "get_activity_project_filing",
+  "checks": [
+    "activity.read"
+  ],
+  "takes": [
+    "activity"
+  ]
+}

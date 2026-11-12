@@ -1,0 +1,7 @@
+{
+  "verb": "read_capture_trace_pipeline",
+  "checks": [],
+  "takes": [
+    "capture_trace"
+  ]
+}

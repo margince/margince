@@ -1,0 +1,14 @@
+{
+  "tool": "change_attention",
+  "action": "mark_all_notices_read",
+  "verb": "mark_all_notices_read",
+  "allowed_for": [
+    "admin",
+    "management",
+    "manager",
+    "ops",
+    "read_only",
+    "rep"
+  ],
+  "refused_for": []
+}

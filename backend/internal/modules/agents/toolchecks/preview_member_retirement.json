@@ -1,0 +1,18 @@
+{
+  "verb": "preview_member_retirement",
+  "checks": [
+    "activity.read",
+    "admin",
+    "company.read",
+    "contact.read",
+    "deal.read",
+    "lead.read",
+    "project.read",
+    "user_admin.delete",
+    "user_admin.read",
+    "user_admin.update"
+  ],
+  "takes": [
+    "user"
+  ]
+}

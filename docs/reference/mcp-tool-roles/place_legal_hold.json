@@ -1,0 +1,19 @@
+{
+  "tool": "change_compliance",
+  "action": "place_legal_hold",
+  "verb": "place_legal_hold",
+  "allowed_for": [
+    "admin",
+    "management",
+    "manager",
+    "ops"
+  ],
+  "refused_for": [
+    "read_only",
+    "rep"
+  ],
+  "colleague_record": {
+    "manager": "refused",
+    "rep": "refused"
+  }
+}

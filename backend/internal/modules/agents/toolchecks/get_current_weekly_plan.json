@@ -1,0 +1,7 @@
+{
+  "verb": "get_current_weekly_plan",
+  "checks": [
+    "installation_settings.read",
+    "weekly_plan.read"
+  ]
+}

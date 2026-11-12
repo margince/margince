@@ -2795,6 +2795,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "history.field.recorded_at_level": "Erfasst auf Ebene",
   "history.field.relationship_types": "Beziehungstypen",
   "history.field.due_has_time": "Fällig zu einer Uhrzeit",
+  "history.field.task_type": "Aufgabentyp",
   "history.field.call_outcome": "Ergebnis des Anrufs",
   "history.field.remind_at": "Erinnerung",
   "history.field.resolved_category": "Nachrichtenkategorie",
@@ -4033,6 +4034,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "standing.exchange.view.meeting": "Termin ansehen",
   "standing.exchange.view.other": "Aktivität ansehen",
   "record.tabs": "Tabs des Datensatzes",
+  "record.tabs.more": "Mehr",
+  "record.tabs.moreLabel": "Mehr Bereiche",
   "record.panel.showDetails": "Details einblenden",
   "record.panel.hideDetails": "Details ausblenden",
   "room.editorial":
@@ -4948,6 +4951,31 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "email.access.unnamedMember": "Ehemaliges Nutzerkonto",
   "email.invitation.badge": "Einladung",
   "email.invitation.startsAt": "Beginnt {when}",
+  "meetingChange.badge.updated": "Termin geändert",
+  "meetingChange.badge.canceled": "Abgesagt",
+  "meetingChange.badge.proposed": "Neue Zeit vorgeschlagen",
+  "meetingChange.badge.accepted": "Zugesagt",
+  "meetingChange.badge.tentative": "Vielleicht",
+  "meetingChange.badge.declined": "Abgelehnt",
+  "meetingChange.line.canceled": "War für {when} geplant",
+  "meetingChange.line.proposed": "{name} schlägt {when} vor",
+  "meetingChange.line.accepted": "{name} hat zugesagt",
+  "meetingChange.line.tentative": "{name} hat mit Vielleicht geantwortet",
+  "meetingChange.line.declined": "{name} hat abgesagt",
+  "meetingChange.line.moved": "Verschoben von {was} auf {when}",
+  "meetingChange.line.movedTo": "Verschoben auf {when}",
+  "meetingChange.line.placed": "Jetzt in {place}",
+  "meetingChange.line.unplaced": "Hat keinen Ort mehr",
+  "meetingChange.line.renamed": "Umbenannt in {title}",
+  "meetingChange.line.added": "Hinzugefügt: {names}",
+  "meetingChange.line.removed": "Entfernt: {names}",
+  "meetingChange.line.details":
+    "Die organisierende Person hat die Details geändert",
+  "meetingChange.was.time": "Vorher",
+  "meetingChange.was.current": "Gebucht für",
+  "meetingChange.was.location": "Ort war",
+  "meetingChange.was.noPlace": "kein Ort",
+  "meetingChange.was.title": "Titel war",
   "email.move.needsReply": "Antwort nötig",
   "email.move.waitingForThem": "Wartet auf Antwort der Gegenseite",
   "email.detail.loading": "Nachricht wird geladen…",
@@ -7206,6 +7234,24 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "task.next.draftIntent": "zu dieser Aufgabe schreiben",
   "task.next.noAddress": "Dieser Kontakt hat keine E-Mail-Adresse.",
   "task.next.noLeadAddress": "Dieser Lead hat keine E-Mail-Adresse.",
+  "task.type.reply": "Antworten",
+  "task.type.reachOut": "Kontakt aufnehmen",
+  "task.type.meet": "Termin",
+  "task.type.review": "Prüfen",
+  "task.type.decide": "Entscheiden",
+  "task.type.do": "Erledigen",
+  "task.type.label": "Aufgabentyp",
+  "task.next.copyNumber": "Nummer kopieren",
+  "task.next.numberCopied": "Nummer kopiert",
+  "task.next.copyNumberRemedy": "Markiere die Nummer, um sie zu kopieren.",
+  "task.next.reviewLead": "Lead prüfen",
+  "task.next.reviewDeal": "Deal prüfen",
+  "task.next.reviewProject": "Projekt prüfen",
+  "task.next.reviewContact": "Kontakt prüfen",
+  "task.next.reviewCompany": "Unternehmen prüfen",
+  "tasks.whichDeal.legend": "Um welchen Deal geht es in der E-Mail?",
+  "tasks.whichDeal.file": "E-Mail-Thread dem Deal zuordnen",
+  "tasks.whichDeal.filed": "E-Mail-Thread dem Deal zugeordnet",
   "today.withheld":
     "Nicht enthalten: {sections}. Du hast keinen Zugriff darauf.",
   "today.source.moments": "Erkenntnisse von Margince",
@@ -15113,6 +15159,9 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "licensebanner.body":
     "Das Lizenz-Token dieser Installation wurde geprüft und abgelehnt.",
   "licensebanner.link": "{tab} öffnen",
+  "licensebanner.grace.title": "Lizenz abgelaufen",
+  "licensebanner.grace.body":
+    "Die Lizenz dieser Installation ist abgelaufen und in der Übergangsfrist. Margince läuft weiter, startet nach dem Ende der Übergangsfrist aber nicht mehr. Erneuere die Lizenz vorher.",
 
   "aicalls.title": "KI-Aufrufprotokoll",
   "aicalls.withheld":
@@ -19472,6 +19521,26 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Du hast das in einem Gespräch zugesagt. Erledige es und markiere es dann als erledigt.",
   "worklist.ask.invitation":
     "Das ist eine Kalendereinladung. Sag zu, mit Vorbehalt zu oder ab, und der Organisator erhält deine Antwort.",
+  "worklist.ask.changedInvitation":
+    "Die organisierende Person hat diesen Termin geändert. Prüf die Änderung, dann sag zu, mit Vorbehalt zu oder ab.",
+  "worklist.ask.meeting.updated":
+    "Die organisierende Person hat diesen Termin geändert. Prüf die Änderung, dann markier ihn als erledigt.",
+  "worklist.ask.meeting.canceled":
+    "Die organisierende Person hat diesen Termin abgesagt. Es gibt nichts zu beantworten; markier ihn als erledigt, sobald du es gesehen hast.",
+  "worklist.ask.meeting.proposed":
+    "Ein Gast schlägt eine andere Zeit vor. Verschieb den Termin in deinem Kalender, wenn sie passt, dann markier dies als erledigt.",
+  "worklist.ask.meeting.answered":
+    "Ein Gast hat auf deine Einladung geantwortet. Markier es als erledigt, sobald du es gesehen hast.",
+  "worklist.ask.changedInvitationNamed":
+    "{name} hat diesen Termin geändert. Prüf die Änderung, dann sag zu, mit Vorbehalt zu oder ab.",
+  "worklist.ask.meetingNamed.updated":
+    "{name} hat diesen Termin geändert. Prüf die Änderung, dann markier ihn als erledigt.",
+  "worklist.ask.meetingNamed.canceled":
+    "{name} hat diesen Termin abgesagt. Es gibt nichts zu beantworten; markier ihn als erledigt, sobald du es gesehen hast.",
+  "worklist.ask.meetingNamed.proposed":
+    "{name} schlägt eine andere Zeit vor. Verschieb den Termin in deinem Kalender, wenn sie passt, dann markier dies als erledigt.",
+  "worklist.ask.meetingNamed.answered":
+    "{name} hat auf deine Einladung geantwortet. Markier es als erledigt, sobald du es gesehen hast.",
   "worklist.ask.customer_waiting":
     "Ein Kunde hat geschrieben, und noch niemand hat geantwortet. Beantworte die Nachricht.",
   "worklist.ask.lead_response":

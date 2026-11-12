@@ -1,0 +1,15 @@
+{
+  "tool": "decide_approvals",
+  "action": "one",
+  "verb": "decide_approval",
+  "allowed_for": [
+    "admin",
+    "management",
+    "manager",
+    "ops",
+    "rep"
+  ],
+  "refused_for": [
+    "read_only"
+  ]
+}

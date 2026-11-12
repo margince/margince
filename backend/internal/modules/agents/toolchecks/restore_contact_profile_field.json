@@ -1,0 +1,10 @@
+{
+  "verb": "restore_contact_profile_field",
+  "checks": [
+    "contact.update"
+  ],
+  "takes": [
+    "contact",
+    "vcard_contact"
+  ]
+}

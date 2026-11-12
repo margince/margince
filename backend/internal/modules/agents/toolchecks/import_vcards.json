@@ -1,0 +1,8 @@
+{
+  "verb": "import_vcards",
+  "checks": [
+    "contact.create",
+    "contact.read",
+    "contact.update"
+  ]
+}

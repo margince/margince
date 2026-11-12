@@ -1,0 +1,15 @@
+{
+  "tool": "change_settings",
+  "action": "update_custom_field_options",
+  "verb": "update_custom_field_options",
+  "allowed_for": [
+    "admin",
+    "ops"
+  ],
+  "refused_for": [
+    "management",
+    "manager",
+    "read_only",
+    "rep"
+  ]
+}

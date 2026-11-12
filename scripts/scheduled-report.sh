@@ -408,8 +408,8 @@ if [[ "${ROLE_SWEEP_RESULT:-}" = "failure" ]]; then
 The job failed, which is one of two findings. If a step before the sweep failed
 (the database, the build), the sweep never ran and the matrix says nothing. If
 the sweep failed, a role's cell, a tool's checks, or a cell no gate decides no
-longer equals \`docs/reference/mcp-tool-roles.json\` or
-\`backend/internal/modules/agents/toolchecks.json\`. tools/list reads that table,
+longer equals \`docs/reference/mcp-tool-roles/\` or
+\`backend/internal/modules/agents/toolchecks/\`. tools/list reads that table,
 so an agent may be offered a tool its user is refused, or not offered one it may use.
 
 Treat it as a red \`main\`: claim it with a \`claim: main-red\` pull request first.

@@ -1,0 +1,9 @@
+{
+  "verb": "get_response_metrics",
+  "checks": [
+    "activity.read",
+    "deal.read",
+    "installation_settings.read",
+    "scope:team"
+  ]
+}

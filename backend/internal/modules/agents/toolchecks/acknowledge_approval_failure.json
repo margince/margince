@@ -1,0 +1,7 @@
+{
+  "verb": "acknowledge_approval_failure",
+  "checks": [],
+  "takes": [
+    "failed_approval"
+  ]
+}
