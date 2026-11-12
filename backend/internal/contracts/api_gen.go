@@ -7351,6 +7351,48 @@ func (e ConnectConnectorRequestReturnTo) Valid() bool {
 	}
 }
 
+// Defines values for ConnectSharedMailboxRequestMailVisibility.
+const (
+	ConnectSharedMailboxRequestMailVisibilityClassified ConnectSharedMailboxRequestMailVisibility = "classified"
+	ConnectSharedMailboxRequestMailVisibilityHeld       ConnectSharedMailboxRequestMailVisibility = "held"
+	ConnectSharedMailboxRequestMailVisibilityShared     ConnectSharedMailboxRequestMailVisibility = "shared"
+)
+
+// Valid indicates whether the value is a known member of the ConnectSharedMailboxRequestMailVisibility enum.
+func (e ConnectSharedMailboxRequestMailVisibility) Valid() bool {
+	switch e {
+	case ConnectSharedMailboxRequestMailVisibilityClassified:
+		return true
+	case ConnectSharedMailboxRequestMailVisibilityHeld:
+		return true
+	case ConnectSharedMailboxRequestMailVisibilityShared:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ConnectSharedMailboxRequestProvider.
+const (
+	ConnectSharedMailboxRequestProviderGmail ConnectSharedMailboxRequestProvider = "gmail"
+	ConnectSharedMailboxRequestProviderGraph ConnectSharedMailboxRequestProvider = "graph"
+	ConnectSharedMailboxRequestProviderImap  ConnectSharedMailboxRequestProvider = "imap"
+)
+
+// Valid indicates whether the value is a known member of the ConnectSharedMailboxRequestProvider enum.
+func (e ConnectSharedMailboxRequestProvider) Valid() bool {
+	switch e {
+	case ConnectSharedMailboxRequestProviderGmail:
+		return true
+	case ConnectSharedMailboxRequestProviderGraph:
+		return true
+	case ConnectSharedMailboxRequestProviderImap:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for ConnectorAppSource.
 const (
 	ConnectorAppSourceEnvironment ConnectorAppSource = "environment"
@@ -22795,6 +22837,108 @@ func (e SharedForecastViewKind) Valid() bool {
 	}
 }
 
+// Defines values for SharedMailboxMailVisibility.
+const (
+	SharedMailboxMailVisibilityHeld   SharedMailboxMailVisibility = "held"
+	SharedMailboxMailVisibilityShared SharedMailboxMailVisibility = "shared"
+)
+
+// Valid indicates whether the value is a known member of the SharedMailboxMailVisibility enum.
+func (e SharedMailboxMailVisibility) Valid() bool {
+	switch e {
+	case SharedMailboxMailVisibilityHeld:
+		return true
+	case SharedMailboxMailVisibilityShared:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for SharedMailboxProvider.
+const (
+	SharedMailboxProviderGmail       SharedMailboxProvider = "gmail"
+	SharedMailboxProviderGraph       SharedMailboxProvider = "graph"
+	SharedMailboxProviderImap        SharedMailboxProvider = "imap"
+	SharedMailboxProviderTestMailbox SharedMailboxProvider = "test_mailbox"
+)
+
+// Valid indicates whether the value is a known member of the SharedMailboxProvider enum.
+func (e SharedMailboxProvider) Valid() bool {
+	switch e {
+	case SharedMailboxProviderGmail:
+		return true
+	case SharedMailboxProviderGraph:
+		return true
+	case SharedMailboxProviderImap:
+		return true
+	case SharedMailboxProviderTestMailbox:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for SharedMailboxStatus.
+const (
+	SharedMailboxStatusConnected      SharedMailboxStatus = "connected"
+	SharedMailboxStatusDisconnected   SharedMailboxStatus = "disconnected"
+	SharedMailboxStatusError          SharedMailboxStatus = "error"
+	SharedMailboxStatusReauthRequired SharedMailboxStatus = "reauth_required"
+)
+
+// Valid indicates whether the value is a known member of the SharedMailboxStatus enum.
+func (e SharedMailboxStatus) Valid() bool {
+	switch e {
+	case SharedMailboxStatusConnected:
+		return true
+	case SharedMailboxStatusDisconnected:
+		return true
+	case SharedMailboxStatusError:
+		return true
+	case SharedMailboxStatusReauthRequired:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for SharedMailboxHistoryImportRequestWindow.
+const (
+	SharedMailboxHistoryImportRequestWindowN120m SharedMailboxHistoryImportRequestWindow = "120m"
+	SharedMailboxHistoryImportRequestWindowN12m  SharedMailboxHistoryImportRequestWindow = "12m"
+	SharedMailboxHistoryImportRequestWindowN24m  SharedMailboxHistoryImportRequestWindow = "24m"
+	SharedMailboxHistoryImportRequestWindowN36m  SharedMailboxHistoryImportRequestWindow = "36m"
+	SharedMailboxHistoryImportRequestWindowN3m   SharedMailboxHistoryImportRequestWindow = "3m"
+	SharedMailboxHistoryImportRequestWindowN60m  SharedMailboxHistoryImportRequestWindow = "60m"
+	SharedMailboxHistoryImportRequestWindowN6m   SharedMailboxHistoryImportRequestWindow = "6m"
+	SharedMailboxHistoryImportRequestWindowN84m  SharedMailboxHistoryImportRequestWindow = "84m"
+)
+
+// Valid indicates whether the value is a known member of the SharedMailboxHistoryImportRequestWindow enum.
+func (e SharedMailboxHistoryImportRequestWindow) Valid() bool {
+	switch e {
+	case SharedMailboxHistoryImportRequestWindowN120m:
+		return true
+	case SharedMailboxHistoryImportRequestWindowN12m:
+		return true
+	case SharedMailboxHistoryImportRequestWindowN24m:
+		return true
+	case SharedMailboxHistoryImportRequestWindowN36m:
+		return true
+	case SharedMailboxHistoryImportRequestWindowN3m:
+		return true
+	case SharedMailboxHistoryImportRequestWindowN60m:
+		return true
+	case SharedMailboxHistoryImportRequestWindowN6m:
+		return true
+	case SharedMailboxHistoryImportRequestWindowN84m:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for SignalEntityType.
 const (
 	SignalEntityTypeCompany SignalEntityType = "company"
@@ -25090,6 +25234,27 @@ func (e UpdateRoleRequestRowScope) Valid() bool {
 	case UpdateRoleRequestRowScopeOwn:
 		return true
 	case UpdateRoleRequestRowScopeTeam:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for UpdateSharedMailboxRequestMailVisibility.
+const (
+	UpdateSharedMailboxRequestMailVisibilityClassified UpdateSharedMailboxRequestMailVisibility = "classified"
+	UpdateSharedMailboxRequestMailVisibilityHeld       UpdateSharedMailboxRequestMailVisibility = "held"
+	UpdateSharedMailboxRequestMailVisibilityShared     UpdateSharedMailboxRequestMailVisibility = "shared"
+)
+
+// Valid indicates whether the value is a known member of the UpdateSharedMailboxRequestMailVisibility enum.
+func (e UpdateSharedMailboxRequestMailVisibility) Valid() bool {
+	switch e {
+	case UpdateSharedMailboxRequestMailVisibilityClassified:
+		return true
+	case UpdateSharedMailboxRequestMailVisibilityHeld:
+		return true
+	case UpdateSharedMailboxRequestMailVisibilityShared:
 		return true
 	default:
 		return false
@@ -41925,22 +42090,7 @@ type ConnectConnectorRequest struct {
 	AlsoConnect *ConnectConnectorRequestAlsoConnect `json:"also_connect,omitempty"`
 
 	// Imap Direct IMAP credentials (the `imap` provider only).
-	Imap *struct {
-		Host string `json:"host"`
-
-		// Mailbox The mailbox to read.
-		Mailbox *string `json:"mailbox,omitempty"`
-
-		// MaxMessages Upper bound on messages pulled per sync, and on the bounded recent window a first sync re-anchors with.
-		MaxMessages *int `json:"max_messages,omitempty" maximum:"200" minimum:"1"`
-		Port        *int `json:"port,omitempty" maximum:"65535" minimum:"1"`
-
-		// Secret Password or app-specific password. Sealed to the vault; never returned.
-		Secret *string `json:"secret,omitempty"`
-
-		// Username The mailbox login — an email address on most servers.
-		Username string `json:"username"`
-	} `json:"imap,omitempty"`
+	Imap *ImapCredentials `json:"imap,omitempty"`
 
 	// ImportWindow The past-email window to import once the mail grant is stored. The callback takes
 	// the estimate then, and starts the import by itself only when that estimate is small
@@ -42024,6 +42174,33 @@ type ConnectProviderRequest struct {
 	// Configuration Omit for automatic-on-create + Full enrichment defaults.
 	Configuration *ProviderConfiguration `json:"configuration,omitempty"`
 }
+
+// ConnectSharedMailboxRequest The mailbox, its readers, and the provider's credentials. Each provider carries its own
+// credentials member, named like the provider.
+type ConnectSharedMailboxRequest struct {
+	// Address The mailbox address. Reconnecting the same address reuses its mailbox.
+	Address openapi_types.Email `json:"address"`
+
+	// Gmail A Google Workspace service account the admin delegated `gmail.readonly` to.
+	Gmail *SharedGmailCredentials `json:"gmail,omitempty"`
+
+	// Graph The customer's own Entra app registration, which reads the mailbox with application permission.
+	Graph *SharedGraphCredentials `json:"graph,omitempty"`
+
+	// Imap Direct IMAP credentials (the `imap` provider only).
+	Imap *ImapCredentials `json:"imap,omitempty"`
+
+	// MailVisibility Absent starts a new mailbox `held` and keeps a reconnected one as it is. `classified` is refused with `422`.
+	MailVisibility *ConnectSharedMailboxRequestMailVisibility `json:"mail_visibility,omitempty"`
+	Provider       ConnectSharedMailboxRequestProvider        `json:"provider"`
+	ReaderTeamId   openapi_types.UUID                         `json:"reader_team_id"`
+}
+
+// ConnectSharedMailboxRequestMailVisibility Absent starts a new mailbox `held` and keeps a reconnected one as it is. `classified` is refused with `422`.
+type ConnectSharedMailboxRequestMailVisibility string
+
+// ConnectSharedMailboxRequestProvider defines model for ConnectSharedMailboxRequest.Provider.
+type ConnectSharedMailboxRequestProvider string
 
 // ConnectorApp defines model for ConnectorApp.
 type ConnectorApp struct {
@@ -50002,6 +50179,24 @@ type HomeRepairTaskBeforeVerdict string
 // HomeRepairTaskSource defines model for HomeRepairTask.Source.
 type HomeRepairTaskSource string
 
+// ImapCredentials Direct IMAP credentials (the `imap` provider only).
+type ImapCredentials struct {
+	Host string `json:"host"`
+
+	// Mailbox The mailbox to read.
+	Mailbox *string `json:"mailbox,omitempty"`
+
+	// MaxMessages Upper bound on messages pulled per sync, and on the bounded recent window a first sync re-anchors with.
+	MaxMessages *int `json:"max_messages,omitempty" maximum:"200" minimum:"1"`
+	Port        *int `json:"port,omitempty" maximum:"65535" minimum:"1"`
+
+	// Secret Password or app-specific password. Sealed to the vault; never returned.
+	Secret *string `json:"secret,omitempty"`
+
+	// Username The mailbox login — an email address on most servers.
+	Username string `json:"username"`
+}
+
 // ImportColumn One column of the uploaded file, described well enough to map it without opening the file elsewhere.
 type ImportColumn struct {
 	// FillRate Non-empty values ÷ rows profiled. A column at 0.02 is usually a mapping mistake waiting to happen, and the number is the only way to see that before committing.
@@ -51399,7 +51594,7 @@ type InternalMailSelection struct {
 	// Containers Exact provider-qualified folder identifiers. An empty list selects the whole connection, subject to ordinary exclusions.
 	Containers []string `json:"containers" unique:"items"`
 
-	// HistorySince Optional administrator authorization for a separate history import, starting at midnight UTC on this day. Omission keeps future capture only. The mailbox owner must still preview and explicitly start the import.
+	// HistorySince Optional administrator authorization for a separate history import, starting at midnight UTC on this day. Omission keeps future capture only. The mailbox owner must still preview and explicitly start the import, so a shared mailbox, which has no owner, refuses it.
 	HistorySince *openapi_types.Date `json:"history_since,omitempty"`
 }
 
@@ -51419,8 +51614,10 @@ type InternalMailSource struct {
 	EnrolledBy   string              `json:"enrolled_by"`
 	Generation   int                 `json:"generation"`
 	HistorySince *openapi_types.Date `json:"history_since,omitempty"`
-	OwnerUserId  openapi_types.UUID  `json:"owner_user_id"`
-	Provider     string              `json:"provider"`
+
+	// OwnerUserId Null for a shared mailbox, which no seat owns. Its connection and generation name it.
+	OwnerUserId *openapi_types.UUID `json:"owner_user_id"`
+	Provider    string              `json:"provider"`
 }
 
 // InternalMailSourceOption defines model for InternalMailSourceOption.
@@ -51429,8 +51626,10 @@ type InternalMailSourceOption struct {
 	ConnectionId openapi_types.UUID `json:"connection_id"`
 	Generation   int                `json:"generation"`
 	OwnerName    string             `json:"owner_name"`
-	OwnerUserId  openapi_types.UUID `json:"owner_user_id"`
-	Provider     string             `json:"provider"`
+
+	// OwnerUserId Null for a shared mailbox. Its account_label is its address, and owner_name is empty.
+	OwnerUserId *openapi_types.UUID `json:"owner_user_id"`
+	Provider    string              `json:"provider"`
 }
 
 // IntroFallbackPolicy What the requester wants to happen if the colleague says no. Stored rather than held in the drawer, so the answer survives the tab that gave it.
@@ -63393,6 +63592,68 @@ type SharedForecastView struct {
 // SharedForecastViewKind Which promise this view makes. A reader shown a frozen number needs to know it is frozen, and as of when.
 type SharedForecastViewKind string
 
+// SharedGmailCredentials A Google Workspace service account the admin delegated `gmail.readonly` to.
+type SharedGmailCredentials struct {
+	// ServiceAccountKey The JSON key file of the service account, as text. Sealed to the vault; never returned.
+	ServiceAccountKey *string `json:"service_account_key,omitempty"`
+}
+
+// SharedGraphCredentials The customer's own Entra app registration, which reads the mailbox with application permission.
+type SharedGraphCredentials struct {
+	// ClientId The application (client) id.
+	ClientId *string `json:"client_id,omitempty"`
+
+	// ClientSecret A client secret of the app. Sealed to the vault; never returned.
+	ClientSecret *string `json:"client_secret,omitempty"`
+
+	// TenantId The directory (tenant) id, or a verified domain of the tenant. Never a multi-tenant alias.
+	TenantId *string `json:"tenant_id,omitempty"`
+}
+
+// SharedMailbox A mailbox no one owns. One team reads what it captures.
+type SharedMailbox struct {
+	// Address The mailbox address.
+	Address     string    `json:"address"`
+	ConnectedAt time.Time `json:"connected_at"`
+
+	// ConnectedBy The admin who last connected it.
+	ConnectedBy *openapi_types.UUID `json:"connected_by,omitempty"`
+
+	// Id The connection id. It stays the same across a disconnect and a reconnect.
+	Id openapi_types.UUID `json:"id"`
+
+	// MailVisibility `held` keeps its mail to the reader team and the message's own participants; `shared` opens it to the workspace.
+	MailVisibility SharedMailboxMailVisibility `json:"mail_visibility"`
+	Provider       SharedMailboxProvider       `json:"provider"`
+
+	// ReaderTeamId The team that reads every message this mailbox captured.
+	ReaderTeamId openapi_types.UUID  `json:"reader_team_id"`
+	Status       SharedMailboxStatus `json:"status"`
+}
+
+// SharedMailboxMailVisibility `held` keeps its mail to the reader team and the message's own participants; `shared` opens it to the workspace.
+type SharedMailboxMailVisibility string
+
+// SharedMailboxProvider defines model for SharedMailbox.Provider.
+type SharedMailboxProvider string
+
+// SharedMailboxStatus defines model for SharedMailbox.Status.
+type SharedMailboxStatus string
+
+// SharedMailboxHistoryImportRequest defines model for SharedMailboxHistoryImportRequest.
+type SharedMailboxHistoryImportRequest struct {
+	// Window How far back to import. Widen-only versus a prior run.
+	Window SharedMailboxHistoryImportRequestWindow `json:"window"`
+}
+
+// SharedMailboxHistoryImportRequestWindow How far back to import. Widen-only versus a prior run.
+type SharedMailboxHistoryImportRequestWindow string
+
+// SharedMailboxList defines model for SharedMailboxList.
+type SharedMailboxList struct {
+	Items []SharedMailbox `json:"items"`
+}
+
 // ShippedLabelKey The catalog key a screen renders a built-in value from, in the reader's language. Set only on a value still worded as the product shipped it; null once an administrator relabels it, so their own words show instead of `label`'s translation. `label` keeps the English text for every reader that has no catalog, such as an export or an agent.
 type ShippedLabelKey = string
 
@@ -66528,6 +66789,24 @@ type UpdateSavedViewRequest struct {
 	Name  *string                 `json:"name,omitempty"`
 	Query *map[string]interface{} `json:"query,omitempty"`
 }
+
+// UpdateSharedMailboxRequest defines model for UpdateSharedMailboxRequest.
+type UpdateSharedMailboxRequest struct {
+	// ApplyToHistory Also narrow mail already captured when the visibility moves to `held`. Absent or false leaves it as it is.
+	ApplyToHistory *bool `json:"apply_to_history,omitempty"`
+
+	// Confirm Must be true: the change moves every message the mailbox captured to other readers.
+	Confirm bool `json:"confirm"`
+
+	// MailVisibility `classified` is refused with `422`.
+	MailVisibility *UpdateSharedMailboxRequestMailVisibility `json:"mail_visibility,omitempty"`
+
+	// ReaderTeamId The team that reads the mailbox from now on, its whole history included.
+	ReaderTeamId *openapi_types.UUID `json:"reader_team_id,omitempty"`
+}
+
+// UpdateSharedMailboxRequestMailVisibility `classified` is refused with `422`.
+type UpdateSharedMailboxRequestMailVisibility string
 
 // UpdateSignalRequest Triage. A `status` move to acknowledged/resolved/dismissed appends the human-outcome
 // `signal_resolution` row; `note` travels with that outcome. `resolution_state` and the
@@ -79621,6 +79900,15 @@ type CreateMeetingProposalJSONRequestBody = MeetingProposalRequest
 
 // ReassignHandoffJSONRequestBody defines body for ReassignHandoff for application/json ContentType.
 type ReassignHandoffJSONRequestBody = HandoffAssigneeInput
+
+// ConnectSharedMailboxJSONRequestBody defines body for ConnectSharedMailbox for application/json ContentType.
+type ConnectSharedMailboxJSONRequestBody = ConnectSharedMailboxRequest
+
+// UpdateSharedMailboxJSONRequestBody defines body for UpdateSharedMailbox for application/json ContentType.
+type UpdateSharedMailboxJSONRequestBody = UpdateSharedMailboxRequest
+
+// StartSharedMailboxHistoryImportJSONRequestBody defines body for StartSharedMailboxHistoryImport for application/json ContentType.
+type StartSharedMailboxHistoryImportJSONRequestBody = SharedMailboxHistoryImportRequest
 
 // CreateSignalJSONRequestBody defines body for CreateSignal for application/json ContentType.
 type CreateSignalJSONRequestBody = CreateSignalRequest
@@ -95540,6 +95828,21 @@ type ServerInterface interface {
 	// Cross-object search (contacts, companies, deals, activities, leads).
 	// (GET /search)
 	Search(w http.ResponseWriter, r *http.Request, params SearchParams)
+	// The installation's shared mailboxes, disconnected ones included.
+	// (GET /shared-mailboxes)
+	ListSharedMailboxes(w http.ResponseWriter, r *http.Request)
+	// Connect a shared mailbox, or reconnect the one stored for this address.
+	// (POST /shared-mailboxes)
+	ConnectSharedMailbox(w http.ResponseWriter, r *http.Request)
+	// Change who reads a shared mailbox, or its mail visibility.
+	// (PATCH /shared-mailboxes/{id})
+	UpdateSharedMailbox(w http.ResponseWriter, r *http.Request, id Id)
+	// Stop capturing a shared mailbox.
+	// (POST /shared-mailboxes/{id}/disconnect)
+	DisconnectSharedMailbox(w http.ResponseWriter, r *http.Request, id Id)
+	// Import a connected shared mailbox's past mail.
+	// (POST /shared-mailboxes/{id}/history-import)
+	StartSharedMailboxHistoryImport(w http.ResponseWriter, r *http.Request, id Id)
 	// List signals (cursor-paginated), newest first.
 	// (GET /signals)
 	ListSignals(w http.ResponseWriter, r *http.Request, params ListSignalsParams)
@@ -101528,6 +101831,36 @@ func (_ Unimplemented) ReassignHandoff(w http.ResponseWriter, r *http.Request, i
 // Cross-object search (contacts, companies, deals, activities, leads).
 // (GET /search)
 func (_ Unimplemented) Search(w http.ResponseWriter, r *http.Request, params SearchParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// The installation's shared mailboxes, disconnected ones included.
+// (GET /shared-mailboxes)
+func (_ Unimplemented) ListSharedMailboxes(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Connect a shared mailbox, or reconnect the one stored for this address.
+// (POST /shared-mailboxes)
+func (_ Unimplemented) ConnectSharedMailbox(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Change who reads a shared mailbox, or its mail visibility.
+// (PATCH /shared-mailboxes/{id})
+func (_ Unimplemented) UpdateSharedMailbox(w http.ResponseWriter, r *http.Request, id Id) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Stop capturing a shared mailbox.
+// (POST /shared-mailboxes/{id}/disconnect)
+func (_ Unimplemented) DisconnectSharedMailbox(w http.ResponseWriter, r *http.Request, id Id) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Import a connected shared mailbox's past mail.
+// (POST /shared-mailboxes/{id}/history-import)
+func (_ Unimplemented) StartSharedMailboxHistoryImport(w http.ResponseWriter, r *http.Request, id Id) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -143612,6 +143945,142 @@ func (siw *ServerInterfaceWrapper) Search(w http.ResponseWriter, r *http.Request
 	handler.ServeHTTP(w, r)
 }
 
+// ListSharedMailboxes operation middleware
+func (siw *ServerInterfaceWrapper) ListSharedMailboxes(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ListSharedMailboxes(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// ConnectSharedMailbox operation middleware
+func (siw *ServerInterfaceWrapper) ConnectSharedMailbox(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ConnectSharedMailbox(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// UpdateSharedMailbox operation middleware
+func (siw *ServerInterfaceWrapper) UpdateSharedMailbox(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.UpdateSharedMailbox(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// DisconnectSharedMailbox operation middleware
+func (siw *ServerInterfaceWrapper) DisconnectSharedMailbox(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.DisconnectSharedMailbox(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// StartSharedMailboxHistoryImport operation middleware
+func (siw *ServerInterfaceWrapper) StartSharedMailboxHistoryImport(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.StartSharedMailboxHistoryImport(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // ListSignals operation middleware
 func (siw *ServerInterfaceWrapper) ListSignals(w http.ResponseWriter, r *http.Request) {
 
@@ -152334,6 +152803,21 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/search", wrapper.Search)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/shared-mailboxes", wrapper.ListSharedMailboxes)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/shared-mailboxes", wrapper.ConnectSharedMailbox)
+	})
+	r.Group(func(r chi.Router) {
+		r.Patch(options.BaseURL+"/shared-mailboxes/{id}", wrapper.UpdateSharedMailbox)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/shared-mailboxes/{id}/disconnect", wrapper.DisconnectSharedMailbox)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/shared-mailboxes/{id}/history-import", wrapper.StartSharedMailboxHistoryImport)
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/signals", wrapper.ListSignals)

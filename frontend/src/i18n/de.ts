@@ -4904,6 +4904,10 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "internalMail.noSources":
     "Zuerst ein Postfach verbinden, dann eine betriebliche Quelle wählen.",
   "internalMail.unavailableSource": "Postfachverbindung nicht verfügbar",
+  "internalMail.sharedSource":
+    "Gemeinsames Postfach, das auch sein Leseteam liest",
+  "internalMail.sharedNoHistory":
+    "Für ein gemeinsames Postfach ist niemand verantwortlich, der einen Verlaufsimport freigibt. Es erfasst daher nur künftige E-Mails.",
   "internalMail.needSource":
     "Vor dem Aktivieren mindestens eine betriebliche Postfachverbindung wählen.",
   "internalMail.disable":

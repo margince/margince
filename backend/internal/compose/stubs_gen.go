@@ -3739,6 +3739,26 @@ func (stubs) Search(w nethttp.ResponseWriter, r *nethttp.Request, params crmcont
 	httperr.NotImplemented(w, r, "Search")
 }
 
+func (stubs) ListSharedMailboxes(w nethttp.ResponseWriter, r *nethttp.Request) {
+	httperr.NotImplemented(w, r, "ListSharedMailboxes")
+}
+
+func (stubs) ConnectSharedMailbox(w nethttp.ResponseWriter, r *nethttp.Request) {
+	httperr.NotImplemented(w, r, "ConnectSharedMailbox")
+}
+
+func (stubs) UpdateSharedMailbox(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {
+	httperr.NotImplemented(w, r, "UpdateSharedMailbox")
+}
+
+func (stubs) DisconnectSharedMailbox(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {
+	httperr.NotImplemented(w, r, "DisconnectSharedMailbox")
+}
+
+func (stubs) StartSharedMailboxHistoryImport(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {
+	httperr.NotImplemented(w, r, "StartSharedMailboxHistoryImport")
+}
+
 func (stubs) ListSignals(w nethttp.ResponseWriter, r *nethttp.Request, params crmcontracts.ListSignalsParams) {
 	httperr.NotImplemented(w, r, "ListSignals")
 }

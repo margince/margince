@@ -391,19 +391,33 @@ func (a *httpAPI) GetSubscription(ctx context.Context, accessToken, id string) (
 		}
 		return Subscription{}, err
 	}
+	// An app token reads every mailbox's subscriptions, so a stored id naming
+	// another mailbox's is treated as gone, and Watch makes this mailbox one.
+	if !a.watchesThisMailbox(out.Resource) {
+		return Subscription{}, ErrSubscriptionGone
+	}
 	return Subscription{ID: out.ID, Expiration: out.Expiration, NotificationURL: out.NotificationURL}, nil
 }
 
 // watchesThisMailbox reports whether a listed subscription is this mailbox's.
 // A personal token lists only its own user's subscriptions, so the URL alone
 // decides, as findSubscription explains. An app token lists every mailbox's,
-// so a shared client also matches the resource, ignoring case and a leading
-// slash, which Microsoft may drop.
+// so a shared client also matches the resource. Microsoft may echo it by
+// object id, as users('{name}'), escaped, in other case or with no slash.
 func (a *httpAPI) watchesThisMailbox(resource string) bool {
 	if a.mailbox == personalMailbox {
 		return true
 	}
-	return strings.EqualFold(strings.TrimPrefix(resource, "/"), strings.TrimPrefix(a.messagesResource(), "/"))
+	if unescaped, err := url.PathUnescape(resource); err == nil {
+		resource = unescaped
+	}
+	resource = "/" + strings.TrimPrefix(strings.ToLower(resource), "/")
+	for _, form := range a.mailboxForms() {
+		if resource == form+"/messages" {
+			return true
+		}
+	}
+	return false
 }
 
 // messagesResource is what the subscription watches. Quoted the way Graph

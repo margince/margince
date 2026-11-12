@@ -117,7 +117,7 @@ func registerMicrosoftConnectors(
 		return
 	}
 	reg.Register(graph.New(newGraphAuthorizer(resolve, g), graph.NewAPI(nil, "")).
-		WithBounceSink(newBounceSink(pool)))
+		WithBounceSink(newBounceSink(pool)).WithSharedMailboxes(graph.SharedMailboxConfig{}))
 	reg.Register(graphcal.New(newGraphCalAuthorizer(resolve, g), graphcal.NewAPI(nil, "")))
 }
 

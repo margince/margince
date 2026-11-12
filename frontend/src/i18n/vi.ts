@@ -4779,6 +4779,9 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "internalMail.sources": "Kết nối hộp thư vận hành",
   "internalMail.noSources": "Kết nối hộp thư trước khi chọn nguồn vận hành.",
   "internalMail.unavailableSource": "Kết nối hộp thư không khả dụng",
+  "internalMail.sharedSource": "Hộp thư chung, nhóm đọc của nó cũng đọc được",
+  "internalMail.sharedNoHistory":
+    "Hộp thư chung không có chủ sở hữu để duyệt việc nhập lịch sử, nên chỉ ghi nhận thư từ nay về sau.",
   "internalMail.needSource":
     "Chọn ít nhất một kết nối hộp thư vận hành trước khi bật.",
   "internalMail.disable":

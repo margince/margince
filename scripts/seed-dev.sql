@@ -371,4 +371,33 @@ BEGIN
   RAISE NOTICE 'seed-dev.sql: a customer is waiting on the Worklist';
 END $$;
 
+
+-- One shared mailbox, so every demo runs with one present: sales@demo.test,
+-- owned by no seat, read by DACH Sales, and held. The admin connect accepts
+-- imap only, so this row is written here. Its test_mailbox credential names no
+-- seat, so a sync where operations.allow_test_mailbox registered the
+-- connector brings in nothing. Idempotent on the provider and address.
+DO $$
+DECLARE
+  admin_id uuid;
+  dach_team_id uuid;
+BEGIN
+  IF pg_temp.installation_workspace() IS NULL THEN
+    RAISE NOTICE 'seed-dev.sql: no live workspace — run make seed-dev first';
+    RETURN;
+  END IF;
+  SELECT id INTO admin_id FROM app_user WHERE lower(email) = lower('admin@demo.test');
+  SELECT id INTO dach_team_id FROM team WHERE name = 'DACH Sales' AND archived_at IS NULL;
+  IF admin_id IS NULL OR dach_team_id IS NULL THEN
+    RAISE NOTICE 'seed-dev.sql: no admin or DACH Sales team yet — skipping the shared mailbox';
+    RETURN;
+  END IF;
+  INSERT INTO capture_connection (provider, user_id, connected_by, reader_team_id, account_label,
+                                  mail_posture, status, scopes, auth, share_acknowledged_at)
+  VALUES ('test_mailbox', NULL, admin_id, dach_team_id, 'sales@demo.test', 'held', 'connected', '{read}',
+          convert_to('{"user_id":"00000000-0000-0000-0000-000000000000"}', 'UTF8'), now())
+  ON CONFLICT (provider, lower(account_label)) WHERE user_id IS NULL DO NOTHING;
+  RAISE NOTICE 'seed-dev.sql: shared mailbox sales@demo.test, read by DACH Sales';
+END $$;
+
 COMMIT;

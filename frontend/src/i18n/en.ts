@@ -4856,6 +4856,9 @@ export const en = {
   "internalMail.noSources":
     "Connect a mailbox before selecting an operational source.",
   "internalMail.unavailableSource": "Unavailable mail connection",
+  "internalMail.sharedSource": "Shared mailbox, also read by its reader team",
+  "internalMail.sharedNoHistory":
+    "A shared mailbox has no owner to approve a history import, so it captures future mail only.",
   "internalMail.needSource":
     "Select at least one operational mail connection before enabling capture.",
   "internalMail.disable":

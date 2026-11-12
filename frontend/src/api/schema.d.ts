@@ -13083,6 +13083,141 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/shared-mailboxes": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * The installation's shared mailboxes, disconnected ones included.
+         * @description A shared mailbox (sales@, an operations desk) belongs to no one. An admin connected it,
+         *     and one team reads what it captures. A disconnected mailbox stays listed, because its
+         *     captured mail stays with its readers.
+         *
+         *     Admin only, in a signed-in session: an agent never manages who reads a team's mail.
+         */
+        get: operations["listSharedMailboxes"];
+        put?: never;
+        /**
+         * Connect a shared mailbox, or reconnect the one stored for this address.
+         * @description Probes the credentials with the same login check a personal connect runs, seals them in the
+         *     key vault, and stores the mailbox. The reader team must have at least one active member.
+         *     `mail_visibility` starts at `held`; `shared` needs `capture.shared_posture_allowed`, and a
+         *     shared mailbox is never `classified`.
+         *
+         *     A second connect of the same provider and address reuses that mailbox: its id, its mail and
+         *     its readers stay. A reconnect naming other readers or another visibility is refused with
+         *     `409`; change those with `PATCH /shared-mailboxes/{id}` first.
+         *
+         *     The request names its provider and carries that provider's credentials:
+         *
+         *     - `imap`: the mailbox login, checked with a login.
+         *     - `graph`: the customer's own Entra app (tenant id, client id, client secret) with the
+         *       `Mail.Read` and `User.ReadBasic.All` application permissions. Checked by reading the
+         *       mailbox's user id and inbox with an app token.
+         *     - `gmail`: a service-account key with domain-wide delegation of `gmail.readonly`. The
+         *       address must be on one of the installation's own domains
+         *       (`422 shared_mailbox_foreign_domain`). Checked by reading the mailbox's profile with a
+         *       delegated token.
+         *
+         *     A refused check answers `422` with the reason class: `shared_mailbox_credentials_invalid`,
+         *     `shared_mailbox_grant_refused`, `shared_mailbox_mailbox_denied` or
+         *     `shared_mailbox_mailbox_not_found`. The provider's own message is never echoed. A provider
+         *     that cannot be reached answers `502 shared_mailbox_unreachable`.
+         *
+         *     Admin only, in a signed-in session.
+         */
+        post: operations["connectSharedMailbox"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/shared-mailboxes/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /**
+         * Change who reads a shared mailbox, or its mail visibility.
+         * @description Moves the whole captured history: the new reader team reads every message the mailbox
+         *     brought in, and the old one stops. So the request must carry `confirm: true`. The new team
+         *     must have at least one active member. `shared` needs `capture.shared_posture_allowed`;
+         *     `classified` is refused. `apply_to_history` also narrows mail already captured when the
+         *     visibility moves to `held`.
+         *
+         *     Admin only, in a signed-in session.
+         */
+        patch: operations["updateSharedMailbox"];
+        trace?: never;
+    };
+    "/shared-mailboxes/{id}/disconnect": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Stop capturing a shared mailbox.
+         * @description Capture stops and the stored credential is deleted from the vault. The mailbox, its captured
+         *     mail and its readers stay, and a later connect of the same address reuses it. Idempotent.
+         *
+         *     Admin only, in a signed-in session.
+         */
+        post: operations["disconnectSharedMailbox"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/shared-mailboxes/{id}/history-import": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Import a connected shared mailbox's past mail.
+         * @description Queues the history import for one window, as `POST /connectors/{provider}/backfill` does for
+         *     a personal mailbox. One live run per mailbox (`409 backfill_running`), widen-only
+         *     (`409 window_narrowing`).
+         *
+         *     Admin only, in a signed-in session.
+         */
+        post: operations["startSharedMailboxHistoryImport"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/connectors/{provider}/signature-enrichment": {
         parameters: {
             query?: never;
@@ -26877,7 +27012,7 @@ export interface components {
         InternalMailSelection: {
             /**
              * Format: date
-             * @description Optional administrator authorization for a separate history import, starting at midnight UTC on this day. Omission keeps future capture only. The mailbox owner must still preview and explicitly start the import.
+             * @description Optional administrator authorization for a separate history import, starting at midnight UTC on this day. Omission keeps future capture only. The mailbox owner must still preview and explicitly start the import, so a shared mailbox, which has no owner, refuses it.
              */
             history_since?: string;
             /** Format: uuid */
@@ -26891,8 +27026,11 @@ export interface components {
             /** Format: uuid */
             connection_id: string;
             containers: string[];
-            /** Format: uuid */
-            owner_user_id: string;
+            /**
+             * Format: uuid
+             * @description Null for a shared mailbox, which no seat owns. Its connection and generation name it.
+             */
+            owner_user_id: string | null;
             provider: string;
             generation: number;
             /** Format: date-time */
@@ -26902,8 +27040,11 @@ export interface components {
         InternalMailSourceOption: {
             /** Format: uuid */
             connection_id: string;
-            /** Format: uuid */
-            owner_user_id: string;
+            /**
+             * Format: uuid
+             * @description Null for a shared mailbox. Its account_label is its address, and owner_name is empty.
+             */
+            owner_user_id: string | null;
             provider: string;
             account_label: string;
             owner_name: string;
@@ -29333,26 +29474,121 @@ export interface components {
              * @enum {string}
              */
             import_window?: "3m" | "6m" | "12m" | "24m" | "36m" | "60m" | "84m" | "120m";
-            /** @description Direct IMAP credentials (the `imap` provider only). */
-            imap?: {
-                host: string;
-                /** @default 993 */
-                port: number;
-                /** @description The mailbox login — an email address on most servers. */
-                username: string;
-                /** @description Password or app-specific password. Sealed to the vault; never returned. */
-                secret: string;
-                /**
-                 * @description The mailbox to read.
-                 * @default INBOX
-                 */
-                mailbox: string;
-                /**
-                 * @description Upper bound on messages pulled per sync, and on the bounded recent window a first sync re-anchors with.
-                 * @default 50
-                 */
-                max_messages: number;
-            };
+            imap?: components["schemas"]["ImapCredentials"];
+        };
+        /** @description Direct IMAP credentials (the `imap` provider only). */
+        ImapCredentials: {
+            host: string;
+            /** @default 993 */
+            port: number;
+            /** @description The mailbox login — an email address on most servers. */
+            username: string;
+            /** @description Password or app-specific password. Sealed to the vault; never returned. */
+            secret: string;
+            /**
+             * @description The mailbox to read.
+             * @default INBOX
+             */
+            mailbox: string;
+            /**
+             * @description Upper bound on messages pulled per sync, and on the bounded recent window a first sync re-anchors with.
+             * @default 50
+             */
+            max_messages: number;
+        };
+        /** @description A mailbox no one owns. One team reads what it captures. */
+        SharedMailbox: {
+            /**
+             * Format: uuid
+             * @description The connection id. It stays the same across a disconnect and a reconnect.
+             */
+            id: string;
+            /** @enum {string} */
+            provider: "imap" | "graph" | "gmail" | "test_mailbox";
+            /** @description The mailbox address. */
+            address: string;
+            /**
+             * Format: uuid
+             * @description The team that reads every message this mailbox captured.
+             */
+            reader_team_id: string;
+            /**
+             * @description `held` keeps its mail to the reader team and the message's own participants; `shared` opens it to the workspace.
+             * @enum {string}
+             */
+            mail_visibility: "held" | "shared";
+            /** @enum {string} */
+            status: "connected" | "disconnected" | "error" | "reauth_required";
+            /**
+             * Format: uuid
+             * @description The admin who last connected it.
+             */
+            connected_by?: string | null;
+            /** Format: date-time */
+            connected_at: string;
+        };
+        SharedMailboxList: {
+            items: components["schemas"]["SharedMailbox"][];
+        };
+        /**
+         * @description The mailbox, its readers, and the provider's credentials. Each provider carries its own
+         *     credentials member, named like the provider.
+         */
+        ConnectSharedMailboxRequest: {
+            /** @enum {string} */
+            provider: "imap" | "graph" | "gmail";
+            /**
+             * Format: email
+             * @description The mailbox address. Reconnecting the same address reuses its mailbox.
+             */
+            address: string;
+            /** Format: uuid */
+            reader_team_id: string;
+            /**
+             * @description Absent starts a new mailbox `held` and keeps a reconnected one as it is. `classified` is refused with `422`.
+             * @enum {string}
+             */
+            mail_visibility?: "held" | "shared" | "classified";
+            imap?: components["schemas"]["ImapCredentials"];
+            graph?: components["schemas"]["SharedGraphCredentials"];
+            gmail?: components["schemas"]["SharedGmailCredentials"];
+        };
+        /** @description The customer's own Entra app registration, which reads the mailbox with application permission. */
+        SharedGraphCredentials: {
+            /** @description The directory (tenant) id, or a verified domain of the tenant. Never a multi-tenant alias. */
+            tenant_id: string;
+            /** @description The application (client) id. */
+            client_id: string;
+            /** @description A client secret of the app. Sealed to the vault; never returned. */
+            client_secret: string;
+        };
+        /** @description A Google Workspace service account the admin delegated `gmail.readonly` to. */
+        SharedGmailCredentials: {
+            /** @description The JSON key file of the service account, as text. Sealed to the vault; never returned. */
+            service_account_key: string;
+        };
+        UpdateSharedMailboxRequest: {
+            /**
+             * Format: uuid
+             * @description The team that reads the mailbox from now on, its whole history included.
+             */
+            reader_team_id?: string;
+            /**
+             * @description `classified` is refused with `422`.
+             * @enum {string}
+             */
+            mail_visibility?: "held" | "shared" | "classified";
+            /** @description Also narrow mail already captured when the visibility moves to `held`. Absent or false leaves it as it is. */
+            apply_to_history?: boolean;
+            /** @description Must be true: the change moves every message the mailbox captured to other readers. */
+            confirm: boolean;
+        };
+        SharedMailboxHistoryImportRequest: {
+            /**
+             * @description How far back to import. Widen-only versus a prior run.
+             * @enum {string}
+             */
+            window: "3m" | "6m" | "12m" | "24m" | "36m" | "60m" | "84m" | "120m";
         };
         /** @description An OAuth redirect target (OAuth providers). */
         ConnectConnectorResponse: {
@@ -81702,6 +81938,153 @@ export interface operations {
             };
             401: components["responses"]["Unauthorized"];
             404: components["responses"]["NotFound"];
+        };
+    };
+    listSharedMailboxes: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Every shared mailbox, ordered by address. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SharedMailboxList"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["PermissionDenied"];
+        };
+    };
+    connectSharedMailbox: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ConnectSharedMailboxRequest"];
+            };
+        };
+        responses: {
+            /** @description The connected mailbox. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SharedMailbox"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["PermissionDenied"];
+            409: components["responses"]["Conflict"];
+            422: components["responses"]["ValidationError"];
+            /** @description The mail server could not be reached (`imap_unreachable`, `shared_mailbox_unreachable`). */
+            502: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    updateSharedMailbox: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateSharedMailboxRequest"];
+            };
+        };
+        responses: {
+            /** @description The mailbox as it now stands. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SharedMailbox"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["PermissionDenied"];
+            404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    disconnectSharedMailbox: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Disconnected (or already disconnected). */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["PermissionDenied"];
+            404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    startSharedMailboxHistoryImport: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SharedMailboxHistoryImportRequest"];
+            };
+        };
+        responses: {
+            /** @description The import is queued. */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BackfillStatus"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["PermissionDenied"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+            422: components["responses"]["ValidationError"];
         };
     };
     setConnectorSignatureEnrichment: {
