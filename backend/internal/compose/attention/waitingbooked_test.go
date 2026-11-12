@@ -119,3 +119,27 @@ func TestAnUnansweredInvitationStaysTodaysWork(t *testing.T) {
 		t.Fatal("an answered invitation still claims the live-wait band over its booked meeting")
 	}
 }
+
+// A meeting change is seen, not replied to; only a proposed time may be.
+func TestAMeetingChangeDraftsNoReplyUnlessATimeIsProposed(t *testing.T) {
+	for kind, want := range map[crmcontracts.EmailCalendarChangeKind]crmcontracts.WorklistMoveAction{
+		crmcontracts.EmailCalendarChangeKindUpdated:  crmcontracts.WorklistMoveActionNone,
+		crmcontracts.EmailCalendarChangeKindCanceled: crmcontracts.WorklistMoveActionNone,
+		crmcontracts.EmailCalendarChangeKindAnswered: crmcontracts.WorklistMoveActionNone,
+		crmcontracts.EmailCalendarChangeKindProposed: crmcontracts.WorklistMoveActionDraftReply,
+	} {
+		waiting := WaitingCustomer{
+			ActivityID:       ids.MustParse("01a05500-0000-7000-8000-0000000000d4"),
+			Subject:          "Canceled event: Kickoff",
+			Since:            rankInstant.Add(-time.Hour),
+			ConfirmedRequest: true,
+			EmailSummary: &crmcontracts.EmailSummary{
+				CalendarChange: &crmcontracts.EmailCalendarChange{Kind: kind},
+			},
+		}
+		row := classifyWaiting(waiting, rankInstant)
+		if row.item.Move == nil || row.item.Move.Action != want {
+			t.Errorf("a %s meeting's move is %+v, want %s", kind, row.item.Move, want)
+		}
+	}
+}

@@ -27854,11 +27854,95 @@ components:
             into the reader's own mailbox, names an event, and that event has not started. A client
             offers the answers here instead of a written reply, because an invitation asks for an
             RSVP. Absent on every other message, and on a withheld one.
+        calendar_change:
+          allOf: [{$ref: '#/components/schemas/EmailCalendarChange'}]
+          description: |-
+            Present when this message tells the reader something about a meeting rather than asking
+            for words: the organizer changed or cancelled it, or a guest proposed another time or
+            answered. It came into the reader's own mailbox. A client draws it as the meeting,
+            saying what changed. Absent on a first invitation, on every other message, and on a
+            withheld one.
         version:
           allOf: [{$ref: '#/components/schemas/RowVersion'}]
           description: |-
             The activity's version, carried so a row can open an editor that writes with
             If-Match. A row without it can only read.
+    EmailCalendarChange:
+      type: object
+      required: [kind, changed]
+      description: |-
+        What a calendar message says happened to its meeting, read against the earlier send of the
+        same event in the reader's mailbox. The event fields are the meeting as this message states
+        it; `before` holds what the earlier send said of each field in `changed`.
+      properties:
+        kind:
+          type: string
+          enum: [updated, canceled, proposed, answered]
+          description: |-
+            `updated`: the organizer sent the meeting again with changes. `canceled`: the organizer
+            called it off. `proposed`: a guest proposed the time in `starts_at`. `answered`: a guest
+            answered, in `answer`.
+        title:
+          type: string
+        location:
+          type: string
+          description: Where the meeting is, as the calendar wrote it. Absent when it names no place.
+        starts_at:
+          type: string
+          format: date-time
+          description: When the meeting starts. Absent when the message names no time it can be read in.
+        ends_at:
+          type: string
+          format: date-time
+        starts_precision:
+          allOf: [{$ref: '#/components/schemas/OccurredPrecision'}]
+          description: How to read `starts_at`, present beside it. `day` is an all-day meeting.
+        changed:
+          type: array
+          description: What differs from the earlier send. Empty when no earlier send is known or nothing a reader sees changed.
+          items:
+            type: string
+            enum: [time, location, title]
+        before:
+          allOf: [{$ref: '#/components/schemas/EmailCalendarBefore'}]
+          description: The earlier send's value of each field in `changed`.
+        guests_added:
+          type: array
+          items: {$ref: '#/components/schemas/EmailCalendarGuest'}
+        guests_removed:
+          type: array
+          items: {$ref: '#/components/schemas/EmailCalendarGuest'}
+        by:
+          allOf: [{$ref: '#/components/schemas/EmailCalendarGuest'}]
+          description: The guest who proposed or answered. Absent on `updated` and `canceled`.
+        answer:
+          type: string
+          enum: [accepted, tentative, declined]
+          description: The guest's answer, on `answered`.
+    EmailCalendarBefore:
+      type: object
+      properties:
+        title:
+          type: string
+        location:
+          type: string
+        starts_at:
+          type: string
+          format: date-time
+        ends_at:
+          type: string
+          format: date-time
+        starts_precision:
+          allOf: [{$ref: '#/components/schemas/OccurredPrecision'}]
+    EmailCalendarGuest:
+      type: object
+      required: [email]
+      properties:
+        email:
+          type: string
+        name:
+          type: string
+          description: The name the calendar gave. Absent when it gave none.
     EmailCalendarInvitation:
       type: object
       required: [response]

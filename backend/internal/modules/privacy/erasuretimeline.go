@@ -115,7 +115,7 @@ func (e *Eraser) redactSubjectTimeline(ctx context.Context, tx pgx.Tx, contactID
 	args := []any{contactID, emails, floorCurrent, floorCarried, erasedName, channelKeys}
 	args = append(args, systemtext.BoundLiteral("core.erased_subject", erasedName))
 	rows, err := tx.Query(ctx, `
-		UPDATE activity a SET subject = $5, body = NULL, system_text = `+fmt.Sprintf("$%d", len(args))+`, raw = NULL, agenda_fingerprint = NULL,
+		UPDATE activity a SET subject = $5, body = NULL, system_text = `+fmt.Sprintf("$%d", len(args))+`, raw = NULL, agenda_fingerprint = NULL, calendar_event = NULL,
  internal_mail_authorization = `+erasedInternalMailAuthorizationSQL+`,
 		  counterparty_email = NULL,
 		  -- What a classifier concluded the message MEANT goes with the words it

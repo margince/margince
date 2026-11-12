@@ -4842,6 +4842,30 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "email.access.unnamedMember": "Người dùng cũ",
   "email.invitation.badge": "Lời mời",
   "email.invitation.startsAt": "Bắt đầu {when}",
+  "meetingChange.badge.updated": "Cuộc họp đã thay đổi",
+  "meetingChange.badge.canceled": "Đã hủy",
+  "meetingChange.badge.proposed": "Đề xuất giờ mới",
+  "meetingChange.badge.accepted": "Đã chấp nhận",
+  "meetingChange.badge.tentative": "Có thể",
+  "meetingChange.badge.declined": "Đã từ chối",
+  "meetingChange.line.canceled": "Trước đó đặt vào {when}",
+  "meetingChange.line.proposed": "{name} đề xuất {when}",
+  "meetingChange.line.accepted": "{name} đã chấp nhận",
+  "meetingChange.line.tentative": "{name} trả lời có thể",
+  "meetingChange.line.declined": "{name} đã từ chối",
+  "meetingChange.line.moved": "Dời từ {was} sang {when}",
+  "meetingChange.line.movedTo": "Dời sang {when}",
+  "meetingChange.line.placed": "Địa điểm mới: {place}",
+  "meetingChange.line.unplaced": "Không còn địa điểm",
+  "meetingChange.line.renamed": "Đổi tên thành {title}",
+  "meetingChange.line.added": "Đã thêm {names}",
+  "meetingChange.line.removed": "Đã bỏ {names}",
+  "meetingChange.line.details": "Người tổ chức đã đổi chi tiết",
+  "meetingChange.was.time": "Trước đó",
+  "meetingChange.was.current": "Đã đặt vào",
+  "meetingChange.was.location": "Địa điểm cũ",
+  "meetingChange.was.noPlace": "không có địa điểm",
+  "meetingChange.was.title": "Tên cũ",
   "email.move.needsReply": "Cần trả lời",
   "email.move.waitingForThem": "Đang chờ họ trả lời",
   "email.detail.loading": "Đang tải email…",
@@ -19000,6 +19024,26 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "Bạn đã cam kết việc này trong một cuộc trao đổi. Làm xong rồi đánh dấu là xong.",
   "worklist.ask.invitation":
     "Đây là lời mời lịch. Hãy chấp nhận, trả lời có thể hoặc từ chối, và bên tổ chức sẽ nhận được câu trả lời của bạn.",
+  "worklist.ask.changedInvitation":
+    "Người tổ chức đã thay đổi cuộc họp này. Xem thay đổi, rồi chấp nhận, trả lời có thể hoặc từ chối.",
+  "worklist.ask.meeting.updated":
+    "Người tổ chức đã thay đổi cuộc họp này. Xem thay đổi, rồi đánh dấu là xong.",
+  "worklist.ask.meeting.canceled":
+    "Người tổ chức đã hủy cuộc họp này. Không cần trả lời; đánh dấu là xong sau khi bạn đã xem.",
+  "worklist.ask.meeting.proposed":
+    "Một khách mời đề xuất giờ khác. Dời cuộc họp trong lịch của bạn nếu phù hợp, rồi đánh dấu là xong.",
+  "worklist.ask.meeting.answered":
+    "Một khách mời đã trả lời lời mời của bạn. Đánh dấu là xong sau khi bạn đã xem.",
+  "worklist.ask.changedInvitationNamed":
+    "{name} đã thay đổi cuộc họp này. Xem thay đổi, rồi chấp nhận, trả lời có thể hoặc từ chối.",
+  "worklist.ask.meetingNamed.updated":
+    "{name} đã thay đổi cuộc họp này. Xem thay đổi, rồi đánh dấu là xong.",
+  "worklist.ask.meetingNamed.canceled":
+    "{name} đã hủy cuộc họp này. Không cần trả lời; đánh dấu là xong sau khi bạn đã xem.",
+  "worklist.ask.meetingNamed.proposed":
+    "{name} đề xuất giờ khác. Dời cuộc họp trong lịch của bạn nếu phù hợp, rồi đánh dấu là xong.",
+  "worklist.ask.meetingNamed.answered":
+    "{name} đã trả lời lời mời của bạn. Đánh dấu là xong sau khi bạn đã xem.",
   "worklist.ask.customer_waiting":
     "Khách hàng đã viết và chưa có ai trả lời. Trả lời khách hàng.",
   "worklist.ask.lead_response":

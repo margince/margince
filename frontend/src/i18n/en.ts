@@ -4930,6 +4930,30 @@ export const en = {
   "email.access.unnamedMember": "Former user",
   "email.invitation.badge": "Invitation",
   "email.invitation.startsAt": "Starts {when}",
+  "meetingChange.badge.updated": "Meeting changed",
+  "meetingChange.badge.canceled": "Canceled",
+  "meetingChange.badge.proposed": "New time proposed",
+  "meetingChange.badge.accepted": "Accepted",
+  "meetingChange.badge.tentative": "Maybe",
+  "meetingChange.badge.declined": "Declined",
+  "meetingChange.line.canceled": "Was set for {when}",
+  "meetingChange.line.proposed": "{name} proposes {when}",
+  "meetingChange.line.accepted": "{name} accepted",
+  "meetingChange.line.tentative": "{name} answered maybe",
+  "meetingChange.line.declined": "{name} declined",
+  "meetingChange.line.moved": "Moved from {was} to {when}",
+  "meetingChange.line.movedTo": "Moved to {when}",
+  "meetingChange.line.placed": "Now at {place}",
+  "meetingChange.line.unplaced": "No longer has a place",
+  "meetingChange.line.renamed": "Renamed to {title}",
+  "meetingChange.line.added": "Added {names}",
+  "meetingChange.line.removed": "Removed {names}",
+  "meetingChange.line.details": "The organizer changed the details",
+  "meetingChange.was.time": "Was",
+  "meetingChange.was.current": "Booked for",
+  "meetingChange.was.location": "Place was",
+  "meetingChange.was.noPlace": "no place",
+  "meetingChange.was.title": "Title was",
   "email.move.needsReply": "Needs reply",
   "email.move.waitingForThem": "Awaiting their reply",
   "email.detail.loading": "Loading message…",
@@ -19281,6 +19305,26 @@ export const en = {
     "You committed to this in a conversation. Do it, then mark it done.",
   "worklist.ask.invitation":
     "This is a calendar invitation. Accept, say maybe or decline, and the organizer gets your answer.",
+  "worklist.ask.changedInvitation":
+    "The organizer changed this meeting. Check what changed, then accept, say maybe or decline.",
+  "worklist.ask.meeting.updated":
+    "The organizer changed this meeting. Check what changed, then mark it done.",
+  "worklist.ask.meeting.canceled":
+    "The organizer canceled this meeting. There is nothing to answer; mark it done once you have seen it.",
+  "worklist.ask.meeting.proposed":
+    "A guest proposed another time. Move the meeting in your calendar if it suits you, then mark this done.",
+  "worklist.ask.meeting.answered":
+    "A guest answered your invitation. Mark it done once you have seen it.",
+  "worklist.ask.changedInvitationNamed":
+    "{name} changed this meeting. Check what changed, then accept, say maybe or decline.",
+  "worklist.ask.meetingNamed.updated":
+    "{name} changed this meeting. Check what changed, then mark it done.",
+  "worklist.ask.meetingNamed.canceled":
+    "{name} canceled this meeting. There is nothing to answer; mark it done once you have seen it.",
+  "worklist.ask.meetingNamed.proposed":
+    "{name} proposed another time. Move the meeting in your calendar if it suits you, then mark this done.",
+  "worklist.ask.meetingNamed.answered":
+    "{name} answered your invitation. Mark it done once you have seen it.",
   "worklist.ask.customer_waiting":
     "A customer wrote and nobody has answered yet. Reply to them.",
   "worklist.ask.lead_response":
