@@ -5,6 +5,10 @@ import {
   useRosterPartial,
   useRosterPartialHint,
 } from "../../components/entityref";
+import {
+  type AssignedRecord,
+  assignedRecord,
+} from "../../components/recordassignments.queries";
 import { ActionRow } from "../../design-system/actionrow";
 import { AppLink } from "../../design-system/applink";
 import {
@@ -375,7 +379,10 @@ export function StagedEditor({
   pending,
   onApprove,
   onCancel,
+  records,
 }: Readonly<{
+  /** The records the proposed work is about; their named colleagues lead the doer picker. */
+  records?: readonly AssignedRecord[];
   disabled?: boolean;
   acceptLabel?: string;
   fields: readonly EditableField[];
@@ -392,6 +399,7 @@ export function StagedEditor({
         entry.as === "doer" ? (
           <DoerField
             key={entry.field}
+            records={records}
             label={entry.label ? t(entry.label) : entry.field}
             value={draft[entry.field] ?? ""}
             onChange={(value) => onChange(entry.field, value)}
@@ -450,13 +458,15 @@ function DoerField({
   label,
   value,
   onChange,
+  records,
 }: Readonly<{
+  records?: readonly AssignedRecord[];
   label: string;
   value: string;
   onChange: (next: string) => void;
 }>) {
   const t = useT();
-  const { options, roster } = useAssignableUserOptions();
+  const { options, roster } = useAssignableUserOptions(true, records);
   const partialHint = useRosterPartialHint(useRosterPartial("user", true));
   return (
     <>
@@ -557,4 +567,29 @@ function ChoiceSelect({
       onChange={onChange}
     />
   );
+}
+
+/**
+ * The records a promise or follow-up card is about: a promise's links, or a
+ * follow-up's deal. Link entries carry the server's field names.
+ */
+export function cardRecords(
+  change: Readonly<Record<string, unknown>> | undefined,
+): AssignedRecord[] {
+  const links = Array.isArray(change?.links) ? change.links : [];
+  const linked = links.flatMap((link: unknown) =>
+    typeof link === "object" &&
+    link !== null &&
+    "EntityType" in link &&
+    "EntityID" in link &&
+    typeof link.EntityType === "string" &&
+    typeof link.EntityID === "string"
+      ? assignedRecord(link.EntityType, link.EntityID)
+      : [],
+  );
+  const deal =
+    typeof change?.deal_id === "string"
+      ? assignedRecord("deal", change.deal_id)
+      : [];
+  return [...linked, ...deal];
 }
