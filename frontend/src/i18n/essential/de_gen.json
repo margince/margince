@@ -1743,6 +1743,8 @@
   "aibanner.dismiss": "Ausblenden",
   "licensebanner.body": "Das Lizenz-Token dieser Installation wurde geprüft und abgelehnt.",
   "licensebanner.link": "{tab} öffnen",
+  "licensebanner.grace.title": "Lizenz abgelaufen",
+  "licensebanner.grace.body": "Die Lizenz dieser Installation ist abgelaufen und in der Übergangsfrist. Margince läuft weiter, startet nach dem Ende der Übergangsfrist aber nicht mehr. Erneuere die Lizenz vorher.",
   "aicalls.reason.provider_error": "Fehler beim Anbieter im Versuch davor",
   "aicalls.reason.schema_invalid": "Antwort davor passte nicht zum Schema",
   "aicalls.reason.budget_degrade": "Vom KI-Budget eine Stufe herabgesetzt",
