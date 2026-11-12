@@ -72,11 +72,8 @@ type Server struct {
 	voiceHandlers
 	reportHandlers
 	briefs.Handlers
-	// The weekly retrospective. Named rather than embedded because
-	// briefs.Handlers already claims the unqualified name, and because the
-	// weekly is deliberately its OWN aggregate — a weekly row on brief_run
-	// would become "the latest brief" to the reader that decides the next
-	// morning's overnight window.
+	// The weekly retrospective, named because briefs.Handlers claims the name.
+	// It is its own aggregate: on brief_run it would read as the latest brief.
 	weeklyHandlers weekly.Handlers
 	// The day's one surface across approvals, dedupe and tasks. Named, as
 	// briefs.Handlers already claims the unqualified name.
