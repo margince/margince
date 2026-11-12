@@ -502,8 +502,11 @@ func TestAReviewedInquiryPolicySavedUnchangedWritesNothing(t *testing.T) {
 	if status := e.Call(t, "PUT", path, body, map[string]string{"If-Match": strconv.FormatInt(first.Form.Version, 10)}, &second); status != http.StatusOK {
 		t.Fatalf("unchanged save: %d", status)
 	}
-	if second.Form.Version != first.Form.Version || second.Automation.Version != first.Automation.Version {
-		t.Fatalf("unchanged save moved versions: form %d -> %d, policy %d -> %d", first.Form.Version, second.Form.Version, first.Automation.Version, second.Automation.Version)
+	if first.Automation.Version == nil || second.Automation.Version == nil {
+		t.Fatal("a saved inquiry policy has no version")
+	}
+	if second.Form.Version != first.Form.Version || *second.Automation.Version != *first.Automation.Version {
+		t.Fatalf("unchanged save moved versions: form %d -> %d, policy %d -> %d", first.Form.Version, second.Form.Version, *first.Automation.Version, *second.Automation.Version)
 	}
 	if after := counts(); after != before {
 		t.Fatalf("unchanged save wrote audit/events: %v -> %v", before, after)
