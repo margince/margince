@@ -4968,7 +4968,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "meetingChange.line.renamed": "Umbenannt in {title}",
   "meetingChange.line.added": "Hinzugefügt: {names}",
   "meetingChange.line.removed": "Entfernt: {names}",
-  "meetingChange.line.details": "Die organisierende Person hat die Details geändert",
+  "meetingChange.line.details":
+    "Die organisierende Person hat die Details geändert",
   "meetingChange.was.time": "Vorher",
   "meetingChange.was.current": "Gebucht für",
   "meetingChange.was.location": "Ort war",
