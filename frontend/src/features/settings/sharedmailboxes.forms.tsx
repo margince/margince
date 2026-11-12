@@ -17,8 +17,8 @@ import { ConfirmModal } from "../../design-system/confirmmodal";
 import { Select } from "../../design-system/select";
 import { useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
-import { problemMessageOf, unwrap } from "../../lib/problem";
 import { labelFor } from "../../lib/labelfor";
+import { problemMessageOf, unwrap } from "../../lib/problem";
 import { ImportWindowPicker } from "../../mail-history/window-picker";
 
 type SharedMailbox = components["schemas"]["SharedMailbox"];
