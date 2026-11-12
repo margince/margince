@@ -8941,6 +8941,20 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "settings.signatureReviewLoading": "Gespeicherte Signatur wird geladen…",
   "settings.signatureReviewSaved": "Signaturprüfung gespeichert",
   "settings.signatureReviewMember": "dem Mitglied",
+  "settings.signatureChoicePlain":
+    "Deine eigene Signatur steht unter jeder E-Mail, die du sendest. Ohne sie endet die E-Mail mit einem Gruß und deinem Namen.",
+  "settings.signatureChoiceTemplate":
+    "Deine eigene HTML-Signatur steht unter jeder E-Mail, die du sendest. Ohne sie gilt die Firmenvorlage mit deinem Namen, Titel und Telefon.",
+  "settings.signatureUseGmail": "Meine Gmail-Signatur verwenden",
+  "settings.signatureGmailTaken":
+    "Unten steht die Signatur von {address}. Prüfe die Vorschau und speichere dann.",
+  "settings.signatureGmailEmpty": "Dein Gmail-Postfach hat keine Signatur.",
+  "settings.signatureGmailNoMailbox":
+    "Verbinde zuerst dein Gmail-Postfach unter Einstellungen → Verbindungen.",
+  "settings.signatureGmailReconnect":
+    "Margince darf deine Gmail-Einstellungen nicht lesen. Drücke unter Einstellungen → Verbindungen auf Neu verbinden, erlaube den Zugriff und versuche es erneut.",
+  "settings.signatureGmailTooLong":
+    "Deine Gmail-Signatur ist länger als 10.000 Zeichen und kann hier nicht verwendet werden.",
   "settings.signature": "E-Mail-Signatur",
   "settings.signatureSub":
     "Steht unter jeder Nachricht, die du sendest, oberhalb der Fußzeile zum Abbestellen.",

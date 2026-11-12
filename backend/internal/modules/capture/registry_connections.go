@@ -100,13 +100,49 @@ func (r *Registry) ReconnectedSince(ctx context.Context, userID ids.UserID, prov
 // the PROVIDER says the grant holds. It is the send path's entry point, which
 // knows a user and a provider rather than a connection id.
 //
-// Everything this cannot answer is returned as the failure it is. Only the two
-// sentinels above are facts about the deployment; a vault outage or a database
-// timeout must never be mistaken for one, because the caller's response to a
-// fact is to stop trying.
-//
 //nolint:ireturn // returns the optional connector.EmailSender seam by design (the same posture Registry.connector takes for connector.Connector)
 func (r *Registry) SenderFor(ctx context.Context, userID ids.UserID, provider string) (connector.EmailSender, connector.Auth, []string, error) {
+	c, auth, granted, err := r.liveConnection(ctx, userID, provider)
+	if err != nil {
+		return nil, nil, nil, err
+	}
+	// Two-value form: EmailSender is optional (connector.go), so a capture-only
+	// connector is reported rather than silently treated as absent.
+	sender, sends := c.(connector.EmailSender)
+	if !sends {
+		return nil, nil, nil, fmt.Errorf("capture: connector %q: %w", provider, ErrConnectorCannotSend)
+	}
+	return sender, auth, granted, nil
+}
+
+// ErrConnectorHasNoSignature is a connector that keeps no send-as signature.
+var ErrConnectorHasNoSignature = errors.New("capture: this connector keeps no send-as signature")
+
+// SignatureReaderFor resolves one user's live connection to provider for a
+// read of its send-as signature, with the scopes the provider says it holds.
+//
+//nolint:ireturn // returns the optional connector.SendAsSignatureReader seam by design, as SenderFor does
+func (r *Registry) SignatureReaderFor(ctx context.Context, userID ids.UserID, provider string) (connector.SendAsSignatureReader, connector.Auth, []string, error) {
+	c, auth, granted, err := r.liveConnection(ctx, userID, provider)
+	if err != nil {
+		return nil, nil, nil, err
+	}
+	reader, reads := c.(connector.SendAsSignatureReader)
+	if !reads {
+		return nil, nil, nil, fmt.Errorf("capture: connector %q: %w", provider, ErrConnectorHasNoSignature)
+	}
+	return reader, auth, granted, nil
+}
+
+// liveConnection is the user's live connection to provider: its connector,
+// unsealed credential and granted scopes.
+//
+// Every failure is returned as it is. Only the two sentinels above are facts
+// about the deployment. A vault outage or a database timeout is never one,
+// because a caller stops trying on a fact.
+//
+//nolint:ireturn // returns the registered connector.Connector, as Registry.connector does
+func (r *Registry) liveConnection(ctx context.Context, userID ids.UserID, provider string) (connector.Connector, connector.Auth, []string, error) {
 	var (
 		credentialRef *string
 		authBytes     []byte
@@ -121,26 +157,19 @@ func (r *Registry) SenderFor(ctx context.Context, userID ids.UserID, provider st
 		return nil, nil, nil, ErrNoConnection
 	}
 	if err != nil {
-		return nil, nil, nil, fmt.Errorf("capture: resolving the sending connection: %w", err)
+		return nil, nil, nil, fmt.Errorf("capture: resolving the user's connection: %w", err)
 	}
 	c, err := r.connector(provider)
 	if err != nil {
-		// The registry's only failure here is a provider this role did not
-		// compile in, and the send path must be able to tell that from an
-		// outage — see ErrConnectorNotConfigured.
+		// The only failure here is a provider this role did not compile in.
+		// The caller tells that from an outage by ErrConnectorNotConfigured.
 		return nil, nil, nil, fmt.Errorf("%w: %w", ErrConnectorNotConfigured, err)
-	}
-	// Two-value form: EmailSender is optional (connector.go), so a capture-only
-	// connector is reported rather than silently treated as absent.
-	sender, sends := c.(connector.EmailSender)
-	if !sends {
-		return nil, nil, nil, fmt.Errorf("capture: connector %q: %w", provider, ErrConnectorCannotSend)
 	}
 	auth, err := r.resolveCredential(ctx, credentialRef, authBytes)
 	if err != nil {
 		return nil, nil, nil, err
 	}
-	return sender, auth, granted, nil
+	return c, auth, granted, nil
 }
 
 // Connections lists the caller's own mailbox connections, for a user or their

@@ -6,6 +6,7 @@ package compose
 // The inventory: which transport handler sets the contract surface is made of.
 import (
 	"context"
+	"github.com/margince/margince/backend/internal/compose/gmailsignature"
 	"io"
 	"log/slog"
 	"net/http"
@@ -77,13 +78,11 @@ type Server struct {
 	// would become "the latest brief" to the reader that decides the next
 	// morning's overnight window.
 	weeklyHandlers weekly.Handlers
-	// The day's one surface, assembled across approvals, dedupe and tasks.
-	// Named rather than embedded: briefs.Handlers already claims the
-	// unqualified name.
+	// The day's one surface across approvals, dedupe and tasks. Named, as
+	// briefs.Handlers already claims the unqualified name.
 	attentionHandlers attention.Handlers
 	magicHandlers     magic.Handlers
-	// magicService is held so wireReversal can bind the undo judge to the SAME
-	// restore seam the reversal route uses: one judgment for offer and refusal.
+	// magicService binds the undo judge to the reversal route's restore seam.
 	magicService *magic.Service
 	homeCache    *homecache.Cache // Home's cached answers; forgetHomeOnWrite ends a writer's own answers
 	// The relationship-graph reads (ADR-0078): who knows this contact, and
@@ -102,6 +101,7 @@ type Server struct {
 	documentReadHandlers
 	scrapeHandlers
 	connectorHandlers
+	gmailsignature.ImportHandlers
 	backfillHandlers
 	aiRoutingHandlers
 	aiAdminHandlers

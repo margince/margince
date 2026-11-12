@@ -2907,6 +2907,10 @@ func (stubs) SaveMyEmailSignature(w nethttp.ResponseWriter, r *nethttp.Request) 
 	httperr.NotImplemented(w, r, "SaveMyEmailSignature")
 }
 
+func (stubs) GetMyGmailSignature(w nethttp.ResponseWriter, r *nethttp.Request) {
+	httperr.NotImplemented(w, r, "GetMyGmailSignature")
+}
+
 func (stubs) SaveMyGreetingName(w nethttp.ResponseWriter, r *nethttp.Request) {
 	httperr.NotImplemented(w, r, "SaveMyGreetingName")
 }

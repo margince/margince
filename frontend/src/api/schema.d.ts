@@ -23432,6 +23432,35 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/me/email-signature/gmail": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * The signature your connected Gmail mailbox holds, as Margince would keep it.
+         * @description Reads the signature of the address Gmail sends from by default (Gmail keeps one per
+         *     send-as address) when the caller presses the button, and writes nothing. `html` is the
+         *     signature after the same cleaning a saved personal signature gets, and `text` its plain
+         *     form, so the preview shows what is kept. Saving it is `saveMyEmailSignature`.
+         *
+         *     `state` says what came back: `ready` with the signature; `empty` when Gmail holds none;
+         *     `no_mailbox` when the caller has no live Gmail connection; `needs_reconnect` when the
+         *     connection's grant cannot read the send-as settings or Google refused it, so the caller
+         *     connects the mailbox again; `too_long` when the cleaned signature is over 10,000
+         *     characters. An agent saves a signature through `saveMyEmailSignature` instead.
+         */
+        get: operations["getMyGmailSignature"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/me/brief-delivery": {
         parameters: {
             query?: never;
@@ -37325,6 +37354,16 @@ export interface components {
             template_active: boolean;
             /** Format: date-time */
             updated_at?: string | null;
+        };
+        GmailSignatureImport: {
+            /** @enum {string} */
+            state: "ready" | "empty" | "no_mailbox" | "needs_reconnect" | "too_long";
+            /** @description The send-as address the signature belongs to. */
+            address?: string;
+            /** @description The signature as a saved personal signature keeps it. */
+            html?: string;
+            /** @description The plain-text form of `html`. */
+            text?: string;
         };
         EmailSignatureTemplate: {
             readonly locks?: components["schemas"]["SettingLocks"];
@@ -96152,6 +96191,27 @@ export interface operations {
             };
             401: components["responses"]["Unauthorized"];
             422: components["responses"]["ValidationError"];
+        };
+    };
+    getMyGmailSignature: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description What the mailbox holds. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GmailSignatureImport"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
         };
     };
     getMyBriefDelivery: {
