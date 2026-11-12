@@ -12,10 +12,11 @@ package gates
 // `sh` refuses on the first line, so the job fails before any check runs.
 
 import (
-	"os"
 	"testing"
 
 	"gopkg.in/yaml.v3"
+
+	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
 
 // shellDefaults is the `defaults.run.shell` key, at workflow or job level.
@@ -34,9 +35,10 @@ type containerWorkflow struct {
 }
 
 func TestEveryContainerJobRunsItsStepsInBash(t *testing.T) {
+	t.Parallel()
 	containerJobs := 0
 	for _, path := range workflowFiles(t) {
-		raw, err := os.ReadFile(path)
+		raw, err := gatekit.ReadFile(path) // #nosec G304 -- a repo-relative workflow path from the glob
 		if err != nil {
 			t.Fatalf("reading %s: %v", path, err)
 		}
