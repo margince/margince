@@ -67,13 +67,15 @@ function readsIn(source: ts.SourceFile, checker: ts.TypeChecker): number[] {
   const visit = (node: ts.Node): void => {
     if (
       ts.isPropertyAccessExpression(node) &&
+      SERVER_WORDS.has(node.name.text) &&
       isServerWords(checker.getSymbolAtLocation(node.name))
     ) {
       report(node);
     }
     if (ts.isBindingElement(node) && ts.isObjectBindingPattern(node.parent)) {
       const key = node.propertyName ?? node.name;
-      if (ts.isIdentifier(key)) {
+      // The name test comes first: asking the checker for a type is the costly step.
+      if (ts.isIdentifier(key) && SERVER_WORDS.has(key.text)) {
         const owner = checker.getTypeAtLocation(node.parent);
         const unions = owner.isUnion() ? owner.types : [owner];
         if (unions.some((type) => isServerWords(type.getProperty(key.text)))) {
