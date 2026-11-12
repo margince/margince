@@ -63,7 +63,7 @@ const settings = {
 };
 
 const ME = meFixture({
-  allow: { deal: ["create", "read"], company: ["read"], user: ["read"] },
+  allow: { deal: ["create", "read"], company: ["read"] },
 });
 
 function stubApi(posted: unknown[], withPartner = false) {
