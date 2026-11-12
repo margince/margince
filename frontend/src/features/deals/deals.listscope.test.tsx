@@ -2,6 +2,7 @@
 import "@testing-library/jest-dom/vitest";
 import { cleanup, screen, waitFor } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { listFetchLimit } from "../../components/listquery";
 import { DealsScreen } from "./deals";
 import { deal, render, stubBackend } from "./deals.testkit";
 
@@ -63,6 +64,24 @@ describe("the deals list asks only once it knows its pipeline", () => {
     expect(totalsBodies.map((body) => body.filters?.pipeline_id)).toEqual(
       totalsBodies.map(() => "pl"),
     );
+  });
+
+  it("reads the table two rendered pages at a time, at the reader's page size", async () => {
+    window.location.hash = "#/deals?view=table&per=50";
+    const { dealReads } = recordReads();
+    render(<DealsScreen />);
+    expect(await screen.findByText("Fleet retrofit")).toBeTruthy();
+    expect(dealReads.map((url) => url.searchParams.get("limit"))).toEqual([
+      String(listFetchLimit(50)),
+    ]);
+  });
+
+  it("asks for no stage totals while the table shows, since it draws none", async () => {
+    window.location.hash = "#/deals?view=table";
+    const { totalsBodies } = recordReads();
+    render(<DealsScreen />);
+    expect(await screen.findByText("Fleet retrofit")).toBeTruthy();
+    expect(totalsBodies).toEqual([]);
   });
 
   // The table waits on the pipelines read, so that read failing is the

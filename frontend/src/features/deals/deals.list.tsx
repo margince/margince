@@ -12,6 +12,7 @@ import {
 import {
   type ListState,
   ListTable,
+  listFetchLimit,
   useTagChips,
 } from "../../components/listquery";
 import { useOwnerChips } from "../../components/ownerdials";
@@ -219,9 +220,14 @@ function useSurfaceReads(
   view: "board" | "table",
   refused: boolean,
   pipelinesQuery: ReturnType<typeof usePipelines>,
+  perPage: number,
 ) {
   const scopeKnown = pipelinesQuery.data !== undefined;
-  const dealsQuery = useDeals(f, view === "table" && !refused && scopeKnown);
+  const dealsQuery = useDeals(
+    f,
+    view === "table" && !refused && scopeKnown,
+    listFetchLimit(perPage),
+  );
   const stageColumns = useStageColumns(
     f,
     stages.map((stage) => stage.id),
@@ -230,7 +236,11 @@ function useSurfaceReads(
   // The board's column totals: a per-stage server aggregate over every
   // matching deal, not only the pages the columns have read. Built from the
   // same filter dials, so cards and totals agree on which deals are in view.
-  const stageTotalsQuery = useStageTotals(f, !refused && scopeKnown);
+  // The table draws no column header to put one in.
+  const stageTotalsQuery = useStageTotals(
+    f,
+    view === "board" && !refused && scopeKnown,
+  );
   const readError = view === "board" ? stageColumns.error : dealsQuery.error;
   const listRead = scopeKnown ? dealsQuery : pipelinesQuery;
   return { dealsQuery, stageColumns, stageTotalsQuery, readError, listRead };
@@ -297,6 +307,7 @@ export function DealsScreen({
       view,
       Boolean(roleRefusal),
       pipelinesQuery,
+      query.perPage,
     );
   // A dial the role's mask refused, which a current snapshot would have
   // withheld. Reading /me again withholds it and the list reloads without it.
