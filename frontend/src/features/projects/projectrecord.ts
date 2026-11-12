@@ -213,7 +213,8 @@ function prefixed(body: string, tag: string): string {
  * goes in beside it hands the message two live keys, and it files under neither.
  */
 function keyShaped(token: string): boolean {
-  return /^[a-z][a-z0-9_-]{1,23}$/i.test(token.trim());
+  // The pattern projectkey.CheckPattern states; a backend gate holds the two equal.
+  return /^[A-Za-z][A-Za-z0-9_-]{1,23}$/.test(token.trim());
 }
 
 /** Where a send files, and what the composer should say about it. */
