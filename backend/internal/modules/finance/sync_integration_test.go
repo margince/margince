@@ -29,6 +29,7 @@ import (
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/testdb"
+	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
@@ -201,7 +202,7 @@ func (e *financeEnv) summaryAtEpoch(
 	t *testing.T, companyID ids.CompanyID,
 ) crmcontracts.CompanyFinanceSummary {
 	t.Helper()
-	at := NewStore(e.store.db, e.store.rates).
+	at := NewStore(e.store.db, e.store.rates).WithSources(e.store.sources).
 		SetClock(func() time.Time { return ledgerEpoch })
 	out, err := at.SummaryFor(e.ctx, companyID)
 	if err != nil {
@@ -943,6 +944,10 @@ func (p *restatingProvider) Customers(context.Context) ([]SourceCustomer, error)
 
 func (p *restatingProvider) InvoicesFor(context.Context, string) (SourceLedger, error) {
 	return p.ledger, nil
+}
+
+func (p *restatingProvider) InvoiceDocument(context.Context, string) (SourceDocument, error) {
+	return SourceDocument{}, apperrors.ErrUnsupportedBySoR
 }
 
 // THE FORMER CUSTOMER, which is the honest hard case here and the one nobody

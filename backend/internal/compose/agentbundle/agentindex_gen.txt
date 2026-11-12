@@ -940,6 +940,7 @@ Every call a passport can make, grouped by area. Find the operationId in openapi
 
 | Call | operationId | What it does | Permission | Runs |
 | --- | --- | --- | --- | --- |
+| `GET /finance/invoices/{id}/pdf` | downloadFinanceInvoicePdf | Open a mirrored invoice's own PDF, fetched from the accounting source. | Read records | at once |
 | `GET /finance/source` | getFinanceSource | Which accounting source is connected, and which this installation can connect. | Read records | at once |
 | `DELETE /finance/source` | disconnectFinanceSource | Disconnect the accounting source (admin/ops). | Change records | at once |
 | `POST /finance/source/sync` | syncFinanceSource | Queue a sync of the connected source now (admin/ops). | Change records | at once |
