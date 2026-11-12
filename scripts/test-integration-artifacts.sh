@@ -11,7 +11,8 @@
 #   3. rerun.txt holds exactly the tests not passed, a test a killed part never
 #      reached included, and none that passed;
 #   4. the fan-in check refuses a missing part, a test in two parts and a part
-#      without its lists, and accepts a shard that was dealt no tests;
+#      without its lists, and accepts a shard that was dealt no tests or, from
+#      the queue, claimed none;
 #   5. a step that cannot be written makes the function fail, not the shell exit;
 #   6. a part with more tests than a pipe buffer holds keeps its evidence.
 set -euo pipefail
@@ -134,12 +135,26 @@ queue="$work/queue"
 cp -R "$forward" "$queue"
 rm -rf "$queue/out/parts" "$queue/out/failed-logs"
 printf 'backend|./internal/compose|TestA\nbackend|./internal/compose|TestB\nbackend|./internal/deals|TestX\n' > "$queue/out/assigned.txt"
-keep_shard_evidence "$queue/out" "$queue/work" "$queue/regex" "$queue/logs" "$queue/failed" 2 3 \
+keep_shard_evidence "$queue/out" "$queue/work" "$queue/regex" "$queue/logs" "$queue/failed" --only 2 3 \
   || fail "a queue shard could not keep the evidence of the parts it claimed"
 kept="$(cd "$queue/out/parts" && ls ./*.assigned.txt | LC_ALL=C sort | tr '\n' ' ')"
 [[ "$kept" == "./backend@internal%2Fcompose@part1of2.assigned.txt ./backend@internal%2Fdeals.assigned.txt " ]] \
   || fail "a queue shard that claimed slots 2 and 3 kept [$kept]"
 reconcile_parts "$queue/out" > /dev/null || fail "a queue shard's claimed parts did not reconcile with its slice"
+keep_shard_evidence "$queue/out" "$queue/work" "$queue/regex" "$queue/logs" "$queue/failed" 2 3 2> /dev/null \
+  && fail "slots without --only were read as a claim"
+
+# A queue shard that started after the others took every group claimed none:
+# it keeps no part, owes nothing, and reconciles with its empty slice.
+idle="$work/idle"
+cp -R "$forward" "$idle"
+rm -rf "$idle/out/parts" "$idle/out/failed-logs"
+: > "$idle/out/assigned.txt"
+keep_shard_evidence "$idle/out" "$idle/work" "$idle/regex" "$idle/logs" "$idle/failed" --only \
+  || fail "a queue shard that claimed nothing could not keep its evidence"
+[[ -z "$(ls "$idle/out/parts")" ]] || fail "a queue shard that claimed nothing kept [$(ls "$idle/out/parts" | tr '\n' ' ')]"
+[[ ! -s "$idle/out/rerun.txt" && ! -d "$idle/out/failed-logs" ]] || fail "a queue shard that claimed nothing owes something"
+reconcile_parts "$idle/out" > /dev/null || fail "a queue shard that claimed nothing did not reconcile"
 
 # 5. A part whose selector is gone fails the function, and the shell runs on.
 lost="$work/lost"
