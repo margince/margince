@@ -134,8 +134,7 @@ func TestAProjectStartsInTheChosenPhaseButNeverClosed(t *testing.T) {
 	_, err = e.Projects.CreateProject(e.Admin(), projects.CreateProjectInput{
 		Name: "Closed at birth", CompanyID: companyIDOf(company), Source: "manual", Phase: projects.PhaseClosed,
 	})
-	var phase *projects.ProjectStartPhaseError
-	if !errors.As(err, &phase) {
+	if _, refused := errors.AsType[*projects.ProjectStartPhaseError](err); !refused {
 		t.Fatalf("a closed start answered %v, want the start-phase refusal", err)
 	}
 }
