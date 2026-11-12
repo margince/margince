@@ -19,6 +19,7 @@ import {
 } from "./format.dates";
 import { formatTimeRange } from "./meetingtime";
 import { formatElapsed } from "./now";
+import { formatRelativeTime } from "./relativetime";
 import { sameWallClockOnDay, startOfDayInZone, UTC_ZONE } from "./timezone";
 
 export type OccurredPrecision = components["schemas"]["OccurredPrecision"];
@@ -95,6 +96,20 @@ export function activityTimeOfDay(
   zone: string,
 ): string | null {
   return precision === "day" ? null : formatTimeOfDay(at, locale, zone);
+}
+
+/**
+ * How soon an activity starts ("in 20 minutes"), or null when only its day is
+ * known: a countdown would run to a noon nobody said.
+ */
+export function activityStartsIn(
+  { at, precision }: ActivityMoment,
+  now: number,
+  locale: Locale,
+): string | null {
+  return precision === "day"
+    ? null
+    : formatRelativeTime(at, locale, new Date(now));
 }
 
 /**
