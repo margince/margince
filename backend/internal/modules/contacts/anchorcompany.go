@@ -28,10 +28,12 @@ import (
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/events"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/kernel/values"
 )
 
 // The profile-field vocabulary — the contract's ColdStartField enum, spelled
@@ -439,6 +441,11 @@ func resolveOrCreateAnchor(ctx context.Context, tx pgx.Tx, displayName, by strin
 	if err != nil {
 		return anchorTarget{}, err
 	}
+	if before[fieldDisplayName] != displayName {
+		if err := httperr.RequireWithin(fieldDisplayName, displayName, values.TextLabelCharacters); err != nil {
+			return anchorTarget{}, err
+		}
+	}
 	rows, err := readProfileFieldImages(ctx, tx, companyID)
 	if err != nil {
 		return anchorTarget{}, err
@@ -460,36 +467,4 @@ func resolveOrCreateAnchor(ctx context.Context, tx pgx.Tx, displayName, by strin
 		}
 	}
 	return anchorTarget{id: companyID, before: before, rows: rows, named: tag.RowsAffected() > 0}, nil
-}
-
-// createAnchorCompany mints the company row, marked as the installation's
-// own. Nothing serializes two FIRST saves — neither has a row to lock — so the
-// uq_company_anchor index is what decides: the loser is told the company
-// already exists rather than quietly minting a rival one.
-// It runs PO-F-2 like every other create and files what it finds. An
-// installation whose own company was already captured from mail genuinely does
-// hold that company twice, and the anchor is the row a human will work from —
-// so the pair belongs on the review queue rather than being the one create
-// allowed to mint a twin in silence.
-func createAnchorCompany(ctx context.Context, tx pgx.Tx, displayName, by string) (ids.CompanyID, error) {
-	match, err := DedupeCompanyForCreate(ctx, tx, CompanyCandidate{DisplayName: displayName})
-	if err != nil {
-		return ids.CompanyID{}, err
-	}
-	companyID, err := createCompany(ctx, tx, match, CompanySpec{
-		DisplayName: displayName,
-		IsAnchor:    true,
-		Source:      activitySourceManual,
-		CapturedBy:  by,
-	})
-	if constraint, dup := storekit.UniqueViolation(err); dup && constraint == "uq_company_anchor" {
-		return ids.CompanyID{}, fmt.Errorf("the company was created by someone else just now: %w", apperrors.ErrConflict)
-	}
-	if err != nil {
-		return ids.CompanyID{}, err
-	}
-	if _, err := match.recordIfReview(ctx, tx, companyID, activitySourceManual, by); err != nil {
-		return ids.CompanyID{}, err
-	}
-	return companyID, nil
 }

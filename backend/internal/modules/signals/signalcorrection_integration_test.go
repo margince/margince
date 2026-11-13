@@ -124,6 +124,14 @@ func TestACorrectedSignalKeepsItsOldKindAndEvidenceInTheAudit(t *testing.T) {
 	if _, err := store.UpdateSignal(agentCtx, signalID, UpdateSignalInput{Evidence: &evidence}); !errors.Is(err, apperrors.ErrPermissionDenied) {
 		t.Errorf("an agent replacing a signal's evidence returned %v, want a refusal", err)
 	}
+	// Only a human corrects: a principal that is neither human nor agent is refused too.
+	connectorCtx := principal.WithActor(ctx, principal.Principal{
+		Type: principal.PrincipalConnector, ID: "connector:" + ids.NewV7().String(), UserID: admin,
+		Permissions: principal.Permissions{Objects: map[string]principal.ObjectGrant{"signal": {Read: true, Update: true}}},
+	})
+	if _, err := store.UpdateSignal(connectorCtx, signalID, UpdateSignalInput{Kind: &moved}); !errors.Is(err, apperrors.ErrPermissionDenied) {
+		t.Errorf("a connector moving a signal's kind returned %v, want a refusal", err)
+	}
 	status := "acknowledged"
 	if _, err := store.UpdateSignal(agentCtx, produced, UpdateSignalInput{Status: &status}); err != nil {
 		t.Errorf("an agent triaging a signal returned %v, want it accepted", err)

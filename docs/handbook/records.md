@@ -290,7 +290,7 @@ A meeting holds a status: **booked, held, no-show, canceled.** **Activities are 
 ### How do I edit or delete a note, call or meeting I logged?
 You cannot edit a logged activity in the Margince app. An activity on the timeline has **Relink**, **Change visibility** (except on email) and **Archive**, all under **More actions** (⋯) on its row, but no Edit. To fix one, log a new activity; a started meeting with no outcome takes **It happened** or **Add notes** to [record what came of it](meetings-and-booking.md#how-do-i-record-what-came-of-a-meeting). You can still move an open task with **Move to** (a new date), **Snooze 1 day** or **Done**. To move an activity to the right record, choose **Relink** and search under "Search contacts, companies, deals, leads or projects". Tick **Replace existing link** to change the link and not add one, then choose **Relink**.
 
-To take an activity off the History, choose **Archive** and confirm. You may archive a note or task you wrote yourself, including one your agent logged for you. Captured email, meetings, calls and a colleague's notes need a role that may delete activities: Team lead, Management, Ops or Admin. Anyone else sees **Archive** greyed out with the reason.
+To take an activity off the History, choose **Archive** and confirm. You may archive a note, task, call or meeting you logged yourself, including one your agent logged for you. Sent or captured email and messages, calendar meetings and colleagues' entries need a role that may delete activities: Team lead, Management, Ops or Admin. Anyone else sees **Archive** greyed out with the reason. A meeting you invited someone to through Margince cannot be archived while the invitation stands: change or [cancel it](meetings-and-booking.md#how-do-i-cancel-a-meeting) through the invitation.
 Also called: fix a note, delete a note, remove a duplicate note, change a task's due date, move an email.
 
 ### Can I mention a colleague or comment on a record?
@@ -354,7 +354,7 @@ Also called: custom property, extra column, new attribute, hide a field on new r
 
 **A custom field on activities** is offered on every call, meeting, note and task you log, unless you pick types under **Shows on**. You can pick them when you add the field, or in its row later. You fill the field in **Log activity**, and it shows only for the types it is on. On a meeting you change it in **Add notes**. A value saved before you changed **Shows on** stays, and **Add notes** still shows it so you can clear it. A colleague who may not read the activity does not see the field.
 
-Renaming a field changes its label and keeps your reports working. To take a field out of create forms later, turn off its switch under **In create forms**. The record page still shows it, and you can edit it there.
+Renaming a field changes its label and keeps your reports working. To name a field and its choices per language, choose **Names in other languages** in its row menu. A colleague whose Margince is in that language sees those names in forms and on records. To take a field out of create forms later, turn off its switch under **In create forms**. The record page still shows it, and you can edit it there.
 
 A deal or company picklist or yes/no field has a switch under **In reports**. Turn it on to group and filter deal reports by that field. A company field groups each deal by its company's value. Everyone who reads deal reports then sees the field's name and choices.
 

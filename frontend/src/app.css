@@ -1,4 +1,15 @@
 @import "tailwindcss";
+/* The product's faces ship with the build, so the app and Storybook draw the
+   same type with no third party asked for it. Only the weights tokens.css
+   names are loaded. */
+@import "@fontsource/geist/400.css";
+@import "@fontsource/geist/500.css";
+@import "@fontsource/geist/700.css";
+@import "@fontsource/geist-mono/400.css";
+@import "@fontsource/geist-mono/500.css";
+@import "@fontsource/outfit/400.css";
+@import "@fontsource/outfit/500.css";
+@import "@fontsource/outfit/700.css";
 @import "./design-system/tokens.css";
 /* After tokens.css, always: brand.css derives from the canon, so it has to see
    it (WDS-GATE-4 cascade order). */

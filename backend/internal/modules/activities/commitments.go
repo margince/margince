@@ -37,6 +37,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -63,6 +64,7 @@ type OpenTask struct {
 	DueAt *time.Time
 	// DueHasTime is true when DueAt names a time of day rather than a day.
 	DueHasTime bool
+	DueIntent  *crmcontracts.IntentTime
 	// AssigneeID and AssigneeName are absent together for an unassigned
 	// task: a promise with no owner, which is the single most useful thing
 	// this read surfaces.
@@ -291,18 +293,14 @@ func openTasksFilter(ctx context.Context, in ListOpenTasksInput, identities stri
 		where = append(where, ActivityWithinProject(arg(*in.WithinProjectID)))
 	}
 	if in.EntityType != nil && in.EntityID != nil {
-		column := linkColumn(*in.EntityType)
-		if column == "" {
+		target, ok := linkTargetOf(*in.EntityType)
+		if !ok {
 			return nil, &InvalidLinkTypeError{EntityType: *in.EntityType}
 		}
 		// EXISTS rather than a join: a task linked to both a project and its
 		// deal must stay ONE row, or the bound above would count it twice and
 		// the reviewer would read the same promise as two.
-		where = append(where, sprintf(
-			`EXISTS (SELECT 1 FROM activity_link l WHERE l.activity_id = a.id
-				AND l.entity_type = $%d AND l.%s = $%d)`,
-			arg(*in.EntityType), column, arg(*in.EntityID),
-		))
+		where = append(where, "EXISTS (SELECT 1 FROM activity_link l WHERE l.activity_id = a.id AND "+target.linkedSQL("l", arg(*in.EntityID))+")")
 	}
 	return where, nil
 }
@@ -360,7 +358,7 @@ func attachTaskAbout(ctx context.Context, tx pgx.Tx, tasks []OpenTask) error {
 
 func scanOpenTask(row pgx.CollectableRow) (OpenTask, error) {
 	var t OpenTask
-	err := row.Scan(&t.ID, &t.Subject, &t.DueAt, &t.DueHasTime, &t.AssigneeID, &t.AssigneeName, &t.CreatedAt)
+	err := row.Scan(&t.ID, &t.Subject, &t.DueAt, &t.DueHasTime, &t.AssigneeID, &t.AssigneeName, &t.CreatedAt, &t.DueIntent)
 	t.DueHasTime = t.DueHasTime && t.DueAt != nil
 	return t, err
 }
@@ -394,5 +392,5 @@ func joinAnd(terms []string) string {
 
 func openTaskColumns() string {
 	return "a.id, coalesce(a.subject, ''), " + storekit.TaskDueSQL("a") +
-		", a.due_has_time, a.assignee_id, coalesce(u.display_name, ''), a.created_at"
+		", a.due_has_time, a.assignee_id, coalesce(u.display_name, ''), a.created_at, " + storekit.IntentWireSQL("a", "due")
 }

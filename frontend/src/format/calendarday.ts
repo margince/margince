@@ -12,8 +12,13 @@
 // All but `today` are pure and take their zone (or the reader's own wall clock)
 // as input, so nothing here has to be tested against the machine's own zone.
 
-import type { ISODate } from "./datepattern";
-import { DAY_MS, endOfDayInZone, instantAtWallClock } from "./timezone";
+import { type ISODate, isISODate } from "./datepattern";
+import {
+  DAY_MS,
+  endOfDayInZone,
+  instantAtWallClock,
+  wallClockTime,
+} from "./timezone";
 
 // The calendar day an instant falls on, in a named IANA zone, as `yyyy-mm-dd` so
 // two of them compare as strings without a second parse.
@@ -80,7 +85,7 @@ function daysIn(year: number, month: number): number {
   return [4, 6, 9, 11].includes(month) ? 30 : 31;
 }
 
-export function calendarDay(at: Date, zone: string): string {
+export function calendarDay(at: Date, zone: string): ISODate {
   const parts = new Map(
     dayFormatter(zone)
       .formatToParts(at)
@@ -97,7 +102,10 @@ export function calendarDay(at: Date, zone: string): string {
     // itself and quietly bucket every task into one day.
     throw new Error(`no calendar day for zone ${zone}`);
   }
-  return `${year}-${month}-${day}`;
+  const result = `${year.padStart(4, "0")}-${month}-${day}`;
+  if (!isISODate(result))
+    throw new RangeError(`invalid calendar day for zone ${zone}`);
+  return result;
 }
 
 // Whether two instants share a day on `zone`'s wall clock. Asked in the zone
@@ -105,6 +113,16 @@ export function calendarDay(at: Date, zone: string): string {
 // on a machine set to UTC, is still tonight's meeting to the reader.
 export function sameCalendarDay(a: Date, b: Date, zone: string): boolean {
   return calendarDay(a, zone) === calendarDay(b, zone);
+}
+
+export function shiftCalendarDay(day: string, days: number): ISODate {
+  if (!isRealCalendarDay(day))
+    throw new RangeError(`not a calendar day: ${day}`);
+  const carrier = new Date(`${day}T12:00:00Z`);
+  carrier.setUTCDate(carrier.getUTCDate() + days);
+  const shifted = carrier.toISOString().slice(0, 10);
+  if (!isISODate(shifted)) throw new RangeError(`no calendar day ${shifted}`);
+  return shifted;
 }
 
 // The day it is now in `zone`, for a form whose date box opens on it and
@@ -177,22 +195,10 @@ export function dueInstant(day: string, zone: string, time = ""): string {
   return new Date(Math.floor(lastMs / 1000) * 1000).toISOString();
 }
 
-// The wall-clock value a `datetime-local` input shows for an instant, in the
-// reader's OWN zone, as the `yyyy-mm-ddThh:mm` that control accepts.
-//
-// It is the exact inverse of the composer's `scheduleFields`, which reads such a
-// value back by handing it to `new Date(...)` and so resolves it against the
-// browser's zone. The pair has to agree: a reschedule form seeded from a
-// differently-zoned reading would open on a moment an hour off the one it is
-// about to resubmit, and the reader would move a message they never moved.
-//
-// Assembled from the local getters rather than by slicing an ISO string.
-// `toISOString()` is UTC, so west of UTC that would seed the picker with
-// yesterday's date and an evening send would read as due the day before.
-export function localDateTimeValue(utcIso: string): string {
+// Local controls need the chosen zone when reopening a saved local-time intent.
+export function localDateTimeValue(utcIso: string, zone: string): string {
   const at = new Date(utcIso);
-  const pad = (value: number) => String(value).padStart(2, "0");
-  return `${isoDay(at)}T${pad(at.getHours())}:${pad(at.getMinutes())}`;
+  return `${calendarDay(at, zone)}T${wallClockTime(at.getTime(), zone)}`;
 }
 
 /** The day a `Date` falls on in the reader's own zone, as `YYYY-MM-DD`. */

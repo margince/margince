@@ -193,7 +193,7 @@ func revokeClientTx(ctx context.Context, tx pgx.Tx, id ids.UUID) error {
 		return err
 	}
 	if _, err := storekit.Audit(ctx, tx, "delete", agentClientAuditEntity, id, map[string]any{
-		"client_name": name, agentClientFieldURIs: uris, "registered_by": createdVia,
+		agentClientFieldClient: name, agentClientFieldURIs: uris, "registered_by": createdVia,
 	}, nil); err != nil {
 		return err
 	}

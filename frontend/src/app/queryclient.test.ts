@@ -314,6 +314,34 @@ describe("the mutation failure sink", () => {
     // same failure twice and add nothing to it.
     expect(reported).not.toHaveBeenCalled();
   });
+
+  it("reads /me and the licence again when a write meets an ended trial", async () => {
+    const client = createQueryClient();
+    client.setQueryData(["me"], { trial_ended: false });
+    client.setQueryData(["installation-license"], { state: "absent" });
+    client.setQueryData(["unrelated"], 1);
+
+    await expect(
+      failWith(client, problem(403, "trial_ended")),
+    ).rejects.toThrow();
+
+    expect(client.getQueryState(["me"])?.isInvalidated).toBe(true);
+    expect(client.getQueryState(["installation-license"])?.isInvalidated).toBe(
+      true,
+    );
+    expect(client.getQueryState(["unrelated"])?.isInvalidated).toBe(false);
+  });
+
+  it("leaves /me alone for any other refusal", async () => {
+    const client = createQueryClient();
+    client.setQueryData(["me"], { trial_ended: false });
+
+    await expect(
+      failWith(client, problem(403, "permission_denied")),
+    ).rejects.toThrow();
+
+    expect(client.getQueryState(["me"])?.isInvalidated).toBe(false);
+  });
 });
 
 describe("names the chrome is showing", () => {

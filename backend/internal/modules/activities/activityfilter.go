@@ -20,6 +20,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/occurredday"
+	"github.com/margince/margince/backend/internal/shared/kernel/provenance"
 	"github.com/margince/margince/backend/internal/shared/kernel/relstrength"
 	"github.com/margince/margince/backend/internal/shared/ports/datasource"
 )
@@ -42,8 +43,8 @@ func appendEntityLinkClauses(in ListActivitiesInput, arg func(any) int, where []
 }
 
 func entityLinkFilter(in ListActivitiesInput, arg func(any) int) (where []string, err error) {
-	column := linkColumn(*in.EntityType)
-	if column == "" {
+	target, ok := linkTargetOf(*in.EntityType)
+	if !ok {
 		return nil, &InvalidLinkTypeError{EntityType: *in.EntityType}
 	}
 	if *in.EntityType == string(datasource.RecordCompany) {
@@ -61,10 +62,8 @@ func entityLinkFilter(in ListActivitiesInput, arg func(any) int) (where []string
 	// row, and the keyset tuple — which names `created_at` and `id` alone,
 	// since every other list it serves reads one table — is ambiguous the
 	// moment activity_link, which carries both, is in the FROM list.
-	return []string{sprintf(
-		`EXISTS (SELECT 1 FROM activity_link al
-		          WHERE al.activity_id = a.id AND al.entity_type = $%d AND al.%s = $%d)`,
-		arg(*in.EntityType), column, arg(*in.EntityID))}, nil
+	return []string{"EXISTS (SELECT 1 FROM activity_link al WHERE al.activity_id = a.id AND " +
+		target.linkedSQL("al", arg(*in.EntityID)) + ")"}, nil
 }
 
 // listActivitiesFilter builds the timeline query's join, WHERE terms and
@@ -207,6 +206,12 @@ func timelineNarrowings(in ListActivitiesInput, reminders string, arg func(any) 
 	if in.ChannelProvider != nil {
 		where = append(where, sprintf("a.channel_provider = $%d", arg(*in.ChannelProvider)))
 	}
+	if in.WebsiteFormID != nil {
+		where = append(where, sprintf("a.kind = 'note' AND a.source_system = $%d AND a.source_id LIKE $%d", arg(provenance.WebFormSource), arg(in.WebsiteFormID.String()+":%")))
+	}
+	if len(in.SourceIDs) != 0 {
+		where = append(where, sprintf("a.source_id = ANY($%d::text[])", arg(in.SourceIDs)))
+	}
 	if in.SourceSystem != nil {
 		where = append(where, sprintf("a.source_system = $%d", arg(*in.SourceSystem)))
 	}
@@ -216,6 +221,9 @@ func timelineNarrowings(in ListActivitiesInput, reminders string, arg func(any) 
 			answeredAt = fmt.Sprintf("$%d", arg(*in.AsOf))
 		}
 		where = append(where, answersThemSQL(answeredAt))
+	}
+	if len(in.IDs) != 0 {
+		where = append(where, sprintf("a.id = ANY($%d::uuid[])", arg(in.IDs)))
 	}
 	if in.onlyID != nil {
 		where = append(where, sprintf("a.id = $%d", arg(*in.onlyID)))
@@ -356,8 +364,8 @@ func occurredWindowClauses(in ListActivitiesInput, arg func(any) int) []string {
 // with the answer blanked.
 func filtersOnContent(in ListActivitiesInput) bool {
 	return (in.ThreadKey != nil && *in.ThreadKey != "") || (in.Query != nil && *in.Query != "") ||
-		in.WaitingReplyAsOf != nil || in.RequestReviewAsOf != nil || in.RequestCurrentAsOf != nil || in.ReadableOnly || in.ConversationAsOf != nil || in.SourceActivityID != nil ||
-		in.SentBy != nil || in.ConversationOf != nil || in.RemindersDue || len(in.CustomFilters) > 0
+		in.WaitingReplyAsOf != nil || in.RequestReviewAsOf != nil || in.RequestCurrentAsOf != nil || in.ReadableOnly || in.ConversationAsOf != nil || in.SourceActivityID != nil || in.WebsiteFormID != nil ||
+		in.SentBy != nil || in.ConversationOf != nil || in.RemindersDue || len(in.SourceIDs) > 0 || len(in.CustomFilters) > 0
 }
 
 // kindPredicate spells known kinds as literals, so a generic plan keeps the

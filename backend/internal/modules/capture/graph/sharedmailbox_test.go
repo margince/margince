@@ -104,7 +104,7 @@ func everyMailboxCall(api API) map[string]func(context.Context) error {
 func TestEveryCallOfASharedMailboxGoesToItsUserRootAndNoneToMe(t *testing.T) {
 	g := &recordingGraph{}
 	srv := g.serve(t)
-	api, err := NewSharedAPI(srv.Client(), srv.URL, sharedAddress)
+	api, err := NewSharedAPI(srv.Client(), srv.URL, sharedAddress, "")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -146,7 +146,7 @@ func TestAPersonalMailboxStillCallsMe(t *testing.T) {
 
 func TestASharedMailboxAddressThatCouldShapeThePathIsRefused(t *testing.T) {
 	for _, address := range []string{"", "team", "Team <team@contoso.example>", "team/../me@contoso.example", "team%2f@contoso.example"} {
-		if _, err := NewSharedAPI(nil, "", address); !errors.Is(err, oauthflow.ErrMailboxAddress) {
+		if _, err := NewSharedAPI(nil, "", address, ""); !errors.Is(err, oauthflow.ErrMailboxAddress) {
 			t.Errorf("NewSharedAPI(%q) = %v, want ErrMailboxAddress", address, err)
 		}
 	}
@@ -155,7 +155,7 @@ func TestASharedMailboxAddressThatCouldShapeThePathIsRefused(t *testing.T) {
 func TestASharedContinuationLinkMustStayInsideItsMailbox(t *testing.T) {
 	g := &recordingGraph{}
 	srv := g.serve(t)
-	shared, err := NewSharedAPI(srv.Client(), srv.URL, sharedAddress)
+	shared, err := NewSharedAPI(srv.Client(), srv.URL, sharedAddress, "")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -199,7 +199,7 @@ func TestASharedMailboxAdoptsOnlyItsOwnSubscription(t *testing.T) {
 			srv := subscriptionStub(t, subscriptionStubState{
 				existing: tc.existing, onCreate: func() { created++ }, onRenew: func() { renewed++ },
 			})
-			api, err := NewSharedAPI(srv.Client(), srv.URL, sharedAddress)
+			api, err := NewSharedAPI(srv.Client(), srv.URL, sharedAddress, "")
 			if err != nil {
 				t.Fatal(err)
 			}

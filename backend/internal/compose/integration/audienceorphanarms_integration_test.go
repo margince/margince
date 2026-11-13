@@ -346,13 +346,14 @@ func sharedMailboxArm(name, change string, admits bool) armCase {
 		arrange: func(t *testing.T, e *Env, tx pgx.Tx, id ids.UUID) ids.UUID {
 			t.Helper()
 			// The cases share one env, and an earlier one may have emptied Team2.
-			if _, err := tx.Exec(context.Background(), `
+			// Committed before the connect, which refuses a team with no member.
+			if _, err := OwnerConn(t).Exec(context.Background(), `
 				WITH live AS (UPDATE app_user SET status = 'active' WHERE id = $2),
 				     open AS (UPDATE team SET archived_at = NULL WHERE id = $1)
 				INSERT INTO team_membership (team_id, user_id) VALUES ($1, $2) ON CONFLICT DO NOTHING`, e.Team2, e.Rep3); err != nil {
 				t.Fatalf("restoring the reader team: %v", err)
 			}
-			box := ConnectSharedMailbox(t, tx, SharedMailbox{
+			box := ConnectSharedMailbox(t, SharedMailboxRegistry(t, e.Pool, "imap"), e.WS, SharedMailbox{
 				Provider: "imap", Address: "ops-" + id.String() + "@fable.test", ReaderTeam: e.Team2, ConnectedBy: e.AdminUser, Posture: "held",
 			})
 			if _, err := tx.Exec(context.Background(),

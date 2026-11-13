@@ -892,7 +892,6 @@ middle
 might
 migrate
 migration
-milestone
 mint
 minute
 mirrored
@@ -1565,6 +1564,7 @@ translate
 transport
 treat
 tree
+trial
 trigger
 trip
 true

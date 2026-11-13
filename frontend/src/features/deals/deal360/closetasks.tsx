@@ -26,7 +26,8 @@ import { ChoiceList } from "../../../design-system/choicelist";
 import { ErrorLine } from "../../../design-system/errorline";
 import { useToast } from "../../../design-system/toast";
 import { useTruncationTooltip } from "../../../design-system/tooltip";
-import { formatDate, formatNumber } from "../../../format/format";
+import { formatNumber } from "../../../format/format";
+import { formatDue } from "../../../format/format.dates";
 import { useLocale, usePlural, useT } from "../../../i18n";
 import { unwrap } from "../../../lib/problem";
 import { displayedSubject } from "../../../lib/systemdisplay";
@@ -294,7 +295,15 @@ function CloseTaskRow({
       </span>
       <span className="t-caption">
         {task.due_at
-          ? t("co.next.due", { when: formatDate(task.due_at, locale, zone) })
+          ? t("co.next.due", {
+              when: formatDue(
+                task.due_at,
+                task.due_has_time,
+                locale,
+                zone,
+                task.due_intent,
+              ),
+            })
           : t("co.next.undated")}
       </span>
     </li>

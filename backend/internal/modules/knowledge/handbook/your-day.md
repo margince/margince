@@ -8,7 +8,7 @@ The Worklist is the ranked to-do list in Margince: one list of everything waitin
 
 Under **Needs you**, every task is its own card, and the first one is open. Press another card to open it in its place. **Next task**, at the top right of the open card, opens the one after it. After the last card it goes back to the first. Opening a card changes only which task you see.
 
-When you email a task's contact after the task was created, Margince marks the task done and shows a receipt in **Done for you**. Bulk mail and a contact named only in Bcc do not count. **Undo** reopens the task; the same email will not close it again. This includes tasks from website requests. After an upgrade, Margince applies this rule once to the email it already holds, and those tasks show in **Done for you** with **Undo** too.
+When you email a task's contact after the task was created, Margince marks the task done and shows a receipt in **Done for you**. Bulk mail and a contact named only in Bcc do not count. **Undo** reopens the task; the same email will not close it again. This includes tasks from website requests. You can also choose **Mark handled** to finish one of those tasks. After an upgrade, Margince applies this rule once to the email it already holds, and those tasks show in **Done for you** with **Undo** too.
 
 Open a task's details and choose **Log what happened** to record the outcome and attach files. **Mark task done** starts selected. Clear it to keep the task open after logging the outcome.
 
@@ -291,7 +291,7 @@ Old automatic findings without a current check stay with their source for review
 
 ### Why an item needs attention
 Each item shows its record, the current facts that call for action, and the action it offers.
-A request can name who is waiting and when they asked. A task shows its due date.
+A request can name who is waiting and when they asked. A follow-up on mail you sent names who it went to and their company. A task shows its due date.
 A deal can show days since the last recorded activity, a missing next step or a close date that needs review.
 
 Suggested deal steps are checked against current records before the list is cut. **Earlier assessment** and its date open the saved words. It does not change the order of work. A changed suggestion asks you to refresh before you can accept its task or open its prepared action. Tasks you create yourself keep their normal controls.

@@ -78,6 +78,11 @@ type EnsureRequest struct {
 	// recorded as the same act: only the first is the contact initiating
 	// contact, and that is the strongest acquisition in the vocabulary.
 	Replied bool
+	// LinkOnly files the mail under a record the address already names and
+	// creates nothing: a shared mailbox's run.
+	LinkOnly bool
+	// ReaderTeam reads the shared mailbox a link-only ensure files for.
+	ReaderTeam ids.UUID
 }
 
 // WithEnsurer returns a copy wired to the counterparty auto-create path.
@@ -110,6 +115,9 @@ type counterpartyDecision struct {
 	// by an address, the other by a provider identity. So the seam a record
 	// belongs to is decided once, here, and not re-derived downstream.
 	channel bool
+	// linkOnly files the mail under existing records and mints none.
+	linkOnly   bool
+	readerTeam ids.UUID
 	// subject is the party this decision is ABOUT, which is the message's
 	// counterparty except where a colleague's message named an external one
 	// (ladderSubjectTx). It is carried, not re-derived, so the create acts on

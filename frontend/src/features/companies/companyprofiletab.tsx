@@ -10,6 +10,7 @@ import { FieldGrid, FieldRow } from "../../design-system/fieldgrid";
 import { InlineText } from "../../design-system/inlinetext";
 import { Panel, PanelBody } from "../../design-system/panel";
 import { useT } from "../../i18n";
+import { TEXT_LIMITS } from "../../lib/textlimits_gen";
 import type { OpenReceipt } from "../records/record360";
 import { profileFieldLabel } from "./companies";
 import { DossierPanel } from "./companydossier";
@@ -135,7 +136,7 @@ export function CompanyProfileForm({
                 value={company.description ?? ""}
                 placeholder={t("co.narrative.add")}
                 multiline
-                maxLength={500}
+                maxLength={TEXT_LIMITS.document}
                 canEdit={canEdit}
                 readOnlyReason={reason}
                 onSave={(next) =>

@@ -269,6 +269,7 @@ const MODEL_ROUTES: Readonly<Record<string, ModelWait>> = {
   "POST /deals/{id}/role-proposals": "always",
   "POST /filters/propose": "always",
   "POST /activities/{id}/reader-rendering": "on-miss",
+  "POST /rewrites": "always",
   "POST /analytics/assessment": "on-miss",
   "POST /analytics/setup-proposal": "always",
   "POST /analytics/progress/summary": "on-miss",

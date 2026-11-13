@@ -25,6 +25,7 @@ type ListActivitiesInput struct {
 	// onlyID narrows a read to one row, so a caller can ask whether this list
 	// returns it without a second spelling of the list's clauses.
 	onlyID *ids.ActivityID
+	IDs    []ids.ActivityID
 	Cursor *string
 	Limit  *int
 	// Sort is the caller's order, validated against activitySortFields. Nil
@@ -44,7 +45,9 @@ type ListActivitiesInput struct {
 	// CallOutcome narrows to calls that ended this way.
 	CallOutcome *string
 	// SourceSystem narrows to rows one connector wrote, such as website forms.
-	SourceSystem *string
+	SourceIDs     []string
+	SourceSystem  *string
+	WebsiteFormID *ids.UUID
 	// AnswersThem keeps only rows that answer the other side (answersThemSQL).
 	AnswersThem bool
 	EntityType  *string
@@ -141,6 +144,9 @@ type ListActivitiesInput struct {
 	// CollapseSeatCopies shows one row per email that several colleagues'
 	// mailboxes each hold a copy of (seatcopies.go), before the page is cut.
 	CollapseSeatCopies bool
+	// WithoutCopiesOf leaves out, on a collapsed page, the row that stands for
+	// this activity or any mailbox copy of it, whatever filter the copy passes.
+	WithoutCopiesOf *ids.UUID
 	// WithinProjectID narrows to one body of work, EXCLUDING what belongs to
 	// another project and keeping what belongs to none.
 	//
@@ -240,7 +246,8 @@ type ListActivitiesInput struct {
 	OpenAndDueBy *time.Time
 	// IncludeEmailRequests adds undated captured requests and undated commitments
 	// to the execution queue, not overdue counts.
-	IncludeEmailRequests bool
+	IncludeEmailRequests    bool
+	IncludeWebsiteInquiries bool
 	// OpenAndDueAfter narrows the same read to work due LATER than an instant,
 	// and is paired with OpenAndDueBy to ask for one window.
 	//

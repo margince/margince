@@ -48,6 +48,7 @@ var judged = map[string]struct {
 	"renewal_reminder":         {true, "one claimed create_task"},
 	"stage_change_create_task": {true, "one claimed create_task"},
 	"route_lead":               {true, "one claimed create_task"},
+	"website_inquiry":          {true, "the accepted submission keeps one effect claim and its frozen assignment; replay reuses its task"},
 
 	// These two plan a side effect nothing folds.
 	"stage_change_notify": {false, "plans notify; applyNotify calls the transport unconditionally, so a repeat tells somebody twice"},

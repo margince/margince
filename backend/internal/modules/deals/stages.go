@@ -19,6 +19,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/platform/httperr"
+	"github.com/margince/margince/backend/internal/platform/labeltranslation"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -124,6 +125,8 @@ type CreateStageInput struct {
 	Position       int
 	Semantic       string
 	WinProbability *int
+	// NameTranslations is the name in further UI languages, nil for none.
+	NameTranslations map[string]string
 }
 
 func (s *Store) CreateStage(ctx context.Context, in CreateStageInput) (crmcontracts.Stage, error) {
@@ -147,6 +150,10 @@ func (s *Store) CreateStage(ctx context.Context, in CreateStageInput) (crmcontra
 		return crmcontracts.Stage{}, err
 	}
 	in.Name = name
+	translations, err := labeltranslation.Normalize(stageNameTranslationsField, in.NameTranslations)
+	if err != nil {
+		return crmcontracts.Stage{}, err
+	}
 	probability := stageProbability(in.Semantic, in.WinProbability)
 	var out crmcontracts.Stage
 	err = s.Tx(ctx, func(tx pgx.Tx) error {
@@ -164,10 +171,10 @@ func (s *Store) CreateStage(ctx context.Context, in CreateStageInput) (crmcontra
 		}
 		var stageID ids.StageID
 		err := tx.QueryRow(ctx, `
-			INSERT INTO stage (pipeline_id, name, position, semantic, win_probability)
-			VALUES ($1, $2, $3, $4, $5)
+			INSERT INTO stage (pipeline_id, name, position, semantic, win_probability, name_translations)
+			VALUES ($1, $2, $3, $4, $5, $6)
 			RETURNING id`,
-			in.PipelineID, in.Name, in.Position, in.Semantic, probability).Scan(&stageID)
+			in.PipelineID, in.Name, in.Position, in.Semantic, probability, translations).Scan(&stageID)
 		if err != nil {
 			if storekit.IsUniqueViolation(err) {
 				return stagePositionTaken(in.Position)
@@ -179,6 +186,7 @@ func (s *Store) CreateStage(ctx context.Context, in CreateStageInput) (crmcontra
 		}
 		auditID, err := storekit.Audit(ctx, tx, "create", "stage", stageID.UUID, nil, map[string]any{
 			"pipeline_id": in.PipelineID, "name": in.Name, stageSemanticField: in.Semantic,
+			stageNameTranslationsField: translations,
 		})
 		if err != nil {
 			return fmt.Errorf("audit stage create: %w", err)
@@ -246,12 +254,18 @@ func (s *Store) ListStages(ctx context.Context, pipelineID *ids.PipelineID, arch
 	return out, err
 }
 
+// stageNameTranslationsField is the column and the request field the
+// translated stage names travel in.
+const stageNameTranslationsField = "name_translations"
+
 type UpdateStageInput struct {
-	Name           *string
-	Position       *int
-	Semantic       *string
-	WinProbability *int
-	IfVersion      *int64
+	// NameTranslations replaces the stored map when set.
+	NameTranslations map[string]string
+	Name             *string
+	Position         *int
+	Semantic         *string
+	WinProbability   *int
+	IfVersion        *int64
 }
 
 func (s *Store) UpdateStage(ctx context.Context, id ids.StageID, in UpdateStageInput) (crmcontracts.Stage, error) {
@@ -269,6 +283,13 @@ func (s *Store) UpdateStage(ctx context.Context, id ids.StageID, in UpdateStageI
 			return crmcontracts.Stage{}, err
 		}
 		in.Name = &name
+	}
+	if in.NameTranslations != nil {
+		translations, err := labeltranslation.Normalize(stageNameTranslationsField, in.NameTranslations)
+		if err != nil {
+			return crmcontracts.Stage{}, err
+		}
+		in.NameTranslations = translations
 	}
 	var out crmcontracts.Stage
 	err := s.Tx(ctx, func(tx pgx.Tx) error {
@@ -368,7 +389,7 @@ func writeStageUpdate(ctx context.Context, tx pgx.Tx, lock storekit.RowLock,
 			return ids.UUID{}, fmt.Errorf("emit pipeline reorder: %w", err)
 		}
 	}
-	if in.Name != nil || in.Semantic != nil || in.WinProbability != nil {
+	if in.Name != nil || in.Semantic != nil || in.WinProbability != nil || in.NameTranslations != nil {
 		if err := storekit.EmitEvent(ctx, tx, auditID, id.UUID, stageUpdatedPayload(pipelineID, in)); err != nil {
 			return ids.UUID{}, fmt.Errorf("emit stage update: %w", err)
 		}

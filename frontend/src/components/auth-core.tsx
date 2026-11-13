@@ -97,9 +97,13 @@ export function typeSpeedFor(text: string): number {
 export function AuthExperience({
   children,
   phase,
+  notice = false,
 }: Readonly<{
   children: ReactNode;
   phase: AuthPhase;
+  // A notice the signed-in reader is held at, not a sign-in. The system does
+  // not introduce itself to someone already inside, and access is not the point.
+  notice?: boolean;
 }>) {
   // The entry choreography belongs to the page load, not to this mount: every
   // animation below — the staggered rows, the typed statement — is gated on it,
@@ -126,9 +130,9 @@ export function AuthExperience({
           in the DOM (see the order note above), not from the tag. */}
       <div className="auth-task">
         <div className="auth-task-in">{children}</div>
-        <LegalFooter />
+        <LegalFooter notice={notice} />
       </div>
-      <IdentityRegion phase={phase} />
+      <IdentityRegion phase={phase} greeting={!notice} />
     </div>
   );
 }
@@ -150,9 +154,10 @@ export function AuthExperience({
 export function AuthCardTitle({
   children,
   className,
-}: Readonly<{ children: ReactNode; className?: string }>) {
+  as = "h2",
+}: Readonly<{ children: ReactNode; className?: string; as?: "h1" | "h2" }>) {
   return (
-    <Heading size="xlarge" as="h2" className={className}>
+    <Heading size="xlarge" as={as} className={className}>
       {children}
     </Heading>
   );
@@ -177,7 +182,7 @@ export function AuthCardTitle({
  * they 404: a missing document, which is a content gap rather than a faked
  * capability.
  */
-function LegalFooter() {
+function LegalFooter({ notice }: Readonly<{ notice: boolean }>) {
   const t = useT();
   return (
     <div className="auth-legal">
@@ -186,7 +191,7 @@ function LegalFooter() {
           those are outcome claims the installation's own configuration can
           contradict (VOICE-RULE-7). It must also not read as a control, which is
           why it is not inside the links group. */}
-      <p>{t("auth.legalProtected")}</p>
+      {!notice && <p>{t("auth.legalProtected")}</p>}
       {/* The bottom row is the surface's chrome row, and the theme control is
           chrome: it changes how this page looks and claims nothing about the
           company. It sits after the two links, behind a separator, so the
@@ -232,7 +237,10 @@ function LegalFooter() {
  * STILL NO CONTROLS. That is what keeps the region from competing with the form,
  * and it is structural rather than a matter of taste.
  */
-export function IdentityRegion({ phase }: Readonly<{ phase: AuthPhase }>) {
+export function IdentityRegion({
+  phase,
+  greeting = true,
+}: Readonly<{ phase: AuthPhase; greeting?: boolean }>) {
   const t = useT();
   return (
     /*
@@ -247,18 +255,20 @@ export function IdentityRegion({ phase }: Readonly<{ phase: AuthPhase }>) {
     <div className="auth-identity-col">
       <MarginceCoreScene state={coreState(phase)} />
 
-      <div className="auth-identity">
-        <div className="auth-identity-copy">
-          {/* The greeting is what gets typed, and it is the only row that does:
+      {greeting && (
+        <div className="auth-identity">
+          <div className="auth-identity-copy">
+            {/* The greeting is what gets typed, and it is the only row that does:
               a system saying its own name as it arrives is what the motion is
               ABOUT. The line under it fades up complete, so a reader who looks
               down mid-reveal finds a finished sentence rather than two
               paragraphs assembling themselves. */}
-          <TypedStatement text={t("auth.coreGreeting")} />
+            <TypedStatement text={t("auth.coreGreeting")} />
 
-          <p className="auth-purpose">{t("auth.corePurpose")}</p>
+            <p className="auth-purpose">{t("auth.corePurpose")}</p>
+          </div>
         </div>
-      </div>
+      )}
     </div>
   );
 }

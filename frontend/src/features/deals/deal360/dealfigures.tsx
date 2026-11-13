@@ -34,6 +34,7 @@ import {
 import type { MessageKey } from "../../../i18n/en";
 import { closeDayOf } from "../../../lib/closeday";
 import { labelFor } from "../../../lib/labelfor";
+import { recordsAnotherMeeting } from "../../../lib/meetingrecord";
 import { useViewerId } from "../../../lib/session";
 import { activityMarks } from "../../../lib/standingmarks";
 import { useViewerZone } from "../../../lib/viewerzone";
@@ -327,7 +328,13 @@ export function timelineEvents(
             key: row.id,
             at: row.due_at,
             title: titleOf(row),
-            sub: formatDueCompact(row.due_at, row.due_has_time, locale, zone),
+            sub: formatDueCompact(
+              row.due_at,
+              row.due_has_time,
+              locale,
+              zone,
+              row.due_intent,
+            ),
             kind: Date.parse(row.due_at) < now ? "late" : "ahead",
           },
         ]
@@ -350,7 +357,8 @@ function isConversation(row: Activity): boolean {
     row.kind === "meeting" &&
     row.meeting_status !== "booked" &&
     row.meeting_status !== "canceled" &&
-    row.meeting_status !== "no_show"
+    row.meeting_status !== "no_show" &&
+    !recordsAnotherMeeting(row)
   );
 }
 

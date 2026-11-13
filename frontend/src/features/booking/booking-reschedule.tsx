@@ -10,6 +10,7 @@ import {
   browserZone,
   dayInZone,
   startOfDayInZone,
+  wallClockIntent,
 } from "../../format/timezone";
 import { useLocale, useT } from "../../i18n";
 import { useViewerZone } from "../../lib/viewerzone";
@@ -25,7 +26,11 @@ export function BookingReschedule({
   id?: string;
   token?: string;
   pending: boolean;
-  onSelect: (slot: { start: string; end: string }) => void;
+  onSelect: (slot: {
+    start: string;
+    end: string;
+    start_intent: { wall_clock: string; timezone: string };
+  }) => void;
 }>) {
   const t = useT();
   const { locale } = useLocale();
@@ -112,7 +117,11 @@ export function BookingReschedule({
         disabled={!selected}
         pending={pending}
         onClick={() => {
-          if (selected) onSelect(selected);
+          if (selected)
+            onSelect({
+              ...selected,
+              start_intent: wallClockIntent(selected.start, zone),
+            });
         }}
       >
         {t("scheduling.saveTime")}

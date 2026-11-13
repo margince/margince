@@ -5,6 +5,7 @@ import { Button } from "../../design-system/atoms";
 import { useToast } from "../../design-system/toast";
 import { useT } from "../../i18n";
 import { useMe } from "../../lib/session";
+import { InquiryTakeButton } from "./worklist.inquiryassignment";
 import type { WorklistItem } from "./worklist.queries";
 import { useReassignTask } from "./worklist.writes";
 
@@ -20,7 +21,11 @@ export function TakeVerb({ item }: Readonly<{ item: WorklistItem }>) {
   ) {
     return null;
   }
-  return <TakeButton item={item} />;
+  return item.kind === "website_inquiry" ? (
+    <InquiryTakeButton item={item} />
+  ) : (
+    <TakeButton item={item} />
+  );
 }
 
 // Apart from TakeVerb so a row with nothing to take never asks who is reading.

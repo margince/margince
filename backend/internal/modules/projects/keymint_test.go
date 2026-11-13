@@ -4,15 +4,11 @@
 package projects
 
 import (
-	"regexp"
 	"strings"
 	"testing"
-)
 
-// The shape the project_key_shape CHECK admits. Spelled here from the
-// constraint rather than imported, so a key the generator mints that the
-// database would refuse fails in this package instead of at the INSERT.
-var keyShape = regexp.MustCompile(`^[A-Za-z][A-Za-z0-9_-]{1,23}$`)
+	"github.com/margince/margince/backend/internal/shared/kernel/projectkey"
+)
 
 func TestTheStemAProjectNameGives(t *testing.T) {
 	t.Parallel()
@@ -48,7 +44,7 @@ func TestEveryMintedKeyFitsTheColumnsShape(t *testing.T) {
 		"A very long project name with a great many separate words in it",
 	} {
 		key := keyStem(name) + "-1"
-		if !keyShape.MatchString(key) {
+		if !projectkey.Shaped(key) {
 			t.Errorf("the key minted for %q is %q, which project_key_shape refuses", name, key)
 		}
 	}

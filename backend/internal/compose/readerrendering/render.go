@@ -132,7 +132,7 @@ func Check(in Input, reply Reply) error {
 	for _, section := range []struct{ name, source, rendered string }{
 		{"subject", in.Subject, reply.Subject}, {"body", in.Body, reply.Body},
 	} {
-		if err := checkSection(section.source, section.rendered); err != nil {
+		if err := CheckSection(section.source, section.rendered); err != nil {
 			return fmt.Errorf("the %s changed: %w", section.name, err)
 		}
 	}

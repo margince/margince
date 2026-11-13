@@ -17,6 +17,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/modules/signals"
 	"github.com/margince/margince/backend/internal/platform/auth"
+	"github.com/margince/margince/backend/internal/platform/labeltranslation"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -116,13 +117,14 @@ func (g *graphAssembly) readOpenDeals() error {
 	// accuracy, unlike the contact scan above. The total rides the same
 	// statement, for the same reason readEmployment's headcount does: two
 	// snapshots could disagree and make dropped_count negative.
+	stageName := labeltranslation.SQL(g.ctx, "s.name", "s.name_translations", arg)
 	rows, err := g.tx.Query(g.ctx, fmt.Sprintf(`
-		SELECT d.id, d.name, s.name, count(*) OVER () AS open_total
+		SELECT d.id, d.name, %s, count(*) OVER () AS open_total
 		FROM deal d
 		LEFT JOIN stage s ON s.id = d.stage_id
 		%s
 		ORDER BY %s DESC NULLS LAST, d.id
-		LIMIT %d`, openDealsWhere(companyPos, dealScope), orderKey, graphDealCap), args...)
+		LIMIT %d`, stageName, openDealsWhere(companyPos, dealScope), orderKey, graphDealCap), args...)
 	if err != nil {
 		return err
 	}

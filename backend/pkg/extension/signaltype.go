@@ -33,9 +33,10 @@ type SignalEvidenceField struct {
 	Type  SignalFieldType
 	// Required makes a signal without the member a refusal.
 	Required bool
-	// Personal marks a member that holds personal data. Erasing the contact a
-	// signal is about removes every such member from it.
-	Personal bool
+	// NotPersonal marks a member that holds no personal data. Every other member
+	// is personal: erasing the contact a signal is about removes it, so a
+	// forgotten mark errs on the side of erasure.
+	NotPersonal bool
 }
 
 // SignalTypeDeclaration is one kind of signal a unit adds beside core's own. It
@@ -147,7 +148,7 @@ func fieldTypeFits(t SignalFieldType, v any) bool {
 func (d SignalTypeDeclaration) PersonalFields() []string {
 	var out []string
 	for _, f := range d.Evidence {
-		if f.Personal {
+		if !f.NotPersonal {
 			out = append(out, f.Name)
 		}
 	}

@@ -42,7 +42,7 @@ func recordInitialActivity(ctx context.Context, tx pgx.Tx, id ids.ActivityID, in
 			return err
 		}
 		maps.Copy(after, audience)
-		after["source_system"], after["source_activity_id"], after["assignee_id"] = in.SourceSystem, in.SourceActivityID, in.AssigneeID
+		after["source_system"], after["source_activity_id"], after["assignee_id"] = in.SourceSystem, in.sourceActivity(), in.AssigneeID
 	}
 	if in.audienceOf != nil {
 		if err := inheritAudienceTx(ctx, tx, id, *in.audienceOf); err != nil {
@@ -65,7 +65,11 @@ func recordInitialActivity(ctx context.Context, tx pgx.Tx, id ids.ActivityID, in
 	if err != nil {
 		return err
 	}
-	return storekit.EmitEvent(ctx, tx, auditID, id.UUID, activityCapturedPayload(ctx, in.Kind, in.ChannelProvider))
+	payload, err := activityCapturedPayload(ctx, in)
+	if err != nil {
+		return err
+	}
+	return storekit.EmitEvent(ctx, tx, auditID, id.UUID, payload)
 }
 
 // inheritAudienceTx gives id the audience of from: the same audience and

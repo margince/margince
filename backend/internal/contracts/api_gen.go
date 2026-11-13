@@ -1204,6 +1204,7 @@ const (
 	AiActivityKindReportInterpret               AiActivityKind = "report_interpret"
 	AiActivityKindReportSetup                   AiActivityKind = "report_setup"
 	AiActivityKindRequestSettlement             AiActivityKind = "request_settlement"
+	AiActivityKindRewrite                       AiActivityKind = "rewrite"
 	AiActivityKindSignalExtract                 AiActivityKind = "signal_extract"
 	AiActivityKindSiteExtract                   AiActivityKind = "site_extract"
 	AiActivityKindSiteFactExtract               AiActivityKind = "site_fact_extract"
@@ -1271,6 +1272,8 @@ func (e AiActivityKind) Valid() bool {
 	case AiActivityKindReportSetup:
 		return true
 	case AiActivityKindRequestSettlement:
+		return true
+	case AiActivityKindRewrite:
 		return true
 	case AiActivityKindSignalExtract:
 		return true
@@ -1797,6 +1800,7 @@ const (
 	AiTaskReportInterpret               AiTask = "report_interpret"
 	AiTaskReportSetup                   AiTask = "report_setup"
 	AiTaskRequestSettlement             AiTask = "request_settlement"
+	AiTaskRewrite                       AiTask = "rewrite"
 	AiTaskSignalExtract                 AiTask = "signal_extract"
 	AiTaskSiteExtract                   AiTask = "site_extract"
 	AiTaskSiteFactExtract               AiTask = "site_fact_extract"
@@ -1861,6 +1865,8 @@ func (e AiTask) Valid() bool {
 	case AiTaskReportSetup:
 		return true
 	case AiTaskRequestSettlement:
+		return true
+	case AiTaskRewrite:
 		return true
 	case AiTaskSignalExtract:
 		return true
@@ -2299,6 +2305,24 @@ func (e ApprovalPreviewImportRowOutcome) Valid() bool {
 	case ApprovalPreviewImportRowOutcomeUnchanged:
 		return true
 	case ApprovalPreviewImportRowOutcomeUpdate:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for AssemblyServedFrom.
+const (
+	AssemblyServedFromCache     AssemblyServedFrom = "cache"
+	AssemblyServedFromGenerated AssemblyServedFrom = "generated"
+)
+
+// Valid indicates whether the value is a known member of the AssemblyServedFrom enum.
+func (e AssemblyServedFrom) Valid() bool {
+	switch e {
+	case AssemblyServedFromCache:
+		return true
+	case AssemblyServedFromGenerated:
 		return true
 	default:
 		return false
@@ -3688,6 +3712,54 @@ func (e AutomationPausedReason) Valid() bool {
 	}
 }
 
+// Defines values for AutomationSetupReason.
+const (
+	AutomationSetupReasonAuthorizerInactive      AutomationSetupReason = "authorizer_inactive"
+	AutomationSetupReasonAuthorizerMissing       AutomationSetupReason = "authorizer_missing"
+	AutomationSetupReasonConfigurationIncomplete AutomationSetupReason = "configuration_incomplete"
+	AutomationSetupReasonPausedBySystem          AutomationSetupReason = "paused_by_system"
+)
+
+// Valid indicates whether the value is a known member of the AutomationSetupReason enum.
+func (e AutomationSetupReason) Valid() bool {
+	switch e {
+	case AutomationSetupReasonAuthorizerInactive:
+		return true
+	case AutomationSetupReasonAuthorizerMissing:
+		return true
+	case AutomationSetupReasonConfigurationIncomplete:
+		return true
+	case AutomationSetupReasonPausedBySystem:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for AutomationSetupState.
+const (
+	AutomationSetupStateNeedsAttention AutomationSetupState = "needs_attention"
+	AutomationSetupStateNeedsSetup     AutomationSetupState = "needs_setup"
+	AutomationSetupStateOn             AutomationSetupState = "on"
+	AutomationSetupStatePaused         AutomationSetupState = "paused"
+)
+
+// Valid indicates whether the value is a known member of the AutomationSetupState enum.
+func (e AutomationSetupState) Valid() bool {
+	switch e {
+	case AutomationSetupStateNeedsAttention:
+		return true
+	case AutomationSetupStateNeedsSetup:
+		return true
+	case AutomationSetupStateOn:
+		return true
+	case AutomationSetupStatePaused:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for AutomationStatus.
 const (
 	AutomationStatusEnabled AutomationStatus = "enabled"
@@ -3706,6 +3778,33 @@ func (e AutomationStatus) Valid() bool {
 	}
 }
 
+// Defines values for AutomationCatalogEntryGroup.
+const (
+	AutomationCatalogEntryGroupCustomers AutomationCatalogEntryGroup = "customers"
+	AutomationCatalogEntryGroupDeals     AutomationCatalogEntryGroup = "deals"
+	AutomationCatalogEntryGroupInquiries AutomationCatalogEntryGroup = "inquiries"
+	AutomationCatalogEntryGroupLists     AutomationCatalogEntryGroup = "lists"
+	AutomationCatalogEntryGroupMeetings  AutomationCatalogEntryGroup = "meetings"
+)
+
+// Valid indicates whether the value is a known member of the AutomationCatalogEntryGroup enum.
+func (e AutomationCatalogEntryGroup) Valid() bool {
+	switch e {
+	case AutomationCatalogEntryGroupCustomers:
+		return true
+	case AutomationCatalogEntryGroupDeals:
+		return true
+	case AutomationCatalogEntryGroupInquiries:
+		return true
+	case AutomationCatalogEntryGroupLists:
+		return true
+	case AutomationCatalogEntryGroupMeetings:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for AutomationCatalogEntryTier.
 const (
 	AutomationCatalogEntryTierAutoExecute          AutomationCatalogEntryTier = "auto_execute"
@@ -3718,6 +3817,24 @@ func (e AutomationCatalogEntryTier) Valid() bool {
 	case AutomationCatalogEntryTierAutoExecute:
 		return true
 	case AutomationCatalogEntryTierConfirmationRequired:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for AutomationPreviewKind.
+const (
+	AutomationPreviewKindEvent      AutomationPreviewKind = "event"
+	AutomationPreviewKindPopulation AutomationPreviewKind = "population"
+)
+
+// Valid indicates whether the value is a known member of the AutomationPreviewKind enum.
+func (e AutomationPreviewKind) Valid() bool {
+	switch e {
+	case AutomationPreviewKindEvent:
+		return true
+	case AutomationPreviewKindPopulation:
 		return true
 	default:
 		return false
@@ -7366,6 +7483,48 @@ func (e ConnectConnectorRequestReturnTo) Valid() bool {
 	case ConnectConnectorRequestReturnToOnboarding:
 		return true
 	case ConnectConnectorRequestReturnToSettings:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ConnectSharedMailboxRequestMailVisibility.
+const (
+	ConnectSharedMailboxRequestMailVisibilityClassified ConnectSharedMailboxRequestMailVisibility = "classified"
+	ConnectSharedMailboxRequestMailVisibilityHeld       ConnectSharedMailboxRequestMailVisibility = "held"
+	ConnectSharedMailboxRequestMailVisibilityShared     ConnectSharedMailboxRequestMailVisibility = "shared"
+)
+
+// Valid indicates whether the value is a known member of the ConnectSharedMailboxRequestMailVisibility enum.
+func (e ConnectSharedMailboxRequestMailVisibility) Valid() bool {
+	switch e {
+	case ConnectSharedMailboxRequestMailVisibilityClassified:
+		return true
+	case ConnectSharedMailboxRequestMailVisibilityHeld:
+		return true
+	case ConnectSharedMailboxRequestMailVisibilityShared:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ConnectSharedMailboxRequestProvider.
+const (
+	ConnectSharedMailboxRequestProviderGmail ConnectSharedMailboxRequestProvider = "gmail"
+	ConnectSharedMailboxRequestProviderGraph ConnectSharedMailboxRequestProvider = "graph"
+	ConnectSharedMailboxRequestProviderImap  ConnectSharedMailboxRequestProvider = "imap"
+)
+
+// Valid indicates whether the value is a known member of the ConnectSharedMailboxRequestProvider enum.
+func (e ConnectSharedMailboxRequestProvider) Valid() bool {
+	switch e {
+	case ConnectSharedMailboxRequestProviderGmail:
+		return true
+	case ConnectSharedMailboxRequestProviderGraph:
+		return true
+	case ConnectSharedMailboxRequestProviderImap:
 		return true
 	default:
 		return false
@@ -13420,6 +13579,33 @@ func (e ForecastSufficiencyBasis) Valid() bool {
 	}
 }
 
+// Defines values for GmailSignatureImportState.
+const (
+	GmailSignatureImportStateEmpty          GmailSignatureImportState = "empty"
+	GmailSignatureImportStateNeedsReconnect GmailSignatureImportState = "needs_reconnect"
+	GmailSignatureImportStateNoMailbox      GmailSignatureImportState = "no_mailbox"
+	GmailSignatureImportStateReady          GmailSignatureImportState = "ready"
+	GmailSignatureImportStateTooLong        GmailSignatureImportState = "too_long"
+)
+
+// Valid indicates whether the value is a known member of the GmailSignatureImportState enum.
+func (e GmailSignatureImportState) Valid() bool {
+	switch e {
+	case GmailSignatureImportStateEmpty:
+		return true
+	case GmailSignatureImportStateNeedsReconnect:
+		return true
+	case GmailSignatureImportStateNoMailbox:
+		return true
+	case GmailSignatureImportStateReady:
+		return true
+	case GmailSignatureImportStateTooLong:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for GrowthFitBand.
 const (
 	GrowthFitBandModerate GrowthFitBand = "moderate"
@@ -14353,6 +14539,7 @@ const (
 	ImportReasonCodeUndoRuleProtects             ImportReasonCode = "undo_rule_protects"
 	ImportReasonCodeUndoStillReferenced          ImportReasonCode = "undo_still_referenced"
 	ImportReasonCodeValueRefused                 ImportReasonCode = "value_refused"
+	ImportReasonCodeValueTooLong                 ImportReasonCode = "value_too_long"
 	ImportReasonCodeValueUnreadable              ImportReasonCode = "value_unreadable"
 )
 
@@ -14600,6 +14787,8 @@ func (e ImportReasonCode) Valid() bool {
 	case ImportReasonCodeUndoStillReferenced:
 		return true
 	case ImportReasonCodeValueRefused:
+		return true
+	case ImportReasonCodeValueTooLong:
 		return true
 	case ImportReasonCodeValueUnreadable:
 		return true
@@ -15889,6 +16078,27 @@ func (e LeadQualificationEvidenceTrigger) Valid() bool {
 	}
 }
 
+// Defines values for LeadRoutingRuleField.
+const (
+	LeadRoutingRuleFieldCandidateCompanyKey LeadRoutingRuleField = "candidate_company_key"
+	LeadRoutingRuleFieldCompanyName         LeadRoutingRuleField = "company_name"
+	LeadRoutingRuleFieldOrigin              LeadRoutingRuleField = "origin"
+)
+
+// Valid indicates whether the value is a known member of the LeadRoutingRuleField enum.
+func (e LeadRoutingRuleField) Valid() bool {
+	switch e {
+	case LeadRoutingRuleFieldCandidateCompanyKey:
+		return true
+	case LeadRoutingRuleFieldCompanyName:
+		return true
+	case LeadRoutingRuleFieldOrigin:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for LeadSourceIntent.
 const (
 	LeadSourceIntentLeadSourceIntentHigh    LeadSourceIntent = "high"
@@ -16501,6 +16711,27 @@ func (e MagicNotShownReason) Valid() bool {
 	case MagicNotShownReasonMagicNotShownUnadmittedAction:
 		return true
 	case MagicNotShownReasonMagicNotShownUnknownEntityType:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for MagicReceiptCutAtLimit.
+const (
+	MagicReceiptCutAtLimitCouldNotComplete MagicReceiptCutAtLimit = "could_not_complete"
+	MagicReceiptCutAtLimitDone             MagicReceiptCutAtLimit = "done"
+	MagicReceiptCutAtLimitNeedsYou         MagicReceiptCutAtLimit = "needs_you"
+)
+
+// Valid indicates whether the value is a known member of the MagicReceiptCutAtLimit enum.
+func (e MagicReceiptCutAtLimit) Valid() bool {
+	switch e {
+	case MagicReceiptCutAtLimitCouldNotComplete:
+		return true
+	case MagicReceiptCutAtLimitDone:
+		return true
+	case MagicReceiptCutAtLimitNeedsYou:
 		return true
 	default:
 		return false
@@ -21220,6 +21451,123 @@ func (e ReviewQuestionType) Valid() bool {
 	}
 }
 
+// Defines values for RewriteLanguage.
+const (
+	RewriteLanguageDe RewriteLanguage = "de"
+	RewriteLanguageEn RewriteLanguage = "en"
+	RewriteLanguageVi RewriteLanguage = "vi"
+)
+
+// Valid indicates whether the value is a known member of the RewriteLanguage enum.
+func (e RewriteLanguage) Valid() bool {
+	switch e {
+	case RewriteLanguageDe:
+		return true
+	case RewriteLanguageEn:
+		return true
+	case RewriteLanguageVi:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for RewriteAboutEntityType.
+const (
+	RewriteAboutEntityTypeActivity RewriteAboutEntityType = "activity"
+	RewriteAboutEntityTypeCompany  RewriteAboutEntityType = "company"
+	RewriteAboutEntityTypeContact  RewriteAboutEntityType = "contact"
+	RewriteAboutEntityTypeDeal     RewriteAboutEntityType = "deal"
+	RewriteAboutEntityTypeLead     RewriteAboutEntityType = "lead"
+	RewriteAboutEntityTypeProject  RewriteAboutEntityType = "project"
+)
+
+// Valid indicates whether the value is a known member of the RewriteAboutEntityType enum.
+func (e RewriteAboutEntityType) Valid() bool {
+	switch e {
+	case RewriteAboutEntityTypeActivity:
+		return true
+	case RewriteAboutEntityTypeCompany:
+		return true
+	case RewriteAboutEntityTypeContact:
+		return true
+	case RewriteAboutEntityTypeDeal:
+		return true
+	case RewriteAboutEntityTypeLead:
+		return true
+	case RewriteAboutEntityTypeProject:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for RewriteRequestEnvelope.
+const (
+	RewriteRequestEnvelopeEmail RewriteRequestEnvelope = "email"
+	RewriteRequestEnvelopeNote  RewriteRequestEnvelope = "note"
+)
+
+// Valid indicates whether the value is a known member of the RewriteRequestEnvelope enum.
+func (e RewriteRequestEnvelope) Valid() bool {
+	switch e {
+	case RewriteRequestEnvelopeEmail:
+		return true
+	case RewriteRequestEnvelopeNote:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for RewriteRequestLanguage.
+const (
+	RewriteRequestLanguageDe RewriteRequestLanguage = "de"
+	RewriteRequestLanguageEn RewriteRequestLanguage = "en"
+	RewriteRequestLanguageVi RewriteRequestLanguage = "vi"
+)
+
+// Valid indicates whether the value is a known member of the RewriteRequestLanguage enum.
+func (e RewriteRequestLanguage) Valid() bool {
+	switch e {
+	case RewriteRequestLanguageDe:
+		return true
+	case RewriteRequestLanguageEn:
+		return true
+	case RewriteRequestLanguageVi:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for RewriteRequestVerb.
+const (
+	RewriteRequestVerbDeadline RewriteRequestVerb = "deadline"
+	RewriteRequestVerbFormal   RewriteRequestVerb = "formal"
+	RewriteRequestVerbPolish   RewriteRequestVerb = "polish"
+	RewriteRequestVerbShorter  RewriteRequestVerb = "shorter"
+	RewriteRequestVerbWarmer   RewriteRequestVerb = "warmer"
+)
+
+// Valid indicates whether the value is a known member of the RewriteRequestVerb enum.
+func (e RewriteRequestVerb) Valid() bool {
+	switch e {
+	case RewriteRequestVerbDeadline:
+		return true
+	case RewriteRequestVerbFormal:
+		return true
+	case RewriteRequestVerbPolish:
+		return true
+	case RewriteRequestVerbShorter:
+		return true
+	case RewriteRequestVerbWarmer:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for RightsCaseReceiptKind.
 const (
 	RightsCaseReceiptKindErasure RightsCaseReceiptKind = "erasure"
@@ -22783,6 +23131,108 @@ func (e SharedForecastViewKind) Valid() bool {
 	case SharedForecastViewKindLive:
 		return true
 	case SharedForecastViewKindSnapshot:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for SharedMailboxMailVisibility.
+const (
+	SharedMailboxMailVisibilityHeld   SharedMailboxMailVisibility = "held"
+	SharedMailboxMailVisibilityShared SharedMailboxMailVisibility = "shared"
+)
+
+// Valid indicates whether the value is a known member of the SharedMailboxMailVisibility enum.
+func (e SharedMailboxMailVisibility) Valid() bool {
+	switch e {
+	case SharedMailboxMailVisibilityHeld:
+		return true
+	case SharedMailboxMailVisibilityShared:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for SharedMailboxProvider.
+const (
+	SharedMailboxProviderGmail       SharedMailboxProvider = "gmail"
+	SharedMailboxProviderGraph       SharedMailboxProvider = "graph"
+	SharedMailboxProviderImap        SharedMailboxProvider = "imap"
+	SharedMailboxProviderTestMailbox SharedMailboxProvider = "test_mailbox"
+)
+
+// Valid indicates whether the value is a known member of the SharedMailboxProvider enum.
+func (e SharedMailboxProvider) Valid() bool {
+	switch e {
+	case SharedMailboxProviderGmail:
+		return true
+	case SharedMailboxProviderGraph:
+		return true
+	case SharedMailboxProviderImap:
+		return true
+	case SharedMailboxProviderTestMailbox:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for SharedMailboxStatus.
+const (
+	SharedMailboxStatusConnected      SharedMailboxStatus = "connected"
+	SharedMailboxStatusDisconnected   SharedMailboxStatus = "disconnected"
+	SharedMailboxStatusError          SharedMailboxStatus = "error"
+	SharedMailboxStatusReauthRequired SharedMailboxStatus = "reauth_required"
+)
+
+// Valid indicates whether the value is a known member of the SharedMailboxStatus enum.
+func (e SharedMailboxStatus) Valid() bool {
+	switch e {
+	case SharedMailboxStatusConnected:
+		return true
+	case SharedMailboxStatusDisconnected:
+		return true
+	case SharedMailboxStatusError:
+		return true
+	case SharedMailboxStatusReauthRequired:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for SharedMailboxHistoryImportRequestWindow.
+const (
+	SharedMailboxHistoryImportRequestWindowN120m SharedMailboxHistoryImportRequestWindow = "120m"
+	SharedMailboxHistoryImportRequestWindowN12m  SharedMailboxHistoryImportRequestWindow = "12m"
+	SharedMailboxHistoryImportRequestWindowN24m  SharedMailboxHistoryImportRequestWindow = "24m"
+	SharedMailboxHistoryImportRequestWindowN36m  SharedMailboxHistoryImportRequestWindow = "36m"
+	SharedMailboxHistoryImportRequestWindowN3m   SharedMailboxHistoryImportRequestWindow = "3m"
+	SharedMailboxHistoryImportRequestWindowN60m  SharedMailboxHistoryImportRequestWindow = "60m"
+	SharedMailboxHistoryImportRequestWindowN6m   SharedMailboxHistoryImportRequestWindow = "6m"
+	SharedMailboxHistoryImportRequestWindowN84m  SharedMailboxHistoryImportRequestWindow = "84m"
+)
+
+// Valid indicates whether the value is a known member of the SharedMailboxHistoryImportRequestWindow enum.
+func (e SharedMailboxHistoryImportRequestWindow) Valid() bool {
+	switch e {
+	case SharedMailboxHistoryImportRequestWindowN120m:
+		return true
+	case SharedMailboxHistoryImportRequestWindowN12m:
+		return true
+	case SharedMailboxHistoryImportRequestWindowN24m:
+		return true
+	case SharedMailboxHistoryImportRequestWindowN36m:
+		return true
+	case SharedMailboxHistoryImportRequestWindowN3m:
+		return true
+	case SharedMailboxHistoryImportRequestWindowN60m:
+		return true
+	case SharedMailboxHistoryImportRequestWindowN6m:
+		return true
+	case SharedMailboxHistoryImportRequestWindowN84m:
 		return true
 	default:
 		return false
@@ -25060,6 +25510,27 @@ func (e UpdateRoleRequestRowScope) Valid() bool {
 	}
 }
 
+// Defines values for UpdateSharedMailboxRequestMailVisibility.
+const (
+	UpdateSharedMailboxRequestMailVisibilityClassified UpdateSharedMailboxRequestMailVisibility = "classified"
+	UpdateSharedMailboxRequestMailVisibilityHeld       UpdateSharedMailboxRequestMailVisibility = "held"
+	UpdateSharedMailboxRequestMailVisibilityShared     UpdateSharedMailboxRequestMailVisibility = "shared"
+)
+
+// Valid indicates whether the value is a known member of the UpdateSharedMailboxRequestMailVisibility enum.
+func (e UpdateSharedMailboxRequestMailVisibility) Valid() bool {
+	switch e {
+	case UpdateSharedMailboxRequestMailVisibilityClassified:
+		return true
+	case UpdateSharedMailboxRequestMailVisibilityHeld:
+		return true
+	case UpdateSharedMailboxRequestMailVisibilityShared:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for UpdateSignalRequestKind.
 const (
 	UpdateSignalRequestKindBuyingIntent UpdateSignalRequestKind = "buying_intent"
@@ -26002,6 +26473,27 @@ func (e VoiceProfileVersionStatus) Valid() bool {
 	}
 }
 
+// Defines values for WebFormIntakeState.
+const (
+	WebFormIntakeStateBlocked   WebFormIntakeState = "blocked"
+	WebFormIntakeStatePausedAll WebFormIntakeState = "paused_all"
+	WebFormIntakeStateThrottled WebFormIntakeState = "throttled"
+)
+
+// Valid indicates whether the value is a known member of the WebFormIntakeState enum.
+func (e WebFormIntakeState) Valid() bool {
+	switch e {
+	case WebFormIntakeStateBlocked:
+		return true
+	case WebFormIntakeStatePausedAll:
+		return true
+	case WebFormIntakeStateThrottled:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for WebFormState.
 const (
 	WebFormStateActive WebFormState = "active"
@@ -26014,6 +26506,27 @@ func (e WebFormState) Valid() bool {
 	case WebFormStateActive:
 		return true
 	case WebFormStatePaused:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for WebFormCreatedIntakeState.
+const (
+	WebFormCreatedIntakeStateBlocked   WebFormCreatedIntakeState = "blocked"
+	WebFormCreatedIntakeStatePausedAll WebFormCreatedIntakeState = "paused_all"
+	WebFormCreatedIntakeStateThrottled WebFormCreatedIntakeState = "throttled"
+)
+
+// Valid indicates whether the value is a known member of the WebFormCreatedIntakeState enum.
+func (e WebFormCreatedIntakeState) Valid() bool {
+	switch e {
+	case WebFormCreatedIntakeStateBlocked:
+		return true
+	case WebFormCreatedIntakeStatePausedAll:
+		return true
+	case WebFormCreatedIntakeStateThrottled:
 		return true
 	default:
 		return false
@@ -26140,6 +26653,159 @@ func (e WebhookSubscriptionState) Valid() bool {
 	case WebhookSubscriptionStateActive:
 		return true
 	case WebhookSubscriptionStatePaused:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for WebsiteInquiryAssignmentRecordType.
+const (
+	WebsiteInquiryAssignmentRecordTypeContact WebsiteInquiryAssignmentRecordType = "contact"
+	WebsiteInquiryAssignmentRecordTypeLead    WebsiteInquiryAssignmentRecordType = "lead"
+)
+
+// Valid indicates whether the value is a known member of the WebsiteInquiryAssignmentRecordType enum.
+func (e WebsiteInquiryAssignmentRecordType) Valid() bool {
+	switch e {
+	case WebsiteInquiryAssignmentRecordTypeContact:
+		return true
+	case WebsiteInquiryAssignmentRecordTypeLead:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for WebsiteInquiryAssignmentRequestMode.
+const (
+	WebsiteInquiryAssignmentRequestModeAssignAndFollowUp WebsiteInquiryAssignmentRequestMode = "assign_and_follow_up"
+	WebsiteInquiryAssignmentRequestModeTake              WebsiteInquiryAssignmentRequestMode = "take"
+)
+
+// Valid indicates whether the value is a known member of the WebsiteInquiryAssignmentRequestMode enum.
+func (e WebsiteInquiryAssignmentRequestMode) Valid() bool {
+	switch e {
+	case WebsiteInquiryAssignmentRequestModeAssignAndFollowUp:
+		return true
+	case WebsiteInquiryAssignmentRequestModeTake:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for WebsiteInquiryAssignmentRequestRecordType.
+const (
+	WebsiteInquiryAssignmentRequestRecordTypeContact WebsiteInquiryAssignmentRequestRecordType = "contact"
+	WebsiteInquiryAssignmentRequestRecordTypeLead    WebsiteInquiryAssignmentRequestRecordType = "lead"
+)
+
+// Valid indicates whether the value is a known member of the WebsiteInquiryAssignmentRequestRecordType enum.
+func (e WebsiteInquiryAssignmentRequestRecordType) Valid() bool {
+	switch e {
+	case WebsiteInquiryAssignmentRequestRecordTypeContact:
+		return true
+	case WebsiteInquiryAssignmentRequestRecordTypeLead:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for WebsiteInquiryHandlingItemStatus.
+const (
+	WebsiteInquiryHandlingItemStatusAlreadyHandled     WebsiteInquiryHandlingItemStatus = "already_handled"
+	WebsiteInquiryHandlingItemStatusChanged            WebsiteInquiryHandlingItemStatus = "changed"
+	WebsiteInquiryHandlingItemStatusFailed             WebsiteInquiryHandlingItemStatus = "failed"
+	WebsiteInquiryHandlingItemStatusSkipped            WebsiteInquiryHandlingItemStatus = "skipped"
+	WebsiteInquiryHandlingItemStatusTaskCreated        WebsiteInquiryHandlingItemStatus = "task_created"
+	WebsiteInquiryHandlingItemStatusUnavailable        WebsiteInquiryHandlingItemStatus = "unavailable"
+	WebsiteInquiryHandlingItemStatusWaitingForApproval WebsiteInquiryHandlingItemStatus = "waiting_for_approval"
+)
+
+// Valid indicates whether the value is a known member of the WebsiteInquiryHandlingItemStatus enum.
+func (e WebsiteInquiryHandlingItemStatus) Valid() bool {
+	switch e {
+	case WebsiteInquiryHandlingItemStatusAlreadyHandled:
+		return true
+	case WebsiteInquiryHandlingItemStatusChanged:
+		return true
+	case WebsiteInquiryHandlingItemStatusFailed:
+		return true
+	case WebsiteInquiryHandlingItemStatusSkipped:
+		return true
+	case WebsiteInquiryHandlingItemStatusTaskCreated:
+		return true
+	case WebsiteInquiryHandlingItemStatusUnavailable:
+		return true
+	case WebsiteInquiryHandlingItemStatusWaitingForApproval:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for WebsiteInquiryMode.
+const (
+	WebsiteInquiryModeCoordinator  WebsiteInquiryMode = "coordinator"
+	WebsiteInquiryModeOneColleague WebsiteInquiryMode = "one_colleague"
+	WebsiteInquiryModeRotate       WebsiteInquiryMode = "rotate"
+)
+
+// Valid indicates whether the value is a known member of the WebsiteInquiryMode enum.
+func (e WebsiteInquiryMode) Valid() bool {
+	switch e {
+	case WebsiteInquiryModeCoordinator:
+		return true
+	case WebsiteInquiryModeOneColleague:
+		return true
+	case WebsiteInquiryModeRotate:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for WebsiteInquiryPreviewItemStatus.
+const (
+	WebsiteInquiryPreviewItemStatusAlreadyHandled WebsiteInquiryPreviewItemStatus = "already_handled"
+	WebsiteInquiryPreviewItemStatusChanged        WebsiteInquiryPreviewItemStatus = "changed"
+	WebsiteInquiryPreviewItemStatusEligible       WebsiteInquiryPreviewItemStatus = "eligible"
+	WebsiteInquiryPreviewItemStatusFailed         WebsiteInquiryPreviewItemStatus = "failed"
+	WebsiteInquiryPreviewItemStatusUnavailable    WebsiteInquiryPreviewItemStatus = "unavailable"
+)
+
+// Valid indicates whether the value is a known member of the WebsiteInquiryPreviewItemStatus enum.
+func (e WebsiteInquiryPreviewItemStatus) Valid() bool {
+	switch e {
+	case WebsiteInquiryPreviewItemStatusAlreadyHandled:
+		return true
+	case WebsiteInquiryPreviewItemStatusChanged:
+		return true
+	case WebsiteInquiryPreviewItemStatusEligible:
+		return true
+	case WebsiteInquiryPreviewItemStatusFailed:
+		return true
+	case WebsiteInquiryPreviewItemStatusUnavailable:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for WebsiteInquiryPreviewItemTargetType.
+const (
+	WebsiteInquiryPreviewItemTargetTypeContact WebsiteInquiryPreviewItemTargetType = "contact"
+	WebsiteInquiryPreviewItemTargetTypeLead    WebsiteInquiryPreviewItemTargetType = "lead"
+)
+
+// Valid indicates whether the value is a known member of the WebsiteInquiryPreviewItemTargetType enum.
+func (e WebsiteInquiryPreviewItemTargetType) Valid() bool {
+	switch e {
+	case WebsiteInquiryPreviewItemTargetTypeContact:
+		return true
+	case WebsiteInquiryPreviewItemTargetTypeLead:
 		return true
 	default:
 		return false
@@ -26444,6 +27110,7 @@ const (
 	WorklistFilterTasks             WorklistFilter = "tasks"
 	WorklistFilterUpcoming          WorklistFilter = "upcoming"
 	WorklistFilterUrgent            WorklistFilter = "urgent"
+	WorklistFilterWebsiteInquiries  WorklistFilter = "website_inquiries"
 )
 
 // Valid indicates whether the value is a known member of the WorklistFilter enum.
@@ -26476,6 +27143,8 @@ func (e WorklistFilter) Valid() bool {
 	case WorklistFilterUpcoming:
 		return true
 	case WorklistFilterUrgent:
+		return true
+	case WorklistFilterWebsiteInquiries:
 		return true
 	default:
 		return false
@@ -31085,6 +31754,7 @@ const (
 	GetWorklistParamsFilterTasks             GetWorklistParamsFilter = "tasks"
 	GetWorklistParamsFilterUpcoming          GetWorklistParamsFilter = "upcoming"
 	GetWorklistParamsFilterUrgent            GetWorklistParamsFilter = "urgent"
+	GetWorklistParamsFilterWebsiteInquiries  GetWorklistParamsFilter = "website_inquiries"
 )
 
 // Valid indicates whether the value is a known member of the GetWorklistParamsFilter enum.
@@ -31117,6 +31787,8 @@ func (e GetWorklistParamsFilter) Valid() bool {
 	case GetWorklistParamsFilterUpcoming:
 		return true
 	case GetWorklistParamsFilterUrgent:
+		return true
+	case GetWorklistParamsFilterWebsiteInquiries:
 		return true
 	default:
 		return false
@@ -31494,7 +32166,10 @@ type ActingIdentity struct {
 // top-level `cf_` keys. They are content, so they are absent whenever `content_state` is
 // `withheld`.
 type Activity struct {
-	// Archivable Whether THIS caller may archive THIS activity: the row write gate `writable` asks, plus the `activity:delete` grant, or `activity:update` on a hand-logged note or task the caller wrote (under their own stamp or through an agent acting for them). Captured correspondence and a colleague's note need the delete grant. Server-computed per row, per caller. A UX signal, never the enforcement, exactly like `writable`; absent means NOT archivable.
+	// AiAssisted Whether an AI model rewrote the subject or body before it was saved, so a reader sees the words as AI-assisted. Set when the activity is logged and kept through later edits: a human who tidies model words still saved model words. Absent means false. Withheld with the content.
+	AiAssisted *bool `json:"ai_assisted,omitempty"`
+
+	// Archivable Whether THIS caller may archive THIS activity: the row write gate `writable` asks, plus the `activity:delete` grant, or `activity:update` on a note, task, call or meeting the caller logged by hand (under their own stamp or through an agent acting for them) that no provider import backs. Sent and captured correspondence, a calendar-synced meeting and a colleague's entry need the delete grant. A meeting a live invitation holds is never archivable. Server-computed per row, per caller. A UX signal, never the enforcement, exactly like `writable`; absent means NOT archivable.
 	Archivable *bool      `json:"archivable,omitempty"`
 	ArchivedAt *time.Time `json:"archived_at,omitempty"`
 
@@ -31585,6 +32260,9 @@ type Activity struct {
 	// DueHasTime Task only. True when `due_at` names an agreed time of day, such as a callback hour. False means the task is due by the end of its day and a reader shows the date alone. Every task written before this field existed reads false.
 	DueHasTime *bool `json:"due_has_time,omitempty"`
 
+	// DueIntent A chosen local time in an IANA zone, resolved with current rules. A time in a gap moves forward; a repeated time takes its first occurrence.
+	DueIntent *IntentTime `json:"due_intent,omitempty"`
+
 	// DurationSeconds Meeting/call only.
 	DurationSeconds *int `json:"duration_seconds,omitempty"`
 
@@ -31622,6 +32300,9 @@ type Activity struct {
 	// Links Every record this activity is filed under that the caller may read; a link to a record they cannot read is left out. One activity may link to several, a contact and a deal say. Every read that returns an activity answers the same links: the list, one activity, and a contact's 360.
 	Links *[]ActivityLink `json:"links,omitempty"`
 
+	// MeetingIntent A chosen local time in an IANA zone, resolved with current rules. A time in a gap moves forward; a repeated time takes its first occurrence.
+	MeetingIntent *IntentTime `json:"meeting_intent,omitempty"`
+
 	// MeetingStatus Set only when kind=meeting.
 	MeetingStatus *ActivityMeetingStatus `json:"meeting_status,omitempty"`
 
@@ -31646,13 +32327,16 @@ type Activity struct {
 	// RemindAt Task only. When the reminder comes due. From that instant, for up to 30 days, the task leads its assignee's own Worklist with the reason `reminder_due`, and `GET /v1/activities?reminder_due=true` lists it for them. Nobody else is reminded, and a task with no assignee reminds nobody. Moving `due_at` on a task whose reminder has passed clears this field, unless the same patch names it.
 	RemindAt *time.Time `json:"remind_at,omitempty"`
 
+	// RemindIntent A chosen local time in an IANA zone, resolved with current rules. A time in a gap moves forward; a repeated time takes its first occurrence.
+	RemindIntent *IntentTime `json:"remind_intent,omitempty"`
+
 	// ReplyChannel Task only. For a `reply` task, the kind of the activity it answers (`source_activity_id`), so the answer goes back the way the message came in. Null for every other type, and for a reply with no source of one of these kinds.
 	ReplyChannel *ActivityReplyChannel `json:"reply_channel,omitempty"`
 
 	// Source Where the row came from. `manual` is anything typed, by a member or by an assistant working for one, so it never says who typed it: `captured_by` and `recorded_by_agent` do.
 	Source string `json:"source"`
 
-	// SourceActivityId The conversation or note this task follows from, whether added by a human or read from a conversation. Opening the source requires current source access. A task cannot grant access to its source or disclose content from a withheld source.
+	// SourceActivityId The conversation or note this task follows from, whether added by a human or read from a conversation. Opening the source requires current source access. A task cannot grant access to its source or disclose content from a withheld source. On a transcript created with `records_meeting_id`, the meeting it records.
 	SourceActivityId *openapi_types.UUID `json:"source_activity_id,omitempty"`
 
 	// SourceId Provider message/event id; part of the idempotency key.
@@ -31807,7 +32491,10 @@ type ActivityFollowUpTask struct {
 	Body       *string             `json:"body,omitempty"`
 	DueAt      *time.Time          `json:"due_at,omitempty"`
 	DueHasTime *bool               `json:"due_has_time,omitempty"`
-	Subject    string              `json:"subject"`
+
+	// DueIntent A chosen local time in an IANA zone, resolved with current rules. A time in a gap moves forward; a repeated time takes its first occurrence.
+	DueIntent *IntentTime `json:"due_intent,omitempty"`
+	Subject   string      `json:"subject"`
 }
 
 // ActivityLink defines model for ActivityLink.
@@ -32278,7 +32965,10 @@ type AgentCommitment struct {
 	DueAt        *string                  `json:"due_at,omitempty"`
 
 	// DueHasTime True when due_at is an agreed time of day.
-	DueHasTime       *bool               `json:"due_has_time,omitempty"`
+	DueHasTime *bool `json:"due_has_time,omitempty"`
+
+	// DueIntent A chosen local time in an IANA zone, resolved with current rules. A time in a gap moves forward; a repeated time takes its first occurrence.
+	DueIntent        *IntentTime         `json:"due_intent,omitempty"`
 	Quote            *string             `json:"quote,omitempty"`
 	Source           string              `json:"source"`
 	SourceActivityId *openapi_types.UUID `json:"source_activity_id,omitempty"`
@@ -34148,7 +34838,7 @@ type AnalyticsContext struct {
 
 // AnalyticsCustomField defines model for AnalyticsCustomField.
 type AnalyticsCustomField struct {
-	// Label The name an administrator gave the field.
+	// Label The name an administrator gave the field, in the caller's UI language when one was given.
 	Label string `json:"label"`
 
 	// Name The field as `group_by` and a filter name it.
@@ -34158,6 +34848,11 @@ type AnalyticsCustomField struct {
 	// and a deal whose company the caller may not open drops out of an answer that groups
 	// or filters by it.
 	Object AnalyticsCustomFieldObject `json:"object"`
+
+	// OptionLabels Each choice as the caller reads it: its name in the caller's UI language when an
+	// administrator gave one. A choice not named here reads as itself. Filters and groups
+	// still carry the choice as `options` lists it.
+	OptionLabels *map[string]string `json:"option_labels,omitempty"`
 
 	// Options The choices a picklist offers today, empty for a boolean. A record may still hold a
 	// choice an administrator has since removed.
@@ -34785,6 +35480,12 @@ type ApproveRequest struct {
 	// Reason Why, in the approver's own words. Recorded with the decision, as a rejection's reason is.
 	Reason *string `json:"reason,omitempty"`
 }
+
+// AssemblyServedFrom How this request got its answer. `cache` is the reader's stored assembly, still
+// matching the record, read in well under a second. `generated` is an assembly
+// written for this request, which is where the model's seconds go. A refresh the AI
+// budget refused, answered with the stored assembly, is `cache`.
+type AssemblyServedFrom string
 
 // AssessNoticeSource defines model for AssessNoticeSource.
 type AssessNoticeSource struct {
@@ -35858,6 +36559,9 @@ type AttentionItem struct {
 	// DueHasTime On a task row: true when `due_at` names an agreed time of day, false when the task is due by that day. Absent on other rows.
 	DueHasTime *bool `json:"due_has_time,omitempty"`
 
+	// DueIntent A chosen local time in an IANA zone, resolved with current rules. A time in a gap moves forward; a repeated time takes its first occurrence.
+	DueIntent *IntentTime `json:"due_intent,omitempty"`
+
 	// HostUserId Whose calendar a meeting came off. Sent by `source: meeting` and
 	// `source: meeting_outcome`. It moves to the organizer, whichever calendar
 	// synced first, when the organizer is a colleague with exactly one bound seat
@@ -35997,6 +36701,9 @@ type AttentionItem struct {
 	// `complete` and `snooze` has to name the row those presses condition on, or two contacts
 	// acting on one task each overwrite the other and neither is told.
 	Version *RowVersion `json:"version,omitempty"`
+
+	// WebsiteInquiry Inquiry facts under the current task and source content permissions. Missing source facts remain unknown.
+	WebsiteInquiry *WebsiteInquiryWork `json:"website_inquiry,omitempty"`
 
 	// WithContact Who a meeting is with: the first attendee by name who holds no seat here, is not
 	// employed by the installation's own company, and is a contact this caller may
@@ -36565,6 +37272,10 @@ type Automation struct {
 	CreatedAt time.Time          `json:"created_at"`
 	Id        openapi_types.UUID `json:"id"`
 
+	// InitialRunPreviewRequired Enabling this scheduled rule or changing its active population requires an initial-run preview and explicit confirmation.
+	InitialRunPreviewRequired *bool                 `json:"initial_run_preview_required,omitempty"`
+	InquiryPolicy             *WebsiteInquiryPolicy `json:"inquiry_policy,omitempty"`
+
 	// Key The catalog type this instance is built from.
 	Key string `json:"key"`
 
@@ -36587,9 +37298,15 @@ type Automation struct {
 
 	// SetterPassportId The passport of the agent that turned this rule on, which the rule stops with. Null for a rule a user runs. It names the credential and grants nothing: `captured_by` shows the same id on what an agent writes.
 	SetterPassportId *openapi_types.UUID `json:"setter_passport_id,omitempty"`
-	Status           AutomationStatus    `json:"status"`
-	UpdatedAt        *time.Time          `json:"updated_at,omitempty"`
-	Version          *int                `json:"version,omitempty"`
+
+	// SetupReason A verified reason the configuration needs work. Record-specific refusals stay on runs.
+	SetupReason *AutomationSetupReason `json:"setup_reason,omitempty"`
+
+	// SetupState Current configuration state, separate from the result of any run.
+	SetupState *AutomationSetupState `json:"setup_state,omitempty"`
+	Status     AutomationStatus      `json:"status"`
+	UpdatedAt  *time.Time            `json:"updated_at,omitempty"`
+	Version    *int                  `json:"version,omitempty"`
 }
 
 // AutomationLastRunOutcome How the run last_run_at dates ended, in the run history's outcome vocabulary. Only GET /automations carries it, and only beside last_run_at.
@@ -36597,6 +37314,12 @@ type AutomationLastRunOutcome string
 
 // AutomationPausedReason Why a rule paused itself: the list it watches or adds to was archived, its filter stopped working, its owner can no longer find it, one check moved more than 100 records, or the agent that set the rule up no longer has a live passport or connection, whether revoked or expired. Null for a rule running or paused by hand. Resuming clears it, and a user resuming or editing a rule makes it their own.
 type AutomationPausedReason string
+
+// AutomationSetupReason A verified reason the configuration needs work. Record-specific refusals stay on runs.
+type AutomationSetupReason string
+
+// AutomationSetupState Current configuration state, separate from the result of any run.
+type AutomationSetupState string
 
 // AutomationStatus defines model for Automation.Status.
 type AutomationStatus string
@@ -36606,6 +37329,9 @@ type AutomationCatalogEntry struct {
 	// Action What it does (e.g. create_task or send_email).
 	Action      string  `json:"action"`
 	Description *string `json:"description,omitempty"`
+
+	// Group The library section for this template.
+	Group *AutomationCatalogEntryGroup `json:"group,omitempty"`
 
 	// Key Stable type key, e.g. stalled_deal_nudge.
 	Key  string `json:"key"`
@@ -36621,16 +37347,31 @@ type AutomationCatalogEntry struct {
 	Trigger string `json:"trigger"`
 }
 
+// AutomationCatalogEntryGroup The library section for this template.
+type AutomationCatalogEntryGroup string
+
 // AutomationCatalogEntryTier confirmation_required actions stage to /approvals at run time.
 type AutomationCatalogEntryTier string
 
-// AutomationPreview Read-only blast-radius result for the designer's dry-run. No side effects.
+// AutomationPreview Read-only preview. Event rules act from activation onward and do not estimate past events from current records.
 type AutomationPreview struct {
 	// ExcludedByPermission Matches the caller cannot see (masked, not silently dropped) — honest count, never widens scope.
 	ExcludedByPermission *int `json:"excluded_by_permission,omitempty"`
 
-	// MatchesNow Records matching the trigger+filter right now, bounded by the caller's Passport visibility.
+	// HistoricalPreviewAvailable False when historical execution cannot be reconstructed. Never infer historical events from record creation dates.
+	HistoricalPreviewAvailable *bool `json:"historical_preview_available,omitempty"`
+
+	// MatchesNow Current population matches within the caller's visibility. Ignore this compatibility field when matches_now_available is false.
 	MatchesNow int `json:"matches_now"`
+
+	// MatchesNowAvailable False for event previews. In that case matches_now is a compatibility placeholder, not a count of eligible work.
+	MatchesNowAvailable *bool `json:"matches_now_available,omitempty"`
+
+	// PreviewKind Whether the preview describes a current record population or a future event.
+	PreviewKind *AutomationPreviewKind `json:"preview_kind,omitempty"`
+
+	// Renewal Current visible renewal dates. Missing dates never count as due renewals.
+	Renewal *AutomationRenewalPreview `json:"renewal,omitempty"`
 
 	// Sample Up to a few matching record ids for the "affects these" preview (visibility-bounded).
 	Sample *[]openapi_types.UUID `json:"sample,omitempty"`
@@ -36641,6 +37382,9 @@ type AutomationPreview struct {
 	// WouldHaveFired Estimated firings over the trailing window (null when not computable).
 	WouldHaveFired *int `json:"would_have_fired,omitempty"`
 }
+
+// AutomationPreviewKind Whether the preview describes a current record population or a future event.
+type AutomationPreviewKind string
 
 // AutomationPreviewRequest Optional body for POST /automations/{id}/preview. Omit to preview the stored automation as-is; supply
 // an inline draft recipe (key + params) to preview a not-yet-created or edited automation from the
@@ -36654,6 +37398,20 @@ type AutomationPreviewRequest struct {
 
 	// WindowDays Trailing window for the would-have-fired estimate (default 30).
 	WindowDays *int `json:"window_days,omitempty" maximum:"90" minimum:"1"`
+}
+
+// AutomationRenewalPreview Current visible renewal dates. Missing dates never count as due renewals.
+type AutomationRenewalPreview struct {
+	MissingDates int                              `json:"missing_dates" minimum:"0"`
+	RecursYearly bool                             `json:"recurs_yearly"`
+	Samples      []AutomationRenewalPreviewSample `json:"samples"`
+}
+
+// AutomationRenewalPreviewSample defines model for AutomationRenewalPreviewSample.
+type AutomationRenewalPreviewSample struct {
+	EntityId       openapi_types.UUID `json:"entity_id"`
+	OccurrenceDate openapi_types.Date `json:"occurrence_date"`
+	ReminderDate   openapi_types.Date `json:"reminder_date"`
 }
 
 // AutomationRetryResult What a retry did, or why it did nothing. `refusal` is present exactly when `retried`
@@ -37152,6 +37910,9 @@ type BriefSnoozeRequest struct {
 	// "after the meeting" names nothing without saying which meeting.
 	ReopenRef *openapi_types.UUID `json:"reopen_ref,omitempty"`
 
+	// SnoozedIntent A chosen local time in an IANA zone, resolved with current rules. A time in a gap moves forward; a repeated time takes its first occurrence.
+	SnoozedIntent *IntentTime `json:"snoozed_intent,omitempty"`
+
 	// SnoozedUntil When the item re-surfaces. REQUIRED for `time` and refused for the other two — a
 	// snooze waiting on a reply lifts when the reply arrives, not on a date. Must be in
 	// the future.
@@ -37452,6 +38213,9 @@ type BulkTask struct {
 
 	// DueAt When it is due. Optional.
 	DueAt *time.Time `json:"due_at,omitempty"`
+
+	// DueIntent A chosen local time in an IANA zone, resolved with current rules. A time in a gap moves forward; a repeated time takes its first occurrence.
+	DueIntent *IntentTime `json:"due_intent,omitempty"`
 
 	// Subject What has to be done, as one line.
 	Subject string `json:"subject"`
@@ -39555,7 +40319,10 @@ type Company360NextStep struct {
 	DueAt *time.Time `json:"due_at,omitempty"`
 
 	// DueHasTime True when `due_at` names an agreed time of day, as on the task itself. The snooze beside this row keeps that time.
-	DueHasTime      *bool               `json:"due_has_time,omitempty"`
+	DueHasTime *bool `json:"due_has_time,omitempty"`
+
+	// DueIntent A chosen local time in an IANA zone, resolved with current rules. A time in a gap moves forward; a repeated time takes its first occurrence.
+	DueIntent       *IntentTime         `json:"due_intent,omitempty"`
 	LinkedContactId *openapi_types.UUID `json:"linked_contact_id,omitempty"`
 	LinkedDealId    *openapi_types.UUID `json:"linked_deal_id,omitempty"`
 
@@ -40417,6 +41184,12 @@ type CompanyDossier struct {
 	// silence reads as a finding of nothing, which is a different claim. The compact
 	// card renders `summary` only.
 	Sections []CompanyDossierSection `json:"sections"`
+
+	// ServedFrom How this request got its answer. `cache` is the reader's stored assembly, still
+	// matching the record, read in well under a second. `generated` is an assembly
+	// written for this request, which is where the model's seconds go. A refresh the AI
+	// budget refused, answered with the stored assembly, is `cache`.
+	ServedFrom *AssemblyServedFrom `json:"served_from,omitempty"`
 }
 
 // CompanyDossierSection defines model for CompanyDossierSection.
@@ -40577,6 +41350,9 @@ type CompanyFinanceSummary struct {
 	// A different question from `last_synced_at`, which answers when we last looked. A card that has only the second can say the figures are fresh and not what period they are about — and a client rendering a window label must build it from these bounds rather than from a fixed string, or the heading and the numbers end up describing different months (FIN-AC-3).
 	CoverageStart *openapi_types.Date `json:"coverage_start,omitempty"`
 
+	// DunningLevel The highest number of payment reminders the accounting source says it has sent for any overdue invoice. Absent when nothing is overdue, or when the source states no dunning level for any of them.
+	DunningLevel *int `json:"dunning_level,omitempty" maximum:"99" minimum:"0"`
+
 	// InvoiceDocuments True when the connected source serves each invoice's own document, which `downloadFinanceInvoicePdf` opens. False or absent means the card offers none.
 	InvoiceDocuments *bool `json:"invoice_documents,omitempty"`
 
@@ -40594,6 +41370,9 @@ type CompanyFinanceSummary struct {
 	// Scoped to the CURRENT connection — what the mirror holds, not what the customer has ever been billed — so re-connecting a source restates it. Absent under the same FIN-AC-6 refusal: one invoice without a conversion rate withholds the whole total rather than reporting a partial sum as if it were complete.
 	NetInvoicedLifetime *Money `json:"net_invoiced_lifetime,omitempty"`
 
+	// OldestOverdueDays Days since the due date of the longest-outstanding overdue invoice. Absent when nothing is overdue.
+	OldestOverdueDays *int `json:"oldest_overdue_days,omitempty" minimum:"0"`
+
 	// OpenBalance What is still open across unpaid invoices (FIN-FORM-2).
 	OpenBalance *Money `json:"open_balance,omitempty"`
 
@@ -40601,6 +41380,9 @@ type CompanyFinanceSummary struct {
 	// ABSENT on an account whose relationship has ended (`lifecycle: former_customer`), and a client should expect the null. An overdue figure reads as an outstanding collection, and a rep acting on the most natural reading makes a collection call about a relationship that finished — a customer-facing mistake rather than a display nit. The figure it would carry is one nobody can state a window for, which is the same "cannot be honestly computed" this schema already answers with absence rather than zero.
 	// `open_balance` is unaffected: what is still open is a fact about the ledger whatever the relationship is now, and it carries no call to action.
 	Overdue *Money `json:"overdue,omitempty"`
+
+	// OverdueCount How many invoices make up `overdue`. Present exactly when `overdue` is, so zero means nothing is past due.
+	OverdueCount *int `json:"overdue_count,omitempty" minimum:"0"`
 
 	// PaymentBehaviour Days-late per settled invoice, oldest first, for the sparkline. Never padded with zeroes, because a zero here reads as "paid exactly on time".
 	// Absent under the same sample floor the median observes: a shape drawn from one invoice would state a payment habit the number beside it refuses to.
@@ -40919,6 +41701,12 @@ type CompanyGrowthFit struct {
 
 	// RecommendedAngle The single suggested approach. A recommendation, and labelled as one.
 	RecommendedAngle *CompanyBriefSentence `json:"recommended_angle,omitempty"`
+
+	// ServedFrom How this request got its answer. `cache` is the reader's stored assembly, still
+	// matching the record, read in well under a second. `generated` is an assembly
+	// written for this request, which is where the model's seconds go. A refresh the AI
+	// budget refused, answered with the stored assembly, is `cache`.
+	ServedFrom *AssemblyServedFrom `json:"served_from,omitempty"`
 
 	// SubScores The band, taken apart (DOSS-AC-17..20, ADR-0095). Four named dimensions over the
 	// same evidence the band is assessed from, each with a 0-100 score and the reason for
@@ -41930,22 +42718,7 @@ type ConnectConnectorRequest struct {
 	AlsoConnect *ConnectConnectorRequestAlsoConnect `json:"also_connect,omitempty"`
 
 	// Imap Direct IMAP credentials (the `imap` provider only).
-	Imap *struct {
-		Host string `json:"host"`
-
-		// Mailbox The mailbox to read.
-		Mailbox *string `json:"mailbox,omitempty"`
-
-		// MaxMessages Upper bound on messages pulled per sync, and on the bounded recent window a first sync re-anchors with.
-		MaxMessages *int `json:"max_messages,omitempty" maximum:"200" minimum:"1"`
-		Port        *int `json:"port,omitempty" maximum:"65535" minimum:"1"`
-
-		// Secret Password or app-specific password. Sealed to the vault; never returned.
-		Secret *string `json:"secret,omitempty"`
-
-		// Username The mailbox login — an email address on most servers.
-		Username string `json:"username"`
-	} `json:"imap,omitempty"`
+	Imap *ImapCredentials `json:"imap,omitempty"`
 
 	// ImportWindow The past-email window to import once the mail grant is stored. The callback takes
 	// the estimate then, and starts the import by itself only when that estimate is small
@@ -42029,6 +42802,36 @@ type ConnectProviderRequest struct {
 	// Configuration Omit for automatic-on-create + Full enrichment defaults.
 	Configuration *ProviderConfiguration `json:"configuration,omitempty"`
 }
+
+// ConnectSharedMailboxRequest The mailbox, its readers, and the provider's credentials. Each provider carries its own
+// credentials member, named like the provider.
+type ConnectSharedMailboxRequest struct {
+	// Address The mailbox address. Reconnecting the same address reuses its mailbox.
+	Address openapi_types.Email `json:"address"`
+
+	// BackupOwnerId The backup owner. It must be an active member of the reader team who can hold work (else `422` `backup_owner_not_in_reader_team`). Absent names none on a new mailbox and keeps a reconnected one's.
+	BackupOwnerId *openapi_types.UUID `json:"backup_owner_id,omitempty"`
+
+	// Gmail A Google Workspace service account the admin delegated `gmail.readonly` to.
+	Gmail *SharedGmailCredentials `json:"gmail,omitempty"`
+
+	// Graph The customer's own Entra app registration, which reads the mailbox with application permission.
+	Graph *SharedGraphCredentials `json:"graph,omitempty"`
+
+	// Imap Direct IMAP credentials (the `imap` provider only).
+	Imap *ImapCredentials `json:"imap,omitempty"`
+
+	// MailVisibility Absent starts a new mailbox `held` and keeps a reconnected one as it is. `classified` is refused with `422`.
+	MailVisibility *ConnectSharedMailboxRequestMailVisibility `json:"mail_visibility,omitempty"`
+	Provider       ConnectSharedMailboxRequestProvider        `json:"provider"`
+	ReaderTeamId   openapi_types.UUID                         `json:"reader_team_id"`
+}
+
+// ConnectSharedMailboxRequestMailVisibility Absent starts a new mailbox `held` and keeps a reconnected one as it is. `classified` is refused with `422`.
+type ConnectSharedMailboxRequestMailVisibility string
+
+// ConnectSharedMailboxRequestProvider defines model for ConnectSharedMailboxRequest.Provider.
+type ConnectSharedMailboxRequestProvider string
 
 // ConnectorApp defines model for ConnectorApp.
 type ConnectorApp struct {
@@ -44250,7 +45053,12 @@ type CreateAcquisitionSourceRequest struct {
 
 // CreateActivityRequest The workspace's active activity custom fields travel as extra top-level `cf_` keys. A key that is not `cf_`-prefixed, names no active activity field, or carries a value of the wrong shape for its field returns `422`. A value for a field that does not apply to the activity's kind returns `422 field_not_valid_for_kind`.
 type CreateActivityRequest struct {
-	AssigneeId *openapi_types.UUID `json:"assignee_id,omitempty"`
+	// AiAssisted True when an AI model rewrote the subject or body the caller sends, as Polish wording (`POST /rewrites`) does. The activity then reads `ai_assisted`. Needs `ai_assisted_on`. Only a human sets it: an agent or a connector is refused with 422 on `ai_assisted`. Absent means false.
+	AiAssisted *bool `json:"ai_assisted,omitempty"`
+
+	// AiAssistedOn The `about` record the words were polished on. Required with `ai_assisted: true`. It must be one of `links` or the record `deal_filing` names as the form's start, or the create is refused with 422 on `ai_assisted_on`.
+	AiAssistedOn *ActivityLink       `json:"ai_assisted_on,omitempty"`
+	AssigneeId   *openapi_types.UUID `json:"assignee_id,omitempty"`
 
 	// AttendeeUserIds Meeting or call only: the colleagues who attended besides the caller. Each one is recorded as a participant, so the meeting counts toward their relationship with every linked contact, the same as a meeting captured from a calendar. Any other kind returns `422 code: field_not_valid_for_kind`. An id that is not an active member of this workspace returns `422 code: not_a_colleague`, and more than 25 ids return `422 code: too_many_attendees`.
 	AttendeeUserIds *[]openapi_types.UUID `json:"attendee_user_ids,omitempty"`
@@ -44269,7 +45077,10 @@ type CreateActivityRequest struct {
 	DueAt           *time.Time                      `json:"due_at,omitempty"`
 
 	// DueHasTime Task only. True: `due_at` is a time of day; `remind_at` defaults to it.
-	DueHasTime      *bool                 `json:"due_has_time,omitempty"`
+	DueHasTime *bool `json:"due_has_time,omitempty"`
+
+	// DueIntent A chosen local time in an IANA zone, resolved with current rules. A time in a gap moves forward; a repeated time takes its first occurrence.
+	DueIntent       *IntentTime           `json:"due_intent,omitempty"`
 	DurationSeconds *int                  `json:"duration_seconds,omitempty"`
 	FollowUpTask    *ActivityFollowUpTask `json:"follow_up_task,omitempty"`
 
@@ -44291,6 +45102,9 @@ type CreateActivityRequest struct {
 		EntityType CreateActivityRequestLinksEntityType `json:"entity_type"`
 	} `json:"links,omitempty"`
 
+	// MeetingIntent A chosen local time in an IANA zone, resolved with current rules. A time in a gap moves forward; a repeated time takes its first occurrence.
+	MeetingIntent *IntentTime `json:"meeting_intent,omitempty"`
+
 	// MeetingStatus Meeting only. `held` records a report that the meeting took place, and `no_show` that the other side did not come. Either ends `awaiting_outcome`. `booked` is a meeting still to come, and `canceled` one called off. Leave it out when nobody said whether the meeting happened: a start in the past is not attendance, so such a meeting still asks for its outcome.
 	MeetingStatus *CreateActivityRequestMeetingStatus `json:"meeting_status,omitempty"`
 	OccurredAt    *time.Time                          `json:"occurred_at,omitempty"`
@@ -44311,8 +45125,14 @@ type CreateActivityRequest struct {
 	// Recommendation The rule and current facts behind a suggested action. The server checks these facts again when accepting the suggestion; the receipt grants no authority. Replaying the same accepted observation returns its original task.
 	Recommendation *RecommendationReceipt `json:"recommendation,omitempty"`
 
+	// RecordsMeetingId A meeting transcript only (`source_system: transcript`), without `source_activity_id`. The open meeting this transcript records. In the same transaction the meeting is marked held and gains the transcript's deal, project and lead links for each kind it has none of. The transcript takes the meeting's time and its deal, project and lead links, keeps no outcome of its own, and names the meeting in `source_activity_id`, so held counts count the meeting once. A meeting that is archived, missing or hidden from the caller answers 404. A live meeting that no longer owes its outcome is refused with 422 on `records_meeting_id`. A meeting the caller may read but not change answers 403. Its subject and notes stay as they are.
+	RecordsMeetingId *openapi_types.UUID `json:"records_meeting_id,omitempty"`
+
 	// RemindAt Task only. When the reminder comes due. From that instant, for up to 30 days, the task leads its assignee's own Worklist with the reason `reminder_due`, and `GET /v1/activities?reminder_due=true` lists it for them. Nobody else is reminded, and a task with no assignee reminds nobody. Moving `due_at` on a task whose reminder has passed clears this field, unless the same patch names it.
 	RemindAt *time.Time `json:"remind_at,omitempty"`
+
+	// RemindIntent A chosen local time in an IANA zone, resolved with current rules. A time in a gap moves forward; a repeated time takes its first occurrence.
+	RemindIntent *IntentTime `json:"remind_intent,omitempty"`
 
 	// RequestActivityId Accept this inbound request for the authenticated human, with activity read and create authority. Task only; agents cannot accept and assignee_id must name the caller when provided. The server verifies source access and copies its links instead of caller-supplied links. Subject and body are honored on creation. Retries return the same personal reminder without changing it. Explicit acceptance can restore an archived unfinished reminder with update authority. Completion settles the source request; automatic reconciliation never restores a reminder.
 	RequestActivityId *openapi_types.UUID `json:"request_activity_id,omitempty"`
@@ -44324,7 +45144,7 @@ type CreateActivityRequest struct {
 	SenderContactId *openapi_types.UUID `json:"sender_contact_id,omitempty"`
 	Source          string              `json:"source"`
 
-	// SourceActivityId For a task, the conversation or note it follows from. The caller and assignee need access to that source. The task preserves its audience and inherits its visible links when no links are supplied. For a logged note, call or meeting, the task whose outcome is being recorded. This reference alone does not complete that task or accept a request.
+	// SourceActivityId For a task, the conversation or note it follows from. The caller and assignee need access to that source. The task preserves its audience and inherits its visible links when no links are supplied. For a logged note, call or meeting, the task whose outcome is being recorded; a meeting transcript naming one needs `meeting_status`. This reference alone does not complete that task or accept a request.
 	SourceActivityId *openapi_types.UUID `json:"source_activity_id,omitempty"`
 
 	// SourceAuthorId Who wrote this record in the system it came from, when the author holds a seat here. Written only by a declared importer (a signed-in human holding import_run:create), only beside a source_system; either author field or both may be sent, and the seat's current name wins on read. captured_by still names the caller.
@@ -44417,7 +45237,7 @@ type CreateCompanyRequest struct {
 	// Address Structured postal address.
 	Address *Address `json:"address,omitempty"`
 
-	// Description One human-written line saying what the company does.
+	// Description A description of what the company does.
 	Description *string               `json:"description,omitempty"`
 	DisplayName string                `json:"display_name"`
 	Domains     *[]CompanyDomainInput `json:"domains,omitempty"`
@@ -45339,11 +46159,17 @@ type CreateStageExitCriterionRequest struct {
 
 // CreateStageRequest defines model for CreateStageRequest.
 type CreateStageRequest struct {
-	Name           string                      `json:"name"`
-	PipelineId     openapi_types.UUID          `json:"pipeline_id"`
-	Position       int                         `json:"position"`
-	Semantic       *CreateStageRequestSemantic `json:"semantic,omitempty"`
-	WinProbability *int                        `json:"win_probability,omitempty" maximum:"100" minimum:"0"`
+	Name string `json:"name"`
+
+	// NameTranslations An admin-named label in further UI languages, keyed by language. A reader whose UI
+	// language has an entry sees it; any other reader sees the stored label. On a write the
+	// map replaces the stored one, an empty text drops its language, and a language outside
+	// en, de and vi is 422 `invalid_translation`.
+	NameTranslations *LabelTranslations          `json:"name_translations,omitempty"`
+	PipelineId       openapi_types.UUID          `json:"pipeline_id"`
+	Position         int                         `json:"position"`
+	Semantic         *CreateStageRequestSemantic `json:"semantic,omitempty"`
+	WinProbability   *int                        `json:"win_probability,omitempty" maximum:"100" minimum:"0"`
 }
 
 // CreateStageRequestSemantic defines model for CreateStageRequest.Semantic.
@@ -45372,6 +46198,9 @@ type CreateTaskRequest struct {
 
 	// DueHasTime True when `due_at` names an agreed time of day, such as a callback hour. Left out or false, the task is due by the end of the day `due_at` falls on, and only the date is shown. Sent only together with `due_at`. True sets the reminder to `due_at` when the request names no `remind_at`.
 	DueHasTime *bool `json:"due_has_time,omitempty"`
+
+	// DueIntent A chosen local time in an IANA zone, resolved with current rules. A time in a gap moves forward; a repeated time takes its first occurrence.
+	DueIntent *IntentTime `json:"due_intent,omitempty"`
 
 	// Links The records the task is about. With a source activity, omitted or empty links inherit its visible links. Otherwise the task appears on no timeline.
 	Links *[]struct {
@@ -45505,8 +46334,20 @@ type CustomField struct {
 	// Label Display label; a rename changes it, and never the slug or column_name.
 	Label string `json:"label"`
 
+	// LabelTranslations An admin-named label in further UI languages, keyed by language. A reader whose UI
+	// language has an entry sees it; any other reader sees the stored label. On a write the
+	// map replaces the stored one, an empty text drops its language, and a language outside
+	// en, de and vi is 422 `invalid_translation`.
+	LabelTranslations *LabelTranslations `json:"label_translations,omitempty"`
+
 	// Object The existing core object this field is added to.
 	Object CustomFieldObject `json:"object"`
+
+	// OptionTranslations Each picklist option's name in further UI languages, keyed by the option as stored. The
+	// stored option stays the value written on records; only its display changes. On a write
+	// the map replaces the stored one, and an option the field does not offer is 422
+	// `invalid_translation`.
+	OptionTranslations *OptionTranslations `json:"option_translations,omitempty"`
 
 	// Options Allowed picklist values; present (non-empty) when `type=picklist`, null otherwise.
 	Options *[]string `json:"options,omitempty"`
@@ -47662,6 +48503,11 @@ type EmailAccess struct {
 	// the content and change it — a reader with no standing to edit the set has no
 	// standing to enumerate it either.
 	SelectedMembers *[]AudienceMember `json:"selected_members,omitempty"`
+
+	// SharedMailboxes The shared mailboxes that brought this message in, each with the team that reads
+	// it. Absent while the content is withheld, and empty for mail only personal
+	// mailboxes captured.
+	SharedMailboxes *[]EmailSharedMailbox `json:"shared_mailboxes,omitempty"`
 }
 
 // EmailAccessChangeMode Which write this caller's Access control performs. `thread_contribution` changes
@@ -47967,6 +48813,13 @@ type EmailPresentationLanguage string
 // correspondence. A scheduled send and a draft awaiting approval will borrow the
 // frame when the reads that serve them land, and they are not listed until then.
 type EmailPresentationLifecycle string
+
+// EmailSharedMailbox A shared mailbox that captured a message, and the team that reads its mail.
+type EmailSharedMailbox struct {
+	Address        string             `json:"address"`
+	ReaderTeamId   openapi_types.UUID `json:"reader_team_id"`
+	ReaderTeamName string             `json:"reader_team_name"`
+}
 
 // EmailSignOff defines model for EmailSignOff.
 type EmailSignOff struct {
@@ -49557,6 +50410,22 @@ type FxRateListResponse struct {
 	Data         []FxRate `json:"data"`
 }
 
+// GmailSignatureImport defines model for GmailSignatureImport.
+type GmailSignatureImport struct {
+	// Address The send-as address the signature belongs to.
+	Address *string `json:"address,omitempty"`
+
+	// Html The signature as a saved personal signature keeps it.
+	Html  *string                   `json:"html,omitempty"`
+	State GmailSignatureImportState `json:"state"`
+
+	// Text The plain-text form of `html`.
+	Text *string `json:"text,omitempty"`
+}
+
+// GmailSignatureImportState defines model for GmailSignatureImport.State.
+type GmailSignatureImportState string
+
 // GrowthFitBand How well this company fits what we sell (DOSS-PARAM-8).
 //
 // `unknown` is the ABSTENTION, not a low score. It says the assembly did not have
@@ -50171,6 +51040,24 @@ type HomeRepairTaskBeforeVerdict string
 
 // HomeRepairTaskSource defines model for HomeRepairTask.Source.
 type HomeRepairTaskSource string
+
+// ImapCredentials Direct IMAP credentials (the `imap` provider only).
+type ImapCredentials struct {
+	Host string `json:"host"`
+
+	// Mailbox The mailbox to read.
+	Mailbox *string `json:"mailbox,omitempty"`
+
+	// MaxMessages Upper bound on messages pulled per sync, and on the bounded recent window a first sync re-anchors with.
+	MaxMessages *int `json:"max_messages,omitempty" maximum:"200" minimum:"1"`
+	Port        *int `json:"port,omitempty" maximum:"65535" minimum:"1"`
+
+	// Secret Password or app-specific password. Sealed to the vault; never returned.
+	Secret *string `json:"secret,omitempty"`
+
+	// Username The mailbox login — an email address on most servers.
+	Username string `json:"username"`
+}
 
 // ImportColumn One column of the uploaded file, described well enough to map it without opening the file elsewhere.
 type ImportColumn struct {
@@ -51554,6 +52441,15 @@ type IntegrationsSettings struct {
 	Locks *SettingLocks `json:"locks,omitempty"`
 }
 
+// IntentTime A chosen local time in an IANA zone, resolved with current rules. A time in a gap moves forward; a repeated time takes its first occurrence.
+type IntentTime struct {
+	// Timezone IANA zone name.
+	Timezone string `json:"timezone"`
+
+	// WallClock Local date and time, no offset.
+	WallClock string `json:"wall_clock"`
+}
+
 // InternalMailHistoryPreview A separate internal-mail import is allowed only within this administrator-authorized scope and only after the mailbox owner explicitly selects it when starting.
 type InternalMailHistoryPreview struct {
 	// Folders Selected provider folder names. Empty means the whole connection, subject to ordinary exclusions.
@@ -51569,7 +52465,7 @@ type InternalMailSelection struct {
 	// Containers Exact provider-qualified folder identifiers. An empty list selects the whole connection, subject to ordinary exclusions.
 	Containers []string `json:"containers" unique:"items"`
 
-	// HistorySince Optional administrator authorization for a separate history import, starting at midnight UTC on this day. Omission keeps future capture only. The mailbox owner must still preview and explicitly start the import.
+	// HistorySince Optional administrator authorization for a separate history import, starting at midnight UTC on this day. Omission keeps future capture only. The mailbox owner must still preview and explicitly start the import, so a shared mailbox, which has no owner, refuses it.
 	HistorySince *openapi_types.Date `json:"history_since,omitempty"`
 }
 
@@ -51589,8 +52485,10 @@ type InternalMailSource struct {
 	EnrolledBy   string              `json:"enrolled_by"`
 	Generation   int                 `json:"generation"`
 	HistorySince *openapi_types.Date `json:"history_since,omitempty"`
-	OwnerUserId  openapi_types.UUID  `json:"owner_user_id"`
-	Provider     string              `json:"provider"`
+
+	// OwnerUserId Null for a shared mailbox, which no seat owns. Its connection and generation name it.
+	OwnerUserId *openapi_types.UUID `json:"owner_user_id"`
+	Provider    string              `json:"provider"`
 }
 
 // InternalMailSourceOption defines model for InternalMailSourceOption.
@@ -51599,8 +52497,10 @@ type InternalMailSourceOption struct {
 	ConnectionId openapi_types.UUID `json:"connection_id"`
 	Generation   int                `json:"generation"`
 	OwnerName    string             `json:"owner_name"`
-	OwnerUserId  openapi_types.UUID `json:"owner_user_id"`
-	Provider     string             `json:"provider"`
+
+	// OwnerUserId Null for a shared mailbox. Its account_label is its address, and owner_name is empty.
+	OwnerUserId *openapi_types.UUID `json:"owner_user_id"`
+	Provider    string              `json:"provider"`
 }
 
 // IntroFallbackPolicy What the requester wants to happen if the colleague says no. Stored rather than held in the drawer, so the answer survives the tab that gave it.
@@ -52350,6 +53250,16 @@ type KnowledgeDocumentList struct {
 //   - `complete`: every live passage carries a vector under the model bound now.
 type KnowledgeEmbedState string
 
+// LabelTranslations An admin-named label in further UI languages, keyed by language. A reader whose UI
+// language has an entry sees it; any other reader sees the stored label. On a write the
+// map replaces the stored one, an empty text drops its language, and a language outside
+// en, de and vi is 422 `invalid_translation`.
+type LabelTranslations struct {
+	De *string `json:"de,omitempty"`
+	En *string `json:"en,omitempty"`
+	Vi *string `json:"vi,omitempty"`
+}
+
 // LastExchange The newest call, meeting, email or message on the record. Absent when there is none.
 type LastExchange struct {
 	// Activity A polymorphic timeline item. Mirrors the `activity` table + `activity_link`.
@@ -52780,6 +53690,25 @@ type LeadQualifiedField struct {
 	Evidence []AgentExcerpt `json:"evidence"`
 	Value    string         `json:"value"`
 }
+
+// LeadRoutingConfig defines model for LeadRoutingConfig.
+type LeadRoutingConfig struct {
+	CapPerOwner *int `json:"cap_per_owner,omitempty" minimum:"1"`
+
+	// Owners Selected colleagues in routing order.
+	Owners *[]openapi_types.UUID `json:"owners,omitempty" unique:"items"`
+	Rules  *[]LeadRoutingRule    `json:"rules,omitempty"`
+}
+
+// LeadRoutingRule defines model for LeadRoutingRule.
+type LeadRoutingRule struct {
+	Equals  string               `json:"equals"`
+	Field   LeadRoutingRuleField `json:"field"`
+	OwnerId openapi_types.UUID   `json:"owner_id"`
+}
+
+// LeadRoutingRuleField defines model for LeadRoutingRule.Field.
+type LeadRoutingRuleField string
 
 // LeadScoreEntry One point in the retained series — what the score was, and why.
 type LeadScoreEntry struct {
@@ -53311,6 +54240,18 @@ type LicenseEntitlement struct {
 	// State Whether a license was verified, none was configured, or one was refused. A client
 	// that cannot read a value it recognizes MUST NOT assume entitlement.
 	State LicenseEntitlementState `json:"state"`
+
+	// Trial The free period of a production installation that has no license. Present only while
+	// `state` is `absent` on a production installation that has been set up; a development or
+	// test installation runs unlicensed with no trial.
+	//
+	// The trial starts when the installation's oldest workspace was created, archived ones
+	// included, and lasts 14 days, with no grace period. Once `ended` is true, and until a
+	// license is configured, every agent tool call is refused with `trial_ended`, and so is
+	// every HTTP change except these: the license routes, `POST /v1/exports`, the data-subject
+	// request routes, and a seat's own credential routes. Background jobs wait instead of
+	// running; they do not fail.
+	Trial *LicenseTrial `json:"trial,omitempty"`
 }
 
 // LicenseEntitlementState Whether a license was verified, none was configured, or one was refused. A client
@@ -53363,6 +54304,27 @@ type LicenseHolder struct {
 	// Subject The operator-chosen handle the license was issued against, for example
 	// `acme-prod`. It tells two installations of one customer apart.
 	Subject string `json:"subject"`
+}
+
+// LicenseTrial The free period of a production installation that has no license. Present only while
+// `state` is `absent` on a production installation that has been set up; a development or
+// test installation runs unlicensed with no trial.
+//
+// The trial starts when the installation's oldest workspace was created, archived ones
+// included, and lasts 14 days, with no grace period. Once `ended` is true, and until a
+// license is configured, every agent tool call is refused with `trial_ended`, and so is
+// every HTTP change except these: the license routes, `POST /v1/exports`, the data-subject
+// request routes, and a seat's own credential routes. Background jobs wait instead of
+// running; they do not fail.
+type LicenseTrial struct {
+	// Ended Whether `ends_at` has passed, as the server decides it, so a client with a wrong clock shows the state the installation acts on.
+	Ended bool `json:"ended"`
+
+	// EndsAt The first instant the trial no longer covers.
+	EndsAt time.Time `json:"ends_at"`
+
+	// StartedAt When the installation's workspace was created.
+	StartedAt time.Time `json:"started_at"`
 }
 
 // LifecyclePreviewEvidence Current readable source and scope supporting a company lifecycle review.
@@ -54180,7 +55142,13 @@ type MagicReceipt struct {
 	// AsOf The instant this read was taken.
 	AsOf             time.Time   `json:"as_of"`
 	CouldNotComplete []MagicLine `json:"could_not_complete"`
-	Done             []MagicLine `json:"done"`
+
+	// CutAtLimit The lanes read to `limit` that may hold more than this page draws. `done` is
+	// also named when its count is a floor (`done_is_floor`). `watching` is never
+	// cut, because `limit` does not bound it. A client says "at least" for a named
+	// lane, never "all". Empty when every lane is whole; absent on older responses.
+	CutAtLimit *[]MagicReceiptCutAtLimit `json:"cut_at_limit,omitempty"`
+	Done       []MagicLine               `json:"done"`
 
 	// DoneIsFloor The done lane's second source, the system's decisions, was read to its bound and still had more, so the lane's total is a floor. Absent on older responses.
 	DoneIsFloor *bool       `json:"done_is_floor,omitempty"`
@@ -54222,6 +55190,9 @@ type MagicReceipt struct {
 	// `failing_since` where the condition has a start.
 	Watching []MagicLine `json:"watching"`
 }
+
+// MagicReceiptCutAtLimit defines model for MagicReceipt.CutAtLimit.
+type MagicReceiptCutAtLimit string
 
 // MagicSentence What happened, as a key and the values to fill it with.
 //
@@ -54348,6 +55319,9 @@ type MailDraft struct {
 	// draft schedules nothing. Absent when none was picked.
 	ScheduledAt *time.Time `json:"scheduled_at,omitempty"`
 
+	// ScheduledIntent A chosen local time in an IANA zone, resolved with current rules. A time in a gap moves forward; a repeated time takes its first occurrence.
+	ScheduledIntent *IntentTime `json:"scheduled_intent,omitempty"`
+
 	// ScheduledTz The IANA zone `scheduled_at` was picked in. Present exactly when it is.
 	ScheduledTz *string   `json:"scheduled_tz,omitempty"`
 	Subject     string    `json:"subject"`
@@ -54425,6 +55399,9 @@ type MailDraftInput struct {
 	// ScheduledAt The moment the rep picked to send at, checked as the send checks it: with
 	// `scheduled_tz`, at most 90 days ahead. Saving schedules nothing. Omit both for none.
 	ScheduledAt *time.Time `json:"scheduled_at,omitempty"`
+
+	// ScheduledIntent A chosen local time in an IANA zone, resolved with current rules. A time in a gap moves forward; a repeated time takes its first occurrence.
+	ScheduledIntent *IntentTime `json:"scheduled_intent,omitempty"`
 
 	// ScheduledTz The IANA zone name `scheduled_at` was picked in. Required with `scheduled_at`.
 	ScheduledTz *string   `json:"scheduled_tz,omitempty"`
@@ -54570,6 +55547,9 @@ type MeResponse struct {
 	// `none`.
 	TeamWeek *TeamWeekReach       `json:"team_week,omitempty"`
 	Teams    []openapi_types.UUID `json:"teams"`
+
+	// TrialEnded True when this installation runs with no license and its 14-day trial is over. Every seat gets it, not only those who may read the license, because every seat is locked until a license is configured. `LicenseTrial` lists what the lock refuses. Absent while the installation is licensed or still on its trial.
+	TrialEnded *bool `json:"trial_ended,omitempty"`
 
 	// User A seat — human or first-party agent. Mirrors `app_user`.
 	User User `json:"user"`
@@ -54736,9 +55716,12 @@ type MeetingInvitation struct {
 	Provider       *MeetingInvitationProvider       `json:"provider,omitempty"`
 	ReminderStatus *MeetingInvitationReminderStatus `json:"reminder_status,omitempty"`
 	Start          time.Time                        `json:"start"`
-	Status         MeetingInvitationStatus          `json:"status"`
-	Subject        string                           `json:"subject"`
-	Version        int64                            `json:"version"`
+
+	// StartIntent A chosen local time in an IANA zone, resolved with current rules. A time in a gap moves forward; a repeated time takes its first occurrence.
+	StartIntent *IntentTime             `json:"start_intent,omitempty"`
+	Status      MeetingInvitationStatus `json:"status"`
+	Subject     string                  `json:"subject"`
+	Version     int64                   `json:"version"`
 
 	// VideoCall A video call link was requested for this meeting.
 	VideoCall *bool `json:"video_call,omitempty"`
@@ -54764,10 +55747,13 @@ type MeetingInvitationStatus string
 
 // MeetingInvitationChange defines model for MeetingInvitationChange.
 type MeetingInvitationChange struct {
-	Action  MeetingInvitationChangeAction `json:"action"`
-	End     *time.Time                    `json:"end,omitempty"`
-	Start   *time.Time                    `json:"start,omitempty"`
-	Version int64                         `json:"version"`
+	Action MeetingInvitationChangeAction `json:"action"`
+	End    *time.Time                    `json:"end,omitempty"`
+	Start  *time.Time                    `json:"start,omitempty"`
+
+	// StartIntent A chosen local time in an IANA zone, resolved with current rules. A time in a gap moves forward; a repeated time takes its first occurrence.
+	StartIntent *IntentTime `json:"start_intent,omitempty"`
+	Version     int64       `json:"version"`
 }
 
 // MeetingInvitationChangeAction defines model for MeetingInvitationChange.Action.
@@ -54790,7 +55776,10 @@ type MeetingInvitationRequest struct {
 	Links    *[]MeetingRecordLink `json:"links,omitempty"`
 	Location string               `json:"location"`
 	Start    time.Time            `json:"start"`
-	Subject  string               `json:"subject"`
+
+	// StartIntent A chosen local time in an IANA zone, resolved with current rules. A time in a gap moves forward; a repeated time takes its first occurrence.
+	StartIntent *IntentTime `json:"start_intent,omitempty"`
+	Subject     string      `json:"subject"`
 
 	// VideoCall Add a video call link from the connected calendar. Absent follows the host's profile setting.
 	VideoCall *bool `json:"video_call,omitempty"`
@@ -54925,7 +55914,7 @@ type MeetingPlanCoaching struct {
 	// ListenFor What a good version of this conversation sounds like.
 	ListenFor string `json:"listen_for"`
 
-	// Paths The ways this meeting can go, for a lead to rehearse against.
+	// Paths The plan's own branches as a lead reads them: each carries the label of a plan scenario and, in `play`, what the lead watches for and asks the rep, never the rep's play again. A branch the model wrote no coach line for is left out, so this can be empty.
 	Paths []MeetingPlanCoachingPath `json:"paths"`
 
 	// WatchFor The move that says it is going wrong.
@@ -55339,6 +56328,9 @@ type MorningBriefItem struct {
 
 	// ReopenRef The meeting being waited for; set exactly while reopen_on=meeting.
 	ReopenRef *openapi_types.UUID `json:"reopen_ref,omitempty"`
+
+	// SnoozedIntent A chosen local time in an IANA zone, resolved with current rules. A time in a gap moves forward; a repeated time takes its first occurrence.
+	SnoozedIntent *IntentTime `json:"snoozed_intent,omitempty"`
 
 	// SnoozedUntil When a snoozed item re-surfaces; set exactly while reopen_on=time, null otherwise — the other conditions lift on an event rather than a date.
 	SnoozedUntil *time.Time `json:"snoozed_until,omitempty"`
@@ -56571,6 +57563,12 @@ type OperationSettings struct {
 	WebhookRetryIntervalSeconds int `json:"webhook_retry_interval_seconds" maximum:"3600" minimum:"10"`
 }
 
+// OptionTranslations Each picklist option's name in further UI languages, keyed by the option as stored. The
+// stored option stays the value written on records; only its display changes. On a write
+// the map replaces the stored one, and an option the field does not offer is 422
+// `invalid_translation`.
+type OptionTranslations map[string]LabelTranslations
+
 // OutcomeReview defines model for OutcomeReview.
 type OutcomeReview struct {
 	// ActivityId The note this review was written as. It is where the prose, the author and the audience rules live.
@@ -56730,8 +57728,14 @@ type Partner struct {
 	MarginTier *PartnerMarginTier `json:"margin_tier,omitempty"`
 
 	// MaskedFields The fields of THIS row the caller's role withholds (a field mask — e.g. `margin_tier` for a seat that reads partners but not their commercial terms). A named field is null because it is withheld, not because it is empty; absent or empty means nothing is withheld.
-	MaskedFields  *[]string           `json:"masked_fields,omitempty"`
-	NextStep      *string             `json:"next_step,omitempty"`
+	MaskedFields *[]string `json:"masked_fields,omitempty"`
+
+	// NextStep Deprecated as stored text: a value sent here is written as a task on the partner's company, held by the caller (or the human an agent acts for), and is not stored on the partner. Text stored before stays readable.
+	// Deprecated: this property has been marked as deprecated upstream, but no `x-deprecated-reason` was set
+	NextStep *string `json:"next_step,omitempty"`
+
+	// NextStepDueAt Deprecated as stored text: the day the next step's task is due. Sent without `next_step` it is refused.
+	// Deprecated: this property has been marked as deprecated upstream, but no `x-deprecated-reason` was set
 	NextStepDueAt *openapi_types.Date `json:"next_step_due_at,omitempty"`
 
 	// PartnerFitOverrideReason Non-null ⇒ partner_fit_score is a human Commercial Judgement override and recompute is suppressed until cleared.
@@ -59495,12 +60499,24 @@ type RemoveMemberRequest struct {
 	ToUserId     *openapi_types.UUID `json:"to_user_id,omitempty"`
 }
 
-// RenameCustomFieldRequest Merge-PATCH of the settings a live field may change: `label`, `show_in_create`, `reportable` and `activity_kinds`. At least one is required. `column_name`, `object`, and `type` are absent from this request schema entirely (immutable, not just ignored if sent). `reportable` true on a field that is not a picklist or boolean is refused. `activity_kinds` replaces the kinds an activity field applies to, and an empty array means every kind again; it is refused on another object's field.
+// RenameCustomFieldRequest Merge-PATCH of the settings a live field may change: `label`, `label_translations`, `option_translations`, `show_in_create`, `reportable` and `activity_kinds`. At least one is required. `column_name`, `object`, and `type` are absent from this request schema entirely (immutable, not just ignored if sent). `reportable` true on a field that is not a picklist or boolean is refused. `activity_kinds` replaces the kinds an activity field applies to, and an empty array means every kind again; it is refused on another object's field.
 type RenameCustomFieldRequest struct {
 	ActivityKinds *[]RenameCustomFieldRequestActivityKinds `json:"activity_kinds,omitempty"`
 	Label         *string                                  `json:"label,omitempty"`
-	Reportable    *bool                                    `json:"reportable,omitempty"`
-	ShowInCreate  *bool                                    `json:"show_in_create,omitempty"`
+
+	// LabelTranslations An admin-named label in further UI languages, keyed by language. A reader whose UI
+	// language has an entry sees it; any other reader sees the stored label. On a write the
+	// map replaces the stored one, an empty text drops its language, and a language outside
+	// en, de and vi is 422 `invalid_translation`.
+	LabelTranslations *LabelTranslations `json:"label_translations,omitempty"`
+
+	// OptionTranslations Each picklist option's name in further UI languages, keyed by the option as stored. The
+	// stored option stays the value written on records; only its display changes. On a write
+	// the map replaces the stored one, and an option the field does not offer is 422
+	// `invalid_translation`.
+	OptionTranslations *OptionTranslations `json:"option_translations,omitempty"`
+	Reportable         *bool               `json:"reportable,omitempty"`
+	ShowInCreate       *bool               `json:"show_in_create,omitempty"`
 }
 
 // RenameCustomFieldRequestActivityKinds defines model for RenameCustomFieldRequest.ActivityKinds.
@@ -60894,7 +61910,10 @@ type RequestLegalReviewRequest struct {
 // approval bound to, so changing it is cancel-and-recompose (ADR-0104 §5).
 type RescheduleSendRequest struct {
 	ScheduledAt time.Time `json:"scheduled_at"`
-	ScheduledTz string    `json:"scheduled_tz"`
+
+	// ScheduledIntent A chosen local time in an IANA zone, resolved with current rules. A time in a gap moves forward; a repeated time takes its first occurrence.
+	ScheduledIntent *IntentTime `json:"scheduled_intent,omitempty"`
+	ScheduledTz     string      `json:"scheduled_tz"`
 }
 
 // ResolveInputCheck defines model for ResolveInputCheck.
@@ -61239,6 +62258,69 @@ type ReviewQuestion struct {
 
 // ReviewQuestionType Text answers use answers; multiple-choice answers use choice_answers.
 type ReviewQuestionType string
+
+// Rewrite defines model for Rewrite.
+type Rewrite struct {
+	// AiDisclosure The provenance notice shown beside the rewritten words.
+	AiDisclosure string `json:"ai_disclosure"`
+
+	// Body The rewritten words; empty when none were sent.
+	Body string `json:"body"`
+
+	// Language The language the words are written in, and the notice below.
+	Language RewriteLanguage `json:"language"`
+
+	// Subject The rewritten title; empty when none was sent.
+	Subject string `json:"subject"`
+
+	// VoiceDegraded True when the sender's voice could not be looked up for an email rewrite, so it may lack a voice its sender built.
+	VoiceDegraded *bool `json:"voice_degraded,omitempty"`
+
+	// VoiceProfileVersion The Voice DNA profile version that styled an email rewrite; null when none did, and always on a note.
+	VoiceProfileVersion *int `json:"voice_profile_version,omitempty" minimum:"1"`
+}
+
+// RewriteLanguage The language the words are written in, and the notice below.
+type RewriteLanguage string
+
+// RewriteAbout The record the words are written on. Its contacts' restriction of processing is honoured, and for a lead the lead's own address.
+type RewriteAbout struct {
+	EntityId   openapi_types.UUID     `json:"entity_id"`
+	EntityType RewriteAboutEntityType `json:"entity_type"`
+}
+
+// RewriteAboutEntityType defines model for RewriteAbout.EntityType.
+type RewriteAboutEntityType string
+
+// RewriteRequest defines model for RewriteRequest.
+type RewriteRequest struct {
+	// About The record the words are written on. Its contacts' restriction of processing is honoured, and for a lead the lead's own address.
+	About RewriteAbout `json:"about"`
+
+	// Body The words on screen: an email body as plain text, a note's details as markdown.
+	Body *string `json:"body,omitempty"`
+
+	// Envelope Which words these are: an email body being written, or a note or task.
+	Envelope RewriteRequestEnvelope `json:"envelope"`
+
+	// Language The reader's interface language.
+	Language RewriteRequestLanguage `json:"language"`
+
+	// Subject A note's title. An email's subject is not rewritten.
+	Subject *string `json:"subject,omitempty"`
+
+	// Verb The rewrite asked for. A note takes `polish` only.
+	Verb RewriteRequestVerb `json:"verb"`
+}
+
+// RewriteRequestEnvelope Which words these are: an email body being written, or a note or task.
+type RewriteRequestEnvelope string
+
+// RewriteRequestLanguage The reader's interface language.
+type RewriteRequestLanguage string
+
+// RewriteRequestVerb The rewrite asked for. A note takes `polish` only.
+type RewriteRequestVerb string
 
 // RightsCaseReceipt What a data subject is told to quote when asking after a request they sent through their confirm
 // link. Carries the reference and the right it was opened under, never the case id — the queue that
@@ -62239,6 +63321,9 @@ type ScheduledSend struct {
 	ReviewId    *openapi_types.UUID `json:"review_id,omitempty"`
 	ScheduledAt time.Time           `json:"scheduled_at"`
 
+	// ScheduledIntent A chosen local time in an IANA zone, resolved with current rules. A time in a gap moves forward; a repeated time takes its first occurrence.
+	ScheduledIntent *IntentTime `json:"scheduled_intent,omitempty"`
+
 	// ScheduledTz The IANA zone the human picked the moment in, kept so it re-renders as meant.
 	ScheduledTz string `json:"scheduled_tz"`
 
@@ -63019,8 +64104,9 @@ type SendCompanyEmailRequest struct {
 	// an allow.
 	OperatorReason *string `json:"operator_reason,omitempty"`
 
-	// ScheduledAt Send this message at this instant instead of now (ADR-0104). Absolute
-	// and unambiguous; `scheduled_tz` records the zone the human picked it in.
+	// ScheduledAt Legacy instant-based schedule. When `scheduled_intent` is present, its
+	// local time and current timezone rules govern the send; this field is a
+	// compatibility cache. Without it, the supplied instant remains authoritative.
 	//
 	// A scheduled message writes NO activity and NO delivery row until it fires —
 	// the timeline stays silent about a message nobody has sent. The response is
@@ -63035,6 +64121,9 @@ type SendCompanyEmailRequest struct {
 	// An instant already past sends immediately. Further ahead than 90 days is
 	// refused 422.
 	ScheduledAt *time.Time `json:"scheduled_at,omitempty"`
+
+	// ScheduledIntent A chosen local time in an IANA zone, resolved with current rules. A time in a gap moves forward; a repeated time takes its first occurrence.
+	ScheduledIntent *IntentTime `json:"scheduled_intent,omitempty"`
 
 	// ScheduledTz The IANA zone name (e.g. `Europe/Berlin`) the human chose `scheduled_at` in.
 	// Required with `scheduled_at`. A zone NAME, never a numeric offset, which
@@ -63201,8 +64290,9 @@ type SendEmailRequest struct {
 	// an allow.
 	OperatorReason *string `json:"operator_reason,omitempty"`
 
-	// ScheduledAt Send this message at this instant instead of now (ADR-0104). Absolute
-	// and unambiguous; `scheduled_tz` records the zone the human picked it in.
+	// ScheduledAt Legacy instant-based schedule. When `scheduled_intent` is present, its
+	// local time and current timezone rules govern the send; this field is a
+	// compatibility cache. Without it, the supplied instant remains authoritative.
 	//
 	// A scheduled message writes NO activity and NO delivery row until it fires —
 	// the timeline stays silent about a message nobody has sent. The response is
@@ -63217,6 +64307,9 @@ type SendEmailRequest struct {
 	// An instant already past sends immediately. Further ahead than 90 days is
 	// refused 422.
 	ScheduledAt *time.Time `json:"scheduled_at,omitempty"`
+
+	// ScheduledIntent A chosen local time in an IANA zone, resolved with current rules. A time in a gap moves forward; a repeated time takes its first occurrence.
+	ScheduledIntent *IntentTime `json:"scheduled_intent,omitempty"`
 
 	// ScheduledTz The IANA zone name (e.g. `Europe/Berlin`) the human chose `scheduled_at` in.
 	// Required with `scheduled_at`. A zone NAME, never a numeric offset, which
@@ -63389,6 +64482,9 @@ type SetActivityDispositionRequest struct {
 	// ReopenRef The meeting to wait for. REQUIRED for `snooze` with `reopen_on: meeting` and
 	// refused otherwise.
 	ReopenRef *openapi_types.UUID `json:"reopen_ref,omitempty"`
+
+	// SnoozedIntent A chosen local time in an IANA zone, resolved with current rules. A time in a gap moves forward; a repeated time takes its first occurrence.
+	SnoozedIntent *IntentTime `json:"snoozed_intent,omitempty"`
 
 	// SnoozedUntil When a snooze lifts. REQUIRED for `snooze` with `reopen_on: time`, and refused
 	// everywhere else — a snooze waiting on a reply lifts when the reply arrives, and a
@@ -63602,7 +64698,12 @@ type SetTransitionPolicyRequestMode string
 // Send `partner_kinds`, or the deprecated `partner_role`. Without `relationship_stage` the
 // program starts on the first active stage meaning `candidate`.
 type SetUpPartnerRequest struct {
-	NextStep      *string             `json:"next_step,omitempty"`
+	// NextStep Deprecated as stored text: a value sent here is written as a task on the partner's company, held by the caller (or the human an agent acts for), and is not stored on the partner. Text stored before stays readable.
+	// Deprecated: this property has been marked as deprecated upstream, but no `x-deprecated-reason` was set
+	NextStep *string `json:"next_step,omitempty"`
+
+	// NextStepDueAt Deprecated as stored text: the day the next step's task is due. Sent without `next_step` it is refused.
+	// Deprecated: this property has been marked as deprecated upstream, but no `x-deprecated-reason` was set
 	NextStepDueAt *openapi_types.Date `json:"next_step_due_at,omitempty"`
 	PartnerKinds  *[]PartnerKind      `json:"partner_kinds,omitempty"`
 
@@ -63747,6 +64848,71 @@ type SharedForecastView struct {
 
 // SharedForecastViewKind Which promise this view makes. A reader shown a frozen number needs to know it is frozen, and as of when.
 type SharedForecastViewKind string
+
+// SharedGmailCredentials A Google Workspace service account the admin delegated `gmail.readonly` to.
+type SharedGmailCredentials struct {
+	// ServiceAccountKey The JSON key file of the service account, as text. Sealed to the vault; never returned.
+	ServiceAccountKey *string `json:"service_account_key,omitempty"`
+}
+
+// SharedGraphCredentials The customer's own Entra app registration, which reads the mailbox with application permission.
+type SharedGraphCredentials struct {
+	// ClientId The application (client) id.
+	ClientId *string `json:"client_id,omitempty"`
+
+	// ClientSecret A client secret of the app. Sealed to the vault; never returned.
+	ClientSecret *string `json:"client_secret,omitempty"`
+
+	// TenantId The directory (tenant) id, or a verified domain of the tenant. Never a multi-tenant alias.
+	TenantId *string `json:"tenant_id,omitempty"`
+}
+
+// SharedMailbox A mailbox no one owns. One team reads what it captures.
+type SharedMailbox struct {
+	// Address The mailbox address.
+	Address string `json:"address"`
+
+	// BackupOwnerId The reader-team member who gets the follow-up work of mail whose sender no reader owns, and owns the contacts that mail creates. Null when none is named: mail whose sender no reader owns then creates no work and no contact.
+	BackupOwnerId *openapi_types.UUID `json:"backup_owner_id,omitempty"`
+	ConnectedAt   time.Time           `json:"connected_at"`
+
+	// ConnectedBy The admin who last connected it.
+	ConnectedBy *openapi_types.UUID `json:"connected_by,omitempty"`
+
+	// Id The connection id. It stays the same across a disconnect and a reconnect.
+	Id openapi_types.UUID `json:"id"`
+
+	// MailVisibility `held` keeps its mail to the reader team and the message's own participants; `shared` opens it to the workspace.
+	MailVisibility SharedMailboxMailVisibility `json:"mail_visibility"`
+	Provider       SharedMailboxProvider       `json:"provider"`
+
+	// ReaderTeamId The team that reads every message this mailbox captured.
+	ReaderTeamId openapi_types.UUID  `json:"reader_team_id"`
+	Status       SharedMailboxStatus `json:"status"`
+}
+
+// SharedMailboxMailVisibility `held` keeps its mail to the reader team and the message's own participants; `shared` opens it to the workspace.
+type SharedMailboxMailVisibility string
+
+// SharedMailboxProvider defines model for SharedMailbox.Provider.
+type SharedMailboxProvider string
+
+// SharedMailboxStatus defines model for SharedMailbox.Status.
+type SharedMailboxStatus string
+
+// SharedMailboxHistoryImportRequest defines model for SharedMailboxHistoryImportRequest.
+type SharedMailboxHistoryImportRequest struct {
+	// Window How far back to import. Widen-only versus a prior run.
+	Window SharedMailboxHistoryImportRequestWindow `json:"window"`
+}
+
+// SharedMailboxHistoryImportRequestWindow How far back to import. Widen-only versus a prior run.
+type SharedMailboxHistoryImportRequestWindow string
+
+// SharedMailboxList defines model for SharedMailboxList.
+type SharedMailboxList struct {
+	Items []SharedMailbox `json:"items"`
+}
 
 // ShippedLabelKey The catalog key a screen renders a built-in value from, in the reader's language. Set only on a value still worded as the product shipped it; null once an administrator relabels it, so their own words show instead of `label`'s translation. `label` keeps the English text for every reader that has no catalog, such as an export or an agent.
 type ShippedLabelKey = string
@@ -64171,7 +65337,13 @@ type Stage struct {
 	ExitCriteria *StageExitCriteriaCounts `json:"exit_criteria,omitempty"`
 	Id           openapi_types.UUID       `json:"id"`
 	Name         string                   `json:"name"`
-	PipelineId   openapi_types.UUID       `json:"pipeline_id"`
+
+	// NameTranslations An admin-named label in further UI languages, keyed by language. A reader whose UI
+	// language has an entry sees it; any other reader sees the stored label. On a write the
+	// map replaces the stored one, an empty text drops its language, and a language outside
+	// en, de and vi is 422 `invalid_translation`.
+	NameTranslations *LabelTranslations `json:"name_translations,omitempty"`
+	PipelineId       openapi_types.UUID `json:"pipeline_id"`
 
 	// Position Unique within the pipeline.
 	Position  int           `json:"position"`
@@ -65606,6 +66778,8 @@ type UpdateAcquisitionSourceRequest struct {
 
 // UpdateActivityRequest A sparse patch. The workspace's active activity custom fields travel as extra top-level `cf_` keys, and an explicit `null` clears one. A key that is not `cf_`-prefixed, names no active activity field, or carries a value of the wrong shape for its field returns `422`. A value for a field that does not apply to the stored kind returns `422 field_not_valid_for_kind`; a `null` clears it all the same.
 type UpdateActivityRequest struct {
+	// AiAssisted True marks the activity's words as AI-assisted, when a model rewrote the subject or body this patch writes. The mark stays once set, so false and absent change nothing. Only a human sets it: an agent or a connector is refused with 422 on `ai_assisted`.
+	AiAssisted *bool               `json:"ai_assisted,omitempty"`
 	AssigneeId *openapi_types.UUID `json:"assignee_id,omitempty"`
 	Body       *string             `json:"body,omitempty"`
 
@@ -65617,8 +66791,14 @@ type UpdateActivityRequest struct {
 	// DueHasTime Task only. True: `due_at` is a time of day, and the reminder moves to it unless `remind_at` is sent. A `due_at` sent without it is a day, which ends a reminder that sat on the old time. Sent only with `due_at`.
 	DueHasTime *bool `json:"due_has_time,omitempty"`
 
+	// DueIntent A chosen local time in an IANA zone, resolved with current rules. A time in a gap moves forward; a repeated time takes its first occurrence.
+	DueIntent *IntentTime `json:"due_intent,omitempty"`
+
 	// IsDone Completing a task writes one audit row + an `activity.updated` event carrying the `is_done` delta (events.md §5.5 — there is no separate `task.*` family).
 	IsDone *bool `json:"is_done,omitempty"`
+
+	// MeetingIntent A chosen local time in an IANA zone, resolved with current rules. A time in a gap moves forward; a repeated time takes its first occurrence.
+	MeetingIntent *IntentTime `json:"meeting_intent,omitempty"`
 
 	// MeetingStatus How the meeting went, set AFTER it happened. Meeting only, and 422 with a
 	// `field_not_valid_for_kind` fault on the field otherwise — the same refusal create
@@ -65641,7 +66821,10 @@ type UpdateActivityRequest struct {
 
 	// RemindAt Task only. When the reminder comes due. From that instant, for up to 30 days, the task leads its assignee's own Worklist with the reason `reminder_due`, and `GET /v1/activities?reminder_due=true` lists it for them. Nobody else is reminded, and a task with no assignee reminds nobody. Moving `due_at` on a task whose reminder has passed clears this field, unless the same patch names it.
 	RemindAt *time.Time `json:"remind_at,omitempty"`
-	Subject  *string    `json:"subject,omitempty"`
+
+	// RemindIntent A chosen local time in an IANA zone, resolved with current rules. A time in a gap moves forward; a repeated time takes its first occurrence.
+	RemindIntent *IntentTime `json:"remind_intent,omitempty"`
+	Subject      *string     `json:"subject,omitempty"`
 
 	// TaskType Task only: the kind of work, which decides its one button.
 	TaskType             *TaskType              `json:"task_type,omitempty"`
@@ -65702,7 +66885,9 @@ type UpdateAttachmentMetadataRequestDocState string
 
 // UpdateAutomationRequest Any subset; omit a field to leave it unchanged. `status` flips enable/pause.
 type UpdateAutomationRequest struct {
-	Name *string `json:"name,omitempty"`
+	// InitialRunConfirmed Confirm the initial-run preview when enabling a scheduled rule or changing its active population. Existing matching records may receive work on the next scan.
+	InitialRunConfirmed *bool   `json:"initial_run_confirmed,omitempty"`
+	Name                *string `json:"name,omitempty"`
 
 	// OwnerId Hand the rule to another member, who must be a seat the caller may make an owner (an active human seat that can write, inside the caller's write scope), else `422` with `code: owner_not_assignable`. Cannot be cleared.
 	OwnerId *openapi_types.UUID            `json:"owner_id,omitempty"`
@@ -65780,7 +66965,7 @@ type UpdateCompanyRequest struct {
 	// archived answers 422 naming this field. Absent leaves it untouched.
 	AssessAgainstEntityId *openapi_types.UUID `json:"assess_against_entity_id,omitempty"`
 
-	// Description One human-written line saying what the company does. Absent leaves it untouched; an empty string clears it, the same spelling every other nullable text field on this record uses.
+	// Description A description of what the company does. Absent leaves it untouched; an empty string clears it, the same spelling every other nullable text field on this record uses.
 	Description *string `json:"description,omitempty"`
 	DisplayName *string `json:"display_name,omitempty"`
 
@@ -66905,14 +68090,35 @@ type UpdateSavedViewRequest struct {
 	Query *map[string]interface{} `json:"query,omitempty"`
 }
 
+// UpdateSharedMailboxRequest defines model for UpdateSharedMailboxRequest.
+type UpdateSharedMailboxRequest struct {
+	// ApplyToHistory Also narrow mail already captured when the visibility moves to `held`. Absent or false leaves it as it is.
+	ApplyToHistory *bool `json:"apply_to_history,omitempty"`
+
+	// BackupOwnerId The backup owner from now on. It must be an active member of the reader team who can hold work (else `422` `backup_owner_not_in_reader_team`). Null removes it; absent leaves it as it is.
+	BackupOwnerId *openapi_types.UUID `json:"backup_owner_id,omitempty"`
+
+	// Confirm Must be true when the readers or the visibility change: such a change moves every message the mailbox captured to other readers.
+	Confirm bool `json:"confirm"`
+
+	// MailVisibility `classified` is refused with `422`.
+	MailVisibility *UpdateSharedMailboxRequestMailVisibility `json:"mail_visibility,omitempty"`
+
+	// ReaderTeamId The team that reads the mailbox from now on, its whole history included.
+	ReaderTeamId *openapi_types.UUID `json:"reader_team_id,omitempty"`
+}
+
+// UpdateSharedMailboxRequestMailVisibility `classified` is refused with `422`.
+type UpdateSharedMailboxRequestMailVisibility string
+
 // UpdateSignalRequest Triage and correction. A `status` move to acknowledged/resolved/dismissed appends the human-outcome
 // `signal_resolution` row; `note` travels with that outcome. `resolution_state` and the
 // resolved ids are resolver-owned and not writable here.
 type UpdateSignalRequest struct {
-	// Evidence Replaces the signal's evidence. The audit row keeps the old evidence.
+	// Evidence Replaces the signal's evidence. Only a human may. The audit row keeps the old evidence.
 	Evidence *[]SignalEvidence `json:"evidence,omitempty"`
 
-	// Kind Corrects the signal's type. Only the kinds a human files by hand are accepted. The audit row keeps the old kind.
+	// Kind Corrects the signal's type. Only a human may, and only to the kinds a human files by hand. The audit row keeps the old kind.
 	Kind *UpdateSignalRequestKind `json:"kind,omitempty"`
 
 	// Note Optional outcome note recorded with a status change.
@@ -66921,7 +68127,7 @@ type UpdateSignalRequest struct {
 	Status   *UpdateSignalRequestStatus   `json:"status,omitempty"`
 }
 
-// UpdateSignalRequestKind Corrects the signal's type. Only the kinds a human files by hand are accepted. The audit row keeps the old kind.
+// UpdateSignalRequestKind Corrects the signal's type. Only a human may, and only to the kinds a human files by hand. The audit row keeps the old kind.
 type UpdateSignalRequestKind string
 
 // UpdateSignalRequestSeverity defines model for UpdateSignalRequest.Severity.
@@ -66950,10 +68156,16 @@ type UpdateStageExitCriterionRequest struct {
 
 // UpdateStageRequest defines model for UpdateStageRequest.
 type UpdateStageRequest struct {
-	Name           *string                     `json:"name,omitempty"`
-	Position       *int                        `json:"position,omitempty"`
-	Semantic       *UpdateStageRequestSemantic `json:"semantic,omitempty"`
-	WinProbability *int                        `json:"win_probability,omitempty" maximum:"100" minimum:"0"`
+	Name *string `json:"name,omitempty"`
+
+	// NameTranslations An admin-named label in further UI languages, keyed by language. A reader whose UI
+	// language has an entry sees it; any other reader sees the stored label. On a write the
+	// map replaces the stored one, an empty text drops its language, and a language outside
+	// en, de and vi is 422 `invalid_translation`.
+	NameTranslations *LabelTranslations          `json:"name_translations,omitempty"`
+	Position         *int                        `json:"position,omitempty"`
+	Semantic         *UpdateStageRequestSemantic `json:"semantic,omitempty"`
+	WinProbability   *int                        `json:"win_probability,omitempty" maximum:"100" minimum:"0"`
 }
 
 // UpdateStageRequestSemantic defines model for UpdateStageRequest.Semantic.
@@ -67000,11 +68212,14 @@ type UpdateVoiceProfileRequest struct {
 
 // UpdateWebFormRequest defines model for UpdateWebFormRequest.
 type UpdateWebFormRequest struct {
-	AllowedOrigins       *[]string           `json:"allowed_origins,omitempty"`
-	ConsentPolicyVersion *string             `json:"consent_policy_version,omitempty"`
-	ConsentRequired      *bool               `json:"consent_required,omitempty"`
-	ConsentWording       *string             `json:"consent_wording,omitempty"`
-	FieldMap             *map[string]string  `json:"field_map,omitempty"`
+	AllowedOrigins       *[]string          `json:"allowed_origins,omitempty"`
+	ConsentPolicyVersion *string            `json:"consent_policy_version,omitempty"`
+	ConsentRequired      *bool              `json:"consent_required,omitempty"`
+	ConsentWording       *string            `json:"consent_wording,omitempty"`
+	FieldMap             *map[string]string `json:"field_map,omitempty"`
+
+	// HandlingAutomationId Explicit conversion to a reviewed inquiry policy for this form. Clear only through a reviewed return to legacy handling.
+	HandlingAutomationId *openapi_types.UUID `json:"handling_automation_id,omitempty"`
 	LeadOrigin           *string             `json:"lead_origin,omitempty"`
 	Name                 *string             `json:"name,omitempty"`
 	OwnerId              *openapi_types.UUID `json:"owner_id,omitempty"`
@@ -67045,11 +68260,17 @@ type UpdateWebhookSubscriptionRequestState string
 // UpsertPartnerRequest Send `partner_kinds`, or the deprecated `partner_role`; one of the two is required (422
 // `partner_kinds_required` otherwise). `partner_kinds` wins when both are sent.
 type UpsertPartnerRequest struct {
-	CertStatus    *UpsertPartnerRequestCertStatus `json:"cert_status,omitempty"`
-	GateMetrics   *map[string]interface{}         `json:"gate_metrics,omitempty"`
-	MarginTier    *UpsertPartnerRequestMarginTier `json:"margin_tier,omitempty"`
-	NextStep      *string                         `json:"next_step,omitempty"`
-	NextStepDueAt *openapi_types.Date             `json:"next_step_due_at,omitempty"`
+	CertStatus  *UpsertPartnerRequestCertStatus `json:"cert_status,omitempty"`
+	GateMetrics *map[string]interface{}         `json:"gate_metrics,omitempty"`
+	MarginTier  *UpsertPartnerRequestMarginTier `json:"margin_tier,omitempty"`
+
+	// NextStep Deprecated as stored text: a value sent here is written as a task on the partner's company, held by the caller (or the human an agent acts for), and is not stored on the partner. Text stored before stays readable.
+	// Deprecated: this property has been marked as deprecated upstream, but no `x-deprecated-reason` was set
+	NextStep *string `json:"next_step,omitempty"`
+
+	// NextStepDueAt Deprecated as stored text: the day the next step's task is due. Sent without `next_step` it is refused.
+	// Deprecated: this property has been marked as deprecated upstream, but no `x-deprecated-reason` was set
+	NextStepDueAt *openapi_types.Date `json:"next_step_due_at,omitempty"`
 
 	// PartnerKinds Every kind the partner holds; it replaces the kinds stored.
 	PartnerKinds *[]PartnerKind `json:"partner_kinds,omitempty"`
@@ -67613,8 +68834,21 @@ type WebForm struct {
 	FieldMap map[string]string `json:"field_map"`
 
 	// FormKey The last segment of the intake address. Public; it is an address, not a credential.
-	FormKey string             `json:"form_key"`
-	Id      openapi_types.UUID `json:"id"`
+	FormKey string `json:"form_key"`
+
+	// HandlingAutomationId Reviewed inquiry policy. Null retains legacy handling; a paused policy never reactivates legacy handling.
+	HandlingAutomationId *openapi_types.UUID `json:"handling_automation_id,omitempty"`
+
+	// HandlingCutoverAt When the handling reference last changed; completed submissions retain their original handling.
+	HandlingCutoverAt *time.Time         `json:"handling_cutover_at,omitempty"`
+	Id                openapi_types.UUID `json:"id"`
+
+	// Intake Present only while the intake refuses posts to this form with 429. `throttled`: too many posts lately, so some are refused; `since` is when that began. `blocked`: every post is refused until `until`. `paused_all`: every form of the workspace or installation refuses posts until `until`, because all forms together receive too many. Answered on the list and on one form's read.
+	Intake *struct {
+		Since *time.Time         `json:"since,omitempty"`
+		State WebFormIntakeState `json:"state"`
+		Until *time.Time         `json:"until,omitempty"`
+	} `json:"intake,omitempty"`
 
 	// LastPostAt When the form last landed a post, stamped at most once a minute. Null until the first one since the time was tracked. A post the spam checks drop is not counted.
 	LastPostAt *time.Time `json:"last_post_at"`
@@ -67652,6 +68886,9 @@ type WebForm struct {
 	// Version Optimistic-concurrency version; echo it in If-Match on update.
 	Version int64 `json:"version"`
 }
+
+// WebFormIntakeState defines model for WebForm.Intake.State.
+type WebFormIntakeState string
 
 // WebFormState defines model for WebForm.State.
 type WebFormState string
@@ -67693,8 +68930,21 @@ type WebFormCreated struct {
 	FieldMap map[string]string `json:"field_map"`
 
 	// FormKey The last segment of the intake address. Public; it is an address, not a credential.
-	FormKey string             `json:"form_key"`
-	Id      openapi_types.UUID `json:"id"`
+	FormKey string `json:"form_key"`
+
+	// HandlingAutomationId Reviewed inquiry policy. Null retains legacy handling; a paused policy never reactivates legacy handling.
+	HandlingAutomationId *openapi_types.UUID `json:"handling_automation_id,omitempty"`
+
+	// HandlingCutoverAt When the handling reference last changed; completed submissions retain their original handling.
+	HandlingCutoverAt *time.Time         `json:"handling_cutover_at,omitempty"`
+	Id                openapi_types.UUID `json:"id"`
+
+	// Intake Present only while the intake refuses posts to this form with 429. `throttled`: too many posts lately, so some are refused; `since` is when that began. `blocked`: every post is refused until `until`. `paused_all`: every form of the workspace or installation refuses posts until `until`, because all forms together receive too many. Answered on the list and on one form's read.
+	Intake *struct {
+		Since *time.Time                `json:"since,omitempty"`
+		State WebFormCreatedIntakeState `json:"state"`
+		Until *time.Time                `json:"until,omitempty"`
+	} `json:"intake,omitempty"`
 
 	// LastPostAt When the form last landed a post, stamped at most once a minute. Null until the first one since the time was tracked. A post the spam checks drop is not counted.
 	LastPostAt *time.Time `json:"last_post_at"`
@@ -67736,6 +68986,9 @@ type WebFormCreated struct {
 	Version int64 `json:"version"`
 }
 
+// WebFormCreatedIntakeState defines model for WebFormCreated.Intake.State.
+type WebFormCreatedIntakeState string
+
 // WebFormCreatedState defines model for WebFormCreated.State.
 type WebFormCreatedState string
 
@@ -67773,8 +69026,8 @@ type WebFormReceiptStatus string
 type WebFormSender string
 
 // WebFormSubmission One website form submission as the visitor sent it. Every value is the visitor's own
-// text and nothing Margince checked, except `consent`, which is the form's own record of
-// its consent box.
+// text. `validated_picklists` records which custom picklist values passed validation;
+// `consent` records the form's own consent box.
 type WebFormSubmission struct {
 	// Campaign The `utm_` parameters the page carried.
 	Campaign []WebFormValue `json:"campaign"`
@@ -67790,6 +69043,9 @@ type WebFormSubmission struct {
 	Extra    []WebFormValue `json:"extra"`
 	FullName *string        `json:"full_name,omitempty"`
 
+	// HandlingAutomationId The policy owning this accepted occurrence; later policy changes do not transfer it to a legacy handler.
+	HandlingAutomationId *openapi_types.UUID `json:"handling_automation_id,omitempty"`
+
 	// Message The free text the visitor wrote.
 	Message *string `json:"message,omitempty"`
 
@@ -67800,6 +69056,9 @@ type WebFormSubmission struct {
 	Phone    *string `json:"phone,omitempty"`
 	Referrer *string `json:"referrer,omitempty"`
 	Title    *string `json:"title,omitempty"`
+
+	// ValidatedPicklists Custom picklist field names whose submitted values passed validation at receipt. Values remain in extra.
+	ValidatedPicklists *[]string `json:"validated_picklists,omitempty"`
 }
 
 // WebFormValue defines model for WebFormValue.
@@ -67919,6 +69178,215 @@ type WebhookSubscriptionListResponse struct {
 	// DeliveryEnabled Whether this deployment has a signing key configured. When false, subscriptions can be listed and inspected but create/rotate/replay are unavailable (they answer 503 webhooks_not_configured), so the UI renders a not-enabled state instead of controls that would only fail on click.
 	DeliveryEnabled bool     `json:"delivery_enabled"`
 	Page            PageInfo `json:"page"`
+}
+
+// WebsiteInquiryAssignment defines model for WebsiteInquiryAssignment.
+type WebsiteInquiryAssignment struct {
+	ChangesRecordOwner bool                               `json:"changes_record_owner"`
+	RecipientId        openapi_types.UUID                 `json:"recipient_id"`
+	RecordId           openapi_types.UUID                 `json:"record_id"`
+	RecordOwnerId      *openapi_types.UUID                `json:"record_owner_id,omitempty"`
+	RecordType         WebsiteInquiryAssignmentRecordType `json:"record_type"`
+
+	// RecordVersion Monotonic row version, incremented by the server on every mutation (data-model §1.3a).
+	// Echoed back as the `version` field on every mutable entity. To make a write conditional,
+	// send the last-seen value in `If-Match`; a mismatch returns `409 code: version_skew`
+	// (ErrVersionSkew) so the client re-reads before retrying.
+	RecordVersion *RowVersion `json:"record_version,omitempty" minimum:"1"`
+
+	// Task A polymorphic timeline item. Mirrors the `activity` table + `activity_link`.
+	// **Per-kind field constraints** (enforced server-side to match the DB `activity_task_fields`
+	// CHECK; the OpenAPI cannot express these conditionally): `due_at`/`assignee_id`/`is_done`/
+	// `done_at` are valid ONLY when `kind=task`; `meeting_status` ONLY when `kind=meeting`;
+	// `duration_seconds` only for meeting/call; `direction` is null for note/task. Setting a
+	// disallowed field for the kind returns `422 code: field_not_valid_for_kind` (the API rejects
+	// what the DB CHECK would reject, rather than 500-ing at write time).
+	// `channel_provider` is the same kind of constraint in both directions: non-null exactly
+	// when `kind=message` (ADR-0107).
+	// **Custom fields**: the values of the workspace's activity custom fields arrive as extra
+	// top-level `cf_` keys. They are content, so they are absent whenever `content_state` is
+	// `withheld`.
+	Task Activity `json:"task"`
+}
+
+// WebsiteInquiryAssignmentRecordType defines model for WebsiteInquiryAssignment.RecordType.
+type WebsiteInquiryAssignmentRecordType string
+
+// WebsiteInquiryAssignmentRequest defines model for WebsiteInquiryAssignmentRequest.
+type WebsiteInquiryAssignmentRequest struct {
+	Mode        WebsiteInquiryAssignmentRequestMode `json:"mode"`
+	RecipientId openapi_types.UUID                  `json:"recipient_id"`
+
+	// RecordId Required when applying; use the record ID from the preview.
+	RecordId *openapi_types.UUID `json:"record_id,omitempty"`
+
+	// RecordType Required when applying; use the record type from the preview.
+	RecordType *WebsiteInquiryAssignmentRequestRecordType `json:"record_type,omitempty"`
+
+	// RecordVersion Monotonic row version, incremented by the server on every mutation (data-model §1.3a).
+	// Echoed back as the `version` field on every mutable entity. To make a write conditional,
+	// send the last-seen value in `If-Match`; a mismatch returns `409 code: version_skew`
+	// (ErrVersionSkew) so the client re-reads before retrying.
+	RecordVersion *RowVersion `json:"record_version,omitempty" minimum:"1"`
+}
+
+// WebsiteInquiryAssignmentRequestMode defines model for WebsiteInquiryAssignmentRequest.Mode.
+type WebsiteInquiryAssignmentRequestMode string
+
+// WebsiteInquiryAssignmentRequestRecordType Required when applying; use the record type from the preview.
+type WebsiteInquiryAssignmentRequestRecordType string
+
+// WebsiteInquiryExistingRequest defines model for WebsiteInquiryExistingRequest.
+type WebsiteInquiryExistingRequest struct {
+	AutomationId openapi_types.UUID `json:"automation_id"`
+
+	// AutomationVersion Monotonic row version, incremented by the server on every mutation (data-model §1.3a).
+	// Echoed back as the `version` field on every mutable entity. To make a write conditional,
+	// send the last-seen value in `If-Match`; a mismatch returns `409 code: version_skew`
+	// (ErrVersionSkew) so the client re-reads before retrying.
+	AutomationVersion *RowVersion               `json:"automation_version,omitempty" minimum:"1"`
+	Selected          []WebsiteInquirySelection `json:"selected"`
+}
+
+// WebsiteInquiryHandling defines model for WebsiteInquiryHandling.
+type WebsiteInquiryHandling struct {
+	// Automation A configured automation instance (feedback/14).
+	Automation Automation `json:"automation"`
+
+	// Form A website form (`web_form`): a public intake address that turns a submission into a lead. No secret is ever returned here; `secret_configured` says one is stored.
+	Form WebForm `json:"form"`
+}
+
+// WebsiteInquiryHandlingItem defines model for WebsiteInquiryHandlingItem.
+type WebsiteInquiryHandlingItem struct {
+	Id     openapi_types.UUID               `json:"id"`
+	Reason *string                          `json:"reason,omitempty"`
+	RunId  *openapi_types.UUID              `json:"run_id,omitempty"`
+	Status WebsiteInquiryHandlingItemStatus `json:"status"`
+	TaskId *openapi_types.UUID              `json:"task_id,omitempty"`
+
+	// Version Monotonic row version, incremented by the server on every mutation (data-model §1.3a).
+	// Echoed back as the `version` field on every mutable entity. To make a write conditional,
+	// send the last-seen value in `If-Match`; a mismatch returns `409 code: version_skew`
+	// (ErrVersionSkew) so the client re-reads before retrying.
+	Version *RowVersion `json:"version,omitempty" minimum:"1"`
+}
+
+// WebsiteInquiryHandlingItemStatus defines model for WebsiteInquiryHandlingItem.Status.
+type WebsiteInquiryHandlingItemStatus string
+
+// WebsiteInquiryHandlingPreview defines model for WebsiteInquiryHandlingPreview.
+type WebsiteInquiryHandlingPreview struct {
+	ExampleDueAt time.Time                   `json:"example_due_at"`
+	Items        []WebsiteInquiryPreviewItem `json:"items"`
+
+	// ReceivedAt Server clock used for the deadline example.
+	ReceivedAt time.Time `json:"received_at"`
+}
+
+// WebsiteInquiryHandlingRequest defines model for WebsiteInquiryHandlingRequest.
+type WebsiteInquiryHandlingRequest struct {
+	AutomationId *openapi_types.UUID `json:"automation_id,omitempty"`
+
+	// AutomationVersion Monotonic row version, incremented by the server on every mutation (data-model §1.3a).
+	// Echoed back as the `version` field on every mutable entity. To make a write conditional,
+	// send the last-seen value in `If-Match`; a mismatch returns `409 code: version_skew`
+	// (ErrVersionSkew) so the client re-reads before retrying.
+	AutomationVersion *RowVersion          `json:"automation_version,omitempty" minimum:"1"`
+	Enabled           bool                 `json:"enabled"`
+	Name              string               `json:"name"`
+	Policy            WebsiteInquiryPolicy `json:"policy"`
+}
+
+// WebsiteInquiryHandlingResults defines model for WebsiteInquiryHandlingResults.
+type WebsiteInquiryHandlingResults struct {
+	Items []WebsiteInquiryHandlingItem `json:"items"`
+}
+
+// WebsiteInquiryMode Keep an eligible existing owner; otherwise route through selected colleagues or coordinator review.
+type WebsiteInquiryMode string
+
+// WebsiteInquiryPolicy defines model for WebsiteInquiryPolicy.
+type WebsiteInquiryPolicy struct {
+	// CoordinatorId Eligible colleague who can read unowned leads and receives inquiries needing review.
+	CoordinatorId openapi_types.UUID `json:"coordinator_id"`
+
+	// DueInDays Calendar days after receipt; due at the end of that day in timezone.
+	DueInDays int                `json:"due_in_days" maximum:"30" minimum:"1"`
+	FormId    openapi_types.UUID `json:"form_id"`
+
+	// Mode Keep an eligible existing owner; otherwise route through selected colleagues or coordinator review.
+	Mode WebsiteInquiryMode `json:"mode"`
+
+	// RequestTypeField Optional mapped picklist field identifying the request type.
+	RequestTypeField *string           `json:"request_type_field,omitempty"`
+	Routing          LeadRoutingConfig `json:"routing"`
+	TaskTitle        string            `json:"task_title"`
+
+	// Timezone Saved IANA timezone for calendar-day deadlines.
+	Timezone string `json:"timezone"`
+}
+
+// WebsiteInquiryPreviewItem defines model for WebsiteInquiryPreviewItem.
+type WebsiteInquiryPreviewItem struct {
+	DueAt       *time.Time                           `json:"due_at,omitempty"`
+	Id          openapi_types.UUID                   `json:"id"`
+	Reason      *string                              `json:"reason,omitempty"`
+	RecipientId *openapi_types.UUID                  `json:"recipient_id,omitempty"`
+	Status      WebsiteInquiryPreviewItemStatus      `json:"status"`
+	TargetId    *openapi_types.UUID                  `json:"target_id,omitempty"`
+	TargetType  *WebsiteInquiryPreviewItemTargetType `json:"target_type,omitempty"`
+
+	// Version Monotonic row version, incremented by the server on every mutation (data-model §1.3a).
+	// Echoed back as the `version` field on every mutable entity. To make a write conditional,
+	// send the last-seen value in `If-Match`; a mismatch returns `409 code: version_skew`
+	// (ErrVersionSkew) so the client re-reads before retrying.
+	Version *RowVersion `json:"version,omitempty" minimum:"1"`
+}
+
+// WebsiteInquiryPreviewItemStatus defines model for WebsiteInquiryPreviewItem.Status.
+type WebsiteInquiryPreviewItemStatus string
+
+// WebsiteInquiryPreviewItemTargetType defines model for WebsiteInquiryPreviewItem.TargetType.
+type WebsiteInquiryPreviewItemTargetType string
+
+// WebsiteInquiryPreviewRequest defines model for WebsiteInquiryPreviewRequest.
+type WebsiteInquiryPreviewRequest struct {
+	AutomationId *openapi_types.UUID `json:"automation_id,omitempty"`
+
+	// AutomationVersion Monotonic row version, incremented by the server on every mutation (data-model §1.3a).
+	// Echoed back as the `version` field on every mutable entity. To make a write conditional,
+	// send the last-seen value in `If-Match`; a mismatch returns `409 code: version_skew`
+	// (ErrVersionSkew) so the client re-reads before retrying.
+	AutomationVersion *RowVersion               `json:"automation_version,omitempty" minimum:"1"`
+	Policy            WebsiteInquiryPolicy      `json:"policy"`
+	Selected          []WebsiteInquirySelection `json:"selected"`
+}
+
+// WebsiteInquirySelection defines model for WebsiteInquirySelection.
+type WebsiteInquirySelection struct {
+	// Id Accepted website source note.
+	Id openapi_types.UUID `json:"id"`
+
+	// Version Monotonic row version, incremented by the server on every mutation (data-model §1.3a).
+	// Echoed back as the `version` field on every mutable entity. To make a write conditional,
+	// send the last-seen value in `If-Match`; a mismatch returns `409 code: version_skew`
+	// (ErrVersionSkew) so the client re-reads before retrying.
+	Version *RowVersion `json:"version,omitempty" minimum:"1"`
+}
+
+// WebsiteInquiryWork Inquiry facts under the current task and source content permissions. Missing source facts remain unknown.
+type WebsiteInquiryWork struct {
+	AssignmentReason *string `json:"assignment_reason,omitempty"`
+
+	// CanTake The reader may review taking this inquiry; the assignment operation rechecks current authority and versions.
+	CanTake          *bool               `json:"can_take,omitempty"`
+	ReceivedAt       *time.Time          `json:"received_at,omitempty"`
+	RecordOwnerId    *openapi_types.UUID `json:"record_owner_id,omitempty"`
+	RecordOwnerKnown *bool               `json:"record_owner_known,omitempty"`
+	RequestType      *string             `json:"request_type,omitempty"`
+	SourceActivityId *openapi_types.UUID `json:"source_activity_id,omitempty"`
+	SourceLabel      *string             `json:"source_label,omitempty"`
 }
 
 // WeeklyDayActivity One local day of a rep's own activity, in the installation reporting timezone.
@@ -69597,6 +71065,9 @@ type WorklistItem struct {
 	// DueHasTime On a task row: true when `due_at` names an agreed time of day, false when the task is due by that day. Absent on other rows.
 	DueHasTime *bool `json:"due_has_time,omitempty"`
 
+	// DueIntent A chosen local time in an IANA zone, resolved with current rules. A time in a gap moves forward; a repeated time takes its first occurrence.
+	DueIntent *IntentTime `json:"due_intent,omitempty"`
+
 	// EmailSummary The canonical email row, on a `customer_waiting` row whose message is an EMAIL this reader may read. The waiting lane spans email and channel messages, and only an email has an email's shape — a chat drawn as one would carry a mail icon and an email's access badge over a message that never travelled on one. Null on a channel message, null on every other source, and null when the message's content is not this reader's, though such a message produces no waiting row at all. A client renders the canonical row when this is present and falls back to `title` when it is not.
 	EmailSummary *EmailSummary `json:"email_summary,omitempty"`
 
@@ -69767,6 +71238,9 @@ type WorklistItem struct {
 	// `complete` and `snooze` has to name the row those presses condition on, or two contacts
 	// acting on one task each overwrite the other and neither is told.
 	Version *RowVersion `json:"version,omitempty"`
+
+	// WebsiteInquiry Inquiry facts under the current task and source content permissions. Missing source facts remain unknown.
+	WebsiteInquiry *WebsiteInquiryWork `json:"website_inquiry,omitempty"`
 
 	// WithContact Whose record a `meeting` row's brief is read on, carried out from
 	// `AttentionItem.with_contact`.
@@ -70607,6 +72081,9 @@ type ValidationError = Problem
 // VersionConflict RFC 7807 problem+json with a stable machine `code` and structured `details`.
 type VersionConflict = Problem
 
+// WebsiteFormBusy RFC 7807 problem+json with a stable machine `code` and structured `details`.
+type WebsiteFormBusy = Problem
+
 // bearerAuthContextKey is the context key for bearerAuth security scheme
 type bearerAuthContextKey string
 
@@ -70724,6 +72201,9 @@ type ListActivitiesParams struct {
 
 	// ProjectId Narrow the timeline sections to one body of work: what is filed under this project or under no project; correspondence filed under another project is left out.
 	ProjectId *openapi_types.UUID `form:"project_id,omitempty" json:"project_id,omitempty"`
+
+	// WebsiteFormId Accepted website submission notes for this form, with readable content only.
+	WebsiteFormId *openapi_types.UUID `form:"website_form_id,omitempty" json:"website_form_id,omitempty"`
 
 	// SourceActivityId Tasks derived from this readable source activity, under current task visibility.
 	SourceActivityId *openapi_types.UUID `form:"source_activity_id,omitempty" json:"source_activity_id,omitempty"`
@@ -70915,6 +72395,16 @@ type ClearActivityDispositionParamsScope string
 type GetEmailPresentationParams struct {
 	// ThreadCursor Continue the thread's member page from a previous response's `thread.next_cursor`.
 	ThreadCursor *string `form:"thread_cursor,omitempty" json:"thread_cursor,omitempty"`
+}
+
+// AssignWebsiteInquiryParams defines parameters for AssignWebsiteInquiry.
+type AssignWebsiteInquiryParams struct {
+	// IfMatch Optional optimistic-concurrency precondition for a mutating request (PATCH/advance/merge):
+	// the last-seen entity `version`. If the row's current `version` differs, the write is
+	// rejected with `409 code: version_skew` (ErrVersionSkew) and no change is made — re-read,
+	// re-apply, retry. Omitting it is last-write-wins (discouraged for agent/automated writers).
+	// Accepted on every native (SoR-mode) mutating endpoint that returns a versioned entity.
+	IfMatch *IfMatch `json:"If-Match,omitempty"`
 }
 
 // GetMeetingBriefParams defines parameters for GetMeetingBrief.
@@ -78547,6 +80037,16 @@ type UpdateWebFormParams struct {
 	IfMatch *IfMatch `json:"If-Match,omitempty"`
 }
 
+// SaveWebFormHandlingParams defines parameters for SaveWebFormHandling.
+type SaveWebFormHandlingParams struct {
+	// IfMatch Optional optimistic-concurrency precondition for a mutating request (PATCH/advance/merge):
+	// the last-seen entity `version`. If the row's current `version` differs, the write is
+	// rejected with `409 code: version_skew` (ErrVersionSkew) and no change is made — re-read,
+	// re-apply, retry. Omitting it is last-write-wins (discouraged for agent/automated writers).
+	// Accepted on every native (SoR-mode) mutating endpoint that returns a versioned entity.
+	IfMatch *IfMatch `json:"If-Match,omitempty"`
+}
+
 // ListWebhookSubscriptionsParams defines parameters for ListWebhookSubscriptions.
 type ListWebhookSubscriptionsParams struct {
 	// IncludeArchived Include soft-deleted (archived) rows. Default false.
@@ -78935,6 +80435,12 @@ type SetActivityDispositionJSONRequestBody = SetActivityDispositionRequest
 
 // DraftEmailJSONRequestBody defines body for DraftEmail for application/json ContentType.
 type DraftEmailJSONRequestBody = DraftSteering
+
+// AssignWebsiteInquiryJSONRequestBody defines body for AssignWebsiteInquiry for application/json ContentType.
+type AssignWebsiteInquiryJSONRequestBody = WebsiteInquiryAssignmentRequest
+
+// PreviewWebsiteInquiryAssignmentJSONRequestBody defines body for PreviewWebsiteInquiryAssignment for application/json ContentType.
+type PreviewWebsiteInquiryAssignmentJSONRequestBody = WebsiteInquiryAssignmentRequest
 
 // UndoActivityProjectFilingJSONRequestBody defines body for UndoActivityProjectFiling for application/json ContentType.
 type UndoActivityProjectFilingJSONRequestBody = RetentionOverrideRequest
@@ -80010,6 +81516,9 @@ type ReleaseRestrictedActivityJSONRequestBody = RetentionOverrideRequest
 // UpdateRetentionSettingsJSONRequestBody defines body for UpdateRetentionSettings for application/json ContentType.
 type UpdateRetentionSettingsJSONRequestBody = UpdateRetentionSettingsRequest
 
+// RewriteTextJSONRequestBody defines body for RewriteText for application/json ContentType.
+type RewriteTextJSONRequestBody = RewriteRequest
+
 // CreateRoleJSONRequestBody defines body for CreateRole for application/json ContentType.
 type CreateRoleJSONRequestBody = CreateRoleRequest
 
@@ -80039,6 +81548,15 @@ type CreateMeetingProposalJSONRequestBody = MeetingProposalRequest
 
 // ReassignHandoffJSONRequestBody defines body for ReassignHandoff for application/json ContentType.
 type ReassignHandoffJSONRequestBody = HandoffAssigneeInput
+
+// ConnectSharedMailboxJSONRequestBody defines body for ConnectSharedMailbox for application/json ContentType.
+type ConnectSharedMailboxJSONRequestBody = ConnectSharedMailboxRequest
+
+// UpdateSharedMailboxJSONRequestBody defines body for UpdateSharedMailbox for application/json ContentType.
+type UpdateSharedMailboxJSONRequestBody = UpdateSharedMailboxRequest
+
+// StartSharedMailboxHistoryImportJSONRequestBody defines body for StartSharedMailboxHistoryImport for application/json ContentType.
+type StartSharedMailboxHistoryImportJSONRequestBody = SharedMailboxHistoryImportRequest
 
 // CreateSignalJSONRequestBody defines body for CreateSignal for application/json ContentType.
 type CreateSignalJSONRequestBody = CreateSignalRequest
@@ -80154,6 +81672,15 @@ type CreateWebFormJSONRequestBody = CreateWebFormRequest
 // UpdateWebFormJSONRequestBody defines body for UpdateWebForm for application/json ContentType.
 type UpdateWebFormJSONRequestBody = UpdateWebFormRequest
 
+// SaveWebFormHandlingJSONRequestBody defines body for SaveWebFormHandling for application/json ContentType.
+type SaveWebFormHandlingJSONRequestBody = WebsiteInquiryHandlingRequest
+
+// HandleExistingWebFormInquiriesJSONRequestBody defines body for HandleExistingWebFormInquiries for application/json ContentType.
+type HandleExistingWebFormInquiriesJSONRequestBody = WebsiteInquiryExistingRequest
+
+// PreviewWebFormHandlingJSONRequestBody defines body for PreviewWebFormHandling for application/json ContentType.
+type PreviewWebFormHandlingJSONRequestBody = WebsiteInquiryPreviewRequest
+
 // CreateWebhookSubscriptionJSONRequestBody defines body for CreateWebhookSubscription for application/json ContentType.
 type CreateWebhookSubscriptionJSONRequestBody = CreateWebhookSubscriptionRequest
 
@@ -80222,6 +81749,14 @@ func (a *Activity) UnmarshalJSON(b []byte) error {
 	err := json.Unmarshal(b, &object)
 	if err != nil {
 		return err
+	}
+
+	if raw, found := object["ai_assisted"]; found {
+		err = json.Unmarshal(raw, &a.AiAssisted)
+		if err != nil {
+			return fmt.Errorf("error reading 'ai_assisted': %w", err)
+		}
+		delete(object, "ai_assisted")
 	}
 
 	if raw, found := object["archivable"]; found {
@@ -80464,6 +81999,14 @@ func (a *Activity) UnmarshalJSON(b []byte) error {
 		delete(object, "due_has_time")
 	}
 
+	if raw, found := object["due_intent"]; found {
+		err = json.Unmarshal(raw, &a.DueIntent)
+		if err != nil {
+			return fmt.Errorf("error reading 'due_intent': %w", err)
+		}
+		delete(object, "due_intent")
+	}
+
 	if raw, found := object["duration_seconds"]; found {
 		err = json.Unmarshal(raw, &a.DurationSeconds)
 		if err != nil {
@@ -80568,6 +82111,14 @@ func (a *Activity) UnmarshalJSON(b []byte) error {
 		delete(object, "links")
 	}
 
+	if raw, found := object["meeting_intent"]; found {
+		err = json.Unmarshal(raw, &a.MeetingIntent)
+		if err != nil {
+			return fmt.Errorf("error reading 'meeting_intent': %w", err)
+		}
+		delete(object, "meeting_intent")
+	}
+
 	if raw, found := object["meeting_status"]; found {
 		err = json.Unmarshal(raw, &a.MeetingStatus)
 		if err != nil {
@@ -80630,6 +82181,14 @@ func (a *Activity) UnmarshalJSON(b []byte) error {
 			return fmt.Errorf("error reading 'remind_at': %w", err)
 		}
 		delete(object, "remind_at")
+	}
+
+	if raw, found := object["remind_intent"]; found {
+		err = json.Unmarshal(raw, &a.RemindIntent)
+		if err != nil {
+			return fmt.Errorf("error reading 'remind_intent': %w", err)
+		}
+		delete(object, "remind_intent")
 	}
 
 	if raw, found := object["reply_channel"]; found {
@@ -80762,6 +82321,13 @@ func (a *Activity) UnmarshalJSON(b []byte) error {
 func (a Activity) MarshalJSON() ([]byte, error) {
 	var err error
 	object := make(map[string]json.RawMessage)
+
+	if a.AiAssisted != nil {
+		object["ai_assisted"], err = json.Marshal(a.AiAssisted)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'ai_assisted': %w", err)
+		}
+	}
 
 	if a.Archivable != nil {
 		object["archivable"], err = json.Marshal(a.Archivable)
@@ -80969,6 +82535,13 @@ func (a Activity) MarshalJSON() ([]byte, error) {
 		}
 	}
 
+	if a.DueIntent != nil {
+		object["due_intent"], err = json.Marshal(a.DueIntent)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'due_intent': %w", err)
+		}
+	}
+
 	if a.DurationSeconds != nil {
 		object["duration_seconds"], err = json.Marshal(a.DurationSeconds)
 		if err != nil {
@@ -81056,6 +82629,13 @@ func (a Activity) MarshalJSON() ([]byte, error) {
 		}
 	}
 
+	if a.MeetingIntent != nil {
+		object["meeting_intent"], err = json.Marshal(a.MeetingIntent)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'meeting_intent': %w", err)
+		}
+	}
+
 	if a.MeetingStatus != nil {
 		object["meeting_status"], err = json.Marshal(a.MeetingStatus)
 		if err != nil {
@@ -81103,6 +82683,13 @@ func (a Activity) MarshalJSON() ([]byte, error) {
 		object["remind_at"], err = json.Marshal(a.RemindAt)
 		if err != nil {
 			return nil, fmt.Errorf("error marshaling 'remind_at': %w", err)
+		}
+	}
+
+	if a.RemindIntent != nil {
+		object["remind_intent"], err = json.Marshal(a.RemindIntent)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'remind_intent': %w", err)
 		}
 	}
 
@@ -83215,6 +84802,22 @@ func (a *CreateActivityRequest) UnmarshalJSON(b []byte) error {
 		return err
 	}
 
+	if raw, found := object["ai_assisted"]; found {
+		err = json.Unmarshal(raw, &a.AiAssisted)
+		if err != nil {
+			return fmt.Errorf("error reading 'ai_assisted': %w", err)
+		}
+		delete(object, "ai_assisted")
+	}
+
+	if raw, found := object["ai_assisted_on"]; found {
+		err = json.Unmarshal(raw, &a.AiAssistedOn)
+		if err != nil {
+			return fmt.Errorf("error reading 'ai_assisted_on': %w", err)
+		}
+		delete(object, "ai_assisted_on")
+	}
+
 	if raw, found := object["assignee_id"]; found {
 		err = json.Unmarshal(raw, &a.AssigneeId)
 		if err != nil {
@@ -83287,6 +84890,14 @@ func (a *CreateActivityRequest) UnmarshalJSON(b []byte) error {
 		delete(object, "due_has_time")
 	}
 
+	if raw, found := object["due_intent"]; found {
+		err = json.Unmarshal(raw, &a.DueIntent)
+		if err != nil {
+			return fmt.Errorf("error reading 'due_intent': %w", err)
+		}
+		delete(object, "due_intent")
+	}
+
 	if raw, found := object["duration_seconds"]; found {
 		err = json.Unmarshal(raw, &a.DurationSeconds)
 		if err != nil {
@@ -83351,6 +84962,14 @@ func (a *CreateActivityRequest) UnmarshalJSON(b []byte) error {
 		delete(object, "links")
 	}
 
+	if raw, found := object["meeting_intent"]; found {
+		err = json.Unmarshal(raw, &a.MeetingIntent)
+		if err != nil {
+			return fmt.Errorf("error reading 'meeting_intent': %w", err)
+		}
+		delete(object, "meeting_intent")
+	}
+
 	if raw, found := object["meeting_status"]; found {
 		err = json.Unmarshal(raw, &a.MeetingStatus)
 		if err != nil {
@@ -83399,12 +85018,28 @@ func (a *CreateActivityRequest) UnmarshalJSON(b []byte) error {
 		delete(object, "recommendation")
 	}
 
+	if raw, found := object["records_meeting_id"]; found {
+		err = json.Unmarshal(raw, &a.RecordsMeetingId)
+		if err != nil {
+			return fmt.Errorf("error reading 'records_meeting_id': %w", err)
+		}
+		delete(object, "records_meeting_id")
+	}
+
 	if raw, found := object["remind_at"]; found {
 		err = json.Unmarshal(raw, &a.RemindAt)
 		if err != nil {
 			return fmt.Errorf("error reading 'remind_at': %w", err)
 		}
 		delete(object, "remind_at")
+	}
+
+	if raw, found := object["remind_intent"]; found {
+		err = json.Unmarshal(raw, &a.RemindIntent)
+		if err != nil {
+			return fmt.Errorf("error reading 'remind_intent': %w", err)
+		}
+		delete(object, "remind_intent")
 	}
 
 	if raw, found := object["request_activity_id"]; found {
@@ -83522,6 +85157,20 @@ func (a CreateActivityRequest) MarshalJSON() ([]byte, error) {
 	var err error
 	object := make(map[string]json.RawMessage)
 
+	if a.AiAssisted != nil {
+		object["ai_assisted"], err = json.Marshal(a.AiAssisted)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'ai_assisted': %w", err)
+		}
+	}
+
+	if a.AiAssistedOn != nil {
+		object["ai_assisted_on"], err = json.Marshal(a.AiAssistedOn)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'ai_assisted_on': %w", err)
+		}
+	}
+
 	if a.AssigneeId != nil {
 		object["assignee_id"], err = json.Marshal(a.AssigneeId)
 		if err != nil {
@@ -83585,6 +85234,13 @@ func (a CreateActivityRequest) MarshalJSON() ([]byte, error) {
 		}
 	}
 
+	if a.DueIntent != nil {
+		object["due_intent"], err = json.Marshal(a.DueIntent)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'due_intent': %w", err)
+		}
+	}
+
 	if a.DurationSeconds != nil {
 		object["duration_seconds"], err = json.Marshal(a.DurationSeconds)
 		if err != nil {
@@ -83639,6 +85295,13 @@ func (a CreateActivityRequest) MarshalJSON() ([]byte, error) {
 		}
 	}
 
+	if a.MeetingIntent != nil {
+		object["meeting_intent"], err = json.Marshal(a.MeetingIntent)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'meeting_intent': %w", err)
+		}
+	}
+
 	if a.MeetingStatus != nil {
 		object["meeting_status"], err = json.Marshal(a.MeetingStatus)
 		if err != nil {
@@ -83681,10 +85344,24 @@ func (a CreateActivityRequest) MarshalJSON() ([]byte, error) {
 		}
 	}
 
+	if a.RecordsMeetingId != nil {
+		object["records_meeting_id"], err = json.Marshal(a.RecordsMeetingId)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'records_meeting_id': %w", err)
+		}
+	}
+
 	if a.RemindAt != nil {
 		object["remind_at"], err = json.Marshal(a.RemindAt)
 		if err != nil {
 			return nil, fmt.Errorf("error marshaling 'remind_at': %w", err)
+		}
+	}
+
+	if a.RemindIntent != nil {
+		object["remind_intent"], err = json.Marshal(a.RemindIntent)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'remind_intent': %w", err)
 		}
 	}
 
@@ -90765,6 +92442,14 @@ func (a *UpdateActivityRequest) UnmarshalJSON(b []byte) error {
 		return err
 	}
 
+	if raw, found := object["ai_assisted"]; found {
+		err = json.Unmarshal(raw, &a.AiAssisted)
+		if err != nil {
+			return fmt.Errorf("error reading 'ai_assisted': %w", err)
+		}
+		delete(object, "ai_assisted")
+	}
+
 	if raw, found := object["assignee_id"]; found {
 		err = json.Unmarshal(raw, &a.AssigneeId)
 		if err != nil {
@@ -90813,12 +92498,28 @@ func (a *UpdateActivityRequest) UnmarshalJSON(b []byte) error {
 		delete(object, "due_has_time")
 	}
 
+	if raw, found := object["due_intent"]; found {
+		err = json.Unmarshal(raw, &a.DueIntent)
+		if err != nil {
+			return fmt.Errorf("error reading 'due_intent': %w", err)
+		}
+		delete(object, "due_intent")
+	}
+
 	if raw, found := object["is_done"]; found {
 		err = json.Unmarshal(raw, &a.IsDone)
 		if err != nil {
 			return fmt.Errorf("error reading 'is_done': %w", err)
 		}
 		delete(object, "is_done")
+	}
+
+	if raw, found := object["meeting_intent"]; found {
+		err = json.Unmarshal(raw, &a.MeetingIntent)
+		if err != nil {
+			return fmt.Errorf("error reading 'meeting_intent': %w", err)
+		}
+		delete(object, "meeting_intent")
 	}
 
 	if raw, found := object["meeting_status"]; found {
@@ -90851,6 +92552,14 @@ func (a *UpdateActivityRequest) UnmarshalJSON(b []byte) error {
 			return fmt.Errorf("error reading 'remind_at': %w", err)
 		}
 		delete(object, "remind_at")
+	}
+
+	if raw, found := object["remind_intent"]; found {
+		err = json.Unmarshal(raw, &a.RemindIntent)
+		if err != nil {
+			return fmt.Errorf("error reading 'remind_intent': %w", err)
+		}
+		delete(object, "remind_intent")
 	}
 
 	if raw, found := object["subject"]; found {
@@ -90887,6 +92596,13 @@ func (a *UpdateActivityRequest) UnmarshalJSON(b []byte) error {
 func (a UpdateActivityRequest) MarshalJSON() ([]byte, error) {
 	var err error
 	object := make(map[string]json.RawMessage)
+
+	if a.AiAssisted != nil {
+		object["ai_assisted"], err = json.Marshal(a.AiAssisted)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'ai_assisted': %w", err)
+		}
+	}
 
 	if a.AssigneeId != nil {
 		object["assignee_id"], err = json.Marshal(a.AssigneeId)
@@ -90930,10 +92646,24 @@ func (a UpdateActivityRequest) MarshalJSON() ([]byte, error) {
 		}
 	}
 
+	if a.DueIntent != nil {
+		object["due_intent"], err = json.Marshal(a.DueIntent)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'due_intent': %w", err)
+		}
+	}
+
 	if a.IsDone != nil {
 		object["is_done"], err = json.Marshal(a.IsDone)
 		if err != nil {
 			return nil, fmt.Errorf("error marshaling 'is_done': %w", err)
+		}
+	}
+
+	if a.MeetingIntent != nil {
+		object["meeting_intent"], err = json.Marshal(a.MeetingIntent)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'meeting_intent': %w", err)
 		}
 	}
 
@@ -90962,6 +92692,13 @@ func (a UpdateActivityRequest) MarshalJSON() ([]byte, error) {
 		object["remind_at"], err = json.Marshal(a.RemindAt)
 		if err != nil {
 			return nil, fmt.Errorf("error marshaling 'remind_at': %w", err)
+		}
+	}
+
+	if a.RemindIntent != nil {
+		object["remind_intent"], err = json.Marshal(a.RemindIntent)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'remind_intent': %w", err)
 		}
 	}
 
@@ -93327,6 +95064,12 @@ type ServerInterface interface {
 	// Everything one email needs to be read and acted on, in one read.
 	// (GET /activities/{id}/email-presentation)
 	GetEmailPresentation(w http.ResponseWriter, r *http.Request, id Id, params GetEmailPresentationParams)
+	// Take an inquiry or hand its lead and this task to a colleague in one transaction.
+	// (POST /activities/{id}/inquiry-assignment)
+	AssignWebsiteInquiry(w http.ResponseWriter, r *http.Request, id Id, params AssignWebsiteInquiryParams)
+	// Show the inquiry task and record ownership before taking or assigning it.
+	// (POST /activities/{id}/inquiry-assignment/preview)
+	PreviewWebsiteInquiryAssignment(w http.ResponseWriter, r *http.Request, id Id)
 	// The pre-meeting brief for one booked meeting — goal, commitments, where the deal stands.
 	// (GET /activities/{id}/meeting-brief)
 	GetMeetingBrief(w http.ResponseWriter, r *http.Request, id Id, params GetMeetingBriefParams)
@@ -95454,6 +97197,9 @@ type ServerInterface interface {
 	// Write or clear your own sign-off.
 	// (PUT /me/email-signature)
 	SaveMyEmailSignature(w http.ResponseWriter, r *http.Request)
+	// The signature your connected Gmail mailbox holds, as Margince would keep it.
+	// (GET /me/email-signature/gmail)
+	GetMyGmailSignature(w http.ResponseWriter, r *http.Request)
 	// Change the name colleagues greet you by.
 	// (PUT /me/greeting-name)
 	SaveMyGreetingName(w http.ResponseWriter, r *http.Request)
@@ -96015,6 +97761,9 @@ type ServerInterface interface {
 	// Set the installation's retention posture (admin/ops).
 	// (PATCH /retention/settings)
 	UpdateRetentionSettings(w http.ResponseWriter, r *http.Request)
+	// Rewrite the words a rep has on screen under one rewrite verb.
+	// (POST /rewrites)
+	RewriteText(w http.ResponseWriter, r *http.Request)
 	// List the workspace's roles with their object grants and row scope.
 	// (GET /roles)
 	ListRoles(w http.ResponseWriter, r *http.Request, params ListRolesParams)
@@ -96090,6 +97839,21 @@ type ServerInterface interface {
 	// Cross-object search (contacts, companies, deals, activities, leads).
 	// (GET /search)
 	Search(w http.ResponseWriter, r *http.Request, params SearchParams)
+	// The installation's shared mailboxes, disconnected ones included.
+	// (GET /shared-mailboxes)
+	ListSharedMailboxes(w http.ResponseWriter, r *http.Request)
+	// Connect a shared mailbox, or reconnect the one stored for this address.
+	// (POST /shared-mailboxes)
+	ConnectSharedMailbox(w http.ResponseWriter, r *http.Request)
+	// Change who reads a shared mailbox, or its mail visibility.
+	// (PATCH /shared-mailboxes/{id})
+	UpdateSharedMailbox(w http.ResponseWriter, r *http.Request, id Id)
+	// Stop capturing a shared mailbox.
+	// (POST /shared-mailboxes/{id}/disconnect)
+	DisconnectSharedMailbox(w http.ResponseWriter, r *http.Request, id Id)
+	// Import a connected shared mailbox's past mail.
+	// (POST /shared-mailboxes/{id}/history-import)
+	StartSharedMailboxHistoryImport(w http.ResponseWriter, r *http.Request, id Id)
 	// List signals (cursor-paginated), newest first.
 	// (GET /signals)
 	ListSignals(w http.ResponseWriter, r *http.Request, params ListSignalsParams)
@@ -96387,6 +98151,15 @@ type ServerInterface interface {
 	// Change a website form, pause it or resume it.
 	// (PATCH /web-forms/{id})
 	UpdateWebForm(w http.ResponseWriter, r *http.Request, id Id, params UpdateWebFormParams)
+	// Save the reviewed inquiry policy and form link together.
+	// (PUT /web-forms/{id}/handling)
+	SaveWebFormHandling(w http.ResponseWriter, r *http.Request, id Id, params SaveWebFormHandlingParams)
+	// Handle explicitly selected accepted inquiries using the reviewed saved policy.
+	// (POST /web-forms/{id}/handling/existing)
+	HandleExistingWebFormInquiries(w http.ResponseWriter, r *http.Request, id Id)
+	// Preview inquiry deadlines and explicitly selected accepted submissions without writing.
+	// (POST /web-forms/{id}/handling/preview)
+	PreviewWebFormHandling(w http.ResponseWriter, r *http.Request, id Id)
 	// Rotate a form's minted signing secret (returns the new secret once).
 	// (POST /web-forms/{id}/rotate-secret)
 	RotateWebFormSecret(w http.ResponseWriter, r *http.Request, id Id)
@@ -96636,6 +98409,18 @@ func (_ Unimplemented) DraftEmail(w http.ResponseWriter, r *http.Request, id Id)
 // Everything one email needs to be read and acted on, in one read.
 // (GET /activities/{id}/email-presentation)
 func (_ Unimplemented) GetEmailPresentation(w http.ResponseWriter, r *http.Request, id Id, params GetEmailPresentationParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Take an inquiry or hand its lead and this task to a colleague in one transaction.
+// (POST /activities/{id}/inquiry-assignment)
+func (_ Unimplemented) AssignWebsiteInquiry(w http.ResponseWriter, r *http.Request, id Id, params AssignWebsiteInquiryParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Show the inquiry task and record ownership before taking or assigning it.
+// (POST /activities/{id}/inquiry-assignment/preview)
+func (_ Unimplemented) PreviewWebsiteInquiryAssignment(w http.ResponseWriter, r *http.Request, id Id) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -100893,6 +102678,12 @@ func (_ Unimplemented) SaveMyEmailSignature(w http.ResponseWriter, r *http.Reque
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
+// The signature your connected Gmail mailbox holds, as Margince would keep it.
+// (GET /me/email-signature/gmail)
+func (_ Unimplemented) GetMyGmailSignature(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
 // Change the name colleagues greet you by.
 // (PUT /me/greeting-name)
 func (_ Unimplemented) SaveMyGreetingName(w http.ResponseWriter, r *http.Request) {
@@ -102015,6 +103806,12 @@ func (_ Unimplemented) UpdateRetentionSettings(w http.ResponseWriter, r *http.Re
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
+// Rewrite the words a rep has on screen under one rewrite verb.
+// (POST /rewrites)
+func (_ Unimplemented) RewriteText(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
 // List the workspace's roles with their object grants and row scope.
 // (GET /roles)
 func (_ Unimplemented) ListRoles(w http.ResponseWriter, r *http.Request, params ListRolesParams) {
@@ -102162,6 +103959,36 @@ func (_ Unimplemented) ReassignHandoff(w http.ResponseWriter, r *http.Request, i
 // Cross-object search (contacts, companies, deals, activities, leads).
 // (GET /search)
 func (_ Unimplemented) Search(w http.ResponseWriter, r *http.Request, params SearchParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// The installation's shared mailboxes, disconnected ones included.
+// (GET /shared-mailboxes)
+func (_ Unimplemented) ListSharedMailboxes(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Connect a shared mailbox, or reconnect the one stored for this address.
+// (POST /shared-mailboxes)
+func (_ Unimplemented) ConnectSharedMailbox(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Change who reads a shared mailbox, or its mail visibility.
+// (PATCH /shared-mailboxes/{id})
+func (_ Unimplemented) UpdateSharedMailbox(w http.ResponseWriter, r *http.Request, id Id) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Stop capturing a shared mailbox.
+// (POST /shared-mailboxes/{id}/disconnect)
+func (_ Unimplemented) DisconnectSharedMailbox(w http.ResponseWriter, r *http.Request, id Id) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Import a connected shared mailbox's past mail.
+// (POST /shared-mailboxes/{id}/history-import)
+func (_ Unimplemented) StartSharedMailboxHistoryImport(w http.ResponseWriter, r *http.Request, id Id) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -102759,6 +104586,24 @@ func (_ Unimplemented) UpdateWebForm(w http.ResponseWriter, r *http.Request, id 
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
+// Save the reviewed inquiry policy and form link together.
+// (PUT /web-forms/{id}/handling)
+func (_ Unimplemented) SaveWebFormHandling(w http.ResponseWriter, r *http.Request, id Id, params SaveWebFormHandlingParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Handle explicitly selected accepted inquiries using the reviewed saved policy.
+// (POST /web-forms/{id}/handling/existing)
+func (_ Unimplemented) HandleExistingWebFormInquiries(w http.ResponseWriter, r *http.Request, id Id) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Preview inquiry deadlines and explicitly selected accepted submissions without writing.
+// (POST /web-forms/{id}/handling/preview)
+func (_ Unimplemented) PreviewWebFormHandling(w http.ResponseWriter, r *http.Request, id Id) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
 // Rotate a form's minted signing secret (returns the new secret once).
 // (POST /web-forms/{id}/rotate-secret)
 func (_ Unimplemented) RotateWebFormSecret(w http.ResponseWriter, r *http.Request, id Id) {
@@ -103313,6 +105158,19 @@ func (siw *ServerInterfaceWrapper) ListActivities(w http.ResponseWriter, r *http
 			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "project_id"})
 		} else {
 			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "project_id", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "website_form_id" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "website_form_id", r.URL.Query(), &params.WebsiteFormId, runtime.BindQueryParameterOptions{Type: "string", Format: "uuid"})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "website_form_id"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "website_form_id", Err: err})
 		}
 		return
 	}
@@ -104206,6 +106064,98 @@ func (siw *ServerInterfaceWrapper) GetEmailPresentation(w http.ResponseWriter, r
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.GetEmailPresentation(w, r, id, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// AssignWebsiteInquiry operation middleware
+func (siw *ServerInterfaceWrapper) AssignWebsiteInquiry(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params AssignWebsiteInquiryParams
+
+	headers := r.Header
+
+	// ------------- Optional header parameter "If-Match" -------------
+	if valueList, found := headers[http.CanonicalHeaderKey("If-Match")]; found {
+		var IfMatch IfMatch
+		n := len(valueList)
+		if n != 1 {
+			siw.ErrorHandlerFunc(w, r, &TooManyValuesForParamError{ParamName: "If-Match", Count: n})
+			return
+		}
+
+		err = runtime.BindStyledParameterWithOptions("simple", "If-Match", valueList[0], &IfMatch, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "string", Format: ""})
+		if err != nil {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "If-Match", Err: err})
+			return
+		}
+
+		params.IfMatch = &IfMatch
+
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.AssignWebsiteInquiry(w, r, id, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// PreviewWebsiteInquiryAssignment operation middleware
+func (siw *ServerInterfaceWrapper) PreviewWebsiteInquiryAssignment(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.PreviewWebsiteInquiryAssignment(w, r, id)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -135359,6 +137309,26 @@ func (siw *ServerInterfaceWrapper) SaveMyEmailSignature(w http.ResponseWriter, r
 	handler.ServeHTTP(w, r)
 }
 
+// GetMyGmailSignature operation middleware
+func (siw *ServerInterfaceWrapper) GetMyGmailSignature(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetMyGmailSignature(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // SaveMyGreetingName operation middleware
 func (siw *ServerInterfaceWrapper) SaveMyGreetingName(w http.ResponseWriter, r *http.Request) {
 
@@ -143641,6 +145611,26 @@ func (siw *ServerInterfaceWrapper) UpdateRetentionSettings(w http.ResponseWriter
 	handler.ServeHTTP(w, r)
 }
 
+// RewriteText operation middleware
+func (siw *ServerInterfaceWrapper) RewriteText(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.RewriteText(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // ListRoles operation middleware
 func (siw *ServerInterfaceWrapper) ListRoles(w http.ResponseWriter, r *http.Request) {
 
@@ -144704,6 +146694,142 @@ func (siw *ServerInterfaceWrapper) Search(w http.ResponseWriter, r *http.Request
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.Search(w, r, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// ListSharedMailboxes operation middleware
+func (siw *ServerInterfaceWrapper) ListSharedMailboxes(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ListSharedMailboxes(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// ConnectSharedMailbox operation middleware
+func (siw *ServerInterfaceWrapper) ConnectSharedMailbox(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ConnectSharedMailbox(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// UpdateSharedMailbox operation middleware
+func (siw *ServerInterfaceWrapper) UpdateSharedMailbox(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.UpdateSharedMailbox(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// DisconnectSharedMailbox operation middleware
+func (siw *ServerInterfaceWrapper) DisconnectSharedMailbox(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.DisconnectSharedMailbox(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// StartSharedMailboxHistoryImport operation middleware
+func (siw *ServerInterfaceWrapper) StartSharedMailboxHistoryImport(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.StartSharedMailboxHistoryImport(w, r, id)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -149135,6 +151261,130 @@ func (siw *ServerInterfaceWrapper) UpdateWebForm(w http.ResponseWriter, r *http.
 	handler.ServeHTTP(w, r)
 }
 
+// SaveWebFormHandling operation middleware
+func (siw *ServerInterfaceWrapper) SaveWebFormHandling(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params SaveWebFormHandlingParams
+
+	headers := r.Header
+
+	// ------------- Optional header parameter "If-Match" -------------
+	if valueList, found := headers[http.CanonicalHeaderKey("If-Match")]; found {
+		var IfMatch IfMatch
+		n := len(valueList)
+		if n != 1 {
+			siw.ErrorHandlerFunc(w, r, &TooManyValuesForParamError{ParamName: "If-Match", Count: n})
+			return
+		}
+
+		err = runtime.BindStyledParameterWithOptions("simple", "If-Match", valueList[0], &IfMatch, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "string", Format: ""})
+		if err != nil {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "If-Match", Err: err})
+			return
+		}
+
+		params.IfMatch = &IfMatch
+
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.SaveWebFormHandling(w, r, id, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// HandleExistingWebFormInquiries operation middleware
+func (siw *ServerInterfaceWrapper) HandleExistingWebFormInquiries(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.HandleExistingWebFormInquiries(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// PreviewWebFormHandling operation middleware
+func (siw *ServerInterfaceWrapper) PreviewWebFormHandling(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.PreviewWebFormHandling(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // RotateWebFormSecret operation middleware
 func (siw *ServerInterfaceWrapper) RotateWebFormSecret(w http.ResponseWriter, r *http.Request) {
 
@@ -150714,6 +152964,12 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/activities/{id}/email-presentation", wrapper.GetEmailPresentation)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/activities/{id}/inquiry-assignment", wrapper.AssignWebsiteInquiry)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/activities/{id}/inquiry-assignment/preview", wrapper.PreviewWebsiteInquiryAssignment)
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/activities/{id}/meeting-brief", wrapper.GetMeetingBrief)
@@ -152843,6 +155099,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 		r.Put(options.BaseURL+"/me/email-signature", wrapper.SaveMyEmailSignature)
 	})
 	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/me/email-signature/gmail", wrapper.GetMyGmailSignature)
+	})
+	r.Group(func(r chi.Router) {
 		r.Put(options.BaseURL+"/me/greeting-name", wrapper.SaveMyGreetingName)
 	})
 	r.Group(func(r chi.Router) {
@@ -153404,6 +155663,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 		r.Patch(options.BaseURL+"/retention/settings", wrapper.UpdateRetentionSettings)
 	})
 	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/rewrites", wrapper.RewriteText)
+	})
+	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/roles", wrapper.ListRoles)
 	})
 	r.Group(func(r chi.Router) {
@@ -153477,6 +155739,21 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/search", wrapper.Search)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/shared-mailboxes", wrapper.ListSharedMailboxes)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/shared-mailboxes", wrapper.ConnectSharedMailbox)
+	})
+	r.Group(func(r chi.Router) {
+		r.Patch(options.BaseURL+"/shared-mailboxes/{id}", wrapper.UpdateSharedMailbox)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/shared-mailboxes/{id}/disconnect", wrapper.DisconnectSharedMailbox)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/shared-mailboxes/{id}/history-import", wrapper.StartSharedMailboxHistoryImport)
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/signals", wrapper.ListSignals)
@@ -153774,6 +156051,15 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Patch(options.BaseURL+"/web-forms/{id}", wrapper.UpdateWebForm)
+	})
+	r.Group(func(r chi.Router) {
+		r.Put(options.BaseURL+"/web-forms/{id}/handling", wrapper.SaveWebFormHandling)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/web-forms/{id}/handling/existing", wrapper.HandleExistingWebFormInquiries)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/web-forms/{id}/handling/preview", wrapper.PreviewWebFormHandling)
 	})
 	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/web-forms/{id}/rotate-secret", wrapper.RotateWebFormSecret)

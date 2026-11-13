@@ -1,11 +1,12 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-import { Suspense, useState } from "react";
+import { type ReactNode, Suspense, useState } from "react";
 
 import { lazy } from "../i18n/lazy";
 import { AuthProbeError, type AuthProbeKind } from "../lib/session";
 import { AuthSplash } from "./bootsplash";
+import { TrialEndedScreen } from "./trialended";
 
 // Split off: the setup carries the QR encoder, which the sign-in surface must not download.
 const ForcedMfaScreen = lazy(async () => ({
@@ -83,6 +84,25 @@ export function useConfinement(
     setHeld(null);
   };
   return kind === null ? null : { kind, onResolved };
+}
+
+/**
+ * The one screen a signed-in seat is held to, or null when it reaches the app.
+ * First an account confined until it does one thing. Then an installation
+ * whose trial has ended: no screen can do its work, and this one says why.
+ */
+export function lockScreen(
+  confinement: ReturnType<typeof useConfinement>,
+  refusal: unknown,
+  me: Readonly<{ trial_ended?: boolean }> | undefined,
+): ReactNode {
+  if (confinement) {
+    return <ConfinedAccountScreen {...confinement} />;
+  }
+  if (refusal === null && me?.trial_ended === true) {
+    return <TrialEndedScreen />;
+  }
+  return null;
 }
 
 /** The boundary's answer to an account confined until it does one thing. */

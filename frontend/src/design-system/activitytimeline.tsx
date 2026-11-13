@@ -191,6 +191,7 @@ export function activityTimeline(
       bulkAttested: activity.bulk_mail_attested,
       copies: activity.copies,
       automaticKind: activity.automatic_kind,
+      aiAssisted: activity.ai_assisted,
       atIso: activity.occurred_at,
       atPrecision: activity.occurred_precision,
       provenance: withControllerSend(

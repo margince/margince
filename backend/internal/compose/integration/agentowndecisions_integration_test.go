@@ -160,27 +160,35 @@ func automationKeyed(t *testing.T, d *twoDoors, key string) automationRow {
 	return automationRow{}
 }
 
-// The rules the product starts with tell owners what happened, agents' acts too.
-// An agent cannot quiet one. The user still can.
+// An agent cannot retune or remove an unreviewed starter. A user reviews it first.
 func TestAnAgentCannotQuietASeededRule(t *testing.T) {
 	d := newTwoDoors(t, "agent-seeded-rule", "read", "write")
 	rule := automationKeyed(t, d, "stage_change_notify")
-	if rule.Status != "enabled" {
-		t.Fatalf("the seeded rule starts %q", rule.Status)
+	if rule.Status != "paused" {
+		t.Fatalf("the unreviewed rule starts %q", rule.Status)
 	}
-	refusal := d.toolRefused(t, "change_settings", map[string]any{"action": "update_automation", "id": rule.ID, "if_version": rule.Version, "request_body": AnyMap{"status": "paused"}})
+	stages := apptest.DefaultPipeline(t, d.e)
+	params := AnyMap{"pipeline_id": stages.PipelineID, "stage_ids": []string{stages.Open}}
+	refusal := d.toolRefused(t, "change_settings", map[string]any{"action": "update_automation", "id": rule.ID, "if_version": rule.Version, "request_body": AnyMap{"params": params}})
 	if !strings.Contains(refusal, "seeded") {
-		t.Errorf("pausing answered %q", refusal)
+		t.Errorf("retuning answered %q", refusal)
 	}
 	refusal = d.toolRefused(t, "change_settings", map[string]any{"action": "archive_automation", "id": rule.ID})
 	if !strings.Contains(refusal, "seeded") {
 		t.Errorf("archiving answered %q", refusal)
 	}
-	if got := automationKeyed(t, d, "stage_change_notify"); got.Status != "enabled" {
-		t.Errorf("the rule now reads %q", got.Status)
+	if got := automationKeyed(t, d, "stage_change_notify"); got.Status != "paused" || got.Version != rule.Version {
+		t.Errorf("the unreviewed rule changed: %+v", got)
 	}
-	if status := d.e.Call(t, "PATCH", "/v1/automations/"+rule.ID, AnyMap{"status": "paused"}, withIfMatch(nil, rule.Version), nil); status != http.StatusOK {
-		t.Errorf("the user pausing their rule → %d", status)
+	if status := d.e.Call(t, "PATCH", "/v1/automations/"+rule.ID, AnyMap{"status": "enabled", "params": params}, withIfMatch(nil, rule.Version), nil); status != http.StatusOK {
+		t.Fatalf("the user reviewing the rule: %d", status)
+	}
+	reviewed := automationKeyed(t, d, "stage_change_notify")
+	if reviewed.Status != "enabled" {
+		t.Fatalf("the reviewed rule is %q", reviewed.Status)
+	}
+	if status := d.e.Call(t, "PATCH", "/v1/automations/"+rule.ID, AnyMap{"status": "paused"}, withIfMatch(nil, reviewed.Version), nil); status != http.StatusOK {
+		t.Errorf("the user pausing their rule: %d", status)
 	}
 }
 
@@ -341,6 +349,11 @@ func TestASignalAnAgentResolvesDoesNotNameTheUser(t *testing.T) {
 	}
 	if resolvedBy != nil || !isAgentStamp(capturedBy) {
 		t.Errorf("the outcome reads resolved_by %v, captured_by %q", resolvedBy, capturedBy)
+	}
+	// The tool does not offer the kind, and a body that sets it anyway is refused at the door.
+	refusal := d.toolRefused(t, "change_attention", map[string]any{"action": "update_signal", "id": signal.ID, "request_body": AnyMap{"kind": "risk"}})
+	if !strings.Contains(refusal, "only a human may set kind") {
+		t.Errorf("an agent moving the kind answered %q, want the human-only refusal", refusal)
 	}
 }
 

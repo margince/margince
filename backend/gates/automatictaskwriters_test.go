@@ -61,13 +61,16 @@ var taskSourceWriters = map[string][]string{
 	"compose/commitmenttask.go:writeCommitmentTask":                       {provenance.CommitmentTaskSource},
 	"compose/leadsla.go:Apply":                                            {provenance.LeadSLATaskSource},
 	"compose/reconcile.go:followUpTaskInput":                              {provenance.OvernightReconcileSource},
+	"compose/reconcile.go:followUpConfirmEffect":                          {provenance.OvernightReconcileSource},
 	"modules/activities/requesttask.go:emailRequestTaskInput":             {provenance.EmailRequestSource},
-	"modules/automation/taskeffect.go:taskCreateEffectFor":                provenance.EngineReminderSources(),
+	"modules/automation/taskeffect.go:taskCreateEffectFor":                provenance.EngineTaskSources(),
 	"compose/csvactivityfields.go:activityCreateFrom":                     {writesCallerSource},
 	"modules/activities/mapping.go:logActivityInput":                      {writesCallerSource},
 	"modules/capture/sinkactivity.go:capturedActivityInsert":              {writesCallerSource},
 	"modules/activities/activityinsert.go:insertLoggedActivityRow":        {writesForItsCaller},
 	"modules/activities/activityinitialaudience.go:recordInitialActivity": {writesForItsCaller},
+	"modules/activities/activity.go:activityCapturedPayload":              {writesForItsCaller},
+	"modules/activities/followuptask.go:preparePatchedTaskSource":         {writesForItsCaller},
 	"compose/csvcontactfields.go:contactCreateFrom":                       {writesNoTask},
 	"modules/contacts/handlers_company.go:ListCompanies":                  {writesNoTask},
 	"modules/deals/handlers_deal.go:ListDeals":                            {writesNoTask},
@@ -76,7 +79,7 @@ var taskSourceWriters = map[string][]string{
 	"compose/dealscoutopen.go:recordOnTimeline":                           {writesNoTask},
 	"compose/dealscoutrevive.go:recordRevivalOnTimeline":                  {writesNoTask},
 	"compose/dealverdictjudge.go:recordOnTimeline":                        {writesNoTask},
-	"compose/webformleads.go:Land":                                        {writesNoTask},
+	"compose/webformlead/webformlead.go:Land":                             {writesNoTask},
 	"compose/assurancebundletask.go:writeBundleTask":                      {provenance.AssuranceTaskSource},
 	"compose/leadworktasks.go:repliedTaskInput":                           {provenance.LeadRepliedSource},
 	"compose/leadworktasks.go:arrivalTaskInput":                           {provenance.LeadForContactSource},
@@ -84,6 +87,7 @@ var taskSourceWriters = map[string][]string{
 	"modules/activities/emailrequesttasks.go:captureEmailRequest":         {provenance.EmailRequestSource},
 	"modules/activities/requesttask.go:takeEmailRequest":                  {provenance.EmailRequestSource},
 	"compose/bulkrecordverbs.go:applyTask":                                {writesHumanTask},
+	"compose/partnersteps/partnersteps.go:WriteTx":                        {writesHumanTask},
 	"modules/activities/handlers_activity.go:LogActivity":                 {writesHumanTask},
 	"modules/activities/handlers_task.go:CreateTask":                      {writesHumanTask},
 	"modules/activities/handlers_task.go:TaskInputFrom":                   {writesHumanTask},
@@ -130,7 +134,7 @@ var openTaskReadersElsewhere = map[string]string{
 	"modules/activities/homerepair.go:pristineRepairTaskSQL":              "the repair reads exactly the automatic tasks that are no longer current",
 	"modules/activities/homerepair.go:readHomeRepairTasksTx":              "the repair reads exactly the automatic tasks that are no longer current",
 	"modules/activities/lasttouch.go:openChildReminderHoldsAccount":       "an open reminder of the engine's own family holds its re-raise; it creates no work",
-	"modules/activities/lasttouch.go:openReminderHoldsEntity":             "an open reminder of the engine's own family holds its re-raise; it creates no work",
+	"modules/activities/lasttouch.go:openReminderHoldsEntityFrom":         "an open reminder of the engine's own family holds its re-raise; it creates no work",
 	"modules/activities/requestreminderreach.go:openReminderClause":       "names the reminder a reach recompute may move, where the waiting horizon would skip a stale one instead of correcting it",
 	"modules/activities/requestrecovery.go:requestAvailableForAcceptance": "checks a request has no accepted task before a human accepts it",
 	"modules/activities/whichdealanswer.go:openWhichDealQuestions":        "closes the deal questions a colleague's filing or decline has just answered; it creates no work",
@@ -255,10 +259,10 @@ func censusPackage(root string, consts packageConsts, files []*ast.File, names m
 					switch callee := x.Fun.(type) {
 					case *ast.Ident:
 						facts.calls = append(facts.calls, callee.Name)
-						facts.clause = facts.clause || callee.Name == "CurrentTaskClause"
+						facts.clause = facts.clause || isCurrentTaskClause(callee.Name)
 					case *ast.SelectorExpr:
 						facts.calls = append(facts.calls, callee.Sel.Name)
-						facts.clause = facts.clause || callee.Sel.Name == "CurrentTaskClause"
+						facts.clause = facts.clause || isCurrentTaskClause(callee.Sel.Name)
 					}
 				}
 				return true
@@ -657,4 +661,10 @@ func lastName(expr ast.Expr) string {
 		return x.Sel.Name
 	}
 	return ""
+}
+
+// isCurrentTaskClause names storekit.CurrentTaskClause or its To-line-only
+// spelling, which is the same rule without the shared-mailbox step.
+func isCurrentTaskClause(name string) bool {
+	return name == "CurrentTaskClause" || name == "CurrentTaskClauseToLineOnly"
 }

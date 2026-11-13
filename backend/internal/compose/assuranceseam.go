@@ -319,7 +319,7 @@ func earlierAnswerSQL(deal, asOf string, arg func(any) int) string {
 // apart so a test can read which tables the check reads.
 func assuranceSubjectsQuery(now time.Time, identities string, only []ids.UUID, arg func(any) int) string {
 	// A task the product filed itself asks for a next step; it is not one.
-	humanTask := activities.CurrentTaskClause("a", now, identities, arg) +
+	humanTask := activities.CurrentTaskClauseToLineOnly("a", now, identities, arg) +
 		" AND a.origin <> '" + activities.OriginSystemRemediation + "'"
 	return fmt.Sprintf(assuranceSubjectsSQL, humanTask,
 		customerProgressSQL("a", "$2"), relstrength.MeetingAheadSQL("a", "$2"),

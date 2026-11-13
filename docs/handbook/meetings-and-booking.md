@@ -102,7 +102,7 @@ Queued means Margince asked your mailbox to send it, not that it reached the gue
 
 Your free times in Margince are your bookable hours minus everything your calendars show as busy. Busy means anything booked in the calendar for new meetings, and in your other calendars that block time. Internal meetings, private events, time you blocked to work alone, and all-day events marked busy all count. None of them becomes a record in Margince, and guests never see their titles, guests or text.
 
-Open times start every 15 minutes in your time zone. Guests can choose the time zone they see times in.
+Open times start every 15 minutes in your time zone. Guests can choose the time zone they see times in. An invite you send or a meeting you move keeps the local time you picked. That holds even if the time zone's clock rules change later.
 
 If Margince cannot read a calendar it needs, it shows no times at all, rather than times that may be wrong. A search with no times says why: past your booking horizon, or inside your notice.
 

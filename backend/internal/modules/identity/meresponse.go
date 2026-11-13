@@ -84,6 +84,7 @@ func (h Handlers) meResponse(ctx context.Context, id Identity) crmcontracts.MeRe
 		AdminPasswordLink:        adminPasswordLink,
 		ConfirmRequestsSendable:  &confirmRequests,
 		ReaderRenderingAvailable: &readerRendering,
+		TrialEnded:               h.trialEndedForMe(ctx),
 		Authorization: &crmcontracts.Authorization{
 			SeatType: contractSeatType(id.SeatType),
 			Objects:  contractObjectGrants(id.Permissions.Objects),

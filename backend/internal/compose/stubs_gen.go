@@ -111,6 +111,14 @@ func (stubs) GetEmailPresentation(w nethttp.ResponseWriter, r *nethttp.Request, 
 	httperr.NotImplemented(w, r, "GetEmailPresentation")
 }
 
+func (stubs) AssignWebsiteInquiry(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id, params crmcontracts.AssignWebsiteInquiryParams) {
+	httperr.NotImplemented(w, r, "AssignWebsiteInquiry")
+}
+
+func (stubs) PreviewWebsiteInquiryAssignment(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {
+	httperr.NotImplemented(w, r, "PreviewWebsiteInquiryAssignment")
+}
+
 func (stubs) GetMeetingBrief(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id, params crmcontracts.GetMeetingBriefParams) {
 	httperr.NotImplemented(w, r, "GetMeetingBrief")
 }
@@ -2947,6 +2955,10 @@ func (stubs) SaveMyEmailSignature(w nethttp.ResponseWriter, r *nethttp.Request) 
 	httperr.NotImplemented(w, r, "SaveMyEmailSignature")
 }
 
+func (stubs) GetMyGmailSignature(w nethttp.ResponseWriter, r *nethttp.Request) {
+	httperr.NotImplemented(w, r, "GetMyGmailSignature")
+}
+
 func (stubs) SaveMyGreetingName(w nethttp.ResponseWriter, r *nethttp.Request) {
 	httperr.NotImplemented(w, r, "SaveMyGreetingName")
 }
@@ -3695,6 +3707,10 @@ func (stubs) UpdateRetentionSettings(w nethttp.ResponseWriter, r *nethttp.Reques
 	httperr.NotImplemented(w, r, "UpdateRetentionSettings")
 }
 
+func (stubs) RewriteText(w nethttp.ResponseWriter, r *nethttp.Request) {
+	httperr.NotImplemented(w, r, "RewriteText")
+}
+
 func (stubs) ListRoles(w nethttp.ResponseWriter, r *nethttp.Request, params crmcontracts.ListRolesParams) {
 	httperr.NotImplemented(w, r, "ListRoles")
 }
@@ -3793,6 +3809,26 @@ func (stubs) ReassignHandoff(w nethttp.ResponseWriter, r *nethttp.Request, id cr
 
 func (stubs) Search(w nethttp.ResponseWriter, r *nethttp.Request, params crmcontracts.SearchParams) {
 	httperr.NotImplemented(w, r, "Search")
+}
+
+func (stubs) ListSharedMailboxes(w nethttp.ResponseWriter, r *nethttp.Request) {
+	httperr.NotImplemented(w, r, "ListSharedMailboxes")
+}
+
+func (stubs) ConnectSharedMailbox(w nethttp.ResponseWriter, r *nethttp.Request) {
+	httperr.NotImplemented(w, r, "ConnectSharedMailbox")
+}
+
+func (stubs) UpdateSharedMailbox(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {
+	httperr.NotImplemented(w, r, "UpdateSharedMailbox")
+}
+
+func (stubs) DisconnectSharedMailbox(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {
+	httperr.NotImplemented(w, r, "DisconnectSharedMailbox")
+}
+
+func (stubs) StartSharedMailboxHistoryImport(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {
+	httperr.NotImplemented(w, r, "StartSharedMailboxHistoryImport")
 }
 
 func (stubs) ListSignals(w nethttp.ResponseWriter, r *nethttp.Request, params crmcontracts.ListSignalsParams) {
@@ -4189,6 +4225,18 @@ func (stubs) GetWebForm(w nethttp.ResponseWriter, r *nethttp.Request, id crmcont
 
 func (stubs) UpdateWebForm(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id, params crmcontracts.UpdateWebFormParams) {
 	httperr.NotImplemented(w, r, "UpdateWebForm")
+}
+
+func (stubs) SaveWebFormHandling(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id, params crmcontracts.SaveWebFormHandlingParams) {
+	httperr.NotImplemented(w, r, "SaveWebFormHandling")
+}
+
+func (stubs) HandleExistingWebFormInquiries(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {
+	httperr.NotImplemented(w, r, "HandleExistingWebFormInquiries")
+}
+
+func (stubs) PreviewWebFormHandling(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {
+	httperr.NotImplemented(w, r, "PreviewWebFormHandling")
 }
 
 func (stubs) RotateWebFormSecret(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {

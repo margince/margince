@@ -37,6 +37,7 @@ import { TaskAssigneeField } from "./assigneepicker";
 import { LogActivityEntries } from "./extensionentries";
 import { ActivityKindField } from "./logactivity.kindfield";
 import { TaskCompletionChoice } from "./logactivity.taskcompletion";
+import { assignedRecord } from "./recordassignments.queries";
 import { TaskTypeField } from "./tasktype";
 import "./logactivity.css";
 import { useViewerZone } from "../lib/viewerzone";
@@ -52,8 +53,10 @@ import {
   type MeetingRecord,
   openMeetingKey,
   recordOnMeeting,
+  transcriptRecords,
   useRecordOfMeeting,
 } from "./logactivity.openmeeting";
+import { PolishWording } from "./logactivity.polish";
 import {
   attachLoggedFiles,
   LogActivityFilesField,
@@ -152,7 +155,8 @@ export function LogActivityForm({
       completion: Readonly<{ id: string; version?: number }> | undefined;
       inheritSourceLinks: boolean;
     }) => {
-      if (input.record) {
+      const recordsMeeting = transcriptRecords(input.record, input.draft);
+      if (input.record && !recordsMeeting) {
         const id = await recordOnMeeting(
           { ...input, record: input.record, entityType, entityId },
           t,
@@ -175,6 +179,7 @@ export function LogActivityForm({
               input.attendees,
             ),
             ...(input.inheritSourceLinks ? { links: undefined } : {}),
+            ...(recordsMeeting ? { records_meeting_id: recordsMeeting } : {}),
           },
         }),
         t,
@@ -368,6 +373,7 @@ export function LogActivityForm({
         active={draft.kind === "task"}
         value={draft.assigneeId}
         onChange={(value) => setField({ assigneeId: value })}
+        records={assignedRecord(entityType, entityId)}
       />
       {asksAttendees && entityType && entityId && (
         <MeetingAttendeeFields
@@ -413,11 +419,19 @@ export function LogActivityForm({
         value={draft.body}
         onChange={(body) => setField({ body })}
       />
+      <PolishWording
+        words={draft}
+        onChange={setField}
+        offered={!transcript}
+        entityType={entityType}
+        entityId={entityId}
+      />
       {custom.controls}
       {draft.kind !== "task" && (
         <FollowUpTaskFields
           value={draft.followUp}
           onChange={(followUp) => setField({ followUp })}
+          records={assignedRecord(entityType, entityId)}
         />
       )}
       {transcript && (

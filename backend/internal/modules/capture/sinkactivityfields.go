@@ -9,12 +9,14 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/platform/database/textbounds"
 	"github.com/margince/margince/backend/internal/shared/ports/connector"
 	"github.com/margince/margince/backend/internal/shared/ports/datasource"
 )
 
 // settledFields fills in what the capture does not take as sent. That is the
-// time and its day anchor, the storable length, and the envelope's judgement.
+// time and its day anchor, the storable length and subject, and the envelope's
+// judgement.
 func settledFields(ctx context.Context, tx pgx.Tx, rec connector.NormalizedRecord, fields ActivityFields) (ActivityFields, error) {
 	var err error
 	if fields.DateOnly {
@@ -24,6 +26,7 @@ func settledFields(ctx context.Context, tx pgx.Tx, rec connector.NormalizedRecor
 	}
 	fields.OccurredAt = defaultOccurredAt(fields.OccurredAt)
 	fields.DurationSeconds = StorableDuration(fields.DurationSeconds)
+	fields.Subject = textbounds.Fit("public.activity.subject", fields.Subject)
 	fields.judged, err = judgeEnvelopeTx(ctx, tx, rec, fields)
 	return fields, err
 }

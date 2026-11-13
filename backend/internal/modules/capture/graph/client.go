@@ -279,6 +279,12 @@ type httpAPI struct {
 	// mailbox is the path root every mailbox call hangs off: personalMailbox,
 	// or /users/{address} for a shared mailbox. Set once, never per call.
 	mailbox string
+	// names are what Graph may call a shared mailbox in a link or a
+	// resource: its address, and its user object id once known.
+	names []string
+	// maxPageSize caps the entries a listing page holds; zero asks for
+	// Graph's own page size.
+	maxPageSize int
 }
 
 // personalMailbox is the signed-in user's own mailbox. It is the one place the
@@ -291,19 +297,6 @@ const personalMailbox = "/me"
 //nolint:ireturn // returns the API seam by design — the connector holds it as an interface so tests substitute a stub
 func NewAPI(client *http.Client, base string) API {
 	return newHTTPAPI(client, base, personalMailbox)
-}
-
-// NewSharedAPI builds the client for a shared mailbox the app reads with
-// application permission. Every call goes to /users/{address}, because /me
-// has no meaning for an app token.
-//
-//nolint:ireturn // returns the API seam by design, as NewAPI does
-func NewSharedAPI(client *http.Client, base, address string) (API, error) {
-	mailbox, err := oauthflow.MailboxAddress(address)
-	if err != nil {
-		return nil, fmt.Errorf("graph: %w", err)
-	}
-	return newHTTPAPI(client, base, "/users/"+url.PathEscape(mailbox)), nil
 }
 
 func newHTTPAPI(client *http.Client, base, mailbox string) *httpAPI {
@@ -348,7 +341,7 @@ func (a *httpAPI) sameMailbox(link string) error {
 		return err
 	}
 	parsed, err := url.Parse(link)
-	if err != nil || dotSegment(parsed.Path) || !strings.HasPrefix(strings.ToLower(link), strings.ToLower(a.root()+"/")) {
+	if err != nil || dotSegment(parsed.Path) || !a.underMailbox(parsed.Path) {
 		return fmt.Errorf("graph: a continuation link left the shared mailbox: %w", ErrUnreachable)
 	}
 	return nil
@@ -425,7 +418,7 @@ func (a *httpAPI) ListAfter(ctx context.Context, accessToken string, after time.
 		q := url.Values{
 			paramFilter: {receivedAfterFilter(after)},
 			paramSelect: {"id,parentFolderId,receivedDateTime"},
-			paramTop:    {strconv.Itoa(pageSize)},
+			paramTop:    {strconv.Itoa(a.pageSize(pageSize))},
 		}
 		u = a.root() + "/messages?" + q.Encode()
 	} else if err := a.sameMailbox(u); err != nil {
@@ -476,4 +469,12 @@ func (a *httpAPI) FolderID(ctx context.Context, accessToken, wellKnown string) (
 		return "", fmt.Errorf("graph: the mailbox reported no %s folder id: %w", wellKnown, ErrUnreachable)
 	}
 	return out.ID, nil
+}
+
+// pageSize is the $top a listing asks for: want, or the client's cap below it.
+func (a *httpAPI) pageSize(want int) int {
+	if a.maxPageSize > 0 && a.maxPageSize < want {
+		return a.maxPageSize
+	}
+	return want
 }

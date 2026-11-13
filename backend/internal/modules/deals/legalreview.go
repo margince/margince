@@ -48,8 +48,8 @@ const (
 // The bounds the table's CHECKs hold, counted in characters as the contract's
 // maxLength is.
 const (
-	maxReviewNote     = 4000
-	maxReviewComments = 8000
+	maxReviewNote     = values.TextNoteCharacters
+	maxReviewComments = values.TextNoteCharacters
 )
 
 // PacketDocument is one contract, legal or offer document on the deal, as the

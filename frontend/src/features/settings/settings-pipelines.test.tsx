@@ -598,7 +598,7 @@ describe("PipelinesCard: the ladder", () => {
     renderPage();
     await user.click(await screen.findByTestId("new-stage-pl"));
     const form = screen.getByRole("dialog");
-    await user.type(within(form).getByLabelText(/Name/), "Discovery");
+    await user.type(within(form).getByLabelText("Name *"), "Discovery");
     await user.type(within(form).getByLabelText(/Win probability/), "15");
     await user.click(within(form).getByRole("button", { name: "Create" }));
     await waitFor(() =>
@@ -636,7 +636,7 @@ describe("PipelinesCard: the ladder", () => {
     );
     await user.click(screen.getByRole("button", { name: "Edit stage" }));
     const form = await screen.findByRole("dialog");
-    const name = within(form).getByLabelText(/Name/);
+    const name = within(form).getByLabelText("Name *");
     await user.clear(name);
     await user.type(name, "Qualified");
     await user.click(within(form).getByRole("button", { name: "Save" }));
@@ -944,7 +944,7 @@ describe("PipelinesCard: the pipeline's own verbs", () => {
     const backend = server({});
     renderPage();
     await user.click(await screen.findByRole("button", { name: "Rename" }));
-    const name = screen.getByLabelText(/Name/);
+    const name = screen.getByLabelText("Name *");
     await user.clear(name);
     await user.type(name, "Renamed");
     await user.click(screen.getByRole("button", { name: "Save" }));

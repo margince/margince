@@ -2,6 +2,8 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
+import { expect, within } from "storybook/test";
+import { en } from "../../i18n/en";
 import type { MagicReceipt } from "../../lib/magic.queries";
 import {
   jsonResponse,
@@ -133,4 +135,20 @@ export const UnknownReceiptKind: Story = {
       ...QUIET,
       not_shown: [{ reason: "unknown_entity_type", count: 2 }],
     }),
+};
+
+/** Lanes the server read to their bound: the done fold says "at least", and a
+ *  cut waiting lane says there is more than it shows. */
+export const LanesCutAtTheirBound: Story = {
+  render: () =>
+    panel({
+      ...EVERY_LANE,
+      cut_at_limit: ["done", "needs_you", "could_not_complete"],
+    }),
+  play: async ({ canvasElement }) => {
+    const notes = await within(canvasElement).findAllByText(
+      en["magic.laneCut"],
+    );
+    await expect(notes).toHaveLength(2);
+  },
 };

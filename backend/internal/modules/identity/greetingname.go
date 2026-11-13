@@ -27,6 +27,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/draftfloor"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/values"
 )
 
 // greetingNameField is the name this answers to in the audit images and the
@@ -35,7 +36,7 @@ const greetingNameField = "greeting_name"
 
 // greetingNameMaxRunes is the contract's bound and the column's CHECK, counted
 // in runes for the reason displayNameMaxRunes is.
-const greetingNameMaxRunes = 100
+const greetingNameMaxRunes = values.TextLabelCharacters
 
 // greetingNameOf flattens a typed value to one trimmed line and refuses one
 // past the bound. Nil or blank comes back "", which clears. draftfloor.NameLine

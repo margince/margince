@@ -49,12 +49,6 @@ export async function mockApi(
       `${parts.year}-${parts.month}-${parts.day}`,
     );
   });
-  // Hermetic runs: no external font fetches.
-  await target.route("https://fonts.googleapis.com/**", (route) =>
-    route.abort(),
-  );
-  await target.route("https://fonts.gstatic.com/**", (route) => route.abort());
-
   const state = createMockState(options);
   await target.route(/\/v1\//, (route) => answer(routes, route, state));
 }

@@ -131,6 +131,9 @@ func existingRowIDs(
 // unchanged source really wrote nothing.
 type writeOutcome int
 
+// maxDunningLevel is the highest reminder count the mirror's range check takes.
+const maxDunningLevel = 99
+
 const (
 	wroteNothing writeOutcome = iota
 	wroteInsert
@@ -162,6 +165,9 @@ func (s *Store) mirrorInvoice(
 	ctx context.Context, tx pgx.Tx, args mirrorArgs,
 ) (ids.UUID, writeOutcome, error) {
 	inv := args.invoice
+	if level := inv.DunningLevel; level != nil && (*level < 0 || *level > maxDunningLevel) {
+		return ids.UUID{}, wroteNothing, fmt.Errorf("the source states dunning level %d; a level runs from 0 to %d", *level, maxDunningLevel)
+	}
 	hash := invoiceHash(inv)
 	existing, found, err := findInvoice(ctx, tx, args.connectionID, inv.ExternalID)
 	if err != nil {
@@ -228,7 +234,7 @@ func findInvoice(
 		SELECT id, sync_hash, fx_rate_to_base, company_id, customer_link_id, number,
 		       issued_at, due_at, status, currency, net_minor, tax_minor,
 		       gross_minor, open_minor, credited_minor,
-		       fully_paid_at, disputed_at, void_at
+		       fully_paid_at, disputed_at, void_at, dunning_level
 		  FROM finance_invoice
 		 WHERE connection_id = $1 AND external_id = $2
 		   FOR UPDATE`,
@@ -237,7 +243,8 @@ func findInvoice(
 		&row.image.IssuedAt, &row.image.DueAt, &row.image.Status,
 		&row.image.Currency, &row.image.NetMinor, &row.image.TaxMinor,
 		&row.image.GrossMinor, &row.image.OpenMinor, &row.image.CreditedMinor,
-		&row.image.FullyPaidAt, &row.image.DisputedAt, &row.image.VoidAt)
+		&row.image.FullyPaidAt, &row.image.DisputedAt, &row.image.VoidAt,
+		&row.image.DunningLevel)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return mirroredInvoice{}, false, nil
 	}
@@ -260,7 +267,7 @@ func invoiceImageOf(args mirrorArgs, values invoiceValues, hash string) invoiceI
 		GrossMinor: inv.GrossMinor, OpenMinor: values.openMinor,
 		CreditedMinor: values.credited, FullyPaidAt: inv.FullyPaidAt,
 		DisputedAt: values.disputedAt, VoidAt: values.voidAt,
-		FxRateToBase: values.fxRate, SyncHash: hash,
+		DunningLevel: inv.DunningLevel, FxRateToBase: values.fxRate, SyncHash: hash,
 	}
 }
 
@@ -326,16 +333,16 @@ func insertInvoice(
 		        issued_at, due_at, status, currency, net_minor, tax_minor, gross_minor,
 		        open_minor, credited_minor, fully_paid_at, disputed_at, void_at,
 		        credits_invoice_id, source_updated_at, sync_hash, fx_rate_to_base,
-		        fx_rate_date, source, captured_by, customer_link_id)
+		        fx_rate_date, source, captured_by, customer_link_id, dunning_level)
 		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15,
-		        $16, $17, $18, $19, $20, $21, $22, $23, $24, $25)
+		        $16, $17, $18, $19, $20, $21, $22, $23, $24, $25, $26)
 		RETURNING fx_rate_to_base`,
 		id, args.connectionID, args.companyID,
 		inv.ExternalID, nullable(inv.Number), inv.IssuedOn, inv.DueOn, values.status,
 		inv.Currency, inv.NetMinor, inv.TaxMinor, inv.GrossMinor, values.openMinor,
 		values.credited, inv.FullyPaidAt, values.disputedAt, values.voidAt,
 		values.creditsID, inv.UpdatedAt, hash, values.fxRate, values.fxDate,
-		args.source, args.capturedBy, args.linkID).Scan(&values.fxRate)
+		args.source, args.capturedBy, args.linkID, inv.DunningLevel).Scan(&values.fxRate)
 	if err != nil {
 		return fmt.Errorf("mirror the invoice: %w", err)
 	}
@@ -375,14 +382,15 @@ func updateInvoice(
 		       gross_minor = $10, open_minor = $11, credited_minor = $12,
 		       fully_paid_at = $13, disputed_at = $14, void_at = $15,
 		       credits_invoice_id = $16, source_updated_at = $17, sync_hash = $18,
-		       fx_rate_to_base = $19, fx_rate_date = $20, customer_link_id = $21
+		       fx_rate_to_base = $19, fx_rate_date = $20, customer_link_id = $21,
+		       dunning_level = $22
 		 WHERE id = $1
 		RETURNING fx_rate_to_base`,
 		id, args.companyID, nullable(inv.Number), inv.IssuedOn, inv.DueOn,
 		values.status, inv.Currency, inv.NetMinor, inv.TaxMinor, inv.GrossMinor,
 		values.openMinor, values.credited, inv.FullyPaidAt, values.disputedAt,
 		values.voidAt, values.creditsID, inv.UpdatedAt, hash,
-		values.fxRate, values.fxDate, args.linkID).Scan(&values.fxRate)
+		values.fxRate, values.fxDate, args.linkID, inv.DunningLevel).Scan(&values.fxRate)
 	if err != nil {
 		return fmt.Errorf("update the mirrored invoice: %w", err)
 	}
@@ -428,67 +436,6 @@ func applyCredits(ledger SourceLedger) (map[string]int64, []string) {
 		credited[inv.CreditsExternalID] += inv.GrossMinor
 	}
 	return credited, orphans
-}
-
-// The mirrored invoice's status vocabulary, matching the column's CHECK and
-// the contract's enum. Named rather than repeated: the derivation below and
-// the CHECK have to agree, and two spellings of one word is how they stop.
-const (
-	statusVoid          = "void"
-	statusCredited      = "credited"
-	statusDisputed      = "disputed"
-	statusPaid          = "paid"
-	statusOverdue       = "overdue"
-	statusPartiallyPaid = "partially_paid"
-	statusOpen          = "open"
-)
-
-// deriveStatus computes what the invoice IS today, from values that do not
-// move. Never hashed and never taken from the provider: "overdue" changes at
-// midnight, and a stored-and-hashed status would rewrite the ledger every
-// morning.
-func deriveStatus(inv SourceInvoice, open int64, now time.Time) string {
-	switch {
-	case inv.Void:
-		return statusVoid
-	case inv.CreditsExternalID != "":
-		return statusCredited
-	case inv.FullyPaidAt != nil: // settled outranks a dispute it settled
-		return statusPaid
-	case inv.Disputed:
-		return statusDisputed
-	default:
-		return settlementStatus(open, inv.PaidMinor, inv.DueOn, now)
-	}
-}
-
-// settlementStatus is the part of the status that moves with the clock. The
-// mirror writes it, and the card derives it again on read, because an
-// unchanged source is never rewritten.
-func settlementStatus(open, paid int64, due *time.Time, now time.Time) string {
-	switch {
-	case open == 0:
-		// Nothing is owed, whether money, credits or a zero total settled it, so
-		// a passed due date makes nothing late.
-		return statusPaid
-	case pastDue(due, now):
-		return statusOverdue
-	case paid > 0:
-		return statusPartiallyPaid
-	default:
-		return statusOpen
-	}
-}
-
-// statusAsOf is a stored status as of now. Void, credited and disputed come
-// from the source alone; every other status is settled again against today.
-func statusAsOf(stored string, gross, credited, open int64, due *time.Time, now time.Time) string {
-	switch stored {
-	case statusVoid, statusCredited, statusDisputed:
-		return stored
-	default:
-		return settlementStatus(open, gross-credited-open, due, now)
-	}
 }
 
 func nullable(value string) *string {

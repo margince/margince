@@ -17,8 +17,10 @@ import (
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/kernel/provenance"
 	"github.com/margince/margince/backend/internal/shared/kernel/systemtext"
 	"github.com/margince/margince/backend/internal/shared/ports/fieldcatalog"
+	"github.com/margince/margince/backend/internal/shared/ports/workflow"
 )
 
 // fieldKind names the activity kind in the write shape's audit and outbox
@@ -28,23 +30,36 @@ const (
 	fieldSubject = "subject"
 )
 
-// activityCapturedPayload builds the activity.captured event for the
-// direct-log path. It never names a source_system, which belongs to the
-// capture auto-create path.
-func activityCapturedPayload(ctx context.Context, kind, channelProvider string) crmcontracts.PublicEventActivityCaptured {
-	p := crmcontracts.PublicEventActivityCaptured{Kind: kind}
+// Website consumers need the accepted identity, never a copy of the submitted text.
+func activityCapturedPayload(ctx context.Context, in LogActivityInput) (crmcontracts.PublicEventActivityCaptured, error) {
+	p := crmcontracts.PublicEventActivityCaptured{Kind: in.Kind}
+	if in.Kind == string(crmcontracts.ActivityKindNote) && in.SourceSystem != nil && *in.SourceSystem == provenance.WebFormSource && in.SourceID != nil {
+		p.SourceSystem = in.SourceSystem
+		p.WebsiteSubmissionKey = in.SourceID
+		owner, err := workflow.AcceptedInquiryOwner(in.Raw)
+		if err != nil {
+			return p, err
+		}
+		if owner != nil {
+			id := crmcontracts.Id(*owner)
+			p.HandlingAutomationId = &id
+		}
+	}
 	// An import's activities are history, so consumers that react to new work
 	// read the mark and skip them.
 	p.Imported, p.ImportRunId = storekit.ImportMark(ctx)
 	// Carried only when there is one, so omitempty leaves it absent. The kind
 	// alone no longer says what carried a message.
-	if channelProvider != "" {
-		p.ChannelProvider = &channelProvider
+	if in.ChannelProvider != "" {
+		p.ChannelProvider = &in.ChannelProvider
 	}
-	return p
+	return p, nil
 }
 
 type LogActivityInput struct {
+	DueIntent     *crmcontracts.IntentTime
+	RemindIntent  *crmcontracts.IntentTime
+	MeetingIntent *crmcontracts.IntentTime
 	// Queued mail keeps its original entity when the sender changes company.
 	correspondenceEntity ids.UUID
 	SystemText           *systemtext.Message
@@ -59,6 +74,8 @@ type LogActivityInput struct {
 	// audienceOf gives the new activity the audience, members and parties of
 	// the activity it records. Nil leaves the audience it is born with.
 	audienceOf *ids.ActivityID
+	// recordsMeeting is the open meeting a transcript records (records_meeting_id).
+	recordsMeeting *ids.ActivityID
 	// invitedAssignee admits an invited colleague as the task's assignee. The
 	// HTTP create handler sets it for an assignee the caller NAMED, and
 	// AdmitInvitedAssignee for a promiser's own task. Every other automatic
@@ -97,10 +114,14 @@ type LogActivityInput struct {
 	DueHasTime bool
 	// TaskType is the work a task asks for; nil leaves the read to derive it
 	// from the task's maker (storekit.TaskTypeSQL).
-	TaskType   *crmcontracts.TaskType
-	RemindAt   *time.Time
-	AssigneeID *ids.UserID
-	HostUserID *ids.UserID
+	TaskType *crmcontracts.TaskType
+	// AIAssisted says a model rewrote the subject or body before the rep saved it.
+	AIAssisted bool
+	// AIAssistedOn is the record the words were polished on, one of Links.
+	AIAssistedOn *ActivityLinkInput
+	RemindAt     *time.Time
+	AssigneeID   *ids.UserID
+	HostUserID   *ids.UserID
 	// AttendeeUserIDs are the colleagues who were in a meeting or call besides
 	// whoever logged it; each is stamped as an our-side participant.
 	AttendeeUserIDs []ids.UserID
@@ -279,6 +300,21 @@ func (s *Store) logActivityAndReadTranscript(
 	in.recordedAt = &at
 	in.dealFilingResolver = s.dealFilingResolver
 	in.identityProver = s.identityProver
+	var recorded crmcontracts.Activity
+	if in.recordsMeeting != nil {
+		// A stored transcript has already marked its meeting held, so a retry
+		// replays before admission would refuse that meeting.
+		replay, err := replayedActivity(ctx, tx, in)
+		if err != nil {
+			return crmcontracts.Activity{}, false, err
+		}
+		if replay != nil {
+			return *replay, false, nil
+		}
+		if recorded, err = admitRecordedMeeting(ctx, tx, &in); err != nil {
+			return crmcontracts.Activity{}, false, err
+		}
+	}
 	out, created, err := logActivityInTx(ctx, tx, in)
 	if err != nil {
 		return out, created, err
@@ -286,9 +322,18 @@ func (s *Store) logActivityAndReadTranscript(
 	if err := s.readTranscriptOnLanding(ctx, tx, out, created); err != nil {
 		return out, created, err
 	}
+	if in.recordsMeeting != nil && created {
+		if err := markRecordedMeetingHeld(ctx, tx, recorded, out, in); err != nil {
+			return out, created, err
+		}
+	}
 	if created && in.FollowUpTask != nil {
 		followUp := *in.FollowUpTask
+		// A transcript's next step follows from the meeting it records, as a typed one does.
 		followUp.SourceActivityID = new(ids.UUID(out.Id))
+		if in.recordsMeeting != nil {
+			followUp.SourceActivityID = &in.recordsMeeting.UUID
+		}
 		if _, _, err := s.logActivityAndReadTranscript(ctx, tx, followUp); err != nil {
 			return out, created, err
 		}

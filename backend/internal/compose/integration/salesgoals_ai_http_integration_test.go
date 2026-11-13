@@ -212,6 +212,24 @@ func TestAManagerIsProposedASellersMonthsFromTheirClosedRevenue(t *testing.T) {
 	}
 }
 
+// The months are shaped by what the seller won, so a colleague's proposal is
+// refused while individual performance is off, before any model call.
+func TestAColleaguesMonthsAreNotProposedWhileIndividualPerformanceIsOff(t *testing.T) {
+	lane := &scriptedLane{reply: proposedMonthsReply}
+	e := apptest.SetupAppWithOptions(t, compose.WithReportSetup(lane))
+	e.BootstrapWorkspace(t)
+	colleague := seedColleague(t, e)
+	mustCall(t, e, http.MethodPatch, "/v1/installation/settings", AnyMap{individualPerformanceKey: false}, http.StatusOK, nil)
+	path := fmt.Sprintf("/v1/analytics/sales-goals/%s/%d/proposed-months", colleague, clocktest.Now(t).Year())
+	var problem crmcontracts.Problem
+	if status := e.Call(t, http.MethodPost, path, AnyMap{}, nil, &problem); status != http.StatusForbidden || problem.Code != "individual_performance_off" {
+		t.Errorf("POST %s with the switch off = %d %q, want 403 individual_performance_off", path, status, problem.Code)
+	}
+	if lane.calls() != 0 {
+		t.Errorf("a refused proposal asked the model %d times", lane.calls())
+	}
+}
+
 func monthsSum(months []int64) int64 {
 	var total int64
 	for _, month := range months {

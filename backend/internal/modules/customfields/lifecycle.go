@@ -20,6 +20,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/platform/labeltranslation"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -40,6 +41,9 @@ type lockedField struct {
 	Reportable    bool
 	ActivityKinds []string
 	Version       int64
+	// The label and each option in further UI languages.
+	LabelTranslations  map[string]string
+	OptionTranslations map[string]map[string]string
 }
 
 // mutable is the status gate on the two catalog mutations a retired field no
@@ -61,10 +65,11 @@ func (f lockedField) mutable() error {
 func lockField(ctx context.Context, tx pgx.Tx, id ids.UUID) (lockedField, error) {
 	var f lockedField
 	err := tx.QueryRow(ctx,
-		`SELECT object, column_name, type, status, label, options, show_in_create, reportable, activity_kinds, version
+		`SELECT object, column_name, type, status, label, options, show_in_create, reportable, activity_kinds, version,
+		        label_translations, option_translations
 		   FROM custom_field WHERE id = $1 FOR UPDATE`,
 		id).Scan(&f.Object, &f.ColumnName, &f.Type, &f.Status, &f.Label, &f.OptionsRaw, &f.ShowInCreate, &f.Reportable,
-		&f.ActivityKinds, &f.Version)
+		&f.ActivityKinds, &f.Version, &f.LabelTranslations, &f.OptionTranslations)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return lockedField{}, apperrors.ErrNotFound
 	}
@@ -92,13 +97,18 @@ type FieldPatch struct {
 	ShowInCreate  *bool
 	Reportable    *bool
 	ActivityKinds *[]string
+	// LabelTranslations and OptionTranslations replace the stored maps when
+	// set; nil leaves them as they are.
+	LabelTranslations  map[string]string
+	OptionTranslations map[string]map[string]string
 }
 
 // validate refuses a patch that changes nothing or blanks the label. An empty
 // patch answers the same label-required refusal a rename always gave, so a
 // client that only ever renames sees no new error.
 func (p FieldPatch) validate() error {
-	if p.ShowInCreate == nil && p.Label == nil && p.Reportable == nil && p.ActivityKinds == nil {
+	if p.ShowInCreate == nil && p.Label == nil && p.Reportable == nil && p.ActivityKinds == nil &&
+		p.LabelTranslations == nil && p.OptionTranslations == nil {
 		return &ValidationError{Errors: []FieldError{{Field: fieldLabel, Code: codeRequired}}}
 	}
 	if p.Label != nil && strings.TrimSpace(*p.Label) == "" {
@@ -138,8 +148,10 @@ func (s *Service) Update(ctx context.Context, id ids.UUID, patch FieldPatch, ifV
 			return err
 		}
 		if _, err := tx.Exec(ctx,
-			`UPDATE custom_field SET label = $1, show_in_create = $2, reportable = $3, activity_kinds = $4 WHERE id = $5`,
-			next.Label, next.ShowInCreate, next.Reportable, storedKinds(next.ActivityKinds), id); err != nil {
+			`UPDATE custom_field SET label = $1, show_in_create = $2, reportable = $3, activity_kinds = $4,
+			        label_translations = $5, option_translations = $6 WHERE id = $7`,
+			next.Label, next.ShowInCreate, next.Reportable, storedKinds(next.ActivityKinds),
+			next.LabelTranslations, next.OptionTranslations, id); err != nil {
 			return fmt.Errorf("customfields: updating settings: %w", err)
 		}
 		if out, err = readField(ctx, tx, id); err != nil {
@@ -186,6 +198,30 @@ func (p FieldPatch) apply(ctx context.Context, tx pgx.Tx, id ids.UUID, f lockedF
 		}
 		next.ActivityKinds = storedKinds(*p.ActivityKinds)
 	}
+	return p.applyTranslations(f, next)
+}
+
+// applyTranslations answers the row with the patch's label and option names
+// in further languages, refusing a language or option the field cannot take.
+func (p FieldPatch) applyTranslations(f, next lockedField) (lockedField, error) {
+	if p.LabelTranslations != nil {
+		label, err := labeltranslation.Normalize(fieldLabelTranslations, p.LabelTranslations)
+		if err != nil {
+			return lockedField{}, err
+		}
+		next.LabelTranslations = label
+	}
+	if p.OptionTranslations != nil {
+		options, err := unmarshalOptions(f.OptionsRaw)
+		if err != nil {
+			return lockedField{}, err
+		}
+		named, err := labeltranslation.NormalizeOptions(fieldOptionTranslations, p.OptionTranslations, options)
+		if err != nil {
+			return lockedField{}, err
+		}
+		next.OptionTranslations = named
+	}
 	return next, nil
 }
 
@@ -204,6 +240,12 @@ func (p FieldPatch) auditDiff(was, now lockedField) (before, after map[string]an
 	}
 	if p.ActivityKinds != nil {
 		before[fieldKinds], after[fieldKinds] = was.ActivityKinds, now.ActivityKinds
+	}
+	if p.LabelTranslations != nil {
+		before[fieldLabelTranslations], after[fieldLabelTranslations] = was.LabelTranslations, now.LabelTranslations
+	}
+	if p.OptionTranslations != nil {
+		before[fieldOptionTranslations], after[fieldOptionTranslations] = was.OptionTranslations, now.OptionTranslations
 	}
 	return before, after
 }

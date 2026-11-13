@@ -253,6 +253,8 @@ jobs:
               - 'third-party-files.txt'
               - 'frontend/**'
               - 'backend/api/**'
+              # Built from frontend/ by fe-drift, which alone sees a stale copy.
+              - 'backend/internal/modules/agents/previewcatalog_gen.json'
               # The frontend job runs BOTH SPA lanes (ADR-0120), and the
               # composed one is derived from inputs that live nowhere near
               # frontend/. A unit's api/ fragment is the ONLY thing that changes
@@ -1453,7 +1455,8 @@ jobs:
         run: pnpm install --frozen-lockfile --ignore-scripts
       - name: Run each changed test many times
         if: steps.plan.outputs.go == 'true' || steps.plan.outputs.integration == 'true' || steps.plan.outputs.vitest == 'true'
-        run: scripts/repeat-changed-tests.sh run "$RUNNER_TEMP/repeat-plan.tsv"
+        # Through make: its composition profile is the one `make test-db-up` used.
+        run: make repeat-changed-tests REPEAT_BASE="$BASE_REF"
 
   # The SPA lane. Its four jobs live in
   # .github/workflows/_lane-frontend.yml (fe-quality, fe-unit, fe-bundle and the

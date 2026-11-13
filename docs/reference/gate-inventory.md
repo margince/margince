@@ -30,7 +30,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `analyticsvocabularylabels_test.go` | H3 | The question builder names the analytics vocabulary the server serves, no more and no fewer. |
 | `approvalfieldlabels_test.go` | H2 | An approval names a withheld field with the label the record's history panel gives it. |
 | `approvalpreviewwords_test.go` | H2 | An approval's email and read\_approval word a preview's effects and states as the approval card does. |
-| `approvalreadingcatalog_test.go` | H2 | _(no doc comment)_ |
+| `approvalreadingcatalog_test.go` | H2 | Every change that can make the approval reading catalog stale runs fe-drift. |
 | `appviewfixtures_test.go` | H2 | Each MCP App view's test fixture has the member names of the Go result its tool returns. |
 | `attachmenttypes_test.go` | H3 | The file picker offers the kinds of file the server keeps, no more and no fewer. |
 | `auditcoherence_test.go` | H3 | The audit\_log action and actor\_type vocabularies in crm.yaml match the table's CHECK constraints. |
@@ -142,6 +142,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `labelinstructions_test.go` | H2 | Every label the docs put in front of a session is one `.github/labels.yml` declares. |
 | `languageset_test.go` | H3 | The languages the product speaks are declared in more than one place, and they have to agree. |
 | `lastactivitymeetingrule_test.go` | H2 | last\_activity\_at on deal, contact, company and project skips a task and a canceled or no-show meeting, and counts only what has happened. |
+| `leadroutingfields_test.go` | H2 | _(no doc comment)_ |
 | `linkceilingparity_test.go` | H2 | The per-activity link ceiling is one number, wherever it is spelled. |
 | `listsortdeclared_test.go` | H2 | An operation that declares the shared `Sort` parameter has a handler that reads it. |
 | `listsortvocabulary_test.go` | H3 | A sort the list offers is a sort the server accepts. |
@@ -188,9 +189,11 @@ The eight shapes, what each is for, and how each one silently passes:
 | `rbacvocabulary_test.go` | H3 | The RBAC vocabulary is declared in the contract and restated in Go, and the two must not drift. |
 | `recordkindopenlist_test.go` | H3 | A column that names a kind of record accepts an extension's kind. |
 | `regionalformats_test.go` | H3 | The store validates through the generated read enum. |
+| `releasepublisheroption_test.go` | H2 | _(no doc comment)_ |
 | `reopenconditionparity_test.go` | H3 | What a snooze may wait for is spelled in four places, and all four must agree. |
 | `requestkeyconflict_test.go` | H2 | A row keyed by a client's request id is written conflict-first. |
 | `requirementseam_test.go` | H1 | The two halves of the requirement seam describe the same thing. |
+| `rewritelimit_test.go` | H3 | The composer bars a rewrite verb past the server's own limit, so the two numbers must be one. |
 | `risksignalcheck_test.go` | H2 | A frozen forecast row accepts the same risk signals the assessment can answer. |
 | `riskverdictretention_test.go` | H1 | The queue's recorded verdicts live as long as the figure that reads them, and no longer. |
 | `rowscopetables_test.go` | H2 | Which table a row-scope call bounds, and which column names a reference to one. |
@@ -311,6 +314,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `documentreaders_test.go` | H1 | Every list of attachments in internal/modules/activities answers "which files does this record hold" through activities.documentMembership. |
 | `doitokenexposure_test.go` | H2 | The plaintext confirm token goes into the mail body and nowhere else. |
 | `draftlanguageevidence_test.go` | H2 | Every draft route reads its language from the same evidence. |
+| `draftloggedtouchwiring_test.go` | H3 | draftWiringRoot is the tree whose construction of the draft services is read. |
 | `draftreplyreader_test.go` | H2 | A {subject, body} model reply has one reader. |
 | `draftsteering_test.go` | H2 | Every draft-email route takes the same steering. |
 | `duplicateindex_test.go` | H2 | One set of columns, one index. |
@@ -349,6 +353,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `ifmatchversion_test.go` | H2 | Every route taking `If-Match` is checked for a read that publishes the record's version, with the routes having none ratified by name. |
 | `importedeventconsumers_test.go` | H3 | Every consumer of a stream an import writes has decided what it does with an imported event. |
 | `insertattemptcaps_test.go` | H2 | An insert that names no MaxAttempts still has a retry ladder: River's default of 25, on attempt-to-the-fourth backoff, which reaches days. |
+| `intenttimecolumns_test.go` | H2 | The second form leaves a zone that also describes a legacy instant free while no wall clock is stored. |
 | `interactionunit_test.go` | H3 | Every count that becomes a relationship-strength number counts the shared unit, not rows. |
 | `jobbinding_test.go` | H2 | workspaceBindFloor guards against a vacuous pass. |
 | `jobcensus_test.go` | H3 | Every job kind api/jobs.yaml declares is wired in internal/compose, and every wired kind is declared. |
@@ -425,6 +430,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `presetcertdisclosure_test.go` | H2 | A shipped preset binds a model to every task, and the certification records grade each of those bindings. |
 | `profilefieldreaders_test.go` | H2 | contact\_profile\_field holds what a machine asserted about a contact, and ai\_feedback holds what a human then decided about that assertion. |
 | `projectionedgereaders_test.go` | H2 | The projection tier's read census. |
+| `projectkeyshape_test.go` | H1 | A project key has one shape, projectkey.CheckPattern, and Go reads it through projectkey.Shaped. |
 | `promptcertified_test.go` | H3 | Every prompt this build sends must be measured by a certification case. |
 | `promptlanguage_test.go` | H1 | Every prompt this product sends says what language to answer in, or says plainly why it does not need to. |
 | `promptvoice_test.go` | H1 | Every prompt either speaks in Margince's one voice or says why it does not. |
@@ -468,6 +474,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `sonarbinaryexclusions_test.go` | H3 | The scan's file-encoding obligation. |
 | `sonarwaivers_test.go` | H3 | A rule waiver in sonar-project.properties has to keep pointing at something, and there are two ways one stops, neither of which announces itself. |
 | `sourcecensus_test.go` | H2 | The two source censuses written in Go, and the corpus that holds both halves of each of them to the same cases. |
+| `stagenamereads_test.go` | H1 | A stage's name reaches a reader in their UI language. |
 | `stagingdecision_test.go` | H3 | Every path that stages a delivery records why it was allowed to. |
 | `statutoryfloorsingle_test.go` | H2 | The statutory retention floor is spelled once, and every destructive activity path applies that one spelling. |
 | `storedobjectdeclaration_test.go` | H2 | A writer that puts bytes into the object store declares them first, or says why its key needs no declaration. |
@@ -476,6 +483,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `tablelistpointer_test.go` | H1 | Every module names its entity-model page as its table list, and no Go comment copies that list. |
 | `tableownershipdiscovery_test.go` | H2 | Which packages the ownership gate walks, derived rather than remembered. |
 | `taskdeadlinereaders_test.go` | H2 | _(no doc comment)_ |
+| `textbounds_test.go` | H2 | The column must sit in the condition's bounds and in the refusal's. |
 | `toolongcarriesmax_test.go` | H2 | Every too\_long field refusal states the limit it refused at, so the screen can say "at most 2,000 characters" in the reader's language. |
 | `uiautonomyclaims_test.go` | H2 | No shipped UI string promises that nothing sends without a human's approval while the generated policy table says the send verbs auto-execute. |
 | `undoreasoncensus_test.go` | H2 | One refusal set, three spellings. |
@@ -513,6 +521,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `gopinsrenovatereach_test.go` | H3 | Every Go pin this tree holds is one Renovate can move, and it moves them together. |
 | `identityholdersreach_test.go` | H2 | Nobody is a lead and a contact at once. |
 | `importheavywork_test.go` | H2 | An import's rows are written only by the worker. |
+| `individualperformancescope_test.go` | H2 | Every operation and tool of a family the "Show individual performance" switch names reaches a read of that switch. |
 | `linkedinnormalizerreach_test.go` | H2 | Leads and contacts share the LinkedIn profile as an identity key. |
 | `liveprobelock_test.go` | H2 | A live-probed write of a held row locks its subject. |
 | `messagingpackreach_test.go` | H2 | Every messaging rule set a shipped unit declares is one the boot registers. |
@@ -658,6 +667,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `seatfixturepick_test.go` | H1 | A fixture that needs this session's seat does not pick one out of app\_user. |
 | `seenaddressrule_test.go` | H2 | SPDX-License-Identifier: BUSL-1.1 SPDX-FileCopyrightText: 2026 Gradion |
 | `sharedtreereads_test.go` | H2 | A gate reads the tree through gatekit's shared view, never from the disk on its own. |
+| `shellbash32_test.go` | H2 | bash32Breakers are tests a bash 3.2 parser rejects outright. |
 | `stagemoveorigin_test.go` | H2 | A stage reader names the moves another system made through the stagemove kernel, so a new provenance value reaches every reader at once. |
 | `standingexceptionwriter_test.go` | H2 | No door records a new standing exception. |
 | `storedoriginal_test.go` | H2 | An activity is correlated to its stored original in one place. |
@@ -726,6 +736,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `declinedwritehelpers_test.go` | H2 | _(no doc comment)_ |
 | `extensionsqlscopecases_test.go` | H2 | The SQL-scope gate's own test, driven with synthetic unit sources rather than the tree, because the real units are supposed to pass. |
 | `historyfieldlabelsfalsify_test.go` | H3 | The label census, falsified. |
+| `individualperformancereachfixtures_test.go` | H2 | The individual-performance path walk read against planted packages, one shape per package, each of which an any-path reading of the switch accepts. |
 | `jobfleetwideshapes_test.go` | H2 | The FleetWide gate's own falsification: every dispatch shape the tree uses is proven accepted, and the shapes it exists to reject (a dispatcher doing a tenant's work, and a fan-out built around the chokepoints) are proven rejected. |
 | `jobkindgate_test.go` | H2 | Registration probes compile the real generated constraint through a source overlay. |
 | `magicfieldcensusfalsify_test.go` | H3 | The receipt field census, falsified: each finding it reports, planted. |

@@ -69,6 +69,8 @@ The 3 tables owned by `projects`, as the migrations build them. [Back to the ent
 
 - `home_read_fence_project_owner`: `AFTER UPDATE FOR EACH ROW WHEN (((old.owner_id IS DISTINCT FROM new.owner_id) OR ((old.archived_at IS NULL) AND (new.archived_at IS NOT NULL)))) EXECUTE FUNCTION advance_home_read_fence()`
 - `project_owner_id_retirement_guard`: `BEFORE INSERT OR UPDATE FOR EACH ROW WHEN (((new.owner_id IS NOT NULL) AND (new.archived_at IS NULL))) EXECUTE FUNCTION refuse_retired_member_work('owner_id')`
+- `text_bound_insert`: `AFTER INSERT FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL, '{"key": 20000, "name": 120, "phase": 20000, "source": 20000, "captured_by": 20000, "description": 20000, "closed_reason": 2000, "source_system": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"captured_by":20000,"closed_reason":2000,"description":20000,"key":20000,"name":120,"phase":20000,"source":20000,"source_system":20000}')`
+- `text_bound_update`: `AFTER UPDATE FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"key": 20000, "name": 120, "phase": 20000, "source": 20000, "captured_by": 20000, "description": 20000, "closed_reason": 2000, "source_system": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"captured_by":20000,"closed_reason":2000,"description":20000,"key":20000,"name":120,"phase":20000,"source":20000,"source_system":20000}')`
 - `trg_project_updated`: `BEFORE UPDATE FOR EACH ROW EXECUTE FUNCTION set_updated_at_bump_version()`
 
 ## project_health_assessment
@@ -99,7 +101,6 @@ The 3 tables owned by `projects`, as the migrations build them. [Back to the ent
 
 - `project_health_assessment_project_id_key`: `UNIQUE (project_id, id)`
 - `project_health_not_its_own_successor`: `CHECK ((supersedes_assessment_id IS DISTINCT FROM id))`
-- `project_health_note_bounded`: `CHECK (((note IS NULL) OR (length(note) <= 4000)))`
 - `project_health_state_known`: `CHECK ((state = ANY (ARRAY['on_track', 'at_risk', 'off_track'])))`
 - `project_health_trouble_is_explained`: `CHECK (((state = 'on_track') OR ((note IS NOT NULL) AND (length(btrim(note)) > 0))))`
 
@@ -113,6 +114,8 @@ The 3 tables owned by `projects`, as the migrations build them. [Back to the ent
 **Triggers**
 
 - `project_health_assessment_append_only`: `BEFORE DELETE OR UPDATE FOR EACH ROW EXECUTE FUNCTION project_health_assessment_is_append_only()`
+- `text_bound_insert`: `AFTER INSERT FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL, '{"note": 2000, "state": 20000, "source": 20000, "captured_by": 20000, "source_author": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"captured_by":20000,"note":2000,"source":20000,"source_author":20000,"state":20000}')`
+- `text_bound_update`: `AFTER UPDATE FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"note": 2000, "state": 20000, "source": 20000, "captured_by": 20000, "source_author": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"captured_by":20000,"note":2000,"source":20000,"source_author":20000,"state":20000}')`
 
 ## project_phase_history
 
@@ -139,3 +142,8 @@ The 3 tables owned by `projects`, as the migrations build them. [Back to the ent
 
 - `idx_pph_project`: `btree (project_id, occurred_at DESC)`
 - `project_phase_history_pkey`: `unique, btree (id)`
+
+**Triggers**
+
+- `text_bound_insert`: `AFTER INSERT FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL, '{"reason": 2000, "to_phase": 20000, "changed_by": 20000, "from_phase": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"changed_by":20000,"from_phase":20000,"reason":2000,"to_phase":20000}')`
+- `text_bound_update`: `AFTER UPDATE FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"reason": 2000, "to_phase": 20000, "changed_by": 20000, "from_phase": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"changed_by":20000,"from_phase":20000,"reason":2000,"to_phase":20000}')`

@@ -270,8 +270,8 @@ The three weekly jobs record what they measure, and none of them writes to `main
 - `records-pr` commits the patch on a `bench/scheduled-<date>-<run>` branch and opens one pull request.
   The body names each part, how it was measured (route, search mode, runner), and any part that did
   not record. It runs only on `main`, and opens nothing when nothing recorded.
-- The default workflow token opens that pull request, and a pull request it opens starts no workflow.
-  Close it and open it again to start CI. The repository must let GitHub Actions open pull requests.
+- A token from the records GitHub App (secrets `RECORDS_APP_CLIENT_ID`, `RECORDS_APP_PRIVATE_KEY`)
+  opens that pull request, so CI runs on it. The default workflow token stays read-only.
 - The model lane searches by word overlap, because no embedding key reaches the runner. Its verdicts
   say `search: lexical`, and they replace the verdicts in the same `<model>@<route>` folder.
 
@@ -327,8 +327,8 @@ build ([#1965](https://github.com/margince/margince/issues/1965)).
 
 What a run does:
 
-1. The CLI asks the dist service for the patch base (`resolve-patch-base --version`): the newest published
-   release on its line. It cuts the patch from the git commit of that release, and uploads it with `draft-release --patch-base <version>`. The first release has no base: its patch is
+1. The CLI asks the dist service for the patch base (`resolve-patch-base --release`): the newest published
+   release on its line. It cuts the patch from the git commit of that release, and uploads it with `draft-release --release <version> --patch-base <version>`. The first release has no base: its patch is
    the whole tree, sent with `--first-release`. With the patch go the three SBOM files for the source tree, generated again at the release commit (`make sbom`).
    The dist service checks that the SBOM files cover every file the patch makes. So the committed `sboms/` files, which may be behind, are never uploaded.
 
@@ -346,8 +346,8 @@ What a run does:
      after a quiet night starts with an empty cache.
 3. The images are pushed to the constellation registry (`registry.test.margince.com/margince/<role>`).
    They log in as the registry publisher through the `MARGINCE_AUTH_PUBLISHER_TOKEN` secret. They
-   are added to the draft with `add-artifacts`, as references pinned by digest.
-4. The release is published with `publish-release`. The dist uploads log in with the dist
+   are added to the draft with `add-artifacts --release <version>`, as references pinned by digest.
+4. The release is published with `publish-release --release <version>`. The dist uploads log in with the dist
    publisher token (the `MARGINCE_DIST_PUBLISHER_TOKEN` secret).
 
 Where the patch starts, and why: [cut-a-release.md](../how-to/cut-a-release.md#where-the-patch-of-changes-starts).

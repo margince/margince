@@ -166,6 +166,19 @@ func receivedFromSQL() string {
 		         WHERE ap.activity_id = a.id AND ap.role = 'from' AND NOT ` + unstatedContactSQL("ap") + `)`
 }
 
+// rowCounterparty is whom a message row was with: the far side of the
+// exchange. That is the sender of a received message, and the recipients of a
+// sent one. The viewer's summary and every list's summary name it here alone.
+func rowCounterparty(
+	direction *crmcontracts.ActivityDirection, parties emailParties,
+) (*string, *openapi_types.UUID) {
+	far := parties.to
+	if direction != nil && *direction == crmcontracts.ActivityDirectionInbound {
+		far = parties.from
+	}
+	return counterpartyOf(far)
+}
+
 // counterpartyOf names the other side for a row: the first party the caller
 // can name, how many more there were, and WHICH CONTACT supplied the name.
 //

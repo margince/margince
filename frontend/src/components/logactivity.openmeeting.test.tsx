@@ -46,6 +46,9 @@ afterEach(() => {
 
 const ZONE = UTC_ZONE;
 
+// Midnight today in the form's zone: already past, and on its default day at any hour.
+const TODAY_START = dayStartIso(calendarDay(new Date(), ZONE), ZONE, 0);
+
 type Captured = {
   key: string;
   body: unknown;
@@ -71,7 +74,7 @@ function booked(over: Record<string, unknown> = {}) {
     kind: "meeting",
     subject: "Quarterly review",
     body: "Agenda: pricing",
-    occurred_at: new Date(Date.now() - 2 * 3_600_000).toISOString(),
+    occurred_at: TODAY_START,
     occurred_precision: "instant",
     meeting_status: "booked",
     awaiting_outcome: true,
@@ -155,6 +158,14 @@ function stubApi(
         return jsonResponse({ data: meetings, page: { next_cursor: null } });
       }
       if (key === "PATCH /activities/m-1") return patch();
+      if (key === "POST /rewrites") {
+        return jsonResponse({
+          subject: "Review notes",
+          body: "They agreed to renew.",
+          language: "en",
+          ai_disclosure: "Written with AI assistance.",
+        });
+      }
       if (key === "POST /activities") {
         const kind = (body as { kind: string }).kind;
         return (
@@ -220,6 +231,20 @@ async function logMeeting(answerNo = false) {
   return user;
 }
 
+async function logTranscript() {
+  const user = userEvent.setup();
+  await pickOption(user, await screen.findByLabelText("Type"), "Meeting");
+  await user.type(screen.getByLabelText("Subject *"), "Review call");
+  await user.click(
+    screen.getByRole("checkbox", { name: en["log.asTranscript"] }),
+  );
+  fireEvent.change(
+    screen.getByRole("textbox", { name: en["log.transcriptLabel"] }),
+    { target: { value: "Anna: we renew." } },
+  );
+  return user;
+}
+
 const sent = (captured: Captured[], key: string) =>
   captured.filter((entry) => entry.key === key);
 
@@ -264,6 +289,26 @@ describe("logging a meeting where one owes its outcome", () => {
       body: "Agenda: pricing\n\nThey agreed to the renewal.",
     });
     expect(sent(captured, "POST /activities")).toHaveLength(0);
+  });
+
+  it("Yes records polished notes on the open meeting marked AI-assisted", async () => {
+    const captured: Captured[] = [];
+    stubApi([booked()], captured);
+    render();
+    const user = await logMeeting();
+    expect(await screen.findByText(QUESTION)).toBeTruthy();
+    await user.click(screen.getByRole("button", { name: "Polish wording" }));
+    await screen.findByText(en["co.assistant.aiTag"]);
+    await user.click(screen.getByRole("button", { name: "Log" }));
+
+    await waitFor(() =>
+      expect(sent(captured, "PATCH /activities/m-1")).toHaveLength(1),
+    );
+    expect(sent(captured, "PATCH /activities/m-1")[0]?.body).toMatchObject({
+      meeting_status: "held",
+      body: "Agenda: pricing\n\nThey agreed to renew.",
+      ai_assisted: true,
+    });
   });
 
   it("Yes puts the typed custom-field values on the open meeting", async () => {
@@ -320,6 +365,72 @@ describe("logging a meeting where one owes its outcome", () => {
       meeting_status: "held",
     });
     expect(sent(captured, "PATCH /activities/m-1")).toHaveLength(0);
+  });
+
+  it("A transcript is asked about, and Yes logs it naming the meeting it records", async () => {
+    const captured: Captured[] = [];
+    stubApi([booked({ calendar_managed: true })], captured);
+    render();
+    const user = await logTranscript();
+    expect(await screen.findByText(QUESTION)).toBeTruthy();
+    expect(screen.getByText(en["log.recordOfMeetingTranscript"])).toBeTruthy();
+    expect(screen.queryByText(en["log.recordOfMeetingManaged"])).toBeNull();
+    await user.click(screen.getByRole("button", { name: "Log" }));
+
+    await waitFor(() =>
+      expect(sent(captured, "POST /activities")).toHaveLength(1),
+    );
+    expect(sent(captured, "POST /activities")[0]?.body).toMatchObject({
+      kind: "meeting",
+      source_system: "transcript",
+      body: "Anna: we renew.",
+      records_meeting_id: "m-1",
+    });
+    expect(sent(captured, "PATCH /activities/m-1")).toHaveLength(0);
+  });
+
+  it("No logs a transcript that names no meeting", async () => {
+    const captured: Captured[] = [];
+    stubApi([booked()], captured);
+    render();
+    const user = await logTranscript();
+    await user.click(
+      await screen.findByRole("radio", { name: en["log.recordOfMeetingNo"] }),
+    );
+    await user.click(screen.getByRole("button", { name: "Log" }));
+
+    await waitFor(() =>
+      expect(sent(captured, "POST /activities")).toHaveLength(1),
+    );
+    expect(sent(captured, "POST /activities")[0]?.body).not.toHaveProperty(
+      "records_meeting_id",
+    );
+  });
+
+  it.each([
+    ["the day before", -1],
+    ["the day after", 1],
+  ])("A transcript is not asked about a meeting %s", async (_, days) => {
+    const captured: Captured[] = [];
+    const at = new Date(Date.now() + days * 86_400_000).toISOString();
+    stubApi([booked({ occurred_at: at })], captured);
+    render();
+    const user = await logTranscript();
+    await waitFor(() =>
+      expect(
+        captured.some((entry) =>
+          entry.query.getAll("kind").includes("meeting"),
+        ),
+      ).toBe(true),
+    );
+    expect(screen.queryByText(QUESTION)).toBeNull();
+    await user.click(screen.getByRole("button", { name: "Log" }));
+    await waitFor(() =>
+      expect(sent(captured, "POST /activities")).toHaveLength(1),
+    );
+    expect(sent(captured, "POST /activities")[0]?.body).not.toHaveProperty(
+      "records_meeting_id",
+    );
   });
 
   it("No open meeting asks nothing", async () => {
@@ -586,7 +697,7 @@ describe("the open meeting on a company", () => {
   });
   const bob = booked({
     id: "m-bob",
-    occurred_at: new Date(Date.now() - 3_600_000).toISOString(),
+    occurred_at: TODAY_START,
     links: [{ entity_type: "contact", entity_id: "bob" }],
   });
   const today = calendarDay(new Date(), ZONE);
@@ -645,6 +756,22 @@ describe("closestMeeting", () => {
     expect(
       closestMeeting([eveningBefore, onTheDay], "2026-07-06", zone)?.id,
     ).toBe("date-only");
+  });
+
+  it("leaves out a meeting on the day before or after", () => {
+    const dayBefore = {
+      id: "day-before",
+      occurred_at: "2026-07-05T23:00:00Z",
+      occurred_precision: "instant" as const,
+    };
+    const dayAfter = {
+      id: "day-after",
+      occurred_at: "2026-07-07T00:30:00Z",
+      occurred_precision: "instant" as const,
+    };
+    expect(
+      closestMeeting([dayBefore, dayAfter], "2026-07-06", ZONE),
+    ).toBeUndefined();
   });
 
   it("breaks a tie on the same day by the instant", () => {

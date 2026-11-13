@@ -108,12 +108,12 @@ func (h Handlers) propose(ctx context.Context, owner ids.UUID, year int, req crm
 // gather reads the plan year's closed revenue and the year before's in one
 // snapshot. It first asks that the reader may set this seller's goals.
 func (h Handlers) gather(ctx context.Context, owner ids.UUID, year int, req crmcontracts.SalesGoalProposalRequest) (Input, error) {
-	if req.YearlyTotalMinor != nil && *req.YearlyTotalMinor <= 0 {
-		return Input{}, httperr.Validation("yearly_total_minor", "out_of_range", "enter a yearly goal above zero, or leave it out")
-	}
 	in := Input{Year: year, Today: h.Now().UTC().Format(time.DateOnly), Lang: identity.BaseLanguageForPrompt(ctx, h.Progress.DB.Pool())}
 	err := h.Progress.DB.TxIsolated(ctx, pgx.RepeatableRead, func(tx pgx.Tx) error {
 		if err := h.Progress.Reports.RequireGoalEdit(ctx, tx, owner); err != nil {
+			return err
+		}
+		if err := requireMeasurableSeller(ctx, tx, owner); err != nil {
 			return err
 		}
 		for _, each := range []int{year, year - 1} {
@@ -129,11 +129,27 @@ func (h Handlers) gather(ctx context.Context, owner ids.UUID, year int, req crmc
 	if err != nil {
 		return in, err
 	}
+	if req.YearlyTotalMinor != nil && *req.YearlyTotalMinor <= 0 {
+		return in, httperr.Validation("yearly_total_minor", "out_of_range", "enter a yearly goal above zero, or leave it out")
+	}
 	if req.YearlyTotalMinor != nil {
 		in.YearlyGoalMinor = *req.YearlyTotalMinor
 		in.YearlyGoal = new(values.WholeMajorUnits(*req.YearlyTotalMinor, in.Currency))
 	}
 	return in, nil
+}
+
+// requireMeasurableSeller refuses a colleague's year while the individual
+// performance switch is off: the proposal is shaped by what that seller won.
+func requireMeasurableSeller(ctx context.Context, tx pgx.Tx, owner ids.UUID) error {
+	allowed, err := identity.IndividualPerformanceFor(ctx, tx)
+	if err != nil {
+		return err
+	}
+	if auth.MayMeasureSeat(ctx, allowed, owner) {
+		return nil
+	}
+	return auth.IndividualPerformanceOffError{}
 }
 
 // yearIn is a year as the model reads it: whole major units, the fraction

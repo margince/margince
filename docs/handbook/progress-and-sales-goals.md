@@ -64,7 +64,7 @@ Once a plan publishes the months of a team member, those months can only be chan
 
 Yes, when an AI model is set up. In the editor, click **Propose months**. Margince reads the sales this team member won in each month of the plan's year and the year before. Months that were high stay high, and months that were quiet stay quiet.
 
-A yearly goal you typed first is split over the months. With none, the proposal sets the year too. Read the reason, then click **Use these months** or **Dismiss**. A team member with no sales won in those two years gets no proposal.
+A yearly goal you typed first is split over the months. With none, the proposal sets the year too. Read the reason, then click **Use these months** or **Dismiss**. A team member with no sales won in those two years gets no proposal. While **Show individual performance** is off, you get a proposal only for your own plan.
 
 A proposal saves nothing. You can change every month before you save, and the draft is marked **Proposed by Margince**.
 

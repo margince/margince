@@ -40,7 +40,7 @@ func (s *salesAssessments) upcomingFacts(ctx context.Context, evaluation crmcont
 		if err != nil {
 			return err
 		}
-		count, err := readUpcomingMeetings(ctx, tx, reportingRequested(evaluation.Context.Scope), window)
+		count, _, err := readUpcomingMeetings(ctx, tx, reportingRequested(evaluation.Context.Scope), window)
 		if err != nil {
 			return err
 		}

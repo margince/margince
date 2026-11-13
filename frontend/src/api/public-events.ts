@@ -929,14 +929,21 @@ export interface components {
                 [key: string]: unknown;
             };
         };
-        /** @description Payload for activity.captured — the first-class capture verb, emitted instead of (never alongside) a generic activity.created (events.md §1). Two emit sites: the direct-log path (activities/activity.go) that sets kind only, and the capture ingestion path (capture/sink.go) that also names its originating source system. */
+        /** @description Payload for activity.captured. This event replaces activity.created. Manual logging includes the activity kind and trusted website receipt details. Connector ingestion includes the source system. */
         PublicEventActivityCaptured: {
+            /**
+             * Format: uuid
+             * @description Reviewed handling policy on the trusted accepted website note; absent on other activity events.
+             */
+            handling_automation_id?: string;
             /** @description The activity kind (email | call | meeting | note | task | message). Decoded by automation/handlers_event.go's post_meeting_recap trigger — this field's JSON key is a binding contract, not just documentation. Since ADR-0107/A158 the kind no longer names a messaging transport: every channel message is `message`, and channel_provider says what carried it. */
             kind: string;
             /** @description Which transport carried the message. Present when kind is `message`, and absent otherwise. Without this field a consumer could not tell a Telegram message from any other. Before ADR-0107 the `kind` field told them that. The envelope is additionalProperties:false, so the field must be named here to be sent at all. */
             channel_provider?: string;
-            /** @description The originating source system (capture ingestion only; absent on a direct log). */
+            /** @description The originating source system for capture ingestion or a trusted website note; absent on other direct logs. */
             source_system?: string;
+            /** @description Canonical accepted website submission key, carried only by a website note. Consumers verify its stored provenance before routing. Contains no submission content. */
+            website_submission_key?: string;
             /** @description True when a data import wrote the event. Absent otherwise. */
             imported?: boolean;
             /**
@@ -1029,6 +1036,18 @@ export interface components {
         };
         /** @description The bounded delta of activity.updated. Each field is carried only when this update touched it. The key set is fixed, so it is typed rather than an open map. */
         PublicEventActivityChangedFields: {
+            /** @description The stored meeting changed from lacking Held status or usable notes to having both. Consumers recheck current content and access before drafting. */
+            meeting_recap_became_ready?: boolean;
+            /**
+             * Format: uuid
+             * @description The reviewed inquiry policy attached to an accepted website note by its internal handler.
+             */
+            handling_automation_id?: string;
+            /**
+             * Format: uuid
+             * @description The accepted source attached to an existing task by its internal handler.
+             */
+            source_activity_id?: string;
             /** @description The activity's new conversation key, when its thread grouping changed. */
             thread_key?: string;
             /** @description A reviewed correction changed the task's source link or cleared a generated deadline; fetch the task through its normal access gate. */
@@ -1123,6 +1142,17 @@ export interface components {
         };
         /** @description Payload for activity.updated, a bounded delta. The contact, company, deal and lead events carry an open patch instead. UpdateActivity and RelinkActivity together cover a fixed, known set of inner keys. So changed_fields is a typed struct here, not an open map. */
         PublicEventActivityUpdated: {
+            /**
+             * Format: uuid
+             * @description Reviewed handling policy on the trusted accepted website note; absent on other activity events.
+             */
+            handling_automation_id?: string;
+            /** @description Present for a trusted accepted website note whose handling was explicitly reviewed. */
+            kind?: string;
+            /** @description Present only when a trusted website note acquires its reviewed handling policy. */
+            source_system?: string;
+            /** @description Canonical accepted website key; consumers verify the actual stored note and policy. */
+            website_submission_key?: string;
             changed_fields: components["schemas"]["PublicEventActivityChangedFields"];
             /** @description True when a data import wrote the event. Absent otherwise. */
             imported?: boolean;

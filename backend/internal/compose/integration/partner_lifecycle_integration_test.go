@@ -12,6 +12,7 @@ package integration
 // vocabulary is the seam's 422, never the DB CHECK's 500.
 
 import (
+	"context"
 	"net/http"
 	"testing"
 )
@@ -61,12 +62,22 @@ func TestPartnerLifecycleFieldsRoundTrip(t *testing.T) {
 	if fetched.RelationshipStage != "in_conversation" {
 		t.Fatalf("relationship_stage read back as %q, want in_conversation", fetched.RelationshipStage)
 	}
-	if fetched.NextStep == nil || *fetched.NextStep != "Send the partnership one-pager" {
-		t.Fatalf("next_step read back as %v", fetched.NextStep)
+	// The next step is a task on the company, held by the writer, not text.
+	if fetched.NextStep != nil || fetched.NextStepDueAt != nil {
+		t.Fatalf("next_step stored as text (%v, %v); it is a task now", fetched.NextStep, fetched.NextStepDueAt)
 	}
-	if fetched.NextStepDueAt == nil || *fetched.NextStepDueAt != "2026-08-01" {
-		t.Fatalf("next_step_due_at read back as %v, want the 2026-08-01 date", fetched.NextStepDueAt)
+	var subject string
+	var dated, held bool
+	if err := e.Pool.QueryRow(context.Background(), `
+		SELECT a.subject, a.due_at IS NOT NULL, a.assignee_id IS NOT NULL FROM activity a
+		  JOIN activity_link l ON l.activity_id = a.id AND l.company_id = $1
+		 WHERE a.kind = 'task'`, e.companyID).Scan(&subject, &dated, &held); err != nil {
+		t.Fatalf("no task on the company for the next step: %v", err)
 	}
+	if subject != "Send the partnership one-pager" || !dated || !held {
+		t.Fatalf("the next step's task reads %q (dated %v, held %v), want the step, its day and a holder", subject, dated, held)
+	}
+	assertPartnerStepWrittenOnce(t, e)
 	if len(fetched.ServedSegments) != 2 || fetched.ServedSegments[0] != "manufacturing" || fetched.ServedSegments[1] != "fintech" {
 		t.Fatalf("served_segments read back as %v", fetched.ServedSegments)
 	}
@@ -153,11 +164,15 @@ func TestPartnerNullableFieldsClearOnNullAndKeepWhenOmitted(t *testing.T) {
 	e := setupRelationships(t)
 	path := "/v1/companies/" + e.companyID + "/partner"
 	if status := e.Call(t, "PUT", path, AnyMap{
-		"partner_role": "consulting", "margin_tier": "tier2_20", "next_step": "Send the one-pager",
-		"next_step_due_at": "2026-08-01", "served_segments": []string{"fintech"},
+		"partner_role": "consulting", "margin_tier": "tier2_20", "served_segments": []string{"fintech"},
 		"gate_metrics": AnyMap{"certified_staff": 4, "retention_rate": 87},
 	}, nil, nil); status != http.StatusOK {
 		t.Fatalf("seeding the partner → %d", status)
+	}
+	// Text a partner write stored before next steps became tasks.
+	if _, err := e.Pool.Exec(context.Background(), `UPDATE partner SET next_step = 'Send the one-pager',
+		next_step_due_at = '2026-08-01' WHERE company_id = $1`, e.companyID); err != nil {
+		t.Fatal(err)
 	}
 
 	var kept partnerWire
@@ -188,5 +203,39 @@ func TestPartnerNullableFieldsClearOnNullAndKeepWhenOmitted(t *testing.T) {
 		if status := e.Call(t, "PUT", path, AnyMap{"partner_role": "consulting", field: nil}, nil, nil); status != 422 {
 			t.Fatalf("%s: null → %d, want 422", field, status)
 		}
+	}
+}
+
+// assertPartnerStepWrittenOnce sends the same next step again, as a client
+// retry would. That finds the task it wrote. A due day with no step is
+// refused. The company then holds one task, the caller's.
+func assertPartnerStepWrittenOnce(t *testing.T, e *relEnv) {
+	t.Helper()
+	path := "/v1/companies/" + e.companyID + "/partner"
+	if status := e.Call(t, "PUT", path, AnyMap{
+		"partner_role": "consulting", "next_step": "Send the partnership one-pager", "next_step_due_at": "2026-08-01",
+	}, nil, nil); status != http.StatusOK {
+		t.Fatalf("retrying the next step → %d", status)
+	}
+	if status := e.Call(t, "PUT", path, AnyMap{"partner_role": "consulting", "next_step_due_at": "2026-09-01"}, nil, nil); status != 422 {
+		t.Fatalf("a due day with no step → %d, want 422", status)
+	}
+	var me struct {
+		User struct {
+			ID string `json:"id"`
+		} `json:"user"`
+	}
+	if status := e.Call(t, "GET", "/v1/me", nil, nil, &me); status != http.StatusOK {
+		t.Fatalf("reading the caller → %d", status)
+	}
+	var tasks, theirs int
+	if err := e.Pool.QueryRow(context.Background(), `
+		SELECT count(*), count(*) FILTER (WHERE a.assignee_id::text = $2) FROM activity a
+		  JOIN activity_link l ON l.activity_id = a.id AND l.company_id = $1
+		 WHERE a.kind = 'task'`, e.companyID, me.User.ID).Scan(&tasks, &theirs); err != nil {
+		t.Fatal(err)
+	}
+	if tasks != 1 || theirs != 1 {
+		t.Fatalf("the company holds %d next-step task(s), %d of them the caller's; want one, the caller's", tasks, theirs)
 	}
 }

@@ -115,6 +115,7 @@
     "assignLegalEntityMember": "admin_settings",
     "assignNoticeCase": "compliance",
     "assignNoticeCaseReview": "compliance",
+    "assignWebsiteInquiry": "business",
     "backfillEmploymentImport": "business",
     "cancelConnectorBackfill": "capture",
     "cancelContract": "business",
@@ -460,6 +461,7 @@
     "getWebForm": "workspace_settings",
     "getWorklist": "business",
     "handOverUserWork": "admin_settings",
+    "handleExistingWebFormInquiries": "admin_settings",
     "hideDealDocument": "business",
     "importCardPhoto": "business",
     "importLinkedInConnections": "own_account",
@@ -670,6 +672,8 @@
     "previewNoticeSource": "compliance",
     "previewSendAuthorization": "business",
     "previewVoiceCorpusSource": "business",
+    "previewWebFormHandling": "workspace_settings",
+    "previewWebsiteInquiryAssignment": "business",
     "progressDeal": "business",
     "promoteLead": "business",
     "proposeDealRoles": "business",
@@ -977,6 +981,7 @@
     "assignLegalEntityMember": "company_profile",
     "assignNoticeCase": "privacy_notices",
     "assignNoticeCaseReview": "privacy_notices",
+    "assignWebsiteInquiry": "activities",
     "backfillEmploymentImport": "contacts",
     "bookMeeting": "scheduling",
     "bookPublicMeeting": "booking_pages",
@@ -1015,6 +1020,7 @@
     "connectExtOauth": "extensions",
     "connectFinanceSource": "finance_source",
     "connectProvider": "connectors",
+    "connectSharedMailbox": "connectors",
     "connectorOAuthCallback": "oauth_callbacks",
     "controlDataTask": "system_health",
     "correctCommunicationWording": "consent",
@@ -1137,6 +1143,7 @@
     "disconnectConnector": "connectors",
     "disconnectFinanceSource": "finance_source",
     "disconnectProvider": "connectors",
+    "disconnectSharedMailbox": "connectors",
     "dismissCompanySuggestion": "companies",
     "dismissConnectorSilence": "connectors",
     "dismissContactMoment": "contacts",
@@ -1335,6 +1342,7 @@
     "getMyAiActivity": "own_profile",
     "getMyBriefDelivery": "own_profile",
     "getMyEmailSignature": "own_profile",
+    "getMyGmailSignature": "own_profile",
     "getMyLinkedInAccount": "own_profile",
     "getMyLinkedInReach": "own_profile",
     "getMyMfa": "own_security",
@@ -1421,6 +1429,7 @@
     "getWebhookSubscription": "webhooks",
     "getWorklist": "worklist",
     "handOverUserWork": "members",
+    "handleExistingWebFormInquiries": "web_forms",
     "hideDealDocument": "documents",
     "importCardPhoto": "contacts",
     "importLinkedInConnections": "own_profile",
@@ -1595,6 +1604,7 @@
     "listScheduledSends": "activities",
     "listSdrUpcomingMeetings": "reports",
     "listSdrWaitingHandoffs": "reports",
+    "listSharedMailboxes": "connectors",
     "listSignals": "signals",
     "listSlippingDeals": "deals",
     "listStageEvidence": "deals",
@@ -1672,7 +1682,9 @@
     "previewReportingReportAsRole": "reports",
     "previewSendAuthorization": "activities",
     "previewVoiceCorpusSource": "voice",
+    "previewWebFormHandling": "web_forms",
     "previewWebhookBody": "webhooks",
+    "previewWebsiteInquiryAssignment": "activities",
     "progressDeal": "deals",
     "promoteLead": "leads",
     "proposeAiModelRateRefresh": "rates",
@@ -1813,6 +1825,7 @@
     "revokePassport": "passports",
     "revokeRecordGrant": "sharing",
     "revokeUserSession": "members",
+    "rewriteText": "ai_help",
     "rollbackVoiceProfileVersion": "voice",
     "rotateAgentClientSecret": "agent_clients",
     "rotateWebFormSecret": "web_forms",
@@ -1835,6 +1848,7 @@
     "saveReportingReportDraft": "reports",
     "saveRetainedEmailSignature": "privacy_notices",
     "saveSalesGoalDraft": "reports",
+    "saveWebFormHandling": "web_forms",
     "scrapeCompany": "companies",
     "search": "search",
     "searchContext": "search",
@@ -1881,6 +1895,7 @@
     "startForecastAssuranceRun": "forecast",
     "startMyTotpEnrolment": "own_security",
     "startOidcSignIn": "sign_in",
+    "startSharedMailboxHistoryImport": "connectors",
     "startWeeklyPlan": "worklist",
     "submitConfirmDetails": "public_links",
     "submitWebForm": "public_links",
@@ -1960,6 +1975,7 @@
     "updateRole": "members",
     "updateSalesInitiative": "reports",
     "updateSavedView": "lists",
+    "updateSharedMailbox": "connectors",
     "updateSignal": "signals",
     "updateStage": "pipelines",
     "updateStageExitCriterion": "pipelines",
@@ -2152,6 +2168,9 @@
     ],
     "assign_notice_case_review": [
       "privacy_notices"
+    ],
+    "assign_website_inquiry": [
+      "activities"
     ],
     "at_risk_relationships": [
       "deals"
@@ -2873,6 +2892,9 @@
     "hand_over_user_work": [
       "members"
     ],
+    "handle_website_inquiries": [
+      "web_forms"
+    ],
     "hide_deal_document": [
       "documents"
     ],
@@ -3313,6 +3335,12 @@
     ],
     "preview_voice_source": [
       "voice"
+    ],
+    "preview_website_inquiries": [
+      "web_forms"
+    ],
+    "preview_website_inquiry_assignment": [
+      "activities"
     ],
     "progress_deal": [
       "deals"
@@ -4239,6 +4267,9 @@
     "assign_notice_case_review": [
       "compliance"
     ],
+    "assign_website_inquiry": [
+      "business"
+    ],
     "at_risk_relationships": [
       "business"
     ],
@@ -4951,6 +4982,9 @@
     "hand_over_user_work": [
       "admin_settings"
     ],
+    "handle_website_inquiries": [
+      "admin_settings"
+    ],
     "hide_deal_document": [
       "business"
     ],
@@ -5379,6 +5413,12 @@
       "business"
     ],
     "preview_voice_source": [
+      "business"
+    ],
+    "preview_website_inquiries": [
+      "workspace_settings"
+    ],
+    "preview_website_inquiry_assignment": [
       "business"
     ],
     "progress_deal": [

@@ -241,7 +241,7 @@ internal/modules/activities/projectcoverage.go#type ProjectActivityFacts.Unattri
 internal/modules/activities/retentionstamp.go#const retentionClassCorrespondence
 internal/modules/activities/retentionstampproject.go#const BasisProjectLinked
 internal/modules/activities/scheduledsend.go#const block at const FieldScheduledAt
-internal/modules/activities/scheduledsendfire.go#method Store.OverdueScheduledSends
+internal/modules/activities/scheduledsendrearm.go#method Store.OverdueScheduledSends
 internal/modules/activities/scheduledsendstore.go#const scheduledSendStatusExpr
 internal/modules/activities/scheduling.go#const block at const assumedMeetingDuration
 internal/modules/activities/scheduling.go#var block at var errAvailabilityToNotAfterFrom
@@ -308,7 +308,6 @@ internal/modules/automation/handlers_clock.go#func renewalAnchor
 internal/modules/automation/handlers_clock.go#func touchAnchor
 internal/modules/automation/handlers_event.go#const block at const dealStageStatusField
 internal/modules/automation/handlers_event.go#const fieldKind
-internal/modules/automation/handlers_event.go#const purposeBusinessCorrespondence
 internal/modules/automation/rundetail.go#func stagedApprovalDetail
 internal/modules/capture/backfill.go#func latestBackfill
 internal/modules/capture/channelconn.go#const channelConnectionColumns

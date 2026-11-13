@@ -227,7 +227,7 @@ func readNextSteps(ctx context.Context, tx pgx.Tx, companyID ids.CompanyID, now 
 		         ORDER BY dl.id LIMIT 1),
 		       (SELECT pl.contact_id FROM activity_link pl
 		         WHERE pl.activity_id = a.id AND pl.entity_type = 'contact' AND %[4]s
-		         ORDER BY pl.id LIMIT 1)
+		         ORDER BY pl.id LIMIT 1), `+storekit.IntentWireSQL("a", "due")+`
 		FROM activity a
 		LEFT JOIN app_user u ON u.id = a.assignee_id AND %[8]s
 		WHERE a.kind = 'task' AND NOT a.is_done AND a.archived_at IS NULL AND %[1]s
@@ -293,7 +293,7 @@ func scanNextStep(row pgx.CollectableRow, now time.Time) (crmcontracts.Company36
 	var source taskSource
 	var dueHasTime bool
 	if err := row.Scan(&id, &step.Subject, &step.Body, &step.DueAt, &dueHasTime, &assignee, &assigneeName, &occurredAt, &version,
-		&source.activity, &source.system, &dealID, &contactID); err != nil {
+		&source.activity, &source.system, &dealID, &contactID, &step.DueIntent); err != nil {
 		return step, occurredAt, source, err
 	}
 	step.ActivityId = openapi_types.UUID(id)

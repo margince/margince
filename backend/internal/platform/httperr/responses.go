@@ -85,13 +85,17 @@ func Validation(field, code, message string) *DetailedError {
 
 // TooLong is the 422 for text past its limit. It carries the limit, so a
 // screen can say the number in the reader's language. A limit of 0 or less is
-// a caller's bug: the wire would carry no max, so it panics.
+// a caller's bug: the wire would carry no max, so it panics. An actual of 0
+// says the length is unknown, as in a refusal the database raised.
 func TooLong(field string, limit, actual int) *DetailedError {
 	if limit <= 0 {
 		panic(fmt.Sprintf("httperr.TooLong: %s has limit %d; a length limit is positive", field, limit))
 	}
-	return withMax(Validation(field, "too_long",
-		fmt.Sprintf("%s holds at most %d characters; this one has %d", field, limit, actual)), limit)
+	message := fmt.Sprintf("%s holds at most %d characters", field, limit)
+	if actual > 0 {
+		message += fmt.Sprintf("; this one has %d", actual)
+	}
+	return withMax(Validation(field, "too_long", message), limit)
 }
 
 // withMax states the limit on a one-field refusal.

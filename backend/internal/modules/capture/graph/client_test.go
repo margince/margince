@@ -254,18 +254,15 @@ func TestDeltaInitWalksPagesFiltersTombstonesAndReturnsDeltaLink(t *testing.T) {
 	}
 }
 
-func TestDeltaResumeCollectsAddedAndReportsRemoved(t *testing.T) {
+func TestDeltaResumeCollectsAddedAndSkipsTombstones(t *testing.T) {
 	srv := msStub(t)
 	api := NewAPI(srv.Client(), srv.URL)
-	ids, removed, delta, err := collectDelta(context.Background(), api, "access-2", srv.URL+"/me/mailFolders/inbox/messages/delta?%24deltatoken=d1")
+	ids, delta, err := collectDelta(context.Background(), api, "access-2", srv.URL+"/me/mailFolders/inbox/messages/delta?%24deltatoken=d1")
 	if err != nil {
 		t.Fatalf("Delta: %v", err)
 	}
 	if strings.Join(messageIDs(ids), ",") != "m3" {
 		t.Errorf("ids = %v, want [m3] (the tombstoned entry is not fetched)", ids)
-	}
-	if len(removed) != 0 {
-		t.Errorf("folder tombstones cannot prove permanent deletion: %v", removed)
 	}
 	if !strings.Contains(delta, "d2") {
 		t.Errorf("advanced deltaLink = %q, want the d2 link", delta)
@@ -275,7 +272,7 @@ func TestDeltaResumeCollectsAddedAndReportsRemoved(t *testing.T) {
 func TestDeltaGoneMapsCursorSentinel(t *testing.T) {
 	srv := msStub(t)
 	api := NewAPI(srv.Client(), srv.URL)
-	if _, _, _, err := collectDelta(context.Background(), api, "access-2", srv.URL+"/me/mailFolders/inbox/messages/delta?%24deltatoken=gone"); !errors.Is(err, ErrDeltaGone) {
+	if _, _, err := collectDelta(context.Background(), api, "access-2", srv.URL+"/me/mailFolders/inbox/messages/delta?%24deltatoken=gone"); !errors.Is(err, ErrDeltaGone) {
 		t.Fatalf("want ErrDeltaGone for a 410 delta, got %v", err)
 	}
 }
@@ -283,7 +280,7 @@ func TestDeltaGoneMapsCursorSentinel(t *testing.T) {
 func TestDeltaRefusesOffOriginLink(t *testing.T) {
 	srv := msStub(t)
 	api := NewAPI(srv.Client(), srv.URL)
-	if _, _, _, err := collectDelta(context.Background(), api, "access-2", "https://attacker.example/steal-token"); err == nil {
+	if _, _, err := collectDelta(context.Background(), api, "access-2", "https://attacker.example/steal-token"); err == nil {
 		t.Fatal("Delta must refuse a deltaLink that points off the Graph API")
 	}
 }

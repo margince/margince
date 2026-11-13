@@ -44,6 +44,13 @@ const lastWidths = new WeakMap<HTMLElement, Map<string, number>>();
 
 const SEPARATOR = "\u0000";
 
+/** The tabs that fold, and the narrowest the strip can be: its open tab
+ *  beside "More". Zero until the strip has been measured. */
+export type FoldedTabs<Option extends string> = Readonly<{
+  folded: Option[];
+  least: number;
+}>;
+
 /**
  * Follows which tabs fold, read again whenever the strip changes size. Where
  * nothing can be measured (no `ResizeObserver`), nothing folds and the strip
@@ -53,7 +60,7 @@ export function useFoldedTabs<Option extends string>(
   strip: RefObject<HTMLElement | null>,
   options: readonly Option[],
   open: Option,
-): Option[] {
+): FoldedTabs<Option> {
   const subscribe = useMemo(() => watchSize(strip), [strip]);
   const key = useSyncExternalStore(
     subscribe,
@@ -63,7 +70,11 @@ export function useFoldedTabs<Option extends string>(
         : "",
     () => "",
   );
-  return options.filter((option) => key.split(SEPARATOR).includes(option));
+  const [least, ...folded] = key.split(SEPARATOR);
+  return {
+    folded: options.filter((option) => folded.includes(option)),
+    least: Number(least) || 0,
+  };
 }
 
 function foldKey<Option extends string>(
@@ -85,12 +96,16 @@ function foldKey<Option extends string>(
     inset = Math.max(inset, missing);
     widths.set(tab.dataset.tab ?? "", tab.offsetWidth + missing);
   }
-  const more = element.querySelector<HTMLElement>(".recordtabs-more");
-  return foldToFit(options, open, (option) => widths.get(option) ?? 0, {
+  const widthOf = (option: Option) => widths.get(option) ?? 0;
+  const more =
+    element.querySelector<HTMLElement>(".recordtabs-more")?.offsetWidth ?? 0;
+  const folded = foldToFit(options, open, widthOf, {
     room: element.clientWidth,
-    more: more?.offsetWidth ?? 0,
+    more,
     inset,
-  }).join(SEPARATOR);
+  });
+  const least = options.length > 0 ? widthOf(open) + more : 0;
+  return [least, ...folded].join(SEPARATOR);
 }
 
 function watchSize(strip: RefObject<HTMLElement | null>) {

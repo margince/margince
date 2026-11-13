@@ -48,9 +48,12 @@ expect:
   # to prevent; a plan that never names what they asked for would read the
   # same about any prospect, which is criterion 2 of the concept this site
   # implements.
+  # It also writes the lead's own reading of at least one branch, which the
+  # coaching layer shows instead of the rep's play.
   answer:
     cites_label: wish_list
     names_token: quote tracking
+    coached_branches_min: 1
   bands:
     # The plan degrades to a deterministic floor whenever the model is
     # unavailable or wrong, and the floor is useful on its own. So the bar is

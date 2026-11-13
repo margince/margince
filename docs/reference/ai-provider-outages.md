@@ -59,6 +59,7 @@ does in this state.
 | `report_interpret` | Assessing a sales report | interactive | `premium` → `cheap_cloud` | fails at once with a 503 naming the cause | — |
 | `report_setup` | Proposing a report setup or sales goals | interactive | `cheap_cloud` → `premium` | fails at once with a 503 naming the cause | — |
 | `request_settlement` | Checking whether the reply answered the request | background | `local_small` → `cheap_cloud` | waits for the provider's next check; the attempt is not spent | — |
+| `rewrite` | Rewriting | interactive | `premium` → `cheap_cloud` | fails at once with a 503 naming the cause | — |
 | `signal_extract` | Signal extraction | background | `frontier` | waits for the provider's next check; the attempt is not spent | — |
 | `site_extract` | Website research | background | `premium` | waits for the provider's next check; the attempt is not spent | — |
 | `site_fact_extract` | Website fact extraction | background | `cheap_cloud` → `premium` | waits for the provider's next check; the attempt is not spent | — |

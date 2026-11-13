@@ -21,19 +21,19 @@ type ListRow = NonNullable<ReturnType<typeof useLists>["data"]>["data"][number];
 
 /** The lists a picker offers: live ones, and only Shortlists the reader may change. */
 function listOptions(
-  kind: "live_list" | "shortlist",
+  kind: "live_list" | "record_list" | "shortlist",
   lists: ListRow[] | undefined,
 ): SelectOption[] {
   return (lists ?? [])
     .filter(
-      (list) => !list.archived_at && (kind === "live_list" || list.can_edit),
+      (list) => !list.archived_at && (kind !== "shortlist" || list.can_edit),
     )
     .map((list) => ({ value: list.id, label: list.name }));
 }
 
 /** Why the picker has nothing to offer, when it has nothing. */
 function emptyHint(
-  kind: "live_list" | "shortlist",
+  kind: "live_list" | "record_list" | "shortlist",
   failed: boolean,
   empty: boolean,
 ): MessageKey | undefined {
@@ -43,6 +43,7 @@ function emptyHint(
   if (!empty) {
     return undefined;
   }
+  if (kind === "record_list") return "auto.lists.noCustomers";
   return kind === "live_list" ? "auto.lists.noLive" : "auto.lists.noShortlist";
 }
 
@@ -52,8 +53,10 @@ export function ListParamSelect({
   watchedList,
   onChange,
   control,
+  allowedTypes,
 }: Readonly<{
-  kind: "live_list" | "shortlist";
+  kind: "live_list" | "record_list" | "shortlist";
+  allowedTypes?: string[];
   value: string;
   /** The Live List the rule watches, whose record type a Shortlist must hold. */
   watchedList: string;
@@ -66,13 +69,32 @@ export function ListParamSelect({
   const needsWatched = kind === "shortlist" && !watched;
   const shortlists = useLists(
     { listType: "static", entityType: watched?.entity_type },
-    kind === "shortlist" && !!watched,
+    kind === "record_list" || (kind === "shortlist" && !!watched),
   );
   const source = kind === "live_list" ? live : shortlists;
-  const options = needsWatched ? [] : listOptions(kind, source.data?.data);
+  const rows =
+    kind === "record_list"
+      ? [...(live.data?.data ?? []), ...(shortlists.data?.data ?? [])]
+      : source.data?.data;
+  const failed =
+    kind === "record_list"
+      ? live.isError || shortlists.isError
+      : source.isError;
+  const loaded =
+    kind === "record_list"
+      ? live.isSuccess && shortlists.isSuccess
+      : source.isSuccess;
+  const options = needsWatched
+    ? []
+    : listOptions(
+        kind,
+        rows?.filter(
+          (row) => !allowedTypes || allowedTypes.includes(row.entity_type),
+        ),
+      );
   const hint: MessageKey | undefined = needsWatched
     ? "auto.lists.needsWatched"
-    : emptyHint(kind, source.isError, source.isSuccess && options.length === 0);
+    : emptyHint(kind, failed, loaded && options.length === 0);
   return (
     <>
       <Select

@@ -1,0 +1,145 @@
+package everypath
+
+import (
+	"context"
+	"net/http"
+
+	"example.test/auth"
+	"example.test/database"
+	"example.test/httperr"
+)
+
+type figures interface {
+	Read(ctx context.Context) ([]int, error)
+}
+
+type checked struct{}
+
+func (checked) Read(ctx context.Context) ([]int, error) {
+	if err := auth.Require(ctx); err != nil {
+		return nil, err
+	}
+	return []int{1}, nil
+}
+
+type unwired struct{}
+
+func (unwired) Read(ctx context.Context) ([]int, error) { return []int{1}, nil }
+
+type Handlers struct {
+	db     *database.DB
+	source figures
+}
+
+func New() Handlers { return Handlers{source: checked{}} }
+
+func checkedFigures(ctx context.Context) ([]int, error) { return checked{}.Read(ctx) }
+
+func serve(w http.ResponseWriter, r *http.Request, figures func(context.Context) ([]int, error)) {
+	out, err := figures(r.Context())
+	if err != nil {
+		httperr.Write(w, r, err)
+		return
+	}
+	httperr.WriteJSON(w, http.StatusOK, out)
+}
+
+func (h Handlers) GetInATransaction(w http.ResponseWriter, r *http.Request) {
+	var out []int
+	err := h.db.Tx(r.Context(), func(tx database.Tx) error {
+		if err := auth.Require(r.Context()); err != nil {
+			return err
+		}
+		out = []int{1}
+		return nil
+	})
+	if err != nil {
+		httperr.Write(w, r, err)
+		return
+	}
+	httperr.WriteJSON(w, http.StatusOK, out)
+}
+
+func (h Handlers) GetThroughTheWiredImplementation(w http.ResponseWriter, r *http.Request) {
+	serve(w, r, h.source.Read)
+}
+
+func (h Handlers) GetThroughACheckedCallback(w http.ResponseWriter, r *http.Request) {
+	serve(w, r, checkedFigures)
+}
+
+func (h Handlers) GetOnBothBranches(w http.ResponseWriter, r *http.Request) {
+	if r.URL.Query().Get("scope") == "owner" {
+		if err := auth.Require(r.Context()); err != nil {
+			httperr.Write(w, r, err)
+			return
+		}
+		httperr.WriteJSON(w, http.StatusOK, []int{1})
+		return
+	}
+	if allowed, _ := auth.IndividualPerformanceOf(r.Context()); !allowed {
+		httperr.Write(w, r, auth.OffError{})
+		return
+	}
+	httperr.WriteJSON(w, http.StatusOK, []int{2})
+}
+
+// A check before the loop covers what the loop gathers.
+func (h Handlers) GetEachRow(w http.ResponseWriter, r *http.Request) {
+	if err := auth.Require(r.Context()); err != nil {
+		httperr.Write(w, r, err)
+		return
+	}
+	var out []int
+	for _, row := range []int{1, 2} {
+		out = append(out, row)
+	}
+	httperr.WriteJSON(w, http.StatusOK, out)
+}
+
+// What a figure-free function answers needs no check.
+func (h Handlers) GetTheCatalog(w http.ResponseWriter, r *http.Request) {
+	httperr.WriteJSON(w, http.StatusOK, auth.Catalog())
+}
+
+type built struct {
+	read func(context.Context) ([]int, error)
+}
+
+func newBuilt(read func(context.Context) ([]int, error)) built { return built{read: read} }
+
+var wired = newBuilt(checkedFigures)
+
+func checkedReader() func(context.Context) ([]int, error) {
+	return func(ctx context.Context) ([]int, error) { return checkedFigures(ctx) }
+}
+
+// A field filled through a constructor's parameter resolves to what each
+// call of the constructor passes, and a reader a function builds to what it
+// returns.
+func (h Handlers) GetThroughAConstructor(w http.ResponseWriter, r *http.Request) {
+	serve(w, r, wired.read)
+}
+
+func (h Handlers) GetThroughABuiltReader(w http.ResponseWriter, r *http.Request) {
+	serve(w, r, checkedReader())
+}
+
+var errUnknown = database.Wrap("unknown")
+
+// A sentinel wrapped by another call is still a refusal.
+func checkedUnlessUnknown(ctx context.Context, known bool) ([]int, error) {
+	if !known {
+		return nil, database.Stored(errUnknown)
+	}
+	return checkedFigures(ctx)
+}
+
+func (h Handlers) GetUnlessUnknown(w http.ResponseWriter, r *http.Request) {
+	out, err := checkedUnlessUnknown(r.Context(), r.URL == nil)
+	if err != nil {
+		httperr.Write(w, r, err)
+		return
+	}
+	httperr.WriteJSON(w, http.StatusOK, out)
+}

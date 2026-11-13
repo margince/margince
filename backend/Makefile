@@ -124,7 +124,7 @@ TEST_EXEC_FLAGS = $(if $(TEST_EXEC),-count=1 -exec $(TEST_EXEC))
 
 .DEFAULT_GOAL := help
 
-.PHONY: mcp-inaccessible perfdoc config-gen extdoc-gen extdoc-check help check check-static build fetch-test-deps test test-cached test-uncached test-v test-cover test-integration e2e-siteread e2e-ai e2e-ai-report ai-probe ai-eval test-db-up test-it test-roles test-integration-serial lint lint-base lint-strict lint-modules lint-tool arch-lint vet gen gen-workflow mcp-apps-vocab drift composition check-composition test-extensions db-up db-init db-wait seed-reset seed-dev-db migrate migrate-up migrate-down run psql redis-cli tidy dev infra-down infra-logs infra-reset clean vuln vendor-live tools tools-go hooks
+.PHONY: mcp-inaccessible perfdoc config-gen extdoc-gen extdoc-check help check check-static build fetch-test-deps test test-cached test-uncached test-v test-cover test-integration e2e-siteread e2e-ai e2e-ai-report ai-probe ai-eval test-db-up test-it test-roles test-integration-serial lint lint-base lint-strict lint-modules lint-tool arch-lint vet gen gen-workflow mcp-apps-vocab drift generators-twice composition check-composition test-extensions db-up db-init db-wait seed-reset seed-dev-db migrate migrate-up migrate-down run psql redis-cli tidy dev infra-down infra-logs infra-reset clean vuln vendor-live tools tools-go hooks
 
 help: ## List targets with their descriptions (the default goal)
 	@grep -hE '^[a-zA-Z][a-zA-Z0-9_-]*:.*## ' $(MAKEFILE_LIST) | awk -F':.*## ' '{printf "  %-18s %s\n", $$1, $$2}'
@@ -142,15 +142,16 @@ help: ## List targets with their descriptions (the default goal)
 # write-under-reader race for any pass still compiling them.
 #
 # Under CHECK_WRITERS_RAN, which the root `make check` sets for its lanes,
-# drift is left out: that run did drift before its lanes, and here it would
-# rewrite files that the frontend lane reads at the same time.
+# drift and generators-twice are left out: that run did both before its lanes,
+# and here they would rewrite files that the frontend lane reads at the same
+# time.
 #
 # Each phase reports how long it took (scripts/phase-timer.sh). The ledger has
 # ONE owner per run: the root `check-backend` or `check` exports
 # PHASE_TIMER_OWNED and prints the table itself, covering its other phases and
-# these together (three under CHECK_WRITERS_RAN, four otherwise); run on its own
+# these together (three under CHECK_WRITERS_RAN, five otherwise); run on its own
 # (`make check-go`, or here directly) this target is the owner instead and prints
-# its own four. Without that, a standalone run
+# its own five. Without that, a standalone run
 # would leave its rows to be counted inside somebody else's table, and a
 # standalone run that FAILED would leave its open phase to abort the next one.
 #
@@ -177,6 +178,9 @@ ifneq ($(CHECK_TREE_GATES),off)
 ifndef CHECK_WRITERS_RAN
 	@bash ../scripts/phase-timer.sh start "backend: contract drift"
 	$(MAKE) drift
+	@bash ../scripts/phase-timer.sh stop
+	@bash ../scripts/phase-timer.sh start "backend: generators run twice"
+	$(MAKE) generators-twice
 	@bash ../scripts/phase-timer.sh stop
 endif
 	@bash ../scripts/phase-timer.sh start "backend: composition reproducibility"
@@ -826,6 +830,7 @@ gen: mcp-apps-vocab handbook-embed ## Regenerate everything derived from the con
 		-out internal/compose/agentbundle/agentcontract_gen.yaml -index internal/compose/agentbundle/agentindex_gen.txt
 	$(GOWORK_ROOT) $(GO) run ./tools/gen-recordfields -in api/crm.yaml -out internal/modules/agents/recordshapes_gen.go
 	$(GOWORK_ROOT) $(GO) run ./tools/gen-aitasks -contract api/ai-tasks.yaml -out-go internal/modules/ai/tasks_gen.go
+	$(GOWORK_ROOT) $(GO) run ./tools/gen-textbounds
 	$(GOWORK_ROOT) $(GO) run ./tools/gen-config
 	$(GOWORK_ROOT) $(GO) run ./tools/gen-jobs -contract api/jobs.yaml \
 		-out-specs internal/platform/jobs/specs_gen.go \
@@ -874,6 +879,17 @@ drift: ## Fail when a committed generated file drifted from what its generator p
 	# the binary would ship a page no reviewer read.
 	@u="$$(git ls-files --others --exclude-standard -- 'internal/modules/knowledge/handbook/*.md' internal/compose/agentbundle/agentcontract_gen.yaml internal/compose/agentbundle/agentindex_gen.txt ../docs/reference/ai-provider-outages.md ../docs/reference/benchmark.md internal/modules/agents/apps/actions.json)"; \
 		[ -z "$$u" ] || { echo "drift: uncommitted generated page(s):" >&2; echo "$$u" >&2; exit 1; }
+
+# drift compares one run with the committed file, so a generator whose output
+# depends on map order passes it until a later run disagrees. This runs each
+# generator it finds and can run twice and fails on any byte the two runs
+# disagree on; tools/check-generators-twice says how it finds them and which it
+# skips. It puts the work tree back, so it judges determinism and leaves
+# currency to drift.
+generators-twice: ## Fail when two runs of the generators found in the tree disagree in any byte
+	@../scripts/keep-unchanged-mtimes.sh save ../.tmp/generators-twice-mtimes
+	$(GOWORK_ROOT) $(GO) run ./tools/check-generators-twice -root ..
+	@../scripts/keep-unchanged-mtimes.sh restore ../.tmp/generators-twice-mtimes
 
 # The MCP App admission vocabulary and the per-view action lists are AUTHORED in frontend/src/mcp-apps, where
 # the build-time validator imports it, and copied here because go:embed cannot

@@ -73,6 +73,8 @@ type dailyInput struct {
 	Team                                           string
 	DealID, DealName, CompanyID, CompanyName       string
 	ContactID, ProjectID, ListPrefix, EvaluateArgs string
+	// AIMonth is the admin's usage query: from and to, the month's bounds.
+	AIMonth string
 }
 
 var dailyFlows = []dailyFlow{
@@ -97,6 +99,7 @@ var dailyFlows = []dailyFlow{
 		return []dailyCall{
 			paletteCall("search", in.DealName),
 			{Name: "deal", Path: page},
+			{Name: "status", Path: page + "/status"},
 			{Name: "offers", Path: page + "/offers"},
 			{Name: "documents", Path: page + "/documents"},
 			{Name: "coverage", Path: page + "/coverage"},

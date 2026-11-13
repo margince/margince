@@ -70,7 +70,7 @@ func (s *Store) ListForRule(ctx context.Context, id ids.ListID) (RuleList, error
 // at most limit of them, oldest first, and how many there are in all. Only an
 // ordinary check's events count; the first check after the filter changed
 // reports the new filter's difference, not records moving.
-func (s *Store) ObservedChanges(ctx context.Context, id ids.ListID, version int64, checkedAt time.Time, actions []string, limit int) ([]ObservedChange, int, error) {
+func (s *Store) ObservedChanges(ctx context.Context, id ids.ListID, version int64, checkedAt time.Time, actions []string, limit int, includeImported ...bool) ([]ObservedChange, int, error) {
 	// The same grant a list read asks: a rule owner who lost it is told nothing
 	// the list holds.
 	if err := auth.Require(ctx, listObject, principal.ActionRead); err != nil {
@@ -89,6 +89,7 @@ func (s *Store) ObservedChanges(ctx context.Context, id ids.ListID, version int6
 		if err != nil {
 			return err
 		}
+		visible += fmt.Sprintf(" AND ($%d OR NOT ev.imported)", arg(len(includeImported) == 0 || includeImported[0]))
 		query := fmt.Sprintf(`
 			SELECT ev.id, ev.entity_type, ev.entity_id, ev.action, count(*) OVER ()
 			FROM list_member_event ev
