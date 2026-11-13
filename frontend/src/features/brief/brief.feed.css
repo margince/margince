@@ -510,7 +510,7 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: var(--space-3);
+  gap: var(--gapActions);
 }
 .brief-pod-open {
   width: var(--controlIcon);

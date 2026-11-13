@@ -59,7 +59,6 @@ export const UNDERLAY_HOSTS = [
   ".analytics-body .meterbar-flat span",
   ".analytics-body .stat-card-meter-fill",
   ".arhit",
-  ".arphead",
   ".avatar-mesh",
   ".brief-triage-frame",
   ".co-move",

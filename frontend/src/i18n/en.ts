@@ -9400,7 +9400,7 @@ export const en = {
   "agent.job.followUps.why":
     "Writes a draft on each of the deals slipping most. Nothing is sent.",
   "agent.job.enrich.why":
-    "Reads the company's website and proposes details. Nothing is saved until you approve it.",
+    "Reads the company’s website and proposes details. Nothing is saved until you approve it.",
   "agent.advice.offline": "{source} is offline",
   "agent.advice.offline.why": "New mail and meetings from it are not captured.",
   "agent.advice.offline.open": "Reconnect",
