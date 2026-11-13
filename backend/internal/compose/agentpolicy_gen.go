@@ -191,6 +191,7 @@ var agentPolicies = map[string]agentPolicy{
 	"DELETE /v1/offers/{id}/line-items/{lineItemId}":                           {Op: "removeOfferLineItem", Access: "tool", Tool: "change_record_parts", RecordType: "", Tier: "auto_execute", Scope: "write"},
 	"DELETE /v1/partner-stages/{id}":                                           {Op: "deletePartnerStage", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: "", HumanOnlyReason: "security"},
 	"DELETE /v1/passports/{id}":                                                {Op: "revokePassport", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: "", HumanOnlyReason: "security"},
+	"DELETE /v1/passports/{id}/app-binding":                                    {Op: "releasePassportAppBinding", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: "", HumanOnlyReason: "security"},
 	"DELETE /v1/pipelines/{id}":                                                {Op: "archivePipeline", Access: "tool", Tool: "archive_pipeline", RecordType: "", Tier: "auto_execute", Scope: "write", ServedBy: "route", Router: "change_settings", Action: "archive_pipeline", AskUserFirst: true},
 	"DELETE /v1/products/{id}":                                                 {Op: "archiveProduct", Access: "tool", Tool: "archive_record", RecordType: "product", Tier: "auto_execute", Scope: "write"},
 	"DELETE /v1/products/{id}/translations/{language}":                         {Op: "deleteProductTranslation", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: "", HumanOnlyReason: "security"},

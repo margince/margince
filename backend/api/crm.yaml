@@ -1231,6 +1231,32 @@ paths:
         '404': { $ref: '#/components/responses/NotFound' }
         '422': { $ref: '#/components/responses/ValidationError' }
 
+  /passports/{id}/app-binding:
+    parameters:
+      - $ref: '#/components/parameters/Id'
+    delete:
+      tags: [Identity]
+      operationId: releasePassportAppBinding
+      security: [ { cookieAuth: [] } ]
+      x-agent-access: human-only
+      x-human-only-reason: security
+      summary: Allow a chat app's user again after their passport was revoked.
+      description: |
+        A revoked passport that a chat app (Dispact) minted keeps naming that app's user, so the
+        user stays refused. Releasing it lets the user's next call mint a fresh passport under the
+        same checks as a first call. The passport itself stays revoked. A user releases their own
+        passport; releasing another user's requires the admin role. Audited.
+      responses:
+        '204': { description: The user may be bound again. }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409':
+          description: 'The passport is still live (`code: passport_still_live`). Revoke it first.'
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+
   /passports/{id}/areas:
     parameters:
       - $ref: '#/components/parameters/Id'
@@ -76843,6 +76869,9 @@ components:
         expires_at: { type: [string, 'null'], format: date-time }
         last_used_at: { type: [string, 'null'], format: date-time }
         revoked_at: { type: [string, 'null'], format: date-time }
+        app_bound:
+          type: boolean
+          description: True while a chat app's user is bound to this passport. A revoked passport that is still bound refuses that user until it is released.
         usage:
           allOf: [ { $ref: '#/components/schemas/AgentUsage' } ]
           description: |

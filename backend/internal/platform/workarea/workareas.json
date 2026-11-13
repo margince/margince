@@ -1750,6 +1750,7 @@
     "rejectOffer": "offers",
     "rejectVoiceDraft": "voice",
     "rejectVoiceProfileVersion": "voice",
+    "releasePassportAppBinding": "passports",
     "releaseRestrictedActivity": "retention",
     "relinkActivities": "activities",
     "relinkActivity": "activities",

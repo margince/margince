@@ -9605,6 +9605,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "settings.passportLastUsedOn": "Dùng lần cuối {date}",
   "settings.passportExpiresOn": "Hết hạn {date}",
   "settings.revokeNamed": "Thu hồi {name}",
+  "settings.allowAgain": "Cho phép lại",
+  "settings.allowAgainNamed": "Cho phép lại {name}",
   "settings.revokeConfirm":
     "Thông tin xác thực của passport sẽ mất hiệu lực ngay. Agent sẽ mất quyền truy cập ở lần gọi tiếp theo.",
   "import.withheld":
