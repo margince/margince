@@ -4,10 +4,12 @@
 package main
 
 import (
+	"errors"
 	"io"
 	"log"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 	"testing"
 	"time"
@@ -148,7 +150,7 @@ func TestAFileChangedBeforeTheLastPassIsLeftAndNamed(t *testing.T) {
 	if last.tree, err = tree.snapshot(); err != nil {
 		t.Fatal(err)
 	}
-	err = tree.restore(before, last)
+	err = tree.restore(before, last, func(path string) bool { return path == "table_gen.txt" })
 	if err == nil || !strings.Contains(err.Error(), "notes.txt") {
 		t.Errorf("restore over an edit made in the first pass gave %v, want a failure naming notes.txt", err)
 	}
@@ -176,7 +178,7 @@ func TestAFileChangedAfterTheGeneratorsRanIsLeftAndNamed(t *testing.T) {
 		t.Fatal(err)
 	}
 	writeFiles(t, root, map[string]string{"notes.txt": "typed during the run\n"})
-	err = tree.restore(before, last)
+	err = tree.restore(before, last, func(path string) bool { return path == "table_gen.txt" })
 	if err == nil || !strings.Contains(err.Error(), "notes.txt") {
 		t.Errorf("restore over an edit made during the run gave %v, want a failure naming notes.txt", err)
 	}
@@ -185,5 +187,48 @@ func TestAFileChangedAfterTheGeneratorsRanIsLeftAndNamed(t *testing.T) {
 	}
 	if got := readFile(t, filepath.Join(root, "table_gen.txt")); got != "committed\n" {
 		t.Errorf("restore left the generated file as %q, want the bytes it found", got)
+	}
+}
+
+func TestAnOutputWrittenOnlyWhenStaleIsPutBack(t *testing.T) {
+	root := repository(t, map[string]string{"manifest_gen.json": "stale\n"})
+	// The shape of a generator that writes only bytes that change: the first
+	// pass rewrites the stale file, the second finds it current. The old time
+	// stands for a first pass well before the second.
+	conditional := shell("units", `[ "$(cat manifest_gen.json)" = current ] || `+
+		`{ printf current > manifest_gen.json; touch -t 200501010000 manifest_gen.json; }`)
+	if err := twice(root, planFor([]string{"manifest_gen.json"}, conditional), log.New(io.Discard, "", 0)); err != nil {
+		t.Fatalf("an output its generator wrote only in the first pass failed the gate: %v", err)
+	}
+	if got := readFile(t, filepath.Join(root, "manifest_gen.json")); got != "stale\n" {
+		t.Errorf("the gate left manifest_gen.json as %q, want the bytes it found", got)
+	}
+}
+
+func TestAnEditDuringTheRunIsKeptAndTheOtherOutputsGetTheirTimesBack(t *testing.T) {
+	root := repository(t, map[string]string{"table_gen.txt": "committed\n", "notes.txt": "mine\n"})
+	original := time.Date(2020, 5, 1, 0, 0, 0, 0, time.UTC)
+	if err := os.Chtimes(filepath.Join(root, "table_gen.txt"), original, original); err != nil {
+		t.Fatal(err)
+	}
+	once := filepath.Join(t.TempDir(), "edited")
+	// The first pass stands in for a developer who saves notes.txt while the
+	// gate runs. The old time puts the save well before the second pass.
+	editor := shell("editor", `printf 'committed\n' > table_gen.txt; [ -e "`+once+`" ] || `+
+		`{ printf typed > notes.txt; touch -t 200501010000 notes.txt; touch "`+once+`"; }`)
+	err := twice(root, planFor([]string{"table_gen.txt"}, editor), log.New(io.Discard, "", 0))
+	var kept keptEdits
+	if !errors.As(err, &kept) || !slices.Equal(kept, keptEdits{"notes.txt"}) {
+		t.Fatalf("an edit during the run gave %v, want it kept and named", err)
+	}
+	if got := readFile(t, filepath.Join(root, "notes.txt")); got != "typed" {
+		t.Errorf("the gate overwrote the edit made during the run: %q", got)
+	}
+	info, err := os.Stat(filepath.Join(root, "table_gen.txt"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !info.ModTime().Equal(original) {
+		t.Errorf("table_gen.txt kept the time %v after a kept edit, want its own %v back", info.ModTime(), original)
 	}
 }

@@ -880,11 +880,12 @@ drift: ## Fail when a committed generated file drifted from what its generator p
 		[ -z "$$u" ] || { echo "drift: uncommitted generated page(s):" >&2; echo "$$u" >&2; exit 1; }
 
 # drift compares one run with the committed file, so a generator whose output
-# depends on map order passes it until a later run disagrees. This runs every
-# generator whose output the tree commits twice and fails on any byte the two
-# runs disagree on; tools/check-generators-twice says how it finds them. It puts
-# the work tree back, so it judges determinism and leaves currency to drift.
-generators-twice: ## Fail when two runs of the committed-output generators disagree in any byte
+# depends on map order passes it until a later run disagrees. This runs each
+# generator it finds and can run twice and fails on any byte the two runs
+# disagree on; tools/check-generators-twice says how it finds them and which it
+# skips. It puts the work tree back, so it judges determinism and leaves
+# currency to drift.
+generators-twice: ## Fail when two runs of the generators found in the tree disagree in any byte
 	@../scripts/keep-unchanged-mtimes.sh save ../.tmp/generators-twice-mtimes
 	$(GOWORK_ROOT) $(GO) run ./tools/check-generators-twice -root ..
 	@../scripts/keep-unchanged-mtimes.sh restore ../.tmp/generators-twice-mtimes

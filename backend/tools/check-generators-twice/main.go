@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-// Command check-generators-twice runs two passes of every generator whose
-// output the tree commits. It fails when the two passes leave the tree
+// Command check-generators-twice runs two passes of each generator it finds in
+// the tree and can run. It fails when the two passes leave the tree
 // different in any byte. A drift gate compares one fresh run with the
 // committed file, so output that depends on map order passes it for a while.
 //
@@ -94,11 +94,24 @@ func twice(root string, p plan, out *log.Logger) (err error) {
 		err = judge(p, stamps, tree, out, &last)
 	}
 	// The bytes go back first. A file with its old time over new bytes of the
-	// same size would replay a cached test result that no longer holds.
-	if restoreErr := tree.restore(before, last); restoreErr != nil {
+	// same size would replay a cached test result that no longer holds. So a
+	// file kept with someone's edit keeps its own time too.
+	restoreErr := tree.restore(before, last, p.generated)
+	var kept keptEdits
+	if restoreErr != nil && !errors.As(restoreErr, &kept) {
 		return errors.Join(err, fmt.Errorf("putting the work tree back: %w", restoreErr))
 	}
-	return errors.Join(err, stamps.restore())
+	return errors.Join(err, restoreErr, stamps.restore(kept))
+}
+
+// generated reports whether path is one of the census's outputs, or one a tool
+// of the drift regeneration names.
+func (p plan) generated(path string) bool {
+	if slices.Contains(p.outputs, path) {
+		return true
+	}
+	_, named := namedBy(path, p.named)
+	return named
 }
 
 // judge runs both passes and names what disagreed. last is kept at the pass

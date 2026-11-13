@@ -9,6 +9,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"slices"
 	"strings"
 	"time"
 )
@@ -128,10 +129,13 @@ func (s stamps) rewritten(output string) bool {
 }
 
 // restore gives each output its own time back, so Go's test cache, which keys
-// on modification times, still holds.
-func (s stamps) restore() error {
+// on modification times, still holds. A kept file keeps the time of its edit.
+func (s stamps) restore(kept []string) error {
 	var failed []error
 	for output, original := range s.original {
+		if slices.Contains(kept, output) {
+			continue
+		}
 		if err := os.Chtimes(filepath.Join(s.root, output), original, original); err != nil {
 			failed = append(failed, err)
 		}

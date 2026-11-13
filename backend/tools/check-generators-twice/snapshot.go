@@ -6,10 +6,12 @@ package main
 import (
 	"bytes"
 	"fmt"
+	"io"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"strings"
+	"sync"
 	"time"
 )
 
@@ -73,11 +75,21 @@ type lastPass struct {
 	started time.Time
 }
 
+// keptEdits names the files restore left as they are, because someone other
+// than the generators changed them while the gate ran.
+type keptEdits []string
+
+func (k keptEdits) Error() string {
+	return "left as they are, changed while the generators ran:\n  " + strings.Join(k, "\n  ")
+}
+
 // restore puts back what the generators changed between tree and the last
-// pass. Every generator writes its output in every pass. So a changed file
-// written before the last pass started, or after its snapshot, was changed by
-// someone else. It is left as it is and named.
-func (w worktree) restore(tree string, last lastPass) error {
+// pass. A file that changed after the last snapshot was changed by someone
+// else. So was a file last written before the last pass started, unless it is
+// a generated output. A generator that writes only changed bytes rewrites a
+// stale output in the first pass and leaves it in the second. The other files
+// are left as they are, and the error is a keptEdits that names them.
+func (w worktree) restore(tree string, last lastPass, generated func(string) bool) error {
 	current, err := w.snapshot()
 	if err != nil {
 		return err
@@ -87,10 +99,10 @@ func (w worktree) restore(tree string, last lastPass) error {
 		return err
 	}
 	edited := map[string]bool{}
-	var names []string
+	var kept keptEdits
 	for _, p := range moved {
 		edited[p[1]] = true
-		names = append(names, p[1])
+		kept = append(kept, p[1])
 	}
 	paths, err := w.changed(tree, last.tree)
 	if err != nil {
@@ -101,8 +113,9 @@ func (w worktree) restore(tree string, last lastPass) error {
 		if edited[p[1]] {
 			continue
 		}
-		if info, err := os.Stat(filepath.Join(w.root, p[1])); err == nil && info.ModTime().Before(last.started) {
-			names = append(names, p[1])
+		info, statErr := os.Stat(filepath.Join(w.root, p[1]))
+		if statErr == nil && info.ModTime().Before(last.started) && !generated(p[1]) {
+			kept = append(kept, p[1])
 			continue
 		}
 		if p[0] == "A" {
@@ -116,8 +129,8 @@ func (w worktree) restore(tree string, last lastPass) error {
 	if err := w.checkout(tree, checkout); err != nil {
 		return err
 	}
-	if len(names) > 0 {
-		return fmt.Errorf("left as they are, changed while the generators ran:\n  %s", strings.Join(names, "\n  "))
+	if len(kept) > 0 {
+		return kept
 	}
 	return nil
 }
@@ -131,18 +144,32 @@ func (w worktree) checkout(tree string, paths []string) error {
 	if _, err := gitOut(w.root, env, "read-tree", tree); err != nil {
 		return err
 	}
-	cmd := exec.Command("git", "-C", w.root, "checkout-index", "-f", "-z", "--stdin") // #nosec G204 -- git with literal args and the repository root
-	cmd.Env = append(os.Environ(), env...)
-	cmd.Stdin = strings.NewReader(strings.Join(paths, "\x00"))
-	if out, err := cmd.CombinedOutput(); err != nil {
-		return fmt.Errorf("git checkout-index: %w: %s", err, out)
-	}
-	return nil
+	_, err := gitIn(w.root, env, strings.NewReader(strings.Join(paths, "\x00")), "checkout-index", "-f", "-z", "--stdin")
+	return err
 }
 
+// gitBinary is git, found once on PATH. Every git call of a run uses this one
+// binary, so a generator that writes into a PATH directory cannot swap it.
+var gitBinary = sync.OnceValues(func() (string, error) {
+	path, err := exec.LookPath("git")
+	if err != nil {
+		return "", err
+	}
+	return filepath.Abs(path)
+})
+
 func gitOut(root string, env []string, args ...string) (string, error) {
-	cmd := exec.Command("git", append([]string{"-C", root}, args...)...) // #nosec G204 -- git; the args are this gate's own literals and git's output
+	return gitIn(root, env, nil, args...)
+}
+
+func gitIn(root string, env []string, stdin io.Reader, args ...string) (string, error) {
+	git, err := gitBinary()
+	if err != nil {
+		return "", fmt.Errorf("finding git: %w", err)
+	}
+	cmd := exec.Command(git, append([]string{"-C", root}, args...)...) // #nosec G204 -- git; the args are this gate's own literals and git's output
 	cmd.Env = append(os.Environ(), env...)
+	cmd.Stdin = stdin
 	var stderr bytes.Buffer
 	cmd.Stderr = &stderr
 	out, err := cmd.Output()
