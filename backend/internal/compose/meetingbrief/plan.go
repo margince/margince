@@ -70,8 +70,11 @@ type Question struct {
 
 // Scenario is what the meeting may turn into.
 type Scenario struct {
-	Label    string
-	Play     string
+	Label string
+	Play  string
+	// Coach is the lead's reading of the branch: what to watch and what to ask
+	// the rep. Only the model writes it; a stock branch has none.
+	Coach    string
 	Evidence []Evidence
 }
 

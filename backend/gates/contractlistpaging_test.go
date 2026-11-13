@@ -49,8 +49,9 @@ var boundedButWhole = gatekit.Waive(map[string]string{
 		"score and nothing to continue",
 	"getMagic (/magic)": "a WINDOW rather than a queue: the read reports from `since`, defaulting " +
 		"to the reader's last brief cutoff, so its bound cuts a period a reader has already been " +
-		"shown rather than a backlog that accumulates. The contract says a cursor arrives with " +
-		"the lane that needs one, which is the sentence this gate exists to doubt; issue 5730",
+		"shown rather than a backlog that accumulates. A lane read to its bound is named in " +
+		"`cut_at_limit`, so the receipt says where it was cut; TestTheMagicReceiptNamesTheLanesItCut " +
+		"holds that",
 	"listSlippingDeals (/deals/slipping)": "the ranked answer of whats_slipping_this_week, served " +
 		"by the tool itself: `limit` keeps the worst N, and omitting it returns every deal the " +
 		"tool evidenced. Continuing past the tool's own scan bound would need a cursor on the " +
@@ -266,4 +267,22 @@ func pagedListContract(t *testing.T) pagedListSpec {
 		t.Fatal("the contract parsed to no paths at all, so this gate read nothing")
 	}
 	return doc
+}
+
+// getMagic stays in boundedButWhole on one condition: its answer names the lanes
+// its bound cut. The register's reason says so, and this test is how a reader
+// checks it rather than trusts it. It names the one schema because the reason
+// is one route's own.
+func TestTheMagicReceiptNamesTheLanesItCut(t *testing.T) {
+	t.Parallel()
+	receipt := pagedListContract(t).Components.Schemas["MagicReceipt"]
+	properties, ok := receipt["properties"].(map[string]any)
+	if !ok {
+		t.Fatal("crm.yaml declares no MagicReceipt properties: this test has stopped reading the contract")
+	}
+	if _, ok := properties["cut_at_limit"]; !ok {
+		t.Error("MagicReceipt declares no `cut_at_limit`: getMagic stays in boundedButWhole only " +
+			"because its answer names the lanes its bound cut. Restore the field, or give the " +
+			"route a cursor and a `page` and take it off the register")
+	}
 }

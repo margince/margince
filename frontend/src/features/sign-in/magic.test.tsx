@@ -508,9 +508,18 @@ describe("the receipt draws every lane it promises", () => {
     });
   });
 
-  it("says it is reading while the read is in flight", () => {
+  // A section of its own takes no room until its read lands. A loader there
+  // pulled Home's column up again when nothing turned out to be waiting.
+  it("stays away while its own section's read is in flight", () => {
     stubPending();
-    renderMagic();
+    const { container } = renderMagic();
+    expect(container.querySelector("section")).toBeNull();
+    expect(screen.queryByText("Reading what the machinery did")).toBeNull();
+  });
+
+  it("says it is reading inside a section that waits for it", () => {
+    stubPending();
+    renderMagic("en", undefined, { lanes: ["done"], embedded: true });
     expect(
       screen.getAllByText("Reading what the machinery did").length,
     ).toBeGreaterThan(0);
@@ -623,6 +632,44 @@ describe("the receipt draws every lane it promises", () => {
     renderMagic();
     expect(await screen.findByText("1+ change, one by one")).toBeTruthy();
     expect(screen.queryByText("1 change, in full")).toBeNull();
+  });
+
+  it("says a lane the server cut at its bound shows only its first lines", async () => {
+    stub(
+      receipt({
+        done: [line()],
+        needs_you: [
+          line({
+            id: "00000000-0000-7000-8000-000000000002",
+            lane: "needs_you",
+            summary: { key: "magic.action.approval_send_email" },
+          }),
+        ],
+        cut_at_limit: ["done", "needs_you"],
+      }),
+    );
+    renderMagic();
+    await lane("Waiting on you");
+    expect(screen.getByText(en["magic.laneCut"])).toBeTruthy();
+    expect(await screen.findByText("1+ change, one by one")).toBeTruthy();
+  });
+
+  it("adds no note to a lane the server read whole", async () => {
+    stub(
+      receipt({
+        needs_you: [
+          line({
+            id: "00000000-0000-7000-8000-000000000002",
+            lane: "needs_you",
+            summary: { key: "magic.action.approval_send_email" },
+          }),
+        ],
+        cut_at_limit: [],
+      }),
+    );
+    renderMagic();
+    await lane("Waiting on you");
+    expect(screen.queryByText(en["magic.laneCut"])).toBeNull();
   });
 
   it("says a receipt it cannot read did not load, rather than throwing", async () => {

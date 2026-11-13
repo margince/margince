@@ -34,6 +34,7 @@ const TranscriptSourceSystem = "transcript"
 // It is exact because the create refuses a meeting transcript with a source and
 // no outcome unless that source is the meeting it records.
 func RecordsMeetingSQL(alias string) string {
-	return "(" + alias + ".kind = 'meeting' AND " + alias + ".source_system = '" + TranscriptSourceSystem +
+	// `IS NOT DISTINCT FROM` keeps a row with no source_system false, never NULL.
+	return "(" + alias + ".kind = 'meeting' AND " + alias + ".source_system IS NOT DISTINCT FROM '" + TranscriptSourceSystem +
 		"' AND " + alias + ".source_activity_id IS NOT NULL AND " + alias + ".meeting_status IS NULL)"
 }

@@ -49,6 +49,10 @@ func readPlanRefs(reply planReply, shown claims.Refs) planReply {
 	})
 	reply.Scenarios = readItems(reply.Scenarios, func(scenario replyScenario) (replyScenario, bool) {
 		scenario.Evidence = read(scenario.Evidence)
+		// The coach line is optional, so a ref in it costs the line, not the branch.
+		if names(scenario.Coach) {
+			scenario.Coach = ""
+		}
 		return scenario, !names(scenario.Label, scenario.Play)
 	})
 	return reply

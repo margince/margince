@@ -20637,6 +20637,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "magic.notShown.outOfScope": "nằm ngoài hồ sơ của bạn",
   "magic.visibleScope": "Chỉ hiển thị những thay đổi bạn có quyền xem.",
   "magic.coverageIncomplete": "Chưa thể đếm một số hoạt động.",
+  "magic.laneCut": "Còn nhiều hơn những gì hiển thị ở đây.",
   "magic.done.all_one": "Xem {count} thay đổi",
   "magic.done.all_other": "Xem {count} thay đổi",
   "magic.done.atLeast_one": "{count} thay đổi, từng mục một",

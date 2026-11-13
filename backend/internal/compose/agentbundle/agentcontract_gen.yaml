@@ -34383,7 +34383,8 @@ components:
         paths:
           type: array
           maxItems: 3
-          description: The ways this meeting can go, for a lead to rehearse against.
+          description: >-
+            The plan's own branches as a lead reads them: each carries the label of a plan scenario and, in `play`, what the lead watches for and asks the rep, never the rep's play again. A branch the model wrote no coach line for is left out, so this can be empty.
           items: {$ref: '#/components/schemas/MeetingPlanCoachingPath'}
     MeetingPlanCoachingPath:
       type: object
@@ -39744,7 +39745,7 @@ components:
           format: uuid
           readOnly: true
           description: >-
-            The conversation or note this task follows from, whether added by a human or read from a conversation. Opening the source requires current source access. A task cannot grant access to its source or disclose content from a withheld source. On a meeting transcript, the meeting it records (`records_meeting_id`).
+            The conversation or note this task follows from, whether added by a human or read from a conversation. Opening the source requires current source access. A task cannot grant access to its source or disclose content from a withheld source. On a transcript created with `records_meeting_id`, the meeting it records.
         links:
           type: array
           description: >-
@@ -40031,7 +40032,7 @@ components:
           type: string
           format: uuid
           description: >-
-            A meeting transcript only (`source_system: transcript`), without `source_activity_id`. The open meeting this transcript records. In the same transaction the meeting is marked held and gains the transcript's deal, project and lead links for each kind it has none of. The transcript takes the meeting's time and its deal, project and lead links, keeps no outcome of its own, and names the meeting in `source_activity_id`, so held counts count the meeting once. The meeting must be a live meeting that still owes its outcome, or the create is refused with 422 on `records_meeting_id`; the caller needs activity update on it. The meeting's subject and notes stay as they are.
+            A meeting transcript only (`source_system: transcript`), without `source_activity_id`. The open meeting this transcript records. In the same transaction the meeting is marked held and gains the transcript's deal, project and lead links for each kind it has none of. The transcript takes the meeting's time and its deal, project and lead links, keeps no outcome of its own, and names the meeting in `source_activity_id`, so held counts count the meeting once. A meeting that is archived, missing or hidden from the caller answers 404. A live meeting that no longer owes its outcome is refused with 422 on `records_meeting_id`. A meeting the caller may read but not change answers 403. Its subject and notes stay as they are.
         follow_up_task:
           $ref: '#/components/schemas/ActivityFollowUpTask'
           description: >-
@@ -55507,6 +55508,14 @@ components:
           type: boolean
           description: >-
             The done lane's second source, the system's decisions, was read to its bound and still had more, so the lane's total is a floor. Absent on older responses.
+        cut_at_limit:
+          type: array
+          items: {type: string, enum: [done, needs_you, could_not_complete]}
+          description: |-
+            The lanes read to `limit` that may hold more than this page draws. `done` is
+            also named when its count is a floor (`done_is_floor`). `watching` is never
+            cut, because `limit` does not bound it. A client says "at least" for a named
+            lane, never "all". Empty when every lane is whole; absent on older responses.
         not_shown_count_withheld:
           type: boolean
           description: >-

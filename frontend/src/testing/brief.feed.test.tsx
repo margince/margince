@@ -690,7 +690,7 @@ it("waits for the day in the card's own frame", () => {
   expect(screen.getByText(en["brief.feed.loading"])).toBeTruthy();
 });
 
-it("holds the opening sentence's line while the day is read, and only then", () => {
+it("holds the opening sentence's line while the day is read, and its room after", () => {
   stubApi({});
   const now = new Date(2026, 6, 5, 9, 30, 0);
   const glance = (pending: boolean) =>
@@ -712,4 +712,8 @@ it("holds the opening sentence's line while the day is read, and only then", () 
   // A day that failed to load says nothing rather than holding a grey line.
   const failed = glance(false);
   expect(failed.container.querySelector(".glance-sentence-pending")).toBeNull();
+  // The line's room stays, empty, so the page under it does not move up.
+  const hold = failed.container.querySelector(".glance-sentence-hold");
+  expect(hold?.getAttribute("aria-hidden")).toBe("true");
+  expect(hold?.textContent).toBe("");
 });

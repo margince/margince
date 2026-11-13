@@ -238,3 +238,26 @@ func TestATranscriptOfALeadsMeetingIsFiledOnTheLead(t *testing.T) {
 		t.Errorf("the lead's meeting is filed under %v, want the lead once", held.Links)
 	}
 }
+
+// A retried transcript create states the same source identity. It replays the
+// stored transcript, though its meeting no longer owes an outcome.
+func TestARetriedTranscriptOfAMeetingReplaysTheStoredTranscript(t *testing.T) {
+	e := setupSend(t)
+	customer := seedCustomer(t, e)
+	booked := string(crmcontracts.ActivityMeetingStatusBooked)
+	meeting := customerMeeting(t, e, customer, "Quarterly review", clocktest.Now(t).Add(-2*time.Hour), &booked)
+	links := fmt.Sprintf(`[{"entity_type": "contact", "entity_id": %q}]`, customer)
+	const source = `, "source_id": "recording-7"`
+
+	first, err := transcriptAs(meetingCtx(e), t, e, meeting, links, source)
+	if err != nil {
+		t.Fatalf("logging the transcript: %v", err)
+	}
+	retry, err := transcriptAs(meetingCtx(e), t, e, meeting, links, source)
+	if err != nil {
+		t.Fatalf("the retry answered %v, want the stored transcript", err)
+	}
+	if retry.Id != first.Id {
+		t.Errorf("the retry answered activity %s, want the stored %s", retry.Id, first.Id)
+	}
+}

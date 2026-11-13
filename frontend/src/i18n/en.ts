@@ -20936,6 +20936,7 @@ export const en = {
   "magic.notShown.outOfScope": "outside your own records",
   "magic.visibleScope": "Only changes visible to you are shown.",
   "magic.coverageIncomplete": "Some activity could not be counted.",
+  "magic.laneCut": "There are more than shown here.",
   "magic.done.all_one": "{count} change, in full",
   "magic.done.all_other": "All {count} changes, one by one",
   "magic.done.atLeast_one": "{count} change, one by one",

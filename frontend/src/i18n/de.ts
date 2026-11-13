@@ -21194,6 +21194,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Hier siehst du nur Änderungen, auf die du zugreifen darfst.",
   "magic.coverageIncomplete":
     "Einige Aktivitäten konnten nicht gezählt werden.",
+  "magic.laneCut": "Es gibt mehr, als hier steht.",
   "magic.done.all_one": "{count} Änderung im Einzelnen",
   "magic.done.all_other": "Alle {count} Änderungen im Einzelnen",
   "magic.done.atLeast_one": "{count} Änderung im Einzelnen",

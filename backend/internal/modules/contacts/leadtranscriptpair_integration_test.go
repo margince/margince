@@ -34,3 +34,25 @@ func TestAMeetingAndItsTranscriptScoreTheLeadOnce(t *testing.T) {
 		t.Errorf("the lead scores %+v, want the one held meeting", signals)
 	}
 }
+
+// A meeting with no source_system that answers a task is no transcript pair,
+// so it still proves the lead's engagement.
+func TestAMeetingAnsweringATaskWithNoSourceSystemScoresTheLead(t *testing.T) {
+	e := setupPromoteConsent(t)
+	lead := e.seedLead(t, "answer@evidence.test")
+	task := e.seedEvidence(t, nil, evidenceSeed{kind: "task"})
+	meeting := e.seedEvidence(t, &lead, evidenceSeed{kind: "meeting"})
+	e.mustExec(t, `UPDATE activity SET source_activity_id = $2 WHERE id = $1`, meeting, task)
+
+	var signals []BehavioralSignal
+	if err := e.store.tx(e.ctx, func(tx pgx.Tx) error {
+		var err error
+		signals, err = leadBehavioralSignals(e.ctx, tx, lead)
+		return err
+	}); err != nil {
+		t.Fatal(err)
+	}
+	if len(signals) != 1 || signals[0].ActivityID != meeting {
+		t.Errorf("the lead scores %+v, want the meeting that answers the task", signals)
+	}
+}
