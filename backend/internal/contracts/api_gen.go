@@ -22117,6 +22117,42 @@ func (e SalesProgressMonthState) Valid() bool {
 	}
 }
 
+// Defines values for SalesProgressSummaryRequestPeriod.
+const (
+	SalesProgressSummaryRequestPeriodMonth SalesProgressSummaryRequestPeriod = "month"
+	SalesProgressSummaryRequestPeriodYear  SalesProgressSummaryRequestPeriod = "year"
+)
+
+// Valid indicates whether the value is a known member of the SalesProgressSummaryRequestPeriod enum.
+func (e SalesProgressSummaryRequestPeriod) Valid() bool {
+	switch e {
+	case SalesProgressSummaryRequestPeriodMonth:
+		return true
+	case SalesProgressSummaryRequestPeriodYear:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for SalesProgressSummaryRequestScopeKind.
+const (
+	SalesProgressSummaryRequestScopeKindOwner SalesProgressSummaryRequestScopeKind = "owner"
+	SalesProgressSummaryRequestScopeKindTeam  SalesProgressSummaryRequestScopeKind = "team"
+)
+
+// Valid indicates whether the value is a known member of the SalesProgressSummaryRequestScopeKind enum.
+func (e SalesProgressSummaryRequestScopeKind) Valid() bool {
+	switch e {
+	case SalesProgressSummaryRequestScopeKindOwner:
+		return true
+	case SalesProgressSummaryRequestScopeKindTeam:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for SaveContactResearchClaimField.
 const (
 	SaveContactResearchClaimFieldAddress     SaveContactResearchClaimField = "address"
@@ -62452,7 +62488,7 @@ type SalesAssessmentCell struct {
 	// Display Locale-formatted quantity for reader text.
 	Display *string `json:"display,omitempty"`
 
-	// Id `metric:<metric id>` or `point:<metric id>:<group key>`.
+	// Id `metric:<metric id>` or `point:<metric id>:<group key>`; a Progress summary names its own figures `progress:<figure>`.
 	Id    string `json:"id"`
 	Label string `json:"label"`
 
@@ -62600,6 +62636,31 @@ type SalesGoalPlan struct {
 
 // SalesGoalPlanState defines model for SalesGoalPlanState.
 type SalesGoalPlanState string
+
+// SalesGoalProposal defines model for SalesGoalProposal.
+type SalesGoalProposal struct {
+	// GeneratedBy Which writer produced a piece of generated prose. `model` — the configured model
+	// lane. `deterministic` — the structured fallback, used when no lane is configured
+	// or the workspace's AI budget is exhausted. Never silently interchangeable: a
+	// reader deciding how much to trust a sentence needs to know which wrote it.
+	GeneratedBy WrittenBy `json:"generated_by"`
+	ModelUsed   *string   `json:"model_used,omitempty"`
+
+	// Months January to December, each an amount of zero or more in minor units of the plan currency.
+	Months []int64 `json:"months"`
+
+	// Reason The pattern the proposal followed, in the reader's language, with no figure in it.
+	Reason string `json:"reason"`
+
+	// TotalMinor What the twelve months add up to.
+	TotalMinor int64 `json:"total_minor"`
+}
+
+// SalesGoalProposalRequest defines model for SalesGoalProposalRequest.
+type SalesGoalProposalRequest struct {
+	// YearlyTotalMinor The yearly goal the months must add up to, when the reader has set one.
+	YearlyTotalMinor *int64 `json:"yearly_total_minor,omitempty" minimum:"1"`
+}
 
 // SalesGoalPublishInput defines model for SalesGoalPublishInput.
 type SalesGoalPublishInput struct {
@@ -62968,6 +63029,27 @@ type SalesProgressNextTask struct {
 	DueAt      *time.Time          `json:"due_at,omitempty"`
 	Subject    string              `json:"subject"`
 }
+
+// SalesProgressSummaryRequest defines model for SalesProgressSummaryRequest.
+type SalesProgressSummaryRequest struct {
+	// Month Required with `period: month`.
+	Month  *int                              `json:"month,omitempty" maximum:"12" minimum:"1"`
+	Period SalesProgressSummaryRequestPeriod `json:"period"`
+
+	// Refresh Ask the model again, whatever is kept.
+	Refresh *bool               `json:"refresh,omitempty"`
+	ScopeId *openapi_types.UUID `json:"scope_id,omitempty"`
+
+	// ScopeKind Absent reads the caller's own figures.
+	ScopeKind *SalesProgressSummaryRequestScopeKind `json:"scope_kind,omitempty"`
+	Year      int                                   `json:"year" maximum:"2200" minimum:"2000"`
+}
+
+// SalesProgressSummaryRequestPeriod defines model for SalesProgressSummaryRequest.Period.
+type SalesProgressSummaryRequestPeriod string
+
+// SalesProgressSummaryRequestScopeKind Absent reads the caller's own figures.
+type SalesProgressSummaryRequestScopeKind string
 
 // SaveContactResearchClaim One claim a human accepted, with the evidence that makes it checkable.
 type SaveContactResearchClaim struct {
@@ -80456,6 +80538,9 @@ type UpdateSalesInitiativeJSONRequestBody = SalesInitiativeInput
 // ReplaceSalesInitiativeMembersJSONRequestBody defines body for ReplaceSalesInitiativeMembers for application/json ContentType.
 type ReplaceSalesInitiativeMembersJSONRequestBody = SalesInitiativeMembersInput
 
+// SummarizeSalesProgressJSONRequestBody defines body for SummarizeSalesProgress for application/json ContentType.
+type SummarizeSalesProgressJSONRequestBody = SalesProgressSummaryRequest
+
 // RunAnalyticsQueryJSONRequestBody defines body for RunAnalyticsQuery for application/json ContentType.
 type RunAnalyticsQueryJSONRequestBody = AnalyticsQuery
 
@@ -80485,6 +80570,9 @@ type SearchReportEvidenceJSONRequestBody = ReportEvidenceSearchRequest
 
 // SaveSalesGoalDraftJSONRequestBody defines body for SaveSalesGoalDraft for application/json ContentType.
 type SaveSalesGoalDraftJSONRequestBody = SalesGoalDraftInput
+
+// ProposeSalesGoalMonthsJSONRequestBody defines body for ProposeSalesGoalMonths for application/json ContentType.
+type ProposeSalesGoalMonthsJSONRequestBody = SalesGoalProposalRequest
 
 // PublishSalesGoalPlanJSONRequestBody defines body for PublishSalesGoalPlan for application/json ContentType.
 type PublishSalesGoalPlanJSONRequestBody = SalesGoalPublishInput
@@ -95273,6 +95361,9 @@ type ServerInterface interface {
 	// The open deals of one seller or team as Progress lists them, each with its sale type and next task.
 	// (GET /analytics/progress/deals)
 	ListSalesProgressDeals(w http.ResponseWriter, r *http.Request, params ListSalesProgressDealsParams)
+	// A few written sentences on where one Progress reading stands against its sales goal and what is still open.
+	// (POST /analytics/progress/summary)
+	SummarizeSalesProgress(w http.ResponseWriter, r *http.Request)
 	// Answer a question nobody wrote a report for.
 	// (POST /analytics/query)
 	RunAnalyticsQuery(w http.ResponseWriter, r *http.Request)
@@ -95366,6 +95457,9 @@ type ServerInterface interface {
 	// Save the shared draft of a sales goal plan.
 	// (PUT /analytics/sales-goals/{owner_id}/{year}/draft)
 	SaveSalesGoalDraft(w http.ResponseWriter, r *http.Request, ownerId openapi_types.UUID, year int, params SaveSalesGoalDraftParams)
+	// Twelve monthly goals proposed for one seller from their closed revenue. Nothing is saved.
+	// (POST /analytics/sales-goals/{owner_id}/{year}/proposed-months)
+	ProposeSalesGoalMonths(w http.ResponseWriter, r *http.Request, ownerId openapi_types.UUID, year int)
 	// Publish the draft as the agreed goals for the year.
 	// (POST /analytics/sales-goals/{owner_id}/{year}/publish)
 	PublishSalesGoalPlan(w http.ResponseWriter, r *http.Request, ownerId openapi_types.UUID, year int, params PublishSalesGoalPlanParams)
@@ -98912,6 +99006,12 @@ func (_ Unimplemented) ListSalesProgressDeals(w http.ResponseWriter, r *http.Req
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
+// A few written sentences on where one Progress reading stands against its sales goal and what is still open.
+// (POST /analytics/progress/summary)
+func (_ Unimplemented) SummarizeSalesProgress(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
 // Answer a question nobody wrote a report for.
 // (POST /analytics/query)
 func (_ Unimplemented) RunAnalyticsQuery(w http.ResponseWriter, r *http.Request) {
@@ -99095,6 +99195,12 @@ func (_ Unimplemented) DiscardSalesGoalDraft(w http.ResponseWriter, r *http.Requ
 // Save the shared draft of a sales goal plan.
 // (PUT /analytics/sales-goals/{owner_id}/{year}/draft)
 func (_ Unimplemented) SaveSalesGoalDraft(w http.ResponseWriter, r *http.Request, ownerId openapi_types.UUID, year int, params SaveSalesGoalDraftParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Twelve monthly goals proposed for one seller from their closed revenue. Nothing is saved.
+// (POST /analytics/sales-goals/{owner_id}/{year}/proposed-months)
+func (_ Unimplemented) ProposeSalesGoalMonths(w http.ResponseWriter, r *http.Request, ownerId openapi_types.UUID, year int) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -110646,6 +110752,26 @@ func (siw *ServerInterfaceWrapper) ListSalesProgressDeals(w http.ResponseWriter,
 	handler.ServeHTTP(w, r)
 }
 
+// SummarizeSalesProgress operation middleware
+func (siw *ServerInterfaceWrapper) SummarizeSalesProgress(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.SummarizeSalesProgress(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // RunAnalyticsQuery operation middleware
 func (siw *ServerInterfaceWrapper) RunAnalyticsQuery(w http.ResponseWriter, r *http.Request) {
 
@@ -112130,6 +112256,47 @@ func (siw *ServerInterfaceWrapper) SaveSalesGoalDraft(w http.ResponseWriter, r *
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.SaveSalesGoalDraft(w, r, ownerId, year, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// ProposeSalesGoalMonths operation middleware
+func (siw *ServerInterfaceWrapper) ProposeSalesGoalMonths(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "owner_id" -------------
+	var ownerId openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "owner_id", chi.URLParam(r, "owner_id"), &ownerId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "owner_id", Err: err})
+		return
+	}
+
+	// ------------- Path parameter "year" -------------
+	var year int
+
+	err = runtime.BindStyledParameterWithOptions("simple", "year", chi.URLParam(r, "year"), &year, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "integer", Format: ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "year", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ProposeSalesGoalMonths(w, r, ownerId, year)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -153096,6 +153263,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 		r.Get(options.BaseURL+"/analytics/progress/deals", wrapper.ListSalesProgressDeals)
 	})
 	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/analytics/progress/summary", wrapper.SummarizeSalesProgress)
+	})
+	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/analytics/query", wrapper.RunAnalyticsQuery)
 	})
 	r.Group(func(r chi.Router) {
@@ -153187,6 +153357,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Put(options.BaseURL+"/analytics/sales-goals/{owner_id}/{year}/draft", wrapper.SaveSalesGoalDraft)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/analytics/sales-goals/{owner_id}/{year}/proposed-months", wrapper.ProposeSalesGoalMonths)
 	})
 	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/analytics/sales-goals/{owner_id}/{year}/publish", wrapper.PublishSalesGoalPlan)

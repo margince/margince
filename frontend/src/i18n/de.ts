@@ -21952,7 +21952,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "aiTask.name.propose_roles": "Erkennung von Einkaufsrollen",
   "aiTask.name.rate_extract": "Erfassung von Wechselkursen",
   "aiTask.name.report_interpret": "Bewertung eines Vertriebsberichts",
-  "aiTask.name.report_setup": "Bericht aus einer Beschreibung einrichten",
+  "aiTask.name.report_setup":
+    "Berichtseinrichtung oder Umsatzziele vorschlagen",
   "aiTask.name.request_settlement": "Prüfung der Antwort auf das Anliegen",
   "aiTask.name.rewrite": "Umformulieren",
   "aiTask.name.signal_extract": "Erkennung von Gesprächssignalen",
@@ -22751,6 +22752,10 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "progress.work.more": "Mehr anzeigen",
   "progress.plannedAhead": "Offene Pipeline, noch nicht gewonnen",
   "progress.rail": "Ziel und Definition",
+  "progress.summary": "Zusammenfassung",
+  "progress.summary.refresh": "Zusammenfassung aktualisieren",
+  "progress.summary.writing": "Zusammenfassung wird geschrieben",
+  "progress.summary.more": "Ganze Zusammenfassung lesen",
   "progress.goalFor": "Ziel für {period}",
   "progress.goalMonths": "Monate mit Ziel",
   "progress.goalMonthsSet": "{set} von {needed}",
@@ -22796,6 +22801,17 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "goals.status": "Status",
   "goals.yearly": "Jahresziel in {currency}",
   "goals.spread": "Gleich verteilen",
+  "goals.propose": "Monate vorschlagen",
+  "goals.propose.busy": "Bisher gewonnener Umsatz wird gelesen",
+  "goals.propose.title": "Vorschlag: {total} für das Jahr",
+  "goals.propose.review":
+    "Gespeichert wird erst, wenn du den Entwurf speicherst.",
+  "goals.propose.apply": "Diese Monate übernehmen",
+  "goals.propose.noModel":
+    "Ein Monatsvorschlag braucht ein eingerichtetes KI-Modell. Du kannst die Monate weiterhin von Hand eingeben.",
+  "goals.propose.noHistory":
+    "{name} hat in {year} und im Jahr davor keinen gewonnenen Umsatz, aus dem sich ein Muster lesen lässt. Gib die Monate von Hand ein.",
+  "goals.proposedByAi": "Von Margince vorgeschlagen",
   "goals.monthsSum": "Die Monate ergeben zusammen {total}.",
   "goals.monthsMissing_one": "{count} Monat ist nicht gesetzt.",
   "goals.monthsMissing_other": "{count} Monate sind nicht gesetzt.",
