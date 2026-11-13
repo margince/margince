@@ -150,7 +150,7 @@ credential. Dispact signs a short token for each call, naming the chat user who 
   binding.
 - So the agent never acts with more than that member could do in the app. The member's live grants and
   the passport's scopes decide every call, as for any agent. Revoking the passport ends it, and
-  the revoked passport keeps refusing that person. Releasing it (`DELETE /passports/{id}/app-binding`,
+  the revoked passport keeps refusing that chat user. Releasing it (`DELETE /passports/{id}/app-binding`,
   **Allow again** in Settings) clears the binding, so their next call mints a fresh passport.
 
 Dispact reads the tool list once and shows it to every user, so the list cannot depend on who asked.
