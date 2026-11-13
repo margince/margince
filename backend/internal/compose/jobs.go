@@ -88,9 +88,8 @@ type JobRunnerConfig struct {
 	// moment the context the runner was started under is — which only a test
 	// harness wants.
 	DrainWindow time.Duration
-	// Paused, when it answers true, snoozes every job instead of working it:
-	// an installation whose trial has ended does no background work. Nil
-	// never pauses.
+	// Paused snoozes every job while it answers true: an installation whose
+	// trial has ended does no background work. Nil never pauses.
 	Paused func(context.Context) bool
 	// SendBlob is the object store the send lane AND the document reading read
 	// attachment bytes from. Both need it for the same reason — the bytes are

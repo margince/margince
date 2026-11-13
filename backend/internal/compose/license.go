@@ -109,9 +109,9 @@ func WithLicensePosture(posture func() licensecheck.Posture) Option {
 	}
 }
 
-// WithInstallationTrial wires the trial into every surface it locks: the
-// admission doors and /me, the agent tool surface, and the entitlement read.
-// posture is read at call time, so a key entered later ends the trial.
+// WithInstallationTrial wires the trial into the admission doors, /me, the agent
+// tools and the entitlement read. posture is read at call time, so a key entered
+// later ends the trial.
 func WithInstallationTrial(env runtimeenv.Environment, posture func() licensecheck.Posture, now func() time.Time) Option {
 	return func(s *Server, pool *pgxpool.Pool) {
 		trial := installtrial.New(pool, env, posture, now)

@@ -34,8 +34,7 @@ type licenseHandlers struct {
 	posture func() licensecheck.Posture
 	// recheck is the watcher's re-check, set by WithLicenseRecheck.
 	recheck func(context.Context) error
-	// trial is the installation's trial, set by WithInstallationTrial. Nil
-	// reports none.
+	// trial is set by WithInstallationTrial; nil reports none.
 	trial *installtrial.Trial
 }
 
@@ -76,8 +75,7 @@ func (h licenseHandlers) GetLicenseEntitlement(w http.ResponseWriter, r *http.Re
 	h.writeEntitlement(w, r, used)
 }
 
-// writeEntitlement answers the posture as it stands now, with the trial it
-// runs on, if any.
+// writeEntitlement answers the posture as it stands now, with any trial.
 func (h licenseHandlers) writeEntitlement(w http.ResponseWriter, r *http.Request, used int) {
 	trial, err := h.trial.Contract(r.Context())
 	if err != nil {
