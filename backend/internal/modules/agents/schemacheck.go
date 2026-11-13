@@ -69,8 +69,8 @@ func readSchema(schema json.RawMessage) (jsonSchema, error) {
 	return declared, nil
 }
 
-// checkedTypes are the type names checkValue has a rule for; it reads this set
-// too, so the boot check and the per-answer check cannot disagree.
+// checkedTypes are the type names checkValue has a rule for. readSchema refuses
+// any other, and checkValue reads this set before its switch.
 var checkedTypes = map[string]bool{
 	schemaObject: true, schemaArray: true, schemaString: true,
 	schemaBoolean: true, schemaNumber: true, schemaInteger: true,
