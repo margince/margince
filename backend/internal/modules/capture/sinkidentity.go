@@ -158,8 +158,10 @@ func (s *Sink) claimRecordIdentity(
 	}
 	// The connector's own stamp: this identity was OBSERVED by a provider that
 	// held the message, not asserted by a caller who typed its header.
-	_, err := s.claimIdentity(ctx, tx, id, kind, key, capturedByFor(ctx, rec))
-	return err
+	if _, err := s.claimIdentity(ctx, tx, id, kind, key, capturedByFor(ctx, rec)); err != nil {
+		return err
+	}
+	return s.claimCalendarSend(ctx, tx, id, rec)
 }
 
 // reclaimMeetingIdentity files a REPLAYED meeting under its identity again,
@@ -179,4 +181,56 @@ func (s *Sink) reclaimMeetingIdentity(
 		return nil
 	}
 	return s.claimRecordIdentity(ctx, tx, id, rec)
+}
+
+// calendarSendPrefix opens the key the copies of one calendar send share. It
+// holds a space, which no Message-ID or References token can, so the key never
+// meets a real message's identity.
+const calendarSendPrefix = "calendar-send "
+
+// calendarSendKey is the identity of one calendar send in one seat's mailbox,
+// or "". Only that seat's mailbox holds the copies, and a shared mailbox binds
+// to nobody (activities.BindableTo), so neither gets a key.
+func calendarSendKey(seat ids.UUID, send string) string {
+	if seat == ids.Nil || send == "" {
+		return ""
+	}
+	return calendarSendPrefix + seat.String() + " " + send
+}
+
+// activityHoldingMessage is activityHoldingIdentity, and then the activity a
+// per-guest copy of a calendar send joins. A copy whose own natural key is
+// stored already replays as that row, so the rows stored apart stay apart.
+func (s *Sink) activityHoldingMessage(
+	ctx context.Context, tx pgx.Tx, rec connector.NormalizedRecord, fields ActivityFields,
+) (ids.ActivityID, bool, error) {
+	known, found, err := s.activityHoldingIdentity(ctx, tx, rec)
+	if err != nil || found {
+		return known, found, err
+	}
+	key := calendarSendKey(actorUserID(ctx), fields.CalendarSend)
+	if key == "" || s.mailIdentityKind == "" || s.resolveIdentity == nil {
+		return ids.ActivityID{}, false, nil
+	}
+	var stored bool
+	if err := tx.QueryRow(ctx, `SELECT EXISTS (SELECT 1 FROM activity WHERE source_system = $1 AND source_id = $2)`,
+		rec.NaturalKey.SourceSystem, rec.NaturalKey.SourceID).Scan(&stored); err != nil {
+		return ids.ActivityID{}, false, fmt.Errorf("capture: reading whether a calendar copy is stored: %w", err)
+	}
+	if stored {
+		return ids.ActivityID{}, false, nil
+	}
+	return s.resolveIdentity(ctx, tx, s.mailIdentityKind, key)
+}
+
+// claimCalendarSend files a new row under its calendar send, so the send's
+// other copies resolve onto it. A lost claim leaves the row as it is.
+func (s *Sink) claimCalendarSend(ctx context.Context, tx pgx.Tx, id ids.ActivityID, rec connector.NormalizedRecord) error {
+	fields, isActivity := rec.Fields.(ActivityFields)
+	key := calendarSendKey(actorUserID(ctx), fields.CalendarSend)
+	if !isActivity || key == "" || s.mailIdentityKind == "" {
+		return nil
+	}
+	_, err := s.claimIdentity(ctx, tx, id, s.mailIdentityKind, key, capturedByFor(ctx, rec))
+	return err
 }

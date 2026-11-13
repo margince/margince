@@ -70,7 +70,7 @@ func (s *Sink) captureActivity(ctx context.Context, tx pgx.Tx, rec connector.Nor
 	// ON CONFLICT is the more specific answer, and a replay of this
 	// connector's own delivery must stay a replay rather than becoming a
 	// cross-door resolution.
-	known, alreadyFiled, err := s.activityHoldingIdentity(ctx, tx, rec)
+	known, alreadyFiled, err := s.activityHoldingMessage(ctx, tx, rec, fields)
 	if err != nil {
 		return datasource.EntityRef{}, false, counterpartyDecision{}, err
 	}
