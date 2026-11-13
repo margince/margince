@@ -79,7 +79,7 @@ var taskSourceWriters = map[string][]string{
 	"compose/dealscoutopen.go:recordOnTimeline":                           {writesNoTask},
 	"compose/dealscoutrevive.go:recordRevivalOnTimeline":                  {writesNoTask},
 	"compose/dealverdictjudge.go:recordOnTimeline":                        {writesNoTask},
-	"compose/webformleads.go:Land":                                        {writesNoTask},
+	"compose/webformlead/webformlead.go:Land":                             {writesNoTask},
 	"compose/assurancebundletask.go:writeBundleTask":                      {provenance.AssuranceTaskSource},
 	"compose/leadworktasks.go:repliedTaskInput":                           {provenance.LeadRepliedSource},
 	"compose/leadworktasks.go:arrivalTaskInput":                           {provenance.LeadForContactSource},

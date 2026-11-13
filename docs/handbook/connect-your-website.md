@@ -1,5 +1,5 @@
 <!-- prose:plain -->
-<!-- describes: frontend/src/components/websiteinquiryexisting.tsx frontend/src/components/websiteinquirydialog.tsx frontend/src/components/websiteinquiryfields.tsx frontend/src/features/settings/webforms.tsx frontend/src/features/settings/webformdrawer.tsx frontend/src/features/settings/webformsetup.tsx frontend/src/features/settings/webformsnippet.ts backend/internal/modules/webforms backend/internal/compose/webformleads.go backend/internal/compose/webforms.go -->
+<!-- describes: frontend/src/components/websiteinquiryexisting.tsx frontend/src/components/websiteinquirydialog.tsx frontend/src/components/websiteinquiryfields.tsx frontend/src/features/settings/webforms.tsx frontend/src/features/settings/webformdrawer.tsx frontend/src/features/settings/webformsetup.tsx frontend/src/features/settings/webformsnippet.ts backend/internal/modules/webforms backend/internal/compose/webformlead backend/internal/compose/webforms.go -->
 # Connecting your website
 
 A website form sends each question from your website to Margince as a new lead. Each form
