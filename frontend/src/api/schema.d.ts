@@ -44815,11 +44815,11 @@ export interface components {
             /** @enum {string} */
             severity?: "info" | "warn" | "urgent";
             /**
-             * @description Corrects the signal's type. Only the kinds a human files by hand are accepted. The audit row keeps the old kind.
+             * @description Corrects the signal's type. Only a human may, and only to the kinds a human files by hand. The audit row keeps the old kind.
              * @enum {string}
              */
             kind?: "stalled_deal" | "champion_left" | "reengagement" | "buying_intent" | "risk" | "other";
-            /** @description Replaces the signal's evidence. The audit row keeps the old evidence. */
+            /** @description Replaces the signal's evidence. Only a human may. The audit row keeps the old evidence. */
             evidence?: components["schemas"]["SignalEvidence"][];
         };
         SignalListResponse: {
