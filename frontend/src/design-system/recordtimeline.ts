@@ -94,6 +94,9 @@ export function timelineQueryParams(
     entity_type: entityType,
     entity_id: id,
     limit: TIMELINE_PAGE_SIZE,
+    // One row per email that several colleagues' mailboxes hold, as the 360
+    // pages that seed this list show it, so page two continues page one.
+    collapse_copies: true,
   };
   if (cursor) query.cursor = cursor;
   const kinds = filters.kind ? [filters.kind] : filters.kinds;

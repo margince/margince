@@ -24,6 +24,8 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/platform/auth"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/ports/commsauthz"
 )
 
@@ -40,7 +42,7 @@ import (
 // installation owes them, so it cannot rest on a permission they have not given
 // yet. A consent confirmation is the same shape — the mail that ASKS for
 // consent cannot itself require consent, or no one could ever be asked.
-func validateConfirmation(ctx context.Context, tx pgx.Tx, subject subjectRef, category commsauthz.Category) (resolution, error) {
+func validateConfirmation(ctx context.Context, tx pgx.Tx, delivery ids.UUID, subject subjectRef, category commsauthz.Category) (resolution, error) {
 	unsupported := resolution{Category: category, Supported: false, Reason: commsauthz.ReasonNoEvidence}
 	// A lead holds one kind of link, the privacy notice a website lead is sent;
 	// the table refuses any other kind for one. Both columns are compile-time
@@ -56,6 +58,15 @@ func validateConfirmation(ctx context.Context, tx pgx.Tx, subject subjectRef, ca
 	if !ok {
 		return unsupported, nil
 	}
+	// The notice of a restriction's lift (GDPR Art. 18(3)) carries no link: the
+	// contact's live restriction is its evidence, and for that template alone.
+	restricted, args := "false", []any{subject.ID, kind}
+	if column == subjectColumnContact && category == commsauthz.CategoryPrivacyNotice {
+		args = append(args, delivery)
+		restricted = `(EXISTS (SELECT 1 FROM comms_outbound lift
+		    WHERE lift.id = $3 AND lift.template_key = '` + TemplateRestrictionLift + `') AND ` +
+			auth.ContactRestrictedSQL("$1::uuid") + `)`
+	}
 	var live bool
 	if err := tx.QueryRow(ctx, fmt.Sprintf(`
 		SELECT EXISTS (
@@ -64,7 +75,7 @@ func validateConfirmation(ctx context.Context, tx pgx.Tx, subject subjectRef, ca
 		      AND kind = $2
 		      AND consumed_at IS NULL
 		      AND expires_at > now()
-		)`, column), subject.ID, kind).Scan(&live); err != nil {
+		) OR %s`, column, restricted), args...).Scan(&live); err != nil {
 		return resolution{}, fmt.Errorf("consent: reading the confirmation link: %w", err)
 	}
 	if !live {

@@ -9612,9 +9612,10 @@ func (e CreateCustomFieldRequestType) Valid() bool {
 
 // Defines values for CreateDataSubjectRequestKind.
 const (
-	CreateDataSubjectRequestKindAccess  CreateDataSubjectRequestKind = "access"
-	CreateDataSubjectRequestKindErasure CreateDataSubjectRequestKind = "erasure"
-	CreateDataSubjectRequestKindRectify CreateDataSubjectRequestKind = "rectify"
+	CreateDataSubjectRequestKindAccess      CreateDataSubjectRequestKind = "access"
+	CreateDataSubjectRequestKindErasure     CreateDataSubjectRequestKind = "erasure"
+	CreateDataSubjectRequestKindRectify     CreateDataSubjectRequestKind = "rectify"
+	CreateDataSubjectRequestKindRestriction CreateDataSubjectRequestKind = "restriction"
 )
 
 // Valid indicates whether the value is a known member of the CreateDataSubjectRequestKind enum.
@@ -9625,6 +9626,8 @@ func (e CreateDataSubjectRequestKind) Valid() bool {
 	case CreateDataSubjectRequestKindErasure:
 		return true
 	case CreateDataSubjectRequestKindRectify:
+		return true
+	case CreateDataSubjectRequestKindRestriction:
 		return true
 	default:
 		return false
@@ -9880,6 +9883,27 @@ func (e CreateProductRequestTaxCategory) Valid() bool {
 	case CreateProductRequestTaxCategoryReduced:
 		return true
 	case CreateProductRequestTaxCategoryStandard:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for CreateProjectRequestPhase.
+const (
+	CreateProjectRequestPhaseDelivering CreateProjectRequestPhase = "delivering"
+	CreateProjectRequestPhaseInitiative CreateProjectRequestPhase = "initiative"
+	CreateProjectRequestPhasePursuing   CreateProjectRequestPhase = "pursuing"
+)
+
+// Valid indicates whether the value is a known member of the CreateProjectRequestPhase enum.
+func (e CreateProjectRequestPhase) Valid() bool {
+	switch e {
+	case CreateProjectRequestPhaseDelivering:
+		return true
+	case CreateProjectRequestPhaseInitiative:
+		return true
+	case CreateProjectRequestPhasePursuing:
 		return true
 	default:
 		return false
@@ -10383,9 +10407,10 @@ func (e CustomFieldLiveListSharing) Valid() bool {
 
 // Defines values for DataSubjectRequestKind.
 const (
-	DataSubjectRequestKindAccess  DataSubjectRequestKind = "access"
-	DataSubjectRequestKindErasure DataSubjectRequestKind = "erasure"
-	DataSubjectRequestKindRectify DataSubjectRequestKind = "rectify"
+	DataSubjectRequestKindAccess      DataSubjectRequestKind = "access"
+	DataSubjectRequestKindErasure     DataSubjectRequestKind = "erasure"
+	DataSubjectRequestKindRectify     DataSubjectRequestKind = "rectify"
+	DataSubjectRequestKindRestriction DataSubjectRequestKind = "restriction"
 )
 
 // Valid indicates whether the value is a known member of the DataSubjectRequestKind enum.
@@ -10396,6 +10421,8 @@ func (e DataSubjectRequestKind) Valid() bool {
 	case DataSubjectRequestKindErasure:
 		return true
 	case DataSubjectRequestKindRectify:
+		return true
+	case DataSubjectRequestKindRestriction:
 		return true
 	default:
 		return false
@@ -15303,9 +15330,10 @@ func (e JobKindHealthConditionCode) Valid() bool {
 
 // Defines values for JurisdictionDeadlineKind.
 const (
-	JurisdictionDeadlineKindAccess  JurisdictionDeadlineKind = "access"
-	JurisdictionDeadlineKindErasure JurisdictionDeadlineKind = "erasure"
-	JurisdictionDeadlineKindRectify JurisdictionDeadlineKind = "rectify"
+	JurisdictionDeadlineKindAccess      JurisdictionDeadlineKind = "access"
+	JurisdictionDeadlineKindErasure     JurisdictionDeadlineKind = "erasure"
+	JurisdictionDeadlineKindRectify     JurisdictionDeadlineKind = "rectify"
+	JurisdictionDeadlineKindRestriction JurisdictionDeadlineKind = "restriction"
 )
 
 // Valid indicates whether the value is a known member of the JurisdictionDeadlineKind enum.
@@ -15316,6 +15344,8 @@ func (e JurisdictionDeadlineKind) Valid() bool {
 	case JurisdictionDeadlineKindErasure:
 		return true
 	case JurisdictionDeadlineKindRectify:
+		return true
+	case JurisdictionDeadlineKindRestriction:
 		return true
 	default:
 		return false
@@ -21079,6 +21109,27 @@ func (e RestoreLeftBehindKind) Valid() bool {
 	case RestoreLeftBehindKindRelationship:
 		return true
 	case RestoreLeftBehindKindTag:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for RestrictionLiftNoticeStatus.
+const (
+	RestrictionLiftNoticeStatusFailed RestrictionLiftNoticeStatus = "failed"
+	RestrictionLiftNoticeStatusQueued RestrictionLiftNoticeStatus = "queued"
+	RestrictionLiftNoticeStatusSent   RestrictionLiftNoticeStatus = "sent"
+)
+
+// Valid indicates whether the value is a known member of the RestrictionLiftNoticeStatus enum.
+func (e RestrictionLiftNoticeStatus) Valid() bool {
+	switch e {
+	case RestrictionLiftNoticeStatusFailed:
+		return true
+	case RestrictionLiftNoticeStatusQueued:
+		return true
+	case RestrictionLiftNoticeStatusSent:
 		return true
 	default:
 		return false
@@ -29364,14 +29415,17 @@ func (e PreviewControllerMailParamsKind) Valid() bool {
 
 // Defines values for SuppressContactJSONBodyKind.
 const (
-	SuppressContactJSONBodyKindMarketingObjection SuppressContactJSONBodyKind = "marketing_objection"
-	SuppressContactJSONBodyKindSubjectRequest     SuppressContactJSONBodyKind = "subject_request"
+	SuppressContactJSONBodyKindMarketingObjection    SuppressContactJSONBodyKind = "marketing_objection"
+	SuppressContactJSONBodyKindProcessingRestriction SuppressContactJSONBodyKind = "processing_restriction"
+	SuppressContactJSONBodyKindSubjectRequest        SuppressContactJSONBodyKind = "subject_request"
 )
 
 // Valid indicates whether the value is a known member of the SuppressContactJSONBodyKind enum.
 func (e SuppressContactJSONBodyKind) Valid() bool {
 	switch e {
 	case SuppressContactJSONBodyKindMarketingObjection:
+		return true
+	case SuppressContactJSONBodyKindProcessingRestriction:
 		return true
 	case SuppressContactJSONBodyKindSubjectRequest:
 		return true
@@ -29505,9 +29559,10 @@ func (e ListDataSubjectRequestsParamsStatus) Valid() bool {
 
 // Defines values for GetDataSubjectRequestDeadlineParamsKind.
 const (
-	GetDataSubjectRequestDeadlineParamsKindAccess  GetDataSubjectRequestDeadlineParamsKind = "access"
-	GetDataSubjectRequestDeadlineParamsKindErasure GetDataSubjectRequestDeadlineParamsKind = "erasure"
-	GetDataSubjectRequestDeadlineParamsKindRectify GetDataSubjectRequestDeadlineParamsKind = "rectify"
+	GetDataSubjectRequestDeadlineParamsKindAccess      GetDataSubjectRequestDeadlineParamsKind = "access"
+	GetDataSubjectRequestDeadlineParamsKindErasure     GetDataSubjectRequestDeadlineParamsKind = "erasure"
+	GetDataSubjectRequestDeadlineParamsKindRectify     GetDataSubjectRequestDeadlineParamsKind = "rectify"
+	GetDataSubjectRequestDeadlineParamsKindRestriction GetDataSubjectRequestDeadlineParamsKind = "restriction"
 )
 
 // Valid indicates whether the value is a known member of the GetDataSubjectRequestDeadlineParamsKind enum.
@@ -29518,6 +29573,8 @@ func (e GetDataSubjectRequestDeadlineParamsKind) Valid() bool {
 	case GetDataSubjectRequestDeadlineParamsKindErasure:
 		return true
 	case GetDataSubjectRequestDeadlineParamsKindRectify:
+		return true
+	case GetDataSubjectRequestDeadlineParamsKindRestriction:
 		return true
 	default:
 		return false
@@ -31502,7 +31559,13 @@ type Activity struct {
 
 	// ControllerSend Present only on a mail sent through the installation's own relay. Absent on every other row.
 	ControllerSend *ControllerSend `json:"controller_send,omitempty"`
-	CreatedAt      time.Time       `json:"created_at"`
+
+	// Copies How many colleagues' mailboxes hold a copy of this email that the caller may read, this one included. Set only on a timeline that shows one row per email (the 360 pages, or `collapse_copies=true`); absent when there is one copy. `links` is the union over those copies.
+	Copies *int `json:"copies,omitempty" minimum:"2"`
+
+	// CopyIds The other copies this row stands for, each readable by the caller through `GET /activities/{id}`. Set exactly when `copies` is. Copies join only when they agree on Message-ID, sender, subject, body, direction and the second they occurred.
+	CopyIds   *[]openapi_types.UUID `json:"copy_ids,omitempty"`
+	CreatedAt time.Time             `json:"created_at"`
 
 	// CreatedBy Who recorded the activity, from its earliest create audit row, read the way
 	// `Contact360.created_by` is: for an agent, the colleague it worked for and the
@@ -36992,6 +37055,15 @@ type BlockedDomainListResponse struct {
 // body.
 type BodyCompleteness string
 
+// BookingReturnPreview defines model for BookingReturnPreview.
+type BookingReturnPreview struct {
+	Name          string `json:"name"`
+	PolicyVersion string `json:"policy_version"`
+
+	// Wording The consent wording the confirm records.
+	Wording string `json:"wording"`
+}
+
 // BoughtField One value on a contact that a data provider's run wrote and still owns.
 type BoughtField struct {
 	// AppliedAt When the run wrote it.
@@ -37889,6 +37961,9 @@ type CaptureHealth struct {
 	// OwnerReviews Mailbox owners with decisions ready for human review. Counts and names only.
 	OwnerReviews *[]CaptureOwnerReview `json:"owner_reviews,omitempty"`
 
+	// SharedMailboxConcerns Active connection concerns for shared mailboxes. Names account state, never correspondence.
+	SharedMailboxConcerns *[]CaptureSharedMailboxConcern `json:"shared_mailbox_concerns,omitempty"`
+
 	// Sweeps One row per repair pass, always all of them, in a fixed order. A pass that has
 	// never run is listed with no `last_run`, not left out.
 	Sweeps []CaptureSweepHealth `json:"sweeps"`
@@ -38229,6 +38304,19 @@ type CaptureSettings struct {
 	// SiteRead What one website read may fetch. Read when a read starts, so a change applies to the next
 	// one. An automatic read also runs under its own lower page ceiling.
 	SiteRead SiteReadLimits `json:"site_read"`
+}
+
+// CaptureSharedMailboxConcern A shared mailbox with an active concern. No member owns it, so `account_label` names it.
+type CaptureSharedMailboxConcern struct {
+	AccountLabel *string            `json:"account_label"`
+	Concern      CaptureConcernKind `json:"concern"`
+	ConnectionId openapi_types.UUID `json:"connection_id"`
+
+	// ErrorClass The class of the last failed sync, as on `CaptureConnectionConcern`.
+	ErrorClass    *string    `json:"error_class,omitempty"`
+	LastSuccessAt *time.Time `json:"last_success_at"`
+	Provider      string     `json:"provider"`
+	Since         *time.Time `json:"since"`
 }
 
 // CaptureSourceEntry One capture provenance id that is not a transport, as the directory publishes it.
@@ -42240,6 +42328,9 @@ type Contact struct {
 	// LegalHold True while a litigation or investigation hold is preserving this record. A held record is never acted on by a retention sweep and an Art. 17 erasure against it is refused, so a screen that offers either action has to know. Placed and lifted through /retention/legal-holds, never by an ordinary edit.
 	LegalHold *bool `json:"legal_hold,omitempty"`
 
+	// LinkedinUrl The contact's LinkedIn profile link. The same stored value as `social.linkedin`, not a second copy.
+	LinkedinUrl *string `json:"linkedin_url,omitempty"`
+
 	// MergedIntoId Set when this row was merged away.
 	MergedIntoId *openapi_types.UUID `json:"merged_into_id,omitempty"`
 	OwnerId      *openapi_types.UUID `json:"owner_id,omitempty"`
@@ -42261,7 +42352,7 @@ type Contact struct {
 	// RelationshipMark Set when the workspace's relationship to this contact is not an ordinary one. `vendor_marketing` is a named sender who only pitches something to this business and whom nobody here has answered. The default contact lists leave a marked contact out; a text search and a read by id still find it. Null is not marked. Written through `PATCH /contacts/{id}` or by the sender check, never by the request body of a create.
 	RelationshipMark *ContactRelationshipMark `json:"relationship_mark,omitempty"`
 
-	// Social { linkedin, twitter, github, ... }
+	// Social The contact's links by platform: github, linkedin, twitter. linkedin is a LinkedIn profile link.
 	Social *map[string]interface{} `json:"social,omitempty"`
 	Source string                  `json:"source"`
 
@@ -43701,13 +43792,22 @@ type ContactStop struct {
 
 	// LiftBlockedBy Why `may_lift` is false. `permission`: you may not change this contact, or you are not
 	// signed in to a seat. `address`: a stop on an address clears when mail to it works
-	// again. `restriction`: lifting it owes the contact notice first, which Margince cannot
-	// send yet. `subject_decision`: the contact set it and only they change it. `level`: it
-	// was recorded at your level or above. Null when `may_lift` is true.
+	// again. `restriction`: lifting it owes the contact notice first, through
+	// `liftContactRestriction`. `subject_decision`: the contact set it and only they change
+	// it. `level`: it was recorded at your level or above. Null when `may_lift` is true.
 	LiftBlockedBy *ContactStopLiftBlockedBy `json:"lift_blocked_by,omitempty"`
+
+	// LiftNotice The newest notice a lift of this restriction queued. Absent when no lift was asked,
+	// and for every other kind of stop.
+	LiftNotice *RestrictionLiftNotice `json:"lift_notice,omitempty"`
 
 	// MayLift This caller may take the stop back now, with a reason.
 	MayLift bool `json:"may_lift"`
+
+	// MayLiftRestriction The stop is a processing restriction and this caller, an admin signed in to the app,
+	// may ask `liftContactRestriction` to lift it. False for every other stop, and while a
+	// lift notice is queued or sent.
+	MayLiftRestriction *bool `json:"may_lift_restriction,omitempty"`
 
 	// PurposeKey The one purpose a narrow stop binds. Null for a stop on every purpose of its kind.
 	PurposeKey *string `json:"purpose_key,omitempty"`
@@ -43730,9 +43830,9 @@ type ContactStopAuthority string
 
 // ContactStopLiftBlockedBy Why `may_lift` is false. `permission`: you may not change this contact, or you are not
 // signed in to a seat. `address`: a stop on an address clears when mail to it works
-// again. `restriction`: lifting it owes the contact notice first, which Margince cannot
-// send yet. `subject_decision`: the contact set it and only they change it. `level`: it
-// was recorded at your level or above. Null when `may_lift` is true.
+// again. `restriction`: lifting it owes the contact notice first, through
+// `liftContactRestriction`. `subject_decision`: the contact set it and only they change
+// it. `level`: it was recorded at your level or above. Null when `may_lift` is true.
 type ContactStopLiftBlockedBy string
 
 // ContextEntityRef defines model for ContextEntityRef.
@@ -44326,8 +44426,11 @@ type CreateCompanyRequest struct {
 	Email *openapi_types.Email `json:"email,omitempty"`
 
 	// Industry An industry code, or text the server can map to one. Text that names no code stores no code and is kept in the description.
-	Industry        *string             `json:"industry,omitempty"`
-	LegalName       *string             `json:"legal_name,omitempty"`
+	Industry  *string `json:"industry,omitempty"`
+	LegalName *string `json:"legal_name,omitempty"`
+
+	// LinkedinUrl Canonical LinkedIn company URL, held to the rule the update holds it to. website_url is derived and refused here.
+	LinkedinUrl     *string             `json:"linkedin_url,omitempty"`
 	OwnerId         *openapi_types.UUID `json:"owner_id,omitempty"`
 	ParentCompanyId *openapi_types.UUID `json:"parent_company_id,omitempty"`
 
@@ -44395,15 +44498,20 @@ type CreateContactRequest struct {
 	ConvertLeadIds *[]openapi_types.UUID `json:"convert_lead_ids,omitempty"`
 
 	// CreatedFromActivityId The note, mail or quick capture this contact was read out of. An agent that creates a contact from a record names it here, so a reader can check where the name and title came from. The caller must be able to read it (404 `not_found` otherwise, never 403).
-	CreatedFromActivityId *openapi_types.UUID     `json:"created_from_activity_id,omitempty"`
-	Emails                *[]ContactEmailInput    `json:"emails,omitempty"`
-	FirstName             *string                 `json:"first_name,omitempty"`
-	FullName              string                  `json:"full_name"`
-	LastName              *string                 `json:"last_name,omitempty"`
-	OwnerId               *openapi_types.UUID     `json:"owner_id,omitempty"`
-	Phones                *[]ContactPhoneInput    `json:"phones,omitempty"`
-	Social                *map[string]interface{} `json:"social,omitempty"`
-	Source                string                  `json:"source"`
+	CreatedFromActivityId *openapi_types.UUID  `json:"created_from_activity_id,omitempty"`
+	Emails                *[]ContactEmailInput `json:"emails,omitempty"`
+	FirstName             *string              `json:"first_name,omitempty"`
+	FullName              string               `json:"full_name"`
+	LastName              *string              `json:"last_name,omitempty"`
+
+	// LinkedinUrl The contact's LinkedIn profile link (https://www.linkedin.com/in/<name>). Writes the same stored value as `social.linkedin`; a request naming both with different profiles is refused with 422 `linkedin_url_conflicts_with_social`.
+	LinkedinUrl *string              `json:"linkedin_url,omitempty"`
+	OwnerId     *openapi_types.UUID  `json:"owner_id,omitempty"`
+	Phones      *[]ContactPhoneInput `json:"phones,omitempty"`
+
+	// Social Links by platform. Only github, linkedin and twitter are taken; any other key is refused with 422 `social_platform_unknown`. linkedin takes only a LinkedIn profile link (https://www.linkedin.com/in/<name>).
+	Social *map[string]interface{} `json:"social,omitempty"`
+	Source string                  `json:"source"`
 
 	// SourceAuthorId Who wrote this record in the system it came from, when the author holds a seat here. Written only by a declared importer (a signed-in human holding import_run:create), only beside a source_system; either author field or both may be sent, and the seat's current name wins on read. captured_by still names the caller.
 	SourceAuthorId *openapi_types.UUID `json:"source_author_id,omitempty"`
@@ -45039,11 +45147,20 @@ type CreateProjectHealthCorrectionRequest struct {
 
 // CreateProjectRequest defines model for CreateProjectRequest.
 type CreateProjectRequest struct {
-	CompanyId   openapi_types.UUID  `json:"company_id"`
+	CompanyId openapi_types.UUID `json:"company_id"`
+
+	// DealId The deal this project comes from. The deal is pointed at the new project in the same transaction.
+	DealId      *openapi_types.UUID `json:"deal_id,omitempty"`
 	Description *string             `json:"description,omitempty"`
-	Name        string              `json:"name"`
-	OwnerId     *openapi_types.UUID `json:"owner_id,omitempty"`
-	Source      string              `json:"source"`
+
+	// Key The key the creator chose; omitted or null to have the server mint one. Read-only after create.
+	Key     *string             `json:"key,omitempty"`
+	Name    string              `json:"name"`
+	OwnerId *openapi_types.UUID `json:"owner_id,omitempty"`
+
+	// Phase The phase the project starts in; initiative when omitted.
+	Phase  *CreateProjectRequestPhase `json:"phase,omitempty"`
+	Source string                     `json:"source"`
 
 	// SourceAuthorId Who wrote this record in the system it came from, when the author holds a seat here. Written only by a declared importer (a signed-in human holding import_run:create), only beside a source_system; either author field or both may be sent, and the seat's current name wins on read. captured_by still names the caller.
 	SourceAuthorId *openapi_types.UUID `json:"source_author_id,omitempty"`
@@ -45060,6 +45177,9 @@ type CreateProjectRequest struct {
 	TargetEndDate        *openapi_types.Date    `json:"target_end_date,omitempty"`
 	AdditionalProperties map[string]interface{} `json:"-"`
 }
+
+// CreateProjectRequestPhase The phase the project starts in; initiative when omitted.
+type CreateProjectRequestPhase string
 
 // CreateRecordAssignmentRequest A responsibility may name an agent seat as well as a human member. It grants no record access. The web picker lists active human colleagues.
 type CreateRecordAssignmentRequest struct {
@@ -45457,9 +45577,16 @@ type DataCompleteness struct {
 	// proportion without its denominator is not a completeness figure.
 	Expected int `json:"expected"`
 
+	// Inputs Every required input in the assembly's order, with whether it counts. An input
+	// that does not count is missing or no longer fresh.
+	Inputs []GrowthFitInputState `json:"inputs"`
+
 	// Missing Which required inputs are missing, as codes. The client words them in the
 	// reader's language, so the server sends no sentence here.
 	Missing *[]GrowthFitInput `json:"missing,omitempty"`
+
+	// Needed The fewest present inputs the assembly judges on. Below it the band is `unknown`.
+	Needed int `json:"needed"`
 
 	// Present Required inputs available and not stale.
 	Present int `json:"present"`
@@ -45474,7 +45601,7 @@ type DataCoverage struct {
 	Sources []ForecastAssuranceSource `json:"sources"`
 }
 
-// DataSubjectRequest A GDPR data-subject request (Art. 15/16/17) tracked to completion (B-E11.30; data-model §12.5).
+// DataSubjectRequest A GDPR data-subject request (Art. 15/16/17/18) tracked to completion.
 type DataSubjectRequest struct {
 	AssigneeId *openapi_types.UUID `json:"assignee_id,omitempty"`
 	CreatedAt  time.Time           `json:"created_at"`
@@ -49205,8 +49332,11 @@ type ForecastReadings struct {
 	Contributions *[]ForecastContribution `json:"contributions,omitempty"`
 
 	// ContributionsLimited True when `contributions` holds only the caller's own deals because the installation switched off individual performance and at least one row was withheld. The totals still include colleagues' deals. On a shared snapshot it says the same of the rows its CSV export holds.
-	ContributionsLimited *bool         `json:"contributions_limited,omitempty"`
-	CurrentCall          *ForecastCall `json:"current_call,omitempty"`
+	ContributionsLimited *bool `json:"contributions_limited,omitempty"`
+
+	// ContributionsLimitedReason Present when `contributions_limited` is true: the sentence that says why, in the reader's language. It is the `coverage.reason` an owner chart limited by the same switch carries.
+	ContributionsLimitedReason *string       `json:"contributions_limited_reason,omitempty"`
+	CurrentCall                *ForecastCall `json:"current_call,omitempty"`
 
 	// EligibleCount Deals considered, priced or not.
 	EligibleCount int `json:"eligible_count"`
@@ -49437,6 +49567,15 @@ type GrowthFitBand string
 
 // GrowthFitInput One input the growth-fit assessment needs about a company. The client words it.
 type GrowthFitInput string
+
+// GrowthFitInputState One required growth-fit input and whether it counts toward the band.
+type GrowthFitInputState struct {
+	// Input One input the growth-fit assessment needs about a company. The client words it.
+	Input GrowthFitInput `json:"input"`
+
+	// Present True when the input is recorded and not stale.
+	Present bool `json:"present"`
+}
 
 // GrowthFitNextStep The one thing to do that would most improve a growth-fit answer. The client words it.
 // `gather_inputs` is to find the inputs in `data_completeness.missing`, `record_profile`
@@ -57707,6 +57846,12 @@ type ProjectHealthAssessmentListResponse struct {
 // ProjectHealthState How a project is going, as somebody judged it.
 type ProjectHealthState string
 
+// ProjectKeyPreview defines model for ProjectKeyPreview.
+type ProjectKeyPreview struct {
+	// Key The key a project of this name would be given if it were created now.
+	Key string `json:"key"`
+}
+
 // ProjectListResponse defines model for ProjectListResponse.
 type ProjectListResponse struct {
 	Data []Project `json:"data"`
@@ -58340,7 +58485,7 @@ type QuickCaptureContactRequest struct {
 	FullName string               `json:"full_name"`
 	Phone    *string              `json:"phone,omitempty"`
 
-	// ProfileUrl The public profile this was read from. Stored, never fetched. A LinkedIn URL must be a profile (`/in/<name>`); a company page is refused with 422 `linkedin_url_not_profile` on this field.
+	// ProfileUrl The LinkedIn profile this was read from. Stored, never fetched. It must be a LinkedIn profile (`/in/<name>`): a page off LinkedIn is refused with 422 `linkedin_url_not_linkedin` on this field, and a company page with `linkedin_url_not_profile`.
 	ProfileUrl *string `json:"profile_url,omitempty"`
 
 	// Role What they do at that employer, when it differs from `title`.
@@ -60941,6 +61086,28 @@ type RestrictedRecord struct {
 	RestrictedUntil time.Time `json:"restricted_until"`
 }
 
+// RestrictionLiftNotice Where the notice that lifts a restriction of processing is.
+type RestrictionLiftNotice struct {
+	QueuedAt time.Time `json:"queued_at"`
+
+	// Reason Why the last attempt did not go out. Null while nothing went wrong.
+	Reason *string `json:"reason,omitempty"`
+
+	// Status `queued`: the notice waits to be sent, and the restriction stays until it is. A
+	// `reason` says an attempt failed and Margince tries again. `sent`: the notice went out
+	// and the restriction is ending; a periodic pass ends it if the first attempt did not.
+	// `failed`: Margince gave up on the notice, so the restriction stays. Ask again to send a
+	// new notice.
+	Status RestrictionLiftNoticeStatus `json:"status"`
+}
+
+// RestrictionLiftNoticeStatus `queued`: the notice waits to be sent, and the restriction stays until it is. A
+// `reason` says an attempt failed and Margince tries again. `sent`: the notice went out
+// and the restriction is ending; a periodic pass ends it if the first attempt did not.
+// `failed`: Margince gave up on the notice, so the restriction stays. Ask again to send a
+// new notice.
+type RestrictionLiftNoticeStatus string
+
 // RetainedEmailSignature defines model for RetainedEmailSignature.
 type RetainedEmailSignature struct {
 	Id        openapi_types.UUID `json:"id"`
@@ -62411,6 +62578,9 @@ type SdrTeamReview struct {
 
 	// WithheldFigures The figures this reader may not see, each needing its own grant of the requesting reader. `meetings` needs activity read and leaves out `meetings` and each `meetings_held`. `handoffs` needs lead read, where handoffs are kept, in either workflow, and leaves out `handoffs` and each member's handoff counts. `leads` needs lead read and leaves out `qualified` and `unanswered`. `qualified` and `unanswered` each leave out that one figure when a field mask withholds a column its reading reads, on some leads or on all: a count over the leads left would read as measured. `targets` needs target read, lead read and an unmasked `qualified`, and leaves out `member_targets` and each `target`. A figure absent and not named here is not measured for this review: a target nobody set, or a target in handoff mode.
 	WithheldFigures []SdrTeamReviewWithheldFigures `json:"withheld_figures"`
+
+	// WithheldReason Present when `withheld` is true: the sentence that says why, in the reader's language. It is the `coverage.reason` a reporting chart withheld by the same rule carries.
+	WithheldReason *string `json:"withheld_reason,omitempty"`
 
 	// Workflow `handoff` when the reporting framework is set up for SDR teams; otherwise `qualification`, and `handoffs` is absent.
 	Workflow SdrTeamReviewWorkflow `json:"workflow"`
@@ -65719,7 +65889,10 @@ type UpdateContactRequest struct {
 	FirstName *string              `json:"first_name,omitempty"`
 	FullName  *string              `json:"full_name,omitempty"`
 	LastName  *string              `json:"last_name,omitempty"`
-	OwnerId   *openapi_types.UUID  `json:"owner_id,omitempty"`
+
+	// LinkedinUrl The contact's LinkedIn profile link (https://www.linkedin.com/in/<name>). Writes the same stored value as `social.linkedin`; null or "" removes it. A request naming both with different profiles is refused with 422 `linkedin_url_conflicts_with_social`.
+	LinkedinUrl *string             `json:"linkedin_url,omitempty"`
+	OwnerId     *openapi_types.UUID `json:"owner_id,omitempty"`
 
 	// Phones REPLACES the contact's numbers with exactly this list, the same way `emails`
 	// replaces addresses. A number that has been reassigned is corrected by sending
@@ -65736,8 +65909,10 @@ type UpdateContactRequest struct {
 
 	// RelationshipMark Marks the contact (`vendor_marketing`) or clears the mark (null). The mark records who set it, so a mark set by hand is never lifted by the automatic check that lifts the mark the sender check set.
 	RelationshipMark *UpdateContactRequestRelationshipMark `json:"relationship_mark,omitempty"`
-	Social           *map[string]interface{}               `json:"social,omitempty"`
-	Title            *string                               `json:"title,omitempty"`
+
+	// Social Merged into the stored links: a key not sent keeps its link, and a key sent as "" or null removes it. Only github, linkedin and twitter are taken; any other key is refused with 422 `social_platform_unknown`. linkedin takes only a LinkedIn profile link (https://www.linkedin.com/in/<name>).
+	Social *map[string]interface{} `json:"social,omitempty"`
+	Title  *string                 `json:"title,omitempty"`
 
 	// Visibility Who may see this contact: `workspace` for everyone in the company,
 	// `owner` for the contact named by `owner_id` alone.
@@ -66634,11 +66809,10 @@ type UpdateProductRequestComponentKind string
 type UpdateProductRequestTaxCategory string
 
 // UpdateProjectRequest Note `phase` is absent by design — it moves only through advanceProjectPhase.
-// `key` is absent for a different reason: the server mints it from the name and
-// it is read-only thereafter. A key is what a human writes in a subject line to
-// file mail under a project, so a caller-chosen one is a matcher a caller can
-// get wrong — a project keyed after a contact's name would claim every bracketed
-// mention of that word.
+// `key` is absent for a different reason: it is set on create and read-only
+// thereafter (422 `read_only`). A key is what a human writes in a subject line to
+// file mail under a project, so changing it would stop mail already sent with it
+// from filing.
 type UpdateProjectRequest struct {
 	Description          *string                `json:"description,omitempty"`
 	EndedAt              *openapi_types.Date    `json:"ended_at,omitempty"`
@@ -70568,6 +70742,9 @@ type ListActivitiesParams struct {
 
 	// ReminderDue Restrict the list to the caller's own due reminders: open, live tasks assigned to the caller whose `remind_at` has passed, at most 30 days ago. The latest reminder comes first. It reads content, so a task whose content the caller may not read is left out.
 	ReminderDue *bool `form:"reminder_due,omitempty" json:"reminder_due,omitempty"`
+
+	// CollapseCopies Show one row per email when several colleagues' mailboxes each hold a copy of it. Only copies the caller may read are joined, and the row shown says how many in `copies`. Off by default, so an export or sync client still reads every row.
+	CollapseCopies *bool `form:"collapse_copies,omitempty" json:"collapse_copies,omitempty"`
 }
 
 // ListActivitiesParamsKind defines parameters for ListActivities.
@@ -73479,6 +73656,7 @@ type SuppressContactJSONBody struct {
 	// category but the three the controller owes anyway. `marketing_objection` is
 	// Art. 21(2), reaches marketing only, and is recorded at the subject's own
 	// authority, so only an admin correcting a mistake can lift it.
+	// `processing_restriction` is Art. 18 and recorded by a human admin only.
 	Kind SuppressContactJSONBodyKind `json:"kind"`
 
 	// Reason What the contact was told, in their words. Stored because a suppression somebody
@@ -73494,6 +73672,12 @@ type LiftSuppressionJSONBody struct {
 	// Reason Why the stop is being taken back. Required, unlike the reason for setting
 	// one: a record saying somebody asked us not to write, now overruled, is the
 	// change most worth being able to explain later.
+	Reason string `json:"reason"`
+}
+
+// LiftContactRestrictionJSONBody defines parameters for LiftContactRestriction.
+type LiftContactRestrictionJSONBody struct {
+	// Reason Why the restriction is being lifted. The audit row keeps it.
 	Reason string `json:"reason"`
 }
 
@@ -76502,6 +76686,11 @@ type CreateProjectParams struct {
 	XApprovalToken *ApprovalToken `json:"X-Approval-Token,omitempty"`
 }
 
+// GetProjectKeyPreviewParams defines parameters for GetProjectKeyPreview.
+type GetProjectKeyPreviewParams struct {
+	Name string `form:"name" json:"name"`
+}
+
 // TransferProjectOwnershipParams defines parameters for TransferProjectOwnership.
 type TransferProjectOwnershipParams struct {
 	// IdempotencyKey Client-supplied key making a mutation safe to retry — an update exactly as much as a
@@ -76886,6 +77075,22 @@ type GetPublicAvailabilityParams struct {
 type GetPublicSchedulingProfileParams struct {
 	// L Offered meeting length in minutes. Unknown lengths use the default.
 	L *int `form:"l,omitempty" json:"l,omitempty"`
+}
+
+// RequestBookingReturnJSONBody defines parameters for RequestBookingReturn.
+type RequestBookingReturnJSONBody struct {
+	Email openapi_types.Email `json:"email"`
+	Name  string              `json:"name"`
+}
+
+// ConfirmBookingReturnJSONBody defines parameters for ConfirmBookingReturn.
+type ConfirmBookingReturnJSONBody struct {
+	Token string `json:"token"`
+}
+
+// PreviewBookingReturnJSONBody defines parameters for PreviewBookingReturn.
+type PreviewBookingReturnJSONBody struct {
+	Token string `json:"token"`
 }
 
 // SubmitConfirmDetailsJSONBody defines parameters for SubmitConfirmDetails.
@@ -79160,6 +79365,9 @@ type SuppressContactJSONRequestBody SuppressContactJSONBody
 // LiftSuppressionJSONRequestBody defines body for LiftSuppression for application/json ContentType.
 type LiftSuppressionJSONRequestBody LiftSuppressionJSONBody
 
+// LiftContactRestrictionJSONRequestBody defines body for LiftContactRestriction for application/json ContentType.
+type LiftContactRestrictionJSONRequestBody LiftContactRestrictionJSONBody
+
 // DraftContactEmailJSONRequestBody defines body for DraftContactEmail for application/json ContentType.
 type DraftContactEmailJSONRequestBody DraftContactEmailJSONBody
 
@@ -79700,6 +79908,15 @@ type ConnectProviderJSONRequestBody = ConnectProviderRequest
 // BookPublicMeetingJSONRequestBody defines body for BookPublicMeeting for application/json ContentType.
 type BookPublicMeetingJSONRequestBody BookPublicMeetingJSONBody
 
+// RequestBookingReturnJSONRequestBody defines body for RequestBookingReturn for application/json ContentType.
+type RequestBookingReturnJSONRequestBody RequestBookingReturnJSONBody
+
+// ConfirmBookingReturnJSONRequestBody defines body for ConfirmBookingReturn for application/json ContentType.
+type ConfirmBookingReturnJSONRequestBody ConfirmBookingReturnJSONBody
+
+// PreviewBookingReturnJSONRequestBody defines body for PreviewBookingReturn for application/json ContentType.
+type PreviewBookingReturnJSONRequestBody PreviewBookingReturnJSONBody
+
 // SubmitConfirmDetailsJSONRequestBody defines body for SubmitConfirmDetails for application/json ContentType.
 type SubmitConfirmDetailsJSONRequestBody SubmitConfirmDetailsJSONBody
 
@@ -80181,6 +80398,22 @@ func (a *Activity) UnmarshalJSON(b []byte) error {
 			return fmt.Errorf("error reading 'controller_send': %w", err)
 		}
 		delete(object, "controller_send")
+	}
+
+	if raw, found := object["copies"]; found {
+		err = json.Unmarshal(raw, &a.Copies)
+		if err != nil {
+			return fmt.Errorf("error reading 'copies': %w", err)
+		}
+		delete(object, "copies")
+	}
+
+	if raw, found := object["copy_ids"]; found {
+		err = json.Unmarshal(raw, &a.CopyIds)
+		if err != nil {
+			return fmt.Errorf("error reading 'copy_ids': %w", err)
+		}
+		delete(object, "copy_ids")
 	}
 
 	if raw, found := object["created_at"]; found {
@@ -80679,6 +80912,20 @@ func (a Activity) MarshalJSON() ([]byte, error) {
 		object["controller_send"], err = json.Marshal(a.ControllerSend)
 		if err != nil {
 			return nil, fmt.Errorf("error marshaling 'controller_send': %w", err)
+		}
+	}
+
+	if a.Copies != nil {
+		object["copies"], err = json.Marshal(a.Copies)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'copies': %w", err)
+		}
+	}
+
+	if a.CopyIds != nil {
+		object["copy_ids"], err = json.Marshal(a.CopyIds)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'copy_ids': %w", err)
 		}
 	}
 
@@ -82000,6 +82247,14 @@ func (a *Contact) UnmarshalJSON(b []byte) error {
 		delete(object, "legal_hold")
 	}
 
+	if raw, found := object["linkedin_url"]; found {
+		err = json.Unmarshal(raw, &a.LinkedinUrl)
+		if err != nil {
+			return fmt.Errorf("error reading 'linkedin_url': %w", err)
+		}
+		delete(object, "linkedin_url")
+	}
+
 	if raw, found := object["merged_into_id"]; found {
 		err = json.Unmarshal(raw, &a.MergedIntoId)
 		if err != nil {
@@ -82297,6 +82552,13 @@ func (a Contact) MarshalJSON() ([]byte, error) {
 		object["legal_hold"], err = json.Marshal(a.LegalHold)
 		if err != nil {
 			return nil, fmt.Errorf("error marshaling 'legal_hold': %w", err)
+		}
+	}
+
+	if a.LinkedinUrl != nil {
+		object["linkedin_url"], err = json.Marshal(a.LinkedinUrl)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'linkedin_url': %w", err)
 		}
 	}
 
@@ -83598,6 +83860,14 @@ func (a *CreateCompanyRequest) UnmarshalJSON(b []byte) error {
 		delete(object, "legal_name")
 	}
 
+	if raw, found := object["linkedin_url"]; found {
+		err = json.Unmarshal(raw, &a.LinkedinUrl)
+		if err != nil {
+			return fmt.Errorf("error reading 'linkedin_url': %w", err)
+		}
+		delete(object, "linkedin_url")
+	}
+
 	if raw, found := object["owner_id"]; found {
 		err = json.Unmarshal(raw, &a.OwnerId)
 		if err != nil {
@@ -83733,6 +84003,13 @@ func (a CreateCompanyRequest) MarshalJSON() ([]byte, error) {
 		object["legal_name"], err = json.Marshal(a.LegalName)
 		if err != nil {
 			return nil, fmt.Errorf("error marshaling 'legal_name': %w", err)
+		}
+	}
+
+	if a.LinkedinUrl != nil {
+		object["linkedin_url"], err = json.Marshal(a.LinkedinUrl)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'linkedin_url': %w", err)
 		}
 	}
 
@@ -83903,6 +84180,14 @@ func (a *CreateContactRequest) UnmarshalJSON(b []byte) error {
 		delete(object, "last_name")
 	}
 
+	if raw, found := object["linkedin_url"]; found {
+		err = json.Unmarshal(raw, &a.LinkedinUrl)
+		if err != nil {
+			return fmt.Errorf("error reading 'linkedin_url': %w", err)
+		}
+		delete(object, "linkedin_url")
+	}
+
 	if raw, found := object["owner_id"]; found {
 		err = json.Unmarshal(raw, &a.OwnerId)
 		if err != nil {
@@ -84052,6 +84337,13 @@ func (a CreateContactRequest) MarshalJSON() ([]byte, error) {
 		object["last_name"], err = json.Marshal(a.LastName)
 		if err != nil {
 			return nil, fmt.Errorf("error marshaling 'last_name': %w", err)
+		}
+	}
+
+	if a.LinkedinUrl != nil {
+		object["linkedin_url"], err = json.Marshal(a.LinkedinUrl)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'linkedin_url': %w", err)
 		}
 	}
 
@@ -85175,12 +85467,28 @@ func (a *CreateProjectRequest) UnmarshalJSON(b []byte) error {
 		delete(object, "company_id")
 	}
 
+	if raw, found := object["deal_id"]; found {
+		err = json.Unmarshal(raw, &a.DealId)
+		if err != nil {
+			return fmt.Errorf("error reading 'deal_id': %w", err)
+		}
+		delete(object, "deal_id")
+	}
+
 	if raw, found := object["description"]; found {
 		err = json.Unmarshal(raw, &a.Description)
 		if err != nil {
 			return fmt.Errorf("error reading 'description': %w", err)
 		}
 		delete(object, "description")
+	}
+
+	if raw, found := object["key"]; found {
+		err = json.Unmarshal(raw, &a.Key)
+		if err != nil {
+			return fmt.Errorf("error reading 'key': %w", err)
+		}
+		delete(object, "key")
 	}
 
 	if raw, found := object["name"]; found {
@@ -85197,6 +85505,14 @@ func (a *CreateProjectRequest) UnmarshalJSON(b []byte) error {
 			return fmt.Errorf("error reading 'owner_id': %w", err)
 		}
 		delete(object, "owner_id")
+	}
+
+	if raw, found := object["phase"]; found {
+		err = json.Unmarshal(raw, &a.Phase)
+		if err != nil {
+			return fmt.Errorf("error reading 'phase': %w", err)
+		}
+		delete(object, "phase")
 	}
 
 	if raw, found := object["source"]; found {
@@ -85279,10 +85595,24 @@ func (a CreateProjectRequest) MarshalJSON() ([]byte, error) {
 		return nil, fmt.Errorf("error marshaling 'company_id': %w", err)
 	}
 
+	if a.DealId != nil {
+		object["deal_id"], err = json.Marshal(a.DealId)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'deal_id': %w", err)
+		}
+	}
+
 	if a.Description != nil {
 		object["description"], err = json.Marshal(a.Description)
 		if err != nil {
 			return nil, fmt.Errorf("error marshaling 'description': %w", err)
+		}
+	}
+
+	if a.Key != nil {
+		object["key"], err = json.Marshal(a.Key)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'key': %w", err)
 		}
 	}
 
@@ -85295,6 +85625,13 @@ func (a CreateProjectRequest) MarshalJSON() ([]byte, error) {
 		object["owner_id"], err = json.Marshal(a.OwnerId)
 		if err != nil {
 			return nil, fmt.Errorf("error marshaling 'owner_id': %w", err)
+		}
+	}
+
+	if a.Phase != nil {
+		object["phase"], err = json.Marshal(a.Phase)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'phase': %w", err)
 		}
 	}
 
@@ -91032,6 +91369,14 @@ func (a *UpdateContactRequest) UnmarshalJSON(b []byte) error {
 		delete(object, "last_name")
 	}
 
+	if raw, found := object["linkedin_url"]; found {
+		err = json.Unmarshal(raw, &a.LinkedinUrl)
+		if err != nil {
+			return fmt.Errorf("error reading 'linkedin_url': %w", err)
+		}
+		delete(object, "linkedin_url")
+	}
+
 	if raw, found := object["owner_id"]; found {
 		err = json.Unmarshal(raw, &a.OwnerId)
 		if err != nil {
@@ -91138,6 +91483,13 @@ func (a UpdateContactRequest) MarshalJSON() ([]byte, error) {
 		object["last_name"], err = json.Marshal(a.LastName)
 		if err != nil {
 			return nil, fmt.Errorf("error marshaling 'last_name': %w", err)
+		}
+	}
+
+	if a.LinkedinUrl != nil {
+		object["linkedin_url"], err = json.Marshal(a.LinkedinUrl)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'linkedin_url': %w", err)
 		}
 	}
 
@@ -94112,6 +94464,9 @@ type ServerInterface interface {
 	// Take back a stop, if you outrank the level that set it.
 	// (POST /contacts/{id}/consent/suppress/{suppressionId}/lift)
 	LiftSuppression(w http.ResponseWriter, r *http.Request, id Id, suppressionId openapi_types.UUID)
+	// Lift a restriction of processing, after telling the contact.
+	// (POST /contacts/{id}/consent/suppress/{suppressionId}/lift-restriction)
+	LiftContactRestriction(w http.ResponseWriter, r *http.Request, id Id, suppressionId openapi_types.UUID)
 	// Recipients copied on inbound correspondence who have no contact or live lead.
 	// (GET /contacts/{id}/conversation-suggestions)
 	ListContactConversationSuggestions(w http.ResponseWriter, r *http.Request, id Id)
@@ -95294,10 +95649,10 @@ type ServerInterface interface {
 	// State who this installation is.
 	// (PUT /privacy/controller-particulars)
 	SetControllerParticulars(w http.ResponseWriter, r *http.Request)
-	// Every contact's privacy-notice case, including a source nobody has confirmed yet (a bought list, an import), soonest deadline first. Start here for what we owe one contact.
+	// Every contact's privacy-notice case, including one whose source was never recorded (an older contact), soonest deadline first. Without state it lists unresolved cases only, so an empty page is not an empty notice history, and a contact imported moments ago may have no case yet. For one contact, read their contact_360 view (GET /contacts/{id}/360) instead; its privacy_source_reviews and privacy_notice_duties carry the case ids.
 	// (GET /privacy/notice-case-reviews)
 	ListNoticeCaseReviews(w http.ResponseWriter, r *http.Request, params ListNoticeCaseReviewsParams)
-	// One contact's privacy-notice case — its source, whether a notice is owed, and by when. The id comes from notice_case_reviews, not the contact's id.
+	// One contact's privacy-notice case — its source, whether a notice is owed, and by when. The id comes from notice_case_reviews or the contact's contact_360 view, not the contact's id.
 	// (GET /privacy/notice-case-reviews/{id})
 	GetNoticeCaseReview(w http.ResponseWriter, r *http.Request, id openapi_types.UUID)
 	// Give a contact's privacy-notice case (from notice_case_reviews) an owner.
@@ -95306,13 +95661,13 @@ type ServerInterface interface {
 	// Read accessible evidence for a contact source assessment.
 	// (GET /privacy/notice-case-reviews/{id}/source)
 	GetNoticeSourceEvidence(w http.ResponseWriter, r *http.Request, id openapi_types.UUID, params GetNoticeSourceEvidenceParams)
-	// Confirm where a contact came from (bought list, import, their own enquiry), which decides whether a privacy notice is owed. Preview it first.
+	// Confirm where a contact came from (bought list, import, their own enquiry), which decides whether a privacy notice is owed. Preview it first (POST /privacy/notice-case-reviews/{id}/source/preview). Only a contact with no recorded source is up for review; when its evidence does not name where the data first came from, ask the user rather than guessing a kind.
 	// (POST /privacy/notice-case-reviews/{id}/source)
 	AssessNoticeSource(w http.ResponseWriter, r *http.Request, id openapi_types.UUID)
-	// Preview what confirming a contact's source decides — whether a notice is owed and by when — without changing the case. Confirming is the user's decision, so offer confirm_notice_source and ask them.
+	// Preview what confirming a contact's source decides — whether a notice is owed and by when — without changing the case. Confirming is the user's decision, so offer confirm_notice_source (POST /privacy/notice-case-reviews/{id}/source) and ask them, unless they already named the source and asked you to confirm it.
 	// (POST /privacy/notice-case-reviews/{id}/source/preview)
 	PreviewNoticeSource(w http.ResponseWriter, r *http.Request, id openapi_types.UUID)
-	// Privacy notices already owed, where the source is confirmed, soonest deadline first. A contact whose source nobody has confirmed is in notice_case_reviews.
+	// Privacy notices already owed, where the source is confirmed, soonest deadline first. A contact whose source nobody has confirmed is in notice_case_reviews (GET /privacy/notice-case-reviews).
 	// (GET /privacy/notice-cases)
 	ListNoticeCases(w http.ResponseWriter, r *http.Request, params ListNoticeCasesParams)
 	// One privacy notice owed, where the source is confirmed. The case id comes from notice_cases, not the contact's id.
@@ -95360,6 +95715,9 @@ type ServerInterface interface {
 	// Create a project on a company.
 	// (POST /projects)
 	CreateProject(w http.ResponseWriter, r *http.Request, params CreateProjectParams)
+	// The key a new project of this name would be given.
+	// (GET /projects/key-preview)
+	GetProjectKeyPreview(w http.ResponseWriter, r *http.Request, params GetProjectKeyPreviewParams)
 	// Move every live project one user owns to another user, in one transaction.
 	// (POST /projects/transfer-ownership)
 	TransferProjectOwnership(w http.ResponseWriter, r *http.Request, params TransferProjectOwnershipParams)
@@ -95438,6 +95796,15 @@ type ServerInterface interface {
 	// Read the host-approved booking page identity and meeting details.
 	// (GET /public/booking/{host_slug}/profile)
 	GetPublicSchedulingProfile(w http.ResponseWriter, r *http.Request, hostSlug string, params GetPublicSchedulingProfileParams)
+	// Ask to be stored again after an erasure (anonymous); mails a confirmation link.
+	// (POST /public/booking/{host_slug}/return)
+	RequestBookingReturn(w http.ResponseWriter, r *http.Request, hostSlug string)
+	// Confirm the mailed link and be stored again (anonymous).
+	// (POST /public/booking/{host_slug}/return/confirm)
+	ConfirmBookingReturn(w http.ResponseWriter, r *http.Request, hostSlug string)
+	// Show what a mailed return link will store, before it is confirmed (anonymous).
+	// (POST /public/booking/{host_slug}/return/preview)
+	PreviewBookingReturn(w http.ResponseWriter, r *http.Request, hostSlug string)
 	// What the workspace holds about this contact (anonymous, token-authed).
 	// (GET /public/confirm/{token})
 	GetConfirmDetails(w http.ResponseWriter, r *http.Request, token string)
@@ -98546,6 +98913,12 @@ func (_ Unimplemented) LiftSuppression(w http.ResponseWriter, r *http.Request, i
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
+// Lift a restriction of processing, after telling the contact.
+// (POST /contacts/{id}/consent/suppress/{suppressionId}/lift-restriction)
+func (_ Unimplemented) LiftContactRestriction(w http.ResponseWriter, r *http.Request, id Id, suppressionId openapi_types.UUID) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
 // Recipients copied on inbound correspondence who have no contact or live lead.
 // (GET /contacts/{id}/conversation-suggestions)
 func (_ Unimplemented) ListContactConversationSuggestions(w http.ResponseWriter, r *http.Request, id Id) {
@@ -100910,13 +101283,13 @@ func (_ Unimplemented) SetControllerParticulars(w http.ResponseWriter, r *http.R
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
-// Every contact's privacy-notice case, including a source nobody has confirmed yet (a bought list, an import), soonest deadline first. Start here for what we owe one contact.
+// Every contact's privacy-notice case, including one whose source was never recorded (an older contact), soonest deadline first. Without state it lists unresolved cases only, so an empty page is not an empty notice history, and a contact imported moments ago may have no case yet. For one contact, read their contact_360 view (GET /contacts/{id}/360) instead; its privacy_source_reviews and privacy_notice_duties carry the case ids.
 // (GET /privacy/notice-case-reviews)
 func (_ Unimplemented) ListNoticeCaseReviews(w http.ResponseWriter, r *http.Request, params ListNoticeCaseReviewsParams) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
-// One contact's privacy-notice case — its source, whether a notice is owed, and by when. The id comes from notice_case_reviews, not the contact's id.
+// One contact's privacy-notice case — its source, whether a notice is owed, and by when. The id comes from notice_case_reviews or the contact's contact_360 view, not the contact's id.
 // (GET /privacy/notice-case-reviews/{id})
 func (_ Unimplemented) GetNoticeCaseReview(w http.ResponseWriter, r *http.Request, id openapi_types.UUID) {
 	w.WriteHeader(http.StatusNotImplemented)
@@ -100934,19 +101307,19 @@ func (_ Unimplemented) GetNoticeSourceEvidence(w http.ResponseWriter, r *http.Re
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
-// Confirm where a contact came from (bought list, import, their own enquiry), which decides whether a privacy notice is owed. Preview it first.
+// Confirm where a contact came from (bought list, import, their own enquiry), which decides whether a privacy notice is owed. Preview it first (POST /privacy/notice-case-reviews/{id}/source/preview). Only a contact with no recorded source is up for review; when its evidence does not name where the data first came from, ask the user rather than guessing a kind.
 // (POST /privacy/notice-case-reviews/{id}/source)
 func (_ Unimplemented) AssessNoticeSource(w http.ResponseWriter, r *http.Request, id openapi_types.UUID) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
-// Preview what confirming a contact's source decides — whether a notice is owed and by when — without changing the case. Confirming is the user's decision, so offer confirm_notice_source and ask them.
+// Preview what confirming a contact's source decides — whether a notice is owed and by when — without changing the case. Confirming is the user's decision, so offer confirm_notice_source (POST /privacy/notice-case-reviews/{id}/source) and ask them, unless they already named the source and asked you to confirm it.
 // (POST /privacy/notice-case-reviews/{id}/source/preview)
 func (_ Unimplemented) PreviewNoticeSource(w http.ResponseWriter, r *http.Request, id openapi_types.UUID) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
-// Privacy notices already owed, where the source is confirmed, soonest deadline first. A contact whose source nobody has confirmed is in notice_case_reviews.
+// Privacy notices already owed, where the source is confirmed, soonest deadline first. A contact whose source nobody has confirmed is in notice_case_reviews (GET /privacy/notice-case-reviews).
 // (GET /privacy/notice-cases)
 func (_ Unimplemented) ListNoticeCases(w http.ResponseWriter, r *http.Request, params ListNoticeCasesParams) {
 	w.WriteHeader(http.StatusNotImplemented)
@@ -101039,6 +101412,12 @@ func (_ Unimplemented) ListProjects(w http.ResponseWriter, r *http.Request, para
 // Create a project on a company.
 // (POST /projects)
 func (_ Unimplemented) CreateProject(w http.ResponseWriter, r *http.Request, params CreateProjectParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// The key a new project of this name would be given.
+// (GET /projects/key-preview)
+func (_ Unimplemented) GetProjectKeyPreview(w http.ResponseWriter, r *http.Request, params GetProjectKeyPreviewParams) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -101195,6 +101574,24 @@ func (_ Unimplemented) GetPublicBookingPreview(w http.ResponseWriter, r *http.Re
 // Read the host-approved booking page identity and meeting details.
 // (GET /public/booking/{host_slug}/profile)
 func (_ Unimplemented) GetPublicSchedulingProfile(w http.ResponseWriter, r *http.Request, hostSlug string, params GetPublicSchedulingProfileParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Ask to be stored again after an erasure (anonymous); mails a confirmation link.
+// (POST /public/booking/{host_slug}/return)
+func (_ Unimplemented) RequestBookingReturn(w http.ResponseWriter, r *http.Request, hostSlug string) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Confirm the mailed link and be stored again (anonymous).
+// (POST /public/booking/{host_slug}/return/confirm)
+func (_ Unimplemented) ConfirmBookingReturn(w http.ResponseWriter, r *http.Request, hostSlug string) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Show what a mailed return link will store, before it is confirmed (anonymous).
+// (POST /public/booking/{host_slug}/return/preview)
+func (_ Unimplemented) PreviewBookingReturn(w http.ResponseWriter, r *http.Request, hostSlug string) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -102994,6 +103391,19 @@ func (siw *ServerInterfaceWrapper) ListActivities(w http.ResponseWriter, r *http
 			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "reminder_due"})
 		} else {
 			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "reminder_due", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "collapse_copies" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "collapse_copies", r.URL.Query(), &params.CollapseCopies, runtime.BindQueryParameterOptions{Type: "boolean", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "collapse_copies"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "collapse_copies", Err: err})
 		}
 		return
 	}
@@ -121052,6 +121462,47 @@ func (siw *ServerInterfaceWrapper) LiftSuppression(w http.ResponseWriter, r *htt
 	handler.ServeHTTP(w, r)
 }
 
+// LiftContactRestriction operation middleware
+func (siw *ServerInterfaceWrapper) LiftContactRestriction(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	// ------------- Path parameter "suppressionId" -------------
+	var suppressionId openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "suppressionId", chi.URLParam(r, "suppressionId"), &suppressionId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "suppressionId", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.LiftContactRestriction(w, r, id, suppressionId)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // ListContactConversationSuggestions operation middleware
 func (siw *ServerInterfaceWrapper) ListContactConversationSuggestions(w http.ResponseWriter, r *http.Request) {
 
@@ -138723,6 +139174,45 @@ func (siw *ServerInterfaceWrapper) CreateProject(w http.ResponseWriter, r *http.
 	handler.ServeHTTP(w, r)
 }
 
+// GetProjectKeyPreview operation middleware
+func (siw *ServerInterfaceWrapper) GetProjectKeyPreview(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params GetProjectKeyPreviewParams
+
+	// ------------- Required query parameter "name" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, true, "name", r.URL.Query(), &params.Name, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "name"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "name", Err: err})
+		}
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetProjectKeyPreview(w, r, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // TransferProjectOwnership operation middleware
 func (siw *ServerInterfaceWrapper) TransferProjectOwnership(w http.ResponseWriter, r *http.Request) {
 
@@ -140135,6 +140625,84 @@ func (siw *ServerInterfaceWrapper) GetPublicSchedulingProfile(w http.ResponseWri
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.GetPublicSchedulingProfile(w, r, hostSlug, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// RequestBookingReturn operation middleware
+func (siw *ServerInterfaceWrapper) RequestBookingReturn(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "host_slug" -------------
+	var hostSlug string
+
+	err = runtime.BindStyledParameterWithOptions("simple", "host_slug", chi.URLParam(r, "host_slug"), &hostSlug, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "host_slug", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.RequestBookingReturn(w, r, hostSlug)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// ConfirmBookingReturn operation middleware
+func (siw *ServerInterfaceWrapper) ConfirmBookingReturn(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "host_slug" -------------
+	var hostSlug string
+
+	err = runtime.BindStyledParameterWithOptions("simple", "host_slug", chi.URLParam(r, "host_slug"), &hostSlug, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "host_slug", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ConfirmBookingReturn(w, r, hostSlug)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// PreviewBookingReturn operation middleware
+func (siw *ServerInterfaceWrapper) PreviewBookingReturn(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "host_slug" -------------
+	var hostSlug string
+
+	err = runtime.BindStyledParameterWithOptions("simple", "host_slug", chi.URLParam(r, "host_slug"), &hostSlug, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "host_slug", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.PreviewBookingReturn(w, r, hostSlug)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -151285,6 +151853,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 		r.Post(options.BaseURL+"/contacts/{id}/consent/suppress/{suppressionId}/lift", wrapper.LiftSuppression)
 	})
 	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/contacts/{id}/consent/suppress/{suppressionId}/lift-restriction", wrapper.LiftContactRestriction)
+	})
+	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/contacts/{id}/conversation-suggestions", wrapper.ListContactConversationSuggestions)
 	})
 	r.Group(func(r chi.Router) {
@@ -152533,6 +153104,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 		r.Post(options.BaseURL+"/projects", wrapper.CreateProject)
 	})
 	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/projects/key-preview", wrapper.GetProjectKeyPreview)
+	})
+	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/projects/transfer-ownership", wrapper.TransferProjectOwnership)
 	})
 	r.Group(func(r chi.Router) {
@@ -152609,6 +153183,15 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/public/booking/{host_slug}/profile", wrapper.GetPublicSchedulingProfile)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/public/booking/{host_slug}/return", wrapper.RequestBookingReturn)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/public/booking/{host_slug}/return/confirm", wrapper.ConfirmBookingReturn)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/public/booking/{host_slug}/return/preview", wrapper.PreviewBookingReturn)
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/public/confirm/{token}", wrapper.GetConfirmDetails)

@@ -329,10 +329,10 @@ What a run does:
 
 1. The CLI asks the dist service for the patch base (`resolve-patch-base --version`): the newest published
    release on its line. It cuts the patch from the git commit of that release, and uploads it with `draft-release --patch-base <version>`. The first release has no base: its patch is
-   the whole tree, sent with `--first-release`. With the patch go the three SBOM files for the source
-   tree, generated again at the release commit (`make sbom`).
-   The dist service checks that the SBOM files cover every file the patch makes. So the
-   committed `sboms/` files, which may be behind, are never uploaded.
+   the whole tree, sent with `--first-release`. With the patch go the three SBOM files for the source tree, generated again at the release commit (`make sbom`).
+   The dist service checks that the SBOM files cover every file the patch makes. So the committed `sboms/` files, which may be behind, are never uploaded.
+
+   The changelog goes with the patch too. [`scripts/release_changelog.py`](../../scripts/release_changelog.py) builds it from the non-merge commit subjects since the patch base (`make test-release-changelog`). It lists the breaking, `feat`, `fix` and `perf` subjects, and the compare link shows the rest.
 2. The three role images are built through the bake file (`docker-bake.hcl`, `linux/amd64` +
    `linux/arm64`, with `mode=max` provenance records).
    - The builder stages compile for each target on the host; only runtime layers run under
@@ -394,7 +394,7 @@ It ships no files: the notes end with a link to the install steps in
 Under the draft's text it lists the pull requests merged since
 the last plain release. A release body holds at most 125,000 characters, and the list gets what the
 draft leaves. The list comes from
-[`scripts/release-notes.sh`](../../scripts/release-notes.sh) (`make test-release-notes`).
+[`scripts/release_notes.py`](../../scripts/release_notes.py) (`make test-release-notes`).
 
 The release job queues and does not cancel. By that job the lane is making a release and writing its notes, and a stopped run would
 leave that half done. How to drive it is in [cut-a-release.md](../how-to/cut-a-release.md).

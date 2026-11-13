@@ -205,7 +205,7 @@ The 28 tables owned by `capture`, as the migrations build them. [Back to the ent
 
 ## capture_connection
 
-31 columns · primary key `(id)` · referenced by 2 foreign keys
+33 columns · primary key `(id)` · referenced by 3 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
@@ -214,6 +214,7 @@ The 28 tables owned by `capture`, as the migrations build them. [Back to the ent
 | `account_label` | `text` |  | Display-only name of the connected account (e.g. the mailbox address). |
 | `auth` | `bytea` |  |  |
 | `connected_at` | `timestamp with time zone`, default `now()` | yes |  |
+| `connected_by` | `uuid` |  | Points at `app_user.id`. |
 | `context_tag_id` | `uuid` |  | Points at `tag.id`. |
 | `credential_ref` | `text` |  |  |
 | `generation` | `integer`, default `0` | yes |  |
@@ -225,6 +226,7 @@ The 28 tables owned by `capture`, as the migrations build them. [Back to the ent
 | `mail_posture` | `text`, default `'classified'::text` | yes | What this mailbox asks of the mail it brings in. |
 | `provider` | `text` | yes | The mail/calendar/meeting-notes provider (A51 email+calendar parity). |
 | `provider_scopes` | `text[]` |  |  |
+| `reader_team_id` | `uuid` |  | Points at `team.id`. |
 | `scopes` | `text[]`, default `'{}'::text[]` | yes | The granted provider scopes. |
 | `share_acknowledged_at` | `timestamp with time zone` |  |  |
 | `signature_enrich_enabled` | `boolean` |  | This mailbox's own answer to reading contact details out of its mail, or null to follow the tenant default (`CaptureSettings.signature_enrich`). |
@@ -235,7 +237,7 @@ The 28 tables owned by `capture`, as the migrations build them. [Back to the ent
 | `sync_revision` | `bigint`, default `0` | yes |  |
 | `unread_from` | `timestamp with time zone` |  |  |
 | `unread_to` | `timestamp with time zone` |  |  |
-| `user_id` | `uuid` | yes | Points at `app_user.id`. |
+| `user_id` | `uuid` |  | Points at `app_user.id`. |
 | `watch_expires_at` | `timestamp with time zone` |  | Push/delta subscription renewal deadline (Gmail Pub/Sub / Graph change-notification), or null. |
 | `watch_ref` | `text` |  |  |
 | `archived_at` | `timestamp with time zone` |  | Soft-delete marker. `NULL` means live, and nearly every read filters on it. |
@@ -245,8 +247,10 @@ The 28 tables owned by `capture`, as the migrations build them. [Back to the ent
 
 | Columns | Table | When the parent goes |
 |---|---|---|
+| `connected_by` | `app_user` | deleting the parent keeps this row and clears the link |
 | `context_tag_id` | `tag` | deleting the parent keeps this row and clears the link |
 | `legal_entity_id` | `legal_entity` | the parent cannot be deleted while this row points at it |
+| `reader_team_id` | `team` | the parent cannot be deleted while this row points at it |
 | `user_id` | `app_user` | deleting the parent deletes this row |
 
 **Rules**
@@ -254,16 +258,22 @@ The 28 tables owned by `capture`, as the migrations build them. [Back to the ent
 - `capture_connection_history_baseline_check`: `CHECK ((((history_baseline_date IS NULL) = (history_baseline_tz IS NULL)) AND ((history_baseline_date IS NULL) = (history_baseline_set_by IS NULL)) AND ((history_baseline_date IS NULL) = (history_baseline_set_at IS NULL))))`
 - `capture_connection_mail_posture_check`: `CHECK ((mail_posture = ANY (ARRAY['shared', 'classified', 'held'])))`
 - `capture_connection_provider_check`: `CHECK ((provider = ANY (ARRAY['gmail', 'gcal', 'gdocs', 'imap', 'graph', 'graphcal', 'whatsapp', 'telegram', 'offline_demo', 'test_mailbox'])))`
+- `capture_connection_shared_shape`: `CHECK ((((user_id IS NOT NULL) AND (reader_team_id IS NULL)) OR ((user_id IS NULL) AND (reader_team_id IS NOT NULL) AND (account_label IS NOT NULL) AND (mail_posture <> 'classified'))))`
 - `capture_connection_status_check`: `CHECK ((status = ANY (ARRAY['connected', 'disconnected', 'error', 'reauth_required'])))`
 - `capture_connection_unique`: `UNIQUE (user_id, provider)`
 - `capture_connection_unread_period_whole`: `CHECK ((((unread_from IS NULL) AND (unread_to IS NULL)) OR ((unread_from IS NOT NULL) AND (unread_to IS NOT NULL) AND (unread_from < unread_to))))`
 
 **Indexes**
 
+- `capture_connection_shared_mailbox`: `unique, btree (provider, lower(account_label)) WHERE (user_id IS NULL)`
 - `capture_connection_unique`: `unique, btree (user_id, provider)`
 - `connector_connection_pkey`: `unique, btree (id)`
 - `idx_capture_connection`: `btree (provider, status) WHERE (archived_at IS NULL)`
 - `idx_capture_watch_renew`: `btree (watch_expires_at) WHERE ((watch_expires_at IS NOT NULL) AND (status = 'connected'))`
+
+**Triggers**
+
+- `home_read_fence_shared_mailbox_readers`: `AFTER UPDATE OF reader_team_id, mail_posture FOR EACH ROW WHEN (((old.reader_team_id IS DISTINCT FROM new.reader_team_id) OR (old.mail_posture IS DISTINCT FROM new.mail_posture))) EXECUTE FUNCTION advance_home_read_fence()`
 
 ## capture_counterparty_hold
 
@@ -387,13 +397,14 @@ The 28 tables owned by `capture`, as the migrations build them. [Back to the ent
 
 ## capture_import
 
-14 columns · primary key `(id)` · referenced by 0 foreign keys
+15 columns · primary key `(id)` · referenced by 0 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
 | `id` | `uuid`, default `uuidv7()` | yes | Primary key. |
 | `activity_id` | `uuid` | yes | Points at `activity.id`. |
 | `bcc_only` | `boolean` |  |  |
+| `connection_id` | `uuid` |  | Points at `capture_connection.id`. |
 | `delivered_by` | `text[]`, default `'{}'::text[]` | yes |  |
 | `imported_at` | `timestamp with time zone`, default `now()` | yes |  |
 | `legal_entity_id` | `uuid` |  | Points at `legal_entity.id`. |
@@ -401,7 +412,7 @@ The 28 tables owned by `capture`, as the migrations build them. [Back to the ent
 | `provider_message_ids` | `text[]`, default `'{}'::text[]` | yes |  |
 | `provider_received_at` | `timestamp with time zone` |  |  |
 | `source_occurred_at` | `timestamp with time zone` |  |  |
-| `user_id` | `uuid` | yes | Points at `app_user.id`. |
+| `user_id` | `uuid` |  | Points at `app_user.id`. |
 | `verdict_reason` | `text` |  |  |
 | `verdict_reasons` | `text[]` |  |  |
 | `verdict_status` | `text` |  | One of `pending`, `cleared`, `held`, `unsure`, `shared_by_owner`, `held_by_owner`. |
@@ -411,25 +422,28 @@ The 28 tables owned by `capture`, as the migrations build them. [Back to the ent
 | Columns | Table | When the parent goes |
 |---|---|---|
 | `activity_id` | `activity` | deleting the parent deletes this row |
+| `connection_id` | `capture_connection` | the parent cannot be deleted while this row points at it |
 | `legal_entity_id` | `legal_entity` | the parent cannot be deleted while this row points at it |
 | `user_id` | `app_user` | the parent cannot be deleted while this row points at it |
 
 **Rules**
 
 - `capture_import_activity_user_key`: `UNIQUE (activity_id, user_id)`
+- `capture_import_one_importer`: `CHECK (((user_id IS NULL) <> (connection_id IS NULL)))`
 - `capture_import_posture_check`: `CHECK (((posture_at_import IS NULL) OR (posture_at_import = ANY (ARRAY['shared', 'classified', 'held']))))`
 - `capture_import_verdict_status_check`: `CHECK (((verdict_status IS NULL) OR (verdict_status = ANY (ARRAY['pending', 'cleared', 'held', 'unsure', 'shared_by_owner', 'held_by_owner']))))`
 
 **Indexes**
 
 - `capture_import_activity_user_key`: `unique, btree (activity_id, user_id)`
+- `capture_import_connection_activity_key`: `unique, btree (connection_id, activity_id) WHERE (connection_id IS NOT NULL)`
 - `capture_import_pkey`: `unique, btree (id)`
 - `capture_import_user_idx`: `btree (user_id, activity_id)`
 - `idx_capture_import_provider_messages`: `gin (provider_message_ids)`
 
 **Triggers**
 
-- `home_read_fence_capture_import`: `AFTER UPDATE FOR EACH ROW WHEN (((old.user_id IS DISTINCT FROM new.user_id) OR (old.activity_id IS DISTINCT FROM new.activity_id))) EXECUTE FUNCTION advance_home_read_fence()`
+- `home_read_fence_capture_import`: `AFTER UPDATE FOR EACH ROW WHEN (((old.user_id IS DISTINCT FROM new.user_id) OR (old.activity_id IS DISTINCT FROM new.activity_id) OR (old.connection_id IS DISTINCT FROM new.connection_id))) EXECUTE FUNCTION advance_home_read_fence()`
 - `home_read_fence_capture_import_removed`: `AFTER DELETE FOR EACH STATEMENT EXECUTE FUNCTION advance_home_read_fence()`
 
 ## capture_owner_identity

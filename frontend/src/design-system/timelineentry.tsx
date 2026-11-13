@@ -152,6 +152,12 @@ export type TimelineEntry = {
    */
   bulkAttested?: boolean;
   /**
+   * How many colleagues' mailboxes hold a copy of this email that the reader
+   * may open, this row included. The server shows the copies as one row, so
+   * they count as one message and one recipient here too.
+   */
+  copies?: number;
+  /**
    * What sent a message no human wrote, as the server judged it: a calendar
    * invitation, a sending system or the product. Such a row counts on neither
    * side of a conversation.
@@ -410,6 +416,21 @@ export function CommitmentReviewFlag({
     <Badge tone="ai">
       {plural("commitment.review.count", count, {
         count: formatNumber(count, locale),
+      })}
+    </Badge>
+  ) : null;
+}
+
+// CopiesFlag says the row stands for the same mail in other colleagues'
+// mailboxes, so a reader knows why only one row shows.
+export function CopiesFlag({ entry }: Readonly<{ entry: TimelineEntry }>) {
+  const plural = usePlural();
+  const { locale } = useLocale();
+  const others = (entry.copies ?? 1) - 1;
+  return others > 0 ? (
+    <Badge>
+      {plural("timeline.copies", others, {
+        count: formatNumber(others, locale),
       })}
     </Badge>
   ) : null;

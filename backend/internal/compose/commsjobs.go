@@ -22,6 +22,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/modules/comms"
+	"github.com/margince/margince/backend/internal/modules/consent"
 	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/platform/blobstore"
 	"github.com/margince/margince/backend/internal/platform/jobs"
@@ -329,9 +330,11 @@ func newSendWorker(pool *pgxpool.Pool, registry *capture.Registry, blob blobstor
 // NewMailDeliveryStore is the delivery store the send worker records receipts
 // through. Comms owns the delivery and activities owns the timeline row.
 // Capture owns the echo that can supply an identity the read-back could not.
+// Consent owns the restriction a sent lift notice releases.
 func NewMailDeliveryStore(pool *pgxpool.Pool, admitParties func(context.Context, ids.ActivityID) error) *comms.Store {
 	return comms.NewStore(InstallationDB(pool), time.Now, activities.NewStore(InstallationDB(pool)),
-		comms.WithPartyAdmission(admitParties), comms.WithEchoIdentity(capture.EchoIdentityTx))
+		comms.WithPartyAdmission(admitParties), comms.WithEchoIdentity(capture.EchoIdentityTx),
+		comms.WithSentEffect(consent.NewStore(InstallationDB(pool)).LiftNoticedRestriction))
 }
 
 // newSendDispatcher builds the dispatcher for one pace.

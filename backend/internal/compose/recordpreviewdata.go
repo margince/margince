@@ -9,9 +9,11 @@ import (
 	"slices"
 	"strings"
 
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
+	"github.com/margince/margince/backend/internal/shared/kernel/fieldmask"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -45,14 +47,12 @@ func (s Server) dealRecordPreview(ctx context.Context, id ids.UUID) (recordPrevi
 		return recordPreview{}, err
 	}
 	var details []string
-	if deal.CompanyId != nil && auth.ReadGranted(ctx, "company") {
-		company, err := s.contactsStore.GetCompany(ctx, ids.From[ids.CompanyKind](ids.UUID(*deal.CompanyId)), storekit.LiveOnly)
-		if err != nil && !errors.Is(err, apperrors.ErrNotFound) {
+	if deal.CompanyId != nil && !cardWithholds(ctx, fieldmask.DealCompanyID) {
+		name, err := s.cardCompanyName(ctx, ids.UUID(*deal.CompanyId))
+		if err != nil {
 			return recordPreview{}, err
 		}
-		if err == nil && company.MergedIntoId == nil {
-			details = append(details, company.DisplayName)
-		}
+		details = append(details, name)
 	}
 	if deal.StageId != nil {
 		stage, err := s.dealsStore.GetStage(ctx, ids.From[ids.StageKind](ids.UUID(*deal.StageId)))
@@ -69,7 +69,7 @@ func (s Server) companyRecordPreview(ctx context.Context, id ids.UUID) (recordPr
 	if err != nil {
 		return recordPreview{}, err
 	}
-	if company.MergedIntoId != nil {
+	if company.MergedIntoId != nil || ownerPrivate(company.Visibility, crmcontracts.CompanyVisibilityOwner) {
 		return recordPreview{}, apperrors.ErrNotFound
 	}
 	var domainName string
@@ -89,17 +89,62 @@ func (s Server) contactRecordPreview(ctx context.Context, id ids.UUID) (recordPr
 	if err != nil {
 		return recordPreview{}, err
 	}
-	if contact.MergedIntoId != nil {
+	if contact.MergedIntoId != nil || ownerPrivate(contact.Visibility, crmcontracts.ContactVisibilityOwner) {
 		return recordPreview{}, apperrors.ErrNotFound
 	}
 	var details []string
 	if contact.Title != nil {
 		details = append(details, *contact.Title)
 	}
-	if contact.Employer != nil && auth.ReadGranted(ctx, "company") {
-		details = append(details, contact.Employer.CompanyName)
+	if contact.Employer != nil {
+		name, err := s.cardCompanyName(ctx, ids.UUID(contact.Employer.CompanyId))
+		if err != nil {
+			return recordPreview{}, err
+		}
+		details = append(details, name)
 	}
 	return recordCard(previewContacts, id, contact.FullName, "Contact", details...), nil
+}
+
+// cardCompanyName is the company name a card may print beside another record.
+// A company that is gone, merged away, or private to its mailbox owner has
+// none. The card is read as the system, which capture privacy does not stop.
+func (s Server) cardCompanyName(ctx context.Context, id ids.UUID) (string, error) {
+	if !auth.ReadGranted(ctx, "company") {
+		return "", nil
+	}
+	company, err := s.contactsStore.GetCompany(ctx, ids.From[ids.CompanyKind](id), storekit.LiveOnly)
+	if errors.Is(err, apperrors.ErrNotFound) {
+		return "", nil
+	}
+	if err != nil {
+		return "", err
+	}
+	if company.MergedIntoId != nil || ownerPrivate(company.Visibility, crmcontracts.CompanyVisibilityOwner) {
+		return "", nil
+	}
+	return company.DisplayName, nil
+}
+
+type cardWithheldKey struct{}
+
+// withCardWithheld carries the deal fields some role withholds to the card,
+// which has no reader whose own masks it could ask.
+func withCardWithheld(ctx context.Context, withheld []string) context.Context {
+	return context.WithValue(ctx, cardWithheldKey{}, withheld)
+}
+
+// cardWithholds reports whether the card leaves the deal field out. A card
+// reached without the installation's masks leaves every field out.
+func cardWithholds(ctx context.Context, field string) bool {
+	withheld, known := ctx.Value(cardWithheldKey{}).([]string)
+	return !known || slices.Contains(withheld, field)
+}
+
+// ownerPrivate reports a row capture privacy keeps for its mailbox owner, which
+// a card anyone may open never names.
+func ownerPrivate[V comparable](visibility *V, owner V) bool {
+	return visibility != nil && *visibility == owner
 }
 
 func recordCard(kind string, id ids.UUID, name, label string, details ...string) recordPreview {

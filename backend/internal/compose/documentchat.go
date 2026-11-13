@@ -64,7 +64,9 @@ func chatCaptureReading(img model.Attachment) ai.ImageReading {
 }
 
 func chatCaptureRequest(src documentSource) model.Request {
-	return ai.ImageRequest(chatCaptureReading(src.Part), src.Part)
+	req := ai.ImageRequest(chatCaptureReading(src.Part), src.Part)
+	req.Subjects = documentSubjects(src.Parent)
+	return req
 }
 
 func chatCaptureQuestion() documentQuestion {

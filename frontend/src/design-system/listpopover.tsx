@@ -41,14 +41,18 @@ export type ListPopoverOption = Readonly<{
 }>;
 
 /** The rows come in hand, filtered here as the reader types (`undefined`
- *  while they load), or from the server, asked once per settled non-empty term. */
+ *  while they load), or from the server, asked once per settled non-empty term.
+ *  With `listOnOpen` the server is also asked for the empty term as the panel
+ *  opens, so a short list is there to pick from before anything is typed. */
 type ListSource =
   | Readonly<{
       options: readonly ListPopoverOption[] | undefined;
       search?: undefined;
+      listOnOpen?: undefined;
     }>
   | Readonly<{
       search: (term: string) => Promise<readonly ListPopoverOption[]>;
+      listOnOpen?: boolean;
       options?: undefined;
     }>;
 
@@ -146,6 +150,7 @@ function ListSearch({
     ListPopoverProps,
     | "options"
     | "search"
+    | "listOnOpen"
     | "selected"
     | "onPick"
     | "pending"
@@ -161,7 +166,7 @@ function ListSearch({
   const { locale } = useLocale();
   const listboxId = useId();
   const [term, setTerm] = useState("");
-  const found = useCandidateSearch(list.search, term);
+  const found = useCandidateSearch(list.search, term, list.listOnOpen === true);
   const rows = list.search
     ? found.candidates
     : matchingTerm(list.options ?? [], term);

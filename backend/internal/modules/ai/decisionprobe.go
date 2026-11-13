@@ -13,6 +13,7 @@ import (
 	"net/url"
 	"strings"
 
+	"github.com/margince/margince/backend/internal/platform/netguard"
 	"github.com/margince/margince/backend/internal/shared/ports/model"
 )
 
@@ -180,7 +181,7 @@ func (c *decisionClient) wireProbe(ctx context.Context) error {
 	}
 	req.Header.Set("Content-Type", "application/json")
 	c.authorize(req)
-	resp, err := noRedirect(c.http).Do(req)
+	resp, err := netguard.NoRedirect(c.http).Do(req)
 	if err != nil {
 		return fmt.Errorf("ai: decision probe: %w", err)
 	}

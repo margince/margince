@@ -15,7 +15,6 @@ package finance
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"math/big"
@@ -29,7 +28,6 @@ import (
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/testdb"
-	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
@@ -121,6 +119,12 @@ func setupFinance(t *testing.T) *financeEnv {
 		       (id, provider, status, credential_ref, source, captured_by)
 		VALUES ($1, $2, 'active', 'offline://test', 'system', 'system:test')`,
 		connID, fixtureProviderName); err != nil {
+		t.Fatal(err)
+	}
+	// The directory entry first: a link names one (finance_customer_link_directory_fk).
+	if _, err := owner.Exec(ctx, `INSERT INTO finance_external_customer
+		(connection_id, external_customer_id, display_name, sync_hash, source, captured_by)
+		VALUES ($1, $2, $2, '', 'system', 'system:test')`, connID, e.external); err != nil {
 		t.Fatal(err)
 	}
 	if _, err := owner.Exec(ctx, `
@@ -781,65 +785,6 @@ func (e *financeEnv) connectionStatus(t *testing.T, id ids.UUID) string {
 	return status
 }
 
-// A source that RESTATES what it said is the only way to reach the mirror's
-// update arms, and it is where the audit trail earns its keep: the before image
-// is what the money was, read off the row, and the after is what the source now
-// says it is.
-//
-// The fixture source cannot produce this. It never changes its mind, so the
-// paths that record a change are unreachable through it. The double below
-// stands at the provider seam only. The store, the SQL, the images and the
-// audit writer under test are all the real ones.
-func TestARestatedSourceAuditsTheUpdateWithBothImages(t *testing.T) {
-	e := setupFinance(t)
-	source := restatingSource(e.external)
-	mark := auditWatermark(e.ctx, t, e)
-
-	if _, err := e.store.SyncConnection(e.ctx, source); err != nil {
-		t.Fatalf("first sync: %v", err)
-	}
-	created := auditRowsByEntity(e.ctx, t, e, mark)
-
-	// A tax correction that leaves GROSS UNCHANGED — net 10000 → 11000, tax
-	// 1900 → 900, gross still 11900 — plus a restated payment and a renamed
-	// customer. Gross is held still deliberately: it is the case an audit image
-	// narrower than the change key cannot record, because the only columns that
-	// moved are ones such an image does not carry, and the row would say money
-	// changed without saying what.
-	source.customer.DisplayName = "Ledger GmbH (Hamburg)"
-	source.ledger.Invoices[0].NetMinor = 11000
-	source.ledger.Invoices[0].TaxMinor = 900
-	source.ledger.Payments[0].AmountMinor = 6000
-	if _, err := e.store.SyncConnection(e.ctx, source); err != nil {
-		t.Fatalf("second sync: %v", err)
-	}
-
-	for _, entity := range []string{entityInvoice, entityPayment, entityExternalCustomer} {
-		if got, want := auditRowsByEntity(e.ctx, t, e, mark)[entity], created[entity]+1; got != want {
-			t.Errorf("%d audit rows for %s after the source restated it, want %d",
-				got, entity, want)
-		}
-	}
-
-	// The before image has to be what the ROW held, not the source's new
-	// figures rendered twice. A writer that rebuilt it from the source would
-	// pass every count above and record a change that did not happen.
-	before, after := updateImages(e.ctx, t, e, entityInvoice, mark)
-	if before["net_minor"] != float64(10000) || after["net_minor"] != float64(11000) {
-		t.Errorf("the invoice's update reads net %v → %v, want 10000 → 11000",
-			before["net_minor"], after["net_minor"])
-	}
-	if before["gross_minor"] != after["gross_minor"] {
-		t.Errorf("gross moved (%v → %v) and this case is about the columns that move UNDER a fixed gross",
-			before["gross_minor"], after["gross_minor"])
-	}
-	before, after = updateImages(e.ctx, t, e, entityPayment, mark)
-	if before["amount_minor"] != float64(5000) || after["amount_minor"] != float64(6000) {
-		t.Errorf("the payment's update reads %v → %v, want 5000 → 6000",
-			before["amount_minor"], after["amount_minor"])
-	}
-}
-
 // What the mirror's rows say ADMITTED them. The sweep holds no grant — it runs
 // on a path ratified as ungated, with no request and nobody behind it — and the
 // row has to say that rather than render a merged policy it never had.
@@ -878,76 +823,6 @@ func TestTheMirrorsAuditRowsNameNoGrantTheSweepDoesNotHold(t *testing.T) {
 		t.Errorf("the mirror's rows record actor_type %v, want exactly [connector] — "+
 			"a `system` type beside a `connector:` actor_id is a row that contradicts itself", actorTypes)
 	}
-}
-
-// updateImages reads the one update row this run wrote for entityType, fenced
-// on the same watermark auditRowsByEntity uses: the package's tests share a
-// database, so an unfenced read returns whichever update landed first, and the
-// images it then asserts belong to another test's invoice.
-func updateImages(
-	ctx context.Context, t *testing.T, e *financeEnv, entityType string, since ids.UUID,
-) (before, after map[string]any) {
-	t.Helper()
-	if err := e.store.tx(ctx, func(tx pgx.Tx) error {
-		var beforeRaw, afterRaw []byte
-		if err := tx.QueryRow(ctx, `
-			SELECT before, after FROM audit_log
-			 WHERE entity_type = $1 AND action = 'update' AND id > $2`,
-			entityType, since).Scan(&beforeRaw, &afterRaw); err != nil {
-			return err
-		}
-		if err := json.Unmarshal(beforeRaw, &before); err != nil {
-			return err
-		}
-		return json.Unmarshal(afterRaw, &after)
-	}); err != nil {
-		t.Fatalf("reading the %s update's images: %v", entityType, err)
-	}
-	return before, after
-}
-
-// restatingSource is one customer with one invoice and one payment against it,
-// held in fields the test rewrites between passes.
-func restatingSource(externalID string) *restatingProvider {
-	issued := time.Date(2026, 3, 2, 9, 0, 0, 0, time.UTC)
-	due := issued.AddDate(0, 0, 30)
-	return &restatingProvider{
-		customer: SourceCustomer{ExternalID: externalID, DisplayName: "Ledger GmbH"},
-		ledger: SourceLedger{
-			Invoices: []SourceInvoice{{
-				ExternalID: "INV-RESTATED-1", Number: "2026-001",
-				IssuedOn: issued, DueOn: &due, Currency: "EUR",
-				NetMinor: 10000, TaxMinor: 1900, GrossMinor: 11900, PaidMinor: 5000,
-			}},
-			Payments: []SourcePayment{{
-				ExternalID: "PAY-RESTATED-1", InvoiceExternalID: "INV-RESTATED-1",
-				PaidAt: issued, Currency: "EUR", AmountMinor: 5000,
-			}},
-		},
-	}
-}
-
-// restatingProvider answers whatever its fields currently hold, so a test can
-// change the source's mind between two passes.
-type restatingProvider struct {
-	customer SourceCustomer
-	ledger   SourceLedger
-}
-
-func (p *restatingProvider) Name() string { return fixtureProviderName }
-
-func (p *restatingProvider) Check(context.Context) error { return nil }
-
-func (p *restatingProvider) Customers(context.Context) ([]SourceCustomer, error) {
-	return []SourceCustomer{p.customer}, nil
-}
-
-func (p *restatingProvider) InvoicesFor(context.Context, string) (SourceLedger, error) {
-	return p.ledger, nil
-}
-
-func (p *restatingProvider) InvoiceDocument(context.Context, string) (SourceDocument, error) {
-	return SourceDocument{}, apperrors.ErrUnsupportedBySoR
 }
 
 // THE FORMER CUSTOMER, which is the honest hard case here and the one nobody

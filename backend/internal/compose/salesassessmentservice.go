@@ -478,3 +478,9 @@ func assessmentCells(in salesassessment.Input) []crmcontracts.SalesAssessmentCel
 	}
 	return out
 }
+
+// assessProgress asks the assessments bound now, so a lane bound after
+// assembly is the one a Progress summary is written on.
+func (s *Server) assessProgress(ctx context.Context, period crmcontracts.GetSalesProgressParams, evaluationKey string, in salesassessment.Input, refresh bool) (crmcontracts.SalesAssessment, error) {
+	return s.salesAssessmentHandlers.svc.AssessProgress(ctx, period, evaluationKey, in, refresh)
+}

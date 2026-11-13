@@ -35,6 +35,7 @@ import { Select } from "../../design-system/select";
 import { Stack } from "../../design-system/stack";
 import { useNow } from "../../format/now";
 import { useT } from "../../i18n";
+import type { MessageKey } from "../../i18n/en";
 import { useCan } from "../../lib/capability";
 import { labelFor } from "../../lib/labelfor";
 import { isOption } from "../../lib/options";
@@ -80,10 +81,21 @@ type CreateDataSubjectRequest =
 type DsrKind = CreateDataSubjectRequest["kind"];
 type RequestDeadline = components["schemas"]["RequestDeadline"];
 
-const DSR_KINDS: readonly DsrKind[] = ["access", "rectify", "erasure"];
+const DSR_KINDS: readonly DsrKind[] = [
+  "access",
+  "rectify",
+  "erasure",
+  "restriction",
+];
 
-// An erasure resolves subject_ref to a contact id, so it is opened against a
-// picked contact; the contact list's own `q` search finds the candidates.
+// The kinds whose fulfilment acts on one contact record, so they are opened
+// against a picked contact, each with the hint that says why.
+const CONTACT_KIND_HINT: Partial<Record<DsrKind, MessageKey>> = {
+  erasure: "privacy.erasureNeedsContact",
+  restriction: "privacy.restrictionNeedsContact",
+  access: "privacy.accessPicksContact",
+};
+
 async function searchContactCandidates(
   q: string,
 ): Promise<RecordPickerCandidate[]> {
@@ -112,8 +124,7 @@ const EMPTY_DSR: DsrDraft = {
   deadline: EMPTY_DEADLINE,
 };
 
-// Kind flips the subject field's shape: an erasure locks onto a picked contact,
-// so the form cannot produce the free-text erasure the server refuses.
+// Kind flips the subject field: a contact kind locks onto a picked contact.
 export function NewDsrForm({ onDone }: Readonly<{ onDone: () => void }>) {
   const t = useT();
   const queryClient = useQueryClient();
@@ -162,6 +173,7 @@ export function NewDsrForm({ onDone }: Readonly<{ onDone: () => void }>) {
     (problem) => problem.field === "due_at",
   );
   const computed = deadline.data;
+  const contactHint = CONTACT_KIND_HINT[draft.kind];
   const ready =
     draft.subjectRef.trim() !== "" &&
     computed !== undefined &&
@@ -201,15 +213,8 @@ export function NewDsrForm({ onDone }: Readonly<{ onDone: () => void }>) {
           )}
         </Field>
 
-        {draft.kind === "erasure" || draft.kind === "access" ? (
-          <Field
-            label={t("privacy.contact")}
-            hint={t(
-              draft.kind === "erasure"
-                ? "privacy.erasureNeedsContact"
-                : "privacy.accessPicksContact",
-            )}
-          >
+        {contactHint ? (
+          <Field label={t("privacy.contact")} hint={t(contactHint)}>
             {(control) => (
               <RecordPicker
                 id={control.id}

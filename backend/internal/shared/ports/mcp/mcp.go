@@ -113,8 +113,10 @@ type ToolSpec struct {
 	// their zero value by whatever registers one.
 	HumanOnly bool
 	// Unlisted marks a tool that is never offered: a router fronts it, or a
-	// listed tool replaces it. It still runs when called by name. Its name is
-	// the approval kind it stages and the key of its tier floor and retry claims.
+	// listed tool replaces it. An agent's call by its name gets the unknown-tool
+	// answer; it runs through its router, a staged approval or an internal task.
+	// Its name is the approval kind it stages and the key of its tier floor and
+	// retry claims.
 	Unlisted bool
 	// Gated marks an Unlisted tool that the registry's tool gate offers to some
 	// callers. For every other caller it does not exist: it is not listed and a

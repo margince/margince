@@ -11,6 +11,7 @@ import (
 	"slices"
 
 	"github.com/margince/margince/backend/internal/shared/kernel/draftfloor"
+	"github.com/margince/margince/backend/internal/shared/ports/model"
 )
 
 // The draftcore.Input contract: what the shared writer needs of a folded
@@ -69,4 +70,25 @@ func coAddresses(others []CoRecipientIn) []string {
 		out = append(out, other.Email)
 	}
 	return out
+}
+
+// Subjects are the recipients, by id and address, and every activity the
+// payload quotes.
+func (in Input) Subjects() *model.Subjects {
+	var activities []string
+	if in.About != nil {
+		activities = append(activities, in.About.ID)
+	}
+	for _, a := range in.Recent {
+		activities = append(activities, a.ID)
+	}
+	for _, c := range in.Claims {
+		activities = append(activities, c.SourceID)
+	}
+	if in.Meeting != nil {
+		activities = append(activities, in.Meeting.ActivityID)
+	}
+	about := model.SubjectsOf([]string{in.Recipient.ID}, activities)
+	about.Addresses = in.Addresses()
+	return about
 }

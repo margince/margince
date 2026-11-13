@@ -135,7 +135,7 @@ const SCREEN_VIEWS: Readonly<Record<Screen, (args: ScreenArgs) => ReactNode>> =
     onboarding: () => <OnboardingScreen />,
     client: () => <ClientSurfaceScreen />,
     // #/book/<host_slug> is the anonymous public variant
-    book: ({ id }) => <BookingScreen hostSlug={id} />,
+    book: ({ id, id2 }) => <BookingScreen hostSlug={id} page={id2} />,
     // #/preferences/<token>: anonymous; the token in the path is the
     // whole capability (security: [] in the contract).
     preferences: ({ id }) => <PreferenceCenterScreen token={id} />,

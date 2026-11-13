@@ -266,6 +266,9 @@ func ownerIdentityAuditImage(identity OwnerIdentity) map[string]any {
 // background sweep, a system principal). An empty set changes no decision: it
 // leaves every gate exactly where it was before a seat declared anything.
 func ownerIdentitiesTx(ctx context.Context, tx pgx.Tx) (SelfSet, error) {
+	if shared, ok := sharedMailboxOf(ctx); ok {
+		return sharedMailboxAddressTx(ctx, tx, shared)
+	}
 	_, user := capturePrincipal(ctx)
 	if user == ids.Nil {
 		return SelfSet{}, nil

@@ -96,7 +96,7 @@ func TestARestoreLandsEveryFieldItSends(t *testing.T) {
 	version := currentVersion(t, e, "contact", id)
 
 	// The image the reversal WILL send, read from the entry the executor reads.
-	patch, _, err := filterImage("contact", json.RawMessage(`{"title":"CTO"}`))
+	patch, _, err := filterImage("contact", json.RawMessage(`{"title":"CTO"}`), nil)
 	if err != nil {
 		t.Fatalf("filter the image: %v", err)
 	}

@@ -9,7 +9,6 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/margince/margince/backend/internal/compose/modelfailure"
-	"github.com/margince/margince/backend/internal/compose/salesprogress"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/reporting"
 	"github.com/margince/margince/backend/internal/platform/httperr"
@@ -18,8 +17,6 @@ import (
 // salesAssessmentHandlers serves the Sales review's assessment.
 type salesAssessmentHandlers struct {
 	svc *salesAssessments
-	// progress reads the Progress page the summary is written from.
-	progress salesprogress.Reading
 }
 
 // AssessSalesReview implements POST /analytics/assessment.
@@ -34,33 +31,6 @@ func (h salesAssessmentHandlers) AssessSalesReview(w http.ResponseWriter, r *htt
 		receipt = &reporting.EvidenceExpectation{Key: body.Receipt.Key, At: body.Receipt.At, FrameworkRevision: body.Receipt.FrameworkRevision}
 	}
 	out, err := h.svc.AssessView(r.Context(), body.Selection, refresh, body.View, receipt)
-	if err != nil {
-		modelfailure.Write(w, r, err)
-		return
-	}
-	httperr.WriteJSON(w, http.StatusOK, out)
-}
-
-// SummarizeSalesProgress implements POST /analytics/progress/summary.
-func (h salesAssessmentHandlers) SummarizeSalesProgress(w http.ResponseWriter, r *http.Request) {
-	var body crmcontracts.SalesProgressSummaryRequest
-	if !httperr.Decode(w, r, &body) {
-		return
-	}
-	period := crmcontracts.GetSalesProgressParams{Period: crmcontracts.GetSalesProgressParamsPeriod(body.Period), Year: body.Year, Month: body.Month, ScopeId: body.ScopeId}
-	if body.ScopeKind != nil {
-		period.ScopeKind = new(crmcontracts.GetSalesProgressParamsScopeKind(*body.ScopeKind))
-	}
-	if !period.Period.Valid() {
-		httperr.Write(w, r, httperr.Validation("period", "invalid", "choose month or year"))
-		return
-	}
-	in, evaluationKey, err := h.progress.SummaryInput(r.Context(), period)
-	if err != nil {
-		httperr.Write(w, r, err)
-		return
-	}
-	out, err := h.svc.AssessProgress(r.Context(), period, evaluationKey, in, body.Refresh != nil && *body.Refresh)
 	if err != nil {
 		modelfailure.Write(w, r, err)
 		return

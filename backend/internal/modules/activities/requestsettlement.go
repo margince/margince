@@ -123,6 +123,7 @@ type RepliedRequest struct {
 // still_owed verdict from an older rule is never skipped.
 var repliedRequestsSQL = `((` + outstandingRequestSQL + `) OR (` + reArmedSettlementSQL + `))
  AND ` + auth.WorkspaceAudienceSQL("a") + `
+ AND NOT ` + auth.ActivityRestrictedSQL("a.id") + `
  AND a.counterparty_email IS NOT NULL
  AND EXISTS (` + settlementAnswersSQL() + `)
  AND ` + settlementEvidenceCompleteSQL + `

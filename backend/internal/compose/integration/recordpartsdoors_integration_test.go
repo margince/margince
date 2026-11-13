@@ -291,6 +291,18 @@ func TestChangeRecordPartsRefusesWhatItsRoutesRefuse(t *testing.T) {
 	nowhere := ids.NewV7().String()
 	key := "employee_range:nowhere"
 
+	// The tool's input schema holds the fact-field vocabulary, so the tool refuses
+	// before any route runs. Its refusal names the words `field` takes instead.
+	if status := d.e.Call(t, "POST", "/v1/companies/"+company+"/facts",
+		AnyMap{"category": "company", "field": "shoe_size", "value": "42"}, d.bearer, nil); status != 422 {
+		t.Errorf("a fact field outside the vocabulary: the route answered %d, want 422", status)
+	}
+	if refusal := d.toolRefused(t, "change_record_parts", map[string]any{
+		"action": "add_company_fact", "company_id": company, "category": "company", "field": "shoe_size", "value": "42",
+	}); !strings.Contains(refusal, "`field` takes one of: ") {
+		t.Errorf("a fact field outside the vocabulary: the tool refused with %s, which names no allowed field", refusal)
+	}
+
 	for _, c := range []struct {
 		what         string
 		method, path string
@@ -298,12 +310,6 @@ func TestChangeRecordPartsRefusesWhatItsRoutesRefuse(t *testing.T) {
 		args         map[string]any
 		status       int
 	}{
-		{
-			"a fact field outside the vocabulary", "POST", "/v1/companies/" + company + "/facts",
-			AnyMap{"category": "company", "field": "shoe_size", "value": "42"},
-			map[string]any{"action": "add_company_fact", "company_id": company, "category": "company", "field": "shoe_size", "value": "42"},
-			422,
-		},
 		{
 			"correcting a fact the company does not state", "PATCH", "/v1/companies/" + company + "/facts/" + key,
 			AnyMap{"value": "11-50"},

@@ -25,6 +25,67 @@ export default meta;
 
 type Story = StoryObj;
 type GrowthFit = components["schemas"]["CompanyGrowthFit"];
+type GrowthFitInput = components["schemas"]["GrowthFitInput"];
+type Company = components["schemas"]["Company"];
+
+const INPUTS: GrowthFitInput[] = [
+  "offer_summary",
+  "icp",
+  "industry",
+  "buying_center",
+  "buying_intents",
+  "employee_range",
+  "technology",
+];
+
+// Every input in the server's order, the named ones not counting.
+function states(missing: readonly GrowthFitInput[]) {
+  return INPUTS.map((input) => ({ input, present: !missing.includes(input) }));
+}
+
+const company: Company = {
+  id: "o-1",
+  writable: true,
+  display_name: "Brandt Automotive GmbH",
+  captured_by: "human:u1",
+  source: "manual",
+  version: 1,
+  created_at: "2026-06-01T08:00:00Z",
+  updated_at: "2026-06-01T08:00:00Z",
+};
+
+// The values the checklist shows beside the inputs that count.
+const profileFields = {
+  data: [
+    {
+      field: "offer_summary",
+      value: "Electric delivery vans and fleet charging",
+      source: "human",
+      version: 1,
+      updated_at: "2026-07-01T09:00:00Z",
+    },
+    {
+      field: "icp",
+      value: "Regional logistics firms with 50+ vans",
+      source: "human",
+      version: 1,
+      updated_at: "2026-07-01T09:00:00Z",
+    },
+  ],
+};
+const facts = {
+  data: [
+    {
+      id: "f-1",
+      category: "signal",
+      field: "technology",
+      value: "SAP S/4HANA",
+      source: "extracted",
+      version: 1,
+      updated_at: "2026-02-01T09:00:00Z",
+    },
+  ],
+};
 
 const assessmentSentence = (
   text: string,
@@ -46,7 +107,13 @@ const strong: GrowthFit = {
   company_id: "o-1",
   band: "strong",
   band_capped_reason: null,
-  data_completeness: { present: 7, expected: 7, missing: [] },
+  data_completeness: {
+    present: 7,
+    expected: 7,
+    needed: 4,
+    inputs: states([]),
+    missing: [],
+  },
   next_step: undefined,
   sub_scores: [
     {
@@ -105,8 +172,10 @@ const weak: GrowthFit = {
   band: "weak",
   band_capped_reason: null,
   data_completeness: {
-    present: 5,
+    present: 6,
     expected: 7,
+    needed: 4,
+    inputs: states(["buying_center"]),
     missing: ["buying_center"],
   },
   next_step: "gather_inputs",
@@ -153,8 +222,10 @@ const capped: GrowthFit = {
   band_capped_reason:
     "our own offering context for this segment is not yet confirmed",
   data_completeness: {
-    present: 4,
+    present: 5,
     expected: 7,
+    needed: 4,
+    inputs: states(["icp", "buying_intents"]),
     missing: ["icp", "buying_intents"],
   },
   next_step: "confirm_offering",
@@ -184,9 +255,23 @@ const unknown: GrowthFit = {
   band: "unknown",
   band_capped_reason: null,
   data_completeness: {
-    present: 1,
+    present: 2,
     expected: 7,
-    missing: ["industry", "employee_range", "technology"],
+    needed: 4,
+    inputs: states([
+      "industry",
+      "buying_center",
+      "buying_intents",
+      "employee_range",
+      "technology",
+    ]),
+    missing: [
+      "industry",
+      "buying_center",
+      "buying_intents",
+      "employee_range",
+      "technology",
+    ],
   },
   next_step: "gather_inputs",
   generated_at: "2026-07-10T09:00:00Z",
@@ -195,12 +280,20 @@ const unknown: GrowthFit = {
 
 function Panel({
   route,
-}: Readonly<{ route: (body: unknown) => Response | Promise<Response> }>) {
-  installFetchStub({ "GET /companies/o-1/growth-fit": route });
+  record = company,
+}: Readonly<{
+  route: (body: unknown) => Response | Promise<Response>;
+  record?: Company;
+}>) {
+  installFetchStub({
+    "GET /companies/o-1/growth-fit": route,
+    "GET /companies/o-1/profile-fields": () => jsonResponse(profileFields),
+    "GET /companies/o-1/facts": () => jsonResponse(facts),
+  });
   return (
     <StoryProviders>
       <div style={{ maxWidth: 760 }}>
-        <GrowthFitPanel companyId="o-1" onOpenReceipt={() => undefined} />
+        <GrowthFitPanel company={record} onOpenReceipt={() => undefined} />
       </div>
     </StoryProviders>
   );
@@ -228,6 +321,23 @@ export const Capped: Story = {
 
 export const Abstention: Story = {
   render: () => <Panel route={() => jsonResponse(unknown)} />,
+};
+
+// The technology read in February has aged out, so it shows its value marked
+// out of date. A reader who may not edit the account reads why once, and every
+// way to fill a gap points at that sentence.
+export const AbstentionReadOnly: Story = {
+  render: () => (
+    <Panel
+      route={() => jsonResponse(unknown)}
+      record={{ ...company, writable: false, owner_id: "u-2" }}
+    />
+  ),
+};
+
+export const AbstentionDark: Story = {
+  render: () => <Panel route={() => jsonResponse(unknown)} />,
+  globals: { theme: "dark" },
 };
 
 export const Loading: Story = {

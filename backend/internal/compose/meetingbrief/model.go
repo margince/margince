@@ -187,6 +187,7 @@ func BriefRequest(in Input, lang string) model.Request {
 		Messages:       []model.Message{{Role: "user", Content: fence.Wrap(shownRefs(in).Show(encodeInput(in)))}},
 		MaxTokens:      ai.ReasoningOutputMaxTokens,
 		SecretStripper: ai.NewSecretStripper(),
+		Subjects:       in.subjects(),
 	}
 }
 
@@ -367,4 +368,27 @@ func meetingItself(in Input) string {
 	in.Deal, in.Attendees, in.Commitments = nil, nil, nil
 	in.Recent, in.PriorMeetings, in.History = nil, nil, nil
 	return claims.Source(in)
+}
+
+// subjects are the meeting, its attendees and every activity the input quotes
+// or builds the account arc from.
+func (in Input) subjects() *model.Subjects {
+	contacts := make([]string, 0, len(in.Attendees))
+	for _, a := range in.Attendees {
+		contacts = append(contacts, a.ContactID)
+	}
+	activities := []string{in.ActivityID}
+	for _, c := range in.Commitments {
+		activities = append(activities, c.SourceID)
+	}
+	for _, a := range in.Recent {
+		activities = append(activities, a.ID)
+	}
+	for _, m := range in.PriorMeetings {
+		activities = append(activities, m.ID)
+	}
+	for _, row := range in.History {
+		activities = append(activities, row.ID)
+	}
+	return model.SubjectsOf(contacts, activities)
 }

@@ -90,13 +90,9 @@ func (s *Dispatcher) explain(tool string, err error) string {
 		// to read_approval for the sentence tells the user a change is pending
 		// and cannot say which.
 		//
-		// COMPOSED HERE rather than by quoting err.Error(), which is what the
-		// other branches do. The summary carries a caller-chosen field name and
-		// a workspace-authored record label, and this text lands in a transcript
-		// whose later prompts the same run reads — so it is escaped and bounded
-		// on the way out, the same treatment faultExplanation gives every echo.
-		// Quoting the error whole would have carried the unescaped original
-		// beside the escaped copy.
+		// Composed here rather than through refusalDetail. The summary carries a
+		// caller-chosen field name and a workspace-authored record label, so it is
+		// escaped and bounded at workflow.MaxStagedSummary on the way out.
 		return stagedExplanation(staged)
 	case errors.Is(err, errDeclinedInChat):
 		return "The user said no in the chat, so nothing was changed. Do not repeat the call unless they ask again."
@@ -104,7 +100,7 @@ func (s *Dispatcher) explain(tool string, err error) string {
 		return "This call needs a contact's approval, and a file cannot wait for an approval: the approval would " +
 			"keep the file. Nothing was changed. Do not retry; tell the user to attach the file in the Margince app."
 	case errors.Is(err, errFileKindRefused):
-		return "Margince does not accept this kind of file, so nothing was attached. (" + fileKindDetail(err) +
+		return "Margince does not accept this kind of file, so nothing was attached. (" + refusalDetail(err) +
 			") Do not retry: do not rename it, convert it, pack it into a zip or other archive, or save its " +
 			"contents as a note. Tell the user it was not attached and which kinds are accepted."
 	case errors.Is(err, apperrors.ErrRequiresApproval):
@@ -113,16 +109,16 @@ func (s *Dispatcher) explain(tool string, err error) string {
 		// There is no proposal to point at, so the answer says what it can.
 		return "This is a confirm-first (🟡) action: a contact answers it before it runs, and not the " +
 			"credential that proposed it. Nothing was changed. Tell the user it is waiting — list_approvals " +
-			"with targets naming this record shows it, and they release it in the CRM. (" + err.Error() + ")"
+			"with targets naming this record shows it, and they release it in the CRM. (" + refusalDetail(err) + ")"
 	case errors.As(err, &areaOff):
 		// Its words name the area and where the user turns it on, for the agent to
 		// relay. The scope sentence below would send it elsewhere.
 		_, message := areaOff.MessageFault()
 		return "Refused: " + message + "."
 	case errors.Is(err, apperrors.ErrScopeExceeded):
-		return "The passport this session runs under does not grant the scope this tool needs. (" + err.Error() + ")"
+		return "The passport this session runs under does not grant the scope this tool needs. (" + refusalDetail(err) + ")"
 	case errors.As(err, &archiveRefusal):
-		return "Refused on authority: " + fileKindDetail(err)
+		return "Refused on authority: " + refusalDetail(err)
 	case errors.Is(err, apperrors.ErrPermissionDenied):
 		// Whose bound it was is in the detail, and the summary must not guess:
 		// an agent has the access of the human it acts for AND no more of it than
@@ -130,17 +126,17 @@ func (s *Dispatcher) explain(tool string, err error) string {
 		// only the first would send a caller to ask for permissions they already
 		// hold.
 		return "Refused on authority: an agent has exactly the access of the human it acts for, and never " +
-			"more of it than they lent this credential. (" + err.Error() + ")"
+			"more of it than they lent this credential. (" + refusalDetail(err) + ")"
 	case errors.Is(err, apperrors.ErrNotFound):
-		return "No such record in this workspace (or it is outside the acting user's row scope). (" + err.Error() + ")"
+		return "No such record in this workspace (or it is outside the acting user's row scope). (" + refusalDetail(err) + ")"
 	case errors.As(err, &skew):
 		// Its words name the remedy, a re-stage or a reload, which the generic retry below contradicts.
 		return echoSafe(skew.Message, MaxFaultDetail)
 	case errors.Is(err, apperrors.ErrVersionSkew):
-		return "The record changed since it was read; re-read it and retry with the new version. (" + err.Error() + ")"
+		return "The record changed since it was read; re-read it and retry with the new version. (" + refusalDetail(err) + ")"
 	case errors.Is(err, apperrors.ErrApprovalTokenInvalid):
 		return "The approval token was not accepted — it may be consumed, expired, or for a different call. " +
-			"Ask for a fresh approval and retry. (" + err.Error() + ")"
+			"Ask for a fresh approval and retry. (" + refusalDetail(err) + ")"
 	case errors.Is(err, apperrors.ErrUnsupportedBySoR):
 		// A DECLARED capability gap (AC-OV-2), not a fault: this workspace's
 		// records live in a system that cannot answer this tool. Saying so —
@@ -149,7 +145,7 @@ func (s *Dispatcher) explain(tool string, err error) string {
 		// a permanent refusal and burn a scheduled run's whole step budget on
 		// it.
 		return "This workspace's system of record cannot serve this tool, and no retry will change that. " +
-			"Do not retry it; use another tool, or tell the user this capability is unavailable here. (" + err.Error() + ")"
+			"Do not retry it; use another tool, or tell the user this capability is unavailable here. (" + refusalDetail(err) + ")"
 	case errors.As(err, &unknownTool):
 		// A name that is not on the surface at all — the model invented it, or
 		// is working from a stale tool list. Saying so discloses nothing: the
@@ -237,9 +233,9 @@ func (s *Dispatcher) explainClassified(tool string, err error) string {
 		"rather than a mistake, do not retry: tell the user what is blocking it."
 }
 
-// fileKindDetail is the store's refusal as the classified path renders it, so
+// refusalDetail is the store's refusal as the classified path renders it, so
 // the agent keeps the field code and the list of accepted kinds.
-func fileKindDetail(err error) string {
+func refusalDetail(err error) string {
 	if fault, ok := httperr.Classify(err); ok {
 		return faultExplanation(fault)
 	}

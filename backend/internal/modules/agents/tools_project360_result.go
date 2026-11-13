@@ -22,6 +22,7 @@ type Project360Result struct {
 	Project         Project360Project       `json:"project"`
 	SectionsOmitted []string                `json:"sections_omitted"`
 	Company         *Project360Company      `json:"company,omitempty"`
+	Health          *Project360Health       `json:"health,omitempty"`
 	PhaseHistory    *Project360PhaseHistory `json:"phase_history,omitempty"`
 	Deals           *Project360Deals        `json:"deals,omitempty"`
 	Stakeholders    *Project360Stakeholders `json:"stakeholders,omitempty"`
@@ -50,6 +51,23 @@ type Project360Project struct {
 	StartedAt     *time.Time `json:"started_at,omitempty"`
 	TargetEndDate *time.Time `json:"target_end_date,omitempty"`
 	EndedAt       *time.Time `json:"ended_at,omitempty"`
+}
+
+// Project360Health is how the project is going now, from the read the page
+// uses. judged is false when nobody has judged it, or a user undid the only AI
+// reading. A project nobody looked at is not one found on track.
+type Project360Health struct {
+	Judged bool `json:"judged"`
+	// AssessmentID is the reading correct_project_health corrects.
+	AssessmentID *ids.UUID `json:"assessment_id,omitempty"`
+	// State is on_track, at_risk or off_track.
+	State string `json:"state,omitempty"`
+	// Source is human, agent or ai.
+	Source string `json:"source,omitempty"`
+	// Author is who is on record as having judged it, as the page names them.
+	Author     string     `json:"author,omitempty"`
+	Note       string     `json:"note,omitempty"`
+	AssessedAt *time.Time `json:"assessed_at,omitempty"`
 }
 
 // Project360Company names the company the project is for.
@@ -214,6 +232,9 @@ func project360Result(page crmcontracts.Project360) Project360Result {
 			CompanyID: ids.UUID(page.Company.Id), Name: page.Company.Name,
 		}
 	}
+	if page.Health != nil {
+		out.Health = project360Health(page.Health.Current)
+	}
 	if page.PhaseHistory != nil {
 		out.PhaseHistory = project360History(*page.PhaseHistory)
 	}
@@ -254,4 +275,16 @@ func project360Result(page crmcontracts.Project360) Project360Result {
 		out.Rollups = project360Rollups(*page.Rollups)
 	}
 	return out
+}
+
+func project360Health(current *crmcontracts.ProjectHealthAssessment) *Project360Health {
+	if current == nil {
+		return &Project360Health{}
+	}
+	assessment := ids.UUID(current.Id)
+	return &Project360Health{
+		Judged: true, AssessmentID: &assessment, State: string(current.State),
+		Source: orBlank(current.Source), Author: orBlank(current.SourceAuthor),
+		Note: orBlank(current.Note), AssessedAt: &current.AssessedAt,
+	}
 }

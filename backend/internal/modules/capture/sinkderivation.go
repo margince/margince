@@ -28,6 +28,11 @@ func (s *Sink) derivationStart(ctx context.Context, tx pgx.Tx, rec connector.Nor
 	if s.ensurer == nil || cp.Email == "" {
 		return dispositionRow{}, counterpartyDecision{}, false, nil
 	}
+	// A shared mailbox has no owner by design, not by fault: its mail files
+	// under existing records and mints none.
+	if _, shared := sharedMailboxOf(ctx); shared {
+		return dispositionRow{}, counterpartyDecision{}, false, nil
+	}
 	actor, owner := capturePrincipal(ctx)
 	if owner.IsZero() {
 		// A fault, and one that reaches no other fault path: this returns

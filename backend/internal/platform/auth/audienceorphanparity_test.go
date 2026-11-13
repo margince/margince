@@ -27,6 +27,7 @@ import (
 	"go/token"
 	"regexp"
 	"sort"
+	"strconv"
 	"strings"
 	"testing"
 
@@ -41,10 +42,6 @@ import (
 // deciding who may read, it belongs in the read clause too and this list is
 // where the next author is told to look.
 var resolutionOnlyRelations = gatekit.Waive(map[string]string{
-	// The read clause is given p.TeamIDs, already filtered to live teams by
-	// identity's loadGrants; the existential has to do that filtering itself.
-	"team_membership": "resolves a selected team to its members, which the read clause receives as p.TeamIDs",
-	"team":            "carries loadGrants' own archived_at filter into the team resolution above",
 	// The existential is a standalone query and names its own subject; the read
 	// clause is a fragment composed into somebody else's FROM.
 	"activity": "the existential is a whole query and names the row it is about",
@@ -73,7 +70,11 @@ func sqlOf(t *testing.T, file, fn string) string {
 		}
 		ast.Inspect(d, func(n ast.Node) bool {
 			if lit, ok := n.(*ast.BasicLit); ok && lit.Kind == token.STRING {
-				sql.WriteString(lit.Value)
+				text, err := strconv.Unquote(lit.Value)
+				if err != nil {
+					t.Fatalf("reading a SQL literal in %s: %v", fn, err)
+				}
+				sql.WriteString(text)
 				sql.WriteString("\n")
 			}
 			if call, ok := n.(*ast.CallExpr); ok {
@@ -102,6 +103,8 @@ func composedFragment(call *ast.CallExpr) string {
 		return internalMailReaderSQL("a") + "\n"
 	case "ParticipantStandsSQL":
 		return ParticipantStandsSQL("ap", "a") + "\n"
+	case "sharedMailboxReaderSQL":
+		return sharedMailboxReaderSQL("a", sharedMailboxReaderColumn+" IN (SELECT 1)") + "\n"
 	case "memberIdentitySetSQL":
 		return memberIdentitySetSQL(1) + "\n"
 	default:

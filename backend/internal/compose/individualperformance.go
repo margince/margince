@@ -29,6 +29,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/langcopy"
 )
 
 // individualPerformance answers the switch for this request: the value its door
@@ -266,6 +267,18 @@ func explainWithheldOwners(ctx context.Context, tx pgx.Tx, out *reporting.Evalua
 	return nil
 }
 
+// readerCoverageCopy speaks coverage copy in the language a reporting frame
+// names for this reader. A reason shown outside a chart then reads as the chart's.
+func readerCoverageCopy(ctx context.Context, tx pgx.Tx) langcopy.Spoken {
+	return langcopy.For(string(identity.ReaderLanguageForRecord(ctx, tx)))
+}
+
+// ownRowsReason says why per-deal rows hold only the reader's own deals: the
+// sentence an owner chart limited by the same switch carries.
+func ownRowsReason(ctx context.Context, tx pgx.Tx) string {
+	return readerCoverageCopy(ctx, tx).Say(reportingCoverageWords.IndividualOff)
+}
+
 // requireFrozenShareMeasurable asks a frozen reading what a live one is asked
 // on every read, while the switch is off. A snapshot of a colleague's forecast
 // is that colleague's number, however old. It answers only the reader's own
@@ -310,12 +323,12 @@ func readerOwnsRow(ctx context.Context, owner ids.UUID) bool {
 // ForecastReaderContributions narrows the forecast's per-deal rows to what this
 // reader may see one by one. While the switch is off a row names a seat. So
 // only the reader's own deals stay, with no owner on them, as evidence does.
-// The HTTP door and the forecast tool both ask it. limited says at least one
-// row was withheld, which both doors tell their reader.
-func ForecastReaderContributions(ctx context.Context, tx pgx.Tx, rows []forecasting.Contribution) (visible []forecasting.Contribution, limited bool, err error) {
+// The HTTP door and the forecast tool both ask it. A withheld row yields the
+// owner chart's reason, which both doors tell their reader; none yields "".
+func ForecastReaderContributions(ctx context.Context, tx pgx.Tx, rows []forecasting.Contribution) (visible []forecasting.Contribution, withheldReason string, err error) {
 	allowed, err := individualPerformance(ctx, tx)
 	if err != nil || allowed {
-		return rows, false, err
+		return rows, "", err
 	}
 	out := make([]forecasting.Contribution, 0, len(rows))
 	for _, row := range rows {
@@ -326,5 +339,8 @@ func ForecastReaderContributions(ctx context.Context, tx pgx.Tx, rows []forecast
 		row.Owner = ""
 		out = append(out, row)
 	}
-	return out, len(out) < len(rows), nil
+	if len(out) == len(rows) {
+		return out, "", nil
+	}
+	return out, ownRowsReason(ctx, tx), nil
 }

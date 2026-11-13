@@ -55,6 +55,9 @@ func buildExtensionTools(exts []extension.Extension, verbs []extension.Verb) ([]
 		if err := v.Validate(); err != nil {
 			return nil, fmt.Errorf("compose: extension %q: %w", v.Unit, err)
 		}
+		if err := agents.SchemaReadable(v.OutputSchema); err != nil {
+			return nil, fmt.Errorf("compose: extension %q, tool %s: %w", v.Unit, v.Tool, err)
+		}
 		key := verbKey(v.Unit, v.Tool)
 		if prior, dup := declared[key]; dup {
 			return nil, fmt.Errorf("compose: extension %q declares tool %q on both %s %s and %s %s — one verb, one operation",
@@ -158,7 +161,8 @@ func adaptExtensionTool(unit extension.Name, tool extension.Tool, verb extension
 		return extensionTool{}, fmt.Errorf(
 			"a served tool spending the outbound %q cap is not yet supported "+
 				"(an extension reaches a destination no seat holder chose, and this surface "+
-				"cannot stage, so an installation has no way to require a human)", scope)
+				"cannot stage, so an installation has no way to require a human)", scope,
+		)
 	}
 	// LAST of the refusals, because the two above are about what this surface
 	// can HONESTLY serve and this one is about what a caller is told. A served

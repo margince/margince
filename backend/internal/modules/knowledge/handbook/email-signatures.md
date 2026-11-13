@@ -1,5 +1,5 @@
 <!-- prose:plain -->
-<!-- describes: frontend/src/features/settings/retainedsignature.tsx backend/internal/modules/contacts/retainedsignature.go frontend/src/features/settings/settingssignaturerow.tsx frontend/src/features/mail/composesignoff.tsx backend/internal/modules/contacts/emailsignature.go backend/internal/modules/activities/signature.go backend/internal/modules/activities/signaturetemplate.go frontend/src/features/settings/legalentityeditor.tsx frontend/src/features/settings/settingssignatureeditor.tsx backend/internal/modules/activities/htmlsanitize.go backend/internal/modules/activities/signaturepolicy.go backend/internal/compose/signaturepreviewimages.go -->
+<!-- describes: frontend/src/features/settings/retainedsignature.tsx backend/internal/modules/contacts/retainedsignature.go frontend/src/features/settings/settingssignaturerow.tsx frontend/src/features/mail/composesignoff.tsx backend/internal/modules/contacts/emailsignature.go backend/internal/modules/activities/signature.go backend/internal/modules/activities/signaturetemplate.go frontend/src/features/settings/legalentityeditor.tsx frontend/src/features/settings/settingssignatureeditor.tsx backend/internal/modules/activities/htmlsanitize.go backend/internal/modules/activities/signaturepolicy.go backend/internal/compose/signaturepreviewimages.go frontend/src/features/automations/approvalevidence.tsx -->
 # Your email signature
 
 Open **Settings → Account → Edit signature**. Choose **Plain text** to write a
@@ -30,7 +30,8 @@ are scripts, forms and embedded pages.
 
 The preview shows each image from a copy Margince fetches. If an image cannot be
 fetched, the preview shows a box of its size with its name. A list of approvals
-shows each image as that box. The sent mail still links the image.
+shows each image as that box. On an approval, choose **Show the images** under
+the signature to see them. The sent mail still links the image.
 
 To show the logo of the company you work for without hosting it yourself, write
 `<img src="cid:signature-logo@margince">`. Margince embeds that logo in the

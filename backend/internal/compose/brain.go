@@ -253,6 +253,7 @@ func NewModelPath(ctx context.Context, cfg ai.RoutingConfig, pool *pgxpool.Pool,
 	if err != nil {
 		return ModelPath{}, &UnservableBindingError{Cause: err}
 	}
+	router.WithSubjectRestrictions(subjectRestrictions{pool: pool})
 	if err := seedEmbedBinding(ctx, search.NewStore(InstallationDB(pool)), router, log); err != nil {
 		return ModelPath{}, err
 	}
@@ -316,6 +317,9 @@ func seedEmbedBinding(ctx context.Context, store *search.Store, router *ai.Route
 // a static budget exactly as it would calling the router constructor
 // directly.
 func NewLocalModelPath(cfg ai.RoutingConfig, opts ...ai.LocalOption) (ModelPath, error) {
+	// First, so a caller's own check replaces it: every lane still has to
+	// declare its subjects, as it does in production.
+	opts = append([]ai.LocalOption{ai.WithRestrictionCheck(ai.NoRestrictionData{})}, opts...)
 	router, err := ai.NewLocalRouter(cfg, opts...)
 	if err != nil {
 		return ModelPath{}, err

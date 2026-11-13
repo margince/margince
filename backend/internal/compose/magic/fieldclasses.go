@@ -23,7 +23,7 @@ var syntheticAuditFields = setOf(
 	"provider_claims_received", "qualifying_event", "qualifying_event_retracted", "reachability",
 	"readiness", "reason", "recorded_at_level", "record_link", "relinked_activity_links", "relinked_emails",
 	"relinked_phones", "relinked_relationships", "reminder_status", "reply_verdict", "reply_verdict_by",
-	"research_claims_accepted", "resolved_category", "revoked_by", "revoked_by_level",
+	"research_claims_accepted", "resolved_category", "restriction_lift_requested", "revoked_by", "revoked_by_level",
 	"revoked_override", "revoked_rows", "scope", "stopped", "stops_carried", "submission_decision",
 	"submission_id", "suppression_kind", "vat_checked_at", "vat_consultation_number", "vat_number",
 	"vat_registered_address", "vat_registered_name", "vat_requested", "vat_status",

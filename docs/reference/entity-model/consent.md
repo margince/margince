@@ -631,7 +631,7 @@ The 22 tables owned by `consent`, as the migrations build them. [Back to the ent
 | `due_at` | `timestamp with time zone` | yes | Statutory deadline (e.g. 30 days). |
 | `due_overridden` | `boolean`, default `false` | yes | True when the officer chose an earlier deadline than `due_rule` gives. |
 | `due_rule` | `text` |  | The rule set the deadline came from: `gdpr` (one calendar month, Art. 12(3)) or `<jurisdiction> v<version>` for a pack's own deadline. |
-| `kind` | `text` | yes | One of `access`, `rectify`, `erasure`. |
+| `kind` | `text` | yes | One of `access`, `rectify`, `erasure`, `restriction`. |
 | `receipt_reference` | `text` |  |  |
 | `received_at` | `timestamp with time zone` |  |  |
 | `resolution` | `text` |  |  |
@@ -651,7 +651,7 @@ The 22 tables owned by `consent`, as the migrations build them. [Back to the ent
 **Rules**
 
 - `data_subject_request_channel`: `CHECK (((channel IS NULL) OR (channel = ANY (ARRAY['confirm_link', 'email', 'phone', 'letter', 'in_person', 'operator_ui']))))`
-- `data_subject_request_kind_check`: `CHECK ((kind = ANY (ARRAY['access', 'rectify', 'erasure'])))`
+- `data_subject_request_kind_check`: `CHECK ((kind = ANY (ARRAY['access', 'rectify', 'erasure', 'restriction'])))`
 - `data_subject_request_status_check`: `CHECK ((status = ANY (ARRAY['open', 'in_progress', 'fulfilled', 'rejected'])))`
 - `dsr_resolution_shape`: `CHECK (((status <> ALL (ARRAY['fulfilled', 'rejected'])) OR (resolution IS NOT NULL)))`
 
@@ -895,7 +895,7 @@ The 22 tables owned by `consent`, as the migrations build them. [Back to the ent
 | `keep_until` | `timestamp with time zone` | yes |  |
 | `received_at` | `timestamp with time zone` | yes |  |
 | `request_id` | `uuid` | yes | Points at `data_subject_request.id`. |
-| `request_kind` | `text` | yes | One of `access`, `rectify`, `erasure`. |
+| `request_kind` | `text` | yes | One of `access`, `rectify`, `erasure`, `restriction`. |
 | `request_number` | `text` | yes |  |
 | `requester_email` | `text` |  |  |
 | `result` | `text` | yes | One of `fulfilled`, `rejected`. |
@@ -911,7 +911,7 @@ The 22 tables owned by `consent`, as the migrations build them. [Back to the ent
 - `privacy_request_proof_actor_type`: `CHECK ((completed_by_type = ANY (ARRAY['human', 'agent', 'connector', 'system'])))`
 - `privacy_request_proof_counts_object`: `CHECK ((jsonb_typeof(erased_counts) = 'object'))`
 - `privacy_request_proof_identity_check`: `CHECK ((identity_check = ANY (ARRAY['confirm_link', 'address_on_file', 'id_document', 'in_person', 'not_verified', 'unknown'])))`
-- `privacy_request_proof_kind`: `CHECK ((request_kind = ANY (ARRAY['access', 'rectify', 'erasure'])))`
+- `privacy_request_proof_kind`: `CHECK ((request_kind = ANY (ARRAY['access', 'rectify', 'erasure', 'restriction'])))`
 - `privacy_request_proof_one_per_request`: `UNIQUE (request_id)`
 - `privacy_request_proof_result`: `CHECK ((result = ANY (ARRAY['fulfilled', 'rejected'])))`
 

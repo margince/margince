@@ -156,7 +156,8 @@ what it read, and when.
 
 **Undo** archives the deal. Margince then does not open a deal on the same
 evidence; a new request opens one again. If your team added notes or tasks to
-the deal, Undo asks first.
+the deal, Undo asks first. Archiving a deal by hand has the same effect: what
+the customer wrote before the archive opens no new deal.
 
 A company with no owner gets a suggestion instead, as does one whose owner
 switched **New deals** off or left.

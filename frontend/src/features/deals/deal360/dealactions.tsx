@@ -14,7 +14,7 @@
 
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { CalendarPlus, FileText, Phone } from "lucide-react";
-import { useState } from "react";
+import { useCallback, useState } from "react";
 import { api } from "../../../api/client";
 import type { components } from "../../../api/schema";
 import { ifMatch, requireVersion } from "../../../api/version";
@@ -373,6 +373,12 @@ function DealBookMeeting({
   reasonId?: string;
 }>) {
   const t = useT();
+  // Held across renders, because a new search function drops the answer the
+  // open panel has already listed.
+  const search = useCallback(
+    (term: string) => searchCompanyContacts(companyId ?? "", term),
+    [companyId],
+  );
   const face = (
     <>
       <CalendarPlus aria-hidden="true" />
@@ -402,7 +408,8 @@ function DealBookMeeting({
       label={face}
       title={t("scheduling.bookContact")}
       searchLabel={t("scheduling.bookPickContact")}
-      search={(term) => searchCompanyContacts(companyId, term)}
+      search={search}
+      listOnOpen
       onPick={(contact, done) => {
         done();
         navigate(

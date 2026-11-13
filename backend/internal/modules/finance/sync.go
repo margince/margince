@@ -140,15 +140,17 @@ func (s *Store) SyncConnection(
 	return out, nil
 }
 
-// link is one accounting customer's mapping onto a company.
+// link is one accounting customer's mapping onto a company. Every row mirrored
+// through it names its id, and the database holds that row to its company.
 type link struct {
+	id                 ids.UUID
 	companyID          ids.CompanyID
 	externalCustomerID string
 }
 
 func readLinks(ctx context.Context, tx pgx.Tx, connectionID ids.UUID) ([]link, error) {
 	rows, err := tx.Query(ctx, `
-		SELECT company_id, external_customer_id
+		SELECT id, company_id, external_customer_id
 		  FROM finance_customer_link
 		 WHERE connection_id = $1 AND archived_at IS NULL
 		 ORDER BY external_customer_id`, connectionID)
@@ -159,7 +161,7 @@ func readLinks(ctx context.Context, tx pgx.Tx, connectionID ids.UUID) ([]link, e
 	var out []link
 	for rows.Next() {
 		var each link
-		if err := rows.Scan(&each.companyID, &each.externalCustomerID); err != nil {
+		if err := rows.Scan(&each.id, &each.companyID, &each.externalCustomerID); err != nil {
 			return nil, fmt.Errorf("scan a customer link: %w", err)
 		}
 		out = append(out, each)

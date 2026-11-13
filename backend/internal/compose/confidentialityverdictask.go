@@ -75,6 +75,7 @@ func confidentialityRequest(row capture.PendingThread) model.Request {
 		MaxTokens:      ai.ReasoningOutputMaxTokens,
 		ResponseSchema: confidentialitySchema(ref),
 		SecretStripper: ai.NewSecretStripper(),
+		Subjects:       model.AboutActivities(row.ActivityID),
 	}
 }
 

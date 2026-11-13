@@ -35,7 +35,7 @@ func TestProjectCreationApprovalMatchesTheWriter(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			fields := map[string]any{"name": "Buyer rollout", "source": "manual", "company_id": company.Id, "started_at": "2030-01-02", "target_end_date": "2030-06-30"}
+			fields := map[string]any{"name": "Buyer rollout", "source": "manual", "company_id": company.Id, "started_at": "2030-01-02", "target_end_date": "2030-06-30", "key": "buyr", "phase": projects.PhasePursuing}
 			payload := map[string]any{"record_type": "project", "fields": fields}
 			if rest {
 				payload = map[string]any{"operation": "createProject", "body": fields}
@@ -65,14 +65,14 @@ func TestProjectCreationApprovalMatchesTheWriter(t *testing.T) {
 			for _, detail := range *preview.Details {
 				details[detail.Field] = detail.Value
 			}
-			if details["name"].Text != "Buyer rollout" || details["company_id"].Text != company.DisplayName || details["phase"].Text != projects.PhaseInitiative {
+			if details["name"].Text != "Buyer rollout" || details["company_id"].Text != company.DisplayName || details["phase"].Text != projects.PhasePursuing {
 				t.Fatalf("missing project context: %+v", details)
 			}
 			if details["started_at"].Kind != "date" || details["target_end_date"].Kind != "date" {
 				t.Fatalf("untyped dates: %+v", details)
 			}
-			if _, exists := details["key"]; exists {
-				t.Fatal("preview claimed a reserved project key")
+			if details["key"].Text != "BUYR" {
+				t.Fatalf("preview shows key %q, want the chosen key as stored", details["key"].Text)
 			}
 			if count := e.WsCount(t, `SELECT count(*) FROM project`); count != 0 {
 				t.Fatalf("preview wrote %d projects", count)
@@ -96,7 +96,7 @@ func TestProjectCreationApprovalMatchesTheWriter(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			if actual.Name != details["name"].Text || (actual.Phase == nil || string(*actual.Phase) != details["phase"].Text) || actual.Key == nil || *actual.Key == "" || actual.CompanyId == nil || *actual.CompanyId != company.Id {
+			if actual.Name != details["name"].Text || (actual.Phase == nil || string(*actual.Phase) != details["phase"].Text) || actual.Key == nil || *actual.Key != details["key"].Text || actual.CompanyId == nil || *actual.CompanyId != company.Id {
 				t.Fatalf("writer differs: %+v", actual)
 			}
 			if actual.Companies == nil || len(*actual.Companies) != 1 || (*actual.Companies)[0].Role != projects.CompanyRoleCustomer {

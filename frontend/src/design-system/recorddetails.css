@@ -20,9 +20,14 @@
   gap: var(--space-1);
   min-inline-size: 0;
 }
-/* Scoped under the group so it outranks the heading's own size rule. */
-.recorddetails-group > .recorddetails-label.heading {
+.recorddetails-labelline {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
   margin-block-end: var(--space-1);
+}
+/* Scoped under the line so it outranks the heading's own size rule. */
+.recorddetails-labelline > .recorddetails-label.heading {
   font: var(--fontBodySmall);
   font-weight: var(--fontWeightMedium);
   color: var(--textSecondary);

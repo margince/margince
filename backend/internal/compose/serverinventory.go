@@ -149,6 +149,7 @@ type Server struct {
 	dataResetHandlers
 	jobHealthHandlers
 	dataTaskHandlers
+	erasureReturnHandlers
 	captureHealthHandlers
 	extensionIngestHealthHandlers
 	recoveryHealthHandlers
@@ -207,6 +208,7 @@ type Server struct {
 	analyticsContextHandlers
 	salesProgressReading
 	goalProposalHandlers
+	progressSummaryHandlers
 	sdrSummaryHandlers
 	assuranceHandlers
 	// The check a human starts: the preview of a first pass, and the pass

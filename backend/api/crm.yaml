@@ -7558,12 +7558,20 @@ paths:
         `company_id` names the project's CUSTOMER — the company the work is for. A project is
         work several companies do together, and the others are put on with
         `PUT /projects/{id}/companies`; this one is required because a project starts with a client.
-        The `key` is MINTED BY THE SERVER from the name (initials plus the lowest free
-        number, e.g. `ERA-1`) and is read-only thereafter: it is what a human writes in a
-        subject line to file mail under this project, so a caller-chosen one is a matcher
-        a caller can get wrong. A collision is resolved by taking the next number, never
-        reported.
-        The project starts in `initiative` and its creation row is appended to the phase history.
+        `key` is optional. Without it the server mints one from the name: the initials alone
+        (`ERA`) when no live project uses those letters, else the letters plus the lowest free
+        number from 2 (`ERA-2`). `getProjectKeyPreview` answers the key a create would mint.
+        A sent key is stored in upper case and is refused with 422 naming `key` when it does not
+        fit the key shape (`invalid_key`), is a word often bracketed in subject lines
+        (`key_is_common_word`), is a word of a colleague's name (`key_is_colleague_name`), or is
+        held by a live project (`key_taken`). The key is read-only after create: it is what a
+        human writes in a subject line to file mail under this project.
+        `phase` is the starting phase, `initiative` when omitted; a project cannot start
+        `closed` (422 `invalid_phase`). The creation row is appended to the phase history.
+        `deal_id` points that deal at the new project in the same transaction, under the check
+        `updateDeal.project_id` takes: the caller must be able to write the deal, and the deal
+        must be on the project's company (422 `project_company_mismatch` naming `deal_id`). Only
+        an open deal that names no project is taken (422 `deal_not_open`, `deal_has_project`).
         A `company_id` that names a company the caller cannot read answers 422 naming `company_id`,
         the same for a missing record and for one hidden by row scope.
       x-mcp-tool: { verb: create_record, record_type: project, tier: auto_execute, scope: write }
@@ -7586,7 +7594,7 @@ paths:
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/Forbidden' }
         '409':
-          description: A live project already holds this key.
+          description: Another project already has this source_system and source_id.
           content:
             application/problem+json:
               schema: { $ref: '#/components/schemas/Problem' }
@@ -7794,6 +7802,34 @@ paths:
           content:
             application/json:
               schema: { $ref: '#/components/schemas/Problem' }
+
+  /projects/key-preview:
+    get:
+      tags: [Projects]
+      operationId: getProjectKeyPreview
+      security: [ { cookieAuth: [] } ]
+      x-agent-access: human-only
+      x-human-only-reason: covered
+      summary: The key a new project of this name would be given.
+      description: |
+        Runs the mint `createProject` runs when no `key` is sent, and writes nothing. A create
+        that lands in between can move the number on, so the create's answer is the key that
+        holds. Needs the grant to create projects. An agent's `create_record` mints the key the
+        same way, so it needs no preview of its own.
+      parameters:
+        - name: name
+          in: query
+          required: true
+          schema: { type: string, minLength: 1 }
+      responses:
+        '200':
+          description: The key.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ProjectKeyPreview' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '422': { $ref: '#/components/responses/ValidationError' }
 
   /projects/transfer-ownership:
     post:
@@ -9173,6 +9209,13 @@ paths:
             Restrict the list to the caller's own due reminders: open, live tasks assigned to the
             caller whose `remind_at` has passed, at most 30 days ago. The latest reminder comes
             first. It reads content, so a task whose content the caller may not read is left out.
+        - name: collapse_copies
+          in: query
+          schema: { type: boolean, default: false }
+          description: >-
+            Show one row per email when several colleagues' mailboxes each hold a copy of it.
+            Only copies the caller may read are joined, and the row shown says how many in
+            `copies`. Off by default, so an export or sync client still reads every row.
       responses:
         '200':
           description: A page of activities (newest first by default).
@@ -11734,6 +11777,112 @@ paths:
         '422': { $ref: '#/components/responses/ValidationError' }
         '502': { $ref: '#/components/responses/CalendarUnavailable' }
 
+
+  /public/booking/{host_slug}/return:
+    parameters:
+      - { name: host_slug, in: path, required: true, schema: { type: string } }
+    post:
+      tags: [Public]
+      operationId: requestBookingReturn
+      security: []   # anonymous public page
+      x-agent-access: human-only
+      summary: Ask to be stored again after an erasure (anonymous); mails a confirmation link.
+      description: |
+        The one way an erased subject lifts their own erasure. When the address is on the erasure
+        list, a single-use link is mailed to it; the address is stored only when that link is
+        confirmed (`confirmBookingReturn`). Nothing is stored before the click.
+        **Always answers 202** with no body, for every well-formed request, whether or not the
+        address was erased, so the answer and its timing say nothing about the address. One
+        link a day goes to one address, however it is spelled. The consent wording the link
+        carries is this installation's own, never the caller's.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [name, email]
+              properties:
+                name:  { type: string, minLength: 1, maxLength: 200 }
+                email: { type: string, format: email }
+      responses:
+        '202': { description: 'Accepted. If the address was erased, a confirmation link is on its way to it.' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+        '429':
+          description: Rate-limited.
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+
+  /public/booking/{host_slug}/return/preview:
+    parameters:
+      - { name: host_slug, in: path, required: true, schema: { type: string } }
+    post:
+      tags: [Public]
+      operationId: previewBookingReturn
+      security: []   # anonymous: the mailed token is the authority
+      x-agent-access: human-only
+      summary: Show what a mailed return link will store, before it is confirmed (anonymous).
+      description: |
+        Reads the token `requestBookingReturn` mailed and answers the name and the consent wording
+        `confirmBookingReturn` would record. Stores nothing. A link that would not work is the same
+        neutral `422` (`code: link_spent`) the confirm answers.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [token]
+              properties:
+                token: { type: string }
+      responses:
+        '200':
+          description: What the link stores.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/BookingReturnPreview' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+        '429':
+          description: Rate-limited.
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+
+  /public/booking/{host_slug}/return/confirm:
+    parameters:
+      - { name: host_slug, in: path, required: true, schema: { type: string } }
+    post:
+      tags: [Public]
+      operationId: confirmBookingReturn
+      security: []   # anonymous: the mailed token is the authority
+      x-agent-access: human-only
+      summary: Confirm the mailed link and be stored again (anonymous).
+      description: |
+        Spends the token `requestBookingReturn` mailed. In one transaction it lifts the erasure for
+        that address, stores the subject as a contact of this booking page's host, and records the
+        consent they gave. A token works once, for the erasure it was mailed for, until it expires.
+        A bad, expired, spent or foreign token is one neutral `422` (`code: link_spent`) on `token`.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [token]
+              properties:
+                token: { type: string }
+      responses:
+        '204': { description: The subject is stored again. }
+        '422': { $ref: '#/components/responses/ValidationError' }
+        '429':
+          description: Rate-limited.
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
 
   /public/forms/{form_key}:
     parameters:
@@ -24639,7 +24788,7 @@ paths:
         What the request form shows before filing: the same resolver `POST /data-subject-requests`
         applies. Gated like the queue, on `privacy_request` read.
       parameters:
-        - { name: kind, in: query, required: true, schema: { type: string, enum: [access, rectify, erasure] } }
+        - { name: kind, in: query, required: true, schema: { type: string, enum: [access, rectify, erasure, restriction] } }
         - { name: received_at, in: query, required: false, schema: { type: string, format: date-time }, description: 'When the request arrived. Absent means now. Up to five minutes ahead of the server clock reads as now; later is refused with 422 naming `received_at`.' }
       responses:
         '200':
@@ -24719,7 +24868,7 @@ paths:
       operationId: listNoticeCases
       security: [ { bearerAuth: [] }, { cookieAuth: [] } ]
       x-mcp-tool: { verb: list_notice_cases, router: read_workspace, action: notice_cases, tier: auto_execute, scope: read, served_by: route }
-      summary: Privacy notices already owed, where the source is confirmed, soonest deadline first. A contact whose source nobody has confirmed is in notice_case_reviews.
+      summary: Privacy notices already owed, where the source is confirmed, soonest deadline first. A contact whose source nobody has confirmed is in notice_case_reviews (GET /privacy/notice-case-reviews).
       description: |
         Every Art. 13 / Art. 14 duty the installation has not discharged, with who owns it and by
         when it falls due.
@@ -24890,7 +25039,7 @@ paths:
       operationId: listNoticeCaseReviews
       security: [ { bearerAuth: [] }, { cookieAuth: [] } ]
       x-mcp-tool: { verb: list_notice_case_reviews, router: read_workspace, action: notice_case_reviews, tier: auto_execute, scope: read, served_by: route }
-      summary: Every contact's privacy-notice case, including a source nobody has confirmed yet (a bought list, an import), soonest deadline first. Start here for what we owe one contact.
+      summary: Every contact's privacy-notice case, including one whose source was never recorded (an older contact), soonest deadline first. Without state it lists unresolved cases only, so an empty page is not an empty notice history, and a contact imported moments ago may have no case yet. For one contact, read their contact_360 view (GET /contacts/{id}/360) instead; its privacy_source_reviews and privacy_notice_duties carry the case ids.
       description: |
         Acquisition-source reviews and notice duties, under privacy-request read authority.
         Unconfirmed sources have no deadline or sending route. Confirmed indirect sources stay owed;
@@ -24941,7 +25090,7 @@ paths:
       operationId: getNoticeCaseReview
       security: [ { bearerAuth: [] }, { cookieAuth: [] } ]
       x-mcp-tool: { verb: get_notice_case_review, router: read_details, action: notice_case_review, tier: auto_execute, scope: read, served_by: route }
-      summary: One contact's privacy-notice case — its source, whether a notice is owed, and by when. The id comes from notice_case_reviews, not the contact's id.
+      summary: One contact's privacy-notice case — its source, whether a notice is owed, and by when. The id comes from notice_case_reviews or the contact's contact_360 view, not the contact's id.
       description: |
         The administrative record for a source review or notice duty. Human privacy-request read
         authority covers the record; contact names remain limited by ordinary contact visibility.
@@ -25013,7 +25162,7 @@ paths:
       operationId: assessNoticeSource
       security: [ { bearerAuth: [] }, { cookieAuth: [] } ]
       x-mcp-tool: { verb: confirm_notice_source, router: change_compliance, action: confirm_notice_source, tier: auto_execute, scope: write, served_by: route, ask_user_first: true }
-      summary: Confirm where a contact came from (bought list, import, their own enquiry), which decides whether a privacy notice is owed. Preview it first.
+      summary: Confirm where a contact came from (bought list, import, their own enquiry), which decides whether a privacy notice is owed. Preview it first (POST /privacy/notice-case-reviews/{id}/source/preview). Only a contact with no recorded source is up for review; when its evidence does not name where the data first came from, ask the user rather than guessing a kind.
       requestBody:
         required: true
         content:
@@ -25037,7 +25186,7 @@ paths:
       operationId: previewNoticeSource
       x-mcp-tool: { verb: preview_notice_source, router: read_details, action: notice_source_preview, tier: auto_execute, scope: read, served_by: route }
       security: [ { bearerAuth: [] }, { cookieAuth: [] } ]
-      summary: Preview what confirming a contact's source decides — whether a notice is owed and by when — without changing the case. Confirming is the user's decision, so offer confirm_notice_source and ask them.
+      summary: Preview what confirming a contact's source decides — whether a notice is owed and by when — without changing the case. Confirming is the user's decision, so offer confirm_notice_source (POST /privacy/notice-case-reviews/{id}/source) and ask them, unless they already named the source and asked you to confirm it.
       requestBody:
         required: true
         content:
@@ -26667,9 +26816,10 @@ paths:
         recorded. `marketing_objection` is Art. 21(2) and stops marketing only, so the invoice the
         same contact is owed still goes.
 
-        A processing restriction and a hard bounce are not recordable by hand: the first is an
-        Art. 18 legal state with its own workflow, the second a fact about a mailbox only the mail
-        path observes.
+        `processing_restriction` is Art. 18: it stops sending, except the three notices above, and
+        stops the AI reading, enrichment and scoring of the contact. Only a human admin records
+        one, at the subject's authority. A hard bounce is not recordable by hand:
+        it is a fact about a mailbox only the mail path observes.
       requestBody:
         required: true
         content:
@@ -26680,12 +26830,13 @@ paths:
               properties:
                 kind:
                   type: string
-                  enum: [subject_request, marketing_objection]
+                  enum: [subject_request, marketing_objection, processing_restriction]
                   description: |
                     Which stop this is. `subject_request` is "stop contacting me" and reaches every
                     category but the three the controller owes anyway. `marketing_objection` is
                     Art. 21(2), reaches marketing only, and is recorded at the subject's own
                     authority, so only an admin correcting a mistake can lift it.
+                    `processing_restriction` is Art. 18 and recorded by a human admin only.
                 reason:
                   type: string
                   maxLength: 500
@@ -26730,7 +26881,7 @@ paths:
         admin makes it signed in themselves; an agent working for them cannot.
 
         **No seat lifts a processing restriction here.** Lifting one owes the contact notice
-        first, and Margince sends no such notice yet.
+        first, so an admin asks `liftContactRestriction`, which sends that notice.
 
         `listContactStops` answers, per stop, whether this caller may lift it and why not.
 
@@ -26760,6 +26911,52 @@ paths:
         '404': { $ref: '#/components/responses/NotFound' }
         '422': { $ref: '#/components/responses/ValidationError' }
 
+  /contacts/{id}/consent/suppress/{suppressionId}/lift-restriction:
+    parameters:
+      - $ref: '#/components/parameters/Id'
+      - name: suppressionId
+        in: path
+        required: true
+        schema: { type: string, format: uuid }
+        description: The contact's processing restriction to lift.
+    post:
+      tags: [Compliance]
+      operationId: liftContactRestriction
+      security: [ { cookieAuth: [] } ]
+      x-agent-access: human-only
+      x-human-only-reason: security
+      summary: Lift a restriction of processing, after telling the contact.
+      description: |
+        GDPR Art. 18(3) owes the contact notice before their restriction is lifted. This queues
+        that notice and lifts nothing yet. The restriction ends once the notice is handed to the
+        mail provider. If the notice does not go out, the restriction stays, and
+        `listContactStops` shows why in the stop's `lift_notice`. Mail stored during the
+        restriction is then read as if it had just arrived.
+
+        Only an admin signed in to the app asks, as only one records a restriction. An agent is
+        refused.
+
+        A stop that is not a live restriction of this contact answers `404`.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [reason]
+              properties:
+                reason:
+                  type: string
+                  minLength: 1
+                  maxLength: 500
+                  description: Why the restriction is being lifted. The audit row keeps it.
+      responses:
+        '202': { description: The notice is queued. The restriction stays until it is sent. }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+
   /contacts/{id}/consent/stops:
     parameters:
       - $ref: '#/components/parameters/Id'
@@ -26776,8 +26973,9 @@ paths:
         `may_lift` is the answer `liftSuppression` would give this caller, from the same rule. An
         admin may correct a marketing objection a colleague recorded by mistake (`correction`);
         one the contact recorded themselves stays until they change it. No seat lifts a processing
-        restriction here, because lifting one owes the contact notice first and Margince sends no
-        such notice yet.
+        restriction here, because lifting one owes the contact notice first: `may_lift_restriction`
+        says whether this caller may ask `liftContactRestriction`, and `lift_notice` says where
+        that notice is.
       responses:
         '200':
           description: The stops that stand.
@@ -29141,7 +29339,8 @@ paths:
         Renaming needs `team_admin.update`. Archiving or restoring switches every member's
         team reach off or on, so it is admin only, like every other change to who is on a
         team: a holder of `team_admin` who is not an admin gets 403
-        `team_membership_requires_admin`.
+        `team_membership_requires_admin`. A team that reads a shared mailbox is not archived:
+        409, naming the mailbox, until the mailbox has another reader team.
       requestBody:
         required: true
         content:
@@ -29178,6 +29377,10 @@ paths:
 
         Only an admin changes who is on a team. A holder of `team_admin.update` who is not an
         admin gets 403 `team_membership_requires_admin`, for themselves as for anybody else.
+
+        A team that reads a shared mailbox grants its members that mailbox's mail. An agent
+        adding a member to such a team gets 403, naming the mailbox; an admin adds them in the
+        app, and the audit row names the mailbox the member can now read.
       responses:
         '204': { description: On the team. }
         '401': { $ref: '#/components/responses/Unauthorized' }
@@ -41492,6 +41695,22 @@ components:
           type: [string, 'null']
           description: The class of the last failed sync (as `CaptureConnection.last_sync_error_class`), so a `forbidden` mailbox reads as a role problem and not a broken connection. Null while none failed.
 
+    CaptureSharedMailboxConcern:
+      type: object
+      additionalProperties: false
+      description: A shared mailbox with an active concern. No member owns it, so `account_label` names it.
+      required: [connection_id, provider, account_label, concern, since, last_success_at]
+      properties:
+        connection_id: { type: string, format: uuid }
+        provider: { type: string }
+        account_label: { type: [string, 'null'] }
+        concern: { $ref: '#/components/schemas/CaptureConcernKind' }
+        since: { type: [string, 'null'], format: date-time }
+        last_success_at: { type: [string, 'null'], format: date-time }
+        error_class:
+          type: [string, 'null']
+          description: The class of the last failed sync, as on `CaptureConnectionConcern`.
+
     CaptureConnection:
       type: object
       description: |
@@ -46283,10 +46502,13 @@ components:
             themselves owner (an edit or a claim) needs the delete grant. Server-computed per row,
             per caller. A UX signal, never the enforcement, exactly like `writable`; absent means
             NOT archivable.
+        linkedin_url:
+          type: [string, 'null']
+          description: 'The contact''s LinkedIn profile link. The same stored value as `social.linkedin`, not a second copy.'
         social:
           type: object
           additionalProperties: true
-          description: '{ linkedin, twitter, github, ... }'
+          description: 'The contact''s links by platform: github, linkedin, twitter. linkedin is a LinkedIn profile link.'
         address: { $ref: '#/components/schemas/Address' }
         address_country_mismatch:
           readOnly: true
@@ -46476,7 +46698,13 @@ components:
         last_name: { type: [string, 'null'] }
         title: { type: [string, 'null'] }
         owner_id: { type: [string, 'null'], format: uuid }
-        social: { type: object, additionalProperties: true }
+        linkedin_url:
+          type: [string, 'null']
+          description: 'The contact''s LinkedIn profile link (https://www.linkedin.com/in/<name>). Writes the same stored value as `social.linkedin`; a request naming both with different profiles is refused with 422 `linkedin_url_conflicts_with_social`.'
+        social:
+          type: object
+          additionalProperties: true
+          description: 'Links by platform. Only github, linkedin and twitter are taken; any other key is refused with 422 `social_platform_unknown`. linkedin takes only a LinkedIn profile link (https://www.linkedin.com/in/<name>).'
         address: { $ref: '#/components/schemas/Address' }
         emails:
           type: array
@@ -46531,7 +46759,7 @@ components:
           description: What they do at that employer, when it differs from `title`.
         profile_url:
           type: [string, 'null']
-          description: 'The public profile this was read from. Stored, never fetched. A LinkedIn URL must be a profile (`/in/<name>`); a company page is refused with 422 `linkedin_url_not_profile` on this field.'
+          description: 'The LinkedIn profile this was read from. Stored, never fetched. It must be a LinkedIn profile (`/in/<name>`): a page off LinkedIn is refused with 422 `linkedin_url_not_linkedin` on this field, and a company page with `linkedin_url_not_profile`.'
         email: { type: [string, 'null'], format: email, description: 'Refused with 422 `email_names_no_one` when the local part names a sending system, as ContactEmailInput.email is.' }
         phone: { type: [string, 'null'] }
         convert_lead_ids:
@@ -46831,7 +47059,13 @@ components:
             names nobody is not reachable through this field at all — an unowned
             record is nobody's to change until somebody claims it, which the write
             gate already enforces for every field on this endpoint.
-        social: { type: object, additionalProperties: true }
+        linkedin_url:
+          type: [string, 'null']
+          description: 'The contact''s LinkedIn profile link (https://www.linkedin.com/in/<name>). Writes the same stored value as `social.linkedin`; null or "" removes it. A request naming both with different profiles is refused with 422 `linkedin_url_conflicts_with_social`.'
+        social:
+          type: object
+          additionalProperties: true
+          description: 'Merged into the stored links: a key not sent keeps its link, and a key sent as "" or null removes it. Only github, linkedin and twitter are taken; any other key is refused with 422 `social_platform_unknown`. linkedin takes only a LinkedIn profile link (https://www.linkedin.com/in/<name>).'
         address: { $ref: '#/components/schemas/Address' }
         emails:
           type: array
@@ -47202,6 +47436,10 @@ components:
       required: [display_name, source]
       properties:
         display_name: { type: string }
+        linkedin_url:
+          type: [string, 'null']
+          description: Canonical LinkedIn company URL, held to the rule the update holds it to. website_url is derived and refused here.
+          pattern: '^https://([a-z]{2,3}\.)?linkedin\.com/company/[^/?#]+/?$'
         legal_name: { type: [string, 'null'] }
         phone: { type: [string, 'null'], description: "The company's main number. A formatted number is accepted and stored in E.164 form (for example +49301234567). It is never a contact's own number." }
         email: { type: [string, 'null'], format: email, description: "The company's general address, for example info@example.com. It never creates or matches a contact." }
@@ -47635,7 +47873,7 @@ components:
       description: |
         How much of what the band needs is actually present — with BOTH counts. "4 of 9"
         and "4 of 40" are different claims and must never render identically (DOSS-AC-12).
-      required: [present, expected]
+      required: [present, expected, needed, inputs]
       properties:
         present: { type: integer, description: Required inputs available and not stale. }
         expected:
@@ -47643,6 +47881,16 @@ components:
           description: |
             Required inputs the assembly wanted. Never omitted and never implied — a
             proportion without its denominator is not a completeness figure.
+        needed:
+          type: integer
+          description: |
+            The fewest present inputs the assembly judges on. Below it the band is `unknown`.
+        inputs:
+          type: array
+          description: |
+            Every required input in the assembly's order, with whether it counts. An input
+            that does not count is missing or no longer fresh.
+          items: { $ref: '#/components/schemas/GrowthFitInputState' }
         missing:
           type: array
           description: |
@@ -47655,6 +47903,14 @@ components:
       enum: [offer_summary, icp, industry, buying_center, buying_intents, employee_range, technology]
       x-extensible-enum: true
       description: One input the growth-fit assessment needs about a company. The client words it.
+
+    GrowthFitInputState:
+      type: object
+      description: One required growth-fit input and whether it counts toward the band.
+      required: [input, present]
+      properties:
+        input: { $ref: '#/components/schemas/GrowthFitInput' }
+        present: { type: boolean, description: True when the input is recorded and not stale. }
 
     GrowthFitNextStep:
       type: string
@@ -55478,8 +55734,18 @@ components:
         source_system: { type: [string, 'null'], maxLength: 128, description: 'Which external system this record came from, when a caller imported it. The reserved mirror: namespace is refused on this wire except for a declared importer: a signed-in human holding import_run:create (an agent carrying those grants is still refused).' }
         source_author_id: { type: [string, 'null'], format: uuid, description: 'Who wrote this record in the system it came from, when the author holds a seat here. Written only by a declared importer (a signed-in human holding import_run:create), only beside a source_system; either author field or both may be sent, and the seat''s current name wins on read. captured_by still names the caller.' }
         source_author_name: { type: [string, 'null'], maxLength: 200, description: 'The source system''s own spelling of who wrote this record. Same door as source_author_id: a declared importer only, beside a source_system. Kept when a seat is also named, so the name survives the seat.' }
+        key: { type: [string, 'null'], maxLength: 24, description: 'The key the creator chose; omitted or null to have the server mint one. Read-only after create.' }
+        phase: { type: [string, 'null'], enum: [initiative, pursuing, delivering, null], description: 'The phase the project starts in; initiative when omitted.' }
+        deal_id: { type: [string, 'null'], format: uuid, description: 'The deal this project comes from. The deal is pointed at the new project in the same transaction.' }
       additionalProperties: true
       x-extension: true
+
+    ProjectKeyPreview:
+      type: object
+      required: [key]
+      properties:
+        key: { type: string, description: 'The key a project of this name would be given if it were created now.' }
+      additionalProperties: false
 
     SetProjectCompanyRequest:
       type: object
@@ -55519,11 +55785,10 @@ components:
       type: object
       description: |
         Note `phase` is absent by design — it moves only through advanceProjectPhase.
-        `key` is absent for a different reason: the server mints it from the name and
-        it is read-only thereafter. A key is what a human writes in a subject line to
-        file mail under a project, so a caller-chosen one is a matcher a caller can
-        get wrong — a project keyed after a contact's name would claim every bracketed
-        mention of that word.
+        `key` is absent for a different reason: it is set on create and read-only
+        thereafter (422 `read_only`). A key is what a human writes in a subject line to
+        file mail under a project, so changing it would stop mail already sent with it
+        from filing.
       properties:
         name: { type: string }
         owner_id: { type: [string, 'null'], format: uuid }
@@ -56899,6 +57164,23 @@ components:
             and a deal say. Every read that returns an activity answers the same links: the
             list, one activity, and a contact's 360.
           items: { $ref: '#/components/schemas/ActivityLink' }
+        copies:
+          type: integer
+          minimum: 2
+          readOnly: true
+          description: >-
+            How many colleagues' mailboxes hold a copy of this email that the caller may read,
+            this one included. Set only on a timeline that shows one row per email (the 360
+            pages, or `collapse_copies=true`); absent when there is one copy. `links` is the
+            union over those copies.
+        copy_ids:
+          type: array
+          readOnly: true
+          items: { type: string, format: uuid }
+          description: >-
+            The other copies this row stands for, each readable by the caller through
+            `GET /activities/{id}`. Set exactly when `copies` is. Copies join only when they
+            agree on Message-ID, sender, subject, body, direction and the second they occurred.
         offers_email:
           type: boolean
           description: >-
@@ -62431,6 +62713,7 @@ components:
           x-extensible-enum: true
           description: '`handoff` when the reporting framework is set up for SDR teams; otherwise `qualification`, and `handoffs` is absent.'
         withheld: { type: boolean, description: 'Individual performance is off and these figures would show one colleague''s work, so `meetings` and `handoffs` are absent.' }
+        withheld_reason: { type: string, description: 'Present when `withheld` is true: the sentence that says why, in the reader''s language. It is the `coverage.reason` a reporting chart withheld by the same rule carries.' }
         small_sample_below:
           type: integer
           minimum: 1
@@ -65228,6 +65511,11 @@ components:
             switched off individual performance and at least one row was withheld. The totals still
             include colleagues' deals. On a shared snapshot it says the same of the rows its CSV
             export holds.
+        contributions_limited_reason:
+          type: string
+          description: >-
+            Present when `contributions_limited` is true: the sentence that says why, in the reader's
+            language. It is the `coverage.reason` an owner chart limited by the same switch carries.
         contributions:
           type: array
           items: { $ref: '#/components/schemas/ForecastContribution' }
@@ -67371,6 +67659,10 @@ components:
           type: array
           description: Active connection concerns for live members. Names account state, never correspondence.
           items: { $ref: '#/components/schemas/CaptureConnectionConcern' }
+        shared_mailbox_concerns:
+          type: array
+          description: Active connection concerns for shared mailboxes. Names account state, never correspondence.
+          items: { $ref: '#/components/schemas/CaptureSharedMailboxConcern' }
         generated_at: { type: string, format: date-time }
         mailboxes:
           type: array
@@ -72421,11 +72713,11 @@ components:
           description: Why they decided that, when they said.
     DataSubjectRequest:
       type: object
-      description: A GDPR data-subject request (Art. 15/16/17) tracked to completion (B-E11.30; data-model §12.5).
+      description: A GDPR data-subject request (Art. 15/16/17/18) tracked to completion.
       required: [id, kind, subject_ref, status, due_at, due_overridden, dispute_open, created_at]
       properties:
         id: { type: string, format: uuid }
-        kind: { type: string, enum: [access, rectify, erasure], x-extensible-enum: true }
+        kind: { type: string, enum: [access, rectify, erasure, restriction], x-extensible-enum: true }
         subject_ref: { type: string, description: 'The data subject: a contact id or external identifier.' }
         subject_label:
           type: [string, 'null']
@@ -72797,7 +73089,7 @@ components:
       type: object
       required: [kind, subject_ref]
       properties:
-        kind: { type: string, enum: [access, rectify, erasure] }
+        kind: { type: string, enum: [access, rectify, erasure, restriction] }
         subject_ref: { type: string }
         received_at:
           type: string
@@ -72923,7 +73215,7 @@ components:
       type: object
       required: [kind, rule]
       properties:
-        kind: { type: string, enum: [access, rectify, erasure], x-extensible-enum: true }
+        kind: { type: string, enum: [access, rectify, erasure, restriction], x-extensible-enum: true }
         rule: { type: string, description: '`gdpr`, or `<jurisdiction> v<version>`.' }
         period: { type: string, description: 'ISO 8601 calendar period, when the deadline counts in calendar units.' }
         hours: { type: integer, description: 'Hours, when the deadline counts in hours.' }
@@ -72982,6 +73274,14 @@ components:
           type: boolean
           description: 'Opens (true) or closes (false) a complaint or dispute about the request. Any status takes it.'
 
+    BookingReturnPreview:
+      type: object
+      additionalProperties: false
+      required: [name, wording, policy_version]
+      properties:
+        name: { type: string }
+        wording: { type: string, description: The consent wording the confirm records. }
+        policy_version: { type: string }
     CaptureConsent:
       type: object
       description: |
@@ -75016,9 +75316,40 @@ components:
           description: |
             Why `may_lift` is false. `permission`: you may not change this contact, or you are not
             signed in to a seat. `address`: a stop on an address clears when mail to it works
-            again. `restriction`: lifting it owes the contact notice first, which Margince cannot
-            send yet. `subject_decision`: the contact set it and only they change it. `level`: it
-            was recorded at your level or above. Null when `may_lift` is true.
+            again. `restriction`: lifting it owes the contact notice first, through
+            `liftContactRestriction`. `subject_decision`: the contact set it and only they change
+            it. `level`: it was recorded at your level or above. Null when `may_lift` is true.
+        may_lift_restriction:
+          type: boolean
+          description: |
+            The stop is a processing restriction and this caller, an admin signed in to the app,
+            may ask `liftContactRestriction` to lift it. False for every other stop, and while a
+            lift notice is queued or sent.
+        lift_notice:
+          allOf: [ { $ref: '#/components/schemas/RestrictionLiftNotice' } ]
+          description: |
+            The newest notice a lift of this restriction queued. Absent when no lift was asked,
+            and for every other kind of stop.
+
+    RestrictionLiftNotice:
+      type: object
+      description: Where the notice that lifts a restriction of processing is.
+      required: [status, queued_at]
+      properties:
+        status:
+          type: string
+          enum: [queued, sent, failed]
+          x-extensible-enum: true
+          description: |
+            `queued`: the notice waits to be sent, and the restriction stays until it is. A
+            `reason` says an attempt failed and Margince tries again. `sent`: the notice went out
+            and the restriction is ending; a periodic pass ends it if the first attempt did not.
+            `failed`: Margince gave up on the notice, so the restriction stays. Ask again to send a
+            new notice.
+        reason:
+          type: [string, 'null']
+          description: Why the last attempt did not go out. Null while nothing went wrong.
+        queued_at: { type: string, format: date-time }
 
     StandingOverride:
       type: object

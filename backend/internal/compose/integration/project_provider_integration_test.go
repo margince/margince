@@ -18,6 +18,7 @@ package integration
 
 import (
 	"errors"
+	"maps"
 	"strings"
 	"testing"
 
@@ -45,44 +46,35 @@ func dealProvider(e *Env) *deals.Provider {
 	return deals.NewProvider(e.DB(), installseam.Deals())
 }
 
-// An agent that names a key is refused and told the key is not its to set. A
-// key an agent could choose is a key it could point at every bracketed mention
-// of a common word.
-func TestTheAgentSeamCannotChooseAProjectsKey(t *testing.T) {
+// The agent seam takes a key the way the New project form does. A chosen key
+// passes the same refusal, and no key means one minted from the name.
+func TestTheAgentSeamChoosesAKeyUnderTheSameRefusal(t *testing.T) {
 	e := Setup(t)
 	p := projectProvider(e)
 	ctx := e.Admin()
 	company := e.SeedCompany(t, "Minted GmbH", nil)
+	create := func(fields map[string]any) (string, error) {
+		created, err := p.Create(ctx, datasource.CreateInput{
+			EntityType: datasource.EntityProject, Fields: fields, Source: "agent",
+		})
+		if err != nil {
+			return "", err
+		}
+		got, err := e.Projects.GetProject(ctx, projectIDOf(created.ID), storekit.LiveOnly)
+		if err != nil || got.Key == nil {
+			t.Fatalf("read the created project back: %v", err)
+		}
+		return *got.Key, nil
+	}
 
-	_, err := p.Create(ctx, datasource.CreateInput{
-		EntityType: datasource.EntityProject,
-		Fields: map[string]any{
-			"name": "Warehouse rollout", "company_id": company.String(), "key": "MINE",
-		},
-		Source: "agent",
-	})
-	if err == nil {
-		t.Fatal("the seam accepted a key the caller named; the agent would believe it chose the matcher")
+	if key, err := create(map[string]any{"name": "Warehouse rollout", "company_id": company.String(), "key": "mine"}); err != nil || key != "MINE" {
+		t.Fatalf("chosen key through the seam = %q (%v), want MINE", key, err)
 	}
-	if !strings.Contains(err.Error(), "cannot be set") {
-		t.Errorf("the refusal does not say the key is not the caller's to set: %v", err)
+	if _, err := create(map[string]any{"name": "Status call", "company_id": company.String(), "key": "STATUS"}); err == nil {
+		t.Error("the seam took a key the REST create refuses")
 	}
-
-	// And the ordinary create still mints one from the NAME.
-	created, err := p.Create(ctx, datasource.CreateInput{
-		EntityType: datasource.EntityProject,
-		Fields:     map[string]any{"name": "Warehouse rollout", "company_id": company.String()},
-		Source:     "agent",
-	})
-	if err != nil {
-		t.Fatalf("create through the seam: %v", err)
-	}
-	got, err := e.Projects.GetProject(ctx, projectIDOf(created.ID), storekit.LiveOnly)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if got.Key == nil || !strings.HasPrefix(*got.Key, "WR-") {
-		t.Errorf("minted key %v does not carry the stem the name gives", got.Key)
+	if key, err := create(map[string]any{"name": "Warehouse rollout", "company_id": company.String()}); err != nil || key != "WR" {
+		t.Errorf("minted key through the seam = %q (%v), want WR", key, err)
 	}
 }
 
@@ -136,25 +128,28 @@ func TestProjectThroughTheAgentSeam(t *testing.T) {
 	}
 }
 
-// Only cf_ keys may ride in the create body's extension map. A key naming a
-// project column the contract does not accept is refused by name. `phase` moves
-// only through advanceProjectPhase, which keeps the move, its history row and its
-// event in one transaction. The agent seam must not reach it.
+// Only cf_ keys may ride in the create body's extension map, so an unknown
+// project column is refused by name. A starting phase is a contract field,
+// and the seam keeps the REST rule that no project starts closed.
 func TestTheAgentSeamCannotSetPhaseThroughAnUnrecognisedField(t *testing.T) {
 	e := Setup(t)
 	p := projectProvider(e)
 	company := e.SeedCompany(t, "Strict GmbH", nil)
+	create := func(extra map[string]any) error {
+		fields := map[string]any{"name": "Typo carrier", "company_id": company.String()}
+		maps.Copy(fields, extra)
+		_, err := p.Create(e.Admin(), datasource.CreateInput{
+			EntityType: datasource.EntityProject, Fields: fields, Source: "agent",
+		})
+		return err
+	}
 
-	_, err := p.Create(e.Admin(), datasource.CreateInput{
-		EntityType: datasource.EntityProject,
-		Fields: map[string]any{
-			"name": "Typo carrier", "company_id": company.String(),
-			"phase": "delivering",
-		},
-		Source: "agent",
-	})
-	if err == nil || !strings.Contains(err.Error(), `unknown field "phase"`) {
-		t.Fatalf("create naming phase answered %v, want a refusal naming the field", err)
+	if err := create(map[string]any{"closed_reason": "done"}); err == nil || !strings.Contains(err.Error(), `unknown field "closed_reason"`) {
+		t.Fatalf("create naming closed_reason answered %v, want a refusal naming the field", err)
+	}
+	var closed *projects.ProjectStartPhaseError
+	if err := create(map[string]any{"phase": "closed"}); !errors.As(err, &closed) {
+		t.Fatalf("create starting closed answered %v, want the start-phase refusal", err)
 	}
 	if n := e.WsCount(t, `SELECT count(*) FROM project WHERE name = 'Typo carrier'`); n != 0 {
 		t.Fatalf("%d projects were written by a refused create", n)

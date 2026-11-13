@@ -850,6 +850,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "approval.preview.unsignedSend":
     "Versand ohne menschlichen Anzeigenamen oder persönliche Signatur. Die Freigabe macht die prüfende Person nicht zur absendenden Person.",
   "approval.preview.senderSignature": "Signatur der absendenden Person",
+  "approval.preview.showImages": "Bilder anzeigen",
   "approval.preview.signaturePrivate":
     "Die private Signatur der absendenden Person darf dieser prüfenden Person nicht angezeigt werden. Lass die absendende Person diese Nachricht prüfen.",
   "approval.preview.recordMeeting":
@@ -1017,8 +1018,6 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "forecast.signal.quiet": "Kunde schweigt",
   "forecast.signal.stuck": "Lange in der Phase",
   "forecast.deals.limitedTitle": "Nur deine eigenen Deals",
-  "forecast.deals.limited":
-    "Die Summe enthält Deals anderer Teammitglieder. Diese sind hier ausgeblendet, weil individuelle Leistung aus ist. Jedes Mitglied sieht weiter seine eigenen.",
   "forecast.signal.closesNoStep_other":
     "Schließt in {count} Tagen, kein nächster Schritt geplant",
   "forecast.signal.closesNoStep_one":
@@ -2421,6 +2420,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "systemJob.graph_edge_reconcile": "Aktualisierung der Beziehungsstärke",
   "systemJob.handbook_corpus": "Indexierung des Handbuchs",
   "systemJob.import_run_sweep": "Prüfung abgebrochener Importe",
+  "systemJob.initiative_enrolment": "Mitgliedschaftsdaten der Initiativen",
   "systemJob.import_worker": "Import-Verarbeitung",
   "systemJob.installation_setup_read": "Einrichtungsprüfung",
   "systemJob.intro_advance": "Weiterführung von Vorstellungen",
@@ -2751,6 +2751,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "history.field.lifted_by": "Aufgehoben von",
   "history.field.lifted_by_level": "Aufgehoben auf Ebene",
   "history.field.lifted_suppression": "Aufgehobene Sperre",
+  "history.field.restriction_lift_requested":
+    "Aufhebung der Einschränkung angefragt",
   "history.field.linkedin_url": "LinkedIn-URL",
   "history.field.lost_reason": "Verlustgrund",
   "history.field.name": "Name",
@@ -3622,7 +3624,21 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "consent.stopBlocked.address":
     "Die Sperre endet, sobald Mails an die Adresse wieder ankommen.",
   "consent.stopBlocked.restriction":
-    "Wer eine Einschränkung aufhebt, muss den Kontakt vorher informieren. Margince kann diese Nachricht noch nicht senden, daher bleibt die Einschränkung.",
+    "Wer eine Einschränkung aufhebt, muss den Kontakt vorher informieren. Nur ein Admin hebt sie auf, und Margince sendet diese Nachricht.",
+  "consent.restrictionLift": "Einschränkung aufheben",
+  "consent.restrictionLiftTitle": "Diese Einschränkung aufheben?",
+  "consent.restrictionLiftBody":
+    "Margince schickt dem Kontakt zuerst eine Nachricht, dass die Einschränkung endet. Die Einschränkung endet, sobald diese Nachricht gesendet ist. Danach liest Margince seine E-Mails wieder, auch die, die während der Einschränkung eingegangen sind.",
+  "consent.restrictionLiftQueued":
+    "Die Nachricht wartet auf den Versand. Bis dahin bleibt die Einschränkung.",
+  "consent.restrictionLiftSent":
+    "Die Nachricht wurde gesendet. Die Einschränkung endet.",
+  "consent.restrictionLiftRetrying":
+    "Die Nachricht wurde noch nicht gesendet, Margince versucht es erneut. Bis sie gesendet ist, bleibt die Einschränkung: {reason}",
+  "consent.restrictionLiftFailed":
+    "Die Nachricht wurde nicht gesendet, daher bleibt die Einschränkung: {reason}",
+  "consent.restrictionLiftFailedNoReason":
+    "Die Nachricht wurde nicht gesendet, daher bleibt die Einschränkung. Hebe sie erneut auf, um eine neue Nachricht zu senden.",
   "consent.stopBlocked.subject_decision":
     "Der Kontakt hat diese Sperre selbst gesetzt. Nur er kann sie ändern.",
   "consent.stopCorrect": "Sperre korrigieren",
@@ -3826,6 +3842,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "co.overview.kind.task": "Aufgabe",
   "co.overview.kind.message": "Nachricht",
   "record.details.about": "Überblick",
+  "section.help": "Über diesen Bereich",
   "record.details.ownership": "Zuständigkeit",
   "co.aside.size": "Mitarbeitende",
   "co.aside.wayIn": "Zugang",
@@ -3867,6 +3884,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "timeline.automatic.bulk": "An einen Verteiler gesendet",
   "timeline.group.bulk_other": "an {count} Personen gesendet",
   "timeline.group.bulk_one": "an {count} Person gesendet",
+  "timeline.copies_other": "Auch in {count} weiteren Postfächern",
+  "timeline.copies_one": "Auch in {count} weiteren Postfach",
   "timeline.group.expand": "Öffnen",
   "timeline.group.collapse": "Schließen",
   "timeline.group.openThread": "Vollständigen Thread anzeigen",
@@ -4473,6 +4492,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "co.brief.by.deterministic": "Aus CRM-Datensätzen zusammengestellt",
   "co.brief.generatedAt": "Stand {when}",
   "co.growthFit.title": "Wachstumspotenzial",
+  "co.growthFit.help":
+    "Eine KI-Einschätzung, wie gut dieses Unternehmen zu dem passt, was dein Team verkauft, aus sieben Angaben wie Branche, Größe und eingesetzter Technik. Je mehr davon erfasst sind, desto belastbarer das Ergebnis.",
   "co.growthFit.unavailable":
     "Die Bewertung konnte nicht geladen werden. Der Unternehmensdatensatz ist unverändert.",
   "co.growthFit.assembling":
@@ -4493,6 +4514,12 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "co.growthFit.band.unknown": "Nicht genügend Daten",
   "co.growthFit.completeness": "{present} von {expected} Angaben erfasst",
   "co.growthFit.missing": "Fehlt noch",
+  "co.growthFit.inputs": "Worauf die Einschätzung beruht",
+  "co.growthFit.rule":
+    "Für eine Einschätzung braucht es mindestens {needed} von {expected} Angaben.",
+  "co.growthFit.inputMissing": "Fehlt",
+  "co.growthFit.inputStale": "Veraltet",
+  "co.growthFit.fromSiteRead": "Wird beim Lesen der Website ermittelt.",
   "co.growthFit.capped": "Zurückgehalten: {reason}.",
   "industry.agriculture": "Landwirtschaft",
   "industry.automotive": "Automobilindustrie",
@@ -4786,6 +4813,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
 
   // Die Prüfliste und die Reichweiten-Tabelle (ADR-0078 §2.1b).
   "companyReach.title": "Wer dich vorstellen kann",
+  "companyReach.help":
+    "Teammitglieder, deren LinkedIn-Kontakte bei diesem Unternehmen arbeiten, als Anzahl. Frag eines von ihnen, ob es dich vorstellt.",
   "companyReach.sub":
     "Teammitglieder, deren LinkedIn-Kontakte hier arbeiten. Nur eine Anzahl, nie die Namen. Frage sie nach einer Vorstellung.",
   "companyReach.colleaguesLabel": "Teammitglieder mit Kontakten hier",
@@ -4866,6 +4895,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "compose.threadStillHeld_other":
     "{count} weitere Nutzerkonten haben diesen Thread nicht geteilt",
   "compose.reason.posture": "Durch deine Einstellung zurückgehalten",
+  "compose.reason.sharedMailbox": "In einem gemeinsamen Postfach",
   "compose.reason.workspaceFloor": "Durch das Unternehmen zurückgehalten",
   "compose.reason.noRecord": "Zurückgehalten: kein Datensatz",
   "compose.reason.pendingVerdict": "Bis zur Prüfung zurückgehalten",
@@ -6010,6 +6040,11 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "deal.ownerMe": "Mir zuweisen",
   "deal.ownerUnassign": "Zuweisung aufheben",
   "deal.partnerCompany": "Vermittelndes Partnerunternehmen",
+  "deal.partnerNoneYet": "Noch keine Partner. Ein Admin kann einen anlegen.",
+  "deal.referredBy": "Partner",
+  "deal.supportedBy": "Partner",
+  "deal.referral.sourced": "(vermittelt)",
+  "deal.referral.influenced": "(beeinflusst)",
   "deal.recordedBy": "Erfasst von",
   "deal.companyWithheld": "Unternehmen ausgeblendet",
   "deal.partnerWithheld": "Partner ausgeblendet",
@@ -6314,6 +6349,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
 
   "deal.monthlyApproximate": "etwa",
   "assignments.title": "Zuständigkeiten",
+  "assignments.help":
+    "Wer in deinem Team sich um diesen Datensatz kümmert, nach Rolle. Das ändert nicht, wer ihn sehen darf; dafür teilst du ihn.",
   "assignments.noAccessNote":
     "Hält fest, wer sich worum kümmert. Eine Zuständigkeit gewährt keinen Zugriff auf diesen Datensatz.",
   "assignments.empty": "Noch niemand zugewiesen",
@@ -7853,6 +7890,12 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "compose.scheduleAfternoon": "Morgen Nachmittag",
   "compose.draftLanguage": "Sprache des Entwurfs",
   "compose.rewrite": "Umschreiben",
+  "compose.rewritePolish": "Glätten",
+  "compose.rewritePolishAsk":
+    "Wortwahl und Lesefluss verbessern. Bedeutung, Fakten und Länge beibehalten.",
+  "compose.rewriteFormatted":
+    "Umschreiben geht nur bei reinem Text. Entferne Formatierung und Links.",
+  "compose.rewriteTooLong": "Diese Mail ist zu lang zum Umschreiben.",
   "compose.rewriteShorter": "Kürzer",
   "compose.rewriteShorterAsk":
     "Die Bedeutung beibehalten und weniger Wörter verwenden.",
@@ -8097,7 +8140,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "tasks.origin.analytics_decision":
     "Aus einer Vertriebsbesprechung festgehalten: eine Entscheidung mit Verantwortlichem und Prüftermin. Halte das Ergebnis unter Entscheidungen aus der letzten Besprechung fest.",
   "tasks.origin.overnight_reconcile":
-    "Erstellt aus einem Follow-up, das die nächtliche Prüfung vorgeschlagen und jemand freigegeben hat.",
+    "Erstellt aus einem Follow-up, das die nächtliche Prüfung vorgeschlagen hat.",
   "tasks.origin.commitment":
     "Erstellt aus einer Zusage, die aus einem Gespräch gelesen wurde.",
   "tasks.origin.email_request": "Erstellt aus einer Anfrage in einer E-Mail.",
@@ -8237,8 +8280,6 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Die Team-Akquise zeigt ein Team oder das ganze Unternehmen. Wähle eines oben im Bereich; die Arbeit eines Mitglieds steht unter Meine Akquise.",
   "analytics.team.todaysMembers":
     "Diese Zahlen folgen dem heutigen Team. Wer gegangen ist, nimmt die frühere Arbeit mit, und wer neu dazukam, bringt die eigene mit.",
-  "analytics.team.withheld":
-    "Die Einzelleistung ist ausgeschaltet. Eine Zahl wird zurückgehalten, wenn weniger als zwei andere Mitglieder zu ihr beitragen oder wenn nach Abzug der Summe eines anderen Teams weniger als zwei übrig blieben.",
   "analytics.team.submitted": "Übergeben",
   "analytics.team.accepted": "Angenommen",
   "analytics.team.returned": "Zurückgegeben",
@@ -10390,6 +10431,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "jobs.kind.import_commit": "Ausführung des Imports",
   "jobs.kind.import_undo": "Rücknahme des Imports",
   "jobs.kind.import_validate": "Import-Testlauf",
+  "jobs.kind.initiative_enrolment_sweep":
+    "Mitgliedschaftsdaten der Initiativen",
   "jobs.kind.intro_expiry": "Ablauf von Vorstellungen",
   "jobs.kind.knowledge_ingest": "Indexierung von Dokumenten",
   "jobs.kind.list_evaluate": "Prüfung der Live-Listen",
@@ -11076,6 +11119,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "privacy.kindAccess": "Auskunft",
   "privacy.kindRectify": "Berichtigung",
   "privacy.kindErasure": "Löschung",
+  "privacy.kindRestriction": "Einschränkung",
   "privacy.purpose": "Zweck",
   "privacy.purposeDoiBadge": "Double-Opt-in",
   "privacy.purposesLoading": "Zwecke werden geladen…",
@@ -11121,6 +11165,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "privacy.openRequest": "Anfrage erstellen",
   "privacy.erasureNeedsContact":
     "Eine Löschanfrage muss einen Kontakt in diesem Unternehmen nennen, da beim Erfüllen der Anfrage genau dieser Datensatz gelöscht wird. Betroffene, die nur als Freitext erfasst sind, lassen sich nicht löschen.",
+  "privacy.restrictionNeedsContact":
+    "Eine Anfrage auf Einschränkung muss einen Kontakt in diesem Unternehmen nennen, da beim Erfüllen der Anfrage die Verarbeitung genau dieses Datensatzes eingeschränkt wird. Betroffene, die nur als Freitext erfasst sind, lassen sich nicht einschränken.",
   "privacy.accessPicksContact":
     "Wähle den Kontakt, um den es in dieser Anfrage geht. In der Anfrage kannst du dann alles herunterladen, was über ihn gespeichert ist.",
   "privacy.downloadPackage": "Datenpaket herunterladen",
@@ -12996,6 +13042,20 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "book.pageTitle": "Termin mit {host} buchen",
   "book.pageTitleGeneric": "Termin buchen",
   "book.meetingTitle": "Dein Termin",
+  "book.returnTitle": "Deine Daten wieder speichern",
+  "book.returnBody":
+    "Du hast darum gebeten, deine Daten nach der Löschung wieder zu speichern. Es wird nichts gespeichert, bevor du bestätigst.",
+  "book.returnStoredAs":
+    "Du wirst als {name} gespeichert, mit dieser Einwilligung:",
+  "book.returnAction": "Meine Daten wieder speichern",
+  "book.returnDone": "Deine Daten sind wieder gespeichert.",
+  "book.returnSpent":
+    "Dieser Link wurde schon benutzt oder ist abgelaufen. Fordere dort einen neuen an, wo du diesen angefordert hast.",
+  "book.returnRequestBody":
+    "Deine Daten wurden auf deinen Wunsch gelöscht. Damit sie wieder gespeichert werden, gib deinen Namen und die gelöschte E-Mail-Adresse ein. An diese Adresse geht ein Link, und gespeichert wird erst, wenn du dort bestätigst.",
+  "book.returnRequestAction": "Link senden",
+  "book.returnRequestSent":
+    "Schau in dein Postfach. Wenn diese Adresse wieder gespeichert werden kann, ist ein Link zum Bestätigen unterwegs.",
   "book.attendee": "E-Mail des Gasts",
   "book.subject": "Termin über Margince",
   "book.name": "Name",
@@ -18768,6 +18828,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "lists.noteHint":
     "Wird mit der \u00c4nderung gespeichert, damit das Team den Grund sieht.",
   "lists.record.title": "Listen",
+  "lists.record.help":
+    "Die Listen, auf denen dieses Unternehmen steht. Live-Listen nehmen es nach ihren Regeln auf; auf eine Shortlist setzt du es selbst. Mit einer Liste arbeitest du Unternehmen nacheinander ab.",
   "lists.record.loading": "Listen werden geladen",
   "lists.record.empty": "Auf keiner Liste, die du finden kannst.",
   "lists.record.check": "Live-Liste pr\u00fcfen",
@@ -19077,6 +19139,14 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "projectHealth.saveCorrection": "Korrektur speichern",
   "project.keyMinted":
     "Jedes Projekt erhält ein Kürzel. Setze [{key}] in den Betreff einer E-Mail, um sie unter diesem Projekt abzulegen.",
+  "project.key": "Kürzel",
+  "project.keySuggested":
+    "Leer lassen, um {key} zu verwenden. Das Kürzel steht im Betreff von E-Mails und lässt sich später nicht ändern.",
+  "project.keyHint":
+    "Leer lassen, dann bildet Margince es aus dem Namen. Das Kürzel steht im Betreff von E-Mails und lässt sich später nicht ändern.",
+  "project.startPhase": "Startphase",
+  "project.deal": "Deal",
+  "project.noDeal": "Kein Deal",
   "project.company": "Unternehmen",
   "project.owner": "Verantwortlich",
   "project.ownerMe": "Selbst",
@@ -19577,7 +19647,21 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Margince kann nicht prüfen, ob dies beantwortet wurde: Der Text der Mail lässt sich nicht mehr lesen. Markiere die Aufgabe als erledigt, sobald sie es ist.",
   "worklist.ask.task_unchecked_reply": "Zuletzt gesendete Antwort: {date}",
   "worklist.ask.brief_item":
-    "Die nächtliche Prüfung hat diesen Deal markiert. Reagiere darauf, stelle ihn zurück oder verwirf ihn.",
+    "Margince hat diesen Deal heute zur Prüfung ausgewählt. Sieh ihn dir an und plane den nächsten Schritt.",
+  "worklist.ask.brief.closing_soon":
+    "Dieser Deal soll in den nächsten 2 Wochen abgeschlossen werden. Prüfe ihn und sorge dafür, dass der nächste Schritt geplant ist.",
+  "worklist.ask.brief.no_next_step":
+    "Für diesen Deal ist kein nächster Schritt erfasst. Prüfe ihn und vereinbare den nächsten Schritt.",
+  "worklist.ask.brief.no_champion":
+    "Beim Kunden setzt sich niemand aktiv für diesen Deal ein. Prüfe ihn und finde jemanden, der es tut.",
+  "worklist.ask.brief.signal.closing_soon":
+    "Das Abschlussdatum dieses Deals rückt näher. Prüfe ihn und sorge dafür, dass der nächste Schritt geplant ist.",
+  "worklist.ask.brief.signal.stalled":
+    "Bei diesem Deal ist es still geworden, er könnte sich verzögern. Prüfe ihn und plane den nächsten Schritt.",
+  "worklist.ask.brief.signal.opportunity":
+    "Dieser Deal lohnt sich jetzt. Prüfe ihn und plane den nächsten Schritt.",
+  "worklist.ask.brief.signal.moved":
+    "Bei diesem Deal gibt es neue Aktivität. Sieh dir an, was passiert ist.",
   "worklist.ask.conversation_claim":
     "Du hast das in einem Gespräch zugesagt. Erledige es und markiere es dann als erledigt.",
   "worklist.ask.invitation":
@@ -20897,6 +20981,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "captureConcern.connections": "Verbindungen mit Handlungsbedarf",
   "captureConcern.sinceLabel": "Seit",
   "captureConcern.member": "Mitglied",
+  "captureConcern.sharedMailbox": "Gemeinsames Postfach",
   "captureConcern.provider": "Anbieter",
   "captureConcern.mailbox": "Postfach",
   "captureConcern.condition": "Zustand",

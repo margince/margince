@@ -5,6 +5,7 @@ import { usePageName } from "../../app/pagemeta";
 import { BULK_MAX_ITEMS } from "../../components/bulkchangeapi";
 import { searchCompanyTargets } from "../../components/companyform";
 import { CreateAction } from "../../components/create";
+import { currencyField } from "../../components/currencyfield";
 import {
   type ObjectCustomFields,
   useObjectCustomFields,
@@ -15,12 +16,12 @@ import {
   useTagChips,
 } from "../../components/listquery";
 import { useOwnerChips } from "../../components/ownerdials";
+import { projectOwnerField } from "../../components/projectownerfield";
 import { mineEmptyNote, standardViews } from "../../components/recordlist";
 import { useOwnerPicker } from "../../components/recordowners";
 import { RefusedFiltersNote } from "../../components/refusedfiltersnote";
 import { ErrorLine } from "../../design-system/errorline";
 import { useRowSelection } from "../../design-system/listselection";
-import { currencyOptions } from "../../format/currencychoices";
 import { useLocale, useT } from "../../i18n";
 import { useAcquisitionSources } from "../../lib/acquisitionsources.queries";
 import { useCan } from "../../lib/capability";
@@ -51,6 +52,7 @@ import {
   ConfirmAdvanceModal,
   type PendingAdvance,
 } from "./deal360/confirmadvance";
+import { acquisitionOptions } from "./deal360/dealcommercialfields";
 import {
   dealProjectFields,
   resolveDealProject,
@@ -64,7 +66,11 @@ import {
   useBoardInteractions,
 } from "./deals.board";
 import { dealColumns } from "./deals.columns";
-import { partnerFields, usePartnerOptions } from "./deals.fields";
+import {
+  partnerFields,
+  useNoPartnersYet,
+  usePartnerOptions,
+} from "./deals.fields";
 import {
   dealRowSelection,
   dealViewDials,
@@ -98,6 +104,9 @@ function DealCreateAction({
 }>) {
   const t = useT();
   const leading = useLeadingCurrencies();
+  const { locale } = useLocale();
+  const noPartnersYet = useNoPartnersYet();
+  const acquisitionSources = useAcquisitionSources().data;
   // The picker asks the server for one company's projects, so it is keyed on
   // the company the open form names. A create form has no record to take it
   // from, and only the server knows which projects a company is on. The form
@@ -155,13 +164,7 @@ function DealCreateAction({
           min: "0",
           wireField: "amount_minor",
         },
-        {
-          key: "currency",
-          label: "create.currency",
-          type: "select",
-          required: true,
-          options: currencyOptions(leading),
-        },
+        currencyField(leading, locale),
         {
           key: "stage_id",
           label: "create.stage",
@@ -191,10 +194,21 @@ function DealCreateAction({
           formCompany,
           projectOwner,
         ),
-        // A deal brought by a partner is attributed at birth, not by editing
-        // it afterwards. The win that pays them can come before anybody
-        // thinks to revisit the record.
-        ...partnerFields(t, partnerOptions),
+        // Owner, source and partner are set at birth. A deal left without its
+        // source stays without it, and the win that pays a partner can come
+        // before anybody revisits the record.
+        ...projectOwnerField(t, projectOwner, {
+          key: "owner_id",
+          label: "list.owner",
+          mode: "create",
+        }),
+        {
+          key: "acquisition_source",
+          label: "deal.acquisitionSource",
+          type: "select",
+          options: acquisitionOptions(t, acquisitionSources ?? [], null),
+        },
+        ...partnerFields(t, partnerOptions, { noneYet: noPartnersYet }),
         {
           key: "expected_close_date",
           label: "create.expectedClose",

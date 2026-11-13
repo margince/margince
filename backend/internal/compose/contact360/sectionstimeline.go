@@ -263,44 +263,24 @@ func (s *Service) readActivities(ctx context.Context, tx pgx.Tx, contactID ids.C
 			return nil, false, err
 		}
 	}
+	candidates := fmt.Sprintf(`a.archived_at IS NULL AND %s AND (%s)%s %s`,
+		fmt.Sprintf(contactReachesActivity, bind(contactPos)), scope, projectScope(opts, arg), extra)
+	// The recent timeline shows one row per email, as the company timeline does.
+	from, trailing, collapse := "activity a", "", order == byRecency
+	if collapse {
+		from = activities.SeatCopyFrom(ctx, candidates, contentArm, arg)
+		contentArm, trailing, candidates = activities.SeatCopyReadable, activities.SeatCopyColumns, "TRUE"
+	}
 	// The SELECT list and its scan are the activities module's, so there is no
 	// list here to fall behind that one.
 	columns, err := activities.ActivityProjection(ctx, contentArm, arg)
 	if err != nil {
 		return nil, false, err
 	}
-	query := fmt.Sprintf(`
-		SELECT %s
-		FROM activity a
-		WHERE a.archived_at IS NULL AND %s AND (%s)%s %s
-		ORDER BY %s
-		LIMIT %d`,
-		columns, fmt.Sprintf(contactReachesActivity, bind(contactPos)),
-		scope, projectScope(opts, arg), extra, order, sectionCap+1)
-	rows, err := tx.Query(ctx, query, args...)
+	query := fmt.Sprintf(`SELECT %s%s FROM %s WHERE %s ORDER BY %s LIMIT %d`,
+		columns, trailing, from, candidates, order, sectionCap+1)
+	out, hasMore, err := readSection(ctx, tx, sectionQuery{query, args, collapse}, opts.activityColumns, s.now())
 	if err != nil {
-		return nil, false, err
-	}
-	defer rows.Close()
-	out := make([]crmcontracts.Activity, 0, sectionCap)
-	for rows.Next() {
-		a, err := activities.ScanActivityRow(ctx, rows)
-		if err != nil {
-			return nil, false, err
-		}
-		out = append(out, a)
-	}
-	if err := rows.Err(); err != nil {
-		return nil, false, err
-	}
-	hasMore := len(out) > sectionCap
-	if hasMore {
-		out = out[:sectionCap]
-	}
-	// After the cap, so the statements count the rows this page returns rather
-	// than the extra one read to detect hasMore. The finish is the one
-	// /activities runs, so a row means the same on either page.
-	if err := activities.FinishActivityRows(ctx, tx, opts.activityColumns, out, s.now()); err != nil {
 		return nil, false, err
 	}
 	// A row reaches this page through a Cc or an attendance too, so each row

@@ -24,6 +24,7 @@ import (
 	"github.com/margince/margince/backend/internal/compose/capturelabel"
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/ai"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/promptfence"
 	"github.com/margince/margince/backend/internal/shared/ports/model"
 	"github.com/margince/margince/backend/internal/shared/schema"
@@ -265,7 +266,16 @@ func classifyRequest(batch []unlabeledMessage) model.Request {
 		MaxTokens:      ai.ReasoningOutputMaxTokens,
 		ResponseSchema: classifySchema(classifyIDs(batch)),
 		SecretStripper: ai.NewSecretStripper(),
+		Subjects:       model.AboutActivities(classifyActivityIDs(batch)...),
 	}
+}
+
+func classifyActivityIDs(batch []unlabeledMessage) []ids.UUID {
+	out := make([]ids.UUID, len(batch))
+	for i, m := range batch {
+		out[i] = m.ID
+	}
+	return out
 }
 
 // ask makes one structured classify call for the given messages, and reports
