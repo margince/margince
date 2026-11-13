@@ -128,7 +128,10 @@ export function MagicPanel({
   );
   const byDay = shown ? spansDays(shown.since, shown.as_of) : false;
   const read = sectionRead(state, shown, lanes, drawn, coverageIncomplete);
-  if (read === "empty") {
+  // A section of its own stays away until its read lands. Drawn as a loader,
+  // it took a block of the page and then left it again when nothing waited.
+  // Embedded, the section around it already waits for its own read.
+  if (read === "empty" || (read === "loading" && !embedded)) {
     return null;
   }
   const notShown = drawsWaiting ? rowsOf(shown?.not_shown).filter(told) : [];
