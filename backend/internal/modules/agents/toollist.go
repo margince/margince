@@ -184,7 +184,7 @@ func actionGovernance(actions []mcp.ToolAction) string {
 // way to use, and here one whose whole point is that the HOST prefetch and
 // sandbox a document it was told about.
 func (s *Dispatcher) toolList(ctx context.Context, fr framing) []map[string]any {
-	specs := s.registry.Offered(ctx)
+	specs := s.offeredTo(ctx)
 	tools := make([]map[string]any, 0, len(specs))
 	actionTools := apps.ActionTools()
 	for _, spec := range specs {

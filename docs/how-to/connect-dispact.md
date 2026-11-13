@@ -9,8 +9,8 @@ what each step does on the server, and what each failure means. The REST surface
 ## What you need
 
 - A Dispact install and its web address, such as `https://chat.example.com`.
-- A Dispact app token for Margince. It starts with `gwapp_`. The app needs these scopes:
-  `chat:write:channel channel:create channel:members:write users:read:email channel:history:read`.
+- A Dispact app token for Margince. It starts with `gwapp_`. The app asks for the scopes the manifest
+  below names.
 - A credential store on this installation. The token is sealed in it, as the Telegram bot token is.
 - A worker running. The worker posts to the channel; the API only schedules the post.
 
@@ -28,6 +28,50 @@ token. The server then does three things in order:
 
 One live Dispact bot is allowed per installation, beside one Telegram bot. A second connect answers
 `409` `channel_workspace_already_bound`.
+
+## Install the Margince app in Dispact
+
+The `@Margince` agent in Dispact calls this installation's MCP tools. It needs the MCP connector on
+(`mcp.connector_enabled`) and `--public-base-url` set, and it needs the bot connected as above.
+
+1. An admin reads the manifest: `GET /v1/integrations/dispact/manifest`. It needs the right to connect a
+   chat bot, and it answers `503` when the installation has no public base URL.
+2. The admin installs the app in Dispact from that manifest. The manifest gives the slug `margince`,
+   `mcp.endpoint` (`<public_base_url>/mcp`), the scopes, and the `events` block that points at
+   `<public_base_url>/v1/channel-events/dispact`.
+3. Dispact reads the tool list once, with the installing admin's token, and shows that list to every
+   user. The list is fixed, as agreed with Dispact: `Tools` in
+   [backend/internal/compose/dispactapp/surface.go](../../backend/internal/compose/dispactapp/surface.go).
+   A tool whose verb this build does not register is left out until it does.
+
+### What the call token check refuses
+
+Every call carries a token Dispact signs for the person who asked the agent. The server answers `401`
+and changes nothing when any of these fails:
+
+- The signature does not verify against a key at `<address>/.well-known/jwks.json`, or the token is not
+  RS256. The header's `alg` is never trusted. An unknown key id fetches the keys at most once a minute.
+- `iss` is not the connected bot's address, `aud` is not `app:margince:mcp`, or `workspace_id` is not
+  the bot's team id.
+- `exp` is missing, is more than 120 seconds after `iat`, or has passed. `iat` and `exp` may be off by 30
+  seconds.
+- `jti` was used before. Token ids are held in Redis until the token expires. When Redis cannot answer,
+  the call gets `503` instead.
+- `email_verified` is not `true`.
+- The person's Margince passport for Dispact was revoked, or the address on the token is no longer their
+  sign-in address.
+
+A token for an address no live member holds may read the tool list. Every other call answers `403`
+`no_margince_seat`.
+
+### Each person acts through their own passport
+
+The first call from a person mints a passport labelled `Dispact` for the member whose sign-in address
+is on the token. It carries the scopes `read`, `write` and `send` for 90 days. Later calls find it by the
+token's issuer and subject. The member's own grants still bound every call, and each write is audited as
+that member's agent. The member sees the passport in **Settings → AI assistants**, under **Passports**,
+and can revoke it there. After a revoke, Dispact calls for that person are refused. After the passport
+expires, the next call mints a new one for the same member.
 
 ## The address must be public in production
 

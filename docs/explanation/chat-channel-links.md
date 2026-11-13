@@ -1,4 +1,4 @@
-<!-- describes: backend/internal/modules/chatlinks backend/internal/compose/chatsync backend/internal/compose/chatsummary -->
+<!-- describes: backend/internal/modules/chatlinks backend/internal/compose/chatsync backend/internal/compose/chatsummary backend/internal/compose/dispactapp -->
 # How chat channel links work
 
 A deal or a project can be linked to one private channel of a team chat (Dispact). Margince keeps a
@@ -108,3 +108,24 @@ message is named by its seq, `#slug:seq`, the chat's `<m:#slug:seq|…>` mention
 the record's own channel. Filing the same message again returns the note already filed. A thread longer
 than five pages answers `422` `channel_thread_too_long` and files nothing, because a part of it would
 take the thread's key for good.
+
+## The Margince app in Dispact
+
+The `@Margince` agent in Dispact calls the same `/mcp` an MCP client calls, but with a different
+credential. Dispact signs a short token for each call, naming the person who asked. The package
+`compose/dispactapp` checks it in front of the passport path:
+
+- The token must come from the connected bot's address, for its team, with a 60 to 120 second life and
+  an id not seen before. The keys come from the address's published key set, through the same
+  `oidctoken` verifier that checks Google and Microsoft sign-in tokens.
+- The person is matched by their confirmed email to a live member, once. That member gets a passport of
+  their own, and the passport keeps Dispact's issuer and subject (`passport.app_issuer`,
+  `passport.app_subject`). Later calls find the passport by that pair. No other table holds the
+  binding.
+- So the agent never acts with more than the person could do in the app. The member's live grants and
+  the passport's scopes decide every call, as for any agent. Revoking the passport ends it.
+
+Dispact reads the tool list once and shows it to every user, so the list cannot depend on who asked.
+The edge gives the request the fixed list `dispactapp.Tools`. `tools/list` returns those tools and no
+others, and `tools/call` refuses any other name as an unknown tool. A person who is no member may read
+that list, and gets `403` `no_margince_seat` for anything else.

@@ -28,9 +28,29 @@ type LiveBot struct {
 // liveChannelBinding, so it counts the same rows a reply send counts, and
 // answers ErrNoConnection when no bot is connected.
 func (r *Registry) LiveBot(ctx context.Context, provider string) (LiveBot, error) {
-	binding, err := r.liveChannelBinding(ctx, provider)
+	bot, binding, err := r.liveBot(ctx, provider)
 	if err != nil {
 		return LiveBot{}, err
+	}
+	secret, err := r.resolveCredential(ctx, &binding.credentialRef, nil)
+	if err != nil {
+		return LiveBot{}, err
+	}
+	bot.Token = string(secret)
+	return bot, nil
+}
+
+// LiveBotIdentity is LiveBot without its token, for code that only checks what
+// the bot's install signed. It opens no vault.
+func (r *Registry) LiveBotIdentity(ctx context.Context, provider string) (LiveBot, error) {
+	bot, _, err := r.liveBot(ctx, provider)
+	return bot, err
+}
+
+func (r *Registry) liveBot(ctx context.Context, provider string) (LiveBot, channelBinding, error) {
+	binding, err := r.liveChannelBinding(ctx, provider)
+	if err != nil {
+		return LiveBot{}, channelBinding{}, err
 	}
 	bot := LiveBot{ConnectionID: binding.id}
 	err = r.db.Tx(ctx, func(tx pgx.Tx) error {
@@ -39,15 +59,10 @@ func (r *Registry) LiveBot(ctx context.Context, provider string) (LiveBot, error
 			Scan(&bot.TeamID, &bot.Address)
 	})
 	if errors.Is(err, pgx.ErrNoRows) {
-		return LiveBot{}, ErrNoConnection
+		return LiveBot{}, channelBinding{}, ErrNoConnection
 	}
 	if err != nil {
-		return LiveBot{}, fmt.Errorf("capture: reading the live %s bot: %w", provider, err)
+		return LiveBot{}, channelBinding{}, fmt.Errorf("capture: reading the live %s bot: %w", provider, err)
 	}
-	secret, err := r.resolveCredential(ctx, &binding.credentialRef, nil)
-	if err != nil {
-		return LiveBot{}, err
-	}
-	bot.Token = string(secret)
-	return bot, nil
+	return bot, binding, nil
 }

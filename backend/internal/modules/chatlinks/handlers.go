@@ -20,6 +20,9 @@ import (
 type Handlers struct {
 	store *Store
 	filer MessageFiler
+	// manifestBase reads public_base_url when the manifest is asked for, so
+	// the option that sets it may run after this one.
+	manifestBase func() string
 }
 
 // MessageFiler files a chosen channel message as a summary note. compose
