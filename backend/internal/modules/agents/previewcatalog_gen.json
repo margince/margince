@@ -37,7 +37,7 @@
   "format/contacturi.ts":
    "cb68b49619c9f3383bd91bd29a99fa15424eb2cc1d53c0056213a24e7e9573fa",
   "format/currencychoices.ts":
-   "e4c5c263856e229936349165be94e78c411ebe675371650f55e90acb59433556",
+   "d6065807adb845f386804656111fcedf85c59975110800341a3337b6d4121d26",
   "format/datepattern.ts":
    "8887328caed0e875faacf2546422f607c92704f3fc9f8807f6406427385a0c4b",
   "format/datetile.ts":
@@ -129,11 +129,11 @@
   "format/weekstart.ts":
    "504a0f7101ddccc7a917819967f39e6dfafb07952180fbccc7e00c7e1b1de1e7",
   "i18n/de.ts":
-   "98de91d54c3fa86832db70e337786ad60c1be699ba473d710a7e5acf0ac40583",
+   "9aa904b029eff4d9a4c939d981725fd3af3da97f1deb1cc5efe8f319446673da",
   "i18n/en.ts":
-   "b1934e352ab98d2cf0607580e178d6c8ade23c1534a2a6fe72c4628ec9217427",
+   "10f7d713d42446b8a15c7f4129d7d910afbe2cbd0573ab7fcb2d08fb5ddcbe99",
   "i18n/vi.ts":
-   "cc678d5607414ebbde64ebc1ae69b02e48da75b94fdedd4689038b77f98fca41",
+   "c1f07d9a0ad55451118583106dbb6d7496e9e24f317f1ddbe31af1a486ce0a7b",
   "lib/acquisitionkinds.ts":
    "c5dd117a1d2e9f0b79cde5aa9ef6e2cc34c1f8aad27f48ca914935fdf4879a54",
   "lib/approvallifecycle.ts":

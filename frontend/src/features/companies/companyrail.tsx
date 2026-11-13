@@ -126,6 +126,7 @@ function RailBody({
     sections.push({
       key: "lists",
       label: t("lists.record.title"),
+      help: t("lists.record.help"),
       children: lists,
     });
   }

@@ -71,6 +71,13 @@
 /* Only the title shrinks: a squeezed badge or button reads as another control.
  * Capped at the band, so a wrapping control wraps inside it, not off the pane.
  * `:where()` adds no specificity: a caller's class wins without sheet order. */
+/* A "?" sits right after the title, so the push moves past it. */
+.panel-head .panel-title:has(+ .info-tip) {
+  margin-right: 0;
+}
+.panel-head .panel-title + .info-tip {
+  margin-right: auto;
+}
 .panel-head > :where(:not(.panel-title)) {
   flex-shrink: 0;
   max-width: 100%;

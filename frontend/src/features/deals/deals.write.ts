@@ -273,6 +273,8 @@ export function mapDealCreate(
       : null,
     currency: currencyBeside(currency, amount, expectedArr),
     company_id: str(values.company_id) || null,
+    // Empty is the form's own "me": the server makes the creator the owner.
+    owner_id: str(values.owner_id) || null,
     partner_company_id: str(values.partner_company_id) || null,
     // The empty option means the caller made no claim, and null is how that
     // travels. The server then reads a named partner as `sourced`, as the

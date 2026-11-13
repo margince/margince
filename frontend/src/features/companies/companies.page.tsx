@@ -208,6 +208,7 @@ export function CompanyPage({
             onDrawer={setActivityDrawer}
             archivedReasonId={archivedReasonId}
             activity={activity}
+            view={view}
           />
           {/* Last in the row, after the verbs it holds the remainder of. A
             menu of everything else reads as the first thing to press when it
