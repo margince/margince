@@ -67,13 +67,19 @@ notices, and talk from before the link was made. Then it cuts the messages into 
   episode.
 - An episode is closed when the next message starts another one, when its last message is 30 minutes
   old, or when its day has ended.
+- When a read stops at the page cap, its last episode stays open, because its talk may go on in the
+  next page. An episode that alone fills the whole read is filed anyway, so one very long day cannot
+  stall the link.
 
 Each closed episode is judged in order by the `chat_summary` task's `episode` site
 (`compose/chatsummary`). The messages are read again from the chat for this and are held only in
 memory. When the model says the talk matters, the title and summary are filed as one note on the
 link's deal and project, under the system actor `system:chat_links`. The note's
 `(source_system, source_id)` is `dispact` and `<channel slug>:<first seq>`, which the activity table
-holds unique, so a replay or a second link to the same channel files nothing twice.
+holds unique, so a replay or a second link to the same channel files nothing twice. No other writer
+may stamp `source_system = dispact`, so no one can claim a summary's key before it is written. The note
+is filed in one transaction that first checks the link is still live and still names the same deal and
+project, so an unlink during the model call files nothing.
 
 After each episode the cursor moves to its last message, under the condition that it still holds the
 value the pull read. A second pull that moved it first wins, and this one stops. The first open episode
@@ -99,4 +105,6 @@ the request. A long history is read 50 pages a tick. A channel Margince created 
 `POST /channel-links/{record_type}/{id}/notes`, and the MCP action `file_channel_message`, file a summary
 of one message, or of the message and the replies in its thread that follow it, as the caller. The
 message is named by its seq, `#slug:seq`, the chat's `<m:#slug:seq|…>` mention or its link, and must be in
-the record's own channel. Filing the same message again returns the note already filed.
+the record's own channel. Filing the same message again returns the note already filed. A thread longer
+than five pages answers `422` `channel_thread_too_long` and files nothing, because a part of it would
+take the thread's key for good.

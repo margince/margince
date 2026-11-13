@@ -7,18 +7,15 @@ import (
 	"encoding/json"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/shared/kernel/provenance"
 )
 
-// ChatSummarySource is the source_system of a note summarising chat talk. Its
-// raw payload holds what talk it summarises, never the talk itself.
-const ChatSummarySource = "dispact"
-
 // chatEpisodeOf answers a chat summary note's raw payload as the talk it
-// summarises. Any other row, or a raw of another shape, answers nil.
+// summarises; the payload never holds the talk itself. Any other row, or a raw of another shape, answers nil.
 //
 //craft:ignore naked-any raw is the activity's free-form source payload column
 func chatEpisodeOf(sourceSystem *string, raw map[string]any) *crmcontracts.ChatEpisode {
-	if sourceSystem == nil || *sourceSystem != ChatSummarySource || raw == nil {
+	if sourceSystem == nil || *sourceSystem != provenance.ChatSummarySource || raw == nil {
 		return nil
 	}
 	encoded, err := json.Marshal(raw)

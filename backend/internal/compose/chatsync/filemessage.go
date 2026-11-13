@@ -73,7 +73,7 @@ func (f *Filer) FileMessage(ctx context.Context, kind string, id ids.UUID, ref s
 		key = link.ChannelSlug + ":" + strconv.FormatInt(seq, 10) + ":thread"
 	}
 	url := chatlinks.ChannelURL(session.Address, link.ChannelSlug) + "?seq=" + strconv.FormatInt(seq, 10)
-	return fileNote(ctx, f.Activities, link, talkOf(key, url, messages), reply)
+	return fileNote(ctx, filing{pool: f.Pool, store: f.Store, acts: f.Activities, link: link}, talkOf(key, url, messages), reply)
 }
 
 // chosenMessages reads the message at seq and, for a thread, the replies in
@@ -99,6 +99,10 @@ func chosenMessages(ctx context.Context, chat chatlinks.Chat, link chatlinks.Lin
 	}
 	if anchor == nil || !judged(*anchor) {
 		return nil, chatlinks.ErrMessageNotFound
+	}
+	// A thread read only in part would be filed under its permanent key.
+	if thread && !read.ended {
+		return nil, chatlinks.ErrThreadTooLong
 	}
 	return read.kept, nil
 }

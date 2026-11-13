@@ -14,13 +14,19 @@ import (
 	"strings"
 	"time"
 
+	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/margince/margince/backend/internal/compose/chatsummary"
+
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/ai"
 	"github.com/margince/margince/backend/internal/modules/chatlinks"
 	"github.com/margince/margince/backend/internal/modules/chatlinks/dispact"
+	"github.com/margince/margince/backend/internal/platform/database"
+	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/provenance"
 	"github.com/margince/margince/backend/internal/shared/kernel/systemtext"
 	"github.com/margince/margince/backend/internal/shared/kernel/textlang"
 	"github.com/margince/margince/backend/internal/shared/ports/model"
@@ -102,11 +108,30 @@ func talkOf(key, url string, messages []dispact.Message) talk {
 
 func recordRef(record chatRecord) ids.Ref { return ids.Ref{Type: record.kind, ID: record.id} }
 
+// errSummaryKeyTaken is a note under the talk's key that the chat engine did
+// not write, which must never stand in for its summary.
+var errSummaryKeyTaken = fmt.Errorf("chat summary: another writer holds this talk's key: %w", apperrors.ErrConflict)
+
+// summarySource is the source of every chat summary note; a row under a
+// summary key with any other source was not written here.
+const summarySource = "chat_links"
+
+// filing is what a note needs besides the summary: the transaction it is
+// written in, the stores, and the link it is filed under.
+type filing struct {
+	pool  *pgxpool.Pool
+	store *chatlinks.Store
+	acts  *activities.Store
+	link  chatlinks.Link
+}
+
 // fileNote files the summary as one note on the link's records, keyed on the
 // talk so a replay returns the note already there. ctx carries the actor: the
-// chat engine for a pull, the member for a message they chose.
-func fileNote(ctx context.Context, acts *activities.Store, link chatlinks.Link, said talk, reply chatsummary.Reply) (crmcontracts.Activity, error) {
-	system := activities.ChatSummarySource
+// chat engine for a pull, the member for a message they chose. The link is
+// checked live in the same transaction, so a note never lands after an unlink.
+func fileNote(ctx context.Context, f filing, said talk, reply chatsummary.Reply) (crmcontracts.Activity, error) {
+	link := f.link
+	system := provenance.ChatSummarySource
 	raw := map[string]any{
 		"message_count": said.count,
 		"ended_at":      said.ended.UTC().Format(time.RFC3339),
@@ -122,7 +147,7 @@ func fileNote(ctx context.Context, acts *activities.Store, link chatlinks.Link, 
 	body := noteBody(reply)
 	// Both the title and the summary are the model's words, in the talk's language.
 	written := textlang.Detect(reply.Summary)
-	note, _, err := acts.LogActivity(ctx, activities.LogActivityInput{
+	in := activities.LogActivityInput{
 		Kind: string(crmcontracts.ActivityKindNote),
 		SystemText: &systemtext.Message{Version: 1,
 			Subject: systemtext.Prose(systemtext.Generated, written), Body: systemtext.Prose(systemtext.Generated, written)},
@@ -133,8 +158,21 @@ func fileNote(ctx context.Context, acts *activities.Store, link chatlinks.Link, 
 		SourceID:     &said.key,
 		Raw:          &raw,
 		Links:        links,
-		Source:       "chat_links",
+		Source:       summarySource,
 		Origin:       activities.OriginAgent,
+	}
+	var note crmcontracts.Activity
+	err := database.WithWorkspaceTx(ctx, f.pool, func(tx pgx.Tx) error {
+		if err := f.store.HoldLiveLinkTx(ctx, tx, link); err != nil {
+			return err
+		}
+		var created bool
+		var err error
+		note, created, err = f.acts.LogActivityTx(ctx, tx, in)
+		if err == nil && !created && note.Source != summarySource {
+			return errSummaryKeyTaken
+		}
+		return err
 	})
 	if err != nil {
 		return crmcontracts.Activity{}, fmt.Errorf("chat summary: filing the note for %s: %w", said.key, err)

@@ -98,17 +98,15 @@ func (p *Puller) pullLink(ctx context.Context, session chatlinks.Session, link c
 		return err
 	}
 	episodes := groupEpisodes(read.kept, p.Now(), p.Zone)
-	// The episode the last page cut may go on in the next one. It is judged
-	// only when it fills the whole read, so one long day cannot stall a link.
-	if n := len(episodes); !read.ended && n > 1 {
-		episodes[n-1].closed = false
-	}
+	cutByPageCap(episodes, read.ended)
 	cursor := link.HistoryCursor
 	for _, ep := range episodes {
 		if !ep.closed {
 			return nil
 		}
-		if err := p.judge(ctx, session, link, ep); err != nil {
+		if err := p.judge(ctx, session, link, ep); errors.Is(err, chatlinks.ErrLinkNotFound) {
+			return nil
+		} else if err != nil {
 			return err
 		}
 		next := ep.lastSeq()
@@ -121,6 +119,20 @@ func (p *Puller) pullLink(ctx context.Context, session chatlinks.Session, link c
 		_, err = p.Store.AdvanceHistory(ctx, link.ID, cursor, read.highest, false)
 	}
 	return err
+}
+
+// cutByPageCap reopens the last episode of a read that stopped at the page
+// cap, because its talk may go on in the next page. An episode that alone
+// fills the whole read is closed instead. Filing it in parts is the only way a
+// link moves past one very long day.
+func cutByPageCap(episodes []episode, ended bool) {
+	switch n := len(episodes); {
+	case ended || n == 0:
+	case n == 1:
+		episodes[0].closed = true
+	default:
+		episodes[n-1].closed = false
+	}
 }
 
 // judge summarises one closed episode and files it when it matters. An
@@ -145,7 +157,12 @@ func (p *Puller) judge(ctx context.Context, session chatlinks.Session, link chat
 		return nil
 	}
 	said := talkOf(ep.key(link.ChannelSlug), ep.url(session.Address, link.ChannelSlug), ep.messages)
-	_, err = fileNote(principal.WithCorrelationID(ctx, ids.NewV7()), p.Activities, link, said, reply)
+	_, err = fileNote(principal.WithCorrelationID(ctx, ids.NewV7()),
+		filing{pool: p.Pool, store: p.Store, acts: p.Activities, link: link}, said, reply)
+	if errors.Is(err, errSummaryKeyTaken) {
+		p.Log.WarnContext(ctx, "chat episode passed over", "link", link.ID.String(), "first_seq", ep.firstSeq(), "reason", "key_taken")
+		return nil
+	}
 	return err
 }
 

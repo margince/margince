@@ -80606,7 +80606,7 @@ export interface operations {
                     "application/problem+json": components["schemas"]["Problem"];
                 };
             };
-            /** @description No bot is connected (`code: channel_bot_not_connected`), or no AI model is bound (`code: ai_not_configured`). */
+            /** @description No bot is connected (`code: channel_bot_not_connected`), no AI model is bound (`code: ai_not_configured`), or a note not written by the chat summary holds the message's key (`code: conflict`). */
             409: {
                 headers: {
                     [name: string]: unknown;
@@ -80615,7 +80615,15 @@ export interface operations {
                     "application/problem+json": components["schemas"]["Problem"];
                 };
             };
-            422: components["responses"]["ValidationError"];
+            /** @description The request is malformed, or the thread is longer than one filing reads (`code: channel_thread_too_long`); nothing was filed. */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
             /** @description The chat could not be reached (`code: channel_provider_unreachable`), or the summary could not be written (`code: channel_summary_failed`); nothing was filed. */
             502: {
                 headers: {

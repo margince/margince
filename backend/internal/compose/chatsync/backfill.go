@@ -10,6 +10,7 @@ package chatsync
 
 import (
 	"context"
+	"errors"
 
 	"github.com/margince/margince/backend/internal/modules/chatlinks"
 	"github.com/margince/margince/backend/internal/modules/chatlinks/dispact"
@@ -56,7 +57,9 @@ func (p *Puller) backfill(ctx context.Context, session chatlinks.Session, link c
 		episodes = episodes[n-backfillEpisodes:]
 	}
 	for _, ep := range episodes {
-		if err := p.judge(ctx, session, link, ep); err != nil {
+		if err := p.judge(ctx, session, link, ep); errors.Is(err, chatlinks.ErrLinkNotFound) {
+			return nil
+		} else if err != nil {
 			return err
 		}
 		next := ep.lastSeq()

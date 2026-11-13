@@ -25,6 +25,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/chatlinks"
 	"github.com/margince/margince/backend/internal/modules/chatlinks/dispact"
 	"github.com/margince/margince/backend/internal/platform/database"
+	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/ports/model"
@@ -319,5 +320,95 @@ func (e *pullEnv) assertNoTableHolds(t *testing.T, text string) {
 		if hits > 0 {
 			t.Errorf("table %s holds the chat's words %q", table, text)
 		}
+	}
+}
+
+// unlinkingSummary is a model call during which a member unlinks the channel.
+type unlinkingSummary struct {
+	scriptedSummary
+	unlink func()
+}
+
+func (u *unlinkingSummary) Complete(ctx context.Context, req model.Request) (model.Response, error) {
+	u.unlink()
+	return u.scriptedSummary.Complete(ctx, req)
+}
+
+func TestAnUnlinkWhileTheModelReadsFilesNothing(t *testing.T) {
+	e := setupPull(t)
+	e.puller.Lane = &unlinkingSummary{unlink: func() {
+		e.exec(t, `UPDATE chat_link SET archived_at = now() WHERE id = $1`, e.link)
+	}}
+	e.say("acme", 1, 60, "Acme wants 12% off")
+	e.pull(t)
+
+	if n := len(e.notes(t)); n != 0 {
+		t.Fatalf("a channel unlinked during the model call filed %d notes on its old record", n)
+	}
+}
+
+func TestAnEpisodeCutByThePageCapIsFiledOnceWhole(t *testing.T) {
+	e := setupPull(t)
+	e.now = linkedAt.Add(12 * time.Hour)
+	for seq := int64(1); seq <= 10; seq++ {
+		e.say("acme", seq, 60+int(seq), "Acme price talk")
+	}
+	for seq := int64(11); seq <= 500; seq++ {
+		e.say("acme", seq, 120+int(seq), "Acme rollout talk")
+	}
+	e.pull(t)
+	if notes := e.notes(t); len(notes) != 1 || notes[0].sourceID != "acme:1" {
+		t.Fatalf("first pull filed %+v, want only the episode the page cap did not cut", notes)
+	}
+
+	e.pull(t)
+	notes := e.notes(t)
+	if len(notes) != 2 || notes[1].sourceID != "acme:11" || notes[1].raw["message_count"] != float64(490) {
+		t.Fatalf("second pull filed %+v, want the cut episode once, all 490 messages", notes)
+	}
+}
+
+func TestAnEpisodeThatFillsTheWholeReadIsFiledSoTheLinkMovesOn(t *testing.T) {
+	e := setupPull(t)
+	e.now = linkedAt.Add(15 * time.Hour)
+	for seq := int64(1); seq <= 600; seq++ {
+		e.say("acme", seq, 60+int(seq), "Acme rollout talk")
+	}
+	e.pull(t)
+
+	notes := e.notes(t)
+	if len(notes) != 1 || notes[0].raw["message_count"] != float64(pullPages*dispact.HistoryPageLimit) {
+		t.Fatalf("notes = %+v, want the read's one episode filed whole", notes)
+	}
+	if c := e.cursor(t); c == nil || *c != int64(pullPages*dispact.HistoryPageLimit) {
+		t.Fatalf("cursor = %v, want the end of the read", c)
+	}
+}
+
+func TestAThreadLongerThanOneReadIsNotFiledInPart(t *testing.T) {
+	e := setupPull(t)
+	for seq := int64(1); seq <= 600; seq++ {
+		e.say("acme", seq, 60, "Thread talk")
+	}
+	for i := range e.history.channels["acme"][1:] {
+		e.history.channels["acme"][i+1].ThreadTS = "m1"
+	}
+	if _, err := e.filer.FileMessage(e.memberCtx(), chatlinks.RecordDeal, e.deal, "1", true); !errors.Is(err, chatlinks.ErrThreadTooLong) {
+		t.Fatalf("filing a long thread = %v, want ErrThreadTooLong", err)
+	}
+	if n := len(e.notes(t)); n != 0 {
+		t.Fatalf("a part of the thread was filed: %d notes", n)
+	}
+}
+
+func TestANoteUnderAMessageKeyThatTheChatDidNotWriteIsRefused(t *testing.T) {
+	e := setupPull(t)
+	e.say("acme", 1, 60, "The 12% is fine with me")
+	planted := ids.NewV7()
+	e.exec(t, `INSERT INTO activity (id, kind, subject, source, source_system, source_id, raw, captured_by)
+		VALUES ($1, 'note', 'Fake', 'manual', 'dispact', 'acme:1:message', '{"message_count":1,"url":"https://evil.test"}', 'human:x')`, planted)
+
+	if _, err := e.filer.FileMessage(e.memberCtx(), chatlinks.RecordDeal, e.deal, "1", false); !errors.Is(err, apperrors.ErrConflict) {
+		t.Fatalf("filing over a planted note = %v, want a conflict", err)
 	}
 }
