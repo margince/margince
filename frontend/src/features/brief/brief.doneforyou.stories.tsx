@@ -221,7 +221,7 @@ export const ChangedDeals: Story = {
     return (
       <StoryProviders>
         <OpenSourceProvider openSource={() => undefined}>
-          <DoneForYou completed={null} />
+          <DoneForYou completed={() => null} />
         </OpenSourceProvider>
       </StoryProviders>
     );
@@ -249,7 +249,7 @@ export const ChangedDealsPhone: Story = {
     stub([...FLIP_FLOP, ...RECEIPTS]);
     return (
       <StoryProviders>
-        <DoneForYou completed={null} />
+        <DoneForYou completed={() => null} />
       </StoryProviders>
     );
   },
@@ -269,7 +269,7 @@ export const AllChangesDrawer: Story = {
     );
     return (
       <StoryProviders>
-        <DoneForYou completed={null} />
+        <DoneForYou completed={() => null} />
       </StoryProviders>
     );
   },
@@ -291,7 +291,7 @@ export const NoReasonRecorded: Story = {
     ]);
     return (
       <StoryProviders>
-        <DoneForYou completed={null} />
+        <DoneForYou completed={() => null} />
       </StoryProviders>
     );
   },
