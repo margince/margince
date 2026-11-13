@@ -13,22 +13,32 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
+	"strings"
 
 	"github.com/margince/margince/backend/internal/platform/database/textbounds"
 )
 
 func main() {
-	output := flag.String("output", "", "write a new core migration pair at this stem")
-	customOutput := flag.String("custom-output", "", "write a new custom-track migration pair at this stem, with -output")
+	version := flag.Int64("version", 0, "write the core migration pairs at this version and the two after it")
+	customOutput := flag.String("custom-output", "", "write a new custom-track migration pair at this stem, with -version")
+	tables := flag.String("tables", "", "with -version and -name, only move these comma-separated core tables' guards to columns.txt")
+	name := flag.String("name", "", "the migration name for -tables")
 	flag.Parse()
-	if err := generate(*output, *customOutput); err != nil {
+	if *tables != "" {
+		if err := retarget(*version, *name, strings.Split(*tables, ",")); err != nil {
+			fmt.Fprintln(os.Stderr, err)
+			os.Exit(1)
+		}
+		return
+	}
+	if err := generate(*version, *customOutput); err != nil {
 		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)
 	}
 }
 
-func generate(output, customOutput string) error {
-	if output != "" {
+func generate(version int64, customOutput string) error {
+	if version != 0 {
 		catalog, err := os.ReadFile("migrations/testdata/head_catalog.txt")
 		if err != nil {
 			return err
@@ -37,23 +47,61 @@ func generate(output, customOutput string) error {
 		if err != nil {
 			return err
 		}
-		core, custom, err := textbounds.SQL(bytes.NewReader(catalog), customTables)
+		guards, err := textbounds.SQL(bytes.NewReader(catalog), customTables)
 		if err != nil {
 			return err
 		}
-		if err := writePair(output, core); err != nil {
-			return err
+		if guards.Custom.Up != "" && customOutput == "" {
+			return errors.New("custom-track tables need guards: pass -custom-output")
 		}
-		if custom.Up != "" {
-			if customOutput == "" {
-				return errors.New("custom-track tables need guards: pass -custom-output")
+		for offset, pair := range []struct {
+			name      string
+			migration textbounds.Migration
+		}{
+			{"the_text_limit_checks_are_defined", guards.Functions},
+			{"each_table_checks_its_text_limits", guards.Tables},
+			{"custom_text_fields_check_their_limits", guards.CustomFields},
+		} {
+			if err := writePair(fmt.Sprintf("migrations/core/%d_%s", version+int64(offset), pair.name), pair.migration); err != nil {
+				return err
 			}
-			if err := writePair(customOutput, custom); err != nil {
+		}
+		if guards.Custom.Up != "" {
+			if err := writePair(customOutput, guards.Custom); err != nil {
 				return err
 			}
 		}
 	}
 	return os.WriteFile("../frontend/src/lib/textlimits_gen.ts", []byte(textbounds.Frontend()), 0o644) //nolint:gosec // a committed source file every reader of the tree opens
+}
+
+// retarget writes the migration for a policy change in columns.txt, since the
+// guards a shipped migration created never change in place.
+func retarget(version int64, name string, tables []string) error {
+	if version == 0 || name == "" {
+		return errors.New("-tables needs -version and -name")
+	}
+	customTables, err := customTrackTables()
+	if err != nil {
+		return err
+	}
+	for _, table := range tables {
+		if customTables[table] {
+			return fmt.Errorf("%s is a custom-track table; its guards need a custom migration", table)
+		}
+	}
+	catalog, err := os.Open("migrations/testdata/head_catalog.txt")
+	if err != nil {
+		return err
+	}
+	migration, err := textbounds.Retarget(catalog, tables)
+	if closeErr := catalog.Close(); err == nil {
+		err = closeErr
+	}
+	if err != nil {
+		return err
+	}
+	return writePair(fmt.Sprintf("migrations/core/%d_%s", version, name), migration)
 }
 
 var createdTable = regexp.MustCompile(`(?i)CREATE TABLE (?:IF NOT EXISTS )?(?:public\.)?"?([a-z_][a-z0-9_]*)"?`)
@@ -79,10 +127,10 @@ func customTrackTables() (map[string]bool, error) {
 }
 
 func writePair(stem string, migration textbounds.Migration) error {
-	if err := writeNew(stem+".up.sql", "SET LOCAL lock_timeout = '2s';\n"+migration.Up); err != nil {
+	if err := writeNew(stem+".up.sql", migration.Up); err != nil {
 		return err
 	}
-	return writeNew(stem+".down.sql", "SET LOCAL lock_timeout = '2s';\n"+migration.Down)
+	return writeNew(stem+".down.sql", migration.Down)
 }
 
 func writeNew(path, content string) error {

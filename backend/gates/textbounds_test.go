@@ -9,7 +9,9 @@ package gates
 
 import (
 	"fmt"
+	"maps"
 	"regexp"
+	"slices"
 	"strings"
 	"testing"
 
@@ -158,5 +160,78 @@ func TestTheWriteShapeTablesCarryNoTextGuard(t *testing.T) {
 				t.Errorf("%s carries a text guard: %s", table, strings.Fields(line)[0])
 			}
 		}
+	}
+}
+
+// A guard migration that ran never changes, so a policy change in columns.txt
+// takes effect only through a new migration (gen-textbounds -tables). Until
+// one exists the guard still refuses at the old limit, which this test sees.
+func TestEveryTextGuardHoldsExactlyTheRegistryBounds(t *testing.T) {
+	t.Parallel()
+	raw, err := gatekit.ReadFile(vocabularyCatalog)
+	if err != nil {
+		t.Fatal(err)
+	}
+	guards, err := textbounds.GuardBounds(string(raw))
+	if err != nil {
+		t.Fatal(err)
+	}
+	wanted, err := textbounds.PolicyBounds(string(raw))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(guards) < 2*len(wanted) {
+		t.Fatalf("read %d text guards for %d bounded tables: the catalog pattern no longer matches", len(guards), len(wanted))
+	}
+	for key, bounds := range guards {
+		table, _, _ := strings.Cut(key, ".")
+		if maps.Equal(bounds, wanted[table]) {
+			continue
+		}
+		names := slices.AppendSeq(slices.Collect(maps.Keys(bounds)), maps.Keys(wanted[table]))
+		slices.Sort(names)
+		for _, column := range slices.Compact(names) {
+			if bounds[column] != wanted[table][column] {
+				t.Errorf("%s bounds %s at %d and columns.txt at %d (0 is none); run gen-textbounds -tables %s -output <new migration>",
+					key, column, bounds[column], wanted[table][column], table)
+			}
+		}
+	}
+}
+
+// contentColumnName marks a column that may hold whole text from a model, a mail
+// or another system. Its writers cannot be read from the schema, so such a
+// column on the document limit says what its writers were checked for.
+var contentColumnName = regexp.MustCompile(`(^|_)(body|html|md|markdown|content|payload|transcript|text|json|template|prompt|output|original|message|snippet|quote|narrative|summary|error|detail|evidence|description|subject|value|url|explanation|goal|query)$`)
+
+func TestContentColumnsOnTheDocumentLimitSayWhatTheirWritersWereCheckedFor(t *testing.T) {
+	t.Parallel()
+	raw, err := gatekit.ReadFile(vocabularyCatalog)
+	if err != nil {
+		t.Fatal(err)
+	}
+	columns, err := textbounds.Columns(strings.NewReader(string(raw)))
+	if err != nil {
+		t.Fatal(err)
+	}
+	policies, err := textbounds.Policies()
+	if err != nil {
+		t.Fatal(err)
+	}
+	matched := 0
+	for _, column := range columns {
+		if !contentColumnName.MatchString(column.Name) {
+			continue
+		}
+		matched++
+		policy := policies[column.Key]
+		if policy.Limit == values.TextDocumentCharacters && policy.Checked == "" {
+			t.Errorf("%s holds content on the document limit unchecked: read its writers, then make it exempt or add \"checked: <why the limit holds>\" in columns.txt", column.Key)
+		}
+	}
+	// Just under today's count, so a rename that moves columns out of the
+	// pattern fails here instead of shrinking what the test reads.
+	if matched < 108 {
+		t.Fatalf("only %d text columns look like content: the name pattern no longer matches the catalog", matched)
 	}
 }

@@ -41,6 +41,7 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/platform/auth"
+	"github.com/margince/margince/backend/internal/platform/database/textbounds"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -202,6 +203,14 @@ func profileFieldValueKey(field, value string) string {
 		return parsed.String()
 	}
 	return strings.TrimSpace(value)
+}
+
+// machineProfileField cuts a value and its evidence that a card, a signature or a
+// page stated to what their columns hold. A researcher's claim is not cut: it is
+// refused past the limit, so the user who typed it can shorten it.
+func machineProfileField(value, evidence string) (string, string) {
+	return textbounds.Fit("public.contact_profile_field.value", value),
+		textbounds.Fit("public.contact_profile_field.evidence_snippet", evidence)
 }
 
 // writeContactProfileField writes one evidence row through writeProfileFieldRow,

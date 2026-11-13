@@ -33,7 +33,7 @@ public.activity.source document
 public.activity.source_author_name exempt imported source attribution retains the original author identity
 public.activity.source_id document
 public.activity.source_system document
-public.activity.subject document
+public.activity.subject document checked: capture cuts a mail or calendar subject to it (sinkactivityfields.go); a typed subject is refused past it
 public.activity.task_type document
 public.activity.thread_key document
 public.activity_audience_member.created_by document
@@ -44,7 +44,7 @@ public.activity_commitment_admission.captured_by document
 public.activity_commitment_admission.locator document
 public.activity_commitment_admission.outcome document
 public.activity_commitment_admission.rule_version document
-public.activity_commitment_admission.source_quote document
+public.activity_commitment_admission.source_quote document checked: a model quote refused past 300 runes, or cut to 500 bytes from a transcript
 public.activity_commitment_admission.summary line
 public.activity_identity.attested_by document
 public.activity_identity.identity_key document
@@ -81,7 +81,7 @@ public.activity_reader_state.state document
 public.activity_reply_verdict_history.decided_by document
 public.activity_reply_verdict_history.verdict document
 public.activity_request_settlement.decided_by document
-public.activity_request_settlement.judged_evidence document
+public.activity_request_settlement.judged_evidence exempt aggregated from every answer in the thread, so it grows with the thread
 public.activity_request_settlement.remaining document
 public.activity_request_settlement.rule_version document
 public.activity_request_settlement.verdict document
@@ -108,13 +108,13 @@ public.activity_sales_state.set_by document
 public.activity_sales_state.thread_key document
 public.agent_run.agent_spec document
 public.agent_run.degrade_reason note
-public.agent_run.goal document
+public.agent_run.goal document checked: catalog constants
 public.agent_run.status document
 public.agent_run.trigger_ref document
 public.agent_standing_grant.agent_spec document
 public.agent_standing_grant.state document
 public.agent_task.status document
-public.agent_task.status_message document
+public.agent_task.status_message exempt may quote the failing tool error, which has no length bound
 public.agent_task.tool document
 public.ai_call.attempt_reason note
 public.ai_call.config_hash document
@@ -142,7 +142,7 @@ public.ai_call_config.task_contract_hash document
 public.ai_feedback.captured_by document
 public.ai_feedback.claim_key document
 public.ai_feedback.claim_kind document
-public.ai_feedback.corrected_value document
+public.ai_feedback.corrected_value document checked: typed by a user
 public.ai_feedback.note note
 public.ai_feedback.source document
 public.ai_feedback.subject_type document
@@ -251,7 +251,7 @@ public.attachment.url exempt bounded link identities keep the existing URL contr
 public.attachment_extraction.question document
 public.attachment_extraction.requested_by document
 public.attachment_extraction.status document
-public.attachment_extraction.status_detail document
+public.attachment_extraction.status_detail document checked: fixed sentences with a size or media type
 public.audit_log.action exempt system-written rows on the write path of every change or capture; a guard would serialize each whole row
 public.audit_log.actor_id exempt system-written rows on the write path of every change or capture; a guard would serialize each whole row
 public.audit_log.actor_type exempt system-written rows on the write path of every change or capture; a guard would serialize each whole row
@@ -281,9 +281,9 @@ public.bulk_confirmation.requested_by document
 public.bulk_operation.record_type document
 public.bulk_operation.requested_by document
 public.bulk_operation.verb document
-public.capture_alias_refused.value document
+public.capture_alias_refused.value document checked: a mail address or domain
 public.capture_alias_sighting.source document
-public.capture_alias_sighting.value document
+public.capture_alias_sighting.value document checked: a mail address or domain
 public.capture_auto_enrich_state.last_outcome document
 public.capture_backfill.last_error_class document
 public.capture_backfill.status document
@@ -301,11 +301,11 @@ public.capture_connection.status document
 public.capture_connection.watch_ref document
 public.capture_counterparty_hold.created_by document
 public.capture_counterparty_hold.kind document
-public.capture_counterparty_hold.value document
+public.capture_counterparty_hold.value document checked: a mail address or domain
 public.capture_exclusion.created_by document
 public.capture_exclusion.kind document
 public.capture_exclusion.scope document
-public.capture_exclusion.value document
+public.capture_exclusion.value document checked: a mail address or domain
 public.capture_freemail_domain.domain document
 public.capture_freemail_domain.kind document
 public.capture_import.delivered_by document
@@ -317,11 +317,11 @@ public.capture_import.verdict_status document
 public.capture_owner_identity.created_by document
 public.capture_owner_identity.kind document
 public.capture_owner_identity.source document
-public.capture_owner_identity.value document
+public.capture_owner_identity.value document checked: a mail address or domain
 public.capture_owner_identity_withdrawn.created_by document
 public.capture_owner_identity_withdrawn.kind document
 public.capture_owner_identity_withdrawn.source document
-public.capture_owner_identity_withdrawn.value document
+public.capture_owner_identity_withdrawn.value document checked: a copy of capture_owner_identity.value
 public.capture_owner_identity_withdrawn.withdrawn_by document
 public.capture_party_source.containers document
 public.capture_party_source.policy_addresses document
@@ -344,7 +344,7 @@ public.capture_sweep_run.outcome document
 public.capture_sweep_run.sweep document
 public.capture_sync_state.last_error_class document
 public.capture_test_mailbox_sent.message_id exempt bounded message identities keep the existing mailbox-test protocol limit
-public.capture_test_mailbox_sent.subject document
+public.capture_test_mailbox_sent.subject document checked: a copy of the sent subject, which comms_outbound.subject bounds
 public.capture_thread_verdict.disposition_reason note
 public.capture_thread_verdict.kind document
 public.capture_thread_verdict.seen_addresses document
@@ -396,7 +396,7 @@ public.comms_outbound.reason note
 public.comms_outbound.redacted_fields document
 public.comms_outbound.sender_kind document
 public.comms_outbound.status document
-public.comms_outbound.subject document
+public.comms_outbound.subject document checked: typed by a user or agent; a refusal reaches the sender
 public.comms_outbound.template_key document
 public.comms_outbound.thread_key document
 public.communication_basis.captured_by document
@@ -420,7 +420,7 @@ public.communication_decision.subject_kind document
 public.communication_decision.suppression document
 public.communication_decision.verdict document
 public.communication_instruction.directed_by_agent document
-public.communication_instruction.explanation document
+public.communication_instruction.explanation document checked: refused past 1000 runes
 public.communication_instruction.reason_code note
 public.communication_instruction.revoked_reason note
 public.communication_instruction.status document
@@ -448,7 +448,7 @@ public.company.address_line2 line
 public.company.address_postal_code document
 public.company.address_region document
 public.company.captured_by document
-public.company.description document
+public.company.description document checked: every writer checks 20000 (companydescriptionlimit.go); a site read is cut; a CSV cell is refused
 public.company.display_name exempt imported business identities retain their source names
 public.company.email document
 public.company.geocode_input_hash document
@@ -457,7 +457,7 @@ public.company.geocode_status document
 public.company.industry document
 public.company.legal_name line
 public.company.lifecycle document
-public.company.linkedin_url document
+public.company.linkedin_url document checked: normalized to one profile slug
 public.company.logo_icon_object_key document
 public.company.logo_icon_origin document
 public.company.logo_object_key document
@@ -483,7 +483,7 @@ public.company_domain_disposition.admission_reason_code note
 public.company_domain_disposition.admission_sender_kind document
 public.company_domain_disposition.admission_source document
 public.company_domain_disposition.domain document
-public.company_domain_disposition.evidence document
+public.company_domain_disposition.evidence exempt carries model reasons and crawled redirect URLs, which nothing cuts
 public.company_domain_disposition.pending_reason note
 public.company_domain_disposition.source document
 public.company_domain_disposition.status document
@@ -492,11 +492,11 @@ public.company_dossier.fingerprint document
 public.company_dossier.generated_by document
 public.company_fact.captured_by document
 public.company_fact.category document
-public.company_fact.evidence_snippet document
+public.company_fact.evidence_snippet document checked: a site passage of about 600 runes or a fixed marker
 public.company_fact.field document
 public.company_fact.source document
-public.company_fact.source_url document
-public.company_fact.value document
+public.company_fact.source_url document checked: a crawled page URL
+public.company_fact.value document checked: must match the cited passage or the page excerpt of 18000 runes
 public.company_fact.value_key document
 public.company_geocode_state.input_hash document
 public.company_geocode_state.last_outcome document
@@ -505,14 +505,14 @@ public.company_geocode_state.status document
 public.company_growth_fit.fingerprint document
 public.company_growth_fit.generated_by document
 public.company_offered_value.field_key document
-public.company_offered_value.offered_value document
+public.company_offered_value.offered_value document checked: the extension surface refuses past 500
 public.company_offered_value.source_system document
 public.company_profile_field.captured_by document
-public.company_profile_field.evidence_snippet document
+public.company_profile_field.evidence_snippet document checked: site reads and enrichment are cut to it (coldstartprofile.go)
 public.company_profile_field.field document
 public.company_profile_field.source document
-public.company_profile_field.source_url document
-public.company_profile_field.value document
+public.company_profile_field.source_url document checked: a crawled page or seed URL
+public.company_profile_field.value document checked: site reads and enrichment are cut to it (coldstartprofile.go); a typed correction is refused past it
 public.company_relationship_type.captured_by document
 public.company_relationship_type.relationship_type document
 public.company_relationship_type.source document
@@ -540,7 +540,7 @@ public.consent_event.confirm_user_agent document
 public.consent_event.issuance_trigger document
 public.consent_event.lawful_basis document
 public.consent_event.new_state document
-public.consent_event.policy_text document
+public.consent_event.policy_text exempt the proof of consent keeps the wording shown, which may copy consent_text_version.body
 public.consent_event.policy_version document
 public.consent_event.source document
 public.consent_purpose.class document
@@ -603,7 +603,7 @@ public.contact_channel_identity.username document
 public.contact_confirm_submission.field document
 public.contact_confirm_submission.kind document
 public.contact_confirm_submission.note note
-public.contact_confirm_submission.proposed_value document
+public.contact_confirm_submission.proposed_value document checked: refused past 500 runes
 public.contact_confirm_submission.resolution document
 public.contact_confirm_submission.resolved_by document
 public.contact_consent.lawful_basis document
@@ -623,17 +623,17 @@ public.contact_phone.phone document
 public.contact_phone.phone_type document
 public.contact_phone.source document
 public.contact_profile_field.captured_by document
-public.contact_profile_field.evidence_snippet document
+public.contact_profile_field.evidence_snippet document checked: cards, signatures and pages are cut to it (machineProfileField); a research quote is refused past it
 public.contact_profile_field.field document
 public.contact_profile_field.source document
-public.contact_profile_field.source_ref document
+public.contact_profile_field.source_ref document checked: a record reference or a crawled page URL
 public.contact_profile_field.superseded_captured_by document
-public.contact_profile_field.superseded_value document
-public.contact_profile_field.value document
+public.contact_profile_field.superseded_value document checked: a copy of an earlier contact_profile_field.value or a contact column
+public.contact_profile_field.value document checked: cards, signatures and pages are cut to it (machineProfileField); a research claim is refused past it
 public.contact_profile_field.value_key document
 public.contact_provider_claim.captured_by document
 public.contact_provider_claim.claim_key document
-public.contact_provider_claim.employment_processing_error document
+public.contact_provider_claim.employment_processing_error document checked: one fixed sentence
 public.contact_provider_claim.provider document
 public.contact_provider_claim.source document
 public.contact_provider_claim.validation_status document
@@ -645,12 +645,12 @@ public.contract.source document
 public.contract.status document
 public.contract.title label
 public.contract.value_basis document
-public.conversation_claim.body document
+public.conversation_claim.body document checked: a copy of activity_commitment_admission.summary, which is a line
 public.conversation_claim.captured_by document
 public.conversation_claim.evidence_fingerprint document
 public.conversation_claim.kind document
 public.conversation_claim.source document
-public.conversation_claim.source_quote document
+public.conversation_claim.source_quote document checked: a copy of activity_commitment_admission.source_quote
 public.conversation_claim.status document
 public.custom_field.activity_kinds document
 public.custom_field.column_name label
@@ -679,7 +679,7 @@ public.deal.acquisition_source document
 public.deal.captured_by document
 public.deal.commercial_mode document
 public.deal.commercial_motion document
-public.deal.description document
+public.deal.description document checked: typed by a user or agent; a CSV cell is refused at the test run
 public.deal.lost_reason note
 public.deal.lost_reason_basis note
 public.deal.lost_reason_code note
@@ -692,7 +692,7 @@ public.deal.source_id exempt bounded imported identities keep the existing index
 public.deal.source_system document
 public.deal.status document
 public.deal.win_probability_set_by document
-public.deal.won_without_contract_detail document
+public.deal.won_without_contract_detail document checked: refused past 500 runes
 public.deal.won_without_contract_reason note
 public.deal_acquisition_source.key document
 public.deal_acquisition_source.label label
@@ -711,7 +711,7 @@ public.deal_line_item.billing_model document
 public.deal_line_item.captured_by document
 public.deal_line_item.catalog_name line
 public.deal_line_item.component_kind document
-public.deal_line_item.description document
+public.deal_line_item.description document checked: refused past 2000 bytes
 public.deal_line_item.sku line
 public.deal_line_item.tax_category document
 public.deal_line_item.unit label
@@ -731,8 +731,8 @@ public.deal_room.captured_by document
 public.deal_room.source document
 public.deal_room.state document
 public.deal_room.title label
-public.deal_room.welcome_message document
-public.deal_room_comment.body document
+public.deal_room.welcome_message document checked: typed by a user
+public.deal_room_comment.body document checked: refused past 8000 runes
 public.deal_room_comment.captured_by document
 public.deal_room_comment.source document
 public.deal_room_document.captured_by document
@@ -794,7 +794,7 @@ public.existing_customer_notice.captured_by document
 public.existing_customer_notice.collection_channel document
 public.existing_customer_notice.customer_group document
 public.existing_customer_notice.evidence_reference document
-public.existing_customer_notice.notice_text document
+public.existing_customer_notice.notice_text document checked: refused past 4000 runes
 public.existing_customer_notice.withdrawn_by document
 public.existing_customer_notice.withdrawn_reason note
 public.extension_ingest_position.position document
@@ -870,10 +870,10 @@ public.forecast_snapshot.risk_signals_version document
 public.forecast_snapshot.scope_kind document
 public.forecast_snapshot.trigger document
 public.geocode_cache.provider document
-public.geocode_cache.query document
+public.geocode_cache.query document checked: joined from bounded address columns
 public.geocode_country_cache.country_codes document
 public.geocode_country_cache.provider document
-public.geocode_country_cache.query document
+public.geocode_country_cache.query document checked: joined from bounded address columns
 public.home_read_cache.read document
 public.home_read_cache.request_key document
 public.home_read_fence_pending.fence document
@@ -891,7 +891,7 @@ public.import_run.approved_by document
 public.import_run.captured_by document
 public.import_run.connector document
 public.import_run.draft_step document
-public.import_run.error document
+public.import_run.error document checked: fixed stop causes only
 public.import_run.job_status document
 public.import_run.phase document
 public.import_run.phase_object document
@@ -909,12 +909,12 @@ public.intro_request.origin document
 public.intro_request.recorded_channel document
 public.intro_request.route_type document
 public.intro_request.status document
-public.intro_request.value_for_target document
+public.intro_request.value_for_target document checked: refused past 2000 runes
 public.knowledge_chunk.chunk_hash exempt system-written rows on the write path of every change or capture; a guard would serialize each whole row
 public.knowledge_chunk.embed_identity exempt system-written rows on the write path of every change or capture; a guard would serialize each whole row
 public.knowledge_chunk.text exempt complete captured or authored source content must retain its original text
 public.knowledge_corpus.captured_by document
-public.knowledge_corpus.description document
+public.knowledge_corpus.description document checked: refused past 2000 runes
 public.knowledge_corpus.managed_source document
 public.knowledge_corpus.name label
 public.knowledge_corpus.topic_statement document
@@ -922,7 +922,7 @@ public.knowledge_document.captured_by document
 public.knowledge_document.checksum document
 public.knowledge_document.content_type document
 public.knowledge_document.filename document
-public.knowledge_document.ingest_detail document
+public.knowledge_document.ingest_detail document checked: fixed sentences and numbers
 public.knowledge_document.ingest_status document
 public.knowledge_document.managed_source document
 public.knowledge_document.storage_key document
@@ -934,7 +934,7 @@ public.lead.email document
 public.lead.email_domain_folded document
 public.lead.full_name exempt imported lead identities retain the source name rules
 public.lead.industry document
-public.lead.linkedin_url document
+public.lead.linkedin_url document checked: typed, or a page quote a user accepts; a CSV cell is refused at the test run
 public.lead.origin document
 public.lead.origin_detail line
 public.lead.partner_accepted_by document
@@ -986,10 +986,10 @@ public.legal_entity.icp document
 public.legal_entity.imprint document
 public.legal_entity.legal_name line
 public.legal_entity.logo_object_key document
-public.legal_entity.offer_summary document
+public.legal_entity.offer_summary document checked: typed by an admin; refused past 20000
 public.legal_entity.register_court document
 public.legal_entity.register_number document
-public.legal_entity.signature_template document
+public.legal_entity.signature_template document checked: typed by an admin; refused past 20000
 public.legal_entity.usp document
 public.legal_entity.value_proposition document
 public.legal_entity.vat_id document
@@ -998,7 +998,7 @@ public.legal_review.captured_by document
 public.legal_review.comments note
 public.legal_review.note note
 public.legal_review.status document
-public.linkedin_account.profile_url document
+public.linkedin_account.profile_url document checked: typed by its owner
 public.linkedin_connection.company_name label
 public.linkedin_connection.email document
 public.linkedin_connection.full_name exempt imported address book identities retain the source name
@@ -1006,7 +1006,7 @@ public.linkedin_connection.match_status document
 public.linkedin_connection.normalized_company document
 public.linkedin_connection.normalized_name label
 public.linkedin_connection.position document
-public.linkedin_connection.profile_url document
+public.linkedin_connection.profile_url document checked: a cell of an uploaded export; the upload is refused past it
 public.linkedin_connection.provider_member_ref document
 public.linkedin_connection.source document
 public.list.entity_type document
@@ -1036,7 +1036,7 @@ public.mail_draft.cc_addresses document
 public.mail_draft.communication_context document
 public.mail_draft.html_body exempt complete captured or authored source content must retain its original text
 public.mail_draft.scheduled_tz document
-public.mail_draft.subject document
+public.mail_draft.subject document checked: refused past 998 characters
 public.mail_draft.to_addresses document
 public.maskable_field.field document
 public.maskable_field.object document
@@ -1085,15 +1085,15 @@ public.oauth_grant.scopes document
 public.oauth_grant.work_areas document
 public.oauth_refresh_token.token_hash document
 public.offer.captured_by document
-public.offer.intro_text document
+public.offer.intro_text document checked: typed by a user
 public.offer.language document
 public.offer.offer_number document
 public.offer.pdf_asset_ref document
 public.offer.source document
 public.offer.status document
-public.offer.terms_text document
+public.offer.terms_text document checked: typed by a user
 public.offer_line_item.billing_model document
-public.offer_line_item.description document
+public.offer_line_item.description document checked: typed by a user; a model line past the limit is dropped
 public.offer_line_item.proposal_state document
 public.offer_line_item.tax_category document
 public.offer_line_item.unit document
@@ -1103,7 +1103,7 @@ public.onboarding_wizard_state.path document
 public.onboarding_wizard_state.selected_fact_keys document
 public.onboarding_wizard_state.source_mode document
 public.onboarding_wizard_state.step document
-public.onboarding_wizard_state.website_url document
+public.onboarding_wizard_state.website_url document checked: typed by a user
 public.partner.activated_by document
 public.partner.activation_basis document
 public.partner.captured_by document
@@ -1148,19 +1148,19 @@ public.privacy_request_proof.result document
 public.product.billing_model document
 public.product.captured_by document
 public.product.component_kind document
-public.product.description document
+public.product.description document checked: typed by a user or agent
 public.product.name label
 public.product.sku document
 public.product.source document
 public.product.tax_category document
 public.product.unit document
 public.product_translation.captured_by document
-public.product_translation.description document
+public.product_translation.description document checked: refused past 20000
 public.product_translation.language document
 public.product_translation.name label
 public.project.captured_by document
 public.project.closed_reason note
-public.project.description document
+public.project.description document checked: typed by a user or agent
 public.project.key document
 public.project.name label
 public.project.phase document
@@ -1177,7 +1177,7 @@ public.project_phase_history.changed_by document
 public.project_phase_history.from_phase document
 public.project_phase_history.reason note
 public.project_phase_history.to_phase document
-public.provider_applied_field.applied_value document
+public.provider_applied_field.applied_value document checked: a copy of a contact column, which its own guard bounds first
 public.provider_applied_field.captured_by document
 public.provider_applied_field.provider document
 public.provider_applied_field.target_field document
@@ -1233,7 +1233,7 @@ public.relationship.source document
 public.relationship.started_precision document
 public.relationship_nudge_dismissal.set_by document
 public.report_definition.audience document
-public.report_definition.description document
+public.report_definition.description document checked: refused past 2000 runes
 public.report_definition.name label
 public.report_edition.publication_audience document
 public.report_edition_contribution.context_id document
@@ -1264,14 +1264,14 @@ public.retention_policy.object_type document
 public.role.key document
 public.role.name label
 public.runner_job.agent_spec document
-public.runner_job.last_error document
+public.runner_job.last_error document checked: fixed text and catalog spec names
 public.runner_job.status document
 public.runner_job.trigger_ref document
 public.sales_goal_plan_revision.kind document
 public.sales_goal_plan_revision.origin document
 public.sales_goal_plan_revision.reason note
 public.sales_initiative.captured_by document
-public.sales_initiative.description document
+public.sales_initiative.description document checked: typed by a user
 public.sales_initiative.name label
 public.sales_initiative.objective_metric document
 public.sales_initiative.source document
@@ -1337,10 +1337,10 @@ public.site_read.logo_origin document
 public.site_read.phase document
 public.site_read.proposal_hash document
 public.site_read.requested_by document
-public.site_read.seed_url document
+public.site_read.seed_url document checked: built from a domain or a company website
 public.site_read.status document
 public.site_read.status_code document
-public.site_read.status_detail document
+public.site_read.status_detail document checked: fixed sentences with an HTTP status
 public.site_read.stopped_reason note
 public.site_read.target_kind document
 public.stage.name label
@@ -1361,7 +1361,7 @@ public.system_log.action document
 public.system_log.actor_id document
 public.system_log.actor_type document
 public.tag.color document
-public.tag.description document
+public.tag.description document checked: typed by a user or agent
 public.tag.name label
 public.tag_interest_read.content_digest document
 public.tag_interest_read.vocabulary_digest document
@@ -1390,11 +1390,11 @@ public.team_weekly_review_rep_funnel.pipeline_name label
 public.team_weekly_review_rep_funnel.stage_name label
 public.team_weekly_review_rep_pattern.kind document
 public.team_weekly_review_rep_pattern.label label
-public.technical_lookup_cache.query document
+public.technical_lookup_cache.query document checked: a domain or host name
 public.technical_lookup_cache.record_kind document
 public.transcript_read.requested_by document
 public.transcript_read.status document
-public.transcript_read.status_detail document
+public.transcript_read.status_detail document checked: fixed sentences with counts
 public.user_mfa.secret_ref document
 public.user_record_view.entity_type document
 public.vault_secret.ref document
@@ -1404,7 +1404,7 @@ public.voice_build.source_hash document
 public.voice_build.stage document
 public.voice_build.status document
 public.voice_build.status_code document
-public.voice_build.status_detail document
+public.voice_build.status_detail document checked: fixed sentences
 public.voice_corpus_source.captured_by document
 public.voice_corpus_source.content exempt complete captured or authored source content must retain its original text
 public.voice_corpus_source.content_hash document
@@ -1418,18 +1418,18 @@ public.voice_corpus_source.source_label line
 public.voice_corpus_source.source_ref document
 public.voice_learning_signal.captured_by document
 public.voice_learning_signal.final_captured_by document
-public.voice_learning_signal.final_text document
-public.voice_learning_signal.generated_original document
+public.voice_learning_signal.final_text exempt a copy of the sent mail body, which has no length bound
+public.voice_learning_signal.generated_original exempt a copy of the model-drafted mail body, which mail_draft.body keeps whole
 public.voice_learning_signal.outcome document
 public.voice_learning_signal.source document
 public.voice_profile.active_source_hash document
 public.voice_profile.captured_by document
 public.voice_profile.model_ref document
-public.voice_profile.personality_md document
+public.voice_profile.personality_md document checked: typed by the owner; voice.go refuses past 20000
 public.voice_profile.scope document
 public.voice_profile.source document
 public.voice_profile.status document
-public.voice_profile.voice_profile_md document
+public.voice_profile.voice_profile_md exempt assembled from model output and verbatim quotes; a refusal would lose the whole build
 public.voice_profile_delta.activation_outcome document
 public.voice_profile_delta.classification document
 public.voice_profile_version.activation_policy_version document
@@ -1442,7 +1442,7 @@ public.voice_profile_version.review_reasons note
 public.voice_profile_version.source document
 public.voice_profile_version.source_hash document
 public.voice_profile_version.status document
-public.voice_profile_version.voice_profile_md document
+public.voice_profile_version.voice_profile_md exempt the versioned copy of voice_profile.voice_profile_md
 public.web_form.allowed_origins document
 public.web_form.captured_by document
 public.web_form.consent_policy_version document
@@ -1452,7 +1452,7 @@ public.web_form.lead_origin document
 public.web_form.name label
 public.web_form.privacy_notice line
 public.web_form.privacy_notice_url exempt bounded HTTPS link identities keep the existing URL contract
-public.web_form.redirect_url document
+public.web_form.redirect_url document checked: typed by an admin
 public.web_form.secret_ref document
 public.web_form.sender document
 public.web_form.state document
@@ -1460,15 +1460,15 @@ public.web_form.success_message line
 public.webhook_delivery.content_type document
 public.webhook_delivery.entity_type document
 public.webhook_delivery.event_type document
-public.webhook_delivery.last_error document
-public.webhook_delivery.payload document
+public.webhook_delivery.last_error exempt quotes the transport error, which repeats the target URL and the render error
+public.webhook_delivery.payload exempt the delivered body is the event envelope or its rendering, which has no length bound
 public.webhook_delivery.status document
 public.webhook_subscription.body_content_type document
-public.webhook_subscription.body_template document
+public.webhook_subscription.body_template document checked: typed by a user
 public.webhook_subscription.event_types document
 public.webhook_subscription.signing_secret_ref document
 public.webhook_subscription.state document
-public.webhook_subscription.target_url document
+public.webhook_subscription.target_url document checked: typed by a user
 public.weekly_plan.capacity_note note
 public.weekly_plan.captured_by document
 public.weekly_plan.risks note
@@ -1500,7 +1500,7 @@ public.withdrawal_credential.address document
 public.withdrawal_credential.revoked_reason note
 public.withdrawal_credential.scope document
 public.withdrawal_credential.token_hash document
-public.workflow_run.error document
+public.workflow_run.error document checked: no code writes it
 public.workflow_run.handler document
 public.workflow_run.idempotency_key document
 public.workflow_run.status document

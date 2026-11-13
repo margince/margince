@@ -15,6 +15,7 @@ import (
 	"strings"
 	"sync"
 
+	"github.com/margince/margince/backend/internal/shared/kernel/textcut"
 	"github.com/margince/margince/backend/internal/shared/kernel/values"
 )
 
@@ -22,6 +23,10 @@ import (
 var columnPolicies string
 
 var qualifiedColumn = regexp.MustCompile(`^public\.([a-z_][a-z0-9_]*)\.([a-z_][a-z0-9_]*)$`)
+
+// checkedMarker opens the note on a bounded line, so a stray word after the
+// limit stays an error instead of reading as a note.
+const checkedMarker = "checked:"
 
 var limits = map[string]int{
 	"label":    values.TextLabelCharacters,
@@ -31,10 +36,12 @@ var limits = map[string]int{
 }
 
 // Policy is one column's character limit. An exempt column has no limit and
-// says why in Exception.
+// says why in Exception; a bounded one may say in Checked what its writers
+// were read for, so the limit records a decision and not only a default.
 type Policy struct {
 	Limit     int
 	Exception string
+	Checked   string
 }
 
 // Column is one text column of the catalog, by key public.table.name.
@@ -60,6 +67,15 @@ var embeddedPolicies = sync.OnceValue(func() map[string]Policy {
 // when the column is exempt or has no policy.
 func LimitOf(column string) int { return embeddedPolicies()[column].Limit }
 
+// Fit cuts text a machine wrote to the limit of its column, so a write nobody
+// can shorten lands cut instead of failing. An exempt column keeps it whole.
+func Fit(column, text string) string {
+	if limit := LimitOf(column); limit > 0 {
+		return textcut.Runes(text, limit)
+	}
+	return text
+}
+
 // ParsePolicies reads policies in the columns.txt form, one column and its
 // limit name per line. A duplicate or unknown limit is an error.
 func ParsePolicies(input io.Reader) (map[string]Policy, error) {
@@ -78,9 +94,12 @@ func ParsePolicies(input io.Reader) (map[string]Policy, error) {
 			return nil, fmt.Errorf("duplicate text policy: %s", fields[0])
 		}
 		policy := Policy{Limit: limits[fields[1]]}
-		if fields[1] == "exempt" && len(fields) > 2 {
+		switch {
+		case fields[1] == "exempt" && len(fields) > 2:
 			policy.Exception = strings.Join(fields[2:], " ")
-		} else if policy.Limit == 0 || len(fields) != 2 {
+		case policy.Limit != 0 && len(fields) > 3 && fields[2] == checkedMarker:
+			policy.Checked = strings.Join(fields[3:], " ")
+		case policy.Limit == 0 || len(fields) != 2:
 			return nil, fmt.Errorf("invalid text limit: %s", line)
 		}
 		policies[fields[0]] = policy

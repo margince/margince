@@ -126,11 +126,10 @@
 1794489417_booked_meetings_keep_the_chosen_clock.up.sql | * | adds two nullable columns, two NOT VALID checks and two triggers on activity; the triggers act on later writes only, and it changes no existing row
 1794489405_the_company_description_limit_is_validated.down.sql | * | rollback retains the validated bound and changes no row
 1794489408_the_shared_text_checks_are_validated.down.sql | * | rollback retains validation and changes no row
-1794489406_new_text_values_follow_the_shared_limits.up.sql | * | the block reads the custom-field schema catalog, bounded by PostgreSQL physical columns per core table, and creates two guards per affected table; it never reads or rewrites domain rows
-1794489406_new_text_values_follow_the_shared_limits.down.sql | * | the block drops only the two named custom-field guards from the schema catalog and changes no domain rows
-1794489419_chosen_clock_zones_follow_the_text_limits.up.sql | * | drops and re-creates the two text guards on activity, activity_reader_state and brief_item; the guards act on later writes only, and it changes no existing row
-1794489419_chosen_clock_zones_follow_the_text_limits.down.sql | * | runs only on a rollback; drops and re-creates the same six guards without the zone columns, and changes no existing row
 1794483980_a_website_form_names_its_reviewed_inquiry_policy.down.sql | * | read-only existence check refuses rollback after a cutover; no row is rewritten
 1794483981_an_inquiry_effect_keeps_its_planned_assignment.down.sql | * | read-only existence check refuses rollback after an assignment; no row is rewritten
-1794500554_task_types_and_record_links_follow_the_text_limits.up.sql | * | drops and re-creates the two text guards on activity and creates them on activity_link_suggestion and record_link; the guards act on later writes only, and it changes no existing row
-1794500554_task_types_and_record_links_follow_the_text_limits.down.sql | * | runs only on a rollback; drops the link table guards and re-creates the activity guards without the task type, and changes no existing row
+1794600201_each_table_checks_its_text_limits.up.sql | * | creates or replaces two text guards per core table, each in its own statement; the guards act on later writes only, and it changes no existing row
+1794600202_custom_text_fields_check_their_limits.up.sql | * | the block reads the custom-field schema catalog, bounded by PostgreSQL physical columns per core table, and creates or replaces two guards per affected table; it never reads or rewrites domain rows
+1794600202_custom_text_fields_check_their_limits.down.sql | * | the block drops only the two named custom-field guards from the schema catalog and changes no domain rows
+1794600300_machine_written_text_keeps_its_full_length.up.sql | * | runs unwrapped and replaces the two text guards on each table it names in place; the guards act on later writes only, and it changes no existing row
+1794600300_machine_written_text_keeps_its_full_length.down.sql | * | runs only on a rollback; replaces the same guards with their earlier bounds, and changes no existing row
