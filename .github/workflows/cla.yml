@@ -69,7 +69,7 @@ jobs:
             echo "::error::no members listed for the margince organisation — CLA_SIGNATURES_TOKEN needs the organisation Members: read permission"
             exit 1
           fi
-          echo "logins=${members},renovate[bot],coderabbitai[bot],github-actions[bot],dependabot[bot]" >> "$GITHUB_OUTPUT"
+          echo "logins=${members},renovate[bot],coderabbitai[bot],github-actions[bot],dependabot[bot],margince-bench-records[bot]" >> "$GITHUB_OUTPUT"
       # These staff commits carry a git identity GitHub cannot link, so the action
       # reads them under a bare author name instead of a login. Anybody can type a
       # name, so it joins the allowlist only while every unlinked commit under it
