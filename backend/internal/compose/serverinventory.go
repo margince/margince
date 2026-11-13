@@ -207,8 +207,6 @@ type Server struct {
 	accountCoverageHandlers
 	analyticsContextHandlers
 	salesProgressReading
-	goalProposalHandlers
-	progressSummaryHandlers
 	sdrSummaryHandlers
 	assuranceHandlers
 	// The check a human starts: the preview of a first pass, and the pass

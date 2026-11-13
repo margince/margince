@@ -16,6 +16,8 @@ import (
 // reportSetupHandlers serves the proposal both drawers ask for.
 type reportSetupHandlers struct {
 	svc *reportSetups
+	// Proposed sales goals are asked on the same lane.
+	goalProposalHandlers
 }
 
 // ProposeReportSetup implements POST /analytics/setup-proposal.

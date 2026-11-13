@@ -262,7 +262,6 @@ func (s *Server) wireAnalyticsSurface(pool *pgxpool.Pool) {
 		InstallationDB(pool), func() time.Time { return time.Now().UTC() },
 	)
 	s.salesProgressReading = salesprogress.Reading{DB: InstallationDB(pool), Reports: reportingService, Deals: deals.NewStore(InstallationDB(pool), DealsInstallation())}
-	s.goalProposalHandlers = goalproposal.Handlers{Progress: s.salesProgressReading, Now: time.Now}
 	s.sdrSummaryHandlers = newSdrSummaryHandlers(
 		InstallationDB(pool), func() time.Time { return time.Now().UTC() },
 	).withTargets(reportingService)
@@ -432,3 +431,8 @@ type goalProposalHandlers = goalproposal.Handlers
 
 // progressSummaryHandlers names the Progress summary the same way.
 type progressSummaryHandlers = salesprogress.SummaryHandlers
+
+// newGoalProposals reads a seller's closed revenue as Progress does.
+func (s *Server) newGoalProposals() goalProposalHandlers {
+	return goalproposal.Handlers{Progress: s.salesProgressReading, Now: time.Now}
+}
