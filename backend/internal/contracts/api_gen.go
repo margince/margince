@@ -95539,7 +95539,7 @@ type ServerInterface interface {
 	// State who this installation is.
 	// (PUT /privacy/controller-particulars)
 	SetControllerParticulars(w http.ResponseWriter, r *http.Request)
-	// Every contact's privacy-notice case, including a source nobody has confirmed yet (a bought list, an import), soonest deadline first. Without state it lists unresolved cases only, so an empty page is not an empty notice history, and a contact imported moments ago may have no case yet. For one contact, read their contact_360 view (GET /contacts/{id}/360) instead; its privacy_source_reviews and privacy_notice_duties carry the case ids.
+	// Every contact's privacy-notice case, including one whose source was never recorded (an older contact), soonest deadline first. Without state it lists unresolved cases only, so an empty page is not an empty notice history, and a contact imported moments ago may have no case yet. For one contact, read their contact_360 view (GET /contacts/{id}/360) instead; its privacy_source_reviews and privacy_notice_duties carry the case ids.
 	// (GET /privacy/notice-case-reviews)
 	ListNoticeCaseReviews(w http.ResponseWriter, r *http.Request, params ListNoticeCaseReviewsParams)
 	// One contact's privacy-notice case — its source, whether a notice is owed, and by when. The id comes from notice_case_reviews or the contact's contact_360 view, not the contact's id.
@@ -95551,7 +95551,7 @@ type ServerInterface interface {
 	// Read accessible evidence for a contact source assessment.
 	// (GET /privacy/notice-case-reviews/{id}/source)
 	GetNoticeSourceEvidence(w http.ResponseWriter, r *http.Request, id openapi_types.UUID, params GetNoticeSourceEvidenceParams)
-	// Confirm where a contact came from (bought list, import, their own enquiry), which decides whether a privacy notice is owed. Preview it first (POST /privacy/notice-case-reviews/{id}/source/preview). An import alone does not say where the data first came from; when the evidence is unclear, ask the user for the original source rather than proposing purchased_or_imported.
+	// Confirm where a contact came from (bought list, import, their own enquiry), which decides whether a privacy notice is owed. Preview it first (POST /privacy/notice-case-reviews/{id}/source/preview). Only a contact with no recorded source is up for review; when its evidence does not name where the data first came from, ask the user rather than guessing a kind.
 	// (POST /privacy/notice-case-reviews/{id}/source)
 	AssessNoticeSource(w http.ResponseWriter, r *http.Request, id openapi_types.UUID)
 	// Preview what confirming a contact's source decides — whether a notice is owed and by when — without changing the case. Confirming is the user's decision, so offer confirm_notice_source (POST /privacy/notice-case-reviews/{id}/source) and ask them, unless they already named the source and asked you to confirm it.
@@ -101161,7 +101161,7 @@ func (_ Unimplemented) SetControllerParticulars(w http.ResponseWriter, r *http.R
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
-// Every contact's privacy-notice case, including a source nobody has confirmed yet (a bought list, an import), soonest deadline first. Without state it lists unresolved cases only, so an empty page is not an empty notice history, and a contact imported moments ago may have no case yet. For one contact, read their contact_360 view (GET /contacts/{id}/360) instead; its privacy_source_reviews and privacy_notice_duties carry the case ids.
+// Every contact's privacy-notice case, including one whose source was never recorded (an older contact), soonest deadline first. Without state it lists unresolved cases only, so an empty page is not an empty notice history, and a contact imported moments ago may have no case yet. For one contact, read their contact_360 view (GET /contacts/{id}/360) instead; its privacy_source_reviews and privacy_notice_duties carry the case ids.
 // (GET /privacy/notice-case-reviews)
 func (_ Unimplemented) ListNoticeCaseReviews(w http.ResponseWriter, r *http.Request, params ListNoticeCaseReviewsParams) {
 	w.WriteHeader(http.StatusNotImplemented)
@@ -101185,7 +101185,7 @@ func (_ Unimplemented) GetNoticeSourceEvidence(w http.ResponseWriter, r *http.Re
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
-// Confirm where a contact came from (bought list, import, their own enquiry), which decides whether a privacy notice is owed. Preview it first (POST /privacy/notice-case-reviews/{id}/source/preview). An import alone does not say where the data first came from; when the evidence is unclear, ask the user for the original source rather than proposing purchased_or_imported.
+// Confirm where a contact came from (bought list, import, their own enquiry), which decides whether a privacy notice is owed. Preview it first (POST /privacy/notice-case-reviews/{id}/source/preview). Only a contact with no recorded source is up for review; when its evidence does not name where the data first came from, ask the user rather than guessing a kind.
 // (POST /privacy/notice-case-reviews/{id}/source)
 func (_ Unimplemented) AssessNoticeSource(w http.ResponseWriter, r *http.Request, id openapi_types.UUID) {
 	w.WriteHeader(http.StatusNotImplemented)

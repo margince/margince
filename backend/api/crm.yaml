@@ -24976,7 +24976,7 @@ paths:
       operationId: listNoticeCaseReviews
       security: [ { bearerAuth: [] }, { cookieAuth: [] } ]
       x-mcp-tool: { verb: list_notice_case_reviews, router: read_workspace, action: notice_case_reviews, tier: auto_execute, scope: read, served_by: route }
-      summary: Every contact's privacy-notice case, including a source nobody has confirmed yet (a bought list, an import), soonest deadline first. Without state it lists unresolved cases only, so an empty page is not an empty notice history, and a contact imported moments ago may have no case yet. For one contact, read their contact_360 view (GET /contacts/{id}/360) instead; its privacy_source_reviews and privacy_notice_duties carry the case ids.
+      summary: Every contact's privacy-notice case, including one whose source was never recorded (an older contact), soonest deadline first. Without state it lists unresolved cases only, so an empty page is not an empty notice history, and a contact imported moments ago may have no case yet. For one contact, read their contact_360 view (GET /contacts/{id}/360) instead; its privacy_source_reviews and privacy_notice_duties carry the case ids.
       description: |
         Acquisition-source reviews and notice duties, under privacy-request read authority.
         Unconfirmed sources have no deadline or sending route. Confirmed indirect sources stay owed;
@@ -25099,7 +25099,7 @@ paths:
       operationId: assessNoticeSource
       security: [ { bearerAuth: [] }, { cookieAuth: [] } ]
       x-mcp-tool: { verb: confirm_notice_source, router: change_compliance, action: confirm_notice_source, tier: auto_execute, scope: write, served_by: route, ask_user_first: true }
-      summary: Confirm where a contact came from (bought list, import, their own enquiry), which decides whether a privacy notice is owed. Preview it first (POST /privacy/notice-case-reviews/{id}/source/preview). An import alone does not say where the data first came from; when the evidence is unclear, ask the user for the original source rather than proposing purchased_or_imported.
+      summary: Confirm where a contact came from (bought list, import, their own enquiry), which decides whether a privacy notice is owed. Preview it first (POST /privacy/notice-case-reviews/{id}/source/preview). Only a contact with no recorded source is up for review; when its evidence does not name where the data first came from, ask the user rather than guessing a kind.
       requestBody:
         required: true
         content:
