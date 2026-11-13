@@ -196,6 +196,7 @@ func audienceNarrowedByAMember(ctx context.Context, tx pgx.Tx, activityID ids.Ac
 
 // retireOffTheRoster removes this calendar's rows the roster no longer grants:
 // a colleague's seat once they declined, and anybody a complete roster dropped.
+// A row a member relinked by hand is never retired: that link is theirs.
 // It also retires rows of a disconnected calendar, and colleagues the organizer
 // removed. A seat that left drops every calendar row bound to it, whichever
 // roster wrote it last. The syncing seat's own row and the host's are never
@@ -217,7 +218,7 @@ func retireOffTheRoster(
 	}
 	tag, err := tx.Exec(ctx, `
  DELETE FROM activity_participant ap USING activity a
- WHERE a.id=ap.activity_id AND ap.activity_id=@activity
+ WHERE a.id=ap.activity_id AND ap.activity_id=@activity AND ap.relinked_at IS NULL
  AND ((@left AND ap.roster_seat IS NOT NULL AND ap.user_id=@seat)
  OR (NOT @left AND (ap.roster_seat=@seat OR `+rosterOwnerGoneSQL("ap")+`) AND ap.address IS NOT NULL
  AND ap.user_id IS DISTINCT FROM @seat AND ap.user_id IS DISTINCT FROM a.host_user_id
@@ -264,7 +265,7 @@ func retireSeatsTheOrganizerRemoved(
 	}
 	tag, err := tx.Exec(ctx, `
  DELETE FROM activity_participant ap USING activity a
- WHERE a.id=ap.activity_id AND ap.activity_id=$1
+ WHERE a.id=ap.activity_id AND ap.activity_id=$1 AND ap.relinked_at IS NULL
  AND ap.user_id=ap.roster_seat AND ap.user_id<>$2 AND ap.user_id IS DISTINCT FROM a.host_user_id
  AND NOT EXISTS (SELECT 1 FROM app_user u, unnest($3::text[], $4::text[]) AS inp(address, domain_folded)
   WHERE u.id=ap.user_id AND (inp.address=ap.address OR `+listedSeat+`))`, args...)

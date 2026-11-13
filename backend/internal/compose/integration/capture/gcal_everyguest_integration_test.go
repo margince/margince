@@ -263,8 +263,8 @@ func TestEveryGuestOnAnInvitationIsOnTheMeeting(t *testing.T) {
 }
 
 // A link a member moved off a guest outlives the organiser dropping that
-// guest. A roster retires its own rows, and a moved row is no longer one, so
-// the next sync cannot undo what the member chose.
+// guest. A roster never retires a row a member relinked, so the next sync
+// cannot undo what the member chose.
 func TestTheRosterDoesNotRetireALinkAMemberMoved(t *testing.T) {
 	env := newCaptureEnv(t)
 	e := env.e
@@ -296,6 +296,45 @@ func TestTheRosterDoesNotRetireALinkAMemberMoved(t *testing.T) {
 
 	if got := len(guestRows(t, e, meeting)[guestKnown]); got != 1 {
 		t.Errorf("the moved row holds %d rows once the organiser dropped the guest, want 1", got)
+	}
+}
+
+// A link a member moved still follows the guest's answer on the calendar. The
+// move keeps the row out of the roster's reach, not out of its answers.
+func TestAMovedLinkStillTakesTheGuestsAnswer(t *testing.T) {
+	env := newCaptureEnv(t)
+	e := env.e
+	seatFor(t, e, guestColleagueA)
+	ensureGuestContact(t, e, guestKnown)
+	feed := &calendarFeed{}
+	start := captureNow.AddDate(0, 0, -3)
+	feed.set(lateGuestEvent("review", "confirmed", start, guestColleagueA, guestList()...))
+	sync := connectFeed(t, env, feed)
+	sync()
+	meeting := gcalMeeting(t, e)
+	if rows := answeredRows(t, e, meeting)[guestKnown]; len(rows) != 1 || rows[0].response == nil || *rows[0].response != "accepted" {
+		t.Fatalf("the guest's row before the move: %+v, want one that accepted", rows)
+	}
+
+	elsewhere := ensureGuestContact(t, e, "elsewhere@other-co.example")
+	if _, err := activities.NewStore(e.DB()).RelinkActivity(importerCtx(e),
+		ids.From[ids.ActivityKind](meeting), activities.RelinkActivityInput{
+			EntityType: "contact", EntityID: elsewhere.UUID, ReplaceExistingOfType: true,
+		}); err != nil {
+		t.Fatalf("moving the meeting off the known guest: %v", err)
+	}
+	answers := guestList()
+	for _, guest := range answers {
+		if guest["email"] == guestKnown {
+			guest["responseStatus"] = "tentative"
+		}
+	}
+	feed.set(lateGuestEvent("review", "confirmed", start, guestColleagueA, answers...))
+	sync()
+
+	rows := answeredRows(t, e, meeting)[guestKnown]
+	if len(rows) != 1 || rows[0].response == nil || *rows[0].response != "tentative" {
+		t.Errorf("the moved row after the guest changed their answer: %+v, want one that is tentative", rows)
 	}
 }
 
