@@ -218,9 +218,13 @@ func TestAColleaguesMonthsAreNotProposedWhileIndividualPerformanceIsOff(t *testi
 	lane := &scriptedLane{reply: proposedMonthsReply}
 	e := apptest.SetupAppWithOptions(t, compose.WithReportSetup(lane))
 	e.BootstrapWorkspace(t)
-	colleague := seedColleague(t, e)
+	e.DescribeCompany(t)
+	var colleague struct {
+		ID string `json:"id"`
+	}
+	mustCall(t, e, http.MethodPost, "/v1/users", AnyMap{"email": "seller@goal-switch.test", "display_name": "Sam Seller", "role": "rep"}, http.StatusCreated, &colleague)
 	mustCall(t, e, http.MethodPatch, "/v1/installation/settings", AnyMap{individualPerformanceKey: false}, http.StatusOK, nil)
-	path := fmt.Sprintf("/v1/analytics/sales-goals/%s/%d/proposed-months", colleague, clocktest.Now(t).Year())
+	path := fmt.Sprintf("/v1/analytics/sales-goals/%s/%d/proposed-months", colleague.ID, clocktest.Now(t).Year())
 	var problem crmcontracts.Problem
 	if status := e.Call(t, http.MethodPost, path, AnyMap{}, nil, &problem); status != http.StatusForbidden || problem.Code != "individual_performance_off" {
 		t.Errorf("POST %s with the switch off = %d %q, want 403 individual_performance_off", path, status, problem.Code)
