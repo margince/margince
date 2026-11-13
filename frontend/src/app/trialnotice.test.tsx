@@ -6,6 +6,7 @@ import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import type { components } from "../api/schema";
 import { LocaleProvider } from "../i18n";
 import { en } from "../i18n/en";
+import { useTrialStanding } from "../lib/license-posture";
 import {
   MARGINCE_CONTACT_FORM,
   MARGINCE_TEAM_ADDRESS,
@@ -32,13 +33,18 @@ function entitlement(endsIn: number, ended = false): LicenseEntitlement {
   };
 }
 
+// Reads the standing the banner reads, in the same render, so a test can see
+// that the answer arrived before it says the banner stayed away.
+function StandingRead() {
+  const standing = useTrialStanding();
+  return standing ? <output data-testid="standing" /> : null;
+}
+
 // Each read of the licence takes the next answer, and the last one stays.
 function mount(...answers: LicenseEntitlement[]) {
-  const reads: string[] = [];
   vi.stubGlobal(
     "fetch",
     vi.fn(async (input: RequestInfo | URL) => {
-      reads.push(input instanceof Request ? input.url : String(input));
       const url = input instanceof Request ? input.url : String(input);
       const body = url.includes("/installation/license")
         ? answers.length > 1
@@ -57,10 +63,10 @@ function mount(...answers: LicenseEntitlement[]) {
     <QueryClientProvider client={client}>
       <LocaleProvider initial="en">
         <LicenseBanner />
+        <StandingRead />
       </LocaleProvider>
     </QueryClientProvider>,
   );
-  return reads;
 }
 
 beforeEach(() => {
@@ -77,12 +83,8 @@ afterEach(() => {
 });
 
 it("leaves the chrome to the orb while more than a week is left", async () => {
-  const reads = mount(entitlement(10 * DAY));
-  await vi.waitFor(() =>
-    expect(reads.some((url) => url.includes("/installation/license"))).toBe(
-      true,
-    ),
-  );
+  mount(entitlement(10 * DAY));
+  await screen.findByTestId("standing");
   expect(document.querySelector(".callout")).toBeNull();
 });
 
@@ -96,9 +98,8 @@ it("may be put away until tomorrow in the last week, and comes back the next day
 
   cleanup();
   mount(entitlement(6 * DAY));
-  await vi.waitFor(() =>
-    expect(document.querySelector(".appbanner")).toBeNull(),
-  );
+  await screen.findByTestId("standing");
+  expect(document.querySelector(".appbanner")).toBeNull();
 
   cleanup();
   vi.setSystemTime(NOW + DAY);

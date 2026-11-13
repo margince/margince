@@ -1862,7 +1862,7 @@
   "trial.locked.title": "Your Margince trial has ended",
   "trial.locked.adminTitle": "Have a license key?",
   "trial.locked.body": "Margince has stopped working until it has a license. Your data stays as it is, and nothing is deleted.",
-  "trial.locked.admin": "Set it as license.token or MARGINCE_LICENSE in this installation’s configuration, then start Margince again. If you replaced a token file, check now instead.",
+  "trial.locked.admin": "Set it as license.token or MARGINCE_LICENSE in this installation’s configuration, then start Margince again. If you replaced a token file, check now instead. Background work resumes within 5 minutes.",
   "trial.locked.member": "Your admin can get a license from the Margince team. You can also write to them yourself.",
   "common.trialEnded": "This installation’s trial has ended, so nothing can be changed until it has a license.",
   "licensebanner.link": "Open {tab}",

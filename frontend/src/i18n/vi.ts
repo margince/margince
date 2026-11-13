@@ -14900,7 +14900,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "trial.locked.body":
     "Margince đã ngừng hoạt động cho đến khi có giấy phép. Dữ liệu của bạn vẫn được giữ nguyên, không có gì bị xóa.",
   "trial.locked.admin":
-    "Hãy đặt khóa vào license.token hoặc MARGINCE_LICENSE trong cấu hình của bản cài đặt này, rồi khởi động lại Margince. Nếu bạn đã thay tệp token, chỉ cần bấm Kiểm tra ngay.",
+    "Hãy đặt khóa vào license.token hoặc MARGINCE_LICENSE trong cấu hình của bản cài đặt này, rồi khởi động lại Margince. Nếu bạn đã thay tệp token, chỉ cần bấm Kiểm tra ngay. Tác vụ nền sẽ chạy lại trong vòng 5 phút.",
   "trial.locked.member":
     "Quản trị viên của bạn có thể nhận giấy phép từ đội ngũ Margince. Bạn cũng có thể tự viết cho họ.",
   "common.trialEnded":
