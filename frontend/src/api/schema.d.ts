@@ -80790,7 +80790,7 @@ export interface operations {
                     "application/json": components["schemas"]["DispactChannelEventReceipt"];
                 };
             };
-            /** @description The signed body is not a notice (`code: channel_event_malformed`). */
+            /** @description The signed body is not a notice: an unknown `type`, or a field its type needs is missing (`code: channel_event_malformed`). */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -80799,17 +80799,8 @@ export interface operations {
                     "application/problem+json": components["schemas"]["Problem"];
                 };
             };
-            /** @description The signature, the timestamp or the team does not match the connected bot (`code: channel_event_rejected`). */
+            /** @description The notice is not signed by the connected bot: no Dispact bot with an events secret is connected, or the signature, the timestamp or the team does not match (`code: channel_event_rejected`). The answer is the same for each cause. */
             401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/problem+json": components["schemas"]["Problem"];
-                };
-            };
-            /** @description No Dispact bot with an events secret is connected (`code: channel_events_not_configured`). */
-            404: {
                 headers: {
                     [name: string]: unknown;
                 };

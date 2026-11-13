@@ -35,6 +35,8 @@ const (
 	// noticeIDsHeld is how long a webhook-id is refused a second time.
 	// Dispact retries a notice for 24 hours under the same id.
 	noticeIDsHeld = 24 * time.Hour
+	// releaseTimeout bounds giving a failed notice's id back.
+	releaseTimeout = 5 * time.Second
 )
 
 // The pull cadence. While a connection has had a valid notice within
@@ -57,9 +59,10 @@ type EventLinks interface {
 }
 
 // Replays holds each id once for its time to live; FirstUse is false for an
-// id already held.
+// id already held, and Release frees one.
 type Replays interface {
 	FirstUse(ctx context.Context, key string, ttl time.Duration) (bool, error)
+	Release(ctx context.Context, key string) error
 }
 
 // Marks keeps the last moment under a key; Last answers the zero time when
@@ -91,37 +94,72 @@ func noticeKey(connection ids.UUID) string { return "chat-notice|" + connection.
 func sweepKey(connection ids.UUID) string { return "chat-sweep|" + connection.String() }
 
 // Receive implements chatlinks.EventReceiver. ctx carries the installation's
-// workspace, which the session middleware binds on every request.
+// workspace, which the session middleware binds on every request. Every
+// rejection answers alike, so a stranger cannot learn whether push is set up;
+// the log keeps the cause.
 func (r *Receiver) Receive(ctx context.Context, d chatlinks.Delivery) (crmcontracts.DispactChannelEventReceipt, error) {
-	ctx = principal.WithActor(ctx, chatLinksPrincipal)
+	receipt, err := r.receive(principal.WithActor(ctx, chatLinksPrincipal), d)
+	if errors.Is(err, chatlinks.ErrEventRejected) {
+		r.Log.InfoContext(ctx, "chat links: a Dispact notice was rejected", "webhook_id", d.ID, "err", err)
+	}
+	return receipt, err
+}
+
+func (r *Receiver) receive(ctx context.Context, d chatlinks.Delivery) (crmcontracts.DispactChannelEventReceipt, error) {
+	var none crmcontracts.DispactChannelEventReceipt
 	bot, secret, err := r.Bots.LiveBotEvents(ctx, chatlinks.ProviderDispact)
 	if errors.Is(err, capture.ErrNoConnection) || errors.Is(err, capture.ErrNoEventsSecret) {
-		return crmcontracts.DispactChannelEventReceipt{}, chatlinks.ErrEventsNotConfigured
+		return none, fmt.Errorf("%w: no Dispact bot with an events secret is connected: %w", chatlinks.ErrEventRejected, err)
 	}
 	if err != nil {
-		return crmcontracts.DispactChannelEventReceipt{}, fmt.Errorf("chat links: reading the events secret: %w", err)
+		return none, fmt.Errorf("chat links: reading the events secret: %w", err)
 	}
 	if err := r.verify(secret, d); err != nil {
-		return crmcontracts.DispactChannelEventReceipt{}, err
+		return none, err
 	}
-	var notice crmcontracts.DispactChannelEvent
-	if err := json.Unmarshal(d.Body, &notice); err != nil {
-		return crmcontracts.DispactChannelEventReceipt{}, fmt.Errorf("%w: %w", chatlinks.ErrEventMalformed, err)
+	notice, err := parseNotice(d.Body)
+	if err != nil {
+		return none, err
 	}
 	isCheck := notice.Type == crmcontracts.DispactChannelEventTypeUrlVerification
 	if !isCheck && deref(notice.WorkspaceId) != bot.TeamID {
-		return crmcontracts.DispactChannelEventReceipt{}, fmt.Errorf("%w: the notice is for another team", chatlinks.ErrEventRejected)
+		return none, fmt.Errorf("%w: the notice is for another team", chatlinks.ErrEventRejected)
 	}
-	if err := r.spend(ctx, bot.ConnectionID, d.ID); err != nil {
-		return crmcontracts.DispactChannelEventReceipt{}, err
+	key := "dispact-notice|" + bot.ConnectionID.String() + "|" + d.ID
+	if err := r.spend(ctx, key); err != nil {
+		return none, err
 	}
 	if isCheck {
-		if deref(notice.Challenge) == "" {
-			return crmcontracts.DispactChannelEventReceipt{}, fmt.Errorf("%w: a URL check with no challenge", chatlinks.ErrEventMalformed)
-		}
 		return crmcontracts.DispactChannelEventReceipt{Challenge: notice.Challenge}, nil
 	}
-	return r.act(ctx, bot.ConnectionID, notice)
+	receipt, err := r.act(ctx, bot.ConnectionID, notice)
+	if err != nil {
+		// The notice took no effect, so Dispact's retry under the same id must
+		// be taken rather than refused as a replay.
+		r.release(ctx, key)
+	}
+	return receipt, err
+}
+
+// parseNotice reads a signed body. It refuses an unknown type, or a notice
+// without the fields its type needs. This runs before the id is spent or the
+// push is marked fresh.
+func parseNotice(body []byte) (crmcontracts.DispactChannelEvent, error) {
+	var notice crmcontracts.DispactChannelEvent
+	if err := json.Unmarshal(body, &notice); err != nil {
+		return notice, fmt.Errorf("%w: %w", chatlinks.ErrEventMalformed, err)
+	}
+	switch {
+	case !notice.Type.Valid():
+		return notice, fmt.Errorf("%w: unknown type %q", chatlinks.ErrEventMalformed, notice.Type)
+	case notice.Type == crmcontracts.DispactChannelEventTypeUrlVerification:
+		if deref(notice.Challenge) == "" {
+			return notice, fmt.Errorf("%w: a URL check with no challenge", chatlinks.ErrEventMalformed)
+		}
+	case deref(notice.WorkspaceId) == "" || deref(notice.ChannelSlug) == "":
+		return notice, fmt.Errorf("%w: a notice names its workspace_id and channel_slug", chatlinks.ErrEventMalformed)
+	}
+	return notice, nil
 }
 
 // verify holds the Standard Webhooks rules: a signature made with the secret,
@@ -146,8 +184,8 @@ func (r *Receiver) verify(secret string, d chatlinks.Delivery) error {
 
 // spend holds the webhook-id for noticeIDsHeld, so a replayed notice is
 // refused. A store that cannot answer refuses the notice, and Dispact retries.
-func (r *Receiver) spend(ctx context.Context, connection ids.UUID, id string) error {
-	first, err := r.Replays.FirstUse(ctx, "dispact-notice|"+connection.String()+"|"+id, noticeIDsHeld)
+func (r *Receiver) spend(ctx context.Context, key string) error {
+	first, err := r.Replays.FirstUse(ctx, key, noticeIDsHeld)
 	if err != nil {
 		return fmt.Errorf("%w: %w", chatlinks.ErrEventsUnavailable, err)
 	}
@@ -155,6 +193,17 @@ func (r *Receiver) spend(ctx context.Context, connection ids.UUID, id string) er
 		return chatlinks.ErrEventReplayed
 	}
 	return nil
+}
+
+// release frees a spent id whose notice failed. A release that fails leaves
+// the retry refused, and the hourly sweep pull reads the channel instead. It
+// outlives a caller that hung up, within releaseTimeout.
+func (r *Receiver) release(ctx context.Context, key string) {
+	detached, cancel := context.WithTimeout(context.WithoutCancel(ctx), releaseTimeout)
+	defer cancel()
+	if err := r.Replays.Release(detached, key); err != nil {
+		r.Log.WarnContext(ctx, "chat links: a failed notice's id was not released; its retry will be refused", "err", err)
+	}
 }
 
 // act marks the notice, then queues the pull or pauses the archived

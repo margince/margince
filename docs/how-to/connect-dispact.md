@@ -101,12 +101,11 @@ Every notice is signed under Standard Webhooks: the headers `webhook-id`, `webho
 | `200` `pull_queued` | The channel is linked. The bot's channels are read soon. Notices that arrive while that read waits add nothing. |
 | `200` `link_paused` | `channel.archived` for a linked channel. The link is paused, as when the chat answers `404`. |
 | `200` `ignored` | No live link of this bot has the channel. Nothing changes. |
-| `400` `channel_event_malformed` | The signed body is not a notice, or a URL check has no challenge. |
-| `401` `channel_event_rejected` | The signature does not match the sealed secret, the timestamp is more than 5 minutes off this server's clock, or `workspace_id` is not the connected bot's team. Check the secret and the server clock. |
-| `404` `channel_events_not_configured` | No Dispact bot is connected, or it has no events secret. |
-| `409` `channel_event_replayed` | This `webhook-id` was taken in the last 24 hours. Ids are held in Redis. |
+| `400` `channel_event_malformed` | The signed body is not a notice: its `type` is unknown, a notice lacks `workspace_id` or `channel_slug`, or a URL check has no challenge. Nothing is counted. |
+| `401` `channel_event_rejected` | No Dispact bot with an events secret is connected, the signature does not match the sealed secret, the timestamp is more than 5 minutes off this server's clock, or `workspace_id` is not the connected bot's team. The answer is the same for each cause, so a stranger cannot tell whether push is set up. The API log names the cause. Check that the secret is saved, that it matches, and the server clock. |
+| `409` `channel_event_replayed` | This `webhook-id` was taken in the last 24 hours. Ids are held in Redis. A notice whose read could not be queued, or whose link could not be paused, gives its id back, so Dispact's retry is taken. |
 | `413` `channel_event_too_large` | The body is over 16 KiB. |
-| `429` | One sender sent more than 600 notices in a minute. |
+| `429` | One sender sent more than 600 notices in a minute, or Redis cannot count them. |
 | `503` `channel_events_unavailable` | Redis could not record the id, or the read could not be queued. Dispact retries. |
 
 ## The address must be public in production

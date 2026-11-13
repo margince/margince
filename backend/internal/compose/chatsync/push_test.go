@@ -41,8 +41,9 @@ func (b fakeEventBots) LiveBotEvents(context.Context, string) (capture.LiveBot, 
 }
 
 type fakeEventLinks struct {
-	links []chatlinks.Link
-	gone  []ids.UUID
+	links    []chatlinks.Link
+	gone     []ids.UUID
+	failGone int
 }
 
 func (l *fakeEventLinks) PullLinks(_ context.Context, connection ids.UUID) ([]chatlinks.Link, error) {
@@ -56,6 +57,10 @@ func (l *fakeEventLinks) PullLinks(_ context.Context, connection ids.UUID) ([]ch
 }
 
 func (l *fakeEventLinks) MarkChannelGone(_ context.Context, id ids.UUID) error {
+	if l.failGone > 0 {
+		l.failGone--
+		return errors.New("database down")
+	}
 	l.gone = append(l.gone, id)
 	return nil
 }
@@ -70,7 +75,20 @@ func (r fakeReplays) FirstUse(_ context.Context, key string, _ time.Duration) (b
 	return true, nil
 }
 
+func (r fakeReplays) Release(_ context.Context, key string) error {
+	delete(r, key)
+	return nil
+}
+
 type fakeMarks map[string]time.Time
+
+// brokenMarks is a mark store that cannot be read.
+type brokenMarks struct{}
+
+func (brokenMarks) Mark(context.Context, string, time.Time, time.Duration) error { return nil }
+func (brokenMarks) Last(context.Context, string) (time.Time, error) {
+	return time.Time{}, errors.New("redis down")
+}
 
 func (m fakeMarks) Mark(_ context.Context, key string, at time.Time, _ time.Duration) error {
 	m[key] = at
@@ -80,25 +98,31 @@ func (m fakeMarks) Mark(_ context.Context, key string, at time.Time, _ time.Dura
 func (m fakeMarks) Last(_ context.Context, key string) (time.Time, error) { return m[key], nil }
 
 type pushEnv struct {
-	receiver *Receiver
-	links    *fakeEventLinks
-	marks    fakeMarks
-	pulls    []ids.UUID
-	conn     ids.UUID
-	link     chatlinks.Link
-	now      time.Time
+	receiver  *Receiver
+	links     *fakeEventLinks
+	marks     fakeMarks
+	replays   fakeReplays
+	pulls     []ids.UUID
+	failPulls int
+	conn      ids.UUID
+	link      chatlinks.Link
+	now       time.Time
 }
 
 func newPushEnv(t *testing.T) *pushEnv {
 	t.Helper()
-	e := &pushEnv{conn: ids.NewV7(), marks: fakeMarks{}, now: pushNow}
+	e := &pushEnv{conn: ids.NewV7(), marks: fakeMarks{}, replays: fakeReplays{}, now: pushNow}
 	e.link = chatlinks.Link{ID: ids.NewV7(), ConnectionID: e.conn, ChannelSlug: "deal-acme", Status: chatlinks.StatusActive}
 	e.links = &fakeEventLinks{links: []chatlinks.Link{e.link,
 		{ID: ids.NewV7(), ConnectionID: ids.NewV7(), ChannelSlug: "deal-other", Status: chatlinks.StatusActive}}}
 	e.receiver = &Receiver{
 		Bots:  fakeEventBots{bot: capture.LiveBot{ConnectionID: e.conn, TeamID: pushTeam}, secret: pushSecret},
-		Links: e.links, Replays: fakeReplays{}, Marks: e.marks, Now: func() time.Time { return e.now }, Log: slog.Default(),
+		Links: e.links, Replays: e.replays, Marks: e.marks, Now: func() time.Time { return e.now }, Log: slog.Default(),
 		Pull: func(_ context.Context, _, connection ids.UUID) error {
+			if e.failPulls > 0 {
+				e.failPulls--
+				return errors.New("queue down")
+			}
 			e.pulls = append(e.pulls, connection)
 			return nil
 		},
@@ -249,8 +273,8 @@ func TestWithNoEventsSecretEveryNoticeIsRefused(t *testing.T) {
 		e := newPushEnv(t)
 		e.receiver.Bots = fakeEventBots{err: err}
 		d := signed(t, pushSecret, "msg_1", pushNow, notice("message.created", pushTeam, "deal-acme"))
-		if _, got := e.receive(d); !errors.Is(got, chatlinks.ErrEventsNotConfigured) {
-			t.Errorf("%s: err = %v; want ErrEventsNotConfigured", name, got)
+		if _, got := e.receive(d); !errors.Is(got, chatlinks.ErrEventRejected) {
+			t.Errorf("%s: err = %v; want the same ErrEventRejected a bad signature gets", name, got)
 		}
 		if len(e.pulls) != 0 {
 			t.Errorf("%s: %d pull(s) queued", name, len(e.pulls))
@@ -322,5 +346,67 @@ func TestANoticeDuringAPullRunsItOnceMore(t *testing.T) {
 	var snooze *river.JobSnoozeError
 	if err := worker.Work(context.Background(), job); !errors.As(err, &snooze) {
 		t.Errorf("a notice that came while the pull ran: %v; want the pull to run again", err)
+	}
+}
+
+func TestANoticeWhoseActionFailedIsTakenOnRetry(t *testing.T) {
+	for _, tc := range []struct {
+		kind, want string
+		fail       func(e *pushEnv)
+	}{
+		{"message.created", "pull_queued", func(e *pushEnv) { e.failPulls = 1 }},
+		{"channel.archived", "link_paused", func(e *pushEnv) { e.links.failGone = 1 }},
+	} {
+		e := newPushEnv(t)
+		tc.fail(e)
+		d := signed(t, pushSecret, "msg_1", pushNow, notice(tc.kind, pushTeam, "deal-acme"))
+		if _, err := e.receive(d); err == nil || errors.Is(err, chatlinks.ErrEventReplayed) {
+			t.Fatalf("%s: the failed action answered %v; want its own error", tc.kind, err)
+		}
+		if got, err := e.receive(d); err != nil || statusOf(got) != tc.want {
+			t.Errorf("%s: Dispact's retry under the same id → %+v, %v; want %s", tc.kind, got, err, tc.want)
+		}
+		if _, err := e.receive(d); !errors.Is(err, chatlinks.ErrEventReplayed) {
+			t.Errorf("%s: a replay after the success: %v; want ErrEventReplayed", tc.kind, err)
+		}
+	}
+}
+
+func TestANoticeOfUnknownShapeIsRefusedBeforeItCounts(t *testing.T) {
+	for name, body := range map[string]string{
+		"an unknown type":   notice("message.deleted", pushTeam, "deal-acme"),
+		"no type":           `{"workspace_id":"team-ours","channel_slug":"deal-acme"}`,
+		"no channel":        notice("message.created", pushTeam, ""),
+		"a check, no value": `{"type":"url_verification"}`,
+	} {
+		e := newPushEnv(t)
+		if _, err := e.receive(signed(t, pushSecret, "msg_1", pushNow, body)); !errors.Is(err, chatlinks.ErrEventMalformed) {
+			t.Errorf("%s: err = %v; want ErrEventMalformed", name, err)
+		}
+		if len(e.replays) != 0 || len(e.marks) != 0 || len(e.pulls) != 0 {
+			t.Errorf("%s: a refused notice spent %v, marked %v and pulled %d", name, e.replays, e.marks, len(e.pulls))
+		}
+	}
+}
+
+func TestAPullWhoseMarksCannotBeReadRunsOnceMore(t *testing.T) {
+	worker := &PullWorker[pullArgs]{Bind: bindAny, Marks: brokenMarks{},
+		Puller: &Puller{Chats: closedChats{}, Now: func() time.Time { return pushNow }}}
+	var snooze *river.JobSnoozeError
+	if err := worker.Work(context.Background(), &river.Job[pullArgs]{Args: pullArgs{conn: ids.NewV7()}}); !errors.As(err, &snooze) {
+		t.Errorf("an unreadable notice mark: %v; want the pull to run again", err)
+	}
+}
+
+func TestANoticeInTheMillisecondThePullStartedRunsItOnceMore(t *testing.T) {
+	conn := ids.NewV7()
+	start := pushNow.Add(400 * time.Microsecond)
+	// The store keeps milliseconds, so a notice 300µs after the start reads back as pushNow.
+	marks := fakeMarks{noticeKey(conn): time.UnixMilli(start.Add(300 * time.Microsecond).UnixMilli())}
+	worker := &PullWorker[pullArgs]{Bind: bindAny, Marks: marks,
+		Puller: &Puller{Chats: closedChats{}, Now: func() time.Time { return start }}}
+	var snooze *river.JobSnoozeError
+	if err := worker.Work(context.Background(), &river.Job[pullArgs]{Args: pullArgs{conn: conn}}); !errors.As(err, &snooze) {
+		t.Errorf("a notice in the start's millisecond: %v; want the pull to run again", err)
 	}
 }

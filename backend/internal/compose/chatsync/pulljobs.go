@@ -44,15 +44,18 @@ func (w *PullWorker[T]) Work(ctx context.Context, job *river.Job[T]) error {
 	if err != nil {
 		return jobs.FaultContext(ctx, err)
 	}
-	started := w.Puller.Now()
+	// Marks are held to the millisecond, so the start is compared at that grain.
+	started := w.Puller.Now().Truncate(time.Millisecond)
 	if err := w.Puller.Pull(bound, job.Args.Connection()); err != nil {
 		return jobs.FaultContext(bound, err)
 	}
 	if w.Marks == nil {
 		return nil
 	}
+	// A mark that cannot be read may hide a notice from the run. So the pull
+	// runs once more, instead of leaving it to the hourly sweep.
 	notice, err := w.Marks.Last(bound, noticeKey(job.Args.Connection()))
-	if err == nil && notice.After(started) {
+	if err != nil || !notice.Before(started) {
 		return river.JobSnooze(noticeRerun)
 	}
 	return nil

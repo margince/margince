@@ -17388,17 +17388,12 @@ paths:
             application/json:
               schema: { $ref: '#/components/schemas/DispactChannelEventReceipt' }
         '400':
-          description: 'The signed body is not a notice (`code: channel_event_malformed`).'
+          description: 'The signed body is not a notice: an unknown `type`, or a field its type needs is missing (`code: channel_event_malformed`).'
           content:
             application/problem+json:
               schema: { $ref: '#/components/schemas/Problem' }
         '401':
-          description: 'The signature, the timestamp or the team does not match the connected bot (`code: channel_event_rejected`).'
-          content:
-            application/problem+json:
-              schema: { $ref: '#/components/schemas/Problem' }
-        '404':
-          description: 'No Dispact bot with an events secret is connected (`code: channel_events_not_configured`).'
+          description: 'The notice is not signed by the connected bot: no Dispact bot with an events secret is connected, or the signature, the timestamp or the team does not match (`code: channel_event_rejected`). The answer is the same for each cause.'
           content:
             application/problem+json:
               schema: { $ref: '#/components/schemas/Problem' }

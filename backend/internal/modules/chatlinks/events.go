@@ -31,11 +31,10 @@ const eventsPerMinute = 600
 
 // The refusals of a notice, each with its own answer.
 var (
-	ErrEventRejected       = errors.New("chatlinks: the notice's signature, time or team does not match the connected bot")
-	ErrEventsNotConfigured = errors.New("chatlinks: no Dispact bot with an events secret is connected")
-	ErrEventReplayed       = errors.New("chatlinks: this notice id was already taken")
-	ErrEventMalformed      = errors.New("chatlinks: the signed body is not a notice")
-	ErrEventsUnavailable   = errors.New("chatlinks: the notice could not be recorded")
+	ErrEventRejected     = errors.New("chatlinks: the notice is not signed by the connected Dispact bot")
+	ErrEventReplayed     = errors.New("chatlinks: this notice id was already taken")
+	ErrEventMalformed    = errors.New("chatlinks: the signed body is not a notice")
+	ErrEventsUnavailable = errors.New("chatlinks: the notice could not be recorded")
 )
 
 // Delivery is one signed request as it arrived.
@@ -61,8 +60,15 @@ type EventHandlers struct {
 
 // NewEventHandlers wires the transport over the receiver.
 func NewEventHandlers(receiver EventReceiver) EventHandlers {
+	return eventHandlersOn(receiver, ratelimit.New)
+}
+
+// eventHandlersOn meters through newLimiter. The meter fails closed while the
+// shared count is out. Each notice costs a secret decrypt and a database read,
+// so an anonymous caller is never let through unmetered.
+func eventHandlersOn(receiver EventReceiver, newLimiter func(string, ratelimit.Kind, int, time.Duration) *ratelimit.Limiter) EventHandlers {
 	return EventHandlers{receiver: receiver,
-		perPeer: ratelimit.New("channel-events/dispact", ratelimit.FailOpen, eventsPerMinute, time.Minute)}
+		perPeer: newLimiter("channel-events/dispact", ratelimit.FailClosed, eventsPerMinute, time.Minute)}
 }
 
 // ReceiveDispactChannelEvent takes one signed notice from Dispact.
@@ -100,7 +106,8 @@ func (h EventHandlers) ReceiveDispactChannelEvent(w http.ResponseWriter, r *http
 }
 
 // eventRefusals map each refusal to its answer. The rejection names no
-// reason: which check failed would tell a stranger how near a forgery came.
+// reason. Which check failed, or that no secret is set, would tell a stranger
+// how near a forgery came.
 var eventRefusals = []struct {
 	err    error
 	status int
@@ -108,7 +115,6 @@ var eventRefusals = []struct {
 	detail string
 }{
 	{ErrEventRejected, http.StatusUnauthorized, "channel_event_rejected", "The notice is not signed by the connected Dispact bot."},
-	{ErrEventsNotConfigured, http.StatusNotFound, "channel_events_not_configured", "No Dispact bot with an events secret is connected."},
 	{ErrEventReplayed, http.StatusConflict, "channel_event_replayed", "This notice was already taken."},
 	{ErrEventMalformed, http.StatusBadRequest, "channel_event_malformed", "The body is not a Dispact notice."},
 	{ErrEventsUnavailable, http.StatusServiceUnavailable, "channel_events_unavailable", "The notice could not be taken now. Send it again later."},

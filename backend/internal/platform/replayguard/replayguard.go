@@ -28,6 +28,16 @@ func New(rdb *redis.Client) Guard { return Guard{rdb: rdb} }
 // A ttl under a second is raised to one, because Redis keeps a key with no
 // expiry forever.
 func (g Guard) FirstUse(ctx context.Context, key string, ttl time.Duration) (bool, error) {
+	return g.rdb.SetNX(ctx, stored(key), 1, max(ttl, time.Second)).Result()
+}
+
+// Release forgets key, so a use that failed before it took effect can be
+// made again.
+func (g Guard) Release(ctx context.Context, key string) error {
+	return g.rdb.Del(ctx, stored(key)).Err()
+}
+
+func stored(key string) string {
 	sum := sha256.Sum256([]byte(key))
-	return g.rdb.SetNX(ctx, keyPrefix+hex.EncodeToString(sum[:]), 1, max(ttl, time.Second)).Result()
+	return keyPrefix + hex.EncodeToString(sum[:])
 }
