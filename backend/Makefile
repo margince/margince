@@ -127,7 +127,7 @@ TEST_EXEC_FLAGS = $(if $(TEST_EXEC),-count=1 -exec $(TEST_EXEC))
 # CI passes its run number. Unset, the tests run in source order. Go caches no
 # shuffled result, so a local run with a seed runs every package again.
 TEST_SHUFFLE_FLAGS = $(if $(TEST_SHUFFLE_SEED),-shuffle=$(TEST_SHUFFLE_SEED))
-TEST_SHUFFLE_NOTE = $(if $(TEST_SHUFFLE_SEED),@echo "$@: test order -shuffle=$(TEST_SHUFFLE_SEED); replay: make -C backend $@ TEST_SHUFFLE_SEED=$(TEST_SHUFFLE_SEED) or go test -shuffle=$(TEST_SHUFFLE_SEED) <package>")
+TEST_SHUFFLE_NOTE = $(if $(TEST_SHUFFLE_SEED),@echo "$@: test order -shuffle=$(TEST_SHUFFLE_SEED); replay: make -C backend $@ TEST_SHUFFLE_SEED=$(TEST_SHUFFLE_SEED) or cd backend && $(GOWORK_COMPOSED) go test -shuffle=$(TEST_SHUFFLE_SEED) <package>")
 
 .DEFAULT_GOAL := help
 

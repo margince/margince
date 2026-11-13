@@ -675,7 +675,7 @@ FE_BLOB_DIR := .vitest-reports
 ## TEST_SHUFFLE_SEED=<n> shuffles the tests inside each vitest file with that
 ## seed (frontend/scripts/vitest-shards.ts); CI passes its run number. Unset,
 ## they run in source order.
-FE_SHUFFLE_NOTE = $(if $(TEST_SHUFFLE_SEED),@echo "$@: test order seed $(TEST_SHUFFLE_SEED); replay: make $@ TEST_SHUFFLE_SEED=$(TEST_SHUFFLE_SEED) or cd frontend && TEST_SHUFFLE_SEED=$(TEST_SHUFFLE_SEED) pnpm exec vitest run <file>")
+FE_SHUFFLE_NOTE = $(if $(TEST_SHUFFLE_SEED),@echo "$@: test order seed $(TEST_SHUFFLE_SEED); replay: make $@ TEST_SHUFFLE_SEED=$(TEST_SHUFFLE_SEED) or cd frontend && TEST_SHUFFLE_SEED=$(TEST_SHUFFLE_SEED) $(if $(filter fe-test-ext,$@),MARGINCE_COMPOSITION_FRONTEND=../build/composition/frontend pnpm test:ext,pnpm exec vitest run) <file>")
 fe-unit:
 	$(FE_SHUFFLE_NOTE)
 	node --test scripts/ensure-pnpm.test.mjs

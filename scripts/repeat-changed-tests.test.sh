@@ -68,6 +68,23 @@ for base in origin/main origin/develop; do
     fail "the replay dropped the base $base or the seed: $replay"
 done
 
+root="$(cd "$(dirname "$SCRIPT")/.." && pwd)"
+shuffle_note() {
+  make --no-print-directory --dry-run -o composition -C "$1" "$2" TEST_SHUFFLE_SEED=22413 |
+    sed -n '/^echo ".*test order.*replay:/p'
+}
+for target in test-cached test-solo test-uncached test-extensions; do
+  note="$(shuffle_note "$root/backend" "$target")"
+  [[ "$note" == *"or cd backend && GOWORK="*"/build/composition/go.work go test -shuffle=22413 <package>"* ]] ||
+    fail "$target package replay lost the composed workspace or working directory: $note"
+done
+note="$(shuffle_note "$root" fe-test-ext)"
+[[ "$note" == *"TEST_SHUFFLE_SEED=22413 MARGINCE_COMPOSITION_FRONTEND=../build/composition/frontend pnpm test:ext <file>"* ]] ||
+  fail "the extension file replay lost its composed registry or test config: $note"
+note="$(shuffle_note "$root" fe-unit)"
+[[ "$note" == *"TEST_SHUFFLE_SEED=22413 pnpm exec vitest run <file>"* ]] ||
+  fail "the core file replay changed configs: $note"
+
 if ((FAILURES > 0)); then
   echo "repeat-changed-tests.test: $FAILURES failure(s)" >&2
   exit 1
