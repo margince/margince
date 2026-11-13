@@ -311,6 +311,9 @@ class TellHerWhatWeHoldTest(GuardCase):
     def test_saying_what_it_would_send(self):
         self.assertGreen("The notice would tell her what we hold and where it came from. I have sent nothing yet.")
 
+    def test_asking_if_the_user_would_like_it_done(self):
+        self.assertGreen("Confirming the source schedules the Art. 14 notice; please confirm if you would like that.")
+
     def test_saying_what_is_owed_and_nothing_more_fails(self):
         self.assertMissed("You owe her a privacy notice under Art. 14 GDPR within a month.", "shall|should|may")
 
