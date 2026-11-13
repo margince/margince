@@ -5147,7 +5147,9 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Diesen Eintrag archivieren? Er verschwindet aus dem Verlauf.",
   "activity.archiveDone": "Eintrag archiviert",
   "activity.archiveRefused":
-    "Du kannst nur Notizen und Aufgaben archivieren, die du selbst geschrieben hast. Eine Führungskraft kann diesen Eintrag für dich archivieren.",
+    "Du kannst nur Notizen, Aufgaben, Anrufe und Termine archivieren, die du selbst erfasst hast.",
+  "activity.archiveCalendarManaged":
+    "Die Kalendereinladung führt diesen Termin. Ändere ihn oder sag ihn über die Einladung ab.",
   "activity.notYoursToChange":
     "Du kannst diese Aktivität nicht ändern. Frage einen Admin nach Bearbeitungsrechten.",
   "activity.files.empty": "Noch keine Dateien an dieser Aktivität.",
@@ -7575,6 +7577,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "{subject} ist schon als stattgefunden erfasst. Erneutes Speichern ergänzt nur, was nicht gespeichert wurde.",
   "log.recordOfMeetingManaged":
     "Betreff und Notizen gehören zur Kalendereinladung. Deine Notizen werden hier als Notiz gespeichert, und der Termin wird als stattgefunden markiert.",
+  "log.recordOfMeetingTranscript":
+    "Das Transkript wird als eigener Eintrag gespeichert, und der Termin wird als stattgefunden markiert.",
   "log.asTranscript": "Dieser Text ist ein Transkript",
   "log.transcriptUpload": "Oder Datei hochladen",
   "log.transcriptUploadRejected": "Nur eine .txt-Datei ist zulässig.",

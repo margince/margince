@@ -33,7 +33,8 @@ func StampActivityAffordances(ctx context.Context, tx pgx.Tx, page []crmcontract
 
 // stampActivitiesWritable answers what the update and archive paths ask. The
 // update path needs the object grant, then the row authority for the whole
-// page at once. Archivable is auth.ArchivableSubset's answer whole.
+// page at once. Archivable is auth.ArchivableSubset's answer, less the meetings
+// a live invitation holds, which the archive refuses for every caller.
 func stampActivitiesWritable(ctx context.Context, tx pgx.Tx, page []crmcontracts.Activity) error {
 	named := make([]ids.UUID, len(page))
 	for i := range page {
@@ -50,8 +51,12 @@ func stampActivitiesWritable(ctx context.Context, tx pgx.Tx, page []crmcontracts
 	if err != nil {
 		return err
 	}
+	invited, err := invitationHeldMeetings(ctx, tx, named)
+	if err != nil {
+		return err
+	}
 	for i, id := range named {
-		w, a := may[id], archivable[id]
+		w, a := may[id], archivable[id] && !invited[id]
 		page[i].Writable, page[i].Archivable = &w, &a
 	}
 	return nil

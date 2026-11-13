@@ -531,6 +531,39 @@ describe("the timeline", () => {
     ]);
   });
 
+  it("draws a meeting and the transcript that records it once", () => {
+    const meeting = {
+      occurred_precision: "instant" as const,
+      offers_email: false,
+      is_done: false,
+      id: "m-1",
+      kind: "meeting" as const,
+      subject: "Quarterly review",
+      occurred_at: "2026-08-10T09:00:00Z",
+      meeting_status: "held" as const,
+      source: "manual",
+      captured_by: "human:u1",
+      created_at: "2026-08-10T09:00:00Z",
+      updated_at: "2026-08-10T09:00:00Z",
+    };
+    const transcript = {
+      ...meeting,
+      id: "m-2",
+      subject: "Review call",
+      meeting_status: null,
+      source_system: "transcript",
+      source_activity_id: "m-1",
+    };
+    const events = contactTimelineEvents(
+      {
+        ...VIEW,
+        activities: { data: [meeting, transcript], page: { has_more: false } },
+      },
+      words,
+    );
+    expect(events.map((event) => event.title)).toEqual(["Quarterly review"]);
+  });
+
   it("names the contact clock as the last recorded exchange", () => {
     expect(
       contactGap(

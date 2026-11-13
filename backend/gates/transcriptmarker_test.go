@@ -38,8 +38,9 @@ var transcriptMarkerConst = regexp.MustCompile(`(?m)^\s*(?:const\s+)?(\w*[Tt]ran
 // two spellings match — a scan that found neither would pass while holding
 // nothing.
 var transcriptMarkerSites = map[string]string{
-	"internal/modules/activities/mapping.go": "transcriptSourceSystem",
-	"internal/modules/deals/authorside.go":   "TranscriptSourceSystem",
+	"internal/modules/activities/mapping.go":                  "transcriptSourceSystem",
+	"internal/modules/deals/authorside.go":                    "TranscriptSourceSystem",
+	"internal/shared/kernel/meetingoutcome/meetingoutcome.go": "TranscriptSourceSystem",
 }
 
 func TestTheTranscriptMarkerIsSpelledTheSameInBothModules(t *testing.T) {

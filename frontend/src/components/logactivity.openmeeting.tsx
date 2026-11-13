@@ -10,11 +10,11 @@ import { isISODate } from "../design-system/dateinput";
 import { dayStartIso } from "../design-system/recordtimeline";
 import { activityDate, formatActivityWhen } from "../format/activitywhen";
 import type { ISODate } from "../format/datepattern";
-import { DAY_MS } from "../format/timezone";
 import { useLocale, useT } from "../i18n";
 import {
   type ActivityDraft,
   activityRequestBody,
+  canHaveTranscript,
   NO_ATTENDEES,
   outgoingBody,
 } from "../lib/activitybody";
@@ -107,40 +107,28 @@ export function meetingIsAsked(
     : asker.attendeeIds.some((id) => participants.has(id));
 }
 
-// Whole calendar days between two ISO days.
-function daysApart(a: string, b: string): number {
-  return (
-    Math.abs(Date.parse(`${a}T00:00:00Z`) - Date.parse(`${b}T00:00:00Z`)) /
-    DAY_MS
-  );
-}
-
 /**
- * The asked meeting closest to the chosen day. Closeness is by calendar day in
- * the reader's zone first. A date-only meeting is stored at noon UTC, so its
- * instant says nothing about the hour. The instant only breaks a tie.
+ * The asked meeting on the chosen day, by calendar day in the reader's zone.
+ * The question is about that day, so a meeting the day before or after is not
+ * asked. A date-only meeting is stored at noon UTC, so its instant says nothing
+ * about the hour. Of several on the day, the earliest wins.
  */
 export function closestMeeting<
   T extends Pick<Activity, "occurred_at" | "occurred_precision">,
 >(meetings: readonly T[], day: ISODate, zone: string): T | undefined {
-  const target = Date.parse(dayStartIso(day, zone));
-  const rank = (meeting: T) => ({
-    days: daysApart(
-      activityDate(meeting.occurred_at, meeting.occurred_precision, zone),
-      day,
-    ),
-    ms: Math.abs(Date.parse(meeting.occurred_at) - target),
-  });
-  return [...meetings]
-    .map((meeting) => ({ meeting, rank: rank(meeting) }))
-    .sort((a, b) => a.rank.days - b.rank.days || a.rank.ms - b.rank.ms)[0]
-    ?.meeting;
+  return meetings
+    .filter(
+      (meeting) =>
+        activityDate(meeting.occurred_at, meeting.occurred_precision, zone) ===
+        day,
+    )
+    .sort((a, b) => Date.parse(a.occurred_at) - Date.parse(b.occurred_at))[0];
 }
 
 /**
  * The meeting on this record that still owes its outcome and that this reader
- * may record for these contacts. Of those within a day of the chosen day, the
- * closest wins. `enabled` is false for every case the form does not ask about.
+ * may record for these contacts, on the chosen day (closestMeeting).
+ * `enabled` is false for every case the form does not ask about.
  */
 export function useOpenMeetingOnDay(
   entityType: EntityKind | undefined,
@@ -213,11 +201,11 @@ type RecordStep = "note" | "follow-up";
 type ActivityRequest = ReturnType<typeof activityRequestBody>;
 
 /**
- * The open meeting this entry records, and the question that asks. A transcript
- * is not asked about: a write to the meeting cannot mark its notes as one. Yes
- * is the default, and a different meeting asks again from Yes. A save that
- * wrote the outcome and then failed swaps the question for a line saying so.
- * The next save resumes that record.
+ * The open meeting this entry records, and the question that asks. Yes is the
+ * default, and a different meeting asks again from Yes. A save that wrote the
+ * outcome and then failed swaps the question for a line saying so. The next
+ * save resumes that record. A transcript is saved in one create, so it never
+ * resumes one.
  */
 export function useRecordOfMeeting(
   entityType: EntityKind | undefined,
@@ -234,7 +222,7 @@ export function useRecordOfMeeting(
 }> {
   const viewerId = useViewerId();
   const [resume, setResume] = useState<MeetingRecord>();
-  const meetingKind = draft.kind === "meeting" && !draft.asTranscript;
+  const meetingKind = draft.kind === "meeting";
   const open = useOpenMeetingOnDay(
     entityType,
     entityId,
@@ -249,7 +237,7 @@ export function useRecordOfMeeting(
       record?.outcome ? { ...record, sent: { ...record.sent } } : undefined,
     );
   const clear = () => setResume(undefined);
-  if (resume && meetingKind) {
+  if (resume && meetingKind && !draft.asTranscript) {
     return {
       recordingFiledMeeting: Boolean(
         resume.meeting.links?.some((link) =>
@@ -297,6 +285,7 @@ export function useRecordOfMeeting(
         value={recordsIt}
         onChange={(yes) => setNotRecordOf(yes ? undefined : open.id)}
         zone={zone}
+        transcript={draft.asTranscript}
       />
     ),
   };
@@ -319,11 +308,14 @@ export function RecordOfMeetingQuestion({
   value,
   onChange,
   zone,
+  transcript = false,
 }: Readonly<{
   meeting: OpenMeeting;
   value: boolean;
   onChange: (recordsIt: boolean) => void;
   zone: string;
+  // The entry is a transcript, which is saved as its own entry either way.
+  transcript?: boolean;
 }>) {
   const t = useT();
   const { locale } = useLocale();
@@ -346,11 +338,27 @@ export function RecordOfMeetingQuestion({
           { value: "no", label: t("log.recordOfMeetingNo") },
         ]}
       />
-      {value && meeting.calendar_managed && (
+      {value && transcript && (
+        <p className="t-caption">{t("log.recordOfMeetingTranscript")}</p>
+      )}
+      {value && !transcript && meeting.calendar_managed && (
         <p className="t-caption">{t("log.recordOfMeetingManaged")}</p>
       )}
     </>
   );
+}
+
+/**
+ * The meeting a transcript records, when the entry is one. A transcript stays
+ * its own entry, so its create names the meeting rather than writing on it.
+ */
+export function transcriptRecords(
+  record: MeetingRecord | undefined,
+  draft: ActivityDraft,
+): string | undefined {
+  return record && canHaveTranscript(draft.kind) && draft.asTranscript
+    ? record.meeting.id
+    : undefined;
 }
 
 /** The notes a meeting keeps: its own, then the typed ones after a blank line. */

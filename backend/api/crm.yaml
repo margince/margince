@@ -57617,9 +57617,10 @@ components:
           readOnly: true
           description: >-
             Whether THIS caller may archive THIS activity: the row write gate `writable` asks, plus the `activity:delete`
-            grant, or `activity:update` on a hand-logged note or task the caller wrote (under
-            their own stamp or through an agent acting for them). Captured correspondence and a
-            colleague's note need the delete grant. Server-computed per row, per caller. A UX
+            grant, or `activity:update` on a note, task, call or meeting the caller logged by hand
+            (under their own stamp or through an agent acting for them) that no provider import
+            backs. Sent and captured correspondence, a calendar-synced meeting and a colleague's
+            entry need the delete grant. A meeting a live invitation holds is never archivable. Server-computed per row, per caller. A UX
             signal, never the enforcement, exactly like `writable`; absent means NOT archivable.
         awaiting_outcome:
           type: boolean
@@ -57880,6 +57881,7 @@ components:
             The conversation or note this task follows from, whether added by a human or
             read from a conversation. Opening the source requires current source access.
             A task cannot grant access to its source or disclose content from a withheld source.
+            On a transcript created with `records_meeting_id`, the meeting it records.
         links:
           type: array
           description: >-
@@ -58413,8 +58415,20 @@ components:
             For a task, the conversation or note it follows from. The caller and assignee
             need access to that source. The task preserves its audience and inherits its
             visible links when no links are supplied. For a logged note, call or meeting,
-            the task whose outcome is being recorded. This reference alone does not complete
-            that task or accept a request.
+            the task whose outcome is being recorded; a meeting transcript naming one needs
+            `meeting_status`. This reference alone does not complete that task or accept a request.
+        records_meeting_id:
+          type: string
+          format: uuid
+          description: >-
+            A meeting transcript only (`source_system: transcript`), without `source_activity_id`.
+            The open meeting this transcript records. In the same transaction the meeting is marked
+            held and gains the transcript's deal, project and lead links for each kind it has none of.
+            The transcript takes the meeting's time and its deal, project and lead links, keeps no
+            outcome of its own, and names the meeting in `source_activity_id`, so held counts count
+            the meeting once. A meeting that is archived, missing or hidden from the caller answers 404.
+            A live meeting that no longer owes its outcome is refused with 422 on `records_meeting_id`.
+            A meeting the caller may read but not change answers 403. Its subject and notes stay as they are.
         follow_up_task:
           $ref: '#/components/schemas/ActivityFollowUpTask'
           description: >-

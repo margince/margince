@@ -5098,7 +5098,9 @@ export const en = {
   "activity.archiveConfirm": "Archive this entry? It leaves the History.",
   "activity.archiveDone": "Entry archived",
   "activity.archiveRefused":
-    "You can archive only notes and tasks you wrote yourself. Ask a manager to archive this entry.",
+    "You can archive only notes, tasks, calls and meetings you logged yourself.",
+  "activity.archiveCalendarManaged":
+    "The calendar invitation keeps this meeting. Change or cancel it through the invitation.",
   "activity.notYoursToChange":
     "You cannot change this activity. Ask the colleague it belongs to, or an administrator, for edit rights.",
   "activity.files.empty": "No files on this activity yet.",
@@ -7594,6 +7596,8 @@ export const en = {
     "{subject} is already recorded as held. Saving again adds only what did not save.",
   "log.recordOfMeetingManaged":
     "The calendar invitation keeps the subject and notes of that meeting. Your notes are saved as a note here, and the meeting is marked held.",
+  "log.recordOfMeetingTranscript":
+    "The transcript is saved as its own entry, and the meeting is marked held.",
   "log.asTranscript": "This text is a transcript",
   "log.transcriptUpload": "Or upload a file",
   "log.transcriptUploadRejected": "Only a .txt file is accepted.",
