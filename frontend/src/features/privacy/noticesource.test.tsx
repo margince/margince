@@ -79,10 +79,6 @@ const duty: NoticeCase = {
   created_at: "2026-01-01T10:00:00Z",
   allowed_routes: [],
 };
-// The source drawer is a lazy chunk, and the first case that opens it pays its
-// cold import. On a loaded runner that took more than findBy's one second.
-const DRAWER_LOAD = { timeout: 10_000 };
-
 afterEach(() => {
   cleanup();
   vi.unstubAllGlobals();
@@ -136,7 +132,7 @@ it("confirms an existing source record without retyping its contents", async () 
   await user.click(
     dialog.getByRole("button", { name: en["notice.source.openRecord"] }),
   );
-  await screen.findByText("The original booking request.", {}, DRAWER_LOAD);
+  await screen.findByText("The original booking request.");
   await user.keyboard("{Escape}");
   await waitFor(() =>
     expect(screen.queryByText("The original booking request.")).toBeNull(),
@@ -269,11 +265,7 @@ it("keeps refused source details hidden when another evidence page arrives", asy
     expect(panel.queryByRole("radio", { name: /Original booking/ })).toBeNull(),
   );
   // The drawer is a lazy chunk. Escape closes it only once it is drawn.
-  await screen.findByText(
-    en["activity.detail.withheldReason"],
-    {},
-    DRAWER_LOAD,
-  );
+  await screen.findByText(en["activity.detail.withheldReason"]);
   await user.keyboard("{Escape}");
   await user.click(
     panel.getByRole("button", { name: en["notice.source.moreEvidence"] }),
