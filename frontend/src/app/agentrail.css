@@ -114,6 +114,8 @@
 /* The button is the orb, so the ring follows the orb: a bare control with
    nothing of its own to draw but the ball it wraps. */
 .artoggle {
+  /* The trial's ring is drawn over the orb's box, so it is placed against it. */
+  position: relative;
   display: block;
   flex: none;
   padding: 0;
@@ -294,6 +296,14 @@
   flex: 0 1 auto;
 }
 
+/* The trial's count, its own row under the block. */
+.artrial {
+  display: flex;
+  justify-content: center;
+  width: 100%;
+  margin-top: var(--space-1);
+}
+
 /* What the report is ABOUT, and it is a label rather than a thing to read on its
    own: no chip border here, because a bordered chip inside a bordered block in a
    column this narrow is three frames deep. */
@@ -387,7 +397,8 @@
  * this width. The button keeps its accessible name, so nothing is lost to a
  * screen reader. */
 .rail.collapsed .arwords,
-.rail.collapsed .arlast {
+.rail.collapsed .arlast,
+.rail.collapsed .artrial {
   display: none;
 }
 .rail.collapsed .arhit {
@@ -414,7 +425,8 @@
  * lost to a screen reader.
  */
 .rail.leveled .arwords,
-.rail.leveled .arlast {
+.rail.leveled .arlast,
+.rail.leveled .artrial {
   display: none;
 }
 /* `:not(.collapsed)` rather than source order: the collapsed rail reduces the

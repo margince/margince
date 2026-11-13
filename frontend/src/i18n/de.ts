@@ -15398,6 +15398,69 @@ export const de: Readonly<Record<MessageKey, string>> = {
 
   "licensebanner.body":
     "Das Lizenz-Token dieser Installation wurde geprüft und abgelehnt.",
+  "trial.pill.days_one": "Testphase · noch {count} Tag",
+  "trial.pill.days_other": "Testphase · noch {count} Tage",
+  "trial.pill.closing_one": "Noch {count} Tag Testphase",
+  "trial.pill.closing_other": "Noch {count} Tage Testphase",
+  "trial.pill.lastDay": "Letzter Tag der Testphase",
+  "trial.pill.ended": "Testphase beendet · Margince kontaktieren",
+  "trial.notice.daysLeft_one": "Noch {count} Tag Testphase",
+  "trial.notice.daysLeft_other": "Noch {count} Tage Testphase",
+  "trial.notice.body":
+    "Am {date} wird Margince gesperrt, und die Arbeit im Hintergrund ruht, bis eine Lizenz da ist. Deine Daten bleiben, wie sie sind.",
+  "trial.notice.endedTitle": "Deine Testphase ist beendet",
+  "trial.notice.hideToday": "Bis morgen ausblenden",
+  "trial.notice.endedBody":
+    "Margince ist seit dem {date} gesperrt, und die Arbeit im Hintergrund ruht, bis eine Lizenz da ist. Deine Daten bleiben, wie sie sind, und nichts wird gelöscht.",
+  "trial.contact.title": "Mit dem Margince-Team sprechen",
+  "trial.contact.endsOn": "Deine Testphase endet am {date}",
+  "trial.contact.endedOn": "Deine Testphase endete am {date}",
+  "trial.contact.legend": "Was würde helfen?",
+  "trial.contact.ask.time": "Mehr Zeit",
+  "trial.contact.ask.time.hint": "Die Testphase verlängern.",
+  "trial.contact.ask.license": "Eine Lizenz",
+  "trial.contact.ask.license.hint": "Margince behalten, mit allen Daten.",
+  "trial.contact.ask.call": "Ein kurzes Gespräch",
+  "trial.contact.ask.call.hint": "Erst einmal darüber reden.",
+  "trial.contact.note": "Noch etwas?",
+  "trial.contact.optional": "Optional",
+  "trial.contact.preview": "Deine Nachricht",
+  "trial.contact.to": "An",
+  "trial.contact.subject": "Betreff",
+  "trial.contact.copy": "Text kopieren",
+  "trial.contact.copied": "Text kopiert",
+  "trial.contact.copyRemedy":
+    "Markiere den Text der E-Mail und kopiere ihn selbst.",
+  "trial.contact.open": "In meinem Mailprogramm öffnen",
+  "trial.contact.form": "Kontaktformular öffnen",
+  "trial.contact.how":
+    "Füg sie ins Kontaktformular auf der Margince-Website ein oder schick sie aus einem beliebigen Mailprogramm an diese Adresse.",
+  "trial.mail.subject.time": "{company}: mehr Zeit für die Margince-Testphase",
+  "trial.mail.subject.license": "{company}: eine Margince-Lizenz",
+  "trial.mail.subject.call": "{company}: ein kurzes Gespräch über Margince",
+  "trial.mail.greeting": "Hallo Margince-Team,",
+  "trial.mail.ask.time":
+    "Wir brauchen mehr Zeit, um Margince zu testen. Könnt ihr unsere Testphase verlängern?",
+  "trial.mail.ask.license":
+    "Wir möchten Margince weiter nutzen. Könnt ihr uns ein Angebot für eine Lizenz schicken?",
+  "trial.mail.ask.call":
+    "Wir möchten vor der Entscheidung über Margince sprechen. Können wir ein kurzes Gespräch vereinbaren?",
+  "trial.mail.company": "Unternehmen: {company}",
+  "trial.mail.ends": "Testphase endet: {date}",
+  "trial.mail.ended": "Testphase endete: {date}",
+  "trial.mail.seats": "Genutzte Zugänge: {seats}",
+  "trial.mail.signoff": "Viele Grüße",
+  "trial.locked.pageTitle": "Testphase beendet",
+  "trial.locked.title": "Deine Margince-Testphase ist beendet",
+  "trial.locked.adminTitle": "Du hast einen Lizenzschlüssel?",
+  "trial.locked.body":
+    "Margince ist gesperrt, und die Arbeit im Hintergrund ruht, bis eine Lizenz da ist. Deine Daten bleiben, wie sie sind, und nichts wird gelöscht.",
+  "trial.locked.admin":
+    "Trag ihn als license.token oder MARGINCE_LICENSE in die Konfiguration dieser Installation ein und starte Margince neu. Hast du eine Token-Datei ersetzt, reicht „Jetzt prüfen“. Die Arbeit im Hintergrund läuft dann von selbst wieder an, ohne Neustart.",
+  "trial.locked.member":
+    "Deine Admins können eine Lizenz vom Margince-Team bekommen. Du kannst dem Team auch selbst schreiben.",
+  "common.trialEnded":
+    "Die Testphase dieser Installation ist beendet, deshalb wartet diese Änderung auf eine Lizenz. Deine Daten bleiben, wie sie sind.",
   "licensebanner.link": "{tab} öffnen",
   "licensebanner.grace.title": "Lizenz abgelaufen",
   "licensebanner.grace.body":

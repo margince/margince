@@ -63,11 +63,14 @@ const SPOKEN_BY_THE_READER = new Set<string>([
   "book.consentWording",
   "worklist.ready.confirm",
 ]);
-const SPOKEN_BY_THE_READER_PREFIX = "prefs.wording";
+// And the email a trial installation sends the Margince team from the
+// reader's own mail app.
+const SPOKEN_BY_THE_READER_PREFIXES = ["prefs.wording", "trial.mail."];
 
 function spokenByTheReader(key: string): boolean {
   return (
-    SPOKEN_BY_THE_READER.has(key) || key.startsWith(SPOKEN_BY_THE_READER_PREFIX)
+    SPOKEN_BY_THE_READER.has(key) ||
+    SPOKEN_BY_THE_READER_PREFIXES.some((prefix) => key.startsWith(prefix))
   );
 }
 

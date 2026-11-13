@@ -203,7 +203,7 @@ export type Voices = Readonly<{
   agentSpeaks: string;
   controllerSpeaks: string;
   spokenByTheReader: ReadonlySet<string>;
-  spokenByTheReaderPrefix: string;
+  spokenByTheReaderPrefixes: readonly string[];
   readByAnOutsider: readonly string[];
   serverWorded: ReadonlySet<string>;
 }>;
@@ -214,9 +214,9 @@ function voicesIn(tree: CensusTree): Voices {
     agentSpeaks: declaredString(gate, "AGENT_SPEAKS_PREFIX"),
     controllerSpeaks: declaredString(gate, "CONTROLLER_SPEAKS_PREFIX"),
     spokenByTheReader: new Set(declaredStrings(gate, "SPOKEN_BY_THE_READER")),
-    spokenByTheReaderPrefix: declaredString(
+    spokenByTheReaderPrefixes: declaredStrings(
       gate,
-      "SPOKEN_BY_THE_READER_PREFIX",
+      "SPOKEN_BY_THE_READER_PREFIXES",
     ),
     // German's Sie families, plus the public booking form a guest fills in,
     // which Vietnamese alone addresses as an outsider.
@@ -239,7 +239,7 @@ export function copyFindings(
   const ordinary = keptCompounds(cells, retired);
   const spokenByTheReader = (key: string) =>
     voices.spokenByTheReader.has(key) ||
-    key.startsWith(voices.spokenByTheReaderPrefix);
+    voices.spokenByTheReaderPrefixes.some((prefix) => key.startsWith(prefix));
   const readByAnOutsider = (key: string) =>
     voices.readByAnOutsider.some((prefix) => key.startsWith(prefix));
   const catalogOf = (source: string): Catalog =>

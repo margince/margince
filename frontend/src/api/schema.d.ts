@@ -27563,6 +27563,33 @@ export interface components {
              */
             checked_at: string;
             license?: components["schemas"]["LicenseHolder"];
+            trial?: components["schemas"]["LicenseTrial"];
+        };
+        /**
+         * @description The free period of a production installation that has no license. Present only while
+         *     `state` is `absent` on a production installation that has been set up; a development or
+         *     test installation runs unlicensed with no trial.
+         *
+         *     The trial starts when the installation's oldest workspace was created, archived ones
+         *     included, and lasts 14 days, with no grace period. Once `ended` is true, and until a
+         *     license is configured, every agent tool call is refused with `trial_ended`, and so is
+         *     every HTTP change except these: the license routes, `POST /v1/exports`, the data-subject
+         *     request routes, and a seat's own credential routes. Background jobs wait instead of
+         *     running; they do not fail.
+         */
+        LicenseTrial: {
+            /**
+             * Format: date-time
+             * @description When the installation's workspace was created.
+             */
+            started_at: string;
+            /**
+             * Format: date-time
+             * @description The first instant the trial no longer covers.
+             */
+            ends_at: string;
+            /** @description Whether `ends_at` has passed, as the server decides it, so a client with a wrong clock shows the state the installation acts on. */
+            ended: boolean;
         };
         /**
          * @description Who holds the license and how long it lasts, as the validation module proved it.
@@ -48243,6 +48270,8 @@ export interface components {
             pipelines?: components["schemas"]["Pipeline"][];
         };
         MeResponse: {
+            /** @description True when this installation runs with no license and its 14-day trial is over. Every seat gets it, not only those who may read the license, because every seat is locked until a license is configured. `LicenseTrial` lists what the lock refuses. Absent while the installation is licensed or still on its trial. */
+            trial_ended?: boolean;
             /** @description Whether this human caller may use the configured activity reader-rendering lane. Absent or false keeps generated text original until an explicit request. */
             reader_rendering_available?: boolean;
             analytics_startup?: components["schemas"]["AnalyticsStartup"];

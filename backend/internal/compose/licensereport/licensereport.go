@@ -11,16 +11,18 @@ import (
 	"io"
 	"log/slog"
 	"strings"
+	"time"
 
 	"github.com/margince/margince/backend/internal/platform/httpserver"
 	"github.com/margince/margince/backend/internal/platform/licensecheck"
+	"github.com/margince/margince/backend/internal/shared/runtimeenv"
 )
 
 // LogPosture writes the one boot line an operator greps for. It names the
 // module version, because a refused license and a stale bundled module read
 // alike without it. It names the token's origin, because the environment
 // outranks the deployment file.
-func LogPosture(ctx context.Context, log *slog.Logger, posture licensecheck.Posture, origin string) {
+func LogPosture(ctx context.Context, log *slog.Logger, posture licensecheck.Posture, origin string, env runtimeenv.Environment) {
 	attrs := []any{"state", string(posture.State), "module", licensecheck.ModuleVersion(), "token_from", origin}
 	if posture.Issuer != "" && posture.Issuer != licensecheck.ProductionIssuer {
 		// A license minted by a non-production authority. Only a non-production
@@ -31,11 +33,15 @@ func LogPosture(ctx context.Context, log *slog.Logger, posture licensecheck.Post
 	if seats, ok := posture.Seats(); ok {
 		attrs = append(attrs, "seats", seats)
 	}
-	if posture.State == licensecheck.StateAbsent {
-		// Only a non-production installation gets here, since production refused
-		// the boot. A warning, because an unlicensed installation proves nothing
-		// about what a licensed one would do.
+	if posture.State == licensecheck.StateAbsent && env.IsNonProduction() {
+		// A warning, because an unlicensed installation proves nothing about what
+		// a licensed one would do.
 		log.WarnContext(ctx, "no license configured; this non-production installation is running unlicensed", attrs...)
+		return
+	}
+	if posture.State == licensecheck.StateAbsent {
+		log.WarnContext(ctx, "no license configured; this installation runs on its trial and stops working when the trial ends",
+			append(attrs, "trial_days", int(licensecheck.TrialLength/(24*time.Hour)))...)
 		return
 	}
 	log.InfoContext(ctx, "license verified", attrs...)
