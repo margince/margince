@@ -222,7 +222,10 @@ func TestAColleaguesMonthsAreNotProposedWhileIndividualPerformanceIsOff(t *testi
 	var colleague struct {
 		ID string `json:"id"`
 	}
-	mustCall(t, e, http.MethodPost, "/v1/users", AnyMap{"email": "seller@goal-switch.test", "display_name": "Sam Seller", "role": "rep"}, http.StatusCreated, &colleague)
+	const email, password = "seller@goal-switch.test", "goal-switch-seller-password"
+	mustCall(t, e, http.MethodPost, "/v1/users", AnyMap{"email": email, "display_name": "Sam Seller", "role": "rep"}, http.StatusCreated, &colleague)
+	// Only an activated account is a live member a plan can be set for.
+	apptest.SetPasswordByLink(t, e, colleague.ID, password)
 	path := fmt.Sprintf("/v1/analytics/sales-goals/%s/%d/proposed-months", colleague.ID, clocktest.Now(t).Year())
 	if status := e.Call(t, http.MethodPost, path, AnyMap{}, nil, nil); status != http.StatusConflict {
 		t.Fatalf("POST %s with the switch on = %d, want 409 for a seller with no sales yet", path, status)
