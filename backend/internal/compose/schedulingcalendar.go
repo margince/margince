@@ -11,6 +11,7 @@ import (
 
 	"github.com/jackc/pgx/v5/pgxpool"
 
+	"github.com/margince/margince/backend/internal/compose/hostauthority"
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/modules/contacts"
@@ -201,15 +202,7 @@ func (c schedulingCalendar) checkAppointmentRecipient(ctx context.Context, host 
 }
 
 func (c schedulingCalendar) recipientContext(ctx context.Context, host ids.UserID) (context.Context, error) {
-	workspace, ok := principal.WorkspaceID(ctx)
-	if !ok {
-		return nil, apperrors.ErrPermissionDenied
-	}
-	rbac, seat, err := c.identity.EffectiveAuthority(ctx, workspace, host.UUID)
-	if err != nil {
-		return nil, err
-	}
-	return principal.WithActor(ctx, principal.Principal{Type: principal.PrincipalHuman, ID: "human:" + host.String(), UserID: host.UUID, SeatType: seat, Permissions: rbac.Permissions, TeamIDs: rbac.TeamIDs}), nil
+	return hostauthority.Context(ctx, c.identity, host)
 }
 
 func (c schedulingCalendar) List(ctx context.Context, host ids.UserID, provider string) ([]connector.CalendarOption, error) {
