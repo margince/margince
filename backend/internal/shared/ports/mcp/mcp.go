@@ -247,6 +247,15 @@ const ReservedIdempotencyKeyRule = "Same key, same result; a key reused with oth
 // (backend/internal/modules/agents/runner/window_test.go) and
 // TestTheInstructionsTellAClientsModelToNameADisagreement
 // (backend/internal/modules/agents/modern_test.go).
+// LocalTimeRule is how a model sets a time the user named. Every write that
+// takes a time offers both the instant (`due_at`) and the local pick
+// (`due_intent`), and the record shapes say nothing of which to send. Measured
+// on the use-case lane, a model looked the field names up on the web instead.
+const LocalTimeRule = "A field ending in _intent, such as due_intent, takes a time the user named " +
+	"in local terms: wall_clock as YYYY-MM-DDTHH:MM in the user's own IANA timezone (whoami says it), " +
+	"and the server sets the matching _at field and whether it has a time of day. A deadline with " +
+	"no time of day is that day at 23:59:59. Send the _at field yourself only for an exact instant."
+
 const ConflictingSourcesRule = "When two sources disagree, say that they disagree and name both; " +
 	"never invent an event that would reconcile them. Where a structured field on a record " +
 	"(a date, an amount, a status) disagrees with prose someone wrote, the field wins: " +

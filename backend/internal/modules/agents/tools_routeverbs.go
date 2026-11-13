@@ -113,7 +113,7 @@ func RegisterRouteVerbs(r *Registry, verbs []RouteVerb, run RouteRunner) {
 	if len(verbs) == 0 {
 		return
 	}
-	r.Register(describeRouterActions{verbs: verbs})
+	r.Register(describeRouterActions{verbs: verbs, runs: r.routerRunSpec})
 	r.mu.Lock()
 	r.routeActions[readWorkspaceName] = map[string]string{routeActionsTopic: describeRouterActionsName}
 	r.mu.Unlock()
@@ -400,7 +400,11 @@ const (
 
 // describeRouterActions answers what each action of one router takes, so a
 // router's own listing stays one enum and one body object.
-type describeRouterActions struct{ verbs []RouteVerb }
+type describeRouterActions struct {
+	verbs []RouteVerb
+	// runs finds an action the router runs in process, which has no route.
+	runs func(router, action string) (mcp.ToolSpec, bool)
+}
 
 func (d describeRouterActions) routers() []string {
 	var names []string
@@ -428,6 +432,10 @@ func (d describeRouterActions) Spec() mcp.ToolSpec {
 			mustJSON(d.routers()) + `},"action":{"type":"string","description":"One action to describe; leave it out for all of them"}},"additionalProperties":false}`),
 	}
 }
+
+// routerRunRoute stands in the route column for an action the router runs in
+// process: the arguments go to the router itself, beside its action field.
+const routerRunRoute = "in process: call the router with these arguments"
 
 type routeActionShape struct {
 	Action       string          `json:"action"`
@@ -470,9 +478,18 @@ func (d describeRouterActions) Handle(_ context.Context, in json.RawMessage) (js
 		actions = append(actions, shape)
 	}
 	if args.Action != "" && len(actions) == 0 {
-		return nil, &BadArgsError{Field: "action", Cause: fmt.Errorf(
-			"router %s has no route action %s; a router-run action takes the router's inputSchema, and any other name is no action of %[1]s",
-			args.Router, args.Action)}
+		// A client that reads tool schemas from a file has no inputSchema at hand,
+		// so an action the router runs itself is described from its own spec.
+		spec, runs := d.runs(args.Router, args.Action)
+		if !runs {
+			return nil, &BadArgsError{Field: "action", Cause: fmt.Errorf(
+				"router %s has no action %s; read_workspace with topic=actions and this router lists the ones it has",
+				args.Router, args.Action)}
+		}
+		actions = append(actions, routeActionShape{
+			Action: args.Action, Does: spec.Description, Route: routerRunRoute,
+			AskUserFirst: spec.AskUserFirst, Body: spec.InputSchema,
+		})
 	}
 	slices.SortFunc(actions, func(a, b routeActionShape) int { return strings.Compare(a.Action, b.Action) })
 	return json.Marshal(map[string]any{"router": args.Router, "actions": actions})

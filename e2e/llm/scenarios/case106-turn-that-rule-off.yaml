@@ -2,7 +2,7 @@
 # and nothing more.
 #
 # Every workspace seeds "Tell the owner when someone moves their deal". It starts
-# paused, and switching it on makes the person who did it its owner: the setup
+# paused, and switching it on makes whoever did it its owner: the setup
 # step switches it on as the admin, the seat this lane's passport acts for. The
 # rule is then the user's own, so their agent may pause it when they ask. The
 # user asked in the prompt, which is the yes the action's ask-first wants.

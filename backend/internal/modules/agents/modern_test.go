@@ -924,3 +924,17 @@ func TestDecoratingAResultDoesNotRewriteTheHandlersBytes(t *testing.T) {
 		t.Errorf("result = %s, want the handler's integer unchanged", body)
 	}
 }
+
+// A client's model is told how to set a time the user named: the local pick,
+// in the user's own zone, and what the server derives from it.
+func TestTheInstructionsTellAClientsModelHowToSetALocalTime(t *testing.T) {
+	instructions := modernDispatcher(t).instructions()
+	if !strings.Contains(instructions, mcp.LocalTimeRule) {
+		t.Fatalf("the surface does not carry the local-time rule:\n%s", instructions)
+	}
+	for _, want := range []string{"_intent", "wall_clock", "IANA timezone", "whoami", "23:59:59", "exact instant"} {
+		if !strings.Contains(mcp.LocalTimeRule, want) {
+			t.Errorf("the local-time rule does not say %q", want)
+		}
+	}
+}

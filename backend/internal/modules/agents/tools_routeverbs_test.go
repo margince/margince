@@ -173,19 +173,30 @@ func TestReadWorkspaceListsWhatARoutersActionsTake(t *testing.T) {
 	}
 }
 
-// An action the router runs in process has no route to describe. The refusal
-// points at the router's own inputSchema. Saying the router lacks the action
-// sends a caller to invent the action's arguments.
-func TestAnActionWithNoRouteIsNotDeniedToExist(t *testing.T) {
-	_, err := describeRouterActions{verbs: []RouteVerb{shareRecordVerb}}.Handle(context.Background(),
-		json.RawMessage(`{"router":"change_access","action":"relink_many"}`))
-	if err == nil {
-		t.Fatal("an action with no route was described")
-	}
-	for _, says := range []string{"no route action relink_many", "router's inputSchema", "no action of change_access"} {
-		if !strings.Contains(err.Error(), says) {
-			t.Errorf("refusal = %q, want it to say %q, so neither a router-run action nor a typo is misread", err, says)
+// An action the router runs in process has no route, and is described from its
+// own spec: a client that reads schemas from a file has no inputSchema at hand.
+// A name the router does not have is refused as one.
+func TestARouterRunActionIsDescribedFromItsOwnSpec(t *testing.T) {
+	runs := func(router, action string) (mcp.ToolSpec, bool) {
+		if router == "change_access" && action == "relink_many" {
+			return mcp.ToolSpec{Description: "Move many activities.", AskUserFirst: true,
+				InputSchema: json.RawMessage(`{"type":"object","properties":{"ids":{"type":"array"}}}`)}, true
 		}
+		return mcp.ToolSpec{}, false
+	}
+	d := describeRouterActions{verbs: []RouteVerb{shareRecordVerb}, runs: runs}
+	out, err := d.Handle(context.Background(), json.RawMessage(`{"router":"change_access","action":"relink_many"}`))
+	if err != nil {
+		t.Fatalf("a router-run action was refused: %v", err)
+	}
+	for _, says := range []string{`"action":"relink_many"`, "Move many activities.", `"ids"`, `"ask_user_first":true`, routerRunRoute} {
+		if !strings.Contains(string(out), says) {
+			t.Errorf("description %s does not carry %s", out, says)
+		}
+	}
+	_, err = d.Handle(context.Background(), json.RawMessage(`{"router":"change_access","action":"relink_mny"}`))
+	if err == nil || !strings.Contains(err.Error(), "no action relink_mny") {
+		t.Errorf("a name the router does not have answered %v, want a refusal naming it", err)
 	}
 }
 
