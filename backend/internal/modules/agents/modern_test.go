@@ -932,7 +932,7 @@ func TestTheInstructionsTellAClientsModelHowToSetALocalTime(t *testing.T) {
 	if !strings.Contains(instructions, mcp.LocalTimeRule) {
 		t.Fatalf("the surface does not carry the local-time rule:\n%s", instructions)
 	}
-	for _, want := range []string{"_intent", "wall_clock", "IANA timezone", "whoami", "23:59:59", "exact instant"} {
+	for _, want := range []string{"_intent", "wall_clock", "IANA timezone", "whoami", "23:59:59", "exact instant", "does not list"} {
 		if !strings.Contains(mcp.LocalTimeRule, want) {
 			t.Errorf("the local-time rule does not say %q", want)
 		}
