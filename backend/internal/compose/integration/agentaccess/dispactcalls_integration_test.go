@@ -169,7 +169,7 @@ func TestACallerWithNoMemberIsListedButRefusedA403(t *testing.T) {
 }
 
 func TestTheManifestNamesThisInstallationsMCPAddress(t *testing.T) {
-	e := setupConnectorWith(t, compose.WithPublicBaseURL("https://crm.example.test"), compose.WithChatLinks(nil, true))
+	e := setupConnectorWith(t, compose.WithPublicBaseURL("https://crm.example.test"), compose.WithChatLinks(nil, true, nil))
 	resp := mcpRaw(t, e.AppEnv, http.MethodGet, "/v1/integrations/dispact/manifest", "", nil)
 	if resp.StatusCode != http.StatusOK || !strings.Contains(resp.Body, `"endpoint":"https://crm.example.test/mcp"`) {
 		t.Fatalf("the manifest → %d %s", resp.StatusCode, resp.Body)
