@@ -7,7 +7,6 @@ package activities
 
 import (
 	"context"
-	"encoding/json"
 	"slices"
 	"strconv"
 	"strings"
@@ -112,45 +111,21 @@ func TestOverdueScheduledSendsReadsOnlyTheDueIndexRange(t *testing.T) {
 			len(overdue), slices.Contains(overdue, ruleMovedEarlier), slices.Contains(overdue, ruleMovedLater))
 	}
 
-	var plan json.RawMessage
+	var plan string
 	if err := e.owner.QueryRow(ctx, `EXPLAIN (ANALYZE, FORMAT JSON) `+overdueScheduledSendsSQL,
 		overdueScheduledSendsArgs(draftClock.Add(-overdueGrace), 100)).Scan(&plan); err != nil {
 		t.Fatal(err)
 	}
 	t.Logf("plan over %d queued messages: %s", overdueQueueSize, plan)
-	var nodes []struct {
-		Plan explainNode `json:"Plan"`
-	}
-	if err := json.Unmarshal(plan, &nodes); err != nil || len(nodes) != 1 {
-		t.Fatalf("reading the plan: %v", err)
-	}
-	scan, ok := nodes[0].Plan.find("scheduled_send")
-	if !ok || scan.Index != "idx_scheduled_send_due" || scan.Rows > 60 {
-		t.Fatalf("the overdue read scanned scheduled_send by %q via %q and read %d rows, want idx_scheduled_send_due over the next %s only",
-			scan.Type, scan.Index, scan.Rows, zoneRuleShift)
-	}
-}
-
-type explainNode struct {
-	Type     string        `json:"Node Type"`
-	Relation string        `json:"Relation Name"`
-	Index    string        `json:"Index Name"`
-	Rows     int           `json:"Actual Rows"`
-	Removed  int           `json:"Rows Removed by Filter"`
-	Children []explainNode `json:"Plans"`
-}
-
-// find returns the scan of relation, with Rows counting every row it read
-// before its filter.
-func (n explainNode) find(relation string) (explainNode, bool) {
-	if n.Relation == relation {
-		n.Rows += n.Removed
-		return n, true
-	}
-	for _, child := range n.Children {
-		if found, ok := child.find(relation); ok {
-			return found, true
+	var scan planNode
+	decodePlan(t, plan).walk(func(n planNode) {
+		if n.RelationName == "scheduled_send" && scan.RelationName == "" {
+			scan = n
 		}
+	})
+	read := scan.ActualRows + scan.RemovedByFilter
+	if scan.IndexName != "idx_scheduled_send_due" || read > 60 {
+		t.Fatalf("the overdue read scanned scheduled_send by %q via %q and read %.0f rows, want idx_scheduled_send_due over the next %s only",
+			scan.NodeType, scan.IndexName, read, zoneRuleShift)
 	}
-	return explainNode{}, false
 }

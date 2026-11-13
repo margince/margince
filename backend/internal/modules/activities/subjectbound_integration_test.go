@@ -27,8 +27,8 @@ func TestATypedSubjectPastTheLimitIsRefused(t *testing.T) {
 		t.Fatalf("LogActivityInputFrom: %v", err)
 	}
 	_, _, err = e.store(nil).LogActivity(ctx, in)
-	column, max, ok := storekit.TextBoundViolation(err)
-	if !ok || column != "subject" || max != limit {
+	column, refusedAt, ok := storekit.TextBoundViolation(err)
+	if !ok || column != "subject" || refusedAt != limit {
 		t.Fatalf("LogActivity answered %v, want the subject column refused at %d", err, limit)
 	}
 }

@@ -53,8 +53,8 @@ func TestAProfileFieldCorrectionPastTheLimitIsRefused(t *testing.T) {
 	corrected := strings.Repeat("a", limit+1)
 
 	_, err := e.store.UpdateCompanyProfileField(ctx, companyID, "icp", ProfileFieldWriteInput{Value: &corrected})
-	column, max, ok := storekit.TextBoundViolation(err)
-	if !ok || column != "value" || max != limit {
+	column, refusedAt, ok := storekit.TextBoundViolation(err)
+	if !ok || column != "value" || refusedAt != limit {
 		t.Fatalf("the correction answered %v, want the value column refused at %d", err, limit)
 	}
 }

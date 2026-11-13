@@ -36,8 +36,8 @@ var limits = map[string]int{
 }
 
 // Policy is one column's character limit. An exempt column has no limit and
-// says why in Exception; a bounded one may say in Checked what its writers
-// were read for, so the limit records a decision and not only a default.
+// says why in Exception. A bounded one may say in Checked what its writers
+// were read for. Then the limit records a decision and not only a default.
 type Policy struct {
 	Limit     int
 	Exception string
