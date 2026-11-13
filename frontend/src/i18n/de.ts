@@ -3384,7 +3384,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "common.errorNoCause":
     "Die Anfrage ist fehlgeschlagen. Es wurde keine Ursache gemeldet.",
   "common.assistantUnavailable":
-    "Der Assistent hat nicht geantwortet, deshalb wurde kein Entwurf erstellt. Du kannst die Details auch selbst eingeben oder einen Admin bitten, das Modell in den Einstellungen unter KI zu prüfen.",
+    "Die KI hat nicht geantwortet. Bitte versuche es noch mal, oder frage deinen Admin nach Einstellungen → KI.",
   "common.providerOutOfCredit":
     "Beim KI-Anbieter ist kein Guthaben mehr vorhanden. Bitte wende dich an die Systemadministration.",
   "common.providerUnauthorized":
@@ -7774,7 +7774,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "compose.draftEmail": "E-Mail entwerfen",
   "compose.drafting": "Wird entworfen…",
   "compose.draftingBody": "Der Entwurf wird geschrieben.",
-  "compose.askAgain": "Auftrag ändern",
+  "compose.redraft": "Neu entwerfen",
   "compose.discardDraft": "Entwurf verwerfen",
   "compose.discardDraftHint":
     "Markiert diesen Entwurf für deine Voice DNA als Fehlgriff. Der erzeugte Text wird nie gespeichert.",
@@ -21886,6 +21886,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "aiTask.name.report_interpret": "Bewertung eines Vertriebsberichts",
   "aiTask.name.report_setup": "Bericht aus einer Beschreibung einrichten",
   "aiTask.name.request_settlement": "Prüfung der Antwort auf das Anliegen",
+  "aiTask.name.rewrite": "Umformulieren",
   "aiTask.name.signal_extract": "Erkennung von Gesprächssignalen",
   "aiTask.name.site_extract": "Ausführliche Website-Auswertung",
   "aiTask.name.site_fact_extract": "Erfassung von Website-Fakten",

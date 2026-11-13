@@ -30,7 +30,7 @@ const (
 	TaskDealVerdict Task = "deal_verdict"
 	// TaskDocumentExtract is read ONE attached document — a scanned form, an invoice, an order confirmation — for the four deal facts a human may then accept onto the deal (records-depth RD-PARAM-N-3), each carrying the quote it was read from. premium-only BY CONTRACT for site_extract's reason and one of its own: a rung that cannot carry the document is not a degraded answer to this question, it is a different question, so there is no rung to degrade to. no_payload BY CONTRACT: a scanned contract or invoice is exactly the content that must never reach ai_call_payload, whatever the deployment's capture posture says. A reading takes seconds and can fail, so it is a durable record its surface polls (records-depth RD-DDL-4), never work done inside the request that asks for it. The `cards` site reads a PHOTO of business cards instead, on the same ladder and the same carriage declaration, for the contact import: an importer waits on it in the request, and the result goes to the approval queue, never to a contact. The `chat` site reads a SCREENSHOT of a messaging conversation pasted on a contact, for its messages and the name and number its header prints; nothing is written until the user files it as a message activity.
 	TaskDocumentExtract Task = "document_extract"
-	// TaskDraftReply is Six sites, one task: the reply to an activity, the contact page's composer, the company page's first-touch outbound, the ask a rep sends a COLLEAGUE for an introduction (the only one written to somebody on our own side, which is why it carries its own phrasing), the note that colleague then FORWARDS to the contact (draft_email over MCP, which names records to file under rather than records to write from), and rewrite: one rewrite verb (Polish, Shorter, Warmer, More formal, Add a deadline) over the words a rep has on screen, an email body in the composer or a task or note in Add task and Log activity. It keeps their meaning, language, names, numbers, dates and links, reads no company context and no record, and writes nothing. The last two are one workflow and two registers: the ask is internal and its overclaim is falsifiable by the teammate reading it, while the note goes out over that colleague's own name to a customer who cannot check it — which is why they carry separate prompts, separate wording tables and separate scenarios rather than one site with a flag. They differ in what a draft is grounded IN, and share the rules block every drafting surface writes under (compose/draftrules). The reply site and the two composers each have two system variants (voice-enabled and plain), selected per call from the sender's Voice DNA state — a variant, not a site of its own.
+	// TaskDraftReply is Five sites, one task: the reply to an activity, the contact page's composer, the company page's first-touch outbound, the ask a rep sends a COLLEAGUE for an introduction (the only one written to somebody on our own side, which is why it carries its own phrasing), and the note that colleague then FORWARDS to the contact (draft_email over MCP, which names records to file under rather than records to write from). The last two are one workflow and two registers: the ask is internal and its overclaim is falsifiable by the teammate reading it, while the note goes out over that colleague's own name to a customer who cannot check it — which is why they carry separate prompts, separate wording tables and separate scenarios rather than one site with a flag. They differ in what a draft is grounded IN, and share the rules block every drafting surface writes under (compose/draftrules). The reply site and the two composers each have two system variants (voice-enabled and plain), selected per call from the sender's Voice DNA state — a variant, not a site of its own.
 	TaskDraftReply Task = "draft_reply"
 	// TaskEnrich is Read a contact's own mail signature into contact fields - title, phone, linkedin, company_name, address, website - each quoting the signature line it was read from; a quote not in the signature is dropped in code. Floor 0.6. phone is a list: the reply carries one phone entry per number the signature lists, and each number is its own evidence row. A newer signature replaces only the older number of the same country and type; a number it leaves out is kept, because a trimmed signature is not a retired number.
 	TaskEnrich Task = "enrich"
@@ -53,6 +53,8 @@ const (
 	TaskReportSetup Task = "report_setup"
 	// TaskRequestSettlement is Whether OUR OWN reply settled the request an inbound message made — settled, still_owed or unsure. owed_verdict answers a question about one message from that message alone, so a request answered within the hour still reads as owed a week later; this is the second question, asked of the THREAD, and only askable once the workspace has written back. The candidates are requests we have since answered: our attested reply on the thread, our attested mail to the sender with the same subject, or a logged call or held meeting with the sender's contact — the answers the needs-reply check recognises. A conversation nobody has answered is never judged here and costs nothing; the off-thread answers reach the prompt marked as such, a call's or meeting's notes as its text. A REPLY IS EVIDENCE AND NOT AN ANSWER: 'thanks, I will check' is a reply that discharges nothing, which is exactly why this is a model reading of what our words did rather than a SQL test for whether words exist. A settled verdict completes the reminder the owed pass filed, through the ordinary activity writer, so it carries the audit row and the event a human ticking the box carries; still_owed may sharpen a MACHINE-FILED, undated reminder to name what is actually outstanding, and never touches a task a human accepted, dated or reopened. Below the confidence floor the verdict is unsure, which is a real answer: the request stays owed exactly as it was before this pass existed, and the watermark advances so the same thread is not re-asked until somebody writes again. No cost_unit, for owed_verdict's reason: the candidates are live requests rather than mailbox history, so the pass deliberately does not run at backfill.
 	TaskRequestSettlement Task = "request_settlement"
+	// TaskRewrite is One rewrite verb (Polish, Shorter, Warmer, More formal, Add a deadline) over the words a rep has on screen: an email body in the composer, or a task or note in Add task and Log activity. It keeps their meaning, language, names, numbers, dates and links, reads no company context and no record, and writes nothing. Its own task, apart from draft_reply, so it can run premium first: the cheap tier adds meaning to the rep's words, and a rewrite that changes what they said is worse than none. The cheap tier stays as the fallback, because a rep who pressed a button is better served by a careful cheap answer than by an outage.
+	TaskRewrite Task = "rewrite"
 	// TaskSignalExtract is SIG-F-3: read the material events out of a settled thread — contract_ended, new_opportunity, commitment_made — each citing the message it came from. Floor 0.7; below it the event is dropped, never guessed. An event is an OBSERVATION and is written directly; what follows from one is a structural claim and stages for a human.
 	TaskSignalExtract Task = "signal_extract"
 	// TaskSiteExtract is premium-only BY CONTRACT: the no-guess gate demands verbatim quotes cheap tiers paraphrase; no fallback rung. Its response schema is built PER CALL (the citation enum is that call's passage ids), which is why ADR-0074 leaves answer schemas in code.
@@ -110,6 +112,7 @@ var taskDisplayNames = map[Task]string{
 	TaskReportInterpret:               "Assessing a sales report",
 	TaskReportSetup:                   "Setting up a report from a description",
 	TaskRequestSettlement:             "Checking whether the reply answered the request",
+	TaskRewrite:                       "Rewriting",
 	TaskSignalExtract:                 "Signal extraction",
 	TaskSiteExtract:                   "Website research",
 	TaskSiteFactExtract:               "Website fact extraction",
@@ -156,6 +159,7 @@ var taskSummaries = map[Task]string{
 	TaskReportInterpret:               "Writes an assessment beside a report's leading chart, citing the figures it rests on.",
 	TaskReportSetup:                   "Turns a described sales initiative or custom report into a setup you check before saving.",
 	TaskRequestSettlement:             "Checks whether our reply actually answered what the other side asked for.",
+	TaskRewrite:                       "Rewrites the words you typed when you press Polish, Shorter, Warmer, More formal or Add a deadline.",
 	TaskSignalExtract:                 "Picks out important events from a finished thread, such as a contract ending or a new opportunity.",
 	TaskSiteExtract:                   "Reads a company's website in depth, quoting the pages each fact comes from.",
 	TaskSiteFactExtract:               "Picks short, quoted facts out of each page of a company's website.",
@@ -198,7 +202,7 @@ const (
 // TaskContractHash is the sha256 of api/ai-tasks.yaml at generation
 // time: a build fingerprint the cert runner can compare against a
 // freshly hashed contract file to catch a stale generated table.
-const TaskContractHash = "d193ae28fe242620ae98ecfbb89c9a62cdc2d6562dcff7b4c2a107b936a8985f"
+const TaskContractHash = "9f3b81912e93b0cca8cbfaa70d8e02dc921d6e7c01f8569e0fe575e8f7efedfe"
 
 // AllTasks returns every contract task, sorted — the completeness
 // check a certification run walks to prove it covers every routed
@@ -229,6 +233,7 @@ func AllTasks() []Task {
 		TaskReportInterpret,
 		TaskReportSetup,
 		TaskRequestSettlement,
+		TaskRewrite,
 		TaskSignalExtract,
 		TaskSiteExtract,
 		TaskSiteFactExtract,
@@ -271,6 +276,7 @@ var taskLadders = map[Task][]Tier{
 	TaskReportInterpret:               {TierPremium, TierCheapCloud},
 	TaskReportSetup:                   {TierCheapCloud, TierPremium},
 	TaskRequestSettlement:             {TierLocalSmall, TierCheapCloud},
+	TaskRewrite:                       {TierPremium, TierCheapCloud},
 	TaskSignalExtract:                 {TierFrontier},
 	TaskSiteExtract:                   {TierPremium},
 	TaskSiteFactExtract:               {TierCheapCloud, TierPremium},
@@ -322,6 +328,7 @@ var taskExecutionModes = map[Task]ExecutionMode{
 	TaskReportInterpret:               ExecutionModeInteractive,
 	TaskReportSetup:                   ExecutionModeInteractive,
 	TaskRequestSettlement:             ExecutionModeBackground,
+	TaskRewrite:                       ExecutionModeInteractive,
 	TaskSignalExtract:                 ExecutionModeBackground,
 	TaskSiteExtract:                   ExecutionModeBackground,
 	TaskSiteFactExtract:               ExecutionModeBackground,
@@ -392,6 +399,7 @@ var taskStatus = map[Task]string{
 	TaskReportInterpret:               "shipped",
 	TaskReportSetup:                   "shipped",
 	TaskRequestSettlement:             "shipped",
+	TaskRewrite:                       "shipped",
 	TaskSignalExtract:                 "shipped",
 	TaskSiteExtract:                   "shipped",
 	TaskSiteFactExtract:               "shipped",
@@ -478,7 +486,6 @@ var taskSites = map[Task][]Site{
 		{Name: "account", Kind: "one_shot"},
 		{Name: "intro", Kind: "one_shot"},
 		{Name: "intro_note", Kind: "one_shot"},
-		{Name: "rewrite", Kind: "one_shot"},
 	},
 	TaskEnrich: {
 		{Name: "signature", Kind: "one_shot"},
@@ -513,6 +520,9 @@ var taskSites = map[Task][]Site{
 	},
 	TaskRequestSettlement: {
 		{Name: "request_settle", Kind: "one_shot"},
+	},
+	TaskRewrite: {
+		{Name: "rewrite", Kind: "one_shot"},
 	},
 	TaskSignalExtract: {
 		{Name: "thread_events", Kind: "one_shot"},
@@ -658,6 +668,7 @@ var taskSubjectRestriction = map[Task]SubjectRestrictionPosture{
 	TaskReportInterpret:               {Posture: "none", Reason: "reads evaluated report figures and deal names, never a contact's record or mail"},
 	TaskReportSetup:                   {Posture: "none", Reason: "reads the manager's description and the report catalog, never a record"},
 	TaskRequestSettlement:             {Posture: "honour", Reason: ""},
+	TaskRewrite:                       {Posture: "honour", Reason: ""},
 	TaskSignalExtract:                 {Posture: "honour", Reason: ""},
 	TaskSiteExtract:                   {Posture: "none", Reason: "reads a company's public website"},
 	TaskSiteFactExtract:               {Posture: "none", Reason: "reads a company's public website"},
@@ -739,6 +750,7 @@ var taskCompanyContext = map[Task]CompanyContextPolicy{
 	TaskReportInterpret:               {TokenBudget: 0, Conditional: false},
 	TaskReportSetup:                   {TokenBudget: 0, Conditional: false},
 	TaskRequestSettlement:             {TokenBudget: 0, Conditional: false},
+	TaskRewrite:                       {TokenBudget: 0, Conditional: false},
 	TaskSignalExtract:                 {TokenBudget: 0, Conditional: false},
 	TaskSiteExtract:                   {TokenBudget: 0, Conditional: false},
 	TaskSiteFactExtract:               {TokenBudget: 0, Conditional: false},

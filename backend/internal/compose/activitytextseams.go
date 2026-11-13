@@ -90,8 +90,8 @@ func leadSubjects(ctx context.Context, leads *contacts.Store, id ids.LeadID) (*m
 	return about, nil
 }
 
-// WithRewrite binds the rewrite path to the drafting lane, the one the
-// composer's drafts ride. Unbound, the endpoint answers 409 ai_not_configured.
+// WithRewrite binds the rewrite path to the rewrite lane. Unbound, the endpoint
+// answers 409 ai_not_configured.
 func WithRewrite(brain completer) Option {
 	return func(s *Server, pool *pgxpool.Pool) {
 		s.rewriteHandlers = newRewriteHandlers(pool, brain)

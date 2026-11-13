@@ -189,6 +189,7 @@ export function useVoiceDraft({
       if (written) {
         // A pick counts once its words are on screen; a kept body keeps its own.
         if (ask.language) fields.setLanguage(ask.language);
+        if (!ask.verb) fields.setDraftedIntent(ask.intent);
         setDrafted(result.draft.body);
         setRewritten(
           ask.verb

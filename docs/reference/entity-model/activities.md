@@ -1383,7 +1383,7 @@ The 34 tables owned by `activities`, as the migrations build them. [Back to the 
 
 ## scheduled_send
 
-22 columns · primary key `(id)` · referenced by 1 foreign key
+23 columns · primary key `(id)` · referenced by 1 foreign key
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
@@ -1401,6 +1401,7 @@ The 34 tables owned by `activities`, as the migrations build them. [Back to the 
 | `payload` | `jsonb` | yes |  |
 | `payload_version` | `integer`, default `1` | yes |  |
 | `principal_kind` | `text` | yes | One of `human`, `agent`. |
+| `rearmed_at` | `timestamp with time zone` |  |  |
 | `scheduled_at` | `timestamp with time zone` | yes |  |
 | `scheduled_by` | `uuid` | yes | Points at `app_user.id`. |
 | `scheduled_tz` | `text` | yes | The IANA zone the human picked the moment in, kept so it re-renders as meant. |

@@ -16,6 +16,9 @@ package main
 import (
 	"bytes"
 	"context"
+	"go/ast"
+	"go/parser"
+	"go/token"
 	"io"
 	"log/slog"
 	"strings"
@@ -409,4 +412,32 @@ embeddings:
 		t.Fatalf("parsing the offline binding: %v", err)
 	}
 	return cfg
+}
+
+// An Option hides the lane it binds, so the wiring source is read instead. The
+// rewrite endpoint rides its own premium-first lane, never the drafting one.
+func TestTheRewriteEndpointRidesTheRewriteLane(t *testing.T) {
+	file, err := parser.ParseFile(token.NewFileSet(), "modelwiring.go", nil, 0)
+	if err != nil {
+		t.Fatalf("parsing modelwiring.go: %v", err)
+	}
+	var lanes []string
+	ast.Inspect(file, func(node ast.Node) bool {
+		call, ok := node.(*ast.CallExpr)
+		if !ok || len(call.Args) != 1 {
+			return true
+		}
+		if fn, ok := call.Fun.(*ast.SelectorExpr); ok && fn.Sel.Name == "WithRewrite" {
+			if lane, ok := call.Args[0].(*ast.SelectorExpr); ok {
+				lanes = append(lanes, lane.Sel.Name)
+			}
+		}
+		return true
+	})
+	if len(lanes) != 1 || lanes[0] != "Rewrite" {
+		t.Errorf("compose.WithRewrite is bound to the lanes %v, want exactly modelPath.Rewrite", lanes)
+	}
+	if lead := ai.LeadingTier(ai.TaskRewrite); lead != ai.TierPremium {
+		t.Errorf("the rewrite ladder leads with %q, want premium", lead)
+	}
 }

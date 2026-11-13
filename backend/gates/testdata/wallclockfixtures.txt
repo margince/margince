@@ -213,6 +213,7 @@ internal/compose/integration/scheduledsendagent_integration_test.go 3
 internal/compose/integration/scheduledsendorigin_integration_test.go 1
 internal/compose/integration/scheduledsendpreview_integration_test.go 2
 internal/compose/integration/scheduledsendprivacy_integration_test.go 3
+internal/compose/integration/scheduledsendrecovery_integration_test.go 2
 internal/compose/integration/scheduledsendstamps_integration_test.go 1
 internal/compose/integration/signalextract_integration_test.go 1
 internal/compose/integration/signals_integration_test.go 3

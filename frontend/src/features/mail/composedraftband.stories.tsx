@@ -2,7 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { RefreshCw, RotateCcw } from "lucide-react";
+import { RotateCcw } from "lucide-react";
 import { expect, screen } from "storybook/test";
 import type { components } from "../../api/schema";
 import { IconAction } from "../../design-system/iconaction";
@@ -177,11 +177,6 @@ function everyAction() {
             actions={
               <>
                 <RewriteRow onRewrite={() => {}} disabled={false} />
-                <IconAction
-                  label="Change the ask"
-                  icon={<RefreshCw aria-hidden="true" />}
-                  onClick={() => {}}
-                />
                 <IconAction
                   label="Discard draft"
                   icon={<RotateCcw aria-hidden="true" />}

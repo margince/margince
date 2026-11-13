@@ -5,8 +5,9 @@
 
 package gates
 
-// The call graph the individual-performance scope gate walks: from a handler
-// or a tool to the functions that read the switch.
+// What the individual-performance path walk reads. That is each declaration
+// of the switch's packages and each type converted to an interface. It is
+// also each value stored in a variable or field of func type.
 
 import (
 	"fmt"
@@ -33,10 +34,12 @@ var switchReachDirs = []string{
 	"internal/modules/forecasting",
 	"internal/modules/agents",
 	"internal/modules/assurance",
+	"internal/modules/commissions",
 	"internal/compose",
 }
 
-// switchReader names one function that reads the installation's switch.
+// switchReader names one function a path may pass instead of asking the
+// switch itself: a method is named Type.Method.
 type switchReader struct{ pkg, name string }
 
 // switchReaders are the switch's readers: the value a request bound, the
@@ -45,18 +48,56 @@ var switchReaders = []switchReader{
 	{"auth", "IndividualPerformanceOf"},
 	{"auth", "MayMeasureSeat"},
 	{"identity", "IndividualPerformanceTx"},
+	// The reader's own seat: MayMeasureSeat answers yes for it whatever the
+	// switch says, so a path that builds it has nothing left to ask.
+	{"compose", "ownScope"},
 }
 
-// switchGraph links each declared function, and each variable of func type,
-// to every function or such variable its code names or is handed. A call
-// through an interface names every declared method that could answer it.
+// answersNoColleagueFigure are functions whose answer carries no figure keyed
+// to a colleague. They are not a check: a figure made after one still needs
+// the switch. A tool that serves them beside figures cannot be waived whole.
+var answersNoColleagueFigure = []switchReader{
+	{"reporting", "Service.Catalog"},     // the metric catalog: names and definitions
+	{"reporting", "Service.ListReports"}, // saved report definitions by name
+	{"reporting", "Service.GetReport"},   // one report definition: its selection, not its figures
+	{"commissions", "Store.Summary"},     // what is owed to partners, grouped by partner, never by seat
+}
+
+// valueSite is one expression stored in a variable or field of func type,
+// with the type information of the file it is written in.
+type valueSite struct {
+	expr ast.Expr
+	info *types.Info
+}
+
+// invocation is one call of a declared function, for resolving what a
+// parameter stored in a field was handed.
+type invocation struct {
+	call *ast.CallExpr
+	info *types.Info
+}
+
+// paramSlot places a parameter in the signature of its function.
+type paramSlot struct {
+	fn    *types.Func
+	index int
+}
+
+// switchGraph is the code the walk reads. converted holds each concrete type
+// some expression turns into an interface value; stored holds what each
+// func-typed variable or field is ever given.
 type switchGraph struct {
-	fset    *token.FileSet
-	edges   map[types.Object]map[types.Object]bool
-	decls   map[*types.Func]*ast.FuncDecl
-	methods map[string][]*types.Func
-	pkgOf   map[*types.Func]string
-	infos   map[*types.Func]*types.Info
+	fset      *token.FileSet
+	decls     map[*types.Func]*ast.FuncDecl
+	pkgOf     map[*types.Func]string
+	infos     map[*types.Func]*types.Info
+	converted map[types.Type]bool
+	stored    map[*types.Var][]valueSite
+	calls     map[*types.Func][]invocation
+	paramOf   map[*types.Var]paramSlot
+	writers   map[*types.Var]bool
+	readerSet map[*types.Func]bool
+	bareSet   map[*types.Func]bool
 }
 
 // loadSwitchGraph type-checks the packages under dirs, each after the ones it
@@ -77,24 +118,25 @@ func loadSwitchGraph(t *testing.T, dirs ...string) *switchGraph {
 
 func newSwitchGraph(fset *token.FileSet, byPackage map[string][]*ast.File) *switchGraph {
 	g := &switchGraph{
-		fset: fset, edges: map[types.Object]map[types.Object]bool{}, decls: map[*types.Func]*ast.FuncDecl{},
-		methods: map[string][]*types.Func{}, pkgOf: map[*types.Func]string{}, infos: map[*types.Func]*types.Info{},
+		fset: fset, decls: map[*types.Func]*ast.FuncDecl{}, pkgOf: map[*types.Func]string{},
+		infos: map[*types.Func]*types.Info{}, converted: map[types.Type]bool{},
+		stored: map[*types.Var][]valueSite{}, writers: map[*types.Var]bool{},
+		calls: map[*types.Func][]invocation{}, paramOf: map[*types.Var]paramSlot{},
 	}
 	checked := sharedImports{}
-	infos := map[string]*types.Info{}
 	for _, path := range importOrder(byPackage) {
 		files := byPackage[path]
 		info := &types.Info{
 			Defs: map[*ast.Ident]types.Object{}, Uses: map[*ast.Ident]types.Object{},
-			Types: map[ast.Expr]types.TypeAndValue{},
+			Types: map[ast.Expr]types.TypeAndValue{}, Selections: map[*ast.SelectorExpr]*types.Selection{},
 		}
 		conf := types.Config{Importer: checked, Error: func(error) {}}
 		pkg, _ := conf.Check(path, fset, files, info)
-		checked[path], infos[path] = pkg, info
-		g.index(files, info)
-	}
-	for path, info := range infos {
-		g.link(byPackage[path], info)
+		checked[path] = pkg
+		for _, file := range files {
+			g.index(file, info)
+			g.census(file, info)
+		}
 	}
 	return g
 }
@@ -126,86 +168,185 @@ func importOrder(byPackage map[string][]*ast.File) []string {
 	return order
 }
 
-func (g *switchGraph) index(files []*ast.File, info *types.Info) {
-	for _, file := range files {
-		for _, decl := range file.Decls {
-			fn, ok := decl.(*ast.FuncDecl)
-			if !ok || fn.Body == nil {
-				continue
-			}
-			if obj, ok := info.Defs[fn.Name].(*types.Func); ok {
-				g.decls[obj], g.pkgOf[obj], g.infos[obj] = fn, file.Name.Name, info
-				if fn.Recv != nil {
-					g.methods[methodKey(obj)] = append(g.methods[methodKey(obj)], obj)
+func (g *switchGraph) index(file *ast.File, info *types.Info) {
+	for _, decl := range file.Decls {
+		fn, ok := decl.(*ast.FuncDecl)
+		if !ok || fn.Body == nil {
+			continue
+		}
+		if obj, ok := info.Defs[fn.Name].(*types.Func); ok {
+			g.decls[obj], g.pkgOf[obj], g.infos[obj] = fn, file.Name.Name, info
+			if sig, ok := obj.Type().(*types.Signature); ok {
+				for i := range sig.Params().Len() {
+					g.paramOf[sig.Params().At(i)] = paramSlot{obj, i}
 				}
 			}
 		}
 	}
+	ast.Inspect(file, func(n ast.Node) bool {
+		if ft, ok := n.(*ast.FuncType); ok {
+			g.indexWriters(ft, info)
+		}
+		return true
+	})
 }
 
-// link adds what each declaration names. It also adds every value handed to a
-// variable of func type: by assignment, as a struct field, or as an argument.
-func (g *switchGraph) link(files []*ast.File, info *types.Info) {
-	for _, file := range files {
-		for _, decl := range file.Decls {
-			if fn, ok := decl.(*ast.FuncDecl); ok && fn.Body != nil {
-				if obj, ok := info.Defs[fn.Name].(*types.Func); ok {
-					g.addAll(obj, g.named(fn.Body, info))
+// indexWriters records each parameter spelled as an http.ResponseWriter. The
+// stand-in import gives it no type, so the spelling is what is read.
+func (g *switchGraph) indexWriters(ft *ast.FuncType, info *types.Info) {
+	for _, field := range ft.Params.List {
+		sel, ok := field.Type.(*ast.SelectorExpr)
+		if !ok || sel.Sel.Name != "ResponseWriter" {
+			continue
+		}
+		for _, name := range field.Names {
+			if v, ok := info.Defs[name].(*types.Var); ok {
+				g.writers[v] = true
+			}
+		}
+	}
+}
+
+// census records each conversion of a concrete type to an interface in file.
+// It also records each value handed to a variable or field of func type.
+func (g *switchGraph) census(file *ast.File, info *types.Info) {
+	ast.Inspect(file, func(n ast.Node) bool {
+		switch node := n.(type) {
+		case *ast.AssignStmt:
+			if len(node.Lhs) == len(node.Rhs) {
+				for i, lhs := range node.Lhs {
+					g.flow(info.TypeOf(lhs), node.Rhs[i], info)
+					g.store(assignedObject(lhs, info), node.Rhs[i], info)
 				}
 			}
-			ast.Inspect(decl, func(n ast.Node) bool {
-				g.linkFlow(n, info)
-				return true
-			})
+		case *ast.ValueSpec:
+			for i, name := range node.Names {
+				if i < len(node.Values) {
+					g.flow(info.TypeOf(name), node.Values[i], info)
+					g.store(info.Defs[name], node.Values[i], info)
+				}
+			}
+		case *ast.CompositeLit:
+			g.censusLiteral(node, info)
+		case *ast.CallExpr:
+			g.censusCall(node, info)
+		case *ast.FuncDecl:
+			g.censusReturns(node.Type, node.Body, info)
+		case *ast.FuncLit:
+			g.censusReturns(node.Type, node.Body, info)
 		}
+		return true
+	})
+}
+
+func (g *switchGraph) censusLiteral(lit *ast.CompositeLit, info *types.Info) {
+	litType := info.TypeOf(lit)
+	if litType == nil {
+		return
+	}
+	switch under := litType.Underlying().(type) {
+	case *types.Struct:
+		for i, elt := range lit.Elts {
+			if kv, ok := elt.(*ast.KeyValueExpr); ok {
+				if key, ok := kv.Key.(*ast.Ident); ok {
+					g.flow(info.TypeOf(key), kv.Value, info)
+					g.store(info.Uses[key], kv.Value, info)
+				}
+			} else if i < under.NumFields() {
+				g.flow(under.Field(i).Type(), elt, info)
+				g.store(under.Field(i), elt, info)
+			}
+		}
+	case *types.Slice:
+		g.censusElements(lit, under.Elem(), nil, info)
+	case *types.Array:
+		g.censusElements(lit, under.Elem(), nil, info)
+	case *types.Map:
+		g.censusElements(lit, under.Elem(), under.Key(), info)
 	}
 }
 
-func (g *switchGraph) linkFlow(n ast.Node, info *types.Info) {
-	switch node := n.(type) {
-	case *ast.AssignStmt:
-		for i, lhs := range node.Lhs {
-			if len(node.Rhs) == len(node.Lhs) {
-				g.handTo(assignedObject(lhs, info), node.Rhs[i], info)
-			} else if len(node.Rhs) == 1 {
-				g.handTo(assignedObject(lhs, info), node.Rhs[0], info)
-			}
-		}
-	case *ast.ValueSpec:
-		for i, name := range node.Names {
-			if i < len(node.Values) {
-				g.handTo(info.Defs[name], node.Values[i], info)
-			}
-		}
-	case *ast.CompositeLit:
-		g.linkFields(node, info)
-	case *ast.CallExpr:
-		sig, ok := info.TypeOf(node.Fun).(*types.Signature)
-		if !ok {
-			return
-		}
-		for i, arg := range node.Args {
-			if params := sig.Params(); params.Len() > 0 {
-				g.handTo(params.At(min(i, params.Len()-1)), arg, info)
-			}
-		}
-	}
-}
-
-// linkFields hands each field value of a struct literal to its field.
-func (g *switchGraph) linkFields(lit *ast.CompositeLit, info *types.Info) {
-	st, _ := info.TypeOf(lit).(*types.Struct)
-	if named, ok := info.TypeOf(lit).(*types.Named); ok {
-		st, _ = named.Underlying().(*types.Struct)
-	}
-	for i, elt := range lit.Elts {
+func (g *switchGraph) censusElements(lit *ast.CompositeLit, elem, key types.Type, info *types.Info) {
+	for _, elt := range lit.Elts {
+		value := elt
 		if kv, ok := elt.(*ast.KeyValueExpr); ok {
-			if key, ok := kv.Key.(*ast.Ident); ok {
-				g.handTo(info.Uses[key], kv.Value, info)
+			value = kv.Value
+			if key != nil {
+				g.flow(key, kv.Key, info)
 			}
-		} else if st != nil && i < st.NumFields() {
-			g.handTo(st.Field(i), elt, info)
 		}
+		g.flow(elem, value, info)
+	}
+}
+
+// censusCall reads each argument as handed to its parameter, and an explicit
+// conversion I(x) as a conversion.
+func (g *switchGraph) censusCall(call *ast.CallExpr, info *types.Info) {
+	if fn := calledFunc(call, info); fn != nil {
+		g.calls[fn] = append(g.calls[fn], invocation{call, info})
+	}
+	if tv, ok := info.Types[call.Fun]; ok && tv.IsType() && len(call.Args) == 1 {
+		g.flow(tv.Type, call.Args[0], info)
+		return
+	}
+	sig, ok := info.TypeOf(call.Fun).(*types.Signature)
+	if !ok || sig.Params().Len() == 0 {
+		return
+	}
+	last := sig.Params().Len() - 1
+	for i, arg := range call.Args {
+		paramType := sig.Params().At(min(i, last)).Type()
+		if slice, ok := paramType.(*types.Slice); ok && sig.Variadic() && i >= last && !call.Ellipsis.IsValid() {
+			paramType = slice.Elem()
+		}
+		g.flow(paramType, arg, info)
+	}
+}
+
+// censusReturns reads each value a function returns as converted to its
+// declared result type. A literal nested inside answers for its own results.
+func (g *switchGraph) censusReturns(ft *ast.FuncType, body *ast.BlockStmt, info *types.Info) {
+	if ft.Results == nil || body == nil {
+		return
+	}
+	var results []types.Type
+	for _, field := range ft.Results.List {
+		for range max(1, len(field.Names)) {
+			results = append(results, info.TypeOf(field.Type))
+		}
+	}
+	ast.Inspect(body, func(n ast.Node) bool {
+		switch node := n.(type) {
+		case *ast.FuncLit:
+			return false
+		case *ast.ReturnStmt:
+			if len(node.Results) == len(results) {
+				for i, result := range node.Results {
+					g.flow(results[i], result, info)
+				}
+			}
+		}
+		return true
+	})
+}
+
+// flow records value's type when the place it goes to is an interface and the
+// value is not one.
+func (g *switchGraph) flow(target types.Type, value ast.Expr, info *types.Info) {
+	source := info.TypeOf(value)
+	if target == nil || source == nil || !types.IsInterface(target) || types.IsInterface(source) {
+		return
+	}
+	if basic, ok := source.(*types.Basic); ok && (basic.Kind() == types.UntypedNil || basic.Kind() == types.Invalid) {
+		return
+	}
+	g.converted[source] = true
+}
+
+// store records value as one a func-typed variable or field is given.
+func (g *switchGraph) store(target types.Object, value ast.Expr, info *types.Info) {
+	if v, ok := target.(*types.Var); ok && isFuncTyped(v) {
+		g.stored[v.Origin()] = append(g.stored[v.Origin()], valueSite{value, info})
 	}
 }
 
@@ -222,100 +363,72 @@ func assignedObject(lhs ast.Expr, info *types.Info) types.Object {
 	return nil
 }
 
-// handTo links a variable of func type to what value names.
-func (g *switchGraph) handTo(target types.Object, value ast.Expr, info *types.Info) {
-	if v, ok := target.(*types.Var); ok && isFuncTyped(v) {
-		g.addAll(v, g.named(value, info))
-	}
-}
-
 func isFuncTyped(v *types.Var) bool {
 	_, ok := v.Type().Underlying().(*types.Signature)
 	return ok
 }
 
-// named lists the functions and func-typed variables node names.
-func (g *switchGraph) named(node ast.Node, info *types.Info) []types.Object {
-	var found []types.Object
-	ast.Inspect(node, func(n ast.Node) bool {
-		ident, ok := n.(*ast.Ident)
-		if !ok {
-			return true
+// implementations are the declared methods that answer a call of method on
+// iface. There is one for each type the code converts to an interface that
+// has the method. A type a stand-in leaves unresolved has no method, so it is
+// not one. ok is false when there is none, or one has no body here.
+func (g *switchGraph) implementations(iface *types.Interface, method *types.Func) (found []*types.Func, ok bool) {
+	ok = true
+	for _, concrete := range slices.SortedFunc(maps.Keys(g.converted), byTypeName) {
+		if !types.Implements(concrete, iface) {
+			continue
 		}
-		switch obj := info.Uses[ident].(type) {
-		case *types.Func:
-			found = append(found, obj.Origin())
-		case *types.Var:
-			if isFuncTyped(obj) {
-				found = append(found, obj.Origin())
-			}
+		obj, _, _ := types.LookupFieldOrMethod(concrete, true, method.Pkg(), method.Name())
+		fn, isFunc := obj.(*types.Func)
+		if !isFunc {
+			continue
 		}
-		return true
-	})
-	return found
+		if g.decls[fn.Origin()] == nil {
+			ok = false
+			continue
+		}
+		found = append(found, fn.Origin())
+	}
+	return found, ok && len(found) > 0
 }
 
-func (g *switchGraph) addAll(from types.Object, to []types.Object) {
-	if from == nil || len(to) == 0 {
-		return
-	}
-	if g.edges[from] == nil {
-		g.edges[from] = map[types.Object]bool{}
-	}
-	for _, obj := range to {
-		g.edges[from][obj] = true
-	}
+func byTypeName(a, b types.Type) int {
+	return strings.Compare(a.String(), b.String())
 }
 
-// next is what running obj may run next; an interface method runs any
-// declared method that could answer it.
-func (g *switchGraph) next(obj types.Object) []types.Object {
-	out := slices.Collect(maps.Keys(g.edges[obj]))
-	if fn, ok := obj.(*types.Func); ok && g.decls[fn] == nil {
-		if sig, ok := fn.Type().(*types.Signature); ok && sig.Recv() != nil && types.IsInterface(sig.Recv().Type()) {
-			for _, m := range g.methods[methodKey(fn)] {
-				out = append(out, m)
-			}
-		}
+// readers resolves the switch's readers, and the functions that answer no
+// colleague's figure, to their declarations.
+func (g *switchGraph) readers(readers, bare []switchReader) error {
+	var err error
+	if g.readerSet, err = g.resolveNamed(readers); err != nil {
+		return err
 	}
-	return out
+	g.bareSet, err = g.resolveNamed(bare)
+	return err
 }
 
-// readers resolves the switch's readers to their declarations.
-func (g *switchGraph) readers(named []switchReader) (map[types.Object]bool, error) {
-	found := map[types.Object]bool{}
+func (g *switchGraph) resolveNamed(named []switchReader) (map[*types.Func]bool, error) {
+	found := map[*types.Func]bool{}
 	for _, reader := range named {
 		hit := false
-		for fn := range g.decls {
-			if g.pkgOf[fn] == reader.pkg && fn.Name() == reader.name {
+		for fn, decl := range g.decls {
+			if g.pkgOf[fn] == reader.pkg && declLabel(decl) == reader.name {
 				found[fn], hit = true, true
 			}
 		}
 		if !hit {
-			return nil, fmt.Errorf("found no %s.%s, the switch's reader; the scope gate has stopped reading it", reader.pkg, reader.name)
+			return nil, fmt.Errorf("found no %s.%s, which the scope gate names; it has stopped reading it", reader.pkg, reader.name)
 		}
 	}
 	return found, nil
 }
 
-// reaches reports whether running root may run one of targets.
-func (g *switchGraph) reaches(root types.Object, targets map[types.Object]bool) bool {
-	seen := map[types.Object]bool{root: true}
-	queue := []types.Object{root}
-	for len(queue) > 0 {
-		obj := queue[0]
-		queue = queue[1:]
-		if targets[obj] {
-			return true
-		}
-		for _, next := range g.next(obj) {
-			if !seen[next] {
-				seen[next] = true
-				queue = append(queue, next)
-			}
-		}
+// declLabel names a function as switchReader spells it: Type.Method or Func.
+func declLabel(decl *ast.FuncDecl) string {
+	if recv := receiverTypeName(decl); recv != "" {
+		return recv + "." + decl.Name.Name
 	}
-	return false
+	return decl.Name.Name
 }
 
 // httpHandlers are the hand-written methods that serve operationID: named for

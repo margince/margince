@@ -10,7 +10,7 @@ type DraftReason = components["schemas"]["AccountDraftReason"];
 
 /**
  * What marks a body as the model's: its reference, disclosure and reasons, and
- * the language the rep had chosen for it.
+ * the language and purpose the rep had chosen for it.
  */
 export type DraftMarks = Readonly<{
   draftRef: string | null;
@@ -18,6 +18,7 @@ export type DraftMarks = Readonly<{
   reasoning: DraftReason[];
   scope: ProjectScope | undefined;
   language: Locale | null;
+  draftedIntent: string;
 }>;
 
 export const plainText = (text: string) => text.replace(/\s+/g, " ").trim();

@@ -9238,6 +9238,7 @@ public.scheduled_send.origin_links jsonb gen=- def=-
 public.scheduled_send.payload jsonb NOT NULL gen=- def=-
 public.scheduled_send.payload_version integer NOT NULL gen=- def=1
 public.scheduled_send.principal_kind text NOT NULL gen=- def=-
+public.scheduled_send.rearmed_at timestamp with time zone gen=- def=-
 public.scheduled_send.scheduled_at timestamp with time zone NOT NULL gen=- def=-
 public.scheduled_send.scheduled_by uuid NOT NULL gen=- def=-
 public.scheduled_send.scheduled_send_activity_id_fkey FOREIGN KEY (activity_id) REFERENCES activity(id) ON DELETE RESTRICT

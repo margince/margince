@@ -1,5 +1,5 @@
-name: draft_reply_rewrite_email_shorter_keeps_the_ask
-task: draft_reply
+name: rewrite_email_shorter_keeps_the_ask
+task: rewrite
 site: rewrite
 source: hand_authored
 sanitized_by: hand_authored/claude-opus-5-5

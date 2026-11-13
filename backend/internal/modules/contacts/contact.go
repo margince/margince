@@ -91,7 +91,7 @@ type CreateContactInput struct {
 	// auditEvidence rides on the create's audit row. Unexported, so no request
 	// can claim the evidence an import writes for itself.
 	auditEvidence map[string]any
-	// erasure is set only by EnsureContactByEmail, from its caller.
+	// erasure is set only by the ensure-by-email doors, from their callers.
 	erasure storekit.ErasureAdmission
 	// ConvertLeadIDs are the live leads holding this contact's address or
 	// profile, which the user chose to convert into the new contact.
@@ -295,33 +295,23 @@ func (s *Store) GetContactTx(ctx context.Context, tx pgx.Tx, id ids.ContactID,
 	return readContact(ctx, tx, id, archived, active.cols)
 }
 
-// EnsureBookerByEmail is EnsureContactByEmail for the public booking page. A
-// live lead holding the address is the booker's record. No contact is made,
-// and one of the two ids is set.
-func (s *Store) EnsureBookerByEmail(ctx context.Context, fullName, email, source string, erasure storekit.ErasureAdmission) (ids.UUID, ids.LeadID, error) {
-	contact, err := s.EnsureContactByEmail(ctx, fullName, email, source, erasure)
-	if _, held := errors.AsType[*LeadHoldsIdentityError](err); !held {
-		return contact, ids.LeadID{}, err
-	}
-	lead, err := s.CounterpartyLead(ctx, email)
-	if err == nil && lead.IsZero() {
-		// The lead the refusal named is gone, or a contact took the address:
-		// the same race the claimed-email retry above answers, met the other way.
-		err = apperrors.ErrConflict
-	}
-	return ids.Nil, lead, err
-}
-
 // EnsureContactByEmail returns the contact holding this address, creating one
 // when none does — where an address seen on a message becomes a record.
 func (s *Store) EnsureContactByEmail(ctx context.Context, fullName, email, source string, erasure storekit.ErasureAdmission) (ids.UUID, error) {
+	id, _, err := s.findOrCreateContactByEmail(ctx, email, CreateContactInput{FullName: fullName, Source: source, erasure: erasure})
+	return id, err
+}
+
+// findOrCreateContactByEmail is EnsureContactByEmail with the create the caller
+// wants when no contact holds the address; created says whether it ran.
+func (s *Store) findOrCreateContactByEmail(ctx context.Context, email string, create CreateContactInput) (ids.UUID, bool, error) {
 	if err := auth.Require(ctx, "contact", principal.ActionCreate); err != nil {
-		return ids.Nil, err
+		return ids.Nil, false, err
 	}
 	// Before the lookup, so a machine-address contact made before the refusal
 	// existed is not handed back either.
 	if err := refuseMachineAddress(email); err != nil {
-		return ids.Nil, err
+		return ids.Nil, false, err
 	}
 	lookup := func() (ids.UUID, bool, error) {
 		var id ids.UUID
@@ -346,26 +336,22 @@ func (s *Store) EnsureContactByEmail(ctx context.Context, fullName, email, sourc
 	}
 
 	if id, found, err := lookup(); err != nil || found {
-		return id, err
+		return id, false, err
 	}
-	created, err := s.CreateContact(ctx, CreateContactInput{
-		FullName:    fullName,
-		sourceNames: true,
-		Emails:      []ContactEmailInput{{Email: email, EmailType: emailTypeWork, IsPrimary: true}},
-		Source:      source,
-		erasure:     erasure,
-	})
+	create.sourceNames = true
+	create.Emails = []ContactEmailInput{{Email: email, EmailType: emailTypeWork, IsPrimary: true}}
+	created, err := s.CreateContact(ctx, create)
 	if err == nil {
-		return ids.UUID(created.Id), nil
+		return ids.UUID(created.Id), true, nil
 	}
 	// A concurrent capture of the same email won the race: its row IS
 	// the idempotent answer.
 	if IsClaimedEmail(err) {
 		if id, found, lookupErr := lookup(); lookupErr == nil && found {
-			return id, nil
+			return id, false, nil
 		}
 	}
-	return ids.Nil, err
+	return ids.Nil, false, err
 }
 
 // refuseUnreadableSource refuses a create that names a record the caller

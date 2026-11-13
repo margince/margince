@@ -62,7 +62,7 @@ type Service struct {
 	voice draftvoice.Reader
 }
 
-// NewService binds the rewrite to the draft_reply lane, nil for none, and to
+// NewService binds the rewrite to the rewrite lane, nil for none, and to
 // the read check the record an ask names must pass.
 func NewService(lane ai.Completer, admit Admit) *Service {
 	return &Service{lane: lane, admit: admit}
