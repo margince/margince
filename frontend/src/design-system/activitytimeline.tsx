@@ -196,6 +196,7 @@ export function activityTimeline(
       copies: activity.copies,
       automaticKind: activity.automatic_kind,
       aiAssisted: activity.ai_assisted,
+      chatEpisode: activity.chat_episode,
       atIso: activity.occurred_at,
       atPrecision: activity.occurred_precision,
       provenance: withControllerSend(

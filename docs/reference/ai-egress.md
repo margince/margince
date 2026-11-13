@@ -41,6 +41,7 @@ bound for its ladder's rungs, and may retain the prompt for debugging.
 | `capture_confidentiality_verdict` | `local_small` | yes | yes | yes | only a local decision provider | shipped |
 | `capture_counterparty_verdict` | `local_small` | yes | yes | yes | only a local decision provider | shipped |
 | `cert_judge` | `premium` → `cheap_cloud` | no | no | no | none | shipped |
+| `chat_summary` | `cheap_cloud` → `premium` | no | yes | no | none | shipped |
 | `cold_start` | `cheap_cloud` → `premium` | no | no | no | none | shipped |
 | `corpus_ask` | `premium` | no | no | no | none | shipped |
 | `deal_health` | `cheap_cloud` → `premium` | no | no | no | none | shipped |

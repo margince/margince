@@ -17,6 +17,7 @@ import (
 	"time"
 
 	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/margince/margince/backend/internal/modules/chatlinks"
 	"github.com/margince/margince/backend/internal/platform/database"
@@ -38,7 +39,9 @@ type chatRecord struct {
 	ownerEmail string
 }
 
-func (w *Flusher) recordFacts(ctx context.Context, link chatlinks.Link) (chatRecord, error) {
+// readRecord reads what a channel shows of its record: the deal, or the
+// project when the link carries no deal.
+func readRecord(ctx context.Context, pool *pgxpool.Pool, link chatlinks.Link) (chatRecord, error) {
 	record := chatRecord{kind: chatlinks.RecordProject}
 	args := []any{nil}
 	arg := func(v any) int { args = append(args, v); return len(args) }
@@ -58,7 +61,7 @@ func (w *Flusher) recordFacts(ctx context.Context, link chatlinks.Link) (chatRec
 		record.id = *link.ProjectID
 	}
 	args[0] = record.id
-	err := database.WithWorkspaceTx(ctx, w.Pool, func(tx pgx.Tx) error {
+	err := database.WithWorkspaceTx(ctx, pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(ctx, query, args...).Scan(&record.name, &record.stage, &record.status, &record.due,
 			&record.ownerName, &record.ownerEmail)
 	})

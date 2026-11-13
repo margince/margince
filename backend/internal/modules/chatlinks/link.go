@@ -252,11 +252,11 @@ func linkActor(ctx context.Context) (ids.UUID, error) {
 func resolveChannel(ctx context.Context, chat Chat, kind string, id ids.UUID, name string, req LinkRequest) (dispact.Channel, error) {
 	if req.Mode == ModeCreate {
 		ch, err := chat.CreateChannel(ctx, externalKey(kind, id), channelNameOf(name))
-		return ch, chatFailure(err)
+		return ch, ChatFailure(err)
 	}
 	ch, err := chat.Channel(ctx, req.Channel)
 	if err != nil {
-		return dispact.Channel{}, chatFailure(err)
+		return dispact.Channel{}, ChatFailure(err)
 	}
 	switch {
 	case ch.IsArchived:
@@ -284,8 +284,8 @@ func channelNameOf(name string) string {
 	return string(runes)
 }
 
-// chatFailure turns the chat client's errors into this package's refusals.
-func chatFailure(err error) error {
+// ChatFailure turns the chat client's errors into this package's refusals.
+func ChatFailure(err error) error {
 	switch {
 	case err == nil:
 		return nil
@@ -306,7 +306,7 @@ func (s *Store) invite(ctx context.Context, chat Chat, slug string, facts record
 	}
 	result, err := chat.AddMembers(ctx, slug, emails)
 	if err != nil {
-		return nil, chatFailure(err)
+		return nil, ChatFailure(err)
 	}
 	return &Invites{Invited: len(result.Added), NotInChat: len(result.NotFound)}, nil
 }

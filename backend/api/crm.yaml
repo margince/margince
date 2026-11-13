@@ -17272,6 +17272,53 @@ paths:
             application/problem+json:
               schema: { $ref: '#/components/schemas/Problem' }
 
+  /channel-links/{record_type}/{id}/notes:
+    parameters:
+      - name: record_type
+        in: path
+        required: true
+        schema: { $ref: '#/components/schemas/ChannelLinkRecordType' }
+      - $ref: '#/components/parameters/Id'
+    post:
+      tags: [Connectors]
+      operationId: fileChannelMessage
+      security: [ { bearerAuth: [] }, { cookieAuth: [] } ]
+      x-mcp-tool: { verb: file_channel_message, router: change_activities, action: file_channel_message, tier: auto_execute, scope: write, served_by: route }
+      summary: File a summary of one message in a record's channel, or of its thread, as a note.
+      description: |
+        Reads the message from the chat, has the AI write a short summary of it, and files that
+        summary as a note on the record, as the caller. The message text is not stored. Filing the
+        same message again returns the note already filed.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/FileChannelMessageRequest' }
+      responses:
+        '201':
+          description: The note.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Activity' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404':
+          description: 'The record is not visible, it has no channel (`code: channel_link_not_found`), or the message is not in its channel (`code: channel_message_not_found`).'
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+        '409':
+          description: 'No bot is connected (`code: channel_bot_not_connected`), or no AI model is bound (`code: ai_not_configured`).'
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+        '502':
+          description: 'The chat could not be reached (`code: channel_provider_unreachable`), or the summary could not be written (`code: channel_summary_failed`); nothing was filed.'
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+
   # ----------------------- /webhook-subscriptions ---------------------------
   # Outbound webhook subscriptions (E10/S-E10.6, A51): a first-party outbound
   # surface — signed, retried delivery of published domain events to a
@@ -45517,6 +45564,34 @@ components:
       properties:
         verbosity: { $ref: '#/components/schemas/ChannelVerbosity' }
 
+    FileChannelMessageRequest:
+      type: object
+      additionalProperties: false
+      required: [message]
+      properties:
+        message:
+          type: string
+          minLength: 1
+          maxLength: 500
+          description: |
+            The message in the record's channel: its sequence number, `#slug:seq`, the chat's
+            `<m:#slug:seq|…>` mention, or its link. A message in another channel is not found.
+        thread:
+          type: boolean
+          description: True files the message and the replies in its thread that follow it.
+
+    ChatEpisode:
+      type: object
+      readOnly: true
+      description: |
+        The chat talk a summary note was written from. The talk itself is not kept: open `url`
+        to read it in the chat.
+      required: [message_count, ended_at, url]
+      properties:
+        message_count: { type: integer, minimum: 1, description: How many messages the summary covers. }
+        ended_at: { type: string, format: date-time, description: When the last of them was posted. }
+        url: { type: string, description: The first message in the chat. }
+
     ImportObject:
       type: string
       enum: [company, lead, contact, deal, activity]
@@ -58212,6 +58287,13 @@ components:
             draw text only; a surface that draws fields reads them here. Null on every other
             row, and on a form note written before the fields were kept. Withheld with the
             content, like `body`.
+        chat_episode:
+          allOf: [{ $ref: '#/components/schemas/ChatEpisode' }]
+          readOnly: true
+          description: >-
+            On a note summarising chat talk (`source_system` `dispact`), what talk it summarises.
+            The note's subject and body are an AI summary. Absent on every other row. Withheld with
+            the content, like `body`.
         raw: { type: [object, 'null'], additionalProperties: true }
         version: { $ref: '#/components/schemas/RowVersion' }
         created_at: { type: string, format: date-time }
@@ -70437,6 +70519,7 @@ components:
         - capture_classify
         - capture_confidentiality_verdict
         - capture_counterparty_verdict
+        - chat_summary
         - cert_judge
         - cold_start
         - corpus_ask
@@ -70480,7 +70563,7 @@ components:
          site_triage, stage_evidence_extract, summarize, transcript, transcript_propose, voice_build,
          corpus_ask, weekly_review, weekly_learnings, propose_roles, owed_verdict,
          request_settlement, account_scan, tag_suggest, report_setup, report_interpret,
-         reader_rendering, deal_verdict, rewrite]
+         reader_rendering, deal_verdict, rewrite, chat_summary]
       x-extensible-enum: true
       description: |
         What kind of AI work an occurrence is. Every AI task this build can run reports here,

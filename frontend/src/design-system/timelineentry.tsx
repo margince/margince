@@ -165,6 +165,8 @@ export type TimelineEntry = {
   automaticKind?: AutomaticKind | null;
   /** A model rewrote the words before a rep saved them (Polish wording). */
   aiAssisted?: boolean;
+  /** The chat talk an AI summary note was written from. */
+  chatEpisode?: components["schemas"]["ChatEpisode"] | null;
   /**
    * The message's own subject, when it had one. This is not the rendered
    * `title`, which falls back to the body (or to the kind) so a subjectless

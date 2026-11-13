@@ -286,6 +286,7 @@ func newJobRunner(pool *pgxpool.Pool, logger *slog.Logger, cfg workerConfig, sch
 		SettlementBrain:      modelPath.RequestSettlement,
 		DealVerdictBrain:     modelPath.DealVerdict,
 		TagSuggestBrain:      modelPath.TagSuggest,
+		ChatSummaryBrain:     modelPath.ChatSummary,
 		VerdictBrain:         modelPath.CaptureCounterpartyVerdict,
 		ConfidentialityBrain: modelPath.CaptureConfidentialityVerdict,
 		EnrichBrain:          modelPath.Enrich,

@@ -4,6 +4,7 @@
 package compose
 
 import (
+	"context"
 	"log/slog"
 	"time"
 
@@ -11,6 +12,8 @@ import (
 	"github.com/riverqueue/river"
 
 	"github.com/margince/margince/backend/internal/compose/chatsync"
+	"github.com/margince/margince/backend/internal/modules/ai"
+	"github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/modules/chatlinks"
 	"github.com/margince/margince/backend/internal/platform/jobs"
 	"github.com/margince/margince/backend/internal/platform/keyvault"
@@ -32,6 +35,37 @@ func (a ChatLinkFlushArgs) WorkspaceID() ids.UUID { return a.Workspace }
 // Link names the link the flush posts for.
 func (a ChatLinkFlushArgs) Link() ids.UUID { return a.LinkID }
 
+// ChatPullSweepArgs enqueues one chat_pull per live Dispact bot.
+type ChatPullSweepArgs struct{}
+
+// Kind is the stable job identifier River persists in river_job.
+func (ChatPullSweepArgs) Kind() string { return "chat_pull_sweep" }
+
+// FleetWide marks this a dispatcher (jobs.FleetWide).
+func (ChatPullSweepArgs) FleetWide() {}
+
+// ChatPullArgs reads the linked channels of one Dispact bot.
+type ChatPullArgs struct {
+	Workspace    ids.UUID `json:"workspace_id"`
+	ConnectionID ids.UUID `json:"connection_id"`
+}
+
+// Kind is the stable job identifier River persists in river_job.
+func (ChatPullArgs) Kind() string { return "chat_pull" }
+
+// WorkspaceID binds the pull to its tenant (jobs.WorkspaceScoped).
+func (a ChatPullArgs) WorkspaceID() ids.UUID { return a.Workspace }
+
+// Connection names the bot whose channels the pull reads.
+func (a ChatPullArgs) Connection() ids.UUID { return a.ConnectionID }
+
+// InsertOpts makes one pull per bot wait or run at a time, whoever enqueues
+// it, because two pulls would judge the same talk.
+func (ChatPullArgs) InsertOpts() river.InsertOpts {
+	return river.InsertOpts{MaxAttempts: sweptJobMaxAttempts,
+		UniqueOpts: river.UniqueOpts{ByArgs: true, ByState: activeSweepStates}}
+}
+
 func chatLinks(pool *pgxpool.Pool, vault func() keyvault.Vault, in chatsync.TxInserter, delay time.Duration, private bool) (*chatlinks.Store, chatsync.LiveChats) {
 	return chatsync.Wire(InstallationDB(pool), vault, chatsync.Enqueuer{Inserter: in, Delay: delay,
 		MaxAttempts: oneOffJobMaxAttempts, States: activeSweepStates,
@@ -40,10 +74,11 @@ func chatLinks(pool *pgxpool.Pool, vault func() keyvault.Vault, in chatsync.TxIn
 
 // WithChatLinks composes /channel-links and the Dispact bot connect; it must
 // follow WithChannelSurface. A new link's card is scheduled with no window.
-func WithChatLinks(inserter *jobs.Runner, private bool) Option {
+// lane is the chat_summary lane a chosen message is summarised on.
+func WithChatLinks(inserter *jobs.Runner, private bool, lane ai.Completer) Option {
 	return func(s *Server, pool *pgxpool.Pool) {
-		store, _ := chatLinks(pool, func() keyvault.Vault { return s.vault }, inserter, 0, private)
-		s.chatLinkHandlers = chatlinks.NewHandlers(store)
+		store, chats := chatLinks(pool, func() keyvault.Vault { return s.vault }, inserter, 0, private)
+		s.chatLinkHandlers = chatlinks.NewHandlers(store, chatsync.NewFiler(pool, store, chats, lane))
 		s.channelHandlers = s.channelHandlers.WithBotCheck(chatlinks.ProviderDispact, chatsync.BotCheck{HTTP: chatsync.HTTPClient(private), AllowHTTP: private})
 	}
 }
@@ -60,6 +95,27 @@ func registerChatLinkFlush(reg *jobRegistry, pool *pgxpool.Pool, cfg JobRunnerCo
 			chatsync.Window, cfg.SendOrigin.Environment.IsNonProduction())
 		addDeclaredWorker[ChatLinkFlushArgs](reg, &chatsync.Worker[ChatLinkFlushArgs]{Bind: workspaceJobCtx,
 			Flusher: chatsync.NewFlusher(pool, chats, store, cfg.SendOrigin.PublicBaseURL, log)})
+		addDeclaredWorker[ChatPullArgs](reg, &chatsync.PullWorker[ChatPullArgs]{Bind: workspaceJobCtx,
+			Puller: chatsync.NewPuller(pool, store, chats, cfg.ChatSummaryBrain, log)})
+		addDeclaredWorker[ChatPullSweepArgs](reg, &chatPullSweepWorker{pool: pool, log: log})
+		return periodicFor(cfg, ChatPullSweepArgs{})
 	}
 	return nil
+}
+
+// chatPullSweepWorker enqueues one chat_pull per live Dispact bot. A failed
+// enqueue is logged and the next tick tries again; a failed scan is returned.
+type chatPullSweepWorker struct {
+	pool *pgxpool.Pool
+	log  *slog.Logger
+}
+
+func (w *chatPullSweepWorker) Work(ctx context.Context, _ *river.Job[ChatPullSweepArgs]) error {
+	due, scanErr := capture.DueChannelConnections(ctx, w.pool, chatlinks.ProviderDispact)
+	for _, d := range due {
+		if err := dispatchOne(ctx, w.pool, ChatPullArgs{Workspace: d.WorkspaceID, ConnectionID: d.ID}, nil); err != nil {
+			w.log.WarnContext(ctx, "chat pull enqueue failed", "connection", d.ID.String(), "err", err)
+		}
+	}
+	return jobs.FaultContext(ctx, scanErr)
 }
