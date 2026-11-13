@@ -470,3 +470,24 @@
 .brief-triage-lead .which-deal-verbs > .btn-primary {
   order: 2;
 }
+
+/* The card's place in a stack shown one card at a time. */
+.brief-stack-at {
+  margin: 0 0 var(--space-2);
+  color: var(--textSecondary);
+}
+
+/* One card in a narrow panel: the same card at the panel's own measure. The
+   quote is two lines at body size, since the panel is a glance and the mail
+   itself is one press away. */
+.brief-triage-solo .brief-triage-lead {
+  padding: var(--space-4) var(--space-4) var(--space-4) var(--space-2);
+}
+.brief-triage-solo .emailentry__preview {
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  font: var(--fontBody);
+}
+.brief-triage-solo .worklist-row-ask {
+  font: var(--fontBody);
+}

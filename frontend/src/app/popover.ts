@@ -1,5 +1,8 @@
 import { type RefObject, useEffect } from "react";
-import { coveredByDialog } from "../design-system/dialogfocus";
+import {
+  coveredByDialog,
+  panelsOpenedFrom,
+} from "../design-system/dialogfocus";
 
 /**
  * Dismissal for a popover that owns the document while it is open: Escape from
@@ -34,8 +37,19 @@ export function usePopoverDismiss(
     // Outside clicks only: a press inside the popover acts on it. A click that
     // should both act and close (a destination) says so at the call site.
     const onClick = (event: globalThis.MouseEvent) => {
-      const target = event.target;
-      if (target instanceof Node && panel.current?.contains(target)) {
+      const within = panel.current;
+      // The path, not `contains`: a press that replaces its own button leaves
+      // a target the panel no longer holds, and that press was still inside.
+      const path = event.composedPath();
+      if (within !== null && path.includes(within)) {
+        return;
+      }
+      // A dialog raised from the panel owns the press, and so does a menu the
+      // panel opened: both are portalled to the body, outside it.
+      if (
+        coveredByDialog(within) ||
+        panelsOpenedFrom(within).some((opened) => path.includes(opened))
+      ) {
         return;
       }
       dismiss();

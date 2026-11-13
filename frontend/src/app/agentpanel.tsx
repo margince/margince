@@ -1,8 +1,8 @@
 import { type ReactNode, type RefObject, useId } from "react";
 import { AppLink } from "../design-system/applink";
+import { Disclosure } from "../design-system/disclosure";
 import { Heading } from "../design-system/heading";
 import type { MarginceCoreState } from "../design-system/margince-core";
-import { ReadyStack } from "../features/brief/brief.feed";
 import type { WorklistItem } from "../features/worklist/worklist.queries";
 import { formatMoney, formatNumber } from "../format/format";
 import { useLocale, useT } from "../i18n";
@@ -10,6 +10,8 @@ import type { MessageKey } from "../i18n/en";
 import { useCan } from "../lib/capability";
 import { routeHash } from "../lib/router";
 import { settingsHref } from "../lib/settingsrouting";
+import { type AgentJob, AgentJobs } from "./agentjobs";
+import { ReadyWork } from "./agentpanel-work";
 import type { PanelFrame } from "./agentpanelframe";
 import { EdgeLightSetting } from "./agentrail-edgelight";
 import { RailLine } from "./agentrail-line";
@@ -197,6 +199,8 @@ export function AgentPanel({
   panel,
   frame,
   ready,
+  here,
+  jobs,
 }: Readonly<{
   state: MarginceCoreState;
   /** The same line the card carries, so the two never disagree. */
@@ -211,8 +215,12 @@ export function AgentPanel({
   spend: Spend;
   panel: RefObject<HTMLElement | null>;
   frame: PanelFrame;
-  /** The reader's day, the open record's rows first; undefined until it is read. */
+  /** The reader's day, the open page's rows first; undefined until it is read. */
   ready?: readonly WorklistItem[];
+  /** The rows of it about the open page. */
+  here?: readonly WorklistItem[];
+  /** What the reader can hand the agent from this page. */
+  jobs?: readonly AgentJob[];
 }>) {
   const { locale } = useLocale();
   const t = useT();
@@ -220,6 +228,7 @@ export function AgentPanel({
   // may read diagnostics. A link a rep cannot follow is a dead end, so it is
   // not offered.
   const mayOpenLog = useCan("ai_diagnostics", "read");
+  const hasWork = ready !== undefined && ready.length > 0;
   return (
     <section
       className="arpanel"
@@ -236,12 +245,8 @@ export function AgentPanel({
       <PanelHead state={state} name={signals.name} line={line} spend={spend} />
 
       {/* The work comes first: what the agent prepared or found for the
-          reader, answered here the way Home answers it. The report follows. */}
-      {ready !== undefined && ready.length > 0 && (
-        <div className="arsect">
-          <ReadyStack rows={ready} />
-        </div>
-      )}
+          reader, answered here the way Home answers it. */}
+      {hasWork && <ReadyWork rows={ready} here={here ?? []} />}
 
       {/* Above the counts: a run happening this second outranks a queue that
           has been waiting since yesterday. Only live work is listed here. What
@@ -250,7 +255,20 @@ export function AgentPanel({
           list is, rather than drawn empty. */}
       <RunSection items={running} unnamed={unnamed} />
 
-      {/* Three cases, and the third is the doctrine of this surface: a count
+      {jobs !== undefined && jobs.length > 0 && (
+        <PanelSection title={t("agent.job.section")}>
+          <AgentJobs jobs={jobs} />
+        </PanelSection>
+      )}
+
+      {/* The report, behind one row while there is work above it: a reader who
+          came to act is not made to scroll past the installation's health. */}
+      <Disclosure
+        className="arstatus"
+        summary={t("agent.panel.status")}
+        open={!hasWork}
+      >
+        {/* Three cases, and the third is the doctrine of this surface: a count
           nobody has read differs from a count of zero.
 
           Absent when the read has not answered or this seat may not make it.
@@ -261,65 +279,66 @@ export function AgentPanel({
 
           A read that answered zero is different, and it earns the sentence:
           the agent looked, and there is nothing waiting. */}
-      {signals.waiting !== undefined && (
-        <PanelSection title={t("agent.panel.needsYou")}>
-          {signals.waiting === 0 ? (
-            // A quiet line rather than a dashed plate. Before anyone read its
-            // words, the plate said "a tile failed to load". That is the
-            // opposite of what an all-clear is for.
-            //
-            // Its own sentence, not the resting line's. That line says "Nothing
-            // needs you" in the head of this same panel. One surface saying the
-            // same four words twice reads as assembled rather than written.
-            <p className="arnone t-caption">
-              {t("agent.panel.nothingWaiting")}
-            </p>
-          ) : (
-            <div className="artiles">
-              {/* The tile leads with the number a reader scans for. Its name
+        {signals.waiting !== undefined && (
+          <PanelSection title={t("agent.panel.needsYou")}>
+            {signals.waiting === 0 ? (
+              // A quiet line rather than a dashed plate. Before anyone read its
+              // words, the plate said "a tile failed to load". That is the
+              // opposite of what an all-clear is for.
+              //
+              // Its own sentence, not the resting line's. That line says "Nothing
+              // needs you" in the head of this same panel. One surface saying the
+              // same four words twice reads as assembled rather than written.
+              <p className="arnone t-caption">
+                {t("agent.panel.nothingWaiting")}
+              </p>
+            ) : (
+              <div className="artiles">
+                {/* The tile leads with the number a reader scans for. Its name
                   leads with the label, because "10" alone names nothing. */}
-              <AppLink
-                className="arbox artile"
-                href="#/worklist"
-                aria-label={`${t("agent.panel.decisions")} ${formatNumber(signals.waiting, locale)}`}
-              >
-                <b>{formatNumber(signals.waiting, locale)}</b>
-                <span>{t("agent.panel.decisions")}</span>
+                <AppLink
+                  className="arbox artile"
+                  href="#/worklist"
+                  aria-label={`${t("agent.panel.decisions")} ${formatNumber(signals.waiting, locale)}`}
+                >
+                  <b>{formatNumber(signals.waiting, locale)}</b>
+                  <span>{t("agent.panel.decisions")}</span>
+                </AppLink>
+              </div>
+            )}
+          </PanelSection>
+        )}
+
+        <PanelSection
+          title={t("agent.panel.recent")}
+          action={
+            // A verb, beside the title rather than inside it. Inside the heading,
+            // it took the heading's weight and read as a second title.
+            mayOpenLog ? (
+              <AppLink className="link-button" href={AI_SETTINGS_HREF}>
+                {t("agent.panel.fullLog")}
               </AppLink>
-            </div>
-          )}
+            ) : undefined
+          }
+        >
+          <Recap settled={settled} />
         </PanelSection>
-      )}
 
-      <PanelSection
-        title={t("agent.panel.recent")}
-        action={
-          // A verb, beside the title rather than inside it. Inside the heading,
-          // it took the heading's weight and read as a second title.
-          mayOpenLog ? (
-            <AppLink className="link-button" href={AI_SETTINGS_HREF}>
-              {t("agent.panel.fullLog")}
-            </AppLink>
-          ) : undefined
-        }
-      >
-        <Recap settled={settled} />
-      </PanelSection>
+        <PanelSection title={t("agent.panel.runtime")} className="arstrip">
+          <RuntimeFacts
+            offline={signals.offline}
+            model={model}
+            ai={signals.ai}
+            license={signals.license}
+            licenseLine={signals.licenseLine}
+          />
+        </PanelSection>
 
-      <PanelSection title={t("agent.panel.runtime")} className="arstrip">
-        <RuntimeFacts
-          offline={signals.offline}
-          model={model}
-          ai={signals.ai}
-          license={signals.license}
-          licenseLine={signals.licenseLine}
-        />
-      </PanelSection>
-
-      {/* The one thing on this panel that changes anything, under everything
+        {/* The one thing on this panel that changes anything, under everything
           that reports: a control above the report it is about would be read as
           part of the report. */}
-      <EdgeLightSetting />
+        <EdgeLightSetting />
+      </Disclosure>
 
       {/* Last, and the only line here no read produced: the agent reaches no
           further than this reader does, whatever the rows above managed to

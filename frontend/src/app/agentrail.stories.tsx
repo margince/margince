@@ -225,6 +225,16 @@ function story(
           currency: "USD",
           computed_at: "2026-08-01T09:00:00Z",
         }),
+      "POST /deals/follow-up-drafts": () =>
+        jsonResponse({
+          segment: "slipping",
+          drafts: ["d1", "d2"].map((deal) => ({
+            deal_id: `019f7e65-0000-7000-8000-0000000000${deal}`,
+            draft_activity_id: `019f7e65-0000-7000-8000-0000000001${deal}`,
+            summary: "Quiet for three weeks",
+            evidence: [],
+          })),
+        }),
       "GET /worklist": () =>
         jsonResponse(readingsDay({}, [...(answers.ready ?? [])], [])),
       "GET /me/ai-activity": () =>
@@ -605,11 +615,37 @@ export const ReadyForYouDark: Story = {
   render: story({ ...HEALTHY, ready: A_READY_DAY }),
 };
 
-/** The orb opens the panel on the same cards Home lists under "Needs you", one
- *  stack shared with Home, and the report stays below them. */
+/** The orb opens the panel on the card in hand, with its own verbs and its
+ *  place in the stack. The jobs follow, and the report waits behind one row. */
 export const ReadyPanelOpen: Story = {
   render: story({ ...HEALTHY, ready: A_READY_DAY, recent: A_DAYS_WORK }),
   play: openThePanel,
+};
+
+/** On a record the panel opens on the rows about it, and the whole day is one
+ *  press away. */
+export const ReadyOnARecord: Story = {
+  render: story({ ...HEALTHY, ready: A_READY_DAY }),
+  play: async (context) => {
+    // After mount, as a reader walking there: the address a page arrives on
+    // is not one this catalog serves.
+    globalThis.location.hash = "#/contacts/contact-sonya";
+    await openThePanel(context);
+  },
+};
+
+/** A job handed over and answered: the verb, then what came of it and where
+ *  the work can be seen. */
+export const JobAnswered: Story = {
+  render: story({ ...HEALTHY, ready: A_READY_DAY }),
+  play: async (context) => {
+    await openThePanel(context);
+    const page = within(context.canvasElement.ownerDocument.body);
+    await userEvent.click(
+      await page.findByRole("button", { name: /Draft follow-ups/ }),
+    );
+    await page.findByText(/Drafted 2 follow-ups/);
+  },
 };
 
 /** A collapsed rail drops the line, so the count moves onto the orb. */

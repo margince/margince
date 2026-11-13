@@ -2075,6 +2075,7 @@ export const en = {
   "worklist.bandCount_other": "{count} items",
   "brief.focus.context": "View details",
   "brief.focus.next": "Next task",
+  "brief.focus.position": "{at} of {count}",
   "brief.queue.back": "Back to Worklist",
   "brief.queue.title": "Worklist",
   "brief.queue.show": "Show Worklist",
@@ -9383,6 +9384,27 @@ export const en = {
   "agent.ready.about_other": "{about} of your {count} are about this page",
   "agent.ready.count_one": "{count} thing ready for you",
   "agent.ready.count_other": "{count} things ready for you",
+  "agent.ready.scope": "Which tasks to show",
+  "agent.ready.scope.here": "This page",
+  "agent.ready.scope.all": "Everything",
+  "agent.panel.status": "Status and log",
+  "agent.job.section": "Hand it a job",
+  "agent.job.followUps": "Draft follow-ups for slipping deals",
+  "agent.job.followUps.running": "Drafting follow-ups",
+  "agent.job.followUps.done_one":
+    "Drafted {count} follow-up. It waits on the deal and nothing was sent.",
+  "agent.job.followUps.done_other":
+    "Drafted {count} follow-ups. They wait on their deals and nothing was sent.",
+  "agent.job.followUps.none":
+    "No deal is slipping, so there was nothing to draft.",
+  "agent.job.followUps.open": "Open deals",
+  "agent.job.enrich": "Fill in this company from its website",
+  "agent.job.enrich.running": "Reading the website",
+  "agent.job.enrich.done_one":
+    "Found {count} detail. Nothing is saved until you approve it.",
+  "agent.job.enrich.done_other":
+    "Found {count} details. Nothing is saved until you approve them.",
+  "agent.job.enrich.open": "Review",
   "agent.ready.peekHead": "Next up",
   "agent.ready.peekFoot_one": "Open the agent to work through it",
   "agent.ready.peekFoot_other": "Open the agent to work through all {count}",

@@ -27,10 +27,12 @@ import {
   usePlural,
   useT,
 } from "../i18n";
+import { useRoute } from "../lib/router";
 import { useShortcutHandler } from "../lib/shortcuts";
 import { usePhoneViewport } from "../lib/viewport";
 import { clearAgentEdge, publishAgentEdge } from "./agent-edge-signal";
 import { useAgentFault } from "./agent-fault";
+import { useAgentJobs } from "./agentjobs";
 import { RUNNING } from "./agentrail-copy";
 import { RailLine } from "./agentrail-line";
 import type { Signals } from "./agentrail-reads";
@@ -260,7 +262,14 @@ export function AgentRail({
   const plural = usePlural();
   const said: RailWords = railWords(t, plural, locale);
   const { fault, acknowledge } = useAgentFault(server.faults);
-  const { state, cause, register } = derive(signals, server, fault);
+  const derived = derive(signals, server, fault);
+  const { cause, register } = derived;
+  const jobs = useAgentJobs(useRoute());
+  // A job the reader handed over is the agent's work as much as a scheduled
+  // run is, so a resting orb takes it up. A fault or a live run keeps the orb.
+  const handed =
+    derived.state === "idle" ? jobs.find((job) => job.pending) : undefined;
+  const state: MarginceCoreState = handed ? "working" : derived.state;
   const hit = useHit(open, setOpen, acknowledge);
   const ready = useAgentReady();
   const openPanel = useCallback(() => {
@@ -336,8 +345,9 @@ export function AgentRail({
   // The named occurrence is the one that put the orb where it is, so the colour
   // and the sentence can never be about two different runs.
   const agentLine = causeLine(cause, t);
-  const line =
-    state === "idle"
+  const line = handed
+    ? plain(handed.running)
+    : state === "idle"
       ? resting
       : barLine(state, signals, t("auth.coreDevelopment"), agentLine, said);
   // ONE line under the orb, whoever is talking. While this tab is fetching
@@ -384,6 +394,8 @@ export function AgentRail({
                 settled={server.answered ? server.recent : undefined}
                 spend={spend}
                 ready={ready.rows}
+                here={ready.here}
+                jobs={jobs}
               />
             </Suspense>
           </div>,

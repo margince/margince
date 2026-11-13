@@ -126,10 +126,15 @@ export function BriefFeed({
 export function ReadyStack({
   rows,
   onContext,
+  solo = false,
 }: Readonly<{
   rows: readonly WorklistItem[];
   onContext?: (item: WorklistItem) => void;
+  /** One card at a time with its place in the stack, for a narrow panel. */
+  solo?: boolean;
 }>) {
+  const t = useT();
+  const { locale } = useLocale();
   const readerZone = useViewerZone();
   const client = useQueryClient();
   const [openEmail, setOpenEmail] = useState<string | null>(null);
@@ -137,9 +142,18 @@ export function ReadyStack({
   const lead = rows[at];
   return (
     <>
+      {solo && lead && rows.length > 1 && (
+        <p className="t-caption brief-stack-at">
+          {t("brief.focus.position", {
+            at: formatNumber(at + 1, locale),
+            count: formatNumber(rows.length, locale),
+          })}
+        </p>
+      )}
       {lead && (
         <HomeListReturnScope>
           <Triage
+            solo={solo}
             rows={rows}
             at={at}
             lead={lead}

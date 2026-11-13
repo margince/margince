@@ -2164,6 +2164,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "worklist.bandCount_other": "{count} Einträge",
   "brief.focus.context": "Details anzeigen",
   "brief.focus.next": "Nächste Aufgabe",
+  "brief.focus.position": "{at} von {count}",
   "brief.queue.back": "Zurück zur Worklist",
   "brief.queue.title": "Worklist",
   "brief.queue.show": "Worklist einblenden",
@@ -9372,6 +9373,26 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "agent.ready.about_other": "{about} von deinen {count} betreffen diese Seite",
   "agent.ready.count_one": "{count} Sache bereit für dich",
   "agent.ready.count_other": "{count} Sachen bereit für dich",
+  "agent.ready.scope": "Welche Aufgaben angezeigt werden",
+  "agent.ready.scope.here": "Diese Seite",
+  "agent.ready.scope.all": "Alles",
+  "agent.panel.status": "Status und Protokoll",
+  "agent.job.section": "Aufgabe übergeben",
+  "agent.job.followUps": "Nachfass-Mails für stockende Deals entwerfen",
+  "agent.job.followUps.running": "Nachfass-Mails werden entworfen",
+  "agent.job.followUps.done_one":
+    "{count} Nachfass-Mail entworfen. Sie wartet beim Deal, gesendet wurde nichts.",
+  "agent.job.followUps.done_other":
+    "{count} Nachfass-Mails entworfen. Sie warten bei ihren Deals, gesendet wurde nichts.",
+  "agent.job.followUps.none": "Kein Deal stockt, es gab nichts zu entwerfen.",
+  "agent.job.followUps.open": "Deals öffnen",
+  "agent.job.enrich": "Dieses Unternehmen von seiner Website ergänzen",
+  "agent.job.enrich.running": "Website wird gelesen",
+  "agent.job.enrich.done_one":
+    "{count} Angabe gefunden. Gespeichert wird erst nach deiner Freigabe.",
+  "agent.job.enrich.done_other":
+    "{count} Angaben gefunden. Gespeichert wird erst nach deiner Freigabe.",
+  "agent.job.enrich.open": "Prüfen",
   "agent.ready.peekHead": "Als Nächstes",
   "agent.ready.peekFoot_one": "Öffne den Agenten, um es zu erledigen",
   "agent.ready.peekFoot_other":

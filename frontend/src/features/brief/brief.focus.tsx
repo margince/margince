@@ -33,6 +33,7 @@ export function Triage({
   onChoose,
   onOpenEmail,
   onContext,
+  solo = false,
 }: Readonly<{
   rows: readonly WorklistItem[];
   at: number;
@@ -40,6 +41,8 @@ export function Triage({
   onChoose: (item: WorklistItem) => void;
   onOpenEmail: (id: string) => void;
   onContext?: (item: WorklistItem) => void;
+  /** Only the card in hand, where there is room for one: Next walks the rest. */
+  solo?: boolean;
 }>) {
   const t = useT();
   const { locale } = useLocale();
@@ -113,7 +116,7 @@ export function Triage({
   // opens where it stands. An ordered list, so the order reaches a screen
   // reader as the claim it is.
   return (
-    <ol className="brief-triage">
+    <ol className={solo ? "brief-triage brief-triage-solo" : "brief-triage"}>
       {rows.map((item, index) =>
         index === at ? (
           <li key={identity(item)}>
@@ -177,7 +180,7 @@ export function Triage({
               </OneRowWrite>
             </div>
           </li>
-        ) : (
+        ) : solo ? null : (
           <li key={identity(item)}>
             <QueuedCard
               item={item}

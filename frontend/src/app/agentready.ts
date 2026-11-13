@@ -37,16 +37,30 @@ const RECORD_SCREENS: ReadonlySet<Route["screen"]> = new Set([
   "projects",
 ]);
 
+/** What a row's subject is called on the list screen that lists its kind. */
+const LISTED_SUBJECT: Partial<Record<Route["screen"], string>> = {
+  contacts: "contact",
+  companies: "company",
+  leads: "lead",
+  deals: "deal",
+  projects: "project",
+};
+
 /**
- * The rows about the record the reader has open: its subject, the contact it
- * is with, or that contact's account. Empty off a record page.
+ * The rows about the page the reader has open. On a record: its subject, the
+ * contact it is with, or that contact's account. On a list: the rows about
+ * records of that list's kind. Empty everywhere else.
  */
 export function rowsAbout(
   rows: readonly WorklistItem[],
   route: Route,
 ): readonly WorklistItem[] {
   const id = route.id;
-  if (id === undefined || !RECORD_SCREENS.has(route.screen)) return [];
+  if (!RECORD_SCREENS.has(route.screen)) return [];
+  if (id === undefined) {
+    const kind = LISTED_SUBJECT[route.screen];
+    return rows.filter((row) => row.subject?.type === kind);
+  }
   return rows.filter(
     (row) =>
       row.subject?.id === id ||
@@ -80,7 +94,7 @@ export function readyLine(
   if (rows.length === 0) return null;
   const count = formatNumber(rows.length, locale);
   return plain(
-    about.length > 0
+    about.length > 0 && about.length < rows.length
       ? plural("agent.ready.about", about.length, {
           about: formatNumber(about.length, locale),
           count,
@@ -92,8 +106,8 @@ export function readyLine(
 export type AgentReady = Readonly<{
   /** The day's rows, the open record's first; undefined until the day is read. */
   rows: readonly WorklistItem[] | undefined;
-  /** How many of them are about the open record. */
-  about: number;
+  /** The ones about the open page, in the day's order. */
+  here: readonly WorklistItem[];
   line: SpokenLine | null;
 }>;
 
@@ -103,11 +117,11 @@ export function useAgentReady(): AgentReady {
   const route = useRoute();
   const plural = usePlural();
   const { locale } = useLocale();
-  if (day === undefined) return { rows: undefined, about: 0, line: null };
+  if (day === undefined) return { rows: undefined, here: [], line: null };
   const about = rowsAbout(day, route);
   return {
     rows: aboutFirst(day, about),
-    about: about.length,
+    here: about,
     line: readyLine(day, about, plural, locale),
   };
 }

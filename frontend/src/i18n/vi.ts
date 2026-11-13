@@ -2108,6 +2108,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "worklist.bandCount_other": "{count} việc",
   "brief.focus.context": "Xem chi tiết",
   "brief.focus.next": "Công việc tiếp theo",
+  "brief.focus.position": "{at} / {count}",
   "brief.queue.back": "Quay lại Danh sách công việc",
   "brief.queue.title": "Danh sách công việc",
   "brief.queue.show": "Xem Danh sách công việc",
@@ -9114,6 +9115,27 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "{about} trong {count} việc của bạn thuộc trang này",
   "agent.ready.count_one": "{count} việc sẵn sàng cho bạn",
   "agent.ready.count_other": "{count} việc sẵn sàng cho bạn",
+  "agent.ready.scope": "Hiển thị công việc nào",
+  "agent.ready.scope.here": "Trang này",
+  "agent.ready.scope.all": "Tất cả",
+  "agent.panel.status": "Trạng thái và nhật ký",
+  "agent.job.section": "Giao việc cho trợ lý",
+  "agent.job.followUps": "Soạn thư nhắc cho các deal đang chậm",
+  "agent.job.followUps.running": "Đang soạn thư nhắc",
+  "agent.job.followUps.done_one":
+    "Đã soạn {count} thư nhắc. Thư nằm ở deal và chưa gửi gì.",
+  "agent.job.followUps.done_other":
+    "Đã soạn {count} thư nhắc. Thư nằm ở deal và chưa gửi gì.",
+  "agent.job.followUps.none":
+    "Không có deal nào đang chậm nên không có gì để soạn.",
+  "agent.job.followUps.open": "Mở deal",
+  "agent.job.enrich": "Bổ sung công ty này từ website",
+  "agent.job.enrich.running": "Đang đọc website",
+  "agent.job.enrich.done_one":
+    "Tìm thấy {count} thông tin. Chưa lưu gì cho đến khi bạn duyệt.",
+  "agent.job.enrich.done_other":
+    "Tìm thấy {count} thông tin. Chưa lưu gì cho đến khi bạn duyệt.",
+  "agent.job.enrich.open": "Xem lại",
   "agent.ready.peekHead": "Tiếp theo",
   "agent.ready.peekFoot_one": "Mở trợ lý để xử lý việc này",
   "agent.ready.peekFoot_other": "Mở trợ lý để xử lý cả {count} việc",
