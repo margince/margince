@@ -37,8 +37,7 @@ func (e *StatusError) Error() string {
 func (e *StatusError) Unwrap() error { return e.wrapped }
 
 func statusOf(err error) (int, bool) {
-	var status *StatusError
-	if errors.As(err, &status) {
+	if status, ok := errors.AsType[*StatusError](err); ok {
 		return status.Status, true
 	}
 	return 0, false

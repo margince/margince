@@ -107,8 +107,8 @@ func chosenMessages(ctx context.Context, chat chatlinks.Chat, link chatlinks.Lin
 // names another channel.
 func messageSeq(ref, slug string) (int64, bool) {
 	ref = strings.TrimSpace(ref)
-	if strings.HasPrefix(ref, "<m:") {
-		ref, _, _ = strings.Cut(strings.TrimSuffix(strings.TrimPrefix(ref, "<m:"), ">"), "|")
+	if inner, ok := strings.CutPrefix(ref, "<m:"); ok {
+		ref, _, _ = strings.Cut(strings.TrimSuffix(inner, ">"), "|")
 	}
 	if before, after, found := strings.Cut(ref, "?seq="); found {
 		if channelSlugOfLink(before) != slug {

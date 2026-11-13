@@ -79,7 +79,7 @@ func WithChatLinks(inserter *jobs.Runner, private bool, lane ai.Completer) Optio
 	return func(s *Server, pool *pgxpool.Pool) {
 		store, chats := chatLinks(pool, func() keyvault.Vault { return s.vault }, inserter, 0, private)
 		s.chatLinkHandlers = chatlinks.NewHandlers(store, chatsync.NewFiler(pool, store, chats, lane))
-		s.channelHandlers = s.channelHandlers.WithBotCheck(chatlinks.ProviderDispact, chatsync.BotCheck{HTTP: chatsync.HTTPClient(private), AllowHTTP: private})
+		s.channelHandlers = s.WithBotCheck(chatlinks.ProviderDispact, chatsync.BotCheck{HTTP: chatsync.HTTPClient(private), AllowHTTP: private})
 	}
 }
 
