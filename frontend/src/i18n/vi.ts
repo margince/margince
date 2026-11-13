@@ -5882,6 +5882,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "deal.partnerNoneYet":
     "Chưa có đối tác. Liên hệ quản trị viên để thêm đối tác.",
   "deal.referredBy": "Đối tác giới thiệu:",
+  "deal.supportedBy": "Đối tác hỗ trợ:",
   "deal.referral.sourced": "(mang về)",
   "deal.referral.influenced": "(có hỗ trợ)",
   "deal.recordedBy": "Bên ghi nhận",
@@ -6180,7 +6181,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "deal.monthlyApproximate": "khoảng",
   "assignments.title": "Vai trò trong nhóm",
   "assignments.help":
-    "Ai trong nhóm bạn phụ trách công ty này, theo vai trò. Mục này không thay đổi ai được xem hồ sơ; hãy chia sẻ hồ sơ nếu cần.",
+    "Ai trong nhóm bạn phụ trách hồ sơ này, theo vai trò. Mục này không thay đổi ai được xem hồ sơ; hãy chia sẻ hồ sơ nếu cần.",
   "assignments.noAccessNote":
     "Ghi nhận ai phụ trách việc gì. Không cấp quyền truy cập vào hồ sơ này.",
   "assignments.empty": "Chưa giao vai trò nào",

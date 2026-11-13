@@ -5967,6 +5967,7 @@ export const en = {
   "deal.partnerCompany": "Referring partner",
   "deal.partnerNoneYet": "No partners yet. Ask an admin to add one.",
   "deal.referredBy": "Referred by",
+  "deal.supportedBy": "Supported by",
   "deal.referral.sourced": "(sourced)",
   "deal.referral.influenced": "(influenced)",
   "deal.recordedBy": "Recorded by",
@@ -6314,7 +6315,7 @@ export const en = {
   "deal.monthlyApproximate": "approx.",
   "assignments.title": "Responsibilities",
   "assignments.help":
-    "Who on your team looks after this company, by role. It does not change who can see the record; share the record for that.",
+    "Who on your team looks after this record, by role. It does not change who can see the record; share the record for that.",
   "assignments.noAccessNote":
     "Records who looks after what. It does not grant access to this record.",
   "assignments.empty": "No one is assigned yet",

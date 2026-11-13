@@ -394,10 +394,10 @@ describe("DealScreen — edit, archive (A3)", () => {
     expect(partner.textContent).toContain(
       translate("en", "deal.attributionInfluenced"),
     );
-    const line = await screen.findByText(translate("en", "deal.referredBy"), {
+    const line = await screen.findByText(translate("en", "deal.supportedBy"), {
       exact: false,
     });
-    expect(line.textContent).toBe("Referred by Xentral (influenced)");
+    expect(line.textContent).toBe("Supported by Xentral (influenced)");
   });
 
   it("archive confirms then DELETEs", async () => {

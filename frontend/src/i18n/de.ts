@@ -6036,6 +6036,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "deal.partnerCompany": "Vermittelndes Partnerunternehmen",
   "deal.partnerNoneYet": "Noch keine Partner. Ein Admin kann einen anlegen.",
   "deal.referredBy": "Partner",
+  "deal.supportedBy": "Partner",
   "deal.referral.sourced": "(vermittelt)",
   "deal.referral.influenced": "(beeinflusst)",
   "deal.recordedBy": "Erfasst von",
@@ -6343,7 +6344,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "deal.monthlyApproximate": "etwa",
   "assignments.title": "Zuständigkeiten",
   "assignments.help":
-    "Wer in deinem Team sich um dieses Unternehmen kümmert, nach Rolle. Das ändert nicht, wer den Datensatz sehen darf; dafür teilst du ihn.",
+    "Wer in deinem Team sich um diesen Datensatz kümmert, nach Rolle. Das ändert nicht, wer ihn sehen darf; dafür teilst du ihn.",
   "assignments.noAccessNote":
     "Hält fest, wer sich worum kümmert. Eine Zuständigkeit gewährt keinen Zugriff auf diesen Datensatz.",
   "assignments.empty": "Noch niemand zugewiesen",

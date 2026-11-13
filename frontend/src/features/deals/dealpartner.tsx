@@ -45,9 +45,9 @@ export function DealPartner({ deal }: Readonly<{ deal: DealPartnerFacts }>) {
 }
 
 /**
- * The referral as one line under the deal's name, or nothing when no partner
- * brought it. An unset attribution reads as sourced, because the server
- * counts it so.
+ * The partner as one line under the deal's name, or nothing when there is
+ * none. Only a sourced deal reads as referred; an unset attribution counts as
+ * sourced, because the server counts it so.
  */
 export function DealReferralLine({
   deal,
@@ -60,19 +60,16 @@ export function DealReferralLine({
   ) {
     return null;
   }
+  const influenced = deal.partner_attribution === "influenced";
   return (
     <div className="deal-project-line">
-      {t("deal.referredBy")}{" "}
+      {t(influenced ? "deal.supportedBy" : "deal.referredBy")}{" "}
       <AppLink
         href={routeHash({ screen: "companies", id: deal.partner_company_id })}
       >
         {name ?? t("field.unset")}
       </AppLink>{" "}
-      {t(
-        deal.partner_attribution === "influenced"
-          ? "deal.referral.influenced"
-          : "deal.referral.sourced",
-      )}
+      {t(influenced ? "deal.referral.influenced" : "deal.referral.sourced")}
     </div>
   );
 }
