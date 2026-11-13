@@ -44,7 +44,10 @@ func scheduleBerlinSend(t *testing.T, e *sendEnv) ids.UUID {
 }
 
 // cloneScheduledSend copies the written row once per offset from draftClock,
-// keeping its Berlin wall clock in step with the copy's instant.
+// keeping its Berlin wall clock in step with the copy's instant. A copy past
+// zoneRuleShift, which the overdue read never reaches, keeps no wall clock.
+// The wall clock's CHECK scans the whole zone catalog per row, so 5000 such
+// copies take minutes on a slow runner.
 func cloneScheduledSend(t *testing.T, e *sendEnv, source ids.UUID, offsets string) {
 	t.Helper()
 	if _, err := e.owner.Exec(context.Background(), `
@@ -52,9 +55,10 @@ func cloneScheduledSend(t *testing.T, e *sendEnv, source ids.UUID, offsets strin
 		SELECT (jsonb_populate_record(s, jsonb_build_object(
 		         'id', uuidv7(),
 		         'scheduled_at', $2::timestamptz + offset_minutes * interval '1 minute',
-		         'scheduled_wall', ($2::timestamptz + offset_minutes * interval '1 minute') AT TIME ZONE 'Europe/Berlin'))).*
+		         'scheduled_wall', CASE WHEN offset_minutes < $4
+		           THEN ($2::timestamptz + offset_minutes * interval '1 minute') AT TIME ZONE 'Europe/Berlin' END))).*
 		  FROM scheduled_send s, unnest($3::int[]) AS offset_minutes
-		 WHERE s.id = $1`, source, draftClock, offsets); err != nil {
+		 WHERE s.id = $1`, source, draftClock, offsets, int(zoneRuleShift/time.Minute)); err != nil {
 		t.Fatalf("cloning the scheduled message: %v", err)
 	}
 }
