@@ -9872,6 +9872,61 @@ paths:
             application/problem+json:
               schema: { $ref: '#/components/schemas/Problem' }
 
+  /rewrites:
+    post:
+      tags: [AI]
+      operationId: rewriteText
+      x-waits-on-model: always
+      # Human-only: the rewrite buttons under a rep's own words, in the email
+      # composer and in Add task and Log activity. An agent writes its own wording.
+      x-agent-access: human-only
+      x-human-only-reason: covered
+      security: [ { cookieAuth: [] } ]
+      summary: Rewrite the words a rep has on screen under one rewrite verb.
+      description: |
+        The one rewrite path behind the email composer's Polish, Shorter, Warmer, More formal and
+        Add a deadline, and behind Polish wording in Add task and Log activity. `envelope` says
+        which words these are: the body of an `email` being written, or the subject and details of
+        a `note` or task. A note takes `polish` only. The server holds the instruction each verb
+        stands for; the client names the verb.
+
+        The model keeps the meaning, the language the text is written in, names, numbers, dates,
+        email addresses and links. A reply that loses one of them, changes language or drops a
+        question is refused and asked again. `language` is the reader's interface language; it
+        decides only for text too short to place. Nothing is stored. A rep saves polished note
+        words with `ai_assisted: true` on `POST /activities`.
+
+        Needs `activity:create` and read access to `about`, the record the words are written on:
+        the record the note is logged on, or the record or message the email is written from. An
+        `about` the caller cannot read answers 404, the same as one that does not exist, before
+        anything reads it. A message counts as readable only when its content is. With no AI model
+        it answers 409 `ai_not_configured`. When a contact on that record, or a lead's address,
+        is under a restriction of processing it answers 409 `subject_restricted` and no model
+        reads the words. Text with neither a subject nor a body is 422 `required` naming `body`;
+        text past what one answer can carry is 422 `too_long`. A model that was asked and did not
+        answer is 503 `assistant_unavailable`.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/RewriteRequest' }
+      responses:
+        '200':
+          description: The rewritten words.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Rewrite' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+        '503':
+          description: 'The model was asked and did not answer (`code: assistant_unavailable`).'
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+
   /activities/{id}/pipeline:
     parameters:
       - $ref: '#/components/parameters/Id'
@@ -57580,6 +57635,14 @@ components:
             are separate axes, and reading one off the other is what ADR-0107 retired.
         subject: { type: [string, 'null'] }
         body: { type: [string, 'null'] }
+        ai_assisted:
+          type: boolean
+          readOnly: true
+          description: >-
+            Whether an AI model rewrote the subject or body before it was saved, so a reader
+            sees the words as AI-assisted. Set when the activity is logged and kept through
+            later edits: a human who tidies model words still saved model words. Absent means
+            false. Withheld with the content.
         language:
           type: [string, 'null']
           readOnly: true
@@ -58290,6 +58353,19 @@ components:
       type: object
       required: [kind, source]
       properties:
+        ai_assisted:
+          type: boolean
+          description: >-
+            True when an AI model rewrote the subject or body the caller sends, as Polish
+            wording (`POST /rewrites`) does. The activity then reads `ai_assisted`. Needs
+            `ai_assisted_on`. Only a human sets it: an agent or a connector is refused with 422
+            on `ai_assisted`. Absent means false.
+        ai_assisted_on:
+          allOf: [{ $ref: '#/components/schemas/ActivityLink' }]
+          description: >-
+            The `about` record the words were polished on. Required with `ai_assisted: true`. It
+            must be one of `links` or the record `deal_filing` names as the form's start, or the
+            create is refused with 422 on `ai_assisted_on`.
         task_type:
           allOf: [{ $ref: '#/components/schemas/TaskType' }]
           description: 'Task only: the kind of work, which decides its one button.'
@@ -58849,6 +58925,12 @@ components:
     UpdateActivityRequest:
       type: object
       properties:
+        ai_assisted:
+          type: boolean
+          description: >-
+            True marks the activity's words as AI-assisted, when a model rewrote the subject or
+            body this patch writes. The mark stays once set, so false and absent change nothing.
+            Only a human sets it: an agent or a connector is refused with 422 on `ai_assisted`.
         task_type:
           allOf: [{ $ref: '#/components/schemas/TaskType' }]
           description: 'Task only: the kind of work, which decides its one button.'
@@ -62665,6 +62747,56 @@ components:
           type: array
           items: { type: string, enum: [subject, body], x-extensible-enum: true }
         source_version: { type: integer, format: int64 }
+
+    RewriteRequest:
+      type: object
+      additionalProperties: false
+      required: [envelope, verb, language, about]
+      properties:
+        envelope:
+          type: string
+          enum: [email, note]
+          description: 'Which words these are: an email body being written, or a note or task.'
+        verb:
+          type: string
+          enum: [polish, shorter, warmer, formal, deadline]
+          description: The rewrite asked for. A note takes `polish` only.
+        subject: { type: string, maxLength: 1000, description: 'A note''s title. An email''s subject is not rewritten.' }
+        body: { type: string, maxLength: 20000, description: 'The words on screen: an email body as plain text, a note''s details as markdown.' }
+        language:
+          type: string
+          enum: [en, de, vi]
+          description: The reader's interface language.
+        about: { $ref: '#/components/schemas/RewriteAbout' }
+    RewriteAbout:
+      type: object
+      additionalProperties: false
+      required: [entity_type, entity_id]
+      description: >-
+        The record the words are written on. Its contacts' restriction of processing is honoured,
+        and for a lead the lead's own address.
+      properties:
+        entity_type: { type: string, enum: [contact, company, deal, lead, project, activity] }
+        entity_id: { type: string, format: uuid }
+    Rewrite:
+      type: object
+      required: [subject, body, language, ai_disclosure]
+      properties:
+        subject: { type: string, description: 'The rewritten title; empty when none was sent.' }
+        body: { type: string, description: 'The rewritten words; empty when none were sent.' }
+        language:
+          type: string
+          enum: [en, de, vi]
+          x-extensible-enum: true
+          description: The language the words are written in, and the notice below.
+        ai_disclosure: { type: string, description: 'The provenance notice shown beside the rewritten words.' }
+        voice_profile_version:
+          type: [integer, 'null']
+          minimum: 1
+          description: 'The Voice DNA profile version that styled an email rewrite; null when none did, and always on a note.'
+        voice_degraded:
+          type: boolean
+          description: 'True when the sender''s voice could not be looked up for an email rewrite, so it may lack a voice its sender built.'
 
     ActivityReaderRenderingRequest:
       type: object

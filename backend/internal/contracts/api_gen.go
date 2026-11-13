@@ -21424,6 +21424,123 @@ func (e ReviewQuestionType) Valid() bool {
 	}
 }
 
+// Defines values for RewriteLanguage.
+const (
+	RewriteLanguageDe RewriteLanguage = "de"
+	RewriteLanguageEn RewriteLanguage = "en"
+	RewriteLanguageVi RewriteLanguage = "vi"
+)
+
+// Valid indicates whether the value is a known member of the RewriteLanguage enum.
+func (e RewriteLanguage) Valid() bool {
+	switch e {
+	case RewriteLanguageDe:
+		return true
+	case RewriteLanguageEn:
+		return true
+	case RewriteLanguageVi:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for RewriteAboutEntityType.
+const (
+	RewriteAboutEntityTypeActivity RewriteAboutEntityType = "activity"
+	RewriteAboutEntityTypeCompany  RewriteAboutEntityType = "company"
+	RewriteAboutEntityTypeContact  RewriteAboutEntityType = "contact"
+	RewriteAboutEntityTypeDeal     RewriteAboutEntityType = "deal"
+	RewriteAboutEntityTypeLead     RewriteAboutEntityType = "lead"
+	RewriteAboutEntityTypeProject  RewriteAboutEntityType = "project"
+)
+
+// Valid indicates whether the value is a known member of the RewriteAboutEntityType enum.
+func (e RewriteAboutEntityType) Valid() bool {
+	switch e {
+	case RewriteAboutEntityTypeActivity:
+		return true
+	case RewriteAboutEntityTypeCompany:
+		return true
+	case RewriteAboutEntityTypeContact:
+		return true
+	case RewriteAboutEntityTypeDeal:
+		return true
+	case RewriteAboutEntityTypeLead:
+		return true
+	case RewriteAboutEntityTypeProject:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for RewriteRequestEnvelope.
+const (
+	RewriteRequestEnvelopeEmail RewriteRequestEnvelope = "email"
+	RewriteRequestEnvelopeNote  RewriteRequestEnvelope = "note"
+)
+
+// Valid indicates whether the value is a known member of the RewriteRequestEnvelope enum.
+func (e RewriteRequestEnvelope) Valid() bool {
+	switch e {
+	case RewriteRequestEnvelopeEmail:
+		return true
+	case RewriteRequestEnvelopeNote:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for RewriteRequestLanguage.
+const (
+	RewriteRequestLanguageDe RewriteRequestLanguage = "de"
+	RewriteRequestLanguageEn RewriteRequestLanguage = "en"
+	RewriteRequestLanguageVi RewriteRequestLanguage = "vi"
+)
+
+// Valid indicates whether the value is a known member of the RewriteRequestLanguage enum.
+func (e RewriteRequestLanguage) Valid() bool {
+	switch e {
+	case RewriteRequestLanguageDe:
+		return true
+	case RewriteRequestLanguageEn:
+		return true
+	case RewriteRequestLanguageVi:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for RewriteRequestVerb.
+const (
+	RewriteRequestVerbDeadline RewriteRequestVerb = "deadline"
+	RewriteRequestVerbFormal   RewriteRequestVerb = "formal"
+	RewriteRequestVerbPolish   RewriteRequestVerb = "polish"
+	RewriteRequestVerbShorter  RewriteRequestVerb = "shorter"
+	RewriteRequestVerbWarmer   RewriteRequestVerb = "warmer"
+)
+
+// Valid indicates whether the value is a known member of the RewriteRequestVerb enum.
+func (e RewriteRequestVerb) Valid() bool {
+	switch e {
+	case RewriteRequestVerbDeadline:
+		return true
+	case RewriteRequestVerbFormal:
+		return true
+	case RewriteRequestVerbPolish:
+		return true
+	case RewriteRequestVerbShorter:
+		return true
+	case RewriteRequestVerbWarmer:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for RightsCaseReceiptKind.
 const (
 	RightsCaseReceiptKindErasure RightsCaseReceiptKind = "erasure"
@@ -31986,6 +32103,9 @@ type ActingIdentity struct {
 // top-level `cf_` keys. They are content, so they are absent whenever `content_state` is
 // `withheld`.
 type Activity struct {
+	// AiAssisted Whether an AI model rewrote the subject or body before it was saved, so a reader sees the words as AI-assisted. Set when the activity is logged and kept through later edits: a human who tidies model words still saved model words. Absent means false. Withheld with the content.
+	AiAssisted *bool `json:"ai_assisted,omitempty"`
+
 	// Archivable Whether THIS caller may archive THIS activity: the row write gate `writable` asks, plus the `activity:delete` grant, or `activity:update` on a hand-logged note or task the caller wrote (under their own stamp or through an agent acting for them). Captured correspondence and a colleague's note need the delete grant. Server-computed per row, per caller. A UX signal, never the enforcement, exactly like `writable`; absent means NOT archivable.
 	Archivable *bool      `json:"archivable,omitempty"`
 	ArchivedAt *time.Time `json:"archived_at,omitempty"`
@@ -44870,7 +44990,12 @@ type CreateAcquisitionSourceRequest struct {
 
 // CreateActivityRequest The workspace's active activity custom fields travel as extra top-level `cf_` keys. A key that is not `cf_`-prefixed, names no active activity field, or carries a value of the wrong shape for its field returns `422`. A value for a field that does not apply to the activity's kind returns `422 field_not_valid_for_kind`.
 type CreateActivityRequest struct {
-	AssigneeId *openapi_types.UUID `json:"assignee_id,omitempty"`
+	// AiAssisted True when an AI model rewrote the subject or body the caller sends, as Polish wording (`POST /rewrites`) does. The activity then reads `ai_assisted`. Needs `ai_assisted_on`. Only a human sets it: an agent or a connector is refused with 422 on `ai_assisted`. Absent means false.
+	AiAssisted *bool `json:"ai_assisted,omitempty"`
+
+	// AiAssistedOn The `about` record the words were polished on. Required with `ai_assisted: true`. It must be one of `links` or the record `deal_filing` names as the form's start, or the create is refused with 422 on `ai_assisted_on`.
+	AiAssistedOn *ActivityLink       `json:"ai_assisted_on,omitempty"`
+	AssigneeId   *openapi_types.UUID `json:"assignee_id,omitempty"`
 
 	// AttendeeUserIds Meeting or call only: the colleagues who attended besides the caller. Each one is recorded as a participant, so the meeting counts toward their relationship with every linked contact, the same as a meeting captured from a calendar. Any other kind returns `422 code: field_not_valid_for_kind`. An id that is not an active member of this workspace returns `422 code: not_a_colleague`, and more than 25 ids return `422 code: too_many_attendees`.
 	AttendeeUserIds *[]openapi_types.UUID `json:"attendee_user_ids,omitempty"`
@@ -62007,6 +62132,69 @@ type ReviewQuestion struct {
 // ReviewQuestionType Text answers use answers; multiple-choice answers use choice_answers.
 type ReviewQuestionType string
 
+// Rewrite defines model for Rewrite.
+type Rewrite struct {
+	// AiDisclosure The provenance notice shown beside the rewritten words.
+	AiDisclosure string `json:"ai_disclosure"`
+
+	// Body The rewritten words; empty when none were sent.
+	Body string `json:"body"`
+
+	// Language The language the words are written in, and the notice below.
+	Language RewriteLanguage `json:"language"`
+
+	// Subject The rewritten title; empty when none was sent.
+	Subject string `json:"subject"`
+
+	// VoiceDegraded True when the sender's voice could not be looked up for an email rewrite, so it may lack a voice its sender built.
+	VoiceDegraded *bool `json:"voice_degraded,omitempty"`
+
+	// VoiceProfileVersion The Voice DNA profile version that styled an email rewrite; null when none did, and always on a note.
+	VoiceProfileVersion *int `json:"voice_profile_version,omitempty" minimum:"1"`
+}
+
+// RewriteLanguage The language the words are written in, and the notice below.
+type RewriteLanguage string
+
+// RewriteAbout The record the words are written on. Its contacts' restriction of processing is honoured, and for a lead the lead's own address.
+type RewriteAbout struct {
+	EntityId   openapi_types.UUID     `json:"entity_id"`
+	EntityType RewriteAboutEntityType `json:"entity_type"`
+}
+
+// RewriteAboutEntityType defines model for RewriteAbout.EntityType.
+type RewriteAboutEntityType string
+
+// RewriteRequest defines model for RewriteRequest.
+type RewriteRequest struct {
+	// About The record the words are written on. Its contacts' restriction of processing is honoured, and for a lead the lead's own address.
+	About RewriteAbout `json:"about"`
+
+	// Body The words on screen: an email body as plain text, a note's details as markdown.
+	Body *string `json:"body,omitempty"`
+
+	// Envelope Which words these are: an email body being written, or a note or task.
+	Envelope RewriteRequestEnvelope `json:"envelope"`
+
+	// Language The reader's interface language.
+	Language RewriteRequestLanguage `json:"language"`
+
+	// Subject A note's title. An email's subject is not rewritten.
+	Subject *string `json:"subject,omitempty"`
+
+	// Verb The rewrite asked for. A note takes `polish` only.
+	Verb RewriteRequestVerb `json:"verb"`
+}
+
+// RewriteRequestEnvelope Which words these are: an email body being written, or a note or task.
+type RewriteRequestEnvelope string
+
+// RewriteRequestLanguage The reader's interface language.
+type RewriteRequestLanguage string
+
+// RewriteRequestVerb The rewrite asked for. A note takes `polish` only.
+type RewriteRequestVerb string
+
 // RightsCaseReceipt What a data subject is told to quote when asking after a request they sent through their confirm
 // link. Carries the reference and the right it was opened under, never the case id — the queue that
 // holds the case is admin-gated, and a row id in a receipt invites being typed back in somewhere
@@ -66417,6 +66605,8 @@ type UpdateAcquisitionSourceRequest struct {
 
 // UpdateActivityRequest A sparse patch. The workspace's active activity custom fields travel as extra top-level `cf_` keys, and an explicit `null` clears one. A key that is not `cf_`-prefixed, names no active activity field, or carries a value of the wrong shape for its field returns `422`. A value for a field that does not apply to the stored kind returns `422 field_not_valid_for_kind`; a `null` clears it all the same.
 type UpdateActivityRequest struct {
+	// AiAssisted True marks the activity's words as AI-assisted, when a model rewrote the subject or body this patch writes. The mark stays once set, so false and absent change nothing. Only a human sets it: an agent or a connector is refused with 422 on `ai_assisted`.
+	AiAssisted *bool               `json:"ai_assisted,omitempty"`
 	AssigneeId *openapi_types.UUID `json:"assignee_id,omitempty"`
 	Body       *string             `json:"body,omitempty"`
 
@@ -81147,6 +81337,9 @@ type ReleaseRestrictedActivityJSONRequestBody = RetentionOverrideRequest
 // UpdateRetentionSettingsJSONRequestBody defines body for UpdateRetentionSettings for application/json ContentType.
 type UpdateRetentionSettingsJSONRequestBody = UpdateRetentionSettingsRequest
 
+// RewriteTextJSONRequestBody defines body for RewriteText for application/json ContentType.
+type RewriteTextJSONRequestBody = RewriteRequest
+
 // CreateRoleJSONRequestBody defines body for CreateRole for application/json ContentType.
 type CreateRoleJSONRequestBody = CreateRoleRequest
 
@@ -81377,6 +81570,14 @@ func (a *Activity) UnmarshalJSON(b []byte) error {
 	err := json.Unmarshal(b, &object)
 	if err != nil {
 		return err
+	}
+
+	if raw, found := object["ai_assisted"]; found {
+		err = json.Unmarshal(raw, &a.AiAssisted)
+		if err != nil {
+			return fmt.Errorf("error reading 'ai_assisted': %w", err)
+		}
+		delete(object, "ai_assisted")
 	}
 
 	if raw, found := object["archivable"]; found {
@@ -81941,6 +82142,13 @@ func (a *Activity) UnmarshalJSON(b []byte) error {
 func (a Activity) MarshalJSON() ([]byte, error) {
 	var err error
 	object := make(map[string]json.RawMessage)
+
+	if a.AiAssisted != nil {
+		object["ai_assisted"], err = json.Marshal(a.AiAssisted)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'ai_assisted': %w", err)
+		}
+	}
 
 	if a.Archivable != nil {
 		object["archivable"], err = json.Marshal(a.Archivable)
@@ -84415,6 +84623,22 @@ func (a *CreateActivityRequest) UnmarshalJSON(b []byte) error {
 		return err
 	}
 
+	if raw, found := object["ai_assisted"]; found {
+		err = json.Unmarshal(raw, &a.AiAssisted)
+		if err != nil {
+			return fmt.Errorf("error reading 'ai_assisted': %w", err)
+		}
+		delete(object, "ai_assisted")
+	}
+
+	if raw, found := object["ai_assisted_on"]; found {
+		err = json.Unmarshal(raw, &a.AiAssistedOn)
+		if err != nil {
+			return fmt.Errorf("error reading 'ai_assisted_on': %w", err)
+		}
+		delete(object, "ai_assisted_on")
+	}
+
 	if raw, found := object["assignee_id"]; found {
 		err = json.Unmarshal(raw, &a.AssigneeId)
 		if err != nil {
@@ -84745,6 +84969,20 @@ func (a *CreateActivityRequest) UnmarshalJSON(b []byte) error {
 func (a CreateActivityRequest) MarshalJSON() ([]byte, error) {
 	var err error
 	object := make(map[string]json.RawMessage)
+
+	if a.AiAssisted != nil {
+		object["ai_assisted"], err = json.Marshal(a.AiAssisted)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'ai_assisted': %w", err)
+		}
+	}
+
+	if a.AiAssistedOn != nil {
+		object["ai_assisted_on"], err = json.Marshal(a.AiAssistedOn)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'ai_assisted_on': %w", err)
+		}
+	}
 
 	if a.AssigneeId != nil {
 		object["assignee_id"], err = json.Marshal(a.AssigneeId)
@@ -92010,6 +92248,14 @@ func (a *UpdateActivityRequest) UnmarshalJSON(b []byte) error {
 		return err
 	}
 
+	if raw, found := object["ai_assisted"]; found {
+		err = json.Unmarshal(raw, &a.AiAssisted)
+		if err != nil {
+			return fmt.Errorf("error reading 'ai_assisted': %w", err)
+		}
+		delete(object, "ai_assisted")
+	}
+
 	if raw, found := object["assignee_id"]; found {
 		err = json.Unmarshal(raw, &a.AssigneeId)
 		if err != nil {
@@ -92156,6 +92402,13 @@ func (a *UpdateActivityRequest) UnmarshalJSON(b []byte) error {
 func (a UpdateActivityRequest) MarshalJSON() ([]byte, error) {
 	var err error
 	object := make(map[string]json.RawMessage)
+
+	if a.AiAssisted != nil {
+		object["ai_assisted"], err = json.Marshal(a.AiAssisted)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'ai_assisted': %w", err)
+		}
+	}
 
 	if a.AssigneeId != nil {
 		object["assignee_id"], err = json.Marshal(a.AssigneeId)
@@ -97308,6 +97561,9 @@ type ServerInterface interface {
 	// Set the installation's retention posture (admin/ops).
 	// (PATCH /retention/settings)
 	UpdateRetentionSettings(w http.ResponseWriter, r *http.Request)
+	// Rewrite the words a rep has on screen under one rewrite verb.
+	// (POST /rewrites)
+	RewriteText(w http.ResponseWriter, r *http.Request)
 	// List the workspace's roles with their object grants and row scope.
 	// (GET /roles)
 	ListRoles(w http.ResponseWriter, r *http.Request, params ListRolesParams)
@@ -103335,6 +103591,12 @@ func (_ Unimplemented) GetRetentionSettings(w http.ResponseWriter, r *http.Reque
 // Set the installation's retention posture (admin/ops).
 // (PATCH /retention/settings)
 func (_ Unimplemented) UpdateRetentionSettings(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Rewrite the words a rep has on screen under one rewrite verb.
+// (POST /rewrites)
+func (_ Unimplemented) RewriteText(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -145076,6 +145338,26 @@ func (siw *ServerInterfaceWrapper) UpdateRetentionSettings(w http.ResponseWriter
 	handler.ServeHTTP(w, r)
 }
 
+// RewriteText operation middleware
+func (siw *ServerInterfaceWrapper) RewriteText(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.RewriteText(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // ListRoles operation middleware
 func (siw *ServerInterfaceWrapper) ListRoles(w http.ResponseWriter, r *http.Request) {
 
@@ -155100,6 +155382,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Patch(options.BaseURL+"/retention/settings", wrapper.UpdateRetentionSettings)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/rewrites", wrapper.RewriteText)
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/roles", wrapper.ListRoles)

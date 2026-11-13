@@ -2718,6 +2718,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "history.field.relationship_types": "Loại quan hệ",
   "history.field.due_has_time": "Đến hạn vào giờ cụ thể",
   "history.field.task_type": "Loại việc",
+  "history.field.ai_assisted": "Có AI hỗ trợ",
   "history.field.call_outcome": "Kết quả cuộc gọi",
   "history.field.remind_at": "Lời nhắc",
   "history.field.remind_intent": "Lời nhắc (giờ địa phương)",
@@ -7359,6 +7360,13 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "log.transcriptLabel": "Bản chép lời",
   "log.transcriptHint":
     "Dán bản chép lời cuộc gọi hoặc cuộc họp. Nhãn người nói được giữ nguyên nếu có.",
+  "log.polish": "Trau chuốt câu chữ",
+  "log.polishPending": "Đang trau chuốt",
+  "log.polishNoModel":
+    "Cần một mô hình AI để trau chuốt câu chữ. Quản trị viên có thể kết nối trong Cài đặt → AI.",
+  "log.polishRestricted":
+    "Một liên hệ trong hồ sơ này đã yêu cầu không xử lý dữ liệu của họ, nên AI không đọc nội dung này.",
+  "log.polishTooLong": "Nội dung này quá dài để trau chuốt.",
   "log.recordOfMeeting": "Đây có phải là ghi chép của {subject}, {time} không?",
   "log.recordOfMeetingUntitled": "cuộc họp",
   "log.recordOfMeetingYes": "Có, lưu vào cuộc họp đó và đánh dấu đã diễn ra",
@@ -7715,19 +7723,13 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "compose.draftLanguage": "Ngôn ngữ của bản nháp",
   "compose.rewrite": "Viết lại",
   "compose.rewritePolish": "Trau chuốt",
-  "compose.rewritePolishAsk":
-    "Cải thiện cách diễn đạt và mạch văn. Giữ nguyên ý, các dữ kiện và độ dài.",
   "compose.rewriteFormatted":
     "Chỉ viết lại được văn bản thuần. Hãy bỏ định dạng và liên kết.",
   "compose.rewriteTooLong": "Thư này quá dài để viết lại.",
   "compose.rewriteShorter": "Ngắn hơn",
-  "compose.rewriteShorterAsk": "Giữ nguyên ý, dùng ít chữ hơn.",
   "compose.rewriteWarmer": "Ấm áp hơn",
-  "compose.rewriteWarmerAsk": "Giọng ấm áp hơn, nhưng không suồng sã.",
   "compose.rewriteFormal": "Trang trọng hơn",
-  "compose.rewriteFormalAsk": "Giọng trang trọng hơn.",
   "compose.rewriteDeadline": "Thêm thời hạn",
-  "compose.rewriteDeadlineAsk": "Đề nghị trả lời trước một ngày cụ thể.",
   "compose.sendOptions": "Cách gửi khác",
   "compose.scheduleSend": "Hẹn giờ gửi",
   "compose.scheduleTomorrow": "Sáng mai",

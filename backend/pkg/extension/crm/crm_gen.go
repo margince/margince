@@ -1786,6 +1786,9 @@ func (e TaskType) Valid() bool {
 // top-level `cf_` keys. They are content, so they are absent whenever `content_state` is
 // `withheld`.
 type Activity struct {
+	// AiAssisted Whether an AI model rewrote the subject or body before it was saved, so a reader sees the words as AI-assisted. Set when the activity is logged and kept through later edits: a human who tidies model words still saved model words. Absent means false. Withheld with the content.
+	AiAssisted *bool `json:"ai_assisted,omitempty"`
+
 	// Archivable Whether THIS caller may archive THIS activity: the row write gate `writable` asks, plus the `activity:delete` grant, or `activity:update` on a hand-logged note or task the caller wrote (under their own stamp or through an agent acting for them). Captured correspondence and a colleague's note need the delete grant. Server-computed per row, per caller. A UX signal, never the enforcement, exactly like `writable`; absent means NOT archivable.
 	Archivable *bool      `json:"archivable,omitempty"`
 	ArchivedAt *time.Time `json:"archived_at,omitempty"`
@@ -2423,7 +2426,12 @@ type ControllerSend struct {
 
 // CreateActivityRequest The workspace's active activity custom fields travel as extra top-level `cf_` keys. A key that is not `cf_`-prefixed, names no active activity field, or carries a value of the wrong shape for its field returns `422`. A value for a field that does not apply to the activity's kind returns `422 field_not_valid_for_kind`.
 type CreateActivityRequest struct {
-	AssigneeId *string `json:"assignee_id,omitempty"`
+	// AiAssisted True when an AI model rewrote the subject or body the caller sends, as Polish wording (`POST /rewrites`) does. The activity then reads `ai_assisted`. Needs `ai_assisted_on`. Only a human sets it: an agent or a connector is refused with 422 on `ai_assisted`. Absent means false.
+	AiAssisted *bool `json:"ai_assisted,omitempty"`
+
+	// AiAssistedOn The `about` record the words were polished on. Required with `ai_assisted: true`. It must be one of `links` or the record `deal_filing` names as the form's start, or the create is refused with 422 on `ai_assisted_on`.
+	AiAssistedOn *ActivityLink `json:"ai_assisted_on,omitempty"`
+	AssigneeId   *string       `json:"assignee_id,omitempty"`
 
 	// AttendeeUserIds Meeting or call only: the colleagues who attended besides the caller. Each one is recorded as a participant, so the meeting counts toward their relationship with every linked contact, the same as a meeting captured from a calendar. Any other kind returns `422 code: field_not_valid_for_kind`. An id that is not an active member of this workspace returns `422 code: not_a_colleague`, and more than 25 ids return `422 code: too_many_attendees`.
 	AttendeeUserIds *[]string `json:"attendee_user_ids,omitempty"`
@@ -3542,6 +3550,14 @@ func (a *Activity) UnmarshalJSON(b []byte) error {
 		return err
 	}
 
+	if raw, found := object["ai_assisted"]; found {
+		err = json.Unmarshal(raw, &a.AiAssisted)
+		if err != nil {
+			return fmt.Errorf("error reading 'ai_assisted': %w", err)
+		}
+		delete(object, "ai_assisted")
+	}
+
 	if raw, found := object["archivable"]; found {
 		err = json.Unmarshal(raw, &a.Archivable)
 		if err != nil {
@@ -4104,6 +4120,13 @@ func (a *Activity) UnmarshalJSON(b []byte) error {
 func (a Activity) MarshalJSON() ([]byte, error) {
 	var err error
 	object := make(map[string]json.RawMessage)
+
+	if a.AiAssisted != nil {
+		object["ai_assisted"], err = json.Marshal(a.AiAssisted)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'ai_assisted': %w", err)
+		}
+	}
 
 	if a.Archivable != nil {
 		object["archivable"], err = json.Marshal(a.Archivable)
@@ -5426,6 +5449,22 @@ func (a *CreateActivityRequest) UnmarshalJSON(b []byte) error {
 		return err
 	}
 
+	if raw, found := object["ai_assisted"]; found {
+		err = json.Unmarshal(raw, &a.AiAssisted)
+		if err != nil {
+			return fmt.Errorf("error reading 'ai_assisted': %w", err)
+		}
+		delete(object, "ai_assisted")
+	}
+
+	if raw, found := object["ai_assisted_on"]; found {
+		err = json.Unmarshal(raw, &a.AiAssistedOn)
+		if err != nil {
+			return fmt.Errorf("error reading 'ai_assisted_on': %w", err)
+		}
+		delete(object, "ai_assisted_on")
+	}
+
 	if raw, found := object["assignee_id"]; found {
 		err = json.Unmarshal(raw, &a.AssigneeId)
 		if err != nil {
@@ -5756,6 +5795,20 @@ func (a *CreateActivityRequest) UnmarshalJSON(b []byte) error {
 func (a CreateActivityRequest) MarshalJSON() ([]byte, error) {
 	var err error
 	object := make(map[string]json.RawMessage)
+
+	if a.AiAssisted != nil {
+		object["ai_assisted"], err = json.Marshal(a.AiAssisted)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'ai_assisted': %w", err)
+		}
+	}
+
+	if a.AiAssistedOn != nil {
+		object["ai_assisted_on"], err = json.Marshal(a.AiAssistedOn)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'ai_assisted_on': %w", err)
+		}
+	}
 
 	if a.AssigneeId != nil {
 		object["assignee_id"], err = json.Marshal(a.AssigneeId)

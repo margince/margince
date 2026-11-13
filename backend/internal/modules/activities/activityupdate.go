@@ -42,7 +42,9 @@ type UpdateActivityInput struct {
 	// a DueAt without it is a day (admitPatchTime).
 	DueHasTime *bool
 	// TaskType retypes a task; refused on another kind.
-	TaskType   *crmcontracts.TaskType
+	TaskType *crmcontracts.TaskType
+	// AIAssisted true marks the words as AI-assisted; the mark is never lifted.
+	AIAssisted *bool
 	RemindAt   *time.Time
 	AssigneeID *ids.UserID
 	IsDone     *bool
@@ -67,6 +69,9 @@ type UpdateActivityInput struct {
 // UpdateActivity keeps an authorized edit and its audit in one transaction.
 func (s *Store) UpdateActivity(ctx context.Context, id ids.ActivityID, in UpdateActivityInput) (crmcontracts.Activity, error) {
 	if err := auth.Require(ctx, "activity", principal.ActionUpdate); err != nil {
+		return crmcontracts.Activity{}, err
+	}
+	if err := refuseMarkByMachine(ctx, in.AIAssisted != nil && *in.AIAssisted); err != nil {
 		return crmcontracts.Activity{}, err
 	}
 	at := s.now()
@@ -116,7 +121,7 @@ func activityColumnImage(a crmcontracts.Activity) map[string]any {
 		"due_at":               derefOrNil(a.DueAt),
 		"due_intent":           derefOrNil(a.DueIntent),
 		"remind_intent":        derefOrNil(a.RemindIntent),
-		"meeting_intent":       derefOrNil(a.MeetingIntent),
+		fieldMeetingIntent:     derefOrNil(a.MeetingIntent),
 		"source_activity_id":   derefOrNil(a.SourceActivityId),
 		fieldDueHasTime:        derefOrNil(a.DueHasTime),
 		"remind_at":            derefOrNil(a.RemindAt),
@@ -131,6 +136,7 @@ func activityColumnImage(a crmcontracts.Activity) map[string]any {
 		// How a call ended: writable on the patch, so the diff must see it.
 		fieldCallOutcome: derefOrNil(a.CallOutcome),
 		fieldTaskType:    derefOrNil(a.TaskType),
+		fieldAIAssisted:  derefOrNil(a.AiAssisted),
 	}
 }
 

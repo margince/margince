@@ -2695,6 +2695,7 @@ export const en = {
   "history.field.relationship_types": "Relationship types",
   "history.field.due_has_time": "Due at a set time",
   "history.field.task_type": "Task type",
+  "history.field.ai_assisted": "AI-assisted",
   "history.field.call_outcome": "Call outcome",
   "history.field.remind_at": "Reminder",
   "history.field.remind_intent": "Reminder (local time)",
@@ -7560,6 +7561,13 @@ export const en = {
   "log.transcriptLabel": "Transcript",
   "log.transcriptHint":
     "Paste a call or meeting transcript. Speaker labels, if present, are kept.",
+  "log.polish": "Polish wording",
+  "log.polishPending": "Polishing",
+  "log.polishNoModel":
+    "Polishing wording needs an AI model. An administrator can connect one under Settings → AI.",
+  "log.polishRestricted":
+    "A contact on this record asked that their data not be processed, so AI does not read these words.",
+  "log.polishTooLong": "This text is too long to polish.",
   "log.recordOfMeeting": "Is this the record of {subject}, {time}?",
   "log.recordOfMeetingUntitled": "the meeting",
   "log.recordOfMeetingYes": "Yes, save it on that meeting as held",
@@ -7909,19 +7917,13 @@ export const en = {
   "compose.draftLanguage": "Draft language",
   "compose.rewrite": "Rewrite",
   "compose.rewritePolish": "Polish",
-  "compose.rewritePolishAsk":
-    "Improve the wording and flow. Keep the meaning, the facts and the length.",
   "compose.rewriteFormatted":
     "Rewrites work on plain text. Remove the formatting and links to use them.",
   "compose.rewriteTooLong": "This mail is too long to rewrite.",
   "compose.rewriteShorter": "Shorter",
-  "compose.rewriteShorterAsk": "Keep the meaning and use fewer words.",
   "compose.rewriteWarmer": "Warmer",
-  "compose.rewriteWarmerAsk": "Warmer in tone, without getting familiar.",
   "compose.rewriteFormal": "More formal",
-  "compose.rewriteFormalAsk": "More formal in tone.",
   "compose.rewriteDeadline": "Add a deadline",
-  "compose.rewriteDeadlineAsk": "Ask for an answer by a named date.",
   "compose.sendOptions": "Other ways to send",
   "compose.scheduleSend": "Schedule send",
   "compose.scheduleTomorrow": "Tomorrow morning",

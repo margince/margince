@@ -411,7 +411,12 @@ export async function recordOnMeeting(
         id: meeting.id,
         version: meeting.version,
         status: "held",
-        ...(managed ? {} : { body: appendedNotes(meeting.body, draft.body) }),
+        ...(managed
+          ? {}
+          : {
+              body: appendedNotes(meeting.body, draft.body),
+              aiAssisted: draft.aiAssisted,
+            }),
         // The fields typed on the form describe the meeting they record.
         custom: draft.custom,
         dealFiling: draft.dealFiling?.context,

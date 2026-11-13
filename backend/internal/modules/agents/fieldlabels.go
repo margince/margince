@@ -27,6 +27,7 @@ import (
 var fieldLabelsByLang = map[textlang.Lang]map[string]string{
 	textlang.English: {
 		"task_type":                    "Task type",
+		"ai_assisted":                  "AI-assisted",
 		"extension_relationship_types": "Extension relationship types",
 		"deal_filing":                  "Deal filing",
 		"acquisition_source":           "Acquisition source",
@@ -127,6 +128,7 @@ var fieldLabelsByLang = map[textlang.Lang]map[string]string{
 	textlang.German: {
 		"extension_relationship_types": "Erweiterungs-Beziehungstypen",
 		"task_type":                    "Aufgabentyp",
+		"ai_assisted":                  "KI-gestützt",
 		"deal_filing":                  "Deal-Zuordnung",
 		"acquisition_source":           "Akquisitionsquelle",
 		"active":                       "Aktiv",
@@ -321,6 +323,7 @@ var fieldLabelsByLang = map[textlang.Lang]map[string]string{
 		"win_probability":              "Xác suất",
 		"extension_relationship_types": "Loại quan hệ từ tiện ích mở rộng",
 		"task_type":                    "Loại việc",
+		"ai_assisted":                  "Có AI hỗ trợ",
 	},
 }
 

@@ -3699,6 +3699,10 @@ func (stubs) UpdateRetentionSettings(w nethttp.ResponseWriter, r *nethttp.Reques
 	httperr.NotImplemented(w, r, "UpdateRetentionSettings")
 }
 
+func (stubs) RewriteText(w nethttp.ResponseWriter, r *nethttp.Request) {
+	httperr.NotImplemented(w, r, "RewriteText")
+}
+
 func (stubs) ListRoles(w nethttp.ResponseWriter, r *nethttp.Request, params crmcontracts.ListRolesParams) {
 	httperr.NotImplemented(w, r, "ListRoles")
 }

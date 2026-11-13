@@ -29,7 +29,7 @@ func (in *LogActivityInput) admitPickedTimes() error {
 	if err := checkMeetingIntent(in.Kind, in.OccurredPrecision, in.MeetingIntent); err != nil {
 		return err
 	}
-	if err := applyPickedTime("meeting_intent", in.MeetingIntent, &in.OccurredAt); err != nil {
+	if err := applyPickedTime(fieldMeetingIntent, in.MeetingIntent, &in.OccurredAt); err != nil {
 		return err
 	}
 	if err := applyPickedTime("due_intent", in.DueIntent, &in.DueAt); err != nil {
@@ -69,10 +69,10 @@ func (in *UpdateActivityInput) admitPatchDueTime() error {
 // held to an instant: a whole-day meeting has no clock to keep.
 func checkMeetingIntent(kind, precision string, intent *crmcontracts.IntentTime) error {
 	if intent != nil && kind != KindMeeting {
-		return &values.ParseError{Field: "meeting_intent", Code: "not_applicable", Message: "only a meeting has a chosen local start"}
+		return &values.ParseError{Field: fieldMeetingIntent, Code: "not_applicable", Message: "only a meeting has a chosen local start"}
 	}
 	if intent != nil && precision == PrecisionDay {
-		return &values.ParseError{Field: "meeting_intent", Code: "not_applicable", Message: "a whole-day meeting has no local start time"}
+		return &values.ParseError{Field: fieldMeetingIntent, Code: "not_applicable", Message: "a whole-day meeting has no local start time"}
 	}
 	return nil
 }
@@ -82,7 +82,7 @@ func (in *UpdateActivityInput) admitPickedTimes(kind string) error {
 	if err := checkMeetingIntent(kind, deref(in.OccurredPrecision), in.MeetingIntent); err != nil {
 		return err
 	}
-	if err := applyPickedTime("meeting_intent", in.MeetingIntent, &in.OccurredAt); err != nil {
+	if err := applyPickedTime(fieldMeetingIntent, in.MeetingIntent, &in.OccurredAt); err != nil {
 		return err
 	}
 	if err := applyPickedTime("due_intent", in.DueIntent, &in.DueAt); err != nil {

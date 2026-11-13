@@ -78,6 +78,8 @@ export type ActivityDraft = {
   followUp?: TaskDraft;
   // The workspace's custom-field values, as the create body's cf_ keys.
   custom?: Record<string, unknown>;
+  // A model polished the subject or body, so the saved activity reads AI-assisted.
+  aiAssisted?: boolean;
 };
 
 export type TaskDraft = Pick<
@@ -218,6 +220,12 @@ export function activityRequestBody(
             : {}),
         }),
     ...(isTranscript ? { source_system: "transcript" } : {}),
+    ...(input.aiAssisted && !isTranscript && entityType && entityId
+      ? {
+          ai_assisted: true,
+          ai_assisted_on: { entity_type: entityType, entity_id: entityId },
+        }
+      : {}),
     // Only for the kinds that ask who attended. Switching to a note hides the
     // fields but keeps their picks in state. A note must not be filed against them.
     links:
