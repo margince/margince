@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"testing"
 
+	"github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 )
 
@@ -28,5 +29,19 @@ func TestProductionRefusesAPlainHTTPAddressBeforeTheTokenIsSent(t *testing.T) {
 	_, err = BotCheck{HTTP: doer, AllowHTTP: true}.Confirm(context.Background(), "http://localhost:9000", "gwapp_secret")
 	if !doer.called || errors.Is(err, apperrors.ErrInvalidArgument) {
 		t.Fatalf("http in dev = %v, sent=%v; want the call made", err, doer.called)
+	}
+}
+
+func TestTheDispactCheckTakesAnEventsSecret(t *testing.T) {
+	var check capture.ChannelBotCheck = BotCheck{}
+	events, ok := check.(capture.ChannelEventsCheck)
+	if !ok {
+		t.Fatal("the Dispact bot check takes no events secret, so push can never be turned on")
+	}
+	if err := events.ValidateEventsSecret("whsec_c2VjcmV0c2VjcmV0c2VjcmV0c2VjcmV0"); err != nil {
+		t.Fatalf("a whsec_ secret was refused: %v", err)
+	}
+	if err := events.ValidateEventsSecret("not-a-secret"); err == nil {
+		t.Fatal("a secret without whsec_ was accepted")
 	}
 }

@@ -18,6 +18,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/modules/chatlinks"
 	"github.com/margince/margince/backend/internal/modules/chatlinks/dispact"
+	"github.com/margince/margince/backend/internal/modules/webhooks"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/keyvault"
 	"github.com/margince/margince/backend/internal/platform/netguard"
@@ -93,6 +94,10 @@ func (BotCheck) ValidateToken(token string) error {
 }
 
 func (BotCheck) FixedIdentity() bool { return true }
+
+// ValidateEventsSecret makes Dispact a provider that pushes signed notices, so
+// its connection takes an events secret.
+func (BotCheck) ValidateEventsSecret(secret string) error { return webhooks.CheckSecret(secret) }
 
 func (c BotCheck) Confirm(ctx context.Context, address, token string) (capture.ChannelBot, error) {
 	if !c.AllowHTTP && !strings.HasPrefix(address, "https://") {
