@@ -8,10 +8,11 @@ import (
 	"testing"
 	"time"
 
+	openapi_types "github.com/oapi-codegen/runtime/types"
+
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/langcopy/langcopytest"
-	openapi_types "github.com/oapi-codegen/runtime/types"
 )
 
 const sessionPromise = "Lan Pham scheduled an introductory session on the archive solution for Northwind on October 30, 2026."
