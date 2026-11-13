@@ -35,7 +35,7 @@ import { RUNNING } from "./agentrail-copy";
 import { RailLine } from "./agentrail-line";
 import type { Signals } from "./agentrail-reads";
 import { useAiSpend, useLastCall, useSignals } from "./agentrail-reads";
-import { ReadyButton, useReadyPeek, useSettledFlight } from "./agentrail-ready";
+import { useReadyPeek, useSettledFlight } from "./agentrail-ready";
 import {
   type RailWords,
   railWords,
@@ -431,9 +431,6 @@ export function AgentRail({
               regardless, because it is the agent's report. */}
           <RailSaying line={shown} />
         </span>
-        {state === "idle" && (
-          <ReadyButton ready={ready} open={open} onOpen={openPanel} />
-        )}
         {/* The block's last line, and it exists whether or not there is a figure
             on it: the chevron reports whether the panel is open, which is a fact
             about the block rather than about the spend, so a row that came and

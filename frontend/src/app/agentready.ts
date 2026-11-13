@@ -3,21 +3,16 @@
 
 import { briefDay } from "../features/brief/brief.facts";
 import { waitingRows } from "../features/brief/brief.sentence";
-import { taskName } from "../features/brief/brief.taskcard";
 import type { WorklistItem } from "../features/worklist/worklist.queries";
 import { useWorklist } from "../features/worklist/worklist.reads";
 import { formatNumber } from "../format/format";
 import {
   type Locale,
   type PluralTranslator,
-  type Translator,
   useLocale,
   usePlural,
-  useT,
 } from "../i18n";
 import { type Route, useRoute } from "../lib/router";
-import { useMe } from "../lib/session";
-import type { readerTask } from "../lib/worklistcopy";
 import { DEFAULT_VIEW } from "../lib/worklistviews";
 import { plain, type SpokenLine } from "./ai-activity-speak";
 
@@ -71,40 +66,26 @@ export function aboutFirst(
     : [...about, ...rows.filter((row) => !about.includes(row))];
 }
 
-type Viewer = Parameters<typeof readerTask>[1];
-
 /**
- * What the orb says at rest when something waits: how much, and the first of
- * it by name. On a record page it says how many are about that record and
- * names none, because the record already shows its own.
+ * What the orb says at rest when something waits: how much. On a record page
+ * it says how many are about that record, because the record shows its own.
+ * The first row's name is the peek's, so the rail holds one short line.
  */
 export function readyLine(
   rows: readonly WorklistItem[],
   about: readonly WorklistItem[],
-  words: Readonly<{
-    t: Translator;
-    plural: PluralTranslator;
-    locale: Locale;
-    viewer: Viewer;
-  }>,
+  plural: PluralTranslator,
+  locale: Locale,
 ): SpokenLine | null {
-  const [first] = rows;
-  if (first === undefined) return null;
-  const { t, plural, locale, viewer } = words;
+  if (rows.length === 0) return null;
   const count = formatNumber(rows.length, locale);
-  if (about.length > 0) {
-    return plain(
-      plural("agent.ready.about", about.length, {
-        about: formatNumber(about.length, locale),
-        count,
-      }),
-    );
-  }
   return plain(
-    plural("agent.ready.line", rows.length, {
-      count,
-      first: taskName(first, viewer, t, locale),
-    }),
+    about.length > 0
+      ? plural("agent.ready.about", about.length, {
+          about: formatNumber(about.length, locale),
+          count,
+        })
+      : plural("agent.ready.count", rows.length, { count }),
   );
 }
 
@@ -120,15 +101,13 @@ export type AgentReady = Readonly<{
 export function useAgentReady(): AgentReady {
   const day = useReadyRows();
   const route = useRoute();
-  const t = useT();
   const plural = usePlural();
   const { locale } = useLocale();
-  const viewer = useMe(false).data?.user;
   if (day === undefined) return { rows: undefined, about: 0, line: null };
   const about = rowsAbout(day, route);
   return {
     rows: aboutFirst(day, about),
     about: about.length,
-    line: readyLine(day, about, { t, plural, locale, viewer }),
+    line: readyLine(day, about, plural, locale),
   };
 }

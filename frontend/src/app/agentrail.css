@@ -1029,32 +1029,14 @@
   padding: 0 var(--space-4) var(--space-4);
 }
 
-/* The one press under the line while something waits. Its own row, so the
-   line above keeps the two-line room it holds for itself. */
-.arready {
-  position: relative;
-  z-index: 1;
-  display: flex;
-  justify-content: center;
-  width: 100%;
-  padding: var(--space-2) var(--space-2) var(--space-1);
-}
-.arready .btn {
-  min-inline-size: 0;
-}
-.rail.collapsed .arready,
-.rail.leveled .arready {
-  display: none;
-}
-@media (max-height: 780px) {
-  .arready {
+/* On the full rail the ring's segments and the line carry the count, so the
+   figure on the ball is for the narrow feet alone. */
+@media (min-width: 701px) {
+  .rail:not(.collapsed):not(.leveled) .arorb .core-count {
     display: none;
   }
 }
 @media (max-width: 700px) {
-  .rail .arready {
-    display: none;
-  }
   /* The well is a 56px circle: a full-size figure would cover the ball. */
   .rail .arorb .core-count {
     --coreCount: 18px;

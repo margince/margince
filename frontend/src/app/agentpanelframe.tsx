@@ -13,9 +13,9 @@ const PANEL_GAP = 8;
  *
  * Wide enough that a count tile holds its label on one line. If "Duplicate
  * pairs open" wraps under its own number, a figure with a name becomes two
- * stacked fragments.
+ * stacked fragments. A day's card keeps its chips and buttons on one row.
  */
-const PANEL_WIDTH = 408;
+const PANEL_WIDTH = 448;
 
 const PANEL_MARGIN = 12;
 

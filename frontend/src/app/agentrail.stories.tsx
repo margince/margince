@@ -588,8 +588,8 @@ export const LicenceWithheld: Story = {
 };
 
 /** Three things the agent prepared, so the orb draws them: one segment each on
- *  its ring's line, the count on the ball's edge, the first by name in the
- *  line, and Start under it. */
+ *  its ring's line and the count in the line. The narrow feet add the figure
+ *  on the ball's edge. */
 const A_READY_DAY: readonly WorklistItem[] = [
   waitingEmailRow(),
   taskRow("task-proposal", "Send the proposal to Acme"),
@@ -605,17 +605,14 @@ export const ReadyForYouDark: Story = {
   render: story({ ...HEALTHY, ready: A_READY_DAY }),
 };
 
-/** Start opens the panel on the same cards Home lists under "Needs you", one
+/** The orb opens the panel on the same cards Home lists under "Needs you", one
  *  stack shared with Home, and the report stays below them. */
 export const ReadyPanelOpen: Story = {
   render: story({ ...HEALTHY, ready: A_READY_DAY, recent: A_DAYS_WORK }),
-  play: async ({ canvasElement }) => {
-    const canvas = within(canvasElement);
-    await userEvent.click(await canvas.findByRole("button", { name: "Start" }));
-  },
+  play: openThePanel,
 };
 
-/** A collapsed rail keeps the count on the orb and drops the line and Start. */
+/** A collapsed rail drops the line, so the count moves onto the orb. */
 export const ReadyCollapsed: Story = {
   render: story({ ...HEALTHY, ready: A_READY_DAY }, "collapsed"),
 };

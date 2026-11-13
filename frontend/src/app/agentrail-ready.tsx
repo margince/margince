@@ -2,7 +2,6 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import { type RefObject, useEffect, useRef } from "react";
-import { Button } from "../design-system/atoms";
 import { usePrefersReducedMotion } from "../design-system/motion";
 import { type PeekContent, usePeek } from "../design-system/peek";
 import { taskLine, taskName } from "../features/brief/brief.taskcard";
@@ -11,34 +10,6 @@ import { formatNumber } from "../format/format";
 import { useLocale, usePlural, useT } from "../i18n";
 import { useMe } from "../lib/session";
 import { useViewerZone } from "../lib/viewerzone";
-import type { AgentReady } from "./agentready";
-
-/**
- * The one press under the orb's line while something waits: Start, or on a
- * record page Show me. It opens the panel, whose first section is the stack.
- */
-export function ReadyButton({
-  ready,
-  open,
-  onOpen,
-}: Readonly<{ ready: AgentReady; open: boolean; onOpen: () => void }>) {
-  const t = useT();
-  if (open || ready.rows === undefined || ready.rows.length === 0) return null;
-  return (
-    <span className="arready">
-      <Button
-        variant={ready.about > 0 ? "ghost" : "ai"}
-        onClick={(event) => {
-          // The block's own hit area toggles; this press only ever opens.
-          event.stopPropagation();
-          onOpen();
-        }}
-      >
-        {t(ready.about > 0 ? "agent.ready.show" : "agent.ready.start")}
-      </Button>
-    </span>
-  );
-}
 
 /** The next row in one card, on hover or focus of the orb, while the panel is shut. */
 export function useReadyPeek(

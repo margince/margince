@@ -238,9 +238,9 @@ export function AgentPanel({
       {/* The work comes first: what the agent prepared or found for the
           reader, answered here the way Home answers it. The report follows. */}
       {ready !== undefined && ready.length > 0 && (
-        <PanelSection title={t("agent.ready.section")}>
+        <div className="arsect">
           <ReadyStack rows={ready} />
-        </PanelSection>
+        </div>
       )}
 
       {/* Above the counts: a run happening this second outranks a queue that
