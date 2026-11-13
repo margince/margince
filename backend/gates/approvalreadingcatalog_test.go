@@ -5,30 +5,41 @@
 
 package gates
 
+// Every change that can make the approval reading catalog stale runs fe-drift.
+//
+// A Node script builds the catalog from frontend sources, and only a fresh
+// build shows that the committed copy is stale. fe-drift does that build, so
+// each path that changes the catalog must route a pull request to its lane.
+
 import (
-	"crypto/sha256"
-	"encoding/hex"
-	"encoding/json"
+	"slices"
+	"strings"
 	"testing"
 )
 
-func TestTheApprovalReadingCatalogTracksItsCardSources(t *testing.T) {
+const approvalReadingCheck = "gen:approval-reading --check"
+
+func TestEveryChangeToTheApprovalReadingCatalogRunsItsDriftCheck(t *testing.T) {
 	t.Parallel()
-	var catalog struct {
-		Inputs map[string]string `json:"inputs"`
-	}
-	if err := json.Unmarshal([]byte(readSource(t, "internal/modules/agents/previewcatalog_gen.json")), &catalog); err != nil {
-		t.Fatal(err)
-	}
-	for _, required := range []string{"lib/approvalpreview.ts", "lib/approvalpreviewfields.ts", "lib/approvalpreviewmergefields.ts", "i18n/en.ts", "i18n/de.ts", "i18n/vi.ts"} {
-		if catalog.Inputs[required] == "" {
-			t.Fatalf("catalog misses its source %s", required)
+	scope := filterScopes(t, readWorkflow(t, classifierWorkflow))[theFrontendFilter]
+	for _, path := range []string{
+		"frontend/scripts/gen-approval-reading.mjs",
+		"frontend/src/lib/approvalpreview.ts",
+		"frontend/src/i18n/en.ts",
+		"backend/internal/modules/agents/previewcatalog_gen.json",
+	} {
+		if !scopeClaims(path, scope) {
+			t.Errorf("the %q filter in %s does not cover %s, so a pull request that changes it "+
+				"skips fe-drift and a stale approval reading catalog merges green", theFrontendFilter, classifierWorkflow, path)
 		}
 	}
-	for source, want := range catalog.Inputs {
-		sum := sha256.Sum256([]byte(readSource(t, "../frontend/src/"+source)))
-		if hex.EncodeToString(sum[:]) != want {
-			t.Errorf("%s changed; run pnpm --dir frontend gen:approval-reading", source)
-		}
+	targets, _ := parseRecipes(t, rootMakefile)
+	drift, ok := targets["fe-drift"]
+	if !ok {
+		t.Fatalf("%s has no fe-drift target; it is the lane that rebuilds the approval reading catalog", rootMakefile)
+	}
+	if !slices.ContainsFunc(drift.recipes, func(line string) bool { return strings.Contains(line, approvalReadingCheck) }) {
+		t.Errorf("fe-drift in %s no longer runs %q, so no lane compares the committed approval reading catalog with a fresh build",
+			rootMakefile, approvalReadingCheck)
 	}
 }
