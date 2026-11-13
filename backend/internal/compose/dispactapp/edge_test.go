@@ -13,6 +13,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/margince/margince/backend/internal/compose/chatsync"
 	"github.com/margince/margince/backend/internal/compose/oidctoken/oidctokentest"
 	"github.com/margince/margince/backend/internal/modules/agents"
 	"github.com/margince/margince/backend/internal/modules/capture"
@@ -325,5 +326,45 @@ func TestAnAppCallIsPacedByItsPassport(t *testing.T) {
 	}
 	if got := PaceKey(t.Context(), "digest"); got != "digest" {
 		t.Fatalf("a passport call is paced under %q, want its own key", got)
+	}
+}
+
+// swappableBots lets a test replace the connected bot after a call warmed the
+// key cache.
+type swappableBots struct{ bot *capture.LiveBot }
+
+func (b swappableBots) LiveBotIdentity(context.Context, string) (capture.LiveBot, error) {
+	return *b.bot, nil
+}
+
+func TestProductionWiringRefusesKeysAtAPrivateAddress(t *testing.T) {
+	h := newHarness(t)
+	for private, wantAccepted := range map[bool]bool{false: false, true: true} {
+		edge := New(fakeBots{bot: capture.LiveBot{TeamID: testTeam, Address: h.rig.Srv.URL}}, &fakeReplays{seen: map[string]time.Duration{}},
+			chatsync.HTTPClient(private)).SetClock(func() time.Time { return h.rig.Base })
+		_, err := edge.Authenticate(t.Context(), h.seats, h.token(t, nil))
+		if (err == nil) != wantAccepted {
+			t.Errorf("keys on loopback with private=%v: err = %v, want accepted=%v", private, err, wantAccepted)
+		}
+	}
+}
+
+func TestAReplacedBotRefusesTheOldTeamsTokensAfterTheCacheIsWarm(t *testing.T) {
+	h := newHarness(t)
+	bot := capture.LiveBot{TeamID: testTeam, Address: h.rig.Srv.URL}
+	h.edge = New(swappableBots{bot: &bot}, h.replays, h.rig.Srv.Client()).SetClock(func() time.Time { return h.rig.Base })
+	if _, err := h.authenticate(t, h.token(t, nil)); err != nil {
+		t.Fatalf("warming call refused: %v", err)
+	}
+	bot.TeamID = "team-2"
+	if _, err := h.authenticate(t, h.token(t, nil)); err == nil {
+		t.Fatal("a token for the replaced bot's team was accepted")
+	}
+	if _, err := h.authenticate(t, h.token(t, map[string]any{"workspace_id": "team-2"})); err != nil {
+		t.Fatalf("a token for the new team was refused: %v", err)
+	}
+	bot.Address = "https://other.example.test"
+	if _, err := h.authenticate(t, h.token(t, map[string]any{"workspace_id": "team-2"})); err == nil {
+		t.Fatal("a token whose issuer is the old address was accepted after the address changed")
 	}
 }
