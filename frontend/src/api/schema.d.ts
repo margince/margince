@@ -33687,6 +33687,13 @@ export interface components {
              *     proportion without its denominator is not a completeness figure.
              */
             expected: number;
+            /** @description The fewest present inputs the assembly judges on. Below it the band is `unknown`. */
+            needed: number;
+            /**
+             * @description Every required input in the assembly's order, with whether it counts. An input
+             *     that does not count is missing or no longer fresh.
+             */
+            inputs: components["schemas"]["GrowthFitInputState"][];
             /**
              * @description Which required inputs are missing, as codes. The client words them in the
              *     reader's language, so the server sends no sentence here.
@@ -33698,6 +33705,12 @@ export interface components {
          * @enum {string}
          */
         GrowthFitInput: "offer_summary" | "icp" | "industry" | "buying_center" | "buying_intents" | "employee_range" | "technology";
+        /** @description One required growth-fit input and whether it counts toward the band. */
+        GrowthFitInputState: {
+            input: components["schemas"]["GrowthFitInput"];
+            /** @description True when the input is recorded and not stale. */
+            present: boolean;
+        };
         /**
          * @description The one thing to do that would most improve a growth-fit answer. The client words it.
          *     `gather_inputs` is to find the inputs in `data_completeness.missing`, `record_profile`
