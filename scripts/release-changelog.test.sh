@@ -129,6 +129,9 @@ $compare
 EOF
 )" "$(fixes 2600)" 2026.1.1 margince/margince "$AFTER" 2026.1.0 "$BASE"
 
+expect "a no-break space is a subject, not an empty patch" "$compare" $'\xc2\xa0\n' \
+	2026.1.1 margince/margince "$AFTER" 2026.1.0 "$BASE"
+
 refuse "a base with no subject since it" "" \
 	2026.1.1 margince/margince "$AFTER" 2026.1.0 "$BASE"
 refuse "a base with only empty lines since it" $'\n\n' \

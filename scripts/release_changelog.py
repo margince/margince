@@ -42,6 +42,15 @@ from release_notes import Refused, notes
 # takes at most four bytes.
 ROOM = 250000
 
+# Whitespace as POSIX [[:space:]] reads it: Python's str.isspace also takes the
+# no-break spaces and the C0 separators, which are text in a subject.
+NOT_SPACE = set("\x1c\x1d\x1e\x1f\x85\xa0\u2007\u202f")
+
+
+def blank(text):
+    """Whether text holds nothing but whitespace."""
+    return all(c.isspace() and c not in NOT_SPACE for c in text)
+
 
 def changelog(args, stdin):
     """The changelog for args, reading stdin only when a base is given."""
@@ -55,8 +64,8 @@ def changelog(args, stdin):
     base_version, base_revision = args[3:]
     if not base_version or not base_revision:
         raise Refused("the base version and base revision must not be empty.")
-    subjects = stdin.read().decode("utf-8", "ignore")
-    if not subjects.strip():
+    subjects = stdin.read().replace(b"\0", b"").decode("utf-8", "ignore")
+    if blank(subjects):
         raise Refused(f"no commit subject since the patch base {base_version} ({base_revision}); the patch would be empty.")
     text = notes(subjects.split("\n"), base_revision, revision, repo, ROOM, base_version)
     # Only the compare line: nothing a user notices, so no section to head.

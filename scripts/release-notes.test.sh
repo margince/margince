@@ -52,6 +52,16 @@ perf(reports): the pipeline report reads one query (#13)
 fix: dialogs survive a drag (#14)
 EOF
 
+writes 'a subject that is not UTF-8 is left out, and a NUL byte is dropped' "$(
+	cat <<EOF
+### Added
+
+- ab (#31)
+
+$compare
+EOF
+)" < <(printf 'feat: caf\xe9 (#30)\nfeat: a\000b (#31)\n')
+
 writes 'work a user cannot notice, and subjects with no type, are left to the compare view' "$compare" <<'EOF'
 refactor(store): one writer for the audit row (#20)
 test(e2e): wait for the list to render (#21)

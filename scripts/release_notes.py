@@ -78,9 +78,16 @@ def notes(subjects, previous, tag, repo, budget=100000, previous_name=""):
 
 
 def read_subjects():
-    """Every line on stdin, the last one with or without its line feed. A byte
-    that is not UTF-8 passes through unchanged, as git wrote it."""
-    return sys.stdin.buffer.read().decode("utf-8", "surrogateescape").split("\n")
+    """Every line on stdin, the last one with or without its line feed. A NUL
+    byte is dropped; a line that is not UTF-8 is skipped, since no section can
+    print it."""
+    subjects = []
+    for raw in sys.stdin.buffer.read().replace(b"\0", b"").split(b"\n"):
+        try:
+            subjects.append(raw.decode("utf-8"))
+        except UnicodeDecodeError:
+            continue
+    return subjects
 
 
 def main(argv):
@@ -99,7 +106,7 @@ def main(argv):
     except Refused as refused:
         print(f"release-notes: {refused}", file=sys.stderr)
         return 1
-    sys.stdout.buffer.write((text + "\n").encode("utf-8", "surrogateescape"))
+    sys.stdout.buffer.write((text + "\n").encode("utf-8"))
     return 0
 
 
