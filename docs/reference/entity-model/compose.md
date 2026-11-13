@@ -198,8 +198,8 @@ The 48 tables owned by `compose`, as the migrations build them. [Back to the ent
 
 **Triggers**
 
-- `text_bound_insert`: `AFTER INSERT FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL, '{"tool": 20000, "status": 20000, "status_message": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"status":20000,"status_message":20000,"tool":20000}')`
-- `text_bound_update`: `AFTER UPDATE FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"tool": 20000, "status": 20000, "status_message": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"status":20000,"status_message":20000,"tool":20000}')`
+- `text_bound_insert`: `AFTER INSERT FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL, '{"tool": 20000, "status": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"status":20000,"tool":20000}')`
+- `text_bound_update`: `AFTER UPDATE FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"tool": 20000, "status": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"status":20000,"tool":20000}')`
 
 ## analytics_share
 

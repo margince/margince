@@ -137,6 +137,16 @@ A failed build can leave behind an index Postgres never uses. The
 put `DROP INDEX CONCURRENTLY IF EXISTS` before each build, so a second try builds it again.
 The down file drops its indexes with `DROP INDEX CONCURRENTLY` too.
 
+A trigger made on many tables may use the same mode. In one transaction, every table it touches stays
+closed to writers until the last trigger is made. With the marker, each statement commits on its own.
+Such a file says `CREATE OR REPLACE TRIGGER` and `DROP TRIGGER IF EXISTS`, so a second run does no harm.
+
+The file opens with `SET lock_timeout`, because `SET LOCAL` does nothing outside a transaction, and ends
+with `RESET lock_timeout`. The text-limit guards
+(`1794600201_each_table_checks_its_text_limits.up.sql`, written by `backend/tools/gen-textbounds`) are
+the worked example. `TestEveryUnwrappedMigrationOnlySaysRerunnableStatements` refuses any other
+statement in a file with the marker.
+
 ## Why no one edits a shipped migration
 
 On the `up` path an applied version never runs again. Only `migrate down` runs a version again, by

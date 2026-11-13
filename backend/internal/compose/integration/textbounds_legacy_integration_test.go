@@ -25,17 +25,25 @@ import (
 
 func withoutTextGuards(t *testing.T, ctx context.Context) func() {
 	t.Helper()
-	coreUp, coreDown := migrationPair(t, migrations.Core, "1794489406")
-	customUp, customDown := migrationPair(t, migrations.Custom, "20261112130500")
+	// Applied in this order, and removed in the reverse one: the shared functions,
+	// the table guards, the custom-field guards, then the custom track on top.
+	var ups, downs []string
+	for _, pair := range []struct {
+		namespace func() (dbmigrate.Namespace, error)
+		version   string
+	}{{migrations.Core, "1794600200"}, {migrations.Core, "1794600201"}, {migrations.Core, "1794600202"}, {migrations.Custom, "20261112130500"}} {
+		up, down := migrationPair(t, pair.namespace, pair.version)
+		ups = append(ups, up)
+		downs = append([]string{down}, downs...)
+	}
 	owner := SchemaPool(t)
-	// The custom track sits on top of core, so it leaves first and returns last.
-	for _, step := range []string{customDown, coreDown} {
+	for _, step := range downs {
 		if _, err := owner.Exec(ctx, step); err != nil {
 			t.Fatal(err)
 		}
 	}
 	restore := func() error {
-		for _, step := range []string{coreUp, customUp} {
+		for _, step := range ups {
 			if _, err := owner.Exec(ctx, step); err != nil {
 				return err
 			}

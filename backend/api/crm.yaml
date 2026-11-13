@@ -38940,6 +38940,7 @@ components:
         value:
           type: string
           minLength: 1
+          maxLength: 20000
           description: >-
             The corrected value. Where this field maps to a column on `company`,
             the COLUMN is what changes — a correction the header ignores is not a
@@ -50970,8 +50971,8 @@ components:
           type: string
           description: Which profile field this fills. A closed set, so a claim cannot be stored under a name no reader looks for.
           enum: [title, phone, role, linkedin, company_name, address, website]
-        value: { type: string }
-        source_quote: { type: string }
+        value: { type: string, maxLength: 20000 }
+        source_quote: { type: string, maxLength: 20000 }
         source_url: { type: string }
 
     DismissContactMomentRequest:
@@ -51975,7 +51976,7 @@ components:
           maxLength: 2000
         forwardable_note:
           type: string
-          maxLength: 4000
+          maxLength: 2000
         note_generated_by:
           $ref: '#/components/schemas/IntroNoteOrigin'
         note_ai_generated: { type: boolean }
@@ -54521,8 +54522,8 @@ components:
       type: object
       required: [name, objective_metric, deadline]
       properties:
-        name: { type: string, minLength: 1, maxLength: 200 }
-        description: { type: [string, 'null'], maxLength: 4000 }
+        name: { type: string, minLength: 1, maxLength: 120 }
+        description: { type: [string, 'null'], maxLength: 20000 }
         owner_id: { type: [string, 'null'], format: uuid, description: Defaults to the caller. }
         objective_metric: { $ref: '#/components/schemas/ReportingMetricID' }
         target_value: { type: [integer, 'null'], format: int64, minimum: 1 }
@@ -58346,7 +58347,7 @@ components:
             null otherwise; violating either direction returns
             `422 code: field_not_valid_for_kind`. Must name a provider this installation has
             registered.
-        subject: { type: [string, 'null'] }
+        subject: { type: [string, 'null'], maxLength: 20000 }
         body: { type: [string, 'null'] }
         occurred_at: { type: string, format: date-time }
         occurred_precision:
@@ -58857,7 +58858,7 @@ components:
         deal_filing:
           $ref: '#/components/schemas/ActivityDealFiling'
           description: Optional filing choice when recording a call or meeting outcome. Existing deal links remain.
-        subject: { type: [string, 'null'] }
+        subject: { type: [string, 'null'], maxLength: 20000 }
         body: { type: [string, 'null'] }
         occurred_at: { type: string, format: date-time }
         occurred_precision:
@@ -81516,7 +81517,7 @@ components:
       required: [id, name, topic_statement, min_similarity, default_ask, shipped, coverage, created_at]
       properties:
         id: { type: string, format: uuid }
-        name: { type: string, maxLength: 200 }
+        name: { type: string, maxLength: 120 }
         shipped:
           type: boolean
           description: >-

@@ -19,6 +19,7 @@ import (
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/deals"
+	"github.com/margince/margince/backend/internal/platform/database/textbounds"
 	"github.com/margince/margince/backend/internal/shared/kernel/promptfence"
 	"github.com/margince/margince/backend/internal/shared/kernel/textlang"
 )
@@ -134,6 +135,23 @@ func TestGroundOfferLinesGroundsAQuoteThatSpansALineBreakInTheSource(t *testing.
 	}
 	if len(lines) != 1 || lines[0].Description != "Priority support" {
 		t.Fatalf("staged %+v, want only the line whose words the source says, whatever whitespace separates them", lines)
+	}
+}
+
+func TestGroundOfferLinesDropsADescriptionTheLineColumnWouldRefuse(t *testing.T) {
+	d := offerDrafter{}
+	dealContext := []dealContextItem{{SourceID: "activity:1", Snippet: "they want a kickoff workshop"}}
+
+	limit := textbounds.LimitOf("public.offer_line_item.description")
+	atLimit := candidate(strings.Repeat("w", limit), "they want a kickoff workshop")
+	pastLimit := candidate(strings.Repeat("x", limit+1), "they want a kickoff workshop")
+
+	lines, err := d.groundOfferLines(context.Background(), []offerLineCandidate{atLimit, pastLimit}, dealContext, "EUR", "en")
+	if err != nil {
+		t.Fatalf("groundOfferLines: %v", err)
+	}
+	if len(lines) != 1 || lines[0].Description != atLimit.Description {
+		t.Fatalf("staged %d lines, want only the one at the column limit of %d", len(lines), limit)
 	}
 }
 

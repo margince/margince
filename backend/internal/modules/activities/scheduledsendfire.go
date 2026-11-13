@@ -412,6 +412,23 @@ func holdReasonFor(err error) (string, bool) {
 	return "", false
 }
 
+// zoneRuleShift bounds how far a chosen local time's instant can move when its
+// zone's rules change: the UTC offsets in use span UTC-12 to UTC+14.
+const zoneRuleShift = 26 * time.Hour
+
+// overdueScheduledSendsSQL reads idx_scheduled_send_due in cached-instant order
+// up to zoneRuleShift past the cutoff, and resolves the chosen local time only
+// for the rows in that range.
+const overdueScheduledSendsSQL = `
+	SELECT id FROM scheduled_send
+	 WHERE status = 'scheduled' AND scheduled_at < @horizon AND ` + scheduleInstantSQL + ` < @before
+	 ORDER BY scheduled_at ASC
+	 LIMIT @limit`
+
+func overdueScheduledSendsArgs(before time.Time, limit int) pgx.NamedArgs {
+	return pgx.NamedArgs{"before": before, "horizon": before.Add(zoneRuleShift), "limit": limit}
+}
+
 // OverdueScheduledSends returns messages whose moment has passed and which are
 // still waiting — the shape a message takes when the job that should have fired
 // it is gone. Why that state exists and what the caller does about it is in
@@ -430,11 +447,7 @@ func holdReasonFor(err error) (string, bool) {
 func (s *Store) OverdueScheduledSends(ctx context.Context, olderThan time.Duration, limit int) ([]ids.UUID, error) {
 	var out []ids.UUID
 	err := s.tx(ctx, func(tx pgx.Tx) error {
-		rows, err := tx.Query(ctx, `
-			SELECT id FROM scheduled_send
-			 WHERE status = 'scheduled' AND `+scheduleInstantSQL+` < @before
- ORDER BY `+scheduleInstantSQL+` ASC
- LIMIT @limit`, pgx.NamedArgs{"before": s.now().Add(-olderThan), "limit": limit})
+		rows, err := tx.Query(ctx, overdueScheduledSendsSQL, overdueScheduledSendsArgs(s.now().Add(-olderThan), limit))
 		if err != nil {
 			return fmt.Errorf("scheduled send: finding messages nothing will wake: %w", err)
 		}

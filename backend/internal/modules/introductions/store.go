@@ -29,12 +29,11 @@ import (
 // codeRequired is the wire code of a field a request left out.
 const codeRequired = "required"
 
-// The contract's maxLength for each text field, in characters. A reason is a
-// paragraph and a note is a short mail; the colleague deciding is the one who
-// pays for a wall of text.
+// The contract's maxLength for each text field, in characters: the note limit
+// the intro_request columns hold.
 const (
-	reasonBound = 2000
-	noteBound   = 4000
+	reasonBound = values.TextNoteCharacters
+	noteBound   = values.TextNoteCharacters
 )
 
 // Store owns the intro_request table.

@@ -749,8 +749,8 @@ The 34 tables owned by `activities`, as the migrations build them. [Back to the 
 
 **Triggers**
 
-- `text_bound_insert`: `AFTER INSERT FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL, '{"verdict": 20000, "remaining": 20000, "decided_by": 20000, "rule_version": 20000, "judged_evidence": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"decided_by":20000,"judged_evidence":20000,"remaining":20000,"rule_version":20000,"verdict":20000}')`
-- `text_bound_update`: `AFTER UPDATE FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"verdict": 20000, "remaining": 20000, "decided_by": 20000, "rule_version": 20000, "judged_evidence": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"decided_by":20000,"judged_evidence":20000,"remaining":20000,"rule_version":20000,"verdict":20000}')`
+- `text_bound_insert`: `AFTER INSERT FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL, '{"verdict": 20000, "remaining": 20000, "decided_by": 20000, "rule_version": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"decided_by":20000,"remaining":20000,"rule_version":20000,"verdict":20000}')`
+- `text_bound_update`: `AFTER UPDATE FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"verdict": 20000, "remaining": 20000, "decided_by": 20000, "rule_version": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"decided_by":20000,"remaining":20000,"rule_version":20000,"verdict":20000}')`
 
 ## activity_retention_evidence
 

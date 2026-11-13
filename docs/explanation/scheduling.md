@@ -68,9 +68,14 @@ with the zone rules of the day it was saved. The rule that stops two holds shari
 fixed moment. A read of a meeting that is still booked works the start out again with current
 rules.
 
-Google gets the zone with the event times, so the event keeps the same local time there. Microsoft
-still gets the start in UTC. A move the provider reports, or a move that names only a UTC time,
-drops the clock. A whole-day meeting never keeps one.
+Both providers get the zone with the event times, so the event keeps the same local time there.
+Google gets the IANA name. Microsoft gets the Windows zone that the Unicode CLDR data maps it to.
+Graph's event create and update take every Windows zone but only some IANA names.
+
+A zone CLDR maps to no Windows zone goes to Microsoft in UTC. So does a zone that a newer CLDR
+release moved to a new Windows zone, because the old Windows zone states the old rules. A move the
+provider reports, or a move that names only a UTC time, drops the clock. A whole-day meeting never
+keeps one.
 
 ## Delivery is a command, not a call
 
