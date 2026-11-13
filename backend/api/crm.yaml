@@ -25083,7 +25083,7 @@ paths:
       operationId: createDataSubjectRequest
       security: [ { bearerAuth: [] }, { cookieAuth: [] } ]
       x-mcp-tool: { verb: open_data_subject_request, router: change_compliance, action: open_data_subject_request, tier: auto_execute, scope: write, served_by: route, ask_user_first: true }
-      summary: Open a data-subject request (access/rectify/erasure). Admin-mediated; ties to retention and erasure.
+      summary: Open a data-subject request (access/rectify/erasure). subject_ref is the subject's contact id when they are a contact, else the email they wrote from; only a contact id can be fulfilled. Admin-mediated; ties to retention and erasure.
       description: |
         The server computes the deadline from `received_at` under the installation's
         jurisdiction (`GET /data-subject-requests/deadline` shows it before filing).

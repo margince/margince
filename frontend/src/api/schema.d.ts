@@ -16983,7 +16983,7 @@ export interface paths {
         get: operations["listDataSubjectRequests"];
         put?: never;
         /**
-         * Open a data-subject request (access/rectify/erasure). Admin-mediated; ties to retention and erasure.
+         * Open a data-subject request (access/rectify/erasure). subject_ref is the subject's contact id when they are a contact, else the email they wrote from; only a contact id can be fulfilled. Admin-mediated; ties to retention and erasure.
          * @description The server computes the deadline from `received_at` under the installation's
          *     jurisdiction (`GET /data-subject-requests/deadline` shows it before filing).
          *

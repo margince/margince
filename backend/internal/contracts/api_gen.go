@@ -96159,7 +96159,7 @@ type ServerInterface interface {
 	// List GDPR data-subject requests (B-E11.30).
 	// (GET /data-subject-requests)
 	ListDataSubjectRequests(w http.ResponseWriter, r *http.Request, params ListDataSubjectRequestsParams)
-	// Open a data-subject request (access/rectify/erasure). Admin-mediated; ties to retention and erasure.
+	// Open a data-subject request (access/rectify/erasure). subject_ref is the subject's contact id when they are a contact, else the email they wrote from; only a contact id can be fulfilled. Admin-mediated; ties to retention and erasure.
 	// (POST /data-subject-requests)
 	CreateDataSubjectRequest(w http.ResponseWriter, r *http.Request, params CreateDataSubjectRequestParams)
 	// The deadline a request would get, and the rule that sets it.
@@ -100764,7 +100764,7 @@ func (_ Unimplemented) ListDataSubjectRequests(w http.ResponseWriter, r *http.Re
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
-// Open a data-subject request (access/rectify/erasure). Admin-mediated; ties to retention and erasure.
+// Open a data-subject request (access/rectify/erasure). subject_ref is the subject's contact id when they are a contact, else the email they wrote from; only a contact id can be fulfilled. Admin-mediated; ties to retention and erasure.
 // (POST /data-subject-requests)
 func (_ Unimplemented) CreateDataSubjectRequest(w http.ResponseWriter, r *http.Request, params CreateDataSubjectRequestParams) {
 	w.WriteHeader(http.StatusNotImplemented)
