@@ -54096,6 +54096,11 @@ export interface components {
         CreateDataSubjectRequest: {
             /** @enum {string} */
             kind: "access" | "rectify" | "erasure" | "restriction";
+            /**
+             * @description The data subject: their contact id when they are a contact, else the identifier they
+             *     wrote from, such as an email. Only a contact id can be fulfilled; anything else waits
+             *     until somebody resolves it to a contact.
+             */
             subject_ref: string;
             /**
              * Format: date-time
