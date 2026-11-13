@@ -34,6 +34,13 @@ empty. Make the passwords with `openssl rand -hex 24` and the vault root key wit
 `openssl rand -base64 32`. The vault root key seals every secret the app stores, so store it apart
 from the data: [back-up-an-installation.md](back-up-an-installation.md).
 
+`MARGINCE_PORT` is plain HTTP, and Compose opens it on every address of the host. Set it before the
+first start, so that only the TLS proxy can reach it. On the same host, set
+`MARGINCE_PORT=127.0.0.1:8080`. On another host, block that port for any address but the proxy's. To
+try Margince on this machine alone, set `MARGINCE_PORT=127.0.0.1:8080` and
+`MARGINCE_PUBLIC_BASE_URL=http://localhost:8080`, with the port `MARGINCE_PORT` names. That is
+enough until you set up email.
+
 Edit `margince.yaml` as [Write the first-boot config](deploy-margince.md#write-the-first-boot-config)
 says. Its `password_file` already points where the api writes the first admin's password. A setting that
 `.env.example` lists works only in `.env`. Put any other setting in a file named `margince.env` in
@@ -49,14 +56,8 @@ curl -fsS http://localhost:8080/readyz
 
 The api applies the migrations, then serves; the worker restarts until it has. The proxy listens on
 the port `.env` names, 8080 by default. Without `MARGINCE_LICENSE`, the install runs for 14 days,
-as [Get a license token](deploy-margince.md#get-a-license-token) says. To try it on this machine
-alone, set `MARGINCE_PORT=127.0.0.1:8080` and `MARGINCE_PUBLIC_BASE_URL=http://localhost:8080`, with
-the port `MARGINCE_PORT` names. That is enough until you set up email.
-
-For real use, put a TLS proxy before it, and set `MARGINCE_PUBLIC_BASE_URL` to the `https` address.
-The proxy port is plain HTTP, and Compose opens it on every address of the host. Let only the TLS
-proxy reach it: on the same host, set `MARGINCE_PORT=127.0.0.1:8080`. On another host, block that
-port for any address but the proxy's.
+as [Get a license token](deploy-margince.md#get-a-license-token) says. For real use, put a TLS
+proxy before it, and set `MARGINCE_PUBLIC_BASE_URL` to the `https` address.
 
 Sign in as the `bootstrap_admin` of `margince.yaml`, then remove `MARGINCE_ADMIN_PASSWORD` from
 `.env`, as [After the first boot](deploy-margince.md#after-the-first-boot) says.
