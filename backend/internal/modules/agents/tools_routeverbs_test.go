@@ -179,8 +179,10 @@ func TestReadWorkspaceListsWhatARoutersActionsTake(t *testing.T) {
 func TestARouterRunActionIsDescribedFromItsOwnSpec(t *testing.T) {
 	runs := func(router, action string) (mcp.ToolSpec, bool) {
 		if router == "change_access" && action == "relink_many" {
-			return mcp.ToolSpec{Description: "Move many activities.", AskUserFirst: true,
-				InputSchema: json.RawMessage(`{"type":"object","properties":{"ids":{"type":"array"}}}`)}, true
+			return mcp.ToolSpec{
+				Description: "Move many activities.", AskUserFirst: true,
+				InputSchema: json.RawMessage(`{"type":"object","properties":{"ids":{"type":"array"}}}`),
+			}, true
 		}
 		return mcp.ToolSpec{}, false
 	}
