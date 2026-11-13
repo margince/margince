@@ -344,7 +344,7 @@ function TranscriptReadBody({
 }
 
 /**
- * TranscriptReadCard offers one reading of one transcript (S-E04.3). The model
+ * TranscriptReadCard offers one reading of one transcript. The model
  * reads the next steps the conversation STATES, each citing its lines. A staged
  * proposal waits for a human to confirm it. The summary is shown at once.
  *
