@@ -11165,6 +11165,29 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/integrations/dispact/manifest": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * The manifest that installs the Margince app in a Dispact team (admin).
+         * @description Read-only. Dispact reads `mcp.endpoint` to send each `@Margince` call to this
+         *     installation's `/mcp`, signed with a call token for the caller who asked. `events` is where
+         *     Dispact sends signed notices of new messages in a linked channel. Needs the right to
+         *     connect a chat bot (the `channel_connection` RBAC object).
+         */
+        get: operations["getDispactAppManifest"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/web-forms": {
         parameters: {
             query?: never;
@@ -31983,6 +32006,26 @@ export interface components {
             not_in_chat: number;
             /** @description Members left out because a new channel invites at most 50. */
             skipped_over_cap: number;
+        };
+        /** @description What Dispact needs to install the Margince app in a team. */
+        DispactAppManifest: {
+            /** @enum {string} */
+            slug: "margince";
+            name: string;
+            mcp: components["schemas"]["DispactAppManifestMcp"];
+            /** @description The bot scopes the app asks for, separated by spaces. */
+            scopes: string;
+            events: components["schemas"]["DispactAppManifestEvents"];
+        };
+        DispactAppManifestMcp: {
+            /** @description This installation's MCP address, `<public_base_url>/mcp`. */
+            endpoint: string;
+        };
+        DispactAppManifestEvents: {
+            /** @description Where Dispact sends signed notices, `<public_base_url>/v1/channel-events/dispact`. */
+            url: string;
+            /** @description The notice types the app subscribes to. */
+            types: string[];
         };
         LinkChannelRequest: {
             /** @enum {string} */
@@ -80815,6 +80858,37 @@ export interface operations {
             };
             /** @description The chat could not be reached (`code: channel_provider_unreachable`), or the summary could not be written (`code: channel_summary_failed`); nothing was filed. */
             502: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    getDispactAppManifest: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The app manifest. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DispactAppManifest"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            /** @description This deployment serves no chat channel links, or has no public base URL configured (`code: channel_links_not_configured`). */
+            503: {
                 headers: {
                     [name: string]: unknown;
                 };

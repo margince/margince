@@ -1136,6 +1136,8 @@ public.partner_stage.label_key exempt generated from independently checked sourc
 public.partner_stage.meaning document
 public.partner_stage.shipped_label label
 public.partner_stage.shipped_label_key document
+public.passport.app_issuer line
+public.passport.app_subject line
 public.passport.label label
 public.passport.scopes document
 public.passport.token_hash document

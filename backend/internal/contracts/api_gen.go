@@ -12073,6 +12073,21 @@ func (e DismissDealSuggestionRequestReason) Valid() bool {
 	}
 }
 
+// Defines values for DispactAppManifestSlug.
+const (
+	DispactAppManifestSlugMargince DispactAppManifestSlug = "margince"
+)
+
+// Valid indicates whether the value is a known member of the DispactAppManifestSlug enum.
+func (e DispactAppManifestSlug) Valid() bool {
+	switch e {
+	case DispactAppManifestSlugMargince:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for DomainQuestionContextSiteRead.
 const (
 	DomainQuestionContextSiteReadRead   DomainQuestionContextSiteRead = "read"
@@ -48552,6 +48567,35 @@ type DismissRelationshipNudgesRequest struct {
 
 	// Permanent Stop following them for good, for this reader only, until resumed one by one.
 	Permanent *bool `json:"permanent,omitempty"`
+}
+
+// DispactAppManifest What Dispact needs to install the Margince app in a team.
+type DispactAppManifest struct {
+	Events DispactAppManifestEvents `json:"events"`
+	Mcp    DispactAppManifestMcp    `json:"mcp"`
+	Name   string                   `json:"name"`
+
+	// Scopes The bot scopes the app asks for, separated by spaces.
+	Scopes string                 `json:"scopes"`
+	Slug   DispactAppManifestSlug `json:"slug"`
+}
+
+// DispactAppManifestSlug defines model for DispactAppManifest.Slug.
+type DispactAppManifestSlug string
+
+// DispactAppManifestEvents defines model for DispactAppManifestEvents.
+type DispactAppManifestEvents struct {
+	// Types The notice types the app subscribes to.
+	Types []string `json:"types"`
+
+	// Url Where Dispact sends signed notices, `<public_base_url>/v1/channel-events/dispact`.
+	Url string `json:"url"`
+}
+
+// DispactAppManifestMcp defines model for DispactAppManifestMcp.
+type DispactAppManifestMcp struct {
+	// Endpoint This installation's MCP address, `<public_base_url>/mcp`.
+	Endpoint string `json:"endpoint"`
 }
 
 // DisqualifyLeadRequest Why the lead is closed. Both fields are optional on the wire so an agent's governed disqualify still works; the UI always sends a reason.
@@ -97165,6 +97209,9 @@ type ServerInterface interface {
 	// What this installation still has to be configured with before it can be used.
 	// (GET /installation/setup)
 	GetInstallationSetup(w http.ResponseWriter, r *http.Request)
+	// The manifest that installs the Margince app in a Dispact team (admin).
+	// (GET /integrations/dispact/manifest)
+	GetDispactAppManifest(w http.ResponseWriter, r *http.Request)
 	// The installation's provider-lookup posture.
 	// (GET /integrations/settings)
 	GetIntegrationsSettings(w http.ResponseWriter, r *http.Request)
@@ -102337,6 +102384,12 @@ func (_ Unimplemented) GetFiscalYearImpact(w http.ResponseWriter, r *http.Reques
 // What this installation still has to be configured with before it can be used.
 // (GET /installation/setup)
 func (_ Unimplemented) GetInstallationSetup(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// The manifest that installs the Margince app in a Dispact team (admin).
+// (GET /integrations/dispact/manifest)
+func (_ Unimplemented) GetDispactAppManifest(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -133234,6 +133287,26 @@ func (siw *ServerInterfaceWrapper) GetInstallationSetup(w http.ResponseWriter, r
 	handler.ServeHTTP(w, r)
 }
 
+// GetDispactAppManifest operation middleware
+func (siw *ServerInterfaceWrapper) GetDispactAppManifest(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetDispactAppManifest(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // GetIntegrationsSettings operation middleware
 func (siw *ServerInterfaceWrapper) GetIntegrationsSettings(w http.ResponseWriter, r *http.Request) {
 
@@ -155325,6 +155398,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/installation/setup", wrapper.GetInstallationSetup)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/integrations/dispact/manifest", wrapper.GetDispactAppManifest)
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/integrations/settings", wrapper.GetIntegrationsSettings)

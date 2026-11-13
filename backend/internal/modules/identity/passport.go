@@ -89,6 +89,8 @@ type IssuePassportInput struct {
 	Scopes []string
 	TTL    *time.Duration
 	Areas  principal.WorkAreas
+	// App is set only by AuthenticateAppCaller, never from a request body.
+	App *AppCaller
 }
 
 // IssuedPassport carries the raw token exactly once.
@@ -221,11 +223,12 @@ func mintPassport(ctx context.Context, tx pgx.Tx, id Identity, in IssuePassportI
 	token := passportTokenPrefix + raw
 	out := IssuedPassport{Token: token, Scopes: in.Scopes}
 
+	appIssuer, appSubject := in.App.columns()
 	if err := tx.QueryRow(ctx,
-		`INSERT INTO passport (on_behalf_of, granted_by, label, scopes, token_hash, expires_at, oauth_grant_id, work_areas)
-		 VALUES ($1, $1, $2, $3, $4, now() + $5::interval, $6, $7)
+		`INSERT INTO passport (on_behalf_of, granted_by, label, scopes, token_hash, expires_at, oauth_grant_id, work_areas, app_issuer, app_subject)
+		 VALUES ($1, $1, $2, $3, $4, now() + $5::interval, $6, $7, $8, $9)
 		 RETURNING id, expires_at`,
-		id.UserID, in.Label, in.Scopes, hashToken(token), ttl.String(), grantID, areasColumn(in.Areas)).
+		id.UserID, in.Label, in.Scopes, hashToken(token), ttl.String(), grantID, areasColumn(in.Areas), appIssuer, appSubject).
 		Scan(&out.ID, &out.ExpiresAt); err != nil {
 		return IssuedPassport{}, err
 	}

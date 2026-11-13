@@ -41,6 +41,7 @@ import (
 
 	"github.com/jackc/pgx/v5/pgxpool"
 
+	"github.com/margince/margince/backend/internal/compose/dispactapp"
 	"github.com/margince/margince/backend/internal/modules/agents"
 	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/modules/search"
@@ -78,9 +79,8 @@ func (s *Server) mcpHandler(pool *pgxpool.Pool, auth *identity.Service, log *slo
 	if !s.mcpConnectorEnabled {
 		return nil
 	}
-	// An operator turning the gate on needs one line confirming the surface
-	// came up, and how much of it: a mount that silently serves nothing is
-	// indistinguishable from a mount that never happened.
+	// One line confirms the surface came up, and how much of it: a silent mount
+	// looks like no mount.
 	log.Info("mcp: hosted connector transport mounted", "path", "/mcp", "tools", len(s.toolRegistry.Specs()))
 	// The consent flow leaves this origin and has to come back to it: the
 	// authorize GET redirects a human's browser to the SPA route below, which
@@ -89,7 +89,7 @@ func (s *Server) mcpHandler(pool *pgxpool.Pool, auth *identity.Service, log *slo
 	// sends it elsewhere 404s a human mid-consent, so the target is named where an
 	// operator can compare it against what their front end actually routes.
 	log.Info("mcp: consent screen redirect target", "location", identity.ConsentScreenPath)
-	return agents.NewHTTPHandler(s.toolRegistry, mcpPaceAfterAuth(mcpAuthenticate(auth), lim.perPassport, s.volumeMeter),
+	return agents.NewHTTPHandler(s.toolRegistry, mcpPaceAfterAuth(s.dispactCalls.Or(auth, mcpAuthenticate(auth)), lim.perPassport, s.volumeMeter),
 		agents.ResourceMetadataChallenge(s.mcpAllowedOrigin), mcpServerName, mcpServerVersion, log,
 		// The cross-module edge: composing the query vocabulary is the search
 		// module's job and publishing it is the transport's, and neither
@@ -109,13 +109,9 @@ func (s *Server) mcpHandler(pool *pgxpool.Pool, auth *identity.Service, log *slo
 		// validates against (queryseam.go), which is what makes "what this
 		// document advertises" and "what a plan can be answered from" the same
 		// sentence rather than two that have to be kept in step.
-		// TWO providers now, fanned into the one the transport takes: the
-		// vocabulary above, and the interactive views the tool surface serves. The
-		// views come second, so a URI collision resolves to the vocabulary — see
-		// composeResources for why the order is stated rather than incidental, and
-		// TestTheProductionProvidersClaimDisjointURIs for the gate that makes
-		// it moot — which is the one that reaches BOTH of these, unlike the
-		// duplicate sweep, which only sees the view catalogue.
+		// Two providers fan into the one the transport takes, the vocabulary first.
+		// So a URI collision resolves to the vocabulary (composeResources), and
+		// TestTheProductionProvidersClaimDisjointURIs holds that none occurs.
 		agents.WithResourceProvider(composeResources(
 			mcpResourceProviders(
 				agents.NewCapabilitiesResource(s.toolRegistry),
@@ -143,9 +139,8 @@ func (s *Server) mcpHandler(pool *pgxpool.Pool, auth *identity.Service, log *slo
 }
 
 // mcpAuthenticate binds one request to its agent principal. It runs on EVERY
-// exchange: the passport, the granting human's seat and their RBAC are all
-// re-derived, so a revocation or demotion takes effect on the next call
-// rather than after a reconnect.
+// exchange, so a revocation or demotion binds on the next call. A Dispact call
+// token takes the dispactapp branch in front of it (mcpHandler).
 func mcpAuthenticate(auth *identity.Service) func(*http.Request) (context.Context, error) {
 	return func(r *http.Request) (context.Context, error) {
 		wsID, err := auth.InstallationWorkspace(r.Context())
@@ -196,7 +191,7 @@ func mcpPaceAfterAuth(
 		if err != nil || !meter.Paced(ctx) {
 			return ctx, err
 		}
-		if !calls.Allow(passportBucket(r)) {
+		if !calls.Allow(dispactapp.PaceKey(ctx, passportBucket(r))) {
 			return nil, mcpPacingRefusal{bucket: calls}
 		}
 		return ctx, nil
@@ -245,9 +240,8 @@ type mcpLimiters struct {
 	peerCeiling *ratelimit.Limiter // 600/min per (endpoint group, peer) — the shared ceiling no chosen key escapes
 }
 
-// The per-minute bounds of the MCP transport. They guard the server against a
-// flood and do not set what an agent may do. So the build fixes them, and the
-// settings page shows them read-only.
+// The per-minute bounds of the MCP transport guard against a flood. They do not
+// set what an agent may do, so the build fixes them and settings shows them.
 const (
 	mcpCallsPerMinute       = 240
 	mcpStreamOpensPerMinute = 30

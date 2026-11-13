@@ -6380,6 +6380,7 @@ public.idx_participant_domain_evidence_parent CREATE INDEX idx_participant_domai
 public.idx_partner_kinds CREATE INDEX idx_partner_kinds ON public.partner USING gin (partner_kinds)
 public.idx_partner_stage CREATE INDEX idx_partner_stage ON public.partner USING btree (relationship_stage)
 public.idx_partner_tier CREATE INDEX idx_partner_tier ON public.partner USING btree (margin_tier) WHERE (archived_at IS NULL)
+public.idx_passport_app_caller CREATE INDEX idx_passport_app_caller ON public.passport USING btree (app_issuer, app_subject, created_at DESC) WHERE (app_issuer IS NOT NULL)
 public.idx_passport_on_behalf_of CREATE INDEX idx_passport_on_behalf_of ON public.passport USING btree (on_behalf_of)
 public.idx_pph_project CREATE INDEX idx_pph_project ON public.project_phase_history USING btree (project_id, occurred_at DESC)
 public.idx_preference_token_contact CREATE INDEX idx_preference_token_contact ON public.preference_token USING btree (contact_id)
@@ -7957,6 +7958,8 @@ public.partner_stage.version bigint NOT NULL gen=- def=1
 public.partner_stage_key_key CREATE UNIQUE INDEX partner_stage_key_key ON public.partner_stage USING btree (key)
 public.partner_stage_pkey CREATE UNIQUE INDEX partner_stage_pkey ON public.partner_stage USING btree (id)
 public.passport acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
+public.passport.app_issuer text gen=- def=-
+public.passport.app_subject text gen=- def=-
 public.passport.created_at timestamp with time zone NOT NULL gen=- def=now()
 public.passport.expires_at timestamp with time zone NOT NULL gen=- def=-
 public.passport.granted_by uuid NOT NULL gen=- def=-
@@ -7965,6 +7968,7 @@ public.passport.label text gen=- def=-
 public.passport.last_used_at timestamp with time zone gen=- def=-
 public.passport.oauth_grant_id uuid gen=- def=-
 public.passport.on_behalf_of uuid NOT NULL gen=- def=-
+public.passport.passport_app_caller_pair CHECK (((app_issuer IS NULL) = (app_subject IS NULL)))
 public.passport.passport_expires_after_creation CHECK ((expires_at > created_at))
 public.passport.passport_grant_fkey FOREIGN KEY (oauth_grant_id) REFERENCES oauth_grant(id) ON DELETE RESTRICT
 public.passport.passport_granted_by_fkey FOREIGN KEY (granted_by) REFERENCES app_user(id) ON DELETE RESTRICT
@@ -7973,8 +7977,8 @@ public.passport.passport_pkey PRIMARY KEY (id)
 public.passport.passport_token_hash_key UNIQUE (token_hash)
 public.passport.revoked_at timestamp with time zone gen=- def=-
 public.passport.scopes text[] NOT NULL gen=- def=-
-public.passport.text_bound_insert CREATE TRIGGER text_bound_insert AFTER INSERT ON public.passport FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL::jsonb, '{"label": 120, "scopes": 20000, "token_hash": 20000, "work_areas": 20000}'::jsonb)) EXECUTE FUNCTION refuse_oversized_text('{"label":120,"scopes":20000,"token_hash":20000,"work_areas":20000}')
-public.passport.text_bound_update CREATE TRIGGER text_bound_update AFTER UPDATE ON public.passport FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"label": 120, "scopes": 20000, "token_hash": 20000, "work_areas": 20000}'::jsonb)) EXECUTE FUNCTION refuse_oversized_text('{"label":120,"scopes":20000,"token_hash":20000,"work_areas":20000}')
+public.passport.text_bound_insert CREATE TRIGGER text_bound_insert AFTER INSERT ON public.passport FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL::jsonb, '{"label": 120, "scopes": 20000, "app_issuer": 500, "token_hash": 20000, "work_areas": 20000, "app_subject": 500}'::jsonb)) EXECUTE FUNCTION refuse_oversized_text('{"app_issuer":500,"app_subject":500,"label":120,"scopes":20000,"token_hash":20000,"work_areas":20000}')
+public.passport.text_bound_update CREATE TRIGGER text_bound_update AFTER UPDATE ON public.passport FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"label": 120, "scopes": 20000, "app_issuer": 500, "token_hash": 20000, "work_areas": 20000, "app_subject": 500}'::jsonb)) EXECUTE FUNCTION refuse_oversized_text('{"app_issuer":500,"app_subject":500,"label":120,"scopes":20000,"token_hash":20000,"work_areas":20000}')
 public.passport.token_hash text NOT NULL gen=- def=-
 public.passport.uq_passport_id_owner UNIQUE (id, on_behalf_of)
 public.passport.work_areas text[] gen=- def=-

@@ -9,8 +9,8 @@ Counting what another tool covers, it is 85.1%. Once every pending operation ope
 
 | Counted over | Operations | Open to an agent | Parity |
 |---|---:|---:|---:|
-| Every operation in the contract | 1097 | 863 | 78.6% |
-| Operations a signed-in user reaches | 1054 | 863 | 81.8% |
+| Every operation in the contract | 1098 | 863 | 78.5% |
+| Operations a signed-in user reaches | 1055 | 863 | 81.8% |
 | Operations the web app calls for a signed-in user | 913 | 753 | 82.4% |
 
 The last count answers the question of parity with the web app, so it leads this page. The first adds pages for visitors with no account, where no agent acts because no signed-in user does. The second adds routes where the scan found no web app call: 110 of those are open, so an agent can do them.
@@ -48,7 +48,7 @@ Each operation is in one group. Ask first is a part of Open, so leave it out of 
 |---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
 | [Business operations](#business-operations) | Sales work | 595 | 540 | 43 | 0 | 29 | 26 | 502 | 91.4% | 90.7% |
 | [Compliance and privacy](#compliance-and-privacy) | Compliance and privacy | 68 | 48 | 21 | 0 | 20 | 0 | 55 | 69.0% | 70.5% |
-| [Capture and connectors](#capture-and-connectors) | Email and calendar capture | 60 | 46 | 12 | 0 | 14 | 0 | 58 | 75.8% | 76.6% |
+| [Capture and connectors](#capture-and-connectors) | Email and calendar capture | 61 | 46 | 12 | 0 | 15 | 0 | 58 | 75.8% | 75.4% |
 | [Workspace settings a non-admin can reach](#workspace-settings-a-non-admin-can-reach) | Company settings | 88 | 68 | 4 | 0 | 12 | 8 | 73 | 82.1% | 77.2% |
 | [Admin settings](#admin-settings) | Admin settings | 160 | 118 | 32 | 0 | 41 | 1 | 148 | 75.6% | 73.7% |
 | [The user's own account and security](#the-users-own-account-and-security) | My account | 32 | 18 | 5 | 0 | 11 | 2 | 29 | 58.6% | 56.2% |
@@ -117,7 +117,7 @@ Passport area: Email and calendar capture.
 | Area | Operations | Open | Ask first | Pending | Security | Covered | Web app calls | Parity (web app) | Parity (signed-in) |
 |---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
 | Capture review | 19 | 18 | 3 | 0 | 1 | 0 | 18 | 94.4% | 94.7% |
-| Connectors and provider connections | 33 | 21 | 7 | 0 | 12 | 0 | 32 | 62.5% | 63.6% |
+| Connectors and provider connections | 34 | 21 | 7 | 0 | 13 | 0 | 32 | 62.5% | 61.7% |
 | Accounting source | 8 | 7 | 2 | 0 | 1 | 0 | 8 | 87.5% | 87.5% |
 
 ## Workspace settings a non-admin can reach
