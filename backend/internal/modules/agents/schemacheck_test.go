@@ -265,3 +265,44 @@ func TestALargeFractionDoesNotSurviveTheIntegerCheck(t *testing.T) {
 		t.Error(`a quoted "7.5" was accepted as a declared number`)
 	}
 }
+
+// The checker reads types and leaves enum members unchecked, whatever their
+// JSON type. A numeric enum, as the served deal-lines answer spells
+// billing_interval_months, is a readable schema; a wrong type is still caught.
+func TestAnEnumOfAnyTypeLeavesTheSchemaReadable(t *testing.T) {
+	for name, schema := range map[string]string{
+		"the issue's numeric enum": `{"type":"object","required":["interval"],"properties":{"interval":{"type":"integer","enum":[1,3]}}}`,
+		"the deal-lines spelling":  `{"type":"object","required":["interval"],"properties":{"interval":{"enum":[1,3,6,12],"type":"integer","x-extensible-enum":true}}}`,
+		"a nullable numeric enum":  `{"type":"object","required":["interval"],"properties":{"interval":{"type":"integer","enum":[1,3,6,12,null]}}}`,
+		"a string enum":            `{"type":"object","required":["interval"],"properties":{"interval":{"type":"string","enum":["monthly","yearly"]}}}`,
+	} {
+		value := `{"interval":1}`
+		if strings.Contains(schema, `"string"`) {
+			value = `{"interval":"monthly"}`
+		}
+		if defect := ResultDefect(json.RawMessage(schema), json.RawMessage(value)); defect != "" {
+			t.Errorf("%s: a result that keeps the schema answered %q", name, defect)
+		}
+		if defect := ResultDefect(json.RawMessage(schema), json.RawMessage(`{"interval":true}`)); !strings.Contains(defect, "interval") {
+			t.Errorf("%s: a boolean where the schema declares otherwise answered %q", name, defect)
+		}
+	}
+}
+
+// A type name the checker has no rule for turns every answer into a logged
+// defect. The boot check refuses it at any depth.
+func TestAnUnknownTypeNameLeavesTheSchemaUnreadable(t *testing.T) {
+	for name, schema := range map[string]string{
+		"at the top":             `{"type":"widget"}`,
+		"in a property":          `{"type":"object","properties":{"n":{"type":"widget"}}}`,
+		"in array items":         `{"type":"array","items":{"type":"widget"}}`,
+		"in a map's value shape": `{"type":"object","additionalProperties":{"type":"widget"}}`,
+	} {
+		if err := SchemaReadable(json.RawMessage(schema)); err == nil || !strings.Contains(err.Error(), "widget") {
+			t.Errorf("%s: SchemaReadable = %v, want a refusal naming the type", name, err)
+		}
+	}
+	if err := SchemaReadable(json.RawMessage(`{"properties":{"n":{"type":"integer"}},"additionalProperties":false}`)); err != nil {
+		t.Errorf("a schema without a top type was refused: %v", err)
+	}
+}

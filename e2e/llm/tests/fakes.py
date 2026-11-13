@@ -83,9 +83,20 @@ class FakeMcp(_Server):
         if method != "tools/call":
             raise AssertionError(f"FakeMcp was sent {method!r}, which it does not serve")
         self.calls.append((params["name"], params.get("arguments")))
-        reply = replies.get(params["name"], ("ok", False))
-        text, is_error = reply(params.get("arguments") or {}) if callable(reply) else reply
+        name, arguments = params["name"], dict(params.get("arguments") or {})
+        # find_records picks its target by `engine` and drops it, as the server's
+        # router does, so a reply keyed by the target answers the routed call.
+        if name == "find_records" and arguments.get("engine") in FIND_RECORDS_ENGINES:
+            name = FIND_RECORDS_ENGINES[arguments.pop("engine")]
+        reply = replies.get(name, ("ok", False))
+        text, is_error = reply(arguments) if callable(reply) else reply
         return {"content": [{"type": "text", "text": text}], "isError": is_error}
+
+
+# The engines of the server's find_records router (agents/tools_regroup.go).
+FIND_RECORDS_ENGINES = {
+    "search": "search_records", "list": "list_records", "meaning": "search_context", "identify": "resolve_entities",
+}
 
 
 class FakeProvider(_Server):

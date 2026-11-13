@@ -1516,6 +1516,35 @@ seed_contact "Wiebke Brandstätter" "wiebke.brandstaetter@ostfriesen-kaelte.test
 seed_contact "Okko Rademacher" "okko.rademacher@emder-werftbedarf.test" "$me" >/dev/null
 seed_contact "Theda Uphoff" "theda.uphoff@leeraner-moorbau.test" "$me" >/dev/null
 
+# --- CASE 118: a project someone judged at risk, and why ---------------------
+#
+# One human health reading, at risk, with a note. The note is the fact the case
+# asserts: no other record says the cranes slipped, so an answer that names it
+# read the project's current health and not a guess from its tasks.
+kranwerk="$(company_id_by_name "Kranwerk Nord GmbH")"
+if [[ -z "$kranwerk" ]]; then
+  body="$(printf '{"display_name":"Kranwerk Nord GmbH","owner_id":"%s","industry":"Hafentechnik"}' "$me")"
+  kranwerk="$(create_or_die "/companies" "$body" "Kranwerk Nord GmbH")"
+fi
+project="$(api GET "/projects?q=$(url_encode "Hafenkran Retrofit")&limit=50" | python3 -c 'import json,sys
+for row in json.load(sys.stdin).get("data", []):
+    if row.get("name") == "Hafenkran Retrofit":
+        print(row["id"]); break
+else:
+    print("")')"
+if [[ -z "$project" ]]; then
+  body="$(printf '{"name":"Hafenkran Retrofit","company_id":"%s","owner_id":"%s","source":"%s","description":"Steuerung von zwei Hafenkränen erneuern."}' \
+    "$kranwerk" "$me" "$FIXTURE_SOURCE")"
+  project="$(create_or_die "/projects" "$body" "the Hafenkran project")"
+  create_or_die "/projects/$project/advance" '{"to_phase":"pursuing","reason":"Angebot angenommen."}' \
+    "the pursuing entry in the Hafenkran project's history" >/dev/null
+  create_or_die "/projects/$project/advance" '{"to_phase":"delivering","reason":"Montage beauftragt."}' \
+    "the delivering entry in the Hafenkran project's history" >/dev/null
+  create_or_die "/projects/$project/health-assessments" \
+    '{"state":"at_risk","note":"Der Zulieferer hat die Steuerschränke um sechs Wochen verschoben."}' \
+    "the at-risk health reading on the Hafenkran project" >/dev/null
+fi
+
 # --- THE ROSTER IS VERIFIED, not assumed ---------------------------------
 #
 # The seats above are the fixture's most silent failure mode. A seat that stays

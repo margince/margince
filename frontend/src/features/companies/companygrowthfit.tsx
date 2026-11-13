@@ -152,6 +152,7 @@ export function GrowthFitPanel({
     <Panel
       className="co-worth"
       title={t("co.growthFit.title")}
+      help={t("co.growthFit.help")}
       // The assessment is a machine's, in every state it can be in — so the
       // tint rides the panel rather than the readable payload.
       tone="ai"

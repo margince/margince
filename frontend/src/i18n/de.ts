@@ -3847,6 +3847,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "co.overview.kind.task": "Aufgabe",
   "co.overview.kind.message": "Nachricht",
   "record.details.about": "Überblick",
+  "section.help": "Über diesen Bereich",
   "record.details.ownership": "Zuständigkeit",
   "co.aside.size": "Mitarbeitende",
   "co.aside.wayIn": "Zugang",
@@ -4513,6 +4514,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "co.brief.generatedAt": "Stand {when}",
   "co.assembly.writtenNow": "gerade geschrieben",
   "co.growthFit.title": "Wachstumspotenzial",
+  "co.growthFit.help":
+    "Eine KI-Einschätzung, wie gut dieses Unternehmen zu dem passt, was dein Team verkauft, aus sieben Angaben wie Branche, Größe und eingesetzter Technik. Je mehr davon erfasst sind, desto belastbarer das Ergebnis.",
   "co.growthFit.unavailable":
     "Die Bewertung konnte nicht geladen werden. Der Unternehmensdatensatz ist unverändert.",
   "co.growthFit.assembling":
@@ -4830,6 +4833,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
 
   // Die Prüfliste und die Reichweiten-Tabelle (ADR-0078 §2.1b).
   "companyReach.title": "Wer dich vorstellen kann",
+  "companyReach.help":
+    "Teammitglieder, deren LinkedIn-Kontakte bei diesem Unternehmen arbeiten, als Anzahl. Frag eines von ihnen, ob es dich vorstellt.",
   "companyReach.sub":
     "Teammitglieder, deren LinkedIn-Kontakte hier arbeiten. Nur eine Anzahl, nie die Namen. Frage sie nach einer Vorstellung.",
   "companyReach.colleaguesLabel": "Teammitglieder mit Kontakten hier",
@@ -6061,6 +6066,11 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "deal.ownerMe": "Mir zuweisen",
   "deal.ownerUnassign": "Zuweisung aufheben",
   "deal.partnerCompany": "Vermittelndes Partnerunternehmen",
+  "deal.partnerNoneYet": "Noch keine Partner. Ein Admin kann einen anlegen.",
+  "deal.referredBy": "Partner",
+  "deal.supportedBy": "Partner",
+  "deal.referral.sourced": "(vermittelt)",
+  "deal.referral.influenced": "(beeinflusst)",
   "deal.recordedBy": "Erfasst von",
   "deal.companyWithheld": "Unternehmen ausgeblendet",
   "deal.partnerWithheld": "Partner ausgeblendet",
@@ -6365,6 +6375,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
 
   "deal.monthlyApproximate": "etwa",
   "assignments.title": "Zuständigkeiten",
+  "assignments.help":
+    "Wer in deinem Team sich um diesen Datensatz kümmert, nach Rolle. Das ändert nicht, wer ihn sehen darf; dafür teilst du ihn.",
   "assignments.noAccessNote":
     "Hält fest, wer sich worum kümmert. Eine Zuständigkeit gewährt keinen Zugriff auf diesen Datensatz.",
   "assignments.empty": "Noch niemand zugewiesen",
@@ -19077,6 +19089,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "lists.noteHint":
     "Wird mit der \u00c4nderung gespeichert, damit das Team den Grund sieht.",
   "lists.record.title": "Listen",
+  "lists.record.help":
+    "Die Listen, auf denen dieses Unternehmen steht. Live-Listen nehmen es nach ihren Regeln auf; auf eine Shortlist setzt du es selbst. Mit einer Liste arbeitest du Unternehmen nacheinander ab.",
   "lists.record.loading": "Listen werden geladen",
   "lists.record.empty": "Auf keiner Liste, die du finden kannst.",
   "lists.record.check": "Live-Liste pr\u00fcfen",

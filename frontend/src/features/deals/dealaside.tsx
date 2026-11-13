@@ -10,7 +10,7 @@ import {
   useCustomFieldDisplay,
   useObjectCustomFields,
 } from "../../components/customfields.form";
-import { EntityRef, useEntityName } from "../../components/entityref";
+import { EntityRef } from "../../components/entityref";
 import { type RailEdit, RailField } from "../../components/railfield";
 import { AppLink } from "../../design-system/applink";
 import { Badge } from "../../design-system/atoms";
@@ -44,6 +44,7 @@ import {
   PRIORITY_OPTIONS,
 } from "./deal360/dealcommercialfields";
 import { useDealEdit } from "./dealedit";
+import { DealPartner } from "./dealpartner";
 import { ProbabilityHint } from "./dealprobabilityhint";
 import type { Deal, Stage } from "./deals";
 import "./deal360/deal360.css";
@@ -374,34 +375,6 @@ function registrationRows(
       ) : null,
     ),
   ];
-}
-
-// The partner and what it did: a sourced deal earns commission, an influenced
-// one does not, so the two must not read alike. No partner is an answer.
-function DealPartner({ deal }: Readonly<{ deal: Deal }>) {
-  const t = useT();
-  const name = useEntityName("company", deal.partner_company_id).name;
-  if (deal.masked_fields?.includes("partner_company_id")) {
-    return <FieldGuard mode="masked" />;
-  }
-  if (!deal.partner_company_id) {
-    return <>{t("deal.aside.partnerNone")}</>;
-  }
-  const role =
-    deal.partner_attribution === "sourced"
-      ? t("deal.attributionSourced")
-      : deal.partner_attribution === "influenced"
-        ? t("deal.attributionInfluenced")
-        : undefined;
-  return (
-    <AppLink
-      className="deal-aside-link"
-      href={routeHash({ screen: "companies", id: deal.partner_company_id })}
-      title={role}
-    >
-      {[name ?? t("field.unset"), role].filter(Boolean).join(" · ")}
-    </AppLink>
-  );
 }
 
 // A stored option in the reader's words; one this build does not list reads
