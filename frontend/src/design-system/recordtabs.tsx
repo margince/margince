@@ -105,7 +105,11 @@ export function RecordTabs<Option extends string>({
   const edges = useClippedEdges(stripRef);
   // A lone body has nothing to fold, and a strip without a handler has nowhere
   // to send a folded tab.
-  const folded = useFoldedTabs(stripRef, onChange ? options : [], value);
+  const { folded, least } = useFoldedTabs(
+    stripRef,
+    onChange ? options : [],
+    value,
+  );
   const keepFocus = useFocusKeptOnFold(stripRef, folded, value);
   const tabBody = (option: Option) => {
     const count = counts?.[option];
@@ -131,6 +135,9 @@ export function RecordTabs<Option extends string>({
         <fieldset
           ref={stripRef}
           className={stripClass(edges)}
+          // Below this the trailing control wraps under the strip, because
+          // folding cannot make the strip narrower than its open tab and More.
+          style={least > 0 ? { minInlineSize: least } : undefined}
           aria-label={label ?? t("record.tabs")}
           {...keepFocus}
         >

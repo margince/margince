@@ -19,6 +19,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/kernel/provenance"
 	"github.com/margince/margince/backend/internal/shared/kernel/relstrength"
+	"github.com/margince/margince/backend/internal/shared/ports/connector"
 	"github.com/margince/margince/backend/internal/shared/ports/datasource"
 )
 
@@ -229,6 +230,43 @@ func anchorProfile(ctx context.Context, tx pgx.Tx, branch *searchBranch, anchorT
 	return title, nil
 }
 
+// anchorTimelineSQL is hop 1's read: one touch per mail, however many
+// mailboxes captured it, so copies cannot push distinct touches out of the
+// sample. Every candidate passes the content gate.
+//
+// A readable copy filed elsewhere joins its group, so hop 2 walks its links.
+// Copies share the thread key mailmap derives from the headers, which keeps
+// that search on the thread index. A group shows only when a member reaches
+// the anchor. The seventh column is the import marker trustOfWriter explains.
+func anchorTimelineSQL(ctx context.Context, linkCol string, anchorPos int, within projectScope, arg func(any) int) (string, error) {
+	scope, err := auth.ActivityContentClause(ctx, "a", arg)
+	if err != nil {
+		return "", err
+	}
+	narrowing := conjunction("a.archived_at IS NULL", scope, within.clause("a", arg))
+	// An ACCOUNT reaches its activities by three arms rather than one, so it
+	// takes a predicate where every other anchor takes its link column.
+	reach := fmt.Sprintf("EXISTS (SELECT 1 FROM activity_link l WHERE l.activity_id = a.id AND l.%s = $%d)", linkCol, anchorPos)
+	if linkCol == anchorLinkColumn[string(datasource.EntityCompany)] {
+		reach = activityReachesCompany(anchorPos)
+	}
+	elsewhere := `a.kind = 'email' AND a.thread_key IN (SELECT r.thread_key FROM activity r WHERE r.id IN (SELECT id FROM reached))
+		AND ` + connector.SharedMailKeySQL("a") + ` IN (SELECT ` + connector.SharedMailKeySQL("r") + ` FROM activity r WHERE r.id IN (SELECT id FROM reached))`
+	// The content gate is rendered once, over every candidate, and the rest of
+	// the statement tests membership in that set: each copy costs plan memory.
+	return fmt.Sprintf(`
+		WITH reached(id) AS (SELECT a.id FROM activity a WHERE %s),
+		candidate(id) AS (SELECT id FROM reached UNION SELECT a.id FROM activity a WHERE %s),
+		readable(id) AS MATERIALIZED (SELECT a.id FROM activity a WHERE a.id = ANY(ARRAY(SELECT id FROM candidate)) AND %s)
+		SELECT a.id, coalesce(a.subject, a.kind), a.kind, a.is_done, a.occurred_at, coalesce(a.captured_by, ''),
+		       (coalesce(a.source_system, '') LIKE '%s%%'), a.occurred_precision = 'day', copies.copy_ids
+		FROM %s
+		WHERE copies.copy_ids && ARRAY(SELECT id FROM reached)
+		ORDER BY a.occurred_at DESC LIMIT %d`, reach, elsewhere, narrowing, provenance.ReservedSourceSystemPrefix,
+		connector.MailCopyGroupFrom(ctx, "activity", "a", "a.id IN (SELECT id FROM readable)", sqlTrue, arg),
+		graphExpansionLimit), nil
+}
+
 // anchorTimeline is hop 1: the anchor's activity timeline, scope-walked
 // and ranked by recency × trust (§10.7.2 with similarity = 0), split
 // into recent touches and open tasks.
@@ -236,34 +274,10 @@ func anchorTimeline(ctx context.Context, tx pgx.Tx, linkCol string, anchorID ids
 	var args []any
 	arg := func(v any) int { args = append(args, v); return len(args) }
 	anchorPos := arg(anchorID)
-	scope, err := auth.ActivityContentClause(ctx, "a", arg)
+	activitySQL, err := anchorTimelineSQL(ctx, linkCol, anchorPos, within, arg)
 	if err != nil {
 		return nil, nil, nil, err
 	}
-	// An ACCOUNT reaches its activities by three arms rather than one, so it
-	// takes a predicate where every other anchor takes a join on its own link
-	// column. That link is only one of the three, and for a meeting it is the
-	// one that cannot exist.
-	join := "JOIN activity_link l ON l.activity_id = a.id"
-	reach := fmt.Sprintf("l.%s = $%d", linkCol, anchorPos)
-	if linkCol == anchorLinkColumn[string(datasource.EntityCompany)] {
-		join, reach = "", activityReachesCompany(anchorPos)
-	}
-	// The seventh column is the import marker the trust ladder reads, as one
-	// boolean. trustOfWriter states what it means and why it is spelled this
-	// way — the namespace, the coalesce, and what each would break without.
-	activitySQL := fmt.Sprintf(`
-		SELECT a.id, coalesce(a.subject, a.kind), a.kind, a.is_done, a.occurred_at, coalesce(a.captured_by, ''),
-		       (coalesce(a.source_system, '') LIKE '%s%%'), a.occurred_precision = 'day'
-		FROM activity a %s
-		WHERE %s AND a.archived_at IS NULL`, provenance.ReservedSourceSystemPrefix, join, reach)
-	if scope != "" {
-		activitySQL += " AND " + scope
-	}
-	if narrow := within.clause("a", arg); narrow != "" {
-		activitySQL += " AND " + narrow
-	}
-	activitySQL += fmt.Sprintf(" ORDER BY a.occurred_at DESC LIMIT %d", graphExpansionLimit)
 	rows, err := tx.Query(ctx, activitySQL, args...)
 	if err != nil {
 		return nil, nil, nil, err
@@ -274,10 +288,14 @@ func anchorTimeline(ctx context.Context, tx pgx.Tx, linkCol string, anchorID ids
 		var summary, kind, capturedBy string
 		var isDone, imported, dateOnly bool
 		var occurredAt time.Time
-		if err := rows.Scan(&id, &summary, &kind, &isDone, &occurredAt, &capturedBy, &imported, &dateOnly); err != nil {
+		var copies []ids.UUID
+		if err := rows.Scan(&id, &summary, &kind, &isDone, &occurredAt, &capturedBy, &imported, &dateOnly, &copies); err != nil {
 			return nil, nil, nil, err
 		}
-		activityIDs = append(activityIDs, id)
+		// Every copy's links lead on: each colleague filed their own.
+		for _, copyID := range copies {
+			activityIDs = append(activityIDs, ids.From[ids.ActivityKind](copyID))
+		}
 		// graphItem.id is the polymorphic result column (activity here,
 		// contact/company/deal on the hop-2 sections), so it carries
 		// the untyped UUID.

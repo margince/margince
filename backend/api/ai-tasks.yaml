@@ -311,6 +311,18 @@ tasks:
     company_context: {scopes: [positioning, sales, proof, market], token_budget: 1400}
     doc: "Five sites, one task: the reply to an activity, the contact page's composer, the company page's first-touch outbound, the ask a rep sends a COLLEAGUE for an introduction (the only one written to somebody on our own side, which is why it carries its own phrasing), and the note that colleague then FORWARDS to the contact (draft_email over MCP, which names records to file under rather than records to write from). The last two are one workflow and two registers: the ask is internal and its overclaim is falsifiable by the teammate reading it, while the note goes out over that colleague's own name to a customer who cannot check it — which is why they carry separate prompts, separate wording tables and separate scenarios rather than one site with a flag. They differ in what a draft is grounded IN, and share the rules block every drafting surface writes under (compose/draftrules). The reply site and the two composers each have two system variants (voice-enabled and plain), selected per call from the sender's Voice DNA state — a variant, not a site of its own."
 
+  rewrite:
+    display_name: "Rewriting"
+    summary: "Rewrites the words you typed when you press Polish, Shorter, Warmer, More formal or Add a deadline."
+    ladder: [premium, cheap_cloud]
+    execution_mode: interactive
+    on_budget_exhausted: degrade
+    status: shipped
+    subject_restriction: honour
+    sites: [rewrite]
+    company_context: none
+    doc: "One rewrite verb (Polish, Shorter, Warmer, More formal, Add a deadline) over the words a rep has on screen: an email body in the composer, or a task or note in Add task and Log activity. It keeps their meaning, language, names, numbers, dates and links, reads no company context and no record, and writes nothing. Its own task, apart from draft_reply, so it can run premium first: the cheap tier adds meaning to the rep's words, and a rewrite that changes what they said is worse than none. The cheap tier stays as the fallback, because a rep who pressed a button is better served by a careful cheap answer than by an outage."
+
   nl_search:
     display_name: "Natural-language search"
     summary: "Turns a list described in plain words into filters you can check and save."

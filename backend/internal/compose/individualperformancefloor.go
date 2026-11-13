@@ -211,6 +211,15 @@ func requirePopulationFloor(ctx context.Context, tx pgx.Tx, resolved ResolvedSco
 	return requireNoLoneColleague(ctx, tx, [][]ids.UUID{members})
 }
 
+// requireFlooredTotals holds a population's totals to the floor both ways: by
+// the seats behind each figure, and by the population's members.
+func requireFlooredTotals(ctx context.Context, tx pgx.Tx, resolved ResolvedScope, contributors [][]ids.UUID) error {
+	if err := requireNoLoneColleague(ctx, tx, contributors); err != nil {
+		return err
+	}
+	return requirePopulationFloor(ctx, tx, resolved)
+}
+
 // requireSpecPopulationFloor is requirePopulationFloor for a report spec's
 // answer. A spec without an owner column has no team to narrow to, so no team
 // total to take from it.

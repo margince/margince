@@ -57,7 +57,7 @@ func (s *Store) CorrectHeldWording(ctx context.Context, intent ids.UUID, in comm
 		}
 		var status string
 		if err := tx.QueryRow(ctx, `SELECT version, status FROM scheduled_send WHERE id=@id AND scheduled_by=@seat AND held_reason=@hold_reason FOR UPDATE`,
-			pgx.StrictNamedArgs{"id": intent, "seat": actor.UserID, "hold_reason": HeldSendRefused}).Scan(&version, &status); err != nil {
+			pgx.StrictNamedArgs{"id": intent, argSeat: actor.UserID, "hold_reason": HeldSendRefused}).Scan(&version, &status); err != nil {
 			if errors.Is(err, pgx.ErrNoRows) {
 				return apperrors.ErrNotFound
 			}
@@ -73,7 +73,7 @@ func (s *Store) CorrectHeldWording(ctx context.Context, intent ids.UUID, in comm
 		if err := tx.QueryRow(ctx, `UPDATE scheduled_send
 			SET payload=payload || jsonb_build_object('subject',@subject::text,'body',@body::text,'html_body',@html::text),
 			version=version+1, updated_at=now() WHERE id=@id RETURNING version`, pgx.StrictNamedArgs{
-			fieldSubject: in.Subject, fieldBody: in.Body, "html": markup, "id": intent,
+			fieldSubject: in.Subject, fieldBody: in.Body, argHTML: markup, "id": intent,
 		}).Scan(&version); err != nil {
 			return fmt.Errorf("scheduled send: recording the wording correction: %w", err)
 		}

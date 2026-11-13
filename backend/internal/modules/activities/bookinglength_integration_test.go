@@ -22,18 +22,29 @@ import (
 type existingLengthBooker struct {
 	contact ids.UUID
 	lead    ids.LeadID
+	created bool
+	// host is the booking page host the handler named, and fills counts the
+	// gap fills it asked for; the test reads both back.
+	host  *ids.UserID
+	fills *int
 }
 
-func (b existingLengthBooker) EnsureBookerByEmail(context.Context, string, string, string, storekit.ErasureAdmission) (ids.UUID, ids.LeadID, error) {
-	return b.contact, b.lead, nil
+func (b existingLengthBooker) EnsureBookerByEmail(_ context.Context, host ids.UserID, _, _, _ string, _ storekit.ErasureAdmission) (ids.UUID, ids.LeadID, bool, error) {
+	*b.host = host
+	return b.contact, b.lead, b.created, nil
+}
+
+func (b existingLengthBooker) FillBookerGaps(context.Context, ids.UUID, ids.UserID, string) error {
+	*b.fills++
+	return nil
 }
 
 func TestOfferedLengthsReachAvailabilityAndTheActualReservation(t *testing.T) {
 	for _, test := range []struct {
 		name            string
 		requested, want int
-		lead            bool
-	}{{"offered contact", 45, 45, false}, {"offered lead", 60, 60, true}, {"unknown length defaults", 47, 30, false}} {
+		lead, created   bool
+	}{{"offered contact", 45, 45, false, false}, {"offered lead", 60, 60, true, false}, {"unknown length defaults", 47, 30, false, false}, {"created contact", 45, 45, false, true}} {
 		t.Run(test.name, func(t *testing.T) {
 			f := newInvitationFixture(t)
 			profile := savePage(t, f, true)
@@ -42,7 +53,7 @@ func TestOfferedLengthsReachAvailabilityAndTheActualReservation(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			booker := existingLengthBooker{contact: ids.UUID(f.request.ContactId)}
+			booker := existingLengthBooker{contact: ids.UUID(f.request.ContactId), created: test.created, host: new(ids.UserID), fills: new(int)}
 			if test.lead {
 				booker.contact = ids.Nil
 				booker.lead = ids.New[ids.LeadKind]()
@@ -76,6 +87,13 @@ func TestOfferedLengthsReachAvailabilityAndTheActualReservation(t *testing.T) {
 			handler.BookPublicMeeting(response, request, *profile.Slug, crmcontracts.BookPublicMeetingParams{L: &test.requested})
 			if response.Code != http.StatusCreated {
 				t.Fatalf("reservation: %d %s", response.Code, response.Body.String())
+			}
+			if booker.host.UUID != f.env.rep {
+				t.Errorf("the booker was ensured for host %s, want the page's host %s", booker.host, f.env.rep)
+			}
+			// Only an existing contact is filled: a created one already has it all.
+			if want := map[bool]int{true: 0, false: 1}[test.lead || test.created]; *booker.fills != want {
+				t.Errorf("gap fills = %d, want %d", *booker.fills, want)
 			}
 			saved, err := f.store.SchedulingProfile(f.ctx)
 			if err != nil || saved.DurationMinutes != 30 {

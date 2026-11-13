@@ -34,12 +34,15 @@ const (
 // runStatusRequiresApproval is the stored status of a run an approval holds.
 const runStatusRequiresApproval = "requires_approval"
 
+// runStatusApplied is the stored status of a run whose effects were written.
+const runStatusApplied = "applied"
+
 // runStatusByOutcome maps the contract's outcome vocabulary onto the
 // workflow_run.status set (the two differ where the wire says what the
 // user sees — "fired", "queued_for_approval" — and the row says what the
 // engine did).
 var runStatusByOutcome = map[string]string{
-	"fired":               "applied",
+	"fired":               runStatusApplied,
 	runStatusFailed:       runStatusFailed,
 	runBlocked:            runBlocked,
 	runSkipped:            runSkipped,
@@ -49,7 +52,7 @@ var runStatusByOutcome = map[string]string{
 // runOutcomeByStatus is the inverse mapping; the status CHECK constraint
 // (migration 0061) closes the domain, so the map is total over stored rows.
 var runOutcomeByStatus = map[string]string{
-	"applied":                 "fired",
+	runStatusApplied:          "fired",
 	runStatusFailed:           runStatusFailed,
 	runBlocked:                runBlocked,
 	runSkipped:                runSkipped,

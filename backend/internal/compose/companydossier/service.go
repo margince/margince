@@ -191,7 +191,7 @@ func (s *Service) Get(ctx context.Context, companyID ids.CompanyID, force bool) 
 		return zero, err
 	}
 	if found && !force && cached.usable(fingerprint) {
-		return s.enrich(ctx, cached.wire(companyID, s.now().UTC()))
+		return s.enrich(ctx, cached.wire(companyID, s.now().UTC(), crmcontracts.AssemblyServedFromCache))
 	}
 
 	// The company is NAMED to the rail here, from the same input the dossier
@@ -207,7 +207,7 @@ func (s *Service) Get(ctx context.Context, companyID ids.CompanyID, force bool) 
 		// The same gate the ordinary read applies: a lane being down is a
 		// reason to keep a good answer, never to serve one written from facts
 		// that have since moved or in a shape this build cannot read.
-		return s.enrich(ctx, cached.wire(companyID, s.now().UTC()))
+		return s.enrich(ctx, cached.wire(companyID, s.now().UTC(), crmcontracts.AssemblyServedFromCache))
 	}
 	written := stored{
 		Fingerprint:    fingerprint,
@@ -221,12 +221,12 @@ func (s *Service) Get(ctx context.Context, companyID ids.CompanyID, force bool) 
 	// the current fingerprint, this plainer answer would be served as a hit on
 	// every later read, so one transient outage would outlive itself.
 	if laneFailed || withheld {
-		return s.enrich(ctx, written.wire(companyID, s.now().UTC()))
+		return s.enrich(ctx, written.wire(companyID, s.now().UTC(), crmcontracts.AssemblyServedFromGenerated))
 	}
 	if err := s.save(ctx, userID, companyID, written); err != nil {
 		return zero, err
 	}
-	return s.enrich(ctx, written.wire(companyID, s.now().UTC()))
+	return s.enrich(ctx, written.wire(companyID, s.now().UTC(), crmcontracts.AssemblyServedFromGenerated))
 }
 
 // keepGrounded runs every assembled sentence past the SHARED filter, whichever
@@ -279,7 +279,7 @@ func Fingerprint(in Input, routingVersion, lang string) (string, error) {
 	return hex.EncodeToString(sum[:]), nil
 }
 
-func (d stored) wire(companyID ids.CompanyID, now time.Time) crmcontracts.CompanyDossier {
+func (d stored) wire(companyID ids.CompanyID, now time.Time, from crmcontracts.AssemblyServedFrom) crmcontracts.CompanyDossier {
 	sections := make([]crmcontracts.CompanyDossierSection, 0, len(d.Sections))
 	for _, section := range d.Sections {
 		sentences := wireSentences(section.Sentences)
@@ -297,6 +297,7 @@ func (d stored) wire(companyID ids.CompanyID, now time.Time) crmcontracts.Compan
 		CompanyId:   openapi_types.UUID(companyID.UUID),
 		GeneratedAt: d.GeneratedAt,
 		GeneratedBy: crmcontracts.WrittenBy(d.GeneratedBy),
+		ServedFrom:  &from,
 		Sections:    sections,
 	}
 	// Said out loud BESIDE the content, never instead of it: a stale dossier is

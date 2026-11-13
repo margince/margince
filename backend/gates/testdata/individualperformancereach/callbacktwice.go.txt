@@ -1,0 +1,38 @@
+package callbacktwice
+
+import (
+	"context"
+	"net/http"
+
+	"example.test/auth"
+	"example.test/httperr"
+)
+
+type Handlers struct {
+	read func(ctx context.Context) ([]int, error)
+}
+
+func NewChecked() Handlers   { return Handlers{read: checkedFigures} }
+func NewUnchecked() Handlers { return Handlers{read: uncheckedFigures} }
+
+func checkedFigures(ctx context.Context) ([]int, error) {
+	if err := auth.Require(ctx); err != nil {
+		return nil, err
+	}
+	return []int{1}, nil
+}
+
+func uncheckedFigures(ctx context.Context) ([]int, error) { return []int{1}, nil }
+
+func serve(w http.ResponseWriter, r *http.Request, figures func(context.Context) ([]int, error)) {
+	out, err := figures(r.Context())
+	if err != nil {
+		httperr.Write(w, r, err)
+		return
+	}
+	httperr.WriteJSON(w, http.StatusOK, out)
+}
+
+func (h Handlers) GetChecked(w http.ResponseWriter, r *http.Request)      { serve(w, r, checkedFigures) }
+func (h Handlers) GetUnchecked(w http.ResponseWriter, r *http.Request)    { serve(w, r, uncheckedFigures) }
+func (h Handlers) GetThroughField(w http.ResponseWriter, r *http.Request) { serve(w, r, h.read) }

@@ -100,6 +100,8 @@ type Store struct {
 	shareRequests ShareRequests
 	// leadArrivals tells a contact's owner about a lead refused for them; nil tells nobody.
 	leadArrivals LeadArrivals
+	// partnerNextSteps writes a partner's next step as a task; nil refuses one.
+	partnerNextSteps PartnerNextSteps
 	// leadQualifyTasks files the durable follow-up when captured work lands on a lead.
 	leadQualifyTasks LeadQualifyTasks
 	// extensions declares the extension tables whose rows depend on a record; a

@@ -91,7 +91,10 @@ func TestDailyUseBudgets(t *testing.T) {
 			logWorklistStages(t, seat.Role, stagesBefore)
 		}
 		admin := Seat{Name: "admin", Role: "admin", Client: e.Client}
-		rows = append(rows, runDailyFlow(t, e, dailyAdminFlow, dailyInput{Seat: admin, Team: seats.Teams[0]})...)
+		adminIn := dailyInput{Seat: admin, Team: seats.Teams[0], AIMonth: dailyAIMonth(t, e)}
+		for _, f := range []dailyFlow{dailyAdminFlow, dailyAISettingsFlow} {
+			rows = append(rows, runDailyFlow(t, e, f, adminIn)...)
+		}
 		assertDailyReviewFocus(t, rows)
 	})
 

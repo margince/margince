@@ -457,7 +457,7 @@ func (w renewalReminder) Plan(ctx context.Context, ev workflow.Event) (workflow.
 	// Due AT the firing, not three days out like the quiet-account reminders:
 	// the renewal this warns about can be today, so a horizon would file the
 	// task after the date it exists to get ahead of.
-	return ownedTaskEffectNoKey(ctx, w.ex, ev, subject, ev.OccurredAt)
+	return configuredTaskEffect(ctx, w.ex, ev, subject, ev.OccurredAt)
 }
 
 func (w renewalReminder) Apply(ctx context.Context, _ workflow.Event, eff workflow.Effect, _ *workflow.ApprovalToken) (workflow.RunResult, error) {

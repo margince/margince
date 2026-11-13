@@ -57,6 +57,8 @@ The 5 tables owned by `integrations`, as the migrations build them. [Back to the
 
 **Triggers**
 
+- `text_bound_insert`: `AFTER INSERT FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL, '{"mode": 20000, "preset": 20000, "status": 20000, "provider": 20000, "categories": 20000, "credential_ref": 20000, "last_safe_status_code": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"categories":20000,"credential_ref":20000,"last_safe_status_code":20000,"mode":20000,"preset":20000,"provider":20000,"status":20000}')`
+- `text_bound_update`: `AFTER UPDATE FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"mode": 20000, "preset": 20000, "status": 20000, "provider": 20000, "categories": 20000, "credential_ref": 20000, "last_safe_status_code": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"categories":20000,"credential_ref":20000,"last_safe_status_code":20000,"mode":20000,"preset":20000,"provider":20000,"status":20000}')`
 - `trg_provider_connection_updated`: `BEFORE UPDATE FOR EACH ROW EXECUTE FUNCTION set_updated_at_bump_version()`
 
 ## provider_connection_budget
@@ -88,6 +90,11 @@ The 5 tables owned by `integrations`, as the migrations build them. [Back to the
 **Indexes**
 
 - `provider_connection_budget_pkey`: `unique, btree (connection_id, pool)`
+
+**Triggers**
+
+- `text_bound_insert`: `AFTER INSERT FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL, '{"pool": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"pool":20000}')`
+- `text_bound_update`: `AFTER UPDATE FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"pool": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"pool":20000}')`
 
 ## provider_run
 
@@ -154,6 +161,8 @@ The 5 tables owned by `integrations`, as the migrations build them. [Back to the
 
 **Triggers**
 
+- `text_bound_insert`: `AFTER INSERT FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL, '{"state": 20000, "trigger": 20000, "provider": 20000, "skip_reason": 2000, "subject_kind": 20000, "provider_job_id": 20000, "input_fingerprint": 20000, "requested_categories": 20000, "last_safe_status_code": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"input_fingerprint":20000,"last_safe_status_code":20000,"provider":20000,"provider_job_id":20000,"requested_categories":20000,"skip_reason":2000,"state":20000,"subject_kind":20000,"trigger":20000}')`
+- `text_bound_update`: `AFTER UPDATE FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"state": 20000, "trigger": 20000, "provider": 20000, "skip_reason": 2000, "subject_kind": 20000, "provider_job_id": 20000, "input_fingerprint": 20000, "requested_categories": 20000, "last_safe_status_code": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"input_fingerprint":20000,"last_safe_status_code":20000,"provider":20000,"provider_job_id":20000,"requested_categories":20000,"skip_reason":2000,"state":20000,"subject_kind":20000,"trigger":20000}')`
 - `trg_provider_run_release_categories`: `BEFORE UPDATE OF state, contact_id FOR EACH ROW WHEN (((new.state <> ALL (ARRAY['queued', 'submitting', 'in_progress', 'submission_unknown'])) OR (new.contact_id IS NULL))) EXECUTE FUNCTION provider_run_release_categories()`
 - `trg_provider_run_updated`: `BEFORE UPDATE FOR EACH ROW EXECUTE FUNCTION set_updated_at()`
 
@@ -183,6 +192,11 @@ The 5 tables owned by `integrations`, as the migrations build them. [Back to the
 - `provider_run_category_one_live_buyer`: `unique, btree (contact_id, provider, category)`
 - `provider_run_category_pkey`: `unique, btree (run_id, contact_id, provider, category)`
 
+**Triggers**
+
+- `text_bound_insert`: `AFTER INSERT FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL, '{"category": 20000, "provider": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"category":20000,"provider":20000}')`
+- `text_bound_update`: `AFTER UPDATE FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"category": 20000, "provider": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"category":20000,"provider":20000}')`
+
 ## provider_run_reservation
 
 6 columns · primary key `(run_id, pool)` · referenced by 0 foreign keys
@@ -210,3 +224,8 @@ The 5 tables owned by `integrations`, as the migrations build them. [Back to the
 **Indexes**
 
 - `provider_run_reservation_pkey`: `unique, btree (run_id, pool)`
+
+**Triggers**
+
+- `text_bound_insert`: `AFTER INSERT FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL, '{"pool": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"pool":20000}')`
+- `text_bound_update`: `AFTER UPDATE FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"pool": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"pool":20000}')`

@@ -49,10 +49,10 @@ func TestTheBriefingLaneReadsAnExpiredSnoozeInAReadOnlyTransaction(t *testing.T)
 	timed, replied := run.Items[0], run.Items[1]
 	setDown := b.now.Add(time.Minute)
 	until := b.now.Add(time.Hour)
-	if _, err := b.engine.MarkSnoozed(b.repCtx, timed.ID, values.ReopenOnTime, &until, nil, setDown); err != nil {
+	if _, err := b.engine.MarkSnoozed(b.repCtx, timed.ID, values.ReopenOnTime, &until, nil, setDown, nil); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := b.engine.MarkSnoozed(b.repCtx, replied.ID, values.ReopenOnReply, nil, nil, setDown); err != nil {
+	if _, err := b.engine.MarkSnoozed(b.repCtx, replied.ID, values.ReopenOnReply, nil, nil, setDown, nil); err != nil {
 		t.Fatal(err)
 	}
 	owner := integration.OwnerConn(t)

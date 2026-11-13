@@ -7,6 +7,10 @@ import type { components } from "../../api/schema";
 import { browserZone } from "../../format/timezone";
 import type { Transport } from "../../lib/contacttransports";
 import {
+  allowedPreview,
+  previewedAddresses,
+} from "../../testing/sendpermission.testkit";
+import {
   installFetchStub,
   jsonResponse,
   meRoute,
@@ -123,6 +127,10 @@ function composeStory(routes: RouteMap) {
           subject: "Q3 numbers",
           occurred_at: "2026-09-01T09:00:00Z",
         }),
+      // Send waits on the engine's answer, so each story here starts from
+      // an allowed one and its send route decides the refusal.
+      "POST /activities/act-1/send-email:preview": (body) =>
+        jsonResponse(allowedPreview(previewedAddresses(body))),
       ...routes,
     });
     return (

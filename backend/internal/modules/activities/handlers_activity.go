@@ -34,6 +34,10 @@ func (h Handlers) ListActivities(w http.ResponseWriter, r *http.Request, params 
 			in.Kinds = append(in.Kinds, string(kind))
 		}
 	}
+	if params.WebsiteFormId != nil {
+		id := ids.UUID(*params.WebsiteFormId)
+		in.WebsiteFormID = &id
+	}
 	in.ChannelProvider = params.ChannelProvider
 	if params.CallOutcome != nil {
 		outcome := string(*params.CallOutcome)

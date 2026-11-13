@@ -337,3 +337,31 @@ func TestTheConsentRedirectIsRebuiltFromTheCheckedParts(t *testing.T) {
 		t.Errorf("a loopback redirect with port 99999: status %d, want 400", resp.StatusCode)
 	}
 }
+
+func TestTheSendAsSignatureIsServedToItsOwnMailbox(t *testing.T) {
+	srv := newTestServer(t, 1)
+	req, err := http.NewRequestWithContext(t.Context(), http.MethodGet, srv.URL+apiPrefix+"/settings/sendAs", nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	req.Header.Set("Authorization", "Bearer at-a@demo.test")
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer closeBody(t, resp)
+	var got struct {
+		SendAs []struct {
+			SendAsEmail string `json:"sendAsEmail"`
+			Signature   string `json:"signature"`
+			IsDefault   bool   `json:"isDefault"`
+		} `json:"sendAs"`
+	}
+	if err := json.NewDecoder(resp.Body).Decode(&got); err != nil {
+		t.Fatal(err)
+	}
+	if len(got.SendAs) != 1 || got.SendAs[0].SendAsEmail != "a@demo.test" || !got.SendAs[0].IsDefault ||
+		!strings.Contains(got.SendAs[0].Signature, "a@demo.test") {
+		t.Fatalf("send-as list = %+v, want the mailbox's own default address with its signature", got.SendAs)
+	}
+}

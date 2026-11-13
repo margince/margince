@@ -19,7 +19,14 @@ const SOURCE = {
   owner_name: "Ana Fischer",
   generation: 3,
 };
-const POLICY = { enabled: false, sources: [], available_sources: [SOURCE] };
+const SHARED_SOURCE = {
+  connection_id: "33333333-3333-4333-8333-333333333333",
+  owner_user_id: null,
+  provider: "gmail",
+  account_label: "desk@demo.test",
+  owner_name: "",
+  generation: 1,
+};
 const reply = (body: unknown, status = 200) =>
   new Response(JSON.stringify(body), {
     status,
@@ -34,10 +41,13 @@ afterEach(() => {
 function show({
   admin = true,
   refuse = false,
+  available = [SOURCE],
 }: {
   admin?: boolean;
   refuse?: boolean;
+  available?: unknown[];
 } = {}) {
+  const policy = { enabled: false, sources: [], available_sources: available };
   const patches: unknown[] = [];
   const folders: URL[] = [];
   let saved = false;
@@ -65,7 +75,7 @@ function show({
             ? {
                 internal_mail: saved
                   ? {
-                      ...POLICY,
+                      ...policy,
                       enabled: true,
                       sources: [
                         {
@@ -76,7 +86,7 @@ function show({
                         },
                       ],
                     }
-                  : POLICY,
+                  : policy,
               }
             : {},
         );
@@ -206,5 +216,23 @@ it("shows no source controls when the server omits administrator-only settings",
   );
   expect(
     screen.queryByText("Internal operational mail"),
+  ).not.toBeInTheDocument();
+});
+
+it("lists a shared mailbox by its address and offers it no history import", async () => {
+  const user = userEvent.setup();
+  show({ available: [SOURCE, SHARED_SOURCE] });
+  const shared = await screen.findByRole("checkbox", {
+    name: /desk@demo.test/,
+  });
+  expect(
+    screen.getByText("Shared mailbox, also read by its reader team · gmail"),
+  ).toBeInTheDocument();
+  await user.click(shared);
+  expect(
+    screen.getByText(/A shared mailbox has no owner to approve/),
+  ).toBeInTheDocument();
+  expect(
+    screen.queryByRole("checkbox", { name: /history/i }),
   ).not.toBeInTheDocument();
 });

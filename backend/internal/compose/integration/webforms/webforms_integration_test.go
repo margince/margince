@@ -17,6 +17,7 @@ import (
 	"encoding/base64"
 	"encoding/hex"
 	"io"
+	"maps"
 	"net/http"
 	"net/url"
 	"slices"
@@ -31,6 +32,7 @@ import (
 	"github.com/margince/margince/backend/internal/compose/integration"
 	"github.com/margince/margince/backend/internal/compose/integration/apptest"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/platform/clocktest"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/platform/keyvault"
 	"github.com/margince/margince/backend/pkg/extension"
@@ -97,10 +99,23 @@ func postForm(t *testing.T, e *apptest.AppEnv, method, key, contentType string, 
 	return formAnswer{Status: resp.StatusCode, Header: resp.Header, Body: string(raw)}
 }
 
+// browserPost posts as the form code does, which always sends the render time.
+// A case names _mrg_ts itself to send its own, or a nil value to send none.
 func browserPost(t *testing.T, e *apptest.AppEnv, key string, fields url.Values, origin string) formAnswer {
 	t.Helper()
+	if !fields.Has("_mrg_ts") {
+		fields = withRenderTime(t, fields)
+	}
 	return postForm(t, e, "POST", key, "application/x-www-form-urlencoded", []byte(fields.Encode()),
 		map[string]string{"Origin": origin, "Accept": "application/json"})
+}
+
+// withRenderTime copies fields with a render time a visitor could have typed after.
+func withRenderTime(t *testing.T, fields url.Values) url.Values {
+	out := url.Values{}
+	maps.Copy(out, fields)
+	out.Set("_mrg_ts", strconv.FormatInt(clocktest.Now(t).Add(-20*time.Second).UnixMilli(), 10))
+	return out
 }
 
 func leadsWithEmail(t *testing.T, e *apptest.AppEnv, email string) (count int, origin, source string) {
@@ -357,6 +372,18 @@ func TestABrowserFormRefusesWhatItShouldNotLand(t *testing.T) {
 	}
 }
 
+// A form a site builder makes sends no render time, and its posts still land.
+func TestABrowserPostWithoutARenderTimeLandsAsALead(t *testing.T) {
+	e := setupFormsApp(t)
+	form := createForm(t, e, integration.AnyMap{"name": "Contact", "sender": "browser", "allowed_origins": []string{siteOrigin}})
+	if answer := browserPost(t, e, form.FormKey, url.Values{"email": {"builder@visitor.example"}, "_mrg_ts": nil}, siteOrigin); answer.Status != http.StatusAccepted {
+		t.Fatalf("→ %d %s, want 202", answer.Status, answer.Body)
+	}
+	if count, _, _ := leadsWithEmail(t, e, "builder@visitor.example"); count != 1 {
+		t.Fatalf("a post without a render time landed %d leads, want 1", count)
+	}
+}
+
 func TestAPlainHTMLPostIsSentToTheFormsRedirect(t *testing.T) {
 	e := setupFormsApp(t)
 	form := createForm(t, e, integration.AnyMap{
@@ -364,7 +391,7 @@ func TestAPlainHTMLPostIsSentToTheFormsRedirect(t *testing.T) {
 		"redirect_url": "https://www.example.com/thanks",
 	})
 	answer := postForm(t, e, "POST", form.FormKey, "application/x-www-form-urlencoded",
-		[]byte(url.Values{"email": {"page@visitor.example"}}.Encode()),
+		[]byte(withRenderTime(t, url.Values{"email": {"page@visitor.example"}}).Encode()),
 		map[string]string{"Origin": siteOrigin, "Accept": "text/html,application/xhtml+xml"})
 	if answer.Status != http.StatusSeeOther || answer.Header.Get("Location") != "https://www.example.com/thanks" {
 		t.Fatalf("plain post → %d Location %q", answer.Status, answer.Header.Get("Location"))

@@ -95,6 +95,7 @@ export function Textarea({
  */
 type ToggleProps = Omit<InputHTMLAttributes<HTMLInputElement>, "type"> & {
   label: ReactNode;
+  labelHidden?: boolean;
   /**
    * Some, not all, of what the box stands for is on. HTML has no attribute for
    * it, only the element's property, so it is set on the node.
@@ -105,6 +106,7 @@ type ToggleProps = Omit<InputHTMLAttributes<HTMLInputElement>, "type"> & {
 function Toggle({
   kind,
   label,
+  labelHidden = false,
   className,
   indeterminate = false,
   ...rest
@@ -122,7 +124,7 @@ function Toggle({
         }}
         {...rest}
       />
-      <span>{label}</span>
+      <span className={labelHidden ? "sr-only" : undefined}>{label}</span>
     </label>
   );
 }

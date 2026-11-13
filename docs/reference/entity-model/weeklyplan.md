@@ -47,6 +47,8 @@ The 2 tables owned by `weeklyplan`, as the migrations build them. [Back to the e
 
 **Triggers**
 
+- `text_bound_insert`: `AFTER INSERT FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL, '{"risks": 2000, "status": 20000, "captured_by": 20000, "capacity_note": 2000}')) EXECUTE FUNCTION refuse_oversized_text('{"capacity_note":2000,"captured_by":20000,"risks":2000,"status":20000}')`
+- `text_bound_update`: `AFTER UPDATE FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"risks": 2000, "status": 20000, "captured_by": 20000, "capacity_note": 2000}')) EXECUTE FUNCTION refuse_oversized_text('{"capacity_note":2000,"captured_by":20000,"risks":2000,"status":20000}')`
 - `weekly_plan_owner_id_retirement_guard`: `BEFORE INSERT OR UPDATE FOR EACH ROW WHEN (((new.owner_id IS NOT NULL) AND (new.status = 'open'))) EXECUTE FUNCTION refuse_retired_member_work('owner_id')`
 
 ## weekly_plan_commitment
@@ -123,4 +125,6 @@ The 2 tables owned by `weeklyplan`, as the migrations build them. [Back to the e
 
 **Triggers**
 
+- `text_bound_insert`: `AFTER INSERT FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL, '{"label": 500, "state": 20000, "captured_by": 20000, "help_requested": 2000, "manager_response": 2000, "linked_record_type": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"captured_by":20000,"help_requested":2000,"label":500,"linked_record_type":20000,"manager_response":2000,"state":20000}')`
+- `text_bound_update`: `AFTER UPDATE FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"label": 500, "state": 20000, "captured_by": 20000, "help_requested": 2000, "manager_response": 2000, "linked_record_type": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"captured_by":20000,"help_requested":2000,"label":500,"linked_record_type":20000,"manager_response":2000,"state":20000}')`
 - `trg_weekly_plan_commitment_linked_keys`: `BEFORE INSERT OR UPDATE FOR EACH ROW EXECUTE FUNCTION trg_weekly_plan_commitment_linked_keys()`

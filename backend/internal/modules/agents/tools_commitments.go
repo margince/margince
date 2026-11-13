@@ -35,6 +35,7 @@ import (
 	"fmt"
 	"time"
 
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/shared/kernel/deadline"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -76,6 +77,7 @@ type OpenCommitment struct {
 	DueAt   *time.Time
 	// DueHasTime is true when DueAt names a time of day; a claim never does.
 	DueHasTime bool
+	DueIntent  *crmcontracts.IntentTime
 	// FiledAt is when the promise was made: a task's creation, a claim's
 	// message. It breaks ties between two promises sharing a deadline, so the
 	// answer does not depend on which source a seam happened to read first.
@@ -243,6 +245,7 @@ func (c OpenCommitment) wire(asOf time.Time) CommitmentItem {
 		SourceActivityID: c.SourceActivityID,
 		Quote:            c.Quote, Subject: c.Subject, DueAt: c.DueAt,
 		DueHasTime: c.DueHasTime,
+		DueIntent:  c.DueIntent,
 		State:      commitmentState(c.DueAt, asOf),
 		// Never null: a model handed null reads it as "unknown" where an empty
 		// array says "this promise names no record".

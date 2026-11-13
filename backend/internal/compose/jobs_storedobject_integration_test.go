@@ -93,7 +93,7 @@ func TestTheReapDestroysAnOrphansBytesAndRetiresItsKey(t *testing.T) {
 	orphanedObject(t, e, blob, key)
 
 	worker := reapWorkerOver(e, blob)
-	if err := worker.reapWorkspace(context.Background(), e.WS); err != nil {
+	if err := worker.reapWorkspace(context.Background(), e.WS, unbudgeted); err != nil {
 		t.Fatalf("reapWorkspace: %v", err)
 	}
 
@@ -113,7 +113,7 @@ func TestAnObjectTheStoreWillNotDeleteStaysInTheLedger(t *testing.T) {
 	orphanedObject(t, e, blob, key)
 
 	worker := reapWorkerOver(e, blob)
-	if err := worker.reapWorkspace(context.Background(), e.WS); err != nil {
+	if err := worker.reapWorkspace(context.Background(), e.WS, unbudgeted); err != nil {
 		t.Fatalf("reapWorkspace: %v — one key that will not delete must not stop the pass", err)
 	}
 
@@ -182,7 +182,7 @@ func TestTheSweepCollectsAnOrphanOfEveryDeclaredKind(t *testing.T) {
 	}
 
 	worker := reapWorkerOver(e, blob)
-	if err := worker.reapWorkspace(context.Background(), e.WS); err != nil {
+	if err := worker.reapWorkspace(context.Background(), e.WS, unbudgeted); err != nil {
 		t.Fatalf("reapWorkspace: %v", err)
 	}
 
@@ -222,7 +222,7 @@ func TestAKeyStillInsideItsGracePeriodSurvivesAPass(t *testing.T) {
 	}
 
 	worker := reapWorkerOver(e, blob)
-	if err := worker.reapWorkspace(context.Background(), e.WS); err != nil {
+	if err := worker.reapWorkspace(context.Background(), e.WS, unbudgeted); err != nil {
 		t.Fatalf("reapWorkspace: %v", err)
 	}
 
@@ -262,7 +262,7 @@ func TestAReferencedObjectOfEveryKindSurvivesTheSweep(t *testing.T) {
 	}
 
 	worker := reapWorkerOver(e, blob)
-	if err := worker.reapWorkspace(context.Background(), e.WS); err != nil {
+	if err := worker.reapWorkspace(context.Background(), e.WS, unbudgeted); err != nil {
 		t.Fatalf("reapWorkspace: %v", err)
 	}
 
@@ -491,7 +491,7 @@ func TestALogoOnlyASentOfferNamesSurvivesTheSweep(t *testing.T) {
 		ids.NewV7(), e.SeedWonDealLinkedTo(t), printed)
 
 	worker := reapWorkerOver(e, blob)
-	if err := worker.reapWorkspace(context.Background(), e.WS); err != nil {
+	if err := worker.reapWorkspace(context.Background(), e.WS, unbudgeted); err != nil {
 		t.Fatalf("reapWorkspace: %v", err)
 	}
 	if blob.deleted[printed] {
@@ -506,5 +506,8 @@ func TestALogoOnlyASentOfferNamesSurvivesTheSweep(t *testing.T) {
 // clock is the wall clock, because the provisional keys are dated by the
 // database's own now().
 func reapWorkerOver(e *integration.Env, blob blobstore.Store) *storedObjectReapWorker {
-	return &storedObjectReapWorker{pool: e.Pool, blob: blob, log: slog.New(slog.DiscardHandler), now: time.Now}
+	return &storedObjectReapWorker{pool: e.Pool, blob: blob, log: slog.New(slog.DiscardHandler), now: time.Now, batch: storedObjectReapBatch}
 }
+
+// unbudgeted is a stop time no test run reaches.
+var unbudgeted = time.Date(9999, time.January, 1, 0, 0, 0, 0, time.UTC)

@@ -62,7 +62,10 @@ type Invoice struct {
 	// CreditsExternalID names the invoice a credit note reduces. Empty on an
 	// ordinary invoice.
 	CreditsExternalID string
-	UpdatedAt         *time.Time
+	// DunningLevel is how many payment reminders the source has sent for this
+	// invoice, from 0 to 99. Nil when the source does not say.
+	DunningLevel *int
+	UpdatedAt    *time.Time
 }
 
 // Payment is one payment received.

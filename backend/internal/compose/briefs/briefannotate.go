@@ -36,16 +36,8 @@ import (
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/kernel/values"
 )
-
-// MaxAnnotationRunes bounds one piece of annotation prose.
-//
-// It matches the CHECK constraint the migration puts on both columns, and it is
-// checked HERE as well so an over-long annotation is a refusal the agent can
-// read and shorten rather than a driver error surfacing as a failed run. Two
-// spellings of one bound is the cost; a run dying on a constraint violation at
-// 2am with no actionable message is what it buys.
-const MaxAnnotationRunes = 600
 
 // ItemAnnotation is one finding: what the night learned about one queued deal,
 // and the evidence it is drawn from.
@@ -263,7 +255,7 @@ func writeRunNarrative(
 
 // validate bounds what a model may write before any of it reaches a statement.
 func (a Annotation) validate() error {
-	if err := boundProse("narrative", a.Narrative); err != nil {
+	if err := httperr.RequireWithin("narrative", a.Narrative, values.TextNoteCharacters); err != nil {
 		return err
 	}
 	seen := make(map[ids.UUID]bool, len(a.Items))
@@ -279,19 +271,9 @@ func (a Annotation) validate() error {
 				fmt.Sprintf("item %s is annotated twice", item.ItemID))
 		}
 		seen[item.ItemID] = true
-		if err := boundProse("finding", item.Finding); err != nil {
+		if err := httperr.RequireWithin("finding", item.Finding, values.TextLineCharacters); err != nil {
 			return err
 		}
-	}
-	return nil
-}
-
-// boundProse refuses text past the column's own ceiling, in runes rather than
-// bytes: the constraint counts characters, and a German sentence full of
-// umlauts would otherwise be refused by the database after passing here.
-func boundProse(field, text string) error {
-	if n := len([]rune(text)); n > MaxAnnotationRunes {
-		return httperr.TooLong(field, MaxAnnotationRunes, n)
 	}
 	return nil
 }

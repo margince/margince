@@ -371,7 +371,7 @@ func (s *Service) gatherSnapshot(ctx context.Context, dealID ids.DealID) (facts,
 	entityType := "deal"
 	limit := timelineWindow
 	timeline, _, err := s.activities.ListActivities(ctx, activities.ListActivitiesInput{
-		EntityType: &entityType, EntityID: &dealID.UUID, Limit: &limit,
+		EntityType: &entityType, EntityID: &dealID.UUID, Limit: &limit, CollapseSeatCopies: true,
 	})
 	if err != nil {
 		return facts{}, fmt.Errorf("deal status: reading the deal's timeline: %w", err)
@@ -383,14 +383,14 @@ func (s *Service) gatherSnapshot(ctx context.Context, dealID ids.DealID) (facts,
 	requestKind := string(crmcontracts.ActivityKindEmail)
 	f.currentRequests, _, err = s.activities.ListActivities(ctx, activities.ListActivitiesInput{
 		EntityType: &entityType, EntityID: &dealID.UUID, Limit: &limit,
-		RequestCurrentAsOf: &f.now, Kind: &requestKind, ReadableOnly: true,
+		RequestCurrentAsOf: &f.now, Kind: &requestKind, ReadableOnly: true, CollapseSeatCopies: true,
 	})
 	if err != nil {
 		return facts{}, fmt.Errorf("deal status: reading current requests: %w", err)
 	}
 	f.requests, _, err = s.activities.ListActivities(ctx, activities.ListActivitiesInput{
 		EntityType: &entityType, EntityID: &dealID.UUID, Limit: &limit,
-		RequestReviewAsOf: &f.now, Kind: &requestKind, ReadableOnly: true,
+		RequestReviewAsOf: &f.now, Kind: &requestKind, ReadableOnly: true, CollapseSeatCopies: true,
 	})
 	if err != nil {
 		return facts{}, fmt.Errorf("deal status: reading outstanding requests: %w", err)
@@ -485,7 +485,7 @@ func (s *Service) gatherLastExchange(ctx context.Context, dealID ids.DealID, f *
 	entityType := "deal"
 	one := 1
 	contactRows, _, err := s.activities.ListActivities(ctx, activities.ListActivitiesInput{
-		EntityType: &entityType, EntityID: &dealID.UUID, Limit: &one, InteractionsAsOf: &f.now,
+		EntityType: &entityType, EntityID: &dealID.UUID, Limit: &one, InteractionsAsOf: &f.now, CollapseSeatCopies: true,
 	})
 	if err != nil {
 		return fmt.Errorf("deal status: reading the last recorded exchange: %w", err)

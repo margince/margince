@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 # The repeat job's own test, for the parts a wrong answer hides: a scope that
 # misses a test file skips the job green, a log reader that misses a failure
-# names no attempt, and a run composed apart from its template refuses every
-# clone. backend/tools/changed-tests tests the plan.
+# names no attempt, and a run outside the make profile fails every integration
+# test before its body. backend/tools/changed-tests tests the plan.
 #
 # Usage: bash scripts/repeat-changed-tests.test.sh
 
@@ -49,18 +49,16 @@ want="FAIL: TestSteady on attempt 2 of 20
 FAIL: TestFlaky on attempt 2 of 20"
 [[ "$named" == "$want" ]] || fail "the log reader named '$named', want '$want'"
 
-# The run composes as the test goals do. Stub make and go record their calls.
-mkdir -p "$TMP/bin"
-printf '#!/bin/sh\necho "make $*" >>"%s/calls"\n' "$TMP" >"$TMP/bin/make"
-printf '#!/bin/sh\nexit 0\n' >"$TMP/bin/go"
-chmod +x "$TMP/bin/make" "$TMP/bin/go"
-printf 'go-unit\t1\tbackend/internal/thing\t^TestThing$\n' >"$TMP/plan.tsv"
-PATH="$TMP/bin:$PATH" env -u COMPOSITION_FLAGS bash "$SCRIPT" run "$TMP/plan.tsv" >/dev/null 2>&1 || true
-grep -q 'composition COMPOSITION_FLAGS=-include-development' "$TMP/calls" ||
-  fail "the run composed without the test profile: $(cat "$TMP/calls" 2>/dev/null)"
+# The template holds the examples' ledgers; a composition without them makes
+# every clone refuse its test, so the run stops before it composes.
+printf 'go-unit\t3\tbackend/internal/thing\t^(TestThing)$\n' >"$TMP/plan.tsv"
+status=0
+outside="$(env -u COMPOSITION_FLAGS bash "$SCRIPT" run "$TMP/plan.tsv" 2>&1)" || status=$?
+[[ "$status" -eq 2 && "$outside" == *"make repeat-changed-tests"* ]] ||
+  fail "a run outside the make profile went on (status $status): $outside"
 
 if ((FAILURES > 0)); then
   echo "repeat-changed-tests.test: $FAILURES failure(s)" >&2
   exit 1
 fi
-echo "OK: repeat-changed-tests scope, attempt names and composition profile"
+echo "OK: repeat-changed-tests scope and attempt names"

@@ -103,7 +103,7 @@ func (r listRule) expand(ctx context.Context, resolver authz.Resolver, ev workfl
 		return nil, nil, err
 	}
 	changes, total, err := r.ex.Lists.ObservedChanges(owner, list.ID, check.DefinitionVersion, check.EvaluatedAt,
-		actionsFor(rule.Direction), burstCap)
+		actionsFor(rule.Direction), burstCap, rule.IncludeImported == nil || *rule.IncludeImported)
 	switch {
 	case errors.Is(err, apperrors.ErrNotFound), errors.Is(err, apperrors.ErrPermissionDenied):
 		// The owner can no longer find or read the list: what it holds is no
@@ -202,7 +202,7 @@ func (p *RulePauser) PauseRulesOnList(ctx context.Context, listID ids.UUID, reas
 		rows, err := tx.Query(ctx, `SELECT id, version FROM automation
 			WHERE enabled AND archived_at IS NULL AND key = ANY(@keys)
 			  AND (params ->> 'list_id' = @list_id OR params ->> 'shortlist_id' = @list_id)`,
-			pgx.StrictNamedArgs{"keys": listRuleKeys, "list_id": listID.String()})
+			pgx.StrictNamedArgs{argKeys: listRuleKeys, "list_id": listID.String()})
 		if err != nil {
 			return err
 		}

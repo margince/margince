@@ -42,6 +42,7 @@ export function ValueControl({
   type,
   references,
   options,
+  optionLabels,
   op,
   value,
   onChange,
@@ -54,6 +55,8 @@ export function ValueControl({
   references: Reference | undefined;
   /** A picklist's allowed values, when the vocabulary carried them. */
   options: readonly string[] | undefined;
+  /** The reader's names for some of those values; a value without one reads as itself. */
+  optionLabels?: Readonly<Record<string, string>>;
   /** The currency a money field counts minor units of, when it is known. */
   currency?: string;
   op: FilterOp;
@@ -133,7 +136,10 @@ export function ValueControl({
       <Select
         options={options.map((option) => ({
           value: option,
-          label: field === INDUSTRY_FIELD ? industryWords(t, option) : option,
+          label:
+            field === INDUSTRY_FIELD
+              ? industryWords(t, option)
+              : (optionLabels?.[option] ?? option),
         }))}
         value={typeof value === "string" ? value : ""}
         onChange={onChange}

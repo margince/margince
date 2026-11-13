@@ -15,7 +15,13 @@ import (
 type localStore struct {
 	mu      sync.Mutex
 	windows map[string]window
+	holds   map[string]heldValue
 	sweepAt time.Time
+}
+
+type heldValue struct {
+	value int64
+	until time.Time
 }
 
 // window is one key's current fixed window: when it opened, how many events
@@ -28,7 +34,9 @@ type window struct {
 	span  time.Duration
 }
 
-func newLocalStore() *localStore { return &localStore{windows: make(map[string]window)} }
+func newLocalStore() *localStore {
+	return &localStore{windows: make(map[string]window), holds: make(map[string]heldValue)}
+}
 
 func (s *localStore) count(key string, span time.Duration, now time.Time) (int, error) {
 	s.mu.Lock()
@@ -60,6 +68,7 @@ func (s *localStore) forget(string) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	s.windows = make(map[string]window)
+	s.holds = make(map[string]heldValue)
 	// sweepAt goes too: a future deadline left behind would keep the next
 	// sweep from running on a map that no longer matches it.
 	s.sweepAt = time.Time{}
@@ -79,4 +88,26 @@ func (s *localStore) sweep(now time.Time, span time.Duration) {
 		}
 	}
 	s.sweepAt = now.Add(span)
+}
+
+func (s *localStore) hold(key string, value int64, ttl time.Duration, now time.Time) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	for k, h := range s.holds {
+		if !now.Before(h.until) {
+			delete(s.holds, k)
+		}
+	}
+	s.holds[key] = heldValue{value: value, until: now.Add(ttl)}
+	return nil
+}
+
+func (s *localStore) held(key string, now time.Time) (int64, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	h, ok := s.holds[key]
+	if !ok || !now.Before(h.until) {
+		return 0, nil
+	}
+	return h.value, nil
 }

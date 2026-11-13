@@ -36,6 +36,7 @@
       "actions": {
         "accept_document_fields": "accept_attachment_extraction",
         "archive_document": "delete_attachment",
+        "assign_inquiry": "assign_website_inquiry",
         "attach": "attach_document",
         "bring_back": "clear_activity_disposition",
         "cancel_send": "cancel_scheduled_send",
@@ -45,6 +46,7 @@
         "discard_draft": "discard_mail_draft",
         "hide_document": "hide_deal_document",
         "log": "log_activity",
+        "preview_inquiry_assignment": "preview_website_inquiry_assignment",
         "preview_sign_off": "preview_email_sign_off",
         "read_document_fields": "read_attachment_for_fields",
         "read_transcript": "read_transcript_for_next_steps",
@@ -304,6 +306,7 @@
         "delete_lead_source": "delete_lead_source",
         "disconnect_finance_source": "disconnect_finance_source",
         "disconnect_provider": "disconnect_provider",
+        "handle_website_inquiries": "handle_website_inquiries",
         "link_finance_customer": "link_finance_customer",
         "mark_booking_page_shared": "mark_booking_page_shared",
         "propose_fx_rate_refresh": "propose_fx_rate_refresh",
@@ -544,6 +547,7 @@
         "team_weekly_review": "get_team_weekly_review",
         "teammate_weekly_plan": "get_teammate_weekly_plan",
         "voice_source_preview": "preview_voice_source",
+        "website_inquiry_preview": "preview_website_inquiries",
         "weekly_plan": "get_current_weekly_plan",
         "weekly_reviews": "list_weekly_reviews",
         "win_evidence": "get_deal_win_evidence"

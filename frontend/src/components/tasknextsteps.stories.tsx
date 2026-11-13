@@ -129,11 +129,7 @@ export const Meet: Story = {
       task={{ ...CALL, subject: "Book the site visit", task_type: "meet" }}
     />
   ),
-  play: async () => {
-    await within(document.body).findByRole("button", {
-      name: en["scheduling.bookContact"],
-    });
-  },
+  play: offers(en["scheduling.bookContact"]),
 };
 
 export const Review: Story = {
@@ -147,11 +143,7 @@ export const Review: Story = {
       }}
     />
   ),
-  play: async () => {
-    await within(document.body).findByRole("button", {
-      name: en["task.next.reviewLead"],
-    });
-  },
+  play: offers(en["task.next.reviewLead"]),
 };
 
 export const NoAddress: Story = {

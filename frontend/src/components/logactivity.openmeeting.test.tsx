@@ -155,6 +155,14 @@ function stubApi(
         return jsonResponse({ data: meetings, page: { next_cursor: null } });
       }
       if (key === "PATCH /activities/m-1") return patch();
+      if (key === "POST /rewrites") {
+        return jsonResponse({
+          subject: "Review notes",
+          body: "They agreed to renew.",
+          language: "en",
+          ai_disclosure: "Written with AI assistance.",
+        });
+      }
       if (key === "POST /activities") {
         const kind = (body as { kind: string }).kind;
         return (
@@ -264,6 +272,26 @@ describe("logging a meeting where one owes its outcome", () => {
       body: "Agenda: pricing\n\nThey agreed to the renewal.",
     });
     expect(sent(captured, "POST /activities")).toHaveLength(0);
+  });
+
+  it("Yes records polished notes on the open meeting marked AI-assisted", async () => {
+    const captured: Captured[] = [];
+    stubApi([booked()], captured);
+    render();
+    const user = await logMeeting();
+    expect(await screen.findByText(QUESTION)).toBeTruthy();
+    await user.click(screen.getByRole("button", { name: "Polish wording" }));
+    await screen.findByText(en["co.assistant.aiTag"]);
+    await user.click(screen.getByRole("button", { name: "Log" }));
+
+    await waitFor(() =>
+      expect(sent(captured, "PATCH /activities/m-1")).toHaveLength(1),
+    );
+    expect(sent(captured, "PATCH /activities/m-1")[0]?.body).toMatchObject({
+      meeting_status: "held",
+      body: "Agenda: pricing\n\nThey agreed to renew.",
+      ai_assisted: true,
+    });
   });
 
   it("Yes puts the typed custom-field values on the open meeting", async () => {

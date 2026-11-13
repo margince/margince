@@ -24,6 +24,7 @@ import (
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/platform/database/textbounds"
 	"github.com/margince/margince/backend/internal/shared/kernel/events"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -349,8 +350,12 @@ func applyEvidenceFieldsWithOverwrite(
 		// The evidence row lands for every accepted field; a re-accept
 		// refreshes an agent-captured row and never touches one a human has
 		// since claimed.
+		// The row keeps what a machine read, cut to its columns; the human form
+		// writes its own rows and is refused past the limit instead.
+		value := textbounds.Fit("public.company_profile_field.value", f.Value)
+		snippet := textbounds.Fit("public.company_profile_field.evidence_snippet", f.EvidenceSnippet)
 		if _, err := tx.Exec(ctx, upsertCompanyProfileField,
-			companyID, f.Field, f.Value, f.EvidenceSnippet, f.SourceURL, f.Confidence, source, by, overwrite[f.Field]); err != nil {
+			companyID, f.Field, value, snippet, f.SourceURL, f.Confidence, source, by, overwrite[f.Field]); err != nil {
 			return nil, fmt.Errorf("upsert profile field %s: %w", f.Field, err)
 		}
 	}

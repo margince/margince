@@ -24,6 +24,7 @@ import (
 	"fmt"
 	"time"
 
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -56,9 +57,10 @@ type BulkChangeCommand struct {
 
 // BulkTask is the task create_task files under every record.
 type BulkTask struct {
-	Subject    string     `json:"subject"`
-	DueAt      *time.Time `json:"due_at,omitempty"`
-	AssigneeID *ids.UUID  `json:"assignee_id,omitempty"`
+	DueIntent  *crmcontracts.IntentTime `json:"due_intent,omitempty"`
+	Subject    string                   `json:"subject"`
+	DueAt      *time.Time               `json:"due_at,omitempty"`
+	AssigneeID *ids.UUID                `json:"assignee_id,omitempty"`
 }
 
 // BulkItem is one selected record and the version the caller read.

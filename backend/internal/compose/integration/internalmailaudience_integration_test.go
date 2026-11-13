@@ -141,7 +141,8 @@ func seedRestrictedInternalMail(participant context.Context, t *testing.T, e *En
 	}
 	actor.Type, actor.ID = principal.PrincipalConnector, "connector:imap"
 	connector := principal.WithActor(participant, actor)
-	provenance := json.RawMessage(`{"connection_id":"mail-source","owner_user_id":"mail-owner","provider":"imap","generation":1,"enrolled_at":"2026-01-01T00:00:00Z","enrolled_by":"human:admin","policy_since":"2026-01-01T00:00:00Z"}`)
+	mailbox := ids.NewV7()
+	provenance := json.RawMessage(`{"connection_id":"` + mailbox.String() + `","owner_user_id":"` + actor.UserID.String() + `","provider":"imap","generation":1,"enrolled_at":"2026-01-01T00:00:00Z","enrolled_by":"human:admin","policy_since":"2026-01-01T00:00:00Z"}`)
 	if err := database.WithWorkspaceTx(connector, e.Pool, func(tx pgx.Tx) error {
 		if _, err := tx.Exec(connector, `INSERT INTO activity (id, kind, occurred_at, source, captured_by, audience, body)
    VALUES ($1, 'email', now(), 'imap', 'connector:imap', 'workspace', 'Internal account discussion')`, id); err != nil {
@@ -151,7 +152,7 @@ func seedRestrictedInternalMail(participant context.Context, t *testing.T, e *En
    VALUES ($1, $2, 'to', 'rep@team.test')`, id, e.Rep1); err != nil {
 			return err
 		}
-		return activities.MarkInternalMailTx(connector, tx, ids.From[ids.ActivityKind](id), provenance)
+		return activities.MarkInternalMailTx(connector, tx, ids.From[ids.ActivityKind](id), provenance, mailbox, 1)
 	}); err != nil {
 		t.Fatal(err)
 	}

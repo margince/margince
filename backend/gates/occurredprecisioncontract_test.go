@@ -183,6 +183,8 @@ const (
 // instantTimeNames are the names that are never an activity's time, wherever a
 // schema declares them, each with the reason.
 var instantTimeNames = gatekit.Waive(map[string]string{
+	"handling_cutover_at": "server timestamp of the policy conversion, not an activity occurrence",
+	"example_due_at":      "computed deadline for the preview receipt time and selected local-day policy",
 	"expected_updated_at": rowStamp,
 	"queued_at":           rowStamp,
 	"enrolled_at":         "server timestamp of source enrollment, never an activity occurrence",

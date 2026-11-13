@@ -6,7 +6,7 @@ import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, expect, it, vi } from "vitest";
 import { LocaleProvider } from "../../i18n";
 import { commercialApproval } from "../../testing/commercial-approval";
-import { ApprovalDetailModal } from "./approvaleditor";
+import { ApprovalDetailModal } from "./approvaldetail";
 
 afterEach(() => {
   cleanup();

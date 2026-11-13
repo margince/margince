@@ -9,6 +9,7 @@ import (
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/shared/kernel/values"
 )
@@ -99,6 +100,13 @@ func checkBulkTextLimits(change bulkChange) error {
 	if change.task != nil {
 		if err := httperr.RequireWithin("task.subject", change.task.Subject, maxBulkTaskSubject); err != nil {
 			return err
+		}
+		if change.task.DueIntent != nil {
+			input, err := activities.TaskInputFrom(crmcontracts.CreateTaskRequest{Subject: change.task.Subject, DueIntent: change.task.DueIntent, Source: "manual"})
+			if err != nil {
+				return err
+			}
+			change.task.DueAt = input.DueAt
 		}
 	}
 	if change.note != nil {

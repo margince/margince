@@ -28,15 +28,14 @@ type Eraser struct {
 	invalidateEdges EdgeInvalidator
 	// db binds the installation's workspace itself (ADR-0091 §9 step 3).
 	db *database.DB
-	// blob purges the subject's attachment objects (Art. 17 reaches the
-	// bytes, not only the row). nil in a deployment with no object store —
-	// where no upload path could have stored an object either.
+	// blob is the object store the erased attachments' bytes live in. The
+	// erasure queues their keys for the stored-object reap and deletes no
+	// object itself. nil in a deployment with no object store.
 	blob blobstore.Store
 	// payloads destroys the one-time link material behind a controller
-	// delivery. Like blob it is nil where no such material could exist, and
-	// like blob the purge happens BEFORE the rows that reference it: the
-	// reference lives in the row, so clearing the row first would orphan a live
-	// confirmation link with no key left to find it.
+	// delivery. nil where no such material could exist. Unlike the object
+	// store, it deletes the vault entry before the transaction commits, so a
+	// rolled-back erasure leaves rows naming a deleted entry.
 	payloads PayloadPurger
 	// purgeRawCaptures destroys the provider original behind an activity whose
 	// text this eraser destroys.

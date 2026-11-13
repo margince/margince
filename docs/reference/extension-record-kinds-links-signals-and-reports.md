@@ -185,7 +185,7 @@ flowchart LR
 | Part | What it does |
 |---|---|
 | `Extension.SignalTypes` | The unit declares each kind: a name, a label and the evidence members. The boot and `make gen` refuse a bad name, a duplicate member or an unknown type. |
-| Evidence layout | Each member has a name, a label, a type (`text`, `number` or `bool`), `Required` and `Personal`. A member the layout does not name, a missing required one or a wrong type is refused with `invalid_evidence`. |
+| Evidence layout | Each member has a name, a label, a type (`text`, `number` or `bool`), `Required` and `NotPersonal`. A member is personal unless it is marked `NotPersonal`. A member the layout does not name, a missing required one or a wrong type is refused with `invalid_evidence`. |
 | `Signals().Create` | Files one signal about a deal, company, contact or project, under the caller's own rights. It writes the signal, its audit row and its `signal.detected` event in the unit's transaction. A scheduled job or a bus delivery is refused. |
 | Fingerprint | Required. The stored fingerprint is the kind, the subject and the unit's value, so two kinds, two subjects or two units cannot swallow each other's signals. The existing unique index on live fingerprints holds the repeat out, and the call answers the first signal with `created` false. The answer is a read, so a signal the caller cannot see is not found. |
 | Provenance | Core writes the `provenance` member of the evidence claim with the unit and the signed-in seat. A unit cannot set it. The `fields` and `provenance` members of a claim are also refused on a request to create or edit a signal. |
@@ -199,7 +199,7 @@ flowchart LR
 
 Erasing or anonymizing a contact rewrites the extension signals whose subject is the contact, and those the resolver
 attributed to them. The summary and each claim's snippet are
-free text a unit wrote, so both become `[erased]`. A layout member marked `Personal` is removed. A signal whose kind no
+free text a unit wrote, so both become `[erased]`. A layout member not marked `NotPersonal` is removed. A signal whose kind no
 unit declares loses all its members, because nothing says what is safe to keep. The provenance stays, because it names a
 unit and a seat and never the subject. Signals of core's own kinds are not rewritten by this path.
 
@@ -208,7 +208,7 @@ What this feature does not do yet:
 - A report does not read evidence members. See [the reports section](#extension-report-breakdowns-and-counts).
 - Signals about a contact are not in the data-access export, as noted for the audited fix of evidence.
 - The list filter on `kind` does not take an extension kind.
-- Erase reaches the signals whose subject is the contact, and those the resolver attributed to the contact. A `Personal`
+- Erase reaches the signals whose subject is the contact, and those the resolver attributed to the contact. A personal
   member on a signal about a company or deal that is not attributed to the contact is not reached, because nothing links
   it to one.
 - An extension signal cannot be moved to another kind by an edit.

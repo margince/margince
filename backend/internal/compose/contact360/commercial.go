@@ -25,6 +25,7 @@ import (
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/auth"
+	"github.com/margince/margince/backend/internal/platform/labeltranslation"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -125,15 +126,16 @@ func (s *Service) leadingDealSeat(ctx context.Context, tx pgx.Tx, contactID ids.
 	if err != nil {
 		return dealSeat{}, false, err
 	}
+	stageName := labeltranslation.SQL(ctx, "s.name", "s.name_translations", arg)
 	err = tx.QueryRow(ctx, fmt.Sprintf(`
-		SELECT d.id, r.role, d.name, s.name, %[4]s, d.currency, d.expected_close_date
+		SELECT d.id, r.role, d.name, %[5]s, %[4]s, d.currency, d.expected_close_date
 		FROM relationship r
 		JOIN deal d ON d.id = r.deal_id AND d.status = 'open' AND d.archived_at IS NULL
 		LEFT JOIN stage s ON s.id = d.stage_id
 		WHERE r.kind = 'deal_stakeholder' AND r.contact_id = $%[1]d
 		  AND r.archived_at IS NULL AND r.ended_at IS NULL AND (%[2]s) AND (%[3]s)
 		ORDER BY d.expected_close_date NULLS LAST, d.id
-		LIMIT 1`, contactPos, edgeBound, dealScope, amountSQL), args...).
+		LIMIT 1`, contactPos, edgeBound, dealScope, amountSQL, stageName), args...).
 		Scan(&seat.dealID, &seat.role, &seat.deal.Title, &stage, &amount, &currency, &closeDate)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return dealSeat{}, false, nil
