@@ -17,6 +17,7 @@ func TestABodySettingAHumanOnlyMemberIsRefused(t *testing.T) {
 	members := []string{"evidence", "kind"}
 	for body, refused := range map[string]bool{
 		`{"kind":"risk"}`:           true,
+		`{"Kind":"risk"}`:           true,
 		`{"evidence":[]}`:           true,
 		`{"status":"acknowledged"}`: false,
 		`not json`:                  false,

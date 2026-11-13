@@ -422,6 +422,21 @@ content:
 	if _, _, err := bodySchema(body("kind"), map[string]any{}); err == nil || !strings.Contains(err.Error(), "kind") {
 		t.Errorf("a body requiring a human-only member answered %v, want a refusal naming it", err)
 	}
+	var referenced yaml.Node
+	if err := yaml.Unmarshal([]byte(`
+content:
+  application/json:
+    schema:
+      type: object
+      properties:
+        kind: { $ref: '#/components/schemas/Kind', x-human-only: true }
+`), &referenced); err != nil {
+		t.Fatal(err)
+	}
+	got, humanOnly, err = bodySchema(referenced.Content[0], map[string]any{"Kind": map[string]any{"type": "string"}})
+	if err != nil || strings.Contains(got, `"kind"`) || !slices.Equal(humanOnly, []string{"kind"}) {
+		t.Errorf("a marker beside $ref: schema %s, human-only %v (%v), want kind left out and named", got, humanOnly, err)
+	}
 	var nested yaml.Node
 	if err := yaml.Unmarshal([]byte(`
 content:

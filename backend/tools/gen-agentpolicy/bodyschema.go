@@ -255,7 +255,12 @@ func resolveRefs(node any, schemas map[string]any, depth int, open map[string]bo
 			}
 			open[name] = true
 			defer delete(open, name)
-			return resolveRefs(target, schemas, depth+1, open)
+			resolved, err := resolveRefs(target, schemas, depth+1, open)
+			// A marker beside the $ref belongs to the member, not to the schema it names.
+			if fields, isMap := resolved.(map[string]any); isMap && v[humanOnlyMarker] == true {
+				fields[humanOnlyMarker] = true
+			}
+			return resolved, err
 		}
 		if flat, combined, err := flattenCombinator(v, schemas, depth, open); combined {
 			return flat, err

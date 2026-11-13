@@ -11,6 +11,8 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"slices"
+	"strings"
 
 	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
@@ -35,9 +37,9 @@ func Refused(w http.ResponseWriter, r *http.Request, members []string, limit int
 	if int64(len(head)) > limit || json.Unmarshal(head, &set) != nil {
 		return false
 	}
-	for _, name := range members {
-		if _, ok := set[name]; ok {
-			httperr.Write(w, r, fmt.Errorf("only a human may set %s: %w", name, apperrors.ErrPermissionDenied))
+	for key := range set {
+		if i := slices.IndexFunc(members, func(name string) bool { return strings.EqualFold(key, name) }); i >= 0 {
+			httperr.Write(w, r, fmt.Errorf("only a human may set %s: %w", members[i], apperrors.ErrPermissionDenied))
 			return true
 		}
 	}
