@@ -23,7 +23,6 @@ import (
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
-	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -316,28 +315,6 @@ func (s *Service) revokePassportTx(
 		return nil
 	}
 	return auditPassportRevoked(ctx, tx, passportID, id.UserID)
-}
-
-// mayManagePassport decides who may end or release a passport. Another user's
-// passport reads as absent, not forbidden, matching the row-scope convention.
-//
-// Only the CROSS-USER branch is gated. Managing your own passport is
-// self-authorized: requiring a member-administration grant would take from
-// every seat the ability to cut off an agent acting as them.
-func mayManagePassport(ctx context.Context, tx pgx.Tx, id Identity, onBehalfOf ids.UserID) error {
-	if onBehalfOf == id.UserID {
-		return nil
-	}
-	if err := auth.Require(ctx, objectUserAdmin, principal.ActionUpdate); err != nil {
-		return apperrors.ErrNotFound
-	}
-	// The same ceiling IssuePasswordLink carries: a delegated holder who could
-	// cut off every agent acting for an administrator has reach over that
-	// administrator's work.
-	if err := refuseUnlessCallerOutranksTarget(ctx, tx, id, onBehalfOf, reachDenial); err != nil {
-		return apperrors.ErrNotFound
-	}
-	return nil
 }
 
 // auditPassportRevoked records one dead passport: the audit row and the bus
