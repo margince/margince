@@ -73,7 +73,6 @@ func loggedNote(ctx context.Context, t *testing.T, e *sendEnv) crmcontracts.Acti
 // text the patch replaced rather than a flag that it changed. A flag says an
 // edit happened and leaves nobody able to say what it undid.
 func TestAPatchedBodyRecordsTheTextItReplaced(t *testing.T) {
-	// The repeat job runs this body.
 	e := setupSend(t)
 	ctx := e.as(principal.RowScopeAll)
 	activity := loggedNote(ctx, t, e)
