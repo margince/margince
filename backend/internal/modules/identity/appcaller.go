@@ -18,14 +18,14 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
-// AppCaller is one person an installed chat app vouches for on one call. It
-// holds the app's issuer, the app's own id for the person, and the address the
+// AppCaller is one caller an installed chat app vouches for on one call. It
+// holds the app's issuer, the app's own id for the caller, and the address the
 // app has verified. The caller has checked the app's signature already.
 type AppCaller struct {
 	Issuer  string
 	Subject string
 	Email   string
-	// Label names the app on the passport the person sees in their settings.
+	// Label names the app on the passport the member sees in their settings.
 	Label string
 }
 

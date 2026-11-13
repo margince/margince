@@ -2,9 +2,9 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 // Package dispactapp is the /mcp edge for the Margince app installed in a
-// Dispact team. Dispact signs each call with a short-lived token for the person
+// Dispact team. Dispact signs each call with a short-lived token for the member
 // who asked its agent. This package checks that token against the connected
-// bot, then binds the call to that person's own passport.
+// bot, then binds the call to that member's own passport.
 package dispactapp
 
 import (
@@ -38,11 +38,11 @@ const (
 	skew = 30 * time.Second
 	// jwksPath is where an install publishes the keys it signs with.
 	jwksPath = "/.well-known/jwks.json"
-	// passportLabel names the app on the passport a person sees in settings.
+	// passportLabel names the app on the passport a member sees in settings.
 	passportLabel = "Dispact"
 )
 
-// ErrRejected is every refusal of the token itself. The transport answers 401.
+// ErrRejected marks a refusal of the token itself. The transport answers 401.
 var ErrRejected = errors.New("dispactapp: call token rejected")
 
 // Bots answers the connected Dispact bot: its address is the token issuer,
@@ -51,7 +51,7 @@ type Bots interface {
 	LiveBotIdentity(ctx context.Context, provider string) (capture.LiveBot, error)
 }
 
-// Seats resolves the installation and the person a verified token names.
+// Seats resolves the installation and the caller a verified token names.
 type Seats interface {
 	InstallationWorkspace(ctx context.Context) (ids.WorkspaceID, error)
 	AuthenticateAppCaller(ctx context.Context, c identity.AppCaller) (identity.AgentIdentity, error)
@@ -116,8 +116,8 @@ func IsCallToken(bearer string) bool {
 	return strings.Count(bearer, ".") == 2
 }
 
-// Authenticate checks one call token and binds the call to the person it
-// names. A person with no member gets the app's list and nothing more.
+// Authenticate checks one call token and binds the call to the member it
+// names. A caller with no member gets the app's list and nothing more.
 func (e *Edge) Authenticate(ctx context.Context, seats Seats, bearer string) (context.Context, error) {
 	bot, err := e.bots.LiveBotIdentity(ctx, chatlinks.ProviderDispact)
 	if errors.Is(err, capture.ErrNoConnection) {

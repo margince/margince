@@ -136,3 +136,5 @@
 1794604300_a_deal_or_project_may_have_a_chat_channel.up.sql | * | the trigger statements change no row; the migration adds one channel_provider row and two empty tables, and channel_connection holds at most one live bot per provider
 1794604300_a_deal_or_project_may_have_a_chat_channel.down.sql | *, channel_connection, channel_provider | channel_connection holds at most one live bot per provider and its archived bindings, and channel_provider loses its one dispact row; the trigger statements change no row
 1794604700_the_chat_channel_checks_are_validated.down.sql | * | the down migration is a single SELECT 1 that changes nothing
+1794604600_a_chat_app_caller_holds_a_passport.up.sql | * | the trigger statements change no row; the migration adds two empty columns, a NOT VALID check and a partial index to passport
+1794604600_a_chat_app_caller_holds_a_passport.down.sql | * | runs only on a rollback; the trigger statements restore the earlier bounds and change no row, then the two columns are dropped

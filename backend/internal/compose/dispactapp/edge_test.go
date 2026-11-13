@@ -6,6 +6,7 @@ package dispactapp
 import (
 	"context"
 	"errors"
+	"maps"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -93,9 +94,7 @@ func (h *harness) token(t *testing.T, over map[string]any) string {
 		"jti": ids.NewV7().String(), "workspace_id": testTeam,
 		"email": "rep@example.test", "email_verified": true, "display_name": "Rep",
 	}
-	for k, v := range over {
-		claims[k] = v
-	}
+	maps.Copy(claims, over)
 	return h.rig.Mint(t, oidctokentest.KID, "RS256", claims)
 }
 

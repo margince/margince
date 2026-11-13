@@ -46,7 +46,7 @@ The `@Margince` agent in Dispact calls this installation's MCP tools. It needs t
 
 ### What the call token check refuses
 
-Every call carries a token Dispact signs for the person who asked the agent. The server answers `401`
+Every call carries a token Dispact signs for the member who asked the agent. The server answers `401`
 and changes nothing when any of these fails:
 
 - The signature does not verify against a key at `<address>/.well-known/jwks.json`, or the token is not
@@ -58,19 +58,19 @@ and changes nothing when any of these fails:
 - `jti` was used before. Token ids are held in Redis until the token expires. When Redis cannot answer,
   the call gets `503` instead.
 - `email_verified` is not `true`.
-- The person's Margince passport for Dispact was revoked, or the address on the token is no longer their
+- The caller's Margince passport for Dispact was revoked, or the address on the token is no longer their
   sign-in address.
 
 A token for an address no live member holds may read the tool list. Every other call answers `403`
 `no_margince_seat`.
 
-### Each person acts through their own passport
+### Each member acts through their own passport
 
-The first call from a person mints a passport labelled `Dispact` for the member whose sign-in address
+The first call from a chat user mints a passport labelled `Dispact` for the member whose sign-in address
 is on the token. It carries the scopes `read`, `write` and `send` for 90 days. Later calls find it by the
 token's issuer and subject. The member's own grants still bound every call, and each write is audited as
 that member's agent. The member sees the passport in **Settings → AI assistants**, under **Passports**,
-and can revoke it there. After a revoke, Dispact calls for that person are refused. After the passport
+and can revoke it there. After a revoke, Dispact calls for that member are refused. After the passport
 expires, the next call mints a new one for the same member.
 
 ## The address must be public in production

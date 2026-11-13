@@ -6,13 +6,14 @@
 package agentaccess
 
 // The Dispact app's calls over the composed /mcp. A call token signed by the
-// connected install acts as the person it names, through their own passport.
+// connected install acts as the member it names, through their own passport.
 // It sees only the app's fixed list. The token rules themselves are unit
 // tests in dispactapp; this suite proves they are what the real route runs.
 
 import (
 	"context"
 	"encoding/json"
+	"maps"
 	"net/http"
 	"slices"
 	"strings"
@@ -62,9 +63,7 @@ func (e *dispactEnv) token(t *testing.T, email string, over map[string]any) stri
 		"jti": ids.NewV7().String(), "workspace_id": dispactTeam,
 		"email": email, "email_verified": true, "display_name": "Someone",
 	}
-	for k, v := range over {
-		claims[k] = v
-	}
+	maps.Copy(claims, over)
 	return e.rig.Mint(t, oidctokentest.KID, "RS256", claims)
 }
 

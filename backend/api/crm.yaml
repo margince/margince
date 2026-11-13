@@ -17339,7 +17339,7 @@ paths:
       summary: The manifest that installs the Margince app in a Dispact team (admin).
       description: |
         Read-only. Dispact reads `mcp.endpoint` to send each `@Margince` call to this
-        installation's `/mcp`, signed with a call token for the person who asked. `events` is where
+        installation's `/mcp`, signed with a call token for the caller who asked. `events` is where
         Dispact sends signed notices of new messages in a linked channel. Needs the right to
         connect a chat bot (the `channel_connection` RBAC object).
       responses:

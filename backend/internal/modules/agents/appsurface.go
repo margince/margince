@@ -11,7 +11,7 @@ import (
 )
 
 // AppSurface is the fixed tool list an installed app calls this server with.
-// The app reads tools/list once, with one person's token, and shows that list
+// The app reads tools/list once, with one caller's token, and shows that list
 // to all of its users. So the list cannot depend on who asked.
 type AppSurface struct {
 	// Tools are the only names the app may list and call.

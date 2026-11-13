@@ -8,7 +8,7 @@ SET LOCAL lock_timeout = '5s';
 ALTER TABLE passport ADD COLUMN app_issuer text;
 ALTER TABLE passport ADD COLUMN app_subject text;
 ALTER TABLE passport ADD CONSTRAINT passport_app_caller_pair
-    CHECK ((app_issuer IS NULL) = (app_subject IS NULL));
+    CHECK ((app_issuer IS NULL) = (app_subject IS NULL)) NOT VALID;
 
 CREATE INDEX idx_passport_app_caller ON passport (app_issuer, app_subject, created_at DESC)
     WHERE app_issuer IS NOT NULL;
