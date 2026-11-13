@@ -15,6 +15,7 @@ import { daysPast } from "../../format/lateness";
 import { formatMoneyOrWord } from "../../format/moneyword";
 import { type Locale, type Translator, translatePlural } from "../../i18n";
 import type { ContactTab } from "../../lib/contacttab";
+import { recordsAnotherMeeting } from "../../lib/meetingrecord";
 import { dealRoleLabel } from "../../lib/recordlabels";
 import { omitted } from "./contact360";
 import { contactFirstName } from "./contactfirstname";
@@ -235,6 +236,7 @@ function heldMeetings(view: Contact360, words: StandingWords): TimelineEvent[] {
       (row) =>
         row.kind === "meeting" &&
         !CALLED_OFF.has(row.meeting_status ?? "") &&
+        !recordsAnotherMeeting(row) &&
         Date.parse(row.occurred_at ?? "") <= asOf,
     )
     .sort((a, b) => Date.parse(b.occurred_at) - Date.parse(a.occurred_at))

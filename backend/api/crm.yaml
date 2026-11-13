@@ -57877,6 +57877,7 @@ components:
             The conversation or note this task follows from, whether added by a human or
             read from a conversation. Opening the source requires current source access.
             A task cannot grant access to its source or disclose content from a withheld source.
+            On a meeting transcript, the meeting it records (`records_meeting_id`).
         links:
           type: array
           description: >-
@@ -58410,8 +58411,20 @@ components:
             For a task, the conversation or note it follows from. The caller and assignee
             need access to that source. The task preserves its audience and inherits its
             visible links when no links are supplied. For a logged note, call or meeting,
-            the task whose outcome is being recorded. This reference alone does not complete
-            that task or accept a request.
+            the task whose outcome is being recorded; a meeting transcript naming one needs
+            `meeting_status`. This reference alone does not complete that task or accept a request.
+        records_meeting_id:
+          type: string
+          format: uuid
+          description: >-
+            A meeting transcript only (`source_system: transcript`), without `source_activity_id`.
+            The open meeting this transcript records. In the same transaction the meeting is marked
+            held and gains the transcript's deal, project and lead links for each kind it has none of.
+            The transcript takes the meeting's time and its deal, project and lead links, keeps no
+            outcome of its own, and names the meeting in `source_activity_id`, so held counts count
+            the meeting once. The meeting must be a live meeting that still owes its outcome, or the
+            create is refused with 422 on `records_meeting_id`; the caller needs activity update on
+            it. The meeting's subject and notes stay as they are.
         follow_up_task:
           $ref: '#/components/schemas/ActivityFollowUpTask'
           description: >-

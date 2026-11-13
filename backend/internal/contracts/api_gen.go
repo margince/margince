@@ -32279,7 +32279,7 @@ type Activity struct {
 	// Source Where the row came from. `manual` is anything typed, by a member or by an assistant working for one, so it never says who typed it: `captured_by` and `recorded_by_agent` do.
 	Source string `json:"source"`
 
-	// SourceActivityId The conversation or note this task follows from, whether added by a human or read from a conversation. Opening the source requires current source access. A task cannot grant access to its source or disclose content from a withheld source.
+	// SourceActivityId The conversation or note this task follows from, whether added by a human or read from a conversation. Opening the source requires current source access. A task cannot grant access to its source or disclose content from a withheld source. On a meeting transcript, the meeting it records (`records_meeting_id`).
 	SourceActivityId *openapi_types.UUID `json:"source_activity_id,omitempty"`
 
 	// SourceId Provider message/event id; part of the idempotency key.
@@ -45068,6 +45068,9 @@ type CreateActivityRequest struct {
 	// Recommendation The rule and current facts behind a suggested action. The server checks these facts again when accepting the suggestion; the receipt grants no authority. Replaying the same accepted observation returns its original task.
 	Recommendation *RecommendationReceipt `json:"recommendation,omitempty"`
 
+	// RecordsMeetingId A meeting transcript only (`source_system: transcript`), without `source_activity_id`. The open meeting this transcript records. In the same transaction the meeting is marked held and gains the transcript's deal, project and lead links for each kind it has none of. The transcript takes the meeting's time and its deal, project and lead links, keeps no outcome of its own, and names the meeting in `source_activity_id`, so held counts count the meeting once. The meeting must be a live meeting that still owes its outcome, or the create is refused with 422 on `records_meeting_id`; the caller needs activity update on it. The meeting's subject and notes stay as they are.
+	RecordsMeetingId *openapi_types.UUID `json:"records_meeting_id,omitempty"`
+
 	// RemindAt Task only. When the reminder comes due. From that instant, for up to 30 days, the task leads its assignee's own Worklist with the reason `reminder_due`, and `GET /v1/activities?reminder_due=true` lists it for them. Nobody else is reminded, and a task with no assignee reminds nobody. Moving `due_at` on a task whose reminder has passed clears this field, unless the same patch names it.
 	RemindAt *time.Time `json:"remind_at,omitempty"`
 
@@ -45084,7 +45087,7 @@ type CreateActivityRequest struct {
 	SenderContactId *openapi_types.UUID `json:"sender_contact_id,omitempty"`
 	Source          string              `json:"source"`
 
-	// SourceActivityId For a task, the conversation or note it follows from. The caller and assignee need access to that source. The task preserves its audience and inherits its visible links when no links are supplied. For a logged note, call or meeting, the task whose outcome is being recorded. This reference alone does not complete that task or accept a request.
+	// SourceActivityId For a task, the conversation or note it follows from. The caller and assignee need access to that source. The task preserves its audience and inherits its visible links when no links are supplied. For a logged note, call or meeting, the task whose outcome is being recorded; a meeting transcript naming one needs `meeting_status`. This reference alone does not complete that task or accept a request.
 	SourceActivityId *openapi_types.UUID `json:"source_activity_id,omitempty"`
 
 	// SourceAuthorId Who wrote this record in the system it came from, when the author holds a seat here. Written only by a declared importer (a signed-in human holding import_run:create), only beside a source_system; either author field or both may be sent, and the seat's current name wins on read. captured_by still names the caller.
@@ -84861,6 +84864,14 @@ func (a *CreateActivityRequest) UnmarshalJSON(b []byte) error {
 		delete(object, "recommendation")
 	}
 
+	if raw, found := object["records_meeting_id"]; found {
+		err = json.Unmarshal(raw, &a.RecordsMeetingId)
+		if err != nil {
+			return fmt.Errorf("error reading 'records_meeting_id': %w", err)
+		}
+		delete(object, "records_meeting_id")
+	}
+
 	if raw, found := object["remind_at"]; found {
 		err = json.Unmarshal(raw, &a.RemindAt)
 		if err != nil {
@@ -85176,6 +85187,13 @@ func (a CreateActivityRequest) MarshalJSON() ([]byte, error) {
 		object["recommendation"], err = json.Marshal(a.Recommendation)
 		if err != nil {
 			return nil, fmt.Errorf("error marshaling 'recommendation': %w", err)
+		}
+	}
+
+	if a.RecordsMeetingId != nil {
+		object["records_meeting_id"], err = json.Marshal(a.RecordsMeetingId)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'records_meeting_id': %w", err)
 		}
 	}
 

@@ -30,8 +30,9 @@ const customerLinkSQL = "(al.contact_id IS NOT NULL OR al.lead_id IS NOT NULL OR
 
 // OpenMeetingStatusSQL is a meeting under alias a whose result nobody has recorded. NULL counts:
 // capture writes calendar events with no status, and dropping them would empty
-// the question on a connected calendar.
-const OpenMeetingStatusSQL = "(a.meeting_status IS NULL OR a.meeting_status = 'booked')"
+// the question on a connected calendar. A transcript is the record of a
+// meeting, so it never owes an outcome of its own.
+const OpenMeetingStatusSQL = "((a.meeting_status IS NULL OR a.meeting_status = 'booked') AND a.source_system IS DISTINCT FROM '" + transcriptSourceSystem + "')"
 
 // appendCustomerMeetingClause narrows a list to customer meetings, counting
 // only a customer link whose record this reader may see. A link to a record

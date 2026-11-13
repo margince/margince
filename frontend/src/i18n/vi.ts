@@ -7396,6 +7396,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "{subject} đã được ghi là đã diễn ra. Lưu lại chỉ thêm phần chưa được lưu.",
   "log.recordOfMeetingManaged":
     "Lời mời trên lịch giữ tiêu đề và ghi chú của cuộc họp đó. Ghi chú của bạn được lưu thành một ghi chú ở đây, và cuộc họp được đánh dấu đã diễn ra.",
+  "log.recordOfMeetingTranscript":
+    "Bản chép lời được lưu thành một mục riêng, và cuộc họp được đánh dấu đã diễn ra.",
   "log.asTranscript": "Văn bản này là bản chép lời",
   "log.transcriptUpload": "Hoặc tải lên tệp",
   "log.transcriptUploadRejected": "Chỉ chấp nhận tệp .txt.",
