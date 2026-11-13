@@ -87,6 +87,20 @@ func TestAnInvoiceOfAHiddenCompanyAnswersAsIfItDidNotExist(t *testing.T) {
 	expect(t, download(noGrant, a.handlers, ids.UUID(invoice.Id)), http.StatusForbidden, "permission_denied")
 }
 
+// Each document is a live call against a vendor quota the whole installation
+// shares, so one caller's fetches are counted, and another caller keeps theirs.
+func TestOneCallerFetchesAtMostTwentyDocumentsAMinute(t *testing.T) {
+	a := setupSourceAdmin(t)
+	invoice := a.mirroredInvoice(t)
+
+	reader := a.documentReader(principal.RowScopeAll)
+	for range invoiceDocumentsPerMinute {
+		expect(t, download(reader, a.handlers, ids.UUID(invoice.Id)), http.StatusOK, "")
+	}
+	expect(t, download(reader, a.handlers, ids.UUID(invoice.Id)), http.StatusTooManyRequests, "rate_limited")
+	expect(t, download(a.documentReader(principal.RowScopeAll), a.handlers, ids.UUID(invoice.Id)), http.StatusOK, "")
+}
+
 // An archived company's card is not found, and neither are the documents it
 // listed, though archiving leaves its invoices in place.
 func TestAnInvoiceOfAnArchivedCompanyIsNotFound(t *testing.T) {

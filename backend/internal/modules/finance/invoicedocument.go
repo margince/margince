@@ -12,12 +12,14 @@ import (
 	"mime"
 	"net/http"
 	"regexp"
+	"time"
 
 	"github.com/jackc/pgx/v5"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/httperr"
+	"github.com/margince/margince/backend/internal/platform/ratelimit"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -30,6 +32,16 @@ const maxInvoiceDocumentBytes = 20 << 20
 // pdfMediaType is the one kind of document the core serves. Anything else a
 // source sends could be rendered by the browser as a page of our origin.
 const pdfMediaType = "application/pdf"
+
+// invoiceDocumentsPerMinute is how many documents one caller may fetch in a
+// minute. Each one is a live call to the vendor, whose quota the whole
+// installation shares, and a reader opening invoices by hand needs far fewer.
+const invoiceDocumentsPerMinute = 20
+
+// invoiceDocumentFetches meters document fetches per caller. FailClosed: an
+// unmetered window can spend the vendor quota for the day, and that cannot be
+// taken back.
+var invoiceDocumentFetches = ratelimit.New("finance-invoice-document", ratelimit.FailClosed, invoiceDocumentsPerMinute, time.Minute)
 
 // unsafeFileRune is what a source's invoice number may not carry into a file name.
 var unsafeFileRune = regexp.MustCompile(`[^A-Za-z0-9._-]+`)
@@ -66,6 +78,16 @@ func (s *Store) InvoiceDocumentFor(ctx context.Context, invoiceID ids.UUID) (Inv
 	})
 	if err != nil {
 		return InvoiceDocument{}, err
+	}
+	// Counted only once the invoice is found and visible, so a miss spends
+	// nothing of the caller's budget.
+	actor, ok := principal.Actor(ctx)
+	if !ok {
+		return InvoiceDocument{}, apperrors.ErrPermissionDenied
+	}
+	if !invoiceDocumentFetches.Allow(actor.ID) {
+		return InvoiceDocument{}, fmt.Errorf("%w: at most %d invoice documents a minute; try again in %d seconds",
+			apperrors.ErrBudgetExceeded, invoiceDocumentsPerMinute, invoiceDocumentFetches.RetryAfterSeconds())
 	}
 	// The source is asked outside the transaction, so a slow vendor holds no
 	// database connection.
