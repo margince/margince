@@ -221,7 +221,7 @@ func readMember(ctx context.Context, tx pgx.Tx, m exportMember) (memberData, err
 	var args []any
 	arg := func(v any) int { args = append(args, v); return len(args) }
 
-	scope, err := memberScope(ctx, m, "t", arg)
+	with, scope, err := memberScope(ctx, m, arg)
 	if err != nil {
 		return memberData{}, err
 	}
@@ -230,7 +230,7 @@ func readMember(ctx context.Context, tx pgx.Tx, m exportMember) (memberData, err
 	for i, col := range columns {
 		selects[i] = exportColumnSQL(m.table, col, arg)
 	}
-	sql := fmt.Sprintf("SELECT %s FROM %s t", strings.Join(selects, ", "), m.table)
+	sql := fmt.Sprintf("%sSELECT %s FROM %s %s", with, strings.Join(selects, ", "), m.table, memberAlias)
 	if scope != "" {
 		sql += " WHERE " + scope
 	}
