@@ -143,7 +143,7 @@ func TestAFileChangedBeforeTheLastPassIsLeftAndNamed(t *testing.T) {
 	if err := os.Chtimes(filepath.Join(root, "notes.txt"), old, old); err != nil {
 		t.Fatal(err)
 	}
-	last := lastPass{started: time.Now()}
+	last := lastPass{started: passStart(time.Now())}
 	writeFiles(t, root, map[string]string{"table_gen.txt": "fresh\n"})
 	if last.tree, err = tree.snapshot(); err != nil {
 		t.Fatal(err)
@@ -170,7 +170,7 @@ func TestAFileChangedAfterTheGeneratorsRanIsLeftAndNamed(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	last := lastPass{started: time.Now().Add(-time.Second)}
+	last := lastPass{started: passStart(time.Now())}
 	writeFiles(t, root, map[string]string{"table_gen.txt": "fresh\n"})
 	if last.tree, err = tree.snapshot(); err != nil {
 		t.Fatal(err)

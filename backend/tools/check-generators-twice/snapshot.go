@@ -60,6 +60,13 @@ func (w worktree) changed(from, to string) ([][2]string, error) {
 	return paths, nil
 }
 
+// passStart is the earliest time a write in a pass that starts at now carries.
+// The kernel stamps a file from a clock that may lag the one Go reads. Some file
+// systems keep whole seconds. So the bound is a second early.
+func passStart(now time.Time) time.Time {
+	return now.Add(-time.Second).Truncate(time.Second)
+}
+
 // lastPass is the snapshot after the pass that ran last, and when it started.
 type lastPass struct {
 	tree    string

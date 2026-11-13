@@ -155,9 +155,7 @@ func judge(p plan, stamps stamps, tree worktree, out *log.Logger, last *lastPass
 // pass runs every generator once and snapshots what they left, also after a
 // generator failed, so the restore knows what the generators wrote.
 func pass(root string, generators []generator, tree worktree, out *log.Logger, number int, last *lastPass) (string, error) {
-	// Whole seconds, so a file system that keeps coarse times still reads a
-	// write in this pass as one.
-	last.started = time.Now().Truncate(time.Second)
+	last.started = passStart(time.Now())
 	var failed error
 	for _, g := range generators {
 		started := time.Now()
