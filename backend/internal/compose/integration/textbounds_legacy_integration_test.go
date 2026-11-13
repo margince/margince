@@ -61,8 +61,8 @@ func withoutTextGuards(ctx context.Context, t *testing.T) func() {
 }
 
 // textGuardMigrations returns every migration that touches a text guard, core
-// before the custom track that sits on it: ups in applied order, downs in the
-// reverse one, so undoing them leaves the schema as it was before any guard.
+// before the custom track that sits on it. Ups come in applied order and downs
+// in the reverse one, so the downs leave the schema as it was before any guard.
 func textGuardMigrations(t *testing.T) (ups, downs []string) {
 	t.Helper()
 	for _, namespace := range []func() (dbmigrate.Namespace, error){migrations.Core, migrations.Custom} {
