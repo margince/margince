@@ -59,7 +59,7 @@ func internalMailHistoryPreviewTx(ctx context.Context, tx pgx.Tx, connection ids
 		return nil, err
 	}
 	for _, source := range policy.Sources {
-		if source.ConnectionID != connection || source.OwnerUserID != owner.UUID || source.HistorySince == nil {
+		if source.ConnectionID != connection || !sameInternalMailOwner(source.OwnerUserID, &owner.UUID) || source.HistorySince == nil {
 			continue
 		}
 		current, err := internalMailSourceCurrentTx(ctx, tx, source)

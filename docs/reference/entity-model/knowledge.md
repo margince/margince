@@ -72,6 +72,8 @@ The 3 tables owned by `knowledge`, as the migrations build them. [Back to the en
 **Triggers**
 
 - `knowledge_corpus_touch`: `BEFORE UPDATE FOR EACH ROW EXECUTE FUNCTION set_updated_at()`
+- `text_bound_insert`: `AFTER INSERT FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL, '{"name": 120, "captured_by": 20000, "description": 20000, "managed_source": 20000, "topic_statement": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"captured_by":20000,"description":20000,"managed_source":20000,"name":120,"topic_statement":20000}')`
+- `text_bound_update`: `AFTER UPDATE FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"name": 120, "captured_by": 20000, "description": 20000, "managed_source": 20000, "topic_statement": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"captured_by":20000,"description":20000,"managed_source":20000,"name":120,"topic_statement":20000}')`
 
 ## knowledge_document
 
@@ -119,3 +121,5 @@ The 3 tables owned by `knowledge`, as the migrations build them. [Back to the en
 **Triggers**
 
 - `knowledge_document_touch`: `BEFORE UPDATE FOR EACH ROW EXECUTE FUNCTION set_updated_at()`
+- `text_bound_insert`: `AFTER INSERT FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL, '{"checksum": 20000, "filename": 20000, "captured_by": 20000, "storage_key": 20000, "content_type": 20000, "ingest_detail": 20000, "ingest_status": 20000, "managed_source": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"captured_by":20000,"checksum":20000,"content_type":20000,"filename":20000,"ingest_detail":20000,"ingest_status":20000,"managed_source":20000,"storage_key":20000}')`
+- `text_bound_update`: `AFTER UPDATE FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"checksum": 20000, "filename": 20000, "captured_by": 20000, "storage_key": 20000, "content_type": 20000, "ingest_detail": 20000, "ingest_status": 20000, "managed_source": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"captured_by":20000,"checksum":20000,"content_type":20000,"filename":20000,"ingest_detail":20000,"ingest_status":20000,"managed_source":20000,"storage_key":20000}')`

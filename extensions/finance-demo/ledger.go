@@ -44,12 +44,15 @@ type archetype struct {
 	disputeRate int
 	// openTail is how many of the newest invoices are still unpaid.
 	openTail int
+	// reminders is the dunning level the source states on each unpaid,
+	// undisputed invoice. A fixed count, so a sync on a later day restates it.
+	reminders int
 }
 
 var archetypes = []archetype{
-	{lateLow: -6, lateHigh: 2, disputeRate: 0, openTail: 1},
-	{lateLow: -2, lateHigh: 12, disputeRate: 30, openTail: 2},
-	{lateLow: 5, lateHigh: 38, disputeRate: 40, openTail: 3},
+	{lateLow: -6, lateHigh: 2, disputeRate: 0, openTail: 1, reminders: 0},
+	{lateLow: -2, lateHigh: 12, disputeRate: 30, openTail: 2, reminders: 1},
+	{lateLow: 5, lateHigh: 38, disputeRate: 40, openTail: 3, reminders: 3},
 }
 
 func generate(conn accounting.Connection, customerID string) (accounting.Ledger, error) {
@@ -85,6 +88,7 @@ func generate(conn accounting.Connection, customerID string) (accounting.Ledger,
 		if period >= kind.openTail {
 			settle(&invoice, kind, rng, due, anchor)
 		}
+		invoice.DunningLevel = dunningLevel(invoice, kind)
 		out.Invoices = append(out.Invoices, invoice)
 		if invoice.FullyPaidAt != nil {
 			out.Payments = append(out.Payments, accounting.Payment{
@@ -138,6 +142,16 @@ func creditNoteFor(invoices []accounting.Invoice, customerID string, rng *rand.R
 		GrossMinor:        amount,
 		CreditsExternalID: target.ExternalID,
 	}
+}
+
+// dunningLevel is what the demo source says it has sent: the archetype's
+// reminders on an invoice still unpaid and undisputed, none on any other.
+func dunningLevel(invoice accounting.Invoice, kind archetype) *int {
+	level := 0
+	if invoice.FullyPaidAt == nil && !invoice.Disputed {
+		level = kind.reminders
+	}
+	return &level
 }
 
 func seedFor(connectionID, customerID string) (uint64, uint64) {

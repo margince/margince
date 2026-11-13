@@ -7,6 +7,7 @@ import { Fragment, type ReactNode, useId, useState } from "react";
 import type { components } from "../../api/schema";
 import {
   useCustomFieldDisplay,
+  useCustomFieldLabel,
   useObjectCustomFields,
 } from "../../components/customfields.form";
 import { EntityRef } from "../../components/entityref";
@@ -21,7 +22,10 @@ import { Heading } from "../../design-system/heading";
 import { NoteMarkdown } from "../../design-system/markdown";
 import { Panel, PanelBody } from "../../design-system/panel";
 import { SurfaceState } from "../../design-system/surfacestate";
-import { TIMELINE_KIND_LABEL } from "../../design-system/timelineentry";
+import {
+  AiAssistedFlag,
+  TIMELINE_KIND_LABEL,
+} from "../../design-system/timelineentry";
 import { isTranscriptActivity } from "../../design-system/transcriptread";
 import { formatActivityWhen } from "../../format/activitywhen";
 import { formatDue, formatNumber } from "../../format/format";
@@ -124,6 +128,7 @@ function ActivityDetail({
     >
       <DrawerHead>
         {activity?.archived_at && <Badge>{t("record.archived")}</Badge>}
+        <AiAssistedFlag entry={{ aiAssisted: activity?.ai_assisted }} />
         {activity && (
           <Eyebrow>{t(labelFor(TIMELINE_KIND_LABEL, activity.kind))}</Eyebrow>
         )}
@@ -203,20 +208,17 @@ function ActivityBody({
             locale,
             zone,
           )}
-          {activity.kind === "task" && activity.due_at && (
-            <>
-              {" "}
-              ·{" "}
-              {t("co.next.due", {
-                when: formatDue(
-                  activity.due_at,
-                  activity.due_has_time,
-                  locale,
-                  zone,
-                ),
-              })}
-            </>
-          )}
+          {activity.kind === "task" &&
+            activity.due_at &&
+            ` · ${t("co.next.due", {
+              when: formatDue(
+                activity.due_at,
+                activity.due_has_time,
+                locale,
+                zone,
+                activity.due_intent,
+              ),
+            })}`}
           <CallOutcomeNote activity={activity} />{" "}
           {activity.is_done && (
             <Badge tone="success">{t("tasks.isDone")}</Badge>
@@ -271,8 +273,7 @@ function ActivityBody({
               readOnly={!canUpdate || Boolean(activity.archived_at)}
               update={update}
               onClose={() => setOpened(null)}
-              // The follow-up's source is this activity, already open under
-              // it, so opening it returns there.
+              // The follow-up's source is this activity, already open under it.
               openerFor={(ref) =>
                 ref.id === activity.id ? () => setOpened(null) : undefined
               }
@@ -295,10 +296,11 @@ function ActivityBody({
 function CustomFieldLines({ activity }: Readonly<{ activity: Activity }>) {
   const { fields } = useObjectCustomFields("activity", "record");
   const display = useCustomFieldDisplay();
+  const fieldLabel = useCustomFieldLabel();
   return fields.map((field) => {
     const shown = display(field, activity[field.column_name]);
     return shown === null ? null : (
-      <PartyLine key={field.column_name} label={field.label}>
+      <PartyLine key={field.column_name} label={fieldLabel(field)}>
         {shown}
       </PartyLine>
     );

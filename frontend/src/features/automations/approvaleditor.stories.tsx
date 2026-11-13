@@ -10,8 +10,8 @@ import {
   jsonResponse,
   StoryProviders,
 } from "../../testing/story-utils";
+import { ApprovalDetailModal } from "./approvaldetail";
 import {
-  ApprovalDetailModal,
   DecideOutcome,
   editableSeed,
   editableStrings,

@@ -236,3 +236,12 @@ What an agent reads when a tool refuses is in [mcp-protocol.md](mcp-protocol.md#
 - What a human may do, which limits every agent: [rbac-matrix.md](rbac-matrix.md).
 - What the `agents` module owns and where it sits: [modules.md](modules.md).
 - The transport, limits and client sign-in: [mcp-protocol.md](mcp-protocol.md).
+
+### Questions from a form
+
+| Action | Tier | Scope | Egress | What it does |
+|---|---|---|---|---|
+| `preview_website_inquiries` | 🟢 | read | none | Reads the reviewed plan for posts you pick. |
+| `handle_website_inquiries` | 🟢 | write | none | Handles only posts you pick at their read versions after the user asks. |
+| `preview_website_inquiry_assignment` | 🟢 | write | none | Checks the current recipient and record versions before you take a task or give it to a colleague. |
+| `assign_website_inquiry` | 🟢 | write | none | Takes the task or gives it to a colleague using the reviewed record and task versions. |

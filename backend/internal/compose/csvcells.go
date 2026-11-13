@@ -13,10 +13,9 @@ import (
 	"maps"
 	"slices"
 	"sort"
-	"strconv"
 	"strings"
-	"unicode/utf8"
 
+	"github.com/margince/margince/backend/internal/compose/importtextbounds"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/modules/migration"
@@ -301,6 +300,9 @@ func unwritableReason(object string, fields map[string]string) *cellProblem {
 	if problem := emailCellProblem(object, fields); problem != nil {
 		return problem
 	}
+	if target, why, refused := importtextbounds.Refusal(object, fields); refused {
+		return problemOf(target, fields[target], why)
+	}
 	if object == migration.ObjectContact || object == migration.ObjectLead {
 		return nil
 	}
@@ -312,10 +314,6 @@ func unwritableReason(object string, fields map[string]string) *cellProblem {
 		if _, err := values.ParseDomain(domain); err != nil {
 			return problemOf(fieldDomain, fields[fieldDomain], migration.Why(migration.ReasonNotADomain, "value", domain))
 		}
-	}
-	if length := utf8.RuneCountInString(fields[descriptionField]); length > contacts.CompanyDescriptionMax {
-		return problemOf(descriptionField, fields[descriptionField], migration.Why(migration.ReasonDescriptionTooLong,
-			"length", strconv.Itoa(length), "max", strconv.Itoa(contacts.CompanyDescriptionMax)))
 	}
 	band := strings.TrimSpace(fields[fieldSizeBand])
 	if band == "" || importableSizeBands[band] {

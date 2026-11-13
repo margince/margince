@@ -31,6 +31,7 @@ import {
 } from "../../../lib/legalreviews.queries";
 import { problemMessageOf } from "../../../lib/problem";
 import { navigate } from "../../../lib/router";
+import { TEXT_LIMITS } from "../../../lib/textlimits_gen";
 import { useViewerZone } from "../../../lib/viewerzone";
 import "./deallegaltab.css";
 
@@ -108,7 +109,7 @@ function RequestDialog({
           <Textarea
             {...control}
             value={note}
-            maxLength={4000}
+            maxLength={TEXT_LIMITS.note}
             onChange={(event) => setNote(event.target.value)}
           />
         )}

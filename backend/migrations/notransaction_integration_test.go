@@ -134,3 +134,39 @@ func TestAnUnwrappedConcurrentIndexBuildLandsAndIsRecorded(t *testing.T) {
 			"between the DDL and the bookkeeping would leave this database unmigratable", err)
 	}
 }
+
+// An unwrapped file bounds the lock wait for the whole session. A failure stops it
+// before its RESET, and the runner's later work on this connection must not inherit it.
+func TestAFailedUnwrappedMigrationLeavesTheSessionLockWaitAsItFoundIt(t *testing.T) {
+	ownerDSN, _ := dsns(t)
+	conn := connect(t, ownerDSN)
+	resetSchema(t, conn)
+	ctx := context.Background()
+	if _, err := conn.Exec(ctx, `SET lock_timeout = '7s'`); err != nil {
+		t.Fatal(err)
+	}
+	ns := dbmigrate.Namespace{Name: "probe_lock_wait", Migrations: []dbmigrate.Migration{{
+		Version: "0001", Name: "guards",
+		UpSQL: dbmigrate.NoTransactionMarker + "\nSET lock_timeout = '2s';\n" +
+			"CREATE OR REPLACE TRIGGER text_bound_insert AFTER INSERT ON public.no_such_table " +
+			"FOR EACH ROW EXECUTE FUNCTION suppress_redundant_updates_trigger();\nRESET lock_timeout;",
+		DownSQL: dbmigrate.NoTransactionMarker + "\nSELECT 1;",
+	}}}
+	if _, err := dbmigrate.Up(ctx, conn, ns); err == nil || !strings.Contains(err.Error(), "no_such_table") {
+		t.Fatalf("up → %v, want the missing table to stop the file", err)
+	}
+	var after string
+	if err := conn.QueryRow(ctx, `SHOW lock_timeout`).Scan(&after); err != nil {
+		t.Fatal(err)
+	}
+	if after != "7s" {
+		t.Errorf("lock_timeout is %q after the failed file, want the 7s it was before", after)
+	}
+	var recorded int
+	if err := conn.QueryRow(ctx, `SELECT count(*) FROM schema_migrations_probe_lock_wait`).Scan(&recorded); err != nil {
+		t.Fatal(err)
+	}
+	if recorded != 0 {
+		t.Errorf("the ledger holds %d rows for a file that failed, want 0", recorded)
+	}
+}

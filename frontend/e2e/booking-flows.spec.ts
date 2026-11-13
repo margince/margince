@@ -1,4 +1,5 @@
-import { expect, test } from "@playwright/test";
+import { expect, type Page, test } from "@playwright/test";
+import { wallClockIntent } from "../src/format/timezone";
 import { de } from "../src/i18n/de";
 import {
   bookingConnection,
@@ -11,6 +12,11 @@ import { copy } from "./copy";
 import { contact360 } from "./mockapi/records";
 import { mockApi } from "./seed";
 import { openedAt } from "./waits";
+
+// A chosen time is sent with the wall clock of the zone the browser runs in.
+async function pageZone(page: Page): Promise<string> {
+  return page.evaluate(() => Intl.DateTimeFormat().resolvedOptions().timeZone);
+}
 
 test.beforeEach(async ({ page, context }) => {
   await mockApi(context);
@@ -200,6 +206,7 @@ test("connected calendar setup keeps the draft, then sends and cancels an invita
     location: "",
     video_call: true,
     ...bookingSlots[0],
+    start_intent: wallClockIntent(bookingSlots[0].start, await pageZone(page)),
   });
   await page.getByRole("button", { name: de["scheduling.cancel"] }).click();
   await page
@@ -310,7 +317,15 @@ test("guest reschedules only after confirming the replacement time", async ({
     de["scheduling.rescheduling"],
   );
   expect(changes).toEqual([
-    { action: "reschedule", version: 1, ...bookingSlots[1] },
+    {
+      action: "reschedule",
+      version: 1,
+      ...bookingSlots[1],
+      start_intent: wallClockIntent(
+        bookingSlots[1].start,
+        await pageZone(page),
+      ),
+    },
   ]);
 });
 

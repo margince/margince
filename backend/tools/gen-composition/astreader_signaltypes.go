@@ -100,7 +100,7 @@ func (r *unitReader) readSignalFields(expr ast.Expr, ext string) ([]declaredSign
 }
 
 func (r *unitReader) readSignalField(elt ast.Expr, ext string) (declaredSignalField, error) {
-	var f declaredSignalField
+	f := declaredSignalField{Personal: true}
 	lit, ok := elt.(*ast.CompositeLit)
 	if !ok || (lit.Type != nil && !isSelector(lit.Type, ext, "SignalEvidenceField")) {
 		return f, r.errAt(elt, "an Evidence entry must be an extension.SignalEvidenceField literal")
@@ -119,8 +119,10 @@ func (r *unitReader) readSignalField(elt ast.Expr, ext string) (declaredSignalFi
 			f.Type, err = r.signalFieldType(kv.Value, ext)
 		case "Required":
 			f.Required, err = r.boolLit(kv.Value, "SignalEvidenceField.Required")
-		case "Personal":
-			f.Personal, err = r.boolLit(kv.Value, "SignalEvidenceField.Personal")
+		case "NotPersonal":
+			var notPersonal bool
+			notPersonal, err = r.boolLit(kv.Value, "SignalEvidenceField.NotPersonal")
+			f.Personal = !notPersonal
 		default:
 			err = r.errAt(kv, "SignalEvidenceField field %s is not derivable by this generator", key)
 		}

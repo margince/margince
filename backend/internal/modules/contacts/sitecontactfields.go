@@ -241,8 +241,9 @@ func fillSiteContactFields(ctx context.Context, tx pgx.Tx, contactID ids.Contact
 		}
 		// A machine fill: what a page published claims a field nobody has
 		// answered and never replaces one.
+		value, evidence := machineProfileField(value, in.EvidenceSnippet)
 		landed, err := writeContactProfileField(ctx, tx, contactID, contactProfileFieldRow{
-			Field: field, Value: value, EvidenceSnippet: in.EvidenceSnippet, SourceRef: sourceRef,
+			Field: field, Value: value, EvidenceSnippet: evidence, SourceRef: sourceRef,
 			Source: source, CapturedBy: by,
 		}, claimUnanswered)
 		if err != nil {
@@ -271,7 +272,7 @@ func fillSiteContactFields(ctx context.Context, tx pgx.Tx, contactID ids.Contact
 	// archived_at, so this half refuses exactly when the evidence row above
 	// does. Without it an erasure committing between the two statements leaves
 	// the evidence refused and the erased contact's title written back.
-	if role := strings.TrimSpace(in.Role); role != "" {
+	if role := MachineTitle(in.Role); role != "" {
 		tag, err := tx.Exec(ctx, `
 			UPDATE contact SET title = $2 WHERE id = $1 AND title IS NULL AND archived_at IS NULL`, contactID, role)
 		if err != nil {

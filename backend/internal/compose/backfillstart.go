@@ -7,10 +7,13 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"net/http"
 
 	"github.com/jackc/pgx/v5"
 	"github.com/riverqueue/river"
 
+	"github.com/margince/margince/backend/internal/compose/sharedmailboxhttp"
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/platform/jobs"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -44,21 +47,27 @@ func (h backfillHandlers) beginInternalHistory(ctx context.Context, ws ids.UUID,
 }
 
 func (h backfillHandlers) beginWith(ctx context.Context, ws ids.UUID, provider string, userID ids.UserID, months int, estimate connector.BackfillEstimate, start backfillStarter) (capture.BackfillRun, error) {
-	// Kept apart from the run's own error so a refused queue keeps its own
-	// answer instead of the generic connector-fault mapping.
+	return h.scheduled(ctx, ws, func(ctx context.Context, enqueue capture.EnqueueBackfill) (capture.BackfillRun, error) {
+		return start(ctx, provider, userID, months, estimate, enqueue)
+	})
+}
+
+// scheduled runs one start with the enqueue that schedules its pager. A
+// refused queue keeps its own answer instead of the generic connector-fault
+// mapping.
+func (h backfillHandlers) scheduled(ctx context.Context, ws ids.UUID, start func(context.Context, capture.EnqueueBackfill) (capture.BackfillRun, error)) (capture.BackfillRun, error) {
 	var enqueueErr error
-	run, err := start(ctx, provider, userID, months, estimate,
-		func(ctx context.Context, tx pgx.Tx, backfillID ids.UUID) error {
-			enqueueErr = h.inserter.EnqueueTx(ctx, tx, CaptureBackfillArgs{
-				Workspace: ws, BackfillID: backfillID.String(),
-			}, jobs.QueuedAs[CaptureBackfillArgs](&river.InsertOpts{
-				// One attempt: the backfill row owns the outcome (api/jobs.yaml), and
-				// a River retry would re-page a run the engine already ended.
-				MaxAttempts: rowOwnedMaxAttempts,
-				UniqueOpts:  river.UniqueOpts{ByArgs: true, ByState: activeSweepStates},
-			}))
-			return enqueueErr
-		})
+	run, err := start(ctx, func(ctx context.Context, tx pgx.Tx, backfillID ids.UUID) error {
+		enqueueErr = h.inserter.EnqueueTx(ctx, tx, CaptureBackfillArgs{
+			Workspace: ws, BackfillID: backfillID.String(),
+		}, jobs.QueuedAs[CaptureBackfillArgs](&river.InsertOpts{
+			// One attempt: the backfill row owns the outcome (api/jobs.yaml), and
+			// a River retry would re-page a run the engine already ended.
+			MaxAttempts: rowOwnedMaxAttempts,
+			UniqueOpts:  river.UniqueOpts{ByArgs: true, ByState: activeSweepStates},
+		}))
+		return enqueueErr
+	})
 	if enqueueErr != nil {
 		return capture.BackfillRun{}, fmt.Errorf("%w: %w", errBackfillEnqueue, enqueueErr)
 	}
@@ -72,4 +81,12 @@ func (h backfillHandlers) importOnConnect() connectImport {
 		return connectImport{}
 	}
 	return connectImport{estimate: h.registry.EstimateBackfill, begin: h.begin}
+}
+
+func (h backfillHandlers) StartSharedMailboxHistoryImport(w http.ResponseWriter, r *http.Request, id crmcontracts.Id) {
+	if h.backfillWired(w, r, "StartSharedMailboxHistoryImport") {
+		sharedmailboxhttp.History{
+			Registry: h.registry, Months: windowMonths, Schedule: h.scheduled, Refuse: h.writeBackfillError, Accepted: h.statusPayload,
+		}.Start(w, r, id)
+	}
 }

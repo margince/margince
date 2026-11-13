@@ -1,0 +1,3 @@
+{"type": "system", "subtype": "init", "tools": ["mcp__margince__read_lists", "mcp__margince__find_records"]}
+{"type": "assistant", "message": {"content": [{"type": "tool_use", "name": "mcp__margince__read_lists", "input": {"mode": "preview", "entity_type": "contact", "definition": {"field": "tag", "op": "eq", "value": "01a1d0f0-0000-7000-8000-000000000119"}}}]}}
+{"type": "result", "subtype": "success", "is_error": false, "result": "A live list on the Husum Wind 2026 tag would hold 30 contacts. A few of them: Anke Petersen, Dörte Rickmers and Hella Momsen, among others."}

@@ -186,6 +186,8 @@ export const UNUSED_INSTALLATION_ROUTES: RouteMap = {
     jsonResponse({ items: [] } satisfies Schemas["KnowledgeCorpusList"]),
   "GET /imports/format": () => jsonResponse(formatFixture),
   "GET /extensions": () => jsonResponse({ extensions: [] }),
+  "GET /shared-mailboxes": () =>
+    jsonResponse({ items: [] } satisfies Schemas["SharedMailboxList"]),
   "GET /finance/source": () =>
     jsonResponse({ available: [] } satisfies Schemas["FinanceSourceState"]),
   "GET /installation/jurisdiction": () => jsonResponse(NO_JURISDICTION),

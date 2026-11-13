@@ -11,6 +11,7 @@ import { VisibilityBadge } from "./visibility";
 import "./composed.css";
 
 import {
+  AiAssistedFlag,
   AutomaticFlag,
   CommitmentReviewFlag,
   CopiesFlag,
@@ -372,6 +373,7 @@ export function TimelineRow({
             )
           )}
           <AutomaticFlag entry={entry} />
+          <AiAssistedFlag entry={entry} />
           <CopiesFlag entry={entry} />
           <CommitmentReviewFlag
             count={entry.withheld ? 0 : entry.commitmentReviewCount}

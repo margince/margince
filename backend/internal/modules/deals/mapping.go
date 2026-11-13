@@ -14,6 +14,7 @@ import (
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/platform/httperr"
+	"github.com/margince/margince/backend/internal/platform/labeltranslation"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/provenance"
 )
@@ -101,6 +102,9 @@ func stageCreateInput(req crmcontracts.CreateStageRequest) (CreateStageInput, er
 		Name:           req.Name,
 		Position:       req.Position,
 		WinProbability: req.WinProbability,
+	}
+	if req.NameTranslations != nil {
+		in.NameTranslations = labeltranslation.FromWire(req.NameTranslations)
 	}
 	if req.Semantic != nil {
 		in.Semantic = string(*req.Semantic)

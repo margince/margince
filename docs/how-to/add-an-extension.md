@@ -889,8 +889,8 @@ SignalTypes: []extension.SignalTypeDeclaration{{
 	Kind:  "ledger_loss",
 	Label: "Loss reported on a ledger account",
 	Evidence: []extension.SignalEvidenceField{
-		{Name: "amount", Label: "Amount", Type: extension.SignalFieldNumber, Required: true},
-		{Name: "reporter", Label: "Reporter", Type: extension.SignalFieldText, Personal: true},
+		{Name: "amount", Label: "Amount", Type: extension.SignalFieldNumber, Required: true, NotPersonal: true},
+		{Name: "reporter", Label: "Reporter", Type: extension.SignalFieldText},
 	},
 }},
 ```
@@ -901,7 +901,7 @@ SignalTypes: []extension.SignalTypeDeclaration{{
 | `Label` | What a screen shows. It is also the summary of a signal that gives none. |
 | `Evidence` | The members a signal may carry. Each has a name, a label, a type (`SignalFieldText`, `SignalFieldNumber` or `SignalFieldBool`), and two flags. |
 | `Required` | A signal without the member is refused. |
-| `Personal` | The member holds personal data. It is removed when the contact the signal is about is erased or anonymized. |
+| `NotPersonal` | The member holds no personal data. Every member without it is personal, and is removed when the contact the signal is about is erased or anonymized. |
 
 File a signal from a handler with the core port:
 
@@ -1509,6 +1509,8 @@ the sync reads `InvoicesFor` for each linked customer. It writes only what chang
 - **Report only what the vendor said.** `accounting.Invoice` has no status field.
   "Overdue" depends on today, and the mirror works it out on read. Send the dates and money values as
   the vendor holds them.
+- **Send `DunningLevel`** if the vendor has it: how many reminders the vendor sent for an invoice,
+  from 0 to 99. Leave it unset when the vendor does not say. The company page shows the top one.
 - **Give the same answer for the same data.** The sync compares a hash of each record. A field that
   moves on its own, such as a time you read from the clock, writes the row again on every pass.
 - **Keep the credential in your own secrets.** Ask for a `workspace` key, read it with

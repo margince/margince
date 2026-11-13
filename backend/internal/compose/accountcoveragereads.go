@@ -20,6 +20,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/deals"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/platform/labeltranslation"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
@@ -88,8 +89,9 @@ func openDealsOf(ctx context.Context, tx pgx.Tx, pop *coveragePopulation) ([]crm
 	if err != nil {
 		return nil, err
 	}
+	stageName := labeltranslation.SQL(ctx, "s.name", "s.name_translations", scope.arg)
 	rows, err := tx.Query(ctx, fmt.Sprintf(`
-		SELECT d.id, d.name, %s, %s, s.name, d.owner_id, d.expected_close_date,
+		SELECT d.id, d.name, %s, %s, %s, d.owner_id, d.expected_close_date,
 		       c.id, c.display_name, c.owner_id
 		  FROM deal d
 		  JOIN stage s ON s.id = d.stage_id
@@ -97,7 +99,7 @@ func openDealsOf(ctx context.Context, tx pgx.Tx, pop *coveragePopulation) ([]crm
 		 CROSS JOIN LATERAL (SELECT %s AS base_minor) v
 		 WHERE d.status = 'open' AND d.archived_at IS NULL AND %s
 		 ORDER BY v.base_minor DESC NULLS LAST, d.id
-		 LIMIT %d`, amount, currency, value, scope.where, coverageCandidates), scope.args...)
+		 LIMIT %d`, amount, currency, stageName, value, scope.where, coverageCandidates), scope.args...)
 	if err != nil {
 		return nil, fmt.Errorf("read the population's open deals: %w", err)
 	}

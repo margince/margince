@@ -91,3 +91,21 @@ func TestNoStarterWorkflowDeclaresBothTriggerFields(t *testing.T) {
 		}
 	}
 }
+
+type extraTriggerHandler struct {
+	bothFieldsHandler
+	trigger workflow.Trigger
+}
+
+func (h extraTriggerHandler) Spec() workflow.Spec {
+	return workflow.Spec{Name: "extra_trigger", Trigger: h.trigger}
+}
+
+func TestAdditionalEventTypesRequireAPrimaryEventAndCannotJoinASchedule(t *testing.T) {
+	for _, trigger := range []workflow.Trigger{
+		{AdditionalEventTypes: []string{"activity.updated"}},
+		{Schedule: "clock:test", AdditionalEventTypes: []string{"activity.updated"}},
+	} {
+		mustPanic(t, "additional events must belong to an event handler", func() { NewWorkflowEngine(nil, nil).RegisterWorkflow(extraTriggerHandler{trigger: trigger}) })
+	}
+}

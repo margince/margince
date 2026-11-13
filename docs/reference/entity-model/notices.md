@@ -36,7 +36,7 @@ The 3 tables owned by `notices`, as the migrations build them. [Back to the enti
 
 **Rules**
 
-- `notice_content_bounded`: `CHECK (((length(subject) <= 200) AND (length(body) <= 2000)))`
+- `notice_content_bounded`: `CHECK ((length(body) <= 2000))`
 - `notice_email_error_after_attempt`: `CHECK (((email_error IS NULL) OR (email_attempted_at IS NOT NULL)))`
 - `notice_email_error_bounded`: `CHECK ((length(email_error) <= 500))`
 - `notice_subject_present`: `CHECK ((subject <> ''))`
@@ -55,6 +55,8 @@ The 3 tables owned by `notices`, as the migrations build them. [Back to the enti
 **Triggers**
 
 - `notice_system_text_retire`: `BEFORE UPDATE FOR EACH ROW EXECUTE FUNCTION retire_changed_system_text()`
+- `text_bound_insert`: `AFTER INSERT FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL, '{"body": 2000, "kind": 20000, "subject": 500, "dedupe_key": 20000, "captured_by": 20000, "email_error": 500, "target_type": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"body":2000,"captured_by":20000,"dedupe_key":20000,"email_error":500,"kind":20000,"subject":500,"target_type":20000}')`
+- `text_bound_update`: `AFTER UPDATE FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"body": 2000, "kind": 20000, "subject": 500, "dedupe_key": 20000, "captured_by": 20000, "email_error": 500, "target_type": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"body":2000,"captured_by":20000,"dedupe_key":20000,"email_error":500,"kind":20000,"subject":500,"target_type":20000}')`
 
 ## notification_digest_run
 
@@ -81,6 +83,11 @@ The 3 tables owned by `notices`, as the migrations build them. [Back to the enti
 
 - `notification_digest_run_pkey`: `unique, btree (user_id, digest_date)`
 
+**Triggers**
+
+- `text_bound_insert`: `AFTER INSERT FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL, '{"mail_error": 500}')) EXECUTE FUNCTION refuse_oversized_text('{"mail_error":500}')`
+- `text_bound_update`: `AFTER UPDATE FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"mail_error": 500}')) EXECUTE FUNCTION refuse_oversized_text('{"mail_error":500}')`
+
 ## notification_preference
 
 5 columns · primary key `(user_id, class)` · referenced by 0 foreign keys
@@ -106,3 +113,8 @@ The 3 tables owned by `notices`, as the migrations build them. [Back to the enti
 **Indexes**
 
 - `notification_preference_pkey`: `unique, btree (user_id, class)`
+
+**Triggers**
+
+- `text_bound_insert`: `AFTER INSERT FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL, '{"class": 20000, "delivery": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"class":20000,"delivery":20000}')`
+- `text_bound_update`: `AFTER UPDATE FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"class": 20000, "delivery": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"class":20000,"delivery":20000}')`

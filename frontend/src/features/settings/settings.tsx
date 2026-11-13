@@ -67,6 +67,7 @@ import { PipelinesCard } from "./settings.pipelines";
 import { PrivacyLanes } from "./settings.privacy";
 import { SystemHealthPage } from "./settings.systemhealth";
 import { AuditLogCard } from "./settings-audit";
+import { SharedMailboxesCard } from "./sharedmailboxes";
 import { SharedMergeReviewsCard } from "./sharedmergereviews";
 import { TaxRatesCard } from "./taxrates";
 import { TeamsCard } from "./users-access";
@@ -378,6 +379,8 @@ function integrationsTab(tab: string): ReactNode {
       return <WebhooksCard />;
     case "telegram":
       return <TelegramConnectorsPanel />;
+    case "shared-mailboxes":
+      return <SharedMailboxesCard />;
     case "units":
       // A unit whose secret is `workspace`-scoped holds the installation's
       // credential. Which page a unit lands on is its manifest's decision.

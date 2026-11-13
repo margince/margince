@@ -6,6 +6,7 @@ import { useReferenceOptions } from "../../components/filterreference";
 import { useT } from "../../i18n";
 import { valueLabel } from "./analytics.questions.values";
 import { fieldReference } from "./analytics.questions.vocab";
+import { useAnalyticsSchema } from "./analytics.schema";
 
 type IdLabels = components["schemas"]["AnalyticsIdLabels"];
 
@@ -25,6 +26,8 @@ export function useValueNamer(
   labels: IdLabels | undefined,
 ) {
   const t = useT();
+  const schema = useAnalyticsSchema();
+  const optionLabels = customOptionLabels(schema.data?.entities ?? [], entity);
   const refs = new Set(fields.map(fieldReference));
   const users = useReferenceOptions(
     refs.has("app_user") ? "app_user" : undefined,
@@ -62,7 +65,11 @@ export function useValueNamer(
     const text = String(value);
     const reference = fieldReference(field);
     if (reference === undefined) {
-      return valueLabel(t, entity, field, text) ?? text;
+      return (
+        optionLabels.get(field)?.[text] ??
+        valueLabel(t, entity, field, text) ??
+        text
+      );
     }
     return (
       idName(field, text, reference) ??
@@ -72,3 +79,24 @@ export function useValueNamer(
 }
 
 export type Namer = ReturnType<typeof useValueNamer>;
+
+/**
+ * Each custom field's choices as the reader names them, by field: the
+ * names an administrator gave in the reader's language, served with the
+ * schema. A choice with none reads as itself.
+ */
+export function customOptionLabels(
+  entities: readonly {
+    name: string;
+    custom_fields?: readonly {
+      name: string;
+      option_labels?: Record<string, string>;
+    }[];
+  }[],
+  entity: string,
+): ReadonlyMap<string, Record<string, string>> {
+  const fields = entities.find((one) => one.name === entity)?.custom_fields;
+  return new Map(
+    (fields ?? []).map((field) => [field.name, field.option_labels ?? {}]),
+  );
+}

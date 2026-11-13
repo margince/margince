@@ -182,6 +182,7 @@ export function CompanyNextBar({
                 task.due_has_time,
                 locale,
                 zone,
+                task.due_intent,
               ),
             })
           : undefined,

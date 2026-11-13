@@ -239,3 +239,16 @@ export async function findThreadChoice(name: string | RegExp) {
   );
   return screen.findByRole("button", { name });
 }
+
+// The one rewrite route the composer's verbs and Polish wording share.
+export const REWRITE_ROUTE = "POST /rewrites";
+
+// A rewrite's answer: the body only, since an email's subject is the rep's.
+export function rewrittenBody(body: string, language = "en") {
+  return jsonResponse({
+    subject: "",
+    body,
+    language,
+    ai_disclosure: "Drafted with AI assistance. Review before sending.",
+  });
+}

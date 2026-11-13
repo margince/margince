@@ -159,7 +159,7 @@ func cardEntry(card cardPhotoCard) contacts.VCardEntry {
 	return contacts.VCardEntry{
 		FullName:  strings.TrimSpace(card.FullName),
 		Company:   strings.TrimSpace(card.Company),
-		Title:     strings.TrimSpace(card.Title),
+		Title:     contacts.MachineTitle(card.Title),
 		Emails:    cardChannels(card.Emails, func(v string) bool { return strings.Contains(v, "@") }),
 		Phones:    cardChannels(card.Phones, func(string) bool { return true }),
 		URL:       strings.TrimSpace(card.URL),

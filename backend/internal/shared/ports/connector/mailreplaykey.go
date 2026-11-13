@@ -55,3 +55,11 @@ func SharedMailKeySQL(alias string) string {
 	return "(CASE WHEN " + alias + ".source_system = '" + EmailSourceSystem + "'" +
 		" THEN split_part(" + alias + ".source_id, '" + MailSeatMarker + "', 1) END)"
 }
+
+// ScopedMailCopySQL is true for a captured email row filed under one seat's or
+// one mailbox's scoped key. Such a row is a copy of a message whose shared key
+// another row holds. It is never NULL, so its negation keeps every other row. alias is a
+// compile-time literal.
+func ScopedMailCopySQL(alias string) string {
+	return "coalesce(" + alias + ".source_system = '" + EmailSourceSystem + "' AND strpos(" + alias + ".source_id, '" + MailSeatMarker + "') > 0, false)"
+}

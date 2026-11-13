@@ -22,6 +22,7 @@ here: put it in the area's word list instead. A name that no plain page uses mus
 | changelog | A file listing the changes of each release, which this repository does not keep. |
 | CI | Continuous integration: the checks GitHub runs on every pull request. |
 | CIMD | Client ID Metadata Document: an AI tool's ID that is the URL of a file describing it. |
+| CLDR | The Unicode Common Locale Data Repository, whose zone files map IANA zones to Windows zones. |
 | CLS | Cumulative Layout Shift: how far content moves on screen while a page loads. |
 | Compose | Docker Compose, which starts Postgres and Redis for local work. |
 | Conventional | Conventional Commits, a format for commit messages. |
@@ -103,6 +104,7 @@ here: put it in the area's word list instead. A name that no plain page uses mus
 | terminal | The window where you type commands, such as `claude` or `codex`. |
 | Typeform | An online form tool that can send each answer to a webhook address. |
 | Ubuntu | The Linux distribution the CI image is built on, pinned to 24.04. |
+| Unicode | The consortium that publishes the Unicode text standard and the CLDR data. |
 | UTF | The Unicode text encoding family, as in UTF-8. |
 | VAT | Value added tax, and the tax number a company is registered under. |
 | vi | The language code for Vietnamese, as a setting value. |

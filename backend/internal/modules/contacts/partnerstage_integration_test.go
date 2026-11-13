@@ -229,8 +229,8 @@ func TestAPartnerMovesOnALadderTheAdministratorReshaped(t *testing.T) {
 	if _, err := e.store.UpdatePartnerStage(ctx, ids.UUID(ready.Id), UpdatePartnerStageInput{Active: &retired}); err != nil {
 		t.Fatalf("retiring ready: %v", err)
 	}
-	step := "send the deck"
-	kept, err := e.store.UpsertPartner(ctx, UpsertPartnerInput{CompanyID: retiredCompany, PartnerRole: "hosting", NextStep: &step})
+	segments := []string{"fintech"}
+	kept, err := e.store.UpsertPartner(ctx, UpsertPartnerInput{CompanyID: retiredCompany, PartnerRole: "hosting", ServedSegments: &segments})
 	if err != nil || *kept.RelationshipStage != "ready" {
 		t.Errorf("an edit to a partner on a retired stage: stage %v, err %v; want it kept on ready", kept.RelationshipStage, err)
 	}

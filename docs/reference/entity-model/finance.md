@@ -37,6 +37,8 @@ The 5 tables owned by `finance`, as the migrations build them. [Back to the enti
 
 **Triggers**
 
+- `text_bound_insert`: `AFTER INSERT FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL, '{"source": 20000, "status": 20000, "provider": 20000, "captured_by": 20000, "sync_cursor": 20000, "credential_ref": 20000, "last_error_code": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"captured_by":20000,"credential_ref":20000,"last_error_code":20000,"provider":20000,"source":20000,"status":20000,"sync_cursor":20000}')`
+- `text_bound_update`: `AFTER UPDATE FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"source": 20000, "status": 20000, "provider": 20000, "captured_by": 20000, "sync_cursor": 20000, "credential_ref": 20000, "last_error_code": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"captured_by":20000,"credential_ref":20000,"last_error_code":20000,"provider":20000,"source":20000,"status":20000,"sync_cursor":20000}')`
 - `trg_finance_connection_updated`: `BEFORE UPDATE FOR EACH ROW EXECUTE FUNCTION set_updated_at_bump_version()`
 
 ## finance_customer_link
@@ -81,6 +83,8 @@ The 5 tables owned by `finance`, as the migrations build them. [Back to the enti
 
 **Triggers**
 
+- `text_bound_insert`: `AFTER INSERT FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL, '{"source": 20000, "sync_hash": 20000, "captured_by": 20000, "external_customer_id": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"captured_by":20000,"external_customer_id":20000,"source":20000,"sync_hash":20000}')`
+- `text_bound_update`: `AFTER UPDATE FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"source": 20000, "sync_hash": 20000, "captured_by": 20000, "external_customer_id": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"captured_by":20000,"external_customer_id":20000,"source":20000,"sync_hash":20000}')`
 - `trg_finance_customer_link_updated`: `BEFORE UPDATE FOR EACH ROW EXECUTE FUNCTION set_updated_at_bump_version()`
 
 ## finance_external_customer
@@ -120,11 +124,13 @@ The 5 tables owned by `finance`, as the migrations build them. [Back to the enti
 
 **Triggers**
 
+- `text_bound_insert`: `AFTER INSERT FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL, '{"source": 20000, "sync_hash": 20000, "captured_by": 20000, "external_customer_id": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"captured_by":20000,"external_customer_id":20000,"source":20000,"sync_hash":20000}')`
+- `text_bound_update`: `AFTER UPDATE FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"source": 20000, "sync_hash": 20000, "captured_by": 20000, "external_customer_id": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"captured_by":20000,"external_customer_id":20000,"source":20000,"sync_hash":20000}')`
 - `trg_finance_external_customer_updated`: `BEFORE UPDATE FOR EACH ROW EXECUTE FUNCTION set_updated_at_bump_version()`
 
 ## finance_invoice
 
-30 columns · primary key `(id)` · referenced by 4 foreign keys
+31 columns · primary key `(id)` · referenced by 4 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
@@ -137,6 +143,7 @@ The 5 tables owned by `finance`, as the migrations build them. [Back to the enti
 | `customer_link_id` | `uuid` |  |  |
 | `disputed_at` | `timestamp with time zone` |  |  |
 | `due_at` | `date` |  |  |
+| `dunning_level` | `smallint` |  |  |
 | `external_id` | `text` | yes |  |
 | `fully_paid_at` | `timestamp with time zone` |  |  |
 | `fx_rate_date` | `date` |  |  |
@@ -174,6 +181,7 @@ The 5 tables owned by `finance`, as the migrations build them. [Back to the enti
 - `finance_invoice_connection_id_external_id_key`: `UNIQUE (connection_id, external_id)`
 - `finance_invoice_credit_note_status`: `CHECK (((credits_invoice_id IS NULL) OR (status = ANY (ARRAY['credited', 'void']))))`
 - `finance_invoice_credits_not_self`: `CHECK (((credits_invoice_id IS NULL) OR (credits_invoice_id <> id)))`
+- `finance_invoice_dunning_level_range`: `CHECK (((dunning_level >= 0) AND (dunning_level <= 99)))`
 - `finance_invoice_fx_pair`: `CHECK (((fx_rate_to_base IS NULL) = (fx_rate_date IS NULL)))`
 - `finance_invoice_gross_minor_js_safe`: `CHECK (((gross_minor >= '-9007199254740991'::bigint) AND (gross_minor <= '9007199254740991'::bigint)))`
 - `finance_invoice_net_minor_js_safe`: `CHECK (((net_minor >= '-9007199254740991'::bigint) AND (net_minor <= '9007199254740991'::bigint)))`
@@ -198,6 +206,8 @@ The 5 tables owned by `finance`, as the migrations build them. [Back to the enti
 
 **Triggers**
 
+- `text_bound_insert`: `AFTER INSERT FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL, '{"number": 20000, "source": 20000, "status": 20000, "sync_hash": 20000, "raw_status": 20000, "captured_by": 20000, "external_id": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"captured_by":20000,"external_id":20000,"number":20000,"raw_status":20000,"source":20000,"status":20000,"sync_hash":20000}')`
+- `text_bound_update`: `AFTER UPDATE FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"number": 20000, "source": 20000, "status": 20000, "sync_hash": 20000, "raw_status": 20000, "captured_by": 20000, "external_id": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"captured_by":20000,"external_id":20000,"number":20000,"raw_status":20000,"source":20000,"status":20000,"sync_hash":20000}')`
 - `trg_finance_invoice_updated`: `BEFORE UPDATE FOR EACH ROW EXECUTE FUNCTION set_updated_at_bump_version()`
 
 ## finance_payment
@@ -251,4 +261,6 @@ The 5 tables owned by `finance`, as the migrations build them. [Back to the enti
 
 **Triggers**
 
+- `text_bound_insert`: `AFTER INSERT FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL, '{"source": 20000, "sync_hash": 20000, "captured_by": 20000, "external_id": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"captured_by":20000,"external_id":20000,"source":20000,"sync_hash":20000}')`
+- `text_bound_update`: `AFTER UPDATE FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"source": 20000, "sync_hash": 20000, "captured_by": 20000, "external_id": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"captured_by":20000,"external_id":20000,"source":20000,"sync_hash":20000}')`
 - `trg_finance_payment_updated`: `BEFORE UPDATE FOR EACH ROW EXECUTE FUNCTION set_updated_at_bump_version()`

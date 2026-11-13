@@ -17,6 +17,7 @@ import (
 	"errors"
 	"time"
 
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/ports/baselanguage"
@@ -76,7 +77,8 @@ type SendEmailArgs struct {
 	// gate runs again there.
 	ScheduledAt string `json:"scheduled_at,omitempty"`
 	// ScheduledTZ is the IANA zone the moment was chosen in, required with it.
-	ScheduledTZ string `json:"scheduled_tz,omitempty"`
+	ScheduledTZ     string                   `json:"scheduled_tz,omitempty"`
+	ScheduledIntent *crmcontracts.IntentTime `json:"scheduled_intent,omitempty"`
 	SendContextArgs
 }
 

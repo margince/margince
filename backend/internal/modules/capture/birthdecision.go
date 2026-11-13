@@ -304,7 +304,7 @@ func holdingVerdict(status string) bool {
 // establish is the last one to publish on a guess.
 func mailboxPostureTx(ctx context.Context, tx pgx.Tx) (string, error) {
 	if shared, ok := sharedMailboxOf(ctx); ok {
-		return connectionPostureTx(ctx, tx, `id = $1`, shared)
+		return connectionPostureTx(ctx, tx, sharedConnection(shared))
 	}
 	actor, ok := principal.Actor(ctx)
 	if !ok || actor.UserID == ids.Nil {
@@ -335,14 +335,14 @@ func mailboxPostureForTx(ctx context.Context, tx pgx.Tx, user ids.UUID, provider
 	if user == ids.Nil || provider == "" {
 		return PostureHeld, nil
 	}
-	return connectionPostureTx(ctx, tx, `user_id = $1 AND provider = $2`, user, provider)
+	return connectionPostureTx(ctx, tx, seatConnection(user, provider))
 }
 
 // connectionPostureTx reads the posture of the one live connection match
-// names: a seat's mailbox by (user, provider), a shared mailbox by its id.
-func connectionPostureTx(ctx context.Context, tx pgx.Tx, match string, args ...any) (string, error) {
+// names.
+func connectionPostureTx(ctx context.Context, tx pgx.Tx, match connectionMatch) (string, error) {
 	var posture string
-	err := tx.QueryRow(ctx, `SELECT mail_posture FROM capture_connection WHERE `+match+` AND archived_at IS NULL`, args...).Scan(&posture)
+	err := tx.QueryRow(ctx, `SELECT mail_posture FROM capture_connection WHERE `+match.where+` AND archived_at IS NULL`, match.args...).Scan(&posture)
 	if err != nil {
 		if err == pgx.ErrNoRows {
 			return PostureHeld, nil

@@ -7,7 +7,11 @@ import {
   messageText,
   writeMessage,
 } from "../../design-system/richtext-testing";
-import { draftButton } from "../../testing/composedraft.testkit";
+import {
+  draftButton,
+  purposeField,
+  redraft,
+} from "../../testing/composedraft.testkit";
 import { ComposeModal } from "./compose";
 import {
   activity202,
@@ -18,7 +22,9 @@ import {
   PROVISIONAL_VOICE_PROFILE,
   pickWhy,
   problemResponse,
+  REWRITE_ROUTE,
   render,
+  rewrittenBody,
   stubRoutes,
   WHY_ASK,
   WHY_LABEL,
@@ -105,12 +111,6 @@ function draftsOnCue() {
   };
 }
 
-// Once a draft stands, the ask is folded behind its own control on the line.
-async function askAgain() {
-  await userEvent.click(screen.getByRole("button", { name: "Change the ask" }));
-  await userEvent.click(draftButton());
-}
-
 function renderComposer(onClose = vi.fn()) {
   render(
     <ComposeModal
@@ -169,20 +169,102 @@ describe("ComposeModal draft binding", () => {
 
     await userEvent.click(draftButton());
     await waitFor(() => expect(messageText("Body")).toBe("Draft A body."));
-    await userEvent.click(
-      screen.getByRole("button", { name: "Change the ask" }),
-    );
     const ask = screen.getByRole("textbox", { name: "Purpose of the reply" });
+    expect(screen.queryByRole("button", { name: "Redraft" })).toBeNull();
     await userEvent.clear(ask);
     await userEvent.type(ask, "Offer Tuesday instead");
-    await userEvent.click(draftButton());
+    await userEvent.click(screen.getByRole("button", { name: "Redraft" }));
 
-    await waitFor(() =>
-      expect(
-        sent.filter((r) => r.key === "POST /activities/act-1/draft-email")[1]
-          ?.body,
-      ).toMatchObject({ intent: "Offer Tuesday instead" }),
+    await waitFor(() => expect(messageText("Body")).toBe("Draft B body."));
+    const calls = sent.filter(
+      (r) => r.key === "POST /activities/act-1/draft-email",
     );
+    expect(calls).toHaveLength(2);
+    expect(calls[1]?.body).toMatchObject({ intent: "Offer Tuesday instead" });
+    // A new draft is asked for under the purpose it stands on.
+    expect(purposeField()).toHaveProperty("value", "Offer Tuesday instead");
+    expect(screen.queryByRole("button", { name: "Redraft" })).toBeNull();
+  });
+
+  it("keeps Redraft beside a changed purpose that a rewrite never read", async () => {
+    const sent = stubRoutes({
+      "GET /voice-profiles": () => jsonResponse(PROVISIONAL_VOICE_PROFILE),
+      "POST /activities/act-1/draft-email": draftsInTurn(
+        voiceDraft("vd-a", "Re: Q3", "Draft A body."),
+        voiceDraft("vd-b", "Re: Q3", "Draft B body."),
+      ),
+      [REWRITE_ROUTE]: () => rewrittenBody("Short."),
+      "PUT /mail-drafts": () => emptyResponse(204),
+    });
+    renderComposer();
+    await screen.findByRole("combobox", { name: WHY_ASK });
+    await userEvent.click(draftButton());
+    await waitFor(() => expect(messageText("Body")).toBe("Draft A body."));
+
+    await userEvent.type(purposeField(), "Offer Tuesday");
+    await userEvent.click(screen.getByRole("button", { name: "Shorter" }));
+    await waitFor(() => expect(messageText("Body")).toBe("Short."));
+    await userEvent.click(screen.getByRole("button", { name: "Redraft" }));
+
+    await waitFor(() => expect(messageText("Body")).toBe("Draft B body."));
+    const calls = sent.filter(
+      (r) => r.key === "POST /activities/act-1/draft-email",
+    );
+    expect(calls).toHaveLength(2);
+    expect(calls[1]?.body).toMatchObject({ intent: "Offer Tuesday" });
+  });
+
+  it("announces a failed Redraft and keeps it on offer", async () => {
+    let call = 0;
+    stubRoutes({
+      "GET /voice-profiles": () => jsonResponse(PROVISIONAL_VOICE_PROFILE),
+      "POST /activities/act-1/draft-email": () => {
+        call += 1;
+        return call === 1
+          ? jsonResponse(voiceDraft("vd-a", "Re: Q3", "Draft A body."))
+          : problemResponse(
+              { code: "internal", title: "Server Error", detail: "no model" },
+              500,
+            );
+      },
+      "PUT /mail-drafts": () => emptyResponse(204),
+    });
+    renderComposer();
+    await screen.findByRole("combobox", { name: WHY_ASK });
+    await userEvent.click(draftButton());
+    await waitFor(() => expect(messageText("Body")).toBe("Draft A body."));
+
+    await redraft();
+
+    const announced = await screen.findAllByRole("alert");
+    expect(announced.map((node) => node.textContent)).toContain("no model");
+    expect(messageText("Body")).toBe("Draft A body.");
+    expect(screen.getByRole("button", { name: "Redraft" })).toBeTruthy();
+  });
+
+  it("drops a Redraft answer once the purpose moves on, and says the edits were kept", async () => {
+    const drafts = draftsOnCue();
+    const sent = stubRoutes({
+      "GET /voice-profiles": () => jsonResponse(PROVISIONAL_VOICE_PROFILE),
+      "POST /activities/act-1/draft-email": drafts.route,
+      "PUT /mail-drafts": () => emptyResponse(204),
+    });
+    renderComposer();
+    await screen.findByRole("combobox", { name: WHY_ASK });
+    await userEvent.click(draftButton());
+    await drafts.answer(0, voiceDraft("vd-a", "Re: Q3", "Draft A body."));
+    await waitFor(() => expect(messageText("Body")).toBe("Draft A body."));
+
+    await redraft();
+    await drafts.asked(1);
+    await userEvent.type(purposeField(), " on Tuesday");
+    await drafts.answer(1, voiceDraft("vd-b", "Re: Q3", "Draft B body."));
+
+    expect(await screen.findByText(KEPT_NOTICE)).toBeTruthy();
+    expect(messageText("Body")).toBe("Draft A body.");
+    expect(
+      sent.filter((r) => r.key === "POST /activities/act-1/draft-email"),
+    ).toHaveLength(2);
   });
 
   it("sends the subject on screen with a reply draft, so it can set the language", async () => {
@@ -201,7 +283,7 @@ describe("ComposeModal draft binding", () => {
     const subjectField = await screen.findByDisplayValue("Re: Q3");
     await userEvent.clear(subjectField);
     await userEvent.type(subjectField, "Unsere nächsten Schritte");
-    await askAgain();
+    await redraft();
 
     await waitFor(() =>
       expect(
@@ -225,7 +307,7 @@ describe("ComposeModal draft binding", () => {
 
     await userEvent.click(draftButton());
     await waitFor(() => expect(messageText("Body")).toBe("Draft A body."));
-    await askAgain();
+    await redraft();
 
     await waitFor(() => expect(messageText("Body")).toBe("Draft B body."));
     const calls = sent.filter(
@@ -251,7 +333,7 @@ describe("ComposeModal draft binding", () => {
     await userEvent.click(draftButton());
     await waitFor(() => expect(messageText("Body")).toBe("Draft A body."));
     writeMessage("Body", "Draft A body. And my own line.");
-    await askAgain();
+    await redraft();
 
     await waitFor(() => expect(messageText("Body")).toBe("Draft B body."));
     const calls = sent.filter(
@@ -268,8 +350,8 @@ describe("ComposeModal draft binding", () => {
       "GET /voice-profiles": () => jsonResponse(PROVISIONAL_VOICE_PROFILE),
       "POST /activities/act-1/draft-email": draftsInTurn(
         voiceDraft("vd-a", "Re: Q3", "Draft A body."),
-        voiceDraft("vd-b", "Re: Q3", "Short."),
       ),
+      [REWRITE_ROUTE]: () => rewrittenBody("Short."),
       "PUT /mail-drafts": () => emptyResponse(204),
     });
     renderComposer();
@@ -280,10 +362,12 @@ describe("ComposeModal draft binding", () => {
     await userEvent.click(screen.getByRole("button", { name: "Shorter" }));
 
     await waitFor(() => expect(messageText("Body")).toBe("Short."));
-    const calls = sent.filter(
-      (r) => r.key === "POST /activities/act-1/draft-email",
-    );
-    expect(calls[1]?.body).toMatchObject({ rewrite_of: "Draft A body." });
+    expect(sent.find((r) => r.key === REWRITE_ROUTE)?.body).toMatchObject({
+      envelope: "email",
+      verb: "shorter",
+      body: "Draft A body.",
+      about: { entity_type: "activity", entity_id: "act-1" },
+    });
   });
 
   it("keeps the earlier reference when a re-draft leaves the typed body alone", async () => {
@@ -308,7 +392,7 @@ describe("ComposeModal draft binding", () => {
     await userEvent.click(draftButton());
     await waitFor(() => expect(messageText("Body")).toBe("Draft A body."));
     writeMessage("Body", "Draft A body. And my own line.");
-    await askAgain();
+    await redraft();
     await waitFor(() =>
       expect(
         sent.filter((r) => r.key === "POST /activities/act-1/draft-email")
@@ -671,7 +755,7 @@ describe("ComposeModal draft provenance", () => {
     await userEvent.click(draftButton());
     await drafts.answer(0, voiceDraft("vd-a", "Re: Q3", "Draft A body.", 3));
     await waitFor(() => expect(messageText("Body")).toBe("Draft A body."));
-    await askAgain();
+    await redraft();
     await drafts.asked(1);
     writeMessage("Body", "Draft A body. And my own line.");
     await drafts.answer(

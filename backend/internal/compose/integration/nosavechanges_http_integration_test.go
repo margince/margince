@@ -18,7 +18,9 @@ import (
 
 	"github.com/margince/margince/backend/internal/compose"
 	"github.com/margince/margince/backend/internal/compose/integration/apptest"
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/webhooks"
+	"github.com/margince/margince/backend/internal/platform/keyvault"
 )
 
 type versionedWire struct {
@@ -269,6 +271,7 @@ func TestADealRoomExpirySetToItsStoredValueChangesNothing(t *testing.T) {
 //
 // gatekit:fixture the routes an HTTP probe covers and the test that probes each, expected data checked against the contract
 var noOpProbedRoutes = map[string]string{
+	"PUT /web-forms/{id}/handling":      "TestAReviewedInquiryPolicySavedUnchangedWritesNothing",
 	"PATCH /acquisition-sources/{id}":   "TestACatalogRowSavedAsItAlreadyIsChangesNothing",
 	"PATCH /loss-reasons/{id}":          "TestACatalogRowSavedAsItAlreadyIsChangesNothing",
 	"PATCH /contacts/{id}":              "TestTheFullFormPayloadOfAnUntouchedRecordChangesNothing",
@@ -470,4 +473,42 @@ func TestTheFullFormPayloadOfAnUntouchedRecordChangesNothing(t *testing.T) {
 			t.Errorf("dropping a relationship type -> %d at version %d, want 200 at version %d", status, retyped.Version, moved.Version+1)
 		}
 	})
+}
+
+func TestAReviewedInquiryPolicySavedUnchangedWritesNothing(t *testing.T) {
+	e := apptest.SetupAppWithOptions(t, compose.WithKeyvault(keyvault.NewMemory()), compose.WithSchemaPool(SchemaPool(t)))
+	e.BootstrapWorkspace(t)
+	var form versionedWire
+	if status := e.Call(t, "POST", "/v1/web-forms", AnyMap{"name": "Inquiries", "sender": "browser", "allowed_origins": []string{"https://www.example.com"}}, nil, &form); status != http.StatusCreated {
+		t.Fatalf("create form: %d", status)
+	}
+	body := AnyMap{"name": "Website inquiries", "enabled": true, "policy": AnyMap{"form_id": form.ID, "mode": "coordinator", "routing": AnyMap{}, "coordinator_id": apptest.SessionUserID(t, e), "task_title": "Review the website inquiry", "due_in_days": 1, "timezone": "Europe/Berlin"}}
+	path := "/v1/web-forms/" + form.ID + "/handling"
+	var first crmcontracts.WebsiteInquiryHandling
+	if status := e.Call(t, "PUT", path, body, map[string]string{"If-Match": strconv.FormatInt(form.Version, 10)}, &first); status != http.StatusOK {
+		t.Fatalf("first save: %d", status)
+	}
+	body["automation_id"], body["automation_version"] = first.Automation.Id, first.Automation.Version
+	counts := func() [2]int {
+		t.Helper()
+		var result [2]int
+		if err := e.Owner.QueryRow(t.Context(), `SELECT (SELECT count(*) FROM audit_log), (SELECT count(*) FROM event_outbox)`).Scan(&result[0], &result[1]); err != nil {
+			t.Fatal(err)
+		}
+		return result
+	}
+	before := counts()
+	var second crmcontracts.WebsiteInquiryHandling
+	if status := e.Call(t, "PUT", path, body, map[string]string{"If-Match": strconv.FormatInt(first.Form.Version, 10)}, &second); status != http.StatusOK {
+		t.Fatalf("unchanged save: %d", status)
+	}
+	if first.Automation.Version == nil || second.Automation.Version == nil {
+		t.Fatal("a saved inquiry policy has no version")
+	}
+	if second.Form.Version != first.Form.Version || *second.Automation.Version != *first.Automation.Version {
+		t.Fatalf("unchanged save moved versions: form %d -> %d, policy %d -> %d", first.Form.Version, second.Form.Version, *first.Automation.Version, *second.Automation.Version)
+	}
+	if after := counts(); after != before {
+		t.Fatalf("unchanged save wrote audit/events: %v -> %v", before, after)
+	}
 }

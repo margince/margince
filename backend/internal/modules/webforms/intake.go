@@ -44,6 +44,7 @@ type Landing struct {
 	// SourceKey is stable across a sender's retries of one submission, so a
 	// second delivery finds the lead and note the first one wrote.
 	SourceKey            string
+	HandlingAutomationID *ids.UUID
 	LeadOrigin           *string
 	OwnerID              *ids.UUID
 	ProductID            *ids.UUID
@@ -84,14 +85,28 @@ func NewIntake(store *Store, lander LeadLander) *Intake {
 // Submit admits one post and lands it. The caller has bound the workspace and
 // a system principal. The form's own admission rule is what decides here.
 func (in *Intake) Submit(ctx context.Context, a Arrival) (Receipt, error) {
+	if in.store.fence == nil {
+		return in.landPost(ctx, a)
+	}
+	form, err := in.store.PublicForm(ctx, a.FormKey)
+	if err != nil {
+		return Receipt{}, err
+	}
+	receipt := formReceipt(form, a.Header.Get("Origin"))
+	err = in.store.fence.Within(ctx, form.ID, func(bound context.Context) error {
+		var err error
+		receipt, err = in.landPost(bound, a)
+		return err
+	})
+	return receipt, err
+}
+
+func (in *Intake) landPost(ctx context.Context, a Arrival) (Receipt, error) {
 	f, err := in.store.PublicForm(ctx, a.FormKey)
 	if err != nil {
 		return Receipt{}, err
 	}
-	receipt := Receipt{Message: f.SuccessMessage, RedirectURL: f.RedirectURL}
-	if origin := a.Header.Get("Origin"); f.AllowsOrigin(origin) {
-		receipt.AllowOrigin = origin
-	}
+	receipt := formReceipt(f, a.Header.Get("Origin"))
 	e, key, err := in.admit(ctx, f, a)
 	if err != nil || key == "" {
 		return receipt, err
@@ -102,12 +117,21 @@ func (in *Intake) Submit(ctx context.Context, a Arrival) (Receipt, error) {
 	err = in.lander.Land(ctx, Landing{
 		FormID: f.ID, FormName: f.Name, SourceKey: sourceKey(f.ID, key),
 		LeadOrigin: f.LeadOrigin, OwnerID: f.OwnerID, ProductID: f.ProductID, Enquiry: e,
-		ConsentWording: f.ConsentWording, ConsentPolicyVersion: f.ConsentPolicyVersion,
+		HandlingAutomationID: f.HandlingAutomationID,
+		ConsentWording:       f.ConsentWording, ConsentPolicyVersion: f.ConsentPolicyVersion,
 	})
 	if err == nil {
 		in.store.notePost(ctx, f.ID)
 	}
 	return receipt, err
+}
+
+func formReceipt(form Form, origin string) Receipt {
+	receipt := Receipt{Message: form.SuccessMessage, RedirectURL: form.RedirectURL}
+	if form.AllowsOrigin(origin) {
+		receipt.AllowOrigin = origin
+	}
+	return receipt
 }
 
 // admit runs the form's admission rule and reads the fields. An empty key with

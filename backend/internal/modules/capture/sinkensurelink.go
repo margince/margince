@@ -53,7 +53,7 @@ func (s *Sink) ensureCounterpartyTx(ctx context.Context, tx pgx.Tx, rec connecto
 }
 
 // ensuresMail says the mail ensure later in the capture transaction will run.
-func (d counterpartyDecision) ensuresMail() bool { return d.create && !d.channel }
+func (d counterpartyDecision) ensuresMail() bool { return (d.create || d.linkOnly) && !d.channel }
 
 // lockMailReachTx locks every contact this mail is about to be filed under,
 // with what they reach, in the order every writer shares
@@ -97,10 +97,15 @@ func lockMailReachTx(ctx context.Context, tx pgx.Tx, activity ids.ActivityID, de
 func (s *Sink) mailEnsureRequest(rec connector.NormalizedRecord, ref datasource.EntityRef, decision counterpartyDecision) EnsureRequest {
 	// The party the ladder judged (counterpartyDecision.subject).
 	cp := decision.subject
+	// A link-only ensure admits no party, so it carries no admission.
+	admission := s.counterpartyAdmission(rec, ref, cp)
+	if decision.linkOnly {
+		admission = nil
+	}
 	// No HoldAuthority: admitWriteTx took the member's authority before any
 	// row lock, and no other transaction can see, let alone lock, this new mail.
 	return EnsureRequest{
-		Admission:       s.counterpartyAdmission(rec, ref, cp),
+		Admission:       admission,
 		Email:           cp.Email,
 		DisplayName:     cp.DisplayName,
 		Domain:          cp.Domain,
@@ -110,13 +115,15 @@ func (s *Sink) mailEnsureRequest(rec connector.NormalizedRecord, ref datasource.
 		CapturedBy:      decision.capturedBy,
 		SuppressCompany: decision.suppressCompany,
 		Replied:         decision.replied,
+		LinkOnly:        decision.linkOnly,
+		ReaderTeam:      decision.readerTeam,
 	}
 }
 
 // settleCounterparty finishes the counterparty step once the capture
 // committed. A channel record still ensures here, in its own transaction.
 func (s *Sink) settleCounterparty(ctx context.Context, rec connector.NormalizedRecord, ref datasource.EntityRef, decision counterpartyDecision, ensured mailEnsure) {
-	if !decision.create {
+	if !decision.create && !decision.linkOnly {
 		return
 	}
 	if decision.channel {

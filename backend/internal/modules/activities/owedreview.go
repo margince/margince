@@ -56,17 +56,12 @@ func owedReviewReadTx(ctx context.Context, tx pgx.Tx, after ids.UUID, exact *ids
 	}
 	args := []any{}
 	arg := func(value any) int { args = append(args, value); return len(args) }
-	scope, err := auth.ActivityContentClause(ctx, "a", arg)
-	if err != nil {
-		return nil, err
-	}
-	priorScope, err := auth.ActivityContentClause(ctx, "prior", arg)
+	gate, err := auth.ActivityContentClause(ctx, owedThreadRow, arg)
 	if err != nil {
 		return nil, err
 	}
 	body, prior := arg(storedBodyReadRunes), arg(priorBodyLimit)
 	columns := storekit.SQLf(candidateColumns, body, 0, 0, prior)
-	join := storekit.SQLf(priorOutboundVisibleJoin("%[5]s"), body, 0, 0, prior, priorScope)
 	exactArg := arg(exact)
 	query := storekit.SQLf(`SELECT %s, prior.id, a.version,a.owed_verdict,coalesce(a.owed_verdict_ruleset,''),a.owed_verdict_at,
  encode(sha256(convert_to(jsonb_build_object('source',to_jsonb(a),'participants',jsonb_agg(to_jsonb(p) ORDER BY p.id),
@@ -77,17 +72,18 @@ func owedReviewReadTx(ctx context.Context, tx pgx.Tx, after ids.UUID, exact *ids
  AND proof.after->>'owed_verdict'=a.owed_verdict AND proof.after->>'owed_verdict_ruleset'=a.owed_verdict_ruleset)
  AND NOT EXISTS(SELECT 1 FROM audit_log human WHERE human.entity_type='activity' AND human.entity_id=a.id
  AND human.actor_type='human' AND human.occurred_at>=a.owed_verdict_at),
- NOT EXISTS(SELECT 1 FROM activity prior WHERE `+ourOutboundInThisThread("prior", "a")+`
- AND (prior.occurred_at,prior.id)<(a.occurred_at,a.id)
- AND (`+"NOT ("+auth.WorkspaceAudienceSQL("prior")+")"+` OR prior.restricted_at IS NOT NULL OR NOT (%s))),
+ owed_thread.context_readable,
  `+provenance.MailBodyCompleteSQL("a")+` AND `+priorContextComplete+`
- FROM activity a LEFT JOIN activity_participant p ON p.activity_id=a.id %s
+ FROM activity a CROSS JOIN LATERAL (%s) owed_thread
+ LEFT JOIN LATERAL (SELECT prior.id, prior.subject, left(prior.body, $%d) AS body, prior.occurred_at
+   FROM activity prior WHERE prior.id = owed_thread.prior_id) prior ON true
+ LEFT JOIN activity_participant p ON p.activity_id=a.id
  WHERE a.direction='inbound' AND a.kind IN ('email','message') AND a.owed_verdict IS NOT NULL
  AND a.owed_verdict_at IS NOT NULL AND a.archived_at IS NULL AND `+auth.WorkspaceAudienceSQL("a")+` AND a.restricted_at IS NULL
- AND (%s) AND a.id>$%d AND ($%d::uuid IS NULL OR a.id=$%d)
+ AND owed_thread.source_readable AND a.id>$%d AND ($%d::uuid IS NULL OR a.id=$%d)
  AND NOT EXISTS(SELECT 1 FROM activity_sales_state dismissed WHERE dismissed.thread_key=a.thread_key
  AND dismissed.kind=a.kind AND dismissed.channel_provider=coalesce(a.channel_provider,''))
- GROUP BY %s ORDER BY a.id LIMIT $%d`, columns, priorScope, join, scope, arg(after), exactArg, exactArg, candidateGroupBy, arg(min(max(limit, 1), 25)))
+ GROUP BY %s, owed_thread.context_readable ORDER BY a.id LIMIT $%d`, columns, owedThreadSQL(gate), prior, arg(after), exactArg, exactArg, candidateGroupBy, arg(min(max(limit, 1), 25)))
 	rows, err := tx.Query(ctx, query, args...)
 	if err != nil {
 		return nil, err
@@ -99,6 +95,28 @@ func owedReviewReadTx(ctx context.Context, tx pgx.Tx, after ids.UUID, exact *ids
 		item.Candidate = candidate
 		return item, err
 	})
+}
+
+// owedThreadRow aliases the source and our earlier mail on its conversation
+// inside owedThreadSQL, where the content gate renders once for all of them.
+const owedThreadRow = "thread_row"
+
+// owedThreadSQL judges the source a and our earlier mail on its conversation
+// under one content gate. A message of ours is readable only while it is
+// workspace mail and not restricted, because its body goes to the model too.
+// It yields whether the source is readable, the newest readable earlier mail,
+// and whether every earlier mail is readable.
+func owedThreadSQL(gate string) string {
+	return `SELECT coalesce(bool_or(thread_row.id = a.id AND thread_row.readable), false) AS source_readable,
+   (array_agg(thread_row.id ORDER BY thread_row.occurred_at DESC, thread_row.id DESC)
+      FILTER (WHERE thread_row.id <> a.id AND thread_row.readable))[1] AS prior_id,
+   coalesce(bool_and(thread_row.readable) FILTER (WHERE thread_row.id <> a.id), true) AS context_readable
+  FROM (SELECT thread_row.id, thread_row.occurred_at,
+          (` + auth.WorkspaceAudienceSQL(owedThreadRow) + ` AND thread_row.restricted_at IS NULL AND (` + gate + `)) AS readable
+        FROM activity thread_row
+       WHERE thread_row.id = ANY(ARRAY(SELECT a.id UNION ALL SELECT earlier.id FROM activity earlier
+         WHERE ` + ourOutboundInThisThread("earlier", "a") + `
+           AND (earlier.occurred_at, earlier.id) < (a.occurred_at, a.id)))) thread_row`
 }
 
 // ApplyReviewedOwedVerdictTx keeps a reviewed correction on the ordinary audited writer.

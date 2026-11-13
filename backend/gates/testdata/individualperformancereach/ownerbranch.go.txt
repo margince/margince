@@ -1,0 +1,70 @@
+package ownerbranch
+
+import (
+	"net/http"
+
+	"example.test/auth"
+	"example.test/httperr"
+)
+
+type Handlers struct{}
+
+func ownerFigures() []int { return []int{1} }
+func teamFigures() []int  { return []int{2} }
+
+func (h Handlers) GetProgress(w http.ResponseWriter, r *http.Request) {
+	if r.URL.Query().Get("scope") == "owner" {
+		if err := auth.Require(r.Context()); err != nil {
+			httperr.Write(w, r, err)
+			return
+		}
+		httperr.WriteJSON(w, http.StatusOK, ownerFigures())
+		return
+	}
+	httperr.WriteJSON(w, http.StatusOK, teamFigures())
+}
+
+func (h Handlers) GetProgressBySwitch(w http.ResponseWriter, r *http.Request) {
+	switch r.URL.Query().Get("scope") {
+	case "owner":
+		if err := auth.Require(r.Context()); err != nil {
+			httperr.Write(w, r, err)
+			return
+		}
+	case "team":
+		break
+	default:
+		auth.Require(r.Context())
+	}
+	httperr.WriteJSON(w, http.StatusOK, teamFigures())
+}
+
+// An iteration that skips ahead before the check leaves the rows unchecked.
+func (h Handlers) GetEachRowSkippingOne(w http.ResponseWriter, r *http.Request) {
+	var out []int
+	for _, row := range teamFigures() {
+		if row == 2 {
+			continue
+		}
+		if err := auth.Require(r.Context()); err != nil {
+			httperr.Write(w, r, err)
+			return
+		}
+		out = append(out, row)
+	}
+	httperr.WriteJSON(w, http.StatusOK, out)
+}
+
+// A loop may run no time, so a check inside it covers nothing after it.
+func (h Handlers) GetEachRowCheckingInside(w http.ResponseWriter, r *http.Request) {
+	for range teamFigures() {
+		auth.Require(r.Context())
+	}
+	httperr.WriteJSON(w, http.StatusOK, teamFigures())
+}
+
+// A figure-free call is not a check for the figure made after it.
+func (h Handlers) GetAfterTheCatalog(w http.ResponseWriter, r *http.Request) {
+	names := auth.Catalog()
+	httperr.WriteJSON(w, http.StatusOK, map[string][]int{names[0]: teamFigures()})
+}

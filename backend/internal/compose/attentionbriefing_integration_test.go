@@ -176,7 +176,7 @@ func TestASetAsideBriefingItemComesBackWhenItsWindowPasses(t *testing.T) {
 	}
 	item := run.Items[0]
 	until := b.now.Add(3 * time.Hour)
-	if _, err := b.engine.MarkSnoozed(b.repCtx, item.ID, values.ReopenOnTime, &until, nil, b.now.Add(time.Minute)); err != nil {
+	if _, err := b.engine.MarkSnoozed(b.repCtx, item.ID, values.ReopenOnTime, &until, nil, b.now.Add(time.Minute), nil); err != nil {
 		t.Fatal(err)
 	}
 
@@ -300,7 +300,7 @@ func TestAnEarlierDaysSnoozeStillHoldsTheWorklistRiskAndUndoRestoresIt(t *testin
 	item := run.Items[0]
 	b.WsExec(t, `UPDATE deal SET created_at=@created, expected_close_date=@close WHERE id=@deal`, pgx.StrictNamedArgs{"deal": item.DealID, "created": b.now.Add(-60 * 24 * time.Hour), "close": b.now.Add(-24 * time.Hour)})
 	until := b.now.Add(48 * time.Hour)
-	if _, err := b.engine.MarkSnoozed(b.repCtx, item.ID, values.ReopenOnTime, &until, nil, b.now.Add(time.Minute)); err != nil {
+	if _, err := b.engine.MarkSnoozed(b.repCtx, item.ID, values.ReopenOnTime, &until, nil, b.now.Add(time.Minute), nil); err != nil {
 		t.Fatal(err)
 	}
 	b.now = b.now.Add(24 * time.Hour)

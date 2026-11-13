@@ -129,7 +129,7 @@ If Margince could not load the profile, the draft says so:
 > Your voice profile could not be loaded,
 > so this draft does not use your voice. Draft again, or edit before sending.
 
-Once a draft stands, **Change the ask** opens the ask again, so you can change what the next draft says.
+Once a draft stands, the purpose Margince wrote it to stays above the draft. Change the purpose and press **Redraft** to get a draft for the new purpose.
 
 **Discard draft** marks the draft as a miss for your Voice DNA. Margince never keeps the text it wrote.
 
@@ -148,7 +148,7 @@ To change the language of an AI draft, pick another language in the list on the 
 
 If you edited the words, only an AI model writes your edited words again. With no model set up, or with a link or format you added, your words and the language stay as they are. The composer then says "Your edits were kept. Draft again when ready."
 
-Once you pick a language, **Draft email**, **Change the ask**, the rewrites and a saved draft keep it. Until then, the language of a subject you wrote yourself decides it, when Margince can tell that language. If it cannot, Margince takes it from the mail on the thread, then from your settings. If the new draft fails, your words and the language stay. When Margince cannot tell the language of a draft, it shows no list.
+Once you pick a language, **Draft email**, **Redraft**, the rewrites and a saved draft keep it. Until then, the language of a subject you wrote yourself decides it, when Margince can tell that language. If it cannot, Margince takes it from the mail on the thread, then from your settings. If the new draft fails, your words and the language stay. When Margince cannot tell the language of a draft, it shows no list.
 Also called: draft in another language, write the email in German, change the email language.
 
 ### Why are you writing?

@@ -1,0 +1,15 @@
+{
+  "tool": "change_activities",
+  "action": "assign_inquiry",
+  "verb": "assign_website_inquiry",
+  "allowed_for": [
+    "admin",
+    "management",
+    "manager",
+    "ops",
+    "rep"
+  ],
+  "refused_for": [
+    "read_only"
+  ]
+}

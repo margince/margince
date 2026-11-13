@@ -121,12 +121,7 @@ func (s *Store) updateContactInTx(
 	}
 	// Before the patch and the lane locks, so a rename through the parts is
 	// patched, locked and re-checked as a full_name edit is.
-	in = updateAsWritten(current, in, active)
-	setter, err := relationshipMarkSetter(ctx, in)
-	if err != nil {
-		return out, err
-	}
-	p, err := buildContactPatch(current, in, setter)
+	in, p, err := contactEditPatch(ctx, current, in, active)
 	if err != nil {
 		return out, err
 	}
@@ -260,6 +255,25 @@ func readContactToEdit(
 func movesANamePart(in UpdateContactInput) bool {
 	return in.FirstName != nil || in.LastName != nil ||
 		slices.Contains(in.Clear, columnFirstName) || slices.Contains(in.Clear, columnLastName)
+}
+
+// contactEditPatch reads the edit as written, refuses a typed name past the label
+// limit, and builds the column patch.
+func contactEditPatch(
+	ctx context.Context, current crmcontracts.Contact, in UpdateContactInput, active []fieldcatalog.Column,
+) (UpdateContactInput, *storekit.Patch, error) {
+	in = updateAsWritten(current, in, active)
+	if typedWrite(ctx) {
+		if err := checkChangedContactNames(current, in); err != nil {
+			return in, nil, err
+		}
+	}
+	setter, err := relationshipMarkSetter(ctx, in)
+	if err != nil {
+		return in, nil, err
+	}
+	p, err := buildContactPatch(current, in, setter)
+	return in, p, err
 }
 
 // updateAsWritten completes the input with what the request implies: the core

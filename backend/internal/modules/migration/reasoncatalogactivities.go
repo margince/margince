@@ -14,10 +14,11 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/textlang"
 )
 
-// Parameter names the activity reasons share.
+// Parameter names that several reasons share.
 const (
 	paramAllowed = "allowed"
 	paramMax     = "max"
+	paramLength  = "length"
 )
 
 // Reason codes for activity rows, each with its reasons text in the catalog below.

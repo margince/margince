@@ -5,9 +5,11 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { act, cleanup, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { resetToSignedOut } from "../../lib/session";
 import { jsonResponse } from "../../testing/company.fixtures";
 import {
   type AccountScan,
+  accountScanKey,
   ENSURE_SHARED_MS,
   useAccountScan,
 } from "./accountscan";
@@ -97,6 +99,31 @@ function stubScan(polls: AccountScan["state"][]) {
   return calls;
 }
 
+// Holds every ensure until the test answers it by its place in line, and
+// answers each read from the states handed in.
+function holdPosts(reads: AccountScan["state"][]) {
+  const calls: string[] = [];
+  const held: ((response: Response) => void)[] = [];
+  const remaining = [...reads];
+  vi.stubGlobal(
+    "fetch",
+    vi.fn((input: RequestInfo | URL, init?: RequestInit) => {
+      const request = new Request(input, init);
+      calls.push(`${request.method} ${new URL(request.url).pathname}`);
+      if (request.method === "POST") {
+        return new Promise<Response>((resolve) => held.push(resolve));
+      }
+      return Promise.resolve(jsonResponse(scan(remaining.shift() ?? "done")));
+    }),
+  );
+  return {
+    calls,
+    held,
+    answer: (place: number, body: AccountScan) =>
+      held[place]?.(jsonResponse(body)),
+  };
+}
+
 describe("useAccountScan", () => {
   it("asks once on open and takes the answer as the scan", async () => {
     const calls = stubScan([]);
@@ -104,9 +131,7 @@ describe("useAccountScan", () => {
     await waitFor(() =>
       expect(screen.getByRole("status").textContent).toBe("queued"),
     );
-    expect(calls.filter((call) => call.startsWith("POST"))).toEqual([
-      "POST /v1/companies/o-1/scan",
-    ]);
+    expect(calls).toEqual(["POST /v1/companies/o-1/scan"]);
   });
 
   it("asks no second time for a consumer that opens after the answer", async () => {
@@ -154,6 +179,84 @@ describe("useAccountScan", () => {
     } finally {
       clock.mockRestore();
     }
+  });
+
+  // An open answers for one reader. The next one to sign in on this tab,
+  // inside the shared window, asks the server for their own.
+  it("asks again for the next reader after a sign-out within the window", async () => {
+    const calls = stubScan([]);
+    const client = new QueryClient({
+      defaultOptions: { queries: { retry: false } },
+    });
+    const page = () => (
+      <QueryClientProvider client={client}>
+        <Probe enabled />
+      </QueryClientProvider>
+    );
+    const first = render(page());
+    await waitFor(() =>
+      expect(screen.getByRole("status").textContent).toBe("queued"),
+    );
+    first.unmount();
+    await act(() => resetToSignedOut(client));
+
+    render(page());
+    await waitFor(() =>
+      expect(calls.filter((call) => call.startsWith("POST"))).toHaveLength(2),
+    );
+  });
+
+  it("gives the next reader their own open when sign-out came during the last one", async () => {
+    const posts = holdPosts(["done"]);
+    const client = new QueryClient({
+      defaultOptions: { queries: { retry: false } },
+    });
+    const page = () => (
+      <QueryClientProvider client={client}>
+        <Probe enabled />
+      </QueryClientProvider>
+    );
+    const first = render(page());
+    await waitFor(() => expect(posts.held).toHaveLength(1));
+    first.unmount();
+    await act(() => resetToSignedOut(client));
+
+    render(page());
+    await waitFor(() => expect(posts.held).toHaveLength(2));
+    await act(async () => posts.answer(1, scan("running")));
+    await waitFor(() =>
+      expect(screen.getByRole("status").textContent).toBe("running"),
+    );
+    // The last reader's answer arrives late, and lands nowhere.
+    await act(async () => posts.answer(0, scan("done")));
+    expect(screen.getByRole("status").textContent).toBe("running");
+    expect(client.getQueryData<AccountScan>(accountScanKey("o-1"))?.state).toBe(
+      "running",
+    );
+  });
+
+  it("leaves a change made while the open was out to its own read", async () => {
+    const posts = holdPosts(["done"]);
+    const client = new QueryClient({
+      defaultOptions: { queries: { retry: false } },
+    });
+    render(
+      <QueryClientProvider client={client}>
+        <Probe enabled />
+      </QueryClientProvider>,
+    );
+    await waitFor(() => expect(posts.held).toHaveLength(1));
+    await act(() =>
+      client.invalidateQueries({ queryKey: accountScanKey("o-1") }),
+    );
+    await act(async () => posts.answer(0, scan("queued")));
+    await waitFor(() =>
+      expect(screen.getByRole("status").textContent).toBe("done"),
+    );
+    expect(posts.calls).toEqual([
+      "POST /v1/companies/o-1/scan",
+      "GET /v1/companies/o-1/scan",
+    ]);
   });
 
   it("polls while the read runs and stops once it has settled", async () => {
@@ -216,16 +319,41 @@ describe("useAccountScan", () => {
     expect(screen.getByRole("status").textContent).toBe("none");
   });
 
-  it("asks the server once when two consumers read one account", async () => {
+  it("sends one scan request when two consumers open one account", async () => {
     const calls = stubScan([]);
     mountTwo();
     await waitFor(() =>
-      expect(screen.getAllByRole("status")[0]?.textContent).toBe("queued"),
+      expect(
+        screen.getAllByRole("status").map((held) => held.textContent),
+      ).toEqual(["queued", "queued"]),
     );
-    // The ensure is the expensive half: it is what can cost a model call. Two
-    // consumers of one account are one question about it.
-    expect(calls.filter((call) => call.startsWith("POST"))).toEqual([
+    // Each request assembles the whole account on the server, the read as
+    // much as the ensure. Two consumers of one account are one question.
+    expect(calls).toEqual(["POST /v1/companies/o-1/scan"]);
+  });
+
+  it("reads the scan again when the record changes after the open", async () => {
+    const calls = stubScan(["done"]);
+    const client = new QueryClient({
+      defaultOptions: { queries: { retry: false } },
+    });
+    render(
+      <QueryClientProvider client={client}>
+        <Probe enabled />
+      </QueryClientProvider>,
+    );
+    await waitFor(() =>
+      expect(screen.getByRole("status").textContent).toBe("queued"),
+    );
+    await act(() =>
+      client.invalidateQueries({ queryKey: accountScanKey("o-1") }),
+    );
+    await waitFor(() =>
+      expect(screen.getByRole("status").textContent).toBe("done"),
+    );
+    expect(calls).toEqual([
       "POST /v1/companies/o-1/scan",
+      "GET /v1/companies/o-1/scan",
     ]);
   });
 });

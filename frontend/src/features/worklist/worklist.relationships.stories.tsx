@@ -57,7 +57,9 @@ export const Optional: Story = {
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
     await expect(canvas.getByText("Optional reconnections")).toBeVisible();
-    await expect(canvas.getByText("Demo contact")).toBeVisible();
+    await expect(
+      canvas.getByText("No recent contact with Demo contact"),
+    ).toBeVisible();
     await expect(
       canvas.getByText("More optional contacts are outside this view."),
     ).toBeVisible();

@@ -316,7 +316,12 @@ func TestArchivedOriginalRetentionFollowsItsObjectAndEveryHold(t *testing.T) {
 	if err := e.db.Tx(ctx, func(tx pgx.Tx) error { return svc.eraseRawCapture(ctx, tx, original) }); err != nil {
 		t.Fatal(err)
 	}
-	if _, _, err := blob.Get(ctx, ref.Key); !errors.Is(err, blobstore.ErrNotFound) {
-		t.Fatal("archived original retained its object", err)
+	var queued int
+	if err := e.owner.QueryRow(ctx, `SELECT count(*) FROM stored_object_intent
+ WHERE storage_key=@key AND kind='raw_original'`, pgx.NamedArgs{"key": ref.Key}).Scan(&queued); err != nil {
+		t.Fatal(err)
+	}
+	if queued != 1 {
+		t.Fatal("the erased original's object was not queued for the stored-object reap")
 	}
 }

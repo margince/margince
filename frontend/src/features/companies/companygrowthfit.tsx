@@ -2,17 +2,12 @@ import { useQuery } from "@tanstack/react-query";
 import type { ReactNode } from "react";
 import { api } from "../../api/client";
 import type { components } from "../../api/schema";
-import {
-  Badge,
-  Button,
-  EmptyState,
-  PendingBody,
-} from "../../design-system/atoms";
+import { Badge, Button, EmptyState } from "../../design-system/atoms";
 import { ErrorLine } from "../../design-system/errorline";
 import { Eyebrow } from "../../design-system/eyebrow";
 import { Panel, PanelBody } from "../../design-system/panel";
 import { Meter } from "../../design-system/readings";
-import { formatDateTime, formatNumber, INTL_LOCALE } from "../../format/format";
+import { formatNumber, INTL_LOCALE } from "../../format/format";
 import { type Translator, useLocale, useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
 import type { Locale } from "../../i18n/locale";
@@ -29,10 +24,12 @@ import {
 // for its own sake, so this file renders unstyled anywhere else.
 import "./company360.css";
 import { labelFor } from "../../lib/labelfor";
-import { useViewerZone } from "../../lib/viewerzone";
+import { AssemblyStamp, AssemblyWait } from "./companyassembly";
 import { ReassessOutcome, useReassess } from "./companygrowthfit.reassess";
+import { GrowthFitInputs } from "./companygrowthfitinputs";
 
 type GrowthFit = components["schemas"]["CompanyGrowthFit"];
+type Company = components["schemas"]["Company"];
 type Band = GrowthFit["band"];
 
 type GrowthFitInput = components["schemas"]["GrowthFitInput"];
@@ -111,20 +108,21 @@ const BAND_TONES: Partial<Record<Band, "success" | "warning">> = {
  * identically.
  */
 export function GrowthFitPanel({
-  companyId,
+  company,
   onOpenRecord,
   onOpenReceipt,
   onOpenEmail,
 }: Readonly<{
-  companyId: string;
+  // The record itself, not its id: the inputs checklist edits its fields
+  // under the same write gate the rest of the page uses.
+  company: Company;
   onOpenRecord?: (entityType: string, entityId: string) => void;
   onOpenReceipt: OpenReceipt;
   // Opens a cited message in the page's email drawer; see `Citations`.
   onOpenEmail?: (activityId: string) => void;
 }>) {
   const t = useT();
-  const { locale } = useLocale();
-  const readerZone = useViewerZone();
+  const companyId = company.id;
   const fit = useQuery({
     queryKey: ["company-growth-fit", companyId],
     queryFn: async () => {
@@ -159,6 +157,7 @@ export function GrowthFitPanel({
     <Panel
       className="co-worth"
       title={t("co.growthFit.title")}
+      help={t("co.growthFit.help")}
       // The assessment is a machine's, in every state it can be in — so the
       // tint rides the panel rather than the readable payload.
       tone="ai"
@@ -170,11 +169,10 @@ export function GrowthFitPanel({
       titleAction={
         <>
           {readable && (
-            <span className="t-caption">
-              {t("co.brief.generatedAt", {
-                when: formatDateTime(readable.generated_at, locale, readerZone),
-              })}
-            </span>
+            <AssemblyStamp
+              at={readable.generated_at}
+              servedFrom={readable.served_from}
+            />
           )}
           <Badge tone="ai">{t("co.assistant.aiTag")}</Badge>
         </>
@@ -199,13 +197,10 @@ export function GrowthFitPanel({
       }
     >
       {fit.isPending ? (
-        // A first assessment is assembled on the request, model call included,
-        // and cold that is upwards of twenty seconds — long enough that a mute
-        // grey block reads as a panel that is broken rather than one that is
-        // working. So the wait says what it is waiting for, visibly and to a
-        // screen reader, which is what `note` on the shared pending body is for.
+        // A stored assessment answers at once. A first one is written on the
+        // request and says so once the wait outlasts a stored answer.
         <PanelBody>
-          <PendingBody label={t("co.growthFit.assembling")} visible lines={4} />
+          <AssemblyWait writing={t("co.growthFit.assembling")} lines={4} />
         </PanelBody>
       ) : !readable ? (
         <PanelBody>
@@ -216,6 +211,7 @@ export function GrowthFitPanel({
           <GrowthFitVerdict fit={readable} />
           <GrowthFitReasons
             fit={readable}
+            company={company}
             onOpenRecord={onOpenRecord}
             onOpenReceipt={onOpenReceipt}
             onOpenEmail={onOpenEmail}
@@ -345,11 +341,13 @@ function GrowthFitVerdict({ fit }: Readonly<{ fit: GrowthFit }>) {
  */
 function GrowthFitReasons({
   fit,
+  company,
   onOpenRecord,
   onOpenReceipt,
   onOpenEmail,
 }: Readonly<{
   fit: GrowthFit;
+  company: Company;
   onOpenRecord?: (entityType: string, entityId: string) => void;
   onOpenReceipt: OpenReceipt;
   // Opens a cited message in the page's email drawer; see `Citations`.
@@ -418,11 +416,21 @@ function GrowthFitReasons({
             </GrowthFitRow>
           ),
       )}
-      {missing && missing.length > 0 && (
-        <GrowthFitRow label="co.growthFit.missing">
-          <p>{missingWords(t, locale, missing)}</p>
-        </GrowthFitRow>
-      )}
+      {/* The checklist whenever an input does not count. An answer from a
+          build that sends no per-input states still names what is missing. */}
+      {Array.isArray(fit.data_completeness.inputs)
+        ? fit.data_completeness.present < fit.data_completeness.expected && (
+            <GrowthFitInputs
+              company={company}
+              completeness={fit.data_completeness}
+            />
+          )
+        : missing &&
+          missing.length > 0 && (
+            <GrowthFitRow label="co.growthFit.missing">
+              <p>{missingWords(t, locale, missing)}</p>
+            </GrowthFitRow>
+          )}
     </>
   );
 }

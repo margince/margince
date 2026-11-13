@@ -45,7 +45,8 @@ type CommitmentItem struct {
 	DueAt *time.Time `json:"due_at,omitempty"`
 	// DueHasTime is true when due_at names an agreed time of day. Absent, the
 	// promise is due by the day due_at falls on in time_zone.
-	DueHasTime bool `json:"due_has_time,omitempty"`
+	DueHasTime bool                     `json:"due_has_time,omitempty"`
+	DueIntent  *crmcontracts.IntentTime `json:"due_intent,omitempty"`
 	// State is undated | overdue | upcoming, judged against the answer's own
 	// as_of instant. There is deliberately no "due today": see the note on the
 	// vocabulary in tools_commitments.go.

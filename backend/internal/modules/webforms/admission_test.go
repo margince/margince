@@ -147,6 +147,7 @@ func TestTheSpamChecksDropAFilledHoneypotAndAnInstantSubmit(t *testing.T) {
 	}{
 		{"a human", map[string]string{controlRendered: rendered(20 * time.Second)}, false},
 		{"no snippet controls at all", map[string]string{}, false},
+		{"an unreadable render time", map[string]string{controlRendered: "soon"}, false},
 		{"a filled honeypot", map[string]string{controlHoneypot: "http://spam.example"}, true},
 		{"submitted a second after rendering", map[string]string{controlRendered: rendered(time.Second)}, true},
 	}

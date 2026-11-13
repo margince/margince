@@ -129,21 +129,27 @@ func progressScope(ctx context.Context, kind *crmcontracts.GetSalesProgressParam
 	return crmcontracts.ReportingScope{Kind: crmcontracts.ReportingScopeKindOwner, Id: &own}, nil
 }
 
+// readableScope is the population a reading or its deal list asks about. A
+// named scope must be inside the reader's own lens. Analytics offers every
+// seat a team's totals, which in a small team is a colleague's figure.
+func (h Reading) readableScope(
+	ctx context.Context, tx pgx.Tx, kind *crmcontracts.GetSalesProgressParamsScopeKind, id *openapi_types.UUID,
+) (crmcontracts.ReportingScope, error) {
+	scope, err := progressScope(ctx, kind, id)
+	if err != nil || kind == nil {
+		return scope, err
+	}
+	return h.Reports.GoalScope(ctx, tx, scope)
+}
+
 func (h Reading) read(ctx context.Context, tx pgx.Tx, params crmcontracts.GetSalesProgressParams) (crmcontracts.SalesProgress, error) {
 	frame, err := h.frame(ctx, tx, progressPeriod{kind: params.Period, year: params.Year, month: params.Month})
 	if err != nil {
 		return crmcontracts.SalesProgress{}, err
 	}
-	scope, err := progressScope(ctx, params.ScopeKind, params.ScopeId)
+	scope, err := h.readableScope(ctx, tx, params.ScopeKind, params.ScopeId)
 	if err != nil {
 		return crmcontracts.SalesProgress{}, err
-	}
-	// A named scope must be inside the reader's own lens. Analytics offers
-	// every seat a team's totals, which in a small team is a colleague's figure.
-	if params.ScopeKind != nil {
-		if scope, err = h.Reports.GoalScope(ctx, tx, scope); err != nil {
-			return crmcontracts.SalesProgress{}, err
-		}
 	}
 	headline, err := h.Reports.EvaluateFactsTx(ctx, tx, headlineSelection(scope, frame))
 	if err != nil {

@@ -32,7 +32,7 @@ func TestAnAskCountsCharactersAndRefusesWhatIsTooLong(t *testing.T) {
 	}{
 		{"reason over", "internal_reason", func(r *NewRequest) { r.InternalReason = strings.Repeat("a", 2001) }},
 		{"value over", "value_for_target", func(r *NewRequest) { r.ValueForTarget = strings.Repeat("é", 2001) }},
-		{"note over", "forwardable_note", func(r *NewRequest) { r.ForwardableNote = strings.Repeat("ế", 4001) }},
+		{"note over", "forwardable_note", func(r *NewRequest) { r.ForwardableNote = strings.Repeat("ế", 2001) }},
 		{"blank reason", "internal_reason", func(r *NewRequest) { r.InternalReason = "" }},
 		{"unknown fallback", "fallback_policy", func(r *NewRequest) { r.FallbackPolicy = "zzz" }},
 		{"unknown note origin", "note_generated_by", func(r *NewRequest) { r.NoteGeneratedBy = "zzz" }},

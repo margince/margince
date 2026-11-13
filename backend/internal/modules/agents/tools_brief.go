@@ -30,6 +30,7 @@ import (
 	"encoding/json"
 	"time"
 
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/kernel/values"
@@ -138,7 +139,8 @@ type BriefItem struct {
 	EvidenceIDs []ids.UUID `json:"evidence_ids"`
 	// SnoozedUntil is when a snoozed item re-surfaces, and is absent unless the
 	// item is snoozed waiting on the clock.
-	SnoozedUntil *time.Time `json:"snoozed_until,omitempty"`
+	SnoozedUntil  *time.Time               `json:"snoozed_until,omitempty"`
+	SnoozedIntent *crmcontracts.IntentTime `json:"snoozed_intent,omitempty"`
 	// ReopenOn is what a snoozed item is waiting for: the clock, a reply, or a
 	// meeting being over. SERVED rather than withheld, and served BECAUSE
 	// SnoozedUntil is: without it a snooze with no moment reads as a snooze
