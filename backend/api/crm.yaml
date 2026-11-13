@@ -21244,9 +21244,10 @@ paths:
         again by how far back it will look: a receipt answers "since you last looked",
         never "since installation".
 
-        Not cursor-paginated yet. The window and the bound are what keep the read
-        honest today; a cursor arrives with the lane that needs one, rather than being
-        declared and ignored.
+        Not cursor-paginated: the window bounds what is reported, and the bound cuts a
+        period the reader has already been shown, not a backlog. A lane read to its
+        bound is named in `cut_at_limit`, so a preview never reads a cut lane as the
+        whole of it.
       parameters:
         - name: since
           in: query
@@ -80610,6 +80611,14 @@ components:
           description: >-
             The done lane's second source, the system's decisions, was read to its bound
             and still had more, so the lane's total is a floor. Absent on older responses.
+        cut_at_limit:
+          type: array
+          items: { type: string, enum: [done, needs_you, could_not_complete], x-extensible-enum: true }
+          description: |
+            The lanes read to `limit` that may hold more than this page draws. `done` is
+            also named when its count is a floor (`done_is_floor`). `watching` is never
+            cut, because `limit` does not bound it. A client says "at least" for a named
+            lane, never "all". Empty when every lane is whole; absent on older responses.
         not_shown_count_withheld:
           type: boolean
           description: >-

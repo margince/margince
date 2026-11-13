@@ -14139,9 +14139,10 @@ export interface paths {
          *     again by how far back it will look: a receipt answers "since you last looked",
          *     never "since installation".
          *
-         *     Not cursor-paginated yet. The window and the bound are what keep the read
-         *     honest today; a cursor arrives with the lane that needs one, rather than being
-         *     declared and ignored.
+         *     Not cursor-paginated: the window bounds what is reported, and the bound cuts a
+         *     period the reader has already been shown, not a backlog. A lane read to its
+         *     bound is named in `cut_at_limit`, so a preview never reads a cut lane as the
+         *     whole of it.
          */
         get: operations["getMagic"];
         put?: never;
@@ -60210,6 +60211,13 @@ export interface components {
             not_shown: components["schemas"]["MagicNotShown"][];
             /** @description The done lane's second source, the system's decisions, was read to its bound and still had more, so the lane's total is a floor. Absent on older responses. */
             done_is_floor?: boolean;
+            /**
+             * @description The lanes read to `limit` that may hold more than this page draws. `done` is
+             *     also named when its count is a floor (`done_is_floor`). `watching` is never
+             *     cut, because `limit` does not bound it. A client says "at least" for a named
+             *     lane, never "all". Empty when every lane is whole; absent on older responses.
+             */
+            cut_at_limit?: ("done" | "needs_you" | "could_not_complete")[];
             /** @description True when the reader cannot inspect workspace-wide unsupported record counts. Those counts are withheld; absence of described actions does not establish a complete receipt. */
             not_shown_count_withheld?: boolean;
             /** @description Lanes that could not be read. "All clear" is forbidden while one is here: a lane the reader may not see and a lane with nothing in it are different answers. */

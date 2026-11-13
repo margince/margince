@@ -16717,6 +16717,27 @@ func (e MagicNotShownReason) Valid() bool {
 	}
 }
 
+// Defines values for MagicReceiptCutAtLimit.
+const (
+	MagicReceiptCutAtLimitCouldNotComplete MagicReceiptCutAtLimit = "could_not_complete"
+	MagicReceiptCutAtLimitDone             MagicReceiptCutAtLimit = "done"
+	MagicReceiptCutAtLimitNeedsYou         MagicReceiptCutAtLimit = "needs_you"
+)
+
+// Valid indicates whether the value is a known member of the MagicReceiptCutAtLimit enum.
+func (e MagicReceiptCutAtLimit) Valid() bool {
+	switch e {
+	case MagicReceiptCutAtLimitCouldNotComplete:
+		return true
+	case MagicReceiptCutAtLimitDone:
+		return true
+	case MagicReceiptCutAtLimitNeedsYou:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for MailCaptureCoverageChannel.
 const (
 	MailCaptureCoverageChannelEmail MailCaptureCoverageChannel = "email"
@@ -55049,7 +55070,13 @@ type MagicReceipt struct {
 	// AsOf The instant this read was taken.
 	AsOf             time.Time   `json:"as_of"`
 	CouldNotComplete []MagicLine `json:"could_not_complete"`
-	Done             []MagicLine `json:"done"`
+
+	// CutAtLimit The lanes read to `limit` that may hold more than this page draws. `done` is
+	// also named when its count is a floor (`done_is_floor`). `watching` is never
+	// cut, because `limit` does not bound it. A client says "at least" for a named
+	// lane, never "all". Empty when every lane is whole; absent on older responses.
+	CutAtLimit *[]MagicReceiptCutAtLimit `json:"cut_at_limit,omitempty"`
+	Done       []MagicLine               `json:"done"`
 
 	// DoneIsFloor The done lane's second source, the system's decisions, was read to its bound and still had more, so the lane's total is a floor. Absent on older responses.
 	DoneIsFloor *bool       `json:"done_is_floor,omitempty"`
@@ -55091,6 +55118,9 @@ type MagicReceipt struct {
 	// `failing_since` where the condition has a start.
 	Watching []MagicLine `json:"watching"`
 }
+
+// MagicReceiptCutAtLimit defines model for MagicReceipt.CutAtLimit.
+type MagicReceiptCutAtLimit string
 
 // MagicSentence What happened, as a key and the values to fill it with.
 //
