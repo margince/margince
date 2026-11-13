@@ -349,9 +349,13 @@ func (s *Service) ask(ctx context.Context, in StatusInput, lang string) (Written
 func (s *Service) gather(ctx context.Context, dealID ids.DealID) (facts, error) {
 	var out facts
 	err := database.WithWorkspaceSnapshot(ctx, s.pool, func(ctx context.Context) error {
-		var err error
-		out, err = s.gatherSnapshot(ctx, dealID)
-		return err
+		// Each read carries kilobytes of row scope and plans for longer than it
+		// runs, so the card's reads keep their generic plans.
+		return database.ReuseGenericPlans(ctx, func(ctx context.Context) error {
+			var err error
+			out, err = s.gatherSnapshot(ctx, dealID)
+			return err
+		})
 	})
 	return out, err
 }
