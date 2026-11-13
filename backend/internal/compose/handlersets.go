@@ -188,8 +188,8 @@ func (s *Server) wireProject360(pool *pgxpool.Pool) {
 	s.project360Handlers = project360.NewHandlers(svc)
 }
 
-// The drafters are built here once, so the floor a deployment with no model
-// answers from and the lane an option binds read the same sources.
+// Each drafter is built here once. Its model-free floor and the lane an option
+// binds then read the same sources.
 func (s *Server) accountDraft(pool *pgxpool.Pool, brain completer) *accountdraft.Service {
 	return accountdraft.NewService(s.company360Svc, brain).WithEnvelope(draftEnvelope(pool, s.log)).
 		WithLoggedTouches(loggedtouch.Reader{Store: activities.NewStore(InstallationDB(pool))}).
