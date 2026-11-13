@@ -158,15 +158,24 @@ STAGE_CHANGE_RULE = "stage_change_notify"
 
 
 def stage_change_rule_on(admin):
-    """The seeded stage-change rule switched on by a human, so it runs with no
-    owner. A seeded rule starts paused, and an agent may not quiet one that runs."""
+    """The seeded stage-change rule switched on by the admin, so it runs as the
+    admin's own. A seeded rule starts paused, and switching it on claims it."""
     rules = admin.call("GET", "/automations?limit=100").get("data", [])
     rule = next((rule for rule in rules if rule.get("key") == STAGE_CHANGE_RULE), None)
     if rule is None:
         raise SetupFault(f"the workspace has no {STAGE_CHANGE_RULE} rule")
-    enabled = admin.call("PATCH", f"/automations/{rule['id']}", {"status": "enabled"})
-    if enabled.get("status") != "enabled" or enabled.get("owner_id"):
-        raise SetupFault(f"switching on {STAGE_CHANGE_RULE} answered {enabled}, want it enabled with no owner")
+    # Running, it watches the stages of one pipeline, and it refuses to start without them.
+    pipelines = admin.call("GET", "/pipelines?limit=100").get("data", [])
+    pipeline = next((p for p in pipelines if p.get("is_default")), pipelines[0] if pipelines else None)
+    if pipeline is None:
+        raise SetupFault("the workspace has no pipeline for the stage-change rule to watch")
+    stages = admin.call("GET", f"/pipelines/{pipeline['id']}").get("stages", [])
+    if not stages:
+        raise SetupFault(f"pipeline {pipeline.get('name')} has no stages for the stage-change rule to watch")
+    params = {"pipeline_id": pipeline["id"], "stage_ids": [stage["id"] for stage in stages]}
+    enabled = admin.call("PATCH", f"/automations/{rule['id']}", {"status": "enabled", "params": params})
+    if enabled.get("status") != "enabled" or not enabled.get("owner_id"):
+        raise SetupFault(f"switching on {STAGE_CHANGE_RULE} answered {enabled}, want it enabled with an owner")
 
 
 STEPS = {

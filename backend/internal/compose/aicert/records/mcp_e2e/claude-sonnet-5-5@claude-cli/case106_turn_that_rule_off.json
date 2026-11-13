@@ -3,7 +3,7 @@
   "criteria": [
     1
   ],
-  "passed": 0,
+  "passed": 2,
   "runs": 2,
   "pass_at": 2,
   "driver": "claude:cli",
@@ -12,12 +12,12 @@
   "search": "semantic",
   "self_judged": true,
   "usage": {
-    "input_tokens": 12,
-    "output_tokens": 1470,
-    "cache_creation_input_tokens": 10754,
-    "cache_read_input_tokens": 377591,
+    "input_tokens": 18,
+    "output_tokens": 1548,
+    "cache_creation_input_tokens": 69525,
+    "cache_read_input_tokens": 504867,
     "runs_measured": 2,
     "runs_costed": 2,
-    "cost_usd": 0.0955
+    "cost_usd": 0.3441
   }
 }
