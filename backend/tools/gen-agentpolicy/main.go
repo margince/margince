@@ -112,6 +112,9 @@ func main() {
 	if sErr != nil {
 		log.Fatalf("gen-agentpolicy: %v", sErr)
 	}
+	if defects := humanOnlyOffTheDoor(doc.Paths, raw.Components.Schemas, policies); len(defects) > 0 {
+		log.Fatalf("gen-agentpolicy: %s", strings.Join(defects, "\n  "))
+	}
 	if defects := nonJSONBodies(shapes); len(defects) > 0 {
 		log.Fatalf("gen-agentpolicy: the contract violates the ADR-0055 fail-closed invariant:\n  %s", strings.Join(defects, "\n  "))
 	}

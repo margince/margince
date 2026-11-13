@@ -342,6 +342,11 @@ func TestASignalAnAgentResolvesDoesNotNameTheUser(t *testing.T) {
 	if resolvedBy != nil || !isAgentStamp(capturedBy) {
 		t.Errorf("the outcome reads resolved_by %v, captured_by %q", resolvedBy, capturedBy)
 	}
+	// The tool does not offer the kind, and a body that sets it anyway is refused at the door.
+	refusal := d.toolRefused(t, "change_attention", map[string]any{"action": "update_signal", "id": signal.ID, "request_body": AnyMap{"kind": "risk"}})
+	if !strings.Contains(refusal, "only a human may set kind") {
+		t.Errorf("an agent moving the kind answered %q, want the human-only refusal", refusal)
+	}
 }
 
 // A transition trusted to move deals by itself judges a move by its stage's

@@ -155,17 +155,17 @@ const whatChangedCap = 5
 func (said briefCopy) changedClaimLine(claim ClaimIn) string {
 	switch claim.Kind {
 	case kindCommitmentOurs:
-		return fmt.Sprintf(said.Say(changedWords.Ours), claim.ContactName, claim.Body)
+		return fmt.Sprintf(said.Say(changedWords.Ours), said.whom(claim), claim.Body)
 	case kindCommitmentTheirs:
-		return fmt.Sprintf(said.Say(changedWords.Theirs), claim.ContactName, claim.Body)
+		return fmt.Sprintf(said.Say(changedWords.Theirs), said.whom(claim), claim.Body)
 	case kindObjection:
-		return fmt.Sprintf(said.Say(changedWords.Objection), claim.ContactName, claim.Body)
+		return fmt.Sprintf(said.Say(changedWords.Objection), said.whom(claim), claim.Body)
 	case kindDecision:
-		return fmt.Sprintf(said.Say(changedWords.Agreed), claim.ContactName, claim.Body)
+		return fmt.Sprintf(said.Say(changedWords.Agreed), said.whom(claim), claim.Body)
 	case kindOpenQuestion:
-		return fmt.Sprintf(said.Say(changedWords.Asked), claim.ContactName, claim.Body)
+		return fmt.Sprintf(said.Say(changedWords.Asked), said.whom(claim), claim.Body)
 	default:
-		return fmt.Sprintf(said.Say(changedWords.Said), claim.ContactName, claim.Body)
+		return fmt.Sprintf(said.Say(changedWords.Said), said.whom(claim), claim.Body)
 	}
 }
 

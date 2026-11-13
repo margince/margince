@@ -40,6 +40,9 @@ type routeVerbShape struct {
 	BodySchema   string
 	AnswerSchema string
 	Query        []viewQuery
+	// HumanOnly names the body members only a human sets; the agent gate
+	// refuses an agent body that carries one.
+	HumanOnly []string
 }
 
 // declaredRouteVerbs lists every verb the contract declares served_by: route.

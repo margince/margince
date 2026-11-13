@@ -130,6 +130,46 @@ export const WithTrailingControl: Story = {
   ),
 };
 
+// A trailing control too wide to leave room for the open tab and More beside
+// it. It wraps under the strip, so the strip keeps a row of its own to fold in.
+export const FoldsAboveAWideTrailingControl: Story = {
+  tags: ["uat-phone"],
+  parameters: { layout: "fullscreen" },
+  globals: { viewport: { value: "phone" } },
+  render: () => (
+    <RecordTabs
+      label="Analytics"
+      options={["performance", "outcomes", "delivery", "pipeline", "team"]}
+      value="performance"
+      onChange={() => undefined}
+      labels={ANALYTICS_LABELS}
+      trailing={
+        <>
+          <Button>Reports</Button>
+          <Button>Setup and sharing</Button>
+        </>
+      }
+    />
+  ),
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await waitFor(() =>
+      expect(
+        canvas.getByRole("button", { name: "More sections" }),
+      ).toBeVisible(),
+    );
+    const strip = canvasElement.querySelector(".recordtabs-strip");
+    if (!(strip instanceof HTMLElement)) throw new Error("no tab strip drawn");
+    await waitFor(() =>
+      expect(strip.scrollWidth).toBeLessThanOrEqual(strip.clientWidth),
+    );
+    const reports = canvas.getByRole("button", { name: "Reports" });
+    await expect(reports.getBoundingClientRect().top).toBeGreaterThanOrEqual(
+      strip.getBoundingClientRect().bottom,
+    );
+  },
+};
+
 // Analytics' own tabs at 390px: more than the phone holds. The tabs after the
 // last one that fits fold behind More, and the open tab stays on the row even
 // when it comes last.
@@ -162,7 +202,10 @@ export const FoldsAtPhoneWidth: Story = {
     await expect(canvas.getByRole("button", { name: "Team" })).toBeVisible();
     const strip = canvasElement.querySelector(".recordtabs-strip");
     if (!(strip instanceof HTMLElement)) throw new Error("no tab strip drawn");
-    await expect(strip.scrollWidth).toBeLessThanOrEqual(strip.clientWidth);
+    // The strip's scroll width settles a few frames after More shows.
+    await waitFor(() =>
+      expect(strip.scrollWidth).toBeLessThanOrEqual(strip.clientWidth),
+    );
   },
 };
 
@@ -224,11 +267,15 @@ export const FoldsAndReturnsWithWidth: Story = {
       ).toBeVisible(),
     );
     frame.style.inlineSize = "100%";
+    // Performance leads the row and never folds, so the wait is on a tab
+    // that did fold coming back.
     await waitFor(() =>
-      expect(canvas.getByRole("button", { name: "Performance" })).toBeVisible(),
+      expect(canvas.getByRole("button", { name: "Pipeline" })).toBeVisible(),
     );
-    await expect(
-      canvas.queryByRole("button", { name: "More sections" }),
-    ).toBeNull();
+    await waitFor(() =>
+      expect(
+        canvas.queryByRole("button", { name: "More sections" }),
+      ).toBeNull(),
+    );
   },
 };
