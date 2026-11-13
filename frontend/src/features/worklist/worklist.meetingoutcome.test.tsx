@@ -200,6 +200,25 @@ describe("a meeting that owes an answer", () => {
         because: [{ kind: "outcome_unrecorded" }, { kind: "read_only" }],
       }),
     );
+    const sent: unknown[] = [];
+    const passthrough = globalThis.fetch;
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+        const request = input instanceof Request ? input : undefined;
+        const url = String(request ? request.url : input);
+        if (url.split("?")[0].endsWith("/worklist/done")) {
+          sent.push(
+            JSON.parse(
+              await (request ?? new Request(url, init)).clone().text(),
+            ),
+          );
+          return new Response(null, { status: 204 });
+        }
+        return passthrough(input, init);
+      }),
+    );
+    const user = userEvent.setup();
     renderUnderAToastRegion();
 
     expect(
@@ -213,11 +232,16 @@ describe("a meeting that owes an answer", () => {
         name: "It happened: Discovery call with Turbinenbau",
       }),
     ).toBeNull();
-    expect(
+    await user.click(
       screen.getByRole("button", {
         name: en["worklist.disposition.verb.handled"],
       }),
-    ).not.toBeNull();
+    );
+    await waitFor(() =>
+      expect(sent).toEqual([
+        { rows: [{ source: "meeting_outcome", row_id: MEETING_ID }] },
+      ]),
+    );
   });
 
   it("records a held meeting from the card, with no dialog in the way", async () => {
