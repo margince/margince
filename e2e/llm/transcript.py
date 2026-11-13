@@ -257,7 +257,9 @@ def _agy_tool(out, step, conversation, workspace=""):
             text, is_error = str(info.get("output") or ""), False
         out.tool_results([(call_id, text, is_error)])
         return ""
-    target = params.get("ServerName") or params.get("Path") or ""
+    # The arguments say what the model went outside for, which is the whole of
+    # the diagnosis when the prompt left something unclear.
+    target = params.get("ServerName") or params.get("Path") or json.dumps(params, ensure_ascii=False)[:300]
     return f"agy used a tool outside the lane's MCP server: {name} {target}".strip()
 
 

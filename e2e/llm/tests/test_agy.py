@@ -89,6 +89,12 @@ class FromAgyTest(unittest.TestCase):
         lines = before_answer(sample(), tool_step(9, "search_web", state="ERROR", query="margince"))
         self.assertEqual(convert(lines)[0], 3)
 
+    def test_a_web_search_stop_says_what_was_searched(self):
+        lines = before_answer(sample(), tool_step(9, "search_web", query="Kugellager-online GmbH"))
+        code, _out, raw = convert(lines)
+        self.assertEqual(code, 3)
+        self.assertIn("Kugellager-online GmbH", raw)
+
     def test_a_failed_call_that_names_no_server_reached_nothing(self):
         lines = before_answer(sample(), tool_step(9, "call_mcp_tool", state="ERROR", ToolName="echo"))
         self.assertEqual(convert(lines)[0], 0)
