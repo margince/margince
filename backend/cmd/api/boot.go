@@ -476,7 +476,7 @@ func workerHandoffOptions(
 		// move and its job are one transaction, so the 202 means work is queued.
 		compose.WithImportJobs(sendInserter),
 		// After WithChannelSurface, so a Dispact bot connects beside Telegram.
-		compose.WithChatLinks(sendInserter, gates.privateChat),
+		compose.WithChatLinks(sendInserter, gates.privateChat, chatSummaryLane(modelPath)),
 	}
 
 	enqueueOpts, err := jobEnqueueOptions(pool, logger, modelPath, gates)

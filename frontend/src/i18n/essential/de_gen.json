@@ -2318,6 +2318,7 @@
   "aiTask.name.report_setup": "Berichtseinrichtung oder Umsatzziele vorschlagen",
   "aiTask.name.request_settlement": "Prüfung der Antwort auf das Anliegen",
   "aiTask.name.rewrite": "Umformulieren",
+  "aiTask.name.chat_summary": "Zusammenfassung eines Chat-Kanals",
   "aiTask.name.signal_extract": "Erkennung von Gesprächssignalen",
   "aiTask.name.site_extract": "Ausführliche Website-Auswertung",
   "aiTask.name.site_fact_extract": "Erfassung von Website-Fakten",

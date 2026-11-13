@@ -1107,6 +1107,10 @@ func (stubs) LinkChannel(w nethttp.ResponseWriter, r *nethttp.Request, recordTyp
 	httperr.NotImplemented(w, r, "LinkChannel")
 }
 
+func (stubs) FileChannelMessage(w nethttp.ResponseWriter, r *nethttp.Request, recordType crmcontracts.ChannelLinkRecordType, id crmcontracts.Id) {
+	httperr.NotImplemented(w, r, "FileChannelMessage")
+}
+
 func (stubs) ListChannelProviders(w nethttp.ResponseWriter, r *nethttp.Request) {
 	httperr.NotImplemented(w, r, "ListChannelProviders")
 }

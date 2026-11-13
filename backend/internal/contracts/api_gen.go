@@ -1185,6 +1185,7 @@ const (
 	AiActivityKindCaptureConfidentialityVerdict AiActivityKind = "capture_confidentiality_verdict"
 	AiActivityKindCaptureCounterpartyVerdict    AiActivityKind = "capture_counterparty_verdict"
 	AiActivityKindCertJudge                     AiActivityKind = "cert_judge"
+	AiActivityKindChatSummary                   AiActivityKind = "chat_summary"
 	AiActivityKindColdStart                     AiActivityKind = "cold_start"
 	AiActivityKindCorpusAsk                     AiActivityKind = "corpus_ask"
 	AiActivityKindDealHealth                    AiActivityKind = "deal_health"
@@ -1234,6 +1235,8 @@ func (e AiActivityKind) Valid() bool {
 	case AiActivityKindCaptureCounterpartyVerdict:
 		return true
 	case AiActivityKindCertJudge:
+		return true
+	case AiActivityKindChatSummary:
 		return true
 	case AiActivityKindColdStart:
 		return true
@@ -1783,6 +1786,7 @@ const (
 	AiTaskCaptureConfidentialityVerdict AiTask = "capture_confidentiality_verdict"
 	AiTaskCaptureCounterpartyVerdict    AiTask = "capture_counterparty_verdict"
 	AiTaskCertJudge                     AiTask = "cert_judge"
+	AiTaskChatSummary                   AiTask = "chat_summary"
 	AiTaskColdStart                     AiTask = "cold_start"
 	AiTaskCorpusAsk                     AiTask = "corpus_ask"
 	AiTaskDealHealth                    AiTask = "deal_health"
@@ -1831,6 +1835,8 @@ func (e AiTask) Valid() bool {
 	case AiTaskCaptureCounterpartyVerdict:
 		return true
 	case AiTaskCertJudge:
+		return true
+	case AiTaskChatSummary:
 		return true
 	case AiTaskColdStart:
 		return true
@@ -32346,6 +32352,9 @@ type Activity struct {
 	// are separate axes, and reading one off the other is what ADR-0107 retired.
 	ChannelProvider *ProviderRef `json:"channel_provider,omitempty"`
 
+	// ChatEpisode On a note summarising chat talk (`source_system` `dispact`), what talk it summarises. The note's subject and body are an AI summary. Absent on every other row. Withheld with the content, like `body`.
+	ChatEpisode *ChatEpisode `json:"chat_episode,omitempty"`
+
 	// ColleagueIds The colleagues recorded as taking part: the one who logged a call or meeting, the ones named as attending, and the seats capture stamped on a captured one, never a blind copy. Filled wherever one activity is answered whole (its read, its update); a list leaves it out. Withheld with the content, so it is absent whenever `content_state` is `withheld`.
 	ColleagueIds *[]openapi_types.UUID `json:"colleague_ids,omitempty"`
 
@@ -39546,6 +39555,19 @@ type ChannelProviderEntryCredentialModel string
 
 // ChannelVerbosity How much Margince posts into a linked channel.
 type ChannelVerbosity string
+
+// ChatEpisode The chat talk a summary note was written from. The talk itself is not kept: open `url`
+// to read it in the chat.
+type ChatEpisode struct {
+	// EndedAt When the last of them was posted.
+	EndedAt time.Time `json:"ended_at"`
+
+	// MessageCount How many messages the summary covers.
+	MessageCount int `json:"message_count" minimum:"1"`
+
+	// Url The first message in the chat.
+	Url string `json:"url"`
+}
 
 // ClaimEvidence The receipt behind one cited record (DOSS-WIRE-3). Each `source_kind` owes its own
 // identifying fields (DOSS-PARAM-9), carried in `identity`; a receipt that cannot fill one
@@ -49717,6 +49739,16 @@ type FieldHistoryEntryEntityType string
 type FieldHistoryListResponse struct {
 	Data []FieldHistoryEntry `json:"data"`
 	Page PageInfo            `json:"page"`
+}
+
+// FileChannelMessageRequest defines model for FileChannelMessageRequest.
+type FileChannelMessageRequest struct {
+	// Message The message in the record's channel: its sequence number, `#slug:seq`, the chat's
+	// `<m:#slug:seq|…>` mention, or its link. A message in another channel is not found.
+	Message string `json:"message"`
+
+	// Thread True files the message and the replies in its thread that follow it.
+	Thread *bool `json:"thread,omitempty"`
 }
 
 // FileChatCaptureRequest defines model for FileChatCaptureRequest.
@@ -80942,6 +80974,9 @@ type SetChannelVerbosityJSONRequestBody = SetChannelVerbosityRequest
 // LinkChannelJSONRequestBody defines body for LinkChannel for application/json ContentType.
 type LinkChannelJSONRequestBody = LinkChannelRequest
 
+// FileChannelMessageJSONRequestBody defines body for FileChannelMessage for application/json ContentType.
+type FileChannelMessageJSONRequestBody = FileChannelMessageRequest
+
 // SettleConversationClaimJSONRequestBody defines body for SettleConversationClaim for application/json ContentType.
 type SettleConversationClaimJSONRequestBody = SettleClaimRequest
 
@@ -82142,6 +82177,14 @@ func (a *Activity) UnmarshalJSON(b []byte) error {
 		delete(object, "channel_provider")
 	}
 
+	if raw, found := object["chat_episode"]; found {
+		err = json.Unmarshal(raw, &a.ChatEpisode)
+		if err != nil {
+			return fmt.Errorf("error reading 'chat_episode': %w", err)
+		}
+		delete(object, "chat_episode")
+	}
+
 	if raw, found := object["colleague_ids"]; found {
 		err = json.Unmarshal(raw, &a.ColleagueIds)
 		if err != nil {
@@ -82689,6 +82732,13 @@ func (a Activity) MarshalJSON() ([]byte, error) {
 		object["channel_provider"], err = json.Marshal(a.ChannelProvider)
 		if err != nil {
 			return nil, fmt.Errorf("error marshaling 'channel_provider': %w", err)
+		}
+	}
+
+	if a.ChatEpisode != nil {
+		object["chat_episode"], err = json.Marshal(a.ChatEpisode)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'chat_episode': %w", err)
 		}
 	}
 
@@ -96050,6 +96100,9 @@ type ServerInterface interface {
 	// Link a deal or project to a new or existing private chat channel.
 	// (POST /channel-links/{record_type}/{id})
 	LinkChannel(w http.ResponseWriter, r *http.Request, recordType ChannelLinkRecordType, id Id)
+	// File a summary of one message in a record's channel, or of its thread, as a note.
+	// (POST /channel-links/{record_type}/{id}/notes)
+	FileChannelMessage(w http.ResponseWriter, r *http.Request, recordType ChannelLinkRecordType, id Id)
 	// Which messaging transports THIS installation has registered.
 	// (GET /channel-providers)
 	ListChannelProviders(w http.ResponseWriter, r *http.Request)
@@ -100154,6 +100207,12 @@ func (_ Unimplemented) SetChannelVerbosity(w http.ResponseWriter, r *http.Reques
 // Link a deal or project to a new or existing private chat channel.
 // (POST /channel-links/{record_type}/{id})
 func (_ Unimplemented) LinkChannel(w http.ResponseWriter, r *http.Request, recordType ChannelLinkRecordType, id Id) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// File a summary of one message in a record's channel, or of its thread, as a note.
+// (POST /channel-links/{record_type}/{id}/notes)
+func (_ Unimplemented) FileChannelMessage(w http.ResponseWriter, r *http.Request, recordType ChannelLinkRecordType, id Id) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -117326,6 +117385,49 @@ func (siw *ServerInterfaceWrapper) LinkChannel(w http.ResponseWriter, r *http.Re
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.LinkChannel(w, r, recordType, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// FileChannelMessage operation middleware
+func (siw *ServerInterfaceWrapper) FileChannelMessage(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "record_type" -------------
+	var recordType ChannelLinkRecordType
+
+	err = runtime.BindStyledParameterWithOptions("simple", "record_type", chi.URLParam(r, "record_type"), &recordType, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "record_type", Err: err})
+		return
+	}
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.FileChannelMessage(w, r, recordType, id)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -154158,6 +154260,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/channel-links/{record_type}/{id}", wrapper.LinkChannel)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/channel-links/{record_type}/{id}/notes", wrapper.FileChannelMessage)
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/channel-providers", wrapper.ListChannelProviders)

@@ -85,7 +85,8 @@ func toolRoleApp(t *testing.T, slug string, more ...compose.Option) *apptest.Two
 	// The channel surface takes its vault from WithKeyvault, so it is composed first.
 	d := apptest.SetupTwoDoors(t, slug, append([]compose.Option{
 		compose.WithBlobstore(sweepBlobs), compose.WithRouteChecksRecordedForTest(releases.note), compose.WithTrustedProxies(loopback),
-		compose.WithCardPhotoReader(cardReads.DocumentExtract), compose.WithVoiceBuildEnqueue(jobs), compose.WithChannelSurface(), compose.WithKeyvault(vault), compose.WithGmailCapture(compose.GmailConfig{
+		compose.WithCardPhotoReader(cardReads.DocumentExtract), compose.WithVoiceBuildEnqueue(jobs), compose.WithChannelSurface(), compose.WithKeyvault(vault),
+		compose.WithChatLinks(jobs, true, sweepLane{reply: sweepChatSummaryReply}), compose.WithGmailCapture(compose.GmailConfig{
 			ClientID: "calendar-fixture", ClientSecret: "calendar-fixture",
 			StateKey: "0123456789abcdef0123456789abcdef", PublicBaseURL: "https://mail.example.test",
 		}, compose.CaptureConfig{}), compose.WithCaptureBackfill(jobs),

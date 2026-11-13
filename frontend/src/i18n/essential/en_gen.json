@@ -2318,6 +2318,7 @@
   "aiTask.name.report_setup": "Proposing a report setup or sales goals",
   "aiTask.name.request_settlement": "Checking whether the reply answered the request",
   "aiTask.name.rewrite": "Rewriting",
+  "aiTask.name.chat_summary": "Chat channel summary",
   "aiTask.name.signal_extract": "Signal extraction",
   "aiTask.name.site_extract": "Website research",
   "aiTask.name.site_fact_extract": "Website fact extraction",

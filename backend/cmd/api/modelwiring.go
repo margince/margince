@@ -365,3 +365,12 @@ func knowledgeAskOption(modelPath *compose.ModelPath, log *slog.Logger) compose.
 	}
 	return compose.WithCorpusAsk(modelPath.Embedder, modelPath.CorpusAsk, log)
 }
+
+// chatSummaryLane is the lane a chosen chat message is summarised on; a role
+// with no model path has none.
+func chatSummaryLane(modelPath *compose.ModelPath) ai.Completer {
+	if modelPath == nil || modelPath.ChatSummary == nil {
+		return nil
+	}
+	return modelPath.ChatSummary
+}

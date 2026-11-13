@@ -195,6 +195,8 @@ type JobRunnerConfig struct {
 	// deal's evidence with. Nil = no AI configured: dates, amounts and
 	// probabilities change only by hand and by the close-date sweep.
 	DealVerdictBrain completer
+	// ChatSummaryBrain is the chat_summary lane; nil files no chat summary.
+	ChatSummaryBrain completer
 	// TagSuggestBrain is the tag_suggest lane, which reads captured items
 	// against the suggestible tags' descriptions. Nil = the tag scout matches
 	// description phrases instead.

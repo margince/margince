@@ -267,6 +267,7 @@
     "exportForecastShare": "business",
     "exportReportingEdition": "business",
     "exportReportingEvaluation": "business",
+    "fileChannelMessage": "capture",
     "freezeReportingEdition": "business",
     "generateMorningBrief": "business",
     "getAccountCoverage": "business",
@@ -1193,6 +1194,7 @@
     "exportReportingEdition": "reports",
     "exportReportingEvaluation": "reports",
     "extOauthCallback": "oauth_callbacks",
+    "fileChannelMessage": "connectors",
     "fileChatCapture": "documents",
     "freezeReportingEdition": "reports",
     "generateMorningBrief": "worklist",
@@ -2587,6 +2589,9 @@
     ],
     "export_forecast_share": [
       "forecast"
+    ],
+    "file_channel_message": [
+      "connectors"
     ],
     "forecast_input_checks": [
       "forecast"
@@ -4689,6 +4694,9 @@
     ],
     "export_forecast_share": [
       "business"
+    ],
+    "file_channel_message": [
+      "capture"
     ],
     "forecast_input_checks": [
       "business"

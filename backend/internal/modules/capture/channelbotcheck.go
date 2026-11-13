@@ -7,6 +7,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"maps"
 
 	"github.com/margince/margince/backend/internal/modules/capture/telegram"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
@@ -76,9 +77,7 @@ func (s *ChannelStore) botCheck(provider string) (ChannelBotCheck, error) {
 func (s *ChannelStore) WithBotCheck(provider string, check ChannelBotCheck) *ChannelStore {
 	next := *s
 	next.bots = make(map[string]ChannelBotCheck, len(s.bots)+1)
-	for name, existing := range s.bots {
-		next.bots[name] = existing
-	}
+	maps.Copy(next.bots, s.bots)
 	next.bots[provider] = check
 	return &next
 }

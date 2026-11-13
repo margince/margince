@@ -11,7 +11,7 @@ import (
 // jobContractHash is the sha256 of api/jobs.yaml this file was generated
 // from — the same fingerprint jobs.JobContractHash carries, so a stale
 // half of the pair is visible without diffing the two tables.
-const jobContractHash = "df5b6ef945af1f37757c7679fe05d9e8f0f700f94ff77a7e26b3f060405b497d"
+const jobContractHash = "4e132a6b4040762f8b297fc17644ea65b788ee7830f8eaa7e201a641caeafec3"
 
 // declaredJobArgs requires the generated registration marker for the exact args type.
 // Handwritten markers are refused by the registration census.
@@ -50,6 +50,8 @@ func (CaptureTraceSweepArgs) declaredJobType(CaptureTraceSweepArgs)             
 func (CapturedDealRefileArgs) declaredJobType(CapturedDealRefileArgs)             {}
 func (CapturedDealRefileSweepArgs) declaredJobType(CapturedDealRefileSweepArgs)   {}
 func (ChatLinkFlushArgs) declaredJobType(ChatLinkFlushArgs)                       {}
+func (ChatPullArgs) declaredJobType(ChatPullArgs)                                 {}
+func (ChatPullSweepArgs) declaredJobType(ChatPullSweepArgs)                       {}
 func (CheckCompanyVatArgs) declaredJobType(CheckCompanyVatArgs)                   {}
 func (CloseDateSweepArgs) declaredJobType(CloseDateSweepArgs)                     {}
 func (AuthzDisagreementArgs) declaredJobType(AuthzDisagreementArgs)               {}
@@ -155,6 +157,7 @@ var (
 	_ jobs.FleetWide = CaptureEnrichArgs{}
 	_ jobs.FleetWide = CaptureTraceSweepArgs{}
 	_ jobs.FleetWide = CapturedDealRefileSweepArgs{}
+	_ jobs.FleetWide = ChatPullSweepArgs{}
 	_ jobs.FleetWide = CloseDateSweepArgs{}
 	_ jobs.FleetWide = CompanyNamePromotionArgs{}
 	_ jobs.FleetWide = DataTaskReconcileArgs{}
@@ -205,6 +208,7 @@ var (
 	_ jobs.WorkspaceScoped = CaptureSyncArgs{}
 	_ jobs.WorkspaceScoped = CapturedDealRefileArgs{}
 	_ jobs.WorkspaceScoped = ChatLinkFlushArgs{}
+	_ jobs.WorkspaceScoped = ChatPullArgs{}
 	_ jobs.WorkspaceScoped = CheckCompanyVatArgs{}
 	_ jobs.WorkspaceScoped = ScheduledSendArgs{}
 	_ jobs.WorkspaceScoped = SendEmailArgs{}

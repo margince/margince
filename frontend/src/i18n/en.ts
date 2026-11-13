@@ -4861,6 +4861,11 @@ export const en = {
   "timeline.kind.extension": "Extension",
   "timeline.kind.signal": "Signal",
   "timeline.withheld": "Content for participants only",
+  "timeline.chatSummary.badge": "AI summary",
+  "timeline.chatSummary.from": "From {provider}",
+  "timeline.chatSummary.meta_one": "{count} message, until {ended}",
+  "timeline.chatSummary.meta_other": "{count} messages, until {ended}",
+  "timeline.chatSummary.open": "Open in {provider}",
   "compose.deadRecipients":
     "Mail to {addresses} is bouncing: the last delivery was refused and none has succeeded since. Send anyway, or use another address.",
   "compose.threadShare": "Share with the company",
@@ -10501,6 +10506,8 @@ export const en = {
   "jobs.kind.telegram_ingest": "Telegram message intake",
   "jobs.kind.telegram_poll": "Telegram message fetch",
   "jobs.kind.chat_link_flush": "Chat channel posts",
+  "jobs.kind.chat_pull": "Chat channel summaries",
+  "jobs.kind.chat_pull_sweep": "Chat channel check",
   "jobs.kind.telegram_poll_sweep": "Telegram fetch scheduling",
   "jobs.kind.time_scan": "Time-based automation check",
   "jobs.kind.transcript_propose": "Transcript read",
@@ -21754,6 +21761,7 @@ export const en = {
   "aiTask.name.request_settlement":
     "Checking whether the reply answered the request",
   "aiTask.name.rewrite": "Rewriting",
+  "aiTask.name.chat_summary": "Chat channel summary",
   "aiTask.name.signal_extract": "Signal extraction",
   "aiTask.name.site_extract": "Website research",
   "aiTask.name.site_fact_extract": "Website fact extraction",
