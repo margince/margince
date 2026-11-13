@@ -6,7 +6,7 @@
 // happened. A receipt and a router, never a second inbox: no row carries a
 // verb, and a lane with nothing in it draws nothing.
 
-import { useId } from "react";
+import { Fragment, useId } from "react";
 import { rowsOf } from "../../api/rows";
 import { Eyebrow } from "../../design-system/eyebrow";
 import { PanelBody } from "../../design-system/panel";
@@ -26,6 +26,7 @@ import {
   useMagic,
 } from "../../lib/magic.queries";
 import { sourceUnavailableText } from "../../lib/worklistcopy";
+import { MagicDoneCard } from "./magic.done";
 import { MagicLaneSection } from "./magic.lines";
 import { spansDays } from "./magic.marks";
 import "../brief/brief.css";
@@ -77,11 +78,14 @@ export function MagicPanel({
   visibleReceiptIds = [],
   lanes = LANES,
   embedded = false,
+  doneOpen = false,
 }: Readonly<{
   visibleApprovalIds?: readonly string[];
   visibleReceiptIds?: readonly string[];
   lanes?: readonly MagicLane[];
   embedded?: boolean;
+  /** Embedded, the done card opens on arrival: nothing above it to read first. */
+  doneOpen?: boolean;
 }> = {}) {
   const t = useT();
   const { locale } = useLocale();
@@ -132,45 +136,65 @@ export function MagicPanel({
     return null;
   }
   const notShown = drawsWaiting ? rowsOf(shown?.not_shown).filter(told) : [];
+  // A ready read with nothing to caveat draws no empty body above the lanes.
+  const caveats =
+    read !== "ready" ||
+    withheld.length > 0 ||
+    (drawsWaiting && shown?.not_shown_count_withheld === true) ||
+    (coverageIncomplete && !drawn.includes("done"));
   const body = (
     <>
-      <PanelBody>
-        <SurfaceState
-          state={read}
-          emptyLabel=""
-          loadingLabel={t("magic.loading")}
-          detail={{ onRetry: () => void magic.refetch() }}
-        >
-          <WithheldSources withheld={withheld} />
-          {drawsWaiting && shown?.not_shown_count_withheld && (
-            <p className="t-caption">{t("magic.visibleScope")}</p>
-          )}
-          {coverageIncomplete && !drawn.includes("done") && (
-            <p className="t-caption">{t("magic.coverageIncomplete")}</p>
-          )}
-        </SurfaceState>
-      </PanelBody>
-      {drawn.map((lane) => (
-        <MagicLaneSection
-          key={lane}
-          lane={lane}
-          title={t(
-            embedded && lane === "done"
-              ? "magic.lane.doneOther"
-              : labelFor(LANE_HEADING, lane),
-          )}
-          rows={shown?.[lane] ?? []}
-          since={shown?.since}
-          zone={zone}
-          byDay={byDay}
-          fold={lane === "done" ? doneFold : undefined}
-          note={
-            lane === "done" && coverageIncomplete
-              ? t("magic.coverageIncomplete")
-              : undefined
-          }
-        />
-      ))}
+      {caveats && (
+        <PanelBody>
+          <SurfaceState
+            state={read}
+            emptyLabel=""
+            loadingLabel={t("magic.loading")}
+            detail={{ onRetry: () => void magic.refetch() }}
+          >
+            <WithheldSources withheld={withheld} />
+            {drawsWaiting && shown?.not_shown_count_withheld && (
+              <p className="t-caption">{t("magic.visibleScope")}</p>
+            )}
+            {coverageIncomplete && !drawn.includes("done") && (
+              <p className="t-caption">{t("magic.coverageIncomplete")}</p>
+            )}
+          </SurfaceState>
+        </PanelBody>
+      )}
+      {drawn.map((lane) =>
+        embedded && lane === "done" ? (
+          <Fragment key={lane}>
+            <MagicDoneCard
+              rows={rowsOf(shown?.done)}
+              since={shown?.since}
+              zone={zone}
+              byDay={byDay}
+              floor={doneFloor}
+              defaultOpen={doneOpen}
+            />
+            {coverageIncomplete && (
+              <p className="t-caption">{t("magic.coverageIncomplete")}</p>
+            )}
+          </Fragment>
+        ) : (
+          <MagicLaneSection
+            key={lane}
+            lane={lane}
+            title={t(labelFor(LANE_HEADING, lane))}
+            rows={shown?.[lane] ?? []}
+            since={shown?.since}
+            zone={zone}
+            byDay={byDay}
+            fold={lane === "done" ? doneFold : undefined}
+            note={
+              lane === "done" && coverageIncomplete
+                ? t("magic.coverageIncomplete")
+                : undefined
+            }
+          />
+        ),
+      )}
       {notShown.length > 0 && (
         <PanelBody>
           <NotShown entries={notShown} />
