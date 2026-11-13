@@ -86,6 +86,7 @@ var carriesNoColleagueFigure = gatekit.Waive(map[string]string{
 	"listForecastShares":              "lists the share links the reader issued, with no figure",
 	"createForecastShare":             "answers the share link just issued, with no figure; opening it re-reads the forecast for whoever opens it",
 	"revokeForecastShare":             "revokes a share link and answers nothing",
+	"listInputChecks":                 "lists deals the reader may already read, with their amounts; GroupFindings sums per finding type and currency, never per seat",
 })
 
 // notYetHeldOnEveryPath holds operations the walk still flags and nobody has
@@ -100,7 +101,6 @@ var notYetHeldOnEveryPath = gatekit.Waive(map[string]string{
 	"withdrawSalesGoalPlan":       "goalAccess proves the reader's own seat by comparing ids, which the walk cannot read as a check",
 	"answerReportingQuestionCard": "the restricted answer carries no figure, but the walk reads its write as one",
 	"assessSalesReview":           "a refusal returned through RequireHumanOrItsAgent reads to the walk as a success",
-	"listInputChecks":             "each finding pairs owner_id with affected_minor, GroupFindings sums them into exposures, and the default scope never reads the switch",
 	"createReportingTarget":       "answers an owner-scoped target value, and the write path is not yet held to the switch on every scope",
 	"recordForecastCall":          "answers a forecast call's amount for an owner scope, and the write path is not yet held to the switch on every scope",
 	"evaluateReporting":           "the read_reporting tool shares one handler, and its editions mode gathers checked editions in a loop that may run no time",
