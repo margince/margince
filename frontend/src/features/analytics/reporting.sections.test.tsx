@@ -153,7 +153,9 @@ describe("the Leads view", () => {
     const asked = showView("leads", reportingLeadsEvaluation);
 
     const created = await panel(titled(reportingMetricNames.leads_created));
-    await user.click(created.getByRole("button", { name: "Website: 12" }));
+    await user.click(
+      await created.findByRole("button", { name: "Website: 12" }),
+    );
 
     const drawer = within(await screen.findByRole("dialog"));
     expect(drawer.getByText(/Website/)).toBeVisible();
