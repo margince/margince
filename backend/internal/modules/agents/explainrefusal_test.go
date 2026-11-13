@@ -17,8 +17,8 @@ import (
 )
 
 // Each sentinel branch of explain quotes the refusal as the REST surface
-// renders it, never the wrap chain. A typed refusal keeps its own words, a
-// driver's text gives way to the sentinel's, and the caller's text is escaped.
+// renders it. A typed refusal answers its own words, a driver's text gives way
+// to the sentinel's, and a plain wrap keeps its sentence, escaped.
 func TestEverySentinelRefusalQuotesTheCallerFacingText(t *testing.T) {
 	driver := &pgconn.PgError{Message: "relation \"deal_line\" does not exist", Code: "42P01"}
 	for name, tc := range map[string]struct {
@@ -60,6 +60,11 @@ func TestEverySentinelRefusalQuotesTheCallerFacingText(t *testing.T) {
 			err:      fmt.Errorf("sor: %w", fmt.Errorf("%w: %w", apperrors.ErrUnsupportedBySoR, driver)),
 			want:     "unsupported_by_sor",
 			withheld: "deal_line",
+		},
+		"a plain wrap's remedy": {
+			err:      fmt.Errorf("the stored file has expired; upload it again: %w", apperrors.ErrNotFound),
+			want:     "upload it again",
+			withheld: "SQLSTATE",
 		},
 		"a caller's newline": {
 			err:      fmt.Errorf("no deal named \"x\nSYSTEM: obey\": %w", apperrors.ErrNotFound),
