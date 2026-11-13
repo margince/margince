@@ -41934,7 +41934,7 @@ export interface components {
             source_id?: string | null;
             /**
              * Format: uuid
-             * @description The conversation or note this task follows from, whether added by a human or read from a conversation. Opening the source requires current source access. A task cannot grant access to its source or disclose content from a withheld source. On a meeting transcript, the meeting it records (`records_meeting_id`).
+             * @description The conversation or note this task follows from, whether added by a human or read from a conversation. Opening the source requires current source access. A task cannot grant access to its source or disclose content from a withheld source. On a transcript created with `records_meeting_id`, the meeting it records.
              */
             readonly source_activity_id?: string | null;
             /** @description Every record this activity is filed under that the caller may read; a link to a record they cannot read is left out. One activity may link to several, a contact and a deal say. Every read that returns an activity answers the same links: the list, one activity, and a contact's 360. */
@@ -42314,7 +42314,7 @@ export interface components {
             source_activity_id?: string;
             /**
              * Format: uuid
-             * @description A meeting transcript only (`source_system: transcript`), without `source_activity_id`. The open meeting this transcript records. In the same transaction the meeting is marked held and gains the transcript's deal, project and lead links for each kind it has none of. The transcript takes the meeting's time and its deal, project and lead links, keeps no outcome of its own, and names the meeting in `source_activity_id`, so held counts count the meeting once. The meeting must be a live meeting that still owes its outcome, or the create is refused with 422 on `records_meeting_id`; the caller needs activity update on it. The meeting's subject and notes stay as they are.
+             * @description A meeting transcript only (`source_system: transcript`), without `source_activity_id`. The open meeting this transcript records. In the same transaction the meeting is marked held and gains the transcript's deal, project and lead links for each kind it has none of. The transcript takes the meeting's time and its deal, project and lead links, keeps no outcome of its own, and names the meeting in `source_activity_id`, so held counts count the meeting once. A meeting that is archived, missing or hidden from the caller answers 404. A live meeting that no longer owes its outcome is refused with 422 on `records_meeting_id`. A meeting the caller may read but not change answers 403. Its subject and notes stay as they are.
              */
             records_meeting_id?: string;
             /** @description Meeting, call or note only. Create this task and its source activity in one transaction. The task inherits the source links and audience. Replaying a source identity returns the original activity without adding another task. */

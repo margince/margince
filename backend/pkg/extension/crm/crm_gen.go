@@ -1956,7 +1956,7 @@ type Activity struct {
 	// Source Where the row came from. `manual` is anything typed, by a member or by an assistant working for one, so it never says who typed it: `captured_by` and `recorded_by_agent` do.
 	Source string `json:"source"`
 
-	// SourceActivityId The conversation or note this task follows from, whether added by a human or read from a conversation. Opening the source requires current source access. A task cannot grant access to its source or disclose content from a withheld source. On a meeting transcript, the meeting it records (`records_meeting_id`).
+	// SourceActivityId The conversation or note this task follows from, whether added by a human or read from a conversation. Opening the source requires current source access. A task cannot grant access to its source or disclose content from a withheld source. On a transcript created with `records_meeting_id`, the meeting it records.
 	SourceActivityId *string `json:"source_activity_id,omitempty"`
 
 	// SourceId Provider message/event id; part of the idempotency key.
@@ -2498,7 +2498,7 @@ type CreateActivityRequest struct {
 	// Recommendation The rule and current facts behind a suggested action. The server checks these facts again when accepting the suggestion; the receipt grants no authority. Replaying the same accepted observation returns its original task.
 	Recommendation *RecommendationReceipt `json:"recommendation,omitempty"`
 
-	// RecordsMeetingId A meeting transcript only (`source_system: transcript`), without `source_activity_id`. The open meeting this transcript records. In the same transaction the meeting is marked held and gains the transcript's deal, project and lead links for each kind it has none of. The transcript takes the meeting's time and its deal, project and lead links, keeps no outcome of its own, and names the meeting in `source_activity_id`, so held counts count the meeting once. The meeting must be a live meeting that still owes its outcome, or the create is refused with 422 on `records_meeting_id`; the caller needs activity update on it. The meeting's subject and notes stay as they are.
+	// RecordsMeetingId A meeting transcript only (`source_system: transcript`), without `source_activity_id`. The open meeting this transcript records. In the same transaction the meeting is marked held and gains the transcript's deal, project and lead links for each kind it has none of. The transcript takes the meeting's time and its deal, project and lead links, keeps no outcome of its own, and names the meeting in `source_activity_id`, so held counts count the meeting once. A meeting that is archived, missing or hidden from the caller answers 404. A live meeting that no longer owes its outcome is refused with 422 on `records_meeting_id`. A meeting the caller may read but not change answers 403. Its subject and notes stay as they are.
 	RecordsMeetingId *string `json:"records_meeting_id,omitempty"`
 
 	// RemindAt Task only. When the reminder comes due. From that instant, for up to 30 days, the task leads its assignee's own Worklist with the reason `reminder_due`, and `GET /v1/activities?reminder_due=true` lists it for them. Nobody else is reminded, and a task with no assignee reminds nobody. Moving `due_at` on a task whose reminder has passed clears this field, unless the same patch names it.

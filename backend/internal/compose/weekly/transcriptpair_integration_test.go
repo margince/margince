@@ -75,3 +75,48 @@ func TestAMeetingAndItsTranscriptCountOnceInTheWeek(t *testing.T) {
 		t.Fatal(err)
 	}
 }
+
+// Notes typed against a task, with no source_system and no outcome, are a
+// meeting of their own. The test for a transcript pair must not drop them.
+func TestAMeetingAnsweringATaskWithNoSourceSystemCountsInTheWeek(t *testing.T) {
+	e := setupWeekly(t)
+	now := clocktest.Now(t).UTC()
+	taskSubject, notes, start := "Call the buyer", "Buyer wants a demo.", now.Add(-time.Hour)
+	task, _, err := e.Activities.LogActivity(e.repCtx, activities.LogActivityInput{
+		Kind: string(crmcontracts.ActivityKindTask), Subject: &taskSubject, Source: "manual",
+	})
+	if err != nil {
+		t.Fatalf("logging the task: %v", err)
+	}
+	answered := ids.UUID(task.Id)
+	meeting, _, err := e.Activities.LogActivity(e.repCtx, activities.LogActivityInput{
+		Kind: string(crmcontracts.ActivityKindMeeting), Body: &notes, OccurredAt: &start,
+		SourceActivityID: &answered, Source: "manual",
+	})
+	if err != nil {
+		t.Fatalf("logging the meeting notes: %v", err)
+	}
+	if meeting.SourceSystem != nil || meeting.MeetingStatus != nil || meeting.SourceActivityId == nil {
+		t.Fatalf("the meeting stores source_system %v, status %v, source %v; want none, none and the task",
+			meeting.SourceSystem, meeting.MeetingStatus, meeting.SourceActivityId)
+	}
+
+	weekStart := now.Add(-72 * time.Hour)
+	err = e.DB().Tx(e.repCtx, func(tx pgx.Tx) error {
+		days, err := countWeekDays(e.repCtx, tx, ids.UUID(e.Rep1), weekStart, weekStart.AddDate(0, 0, daysInWeek))
+		if err != nil {
+			return err
+		}
+		charted := 0
+		for _, day := range days {
+			charted += day.MeetingsHeld
+		}
+		if charted != 1 {
+			t.Errorf("the week charts %d meetings, want the notes' one", charted)
+		}
+		return nil
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+}

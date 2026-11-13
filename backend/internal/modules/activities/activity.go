@@ -302,7 +302,15 @@ func (s *Store) logActivityAndReadTranscript(
 	in.identityProver = s.identityProver
 	var recorded crmcontracts.Activity
 	if in.recordsMeeting != nil {
-		var err error
+		// A stored transcript has already marked its meeting held, so a retry
+		// replays before admission would refuse that meeting.
+		replay, err := replayedActivity(ctx, tx, in)
+		if err != nil {
+			return crmcontracts.Activity{}, false, err
+		}
+		if replay != nil {
+			return *replay, false, nil
+		}
 		if recorded, err = admitRecordedMeeting(ctx, tx, &in); err != nil {
 			return crmcontracts.Activity{}, false, err
 		}
