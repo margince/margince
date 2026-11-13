@@ -663,6 +663,32 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/passports/{id}/app-binding": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /**
+         * Allow a chat app's user again after their passport was revoked.
+         * @description A revoked passport that a chat app (Dispact) minted keeps naming that app's user, so the
+         *     user stays refused. Releasing it lets the user's next call mint a fresh passport under the
+         *     same checks as a first call. The passport itself stays revoked. A user releases their own
+         *     passport; releasing another user's requires the admin role. Audited.
+         */
+        delete: operations["releasePassportAppBinding"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/passports/{id}/areas": {
         parameters: {
             query?: never;
@@ -56742,6 +56768,8 @@ export interface components {
             last_used_at?: string | null;
             /** Format: date-time */
             revoked_at?: string | null;
+            /** @description True while a chat app's user is bound to this passport. A revoked passport that is still bound refuses that user until it is released. */
+            app_bound?: boolean;
             /**
              * @description What this passport has used of its allowances in the window that is running. A
              *     connection's passports share one count, so a renewed credential keeps it. **Omitted**
@@ -62898,6 +62926,39 @@ export interface operations {
             };
             401: components["responses"]["Unauthorized"];
             404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    releasePassportAppBinding: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The user may be bound again. */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            401: components["responses"]["Unauthorized"];
+            404: components["responses"]["NotFound"];
+            /** @description The passport is still live (`code: passport_still_live`). Revoke it first. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
             422: components["responses"]["ValidationError"];
         };
     };

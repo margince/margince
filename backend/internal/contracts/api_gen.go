@@ -58174,8 +58174,11 @@ type PassportConnection struct {
 // PassportSummary Agent Seat Passport metadata for the Settings list (feedback/13). Never carries the token.
 type PassportSummary struct {
 	// AgentId The agent this passport is bound to, if any.
-	AgentId *string       `json:"agent_id,omitempty"`
-	Areas   PassportAreas `json:"areas"`
+	AgentId *string `json:"agent_id,omitempty"`
+
+	// AppBound True while a chat app's user is bound to this passport. A revoked passport that is still bound refuses that user until it is released.
+	AppBound *bool         `json:"app_bound,omitempty"`
+	Areas    PassportAreas `json:"areas"`
 
 	// Connection Present when this passport IS a connection's credential — issued to an MCP client by the
 	// token exchange, not minted by a human. **Omitted entirely** on a human-minted passport —
@@ -97677,6 +97680,9 @@ type ServerInterface interface {
 	// Revoke a Passport (kill switch for one agent binding).
 	// (DELETE /passports/{id})
 	RevokePassport(w http.ResponseWriter, r *http.Request, id Id)
+	// Allow a chat app's user again after their passport was revoked.
+	// (DELETE /passports/{id}/app-binding)
+	ReleasePassportAppBinding(w http.ResponseWriter, r *http.Request, id Id)
 	// Choose the work areas one of the caller's own passports may act in.
 	// (PUT /passports/{id}/areas)
 	SetPassportAreas(w http.ResponseWriter, r *http.Request, id Id)
@@ -103350,6 +103356,12 @@ func (_ Unimplemented) IssuePassport(w http.ResponseWriter, r *http.Request) {
 // Revoke a Passport (kill switch for one agent binding).
 // (DELETE /passports/{id})
 func (_ Unimplemented) RevokePassport(w http.ResponseWriter, r *http.Request, id Id) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Allow a chat app's user again after their passport was revoked.
+// (DELETE /passports/{id}/app-binding)
+func (_ Unimplemented) ReleasePassportAppBinding(w http.ResponseWriter, r *http.Request, id Id) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -140044,6 +140056,38 @@ func (siw *ServerInterfaceWrapper) RevokePassport(w http.ResponseWriter, r *http
 	handler.ServeHTTP(w, r)
 }
 
+// ReleasePassportAppBinding operation middleware
+func (siw *ServerInterfaceWrapper) ReleasePassportAppBinding(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ReleasePassportAppBinding(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // SetPassportAreas operation middleware
 func (siw *ServerInterfaceWrapper) SetPassportAreas(w http.ResponseWriter, r *http.Request) {
 
@@ -155810,6 +155854,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Delete(options.BaseURL+"/passports/{id}", wrapper.RevokePassport)
+	})
+	r.Group(func(r chi.Router) {
+		r.Delete(options.BaseURL+"/passports/{id}/app-binding", wrapper.ReleasePassportAppBinding)
 	})
 	r.Group(func(r chi.Router) {
 		r.Put(options.BaseURL+"/passports/{id}/areas", wrapper.SetPassportAreas)

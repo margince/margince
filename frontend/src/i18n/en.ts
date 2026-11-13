@@ -9877,6 +9877,8 @@ export const en = {
   "settings.passportLastUsedOn": "Last used {date}",
   "settings.passportExpiresOn": "Expires {date}",
   "settings.revokeNamed": "Revoke {name}",
+  "settings.allowAgain": "Allow again",
+  "settings.allowAgainNamed": "Allow {name} again",
   "settings.revokeConfirm":
     "The passport’s credential is invalidated immediately. The agent loses access on its next call.",
   "import.withheld":

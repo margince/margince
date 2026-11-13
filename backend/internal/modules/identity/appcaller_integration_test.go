@@ -136,3 +136,49 @@ func TestAnExpiredAppPassportIsRenewedForTheSameMemberOnly(t *testing.T) {
 		t.Fatalf("an expired passport was renewed for another member: %v", err)
 	}
 }
+
+func TestAReleasedAppPassportLetsItsUserBeBoundAgain(t *testing.T) {
+	e := setupRevocationEnv(t, "app-caller-release")
+	agent, err := e.svc.AuthenticateAppCaller(e.appCtx(), e.appCaller("u-1", e.member.Email))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := e.svc.ReleaseAppBinding(e.wsCtx(e.member), e.member, agent.PassportID); !errors.Is(err, ErrAppBindingLive) {
+		t.Fatalf("releasing a live passport = %v, want refused until it is revoked", err)
+	}
+	if err := e.svc.RevokePassport(e.wsCtx(e.member), e.member, agent.PassportID); err != nil {
+		t.Fatal(err)
+	}
+	if err := e.svc.ReleaseAppBinding(e.wsCtx(e.member), e.member, agent.PassportID); err != nil {
+		t.Fatalf("releasing the revoked passport: %v", err)
+	}
+	again, err := e.svc.AuthenticateAppCaller(e.appCtx(), e.appCaller("u-1", e.member.Email))
+	if err != nil {
+		t.Fatalf("the call after the release: %v", err)
+	}
+	if again.PassportID == agent.PassportID || again.OnBehalfOf != e.member.UserID {
+		t.Fatalf("after the release the user acts through %v for %v, want a fresh passport for the member", again.PassportID, again.OnBehalfOf)
+	}
+	var revoked bool
+	if err := e.owner.QueryRow(context.Background(), `SELECT revoked_at IS NOT NULL FROM passport WHERE id = $1`,
+		agent.PassportID).Scan(&revoked); err != nil || !revoked {
+		t.Fatalf("the released passport is revoked=%v (%v), want it to stay revoked", revoked, err)
+	}
+}
+
+func TestAnAdminMayReleaseAMembersAppPassport(t *testing.T) {
+	e := setupRevocationEnv(t, "app-caller-release-admin")
+	agent, err := e.svc.AuthenticateAppCaller(e.appCtx(), e.appCaller("u-1", e.member.Email))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := e.svc.RevokePassport(e.wsCtx(e.member), e.member, agent.PassportID); err != nil {
+		t.Fatal(err)
+	}
+	if err := e.svc.ReleaseAppBinding(e.wsCtx(e.admin), e.admin, agent.PassportID); err != nil {
+		t.Fatalf("an admin releasing a member's revoked app passport: %v", err)
+	}
+	if n := e.appPassports(t, "u-1"); n != 0 {
+		t.Fatalf("after the release %d passports still name the user, want none", n)
+	}
+}
