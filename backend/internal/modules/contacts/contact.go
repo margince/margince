@@ -298,13 +298,13 @@ func (s *Store) GetContactTx(ctx context.Context, tx pgx.Tx, id ids.ContactID,
 // EnsureContactByEmail returns the contact holding this address, creating one
 // when none does — where an address seen on a message becomes a record.
 func (s *Store) EnsureContactByEmail(ctx context.Context, fullName, email, source string, erasure storekit.ErasureAdmission) (ids.UUID, error) {
-	id, _, err := s.ensureContactByEmail(ctx, email, CreateContactInput{FullName: fullName, Source: source, erasure: erasure})
+	id, _, err := s.findOrCreateContactByEmail(ctx, email, CreateContactInput{FullName: fullName, Source: source, erasure: erasure})
 	return id, err
 }
 
-// ensureContactByEmail is EnsureContactByEmail with the create the caller
+// findOrCreateContactByEmail is EnsureContactByEmail with the create the caller
 // wants when no contact holds the address; created says whether it ran.
-func (s *Store) ensureContactByEmail(ctx context.Context, email string, create CreateContactInput) (ids.UUID, bool, error) {
+func (s *Store) findOrCreateContactByEmail(ctx context.Context, email string, create CreateContactInput) (ids.UUID, bool, error) {
 	if err := auth.Require(ctx, "contact", principal.ActionCreate); err != nil {
 		return ids.Nil, false, err
 	}

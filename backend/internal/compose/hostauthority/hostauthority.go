@@ -37,10 +37,14 @@ type BookerContacts struct {
 	Seats *identity.Service
 }
 
+// EnsureBookerByEmail finds or creates the contact for a booker's address,
+// owned by the host.
 func (b BookerContacts) EnsureBookerByEmail(ctx context.Context, host ids.UserID, fullName, email, source string, erasure storekit.ErasureAdmission) (ids.UUID, ids.LeadID, bool, error) {
 	return b.Store.EnsureBookerByEmail(ctx, host, fullName, email, source, erasure)
 }
 
+// FillBookerGaps fills the owner, company and source a booked contact lacks,
+// acting as the host.
 func (b BookerContacts) FillBookerGaps(ctx context.Context, contact ids.UUID, host ids.UserID, source string) error {
 	hostCtx, err := Context(ctx, b.Seats, host)
 	if err != nil {

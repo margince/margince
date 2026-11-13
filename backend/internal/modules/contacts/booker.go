@@ -24,7 +24,7 @@ import (
 // created says the contact is new. An existing one is answered as it stands:
 // FillBookerGaps fills it, once the caller has confirmed the host may book it.
 func (s *Store) EnsureBookerByEmail(ctx context.Context, host ids.UserID, fullName, email, source string, erasure storekit.ErasureAdmission) (contact ids.UUID, lead ids.LeadID, created bool, err error) {
-	contact, created, err = s.ensureContactByEmail(ctx, email, CreateContactInput{
+	contact, created, err = s.findOrCreateContactByEmail(ctx, email, CreateContactInput{
 		FullName:    fullName,
 		OwnerID:     &host,
 		Source:      source,
@@ -37,7 +37,7 @@ func (s *Store) EnsureBookerByEmail(ctx context.Context, host ids.UserID, fullNa
 	lead, err = s.CounterpartyLead(ctx, email)
 	if err == nil && lead.IsZero() {
 		// The lead the refusal named is gone, or a contact took the address:
-		// the race ensureContactByEmail's claimed-email retry answers, met the
+		// the race findOrCreateContactByEmail's claimed-email retry answers, met the
 		// other way.
 		err = apperrors.ErrConflict
 	}
