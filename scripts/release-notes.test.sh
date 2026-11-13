@@ -7,14 +7,14 @@
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
-BUILD="$SCRIPT_DIR/release-notes.sh"
+BUILD="$SCRIPT_DIR/release_notes.py"
 
 FAILURES=0
 
 # writes <reason> <expected notes> [budget]; the subjects come from stdin.
 writes() {
 	local got
-	got="$(bash "$BUILD" v1.0.0 v1.1.0 margince/margince "${3:-100000}")"
+	got="$(python3 "$BUILD" v1.0.0 v1.1.0 margince/margince "${3:-100000}")"
 	if [[ "$got" != "$2" ]]; then
 		printf 'FAIL: %s\n--- want\n%s\n--- got\n%s\n' "$1" "$2" "$got"
 		FAILURES=$((FAILURES + 1))
@@ -122,7 +122,7 @@ perf(search): the index answers prefix search without a scan of every row (#15)
 EOF
 
 named="$(printf 'fix: dialogs survive a drag (#14)\n' |
-	bash "$BUILD" 3f786850e387550fdab836ed7e6dc881de23001b 9f86d081884c7d659a2feaa0c55ad015a3bf4f1b margince/margince 100000 2026.1.0)"
+	python3 "$BUILD" 3f786850e387550fdab836ed7e6dc881de23001b 9f86d081884c7d659a2feaa0c55ad015a3bf4f1b margince/margince 100000 2026.1.0)"
 want_named="$(
 	cat <<'EOF'
 ### Fixed
@@ -138,12 +138,12 @@ if [[ "$named" != "$want_named" ]]; then
 fi
 
 if printf 'feat(api)!: offers drop the legacy total (#12)\n' |
-	bash "$BUILD" v1.0.0 v1.1.0 margince/margince 10 >/dev/null 2>&1; then
+	python3 "$BUILD" v1.0.0 v1.1.0 margince/margince 10 >/dev/null 2>&1; then
 	echo "FAIL: notes that cannot fit the room were printed instead of refused"
 	FAILURES=$((FAILURES + 1))
 fi
 
-if bash "$BUILD" v1.0.0 v1.1.0 </dev/null >/dev/null 2>&1; then
+if python3 "$BUILD" v1.0.0 v1.1.0 </dev/null >/dev/null 2>&1; then
 	echo "FAIL: a call with no repository was accepted"
 	FAILURES=$((FAILURES + 1))
 fi
