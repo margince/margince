@@ -27,6 +27,7 @@ import {
 } from "../../design-system/richtext-testing";
 import { ToastProvider, ToastRegion } from "../../design-system/toast";
 import { LocaleProvider } from "../../i18n";
+import { en } from "../../i18n/en";
 import { ViewerZoneProvider } from "../../lib/viewerzone";
 import { day, row, stub } from "../../testing/worklist.testkit";
 import { WorklistScreen } from "./worklist";
@@ -189,6 +190,34 @@ describe("a meeting that owes an answer", () => {
     }
     // No-show needs the composer, so it is never a verb on the card.
     expect(screen.queryByRole("button", { name: /no-show/i })).toBeNull();
+  });
+
+  it("reminds a reader who may only read it, and lets them mark it done", async () => {
+    stub(
+      aDayWithOne({
+        actions: [],
+        dispositions: ["handled"],
+        because: [{ kind: "outcome_unrecorded" }, { kind: "read_only" }],
+      }),
+    );
+    renderUnderAToastRegion();
+
+    expect(
+      await screen.findByText(
+        "No outcome yet for Discovery call with Turbinenbau",
+      ),
+    ).not.toBeNull();
+    expect(screen.getByText(en["worklist.because.read_only"])).not.toBeNull();
+    expect(
+      screen.queryByRole("button", {
+        name: "It happened: Discovery call with Turbinenbau",
+      }),
+    ).toBeNull();
+    expect(
+      screen.getByRole("button", {
+        name: en["worklist.disposition.verb.handled"],
+      }),
+    ).not.toBeNull();
   });
 
   it("records a held meeting from the card, with no dialog in the way", async () => {
