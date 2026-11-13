@@ -2305,6 +2305,24 @@ func (e ApprovalPreviewImportRowOutcome) Valid() bool {
 	}
 }
 
+// Defines values for AssemblyServedFrom.
+const (
+	AssemblyServedFromCache     AssemblyServedFrom = "cache"
+	AssemblyServedFromGenerated AssemblyServedFrom = "generated"
+)
+
+// Valid indicates whether the value is a known member of the AssemblyServedFrom enum.
+func (e AssemblyServedFrom) Valid() bool {
+	switch e {
+	case AssemblyServedFromCache:
+		return true
+	case AssemblyServedFromGenerated:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for AssessNoticeSourceKind.
 const (
 	AssessNoticeSourceKindCrmMigration            AssessNoticeSourceKind = "crm_migration"
@@ -35280,6 +35298,12 @@ type ApproveRequest struct {
 	Reason *string `json:"reason,omitempty"`
 }
 
+// AssemblyServedFrom How this request got its answer. `cache` is the reader's stored assembly, still
+// matching the record, read in well under a second. `generated` is an assembly
+// written for this request, which is where the model's seconds go. A refresh the AI
+// budget refused, answered with the stored assembly, is `cache`.
+type AssemblyServedFrom string
+
 // AssessNoticeSource defines model for AssessNoticeSource.
 type AssessNoticeSource struct {
 	Kind AssessNoticeSourceKind `json:"kind"`
@@ -40977,6 +41001,12 @@ type CompanyDossier struct {
 	// silence reads as a finding of nothing, which is a different claim. The compact
 	// card renders `summary` only.
 	Sections []CompanyDossierSection `json:"sections"`
+
+	// ServedFrom How this request got its answer. `cache` is the reader's stored assembly, still
+	// matching the record, read in well under a second. `generated` is an assembly
+	// written for this request, which is where the model's seconds go. A refresh the AI
+	// budget refused, answered with the stored assembly, is `cache`.
+	ServedFrom *AssemblyServedFrom `json:"served_from,omitempty"`
 }
 
 // CompanyDossierSection defines model for CompanyDossierSection.
@@ -41137,6 +41167,9 @@ type CompanyFinanceSummary struct {
 	// A different question from `last_synced_at`, which answers when we last looked. A card that has only the second can say the figures are fresh and not what period they are about — and a client rendering a window label must build it from these bounds rather than from a fixed string, or the heading and the numbers end up describing different months (FIN-AC-3).
 	CoverageStart *openapi_types.Date `json:"coverage_start,omitempty"`
 
+	// DunningLevel The highest number of payment reminders the accounting source says it has sent for any overdue invoice. Absent when nothing is overdue, or when the source states no dunning level for any of them.
+	DunningLevel *int `json:"dunning_level,omitempty" maximum:"99" minimum:"0"`
+
 	// InvoiceDocuments True when the connected source serves each invoice's own document, which `downloadFinanceInvoicePdf` opens. False or absent means the card offers none.
 	InvoiceDocuments *bool `json:"invoice_documents,omitempty"`
 
@@ -41154,6 +41187,9 @@ type CompanyFinanceSummary struct {
 	// Scoped to the CURRENT connection — what the mirror holds, not what the customer has ever been billed — so re-connecting a source restates it. Absent under the same FIN-AC-6 refusal: one invoice without a conversion rate withholds the whole total rather than reporting a partial sum as if it were complete.
 	NetInvoicedLifetime *Money `json:"net_invoiced_lifetime,omitempty"`
 
+	// OldestOverdueDays Days since the due date of the longest-outstanding overdue invoice. Absent when nothing is overdue.
+	OldestOverdueDays *int `json:"oldest_overdue_days,omitempty" minimum:"0"`
+
 	// OpenBalance What is still open across unpaid invoices (FIN-FORM-2).
 	OpenBalance *Money `json:"open_balance,omitempty"`
 
@@ -41161,6 +41197,9 @@ type CompanyFinanceSummary struct {
 	// ABSENT on an account whose relationship has ended (`lifecycle: former_customer`), and a client should expect the null. An overdue figure reads as an outstanding collection, and a rep acting on the most natural reading makes a collection call about a relationship that finished — a customer-facing mistake rather than a display nit. The figure it would carry is one nobody can state a window for, which is the same "cannot be honestly computed" this schema already answers with absence rather than zero.
 	// `open_balance` is unaffected: what is still open is a fact about the ledger whatever the relationship is now, and it carries no call to action.
 	Overdue *Money `json:"overdue,omitempty"`
+
+	// OverdueCount How many invoices make up `overdue`. Present exactly when `overdue` is, so zero means nothing is past due.
+	OverdueCount *int `json:"overdue_count,omitempty" minimum:"0"`
 
 	// PaymentBehaviour Days-late per settled invoice, oldest first, for the sparkline. Never padded with zeroes, because a zero here reads as "paid exactly on time".
 	// Absent under the same sample floor the median observes: a shape drawn from one invoice would state a payment habit the number beside it refuses to.
@@ -41479,6 +41518,12 @@ type CompanyGrowthFit struct {
 
 	// RecommendedAngle The single suggested approach. A recommendation, and labelled as one.
 	RecommendedAngle *CompanyBriefSentence `json:"recommended_angle,omitempty"`
+
+	// ServedFrom How this request got its answer. `cache` is the reader's stored assembly, still
+	// matching the record, read in well under a second. `generated` is an assembly
+	// written for this request, which is where the model's seconds go. A refresh the AI
+	// budget refused, answered with the stored assembly, is `cache`.
+	ServedFrom *AssemblyServedFrom `json:"served_from,omitempty"`
 
 	// SubScores The band, taken apart (DOSS-AC-17..20, ADR-0095). Four named dimensions over the
 	// same evidence the band is assessed from, each with a 0-100 score and the reason for

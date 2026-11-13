@@ -35,10 +35,7 @@ import (
 // individualPerformance answers the switch for this request: the value its door
 // bound, or one read in the caller's transaction.
 func individualPerformance(ctx context.Context, tx pgx.Tx) (bool, error) {
-	if allowed, bound := auth.IndividualPerformanceOf(ctx); bound {
-		return allowed, nil
-	}
-	return identity.IndividualPerformanceTx(ctx, tx)
+	return identity.IndividualPerformanceFor(ctx, tx)
 }
 
 // bindIndividualPerformance reads the switch once for a job run, so every
@@ -293,16 +290,13 @@ func requireFrozenShareMeasurable(ctx context.Context, tx pgx.Tx, scope forecast
 	if err != nil {
 		return nil, false, err
 	}
-	if err := requirePopulationFloor(ctx, tx, resolved); err != nil {
-		return nil, false, err
-	}
 	owners, categories := []ids.UUID{}, []string{}
 	for _, row := range rows {
 		if row.Owner != nil {
 			owners, categories = append(owners, *row.Owner), append(categories, row.ProbabilitySource)
 		}
 	}
-	if err := requireNoLoneColleague(ctx, tx, categoryGroups(owners, categories)); err != nil {
+	if err := requireFlooredTotals(ctx, tx, resolved, categoryGroups(owners, categories)); err != nil {
 		return nil, false, err
 	}
 	own := make([]SharedContribution, 0, len(rows))

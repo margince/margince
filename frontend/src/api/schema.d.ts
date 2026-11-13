@@ -34183,6 +34183,7 @@ export interface components {
             /** Format: date-time */
             generated_at: string;
             generated_by: components["schemas"]["WrittenBy"];
+            served_from?: components["schemas"]["AssemblyServedFrom"];
             /**
              * @description The newest contributing source was retrieved more than thirty days ago
              *     (DOSS-PARAM-6). The content is still shown — a stale dossier is more useful
@@ -34381,7 +34382,16 @@ export interface components {
             /** Format: date-time */
             generated_at: string;
             generated_by: components["schemas"]["WrittenBy"];
+            served_from?: components["schemas"]["AssemblyServedFrom"];
         };
+        /**
+         * @description How this request got its answer. `cache` is the reader's stored assembly, still
+         *     matching the record, read in well under a second. `generated` is an assembly
+         *     written for this request, which is where the model's seconds go. A refresh the AI
+         *     budget refused, answered with the stored assembly, is `cache`.
+         * @enum {string}
+         */
+        AssemblyServedFrom: "cache" | "generated";
         /**
          * @description What a read narrowed to one project reports about the narrowing, so a surface can
          *     say "Scoped to KEY · N of M activities" from the server's own count rather than
@@ -34663,6 +34673,12 @@ export interface components {
              *     `open_balance` is unaffected: what is still open is a fact about the ledger whatever the relationship is now, and it carries no call to action.
              */
             overdue?: components["schemas"]["Money"];
+            /** @description How many invoices make up `overdue`. Present exactly when `overdue` is, so zero means nothing is past due. */
+            overdue_count?: number | null;
+            /** @description Days since the due date of the longest-outstanding overdue invoice. Absent when nothing is overdue. */
+            oldest_overdue_days?: number | null;
+            /** @description The highest number of payment reminders the accounting source says it has sent for any overdue invoice. Absent when nothing is overdue, or when the source states no dunning level for any of them. */
+            dunning_level?: number | null;
             /**
              * @description The median days between an invoice's DUE date and its settlement over the window (FIN-FORM-3) — how late they pay, not how long they take. Negative reads as early. Deliberately not issue-to-settlement: an invoice paid on the last day of 30-day terms is punctual, and a figure that called it "30 days to pay" would read as slow.
              *     Absent when too few invoices have settled to say — a median of one invoice is an anecdote, not a payment habit.

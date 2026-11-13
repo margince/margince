@@ -3827,7 +3827,22 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "co.health.rating.atRisk": "Có rủi ro",
   "co.health.rating.good": "Tốt",
   "co.health.rating.strong": "Mạnh",
+  "co.overdue.title_one": "{amount} quá hạn trên {count} hóa đơn",
+  "co.overdue.title_other": "{amount} quá hạn trên {count} hóa đơn",
+  "co.overdue.oldest_one": "Hóa đơn cũ nhất đã quá hạn {days} ngày.",
+  "co.overdue.oldest_other": "Hóa đơn cũ nhất đã quá hạn {days} ngày.",
+  "co.overdue.reminders_one":
+    "Bộ phận kế toán đã gửi {count} lần nhắc thanh toán.",
+  "co.overdue.reminders_other":
+    "Bộ phận kế toán đã gửi {count} lần nhắc thanh toán.",
+  "co.overdue.titleAsOf_one": "{amount} đã quá hạn trên {count} hóa đơn",
+  "co.overdue.titleAsOf_other": "{amount} đã quá hạn trên {count} hóa đơn",
+  "co.overdue.amountOnly": "{amount} quá hạn",
+  "co.overdue.amountOnlyAsOf": "{amount} đã quá hạn",
+  "co.overdue.asOf": "Theo lần đồng bộ kế toán gần nhất vào {date}.",
   "co.health.payment.overdue": "Có khoản thanh toán quá hạn.",
+  "co.health.payment.overdueAsOf":
+    "Khoản thanh toán đã quá hạn tại lần đồng bộ kế toán gần nhất vào {date}.",
   "co.health.payment.late": "Thường thanh toán trễ {days} ngày.",
   "co.health.payment.onTime": "Thanh toán đúng hạn.",
   "co.health.payment.paidOnTime_one":
@@ -4380,6 +4395,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "co.brief.by.model": "Do Margince viết",
   "co.brief.by.deterministic": "Tổng hợp từ hồ sơ CRM",
   "co.brief.generatedAt": "tính đến {when}",
+  "co.assembly.writtenNow": "vừa được viết",
   "co.growthFit.title": "Mức độ phù hợp",
   "co.growthFit.unavailable":
     "Không thể tải đánh giá. Hồ sơ công ty không thay đổi.",
@@ -4459,6 +4475,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "co.dossier.stale": "Đọc lần cuối cách đây hơn một tháng",
   "co.dossier.rewrite": "Tạo lại",
   "co.dossier.rewriting": "Đang tạo lại…",
+  "co.dossier.writing":
+    "Đang viết tổng quan công ty. Lần đầu tiên đọc toàn bộ hồ sơ và có thể mất một phút.",
   "co.dossier.section.summary": "Tóm tắt",
   "co.dossier.section.products_services": "Sản phẩm và dịch vụ",
   "co.dossier.section.markets": "Thị trường",

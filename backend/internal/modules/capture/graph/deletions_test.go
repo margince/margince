@@ -25,8 +25,8 @@ func TestFolderTombstonesDoNotAuthorizeDeletingAnArchivedMessage(t *testing.T) {
 	}))
 	defer server.Close()
 	api := NewAPI(server.Client(), server.URL)
-	messages, removed, next, err := collectDelta(context.Background(), api, "token", server.URL+"/me/mailFolders/inbox/messages/delta")
-	if err != nil || len(messages) != 0 || len(removed) != 0 || next != server.URL+"/next" {
-		t.Fatalf("ambiguous tombstone authorized deletion: messages=%v removed=%v next=%s err=%v", messages, removed, next, err)
+	messages, next, err := collectDelta(context.Background(), api, "token", server.URL+"/me/mailFolders/inbox/messages/delta")
+	if err != nil || len(messages) != 0 || next != server.URL+"/next" {
+		t.Fatalf("ambiguous tombstone surfaced: messages=%v next=%s err=%v", messages, next, err)
 	}
 }

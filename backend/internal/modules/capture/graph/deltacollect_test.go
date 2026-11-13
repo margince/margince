@@ -23,16 +23,14 @@ func collectAnchor(ctx context.Context, api API, token string, after time.Time) 
 }
 
 // collectDelta walks an incremental round and gathers its pages.
-func collectDelta(ctx context.Context, api API, token, deltaLink string) ([]MessageRef, []string, string, error) {
+func collectDelta(ctx context.Context, api API, token, deltaLink string) ([]MessageRef, string, error) {
 	var messages []MessageRef
-	var removed []string
 	link, err := api.Delta(ctx, token, deltaLink, nil, func(_ context.Context, page DeltaPage) error {
 		messages = append(messages, page.Messages...)
-		removed = append(removed, page.Removed...)
 		return nil
 	})
 	if err != nil {
-		return nil, nil, "", err
+		return nil, "", err
 	}
-	return messages, removed, link, nil
+	return messages, link, nil
 }

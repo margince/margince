@@ -31,7 +31,7 @@ module to put a change in, read [modules.md](../modules.md).
 | | |
 |---|--:|
 | Tables | 365 |
-| Columns | 4457 |
+| Columns | 4458 |
 | Foreign keys | 618 |
 | Owning areas | 39 |
 
@@ -325,7 +325,7 @@ erDiagram
 | [`finance_connection`](finance.md#finance_connection) | finance | 15 | 4 |
 | [`finance_customer_link`](finance.md#finance_customer_link) | finance | 12 | 2 |
 | [`finance_external_customer`](finance.md#finance_external_customer) | finance | 12 | 1 |
-| [`finance_invoice`](finance.md#finance_invoice) | finance | 30 | 4 |
+| [`finance_invoice`](finance.md#finance_invoice) | finance | 31 | 4 |
 | [`finance_payment`](finance.md#finance_payment) | finance | 17 | 0 |
 | [`forecast_call`](forecasting.md#forecast_call) | forecasting | 14 | 2 |
 | [`forecast_capture_status`](forecasting.md#forecast_capture_status) | forecasting | 6 | 0 |

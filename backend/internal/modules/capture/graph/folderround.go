@@ -30,12 +30,6 @@ func (c *Connector) pullFolder(
 	sentByOwner := folder == folderSent
 	pages, sinceCheckpoint := 0, 0
 	visit := func(ctx context.Context, page DeltaPage) error {
-		// The owner's own deletions, reported before the page's new mail is
-		// captured. Reporting first is the safe half when a message is deleted
-		// and re-delivered in one page: the re-delivery re-captures it.
-		if err := reportRemovals(ctx, sink, page.Removed); err != nil {
-			return err
-		}
 		state.cancelPurges(page.Messages)
 		if err := c.captureMessages(ctx, access, folder, page.Messages, sink, owner, sentByOwner); err != nil {
 			return err

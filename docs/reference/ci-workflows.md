@@ -270,8 +270,8 @@ The three weekly jobs record what they measure, and none of them writes to `main
 - `records-pr` commits the patch on a `bench/scheduled-<date>-<run>` branch and opens one pull request.
   The body names each part, how it was measured (route, search mode, runner), and any part that did
   not record. It runs only on `main`, and opens nothing when nothing recorded.
-- The default workflow token opens that pull request, and a pull request it opens starts no workflow.
-  Close it and open it again to start CI. The repository must let GitHub Actions open pull requests.
+- A token from the records GitHub App (secrets `RECORDS_APP_CLIENT_ID`, `RECORDS_APP_PRIVATE_KEY`)
+  opens that pull request, so CI runs on it. The default workflow token stays read-only.
 - The model lane searches by word overlap, because no embedding key reaches the runner. Its verdicts
   say `search: lexical`, and they replace the verdicts in the same `<model>@<route>` folder.
 

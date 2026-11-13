@@ -5557,6 +5557,7 @@ public.finance_invoice.currency currency_code NOT NULL gen=- def=-
 public.finance_invoice.customer_link_id uuid gen=- def=-
 public.finance_invoice.disputed_at timestamp with time zone gen=- def=-
 public.finance_invoice.due_at date gen=- def=-
+public.finance_invoice.dunning_level smallint gen=- def=-
 public.finance_invoice.external_id text NOT NULL gen=- def=-
 public.finance_invoice.finance_invoice_company_fk FOREIGN KEY (company_id) REFERENCES company(id) ON DELETE RESTRICT
 public.finance_invoice.finance_invoice_connection_fk FOREIGN KEY (connection_id) REFERENCES finance_connection(id) ON DELETE RESTRICT
@@ -5566,6 +5567,7 @@ public.finance_invoice.finance_invoice_credits_fk FOREIGN KEY (credits_invoice_i
 public.finance_invoice.finance_invoice_credits_not_self CHECK (((credits_invoice_id IS NULL) OR (credits_invoice_id <> id)))
 public.finance_invoice.finance_invoice_credits_owner_fk FOREIGN KEY (credits_invoice_id, connection_id, company_id) REFERENCES finance_invoice(id, connection_id, company_id) ON DELETE RESTRICT DEFERRABLE INITIALLY DEFERRED
 public.finance_invoice.finance_invoice_customer_link_fk FOREIGN KEY (customer_link_id, connection_id, company_id) REFERENCES finance_customer_link(id, connection_id, company_id) ON DELETE RESTRICT DEFERRABLE INITIALLY DEFERRED
+public.finance_invoice.finance_invoice_dunning_level_range CHECK (((dunning_level >= 0) AND (dunning_level <= 99)))
 public.finance_invoice.finance_invoice_fx_pair CHECK (((fx_rate_to_base IS NULL) = (fx_rate_date IS NULL)))
 public.finance_invoice.finance_invoice_gross_minor_js_safe CHECK (((gross_minor >= '-9007199254740991'::bigint) AND (gross_minor <= '9007199254740991'::bigint)))
 public.finance_invoice.finance_invoice_net_minor_js_safe CHECK (((net_minor >= '-9007199254740991'::bigint) AND (net_minor <= '9007199254740991'::bigint)))

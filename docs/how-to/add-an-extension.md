@@ -1509,6 +1509,8 @@ the sync reads `InvoicesFor` for each linked customer. It writes only what chang
 - **Report only what the vendor said.** `accounting.Invoice` has no status field.
   "Overdue" depends on today, and the mirror works it out on read. Send the dates and money values as
   the vendor holds them.
+- **Send `DunningLevel`** if the vendor has it: how many reminders the vendor sent for an invoice,
+  from 0 to 99. Leave it unset when the vendor does not say. The company page shows the top one.
 - **Give the same answer for the same data.** The sync compares a hash of each record. A field that
   moves on its own, such as a time you read from the clock, writes the row again on every pass.
 - **Keep the credential in your own secrets.** Ask for a `workspace` key, read it with
