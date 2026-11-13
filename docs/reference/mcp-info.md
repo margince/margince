@@ -1308,9 +1308,9 @@ before calling, unless they asked for this call themselves; requires passport sc
 
 ```text
 Log, plan and file activities. log records an email, call, meeting, note or message that already
-happened, on its records; one the user only tells you about is logged from their account, saying so,
-without its exact words. task creates a task for a seat. attach attaches a file to a record. relink
-files one activity under another record too, and relink_many a named set; with
+happened, on its records; one the user only tells you about is logged from what they said, saying
+so, without its exact words. task creates a task for a seat. attach attaches a file to a record.
+relink files one activity under another record too, and relink_many a named set; with
 replace_existing_of_type they move it off the old record of that type instead. ready says the user
 is ready for a meeting they attend; unready takes it back. relink and relink_many run at once. Tell
 the user before you file under a project, which only a member can undo from the activity. attach
