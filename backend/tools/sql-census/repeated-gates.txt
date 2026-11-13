@@ -8,7 +8,6 @@
 
 backend/internal/modules/activities/activitylisttx.go activities.ListActivitiesTx the timeline list filter, shared by every activity list; rewritten on its own
 backend/internal/modules/activities/dealactivitylists.go activities.ListActivitiesByDealTx the timeline list filter, shared by every activity list; rewritten on its own
-backend/internal/modules/activities/owedreview.go activities.owedReviewReadTx repeats the gate; awaits its own rewrite and bench measurement
 backend/internal/compose/reportsql.go compose.(*reportEngine).fetchRows.func1 repeats the gate; awaits its own rewrite and bench measurement
 backend/internal/compose/company360/suggestionreads.go company360.newestMessage repeats the gate; awaits its own rewrite and bench measurement
 backend/internal/compose/export.go compose.readMember repeats the gate; awaits its own rewrite and bench measurement
