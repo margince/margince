@@ -53,12 +53,13 @@ func FromView(view crmcontracts.Contact360, req Request) Input {
 // derived from cannot drift apart. An unparseable stamp counts as absent, which
 // at worst reads a correspondence as a first touch — the conservative end, and
 // the one that assumes no history rather than inventing some.
-func ConversationState(view crmcontracts.Contact360, now time.Time, zone *time.Location) convstate.State {
+// logged carries the newest logged touch read past the timeline page.
+func ConversationState(view crmcontracts.Contact360, now time.Time, zone *time.Location, logged ...crmcontracts.Activity) convstate.State {
 	var activities []crmcontracts.Activity
 	if view.Activities != nil {
 		activities = view.Activities.Data
 	}
-	return draftcore.ClassifyWithLogged(now, zone, instant(view.LastInboundAt), instant(view.LastOutboundAt), activities)
+	return draftcore.ClassifyWithLogged(now, zone, instant(view.LastInboundAt), instant(view.LastOutboundAt), append(activities, logged...))
 }
 
 // instant parses one optional stamp, treating anything unreadable as absent.
