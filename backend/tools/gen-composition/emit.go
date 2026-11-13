@@ -242,6 +242,10 @@ func composedFiles(root string) (composition, error) {
 	if err != nil {
 		return composition{}, err
 	}
+	mergedOverrides, err := composedOverrides(root, units)
+	if err != nil {
+		return composition{}, err
+	}
 	if err := checkEntryLabels(manifests, mergedCopy); err != nil {
 		return composition{}, err
 	}
@@ -261,7 +265,7 @@ func composedFiles(root string) (composition, error) {
 		"backend/extensions_gen.go":      wiring,
 		"frontend/extensions.gen.ts":     frontendGen(manifests, verbs, mergedCopy),
 		"frontend/extscreens.gen.ts":     extScreensGen(units, manifestPanels(manifests)),
-		"frontend/extlocales.gen.ts":     extLocalesGen(mergedCopy),
+		"frontend/extlocales.gen.ts":     extLocalesGen(mergedCopy, mergedOverrides),
 		"frontend/extinstruments.gen.ts": extInstrumentsGen(units, manifestBrowserInstruments(manifests)),
 	}
 	// The effective contracts: base + every enabled unit's fragments. With

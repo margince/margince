@@ -157,7 +157,7 @@ func TestExtLocalesGenVanillaIsTheCommittedStub(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if got := extLocalesGen(nil); !bytes.Equal(got, stub) {
+	if got := extLocalesGen(nil, nil); !bytes.Equal(got, stub) {
 		t.Fatalf("the vanilla copy overlay drifted from the committed stub:\n%s", got)
 	}
 }

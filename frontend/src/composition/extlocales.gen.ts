@@ -8,8 +8,13 @@
 // Every enabled unit's own copy, per locale. A unit ships extensions/<name>/
 // frontend/i18n/<locale>.json and this merges them, so there is still ONE
 // catalogue, one lookup and one missing-key gate — and the strings travel with
-// the unit rather than staying behind when it is removed. Core keys win on a
-// collision, and a unit's keys are namespaced to the unit, so a unit cannot
-// rewrite core copy even if that ordering were ever loosened.
+// the unit rather than staying behind when it is removed. A unit's keys are
+// namespaced to the unit, so its own copy cannot rewrite core wording.
+//
+// extensionOverrides is the other way round: a unit's frontend/i18n-overrides/
+// <locale>.json names CORE keys on purpose, and translate() reads it before the
+// core catalogue.
 
 export const extensionCopy = {};
+
+export const extensionOverrides = {};

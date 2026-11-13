@@ -665,7 +665,44 @@ So two different unit names can never give one start: `foo-1` and `foo1` would
 otherwise both claim `extFoo1.`. The `composition` tool merges them into the one catalog, so `useT()` finds your
 keys and the core's in the same way. Give **every** language the installation ships (`en`, `de`, `vi`),
 or the generator refuses. A reader of the missing one would get an empty screen. Keys outside your space are
-refused too: a unit does not write over core text.
+refused too: your own copy never writes over core text. To change core wording, use an override, below.
+
+## Override core wording
+
+An installation can reword the screens without forking core, for example "Deal" becomes "Opportunity". Put one flat
+JSON object per language in `frontend/i18n-overrides/<locale>.json`, in a folder of its own, apart from
+`frontend/i18n/`. The keys are core keys, spelled as in the core catalog.
+
+```json
+{ "nav.deals": "Opportunities" }
+```
+
+| Rule | What happens |
+|---|---|
+| An override may cover only some languages | A language with no file keeps core's wording. |
+| The files are the declaration | `make gen` reads them from every enabled unit. There is no runtime or admin editing. |
+| A key that core does not have | `make gen` refuses it and names the key. |
+| Two units override one key in one language | `make gen` refuses it and names both units. |
+| Any core key | All are overridable, consent, erasure, approval and sign-in wording included. |
+
+`translate()` looks in the overrides first, then the core catalog, then your own copy.
+
+Two gates in `frontend/src/i18n/overrides.test.ts` fail the frontend test lane. One fails when an override drops a
+placeholder that core's string has, such as `{count}`. The other fails when an override gives one plural form of a key
+(`_one`) and not every form core has for it (`_other`).
+
+The installation owns the wording of every key it overrides. Core does not carry its later changes into that
+key. Check your overrides when you upgrade core.
+
+Known limits:
+
+- **Grammar is yours.** A new word can need another article, case or plural. The gates check placeholders and plural
+  forms, not whether the sentence reads well.
+- **Longer text can break a layout.** Buttons and table headers do not grow without limit.
+- **An override can go stale.** If core changes what a key means, your text still says the old thing.
+
+Not covered: renaming a record type itself, AI prompts, agent tools, text the backend writes, the offline page and the
+docs. An override changes frontend wording only.
 
 ## Offer an entry on a core screen
 

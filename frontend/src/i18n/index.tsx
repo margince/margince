@@ -1,4 +1,4 @@
-import { extensionCopy } from "@composition/copy";
+import { extensionCopy, extensionOverrides } from "@composition/copy";
 import {
   createContext,
   type ReactNode,
@@ -86,6 +86,14 @@ export type ExtensionMessageKey = `ext${string}`;
  */
 const unitCopy: Partial<Record<Locale, Record<string, string>>> = extensionCopy;
 
+/**
+ * Wording an enabled unit replaces for core keys, per locale, merged at build
+ * time by gen-composition. Empty on a vanilla tree. The installation owns the
+ * wording of every key listed here.
+ */
+const unitOverrides: Partial<Record<Locale, Record<string, string>>> =
+  extensionOverrides;
+
 // The endonym key for a locale. The template literal is checked against
 // MessageKey, so adding a locale without adding its `locale.name.<code>` key
 // fails the build rather than rendering a raw key at runtime.
@@ -104,15 +112,14 @@ export function translate(
   key: MessageKey | ExtensionMessageKey,
   params?: Record<string, string>,
 ): string {
-  // CORE FIRST, and a unit second. The generator already refuses a key outside
-  // the unit's own namespace, so the two sets cannot overlap today — this
-  // ordering is what keeps that true if the namespace rule were ever loosened:
-  // a unit must not be able to change what a core string says.
+  // Overrides first, then core, then a unit's own copy. The generator keeps a
+  // unit's own keys inside its namespace. Only a declared override changes core
+  // wording.
   //
-  // A key neither side carries falls back to the key itself, which is what an
-  // untranslated string has always done here and reads as an obvious defect on
-  // the page rather than as an empty element.
+  // A key none of them carries falls back to the key itself. That reads as a
+  // defect on the page, not as an empty element.
   const message =
+    unitOverrides[locale]?.[key] ??
     (catalogs[locale] as Record<string, string>)[key] ??
     unitCopy[locale]?.[key] ??
     key;
