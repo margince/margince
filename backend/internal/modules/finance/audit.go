@@ -84,6 +84,7 @@ type invoiceImage struct {
 	FullyPaidAt    *time.Time     `json:"fully_paid_at"`
 	DisputedAt     *time.Time     `json:"disputed_at"`
 	VoidAt         *time.Time     `json:"void_at"`
+	DunningLevel   *int           `json:"dunning_level"`
 	FxRateToBase   pgtype.Numeric `json:"fx_rate_to_base"`
 	SyncHash       string         `json:"sync_hash"`
 }

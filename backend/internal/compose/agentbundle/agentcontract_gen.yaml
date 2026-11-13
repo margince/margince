@@ -32240,6 +32240,7 @@ components:
         company_id: {type: string, format: uuid}
         generated_at: {type: string, format: date-time}
         generated_by: {$ref: '#/components/schemas/WrittenBy'}
+        served_from: {$ref: '#/components/schemas/AssemblyServedFrom'}
         needs_refresh:
           type: boolean
           description: |-
@@ -32423,6 +32424,15 @@ components:
           items: {$ref: '#/components/schemas/CompanyBriefSentence'}
         generated_at: {type: string, format: date-time}
         generated_by: {$ref: '#/components/schemas/WrittenBy'}
+        served_from: {$ref: '#/components/schemas/AssemblyServedFrom'}
+    AssemblyServedFrom:
+      type: string
+      enum: [cache, generated]
+      description: |-
+        How this request got its answer. `cache` is the reader's stored assembly, still
+        matching the record, read in well under a second. `generated` is an assembly
+        written for this request, which is where the model's seconds go. A refresh the AI
+        budget refused, answered with the stored assembly, is `cache`.
     ProjectScope:
       type: object
       description: |-
@@ -32700,6 +32710,22 @@ components:
           allOf: [{$ref: '#/components/schemas/Money'}]
           description: >-
             The share of the open balance already past its due date.
+        overdue_count:
+          type: [integer, 'null']
+          minimum: 0
+          description: >-
+            How many invoices make up `overdue`. Present exactly when `overdue` is, so zero means nothing is past due.
+        oldest_overdue_days:
+          type: [integer, 'null']
+          minimum: 0
+          description: >-
+            Days since the due date of the longest-outstanding overdue invoice. Absent when nothing is overdue.
+        dunning_level:
+          type: [integer, 'null']
+          minimum: 0
+          maximum: 99
+          description: >-
+            The highest number of payment reminders the accounting source says it has sent for any overdue invoice. Absent when nothing is overdue, or when the source states no dunning level for any of them.
         median_days_after_due:
           type: [integer, 'null']
           description: >-

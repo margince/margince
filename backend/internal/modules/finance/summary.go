@@ -273,7 +273,7 @@ func (s *Store) fillFigures(
 		// honestly computed" this card already answers with absence rather than
 		// a zero.
 		if lifecycle != lifecycleFormerCustomer {
-			out.Overdue = money(open.OverdueMinorBase, currency)
+			fillOverdue(open, currency, out)
 		}
 	}
 	// Below the sample floor the answer is "not enough settled invoices to
@@ -420,7 +420,7 @@ func (s *Store) readInvoices(
 	rows, err := tx.Query(ctx, `
 		SELECT status, issued_at, due_at, fully_paid_at, currency,
 		       net_minor, credited_minor, open_minor, fx_rate_to_base,
-		       credits_invoice_id IS NOT NULL, disputed_at IS NOT NULL
+		       credits_invoice_id IS NOT NULL, disputed_at IS NOT NULL, dunning_level
 		  FROM finance_invoice
 		 WHERE company_id = $1 AND connection_id = $2 AND archived_at IS NULL
 		 ORDER BY issued_at ASC, id ASC`, companyID, connectionID)
@@ -434,7 +434,7 @@ func (s *Store) readInvoices(
 		inv := &stored.invoice
 		if err := rows.Scan(&inv.Status, &inv.IssuedOn, &inv.DueOn, &inv.FullyPaidAt,
 			&stored.currency, &stored.netMinor, &stored.creditedMinor, &stored.openMinor,
-			&stored.rate, &inv.CreditsInvoice, &inv.Disputed); err != nil {
+			&stored.rate, &inv.CreditsInvoice, &inv.Disputed, &inv.DunningLevel); err != nil {
 			return nil, fmt.Errorf("scan invoice: %w", err)
 		}
 		converted, err := stored.inBase(base, s.rates.ToBase)

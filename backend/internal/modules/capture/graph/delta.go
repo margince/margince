@@ -109,7 +109,6 @@ var ErrAnchorShort = fmt.Errorf("graph: the anchor census closed short: %w", Err
 // read, with what a checkpoint stores to continue after it.
 type DeltaPage struct {
 	Messages []MessageRef
-	Removed  []string
 	Resume   DeltaResume
 }
 

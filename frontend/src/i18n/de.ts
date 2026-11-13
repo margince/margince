@@ -3942,7 +3942,23 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "co.health.rating.atRisk": "Gefährdet",
   "co.health.rating.good": "Gut",
   "co.health.rating.strong": "Stark",
+  "co.overdue.title_one": "{amount} aus {count} Rechnung überfällig",
+  "co.overdue.title_other": "{amount} aus {count} Rechnungen überfällig",
+  "co.overdue.oldest_one": "Die älteste ist {days} Tag überfällig.",
+  "co.overdue.oldest_other": "Die älteste ist {days} Tage überfällig.",
+  "co.overdue.reminders_one": "Die Buchhaltung hat {count} Mahnung versendet.",
+  "co.overdue.reminders_other":
+    "Die Buchhaltung hat {count} Mahnungen versendet.",
+  "co.overdue.titleAsOf_one": "{amount} aus {count} Rechnung waren überfällig",
+  "co.overdue.titleAsOf_other":
+    "{amount} aus {count} Rechnungen waren überfällig",
+  "co.overdue.amountOnly": "{amount} überfällig",
+  "co.overdue.amountOnlyAsOf": "{amount} waren überfällig",
+  "co.overdue.asOf":
+    "Stand der letzten Synchronisierung mit der Buchhaltung am {date}.",
   "co.health.payment.overdue": "Die Zahlung ist überfällig.",
+  "co.health.payment.overdueAsOf":
+    "Die Zahlung war bei der letzten Synchronisierung mit der Buchhaltung am {date} überfällig.",
   "co.health.payment.late": "Zahlt in der Regel {days} Tage nach Fälligkeit.",
   "co.health.payment.onTime": "Zahlt pünktlich.",
   "co.health.payment.paidOnTime_one":
@@ -4495,6 +4511,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "co.brief.by.model": "Von Margince geschrieben",
   "co.brief.by.deterministic": "Aus CRM-Datensätzen zusammengestellt",
   "co.brief.generatedAt": "Stand {when}",
+  "co.assembly.writtenNow": "gerade geschrieben",
   "co.growthFit.title": "Wachstumspotenzial",
   "co.growthFit.unavailable":
     "Die Bewertung konnte nicht geladen werden. Der Unternehmensdatensatz ist unverändert.",
@@ -4574,6 +4591,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "co.dossier.stale": "Zuletzt vor über einem Monat gelesen",
   "co.dossier.rewrite": "Neu erzeugen",
   "co.dossier.rewriting": "Wird neu erzeugt…",
+  "co.dossier.writing":
+    "Die Unternehmensübersicht wird geschrieben. Die erste liest den gesamten Datensatz und kann eine Minute dauern.",
   "co.dossier.section.summary": "Zusammenfassung",
   "co.dossier.section.products_services": "Produkte und Dienstleistungen",
   "co.dossier.section.markets": "Märkte",

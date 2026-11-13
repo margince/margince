@@ -13,7 +13,7 @@ import {
   type HealthRating,
 } from "../design-system/readingtone";
 import { activityDay } from "../format/activitywhen";
-import { formatDateAbbrev, formatNumber } from "../format/format";
+import { formatDate, formatDateAbbrev, formatNumber } from "../format/format";
 import {
   type Locale,
   type PluralBase,
@@ -24,7 +24,7 @@ import {
 } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import { useViewerZone } from "../lib/viewerzone";
-import { useFinanceSummary } from "./financesummary";
+import { overdueReadingOf, useFinanceSummary } from "./financesummary";
 
 // A leaf for the small lookup tables the company page and its rail both need
 // to draw the same enums the same way. Neither company360.tsx nor
@@ -208,15 +208,21 @@ export const PAYMENT_LATE_DAYS = 5;
 export function usePaymentHealth(companyId?: string) {
   const t = useT();
   const { locale } = useLocale();
+  const zone = useViewerZone();
   const { data } = useFinanceSummary(companyId ?? "");
   if (!companyId || !data) {
     return undefined;
   }
-  const overdue = data.overdue?.amount_minor ?? 0;
-  if (overdue > 0) {
+  // A figure from a stale or failed sync is said in the past, with its date.
+  const overdue = overdueReadingOf(data);
+  if (overdue) {
     return {
       rating: "at_risk" as const,
-      reason: t("co.health.payment.overdue"),
+      reason: overdue.asOf
+        ? t("co.health.payment.overdueAsOf", {
+            date: formatDate(overdue.asOf, locale, zone),
+          })
+        : t("co.health.payment.overdue"),
     };
   }
   const median = data.median_days_after_due;

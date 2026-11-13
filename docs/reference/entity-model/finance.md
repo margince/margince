@@ -130,7 +130,7 @@ The 5 tables owned by `finance`, as the migrations build them. [Back to the enti
 
 ## finance_invoice
 
-30 columns · primary key `(id)` · referenced by 4 foreign keys
+31 columns · primary key `(id)` · referenced by 4 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
@@ -143,6 +143,7 @@ The 5 tables owned by `finance`, as the migrations build them. [Back to the enti
 | `customer_link_id` | `uuid` |  |  |
 | `disputed_at` | `timestamp with time zone` |  |  |
 | `due_at` | `date` |  |  |
+| `dunning_level` | `smallint` |  |  |
 | `external_id` | `text` | yes |  |
 | `fully_paid_at` | `timestamp with time zone` |  |  |
 | `fx_rate_date` | `date` |  |  |
@@ -180,6 +181,7 @@ The 5 tables owned by `finance`, as the migrations build them. [Back to the enti
 - `finance_invoice_connection_id_external_id_key`: `UNIQUE (connection_id, external_id)`
 - `finance_invoice_credit_note_status`: `CHECK (((credits_invoice_id IS NULL) OR (status = ANY (ARRAY['credited', 'void']))))`
 - `finance_invoice_credits_not_self`: `CHECK (((credits_invoice_id IS NULL) OR (credits_invoice_id <> id)))`
+- `finance_invoice_dunning_level_range`: `CHECK (((dunning_level >= 0) AND (dunning_level <= 99)))`
 - `finance_invoice_fx_pair`: `CHECK (((fx_rate_to_base IS NULL) = (fx_rate_date IS NULL)))`
 - `finance_invoice_gross_minor_js_safe`: `CHECK (((gross_minor >= '-9007199254740991'::bigint) AND (gross_minor <= '9007199254740991'::bigint)))`
 - `finance_invoice_net_minor_js_safe`: `CHECK (((net_minor >= '-9007199254740991'::bigint) AND (net_minor <= '9007199254740991'::bigint)))`

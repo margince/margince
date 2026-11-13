@@ -80,15 +80,14 @@ type fakeAPI struct {
 	findMessageErr     error
 	searchedFor        []string
 	// Delta's canned round (the incremental resume).
-	deltaRemoved []string // ids Graph tombstoned in the round
-	folders      []connector.NamedContainer
-	foldersErr   error
-	foldersCut   bool
-	deltaIDs     []string
-	deltaLink    string
-	deltaErr     error
-	deltaCalls   int
-	seenDelta    string
+	folders    []connector.NamedContainer
+	foldersErr error
+	foldersCut bool
+	deltaIDs   []string
+	deltaLink  string
+	deltaErr   error
+	deltaCalls int
+	seenDelta  string
 
 	getErr  error
 	fetched []string // every id GetMIME was asked for, in order
@@ -236,7 +235,7 @@ func (f *fakeAPI) Delta(ctx context.Context, _, deltaLink string, _ *DeltaResume
 	if f.deltaErr != nil {
 		return "", f.deltaErr
 	}
-	return f.deltaLink, visit(ctx, DeltaPage{Messages: f.messageRefs(f.deltaIDs), Removed: f.deltaRemoved})
+	return f.deltaLink, visit(ctx, DeltaPage{Messages: f.messageRefs(f.deltaIDs)})
 }
 
 // DeletionsDelta answers the Recoverable Items Deletions round. With no

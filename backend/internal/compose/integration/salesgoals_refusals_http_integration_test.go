@@ -102,3 +102,57 @@ func TestProgressRefusesAPeriodOrScopeItCannotRead(t *testing.T) {
 		}
 	}
 }
+
+// While individual performance is off, Progress and the open deals behind it
+// refuse a colleague's scope alike. The reader's own deals still answer.
+func TestProgressAndItsDealsRefuseAColleagueWhileIndividualPerformanceIsOff(t *testing.T) {
+	e := apptest.SetupApp(t)
+	e.BootstrapWorkspace(t)
+	colleague := seedColleague(t, e)
+	year := clocktest.Now(t).Year()
+	mustCall(t, e, http.MethodPatch, "/v1/installation/settings", AnyMap{individualPerformanceKey: false}, http.StatusOK, nil)
+	for _, path := range []string{
+		fmt.Sprintf("/v1/analytics/progress?period=year&year=%d&scope_kind=owner&scope_id=%s", year, colleague),
+		"/v1/analytics/progress/deals?scope_kind=owner&scope_id=" + colleague,
+	} {
+		var problem struct {
+			Code string `json:"code"`
+		}
+		if status := e.Call(t, http.MethodGet, path, nil, nil, &problem); status != http.StatusForbidden || problem.Code != "individual_performance_off" {
+			t.Errorf("GET %s with the switch off = %d %q, want 403 individual_performance_off", path, status, problem.Code)
+		}
+	}
+	mustCall(t, e, http.MethodGet, "/v1/analytics/progress/deals", nil, http.StatusOK, nil)
+}
+
+// A team's open deals name each member's work one by one. While individual
+// performance is off the team list is refused, and the reader's own answers.
+func TestProgressRefusesATeamsDealsWhileIndividualPerformanceIsOff(t *testing.T) {
+	e := apptest.SetupApp(t)
+	e.BootstrapWorkspace(t)
+	owner := signedInUser(t, e)
+	colleague := seedColleague(t, e)
+	stages := apptest.DiscoverSeededPipeline(t, e)
+	team := createdRecord(t, e, "/v1/teams", AnyMap{"name": "Field sales"})
+	for _, member := range []string{owner, colleague} {
+		mustCall(t, e, http.MethodPut, "/v1/teams/"+team+"/members/"+member, nil, http.StatusNoContent, nil)
+	}
+	theirs := createdID(t, e, "/v1/deals", AnyMap{
+		"name": "The colleague's deal", "pipeline_id": stages.PipelineID, "stage_id": stages.Open,
+		"source": "manual", "amount_minor": 40_000, "currency": "EUR", "owner_id": colleague,
+	})
+	teamDeals := "/v1/analytics/progress/deals?scope_kind=team&scope_id=" + team
+	var work crmcontracts.SalesProgressDealPage
+	mustCall(t, e, http.MethodGet, teamDeals, nil, http.StatusOK, &work)
+	if dealWorkOf(work, theirs) == nil {
+		t.Fatalf("with the switch on the team list misses the colleague's deal: %+v", work.Data)
+	}
+	mustCall(t, e, http.MethodPatch, "/v1/installation/settings", AnyMap{individualPerformanceKey: false}, http.StatusOK, nil)
+	var problem struct {
+		Code string `json:"code"`
+	}
+	if status := e.Call(t, http.MethodGet, teamDeals, nil, nil, &problem); status != http.StatusForbidden || problem.Code != "individual_performance_off" {
+		t.Errorf("GET %s with the switch off = %d %q, want 403 individual_performance_off", teamDeals, status, problem.Code)
+	}
+	mustCall(t, e, http.MethodGet, "/v1/analytics/progress/deals", nil, http.StatusOK, nil)
+}

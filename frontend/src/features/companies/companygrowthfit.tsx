@@ -2,17 +2,12 @@ import { useQuery } from "@tanstack/react-query";
 import type { ReactNode } from "react";
 import { api } from "../../api/client";
 import type { components } from "../../api/schema";
-import {
-  Badge,
-  Button,
-  EmptyState,
-  PendingBody,
-} from "../../design-system/atoms";
+import { Badge, Button, EmptyState } from "../../design-system/atoms";
 import { ErrorLine } from "../../design-system/errorline";
 import { Eyebrow } from "../../design-system/eyebrow";
 import { Panel, PanelBody } from "../../design-system/panel";
 import { Meter } from "../../design-system/readings";
-import { formatDateTime, formatNumber, INTL_LOCALE } from "../../format/format";
+import { formatNumber, INTL_LOCALE } from "../../format/format";
 import { type Translator, useLocale, useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
 import type { Locale } from "../../i18n/locale";
@@ -29,7 +24,7 @@ import {
 // for its own sake, so this file renders unstyled anywhere else.
 import "./company360.css";
 import { labelFor } from "../../lib/labelfor";
-import { useViewerZone } from "../../lib/viewerzone";
+import { AssemblyStamp, AssemblyWait } from "./companyassembly";
 import { ReassessOutcome, useReassess } from "./companygrowthfit.reassess";
 
 type GrowthFit = components["schemas"]["CompanyGrowthFit"];
@@ -123,8 +118,6 @@ export function GrowthFitPanel({
   onOpenEmail?: (activityId: string) => void;
 }>) {
   const t = useT();
-  const { locale } = useLocale();
-  const readerZone = useViewerZone();
   const fit = useQuery({
     queryKey: ["company-growth-fit", companyId],
     queryFn: async () => {
@@ -170,11 +163,10 @@ export function GrowthFitPanel({
       titleAction={
         <>
           {readable && (
-            <span className="t-caption">
-              {t("co.brief.generatedAt", {
-                when: formatDateTime(readable.generated_at, locale, readerZone),
-              })}
-            </span>
+            <AssemblyStamp
+              at={readable.generated_at}
+              servedFrom={readable.served_from}
+            />
           )}
           <Badge tone="ai">{t("co.assistant.aiTag")}</Badge>
         </>
@@ -199,13 +191,10 @@ export function GrowthFitPanel({
       }
     >
       {fit.isPending ? (
-        // A first assessment is assembled on the request, model call included,
-        // and cold that is upwards of twenty seconds — long enough that a mute
-        // grey block reads as a panel that is broken rather than one that is
-        // working. So the wait says what it is waiting for, visibly and to a
-        // screen reader, which is what `note` on the shared pending body is for.
+        // A stored assessment answers at once. A first one is written on the
+        // request and says so once the wait outlasts a stored answer.
         <PanelBody>
-          <PendingBody label={t("co.growthFit.assembling")} visible lines={4} />
+          <AssemblyWait writing={t("co.growthFit.assembling")} lines={4} />
         </PanelBody>
       ) : !readable ? (
         <PanelBody>

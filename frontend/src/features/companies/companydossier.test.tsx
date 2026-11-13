@@ -1,9 +1,11 @@
 /** @vitest-environment happy-dom */
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { cleanup, render, screen } from "@testing-library/react";
+import { act, cleanup, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { CACHE_ANSWER_GRACE_MS } from "../../api/client";
 import type { components } from "../../api/schema";
 import { LocaleProvider } from "../../i18n";
+import { en } from "../../i18n/en";
 import { DossierPanel } from "./companydossier";
 
 // The dossier's whole claim is that every sentence can be checked. So the tests
@@ -148,5 +150,40 @@ describe("what this company is", () => {
       await screen.findByText(/Overview could not be loaded/),
     ).toBeTruthy();
     expect(screen.queryByText(/Nothing recorded/)).toBeNull();
+  });
+});
+
+// A stored dossier answers in well under a second. A missing one is written on
+// the request, and the panel tells the reader which wait this is.
+describe("the wait for the dossier", () => {
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it("loads, and says it is writing only once the wait outlasts a stored answer", () => {
+    vi.useFakeTimers();
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(() => new Promise<Response>(() => {})),
+    );
+    show();
+    expect(screen.getByText(en["state.loading"])).toBeTruthy();
+    expect(screen.queryByText(en["co.dossier.writing"])).toBeNull();
+    act(() => {
+      vi.advanceTimersByTime(CACHE_ANSWER_GRACE_MS);
+    });
+    expect(screen.getByText(en["co.dossier.writing"])).toBeTruthy();
+  });
+
+  it("stamps a stored dossier with its age and a new one as just written", async () => {
+    serving({ ...DESCRIBED, served_from: "cache" });
+    show();
+    expect(await screen.findByText(/as of /)).toBeTruthy();
+    expect(screen.queryByText(en["co.assembly.writtenNow"])).toBeNull();
+    cleanup();
+    serving({ ...DESCRIBED, served_from: "generated" });
+    show();
+    expect(await screen.findByText(en["co.assembly.writtenNow"])).toBeTruthy();
+    expect(screen.queryByText(/as of /)).toBeNull();
   });
 });
