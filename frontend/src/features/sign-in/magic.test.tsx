@@ -634,6 +634,44 @@ describe("the receipt draws every lane it promises", () => {
     expect(screen.queryByText("1 change, in full")).toBeNull();
   });
 
+  it("says a lane the server cut at its bound shows only its first lines", async () => {
+    stub(
+      receipt({
+        done: [line()],
+        needs_you: [
+          line({
+            id: "00000000-0000-7000-8000-000000000002",
+            lane: "needs_you",
+            summary: { key: "magic.action.approval_send_email" },
+          }),
+        ],
+        cut_at_limit: ["done", "needs_you"],
+      }),
+    );
+    renderMagic();
+    await lane("Waiting on you");
+    expect(screen.getByText(en["magic.laneCut"])).toBeTruthy();
+    expect(await screen.findByText("1+ change, one by one")).toBeTruthy();
+  });
+
+  it("adds no note to a lane the server read whole", async () => {
+    stub(
+      receipt({
+        needs_you: [
+          line({
+            id: "00000000-0000-7000-8000-000000000002",
+            lane: "needs_you",
+            summary: { key: "magic.action.approval_send_email" },
+          }),
+        ],
+        cut_at_limit: [],
+      }),
+    );
+    renderMagic();
+    await lane("Waiting on you");
+    expect(screen.queryByText(en["magic.laneCut"])).toBeNull();
+  });
+
   it("says a receipt it cannot read did not load, rather than throwing", async () => {
     stub({ data: [] } as unknown as ReturnType<typeof receipt>);
     renderMagic();
