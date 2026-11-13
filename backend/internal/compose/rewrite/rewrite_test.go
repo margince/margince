@@ -115,13 +115,14 @@ func TestANoteOffersPolishAloneAndNoCallersTextIsAnInstruction(t *testing.T) {
 	}
 }
 
-func TestTextTooShortToPlaceIsWrittenInTheReadersLanguage(t *testing.T) {
+func TestTextTooShortToPlaceKeepsItsOwnLanguage(t *testing.T) {
 	in := InputFor(Ask{Envelope: EnvelopeNote, Verb: VerbPolish, Subject: "ok", Reader: textlang.Vietnamese})
 	if in.Language != textlang.Vietnamese || in.Detected {
-		t.Fatalf("language = %q detected = %t, want the reader's vi", in.Language, in.Detected)
+		t.Fatalf("language = %q detected = %t, want the reader's vi, undetected", in.Language, in.Detected)
 	}
-	if !strings.Contains(Request(in, model.AboutNoContact("test"), draftvoice.Context{}).System, promptlang.Rule("vi")) {
-		t.Error("the request does not name the reader's language")
+	system := Request(in, model.AboutNoContact("test"), draftvoice.Context{}).System
+	if strings.Contains(system, promptlang.Rule("vi")) || !strings.Contains(system, promptlang.KeepRule()) {
+		t.Error("a text whose language is not placed must be kept in its own language, not put into the reader's")
 	}
 }
 

@@ -1,10 +1,10 @@
 {
   "totals": {
     "sites": 57,
-    "sites_best_current": 48,
+    "sites_best_current": 49,
     "sites_best_partial": 0,
     "sites_best_stale": 8,
-    "sites_absent": 1,
+    "sites_absent": 0,
     "scenarios": 320,
     "records": 355,
     "bindings": 16,
@@ -363,10 +363,10 @@
             "state": "stale"
           },
           "abandoned": 0,
-          "runs": 87,
-          "passed": 87,
-          "cases_failing_often": 0,
-          "cases_below_quality_bar": 2
+          "runs": 135,
+          "passed": 126,
+          "cases_failing_often": 1,
+          "cases_below_quality_bar": 6
         },
         {
           "task": "enrich",
@@ -1445,10 +1445,10 @@
             }
           },
           "abandoned": 0,
-          "runs": 87,
-          "passed": 87,
-          "cases_failing_often": 0,
-          "cases_below_quality_bar": 2,
+          "runs": 135,
+          "passed": 126,
+          "cases_failing_often": 1,
+          "cases_below_quality_bar": 6,
           "measured_on": {
             "provider": "gemini",
             "model": "gemini-3.1-flash-lite",
@@ -7929,10 +7929,10 @@
       "name": "Gemini",
       "answer": "mostly",
       "sites_shipped": 57,
-      "sites_measured": 56,
+      "sites_measured": 57,
       "ready": 41,
       "usable_with_care": 14,
-      "not_reliable_yet": 1,
+      "not_reliable_yet": 2,
       "recheck_pending": 8,
       "models": [
         {
@@ -7941,18 +7941,18 @@
             "model": "gemini-3.1-flash-lite",
             "env": "cloud_frontier"
           },
-          "sites": 49,
-          "sites_current": 41,
+          "sites": 50,
+          "sites_current": 42,
           "sites_partial": 0,
           "sites_stale": 8,
-          "runs": 1161,
-          "passed": 1140,
-          "reliability": 0.9819121447028424,
+          "runs": 1209,
+          "passed": 1179,
+          "reliability": 0.9751861042183623,
           "slowest_p95_ms": 24754,
           "bands": {
             "certified": 28,
             "supported_degraded": 19,
-            "not_supported": 2
+            "not_supported": 3
           }
         },
         {
@@ -8259,8 +8259,8 @@
           },
           "band": "not_supported",
           "state": "stale",
-          "runs": 18,
-          "passed": 18,
+          "runs": 33,
+          "passed": 33,
           "records": 2
         },
         {
@@ -8319,6 +8319,20 @@
           "runs": 30,
           "passed": 30,
           "records": 2
+        },
+        {
+          "key": "draft_reply/rewrite",
+          "task": "draft_reply",
+          "best": {
+            "provider": "gemini",
+            "model": "gemini-3.1-flash-lite",
+            "env": "cloud_frontier"
+          },
+          "band": "not_supported",
+          "state": "current",
+          "runs": 33,
+          "passed": 24,
+          "records": 1
         },
         {
           "key": "enrich/signature",
@@ -10420,18 +10434,18 @@
         "model": "gemini-3.1-flash-lite",
         "env": "cloud_frontier"
       },
-      "sites": 52,
-      "sites_current": 41,
+      "sites": 53,
+      "sites_current": 42,
       "sites_partial": 0,
       "sites_stale": 11,
-      "runs": 1320,
-      "passed": 1282,
-      "reliability": 0.9712121212121212,
+      "runs": 1368,
+      "passed": 1321,
+      "reliability": 0.9656432748538012,
       "slowest_p95_ms": 24754,
       "bands": {
         "certified": 29,
         "supported_degraded": 19,
-        "not_supported": 4
+        "not_supported": 5
       }
     },
     {
@@ -16843,15 +16857,15 @@
           },
           "state": "stale",
           "band": "not_supported",
-          "scenarios_measured": 0,
+          "scenarios_measured": 1,
           "scenarios_total": 3,
-          "runs": 18,
-          "passed": 18,
+          "runs": 33,
+          "passed": 33,
           "reliability": 1,
           "latency_p50_ms": 1098,
           "latency_p95_ms": 2181,
           "reported": {
-            "accepted": 18,
+            "accepted": 33,
             "wrong_answer": 0,
             "invalid": 0,
             "abstained": 0
@@ -18959,9 +18973,23 @@
       "site": "rewrite",
       "key": "draft_reply/rewrite",
       "scope": "full_invocation",
-      "missing_context_scopes": [],
-      "best_state": "absent",
-      "recommended": null,
+      "missing_context_scopes": [
+        "positioning",
+        "sales",
+        "proof",
+        "market"
+      ],
+      "best_state": "current",
+      "recommended": {
+        "binding": {
+          "provider": "gemini",
+          "model": "gemini-3.1-flash-lite",
+          "env": "cloud_frontier"
+        },
+        "band": "not_supported",
+        "reliability": 0.7272727272727273,
+        "state": "current"
+      },
       "scenarios": [
         {
           "name": "draft_reply_rewrite_email_shorter_keeps_the_ask",
@@ -18988,7 +19016,31 @@
           "file": "backend/internal/compose/aicert/corpus/draft_reply/rewrite_task_keeps_names_and_dates_01.yaml"
         }
       ],
-      "records": []
+      "records": [
+        {
+          "binding": {
+            "provider": "gemini",
+            "model": "gemini-3.1-flash-lite",
+            "env": "cloud_frontier"
+          },
+          "state": "current",
+          "band": "not_supported",
+          "scenarios_measured": 4,
+          "scenarios_total": 4,
+          "runs": 33,
+          "passed": 24,
+          "reliability": 0.7272727272727273,
+          "latency_p50_ms": 1098,
+          "latency_p95_ms": 2181,
+          "reported": {
+            "accepted": 24,
+            "wrong_answer": 5,
+            "invalid": 4,
+            "abstained": 0
+          },
+          "stale_reason": ""
+        }
+      ]
     },
     {
       "task": "enrich",
