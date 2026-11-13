@@ -368,6 +368,8 @@ func knowledgeAskOption(modelPath *compose.ModelPath, log *slog.Logger) compose.
 
 // chatSummaryLane is the lane a chosen chat message is summarised on; a role
 // with no model path has none.
+//
+//nolint:ireturn // the chat links take the one Completer seam every model lane serves.
 func chatSummaryLane(modelPath *compose.ModelPath) ai.Completer {
 	if modelPath == nil || modelPath.ChatSummary == nil {
 		return nil

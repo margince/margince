@@ -42,8 +42,10 @@ func (w *PullWorker[T]) Work(ctx context.Context, job *river.Job[T]) error {
 
 // NewPuller builds the pull of a worker role over the chat sessions of chats.
 func NewPuller(pool *pgxpool.Pool, store *chatlinks.Store, chats LiveChats, lane ai.Completer, log *slog.Logger) *Puller {
-	return &Puller{Pool: pool, Store: store, Chats: chats, Activities: activities.NewStore(chats.DB),
-		Lane: lane, Now: time.Now, Zone: time.UTC, Log: log}
+	return &Puller{
+		Pool: pool, Store: store, Chats: chats, Activities: activities.NewStore(chats.DB),
+		Lane: lane, Now: time.Now, Zone: time.UTC, Log: log,
+	}
 }
 
 // NewFiler builds the file_channel_message engine of an api role.
