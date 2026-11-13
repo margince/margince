@@ -413,6 +413,13 @@ export function resolveDisplay(
       value: t("approval.commitment.notFulfilled"),
       lead: undefined,
     });
+    if (change.tentative === true)
+      resolved.push({
+        field: "promise_strength",
+        label: t("approval.commitment.strength"),
+        value: t("approval.commitment.tentative"),
+        lead: undefined,
+      });
   }
   const byField = new Map(resolved.map((entry) => [entry.field, entry]));
   const fields =

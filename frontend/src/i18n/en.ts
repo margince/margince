@@ -20953,6 +20953,8 @@ export const en = {
   "magic.action.approval_overnight": "Review proposal",
   "approval.commitment.proposalExpiresIn": "Proposal expires in {countdown}",
   "approval.commitment.noDueDay": "No day stated",
+  "approval.commitment.strength": "How firm",
+  "approval.commitment.tentative": "Tentative: they said they would try",
   "approval.commitment.promiseStatus": "Commitment status",
   "approval.commitment.notFulfilled":
     "Creating the task does not mark the commitment as fulfilled.",

@@ -76,9 +76,35 @@ func semanticProofs(t *testing.T, scenarios map[string]aicert.Scenario) map[stri
 		out[name] = judgelessProof{correct: owedVerdicts(verdicts...), wrong: owedVerdicts(wrong...), wantWrong: aitasks.OutcomeWrongAnswer}
 	}
 	addPartialDeliveryProof(t, out, scenarios, "vi")
-	sc := proofScenario(t, scenarios, "tentative_promise_with_a_day")
-	out[sc.Name] = judgelessProof{correct: emptyMeaningReply(sc.Task), wrong: meaningReply(t, sc, meaningExpectation{Meaning: openMeaning(), Line: 1}), wantWrong: aitasks.OutcomeWrongAnswer}
+	for name, read := range map[string]tentativeReading{
+		"tentative_promise_with_a_day":  {line: 1, due: "2026-03-06", meaning: meaningAnswer{State: "optional", Precision: "day", Quote: "Friday"}},
+		"we_might_follow_up_some_time":  {line: 2, meaning: meaningAnswer{State: "optional", Precision: "none"}},
+		"tentative_intro_within_a_week": {line: 1, meaning: meaningAnswer{State: "optional", Precision: "range", Quote: "one week or less"}},
+	} {
+		sc := proofScenario(t, scenarios, name)
+		out[name] = judgelessProof{
+			correct:   read.reply(0.5),
+			wrong:     meaningReply(t, sc, meaningExpectation{Meaning: openMeaning(), Line: read.line}),
+			alsoWrong: []func([]string) string{emptyMeaningReply(sc.Task), read.reply(0.29)},
+			wantWrong: aitasks.OutcomeWrongAnswer,
+		}
+	}
 	return out
+}
+
+// tentativeReading is a tentative promise as a reply states it. Read firm, at
+// a confidence that would write a task, or not at all, it is a wrong answer.
+type tentativeReading struct {
+	line    int
+	due     string
+	meaning meaningAnswer
+}
+
+func (read tentativeReading) reply(confidence float64) func([]string) string {
+	return literal(mustJSON(map[string]any{"proposals": []map[string]any{{
+		"summary": "Try to send what was asked.", "owner": "Mira", "promiser_ref": "", "source_lines": []int{read.line},
+		"due_date": read.due, "confidence": confidence, "commitment": read.meaning,
+	}}}))
 }
 
 func proofScenario(t *testing.T, scenarios map[string]aicert.Scenario, name string) aicert.Scenario {

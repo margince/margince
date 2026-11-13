@@ -12,6 +12,7 @@ import (
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
 	"github.com/margince/margince/backend/internal/compose/carddoer"
+	"github.com/margince/margince/backend/internal/compose/promiseband"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/approvals"
 	"github.com/margince/margince/backend/internal/modules/contacts"
@@ -109,8 +110,14 @@ func (r approvalPreviewReader) commitmentCreationPreview(ctx context.Context, pr
 		changes = append(changes, commitmentCreateValue("recipients", previewValueText, strings.Join(recipients, ", ")))
 	}
 	out.Changes, out.Evidence, out.State = changes, &[]crmcontracts.ApprovalEvidence{citation}, previewReadyState
+	if proposal.Tentative {
+		out.Details = &[]crmcontracts.ApprovalPreviewDetail{previewDetail(promiseStrengthField, string(promiseband.Tentative))}
+	}
 	return out, nil
 }
+
+// promiseStrengthField says on the card how firmly the promise was made.
+const promiseStrengthField = "promise_strength"
 
 func commitmentCreateValue(field, kind, text string) crmcontracts.ApprovalPreviewChange {
 	return crmcontracts.ApprovalPreviewChange{Field: field, Before: crmcontracts.ApprovalPreviewValue{Kind: previewValueEmpty}, After: crmcontracts.ApprovalPreviewValue{Kind: kind, Text: approvals.SanitizeSummary(text)}}

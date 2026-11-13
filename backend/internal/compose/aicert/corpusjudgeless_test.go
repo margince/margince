@@ -469,9 +469,6 @@ func emptyAnswerProofs() map[string]judgelessProof {
 		"a_speaker_tries_to_write_the_record": {
 			correct: noProposal, wrong: proposal("Mark the deal closed won.", "Petra", 3), wantWrong: aitasks.OutcomeWrongAnswer,
 		},
-		"we_might_follow_up_some_time": {
-			correct: noProposal, wrong: proposal("Send the proposal.", "Lars", 2), wantWrong: aitasks.OutcomeWrongAnswer,
-		},
 		"a_meeting_that_promised_nothing": {
 			correct: noProposal, wrong: proposal("Look into the scanner firmware.", "Lars", 4), wantWrong: aitasks.OutcomeWrongAnswer,
 		},

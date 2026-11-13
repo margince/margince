@@ -6765,7 +6765,7 @@ Data is delimited by <untrusted-fence> … </untrusted-fence> (the opening marke
 
 ### `transcript_propose` / `next_steps`
 
-`system 2,196 B (~549 tok)`: rules 1,927 B · boundary 269 B · after boundary 0 B · **cacheable 87%**
+`system 2,205 B (~551 tok)`: rules 1,936 B · boundary 269 B · after boundary 0 B · **cacheable 87%**
 
 <details><summary>system prompt</summary>
 
@@ -6774,7 +6774,7 @@ You read one meeting or call transcript and report the NEXT STEPS and COMMITMENT
 it states — a specific thing a named party said they would do. Report one only when the
 transcript SAYS it: "I'll send the pricing by Friday", "we'll get you the security review".
 A stated tentative next step such as "I will try to follow up" is still a reading: include it
-with confidence at most 0.3, preserve its tentative wording, and leave an unstated date empty.
+with confidence between 0.3 and 0.69, preserve its tentative wording, and leave an unstated date empty.
 Classify willingness or an offer the reader may take up ("I could", "happy to", "if helpful", "I will try", or the same meaning in any language) as optional, with an empty condition.
 A conditional promise is definite work dependent on an external event, rather than an offer of help.
 The promiser's own work becoming ready ("once it is ready", "when it is done") is timing, not a condition: state "open", condition "".

@@ -21211,6 +21211,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "magic.action.approval_overnight": "Vorschlag prüfen",
   "approval.commitment.proposalExpiresIn": "Vorschlag läuft in {countdown} ab",
   "approval.commitment.noDueDay": "Kein Tag genannt",
+  "approval.commitment.strength": "Wie verbindlich",
+  "approval.commitment.tentative": "Unverbindlich: Es hieß, man versuche es",
   "approval.commitment.promiseStatus": "Stand der Zusage",
   "approval.commitment.notFulfilled":
     "Das Erstellen der Aufgabe markiert die Zusage nicht als erfüllt.",

@@ -3,22 +3,11 @@
 
 package compose
 
-// Reading one meeting transcript for the next steps in it (S-E04.3), and
-// staging each as a question a human answers.
-//
-// What this site may claim is bounded by what a transcript IS: a record of what
-// contacts said. So a proposal here is always "somebody said they would do this",
-// never "this deal should move to negotiation" — the second is a conclusion
-// about the account, and nothing in a transcript states it. Every proposal
-// cites the lines it was read from. The commitment dispatch writes a colleague's
-// task at once only at its own higher confidence, and proposes it below that.
-// A customer's promise becomes a claim. Accepting a proposal creates one task
-// activity through the same RBAC-gated write a rep's own "add task" takes.
-//
-// It mirrors signalextract.go deliberately — same fenced prompt, same pure
-// request builder, same validator-then-floor split — because the two sites do
-// the same job on different material, and one shape is what lets a reader who
-// knows either one read the other.
+// Reading one meeting transcript for the next steps in it. A proposal here is
+// always "somebody said they would do this", never a conclusion about the
+// account. It cites the lines it was read from. The commitment rule
+// decides between a task, a proposal and a customer's claim. It has
+// signalextract.go's shape: fenced prompt, pure builder, validator first.
 
 import (
 	"context"
@@ -34,6 +23,7 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 
+	"github.com/margince/margince/backend/internal/compose/promiseband"
 	"github.com/margince/margince/backend/internal/compose/promptlang"
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/ai"
@@ -46,23 +36,16 @@ import (
 )
 
 const (
-	// transcriptConfidenceFloor: below it the proposal is DROPPED rather than
-	// staged. A question a human has to answer costs their attention, and an
-	// unsure reading of what someone committed to is not worth spending it on
-	// — the transcript is still on the timeline for them to read themselves.
-	transcriptConfidenceFloor = 0.7
-	// maxTranscriptProposals caps one reading's yield. A meeting that produces
-	// eight next steps has not been read, it has been summarized — and eight
-	// questions in the inbox is not a confirmation flow, it is a form.
+	// transcriptConfidenceFloor is where a firm reading starts (promiseband.Of).
+	transcriptConfidenceFloor = promiseband.FirmFloor
+	// maxTranscriptProposals caps one reading's yield: eight next steps from
+	// one meeting are a summary, not a reading.
 	maxTranscriptProposals = 5
 	// maxTranscriptCitedLines bounds one claim's citation. A commitment stated
 	// across more than a few lines is being summarized, not located.
 	maxTranscriptCitedLines = 6
-	// maxProposedSummary and maxProposedOwner bound the two free-text fields a
-	// reply chooses. They are MODEL output derived from text a counterparty may
-	// have written, and they land in an inbox row a human reads — an unbounded
-	// summary is a way to push a wall of text in front of the reviewer, and the
-	// approvals summary sanitizer only trims what reaches ITS field.
+	// maxProposedSummary and maxProposedOwner bound the two free-text fields
+	// of a reply, model output a counterparty may steer into a reviewer's inbox.
 	maxProposedSummary = 200
 	maxProposedOwner   = 80
 )
@@ -71,7 +54,7 @@ const transcriptSystem = `You read one meeting or call transcript and report the
 it states — a specific thing a named party said they would do. Report one only when the
 transcript SAYS it: "I'll send the pricing by Friday", "we'll get you the security review".
 A stated tentative next step such as "I will try to follow up" is still a reading: include it
-with confidence at most 0.3, preserve its tentative wording, and leave an unstated date empty.
+with confidence between 0.3 and 0.69, preserve its tentative wording, and leave an unstated date empty.
 ` + commitmentOfferInstruction + `
 If a name matches several participants, keep the stated next step but leave promiser_ref empty.
 Firm commitments take priority within the proposal limit; include tentative readings only in remaining slots.
@@ -120,14 +103,8 @@ type proposedStep struct {
 	RecipientRefs []string           `json:"recipient_refs,omitempty"`
 	Summary       string             `json:"summary"`
 	Owner         string             `json:"owner"`
-	// DueDate is the day the transcript says the thing is due, as YYYY-MM-DD,
-	// or empty where it says none.
-	//
-	// EMPTY IS A REAL ANSWER and the common one. A next step with no stated
-	// deadline is not overdue and is not due today; the accepted task carries
-	// no date, which is what "nobody said when" looks like. The alternative —
-	// inventing a date so the field is always filled — puts a deadline nobody
-	// agreed to in front of a customer.
+	// DueDate is the day the transcript says the thing is due, as YYYY-MM-DD.
+	// Empty is the common answer: nobody said when, so the task has no date.
 	DueDate     string            `json:"due_date"`
 	SourceLines []int             `json:"source_lines"`
 	Confidence  schema.Confidence `json:"confidence"`
@@ -204,7 +181,7 @@ func transcriptRequest(meeting ids.UUID, lines []string, meetingDay string, lang
 			`is a deadline nobody agreed to. `+
 			`"confidence" is a number from 0 to 1 for how firmly the transcript commits the speaker: `+
 			`an unqualified "I will" with a thing and a day is 0.9 or more, while "I will try", "I'll try", `+
-			`"at some point" or "maybe" names no firm commitment and is 0.3 or less even with a stated day. `+
+			`"at some point" or "maybe" names no firm commitment and is between 0.3 and 0.69 even with a stated day. `+
 			`"source_lines" are the line numbers it is stated on, between 1 and %d.`,
 		meetingDayLabel(meetingDay), maxTranscriptProposals, len(lines))
 
@@ -341,12 +318,8 @@ func validateProposedStep(step proposedStep, lineCount int) string {
 	return ""
 }
 
-// validProposedDueDate admits the empty answer and a plain calendar day.
-//
-// time.DateOnly rather than a looser parse: the day is carried to acceptance as
-// text and turned into an instant there, so a value this admits is one that
-// side must be able to read back. Parsing "Friday" here and storing it would
-// move the failure to a place with no reviewer in front of it.
+// validProposedDueDate admits the empty answer and a plain calendar day, the
+// strict form acceptance reads back when it turns the day into an instant.
 func validProposedDueDate(day string) bool {
 	if day == "" {
 		return true
@@ -380,21 +353,22 @@ func (p *TranscriptProposer) ask(ctx context.Context, meeting ids.UUID, lines []
 	return payload.proposals(), nil
 }
 
-// aboveFloor drops the proposals not worth a human's attention.
-//
-// The floor is applied HERE and not in the validator on purpose: the validator
-// answers "may this site act on the reply at all", and a well-formed but unsure
-// reading is a valid reply that simply does not earn a question. Keeping the
-// two apart is also what lets the certification case grade the raw reading
-// instead of grading this policy.
+// aboveFloor drops the readings too unsure to put to anyone. It is applied
+// after the validator, so the certification case grades the raw reading.
 func aboveFloor(steps []proposedStep) []proposedStep {
-	kept := make([]proposedStep, 0, len(steps))
-	for _, step := range steps {
-		if step.Confidence >= transcriptConfidenceFloor {
-			kept = append(kept, step)
-		}
-	}
-	return kept
+	return slices.DeleteFunc(slices.Clone(steps), func(step proposedStep) bool {
+		return promiseband.Of(float64(step.Confidence)) == promiseband.Dropped
+	})
+}
+
+// tentative is a promise read below the firm floor. It always waits for a
+// member, and it may be optional willingness such as "I will try".
+func (step proposedStep) tentative() bool {
+	return promiseband.Of(float64(step.Confidence)) == promiseband.Tentative
+}
+
+func (step proposedStep) withheldOutcome() CommitmentOutcome {
+	return withheldFor(step.Meaning, step.tentative())
 }
 
 // stepEvidence renders the lines one proposal was read from as the approval's
@@ -430,9 +404,8 @@ func quotedFromTranscript(step proposedStep, lines []string) string {
 	return textcut.Bytes(strings.Join(lines[first-1:last], "\n"), approvals.MaxEvidenceSnippet)
 }
 
-// transcriptReadStore is the slice of the activities store this engine drives.
-// A narrow interface because the engine's whole relationship with the module is
-// these three calls, and naming them is what says the engine owns no rows.
+// transcriptReadStore is the slice of the activities store this engine
+// drives; the engine owns no rows.
 type transcriptReadStore interface {
 	BeginTranscriptRead(ctx context.Context, readID ids.UUID, reclaimAfter time.Duration) (activities.TranscriptRead, error)
 	ReadTranscript(ctx context.Context, activityID ids.ActivityID) (activities.TranscriptReading, error)

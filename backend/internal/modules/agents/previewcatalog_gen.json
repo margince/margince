@@ -129,19 +129,19 @@
   "format/weekstart.ts":
    "504a0f7101ddccc7a917819967f39e6dfafb07952180fbccc7e00c7e1b1de1e7",
   "i18n/de.ts":
-   "d27ec81580b4477d6ca6577e596a8a56738292417b8c8bb1e4b661caea5e4ffd",
+   "a5b373629c70116cf633a881391faf188abd8223cac0a8d49ff42e81585a44d8",
   "i18n/en.ts":
-   "1ea474b55e4df9b04148733357df0975f4e78d3733422d6e88bccd974db57cb9",
+   "93dc203f432ea0b01d6ec2540765db637634969cfe512052e37f19e6bffa2c98",
   "i18n/vi.ts":
-   "d20a8b5e6df5f9a88898756bc7189863b5a3fa9e25b8289dbac600555be702ac",
+   "bfdf677168f46fb8f2557626a7103ccec39a4ecd899aa7c9e0a0f7bf7fdf4271",
   "lib/acquisitionkinds.ts":
    "c5dd117a1d2e9f0b79cde5aa9ef6e2cc34c1f8aad27f48ca914935fdf4879a54",
   "lib/approvallifecycle.ts":
    "1f39261573eb980b2fe06e6c32b9c983b436839c431c30da6c000c535e6c01c9",
   "lib/approvalpreview.ts":
-   "c802c5c3a810a971f6c7f8a804e51394f6d67a3608ce9a1b9f8da0c00b24b1dc",
+   "fd29d4ce291207d54e938389792c463e3a81c30f669fe0286ad65dc9a2a86ec5",
   "lib/approvalpreviewfields.ts":
-   "8f2be815f7a8f20cf048d8666ed9d669a7a970cb369216a30a057040768a6ff8",
+   "fcda0e245a63261394eb6df5b58ce903cc834d781d3b996a82a863ae0358c80b",
   "lib/approvalpreviewimport.ts":
    "16d6cc578d7607588943a2cfb48d95609a14660717d2c43574b76d3c63c93e05",
   "lib/approvalpreviewmergefields.ts":
@@ -1076,6 +1076,8 @@
      "Product",
     "project_id":
      "Project",
+    "promise_strength":
+     "How firm",
     "promote_create_contact":
      "promote create contact",
     "promote_fill_company_industry":
@@ -11432,6 +11434,12 @@
      "Unknown",
     "project_id/boolean/true":
      "Yes",
+    "promise_strength/text/tentative":
+     "Tentative: they said they would try",
+    "promise_strength/lifecycle/tentative":
+     "Tentative: they said they would try",
+    "promise_strength/boolean/true":
+     "Yes",
     "promote_create_contact/lifecycle/customer":
      "Customer",
     "promote_create_contact/lifecycle/disqualified":
@@ -18748,6 +18756,12 @@
      "Not set",
     "project_id/execution":
      "Set when applied",
+    "promise_strength/boolean":
+     "No",
+    "promise_strength/empty":
+     "Not set",
+    "promise_strength/execution":
+     "Set when applied",
     "promote_create_contact/boolean":
      "No",
     "promote_create_contact/empty":
@@ -20928,6 +20942,8 @@
      "Produkt",
     "project_id":
      "Projekt",
+    "promise_strength":
+     "Wie verbindlich",
     "promote_create_contact":
      "promote create contact",
     "promote_fill_company_industry":
@@ -31284,6 +31300,12 @@
      "Unbekannt",
     "project_id/boolean/true":
      "Ja",
+    "promise_strength/text/tentative":
+     "Unverbindlich: Es hieß, man versuche es",
+    "promise_strength/lifecycle/tentative":
+     "Unverbindlich: Es hieß, man versuche es",
+    "promise_strength/boolean/true":
+     "Ja",
     "promote_create_contact/lifecycle/customer":
      "Kunde",
     "promote_create_contact/lifecycle/disqualified":
@@ -38600,6 +38622,12 @@
      "Nicht gesetzt",
     "project_id/execution":
      "Wird beim Anwenden festgelegt",
+    "promise_strength/boolean":
+     "Nein",
+    "promise_strength/empty":
+     "Nicht gesetzt",
+    "promise_strength/execution":
+     "Wird beim Anwenden festgelegt",
     "promote_create_contact/boolean":
      "Nein",
     "promote_create_contact/empty":
@@ -40780,6 +40808,8 @@
      "Sản phẩm",
     "project_id":
      "Dự án",
+    "promise_strength":
+     "Mức chắc chắn",
     "promote_create_contact":
      "promote create contact",
     "promote_fill_company_industry":
@@ -51136,6 +51166,12 @@
      "Chưa rõ",
     "project_id/boolean/true":
      "Có",
+    "promise_strength/text/tentative":
+     "Chưa chắc chắn: chỉ nói sẽ cố gắng",
+    "promise_strength/lifecycle/tentative":
+     "Chưa chắc chắn: chỉ nói sẽ cố gắng",
+    "promise_strength/boolean/true":
+     "Có",
     "promote_create_contact/lifecycle/customer":
      "Khách hàng",
     "promote_create_contact/lifecycle/disqualified":
@@ -58451,6 +58487,12 @@
     "project_id/empty":
      "Chưa đặt",
     "project_id/execution":
+     "Được xác định khi áp dụng",
+    "promise_strength/boolean":
+     "Không",
+    "promise_strength/empty":
+     "Chưa đặt",
+    "promise_strength/execution":
      "Được xác định khi áp dụng",
     "promote_create_contact/boolean":
      "Không",
