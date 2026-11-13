@@ -15403,11 +15403,11 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "trial.notice.daysLeft_one": "Noch {count} Tag Testphase",
   "trial.notice.daysLeft_other": "Noch {count} Tage Testphase",
   "trial.notice.body":
-    "Am {date} hört Margince auf zu arbeiten, bis eine Lizenz da ist. Deine Daten bleiben, wie sie sind.",
+    "Am {date} wird Margince gesperrt, und die Arbeit im Hintergrund ruht, bis eine Lizenz da ist. Deine Daten bleiben, wie sie sind.",
   "trial.notice.endedTitle": "Deine Testphase ist beendet",
   "trial.notice.hideToday": "Bis morgen ausblenden",
   "trial.notice.endedBody":
-    "Margince hat am {date} aufgehört zu arbeiten und wartet auf eine Lizenz. Deine Daten bleiben, wie sie sind, und nichts wird gelöscht.",
+    "Margince ist seit dem {date} gesperrt, und die Arbeit im Hintergrund ruht, bis eine Lizenz da ist. Deine Daten bleiben, wie sie sind, und nichts wird gelöscht.",
   "trial.contact.title": "Mit dem Margince-Team sprechen",
   "trial.contact.endsOn": "Deine Testphase endet am {date}",
   "trial.contact.endedOn": "Deine Testphase endete am {date}",
@@ -15450,13 +15450,13 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "trial.locked.title": "Deine Margince-Testphase ist beendet",
   "trial.locked.adminTitle": "Du hast einen Lizenzschlüssel?",
   "trial.locked.body":
-    "Margince arbeitet nicht mehr, bis eine Lizenz da ist. Deine Daten bleiben, wie sie sind, und nichts wird gelöscht.",
+    "Margince ist gesperrt, und die Arbeit im Hintergrund ruht, bis eine Lizenz da ist. Deine Daten bleiben, wie sie sind, und nichts wird gelöscht.",
   "trial.locked.admin":
     "Trag ihn als license.token oder MARGINCE_LICENSE in die Konfiguration dieser Installation ein und starte Margince neu. Hast du eine Token-Datei ersetzt, reicht „Jetzt prüfen“. Die Arbeit im Hintergrund läuft dann von selbst wieder an, ohne Neustart.",
   "trial.locked.member":
     "Deine Admins können eine Lizenz vom Margince-Team bekommen. Du kannst dem Team auch selbst schreiben.",
   "common.trialEnded":
-    "Die Testphase dieser Installation ist beendet. Bis eine Lizenz da ist, lässt sich nichts ändern.",
+    "Die Testphase dieser Installation ist beendet, deshalb wartet diese Änderung auf eine Lizenz. Deine Daten bleiben, wie sie sind.",
   "licensebanner.link": "{tab} öffnen",
   "licensebanner.grace.title": "Lizenz abgelaufen",
   "licensebanner.grace.body":

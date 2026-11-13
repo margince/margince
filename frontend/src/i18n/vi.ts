@@ -14999,11 +14999,11 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "trial.notice.daysLeft_one": "Còn {count} ngày dùng thử",
   "trial.notice.daysLeft_other": "Còn {count} ngày dùng thử",
   "trial.notice.body":
-    "Từ {date}, Margince sẽ ngừng hoạt động cho đến khi có giấy phép. Dữ liệu của bạn vẫn được giữ nguyên.",
+    "Từ {date}, Margince sẽ bị khóa và tác vụ nền sẽ tạm dừng cho đến khi có giấy phép. Dữ liệu của bạn vẫn được giữ nguyên.",
   "trial.notice.endedTitle": "Thời gian dùng thử đã kết thúc",
   "trial.notice.hideToday": "Ẩn đến ngày mai",
   "trial.notice.endedBody":
-    "Margince đã ngừng hoạt động từ {date} và đang chờ giấy phép. Dữ liệu của bạn vẫn được giữ nguyên, không có gì bị xóa.",
+    "Margince đã bị khóa từ {date}, và tác vụ nền đang tạm dừng cho đến khi có giấy phép. Dữ liệu của bạn vẫn được giữ nguyên, không có gì bị xóa.",
   "trial.contact.title": "Liên hệ đội ngũ Margince",
   "trial.contact.endsOn": "Thời gian dùng thử kết thúc vào {date}",
   "trial.contact.endedOn": "Thời gian dùng thử đã kết thúc vào {date}",
@@ -15045,13 +15045,13 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "trial.locked.title": "Thời gian dùng thử Margince đã kết thúc",
   "trial.locked.adminTitle": "Bạn đã có khóa giấy phép?",
   "trial.locked.body":
-    "Margince đã ngừng hoạt động cho đến khi có giấy phép. Dữ liệu của bạn vẫn được giữ nguyên, không có gì bị xóa.",
+    "Margince đang bị khóa, và tác vụ nền đang tạm dừng cho đến khi có giấy phép. Dữ liệu của bạn vẫn được giữ nguyên, không có gì bị xóa.",
   "trial.locked.admin":
     "Hãy đặt khóa vào license.token hoặc MARGINCE_LICENSE trong cấu hình của bản cài đặt này, rồi khởi động lại Margince. Nếu bạn đã thay tệp token, chỉ cần bấm Kiểm tra ngay. Sau đó tác vụ nền sẽ tự chạy lại, không cần khởi động lại.",
   "trial.locked.member":
     "Quản trị viên của bạn có thể nhận giấy phép từ đội ngũ Margince. Bạn cũng có thể tự viết cho họ.",
   "common.trialEnded":
-    "Thời gian dùng thử của bản cài đặt này đã kết thúc, nên không thể thay đổi gì cho đến khi có giấy phép.",
+    "Thời gian dùng thử của bản cài đặt này đã kết thúc, nên thay đổi này phải chờ có giấy phép. Dữ liệu của bạn vẫn được giữ nguyên.",
   "licensebanner.link": "Mở {tab}",
   "licensebanner.grace.title": "Giấy phép đã hết hạn",
   "licensebanner.grace.body":

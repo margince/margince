@@ -15310,11 +15310,11 @@ export const en = {
   "trial.notice.daysLeft_one": "{count} day left of your trial",
   "trial.notice.daysLeft_other": "{count} days left of your trial",
   "trial.notice.body":
-    "Margince stops working on {date} until it has a license. Your data stays as it is.",
+    "On {date}, Margince locks and background work pauses until it has a license. Your data stays as it is.",
   "trial.notice.endedTitle": "Your trial has ended",
   "trial.notice.hideToday": "Hide until tomorrow",
   "trial.notice.endedBody":
-    "Margince stopped working on {date} and waits for a license. Your data stays as it is, and nothing is deleted.",
+    "Margince locked on {date}, and background work is paused until it has a license. Your data stays as it is, and nothing is deleted.",
   "trial.contact.title": "Talk to the Margince team",
   "trial.contact.endsOn": "Your trial ends on {date}",
   "trial.contact.endedOn": "Your trial ended on {date}",
@@ -15356,13 +15356,13 @@ export const en = {
   "trial.locked.title": "Your Margince trial has ended",
   "trial.locked.adminTitle": "Have a license key?",
   "trial.locked.body":
-    "Margince has stopped working until it has a license. Your data stays as it is, and nothing is deleted.",
+    "Margince is locked, and background work is paused until it has a license. Your data stays as it is, and nothing is deleted.",
   "trial.locked.admin":
     "Set it as license.token or MARGINCE_LICENSE in this installation’s configuration, then start Margince again. If you replaced a token file, check now instead. Background work then resumes on its own, without a restart.",
   "trial.locked.member":
     "Your admin can get a license from the Margince team. You can also write to them yourself.",
   "common.trialEnded":
-    "This installation’s trial has ended, so nothing can be changed until it has a license.",
+    "This installation’s trial has ended, so this change waits for a license. Your data stays as it is.",
   "licensebanner.link": "Open {tab}",
   "licensebanner.grace.title": "License expired",
   "licensebanner.grace.body":
