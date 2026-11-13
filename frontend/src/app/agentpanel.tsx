@@ -2,7 +2,7 @@ import { type ReactNode, type RefObject, useId } from "react";
 import { AppLink } from "../design-system/applink";
 import { Heading } from "../design-system/heading";
 import type { MarginceCoreState } from "../design-system/margince-core";
-import { ReadyStack } from "../features/brief/brief.stack";
+import { ReadyStack } from "../features/brief/brief.feed";
 import type { WorklistItem } from "../features/worklist/worklist.queries";
 import { formatMoney, formatNumber } from "../format/format";
 import { useLocale, useT } from "../i18n";

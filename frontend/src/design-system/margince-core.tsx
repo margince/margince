@@ -2,6 +2,8 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import { useEffect, useRef, useState } from "react";
+import { formatNumber } from "../format/format";
+import { useLocale } from "../i18n";
 import { useCoreEngine } from "./margince-core-engine";
 import "./margince-core.css";
 
@@ -128,6 +130,7 @@ export function MarginceCoreScene({
   surface?: CoreSurface;
   className?: string;
 }>) {
+  const { locale } = useLocale();
   const canvas = useRef<HTMLCanvasElement>(null);
   const darkPage = useDarkPage();
   const paper = surface === "auto" && !darkPage;
@@ -168,7 +171,7 @@ export function MarginceCoreScene({
       {tally !== undefined && tally > 0 && (
         <>
           {progress === undefined && <TallyRing count={tally} />}
-          <span className="core-count">{tally}</span>
+          <span className="core-count">{formatNumber(tally, locale)}</span>
         </>
       )}
       {progress === undefined ? null : (

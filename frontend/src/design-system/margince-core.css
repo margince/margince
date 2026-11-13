@@ -459,6 +459,9 @@
 .core-count {
   --coreCount: 22px;
   position: absolute;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   z-index: 4;
   right: calc((var(--coreSize) - var(--coreGlass) * var(--coreBall)) / 2 - 8px);
   bottom: calc(
@@ -477,7 +480,6 @@
   color: var(--textOnAccent);
   font: var(--fontBodySmall);
   font-weight: var(--fontWeightMedium);
-  line-height: var(--coreCount);
   font-variant-numeric: tabular-nums;
   text-align: center;
 }
