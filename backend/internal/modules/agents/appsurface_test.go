@@ -29,8 +29,8 @@ func (testSeatless) WriteRefusal(w http.ResponseWriter, r *http.Request) {
 	httperr.Write(w, r, &httperr.DetailedError{Status: http.StatusForbidden, Code: "no_seat", Detail: "No member."})
 }
 
-// appServer serves a registry of one listed read tool, one unlisted verb and
-// one listed write tool, to an app whose surface names the first two.
+// appServer serves a listed read tool, an unlisted write verb and a listed read
+// tool. The app's surface names the first two.
 func appServer(t *testing.T, seated bool) (*httptest.Server, map[string]*fakeTool) {
 	t.Helper()
 	tools := map[string]*fakeTool{}

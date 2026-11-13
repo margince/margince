@@ -45584,7 +45584,7 @@ components:
       required: [slug, name, mcp, scopes, events]
       description: What Dispact needs to install the Margince app in a team.
       properties:
-        slug: { type: string, enum: [margince] }
+        slug: { type: string, enum: [margince], x-extensible-enum: true }
         name: { type: string }
         mcp: { $ref: '#/components/schemas/DispactAppManifestMcp' }
         scopes:

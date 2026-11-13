@@ -3,8 +3,8 @@
 
 // Package dispactapp is the /mcp edge for the Margince app installed in a
 // Dispact team. Dispact signs each call with a short-lived token for the person
-// who asked its agent; this package checks that token against the connected
-// Dispact bot and binds the call to that person's own passport.
+// who asked its agent. This package checks that token against the connected
+// bot, then binds the call to that person's own passport.
 package dispactapp
 
 import (
@@ -15,8 +15,6 @@ import (
 	"strings"
 	"sync"
 	"time"
-
-	"github.com/redis/go-redis/v9"
 
 	"github.com/margince/margince/backend/internal/compose/chatsync"
 	"github.com/margince/margince/backend/internal/compose/oidctoken"
@@ -84,10 +82,10 @@ func New(bots Bots, replays Replays, client *http.Client) *Edge {
 	return &Edge{bots: bots, replays: replays, client: client, now: time.Now}
 }
 
-// Wire builds the edge over the stored bot, Redis and the bot's own HTTP
-// client, which refuses a private address unless private is set.
-func Wire(db *database.DB, rdb *redis.Client, private bool) *Edge {
-	return New(capture.NewRegistry(db, nil, nil, nil), RedisReplays{RDB: rdb}, chatsync.HTTPClient(private))
+// Wire builds the edge over the stored bot and the bot's own HTTP client,
+// which refuses a private address unless private is set.
+func Wire(db *database.DB, replays Replays, private bool) *Edge {
+	return New(capture.NewRegistry(db, nil, nil, nil), replays, chatsync.HTTPClient(private))
 }
 
 // SetClock replaces the clock the token's times are judged by.
@@ -194,8 +192,7 @@ func (e *Edge) matchCall(teamID string) func(oidctoken.Claims) error {
 // spend records the token's id until the token expires, so a second use of
 // the same token is refused. A store that cannot answer refuses the call.
 func (e *Edge) spend(ctx context.Context, c oidctoken.Claims) error {
-	// Never under a second: Redis keeps a key with no expiry forever.
-	ttl := max(time.Unix(c.Exp, 0).Add(skew).Sub(e.now()), time.Second)
+	ttl := time.Unix(c.Exp, 0).Add(skew).Sub(e.now())
 	first, err := e.replays.FirstUse(ctx, c.Iss+"|"+c.Jti, ttl)
 	if err != nil {
 		return fmt.Errorf("dispactapp: recording the token id: %w: %w", err, agents.ErrAuthUnavailable)

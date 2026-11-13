@@ -109,9 +109,9 @@ func (s *Server) mcpHandler(pool *pgxpool.Pool, auth *identity.Service, log *slo
 		// validates against (queryseam.go), which is what makes "what this
 		// document advertises" and "what a plan can be answered from" the same
 		// sentence rather than two that have to be kept in step.
-		// Two providers fan into the one the transport takes: the vocabulary, then
-		// the views, so a URI collision resolves to the vocabulary (composeResources;
-		// TestTheProductionProvidersClaimDisjointURIs holds that none occurs).
+		// Two providers fan into the one the transport takes, the vocabulary first.
+		// So a URI collision resolves to the vocabulary (composeResources), and
+		// TestTheProductionProvidersClaimDisjointURIs holds that none occurs.
 		agents.WithResourceProvider(composeResources(
 			mcpResourceProviders(
 				agents.NewCapabilitiesResource(s.toolRegistry),
@@ -240,8 +240,8 @@ type mcpLimiters struct {
 	peerCeiling *ratelimit.Limiter // 600/min per (endpoint group, peer) — the shared ceiling no chosen key escapes
 }
 
-// The per-minute bounds of the MCP transport guard against a flood, not what an
-// agent may do, so the build fixes them and settings shows them read-only.
+// The per-minute bounds of the MCP transport guard against a flood. They do not
+// set what an agent may do, so the build fixes them and settings shows them.
 const (
 	mcpCallsPerMinute       = 240
 	mcpStreamOpensPerMinute = 30

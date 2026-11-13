@@ -5,12 +5,7 @@ package dispactapp
 
 import (
 	"context"
-	"crypto/sha256"
-	"encoding/hex"
 	"net/http"
-	"time"
-
-	"github.com/redis/go-redis/v9"
 
 	"github.com/margince/margince/backend/internal/modules/agents"
 	"github.com/margince/margince/backend/internal/platform/httperr"
@@ -49,15 +44,4 @@ func PaceKey(ctx context.Context, key string) string {
 		return key
 	}
 	return "app:" + p.PassportID.String()
-}
-
-// RedisReplays holds token ids in Redis, shared by every API replica.
-type RedisReplays struct{ RDB *redis.Client }
-
-// replayKeyPrefix namespaces the token ids beside the bus's own keys.
-const replayKeyPrefix = "gw:dispact-jti:"
-
-func (r RedisReplays) FirstUse(ctx context.Context, key string, ttl time.Duration) (bool, error) {
-	sum := sha256.Sum256([]byte(key))
-	return r.RDB.SetNX(ctx, replayKeyPrefix+hex.EncodeToString(sum[:]), 1, ttl).Result()
 }

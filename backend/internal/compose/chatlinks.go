@@ -9,7 +9,6 @@ import (
 	"time"
 
 	"github.com/jackc/pgx/v5/pgxpool"
-	"github.com/redis/go-redis/v9"
 	"github.com/riverqueue/river"
 
 	"github.com/margince/margince/backend/internal/compose/chatsync"
@@ -85,10 +84,10 @@ func WithChatLinks(inserter *jobs.Runner, private bool, lane ai.Completer) Optio
 	}
 }
 
-// WithDispactCalls lets the Dispact app call /mcp; rdb holds each call token id once.
-func WithDispactCalls(rdb *redis.Client, private bool) Option {
+// WithDispactCalls lets the Dispact app call /mcp; replays holds each token id once.
+func WithDispactCalls(replays dispactapp.Replays, private bool) Option {
 	return func(s *Server, pool *pgxpool.Pool) {
-		s.dispactCalls = dispactapp.Wire(InstallationDB(pool), rdb, private)
+		s.dispactCalls = dispactapp.Wire(InstallationDB(pool), replays, private)
 	}
 }
 

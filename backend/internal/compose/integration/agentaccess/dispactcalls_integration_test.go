@@ -5,9 +5,9 @@
 
 package agentaccess
 
-// The Dispact app's calls over the composed /mcp: a call token signed by the
-// connected install acts as the person it names, through their own passport,
-// and sees only the app's fixed list. The token rules themselves are unit
+// The Dispact app's calls over the composed /mcp. A call token signed by the
+// connected install acts as the person it names, through their own passport.
+// It sees only the app's fixed list. The token rules themselves are unit
 // tests in dispactapp; this suite proves they are what the real route runs.
 
 import (
@@ -23,6 +23,7 @@ import (
 	"github.com/margince/margince/backend/internal/compose/dispactapp"
 	"github.com/margince/margince/backend/internal/compose/oidctoken/oidctokentest"
 	"github.com/margince/margince/backend/internal/platform/redistest"
+	"github.com/margince/margince/backend/internal/platform/replayguard"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -41,7 +42,7 @@ type dispactEnv struct {
 func setupDispact(t *testing.T) *dispactEnv {
 	t.Helper()
 	rig := oidctokentest.NewRig(t)
-	e := setupConnectorWith(t, compose.WithDispactCalls(redistest.Client(t), true))
+	e := setupConnectorWith(t, compose.WithDispactCalls(replayguard.New(redistest.Client(t)), true))
 	if _, err := e.Owner.Exec(context.Background(), `
 		INSERT INTO channel_connection (provider, channel_id, channel_label, address, credential_ref, status, connected_by)
 		SELECT 'dispact', $1, 'Dispact', $2, 'vault:test', 'connected', id FROM app_user WHERE email = $3`,

@@ -114,6 +114,7 @@ components:
   automation:  { in: internal/modules/automation }
   migration:   { in: internal/modules/migration }
   webhooks:    { in: internal/modules/webhooks }
+  chatlinks:   { in: [internal/modules/chatlinks, internal/modules/chatlinks/**] }
   webforms:    { in: internal/modules/webforms }
   comms:       { in: internal/modules/comms }
   notices:     { in: internal/modules/notices }
@@ -258,6 +259,9 @@ deps:
     canUse: [pgx]
   webforms:
     mayDependOn: [contracts, platform]
+    canUse: [pgx, oapi]
+  chatlinks:
+    mayDependOn: [chatlinks, contracts, platform]
     canUse: [pgx, oapi]
   webhooks:
     mayDependOn: [contracts, platform]
