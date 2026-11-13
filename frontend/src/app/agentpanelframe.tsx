@@ -15,7 +15,7 @@ const PANEL_GAP = 8;
  * pairs open" wraps under its own number, a figure with a name becomes two
  * stacked fragments.
  */
-const PANEL_WIDTH = 408;
+const PANEL_WIDTH = 440;
 
 const PANEL_MARGIN = 12;
 

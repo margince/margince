@@ -61,7 +61,7 @@ Also called: confirm, accept, sign off, OK an agent action.
 ### Where are my approvals?
 Margince has no approvals inbox of its own. Approvals waiting on you appear in three places:
 1. **Home → Worklist**: each approval is a row with **Decide**; set **Work type** to **Approvals** to filter.
-2. The agent panel (**Open agent panel**), in its **Approvals** section.
+2. The agent panel (**Open agent panel**): the **Approvals** figure, and **Review** under **Recommended**.
 3. On a company page, **Pending approvals**, with **Review {count} pending**; a deal page shows **Awaiting approval**.
 When nothing waits, the Worklist says "Nothing is waiting on you."
 Also called: approval queue, pending decisions, inbox, to review.
@@ -392,7 +392,7 @@ Staged items show up where the work is:
 
 - **Home → Worklist**, filtered by **Work type → Approvals**. When nothing waits
   it says "Nothing is waiting on you."
-- The agent panel's **Approvals** section.
+- The agent panel's **Approvals** figure, with **Review** under **Recommended**.
 - A company page's **Pending approvals** card, and a deal page's **Awaiting
   approval** panel.
 - Sharing a record that requires approval tells you so at the moment you do it:

@@ -2,7 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import { useQueryClient } from "@tanstack/react-query";
-import { ArrowRight, Sparkles } from "lucide-react";
+import { ArrowLeft, ArrowRight, ChevronRight } from "lucide-react";
 import { type ReactNode, useId, useState } from "react";
 import { AppLink } from "../../design-system/applink";
 import { Badge, Button, Card, PendingBody } from "../../design-system/atoms";
@@ -15,6 +15,7 @@ import {
 import { formatNumber } from "../../format/format";
 import { useLocale, usePlural, useT } from "../../i18n";
 import { useMe } from "../../lib/session";
+import { partialFoot } from "../../lib/standingpeeks";
 import { useViewerZone } from "../../lib/viewerzone";
 import { OpenEmailDrawer } from "../mail/openemaildrawer";
 import {
@@ -122,6 +123,9 @@ export function BriefFeed({
   );
 }
 
+/** How many of the day's rows a narrow panel names before it counts the rest. */
+const POD_ROWS = 5;
+
 /**
  * The day's rows as cards, the one in hand open, with Next. Home's "Needs you"
  * and the agent panel both draw this, so a row reads and answers the same in
@@ -146,20 +150,36 @@ export function ReadyStack({
   const lead = rows[at];
   const viewer = useMe(false).data?.user;
   const plural = usePlural();
-  const rest = solo ? rows.filter((_, index) => index !== at) : [];
+  // A narrow panel lists the day by name first; a press takes one in hand.
+  const [inHand, setInHand] = useState(false);
+  const listed = solo && !inHand;
+  const shown = rows.slice(0, POD_ROWS);
   const next = rows[(at + 1) % rows.length];
   return (
     <>
-      {solo && lead && (
-        <p className="t-caption brief-pod-eyebrow">
-          <Sparkles aria-hidden />
-          {plural("brief.pod.eyebrow", rows.length, {
-            at: formatNumber(at + 1, locale),
-            count: formatNumber(rows.length, locale),
+      {listed && shown.length > 0 && (
+        <PeekCard
+          head={t("brief.pod.head")}
+          headHidden
+          items={shown.map((item) => ({
+            key: identity(item),
+            title: taskName(item, viewer, t, locale),
+            sub: taskLine(item, t, locale, readerZone) ?? undefined,
+            right: <ChevronRight aria-hidden className="brief-pod-open" />,
+            onOpen: () => {
+              choose(item);
+              setInHand(true);
+            },
+          }))}
+          foot={partialFoot(shown.length, rows.length, {
+            t,
+            plural,
+            locale,
+            zone: readerZone,
           })}
-        </p>
+        />
       )}
-      {lead && (
+      {!listed && lead && (
         <HomeListReturnScope>
           <Triage
             solo={solo}
@@ -172,31 +192,17 @@ export function ReadyStack({
           />
         </HomeListReturnScope>
       )}
-      {rest.length > 0 && next && (
-        <>
-          <div className="t-caption brief-pod-pager">
-            <span>
-              {plural("brief.pod.more", rest.length, {
-                count: formatNumber(rest.length, locale),
-              })}
-            </span>
+      {solo && inHand && lead && (
+        <div className="brief-pod-pager">
+          <Button variant="link" onClick={() => setInHand(false)}>
+            <ArrowLeft aria-hidden /> {t("brief.pod.all")}
+          </Button>
+          {rows.length > 1 && next && (
             <Button variant="link" onClick={() => choose(next)}>
               {t("brief.focus.next")} <ArrowRight aria-hidden />
             </Button>
-          </div>
-          {/* The rest by name: a press takes that one in hand. */}
-          <div className="brief-pod-rest">
-            <PeekCard
-              head={t("brief.pod.also")}
-              items={rest.map((item) => ({
-                key: identity(item),
-                title: taskName(item, viewer, t, locale),
-                sub: taskLine(item, t, locale, readerZone) ?? undefined,
-                onOpen: () => choose(item),
-              }))}
-            />
-          </div>
-        </>
+          )}
+        </div>
       )}
       <OpenEmailDrawer
         activityId={openEmail}

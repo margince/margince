@@ -333,11 +333,11 @@ describe("AgentRail", () => {
     stubAgentRailApi({ approvals: () => new Promise<Response>(() => {}) });
     const { container } = render();
     await openPanel(user, container);
-    // The whole section is absent: its heading, its all-clear and its tile. An
-    // unread count is reported by saying nothing, never by an all-clear the
-    // panel never read. (The resting LINE above it is a different reading with
-    // its own rules and is not what this asserts.)
-    expect(panel().textContent).not.toContain(en["agent.panel.needsYou"]);
+    // The reading has no cell: an unread count is reported by saying nothing,
+    // never by a zero the panel never read.
+    expect(panel().querySelector(".arreadings")?.textContent).not.toContain(
+      en["agent.panel.decisions"],
+    );
     expect(
       screen.queryByRole("link", {
         name: new RegExp(`^${en["agent.panel.decisions"]}`),
@@ -350,13 +350,9 @@ describe("AgentRail", () => {
     stubAgentRailApi();
     const { container } = render();
     await openPanel(user, container);
-    // The section's OWN sentence. This used to be scoped to the workspace
-    // section by hand, because the resting line in the head said "Nothing needs
-    // you" too and a whole-panel match would have passed with the paragraph
-    // gone; the two no longer share a sentence, so matching one matches it.
     await waitFor(() =>
-      expect(panel().querySelector(".arnone")?.textContent).toBe(
-        en["agent.panel.nothingWaiting"],
+      expect(panel().querySelector(".arreadings")?.textContent).toContain(
+        `${en["agent.panel.decisions"]}0`,
       ),
     );
     // A real zero is an answer, not a tile: "0 Decisions waiting" is a number
@@ -474,7 +470,7 @@ describe("AgentRail", () => {
     ).toBe("true");
   });
 
-  it("says the runtime row is not readable without ai_diagnostics:read", async () => {
+  it("names no model to a seat without ai_diagnostics:read", async () => {
     const user = userEvent.setup();
     stubAgentRailApi({
       me: () => jsonResponse(meFixture({ allow: { license: ["read"] } })),
@@ -482,10 +478,10 @@ describe("AgentRail", () => {
     const { container } = render();
     await openPanel(user, container);
     await waitFor(() =>
-      expect(panel().querySelector(".armeta")?.textContent).toContain(
-        en["agent.fact.hidden"],
-      ),
+      expect(panel().querySelector(".armeta")).not.toBeNull(),
     );
+    expect(panel().textContent).not.toContain(en["agent.fact.model"]);
+    expect(panel().querySelector(".arpmodel")).toBeNull();
   });
 
   it("says nothing has run yet when the seat may read /ai/calls and none has", async () => {

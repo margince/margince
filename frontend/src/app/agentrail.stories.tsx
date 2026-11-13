@@ -528,11 +528,9 @@ export const PanelOpen: Story = {
 /**
  * The same panel in dark, which is where its hierarchy is hardest to hold.
  *
- * Everything on it that is not body text is a derived value — the head's wash
- * is a `color-mix` of the state's tone into the elevated ground, the terms are
- * `--textSecondary`, the recap's marks are the state families — and each of
- * those is mixed differently in the two themes. A head that separates from the
- * body on light can read as one flat block here.
+ * Everything on it that is not body text is a derived value: the readings'
+ * ground, the marks, the recap's state families. Each is mixed differently in
+ * the two themes.
  */
 export const PanelOpenDark: Story = {
   globals: { theme: "dark" },
@@ -545,8 +543,8 @@ export const PanelOpenDark: Story = {
  * for: an installation on the development path, a mailbox it cannot reach, no
  * licence, a month with a figure on it, and a day's work behind it.
  *
- * Both faults are badges above the facts, the facts are terms and values, and
- * the month's figure is said once, in the head.
+ * Both faults are badges above the facts under System, the facts are terms
+ * and values, and the month's figure is said once, among the readings.
  */
 export const PanelStanding: Story = {
   render: story(
@@ -615,15 +613,26 @@ export const ReadyForYouDark: Story = {
   render: story({ ...HEALTHY, ready: A_READY_DAY }),
 };
 
-/** The orb opens the panel on the card in hand, with its own verbs and its
- *  place in the stack. The jobs follow, and the report waits behind one row. */
+/** The control centre as an administrator reads it: the figures with the
+ *  month's cost, the model named in the head, the day by name, and what the
+ *  agent recommends. */
 export const ReadyPanelOpen: Story = {
-  render: story({ ...HEALTHY, ready: A_READY_DAY, recent: A_DAYS_WORK }),
+  render: story(
+    {
+      ...HEALTHY,
+      ready: A_READY_DAY,
+      recent: A_DAYS_WORK,
+      approvals: 2,
+      pricedMinor: 1_240,
+    },
+    "expanded",
+    SPEND_READER,
+  ),
   play: openThePanel,
 };
 
 /** On a record the panel opens on the rows about it, and the whole day is one
- *  press away. */
+ *  press away. A seat without the diagnostics grant sees no model and no cost. */
 export const ReadyOnARecord: Story = {
   render: story({ ...HEALTHY, ready: A_READY_DAY }),
   play: async (context) => {

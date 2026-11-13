@@ -4,12 +4,14 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { cleanup, render, waitFor } from "@testing-library/react";
+import { cleanup, render, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import type { WorklistItem } from "../features/worklist/worklist.queries";
 import { LocaleProvider } from "../i18n";
 import { de } from "../i18n/de";
 import { en } from "../i18n/en";
+import { readingsDay, taskRow } from "../testing/brief.fixtures";
 import { type GrantSpec, meFixture } from "../testing/mefixture";
 import { AgentRail } from "./agentrail";
 
@@ -84,6 +86,11 @@ type Answers = Readonly<{
   liveTotal?: number;
   recent?: readonly Occurrence[];
   priced?: boolean;
+  /** The day read and found empty; absent leaves the read unanswered. */
+  emptyDay?: boolean;
+  /** The day's open rows; absent leaves the read unanswered. */
+  day?: WorklistItem[];
+  waiting?: number;
   calls?: readonly unknown[];
 }>;
 
@@ -97,6 +104,9 @@ function stubApi(answers: Answers) {
       const pathname = new URL(request.url).pathname;
       if (pathname.endsWith("/me")) {
         return jsonResponse(meFixture({ allow: answers.allow ?? ADMIN }));
+      }
+      if (pathname.endsWith("/worklist") && (answers.emptyDay || answers.day)) {
+        return jsonResponse(readingsDay({}, answers.day ?? [], []));
       }
       if (pathname.endsWith("/assistant/profile")) {
         return jsonResponse({
@@ -126,7 +136,10 @@ function stubApi(answers: Answers) {
         });
       }
       if (pathname.endsWith("/approvals/pending-count")) {
-        return jsonResponse({ count: 0, as_of: "2026-08-01T09:00:00Z" });
+        return jsonResponse({
+          count: answers.waiting ?? 0,
+          as_of: "2026-08-01T09:00:00Z",
+        });
       }
       if (pathname.endsWith("/connectors")) {
         return jsonResponse({ data: [] });
@@ -257,17 +270,17 @@ describe("the agent panel's hierarchy", () => {
     expect(de["agent.state.idle"]).not.toBe(en["agent.state.idle"]);
   });
 
-  // ONE figure. It stood in the head AND in the runtime rows, which invites a
-  // reader to check whether the two agree — and one of them was drawn from a
-  // second call of the same hook.
-  it("says the month's cost once, in the head", async () => {
+  // One figure, among the readings: said twice it invites a reader to check
+  // whether the two agree.
+  it("says the month's cost once, among the readings", async () => {
     const opened = await openPanel({ priced: true });
     await waitFor(() =>
-      expect(opened.querySelector(".arpmoney")?.textContent).toContain("$1.20"),
+      expect(opened.querySelector(".arreadings")?.textContent).toContain(
+        "$1.20",
+      ),
     );
     expect(opened.textContent?.match(/\$1\.20/g)).toHaveLength(1);
   });
-
   // The claim is the last thing on the surface because it is the only line no
   // read produced: a standing promise rather than news. AC-shell-8 holds that
   // it is SAID; this holds where.
@@ -319,23 +332,15 @@ describe("the agent panel's report", () => {
     );
   });
 
-  // A quiet line rather than a dashed plate: the dashes read as a tile whose
-  // number failed to load, which is the opposite of what an all-clear says.
-  //
-  // And its OWN sentence. The head's resting line says "Nothing needs attention" on
-  // exactly the installation this section is empty on, so the two stood on one
-  // panel saying the same four words.
-  it("says the all-clear as a plain line, undashed and in its own words", async () => {
-    const opened = await openPanel();
+  // A day read empty is said as a plain line under the section's heading.
+  it("says a day with no open tasks as a plain line", async () => {
+    const opened = await openPanel({ emptyDay: true });
     await waitFor(() =>
       expect(opened.querySelector(".arnone")?.textContent).toBe(
-        en["agent.panel.nothingWaiting"],
+        en["agent.panel.noTasks"],
       ),
     );
     expect(opened.querySelector(".arnone")?.className).toContain("t-caption");
-    expect(en["agent.panel.nothingWaiting"]).not.toBe(
-      en["agent.line.allClear"],
-    );
   });
 });
 
@@ -441,5 +446,74 @@ describe("work the rail cannot name", () => {
     expect(coreState()).toBe("idle");
     expect(runningSection(opened)).toBeUndefined();
     expect(opened.textContent).not.toContain(en["agent.panel.unnamedLive"]);
+  });
+});
+
+describe("the agent panel as a control centre", () => {
+  it("names the served model in the head for a seat that may read the trace", async () => {
+    const opened = await openPanel({ calls: [AI_CALL] });
+    await waitFor(() =>
+      expect(opened.querySelector(".arpmodel")?.textContent).toContain(
+        `${AI_CALL.provider}/${AI_CALL.served_model}`,
+      ),
+    );
+  });
+
+  it("names no model and no cost for a seat without the diagnostics grant", async () => {
+    const opened = await openPanel({
+      allow: { license: ["read"] },
+      calls: [AI_CALL],
+      priced: true,
+      emptyDay: true,
+    });
+    await waitFor(() => expect(opened.querySelector(".arnone")).not.toBeNull());
+    expect(opened.querySelector(".arpmodel")).toBeNull();
+    expect(opened.textContent).not.toContain(en["agent.fact.model"]);
+    expect(opened.textContent).not.toContain(en["agent.stat.cost"]);
+  });
+
+  it("lists the day by name and takes one in hand on a press", async () => {
+    const opened = await openPanel({
+      day: [
+        taskRow("t1", "Call Ana Roth back"),
+        taskRow("t2", "Send the offer"),
+      ],
+    });
+    const user = userEvent.setup();
+    const row = await within(opened as HTMLElement).findByRole("button", {
+      name: "Call Ana Roth back",
+    });
+    expect(opened.querySelector(".brief-triage")).toBeNull();
+    await user.click(row);
+    await waitFor(() =>
+      expect(opened.querySelector(".brief-triage-solo")).not.toBeNull(),
+    );
+    await user.click(
+      within(opened as HTMLElement).getByRole("button", {
+        name: en["brief.pod.all"],
+      }),
+    );
+    expect(opened.querySelector(".brief-triage")).toBeNull();
+  });
+
+  it("recommends the approvals that wait, with the way to them", async () => {
+    const opened = await openPanel({ waiting: 2 });
+    const advice = await waitFor(() => {
+      const found = [...opened.querySelectorAll(".aradvice")].find((row) =>
+        row.textContent?.includes("2 approvals wait for you"),
+      );
+      if (!found) throw new Error("no approvals recommendation yet");
+      return found;
+    });
+    expect(advice.querySelector("a")?.getAttribute("href")).toBe("/#/worklist");
+  });
+
+  it("offers the follow-up job with what it will do", async () => {
+    const opened = await openPanel();
+    const names = [...opened.querySelectorAll(".aradvicename")].map(
+      (el) => el.textContent,
+    );
+    expect(names).toContain(en["agent.job.followUps"]);
+    expect(opened.textContent).toContain(en["agent.job.followUps.why"]);
   });
 });

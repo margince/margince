@@ -2,6 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { Globe, type LucideIcon, PenLine } from "lucide-react";
 import { api } from "../api/client";
 import { AppLink } from "../design-system/applink";
 import { Button } from "../design-system/atoms";
@@ -23,6 +24,8 @@ export type AgentJob = Readonly<{
   id: "followUps" | "enrichCompany";
   /** The verb on the button. */
   label: string;
+  /** What it will do, and that nothing leaves without the reader. */
+  why: string;
   /** What the orb says while it runs. */
   running: string;
   pending: boolean;
@@ -80,6 +83,7 @@ function useFollowUpsJob(): AgentJob {
   return {
     id: "followUps",
     label: t("agent.job.followUps"),
+    why: t("agent.job.followUps.why"),
     running: t("agent.job.followUps.running"),
     pending: write.isPending,
     outcome: outcome(),
@@ -111,6 +115,7 @@ function useEnrichJob(company: string | undefined): AgentJob | undefined {
   return {
     id: "enrichCompany",
     label: t("agent.job.enrich"),
+    why: t("agent.job.enrich.why"),
     running: t("agent.job.enrich.running"),
     pending: read.isPending,
     outcome:
@@ -128,34 +133,44 @@ function useEnrichJob(company: string | undefined): AgentJob | undefined {
   };
 }
 
-/** The jobs as the panel lists them: a verb each, then what came of it. */
-export function AgentJobs({ jobs }: Readonly<{ jobs: readonly AgentJob[] }>) {
+const JOB_MARK: Readonly<Record<AgentJob["id"], LucideIcon>> = {
+  followUps: PenLine,
+  enrichCompany: Globe,
+};
+
+/** One job as a recommendation: what it does, then the press that starts it. */
+export function AgentJobRow({ job }: Readonly<{ job: AgentJob }>) {
+  const t = useT();
+  const Mark = JOB_MARK[job.id];
   return (
-    <ul className="arjobs">
-      {jobs.map((job) => (
-        <li key={job.id}>
-          <Button
-            variant="aiQuiet"
-            align="start"
-            pending={job.pending}
-            busyLabel={job.running}
-            onClick={job.run}
-          >
-            {job.label}
-          </Button>
-          {!job.pending && job.outcome && (
-            <p className="t-caption arjobsaid" role="status">
-              {job.outcome.said}{" "}
-              {job.outcome.href && (
-                <AppLink className="link-button" href={job.outcome.href}>
-                  {job.outcome.open}
-                </AppLink>
-              )}
-            </p>
-          )}
-          {!job.pending && <ErrorLine>{job.refused}</ErrorLine>}
-        </li>
-      ))}
-    </ul>
+    <li className="aradvice">
+      <span className="aradvicemark aradviceai" aria-hidden="true">
+        <Mark />
+      </span>
+      <div className="aradvicetext">
+        <p className="aradvicename">{job.label}</p>
+        <p className="t-caption">{job.why}</p>
+        {!job.pending && job.outcome && (
+          <p className="t-caption arjobsaid" role="status">
+            {job.outcome.said}{" "}
+            {job.outcome.href && (
+              <AppLink className="link-button" href={job.outcome.href}>
+                {job.outcome.open}
+              </AppLink>
+            )}
+          </p>
+        )}
+        {!job.pending && <ErrorLine>{job.refused}</ErrorLine>}
+      </div>
+      <Button
+        variant="aiQuiet"
+        pending={job.pending}
+        busyLabel={job.running}
+        onClick={job.run}
+        aria-label={t("agent.job.startNamed", { job: job.label })}
+      >
+        {t("agent.job.start")}
+      </Button>
+    </li>
   );
 }

@@ -4,7 +4,13 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { cleanup, render, waitFor, within } from "@testing-library/react";
+import {
+  cleanup,
+  render,
+  screen,
+  waitFor,
+  within,
+} from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../api/schema";
@@ -106,6 +112,10 @@ async function openPanel(container: HTMLElement) {
   const trigger = container.querySelector(".arhit");
   if (!trigger) throw new Error("no .arhit trigger in the rendered tree");
   await user.click(trigger);
+  // The recap stands under Activity, one press from the panel's first view.
+  await user.click(
+    await screen.findByRole("button", { name: en["agent.tab.activity"] }),
+  );
 }
 
 afterEach(() => {

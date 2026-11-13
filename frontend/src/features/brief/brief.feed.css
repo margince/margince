@@ -474,16 +474,12 @@
 /* ===== One card in a narrow panel =====
    The card in hand as a compact item: no tick column and no lift, the ask and
    the quote at small size. The panel is a glance, and the mail is a press away. */
-.brief-pod-eyebrow {
-  display: flex;
-  align-items: center;
-  gap: var(--space-1);
-  margin: 0;
-  color: var(--aiText);
+/* A panel's card is edged by its hairline alone, with no turning ring. */
+.brief-triage-solo .brief-triage-frame {
+  animation: none;
 }
-.brief-pod-eyebrow svg {
-  width: 1em;
-  height: 1em;
+.brief-triage-solo .brief-triage-frame::before {
+  content: none;
 }
 .brief-triage-solo .brief-triage-lead {
   display: block;
@@ -515,8 +511,9 @@
   align-items: center;
   justify-content: space-between;
   gap: var(--space-3);
-  color: var(--textSecondary);
 }
-.brief-pod-rest {
-  margin-top: var(--space-2);
+.brief-pod-open {
+  width: var(--controlIcon);
+  height: var(--controlIcon);
+  color: var(--textSecondary);
 }

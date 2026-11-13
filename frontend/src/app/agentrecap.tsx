@@ -193,16 +193,20 @@ export function RuntimeFacts({
             <dd>{t("auth.coreModeDevelopment")}</dd>
           </>
         )}
-        <dt>{t("agent.fact.model")}</dt>
-        {/* Italic where there is no model to name: the words are the reason
-            there is none, not a value. */}
-        <dd>
-          {model.calls.length > 0 ? (
-            modelText(model, t)
-          ) : (
-            <i>{modelText(model, t)}</i>
-          )}
-        </dd>
+        {/* Named only to a seat that may read the call trace. Italic where
+            there is no model to name: the words are the reason, not a value. */}
+        {model.allowed && (
+          <>
+            <dt>{t("agent.fact.model")}</dt>
+            <dd>
+              {model.calls.length > 0 ? (
+                modelText(model, t)
+              ) : (
+                <i>{modelText(model, t)}</i>
+              )}
+            </dd>
+          </>
+        )}
         {tools > 0 && (
           <>
             <dt>{t("agent.fact.tools")}</dt>

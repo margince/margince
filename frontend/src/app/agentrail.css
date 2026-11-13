@@ -562,9 +562,6 @@
 .arpanel {
   position: fixed;
   overflow-y: auto;
-  /* No padding of its own: the head is a full-bleed band, and a panel that
-     insets it would put a white margin around the one part of this surface that
-     is meant to look like glass. */
   border: 1px solid var(--borderSubtle);
   /* The pane's corner: the flyout is one more pane, opened beside the rail. */
   border-radius: var(--r-lg);
@@ -661,72 +658,18 @@
 
 /* ===== The head =====
  *
- * WHO is reporting, how it is, and what it has cost. Frosted, and the one place
- * on this surface with a wash of colour in it: the state's own tone bleeding out
- * of the orb across the band, so the panel is visibly the same object as the
- * ball that opened it.
- *
- * Three rows of one grid, in the order they are asked for. The state and the
- * month's figure share the meta line; the agent's NAME is the title under it,
- * because the one thing here that does not change every few seconds is whose
- * report this is; the live sentence stands under both as the status.
+ * Who is reporting, how it is and what it runs on, on the panel's own ground:
+ * the state's tone is in the pip and nowhere else. The state and the model
+ * share the meta line, the agent's name is the title, the live sentence closes.
  */
 .arphead {
-  position: relative;
   display: grid;
-  grid-template-columns: 1fr auto;
+  grid-template-columns: auto auto 1fr;
   align-items: baseline;
-  gap: var(--space-1) var(--space-4);
-  padding: var(--space-4);
-  overflow: hidden;
-  border-radius: calc(var(--r-lg) - 1px) calc(var(--r-lg) - 1px) 0 0;
-  background: linear-gradient(
-    165deg,
-    color-mix(in srgb, var(--arTone) 7%, var(--ground)),
-    var(--ground) 70%
-  );
-  border-bottom: 1px solid var(--borderSubtle);
-}
-/* The light in the band, and it MOVES: a slow blurred drift, one long cycle, so
- * the panel is quietly alive while it is open without ever being something a
- * reader has to look away from. This is the one ornamental thing on the surface
- * and it is here because this is the agent's own panel. */
-.arphead::before {
-  content: "";
-  position: absolute;
-  inset: -50% -25% auto -25%;
-  height: 260px;
-  background:
-    radial-gradient(
-      55% 55% at 28% 22%,
-      color-mix(in srgb, var(--arTone) 30%, transparent),
-      transparent 70%
-    ),
-    radial-gradient(
-      45% 45% at 82% 45%,
-      color-mix(in srgb, var(--orbAmber) 18%, transparent),
-      transparent 70%
-    );
-  filter: blur(14px);
-  animation: ardriftwash 16s ease-in-out infinite;
-  pointer-events: none;
-}
-@keyframes ardriftwash {
-  0%,
-  100% {
-    transform: translate3d(0, 0, 0) scale(1);
-  }
-  50% {
-    transform: translate3d(-8px, 5px, 0) scale(1.07);
-  }
-}
-@media (prefers-reduced-motion: reduce) {
-  .arphead::before {
-    animation: none;
-  }
+  gap: var(--space-1) var(--space-3);
+  padding: var(--space-4) var(--space-4) var(--space-3);
 }
 .arphead > * {
-  position: relative;
   margin: 0;
 }
 
@@ -734,7 +677,6 @@
    only place the vocabulary is written out, and it is written out because the
    sentence below it says what is HAPPENING rather than what the agent is. */
 .arpstate {
-  grid-column: 1;
   display: flex;
   align-items: center;
   gap: var(--space-2);
@@ -748,26 +690,21 @@
   background: var(--arTone);
   box-shadow: 0 0 6px -1px var(--arTone);
 }
-/* The month's figure, and it is meta rather than a reading: quiet, at the end
-   of the state's line, said once on this panel. It used to be a two-line block
-   at the head's edge, which gave the second-most-important fact the most
-   emphatic slot on the surface. */
-.arpmoney {
-  grid-column: 2;
+/* The model, at the end of the state's line: meta, never wider than its half. */
+.arpmodel {
+  min-width: 0;
+  text-align: end;
+  overflow: hidden;
+  text-overflow: ellipsis;
   white-space: nowrap;
 }
-/* The figure itself, in the panel's head and on the rail's last line: ONE
-   reading drawn twice, so it is spelled once. Primary ink against the caption
-   ink of the month beside it, and medium rather than the UA's bold — a figure
-   this small in bold reads as a heading. */
-.arpmoney b,
+/* A figure in caption type: primary ink at medium, since bold reads as a heading. */
+.arpmodel b,
 .arspend b {
   color: var(--textPrimary);
   font-weight: var(--fontWeightMedium);
 }
-/* The one title. It takes the whole width whatever stands beside the state. */
 .arptitle {
-  grid-column: 1 / -1;
   color: var(--textPrimary);
 }
 .arpsaying {
@@ -777,17 +714,58 @@
 
 /* ===== The body =====
  *
- * Four titled sections at ONE inset, each a labelled region: what is running,
- * what needs the reader, what has been done, what it is all standing on.
+ * The readings as one plate, the switch between the three bodies, then the
+ * body in view: titled sections at one inset.
  */
+.arreadings {
+  display: flex;
+  margin: 0 var(--space-4);
+  border: 1px solid var(--borderSubtle);
+  border-radius: var(--r-md);
+  background: var(--bgWell);
+}
+.arreading {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  gap: var(--space-1);
+  padding: var(--space-3);
+  white-space: nowrap;
+}
+.arreading + .arreading {
+  border-inline-start: 1px solid var(--borderSubtle);
+}
+.arfigure {
+  margin: 0;
+  font: var(--fontHeadingSmall);
+  color: var(--textPrimary);
+}
+.arfiguredoor {
+  color: inherit;
+  text-decoration: none;
+}
+.arfiguredoor:hover {
+  color: var(--accentText);
+  text-decoration: underline;
+}
+.arscope {
+  display: flex;
+}
+.artabs {
+  display: flex;
+  padding: var(--space-3) var(--space-4) 0;
+}
+.artab {
+  display: grid;
+  gap: var(--space-4);
+  padding: var(--space-4) 0;
+}
+.artab[hidden] {
+  display: none;
+}
 .arsect {
+  min-width: 0;
   padding: 0 var(--space-4);
-}
-.arsect:first-of-type {
-  padding-top: var(--space-4);
-}
-.arsect + .arsect {
-  margin-top: var(--space-4);
 }
 /* The section's name and, at the far end of its line, the one verb that belongs
    to it. The verb rides the line rather than sitting INSIDE the heading, which
@@ -804,13 +782,6 @@
   color: var(--textPrimary);
 }
 
-/* The counts, as tiles. They flex from none to both: a read that has not
-   answered contributes no tile rather than a zero, so the strip is only ever as
-   wide as the facts are. */
-.artiles {
-  display: flex;
-  gap: var(--space-2);
-}
 /* The panel's box, spelled ONCE. A count tile and a run row are different
    things — one is a link with a figure in it, the other a stack of sentences —
    but they are the same object on the page, and a second byte-identical copy of
@@ -822,26 +793,6 @@
   border-radius: var(--r-md);
   background: var(--bgHover);
 }
-.artile {
-  display: flex;
-  flex: 1 1 0;
-  align-items: center;
-  gap: var(--space-2);
-  min-width: 0;
-  text-decoration: none;
-  transition:
-    background 0.16s ease-out,
-    border-color 0.16s ease-out;
-}
-.artile:hover {
-  border-color: color-mix(in srgb, var(--arTone) 45%, var(--borderSubtle));
-  background: var(--accentLight);
-}
-.artile b {
-  flex: none;
-  color: var(--accentText);
-}
-
 /* Nothing waiting, which is a report and not an absence — so it is said as a
    quiet line. It was a dashed plate, and a dashed box round two words reads as a
    tile whose number failed to load, which is the opposite of an all-clear. */
@@ -853,7 +804,7 @@
  *
  * One row per settled occurrence: how it went, what it was, and how long ago.
  * The rows are separated by hairlines rather than boxed, because they are a
- * list of sentences and a box each would be five cards in a 408px column. */
+ * list of sentences and a box each would be five cards in a narrow column. */
 .aritem {
   display: flex;
   align-items: baseline;
@@ -918,10 +869,6 @@
  * against its value in body. It is a section like the three above it — the same
  * inset, the same heading — with a rule over it, because "what this is standing
  * on" is a different question from "what it has done". */
-.arstrip {
-  padding-top: var(--space-4);
-  border-top: 1px solid var(--borderSubtle);
-}
 .armeta {
   display: flex;
   flex-direction: column;
@@ -1020,8 +967,7 @@
  * produced, a standing promise rather than news. */
 .arfoot {
   display: flex;
-  margin-top: var(--space-4);
-  padding: var(--space-4);
+  padding: var(--space-4) var(--space-4) 0;
   border-top: 1px solid var(--borderSubtle);
 }
 .arclaim {
@@ -1083,35 +1029,64 @@
   }
 }
 
-/* ===== The pod: the reader's work, the jobs, one line of status ===== */
+/* ===== The reader's open tasks ===== */
 .arwork {
   display: grid;
   gap: var(--space-3);
-  padding-top: var(--space-4);
-}
-.arjobs {
-  display: grid;
-  gap: var(--space-2);
-  margin: 0;
-  padding: 0;
-  list-style: none;
 }
 .arjobsaid {
   margin: var(--space-1) 0 0;
   color: var(--textSecondary);
 }
-.arpodfoot {
-  display: flex;
+
+/* ===== Recommended: what stands, why, and the one press ===== */
+.aradvices {
+  display: grid;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.aradvice {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
   align-items: center;
   gap: var(--space-3);
-  margin: var(--space-4) var(--space-4) 0;
-  padding-top: var(--space-3);
+  padding: var(--space-3) 0;
   border-top: 1px solid var(--borderSubtle);
+}
+.aradvice:first-child {
+  padding-top: 0;
+  border-top: 0;
+}
+.aradvice:last-child {
+  padding-bottom: 0;
+}
+.aradvicemark {
+  display: grid;
+  place-items: center;
+  width: var(--space-8);
+  height: var(--space-8);
+  border-radius: var(--r-md);
+  background: var(--bgHover);
   color: var(--textSecondary);
 }
-.arpodreport {
-  margin-inline-start: auto;
+.aradvicemark svg {
+  width: var(--controlIcon);
+  height: var(--controlIcon);
 }
-.arback {
-  padding: var(--space-3) var(--space-4) var(--space-2);
+/* Indigo where the agent does the step itself. */
+.aradviceai {
+  background: var(--aiLight);
+  color: var(--aiText);
+}
+.aradvicewarn {
+  background: var(--warningBg);
+  color: var(--warningText);
+}
+.aradvicetext p {
+  margin: 0;
+}
+.aradvicename {
+  color: var(--textPrimary);
+  font-weight: var(--fontWeightMedium);
 }

@@ -24,5 +24,5 @@ export function modelText(
       model: `${indexing.provider}/${indexing.served_model}`,
     });
   }
-  return t(read.allowed ? "agent.fact.noCalls" : "agent.fact.hidden");
+  return t("agent.fact.noCalls");
 }

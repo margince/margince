@@ -30,19 +30,21 @@ export function ReadyWork({
   const splits = here.length > 0 && here.length < rows.length;
   const scope: Scope = splits ? (chosen ?? "here") : "all";
   return (
-    <div className="arsect arwork">
+    <div className="arwork">
       {splits && (
-        <SegmentedControl
-          options={SCOPES}
-          value={scope}
-          onChange={setChosen}
-          label={t("agent.ready.scope")}
-          labels={{
-            here: t("agent.ready.scope.here"),
-            all: t("agent.ready.scope.all"),
-          }}
-          counts={{ here: here.length, all: rows.length }}
-        />
+        <div className="arscope">
+          <SegmentedControl
+            options={SCOPES}
+            value={scope}
+            onChange={setChosen}
+            label={t("agent.ready.scope")}
+            labels={{
+              here: t("agent.ready.scope.here"),
+              all: t("agent.ready.scope.all"),
+            }}
+            counts={{ here: here.length, all: rows.length }}
+          />
+        </div>
       )}
       {/* Keyed by scope: the card in hand belongs to the list it was taken from. */}
       <ReadyStack key={scope} rows={scope === "here" ? here : rows} solo />

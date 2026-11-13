@@ -102,6 +102,10 @@ async function openPanel(
   const trigger = container.querySelector(".arhit");
   if (!trigger) throw new Error("no .arhit trigger in the rendered tree");
   await user.click(trigger);
+  // The switch stands under System, one press from the panel's first view.
+  await user.click(
+    await screen.findByRole("button", { name: en["agent.tab.system"] }),
+  );
   await screen.findByRole("switch", { name: en["agent.setting.edgeLight"] });
 }
 

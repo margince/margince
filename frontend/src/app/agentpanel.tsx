@@ -1,19 +1,20 @@
-import { ArrowLeft, ChevronRight } from "lucide-react";
 import { type ReactNode, type RefObject, useId, useState } from "react";
 import { AppLink } from "../design-system/applink";
-import { Button } from "../design-system/atoms";
+import { SegmentedControl } from "../design-system/atoms";
 import { Heading } from "../design-system/heading";
 import type { MarginceCoreState } from "../design-system/margince-core";
 import type { WorklistItem } from "../features/worklist/worklist.queries";
-import { formatMoney, formatNumber } from "../format/format";
-import { useLocale, useT } from "../i18n";
+import { useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import { useCan } from "../lib/capability";
 import { routeHash } from "../lib/router";
 import { settingsHref } from "../lib/settingsrouting";
-import { type AgentJob, AgentJobs } from "./agentjobs";
+import { Recommended } from "./agentadvice";
+import type { AgentJob } from "./agentjobs";
+import { Readings } from "./agentpanel-readings";
 import { ReadyWork } from "./agentpanel-work";
 import type { PanelFrame } from "./agentpanelframe";
+import { modelText } from "./agentrail.model";
 import { EdgeLightSetting } from "./agentrail-edgelight";
 import { RailLine } from "./agentrail-line";
 import type { AiActivityItem, AiCall, Signals, Spend } from "./agentrail-reads";
@@ -124,51 +125,40 @@ function RunSection({
 }
 
 /**
- * Who is reporting, how it is, and what it has cost.
+ * Who is reporting, how it is, and what it runs on.
  *
- * One title, and it is the agent's name. Whose report it is stays fixed while
- * the rest of the surface changes every few seconds. The live sentence stands
- * under it as the status, not the title. It captions the state (a fault, a run
- * in flight, a resting reading) and is no entry in the log below. As a heading
- * it would rename the region on every poll.
- *
- * The month's figure is meta beside the state, said here and nowhere else on
- * the panel. It is one fact, and printed twice it invites the reader to check
- * whether the two agree.
+ * One title, and it is the agent's name: whose report it is stays fixed while
+ * the rest changes every few seconds. The live sentence stands under it as the
+ * status. The model is named only to a seat that may read the call trace.
  */
 function PanelHead({
   state,
   name,
   line,
-  spend,
+  model,
 }: Readonly<{
   state: MarginceCoreState;
   name: string;
   line: SpokenLine;
-  spend: Spend;
+  model: Readonly<{ allowed: boolean; calls: readonly AiCall[] }>;
 }>) {
   const t = useT();
-  const { locale } = useLocale();
   return (
     <header className="arphead">
-      {/* No orb here. The card in the rail already carries one, and a second
-          Core a few pixels away is the same object drawn at another size
-          against another ground: the two never quite agree, and a reader who
-          sees them disagree stops trusting either. The state's own word and
-          tone carry it instead. */}
+      <Heading size="medium" as="h2" className="arptitle">
+        {name}
+      </Heading>
+      {/* No orb here: the rail already carries one, and two a few pixels
+          apart never quite agree. The state's word and tone carry it. */}
       <p className="arpstate t-caption">
         <i aria-hidden="true" />
         {t(STATE_WORD[state])}
       </p>
-      {spend.allowed && spend.minor !== undefined && (
-        <p className="arpmoney t-caption t-num">
-          <b>{formatMoney(spend.minor, spend.currency, locale)}</b>{" "}
-          {t("agent.thisMonth")}
+      {model.allowed && (
+        <p className="arpmodel t-caption">
+          {t("agent.fact.model")} <b>{modelText(model, t)}</b>
         </p>
       )}
-      <Heading size="medium" as="h2" className="arptitle">
-        {name}
-      </Heading>
       <p className="arpsaying">
         <RailLine line={line} />
       </p>
@@ -176,48 +166,18 @@ function PanelHead({
   );
 }
 
-/** The pod's one line of status: how the agent is, the month, and the report. */
-function PodFoot({
-  state,
-  spend,
-  onReport,
-}: Readonly<{
-  state: MarginceCoreState;
-  spend: Spend;
-  onReport: () => void;
-}>) {
-  const t = useT();
-  const { locale } = useLocale();
-  return (
-    <footer className="arpodfoot t-caption">
-      <span className="arpstate">
-        <i aria-hidden="true" />
-        {t(STATE_WORD[state])}
-      </span>
-      {spend.allowed && spend.minor !== undefined && (
-        <span className="t-num">
-          <b>{formatMoney(spend.minor, spend.currency, locale)}</b>{" "}
-          {t("agent.thisMonth")}
-        </span>
-      )}
-      <Button variant="link" className="arpodreport" onClick={onReport}>
-        {t("agent.panel.status")} <ChevronRight aria-hidden />
-      </Button>
-    </footer>
-  );
-}
+const TABS = ["now", "activity", "system"] as const;
+type Tab = (typeof TABS)[number];
 
 /**
- * The panel: one report, in the order a reader asks for it.
+ * The panel: the agent's control centre.
  *
- * The head says who is reporting and how it is. Under it, four titled sections
- * answer what is running, what needs the reader, what has been done and what
- * it all stands on. That order is severity, then scope. The one control and the
- * one promise close it, under everything that reports.
+ * The head and the readings stand over three bodies. Now holds what is running,
+ * the reader's open tasks and what the agent recommends. Activity holds what
+ * settled. System holds what it stands on. The promise closes all three.
  *
- * Every part is absent rather than empty when its read has nothing to say. This
- * surface reports what was answered, and an empty section claims an answer
- * nobody got.
+ * Every part is absent rather than empty when its read has nothing to say. An
+ * empty section claims an answer nobody got.
  */
 export function AgentPanel({
   state,
@@ -254,17 +214,18 @@ export function AgentPanel({
   /** What the reader can hand the agent from this page. */
   jobs?: readonly AgentJob[];
 }>) {
-  const { locale } = useLocale();
   const t = useT();
   // The log opens Settings, which serves the AI usage page only to a seat that
-  // may read diagnostics. A link a rep cannot follow is a dead end, so it is
-  // not offered.
+  // may read diagnostics. A link a rep cannot follow is not offered.
   const mayOpenLog = useCan("ai_diagnostics", "read");
+  const [tab, setTab] = useState<Tab>("now");
   const hasWork = ready !== undefined && ready.length > 0;
-  // The report is one press behind the work, and the reader's choice holds
-  // while the panel is open.
-  const [report, setReport] = useState(false);
-  const pod = hasWork && !report;
+  // Counted as the recap lists it: a run the copy cannot name is not a row.
+  const advises =
+    (jobs?.length ?? 0) > 0 ||
+    signals.offline.length > 0 ||
+    (signals.waiting ?? 0) > 0;
+  const done = settled?.filter((item) => speak(item, t) !== null).length;
   return (
     <section
       className="arpanel"
@@ -278,117 +239,78 @@ export function AgentPanel({
         maxHeight: frame.maxHeight,
       }}
     >
-      {/* With work waiting the panel is the work: the card in hand, the rest
-          by name, the jobs, and one line of status that opens the report. */}
-      {pod ? (
-        <ReadyWork rows={ready} here={here ?? []} />
-      ) : (
-        <>
-          {hasWork && (
-            <div className="arsect arback">
-              <Button variant="link" onClick={() => setReport(false)}>
-                <ArrowLeft aria-hidden /> {t("agent.panel.back")}
-              </Button>
-            </div>
-          )}
-          <PanelHead
-            state={state}
-            name={signals.name}
-            line={line}
-            spend={spend}
-          />
-        </>
-      )}
+      <PanelHead state={state} name={signals.name} line={line} model={model} />
+      <Readings
+        tasks={ready?.length}
+        waiting={signals.waiting}
+        done={done}
+        spend={spend}
+        logHref={mayOpenLog ? AI_SETTINGS_HREF : undefined}
+      />
+      <div className="artabs">
+        <SegmentedControl
+          options={TABS}
+          value={tab}
+          onChange={setTab}
+          label={t("agent.tab.label")}
+          labels={{
+            now: t("agent.tab.now"),
+            activity: t("agent.tab.activity"),
+            system: t("agent.tab.system"),
+          }}
+        />
+      </div>
 
-      {/* Above the counts: a run happening this second outranks a queue that
-          has been waiting since yesterday. Only live work is listed here. What
-          settled belongs to the recap further down, so an occurrence is in one
-          section or the other, never both. The section is absent when its
-          list is, rather than drawn empty. */}
-      <RunSection items={running} unnamed={unnamed} />
+      {/* The three bodies stay mounted: a job started under Now keeps its
+          answer while the reader looks at Activity. */}
+      <div className="artab" hidden={tab !== "now"}>
+        {/* Live work leads: a run happening this second outranks a queue. */}
+        <RunSection items={running} unnamed={unnamed} />
+        {/* A day nobody has read is no section; a day read empty says so. */}
+        {ready !== undefined && (
+          <PanelSection title={t("agent.panel.tasks")}>
+            {hasWork ? (
+              <ReadyWork rows={ready} here={here ?? []} />
+            ) : (
+              <p className="arnone t-caption">{t("agent.panel.noTasks")}</p>
+            )}
+          </PanelSection>
+        )}
+        {advises && (
+          <PanelSection title={t("agent.panel.recommended")}>
+            <Recommended signals={signals} jobs={jobs ?? []} />
+          </PanelSection>
+        )}
+      </div>
 
-      {(pod || !hasWork) && jobs !== undefined && jobs.length > 0 && (
-        <PanelSection title={t("agent.job.section")}>
-          <AgentJobs jobs={jobs} />
+      <div className="artab" hidden={tab !== "activity"}>
+        <PanelSection
+          title={t("agent.panel.recent")}
+          action={
+            mayOpenLog ? (
+              <AppLink className="link-button" href={AI_SETTINGS_HREF}>
+                {t("agent.panel.fullLog")}
+              </AppLink>
+            ) : undefined
+          }
+        >
+          <Recap settled={settled} />
         </PanelSection>
-      )}
+      </div>
 
-      {pod ? (
-        <PodFoot state={state} spend={spend} onReport={() => setReport(true)} />
-      ) : (
-        <>
-          {/* Three cases, and the third is the doctrine of this surface: a count
-          nobody has read differs from a count of zero.
-
-          Absent when the read has not answered or this seat may not make it.
-          The panel cannot tell those two apart, and either sentence would
-          misreport one. "nothing needs you" claims an all-clear nobody read.
-          "not readable on this seat" accuses a seat whose read is still in
-          flight. Silence is the one true answer to an unanswered question.
-
-          A read that answered zero is different, and it earns the sentence:
-          the agent looked, and there is nothing waiting. */}
-          {signals.waiting !== undefined && (
-            <PanelSection title={t("agent.panel.needsYou")}>
-              {signals.waiting === 0 ? (
-                // A quiet line rather than a dashed plate. Before anyone read its
-                // words, the plate said "a tile failed to load". That is the
-                // opposite of what an all-clear is for.
-                //
-                // Its own sentence, not the resting line's. That line says "Nothing
-                // needs you" in the head of this same panel. One surface saying the
-                // same four words twice reads as assembled rather than written.
-                <p className="arnone t-caption">
-                  {t("agent.panel.nothingWaiting")}
-                </p>
-              ) : (
-                <div className="artiles">
-                  {/* The tile leads with the number a reader scans for. Its name
-                  leads with the label, because "10" alone names nothing. */}
-                  <AppLink
-                    className="arbox artile"
-                    href="#/worklist"
-                    aria-label={`${t("agent.panel.decisions")} ${formatNumber(signals.waiting, locale)}`}
-                  >
-                    <b>{formatNumber(signals.waiting, locale)}</b>
-                    <span>{t("agent.panel.decisions")}</span>
-                  </AppLink>
-                </div>
-              )}
-            </PanelSection>
-          )}
-
-          <PanelSection
-            title={t("agent.panel.recent")}
-            action={
-              // A verb, beside the title rather than inside it. Inside the heading,
-              // it took the heading's weight and read as a second title.
-              mayOpenLog ? (
-                <AppLink className="link-button" href={AI_SETTINGS_HREF}>
-                  {t("agent.panel.fullLog")}
-                </AppLink>
-              ) : undefined
-            }
-          >
-            <Recap settled={settled} />
-          </PanelSection>
-
-          <PanelSection title={t("agent.panel.runtime")} className="arstrip">
-            <RuntimeFacts
-              offline={signals.offline}
-              model={model}
-              ai={signals.ai}
-              license={signals.license}
-              licenseLine={signals.licenseLine}
-            />
-          </PanelSection>
-
-          {/* The one thing on this panel that changes anything, under everything
-          that reports: a control above the report it is about would be read as
-          part of the report. */}
-          <EdgeLightSetting />
-        </>
-      )}
+      <div className="artab" hidden={tab !== "system"}>
+        <PanelSection title={t("agent.panel.runtime")}>
+          <RuntimeFacts
+            offline={signals.offline}
+            model={model}
+            ai={signals.ai}
+            license={signals.license}
+            licenseLine={signals.licenseLine}
+          />
+        </PanelSection>
+        {/* The one control here, under everything that reports. */}
+        <EdgeLightSetting />
+      </div>
 
       {/* Last, and the only line here no read produced: the agent reaches no
           further than this reader does, whatever the rows above managed to

@@ -2075,11 +2075,8 @@ export const en = {
   "worklist.bandCount_other": "{count} items",
   "brief.focus.context": "View details",
   "brief.focus.next": "Next task",
-  "brief.pod.eyebrow_one": "Ready for you",
-  "brief.pod.eyebrow_other": "Ready for you · {at} of {count}",
-  "brief.pod.more_one": "{count} more after this one",
-  "brief.pod.more_other": "{count} more after this one",
-  "brief.pod.also": "Also ready",
+  "brief.pod.head": "Your open tasks",
+  "brief.pod.all": "All tasks",
   "brief.queue.back": "Back to Worklist",
   "brief.queue.title": "Worklist",
   "brief.queue.show": "Show Worklist",
@@ -9347,7 +9344,6 @@ export const en = {
   // The four section titles. Noun phrases: a heading names a thing, and "What
   // it has done" was a sentence pretending to be one.
   "agent.panel.runningNow": "Running now",
-  "agent.panel.needsYou": "Needs attention",
   "agent.panel.recent": "Recent activity",
   "agent.panel.runtime": "Runtime",
   "agent.panel.fullLog": "Full log",
@@ -9357,7 +9353,6 @@ export const en = {
   // line, this section's empty arm and the log's empty arm all said some
   // version of "nothing" and two of them said the same four words.
   "agent.panel.decisions": "Approvals",
-  "agent.panel.nothingWaiting": "Nothing waiting",
   "agent.panel.nothingToday": "Nothing finished today",
   // Live work of a kind the rail does not narrate: it admits the work and
   // offers nothing to read, because there is no row behind it.
@@ -9374,7 +9369,6 @@ export const en = {
   // The two reasons there is no model to name, in the value's own slot.
   "agent.fact.searchIndex": "Search index: {model}",
   "agent.fact.noCalls": "No model calls yet",
-  "agent.fact.hidden": "Hidden for your role",
   // The fault a badge carries, above the facts it invalidates.
   "agent.fact.noModel": "No model configured",
 
@@ -9391,9 +9385,30 @@ export const en = {
   "agent.ready.scope": "Which tasks to show",
   "agent.ready.scope.here": "This page",
   "agent.ready.scope.all": "Everything",
-  "agent.panel.back": "Back to your tasks",
-  "agent.panel.status": "Status and log",
-  "agent.job.section": "Hand it a job",
+  "agent.panel.tasks": "Open tasks",
+  "agent.panel.noTasks": "No open tasks",
+  "agent.panel.recommended": "Recommended",
+  "agent.tab.label": "Agent views",
+  "agent.tab.now": "Now",
+  "agent.tab.activity": "Activity",
+  "agent.tab.system": "System",
+  "agent.stat.label": "Agent figures",
+  "agent.stat.done": "Done today",
+  "agent.stat.cost": "Cost this month",
+  "agent.job.start": "Start",
+  "agent.job.startNamed": "Start: {job}",
+  "agent.job.followUps.why":
+    "Writes a draft on each of the deals slipping most. Nothing is sent.",
+  "agent.job.enrich.why":
+    "Reads the company's website and proposes details. Nothing is saved until you approve it.",
+  "agent.advice.offline": "{source} is offline",
+  "agent.advice.offline.why": "New mail and meetings from it are not captured.",
+  "agent.advice.offline.open": "Reconnect",
+  "agent.advice.approvals_one": "{count} approval waits for you",
+  "agent.advice.approvals_other": "{count} approvals wait for you",
+  "agent.advice.approvals.why":
+    "Changes the agent prepared. Nothing is saved until you decide.",
+  "agent.advice.approvals.open": "Review",
   "agent.job.followUps": "Draft follow-ups for slipping deals",
   "agent.job.followUps.running": "Drafting follow-ups",
   "agent.job.followUps.done_one":

@@ -440,7 +440,7 @@ describe("AgentRail", () => {
       (el) => el.textContent,
     );
     expect(headings[0]).toBe("Running now");
-    expect(headings).toContain(en["agent.panel.needsYou"]);
+    expect(headings).toContain(en["agent.panel.recommended"]);
   });
 
   // `degrade_reason` is server-authored operator vocabulary and untranslated.
