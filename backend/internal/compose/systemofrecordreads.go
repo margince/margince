@@ -15,6 +15,7 @@ import (
 	"github.com/margince/margince/backend/internal/compose/companybrief"
 	"github.com/margince/margince/backend/internal/compose/companydossier"
 	"github.com/margince/margince/backend/internal/compose/companyscan"
+	"github.com/margince/margince/backend/internal/compose/loggedtouch"
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/modules/customfields"
@@ -97,6 +98,7 @@ func (s *Server) wireSystemOfRecordReads(pool *pgxpool.Pool) {
 	// WithAccountDraft binds the api role's lane; unbound, it answers from its floor.
 	s.firstDrafts.account = accountdraft.NewService(s.company360Svc, nil).
 		WithEnvelope(draftEnvelope(pool, s.log)).
+		WithLoggedTouches(loggedtouch.Reader{Store: activities.NewStore(InstallationDB(pool))}).
 		WithEmailSummaries(emailRows(pool)).
 		WithDossier(s.companyDossierSvc)
 	s.accountDraftHandlers = accountdraft.NewHandlers(s.firstDrafts.account)

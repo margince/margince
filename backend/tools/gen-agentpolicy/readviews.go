@@ -53,6 +53,8 @@ type routeShape struct {
 	// answerSchema is its first 2xx answer's.
 	bodySchema   string
 	answerSchema string
+	// humanOnly names the body members only a human sets.
+	humanOnly []string
 }
 
 // readViewQueries names the query parameters of each route read_view serves,
@@ -107,11 +109,11 @@ func routeShapes(paths map[string]map[string]yaml.Node, shared map[string]queryP
 			shape.summary = deprecatedSummaryPrefix + shape.summary
 		}
 		if rawSchemas != nil {
-			body, err := bodySchema(&op.RequestBody, rawSchemas)
+			body, humanOnly, err := bodySchema(&op.RequestBody, rawSchemas)
 			if err != nil {
 				return nil, fmt.Errorf("%s: %w", p.Route, err)
 			}
-			shape.bodySchema = body
+			shape.bodySchema, shape.humanOnly = body, humanOnly
 			answer, err := answerSchema(op.Responses, rawSchemas)
 			if err != nil {
 				return nil, fmt.Errorf("%s: %w", p.Route, err)
@@ -259,7 +261,11 @@ var routeVerbShapes = map[string]routeVerbShape{
 			}
 			b.WriteString(q.literal())
 		}
-		b.WriteString("}},\n")
+		b.WriteString("}")
+		if len(shape.humanOnly) > 0 {
+			fmt.Fprintf(&b, ", HumanOnly: %#v", shape.humanOnly)
+		}
+		b.WriteString("},\n")
 	}
 	b.WriteString("}\n")
 	return b.String()

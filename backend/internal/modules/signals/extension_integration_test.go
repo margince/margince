@@ -77,8 +77,8 @@ func newExtensionSignalFixture(t *testing.T) extensionSignalFixture {
 	signaltypes.Register("sigtest", []extension.SignalTypeDeclaration{{
 		Kind: "loss", Label: "Loss reported",
 		Evidence: []extension.SignalEvidenceField{
-			{Name: "amount", Label: "Amount", Type: extension.SignalFieldNumber, Required: true},
-			{Name: "reporter", Label: "Reporter", Type: extension.SignalFieldText, Personal: true},
+			{Name: "amount", Label: "Amount", Type: extension.SignalFieldNumber, Required: true, NotPersonal: true},
+			{Name: "reporter", Label: "Reporter", Type: extension.SignalFieldText},
 		},
 	}})
 	actorID := "human:" + admin.String()

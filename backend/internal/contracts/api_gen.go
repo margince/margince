@@ -67958,10 +67958,10 @@ type UpdateSharedMailboxRequestMailVisibility string
 // `signal_resolution` row; `note` travels with that outcome. `resolution_state` and the
 // resolved ids are resolver-owned and not writable here.
 type UpdateSignalRequest struct {
-	// Evidence Replaces the signal's evidence. The audit row keeps the old evidence.
+	// Evidence Replaces the signal's evidence. Only a human may. The audit row keeps the old evidence.
 	Evidence *[]SignalEvidence `json:"evidence,omitempty"`
 
-	// Kind Corrects the signal's type. Only the kinds a human files by hand are accepted. The audit row keeps the old kind.
+	// Kind Corrects the signal's type. Only a human may, and only to the kinds a human files by hand. The audit row keeps the old kind.
 	Kind *UpdateSignalRequestKind `json:"kind,omitempty"`
 
 	// Note Optional outcome note recorded with a status change.
@@ -67970,7 +67970,7 @@ type UpdateSignalRequest struct {
 	Status   *UpdateSignalRequestStatus   `json:"status,omitempty"`
 }
 
-// UpdateSignalRequestKind Corrects the signal's type. Only the kinds a human files by hand are accepted. The audit row keeps the old kind.
+// UpdateSignalRequestKind Corrects the signal's type. Only a human may, and only to the kinds a human files by hand. The audit row keeps the old kind.
 type UpdateSignalRequestKind string
 
 // UpdateSignalRequestSeverity defines model for UpdateSignalRequest.Severity.

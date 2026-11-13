@@ -26,10 +26,11 @@ const maxBodyDepth = 6
 var proseMembers = map[string]bool{"description": true, "example": true, "examples": true, "x-go-type": true}
 
 // bodySchema is a route's JSON request body schema, $refs resolved, as one
-// compact JSON document; empty when the route takes no JSON body.
-func bodySchema(requestBody *yaml.Node, schemas map[string]any) (string, error) {
+// compact JSON document; empty when the route takes no JSON body. humanOnly
+// names the top-level members the schema leaves out because a human alone sets them.
+func bodySchema(requestBody *yaml.Node, schemas map[string]any) (schema string, humanOnly []string, err error) {
 	if requestBody == nil || requestBody.Kind == 0 {
-		return "", nil
+		return "", nil, nil
 	}
 	var body struct {
 		Content map[string]struct {
@@ -37,18 +38,22 @@ func bodySchema(requestBody *yaml.Node, schemas map[string]any) (string, error) 
 		} `yaml:"content"`
 	}
 	if err := requestBody.Decode(&body); err != nil {
-		return "", err
+		return "", nil, err
 	}
 	media, ok := body.Content["application/json"]
 	if !ok {
-		return "", nil
+		return "", nil, nil
 	}
 	resolved, err := resolveRefs(media.Schema, schemas, 0, map[string]bool{})
 	if err != nil {
-		return "", err
+		return "", nil, err
+	}
+	humanOnly, err = withoutHumanOnly(resolved)
+	if err != nil {
+		return "", nil, err
 	}
 	out, err := json.Marshal(unmarked(resolved))
-	return string(out), err
+	return string(out), humanOnly, err
 }
 
 // uploadField names the one binary field of a route's multipart body, and is
@@ -188,6 +193,7 @@ func answered(node any) any {
 		props, _ := v["properties"].(map[string]any)
 		withDisplays(props)
 		delete(v, nullableMarker)
+		delete(v, humanOnlyMarker)
 		for _, member := range v {
 			answered(member)
 		}
@@ -249,7 +255,12 @@ func resolveRefs(node any, schemas map[string]any, depth int, open map[string]bo
 			}
 			open[name] = true
 			defer delete(open, name)
-			return resolveRefs(target, schemas, depth+1, open)
+			resolved, err := resolveRefs(target, schemas, depth+1, open)
+			// A marker beside the $ref belongs to the member, not to the schema it names.
+			if fields, isMap := resolved.(map[string]any); isMap && v[humanOnlyMarker] == true {
+				fields[humanOnlyMarker] = true
+			}
+			return resolved, err
 		}
 		if flat, combined, err := flattenCombinator(v, schemas, depth, open); combined {
 			return flat, err

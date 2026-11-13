@@ -889,8 +889,8 @@ SignalTypes: []extension.SignalTypeDeclaration{{
 	Kind:  "ledger_loss",
 	Label: "Loss reported on a ledger account",
 	Evidence: []extension.SignalEvidenceField{
-		{Name: "amount", Label: "Amount", Type: extension.SignalFieldNumber, Required: true},
-		{Name: "reporter", Label: "Reporter", Type: extension.SignalFieldText, Personal: true},
+		{Name: "amount", Label: "Amount", Type: extension.SignalFieldNumber, Required: true, NotPersonal: true},
+		{Name: "reporter", Label: "Reporter", Type: extension.SignalFieldText},
 	},
 }},
 ```
@@ -901,7 +901,7 @@ SignalTypes: []extension.SignalTypeDeclaration{{
 | `Label` | What a screen shows. It is also the summary of a signal that gives none. |
 | `Evidence` | The members a signal may carry. Each has a name, a label, a type (`SignalFieldText`, `SignalFieldNumber` or `SignalFieldBool`), and two flags. |
 | `Required` | A signal without the member is refused. |
-| `Personal` | The member holds personal data. It is removed when the contact the signal is about is erased or anonymized. |
+| `NotPersonal` | The member holds no personal data. Every member without it is personal, and is removed when the contact the signal is about is erased or anonymized. |
 
 File a signal from a handler with the core port:
 

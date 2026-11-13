@@ -18,6 +18,7 @@ import (
 	"github.com/margince/margince/backend/internal/compose/contactbrief"
 	"github.com/margince/margince/backend/internal/compose/contactdraft"
 	"github.com/margince/margince/backend/internal/compose/leaddraft"
+	"github.com/margince/margince/backend/internal/compose/loggedtouch"
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/ai"
 )
@@ -67,6 +68,7 @@ func WithContactDraft(brain completer) Option {
 		svc := contactdraft.NewService(s.contact360Svc, brain).
 			WithCoRecipients(s.contactsStore).
 			WithAboutActivities(activities.NewStore(InstallationDB(pool))).
+			WithLoggedTouches(loggedtouch.Reader{Store: activities.NewStore(InstallationDB(pool))}).
 			WithEnvelope(draftEnvelope(pool, s.log)).
 			WithEmailSummaries(emailRows(pool)).
 			WithVoice(ai.NewVoiceStore(InstallationDB(pool)), s.log)
@@ -96,6 +98,7 @@ func WithLeadDraft(brain completer) Option {
 			leadCorrespondence{activities.NewStore(InstallationDB(pool))},
 			brain,
 		).
+			WithLoggedTouches(loggedtouch.Reader{Store: activities.NewStore(InstallationDB(pool))}).
 			WithEnvelope(draftEnvelope(pool, s.log)).
 			WithVoice(ai.NewVoiceStore(InstallationDB(pool)), s.log)
 		s.firstDrafts.lead = svc

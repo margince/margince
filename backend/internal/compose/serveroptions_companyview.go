@@ -26,7 +26,9 @@ import (
 	"github.com/margince/margince/backend/internal/compose/companybrief"
 	"github.com/margince/margince/backend/internal/compose/companydossier"
 	"github.com/margince/margince/backend/internal/compose/dealstatus"
+	"github.com/margince/margince/backend/internal/compose/loggedtouch"
 	"github.com/margince/margince/backend/internal/compose/meetingbrief"
+	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/ai"
 )
 
@@ -46,6 +48,7 @@ func WithAccountDraft(brain completer) Option {
 	return func(s *Server, pool *pgxpool.Pool) {
 		svc := accountdraft.NewService(s.company360Svc, brain).
 			WithEnvelope(draftEnvelope(pool, s.log)).
+			WithLoggedTouches(loggedtouch.Reader{Store: activities.NewStore(InstallationDB(pool))}).
 			WithEmailSummaries(emailRows(pool)).
 			WithDossier(s.companyDossierSvc).
 			WithVoice(ai.NewVoiceStore(InstallationDB(pool)), s.log)

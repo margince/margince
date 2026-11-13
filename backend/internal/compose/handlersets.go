@@ -20,6 +20,7 @@ import (
 	"github.com/margince/margince/backend/internal/compose/dealstatus"
 	"github.com/margince/margince/backend/internal/compose/erasurereturn"
 	"github.com/margince/margince/backend/internal/compose/leaddraft"
+	"github.com/margince/margince/backend/internal/compose/loggedtouch"
 	"github.com/margince/margince/backend/internal/compose/meetingbrief"
 	"github.com/margince/margince/backend/internal/compose/pipelinetrace"
 	"github.com/margince/margince/backend/internal/compose/project360"
@@ -164,6 +165,7 @@ func (s *Server) wireContact360(pool *pgxpool.Pool) {
 	s.firstDrafts.contact = contactdraft.NewService(s.contact360Svc, nil).
 		WithCoRecipients(s.contactsStore).
 		WithAboutActivities(activities.NewStore(InstallationDB(pool))).
+		WithLoggedTouches(loggedtouch.Reader{Store: activities.NewStore(InstallationDB(pool))}).
 		WithEmailSummaries(emailRows(pool)).
 		WithEnvelope(draftEnvelope(pool, s.log))
 	s.contactDraftHandlers = contactdraft.NewHandlers(s.firstDrafts.contact)
@@ -171,6 +173,7 @@ func (s *Server) wireContact360(pool *pgxpool.Pool) {
 	// model answers from contactdraft's deterministic floor rather than 501-ing,
 	// and WithLeadDraft binds the api role's lane.
 	s.firstDrafts.lead = leaddraft.NewService(s.contactsStore, leadCorrespondence{activities.NewStore(InstallationDB(pool))}, nil).
+		WithLoggedTouches(loggedtouch.Reader{Store: activities.NewStore(InstallationDB(pool))}).
 		WithEnvelope(draftEnvelope(pool, s.log))
 	s.leadDraftHandlers = leaddraft.NewHandlers(s.firstDrafts.lead)
 }
