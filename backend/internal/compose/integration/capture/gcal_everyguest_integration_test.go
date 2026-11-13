@@ -333,8 +333,11 @@ func TestAMovedLinkStillTakesTheGuestsAnswer(t *testing.T) {
 	sync()
 
 	rows := answeredRows(t, e, meeting)[guestKnown]
-	if len(rows) != 1 || rows[0].response == nil || *rows[0].response != "tentative" {
-		t.Errorf("the moved row after the guest changed their answer: %+v, want one that is tentative", rows)
+	if len(rows) != 1 || rows[0].contactID == nil || *rows[0].contactID != elsewhere.UUID {
+		t.Fatalf("the guest's rows after the sync: %+v, want the one moved to the other contact", rows)
+	}
+	if rows[0].response == nil || *rows[0].response != "tentative" {
+		t.Errorf("the moved row after the guest changed their answer: %v, want tentative", rows[0].response)
 	}
 }
 

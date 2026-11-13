@@ -6,7 +6,9 @@ package capture
 // A meeting's guests are the rosters of the calendars that list it. Each row a
 // roster writes names that calendar's seat in roster_seat. The next sync of the
 // same calendar adds who joined and retires who left. Rows a member, an
-// import, mail or another calendar wrote carry no such seat and stay.
+// import, mail or another calendar wrote carry no such seat and stay. A row a
+// member relinked keeps its seat, so it still takes answers, and relinked_at
+// keeps every retirement off it.
 
 import (
 	"context"
@@ -250,7 +252,9 @@ func rosterOwnerGoneSQL(participant string) string {
 
 // retireSeatsTheOrganizerRemoved deletes a colleague's own calendar rows once
 // the organizer's complete roster no longer lists any address of theirs. Their
-// own calendar may report the removal much later, or never.
+// own calendar may report the removal much later, or never. A seat row a
+// member relinked to a contact stays: the member chose it, and no sync undoes
+// that choice.
 func retireSeatsTheOrganizerRemoved(
 	ctx context.Context, tx pgx.Tx, activityID ids.ActivityID, seat ids.UUID, addresses []string,
 ) (int, error) {
