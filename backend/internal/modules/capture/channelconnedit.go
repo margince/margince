@@ -20,7 +20,6 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
-	"github.com/margince/margince/backend/internal/modules/capture/telegram"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/platform/keyvault"
@@ -58,27 +57,27 @@ func (s *ChannelStore) ReplaceToken(ctx context.Context, id ids.UUID, token stri
 	if err := auth.RequireHuman(ctx); err != nil {
 		return err
 	}
-	if err := s.requireConnectWiring(ProviderTelegram); err != nil {
-		return err
-	}
-	if err := telegram.ValidateToken(token); err != nil {
-		return err
-	}
 	ws, ok := principal.WorkspaceID(ctx)
 	if !ok {
 		return errors.New("capture: channel token replacement called outside a workspace context")
 	}
-
 	current, err := s.readChannelRow(ctx, id)
 	if err != nil {
 		return err
 	}
-	bot, err := s.api.GetMe(ctx, token)
+	check, err := s.requireConnectWiring(current.Provider)
 	if err != nil {
 		return err
 	}
-	if err := s.clearWebhook(ctx, token); err != nil {
+	if err := check.ValidateToken(token); err != nil {
 		return err
+	}
+	bot, err := check.Confirm(ctx, current.Address, token)
+	if err != nil {
+		return err
+	}
+	if check.FixedIdentity() && bot.ID != current.ChannelID {
+		return fmt.Errorf("this token belongs to another team; disconnect the bot and connect the new one: %w", apperrors.ErrConflict)
 	}
 
 	credentialRef, err := s.sealBotToken(ctx, ws, token)
@@ -120,7 +119,7 @@ func (s *ChannelStore) ReplaceToken(ctx context.Context, id ids.UUID, token stri
 // Zero rows matched means another replacement already moved this connection on,
 // and this one would otherwise destroy the credential that winner is now polling
 // with.
-func (s *ChannelStore) repoint(ctx context.Context, current channelRow, bot telegram.Bot, credentialRef keyvault.Ref) error {
+func (s *ChannelStore) repoint(ctx context.Context, current channelRow, bot ChannelBot, credentialRef keyvault.Ref) error {
 	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
 		if _, err := storekit.LockRow(ctx, tx, "channel_connection", current.ID, storekit.LiveOnly); err != nil {
 			return err
@@ -130,13 +129,12 @@ func (s *ChannelStore) repoint(ctx context.Context, current channelRow, bot tele
 			   SET channel_id = $2, channel_label = $3, credential_ref = $4, poll_offset = 0
 			 WHERE id = $1 AND version = $5 AND archived_at IS NULL
 			 RETURNING `+channelConnectionColumns,
-			current.ID, channelIDOf(bot), bot.Username, string(credentialRef), current.Version))
+			current.ID, bot.ID, bot.Label, string(credentialRef), current.Version))
 		if err != nil {
 			return err
 		}
 		return auditLifecycle(ctx, tx, "update", channelConnectionObject, out.ID,
-			channelAuditImage(current.ChannelID, current.ChannelLabel, current.Status),
-			channelAuditImage(out.ChannelID, out.ChannelLabel, out.Status))
+			channelAuditImage(current.ChannelConnection), channelAuditImage(out))
 	})
 	if errors.Is(err, pgx.ErrNoRows) {
 		// The lock resolved a LIVE row, so the live clause held and only the
@@ -205,8 +203,7 @@ func (s *ChannelStore) archiveDisconnected(ctx context.Context, current channelR
 			return err
 		}
 		return auditLifecycle(ctx, tx, "archive", channelConnectionObject, after.ID,
-			channelAuditImage(current.ChannelID, current.ChannelLabel, current.Status),
-			channelAuditImage(after.ChannelID, after.ChannelLabel, after.Status))
+			channelAuditImage(current.ChannelConnection), channelAuditImage(after))
 	})
 	if errors.Is(err, pgx.ErrNoRows) {
 		// The lock resolved a LIVE row — an already-archived or absent one fails
@@ -226,8 +223,15 @@ func (s *ChannelStore) readChannelRow(ctx context.Context, id ids.UUID) (channel
 	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
 		row := tx.QueryRow(ctx, `SELECT `+channelConnectionColumns+`, credential_ref
 			 FROM channel_connection WHERE id = $1 AND archived_at IS NULL`, id)
-		return row.Scan(&out.ID, &out.Provider, &out.ChannelID, &out.ChannelLabel,
-			&out.Status, &out.Version, &out.CreatedAt, &out.UpdatedAt, &credentialRef)
+		var address *string
+		if err := row.Scan(&out.ID, &out.Provider, &out.ChannelID, &out.ChannelLabel, &address,
+			&out.Status, &out.Version, &out.CreatedAt, &out.UpdatedAt, &credentialRef); err != nil {
+			return err
+		}
+		if address != nil {
+			out.Address = *address
+		}
+		return nil
 	})
 	if errors.Is(err, pgx.ErrNoRows) {
 		return channelRow{}, apperrors.ErrNotFound

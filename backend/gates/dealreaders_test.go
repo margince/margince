@@ -128,6 +128,10 @@ var predicateDealReads = gatekit.Waive(map[string]string{
 // gate would admit them anyway and the entry records why asking was never the
 // point.
 var lifecycleDealReads = gatekit.Waive(map[string]string{
+	"internal/compose/chatsync/render.go:recordFacts":                           "the name, stage, status, close date and owner of the deal a chat channel is linked to, for the card the chat engine posts under its system principal. The amount is left out because it is masked per reader, and the channel's members linked the record through auth.HoldWritableLive",
+	"internal/compose/chatsync/sync.go:chatRecordQueries":                       "the deal and project ids an event touches, so the chat engine under its system principal finds the linked channels. Only ids leave the query",
+	"internal/modules/chatlinks/linkwrite.go:linkedRecords":                     "the project id of the deal being linked, read after auth.HoldWritableLive on that deal so the deal's project shares its channel. Only the id leaves, stored on the link",
+	"internal/modules/chatlinks/linkwrite.go:AdoptProject":                      "the project id of a linked deal, read under the chat engine's system principal when the deal gains a project, so the project shares its channel. Only the id leaves, stored on the link",
 	"internal/modules/initiatives/enrolment.go:estimatedJoin":                   "the upgrade task's estimate reads only the created_at of a lead or deal the membership evaluation already admitted, to date its enrolment row. It runs under the system data task, and no field of the record leaves the statement",
 	"internal/modules/assignments/memberwork.go:memberAssignmentParents":        memberStaffingMetadataReadVerdict,
 	"internal/modules/privacy/erasure_manualreview.go:manualMentionSourcesSQL":  "the contact-delete-authorized eraser selects only identifiers of retained text requiring manual review. The compose flagger selects live controllers with unrestricted row scope, no field masks and current object read permission before issuing any notification; no matched text is copied",

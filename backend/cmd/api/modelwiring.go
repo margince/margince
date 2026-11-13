@@ -297,6 +297,9 @@ func jobEnqueueOptions(
 type queueGates struct {
 	vatCheck string
 	geocode  string
+	// privateChat lets the chat a channel is linked in sit on a private
+	// address, which only dev and test allow.
+	privateChat bool
 }
 
 // geocodeEnqueueOptions wires the coordinate-lookup enqueue only when

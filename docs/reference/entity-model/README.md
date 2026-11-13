@@ -30,10 +30,10 @@ module to put a change in, read [modules.md](../modules.md).
 
 | | |
 |---|--:|
-| Tables | 365 |
-| Columns | 4460 |
-| Foreign keys | 618 |
-| Owning areas | 39 |
+| Tables | 367 |
+| Columns | 4498 |
+| Foreign keys | 623 |
+| Owning areas | 40 |
 
 ## The 12 records everything else hangs off
 
@@ -41,13 +41,13 @@ Ranked by how many foreign keys point at them.
 
 | Record | Lives in | Columns | Foreign keys pointing at it |
 |---|---|--:|--:|
-| [`app_user`](identity.md#app_user) | [identity](identity.md) | 39 | 157 |
+| [`app_user`](identity.md#app_user) | [identity](identity.md) | 39 | 158 |
 | [`company`](contacts.md#company) | [contacts](contacts.md) | 47 | 51 |
 | [`contact`](contacts.md#contact) | [contacts](contacts.md) | 38 | 49 |
 | [`activity`](activities.md#activity) | [activities](activities.md) | 87 | 46 |
-| [`deal`](deals.md#deal) | [deals](deals.md) | 49 | 30 |
+| [`deal`](deals.md#deal) | [deals](deals.md) | 49 | 31 |
 | [`lead`](contacts.md#lead) | [contacts](contacts.md) | 48 | 19 |
-| [`project`](projects.md#project) | [projects](projects.md) | 24 | 12 |
+| [`project`](projects.md#project) | [projects](projects.md) | 24 | 13 |
 | [`team`](identity.md#team) | [identity](identity.md) | 6 | 10 |
 | [`legal_entity`](contacts.md#legal_entity) | [contacts](contacts.md) | 29 | 9 |
 | [`passport`](identity.md#passport) | [identity](identity.md) | 12 | 9 |
@@ -103,6 +103,7 @@ erDiagram
 | [assurance](assurance.md) | 9 |
 | [automation](automation.md) | 3 |
 | [capture](capture.md) | 28 |
+| [chatlinks](chatlinks.md) | 2 |
 | [collections](collections.md) | 13 |
 | [commissions](commissions.md) | 1 |
 | [comms](comms.md) | 1 |
@@ -175,7 +176,7 @@ erDiagram
 | [`ai_task_run`](aiactivity.md#ai_task_run) | aiactivity | 25 | 0 |
 | [`ai_usage`](ai.md#ai_usage) | ai | 10 | 0 |
 | [`analytics_share`](compose.md#analytics_share) | compose | 16 | 0 |
-| [`app_user`](identity.md#app_user) | identity | 39 | 157 |
+| [`app_user`](identity.md#app_user) | identity | 39 | 158 |
 | [`approval`](approvals.md#approval) | approvals | 38 | 4 |
 | [`approval_autonomy_policy`](approvals.md#approval_autonomy_policy) | approvals | 12 | 0 |
 | [`approval_preference`](approvals.md#approval_preference) | approvals | 3 | 0 |
@@ -225,8 +226,10 @@ erDiagram
 | [`capture_test_mailbox_sent`](capture.md#capture_test_mailbox_sent) | capture | 8 | 0 |
 | [`capture_thread_verdict`](capture.md#capture_thread_verdict) | capture | 16 | 0 |
 | [`capture_trace`](capture.md#capture_trace) | capture | 12 | 0 |
-| [`channel_connection`](capture.md#channel_connection) | capture | 12 | 0 |
+| [`channel_connection`](capture.md#channel_connection) | capture | 14 | 1 |
 | [`channel_provider`](compose.md#channel_provider) | compose | 5 | 2 |
+| [`chat_link`](chatlinks.md#chat_link) | chatlinks | 20 | 1 |
+| [`chat_post_item`](chatlinks.md#chat_post_item) | chatlinks | 16 | 0 |
 | [`close_date_run`](deals.md#close_date_run) | deals | 15 | 2 |
 | [`close_date_run_member`](deals.md#close_date_run_member) | deals | 5 | 0 |
 | [`commission_entry`](commissions.md#commission_entry) | commissions | 18 | 1 |
@@ -282,7 +285,7 @@ erDiagram
 | [`data_task_review`](platform.md#data_task_review) | platform | 6 | 0 |
 | [`data_task_run`](platform.md#data_task_run) | platform | 22 | 0 |
 | [`data_task_run_history`](platform.md#data_task_run_history) | platform | 5 | 0 |
-| [`deal`](deals.md#deal) | deals | 49 | 30 |
+| [`deal`](deals.md#deal) | deals | 49 | 31 |
 | [`deal_acquisition_source`](deals.md#deal_acquisition_source) | deals | 12 | 1 |
 | [`deal_authorship_sweep_cursor`](deals.md#deal_authorship_sweep_cursor) | deals | 3 | 0 |
 | [`deal_correction`](deals.md#deal_correction) | deals | 19 | 0 |
@@ -394,7 +397,7 @@ erDiagram
 | [`privacy_request_proof`](consent.md#privacy_request_proof) | consent | 15 | 0 |
 | [`product`](deals.md#product) | deals | 20 | 6 |
 | [`product_translation`](deals.md#product_translation) | deals | 8 | 0 |
-| [`project`](projects.md#project) | projects | 24 | 12 |
+| [`project`](projects.md#project) | projects | 24 | 13 |
 | [`project_health_assessment`](projects.md#project_health_assessment) | projects | 10 | 1 |
 | [`project_phase_history`](projects.md#project_phase_history) | projects | 8 | 0 |
 | [`provider_applied_field`](contacts.md#provider_applied_field) | contacts | 10 | 0 |

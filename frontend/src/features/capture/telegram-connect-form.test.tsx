@@ -14,7 +14,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../../api/schema";
 import { LocaleProvider } from "../../i18n";
 import { installFetchStub, jsonResponse } from "../../testing/story-utils";
-import { TelegramConnectForm } from "./telegram-connect-form";
+import { BotConnectForm } from "./telegram-connect-form";
 
 // The inline Telegram connect form (Task 17, design §9.1/§9.2): the one
 // messaging-channel bot connects for the whole workspace through the same
@@ -58,7 +58,7 @@ afterEach(() => {
   vi.unstubAllGlobals();
 });
 
-describe("TelegramConnectForm", () => {
+describe("BotConnectForm", () => {
   it("submits the bot token and shows the resolved bot username", async () => {
     const calls: { url: string; body: unknown }[] = [];
     installFetchStub({
@@ -69,7 +69,7 @@ describe("TelegramConnectForm", () => {
     });
     const onConnected = vi.fn();
     render(
-      <TelegramConnectForm open onClose={() => {}} onConnected={onConnected} />,
+      <BotConnectForm open onClose={() => {}} onConnected={onConnected} />,
     );
     await userEvent.type(
       screen.getByLabelText("Bot token *"),
@@ -87,14 +87,60 @@ describe("TelegramConnectForm", () => {
     expect(onConnected).not.toHaveBeenCalled();
   });
 
+  it("sends a Dispact bot with its chat address, and holds it until both are set", async () => {
+    const calls: unknown[] = [];
+    installFetchStub({
+      "POST /channel-connections": (body) => {
+        calls.push(body);
+        return jsonResponse(
+          {
+            ...connectedConnection,
+            provider: "dispact",
+            channelLabel: "margince",
+            address: "https://chat.example.com",
+          },
+          201,
+        );
+      },
+    });
+    const user = userEvent.setup();
+    render(<BotConnectForm provider="dispact" open onClose={() => {}} />);
+    expect(screen.getByText(/starts with gwapp_/)).toBeInTheDocument();
+    await user.type(screen.getByLabelText("Bot token *"), "gwapp_fake");
+    const submit = screen.getByRole("button", { name: "Connect" });
+    expect(submit).toBeDisabled();
+    await user.type(
+      screen.getByLabelText("Chat address *"),
+      "https://chat.example.com",
+    );
+    await user.click(submit);
+    await waitFor(() => expect(calls).toHaveLength(1));
+    expect(calls[0]).toEqual({
+      provider: "dispact",
+      botToken: "gwapp_fake",
+      address: "https://chat.example.com",
+    });
+    expect(await screen.findByText(/@margince/)).toBeInTheDocument();
+  });
+
+  it("replaces a Dispact token without asking for the address again", async () => {
+    installFetchStub({});
+    render(
+      <BotConnectForm
+        provider="dispact"
+        open
+        onClose={() => {}}
+        connection={{ ...connectedConnection, provider: "dispact" }}
+      />,
+    );
+    expect(screen.getByLabelText("Bot token *")).toBeInTheDocument();
+    expect(screen.queryByLabelText("Chat address *")).toBeNull();
+  });
+
   it("renders a pending connection as pending, never as connected", async () => {
     installFetchStub({});
     render(
-      <TelegramConnectForm
-        open
-        onClose={() => {}}
-        connection={pendingConnection}
-      />,
+      <BotConnectForm open onClose={() => {}} connection={pendingConnection} />,
     );
     expect(await screen.findByText(/Pending/)).toBeInTheDocument();
     expect(screen.queryByText("Capturing")).not.toBeInTheDocument();
@@ -117,7 +163,7 @@ describe("TelegramConnectForm", () => {
       },
     });
     render(
-      <TelegramConnectForm
+      <BotConnectForm
         open
         onClose={() => {}}
         connection={connectedConnection}
@@ -141,9 +187,7 @@ describe("TelegramConnectForm", () => {
     installFetchStub({
       "POST /channel-connections": () => jsonResponse(connectedConnection, 201),
     });
-    const { rerender } = render(
-      <TelegramConnectForm open onClose={() => {}} />,
-    );
+    const { rerender } = render(<BotConnectForm open onClose={() => {}} />);
     await userEvent.type(
       screen.getByLabelText("Bot token *"),
       "555000111:AAG-fake-bot-father-token",
@@ -151,8 +195,8 @@ describe("TelegramConnectForm", () => {
     await userEvent.click(screen.getByRole("button", { name: "Connect" }));
     expect(await screen.findByText(/@acme_sales_bot/)).toBeInTheDocument();
 
-    rerender(<TelegramConnectForm open={false} onClose={() => {}} />);
-    rerender(<TelegramConnectForm open onClose={() => {}} />);
+    rerender(<BotConnectForm open={false} onClose={() => {}} />);
+    rerender(<BotConnectForm open onClose={() => {}} />);
 
     // Rotating the token is the next thing this form is for, and a stale
     // success view offers only a Done button — no way back to the field
@@ -177,7 +221,7 @@ describe("TelegramConnectForm", () => {
           409,
         ),
     });
-    render(<TelegramConnectForm open onClose={() => {}} />);
+    render(<BotConnectForm open onClose={() => {}} />);
     await userEvent.type(
       screen.getByLabelText("Bot token *"),
       "555000111:AAG-fake-bot-father-token",

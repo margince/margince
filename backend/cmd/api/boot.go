@@ -432,7 +432,7 @@ func modelAndHandoffOptions(ctx context.Context, cfg apiConfig, bootstrap deploy
 		return nil, nil, err
 	}
 	handoffOpts, err := workerHandoffOptions(pool, logger, modelPath,
-		queueGates{vatCheck: cfg.vatCheckBaseURL, geocode: cfg.geocodeBaseURL})
+		queueGates{vatCheck: cfg.vatCheckBaseURL, geocode: cfg.geocodeBaseURL, privateChat: cfg.posture.IsNonProduction()})
 	if err != nil {
 		return nil, nil, err
 	}
@@ -474,6 +474,9 @@ func workerHandoffOptions(
 		// An approved import commits, and an undo reverses, in the worker: the
 		// move and its job are one transaction, so the 202 means work is queued.
 		compose.WithImportJobs(sendInserter),
+		// A chat link's card is posted by the worker. This follows
+		// WithChannelSurface, so a Dispact bot connects beside Telegram.
+		compose.WithChatLinks(sendInserter, gates.privateChat),
 	}
 
 	enqueueOpts, err := jobEnqueueOptions(pool, logger, modelPath, gates)
