@@ -47,14 +47,26 @@ func TestTheFloorPlanGivesNoCoachingPaths(t *testing.T) {
 	}
 }
 
-// A coach line that only restates the play says nothing a lead needs, and is dropped.
-func TestACoachLineThatRepeatsThePlayIsDropped(t *testing.T) {
+// A coach line is kept only as a sound recommendation to the lead. Restating
+// the play, naming a shown ref, opening with the writer, or a figure no cited
+// record carries each leave the branch without one.
+func TestAnUnsoundCoachLineIsDropped(t *testing.T) {
 	in := fullInput()
-	reply := strings.Replace(coachedReply,
-		"Watch whether the rep trades scope for price; ask them what budget the buyer named.",
-		"Anchor on the agreed outcome, not the list.", 1)
-	plan, _ := writtenPlan(t, reply, in)
-	if paths := briefCopyFor(in.Language).coachingFor(plan).Paths; len(paths) != 0 {
-		t.Errorf("paths = %+v, want none for a coach line equal to its play", paths)
+	ref := planRefs(in, floorFor(in)).Show(activityID)
+	for name, coach := range map[string]string{
+		"restates the play":   "Anchor on the agreed outcome, not the list.",
+		"names a shown ref":   "Ask the rep what " + ref + " says about the budget.",
+		"opens with a writer": "I would ask the rep what budget the buyer named.",
+		"invents a figure":    "Watch whether the rep concedes the 15% discount finance asked for.",
+	} {
+		reply := strings.Replace(coachedReply,
+			"Watch whether the rep trades scope for price; ask them what budget the buyer named.", coach, 1)
+		plan, _ := writtenPlan(t, reply, in)
+		if paths := briefCopyFor(in.Language).coachingFor(plan).Paths; len(paths) != 0 {
+			t.Errorf("%s: paths = %+v, want none", name, paths)
+		}
+		if len(plan.Scenarios) == 0 || plan.Scenarios[0].Label != "They push on price" {
+			t.Errorf("%s: the branch itself was lost: %+v", name, plan.Scenarios)
+		}
 	}
 }

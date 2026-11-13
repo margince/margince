@@ -282,6 +282,18 @@ func keptQuestions(raw []replyQuestion, known map[Evidence]string) []Question {
 	return out
 }
 
+// keptCoach is the scenario's coach line when it holds as a recommendation to
+// the lead: grounded in the branch's own records, no id, no writer opener, and
+// not the play again. Anything else leaves the branch without a coach line.
+func keptCoach(scenario replyScenario, cited []Evidence, known map[Evidence]string) string {
+	coach := strings.TrimSpace(scenario.Coach)
+	if coach == "" || spellsAnID(coach) || normalisedSubject(coach) == normalisedSubject(scenario.Play) ||
+		claims.OpensWithWriterSubject(coach) || !groundedLine(Sentence{Text: coach, Evidence: cited}, known) {
+		return ""
+	}
+	return coach
+}
+
 func keptScenarios(raw []replyScenario, known map[Evidence]string) []Scenario {
 	out := make([]Scenario, 0, len(raw))
 	for _, scenario := range raw {
@@ -299,12 +311,7 @@ func keptScenarios(raw []replyScenario, known map[Evidence]string) []Scenario {
 		if !groundedEvidenceOnly(cited, known) {
 			continue
 		}
-		coach := strings.TrimSpace(scenario.Coach)
-		// A coach line that spells an id, or only restates the play, gives the lead nothing.
-		if spellsAnID(coach) || normalisedSubject(coach) == normalisedSubject(scenario.Play) {
-			coach = ""
-		}
-		out = append(out, Scenario{Label: scenario.Label, Play: scenario.Play, Coach: coach, Evidence: cited})
+		out = append(out, Scenario{Label: scenario.Label, Play: scenario.Play, Coach: keptCoach(scenario, cited, known), Evidence: cited})
 	}
 	return out
 }

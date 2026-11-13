@@ -248,11 +248,11 @@ export const briefManager: MeetingBrief = {
       paths: [
         {
           label: "It becomes a price negotiation",
-          play: "Anchor on the outcome agreed, not the list.",
+          play: "Watch whether the rep trades scope for price; ask what budget the buyer named.",
         },
         {
           label: "A new stakeholder appears",
-          play: "Stop selling and qualify them.",
+          play: "Watch who the rep sells to; ask what the new person decides.",
         },
       ],
     },
