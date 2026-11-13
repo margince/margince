@@ -22,7 +22,10 @@ import { Heading } from "../../design-system/heading";
 import { NoteMarkdown } from "../../design-system/markdown";
 import { Panel, PanelBody } from "../../design-system/panel";
 import { SurfaceState } from "../../design-system/surfacestate";
-import { TIMELINE_KIND_LABEL } from "../../design-system/timelineentry";
+import {
+  AiAssistedFlag,
+  TIMELINE_KIND_LABEL,
+} from "../../design-system/timelineentry";
 import { isTranscriptActivity } from "../../design-system/transcriptread";
 import { formatActivityWhen } from "../../format/activitywhen";
 import { formatDue, formatNumber } from "../../format/format";
@@ -125,6 +128,7 @@ function ActivityDetail({
     >
       <DrawerHead>
         {activity?.archived_at && <Badge>{t("record.archived")}</Badge>}
+        <AiAssistedFlag entry={{ aiAssisted: activity?.ai_assisted }} />
         {activity && (
           <Eyebrow>{t(labelFor(TIMELINE_KIND_LABEL, activity.kind))}</Eyebrow>
         )}
@@ -269,8 +273,7 @@ function ActivityBody({
               readOnly={!canUpdate || Boolean(activity.archived_at)}
               update={update}
               onClose={() => setOpened(null)}
-              // The follow-up's source is this activity, already open under
-              // it, so opening it returns there.
+              // The follow-up's source is this activity, already open under it.
               openerFor={(ref) =>
                 ref.id === activity.id ? () => setOpened(null) : undefined
               }

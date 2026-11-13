@@ -37,7 +37,7 @@ setup instead, go to [Can I use this preset?](#can-i-use-this-preset).
 | Gemini | `gemini-3.1-flash-lite`, `gemini-3.6-flash` | 🟡 Mostly | Ready for 41 of the 56 features we tested; 14 more work if someone looks over the result; 1 not reliable yet. |
 | GPT | `gpt-6-luna`, `gpt-6-sol`, `gpt-oss-120b` | 🟡 Mostly | Ready for 35 of the 52 features we tested; 14 more work if someone looks over the result; 3 not reliable yet. |
 | Mistral | `ministral-14b-2512`, `ministral-8b-2512`, `mistral-medium-3-5` | 🟡 Mostly | Ready for 24 of the 44 features we tested; 12 more work if someone looks over the result; 8 not reliable yet. |
-| Gemma | `gemma-4-26b-a4b-it` | ⚪ Not enough tested yet | Tested on only 6 of the 56 features. Ask before relying on it. |
+| Gemma | `gemma-4-26b-a4b-it` | ⚪ Not enough tested yet | Tested on only 6 of the 57 features. Ask before relying on it. |
 
 A family rated **Yes** is ready for every feature we tested. One rated **Mostly** has at least 80 in every 100 tested features ready or working with a check, and one rated **Not yet** has fewer. We say **Not enough tested yet** when we tested it on under half of the features. A family is judged on its best model for each feature, and only on the models a preset uses, each on the features that preset sends to it.
 
@@ -888,7 +888,7 @@ well the others do.
 | Quality opinions per try | 1; a 2nd when it is within 10 points of a bar or under the lowest, a 3rd when the two are more than 5 apart; the middle one counts |
 | How sure every bound is | one-sided 90% (z = 1.2816 for a pass rate, Student's t for an average score, whose spread is taken as at least 5 points) |
 | Quality bar 70 / 50 / 40: 156 test cases | ✅ Ready needs scores averaging at least 70, allowing for doubt, no case whose best-case average is under 70, and no single try under 40; ⚠️ Usable with care needs at least 50, and no case whose best-case average is under 40 |
-| Quality bar 80 / 60 / 50: 22 test cases | ✅ Ready needs scores averaging at least 80, allowing for doubt, no case whose best-case average is under 80, and no single try under 50; ⚠️ Usable with care needs at least 60, and no case whose best-case average is under 50 |
+| Quality bar 80 / 60 / 50: 26 test cases | ✅ Ready needs scores averaging at least 80, allowing for doubt, no case whose best-case average is under 80, and no single try under 50; ⚠️ Usable with care needs at least 60, and no case whose best-case average is under 50 |
 | Quality bar 75 / 55 / 45: 2 test cases | ✅ Ready needs scores averaging at least 75, allowing for doubt, no case whose best-case average is under 75, and no single try under 45; ⚠️ Usable with care needs at least 55, and no case whose best-case average is under 45 |
 
 All of these live in [`backend/internal/compose/aicert/thresholds.go`](../../backend/internal/compose/aicert/thresholds.go) (quality bars: in each test case's file); change them there and regenerate this page.
@@ -1159,7 +1159,7 @@ under [Certification by provider and model](#certification-by-provider-and-model
 
 ### Gemma
 
-⚪ Not enough tested yet: Tested on only 6 of the 56 features. Ask before relying on it.
+⚪ Not enough tested yet: Tested on only 6 of the 57 features. Ask before relying on it.
 
 6 of these results were measured on an older version of the product and are re-check pending.
 
@@ -1190,12 +1190,12 @@ under [Certification by provider and model](#certification-by-provider-and-model
 
 | | |
 |---|---:|
-| Shipped invocation sites | 56 |
+| Shipped invocation sites | 57 |
 | … best state `current` | 48 |
 | … best state `partial` | 0 |
 | … best state `stale` | 8 |
-| … `absent` on every binding | 0 |
-| Scenarios in the corpus | 316 |
+| … `absent` on every binding | 1 |
+| Scenarios in the corpus | 320 |
 | Committed records | 355 |
 | Bindings measured | 16 |
 
@@ -1259,7 +1259,7 @@ today. It says nothing about how well the model did; that is the band.
 <details>
 <summary>Every site, and the best model tested on it</summary>
 
-### Index of sites (56)
+### Index of sites (57)
 
 Which model to run each site on, and what that choice rests on.
 
@@ -1289,6 +1289,7 @@ Which model to run each site on, and what that choice rests on.
 | [`draft_reply/intro`](#draft_replyintro) | `openai_compatible · mistralai/mistral-medium-3-5 · cloud_frontier` | `certified` | 1.00 | `current` | 2 | 12 |
 | [`draft_reply/intro_note`](#draft_replyintro_note) | `gemini · gemini-3.1-flash-lite · cloud_frontier` | `certified` | 1.00 | `current` | 3 | 12 |
 | [`draft_reply/reply`](#draft_replyreply) | - | - | - | `stale` | 5 | 12 |
+| [`draft_reply/rewrite`](#draft_replyrewrite) | - | - | - | `absent` | 4 | 0 |
 | [`enrich/signature`](#enrichsignature) | `gemini · gemini-3.1-flash-lite · cloud_frontier` | `certified` | 1.00 | `current` | 4 | 9 |
 | [`growth_fit/growth_fit`](#growth_fitgrowth_fit) | `openai_compatible · google/gemma-4-31b-it · cloud_frontier` | `certified` | 1.00 | `current` | 2 | 12 |
 | [`nl_search/filter_propose`](#nl_searchfilter_propose) | `gemini · gemini-3.1-flash-lite · cloud_frontier` | `certified` | 1.00 | `current` | 9 | 12 |
@@ -2526,6 +2527,26 @@ Records (12):
 | `openai_compatible · openai/gpt-6-sol · cloud_frontier` | `stale` | 0/5 | `certified` | 12 | 12 | 1.00 | 5013ms | 9755ms | 12 | 0 | 0 | 0 |
 | `openai_compatible · openai/gpt-oss-120b · cloud_frontier` | `stale` | 0/5 | `supported_degraded` | 39 | 39 | 1.00 | 1083ms | 1834ms | 39 | 0 | 0 | 0 |
 | `openai_compatible · qwen/qwen3.8-27b · cloud_frontier` | `stale` | 0/5 | `supported_degraded` | 24 | 24 | 1.00 | 51998ms | 89773ms | 24 | 0 | 0 | 0 |
+
+</details>
+
+<details>
+<summary><code>draft_reply/rewrite</code>: 4 scenario(s), 0 record(s), best state absent</summary>
+
+##### `draft_reply/rewrite`
+
+Scope a run of it can claim: `full_invocation`.
+
+Scenarios (4):
+
+| Scenario | Expects | Quality | Case |
+|---|---|---|---|
+| `draft_reply_rewrite_email_shorter_keeps_the_ask` | `accepted` | judge | [rewrite_email_shorter_keeps_the_ask_01.yaml](../../backend/internal/compose/aicert/corpus/draft_reply/rewrite_email_shorter_keeps_the_ask_01.yaml) |
+| `draft_reply_rewrite_german_note_stays_german` | `accepted` | judge | [rewrite_german_note_stays_german_01.yaml](../../backend/internal/compose/aicert/corpus/draft_reply/rewrite_german_note_stays_german_01.yaml) |
+| `draft_reply_rewrite_instruction_in_note_is_data` | `accepted` | judge | [rewrite_instruction_in_note_is_data_01.yaml](../../backend/internal/compose/aicert/corpus/draft_reply/rewrite_instruction_in_note_is_data_01.yaml) |
+| `draft_reply_rewrite_task_keeps_names_and_dates` | `accepted` | judge | [rewrite_task_keeps_names_and_dates_01.yaml](../../backend/internal/compose/aicert/corpus/draft_reply/rewrite_task_keeps_names_and_dates_01.yaml) |
+
+No record: this site has never been certified on any binding.
 
 </details>
 

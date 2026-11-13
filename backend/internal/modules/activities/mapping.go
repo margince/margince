@@ -202,6 +202,7 @@ func activityUpdateInput(req crmcontracts.UpdateActivityRequest, ifVersion *int6
 		MeetingIntent:     req.MeetingIntent,
 		DueHasTime:        req.DueHasTime,
 		TaskType:          req.TaskType,
+		AIAssisted:        req.AiAssisted,
 		RemindAt:          req.RemindAt,
 		AssigneeID:        idArg[ids.UserKind](req.AssigneeId),
 		IsDone:            req.IsDone,
@@ -331,6 +332,8 @@ func logActivityInput(req crmcontracts.CreateActivityRequest, adm provenanceAdmi
 		DueAt:          req.DueAt,
 		DueHasTime:     req.DueHasTime != nil && *req.DueHasTime,
 		TaskType:       req.TaskType,
+		AIAssisted:     req.AiAssisted != nil && *req.AiAssisted,
+		AIAssistedOn:   linkInputOf(req.AiAssistedOn),
 		RemindAt:       req.RemindAt,
 		SourceSystem:   req.SourceSystem,
 		SourceID:       req.SourceId,
@@ -485,4 +488,12 @@ func importedProvenanceFrom(req crmcontracts.CreateActivityRequest, in *LogActiv
 	}
 	in.DurationSeconds = req.DurationSeconds
 	return mailIdentityFrom(req, in)
+}
+
+// linkInputOf reads one contract link as the store's, nil for none.
+func linkInputOf(link *crmcontracts.ActivityLink) *ActivityLinkInput {
+	if link == nil {
+		return nil
+	}
+	return &ActivityLinkInput{EntityType: string(link.EntityType), EntityID: ids.UUID(link.EntityId)}
 }

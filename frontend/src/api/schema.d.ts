@@ -6583,6 +6583,46 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/rewrites": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Rewrite the words a rep has on screen under one rewrite verb.
+         * @description The one rewrite path behind the email composer's Polish, Shorter, Warmer, More formal and
+         *     Add a deadline, and behind Polish wording in Add task and Log activity. `envelope` says
+         *     which words these are: the body of an `email` being written, or the subject and details of
+         *     a `note` or task. A note takes `polish` only. The server holds the instruction each verb
+         *     stands for; the client names the verb.
+         *
+         *     The model keeps the meaning, the language the text is written in, names, numbers, dates,
+         *     email addresses and links. A reply that loses one of them, changes language or drops a
+         *     question is refused and asked again. `language` is the reader's interface language; it
+         *     decides only for text too short to place. Nothing is stored. A rep saves polished note
+         *     words with `ai_assisted: true` on `POST /activities`.
+         *
+         *     Needs `activity:create` and read access to `about`, the record the words are written on:
+         *     the record the note is logged on, or the record or message the email is written from. An
+         *     `about` the caller cannot read answers 404, the same as one that does not exist, before
+         *     anything reads it. A message counts as readable only when its content is. With no AI model
+         *     it answers 409 `ai_not_configured`. When a contact on that record, or a lead's address,
+         *     is under a restriction of processing it answers 409 `subject_restricted` and no model
+         *     reads the words. Text with neither a subject nor a body is 422 `required` naming `body`;
+         *     text past what one answer can carry is 422 `too_long`. A model that was asked and did not
+         *     answer is 503 `assistant_unavailable`.
+         */
+        post: operations["rewriteText"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/activities/{id}/pipeline": {
         parameters: {
             query?: never;
@@ -41776,6 +41816,8 @@ export interface components {
             channel_provider?: components["schemas"]["ProviderRef"] | null;
             subject?: string | null;
             body?: string | null;
+            /** @description Whether an AI model rewrote the subject or body before it was saved, so a reader sees the words as AI-assisted. Set when the activity is logged and kept through later edits: a human who tidies model words still saved model words. Absent means false. Withheld with the content. */
+            readonly ai_assisted?: boolean;
             /**
              * @description What language this message is written in, read from its own text when it was captured, or when a note, meeting or call was logged or its text edited. Null on a message whose text was too short to tell, on a hand-logged email or task, and on every row written before this was recorded — all of which mean "not known", never "not any of these".
              *     A detector's observation, not a declaration by its author, and it describes the message rather than the contact: the same contact writes in two languages and each message says which it is. A drafted reply follows it, so that a reply to an English thread is written in English whatever language its sender's own writing samples happen to be in.
@@ -42247,6 +42289,10 @@ export interface components {
         };
         /** @description The workspace's active activity custom fields travel as extra top-level `cf_` keys. A key that is not `cf_`-prefixed, names no active activity field, or carries a value of the wrong shape for its field returns `422`. A value for a field that does not apply to the activity's kind returns `422 field_not_valid_for_kind`. */
         CreateActivityRequest: {
+            /** @description True when an AI model rewrote the subject or body the caller sends, as Polish wording (`POST /rewrites`) does. The activity then reads `ai_assisted`. Needs `ai_assisted_on`. Only a human sets it: an agent or a connector is refused with 422 on `ai_assisted`. Absent means false. */
+            ai_assisted?: boolean;
+            /** @description The `about` record the words were polished on. Required with `ai_assisted: true`. It must be one of `links` or the record `deal_filing` names as the form's start, or the create is refused with 422 on `ai_assisted_on`. */
+            ai_assisted_on?: components["schemas"]["ActivityLink"];
             /** @description Task only: the kind of work, which decides its one button. */
             task_type?: components["schemas"]["TaskType"];
             meeting_intent?: components["schemas"]["IntentTime"];
@@ -42607,6 +42653,8 @@ export interface components {
         };
         /** @description A sparse patch. The workspace's active activity custom fields travel as extra top-level `cf_` keys, and an explicit `null` clears one. A key that is not `cf_`-prefixed, names no active activity field, or carries a value of the wrong shape for its field returns `422`. A value for a field that does not apply to the stored kind returns `422 field_not_valid_for_kind`; a `null` clears it all the same. */
         UpdateActivityRequest: {
+            /** @description True marks the activity's words as AI-assisted, when a model rewrote the subject or body this patch writes. The mark stays once set, so false and absent change nothing. Only a human sets it: an agent or a connector is refused with 422 on `ai_assisted`. */
+            ai_assisted?: boolean;
             /** @description Task only: the kind of work, which decides its one button. */
             task_type?: components["schemas"]["TaskType"];
             meeting_intent?: components["schemas"]["IntentTime"];
@@ -45982,6 +46030,52 @@ export interface components {
             generated_parts?: ("subject" | "body")[];
             /** Format: int64 */
             source_version?: number;
+        };
+        RewriteRequest: {
+            /**
+             * @description Which words these are: an email body being written, or a note or task.
+             * @enum {string}
+             */
+            envelope: "email" | "note";
+            /**
+             * @description The rewrite asked for. A note takes `polish` only.
+             * @enum {string}
+             */
+            verb: "polish" | "shorter" | "warmer" | "formal" | "deadline";
+            /** @description A note's title. An email's subject is not rewritten. */
+            subject?: string;
+            /** @description The words on screen: an email body as plain text, a note's details as markdown. */
+            body?: string;
+            /**
+             * @description The reader's interface language.
+             * @enum {string}
+             */
+            language: "en" | "de" | "vi";
+            about: components["schemas"]["RewriteAbout"];
+        };
+        /** @description The record the words are written on. Its contacts' restriction of processing is honoured, and for a lead the lead's own address. */
+        RewriteAbout: {
+            /** @enum {string} */
+            entity_type: "contact" | "company" | "deal" | "lead" | "project" | "activity";
+            /** Format: uuid */
+            entity_id: string;
+        };
+        Rewrite: {
+            /** @description The rewritten title; empty when none was sent. */
+            subject: string;
+            /** @description The rewritten words; empty when none were sent. */
+            body: string;
+            /**
+             * @description The language the words are written in, and the notice below.
+             * @enum {string}
+             */
+            language: "en" | "de" | "vi";
+            /** @description The provenance notice shown beside the rewritten words. */
+            ai_disclosure: string;
+            /** @description The Voice DNA profile version that styled an email rewrite; null when none did, and always on a note. */
+            voice_profile_version?: number | null;
+            /** @description True when the sender's voice could not be looked up for an email rewrite, so it may lack a voice its sender built. */
+            voice_degraded?: boolean;
         };
         ActivityReaderRenderingRequest: {
             /** @enum {string} */
@@ -71812,6 +71906,44 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ActivityReaderRendering"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+            422: components["responses"]["ValidationError"];
+            /** @description The model was asked and did not answer (`code: assistant_unavailable`). */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    rewriteText: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RewriteRequest"];
+            };
+        };
+        responses: {
+            /** @description The rewritten words. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Rewrite"];
                 };
             };
             401: components["responses"]["Unauthorized"];

@@ -1,5 +1,5 @@
 <!-- prose:plain -->
-<!-- describes: frontend/src/design-system/provenance.tsx frontend/src/design-system/readerrendering.tsx backend/internal/compose/readerrendering frontend/src/app/ai-activity.ts frontend/src/app/agentrail.tsx frontend/src/features/voice-knowledge/documentextraction.tsx backend/internal/modules/aiactivity backend/internal/modules/ai backend/internal/platform/providerhealthstore backend/internal/compose/projecthealthscan.go -->
+<!-- describes: frontend/src/components/logactivity.polish.tsx backend/internal/compose/rewrite frontend/src/design-system/provenance.tsx frontend/src/design-system/readerrendering.tsx backend/internal/compose/readerrendering frontend/src/app/ai-activity.ts frontend/src/app/agentrail.tsx frontend/src/features/voice-knowledge/documentextraction.tsx backend/internal/modules/aiactivity backend/internal/modules/ai backend/internal/platform/providerhealthstore backend/internal/compose/projecthealthscan.go -->
 # What the AI does, and what it does not
 
 What the AI makes for you, and how to read it. The rules that limit it (the
@@ -31,6 +31,12 @@ To have Margince draft an email, open the composer from a contact's page and cho
 
 Check and edit the draft, fill in **Reason for contact** when it asks, then choose **Send**; nothing asks again. The AI never adds a sign-off; you set your signature in **Settings → Account**.
 Also called: AI writer, write a reply, compose with AI.
+
+### Can the AI make a task or note I typed read clearly?
+Yes. In **Log activity** and **Add task**, once you have typed a **Subject** or **Details**, choose **Polish wording**. The AI writes them again so they read clearly. It keeps the language you wrote in, and names, numbers, dates and links stay as they were.
+
+**Undo** brings your own words back until you change the new ones. A saved entry with AI words shows **AI-assisted** in History. With no AI model connected, or on a record whose contact asked that their data not be processed, the button says why. A transcript is never changed.
+Also called: fix my wording, rewrite a note, clean up a task.
 
 ### How do I get the AI to read a document for deal fields?
 To fill deal fields from a file, open the company's **Documents** tab and file the document on a deal with **Add document**. Choose **A deal**, not **This company**. Then choose **Show extracted fields** on that document, and **Read this file**.

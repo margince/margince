@@ -206,6 +206,8 @@ func coldStartOptions(modelPath *compose.ModelPath, routingVersion string) []com
 		compose.WithRoleProposals(modelPath.ProposeRoles),
 		compose.WithFilterProposals(modelPath.NlSearch),
 		compose.WithReaderRendering(modelPath.ReaderRendering),
+		// The rewrite verbs ride the drafting lane, in the composer and in Add task.
+		compose.WithRewrite(modelPath.DraftReply),
 		// The Sales review's assessment caches per reader, so it carries the
 		// routing version like the other cached writers.
 		compose.WithSalesAssessment(modelPath.ReportInterpret, routingVersion),

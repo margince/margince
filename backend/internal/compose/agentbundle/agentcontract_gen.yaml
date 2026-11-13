@@ -39603,6 +39603,11 @@ components:
             The kind says what sort of interaction happened; this says what carried it.
         subject: {type: [string, 'null']}
         body: {type: [string, 'null']}
+        ai_assisted:
+          type: boolean
+          readOnly: true
+          description: >-
+            Whether an AI model rewrote the subject or body before it was saved, so a reader sees the words as AI-assisted. Set when the activity is logged and kept through later edits: a human who tidies model words still saved model words. Absent means false. Withheld with the content.
         language:
           type: [string, 'null']
           readOnly: true
@@ -39994,6 +39999,14 @@ components:
       type: object
       required: [kind, source]
       properties:
+        ai_assisted:
+          type: boolean
+          description: >-
+            True when an AI model rewrote the subject or body the caller sends, as Polish wording (`POST /rewrites`) does. The activity then reads `ai_assisted`. Needs `ai_assisted_on`. Only a human sets it: an agent or a connector is refused with 422 on `ai_assisted`. Absent means false.
+        ai_assisted_on:
+          allOf: [{$ref: '#/components/schemas/ActivityLink'}]
+          description: >-
+            The `about` record the words were polished on. Required with `ai_assisted: true`. It must be one of `links` or the record `deal_filing` names as the form's start, or the create is refused with 422 on `ai_assisted_on`.
         task_type:
           allOf: [{$ref: '#/components/schemas/TaskType'}]
           description: 'Task only: the kind of work, which decides its one button.'
@@ -40344,6 +40357,10 @@ components:
     UpdateActivityRequest:
       type: object
       properties:
+        ai_assisted:
+          type: boolean
+          description: >-
+            True marks the activity's words as AI-assisted, when a model rewrote the subject or body this patch writes. The mark stays once set, so false and absent change nothing. Only a human sets it: an agent or a connector is refused with 422 on `ai_assisted`.
         task_type:
           allOf: [{$ref: '#/components/schemas/TaskType'}]
           description: 'Task only: the kind of work, which decides its one button.'

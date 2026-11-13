@@ -163,6 +163,7 @@ type Server struct {
 	dealStatusHandlers
 	roomBriefHandlers
 	readerRenderingHandlers
+	rewriteHandlers
 	contactResearchHandlers
 	contactDraftHandlers
 	leadDraftHandlers

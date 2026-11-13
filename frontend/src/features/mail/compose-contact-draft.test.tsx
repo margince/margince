@@ -24,6 +24,7 @@ import {
   previewedAddresses,
 } from "../../testing/sendpermission.testkit";
 import { ComposeModal } from "./compose";
+import { REWRITE_ROUTE, rewrittenBody } from "./compose.testkit";
 
 // Drafting to a CONTACT, from the contact's own page.
 //
@@ -190,6 +191,7 @@ describe("drafting to a contact", () => {
   it("sends the draft on screen when the reader asks for a rewrite", async () => {
     const sent = stubRoutes({
       "POST /contacts/c-1/draft-email": () => jsonResponse(CONTACT_DRAFT),
+      [REWRITE_ROUTE]: () => rewrittenBody("Kürzer.", "de"),
     });
     render(
       <ComposeModal
@@ -208,19 +210,14 @@ describe("drafting to a contact", () => {
 
     await userEvent.click(screen.getByRole("button", { name: "Shorter" }));
 
-    await waitFor(() => {
-      const calls = sent.filter(
-        (c) => c.key === "POST /contacts/c-1/draft-email",
-      );
-      expect(calls.length).toBe(2);
-    });
-    const rewrite = sent.filter(
-      (c) => c.key === "POST /contacts/c-1/draft-email",
-    )[1];
-    expect(rewrite.body).toEqual({
-      intent: "Keep the meaning and use fewer words.",
-      rewrite_of: CONTACT_DRAFT.body,
-      subject: CONTACT_DRAFT.subject,
+    await waitFor(() =>
+      expect(sent.some((c) => c.key === REWRITE_ROUTE)).toBe(true),
+    );
+    expect(sent.find((c) => c.key === REWRITE_ROUTE)?.body).toMatchObject({
+      envelope: "email",
+      verb: "shorter",
+      body: CONTACT_DRAFT.body,
+      about: { entity_type: "contact", entity_id: "c-1" },
     });
   });
 

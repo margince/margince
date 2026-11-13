@@ -16,7 +16,7 @@ import (
 // undeclared, which a task that honours restrictions of processing refuses.
 // A contact is named by id or by a mail address it holds. An activity, a
 // company, a deal, a project and a deal room stand for every contact on or
-// linked to it.
+// linked to it. A lead stands for itself.
 type Subjects struct {
 	Contacts   []ids.UUID
 	Addresses  []string
@@ -25,6 +25,7 @@ type Subjects struct {
 	Deals      []ids.UUID
 	Projects   []ids.UUID
 	Rooms      []ids.UUID
+	Leads      []ids.UUID
 	// NoContact is why a request naming nothing carries no contact's data.
 	// Only AboutNoContact sets it.
 	NoContact string
@@ -32,7 +33,7 @@ type Subjects struct {
 
 // Empty reports a set that names no record.
 func (s Subjects) Empty() bool {
-	return len(s.Contacts)+len(s.Addresses)+len(s.Activities)+len(s.Companies)+len(s.Deals)+len(s.Projects)+len(s.Rooms) == 0
+	return len(s.Contacts)+len(s.Addresses)+len(s.Activities)+len(s.Companies)+len(s.Deals)+len(s.Projects)+len(s.Rooms)+len(s.Leads) == 0
 }
 
 // AboutContacts declares the contacts a request carries.
@@ -88,6 +89,11 @@ func (s *Subjects) String() string {
 	if s == nil {
 		return "<undeclared>"
 	}
-	return fmt.Sprintf("{Contacts:%v Addresses:%v Activities:%v Companies:%v Deals:%v Projects:%v Rooms:%v NoContact:%q}",
-		s.Contacts, s.Addresses, s.Activities, s.Companies, s.Deals, s.Projects, s.Rooms, s.NoContact)
+	leads := ""
+	// Printed only when named, so a set without leads prints as it always did.
+	if len(s.Leads) > 0 {
+		leads = fmt.Sprintf(" Leads:%v", s.Leads)
+	}
+	return fmt.Sprintf("{Contacts:%v Addresses:%v Activities:%v Companies:%v Deals:%v Projects:%v Rooms:%v%s NoContact:%q}",
+		s.Contacts, s.Addresses, s.Activities, s.Companies, s.Deals, s.Projects, s.Rooms, leads, s.NoContact)
 }

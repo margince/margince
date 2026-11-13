@@ -51,6 +51,8 @@ type activityScan struct {
 	// dueHasTime is answered on a task only; the column is false on every
 	// other kind and means nothing there.
 	dueHasTime bool
+	// aiAssisted is withheld with the content it describes.
+	aiAssisted bool
 	taskType   *string
 	// replyChannel is how the message a reply task answers came in.
 	replyChannel *string
@@ -125,6 +127,7 @@ var activityProjection = []activityColumn{
 	{"a.channel_provider", func(s *activityScan) any { return &s.channelProvider }},
 	{"a.subject", func(s *activityScan) any { return &s.a.Subject }},
 	{"a.body", func(s *activityScan) any { return &s.a.Body }},
+	{"a.ai_assisted", func(s *activityScan) any { return &s.aiAssisted }},
 	{occurredday.BookedStartSQL("a"), func(s *activityScan) any { return &s.a.OccurredAt }},
 	{"a.occurred_precision", func(s *activityScan) any { return &s.occurredPrecision }},
 	{"a.direction", func(s *activityScan) any { return &s.direction }},
@@ -451,6 +454,9 @@ func (s *activityScan) contentProjection(ctx context.Context, a *crmcontracts.Ac
 		threadKey, captureLabel, audienceReason = nil, nil, nil
 	}
 	a.ContentState = &state
+	if s.contentAvailable && s.aiAssisted {
+		a.AiAssisted = new(true)
+	}
 	if s.contentAvailable {
 		a.SystemDisplay = activitySystemDisplay(ctx, s.systemText, a.Subject, a.Body, s.version)
 	}

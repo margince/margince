@@ -2806,6 +2806,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "history.field.relationship_types": "Beziehungstypen",
   "history.field.due_has_time": "Fällig zu einer Uhrzeit",
   "history.field.task_type": "Aufgabentyp",
+  "history.field.ai_assisted": "KI-gestützt",
   "history.field.call_outcome": "Ergebnis des Anrufs",
   "history.field.remind_at": "Erinnerung",
   "history.field.remind_intent": "Erinnerung (Ortszeit)",
@@ -7558,6 +7559,13 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "log.transcriptLabel": "Transkript",
   "log.transcriptHint":
     "Füge ein Transkript eines Anrufs oder Termins ein. Vorhandene Sprecherangaben bleiben erhalten.",
+  "log.polish": "Formulierung glätten",
+  "log.polishPending": "Wird geglättet",
+  "log.polishNoModel":
+    "Zum Glätten braucht es ein KI-Modell. Ein Admin kann es unter Einstellungen → KI verbinden.",
+  "log.polishRestricted":
+    "Ein Kontakt in diesem Datensatz hat der Verarbeitung seiner Daten widersprochen, deshalb liest keine KI diesen Text.",
+  "log.polishTooLong": "Dieser Text ist zu lang zum Glätten.",
   "log.recordOfMeeting": "Ist das der Eintrag zu {subject}, {time}?",
   "log.recordOfMeetingUntitled": "dem Termin",
   "log.recordOfMeetingYes":
@@ -7923,21 +7931,13 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "compose.draftLanguage": "Sprache des Entwurfs",
   "compose.rewrite": "Umschreiben",
   "compose.rewritePolish": "Glätten",
-  "compose.rewritePolishAsk":
-    "Wortwahl und Lesefluss verbessern. Bedeutung, Fakten und Länge beibehalten.",
   "compose.rewriteFormatted":
     "Umschreiben geht nur bei reinem Text. Entferne Formatierung und Links.",
   "compose.rewriteTooLong": "Diese Mail ist zu lang zum Umschreiben.",
   "compose.rewriteShorter": "Kürzer",
-  "compose.rewriteShorterAsk":
-    "Die Bedeutung beibehalten und weniger Wörter verwenden.",
   "compose.rewriteWarmer": "Wärmer",
-  "compose.rewriteWarmerAsk": "Wärmer im Ton, ohne vertraulich zu werden.",
   "compose.rewriteFormal": "Förmlicher",
-  "compose.rewriteFormalAsk": "Förmlicher im Ton.",
   "compose.rewriteDeadline": "Frist ergänzen",
-  "compose.rewriteDeadlineAsk":
-    "Um eine Antwort bis zu einem bestimmten Datum bitten.",
   "compose.sendOptions": "Weitere Versandoptionen",
   "compose.scheduleSend": "Senden planen",
   "compose.scheduleTomorrow": "Morgen früh",

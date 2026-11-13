@@ -129,11 +129,11 @@
   "format/weekstart.ts":
    "504a0f7101ddccc7a917819967f39e6dfafb07952180fbccc7e00c7e1b1de1e7",
   "i18n/de.ts":
-   "148723ce8eb6d82f3d15d1f04f5a9095e9ad5c0cd3be3b6ceab8357842d05dac",
+   "14fc3762ea9b851fcd62a71983933b042af715658b83ecd4f74051ea18b23265",
   "i18n/en.ts":
-   "b7fd966735487899035c7d71b7aeb53e627b1d2b0b74256e29153601c5082914",
+   "918a84a8f433bffa7f508369546727e4ed785a7b68b3029e38426b8e38912fa5",
   "i18n/vi.ts":
-   "d7b99900c109e749756eb52d5e8b53de6f50ed9a3d75e977a9be7fd126c28009",
+   "a4f7fc0b4bdee857d0b1e38800fe0b486bce69b6cd0114ea0117d23084a08a7b",
   "lib/acquisitionkinds.ts":
    "c5dd117a1d2e9f0b79cde5aa9ef6e2cc34c1f8aad27f48ca914935fdf4879a54",
   "lib/approvallifecycle.ts":
@@ -155,7 +155,7 @@
   "lib/factview.ts":
    "db074f07af5e3a75aca6c7c269ef71529a6078f9f1c03e4c5f4e03b7ab076d0c",
   "lib/historyfieldlabels.ts":
-   "cdda89496f8c0351ccb843b51660aca224654cf3855b1d5d070564e0c5dddb9b",
+   "9bedeebf807bd26b1c2a447e7f03a2c4e8e84598237e186cdd51f660e6c69257",
   "lib/labelfor.ts":
    "26f540eedc3dcbe98e9c831bd25e752c17b8c3c183a056150da4907d396428bf",
   "lib/memberretirement.ts":
@@ -206,6 +206,8 @@
      "Sender category",
     "admission_source":
      "Intake check source",
+    "ai_assisted":
+     "AI-assisted",
     "already_fresh":
      "already fresh",
     "amount":
@@ -1867,6 +1869,26 @@
     "admission_source/lifecycle/unknown":
      "Unknown",
     "admission_source/boolean/true":
+     "Yes",
+    "ai_assisted/lifecycle/customer":
+     "Customer",
+    "ai_assisted/lifecycle/disqualified":
+     "Disqualified",
+    "ai_assisted/lifecycle/former_customer":
+     "Former customer",
+    "ai_assisted/lifecycle/live":
+     "Live",
+    "ai_assisted/lifecycle/onboarding":
+     "Onboarding",
+    "ai_assisted/lifecycle/opportunity":
+     "Opportunity",
+    "ai_assisted/lifecycle/prospect":
+     "Prospect",
+    "ai_assisted/lifecycle/target":
+     "Target",
+    "ai_assisted/lifecycle/unknown":
+     "Unknown",
+    "ai_assisted/boolean/true":
      "Yes",
     "already_fresh/lifecycle/customer":
      "Customer",
@@ -9200,6 +9222,8 @@
      "Sender category",
     "merge_profile_field/text/admission_source":
      "Intake check source",
+    "merge_profile_field/text/ai_assisted":
+     "AI-assisted",
     "merge_profile_field/text/amount_minor":
      "Value",
     "merge_profile_field/text/assess_against_entity_id":
@@ -9498,6 +9522,8 @@
      "Sender category",
     "merge_profile_field/lifecycle/admission_source":
      "Intake check source",
+    "merge_profile_field/lifecycle/ai_assisted":
+     "AI-assisted",
     "merge_profile_field/lifecycle/amount_minor":
      "Value",
     "merge_profile_field/lifecycle/assess_against_entity_id":
@@ -16056,6 +16082,12 @@
      "Not set",
     "admission_source/execution":
      "Set when applied",
+    "ai_assisted/boolean":
+     "No",
+    "ai_assisted/empty":
+     "Not set",
+    "ai_assisted/execution":
+     "Set when applied",
     "already_fresh/boolean":
      "No",
     "already_fresh/empty":
@@ -20026,6 +20058,8 @@
      "Absenderkategorie",
     "admission_source":
      "Quelle der Eingangsprüfung",
+    "ai_assisted":
+     "KI-gestützt",
     "already_fresh":
      "already fresh",
     "amount":
@@ -21687,6 +21721,26 @@
     "admission_source/lifecycle/unknown":
      "Unbekannt",
     "admission_source/boolean/true":
+     "Ja",
+    "ai_assisted/lifecycle/customer":
+     "Kunde",
+    "ai_assisted/lifecycle/disqualified":
+     "Disqualifiziert",
+    "ai_assisted/lifecycle/former_customer":
+     "Ehemaliger Kunde",
+    "ai_assisted/lifecycle/live":
+     "Live",
+    "ai_assisted/lifecycle/onboarding":
+     "Onboarding",
+    "ai_assisted/lifecycle/opportunity":
+     "Chance",
+    "ai_assisted/lifecycle/prospect":
+     "Interessent",
+    "ai_assisted/lifecycle/target":
+     "Zielunternehmen",
+    "ai_assisted/lifecycle/unknown":
+     "Unbekannt",
+    "ai_assisted/boolean/true":
      "Ja",
     "already_fresh/lifecycle/customer":
      "Kunde",
@@ -29020,6 +29074,8 @@
      "Absenderkategorie",
     "merge_profile_field/text/admission_source":
      "Quelle der Eingangsprüfung",
+    "merge_profile_field/text/ai_assisted":
+     "KI-gestützt",
     "merge_profile_field/text/amount_minor":
      "Wert",
     "merge_profile_field/text/assess_against_entity_id":
@@ -29318,6 +29374,8 @@
      "Absenderkategorie",
     "merge_profile_field/lifecycle/admission_source":
      "Quelle der Eingangsprüfung",
+    "merge_profile_field/lifecycle/ai_assisted":
+     "KI-gestützt",
     "merge_profile_field/lifecycle/amount_minor":
      "Wert",
     "merge_profile_field/lifecycle/assess_against_entity_id":
@@ -35876,6 +35934,12 @@
      "Nicht gesetzt",
     "admission_source/execution":
      "Wird beim Anwenden festgelegt",
+    "ai_assisted/boolean":
+     "Nein",
+    "ai_assisted/empty":
+     "Nicht gesetzt",
+    "ai_assisted/execution":
+     "Wird beim Anwenden festgelegt",
     "already_fresh/boolean":
      "Nein",
     "already_fresh/empty":
@@ -39846,6 +39910,8 @@
      "Loại người gửi",
     "admission_source":
      "Nguồn kiểm tra đầu vào",
+    "ai_assisted":
+     "Có AI hỗ trợ",
     "already_fresh":
      "already fresh",
     "amount":
@@ -41507,6 +41573,26 @@
     "admission_source/lifecycle/unknown":
      "Chưa rõ",
     "admission_source/boolean/true":
+     "Có",
+    "ai_assisted/lifecycle/customer":
+     "Khách hàng",
+    "ai_assisted/lifecycle/disqualified":
+     "Đã loại",
+    "ai_assisted/lifecycle/former_customer":
+     "Khách hàng cũ",
+    "ai_assisted/lifecycle/live":
+     "Đang vận hành",
+    "ai_assisted/lifecycle/onboarding":
+     "Đang triển khai",
+    "ai_assisted/lifecycle/opportunity":
+     "Cơ hội",
+    "ai_assisted/lifecycle/prospect":
+     "Tiềm năng",
+    "ai_assisted/lifecycle/target":
+     "Mục tiêu",
+    "ai_assisted/lifecycle/unknown":
+     "Chưa rõ",
+    "ai_assisted/boolean/true":
      "Có",
     "already_fresh/lifecycle/customer":
      "Khách hàng",
@@ -48840,6 +48926,8 @@
      "Loại người gửi",
     "merge_profile_field/text/admission_source":
      "Nguồn kiểm tra đầu vào",
+    "merge_profile_field/text/ai_assisted":
+     "Có AI hỗ trợ",
     "merge_profile_field/text/amount_minor":
      "Giá trị",
     "merge_profile_field/text/assess_against_entity_id":
@@ -49138,6 +49226,8 @@
      "Loại người gửi",
     "merge_profile_field/lifecycle/admission_source":
      "Nguồn kiểm tra đầu vào",
+    "merge_profile_field/lifecycle/ai_assisted":
+     "Có AI hỗ trợ",
     "merge_profile_field/lifecycle/amount_minor":
      "Giá trị",
     "merge_profile_field/lifecycle/assess_against_entity_id":
@@ -55695,6 +55785,12 @@
     "admission_source/empty":
      "Chưa đặt",
     "admission_source/execution":
+     "Được xác định khi áp dụng",
+    "ai_assisted/boolean":
+     "Không",
+    "ai_assisted/empty":
+     "Chưa đặt",
+    "ai_assisted/execution":
      "Được xác định khi áp dụng",
     "already_fresh/boolean":
      "Không",

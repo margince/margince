@@ -20,7 +20,7 @@ func (in UpdateActivityInput) changesNothing(current crmcontracts.Activity) bool
 func (in UpdateActivityInput) movesAField(current crmcontracts.Activity) bool {
 	p := storekit.NewPatch()
 	if in.MeetingIntent != nil {
-		p.Set("meeting_intent", current.MeetingIntent, *in.MeetingIntent)
+		p.Set(fieldMeetingIntent, current.MeetingIntent, *in.MeetingIntent)
 	}
 	if in.DueIntent != nil {
 		p.Set("due_intent", current.DueIntent, *in.DueIntent)
@@ -69,6 +69,9 @@ func (in UpdateActivityInput) movesAField(current crmcontracts.Activity) bool {
 	}
 	if in.TaskType != nil {
 		p.Set(fieldTaskType, current.TaskType, *in.TaskType)
+	}
+	if in.AIAssisted != nil && *in.AIAssisted {
+		p.Set(fieldAIAssisted, current.AiAssisted != nil && *current.AiAssisted, true)
 	}
 	return !p.Empty()
 }

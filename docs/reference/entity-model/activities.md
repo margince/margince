@@ -6,12 +6,13 @@ The 34 tables owned by `activities`, as the migrations build them. [Back to the 
 
 ## activity
 
-86 columns · primary key `(id)` · referenced by 46 foreign keys
+87 columns · primary key `(id)` · referenced by 46 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
 | `id` | `uuid`, default `uuidv7()` | yes | Primary key. |
 | `agenda_fingerprint` | `text` |  |  |
+| `ai_assisted` | `boolean`, default `false` | yes | Whether an AI model rewrote the subject or body before it was saved, so a reader sees the words as AI-assisted. |
 | `assignee_id` | `uuid` |  | Task only. |
 | `audience` | `text`, default `'workspace'::text` | yes | Who may read this activity's CONTENT once the row is discoverable at all. |
 | `audience_reason` | `text` |  | Why `audience` is what it is, for a captured message whose audience the system derived rather than a human set: `posture` (a mailbox asked for it), `workspace_floor` (the workspace turned mail sharing off), `no_record` (the message is filed under no record), `no_counterparty` (the message named nobody a record could be filed under), `pending_verdict` (nothing has judged the message yet), `verdict` (a classifier held the thread), `counterparty` (the importing seat holds mail with one of its parties), `explicitly_confidential` (the subject marks it confidential), `members_only` (every party is a member of the workspace; no verdict opens it, the mailbox owner sharing the thread does), `manual` (a human said so). |

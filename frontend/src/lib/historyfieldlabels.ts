@@ -74,6 +74,7 @@ const HISTORY_FIELD_LABELS = new Map<string, MessageKey>([
   ["relationship_types", "history.field.relationship_types"],
   ["due_has_time", "history.field.due_has_time"],
   ["task_type", "history.field.task_type"],
+  ["ai_assisted", "history.field.ai_assisted"],
   ["remind_at", "history.field.remind_at"],
   ["remind_intent", "history.field.remind_intent"],
   ["score", "history.field.score"],

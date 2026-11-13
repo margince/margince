@@ -29,7 +29,7 @@ func (in *LogActivityInput) admitPickedTimes() error {
 	if err := checkMeetingIntent(in.Kind, in.OccurredPrecision, in.MeetingIntent); err != nil {
 		return err
 	}
-	if err := applyPickedTime("meeting_intent", in.MeetingIntent, &in.OccurredAt); err != nil {
+	if err := applyPickedTime(fieldMeetingIntent, in.MeetingIntent, &in.OccurredAt); err != nil {
 		return err
 	}
 	if err := applyPickedTime("due_intent", in.DueIntent, &in.DueAt); err != nil {
@@ -67,9 +67,6 @@ func (in *UpdateActivityInput) admitPatchDueTime() error {
 
 // checkMeetingIntent admits a chosen local start only on a meeting that is
 // held to an instant: a whole-day meeting has no clock to keep.
-// fieldMeetingIntent names a meeting's chosen local start in refusals and audits.
-const fieldMeetingIntent = "meeting_intent"
-
 func checkMeetingIntent(kind, precision string, intent *crmcontracts.IntentTime) error {
 	if intent != nil && kind != KindMeeting {
 		return &values.ParseError{Field: fieldMeetingIntent, Code: "not_applicable", Message: "only a meeting has a chosen local start"}
@@ -85,7 +82,7 @@ func (in *UpdateActivityInput) admitPickedTimes(kind string) error {
 	if err := checkMeetingIntent(kind, deref(in.OccurredPrecision), in.MeetingIntent); err != nil {
 		return err
 	}
-	if err := applyPickedTime("meeting_intent", in.MeetingIntent, &in.OccurredAt); err != nil {
+	if err := applyPickedTime(fieldMeetingIntent, in.MeetingIntent, &in.OccurredAt); err != nil {
 		return err
 	}
 	if err := applyPickedTime("due_intent", in.DueIntent, &in.DueAt); err != nil {

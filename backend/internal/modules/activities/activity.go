@@ -112,10 +112,14 @@ type LogActivityInput struct {
 	DueHasTime bool
 	// TaskType is the work a task asks for; nil leaves the read to derive it
 	// from the task's maker (storekit.TaskTypeSQL).
-	TaskType   *crmcontracts.TaskType
-	RemindAt   *time.Time
-	AssigneeID *ids.UserID
-	HostUserID *ids.UserID
+	TaskType *crmcontracts.TaskType
+	// AIAssisted says a model rewrote the subject or body before the rep saved it.
+	AIAssisted bool
+	// AIAssistedOn is the record the words were polished on, one of Links.
+	AIAssistedOn *ActivityLinkInput
+	RemindAt     *time.Time
+	AssigneeID   *ids.UserID
+	HostUserID   *ids.UserID
 	// AttendeeUserIDs are the colleagues who were in a meeting or call besides
 	// whoever logged it; each is stamped as an our-side participant.
 	AttendeeUserIDs []ids.UserID

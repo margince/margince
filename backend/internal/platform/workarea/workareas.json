@@ -1824,6 +1824,7 @@
     "revokePassport": "passports",
     "revokeRecordGrant": "sharing",
     "revokeUserSession": "members",
+    "rewriteText": "ai_help",
     "rollbackVoiceProfileVersion": "voice",
     "rotateAgentClientSecret": "agent_clients",
     "rotateWebFormSecret": "web_forms",

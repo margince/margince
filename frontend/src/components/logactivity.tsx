@@ -55,6 +55,7 @@ import {
   recordOnMeeting,
   useRecordOfMeeting,
 } from "./logactivity.openmeeting";
+import { PolishWording } from "./logactivity.polish";
 import {
   attachLoggedFiles,
   LogActivityFilesField,
@@ -414,6 +415,13 @@ export function LogActivityForm({
         className="logactivity-body-field"
         value={draft.body}
         onChange={(body) => setField({ body })}
+      />
+      <PolishWording
+        words={draft}
+        onChange={setField}
+        offered={!transcript}
+        entityType={entityType}
+        entityId={entityId}
       />
       {custom.controls}
       {draft.kind !== "task" && (
