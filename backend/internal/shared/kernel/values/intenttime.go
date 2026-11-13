@@ -12,6 +12,10 @@ import (
 // to microseconds.
 const IntentWallClockLayout = "2006-01-02T15:04:05.999999"
 
+// DayOnlyClock is the clock of a chosen day with no time of day: a deadline
+// picked as a date. Any other clock, 23:59 included, is a time of day.
+const DayOnlyClock = "23:59:59"
+
 var localIntentFormat = regexp.MustCompile(`^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}(:[0-9]{2}(\.[0-9]{1,6})?)?$`)
 
 // IntentTime keeps a chosen local time through timezone rule changes.

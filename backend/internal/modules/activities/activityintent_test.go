@@ -8,6 +8,7 @@ import (
 	"time"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/shared/kernel/values"
 )
 
 func TestTheTaskClockGovernsItsLegacyInstantAndFollowingReminder(t *testing.T) {
@@ -76,5 +77,16 @@ func TestAChosenDueClockMakesATimedDeadlineAndADateOnlyOneStaysDateOnly(t *testi
 	contradiction := UpdateActivityInput{DueIntent: clock, DueHasTime: new(false)}
 	if err := contradiction.admitPickedTimes("task"); err == nil {
 		t.Fatal("a timed clock beside due_has_time false was admitted")
+	}
+}
+
+// The agent surface tells a model to write a date-only deadline with this
+// clock, so the server must read exactly it, and nothing near it, as no time.
+func TestTheDayOnlyClockTheAgentRuleNamesIsTheOneTheServerReadsAsNoTime(t *testing.T) {
+	for clock, timed := range map[string]bool{"T" + values.DayOnlyClock: false, "T23:59": true, "T23:58:59": true} {
+		in := LogActivityInput{Kind: "task", DueIntent: &crmcontracts.IntentTime{WallClock: "2026-11-20" + clock, Timezone: "Europe/Berlin"}}
+		if err := in.admitPickedTimes(); err != nil || in.DueHasTime != timed {
+			t.Errorf("clock %s: has_time=%v, want %v (err %v)", clock, in.DueHasTime, timed, err)
+		}
 	}
 }

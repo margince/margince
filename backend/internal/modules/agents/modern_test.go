@@ -19,6 +19,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/kernel/values"
 	"github.com/margince/margince/backend/internal/shared/ports/mcp"
 )
 
@@ -932,7 +933,7 @@ func TestTheInstructionsTellAClientsModelHowToSetALocalTime(t *testing.T) {
 	if !strings.Contains(instructions, mcp.LocalTimeRule) {
 		t.Fatalf("the surface does not carry the local-time rule:\n%s", instructions)
 	}
-	for _, want := range []string{"_intent", "wall_clock", "IANA timezone", "whoami", "23:59:59", "exact instant", "does not list"} {
+	for _, want := range []string{"_intent", "wall_clock", "IANA timezone", "whoami", "T" + values.DayOnlyClock, "exact instant", "does not list"} {
 		if !strings.Contains(mcp.LocalTimeRule, want) {
 			t.Errorf("the local-time rule does not say %q", want)
 		}

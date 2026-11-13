@@ -16,6 +16,7 @@ import (
 	"encoding/json"
 
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/kernel/values"
 )
 
 // Tool is a single governed MCP tool, exposed identically to every
@@ -252,8 +253,9 @@ const ReservedIdempotencyKeyRule = "Same key, same result; a key reused with oth
 // a model told of the pick went looking for one on a write that lacks it.
 const LocalTimeRule = "Where a write lists a field ending in _intent, such as due_intent, send a time the user " +
 	"named in local terms there: wall_clock as YYYY-MM-DDTHH:MM in the user's own IANA timezone (whoami says it), " +
-	"and the server sets the matching _at field and whether it has a time of day. A deadline with " +
-	"no time of day is that day at 23:59:59. A write that lists only the _at field takes an exact instant: " +
+	"and the server sets the matching _at field and whether it has a time of day. A deadline with no time of day " +
+	"is that date at T" + values.DayOnlyClock + ", seconds included; any other clock, T23:59 too, sets a time of day. " +
+	"A write that lists only the _at field takes an exact instant: " +
 	"convert the user's local time with that timezone yourself, and never look for an _intent field it does not list."
 
 const ConflictingSourcesRule = "When two sources disagree, say that they disagree and name both; " +
