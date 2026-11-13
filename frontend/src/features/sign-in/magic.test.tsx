@@ -508,9 +508,18 @@ describe("the receipt draws every lane it promises", () => {
     });
   });
 
-  it("says it is reading while the read is in flight", () => {
+  // A section of its own takes no room until its read lands. A loader there
+  // pulled Home's column up again when nothing turned out to be waiting.
+  it("stays away while its own section's read is in flight", () => {
     stubPending();
-    renderMagic();
+    const { container } = renderMagic();
+    expect(container.querySelector("section")).toBeNull();
+    expect(screen.queryByText("Reading what the machinery did")).toBeNull();
+  });
+
+  it("says it is reading inside a section that waits for it", () => {
+    stubPending();
+    renderMagic("en", undefined, { lanes: ["done"], embedded: true });
     expect(
       screen.getAllByText("Reading what the machinery did").length,
     ).toBeGreaterThan(0);
