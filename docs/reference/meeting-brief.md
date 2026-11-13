@@ -46,7 +46,7 @@ not stay quiet. It names two sources today:
 | `objective` | The result to work for, plus a one-line note not to push for it too hard. |
 | `opening` | The first thing to say. |
 | `top_risk` | The one thing that can change the conversation, with what to say, what to show and what not to do. |
-| `likely_asks` | What they are likely to ask us, each bound to something they said. A promise filed for several contacts is one ask that names them all. |
+| `likely_asks` | What they are likely to ask us, each bound to something they said. Copies of one promise filed for several contacts become one ask that names them all, when they use the same words, or close words and fall due the same day. |
 | `questions` | What to ask them, best first. |
 | `scenarios` | What the meeting may turn into, and what to do then. |
 | `account_arc` | The few parts of the relationship that still count today. |

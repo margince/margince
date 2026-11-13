@@ -65,14 +65,40 @@ func TestClaimsThatOnlyReadAlikeStayApart(t *testing.T) {
 	due, later := at(20), at(21)
 	base := ClaimIn{ContactName: "Ana Roth", Kind: kindCommitmentOurs, Status: statusOpen, Body: sessionPromise, DueAt: &due}
 	for name, other := range map[string]ClaimIn{
-		"another day":   {ContactName: "Ben Ito", Kind: kindCommitmentOurs, Status: statusOpen, Body: strings.Replace(sessionPromise, "introductory", "follow-up", 1), DueAt: &later},
-		"no due date":   {ContactName: "Ben Ito", Kind: kindCommitmentOurs, Status: statusOpen, Body: strings.Replace(sessionPromise, "introductory", "follow-up", 1)},
-		"already kept":  {ContactName: "Ben Ito", Kind: kindCommitmentOurs, Status: "done", Body: sessionPromise, DueAt: &due},
-		"their promise": {ContactName: "Ben Ito", Kind: kindCommitmentTheirs, Status: statusOpen, Body: sessionPromise, DueAt: &due},
+		"another day":                {ContactName: "Ben Ito", Kind: kindCommitmentOurs, Status: statusOpen, Body: strings.Replace(sessionPromise, "introductory", "follow-up", 1), DueAt: &later},
+		"no due date":                {ContactName: "Ben Ito", Kind: kindCommitmentOurs, Status: statusOpen, Body: strings.Replace(sessionPromise, "introductory", "follow-up", 1)},
+		"already kept":               {ContactName: "Ben Ito", Kind: kindCommitmentOurs, Status: "done", Body: sessionPromise, DueAt: &due},
+		"their promise":              {ContactName: "Ben Ito", Kind: kindCommitmentTheirs, Status: statusOpen, Body: sessionPromise, DueAt: &due},
+		"same words due another day": {ContactName: "Ben Ito", Kind: kindCommitmentOurs, Status: statusOpen, Body: sessionPromise, DueAt: &later},
 	} {
 		if got := foldSameClaims([]ClaimIn{base, other}); len(got) != 2 {
 			t.Errorf("%s: folded into %+v", name, got)
 		}
+	}
+	for name, pair := range map[string]struct {
+		first, second string
+		secondDue     *time.Time
+	}{
+		"another deliverable":        {"Lan will send the pricing sheet.", "Lan will send the signed contract.", &due},
+		"another order, another day": {"Send the contract before the invoice.", "Send the invoice before the contract.", &later},
+	} {
+		first := ClaimIn{ContactName: "Ana Roth", Kind: kindCommitmentOurs, Status: statusOpen, Body: pair.first, DueAt: &due}
+		second := first
+		second.ContactName, second.Body, second.DueAt = "Ben Ito", pair.second, pair.secondDue
+		if got := foldSameClaims([]ClaimIn{first, second}); len(got) != 2 {
+			t.Errorf("%s: folded into %+v", name, got)
+		}
+	}
+}
+
+func TestAFoldedPromiseKeepsTheDueDateItsRepeatKnew(t *testing.T) {
+	due := at(20)
+	undated := ClaimIn{ContactName: "Ana Roth", Kind: kindCommitmentOurs, Status: statusOpen, Body: sessionPromise}
+	dated := undated
+	dated.ContactName, dated.DueAt = "Ben Ito", &due
+	got := foldSameClaims([]ClaimIn{undated, dated})
+	if len(got) != 1 || got[0].DueAt == nil || !got[0].DueAt.Equal(due) {
+		t.Fatalf("folded promise lost its due date: %+v", got)
 	}
 }
 

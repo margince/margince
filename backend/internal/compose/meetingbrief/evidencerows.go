@@ -80,11 +80,11 @@ type citedActivity struct {
 func citedActivities(in Input) map[string]citedActivity {
 	out := map[string]citedActivity{}
 	add := func(id, subject string, when Occurred) {
-		if _, held := out[id]; held || subject == "" {
-			return
+		row := out[id]
+		if row.subject == "" {
+			row.subject = subject
 		}
-		row := citedActivity{subject: subject}
-		if !when.DateOnly && !when.At.IsZero() {
+		if row.at == nil && !when.DateOnly && !when.At.IsZero() {
 			at := when.At.UTC()
 			row.at = &at
 		}
@@ -124,7 +124,7 @@ func nameCitations(citations []*crmcontracts.CompanyBriefEvidence, in Input) {
 		if !ok {
 			continue
 		}
-		if cited.Name == nil {
+		if cited.Name == nil && row.subject != "" {
 			cited.Name = &row.subject
 		}
 		if cited.At == nil {
