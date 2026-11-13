@@ -108,6 +108,7 @@ type replyQuestion struct {
 type replyScenario struct {
 	Label    string          `json:"label"`
 	Play     string          `json:"play"`
+	Coach    string          `json:"coach"`
 	Evidence []replyEvidence `json:"evidence"`
 }
 
@@ -281,6 +282,18 @@ func keptQuestions(raw []replyQuestion, known map[Evidence]string) []Question {
 	return out
 }
 
+// keptCoach is the scenario's coach line when it holds as advice to the lead.
+// It must rest on the branch's own records, name no id, not open with the
+// writer, and not repeat the play. Otherwise the branch has no coach line.
+func keptCoach(scenario replyScenario, cited []Evidence, known map[Evidence]string) string {
+	coach := strings.TrimSpace(scenario.Coach)
+	if coach == "" || spellsAnID(coach) || normalisedSubject(coach) == normalisedSubject(scenario.Play) ||
+		claims.OpensWithWriterSubject(coach) || !groundedLine(Sentence{Text: coach, Evidence: cited}, known) {
+		return ""
+	}
+	return coach
+}
+
 func keptScenarios(raw []replyScenario, known map[Evidence]string) []Scenario {
 	out := make([]Scenario, 0, len(raw))
 	for _, scenario := range raw {
@@ -298,7 +311,7 @@ func keptScenarios(raw []replyScenario, known map[Evidence]string) []Scenario {
 		if !groundedEvidenceOnly(cited, known) {
 			continue
 		}
-		out = append(out, Scenario{Label: scenario.Label, Play: scenario.Play, Evidence: cited})
+		out = append(out, Scenario{Label: scenario.Label, Play: scenario.Play, Coach: keptCoach(scenario, cited, known), Evidence: cited})
 	}
 	return out
 }

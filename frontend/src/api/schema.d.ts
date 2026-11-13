@@ -36326,7 +36326,7 @@ export interface components {
             watch_for: string;
             /** @description The narrow condition under which a lead should step in. Narrow on purpose: a lead who takes over a rep's meeting has coached nobody. */
             intervene_if: string;
-            /** @description The ways this meeting can go, for a lead to rehearse against. */
+            /** @description The plan's own branches as a lead reads them: each carries the label of a plan scenario and, in `play`, what the lead watches for and asks the rep, never the rep's play again. A branch the model wrote no coach line for is left out, so this can be empty. */
             paths: components["schemas"]["MeetingPlanCoachingPath"][];
         };
         MeetingPlanCoachingPath: {

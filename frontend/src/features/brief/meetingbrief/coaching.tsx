@@ -57,8 +57,8 @@ export function CoachPanel({
   );
 }
 
-// The branches a lead rehearses against. The same ones the rep's own plan
-// carries, so the two are preparing for one meeting.
+// The rep's branches as the lead reads them. The labels are the rep's; the
+// text is what the lead watches for and asks.
 export function MeetingPaths({
   coaching,
   writtenByModel,

@@ -34383,7 +34383,8 @@ components:
         paths:
           type: array
           maxItems: 3
-          description: The ways this meeting can go, for a lead to rehearse against.
+          description: >-
+            The plan's own branches as a lead reads them: each carries the label of a plan scenario and, in `play`, what the lead watches for and asks the rep, never the rep's play again. A branch the model wrote no coach line for is left out, so this can be empty.
           items: {$ref: '#/components/schemas/MeetingPlanCoachingPath'}
     MeetingPlanCoachingPath:
       type: object
