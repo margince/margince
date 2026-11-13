@@ -268,11 +268,14 @@
    the tabs scroll sideways and never reads as one more tab. */
 .recordtabs-row {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   gap: var(--space-3);
 }
+/* No basis, so the row wraps only when the strip's least width, set where it
+   is measured, and the trailing control do not fit side by side. */
 .recordtabs-strip {
-  flex: 1 1 auto;
+  flex: 1 1 0;
 }
 /* A lone label has no tab to scroll to, and squeezed beside the trailing
    control it became a scroll box with nothing a keyboard can reach. So it
