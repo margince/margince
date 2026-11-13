@@ -137,6 +137,8 @@ var waivedActivityFields = gatekit.Waive(map[string]string{
 		"from the same calendar part, which a unit never hands over",
 	"CalendarEvent": "nil is the right answer for a unit, for the reason CalendarUID's is: the event is read " +
 		"from the same calendar part, which a unit never hands over",
+	"CalendarSend": "empty is the right answer for a unit, for the reason CalendarEvent's is: the send is named " +
+		"from the same calendar part, which a unit never hands over",
 	"BodyCompleteness": "zero, stored as complete, is the right answer for a unit, for the reason HasCalendarPart's is: the " +
 		"fact comes from the core's MIME walk over a raw RFC822 message, and a unit hands over text it " +
 		"already read",

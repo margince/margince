@@ -121,6 +121,7 @@ Mail is keyed on one identity that does not depend on the transport (`connector.
 both Gmail and IMAP lands one activity. The Sink refuses an email record keyed on an adapter's name. The
 adapter's name stays on `source` and `captured_by`, which answers "which mailbox". The first adapter to
 deliver a message gives the stored original and its attached files; a later copy adds no second set.
+Google Calendar's copy for each guest of one send joins the first copy's activity (`mailmap/calendarsend.go`).
 
 One pipeline step runs *inside* the Sink, before anything is written:
 
