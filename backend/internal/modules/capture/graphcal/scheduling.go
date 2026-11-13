@@ -18,7 +18,10 @@ import (
 	"github.com/margince/margince/backend/internal/shared/ports/connector"
 )
 
-const calendarUTC = "UTC"
+const (
+	calendarUTC    = "UTC"
+	graphWallClock = "2006-01-02T15:04:05"
+)
 
 type schedulingAPI interface {
 	List(context.Context, string) ([]connector.CalendarOption, error)
@@ -195,12 +198,32 @@ func (a *httpAPI) readBusy(ctx context.Context, token, calendar string, from, to
 	return busy, nil
 }
 
+// eventTimes states the meeting in the host's chosen zone, so Outlook keeps its
+// local clock through a zone rule change. A booking that named only an instant,
+// or a zone Windows does not know, is stated in UTC.
+func eventTimes(in connector.CalendarAppointment) (start, end scheduledTime, err error) {
+	zone, loc := calendarUTC, time.UTC
+	windows, ok, err := windowsZone(in.StartZone)
+	if err != nil {
+		return scheduledTime{}, scheduledTime{}, err
+	}
+	if ok {
+		if chosen, err := time.LoadLocation(in.StartZone); err == nil {
+			zone, loc = windows, chosen
+		}
+	}
+	return scheduledTime{in.Start.In(loc).Format(graphWallClock), zone}, scheduledTime{in.End.In(loc).Format(graphWallClock), zone}, nil
+}
+
 func (a *httpAPI) Save(ctx context.Context, token string, in connector.CalendarAppointment) (connector.CalendarReceipt, error) {
 	event := scheduledEvent{
 		Properties: []requestProperty{{meetingRequestProperty, in.RequestID}}, Subject: in.Subject, RequestID: in.RequestID,
-		Start: scheduledTime{in.Start.UTC().Format("2006-01-02T15:04:05"), calendarUTC},
-		End:   scheduledTime{in.End.UTC().Format("2006-01-02T15:04:05"), calendarUTC},
 	}
+	start, end, err := eventTimes(in)
+	if err != nil {
+		return connector.CalendarReceipt{}, err
+	}
+	event.Start, event.End = start, end
 	event.Location.Name = in.Location
 	for _, email := range in.Attendees {
 		attendee := scheduledAttendee{Type: "required"}

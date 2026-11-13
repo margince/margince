@@ -46,6 +46,11 @@ The 4 tables owned by `forecasting`, as the migrations build them. [Back to the 
 - `forecast_call_pkey`: `unique, btree (id)`
 - `idx_forecast_call_period`: `btree (period_start, period_end, scope_kind, scope_id)`
 
+**Triggers**
+
+- `text_bound_insert`: `AFTER INSERT FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL, '{"note": 2000, "scope_kind": 20000, "captured_by": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"captured_by":20000,"note":2000,"scope_kind":20000}')`
+- `text_bound_update`: `AFTER UPDATE FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"note": 2000, "scope_kind": 20000, "captured_by": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"captured_by":20000,"note":2000,"scope_kind":20000}')`
+
 ## forecast_capture_status
 
 6 columns · primary key `(id)` · referenced by 0 foreign keys
@@ -67,6 +72,11 @@ The 4 tables owned by `forecasting`, as the migrations build them. [Back to the 
 
 - `forecast_capture_status_context_key_key`: `unique, btree (context_key)`
 - `forecast_capture_status_pkey`: `unique, btree (id)`
+
+**Triggers**
+
+- `text_bound_insert`: `AFTER INSERT FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL, '{"failure": 20000, "context_key": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"context_key":20000,"failure":20000}')`
+- `text_bound_update`: `AFTER UPDATE FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"failure": 20000, "context_key": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"context_key":20000,"failure":20000}')`
 
 ## forecast_contribution
 
@@ -151,6 +161,8 @@ The 4 tables owned by `forecasting`, as the migrations build them. [Back to the 
 **Triggers**
 
 - `forecast_contribution_is_frozen`: `BEFORE UPDATE FOR EACH ROW EXECUTE FUNCTION forecast_contribution_is_frozen()`
+- `text_bound_insert`: `AFTER INSERT FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL, '{"category": 20000, "captured_by": 20000, "risk_signals": 20000, "qualification": 20000, "exclusion_reason": 2000, "probability_source": 20000, "viability_disposition": 20000, "qualified_policy_version": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"captured_by":20000,"category":20000,"exclusion_reason":2000,"probability_source":20000,"qualification":20000,"qualified_policy_version":20000,"risk_signals":20000,"viability_disposition":20000}')`
+- `text_bound_update`: `AFTER UPDATE FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"category": 20000, "captured_by": 20000, "risk_signals": 20000, "qualification": 20000, "exclusion_reason": 2000, "probability_source": 20000, "viability_disposition": 20000, "qualified_policy_version": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"captured_by":20000,"category":20000,"exclusion_reason":2000,"probability_source":20000,"qualification":20000,"qualified_policy_version":20000,"risk_signals":20000,"viability_disposition":20000}')`
 
 ## forecast_snapshot
 
@@ -250,3 +262,5 @@ The 4 tables owned by `forecasting`, as the migrations build them. [Back to the 
 **Triggers**
 
 - `forecast_snapshot_is_frozen`: `BEFORE UPDATE FOR EACH ROW EXECUTE FUNCTION forecast_snapshot_is_frozen()`
+- `text_bound_insert`: `AFTER INSERT FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL, '{"trigger": 20000, "scope_kind": 20000, "captured_by": 20000, "range_version": 20000, "forward_measure": 20000, "landing_measure": 20000, "range_quantiles": 20000, "input_fingerprint": 20000, "definition_version": 20000, "risk_signals_version": 20000, "population_fingerprint": 20000, "qualified_policy_version": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"captured_by":20000,"definition_version":20000,"forward_measure":20000,"input_fingerprint":20000,"landing_measure":20000,"population_fingerprint":20000,"qualified_policy_version":20000,"range_quantiles":20000,"range_version":20000,"risk_signals_version":20000,"scope_kind":20000,"trigger":20000}')`
+- `text_bound_update`: `AFTER UPDATE FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"trigger": 20000, "scope_kind": 20000, "captured_by": 20000, "range_version": 20000, "forward_measure": 20000, "landing_measure": 20000, "range_quantiles": 20000, "input_fingerprint": 20000, "definition_version": 20000, "risk_signals_version": 20000, "population_fingerprint": 20000, "qualified_policy_version": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"captured_by":20000,"definition_version":20000,"forward_measure":20000,"input_fingerprint":20000,"landing_measure":20000,"population_fingerprint":20000,"qualified_policy_version":20000,"range_quantiles":20000,"range_version":20000,"risk_signals_version":20000,"scope_kind":20000,"trigger":20000}')`

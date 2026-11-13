@@ -8,7 +8,7 @@ include $root/scripts/composition-profile.mk
 print:
 	@printf '%s|%s\n' '\$(COMPOSITION_FLAGS)' "\$\$COMPOSITION_FLAGS"
 EOF_MAKE
-for goal in build composition check check-backend gen drift test-extensions fe-quality migrate migrate-down; do
+for goal in build composition check check-backend gen drift test-extensions repeat-changed-tests fe-quality migrate migrate-down; do
   case "$goal" in build|composition) want='|' ;; *) want='-include-development|-include-development' ;; esac
   actual="$(env -u COMPOSITION_FLAGS -u MAKEFLAGS -u MAKEOVERRIDES make --no-print-directory -s -f "$scratch/Makefile" MAKECMDGOALS="$goal" print)"
   if [[ "$actual" != "$want" ]]; then

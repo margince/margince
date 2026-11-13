@@ -250,6 +250,7 @@ function CompanyTasksTab({
             version={step.version}
             dueAt={step.due_at}
             dueHasTime={step.due_has_time}
+            dueIntent={step.due_intent}
             update={update}
             showComplete={false}
           />

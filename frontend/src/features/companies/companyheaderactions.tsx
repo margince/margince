@@ -2,7 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import { CalendarPlus, FileText } from "lucide-react";
-import { useId, useRef } from "react";
+import { useCallback, useId, useMemo, useRef } from "react";
 import type { components } from "../../api/schema";
 import type { ActivityGate } from "../../components/activitygate";
 import { ExtensionEntries } from "../../components/extensionentries";
@@ -10,7 +10,10 @@ import { LogActivityAction } from "../../components/logactivity.action";
 import { searchCompanyContacts } from "../../components/meetingattendees";
 import { Button } from "../../design-system/atoms";
 import { VerbWord } from "../../design-system/iconaction";
-import { ListPopover } from "../../design-system/listpopover";
+import {
+  ListPopover,
+  type ListPopoverOption,
+} from "../../design-system/listpopover";
 import { useT } from "../../i18n";
 import { navigate } from "../../lib/router";
 import { useShortcut } from "../../lib/shortcuts";
@@ -26,6 +29,7 @@ import { EmailVerb } from "../records/recordemail";
 // new deal, a new project born on it) rather than the header's.
 
 type Company = components["schemas"]["Company"];
+type Company360 = components["schemas"]["Company360"];
 
 // Which of LogActivityAction's two forms the drawer opens on: log what
 // happened, or set what happens next. The page owns it, not two separate
@@ -43,8 +47,12 @@ export function CompanyHeaderActions({
   onDrawer,
   archivedReasonId,
   activity,
+  view,
 }: Readonly<{
   company: Company;
+  // The 360 the page already holds: its ranked roster is what Book a meeting
+  // opens on, so the reader picks a contact without recalling a name.
+  view?: Company360;
   // The composer's open state belongs to the PAGE, not to this strip: the
   // drawer opens into the right rail's column, so the rail has to know it is
   // open in order to stand down.
@@ -104,6 +112,7 @@ export function CompanyHeaderActions({
       />
       <CompanyBookMeeting
         companyId={company.id}
+        view={view}
         allowed={!logPending && !logRefused}
         pending={logPending}
         reasonId={archived ?? (activity.pending ? undefined : bookRefusedId)}
@@ -141,21 +150,59 @@ export function CompanyHeaderActions({
   );
 }
 
+// How many contacts the booking picker opens on. Past these, typing searches
+// every contact the company has.
+const OPENING_CONTACTS = 5;
+
+// The contacts the picker opens on: the best route in first, then the 360's
+// own ranking by relationship strength. Undefined while the 360 is unread.
+export function openingContacts(
+  view: Company360 | undefined,
+): readonly ListPopoverOption[] | undefined {
+  const roster = view?.contacts?.data;
+  if (!roster) {
+    return undefined;
+  }
+  const wayIn = view?.strength?.contributor_contact_id;
+  const isWayIn = (row: (typeof roster)[number]) =>
+    Number(row.contact_id === wayIn);
+  return [...roster]
+    .sort((a, b) => isWayIn(b) - isWayIn(a))
+    .slice(0, OPENING_CONTACTS)
+    .map((row) => ({
+      id: row.contact_id,
+      name: row.full_name,
+      hint: row.title ?? row.provider_title ?? undefined,
+    }));
+}
+
 // CompanyBookMeeting books with a contact, so the account first asks which
 // one, then hands over to that contact's own booking screen. The picker is
 // drawn only once `/me` allows it, so a refusal that lands late also closes it.
 function CompanyBookMeeting({
   companyId,
+  view,
   allowed,
   pending,
   reasonId,
 }: Readonly<{
   companyId: string;
+  view?: Company360;
   allowed: boolean;
   pending: boolean;
   reasonId?: string;
 }>) {
   const t = useT();
+  const opening = useMemo(() => openingContacts(view), [view]);
+  // An empty box answers from the roster in hand; before the 360 lands it
+  // asks the server for the company's contacts instead.
+  const search = useCallback(
+    (term: string) =>
+      term === "" && opening
+        ? Promise.resolve(opening)
+        : searchCompanyContacts(companyId, term),
+    [companyId, opening],
+  );
   const face = (
     <>
       <CalendarPlus aria-hidden="true" />
@@ -182,7 +229,8 @@ function CompanyBookMeeting({
       label={face}
       title={t("scheduling.bookContact")}
       searchLabel={t("scheduling.bookPickContact")}
-      search={(term) => searchCompanyContacts(companyId, term)}
+      search={search}
+      listOnOpen
       onPick={(contact, done) => {
         done();
         navigate({ screen: "book", id: `contact-${contact.id}` });

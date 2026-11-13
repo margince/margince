@@ -1,8 +1,9 @@
 /** @vitest-environment happy-dom */
 import { cleanup, screen, waitFor } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { messageText } from "../../design-system/richtext-testing";
-import { draftButton } from "../../testing/composedraft.testkit";
+import { draftButton, purposeField } from "../../testing/composedraft.testkit";
 import { ComposeModal } from "./compose";
 import {
   jsonResponse,
@@ -65,6 +66,52 @@ describe("ComposeModal draftOnOpen", () => {
     });
   });
 
+  it("keeps the purpose it drafted to on screen once the draft stands", async () => {
+    stubRoutes({
+      "GET /voice-profiles": () => jsonResponse(PROVISIONAL_VOICE_PROFILE),
+      [DRAFT]: () => jsonResponse(drafted),
+    });
+    renderReply(true);
+
+    await waitFor(() =>
+      expect(messageText("Body")).toBe("Tuesday works for us."),
+    );
+    expect(purposeField()).toHaveProperty(
+      "value",
+      "reply to their last message",
+    );
+    expect(screen.queryByRole("button", { name: "Redraft" })).toBeNull();
+    expect(screen.queryByRole("button", { name: /^Draft / })).toBeNull();
+  });
+
+  it("redrafts once under the purpose the rep corrects", async () => {
+    let call = 0;
+    const sent = stubRoutes({
+      "GET /voice-profiles": () => jsonResponse(PROVISIONAL_VOICE_PROFILE),
+      [DRAFT]: () => {
+        call += 1;
+        return jsonResponse(
+          call === 1
+            ? drafted
+            : { ...drafted, body: "Here is the offer.", draft_ref: "vd-b" },
+        );
+      },
+    });
+    renderReply(true);
+    await waitFor(() =>
+      expect(messageText("Body")).toBe("Tuesday works for us."),
+    );
+
+    await userEvent.clear(purposeField());
+    await userEvent.type(purposeField(), "send the offer");
+    await userEvent.click(screen.getByRole("button", { name: "Redraft" }));
+
+    await waitFor(() => expect(messageText("Body")).toBe("Here is the offer."));
+    const asks = sent.filter((r) => r.key === DRAFT);
+    expect(asks).toHaveLength(2);
+    expect(asks[1]?.body).toMatchObject({ intent: "send the offer" });
+  });
+
   it("waits for a press when the opener made no such promise", async () => {
     const sent = stubRoutes({
       "GET /voice-profiles": () => jsonResponse(PROVISIONAL_VOICE_PROFILE),
@@ -78,6 +125,11 @@ describe("ComposeModal draftOnOpen", () => {
     );
     expect(sent.filter((r) => r.key === DRAFT)).toHaveLength(0);
     expect(messageText("Body")).toBe("");
+    expect(purposeField()).toHaveProperty(
+      "value",
+      "reply to their last message",
+    );
+    expect(screen.queryByRole("button", { name: "Redraft" })).toBeNull();
   });
 
   it("waits for a press when it cannot tell whether a draft is saved", async () => {

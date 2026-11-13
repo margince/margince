@@ -24,7 +24,7 @@ import {
 type AutomationRun = components["schemas"]["AutomationRun"];
 
 const meta: Meta = {
-  title: "Settings/AI/Automations/Automation detail",
+  title: "Settings/Data/Automations/Automation detail",
   parameters: { layout: "padded" },
 };
 export default meta;
@@ -255,6 +255,27 @@ export const PreviewError: Story = {
     installFetchStub({
       [PREVIEW_PATH]: () =>
         jsonResponse({ detail: "window_days must be 1..90" }, 422),
+    });
+    return (
+      <StoryProviders>
+        <AutomationPreview automationId="au-1" />
+      </StoryProviders>
+    );
+  },
+};
+
+export const FutureEventsOnly: Story = {
+  render: () => {
+    installFetchStub({
+      [PREVIEW_PATH]: () =>
+        jsonResponse({
+          preview_kind: "event",
+          matches_now_available: false,
+          historical_preview_available: false,
+          matches_now: 0,
+          window_days: 30,
+          would_have_fired: null,
+        }),
     });
     return (
       <StoryProviders>

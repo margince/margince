@@ -10,6 +10,7 @@ package dbmigrate
 
 import (
 	"context"
+	"errors"
 	"strings"
 
 	"github.com/jackc/pgx/v5"
@@ -20,8 +21,8 @@ import (
 // this package and the gate in backend/migrations both do — is still wrapped.
 //
 // It exists for CREATE INDEX CONCURRENTLY, which Postgres refuses inside a
-// transaction block and which is the only way to add an index to a large table
-// without blocking its writers for the whole build.
+// transaction block. A trigger made on many tables uses it too, so each table is
+// closed to writers only while its own trigger is made.
 //
 // THREE THINGS GO AWAY, and the gate in backend/migrations holds the file to the
 // shape that survives them:
@@ -51,11 +52,9 @@ func (m Migration) Unwrapped() bool { return unwrapped(m.UpSQL) }
 
 // unwrapped reports whether sql has the marker as an entire line, trimmed.
 //
-// Whole-line and nothing cleverer, so prose that NAMES the marker — this package and
-// the gate both do — does not ask for it. What it cannot tell is a marker alone on a
-// line inside a quoted body or a block comment; the shape gate keeps an unwrapped file
-// to concurrent index statements, which have neither, and a file that had one would
-// have to be wrapped to say it.
+// Whole-line and nothing cleverer, so prose that NAMES the marker (this package and
+// the gate both do) does not ask for it. It cannot tell a marker inside a quoted body
+// or a block comment. The shape gate keeps such a file to statements that have neither.
 func unwrapped(sql string) bool {
 	for line := range strings.SplitSeq(sql, "\n") {
 		if strings.TrimSpace(line) == NoTransactionMarker {
@@ -101,18 +100,38 @@ func apply(ctx context.Context, conn *pgx.Conn, m Migration, sql, bookkeeping st
 	// the wrapper did — "DROP INDEX CONCURRENTLY cannot run inside a transaction
 	// block" — and that pair is exactly the shape the retry contract asks for.
 	//
-	// Splitting on the semicolon is safe because of the gate, not in general: an
-	// unwrapped file may contain only concurrent index statements
-	// (TestEveryUnwrappedMigrationOnlyBuildsIndexesConcurrently), and those carry no
-	// semicolon inside a string or a body. A file that could would have to be wrapped.
+	// Splitting on the semicolon is safe only because of the shape gate in
+	// backend/migrations. It splits the same way and refuses any fragment it does not
+	// know, which a semicolon inside a string or body would leave.
+	restore, err := keepLockTimeout(ctx, conn)
+	if err != nil {
+		return err
+	}
 	for statement := range strings.SplitSeq(sql, ";") {
 		if strings.TrimSpace(statement) == "" {
 			continue
 		}
 		if _, err := conn.Exec(ctx, statement); err != nil {
-			return err
+			return errors.Join(err, restore())
 		}
 	}
-	_, err := conn.Exec(ctx, bookkeeping, args...)
+	if err := restore(); err != nil {
+		return err
+	}
+	_, err = conn.Exec(ctx, bookkeeping, args...)
 	return err
+}
+
+// keepLockTimeout returns a function that puts the session's lock_timeout back. An
+// unwrapped file sets it for the session, and a failure stops the file before its reset.
+// `RESET ALL` is not used, because it would also drop the statement ceiling cmd/migrate set.
+func keepLockTimeout(ctx context.Context, conn *pgx.Conn) (func() error, error) {
+	var before string
+	if err := conn.QueryRow(ctx, `SELECT current_setting('lock_timeout')`).Scan(&before); err != nil {
+		return nil, err
+	}
+	return func() error {
+		_, err := conn.Exec(ctx, `SELECT set_config('lock_timeout', $1, false)`, before)
+		return err
+	}, nil
 }

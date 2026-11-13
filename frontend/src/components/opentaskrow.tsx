@@ -2,6 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { ReactNode } from "react";
+import type { components } from "../api/schema";
 import { Badge } from "../design-system/atoms";
 import { OverviewRow } from "../design-system/overviewcard";
 import { formatNumber } from "../format/format";
@@ -24,6 +25,7 @@ export type OpenTask = DatedTask &
     id: string;
     subject: string;
     due_has_time?: boolean;
+    due_intent?: components["schemas"]["IntentTime"];
     assignee_id?: string | null;
     assignee_name?: string | null;
     version?: number;
@@ -57,7 +59,13 @@ export function OpenTaskRow({
     holder,
     task.due_at &&
       t("co.next.due", {
-        when: formatDueCompact(task.due_at, task.due_has_time, locale, zone),
+        when: formatDueCompact(
+          task.due_at,
+          task.due_has_time,
+          locale,
+          zone,
+          task.due_intent,
+        ),
       }),
     forName && t("co.overview.for", { name: forName }),
   ]);

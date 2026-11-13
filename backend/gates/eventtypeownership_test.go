@@ -335,6 +335,7 @@ var sharedEventTypes = gatekit.Waive(map[string]string{
 	// that a pipeline ran, which no consumer of the record wants.
 	"lead.created <- internal/modules/contacts":        "a lead somebody created",
 	"lead.created <- internal/modules/capture":         "a lead an inbound message created; source_system names where it came from. Both are a lead existing that did not before",
+	"activity.captured <- internal/compose/inquiries":  "builds planner input from an already accepted note; this preview emits no event",
 	"activity.captured <- internal/modules/activities": "an activity logged through the product",
 	"activity.captured <- internal/modules/capture":    "an activity an inbound message produced, again with source_system. The verb is already `captured` for both — it is the record's arrival, not the pipeline's run",
 })

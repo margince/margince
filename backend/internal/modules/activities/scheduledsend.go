@@ -39,6 +39,9 @@ const (
 	FieldScheduledTZ = "scheduled_tz"
 )
 
+// fieldScheduledIntent is the audit key of the chosen local send time.
+const fieldScheduledIntent = "scheduled_intent"
+
 // ScheduleTimer wakes a scheduled send when it comes due. It is the seam
 // between the decision to defer, which this module owns, and the job runner,
 // which it must not reach into directly.
@@ -134,12 +137,12 @@ type HeldNotice struct {
 	ScheduledAt     time.Time
 }
 
-// SendSchedule is a caller's request to defer a send. At is absolute; TZ is the
-// IANA zone the human picked it in, kept so the choice can be re-rendered and
-// audited (ADR-0104 §7).
+// SendSchedule retains a chosen local time. Without Intent, At and TZ carry
+// a legacy instant whose original local choice cannot be recovered.
 type SendSchedule struct {
-	At time.Time
-	TZ string
+	At     time.Time
+	TZ     string
+	Intent *values.IntentTime
 }
 
 // scheduledPayload is the frozen message, versioned because these rows outlive
@@ -159,6 +162,7 @@ type ScheduledSend struct {
 	ID              ids.UUID
 	Status          string
 	ScheduledAt     time.Time
+	ScheduledWall   *time.Time
 	ScheduledTZ     string
 	OriginKind      string
 	Anchor          ids.ActivityID
@@ -274,6 +278,13 @@ func (s *Store) SendOrSchedule(
 	stager DeliveryStager,
 	timer ScheduleTimer,
 ) (SendOutcome, error) {
+	if sched != nil {
+		normalized, err := normalizeSchedule(*sched)
+		if err != nil {
+			return SendOutcome{}, err
+		}
+		sched = &normalized
+	}
 	if sched == nil || !sched.At.After(s.now()) {
 		sent, err := s.SendEmail(ctx, origin, in, gate, stager)
 		if err != nil {
@@ -306,6 +317,11 @@ func (s *Store) scheduleSend(
 	if timer == nil {
 		return ScheduledSend{}, errNoScheduleTimer
 	}
+	normalized, err := normalizeSchedule(sched)
+	if err != nil {
+		return ScheduledSend{}, err
+	}
+	sched = normalized
 	if err := validateSchedule(sched, s.now()); err != nil {
 		return ScheduledSend{}, err
 	}
@@ -342,24 +358,29 @@ func (s *Store) scheduleSend(
 		// The row's stamps come back from the insert, so the answer to a
 		// scheduling carries the times a later read of the same row shows.
 		if err := tx.QueryRow(ctx, `
-			INSERT INTO scheduled_send
-			  (id, status, scheduled_at, scheduled_tz,
-			   origin_kind, anchor_activity_id, origin_links, also_links,
-			   payload, payload_version, scheduled_by, principal_kind,
-			   agent_actor_id, agent_passport_id, agent_on_behalf_of)
-			VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
-			RETURNING created_at, updated_at`,
-			row.ID, row.Status, row.ScheduledAt, row.ScheduledTZ,
-			row.OriginKind, nullableAnchor(origin), originLinks, alsoLinks,
-			payload, payloadVersionCurrent, row.ScheduledBy, principalKind(actor),
-			prov.ActorID, prov.PassportID, prov.OnBehalfOf,
-		).Scan(&row.CreatedAt, &row.UpdatedAt); err != nil {
+ INSERT INTO scheduled_send
+  (id,status,scheduled_at,scheduled_tz,scheduled_wall,
+   origin_kind,anchor_activity_id,origin_links,also_links,
+   payload,payload_version,scheduled_by,principal_kind,
+   agent_actor_id,agent_passport_id,agent_on_behalf_of)
+ SELECT @id,@status,planned.instant,COALESCE(planned.timezone,@zone),planned.wall_time,
+  @origin,@anchor,@origin_links::jsonb,@also_links::jsonb,
+  @payload::jsonb,@payload_version,@seat,@principal,
+  @agent_actor,@passport,@on_behalf
+ FROM public.update_intent_time(NULL,NULL,NULL,@wall::text::timestamp,@zone,@at) AS planned
+ RETURNING created_at,updated_at,scheduled_wall,scheduled_at`, pgx.NamedArgs{
+			"id": row.ID, "status": row.Status, "at": row.ScheduledAt, argZone: row.ScheduledTZ, argWall: sched.wallClock(),
+			"origin": row.OriginKind, "anchor": nullableAnchor(origin), "origin_links": originLinks, "also_links": alsoLinks,
+			"payload": payload, "payload_version": payloadVersionCurrent, argSeat: row.ScheduledBy, "principal": principalKind(actor),
+			"agent_actor": prov.ActorID, "passport": prov.PassportID, "on_behalf": prov.OnBehalfOf,
+		}).Scan(&row.CreatedAt, &row.UpdatedAt, &row.ScheduledWall, &row.ScheduledAt); err != nil {
 			return fmt.Errorf("scheduled send: recording the intention: %w", err)
 		}
 		if _, err := storekit.Audit(ctx, tx, "schedule", "scheduled_send", row.ID, nil, map[string]any{
-			FieldScheduledAt: row.ScheduledAt,
-			FieldScheduledTZ: row.ScheduledTZ,
-			"subject":        row.Subject,
+			FieldScheduledAt:     row.ScheduledAt,
+			FieldScheduledTZ:     row.ScheduledTZ,
+			fieldScheduledIntent: row.IntentWire(),
+			fieldSubject:         row.Subject,
 		}); err != nil {
 			return err
 		}
@@ -372,26 +393,6 @@ func (s *Store) scheduleSend(
 		return ScheduledSend{}, err
 	}
 	return row, nil
-}
-
-// validateSchedule refuses a due moment the server will not honour.
-func validateSchedule(sched SendSchedule, now time.Time) error {
-	if sched.TZ == "" {
-		return &InvalidScheduleError{Field: FieldScheduledTZ, Reason: "is required when scheduling a send"}
-	}
-	// A zone NAME, never a numeric offset, which would freeze the DST rules of
-	// the day it was written (AC-DS-TZ4). "Local" is the server's zone, so it
-	// is refused, and so is a name with spaces around it.
-	if err := values.ZoneName(sched.TZ); err != nil {
-		return &InvalidScheduleError{Field: FieldScheduledTZ, Reason: "is not an IANA time zone name"}
-	}
-	if sched.At.Sub(now) > scheduleCeiling {
-		return &InvalidScheduleError{
-			Field:  FieldScheduledAt,
-			Reason: fmt.Sprintf("is further ahead than the %d-day scheduling limit", int(scheduleCeiling.Hours()/24)),
-		}
-	}
-	return nil
 }
 
 var (

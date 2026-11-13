@@ -327,7 +327,13 @@ export function timelineEvents(
             key: row.id,
             at: row.due_at,
             title: titleOf(row),
-            sub: formatDueCompact(row.due_at, row.due_has_time, locale, zone),
+            sub: formatDueCompact(
+              row.due_at,
+              row.due_has_time,
+              locale,
+              zone,
+              row.due_intent,
+            ),
             kind: Date.parse(row.due_at) < now ? "late" : "ahead",
           },
         ]

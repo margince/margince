@@ -29,7 +29,7 @@ function CompanyDealPicker(props: ComponentProps<typeof DealPicker>) {
 }
 
 const LazyApprovalDetailModal = lazy(async () => ({
-  default: (await import("./features/automations/approvaleditor"))
+  default: (await import("./features/automations/approvaldetail"))
     .ApprovalDetailModal,
 }));
 function ApprovalDetailModal(

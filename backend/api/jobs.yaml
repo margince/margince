@@ -796,6 +796,7 @@ kinds:
     args:
       Workspace: id
       ScheduledSendID: id
+      DueAt: {scalar: true, reason: "The moment the alarm was set for. It keys the job's uniqueness and the worker never reads it."}
     reason: >-
       A dumb alarm, not the schedule. The row is the schedule: this wakes,
       re-reads it, and does nothing if the message was cancelled, snoozes if

@@ -335,7 +335,7 @@ func hashOf(parts ...string) string {
 // computes. Present: the dates and amounts, which move only when the source
 // moves them.
 func invoiceHash(inv SourceInvoice) string {
-	return hashOf(
+	parts := []string{
 		inv.ExternalID, inv.Number,
 		inv.IssuedOn.UTC().Format(time.RFC3339Nano),
 		stampOf(inv.DueOn), inv.Currency,
@@ -346,7 +346,13 @@ func invoiceHash(inv SourceInvoice) string {
 		stampOf(inv.FullyPaidAt),
 		strconv.FormatBool(inv.Disputed), strconv.FormatBool(inv.Void),
 		inv.CreditsExternalID,
-	)
+	}
+	// Appended only when stated. A source that names no dunning level keeps the
+	// hash its rows were mirrored under, so the next pass writes nothing.
+	if inv.DunningLevel != nil {
+		parts = append(parts, "dunning", strconv.Itoa(*inv.DunningLevel))
+	}
+	return hashOf(parts...)
 }
 
 func paymentHash(pay SourcePayment) string {

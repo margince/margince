@@ -31,13 +31,12 @@ name: Release
 # The flow, in order: draft the release versioned 1970.<build> (the build is
 # this workflow's run number, fitting the constellation YYYY.edition version
 # scheme; the year is pinned to the epoch FOR NOW so every PoC release orders
-# strictly below any real dated release) with the incremental patch and the
-# three freshly generated
-# source-tree SBOMs attached, then build the three role images through the
-# bake file (docker-bake.hcl), push them to the constellation registry, add
-# them to the draft as digest-pinned image references, and finally publish
-# the release. The dist service publishes only a complete draft (patch + all
-# three SBOMs).
+# strictly below any real dated release) with the incremental patch, the
+# three freshly generated source-tree SBOMs and the changelog attached, then
+# build the three role images through the bake file (docker-bake.hcl), push
+# them to the constellation registry, add them to the draft as digest-pinned
+# image references, and finally publish the release. The dist service
+# publishes only a complete draft (patch, all three SBOMs and the changelog).
 #
 # Both the patch cut and the release upload go through the release-management
 # CLI (a closed-source tool built and published from
@@ -53,6 +52,11 @@ name: Release
 # the patch is cut from that revision, and the draft names that version as
 # --patch-base. With no release that went out, the release is the first one and
 # its patch is the whole tree.
+#
+# The changelog is built from every non-merge commit subject since that same
+# revision, through scripts/release_changelog.py, so it describes what the patch
+# carries.
+# The first release gets one fixed sentence.
 on:
   push:
     tags: ['v*']
@@ -182,6 +186,18 @@ jobs:
             -e GIT_CONFIG_VALUE_0='*' \
             "$RELEASE_MANAGEMENT_IMAGE" \
             create-patch "${patch_from[@]}" --to "$AFTER" --repo . --out "$patch_file"
+          # The changelog sits beside the patch, inside the CLI's mount. It is built
+          # from every non-merge commit subject since the patch base, so a change that
+          # came through another branch keeps its own subject. The script drops
+          # invalid UTF-8 bytes and refuses a base with no subject since it; the
+          # CLI refuses an empty or too large file before any request.
+          changelog_file="${GITHUB_REF_NAME//\//-}-$AFTER.changelog.md"
+          if [ "$first_release" = true ]; then
+            python3 scripts/release_changelog.py "$version" "$GITHUB_REPOSITORY" "$AFTER" > "$changelog_file"
+          else
+            git log --no-merges --format=%s "$base_revision..$AFTER" |
+              python3 scripts/release_changelog.py "$version" "$GITHUB_REPOSITORY" "$AFTER" "$base_version" "$base_revision" > "$changelog_file"
+          fi
           docker run --rm \
             --user "$(id -u):$(id -g)" \
             -v "$PWD":/work \
@@ -191,6 +207,7 @@ jobs:
             "$RELEASE_MANAGEMENT_IMAGE" \
             draft-release --release "$version" --revision "$AFTER" \
             --patch "$patch_file" "${patch_base[@]}" \
+            --changelog "$changelog_file" \
             --sbom-cyclonedx sboms/margince.cdx.json \
             --sbom-spdx22 sboms/margince.spdx221.json \
             --sbom-spdx30 sboms/margince.spdx300.json
@@ -316,7 +333,7 @@ jobs:
 
   # Publish only after the images are attached, so a published release always
   # carries its images even though the dist completeness gate only requires
-  # the patch and the SBOMs.
+  # the patch, the SBOMs and the changelog.
   publish:
     name: Publish release
     timeout-minutes: 30

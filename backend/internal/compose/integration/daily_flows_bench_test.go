@@ -73,6 +73,8 @@ type dailyInput struct {
 	Team                                           string
 	DealID, DealName, CompanyID, CompanyName       string
 	ContactID, ProjectID, ListPrefix, EvaluateArgs string
+	// AIMonth is the admin's usage query: from and to, the month's bounds.
+	AIMonth string
 }
 
 var dailyFlows = []dailyFlow{

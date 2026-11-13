@@ -1,19 +1,18 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api } from "../../api/client";
 import type { components } from "../../api/schema";
-import { Badge, Button, EmptyState, Skeleton } from "../../design-system/atoms";
+import { Badge, Button, EmptyState } from "../../design-system/atoms";
 import { ErrorLine } from "../../design-system/errorline";
 import { Panel, PanelBody } from "../../design-system/panel";
-import { formatDateTime } from "../../format/format";
-import { useLocale, useT } from "../../i18n";
+import { useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
 import { unwrap } from "../../lib/problem";
-import { useViewerZone } from "../../lib/viewerzone";
 import {
   type OpenReceipt,
   SentenceList,
   WrittenBy,
 } from "../records/record360";
+import { AssemblyStamp, AssemblyWait } from "./companyassembly";
 
 type Dossier = components["schemas"]["CompanyDossier"];
 type SectionKind = Dossier["sections"][number]["kind"];
@@ -59,9 +58,7 @@ export function DossierPanel({
   nameOf?: (entityType: string, entityId: string) => string | undefined;
 }>) {
   const t = useT();
-  const { locale } = useLocale();
   const queryClient = useQueryClient();
-  const readerZone = useViewerZone();
   const dossier = useQuery({
     queryKey: ["company-dossier", companyId],
     queryFn: async () => {
@@ -113,11 +110,10 @@ export function DossierPanel({
              reader with nothing rather than with something dated. */
           <Badge tone="warning">{t("co.dossier.stale")}</Badge>
         )}
-        <span className="t-caption">
-          {t("co.brief.generatedAt", {
-            when: formatDateTime(readable.generated_at, locale, readerZone),
-          })}
-        </span>
+        <AssemblyStamp
+          at={readable.generated_at}
+          servedFrom={readable.served_from}
+        />
       </span>
       <Button
         // The writer's own verb, inside a panel already tinted for it: quiet
@@ -142,7 +138,9 @@ export function DossierPanel({
       titleAction={<Badge tone="ai">{t("co.assistant.aiTag")}</Badge>}
     >
       <PanelBody className="co-brief-body">
-        {dossier.isPending && <Skeleton width="100%" height={64} />}
+        {dossier.isPending && (
+          <AssemblyWait writing={t("co.dossier.writing")} lines={3} />
+        )}
         {!dossier.isPending && !readable && (
           <EmptyState>{t("co.dossier.unavailable")}</EmptyState>
         )}

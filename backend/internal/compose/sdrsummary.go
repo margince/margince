@@ -76,7 +76,8 @@ func (h sdrSummaryHandlers) GetSdrSummary(w http.ResponseWriter, r *http.Request
 	}
 	ctx := r.Context()
 	var out crmcontracts.SdrSummary
-	err = h.db.Tx(ctx, func(tx pgx.Tx) error {
+	// One snapshot, so the counts and the seats the floor checks are read at one instant.
+	err = h.db.TxIsolated(ctx, pgx.RepeatableRead, func(tx pgx.Tx) error {
 		var err error
 		out, err = readSdrSummary(ctx, tx, requested, at)
 		return err
@@ -137,6 +138,12 @@ func readSdrSummary(ctx context.Context, tx pgx.Tx, requested RequestedScope, at
 	if template == crmcontracts.ReportingFrameworkInputTemplateSdr {
 		out.Workflow = crmcontracts.SdrSummaryWorkflowHandoff
 	}
+	// While the switch is off, the seats behind each count meet the floor.
+	allowed, err := individualPerformance(ctx, tx)
+	if err != nil {
+		return out, err
+	}
+	var contributors [][]ids.UUID
 	// Each count answers to its own grant, the rule the team review keeps.
 	switch {
 	case out.Workflow != crmcontracts.SdrSummaryWorkflowHandoff:
@@ -149,19 +156,33 @@ func readSdrSummary(ctx context.Context, tx pgx.Tx, requested RequestedScope, at
 			return out, err
 		}
 		out.Handoffs = &totals
+		if !allowed {
+			seats, err := readWaitingSubmitters(ctx, tx, requested, at)
+			if err != nil {
+				return out, err
+			}
+			contributors = append(contributors, seats...)
+		}
 	}
 	if weekly.MayReadMeetings(ctx) {
 		window, err := upcomingWindow(ctx, tx, at)
 		if err != nil {
 			return out, err
 		}
-		upcoming, err := readUpcomingMeetings(ctx, tx, requested, window)
+		upcoming, seats, err := readUpcomingMeetings(ctx, tx, requested, window)
 		if err != nil {
 			return out, err
 		}
 		out.UpcomingMeetings, out.UpcomingWindow = &upcoming, &window
+		contributors = append(contributors, seats)
 	}
-	return out, nil
+	if allowed {
+		return out, nil
+	}
+	if err := requireOneSnapshot(ctx, tx); err != nil {
+		return out, err
+	}
+	return out, requireFlooredTotals(ctx, tx, resolved, contributors)
 }
 
 // readHandoffTotals counts the scope's open handoffs in one statement.
@@ -185,16 +206,18 @@ func readHandoffTotals(ctx context.Context, tx pgx.Tx, requested RequestedScope,
 }
 
 // readUpcomingMeetings counts the meetings listUpcomingMeetings lists, by the
-// one predicate both read.
-func readUpcomingMeetings(ctx context.Context, tx pgx.Tx, requested RequestedScope, window crmcontracts.SdrUpcomingWindow) (int, error) {
+// one predicate both read, and names the seats credited with them.
+func readUpcomingMeetings(ctx context.Context, tx pgx.Tx, requested RequestedScope, window crmcontracts.SdrUpcomingWindow) (int, []ids.UUID, error) {
 	var b reportingBindings
 	where, err := upcomingMeetingSQL(ctx, tx, requested, window, &b)
 	if err != nil {
-		return 0, err
+		return 0, nil, err
 	}
 	var count int
-	err = tx.QueryRow(ctx, `SELECT count(*) FROM activity a WHERE `+where, b.values...).Scan(&count)
-	return count, err
+	var seats []ids.UUID
+	err = tx.QueryRow(ctx, `SELECT count(DISTINCT a.id),COALESCE(array_remove(array_agg(DISTINCT credit.id),NULL),'{}')
+ FROM activity a LEFT JOIN LATERAL `+storekit.MeetingCreditedSeatsSQL("a")+` ON true WHERE `+where, b.values...).Scan(&count, &seats)
+	return count, seats, err
 }
 
 // handoffPage is one page of open handoffs in one status: submitted and

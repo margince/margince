@@ -64,12 +64,9 @@ var growthFitPromptVersion = ai.PromptDigest(func(fence promptfence.Fence) strin
 })
 
 // growthFitStoredVersion is the payload SHAPE this build writes and can read.
-// v2 adds the sub-scores (DOSS-AC-17). A v1 payload has none, and serving one
-// would render a card with a band and no bars that looks like a complete
-// answer. v3 carries the missing inputs and the next step as
-// codes. A v2 payload holds English sentences the client no longer words. v4 names the
-// offering the company was judged against; a v3 payload has no such name.
-const growthFitStoredVersion = 4
+// A payload of an older version lacks a part the card draws (sub-scores, input
+// codes, the offering, the per-input states), so it is assessed again.
+const growthFitStoredVersion = 5
 
 // GrowthFitService assembles and caches one company's growth fit per reader.
 type GrowthFitService struct {
@@ -209,7 +206,7 @@ func (s *GrowthFitService) Get(ctx context.Context, companyID ids.CompanyID, for
 		return zero, err
 	}
 	if found && !force && cached.usable(fingerprint, utc()) {
-		return s.enrich(ctx, cached.wire(companyID))
+		return s.enrich(ctx, cached.wire(companyID, crmcontracts.AssemblyServedFromCache))
 	}
 
 	lane, withheld := ai.ReadLane(ctx, s.lane)
@@ -224,7 +221,7 @@ func (s *GrowthFitService) Get(ctx context.Context, companyID ids.CompanyID, for
 		// The contract says as much for this endpoint: a refresh the budget
 		// refuses returns the cached assembly with its age rather than an
 		// error. Its `generated_at` is that age.
-		return s.enrich(ctx, cached.wire(companyID))
+		return s.enrich(ctx, cached.wire(companyID, crmcontracts.AssemblyServedFromCache))
 	}
 	written := storedGrowthFit{
 		Fingerprint:  fingerprint,
@@ -246,12 +243,12 @@ func (s *GrowthFitService) Get(ctx context.Context, companyID ids.CompanyID, for
 	// retry never happens. For a company held on human-entered values there is
 	// no expiry either, so that would be permanent.
 	if laneFailed || withheld {
-		return s.enrich(ctx, written.wire(companyID))
+		return s.enrich(ctx, written.wire(companyID, crmcontracts.AssemblyServedFromGenerated))
 	}
 	if err := s.save(ctx, userID, companyID, written); err != nil {
 		return zero, err
 	}
-	return s.enrich(ctx, written.wire(companyID))
+	return s.enrich(ctx, written.wire(companyID, crmcontracts.AssemblyServedFromGenerated))
 }
 
 // usable reports whether this build may still serve a cached entry.
@@ -298,13 +295,14 @@ func growthFitFingerprint(in Input, routingVersion string, offering Offering, la
 	return hex.EncodeToString(sum[:]), nil
 }
 
-func (g storedGrowthFit) wire(companyID ids.CompanyID) crmcontracts.CompanyGrowthFit {
+func (g storedGrowthFit) wire(companyID ids.CompanyID, from crmcontracts.AssemblyServedFrom) crmcontracts.CompanyGrowthFit {
 	out := crmcontracts.CompanyGrowthFit{
 		CompanyId:        openapi_types.UUID(companyID.UUID),
 		Band:             crmcontracts.GrowthFitBand(g.Band),
 		DataCompleteness: g.Completeness,
 		GeneratedAt:      g.GeneratedAt,
 		GeneratedBy:      crmcontracts.WrittenBy(g.GeneratedBy),
+		ServedFrom:       &from,
 	}
 	// Both stay ABSENT rather than empty when nothing capped the band and
 	// nothing is outstanding: an empty string would render as a reason and a

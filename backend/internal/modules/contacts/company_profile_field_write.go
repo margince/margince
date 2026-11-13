@@ -21,6 +21,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/kernel/values"
 )
 
 // ensureCompanyWritable is ensureCompanyReadable's write-side twin: same row-scope and
@@ -200,6 +201,11 @@ func (s *Store) writeProfileField(
 			if err := tx.QueryRow(ctx, `SELECT display_name FROM company WHERE id = $1`,
 				companyID).Scan(&current); err != nil && !errors.Is(err, pgx.ErrNoRows) {
 				return fmt.Errorf("contacts: reading company %s before its name correction: %w", companyID, err)
+			}
+			if current != name {
+				if err := httperr.RequireWithin(fieldDisplayName, name, values.TextLabelCharacters); err != nil {
+					return err
+				}
 			}
 			if err := writeCanonicalCompanyColumn(ctx, tx, companyID, column, name); err != nil {
 				return err

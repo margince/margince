@@ -8,6 +8,7 @@ import { useLocale, usePlural, useT } from "../i18n";
 import { Button } from "./atoms";
 import { FactList } from "./factlist";
 import { Heading } from "./heading";
+import { SectionHelp } from "./panel";
 import "./recorddetails.css";
 
 /**
@@ -28,6 +29,8 @@ export type DetailRow = Readonly<{
 export type DetailSection = Readonly<{
   key: string;
   label: ReactNode;
+  /** What the group shows, behind a "?" beside its label. */
+  help?: string;
   rows?: readonly DetailRow[];
   children?: ReactNode;
 }>;
@@ -96,14 +99,17 @@ function DetailGroup({
   }
   return (
     <section className="recorddetails-group" aria-labelledby={labelId}>
-      <Heading
-        size="xxsmall"
-        as="h2"
-        id={labelId}
-        className="recorddetails-label"
-      >
-        {section.label}
-      </Heading>
+      <div className="recorddetails-labelline">
+        <Heading
+          size="xxsmall"
+          as="h2"
+          id={labelId}
+          className="recorddetails-label"
+        >
+          {section.label}
+        </Heading>
+        {section.help && <SectionHelp help={section.help} />}
+      </div>
       {rows.length > 0 && <FactList flat facts={rows} />}
       {section.children}
     </section>

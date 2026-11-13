@@ -18,8 +18,10 @@ import (
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/search"
 	"github.com/margince/margince/backend/internal/platform/database"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 func TestErasureRefoldsARelinkedActivityBeforeItsEventIsDelivered(t *testing.T) {
@@ -35,6 +37,10 @@ func TestErasureRefoldsARelinkedActivityBeforeItsEventIsDelivered(t *testing.T) 
 	})
 	if err != nil {
 		t.Fatal(err)
+	}
+	bounded := e.As(e.AdminUser, nil, principal.Permissions{Objects: integration.AdminPerms.Objects, RowScope: principal.RowScopeOwn})
+	if visible, err := e.Activities.GetActivityContent(bounded, ids.From[ids.ActivityKind](ids.UUID(meeting.Id)), storekit.LiveOnly); err != nil || visible.Id != meeting.Id {
+		t.Fatalf("own meeting read = %v, %v", visible.Id, err)
 	}
 	activityID := ids.UUID(meeting.Id)
 	rep := e.As(e.Rep1, []ids.UUID{e.Team1}, integration.AccountRepPerms)

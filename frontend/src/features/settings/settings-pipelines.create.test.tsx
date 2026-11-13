@@ -165,14 +165,14 @@ describe("PipelinesCard: a refusal that lands mid-edit", () => {
     server(TWO_PIPELINES);
     const { client } = render(<PipelinesCard />);
     await user.click(await screen.findByTestId("new-stage-pl"));
-    expect(screen.getByLabelText(/Name/)).toBeTruthy();
+    expect(screen.getByLabelText("Name *")).toBeTruthy();
     act(() => {
       client.setQueryData(
         ["me"],
         meFixture({ allow: { pipeline: ["read", "create"] } }),
       );
     });
-    await waitFor(() => expect(screen.queryByLabelText(/Name/)).toBeNull());
+    await waitFor(() => expect(screen.queryByLabelText("Name *")).toBeNull());
     expectRefused(
       screen.getByTestId("new-stage-pl"),
       "Your role cannot add stages. Ask an admin.",

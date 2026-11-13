@@ -49,7 +49,7 @@ func TestSampleLabelAndReferenceLimitsAreEnforced(t *testing.T) {
 		overrides AnyMap
 		field     string
 	}{
-		{"a 256-character label", AnyMap{"source_label": strings.Repeat("l", 256)}, "source_label"},
+		{"a 501-character label", AnyMap{"source_label": strings.Repeat("l", 501)}, "source_label"},
 		{"a 513-character reference", AnyMap{"source_ref": strings.Repeat("r", 513)}, "source_ref"},
 		{"an empty reference", AnyMap{"source_ref": ""}, "source_ref"},
 		{"a blank reference", AnyMap{"source_ref": "   "}, "source_ref"},
@@ -65,8 +65,8 @@ func TestSampleLabelAndReferenceLimitsAreEnforced(t *testing.T) {
 		})
 	}
 
-	// Limits count characters: 255 two-byte letters are 510 bytes.
-	ingest(t, e, base, sampleBody(AnyMap{"source_label": strings.Repeat("é", 255), "source_ref": strings.Repeat("é", 512)}))
+	// Limits count characters: 500 two-byte letters are 1000 bytes.
+	ingest(t, e, base, sampleBody(AnyMap{"source_label": strings.Repeat("é", 500), "source_ref": strings.Repeat("é", 512)}))
 }
 
 func TestSampleReferenceIsTrimmedSoPaddedAndBareShareOneKey(t *testing.T) {

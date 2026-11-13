@@ -6,7 +6,7 @@
 // Today, Decisions and System are three reads of the day, split by the server.
 // The screen asks for one view at a time and draws only that view's rows.
 
-import { cleanup, screen, within } from "@testing-library/react";
+import { cleanup, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { en } from "../../i18n/en";
@@ -51,6 +51,53 @@ describe("the work views", () => {
     renderWorklist();
 
     await screen.findByText("A task");
+    expect(worklistReads()[0]?.get("view")).toBe("today");
+  });
+
+  it("asks the server for website inquiries when the reader chooses that filter", async () => {
+    stub(
+      day({
+        queue: [
+          row({
+            id: "inquiry-task",
+            source: "task",
+            kind: "website_inquiry",
+            title: "Answer the website inquiry",
+          }),
+        ],
+      }),
+    );
+    const user = userEvent.setup();
+    renderWorklist();
+    await user.click(
+      await screen.findByRole("button", {
+        name: en["worklist.filter.website_inquiries"],
+      }),
+    );
+    await waitFor(() =>
+      expect(worklistReads().at(-1)?.get("filter")).toBe("website_inquiries"),
+    );
+    expect(worklistReads().at(-1)?.get("view")).toBe("today");
+    expect(globalThis.location.hash).toContain("filter=website_inquiries");
+  });
+
+  it("keeps a saved website inquiry filter on the Today view", async () => {
+    stub(
+      day({
+        queue: [
+          row({
+            id: "inquiry-task",
+            source: "task",
+            kind: "website_inquiry",
+            title: "Answer the website inquiry",
+          }),
+        ],
+      }),
+    );
+    globalThis.location.hash = "#/worklist?filter=website_inquiries";
+    renderWorklist();
+    await screen.findByText("Answer the website inquiry");
+    expect(worklistReads()[0]?.get("filter")).toBe("website_inquiries");
     expect(worklistReads()[0]?.get("view")).toBe("today");
   });
 

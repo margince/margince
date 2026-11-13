@@ -64,20 +64,28 @@ const Heading = "LANGUAGE\n"
 func Rule(lang string) string {
 	return Heading + `Write every human-readable sentence of your output in ` + LanguageName(lang) + `.
 Write naturally in that language rather than translating English phrasing.
-Leave everything that is not a sentence exactly as it is given: JSON keys, enum
+` + carveOuts
+}
+
+// KeepRule is the language block for rewriting text whose language could not
+// be placed. The output stays in the language the text is written in.
+func KeepRule() string {
+	return Heading + `Write in the language the text is already written in, and never translate it.
+` + carveOuts
+}
+
+const carveOuts = `Leave everything that is not a sentence exactly as it is given: JSON keys, enum
 and status values, ids, urls, email addresses, personal names, company names,
 and any text you are quoting from a source. Translating one of those changes
 what it refers to.`
-}
 
 // LanguageName is the language's name in English, for any surface that tells
 // a model which language to write in — the prompt rule below, and the tool
 // surface that answers the same question to an agent running elsewhere.
 //
-// A code the product does not ship answers English, which is the fallback Rule
-// documents above and the one every caller wants: the surfaces that call this
-// hand the answer straight to a model, and a blank there instructs it in no
-// language at all.
+// A code the product does not ship answers English, the fallback Rule documents
+// above. Every caller hands the answer straight to a model, and a blank there
+// instructs it in no language at all.
 func LanguageName(lang string) string {
 	if name := englishName(lang); name != "" {
 		return name

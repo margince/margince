@@ -282,7 +282,7 @@ func (s *PendingStore) PurgeRawCaptureTx(ctx context.Context, tx pgx.Tx, activit
 	if err != nil {
 		return fmt.Errorf("capture: purge provider originals: %w", err)
 	}
-	if _, _, err := originalstore.PurgeReturned(ctx, rows); err != nil {
+	if _, _, err := originalstore.CountReturned(rows); err != nil {
 		return err
 	}
 	return purgePartySourcesTx(ctx, tx, activityIDs)

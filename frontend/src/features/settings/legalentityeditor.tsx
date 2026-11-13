@@ -14,6 +14,7 @@ import { ErrorLine } from "../../design-system/errorline";
 import { RecordFormDialog } from "../../design-system/recordformdialog";
 import { Select } from "../../design-system/select";
 import { countryOptions } from "../../format/assignedcountries";
+import { formatNumber } from "../../format/format";
 import { useLocale, useT } from "../../i18n";
 import {
   type LegalEntity,
@@ -23,6 +24,7 @@ import {
   useUpdateLegalEntity,
 } from "../../lib/legalentities.queries";
 import { problemMessageOf } from "../../lib/problem";
+import { TEXT_LIMITS } from "../../lib/textlimits_gen";
 import { EntityLogo } from "./legalentitylogo";
 
 // The editor's fields, flat. The contract nests the address and the offering;
@@ -134,6 +136,7 @@ export function EditEntityDialog({
   onClose,
 }: Readonly<{ entity: LegalEntity; onClose: () => void }>) {
   const t = useT();
+  const { locale } = useLocale();
   const formId = useId();
   const update = useUpdateLegalEntity();
   const logo = useLegalEntityLogo();
@@ -177,11 +180,13 @@ export function EditEntityDialog({
             <>
               <TextField
                 label={t("legalEntities.displayName")}
+                maxLength={TEXT_LIMITS.label}
                 required
                 {...text("display_name")}
               />
               <TextField
                 label={t("legalEntities.legalName")}
+                maxLength={TEXT_LIMITS.line}
                 required
                 {...text("legal_name")}
               />
@@ -245,7 +250,9 @@ export function EditEntityDialog({
           />
           <AreaField
             label={t("legalEntities.imprint")}
-            hint={t("legalEntities.imprintHint")}
+            hint={t("legalEntities.imprintHint", {
+              max: formatNumber(TEXT_LIMITS.document, locale),
+            })}
             {...text("imprint")}
           />
           {/* The default entity signs with the workspace template, which has
@@ -386,7 +393,7 @@ function AreaField({ label, hint, value, onChange }: TextProps) {
         <Textarea
           {...control}
           rows={3}
-          maxLength={4000}
+          maxLength={TEXT_LIMITS.document}
           value={value}
           onChange={(event) => onChange(event.target.value)}
         />

@@ -12,12 +12,14 @@ import {
   writeMessage,
 } from "../../design-system/richtext-testing";
 import { pickOption } from "../../design-system/select-testing";
-import { draftButton } from "../../testing/composedraft.testkit";
+import { draftButton, redraft } from "../../testing/composedraft.testkit";
 import { ComposeModal } from "./compose";
 import {
   jsonResponse,
   problemResponse,
+  REWRITE_ROUTE,
   render,
+  rewrittenBody,
   type Sent,
   stubRoutes,
 } from "./compose.testkit";
@@ -268,6 +270,7 @@ describe("the language of an AI draft", () => {
         answer("Chào chị Dana,", "vi"),
         answer("Chào chị,", "vi"),
       ),
+      [REWRITE_ROUTE]: () => rewrittenBody("Chào chị,", "vi"),
     });
     render(contactComposer());
     await firstDraft(user, "Hello Dana,");
@@ -276,27 +279,27 @@ describe("the language of an AI draft", () => {
 
     await user.click(screen.getByRole("button", { name: "Shorter" }));
     await waitFor(() => expect(messageText("Body")).toBe("Chào chị,"));
-    await user.click(screen.getByRole("button", { name: "Change the ask" }));
-    await user.click(draftButton());
+    await redraft(user);
     await waitFor(() =>
-      expect(draftCalls(sent, CONTACT_ROUTE)).toHaveLength(4),
+      expect(draftCalls(sent, CONTACT_ROUTE)).toHaveLength(3),
     );
 
-    const [, , shorter, again] = draftCalls(sent, CONTACT_ROUTE);
-    expect(shorter?.body).toMatchObject({
-      intent: "Keep the meaning and use fewer words.",
+    const [, , again] = draftCalls(sent, CONTACT_ROUTE);
+    expect(draftCalls(sent, REWRITE_ROUTE)[0]?.body).toMatchObject({
+      verb: "shorter",
       language: "vi",
     });
-    expect(again?.body).toMatchObject({ intent: INTENT, language: "vi" });
+    expect(again?.body).toMatchObject({
+      intent: `${INTENT} again`,
+      language: "vi",
+    });
   });
 
   it("is left to the server while the rep has picked none", async () => {
     const user = userEvent.setup();
     const sent = stubRoutes({
-      [CONTACT_ROUTE]: draftsInTurn(
-        answer("Hallo Dana,", "de"),
-        answer("Hallo,", "de"),
-      ),
+      [CONTACT_ROUTE]: answer("Hallo Dana,", "de"),
+      [REWRITE_ROUTE]: () => rewrittenBody("Hallo,", "de"),
     });
     render(contactComposer());
     await firstDraft(user, "Hallo Dana,");
@@ -307,6 +310,10 @@ describe("the language of an AI draft", () => {
     for (const call of draftCalls(sent, CONTACT_ROUTE)) {
       expect(call.body).not.toHaveProperty("language");
     }
+    // The rewrite names only the reader's language; the words keep their own.
+    expect(draftCalls(sent, REWRITE_ROUTE)[0]?.body).toMatchObject({
+      language: "en",
+    });
   });
 
   it("offers no picker when the draft reports no language", async () => {
@@ -368,8 +375,7 @@ describe("the language of an AI draft", () => {
     expect(await screen.findByText(KEPT_NOTICE)).toBeTruthy();
     expect(messageText("Body")).toBe("Hello Dana, and my own line.");
     expect(languagePicker().textContent).toContain("English");
-    await user.click(screen.getByRole("button", { name: "Change the ask" }));
-    await user.click(draftButton());
+    await redraft(user);
     await waitFor(() =>
       expect(draftCalls(sent, CONTACT_ROUTE)).toHaveLength(3),
     );
@@ -444,8 +450,7 @@ describe("the language of an AI draft", () => {
     await waitFor(() =>
       expect(languagePicker().textContent).toContain("English"),
     );
-    await user.click(screen.getByRole("button", { name: "Change the ask" }));
-    await user.click(draftButton());
+    await redraft(user);
     await waitFor(() =>
       expect(draftCalls(sent, CONTACT_ROUTE)).toHaveLength(3),
     );
@@ -457,10 +462,8 @@ describe("the language of an AI draft", () => {
   it("offers no picker and names nothing for a language this build does not ship", async () => {
     const user = userEvent.setup();
     const sent = stubRoutes({
-      [CONTACT_ROUTE]: draftsInTurn(
-        answer("Bonjour Dana,", "fr"),
-        answer("Bonjour,", "fr"),
-      ),
+      [CONTACT_ROUTE]: answer("Bonjour Dana,", "fr"),
+      [REWRITE_ROUTE]: () => rewrittenBody("Bonjour,", "fr"),
     });
     render(contactComposer());
     await firstDraft(user, "Bonjour Dana,");
@@ -473,6 +476,9 @@ describe("the language of an AI draft", () => {
     for (const call of draftCalls(sent, CONTACT_ROUTE)) {
       expect(call.body).not.toHaveProperty("language");
     }
+    expect(draftCalls(sent, REWRITE_ROUTE)[0]?.body).toMatchObject({
+      language: "en",
+    });
   });
 
   it("keeps the words and the language when the new draft fails", async () => {
@@ -561,7 +567,7 @@ describe("the picked language in a saved draft", () => {
             language: "de",
           },
         }),
-      [CONTACT_ROUTE]: answer("Hallo Dana, Dienstag?", "de"),
+      [REWRITE_ROUTE]: () => rewrittenBody("Hallo Dana, Dienstag?", "de"),
     });
     render(contactComposer());
     await screen.findByText("Saved draft restored");
@@ -572,8 +578,8 @@ describe("the picked language in a saved draft", () => {
     await waitFor(() =>
       expect(messageText("Body")).toBe("Hallo Dana, Dienstag?"),
     );
-    expect(draftCalls(sent, CONTACT_ROUTE)[0]?.body).toMatchObject({
-      rewrite_of: BODY,
+    expect(draftCalls(sent, REWRITE_ROUTE)[0]?.body).toMatchObject({
+      body: BODY,
       language: "de",
     });
   });
@@ -591,7 +597,7 @@ describe("the picked language in a saved draft", () => {
             language: "fr",
           },
         }),
-      [CONTACT_ROUTE]: answer("Hallo Dana, Dienstag?", "de"),
+      [REWRITE_ROUTE]: () => rewrittenBody("Hallo Dana, Dienstag?", "de"),
     });
     render(contactComposer());
     await screen.findByText("Saved draft restored");
@@ -603,8 +609,8 @@ describe("the picked language in a saved draft", () => {
     await waitFor(() =>
       expect(messageText("Body")).toBe("Hallo Dana, Dienstag?"),
     );
-    expect(draftCalls(sent, CONTACT_ROUTE)[0]?.body).not.toHaveProperty(
-      "language",
-    );
+    expect(draftCalls(sent, REWRITE_ROUTE)[0]?.body).toMatchObject({
+      language: "en",
+    });
   });
 });

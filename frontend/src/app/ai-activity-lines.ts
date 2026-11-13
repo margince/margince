@@ -244,6 +244,9 @@ export const ACTIVITY_LINE: Readonly<
   reader_rendering: notDisplayed(
     "a rendering answers beside the message the reader pressed it on, under their own eyes; a rail line would announce a result already on screen",
   ),
+  rewrite: notDisplayed(
+    "the rewritten words replace the rep's own in the field they pressed the button under; a rail line would announce text already on screen",
+  ),
   nl_search: notDisplayed(
     "a plain-words filter answers in the builder the reader pressed it from, under their own eyes; a rail line would announce a result already on screen",
   ),

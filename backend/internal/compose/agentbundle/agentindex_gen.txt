@@ -10,6 +10,8 @@ Every call a passport can make, grouped by area. Find the operationId in openapi
 | `GET /web-forms/{id}` | getWebForm | Get one website form. | Read records | at once |
 | `PATCH /web-forms/{id}` | updateWebForm | Change a website form, pause it or resume it. | Change records | at once |
 | `DELETE /web-forms/{id}` | archiveWebForm | Archive a website form; its address stops taking submissions. | Change records | at once |
+| `POST /web-forms/{id}/handling/preview` | previewWebFormHandling | Preview inquiry deadlines and explicitly selected accepted submissions without writing. | Read records | at once |
+| `POST /web-forms/{id}/handling/existing` | handleExistingWebFormInquiries | Handle explicitly selected accepted inquiries using the reviewed saved policy. | Change records | at once |
 
 ## Integrations
 
@@ -330,6 +332,8 @@ Every call a passport can make, grouped by area. Find the operationId in openapi
 | `DELETE /activities/{id}` | archiveActivity | Archive (soft-delete) an activity. | Change records | at once |
 | `GET /activities/{id}/email-presentation` | getEmailPresentation | Everything one email needs to be read and acted on, in one read. | Read records | at once |
 | `PATCH /activities/{id}/audience` | setActivityAudience | Limit (or re-open) who may see this activity's content. | Change records | at once |
+| `POST /activities/{id}/inquiry-assignment/preview` | previewWebsiteInquiryAssignment | Show the inquiry task and record ownership before taking or assigning it. | Change records | at once |
+| `POST /activities/{id}/inquiry-assignment` | assignWebsiteInquiry | Take an inquiry or hand its lead and this task to a colleague in one transaction. | Change records | at once |
 | `PUT /activities/{id}/disposition` | setActivityDisposition | Put a waiting message down, so the Worklist stops offering it. | Change records | at once |
 | `DELETE /activities/{id}/disposition` | clearActivityDisposition | Pick the message back up — the undo behind every set-aside verb. | Change records | at once |
 | `PUT /activities/{id}/calendar-response` | answerCalendarInvitation | Accept, tentatively accept or decline a calendar invitation that came by email. | Send messages | at once |
@@ -888,15 +892,15 @@ Every call a passport can make, grouped by area. Find the operationId in openapi
 | `POST /data-subject-requests` | createDataSubjectRequest | Open a data-subject request (access/rectify/erasure). Admin-mediated; ties to retention and erasure. | Change records | at once |
 | `GET /data-subject-requests/deadline` | getDataSubjectRequestDeadline | The deadline a request would get, and the rule that sets it. | Read records | at once |
 | `GET /privacy/controller-particulars` | getControllerParticulars | What this installation says about itself in the messages it sends. | Read records | at once |
-| `GET /privacy/notice-cases` | listNoticeCases | Privacy notices already owed, where the source is confirmed, soonest deadline first. A contact whose source nobody has confirmed is in notice_case_reviews. | Read records | at once |
+| `GET /privacy/notice-cases` | listNoticeCases | Privacy notices already owed, where the source is confirmed, soonest deadline first. A contact whose source nobody has confirmed is in notice_case_reviews (GET /privacy/notice-case-reviews). | Read records | at once |
 | `GET /privacy/notice-cases/{id}` | getNoticeCase | One privacy notice owed, where the source is confirmed. The case id comes from notice_cases, not the contact's id. | Read records | at once |
 | `POST /privacy/notice-cases/{id}/assign` | assignNoticeCase | Give a privacy notice already owed (from notice_cases) an owner. | Change records | at once |
-| `GET /privacy/notice-case-reviews` | listNoticeCaseReviews | Every contact's privacy-notice case, including a source nobody has confirmed yet (a bought list, an import), soonest deadline first. Start here for what we owe one contact. | Read records | at once |
-| `GET /privacy/notice-case-reviews/{id}` | getNoticeCaseReview | One contact's privacy-notice case — its source, whether a notice is owed, and by when. The id comes from notice_case_reviews, not the contact's id. | Read records | at once |
+| `GET /privacy/notice-case-reviews` | listNoticeCaseReviews | Every contact's privacy-notice case, including one whose source was never recorded (an older contact), soonest deadline first. Without state it lists unresolved cases only, so an empty page is not an empty notice history, and a contact imported moments ago may have no case yet. For one contact, read their contact_360 view (GET /contacts/{id}/360) instead; its privacy_source_reviews and privacy_notice_duties carry the case ids. | Read records | at once |
+| `GET /privacy/notice-case-reviews/{id}` | getNoticeCaseReview | One contact's privacy-notice case — its source, whether a notice is owed, and by when. The id comes from notice_case_reviews or the contact's contact_360 view, not the contact's id. | Read records | at once |
 | `POST /privacy/notice-case-reviews/{id}/assign` | assignNoticeCaseReview | Give a contact's privacy-notice case (from notice_case_reviews) an owner. | Change records | at once |
 | `GET /privacy/notice-case-reviews/{id}/source` | getNoticeSourceEvidence | Read accessible evidence for a contact source assessment. | Read records | at once |
-| `POST /privacy/notice-case-reviews/{id}/source` | assessNoticeSource | Confirm where a contact came from (bought list, import, their own enquiry), which decides whether a privacy notice is owed. Preview it first. | Change records | at once |
-| `POST /privacy/notice-case-reviews/{id}/source/preview` | previewNoticeSource | Preview what confirming a contact's source decides — whether a notice is owed and by when — without changing the case. Confirming is the user's decision, so offer confirm_notice_source and ask them. | Read records | at once |
+| `POST /privacy/notice-case-reviews/{id}/source` | assessNoticeSource | Confirm where a contact came from (bought list, import, their own enquiry), which decides whether a privacy notice is owed. Preview it first (POST /privacy/notice-case-reviews/{id}/source/preview). Only a contact with no recorded source is up for review; when its evidence does not name where the data first came from, ask the user rather than guessing a kind. | Change records | at once |
+| `POST /privacy/notice-case-reviews/{id}/source/preview` | previewNoticeSource | Preview what confirming a contact's source decides — whether a notice is owed and by when — without changing the case. Confirming is the user's decision, so offer confirm_notice_source (POST /privacy/notice-case-reviews/{id}/source) and ask them, unless they already named the source and asked you to confirm it. | Read records | at once |
 | `PATCH /data-subject-requests/{id}` | updateDataSubjectRequest | Update a data-subject request's status / assignee / resolution. | Change records | at once |
 | `GET /confirm-submissions` | listConfirmSubmissions | List what subjects sent through their own confirm links. | Read records | at once |
 | `POST /confirm-submissions/{id}/resolve` | resolveConfirmSubmission | Accept or decline what a subject proposed. | Change records | at once |

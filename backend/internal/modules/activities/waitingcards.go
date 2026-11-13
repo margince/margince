@@ -233,7 +233,7 @@ func waitingCardsStatement(slots waitingSlots, arg func(any) int, judged []ids.U
 	slots.values[waitingKeysetSlot] = waitingNotMachineSQL +
 		" AND NOT EXISTS (SELECT 1 FROM " + waitingCardOfSQL + " CROSS JOIN LATERAL (" +
 		fmt.Sprintf(waitingEligibleSQL, newer...) + " LIMIT 1) newer)"
-	return "SELECT waiting.*, " + directMailSeatsSQL(slots.identities) + " FROM (" +
+	return "SELECT waiting.*, " + mailAnswerersSQL(slots.identities) + " FROM (" +
 		fmt.Sprintf(waitingCardsAfterSQL, slots.values...) +
 		") waiting JOIN activity a ON a.id = waiting.id ORDER BY waiting.occurred_at, waiting.id"
 }

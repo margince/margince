@@ -38,7 +38,13 @@ export function useThreadMessages(anchor: Activity | undefined): ThreadRead {
     queryFn: async () => {
       return unwrap(
         await api.GET("/activities", {
-          params: { query: { thread_key: threadKey, limit: SHOWN } },
+          params: {
+            query: {
+              thread_key: threadKey,
+              limit: SHOWN,
+              collapse_copies: true,
+            },
+          },
         }),
       );
     },
@@ -59,9 +65,10 @@ export function useThreadMessages(anchor: Activity | undefined): ThreadRead {
   // render as a thread of none: an empty list is a settled answer too, and the
   // pane would then claim the conversation is a single message it cannot show.
   return {
-    // An older selected anchor may sit outside the newest-message page.
+    // An older selected anchor may sit outside the newest-message page. A row
+    // standing for the anchor's mailbox copies already shows it.
     messages: query.data?.data
-      ? query.data.data.some((message) => message.id === anchor.id)
+      ? query.data.data.some((message) => standsFor(message, anchor.id))
         ? query.data.data
         : [...query.data.data, anchor]
       : [],
@@ -69,6 +76,11 @@ export function useThreadMessages(anchor: Activity | undefined): ThreadRead {
     failed: query.isError,
     retry,
   };
+}
+
+/** Whether a listed row is the message, or another mailbox's copy of it. */
+function standsFor(row: Activity, id: string): boolean {
+  return row.id === id || (row.copy_ids ?? []).includes(id);
 }
 
 /**
@@ -130,6 +142,7 @@ export function useRecentConversations(
               entity_id: entityId,
               kind: ["email"],
               limit: SCANNED,
+              collapse_copies: true,
               ...(pageParam ? { cursor: pageParam } : {}),
               ...(term ? { q: term } : {}),
             },
@@ -153,6 +166,9 @@ export function useRecentConversations(
     (activity) => activity.content_state !== "withheld",
   );
   const entries = activityTimeline(readable, undefined, undefined, who);
+  const copiesOf = new Map(
+    readable.map((activity) => [activity.id, activity.copy_ids ?? []]),
+  );
   // A bulk send is not a conversation. It is one message the sender addressed
   // to several contacts and has no thread of its own, so "continuing" it would
   // anchor a reply to a mailing nobody wrote back to. Threads and single
@@ -175,9 +191,12 @@ export function useRecentConversations(
           count: group.entries.length,
           partial: group.partial,
           summary: newest.emailSummary,
-          // Every message the run holds, so a reply to an older one still
-          // finds the conversation it belongs to.
-          memberIds: group.entries.map((entry) => entry.id),
+          // Every message the run holds, each mailbox copy included, so a
+          // reply to an older one still finds the conversation it belongs to.
+          memberIds: group.entries.flatMap((entry) => [
+            entry.id,
+            ...(copiesOf.get(entry.id) ?? []),
+          ]),
         },
       ];
     });

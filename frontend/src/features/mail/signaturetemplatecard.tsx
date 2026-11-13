@@ -11,6 +11,7 @@ import { useT } from "../../i18n";
 import { useCanWrite } from "../../lib/capability";
 import { throwProblem, unwrap } from "../../lib/problem";
 import { useMe } from "../../lib/session";
+import { TEXT_LIMITS } from "../../lib/textlimits_gen";
 import { SIGN_OFF_QUERY, useSignOff } from "./composesignoff";
 
 const TEMPLATE_KEY = ["email-signature-template"] as const;
@@ -92,6 +93,7 @@ export function SignatureTemplateCard() {
                 >
                   {(control) => (
                     <Textarea
+                      maxLength={TEXT_LIMITS.document}
                       {...control}
                       rows={6}
                       value={shown}

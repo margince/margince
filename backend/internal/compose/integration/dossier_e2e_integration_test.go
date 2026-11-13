@@ -15,6 +15,7 @@ package integration
 import (
 	"context"
 	"net/http"
+	"slices"
 	"testing"
 	"time"
 
@@ -25,6 +26,7 @@ import (
 type dossierResponse struct {
 	CompanyID    string `json:"company_id"`
 	GeneratedBy  string `json:"generated_by"`
+	ServedFrom   string `json:"served_from"`
 	NeedsRefresh *bool  `json:"needs_refresh"`
 	Sections     []struct {
 		Kind      string `json:"kind"`
@@ -187,5 +189,25 @@ func seedProfileFieldWrittenAt(
 		        'site_read:seed', $6)`,
 		ids.NewV7(), companyID, field, value, value, written); err != nil {
 		t.Fatalf("seed profile field %s: %v", field, err)
+	}
+}
+
+// A client can tell the two speeds of this read apart. The first read writes
+// the dossier, the next serves it, and a refresh writes it again.
+func TestADossierSaysWhetherItWasWrittenOrServedFromTheCache(t *testing.T) {
+	e := apptest.SetupApp(t)
+	e.BootstrapWorkspace(t)
+	companyID := createBareCompany(t, e)
+	path := "/v1/companies/" + companyID + "/dossier"
+	var served []string
+	for _, method := range []string{"GET", "GET", "POST"} {
+		var dossier dossierResponse
+		if status := e.Call(t, method, path, nil, nil, &dossier); status != http.StatusOK {
+			t.Fatalf("%s dossier = %d, want 200", method, status)
+		}
+		served = append(served, dossier.ServedFrom)
+	}
+	if want := []string{"generated", "cache", "generated"}; !slices.Equal(served, want) {
+		t.Errorf("served_from = %v, want %v", served, want)
 	}
 }

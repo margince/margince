@@ -42,21 +42,7 @@ const SeatCopyColumns = ", copies.copy_count, copies.copy_ids"
 // `ORDER BY` and `LIMIT`, so a page never holds two copies. A keyset clause goes
 // in the caller's outer `WHERE`, applied to the row shown.
 func SeatCopyFrom(ctx context.Context, candidates, contentArm string, arg func(any) int) string {
-	shared := connector.SharedMailKeySQL("a")
-	reader := sprintf("$%d::text", arg(readerOrNobody(ctx).String()))
-	return `(SELECT seat_copy.copy_of, seat_copy.copy_readable,
-	  count(*) OVER copy_group AS copy_count,
-	  array_agg(seat_copy.copy_of) OVER copy_group AS copy_ids,
-	  row_number() OVER (copy_group ORDER BY seat_copy.own_copy DESC, seat_copy.created_at, seat_copy.copy_of) AS copy_rank
-	FROM (SELECT a.id AS copy_of, a.created_at, (` + contentArm + `) AS copy_readable,
-	    CASE WHEN a.kind = 'email' AND ` + shared + ` IS NOT NULL THEN jsonb_build_array(` + shared + `,
-	      lower(a.counterparty_email), a.subject, md5(coalesce(a.body, '')), a.direction,
-	      date_trunc('second', a.occurred_at))::text END AS shared_key,
-	    coalesce(a.source_id = ` + shared + ` || '` + connector.MailSeatMarker + `' || ` + reader + `, false) AS own_copy
-	  FROM activity a WHERE ` + candidates + `) seat_copy
-	WINDOW copy_group AS (PARTITION BY CASE WHEN seat_copy.copy_readable AND seat_copy.shared_key IS NOT NULL
-	  THEN 'message:' || seat_copy.shared_key ELSE 'activity:' || seat_copy.copy_of::text END)
-	) copies JOIN activity a ON a.id = copies.copy_of AND copies.copy_rank = 1`
+	return connector.MailCopyGroupFrom(ctx, "activity", "a", candidates, contentArm, arg)
 }
 
 // SeatCopies is what ScanSeatCopyRow read for one shown row: how many readable

@@ -85,10 +85,11 @@ func briefRunToTool(run briefs.BriefRun) agents.ReadBriefResult {
 			// are different facts, and only one of them can be true here —
 			// the brief's own evidence-or-omit rule means an item without
 			// evidence was never queued.
-			EvidenceIDs:  append(make([]ids.UUID, 0, len(item.EvidenceIDs)), item.EvidenceIDs...),
-			SnoozedUntil: item.SnoozedUntil,
-			ReopenOn:     item.ReopenOn,
-			ReopenRef:    item.ReopenRef,
+			EvidenceIDs:   append(make([]ids.UUID, 0, len(item.EvidenceIDs)), item.EvidenceIDs...),
+			SnoozedUntil:  item.SnoozedUntil,
+			SnoozedIntent: item.SnoozedIntent,
+			ReopenOn:      item.ReopenOn,
+			ReopenRef:     item.ReopenRef,
 		})
 	}
 	return agents.ReadBriefResult{

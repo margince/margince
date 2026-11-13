@@ -1,10 +1,17 @@
 <!-- prose:plain -->
-<!-- describes: frontend/src/features/settings/retainedsignature.tsx backend/internal/modules/contacts/retainedsignature.go frontend/src/features/settings/settingssignaturerow.tsx frontend/src/features/mail/composesignoff.tsx backend/internal/modules/contacts/emailsignature.go backend/internal/modules/activities/signature.go backend/internal/modules/activities/signaturetemplate.go frontend/src/features/settings/legalentityeditor.tsx frontend/src/features/settings/settingssignatureeditor.tsx backend/internal/modules/activities/htmlsanitize.go backend/internal/modules/activities/signaturepolicy.go backend/internal/compose/signaturepreviewimages.go frontend/src/features/automations/approvalevidence.tsx -->
+<!-- describes: frontend/src/features/settings/retainedsignature.tsx backend/internal/modules/contacts/retainedsignature.go frontend/src/features/settings/settingssignaturerow.tsx frontend/src/features/mail/composesignoff.tsx backend/internal/modules/contacts/emailsignature.go backend/internal/modules/activities/signature.go backend/internal/modules/activities/signaturetemplate.go frontend/src/features/settings/legalentityeditor.tsx frontend/src/features/settings/settingssignatureeditor.tsx backend/internal/modules/activities/htmlsanitize.go backend/internal/modules/activities/signaturepolicy.go backend/internal/compose/signaturepreviewimages.go frontend/src/features/automations/approvalevidence.tsx frontend/src/features/settings/gmailsignatureimport.tsx backend/internal/compose/gmailsignature/gmailsignature.go -->
 # Your email signature
 
 Open **Settings → Account → Edit signature**. Choose **Plain text** to write a
 sign-off, or **HTML** to paste a formatted signature. Check the preview and choose
 **Save**. The composer shows the same sign-off before you send.
+
+To use the signature you already have in Gmail, choose **Use my Gmail signature**
+in the same dialog. Margince reads the signature of the address Gmail sends from,
+puts it in the **HTML** field and fills the plain text with its words. Nothing is
+saved until you choose **Save**. Without a connected Gmail mailbox, or when
+Margince may not read your Gmail settings, the dialog says to connect or
+**Reconnect** under **Settings → Connections**.
 
 Margince uses your own HTML first, then the company template, then your saved
 plain text. Clear the HTML field, or choose **Plain text** and save, to use the

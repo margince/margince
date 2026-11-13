@@ -218,7 +218,7 @@ type Request struct {
 	// company-context block. They are trace metadata, never provider inputs.
 	ContextBytes          int
 	ContextTokensEstimate int
-	// IncludeCompanyContext opts into a conditional policy; compose clears it before routing.
+	// IncludeCompanyContext opts into a conditional context policy; compose clears it.
 	IncludeCompanyContext bool
 	// CompanyContextOffering names the legal entity whose offering the context describes; empty is the main one.
 	CompanyContextOffering string

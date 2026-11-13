@@ -15,6 +15,10 @@ import (
 // then never reads a day's stored noon as an hour.
 func activityUpdatedChangedFields(in UpdateActivityInput, current crmcontracts.Activity) crmcontracts.PublicEventActivityChangedFields {
 	var fields crmcontracts.PublicEventActivityChangedFields
+	if in.sourceActivityID != nil {
+		source := openapi_types.UUID(*in.sourceActivityID)
+		fields.SourceActivityId = &source
+	}
 	if in.Subject != nil {
 		fields.Subject = in.Subject
 	}

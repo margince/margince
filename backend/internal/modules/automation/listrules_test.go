@@ -57,6 +57,10 @@ func TestAListRulesParamsAreCheckedBeforeAnythingIsStored(t *testing.T) {
 		{"a complete task rule", listTaskName, map[string]any{"list_id": list, "direction": "either", "due_in_days": float64(3)}, ""},
 		{"a complete Shortlist rule", listShortlistName, map[string]any{"list_id": list, "direction": "left", "shortlist_id": list}, ""},
 	} {
+		if tc.key == listTaskName {
+			tc.params["recipient"] = "record_owner"
+			tc.params["task_title"] = "Follow up with this customer"
+		}
 		t.Run(tc.name, func(t *testing.T) {
 			if got := refusedField(t, listEntry(t, tc.key).Validate(tc.params)); got != tc.field {
 				t.Fatalf("refused %q, want %q", got, tc.field)
@@ -138,11 +142,11 @@ func TestTheCatalogOffersListRulesOnlyWhereListsAreOn(t *testing.T) {
 
 func TestAPausedRuleSaysWhyOnTheWire(t *testing.T) {
 	reason := PausedBurst
-	wire, err := wireAutomation(Automation{ID: ids.New[ids.AutomationKind](), Key: listNotifyName, Params: json.RawMessage(`{}`), PausedReason: &reason})
+	wire, err := WireAutomation(Automation{ID: ids.New[ids.AutomationKind](), Key: listNotifyName, Params: json.RawMessage(`{}`), PausedReason: &reason})
 	if err != nil || wire.Status != "paused" || wire.PausedReason == nil || string(*wire.PausedReason) != PausedBurst {
 		t.Fatalf("a rule paused for a burst reads %+v (%v), want paused with the reason", wire, err)
 	}
-	running, err := wireAutomation(Automation{ID: ids.New[ids.AutomationKind](), Key: listNotifyName, Enabled: true})
+	running, err := WireAutomation(Automation{ID: ids.New[ids.AutomationKind](), Key: listNotifyName, Enabled: true})
 	if err != nil || running.PausedReason != nil {
 		t.Fatalf("a running rule reads %+v (%v), want no pause reason", running, err)
 	}

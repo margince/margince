@@ -92,3 +92,19 @@ func (s *sharedStore) forget(prefix string) error {
 // large enough that a wipe of a busy prefix is a few round trips rather than
 // hundreds, and small enough not to block the server on one reply.
 const scanBatch = 500
+
+func (s *sharedStore) hold(key string, value int64, ttl time.Duration, _ time.Time) error {
+	ctx, cancel := context.WithTimeout(context.Background(), sharedTimeout)
+	defer cancel()
+	return s.rdb.Set(ctx, key, value, ttl).Err()
+}
+
+func (s *sharedStore) held(key string, _ time.Time) (int64, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), sharedTimeout)
+	defer cancel()
+	n, err := s.rdb.Get(ctx, key).Int64()
+	if errors.Is(err, redis.Nil) {
+		return 0, nil
+	}
+	return n, err
+}

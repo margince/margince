@@ -13,7 +13,6 @@ afterEach(() => {
 });
 
 it("restores the purpose and AI attribution without generating again", async () => {
-  const user = userEvent.setup();
   const body = "Hallo Dana, passt die neue Laufzeit für euch?";
   const sent = stubRoutes({
     "GET /mail-drafts": () =>
@@ -53,7 +52,6 @@ it("restores the purpose and AI attribution without generating again", async () 
   expect(
     await screen.findByRole("heading", { name: "AI-assisted draft" }),
   ).toBeTruthy();
-  await user.click(screen.getByRole("button", { name: "Change the ask" }));
   expect(
     await screen.findByDisplayValue("Ask about the new term"),
   ).toBeTruthy();

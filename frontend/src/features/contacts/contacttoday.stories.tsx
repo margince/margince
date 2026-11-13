@@ -170,7 +170,7 @@ export const DraftRefusedOnReadShareContact: Story = {
       .getByText(en["contact.attachRefused"])
       .getBoundingClientRect();
     const snooze = canvas
-      .getByRole("button", { name: "Snooze" })
+      .getByRole("button", { name: en["worklist.disposition.verb.notNow"] })
       .getBoundingClientRect();
     // The sentence wraps at a readable width and keeps clear of Snooze.
     await expect(reason.width).toBeGreaterThan(120);

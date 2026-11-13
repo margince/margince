@@ -169,12 +169,6 @@ func TestStageChangeNotifyPlanEmitsOneNotifyToTheDealOwner(t *testing.T) {
 	}
 }
 
-// TestStageChangeNotifyPlanDeclinesWhenTheDealHasNoOwner proves Plan
-// declines to fire — rather than emitting a notify with a nil/zero
-// recipient — when the moved deal has no assigned owner, and that the
-// decline is a SKIP (declinedFiring), not a failure: an ownerless deal is
-// a legitimate state runOne records as 'skipped', never a 'failed' run that
-// would re-deliver forever and poison the event's sibling handlers.
 func TestStageChangeNotifyPlanDeclinesWhenTheDealHasNoOwner(t *testing.T) {
 	dealID := ids.NewV7()
 	fields, err := json.Marshal(dealOwnerFields{OwnerID: nil})
@@ -189,8 +183,8 @@ func TestStageChangeNotifyPlanDeclinesWhenTheDealHasNoOwner(t *testing.T) {
 	if !errors.Is(err, errDealHasNoOwner) {
 		t.Fatalf("Plan err = %v, want errDealHasNoOwner", err)
 	}
-	if _, ok := errors.AsType[declinedFiring](err); !ok {
-		t.Fatalf("Plan err = %v, want a declinedFiring skip (not a hard failure)", err)
+	if _, ok := errors.AsType[*workflow.DeclinedError](err); !ok {
+		t.Fatalf("Plan err = %v, want a declined skip", err)
 	}
 }
 
@@ -263,53 +257,24 @@ func TestPostMeetingRecapSpecNamesTheCatalogKey(t *testing.T) {
 	}
 }
 
-// TestPostMeetingRecapMatchFiresOnACapturedMeeting is the guard against the
-// silent-Match bug: Match must be TRUE for a captured meeting and FALSE for
-// every other captured kind, read straight off the activity.captured payload.
-func TestPostMeetingRecapMatchFiresOnACapturedMeeting(t *testing.T) {
-	matched, err := postMeetingRecap{}.Match(context.Background(), workflow.Event{
-		Payload: json.RawMessage(`{"kind":"meeting"}`),
-	})
-	if err != nil {
-		t.Fatalf("Match(meeting) err = %v, want nil", err)
-	}
-	if !matched {
-		t.Error("Match(kind=meeting) = false, want true — a captured meeting is the post-meeting signal")
-	}
-}
-
-// TestPostMeetingRecapMatchIgnoresNonMeetingKinds proves Match declines
-// every other captured kind and an empty payload — a recap is drafted only
-// when a meeting was logged, never on a note/call/email capture.
-func TestPostMeetingRecapMatchIgnoresNonMeetingKinds(t *testing.T) {
-	cases := []json.RawMessage{
-		json.RawMessage(`{"kind":"note"}`),
-		json.RawMessage(`{"kind":"call"}`),
-		json.RawMessage(`{"kind":"email"}`),
-		json.RawMessage(`{"kind":"task"}`),
-		json.RawMessage(`{}`),
-		nil,
-	}
-	for _, payload := range cases {
-		matched, err := postMeetingRecap{}.Match(context.Background(), workflow.Event{Payload: payload})
-		if err != nil {
-			t.Fatalf("Match(%s) err = %v, want nil", payload, err)
-		}
-		if matched {
-			t.Errorf("Match(%s) = true, want false — only a captured meeting draws a recap", payload)
-		}
-	}
-}
-
-// TestPostMeetingRecapMatchNeverSwallowsAMalformedPayload proves an
-// undecodable payload surfaces as an error rather than a silent false — a
-// swallowed decode failure would hide a broken upstream emitter.
-func TestPostMeetingRecapMatchNeverSwallowsAMalformedPayload(t *testing.T) {
-	_, err := postMeetingRecap{}.Match(context.Background(), workflow.Event{
-		Payload: json.RawMessage(`{"kind":`),
-	})
-	if err == nil {
-		t.Fatal("Match err = nil for a malformed payload, want a decode error")
+func TestPostMeetingRecapObservesCaptureAndRelevantUpdates(t *testing.T) {
+	for _, tc := range []struct {
+		name, event, payload string
+		want                 bool
+	}{
+		{"meeting captured", eventActivityCaptured, `{"kind":"meeting"}`, true},
+		{"note captured", eventActivityCaptured, `{"kind":"note"}`, false},
+		{"notes added", eventActivityUpdated, `{"changed_fields":{"body":true,"meeting_recap_became_ready":true}}`, true},
+		{"marked held", eventActivityUpdated, `{"changed_fields":{"meeting_status":"held","meeting_recap_became_ready":true}}`, true},
+		{"existing notes edited", eventActivityUpdated, `{"changed_fields":{"body":true}}`, false},
+		{"subject edited", eventActivityUpdated, `{"changed_fields":{"subject":"Planning"}}`, false},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			got, err := meetingRecapCandidate(workflow.Event{Type: tc.event, Payload: json.RawMessage(tc.payload)})
+			if err != nil || got != tc.want {
+				t.Fatalf("candidate = %v, %v; want %v", got, err, tc.want)
+			}
+		})
 	}
 }
 
@@ -396,19 +361,18 @@ func TestPostMeetingRecapApplyComposesTheDraftDurably(t *testing.T) {
 	}
 }
 
-// TestPostMeetingRecapIdempotencyKeyIsStablePerEvent proves the key is
-// derived from the event id, so a redelivered activity.captured claims the
-// same run row instead of drafting a second recap.
-func TestPostMeetingRecapIdempotencyKeyIsStablePerEvent(t *testing.T) {
-	evID := ids.NewV7()
-	key1 := postMeetingRecap{}.IdempotencyKey(workflow.Event{ID: evID})
-	key2 := postMeetingRecap{}.IdempotencyKey(workflow.Event{ID: evID})
-	if key1 != key2 {
-		t.Errorf("IdempotencyKey is not stable across calls for the same event: %q != %q", key1, key2)
+func TestPostMeetingRecapSharesOneOccurrenceAcrossMeetingEvents(t *testing.T) {
+	meeting := datasource.EntityRef{Type: datasource.EntityActivity, ID: ids.NewV7()}
+	captured := workflow.Event{ID: ids.NewV7(), Entity: meeting, Type: eventActivityCaptured, EnabledFrom: time.Date(2026, 7, 15, 14, 0, 0, 0, time.UTC)}
+	updated := captured
+	updated.ID, updated.Type = ids.NewV7(), eventActivityUpdated
+	handler := postMeetingRecap{}
+	if handler.IdempotencyKey(captured) != handler.IdempotencyKey(updated) {
+		t.Fatal("the meeting capture and update must share a single run key")
 	}
-	other := postMeetingRecap{}.IdempotencyKey(workflow.Event{ID: ids.NewV7()})
-	if key1 == other {
-		t.Error("IdempotencyKey did not vary across distinct events — replays of different events would collide")
+	updated.Entity.ID = ids.NewV7()
+	if handler.IdempotencyKey(captured) == handler.IdempotencyKey(updated) {
+		t.Fatal("different meetings must have different run keys")
 	}
 }
 

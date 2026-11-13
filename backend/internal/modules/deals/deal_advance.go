@@ -10,6 +10,7 @@ package deals
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"maps"
 	"time"
@@ -20,6 +21,7 @@ import (
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/platform/labeltranslation"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/ports/fieldcatalog"
@@ -239,7 +241,11 @@ func (s *Store) advanceOnTx(
 			return err
 		}
 		out.AuditLogID = auditID
-		out.Probability = newProbabilitySet(winProbability, toStageName)
+		readerName, err := readerStageName(ctx, tx, in.ToStageID, toStageName)
+		if err != nil {
+			return err
+		}
+		out.Probability = newProbabilitySet(winProbability, readerName)
 		if err := s.onDealWon(ctx, tx, id, status, by, p); err != nil {
 			return err
 		}
@@ -467,4 +473,18 @@ func (s *Store) stageTransitionPatch(ctx context.Context, tx pgx.Tx,
 		}
 	}
 	return p, status, nil
+}
+
+// readerStageName is the stage's name in the reader's language, for the
+// confirmation the mover reads. The event keeps the stored name, because its
+// subscribers read no UI language.
+func readerStageName(ctx context.Context, tx pgx.Tx, stage ids.StageID, stored string) (string, error) {
+	args := []any{stage}
+	arg := func(v any) int { args = append(args, v); return len(args) }
+	name, translated := stored, labeltranslation.SQL(ctx, "s.name", "s.name_translations", arg)
+	err := tx.QueryRow(ctx, `SELECT `+translated+` FROM stage s WHERE s.id = $1`, args...).Scan(&name)
+	if err != nil && !errors.Is(err, pgx.ErrNoRows) {
+		return "", fmt.Errorf("read the stage's name for the reader: %w", err)
+	}
+	return name, nil
 }

@@ -79,6 +79,8 @@ type seatCopyEnv struct {
 	// secondFrom files the second mailbox's copy with this sender, subject and body.
 	secondFrom func(t *testing.T, from, subject, body string)
 	firstRow   func(t *testing.T) mailRow
+	// syncFirst syncs more mail into the first mailbox.
+	syncFirst func(t *testing.T, raws ...[]byte)
 }
 
 // seatCopyPostures says which of the two mailboxes is shared. A shared one
@@ -119,7 +121,8 @@ func newSeatCopyEnv(t *testing.T, shared seatCopyPostures) seatCopyEnv {
 				t.Fatalf("want the second mailbox's copy under its own key, got %+v", rows)
 			}
 		},
-		firstRow: func(t *testing.T) mailRow { return capturedMailRows(t, e)[0] },
+		firstRow:  func(t *testing.T) mailRow { return capturedMailRows(t, e)[0] },
+		syncFirst: env.sync,
 	}
 	s.second = func(t *testing.T) { s.secondFrom(t, seatCopySender, "Telematics renewal", seatCopyBody) }
 	return s

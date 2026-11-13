@@ -52,9 +52,6 @@ func (s *Service) UpdateMember(ctx context.Context, actor Identity, member ids.U
 		return err
 	}
 	in.Name = strings.TrimSpace(in.Name)
-	if err := validateDisplayName(in.Name); err != nil {
-		return err
-	}
 	email, err := values.ParseEmail(in.Email)
 	if err != nil {
 		return err
@@ -126,6 +123,11 @@ func (s *Service) editMemberIdentityTx(ctx context.Context, tx pgx.Tx, actor Ide
 	}
 	if email == in.Email && name == in.Name {
 		return nil
+	}
+	if name != in.Name {
+		if err := validateDisplayName(in.Name); err != nil {
+			return err
+		}
 	}
 	if email != in.Email {
 		if err := requireUnusedMemberEmail(ctx, tx, member); err != nil {

@@ -70,7 +70,11 @@ type CalendarAppointment struct {
 	Location    string    `json:"Location"`
 	Start       time.Time `json:"Start"`
 	End         time.Time `json:"End"`
-	Attendees   []string  `json:"Attendees"`
+	// StartWall and StartZone are the host's chosen local start; both are
+	// empty when the booking named only an instant.
+	StartWall string   `json:"StartWall,omitempty"`
+	StartZone string   `json:"StartZone,omitempty"`
+	Attendees []string `json:"Attendees"`
 	// Roster says, for every address in Attendees, what it resolved to when the
 	// host booked it. Empty on an appointment written before bookings carried
 	// more than one attendee; such an appointment holds its one invitee only.

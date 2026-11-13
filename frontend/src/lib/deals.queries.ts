@@ -3,6 +3,7 @@ import { api } from "../api/client";
 import { dealStatusFilter } from "../format/dealstatus";
 import { useNow } from "../format/now";
 import { dayInZone } from "../format/timezone";
+import { useLocale } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import { useCompanyZone } from "./companyzone";
 import {
@@ -13,6 +14,7 @@ import {
   rangeQueryParams,
   WIN_PROBABILITY_DIAL,
 } from "./dealranges";
+import { translatedPipeline } from "./labeltranslation";
 import { defaultPipelineOf } from "./pipelines.queries";
 import { throwProblem, unwrap } from "./problem";
 import { parseTagIDs, parseTagMode, tagQueryParams } from "./tagfilter";
@@ -28,7 +30,9 @@ import { bandOfDial } from "./winprobabilitybands";
  * mismatch.
  */
 export function usePipeline(pipelineId?: string | null) {
+  const { locale } = useLocale();
   return useQuery({
+    select: (pipeline) => translatedPipeline(pipeline, locale),
     queryKey: ["pipelines", pipelineId ?? "default"],
     queryFn: async () => {
       const data = unwrap(

@@ -4,6 +4,7 @@
 import {
   customFieldHref,
   useCustomFieldDisplay,
+  useCustomFieldLabel,
   useObjectCustomFields,
 } from "../../components/customfields.form";
 import { OffsiteLink } from "../../design-system/offsitelink";
@@ -18,6 +19,7 @@ export function CustomFieldsPanel({
   const t = useT();
   const cf = useObjectCustomFields(object);
   const display = useCustomFieldDisplay();
+  const fieldLabel = useCustomFieldLabel();
 
   const rows = cf.fields
     .map((field) => ({
@@ -49,7 +51,7 @@ export function CustomFieldsPanel({
             const href = customFieldHref(value);
             return (
               <div key={field.column_name}>
-                <dt className="t-eyebrow">{field.label}</dt>
+                <dt className="t-eyebrow">{fieldLabel(field)}</dt>
                 <dd>
                   {href ? (
                     <OffsiteLink href={href}>{value}</OffsiteLink>

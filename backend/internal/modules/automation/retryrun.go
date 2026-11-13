@@ -55,8 +55,8 @@ const runStatusFailed = "failed"
 // aliased alias as its trigger. RetryRun rebuilds the firing from that row's
 // envelope, so a sweep that removed it would end the retry.
 func RetryableTriggerSQL(alias string) string {
-	return `EXISTS (SELECT 1 FROM workflow_run retryable WHERE retryable.trigger_event = ` + alias +
-		`.id AND retryable.status = '` + runStatusFailed + `')`
+	return `EXISTS (SELECT 1 FROM workflow_run retryable WHERE retryable.trigger_event::text = (` + kevents.OutboxEventIDSQL(alias) +
+		`) AND retryable.status = '` + runStatusFailed + `')`
 }
 
 // RetryRefusal names why a failed run may not be re-driven, in the vocabulary
@@ -96,27 +96,40 @@ type RetryOutcome struct {
 // card left over from before they turned it off. The join to event_outbox is
 // LEFT, because a missing envelope is an ANSWER here (refusal 3) rather than a
 // reason to report the run as absent.
-const retryCandidateSQL = `
+func baseRunKeySQL(alias string) string {
+	return `regexp_replace(` + idempotencyKeySQL(alias) + `, '^retry[0-9]+:', '')`
+}
+
+func retryOrdinalSQL(alias string) string {
+	return `COALESCE(max(substring(` + idempotencyKeySQL(alias) + ` from '^retry([0-9]+):')::bigint),0)`
+}
+
+// idempotencyKeySQL is the run's idempotency_key column, qualified by alias
+// when one is given.
+func idempotencyKeySQL(alias string) string {
+	column := pgx.Identifier{"idempotency_key"}
+	if alias != "" {
+		column = pgx.Identifier{alias, column[0]}
+	}
+	return column.Sanitize()
+}
+
+var retryCandidateSQL = `
 WITH target AS (
   SELECT id, status, handler, trigger_event, idempotency_key,
-         -- The BASE key: this run's own attempt marker stripped. Retrying a
-         -- RETRY must count the attempts the original firing has already had,
-         -- so both cases ask the same question. Counting against the unstripped
-         -- key restarts at zero on a second retry, which re-mints the first
-         -- retry's key, loses the run claim, and returns having applied nothing
-         -- while reporting success.
-         regexp_replace(idempotency_key, '^retry[0-9]+:', '') AS base_key
+         -- Nested retries share the original occurrence key.
+         ` + baseRunKeySQL("") + ` AS base_key
     FROM workflow_run WHERE id = $1
 )
 SELECT t.status, t.handler, a.id, a.params, a.owner_id, o.envelope,
-       (SELECT count(*) FROM workflow_run prior
+       (SELECT ` + retryOrdinalSQL("prior") + ` FROM workflow_run prior
          WHERE prior.handler = t.handler
            AND prior.idempotency_key <> t.base_key
-           AND regexp_replace(prior.idempotency_key, '^retry[0-9]+:', '') = t.base_key)
+           AND ` + baseRunKeySQL("prior") + ` = t.base_key)
   FROM target t
   JOIN automation a ON a.archived_at IS NULL AND a.enabled
    AND ` + runOfAutomationSQL + `
-  LEFT JOIN event_outbox o ON o.id = t.trigger_event`
+  LEFT JOIN event_outbox o ON (` + kevents.OutboxEventIDSQL("o") + `) = t.trigger_event::text`
 
 // retryCandidate is one recovered firing, ready to re-dispatch.
 type retryCandidate struct {
@@ -214,10 +227,7 @@ func (e *WorkflowEngine) retryCandidateFor(ctx context.Context, runID ids.UUID) 
 		}
 		event.AutomationID = automationID
 		event.Params = params
-		// The attempt AFTER the ones already recorded, so a second retry of the
-		// same firing claims its own run row rather than folding into the first
-		// retry's. Counting rows rather than tracking a counter keeps the two
-		// from drifting: the run rows ARE the record of what has been tried.
+		// Retention may remove older attempts, so advance the greatest stored ordinal.
 		event.RetryAttempt = priorAttempts + 1
 		if owner != nil {
 			event.OwnerID = *owner

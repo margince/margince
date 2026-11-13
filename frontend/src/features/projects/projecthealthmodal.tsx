@@ -10,6 +10,7 @@ import { ErrorLine } from "../../design-system/errorline";
 import { Heading } from "../../design-system/heading";
 import { trimServerSpace } from "../../format/servertrim";
 import { useT } from "../../i18n";
+import { TEXT_LIMITS } from "../../lib/textlimits_gen";
 import {
   type ProjectHealthState,
   useCorrectProjectHealth,
@@ -141,6 +142,7 @@ export function ProjectHealthModal({
         >
           {(control) => (
             <Textarea
+              maxLength={TEXT_LIMITS.note}
               {...control}
               rows={3}
               value={note}

@@ -42,21 +42,22 @@ const (
 	colPhase        = "t.phase"
 	colLastActivity = "t.last_activity_at"
 
-	// A project's commitments are the open tasks filed under it. Overdue is
-	// a due date already past; a task with no due date is open but never
-	// overdue. Both read through the caller's activity content clause.
-	openCommitmentsExpr = "(SELECT count(*) FROM activity a JOIN activity_link al ON al.activity_id = a.id" +
-		" AND al.entity_type = 'project' AND al.project_id = t.id" +
-		" WHERE a.kind = 'task' AND NOT a.is_done AND a.archived_at IS NULL AND " + reportActivityScopeToken + ")"
+	openCommitmentsExpr    = "commitments.open_tasks"
+	overdueCommitmentsExpr = "commitments.overdue_tasks"
 )
 
 // Project totals and coverage compose the deal module's valuation under the
 // same field-mask and row-scope predicates as the project header.
 var (
-	overdueCommitmentsExpr = "(SELECT count(*) FROM activity a JOIN activity_link al ON al.activity_id = a.id" +
+	// A project's commitments are the open tasks filed under it. Overdue is
+	// a due date already past; a task with no due date is open but never
+	// overdue. One pass counts both, so the statement carries the caller's
+	// activity content clause once.
+	joinProjectCommitments = "LEFT JOIN LATERAL (SELECT count(*) AS open_tasks," +
+		" count(*) FILTER (WHERE " + storekit.TaskDueSQL("a") + " < now()) AS overdue_tasks" +
+		" FROM activity a JOIN activity_link al ON al.activity_id = a.id" +
 		" AND al.entity_type = 'project' AND al.project_id = t.id" +
-		" WHERE a.kind = 'task' AND NOT a.is_done AND a.archived_at IS NULL AND " + storekit.TaskDueSQL("a") + " < now() AND " +
-		reportActivityScopeToken + ")"
+		" WHERE a.kind = 'task' AND NOT a.is_done AND a.archived_at IS NULL AND " + reportActivityScopeToken + ") commitments ON true"
 	openDealValueBaseExpr = projectDealMoneySQL("open", false)
 	wonDealValueBaseExpr  = projectDealMoneySQL("won", false)
 	openDealUnpricedExpr  = projectDealMoneySQL("open", true)
@@ -167,6 +168,7 @@ func projectCommitmentsSpec() reportSpec {
 		table:     tableProject,
 		baseWhere: whereArchivedNull,
 		basePlain: "live (unarchived) projects, each with the open tasks filed under it (overdue: due date already past)",
+		joins:     []string{joinProjectCommitments},
 		// Install-wide, as projectsByPhaseSpec. The default grouping names
 		// owner_id beside the project's own id, which is a listing and not a
 		// breakdown by owner, so it answers whole.

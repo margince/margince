@@ -1,11 +1,8 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-// The verbs one row of the day offers, on one line: Done where the row offers
-// it, then the lane's answer, then the row's menu. So the answer and the menu
-// stand at one x down the queue; in a card the answer leads.
-// The menu holds the rest, most used first: the snooze, a way to the record,
-// the pin, the hand-off, then the hand-backs.
+// The main answer and menu align across rows.
+// Less common actions stay in the menu.
 
 import { Sparkles } from "lucide-react";
 import { type ReactNode, useState } from "react";
@@ -98,11 +95,7 @@ export function RowActs({
     (way) => way !== lead && !(linked && way.destination === href),
   );
   const pins = allowPin && !item.batch;
-  // Only a task carries an assignee, and a group row names no single activity.
-  // The server withholds Done from a task the reader may not change, and the
-  // hand-off's write would be refused there the same way.
-  const handsOff =
-    item.source === "task" && !item.batch && item.actions.includes("complete");
+  const handsOff = handsOffTask(item);
   // One write for Done and the menu's lines, so the two cannot write twice.
   const write = useRowPutDown(item);
   const putsDown = write.offered.some(
@@ -166,9 +159,7 @@ export function RowActs({
           ))}
           {pins && <PinLine item={item} />}
           {handsOff && (
-            <Button variant="ghost" onClick={() => setHandingOff(true)}>
-              {t("worklist.manager.reassign")}
-            </Button>
+            <HandOffLine item={item} onHandOff={() => setHandingOff(true)} />
           )}
           <HandBackLines write={write} />
         </OverflowMenu>
@@ -184,6 +175,32 @@ export function RowActs({
         </QuietVerbs>
       )}
     </div>
+  );
+}
+
+// Only a task carries an assignee, and a group row names no single activity.
+// The server withholds Done from a task the reader may not change, and the
+// hand-off's write would be refused there the same way.
+function handsOffTask(item: WorklistItem): boolean {
+  return (
+    item.source === "task" && !item.batch && item.actions.includes("complete")
+  );
+}
+
+/** The menu line that opens the hand-off form, in the words of what it moves. */
+function HandOffLine({
+  item,
+  onHandOff,
+}: Readonly<{ item: WorklistItem; onHandOff: () => void }>) {
+  const t = useT();
+  return (
+    <Button variant="ghost" onClick={onHandOff}>
+      {t(
+        item.kind === "website_inquiry"
+          ? "inquiry.assignment.assign"
+          : "worklist.manager.reassign",
+      )}
+    </Button>
   );
 }
 

@@ -6,8 +6,8 @@ import { Badge, Button } from "../../design-system/atoms";
 import { Heading } from "../../design-system/heading";
 import { identifierNumber } from "../../format/format";
 import { useT } from "../../i18n";
-import type { MessageKey } from "../../i18n/en";
 import { useOpenEmail } from "../../lib/openemail";
+import { REWRITES, type RewriteVerb } from "../../lib/rewrites";
 import { useViewerZone } from "../../lib/viewerzone";
 import { openCitation } from "../records/record360";
 import { VoiceDegradedNotice } from "./compose.notices";
@@ -99,45 +99,6 @@ export function DraftBand({
   );
 }
 
-// The things a rep asks the machine to do to the body on screen, as one press
-// each. Each is an instruction for ONE call — it never becomes the standing
-// steer in the intent field.
-// The label a rep reads and the instruction the model is given are two
-// different strings and both are translated: the button says "Shorter" and the
-// model is asked for it in a sentence, because an instruction of one word is
-// one the model has to guess the scope of.
-export const REWRITES = [
-  {
-    key: "polish",
-    label: "compose.rewritePolish",
-    instruction: "compose.rewritePolishAsk",
-  },
-  {
-    key: "shorter",
-    label: "compose.rewriteShorter",
-    instruction: "compose.rewriteShorterAsk",
-  },
-  {
-    key: "warmer",
-    label: "compose.rewriteWarmer",
-    instruction: "compose.rewriteWarmerAsk",
-  },
-  {
-    key: "formal",
-    label: "compose.rewriteFormal",
-    instruction: "compose.rewriteFormalAsk",
-  },
-  {
-    key: "deadline",
-    label: "compose.rewriteDeadline",
-    instruction: "compose.rewriteDeadlineAsk",
-  },
-] as const satisfies readonly {
-  key: string;
-  label: MessageKey;
-  instruction: MessageKey;
-}[];
-
 // Offered over any body on screen, whoever wrote it: the call revises the
 // words sent as `rewrite_of`, and the editor's undo brings the old ones back.
 // `refusal` names why this body cannot be sent for revision.
@@ -150,7 +111,7 @@ export function RewriteRow({
   disabled,
   refusal = null,
 }: Readonly<{
-  onRewrite: (instruction: string) => void;
+  onRewrite: (verb: RewriteVerb) => void;
   disabled: boolean;
   refusal?: string | null;
 }>) {
@@ -167,7 +128,7 @@ export function RewriteRow({
           key={rewrite.key}
           variant="aiQuiet"
           disabled={disabled || refusal !== null}
-          onClick={() => onRewrite(t(rewrite.instruction))}
+          onClick={() => onRewrite(rewrite.key)}
         >
           {t(rewrite.label)}
         </Button>

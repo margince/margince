@@ -143,6 +143,17 @@ export const WithTitleAction: Story = {
   },
 };
 
+// `help`: the "?" right after the title, with the title action still at the
+// far end of the band.
+export const WithHelp: Story = {
+  args: {
+    title: "Responsibilities",
+    help: "Who on your team looks after this company, by role. It does not change who can see the record.",
+    titleAction: <Badge tone="accent">2</Badge>,
+    children: <PanelRow>Account owner · Anna Weber</PanelRow>,
+  },
+};
+
 export const WithFooter: Story = {
   args: {
     title: "Recent activity",

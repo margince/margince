@@ -18,9 +18,11 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/modules/activities"
+	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/modules/privacy"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/platform/labeltranslation"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/meetingoutcome"
 	"github.com/margince/margince/backend/internal/shared/kernel/occurredday"
@@ -341,6 +343,10 @@ func readWeekDeals(ctx context.Context, tx pgx.Tx, userID ids.UUID, start, end t
 	if err != nil {
 		return nil, err
 	}
+	// Frozen in the record language, as the team review is, so the snapshot
+	// does not depend on which path wrote it first.
+	language := string(identity.BaseLanguageForRecord(ctx, tx))
+	stageName := labeltranslation.SQLIn(language, "s.name", "s.name_translations", arg)
 	rows, err := tx.Query(ctx, fmt.Sprintf(`
 		WITH closed AS (
 			SELECT d.id, d.name, d.status AS outcome, NULL::text AS to_stage,
@@ -351,7 +357,7 @@ func readWeekDeals(ctx context.Context, tx pgx.Tx, userID ids.UUID, start, end t
 			   AND d.owner_id = $%[3]d AND (%[5]s)
 		), moved AS (
 			SELECT DISTINCT ON (h.deal_id)
-			       d.id, d.name, 'moved'::text AS outcome, s.name AS to_stage,
+			       d.id, d.name, 'moved'::text AS outcome, %[7]s AS to_stage,
 			       NULL::bigint AS amount_minor, NULL::text AS currency,
 			       h.changed_at AS at
 			  FROM deal_stage_history h
@@ -371,7 +377,7 @@ func readWeekDeals(ctx context.Context, tx pgx.Tx, userID ids.UUID, start, end t
 		  FROM (SELECT * FROM closed UNION ALL SELECT * FROM moved) lines
 		 ORDER BY (outcome = 'moved'), at DESC, id
 		 LIMIT $%[4]d`,
-		startPos, endPos, userPos, capPos, dealScope, amountSQL), args...)
+		startPos, endPos, userPos, capPos, dealScope, amountSQL, stageName), args...)
 	if err != nil {
 		return nil, fmt.Errorf("weekly: reading the week's deals: %w", err)
 	}

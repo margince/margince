@@ -113,7 +113,7 @@ func (e *FilterError) Error() string { return "storekit: " + e.detail }
 // FieldFault names the filter and says what it takes. The operand is never
 // echoed.
 func (e *FilterError) FieldFault() (field, code, message string) {
-	return e.Name, "invalid", e.detail
+	return e.Name, codeInvalid, e.detail
 }
 
 // FilterWord binds a closed-vocabulary or free-text operand. The VALUE is not

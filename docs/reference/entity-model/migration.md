@@ -33,6 +33,11 @@ The 2 tables owned by `migration`, as the migrations build them. [Back to the en
 - `idx_import_record_map_run`: `btree (import_run_id)`
 - `import_record_map_pkey`: `unique, btree (source_system, object, external_id)`
 
+**Triggers**
+
+- `text_bound_insert`: `AFTER INSERT FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL, '{"object": 20000, "origin": 20000, "external_id": 20000, "source_system": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"external_id":20000,"object":20000,"origin":20000,"source_system":20000}')`
+- `text_bound_update`: `AFTER UPDATE FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"object": 20000, "origin": 20000, "external_id": 20000, "source_system": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"external_id":20000,"object":20000,"origin":20000,"source_system":20000}')`
+
 ## import_run
 
 34 columns · primary key `(id)` · referenced by 1 foreign key
@@ -88,3 +93,8 @@ The 2 tables owned by `migration`, as the migrations build them. [Back to the en
 - `import_run_one_live_per_source_ref`: `unique, btree (source_ref) WHERE ((connector = 'csv') AND (source_released_at IS NULL))`
 - `import_run_one_test_per_agent`: `unique, btree (((actor ->> 'id'))) WHERE ((status = 'validating') AND ((actor ->> 'type') = 'agent'))`
 - `import_run_pkey`: `unique, btree (id)`
+
+**Triggers**
+
+- `text_bound_insert`: `AFTER INSERT FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL, '{"error": 20000, "phase": 20000, "source": 20000, "status": 20000, "connector": 20000, "draft_step": 20000, "job_status": 20000, "source_ref": 20000, "approved_by": 20000, "captured_by": 20000, "phase_object": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"approved_by":20000,"captured_by":20000,"connector":20000,"draft_step":20000,"error":20000,"job_status":20000,"phase":20000,"phase_object":20000,"source":20000,"source_ref":20000,"status":20000}')`
+- `text_bound_update`: `AFTER UPDATE FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"error": 20000, "phase": 20000, "source": 20000, "status": 20000, "connector": 20000, "draft_step": 20000, "job_status": 20000, "source_ref": 20000, "approved_by": 20000, "captured_by": 20000, "phase_object": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"approved_by":20000,"captured_by":20000,"connector":20000,"draft_step":20000,"error":20000,"job_status":20000,"phase":20000,"phase_object":20000,"source":20000,"source_ref":20000,"status":20000}')`

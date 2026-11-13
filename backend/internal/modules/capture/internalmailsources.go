@@ -18,16 +18,18 @@ import (
 )
 
 // InternalMailSourceOption names a live connection without resolving its credential.
+// A shared mailbox has no owner, and its address is its name.
 type InternalMailSourceOption struct {
 	ConnectionID ids.UUID
-	OwnerUserID  ids.UUID
+	OwnerUserID  *ids.UUID
 	Provider     string
 	AccountLabel string
 	OwnerName    string
 	Generation   int
 }
 
-// ListInternalMailSources offers only mail connections their owners can still access.
+// ListInternalMailSources offers mail connections their owners can still access,
+// and shared mailboxes whose reader team is live.
 func (s *SettingsStore) ListInternalMailSources(ctx context.Context) ([]InternalMailSourceOption, error) {
 	if err := auth.RequireAdmin(ctx); err != nil {
 		return nil, err
@@ -37,10 +39,11 @@ func (s *SettingsStore) ListInternalMailSources(ctx context.Context) ([]Internal
 	}
 	out := []InternalMailSourceOption{}
 	err := s.settings.WriteTx(ctx, func(tx pgx.Tx) error {
-		rows, err := tx.Query(ctx, `SELECT c.id, c.user_id, c.provider, coalesce(c.account_label, ''), u.display_name, c.generation
-   FROM capture_connection c JOIN app_user u ON u.id = c.user_id
+		rows, err := tx.Query(ctx, `SELECT c.id, c.user_id, c.provider, coalesce(c.account_label, ''), coalesce(u.display_name, ''), c.generation
+   FROM capture_connection c LEFT JOIN app_user u ON u.id = c.user_id
    WHERE c.provider IN ('gmail','graph','imap') AND c.status IN ('connected','error')
-    AND c.archived_at IS NULL AND `+workforce.LiveHumanSQL("u")+` ORDER BY u.display_name, c.provider, c.id`)
+    AND c.archived_at IS NULL AND ((u.id IS NOT NULL AND `+workforce.LiveHumanSQL("u")+`) OR `+sharedMailboxLiveSQL+`)
+   ORDER BY u.display_name NULLS FIRST, c.account_label, c.provider, c.id`)
 		if err != nil {
 			return err
 		}
@@ -78,5 +81,8 @@ func (r *Registry) InternalMailSourceContainers(ctx context.Context, connection 
 	if source.Provider != provider {
 		return nil, false, apperrors.ErrNotFound
 	}
-	return r.ListContainers(ctx, source.Provider, ids.From[ids.UserKind](source.OwnerUserID))
+	if source.OwnerUserID == nil {
+		return r.listContainersOf(ctx, source.Provider, `id = $1 AND user_id IS NULL`, source.ConnectionID)
+	}
+	return r.ListContainers(ctx, source.Provider, ids.From[ids.UserKind](*source.OwnerUserID))
 }

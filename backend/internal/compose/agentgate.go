@@ -31,6 +31,7 @@ import (
 
 	"github.com/go-chi/chi/v5"
 
+	"github.com/margince/margince/backend/internal/compose/humanonlybody"
 	"github.com/margince/margince/backend/internal/modules/agents"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/httperr"
@@ -67,7 +68,8 @@ func agentGate(reg *agents.Registry, staging agents.Approvals, stages agents.Sta
 			}
 			// Before the passes below: a tool's in-process call lands here too,
 			// and an area is held to the route whichever door reached it.
-			if refusedOutsideAreas(w, r, reg) {
+			humanOnly := routeVerbShapes[r.Method+" "+chi.RouteContext(ctx).RoutePattern()].HumanOnly
+			if refusedOutsideAreas(w, r, reg) || humanonlybody.Refused(w, r, humanOnly, maxGatedBody) {
 				return
 			}
 			if servedByTheRegistry(r) || admittedByTheTool(r) {

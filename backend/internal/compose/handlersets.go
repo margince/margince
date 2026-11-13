@@ -20,6 +20,7 @@ import (
 	"github.com/margince/margince/backend/internal/compose/dealstatus"
 	"github.com/margince/margince/backend/internal/compose/erasurereturn"
 	"github.com/margince/margince/backend/internal/compose/leaddraft"
+	"github.com/margince/margince/backend/internal/compose/loggedtouch"
 	"github.com/margince/margince/backend/internal/compose/meetingbrief"
 	"github.com/margince/margince/backend/internal/compose/pipelinetrace"
 	"github.com/margince/margince/backend/internal/compose/project360"
@@ -150,6 +151,7 @@ func (s *Server) wireContact360(pool *pgxpool.Pool) {
 	s.roomBriefSvc = newRoomBriefService(pool)
 	s.roomBriefHandlers = roombrief.NewHandlers(s.roomBriefSvc)
 	s.readerRenderingHandlers = readerrendering.NewHandlers(newReaderRenderingService(pool))
+	s.rewriteHandlers = newRewriteHandlers(pool, nil)
 	// No provider is registered, which is the supported configuration rather
 	// than a gap: the surface answers "not connected" and writes nothing
 	// (ADR-0096 D4). Connecting one later is a provider implementation.
@@ -160,17 +162,12 @@ func (s *Server) wireContact360(pool *pgxpool.Pool) {
 	// it needs no pool of its own. Nil lane here for the same reason as the
 	// brief's: WithContactDraft binds the api role's, and without it the endpoint
 	// answers from its deterministic floor rather than 501-ing.
-	s.firstDrafts.contact = contactdraft.NewService(s.contact360Svc, nil).
-		WithCoRecipients(s.contactsStore).
-		WithAboutActivities(activities.NewStore(InstallationDB(pool))).
-		WithEmailSummaries(emailRows(pool)).
-		WithEnvelope(draftEnvelope(pool, s.log))
+	s.firstDrafts.contact = s.contactDraft(pool, nil)
 	s.contactDraftHandlers = contactdraft.NewHandlers(s.firstDrafts.contact)
 	// The lead-side draft, on the same terms: nil lane, so a deployment with no
 	// model answers from contactdraft's deterministic floor rather than 501-ing,
 	// and WithLeadDraft binds the api role's lane.
-	s.firstDrafts.lead = leaddraft.NewService(s.contactsStore, leadCorrespondence{activities.NewStore(InstallationDB(pool))}, nil).
-		WithEnvelope(draftEnvelope(pool, s.log))
+	s.firstDrafts.lead = s.leadDraft(pool, nil)
 	s.leadDraftHandlers = leaddraft.NewHandlers(s.firstDrafts.lead)
 }
 
@@ -190,4 +187,25 @@ func (s *Server) wireProject360(pool *pgxpool.Pool) {
 		time.Now,
 	)
 	s.project360Handlers = project360.NewHandlers(svc)
+}
+
+// Each drafter is built here once. Its model-free floor and the lane an option
+// binds then read the same sources.
+func (s *Server) accountDraft(pool *pgxpool.Pool, brain completer) *accountdraft.Service {
+	return accountdraft.NewService(s.company360Svc, brain).WithEnvelope(draftEnvelope(pool, s.log)).
+		WithLoggedTouches(loggedtouch.Reader{Store: activities.NewStore(InstallationDB(pool))}).
+		WithEmailSummaries(emailRows(pool)).WithDossier(s.companyDossierSvc)
+}
+
+func (s *Server) contactDraft(pool *pgxpool.Pool, brain completer) *contactdraft.Service {
+	return contactdraft.NewService(s.contact360Svc, brain).WithCoRecipients(s.contactsStore).
+		WithAboutActivities(activities.NewStore(InstallationDB(pool))).
+		WithLoggedTouches(loggedtouch.Reader{Store: activities.NewStore(InstallationDB(pool))}).
+		WithEmailSummaries(emailRows(pool)).WithEnvelope(draftEnvelope(pool, s.log))
+}
+
+func (s *Server) leadDraft(pool *pgxpool.Pool, brain completer) *leaddraft.Service {
+	return leaddraft.NewService(s.contactsStore, leadCorrespondence{activities.NewStore(InstallationDB(pool))}, brain).
+		WithLoggedTouches(loggedtouch.Reader{Store: activities.NewStore(InstallationDB(pool))}).
+		WithEnvelope(draftEnvelope(pool, s.log))
 }

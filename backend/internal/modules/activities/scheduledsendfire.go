@@ -277,7 +277,7 @@ func (c claimedSend) replay() (SendOrigin, SendEmailInput, error) {
 // there is nothing to fire. The lock is what makes two timers safe.
 func (s *Store) claimForFire(ctx context.Context, tx pgx.Tx, id ids.UUID) (claimedSend, bool, error) {
 	rows, err := tx.Query(ctx, `
-		SELECT scheduled_at, origin_kind, anchor_activity_id,
+		SELECT `+scheduleInstantSQL+`, origin_kind, anchor_activity_id,
 		       origin_links, also_links, payload, payload_version, version, created_at,
 		       coalesce((payload->>'replies_reviewed_at')::timestamptz, created_at)
 		  FROM scheduled_send
@@ -374,7 +374,7 @@ func (s *Store) notifyHeld(ctx context.Context, tx pgx.Tx, id ids.UUID, reason s
 		scheduledAt time.Time
 	)
 	if err := tx.QueryRow(ctx, `
-		SELECT scheduled_by, payload, scheduled_at FROM scheduled_send WHERE id = $1`,
+		SELECT scheduled_by, payload, `+scheduleInstantSQL+` FROM scheduled_send WHERE id = $1`,
 		id).Scan(&scheduledBy, &payloadRaw, &scheduledAt); err != nil {
 		return fmt.Errorf("scheduled send: reading the held message for its rep: %w", err)
 	}
@@ -410,76 +410,4 @@ func holdReasonFor(err error) (string, bool) {
 		return HeldSendRefused, true
 	}
 	return "", false
-}
-
-// OverdueScheduledSends returns messages whose moment has passed and which are
-// still waiting — the shape a message takes when the job that should have fired
-// it is gone. Why that state exists and what the caller does about it is in
-// compose/scheduledsendrecovery.go, which is the only caller.
-//
-// `olderThan` keeps it off messages that are merely mid-flight: a row due
-// seconds ago is far more likely to have a job about to run than a job that
-// vanished, and re-arming it would race the real one. The claim lock makes that
-// race safe rather than harmful, but a sweep that fights the normal path on
-// every pass is a sweep nobody can read the logs of.
-//
-// There is no workspace predicate, and none is needed: an installation holds
-// exactly one workspace (ADR-0061), so "every row still scheduled and overdue"
-// already means the whole installation's queue. The WHERE clause matches
-// idx_scheduled_send_due (scheduled_at, partial on status = 'scheduled')
-// exactly, so this walks that index in scheduled_at order and stops at the
-// limit rather than scanning the table.
-func (s *Store) OverdueScheduledSends(ctx context.Context, olderThan time.Duration, limit int) ([]ids.UUID, error) {
-	var out []ids.UUID
-	err := s.tx(ctx, func(tx pgx.Tx) error {
-		rows, err := tx.Query(ctx, `
-			SELECT id FROM scheduled_send
-			 WHERE status = 'scheduled' AND scheduled_at < $1
-			 ORDER BY scheduled_at ASC
-			 LIMIT $2`, s.now().Add(-olderThan), limit)
-		if err != nil {
-			return fmt.Errorf("scheduled send: finding messages nothing will wake: %w", err)
-		}
-		defer rows.Close()
-		for rows.Next() {
-			var id ids.UUID
-			if err := rows.Scan(&id); err != nil {
-				return fmt.Errorf("scheduled send: reading an overdue message: %w", err)
-			}
-			out = append(out, id)
-		}
-		return rows.Err()
-	})
-	return out, err
-}
-
-// RearmScheduledSend enqueues a fresh alarm for a message whose own alarm is
-// gone, in one transaction with the claim that proves it is still waiting.
-//
-// It changes NOTHING about the message — not its moment, not its state. The row
-// was always the schedule; what went missing is the thing that wakes it, so this
-// puts that back and the ordinary fire path makes the ordinary decision. A sweep
-// that decided anything itself would be a second send path.
-//
-// Under the claim lock, so a real timer running at the same instant is
-// serialized against this rather than racing it: one of the two enqueues, the
-// other finds the row already handled and does nothing.
-func (s *Store) RearmScheduledSend(ctx context.Context, id ids.UUID, timer ScheduleTimer) error {
-	if timer == nil {
-		return errNoScheduleTimer
-	}
-	return s.tx(ctx, func(tx pgx.Tx) error {
-		_, found, err := s.claimForFire(ctx, tx, id)
-		if err != nil {
-			return err
-		}
-		if !found {
-			// Sent, cancelled or held while this pass was reading. Nothing to
-			// re-arm, and nothing wrong.
-			return nil
-		}
-		// Due NOW: its moment has already passed, and the fire path is what
-		// decides whether that means send it or hold it as a missed window.
-		return timer.ScheduleTx(ctx, tx, id, s.now())
-	})
 }

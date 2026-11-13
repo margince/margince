@@ -7,7 +7,7 @@ export type WebForm = components["schemas"]["WebForm"];
 export type WebFormCreated = components["schemas"]["WebFormCreated"];
 export type WebFormSender = components["schemas"]["WebFormSender"];
 
-export const WEB_FORMS_KEY = "web-forms";
+export { WEB_FORMS_KEY } from "../../lib/websiteinquiries";
 
 // In the order a reader meets them: the ones that need no developer first.
 export const WEB_FORM_SENDERS: readonly WebFormSender[] = [

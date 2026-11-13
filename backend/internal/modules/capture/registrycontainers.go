@@ -34,15 +34,19 @@ import (
 var ErrContainersUnsupported = errors.New("capture: this provider does not list folders")
 
 // ListContainers returns the folders or labels of this seat's connection.
-//
-// The listing is LIVE rather than stored, and that is the point: a folder
-// somebody made this morning is one they may want excluded this morning, and a
-// cached list would offer yesterday's mailbox. It costs one provider round
-// trip, which is why the picker asks for it when it opens rather than on every
-// keystroke.
 func (r *Registry) ListContainers(
 	ctx context.Context, name string, userID ids.UserID,
 ) ([]connector.NamedContainer, bool, error) {
+	return r.listContainersOf(ctx, name, `user_id = $1`, userID.UUID)
+}
+
+// listContainersOf lists the folders of the one connection that connection,
+// a literal predicate on $1, names for this provider.
+//
+// The listing is live rather than stored: a folder made this morning may be
+// one to exclude this morning. It costs one provider round trip, so the picker
+// asks for it when it opens rather than on every keystroke.
+func (r *Registry) listContainersOf(ctx context.Context, name, connection string, key ids.UUID) ([]connector.NamedContainer, bool, error) {
 	conn, err := r.connector(name)
 	if err != nil {
 		return nil, false, err
@@ -56,9 +60,9 @@ func (r *Registry) ListContainers(
 	if err := r.db.Tx(ctx, func(tx pgx.Tx) error {
 		return tx.QueryRow(ctx, `
 			SELECT credential_ref, auth FROM capture_connection
-			 WHERE user_id = $1 AND provider = $2 AND status <> 'disconnected'
+			 WHERE `+connection+` AND provider = $2 AND status <> 'disconnected'
 			   AND archived_at IS NULL`,
-			userID, name).Scan(&credentialRef, &authBytes)
+			key, name).Scan(&credentialRef, &authBytes)
 	}); err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return nil, false, apperrors.ErrNotFound

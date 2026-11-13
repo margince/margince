@@ -45,6 +45,7 @@ import (
 	"errors"
 	"fmt"
 	"strings"
+	"unicode/utf8"
 
 	"github.com/jackc/pgx/v5/pgxpool"
 
@@ -55,6 +56,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/deals"
 	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/platform/database/textbounds"
 	"github.com/margince/margince/backend/internal/shared/kernel/draftfloor"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -450,6 +452,11 @@ func (d offerDrafter) groundOfferLines(ctx context.Context, candidates []offerLi
 		snippet := strings.TrimSpace(c.EvidenceSnippet)
 		sourceID := strings.TrimSpace(c.SourceID)
 		if desc == "" || snippet == "" || sourceID == "" {
+			continue
+		}
+		// A line the column's guard would refuse is dropped like any other bad
+		// line, so it cannot fail the whole draft.
+		if utf8.RuneCountInString(desc) > textbounds.LimitOf("public.offer_line_item.description") {
 			continue
 		}
 		sourceText, known := bySource[sourceID]

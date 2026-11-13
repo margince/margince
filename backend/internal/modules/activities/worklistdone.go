@@ -53,7 +53,7 @@ func (s *Store) MarkWorklistRowsDone(ctx context.Context, rows []WorklistRowRef)
 			if err != nil {
 				return err
 			}
-			return judgeInTx(ctx, tx, id, capturedBy, s.writeReaderState(id, stateHandled, nil, "", nil, shape))
+			return judgeInTx(ctx, tx, id, capturedBy, s.writeReaderState(id, stateHandled, nil, "", nil, shape, nil))
 		}
 		// done_at moves forward on a second press. A row that came back and is
 		// marked done again holds until its subject moves after the new press.

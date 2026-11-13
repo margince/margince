@@ -61,6 +61,11 @@ type Connector struct {
 	// persist one, and a rotation reported to nobody is the behaviour this
 	// connector had before the seam existed.
 	rotations connector.CredentialSink
+	// shared reads shared mailboxes; nil on a connector that reads none.
+	shared *sharedReader
+	// checkpointMessages also checkpoints a round once this many messages
+	// passed since the last one. Zero checkpoints by pages alone.
+	checkpointMessages int
 }
 
 // WithBounceSink returns a copy that records delivery reports instead of
@@ -104,12 +109,13 @@ func New(oauth Authorizer, api API) *Connector {
 }
 
 var (
-	_ connector.Connector         = (*Connector)(nil)
-	_ connector.Backfiller        = (*Connector)(nil)
-	_ connector.Watcher           = (*Connector)(nil)
-	_ connector.GrantedScoper     = (*Connector)(nil)
-	_ connector.AccountLabeler    = (*Connector)(nil)
-	_ connector.CredentialRotator = (*Connector)(nil)
+	_ connector.Connector           = (*Connector)(nil)
+	_ connector.Backfiller          = (*Connector)(nil)
+	_ connector.Watcher             = (*Connector)(nil)
+	_ connector.GrantedScoper       = (*Connector)(nil)
+	_ connector.AccountLabeler      = (*Connector)(nil)
+	_ connector.CredentialRotator   = (*Connector)(nil)
+	_ connector.SharedMailboxReader = (*Connector)(nil)
 )
 
 // cursorState is the persisted incremental watermark: Graph's deltaLink, plus

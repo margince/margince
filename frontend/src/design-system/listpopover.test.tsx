@@ -12,6 +12,7 @@ import {
 } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { SEARCH_DEBOUNCE_MS } from "./debouncedsearch";
 import { ListPopover, type ListPopoverOption } from "./listpopover";
 
 afterEach(() => {
@@ -486,6 +487,32 @@ describe("ListPopover over a server search", () => {
     expect(liveRegion()?.textContent).toBe("1 result");
     expect(screen.getByRole("option", { name: "Atlas" })).toBeTruthy();
     expect(screen.queryByText("Searching…")).toBeNull();
+  });
+
+  it("lists the empty term's answer as it opens, when asked to list on open", async () => {
+    const search = vi.fn().mockResolvedValue([
+      { id: "c-1", name: "Ines Brandt" },
+      { id: "c-2", name: "Jonas Keller" },
+    ]);
+    vi.useFakeTimers();
+    render(
+      <ListPopover
+        label="Book a meeting"
+        title="Contacts"
+        searchLabel="Search contacts"
+        search={search}
+        listOnOpen
+        onPick={vi.fn()}
+      />,
+    );
+    expect(search).not.toHaveBeenCalled();
+
+    fireEvent.click(screen.getByRole("button", { name: "Book a meeting" }));
+    await act(() => vi.advanceTimersByTimeAsync(SEARCH_DEBOUNCE_MS));
+
+    expect(screen.getByRole("option", { name: "Ines Brandt" })).toBeTruthy();
+    expect(screen.getByRole("option", { name: "Jonas Keller" })).toBeTruthy();
+    expect(search).toHaveBeenCalledWith("");
   });
 
   it("tells an empty answer from a refused search", async () => {
