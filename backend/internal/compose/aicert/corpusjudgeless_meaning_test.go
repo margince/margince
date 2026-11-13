@@ -104,7 +104,7 @@ func (read tentativeReading) reply(confidence float64) func([]string) string {
 	return literal(mustJSON(map[string]any{"proposals": []map[string]any{{
 		"summary": "Try to send what was asked.", "owner": "Mira", "promiser_ref": "", "source_lines": []int{read.line},
 		"due_date": read.due, "confidence": confidence, "commitment": read.meaning,
-	}}}))
+	}}, "meeting_summary": meetingSummary}))
 }
 
 func proofScenario(t *testing.T, scenarios map[string]aicert.Scenario, name string) aicert.Scenario {
@@ -129,7 +129,7 @@ func firstMeaningSource(t *testing.T, sc aicert.Scenario) string {
 
 func emptyMeaningReply(task string) func([]string) string {
 	if task == "transcript_propose" {
-		return literal(`{"proposals":[]}`)
+		return literal(noProposalReply)
 	}
 	return literal(`{"events":[]}`)
 }
@@ -140,7 +140,7 @@ func meaningReply(t *testing.T, sc aicert.Scenario, want meaningExpectation) fun
 	if sc.Task == "transcript_propose" {
 		return literal(mustJSON(map[string]any{"proposals": []map[string]any{{
 			"summary": "Send the requested document.", "owner": "Mira", "promiser_ref": "", "source_lines": []int{want.Line}, "due_date": want.Due, "confidence": 0.95, "commitment": want.Meaning,
-		}}}))
+		}}, "meeting_summary": meetingSummary}))
 	}
 	return func(ids []string) string {
 		return mustJSON(map[string]any{"events": []map[string]any{{

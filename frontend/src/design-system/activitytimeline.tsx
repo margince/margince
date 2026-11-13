@@ -23,7 +23,11 @@ import {
   withCreator,
 } from "./provenanceof";
 import type { TimelineEntry } from "./timelineentry";
-import { isTranscriptActivity, TranscriptReadCard } from "./transcriptread";
+import {
+  isTranscriptActivity,
+  TranscriptReadCard,
+  TranscriptSummary,
+} from "./transcriptread";
 
 type Activity = components["schemas"]["Activity"];
 
@@ -211,15 +215,26 @@ export function activityTimeline(
         activity.controller_send,
         viewerUserId,
       ),
-      // Offered on the row rather than by each caller: a transcript is readable
-      // wherever it is listed, and a per-screen opt-in is how the same affordance
-      // ends up on the deal and missing on the contact who was in the meeting.
-      detail: isTranscriptActivity(activity) ? (
-        <TranscriptReadCard activityId={activity.id} />
-      ) : undefined,
+      ...transcriptSlots(activity),
       actions: renderActions?.(activity),
     };
   });
+}
+
+// Offered on the row rather than by each caller, so a transcript is readable
+// wherever it is listed. A per-screen opt-in left it on the deal and missing
+// on the contact who was in the meeting. The summary sits above the
+// transcript and the reading below it.
+function transcriptSlots(
+  activity: Activity,
+): Pick<TimelineEntry, "detail" | "lead"> {
+  if (!isTranscriptActivity(activity)) {
+    return {};
+  }
+  return {
+    detail: <TranscriptReadCard activityId={activity.id} />,
+    lead: <TranscriptSummary activityId={activity.id} />,
+  };
 }
 
 function commitmentReviewCount(activity: Activity): number {

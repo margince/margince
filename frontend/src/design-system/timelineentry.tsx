@@ -215,6 +215,11 @@ export type TimelineEntry = {
    * the same place in the row as a message does.
    */
   detail?: ReactNode;
+  /**
+   * Rendered above the body: the AI-written summary of a meeting, read before
+   * the transcript it summarizes.
+   */
+  lead?: ReactNode;
 };
 
 // One icon per kind and one for all messaging transports. An extension unit's

@@ -79,7 +79,7 @@ func groundedReply(t *testing.T, line int, confidence float64, promiser ids.UUID
 		"summary": "Send the revised pricing", "owner": "Priya", "promiser_ref": "seat:" + promiser.String(),
 		"source_lines": []int{line}, "confidence": confidence,
 		"commitment": &commitmentMeaning{State: "open", DeadlinePrecision: "none"},
-	}}})
+	}}, "meeting_summary": activities.TranscriptSummary{KeyPoints: []activities.TranscriptSummaryPoint{{Text: "Pricing by Friday", SourceLines: []int{line}}}}})
 	if err != nil {
 		t.Fatalf("building the model reply: %v", err)
 	}
@@ -201,6 +201,9 @@ func TestATranscriptReadingStagesACitedProposalAndWritesNothingYet(t *testing.T)
 	if evidence[0].SourceID != e.activity.String() {
 		t.Errorf("the evidence must point back at the transcript activity, got %q", evidence[0].SourceID)
 	}
+	if read.Summary == nil || read.Summary.ReadID != read.ID || read.Summary.KeyPoints[0].SourceLines[0] != 3 {
+		t.Errorf("the reading must write its grounded summary onto the meeting, got %+v", read.Summary)
+	}
 }
 
 // storedEvidence reads the approval's persisted evidence. The test asserts on
@@ -317,6 +320,9 @@ func TestATranscriptStatingNothingProducesNoProposalAndSaysSo(t *testing.T) {
 	}
 	if read.StatusDetail == nil || *read.StatusDetail == "" {
 		t.Error("an empty result must explain itself, or it reads as a broken feature")
+	}
+	if read.Outcome == nil || !read.Outcome.SummaryRefused || read.Summary != nil {
+		t.Errorf("a reply with no summary must write none and say so, got %+v", read.Outcome)
 	}
 }
 

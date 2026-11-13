@@ -7018,6 +7018,11 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "transcriptread.failedFallback": "Chưa có đề xuất nào.",
   "transcriptread.effectFailedTitle":
     "Đã chấp nhận nhưng không thể tạo việc cần làm",
+  "transcriptread.summaryTitle": "Tóm tắt cuộc họp",
+  "transcriptread.keyPoints": "Ý chính",
+  "transcriptread.nextSteps": "Bước tiếp theo",
+  "transcriptread.summaryRefused":
+    "Lần này chưa viết được bản tóm tắt. Đọc lại bản chép lời để thử lại.",
 
   "create.cancel": "Hủy",
   "create.save": "Tạo",

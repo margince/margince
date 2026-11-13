@@ -255,6 +255,19 @@ function RelayTag({ entry }: Readonly<{ entry: TimelineEntry }>) {
  * render the same row inside an expanded conversation. A second rendering of
  * a message would drift from this one the first time either changed.
  */
+// The row's words: a lead such as a meeting's summary, then the body.
+function TimelineRowText({ entry }: Readonly<{ entry: TimelineEntry }>) {
+  if (entry.withheld) {
+    return null;
+  }
+  return (
+    <>
+      {entry.lead}
+      {entry.body && <TimelineBody entry={entry} body={entry.body} />}
+    </>
+  );
+}
+
 export function TimelineRow({
   entry,
   zone,
@@ -403,9 +416,7 @@ export function TimelineRow({
             An email WITH its summary drew EmailEntry above and never reaches
             here; one without still needs the splitter, because a reader whose
             server has not caught up should not lose the fold. */}
-        {entry.body && !entry.withheld && (
-          <TimelineBody entry={entry} body={entry.body} />
-        )}
+        <TimelineRowText entry={entry} />
         {entry.detail}
         <span className="tl-meta">
           <ProvenanceTag provenance={entry.provenance} />

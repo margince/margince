@@ -6803,6 +6803,60 @@ Data is delimited by <untrusted-fence> … </untrusted-fence> (the opening marke
 {
   "additionalProperties": false,
   "properties": {
+    "meeting_summary": {
+      "additionalProperties": false,
+      "properties": {
+        "key_points": {
+          "items": {
+            "additionalProperties": false,
+            "properties": {
+              "source_lines": {
+                "items": {
+                  "type": "integer"
+                },
+                "type": "array"
+              },
+              "text": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "text",
+              "source_lines"
+            ],
+            "type": "object"
+          },
+          "type": "array"
+        },
+        "next_steps": {
+          "items": {
+            "additionalProperties": false,
+            "properties": {
+              "source_lines": {
+                "items": {
+                  "type": "integer"
+                },
+                "type": "array"
+              },
+              "text": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "text",
+              "source_lines"
+            ],
+            "type": "object"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "key_points",
+        "next_steps"
+      ],
+      "type": "object"
+    },
     "proposals": {
       "items": {
         "additionalProperties": false,
@@ -6888,7 +6942,8 @@ Data is delimited by <untrusted-fence> … </untrusted-fence> (the opening marke
     }
   },
   "required": [
-    "proposals"
+    "proposals",
+    "meeting_summary"
   ],
   "type": "object"
 }

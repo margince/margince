@@ -71,7 +71,7 @@ const (
 	TaskTagSuggest Task = "tag_suggest"
 	// TaskTranscript is Declared, not built (ADR-0074). Pasted transcript text is T2/untrusted per ai-operational-spec §1 when a site lands.
 	TaskTranscript Task = "transcript"
-	// TaskTranscriptPropose is the reading of next steps and commitments out of a meeting transcript, each citing the 1-based transcript lines it was read from. A reading at 0.7 or above is firm. From 0.3 up to just under 0.7 it is a tentative promise, such as "I will try": it is kept and always stages for a human (approval kind commitment_task), marked tentative, and never becomes a task by itself. Below 0.3 it is dropped, never guessed, and a transcript stating none yields no proposal at all. Each commitment goes through the shared commitment rule: a customer's promise is filed on their contact and never becomes a task, and a new one stages a follow-up for the member who logged the meeting, titled "Follow up if <promise> has not arrived" and due the day after the promised day; nobody responsible means no follow-up. A named colleague's firm promise read at or above 0.85 becomes their task directly, marked as the reader's; anything else stages for a human (approval kind commitment_task).
+	// TaskTranscriptPropose is the reading of next steps and commitments out of a meeting transcript, each citing the 1-based transcript lines it was read from. A reading at 0.7 or above is firm. From 0.3 up to just under 0.7 it is a tentative promise, such as "I will try": it is kept and always stages for a human (approval kind commitment_task), marked tentative, and never becomes a task by itself. Below 0.3 it is dropped, never guessed, and a transcript stating none yields no proposal at all. Each commitment goes through the shared commitment rule: a customer's promise is filed on their contact and never becomes a task, and a new one stages a follow-up for the member who logged the meeting, titled "Follow up if <promise> has not arrived" and due the day after the promised day; nobody responsible means no follow-up. A named colleague's firm promise read at or above 0.85 becomes their task directly, marked as the reader's; anything else stages for a human (approval kind commitment_task). The same call writes a short summary onto the meeting: key points and next steps in the language the meeting was held in, each citing the transcript lines it was read from. A summary citing a line the transcript lacks is dropped, the meeting keeps its earlier summary, and the reading says so; the proposals still count.
 	TaskTranscriptPropose Task = "transcript_propose"
 	// TaskVoiceBuild is owner-requested or automatic durable Voice DNA candidate build; own-authored corpus only, CompanyContext none (ADR-0066). Four sites: the derive pass, the two evaluation passes, and the demonstration draft the profile card shows — a built voice nobody can read a sentence of is a voice nobody can judge.
 	TaskVoiceBuild Task = "voice_build"
@@ -168,7 +168,7 @@ var taskSummaries = map[Task]string{
 	TaskSummarize:                     "Writes the short summaries shown on account, contact and deal pages.",
 	TaskTagSuggest:                    "Reads captured mail, meetings, notes and calls and suggests the tags whose description of interest they show.",
 	TaskTranscript:                    "Reads pasted meeting transcripts. Not in use yet.",
-	TaskTranscriptPropose:             "Reads next steps and commitments out of a meeting transcript.",
+	TaskTranscriptPropose:             "Reads next steps and commitments out of a meeting transcript, and writes a short summary of the meeting.",
 	TaskVoiceBuild:                    "Learns your writing voice from emails you wrote, so drafts sound like you.",
 	TaskWeeklyLearnings:               "Suggests what last week's results teach for the week ahead.",
 	TaskWeeklyReview:                  "Writes the one or two sentences that open your weekly review.",
@@ -202,7 +202,7 @@ const (
 // TaskContractHash is the sha256 of api/ai-tasks.yaml at generation
 // time: a build fingerprint the cert runner can compare against a
 // freshly hashed contract file to catch a stale generated table.
-const TaskContractHash = "53b15c9aa2e88c4166d6b8ffe665ac484f5796470bd070328fed12da450dbb2d"
+const TaskContractHash = "b5135745aeed91078971459d043cecee443b78a59aa0f348712f1b36c09ed73c"
 
 // AllTasks returns every contract task, sorted — the completeness
 // check a certification run walks to prove it covers every routed

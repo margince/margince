@@ -15,6 +15,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/compose/transcriptsummary"
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/ai"
 	"github.com/margince/margince/backend/internal/modules/identity"
@@ -65,7 +66,7 @@ func (p *TranscriptProposer) readTranscript(ctx context.Context, store transcrip
 	if err != nil {
 		return err
 	}
-	steps, err := p.ask(ai.WithSubject(ctx, activityID.Ref(), ""), activityID.UUID,
+	reply, err := p.ask(ai.WithSubject(ctx, activityID.Ref(), ""), activityID.UUID,
 		reading.Lines, reading.OccurredAt.Format(time.DateOnly), parties)
 	if err != nil {
 		if errors.Is(err, errRefusedTranscript) {
@@ -76,10 +77,10 @@ func (p *TranscriptProposer) readTranscript(ctx context.Context, store transcrip
 		}
 		return err
 	}
-	return p.stageAndFinish(ctx, store, readID, aboveFloor(steps), reading, activityID)
+	return p.stageAndFinish(ctx, store, readID, reply, reading, activityID)
 }
 
-// stageAndFinish commits the quotations and the run record as one fact, under
+// stageAndFinish commits the quotations, the summary and the run record as one fact, under
 // the lock the engines that destroy a transcript take (storekit.
 // LockTranscriptBody). The reading is re-read under it: an erasure that came
 // first leaves nothing to stage, and one that comes second scrubs what was.
@@ -87,17 +88,19 @@ func (p *TranscriptProposer) stageAndFinish(
 	ctx context.Context,
 	store transcriptReadStore,
 	readID ids.UUID,
-	kept []proposedStep,
+	reply transcriptPayload,
 	reading activities.TranscriptReading,
 	activityID ids.ActivityID,
 ) error {
 	return p.finishUnderLock(ctx, store, readID, activityID,
 		func(tx pgx.Tx) (activities.TranscriptReadOutcome, error) {
+			kept := aboveFloor(reply.proposals())
 			staged, err := p.stage(ctx, tx, kept, reading, activityID)
 			if err != nil {
 				return activities.TranscriptReadOutcome{}, err
 			}
 			facts := staged.facts(len(kept))
+			transcriptsummary.Onto(ctx, p.log, facts, reply.Summary, len(reading.Lines))
 			return activities.TranscriptReadOutcome{
 				Status:      activities.TranscriptReadDone,
 				ProposalIDs: staged.approvalIDs(),

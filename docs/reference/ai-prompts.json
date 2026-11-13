@@ -4555,6 +4555,60 @@
       "answer_schema": {
         "additionalProperties": false,
         "properties": {
+          "meeting_summary": {
+            "additionalProperties": false,
+            "properties": {
+              "key_points": {
+                "items": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "source_lines": {
+                      "items": {
+                        "type": "integer"
+                      },
+                      "type": "array"
+                    },
+                    "text": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "text",
+                    "source_lines"
+                  ],
+                  "type": "object"
+                },
+                "type": "array"
+              },
+              "next_steps": {
+                "items": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "source_lines": {
+                      "items": {
+                        "type": "integer"
+                      },
+                      "type": "array"
+                    },
+                    "text": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "text",
+                    "source_lines"
+                  ],
+                  "type": "object"
+                },
+                "type": "array"
+              }
+            },
+            "required": [
+              "key_points",
+              "next_steps"
+            ],
+            "type": "object"
+          },
           "proposals": {
             "items": {
               "additionalProperties": false,
@@ -4640,7 +4694,8 @@
           }
         },
         "required": [
-          "proposals"
+          "proposals",
+          "meeting_summary"
         ],
         "type": "object"
       },

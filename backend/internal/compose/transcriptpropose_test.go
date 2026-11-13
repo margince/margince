@@ -128,8 +128,10 @@ func TestAReadingIsRefusedWhenItProposesMoreThanAMeetingCanHold(t *testing.T) {
 func TestTheFloorKeepsFirmAndTentativeReadingsAndDropsAGuess(t *testing.T) {
 	var steps []proposedStep
 	for i, confidence := range []schema.Confidence{0.9, 0.69, 0.3, 0.29} {
-		steps = append(steps, proposedStep{Meaning: &commitmentMeaning{State: "optional", DeadlinePrecision: "none"},
-			Summary: fmt.Sprint(confidence), Owner: "Priya", SourceLines: []int{i + 1}, Confidence: confidence})
+		steps = append(steps, proposedStep{
+			Meaning: &commitmentMeaning{State: "optional", DeadlinePrecision: "none"},
+			Summary: fmt.Sprint(confidence), Owner: "Priya", SourceLines: []int{i + 1}, Confidence: confidence,
+		})
 	}
 	if msg := validateTranscriptPayload(payloadOf(t, steps...), meetingLines(), nil); msg != "" {
 		t.Fatalf("an unsure but well-formed reading is valid, got refusal %q", msg)

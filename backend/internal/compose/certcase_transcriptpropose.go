@@ -34,6 +34,7 @@ import (
 	"strings"
 
 	"github.com/margince/margince/backend/internal/compose/aitasks"
+	"github.com/margince/margince/backend/internal/compose/transcriptsummary"
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/ai"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -220,6 +221,9 @@ func (c *transcriptProposeCase) Evaluate(trace aitasks.Trace) aitasks.Outcome {
 	}
 	payload = payload.asRead(c.parties)
 	if msg := validateTranscriptPayload(payload, c.lines, c.parties); msg != "" {
+		return aitasks.Outcome{Result: aitasks.OutcomeInvalid, Detail: msg}
+	}
+	if _, msg := transcriptsummary.Read(payload.Summary, len(c.lines)); msg != "" {
 		return aitasks.Outcome{Result: aitasks.OutcomeInvalid, Detail: msg}
 	}
 	if disagreements := c.disagreements(payload); len(disagreements) > 0 {

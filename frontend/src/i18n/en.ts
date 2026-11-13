@@ -7209,6 +7209,11 @@ export const en = {
   "transcriptread.failedTitle": "Transcript could not be read",
   "transcriptread.failedFallback": "Nothing was staged.",
   "transcriptread.effectFailedTitle": "Accepted, but no task was created",
+  "transcriptread.summaryTitle": "Meeting summary",
+  "transcriptread.keyPoints": "Key points",
+  "transcriptread.nextSteps": "Next steps",
+  "transcriptread.summaryRefused":
+    "No summary was written this time. Read the transcript again to retry.",
 
   "create.cancel": "Cancel",
   "create.save": "Create",

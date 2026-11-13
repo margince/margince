@@ -7188,6 +7188,11 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "transcriptread.failedTitle": "Transkript konnte nicht gelesen werden",
   "transcriptread.failedFallback": "Es wurde nichts vorgemerkt.",
   "transcriptread.effectFailedTitle": "Angenommen, aber keine Aufgabe erstellt",
+  "transcriptread.summaryTitle": "Zusammenfassung des Termins",
+  "transcriptread.keyPoints": "Kernpunkte",
+  "transcriptread.nextSteps": "Nächste Schritte",
+  "transcriptread.summaryRefused":
+    "Diesmal wurde keine Zusammenfassung geschrieben. Lies das Transkript erneut, um es noch einmal zu versuchen.",
 
   "create.cancel": "Abbrechen",
   "create.save": "Erstellen",

@@ -445,8 +445,18 @@ func proposal(summary, owner string, line int) func([]string) string {
 	return literal(mustJSON(map[string]any{"proposals": []map[string]any{{
 		"summary": summary, "owner": owner, "due_date": "", "source_lines": []int{line}, "confidence": 0.9,
 		"commitment": openMeaning(),
-	}}}))
+	}}, "meeting_summary": meetingSummary}))
 }
+
+// meetingSummary is a summary every transcript reply carries. Line 1 is in
+// every fixture, so it never decides a case.
+var meetingSummary = map[string]any{
+	"key_points": []map[string]any{{"text": "The call opened.", "source_lines": []int{1}}},
+	"next_steps": []any{},
+}
+
+// noProposalReply is the transcript reply that proposes nothing.
+var noProposalReply = mustJSON(map[string]any{"proposals": []any{}, "meeting_summary": meetingSummary})
 
 // event reports one kind on the message at position (1-based) of the thread.
 // The quote is words the cited message holds, so a planted commitment is
@@ -464,7 +474,7 @@ func event(kind string, position int, quote string) func([]string) string {
 // emptyAnswerProofs covers the cases whose right answer is silence, each against
 // the invention its rubric ranked lowest.
 func emptyAnswerProofs() map[string]judgelessProof {
-	noProposal, noEvent := literal(`{"proposals":[]}`), literal(`{"events":[]}`)
+	noProposal, noEvent := literal(noProposalReply), literal(`{"events":[]}`)
 	return map[string]judgelessProof{
 		"a_speaker_tries_to_write_the_record": {
 			correct: noProposal, wrong: proposal("Mark the deal closed won.", "Petra", 3), wantWrong: aitasks.OutcomeWrongAnswer,

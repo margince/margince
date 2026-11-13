@@ -25,6 +25,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/compose/promiseband"
 	"github.com/margince/margince/backend/internal/compose/promptlang"
+	"github.com/margince/margince/backend/internal/compose/transcriptsummary"
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/ai"
 	"github.com/margince/margince/backend/internal/modules/approvals"
@@ -41,9 +42,6 @@ const (
 	// maxTranscriptProposals caps one reading's yield: eight next steps from
 	// one meeting are a summary, not a reading.
 	maxTranscriptProposals = 5
-	// maxTranscriptCitedLines bounds one claim's citation. A commitment stated
-	// across more than a few lines is being summarized, not located.
-	maxTranscriptCitedLines = 6
 	// maxProposedSummary and maxProposedOwner bound the two free-text fields
 	// of a reply, model output a counterparty may steer into a reviewer's inbox.
 	maxProposedSummary = 200
@@ -116,6 +114,7 @@ type proposedStep struct {
 // of those is an outcome to record.
 type transcriptPayload struct {
 	Proposals *[]proposedStep `json:"proposals"`
+	Summary   json.RawMessage `json:"meeting_summary"`
 }
 
 // asRead is a reply as the server reads it: each participant ref becomes the
@@ -152,7 +151,7 @@ var errRefusedTranscript = errors.New("compose: the reading could not be used")
 // SHIPPING request rather than a copy of it — a cert that grades a
 // hand-rewritten prompt certifies nothing about what runs.
 //
-//promptvoice:exempt returns next steps and commitments as structured rows quoted from the transcript; the task list that renders them is the surface a reader reads.
+//promptvoice:exempt returns next steps and commitments as structured rows, and a meeting summary that reports who said what; the voice's "I" and "you" would change the speaker.
 func transcriptRequest(meeting ids.UUID, lines []string, meetingDay string, lang string, parties []commitmentParty) model.Request {
 	fence := promptfence.New()
 	var prompt strings.Builder
@@ -163,8 +162,8 @@ func transcriptRequest(meeting ids.UUID, lines []string, meetingDay string, lang
 	}
 	fmt.Fprintf(&prompt,
 		`This meeting happened on %s.`+"\n"+
-			`Return JSON: { "proposals": [ { "summary", "owner", "promiser_ref", "recipient_refs", "due_date", "source_lines", "commitment", "confidence" } ] } — `+
-			`at most %d, and an empty list when the transcript states none. `+
+			`Return JSON: { "proposals": [ { "summary", "owner", "promiser_ref", "recipient_refs", "due_date", "source_lines", "commitment", "confidence" } ], "meeting_summary": { "key_points", "next_steps" } } — `+
+			`at most %d proposals, and an empty list when the transcript states none. `+
 			`"summary" is one plain sentence naming the thing to be done. `+
 			commitmentRecipientsPrompt+
 			`"owner" is the party who promised, as the transcript names them; a speaker may report someone else's promise. `+
@@ -185,7 +184,7 @@ func transcriptRequest(meeting ids.UUID, lines []string, meetingDay string, lang
 			`"source_lines" are the line numbers it is stated on, between 1 and %d.`,
 		meetingDayLabel(meetingDay), maxTranscriptProposals, len(lines))
 
-	prompt.WriteString("\n" + commitmentMeaningInstruction)
+	prompt.WriteString("\n" + commitmentMeaningInstruction + "\n" + transcriptsummary.Instruction())
 	return model.Request{
 		System:         transcriptSystemFor(fence, lang),
 		Messages:       []model.Message{{Role: chatRoleUser, Content: prompt.String()}},
@@ -225,8 +224,9 @@ func transcriptSchema() json.RawMessage {
 				},
 				"summary", "owner", "promiser_ref", "recipient_refs", "due_date", "source_lines", extractionConfidenceKey, commitmentMeaningField,
 			)),
+			transcriptsummary.Key: transcriptsummary.Schema(),
 		},
-		"proposals",
+		"proposals", transcriptsummary.Key,
 	))
 }
 
@@ -293,12 +293,6 @@ func validateProposedStep(step proposedStep, lineCount int) string {
 	case len(step.Owner) > maxProposedOwner:
 		return fmt.Sprintf("a proposal's owner is %d characters, and at most %d may be proposed",
 			len(step.Owner), maxProposedOwner)
-	case len(step.SourceLines) == 0:
-		return fmt.Sprintf("proposal %q cites no line, and an uncited next step is a guess",
-			clampToken(step.Summary))
-	case len(step.SourceLines) > maxTranscriptCitedLines:
-		return fmt.Sprintf("proposal %q cites %d lines, and at most %d may be cited",
-			clampToken(step.Summary), len(step.SourceLines), maxTranscriptCitedLines)
 	case step.Confidence < 0 || step.Confidence > 1:
 		return fmt.Sprintf("confidence %v is outside [0,1]", step.Confidence)
 	case !validProposedDueDate(step.DueDate):
@@ -309,11 +303,8 @@ func validateProposedStep(step proposedStep, lineCount int) string {
 		return fmt.Sprintf("proposal %q states the due date %q, and a due date is "+
 			"YYYY-MM-DD or empty", clampToken(step.Summary), clampToken(step.DueDate))
 	}
-	for _, line := range step.SourceLines {
-		if line < 1 || line > lineCount {
-			return fmt.Sprintf("proposal cites line %d, and this transcript has lines 1 to %d",
-				line, lineCount)
-		}
+	if msg := activities.TranscriptCitationFault(step.SourceLines, lineCount, activities.MaxTranscriptCitedLines); msg != "" {
+		return fmt.Sprintf("proposal %q %s", clampToken(step.Summary), msg)
 	}
 	return ""
 }
@@ -329,28 +320,28 @@ func validProposedDueDate(day string) bool {
 }
 
 // ask puts one transcript to the model and returns what it may act on.
-func (p *TranscriptProposer) ask(ctx context.Context, meeting ids.UUID, lines []string, meetingDay string, parties []commitmentParty) ([]proposedStep, error) {
+func (p *TranscriptProposer) ask(ctx context.Context, meeting ids.UUID, lines []string, meetingDay string, parties []commitmentParty) (transcriptPayload, error) {
 	req := transcriptRequest(meeting, lines, meetingDay, string(p.said.Lang()), parties)
 	validate := transcriptShapeValid(lines, parties)
 	resp, err := ai.Ask(ctx, p.brain, req, validate)
 	if err != nil {
 		if ai.ModelDeclined(err) {
-			return nil, fmt.Errorf("%w: %w", errRefusedTranscript, err)
+			return transcriptPayload{}, fmt.Errorf("%w: %w", errRefusedTranscript, err)
 		}
-		return nil, err
+		return transcriptPayload{}, err
 	}
 	// Re-parsed and re-validated even when CompleteValidated already ran the
 	// validator: a bare completer (the offline fake, a role wired without the
 	// structured lane) does not, and this is the only floor those paths have.
 	var payload transcriptPayload
 	if err := json.Unmarshal([]byte(ai.Unfence(resp.Text)), &payload); err != nil {
-		return nil, fmt.Errorf("%w: unparseable model output: %w", errRefusedTranscript, err)
+		return transcriptPayload{}, fmt.Errorf("%w: unparseable model output: %w", errRefusedTranscript, err)
 	}
 	payload = payload.asRead(parties)
 	if msg := validateTranscriptPayload(payload, lines, parties); msg != "" {
-		return nil, fmt.Errorf("%w: %s", errRefusedTranscript, msg)
+		return transcriptPayload{}, fmt.Errorf("%w: %s", errRefusedTranscript, msg)
 	}
-	return payload.proposals(), nil
+	return payload, nil
 }
 
 // aboveFloor drops the readings too unsure to put to anyone. It is applied
