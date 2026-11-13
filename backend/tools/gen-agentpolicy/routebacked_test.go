@@ -5,6 +5,7 @@ package main
 
 import (
 	"encoding/json"
+	"slices"
 	"strings"
 	"testing"
 
@@ -199,7 +200,7 @@ content:
 	schemas := map[string]any{"Base": map[string]any{
 		"type": "object", "required": []any{"id"}, "properties": map[string]any{"id": map[string]any{"type": "string"}},
 	}}
-	got, err := bodySchema(node.Content[0], schemas)
+	got, _, err := bodySchema(node.Content[0], schemas)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -408,14 +409,31 @@ content:
 		}
 		return node.Content[0]
 	}
-	got, err := bodySchema(body("status"), map[string]any{})
+	got, humanOnly, err := bodySchema(body("status"), map[string]any{})
 	if err != nil {
 		t.Fatal(err)
 	}
 	if !strings.Contains(got, `"status"`) || strings.Contains(got, `"kind"`) || strings.Contains(got, "x-human-only") {
 		t.Errorf("body schema %s, want status alone and no marker", got)
 	}
-	if _, err := bodySchema(body("kind"), map[string]any{}); err == nil || !strings.Contains(err.Error(), "kind") {
+	if !slices.Equal(humanOnly, []string{"kind"}) {
+		t.Errorf("human-only members %v, want [kind] for the agent gate", humanOnly)
+	}
+	if _, _, err := bodySchema(body("kind"), map[string]any{}); err == nil || !strings.Contains(err.Error(), "kind") {
 		t.Errorf("a body requiring a human-only member answered %v, want a refusal naming it", err)
+	}
+	var nested yaml.Node
+	if err := yaml.Unmarshal([]byte(`
+content:
+  application/json:
+    schema:
+      type: object
+      properties:
+        line: { type: object, properties: { price: { type: number, x-human-only: true } } }
+`), &nested); err != nil {
+		t.Fatal(err)
+	}
+	if _, _, err := bodySchema(nested.Content[0], map[string]any{}); err == nil {
+		t.Error("a nested human-only member was accepted, though the agent gate reads top-level members only")
 	}
 }

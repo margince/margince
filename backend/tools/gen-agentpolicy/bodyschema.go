@@ -26,10 +26,11 @@ const maxBodyDepth = 6
 var proseMembers = map[string]bool{"description": true, "example": true, "examples": true, "x-go-type": true}
 
 // bodySchema is a route's JSON request body schema, $refs resolved, as one
-// compact JSON document; empty when the route takes no JSON body.
-func bodySchema(requestBody *yaml.Node, schemas map[string]any) (string, error) {
+// compact JSON document; empty when the route takes no JSON body. humanOnly
+// names the top-level members the schema leaves out because a human alone sets them.
+func bodySchema(requestBody *yaml.Node, schemas map[string]any) (schema string, humanOnly []string, err error) {
 	if requestBody == nil || requestBody.Kind == 0 {
-		return "", nil
+		return "", nil, nil
 	}
 	var body struct {
 		Content map[string]struct {
@@ -37,57 +38,22 @@ func bodySchema(requestBody *yaml.Node, schemas map[string]any) (string, error) 
 		} `yaml:"content"`
 	}
 	if err := requestBody.Decode(&body); err != nil {
-		return "", err
+		return "", nil, err
 	}
 	media, ok := body.Content["application/json"]
 	if !ok {
-		return "", nil
+		return "", nil, nil
 	}
 	resolved, err := resolveRefs(media.Schema, schemas, 0, map[string]bool{})
 	if err != nil {
-		return "", err
+		return "", nil, err
 	}
-	if err := withoutHumanOnly(resolved); err != nil {
-		return "", err
+	humanOnly, err = withoutHumanOnly(resolved)
+	if err != nil {
+		return "", nil, err
 	}
 	out, err := json.Marshal(unmarked(resolved))
-	return string(out), err
-}
-
-// humanOnlyMarker flags a body member a human alone may set. The store refuses
-// any other principal; the agent is not offered the member at all.
-const humanOnlyMarker = "x-human-only"
-
-// withoutHumanOnly drops every member that carries humanOnlyMarker. A body that
-// requires one is refused, since no agent call could then be complete.
-//
-//craft:ignore naked-any a JSON schema is walked as decoded YAML, whatever its shape
-func withoutHumanOnly(node any) error {
-	switch v := node.(type) {
-	case map[string]any:
-		props, _ := v["properties"].(map[string]any)
-		required, _ := v["required"].([]any)
-		for name, member := range props {
-			if fields, ok := member.(map[string]any); ok && fields[humanOnlyMarker] == true {
-				if slices.Contains(required, any(name)) {
-					return fmt.Errorf("body member %s is human-only and required, so no agent call could be complete", name)
-				}
-				delete(props, name)
-			}
-		}
-		for _, member := range v {
-			if err := withoutHumanOnly(member); err != nil {
-				return err
-			}
-		}
-	case []any:
-		for _, member := range v {
-			if err := withoutHumanOnly(member); err != nil {
-				return err
-			}
-		}
-	}
-	return nil
+	return string(out), humanOnly, err
 }
 
 // uploadField names the one binary field of a route's multipart body, and is
