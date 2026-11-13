@@ -327,6 +327,7 @@ it("pins a move to the version the row was drawn from", async () => {
   expect(patch?.body).toEqual({
     scheduled_at: new Date("2026-09-02T08:30").toISOString(),
     scheduled_tz: readerZone,
+    scheduled_intent: { wall_clock: "2026-09-02T08:30", timezone: readerZone },
   });
 });
 
@@ -406,6 +407,7 @@ it("moves a message to tomorrow morning in one press", async () => {
   expect(patch?.body).toEqual({
     scheduled_at: expected.toISOString(),
     scheduled_tz: readerZone,
+    scheduled_intent: { wall_clock: "2026-09-01T08:00", timezone: readerZone },
   });
 });
 

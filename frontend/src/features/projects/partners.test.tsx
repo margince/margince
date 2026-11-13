@@ -295,18 +295,49 @@ describe("PartnerTab — existing partner", () => {
     expect(screen.getByText("Live")).toBeTruthy();
     await user.click(screen.getByTestId("edit-partner"));
 
-    const nextStep = await screen.findByLabelText("Next step");
-    await user.clear(nextStep);
-    await user.type(nextStep, "Book QBR");
+    expect(screen.queryByLabelText("Next step")).toBeNull();
+    const segments = await screen.findByLabelText("Served segments");
+    await user.clear(segments);
+    await user.type(segments, "fintech");
     await user.click(screen.getByRole("button", { name: "Save" }));
 
     await waitFor(() => expect(putBody).toBeTruthy());
     expect(putHeader).toBe("3");
     expect(putBody).toMatchObject({
-      next_step: "Book QBR",
+      served_segments: ["fintech"],
       partner_kinds: ["hosting", "referral"],
       relationship_stage: "active",
     });
+    // The old free-text step is never sent, so the save keeps it.
+    expect(putBody).not.toHaveProperty("next_step");
+    expect(putBody).not.toHaveProperty("next_step_due_at");
+  });
+
+  it("keeps an old next step readable and offers a task for the next one", async () => {
+    stubFetch(
+      async (url, method) => {
+        if (url.includes("/companies/o-1/partner") && method === "GET") {
+          return jsonResponse(partner);
+        }
+        throw new Error(`unexpected request ${method} ${url}`);
+      },
+      meFixture({
+        allow: {
+          company: ["read", "update"],
+          partner: ["read", "update"],
+          activity: ["read", "create"],
+        },
+      }),
+    );
+    render(<PartnerTab companyId="o-1" />);
+
+    expect(await screen.findByText("Renew certification")).toBeTruthy();
+    expect(
+      screen.getByText(/Kept as text, with no colleague who does it/),
+    ).toBeTruthy();
+    expect(
+      await screen.findByRole("button", { name: "Add task" }),
+    ).toBeTruthy();
   });
 
   it("offers the active stages in ladder order and the retired one the partner stands on", async () => {

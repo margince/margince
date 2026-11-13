@@ -34,6 +34,7 @@ import {
 } from "./companyheaderactions";
 import { CompanyHeadLines } from "./companyheaderfacts";
 import { CompanyMarks } from "./companymarks";
+import { OverdueWarning, useOverdueWarning } from "./companyoverdue";
 import { CompanyRail, useCompanyRename } from "./companyrail";
 
 // openTaskId is scoped to the account being read, like the tab. The route
@@ -145,6 +146,7 @@ export function CompanyPage({
   // workspace-wide queue, and the task's own detail.
   const taskUpdate = useTaskUpdate(taskWriteKeys("company", company.id));
   const rename = useCompanyRename(company);
+  const overdue = useOverdueWarning(company.id, Boolean(company.archived_at));
   const rail = (
     <CompanyRail
       company={company}
@@ -208,6 +210,7 @@ export function CompanyPage({
             onDrawer={setActivityDrawer}
             archivedReasonId={archivedReasonId}
             activity={activity}
+            view={view}
           />
           {/* Last in the row, after the verbs it holds the remainder of. A
             menu of everything else reads as the first thing to press when it
@@ -227,6 +230,9 @@ export function CompanyPage({
       // stays put when a tab changes.
       aside={rail}
       tabs={tabs}
+      // Overdue invoices stand over every tab, so no one working the account
+      // misses them, whichever deal they came for.
+      band={overdue && <OverdueWarning reading={overdue} />}
       // The chronology is the account's story and belongs to the overview.
       // The Partner tab is a form, so it does not repeat it under itself.
       {...slots}

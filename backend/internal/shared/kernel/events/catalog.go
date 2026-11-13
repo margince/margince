@@ -33,6 +33,7 @@ var catalog = map[string]struct {
 	"scheduled_send.updated":            {activityStreamEntity, 1},
 	"internal_mail_history.created":     {captureStreamEntity, 1},
 	"capture_settings.updated":          {captureStreamEntity, 1},
+	"shared_mailbox.changed":            {captureStreamEntity, 1},
 	"contact.created":                   {contactStreamEntity, 1},
 	"contact.updated":                   {contactStreamEntity, 1},
 	"contact.archived":                  {contactStreamEntity, 1},

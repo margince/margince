@@ -77,6 +77,8 @@ const (
 	entityMailDraft = "mail_draft"
 	fieldAnchorType = "anchor_type"
 	fieldVersion    = "version"
+	fieldAnchorID   = "anchor_id"
+	fieldBcc        = "bcc"
 	// maxDraftAddresses bounds each address line. A composer holds a handful;
 	// the ceiling stops a caller parking a mailing list in a row nothing reads.
 	maxDraftAddresses = 100
@@ -88,7 +90,7 @@ const (
 
 const mailDraftColumns = `id, anchor_type, anchor_id, to_addresses, cc_addresses, bcc_addresses,
 	subject, body, html_body, version, agent_drafted, grounding, attachment_ids,
-	communication_context, scheduled_at, scheduled_tz, created_at, updated_at, editor_state`
+	communication_context, ` + scheduleInstantSQL + ` AS scheduled_at, scheduled_tz, scheduled_wall, created_at, updated_at, editor_state`
 
 // InvalidMailDraftError refuses a draft the store will not keep.
 type InvalidMailDraftError struct {
@@ -194,23 +196,32 @@ func (s *Store) SaveMailDraft(ctx context.Context, anchor MailDraftAnchor, conte
 	return out, nil
 }
 
+// mailDraftArgs binds the anchor and content arguments that every write of a
+// draft shares.
+func mailDraftArgs(author ids.UUID, anchor MailDraftAnchor, content MailDraftContent) pgx.NamedArgs {
+	at, tz, wall := draftScheduleColumns(content.Schedule)
+	return pgx.NamedArgs{
+		argAuthor: author, fieldAnchorType: string(anchor.Type), fieldAnchorID: anchor.ID,
+		"to": addressLine(content.To), "cc": addressLine(content.Cc), fieldBcc: addressLine(content.Bcc),
+		fieldSubject: content.Subject, fieldBody: content.Body, argHTML: nullableText(content.HTMLBody),
+		"attachments": content.AttachmentIDs, "context": nullableText(string(content.Context)),
+		"at": at, argZone: tz, argWall: wall,
+	}
+}
+
 func insertMailDraft(ctx context.Context, tx pgx.Tx, author ids.UUID, anchor MailDraftAnchor, content MailDraftContent) (MailDraft, error) {
-	at, tz := draftScheduleColumns(content.Schedule)
-	var args []any
-	arg := func(v any) int { args = append(args, v); return len(args) }
-	query := fmt.Sprintf(`
-		INSERT INTO mail_draft (id, author_id, anchor_type, anchor_id, to_addresses, cc_addresses,
-		                        bcc_addresses, subject, body, html_body, attachment_ids,
-		                        communication_context, scheduled_at, scheduled_tz, editor_state)
-		VALUES ($%d, $%d, $%d, $%d, $%d, $%d, $%d, $%d, $%d, $%d, $%d, $%d, $%d, $%d, $%d)
-		ON CONFLICT (author_id, anchor_type, anchor_id) DO NOTHING
-		RETURNING `+mailDraftColumns,
-		arg(ids.NewV7()), arg(author), arg(string(anchor.Type)), arg(anchor.ID),
-		arg(addressLine(content.To)), arg(addressLine(content.Cc)), arg(addressLine(content.Bcc)),
-		arg(content.Subject), arg(content.Body), arg(nullableText(content.HTMLBody)),
-		arg(content.AttachmentIDs), arg(nullableText(string(content.Context))), arg(at), arg(tz),
-		arg(content.EditorState))
-	row := tx.QueryRow(ctx, query, args...)
+	args := mailDraftArgs(author, anchor, content)
+	args["id"], args["editor"] = ids.NewV7(), content.EditorState
+	row := tx.QueryRow(ctx, `
+ INSERT INTO mail_draft(id,author_id,anchor_type,anchor_id,to_addresses,cc_addresses,
+ bcc_addresses,subject,body,html_body,attachment_ids,communication_context,
+ scheduled_at,scheduled_tz,scheduled_wall,editor_state)
+ SELECT @id,@author,@anchor_type,@anchor_id,@to,@cc,@bcc,@subject,@body,@html,
+ @attachments,@context,planned.instant,COALESCE(planned.timezone,@zone),planned.wall_time,@editor
+ FROM public.update_intent_time(NULL,NULL,NULL,@wall::text::timestamp,@zone,@at) AS planned
+ WHERE true
+ ON CONFLICT(author_id,anchor_type,anchor_id) DO NOTHING
+ RETURNING `+mailDraftColumns, args)
 	saved, err := scanMailDraft(row)
 	if errors.Is(err, apperrors.ErrNotFound) {
 		// The conflict target held: a draft is already here that this caller
@@ -227,23 +238,19 @@ func insertMailDraft(ctx context.Context, tx pgx.Tx, author ids.UUID, anchor Mai
 }
 
 func replaceMailDraft(ctx context.Context, tx pgx.Tx, author ids.UUID, anchor MailDraftAnchor, content MailDraftContent, expected int64) (MailDraft, error) {
-	at, tz := draftScheduleColumns(content.Schedule)
-	var args []any
-	arg := func(v any) int { args = append(args, v); return len(args) }
-	query := fmt.Sprintf(`
-		UPDATE mail_draft
-		   SET to_addresses = $%d, cc_addresses = $%d, bcc_addresses = $%d,
-		       subject = $%d, body = $%d, html_body = $%d, attachment_ids = $%d,
-		       communication_context = $%d, scheduled_at = $%d, scheduled_tz = $%d, editor_state = $%d,
-		       version = version + 1, agent_drafted = false, updated_at = now()
-		 WHERE author_id = $%d AND anchor_type = $%d AND anchor_id = $%d AND version = $%d
-		RETURNING `+mailDraftColumns,
-		arg(addressLine(content.To)), arg(addressLine(content.Cc)), arg(addressLine(content.Bcc)),
-		arg(content.Subject), arg(content.Body), arg(nullableText(content.HTMLBody)),
-		arg(content.AttachmentIDs), arg(nullableText(string(content.Context))), arg(at), arg(tz),
-		arg(content.EditorState),
-		arg(author), arg(string(anchor.Type)), arg(anchor.ID), arg(expected))
-	row := tx.QueryRow(ctx, query, args...)
+	args := mailDraftArgs(author, anchor, content)
+	args[fieldVersion], args["editor"] = expected, content.EditorState
+	row := tx.QueryRow(ctx, `
+ UPDATE mail_draft
+ SET to_addresses=@to,cc_addresses=@cc,bcc_addresses=@bcc,
+ subject=@subject,body=@body,html_body=@html,attachment_ids=@attachments,
+ communication_context=@context,
+ (scheduled_at,scheduled_tz,scheduled_wall)=(
+ SELECT planned.instant,COALESCE(planned.timezone,@zone),planned.wall_time
+ FROM public.update_intent_time(scheduled_wall,scheduled_tz,scheduled_at,@wall::text::timestamp,@zone,@at) AS planned),
+ editor_state=@editor,version=version+1,agent_drafted=false,updated_at=now()
+ WHERE author_id=@author AND anchor_type=@anchor_type AND anchor_id=@anchor_id AND version=@version
+ RETURNING `+mailDraftColumns, args)
 	saved, err := scanMailDraft(row)
 	if errors.Is(err, apperrors.ErrNotFound) {
 		// Moved by another composer, or discarded: the draft this caller read
@@ -330,7 +337,7 @@ func validateDraft(anchor MailDraftAnchor, content MailDraftContent, now time.Ti
 	for _, line := range []struct {
 		field     string
 		addresses []string
-	}{{"to", content.To}, {"cc", content.Cc}, {"bcc", content.Bcc}} {
+	}{{"to", content.To}, {"cc", content.Cc}, {fieldBcc, content.Bcc}} {
 		if len(line.addresses) > maxDraftAddresses {
 			return &InvalidMailDraftError{Field: line.field, Reason: fmt.Sprintf("holds more than %d addresses", maxDraftAddresses)}
 		}
@@ -372,7 +379,7 @@ func canonicalAddresses(line []string) []string {
 //
 //craft:ignore naked-any the audit seam serializes this image to jsonb
 func draftImage(d MailDraft) map[string]any {
-	return map[string]any{fieldAnchorType: string(d.Anchor.Type), "anchor_id": d.Anchor.ID, fieldVersion: d.Version}
+	return map[string]any{fieldAnchorType: string(d.Anchor.Type), fieldAnchorID: d.Anchor.ID, fieldVersion: d.Version}
 }
 
 // addressLine is never nil: the columns are NOT NULL and a nil slice is NULL.
@@ -398,11 +405,12 @@ func scanMailDraft(row pgx.Row) (MailDraft, error) {
 		grounding  []draftGround
 		claimed    *string
 		at         *time.Time
+		wall       *time.Time
 		tz         *string
 	)
 	err := row.Scan(&out.ID, &anchorType, &out.Anchor.ID, &out.Content.To, &out.Content.Cc,
 		&out.Content.Bcc, &out.Content.Subject, &out.Content.Body, &html, &out.Version,
-		&out.AgentDrafted, &grounding, &out.Content.AttachmentIDs, &claimed, &at, &tz,
+		&out.AgentDrafted, &grounding, &out.Content.AttachmentIDs, &claimed, &at, &tz, &wall,
 		&out.CreatedAt, &out.UpdatedAt, &out.Content.EditorState)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return MailDraft{}, apperrors.ErrNotFound
@@ -421,8 +429,10 @@ func scanMailDraft(row pgx.Row) (MailDraft, error) {
 		out.Grounding = append(out.Grounding, MailDraftAnchor(ground))
 	}
 	out.Content.Context = commsauthz.Category(orEmpty(claimed))
-	if at != nil && tz != nil {
-		out.Content.Schedule = &SendSchedule{At: *at, TZ: *tz}
+	schedule, err := readSchedule(at, tz, wall)
+	if err != nil {
+		return MailDraft{}, err
 	}
+	out.Content.Schedule = schedule
 	return out, nil
 }

@@ -20,6 +20,7 @@ package meetingbrief
 
 import (
 	"fmt"
+	"strings"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 )
@@ -119,7 +120,9 @@ func (said briefCopy) askLines(claim ClaimIn) (string, string) {
 		return fmt.Sprintf("%q", claim.Body),
 			said.Say(questionWords.Answer)
 	case kindCommitmentOurs:
-		return fmt.Sprintf(said.Say(questionWords.Progress), claim.Body),
+		// The body is a whole sentence, so it is quoted without its own full
+		// stop rather than spliced into ours.
+		return fmt.Sprintf(said.Say(questionWords.Progress), strings.TrimRight(claim.Body, ". ")),
 			said.Say(questionWords.Prepare)
 	case kindObjection:
 		return fmt.Sprintf(said.Say(questionWords.Objection), claim.Body),
@@ -131,9 +134,9 @@ func (said briefCopy) askLines(claim ClaimIn) (string, string) {
 
 func (said briefCopy) askBasis(claim ClaimIn) string {
 	if claim.Kind == kindCommitmentOurs {
-		return fmt.Sprintf(said.Say(questionWords.PromiseOpen), claim.ContactName)
+		return fmt.Sprintf(said.Say(questionWords.PromiseOpen), said.whom(claim))
 	}
-	return fmt.Sprintf(said.Say(questionWords.RaisedOpen), claim.ContactName)
+	return fmt.Sprintf(said.Say(questionWords.RaisedOpen), said.whom(claim))
 }
 
 // questionsFor is what to ask THEM.
@@ -156,7 +159,7 @@ func questionsFor(in Input, unknowns []Unknown, ranked *rankedClaims) []Question
 			Ask: fmt.Sprintf(said.Say(questionWords.Changed), claim.Body),
 			Why: fmt.Sprintf(
 				said.Say(questionWords.Named),
-				claim.ContactName),
+				said.whom(claim)),
 			ListenFor: said.Say(questionWords.ListenPriority),
 			Evidence:  []Evidence{{EntityType: citeActivity, EntityID: claim.SourceID}},
 		})

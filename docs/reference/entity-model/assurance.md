@@ -27,6 +27,11 @@ The 9 tables owned by `assurance`, as the migrations build them. [Back to the en
 - `assurance_cycle_one_open_per_scope`: `unique, btree (scope) WHERE (closed_at IS NULL)`
 - `assurance_cycle_pkey`: `unique, btree (id)`
 
+**Triggers**
+
+- `text_bound_insert`: `AFTER INSERT FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL, '{"scope": 20000, "opened_by": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"opened_by":20000,"scope":20000}')`
+- `text_bound_update`: `AFTER UPDATE FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"scope": 20000, "opened_by": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"opened_by":20000,"scope":20000}')`
+
 ## assurance_deal_receipt
 
 18 columns · primary key `(deal_id)` · referenced by 0 foreign keys
@@ -67,6 +72,11 @@ The 9 tables owned by `assurance`, as the migrations build them. [Back to the en
 
 - `assurance_deal_receipt_by_run`: `btree (run_id)`
 - `assurance_deal_receipt_pkey`: `unique, btree (deal_id)`
+
+**Triggers**
+
+- `text_bound_insert`: `AFTER INSERT FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL, '{"outcome": 20000, "reasons": 2000, "captured_by": 20000, "policy_version": 20000, "input_fingerprint": 20000, "verdict_basis_digest": 20000, "verdict_input_checksum": 20000, "verdict_prompt_version": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"captured_by":20000,"input_fingerprint":20000,"outcome":20000,"policy_version":20000,"reasons":2000,"verdict_basis_digest":20000,"verdict_input_checksum":20000,"verdict_prompt_version":20000}')`
+- `text_bound_update`: `AFTER UPDATE FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"outcome": 20000, "reasons": 2000, "captured_by": 20000, "policy_version": 20000, "input_fingerprint": 20000, "verdict_basis_digest": 20000, "verdict_input_checksum": 20000, "verdict_prompt_version": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"captured_by":20000,"input_fingerprint":20000,"outcome":20000,"policy_version":20000,"reasons":2000,"verdict_basis_digest":20000,"verdict_input_checksum":20000,"verdict_prompt_version":20000}')`
 
 ## assurance_exception
 
@@ -125,6 +135,11 @@ The 9 tables owned by `assurance`, as the migrations build them. [Back to the en
 - `idx_assurance_exception_subject`: `btree (subject_kind, subject_id)`
 - `uq_assurance_exception_logical_key`: `unique, btree (logical_key)`
 
+**Triggers**
+
+- `text_bound_insert`: `AFTER INSERT FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL, '{"type": 20000, "status": 20000, "severity": 20000, "captured_by": 20000, "logical_key": 20000, "subject_kind": 20000, "delivery_state": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"captured_by":20000,"delivery_state":20000,"logical_key":20000,"severity":20000,"status":20000,"subject_kind":20000,"type":20000}')`
+- `text_bound_update`: `AFTER UPDATE FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"type": 20000, "status": 20000, "severity": 20000, "captured_by": 20000, "logical_key": 20000, "subject_kind": 20000, "delivery_state": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"captured_by":20000,"delivery_state":20000,"logical_key":20000,"severity":20000,"status":20000,"subject_kind":20000,"type":20000}')`
+
 ## assurance_input_change
 
 6 columns · primary key `(subject_kind, subject_id)` · referenced by 0 foreign keys
@@ -146,6 +161,11 @@ The 9 tables owned by `assurance`, as the migrations build them. [Back to the en
 
 - `assurance_input_change_by_generation`: `btree (generation)`
 - `assurance_input_change_pkey`: `unique, btree (subject_kind, subject_id)`
+
+**Triggers**
+
+- `text_bound_insert`: `AFTER INSERT FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL, '{"subject_kind": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"subject_kind":20000}')`
+- `text_bound_update`: `AFTER UPDATE FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"subject_kind": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"subject_kind":20000}')`
 
 ## assurance_resolution
 
@@ -186,6 +206,11 @@ The 9 tables owned by `assurance`, as the migrations build them. [Back to the en
 - `assurance_resolution_pkey`: `unique, btree (id)`
 - `idx_assurance_resolution_exception`: `btree (exception_id, created_at DESC)`
 
+**Triggers**
+
+- `text_bound_insert`: `AFTER INSERT FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL, '{"reason": 2000, "outcome": 20000, "captured_by": 20000, "evidence_ref": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"captured_by":20000,"evidence_ref":20000,"outcome":20000,"reason":2000}')`
+- `text_bound_update`: `AFTER UPDATE FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"reason": 2000, "outcome": 20000, "captured_by": 20000, "evidence_ref": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"captured_by":20000,"evidence_ref":20000,"outcome":20000,"reason":2000}')`
+
 ## assurance_run
 
 16 columns · primary key `(id)` · referenced by 3 foreign keys
@@ -222,6 +247,11 @@ The 9 tables owned by `assurance`, as the migrations build them. [Back to the en
 
 - `assurance_run_pkey`: `unique, btree (id)`
 - `idx_assurance_run_as_of`: `btree (as_of DESC)`
+
+**Triggers**
+
+- `text_bound_insert`: `AFTER INSERT FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL, '{"digest": 20000, "status": 20000, "readiness": 20000, "captured_by": 20000, "requested_by": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"captured_by":20000,"digest":20000,"readiness":20000,"requested_by":20000,"status":20000}')`
+- `text_bound_update`: `AFTER UPDATE FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"digest": 20000, "status": 20000, "readiness": 20000, "captured_by": 20000, "requested_by": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"captured_by":20000,"digest":20000,"readiness":20000,"requested_by":20000,"status":20000}')`
 
 ## assurance_run_finding
 
@@ -281,6 +311,11 @@ The 9 tables owned by `assurance`, as the migrations build them. [Back to the en
 - `assurance_source_coverage_pkey`: `unique, btree (id)`
 - `uq_assurance_source_coverage_run_source`: `unique, btree (run_id, source)`
 
+**Triggers**
+
+- `text_bound_insert`: `AFTER INSERT FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL, '{"state": 20000, "source": 20000, "captured_by": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"captured_by":20000,"source":20000,"state":20000}')`
+- `text_bound_update`: `AFTER UPDATE FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"state": 20000, "source": 20000, "captured_by": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"captured_by":20000,"source":20000,"state":20000}')`
+
 ## assurance_task_item
 
 13 columns · primary key `(id)` · referenced by 0 foreign keys
@@ -339,4 +374,6 @@ The 9 tables owned by `assurance`, as the migrations build them. [Back to the en
 
 **Triggers**
 
+- `text_bound_insert`: `AFTER INSERT FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL, '{"state": 20000, "subject_kind": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"state":20000,"subject_kind":20000}')`
+- `text_bound_update`: `AFTER UPDATE FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"state": 20000, "subject_kind": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"state":20000,"subject_kind":20000}')`
 - `trg_assurance_task_item_subject_keys`: `BEFORE INSERT OR UPDATE FOR EACH ROW EXECUTE FUNCTION trg_assurance_task_item_subject_keys()`

@@ -79,6 +79,7 @@ func activityOfTask(req crmcontracts.CreateTaskRequest) (crmcontracts.CreateActi
 		RequestActivityId: req.RequestActivityId,
 		SourceActivityId:  req.SourceActivityId,
 		DueAt:             req.DueAt,
+		DueIntent:         req.DueIntent,
 		DueHasTime:        req.DueHasTime,
 		TaskType:          req.TaskType,
 		AssigneeId:        req.AssigneeId,

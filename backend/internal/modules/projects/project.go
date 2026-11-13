@@ -154,7 +154,7 @@ func createProjectTx(
 	// After the project's own write shape, so the deal's update audit row
 	// names a project that already exists in this transaction.
 	if in.DealID != nil {
-		if err := seams.attachDeal(ctx, tx, *in.DealID, id); err != nil {
+		if err := seams.attachDeal(ctx, tx, *in.DealID, id, in.CompanyID); err != nil {
 			return crmcontracts.Project{}, err
 		}
 	}

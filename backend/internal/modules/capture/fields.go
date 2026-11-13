@@ -56,6 +56,9 @@ type ActivityFields struct {
 	// CalendarEvent is what that part says of the event, so a later send can
 	// be read against an earlier one. Nil when no part names an event.
 	CalendarEvent *calendarevent.Event
+	// CalendarSend names the one provider send this mail is a per-guest copy
+	// of, or "" (mailmap.calendarSend). The copies are captured as one activity.
+	CalendarSend string
 	// BodyCompleteness says how much of a mail's text the parser decoded. Zero
 	// for anything not parsed from a mail, which is stored as complete.
 	BodyCompleteness BodyCompleteness

@@ -49,11 +49,11 @@ const backfillMatchesAccount = `(c.account_bound_at IS NULL OR b.created_at >= c
 // connection's trail. nil means nothing was resumed and the caller starts a new
 // run, which is also the answer when the caller asked to start over (resume
 // false).
-func resumeOrNil(ctx context.Context, tx pgx.Tx, resume bool, connID ids.UUID, windowMonths int, widest *int, enqueue EnqueueBackfill) (*BackfillRun, error) {
+func resumeOrNil(ctx context.Context, tx pgx.Tx, options backfillStart, connID ids.UUID, windowMonths int, widest *int, enqueue EnqueueBackfill) (*BackfillRun, error) {
 	if widest != nil && windowMonths < *widest {
 		return nil, ErrWindowNarrowing
 	}
-	if !resume {
+	if !options.resume {
 		return nil, nil //nolint:nilnil // starting over resumes nothing
 	}
 	resumed, err := resumeFailedBackfillTx(ctx, tx, connID, windowMonths)
@@ -63,9 +63,18 @@ func resumeOrNil(ctx context.Context, tx pgx.Tx, resume bool, connID ids.UUID, w
 	if err := enqueue(ctx, tx, resumed.ID); err != nil {
 		return nil, fmt.Errorf("capture: scheduling the backfill: %w", err)
 	}
-	return resumed, auditLifecycle(ctx, tx, "update", captureConnectionObject, connID,
+	return resumed, auditBackfillTx(ctx, tx, options.shared, connID,
 		map[string]any{auditBackfillWindowMonths: widest},
 		map[string]any{auditBackfillWindowMonths: windowMonths, "backfill_resumed": resumed.ID.String()})
+}
+
+// auditBackfillTx records how far an import reaches on the connection's trail.
+// A shared mailbox's trail also announces it, as every change to one does.
+func auditBackfillTx(ctx context.Context, tx pgx.Tx, shared bool, connID ids.UUID, before, after map[string]any) error {
+	if shared {
+		return announceSharedMailboxTx(ctx, tx, auditVerbUpdate, sharedChangeHistoryImport, connID, before, after)
+	}
+	return auditLifecycle(ctx, tx, "update", captureConnectionObject, connID, before, after)
 }
 
 // auditBackfillWindowMonths names how far back an import reaches on the

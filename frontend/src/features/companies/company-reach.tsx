@@ -69,7 +69,7 @@ export function CompanyReachCard({
   const colleagues = readerFirst(query.data?.colleagues ?? [], viewerId);
   const [asking, setAsking] = useState<AccountIntroTarget | null>(null);
   return (
-    <Panel title={t("companyReach.title")}>
+    <Panel title={t("companyReach.title")} help={t("companyReach.help")}>
       <PanelBody>
         <PanelIntro>{t("companyReach.sub")}</PanelIntro>
         {query.isPending && <Skeleton width="60%" />}

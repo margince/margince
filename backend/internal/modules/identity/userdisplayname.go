@@ -27,17 +27,14 @@ import (
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/values"
 )
 
 // displayNameField is the name this answers to on every surface: the audit
 // images, the outbox payload, and the field a 422 points the form at.
 const displayNameField = "display_name"
 
-// displayNameMaxRunes is the contract's own bound, counted in RUNES rather than
-// bytes so the limit means the same thing in every script. `maxLength` in
-// OpenAPI is a character count, and a 255-byte check would refuse a name of 90
-// Vietnamese or Japanese characters that the contract admits.
-const displayNameMaxRunes = 255
+const displayNameMaxRunes = values.TextLabelCharacters
 
 // SaveMyDisplayName records the name the CALLER's colleagues see them by.
 //
@@ -55,10 +52,6 @@ func (s *Service) SaveMyDisplayName(ctx context.Context, name string) (Seat, err
 	// Trimmed before it is judged, so a name that is only spaces is refused
 	// rather than stored as a blank a colleague cannot address.
 	name = strings.TrimSpace(name)
-	if err := validateDisplayName(name); err != nil {
-		return Seat{}, err
-	}
-
 	seat := Seat{UserID: ids.From[ids.UserKind](human), DisplayName: name}
 	err = s.db.Tx(ctx, func(tx pgx.Tx) error {
 		var before string
@@ -90,6 +83,9 @@ func (s *Service) SaveMyDisplayName(ctx context.Context, name string) (Seat, err
 			// nothing. A settings form that saves on every render would
 			// otherwise fill the ledger with a change nobody made.
 			return nil
+		}
+		if err := validateDisplayName(name); err != nil {
+			return err
 		}
 		// The row is locked above, so this cannot match zero — but the count is
 		// checked rather than discarded, because an UPDATE that silently wrote

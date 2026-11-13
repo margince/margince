@@ -77,6 +77,7 @@ type SendRequest = {
     evidence?: components["schemas"]["CommunicationEvidence"];
     scheduled_at?: string;
     scheduled_tz?: string;
+    scheduled_intent?: components["schemas"]["IntentTime"];
   };
   channelBody: {
     body: string;
@@ -187,7 +188,7 @@ function sendRequest(
       mail_draft_id: where.heldDraftId,
       communication_context: where.context,
       evidence: where.evidence,
-      ...scheduleFields(fields.sendAt),
+      ...scheduleFields(fields.sendAt, fields.sendSchedule),
     },
     channelBody: {
       body,

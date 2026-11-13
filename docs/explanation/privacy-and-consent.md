@@ -130,9 +130,8 @@ The refusal keeps the status and code it already holds (a consent refusal stays
 the status. The ID adds a handle a machine can act on. So an agent that gets a refusal can hand the
 question to a human, not only report text.
 
-States name what is needed, not who is blocked.
-`needs_context` is a fact about the message and stays true for every reader. "Waiting for
-Anna" stops being true when Anna leaves:
+States name what is needed, not who is blocked. `needs_context` is a fact about the message and
+stays true for every reader. "Waiting for Anna" stops being true when Anna leaves:
 
 | State | What it means |
 |---|---|
@@ -315,14 +314,13 @@ counts transmit decisions since the process started, labelled by verdict, catego
 labels are those three and nothing else. The recipient is not a field of the count and must never
 become one. A metrics endpoint is the last place a subject's address should show.
 
-**A report shows where engine and gate disagree.** `DisagreementReportSince` reads that per
-category from the verdicts already recorded on every transmit row. A daily sweep runs it, so nobody
-has to ask for it. It decides nothing and writes no domain row.
+**A report shows where engine and gate disagree.** `DisagreementReportSince` reads that per category
+from the verdicts already recorded on every transmit row. A daily sweep runs it, so nobody has to
+ask for it. It decides nothing and writes no domain row.
 
-To enforce is a setting a human
-changes after reading the report. A pass that turned a category itself would be a second authority
-over what may be sent. Since every category ships enforcing, the report is how someone notices a
-category refusing mail the old gate would have allowed.
+To enforce is a setting a human changes after reading the report. A pass that turned a category
+itself would be a second authority over what may be sent. Since every category ships enforcing, the
+report is how someone notices a category refusing mail the old gate would have allowed.
 
 ## The privacy engines (`privacy`)
 
@@ -334,6 +332,10 @@ into consent's handlers.
   images. It removes raw capture, embeddings, attachment bytes and webhook bodies, and cancels kept
   outbox copies ([what stays](erasure-leftovers.md)). Audit IDs, actors, actions and times stay fixed.
   One transaction per subject records the proof and audit marker. A subject under `legal_hold` cannot be erased.
+
+  The erasure queues each object key no other row names in its transaction. The hourly
+  `stored_object_reap` deletes it once 24 hours old (`ProvisionalObjectGrace`), for up to 4 minutes
+  a run. So files go within 25 hours, and the rest of a long queue an hour later.
 
   Background tasks use earlier proofs and stored links to clear old copies while keeping later
   edits and held content. Request references go after their linked copies.
@@ -567,13 +569,11 @@ language. Its link opens the same disclosure page.
 A notice mail under a statutory hold stays until the hold ends. Ending a hold
 clears the delivery the same way an erasure does, which empties its recipients.
 
-The lane stays closed until a reviewed wording is named. `siteLeadNoticeReviewed`
-holds the `privacy_notice` version that passed legal review, and zero means none
-has. Staging, the check before a decision and the accept step all ask
-`siteLeadLaneRefusal`.
-`TestSiteLeadCaptureOpensOnlyWithAReviewedNotice` fails when the accept path
-stops calling the notice step. It also fails when the reviewed version is not the
-version the build sends.
+The lane stays closed until a reviewed wording is named. `siteLeadNoticeReviewed` holds the
+`privacy_notice` version that passed legal review, and zero means none has. Staging, the check
+before a decision and the accept step all ask `siteLeadLaneRefusal`.
+`TestSiteLeadCaptureOpensOnlyWithAReviewedNotice` fails when the accept path stops calling the
+notice step. It also fails when the reviewed version is not the version the build sends.
 
 ## Mail from the contact
 

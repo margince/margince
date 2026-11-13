@@ -6,7 +6,7 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, expect, it, vi } from "vitest";
 import type { components } from "../../api/schema";
 import { formatDateTime } from "../../format/format";
-import { browserZone } from "../../format/timezone";
+import { browserZone, wallClockIntent } from "../../format/timezone";
 import { LocaleProvider } from "../../i18n";
 import {
   bookingConnection,
@@ -280,6 +280,7 @@ it("sends an agreed time as an invitation without a video link when switched off
   await waitFor(() => expect(invitations).toHaveLength(1));
   expect(invitations[0]).toMatchObject({
     ...bookingSlots[1],
+    start_intent: wallClockIntent(bookingSlots[1].start, browserZone()),
     location: "Office, Room 2",
     video_call: false,
   });

@@ -14,7 +14,7 @@ import { AutomationDialog } from "./automations.form";
 type CatalogEntry = components["schemas"]["AutomationCatalogEntry"];
 
 const meta: Meta<typeof AutomationDialog> = {
-  title: "Settings/AI/Automations/Automation form",
+  title: "Settings/Data/Automations/Automation form",
   component: AutomationDialog,
   parameters: { layout: "padded" },
 };
@@ -162,4 +162,26 @@ const sequence: CatalogEntry = {
 /** Eight fields: the same form in the drawer. */
 export const LongDefinitionInADrawer: Story = {
   render: () => form({ entry: sequence, initialName: sequence.name }),
+};
+
+export const CalendarDayDeadline: Story = {
+  render: () =>
+    form({
+      entry: {
+        ...nudge,
+        params_schema: {
+          type: "object",
+          properties: {
+            due_in_days: {
+              type: "integer",
+              default: 1,
+              minimum: 1,
+              maximum: 30,
+            },
+            timezone: { type: "string", format: "timezone" },
+          },
+        },
+      },
+      initialParams: { due_in_days: 1, timezone: "Europe/Berlin" },
+    }),
 };

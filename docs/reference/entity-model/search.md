@@ -27,6 +27,11 @@ The 4 tables owned by `search`, as the migrations build them. [Back to the entit
 
 - `embed_store_binding_pkey`: `unique, btree (singleton)`
 
+**Triggers**
+
+- `text_bound_insert`: `AFTER INSERT FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL, '{"status": 20000, "populated_identity": 20000, "reembedding_identity": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"populated_identity":20000,"reembedding_identity":20000,"status":20000}')`
+- `text_bound_update`: `AFTER UPDATE FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"status": 20000, "populated_identity": 20000, "reembedding_identity": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"populated_identity":20000,"reembedding_identity":20000,"status":20000}')`
+
 ## embedding
 
 7 columns · primary key `(entity_type, entity_id, chunk_ix)` · referenced by 0 foreign keys
@@ -48,6 +53,11 @@ The 4 tables owned by `search`, as the migrations build them. [Back to the entit
 **Indexes**
 
 - `embedding_pkey`: `unique, btree (entity_type, entity_id, chunk_ix)`
+
+**Triggers**
+
+- `text_bound_insert`: `AFTER INSERT FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL, '{"model": 20000, "chunk_hash": 20000, "entity_type": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"chunk_hash":20000,"entity_type":20000,"model":20000}')`
+- `text_bound_update`: `AFTER UPDATE FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"model": 20000, "chunk_hash": 20000, "entity_type": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"chunk_hash":20000,"entity_type":20000,"model":20000}')`
 
 ## graph_contact_edge
 

@@ -2112,15 +2112,17 @@ components:
       x-entity-type: activity
       x-version: 1
       description: >-
-        Payload for activity.captured — the first-class capture verb,
-        emitted instead of (never alongside) a generic activity.created
-        (events.md §1). Two emit sites: the direct-log path
-        (activities/activity.go) that sets kind only, and the capture
-        ingestion path (capture/sink.go) that also names its originating
-        source system.
+        Payload for activity.captured. This event replaces activity.created.
+        Manual logging includes the activity kind and trusted website receipt details.
+        Connector ingestion includes the source system.
       required:
         - kind
       properties:
+        handling_automation_id:
+          type: string
+          format: uuid
+          description: Reviewed handling policy on the trusted accepted website note; absent on other activity events.
+
         kind:
           type: string
           description: >-
@@ -2142,8 +2144,12 @@ components:
         source_system:
           type: string
           description: >-
-            The originating source system (capture ingestion only;
-            absent on a direct log).
+            The originating source system for capture ingestion or a trusted website note; absent on other direct logs.
+        website_submission_key:
+          type: string
+          description: >-
+            Canonical accepted website submission key, carried only by a website note.
+            Consumers verify its stored provenance before routing. Contains no submission content.
         imported:
           type: boolean
           description: True when a data import wrote the event. Absent otherwise.
@@ -2304,6 +2310,20 @@ components:
         The bounded delta of activity.updated. Each field is carried only when this update touched
         it. The key set is fixed, so it is typed rather than an open map.
       properties:
+        meeting_recap_became_ready:
+          type: boolean
+          description: The stored meeting changed from lacking Held status or usable notes to having both. Consumers recheck current content and access before drafting.
+
+        handling_automation_id:
+          type: string
+          format: uuid
+          description: The reviewed inquiry policy attached to an accepted website note by its internal handler.
+
+        source_activity_id:
+          type: string
+          format: uuid
+          description: The accepted source attached to an existing task by its internal handler.
+
         thread_key:
           type: string
           description: The activity's new conversation key, when its thread grouping changed.
@@ -2471,6 +2491,20 @@ components:
       required:
         - changed_fields
       properties:
+        handling_automation_id:
+          type: string
+          format: uuid
+          description: Reviewed handling policy on the trusted accepted website note; absent on other activity events.
+
+        kind:
+          type: string
+          description: Present for a trusted accepted website note whose handling was explicitly reviewed.
+        source_system:
+          type: string
+          description: Present only when a trusted website note acquires its reviewed handling policy.
+        website_submission_key:
+          type: string
+          description: Canonical accepted website key; consumers verify the actual stored note and policy.
         changed_fields:
           $ref: '#/components/schemas/PublicEventActivityChangedFields'
         imported:

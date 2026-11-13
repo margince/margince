@@ -90,12 +90,12 @@ func briefSnoozedSQL(asOf string) string {
 // time snoozes ends, or NULL. Nothing is written when a snooze runs out, so an
 // answer that hid a snoozed item must not be served past it.
 func NextSnoozeEndSQL(user, asOf string) string {
-	return fmt.Sprintf(`(SELECT min(bi.snoozed_until) FROM brief_item bi
+	return fmt.Sprintf(`(SELECT min(`+storekit.IntentInstantColumnSQL("bi", "snoozed", "snoozed_until")+`) FROM brief_item bi
 		JOIN brief_run br ON br.id = bi.brief_run_id
 		WHERE br.user_id = %s AND bi.reopen_on = 'time' AND %s)`, user, briefSnoozedSQL(asOf))
 }
 
 func briefSnoozeHoldsSQL(item, asOf string) string {
-	return fmt.Sprintf("(CASE WHEN %s.reopen_on = 'time' THEN %s.snoozed_until > %s ELSE NOT %s END)",
-		item, item, asOf, briefSnoozeLiftedSQL(item+".deal_id", item+".reopen_on", item+".reopen_ref", item+".state_at", asOf))
+	return fmt.Sprintf("(CASE WHEN %s.reopen_on = 'time' THEN %s > %s ELSE NOT %s END)",
+		item, storekit.IntentInstantColumnSQL(item, "snoozed", "snoozed_until"), asOf, briefSnoozeLiftedSQL(item+".deal_id", item+".reopen_on", item+".reopen_ref", item+".state_at", asOf))
 }

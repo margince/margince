@@ -48,7 +48,7 @@ func CurrentLeadEngagementClause(source string, asOf time.Time, arg func(any) in
 func TaskDueSQL(alias string) string {
 	sources := taskSourcesWith(func(p taskSourcePolicy) bool { return p.generatedDate })
 	return `CASE WHEN ` + alias + `.kind = 'task' AND ` + alias + `.source_system IN ('` + strings.Join(sources, "','") + `')
- AND ` + alias + `.due_at = ` + alias + `.occurred_at AND NOT ` + humanSetDueSQL(alias) + ` THEN NULL ELSE ` + alias + `.due_at END`
+ AND ` + alias + `.due_at = ` + alias + `.occurred_at AND NOT ` + humanSetDueSQL(alias) + ` THEN NULL ELSE ` + IntentInstantSQL(alias, "due") + ` END`
 }
 
 func humanSetDueSQL(alias string) string {

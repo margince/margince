@@ -34,10 +34,11 @@ type InternalMailPolicy struct {
 }
 
 // InternalMailSource binds an enrollment to the provider account's current generation.
+// OwnerUserID is null for a shared mailbox: its connection and generation name it.
 type InternalMailSource struct {
 	HistorySince *time.Time `json:"history_since,omitempty"`
 	ConnectionID ids.UUID   `json:"connection_id"`
-	OwnerUserID  ids.UUID   `json:"owner_user_id"`
+	OwnerUserID  *ids.UUID  `json:"owner_user_id"`
 	Provider     string     `json:"provider"`
 	Generation   int        `json:"generation"`
 	Containers   []string   `json:"containers"`
@@ -92,6 +93,9 @@ func validateInternalMailPolicy(policy InternalMailPolicy) error {
 		}
 		if err := validateInternalMailContainers(source.Provider, source.Containers); err != nil {
 			return err
+		}
+		if source.OwnerUserID == nil && source.HistorySince != nil {
+			return fmt.Errorf("a shared mailbox has no owner to start a history import, so enrol it for future mail only: %w", apperrors.ErrInvalidArgument)
 		}
 	}
 	return nil
@@ -158,7 +162,7 @@ func checkInternalMailSource(ctx context.Context, tx pgx.Tx, next, before Intern
 	if err != nil {
 		return err
 	}
-	if actual.OwnerUserID != next.OwnerUserID || actual.Provider != next.Provider || actual.Generation != next.Generation {
+	if !sameInternalMailOwner(actual.OwnerUserID, next.OwnerUserID) || actual.Provider != next.Provider || actual.Generation != next.Generation {
 		return apperrors.ErrConflict
 	}
 	stamp, err := storekit.CapturedBy(ctx)
@@ -178,14 +182,24 @@ func checkInternalMailSource(ctx context.Context, tx pgx.Tx, next, before Intern
 	return nil
 }
 
+// readInternalMailSource reads a live mail connection: a live human's own, or
+// a shared mailbox whose reader team is live.
 func readInternalMailSource(ctx context.Context, tx pgx.Tx, id ids.UUID) (InternalMailSource, error) {
 	source := InternalMailSource{ConnectionID: id}
 	err := tx.QueryRow(ctx, `SELECT c.user_id, c.provider, c.generation
- FROM capture_connection c JOIN app_user u ON u.id = c.user_id
+ FROM capture_connection c
  WHERE c.id = $1 AND c.provider IN ('gmail','graph','imap')
  AND c.status IN ('connected','error') AND c.archived_at IS NULL
- AND `+workforce.LiveHumanSQL("u")+` FOR SHARE OF c, u`, id).
+ AND (c.user_id IS NOT NULL OR `+sharedMailboxLiveSQL+`) FOR SHARE OF c`, id).
 		Scan(&source.OwnerUserID, &source.Provider, &source.Generation)
+	if err == pgx.ErrNoRows {
+		return InternalMailSource{}, apperrors.ErrNotFound
+	}
+	if err != nil || source.OwnerUserID == nil {
+		return source, err
+	}
+	var live bool
+	err = tx.QueryRow(ctx, `SELECT true FROM app_user u WHERE u.id = $1 AND `+workforce.LiveHumanSQL("u")+` FOR SHARE`, *source.OwnerUserID).Scan(&live)
 	if err == pgx.ErrNoRows {
 		return InternalMailSource{}, apperrors.ErrNotFound
 	}
@@ -197,12 +211,12 @@ func emitInternalMailPolicyChanged(ctx context.Context, tx pgx.Tx, auditID ids.U
 }
 
 func validInternalMailSourceMetadata(source InternalMailSource) bool {
-	return source.ConnectionID != ids.Nil && source.OwnerUserID != ids.Nil &&
+	return source.ConnectionID != ids.Nil && (source.OwnerUserID == nil || *source.OwnerUserID != ids.Nil) &&
 		!source.EnrolledAt.IsZero() && source.EnrolledBy != "" && source.Generation >= 0 && source.Containers != nil
 }
 
 func sameInternalMailScope(a, b InternalMailSource) bool {
-	return a.ConnectionID == b.ConnectionID && a.OwnerUserID == b.OwnerUserID && a.Provider == b.Provider &&
+	return a.ConnectionID == b.ConnectionID && sameInternalMailOwner(a.OwnerUserID, b.OwnerUserID) && a.Provider == b.Provider &&
 		a.Generation == b.Generation && slices.Equal(a.Containers, b.Containers) && sameOptionalInstant(a.HistorySince, b.HistorySince)
 }
 
@@ -214,5 +228,13 @@ func internalMailSourceCurrentTx(ctx context.Context, tx pgx.Tx, enrolled Intern
 	if err != nil {
 		return false, err
 	}
-	return actual.OwnerUserID == enrolled.OwnerUserID && actual.Provider == enrolled.Provider && actual.Generation == enrolled.Generation, nil
+	return sameInternalMailOwner(actual.OwnerUserID, enrolled.OwnerUserID) && actual.Provider == enrolled.Provider && actual.Generation == enrolled.Generation, nil
+}
+
+// sameInternalMailOwner compares owners by value; two shared sources have none.
+func sameInternalMailOwner(a, b *ids.UUID) bool {
+	if a == nil || b == nil {
+		return a == nil && b == nil
+	}
+	return *a == *b
 }

@@ -190,3 +190,98 @@ it("keeps Save disabled when changing format would submit the same empty HTML", 
       .disabled,
   ).toBe(true);
 });
+
+function gmailBackend(
+  answer: components["schemas"]["GmailSignatureImport"],
+  writes: components["schemas"]["SaveEmailSignatureRequest"][],
+) {
+  const saved: components["schemas"]["EmailSignature"] = {
+    body: "",
+    html: "",
+    title: "",
+    phone: "",
+    template_active: false,
+  };
+  vi.stubGlobal(
+    "fetch",
+    vi.fn(async (input: RequestInfo | URL) => {
+      if (!(input instanceof Request))
+        throw new Error("Expected a generated-client request");
+      const path = new URL(input.url).pathname;
+      if (path.endsWith("/me")) return jsonResponse(meFixture({}));
+      if (path.endsWith("/me/email-signature/gmail"))
+        return jsonResponse(answer);
+      if (path.endsWith("/me/email-signature")) {
+        if (input.method === "PUT") {
+          const value: components["schemas"]["SaveEmailSignatureRequest"] =
+            await input.clone().json();
+          writes.push(value);
+          return jsonResponse({ ...saved, ...value });
+        }
+        return jsonResponse(saved);
+      }
+      if (path.endsWith("/emails:sign-off")) {
+        return jsonResponse({ kind: "signature", text: "", html: "" });
+      }
+      throw new Error(`Unexpected request ${path}`);
+    }),
+  );
+}
+
+it("takes the Gmail signature into the draft and saves it only on Save", async () => {
+  const user = steppedClock();
+  const writes: components["schemas"]["SaveEmailSignatureRequest"][] = [];
+  gmailBackend(
+    {
+      state: "ready",
+      address: "rep@demo.test",
+      html: "<div><b>Rep</b><br>Demo GmbH</div>",
+      text: "Rep\nDemo GmbH",
+    },
+    writes,
+  );
+  render(<Row />);
+  await user.click(
+    await screen.findByRole("button", { name: "Edit signature" }),
+  );
+  const dialog = await screen.findByRole("dialog");
+  await user.click(
+    within(dialog).getByRole("button", { name: "Use my Gmail signature" }),
+  );
+  const box = await within(dialog).findByRole<HTMLTextAreaElement>("textbox", {
+    name: "HTML signature",
+  });
+  expect(box.value).toBe("<div><b>Rep</b><br>Demo GmbH</div>");
+  expect(within(dialog).getByText(/rep@demo\.test/)).toBeTruthy();
+  expect(writes).toEqual([]);
+  await user.click(within(dialog).getByRole("button", { name: "Save" }));
+  await waitFor(() =>
+    expect(writes).toEqual([
+      {
+        body: "Rep\nDemo GmbH",
+        title: "",
+        phone: "",
+        html: "<div><b>Rep</b><br>Demo GmbH</div>",
+      },
+    ]),
+  );
+});
+
+it("says to reconnect when the grant cannot read Gmail's settings", async () => {
+  const user = steppedClock();
+  const writes: components["schemas"]["SaveEmailSignatureRequest"][] = [];
+  gmailBackend({ state: "needs_reconnect" }, writes);
+  render(<Row />);
+  await user.click(
+    await screen.findByRole("button", { name: "Edit signature" }),
+  );
+  const dialog = await screen.findByRole("dialog");
+  await user.click(
+    within(dialog).getByRole("button", { name: "Use my Gmail signature" }),
+  );
+  expect(await within(dialog).findByText(/Press Reconnect/)).toBeTruthy();
+  expect(
+    within(dialog).queryByRole("textbox", { name: "HTML signature" }),
+  ).toBeNull();
+  expect(writes).toEqual([]);
+});

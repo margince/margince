@@ -273,6 +273,18 @@ const clickButton =
     }
   };
 
+// A phone has room for the first sections only, so the rest are chosen from
+// the strip's "More" menu.
+const pickFoldedSection =
+  (name: string) =>
+  async ({ canvasElement }: { canvasElement: HTMLElement }) => {
+    const page = within(canvasElement.ownerDocument.body);
+    await userEvent.click(
+      await page.findByRole("button", { name: "More sections" }),
+    );
+    await userEvent.click(await page.findByRole("button", { name }));
+  };
+
 // Every Pipeline card carries its own explain verb. The stage card's is the one
 // whose derivation these stories stub, so the press is scoped to that card.
 async function explainStageCard({
@@ -348,6 +360,10 @@ export const OpenDealsPerCompanyCappedPhone: Story = {
   ...OpenDealsPerCompanyCapped,
   globals: { viewport: { value: "phone" } },
   tags: ["uat-phone"],
+  play: async (context) => {
+    await pickFoldedSection("Pipeline")(context);
+    await within(context.canvasElement).findByText("1,248 more not shown");
+  },
 };
 
 // The performance section: closed outcomes beside stage velocity, every
@@ -689,4 +705,5 @@ export const MyOutcomesPhone: Story = {
   ...MyOutcomes,
   globals: { viewport: { value: "phone" } },
   tags: ["uat-phone"],
+  play: pickFoldedSection("My outcomes"),
 };

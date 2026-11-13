@@ -43,8 +43,8 @@ func (a ListRules) Find(ctx context.Context, id ids.UUID) (automation.ListRef, e
 }
 
 // ObservedChanges reads what one check saw change, as the caller may see it.
-func (a ListRules) ObservedChanges(ctx context.Context, id ids.UUID, version int64, checkedAt time.Time, actions []string, limit int) ([]automation.ListChange, int, error) {
-	changes, total, err := a.store.ObservedChanges(ctx, ids.From[ids.ListKind](id), version, checkedAt, actions, limit)
+func (a ListRules) ObservedChanges(ctx context.Context, id ids.UUID, version int64, checkedAt time.Time, actions []string, limit int, includeImported ...bool) ([]automation.ListChange, int, error) {
+	changes, total, err := a.store.ObservedChanges(ctx, ids.From[ids.ListKind](id), version, checkedAt, actions, limit, includeImported...)
 	if err != nil {
 		return nil, 0, err
 	}

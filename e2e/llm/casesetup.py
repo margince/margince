@@ -126,7 +126,35 @@ def card_reviews_and_recap(admin):
         raise SetupFault("; ".join(problems))
 
 
-STEPS = {"card_reviews_and_recap": card_reviews_and_recap}
+FAIR_TAG = "Husum Wind 2026"
+
+# Thirty, five past the filter preview's first page of 25, so a list read that
+# stops at one page leaves names out.
+FAIR_GUESTS = [
+    "Anke Petersen", "Bjarne Hansen", "Carla Jessen", "Dirk Matthiesen", "Elke Nissen",
+    "Frerk Andresen", "Gesa Lorenzen", "Hauke Clausen", "Inken Sönksen", "Jens Paulsen",
+    "Kirsten Thomsen", "Lars Bahnsen", "Maren Feddersen", "Nils Ketelsen", "Ocke Jürgensen",
+    "Pia Carstensen", "Rasmus Boysen", "Silke Hinrichsen", "Thore Lassen", "Ute Martensen",
+    "Volker Brodersen", "Wiebke Nommensen", "Arne Dethlefsen", "Britta Ingwersen", "Claas Volquardsen",
+    "Dörte Rickmers", "Eike Jacobsen", "Finja Christiansen", "Gunnar Asmussen", "Hella Momsen",
+]
+
+
+def fair_guests_tagged(admin):
+    """Thirty contacts carrying one tag no other case sees, so a list built on it
+    holds more than one preview page."""
+    tag = admin.call("POST", "/tags", {"name": FAIR_TAG})
+    for name in FAIR_GUESTS:
+        contact = admin.call("POST", "/contacts", {"full_name": name, "source": "manual"})
+        admin.call("POST", f"/tags/{tag['id']}/apply", {"entity_type": "contact", "entity_id": contact["id"]})
+    preview = admin.call("POST", "/filters/preview", {
+        "resource": "contact", "filter": {"field": "tag", "op": "eq", "value": tag["id"]}, "limit": 1,
+    })
+    if preview.get("match_count") != len(FAIR_GUESTS):
+        raise SetupFault(f"the {FAIR_TAG} filter matches {preview.get('match_count')} contacts, want {len(FAIR_GUESTS)}")
+
+
+STEPS = {"card_reviews_and_recap": card_reviews_and_recap, "fair_guests_tagged": fair_guests_tagged}
 
 
 def main(argv):

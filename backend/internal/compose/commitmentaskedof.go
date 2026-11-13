@@ -13,32 +13,41 @@ import (
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/platform/approvalsubject"
 	"github.com/margince/margince/backend/internal/platform/auth"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
 // commitmentAskedOf is the one colleague a promise is put to: the colleague who
-// made it, when they are active or invited. Nobody else is asked. Not the
-// reader of the conversation, the mailbox owner or the deal's owner: taking on
-// somebody else's promise is an explicit act, never a fallback. On a private
-// conversation the promiser must also be able to open the message they made the
-// promise in (auth.SeatMayHoldPrivateWorkTx). The zero id means nobody is asked;
-// the finding stays on its source.
+// made it, when they are active or invited. Nobody else is asked: not the
+// reader, a personal mailbox's owner or the deal's owner. Taking on somebody
+// else's promise is an explicit act, never a fallback. On a
+// private conversation the promiser must also be able to open the message they
+// made the promise in (auth.SeatMayHoldPrivateWorkTx). Our promise in mail a
+// shared mailbox sent goes to the customer's owner (storekit.SharedMailWorkOwnerSQL),
+// who owns the relationship and so is no stand-in. The zero id means nobody is
+// asked; the finding stays on its source.
 //
 // It asks the task writer's own rule, so the dispatcher never stages or writes
 // for a seat the writer then refuses. It also says whether they signed in yet.
 func commitmentAskedOf(ctx context.Context, tx pgx.Tx, c Commitment) (ids.UUID, activities.SeatWorkState, error) {
-	if c.Seat == nil || c.Seat.IsZero() {
-		return ids.Nil, activities.SeatCannotHoldWork, nil
+	seat, err := ids.Nil, error(nil)
+	if c.Seat != nil {
+		seat = *c.Seat
+	} else if c.Theirs == nil && !c.absentColleague {
+		seat, err = storekit.SharedMailWorkOwnerTx(ctx, tx, c.SourceActivityID, true)
 	}
-	may, err := auth.SeatMayHoldPrivateWorkTx(ctx, tx, c.SourceActivityID, c.PrivateTo, *c.Seat)
+	if err != nil || seat.IsZero() {
+		return ids.Nil, activities.SeatCannotHoldWork, err
+	}
+	may, err := auth.SeatMayHoldPrivateWorkTx(ctx, tx, c.SourceActivityID, c.PrivateTo, seat)
 	if err != nil || !may {
 		return ids.Nil, activities.SeatCannotHoldWork, err
 	}
-	state, err := activities.NewTaskSeatState(ctx, tx, ids.From[ids.UserKind](*c.Seat))
+	state, err := activities.NewTaskSeatState(ctx, tx, ids.From[ids.UserKind](seat))
 	if err != nil || state == activities.SeatCannotHoldWork {
 		return ids.Nil, activities.SeatCannotHoldWork, err
 	}
-	return *c.Seat, state, nil
+	return seat, state, nil
 }
 
 // pendingProposalAskedOf is who a waiting proposal stays with when its

@@ -16,6 +16,8 @@ import { browserZone } from "../format/timezone";
 import { webUrl } from "../format/weburl";
 import { type Locale, useLocale, useT } from "../i18n";
 import type { CfObject } from "../lib/customfields.logic";
+import { translatedLabel } from "../lib/labeltranslation";
+import { TEXT_LIMITS } from "../lib/textlimits_gen";
 import {
   type CreateField,
   joinMultiselectValue,
@@ -32,8 +34,17 @@ export function customFieldToFormField(
   field: CustomField,
   boolLabels: BooleanLabels,
   tooPrecise: (currency: string) => string,
+  locale = "en",
 ): CreateField {
-  const base = { key: field.column_name, labelText: field.label };
+  const base = {
+    key: field.column_name,
+    labelText: customFieldLabel(field, locale),
+  };
+  // The option stays the stored value; only the label the reader sees moves.
+  const optionChoices = (field.options ?? []).map((option) => ({
+    value: option,
+    label: optionLabel(field, option, locale),
+  }));
   switch (field.type) {
     case "number":
       return { ...base, type: "number" };
@@ -58,19 +69,13 @@ export function customFieldToFormField(
         type: "multiselect",
         multiselectEncoding: "json",
         toInput: (raw) => customFieldFormValue(field, raw),
-        options: (field.options ?? []).map((option) => ({
-          value: option,
-          label: option,
-        })),
+        options: optionChoices,
       };
     case "picklist":
       return {
         ...base,
         type: "select",
-        options: (field.options ?? []).map((option) => ({
-          value: option,
-          label: option,
-        })),
+        options: optionChoices,
       };
     case "boolean":
       return {
@@ -82,6 +87,7 @@ export function customFieldToFormField(
         ],
       };
     case "text":
+      return { ...base, type: "text", maxLength: TEXT_LIMITS.document };
     case "record":
       return { ...base, type: "text" };
     default:
@@ -247,12 +253,28 @@ export function customFieldDisplay(
         ? opts.boolLabels.yes
         : opts.boolLabels.no;
     case "multiselect":
-      return Array.isArray(raw) && raw.length ? raw.join(", ") : null;
+      return Array.isArray(raw) && raw.length
+        ? raw
+            .map((one) => optionLabel(field, String(one), opts.locale))
+            .join(", ")
+        : null;
     case "date":
       return formatDateAbbrev(String(raw), opts.locale, browserZone());
+    case "picklist":
+      return optionLabel(field, String(raw), opts.locale);
     default:
       return String(raw);
   }
+}
+
+/** A stored option as the reader sees it. The record keeps the stored value. */
+function optionLabel(field: CustomField, option: string, locale: string) {
+  return translatedLabel(option, field.option_translations?.[option], locale);
+}
+
+/** A field's label as the reader sees it. */
+export function customFieldLabel(field: CustomField, locale: string): string {
+  return translatedLabel(field.label, field.label_translations, locale);
 }
 
 // customFieldDisplay in this reader's locale and Yes/No words, for either record
@@ -263,6 +285,12 @@ export function useCustomFieldDisplay() {
   const boolLabels = { yes: t("field.yes"), no: t("field.no") };
   return (field: CustomField, raw: unknown) =>
     customFieldDisplay(field, raw, { locale, boolLabels });
+}
+
+// customFieldLabel in this reader's language, for a record surface.
+export function useCustomFieldLabel() {
+  const { locale } = useLocale();
+  return (field: CustomField) => customFieldLabel(field, locale);
 }
 
 // Where a displayed value may be followed to, or null when it is only text.
@@ -359,6 +387,7 @@ export function useObjectCustomFields(
   activity?: ActivityNarrowing,
 ): ObjectCustomFields {
   const t = useT();
+  const { locale } = useLocale();
   const query = useQuery({
     queryKey: ["custom-fields", object],
     queryFn: async () => {
@@ -380,8 +409,11 @@ export function useObjectCustomFields(
   const boolLabels = { yes: t("field.yes"), no: t("field.no") };
 
   const controls = fields.map((field) =>
-    customFieldToFormField(field, boolLabels, (currency) =>
-      t("record.amountTooPrecise", { currency }),
+    customFieldToFormField(
+      field,
+      boolLabels,
+      (currency) => t("record.amountTooPrecise", { currency }),
+      locale,
     ),
   );
   const formFields: CreateField[] =

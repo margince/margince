@@ -1,5 +1,5 @@
 <!-- prose:plain -->
-<!-- describes: frontend/src/features/projects/contractform.tsx frontend/src/features/projects/contractlifecycle.tsx frontend/src/features/projects/contractrenewal.ts frontend/src/features/companies/companycontracts.tsx frontend/src/components/contractterms.tsx frontend/src/features/companies/companyfinance.tsx frontend/src/features/settings/financesource.tsx backend/internal/modules/contracts backend/internal/modules/finance backend/internal/modules/deals/win_evidence.go -->
+<!-- describes: frontend/src/features/projects/contractform.tsx frontend/src/features/projects/contractlifecycle.tsx frontend/src/features/projects/contractrenewal.ts frontend/src/features/companies/companycontracts.tsx frontend/src/components/contractterms.tsx frontend/src/features/companies/companyfinance.tsx frontend/src/features/companies/companyoverdue.tsx frontend/src/features/settings/financesource.tsx backend/internal/modules/contracts backend/internal/modules/finance backend/internal/modules/deals/win_evidence.go -->
 # Contracts and invoices
 
 Contracts and invoices both live on a company's own page in Margince. The
@@ -185,6 +185,33 @@ Once a source is connected, the Finance card names where the figures came from
 and when. It reads "From {provider} · synced {when}", or "From {provider} · not
 yet synced" before its first sync. With no source connected it names none. For a
 past customer the card is titled "Finance · historical".
+
+### The overdue warning
+
+When a company has overdue invoices, a warning stands at the top of its page,
+over every tab. It reads, for example, "€12,400.00 overdue on 3 invoices" and
+"The oldest is 41 days past due."
+
+If your accounting system tells Margince how many payment reminders it has
+sent, the warning adds that too: "Accounting has sent 3 reminders." It names
+the highest count among the overdue invoices.
+
+A disputed invoice still counts as **Open** on the **Finance** tab. It is left
+out of the warning and of every overdue figure, its reminders too.
+
+If the last sync is old or failed, the warning still shows the last figures.
+It then reads "€12,400.00 was overdue on 3 invoices" and "As of the last
+accounting sync on {date}." An invoice paid since then leaves the warning at
+the next good sync. The payment line under **How it
+stands** follows the same rule.
+
+Everyone who may see finance figures sees the same warning, whoever owns the
+deal. A role that may not see finance sees no warning and no amount. With no
+accounting system connected there is no warning. Nobody can add one by hand.
+A past customer gets no warning, because the overdue figure is left out for
+them.
+
+Also called: payment reminder, account on hold, credit stop.
 
 ### A blank is not zero
 

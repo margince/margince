@@ -162,11 +162,15 @@ func legalEntityPatch(before LegalEntity, in LegalEntityInput) (*storekit.Patch,
 	p := storekit.NewPatch()
 	var changed []string
 	for i, field := range in.fields() {
+		stored := current[i].value
+		if (!before.IsDefault || (!field.anchored && !field.installationOwned)) &&
+			field.value != nil && stored != nil && strings.TrimSpace(*field.value) == *stored {
+			continue
+		}
 		value, sent, err := field.cleaned(before.IsDefault)
 		if err != nil {
 			return nil, nil, err
 		}
-		stored := current[i].value
 		if !sent || sameStored(stored, value) {
 			continue
 		}

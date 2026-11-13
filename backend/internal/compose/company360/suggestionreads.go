@@ -99,38 +99,40 @@ func newestMessage(
 	if activityScope == "" {
 		activityScope = scopeAll
 	}
-	// The WORDS ride the audience test and the ROW does not: which message is
-	// newest is a fact about the account, what it said is content a limited
-	// audience withholds. Filtering the row on the audience would make the
-	// rule fall through to an older message and advise a chase on a thread
-	// somebody else already answered.
-	audience, err := auth.ActivityAudienceArm(ctx, "a", arg)
+	// The WORDS ride the content gate and the ROW does not. Which message is
+	// newest is a fact about the account; what it said is content a limited
+	// audience withholds. Filtering the row would fall through to an older
+	// message and advise a chase on a thread somebody else already answered.
+	// The words and the move test membership in one gated set.
+	readable, err := activities.MailThreadReadableSQL(ctx, newestMessageRows, arg)
 	if err != nil {
 		return lastMessage{}, false, err
 	}
+	contentReadable := activities.InGatedSetSQL(newestMessageReadable, "a")
 	// A mail's own History badge says whose move it is, so the strip and the
 	// no-reply advice read the same rule as the message's row.
-	move, err := activities.MailMoveColumnSQL(ctx, arg, now)
-	if err != nil {
-		return lastMessage{}, false, err
-	}
+	move := activities.MailMoveColumnSQL(ctx, arg, now, newestMessageReadable)
 	reached := fmt.Sprintf(`%[3]s AND a.archived_at IS NULL AND %[1]s AND %[2]s`, activityScope,
 		activities.CompanyLinkedActivityExists(companyPos),
 		relstrength.InteractionCountsAtSQL("a", fmt.Sprintf("$%d::timestamptz", nowPos))) + opts.projectScope(arg)
 	// LastWord wants every row at the newest stored instant, in the timeline's order (storekit's created_at, id).
 	// Not a rank() window: without a small LIMIT the planner sorts every reached row instead of stopping on the index.
 	query := fmt.Sprintf(`
+		WITH %[6]s AS MATERIALIZED (
+		      SELECT a.id, a.created_at, a.thread_key, a.kind, a.channel_provider FROM activity a
+		      WHERE %[4]s AND a.occurred_at = (
+		        SELECT a.occurred_at FROM activity a WHERE %[4]s ORDER BY a.occurred_at DESC LIMIT 1)
+		      ORDER BY a.created_at DESC, a.id DESC
+		      LIMIT %[5]d),
+		     %[7]s AS MATERIALIZED (%[8]s)
 		SELECT a.id, a.direction, a.occurred_at, a.occurred_precision = 'day', a.kind,
 		       CASE WHEN %[1]s THEN a.subject END,
 		       CASE WHEN %[1]s THEN left(a.body, %[2]d) END,
 		       %[3]s
-		FROM (SELECT a.id, a.created_at FROM activity a
-		      WHERE %[4]s AND a.occurred_at = (
-		        SELECT a.occurred_at FROM activity a WHERE %[4]s ORDER BY a.occurred_at DESC LIMIT 1)
-		      ORDER BY a.created_at DESC, a.id DESC
-		      LIMIT %[5]d) newest
+		FROM %[6]s newest
 		JOIN activity a ON a.id = newest.id
-		ORDER BY newest.created_at DESC, newest.id DESC`, audience, excerptRunes, move, reached, activities.NewestTiedCap)
+		ORDER BY newest.created_at DESC, newest.id DESC`, contentReadable, excerptRunes, move, reached, activities.NewestTiedCap,
+		newestMessageRows, newestMessageReadable, readable)
 	rows, err := tx.Query(ctx, query, args...)
 	if err != nil {
 		return lastMessage{}, false, fmt.Errorf("read the account's newest message: %w", err)
@@ -151,6 +153,13 @@ func newestMessage(
 	}
 	return last, true, nil
 }
+
+// The sets newestMessage reads: the rows at the newest instant, and the ids
+// among them and their threads that the reader may read.
+const (
+	newestMessageRows     = "newest_message_rows"
+	newestMessageReadable = "newest_message_readable"
+)
 
 func scanLastMessage(row pgx.CollectableRow) (lastMessage, error) {
 	var found lastMessage

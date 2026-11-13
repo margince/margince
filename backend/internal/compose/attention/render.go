@@ -16,6 +16,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/deadline"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/provenance"
 )
 
 // One item's shape, per producer.
@@ -330,13 +331,17 @@ func stagedFacts(
 func taskItem(task Task, asOf, until time.Time, loc *time.Location) crmcontracts.AttentionItem {
 	subject := task.Subject
 	item := crmcontracts.AttentionItem{
-		Id:            task.ID.String(),
-		Source:        crmcontracts.AttentionItemSource("task"),
-		Title:         &subject,
-		SystemDisplay: task.SystemDisplay,
-		Subject:       subjectOf(task.LinkType, task.LinkID), MayBeDone: task.MayBeDone,
+		Id:             task.ID.String(),
+		Source:         crmcontracts.AttentionItemSource("task"),
+		Title:          &subject,
+		SystemDisplay:  task.SystemDisplay,
+		WebsiteInquiry: task.Inquiry,
+		Subject:        subjectOf(task.LinkType, task.LinkID), MayBeDone: task.MayBeDone,
 		RequestCheck: task.RequestCheck,
 		Actions:      taskActions(task),
+	}
+	if task.WebsiteInquiry {
+		item.Kind = new(provenance.WebsiteInquirySource)
 	}
 	if task.SourceActivityID != nil {
 		item.SourceRecord = subjectOf("activity", *task.SourceActivityID)
@@ -352,6 +357,7 @@ func taskItem(task Task, asOf, until time.Time, loc *time.Location) crmcontracts
 		due := *task.DueAt
 		item.DueAt = &due
 		item.DueHasTime = new(task.DueHasTime)
+		item.DueIntent = task.DueIntent
 		past := taskLateAt(task.DueAt, asOf, task.MayBeDone)
 		item.Overdue = &past
 		// Which run of the page it heads. Only dated rows carry one, which is

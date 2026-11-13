@@ -14,6 +14,7 @@ import (
 	"testing"
 
 	"github.com/margince/margince/backend/internal/modules/contacts"
+	"github.com/margince/margince/backend/internal/platform/database/textbounds"
 	"github.com/margince/margince/backend/internal/shared/ports/model"
 )
 
@@ -133,5 +134,12 @@ func TestCardPhotoReaderTurnsEachOutcomeIntoARefusalAClientCanAct(t *testing.T) 
 	entries, err := cardPhotoReader(&cardLane{carries: []string{"image/png"}, reply: twoCards})(context.Background(), photo)
 	if err != nil || len(entries) != 1 || !entries[0].ModelRead {
 		t.Errorf("entries = %+v, err = %v, want one model-read card", entries, err)
+	}
+}
+
+func TestACardPhotoTitleIsCutToTheContactTitleLimit(t *testing.T) {
+	card := cardEntry(cardPhotoCard{FullName: "Dana Buyer", Title: strings.Repeat("ế", 300)})
+	if got, want := len([]rune(card.Title)), textbounds.LimitOf("public.contact.title"); got != want {
+		t.Fatalf("title holds %d characters, want the contact.title limit of %d", got, want)
 	}
 }

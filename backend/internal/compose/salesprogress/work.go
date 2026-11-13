@@ -15,6 +15,7 @@ import (
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/deals"
+	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/platform/httperr"
@@ -27,19 +28,21 @@ import (
 // deals come from the deal list itself, so its row scope and masks hold.
 func (h Reading) ListSalesProgressDeals(w http.ResponseWriter, r *http.Request, params crmcontracts.ListSalesProgressDealsParams) {
 	ctx := r.Context()
-	scope, err := progressScope(ctx, (*crmcontracts.GetSalesProgressParamsScopeKind)(params.ScopeKind), params.ScopeId)
-	if err != nil {
-		httperr.Write(w, r, err)
-		return
-	}
-	in := deals.ListDealsInput{Status: new("open"), Cursor: params.Cursor, Limit: params.Limit}
-	if scope.Kind == crmcontracts.ReportingScopeKindTeam {
-		in.OwnerTeamID = new(ids.From[ids.TeamKind](ids.UUID(*scope.Id)))
-	} else {
-		in.OwnerID = new(ids.From[ids.UserKind](ids.UUID(*scope.Id)))
-	}
 	var out crmcontracts.SalesProgressDealPage
-	err = h.DB.TxIsolated(ctx, pgx.RepeatableRead, func(tx pgx.Tx) error {
+	err := h.DB.TxIsolated(ctx, pgx.RepeatableRead, func(tx pgx.Tx) error {
+		scope, err := h.readableScope(ctx, tx, (*crmcontracts.GetSalesProgressParamsScopeKind)(params.ScopeKind), params.ScopeId)
+		if err != nil {
+			return err
+		}
+		in := deals.ListDealsInput{Status: new("open"), Cursor: params.Cursor, Limit: params.Limit}
+		if scope.Kind == crmcontracts.ReportingScopeKindTeam {
+			if err := requireTeamDealsShown(ctx, tx); err != nil {
+				return err
+			}
+			in.OwnerTeamID = new(ids.From[ids.TeamKind](ids.UUID(*scope.Id)))
+		} else {
+			in.OwnerID = new(ids.From[ids.UserKind](ids.UUID(*scope.Id)))
+		}
 		page, next, err := h.Deals.ListDealsTx(ctx, tx, in, deals.CustomColumns{})
 		if err != nil {
 			return err
@@ -56,6 +59,16 @@ func (h Reading) ListSalesProgressDeals(w http.ResponseWriter, r *http.Request, 
 		return
 	}
 	httperr.WriteJSON(w, http.StatusOK, out)
+}
+
+// requireTeamDealsShown refuses a team's deal list while the switch is off.
+// The list names each member's deals one by one; the team totals keep their floor.
+func requireTeamDealsShown(ctx context.Context, tx pgx.Tx) error {
+	allowed, err := identity.IndividualPerformanceFor(ctx, tx)
+	if err != nil || allowed {
+		return err
+	}
+	return auth.IndividualPerformanceOffError{}
 }
 
 func dealWork(ctx context.Context, tx pgx.Tx, page []crmcontracts.Deal, now time.Time) (crmcontracts.SalesProgressDealPage, error) {

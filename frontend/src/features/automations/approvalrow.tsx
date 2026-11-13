@@ -35,8 +35,9 @@ import {
 import { navigate } from "../../lib/router";
 import { useViewerId } from "../../lib/session";
 import { useSendPermission } from "../../lib/usesendpermission";
+import { ApprovalDetailModal } from "./approvaldetail";
 import {
-  ApprovalDetailModal,
+  cardRecords,
   DecideOutcome,
   editableSeed,
   editableStrings,
@@ -379,6 +380,7 @@ export function ApprovalRow({
               typeof approval.proposed_change?.existing_task_id === "string",
             )}
             fields={strings}
+            records={cardRecords(approval.proposed_change)}
             draft={draft}
             onChange={(field, value) =>
               setDraft((current) => ({ ...current, [field]: value }))

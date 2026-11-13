@@ -26,7 +26,7 @@ import (
 // timeline: subject/body of every subject-only activity are wiped (the
 // GENERATED search_tsv refreshes from the now-empty text, so the erased
 // name is no longer full-text searchable). The subject's attachments are
-// purged separately by eraseAttachments (objects first); this handles only
+// purged separately by eraseAttachments; this handles only
 // the timeline text and its field-level provenance. It returns the
 // redacted activity ids so the caller can tombstone each record's own
 // audit spine.

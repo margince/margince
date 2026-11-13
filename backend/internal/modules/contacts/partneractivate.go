@@ -24,7 +24,9 @@ import (
 // The bases a door stamps, as partner_activation_basis_check names them.
 const (
 	// eventKeyPartner is the company.updated delta key a partner change rides.
-	eventKeyPartner        = "partner"
+	eventKeyPartner = "partner"
+	// eventKeyPartnerKinds lists the partner kinds inside that delta.
+	eventKeyPartnerKinds   = "kinds"
 	activationLeadAccepted = "lead_accepted"
 	activationCustomerWon  = "customer_won"
 )

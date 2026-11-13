@@ -61,7 +61,7 @@ func TestNoticePresentationUsesTheReaderLanguageWithoutChangingItsIdentity(t *te
 
 func TestNoticeLimitsKeepEveryLanguageAndEditsRetireMetadata(t *testing.T) {
 	e := setupNotices(t)
-	label := strings.Repeat("長", 180)
+	label := strings.Repeat("長", subjectBound)
 	subject := fmt.Sprintf(systemtext.Copy("lead.reply", textlang.English), label)
 	input := NewNotice{Recipient: e.recipient, Kind: "automation", Subject: subject, Body: systemtext.Literal("automation.new_lead"), SystemText: &systemtext.Message{Subject: systemtext.Sentence("lead.reply", systemtext.Label(label)), Body: systemtext.Sentence("automation.new_lead")}}
 	id, err := e.store.Create(e.engineCtx(), input)

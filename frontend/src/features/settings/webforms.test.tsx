@@ -343,6 +343,45 @@ describe("WebFormsCard", () => {
     expect(screen.getByText("No post recorded yet")).toBeTruthy();
   });
 
+  it("tells the admin when the intake refuses posts, and why", async () => {
+    vi.stubGlobal(
+      "fetch",
+      backendFor(OPERATOR, [
+        {
+          ...contactForm,
+          intake: { state: "throttled", since: "2026-10-30T09:02:00Z" },
+        },
+        {
+          ...contactForm,
+          id: "wf-2",
+          name: "Demo page",
+          intake: { state: "blocked", until: "2026-10-30T09:30:00Z" },
+        },
+        {
+          ...contactForm,
+          id: "wf-3",
+          name: "Event page",
+          intake: { state: "paused_all", until: "2026-10-30T09:30:00Z" },
+        },
+      ]).fetch,
+    );
+    render(<WebFormsCard />);
+    expect(
+      await screen.findByText(/^Throttled since .+, too many submissions$/),
+    ).toBeTruthy();
+    expect(screen.getByText(/^Blocked until /)).toBeTruthy();
+    expect(
+      screen.getByText("Paused for all forms: too much traffic"),
+    ).toBeTruthy();
+  });
+
+  it("says nothing about the intake while it takes posts as usual", async () => {
+    vi.stubGlobal("fetch", backendFor(OPERATOR, [contactForm]).fetch);
+    render(<WebFormsCard />);
+    expect(await screen.findByText("Contact page")).toBeTruthy();
+    expect(screen.queryByTestId("web-form-intake")).toBeNull();
+  });
+
   it("says nothing about posts when the server does not report them", async () => {
     const { last_post_at: _, ...fromAnOlderServer } = contactForm;
     vi.stubGlobal("fetch", backendFor(OPERATOR, [fromAnOlderServer]).fetch);

@@ -1,4 +1,3 @@
-import { createHash } from "node:crypto";
 import { readdir, readFile, writeFile } from "node:fs/promises";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -23,13 +22,7 @@ for (const name of await readdir(join(root, "src/format"))) {
   if (name.endsWith(".ts") && !name.includes(".test."))
     inputs.push(`format/${name}`);
 }
-inputs.push(
-  "i18n/en.ts",
-  "i18n/de.ts",
-  "i18n/vi.ts",
-  "../scripts/gen-approval-reading.mjs",
-  "../scripts/lib/source-tree.ts",
-);
+inputs.push("i18n/en.ts", "i18n/de.ts", "i18n/vi.ts");
 function addCodes(source, name) {
   const tree = parseSource(name, source);
   const visit = (node) => {
@@ -42,10 +35,8 @@ function addCodes(source, name) {
 }
 const fields = new Set();
 const values = new Set();
-const hashes = {};
 for (const name of inputs.sort(stable)) {
   const source = await readFile(join(root, "src", name), "utf8");
-  hashes[name] = createHash("sha256").update(source).digest("hex");
   if (!name.startsWith("i18n/")) addCodes(source, name);
   if (name.includes("preview") || name.includes("historyfieldlabels")) {
     for (const match of source.matchAll(
@@ -90,7 +81,6 @@ try {
       continue;
     const source = await readFile(id, "utf8");
     const name = id.slice(join(root, "src/").length);
-    hashes[name] = createHash("sha256").update(source).digest("hex");
     if (!name.startsWith("i18n/")) addCodes(source, name);
   }
   const { importPreviewFields } = await server.ssrLoadModule(
@@ -188,16 +178,10 @@ try {
   }
   // Each string value sits on its own line below its key. Git merges two edits
   // only when an unchanged line parts them, and the key parts neighbour values.
-  const output = `${JSON.stringify(
-    {
-      inputs: Object.fromEntries(
-        Object.entries(hashes).sort(([a], [b]) => stable(a, b)),
-      ),
-      languages,
-    },
-    null,
-    1,
-  ).replace(/^( *)("(?:[^"\\]|\\.)*"): "/gm, '$1$2:\n$1 "')}\n`;
+  const output = `${JSON.stringify({ languages }, null, 1).replace(
+    /^( *)("(?:[^"\\]|\\.)*"): "/gm,
+    '$1$2:\n$1 "',
+  )}\n`;
   const path = join(
     root,
     "../backend/internal/modules/agents/previewcatalog_gen.json",

@@ -22,6 +22,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/kernel/values"
 )
 
 // displayNameLedger counts the rows a name change is supposed to leave behind.
@@ -139,18 +140,13 @@ func TestABlankOrOverlongNameIsRefused(t *testing.T) {
 	for _, name := range []string{"", "   ", "\t\n"} {
 		refusesNaming(t, name)
 	}
-	// One rune over the contract's own bound, counted in RUNES: 255 bytes of a
-	// multi-byte script is far fewer characters than the contract admits, and a
-	// byte check would refuse a name the edge accepted.
-	refusesNaming(t, strings.Repeat("é", 256))
-	// Exactly at the bound is admitted — without this the case above would pass
-	// against an implementation that refuses every multi-byte name.
-	if _, err := svc.SaveMyDisplayName(ctx, strings.Repeat("é", 255)); err != nil {
-		t.Errorf("saving exactly 255 characters: %v, want it admitted", err)
+	refusesNaming(t, strings.Repeat("é", values.TextLabelCharacters+1))
+	if _, err := svc.SaveMyDisplayName(ctx, strings.Repeat("é", values.TextLabelCharacters)); err != nil {
+		t.Errorf("saving exactly %d characters: %v", values.TextLabelCharacters, err)
 	}
 
 	if got := storedName(t, svc, userID); got == before {
-		t.Errorf("the 255-character name did not reach the column; it still holds %q", got)
+		t.Errorf("the name at the character bound did not reach the column; it still holds %q", got)
 	}
 }
 

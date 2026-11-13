@@ -12,6 +12,7 @@ import (
 	"testing"
 
 	"github.com/margince/margince/backend/internal/compose/integration"
+	"github.com/margince/margince/backend/internal/compose/webformlead"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/modules/webforms"
@@ -136,7 +137,7 @@ func TestAWebFormNamesTheProductItsLeadsAskAbout(t *testing.T) {
 	if form.ProductID == nil || *form.ProductID != suite {
 		t.Fatalf("the form names product %v, want %v", form.ProductID, suite)
 	}
-	if got := webFormLeadInput(webforms.Landing{ProductID: form.ProductID}).ProductID; got == nil || *got != suite {
+	if got := webformlead.LeadInput(webforms.Landing{ProductID: form.ProductID}).ProductID; got == nil || *got != suite {
 		t.Errorf("a lead the form lands names product %v, want %v", got, suite)
 	}
 

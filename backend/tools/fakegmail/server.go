@@ -47,6 +47,7 @@ func (s *server) routes() *http.ServeMux {
 		writeJSON(w, map[string]any{"historyId": "100"})
 	})
 	m.HandleFunc("GET "+apiPrefix+"/labels", s.labels)
+	m.HandleFunc("GET "+apiPrefix+"/settings/sendAs", s.sendAs)
 	m.HandleFunc("POST "+apiPrefix+"/watch", func(w http.ResponseWriter, _ *http.Request) {
 		s.count("watch")
 		writeJSON(w, map[string]any{"historyId": "100", "expiration": strconv.FormatInt(time.Now().Add(7*24*time.Hour).UnixMilli(), 10)})
@@ -223,6 +224,21 @@ func (s *server) profile(w http.ResponseWriter, r *http.Request) {
 	if box, ok := s.mailboxOf(w, r); ok {
 		writeJSON(w, map[string]any{"emailAddress": s.boxes[box].owner, "historyId": "100", "messagesTotal": s.boxes[box].count})
 	}
+}
+
+// sendAs answers the mailbox's one send-as address with an HTML signature
+// that carries markup a saved signature keeps and markup it drops.
+func (s *server) sendAs(w http.ResponseWriter, r *http.Request) {
+	s.count("sendAs")
+	box, ok := s.mailboxOf(w, r)
+	if !ok {
+		return
+	}
+	owner := s.boxes[box].owner
+	writeJSON(w, map[string]any{"sendAs": []map[string]any{{
+		"sendAsEmail": owner, "isPrimary": true, "isDefault": true,
+		"signature": `<div><b>` + owner + `</b><br>Demo GmbH<script>alert(1)</script></div>`,
+	}}})
 }
 
 // list pages through the mailbox newest first. The search query is ignored:

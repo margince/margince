@@ -365,10 +365,7 @@ func admittedBranchSQL(ctx context.Context, types []string, headPos, tailPos int
 			where = candidates + " AND t.archived_at IS NULL AND " + conjunction(branch.narrowing("t"), scope)
 			score = fmt.Sprintf("(%s + %d * (%s)::int)", score, companyAssociationScore, associated)
 		}
-		source := fmt.Sprintf("%s t WHERE %s", branch.table, where)
-		if branch.rankSample > 0 {
-			source = fmt.Sprintf("(SELECT t.* FROM %s LIMIT $%d) t", source, arg(branch.rankSample))
-		}
+		source := branch.rowSource(ctx, where, arg)
 		branches = append(branches, fmt.Sprintf(
 			`SELECT '%s'::text AS rtype, t.id, %s AS title, %s AS snippet,
 			        %s::float8 AS score, %s, %s AS identifier_match

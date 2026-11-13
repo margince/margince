@@ -242,7 +242,8 @@ def _matching(session, record_type, name):
         arguments = {"record_type": record_type, "limit": _PAGE_LIMIT}
         if cursor:
             arguments["cursor"] = cursor
-        page = _data(session, "list_records", arguments)
+        # Through its router: tools/call refuses a name tools/list does not offer.
+        page = _data(session, "find_records", {"engine": "list", **arguments})
         records = page.get("records")
         if not isinstance(records, list):
             raise Unreadable(f"list_records answered with no records list: {str(page)[:200]}")

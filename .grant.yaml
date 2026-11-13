@@ -16,6 +16,10 @@ verbose: false # Enable verbose output (default: false)
 # `allow` rather than in ignore-packages, which is for things that only ever run
 # in CI. Admitting it is a maintainer decision, taken deliberately rather than to
 # clear a red build.
+#
+# Unicode-3.0 is here for the Unicode CLDR zone files copied into
+# backend/internal/modules/capture/graphcal/data/, which are built into the
+# product. It is permissive in the same way as MIT: notice and disclaimer only.
 allow:
   - Apache-2.0
   - MIT
@@ -33,6 +37,7 @@ allow:
   - CC-BY-4.0
   - Python-2.0
   - Unlicense
+  - Unicode-3.0
   - BUSL-1.1
 
 # First-party components carry no third-party license to gate. The scan now
@@ -87,6 +92,7 @@ copied-file-licenses:
   - Apache-2.0
   - MIT
   - Community-Spec-1.0
+  - Unicode-3.0
 
 require-license: true # When true, deny packages with no detected licenses
 require-known-license: true

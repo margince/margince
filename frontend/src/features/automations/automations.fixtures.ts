@@ -19,6 +19,7 @@ const NO_PARAMS = { type: "object", properties: {} };
 export const AUTOMATION_CATALOG: CatalogEntry[] = [
   {
     key: "no_activity_reminder",
+    group: "deals",
     name: "No-activity reminder",
     description:
       "Reminds an entity's owner once its most recent captured activity has gone quiet for N days.",
@@ -29,6 +30,7 @@ export const AUTOMATION_CATALOG: CatalogEntry[] = [
   },
   {
     key: "renewal_reminder",
+    group: "customers",
     name: "Renewal reminder",
     description:
       "Reminds an entity's owner as its configured renewal date approaches.",
@@ -39,6 +41,7 @@ export const AUTOMATION_CATALOG: CatalogEntry[] = [
   },
   {
     key: "stage_change_notify",
+    group: "deals",
     name: "Stage-change notify",
     description:
       "Notifies the deal's owner when someone else or an automation moves the deal, including closes. The owner's own moves stay in deal history.",
@@ -58,8 +61,10 @@ export const AUTOMATION_CATALOG: CatalogEntry[] = [
   },
   {
     key: "post_meeting_recap",
-    name: "Post-meeting recap draft",
-    description: "Drafts a follow-up recap whenever a meeting is logged.",
+    group: "meetings",
+    name: "Draft a follow-up after a meeting",
+    description:
+      "Drafts a follow-up once a customer meeting is held and has usable notes. The draft waits for a colleague and is never sent by the rule.",
     trigger: "activity.captured",
     action: "draft_email",
     tier: "auto_execute",
@@ -67,6 +72,7 @@ export const AUTOMATION_CATALOG: CatalogEntry[] = [
   },
   {
     key: "list_membership_notify",
+    group: "lists",
     name: "Live List alert",
     description: "Tells you when a record joins a Live List you watch.",
     trigger: "list.evaluated",
@@ -152,4 +158,12 @@ export function configuredAutomations(now: number): Automation[] {
       runs_last_30_days: 0,
     },
   ];
+}
+
+export function configuredAutomation(id: string, now: number): Automation {
+  const rule = configuredAutomations(now).find(
+    (candidate) => candidate.id === id,
+  );
+  if (!rule) throw new Error(`No automation fixture named ${id}`);
+  return rule;
 }
