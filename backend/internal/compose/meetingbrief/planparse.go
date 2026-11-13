@@ -282,9 +282,9 @@ func keptQuestions(raw []replyQuestion, known map[Evidence]string) []Question {
 	return out
 }
 
-// keptCoach is the scenario's coach line when it holds as a recommendation to
-// the lead: grounded in the branch's own records, no id, no writer opener, and
-// not the play again. Anything else leaves the branch without a coach line.
+// keptCoach is the scenario's coach line when it holds as advice to the lead.
+// It must rest on the branch's own records, name no id, not open with the
+// writer, and not repeat the play. Otherwise the branch has no coach line.
 func keptCoach(scenario replyScenario, cited []Evidence, known map[Evidence]string) string {
 	coach := strings.TrimSpace(scenario.Coach)
 	if coach == "" || spellsAnID(coach) || normalisedSubject(coach) == normalisedSubject(scenario.Play) ||
