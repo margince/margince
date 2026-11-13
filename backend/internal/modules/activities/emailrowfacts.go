@@ -21,11 +21,16 @@ import (
 //
 // ONE entry point rather than a pass per fact, because they are one
 // obligation. Each is read once per page and refused on a withheld row. Who
-// wrote each row rides it too (WithMessageVoices).
+// wrote each row and whom it was with ride the same read of its parties.
 func WithEmailRowFacts(ctx context.Context, tx pgx.Tx, page []crmcontracts.Activity, asOf time.Time) error {
-	if err := WithMessageVoices(ctx, tx, page); err != nil {
+	parties, err := pageParties(ctx, tx, page)
+	if err != nil {
 		return err
 	}
+	if err := withMessageVoices(ctx, tx, page, parties); err != nil {
+		return err
+	}
+	applyCounterparties(page, parties)
 	if err := withMessageMoves(ctx, tx, page, asOf); err != nil {
 		return err
 	}
@@ -60,6 +65,20 @@ func WithEmailRowFacts(ctx context.Context, tx pgx.Tx, page []crmcontracts.Activ
 		return err
 	}
 	return withCalendarChanges(ctx, tx, page)
+}
+
+// applyCounterparties names the far side on each readable email row. It uses
+// the message viewer's own rule, so a list and the viewer name one person. A
+// withheld row names nobody: who it was with is content.
+func applyCounterparties(page []crmcontracts.Activity, parties map[ids.UUID]emailParties) {
+	for i := range page {
+		summary := page[i].EmailSummary
+		if summary == nil || !contentReadable(page[i]) {
+			continue
+		}
+		summary.Counterparty, summary.CounterpartyContactId =
+			rowCounterparty(page[i].Direction, parties[ids.UUID(page[i].Id)])
+	}
 }
 
 // applyEverySeatReach widens `team` to `workspace` on the rows a stranger can
