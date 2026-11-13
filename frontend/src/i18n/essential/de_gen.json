@@ -2307,7 +2307,7 @@
   "aiTask.name.propose_roles": "Erkennung von Einkaufsrollen",
   "aiTask.name.rate_extract": "Erfassung von Wechselkursen",
   "aiTask.name.report_interpret": "Bewertung eines Vertriebsberichts",
-  "aiTask.name.report_setup": "Bericht aus einer Beschreibung einrichten",
+  "aiTask.name.report_setup": "Berichtseinrichtung oder Umsatzziele vorschlagen",
   "aiTask.name.request_settlement": "Prüfung der Antwort auf das Anliegen",
   "aiTask.name.rewrite": "Umformulieren",
   "aiTask.name.signal_extract": "Erkennung von Gesprächssignalen",

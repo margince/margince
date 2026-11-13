@@ -125,11 +125,25 @@ Coverage "withheld", "failed" or "unsupported" prohibits a conclusion from that 
 "confidence" is how far the cited figures carry the reading.
 `
 
-// Request is the one request production sends for this site.
+// ViewProgress is one Progress reading. Its rule joins the request only for
+// that view, so the other views' request stays as certified.
+const ViewProgress = "progress"
+
+const progressRule = `View "progress" is one seller's or one team's closed revenue against the sales goal for one month or one calendar year. Say where the period stands against the goal, then name what is still open: what is missing to the goal and the open deals expected to close in the period. Write one or two short paragraphs. With no goal cell, no goal is set for the whole period: judge nothing against one. A goal with partial coverage counts only the months that have one. Open deals expected in the period are not closed revenue and do not establish that the goal will be reached.
+`
+
+func viewRule(view string) string {
+	if view == ViewProgress {
+		return progressRule
+	}
+	return ""
+}
+
+// Request is the one request production sends for both sites.
 func Request(in Input, lang string) model.Request {
 	fence := promptfence.New()
 	return model.Request{
-		System:         system + "\n" + promptvoice.Rule + "\n" + promptlang.Rule(lang) + "\n" + fence.Rule("report figures and recorded decisions"),
+		System:         system + viewRule(in.View) + "\n" + promptvoice.Rule + "\n" + promptlang.Rule(lang) + "\n" + fence.Rule("report figures and recorded decisions"),
 		Messages:       []model.Message{{Role: "user", Content: fence.Wrap(encode(in))}},
 		MaxTokens:      ai.ReasoningOutputMaxTokens,
 		SecretStripper: ai.NewSecretStripper(),

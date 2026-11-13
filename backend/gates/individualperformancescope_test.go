@@ -99,6 +99,7 @@ var notYetHeldOnEveryPath = gatekit.Waive(map[string]string{
 	"discardSalesGoalDraft":       "goalAccess proves the reader's own seat by comparing ids, which the walk cannot read as a check",
 	"publishSalesGoalPlan":        "goalAccess proves the reader's own seat by comparing ids, which the walk cannot read as a check",
 	"withdrawSalesGoalPlan":       "goalAccess proves the reader's own seat by comparing ids, which the walk cannot read as a check",
+	"proposeSalesGoalMonths":      "goalAccess proves the reader's own seat by comparing ids, which the walk cannot read as a check",
 	"answerReportingQuestionCard": "the restricted answer carries no figure, but the walk reads its write as one",
 	"assessSalesReview":           "a refusal returned through RequireHumanOrItsAgent reads to the walk as a success",
 	"createReportingTarget":       "answers an owner-scoped target value, and the write path is not yet held to the switch on every scope",

@@ -5,12 +5,8 @@ package compose
 
 import (
 	"context"
-	"crypto/sha256"
-	"encoding/hex"
-	"encoding/json"
 	"fmt"
 	"log/slog"
-	"strconv"
 	"sync"
 	"time"
 
@@ -90,11 +86,31 @@ func (s *salesAssessments) AssessView(ctx context.Context, selection crmcontract
 	if err != nil {
 		return crmcontracts.SalesAssessment{}, err
 	}
+	return s.answer(ctx, actor.UserID, salesassessment.KeyPart(selection), evaluation.EvaluationKey, in, refresh)
+}
+
+// AssessProgress answers the summary of one Progress reading for the reader,
+// kept and written as the review's assessment is. The figures were read
+// under the reader's own reach before this is asked.
+func (s *salesAssessments) AssessProgress(ctx context.Context, period crmcontracts.GetSalesProgressParams, evaluationKey string, in salesassessment.Input, refresh bool) (crmcontracts.SalesAssessment, error) {
+	if err := auth.RequireHumanOrItsAgent(ctx); err != nil {
+		return crmcontracts.SalesAssessment{}, err
+	}
+	actor, ok := principal.Actor(ctx)
+	if !ok {
+		return crmcontracts.SalesAssessment{}, apperrors.ErrPermissionDenied
+	}
+	return s.answer(ctx, actor.UserID, salesassessment.KeyPart(period), evaluationKey, in, refresh)
+}
+
+// answer serves what is kept for this reader and subject, joins a call in
+// flight for the same key, or writes anew. Refresh forces a new call.
+func (s *salesAssessments) answer(ctx context.Context, reader ids.UUID, subject []byte, evaluationKey string, in salesassessment.Input, refresh bool) (crmcontracts.SalesAssessment, error) {
 	lang := identity.BaseLanguageForPrompt(ctx, s.db.Pool())
-	key := assessmentKey(actor.UserID.String(), lang, s.routingVersion, selection, in)
+	key := salesassessment.Key(reader.String(), lang, s.routingVersion, subject, in)
 	if !refresh {
 		if out, found := s.cached(key); found {
-			out.EvaluationKey = evaluation.EvaluationKey
+			out.EvaluationKey = evaluationKey
 			return out, nil
 		}
 	}
@@ -106,12 +122,12 @@ func (s *salesAssessments) AssessView(ctx context.Context, selection crmcontract
 			return crmcontracts.SalesAssessment{}, ctx.Err()
 		}
 		if out, found := s.cached(key); found {
-			out.EvaluationKey = evaluation.EvaluationKey
+			out.EvaluationKey = evaluationKey
 			return out, nil
 		}
 	}
 	defer release()
-	out := s.write(ctx, evaluation, in, lang)
+	out := s.write(ctx, evaluationKey, in, lang)
 	if out.GeneratedBy == crmcontracts.WrittenByModel {
 		s.keep(key, out)
 	}
@@ -155,7 +171,7 @@ func (s *salesAssessments) prepareAssessment(ctx context.Context, selection crmc
 		}
 		in.Cells = append(in.Cells, work...)
 	}
-	displayAssessmentFigures(&in, string(reporting.ExplanationCopy(evaluation.Context).Lang()))
+	salesassessment.DisplayFigures(&in, string(reporting.ExplanationCopy(evaluation.Context).Lang()))
 	return evaluation, in, nil
 }
 
@@ -214,9 +230,9 @@ func (s *salesAssessments) keep(key string, out crmcontracts.SalesAssessment) {
 
 // write asks the model, or serves the deterministic floor: no sentences,
 // and generated_by identifies the source while measured actions stay usable.
-func (s *salesAssessments) write(ctx context.Context, evaluation crmcontracts.ReportingEvaluation, in salesassessment.Input, lang string) crmcontracts.SalesAssessment {
+func (s *salesAssessments) write(ctx context.Context, evaluationKey string, in salesassessment.Input, lang string) crmcontracts.SalesAssessment {
 	out := crmcontracts.SalesAssessment{
-		EvaluationKey: evaluation.EvaluationKey,
+		EvaluationKey: evaluationKey,
 		GeneratedAt:   s.now().UTC(),
 		GeneratedBy:   crmcontracts.WrittenByDeterministic,
 		Sentences:     []crmcontracts.SalesAssessmentSentence{},
@@ -274,27 +290,6 @@ func foldAssessment(out crmcontracts.SalesAssessment, written salesassessment.Wr
 		out.ModelUsed = &served
 	}
 	return out
-}
-
-// assessmentKey is what one written assessment answers for: this reader,
-// this selection, everything the model read, this prompt and this model
-// binding. The evaluation's own instant is left out, so the same figures
-// read a minute later are the same assessment.
-func assessmentKey(reader, lang, routingVersion string, selection crmcontracts.ReportingSelection, in salesassessment.Input) string {
-	hash := sha256.New()
-	for _, part := range []string{reader, lang, routingVersion, salesassessment.PromptVersion} {
-		hash.Write([]byte(part))
-		hash.Write([]byte{0})
-	}
-	for _, read := range []any{selection, in} {
-		encoded, err := json.Marshal(read)
-		if err != nil {
-			encoded = []byte(fmt.Sprint(read))
-		}
-		hash.Write(encoded)
-		hash.Write([]byte{0})
-	}
-	return hex.EncodeToString(hash.Sum(nil))
 }
 
 // gather turns the evaluation into what the model reads. That is the cells
@@ -398,20 +393,11 @@ func assessmentCell(id, label string, value *float64, unit string, window string
 		value = new(float64)
 	}
 	if value != nil {
-		cell.Value = figureText(*value, unit)
+		cell.Value = salesassessment.FigureText(*value, unit)
 	} else {
 		cell.Value = "not measured"
 	}
 	return cell
-}
-
-// figureText writes a figure the way the page prints it: money in major
-// units, a count or rate as it is.
-func figureText(value float64, unit string) string {
-	if values.ValidCurrency(unit) {
-		return values.MajorUnits(int64(value), unit) + " " + unit
-	}
-	return strconv.FormatFloat(value, 'f', -1, 64) + " " + unit
 }
 
 // candidates are the open pipeline's largest deals the reader may see, read
@@ -438,7 +424,7 @@ func (s *salesAssessments) candidates(ctx context.Context, selection crmcontract
 		}
 		candidate := salesassessment.CandidateIn{ID: row.SourceId.String(), Name: row.Label, OwnerID: row.OwnerId.String()}
 		if row.Value != nil {
-			candidate.Amount = figureText(*row.Value, evaluation.Context.Currency)
+			candidate.Amount = salesassessment.FigureText(*row.Value, evaluation.Context.Currency)
 		}
 		out = append(out, candidate)
 	}
@@ -491,4 +477,10 @@ func assessmentCells(in salesassessment.Input) []crmcontracts.SalesAssessmentCel
 		out = append(out, crmcontracts.SalesAssessmentCell{Id: cell.ID, Label: cell.Label, Value: cell.Value, Display: new(salesassessment.CellDisplay(cell))})
 	}
 	return out
+}
+
+// assessProgress asks the assessments bound now, so a lane bound after
+// assembly is the one a Progress summary is written on.
+func (s *Server) assessProgress(ctx context.Context, period crmcontracts.GetSalesProgressParams, evaluationKey string, in salesassessment.Input, refresh bool) (crmcontracts.SalesAssessment, error) {
+	return s.salesAssessmentHandlers.svc.AssessProgress(ctx, period, evaluationKey, in, refresh)
 }
