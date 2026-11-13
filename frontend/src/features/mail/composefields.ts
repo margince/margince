@@ -54,6 +54,7 @@ export type FieldsSnapshot = Readonly<{
   body: string;
   html: string;
   intent: string;
+  draftedIntent: string;
   context: CommunicationContext | "";
   sendAt: string;
   sendSchedule?: ScheduleFields;
@@ -76,6 +77,7 @@ export function emptyFields(): FieldsSnapshot {
     body: "",
     html: "",
     intent: "",
+    draftedIntent: "",
     context: "",
     sendAt: "",
     provenance: null,
@@ -147,13 +149,17 @@ export function useComposeFields({
     () =>
       edit?.html ?? (initialMessage ? paragraphsFrom(initialMessage.body) : ""),
   );
-  const [intent, setIntent] = useState(askedIntent ?? "");
+  const asked = askedIntent ?? "";
+  const [intent, setIntent] = useState(asked);
+  // The purpose the words on screen were last drafted to. A rewrite verb keeps
+  // it, since it rewrites the words without reading the purpose.
+  const [draftedIntent, setDraftedIntent] = useState(asked);
   // Keyed on the caller's ask, so a second moment action replaces the reason
   // the first one seeded.
-  const [seededIntent, setSeededIntent] = useState(askedIntent ?? "");
-  if ((askedIntent ?? "") !== seededIntent) {
-    setSeededIntent(askedIntent ?? "");
-    setIntent(askedIntent ?? "");
+  const [seededIntent, setSeededIntent] = useState(asked);
+  if (asked !== seededIntent) {
+    setSeededIntent(asked);
+    setIntent(asked);
   }
   // What this message is, when the record does not say. Empty until the
   // reader answers, and never asked on a reply (see contextFor).
@@ -327,7 +333,11 @@ export function useComposeFields({
     setSendAtValue(saved.sendAt);
     setSendSchedule(saved.sendSchedule);
     const state = saved.editorState;
-    setIntent(state?.intent ?? "");
+    const savedIntent = state?.intent ?? "";
+    setIntent(savedIntent);
+    // The saved state does not carry the drafted purpose, so a restored
+    // purpose counts as the one its words were drafted to.
+    setDraftedIntent(savedIntent);
     setServedBody(state?.served_body ?? "");
     setLanguage(chosenLanguage(state?.language));
     setDraftRef(null);
@@ -352,6 +362,7 @@ export function useComposeFields({
     body,
     html,
     intent,
+    draftedIntent,
     context,
     sendAt,
     sendSchedule,
@@ -377,6 +388,7 @@ export function useComposeFields({
     setBody(next.body);
     setHtml(next.html);
     setIntent(next.intent);
+    setDraftedIntent(next.draftedIntent);
     setContext(next.context);
     setSendAtValue(next.sendAt);
     setSendSchedule(next.sendSchedule);
@@ -405,6 +417,8 @@ export function useComposeFields({
     html,
     intent,
     setIntent,
+    draftedIntent,
+    setDraftedIntent,
     context,
     setContext,
     sendAt,

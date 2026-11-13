@@ -7571,7 +7571,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "compose.draftEmail": "Soạn email",
   "compose.drafting": "Đang soạn…",
   "compose.draftingBody": "Đang viết bản nháp.",
-  "compose.askAgain": "Đổi yêu cầu",
+  "compose.redraft": "Soạn lại",
   "compose.discardDraft": "Bỏ bản nháp",
   "compose.discardDraftHint":
     "Đánh dấu bản nháp này là chưa đạt để Voice DNA ghi nhận. Văn bản đã tạo sẽ không được lưu.",

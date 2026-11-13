@@ -7756,7 +7756,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "compose.draftEmail": "E-Mail entwerfen",
   "compose.drafting": "Wird entworfen…",
   "compose.draftingBody": "Der Entwurf wird geschrieben.",
-  "compose.askAgain": "Auftrag ändern",
+  "compose.redraft": "Neu entwerfen",
   "compose.discardDraft": "Entwurf verwerfen",
   "compose.discardDraftHint":
     "Markiert diesen Entwurf für deine Voice DNA als Fehlgriff. Der erzeugte Text wird nie gespeichert.",

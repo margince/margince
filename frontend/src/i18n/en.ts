@@ -7763,7 +7763,7 @@ export const en = {
   "compose.draftEmail": "Draft email",
   "compose.drafting": "Drafting…",
   "compose.draftingBody": "Writing the draft.",
-  "compose.askAgain": "Change the ask",
+  "compose.redraft": "Redraft",
   "compose.discardDraft": "Discard draft",
   "compose.discardDraftHint":
     "Marks this draft as a miss for your Voice DNA. The generated text is never kept.",
