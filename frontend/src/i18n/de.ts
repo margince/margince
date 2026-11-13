@@ -5147,7 +5147,9 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Diesen Eintrag archivieren? Er verschwindet aus dem Verlauf.",
   "activity.archiveDone": "Eintrag archiviert",
   "activity.archiveRefused":
-    "Du kannst nur Notizen und Aufgaben archivieren, die du selbst geschrieben hast. Eine Führungskraft kann diesen Eintrag für dich archivieren.",
+    "Du kannst nur Notizen, Aufgaben, Anrufe und Termine archivieren, die du selbst erfasst hast.",
+  "activity.archiveCalendarManaged":
+    "Die Kalendereinladung führt diesen Termin. Ändere ihn oder sag ihn über die Einladung ab.",
   "activity.notYoursToChange":
     "Du kannst diese Aktivität nicht ändern. Frage einen Admin nach Bearbeitungsrechten.",
   "activity.files.empty": "Noch keine Dateien an dieser Aktivität.",

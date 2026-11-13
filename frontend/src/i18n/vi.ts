@@ -5011,7 +5011,9 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "activity.archiveConfirm": "Lưu trữ mục này? Mục sẽ rời khỏi Lịch sử.",
   "activity.archiveDone": "Đã lưu trữ mục",
   "activity.archiveRefused":
-    "Bạn chỉ có thể lưu trữ ghi chú và công việc do chính bạn viết. Hãy nhờ quản lý lưu trữ mục này.",
+    "Bạn chỉ có thể lưu trữ ghi chú, công việc, cuộc gọi và cuộc họp do chính bạn ghi lại.",
+  "activity.archiveCalendarManaged":
+    "Lời mời trên lịch quản lý cuộc họp này. Đổi hoặc hủy cuộc họp qua lời mời.",
   "activity.notYoursToChange":
     "Bạn không có quyền sửa hoạt động này. Liên hệ quản trị viên để được cấp thêm quyền.",
   "activity.files.empty": "Hoạt động này chưa có tệp nào.",

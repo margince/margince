@@ -57613,9 +57613,10 @@ components:
           readOnly: true
           description: >-
             Whether THIS caller may archive THIS activity: the row write gate `writable` asks, plus the `activity:delete`
-            grant, or `activity:update` on a hand-logged note or task the caller wrote (under
-            their own stamp or through an agent acting for them). Captured correspondence and a
-            colleague's note need the delete grant. Server-computed per row, per caller. A UX
+            grant, or `activity:update` on a note, task, call or meeting the caller logged by hand
+            (under their own stamp or through an agent acting for them) that no provider import
+            backs. Sent and captured correspondence, a calendar-synced meeting and a colleague's
+            entry need the delete grant. A meeting a live invitation holds is never archivable. Server-computed per row, per caller. A UX
             signal, never the enforcement, exactly like `writable`; absent means NOT archivable.
         awaiting_outcome:
           type: boolean
