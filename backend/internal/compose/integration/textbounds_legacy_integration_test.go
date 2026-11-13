@@ -22,19 +22,13 @@ import (
 	"github.com/margince/margince/backend/migrations"
 )
 
+// textGuardFunction is what every text-limit trigger executes, so a migration
+// that names it is one that creates, re-creates or removes a guard.
+const textGuardFunction = "public.refuse_oversized_text"
+
 func withoutTextGuards(ctx context.Context, t *testing.T) func() {
 	t.Helper()
-	// Applied in this order, and removed in the reverse one: the shared functions,
-	// the table guards, the custom-field guards, then the custom track on top.
-	var ups, downs []string
-	for _, pair := range []struct {
-		namespace func() (dbmigrate.Namespace, error)
-		version   string
-	}{{migrations.Core, "1794600200"}, {migrations.Core, "1794600201"}, {migrations.Core, "1794600202"}, {migrations.Custom, "20261112130500"}} {
-		up, down := migrationPair(t, pair.namespace, pair.version)
-		ups = append(ups, up)
-		downs = append([]string{down}, downs...)
-	}
+	ups, downs := textGuardMigrations(t)
 	owner := SchemaPool(t)
 	for _, step := range downs {
 		if _, err := owner.Exec(ctx, step); err != nil {
@@ -66,21 +60,31 @@ func withoutTextGuards(ctx context.Context, t *testing.T) func() {
 	}
 }
 
-func migrationPair(t *testing.T, namespace func() (dbmigrate.Namespace, error), version string) (up, down string) {
+// textGuardMigrations returns every migration that touches a text guard, core
+// before the custom track that sits on it: ups in applied order, downs in the
+// reverse one, so undoing them leaves the schema as it was before any guard.
+func textGuardMigrations(t *testing.T) (ups, downs []string) {
 	t.Helper()
-	migrationSet, err := namespace()
-	if err != nil {
-		t.Fatal(err)
-	}
-	for _, migration := range migrationSet.Migrations {
-		if migration.Version == version {
-			up, down = migration.UpSQL, migration.DownSQL
+	for _, namespace := range []func() (dbmigrate.Namespace, error){migrations.Core, migrations.Custom} {
+		migrationSet, err := namespace()
+		if err != nil {
+			t.Fatal(err)
+		}
+		for _, migration := range migrationSet.Migrations {
+			if !strings.Contains(migration.UpSQL, textGuardFunction) {
+				continue
+			}
+			if len(ups) == 0 && !strings.Contains(migration.UpSQL, "FUNCTION "+textGuardFunction+"()") {
+				t.Fatalf("the first text-guard migration %s does not define %s", migration.Version, textGuardFunction)
+			}
+			ups = append(ups, migration.UpSQL)
+			downs = append([]string{migration.DownSQL}, downs...)
 		}
 	}
-	if up == "" || down == "" {
-		t.Fatalf("text-bound migration %s is absent", version)
+	if len(ups) == 0 {
+		t.Fatalf("no migration names %s", textGuardFunction)
 	}
-	return up, down
+	return ups, downs
 }
 
 func TestATranslationUpsertKeepsItsUnchangedEarlierLongName(t *testing.T) {
