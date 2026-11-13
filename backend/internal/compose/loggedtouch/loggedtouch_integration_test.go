@@ -9,6 +9,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/jackc/pgx/v5"
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
 	"github.com/margince/margince/backend/internal/compose/contact360"
@@ -20,8 +21,10 @@ import (
 	"github.com/margince/margince/backend/internal/modules/comms"
 	"github.com/margince/margince/backend/internal/modules/consent"
 	"github.com/margince/margince/backend/internal/platform/clocktest"
+	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/kernel/convstate"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 // The issue's case: a contact met once, with more than a page of newer
@@ -77,5 +80,55 @@ func TestANoteOlderThanAPageOfActivityStillCountsAsContact(t *testing.T) {
 	}
 	if state := contactdraft.ConversationState(page, now, time.UTC, newest...); state.Band == convstate.BandNone {
 		t.Error("with the note read past the page, the draft still writes a first touch")
+	}
+}
+
+// A meeting the contact attended counts though nothing links it to them, as a
+// calendar files a meeting by its attendees. A note about a colleague does not.
+func TestAMeetingTheContactAttendedCountsWithoutALink(t *testing.T) {
+	e := integration.Setup(t)
+	guest := e.SeedContact(t, "Priya Raman", nil)
+	colleague := e.SeedContact(t, "Bob Becker", nil)
+	now := clocktest.Now(t)
+	at, held := now.Add(-30*24*time.Hour), "held"
+	subject := "Pilot review"
+	meeting, _, err := e.Activities.LogActivity(e.Admin(), activities.LogActivityInput{
+		Kind: "meeting", Subject: &subject, OccurredAt: &at, MeetingStatus: &held, Source: "manual",
+		Links: []activities.ActivityLinkInput{{EntityType: "contact", EntityID: colleague}},
+	})
+	if err != nil {
+		t.Fatalf("logging the meeting: %v", err)
+	}
+	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+		_, err := tx.Exec(t.Context(), `INSERT INTO activity_participant (activity_id, contact_id, role)
+			VALUES ($1, $2, 'attendee')`, meeting.Id, guest)
+		return err
+	}); err != nil {
+		t.Fatalf("seating the guest: %v", err)
+	}
+	note := "Bob said Priya might join later"
+	if _, _, err := e.Activities.LogActivity(e.Admin(), activities.LogActivityInput{
+		Kind: "note", Subject: &note, OccurredAt: new(now.Add(-time.Hour)), Source: "manual",
+		Links: []activities.ActivityLinkInput{{EntityType: "contact", EntityID: colleague}},
+	}); err != nil {
+		t.Fatalf("logging the note: %v", err)
+	}
+
+	newest, err := Reader{Store: activities.NewStore(e.DB())}.NewestLoggedTouch(
+		e.Admin(), draftcore.LoggedOn{RecordType: "contact", ID: guest}, now)
+	if err != nil {
+		t.Fatalf("reading the newest logged touch: %v", err)
+	}
+	if len(newest) != 1 || newest[0].Id != meeting.Id {
+		t.Errorf("newest logged touch = %v, want only the meeting Priya attended", newest)
+	}
+
+	// No activity grant: the draft's view omits its timeline, and this read
+	// answers nothing rather than failing the draft.
+	contactOnly := e.As(e.Rep1, nil, principal.Permissions{Objects: map[string]principal.ObjectGrant{"contact": {Read: true}}})
+	none, err := Reader{Store: activities.NewStore(e.DB())}.NewestLoggedTouch(
+		contactOnly, draftcore.LoggedOn{RecordType: "contact", ID: guest}, now)
+	if err != nil || len(none) != 0 {
+		t.Errorf("a caller with no activity grant got %v (%v), want nothing and no error", none, err)
 	}
 }

@@ -27,9 +27,9 @@ func (a *askedLogged) NewestLoggedTouch(_ context.Context, on draftcore.LoggedOn
 	return nil, a.err
 }
 
-// The account draft asks for the company's newest logged touch, and a failed
-// read stops it.
-func TestAnAccountDraftReadsTheNewestLoggedTouchOfItsCompany(t *testing.T) {
+// The account draft asks for its recipient's newest logged touch, not the
+// company's: a note about a colleague is not having met them. A failed read stops it.
+func TestAnAccountDraftReadsTheNewestLoggedTouchOfItsRecipient(t *testing.T) {
 	company := ids.From[ids.CompanyKind](ids.NewV7())
 	human := principal.WithActor(context.Background(), principal.Principal{Type: principal.PrincipalHuman, ID: "human:u-1"})
 	contact := ids.NewV7()
@@ -44,8 +44,8 @@ func TestAnAccountDraftReadsTheNewestLoggedTouchOfItsCompany(t *testing.T) {
 	if _, _, err := svc.Draft(human, company, Request{ContactID: contact.String()}); err != nil {
 		t.Fatalf("drafting: %v", err)
 	}
-	if reader.on.RecordType != "company" || reader.on.ID != company.UUID {
-		t.Errorf("the draft asked about %+v, want the company", reader.on)
+	if reader.on.RecordType != "contact" || reader.on.ID != contact {
+		t.Errorf("the draft asked about %+v, want the recipient", reader.on)
 	}
 	reader.err = errors.New("down")
 	if _, _, err := svc.Draft(human, company, Request{ContactID: contact.String()}); err == nil {

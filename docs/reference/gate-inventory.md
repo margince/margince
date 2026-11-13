@@ -311,7 +311,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `documentreaders_test.go` | H1 | Every list of attachments in internal/modules/activities answers "which files does this record hold" through activities.documentMembership. |
 | `doitokenexposure_test.go` | H2 | The plaintext confirm token goes into the mail body and nowhere else. |
 | `draftlanguageevidence_test.go` | H2 | Every draft route reads its language from the same evidence. |
-| `draftloggedtouchwiring_test.go` | H3 | draftEngines are the packages whose draft classifies a conversation through draftcore.ClassifyWithLogged, and so reads the newest logged touch. |
+| `draftloggedtouchwiring_test.go` | H3 | draftWiringRoot is the tree whose construction of the draft services is read. |
 | `draftreplyreader_test.go` | H2 | A {subject, body} model reply has one reader. |
 | `draftsteering_test.go` | H2 | Every draft-email route takes the same steering. |
 | `duplicateindex_test.go` | H2 | One set of columns, one index. |

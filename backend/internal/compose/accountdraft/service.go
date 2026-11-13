@@ -154,13 +154,18 @@ func (s *Service) WithEnvelope(resolver *draftfloor.Resolver) *Service {
 // account we have corresponded with for a year that we are writing for the
 // first time, which is as false as the "just following up" this program set out
 // to remove, only in the other direction.
-func (s *Service) envelopeFor(ctx context.Context, companyID ids.CompanyID, view crmcontracts.Company360, req Request) (draftfloor.Envelope, error) {
+func (s *Service) envelopeFor(ctx context.Context, view crmcontracts.Company360, req Request) (draftfloor.Envelope, error) {
 	// The account's own correspondence, already bounded and scoped by the view.
 	// No stored language: an account history is many messages, and the language
 	// of whichever one sorted first is not the language of the exchange.
 	zone := s.envelope.Zone(ctx)
+	// The recipient's own notes and meetings, as the view keeps the rows they are a party to.
+	recipient, err := ids.ParseAs[ids.ContactKind](req.ContactID)
+	if err != nil {
+		return draftfloor.Envelope{}, err
+	}
 	logged, err := draftcore.WithNewestLogged(ctx, s.loggedTouches,
-		draftcore.LoggedOn{RecordType: "company", ID: companyID.UUID, ProjectID: req.ProjectID}, s.envelope.Now(), nil)
+		draftcore.LoggedOn{RecordType: "contact", ID: recipient.UUID, ProjectID: req.ProjectID}, s.envelope.Now(), nil)
 	if err != nil {
 		return draftfloor.Envelope{}, err
 	}
@@ -219,7 +224,7 @@ func (s *Service) Draft(
 	if err != nil {
 		return crmcontracts.CompanyEmailDraft{}, nil, err
 	}
-	if req.Envelope, err = s.envelopeFor(ctx, companyID, view, req); err != nil {
+	if req.Envelope, err = s.envelopeFor(ctx, view, req); err != nil {
 		return crmcontracts.CompanyEmailDraft{}, nil, err
 	}
 	in, err := FromView(view, req)
