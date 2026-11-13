@@ -269,11 +269,12 @@ func TestADayMeetingDatedTodayIsNotEvidenceUntilItsDateEnds(t *testing.T) {
 func TestARelinkedGuestIsNoEvidenceOfMeetingTheContactItNowNames(t *testing.T) {
 	ctx, pool := meetingTenureEnv(t)
 
-	// Each case seeds its own meeting, guest and contact, so the two cannot
-	// see each other's rows.
+	// Each case seeds its own meeting, guest and contact under a fresh name.
+	// Neither the other case nor an earlier run can then answer for it.
 	read := func(name string, relinked bool) bool {
 		t.Helper()
-		guest, judged := "guest-"+name+"@partner.example", "judged-"+name+"@chosen.example"
+		run := ids.NewV7().String()
+		guest, judged := "guest-"+name+"-"+run+"@partner.example", "judged-"+name+"-"+run+"@chosen.example"
 		var met bool
 		if err := database.WithWorkspaceTx(ctx, pool, func(tx pgx.Tx) error {
 			if err := seedMeetingWith(ctx, tx, guest, 30*24*time.Hour); err != nil {
