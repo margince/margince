@@ -111,19 +111,20 @@ func moveInputsGatedBy(ctx context.Context, arg func(any) int, asOf time.Time, l
 }
 
 // MailMoveColumnSQL is the History badge's move on the activity under alias a
-// as a column. It is NULL when the row is not a mail the reader may read, since
+// as a column. readable names the set MailThreadReadableSQL renders over a's
+// candidates. It is NULL when the row is not a mail the reader may read, since
 // the move is judged from the mail's content.
-func MailMoveColumnSQL(ctx context.Context, arg func(any) int, asOf time.Time) (string, error) {
-	content, err := auth.ActivityContentClause(ctx, "a", arg)
-	if err != nil {
-		return "", err
-	}
-	in, err := moveInputs(ctx, arg, asOf)
-	if err != nil {
-		return "", err
-	}
-	return `CASE WHEN a.kind = 'email' AND a.restricted_at IS NULL AND ` + content + ` THEN ` +
-		moveSQL(in, mailKinds) + ` END`, nil
+func MailMoveColumnSQL(ctx context.Context, arg func(any) int, asOf time.Time, readable string) string {
+	in := moveInputsGatedBy(ctx, arg, asOf, InGatedSetSQL(readable, "later"))
+	return `CASE WHEN a.kind = 'email' AND a.restricted_at IS NULL AND ` + InGatedSetSQL(readable, "a") + ` THEN ` +
+		moveSQL(in, mailKinds) + ` END`
+}
+
+// MailThreadReadableSQL renders the ids the reader may read among the
+// activities in candidates and every mail on their threads, under one content
+// gate. candidates names a set with id, thread_key, kind and channel_provider.
+func MailThreadReadableSQL(ctx context.Context, candidates string, arg func(any) int) (string, error) {
+	return auth.ContentReadableActivitiesSQL(ctx, threadNeedSQL(candidates), arg)
 }
 
 // MailMovesFor reads the History badge's move for each mail among activityIDs.
@@ -139,17 +140,17 @@ func MailMovesFor(ctx context.Context, tx pgx.Tx, activityIDs []ids.UUID, asOf t
 	wanted := arg(activityIDs)
 	// The mails and every mail on their threads share one content gate, which
 	// the later mail the move walks tests membership in.
-	readable, err := auth.ContentReadableActivitiesSQL(ctx, threadNeedSQL(mailMoveCandidates), arg)
+	readable, err := MailThreadReadableSQL(ctx, mailMoveCandidates, arg)
 	if err != nil {
 		return nil, err
 	}
-	in := moveInputsGatedBy(ctx, arg, asOf, inGatedSetSQL(mailMoveReadable, "later"))
+	in := moveInputsGatedBy(ctx, arg, asOf, InGatedSetSQL(mailMoveReadable, "later"))
 	rows, err := tx.Query(ctx, `WITH `+mailMoveCandidates+` AS MATERIALIZED (
   SELECT a.id, a.thread_key, a.kind, a.channel_provider FROM activity a
    WHERE a.id = ANY(`+fmt.Sprintf("$%d", wanted)+`) AND a.kind = 'email' AND a.restricted_at IS NULL),
 `+mailMoveReadable+` AS MATERIALIZED (`+readable+`)
 SELECT a.id, `+moveSQL(in, mailKinds)+` FROM activity a
- WHERE a.id IN (SELECT id FROM `+mailMoveCandidates+`) AND `+inGatedSetSQL(mailMoveReadable, "a"), args...)
+ WHERE a.id IN (SELECT id FROM `+mailMoveCandidates+`) AND `+InGatedSetSQL(mailMoveReadable, "a"), args...)
 	if err != nil {
 		return nil, fmt.Errorf("activities: reading whose move each mail is: %w", err)
 	}
