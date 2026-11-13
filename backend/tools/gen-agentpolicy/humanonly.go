@@ -60,11 +60,7 @@ func markedBelow(node any) bool {
 			}
 		}
 	case []any:
-		for _, member := range v {
-			if markedBelow(member) {
-				return true
-			}
-		}
+		return slices.ContainsFunc(v, markedBelow)
 	}
 	return false
 }
