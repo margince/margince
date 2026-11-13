@@ -169,7 +169,7 @@ run() {
     echo "repeat-changed-tests: the plan is empty, so no test to repeat"
     return 0
   fi
-  if grep -q '^go-' "$plan" && [[ ! -v COMPOSITION_FLAGS ]]; then
+  if grep -q '^go-' "$plan" && [[ -z "${COMPOSITION_FLAGS+set}" ]]; then
     echo "repeat-changed-tests: run the plan through \`make repeat-changed-tests\`; without its composition profile the lanes compose without the examples the template holds" >&2
     return 2
   fi
