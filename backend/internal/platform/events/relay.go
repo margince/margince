@@ -140,6 +140,11 @@ type Relay struct {
 	// maxLen caps each stream (XADD MAXLEN ~, events.md §4.4): streams
 	// are a transient delivery buffer, audit_log is the permanent record.
 	maxLen int64
+
+	// paused holds the relay while consumers are held too: past maxLen a
+	// stream drops entries they never read, and the outbox loses none.
+	paused     func(context.Context) bool
+	pauseEvery time.Duration
 }
 
 // NewRelay applies the operational defaults: 200ms idle
@@ -148,13 +153,21 @@ type Relay struct {
 // §4.3 retention horizon at PoC write rates).
 func NewRelay(pool *pgxpool.Pool, rdb *redis.Client, log *slog.Logger) *Relay {
 	return &Relay{
-		pool:      pool,
-		rdb:       rdb,
-		log:       log,
-		interval:  200 * time.Millisecond,
-		batchSize: 256,
-		maxLen:    1 << 17,
+		pool:       pool,
+		rdb:        rdb,
+		log:        log,
+		interval:   200 * time.Millisecond,
+		batchSize:  256,
+		maxLen:     1 << 17,
+		pauseEvery: time.Minute,
 	}
+}
+
+// WithPause holds the relay while paused answers true, asking again every
+// minute. A nil paused never holds it.
+func (r *Relay) WithPause(paused func(context.Context) bool) *Relay {
+	r.paused = paused
+	return r
 }
 
 // Run relays until ctx is canceled. Errors are retried with backoff, not
@@ -163,6 +176,12 @@ func NewRelay(pool *pgxpool.Pool, rdb *redis.Client, log *slog.Logger) *Relay {
 func (r *Relay) Run(ctx context.Context) {
 	backoff := r.interval
 	for {
+		if r.paused != nil && r.paused(ctx) {
+			if !r.sleep(ctx, r.pauseEvery) {
+				return
+			}
+			continue
+		}
 		published, err := r.relayBatch(ctx)
 		switch {
 		case err != nil && ctx.Err() != nil:
@@ -177,11 +196,19 @@ func (r *Relay) Run(ctx context.Context) {
 			}
 		}
 
-		select {
-		case <-ctx.Done():
+		if !r.sleep(ctx, backoff) {
 			return
-		case <-time.After(backoff):
 		}
+	}
+}
+
+// sleep waits d and reports false when ctx ended first.
+func (r *Relay) sleep(ctx context.Context, d time.Duration) bool {
+	select {
+	case <-ctx.Done():
+		return false
+	case <-time.After(d):
+		return true
 	}
 }
 

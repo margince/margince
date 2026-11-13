@@ -181,13 +181,15 @@ func (said briefCopy) coachingWatchFor(plan Plan) string {
 	return said.Say(coachingWords.NoQuestions)
 }
 
-// coachingPaths are the branches a lead rehearses against. Taken from the
-// plan's own scenarios where it has them, so the lead and the rep are
-// preparing for the same meeting.
+// coachingPaths are the plan's own branches as a lead reads them. The labels
+// stay, so lead and rep prepare for one meeting; the coach's words replace the
+// rep's play. A branch with no coach line gives no path.
 func coachingPaths(plan Plan) []CoachingPath {
 	paths := make([]CoachingPath, 0, len(plan.Scenarios))
 	for _, scenario := range plan.Scenarios {
-		paths = append(paths, CoachingPath{Label: scenario.Label, Play: scenario.Play})
+		if scenario.Coach != "" {
+			paths = append(paths, CoachingPath{Label: scenario.Label, Play: scenario.Coach})
+		}
 	}
 	return paths
 }

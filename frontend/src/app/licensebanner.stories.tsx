@@ -24,10 +24,24 @@ const IN_GRACE: LicenseHolder = {
   renewal_due: true,
 };
 
+const DAY = 86_400_000;
+
+// A trial that ends `days` from whenever the story is opened, so it reads the
+// same on any day.
+function trialEnding(days: number) {
+  const ends = Date.now() + days * DAY;
+  return {
+    started_at: new Date(ends - 14 * DAY).toISOString(),
+    ends_at: new Date(ends).toISOString(),
+    ended: false,
+  };
+}
+
 function story(
   state: LicenseState,
   allow: GrantSpec = LICENSE_READER,
   license?: LicenseHolder,
+  trial?: ReturnType<typeof trialEnding>,
 ) {
   return () => {
     installFetchStub({
@@ -36,6 +50,7 @@ function story(
         jsonResponse({
           state,
           license,
+          trial,
           seats_used: 12,
           over_limit: false,
           checked_at: "2026-08-01T09:00:00Z",
@@ -59,6 +74,19 @@ type Story = StoryObj<typeof LicenseBanner>;
 export const Refused: Story = { render: story("rejected") };
 export const InGrace: Story = {
   render: story("valid", LICENSE_READER, IN_GRACE),
+};
+
+// A production installation with no licence runs on its trial. While more than
+// a week is left the orb's ring carries it, and this draws nothing. In the last
+// week it warns. It may be put away until tomorrow, except on the last day.
+export const TrialRunning: Story = {
+  render: story("absent", LICENSE_READER, undefined, trialEnding(10)),
+};
+export const TrialClosing: Story = {
+  render: story("absent", LICENSE_READER, undefined, trialEnding(3)),
+};
+export const TrialLastDay: Story = {
+  render: story("absent", LICENSE_READER, undefined, trialEnding(0.5)),
 };
 
 // No licence is every dev and demo stack's state, so it draws nothing.

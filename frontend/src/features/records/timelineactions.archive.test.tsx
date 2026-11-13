@@ -115,4 +115,22 @@ describe("archiving from the History", () => {
     expect(screen.getByText(en["activity.archiveRefused"])).toBeTruthy();
     expect(archives).toHaveLength(0);
   });
+
+  it("sends a meeting a live invitation holds to the invitation", async () => {
+    const { archives } = show({
+      ...NOTE,
+      kind: "meeting",
+      archivable: false,
+      calendar_managed: true,
+    });
+    await openMenu();
+    const archive = await screen.findByRole("button", {
+      name: en["activity.archive"],
+    });
+    expect(archive.hasAttribute("disabled")).toBe(true);
+    expect(
+      screen.getByText(en["activity.archiveCalendarManaged"]),
+    ).toBeTruthy();
+    expect(archives).toHaveLength(0);
+  });
 });

@@ -6,6 +6,7 @@ package activities
 import (
 	"context"
 	"errors"
+	"fmt"
 	"slices"
 	"strings"
 	"time"
@@ -252,19 +253,37 @@ func (s *Store) settleInvitation(ctx context.Context, tx pgx.Tx, row invitationR
 }
 
 func refuseActiveInvitationPatch(ctx context.Context, tx pgx.Tx, id ids.UUID) error {
-	args := schedulingArgs{}
-	var status string
-	err := tx.QueryRow(ctx, `SELECT status FROM meeting_invitation WHERE activity_id=`+args.add(id), args...).Scan(&status)
-	if errors.Is(err, pgx.ErrNoRows) {
-		return nil
-	}
+	held, err := invitationHeldMeetings(ctx, tx, []ids.UUID{id})
 	if err != nil {
 		return err
 	}
-	if invitationHoldsMeeting(status) {
+	if held[id] {
 		return &SchedulingArgumentError{Field: KindMeeting, Code: "calendar_managed", Message: "Change or cancel this meeting through its calendar invitation"}
 	}
 	return nil
+}
+
+// invitationHeldMeetings answers which of the activities a live invitation
+// holds. The archive refusal and the archivable flag both ask it, so the flag
+// never offers an archive the write refuses.
+func invitationHeldMeetings(ctx context.Context, tx pgx.Tx, activityIDs []ids.UUID) (map[ids.UUID]bool, error) {
+	out := make(map[ids.UUID]bool, len(activityIDs))
+	if len(activityIDs) == 0 {
+		return out, nil
+	}
+	args := schedulingArgs{}
+	rows, err := tx.Query(ctx, `SELECT m.activity_id FROM meeting_invitation m WHERE m.activity_id = ANY(`+args.add(activityIDs)+`) AND `+InvitationHoldsMeetingSQL("m"), args...)
+	if err != nil {
+		return nil, fmt.Errorf("activities: reading which meetings a live invitation holds: %w", err)
+	}
+	held, err := pgx.CollectRows(rows, pgx.RowTo[ids.UUID])
+	if err != nil {
+		return nil, fmt.Errorf("activities: reading which meetings a live invitation holds: %w", err)
+	}
+	for _, id := range held {
+		out[id] = true
+	}
+	return out, nil
 }
 
 // calendarManaged reports whether a live invitation holds the meeting, so its

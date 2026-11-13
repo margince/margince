@@ -12,12 +12,14 @@ import (
 	"mime"
 	"net/http"
 	"regexp"
+	"time"
 
 	"github.com/jackc/pgx/v5"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/httperr"
+	"github.com/margince/margince/backend/internal/platform/ratelimit"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -30,6 +32,37 @@ const maxInvoiceDocumentBytes = 20 << 20
 // pdfMediaType is the one kind of document the core serves. Anything else a
 // source sends could be rendered by the browser as a page of our origin.
 const pdfMediaType = "application/pdf"
+
+// invoiceDocumentsPerMinute is how many documents one member may fetch in a
+// minute. Each one is a live call against the vendor's quota. The ceiling stops
+// one runaway reader or agent loop from draining it; a reader opening invoices
+// by hand needs far fewer.
+const invoiceDocumentsPerMinute = 20
+
+// invoiceDocumentFetches meters document fetches per member. FailClosed: an
+// unmetered window can spend the vendor quota for the day, and that cannot be
+// taken back.
+var invoiceDocumentFetches = ratelimit.New("finance/invoice-document-per-user", ratelimit.FailClosed, invoiceDocumentsPerMinute, time.Minute)
+
+// documentCeilingError refuses a fetch past the ceiling. It names the ceiling
+// and the wait, so a client reads Retry-After rather than parsing a sentence.
+type documentCeilingError struct{ waitSeconds int }
+
+func (e documentCeilingError) Error() string {
+	return fmt.Sprintf("at most %d invoice documents a minute; try again in %d seconds", invoiceDocumentsPerMinute, e.waitSeconds)
+}
+
+func (e documentCeilingError) Unwrap() error { return apperrors.ErrBudgetExceeded }
+
+func (e documentCeilingError) Unreferenced() error {
+	return fmt.Errorf("%s: %w", e.Error(), apperrors.ErrBudgetExceeded)
+}
+
+func (e documentCeilingError) FaultReference() map[string]any {
+	return map[string]any{"limit": map[string]any{"ceiling": invoiceDocumentsPerMinute, "window_seconds": 60}}
+}
+
+func (e documentCeilingError) RetryAfterSeconds() int { return e.waitSeconds }
 
 // unsafeFileRune is what a source's invoice number may not carry into a file name.
 var unsafeFileRune = regexp.MustCompile(`[^A-Za-z0-9._-]+`)
@@ -67,6 +100,11 @@ func (s *Store) InvoiceDocumentFor(ctx context.Context, invoiceID ids.UUID) (Inv
 	if err != nil {
 		return InvoiceDocument{}, err
 	}
+	// Counted only once the invoice is found and visible, so a miss spends
+	// nothing of the caller's budget.
+	if err := admitDocumentFetch(ctx); err != nil {
+		return InvoiceDocument{}, err
+	}
 	// The source is asked outside the transaction, so a slow vendor holds no
 	// database connection.
 	provider, ok := s.open(target.provider, target.conn)
@@ -84,6 +122,26 @@ func (s *Store) InvoiceDocumentFor(ctx context.Context, invoiceID ids.UUID) (Inv
 		return InvoiceDocument{}, err
 	}
 	return InvoiceDocument{Body: document.Body, Filename: documentFilename(target)}, nil
+}
+
+// admitDocumentFetch counts one document fetch against the caller's minute,
+// and refuses it once the caller is past the ceiling. The budget is the
+// human's, shared by every agent acting for them, so minting passports or
+// refreshing a token does not buy a fresh one. A principal with no human
+// behind it is counted under its own id.
+func admitDocumentFetch(ctx context.Context) error {
+	actor, ok := principal.Actor(ctx)
+	if !ok {
+		return apperrors.ErrPermissionDenied
+	}
+	key := actor.ID
+	if !actor.UserID.IsZero() {
+		key = "user:" + actor.UserID.String()
+	}
+	if !invoiceDocumentFetches.Allow(key) {
+		return documentCeilingError{waitSeconds: invoiceDocumentFetches.RetryAfterSeconds()}
+	}
+	return nil
 }
 
 // servesDocuments answers whether the named source serves invoice documents,

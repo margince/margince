@@ -261,3 +261,52 @@ func TestADayMeetingDatedTodayIsNotEvidenceUntilItsDateEnds(t *testing.T) {
 		}
 	}
 }
+
+// A row a member relinked names the contact the member chose, not one the
+// calendar listed. The same row is evidence while the calendar named that
+// contact, and stops being evidence once relinked_at marks it as the member's.
+// The columns set here are the ones the activities relink writes.
+func TestARelinkedGuestIsNoEvidenceOfMeetingTheContactItNowNames(t *testing.T) {
+	ctx, pool := meetingTenureEnv(t)
+
+	// Each case seeds its own meeting, guest and contact under a fresh name.
+	// Neither the other case nor an earlier run can then answer for it.
+	read := func(name string, relinked bool) bool {
+		t.Helper()
+		run := ids.NewV7().String()
+		guest, judged := "guest-"+name+"-"+run+"@partner.example", "judged-"+name+"-"+run+"@chosen.example"
+		var met bool
+		if err := database.WithWorkspaceTx(ctx, pool, func(tx pgx.Tx) error {
+			if err := seedMeetingWith(ctx, tx, guest, 30*24*time.Hour); err != nil {
+				return err
+			}
+			var contactID ids.UUID
+			if err := tx.QueryRow(ctx, `INSERT INTO contact (full_name, source, captured_by)
+ VALUES ('The Chosen Contact', 'manual', 'human:test') RETURNING id`).Scan(&contactID); err != nil {
+				return err
+			}
+			if _, err := tx.Exec(ctx, `INSERT INTO contact_email (contact_id, email, source, captured_by)
+ VALUES ($1, $2, 'manual', 'human:test')`, contactID, judged); err != nil {
+				return err
+			}
+			if _, err := tx.Exec(ctx, `UPDATE activity_participant SET contact_id = $1,
+ relinked_at = CASE WHEN $2 THEN now() END
+ WHERE address = $3`, contactID, relinked, guest); err != nil {
+				return err
+			}
+			var err error
+			met, _, err = metInPersonTx(ctx, tx, judged, ids.NewV7())
+			return err
+		}); err != nil {
+			t.Fatalf("reading whether the workspace has met %s: %v", judged, err)
+		}
+		return met
+	}
+
+	if !read("calendar", false) {
+		t.Fatal("a calendar row naming the contact is not evidence; the relinked case below would prove nothing")
+	}
+	if read("relinked", true) {
+		t.Error("a row a member relinked counts as meeting the contact the member chose")
+	}
+}

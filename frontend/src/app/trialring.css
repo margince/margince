@@ -1,0 +1,81 @@
+/* The trial's ring over the orb's box. It sits outside the import ring the orb
+   draws for itself, so the two can show at once without touching. */
+.artrialring {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  --trialTone: var(--accent);
+}
+.artrialring[data-closing] {
+  --trialTone: var(--warning);
+}
+
+.artrialring svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+}
+
+.artrialring path,
+.artrialring circle.used {
+  fill: none;
+  stroke-width: 2.2;
+  stroke-linecap: round;
+}
+.artrialring .used {
+  stroke: color-mix(in srgb, var(--textSecondary) 28%, transparent);
+}
+.artrialring .left {
+  stroke: var(--trialTone);
+}
+
+.artrialring-today {
+  fill: var(--trialTone);
+}
+
+/* In the last week only today's dot breathes: a whole arc that breathes reads as
+   faded half the time. Never for a reader who asked for less motion. */
+@media (prefers-reduced-motion: no-preference) {
+  .artrialring[data-closing] .artrialring-today {
+    animation: artrialring-breathe 2.4s ease-in-out infinite;
+    transform-box: fill-box;
+    transform-origin: center;
+  }
+}
+@keyframes artrialring-breathe {
+  50% {
+    transform: scale(1.35);
+    opacity: 0.7;
+  }
+}
+
+.artrialring-arc,
+.artrialring-count {
+  display: none;
+}
+
+/* The folded rail: one smooth arc, and in the last week the count on the orb,
+   inside its box so it never crosses the rail's edge. */
+.rail.collapsed .artrialring-marks {
+  display: none;
+}
+.rail.collapsed .artrialring-arc {
+  display: inline;
+}
+.rail.collapsed .artrialring-count {
+  display: grid;
+  place-items: center;
+  position: absolute;
+  inset-block-end: 0;
+  inset-inline-end: 0;
+  min-width: 16px;
+  height: 16px;
+  padding-inline: var(--space-1);
+  border-radius: var(--r-full);
+  corner-shape: round;
+  background: var(--trialTone);
+  color: var(--textOnStatusControl);
+  font: var(--fontBodySmall);
+  font-variant-numeric: tabular-nums;
+}

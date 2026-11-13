@@ -433,6 +433,7 @@ var vocabulary = []sentinelFault{
 	{apperrors.ErrRequiresApproval, "staged_for_approval", systemtext.Literal("jobs.staged_for_approval.sentence"), systemtext.Literal("jobs.staged_for_approval.remedy")},
 	{apperrors.ErrSeatTierInsufficient, "seat_tier_insufficient", systemtext.Literal("jobs.seat_tier_insufficient.sentence"), systemtext.Literal("jobs.seat_tier_insufficient.remedy")},
 	{apperrors.ErrSeatLimitReached, "seat_limit_reached", systemtext.Literal("jobs.seat_limit_reached.sentence"), systemtext.Literal("jobs.seat_limit_reached.remedy")},
+	{apperrors.ErrTrialEnded, "trial_ended", systemtext.Literal("jobs.trial_ended.sentence"), systemtext.Literal("jobs.trial_ended.remedy")},
 	{apperrors.ErrScopeExceeded, "scope_exceeded", systemtext.Literal("jobs.scope_exceeded.sentence"), systemtext.Literal("jobs.scope_exceeded.remedy")},
 	{apperrors.ErrApprovalTokenInvalid, "approval_token_spent", systemtext.Literal("jobs.approval_token_spent.sentence"), systemtext.Literal("jobs.approval_token_spent.remedy")},
 	{apperrors.ErrUnsupportedBySoR, "unsupported_by_sor", systemtext.Literal("jobs.unsupported_by_sor.sentence"), systemtext.Literal("jobs.unsupported_by_sor.remedy")},

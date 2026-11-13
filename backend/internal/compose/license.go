@@ -19,6 +19,7 @@ import (
 
 	"github.com/jackc/pgx/v5/pgxpool"
 
+	"github.com/margince/margince/backend/internal/compose/installtrial"
 	"github.com/margince/margince/backend/internal/compose/licensereport"
 	"github.com/margince/margince/backend/internal/platform/config"
 	"github.com/margince/margince/backend/internal/platform/keyvault"
@@ -30,14 +31,10 @@ import (
 // watcher that holds it. The caller starts the watcher's re-check loop and
 // wires its posture into whatever reports it.
 //
-// A serving role boots on a license or it does not boot. Three postures refuse
-// it — a license the bundled module will not honor, a module that could not run
-// at all, and, in production, no license configured — and the third is the one
-// the deployment posture decides: an installation that names itself
-// non-production through MARGINCE_ENV keeps running unlicensed, which is how
-// every development, test and CI process in this repository boots. MARGINCE_ENV
-// is fail-closed, so an installation that names nothing is production and is
-// held to a license.
+// Two postures refuse the boot: a license the bundled module will not honor, and
+// a module that could not run at all. No license is not one of them. A
+// production installation without one runs on its trial (installtrial.Trial),
+// and a development or test one runs unlicensed with no trial at all.
 func EnsureLicense(ctx context.Context, log *slog.Logger, pool *pgxpool.Pool, vault keyvault.Vault, cfg *config.Config, env runtimeenv.Environment) (*licensecheck.Watcher, error) {
 	// The SOURCE is handed over, not a token: the watcher re-reads it. A
 	// license.token_file renewed in place takes effect on the next re-check;
@@ -54,10 +51,7 @@ func EnsureLicense(ctx context.Context, log *slog.Logger, pool *pgxpool.Pool, va
 		// known: platform's check is handed a token, not a configuration file.
 		return nil, fmt.Errorf("%w — %s", err, correctTheToken(cfg))
 	}
-	if err := refuseUnlicensedProduction(watcher.Posture(), env); err != nil {
-		return nil, err
-	}
-	licensereport.LogPosture(ctx, log, watcher.Posture(), licenseTokenOrigin(cfg, watcher.Posture()))
+	licensereport.LogPosture(ctx, log, watcher.Posture(), licenseTokenOrigin(cfg, watcher.Posture()), env)
 	return watcher, nil
 }
 
@@ -96,20 +90,6 @@ func licenseTokenOrigin(cfg *config.Config, posture licensecheck.Posture) string
 	return "keyvault"
 }
 
-// refuseUnlicensedProduction stops a production boot that configured no license.
-//
-// The error names both ways out: a licensed installation that lost its token
-// reference, and a development one that never named itself non-production.
-func refuseUnlicensedProduction(posture licensecheck.Posture, env runtimeenv.Environment) error {
-	if posture.State != licensecheck.StateAbsent || env.IsNonProduction() {
-		return nil
-	}
-	return fmt.Errorf("no license is configured and this installation is production: "+
-		"point license.token (or %s) at the license token issued for this installation, "+
-		"or, if this is a development or test installation, set %s=%s",
-		LicenseToken.Env(), runtimeenv.EnvVar, runtimeenv.Development)
-}
-
 // WithLicensePosture wires the resolved posture into everything this role does
 // with it: the /metrics section, the entitlement surface, and the ceiling seat
 // creation is held to. The function is read at scrape and call time rather than
@@ -126,6 +106,17 @@ func WithLicensePosture(posture func() licensecheck.Posture) Option {
 		// admin is held to the number they are shown. A refused or removed license
 		// keeps the last valid one's ceiling (Posture.SeatCeiling).
 		s.authHandlers = s.WithSeatCeiling(func() (int, bool) { return posture().SeatCeiling() })
+	}
+}
+
+// WithInstallationTrial wires the trial into the admission doors, /me, the agent
+// tools and the entitlement read. posture is read at call time, so a key entered
+// later ends the trial.
+func WithInstallationTrial(env runtimeenv.Environment, posture func() licensecheck.Posture, now func() time.Time) Option {
+	return func(s *Server, pool *pgxpool.Pool) {
+		trial := installtrial.New(pool, env, posture, now)
+		s.authHandlers = s.WithTrialLock(trial.Ended)
+		s.trial = trial
 	}
 }
 

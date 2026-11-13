@@ -381,7 +381,6 @@ eligible
 else
 email
 embed
-embeddings
 employer
 empty
 enable
@@ -1247,6 +1246,7 @@ transfer
 translation
 trash
 trend
+trial
 trigger
 true
 trust

@@ -109,11 +109,14 @@ export function MagicPanel({
   const done = rowsOf(shown?.done);
   const doneRecords = recordsOf(done);
   const coverageIncomplete = drawsDone && doneCoverageIncomplete(shown);
+  // A lane the server read to its bound may hold more than it drew.
+  const cut = new Set(rowsOf(receipt?.cut_at_limit));
   // The decision source read to its bound and still had more.
   const doneFloor =
     sumIsFloor("done", rowsOf(receipt?.done)) ||
     coverageIncomplete ||
-    receipt?.done_is_floor === true;
+    receipt?.done_is_floor === true ||
+    cut.has("done");
   // "All" would claim the whole of a count that is only a floor.
   const doneFold = plural(
     doneFloor ? "magic.done.atLeast" : "magic.done.all",
@@ -127,8 +130,21 @@ export function MagicPanel({
     },
   );
   const byDay = shown ? spansDays(shown.since, shown.as_of) : false;
+  // The done lane says "at least" in its fold. The waiting lanes say it here,
+  // so a cut queue never reads as the whole of it.
+  const laneNote = (lane: MagicLane): string | undefined => {
+    if (lane === "done") {
+      return coverageIncomplete ? t("magic.coverageIncomplete") : undefined;
+    }
+    return lane !== "watching" && cut.has(lane)
+      ? t("magic.laneCut")
+      : undefined;
+  };
   const read = sectionRead(state, shown, lanes, drawn, coverageIncomplete);
-  if (read === "empty") {
+  // A section of its own stays away until its read lands. Drawn as a loader,
+  // it took a block of the page and then left it again when nothing waited.
+  // Embedded, the section around it already waits for its own read.
+  if (read === "empty" || (read === "loading" && !embedded)) {
     return null;
   }
   const notShown = drawsWaiting ? rowsOf(shown?.not_shown).filter(told) : [];
@@ -164,11 +180,7 @@ export function MagicPanel({
           zone={zone}
           byDay={byDay}
           fold={lane === "done" ? doneFold : undefined}
-          note={
-            lane === "done" && coverageIncomplete
-              ? t("magic.coverageIncomplete")
-              : undefined
-          }
+          note={laneNote(lane)}
         />
       ))}
       {notShown.length > 0 && (

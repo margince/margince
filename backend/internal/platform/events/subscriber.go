@@ -57,6 +57,10 @@ type Subscriber struct {
 	// stream in a single call (subscriberbatch.go). handler remains the
 	// per-entry path it falls back to.
 	batchHandler BatchHandler
+	// paused, when it answers true, holds the group: nothing is read, so
+	// nothing is handled or acked, and the entries wait in the stream.
+	paused     func(context.Context) bool
+	pauseEvery time.Duration
 }
 
 // NewSubscriber wires a handler to a consumer group. The consumer name is
@@ -73,6 +77,8 @@ func NewSubscriber(rdb *redis.Client, group kevents.Group, handler Handler, log 
 		block:    2 * time.Second,
 		minIdle:  5 * time.Minute,
 		batch:    64,
+		// How often a held group asks again whether to resume.
+		pauseEvery: time.Minute,
 	}
 }
 
@@ -84,6 +90,13 @@ func (s *Subscriber) WithMinIdle(d time.Duration) *Subscriber {
 	if d > 0 {
 		s.minIdle = d
 	}
+	return s
+}
+
+// WithPause holds the group while paused answers true, asking again every
+// minute. A nil paused never holds it.
+func (s *Subscriber) WithPause(paused func(context.Context) bool) *Subscriber {
+	s.paused = paused
 	return s
 }
 
@@ -102,7 +115,14 @@ func (s *Subscriber) Run(ctx context.Context) error {
 	}
 
 	for ctx.Err() == nil {
-		s.reclaim(ctx)
+		if s.held(ctx) {
+			s.wait(ctx, s.pauseEvery)
+			continue
+		}
+		// The reclaim pass can run many pages, so the hold may begin during it.
+		if s.reclaim(ctx); s.held(ctx) {
+			continue
+		}
 
 		res, err := s.rdb.XReadGroup(ctx, &redis.XReadGroupArgs{
 			Group:    s.group.Name,
@@ -147,12 +167,22 @@ func (s *Subscriber) Run(ctx context.Context) error {
 	return ctx.Err()
 }
 
+// held reports whether WithPause's check holds the group now.
+func (s *Subscriber) held(ctx context.Context) bool {
+	return s.paused != nil && s.paused(ctx)
+}
+
 // backoff pauses briefly for a retryable transport failure, or returns
 // immediately once ctx is done.
 func (s *Subscriber) backoff(ctx context.Context) {
+	s.wait(ctx, time.Second)
+}
+
+// wait returns after d, or at once when ctx is done.
+func (s *Subscriber) wait(ctx context.Context, d time.Duration) {
 	select {
 	case <-ctx.Done():
-	case <-time.After(time.Second):
+	case <-time.After(d):
 	}
 }
 
@@ -179,6 +209,10 @@ func (s *Subscriber) reclaim(ctx context.Context) {
 	for _, stream := range s.group.Streams {
 		start := "0-0"
 		for {
+			// A held pass stops between pages; what it leaves stays pending for the next.
+			if s.held(ctx) {
+				return
+			}
 			claimed, next, err := s.rdb.XAutoClaim(ctx, &redis.XAutoClaimArgs{
 				Stream:   stream,
 				Group:    s.group.Name,

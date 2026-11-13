@@ -10,15 +10,20 @@ import (
 	"errors"
 	"maps"
 	"testing"
+	"time"
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/compose"
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/deals"
+	"github.com/margince/margince/backend/internal/platform/clocktest"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/ports/connector"
+	"github.com/margince/margince/backend/internal/shared/ports/datasource"
 )
 
 // ownArchivePerms is the rep's seeded shape on the archived objects: write
@@ -72,57 +77,119 @@ func archiveWroteTheShape(t *testing.T, e *Env, entity ids.UUID, eventType strin
 	}
 }
 
-func TestAMemberArchivesTheNotesAndTasksTheyWrote(t *testing.T) {
+func TestAMemberArchivesTheNotesTasksCallsAndMeetingsTheyLogged(t *testing.T) {
 	e := Setup(t)
 	rep := asTeam1Member(e, e.Rep1, ownArchivePerms)
-	teammate := asTeam1Member(e, e.Rep2, ownArchivePerms)
 	mine := e.SeedContact(t, "Mine", &e.Rep1)
 
-	note, task := logOwnActivity(rep, t, e, "note", mine), logOwnActivity(rep, t, e, "task", mine)
-	theirs := logOwnActivity(teammate, t, e, "note", mine)
+	for _, kind := range []string{"note", "task", "meeting", "call"} {
+		own := logOwnActivity(rep, t, e, kind, mine)
+		read, err := e.Activities.GetActivity(rep, own, storekit.LiveOnly)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if !*read.Archivable {
+			t.Errorf("my own hand-logged %s reads as not archivable", kind)
+		}
+		if _, err := e.Activities.ArchiveActivity(rep, own, nil); err != nil {
+			t.Errorf("archiving my own hand-logged %s → %v, want allowed", kind, err)
+			continue
+		}
+		archiveWroteTheShape(t, e, own.UUID, "activity.archived")
+	}
+}
+
+func TestAMemberCannotArchiveAColleaguesHandLoggedMeeting(t *testing.T) {
+	e := Setup(t)
+	rep := asTeam1Member(e, e.Rep1, ownArchivePerms)
+	mine := e.SeedContact(t, "Mine", &e.Rep1)
+	theirs := logOwnActivity(asTeam1Member(e, e.Rep2, ownArchivePerms), t, e, "meeting", mine)
 
 	read, err := e.Activities.GetActivity(rep, theirs, storekit.LiveOnly)
 	if err != nil {
 		t.Fatal(err)
 	}
 	if !*read.Writable || *read.Archivable {
-		t.Errorf("teammate's note on my contact: writable=%v archivable=%v, want true/false", *read.Writable, *read.Archivable)
+		t.Errorf("teammate's meeting on my contact: writable=%v archivable=%v, want true/false", *read.Writable, *read.Archivable)
 	}
 	if _, err := e.Activities.ArchiveActivity(rep, theirs, nil); !errors.Is(err, apperrors.ErrPermissionDenied) {
-		t.Errorf("archiving a teammate's note → %v, want ErrPermissionDenied", err)
-	}
-	for _, own := range []ids.ActivityID{note, task} {
-		read, err := e.Activities.GetActivity(rep, own, storekit.LiveOnly)
-		if err != nil {
-			t.Fatal(err)
-		}
-		if !*read.Archivable {
-			t.Errorf("my own %s reads as not archivable", read.Kind)
-		}
-		if _, err := e.Activities.ArchiveActivity(rep, own, nil); err != nil {
-			t.Fatalf("archiving my own %s → %v, want allowed", read.Kind, err)
-		}
-		archiveWroteTheShape(t, e, own.UUID, "activity.archived")
+		t.Errorf("archiving a teammate's hand-logged meeting → %v, want ErrPermissionDenied", err)
 	}
 }
 
-func TestOnlyANoteOrTaskIsTheAuthorsToArchive(t *testing.T) {
+func TestCapturedEntriesStayTheManagersToArchive(t *testing.T) {
 	e := Setup(t)
 	rep := asTeam1Member(e, e.Rep1, ownArchivePerms)
 	mine := e.SeedContact(t, "Mine", &e.Rep1)
 	mail := SeedIDRow(t, OwnerConn(t), `INSERT INTO activity (id, kind, subject, body, occurred_at, source, captured_by)
 		VALUES ($1, 'email', 'Re: terms', 'body', now(), 'gmail', 'connector:gmail:`+e.Rep1.String()+`')`)
 	LinkActivity(t, OwnerConn(t), mail, objContact, mine)
-	call := logOwnActivity(rep, t, e, "call", mine)
+	hosted := CalendarMeeting{
+		Event: "rep-hosted-" + ids.NewV7().String(), At: clocktest.Now(t).Add(-time.Hour), Seat: e.Rep1,
+		Links: []datasource.EntityRef{{Type: datasource.EntityContact, ID: mine}},
+	}.Capture(t, e)
+	if n := e.WsCount(t, `SELECT count(*) FROM activity WHERE id = $1 AND host_user_id = $2`, hosted, e.Rep1); n != 1 {
+		t.Fatalf("the synced meeting is not hosted by the rep (%d rows)", n)
+	}
 
 	manager := asTeam1Member(e, e.Rep1, withActivityDelete(ownArchivePerms))
-	for name, id := range map[string]ids.ActivityID{"captured mail": ids.From[ids.ActivityKind](mail), "logged call": call} {
-		if _, err := e.Activities.ArchiveActivity(rep, id, nil); !errors.Is(err, apperrors.ErrPermissionDenied) {
-			t.Errorf("a rep archiving their own %s → %v, want ErrPermissionDenied", name, err)
+	for name, id := range map[string]ids.UUID{"captured mail": mail, "calendar-synced meeting they host": hosted} {
+		activity := ids.From[ids.ActivityKind](id)
+		if _, err := e.Activities.ArchiveActivity(rep, activity, nil); !errors.Is(err, apperrors.ErrPermissionDenied) {
+			t.Errorf("a rep archiving the %s → %v, want ErrPermissionDenied", name, err)
 		}
-		if _, err := e.Activities.ArchiveActivity(manager, id, nil); err != nil {
+		if _, err := e.Activities.ArchiveActivity(manager, activity, nil); err != nil {
 			t.Errorf("a seat holding activity.delete archiving the %s → %v, want allowed", name, err)
 		}
+	}
+}
+
+// A calendar copy that folds onto a hand-logged meeting brings its import
+// with it. The meeting is then the provider's record too.
+func TestAHandLoggedMeetingTheCalendarCopyFoldedOntoIsNotTheAuthorsToArchive(t *testing.T) {
+	e := Setup(t)
+	rep := asTeam1Member(e, e.Rep1, ownArchivePerms)
+	contact := e.SeedContact(t, "Fold Buyer", &e.Rep1)
+	at := clocktest.Now(t).UTC().Add(-time.Hour).Truncate(time.Second)
+	series := "fold-" + ids.NewV7().String() + "@calendar.test"
+	address := "rep-" + ids.NewV7().String() + "@fold.test"
+	e.WsExec(t, `INSERT INTO capture_connection (provider, user_id, status, account_label) VALUES ($1, $2, 'connected', $3)`,
+		CalendarSystem, e.Rep1, address)
+	calendar := CalendarMeeting{
+		Event: "fold-" + ids.NewV7().String(), At: at, Seat: e.Rep1, DeliveredTo: address,
+		Links: []datasource.EntityRef{{Type: datasource.EntityContact, ID: contact}},
+	}
+	copyID := calendar.Capture(t, e)
+
+	subject := "Quarterly review"
+	logged, _, err := e.Activities.LogActivity(rep, activities.LogActivityInput{
+		Kind: "meeting", Subject: &subject, OccurredAt: &at, Source: "manual",
+		ICalUID: series, ICalInstance: at.Format(time.RFC3339),
+		Links: []activities.ActivityLinkInput{{EntityType: objContact, EntityID: contact}},
+	})
+	if err != nil {
+		t.Fatalf("logging the meeting: %v", err)
+	}
+	meeting := ids.From[ids.ActivityKind](ids.UUID(logged.Id))
+	read, err := e.Activities.GetActivity(rep, meeting, storekit.LiveOnly)
+	if err != nil || !*read.Archivable {
+		t.Fatalf("before the fold the author reads the meeting as not archivable (%v), want archivable", err)
+	}
+
+	calendar.Identity = connector.CrossDoorIdentity{Series: series, Occurrence: at}
+	if landed := calendar.CaptureThrough(t, e, compose.NewCaptureSink(e.Pool, compose.CaptureConfig{})); landed != meeting.UUID {
+		t.Fatalf("the calendar's next sync landed on %s, want the hand-logged meeting %s", landed, meeting)
+	}
+	if e.WsCount(t, `SELECT count(*) FROM activity WHERE id = $1 AND archived_at IS NULL`, copyID) != 0 ||
+		e.WsCount(t, `SELECT count(*) FROM capture_import WHERE activity_id = $1`, meeting.UUID) == 0 {
+		t.Fatal("the calendar copy did not fold onto the hand-logged meeting")
+	}
+
+	if read, err = e.Activities.GetActivity(rep, meeting, storekit.LiveOnly); err != nil || *read.Archivable {
+		t.Errorf("after the fold the author reads the meeting as archivable (%v), want not archivable", err)
+	}
+	if _, err := e.Activities.ArchiveActivity(rep, meeting, nil); !errors.Is(err, apperrors.ErrPermissionDenied) {
+		t.Errorf("the author archiving the folded meeting → %v, want ErrPermissionDenied", err)
 	}
 }
 

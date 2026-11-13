@@ -189,6 +189,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `rbacvocabulary_test.go` | H3 | The RBAC vocabulary is declared in the contract and restated in Go, and the two must not drift. |
 | `recordkindopenlist_test.go` | H3 | A column that names a kind of record accepts an extension's kind. |
 | `regionalformats_test.go` | H3 | The store validates through the generated read enum. |
+| `releasepublisheroption_test.go` | H2 | _(no doc comment)_ |
 | `reopenconditionparity_test.go` | H3 | What a snooze may wait for is spelled in four places, and all four must agree. |
 | `requestkeyconflict_test.go` | H2 | A row keyed by a client's request id is written conflict-first. |
 | `requirementseam_test.go` | H1 | The two halves of the requirement seam describe the same thing. |
@@ -666,6 +667,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `seatfixturepick_test.go` | H1 | A fixture that needs this session's seat does not pick one out of app\_user. |
 | `seenaddressrule_test.go` | H2 | SPDX-License-Identifier: BUSL-1.1 SPDX-FileCopyrightText: 2026 Gradion |
 | `sharedtreereads_test.go` | H2 | A gate reads the tree through gatekit's shared view, never from the disk on its own. |
+| `shellbash32_test.go` | H2 | bash32Breakers are tests a bash 3.2 parser rejects outright. |
 | `stagemoveorigin_test.go` | H2 | A stage reader names the moves another system made through the stagemove kernel, so a new provenance value reaches every reader at once. |
 | `standingexceptionwriter_test.go` | H2 | No door records a new standing exception. |
 | `storedoriginal_test.go` | H2 | An activity is correlated to its stored original in one place. |
