@@ -6,6 +6,7 @@ package rewrite
 import (
 	"context"
 	"errors"
+	"slices"
 	"strings"
 	"testing"
 
@@ -73,8 +74,8 @@ func TestARewriteSendsTheRepsWordsAndTheServersOwnInstructionInTheirLanguage(t *
 			t.Errorf("the prompt does not carry %q", want)
 		}
 	}
-	if !sent.ExcludeCompanyContext {
-		t.Error("a rewrite asks for the company's own context")
+	if policy, _ := ai.CompanyContextFor(ai.TaskRewrite); sent.IncludeCompanyContext || len(policy.Scopes) != 0 {
+		t.Errorf("a rewrite asks for the company's own context: request %v, task policy %+v", sent.IncludeCompanyContext, policy)
 	}
 	if sent.Subjects == nil || len(sent.Subjects.Companies) != 1 || sent.Subjects.Companies[0] != onCompany.ID {
 		t.Errorf("the request does not declare the record the words are on: %v", sent.Subjects)
@@ -214,5 +215,19 @@ func TestAnEmailRewriteCarriesTheSendersVoiceAndANoteRewriteNone(t *testing.T) {
 	}
 	if strings.Contains(note.sent[0].Messages[0].Content, voiceMarker) || strings.Contains(note.sent[0].System, draftvoice.SystemRule) || got.Voice.OK {
 		t.Error("a note rewrite carries the sender's Voice DNA")
+	}
+}
+
+// The cheap tier adds meaning to a rep's words. So a rewrite is its own task,
+// served premium first, with the cheap tier as the fallback.
+func TestARewriteIsItsOwnTaskServedPremiumFirst(t *testing.T) {
+	if site := (CertCases{}).Site(); site.Task != ai.TaskRewrite {
+		t.Errorf("the rewrite site is certified under %q, want %q", site.Task, ai.TaskRewrite)
+	}
+	if lead := ai.LeadingTier(ai.TaskRewrite); lead != ai.TierPremium {
+		t.Errorf("the rewrite ladder leads with %q, want premium", lead)
+	}
+	if !slices.Contains(ai.ServableTiers(ai.TaskRewrite), ai.TierCheapCloud) {
+		t.Errorf("the rewrite ladder %v has no cheap_cloud fallback", ai.ServableTiers(ai.TaskRewrite))
 	}
 }

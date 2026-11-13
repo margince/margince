@@ -1204,6 +1204,7 @@ const (
 	AiActivityKindReportInterpret               AiActivityKind = "report_interpret"
 	AiActivityKindReportSetup                   AiActivityKind = "report_setup"
 	AiActivityKindRequestSettlement             AiActivityKind = "request_settlement"
+	AiActivityKindRewrite                       AiActivityKind = "rewrite"
 	AiActivityKindSignalExtract                 AiActivityKind = "signal_extract"
 	AiActivityKindSiteExtract                   AiActivityKind = "site_extract"
 	AiActivityKindSiteFactExtract               AiActivityKind = "site_fact_extract"
@@ -1271,6 +1272,8 @@ func (e AiActivityKind) Valid() bool {
 	case AiActivityKindReportSetup:
 		return true
 	case AiActivityKindRequestSettlement:
+		return true
+	case AiActivityKindRewrite:
 		return true
 	case AiActivityKindSignalExtract:
 		return true
@@ -1797,6 +1800,7 @@ const (
 	AiTaskReportInterpret               AiTask = "report_interpret"
 	AiTaskReportSetup                   AiTask = "report_setup"
 	AiTaskRequestSettlement             AiTask = "request_settlement"
+	AiTaskRewrite                       AiTask = "rewrite"
 	AiTaskSignalExtract                 AiTask = "signal_extract"
 	AiTaskSiteExtract                   AiTask = "site_extract"
 	AiTaskSiteFactExtract               AiTask = "site_fact_extract"
@@ -1861,6 +1865,8 @@ func (e AiTask) Valid() bool {
 	case AiTaskReportSetup:
 		return true
 	case AiTaskRequestSettlement:
+		return true
+	case AiTaskRewrite:
 		return true
 	case AiTaskSignalExtract:
 		return true

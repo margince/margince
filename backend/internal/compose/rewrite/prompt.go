@@ -80,13 +80,11 @@ func Request(in Input, about *model.Subjects, voice draftvoice.Context) model.Re
 		ResponseSchema: Schema(),
 		SecretStripper: ai.NewSecretStripper(),
 		Subjects:       about,
-		// A rewrite keeps the words on screen; our own pitch has no place in them.
-		ExcludeCompanyContext: true,
 	}
 }
 
-// languageRule names the text's own language when it was read from the text,
-// and otherwise tells the model to keep whatever language the words are in.
+// languageRule names the text's own language when it was read from the text.
+// Otherwise it tells the model to keep whatever language the words are in.
 func languageRule(in Input) string {
 	if !in.Detected {
 		return promptlang.KeepRule()

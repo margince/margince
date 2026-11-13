@@ -21269,6 +21269,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "aiTask.name.report_interpret": "Đánh giá báo cáo bán hàng",
   "aiTask.name.report_setup": "Thiết lập báo cáo từ mô tả",
   "aiTask.name.request_settlement": "Kiểm tra yêu cầu đã được giải đáp",
+  "aiTask.name.rewrite": "Viết lại",
   "aiTask.name.signal_extract": "Trích xuất tín hiệu từ cuộc trao đổi",
   "aiTask.name.site_extract": "Phân tích chuyên sâu trang web",
   "aiTask.name.site_fact_extract": "Trích xuất thông tin từ trang web",

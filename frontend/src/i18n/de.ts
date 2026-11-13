@@ -21852,6 +21852,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "aiTask.name.report_interpret": "Bewertung eines Vertriebsberichts",
   "aiTask.name.report_setup": "Bericht aus einer Beschreibung einrichten",
   "aiTask.name.request_settlement": "Prüfung der Antwort auf das Anliegen",
+  "aiTask.name.rewrite": "Umformulieren",
   "aiTask.name.signal_extract": "Erkennung von Gesprächssignalen",
   "aiTask.name.site_extract": "Ausführliche Website-Auswertung",
   "aiTask.name.site_fact_extract": "Erfassung von Website-Fakten",

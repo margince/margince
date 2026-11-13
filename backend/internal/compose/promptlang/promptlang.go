@@ -67,8 +67,8 @@ Write naturally in that language rather than translating English phrasing.
 ` + carveOuts
 }
 
-// KeepRule is the language block for a rewrite of text whose language could
-// not be placed: the output stays in the language the text is written in.
+// KeepRule is the language block for rewriting text whose language could not
+// be placed. The output stays in the language the text is written in.
 func KeepRule() string {
 	return Heading + `Write in the language the text is already written in, and never translate it.
 ` + carveOuts
@@ -83,10 +83,9 @@ what it refers to.`
 // a model which language to write in — the prompt rule below, and the tool
 // surface that answers the same question to an agent running elsewhere.
 //
-// A code the product does not ship answers English, which is the fallback Rule
-// documents above and the one every caller wants: the surfaces that call this
-// hand the answer straight to a model, and a blank there instructs it in no
-// language at all.
+// A code the product does not ship answers English, the fallback Rule documents
+// above. Every caller hands the answer straight to a model, and a blank there
+// instructs it in no language at all.
 func LanguageName(lang string) string {
 	if name := englishName(lang); name != "" {
 		return name

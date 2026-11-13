@@ -21571,6 +21571,7 @@ export const en = {
   "aiTask.name.report_setup": "Setting up a report from a description",
   "aiTask.name.request_settlement":
     "Checking whether the reply answered the request",
+  "aiTask.name.rewrite": "Rewriting",
   "aiTask.name.signal_extract": "Signal extraction",
   "aiTask.name.site_extract": "Website research",
   "aiTask.name.site_fact_extract": "Website fact extraction",
