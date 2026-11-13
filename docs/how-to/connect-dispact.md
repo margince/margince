@@ -42,6 +42,10 @@ follows no redirect. Otherwise a token holder could point the server at its own 
   event adds nothing. It starts only when the worker has a credential store.
 - **The job `chat_link_flush`** sends one post per link with the rows that are waiting, after a window of
   two minutes. It also posts the record's card once and edits it when a fact on it changes.
+- **The job `chat_pull_sweep`** runs every minute and enqueues one **`chat_pull`** per live bot. The pull
+  reads each linked channel's history and files an AI summary note for each stretch of talk that
+  matters. It needs a model bound to the `chat_summary` task in the AI routing. Without one, the talk is
+  read and passed over, and no note is filed.
 
 ## When the chat refuses
 
@@ -49,11 +53,13 @@ follows no redirect. Otherwise a token holder could point the server at its own 
 |---|---|
 | `401` | The connection goes to `reauth_required` and nothing is posted until an admin replaces the token. |
 | `403`, `404` or `410` on a channel | The link goes to `channel_gone` and the panel shows it as paused. |
-| `429` | The flush waits for `Retry-After`, or 30 seconds, and tries again. |
-| `5xx` or no answer | The flush tries again, at most five times. |
+| `429` | The flush or pull waits for `Retry-After`, or 30 seconds, and tries again. |
+| `5xx` or no answer | The flush tries again, at most five times. The pull logs it and tries on the next tick. |
 
 ## Check it
 
 - `GET /v1/channel-connections` lists the Dispact bot with `provider: dispact` and its address.
 - `GET /v1/channel-links/deal/{id}` answers `off` while no bot is connected, `none` once one is.
-- **Settings → System health** lists the **Chat channel posts** job.
+- **Settings → System health** lists the **Chat channel posts**, **Chat channel check** and **Chat
+  channel summaries** jobs.
+- A stretch of talk files its note about 30 minutes after the last message in it.

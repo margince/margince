@@ -91,7 +91,7 @@ func (w *Flusher) Flush(ctx context.Context, linkID ids.UUID) error {
 // send keeps the card current, rewrites narrowed posts, and posts what is
 // pending. The order puts the card before the first update.
 func (w *Flusher) send(ctx context.Context, session chatlinks.Session, pending chatlinks.Pending) error {
-	record, err := w.recordFacts(ctx, pending.Link)
+	record, err := readRecord(ctx, w.Pool, pending.Link)
 	if err != nil {
 		return err
 	}
@@ -242,9 +242,10 @@ type Worker[T FlushJob] struct {
 
 // Work implements River's worker for the flush.
 func (w *Worker[T]) Work(ctx context.Context, job *river.Job[T]) error {
-	ctx, err := w.Bind(ctx, job.Args)
+	// Bind answers no context when it refuses, so the fault rides the job's own.
+	bound, err := w.Bind(ctx, job.Args)
 	if err != nil {
 		return jobs.FaultContext(ctx, err)
 	}
-	return jobs.FaultContext(ctx, w.Flusher.Flush(ctx, job.Args.Link()))
+	return jobs.FaultContext(bound, w.Flusher.Flush(bound, job.Args.Link()))
 }

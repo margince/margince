@@ -52,6 +52,9 @@ The 2 tables owned by `chatlinks`, as the migrations build them. [Back to the en
 **Indexes**
 
 - `chat_link_pkey`: `unique, btree (id)`
+- `idx_chat_link_connection`: `btree (connection_id)`
+- `idx_chat_link_deal`: `btree (deal_id)`
+- `idx_chat_link_project`: `btree (project_id)`
 - `uq_chat_link_channel`: `unique, btree (provider, channel_slug) WHERE (archived_at IS NULL)`
 - `uq_chat_link_deal`: `unique, btree (deal_id) WHERE ((archived_at IS NULL) AND (deal_id IS NOT NULL))`
 - `uq_chat_link_project`: `unique, btree (project_id) WHERE ((archived_at IS NULL) AND (project_id IS NOT NULL))`

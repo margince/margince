@@ -11,7 +11,7 @@ import "time"
 // would believe. It says nothing about the file on disk — a pair
 // regenerated TOGETHER from a stale contract matches here, and the drift
 // gate is what catches that.
-const JobContractHash = "df5b6ef945af1f37757c7679fe05d9e8f0f700f94ff77a7e26b3f060405b497d"
+const JobContractHash = "4e132a6b4040762f8b297fc17644ea65b788ee7830f8eaa7e201a641caeafec3"
 
 // specs is every declared kind. A kind absent from this table is a kind
 // nobody declared, and MustBeTotal is what names them: the runner calls it
@@ -326,6 +326,30 @@ var specs = map[string]Spec{
 		OptsOwner:    OptsCaller,
 		Registration: Registration{When: []string{"ChannelVault"}},
 		Args:         []ArgField{{Name: "LinkID"}, {Name: "Workspace"}},
+	},
+	"chat_pull": {
+		Kind:         "chat_pull",
+		GoType:       "ChatPullArgs",
+		Role:         Worker,
+		Queue:        "default",
+		Timeout:      TimeoutPolicy{Fixed: 10 * time.Minute},
+		MaxAttempts:  3,
+		OptsOwner:    OptsArgs,
+		Registration: Registration{When: []string{"ChannelVault"}},
+		Args:         []ArgField{{Name: "ConnectionID"}, {Name: "Workspace"}},
+	},
+	"chat_pull_sweep": {
+		Kind:         "chat_pull_sweep",
+		GoType:       "ChatPullSweepArgs",
+		Role:         Dispatcher,
+		Fleet:        true,
+		Queue:        "default",
+		Timeout:      TimeoutPolicy{Fixed: 2 * time.Minute},
+		FanOutUnit:   FanOutConnection,
+		FanOutTo:     "chat_pull",
+		OptsOwner:    OptsCaller,
+		Cadence:      Cadence{Fixed: 1 * time.Minute},
+		Registration: Registration{When: []string{"ChannelVault"}},
 	},
 	"check_company_vat": {
 		Kind:         "check_company_vat",

@@ -476,7 +476,7 @@ func workerHandoffOptions(
 		compose.WithImportJobs(sendInserter),
 		// A chat link's card is posted by the worker. This follows
 		// WithChannelSurface, so a Dispact bot connects beside Telegram.
-		compose.WithChatLinks(sendInserter, gates.privateChat),
+		compose.WithChatLinks(sendInserter, gates.privateChat, chatSummaryLane(modelPath)),
 	}
 
 	enqueueOpts, err := jobEnqueueOptions(pool, logger, modelPath, gates)
