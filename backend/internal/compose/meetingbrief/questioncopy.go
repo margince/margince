@@ -38,7 +38,7 @@ var questionWords = struct {
 	Background:     langcopy.Phrase{En: "How much of the background do you already have from your side?", De: "Wie viel vom Hintergrund kennen Sie bereits von Ihrer Seite?", Vi: "Phía bạn đã nắm được bao nhiêu thông tin nền?"},
 	Joining:        langcopy.Phrase{En: "Who else is joining, and what do they need from this?", De: "Wer nimmt noch teil und was brauchen diese Personen aus dem Gespräch?", Vi: "Ai khác sẽ tham gia và họ cần gì từ cuộc trao đổi này?"},
 	Answer:         langcopy.Phrase{En: "Answer it directly, or say who will and by when.", De: "Beantworte die Frage direkt oder sage, wer sie bis wann beantwortet.", Vi: "Trả lời trực tiếp hoặc cho biết ai sẽ trả lời và vào lúc nào."},
-	Progress:       langcopy.Phrase{En: "Where are you with %s?", De: "Wie ist der Stand bei %s?", Vi: "Bạn đã tiến hành %s đến đâu?"},
+	Progress:       langcopy.Phrase{En: "Where does this stand: %q?", De: "Wie ist hier der Stand: %q?", Vi: "Việc này đang đến đâu: %q?"},
 	Prepare:        langcopy.Phrase{En: "Have the current state and the next date ready before the meeting.", De: "Halte vor dem Meeting den aktuellen Stand und den nächsten Termin bereit.", Vi: "Chuẩn bị sẵn tình trạng hiện tại và ngày tiếp theo trước cuộc họp."},
 	Objection:      langcopy.Phrase{En: "%q — expect them to raise it again.", De: "%q: Rechne damit, dass sie den Punkt erneut ansprechen.", Vi: "%q — hãy chuẩn bị vì họ có thể nêu lại vấn đề này."},
 	Evidence:       langcopy.Phrase{En: "Answer it with a record they can check, not with reassurance.", De: "Antworte mit einem überprüfbaren Beleg statt mit einer Beschwichtigung.", Vi: "Trả lời bằng bản ghi họ có thể kiểm tra, thay vì chỉ trấn an."},
