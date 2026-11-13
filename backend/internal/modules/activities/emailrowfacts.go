@@ -68,7 +68,7 @@ func WithEmailRowFacts(ctx context.Context, tx pgx.Tx, page []crmcontracts.Activ
 }
 
 // applyCounterparties names the far side on each readable email row. It uses
-// the message viewer's own rule, so a list and the viewer name one person. A
+// the message viewer's own rule, so a list and the viewer name one party. A
 // withheld row names nobody: who it was with is content.
 func applyCounterparties(page []crmcontracts.Activity, parties map[ids.UUID]emailParties) {
 	for i := range page {
