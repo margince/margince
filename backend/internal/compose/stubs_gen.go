@@ -1083,6 +1083,10 @@ func (stubs) ReplaceChannelToken(w nethttp.ResponseWriter, r *nethttp.Request, i
 	httperr.NotImplemented(w, r, "ReplaceChannelToken")
 }
 
+func (stubs) ReceiveDispactChannelEvent(w nethttp.ResponseWriter, r *nethttp.Request) {
+	httperr.NotImplemented(w, r, "ReceiveDispactChannelEvent")
+}
+
 func (stubs) UnlinkChannel(w nethttp.ResponseWriter, r *nethttp.Request, recordType crmcontracts.ChannelLinkRecordType, id crmcontracts.Id) {
 	httperr.NotImplemented(w, r, "UnlinkChannel")
 }

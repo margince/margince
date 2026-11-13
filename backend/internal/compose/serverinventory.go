@@ -126,6 +126,7 @@ type Server struct {
 	importHandlers
 	channelHandlers
 	chatLinkHandlers
+	chatEventHandlers
 	traceHandlers
 	pipelineTraceHandlers
 	filteredExportHandlers
@@ -251,6 +252,8 @@ type Server struct {
 	mcpInputStateKey string
 	// dispactCalls checks the Dispact app's call tokens on /mcp; nil serves none.
 	dispactCalls *dispactapp.Edge
+	// chatPulls queues a chat_pull for a Dispact notice; WithChatLinks sets it.
+	chatPulls *jobs.Runner
 
 	// metricsToken gates /metrics, from --metrics-token. Empty refuses every
 	// scrape unless metricsOpen is set, because the exposition names routes and

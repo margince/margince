@@ -14,6 +14,10 @@ An admin connects the Dispact bot once for everyone.
 2. Click **Connect Dispact bot**.
 3. Enter the **Chat address**, such as `https://chat.example.com`, and the app token, which starts with
    `gwapp_`.
+4. Optional: paste the **Events secret** from the Margince app page in your chat. It starts with
+   `whsec_`. With it, the chat tells Margince when a channel has new messages, and summaries come
+   sooner. To add it later, or to change it, click **Replace token** on the connected bot. Leave the
+   field empty there to keep the saved secret.
 
 ### How do I give a deal a channel?
 Open the deal. The **Team chat** card is on its overview.

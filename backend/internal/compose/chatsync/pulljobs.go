@@ -5,6 +5,7 @@ package chatsync
 
 import (
 	"context"
+	"errors"
 	"log/slog"
 	"time"
 
@@ -24,10 +25,16 @@ type PullJob interface {
 	Connection() ids.UUID
 }
 
-// PullWorker runs chat_pull for one bot connection.
+// noticeRerun is how soon a pull runs again after a notice arrived while it ran.
+const noticeRerun = 5 * time.Second
+
+// PullWorker runs chat_pull for one bot connection. Marks, when set, holds the
+// notices. A notice's own enqueue adds nothing while this pull runs. So a
+// notice that arrived during the run makes the pull run once more.
 type PullWorker[T PullJob] struct {
 	Bind   func(context.Context, jobs.WorkspaceScoped) (context.Context, error)
 	Puller *Puller
+	Marks  Marks
 }
 
 // Work implements River's worker for the pull.
@@ -37,7 +44,51 @@ func (w *PullWorker[T]) Work(ctx context.Context, job *river.Job[T]) error {
 	if err != nil {
 		return jobs.FaultContext(ctx, err)
 	}
-	return jobs.FaultContext(bound, w.Puller.Pull(bound, job.Args.Connection()))
+	started := w.Puller.Now()
+	if err := w.Puller.Pull(bound, job.Args.Connection()); err != nil {
+		return jobs.FaultContext(bound, err)
+	}
+	if w.Marks == nil {
+		return nil
+	}
+	notice, err := w.Marks.Last(bound, noticeKey(job.Args.Connection()))
+	if err == nil && notice.After(started) {
+		return river.JobSnooze(noticeRerun)
+	}
+	return nil
+}
+
+// Sweeper decides which connections chat_pull_sweep reads on this tick, from
+// the moments held in Marks. With no Marks every connection is read.
+type Sweeper struct {
+	Marks Marks
+	Now   func() time.Time
+	Log   *slog.Logger
+}
+
+// Due reports whether the sweep reads connection now. A moment it cannot
+// read counts as no notice, so a broken store falls back to polling.
+func (s Sweeper) Due(ctx context.Context, connection ids.UUID) bool {
+	if s.Marks == nil {
+		return true
+	}
+	notice, noticeErr := s.Marks.Last(ctx, noticeKey(connection))
+	swept, sweptErr := s.Marks.Last(ctx, sweepKey(connection))
+	if err := errors.Join(noticeErr, sweptErr); err != nil {
+		s.Log.WarnContext(ctx, "chat pull sweep: reading the notice marks failed; reading the channels now", "err", err)
+		return true
+	}
+	return SweepDue(s.Now(), notice, swept)
+}
+
+// Swept marks that the sweep queued connection's pull now.
+func (s Sweeper) Swept(ctx context.Context, connection ids.UUID) {
+	if s.Marks == nil {
+		return
+	}
+	if err := s.Marks.Mark(ctx, sweepKey(connection), s.Now(), PushedPullEvery); err != nil {
+		s.Log.WarnContext(ctx, "chat pull sweep: the sweep was not marked; the next tick reads again", "err", err)
+	}
 }
 
 // NewPuller builds the pull of a worker role over the chat sessions of chats.

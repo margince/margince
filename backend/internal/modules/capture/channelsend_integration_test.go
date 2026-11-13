@@ -294,7 +294,7 @@ func TestASendRefusesAfterItsBotWasReplaced(t *testing.T) {
 		t.Fatalf("the fixture holds %d live connections, want exactly 1", len(live))
 	}
 	incoming, _ := f.api.withNewBot("incomingbot")
-	if err := f.store.ReplaceToken(f.ctx, live[0].ID, incoming); err != nil {
+	if err := f.store.ReplaceToken(f.ctx, live[0].ID, incoming, ""); err != nil {
 		t.Fatalf("ReplaceToken: %v", err)
 	}
 

@@ -67,6 +67,7 @@ type (
 	authHandlers            = identity.Handlers
 	channelHandlers         = capture.ChannelHandlers
 	chatLinkHandlers        = chatlinks.Handlers
+	chatEventHandlers       = chatlinks.EventHandlers
 	traceHandlers           = capture.TraceHandlers
 	pipelineTraceHandlers   = pipelinetrace.Handlers
 	contactsHandlers        = contacts.Handlers

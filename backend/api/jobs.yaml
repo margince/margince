@@ -2117,7 +2117,8 @@ kinds:
     reason: >-
       Every minute, so a stretch of talk is judged soon after its thirty quiet
       minutes end. A connection whose channels have nothing new costs one
-      history read per channel.
+      history read per channel. A connection Dispact pushed a notice for in
+      the last hour is read only hourly, because the notices start its pulls.
 
   telegram_ingest:
     role: worker

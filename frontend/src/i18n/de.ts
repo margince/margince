@@ -12208,6 +12208,11 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "connectors.bot.dispactAddress": "Chat-Adresse",
   "connectors.bot.dispactAddressHint":
     "Die Webadresse eures Team-Chats, etwa https://chat.example.com.",
+  "connectors.bot.eventsSecret": "Ereignis-Schlüssel",
+  "connectors.bot.eventsSecretHint":
+    "Optional. Kopiert den Ereignis-Schlüssel (whsec_…) von der Seite der Margince-App in eurem Chat. Mit ihm liest Margince einen Kanal, sobald er neue Nachrichten hat, und prüft den Rest stündlich; ohne ihn prüft Margince jeden Kanal jede Minute.",
+  "connectors.bot.eventsSecretKeepHint":
+    "Leer lassen, um den gespeicherten Ereignis-Schlüssel zu behalten.",
 
   "channelLink.title": "Team-Chat",
   "channelLink.off":

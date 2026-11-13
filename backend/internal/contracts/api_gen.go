@@ -12088,6 +12088,54 @@ func (e DispactAppManifestSlug) Valid() bool {
 	}
 }
 
+// Defines values for DispactChannelEventType.
+const (
+	DispactChannelEventTypeChannelArchived DispactChannelEventType = "channel.archived"
+	DispactChannelEventTypeMessageCreated  DispactChannelEventType = "message.created"
+	DispactChannelEventTypeMessageUpdated  DispactChannelEventType = "message.updated"
+	DispactChannelEventTypeThreadReplied   DispactChannelEventType = "thread.replied"
+	DispactChannelEventTypeUrlVerification DispactChannelEventType = "url_verification"
+)
+
+// Valid indicates whether the value is a known member of the DispactChannelEventType enum.
+func (e DispactChannelEventType) Valid() bool {
+	switch e {
+	case DispactChannelEventTypeChannelArchived:
+		return true
+	case DispactChannelEventTypeMessageCreated:
+		return true
+	case DispactChannelEventTypeMessageUpdated:
+		return true
+	case DispactChannelEventTypeThreadReplied:
+		return true
+	case DispactChannelEventTypeUrlVerification:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for DispactChannelEventReceiptStatus.
+const (
+	DispactChannelEventReceiptStatusIgnored    DispactChannelEventReceiptStatus = "ignored"
+	DispactChannelEventReceiptStatusLinkPaused DispactChannelEventReceiptStatus = "link_paused"
+	DispactChannelEventReceiptStatusPullQueued DispactChannelEventReceiptStatus = "pull_queued"
+)
+
+// Valid indicates whether the value is a known member of the DispactChannelEventReceiptStatus enum.
+func (e DispactChannelEventReceiptStatus) Valid() bool {
+	switch e {
+	case DispactChannelEventReceiptStatusIgnored:
+		return true
+	case DispactChannelEventReceiptStatusLinkPaused:
+		return true
+	case DispactChannelEventReceiptStatusPullQueued:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for DomainQuestionContextSiteRead.
 const (
 	DomainQuestionContextSiteReadRead   DomainQuestionContextSiteRead = "read"
@@ -39354,7 +39402,7 @@ type ChangeUserRoleRequest struct {
 	Role string `json:"role"`
 }
 
-// ChannelConnection One workspace-level messaging-channel binding. The bot token never appears in this shape — it lives sealed in the vault, and it is the only secret a binding holds.
+// ChannelConnection One workspace-level messaging-channel binding. The bot token and the Dispact events secret never appear in this shape: both live sealed in the vault.
 type ChannelConnection struct {
 	// Address The web address of a self-hosted provider's install (Dispact). Absent for Telegram.
 	Address *string `json:"address,omitempty"`
@@ -39363,10 +39411,13 @@ type ChannelConnection struct {
 	ChannelId string `json:"channelId"`
 
 	// ChannelLabel The bot's @username. Display only — a username is mutable and re-assignable, so it identifies nothing.
-	ChannelLabel string                    `json:"channelLabel"`
-	CreatedAt    *time.Time                `json:"createdAt,omitempty"`
-	Id           openapi_types.UUID        `json:"id"`
-	Provider     ChannelConnectionProvider `json:"provider"`
+	ChannelLabel string     `json:"channelLabel"`
+	CreatedAt    *time.Time `json:"createdAt,omitempty"`
+
+	// EventsSecretSet Whether a Dispact events secret is sealed for this connection, so signed notices of new messages are taken. The secret itself is never shown.
+	EventsSecretSet *bool                     `json:"eventsSecretSet,omitempty"`
+	Id              openapi_types.UUID        `json:"id"`
+	Provider        ChannelConnectionProvider `json:"provider"`
 
 	// Status Only `connected` is live, and it is the only state a connect can produce: a pull ingress makes no provider call after the write, so there is no half-connected state. `error` and `reauth_required` are where ingress parks a binding it can no longer poll (another consumer holds the bot's updates; the token was refused), and neither is polled again until an operator acts. `pending` is a value NO server produces: it is retained because the code generator disambiguates enum member names across the whole document, so dropping it renames unrelated generated constants in other schemas.
 	Status    ChannelConnectionStatus `json:"status"`
@@ -42879,8 +42930,11 @@ type ConnectChannelRequest struct {
 	Address *string `json:"address,omitempty"`
 
 	// BotToken The bot token. For Telegram the BotFather token, `<bot id>:<secret>`; for Dispact the app token, `gwapp_…`. Sealed into the vault on arrival and never echoed back.
-	BotToken string                        `json:"botToken"`
-	Provider ConnectChannelRequestProvider `json:"provider"`
+	BotToken string `json:"botToken"`
+
+	// EventsSecret The Dispact app's events secret, `whsec_…`, which signs each notice of a new message. Optional; without it Margince reads the channels every minute. Refused for Telegram. Sealed into the vault on arrival and never echoed back.
+	EventsSecret *string                       `json:"eventsSecret,omitempty"`
+	Provider     ConnectChannelRequestProvider `json:"provider"`
 }
 
 // ConnectChannelRequestProvider defines model for ConnectChannelRequest.Provider.
@@ -48561,6 +48615,37 @@ type DispactAppManifestMcp struct {
 	// Endpoint This installation's MCP address, `<public_base_url>/mcp`.
 	Endpoint string `json:"endpoint"`
 }
+
+// DispactChannelEvent One signed notice from Dispact, or its URL check. A notice names the channel and the newest message sequence, and never carries message text.
+type DispactChannelEvent struct {
+	// Challenge The value a URL check expects back.
+	Challenge   *string `json:"challenge,omitempty"`
+	ChannelSlug *string `json:"channel_slug,omitempty"`
+	EventId     *string `json:"event_id,omitempty"`
+	MessageId   *string `json:"message_id,omitempty"`
+
+	// Seq The highest message sequence of the burst. Margince reads the history itself and uses the notice only as a signal.
+	Seq  *int                    `json:"seq,omitempty"`
+	Ts   *int64                  `json:"ts,omitempty"`
+	Type DispactChannelEventType `json:"type"`
+
+	// WorkspaceId The Dispact team; it must be the connected bot's team.
+	WorkspaceId *string `json:"workspace_id,omitempty"`
+}
+
+// DispactChannelEventType defines model for DispactChannelEvent.Type.
+type DispactChannelEventType string
+
+// DispactChannelEventReceipt The answer to a taken notice. A URL check gets `challenge` alone.
+type DispactChannelEventReceipt struct {
+	Challenge *string `json:"challenge,omitempty"`
+
+	// Status `pull_queued`: the channel's history is read soon. `link_paused`: the archived channel's link is paused. `ignored`: no live link has this channel.
+	Status *DispactChannelEventReceiptStatus `json:"status,omitempty"`
+}
+
+// DispactChannelEventReceiptStatus `pull_queued`: the channel's history is read soon. `link_paused`: the archived channel's link is paused. `ignored`: no live link has this channel.
+type DispactChannelEventReceiptStatus string
 
 // DisqualifyLeadRequest Why the lead is closed. Both fields are optional on the wire so an agent's governed disqualify still works; the UI always sends a reason.
 type DisqualifyLeadRequest struct {
@@ -60797,8 +60882,11 @@ type ReopenCondition string
 
 // ReplaceChannelTokenRequest defines model for ReplaceChannelTokenRequest.
 type ReplaceChannelTokenRequest struct {
-	// BotToken The replacement BotFather token. Sealed into the vault on arrival and never echoed back.
+	// BotToken The replacement bot token. Sealed into the vault on arrival and never echoed back.
 	BotToken string `json:"botToken"`
+
+	// EventsSecret A new Dispact events secret, `whsec_…`. Absent keeps the sealed one. Refused for Telegram. Sealed into the vault on arrival and never echoed back.
+	EventsSecret *string `json:"eventsSecret,omitempty"`
 }
 
 // ReplaceDealProductsRequest defines model for ReplaceDealProductsRequest.
@@ -80888,6 +80976,9 @@ type ConnectChannelJSONRequestBody = ConnectChannelRequest
 // ReplaceChannelTokenJSONRequestBody defines body for ReplaceChannelToken for application/json ContentType.
 type ReplaceChannelTokenJSONRequestBody = ReplaceChannelTokenRequest
 
+// ReceiveDispactChannelEventJSONRequestBody defines body for ReceiveDispactChannelEvent for application/json ContentType.
+type ReceiveDispactChannelEventJSONRequestBody = DispactChannelEvent
+
 // SetChannelVerbosityJSONRequestBody defines body for SetChannelVerbosity for application/json ContentType.
 type SetChannelVerbosityJSONRequestBody = SetChannelVerbosityRequest
 
@@ -96002,6 +96093,9 @@ type ServerInterface interface {
 	// Replace a channel connection's bot token in place.
 	// (PATCH /channel-connections/{id})
 	ReplaceChannelToken(w http.ResponseWriter, r *http.Request, id Id)
+	// Take a signed notice of new talk in a linked Dispact channel (anonymous).
+	// (POST /channel-events/dispact)
+	ReceiveDispactChannelEvent(w http.ResponseWriter, r *http.Request)
 	// Stop syncing a record with its chat channel.
 	// (DELETE /channel-links/{record_type}/{id})
 	UnlinkChannel(w http.ResponseWriter, r *http.Request, recordType ChannelLinkRecordType, id Id)
@@ -100088,6 +100182,12 @@ func (_ Unimplemented) DisconnectChannel(w http.ResponseWriter, r *http.Request,
 // Replace a channel connection's bot token in place.
 // (PATCH /channel-connections/{id})
 func (_ Unimplemented) ReplaceChannelToken(w http.ResponseWriter, r *http.Request, id Id) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Take a signed notice of new talk in a linked Dispact channel (anonymous).
+// (POST /channel-events/dispact)
+func (_ Unimplemented) ReceiveDispactChannelEvent(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -117063,6 +117163,20 @@ func (siw *ServerInterfaceWrapper) ReplaceChannelToken(w http.ResponseWriter, r 
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.ReplaceChannelToken(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// ReceiveDispactChannelEvent operation middleware
+func (siw *ServerInterfaceWrapper) ReceiveDispactChannelEvent(w http.ResponseWriter, r *http.Request) {
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ReceiveDispactChannelEvent(w, r)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -154112,6 +154226,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Patch(options.BaseURL+"/channel-connections/{id}", wrapper.ReplaceChannelToken)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/channel-events/dispact", wrapper.ReceiveDispactChannelEvent)
 	})
 	r.Group(func(r chi.Router) {
 		r.Delete(options.BaseURL+"/channel-links/{record_type}/{id}", wrapper.UnlinkChannel)
