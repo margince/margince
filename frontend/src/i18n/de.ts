@@ -4536,6 +4536,12 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "co.growthFit.band.unknown": "Nicht genügend Daten",
   "co.growthFit.completeness": "{present} von {expected} Angaben erfasst",
   "co.growthFit.missing": "Fehlt noch",
+  "co.growthFit.inputs": "Worauf die Einschätzung beruht",
+  "co.growthFit.rule":
+    "Für eine Einschätzung braucht es mindestens {needed} von {expected} Angaben.",
+  "co.growthFit.inputMissing": "Fehlt",
+  "co.growthFit.inputStale": "Veraltet",
+  "co.growthFit.fromSiteRead": "Wird beim Lesen der Website ermittelt.",
   "co.growthFit.capped": "Zurückgehalten: {reason}.",
   "industry.agriculture": "Landwirtschaft",
   "industry.automotive": "Automobilindustrie",

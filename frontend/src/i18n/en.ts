@@ -4493,6 +4493,12 @@ export const en = {
   "co.growthFit.band.unknown": "Not enough data",
   "co.growthFit.completeness": "{present} of {expected} inputs recorded",
   "co.growthFit.missing": "Still missing",
+  "co.growthFit.inputs": "What the fit is judged on",
+  "co.growthFit.rule":
+    "At least {needed} of {expected} inputs are needed to judge the fit.",
+  "co.growthFit.inputMissing": "Missing",
+  "co.growthFit.inputStale": "Out of date",
+  "co.growthFit.fromSiteRead": "Found when the website is read.",
   "co.growthFit.capped": "Held back: {reason}.",
   "industry.agriculture": "Agriculture",
   "industry.automotive": "Automotive",

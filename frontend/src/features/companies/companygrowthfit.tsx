@@ -26,8 +26,10 @@ import "./company360.css";
 import { labelFor } from "../../lib/labelfor";
 import { AssemblyStamp, AssemblyWait } from "./companyassembly";
 import { ReassessOutcome, useReassess } from "./companygrowthfit.reassess";
+import { GrowthFitInputs } from "./companygrowthfitinputs";
 
 type GrowthFit = components["schemas"]["CompanyGrowthFit"];
+type Company = components["schemas"]["Company"];
 type Band = GrowthFit["band"];
 
 type GrowthFitInput = components["schemas"]["GrowthFitInput"];
@@ -106,18 +108,21 @@ const BAND_TONES: Partial<Record<Band, "success" | "warning">> = {
  * identically.
  */
 export function GrowthFitPanel({
-  companyId,
+  company,
   onOpenRecord,
   onOpenReceipt,
   onOpenEmail,
 }: Readonly<{
-  companyId: string;
+  // The record itself, not its id: the inputs checklist edits its fields
+  // under the same write gate the rest of the page uses.
+  company: Company;
   onOpenRecord?: (entityType: string, entityId: string) => void;
   onOpenReceipt: OpenReceipt;
   // Opens a cited message in the page's email drawer; see `Citations`.
   onOpenEmail?: (activityId: string) => void;
 }>) {
   const t = useT();
+  const companyId = company.id;
   const fit = useQuery({
     queryKey: ["company-growth-fit", companyId],
     queryFn: async () => {
@@ -206,6 +211,7 @@ export function GrowthFitPanel({
           <GrowthFitVerdict fit={readable} />
           <GrowthFitReasons
             fit={readable}
+            company={company}
             onOpenRecord={onOpenRecord}
             onOpenReceipt={onOpenReceipt}
             onOpenEmail={onOpenEmail}
@@ -335,11 +341,13 @@ function GrowthFitVerdict({ fit }: Readonly<{ fit: GrowthFit }>) {
  */
 function GrowthFitReasons({
   fit,
+  company,
   onOpenRecord,
   onOpenReceipt,
   onOpenEmail,
 }: Readonly<{
   fit: GrowthFit;
+  company: Company;
   onOpenRecord?: (entityType: string, entityId: string) => void;
   onOpenReceipt: OpenReceipt;
   // Opens a cited message in the page's email drawer; see `Citations`.
@@ -408,11 +416,21 @@ function GrowthFitReasons({
             </GrowthFitRow>
           ),
       )}
-      {missing && missing.length > 0 && (
-        <GrowthFitRow label="co.growthFit.missing">
-          <p>{missingWords(t, locale, missing)}</p>
-        </GrowthFitRow>
-      )}
+      {/* The checklist whenever an input does not count. An answer from a
+          build that sends no per-input states still names what is missing. */}
+      {Array.isArray(fit.data_completeness.inputs)
+        ? fit.data_completeness.present < fit.data_completeness.expected && (
+            <GrowthFitInputs
+              company={company}
+              completeness={fit.data_completeness}
+            />
+          )
+        : missing &&
+          missing.length > 0 && (
+            <GrowthFitRow label="co.growthFit.missing">
+              <p>{missingWords(t, locale, missing)}</p>
+            </GrowthFitRow>
+          )}
     </>
   );
 }

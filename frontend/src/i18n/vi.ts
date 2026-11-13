@@ -4421,6 +4421,12 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "co.growthFit.completeness":
     "Đã ghi nhận {present}/{expected} dữ liệu đầu vào",
   "co.growthFit.missing": "Còn thiếu",
+  "co.growthFit.inputs": "Căn cứ để đánh giá",
+  "co.growthFit.rule":
+    "Cần ít nhất {needed}/{expected} dữ liệu đầu vào để đánh giá mức độ phù hợp.",
+  "co.growthFit.inputMissing": "Còn thiếu",
+  "co.growthFit.inputStale": "Đã cũ",
+  "co.growthFit.fromSiteRead": "Có được khi đọc trang web.",
   "co.growthFit.capped": "Bị giới hạn: {reason}.",
   "industry.agriculture": "Nông nghiệp",
   "industry.automotive": "Ô tô",

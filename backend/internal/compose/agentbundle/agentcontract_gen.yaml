@@ -17113,7 +17113,7 @@ paths:
       tags: [Compliance]
       operationId: listNoticeCases
       security: [{bearerAuth: []}]
-      summary: Privacy notices already owed, where the source is confirmed, soonest deadline first. A contact whose source nobody has confirmed is in notice_case_reviews.
+      summary: Privacy notices already owed, where the source is confirmed, soonest deadline first. A contact whose source nobody has confirmed is in notice_case_reviews (GET /privacy/notice-case-reviews).
       description: |-
         Every Art. 13 / Art. 14 duty the installation has not discharged, with who owns it and by
         when it falls due.
@@ -17202,7 +17202,7 @@ paths:
       tags: [Compliance]
       operationId: listNoticeCaseReviews
       security: [{bearerAuth: []}]
-      summary: Every contact's privacy-notice case, including a source nobody has confirmed yet (a bought list, an import), soonest deadline first. Start here for what we owe one contact.
+      summary: Every contact's privacy-notice case, including one whose source was never recorded (an older contact), soonest deadline first. Without state it lists unresolved cases only, so an empty page is not an empty notice history, and a contact imported moments ago may have no case yet. For one contact, read their contact_360 view (GET /contacts/{id}/360) instead; its privacy_source_reviews and privacy_notice_duties carry the case ids.
       description: |-
         Acquisition-source reviews and notice duties, under privacy-request read authority.
         Unconfirmed sources have no deadline or sending route. Confirmed indirect sources stay owed;
@@ -17244,7 +17244,7 @@ paths:
       tags: [Compliance]
       operationId: getNoticeCaseReview
       security: [{bearerAuth: []}]
-      summary: One contact's privacy-notice case — its source, whether a notice is owed, and by when. The id comes from notice_case_reviews, not the contact's id.
+      summary: One contact's privacy-notice case — its source, whether a notice is owed, and by when. The id comes from notice_case_reviews or the contact's contact_360 view, not the contact's id.
       description: |-
         The administrative record for a source review or notice duty. Human privacy-request read
         authority covers the record; contact names remain limited by ordinary contact visibility.
@@ -17313,7 +17313,7 @@ paths:
       tags: [Compliance]
       operationId: assessNoticeSource
       security: [{bearerAuth: []}]
-      summary: Confirm where a contact came from (bought list, import, their own enquiry), which decides whether a privacy notice is owed. Preview it first.
+      summary: Confirm where a contact came from (bought list, import, their own enquiry), which decides whether a privacy notice is owed. Preview it first (POST /privacy/notice-case-reviews/{id}/source/preview). Only a contact with no recorded source is up for review; when its evidence does not name where the data first came from, ask the user rather than guessing a kind.
       requestBody:
         required: true
         content:
@@ -17330,7 +17330,7 @@ paths:
         '404': {$ref: '#/components/responses/NotFound'}
         '422': {$ref: '#/components/responses/ValidationError'}
       description: |-
-        Confirm where a contact came from (bought list, import, their own enquiry), which decides whether a privacy notice is owed. Preview it first.
+        Confirm where a contact came from (bought list, import, their own enquiry), which decides whether a privacy notice is owed. Preview it first (POST /privacy/notice-case-reviews/{id}/source/preview). Only a contact with no recorded source is up for review; when its evidence does not name where the data first came from, ask the user rather than guessing a kind.
 
         Needs the passport permission Change records.
 
@@ -17342,7 +17342,7 @@ paths:
       tags: [Compliance]
       operationId: previewNoticeSource
       security: [{bearerAuth: []}]
-      summary: Preview what confirming a contact's source decides — whether a notice is owed and by when — without changing the case. Confirming is the user's decision, so offer confirm_notice_source and ask them.
+      summary: Preview what confirming a contact's source decides — whether a notice is owed and by when — without changing the case. Confirming is the user's decision, so offer confirm_notice_source (POST /privacy/notice-case-reviews/{id}/source) and ask them, unless they already named the source and asked you to confirm it.
       requestBody:
         required: true
         content:
@@ -17359,7 +17359,7 @@ paths:
         '404': {$ref: '#/components/responses/NotFound'}
         '422': {$ref: '#/components/responses/ValidationError'}
       description: |-
-        Preview what confirming a contact's source decides — whether a notice is owed and by when — without changing the case. Confirming is the user's decision, so offer confirm_notice_source and ask them.
+        Preview what confirming a contact's source decides — whether a notice is owed and by when — without changing the case. Confirming is the user's decision, so offer confirm_notice_source (POST /privacy/notice-case-reviews/{id}/source) and ask them, unless they already named the source and asked you to confirm it.
 
         Needs the passport permission Read records.
 
@@ -32341,7 +32341,7 @@ components:
       description: |-
         How much of what the band needs is actually present — with BOTH counts. "4 of 9"
         and "4 of 40" are different claims and must never render identically.
-      required: [present, expected]
+      required: [present, expected, needed, inputs]
       properties:
         present: {type: integer, description: Required inputs available and not stale.}
         expected:
@@ -32349,6 +32349,16 @@ components:
           description: |-
             Required inputs the assembly wanted. Never omitted and never implied — a
             proportion without its denominator is not a completeness figure.
+        needed:
+          type: integer
+          description: |-
+            The fewest present inputs the assembly judges on. Below it the band is `unknown`.
+        inputs:
+          type: array
+          description: |-
+            Every required input in the assembly's order, with whether it counts. An input
+            that does not count is missing or no longer fresh.
+          items: {$ref: '#/components/schemas/GrowthFitInputState'}
         missing:
           type: array
           description: |-
@@ -32359,6 +32369,13 @@ components:
       type: string
       enum: [offer_summary, icp, industry, buying_center, buying_intents, employee_range, technology]
       description: One input the growth-fit assessment needs about a company. The client words it.
+    GrowthFitInputState:
+      type: object
+      description: One required growth-fit input and whether it counts toward the band.
+      required: [input, present]
+      properties:
+        input: {$ref: '#/components/schemas/GrowthFitInput'}
+        present: {type: boolean, description: True when the input is recorded and not stale.}
     GrowthFitNextStep:
       type: string
       enum: [gather_inputs, record_profile, confirm_offering, configure_model, retry_later]
