@@ -3,7 +3,7 @@
 
 //go:build integration
 
-package compose
+package integration_test
 
 // Google Calendar mails each guest their own copy of the organizer's
 // invitation and files every copy in the organizer's Sent. Captured through
@@ -17,6 +17,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/compose"
 	"github.com/margince/margince/backend/internal/compose/integration"
 	"github.com/margince/margince/backend/internal/modules/capture/mailmap"
 	"github.com/margince/margince/backend/internal/platform/database"
@@ -73,11 +74,27 @@ func captureCopy(t *testing.T, e *integration.Env, owner ids.UUID, seat, provide
 	}
 	rec := parsed.AttestSentByOwner(true).ToRecord("gmail", raw)
 	rec.ProviderMessageID = providerID
-	ref, err := newCaptureSink(e.Pool, CaptureConfig{}).Upsert(threadConnectorCtx(e, owner), rec)
+	ref, err := compose.NewCaptureSink(e.Pool, compose.CaptureConfig{}).Upsert(connectorCtx(e, "gmail", owner), rec)
 	if err != nil {
 		t.Fatalf("capturing the copy: %v", err)
 	}
 	return ref.ID
+}
+
+// guestCopyMailbox connects a Gmail mailbox for the seat and answers its
+// address, so the seat's sync is recorded as holding what it captures.
+func guestCopyMailbox(t *testing.T, e *integration.Env, seat ids.UUID) string {
+	t.Helper()
+	address := "organizer-" + seat.String() + "@ws.example"
+	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+		_, err := tx.Exec(context.Background(), `
+			INSERT INTO capture_connection (user_id, provider, status, credential_ref, account_label)
+			VALUES ($1, 'gmail', 'connected', 'vault:test', $2)`, seat, address)
+		return err
+	}); err != nil {
+		t.Fatalf("connecting the seat's mailbox: %v", err)
+	}
+	return address
 }
 
 // storedInvitations counts the seat's live invitation mail of the event, and
@@ -98,7 +115,7 @@ func storedInvitations(t *testing.T, e *integration.Env, owner ids.UUID, uid str
 
 func TestEveryGuestsCopyOfOneInvitationIsOneActivity(t *testing.T) {
 	e := integration.Setup(t)
-	seat := seatAddress(t, e, e.Rep1)
+	seat := guestCopyMailbox(t, e, e.Rep1)
 
 	first := captureCopy(t, e, e.Rep1, seat, "mailbox-1", guestCopy(seat, "ana@customer.example", "0"))
 	second := captureCopy(t, e, e.Rep1, seat, "mailbox-2", guestCopy(seat, "ben@customer.example", "0"))
@@ -123,7 +140,7 @@ func TestEveryGuestsCopyOfOneInvitationIsOneActivity(t *testing.T) {
 func TestAnotherSeatsCopiesStayTheirOwn(t *testing.T) {
 	e := integration.Setup(t)
 	e.GrantRole(t, e.Rep2, "rep")
-	one, two := seatAddress(t, e, e.Rep1), seatAddress(t, e, e.Rep2)
+	one, two := guestCopyMailbox(t, e, e.Rep1), guestCopyMailbox(t, e, e.Rep2)
 	mine := captureCopy(t, e, e.Rep1, one, "mailbox-1", guestCopy(one, "ana@customer.example", "0"))
 	theirs := captureCopy(t, e, e.Rep2, two, "mailbox-1", guestCopy(two, "ana@customer.example", "0"))
 	if mine == theirs {

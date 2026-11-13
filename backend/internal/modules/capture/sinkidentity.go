@@ -114,8 +114,8 @@ func OccurrenceText(id connector.CrossDoorIdentity) string {
 	return id.Occurrence.UTC().Format(time.RFC3339)
 }
 
-// activityHoldingIdentity answers the activity another door already filed this
-// message under, and whether one did.
+// activityHoldingStatedIdentity answers the activity another door already
+// filed this message under, and whether one did.
 //
 // False covers four cases deliberately, because none is an error and each
 // leads to the same place: this sink files no cross-door identity, this record
@@ -123,7 +123,7 @@ func OccurrenceText(id connector.CrossDoorIdentity) string {
 // different seat holds it, or its holder was erased. The caller captures the
 // message as its own row either way, which is what keeps the refusal from
 // becoming an existence oracle (activities.ResolveBindableIdentity).
-func (s *Sink) activityHoldingIdentity(
+func (s *Sink) activityHoldingStatedIdentity(
 	ctx context.Context, tx pgx.Tx, rec connector.NormalizedRecord,
 ) (ids.ActivityID, bool, error) {
 	kind, key := s.identityOfRecord(rec)
@@ -198,18 +198,19 @@ func calendarSendKey(seat ids.UUID, send string) string {
 	return calendarSendPrefix + seat.String() + " " + send
 }
 
-// activityHoldingMessage is activityHoldingIdentity, and then the activity a
-// per-guest copy of a calendar send joins. A copy whose own natural key is
-// stored already replays as that row, so the rows stored apart stay apart.
-func (s *Sink) activityHoldingMessage(
-	ctx context.Context, tx pgx.Tx, rec connector.NormalizedRecord, fields ActivityFields,
+// activityHoldingIdentity is activityHoldingStatedIdentity, and then the
+// activity a per-guest copy of a calendar send joins. A copy whose own natural
+// key is stored already replays as that row, so the rows stored apart stay apart.
+func (s *Sink) activityHoldingIdentity(
+	ctx context.Context, tx pgx.Tx, rec connector.NormalizedRecord,
 ) (ids.ActivityID, bool, error) {
-	known, found, err := s.activityHoldingIdentity(ctx, tx, rec)
+	known, found, err := s.activityHoldingStatedIdentity(ctx, tx, rec)
 	if err != nil || found {
 		return known, found, err
 	}
+	fields, isActivity := rec.Fields.(ActivityFields)
 	key := calendarSendKey(actorUserID(ctx), fields.CalendarSend)
-	if key == "" || s.mailIdentityKind == "" || s.resolveIdentity == nil {
+	if !isActivity || key == "" || s.mailIdentityKind == "" || s.resolveIdentity == nil {
 		return ids.ActivityID{}, false, nil
 	}
 	var stored bool
