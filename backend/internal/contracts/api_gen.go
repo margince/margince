@@ -45541,9 +45541,16 @@ type DataCompleteness struct {
 	// proportion without its denominator is not a completeness figure.
 	Expected int `json:"expected"`
 
+	// Inputs Every required input in the assembly's order, with whether it counts. An input
+	// that does not count is missing or no longer fresh.
+	Inputs []GrowthFitInputState `json:"inputs"`
+
 	// Missing Which required inputs are missing, as codes. The client words them in the
 	// reader's language, so the server sends no sentence here.
 	Missing *[]GrowthFitInput `json:"missing,omitempty"`
+
+	// Needed The fewest present inputs the assembly judges on. Below it the band is `unknown`.
+	Needed int `json:"needed"`
 
 	// Present Required inputs available and not stale.
 	Present int `json:"present"`
@@ -49524,6 +49531,15 @@ type GrowthFitBand string
 
 // GrowthFitInput One input the growth-fit assessment needs about a company. The client words it.
 type GrowthFitInput string
+
+// GrowthFitInputState One required growth-fit input and whether it counts toward the band.
+type GrowthFitInputState struct {
+	// Input One input the growth-fit assessment needs about a company. The client words it.
+	Input GrowthFitInput `json:"input"`
+
+	// Present True when the input is recorded and not stale.
+	Present bool `json:"present"`
+}
 
 // GrowthFitNextStep The one thing to do that would most improve a growth-fit answer. The client words it.
 // `gather_inputs` is to find the inputs in `data_completeness.missing`, `record_profile`

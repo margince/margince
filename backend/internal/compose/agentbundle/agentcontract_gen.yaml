@@ -32018,7 +32018,7 @@ components:
       description: |-
         How much of what the band needs is actually present — with BOTH counts. "4 of 9"
         and "4 of 40" are different claims and must never render identically.
-      required: [present, expected]
+      required: [present, expected, needed, inputs]
       properties:
         present: {type: integer, description: Required inputs available and not stale.}
         expected:
@@ -32026,6 +32026,16 @@ components:
           description: |-
             Required inputs the assembly wanted. Never omitted and never implied — a
             proportion without its denominator is not a completeness figure.
+        needed:
+          type: integer
+          description: |-
+            The fewest present inputs the assembly judges on. Below it the band is `unknown`.
+        inputs:
+          type: array
+          description: |-
+            Every required input in the assembly's order, with whether it counts. An input
+            that does not count is missing or no longer fresh.
+          items: {$ref: '#/components/schemas/GrowthFitInputState'}
         missing:
           type: array
           description: |-
@@ -32036,6 +32046,13 @@ components:
       type: string
       enum: [offer_summary, icp, industry, buying_center, buying_intents, employee_range, technology]
       description: One input the growth-fit assessment needs about a company. The client words it.
+    GrowthFitInputState:
+      type: object
+      description: One required growth-fit input and whether it counts toward the band.
+      required: [input, present]
+      properties:
+        input: {$ref: '#/components/schemas/GrowthFitInput'}
+        present: {type: boolean, description: True when the input is recorded and not stale.}
     GrowthFitNextStep:
       type: string
       enum: [gather_inputs, record_profile, confirm_offering, configure_model, retry_later]
