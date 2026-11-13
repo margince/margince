@@ -10,6 +10,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"strings"
+	"time"
 )
 
 // worktree records the work tree as git trees in an index of its own, so the
@@ -59,15 +60,22 @@ func (w worktree) changed(from, to string) ([][2]string, error) {
 	return paths, nil
 }
 
-// restore puts back what the generators changed between tree and generated,
-// the snapshot after their last run. A file that differs from generated now was
-// changed by someone else while the gate ran: it is left as it is and named.
-func (w worktree) restore(tree, generated string) error {
+// lastPass is the snapshot after the pass that ran last, and when it started.
+type lastPass struct {
+	tree    string
+	started time.Time
+}
+
+// restore puts back what the generators changed between tree and the last
+// pass. Every generator writes its output in every pass. So a changed file
+// written before the last pass started, or after its snapshot, was changed by
+// someone else. It is left as it is and named.
+func (w worktree) restore(tree string, last lastPass) error {
 	current, err := w.snapshot()
 	if err != nil {
 		return err
 	}
-	moved, err := w.changed(generated, current)
+	moved, err := w.changed(last.tree, current)
 	if err != nil {
 		return err
 	}
@@ -77,13 +85,17 @@ func (w worktree) restore(tree, generated string) error {
 		edited[p[1]] = true
 		names = append(names, p[1])
 	}
-	paths, err := w.changed(tree, generated)
+	paths, err := w.changed(tree, last.tree)
 	if err != nil {
 		return err
 	}
 	var checkout []string
 	for _, p := range paths {
 		if edited[p[1]] {
+			continue
+		}
+		if info, err := os.Stat(filepath.Join(w.root, p[1])); err == nil && info.ModTime().Before(last.started) {
+			names = append(names, p[1])
 			continue
 		}
 		if p[0] == "A" {

@@ -84,9 +84,10 @@ func TestOnlyTheOutputsASkippedScriptNamesGoUnchecked(t *testing.T) {
 	rest, owned := splitBySkipped([]string{
 		"frontend/src/api/schema.d.ts", "frontend/src/i18n/essential/de_gen.json",
 		"backend/internal/modules/agents/previewcatalog_gen.json", "backend/internal/compose/new_gen.go",
-		"backend/internal/modules/agents/new_gen.go",
+		"backend/internal/modules/agents/new_gen.go", "backend/internal/modules/agents/previewcatalog_gen.js",
 	}, skipped)
-	want := []string{"backend/internal/compose/new_gen.go", "backend/internal/modules/agents/new_gen.go"}
+	want := []string{"backend/internal/compose/new_gen.go", "backend/internal/modules/agents/new_gen.go",
+		"backend/internal/modules/agents/previewcatalog_gen.js"}
 	if !reflect.DeepEqual(rest, want) {
 		t.Errorf("still required = %v, want %v", rest, want)
 	}

@@ -10,6 +10,7 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+	"time"
 )
 
 // repository makes a git repository holding files, all committed. Git reads
@@ -127,6 +128,38 @@ func TestAnEditTheDeveloperHadNotCommittedSurvivesTheGate(t *testing.T) {
 	}
 }
 
+func TestAFileChangedBeforeTheLastPassIsLeftAndNamed(t *testing.T) {
+	root := repository(t, map[string]string{"table_gen.txt": "committed\n", "notes.txt": "mine\n"})
+	tree, err := newWorktree(root, t.TempDir())
+	if err != nil {
+		t.Fatal(err)
+	}
+	before, err := tree.snapshot()
+	if err != nil {
+		t.Fatal(err)
+	}
+	writeFiles(t, root, map[string]string{"notes.txt": "typed during the first pass\n"})
+	old := time.Now().Add(-time.Hour)
+	if err := os.Chtimes(filepath.Join(root, "notes.txt"), old, old); err != nil {
+		t.Fatal(err)
+	}
+	last := lastPass{started: time.Now()}
+	writeFiles(t, root, map[string]string{"table_gen.txt": "fresh\n"})
+	if last.tree, err = tree.snapshot(); err != nil {
+		t.Fatal(err)
+	}
+	err = tree.restore(before, last)
+	if err == nil || !strings.Contains(err.Error(), "notes.txt") {
+		t.Errorf("restore over an edit made in the first pass gave %v, want a failure naming notes.txt", err)
+	}
+	if got := readFile(t, filepath.Join(root, "notes.txt")); got != "typed during the first pass\n" {
+		t.Errorf("restore overwrote the edit made in the first pass: %q", got)
+	}
+	if got := readFile(t, filepath.Join(root, "table_gen.txt")); got != "committed\n" {
+		t.Errorf("restore left the generated file as %q, want the bytes it found", got)
+	}
+}
+
 func TestAFileChangedAfterTheGeneratorsRanIsLeftAndNamed(t *testing.T) {
 	root := repository(t, map[string]string{"table_gen.txt": "committed\n", "notes.txt": "mine\n"})
 	tree, err := newWorktree(root, t.TempDir())
@@ -137,13 +170,13 @@ func TestAFileChangedAfterTheGeneratorsRanIsLeftAndNamed(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	last := lastPass{started: time.Now().Add(-time.Second)}
 	writeFiles(t, root, map[string]string{"table_gen.txt": "fresh\n"})
-	generated, err := tree.snapshot()
-	if err != nil {
+	if last.tree, err = tree.snapshot(); err != nil {
 		t.Fatal(err)
 	}
 	writeFiles(t, root, map[string]string{"notes.txt": "typed during the run\n"})
-	err = tree.restore(before, generated)
+	err = tree.restore(before, last)
 	if err == nil || !strings.Contains(err.Error(), "notes.txt") {
 		t.Errorf("restore over an edit made during the run gave %v, want a failure naming notes.txt", err)
 	}

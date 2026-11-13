@@ -88,23 +88,23 @@ func twice(root string, p plan, out *log.Logger) (err error) {
 	if err != nil {
 		return err
 	}
-	generated := before
+	last := lastPass{tree: before}
 	stamps, err := stampOutputs(root, p.outputs)
 	if err == nil {
-		err = judge(p, stamps, tree, out, &generated)
+		err = judge(p, stamps, tree, out, &last)
 	}
 	// The bytes go back first. A file with its old time over new bytes of the
 	// same size would replay a cached test result that no longer holds.
-	if restoreErr := tree.restore(before, generated); restoreErr != nil {
+	if restoreErr := tree.restore(before, last); restoreErr != nil {
 		return errors.Join(err, fmt.Errorf("putting the work tree back: %w", restoreErr))
 	}
 	return errors.Join(err, stamps.restore())
 }
 
-// judge runs both passes and names what disagreed. generated is kept at the
-// snapshot after the last generator that ran.
-func judge(p plan, stamps stamps, tree worktree, out *log.Logger, generated *string) error {
-	first, err := pass(tree.root, p.generators, tree, out, 1, generated)
+// judge runs both passes and names what disagreed. last is kept at the pass
+// that ran last.
+func judge(p plan, stamps stamps, tree worktree, out *log.Logger, last *lastPass) error {
+	first, err := pass(tree.root, p.generators, tree, out, 1, last)
 	if err != nil {
 		return err
 	}
@@ -130,7 +130,7 @@ func judge(p plan, stamps stamps, tree worktree, out *log.Logger, generated *str
 			"Give the generator an -update… flag in a test, a gen:* script in %s, or a place in `make gen`",
 			len(unwritten), strings.Join(unwritten, "\n  "), frontendPackage)
 	}
-	second, err := pass(tree.root, p.generators, tree, out, 2, generated)
+	second, err := pass(tree.root, p.generators, tree, out, 2, last)
 	if err != nil {
 		return err
 	}
@@ -154,7 +154,10 @@ func judge(p plan, stamps stamps, tree worktree, out *log.Logger, generated *str
 
 // pass runs every generator once and snapshots what they left, also after a
 // generator failed, so the restore knows what the generators wrote.
-func pass(root string, generators []generator, tree worktree, out *log.Logger, number int, generated *string) (string, error) {
+func pass(root string, generators []generator, tree worktree, out *log.Logger, number int, last *lastPass) (string, error) {
+	// Whole seconds, so a file system that keeps coarse times still reads a
+	// write in this pass as one.
+	last.started = time.Now().Truncate(time.Second)
 	var failed error
 	for _, g := range generators {
 		started := time.Now()
@@ -171,7 +174,7 @@ func pass(root string, generators []generator, tree worktree, out *log.Logger, n
 	if err != nil {
 		return "", errors.Join(failed, err)
 	}
-	*generated = snapshot
+	last.tree = snapshot
 	return snapshot, failed
 }
 

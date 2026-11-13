@@ -120,17 +120,19 @@ func scriptSource(root string, scripts map[string]string, name string) (string, 
 }
 
 // splitBySkipped separates the outputs a skipped frontend script names from
-// the rest. A script names an output by its path, or by its folder written as a
-// string of its own. A script that builds each file name does the latter.
+// the rest. A script names an output by its whole path, or by its folder written
+// as a string of its own. A script that builds each file name does the latter.
 func splitBySkipped(outputs []string, skipped []generator) (rest, owned []string) {
 	for _, output := range outputs {
 		rel := "../" + output
 		if after, ok := strings.CutPrefix(output, "frontend/"); ok {
 			rel = after
 		}
+		whole := regexp.MustCompile(`(^|[\s"'` + "`" + `(,])(` + regexp.QuoteMeta(rel) + `|` +
+			regexp.QuoteMeta(filepath.Dir(rel)) + `["'` + "`" + `])($|[\s"'` + "`" + `),])`)
 		named := false
 		for _, g := range skipped {
-			named = named || strings.Contains(g.ScriptText, rel) || strings.Contains(g.ScriptText, filepath.Dir(rel)+`"`)
+			named = named || whole.MatchString(g.ScriptText)
 		}
 		if named {
 			owned = append(owned, output)
