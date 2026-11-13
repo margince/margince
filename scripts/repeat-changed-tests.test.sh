@@ -53,9 +53,20 @@ FAIL: TestFlaky on attempt 2 of 20"
 # every clone refuse its test, so the run stops before it composes.
 printf 'go-unit\t3\tbackend/internal/thing\t^(TestThing)$\n' >"$TMP/plan.tsv"
 status=0
-outside="$(env -u COMPOSITION_FLAGS bash "$SCRIPT" run "$TMP/plan.tsv" 2>&1)" || status=$?
+outside="$(env -u COMPOSITION_FLAGS bash "$SCRIPT" run "$TMP/plan.tsv" origin/main 2>&1)" || status=$?
 [[ "$status" -eq 2 && "$outside" == *"make repeat-changed-tests"* ]] ||
   fail "a run outside the make profile went on (status $status): $outside"
+
+mkdir "$TMP/bin"
+printf '#!/bin/sh\nexit 0\n' >"$TMP/bin/pnpm"
+chmod +x "$TMP/bin/pnpm"
+printf 'vitest\t1\tsrc/example.test.ts\t\n' >"$TMP/vitest.tsv"
+for base in origin/main origin/develop; do
+  replay="$(PATH="$TMP/bin:$PATH" TEST_SHUFFLE_SEED=22413 \
+    bash "$SCRIPT" run "$TMP/vitest.tsv" "$base")"
+  [[ "$replay" == *"replay: make repeat-changed-tests REPEAT_BASE=$base TEST_SHUFFLE_SEED=22413"* ]] ||
+    fail "the replay dropped the base $base or the seed: $replay"
+done
 
 if ((FAILURES > 0)); then
   echo "repeat-changed-tests.test: $FAILURES failure(s)" >&2

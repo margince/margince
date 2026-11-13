@@ -7,7 +7,7 @@
 #   scripts/repeat-changed-tests.sh scope BASE_REF       whether the diff touches a test file
 #   scripts/repeat-changed-tests.sh scope - < paths      the same, over the changed paths
 #   scripts/repeat-changed-tests.sh plan BASE_REF FILE   write the plan to FILE
-#   scripts/repeat-changed-tests.sh run FILE             run the plan, under `make repeat-changed-tests`
+#   scripts/repeat-changed-tests.sh run FILE BASE_REF    run the plan, under `make repeat-changed-tests`
 #   scripts/repeat-changed-tests.sh attempts COUNT LOG   name the attempt of each failure in a `go test -v` log
 #
 # backend/tools/changed-tests picks the tests and the repeat count of each. The
@@ -164,7 +164,7 @@ vitest_lane() {
 }
 
 run() {
-  local plan="$1" logs verdict=0 pids=()
+  local plan="$1" base="$2" logs verdict=0 pids=()
   if [[ ! -s "$plan" ]]; then
     echo "repeat-changed-tests: the plan is empty, so no test to repeat"
     return 0
@@ -176,7 +176,10 @@ run() {
   fi
   logs="$(mktemp -d)"
   # Every lane below reads TEST_SHUFFLE_SEED, as the merge gate's own runs do.
-  [[ -z "${TEST_SHUFFLE_SEED:-}" ]] || echo "repeat-changed-tests: test order seed $TEST_SHUFFLE_SEED; replay: make repeat-changed-tests TEST_SHUFFLE_SEED=$TEST_SHUFFLE_SEED"
+  if [[ -n "${TEST_SHUFFLE_SEED:-}" ]]; then
+    printf 'repeat-changed-tests: test order seed %s; replay: make repeat-changed-tests REPEAT_BASE=%q TEST_SHUFFLE_SEED=%q\n' \
+      "$TEST_SHUFFLE_SEED" "$base" "$TEST_SHUFFLE_SEED"
+  fi
   # The lanes below only read build/composition/; one write first keeps a
   # lane from reading it while another rewrites it.
   if grep -q '^go-' "$plan"; then
@@ -201,7 +204,7 @@ run() {
 case "${1:-}" in
   scope) scope "${2:?usage: $0 scope BASE_REF|-}" ;;
   plan) plan "${2:?usage: $0 plan BASE_REF FILE}" "${3:?usage: $0 plan BASE_REF FILE}" ;;
-  run) run "${2:?usage: $0 run FILE}" ;;
+  run) run "${2:?usage: $0 run FILE BASE_REF}" "${3:?usage: $0 run FILE BASE_REF}" ;;
   attempts) attempts "${2:?usage: $0 attempts COUNT LOG}" "${3:?usage: $0 attempts COUNT LOG}" ;;
   *)
     echo "usage: $0 scope|plan|run|attempts ..." >&2

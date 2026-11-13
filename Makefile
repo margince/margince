@@ -750,7 +750,7 @@ backend-clock-drift:
 REPEAT_BASE ?= origin/main
 repeat-changed-tests:
 	@plan="$$(mktemp)"; trap 'rm -f "$$plan"' EXIT; \
-	./scripts/repeat-changed-tests.sh plan "$(REPEAT_BASE)" "$$plan" && ./scripts/repeat-changed-tests.sh run "$$plan"
+	./scripts/repeat-changed-tests.sh plan "$(REPEAT_BASE)" "$$plan" && ./scripts/repeat-changed-tests.sh run "$$plan" "$(REPEAT_BASE)"
 
 ## test-repeat-changed-tests — prove the repeat job's scope sees every test
 ## file, and that its log reader names the attempt of each failure.
