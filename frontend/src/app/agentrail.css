@@ -114,6 +114,8 @@
 /* The button is the orb, so the ring follows the orb: a bare control with
    nothing of its own to draw but the ball it wraps. */
 .artoggle {
+  /* The trial's ring is drawn over the orb's box, so it is placed against it. */
+  position: relative;
   display: block;
   flex: none;
   padding: 0;
@@ -294,11 +296,8 @@
   flex: 0 1 auto;
 }
 
-/* The trial's count, its own row under the spend, lifted over the hit like the
-   row above it. */
+/* The trial's count, its own row under the block. */
 .artrial {
-  position: relative;
-  z-index: 1;
   display: flex;
   justify-content: center;
   width: 100%;

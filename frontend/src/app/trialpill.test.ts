@@ -14,7 +14,13 @@ const plural = (
 ) => translatePlural("en", base, count, params);
 
 function standing(daysLeft: number, closing: boolean): TrialStanding {
-  return { endsAt: "2026-11-16T09:30:00Z", daysLeft, ended: false, closing };
+  return {
+    endsAt: "2026-11-16T09:30:00Z",
+    totalDays: 14,
+    daysLeft,
+    ended: false,
+    closing,
+  };
 }
 
 it("says the trial's state in the words of each stage", () => {

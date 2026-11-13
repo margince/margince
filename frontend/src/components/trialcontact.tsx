@@ -41,7 +41,13 @@ export function trialTone(standing: TrialStanding): CalloutTone {
 export function TrialNotice({
   standing,
   seatsUsed,
-}: Readonly<{ standing: TrialStanding; seatsUsed?: number }>) {
+  onHide,
+}: Readonly<{
+  standing: TrialStanding;
+  seatsUsed?: number;
+  /** Puts the notice away until the next day; absent, it cannot be put away. */
+  onHide?: () => void;
+}>) {
   const t = useT();
   const { locale } = useLocale();
   const plural = usePlural();
@@ -63,6 +69,9 @@ export function TrialNotice({
           <Button variant="primary" onClick={() => setOpen(true)}>
             {t("trial.contact.title")}
           </Button>
+        }
+        dismiss={
+          onHide && { label: t("trial.notice.hideToday"), onDismiss: onHide }
         }
       >
         {t(standing.ended ? "trial.notice.endedBody" : "trial.notice.body", {

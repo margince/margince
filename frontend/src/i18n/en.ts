@@ -15153,6 +15153,7 @@ export const en = {
   "trial.notice.body":
     "Margince stops working on {date} until it has a license. Your data stays as it is.",
   "trial.notice.endedTitle": "Your trial has ended",
+  "trial.notice.hideToday": "Hide until tomorrow",
   "trial.notice.endedBody":
     "Margince stopped working on {date} and waits for a license. Your data stays as it is, and nothing is deleted.",
   "trial.contact.title": "Talk to the Margince team",

@@ -15235,6 +15235,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "trial.notice.body":
     "Am {date} hört Margince auf zu arbeiten, bis eine Lizenz da ist. Deine Daten bleiben, wie sie sind.",
   "trial.notice.endedTitle": "Deine Testphase ist beendet",
+  "trial.notice.hideToday": "Bis morgen ausblenden",
   "trial.notice.endedBody":
     "Margince hat am {date} aufgehört zu arbeiten und wartet auf eine Lizenz. Deine Daten bleiben, wie sie sind, und nichts wird gelöscht.",
   "trial.contact.title": "Mit dem Margince-Team sprechen",

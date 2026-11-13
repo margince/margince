@@ -20,6 +20,7 @@ function story(daysLeft: number | undefined) {
         ? undefined
         : {
             endsAt: new Date(Date.now() + daysLeft * DAY).toISOString(),
+            totalDays: 14,
             daysLeft: Math.max(daysLeft, 0),
             ended: daysLeft <= 0,
             closing: daysLeft <= 7,

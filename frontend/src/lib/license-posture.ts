@@ -121,6 +121,8 @@ type LicenseTrial = components["schemas"]["LicenseTrial"];
 /** Where the installation's trial stands, as the chrome counts it. */
 export type TrialStanding = Readonly<{
   endsAt: string;
+  /** The trial's length in whole days, from the server's start and end. */
+  totalDays: number;
   /** Whole days left, at least 1 while the trial runs and 0 once it ended. */
   daysLeft: number;
   ended: boolean;
@@ -145,9 +147,16 @@ export function trialStandingOf(
   const daysLeft = trial.ended
     ? 0
     : Math.max(1, Math.ceil((Date.parse(trial.ends_at) - now) / DAY_MS));
+  const totalDays = Math.max(
+    1,
+    Math.round(
+      (Date.parse(trial.ends_at) - Date.parse(trial.started_at)) / DAY_MS,
+    ),
+  );
   return {
     endsAt: trial.ends_at,
-    daysLeft,
+    totalDays,
+    daysLeft: Math.min(daysLeft, totalDays),
     ended: trial.ended,
     closing: trial.ended || daysLeft <= TRIAL_WARNING_DAYS,
   };

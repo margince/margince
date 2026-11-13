@@ -34,9 +34,11 @@ function entitlement(endsIn: number, ended = false): LicenseEntitlement {
 
 // Each read of the licence takes the next answer, and the last one stays.
 function mount(...answers: LicenseEntitlement[]) {
+  const reads: string[] = [];
   vi.stubGlobal(
     "fetch",
     vi.fn(async (input: RequestInfo | URL) => {
+      reads.push(input instanceof Request ? input.url : String(input));
       const url = input instanceof Request ? input.url : String(input);
       const body = url.includes("/installation/license")
         ? answers.length > 1
@@ -58,6 +60,7 @@ function mount(...answers: LicenseEntitlement[]) {
       </LocaleProvider>
     </QueryClientProvider>,
   );
+  return reads;
 }
 
 beforeEach(() => {
@@ -68,14 +71,47 @@ beforeEach(() => {
 
 afterEach(() => {
   cleanup();
+  localStorage.clear();
   vi.useRealTimers();
   vi.unstubAllGlobals();
 });
 
-it("counts down the trial calmly while more than a week is left", async () => {
-  mount(entitlement(10 * DAY));
-  const notice = await screen.findByText("10 days left of your trial");
-  expect(notice.closest(".callout")?.classList).toContain("callout-info");
+it("leaves the chrome to the orb while more than a week is left", async () => {
+  const reads = mount(entitlement(10 * DAY));
+  await vi.waitFor(() =>
+    expect(reads.some((url) => url.includes("/installation/license"))).toBe(
+      true,
+    ),
+  );
+  expect(document.querySelector(".callout")).toBeNull();
+});
+
+it("may be put away until tomorrow in the last week, and comes back the next day", async () => {
+  const user = userEvent.setup();
+  mount(entitlement(6 * DAY));
+  await user.click(
+    await screen.findByRole("button", { name: en["trial.notice.hideToday"] }),
+  );
+  expect(screen.queryByText("6 days left of your trial")).toBeNull();
+
+  cleanup();
+  mount(entitlement(6 * DAY));
+  await vi.waitFor(() =>
+    expect(document.querySelector(".appbanner")).toBeNull(),
+  );
+
+  cleanup();
+  vi.setSystemTime(NOW + DAY);
+  mount(entitlement(6 * DAY));
+  expect(await screen.findByText("5 days left of your trial")).toBeTruthy();
+});
+
+it("cannot be put away on the last day", async () => {
+  mount(entitlement(DAY / 2));
+  expect(await screen.findByText("1 day left of your trial")).toBeTruthy();
+  expect(
+    screen.queryByRole("button", { name: en["trial.notice.hideToday"] }),
+  ).toBeNull();
 });
 
 it("turns to a warning in the trial's last week", async () => {

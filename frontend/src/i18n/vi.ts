@@ -14835,6 +14835,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "trial.notice.body":
     "Từ {date}, Margince sẽ ngừng hoạt động cho đến khi có giấy phép. Dữ liệu của bạn vẫn được giữ nguyên.",
   "trial.notice.endedTitle": "Thời gian dùng thử đã kết thúc",
+  "trial.notice.hideToday": "Ẩn đến ngày mai",
   "trial.notice.endedBody":
     "Margince đã ngừng hoạt động từ {date} và đang chờ giấy phép. Dữ liệu của bạn vẫn được giữ nguyên, không có gì bị xóa.",
   "trial.contact.title": "Liên hệ đội ngũ Margince",

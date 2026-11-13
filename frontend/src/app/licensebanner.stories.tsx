@@ -76,13 +76,17 @@ export const InGrace: Story = {
   render: story("valid", LICENSE_READER, IN_GRACE),
 };
 
-// A production installation with no licence runs on its trial: calm while
-// more than a week is left, then a warning. Its button writes to the team.
+// A production installation with no licence runs on its trial. While more than
+// a week is left the orb's ring carries it, and this draws nothing. In the last
+// week it warns. It may be put away until tomorrow, except on the last day.
 export const TrialRunning: Story = {
   render: story("absent", LICENSE_READER, undefined, trialEnding(10)),
 };
 export const TrialClosing: Story = {
   render: story("absent", LICENSE_READER, undefined, trialEnding(3)),
+};
+export const TrialLastDay: Story = {
+  render: story("absent", LICENSE_READER, undefined, trialEnding(0.5)),
 };
 
 // No licence is every dev and demo stack's state, so it draws nothing.
