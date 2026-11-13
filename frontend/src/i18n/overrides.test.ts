@@ -11,7 +11,7 @@ import { de } from "./de";
 vi.mock("@composition/copy", () => ({
   extensionCopy: { en: { "extAcme.title": "Acme" } },
   extensionOverrides: {
-    en: { "nav.contacts": "People", "worklist.relationships.optional": "{q}" },
+    en: { "nav.contacts": "Customers", "worklist.relationships.optional": "{q}" },
   },
 }));
 
@@ -19,7 +19,7 @@ const { translate } = await import("./index");
 
 describe("translate() with overrides", () => {
   it("reads the override before the core catalogue", () => {
-    expect(translate("en", "nav.contacts")).toBe("People");
+    expect(translate("en", "nav.contacts")).toBe("Customers");
   });
 
   it("falls back to core for a locale the override does not cover", () => {

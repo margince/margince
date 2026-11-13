@@ -669,9 +669,9 @@ refused too: your own copy never writes over core text. To change core wording, 
 
 ## Override core wording
 
-An installation can reword the screens without forking core, for example "Deal" becomes "Opportunity". Put one flat
+An installation can change the text of the screens without forking core, for example "Deal" becomes "Opportunity". Put one flat
 JSON object per language in `frontend/i18n-overrides/<locale>.json`, in a folder of its own, apart from
-`frontend/i18n/`. The keys are core keys, spelled as in the core catalog.
+`frontend/i18n/`. The keys are core keys, named as in the core catalog.
 
 ```json
 { "nav.deals": "Opportunities" }
@@ -683,21 +683,21 @@ JSON object per language in `frontend/i18n-overrides/<locale>.json`, in a folder
 | The files are the declaration | `make gen` reads them from every enabled unit. There is no runtime or admin editing. |
 | A key that core does not have | `make gen` refuses it and names the key. |
 | Two units override one key in one language | `make gen` refuses it and names both units. |
-| Any core key | All are overridable, consent, erasure, approval and sign-in wording included. |
+| Any core key | All can be changed: consent, erasure, approval and sign-in wording included. |
 
 `translate()` looks in the overrides first, then the core catalog, then your own copy.
 
 Two gates in `frontend/src/i18n/overrides.test.ts` fail the frontend test lane. One fails when an override drops a
-placeholder that core's string has, such as `{count}`. The other fails when an override gives one plural form of a key
+part that core's text has, such as `{count}`. The other fails when an override gives one count form of a key
 (`_one`) and not every form core has for it (`_other`).
 
 The installation owns the wording of every key it overrides. Core does not carry its later changes into that
 key. Check your overrides when you upgrade core.
 
-Known limits:
+Limits:
 
-- **Grammar is yours.** A new word can need another article, case or plural. The gates check placeholders and plural
-  forms, not whether the sentence reads well.
+- **Grammar is yours.** A new word can need another article, case or count form. The gates check the parts and count
+  forms, not whether the sentence reads right.
 - **Longer text can break a layout.** Buttons and table headers do not grow without limit.
 - **An override can go stale.** If core changes what a key means, your text still says the old thing.
 
