@@ -33,13 +33,13 @@ const maxInvoiceDocumentBytes = 20 << 20
 // source sends could be rendered by the browser as a page of our origin.
 const pdfMediaType = "application/pdf"
 
-// invoiceDocumentsPerMinute is how many documents one person may fetch in a
+// invoiceDocumentsPerMinute is how many documents one member may fetch in a
 // minute. Each one is a live call against the vendor's quota. The ceiling stops
 // one runaway reader or agent loop from draining it; a reader opening invoices
 // by hand needs far fewer.
 const invoiceDocumentsPerMinute = 20
 
-// invoiceDocumentFetches meters document fetches per person. FailClosed: an
+// invoiceDocumentFetches meters document fetches per member. FailClosed: an
 // unmetered window can spend the vendor quota for the day, and that cannot be
 // taken back.
 var invoiceDocumentFetches = ratelimit.New("finance/invoice-document-per-user", ratelimit.FailClosed, invoiceDocumentsPerMinute, time.Minute)
