@@ -8,6 +8,7 @@ package gates
 import (
 	"io/fs"
 	"regexp"
+	"slices"
 	"strings"
 	"testing"
 
@@ -38,10 +39,8 @@ func TestNoShellScriptUsesATestBash32CannotParse(t *testing.T) {
 			return err
 		}
 		read++
-		for i, line := range strings.Split(string(body), "\n") {
-			if bash32Breakers.MatchString(line) && !strings.HasPrefix(strings.TrimSpace(line), "#") {
-				t.Errorf("%s:%d uses [[ -v ]], which macOS bash 3.2 cannot parse; test \"${VAR+set}\" instead", path, i+1)
-			}
+		for _, line := range bash32BreakerLines(string(body)) {
+			t.Errorf("%s:%d uses [[ -v ]], which macOS bash 3.2 cannot parse; test \"${VAR+set}\" instead", path, line)
 		}
 		return nil
 	})
@@ -50,5 +49,39 @@ func TestNoShellScriptUsesATestBash32CannotParse(t *testing.T) {
 	}
 	if read < 50 {
 		t.Fatalf("read %d shell scripts; the walk is short", read)
+	}
+}
+
+// bash32BreakerLines names the lines where a [[ -v ]] test opens. Comment lines
+// are blanked first, keeping the line count, so a test split over lines is
+// matched as bash reads it.
+func bash32BreakerLines(script string) []int {
+	lines := strings.Split(script, "\n")
+	for i, line := range lines {
+		if strings.HasPrefix(strings.TrimSpace(line), "#") {
+			lines[i] = ""
+		}
+	}
+	code := strings.Join(lines, "\n")
+	var found []int
+	for _, at := range bash32Breakers.FindAllStringIndex(code, -1) {
+		found = append(found, strings.Count(code[:at[0]], "\n")+1)
+	}
+	return found
+}
+
+// The matcher sees a test on one line and one split over lines, and leaves a
+// comment that names the construct alone.
+func TestTheBash32MatcherReadsATestAcrossLines(t *testing.T) {
+	t.Parallel()
+	for script, want := range map[string][]int{
+		"if [[ ! -v FLAGS ]]; then\n  exit 2\nfi":          {1},
+		"x=1\nif [[\n  ! -v FLAGS\n]]; then\n  exit 2\nfi": {2},
+		"# never write [[ -v FLAGS ]]\nx=1":                nil,
+		"if [[ -z \"${FLAGS+set}\" ]]; then exit; fi":      nil,
+	} {
+		if got := bash32BreakerLines(script); !slices.Equal(got, want) {
+			t.Errorf("%q: lines %v, want %v", script, got, want)
+		}
 	}
 }
