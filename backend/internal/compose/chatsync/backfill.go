@@ -77,7 +77,7 @@ func (p *Puller) backfill(ctx context.Context, session chatlinks.Session, link c
 // to. It also says whether the talk before the link was read to its end.
 func beforeLink(read historyRead, link chatlinks.Link) ([]dispact.Message, int64, bool) {
 	for i, m := range read.kept {
-		if !m.PostedAt.Before(link.CreatedAt) {
+		if postedSinceLink(m, link) {
 			return read.kept[:i], m.Seq - 1, true
 		}
 	}

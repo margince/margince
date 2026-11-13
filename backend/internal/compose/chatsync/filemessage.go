@@ -77,7 +77,7 @@ func (f *Filer) FileMessage(ctx context.Context, kind string, id ids.UUID, ref s
 }
 
 // chosenMessages reads the message at seq and, for a thread, the replies in
-// its thread that follow it.
+// its thread that follow it, all posted since the link was made.
 func chosenMessages(ctx context.Context, chat chatlinks.Chat, link chatlinks.Link, seq int64, thread bool) ([]dispact.Message, error) {
 	from := seq - 1
 	link.HistoryCursor = &from
@@ -91,13 +91,14 @@ func chosenMessages(ctx context.Context, chat chatlinks.Chat, link chatlinks.Lin
 			anchor = &m
 			return true
 		}
-		return thread && anchor != nil && judged(m) && m.ThreadTS != "" &&
+		return thread && anchor != nil && judged(m) && postedSinceLink(m, link) && m.ThreadTS != "" &&
 			(m.ThreadTS == anchor.ThreadTS || m.ThreadTS == anchor.ID)
 	})
 	if err != nil {
 		return nil, chatlinks.ChatFailure(err)
 	}
-	if anchor == nil || !judged(*anchor) {
+	// Talk from before the link answers as missing, so no one learns it is there.
+	if anchor == nil || !judged(*anchor) || !postedSinceLink(*anchor, link) {
 		return nil, chatlinks.ErrMessageNotFound
 	}
 	// A thread read only in part would be filed under its permanent key.
