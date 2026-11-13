@@ -194,7 +194,7 @@ The work counts come from the current Worklist read. The greeting's email count 
 **Since your last brief** says when some activity could not be counted. Its count then says how much it could count, and an empty list does not mean nothing happened. A change that covers several records lists each record with its time and its full values, before and after. Each record keeps the **Undo** its change allows.
 
 ### Done for you
-**Done for you**, on **Today**, shows what Margince finished for you. Its band counts the deals Margince changed in the last 7 days and holds **Change history**, which opens the Worklist at its **Change history** panel. Each deal it changed is a card, then **Other updates** follows. One card is open at a time; a closed card shows the deal's newest change, and a press opens it.
+**Done for you**, on **Today**, shows what Margince finished for you. Its band counts the deals Margince changed in the last 7 days and holds **Change history**, which opens the Worklist at its **Change history** panel. Each deal it changed is a card, and the last card holds the small changes, such as **8 small changes**. One card is open at a time; a closed card shows the deal's newest change, and a press opens it. The small-changes card holds the work Margince did beside the deals, such as saving or filing an email. Closed, it names each kind of change on one line. It opens by itself when no deal changed. Changes that read the same show as one step with a count, such as **Saved email or meeting** with **4 changes**, and each email or meeting under it keeps its own **View 2 changes** and **Undo**. **Details** under each one says when it happened, who did it, why, and why it cannot be undone when it cannot.
 
 An open card lists every change on the deal, newest first: what moved and when, and why Margince did it. When a change rests on the customer's own words, they show under "The customer wrote:". A deal Margince closed reads **Marked lost**, and "Reason unavailable" when you may not read why. Only the deal's owner reads why. A change a later one replaced is grey and reads "Replaced by a later change".
 
@@ -206,7 +206,7 @@ Home shows the first five deals. **See all 6 deals** opens a list of every chang
 
 At the foot of that list, **Undo changes on 6 deals** takes back the ticked deals, from those listed when you opened it. When some deals cannot be sent, the answer counts them and offers **Send again**. It reads them again and sends only those that still have a change to undo.
 
-A deal Margince took back while the answer failed counts as undone, and one with no change left to undo is counted apart. The answer stays when you refresh the page, until you press **Clear this result**. Only this browser keeps it. See [Approvals](approvals.md#can-i-undo-what-the-ai-changed). When some activity could not be counted, **Other updates** says so under its list.
+A deal Margince took back while the answer failed counts as undone, and one with no change left to undo is counted apart. The answer stays when you refresh the page, until you press **Clear this result**. Only this browser keeps it. See [Approvals](approvals.md#can-i-undo-what-the-ai-changed). When some activity could not be counted, a line under the small-changes card says so.
 
 A deal that changed again reads "Replaced by a later change". To make Margince ask first, see [Approvals](approvals.md). Also called: automatic changes, review changes, accept a change, check applied changes.
 
