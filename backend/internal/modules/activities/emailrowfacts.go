@@ -76,8 +76,8 @@ func applyCounterparties(page []crmcontracts.Activity, parties map[ids.UUID]emai
 		if summary == nil || !contentReadable(page[i]) {
 			continue
 		}
-		summary.Counterparty, summary.CounterpartyContactId =
-			rowCounterparty(page[i].Direction, parties[ids.UUID(page[i].Id)])
+		message := parties[ids.UUID(page[i].Id)]
+		summary.Counterparty, summary.CounterpartyContactId = rowCounterparty(page[i].Direction, message)
 	}
 }
 
