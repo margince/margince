@@ -13,11 +13,8 @@ import { browserZone } from "../format/timezone";
 import { LocaleProvider } from "../i18n";
 import { activityTimeline } from "./activitytimeline";
 import { TimelineRow } from "./timeline";
-import {
-  isTranscriptActivity,
-  TranscriptReadCard,
-  TranscriptSummary,
-} from "./transcriptread";
+import { isTranscriptActivity, TranscriptReadCard } from "./transcriptread";
+import { TranscriptSummary } from "./transcriptsummary";
 
 // Reading a meeting transcript for the next steps it states (S-E04.3).
 //

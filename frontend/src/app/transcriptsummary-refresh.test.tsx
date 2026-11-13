@@ -2,7 +2,7 @@
 import { type QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { act, cleanup, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, expect, it } from "vitest";
-import { TranscriptSummary } from "../design-system/transcriptread";
+import { TranscriptSummary } from "../design-system/transcriptsummary";
 import { LocaleProvider } from "../i18n";
 import { transcriptReadLatestKey } from "../lib/activitykeys";
 import { installFetchStub, jsonResponse } from "../testing/story-utils";

@@ -7,7 +7,8 @@ import {
   jsonResponse,
   StoryProviders,
 } from "../testing/story-utils";
-import { TranscriptReadCard, TranscriptSummary } from "./transcriptread";
+import { TranscriptReadCard } from "./transcriptread";
+import { TranscriptSummary } from "./transcriptsummary";
 
 // Reading a meeting transcript for the next steps it states (S-E04.3). The
 // three terminal states are separate stories on purpose: they are the whole
