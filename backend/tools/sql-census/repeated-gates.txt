@@ -8,7 +8,6 @@
 
 backend/internal/modules/activities/activitylisttx.go activities.ListActivitiesTx the timeline list filter, shared by every activity list; rewritten on its own
 backend/internal/modules/activities/dealactivitylists.go activities.ListActivitiesByDealTx the timeline list filter, shared by every activity list; rewritten on its own
-backend/internal/modules/activities/owedreview.go activities.owedReviewReadTx repeats the gate; awaits its own rewrite and bench measurement
 backend/internal/compose/export.go compose.readMember repeats the gate; awaits its own rewrite and bench measurement
 backend/internal/modules/search/queryexec.go search.(*QueryExecutor).answerRows.func1 repeats the gate; awaits its own rewrite and bench measurement
 backend/internal/modules/activities/waiting.go activities.(*Store).queryWaitingQueue gated once, the set holds every candidate and loses the early stop of the page and the card tail; bench-daily measured it slower
