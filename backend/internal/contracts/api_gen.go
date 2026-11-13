@@ -66569,6 +66569,12 @@ type TranscriptReadReport struct {
 
 	// StatusDetail The sentence stored when the reading finished, in the installation's base language and naming nobody. Kept for readings finished before `detail` existed; a client shows `detail` when it is set.
 	StatusDetail *string `json:"status_detail,omitempty"`
+
+	// Summary The meeting's summary as this reading leaves it: the one this reading wrote, or the newest one an earlier reading wrote. Absent when no reading has written one.
+	Summary *TranscriptSummary `json:"summary,omitempty"`
+
+	// SummaryRefused True when this reading finished without writing a summary, because the summary failed the check that every point cites lines the transcript has. The meeting keeps `summary` as it was.
+	SummaryRefused bool `json:"summary_refused"`
 }
 
 // TranscriptReadReportStatus defines model for TranscriptReadReport.Status.
@@ -66584,6 +66590,27 @@ type TranscriptReadStarted struct {
 
 // TranscriptReadStartedStatus The joined reading's state when one is already in flight.
 type TranscriptReadStartedStatus string
+
+// TranscriptSummary A short summary of one meeting, written by a model from its transcript and never by a member. A client marks it as AI-written. Each point cites the transcript lines it was read from; the transcript itself is unchanged.
+type TranscriptSummary struct {
+	GeneratedAt time.Time `json:"generated_at"`
+
+	// KeyPoints What the meeting covered, in the language the meeting was held in.
+	KeyPoints []TranscriptSummaryPoint `json:"key_points"`
+
+	// NextSteps What the meeting agreed would happen next. Empty when it agreed nothing.
+	NextSteps []TranscriptSummaryPoint `json:"next_steps"`
+
+	// ReadId The reading that wrote this summary.
+	ReadId openapi_types.UUID `json:"read_id"`
+}
+
+// TranscriptSummaryPoint defines model for TranscriptSummaryPoint.
+type TranscriptSummaryPoint struct {
+	// SourceLines The 1-based transcript lines this point was read from.
+	SourceLines []int  `json:"source_lines"`
+	Text        string `json:"text"`
+}
 
 // TransferProjectOwnershipRequest defines model for TransferProjectOwnershipRequest.
 type TransferProjectOwnershipRequest struct {

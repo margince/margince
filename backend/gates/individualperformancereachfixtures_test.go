@@ -22,6 +22,9 @@ import (
 
 const reachFixtures = "gates/testdata/individualperformancereach/"
 
+// fixtureDispatchers names the tool registry a planted package declares.
+var fixtureDispatchers = map[string][]switchReader{"toolroute": {{"toolroute", "Registry.Invoke"}}}
+
 // walkFixture loads one planted package beside the planted auth reader, and
 // answers which of ops the walk flags. Each package is loaded alone, so a type
 // one package converts is never wired into another.
@@ -42,6 +45,9 @@ func walkFixture(t *testing.T, name string, ops ...string) []string {
 	}
 	g := newSwitchGraph(fset, byPackage)
 	if err := g.readers([]switchReader{{"auth", "IndividualPerformanceOf"}}, []switchReader{{"auth", "Catalog"}}); err != nil {
+		t.Fatal(err)
+	}
+	if err := g.dispatchers(fixtureDispatchers[name]); err != nil {
 		t.Fatal(err)
 	}
 	walk := newSwitchWalk(g)
@@ -75,7 +81,11 @@ func TestACallbackResolvesPerCallSiteAndAFieldByEveryValueItIsGiven(t *testing.T
 
 func TestABranchThatSkipsTheCheckBesideOneThatAsksFails(t *testing.T) {
 	t.Parallel()
-	ops := []string{"getProgress", "getProgressBySwitch", "getEachRowSkippingOne", "getEachRowCheckingInside", "getAfterTheCatalog"}
+	ops := []string{
+		"getProgress", "getProgressBySwitch", "getEachRowSkippingOne", "getEachRowCheckingInside", "getAfterTheCatalog", "getAFigureBesideARefusal",
+		"getAFigureBesideASentinel", "getAFigureBesideAWrappedSentinel",
+		"getAFigureBesideAnImportedSentinel", "getAFigureBesideAnErrorLiteral",
+	}
 	if got := walkFixture(t, "ownerbranch", ops...); !slices.Equal(got, ops) {
 		t.Errorf("flagged %v, want %v", got, ops)
 	}
@@ -85,7 +95,7 @@ func TestAHandlerThatChecksOnEveryPathPasses(t *testing.T) {
 	t.Parallel()
 	ops := []string{
 		"getInATransaction", "getThroughTheWiredImplementation", "getThroughACheckedCallback", "getOnBothBranches",
-		"getEachRow", "getThroughAConstructor", "getThroughABuiltReader", "getUnlessUnknown", "getTheCatalog",
+		"getEachRow", "getThroughAConstructor", "getThroughABuiltReader", "getUnlessUnknown", "getUnlessMalformed", "getTheCatalog",
 	}
 	if got := walkFixture(t, "everypath", ops...); len(got) > 0 {
 		t.Errorf("flagged %v, want none: each checks the switch before every figure it writes", got)
@@ -98,5 +108,14 @@ func TestAHandlerWithNoFigureTheWalkSeesFailsTheCensus(t *testing.T) {
 	t.Parallel()
 	if got := walkFixture(t, "nofigure", "getNothingItCanSee"); !slices.Equal(got, []string{"getNothingItCanSee"}) {
 		t.Errorf("flagged %v, want getNothingItCanSee", got)
+	}
+}
+
+// A route that hands a tool's name to the registry answers for that tool alone.
+func TestARouteTheRegistryServesAnswersForTheToolItNames(t *testing.T) {
+	t.Parallel()
+	ops := []string{"getCheckedTool", "getUncheckedTool", "getToolByPath", "getRenamedTool", "getRewiredTool", "getToolThroughARunner"}
+	if got, want := walkFixture(t, "toolroute", ops...), ops[1:]; !slices.Equal(got, want) {
+		t.Errorf("flagged %v, want %v", got, want)
 	}
 }

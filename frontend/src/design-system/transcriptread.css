@@ -17,3 +17,15 @@
 .transcript-tally {
   margin-top: var(--space-3);
 }
+
+.transcript-summary {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  margin-top: var(--space-2);
+}
+
+.transcript-summary-points {
+  margin: 0;
+  padding-inline-start: var(--space-4);
+}

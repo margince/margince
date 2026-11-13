@@ -7188,6 +7188,11 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "transcriptread.failedTitle": "Transkript konnte nicht gelesen werden",
   "transcriptread.failedFallback": "Es wurde nichts vorgemerkt.",
   "transcriptread.effectFailedTitle": "Angenommen, aber keine Aufgabe erstellt",
+  "transcriptread.summaryTitle": "Zusammenfassung des Termins",
+  "transcriptread.keyPoints": "Kernpunkte",
+  "transcriptread.nextSteps": "Nächste Schritte",
+  "transcriptread.summaryRefused":
+    "Diesmal wurde keine Zusammenfassung geschrieben. Lies das Transkript erneut, um es noch einmal zu versuchen.",
 
   "create.cancel": "Abbrechen",
   "create.save": "Erstellen",
@@ -21275,6 +21280,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "magic.action.approval_overnight": "Vorschlag prüfen",
   "approval.commitment.proposalExpiresIn": "Vorschlag läuft in {countdown} ab",
   "approval.commitment.noDueDay": "Kein Tag genannt",
+  "approval.commitment.strength": "Wie verbindlich",
+  "approval.commitment.tentative": "Mit Vorbehalt: Es hieß, man versuche es",
   "approval.commitment.promiseStatus": "Stand der Zusage",
   "approval.commitment.notFulfilled":
     "Das Erstellen der Aufgabe markiert die Zusage nicht als erfüllt.",

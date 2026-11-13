@@ -71731,7 +71731,7 @@ components:
         What one reading of one transcript did. The three outcomes are kept apart on purpose: still
         reading, read it and it stated nothing, and could not read it are different answers, and
         collapsing the last two makes a correct empty result look like a broken feature.
-      required: [read_id, activity_id, status, line_count, proposal_ids, proposals, created_at]
+      required: [read_id, activity_id, status, line_count, proposal_ids, proposals, created_at, summary_refused]
       properties:
         read_id: { type: string, format: uuid }
         activity_id: { type: string, format: uuid }
@@ -71769,6 +71769,46 @@ components:
         started_at: { type: [string, 'null'], format: date-time }
         finished_at: { type: [string, 'null'], format: date-time }
         created_at: { type: string, format: date-time }
+        summary:
+          allOf: [ { $ref: '#/components/schemas/TranscriptSummary' } ]
+          description: >-
+            The meeting's summary as this reading leaves it: the one this reading wrote, or the
+            newest one an earlier reading wrote. Absent when no reading has written one.
+        summary_refused:
+          type: boolean
+          description: >-
+            True when this reading finished without writing a summary, because the summary failed
+            the check that every point cites lines the transcript has. The meeting keeps `summary`
+            as it was.
+
+    TranscriptSummary:
+      type: object
+      description: >-
+        A short summary of one meeting, written by a model from its transcript and never by a
+        member. A client marks it as AI-written. Each point cites the transcript lines it was read
+        from; the transcript itself is unchanged.
+      required: [read_id, generated_at, key_points, next_steps]
+      properties:
+        read_id: { type: string, format: uuid, description: 'The reading that wrote this summary.' }
+        generated_at: { type: string, format: date-time }
+        key_points:
+          type: array
+          description: What the meeting covered, in the language the meeting was held in.
+          items: { $ref: '#/components/schemas/TranscriptSummaryPoint' }
+        next_steps:
+          type: array
+          description: What the meeting agreed would happen next. Empty when it agreed nothing.
+          items: { $ref: '#/components/schemas/TranscriptSummaryPoint' }
+
+    TranscriptSummaryPoint:
+      type: object
+      required: [text, source_lines]
+      properties:
+        text: { type: string }
+        source_lines:
+          type: array
+          description: The 1-based transcript lines this point was read from.
+          items: { type: integer }
 
     TranscriptReadProposal:
       type: object

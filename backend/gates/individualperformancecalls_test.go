@@ -10,6 +10,7 @@ package gates
 
 import (
 	"go/ast"
+	"go/constant"
 	"go/token"
 	"go/types"
 	"slices"
@@ -39,10 +40,11 @@ var successStatuses = map[string]bool{
 
 // run is one function a call runs, with its func-typed parameters bound to
 // what this call site passes. A parameter bound to nil is one the walk cannot
-// resolve.
+// resolve. names holds each string parameter passed a constant.
 type run struct {
 	fn    fnValue
 	bound map[*types.Var][]fnValue
+	names map[*types.Var]string
 }
 
 // expr walks the calls in expr in the order they run. A literal does not run
@@ -85,12 +87,13 @@ func (w *pathWalk) call(call *ast.CallExpr, s pathState) pathState {
 		return s
 	}
 	runs, resolved, external := w.runs(call, callee)
+	runs = w.dispatched(call, runs)
 	if w.writesFigure(call, resolved && !external) {
 		w.verdict.writes.add(call.Pos(), s.covered())
 	}
 	guards, bare := resolved && len(runs) > 0, resolved && len(runs) > 0
 	for _, next := range runs {
-		verdict := w.sw.walk(next.fn, next.bound, pathState{checked: s.checked, bare: s.bare}, w.frame.depth+1)
+		verdict := w.sw.walk(next, pathState{checked: s.checked, bare: s.bare}, w.frame.depth+1)
 		w.verdict.writes.merge(verdict.writes)
 		guards, bare = guards && verdict.guards, bare && verdict.bare
 	}
@@ -108,7 +111,7 @@ func (w *pathWalk) runs(call *ast.CallExpr, callee *types.Func) (runs []run, res
 	info := w.frame.info
 	if lit, ok := ast.Unparen(call.Fun).(*ast.FuncLit); ok {
 		value := fnValue{lit: lit, env: w.frame, info: info}
-		return []run{{value, w.bind(value, call)}}, true, false
+		return []run{w.bind(value, call)}, true, false
 	}
 	var values []fnValue
 	switch {
@@ -122,13 +125,14 @@ func (w *pathWalk) runs(call *ast.CallExpr, callee *types.Func) (runs []run, res
 		return w.handedFuncs(call), true, true
 	}
 	for _, value := range values {
-		runs = append(runs, run{value, w.bind(value, call)})
+		runs = append(runs, w.bind(value, call))
 	}
 	return runs, resolved, false
 }
 
 // handedFuncs are the func values call passes, each run where it is handed.
-// One the walk cannot resolve makes the call one that does not check.
+// One the walk cannot resolve makes the call one that does not check. The
+// outside caller chooses what it hands each, so their parameters stay unbound.
 func (w *pathWalk) handedFuncs(call *ast.CallExpr) []run {
 	var runs []run
 	for _, arg := range call.Args {
@@ -140,39 +144,89 @@ func (w *pathWalk) handedFuncs(call *ast.CallExpr) []run {
 			return nil
 		}
 		for _, value := range values {
-			runs = append(runs, run{value, w.bind(value, call)})
+			runs = append(runs, run{fn: value})
 		}
 	}
 	return runs
 }
 
-// bind maps each func-typed parameter of fn to what call passes for it.
-func (w *pathWalk) bind(fn fnValue, call *ast.CallExpr) map[*types.Var][]fnValue {
+// dispatched replaces a run of the tool registry's dispatcher with the Handle
+// of each tool whose spec names the dispatcher's second argument. A name the
+// walk cannot read as a constant leaves the dispatcher, which checks nothing.
+func (w *pathWalk) dispatched(call *ast.CallExpr, runs []run) []run {
+	out := make([]run, 0, len(runs))
+	for _, next := range runs {
+		var handlers []*types.Func
+		if verb, ok := w.constantString(call, 1); ok && w.sw.g.dispatchSet[next.fn.decl] {
+			handlers = w.sw.g.toolHandlers(verb)
+		}
+		if len(handlers) == 0 {
+			out = append(out, next)
+		}
+		for _, handler := range handlers {
+			out = append(out, run{fn: fnValue{decl: handler}})
+		}
+	}
+	return out
+}
+
+// constantString reads a call's argument as a string constant: a literal, a
+// constant, or a parameter this walk's call sites passed one.
+func (w *pathWalk) constantString(call *ast.CallExpr, index int) (string, bool) {
+	if index >= len(call.Args) {
+		return "", false
+	}
+	arg := ast.Unparen(call.Args[index])
+	if value := w.frame.info.Types[arg].Value; value != nil && value.Kind() == constant.String {
+		return constant.StringVal(value), true
+	}
+	ident, ok := arg.(*ast.Ident)
+	if !ok {
+		return "", false
+	}
+	v, ok := w.frame.info.Uses[ident].(*types.Var)
+	for frame := w.frame; ok && !w.sw.g.reassigned[v] && frame != nil; frame = frame.parent {
+		if name, found := frame.names[v]; found {
+			return name, true
+		}
+	}
+	return "", false
+}
+
+// bind maps each func-typed parameter of fn to what call passes for it, and
+// each string parameter to the constant it passes.
+func (w *pathWalk) bind(fn fnValue, call *ast.CallExpr) run {
 	var sig *types.Signature
 	if fn.lit != nil {
 		sig, _ = fn.info.TypeOf(fn.lit).(*types.Signature)
 	} else {
 		sig, _ = fn.decl.Type().(*types.Signature)
 	}
+	out := run{fn: fn}
 	if sig == nil {
-		return nil
+		return out
 	}
-	var bound map[*types.Var][]fnValue
 	for i := range min(sig.Params().Len(), len(call.Args)) {
 		param := sig.Params().At(i)
+		if name, ok := w.constantString(call, i); ok && types.Identical(param.Type(), types.Typ[types.String]) {
+			if out.names == nil {
+				out.names = map[*types.Var]string{}
+			}
+			out.names[param] = name
+		}
 		if !isFuncTyped(param) {
 			continue
 		}
-		if bound == nil {
-			bound = map[*types.Var][]fnValue{}
+		if out.bound == nil {
+			out.bound = map[*types.Var][]fnValue{}
 		}
 		values, ok := w.values(call.Args[i])
 		if !ok {
 			values = nil
 		}
-		bound[param] = values
+		out.bound[param] = values
 	}
-	return bound
+	return out
 }
 
 // values resolves an expression of func type to the functions it may hold.
@@ -228,7 +282,7 @@ func (w *pathWalk) funcValues(fn *types.Func) ([]fnValue, bool) {
 func (w *pathWalk) varValues(v *types.Var) ([]fnValue, bool) {
 	for frame := w.frame; frame != nil; frame = frame.parent {
 		if values, ok := frame.bound[v]; ok {
-			return values, values != nil
+			return values, values != nil && !w.sw.g.reassigned[v]
 		}
 	}
 	origin := v.Origin()
