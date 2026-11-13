@@ -19,11 +19,11 @@ SET LOCAL lock_timeout = '5s';
 
 ALTER TABLE channel_connection DROP CONSTRAINT channel_connection_provider_check;
 ALTER TABLE channel_connection ADD CONSTRAINT channel_connection_provider_check
-    CHECK (provider IN ('telegram', 'dispact'));
+    CHECK (provider IN ('telegram', 'dispact')) NOT VALID;
 ALTER TABLE channel_connection ADD COLUMN address text;
 ALTER TABLE channel_connection ADD COLUMN events_credential_ref text;
 ALTER TABLE channel_connection ADD CONSTRAINT channel_connection_address_check
-    CHECK ((provider = 'dispact') = (address IS NOT NULL) AND (address IS NULL OR address ~ '^https?://'));
+    CHECK ((provider = 'dispact') = (address IS NOT NULL) AND (address IS NULL OR address ~ '^https?://')) NOT VALID;
 
 INSERT INTO channel_provider (provider, transport, label, credential_model, supplies_transport)
 VALUES ('dispact', 'core', 'Dispact', 'workspace_bot', false)
@@ -66,6 +66,10 @@ CREATE TABLE chat_link (
 CREATE UNIQUE INDEX uq_chat_link_channel ON chat_link (provider, channel_slug) WHERE archived_at IS NULL;
 CREATE UNIQUE INDEX uq_chat_link_deal ON chat_link (deal_id) WHERE archived_at IS NULL AND deal_id IS NOT NULL;
 CREATE UNIQUE INDEX uq_chat_link_project ON chat_link (project_id) WHERE archived_at IS NULL AND project_id IS NOT NULL;
+-- A delete of a deal, a project or a connection finds its links through these.
+CREATE INDEX idx_chat_link_connection ON chat_link (connection_id);
+CREATE INDEX idx_chat_link_deal ON chat_link (deal_id);
+CREATE INDEX idx_chat_link_project ON chat_link (project_id);
 
 -- The sync columns move every minute, and a version bump on each would make
 -- every edit of the link's settings lose to the pull.

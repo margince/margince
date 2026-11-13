@@ -161,6 +161,8 @@ func TestSchema_companyOpenPipelineRollupIsSecurityInvoker(t *testing.T) {
 // naming a row-scoped business record. Values are prose for the reader;
 // the map's completeness is the invariant.
 var rowScopedFKDecisions = gatekit.Waive(map[string]string{
+	"chat_link.deal_id":                "gated: auth.HoldWritableLive in chatlinks.insertLink — the member must be able to edit the deal a channel is linked to, since the channel then shows the deal to its members",
+	"chat_link.project_id":             "gated: auth.HoldWritableLive on a linked project, or auth.Require(project, update) plus auth.EnsureWritableLive when a deal brings its project along (chatlinks.linkedRecords); AdoptProject copies only the project the deal already names",
 	"company_offered_value.company_id": "child row: what a feed offered for a company, written by contacts.RecordOfferedValues from an extension landing under the service member's own update right on the company and auth.EnsureWritableLive, never from a request body, and read only through contacts.ListOfferedValues, which gates the company with auth.EnsureReadable and answers 404 for an archived one. ON DELETE CASCADE, and the erasure path deletes a row by statement",
 	// Client-supplied references — visibility-gated at the store:
 	"activity_link_suggestion.activity_id": "gated: auth.EnsureActivityWritable in the write that records a suggestion, and the read joins the activity under auth.ActivityContentClause, so a caller sees a suggestion only for an activity whose content they may read",
