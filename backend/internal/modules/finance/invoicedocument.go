@@ -81,13 +81,8 @@ func (s *Store) InvoiceDocumentFor(ctx context.Context, invoiceID ids.UUID) (Inv
 	}
 	// Counted only once the invoice is found and visible, so a miss spends
 	// nothing of the caller's budget.
-	actor, ok := principal.Actor(ctx)
-	if !ok {
-		return InvoiceDocument{}, apperrors.ErrPermissionDenied
-	}
-	if !invoiceDocumentFetches.Allow(actor.ID) {
-		return InvoiceDocument{}, fmt.Errorf("%w: at most %d invoice documents a minute; try again in %d seconds",
-			apperrors.ErrBudgetExceeded, invoiceDocumentsPerMinute, invoiceDocumentFetches.RetryAfterSeconds())
+	if err := admitDocumentFetch(ctx); err != nil {
+		return InvoiceDocument{}, err
 	}
 	// The source is asked outside the transaction, so a slow vendor holds no
 	// database connection.
@@ -106,6 +101,20 @@ func (s *Store) InvoiceDocumentFor(ctx context.Context, invoiceID ids.UUID) (Inv
 		return InvoiceDocument{}, err
 	}
 	return InvoiceDocument{Body: document.Body, Filename: documentFilename(target)}, nil
+}
+
+// admitDocumentFetch counts one document fetch against the caller's minute,
+// and refuses it once the caller is past the ceiling.
+func admitDocumentFetch(ctx context.Context) error {
+	actor, ok := principal.Actor(ctx)
+	if !ok {
+		return apperrors.ErrPermissionDenied
+	}
+	if !invoiceDocumentFetches.Allow(actor.ID) {
+		return fmt.Errorf("%w: at most %d invoice documents a minute; try again in %d seconds",
+			apperrors.ErrBudgetExceeded, invoiceDocumentsPerMinute, invoiceDocumentFetches.RetryAfterSeconds())
+	}
+	return nil
 }
 
 // servesDocuments answers whether the named source serves invoice documents,
