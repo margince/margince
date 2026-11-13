@@ -1,6 +1,8 @@
 package ownerbranch
 
 import (
+	"context"
+	"fmt"
 	"net/http"
 
 	"example.test/auth"
@@ -67,4 +69,73 @@ func (h Handlers) GetEachRowCheckingInside(w http.ResponseWriter, r *http.Reques
 func (h Handlers) GetAfterTheCatalog(w http.ResponseWriter, r *http.Request) {
 	names := auth.Catalog()
 	httperr.WriteJSON(w, http.StatusOK, map[string][]int{names[0]: teamFigures()})
+}
+
+// A new error beside a figure does not make the return a refusal.
+func teamFigureBesideARefusal(ctx context.Context) ([]int, error) {
+	return teamFigures(), fmt.Errorf("the team is too small")
+}
+
+func (h Handlers) GetAFigureBesideARefusal(w http.ResponseWriter, r *http.Request) {
+	out, err := teamFigureBesideARefusal(r.Context())
+	if err != nil {
+		httperr.Write(w, r, err)
+		return
+	}
+	httperr.WriteJSON(w, http.StatusOK, out)
+}
+
+var errSmallTeam = fmt.Errorf("the team is too small")
+
+// A sentinel beside a figure does not make the return a refusal either.
+func teamFigureBesideASentinel(ctx context.Context) ([]int, error) {
+	return teamFigures(), errSmallTeam
+}
+
+func teamFigureBesideAWrappedSentinel(ctx context.Context) ([]int, error) {
+	return teamFigures(), fmt.Errorf("too small: %w", errSmallTeam)
+}
+
+func (h Handlers) GetAFigureBesideASentinel(w http.ResponseWriter, r *http.Request) {
+	out, err := teamFigureBesideASentinel(r.Context())
+	if err != nil {
+		httperr.Write(w, r, err)
+		return
+	}
+	httperr.WriteJSON(w, http.StatusOK, out)
+}
+
+func (h Handlers) GetAFigureBesideAWrappedSentinel(w http.ResponseWriter, r *http.Request) {
+	out, err := teamFigureBesideAWrappedSentinel(r.Context())
+	if err != nil {
+		httperr.Write(w, r, err)
+		return
+	}
+	httperr.WriteJSON(w, http.StatusOK, out)
+}
+
+func teamFigureBesideAnImportedSentinel(ctx context.Context) ([]int, error) {
+	return teamFigures(), auth.ErrTooSmall
+}
+
+func teamFigureBesideAnErrorLiteral(ctx context.Context) ([]int, error) {
+	return teamFigures(), auth.OffError{}
+}
+
+func (h Handlers) GetAFigureBesideAnImportedSentinel(w http.ResponseWriter, r *http.Request) {
+	out, err := teamFigureBesideAnImportedSentinel(r.Context())
+	if err != nil {
+		httperr.Write(w, r, err)
+		return
+	}
+	httperr.WriteJSON(w, http.StatusOK, out)
+}
+
+func (h Handlers) GetAFigureBesideAnErrorLiteral(w http.ResponseWriter, r *http.Request) {
+	out, err := teamFigureBesideAnErrorLiteral(r.Context())
+	if err != nil {
+		httperr.Write(w, r, err)
+		return
+	}
+	httperr.WriteJSON(w, http.StatusOK, out)
 }

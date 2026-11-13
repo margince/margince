@@ -143,3 +143,20 @@ func (h Handlers) GetUnlessUnknown(w http.ResponseWriter, r *http.Request) {
 	}
 	httperr.WriteJSON(w, http.StatusOK, out)
 }
+
+// A malformed request refused before the check hands out nothing.
+func checkedUnlessMalformed(ctx context.Context, malformed bool) ([]int, error) {
+	if malformed {
+		return nil, httperr.Validation("arguments", "malformed_json", "the arguments are not an object")
+	}
+	return checkedFigures(ctx)
+}
+
+func (h Handlers) GetUnlessMalformed(w http.ResponseWriter, r *http.Request) {
+	out, err := checkedUnlessMalformed(r.Context(), r.URL == nil)
+	if err != nil {
+		httperr.Write(w, r, err)
+		return
+	}
+	httperr.WriteJSON(w, http.StatusOK, out)
+}

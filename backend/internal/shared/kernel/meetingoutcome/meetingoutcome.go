@@ -23,3 +23,18 @@ func IsHeld(status string) bool {
 func HeldSQL(alias string) string {
 	return "(" + alias + ".meeting_status = '" + Held + "')"
 }
+
+// TranscriptSourceSystem is the activity.source_system of a transcript.
+const TranscriptSourceSystem = "transcript"
+
+// RecordsMeetingSQL admits a transcript under alias that records another
+// meeting. The pair is one meeting: a reader that counts meetings skips this
+// row. alias is a compile-time identifier.
+//
+// It is exact because the create refuses a meeting transcript with a source and
+// no outcome unless that source is the meeting it records.
+func RecordsMeetingSQL(alias string) string {
+	// `IS NOT DISTINCT FROM` keeps a row with no source_system false, never NULL.
+	return "(" + alias + ".kind = 'meeting' AND " + alias + ".source_system IS NOT DISTINCT FROM '" + TranscriptSourceSystem +
+		"' AND " + alias + ".source_activity_id IS NOT NULL AND " + alias + ".meeting_status IS NULL)"
+}

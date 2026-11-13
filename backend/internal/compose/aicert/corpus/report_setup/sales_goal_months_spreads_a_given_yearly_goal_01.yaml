@@ -1,0 +1,33 @@
+name: sales_goal_months_spreads_a_given_yearly_goal
+task: report_setup
+site: sales_goal_months
+source: hand_authored
+sanitized_by: hand_authored/claude-fable-5
+# The manager set a yearly goal of 300,000. Both years close most in the last
+# quarter and least in the first. The proposal spreads the goal over that
+# pattern, so the months add up to it.
+fixture:
+  year: 2026
+  currency: EUR
+  today: "2026-07-06"
+  yearly_goal: 300000
+  closed_revenue:
+    - {year: 2026, months: [9000, 11000, 12000, 18000, 19000, 21000, null, null, null, null, null, null]}
+    - {year: 2025, months: [8000, 9000, 10000, 15000, 16000, 17000, 18000, 16000, 24000, 30000, 32000, 35000]}
+expect:
+  outcome: accepted
+  answer:
+    above: [10, 11, 12]
+    below: [1, 2, 3]
+    total_min: 300000
+    total_max: 300000
+  bands:
+    certified_min: 70
+    degraded_min: 50
+    floor: 40
+  rubric: >
+    Score whether the months spread the yearly goal of 300,000 over the
+    pattern both years show. October, November and December must each get a
+    larger goal than January, February and March. The reason must name the
+    stronger year end in plain words with no figure in it. An even spread, or
+    a plan that follows neither year, fails the scenario.

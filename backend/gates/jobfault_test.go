@@ -49,6 +49,7 @@ const workerHome = "internal/compose"
 // declares one to DELEGATE, which is why the exemption is by name and carries
 // what it is rather than being a directory this walk skips.
 var workersOutsideTheirHome = gatekit.Waive(map[string]string{
+	"internal/platform/jobs/pause.go":  "the pause wrapper's own Work, which runs no job of its own: it returns River's snooze, a scheduling signal and not a fault, or what the wrapped compose worker returned. It lives beside Govern because it is wrapped around every worker at the same registration seam",
 	"internal/platform/jobs/govern.go": "the governing wrapper's own Work, which runs no job of its own: it decorates the worker it wraps and returns what that worker returned, so the return rule is satisfied by the wrapped worker and asking it of the wrapper would ask it twice of one value. It lives in platform because it is the seam every compose worker is registered through, and a seam that lived among the workers it governs would be one of them",
 })
 

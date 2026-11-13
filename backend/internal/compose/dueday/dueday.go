@@ -35,3 +35,16 @@ func EndOf(ctx context.Context, tx pgx.Tx, day, zone string) (time.Time, error) 
 	}
 	return time.Date(parsed.Year(), parsed.Month(), parsed.Day(), 23, 59, 59, 0, loc).UTC(), nil
 }
+
+// DayAfter is the calendar day after a stated day, as YYYY-MM-DD. An empty day
+// stays empty: a promise nobody dated gives no day to follow it up on.
+func DayAfter(day string) (string, error) {
+	if day == "" {
+		return "", nil
+	}
+	parsed, err := time.Parse(time.DateOnly, day)
+	if err != nil {
+		return "", fmt.Errorf("compose: commitment due date %q is not a date — write it as YYYY-MM-DD: %w", day, err)
+	}
+	return parsed.AddDate(0, 0, 1).Format(time.DateOnly), nil
+}

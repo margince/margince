@@ -253,6 +253,8 @@ jobs:
               - 'third-party-files.txt'
               - 'frontend/**'
               - 'backend/api/**'
+              # Built from frontend/ by fe-drift, which alone sees a stale copy.
+              - 'backend/internal/modules/agents/previewcatalog_gen.json'
               # The frontend job runs BOTH SPA lanes (ADR-0120), and the
               # composed one is derived from inputs that live nowhere near
               # frontend/. A unit's api/ fragment is the ONLY thing that changes
@@ -1278,7 +1280,7 @@ jobs:
           fetch-depth: 0
       # No version input: the pin is package.json's "packageManager".
       - uses: pnpm/action-setup@73e46992e05b19abd31f2f3c20e0e7370d762115 # v6.1.1
-      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version: 24
           cache: pnpm
@@ -1440,7 +1442,7 @@ jobs:
       # No version input: the pin is package.json's "packageManager".
       - uses: pnpm/action-setup@73e46992e05b19abd31f2f3c20e0e7370d762115 # v6.1.1
         if: steps.plan.outputs.vitest == 'true'
-      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         if: steps.plan.outputs.vitest == 'true'
         with:
           node-version: 24
@@ -1517,7 +1519,7 @@ jobs:
       - uses: pnpm/action-setup@73e46992e05b19abd31f2f3c20e0e7370d762115 # v6.1.1
         if: needs.ci-image.outputs.pinned-image == ''
       # In the image Node is already there, so only the pnpm store is restored.
-      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version: ${{ needs.ci-image.outputs.pinned-image == '' && '24' || '' }}
           cache: pnpm

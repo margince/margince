@@ -16717,6 +16717,27 @@ func (e MagicNotShownReason) Valid() bool {
 	}
 }
 
+// Defines values for MagicReceiptCutAtLimit.
+const (
+	MagicReceiptCutAtLimitCouldNotComplete MagicReceiptCutAtLimit = "could_not_complete"
+	MagicReceiptCutAtLimitDone             MagicReceiptCutAtLimit = "done"
+	MagicReceiptCutAtLimitNeedsYou         MagicReceiptCutAtLimit = "needs_you"
+)
+
+// Valid indicates whether the value is a known member of the MagicReceiptCutAtLimit enum.
+func (e MagicReceiptCutAtLimit) Valid() bool {
+	switch e {
+	case MagicReceiptCutAtLimitCouldNotComplete:
+		return true
+	case MagicReceiptCutAtLimitDone:
+		return true
+	case MagicReceiptCutAtLimitNeedsYou:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for MailCaptureCoverageChannel.
 const (
 	MailCaptureCoverageChannelEmail MailCaptureCoverageChannel = "email"
@@ -22090,6 +22111,42 @@ func (e SalesProgressMonthState) Valid() bool {
 	case SalesProgressMonthStateEnded:
 		return true
 	case SalesProgressMonthStateNotStarted:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for SalesProgressSummaryRequestPeriod.
+const (
+	SalesProgressSummaryRequestPeriodMonth SalesProgressSummaryRequestPeriod = "month"
+	SalesProgressSummaryRequestPeriodYear  SalesProgressSummaryRequestPeriod = "year"
+)
+
+// Valid indicates whether the value is a known member of the SalesProgressSummaryRequestPeriod enum.
+func (e SalesProgressSummaryRequestPeriod) Valid() bool {
+	switch e {
+	case SalesProgressSummaryRequestPeriodMonth:
+		return true
+	case SalesProgressSummaryRequestPeriodYear:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for SalesProgressSummaryRequestScopeKind.
+const (
+	SalesProgressSummaryRequestScopeKindOwner SalesProgressSummaryRequestScopeKind = "owner"
+	SalesProgressSummaryRequestScopeKindTeam  SalesProgressSummaryRequestScopeKind = "team"
+)
+
+// Valid indicates whether the value is a known member of the SalesProgressSummaryRequestScopeKind enum.
+func (e SalesProgressSummaryRequestScopeKind) Valid() bool {
+	switch e {
+	case SalesProgressSummaryRequestScopeKindOwner:
+		return true
+	case SalesProgressSummaryRequestScopeKindTeam:
 		return true
 	default:
 		return false
@@ -32112,7 +32169,7 @@ type Activity struct {
 	// AiAssisted Whether an AI model rewrote the subject or body before it was saved, so a reader sees the words as AI-assisted. Set when the activity is logged and kept through later edits: a human who tidies model words still saved model words. Absent means false. Withheld with the content.
 	AiAssisted *bool `json:"ai_assisted,omitempty"`
 
-	// Archivable Whether THIS caller may archive THIS activity: the row write gate `writable` asks, plus the `activity:delete` grant, or `activity:update` on a hand-logged note or task the caller wrote (under their own stamp or through an agent acting for them). Captured correspondence and a colleague's note need the delete grant. Server-computed per row, per caller. A UX signal, never the enforcement, exactly like `writable`; absent means NOT archivable.
+	// Archivable Whether THIS caller may archive THIS activity: the row write gate `writable` asks, plus the `activity:delete` grant, or `activity:update` on a note, task, call or meeting the caller logged by hand (under their own stamp or through an agent acting for them) that no provider import backs. Sent and captured correspondence, a calendar-synced meeting and a colleague's entry need the delete grant. A meeting a live invitation holds is never archivable. Server-computed per row, per caller. A UX signal, never the enforcement, exactly like `writable`; absent means NOT archivable.
 	Archivable *bool      `json:"archivable,omitempty"`
 	ArchivedAt *time.Time `json:"archived_at,omitempty"`
 
@@ -32279,7 +32336,7 @@ type Activity struct {
 	// Source Where the row came from. `manual` is anything typed, by a member or by an assistant working for one, so it never says who typed it: `captured_by` and `recorded_by_agent` do.
 	Source string `json:"source"`
 
-	// SourceActivityId The conversation or note this task follows from, whether added by a human or read from a conversation. Opening the source requires current source access. A task cannot grant access to its source or disclose content from a withheld source.
+	// SourceActivityId The conversation or note this task follows from, whether added by a human or read from a conversation. Opening the source requires current source access. A task cannot grant access to its source or disclose content from a withheld source. On a transcript created with `records_meeting_id`, the meeting it records.
 	SourceActivityId *openapi_types.UUID `json:"source_activity_id,omitempty"`
 
 	// SourceId Provider message/event id; part of the idempotency key.
@@ -45068,6 +45125,9 @@ type CreateActivityRequest struct {
 	// Recommendation The rule and current facts behind a suggested action. The server checks these facts again when accepting the suggestion; the receipt grants no authority. Replaying the same accepted observation returns its original task.
 	Recommendation *RecommendationReceipt `json:"recommendation,omitempty"`
 
+	// RecordsMeetingId A meeting transcript only (`source_system: transcript`), without `source_activity_id`. The open meeting this transcript records. In the same transaction the meeting is marked held and gains the transcript's deal, project and lead links for each kind it has none of. The transcript takes the meeting's time and its deal, project and lead links, keeps no outcome of its own, and names the meeting in `source_activity_id`, so held counts count the meeting once. A meeting that is archived, missing or hidden from the caller answers 404. A live meeting that no longer owes its outcome is refused with 422 on `records_meeting_id`. A meeting the caller may read but not change answers 403. Its subject and notes stay as they are.
+	RecordsMeetingId *openapi_types.UUID `json:"records_meeting_id,omitempty"`
+
 	// RemindAt Task only. When the reminder comes due. From that instant, for up to 30 days, the task leads its assignee's own Worklist with the reason `reminder_due`, and `GET /v1/activities?reminder_due=true` lists it for them. Nobody else is reminded, and a task with no assignee reminds nobody. Moving `due_at` on a task whose reminder has passed clears this field, unless the same patch names it.
 	RemindAt *time.Time `json:"remind_at,omitempty"`
 
@@ -45084,7 +45144,7 @@ type CreateActivityRequest struct {
 	SenderContactId *openapi_types.UUID `json:"sender_contact_id,omitempty"`
 	Source          string              `json:"source"`
 
-	// SourceActivityId For a task, the conversation or note it follows from. The caller and assignee need access to that source. The task preserves its audience and inherits its visible links when no links are supplied. For a logged note, call or meeting, the task whose outcome is being recorded. This reference alone does not complete that task or accept a request.
+	// SourceActivityId For a task, the conversation or note it follows from. The caller and assignee need access to that source. The task preserves its audience and inherits its visible links when no links are supplied. For a logged note, call or meeting, the task whose outcome is being recorded; a meeting transcript naming one needs `meeting_status`. This reference alone does not complete that task or accept a request.
 	SourceActivityId *openapi_types.UUID `json:"source_activity_id,omitempty"`
 
 	// SourceAuthorId Who wrote this record in the system it came from, when the author holds a seat here. Written only by a declared importer (a signed-in human holding import_run:create), only beside a source_system; either author field or both may be sent, and the seat's current name wins on read. captured_by still names the caller.
@@ -54180,6 +54240,18 @@ type LicenseEntitlement struct {
 	// State Whether a license was verified, none was configured, or one was refused. A client
 	// that cannot read a value it recognizes MUST NOT assume entitlement.
 	State LicenseEntitlementState `json:"state"`
+
+	// Trial The free period of a production installation that has no license. Present only while
+	// `state` is `absent` on a production installation that has been set up; a development or
+	// test installation runs unlicensed with no trial.
+	//
+	// The trial starts when the installation's oldest workspace was created, archived ones
+	// included, and lasts 14 days, with no grace period. Once `ended` is true, and until a
+	// license is configured, every agent tool call is refused with `trial_ended`, and so is
+	// every HTTP change except these: the license routes, `POST /v1/exports`, the data-subject
+	// request routes, and a seat's own credential routes. Background jobs wait instead of
+	// running; they do not fail.
+	Trial *LicenseTrial `json:"trial,omitempty"`
 }
 
 // LicenseEntitlementState Whether a license was verified, none was configured, or one was refused. A client
@@ -54232,6 +54304,27 @@ type LicenseHolder struct {
 	// Subject The operator-chosen handle the license was issued against, for example
 	// `acme-prod`. It tells two installations of one customer apart.
 	Subject string `json:"subject"`
+}
+
+// LicenseTrial The free period of a production installation that has no license. Present only while
+// `state` is `absent` on a production installation that has been set up; a development or
+// test installation runs unlicensed with no trial.
+//
+// The trial starts when the installation's oldest workspace was created, archived ones
+// included, and lasts 14 days, with no grace period. Once `ended` is true, and until a
+// license is configured, every agent tool call is refused with `trial_ended`, and so is
+// every HTTP change except these: the license routes, `POST /v1/exports`, the data-subject
+// request routes, and a seat's own credential routes. Background jobs wait instead of
+// running; they do not fail.
+type LicenseTrial struct {
+	// Ended Whether `ends_at` has passed, as the server decides it, so a client with a wrong clock shows the state the installation acts on.
+	Ended bool `json:"ended"`
+
+	// EndsAt The first instant the trial no longer covers.
+	EndsAt time.Time `json:"ends_at"`
+
+	// StartedAt When the installation's workspace was created.
+	StartedAt time.Time `json:"started_at"`
 }
 
 // LifecyclePreviewEvidence Current readable source and scope supporting a company lifecycle review.
@@ -55049,7 +55142,13 @@ type MagicReceipt struct {
 	// AsOf The instant this read was taken.
 	AsOf             time.Time   `json:"as_of"`
 	CouldNotComplete []MagicLine `json:"could_not_complete"`
-	Done             []MagicLine `json:"done"`
+
+	// CutAtLimit The lanes read to `limit` that may hold more than this page draws. `done` is
+	// also named when its count is a floor (`done_is_floor`). `watching` is never
+	// cut, because `limit` does not bound it. A client says "at least" for a named
+	// lane, never "all". Empty when every lane is whole; absent on older responses.
+	CutAtLimit *[]MagicReceiptCutAtLimit `json:"cut_at_limit,omitempty"`
+	Done       []MagicLine               `json:"done"`
 
 	// DoneIsFloor The done lane's second source, the system's decisions, was read to its bound and still had more, so the lane's total is a floor. Absent on older responses.
 	DoneIsFloor *bool       `json:"done_is_floor,omitempty"`
@@ -55091,6 +55190,9 @@ type MagicReceipt struct {
 	// `failing_since` where the condition has a start.
 	Watching []MagicLine `json:"watching"`
 }
+
+// MagicReceiptCutAtLimit defines model for MagicReceipt.CutAtLimit.
+type MagicReceiptCutAtLimit string
 
 // MagicSentence What happened, as a key and the values to fill it with.
 //
@@ -55445,6 +55547,9 @@ type MeResponse struct {
 	// `none`.
 	TeamWeek *TeamWeekReach       `json:"team_week,omitempty"`
 	Teams    []openapi_types.UUID `json:"teams"`
+
+	// TrialEnded True when this installation runs with no license and its 14-day trial is over. Every seat gets it, not only those who may read the license, because every seat is locked until a license is configured. `LicenseTrial` lists what the lock refuses. Absent while the installation is licensed or still on its trial.
+	TrialEnded *bool `json:"trial_ended,omitempty"`
 
 	// User A seat — human or first-party agent. Mirrors `app_user`.
 	User User `json:"user"`
@@ -55809,7 +55914,7 @@ type MeetingPlanCoaching struct {
 	// ListenFor What a good version of this conversation sounds like.
 	ListenFor string `json:"listen_for"`
 
-	// Paths The ways this meeting can go, for a lead to rehearse against.
+	// Paths The plan's own branches as a lead reads them: each carries the label of a plan scenario and, in `play`, what the lead watches for and asks the rep, never the rep's play again. A branch the model wrote no coach line for is left out, so this can be empty.
 	Paths []MeetingPlanCoachingPath `json:"paths"`
 
 	// WatchFor The move that says it is going wrong.
@@ -62383,7 +62488,7 @@ type SalesAssessmentCell struct {
 	// Display Locale-formatted quantity for reader text.
 	Display *string `json:"display,omitempty"`
 
-	// Id `metric:<metric id>` or `point:<metric id>:<group key>`.
+	// Id `metric:<metric id>` or `point:<metric id>:<group key>`; a Progress summary names its own figures `progress:<figure>`.
 	Id    string `json:"id"`
 	Label string `json:"label"`
 
@@ -62531,6 +62636,31 @@ type SalesGoalPlan struct {
 
 // SalesGoalPlanState defines model for SalesGoalPlanState.
 type SalesGoalPlanState string
+
+// SalesGoalProposal defines model for SalesGoalProposal.
+type SalesGoalProposal struct {
+	// GeneratedBy Which writer produced a piece of generated prose. `model` — the configured model
+	// lane. `deterministic` — the structured fallback, used when no lane is configured
+	// or the workspace's AI budget is exhausted. Never silently interchangeable: a
+	// reader deciding how much to trust a sentence needs to know which wrote it.
+	GeneratedBy WrittenBy `json:"generated_by"`
+	ModelUsed   *string   `json:"model_used,omitempty"`
+
+	// Months January to December, each an amount of zero or more in minor units of the plan currency.
+	Months []int64 `json:"months"`
+
+	// Reason The pattern the proposal followed, in the reader's language, with no figure in it.
+	Reason string `json:"reason"`
+
+	// TotalMinor What the twelve months add up to.
+	TotalMinor int64 `json:"total_minor"`
+}
+
+// SalesGoalProposalRequest defines model for SalesGoalProposalRequest.
+type SalesGoalProposalRequest struct {
+	// YearlyTotalMinor The yearly goal the months must add up to, when the reader has set one.
+	YearlyTotalMinor *int64 `json:"yearly_total_minor,omitempty" minimum:"1"`
+}
 
 // SalesGoalPublishInput defines model for SalesGoalPublishInput.
 type SalesGoalPublishInput struct {
@@ -62899,6 +63029,27 @@ type SalesProgressNextTask struct {
 	DueAt      *time.Time          `json:"due_at,omitempty"`
 	Subject    string              `json:"subject"`
 }
+
+// SalesProgressSummaryRequest defines model for SalesProgressSummaryRequest.
+type SalesProgressSummaryRequest struct {
+	// Month Required with `period: month`.
+	Month  *int                              `json:"month,omitempty" maximum:"12" minimum:"1"`
+	Period SalesProgressSummaryRequestPeriod `json:"period"`
+
+	// Refresh Ask the model again, whatever is kept.
+	Refresh *bool               `json:"refresh,omitempty"`
+	ScopeId *openapi_types.UUID `json:"scope_id,omitempty"`
+
+	// ScopeKind Absent reads the caller's own figures.
+	ScopeKind *SalesProgressSummaryRequestScopeKind `json:"scope_kind,omitempty"`
+	Year      int                                   `json:"year" maximum:"2200" minimum:"2000"`
+}
+
+// SalesProgressSummaryRequestPeriod defines model for SalesProgressSummaryRequest.Period.
+type SalesProgressSummaryRequestPeriod string
+
+// SalesProgressSummaryRequestScopeKind Absent reads the caller's own figures.
+type SalesProgressSummaryRequestScopeKind string
 
 // SaveContactResearchClaim One claim a human accepted, with the evidence that makes it checkable.
 type SaveContactResearchClaim struct {
@@ -66418,6 +66569,12 @@ type TranscriptReadReport struct {
 
 	// StatusDetail The sentence stored when the reading finished, in the installation's base language and naming nobody. Kept for readings finished before `detail` existed; a client shows `detail` when it is set.
 	StatusDetail *string `json:"status_detail,omitempty"`
+
+	// Summary The meeting's summary as this reading leaves it: the one this reading wrote, or the newest one an earlier reading wrote. Absent when no reading has written one.
+	Summary *TranscriptSummary `json:"summary,omitempty"`
+
+	// SummaryRefused True when this reading finished without writing a summary, because the summary failed the check that every point cites lines the transcript has. The meeting keeps `summary` as it was.
+	SummaryRefused bool `json:"summary_refused"`
 }
 
 // TranscriptReadReportStatus defines model for TranscriptReadReport.Status.
@@ -66433,6 +66590,27 @@ type TranscriptReadStarted struct {
 
 // TranscriptReadStartedStatus The joined reading's state when one is already in flight.
 type TranscriptReadStartedStatus string
+
+// TranscriptSummary A short summary of one meeting, written by a model from its transcript and never by a member. A client marks it as AI-written. Each point cites the transcript lines it was read from; the transcript itself is unchanged.
+type TranscriptSummary struct {
+	GeneratedAt time.Time `json:"generated_at"`
+
+	// KeyPoints What the meeting covered, in the language the meeting was held in.
+	KeyPoints []TranscriptSummaryPoint `json:"key_points"`
+
+	// NextSteps What the meeting agreed would happen next. Empty when it agreed nothing.
+	NextSteps []TranscriptSummaryPoint `json:"next_steps"`
+
+	// ReadId The reading that wrote this summary.
+	ReadId openapi_types.UUID `json:"read_id"`
+}
+
+// TranscriptSummaryPoint defines model for TranscriptSummaryPoint.
+type TranscriptSummaryPoint struct {
+	// SourceLines The 1-based transcript lines this point was read from.
+	SourceLines []int  `json:"source_lines"`
+	Text        string `json:"text"`
+}
 
 // TransferProjectOwnershipRequest defines model for TransferProjectOwnershipRequest.
 type TransferProjectOwnershipRequest struct {
@@ -80387,6 +80565,9 @@ type UpdateSalesInitiativeJSONRequestBody = SalesInitiativeInput
 // ReplaceSalesInitiativeMembersJSONRequestBody defines body for ReplaceSalesInitiativeMembers for application/json ContentType.
 type ReplaceSalesInitiativeMembersJSONRequestBody = SalesInitiativeMembersInput
 
+// SummarizeSalesProgressJSONRequestBody defines body for SummarizeSalesProgress for application/json ContentType.
+type SummarizeSalesProgressJSONRequestBody = SalesProgressSummaryRequest
+
 // RunAnalyticsQueryJSONRequestBody defines body for RunAnalyticsQuery for application/json ContentType.
 type RunAnalyticsQueryJSONRequestBody = AnalyticsQuery
 
@@ -80416,6 +80597,9 @@ type SearchReportEvidenceJSONRequestBody = ReportEvidenceSearchRequest
 
 // SaveSalesGoalDraftJSONRequestBody defines body for SaveSalesGoalDraft for application/json ContentType.
 type SaveSalesGoalDraftJSONRequestBody = SalesGoalDraftInput
+
+// ProposeSalesGoalMonthsJSONRequestBody defines body for ProposeSalesGoalMonths for application/json ContentType.
+type ProposeSalesGoalMonthsJSONRequestBody = SalesGoalProposalRequest
 
 // PublishSalesGoalPlanJSONRequestBody defines body for PublishSalesGoalPlan for application/json ContentType.
 type PublishSalesGoalPlanJSONRequestBody = SalesGoalPublishInput
@@ -84861,6 +85045,14 @@ func (a *CreateActivityRequest) UnmarshalJSON(b []byte) error {
 		delete(object, "recommendation")
 	}
 
+	if raw, found := object["records_meeting_id"]; found {
+		err = json.Unmarshal(raw, &a.RecordsMeetingId)
+		if err != nil {
+			return fmt.Errorf("error reading 'records_meeting_id': %w", err)
+		}
+		delete(object, "records_meeting_id")
+	}
+
 	if raw, found := object["remind_at"]; found {
 		err = json.Unmarshal(raw, &a.RemindAt)
 		if err != nil {
@@ -85176,6 +85368,13 @@ func (a CreateActivityRequest) MarshalJSON() ([]byte, error) {
 		object["recommendation"], err = json.Marshal(a.Recommendation)
 		if err != nil {
 			return nil, fmt.Errorf("error marshaling 'recommendation': %w", err)
+		}
+	}
+
+	if a.RecordsMeetingId != nil {
+		object["records_meeting_id"], err = json.Marshal(a.RecordsMeetingId)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'records_meeting_id': %w", err)
 		}
 	}
 
@@ -95189,6 +95388,9 @@ type ServerInterface interface {
 	// The open deals of one seller or team as Progress lists them, each with its sale type and next task.
 	// (GET /analytics/progress/deals)
 	ListSalesProgressDeals(w http.ResponseWriter, r *http.Request, params ListSalesProgressDealsParams)
+	// A few written sentences on where one Progress reading stands against its sales goal and what is still open.
+	// (POST /analytics/progress/summary)
+	SummarizeSalesProgress(w http.ResponseWriter, r *http.Request)
 	// Answer a question nobody wrote a report for.
 	// (POST /analytics/query)
 	RunAnalyticsQuery(w http.ResponseWriter, r *http.Request)
@@ -95282,6 +95484,9 @@ type ServerInterface interface {
 	// Save the shared draft of a sales goal plan.
 	// (PUT /analytics/sales-goals/{owner_id}/{year}/draft)
 	SaveSalesGoalDraft(w http.ResponseWriter, r *http.Request, ownerId openapi_types.UUID, year int, params SaveSalesGoalDraftParams)
+	// Twelve monthly goals proposed for one seller from their closed revenue. Nothing is saved.
+	// (POST /analytics/sales-goals/{owner_id}/{year}/proposed-months)
+	ProposeSalesGoalMonths(w http.ResponseWriter, r *http.Request, ownerId openapi_types.UUID, year int)
 	// Publish the draft as the agreed goals for the year.
 	// (POST /analytics/sales-goals/{owner_id}/{year}/publish)
 	PublishSalesGoalPlan(w http.ResponseWriter, r *http.Request, ownerId openapi_types.UUID, year int, params PublishSalesGoalPlanParams)
@@ -98828,6 +99033,12 @@ func (_ Unimplemented) ListSalesProgressDeals(w http.ResponseWriter, r *http.Req
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
+// A few written sentences on where one Progress reading stands against its sales goal and what is still open.
+// (POST /analytics/progress/summary)
+func (_ Unimplemented) SummarizeSalesProgress(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
 // Answer a question nobody wrote a report for.
 // (POST /analytics/query)
 func (_ Unimplemented) RunAnalyticsQuery(w http.ResponseWriter, r *http.Request) {
@@ -99011,6 +99222,12 @@ func (_ Unimplemented) DiscardSalesGoalDraft(w http.ResponseWriter, r *http.Requ
 // Save the shared draft of a sales goal plan.
 // (PUT /analytics/sales-goals/{owner_id}/{year}/draft)
 func (_ Unimplemented) SaveSalesGoalDraft(w http.ResponseWriter, r *http.Request, ownerId openapi_types.UUID, year int, params SaveSalesGoalDraftParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Twelve monthly goals proposed for one seller from their closed revenue. Nothing is saved.
+// (POST /analytics/sales-goals/{owner_id}/{year}/proposed-months)
+func (_ Unimplemented) ProposeSalesGoalMonths(w http.ResponseWriter, r *http.Request, ownerId openapi_types.UUID, year int) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -110562,6 +110779,26 @@ func (siw *ServerInterfaceWrapper) ListSalesProgressDeals(w http.ResponseWriter,
 	handler.ServeHTTP(w, r)
 }
 
+// SummarizeSalesProgress operation middleware
+func (siw *ServerInterfaceWrapper) SummarizeSalesProgress(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.SummarizeSalesProgress(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // RunAnalyticsQuery operation middleware
 func (siw *ServerInterfaceWrapper) RunAnalyticsQuery(w http.ResponseWriter, r *http.Request) {
 
@@ -112046,6 +112283,47 @@ func (siw *ServerInterfaceWrapper) SaveSalesGoalDraft(w http.ResponseWriter, r *
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.SaveSalesGoalDraft(w, r, ownerId, year, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// ProposeSalesGoalMonths operation middleware
+func (siw *ServerInterfaceWrapper) ProposeSalesGoalMonths(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "owner_id" -------------
+	var ownerId openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "owner_id", chi.URLParam(r, "owner_id"), &ownerId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "owner_id", Err: err})
+		return
+	}
+
+	// ------------- Path parameter "year" -------------
+	var year int
+
+	err = runtime.BindStyledParameterWithOptions("simple", "year", chi.URLParam(r, "year"), &year, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "integer", Format: ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "year", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ProposeSalesGoalMonths(w, r, ownerId, year)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -153012,6 +153290,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 		r.Get(options.BaseURL+"/analytics/progress/deals", wrapper.ListSalesProgressDeals)
 	})
 	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/analytics/progress/summary", wrapper.SummarizeSalesProgress)
+	})
+	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/analytics/query", wrapper.RunAnalyticsQuery)
 	})
 	r.Group(func(r chi.Router) {
@@ -153103,6 +153384,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Put(options.BaseURL+"/analytics/sales-goals/{owner_id}/{year}/draft", wrapper.SaveSalesGoalDraft)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/analytics/sales-goals/{owner_id}/{year}/proposed-months", wrapper.ProposeSalesGoalMonths)
 	})
 	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/analytics/sales-goals/{owner_id}/{year}/publish", wrapper.PublishSalesGoalPlan)

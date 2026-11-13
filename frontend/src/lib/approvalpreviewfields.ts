@@ -5,6 +5,7 @@ import { MERGE_FIELD_LABELS } from "./approvalpreviewmergefields";
 import { historyFieldLabel } from "./historyfieldlabels";
 
 const PREVIEW_DETAIL_LABELS: Record<string, MessageKey> = {
+  promise_strength: "approval.commitment.strength",
   import_create_tag: "approval.import.createTag",
   import_apply_tag: "approval.import.applyTag",
   import_context_tag: "approval.import.contextTag",

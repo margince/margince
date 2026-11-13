@@ -6,13 +6,22 @@ import {
   type QueryKey,
 } from "@tanstack/react-query";
 import { ENTITY_NAME_KEY } from "../components/entityref.queries";
-import { isRecordRead, isTimelineRead } from "../lib/activitykeys";
+import {
+  isRecordRead,
+  isTimelineRead,
+  isTranscriptReadingRead,
+} from "../lib/activitykeys";
 import {
   ConnectivityError,
   connectivityNow,
   subscribeConnectivity,
 } from "../lib/connectivity";
-import { logUnexpectedError, ProblemError } from "../lib/problem";
+import { refreshTrialLock } from "../lib/license-posture";
+import {
+  logUnexpectedError,
+  ProblemError,
+  problemCodeOf,
+} from "../lib/problem";
 import { INSTALLATION_SETTINGS_KEY } from "../lib/uploadlimit";
 import { SEND_PERMISSION_KEY } from "../lib/usesendpermission";
 import {
@@ -60,7 +69,8 @@ export function liveOnReturn(query: {
   return (
     (isLiveRead(query.queryKey) ||
       isInstallationRead(query.queryKey) ||
-      isTimelineRead(query.queryKey)) &&
+      isTimelineRead(query.queryKey) ||
+      isTranscriptReadingRead(query.queryKey)) &&
     "always"
   );
 }
@@ -147,18 +157,6 @@ function problemStatusOf(error: unknown): number | null {
   return typeof problem.status === "number" ? problem.status : null;
 }
 
-// The RFC-7807 `code` a failure carries, on the same terms as the status above.
-function problemCodeOf(error: unknown): string | null {
-  if (!(error instanceof ProblemError)) {
-    return null;
-  }
-  const problem = error.problem;
-  if (typeof problem !== "object" || problem === null || !("code" in problem)) {
-    return null;
-  }
-  return typeof problem.code === "string" ? problem.code : null;
-}
-
 // FE-PARAM-2: retry a server error that the server may yet recover from —
 // never a client error, and never a refusal it has already settled.
 export function retryQuery(failureCount: number, error: Error): boolean {
@@ -238,6 +236,14 @@ function refreshRecordHistory(client: QueryClient): void {
   });
 }
 
+// A transcript's reading shows words drawn from it. An erasure deletes the
+// reading on the server, so any successful write re-reads the mounted ones.
+function refreshTranscriptReadings(client: QueryClient): void {
+  client.invalidateQueries({
+    predicate: (query) => isTranscriptReadingRead(query.queryKey),
+  });
+}
+
 // Who can see a record changes with a share, a visibility or owner change, or
 // a role or team edit, and each of those is a different write. Invalidated for
 // every successful mutation for the reason the two above are.
@@ -297,11 +303,19 @@ export function createQueryClient(): QueryClient {
     // words, and a refusal a form renders field by field is a routine answer
     // to a mutation, not a fault anyone should open a console for.
     mutationCache: new MutationCache({
-      onError: logUnexpectedError,
+      onError: (error) => {
+        logUnexpectedError(error);
+        // The trial ended under an open session: show the lock now, not at
+        // the next read of /me.
+        if (problemCodeOf(error) === "trial_ended") {
+          refreshTrialLock(client);
+        }
+      },
       onSuccess: () => {
         refreshNamedReferences(client);
         refreshRecordHistory(client);
         refreshRecordAccess(client);
+        refreshTranscriptReadings(client);
         // A write can revoke the facts a mounted message relies on.
         client
           .cancelQueries({ queryKey: SEND_PERMISSION_KEY })

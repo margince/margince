@@ -31,6 +31,9 @@ func followUpFieldsFrom(req crmcontracts.CreateActivityRequest, in *LogActivityI
 	if req.SourceActivityId != nil {
 		in.SourceActivityID = new(ids.UUID(*req.SourceActivityId))
 	}
+	if err := recordedMeetingFrom(req, in); err != nil {
+		return err
+	}
 	if req.FollowUpTask == nil {
 		return nil
 	}

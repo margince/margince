@@ -33,7 +33,7 @@ func (s *Service) edition(ctx context.Context, tx pgx.Tx, id ids.UUID) (crmcontr
 		return out, nil, err
 	}
 	if !permitted {
-		return out, nil, storedError(pgx.ErrNoRows)
+		return crmcontracts.ReportingEdition{}, nil, storedError(pgx.ErrNoRows)
 	}
 	b = bindings{}
 	var redacted *time.Time

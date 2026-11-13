@@ -1,0 +1,17 @@
+/* The button is the badge's box and nothing more: no padding, edge or fill of
+   its own, so a pressable status looks like the status it is. */
+.noticepill {
+  appearance: none;
+  display: inline-flex;
+  padding: 0;
+  border: 0;
+  border-radius: var(--r-full);
+  corner-shape: round;
+  background: none;
+  font: inherit;
+  cursor: pointer;
+}
+.noticepill:focus-visible {
+  outline: var(--focus-ring);
+  outline-offset: 2px;
+}

@@ -25,6 +25,7 @@ const base = {
   proposal_ids: [],
   proposals: [],
   created_at: "2026-08-01T09:00:00Z",
+  summary_refused: false,
 };
 
 function stubbed(report: Record<string, unknown>) {

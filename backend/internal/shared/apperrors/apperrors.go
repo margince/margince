@@ -137,6 +137,11 @@ var (
 	// with time, and telling a caller to retry would be advice that can only
 	// ever fail. It is the licensed ceiling (A36/ADR-0029), not a volume budget.
 	ErrSeatLimitReached = errors.New("seat limit reached")
+
+	// ErrTrialEnded: this INSTALLATION runs with no license and its trial is
+	// over, so it changes nothing until a license is entered (403
+	// trial_ended). Like ErrSeatLimitReached it never clears with time.
+	ErrTrialEnded = errors.New("the trial of this installation has ended: an admin enters a license key, or contacts the Margince team for one")
 )
 
 // VersionSkewError is a lost version race whose Message a REST client or an MCP agent reads, so it

@@ -1,0 +1,106 @@
+package toolroute
+
+import (
+	"context"
+	"net/http"
+
+	"example.test/auth"
+	"example.test/httperr"
+	"example.test/runner"
+)
+
+type ToolSpec struct{ Name string }
+
+type tool interface {
+	Spec() ToolSpec
+	Handle(ctx context.Context, in []byte) ([]byte, error)
+}
+
+type checkedTool struct{}
+
+func (checkedTool) Spec() ToolSpec { return ToolSpec{Name: "checked_tool"} }
+
+func (checkedTool) Handle(ctx context.Context, in []byte) ([]byte, error) {
+	if err := auth.Require(ctx); err != nil {
+		return nil, err
+	}
+	return []byte("1"), nil
+}
+
+type uncheckedTool struct{}
+
+func (uncheckedTool) Spec() ToolSpec { return ToolSpec{Name: "unchecked_tool"} }
+
+func (uncheckedTool) Handle(ctx context.Context, in []byte) ([]byte, error) { return []byte("1"), nil }
+
+// Registry runs a tool by its name, through a map the walk cannot read.
+type Registry struct{ tools map[string]tool }
+
+func NewRegistry() *Registry {
+	r := &Registry{tools: map[string]tool{}}
+	for _, t := range []tool{checkedTool{}, uncheckedTool{}} {
+		r.tools[t.Spec().Name] = t
+	}
+	return r
+}
+
+func (r *Registry) Invoke(ctx context.Context, name string, in []byte) ([]byte, error) {
+	return r.tools[name].Handle(ctx, in)
+}
+
+func serveTool(w http.ResponseWriter, r *http.Request, invoke func(context.Context, string, []byte) ([]byte, error), name string) {
+	out, err := invoke(r.Context(), name, nil)
+	if err != nil {
+		httperr.Write(w, r, err)
+		return
+	}
+	w.WriteHeader(http.StatusOK)
+	w.Write(out)
+}
+
+type Handlers struct{ registry *Registry }
+
+// A route the registry serves answers for the one tool it names.
+func (h Handlers) GetCheckedTool(w http.ResponseWriter, r *http.Request) {
+	serveTool(w, r, h.registry.Invoke, "checked_tool")
+}
+
+func (h Handlers) GetUncheckedTool(w http.ResponseWriter, r *http.Request) {
+	serveTool(w, r, h.registry.Invoke, "unchecked_tool")
+}
+
+// A name the walk cannot read leaves the registry, which checks nothing.
+func (h Handlers) GetToolByPath(w http.ResponseWriter, r *http.Request) {
+	serveTool(w, r, h.registry.Invoke, r.URL.Path)
+}
+
+// A wrapper that is handed one name and then names another runs the other.
+func serveRenamed(w http.ResponseWriter, r *http.Request, invoke func(context.Context, string, []byte) ([]byte, error), name string) {
+	name = "unchecked_tool"
+	serveTool(w, r, invoke, name)
+}
+
+func (h Handlers) GetRenamedTool(w http.ResponseWriter, r *http.Request) {
+	serveRenamed(w, r, h.registry.Invoke, "checked_tool")
+}
+
+// An outside runner need not hand its callback the arguments it was given.
+func (h Handlers) GetToolThroughARunner(w http.ResponseWriter, r *http.Request) {
+	runner.Run(r.Context(), "checked_tool", func(ctx context.Context, name string) {
+		serveTool(w, r, h.registry.Invoke, name)
+	})
+}
+
+func invokeUnchecked(ctx context.Context, name string, in []byte) ([]byte, error) {
+	return uncheckedTool{}.Handle(ctx, in)
+}
+
+// A wrapper that is handed one function and then calls another runs the other.
+func serveRewired(w http.ResponseWriter, r *http.Request, invoke func(context.Context, string, []byte) ([]byte, error), name string) {
+	invoke = invokeUnchecked
+	serveTool(w, r, invoke, name)
+}
+
+func (h Handlers) GetRewiredTool(w http.ResponseWriter, r *http.Request) {
+	serveRewired(w, r, h.registry.Invoke, "checked_tool")
+}

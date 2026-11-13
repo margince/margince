@@ -3371,6 +3371,9 @@ paths:
         an invoice they cannot see answers 404 like one that does not exist. 422 when the
         connected source serves no documents (`invoice_documents` on the summary is false),
         and 502 when the source could not be reached or answered something other than a PDF.
+        Each request is a live call to the vendor, so one caller may fetch at most 20
+        documents in each fixed one-minute window; past that the read answers 429 until
+        the window ends.
       responses:
         '200':
           description: The PDF bytes; Content-Disposition names the file.
@@ -3380,6 +3383,11 @@ paths:
         '403': {$ref: '#/components/responses/Forbidden'}
         '404': {$ref: '#/components/responses/NotFound'}
         '422': {$ref: '#/components/responses/ValidationError'}
+        '429':
+          description: The caller fetched 20 invoice documents in the current one-minute window.
+          content:
+            application/problem+json:
+              schema: {$ref: '#/components/schemas/Problem'}
         '502':
           description: The accounting source could not be reached, or did not answer with a PDF.
           content:
@@ -34383,7 +34391,8 @@ components:
         paths:
           type: array
           maxItems: 3
-          description: The ways this meeting can go, for a lead to rehearse against.
+          description: >-
+            The plan's own branches as a lead reads them: each carries the label of a plan scenario and, in `play`, what the lead watches for and asks the rep, never the rep's play again. A branch the model wrote no coach line for is left out, so this can be empty.
           items: {$ref: '#/components/schemas/MeetingPlanCoachingPath'}
     MeetingPlanCoachingPath:
       type: object
@@ -37259,7 +37268,7 @@ components:
       type: object
       required: [id, label, value]
       properties:
-        id: {type: string, description: "`metric:<metric id>` or `point:<metric id>:<group key>`."}
+        id: {type: string, description: "`metric:<metric id>` or `point:<metric id>:<group key>`; a Progress summary names its own figures `progress:<figure>`."}
         label: {type: string}
         value: {type: string, description: Raw source quantity with its unit.}
         display: {type: string, description: Locale-formatted quantity for reader text.}
@@ -39577,7 +39586,7 @@ components:
           type: boolean
           readOnly: true
           description: >-
-            Whether THIS caller may archive THIS activity: the row write gate `writable` asks, plus the `activity:delete` grant, or `activity:update` on a hand-logged note or task the caller wrote (under their own stamp or through an agent acting for them). Captured correspondence and a colleague's note need the delete grant. Server-computed per row, per caller. A UX signal, never the enforcement, exactly like `writable`; absent means NOT archivable.
+            Whether THIS caller may archive THIS activity: the row write gate `writable` asks, plus the `activity:delete` grant, or `activity:update` on a note, task, call or meeting the caller logged by hand (under their own stamp or through an agent acting for them) that no provider import backs. Sent and captured correspondence, a calendar-synced meeting and a colleague's entry need the delete grant. A meeting a live invitation holds is never archivable. Server-computed per row, per caller. A UX signal, never the enforcement, exactly like `writable`; absent means NOT archivable.
         awaiting_outcome:
           type: boolean
           readOnly: true
@@ -39744,7 +39753,7 @@ components:
           format: uuid
           readOnly: true
           description: >-
-            The conversation or note this task follows from, whether added by a human or read from a conversation. Opening the source requires current source access. A task cannot grant access to its source or disclose content from a withheld source.
+            The conversation or note this task follows from, whether added by a human or read from a conversation. Opening the source requires current source access. A task cannot grant access to its source or disclose content from a withheld source. On a transcript created with `records_meeting_id`, the meeting it records.
         links:
           type: array
           description: >-
@@ -40026,7 +40035,12 @@ components:
           type: string
           format: uuid
           description: >-
-            For a task, the conversation or note it follows from. The caller and assignee need access to that source. The task preserves its audience and inherits its visible links when no links are supplied. For a logged note, call or meeting, the task whose outcome is being recorded. This reference alone does not complete that task or accept a request.
+            For a task, the conversation or note it follows from. The caller and assignee need access to that source. The task preserves its audience and inherits its visible links when no links are supplied. For a logged note, call or meeting, the task whose outcome is being recorded; a meeting transcript naming one needs `meeting_status`. This reference alone does not complete that task or accept a request.
+        records_meeting_id:
+          type: string
+          format: uuid
+          description: >-
+            A meeting transcript only (`source_system: transcript`), without `source_activity_id`. The open meeting this transcript records. In the same transaction the meeting is marked held and gains the transcript's deal, project and lead links for each kind it has none of. The transcript takes the meeting's time and its deal, project and lead links, keeps no outcome of its own, and names the meeting in `source_activity_id`, so held counts count the meeting once. A meeting that is archived, missing or hidden from the caller answers 404. A live meeting that no longer owes its outcome is refused with 422 on `records_meeting_id`. A meeting the caller may read but not change answers 403. Its subject and notes stay as they are.
         follow_up_task:
           $ref: '#/components/schemas/ActivityFollowUpTask'
           description: >-
@@ -49962,7 +49976,7 @@ components:
       type: object
       description: >-
         What one reading of one transcript did. The three outcomes are kept apart on purpose: still reading, read it and it stated nothing, and could not read it are different answers, and collapsing the last two makes a correct empty result look like a broken feature.
-      required: [read_id, activity_id, status, line_count, proposal_ids, proposals, created_at]
+      required: [read_id, activity_id, status, line_count, proposal_ids, proposals, created_at, summary_refused]
       properties:
         read_id: {type: string, format: uuid}
         activity_id: {type: string, format: uuid}
@@ -49991,6 +50005,39 @@ components:
         started_at: {type: [string, 'null'], format: date-time}
         finished_at: {type: [string, 'null'], format: date-time}
         created_at: {type: string, format: date-time}
+        summary:
+          allOf: [{$ref: '#/components/schemas/TranscriptSummary'}]
+          description: >-
+            The meeting's summary as this reading leaves it: the one this reading wrote, or the newest one an earlier reading wrote. Absent when no reading has written one.
+        summary_refused:
+          type: boolean
+          description: >-
+            True when this reading finished without writing a summary, because the summary failed the check that every point cites lines the transcript has. The meeting keeps `summary` as it was.
+    TranscriptSummary:
+      type: object
+      description: >-
+        A short summary of one meeting, written by a model from its transcript and never by a member. A client marks it as AI-written. Each point cites the transcript lines it was read from; the transcript itself is unchanged.
+      required: [read_id, generated_at, key_points, next_steps]
+      properties:
+        read_id: {type: string, format: uuid, description: 'The reading that wrote this summary.'}
+        generated_at: {type: string, format: date-time}
+        key_points:
+          type: array
+          description: What the meeting covered, in the language the meeting was held in.
+          items: {$ref: '#/components/schemas/TranscriptSummaryPoint'}
+        next_steps:
+          type: array
+          description: What the meeting agreed would happen next. Empty when it agreed nothing.
+          items: {$ref: '#/components/schemas/TranscriptSummaryPoint'}
+    TranscriptSummaryPoint:
+      type: object
+      required: [text, source_lines]
+      properties:
+        text: {type: string}
+        source_lines:
+          type: array
+          description: The 1-based transcript lines this point was read from.
+          items: {type: integer}
     TranscriptReadProposal:
       type: object
       description: One approval a transcript reading staged, and who it waits on.
@@ -55469,6 +55516,14 @@ components:
           type: boolean
           description: >-
             The done lane's second source, the system's decisions, was read to its bound and still had more, so the lane's total is a floor. Absent on older responses.
+        cut_at_limit:
+          type: array
+          items: {type: string, enum: [done, needs_you, could_not_complete]}
+          description: |-
+            The lanes read to `limit` that may hold more than this page draws. `done` is
+            also named when its count is a floor (`done_is_floor`). `watching` is never
+            cut, because `limit` does not bound it. A client says "at least" for a named
+            lane, never "all". Empty when every lane is whole; absent on older responses.
         not_shown_count_withheld:
           type: boolean
           description: >-

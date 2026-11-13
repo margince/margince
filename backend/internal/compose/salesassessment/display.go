@@ -184,3 +184,32 @@ func replaceQuantity(text, from, to string) string {
 		return strings.Replace(match, from, to, 1)
 	})
 }
+
+// FigureText writes a figure the way a cell carries it: money in major
+// units, a count or rate as it is.
+func FigureText(value float64, unit string) string {
+	if values.ValidCurrency(unit) {
+		return values.MajorUnits(int64(value), unit) + " " + unit
+	}
+	return strconv.FormatFloat(value, 'f', -1, 64) + " " + unit
+}
+
+// DisplayFigures writes each figure the way the page prints it in this
+// language. The certification cases call it too, so a model is graded on the
+// figures production shows it.
+func DisplayFigures(in *Input, language string) {
+	for i := range in.Cells {
+		cell := &in.Cells[i]
+		number := strings.TrimSpace(strings.TrimSuffix(cell.Value, " "+cell.Unit))
+		if value, err := strconv.ParseFloat(number, 64); err == nil {
+			cell.Display = DisplayQuantity(value, cell.Unit, language)
+		}
+	}
+	for i := range in.Candidates {
+		candidate := &in.Candidates[i]
+		number, unit, _ := strings.Cut(candidate.Amount, " ")
+		if value, err := strconv.ParseFloat(number, 64); err == nil {
+			candidate.Display = DisplayQuantity(value, unit, language)
+		}
+	}
+}
