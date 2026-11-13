@@ -15,9 +15,9 @@ package compose
 import (
 	"context"
 	"net/http"
-	"time"
 
 	"github.com/margince/margince/backend/internal/compose/installtrial"
+	"github.com/margince/margince/backend/internal/compose/licenseentitlement"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/platform/auth"
@@ -82,7 +82,7 @@ func (h licenseHandlers) writeEntitlement(w http.ResponseWriter, r *http.Request
 		httperr.Write(w, r, err)
 		return
 	}
-	out := toContractLicenseEntitlement(h.posture(), used)
+	out := licenseentitlement.Entitlement(h.posture(), used)
 	out.Trial = trial
 	httperr.WriteJSON(w, http.StatusOK, out)
 }
@@ -144,72 +144,4 @@ func (h licenseHandlers) GetSeatUsage(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	httperr.WriteJSON(w, http.StatusOK, crmcontracts.SeatUsage{SeatsUsed: used})
-}
-
-// renewalWindow is how long before expiry the surface asks for a renewal.
-//
-// It is the same 90 days the module's grace period runs for, on purpose: an
-// installation is warned for as long before expiry as it keeps working after it.
-// The two are NOT one constant — the module owns its grace and does not report
-// it — so if upstream ever changes that window, this stops matching silently.
-const renewalWindow = 90 * 24 * time.Hour
-
-// toContractLicenseEntitlement renders one posture and one count onto the wire.
-//
-// The reason a rejection carries is deliberately NOT here. It is the module's
-// text about the installation's own configuration — and the module quotes token
-// content it has not verified — so it belongs in the boot error and the process
-// log, never in a response.
-func toContractLicenseEntitlement(posture licensecheck.Posture, used int) crmcontracts.LicenseEntitlement {
-	out := crmcontracts.LicenseEntitlement{
-		State:     crmcontracts.LicenseEntitlementState(posture.State),
-		SeatsUsed: used,
-		CheckedAt: posture.CheckedAt,
-	}
-	if posture.State == licensecheck.StateValid {
-		holder := toContractLicenseHolder(posture.License, posture.CheckedAt)
-		out.License = &holder
-	}
-	// The ceiling a new seat is held to. A refused license keeps the last valid
-	// one, and the screen shows the number an invite is refused against.
-	granted, capped := posture.SeatCeiling()
-	if !capped {
-		// Absent, never zero. A client rendering a missing cap as 0 would tell an
-		// admin their license permits nobody, and `over_limit` stays false because
-		// there is no limit to be over — not because the installation is inside one.
-		return out
-	}
-	out.SeatsGranted = &granted
-	out.OverLimit = used > granted
-	return out
-}
-
-// toContractLicenseHolder renders who holds the license and how long it lasts.
-//
-// Every optional claim is rendered only when the token carries it. A license
-// issued before those claims existed verifies exactly like any other, and a
-// client should show the rows it has rather than placeholders for the rest.
-//
-// The token never appears here. It is a credential and this response reaches a
-// browser.
-func toContractLicenseHolder(license licensecheck.License, now time.Time) crmcontracts.LicenseHolder {
-	holder := crmcontracts.LicenseHolder{
-		Id:      license.ID,
-		Subject: license.Subject,
-		Expiry:  license.Expiry,
-		InGrace: license.InGrace,
-		// True whenever the license is already on its grace period, so a client
-		// that reads only this one still warns.
-		RenewalDue: license.InGrace || !license.Expiry.After(now.Add(renewalWindow)),
-	}
-	if license.Company != "" {
-		holder.Company = &license.Company
-	}
-	if license.ContactName != "" {
-		holder.ContactName = &license.ContactName
-	}
-	if license.ContactEmail != "" {
-		holder.ContactEmail = &license.ContactEmail
-	}
-	return holder
 }
