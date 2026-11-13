@@ -155,7 +155,7 @@ jobs:
             -e MARGINCE_RELEASE_MANAGEMENT_DIST_URL \
             -e MARGINCE_RELEASE_MANAGEMENT_DIST_TOKEN \
             "$RELEASE_MANAGEMENT_IMAGE" \
-            resolve-patch-base --version "$version" --jsonl > "$RUNNER_TEMP/patch-base.jsonl"
+            resolve-patch-base --release "$version" --jsonl > "$RUNNER_TEMP/patch-base.jsonl"
           bash scripts/release-patch-base.sh < "$RUNNER_TEMP/patch-base.jsonl" > "$RUNNER_TEMP/patch-base.env"
           # shellcheck source=/dev/null
           . "$RUNNER_TEMP/patch-base.env"
@@ -205,7 +205,7 @@ jobs:
             -e MARGINCE_RELEASE_MANAGEMENT_DIST_URL \
             -e MARGINCE_RELEASE_MANAGEMENT_DIST_TOKEN \
             "$RELEASE_MANAGEMENT_IMAGE" \
-            draft-release --version "$version" --revision "$AFTER" \
+            draft-release --release "$version" --revision "$AFTER" \
             --patch "$patch_file" "${patch_base[@]}" \
             --changelog "$changelog_file" \
             --sbom-cyclonedx sboms/margince.cdx.json \
@@ -329,7 +329,7 @@ jobs:
             -e MARGINCE_RELEASE_MANAGEMENT_DIST_URL \
             -e MARGINCE_RELEASE_MANAGEMENT_DIST_TOKEN \
             "$RELEASE_MANAGEMENT_IMAGE" \
-            add-artifacts --version "$VERSION" "${images[@]}"
+            add-artifacts --release "$VERSION" "${images[@]}"
 
   # Publish only after the images are attached, so a published release always
   # carries its images even though the dist completeness gate only requires
@@ -368,5 +368,5 @@ jobs:
             -e MARGINCE_RELEASE_MANAGEMENT_DIST_URL \
             -e MARGINCE_RELEASE_MANAGEMENT_DIST_TOKEN \
             "$RELEASE_MANAGEMENT_IMAGE" \
-            publish-release --version "$VERSION"
+            publish-release --release "$VERSION"
 
