@@ -47,8 +47,47 @@ func bodySchema(requestBody *yaml.Node, schemas map[string]any) (string, error) 
 	if err != nil {
 		return "", err
 	}
+	if err := withoutHumanOnly(resolved); err != nil {
+		return "", err
+	}
 	out, err := json.Marshal(unmarked(resolved))
 	return string(out), err
+}
+
+// humanOnlyMarker flags a body member a human alone may set. The store refuses
+// any other principal; the agent is not offered the member at all.
+const humanOnlyMarker = "x-human-only"
+
+// withoutHumanOnly drops every member that carries humanOnlyMarker. A body that
+// requires one is refused, since no agent call could then be complete.
+//
+//craft:ignore naked-any a JSON schema is walked as decoded YAML, whatever its shape
+func withoutHumanOnly(node any) error {
+	switch v := node.(type) {
+	case map[string]any:
+		props, _ := v["properties"].(map[string]any)
+		required, _ := v["required"].([]any)
+		for name, member := range props {
+			if fields, ok := member.(map[string]any); ok && fields[humanOnlyMarker] == true {
+				if slices.Contains(required, any(name)) {
+					return fmt.Errorf("body member %s is human-only and required, so no agent call could be complete", name)
+				}
+				delete(props, name)
+			}
+		}
+		for _, member := range v {
+			if err := withoutHumanOnly(member); err != nil {
+				return err
+			}
+		}
+	case []any:
+		for _, member := range v {
+			if err := withoutHumanOnly(member); err != nil {
+				return err
+			}
+		}
+	}
+	return nil
 }
 
 // uploadField names the one binary field of a route's multipart body, and is
@@ -188,6 +227,7 @@ func answered(node any) any {
 		props, _ := v["properties"].(map[string]any)
 		withDisplays(props)
 		delete(v, nullableMarker)
+		delete(v, humanOnlyMarker)
 		for _, member := range v {
 			answered(member)
 		}

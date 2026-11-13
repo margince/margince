@@ -48,6 +48,8 @@ openapi: 3.1.0
 #     agent principal (403 code: permission_denied) — never silently admitted. So a new endpoint that
 #     forgets `x-mcp-tool` fails closed, not open. CONTRACT INVARIANT (drift-lint): every mutating
 #     operation (POST/PUT/PATCH/DELETE) MUST carry either `x-mcp-tool` (a tier) OR `x-agent-access`.
+#   - `x-human-only: true` on a request body MEMBER — only a human may set it. The agent tool
+#     built from the route is not offered the member, and the store refuses any other principal.
 #   - `x-agent-access: human-only` — the operation rejects an AGENT (Passport) principal outright
 #     (403 code: permission_denied), whatever its scope/seat. Used for governance the agent must not
 #     self-serve: approval decisions (approve/reject — an agent may STAGE a 🟡 action but never
@@ -61411,11 +61413,13 @@ components:
         kind:
           type: string
           enum: [stalled_deal, champion_left, reengagement, buying_intent, risk, other]
-          description: Corrects the signal's type. Only the kinds a human files by hand are accepted. The audit row keeps the old kind.
+          x-human-only: true
+          description: Corrects the signal's type. Only a human may, and only to the kinds a human files by hand. The audit row keeps the old kind.
         evidence:
           type: array
           items: { $ref: '#/components/schemas/SignalEvidence' }
-          description: Replaces the signal's evidence. The audit row keeps the old evidence.
+          x-human-only: true
+          description: Replaces the signal's evidence. Only a human may. The audit row keeps the old evidence.
 
     SignalListResponse:
       type: object
