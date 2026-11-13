@@ -471,23 +471,52 @@
   order: 2;
 }
 
-/* The card's place in a stack shown one card at a time. */
-.brief-stack-at {
-  margin: 0 0 var(--space-2);
+/* ===== One card in a narrow panel =====
+   The card in hand as a compact item: no tick column and no lift, the ask and
+   the quote at small size. The panel is a glance, and the mail is a press away. */
+.brief-pod-eyebrow {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  margin: 0;
+  color: var(--aiText);
+}
+.brief-pod-eyebrow svg {
+  width: 1em;
+  height: 1em;
+}
+.brief-triage-solo .brief-triage-lead {
+  display: block;
+  padding: var(--space-3) var(--space-4);
+  border: 1px solid var(--borderSubtle);
+  border-radius: var(--r-md);
+  box-shadow: none;
+}
+.brief-triage-solo .brief-task-tick,
+.brief-triage-solo .brief-triage-next,
+.brief-triage-solo .brief-triage-facts {
+  display: none;
+}
+.brief-triage-solo .worklist-row-ask {
+  font: var(--fontBodySmall);
   color: var(--textSecondary);
 }
-
-/* One card in a narrow panel: the same card at the panel's own measure. The
-   quote is two lines at body size, since the panel is a glance and the mail
-   itself is one press away. */
-.brief-triage-solo .brief-triage-lead {
-  padding: var(--space-4) var(--space-4) var(--space-4) var(--space-2);
+.brief-triage-solo .emailentry__subject {
+  font: var(--fontBodySmall);
+  font-weight: var(--fontWeightMedium);
 }
 .brief-triage-solo .emailentry__preview {
   -webkit-line-clamp: 2;
   line-clamp: 2;
-  font: var(--fontBody);
+  font: var(--fontBodySmall);
 }
-.brief-triage-solo .worklist-row-ask {
-  font: var(--fontBody);
+.brief-pod-pager {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  color: var(--textSecondary);
+}
+.brief-pod-rest {
+  margin-top: var(--space-2);
 }

@@ -115,10 +115,13 @@ export function Triage({
   // Every row of the day is a card in the server's order, and the one in hand
   // opens where it stands. An ordered list, so the order reaches a screen
   // reader as the claim it is.
+  // A narrow panel holds the card in hand alone, at its own measure.
+  const shown = solo ? [lead] : rows;
+  const titleSize = solo ? "xsmall" : "small";
   return (
     <ol className={solo ? "brief-triage brief-triage-solo" : "brief-triage"}>
-      {rows.map((item, index) =>
-        index === at ? (
+      {shown.map((item) =>
+        item === lead ? (
           <li key={identity(item)}>
             {/* Keyed by the row, so pressing another one mounts a new card and
                 replays its arrival. The press is answered on the card. */}
@@ -137,7 +140,7 @@ export function Triage({
                     <div className="brief-triage-lead-head">
                       {lead.email_summary && (
                         <div className="brief-triage-title">
-                          <Heading size="small" as="h3">
+                          <Heading size={titleSize} as="h3">
                             {taskName(lead, viewer, t, locale)}
                           </Heading>
                           {nextLink}
@@ -180,7 +183,7 @@ export function Triage({
               </OneRowWrite>
             </div>
           </li>
-        ) : solo ? null : (
+        ) : (
           <li key={identity(item)}>
             <QueuedCard
               item={item}

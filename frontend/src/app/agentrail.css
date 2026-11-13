@@ -1083,7 +1083,7 @@
   }
 }
 
-/* ===== The reader's work and the jobs they hand over ===== */
+/* ===== The pod: the reader's work, the jobs, one line of status ===== */
 .arwork {
   display: grid;
   gap: var(--space-3);
@@ -1100,15 +1100,18 @@
   margin: var(--space-1) 0 0;
   color: var(--textSecondary);
 }
-.arjobrefused {
-  color: var(--danger);
-}
-/* The report behind one row, on the sections' own inset. */
-.arstatus {
-  margin-top: var(--space-4);
-  padding: var(--space-1) var(--space-4) var(--space-2);
+.arpodfoot {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  margin: var(--space-4) var(--space-4) 0;
+  padding-top: var(--space-3);
   border-top: 1px solid var(--borderSubtle);
+  color: var(--textSecondary);
 }
-.arstatus .arsect {
-  padding-inline: 0;
+.arpodreport {
+  margin-inline-start: auto;
+}
+.arback {
+  padding: var(--space-3) var(--space-4) var(--space-2);
 }

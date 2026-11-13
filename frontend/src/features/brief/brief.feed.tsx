@@ -2,16 +2,19 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import { useQueryClient } from "@tanstack/react-query";
+import { ArrowRight, Sparkles } from "lucide-react";
 import { type ReactNode, useId, useState } from "react";
 import { AppLink } from "../../design-system/applink";
 import { Badge, Button, Card, PendingBody } from "../../design-system/atoms";
 import { Eyebrow } from "../../design-system/eyebrow";
+import { PeekCard } from "../../design-system/peek";
 import {
   type SectionState,
   SurfaceState,
 } from "../../design-system/surfacestate";
 import { formatNumber } from "../../format/format";
 import { useLocale, usePlural, useT } from "../../i18n";
+import { useMe } from "../../lib/session";
 import { useViewerZone } from "../../lib/viewerzone";
 import { OpenEmailDrawer } from "../mail/openemaildrawer";
 import {
@@ -24,6 +27,7 @@ import { identity } from "./brief.focuslink";
 import { HomeListReturnScope } from "./brief.queue";
 import { laneUnread } from "./brief.readings.honesty";
 import { waitingRows } from "./brief.sentence";
+import { taskLine, taskName } from "./brief.taskcard";
 import { HOME_DAY_TIMING } from "./elementtiming";
 
 import "../worklist/worklist.css";
@@ -140,11 +144,16 @@ export function ReadyStack({
   const [openEmail, setOpenEmail] = useState<string | null>(null);
   const { at, choose } = useCardChoice(rows);
   const lead = rows[at];
+  const viewer = useMe(false).data?.user;
+  const plural = usePlural();
+  const rest = solo ? rows.filter((_, index) => index !== at) : [];
+  const next = rows[(at + 1) % rows.length];
   return (
     <>
-      {solo && lead && rows.length > 1 && (
-        <p className="t-caption brief-stack-at">
-          {t("brief.focus.position", {
+      {solo && lead && (
+        <p className="t-caption brief-pod-eyebrow">
+          <Sparkles aria-hidden />
+          {plural("brief.pod.eyebrow", rows.length, {
             at: formatNumber(at + 1, locale),
             count: formatNumber(rows.length, locale),
           })}
@@ -162,6 +171,32 @@ export function ReadyStack({
             onContext={onContext}
           />
         </HomeListReturnScope>
+      )}
+      {rest.length > 0 && next && (
+        <>
+          <div className="t-caption brief-pod-pager">
+            <span>
+              {plural("brief.pod.more", rest.length, {
+                count: formatNumber(rest.length, locale),
+              })}
+            </span>
+            <Button variant="link" onClick={() => choose(next)}>
+              {t("brief.focus.next")} <ArrowRight aria-hidden />
+            </Button>
+          </div>
+          {/* The rest by name: a press takes that one in hand. */}
+          <div className="brief-pod-rest">
+            <PeekCard
+              head={t("brief.pod.also")}
+              items={rest.map((item) => ({
+                key: identity(item),
+                title: taskName(item, viewer, t, locale),
+                sub: taskLine(item, t, locale, readerZone) ?? undefined,
+                onOpen: () => choose(item),
+              }))}
+            />
+          </div>
+        </>
       )}
       <OpenEmailDrawer
         activityId={openEmail}

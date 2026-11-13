@@ -5,6 +5,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "../api/client";
 import { AppLink } from "../design-system/applink";
 import { Button } from "../design-system/atoms";
+import { ErrorLine } from "../design-system/errorline";
 import { formatNumber } from "../format/format";
 import { useLocale, usePlural, useT } from "../i18n";
 import { pendingApprovalCountKey } from "../lib/approvals.queries";
@@ -152,11 +153,7 @@ export function AgentJobs({ jobs }: Readonly<{ jobs: readonly AgentJob[] }>) {
               )}
             </p>
           )}
-          {!job.pending && job.refused && (
-            <p className="t-caption arjobsaid arjobrefused" role="alert">
-              {job.refused}
-            </p>
-          )}
+          {!job.pending && <ErrorLine>{job.refused}</ErrorLine>}
         </li>
       ))}
     </ul>

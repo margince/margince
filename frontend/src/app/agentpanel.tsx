@@ -1,6 +1,7 @@
-import { type ReactNode, type RefObject, useId } from "react";
+import { ArrowLeft, ChevronRight } from "lucide-react";
+import { type ReactNode, type RefObject, useId, useState } from "react";
 import { AppLink } from "../design-system/applink";
-import { Disclosure } from "../design-system/disclosure";
+import { Button } from "../design-system/atoms";
 import { Heading } from "../design-system/heading";
 import type { MarginceCoreState } from "../design-system/margince-core";
 import type { WorklistItem } from "../features/worklist/worklist.queries";
@@ -175,6 +176,37 @@ function PanelHead({
   );
 }
 
+/** The pod's one line of status: how the agent is, the month, and the report. */
+function PodFoot({
+  state,
+  spend,
+  onReport,
+}: Readonly<{
+  state: MarginceCoreState;
+  spend: Spend;
+  onReport: () => void;
+}>) {
+  const t = useT();
+  const { locale } = useLocale();
+  return (
+    <footer className="arpodfoot t-caption">
+      <span className="arpstate">
+        <i aria-hidden="true" />
+        {t(STATE_WORD[state])}
+      </span>
+      {spend.allowed && spend.minor !== undefined && (
+        <span className="t-num">
+          <b>{formatMoney(spend.minor, spend.currency, locale)}</b>{" "}
+          {t("agent.thisMonth")}
+        </span>
+      )}
+      <Button variant="link" className="arpodreport" onClick={onReport}>
+        {t("agent.panel.status")} <ChevronRight aria-hidden />
+      </Button>
+    </footer>
+  );
+}
+
 /**
  * The panel: one report, in the order a reader asks for it.
  *
@@ -229,6 +261,10 @@ export function AgentPanel({
   // not offered.
   const mayOpenLog = useCan("ai_diagnostics", "read");
   const hasWork = ready !== undefined && ready.length > 0;
+  // The report is one press behind the work, and the reader's choice holds
+  // while the panel is open.
+  const [report, setReport] = useState(false);
+  const pod = hasWork && !report;
   return (
     <section
       className="arpanel"
@@ -242,11 +278,27 @@ export function AgentPanel({
         maxHeight: frame.maxHeight,
       }}
     >
-      <PanelHead state={state} name={signals.name} line={line} spend={spend} />
-
-      {/* The work comes first: what the agent prepared or found for the
-          reader, answered here the way Home answers it. */}
-      {hasWork && <ReadyWork rows={ready} here={here ?? []} />}
+      {/* With work waiting the panel is the work: the card in hand, the rest
+          by name, the jobs, and one line of status that opens the report. */}
+      {pod ? (
+        <ReadyWork rows={ready} here={here ?? []} />
+      ) : (
+        <>
+          {hasWork && (
+            <div className="arsect arback">
+              <Button variant="link" onClick={() => setReport(false)}>
+                <ArrowLeft aria-hidden /> {t("agent.panel.back")}
+              </Button>
+            </div>
+          )}
+          <PanelHead
+            state={state}
+            name={signals.name}
+            line={line}
+            spend={spend}
+          />
+        </>
+      )}
 
       {/* Above the counts: a run happening this second outranks a queue that
           has been waiting since yesterday. Only live work is listed here. What
@@ -255,20 +307,17 @@ export function AgentPanel({
           list is, rather than drawn empty. */}
       <RunSection items={running} unnamed={unnamed} />
 
-      {jobs !== undefined && jobs.length > 0 && (
+      {(pod || !hasWork) && jobs !== undefined && jobs.length > 0 && (
         <PanelSection title={t("agent.job.section")}>
           <AgentJobs jobs={jobs} />
         </PanelSection>
       )}
 
-      {/* The report, behind one row while there is work above it: a reader who
-          came to act is not made to scroll past the installation's health. */}
-      <Disclosure
-        className="arstatus"
-        summary={t("agent.panel.status")}
-        open={!hasWork}
-      >
-        {/* Three cases, and the third is the doctrine of this surface: a count
+      {pod ? (
+        <PodFoot state={state} spend={spend} onReport={() => setReport(true)} />
+      ) : (
+        <>
+          {/* Three cases, and the third is the doctrine of this surface: a count
           nobody has read differs from a count of zero.
 
           Absent when the read has not answered or this seat may not make it.
@@ -279,66 +328,67 @@ export function AgentPanel({
 
           A read that answered zero is different, and it earns the sentence:
           the agent looked, and there is nothing waiting. */}
-        {signals.waiting !== undefined && (
-          <PanelSection title={t("agent.panel.needsYou")}>
-            {signals.waiting === 0 ? (
-              // A quiet line rather than a dashed plate. Before anyone read its
-              // words, the plate said "a tile failed to load". That is the
-              // opposite of what an all-clear is for.
-              //
-              // Its own sentence, not the resting line's. That line says "Nothing
-              // needs you" in the head of this same panel. One surface saying the
-              // same four words twice reads as assembled rather than written.
-              <p className="arnone t-caption">
-                {t("agent.panel.nothingWaiting")}
-              </p>
-            ) : (
-              <div className="artiles">
-                {/* The tile leads with the number a reader scans for. Its name
+          {signals.waiting !== undefined && (
+            <PanelSection title={t("agent.panel.needsYou")}>
+              {signals.waiting === 0 ? (
+                // A quiet line rather than a dashed plate. Before anyone read its
+                // words, the plate said "a tile failed to load". That is the
+                // opposite of what an all-clear is for.
+                //
+                // Its own sentence, not the resting line's. That line says "Nothing
+                // needs you" in the head of this same panel. One surface saying the
+                // same four words twice reads as assembled rather than written.
+                <p className="arnone t-caption">
+                  {t("agent.panel.nothingWaiting")}
+                </p>
+              ) : (
+                <div className="artiles">
+                  {/* The tile leads with the number a reader scans for. Its name
                   leads with the label, because "10" alone names nothing. */}
-                <AppLink
-                  className="arbox artile"
-                  href="#/worklist"
-                  aria-label={`${t("agent.panel.decisions")} ${formatNumber(signals.waiting, locale)}`}
-                >
-                  <b>{formatNumber(signals.waiting, locale)}</b>
-                  <span>{t("agent.panel.decisions")}</span>
+                  <AppLink
+                    className="arbox artile"
+                    href="#/worklist"
+                    aria-label={`${t("agent.panel.decisions")} ${formatNumber(signals.waiting, locale)}`}
+                  >
+                    <b>{formatNumber(signals.waiting, locale)}</b>
+                    <span>{t("agent.panel.decisions")}</span>
+                  </AppLink>
+                </div>
+              )}
+            </PanelSection>
+          )}
+
+          <PanelSection
+            title={t("agent.panel.recent")}
+            action={
+              // A verb, beside the title rather than inside it. Inside the heading,
+              // it took the heading's weight and read as a second title.
+              mayOpenLog ? (
+                <AppLink className="link-button" href={AI_SETTINGS_HREF}>
+                  {t("agent.panel.fullLog")}
                 </AppLink>
-              </div>
-            )}
+              ) : undefined
+            }
+          >
+            <Recap settled={settled} />
           </PanelSection>
-        )}
 
-        <PanelSection
-          title={t("agent.panel.recent")}
-          action={
-            // A verb, beside the title rather than inside it. Inside the heading,
-            // it took the heading's weight and read as a second title.
-            mayOpenLog ? (
-              <AppLink className="link-button" href={AI_SETTINGS_HREF}>
-                {t("agent.panel.fullLog")}
-              </AppLink>
-            ) : undefined
-          }
-        >
-          <Recap settled={settled} />
-        </PanelSection>
+          <PanelSection title={t("agent.panel.runtime")} className="arstrip">
+            <RuntimeFacts
+              offline={signals.offline}
+              model={model}
+              ai={signals.ai}
+              license={signals.license}
+              licenseLine={signals.licenseLine}
+            />
+          </PanelSection>
 
-        <PanelSection title={t("agent.panel.runtime")} className="arstrip">
-          <RuntimeFacts
-            offline={signals.offline}
-            model={model}
-            ai={signals.ai}
-            license={signals.license}
-            licenseLine={signals.licenseLine}
-          />
-        </PanelSection>
-
-        {/* The one thing on this panel that changes anything, under everything
+          {/* The one thing on this panel that changes anything, under everything
           that reports: a control above the report it is about would be read as
           part of the report. */}
-        <EdgeLightSetting />
-      </Disclosure>
+          <EdgeLightSetting />
+        </>
+      )}
 
       {/* Last, and the only line here no read produced: the agent reaches no
           further than this reader does, whatever the rows above managed to
