@@ -54,6 +54,8 @@ type Connector struct {
 	// dropped with the rest of the delivery-system mail.
 	bounces   connector.BounceSink
 	rawMemory *semaphore.Weighted
+	// shared mints shared mailboxes' tokens; nil on a connector that reads none.
+	shared *SharedAuthorizer
 }
 
 var (
@@ -61,6 +63,8 @@ var (
 	_ connector.Watcher        = (*Connector)(nil)
 	_ connector.AccountLabeler = (*Connector)(nil)
 	_ connector.GrantedScoper  = (*Connector)(nil)
+
+	_ connector.SharedMailboxReader = (*Connector)(nil)
 )
 
 // authState is the persisted credential bundle (the opaque connector.Auth).

@@ -20,10 +20,9 @@ package gates
 // only thing that changed is that the pointer it nulls now pointed somewhere.
 //
 // So the gap is held rather than written down. The rule is that the column
-// takes no value but NULL; an author who needs it to take one is the author
-// who must also purge the object, the way eraseAttachments does — read the
-// keys, delete the objects FIRST, then clear the rows, inside the erasure's
-// own transaction.
+// takes no value but NULL. An author who needs it to take one must also purge
+// the object the way eraseAttachments does. It reads the keys, queues each one
+// with storedobjects.RecordTx and clears the rows, in the erasure's transaction.
 
 import (
 	"go/ast"
@@ -82,8 +81,8 @@ func TestTheSubjectPhotoIsNeverStoredWhereErasureCannotFollow(t *testing.T) {
 					"\tThe Art. 17 cascade clears this column, and clearing a pointer does not destroy "+
 					"the object it names — the attachment arm purges only rows in `attachment`, so an "+
 					"erased subject's photograph would stay in the store with nothing left naming it.\n"+
-					"\tPurge the object in the eraser first, the way eraseAttachments does: read the "+
-					"keys, delete the objects, then clear the rows, in the erasure's own transaction. "+
+					"\tPurge the object the way eraseAttachments does: read the keys, queue each one "+
+					"with storedobjects.RecordTx and clear the rows, in the erasure's own transaction. "+
 					"Then this gate has nothing to hold and can go.",
 					parsed.Path, stored)
 			}

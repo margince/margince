@@ -304,6 +304,16 @@ input.
 - A reader who never opens an account never pays for it. And a busy inbox does not read the account
   again on every message.
 
+**One open per page load.** Each `GET` and `POST` assembles the whole account before it answers, which
+takes seconds. So the page sends one request for an open. Every consumer of `useAccountScan` shares the
+`POST`, and the `GET` waits for its answer. After that, `GET` serves the poll and the refresh after a
+change on the record.
+
+The shared open lives in the query cache, so sign-out drops it. A `POST` that answers after sign-out,
+or after a change marked the scan for a new read, does not write its answer. The server does not share
+work between requests. Two opens at once still queue one read, because the
+queue write refuses a second read while one is live.
+
 **The row is the carrier.** `company_scan` holds one row per (reader, account). It holds the read in
 flight: the `status` in the vocabulary of the AI activity rail, and the attempt. It also holds the
 timestamp fields that carry the lease, and `next_attempt_at` for a budget deferral. It also holds the last findings that settled. Those
@@ -332,6 +342,22 @@ seconds until the row settles.
 Then the merged list replaces the own rows of the 360. The foot says who wrote them, how many
 exchanges were read over how many days (`read.window_days`), and how many open deals. It says that the account has moved since (where it has), or why the model
 did not write them.
+
+A scan that is still running, or that failed, holds no other part of the page. The tabs and links work
+the whole time (`companyscan.test.tsx`).
+
+## The dossier and the growth fit: stored or written
+
+The dossier and the growth fit are stored per reader. A stored one answers in well under a second, and
+a missing or stale one is written on the request, in several seconds. The answer says which one it
+was in `served_from`: `cache` or `generated`. A refresh that the AI budget refused, answered with the
+stored reading, is `cache`. Count the two apart when you measure these reads, because a model call takes
+far longer than a stored read.
+
+The panel cannot know which one it gets until the answer is there. So it uses the grace that the AI activity rail uses
+(`CACHE_ANSWER_GRACE_MS`, one second). Under it the wait is a plain load. Past it the panel says the
+reading is being written (`companyassembly.tsx`). Once the answer is there, a stored reading shows when it
+was written, and a new one says it was written just now.
 
 ## The state strip and health
 

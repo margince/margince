@@ -1056,10 +1056,9 @@ jobs:
   # Opens the pull request that publishes the records. It never pushes to main:
   # a human publishes a record by reviewing and merging this pull request.
   #
-  # The default token, because the repository holds no bot token for pull
-  # requests. A pull request that token opens starts no workflow, so the body
-  # tells the reviewer how to start CI. Only from main: a dispatch on another
-  # branch measures and renders, and proposes nothing.
+  # A token minted from the repository's records App opens the pull request,
+  # so CI starts on it; the default workflow token stays read-only. Only from
+  # main: a dispatch on another branch measures and renders, and proposes nothing.
   records-pr:
     name: propose the weekly records
     needs: [records, perf-budgets, perf-mobile, llm-use-cases]
@@ -1070,27 +1069,38 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     permissions:
-      contents: write
-      pull-requests: write
+      contents: read
     defaults:
       run:
         working-directory: .
     steps:
+      # The App is installed on this repository only, with contents and pull
+      # requests write. RECORDS_APP_CLIENT_ID and RECORDS_APP_PRIVATE_KEY hold it.
+      - id: app-token
+        uses: actions/create-github-app-token@64ab729a6294000f5aa4a4bc0b73d1f32bc45510 # v3.3.0
+        with:
+          client-id: ${{ secrets.RECORDS_APP_CLIENT_ID }}
+          private-key: ${{ secrets.RECORDS_APP_PRIVATE_KEY }}
+          permission-contents: write
+          permission-pull-requests: write
       # The credential persists here and nowhere else in this file: the push
       # below is the one write this workflow makes to the repository.
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          token: ${{ steps.app-token.outputs.token }}
       - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         with:
           name: scheduled-records
           path: ${{ runner.temp }}/records
       - name: Commit the records and open the pull request
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
           PATCH: ${{ runner.temp }}/records/records.patch
           BODY: ${{ runner.temp }}/records-body.md
           PARTS: ${{ needs.records.outputs.parts }}
           RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
           RUN_ID: ${{ github.run_id }}
+          APP_SLUG: ${{ steps.app-token.outputs.app-slug }}
           BASE: ${{ github.event.repository.default_branch }}
           PERF_RESULT: ${{ needs.perf-budgets.result }}
           PERF_OUTCOME: ${{ needs.perf-budgets.outputs.outcome }}
@@ -1141,14 +1151,14 @@ jobs:
             echo
             echo "## How verified"
             echo
-            echo "The default workflow token opened this pull request, so no workflow ran on it."
-            echo "Close and reopen it to start CI before you merge."
+            echo "The records App opened this pull request, so CI runs on it. Merge only when it is green."
             echo
             echo "Closes: none"
           } >"$BODY"
 
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          bot_id="$(gh api "/users/${APP_SLUG}%5Bbot%5D" --jq .id)"
+          git config user.name "${APP_SLUG}[bot]"
+          git config user.email "${bot_id}+${APP_SLUG}[bot]@users.noreply.github.com"
           git switch -c "$branch"
           git commit -q -m "chore(records): weekly measurements of $day"
           # --force, because a re-run of this job replaces the branch it pushed.

@@ -76,8 +76,10 @@ func mailSeatAddressesSQL(identities, seat string) string {
 	return storekit.MailSeatAddressesSQL(identities, seat)
 }
 
-func directMailSeatsSQL(identities string) string {
-	return storekit.DirectMailSeatsSQL("a", identities)
+// mailAnswerersSQL is the seats that answer mail `a`
+// (storekit.MailAnswerersSQL), the list a waiting row names its owner from.
+func mailAnswerersSQL(identities string) string {
+	return storekit.MailAnswerersSQL("a", identities)
 }
 
 func (s *Store) mailSeatIdentitiesSQL(ctx context.Context, tx pgx.Tx, bind func(any) int) (string, error) {

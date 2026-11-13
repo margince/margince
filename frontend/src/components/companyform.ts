@@ -24,6 +24,7 @@ import type { Locale, Translator } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import { labelFor } from "../lib/labelfor";
 import { unwrap } from "../lib/problem";
+import { TEXT_LIMITS } from "../lib/textlimits_gen";
 import {
   formatSizeBand,
   LIFECYCLE_LABELS,
@@ -255,8 +256,17 @@ export function companyCreateFields(
   locale: Locale,
 ): CreateField[] {
   return [
-    { key: "display_name", label: "create.displayName", required: true },
-    { key: "legal_name", label: "create.legalName" },
+    {
+      key: "display_name",
+      label: "create.displayName",
+      required: true,
+      maxLength: TEXT_LIMITS.label,
+    },
+    {
+      key: "legal_name",
+      label: "create.legalName",
+      maxLength: TEXT_LIMITS.line,
+    },
     {
       key: "industry",
       label: "create.industry",

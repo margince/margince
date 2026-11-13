@@ -8,8 +8,10 @@ import type { ProjectScope } from "../../design-system/projectpicker";
 import type { useT } from "../../i18n";
 import type { Locale } from "../../i18n/locale";
 import { throwProblem } from "../../lib/problem";
+import type { RewriteVerb } from "../../lib/rewrites";
 import { stripEveryKeyTag, withSubjectTag } from "../projects/projectrecord";
 import type { RelinkKind } from "./composerelink";
+import { rewriteAsDraft } from "./composerewrite";
 
 type EmailDraft = components["schemas"]["EmailDraft"];
 type DraftReason = components["schemas"]["AccountDraftReason"];
@@ -87,7 +89,10 @@ export type DraftAsk = Readonly<{
   subject?: string;
   body: string;
   html: string;
-  instruction?: string;
+  // A rewrite verb pressed over the body on screen: the one rewrite path.
+  verb?: RewriteVerb;
+  // The reader's interface language, which places words too short to tell.
+  reader?: Locale;
   // The language the rep chose, named on every ask, since the server keeps none.
   language?: Locale;
   // The answer replaces the body on screen: a rewrite verb or a new language.
@@ -238,12 +243,16 @@ function steering(steer: Steer) {
 // a first draft, so the route still answers and the fill keeps the body.
 const REWRITE_OF_MAX = 20_000;
 
-/** Why the body on screen cannot be sent for revision, or null when it can. */
+/**
+ * Why the body on screen cannot be sent for revision, or null when it can. A
+ * rewrite verb is held to the rewrite path's limit, a redraft to `rewrite_of`'s.
+ */
 export function rewriteBlock(
   body: Readonly<{ text: string; html: string }>,
+  limit = REWRITE_OF_MAX,
 ): "formatted" | "long" | null {
   if (hasRepFormatting(body.html)) return "formatted";
-  return [...body.text.trim()].length > REWRITE_OF_MAX ? "long" : null;
+  return [...body.text.trim()].length > limit ? "long" : null;
 }
 
 // The words a draft call is asked to revise: the body on screen, whoever wrote
@@ -403,8 +412,11 @@ export function useDraftMutation({
     mutationFn: async (ask: DraftAsk): Promise<DraftResult> => {
       resetUnavailable();
       const { grounding, activityId, entityType } = ask;
+      if (ask.verb) {
+        return rewriteAsDraft(ask, ask.verb, t);
+      }
       const steer = {
-        intent: ask.instruction ?? ask.intent,
+        intent: ask.intent,
         // The body on screen goes with every ask, so words the rep wrote are
         // revised rather than ignored. A blank body asks for a first draft.
         rewriteOf: rewriteOfAsk(ask),

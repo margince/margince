@@ -112,10 +112,7 @@ func readSdrTeamReview(ctx context.Context, tx pgx.Tx, targets sdrTeamTargets, r
 	if owners.IndividualOff {
 		out.MembersWithheld = true
 		// One figure a lone colleague makes up withholds the whole review.
-		err := requireNoLoneColleague(ctx, tx, figures.contributors)
-		if err == nil {
-			err = requirePopulationFloor(ctx, tx, resolved)
-		}
+		err := requireFlooredTotals(ctx, tx, resolved, figures.contributors)
 		if errors.As(err, new(auth.IndividualPerformanceOffError)) {
 			reason := readerCoverageCopy(ctx, tx).Say(reportingCoverageWords.BelowFloor)
 			out.Withheld, out.WithheldReason = true, &reason

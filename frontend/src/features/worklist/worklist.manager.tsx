@@ -21,6 +21,10 @@ import {
   useRosterPartial,
 } from "../../components/entityref";
 import {
+  type AssignedRecord,
+  assignedRecord,
+} from "../../components/recordassignments.queries";
+import {
   Button,
   Field,
   SegmentedControl,
@@ -34,6 +38,7 @@ import type { MessageKey } from "../../i18n/en";
 import { labelFor } from "../../lib/labelfor";
 import { problemCodeOf } from "../../lib/problem";
 import { useMe } from "../../lib/session";
+import { InquiryAssignmentDialog } from "./worklist.inquiryassignment";
 import {
   subjectAcceptsAnOwner,
   type TeamException,
@@ -113,23 +118,37 @@ export function OwnerPicker({
 }
 
 // Who the reader may hand work to: the contacts, less whoever holds the task
-// already. Why the holder is excluded is the caller's own note below.
-function useAssigneeOptions(exclude: string | undefined) {
-  const { options, roster } = useAssignableUserOptions();
+// already, with those named on the task's record first. Why the holder is
+// excluded is the caller's own note below.
+function useAssigneeOptions(
+  exclude: string | undefined,
+  records: readonly AssignedRecord[],
+) {
+  const { options, roster } = useAssignableUserOptions(true, records);
   return {
     options: options.filter((option) => option.value !== exclude),
     roster,
   };
 }
 
-// Hand one task to somebody else, in a form the row opens from its menu.
-//
-// The row leaves this queue when the refetch lands, not on the press. The queue
-// is ranked and counted server-side — a row removed locally would leave the
-// summary above it counting work that is no longer here, and the rank numbers
-// beside every remaining row wrong. So the press reports itself through the
-// toast, and the list reconciles.
-export function ReassignForm({
+// Hand one task to somebody else, in a form the row opens from its menu. The row
+// leaves when the refetch lands, not on the press. The server ranks and counts
+// the queue, so a row removed here would leave the summary and ranks wrong.
+export function ReassignForm(
+  props: Readonly<{ item: WorklistItem; owner: string; onClose: () => void }>,
+) {
+  return props.item.kind === "website_inquiry" ? (
+    <InquiryAssignmentDialog
+      item={props.item}
+      mode="assign_and_follow_up"
+      onClose={props.onClose}
+    />
+  ) : (
+    <TaskReassignForm {...props} />
+  );
+}
+
+function TaskReassignForm({
   item,
   owner,
   onClose,
@@ -151,7 +170,10 @@ export function ReassignForm({
   // the contact already holding the task. An empty list is the honest state of a
   // question not yet answered; a self-reassignment is a write that changes
   // nothing and looks on screen exactly like one that did.
-  const { options, roster } = useAssigneeOptions(holder);
+  const { options, roster } = useAssigneeOptions(
+    holder,
+    assignedRecord(item.subject?.type, item.subject?.id),
+  );
   const settled = holder !== undefined;
   const reassign = useReassignTask();
 

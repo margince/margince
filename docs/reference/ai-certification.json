@@ -1,11 +1,11 @@
 {
   "totals": {
-    "sites": 56,
+    "sites": 57,
     "sites_best_current": 46,
     "sites_best_partial": 0,
     "sites_best_stale": 10,
-    "sites_absent": 0,
-    "scenarios": 316,
+    "sites_absent": 1,
+    "scenarios": 320,
     "records": 355,
     "bindings": 16,
     "self_judged_records": 0
@@ -7928,7 +7928,7 @@
     {
       "name": "Gemini",
       "answer": "mostly",
-      "sites_shipped": 56,
+      "sites_shipped": 57,
       "sites_measured": 56,
       "ready": 41,
       "usable_with_care": 14,
@@ -8785,7 +8785,7 @@
     {
       "name": "GPT",
       "answer": "mostly",
-      "sites_shipped": 56,
+      "sites_shipped": 57,
       "sites_measured": 52,
       "ready": 35,
       "usable_with_care": 14,
@@ -9587,7 +9587,7 @@
     {
       "name": "Mistral",
       "answer": "mostly",
-      "sites_shipped": 56,
+      "sites_shipped": 57,
       "sites_measured": 44,
       "ready": 24,
       "usable_with_care": 12,
@@ -10297,7 +10297,7 @@
     {
       "name": "Gemma",
       "answer": "not_enough_tested",
-      "sites_shipped": 56,
+      "sites_shipped": 57,
       "sites_measured": 6,
       "ready": 1,
       "usable_with_care": 1,
@@ -18953,6 +18953,42 @@
           }
         }
       ]
+    },
+    {
+      "task": "draft_reply",
+      "site": "rewrite",
+      "key": "draft_reply/rewrite",
+      "scope": "full_invocation",
+      "missing_context_scopes": [],
+      "best_state": "absent",
+      "recommended": null,
+      "scenarios": [
+        {
+          "name": "draft_reply_rewrite_email_shorter_keeps_the_ask",
+          "expects": "accepted",
+          "graded_by": "judge",
+          "file": "backend/internal/compose/aicert/corpus/draft_reply/rewrite_email_shorter_keeps_the_ask_01.yaml"
+        },
+        {
+          "name": "draft_reply_rewrite_german_note_stays_german",
+          "expects": "accepted",
+          "graded_by": "judge",
+          "file": "backend/internal/compose/aicert/corpus/draft_reply/rewrite_german_note_stays_german_01.yaml"
+        },
+        {
+          "name": "draft_reply_rewrite_instruction_in_note_is_data",
+          "expects": "accepted",
+          "graded_by": "judge",
+          "file": "backend/internal/compose/aicert/corpus/draft_reply/rewrite_instruction_in_note_is_data_01.yaml"
+        },
+        {
+          "name": "draft_reply_rewrite_task_keeps_names_and_dates",
+          "expects": "accepted",
+          "graded_by": "judge",
+          "file": "backend/internal/compose/aicert/corpus/draft_reply/rewrite_task_keeps_names_and_dates_01.yaml"
+        }
+      ],
+      "records": []
     },
     {
       "task": "enrich",

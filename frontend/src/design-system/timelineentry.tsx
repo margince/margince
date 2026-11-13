@@ -163,6 +163,8 @@ export type TimelineEntry = {
    * side of a conversation.
    */
   automaticKind?: AutomaticKind | null;
+  /** A model rewrote the words before a rep saved them (Polish wording). */
+  aiAssisted?: boolean;
   /**
    * The message's own subject, when it had one. This is not the rendered
    * `title`, which falls back to the body (or to the kind) so a subjectless
@@ -405,6 +407,16 @@ export function AutomaticFlag({ entry }: Readonly<{ entry: TimelineEntry }>) {
   }
   const label = automaticLabel(entry);
   return label ? <Badge>{t(label)}</Badge> : null;
+}
+
+// AiAssistedFlag marks words a model rewrote, as every AI-written text is marked.
+export function AiAssistedFlag({
+  entry,
+}: Readonly<{ entry: Pick<TimelineEntry, "aiAssisted" | "withheld"> }>) {
+  const t = useT();
+  return entry.aiAssisted && !entry.withheld ? (
+    <Badge tone="ai">{t("co.assistant.aiTag")}</Badge>
+  ) : null;
 }
 
 export function CommitmentReviewFlag({

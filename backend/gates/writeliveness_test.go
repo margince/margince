@@ -127,7 +127,7 @@ const retirableTableFloor = 20
 var livenessUnstated = gatekit.Waive(map[string]string{
 	"internal/modules/privacy:redactSubjectExtensionSignals":  "redacts archived signals on purpose: an archived signal about the erased contact holds the same free text and personal members a live one does",
 	"internal/modules/activities:StampSenderAuthenticationTx": "system-only repair of sender-authentication evidence from a retained original. Archiving a message does not change its sender authentication; restricted content is excluded explicitly",
-	"internal/modules/automation:claimDraftStarter":           "UpdateAutomation holds a storekit.LiveOnly row lock before settleRuleOwner calls this claim, and retains it through the update transaction",
+	"internal/modules/automation:claimStarterAuthorizer":      "UpdateAutomation holds a storekit.LiveOnly row lock before settleRuleOwner calls this claim, and retains it through the update transaction",
 	"internal/modules/contacts:refreshContactPhoneEvidence":   "lockOpenPairs selects only open, unarchived candidates FOR UPDATE OF d before stillFiled refreshes their evidence in the same transaction",
 	"internal/modules/identity:applyMemberRetirement":         "retireMemberTx reads and locks its source through readRetirementSource/readRetirementMember, whose query requires archived_at IS NULL, before applying the removal",
 	"internal/modules/identity:recordMemberSurvivor":          "retireMemberTx locks the surviving member through readRetirementTarget/readRetirementMember with archived_at IS NULL before the merge stamps its change",

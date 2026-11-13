@@ -23,6 +23,7 @@ import (
 	"github.com/margince/margince/backend/internal/compose/erasurereturn"
 	"github.com/margince/margince/backend/internal/compose/homecache"
 	"github.com/margince/margince/backend/internal/compose/magic"
+	"github.com/margince/margince/backend/internal/compose/partnersteps"
 	"github.com/margince/margince/backend/internal/compose/salesprogress"
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/ai"
@@ -73,6 +74,7 @@ func newContactsHandlers(pool *pgxpool.Pool) contactsHandlers {
 		WithDealOpener(leadDealOpener{deals: deals.NewStore(InstallationDB(pool), DealsInstallation())}).
 		WithShareRequests(contactShareRequests(pool)).
 		WithLeadArrivals(newLeadWorkTasks(InstallationDB(pool), slog.Default())).
+		WithPartnerNextSteps(partnersteps.New(activities.NewStore(InstallationDB(pool)))).
 		WithInstallationRenamer(installationRenamer(pool)).
 		WithConsumerMail(capture.MatcherTx)
 }
@@ -84,6 +86,7 @@ func newActivitiesHandlers(pool *pgxpool.Pool) activitiesHandlers {
 	return activities.NewHandlers(InstallationDB(pool)).WithIdentityProver(capture.ProvedUnambiguouslyTx).
 		WithDealFiling(NewActivityDealFiling(InstallationDB(pool))).
 		WithTaskRecommendation(taskRecommendationReader(pool)).
+		WithInquiryAssignment(newInquiryAssignment(InstallationDB(pool))).
 		WithLeadQualifyTasks(newLeadWorkTasks(InstallationDB(pool), slog.Default())).
 		WithFieldCatalog(customfields.NewService(pool, nil)).
 		WithRecordZone(installationZoneTx).

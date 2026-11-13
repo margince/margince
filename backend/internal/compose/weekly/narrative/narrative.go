@@ -25,16 +25,12 @@ import (
 	"github.com/margince/margince/backend/internal/compose/promptlang"
 	"github.com/margince/margince/backend/internal/modules/ai"
 	"github.com/margince/margince/backend/internal/shared/kernel/promptfence"
+	"github.com/margince/margince/backend/internal/shared/kernel/values"
 	"github.com/margince/margince/backend/internal/shared/ports/model"
 )
 
-// MaxNarrativeRunes bounds the sentence.
-//
-// It matches the CHECK on weekly_review.narrative and is enforced here as well,
-// in RUNES rather than bytes: the column counts characters, and a German
-// sentence full of umlauts would otherwise pass this and be refused by the
-// driver — a failed write at 06:00 on a Monday with nobody watching.
-const MaxNarrativeRunes = 600
+// MaxNarrativeRunes bounds a weekly summary before it reaches storage.
+const MaxNarrativeRunes = values.TextNoteCharacters
 
 // Input is the week as the prompt reads it.
 //

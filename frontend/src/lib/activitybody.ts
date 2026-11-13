@@ -9,6 +9,7 @@ import {
   type OccurredPrecision,
 } from "../format/activitywhen";
 import { calendarDay, dueInstant } from "../format/calendarday";
+import { dueTimeOf } from "../format/timezone";
 import type { EntityKind } from "./entity";
 import type { TaskType } from "./tasktype";
 
@@ -77,6 +78,8 @@ export type ActivityDraft = {
   followUp?: TaskDraft;
   // The workspace's custom-field values, as the create body's cf_ keys.
   custom?: Record<string, unknown>;
+  // A model polished the subject or body, so the saved activity reads AI-assisted.
+  aiAssisted?: boolean;
 };
 
 export type TaskDraft = Pick<
@@ -99,14 +102,40 @@ export function taskRequestFields(input: TaskDraft, recordZone: string) {
  * a time also reminds its assignee then, and that rule is the server's, for
  * every writer, so this sends no reminder of its own.
  */
+export function taskDueChoice(
+  dueAt: string | null | undefined,
+  hasTime: boolean | undefined,
+  zone: string,
+  intent?: components["schemas"]["IntentTime"],
+): { day: string; time: string; zone: string } {
+  const chosenZone = intent?.timezone ?? zone;
+  const [day, clock] = intent?.wall_clock.split("T") ?? [];
+  return {
+    day: day ?? (dueAt ? calendarDay(new Date(dueAt), chosenZone) : ""),
+    time: hasTime
+      ? (clock?.split(":").slice(0, 2).join(":") ??
+        (dueAt ? dueTimeOf(dueAt, hasTime, chosenZone) : ""))
+      : "",
+    zone: chosenZone,
+  };
+}
+
 export function taskDueFields(
   day: string,
   time: string,
   recordZone: string,
-): { due_at: string; due_has_time: boolean } {
+): {
+  due_at: string;
+  due_has_time: boolean;
+  due_intent: components["schemas"]["IntentTime"];
+} {
   return {
     due_at: dueInstant(day, recordZone, time),
     due_has_time: time !== "",
+    due_intent: {
+      wall_clock: `${day}T${time || "23:59:59"}`,
+      timezone: recordZone,
+    },
   };
 }
 
@@ -191,6 +220,12 @@ export function activityRequestBody(
             : {}),
         }),
     ...(isTranscript ? { source_system: "transcript" } : {}),
+    ...(input.aiAssisted && !isTranscript && entityType && entityId
+      ? {
+          ai_assisted: true,
+          ai_assisted_on: { entity_type: entityType, entity_id: entityId },
+        }
+      : {}),
     // Only for the kinds that ask who attended. Switching to a note hides the
     // fields but keeps their picks in state. A note must not be filed against them.
     links:

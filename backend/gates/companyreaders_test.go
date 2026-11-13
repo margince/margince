@@ -62,6 +62,7 @@ var companyGate = objectGate{
 // than in the gated set: removing the company condition could only WIDEN the
 // result the caller already sees.
 var predicateCompanyReads = gatekit.Waive(map[string]string{
+	"internal/platform/database/storekit/sharedmailowner.go:SharedMailWorkOwnerSQL":    "picks the seat that holds the work of mail only a shared mailbox captured: the owner_id, a USER id, of the sender's contact and of its current company. Only that seat id leaves the statement, it is a candidate the same rule then checks may read the mail, and no company field reaches any reader",
 	"internal/modules/privacy/notementionlocks.go:lockNoteMentions":                    "the contact-delete-authorized eraser locks records linked to candidate notes so their legal-hold flags cannot change during erasure. IDs are consumed inside the transaction and no record content is disclosed",
 	"internal/modules/privacy/historicalaudit.go:markerHoldSQL":                        "system-only marker correction reads existence of a legal hold to refuse destruction. No record field leaves the transaction; SHARE locks keep the hold decision stable",
 	"internal/modules/privacy/heldrecords.go:heldRecordRule":                           "the system-only audit cleanup and copy retention read only a company's legal-hold flag, to keep the copies made from it. Only the ids of held companies leave the read, inside the transaction that keeps their copies",

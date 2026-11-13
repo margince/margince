@@ -7,6 +7,10 @@ import { toMinorUnits } from "../../format/minorunits";
 import { useLocale, useT } from "../../i18n";
 import { useCanWrite } from "../../lib/capability";
 import { currencyBeside } from "../../lib/dealcurrency";
+import {
+  translatedLabel,
+  translatedPipeline,
+} from "../../lib/labeltranslation";
 import { useLeadingCurrencies } from "../../lib/leadingcurrencies";
 import { defaultPipelineOf } from "../../lib/pipelines.queries";
 import { unwrap } from "../../lib/problem";
@@ -32,7 +36,15 @@ type Stage = components["schemas"]["Stage"];
  * deal board applies the same rule to its own stage picker.
  */
 function useDealTarget() {
+  const { locale } = useLocale();
   return useQuery({
+    select: ({ pipeline, open }) => ({
+      pipeline: pipeline && translatedPipeline(pipeline, locale),
+      open: open.map((stage) => ({
+        ...stage,
+        name: translatedLabel(stage.name, stage.name_translations, locale),
+      })),
+    }),
     queryKey: ["pipelines", "dealTarget"],
     queryFn: async () => {
       const data = unwrap(

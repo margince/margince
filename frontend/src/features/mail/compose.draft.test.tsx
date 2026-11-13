@@ -18,7 +18,9 @@ import {
   PROVISIONAL_VOICE_PROFILE,
   pickWhy,
   problemResponse,
+  REWRITE_ROUTE,
   render,
+  rewrittenBody,
   stubRoutes,
   WHY_ASK,
   WHY_LABEL,
@@ -268,8 +270,8 @@ describe("ComposeModal draft binding", () => {
       "GET /voice-profiles": () => jsonResponse(PROVISIONAL_VOICE_PROFILE),
       "POST /activities/act-1/draft-email": draftsInTurn(
         voiceDraft("vd-a", "Re: Q3", "Draft A body."),
-        voiceDraft("vd-b", "Re: Q3", "Short."),
       ),
+      [REWRITE_ROUTE]: () => rewrittenBody("Short."),
       "PUT /mail-drafts": () => emptyResponse(204),
     });
     renderComposer();
@@ -280,10 +282,12 @@ describe("ComposeModal draft binding", () => {
     await userEvent.click(screen.getByRole("button", { name: "Shorter" }));
 
     await waitFor(() => expect(messageText("Body")).toBe("Short."));
-    const calls = sent.filter(
-      (r) => r.key === "POST /activities/act-1/draft-email",
-    );
-    expect(calls[1]?.body).toMatchObject({ rewrite_of: "Draft A body." });
+    expect(sent.find((r) => r.key === REWRITE_ROUTE)?.body).toMatchObject({
+      envelope: "email",
+      verb: "shorter",
+      body: "Draft A body.",
+      about: { entity_type: "activity", entity_id: "act-1" },
+    });
   });
 
   it("keeps the earlier reference when a re-draft leaves the typed body alone", async () => {

@@ -36,6 +36,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/meetingoutcome"
 	"github.com/margince/margince/backend/internal/shared/kernel/occurredday"
+	"github.com/margince/margince/backend/internal/shared/ports/connector"
 )
 
 // historyCap bounds the scan. Two hundred conversations is more than a year of
@@ -84,45 +85,50 @@ type FiledDeal struct {
 	State string `json:"state"`
 }
 
-var historyQuery = `
+// historyColumns reads one conversation of historyCandidates, through the
+// mailbox-copy grouping: a mail several colleagues captured is one conversation.
+var historyColumns = `
 	SELECT a.id, a.kind, COALESCE(a.subject, ''), COALESCE(a.direction, ''),
 	       a.occurred_at, a.occurred_precision = 'day', COALESCE(a.thread_key, ''),
-	       ($%[3]d::uuid IS NOT NULL AND EXISTS (
+	       -- Filing is read over every copy the row stands for, each one the
+	       -- reader may open: each colleague files their own copy.
+	       ($%[1]d::uuid IS NOT NULL AND EXISTS (
 	          SELECT 1 FROM activity_link dl
-	          WHERE dl.activity_id = a.id AND dl.deal_id = $%[3]d)) AS on_deal,
-	       (%[2]s) AS readable,
+	          WHERE dl.activity_id = ANY(copies.copy_ids) AND dl.deal_id = $%[1]d)) AS on_deal,
+	       copies.copy_readable AS readable,
 	       -- The deals the row is filed under, under the caller's deal scope.
 	       -- An open one first, so a thread on a live and a lost deal is named live.
 	       COALESCE((
 	         SELECT json_agg(json_build_object('id', fd.id, 'name', fd.name, 'state', fd.status)
 	                         ORDER BY (fd.status = 'open') DESC, fd.id)
-	         FROM activity_link ol
-	         JOIN deal fd ON fd.id = ol.deal_id AND fd.archived_at IS NULL
-	         WHERE ol.activity_id = a.id AND ol.deal_id IS NOT NULL AND %[10]s
+	         FROM deal fd
+	         WHERE fd.archived_at IS NULL AND %[2]s AND EXISTS (
+	           SELECT 1 FROM activity_link ol WHERE ol.deal_id = fd.id AND ol.activity_id = ANY(copies.copy_ids))
 	       ), '[]'::json) AS filed
-	FROM activity a
-	WHERE a.archived_at IS NULL
-	  AND a.kind <> 'task'
-	  AND a.id <> $%[4]d
-	  AND %[5]s
-	  AND %[9]s
-	  AND (a.kind <> 'meeting' OR ` + meetingoutcome.HeldSQL("a") + `)
-	  AND (EXISTS (
-	         SELECT 1 FROM activity_participant ap
-	         WHERE ap.activity_id = a.id AND ap.contact_id = ANY($%[6]d))
-	       OR EXISTS (
-	         SELECT 1 FROM activity_link pl
-	         WHERE pl.activity_id = a.id AND pl.entity_type = 'contact'
-	           AND pl.contact_id = ANY($%[6]d)))
-	  AND %[1]s
-	  AND %[7]s
+	FROM %[3]s
 	-- The id breaks a tie on the timestamp. Two conversations captured in the
 	-- same second are common (one sync writes a thread), and without this the
 	-- rows that survive the cap, the messages picked for excerpting and the
 	-- subject a thread is named after would all vary between reads of an
 	-- unchanged database.
 	ORDER BY a.occurred_at DESC, a.id DESC
-	LIMIT %[8]d`
+	LIMIT %[4]d`
+
+var historyCandidates = `a.archived_at IS NULL
+	  AND a.kind <> 'task'
+	  AND a.id <> $%[1]d
+	  AND %[2]s
+	  AND %[3]s
+	  AND (a.kind <> 'meeting' OR ` + meetingoutcome.HeldSQL("a") + `)
+	  AND (EXISTS (
+	         SELECT 1 FROM activity_participant ap
+	         WHERE ap.activity_id = a.id AND ap.contact_id = ANY($%[4]d))
+	       OR EXISTS (
+	         SELECT 1 FROM activity_link pl
+	         WHERE pl.activity_id = a.id AND pl.entity_type = 'contact'
+	           AND pl.contact_id = ANY($%[4]d)))
+	  AND %[5]s
+	  AND %[6]s`
 
 // readHistory returns the room's conversations, newest first.
 //
@@ -177,10 +183,10 @@ func (s *Service) readHistory(
 		return nil, err
 	}
 
-	rows, err := tx.Query(ctx, fmt.Sprintf(historyQuery,
-		scope, readable, dealPos, roomPos, occurredday.WithinSQL("a", floor, opens), attendeePos, within, historyCap, happened,
-		otherDeal,
-	), args...)
+	candidates := fmt.Sprintf(historyCandidates,
+		roomPos, occurredday.WithinSQL("a", floor, opens), happened, attendeePos, scope, within)
+	from := connector.MailCopyGroupFrom(ctx, "activity", "a", candidates, readable, arg)
+	rows, err := tx.Query(ctx, fmt.Sprintf(historyColumns, dealPos, otherDeal, from, historyCap), args...)
 	if err != nil {
 		return nil, fmt.Errorf("read the account history: %w", err)
 	}

@@ -32,7 +32,8 @@ type Store struct {
 	// relationship table a project's companies ride on.
 	attachCompany    AttachCompany
 	projectCompanies ProjectCompanies
-	// attachDeal links the deal a project comes from (dealseam.go).
+	// checkDeal and attachDeal link the deal a project comes from (dealseam.go).
+	checkDeal  CheckDeal
 	attachDeal AttachDeal
 }
 
@@ -46,6 +47,7 @@ func NewStore(db *database.DB) *Store {
 		db: db, clock: time.Now,
 		attachCompany:    refusingAttachCompany(),
 		projectCompanies: refusingProjectCompanies(),
+		checkDeal:        refusingCheckDeal(),
 		attachDeal:       refusingAttachDeal(),
 	}
 }

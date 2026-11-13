@@ -24,6 +24,9 @@ type store interface {
 	count(key string, span time.Duration, now time.Time) (int, error)
 	peek(key string, span time.Duration, now time.Time) (int, error)
 	forget(prefix string) error
+	// hold keeps value under key until ttl passes; held answers it, or 0 once gone.
+	hold(key string, value int64, ttl time.Duration, now time.Time) error
+	held(key string, now time.Time) (int64, error)
 }
 
 // Registry is the backing store every Limiter built from it reads through.

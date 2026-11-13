@@ -56,6 +56,9 @@ type Invoice struct {
 	// Disputed excludes the invoice from timeliness: the delay is a
 	// disagreement, not a payment habit. It still counts as open and owed.
 	Disputed bool
+	// DunningLevel is the reminder count the source states, nil when it does
+	// not say.
+	DunningLevel *int
 	// RateMissing marks an invoice whose issue date had no effective
 	// conversion rate. One of these refuses the WHOLE figure rather than
 	// converting some rows and not others (FIN-AC-6).
@@ -155,13 +158,16 @@ type OpenBalance struct {
 	// OldestOverdueDays is the age of the longest-outstanding overdue
 	// invoice, which is what tells a rep whether this is a slip or a problem.
 	OldestOverdueDays int
+	// HighestDunningLevel is the highest reminder count across the overdue
+	// invoices, nil when none of them states one.
+	HighestDunningLevel *int
 }
 
 // OpenBalanceAt folds what is outstanding as of the given instant.
 //
-// A DISPUTED invoice counts as open, because it is genuinely owed, and is
-// reported separately as disputed elsewhere. Presenting it only as overdue
-// would describe a disagreement as a payment failure.
+// A disputed invoice counts as open, because it is still owed. It stays out of
+// every overdue figure. Calling it overdue would describe a disagreement as a
+// payment failure.
 func OpenBalanceAt(invoices []Invoice, asOf time.Time) OpenBalance {
 	var out OpenBalance
 	for _, inv := range invoices {
@@ -172,13 +178,17 @@ func OpenBalanceAt(invoices []Invoice, asOf time.Time) OpenBalance {
 			return OpenBalance{RateUnavailable: true}
 		}
 		out.OpenMinorBase += inv.OpenMinorBase
-		if !pastDue(inv.DueOn, asOf) {
+		if inv.Disputed || !pastDue(inv.DueOn, asOf) {
 			continue
 		}
 		out.OverdueMinorBase += inv.OpenMinorBase
 		out.OverdueCount++
 		if age := daysBetween(*inv.DueOn, asOf); age > out.OldestOverdueDays {
 			out.OldestOverdueDays = age
+		}
+		if level := inv.DunningLevel; level != nil &&
+			(out.HighestDunningLevel == nil || *level > *out.HighestDunningLevel) {
+			out.HighestDunningLevel = level
 		}
 	}
 	return out

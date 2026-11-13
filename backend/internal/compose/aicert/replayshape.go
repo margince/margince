@@ -49,16 +49,18 @@ func (t *idTable) ordinal(id string) int {
 // The stamp leaves them out. The router fills several of them, so a stamp
 // holding them could not tell a scenario edit from a routing one.
 type answerSettings struct {
-	Model                  string                     `json:"model"`
-	Site                   string                     `json:"site"`
-	ThinkingFloor          string                     `json:"thinking_floor"`
-	ThinkingLevel          string                     `json:"thinking_level"`
-	ContextScopes          []string                   `json:"context_scopes"`
-	ContextFingerprint     string                     `json:"context_fingerprint"`
-	IncludeCompanyContext  bool                       `json:"include_company_context"`
-	CompanyContextOffering string                     `json:"company_context_offering"`
-	ProviderOptions        map[string]json.RawMessage `json:"provider_options"`
-	Attachments            []attachmentShape          `json:"attachments"`
+	Model                  string   `json:"model"`
+	Site                   string   `json:"site"`
+	ThinkingFloor          string   `json:"thinking_floor"`
+	ThinkingLevel          string   `json:"thinking_level"`
+	ContextScopes          []string `json:"context_scopes"`
+	ContextFingerprint     string   `json:"context_fingerprint"`
+	IncludeCompanyContext  bool     `json:"include_company_context"`
+	CompanyContextOffering string   `json:"company_context_offering"`
+	// Omitted when false, so the shape every recorded request had stays.
+	ExcludeCompanyContext bool                       `json:"exclude_company_context,omitempty"`
+	ProviderOptions       map[string]json.RawMessage `json:"provider_options"`
+	Attachments           []attachmentShape          `json:"attachments"`
 }
 
 // attachmentShape is an attachment by digest, so a journal line never holds a
@@ -72,7 +74,7 @@ func answerSettingsOf(req model.Request) answerSettings {
 		Model: req.Model, Site: req.Site, ThinkingFloor: req.ThinkingFloor, ThinkingLevel: req.ThinkingLevel,
 		ContextScopes: req.ContextScopes, ContextFingerprint: req.ContextFingerprint,
 		IncludeCompanyContext: req.IncludeCompanyContext, CompanyContextOffering: req.CompanyContextOffering,
-		ProviderOptions: req.ProviderOptions,
+		ExcludeCompanyContext: req.ExcludeCompanyContext, ProviderOptions: req.ProviderOptions,
 	}
 	for _, a := range req.Attachments {
 		sum := sha256.Sum256(a.Bytes)

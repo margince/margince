@@ -46,6 +46,8 @@ The 14 tables owned by `reporting`, as the migrations build them. [Back to the e
 **Triggers**
 
 - `report_definition_owner_id_retirement_guard`: `BEFORE INSERT OR UPDATE FOR EACH ROW WHEN (((new.owner_id IS NOT NULL) AND (new.archived_at IS NULL))) EXECUTE FUNCTION refuse_retired_member_work('owner_id')`
+- `text_bound_insert`: `AFTER INSERT FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL, '{"name": 120, "audience": 20000, "description": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"audience":20000,"description":20000,"name":120}')`
+- `text_bound_update`: `AFTER UPDATE FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"name": 120, "audience": 20000, "description": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"audience":20000,"description":20000,"name":120}')`
 
 ## report_definition_revision
 
@@ -116,6 +118,11 @@ The 14 tables owned by `reporting`, as the migrations build them. [Back to the e
 - `report_edition_execution_id_key`: `unique, btree (execution_id)`
 - `report_edition_pkey`: `unique, btree (id)`
 
+**Triggers**
+
+- `text_bound_insert`: `AFTER INSERT FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL, '{"publication_audience": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"publication_audience":20000}')`
+- `text_bound_update`: `AFTER UPDATE FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"publication_audience": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"publication_audience":20000}')`
+
 ## report_edition_contribution
 
 9 columns · primary key `(edition_id, metric, context_id, contribution_key)` · referenced by 0 foreign keys
@@ -142,6 +149,11 @@ The 14 tables owned by `reporting`, as the migrations build them. [Back to the e
 
 - `report_contribution_source`: `btree (source_type, source_id)`
 - `report_edition_contribution_pkey`: `unique, btree (edition_id, metric, context_id, contribution_key)`
+
+**Triggers**
+
+- `text_bound_insert`: `AFTER INSERT FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL, '{"metric": 20000, "group_key": 20000, "context_id": 20000, "source_type": 20000, "contribution_key": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"context_id":20000,"contribution_key":20000,"group_key":20000,"metric":20000,"source_type":20000}')`
+- `text_bound_update`: `AFTER UPDATE FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"metric": 20000, "group_key": 20000, "context_id": 20000, "source_type": 20000, "contribution_key": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"context_id":20000,"contribution_key":20000,"group_key":20000,"metric":20000,"source_type":20000}')`
 
 ## report_edition_question
 
@@ -170,6 +182,11 @@ The 14 tables owned by `reporting`, as the migrations build them. [Back to the e
 
 - `report_edition_question_pkey`: `unique, btree (edition_id, card_id)`
 
+**Triggers**
+
+- `text_bound_insert`: `AFTER INSERT FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL, '{"entity": 20000, "reason": 2000, "card_id": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"card_id":20000,"entity":20000,"reason":2000}')`
+- `text_bound_update`: `AFTER UPDATE FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"entity": 20000, "reason": 2000, "card_id": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"card_id":20000,"entity":20000,"reason":2000}')`
+
 ## report_edition_question_source
 
 5 columns · primary key `(edition_id, card_id, row_index, source_id)` · referenced by 0 foreign keys
@@ -192,6 +209,11 @@ The 14 tables owned by `reporting`, as the migrations build them. [Back to the e
 
 - `report_edition_question_source_pkey`: `unique, btree (edition_id, card_id, row_index, source_id)`
 - `report_question_source`: `btree (source_type, source_id)`
+
+**Triggers**
+
+- `text_bound_insert`: `AFTER INSERT FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL, '{"card_id": 20000, "source_type": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"card_id":20000,"source_type":20000}')`
+- `text_bound_update`: `AFTER UPDATE FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"card_id": 20000, "source_type": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"card_id":20000,"source_type":20000}')`
 
 ## report_execution
 
@@ -242,6 +264,11 @@ The 14 tables owned by `reporting`, as the migrations build them. [Back to the e
 - `report_execution_pkey`: `unique, btree (id)`
 - `report_execution_report_history`: `btree (report_id, id DESC)`
 
+**Triggers**
+
+- `text_bound_insert`: `AFTER INSERT FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL, '{"reason": 2000, "status": 20000, "request_hash": 20000, "execution_key": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"execution_key":20000,"reason":2000,"request_hash":20000,"status":20000}')`
+- `text_bound_update`: `AFTER UPDATE FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"reason": 2000, "status": 20000, "request_hash": 20000, "execution_key": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"execution_key":20000,"reason":2000,"request_hash":20000,"status":20000}')`
+
 ## report_schedule
 
 10 columns · primary key `(id)` · referenced by 1 foreign key
@@ -279,6 +306,8 @@ The 14 tables owned by `reporting`, as the migrations build them. [Back to the e
 **Triggers**
 
 - `report_schedule_owner_id_retirement_guard`: `BEFORE INSERT OR UPDATE FOR EACH ROW WHEN (((new.owner_id IS NOT NULL) AND new.enabled)) EXECUTE FUNCTION refuse_retired_member_work('owner_id')`
+- `text_bound_insert`: `AFTER INSERT FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL, '{"timezone": 20000, "last_status": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"last_status":20000,"timezone":20000}')`
+- `text_bound_update`: `AFTER UPDATE FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"timezone": 20000, "last_status": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"last_status":20000,"timezone":20000}')`
 
 ## reporting_framework
 
@@ -405,6 +434,11 @@ The 14 tables owned by `reporting`, as the migrations build them. [Back to the e
 - `idx_sales_goal_plan_revision_created_by`: `btree (created_by)`
 - `sales_goal_plan_revision_pkey`: `unique, btree (plan_id, revision)`
 
+**Triggers**
+
+- `text_bound_insert`: `AFTER INSERT FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL, '{"kind": 20000, "origin": 20000, "reason": 2000}')) EXECUTE FUNCTION refuse_oversized_text('{"kind":20000,"origin":20000,"reason":2000}')`
+- `text_bound_update`: `AFTER UPDATE FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"kind": 20000, "origin": 20000, "reason": 2000}')) EXECUTE FUNCTION refuse_oversized_text('{"kind":20000,"origin":20000,"reason":2000}')`
+
 ## sales_target
 
 12 columns · primary key `(id)` · referenced by 1 foreign key
@@ -443,6 +477,11 @@ The 14 tables owned by `reporting`, as the migrations build them. [Back to the e
 
 - `sales_target_identity`: `unique, btree (metric, scope_kind, scope_id, pipeline_id, period_kind, period_start) NULLS NOT DISTINCT`
 - `sales_target_pkey`: `unique, btree (id)`
+
+**Triggers**
+
+- `text_bound_insert`: `AFTER INSERT FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL, '{"unit": 20000, "metric": 20000, "scope_kind": 20000, "period_kind": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"metric":20000,"period_kind":20000,"scope_kind":20000,"unit":20000}')`
+- `text_bound_update`: `AFTER UPDATE FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"unit": 20000, "metric": 20000, "scope_kind": 20000, "period_kind": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"metric":20000,"period_kind":20000,"scope_kind":20000,"unit":20000}')`
 
 ## sales_target_revision
 

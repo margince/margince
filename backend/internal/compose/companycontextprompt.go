@@ -71,14 +71,16 @@ func (p *companyContextProvider) Prepare(ctx context.Context, task ai.Task, req 
 		return model.Request{}, fmt.Errorf("compose: AI task %q has no company-context policy", task)
 	}
 	requested := req.IncludeCompanyContext
+	excluded := req.ExcludeCompanyContext
 	chosenOffering := req.CompanyContextOffering
 	req.IncludeCompanyContext = false
+	req.ExcludeCompanyContext = false
 	req.CompanyContextOffering = ""
 	req.ContextScopes = nil
 	req.ContextFingerprint = ""
 	req.ContextBytes = 0
 	req.ContextTokensEstimate = 0
-	if p != nil && !p.enabled {
+	if excluded || (p != nil && !p.enabled) {
 		return req, nil
 	}
 	if len(policy.Scopes) == 0 || (policy.Conditional && !requested) {

@@ -341,7 +341,7 @@ func (h Handlers) SendCompanyEmail(w http.ResponseWriter, r *http.Request, _ crm
 		return
 	}
 
-	sched, err := scheduleFrom(req.ScheduledAt, req.ScheduledTz)
+	sched, err := ParseSendSchedule(req.ScheduledAt, req.ScheduledTz, req.ScheduledIntent)
 	if err != nil {
 		writeStoreErr(w, r, err)
 		return
@@ -434,7 +434,7 @@ func (h Handlers) SendEmail(w http.ResponseWriter, r *http.Request, id crmcontra
 	// derived by the store, on the message, where the MCP send tool reaches
 	// it too. It belongs on the mail, not on this response to the API
 	// caller, who is not the recipient and has nothing to unsubscribe from.
-	sched, err := scheduleFrom(req.ScheduledAt, req.ScheduledTz)
+	sched, err := ParseSendSchedule(req.ScheduledAt, req.ScheduledTz, req.ScheduledIntent)
 	if err != nil {
 		writeStoreErr(w, r, err)
 		return

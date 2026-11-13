@@ -21,7 +21,7 @@
   "format/bounds.ts":
    "dabb9b7f152225cd8544aff9bc20f5b36ec4d505e82a254999916e93c72d1269",
   "format/calendarday.ts":
-   "b83e1b1632ce9bc194cfcadcc56817965b360801f2e626c43e06a99ac2fbe7d2",
+   "0ae16ab0e2cc00ef0a17479b1bf2f85ffdadbed0f1d03123c18ab691c465bd61",
   "format/collate.ts":
    "80999b6f94b4d4adf9d3612fe2c5c25759bd7b9b0559294a306aa9c9c8025cc2",
   "format/companylifecycle.ts":
@@ -53,7 +53,7 @@
   "format/format.analytics.ts":
    "73f785911a1d9cfcf20a1ddc7d22ab4ae52b5c25177fe4e79d1e9827fe224a56",
   "format/format.dates.ts":
-   "3a04849087fc0f8f8aaae8a18c63c0e4bd07ca8e6a39157490b233c3a51015b9",
+   "73b3aa6aca1526ee4ea188789ed87429b6a21e4952346cb9f3519bccb7d22fa7",
   "format/format.ts":
    "d7aa28b6f2d345a67aa4190a3086dd757fbb4227ffdb94bc7cc7637c07a60a43",
   "format/greetingname.ts":
@@ -123,17 +123,17 @@
   "format/timepattern.ts":
    "267a6e3017019606b313230215042a6747cfb502350bf683c8ef325ed09c3887",
   "format/timezone.ts":
-   "03c81cc0c3b798dfa6317235841c367cad7811e90d06c30d50880d491551431b",
+   "fa91578215eb92413cdd446831010fb542dafdd4cedd12d7a9efd3afac8215b0",
   "format/weburl.ts":
    "395c0dd6bf2cb8678d814778c17619a527e17f885f85830f6ed81982e8c0fdf4",
   "format/weekstart.ts":
    "504a0f7101ddccc7a917819967f39e6dfafb07952180fbccc7e00c7e1b1de1e7",
   "i18n/de.ts":
-   "27a72093683f253f129fcba50f65542961f36e27569e55d39ae8e0d952c3cf54",
+   "14fc3762ea9b851fcd62a71983933b042af715658b83ecd4f74051ea18b23265",
   "i18n/en.ts":
-   "a0fab95f2520b19b0941d6b8e22ed4d978b436d91e7c02dc026f12d272b81691",
+   "918a84a8f433bffa7f508369546727e4ed785a7b68b3029e38426b8e38912fa5",
   "i18n/vi.ts":
-   "b130185f5bd12efc6ab0d1fbbf8d3e9c1b540cd1c44e40976fac1661850a5165",
+   "a4f7fc0b4bdee857d0b1e38800fe0b486bce69b6cd0114ea0117d23084a08a7b",
   "lib/acquisitionkinds.ts":
    "c5dd117a1d2e9f0b79cde5aa9ef6e2cc34c1f8aad27f48ca914935fdf4879a54",
   "lib/approvallifecycle.ts":
@@ -155,7 +155,7 @@
   "lib/factview.ts":
    "db074f07af5e3a75aca6c7c269ef71529a6078f9f1c03e4c5f4e03b7ab076d0c",
   "lib/historyfieldlabels.ts":
-   "c33c0d5a94fe11f0bb3cb9f0beebc231e8a27e2e287f01c25e81ae669981f014",
+   "9bedeebf807bd26b1c2a447e7f03a2c4e8e84598237e186cdd51f660e6c69257",
   "lib/labelfor.ts":
    "26f540eedc3dcbe98e9c831bd25e752c17b8c3c183a056150da4907d396428bf",
   "lib/memberretirement.ts":
@@ -206,6 +206,8 @@
      "Sender category",
     "admission_source":
      "Intake check source",
+    "ai_assisted":
+     "AI-assisted",
     "already_fresh":
      "already fresh",
     "amount":
@@ -498,6 +500,8 @@
      "Due",
     "due_has_time":
      "Due at a set time",
+    "due_intent":
+     "Due (local time)",
     "duplicate_subject_candidate":
      "duplicate subject candidate",
     "email":
@@ -692,6 +696,8 @@
      "Guests returned to the meeting they came from",
     "meeting_host":
      "Meeting host",
+    "meeting_intent":
+     "Meeting start (local time)",
     "meeting_location":
      "Location or meeting link",
     "meeting_start":
@@ -1266,6 +1272,8 @@
      "Relationships moved over",
     "remind_at":
      "Reminder",
+    "remind_intent":
+     "Reminder (local time)",
     "reminder_status":
      "Reminder status",
     "reply_verdict":
@@ -1861,6 +1869,26 @@
     "admission_source/lifecycle/unknown":
      "Unknown",
     "admission_source/boolean/true":
+     "Yes",
+    "ai_assisted/lifecycle/customer":
+     "Customer",
+    "ai_assisted/lifecycle/disqualified":
+     "Disqualified",
+    "ai_assisted/lifecycle/former_customer":
+     "Former customer",
+    "ai_assisted/lifecycle/live":
+     "Live",
+    "ai_assisted/lifecycle/onboarding":
+     "Onboarding",
+    "ai_assisted/lifecycle/opportunity":
+     "Opportunity",
+    "ai_assisted/lifecycle/prospect":
+     "Prospect",
+    "ai_assisted/lifecycle/target":
+     "Target",
+    "ai_assisted/lifecycle/unknown":
+     "Unknown",
+    "ai_assisted/boolean/true":
      "Yes",
     "already_fresh/lifecycle/customer":
      "Customer",
@@ -4840,6 +4868,26 @@
      "Unknown",
     "due_has_time/boolean/true":
      "Yes",
+    "due_intent/lifecycle/customer":
+     "Customer",
+    "due_intent/lifecycle/disqualified":
+     "Disqualified",
+    "due_intent/lifecycle/former_customer":
+     "Former customer",
+    "due_intent/lifecycle/live":
+     "Live",
+    "due_intent/lifecycle/onboarding":
+     "Onboarding",
+    "due_intent/lifecycle/opportunity":
+     "Opportunity",
+    "due_intent/lifecycle/prospect":
+     "Prospect",
+    "due_intent/lifecycle/target":
+     "Target",
+    "due_intent/lifecycle/unknown":
+     "Unknown",
+    "due_intent/boolean/true":
+     "Yes",
     "duplicate_subject_candidate/lifecycle/customer":
      "Customer",
     "duplicate_subject_candidate/lifecycle/disqualified":
@@ -6765,6 +6813,26 @@
     "meeting_host/lifecycle/unknown":
      "Unknown",
     "meeting_host/boolean/true":
+     "Yes",
+    "meeting_intent/lifecycle/customer":
+     "Customer",
+    "meeting_intent/lifecycle/disqualified":
+     "Disqualified",
+    "meeting_intent/lifecycle/former_customer":
+     "Former customer",
+    "meeting_intent/lifecycle/live":
+     "Live",
+    "meeting_intent/lifecycle/onboarding":
+     "Onboarding",
+    "meeting_intent/lifecycle/opportunity":
+     "Opportunity",
+    "meeting_intent/lifecycle/prospect":
+     "Prospect",
+    "meeting_intent/lifecycle/target":
+     "Target",
+    "meeting_intent/lifecycle/unknown":
+     "Unknown",
+    "meeting_intent/boolean/true":
      "Yes",
     "meeting_location/lifecycle/customer":
      "Customer",
@@ -9154,6 +9222,8 @@
      "Sender category",
     "merge_profile_field/text/admission_source":
      "Intake check source",
+    "merge_profile_field/text/ai_assisted":
+     "AI-assisted",
     "merge_profile_field/text/amount_minor":
      "Value",
     "merge_profile_field/text/assess_against_entity_id":
@@ -9214,6 +9284,8 @@
      "Due",
     "merge_profile_field/text/due_has_time":
      "Due at a set time",
+    "merge_profile_field/text/due_intent":
+     "Due (local time)",
     "merge_profile_field/text/email":
      "Email",
     "merge_profile_field/text/emails":
@@ -9276,6 +9348,8 @@
      "Meeting notes linked from the calendar",
     "merge_profile_field/text/meeting_guests_removed":
      "Guests returned to the meeting they came from",
+    "merge_profile_field/text/meeting_intent":
+     "Meeting start (local time)",
     "merge_profile_field/text/meeting_status":
      "Meeting outcome",
     "merge_profile_field/text/merged_from_id":
@@ -9348,6 +9422,8 @@
      "Relationships moved over",
     "merge_profile_field/text/remind_at":
      "Reminder",
+    "merge_profile_field/text/remind_intent":
+     "Reminder (local time)",
     "merge_profile_field/text/reminder_status":
      "Reminder status",
     "merge_profile_field/text/reply_verdict":
@@ -9446,6 +9522,8 @@
      "Sender category",
     "merge_profile_field/lifecycle/admission_source":
      "Intake check source",
+    "merge_profile_field/lifecycle/ai_assisted":
+     "AI-assisted",
     "merge_profile_field/lifecycle/amount_minor":
      "Value",
     "merge_profile_field/lifecycle/assess_against_entity_id":
@@ -9506,6 +9584,8 @@
      "Due",
     "merge_profile_field/lifecycle/due_has_time":
      "Due at a set time",
+    "merge_profile_field/lifecycle/due_intent":
+     "Due (local time)",
     "merge_profile_field/lifecycle/email":
      "Email",
     "merge_profile_field/lifecycle/emails":
@@ -9568,6 +9648,8 @@
      "Meeting notes linked from the calendar",
     "merge_profile_field/lifecycle/meeting_guests_removed":
      "Guests returned to the meeting they came from",
+    "merge_profile_field/lifecycle/meeting_intent":
+     "Meeting start (local time)",
     "merge_profile_field/lifecycle/meeting_status":
      "Meeting outcome",
     "merge_profile_field/lifecycle/merged_from_id":
@@ -9640,6 +9722,8 @@
      "Relationships moved over",
     "merge_profile_field/lifecycle/remind_at":
      "Reminder",
+    "merge_profile_field/lifecycle/remind_intent":
+     "Reminder (local time)",
     "merge_profile_field/lifecycle/reminder_status":
      "Reminder status",
     "merge_profile_field/lifecycle/reply_verdict":
@@ -13571,6 +13655,26 @@
     "remind_at/lifecycle/unknown":
      "Unknown",
     "remind_at/boolean/true":
+     "Yes",
+    "remind_intent/lifecycle/customer":
+     "Customer",
+    "remind_intent/lifecycle/disqualified":
+     "Disqualified",
+    "remind_intent/lifecycle/former_customer":
+     "Former customer",
+    "remind_intent/lifecycle/live":
+     "Live",
+    "remind_intent/lifecycle/onboarding":
+     "Onboarding",
+    "remind_intent/lifecycle/opportunity":
+     "Opportunity",
+    "remind_intent/lifecycle/prospect":
+     "Prospect",
+    "remind_intent/lifecycle/target":
+     "Target",
+    "remind_intent/lifecycle/unknown":
+     "Unknown",
+    "remind_intent/boolean/true":
      "Yes",
     "reminder_status/lifecycle/customer":
      "Customer",
@@ -15978,6 +16082,12 @@
      "Not set",
     "admission_source/execution":
      "Set when applied",
+    "ai_assisted/boolean":
+     "No",
+    "ai_assisted/empty":
+     "Not set",
+    "ai_assisted/execution":
+     "Set when applied",
     "already_fresh/boolean":
      "No",
     "already_fresh/empty":
@@ -16858,6 +16968,12 @@
      "Not set",
     "due_has_time/execution":
      "Set when applied",
+    "due_intent/boolean":
+     "No",
+    "due_intent/empty":
+     "Not set",
+    "due_intent/execution":
+     "Set when applied",
     "duplicate_subject_candidate/boolean":
      "No",
     "duplicate_subject_candidate/empty":
@@ -17439,6 +17555,12 @@
     "meeting_host/empty":
      "Not set",
     "meeting_host/execution":
+     "Set when applied",
+    "meeting_intent/boolean":
+     "No",
+    "meeting_intent/empty":
+     "Not set",
+    "meeting_intent/execution":
      "Set when applied",
     "meeting_location/boolean":
      "No",
@@ -19226,6 +19348,12 @@
      "Not set",
     "remind_at/execution":
      "Set when applied",
+    "remind_intent/boolean":
+     "No",
+    "remind_intent/empty":
+     "Not set",
+    "remind_intent/execution":
+     "Set when applied",
     "reminder_status/boolean":
      "No",
     "reminder_status/empty":
@@ -19930,6 +20058,8 @@
      "Absenderkategorie",
     "admission_source":
      "Quelle der Eingangsprüfung",
+    "ai_assisted":
+     "KI-gestützt",
     "already_fresh":
      "already fresh",
     "amount":
@@ -20222,6 +20352,8 @@
      "Fällig",
     "due_has_time":
      "Fällig zu einer Uhrzeit",
+    "due_intent":
+     "Fällig (Ortszeit)",
     "duplicate_subject_candidate":
      "duplicate subject candidate",
     "email":
@@ -20416,6 +20548,8 @@
      "Gäste an ihre eigene Besprechung zurückgegeben",
     "meeting_host":
      "Organisiert von",
+    "meeting_intent":
+     "Terminbeginn (Ortszeit)",
     "meeting_location":
      "Ort oder Besprechungslink",
     "meeting_start":
@@ -20990,6 +21124,8 @@
      "Beziehungen übernommen",
     "remind_at":
      "Erinnerung",
+    "remind_intent":
+     "Erinnerung (Ortszeit)",
     "reminder_status":
      "Erinnerungsstatus",
     "reply_verdict":
@@ -21585,6 +21721,26 @@
     "admission_source/lifecycle/unknown":
      "Unbekannt",
     "admission_source/boolean/true":
+     "Ja",
+    "ai_assisted/lifecycle/customer":
+     "Kunde",
+    "ai_assisted/lifecycle/disqualified":
+     "Disqualifiziert",
+    "ai_assisted/lifecycle/former_customer":
+     "Ehemaliger Kunde",
+    "ai_assisted/lifecycle/live":
+     "Live",
+    "ai_assisted/lifecycle/onboarding":
+     "Onboarding",
+    "ai_assisted/lifecycle/opportunity":
+     "Chance",
+    "ai_assisted/lifecycle/prospect":
+     "Interessent",
+    "ai_assisted/lifecycle/target":
+     "Zielunternehmen",
+    "ai_assisted/lifecycle/unknown":
+     "Unbekannt",
+    "ai_assisted/boolean/true":
      "Ja",
     "already_fresh/lifecycle/customer":
      "Kunde",
@@ -24564,6 +24720,26 @@
      "Unbekannt",
     "due_has_time/boolean/true":
      "Ja",
+    "due_intent/lifecycle/customer":
+     "Kunde",
+    "due_intent/lifecycle/disqualified":
+     "Disqualifiziert",
+    "due_intent/lifecycle/former_customer":
+     "Ehemaliger Kunde",
+    "due_intent/lifecycle/live":
+     "Live",
+    "due_intent/lifecycle/onboarding":
+     "Onboarding",
+    "due_intent/lifecycle/opportunity":
+     "Chance",
+    "due_intent/lifecycle/prospect":
+     "Interessent",
+    "due_intent/lifecycle/target":
+     "Zielunternehmen",
+    "due_intent/lifecycle/unknown":
+     "Unbekannt",
+    "due_intent/boolean/true":
+     "Ja",
     "duplicate_subject_candidate/lifecycle/customer":
      "Kunde",
     "duplicate_subject_candidate/lifecycle/disqualified":
@@ -26489,6 +26665,26 @@
     "meeting_host/lifecycle/unknown":
      "Unbekannt",
     "meeting_host/boolean/true":
+     "Ja",
+    "meeting_intent/lifecycle/customer":
+     "Kunde",
+    "meeting_intent/lifecycle/disqualified":
+     "Disqualifiziert",
+    "meeting_intent/lifecycle/former_customer":
+     "Ehemaliger Kunde",
+    "meeting_intent/lifecycle/live":
+     "Live",
+    "meeting_intent/lifecycle/onboarding":
+     "Onboarding",
+    "meeting_intent/lifecycle/opportunity":
+     "Chance",
+    "meeting_intent/lifecycle/prospect":
+     "Interessent",
+    "meeting_intent/lifecycle/target":
+     "Zielunternehmen",
+    "meeting_intent/lifecycle/unknown":
+     "Unbekannt",
+    "meeting_intent/boolean/true":
      "Ja",
     "meeting_location/lifecycle/customer":
      "Kunde",
@@ -28878,6 +29074,8 @@
      "Absenderkategorie",
     "merge_profile_field/text/admission_source":
      "Quelle der Eingangsprüfung",
+    "merge_profile_field/text/ai_assisted":
+     "KI-gestützt",
     "merge_profile_field/text/amount_minor":
      "Wert",
     "merge_profile_field/text/assess_against_entity_id":
@@ -28938,6 +29136,8 @@
      "Fällig",
     "merge_profile_field/text/due_has_time":
      "Fällig zu einer Uhrzeit",
+    "merge_profile_field/text/due_intent":
+     "Fällig (Ortszeit)",
     "merge_profile_field/text/email":
      "E-Mail",
     "merge_profile_field/text/emails":
@@ -29000,6 +29200,8 @@
      "Besprechungsnotizen aus dem Kalender verknüpft",
     "merge_profile_field/text/meeting_guests_removed":
      "Gäste an ihre eigene Besprechung zurückgegeben",
+    "merge_profile_field/text/meeting_intent":
+     "Terminbeginn (Ortszeit)",
     "merge_profile_field/text/meeting_status":
      "Ergebnis des Termins",
     "merge_profile_field/text/merged_from_id":
@@ -29072,6 +29274,8 @@
      "Beziehungen übernommen",
     "merge_profile_field/text/remind_at":
      "Erinnerung",
+    "merge_profile_field/text/remind_intent":
+     "Erinnerung (Ortszeit)",
     "merge_profile_field/text/reminder_status":
      "Erinnerungsstatus",
     "merge_profile_field/text/reply_verdict":
@@ -29170,6 +29374,8 @@
      "Absenderkategorie",
     "merge_profile_field/lifecycle/admission_source":
      "Quelle der Eingangsprüfung",
+    "merge_profile_field/lifecycle/ai_assisted":
+     "KI-gestützt",
     "merge_profile_field/lifecycle/amount_minor":
      "Wert",
     "merge_profile_field/lifecycle/assess_against_entity_id":
@@ -29230,6 +29436,8 @@
      "Fällig",
     "merge_profile_field/lifecycle/due_has_time":
      "Fällig zu einer Uhrzeit",
+    "merge_profile_field/lifecycle/due_intent":
+     "Fällig (Ortszeit)",
     "merge_profile_field/lifecycle/email":
      "E-Mail",
     "merge_profile_field/lifecycle/emails":
@@ -29292,6 +29500,8 @@
      "Besprechungsnotizen aus dem Kalender verknüpft",
     "merge_profile_field/lifecycle/meeting_guests_removed":
      "Gäste an ihre eigene Besprechung zurückgegeben",
+    "merge_profile_field/lifecycle/meeting_intent":
+     "Terminbeginn (Ortszeit)",
     "merge_profile_field/lifecycle/meeting_status":
      "Ergebnis des Termins",
     "merge_profile_field/lifecycle/merged_from_id":
@@ -29364,6 +29574,8 @@
      "Beziehungen übernommen",
     "merge_profile_field/lifecycle/remind_at":
      "Erinnerung",
+    "merge_profile_field/lifecycle/remind_intent":
+     "Erinnerung (Ortszeit)",
     "merge_profile_field/lifecycle/reminder_status":
      "Erinnerungsstatus",
     "merge_profile_field/lifecycle/reply_verdict":
@@ -33295,6 +33507,26 @@
     "remind_at/lifecycle/unknown":
      "Unbekannt",
     "remind_at/boolean/true":
+     "Ja",
+    "remind_intent/lifecycle/customer":
+     "Kunde",
+    "remind_intent/lifecycle/disqualified":
+     "Disqualifiziert",
+    "remind_intent/lifecycle/former_customer":
+     "Ehemaliger Kunde",
+    "remind_intent/lifecycle/live":
+     "Live",
+    "remind_intent/lifecycle/onboarding":
+     "Onboarding",
+    "remind_intent/lifecycle/opportunity":
+     "Chance",
+    "remind_intent/lifecycle/prospect":
+     "Interessent",
+    "remind_intent/lifecycle/target":
+     "Zielunternehmen",
+    "remind_intent/lifecycle/unknown":
+     "Unbekannt",
+    "remind_intent/boolean/true":
      "Ja",
     "reminder_status/lifecycle/customer":
      "Kunde",
@@ -35702,6 +35934,12 @@
      "Nicht gesetzt",
     "admission_source/execution":
      "Wird beim Anwenden festgelegt",
+    "ai_assisted/boolean":
+     "Nein",
+    "ai_assisted/empty":
+     "Nicht gesetzt",
+    "ai_assisted/execution":
+     "Wird beim Anwenden festgelegt",
     "already_fresh/boolean":
      "Nein",
     "already_fresh/empty":
@@ -36582,6 +36820,12 @@
      "Nicht gesetzt",
     "due_has_time/execution":
      "Wird beim Anwenden festgelegt",
+    "due_intent/boolean":
+     "Nein",
+    "due_intent/empty":
+     "Nicht gesetzt",
+    "due_intent/execution":
+     "Wird beim Anwenden festgelegt",
     "duplicate_subject_candidate/boolean":
      "Nein",
     "duplicate_subject_candidate/empty":
@@ -37163,6 +37407,12 @@
     "meeting_host/empty":
      "Nicht gesetzt",
     "meeting_host/execution":
+     "Wird beim Anwenden festgelegt",
+    "meeting_intent/boolean":
+     "Nein",
+    "meeting_intent/empty":
+     "Nicht gesetzt",
+    "meeting_intent/execution":
      "Wird beim Anwenden festgelegt",
     "meeting_location/boolean":
      "Nein",
@@ -38950,6 +39200,12 @@
      "Nicht gesetzt",
     "remind_at/execution":
      "Wird beim Anwenden festgelegt",
+    "remind_intent/boolean":
+     "Nein",
+    "remind_intent/empty":
+     "Nicht gesetzt",
+    "remind_intent/execution":
+     "Wird beim Anwenden festgelegt",
     "reminder_status/boolean":
      "Nein",
     "reminder_status/empty":
@@ -39654,6 +39910,8 @@
      "Loại người gửi",
     "admission_source":
      "Nguồn kiểm tra đầu vào",
+    "ai_assisted":
+     "Có AI hỗ trợ",
     "already_fresh":
      "already fresh",
     "amount":
@@ -39946,6 +40204,8 @@
      "Hạn",
     "due_has_time":
      "Đến hạn vào giờ cụ thể",
+    "due_intent":
+     "Hạn (giờ địa phương)",
     "duplicate_subject_candidate":
      "duplicate subject candidate",
     "email":
@@ -40140,6 +40400,8 @@
      "Khách được trả về cuộc họp của họ",
     "meeting_host":
      "Người chủ trì",
+    "meeting_intent":
+     "Giờ bắt đầu cuộc họp (giờ địa phương)",
     "meeting_location":
      "Địa điểm hoặc liên kết cuộc họp",
     "meeting_start":
@@ -40714,6 +40976,8 @@
      "Mối quan hệ đã chuyển sang",
     "remind_at":
      "Lời nhắc",
+    "remind_intent":
+     "Lời nhắc (giờ địa phương)",
     "reminder_status":
      "Trạng thái lời nhắc",
     "reply_verdict":
@@ -41309,6 +41573,26 @@
     "admission_source/lifecycle/unknown":
      "Chưa rõ",
     "admission_source/boolean/true":
+     "Có",
+    "ai_assisted/lifecycle/customer":
+     "Khách hàng",
+    "ai_assisted/lifecycle/disqualified":
+     "Đã loại",
+    "ai_assisted/lifecycle/former_customer":
+     "Khách hàng cũ",
+    "ai_assisted/lifecycle/live":
+     "Đang vận hành",
+    "ai_assisted/lifecycle/onboarding":
+     "Đang triển khai",
+    "ai_assisted/lifecycle/opportunity":
+     "Cơ hội",
+    "ai_assisted/lifecycle/prospect":
+     "Tiềm năng",
+    "ai_assisted/lifecycle/target":
+     "Mục tiêu",
+    "ai_assisted/lifecycle/unknown":
+     "Chưa rõ",
+    "ai_assisted/boolean/true":
      "Có",
     "already_fresh/lifecycle/customer":
      "Khách hàng",
@@ -44288,6 +44572,26 @@
      "Chưa rõ",
     "due_has_time/boolean/true":
      "Có",
+    "due_intent/lifecycle/customer":
+     "Khách hàng",
+    "due_intent/lifecycle/disqualified":
+     "Đã loại",
+    "due_intent/lifecycle/former_customer":
+     "Khách hàng cũ",
+    "due_intent/lifecycle/live":
+     "Đang vận hành",
+    "due_intent/lifecycle/onboarding":
+     "Đang triển khai",
+    "due_intent/lifecycle/opportunity":
+     "Cơ hội",
+    "due_intent/lifecycle/prospect":
+     "Tiềm năng",
+    "due_intent/lifecycle/target":
+     "Mục tiêu",
+    "due_intent/lifecycle/unknown":
+     "Chưa rõ",
+    "due_intent/boolean/true":
+     "Có",
     "duplicate_subject_candidate/lifecycle/customer":
      "Khách hàng",
     "duplicate_subject_candidate/lifecycle/disqualified":
@@ -46213,6 +46517,26 @@
     "meeting_host/lifecycle/unknown":
      "Chưa rõ",
     "meeting_host/boolean/true":
+     "Có",
+    "meeting_intent/lifecycle/customer":
+     "Khách hàng",
+    "meeting_intent/lifecycle/disqualified":
+     "Đã loại",
+    "meeting_intent/lifecycle/former_customer":
+     "Khách hàng cũ",
+    "meeting_intent/lifecycle/live":
+     "Đang vận hành",
+    "meeting_intent/lifecycle/onboarding":
+     "Đang triển khai",
+    "meeting_intent/lifecycle/opportunity":
+     "Cơ hội",
+    "meeting_intent/lifecycle/prospect":
+     "Tiềm năng",
+    "meeting_intent/lifecycle/target":
+     "Mục tiêu",
+    "meeting_intent/lifecycle/unknown":
+     "Chưa rõ",
+    "meeting_intent/boolean/true":
      "Có",
     "meeting_location/lifecycle/customer":
      "Khách hàng",
@@ -48602,6 +48926,8 @@
      "Loại người gửi",
     "merge_profile_field/text/admission_source":
      "Nguồn kiểm tra đầu vào",
+    "merge_profile_field/text/ai_assisted":
+     "Có AI hỗ trợ",
     "merge_profile_field/text/amount_minor":
      "Giá trị",
     "merge_profile_field/text/assess_against_entity_id":
@@ -48662,6 +48988,8 @@
      "Hạn",
     "merge_profile_field/text/due_has_time":
      "Đến hạn vào giờ cụ thể",
+    "merge_profile_field/text/due_intent":
+     "Hạn (giờ địa phương)",
     "merge_profile_field/text/email":
      "Email",
     "merge_profile_field/text/emails":
@@ -48724,6 +49052,8 @@
      "Ghi chú cuộc họp được liên kết từ lịch",
     "merge_profile_field/text/meeting_guests_removed":
      "Khách được trả về cuộc họp của họ",
+    "merge_profile_field/text/meeting_intent":
+     "Giờ bắt đầu cuộc họp (giờ địa phương)",
     "merge_profile_field/text/meeting_status":
      "Kết quả cuộc họp",
     "merge_profile_field/text/merged_from_id":
@@ -48796,6 +49126,8 @@
      "Mối quan hệ đã chuyển sang",
     "merge_profile_field/text/remind_at":
      "Lời nhắc",
+    "merge_profile_field/text/remind_intent":
+     "Lời nhắc (giờ địa phương)",
     "merge_profile_field/text/reminder_status":
      "Trạng thái lời nhắc",
     "merge_profile_field/text/reply_verdict":
@@ -48894,6 +49226,8 @@
      "Loại người gửi",
     "merge_profile_field/lifecycle/admission_source":
      "Nguồn kiểm tra đầu vào",
+    "merge_profile_field/lifecycle/ai_assisted":
+     "Có AI hỗ trợ",
     "merge_profile_field/lifecycle/amount_minor":
      "Giá trị",
     "merge_profile_field/lifecycle/assess_against_entity_id":
@@ -48954,6 +49288,8 @@
      "Hạn",
     "merge_profile_field/lifecycle/due_has_time":
      "Đến hạn vào giờ cụ thể",
+    "merge_profile_field/lifecycle/due_intent":
+     "Hạn (giờ địa phương)",
     "merge_profile_field/lifecycle/email":
      "Email",
     "merge_profile_field/lifecycle/emails":
@@ -49016,6 +49352,8 @@
      "Ghi chú cuộc họp được liên kết từ lịch",
     "merge_profile_field/lifecycle/meeting_guests_removed":
      "Khách được trả về cuộc họp của họ",
+    "merge_profile_field/lifecycle/meeting_intent":
+     "Giờ bắt đầu cuộc họp (giờ địa phương)",
     "merge_profile_field/lifecycle/meeting_status":
      "Kết quả cuộc họp",
     "merge_profile_field/lifecycle/merged_from_id":
@@ -49088,6 +49426,8 @@
      "Mối quan hệ đã chuyển sang",
     "merge_profile_field/lifecycle/remind_at":
      "Lời nhắc",
+    "merge_profile_field/lifecycle/remind_intent":
+     "Lời nhắc (giờ địa phương)",
     "merge_profile_field/lifecycle/reminder_status":
      "Trạng thái lời nhắc",
     "merge_profile_field/lifecycle/reply_verdict":
@@ -53020,6 +53360,26 @@
      "Chưa rõ",
     "remind_at/boolean/true":
      "Có",
+    "remind_intent/lifecycle/customer":
+     "Khách hàng",
+    "remind_intent/lifecycle/disqualified":
+     "Đã loại",
+    "remind_intent/lifecycle/former_customer":
+     "Khách hàng cũ",
+    "remind_intent/lifecycle/live":
+     "Đang vận hành",
+    "remind_intent/lifecycle/onboarding":
+     "Đang triển khai",
+    "remind_intent/lifecycle/opportunity":
+     "Cơ hội",
+    "remind_intent/lifecycle/prospect":
+     "Tiềm năng",
+    "remind_intent/lifecycle/target":
+     "Mục tiêu",
+    "remind_intent/lifecycle/unknown":
+     "Chưa rõ",
+    "remind_intent/boolean/true":
+     "Có",
     "reminder_status/lifecycle/customer":
      "Khách hàng",
     "reminder_status/lifecycle/disqualified":
@@ -55426,6 +55786,12 @@
      "Chưa đặt",
     "admission_source/execution":
      "Được xác định khi áp dụng",
+    "ai_assisted/boolean":
+     "Không",
+    "ai_assisted/empty":
+     "Chưa đặt",
+    "ai_assisted/execution":
+     "Được xác định khi áp dụng",
     "already_fresh/boolean":
      "Không",
     "already_fresh/empty":
@@ -56306,6 +56672,12 @@
      "Chưa đặt",
     "due_has_time/execution":
      "Được xác định khi áp dụng",
+    "due_intent/boolean":
+     "Không",
+    "due_intent/empty":
+     "Chưa đặt",
+    "due_intent/execution":
+     "Được xác định khi áp dụng",
     "duplicate_subject_candidate/boolean":
      "Không",
     "duplicate_subject_candidate/empty":
@@ -56887,6 +57259,12 @@
     "meeting_host/empty":
      "Chưa đặt",
     "meeting_host/execution":
+     "Được xác định khi áp dụng",
+    "meeting_intent/boolean":
+     "Không",
+    "meeting_intent/empty":
+     "Chưa đặt",
+    "meeting_intent/execution":
      "Được xác định khi áp dụng",
     "meeting_location/boolean":
      "Không",
@@ -58673,6 +59051,12 @@
     "remind_at/empty":
      "Chưa đặt",
     "remind_at/execution":
+     "Được xác định khi áp dụng",
+    "remind_intent/boolean":
+     "Không",
+    "remind_intent/empty":
+     "Chưa đặt",
+    "remind_intent/execution":
      "Được xác định khi áp dụng",
     "reminder_status/boolean":
      "Không",

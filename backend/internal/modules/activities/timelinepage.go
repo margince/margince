@@ -44,8 +44,16 @@ func timelinePageSQL(ctx context.Context, in ListActivitiesInput, limit int) (ti
 	}
 	from, trailing := "activity a", ""
 	if in.CollapseSeatCopies {
-		from = SeatCopyFrom(ctx, strings.Join(where, " AND "), content, arg)
-		content, trailing, where = SeatCopyReadable, SeatCopyColumns, []string{sqlTrue}
+		candidates, without := strings.Join(where, " AND "), sqlTrue
+		if in.WithoutCopiesOf != nil {
+			// The activity joins the candidates so its copies group with it; the
+			// group is then left out, so the activity itself is never shown.
+			pos := arg(*in.WithoutCopiesOf)
+			candidates = sprintf("((%s) OR a.id = $%d)", candidates, pos)
+			without = sprintf("NOT ($%d = ANY(copies.copy_ids))", pos)
+		}
+		from = SeatCopyFrom(ctx, candidates, content, arg)
+		content, trailing, where = SeatCopyReadable, SeatCopyColumns, []string{without}
 		keyset, err := timelineKeyset(in, sorted, arg)
 		if err != nil {
 			return timelinePage{}, err

@@ -22,6 +22,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/kernel/signature"
+	"github.com/margince/margince/backend/internal/shared/kernel/values"
 	"github.com/margince/margince/backend/internal/shared/kernel/workforce"
 )
 
@@ -34,7 +35,7 @@ const SignatureMaxRunes = 2000
 const SignatureFieldMaxRunes = 120
 
 // SignatureTemplateMaxRunes bounds the workspace's signature template.
-const SignatureTemplateMaxRunes = 4000
+const SignatureTemplateMaxRunes = values.TextDocumentCharacters
 
 // SignatureTemplate is the workspace layout used after personal HTML.
 var SignatureTemplate = config.DefineStored(config.Spec[string]{

@@ -212,6 +212,7 @@ describe("moving a task to a callback time", () => {
     expect(sent[0]).toEqual({
       due_at: "2026-09-01T13:00:00.000Z",
       due_has_time: true,
+      due_intent: { wall_clock: "2026-09-01T15:00", timezone: "Europe/Berlin" },
     });
   });
 
@@ -228,6 +229,7 @@ describe("moving a task to a callback time", () => {
     expect(sent[0]).toEqual({
       due_at: "2026-09-15T13:00:00.000Z",
       due_has_time: true,
+      due_intent: { wall_clock: "2026-09-15T15:00", timezone: "Europe/Berlin" },
     });
   });
 
@@ -239,7 +241,14 @@ describe("moving a task to a callback time", () => {
 
     await waitFor(() => expect(sent).toHaveLength(1));
     // The server ends a reminder that sat on the old hour.
-    expect(sent[0]).toEqual({ due_at: DUE_AT, due_has_time: false });
+    expect(sent[0]).toEqual({
+      due_at: DUE_AT,
+      due_has_time: false,
+      due_intent: {
+        wall_clock: "2026-09-01T23:59:59",
+        timezone: "Europe/Berlin",
+      },
+    });
   });
 
   it("waits for a day on an undated task", () => {

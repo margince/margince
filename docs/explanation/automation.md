@@ -281,6 +281,18 @@ of wording cannot break the link. No 🟡 firing stays parked forever with no ap
   make a task owned by the record's owner. That owner sees it through RBAC row scope
   (`own`/`team`/`all`), not through a `my tasks` queue built on who the task is assigned to.
 
+## Preview and deadline boundaries
+
+An event rule acts on a new event. Its preview does not count stored records as past events.
+The response keeps the required count field for older clients. `matches_now_available` tells them
+whether it has a count. The screen shows that the rule acts from now on. Scheduled rules keep their
+own record readers.
+
+Task rules with a saved time zone use local calendar days. Their shared deadline reader starts the
+day after the due date and moves back by `time.Microsecond`, the step the store keeps. This keeps a
+deadline on its chosen date across clock changes. A rule with no time zone keeps its deadline rule
+unless a zone is chosen.
+
 ## Where the code lives
 
 | | |

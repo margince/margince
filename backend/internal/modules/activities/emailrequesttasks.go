@@ -27,10 +27,12 @@ const automaticRequestHorizonDays = 14
 // emailRequestAssigneeSQL is the reminder's assignee: the mail's sole
 // directly addressed seat (soleDirectSeatSQL), the decision the waiting queue
 // reads, when that seat's own mailbox delivered it. capture_import proves
-// delivery, not who was addressed, so it only confirms the seat.
+// delivery, not who was addressed, so it only confirms the seat. A shared
+// mailbox's import confirms the seat that holds its mail's work instead.
 func emailRequestAssigneeSQL(identities string) string {
 	return `SELECT DISTINCT u.id AS user_id FROM capture_import ci
-      JOIN (SELECT id AS owner_id, app_user.* FROM app_user) u ON u.id = ci.user_id AND %s
+      JOIN (SELECT id AS owner_id, app_user.* FROM app_user) u
+        ON u.id = coalesce(ci.user_id, ` + strings.ReplaceAll(storekit.SharedMailWorkOwnerSQL("a"), "%", "%%") + `) AND %s
       WHERE ci.activity_id = a.id AND u.id = ` + strings.ReplaceAll(soleDirectSeatSQL(identities), "%", "%%")
 }
 
@@ -55,6 +57,9 @@ func (s *Store) CaptureEmailRequests(ctx context.Context, asOf time.Time) error 
 		if err := s.retireAgedReminders(ctx, tx, asOf); err != nil {
 			return err
 		}
+		if err := s.rehomeSharedReminders(ctx, tx, asOf); err != nil {
+			return err
+		}
 		args := []any{}
 		arg := func(v any) int { args = append(args, v); return len(args) }
 		domains, err := s.ownDomainList(ctx, tx)
@@ -71,7 +76,7 @@ func (s *Store) CaptureEmailRequests(ctx context.Context, asOf time.Time) error 
 			outstandingRequestSQL+`
      AND `+storekit.AutomaticRequestIntentClause("a")+`
      AND a.occurred_at >= $`+fmt.Sprint(arg(asOf.AddDate(0, 0, -automaticRequestHorizonDays)))+`
-     AND `+auth.WorkspaceAudienceSQL("a")+` AND a.restricted_at IS NULL
+     AND (`+auth.WorkspaceAudienceSQL("a")+` OR `+storekit.SharedMailWorkOwnerSQL("a")+` IS NOT NULL) AND a.restricted_at IS NULL
      AND NOT `+answerableInvitationSQL+`
      AND NOT EXISTS (SELECT 1 FROM activity task WHERE task.source_system = 'email_request' AND task.source_activity_id = a.id)
      AND (`+assigneeSQL+`) IS NOT NULL

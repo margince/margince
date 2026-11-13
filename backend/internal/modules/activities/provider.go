@@ -77,8 +77,8 @@ func (p *Provider) SearchEntity(ctx context.Context, t datasource.EntityType, te
 	if err := httperr.RequirePair(filterEntityType, in.EntityType, filterEntityID, in.EntityID); err != nil {
 		return nil, "", false, err
 	}
-	// A record's timeline reads as the 360 pages show it: one row per email.
-	in.CollapseSeatCopies = in.EntityID != nil
+	// A record's timeline and a thread read as the app shows them: one row per email.
+	in.CollapseSeatCopies = in.EntityID != nil || in.ThreadKey != nil
 	rows, page, err := p.store.ListActivities(ctx, in)
 	if err != nil {
 		return nil, "", false, err
@@ -153,25 +153,13 @@ func (p *Provider) ArchiveAt(ctx context.Context, in datasource.ArchiveInput) (d
 	return ref(datasource.EntityActivity, v.Id), nil
 }
 
-// logInputForPrincipal maps a create wire, admitting the engine's own reserved
-// reminder identity and nothing else.
-//
-// This seam carries two kinds of caller. A human's tool call arrives here just
-// as an HTTP create does, so the reserved namespace has to hold: a caller able
-// to spell a reminder's source_system could plant a row under its key and have
-// the scan read it back as already asked, and the reminder would never be
-// written. The automation engine arrives here too, through applyCreate, and it
-// must stamp exactly those names — the reminder's natural key IS its identity.
-//
-// The principal is what separates them, not the field: PrincipalSystem is set
-// by the runtime and never by a request body, so it cannot be spelled by a
-// caller the way a source_system can. Only the reminder identities are
-// admitted, never the importer's mirror: namespace, which has its own writer.
+// The signed system actor may stamp task identities that no request may forge.
+// The importer namespace stays refused even for that actor.
 func logInputForPrincipal(ctx context.Context, req crmcontracts.CreateActivityRequest) (LogActivityInput, error) {
 	actor, ok := principal.Actor(ctx)
 	engine := ok && actor.Type == principal.PrincipalSystem
-	if engine && req.SourceSystem != nil && provenance.EngineReminderSource(*req.SourceSystem) {
-		return logActivityInputAllowingReminderIdentity(req)
+	if engine && req.SourceSystem != nil && provenance.EngineTaskSource(*req.SourceSystem) {
+		return logActivityInputAllowingTaskIdentity(req)
 	}
 	return LogActivityInputFrom(req)
 }

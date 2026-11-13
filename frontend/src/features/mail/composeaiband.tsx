@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-import { RefreshCw, RotateCcw } from "lucide-react";
+import { RefreshCw, RotateCcw, Undo2 } from "lucide-react";
 import { useId, useState } from "react";
 import type { components } from "../../api/schema";
 import { ErrorLine } from "../../design-system/errorline";
@@ -9,6 +9,7 @@ import { IconAction } from "../../design-system/iconaction";
 import { LanguageSelect } from "../../design-system/languageselect";
 import { useT } from "../../i18n";
 import { isLocale, LOCALES, type Locale } from "../../i18n/locale";
+import { REWRITE_MAX_CHARACTERS } from "../../lib/rewrites";
 import { DraftBand, RewriteRow } from "./composedraftband";
 import { rewriteBlock } from "./composedraftcall";
 import { DraftOffer } from "./composedraftcontext";
@@ -37,12 +38,22 @@ export function AiDraftBand({
   const { provenance, account } = fields;
   const control = voice.control;
   const drafted = provenance?.ai_generated === true;
+  const undo = voice.undoRewrite;
   const rewrites = fields.body.trim() !== "" && (
-    <RewriteRow
-      disabled={control.pending || control.disabled}
-      refusal={rewriteRefusal(fields, t)}
-      onRewrite={voice.rewrite}
-    />
+    <>
+      <RewriteRow
+        disabled={control.pending || control.disabled}
+        refusal={rewriteRefusal(fields, t)}
+        onRewrite={voice.rewrite}
+      />
+      {undo && (
+        <IconAction
+          label={t("common.undo")}
+          icon={<Undo2 aria-hidden="true" />}
+          onClick={undo}
+        />
+      )}
+    </>
   );
   const discard = voice.discardControl;
   const shownLanguage = draftLanguage(fields);
@@ -122,7 +133,12 @@ function rewriteRefusal(
   fields: ComposeFields,
   t: ReturnType<typeof useT>,
 ): string | null {
-  switch (rewriteBlock({ text: fields.body, html: fields.html })) {
+  switch (
+    rewriteBlock(
+      { text: fields.body, html: fields.html },
+      REWRITE_MAX_CHARACTERS,
+    )
+  ) {
     case "formatted":
       return t("compose.rewriteFormatted");
     case "long":

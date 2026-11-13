@@ -62,9 +62,10 @@ func (s *Store) FileTypedRecipientsTx(ctx context.Context, tx pgx.Tx, addresses 
 		}
 		name := ParseContactName("", address)
 		in := CreateContactInput{
-			FullName: name.Full,
-			Emails:   []ContactEmailInput{{Email: address, EmailType: emailTypeWork, IsPrimary: true}},
-			Source:   typedRecipientSource,
+			FullName:    name.Full,
+			sourceNames: true,
+			Emails:      []ContactEmailInput{{Email: address, EmailType: emailTypeWork, IsPrimary: true}},
+			Source:      typedRecipientSource,
 		}
 		if name.Confident {
 			in.FirstName, in.LastName = nameColumn(name.First), nameColumn(name.Last)

@@ -233,7 +233,7 @@ describe("dueTimeOf", () => {
 
 describe("localDateTimeValue", () => {
   it("yields the shape a datetime-local input accepts", () => {
-    expect(localDateTimeValue("2026-07-05T09:07:00Z")).toMatch(
+    expect(localDateTimeValue("2026-07-05T09:07:00Z", readerZone)).toMatch(
       /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/,
     );
   });
@@ -250,7 +250,7 @@ describe("localDateTimeValue", () => {
       "2026-07-05T02:00:00Z",
       "2026-12-31T12:30:00Z",
     ]) {
-      const readBack = new Date(localDateTimeValue(instant));
+      const readBack = new Date(localDateTimeValue(instant, readerZone));
       expect(readBack.getTime()).toBe(
         Math.floor(new Date(instant).getTime() / 60_000) * 60_000,
       );
@@ -263,7 +263,7 @@ describe("localDateTimeValue", () => {
     // is. Read against the machine's own zone so the assertion holds wherever
     // the suite runs, which is the same choice `readerZone` above makes.
     const instant = "2026-07-05T02:00:00Z";
-    expect(localDateTimeValue(instant).slice(0, 10)).toBe(
+    expect(localDateTimeValue(instant, readerZone).slice(0, 10)).toBe(
       calendarDay(new Date(instant), readerZone),
     );
   });

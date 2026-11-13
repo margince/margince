@@ -22,7 +22,11 @@ var transientCodes = map[string]struct{}{
 	SourceBusyCode:               {},
 	AgentBusyCode:                {},
 	agentVolumeUnansweredCode:    {},
+	WebsiteFormBusyCode:          {},
 }
+
+// WebsiteFormBusyCode means another intake or policy cutover owns the form lock.
+const WebsiteFormBusyCode = "website_form_busy"
 
 // SourceBusyCode refuses an import test while another run of the same source
 // name is writing. It clears when that write ends.

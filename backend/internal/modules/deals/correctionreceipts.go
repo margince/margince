@@ -20,6 +20,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/platform/labeltranslation"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
@@ -191,7 +192,7 @@ func correctionReceiptSelect(ctx context.Context, arg func(any) int) (string, er
 	if err != nil {
 		return "", err
 	}
-	stageBefore, stageAfter := correctionStageNamesSQL(ctx)
+	stageBefore, stageAfter := correctionStageNamesSQL(ctx, arg)
 	return storekit.SQLf(`
 			SELECT c.deal_id, d.name, c.audit_log_id, c.fields,
 			       -- The reason, only for the seat whose grants composed it.
@@ -240,13 +241,14 @@ func correctionReceiptSelect(ctx context.Context, arg func(any) int) (string, er
 // correctionStageNamesSQL names the stages a correction moved between, only
 // for a reader who may read pipelines: StageLabels holds stage names to the
 // same grant.
-func correctionStageNamesSQL(ctx context.Context) (before, after string) {
+func correctionStageNamesSQL(ctx context.Context, arg func(any) int) (before, after string) {
 	if !auth.Allows(ctx, "pipeline", principal.ActionRead) {
 		const hidden = "NULL::text"
 		return hidden, hidden
 	}
-	return "(SELECT st.name FROM stage st WHERE st.id::text = a.before->>'stage_id')",
-		"(SELECT st.name FROM stage st WHERE st.id::text = a.after->>'stage_id')"
+	name := labeltranslation.SQL(ctx, "st.name", "st.name_translations", arg)
+	return "(SELECT " + name + " FROM stage st WHERE st.id::text = a.before->>'stage_id')",
+		"(SELECT " + name + " FROM stage st WHERE st.id::text = a.after->>'stage_id')"
 }
 
 // BasisReadableSQL is when the reader at readerPos may read why Margince did

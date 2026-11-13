@@ -1,4 +1,5 @@
 import type { components } from "../../api/schema";
+import { overdueReadingOf } from "../../components/financesummary";
 import { Badge } from "../../design-system/atoms";
 import { Meter } from "../../design-system/readings";
 import { formatMoney, formatNumber } from "../../format/format";
@@ -28,12 +29,15 @@ export function OverdueLead({
   const t = useT();
   const { locale } = useLocale();
   const split = openSplitOf(summary);
+  // The figure leads at full size only while it is current. A stale one stays
+  // in the ink of the rest, dated by the panel's own caveat.
+  const reading = overdueReadingOf(summary);
   return (
     <div className="fin-lead">
       <FinanceFigure
         label={t("finance.overdue")}
         value={amountOf(summary.overdue, locale)}
-        hero={(summary.overdue?.amount_minor ?? 0) > 0}
+        hero={reading !== null && !reading.asOf}
         // An overdue figure is a call to action, and the server withholds it
         // once the relationship has ended rather than sending a number that
         // would read as a collection to make. A bare dash here would say "we

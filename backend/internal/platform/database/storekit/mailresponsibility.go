@@ -177,7 +177,7 @@ func DirectMailRecipientSQL(activity, addresses string) string {
 }
 
 // DirectMailActivitiesSQL builds a seat's waiting-mail candidates from recent
-// recipients and human-held requests. Null evidence uses an index probe so
+// recipients, recent shared-mailbox mail it holds, and human-held requests. Null evidence uses an index probe so
 // backfill state never changes which mail a seat can read.
 func DirectMailActivitiesSQL(identities, seat, cutoff, heldIDs string) string {
 	match := strings.ReplaceAll(directRecipientMatch, "ADDRESS_LIST", MailSeatAddressesSQL(identities, seat))
@@ -198,6 +198,12 @@ func DirectMailActivitiesSQL(identities, seat, cutoff, heldIDs string) string {
  AND mail.occurred_at >= -- occurred_at raw: waiting age superset bound
  ` + cutoff + `
  UNION
+ SELECT shared_mail.activity_id FROM capture_import shared_mail
+ JOIN activity mail ON mail.id = shared_mail.activity_id
+ WHERE shared_mail.user_id IS NULL AND ` + live + `
+ AND mail.occurred_at >= -- occurred_at raw: waiting age superset bound
+ ` + cutoff + ` AND ` + SharedMailWorkOwnerSQL("mail") + ` = ` + seat + `
+ UNION
  SELECT recipient.activity_id FROM held_mail held
  CROSS JOIN LATERAL (SELECT activity_id, role, address FROM activity_participant
   WHERE activity_id = held.activity_id OFFSET 0) recipient
@@ -214,13 +220,33 @@ func DirectMailSeatsSQL(activity, identities string) string {
 		activity + ".id AND recipient.role = 'to'\n AND mail_seat.value ? lower(recipient.address)))"
 }
 
+// MailAnswerersSQL lists the seats that answer a mail: every seat its parsed
+// To line names. When it names none, the answerer is the work owner of mail
+// only a shared mailbox captured (SharedMailWorkOwnerSQL).
+func MailAnswerersSQL(activity, identities string) string {
+	return "(SELECT CASE WHEN cardinality(direct.seats) = 0 THEN array_remove(ARRAY[" + SharedMailWorkOwnerSQL(activity) +
+		"], NULL) ELSE direct.seats END FROM (SELECT " + DirectMailSeatsSQL(activity, identities) + " AS seats OFFSET 0) direct)"
+}
+
 // SoleDirectMailSeatSQL decides who answers an inbound mail: the seat in its
 // To line when it is the only seat there, else NULL. Two addressed seats make
-// no automatic duty for either, and no shared one. OFFSET 0 keeps the planner
+// no automatic duty for either, and no shared one. Mail addressed to no seat
+// is answered by its shared-mailbox work owner. OFFSET 0 keeps the planner
 // from inlining the seat list into both of its uses, which built it twice.
 func SoleDirectMailSeatSQL(activity, identities string) string {
+	return soleSeatSQL(MailAnswerersSQL(activity, identities))
+}
+
+// SoleToLineSeatSQL is SoleDirectMailSeatSQL without the shared-mailbox step:
+// the one seat the parsed To line names, else NULL. A question about a
+// colleague's own correspondence, such as who decides a vendor, asks it.
+func SoleToLineSeatSQL(activity, identities string) string {
+	return soleSeatSQL(DirectMailSeatsSQL(activity, identities))
+}
+
+func soleSeatSQL(seats string) string {
 	return "(SELECT CASE WHEN cardinality(direct.seats) = 1 THEN direct.seats[1] END FROM (SELECT " +
-		DirectMailSeatsSQL(activity, identities) + " AS seats OFFSET 0) direct)"
+		seats + " AS seats OFFSET 0) direct)"
 }
 
 // MailSeatAddressesSQL selects one seat's unambiguous addresses from a bound identity map.

@@ -9,6 +9,7 @@ import {
   sameWallClockOnDay,
   startOfDayInZone,
   timezoneOptions,
+  wallClockIntent,
   zoneNameAndOffset,
   zoneOffsetMs,
 } from "./timezone";
@@ -315,5 +316,20 @@ describe("zoneNameAndOffset", () => {
     expect(() =>
       zoneNameAndOffset("en-GB", new Date(Number.NaN), "Asia/Bangkok"),
     ).toThrow(RangeError);
+  });
+});
+
+describe("wallClockIntent", () => {
+  it("names the local clock the zone shows at that instant", () => {
+    expect(wallClockIntent("2026-10-05T08:00:00Z", "Europe/Berlin")).toEqual({
+      wall_clock: "2026-10-05T10:00:00.000",
+      timezone: "Europe/Berlin",
+    });
+  });
+
+  it("takes the local date, not the UTC one", () => {
+    expect(
+      wallClockIntent("2026-10-05T23:30:00Z", "Asia/Bangkok").wall_clock,
+    ).toBe("2026-10-06T06:30:00.000");
   });
 });

@@ -66,6 +66,7 @@ var memberReferences = map[string]memberReference{
 	"brief_run.user_id":                        {disposition: referenceRetain},
 	"capture_alias_refused.user_id":            {disposition: referenceRetain},
 	"capture_alias_sighting.user_id":           {disposition: referenceRetain},
+	"capture_connection.backup_owner_id":       {disposition: referenceRetain},
 	"capture_connection.connected_by":          {disposition: referenceRetain},
 	"capture_connection.user_id":               {disposition: referenceRetain},
 	"capture_counterparty_hold.user_id":        {disposition: referenceRetain},

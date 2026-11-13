@@ -5,8 +5,8 @@ package compose
 
 import (
 	"context"
-	"fmt"
 
+	"github.com/margince/margince/backend/internal/compose/storedobjectreap"
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/modules/contacts"
@@ -27,12 +27,12 @@ import (
 // to storedobjects.AllKinds() so a new kind cannot be declared without one, and
 // Record refuses a kind outside that vocabulary, so reaching the sweep without an
 // owner takes both a new kind and a missing entry.
-func unreferencedKeysBy(db *database.DB) map[storedobjects.Kind]func(context.Context, []string) ([]string, error) {
-	return map[storedobjects.Kind]func(context.Context, []string) ([]string, error){
+func unreferencedKeysBy(db *database.DB) map[storedobjects.Kind]storedobjectreap.Owner {
+	return map[storedobjects.Kind]storedobjectreap.Owner{
 		storedobjects.KindRawOriginal: capture.NewSink(db).UnreferencedOriginalKeys,
 		storedobjects.KindAttachment:  activities.NewStore(db).UnreferencedAttachmentKeys,
 		storedobjects.KindKnowledge:   knowledge.NewStore(db).UnreferencedDocumentKeys,
-		storedobjects.KindLogo: unreferencedByAll(contacts.NewStore(db).UnreferencedLogoKeys,
+		storedobjects.KindLogo: storedobjectreap.UnreferencedByAll(contacts.NewStore(db).UnreferencedLogoKeys,
 			deals.NewStore(db, DealsInstallation()).UnreferencedIssuerLogoKeys),
 		storedobjects.KindOffer:  deals.NewStore(db, DealsInstallation()).UnreferencedOfferKeys,
 		storedobjects.KindImport: migration.NewRunStore(db).UnreferencedImportKeys,
@@ -40,82 +40,9 @@ func unreferencedKeysBy(db *database.DB) map[storedobjects.Kind]func(context.Con
 	}
 }
 
-// adjudicated is what one pass over the ledger established.
-type adjudicated struct {
-	// orphans are keys whose owning row never arrived: bytes to delete.
-	orphans []string
-	// adopted are keys an owning row DOES carry. Their bytes stay, and their intent
-	// is retired: a referenced key still in the ledger is a clear that never ran,
-	// and left there it occupies a slot in every later pass's limit — which is how a
-	// handful of them starve every orphan behind them.
-	adopted []string
-}
-
-// adjudicate groups what the ledger holds and asks each kind's owner.
-//
-// A kind with no owner registered is reported and the pass CONTINUES for every other
-// kind: aborting would discard the orphans already adjudicated and leave every owned
-// kind uncollected because one unowned kind exists. The fault is still returned, so
-// it reaches an operator rather than passing as a clean sweep.
+// adjudicate asks this installation's owners about the provisional keys.
 func adjudicate(
 	ctx context.Context, db *database.DB, provisional []storedobjects.Provisional,
-) (adjudicated, error) {
-	byKind := map[storedobjects.Kind][]string{}
-	for _, p := range provisional {
-		byKind[p.Kind] = append(byKind[p.Kind], p.Key)
-	}
-	owners := unreferencedKeysBy(db)
-	var out adjudicated
-	var unowned []storedobjects.Kind
-	for kind, keys := range byKind {
-		owner, ok := owners[kind]
-		if !ok {
-			unowned = append(unowned, kind)
-			continue
-		}
-		unreferenced, err := owner(ctx, keys)
-		if err != nil {
-			return out, err
-		}
-		out.orphans = append(out.orphans, unreferenced...)
-		out.adopted = append(out.adopted, keysExcept(keys, unreferenced)...)
-	}
-	if len(unowned) > 0 {
-		return out, fmt.Errorf("the stored-object sweep has no owner for kind(s) %v, so their keys cannot be adjudicated", unowned)
-	}
-	return out, nil
-}
-
-// keysExcept is the complement: everything the owner did not call unreferenced.
-func keysExcept(keys, unreferenced []string) []string {
-	gone := make(map[string]bool, len(unreferenced))
-	for _, key := range unreferenced {
-		gone[key] = true
-	}
-	var kept []string
-	for _, key := range keys {
-		if !gone[key] {
-			kept = append(kept, key)
-		}
-	}
-	return kept
-}
-
-// unreferencedByAll is a key every owner calls unreferenced. A logo is owned
-// by the company or entity wearing it and by every sent offer that printed it.
-// Its bytes stay while any of them names it.
-func unreferencedByAll(owners ...func(context.Context, []string) ([]string, error)) func(context.Context, []string) ([]string, error) {
-	return func(ctx context.Context, keys []string) ([]string, error) {
-		left := keys
-		for _, owner := range owners {
-			var err error
-			if left, err = owner(ctx, left); err != nil {
-				return nil, err
-			}
-			if len(left) == 0 {
-				return nil, nil
-			}
-		}
-		return left, nil
-	}
+) (storedobjectreap.Verdict, error) {
+	return storedobjectreap.Adjudicate(ctx, unreferencedKeysBy(db), provisional)
 }

@@ -65,9 +65,10 @@ function listsBackend(byType: Record<string, List[] | "fail">) {
 }
 
 function picker(
-  kind: "live_list" | "shortlist",
+  kind: "live_list" | "record_list" | "shortlist",
   watchedList: string,
   onChange: (value: string) => void = () => undefined,
+  allowedTypes?: string[],
 ) {
   return render(
     <StoryProviders>
@@ -79,6 +80,7 @@ function picker(
             watchedList={watchedList}
             onChange={onChange}
             control={control}
+            allowedTypes={allowedTypes}
           />
         )}
       </Field>
@@ -169,6 +171,51 @@ describe("a rule that watches a list", () => {
 });
 
 describe("the list pickers", () => {
+  it("offers readable customer lists of either kind and excludes other record types", async () => {
+    listsBackend({
+      dynamic: [
+        liveList,
+        {
+          ...liveList,
+          id: "prospects",
+          name: "Imported prospects",
+          entity_type: "lead",
+        },
+      ],
+      static: [
+        {
+          ...shortlist,
+          entity_type: "contact",
+          name: "Chosen customers",
+          can_edit: false,
+        },
+      ],
+    });
+    const user = userEvent.setup();
+    const picked: string[] = [];
+    picker("record_list", "", (value) => picked.push(value), [
+      "contact",
+      "company",
+    ]);
+    const control = await screen.findByRole("combobox", {
+      name: "record_list",
+    });
+    await waitFor(() => expect(control).toBeEnabled());
+    await user.click(control);
+    const options = within(screen.getByRole("listbox"));
+    expect(
+      options.getByRole("option", { name: liveList.name }),
+    ).toBeInTheDocument();
+    expect(
+      await options.findByRole("option", { name: "Chosen customers" }),
+    ).toBeInTheDocument();
+    expect(
+      options.queryByRole("option", { name: "Imported prospects" }),
+    ).not.toBeInTheDocument();
+    await user.click(options.getByRole("option", { name: "Chosen customers" }));
+    expect(picked).toEqual([shortlist.id]);
+  });
+
   it("offers the Live Lists that are not archived, and picks one by id", async () => {
     listsBackend({
       dynamic: [

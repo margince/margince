@@ -81,6 +81,8 @@ export type MeetingOutcomeWrite = {
   // Each sent only when given, so an answer alone never touches the notes.
   subject?: string;
   body?: string | null;
+  // A model polished the notes this write carries.
+  aiAssisted?: boolean;
   start?: Readonly<{
     occurred_at: string;
     occurred_precision: components["schemas"]["OccurredPrecision"];
@@ -108,6 +110,7 @@ export async function writeMeetingOutcome(
         ...(input.dealFiling ? { deal_filing: input.dealFiling } : {}),
         ...(input.subject === undefined ? {} : { subject: input.subject }),
         ...(input.body === undefined ? {} : { body: input.body }),
+        ...(input.aiAssisted ? { ai_assisted: true } : {}),
         ...input.start,
         ...input.custom,
       },

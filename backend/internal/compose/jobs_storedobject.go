@@ -25,6 +25,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/riverqueue/river"
 
+	"github.com/margince/margince/backend/internal/compose/storedobjectreap"
 	"github.com/margince/margince/backend/internal/platform/blobstore"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/jobs"
@@ -43,14 +44,16 @@ func (StoredObjectReapArgs) Kind() string { return "stored_object_reap" }
 // workspace and walks them itself (jobs.FleetWide, ADR-0103).
 func (StoredObjectReapArgs) FleetWide() {}
 
-// storedObjectReapBatch bounds one workspace's pass.
-//
-// A pass that could run unbounded over a large backlog holds a worker for as
-// long as the backlog is deep, and the cadence is hourly — so a capped pass
-// that leaves work behind is picked up an hour later rather than never. The
-// oldest keys go first, so a capped pass still makes progress on the ones that
-// have waited longest.
+// storedObjectReapBatch bounds one read of the ledger. A run takes batch after
+// batch, oldest keys first, so the batch size does not cap how much one run
+// deletes.
 const storedObjectReapBatch = 500
+
+// storedObjectReapDrainBudget bounds how long one run keeps taking batches,
+// over every workspace. It is under the job's 5-minute timeout, which must also
+// cover the batch still running when the budget is spent. It is checked
+// between batches only.
+const storedObjectReapDrainBudget = 4 * time.Minute
 
 // storedObjectReapWorker deletes the bytes of provisional objects past the
 // grace period, in every workspace.
@@ -63,13 +66,26 @@ type storedObjectReapWorker struct {
 	blob blobstore.Store
 	log  *slog.Logger
 	now  func() time.Time
+	// batch is storedObjectReapBatch outside tests.
+	batch int
 }
 
 func (w *storedObjectReapWorker) Work(ctx context.Context, _ *river.Job[StoredObjectReapArgs]) error {
-	return jobs.FaultContext(ctx, runPerEveryWorkspace(ctx, w.pool, w.reapWorkspace))
+	stop := w.now().Add(storedObjectReapDrainBudget)
+	return jobs.FaultContext(ctx, runPerEveryWorkspace(ctx, w.pool, func(ctx context.Context, workspace ids.UUID) error {
+		return w.reapWorkspace(ctx, workspace, stop)
+	}))
 }
 
-func (w *storedObjectReapWorker) reapWorkspace(ctx context.Context, workspace ids.UUID) error {
+func (w *storedObjectReapWorker) reapWorkspace(ctx context.Context, workspace ids.UUID, stop time.Time) error {
+	return storedobjectreap.Drain(ctx, func(ctx context.Context) (int, int, error) {
+		return w.reapBatch(ctx, workspace)
+	}, w.batch, stop, w.now)
+}
+
+// reapBatch answers how many keys it read and how many it settled: bytes
+// deleted, or an intent retired because a row names the key.
+func (w *storedObjectReapWorker) reapBatch(ctx context.Context, workspace ids.UUID) (listed, settled int, err error) {
 	// The system principal, bound here rather than inherited: a queue carries
 	// no actor, and every read and write below is RBAC-gated. The pass is the
 	// installation's own bookkeeping, not any seat's.
@@ -77,53 +93,59 @@ func (w *storedObjectReapWorker) reapWorkspace(ctx context.Context, workspace id
 	db := InstallationDB(w.pool)
 	ledger := storedobjects.NewLedger(db)
 	before := w.now().UTC().Add(-storedobjects.ProvisionalObjectGrace)
-	provisional, err := ledger.ListProvisional(ctx, before, storedObjectReapBatch)
+	provisional, err := ledger.ListProvisional(ctx, before, w.batch)
 	if err != nil {
-		return err
+		return 0, 0, err
 	}
 	// The fault from an unowned kind is held until the rest of the pass has run: the
 	// orphans already adjudicated are still orphans, and a kind nobody owns must not
 	// keep every other kind's bytes alive.
-	settled, adjudicateErr := adjudicate(ctx, db, provisional)
+	verdict, adjudicateErr := adjudicate(ctx, db, provisional)
 	pendingByKey := make(map[string]storedobjects.Provisional, len(provisional))
 	for _, pending := range provisional {
 		pendingByKey[pending.Key] = pending
 	}
 	// A key an owning row DOES carry is a clear that never ran. Its bytes stay and
 	// its intent goes, so it stops occupying a slot in every later pass's limit.
-	for _, adopted := range settled.adopted {
+	for _, adopted := range verdict.Adopted {
 		if err := ledger.Retire(ctx, pendingByKey[adopted]); err != nil {
-			return err
+			return len(provisional), settled, err
+		}
+		settled++
+	}
+	for _, orphan := range verdict.Orphans {
+		done, err := w.reapOrphan(ctx, ledger, db, pendingByKey[orphan], before, workspace)
+		if err != nil {
+			return len(provisional), settled, err
+		}
+		if done {
+			settled++
 		}
 	}
-	for _, orphan := range settled.orphans {
-		if err := w.reapOrphan(ctx, ledger, db, pendingByKey[orphan], before, workspace); err != nil {
-			return err
-		}
-	}
-	return adjudicateErr
+	return len(provisional), settled, adjudicateErr
 }
 
-func (w *storedObjectReapWorker) reapOrphan(ctx context.Context, ledger *storedobjects.Ledger, db *database.DB, pending storedobjects.Provisional, before time.Time, workspace ids.UUID) error {
+// reapOrphan answers whether it settled the key.
+func (w *storedObjectReapWorker) reapOrphan(ctx context.Context, ledger *storedobjects.Ledger, db *database.DB, pending storedobjects.Provisional, before time.Time, workspace ids.UUID) (bool, error) {
 	claimed, err := ledger.Condemn(ctx, pending.Key, before, w.now())
 	if err != nil || !claimed {
-		return err
+		return false, err
 	}
 	current, err := adjudicate(ctx, db, []storedobjects.Provisional{pending})
 	if err != nil {
-		return err
+		return false, err
 	}
-	if len(current.adopted) != 0 {
-		return ledger.Retire(ctx, pending)
+	if len(current.Adopted) != 0 {
+		return true, ledger.Retire(ctx, pending)
 	}
 	orphan := pending.Key
 	if err := w.blob.Delete(ctx, orphan); err != nil {
 		// The claim stays retryable; one unavailable object must not stop the batch.
 		w.log.ErrorContext(ctx, "an orphaned object could not be deleted",
 			"workspace", workspace, "err", err)
-		return nil
+		return false, nil
 	}
-	return ledger.CompleteReap(ctx, orphan, w.now())
+	return true, ledger.CompleteReap(ctx, orphan, w.now())
 }
 
 // storedObjectReaperFor answers nil for a role that composed no object store.
@@ -136,5 +158,5 @@ func storedObjectReaperFor(pool *pgxpool.Pool, blob blobstore.Store, log *slog.L
 	if blob == nil {
 		return nil
 	}
-	return &storedObjectReapWorker{pool: pool, blob: blob, log: log, now: time.Now}
+	return &storedObjectReapWorker{pool: pool, blob: blob, log: log, now: time.Now, batch: storedObjectReapBatch}
 }

@@ -70,6 +70,39 @@ const templateText = (key: string) =>
   AUTOMATION_CATALOG.find((entry) => entry.key === key)?.description ?? "";
 
 describe("the configured automations table", () => {
+  it("names the authorizer for a reader without editing rights", async () => {
+    const rules = configuredAutomations(RECORDED_AT).map((rule, index) =>
+      index === 0 ? { ...rule, owner_id: "u-2" } : rule,
+    );
+    const members = () =>
+      jsonResponse({
+        data: [
+          {
+            id: "u-2",
+            display_name: "Morgan",
+            status: "active",
+            is_agent: false,
+          },
+        ],
+        page: { next_cursor: null, has_more: false },
+      });
+    mount(
+      { automation: ["read"] },
+      {
+        "GET /automations": () =>
+          jsonResponse({ data: rules, page: { next_cursor: null } }),
+        "GET /users": members,
+        "GET /users/names": members,
+      },
+    );
+    const configured = within(await row("au-1"));
+    expect(await configured.findByText("Morgan")).toBeVisible();
+    expect(configured.queryByText(en["auto.ownerNone"])).toBeNull();
+    expect(
+      configured.queryByRole("combobox", { name: /authorized by/i }),
+    ).toBeNull();
+  });
+
   it("reads each rule's last run as an outcome word, and Never when it has none", async () => {
     mount();
     expect(await row("au-1")).toHaveTextContent(en["auto.runs.outcomeFired"]);
@@ -237,7 +270,7 @@ describe("a rule's owner", () => {
       return stubbed(input, init);
     };
     const picker = await within(await row("au-5")).findByRole("combobox", {
-      name: "Runs as Post-meeting recap draft",
+      name: "Person authorizing Post-meeting recap draft",
     });
     await user.click(picker);
     await user.click(await screen.findByRole("option", { name: "Lee Closer" }));
@@ -277,6 +310,26 @@ describe("a rule's run history", () => {
 });
 
 describe("the starter library", () => {
+  it("puts each grouped template under its catalog section", async () => {
+    mount(OPERATOR, {}, "library");
+    const meetings = await screen.findByRole("table", {
+      name: en["auto.group.meetings"],
+    });
+    expect(
+      within(meetings).getByTestId("template-post_meeting_recap"),
+    ).toBeInTheDocument();
+    expect(
+      within(meetings).queryByTestId("template-renewal_reminder"),
+    ).toBeNull();
+    const customers = screen.getByRole("table", {
+      name: en["auto.group.customers"],
+    });
+    expect(
+      within(customers).getByTestId("template-renewal_reminder"),
+    ).toBeInTheDocument();
+    expect(screen.getByTestId("template-close_approval")).toBeInTheDocument();
+  });
+
   it("opens a template's create dialog from a press anywhere on its row", async () => {
     const user = userEvent.setup();
     mount(OPERATOR, {}, "library");
@@ -297,7 +350,9 @@ describe("the starter library", () => {
     mount(OPERATOR, {}, "library");
     const template = await screen.findByTestId("template-post_meeting_recap");
     within(template)
-      .getByRole("button", { name: "Use template: Post-meeting recap draft" })
+      .getByRole("button", {
+        name: "Use template: Draft a follow-up after a meeting",
+      })
       .focus();
     await user.keyboard("{Enter}");
     expect(await screen.findByRole("dialog")).toBeInTheDocument();

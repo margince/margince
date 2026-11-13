@@ -12,6 +12,7 @@ import { afterEach, expect, it, vi } from "vitest";
 import { PageSaveBar, SavePageProvider } from "../../design-system/savepage";
 import { SettingList } from "../../design-system/settingrow";
 import { useToast } from "../../design-system/toast";
+import { TEXT_LIMITS } from "../../lib/textlimits_gen";
 import { meFixture } from "../../testing/mefixture";
 import {
   installFetchStub,
@@ -29,10 +30,12 @@ function Rows() {
   );
 }
 
-function mount(answer: () => Response) {
+function mount(answer: () => Response, displayName?: string) {
   const sent: unknown[] = [];
+  const me = meFixture({});
+  if (displayName !== undefined) me.user.display_name = displayName;
   installFetchStub({
-    "GET /me": () => jsonResponse(meFixture({})),
+    "GET /me": () => jsonResponse(me),
     "PUT /me/greeting-name": (body) => {
       sent.push(body);
       return answer();
@@ -58,6 +61,32 @@ it("offers no save until a name moves", async () => {
   mount(() => jsonResponse({ greeting_name: "Ada" }));
   await screen.findByRole("textbox", { name: "Greeting name" });
   expect(screen.queryByRole("button", { name: "Save" })).toBeNull();
+});
+
+it("keeps an unchanged earlier long name while saving the greeting", async () => {
+  const user = userEvent.setup();
+  const name = "界".repeat(TEXT_LIMITS.label + 1);
+  const sent = mount(() => jsonResponse({ greeting_name: "Ada" }), name);
+  const greeting = await screen.findByRole("textbox", {
+    name: "Greeting name",
+  });
+  await waitFor(() =>
+    expect(screen.getByRole("textbox", { name: "Display name" })).toHaveValue(
+      name,
+    ),
+  );
+  await user.type(greeting, "Ada");
+  await user.click(screen.getByRole("button", { name: "Save" }));
+  await waitFor(() => expect(sent).toEqual([{ greeting_name: "Ada" }]));
+});
+
+it("refuses a newly typed name beyond the shared label bound", async () => {
+  mount(() => jsonResponse({}));
+  const display = await screen.findByRole("textbox", { name: "Display name" });
+  fireEvent.change(display, {
+    target: { value: "界".repeat(TEXT_LIMITS.label + 1) },
+  });
+  expect(screen.getByRole("button", { name: "Save" })).toBeDisabled();
 });
 
 it("writes the greeting name from the page's save bar", async () => {

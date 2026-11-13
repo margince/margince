@@ -163,7 +163,7 @@ var erasureColumnBaseline = map[string][]string{
 		// not, and clearing audience_reason would break the audience decision on
 		// a row whose content is already gone.
 		"audience_reason",
-		"capture_label",
+		"capture_label", "due_zone", "meeting_zone", "remind_zone", // a zone is an IANA name beside a chosen clock
 		// One of two words this repository defines, saying whether the message
 		// asked its recipient side for something. Neither is anything the
 		// subject wrote nor anything written about them — it is a reading OF the

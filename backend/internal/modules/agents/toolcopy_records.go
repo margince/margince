@@ -24,9 +24,9 @@ var searchRecordsCopy = toolCopy{
 }
 
 var listRecordsCopy = toolCopy{
-	Purpose: "List one page of matching records, such as the deals in a pipeline.",
+	Purpose: "List one page of records matching record_type and filters.",
 	Limits:  "Only declared record_type filters apply.",
-	Instead: "Use search_records to find a record by name, and run_report for a count or total.",
+	Instead: "Use search_records for names, run_report for counts or totals.",
 	Retain:  "Pass next_cursor for the next page. `owner` names the holder. " + sayWhoseItIs,
 }
 
@@ -117,14 +117,14 @@ var updateRecordCopy = toolCopy{
 // clause, with the instruction itself down in the `links` field description —
 // which is read after the call has already been shaped.
 var logActivityCopy = toolCopy{
-	Purpose: "Record something that happened — a call, a meeting, a note, a message — on the " +
-		"records it was about: name every one of them in this call. A meeting is with a contact, " +
-		"and also concerns their company and its deal.",
-	Limits: "It writes history and can add a follow_up_task to a meeting, call or note in one " +
+	// The links field says which records to name, so the purpose does not repeat it.
+	Purpose: "Record something that happened — a call, a meeting, a note, a message — on every " +
+		"record it was about.",
+	Limits: "It can add a follow_up_task to a meeting, call or note in one " +
 		"transaction; the task inherits source links and audience, and its assignee must be able to " +
 		"read the source. A source-identity replay adds no task. " +
 		"No deal or field changes; nobody is notified. Unlinked, it is on no timeline; " +
-		"relink_activity links it later (onto a project, after the user's yes)." +
+		"relink_activity links it later." +
 		pastDayNeedsATime,
 	Instead: "Use progress_deal when the event also moves a deal; create_task for something " +
 		"still owed; attach_document for a file, whose text never goes into a note.",
