@@ -20,6 +20,7 @@ import (
 	"slices"
 	"strings"
 	"syscall"
+	"time"
 	// Embedded tzdata: workspace timezones must resolve on scratch
 	// containers that ship no zoneinfo.
 	_ "time/tzdata"
@@ -152,7 +153,7 @@ func run(ctx context.Context, args []string, stdout io.Writer) error {
 	volumeMeter := newVolumeMeter(rdb, pool)
 	opts = append(opts, agentVolumeOptions(volumeMeter)...)
 
-	relayOpts, stopRelay, err := inlineRelayLane(ctx, cfg, pool, logger, stdout)
+	relayOpts, stopRelay, err := inlineRelayLane(ctx, cfg, pool, license, logger, stdout)
 	if err != nil {
 		return err
 	}
@@ -306,6 +307,7 @@ func baseComposeOptions(ctx context.Context, cfg apiConfig, capCfg compose.Captu
 	opts = append(opts, compose.WithLicensePosture(license.Posture))
 	// "Check now" in Settings runs the same re-check the daily loop does.
 	opts = append(opts, compose.WithLicenseRecheck(license.Recheck))
+	opts = append(opts, compose.WithInstallationTrial(cfg.posture, license.Posture, time.Now))
 	// Record the deployment's capture suppression-list config first, so the
 	// registry rebuilds in WithKeyvault/WithGraphCapture apply it too — not just
 	// the Gmail path WithGmailCapture threads it into (ADR-0072).

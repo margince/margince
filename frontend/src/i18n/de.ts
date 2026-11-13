@@ -5147,7 +5147,9 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Diesen Eintrag archivieren? Er verschwindet aus dem Verlauf.",
   "activity.archiveDone": "Eintrag archiviert",
   "activity.archiveRefused":
-    "Du kannst nur Notizen und Aufgaben archivieren, die du selbst geschrieben hast. Eine Führungskraft kann diesen Eintrag für dich archivieren.",
+    "Du kannst nur Notizen, Aufgaben, Anrufe und Termine archivieren, die du selbst erfasst hast.",
+  "activity.archiveCalendarManaged":
+    "Die Kalendereinladung führt diesen Termin. Ändere ihn oder sag ihn über die Einladung ab.",
   "activity.notYoursToChange":
     "Du kannst diese Aktivität nicht ändern. Frage einen Admin nach Bearbeitungsrechten.",
   "activity.files.empty": "Noch keine Dateien an dieser Aktivität.",
@@ -7186,6 +7188,11 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "transcriptread.failedTitle": "Transkript konnte nicht gelesen werden",
   "transcriptread.failedFallback": "Es wurde nichts vorgemerkt.",
   "transcriptread.effectFailedTitle": "Angenommen, aber keine Aufgabe erstellt",
+  "transcriptread.summaryTitle": "Zusammenfassung des Termins",
+  "transcriptread.keyPoints": "Kernpunkte",
+  "transcriptread.nextSteps": "Nächste Schritte",
+  "transcriptread.summaryRefused":
+    "Diesmal wurde keine Zusammenfassung geschrieben. Lies das Transkript erneut, um es noch einmal zu versuchen.",
 
   "create.cancel": "Abbrechen",
   "create.save": "Erstellen",
@@ -7575,6 +7582,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "{subject} ist schon als stattgefunden erfasst. Erneutes Speichern ergänzt nur, was nicht gespeichert wurde.",
   "log.recordOfMeetingManaged":
     "Betreff und Notizen gehören zur Kalendereinladung. Deine Notizen werden hier als Notiz gespeichert, und der Termin wird als stattgefunden markiert.",
+  "log.recordOfMeetingTranscript":
+    "Das Transkript wird als eigener Eintrag gespeichert, und der Termin wird als stattgefunden markiert.",
   "log.asTranscript": "Dieser Text ist ein Transkript",
   "log.transcriptUpload": "Oder Datei hochladen",
   "log.transcriptUploadRejected": "Nur eine .txt-Datei ist zulässig.",
@@ -15394,6 +15403,69 @@ export const de: Readonly<Record<MessageKey, string>> = {
 
   "licensebanner.body":
     "Das Lizenz-Token dieser Installation wurde geprüft und abgelehnt.",
+  "trial.pill.days_one": "Testphase · noch {count} Tag",
+  "trial.pill.days_other": "Testphase · noch {count} Tage",
+  "trial.pill.closing_one": "Noch {count} Tag Testphase",
+  "trial.pill.closing_other": "Noch {count} Tage Testphase",
+  "trial.pill.lastDay": "Letzter Tag der Testphase",
+  "trial.pill.ended": "Testphase beendet · Margince kontaktieren",
+  "trial.notice.daysLeft_one": "Noch {count} Tag Testphase",
+  "trial.notice.daysLeft_other": "Noch {count} Tage Testphase",
+  "trial.notice.body":
+    "Am {date} wird Margince gesperrt, und die Arbeit im Hintergrund ruht, bis eine Lizenz da ist. Deine Daten bleiben, wie sie sind.",
+  "trial.notice.endedTitle": "Deine Testphase ist beendet",
+  "trial.notice.hideToday": "Bis morgen ausblenden",
+  "trial.notice.endedBody":
+    "Margince ist seit dem {date} gesperrt, und die Arbeit im Hintergrund ruht, bis eine Lizenz da ist. Deine Daten bleiben, wie sie sind, und nichts wird gelöscht.",
+  "trial.contact.title": "Mit dem Margince-Team sprechen",
+  "trial.contact.endsOn": "Deine Testphase endet am {date}",
+  "trial.contact.endedOn": "Deine Testphase endete am {date}",
+  "trial.contact.legend": "Was würde helfen?",
+  "trial.contact.ask.time": "Mehr Zeit",
+  "trial.contact.ask.time.hint": "Die Testphase verlängern.",
+  "trial.contact.ask.license": "Eine Lizenz",
+  "trial.contact.ask.license.hint": "Margince behalten, mit allen Daten.",
+  "trial.contact.ask.call": "Ein kurzes Gespräch",
+  "trial.contact.ask.call.hint": "Erst einmal darüber reden.",
+  "trial.contact.note": "Noch etwas?",
+  "trial.contact.optional": "Optional",
+  "trial.contact.preview": "Deine Nachricht",
+  "trial.contact.to": "An",
+  "trial.contact.subject": "Betreff",
+  "trial.contact.copy": "Text kopieren",
+  "trial.contact.copied": "Text kopiert",
+  "trial.contact.copyRemedy":
+    "Markiere den Text der E-Mail und kopiere ihn selbst.",
+  "trial.contact.open": "In meinem Mailprogramm öffnen",
+  "trial.contact.form": "Kontaktformular öffnen",
+  "trial.contact.how":
+    "Füg sie ins Kontaktformular auf der Margince-Website ein oder schick sie aus einem beliebigen Mailprogramm an diese Adresse.",
+  "trial.mail.subject.time": "{company}: mehr Zeit für die Margince-Testphase",
+  "trial.mail.subject.license": "{company}: eine Margince-Lizenz",
+  "trial.mail.subject.call": "{company}: ein kurzes Gespräch über Margince",
+  "trial.mail.greeting": "Hallo Margince-Team,",
+  "trial.mail.ask.time":
+    "Wir brauchen mehr Zeit, um Margince zu testen. Könnt ihr unsere Testphase verlängern?",
+  "trial.mail.ask.license":
+    "Wir möchten Margince weiter nutzen. Könnt ihr uns ein Angebot für eine Lizenz schicken?",
+  "trial.mail.ask.call":
+    "Wir möchten vor der Entscheidung über Margince sprechen. Können wir ein kurzes Gespräch vereinbaren?",
+  "trial.mail.company": "Unternehmen: {company}",
+  "trial.mail.ends": "Testphase endet: {date}",
+  "trial.mail.ended": "Testphase endete: {date}",
+  "trial.mail.seats": "Genutzte Zugänge: {seats}",
+  "trial.mail.signoff": "Viele Grüße",
+  "trial.locked.pageTitle": "Testphase beendet",
+  "trial.locked.title": "Deine Margince-Testphase ist beendet",
+  "trial.locked.adminTitle": "Du hast einen Lizenzschlüssel?",
+  "trial.locked.body":
+    "Margince ist gesperrt, und die Arbeit im Hintergrund ruht, bis eine Lizenz da ist. Deine Daten bleiben, wie sie sind, und nichts wird gelöscht.",
+  "trial.locked.admin":
+    "Trag ihn als license.token oder MARGINCE_LICENSE in die Konfiguration dieser Installation ein und starte Margince neu. Hast du eine Token-Datei ersetzt, reicht „Jetzt prüfen“. Die Arbeit im Hintergrund läuft dann von selbst wieder an, ohne Neustart.",
+  "trial.locked.member":
+    "Deine Admins können eine Lizenz vom Margince-Team bekommen. Du kannst dem Team auch selbst schreiben.",
+  "common.trialEnded":
+    "Die Testphase dieser Installation ist beendet, deshalb wartet diese Änderung auf eine Lizenz. Deine Daten bleiben, wie sie sind.",
   "licensebanner.link": "{tab} öffnen",
   "licensebanner.grace.title": "Lizenz abgelaufen",
   "licensebanner.grace.body":
@@ -21185,6 +21257,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Hier siehst du nur Änderungen, auf die du zugreifen darfst.",
   "magic.coverageIncomplete":
     "Einige Aktivitäten konnten nicht gezählt werden.",
+  "magic.laneCut": "Es gibt mehr, als hier steht.",
   "magic.done.all_one": "{count} Änderung im Einzelnen",
   "magic.done.all_other": "Alle {count} Änderungen im Einzelnen",
   "magic.done.atLeast_one": "{count} Änderung im Einzelnen",
@@ -21207,6 +21280,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "magic.action.approval_overnight": "Vorschlag prüfen",
   "approval.commitment.proposalExpiresIn": "Vorschlag läuft in {countdown} ab",
   "approval.commitment.noDueDay": "Kein Tag genannt",
+  "approval.commitment.strength": "Wie verbindlich",
+  "approval.commitment.tentative": "Mit Vorbehalt: Es hieß, man versuche es",
   "approval.commitment.promiseStatus": "Stand der Zusage",
   "approval.commitment.notFulfilled":
     "Das Erstellen der Aufgabe markiert die Zusage nicht als erfüllt.",
@@ -21884,7 +21959,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "aiTask.name.propose_roles": "Erkennung von Einkaufsrollen",
   "aiTask.name.rate_extract": "Erfassung von Wechselkursen",
   "aiTask.name.report_interpret": "Bewertung eines Vertriebsberichts",
-  "aiTask.name.report_setup": "Bericht aus einer Beschreibung einrichten",
+  "aiTask.name.report_setup":
+    "Berichtseinrichtung oder Umsatzziele vorschlagen",
   "aiTask.name.request_settlement": "Prüfung der Antwort auf das Anliegen",
   "aiTask.name.rewrite": "Umformulieren",
   "aiTask.name.signal_extract": "Erkennung von Gesprächssignalen",
@@ -22569,7 +22645,11 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "brief.done.noReason": "Grund nicht verfügbar",
   "brief.done.markedLost": "Als verloren markiert",
   "brief.done.customerWrote": "Der Kunde schrieb:",
-  "magic.lane.doneOther": "Weitere Änderungen",
+  "brief.done.small_one": "{count} kleine Änderung",
+  "brief.done.small_other": "{count} kleine Änderungen",
+  "brief.done.smallLabel": "Kleine Änderungen, neueste zuerst",
+  "brief.done.why": "Warum",
+  "brief.done.undoNote": "Rückgängig",
   "changes.bulk.undone_one": "Auf {count} Deal rückgängig gemacht.",
   "changes.bulk.undone_other": "Auf {count} Deals rückgängig gemacht.",
   "changes.bulk.partly_one": "{count} Deal wurde teilweise rückgängig gemacht.",
@@ -22679,6 +22759,10 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "progress.work.more": "Mehr anzeigen",
   "progress.plannedAhead": "Offene Pipeline, noch nicht gewonnen",
   "progress.rail": "Ziel und Definition",
+  "progress.summary": "Zusammenfassung",
+  "progress.summary.refresh": "Zusammenfassung aktualisieren",
+  "progress.summary.writing": "Zusammenfassung wird geschrieben",
+  "progress.summary.more": "Ganze Zusammenfassung lesen",
   "progress.goalFor": "Ziel für {period}",
   "progress.goalMonths": "Monate mit Ziel",
   "progress.goalMonthsSet": "{set} von {needed}",
@@ -22724,6 +22808,17 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "goals.status": "Status",
   "goals.yearly": "Jahresziel in {currency}",
   "goals.spread": "Gleich verteilen",
+  "goals.propose": "Monate vorschlagen",
+  "goals.propose.busy": "Bisher gewonnener Umsatz wird gelesen",
+  "goals.propose.title": "Vorschlag: {total} für das Jahr",
+  "goals.propose.review":
+    "Gespeichert wird erst, wenn du den Entwurf speicherst.",
+  "goals.propose.apply": "Diese Monate übernehmen",
+  "goals.propose.noModel":
+    "Ein Monatsvorschlag braucht ein eingerichtetes KI-Modell. Du kannst die Monate weiterhin von Hand eingeben.",
+  "goals.propose.noHistory":
+    "{name} hat in {year} und im Jahr davor keinen gewonnenen Umsatz, aus dem sich ein Muster lesen lässt. Gib die Monate von Hand ein.",
+  "goals.proposedByAi": "Von Margince vorgeschlagen",
   "goals.monthsSum": "Die Monate ergeben zusammen {total}.",
   "goals.monthsMissing_one": "{count} Monat ist nicht gesetzt.",
   "goals.monthsMissing_other": "{count} Monate sind nicht gesetzt.",

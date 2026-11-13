@@ -20,6 +20,7 @@ import (
 	openapi_types "github.com/oapi-codegen/runtime/types"
 	"github.com/riverqueue/river"
 
+	"github.com/margince/margince/backend/internal/compose/transcriptsummary"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/identity"
@@ -141,6 +142,7 @@ func phraseTranscriptReport(
 	report *crmcontracts.TranscriptReadReport, facts activities.TranscriptReadFacts, said transcriptCopy, who transcriptAudience,
 ) {
 	report.Detail = new(said.outcomeSentence(facts, who))
+	report.SummaryRefused = facts.SummaryRefused
 	for _, proposal := range facts.Proposals {
 		asked := crmcontracts.TranscriptReadAskedOf{
 			SeatId: openapi_types.UUID(proposal.SeatID),
@@ -170,6 +172,7 @@ func transcriptReadReport(read activities.TranscriptRead) crmcontracts.Transcrip
 		StartedAt:    read.StartedAt,
 		FinishedAt:   read.FinishedAt,
 		CreatedAt:    read.CreatedAt,
+		Summary:      transcriptsummary.Report(read.Summary),
 	}
 	for _, id := range read.ProposalIDs {
 		report.ProposalIds = append(report.ProposalIds, openapi_types.UUID(id))

@@ -140,3 +140,9 @@ func objectiveSentences(plan Plan) []Sentence {
 	}
 	return out
 }
+
+// CoachedBranches counts the plan's branches that carry a kept coach line, the
+// ones a lead's coaching layer shows.
+func CoachedBranches(plan Plan) int {
+	return len(coachingPaths(plan))
+}

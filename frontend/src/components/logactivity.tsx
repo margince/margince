@@ -53,6 +53,7 @@ import {
   type MeetingRecord,
   openMeetingKey,
   recordOnMeeting,
+  transcriptRecords,
   useRecordOfMeeting,
 } from "./logactivity.openmeeting";
 import { PolishWording } from "./logactivity.polish";
@@ -154,7 +155,8 @@ export function LogActivityForm({
       completion: Readonly<{ id: string; version?: number }> | undefined;
       inheritSourceLinks: boolean;
     }) => {
-      if (input.record) {
+      const recordsMeeting = transcriptRecords(input.record, input.draft);
+      if (input.record && !recordsMeeting) {
         const id = await recordOnMeeting(
           { ...input, record: input.record, entityType, entityId },
           t,
@@ -177,6 +179,7 @@ export function LogActivityForm({
               input.attendees,
             ),
             ...(input.inheritSourceLinks ? { links: undefined } : {}),
+            ...(recordsMeeting ? { records_meeting_id: recordsMeeting } : {}),
           },
         }),
         t,

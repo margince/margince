@@ -203,6 +203,12 @@
   vertical-align: top;
   min-block-size: 1lh;
 }
+/* The same line, empty, where the read settled on no sentence. It sets the
+   sentence's font so that 1lh is the height the skeleton held. */
+.glance-sentence-hold {
+  min-block-size: 1lh;
+  font: var(--fontBodyLarge);
+}
 /* A section's name on this page is a quiet label over its rows, not a title:
    the greeting is the page's one headline and the card in hand its second. */
 .t-eyebrow.brief-section-label,
@@ -957,4 +963,15 @@
 .glance-greeting-name {
   display: inline-block;
   text-wrap: balance;
+}
+
+/* A small change names its record first on its line, so the record takes no
+   gap of its own before it. */
+.brief-done-small .magic-line-subject {
+  margin-inline-start: 0;
+}
+
+/* The embedded receipt's caveat body stays out of the grid when it has none. */
+.brief-done > .panel-body:empty {
+  display: none;
 }

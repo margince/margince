@@ -240,8 +240,8 @@ var defaults = map[string]Document{
 	// same-day-correct, never delete) because archiving someone else's
 	// commercial record is a manager's call. The owner of a contact, company
 	// or deal still archives it without delete (auth.ContactArchive,
-	// CompanyArchive, DealArchive). So does the author of a hand-logged note
-	// or task.
+	// CompanyArchive, DealArchive). So does the author of a hand-logged note,
+	// task, call or meeting (auth.ActivityArchive).
 	//
 	// The three departures from that rule each have a reason. `lead` is crud
 	// because disqualifying IS the delete and is routine rep work.

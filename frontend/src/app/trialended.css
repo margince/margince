@@ -1,0 +1,17 @@
+/* The admin's part sits under the way out, behind a rule, in the smaller voice
+   of a footnote: every seat reads the card, and only an admin acts on this. */
+.trialended-key {
+  margin-block-start: var(--space-5);
+  padding-block-start: var(--space-4);
+  border-block-start: 1px solid var(--borderSubtle);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-2);
+  font: var(--fontBodySmall);
+  color: var(--textSecondary);
+}
+
+.trialended-key p {
+  margin: 0;
+}

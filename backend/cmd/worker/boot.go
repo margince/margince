@@ -458,7 +458,7 @@ func startWebhookLane(ctx context.Context, cfg workerConfig, pool *pgxpool.Pool,
 // Lane shutdown is not this function's job: run() defers the one join.
 func relayUntilSignal(ctx context.Context, cfg workerConfig, pool *pgxpool.Pool, rdb *redis.Client, logger *slog.Logger, stdout io.Writer) {
 	_, _ = fmt.Fprintf(stdout, "worker relaying outbox events to %s\n", cfg.redisAddr)
-	events.NewRelay(pool, rdb, logger).Run(ctx)
+	events.NewRelay(pool, rdb, logger).WithPause(workPause(ctx)).Run(ctx)
 }
 
 // backfillConnectorCredentials migrates any legacy capture_connection rows

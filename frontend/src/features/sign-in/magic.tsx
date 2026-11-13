@@ -26,6 +26,7 @@ import {
   useMagic,
 } from "../../lib/magic.queries";
 import { sourceUnavailableText } from "../../lib/worklistcopy";
+import { MagicDoneCard } from "./magic.done";
 import { MagicLaneSection } from "./magic.lines";
 import { spansDays } from "./magic.marks";
 import "../brief/brief.css";
@@ -77,11 +78,14 @@ export function MagicPanel({
   visibleReceiptIds = [],
   lanes = LANES,
   embedded = false,
+  doneOpen = false,
 }: Readonly<{
   visibleApprovalIds?: readonly string[];
   visibleReceiptIds?: readonly string[];
   lanes?: readonly MagicLane[];
   embedded?: boolean;
+  /** Embedded, the done card opens on arrival: nothing above it to read first. */
+  doneOpen?: boolean;
 }> = {}) {
   const t = useT();
   const { locale } = useLocale();
@@ -109,11 +113,14 @@ export function MagicPanel({
   const done = rowsOf(shown?.done);
   const doneRecords = recordsOf(done);
   const coverageIncomplete = drawsDone && doneCoverageIncomplete(shown);
+  // A lane the server read to its bound may hold more than it drew.
+  const cut = new Set(rowsOf(receipt?.cut_at_limit));
   // The decision source read to its bound and still had more.
   const doneFloor =
     sumIsFloor("done", rowsOf(receipt?.done)) ||
     coverageIncomplete ||
-    receipt?.done_is_floor === true;
+    receipt?.done_is_floor === true ||
+    cut.has("done");
   // "All" would claim the whole of a count that is only a floor.
   const doneFold = plural(
     doneFloor ? "magic.done.atLeast" : "magic.done.all",
@@ -127,8 +134,21 @@ export function MagicPanel({
     },
   );
   const byDay = shown ? spansDays(shown.since, shown.as_of) : false;
+  // The done lane says "at least" in its fold. The waiting lanes say it here,
+  // so a cut queue never reads as the whole of it.
+  const laneNote = (lane: MagicLane): string | undefined => {
+    if (lane === "done") {
+      return coverageIncomplete ? t("magic.coverageIncomplete") : undefined;
+    }
+    return lane !== "watching" && cut.has(lane)
+      ? t("magic.laneCut")
+      : undefined;
+  };
   const read = sectionRead(state, shown, lanes, drawn, coverageIncomplete);
-  if (read === "empty") {
+  // A section of its own stays away until its read lands. Drawn as a loader,
+  // it took a block of the page and then left it again when nothing waited.
+  // Embedded, the section around it already waits for its own read.
+  if (read === "empty" || (read === "loading" && !embedded)) {
     return null;
   }
   const notShown = drawsWaiting ? rowsOf(shown?.not_shown).filter(told) : [];
@@ -151,24 +171,15 @@ export function MagicPanel({
         </SurfaceState>
       </PanelBody>
       {drawn.map((lane) => (
-        <MagicLaneSection
+        <DrawnLane
           key={lane}
           lane={lane}
-          title={t(
-            embedded && lane === "done"
-              ? "magic.lane.doneOther"
-              : labelFor(LANE_HEADING, lane),
-          )}
-          rows={shown?.[lane] ?? []}
-          since={shown?.since}
+          shown={shown}
           zone={zone}
           byDay={byDay}
-          fold={lane === "done" ? doneFold : undefined}
-          note={
-            lane === "done" && coverageIncomplete
-              ? t("magic.coverageIncomplete")
-              : undefined
-          }
+          embedded={embedded}
+          note={laneNote(lane)}
+          done={{ fold: doneFold, floor: doneFloor, open: doneOpen }}
         />
       ))}
       {notShown.length > 0 && (
@@ -188,6 +199,58 @@ export function MagicPanel({
       </Eyebrow>
       {body}
     </section>
+  );
+}
+
+/**
+ * One lane under its heading. Embedded, the done lane is Done for you's last
+ * card instead, its coverage caveat under it.
+ */
+function DrawnLane({
+  lane,
+  shown,
+  zone,
+  byDay,
+  embedded,
+  note,
+  done,
+}: Readonly<{
+  lane: MagicLane;
+  shown: MagicReceipt | undefined;
+  zone: string;
+  byDay: boolean;
+  embedded: boolean;
+  /** Why the lane may hold more than it draws, under it. */
+  note: string | undefined;
+  done: Readonly<{ fold: string; floor: boolean; open: boolean }>;
+}>) {
+  const t = useT();
+  if (embedded && lane === "done") {
+    return (
+      <>
+        <MagicDoneCard
+          rows={rowsOf(shown?.done)}
+          since={shown?.since}
+          zone={zone}
+          byDay={byDay}
+          floor={done.floor}
+          defaultOpen={done.open}
+        />
+        {note && <p className="t-caption">{note}</p>}
+      </>
+    );
+  }
+  return (
+    <MagicLaneSection
+      lane={lane}
+      title={t(labelFor(LANE_HEADING, lane))}
+      rows={shown?.[lane] ?? []}
+      since={shown?.since}
+      zone={zone}
+      byDay={byDay}
+      fold={lane === "done" ? done.fold : undefined}
+      note={note}
+    />
   );
 }
 

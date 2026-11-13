@@ -93,8 +93,8 @@ func (s *Store) NextBookedMeetingTx(
 func nextBookedMeeting(
 	ctx context.Context, tx pgx.Tx, in NextBookedMeetingInput,
 ) (BookedMeeting, bool, error) {
-	column := linkColumn(in.EntityType)
-	if column == "" {
+	target, ok := linkTargetOf(in.EntityType)
+	if !ok {
 		return BookedMeeting{}, false, &InvalidLinkTypeError{EntityType: in.EntityType}
 	}
 	// The record the question is narrowed to is gated before it is answered:
@@ -109,8 +109,7 @@ func nextBookedMeeting(
 	if err != nil {
 		return BookedMeeting{}, false, err
 	}
-	where = append(where, fmt.Sprintf(`EXISTS (SELECT 1 FROM activity_link l WHERE l.activity_id = a.id
-		AND l.entity_type = $%d AND l.%s = $%d)`, arg(in.EntityType), column, arg(in.EntityID)))
+	where = append(where, "EXISTS (SELECT 1 FROM activity_link l WHERE l.activity_id = a.id AND "+target.linkedSQL("l", arg(in.EntityID))+")")
 	var meeting BookedMeeting
 	var subject *string
 	err = tx.QueryRow(ctx, `SELECT a.id, a.subject, a.occurred_at, a.occurred_precision

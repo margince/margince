@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
+import type { components } from "../../api/schema";
 import { deal } from "../../testing/brief.fixtures";
 import { REPORTING_FIXTURE_ZONE } from "../../testing/reporting.fixtures";
 import { jsonResponse } from "../../testing/story-utils";
@@ -274,4 +275,83 @@ export const publishedPlan: SalesGoalPlan = {
   live_months: GOALS.map((goal) => goal * 100000),
   draft: undefined,
   capabilities: { edit: false },
+};
+
+/** The written summary of `sellerMarch`, as the server answers it. */
+export const sellerMarchSummary: components["schemas"]["SalesAssessment"] = {
+  evaluation_key: "progress-2026-03",
+  generated_at: "2026-03-31T22:59:59Z",
+  generated_by: "model",
+  decisions: 0,
+  cells: [
+    {
+      id: "progress:goal",
+      label: "Sales goal",
+      value: "100000.00 EUR",
+      display: "100,000 EUR",
+    },
+    {
+      id: "progress:closed",
+      label: "Closed revenue",
+      value: "60000.00 EUR",
+      display: "60,000 EUR",
+    },
+    {
+      id: "progress:missing",
+      label: "Still missing to the goal",
+      value: "40000.00 EUR",
+      display: "40,000 EUR",
+    },
+    {
+      id: "progress:planned",
+      label: "Open deals expected to close in the period",
+      value: "220000.00 EUR",
+      display: "220,000 EUR",
+    },
+  ],
+  sentences: [
+    {
+      text: "You closed 60,000 EUR of the 100,000 EUR goal in March.",
+      kind: "observation",
+      cells: ["progress:closed", "progress:goal"],
+    },
+    {
+      text: "That leaves 40,000 EUR still missing to the goal.",
+      kind: "observation",
+      cells: ["progress:missing"],
+    },
+  ],
+  paragraphs: [
+    [
+      {
+        text: "You closed 60,000 EUR of the 100,000 EUR goal in March.",
+        kind: "observation",
+        cells: ["progress:closed", "progress:goal"],
+      },
+      {
+        text: "That leaves 40,000 EUR still missing to the goal.",
+        kind: "observation",
+        cells: ["progress:missing"],
+      },
+    ],
+    [
+      {
+        text: "Open deals worth 220,000 EUR were expected to close in the month and are not won yet.",
+        kind: "observation",
+        cells: ["progress:planned"],
+      },
+    ],
+  ],
+};
+
+/** Twelve months proposed for `draftPlan`'s seller, with a stronger autumn. */
+export const goalProposal: components["schemas"]["SalesGoalProposal"] = {
+  months: [
+    9000000, 9000000, 10000000, 10000000, 8000000, 7000000, 7000000, 8000000,
+    13000000, 14000000, 13000000, 12000000,
+  ],
+  total_minor: 120000000,
+  reason:
+    "The months follow last year: a quiet summer, then a stronger autumn into the year end.",
+  generated_by: "model",
 };

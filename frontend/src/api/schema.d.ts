@@ -3713,6 +3713,9 @@ export interface paths {
          *     an invoice they cannot see answers 404 like one that does not exist. 422 when the
          *     connected source serves no documents (`invoice_documents` on the summary is false),
          *     and 502 when the source could not be reached or answered something other than a PDF.
+         *     Each request is a live call to the vendor, so one caller may fetch at most 20
+         *     documents in each fixed one-minute window; past that the read answers 429 until
+         *     the window ends.
          */
         get: operations["downloadFinanceInvoicePdf"];
         put?: never;
@@ -10554,6 +10557,30 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/analytics/progress/summary": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * A few written sentences on where one Progress reading stands against its sales goal and what is still open.
+         * @description The model reads the figures `GET /analytics/progress` answers for the same period and
+         *     scope, under the caller's own reach, and nothing else. Each sentence cites the figures it
+         *     rests on, and a sentence quoting a number none of them holds is dropped. The answer is kept
+         *     per reader until a figure moves. Without a model, or when the reply cannot be grounded, it
+         *     answers no sentences and `generated_by` says so, and Progress shows its figures alone.
+         */
+        post: operations["summarizeSalesProgress"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/analytics/sales-goals": {
         parameters: {
             query?: never;
@@ -10621,6 +10648,34 @@ export interface paths {
         post?: never;
         /** Discard the shared draft and keep the published goals. */
         delete: operations["discardSalesGoalDraft"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/analytics/sales-goals/{owner_id}/{year}/proposed-months": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                owner_id: string;
+                year: number;
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Twelve monthly goals proposed for one seller from their closed revenue. Nothing is saved.
+         * @description The model reads the seller's closed revenue by month for the plan year and the year before,
+         *     and the yearly goal when the request gives one. It answers twelve months and one or two
+         *     sentences on the pattern it followed. With a yearly goal the months add up to it exactly.
+         *     The reader reviews the months in the editor and saves them as a draft with origin `ai`.
+         *     Only a reader who may set this seller's goals may ask. Without a model it answers 409
+         *     `ai_not_configured`, and with no closed revenue in either year 409 `no_sales_history`.
+         */
+        post: operations["proposeSalesGoalMonths"];
+        delete?: never;
         options?: never;
         head?: never;
         patch?: never;
@@ -14139,9 +14194,10 @@ export interface paths {
          *     again by how far back it will look: a receipt answers "since you last looked",
          *     never "since installation".
          *
-         *     Not cursor-paginated yet. The window and the bound are what keep the read
-         *     honest today; a cursor arrives with the lane that needs one, rather than being
-         *     declared and ignored.
+         *     Not cursor-paginated: the window bounds what is reported, and the bound cuts a
+         *     period the reader has already been shown, not a backlog. A lane read to its
+         *     bound is named in `cut_at_limit`, so a preview never reads a cut lane as the
+         *     whole of it.
          */
         get: operations["getMagic"];
         put?: never;
@@ -27562,6 +27618,33 @@ export interface components {
              */
             checked_at: string;
             license?: components["schemas"]["LicenseHolder"];
+            trial?: components["schemas"]["LicenseTrial"];
+        };
+        /**
+         * @description The free period of a production installation that has no license. Present only while
+         *     `state` is `absent` on a production installation that has been set up; a development or
+         *     test installation runs unlicensed with no trial.
+         *
+         *     The trial starts when the installation's oldest workspace was created, archived ones
+         *     included, and lasts 14 days, with no grace period. Once `ended` is true, and until a
+         *     license is configured, every agent tool call is refused with `trial_ended`, and so is
+         *     every HTTP change except these: the license routes, `POST /v1/exports`, the data-subject
+         *     request routes, and a seat's own credential routes. Background jobs wait instead of
+         *     running; they do not fail.
+         */
+        LicenseTrial: {
+            /**
+             * Format: date-time
+             * @description When the installation's workspace was created.
+             */
+            started_at: string;
+            /**
+             * Format: date-time
+             * @description The first instant the trial no longer covers.
+             */
+            ends_at: string;
+            /** @description Whether `ends_at` has passed, as the server decides it, so a client with a wrong clock shows the state the installation acts on. */
+            ended: boolean;
         };
         /**
          * @description Who holds the license and how long it lasts, as the validation module proved it.
@@ -36325,7 +36408,7 @@ export interface components {
             watch_for: string;
             /** @description The narrow condition under which a lead should step in. Narrow on purpose: a lead who takes over a rep's meeting has coached nobody. */
             intervene_if: string;
-            /** @description The ways this meeting can go, for a lead to rehearse against. */
+            /** @description The plan's own branches as a lead reads them: each carries the label of a plan scenario and, in `play`, what the lead watches for and asks the rep, never the rep's play again. A branch the model wrote no coach line for is left out, so this can be empty. */
             paths: components["schemas"]["MeetingPlanCoachingPath"][];
         };
         MeetingPlanCoachingPath: {
@@ -39001,6 +39084,22 @@ export interface components {
             /** @description Ask the model again, whatever is kept. */
             refresh?: boolean;
         };
+        SalesProgressSummaryRequest: {
+            /** @enum {string} */
+            period: "month" | "year";
+            year: number;
+            /** @description Required with `period: month`. */
+            month?: number;
+            /**
+             * @description Absent reads the caller's own figures.
+             * @enum {string}
+             */
+            scope_kind?: "owner" | "team";
+            /** Format: uuid */
+            scope_id?: string;
+            /** @description Ask the model again, whatever is kept. */
+            refresh?: boolean;
+        };
         SalesAssessment: {
             /** @description The evaluation the assessment read. */
             evaluation_key: string;
@@ -39036,7 +39135,7 @@ export interface components {
             text: string;
         };
         SalesAssessmentCell: {
-            /** @description `metric:<metric id>` or `point:<metric id>:<group key>`. */
+            /** @description `metric:<metric id>` or `point:<metric id>:<group key>`; a Progress summary names its own figures `progress:<figure>`. */
             id: string;
             label: string;
             /** @description Raw source quantity with its unit. */
@@ -41796,7 +41895,7 @@ export interface components {
             readonly can_share_internal?: boolean;
             /** @description Whether THIS caller may change THIS activity: the same question the server's write gate answers on a mutation — an `activity:update` grant, plus authorship, assignment or a linked record the caller may change, or an unbounded seat. Server-computed per row, per caller. It is a UX signal, never the enforcement. A client uses it to draw or withhold edit affordances so a reader is not offered a control the save would refuse; the server refuses an unauthorized write with 403 whatever this said. Absent means NOT writable, so a client reading a response from a server too old to send it fails closed. */
             readonly writable?: boolean;
-            /** @description Whether THIS caller may archive THIS activity: the row write gate `writable` asks, plus the `activity:delete` grant, or `activity:update` on a hand-logged note or task the caller wrote (under their own stamp or through an agent acting for them). Captured correspondence and a colleague's note need the delete grant. Server-computed per row, per caller. A UX signal, never the enforcement, exactly like `writable`; absent means NOT archivable. */
+            /** @description Whether THIS caller may archive THIS activity: the row write gate `writable` asks, plus the `activity:delete` grant, or `activity:update` on a note, task, call or meeting the caller logged by hand (under their own stamp or through an agent acting for them) that no provider import backs. Sent and captured correspondence, a calendar-synced meeting and a colleague's entry need the delete grant. A meeting a live invitation holds is never archivable. Server-computed per row, per caller. A UX signal, never the enforcement, exactly like `writable`; absent means NOT archivable. */
             readonly archivable?: boolean;
             /** @description Whether this meeting still owes an answer about how it went, by the rule the Worklist's outcome lane asks: a meeting linked to a customer record the caller may see, with no `meeting_status` or `booked`, whose start has passed (a date-only meeting once its date is over in the installation's timezone) by the server's clock, and whose content the caller may read. Unlike the lane it has no look-back window, so an old booked meeting still asks. Every read that carries `writable` carries this. A client offers the outcome control when this and `writable` are both true. Absent means false. */
             readonly awaiting_outcome?: boolean;
@@ -41934,7 +42033,7 @@ export interface components {
             source_id?: string | null;
             /**
              * Format: uuid
-             * @description The conversation or note this task follows from, whether added by a human or read from a conversation. Opening the source requires current source access. A task cannot grant access to its source or disclose content from a withheld source.
+             * @description The conversation or note this task follows from, whether added by a human or read from a conversation. Opening the source requires current source access. A task cannot grant access to its source or disclose content from a withheld source. On a transcript created with `records_meeting_id`, the meeting it records.
              */
             readonly source_activity_id?: string | null;
             /** @description Every record this activity is filed under that the caller may read; a link to a record they cannot read is left out. One activity may link to several, a contact and a deal say. Every read that returns an activity answers the same links: the list, one activity, and a contact's 360. */
@@ -42309,9 +42408,14 @@ export interface components {
             recommendation?: components["schemas"]["RecommendationReceipt"];
             /**
              * Format: uuid
-             * @description For a task, the conversation or note it follows from. The caller and assignee need access to that source. The task preserves its audience and inherits its visible links when no links are supplied. For a logged note, call or meeting, the task whose outcome is being recorded. This reference alone does not complete that task or accept a request.
+             * @description For a task, the conversation or note it follows from. The caller and assignee need access to that source. The task preserves its audience and inherits its visible links when no links are supplied. For a logged note, call or meeting, the task whose outcome is being recorded; a meeting transcript naming one needs `meeting_status`. This reference alone does not complete that task or accept a request.
              */
             source_activity_id?: string;
+            /**
+             * Format: uuid
+             * @description A meeting transcript only (`source_system: transcript`), without `source_activity_id`. The open meeting this transcript records. In the same transaction the meeting is marked held and gains the transcript's deal, project and lead links for each kind it has none of. The transcript takes the meeting's time and its deal, project and lead links, keeps no outcome of its own, and names the meeting in `source_activity_id`, so held counts count the meeting once. A meeting that is archived, missing or hidden from the caller answers 404. A live meeting that no longer owes its outcome is refused with 422 on `records_meeting_id`. A meeting the caller may read but not change answers 403. Its subject and notes stay as they are.
+             */
+            records_meeting_id?: string;
             /** @description Meeting, call or note only. Create this task and its source activity in one transaction. The task inherits the source links and audience. Replaying a source identity returns the original activity without adding another task. */
             follow_up_task?: components["schemas"]["ActivityFollowUpTask"];
             /**
@@ -47638,6 +47742,26 @@ export interface components {
              */
             origin: "manual" | "ai" | "adopted";
         };
+        SalesGoalProposalRequest: {
+            /**
+             * Format: int64
+             * @description The yearly goal the months must add up to, when the reader has set one.
+             */
+            yearly_total_minor?: number;
+        };
+        SalesGoalProposal: {
+            /** @description January to December, each an amount of zero or more in minor units of the plan currency. */
+            months: number[];
+            /**
+             * Format: int64
+             * @description What the twelve months add up to.
+             */
+            total_minor: number;
+            /** @description The pattern the proposal followed, in the reader's language, with no figure in it. */
+            reason: string;
+            generated_by: components["schemas"]["WrittenBy"];
+            model_used?: string;
+        };
         SalesGoalPublishInput: {
             reason: string;
             /**
@@ -48237,6 +48361,8 @@ export interface components {
             pipelines?: components["schemas"]["Pipeline"][];
         };
         MeResponse: {
+            /** @description True when this installation runs with no license and its 14-day trial is over. Every seat gets it, not only those who may read the license, because every seat is locked until a license is configured. `LicenseTrial` lists what the lock refuses. Absent while the installation is licensed or still on its trial. */
+            trial_ended?: boolean;
             /** @description Whether this human caller may use the configured activity reader-rendering lane. Absent or false keeps generated text original until an explicit request. */
             reader_rendering_available?: boolean;
             analytics_startup?: components["schemas"]["AnalyticsStartup"];
@@ -52082,6 +52208,29 @@ export interface components {
             finished_at?: string | null;
             /** Format: date-time */
             created_at: string;
+            /** @description The meeting's summary as this reading leaves it: the one this reading wrote, or the newest one an earlier reading wrote. Absent when no reading has written one. */
+            summary?: components["schemas"]["TranscriptSummary"];
+            /** @description True when this reading finished without writing a summary, because the summary failed the check that every point cites lines the transcript has. The meeting keeps `summary` as it was. */
+            summary_refused: boolean;
+        };
+        /** @description A short summary of one meeting, written by a model from its transcript and never by a member. A client marks it as AI-written. Each point cites the transcript lines it was read from; the transcript itself is unchanged. */
+        TranscriptSummary: {
+            /**
+             * Format: uuid
+             * @description The reading that wrote this summary.
+             */
+            read_id: string;
+            /** Format: date-time */
+            generated_at: string;
+            /** @description What the meeting covered, in the language the meeting was held in. */
+            key_points: components["schemas"]["TranscriptSummaryPoint"][];
+            /** @description What the meeting agreed would happen next. Empty when it agreed nothing. */
+            next_steps: components["schemas"]["TranscriptSummaryPoint"][];
+        };
+        TranscriptSummaryPoint: {
+            text: string;
+            /** @description The 1-based transcript lines this point was read from. */
+            source_lines: number[];
         };
         /** @description One approval a transcript reading staged, and who it waits on. */
         TranscriptReadProposal: {
@@ -60215,6 +60364,13 @@ export interface components {
             not_shown: components["schemas"]["MagicNotShown"][];
             /** @description The done lane's second source, the system's decisions, was read to its bound and still had more, so the lane's total is a floor. Absent on older responses. */
             done_is_floor?: boolean;
+            /**
+             * @description The lanes read to `limit` that may hold more than this page draws. `done` is
+             *     also named when its count is a floor (`done_is_floor`). `watching` is never
+             *     cut, because `limit` does not bound it. A client says "at least" for a named
+             *     lane, never "all". Empty when every lane is whole; absent on older responses.
+             */
+            cut_at_limit?: ("done" | "needs_you" | "could_not_complete")[];
             /** @description True when the reader cannot inspect workspace-wide unsupported record counts. Those counts are withheld; absence of described actions does not establish a complete receipt. */
             not_shown_count_withheld?: boolean;
             /** @description Lanes that could not be read. "All clear" is forbidden while one is here: a lane the reader may not see and a lane with nothing in it are different answers. */
@@ -66790,6 +66946,15 @@ export interface operations {
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
             422: components["responses"]["ValidationError"];
+            /** @description The caller fetched 20 invoice documents in the current one-minute window. */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
             /** @description The accounting source could not be reached, or did not answer with a PDF. */
             502: {
                 headers: {
@@ -79226,6 +79391,34 @@ export interface operations {
             422: components["responses"]["ValidationError"];
         };
     };
+    summarizeSalesProgress: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SalesProgressSummaryRequest"];
+            };
+        };
+        responses: {
+            /** @description The summary. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SalesAssessment"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
     listSalesGoalSellers: {
         parameters: {
             query: {
@@ -79361,6 +79554,38 @@ export interface operations {
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
             409: components["responses"]["VersionConflict"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    proposeSalesGoalMonths: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                owner_id: string;
+                year: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SalesGoalProposalRequest"];
+            };
+        };
+        responses: {
+            /** @description The proposal. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SalesGoalProposal"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
             422: components["responses"]["ValidationError"];
         };
     };

@@ -74,6 +74,8 @@ type LogActivityInput struct {
 	// audienceOf gives the new activity the audience, members and parties of
 	// the activity it records. Nil leaves the audience it is born with.
 	audienceOf *ids.ActivityID
+	// recordsMeeting is the open meeting a transcript records (records_meeting_id).
+	recordsMeeting *ids.ActivityID
 	// invitedAssignee admits an invited colleague as the task's assignee. The
 	// HTTP create handler sets it for an assignee the caller NAMED, and
 	// AdmitInvitedAssignee for a promiser's own task. Every other automatic
@@ -298,6 +300,21 @@ func (s *Store) logActivityAndReadTranscript(
 	in.recordedAt = &at
 	in.dealFilingResolver = s.dealFilingResolver
 	in.identityProver = s.identityProver
+	var recorded crmcontracts.Activity
+	if in.recordsMeeting != nil {
+		// A stored transcript has already marked its meeting held, so a retry
+		// replays before admission would refuse that meeting.
+		replay, err := replayedActivity(ctx, tx, in)
+		if err != nil {
+			return crmcontracts.Activity{}, false, err
+		}
+		if replay != nil {
+			return *replay, false, nil
+		}
+		if recorded, err = admitRecordedMeeting(ctx, tx, &in); err != nil {
+			return crmcontracts.Activity{}, false, err
+		}
+	}
 	out, created, err := logActivityInTx(ctx, tx, in)
 	if err != nil {
 		return out, created, err
@@ -305,9 +322,18 @@ func (s *Store) logActivityAndReadTranscript(
 	if err := s.readTranscriptOnLanding(ctx, tx, out, created); err != nil {
 		return out, created, err
 	}
+	if in.recordsMeeting != nil && created {
+		if err := markRecordedMeetingHeld(ctx, tx, recorded, out, in); err != nil {
+			return out, created, err
+		}
+	}
 	if created && in.FollowUpTask != nil {
 		followUp := *in.FollowUpTask
+		// A transcript's next step follows from the meeting it records, as a typed one does.
 		followUp.SourceActivityID = new(ids.UUID(out.Id))
+		if in.recordsMeeting != nil {
+			followUp.SourceActivityID = &in.recordsMeeting.UUID
+		}
 		if _, _, err := s.logActivityAndReadTranscript(ctx, tx, followUp); err != nil {
 			return out, created, err
 		}

@@ -3,12 +3,14 @@
 
 package compose
 
-// The sales assessment's certification case. A scenario names the cells a
-// right reading must cite and the deal its decision must name, or "none".
+// The certification cases of the sales assessment and the Progress summary,
+// one request read under two views. A scenario names the cells a right
+// reading must cite and the deal its decision must name, or "none".
 // Run calls salesassessment.Request and Evaluate calls salesassessment.Parse,
 // so a change to either is a change to what is certified.
 
 import (
+	"cmp"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -23,8 +25,6 @@ import (
 	"github.com/margince/margince/backend/internal/shared/ports/model"
 )
 
-const salesAssessmentSite = "report_interpret/sales_assessment"
-
 // salesAssessmentFixture is one assessment's input with labels in place of
 // ids: the case mints the ids, so no scenario carries one.
 type salesAssessmentFixture struct {
@@ -34,8 +34,12 @@ type salesAssessmentFixture struct {
 	Decisions  []salesAssessmentDecisionFix `json:"decisions"`
 }
 
+// salesAssessmentCellFixture is one cell. A label holding a colon is the
+// cell's whole id, as a Progress figure's is. Name is what the reader calls
+// it when that differs from the label.
 type salesAssessmentCellFixture struct {
 	Label    string `json:"label"`
+	Name     string `json:"name"`
 	Value    string `json:"value"`
 	Unit     string `json:"unit"`
 	Window   string `json:"window"`
@@ -63,17 +67,25 @@ type salesAssessmentExpectation struct {
 	NextDecision string   `json:"next_decision"`
 }
 
-type salesAssessmentCases struct{}
+// salesAssessmentCases serves one site of the task: its variant, and the
+// view production asks that site's request under.
+type salesAssessmentCases struct{ variant, view string }
 
-func (salesAssessmentCases) Site() aitasks.Site {
-	return aitasks.Site{Task: ai.TaskReportInterpret, Variant: "sales_assessment", Kind: ai.SiteKindOneShot}
+var (
+	salesReviewCases     = salesAssessmentCases{variant: "sales_assessment", view: string(crmcontracts.SalesAssessmentViewSales)}
+	progressSummaryCases = salesAssessmentCases{variant: "progress_summary", view: salesassessment.ViewProgress}
+)
+
+func (c salesAssessmentCases) Site() aitasks.Site {
+	return aitasks.Site{Task: ai.TaskReportInterpret, Variant: c.variant, Kind: ai.SiteKindOneShot}
 }
 
 // Prepare refuses a scenario no reply could pass: an expected cell or deal
 // the fixture does not carry.
 //
 //nolint:ireturn // PreparedCase IS the seam: one implementation per site behind the one interface the cert lane runs.
-func (salesAssessmentCases) Prepare(fixture, expected json.RawMessage) (aitasks.PreparedCase, error) {
+func (c salesAssessmentCases) Prepare(fixture, expected json.RawMessage) (aitasks.PreparedCase, error) {
+	salesAssessmentSite := string(ai.TaskReportInterpret) + "/" + c.variant
 	var f salesAssessmentFixture
 	if err := json.Unmarshal(fixture, &f); err != nil {
 		return nil, fmt.Errorf("%s: the fixture is not the shape this site takes: %w", salesAssessmentSite, err)
@@ -85,7 +97,7 @@ func (salesAssessmentCases) Prepare(fixture, expected json.RawMessage) (aitasks.
 	if len(f.Cells) == 0 {
 		return nil, fmt.Errorf("%s: the fixture needs at least one cell, as production never asks without one", salesAssessmentSite)
 	}
-	in, labels, err := salesAssessmentInput(f)
+	in, labels, err := salesAssessmentInput(f, c.view)
 	if err != nil {
 		return nil, fmt.Errorf("%s: %w", salesAssessmentSite, err)
 	}
@@ -99,19 +111,22 @@ func (salesAssessmentCases) Prepare(fixture, expected json.RawMessage) (aitasks.
 			return nil, fmt.Errorf("%s: the expected decision names %q, which is no candidate deal of the fixture", salesAssessmentSite, want.NextDecision)
 		}
 	}
-	return &salesAssessmentCase{in: in, labels: labels, expected: want}, nil
+	return &salesAssessmentCase{site: salesAssessmentSite, in: in, labels: labels, expected: want}, nil
 }
 
-func salesAssessmentInput(f salesAssessmentFixture) (salesassessment.Input, map[string]string, error) {
-	in := salesassessment.Input{View: string(crmcontracts.SalesAssessmentViewSales), Frame: f.Frame}
+func salesAssessmentInput(f salesAssessmentFixture, view string) (salesassessment.Input, map[string]string, error) {
+	in := salesassessment.Input{View: view, Frame: f.Frame}
 	labels := map[string]string{}
 	for _, cell := range f.Cells {
 		if err := refuseUnnameable(cell.Label, "cell", labels); err != nil {
 			return in, nil, err
 		}
-		id := "metric:" + cell.Label
+		id, name := "metric:"+cell.Label, cmp.Or(cell.Name, cell.Label)
+		if strings.Contains(cell.Label, ":") {
+			id = cell.Label
+		}
 		labels[cell.Label] = id
-		in.Cells = append(in.Cells, salesassessment.CellIn{ID: id, Label: cell.Label, Value: cell.Value, Unit: cell.Unit, Window: cell.Window, Coverage: cell.Coverage})
+		in.Cells = append(in.Cells, salesassessment.CellIn{ID: id, Label: name, Value: cell.Value, Unit: cell.Unit, Window: cell.Window, Coverage: cell.Coverage})
 	}
 	owners := map[string]string{}
 	for _, deal := range f.Candidates {
@@ -129,11 +144,12 @@ func salesAssessmentInput(f salesAssessmentFixture) (salesassessment.Input, map[
 		}
 		in.Decisions = append(in.Decisions, salesassessment.DecisionIn{ID: ids.NewV7().String(), Text: decision.Text, Deal: deal, OwnerID: owners[decision.Deal], ReviewOn: decision.ReviewOn, Status: decision.Status, Result: decision.Result})
 	}
-	displayAssessmentFigures(&in, string(textlang.English))
+	salesassessment.DisplayFigures(&in, string(textlang.English))
 	return in, labels, nil
 }
 
 type salesAssessmentCase struct {
+	site     string
 	in       salesassessment.Input
 	labels   map[string]string
 	expected salesAssessmentExpectation
@@ -144,7 +160,7 @@ func (c *salesAssessmentCase) Run(ctx context.Context, completer aitasks.Complet
 	trace := aitasks.Trace{Requests: []model.Request{req}}
 	res, err := completer.Complete(ctx, req)
 	if err != nil {
-		return trace, fmt.Errorf("%s: %w", salesAssessmentSite, err)
+		return trace, fmt.Errorf("%s: %w", c.site, err)
 	}
 	trace.Output = res.Text
 	return trace, nil

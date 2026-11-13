@@ -145,6 +145,8 @@ func (s *Service) Read(
 	}
 	receipt.Done = mergeNewestFirst(receipt.Done, decided, limit)
 	receipt.DoneIsFloor = &floor
+	cut := cutLanes(receipt, limit)
+	receipt.CutAtLimit = &cut
 	// THE TOTALS COUNT WHAT IS DRAWN, and say so by being derived from the
 	// drawn lines rather than from the fetch behind them. The fetch is neither
 	// the page nor the window: each of the six arms applies the same LIMIT

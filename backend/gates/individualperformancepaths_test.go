@@ -37,10 +37,12 @@ type fnValue struct {
 }
 
 // pathFrame is one walked call and what its call site binds each func-typed
-// parameter to. A literal's frame links to the frame it was written in.
+// parameter to, and each string parameter it passes a constant. A literal's
+// frame links to the frame it was written in.
 type pathFrame struct {
 	info   *types.Info
 	bound  map[*types.Var][]fnValue
+	names  map[*types.Var]string
 	parent *pathFrame
 	depth  int
 }
@@ -96,9 +98,10 @@ func newSwitchWalk(g *switchGraph) *switchWalk {
 
 // walk reads fn from an entry state. A call already on the stack answers as
 // one that does not check, so recursion cannot lend itself a check.
-func (sw *switchWalk) walk(fn fnValue, bound map[*types.Var][]fnValue, entry pathState, depth int) walkVerdict {
+func (sw *switchWalk) walk(next run, entry pathState, depth int) walkVerdict {
+	fn := next.fn
 	key := walkKey{fn.decl, fn.lit, entry.checked, entry.bare}
-	reusable := len(bound) == 0 && fn.env == nil
+	reusable := len(next.bound) == 0 && len(next.names) == 0 && fn.env == nil
 	if verdict, ok := sw.memo[key]; ok && reusable {
 		return verdict
 	}
@@ -112,7 +115,7 @@ func (sw *switchWalk) walk(fn fnValue, bound map[*types.Var][]fnValue, entry pat
 		return walkVerdict{}
 	}
 	w := &pathWalk{
-		sw: sw, frame: &pathFrame{info: info, bound: bound, parent: fn.env, depth: depth},
+		sw: sw, frame: &pathFrame{info: info, bound: next.bound, names: next.names, parent: fn.env, depth: depth},
 		shape: shapeOf(ft, info), verdict: walkVerdict{guards: true, bare: true},
 	}
 	// Only a function that returns nothing keeps the caller's figure-free
@@ -401,7 +404,7 @@ func stopsThePath(expr ast.Expr, info *types.Info) bool {
 // exit records one way out of the function. A return of an error known not to
 // be nil is a refusal, and hands out nothing.
 func (w *pathWalk) exit(results []ast.Expr, s pathState, at token.Pos) {
-	if w.shape.errLast && len(results) == w.shape.results && w.refuses(results[len(results)-1], s) {
+	if w.shape.errLast && len(results) == w.shape.results && w.refuses(results[len(results)-1], s, w.carriesValue(results)) {
 		return
 	}
 	if !s.checked {
@@ -446,26 +449,31 @@ func spelledZero(expr ast.Expr) bool {
 	return false
 }
 
+// refusalConstructors are outside functions that always answer a new error.
+// The stand-in importer leaves their bodies unread, so they are declared here.
+// A return beside a value that is not spelled zero is no refusal through them.
+var refusalConstructors = map[string]bool{"fmt.Errorf": true, "errors.New": true, "httperr.Validation": true}
+
 // refuses reports an error result that cannot be nil. That is a variable a
 // condition proved set, a literal, a sentinel, a new error, or a wrapped one.
-func (w *pathWalk) refuses(expr ast.Expr, s pathState) bool {
+// Beside a value, only an error a condition proved set is a refusal.
+func (w *pathWalk) refuses(expr ast.Expr, s pathState, valued bool) bool {
 	info := w.frame.info
 	switch e := ast.Unparen(expr).(type) {
 	case *ast.Ident:
 		obj := info.Uses[e]
-		return obj != nil && (s.nonNil[obj] || (isPackageVar(obj) && isSentinelName(obj.Name())))
+		return obj != nil && (s.nonNil[obj] || (!valued && isPackageVar(obj) && isSentinelName(obj.Name())))
 	case *ast.CompositeLit:
-		return true
+		return !valued
 	case *ast.UnaryExpr:
 		_, lit := ast.Unparen(e.X).(*ast.CompositeLit)
-		return e.Op == token.AND && lit
+		return !valued && e.Op == token.AND && lit
 	case *ast.SelectorExpr:
-		return qualifiesAPackage(e.X, info) && isSentinelName(e.Sel.Name)
+		return !valued && qualifiesAPackage(e.X, info) && isSentinelName(e.Sel.Name)
 	case *ast.CallExpr:
-		name := importedCallee(e, info)
-		return name == "fmt.Errorf" || name == "errors.New" || slices.ContainsFunc(e.Args, func(arg ast.Expr) bool {
+		return (!valued && refusalConstructors[importedCallee(e, info)]) || slices.ContainsFunc(e.Args, func(arg ast.Expr) bool {
 			_, literal := ast.Unparen(arg).(*ast.CompositeLit)
-			return !literal && w.refuses(arg, s)
+			return !literal && w.refuses(arg, s, valued)
 		})
 	}
 	return false

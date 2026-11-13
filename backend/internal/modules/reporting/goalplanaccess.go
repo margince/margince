@@ -73,8 +73,8 @@ func (s *Service) goalWriteReaches(ctx context.Context, tx pgx.Tx, actor princip
 	return s.writeReaches(ctx, tx, crmcontracts.ReportingScope{Kind: reportingOwner, Id: &id})
 }
 
-// requireGoalEdit refuses a plan write the caller may not make.
-func (s *Service) requireGoalEdit(ctx context.Context, tx pgx.Tx, owner ids.UUID) error {
+// RequireGoalEdit refuses a plan write the caller may not make.
+func (s *Service) RequireGoalEdit(ctx context.Context, tx pgx.Tx, owner ids.UUID) error {
 	access, err := s.goalAccess(ctx, tx, owner)
 	if err != nil {
 		return err
