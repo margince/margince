@@ -3289,7 +3289,7 @@ export const en = {
   // a reader, so the screen states the fact it can stand behind and stops.
   "common.errorNoCause": "The request failed. No cause reported.",
   "common.assistantUnavailable":
-    "The assistant did not respond, so no draft was created. Enter the details manually, or ask an administrator to check the model in Settings under AI.",
+    "The AI did not answer. Try again, or ask your admin to check Settings → AI.",
   "common.providerOutOfCredit":
     "The AI provider has no credit left. Contact your system administrator.",
   "common.providerUnauthorized":
