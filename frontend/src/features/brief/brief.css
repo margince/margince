@@ -958,3 +958,8 @@
 .brief-done-small .magic-line-subject {
   margin-inline-start: 0;
 }
+
+/* The embedded receipt's caveat body stays out of the grid when it has none. */
+.brief-done > .panel-body:empty {
+  display: none;
+}

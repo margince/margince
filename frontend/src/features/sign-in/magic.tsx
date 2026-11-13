@@ -6,7 +6,7 @@
 // happened. A receipt and a router, never a second inbox: no row carries a
 // verb, and a lane with nothing in it draws nothing.
 
-import { Fragment, useId } from "react";
+import { useId } from "react";
 import { rowsOf } from "../../api/rows";
 import { Eyebrow } from "../../design-system/eyebrow";
 import { PanelBody } from "../../design-system/panel";
@@ -136,65 +136,40 @@ export function MagicPanel({
     return null;
   }
   const notShown = drawsWaiting ? rowsOf(shown?.not_shown).filter(told) : [];
-  // A ready read with nothing to caveat draws no empty body above the lanes.
-  const caveats =
-    read !== "ready" ||
-    withheld.length > 0 ||
-    (drawsWaiting && shown?.not_shown_count_withheld === true) ||
-    (coverageIncomplete && !drawn.includes("done"));
   const body = (
     <>
-      {caveats && (
-        <PanelBody>
-          <SurfaceState
-            state={read}
-            emptyLabel=""
-            loadingLabel={t("magic.loading")}
-            detail={{ onRetry: () => void magic.refetch() }}
-          >
-            <WithheldSources withheld={withheld} />
-            {drawsWaiting && shown?.not_shown_count_withheld && (
-              <p className="t-caption">{t("magic.visibleScope")}</p>
-            )}
-            {coverageIncomplete && !drawn.includes("done") && (
-              <p className="t-caption">{t("magic.coverageIncomplete")}</p>
-            )}
-          </SurfaceState>
-        </PanelBody>
-      )}
-      {drawn.map((lane) =>
-        embedded && lane === "done" ? (
-          <Fragment key={lane}>
-            <MagicDoneCard
-              rows={rowsOf(shown?.done)}
-              since={shown?.since}
-              zone={zone}
-              byDay={byDay}
-              floor={doneFloor}
-              defaultOpen={doneOpen}
-            />
-            {coverageIncomplete && (
-              <p className="t-caption">{t("magic.coverageIncomplete")}</p>
-            )}
-          </Fragment>
-        ) : (
-          <MagicLaneSection
-            key={lane}
-            lane={lane}
-            title={t(labelFor(LANE_HEADING, lane))}
-            rows={shown?.[lane] ?? []}
-            since={shown?.since}
-            zone={zone}
-            byDay={byDay}
-            fold={lane === "done" ? doneFold : undefined}
-            note={
-              lane === "done" && coverageIncomplete
-                ? t("magic.coverageIncomplete")
-                : undefined
-            }
-          />
-        ),
-      )}
+      <PanelBody>
+        <SurfaceState
+          state={read}
+          emptyLabel=""
+          loadingLabel={t("magic.loading")}
+          detail={{ onRetry: () => void magic.refetch() }}
+        >
+          <WithheldSources withheld={withheld} />
+          {drawsWaiting && shown?.not_shown_count_withheld && (
+            <p className="t-caption">{t("magic.visibleScope")}</p>
+          )}
+          {coverageIncomplete && !drawn.includes("done") && (
+            <p className="t-caption">{t("magic.coverageIncomplete")}</p>
+          )}
+        </SurfaceState>
+      </PanelBody>
+      {drawn.map((lane) => (
+        <DrawnLane
+          key={lane}
+          lane={lane}
+          shown={shown}
+          zone={zone}
+          byDay={byDay}
+          embedded={embedded}
+          done={{
+            fold: doneFold,
+            floor: doneFloor,
+            open: doneOpen,
+            uncounted: coverageIncomplete,
+          }}
+        />
+      ))}
       {notShown.length > 0 && (
         <PanelBody>
           <NotShown entries={notShown} />
@@ -212,6 +187,61 @@ export function MagicPanel({
       </Eyebrow>
       {body}
     </section>
+  );
+}
+
+/**
+ * One lane under its heading. Embedded, the done lane is Done for you's last
+ * card instead, its coverage caveat under it.
+ */
+function DrawnLane({
+  lane,
+  shown,
+  zone,
+  byDay,
+  embedded,
+  done,
+}: Readonly<{
+  lane: MagicLane;
+  shown: MagicReceipt | undefined;
+  zone: string;
+  byDay: boolean;
+  embedded: boolean;
+  done: Readonly<{
+    fold: string;
+    floor: boolean;
+    open: boolean;
+    uncounted: boolean;
+  }>;
+}>) {
+  const t = useT();
+  const uncounted = done.uncounted ? t("magic.coverageIncomplete") : undefined;
+  if (embedded && lane === "done") {
+    return (
+      <>
+        <MagicDoneCard
+          rows={rowsOf(shown?.done)}
+          since={shown?.since}
+          zone={zone}
+          byDay={byDay}
+          floor={done.floor}
+          defaultOpen={done.open}
+        />
+        {uncounted && <p className="t-caption">{uncounted}</p>}
+      </>
+    );
+  }
+  return (
+    <MagicLaneSection
+      lane={lane}
+      title={t(labelFor(LANE_HEADING, lane))}
+      rows={shown?.[lane] ?? []}
+      since={shown?.since}
+      zone={zone}
+      byDay={byDay}
+      fold={lane === "done" ? done.fold : undefined}
+      note={lane === "done" ? uncounted : undefined}
+    />
   );
 }
 
