@@ -48,8 +48,10 @@ curl -fsS http://localhost:8080/readyz
 ```
 
 The api applies the migrations, then serves; the worker restarts until it has. The proxy listens on
-the port `.env` names, 8080 by default. Put a TLS proxy before it, and set `MARGINCE_PUBLIC_BASE_URL`
-to the `https` address. Sign in as the `bootstrap_admin` of `margince.yaml`, then remove
+the port `.env` names, 8080 by default. Without `MARGINCE_LICENSE`, the install runs for 14 days,
+as [Get a license token](deploy-margince.md#get-a-license-token) says. To try it on this machine
+alone, `MARGINCE_PUBLIC_BASE_URL=http://localhost:8080` is enough until you set up email. For real
+use, put a TLS proxy before it, and set `MARGINCE_PUBLIC_BASE_URL` to the `https` address. Sign in as the `bootstrap_admin` of `margince.yaml`, then remove
 `MARGINCE_ADMIN_PASSWORD` from `.env`, as [After the first boot](deploy-margince.md#after-the-first-boot)
 says.
 

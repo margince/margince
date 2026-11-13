@@ -4,7 +4,8 @@
 # The release job runs it after the images are pushed, so a folder that packs
 # but does not start fails the release instead of reaching a host. It answers
 # through the front server: readiness, the anonymous status route, the web app.
-# The stack runs in dev mode because the job holds no license token.
+# It runs as production with no license token, so it starts on its trial as a
+# new install does.
 #
 # Usage: bash scripts/release-compose-smoke.sh dist/release/margince-v1.0.0-compose.tar.gz
 set -euo pipefail
@@ -34,7 +35,6 @@ trap cleanup EXIT
 	echo "MARGINCE_KEYVAULT_ROOT_KEY=$(openssl rand -base64 32)"
 	echo "MARGINCE_ADMIN_PASSWORD=$(openssl rand -hex 24)"
 	echo "MARGINCE_PORT=$port"
-	echo "MARGINCE_ENV=dev"
 } >.env
 
 docker compose up -d --quiet-pull

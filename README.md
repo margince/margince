@@ -20,9 +20,17 @@ Margince is source-available, not open source. [LICENSING.md](LICENSING.md) expl
 
 The [handbook](docs/handbook/README.md) explains the app for the teams who use it. It has no code.
 
-To run your own copy, start with [docs/how-to/deploy-margince.md](docs/how-to/deploy-margince.md).
+## Run your own copy
 
-## Run it on your machine
+Get a release and start it with Docker Compose, as
+[docs/how-to/run-with-docker-compose.md](docs/how-to/run-with-docker-compose.md) says. Without a
+license token it runs a 14-day trial. To run it on servers of your own, start with
+[docs/how-to/deploy-margince.md](docs/how-to/deploy-margince.md).
+
+## Run it from the source
+
+This is the stack for working on the code. It runs in `dev` mode: it has no trial and skips checks
+a real install must pass, so do not use it for real work.
 
 You need Go 1.27 or later, Docker with Compose, `jq`, `golangci-lint`, Node 24 and pnpm.
 
@@ -99,8 +107,8 @@ accept [CLA.md](CLA.md) to send code.
 - To host it as a service for other companies, you need a hosting partner agreement with Gradion.
 - Each release becomes Apache 2.0 no later than two years after it ships.
 
-Outside `dev` and `test` mode, the server needs a license token from Gradion to start, even for one
-seat. For up to 3 seats, ask for a free token with the
+Without a license token, an install runs a 14-day trial and then stops working until a token is
+set up. For up to 3 seats, ask for a free token with the
 [free license form](https://dist.margince.com/free-license). It lasts one year. If this blocks you, please say so
 in an issue.
 
