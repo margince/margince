@@ -204,6 +204,7 @@ function ProjectPage({ view }: Readonly<{ view: Project360 }>) {
       />
       <ProjectCards
         view={view}
+        canEdit={!readOnly}
         newDeal={
           // New Deal from here binds the deal to this project. Binding is held
           // to project write authority rather than deal permission alone.

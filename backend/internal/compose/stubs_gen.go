@@ -1083,6 +1083,22 @@ func (stubs) ReplaceChannelToken(w nethttp.ResponseWriter, r *nethttp.Request, i
 	httperr.NotImplemented(w, r, "ReplaceChannelToken")
 }
 
+func (stubs) UnlinkChannel(w nethttp.ResponseWriter, r *nethttp.Request, recordType crmcontracts.ChannelLinkRecordType, id crmcontracts.Id) {
+	httperr.NotImplemented(w, r, "UnlinkChannel")
+}
+
+func (stubs) GetChannelLink(w nethttp.ResponseWriter, r *nethttp.Request, recordType crmcontracts.ChannelLinkRecordType, id crmcontracts.Id) {
+	httperr.NotImplemented(w, r, "GetChannelLink")
+}
+
+func (stubs) SetChannelVerbosity(w nethttp.ResponseWriter, r *nethttp.Request, recordType crmcontracts.ChannelLinkRecordType, id crmcontracts.Id) {
+	httperr.NotImplemented(w, r, "SetChannelVerbosity")
+}
+
+func (stubs) LinkChannel(w nethttp.ResponseWriter, r *nethttp.Request, recordType crmcontracts.ChannelLinkRecordType, id crmcontracts.Id) {
+	httperr.NotImplemented(w, r, "LinkChannel")
+}
+
 func (stubs) ListChannelProviders(w nethttp.ResponseWriter, r *nethttp.Request) {
 	httperr.NotImplemented(w, r, "ListChannelProviders")
 }

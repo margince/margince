@@ -18,7 +18,8 @@ An area with no inbound key is a candidate for a separate module. Its outbound k
 | [assignments](assignments.md) | 2 | 27 | 0 | 5 | 3 |
 | [assurance](assurance.md) | 9 | 108 | 0 | 7 | 5 |
 | [automation](automation.md) | 3 | 34 | 1 | 2 | 0 |
-| [capture](capture.md) | 28 | 272 | 4 | 28 | 15 |
+| [capture](capture.md) | 28 | 274 | 5 | 28 | 15 |
+| [chatlinks](chatlinks.md) | 2 | 36 | 0 | 4 | 2 |
 | [collections](collections.md) | 13 | 108 | 1 | 10 | 6 |
 | [commissions](commissions.md) | 1 | 18 | 0 | 2 | 2 |
 | [comms](comms.md) | 1 | 44 | 4 | 4 | 1 |
@@ -29,10 +30,10 @@ An area with no inbound key is a candidate for a separate module. Its outbound k
 | [contracts](contracts.md) | 1 | 29 | 2 | 3 | 0 |
 | [customfields](customfields.md) | 1 | 19 | 0 | 1 | 0 |
 | [dealrooms](dealrooms.md) | 8 | 95 | 0 | 8 | 1 |
-| [deals](deals.md) | 29 | 422 | 25 | 19 | 5 |
+| [deals](deals.md) | 29 | 422 | 26 | 19 | 5 |
 | [finance](finance.md) | 5 | 87 | 0 | 3 | 0 |
 | [forecasting](forecasting.md) | 4 | 98 | 1 | 2 | 0 |
-| [identity](identity.md) | 22 | 204 | 158 | 6 | 5 |
+| [identity](identity.md) | 22 | 204 | 159 | 6 | 5 |
 | [initiatives](initiatives.md) | 5 | 45 | 0 | 2 | 1 |
 | [integrations](integrations.md) | 5 | 61 | 3 | 3 | 1 |
 | [introductions](introductions.md) | 1 | 31 | 0 | 6 | 1 |
@@ -41,7 +42,7 @@ An area with no inbound key is a candidate for a separate module. Its outbound k
 | [notices](notices.md) | 3 | 26 | 0 | 3 | 3 |
 | [platform](platform.md) | 13 | 95 | 2 | 3 | 1 |
 | [privacy](privacy.md) | 2 | 14 | 0 | 0 | 0 |
-| [projects](projects.md) | 3 | 42 | 10 | 3 | 0 |
+| [projects](projects.md) | 3 | 42 | 11 | 3 | 0 |
 | [recordlinks](recordlinks.md) | 1 | 8 | 0 | 0 | 0 |
 | [reporting](reporting.md) | 14 | 124 | 0 | 10 | 0 |
 | [search](search.md) | 4 | 41 | 0 | 4 | 2 |
@@ -88,6 +89,13 @@ An area with no inbound key is a candidate for a separate module. Its outbound k
 - `assurance_task_item.assurance_task_item_subject_offer_id_fkey`: `FOREIGN KEY (subject_offer_id) REFERENCES offer(id) ON DELETE CASCADE`
 - `assurance_task_item.assurance_task_item_subject_signal_id_fkey`: `FOREIGN KEY (subject_signal_id) REFERENCES signal(id) ON DELETE CASCADE`
 - `assurance_task_item.assurance_task_item_task_activity_id_fkey`: `FOREIGN KEY (task_activity_id) REFERENCES activity(id) ON DELETE CASCADE`
+
+### chatlinks
+
+- `chat_link.chat_link_connection_id_fkey`: `FOREIGN KEY (connection_id) REFERENCES channel_connection(id) ON DELETE RESTRICT`
+- `chat_link.chat_link_deal_id_fkey`: `FOREIGN KEY (deal_id) REFERENCES deal(id) ON DELETE CASCADE`
+- `chat_link.chat_link_linked_by_fkey`: `FOREIGN KEY (linked_by) REFERENCES app_user(id) ON DELETE RESTRICT`
+- `chat_link.chat_link_project_id_fkey`: `FOREIGN KEY (project_id) REFERENCES project(id) ON DELETE CASCADE`
 
 ### commissions
 

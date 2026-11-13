@@ -51,6 +51,16 @@ func (h ChannelHandlers) WithVault(vault keyvault.Vault) ChannelHandlers {
 	return h
 }
 
+// WithBotCheck returns a copy whose store also connects bots of provider. A
+// transport that was never composed stays uncomposed.
+func (h ChannelHandlers) WithBotCheck(provider string, check ChannelBotCheck) ChannelHandlers {
+	if h.store == nil {
+		return h
+	}
+	h.store = h.store.WithBotCheck(provider, check)
+	return h
+}
+
 // ListChannelConnections returns the workspace's live channel connections.
 func (h ChannelHandlers) ListChannelConnections(w http.ResponseWriter, r *http.Request) {
 	if !h.composed(w, r) {
@@ -80,6 +90,7 @@ func (h ChannelHandlers) ConnectChannel(w http.ResponseWriter, r *http.Request) 
 	conn, err := h.store.Connect(r.Context(), ConnectRequest{
 		Provider: string(req.Provider),
 		BotToken: req.BotToken,
+		Address:  deref(req.Address),
 	})
 	if err != nil {
 		writeChannelErr(w, r, err)
@@ -144,6 +155,7 @@ func wireChannelConnection(c ChannelConnection) crmcontracts.ChannelConnection {
 		Provider:     crmcontracts.ChannelConnectionProvider(c.Provider),
 		ChannelId:    c.ChannelID,
 		ChannelLabel: c.ChannelLabel,
+		Address:      optionalString(c.Address),
 		Status:       crmcontracts.ChannelConnectionStatus(c.Status),
 		Version:      c.Version,
 		CreatedAt:    &c.CreatedAt,
@@ -158,11 +170,11 @@ func wireChannelConnection(c ChannelConnection) crmcontracts.ChannelConnection {
 // error the platform mapper logs server-side.
 func writeChannelErr(w http.ResponseWriter, r *http.Request, err error) {
 	switch {
-	case errors.Is(err, telegram.ErrTokenRejected):
+	case errors.Is(err, telegram.ErrTokenRejected), errors.Is(err, ErrChannelTokenRejected):
 		httperr.Write(w, r, &httperr.DetailedError{
 			Status: http.StatusBadRequest,
 			Code:   "channel_token_rejected",
-			Detail: "The bot token was rejected. Check the token BotFather issued, and that it has not been revoked.",
+			Detail: "The bot token was rejected. Check the token the provider issued, and that it has not been revoked.",
 		})
 	case errors.Is(err, ErrChannelWorkspaceBotAlreadyBound):
 		httperr.Write(w, r, &httperr.DetailedError{
@@ -176,7 +188,7 @@ func writeChannelErr(w http.ResponseWriter, r *http.Request, err error) {
 			Code:   "channel_credentials_not_configured",
 			Detail: "This installation has no credential store configured, so a bot's token cannot be sealed or removed. Configure one and restart.",
 		})
-	case errors.Is(err, telegram.ErrUnreachable):
+	case errors.Is(err, telegram.ErrUnreachable), errors.Is(err, ErrChannelProviderUnreachable):
 		httperr.Write(w, r, &httperr.DetailedError{
 			Status: http.StatusBadGateway,
 			Code:   "channel_provider_unreachable",
@@ -191,4 +203,18 @@ func writeChannelErr(w http.ResponseWriter, r *http.Request, err error) {
 	default:
 		httperr.Write(w, r, err)
 	}
+}
+
+func deref(value *string) string {
+	if value == nil {
+		return ""
+	}
+	return *value
+}
+
+func optionalString(value string) *string {
+	if value == "" {
+		return nil
+	}
+	return &value
 }

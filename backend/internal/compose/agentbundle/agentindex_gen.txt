@@ -621,6 +621,10 @@ Every call a passport can make, grouped by area. Find the operationId in openapi
 | --- | --- | --- | --- | --- |
 | `GET /channel-connections` | listChannelConnections | List the workspace's messaging-channel connections. | Read records | at once |
 | `DELETE /channel-connections/{id}` | disconnectChannel | Disconnect a messaging channel (archives the binding and destroys the credential). | Change records | at once |
+| `GET /channel-links/{record_type}/{id}` | getChannelLink | The chat channel a deal or project is linked to, if any. | Read records | at once |
+| `POST /channel-links/{record_type}/{id}` | linkChannel | Link a deal or project to a new or existing private chat channel. | Send messages | at once |
+| `PATCH /channel-links/{record_type}/{id}` | setChannelVerbosity | Choose how much Margince posts into a record's channel. | Change records | at once |
+| `DELETE /channel-links/{record_type}/{id}` | unlinkChannel | Stop syncing a record with its chat channel. | Change records | at once |
 | `GET /connectors` | listConnectors | List the calling user's capture connections + sync state. | Read records | at once |
 | `POST /connectors/{provider}/disconnect` | disconnectConnector | Disconnect the calling user's mail/calendar capture. | Change records | at once |
 | `PUT /connectors/{provider}/signature-enrichment` | setConnectorSignatureEnrichment | Set this mailbox's own answer to the nightly signature pass. | Change records | at once |
