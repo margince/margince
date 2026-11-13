@@ -16,10 +16,14 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/systemtext"
 )
 
+// clockRefoldAuditReason is why a data task that refolds a last-activity clock
+// writes no audit row of its own.
+const clockRefoldAuditReason = "the last-activity triggers move the same derived clock without an audit"
+
 // pastActivityClocksDataTask moves back the stored clocks the rule before
 // 1792656701 left in the future, through the refold the job runs.
 func pastActivityClocksDataTask() datatask.Task {
-	audit := datatask.AuditPolicy{Reason: "the last-activity triggers move the same derived clock without an audit"}
+	audit := datatask.AuditPolicy{Reason: clockRefoldAuditReason}
 	return datatask.Task{
 		ID: "core/1792656701_past_activity_clocks", Version: 1,
 		Title: systemtext.Literal("datatask.title.core.1792656701_past_activity_clocks"), Requires: []string{"core/1792656701"},

@@ -374,8 +374,12 @@ func (h Handlers) oauthAuthorize(w http.ResponseWriter, r *http.Request) {
 	var code string
 	if err == nil {
 		code, err = h.svc.mintConsentedAuthorizationCode(
-			r.Context(), id, consentChoice{scopes: r.PostForm.Get("scopes"), areas: areas}, req,
+			r.Context(), id, currentSessionHash(r), consentChoice{scopes: r.PostForm.Get("scopes"), areas: areas}, req,
 		)
+	}
+	if errors.Is(err, errConsentingSessionEnded) {
+		httperr.Unauthorized(w, r, "your session ended before the consent was saved; sign in again and start from the client")
+		return
 	}
 	if errors.Is(err, apperrors.ErrInvalidArgument) {
 		// Not something the human's next click fixes: this server rendered

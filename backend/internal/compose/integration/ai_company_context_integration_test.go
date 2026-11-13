@@ -166,7 +166,8 @@ func TestDraftReplyCarriesItsBoundedCompanyContextPolicy(t *testing.T) {
 		t.Fatalf("NewModelPath: %v", err)
 	}
 	if _, err := modelPath.DraftReply.Complete(e.Admin(), model.Request{
-		Messages: []model.Message{{Role: "user", Content: "draft from this activity"}},
+		Messages: []model.Message{{Role: "user", Content: "draft a generic reply using the company positioning"}},
+		Subjects: model.AboutNoContact("only the company's own recorded facts"),
 	}); err != nil {
 		t.Fatalf("draft reply completion: %v", err)
 	}

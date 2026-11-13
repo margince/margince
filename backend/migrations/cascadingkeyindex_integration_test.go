@@ -227,7 +227,6 @@ var foreignKeyNoIndexNeeded = map[string]string{
 	"deal_stage_evidence":        "append-only: evidence for why a stage moved",
 	"stage_exit_criterion":       "a criterion is archived, so the evidence that met it keeps resolving",
 	"deal_stage_history":         "append-only: the history is the record",
-	"finance_connection":         "a connection is archived, keeping the entries it produced attributable",
 	"product":                    "a product is archived; the offers that priced it still name it",
 	"relationship":               "a relationship is archived or ended in place",
 	"record_role":                "append-only: a role assignment is who could do what, when",

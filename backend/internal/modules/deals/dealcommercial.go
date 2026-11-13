@@ -42,7 +42,7 @@ func priorityOf(d crmcontracts.Deal) *string {
 }
 
 // appendCommercialFilters narrows a deal list by the three commercial-context
-// columns.
+// columns and by link type.
 //
 // Each also admits the sentinel "unset", which asks for the deals carrying no
 // value at all — a question no enum member can pose. Spelled as a sentinel
@@ -65,6 +65,9 @@ func appendCommercialFilters(where []string, in ListDealsInput, arg func(any) in
 			continue
 		}
 		where = append(where, storekit.SQLf("%s = $%d", f.column, arg(*f.value)))
+	}
+	if in.LinkType != nil {
+		where = append(where, storekit.DealLinkFilter("deal.id", storekit.SQLf("$%d", arg(*in.LinkType))))
 	}
 	return where
 }

@@ -281,10 +281,11 @@
   color: var(--textSecondary);
 }
 
-/* The rail's verbs are quiet words, not underlined links. */
+/* The rail's verbs are quiet words, not underlined links. A row's bare link
+   is named as the base sheet names it, so this rule wins whichever loads last. */
 .analytics-board-rail .btn-link,
 .analytics-board-rail .panel-foot > a,
-.analytics-attention-row > a {
+.analytics-attention-row > a:not([class]) {
   text-decoration: none;
   font-weight: var(--fontWeightMedium);
 }
@@ -317,4 +318,10 @@
 }
 .analytics-body .filter-bar-row {
   align-items: center;
+}
+
+/* My targets: rows of equal length, so every reading is one size. */
+.analytics-target-rows {
+  display: grid;
+  gap: var(--space-3);
 }

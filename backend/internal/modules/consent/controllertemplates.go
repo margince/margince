@@ -54,6 +54,9 @@ const (
 	// they asked not to receive — and a link asking them to do something more
 	// would read as a message that did not take the first answer.
 	TemplateOptOutAcknowledgement = "optout_acknowledgement"
+	// TemplateRestrictionLift tells a contact, before it happens, that their
+	// restriction of processing is lifted (GDPR Art. 18(3)). It carries no link.
+	TemplateRestrictionLift = "restriction_lift"
 )
 
 // Rendered is one template resolved into the words that will be sent.
@@ -160,6 +163,14 @@ var controllerTemplates = map[string]controllerTemplate{
 		// The one template with nothing to click. comms refuses a body whose
 		// placeholder count disagrees with the material it was staged with, and
 		// this is staged with none.
+		linkless: true,
+	},
+	TemplateRestrictionLift: {
+		version:  1,
+		category: commsauthz.CategoryPrivacyNotice,
+		subject:  func(w mailcopy.Copy) string { return w.RestrictionLiftSubject },
+		intro:    func(w mailcopy.Copy) string { return w.RestrictionLiftBody },
+		closing:  func(w mailcopy.Copy) string { return w.NoticeIgnore },
 		linkless: true,
 	},
 }

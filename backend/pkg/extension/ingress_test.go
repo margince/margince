@@ -287,3 +287,25 @@ func TestAChannelIdentityMayCarryACorroboratingAddress(t *testing.T) {
 		t.Fatalf("the grammar refused a channel identity carrying an address: %v", err)
 	}
 }
+
+func TestOnlyATaskMayCarryAnAssigneeOrADueDate(t *testing.T) {
+	task := aValidRecord()
+	task.Activity.Kind = extension.ActivityKindTask
+	task.Activity.AssigneeID = "0198e5a0-1111-7222-8333-444455556666"
+	task.Activity.DueAt = time.Date(2026, 11, 2, 9, 0, 0, 0, time.UTC)
+	if err := task.Validate(); err != nil {
+		t.Fatalf("a task with an assignee and a due date was refused: %v", err)
+	}
+
+	for name, damage := range map[string]func(*extension.Record){
+		"an assignee on a note":     func(r *extension.Record) { r.Activity.Kind = "note" },
+		"a due date on a note":      func(r *extension.Record) { r.Activity.Kind = "note"; r.Activity.AssigneeID = "" },
+		"an assignee that is no id": func(r *extension.Record) { r.Activity.AssigneeID = "the deal owner" },
+	} {
+		rec := task
+		damage(&rec)
+		if err := rec.Validate(); err == nil {
+			t.Errorf("%s was accepted", name)
+		}
+	}
+}

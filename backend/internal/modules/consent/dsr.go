@@ -49,8 +49,9 @@ const (
 	// as the field names above, and dsrKindErasure carries the higher stake:
 	// its comparison guards an irreversible scrub, so a typo there skips the
 	// erasure silently and reports the request fulfilled.
-	dsrKindAccess  = "access"
-	dsrKindErasure = "erasure"
+	dsrKindAccess      = "access"
+	dsrKindErasure     = "erasure"
+	dsrKindRestriction = "restriction"
 
 	dsrStatusFulfilled = "fulfilled"
 )

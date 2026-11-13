@@ -38,9 +38,13 @@
 .reporting-toolbar > * {
   min-width: 8rem;
 }
-/* A date field holds its box and picker: 8rem would let them spill past it. */
-.reporting-toolbar > .field:has(.date-input) {
+/* A date field holds its box and picker: 8rem would let them spill past it.
+   A month field holds its month and year on one line for the same reason. */
+.reporting-toolbar > .field:has(.date-input, .month-input) {
   min-width: min-content;
+}
+.reporting-toolbar .month-input {
+  flex-wrap: nowrap;
 }
 /* A toolbar whose verbs the reader may not use renders nothing, and its margin
    would still open a gap in the page. */

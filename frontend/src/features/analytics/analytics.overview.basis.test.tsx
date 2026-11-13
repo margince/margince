@@ -162,7 +162,7 @@ it.each([
     if (measure === "manager_call") {
       const call = await card(label);
       expect(
-        call.getByText(`${short(20000 - amount)} short of target`),
+        call.getByText(`${short(20000 - amount)} short of goal`),
       ).toBeVisible();
       await openReceipt(user, call);
       expect(await screen.findByText("Called 30 Oct 2026")).toBeVisible();

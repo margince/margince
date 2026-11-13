@@ -172,9 +172,9 @@ func (inertRetriever) AssembleContext(context.Context, datasource.EntityRef, ret
 // catch. Every seam here is non-nil for the same reason: each registrar
 // registers nothing when its seam is absent, so a nil would shrink the set
 // silently rather than fail.
-func fullRegistry(t *testing.T) *Registry {
+func fullRegistry(t *testing.T, opts ...RegistryOption) *Registry {
 	t.Helper()
-	r := NewRegistry(nil, auth.NewGate(fullSeatAuthority{}))
+	r := NewRegistry(nil, auth.NewGate(fullSeatAuthority{}), opts...)
 	RegisterCoreTools(r, nil, nil, nil, nil, nil, nil)
 	RegisterRecordSearchTool(r, nil, func(context.Context, RecordSearchQuery) (RecordSearchPage, error) {
 		return RecordSearchPage{}, nil
@@ -710,7 +710,8 @@ func TestTheWholeToolListEncodes(t *testing.T) {
 	// rendered without it would leave the one member added most recently as the
 	// only part of the entry no encode check has ever seen.
 	listed := s.toolList(scopedAgentCtx(
-		principal.ScopeRead, principal.ScopeDraft, principal.ScopeWrite, principal.ScopeSend),
+		principal.ScopeRead, principal.ScopeDraft, principal.ScopeWrite, principal.ScopeSend,
+	),
 		framing{modern: true, apps: true})
 	if len(listed) == 0 {
 		t.Fatal("no tools listed — this walk would pass vacuously")

@@ -24,12 +24,9 @@ import (
 type initiativeRules struct{ collections *collections.Store }
 
 func (r initiativeRules) Match(ctx context.Context, tx pgx.Tx, recordType string, rule storekit.Predicate, limit int) ([]ids.UUID, int, error) {
-	engine, ok, err := r.collections.SegmentEngine(ctx, recordType)
+	engine, err := r.engine(ctx, recordType)
 	if err != nil {
 		return nil, 0, err
-	}
-	if !ok {
-		return nil, 0, fmt.Errorf("%q is not a filterable record type: %w", recordType, apperrors.ErrInvalidArgument)
 	}
 	count, err := engine.CountMatching(ctx, tx, rule)
 	if err != nil {
@@ -42,9 +39,28 @@ func (r initiativeRules) Match(ctx context.Context, tx pgx.Tx, recordType string
 	return matched, count, nil
 }
 
-// newInitiativeStore is the one initiative store the transport and the
+func (r initiativeRules) Page(ctx context.Context, tx pgx.Tx, recordType string, rule storekit.Predicate, after *ids.UUID, limit int) ([]ids.UUID, bool, error) {
+	engine, err := r.engine(ctx, recordType)
+	if err != nil {
+		return nil, false, err
+	}
+	return engine.SelectPage(ctx, tx, rule, after, limit)
+}
+
+func (r initiativeRules) engine(ctx context.Context, recordType string) (storekit.Query, error) {
+	engine, ok, err := r.collections.SegmentEngine(ctx, recordType)
+	if err != nil {
+		return storekit.Query{}, err
+	}
+	if !ok {
+		return storekit.Query{}, fmt.Errorf("%q is not a filterable record type: %w", recordType, apperrors.ErrInvalidArgument)
+	}
+	return engine, nil
+}
+
+// NewInitiativeStore is the one initiative store the transport and the
 // reporting engine share, so both read one membership.
-func newInitiativeStore(pool *pgxpool.Pool) *initiatives.Store {
+func NewInitiativeStore(pool *pgxpool.Pool) *initiatives.Store {
 	db := InstallationDB(pool)
 	return initiatives.NewStore(db, time.Now, initiativeRules{collections: collections.NewStore(db)})
 }

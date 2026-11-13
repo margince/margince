@@ -195,7 +195,7 @@ func TestSdrTeamReviewWithIndividualPerformanceOffKeepsTeamTotalsOnly(t *testing
 	e.showIndividualPerformance(t, false)
 
 	got := f.review(f.as(f.manager), t, crmcontracts.GetSdrTeamReviewParamsScopeKindTeam, &e.Team1)
-	if got.Withheld || got.Handoffs == nil || got.Handoffs.Outcomes.Submitted != 2 {
+	if got.Withheld || got.WithheldReason != nil || got.Handoffs == nil || got.Handoffs.Outcomes.Submitted != 2 {
 		t.Fatalf("two colleagues' work is a team total the manager may read: %+v", got)
 	}
 	if !got.MembersWithheld || len(got.Members) != 0 {
@@ -205,6 +205,10 @@ func TestSdrTeamReviewWithIndividualPerformanceOffKeepsTeamTotalsOnly(t *testing
 	mine := f.review(f.as(e.Rep1), t, crmcontracts.GetSdrTeamReviewParamsScopeKindTeam, &e.Team1)
 	if !mine.Withheld || mine.Handoffs != nil || mine.Meetings != nil || len(mine.Members) != 0 || mine.Workflow != crmcontracts.SdrTeamReviewWorkflowHandoff {
 		t.Fatalf("a total one colleague makes up is withheld: %+v", mine)
+	}
+	// The review says why in the words a chart withheld by the same floor uses.
+	if mine.WithheldReason == nil || *mine.WithheldReason != reportingCoverageWords.BelowFloor.En {
+		t.Fatalf("withheld_reason = %v, want the chart's below-floor sentence", mine.WithheldReason)
 	}
 }
 

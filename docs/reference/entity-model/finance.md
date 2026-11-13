@@ -41,7 +41,7 @@ The 5 tables owned by `finance`, as the migrations build them. [Back to the enti
 
 ## finance_customer_link
 
-12 columns · primary key `(id)` · referenced by 0 foreign keys
+12 columns · primary key `(id)` · referenced by 2 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
@@ -64,15 +64,19 @@ The 5 tables owned by `finance`, as the migrations build them. [Back to the enti
 |---|---|---|
 | `company_id` | `company` | the parent cannot be deleted while this row points at it |
 | `connection_id` | `finance_connection` | the parent cannot be deleted while this row points at it |
+| `connection_id, external_customer_id` | `finance_external_customer` | the parent cannot be deleted while this row points at it |
 
 **Rules**
 
+- `finance_customer_link_mapping_key`: `UNIQUE (id, connection_id, company_id)`
 - `finance_customer_link_version_js_safe`: `CHECK (((version >= '-9007199254740991'::bigint) AND (version <= '9007199254740991'::bigint)))`
 
 **Indexes**
 
 - `finance_customer_link_company_ix`: `btree (connection_id, company_id) WHERE (archived_at IS NULL)`
+- `finance_customer_link_directory_idx`: `btree (connection_id, external_customer_id)`
 - `finance_customer_link_external_ux`: `unique, btree (connection_id, external_customer_id) WHERE (archived_at IS NULL)`
+- `finance_customer_link_mapping_key`: `unique, btree (id, connection_id, company_id)`
 - `finance_customer_link_pkey`: `unique, btree (id)`
 
 **Triggers**
@@ -81,7 +85,7 @@ The 5 tables owned by `finance`, as the migrations build them. [Back to the enti
 
 ## finance_external_customer
 
-12 columns · primary key `(id)` · referenced by 0 foreign keys
+12 columns · primary key `(id)` · referenced by 1 foreign key
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
@@ -120,7 +124,7 @@ The 5 tables owned by `finance`, as the migrations build them. [Back to the enti
 
 ## finance_invoice
 
-29 columns · primary key `(id)` · referenced by 2 foreign keys
+30 columns · primary key `(id)` · referenced by 4 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
@@ -130,6 +134,7 @@ The 5 tables owned by `finance`, as the migrations build them. [Back to the enti
 | `credited_minor` | `bigint`, default `0` | yes |  |
 | `credits_invoice_id` | `uuid` |  | Points at `finance_invoice.id`. |
 | `currency` | `currency_code` | yes |  |
+| `customer_link_id` | `uuid` |  |  |
 | `disputed_at` | `timestamp with time zone` |  |  |
 | `due_at` | `date` |  |  |
 | `external_id` | `text` | yes |  |
@@ -161,15 +166,19 @@ The 5 tables owned by `finance`, as the migrations build them. [Back to the enti
 | `company_id` | `company` | the parent cannot be deleted while this row points at it |
 | `connection_id` | `finance_connection` | the parent cannot be deleted while this row points at it |
 | `credits_invoice_id` | `finance_invoice` | the parent cannot be deleted while this row points at it |
+| `credits_invoice_id, connection_id, company_id` | `finance_invoice` | the parent cannot be deleted while this row points at it |
+| `customer_link_id, connection_id, company_id` | `finance_customer_link` | the parent cannot be deleted while this row points at it |
 
 **Rules**
 
 - `finance_invoice_connection_id_external_id_key`: `UNIQUE (connection_id, external_id)`
+- `finance_invoice_credit_note_status`: `CHECK (((credits_invoice_id IS NULL) OR (status = ANY (ARRAY['credited', 'void']))))`
 - `finance_invoice_credits_not_self`: `CHECK (((credits_invoice_id IS NULL) OR (credits_invoice_id <> id)))`
 - `finance_invoice_fx_pair`: `CHECK (((fx_rate_to_base IS NULL) = (fx_rate_date IS NULL)))`
 - `finance_invoice_gross_minor_js_safe`: `CHECK (((gross_minor >= '-9007199254740991'::bigint) AND (gross_minor <= '9007199254740991'::bigint)))`
 - `finance_invoice_net_minor_js_safe`: `CHECK (((net_minor >= '-9007199254740991'::bigint) AND (net_minor <= '9007199254740991'::bigint)))`
 - `finance_invoice_open_minor_js_safe`: `CHECK (((open_minor >= '-9007199254740991'::bigint) AND (open_minor <= '9007199254740991'::bigint)))`
+- `finance_invoice_owner_key`: `UNIQUE (id, connection_id, company_id)`
 - `finance_invoice_paid_status`: `CHECK (((fully_paid_at IS NULL) OR (status = ANY (ARRAY['paid', 'credited', 'void']))))`
 - `finance_invoice_status_check`: `CHECK ((status = ANY (ARRAY['draft', 'open', 'partially_paid', 'paid', 'overdue', 'disputed', 'credited', 'void'])))`
 - `finance_invoice_tax_minor_js_safe`: `CHECK (((tax_minor >= '-9007199254740991'::bigint) AND (tax_minor <= '9007199254740991'::bigint)))`
@@ -180,8 +189,11 @@ The 5 tables owned by `finance`, as the migrations build them. [Back to the enti
 
 - `finance_invoice_account_ix`: `btree (company_id, issued_at DESC)`
 - `finance_invoice_connection_id_external_id_key`: `unique, btree (connection_id, external_id)`
+- `finance_invoice_credit_owner_idx`: `btree (credits_invoice_id, connection_id, company_id)`
 - `finance_invoice_credits_ix`: `btree (credits_invoice_id) WHERE (credits_invoice_id IS NOT NULL)`
+- `finance_invoice_customer_owner_idx`: `btree (customer_link_id, connection_id, company_id)`
 - `finance_invoice_open_ix`: `btree (company_id) WHERE ((open_minor > 0) AND (void_at IS NULL))`
+- `finance_invoice_owner_key`: `unique, btree (id, connection_id, company_id)`
 - `finance_invoice_pkey`: `unique, btree (id)`
 
 **Triggers**
@@ -190,7 +202,7 @@ The 5 tables owned by `finance`, as the migrations build them. [Back to the enti
 
 ## finance_payment
 
-16 columns · primary key `(id)` · referenced by 0 foreign keys
+17 columns · primary key `(id)` · referenced by 0 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
@@ -199,6 +211,7 @@ The 5 tables owned by `finance`, as the migrations build them. [Back to the enti
 | `company_id` | `uuid` | yes | Points at `company.id`. |
 | `connection_id` | `uuid` | yes | Points at `finance_connection.id`. |
 | `currency` | `currency_code` | yes |  |
+| `customer_link_id` | `uuid` |  |  |
 | `external_id` | `text` | yes |  |
 | `invoice_id` | `uuid` |  | Points at `finance_invoice.id`. |
 | `paid_at` | `timestamp with time zone` | yes |  |
@@ -217,7 +230,9 @@ The 5 tables owned by `finance`, as the migrations build them. [Back to the enti
 |---|---|---|
 | `company_id` | `company` | the parent cannot be deleted while this row points at it |
 | `connection_id` | `finance_connection` | the parent cannot be deleted while this row points at it |
+| `customer_link_id, connection_id, company_id` | `finance_customer_link` | the parent cannot be deleted while this row points at it |
 | `invoice_id` | `finance_invoice` | the parent cannot be deleted while this row points at it |
+| `invoice_id, connection_id, company_id` | `finance_invoice` | the parent cannot be deleted while this row points at it |
 
 **Rules**
 
@@ -229,7 +244,9 @@ The 5 tables owned by `finance`, as the migrations build them. [Back to the enti
 
 - `finance_payment_account_ix`: `btree (company_id, paid_at DESC)`
 - `finance_payment_connection_id_external_id_key`: `unique, btree (connection_id, external_id)`
+- `finance_payment_customer_owner_idx`: `btree (customer_link_id, connection_id, company_id)`
 - `finance_payment_invoice_ix`: `btree (invoice_id) WHERE (invoice_id IS NOT NULL)`
+- `finance_payment_invoice_owner_idx`: `btree (invoice_id, connection_id, company_id)`
 - `finance_payment_pkey`: `unique, btree (id)`
 
 **Triggers**

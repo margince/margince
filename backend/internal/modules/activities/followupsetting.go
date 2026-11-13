@@ -10,6 +10,8 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/platform/config"
+	"github.com/margince/margince/backend/internal/platform/database"
+	"github.com/margince/margince/backend/internal/platform/settings"
 )
 
 const (
@@ -43,7 +45,9 @@ func ConfigSettings() []config.Any {
 // followUpAfterDays reads the setting inside the caller's transaction, under
 // the boot value the program bound.
 func followUpAfterDays(ctx context.Context, tx pgx.Tx) (int, error) {
-	days, err := config.StoredApplyTx(ctx, tx, config.Bound(), FollowUpAfterDays)
+	days, err := database.Remember(tx, settings.ValueMemoKey(FollowUpAfterDays.Key()), func() (int, error) {
+		return config.StoredApplyTx(ctx, tx, config.Bound(), FollowUpAfterDays)
+	})
 	if err != nil {
 		return 0, fmt.Errorf("read %s: %w", FollowUpAfterDays.Key(), err)
 	}

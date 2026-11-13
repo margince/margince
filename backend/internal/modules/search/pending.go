@@ -234,6 +234,9 @@ func (p pendingSource) pendingIDsSQL(entityType string) string {
 		SELECT id FROM pending_text`
 }
 
+// activityIndexable is an activity whose text may be embedded. Mail a contact
+// restricted under GDPR Art. 18 sends or receives is not, until the lift.
 func activityIndexable(alias string) string {
-	return auth.WorkspaceAudienceSQL(alias) + " AND " + alias + ".restricted_at IS NULL AND " + auth.CommitmentContentRetainedClause(alias)
+	return auth.WorkspaceAudienceSQL(alias) + " AND " + alias + ".restricted_at IS NULL AND " + auth.CommitmentContentRetainedClause(alias) +
+		" AND NOT " + auth.ActivityRestrictedSQL(alias+".id")
 }

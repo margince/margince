@@ -11,6 +11,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/compose/capturehealth"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/modules/continuity"
@@ -145,7 +146,7 @@ func (s Server) captureSummary(ctx context.Context) (crmcontracts.HealthSource, 
 		if err != nil {
 			return false, err
 		}
-		classifier, err = captureClassifierHealth(ctx, tx, now)
+		classifier, err = capturehealth.ClassifierHealth(ctx, tx, now)
 		if err != nil {
 			return false, err
 		}

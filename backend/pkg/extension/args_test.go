@@ -9,6 +9,7 @@ package extension_test
 
 import (
 	"encoding/json"
+	"errors"
 	"testing"
 
 	"github.com/margince/margince/backend/pkg/extension"
@@ -45,8 +46,9 @@ func TestDecodeArgsRefusesWhatTheSchemaDoesNot(t *testing.T) {
 		"a second value after the first": `{"body":"first"} {"body":"second"}`,
 	} {
 		t.Run(name, func(t *testing.T) {
-			if _, err := extension.DecodeArgs[args](json.RawMessage(document)); err == nil {
-				t.Fatalf("the decoder accepted %s", name)
+			// ErrInvalid is what makes the caller's answer a 422 and not a 500.
+			if _, err := extension.DecodeArgs[args](json.RawMessage(document)); !errors.Is(err, extension.ErrInvalid) {
+				t.Fatalf("the decoder answered %s with %v, want ErrInvalid", name, err)
 			}
 		})
 	}

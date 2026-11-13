@@ -229,7 +229,7 @@ func (w *vcardIngestWorker) asMailboxGrantor(ctx context.Context, args VCardInge
 		  FROM activity a
 		  JOIN capture_connection cc
 		    ON ('connector:' || cc.provider || ':' || cc.user_id::text) = a.captured_by
-		 WHERE a.id = $1 AND a.archived_at IS NULL
+		 WHERE a.id = $1 AND a.archived_at IS NULL AND cc.user_id IS NOT NULL
 		   -- INBOUND only, the same gate the signature candidates apply. A card a
 		   -- rep SENT is our own attachment coming back: forwarding a colleague's
 		   -- .vcf out of the mailbox would otherwise file it as a contact, which

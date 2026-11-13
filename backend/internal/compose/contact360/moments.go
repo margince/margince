@@ -106,13 +106,11 @@ func (s *Service) momentsSection(ctx context.Context, tx pgx.Tx, contactID ids.C
 	}
 	said := momentCopyFor(string(identity.ReaderLanguageForRecord(ctx, tx)))
 	said.zone = zone
-	// A reader who may not read activity sees no mail to cite, so their
-	// promise cards stay as they are.
-	followUps, err := promiseFollowUps(ctx, tx, contactID, now, out)
-	if err != nil && !errors.Is(err, apperrors.ErrPermissionDenied) {
+	asks, err := s.doneAsksFor(ctx, tx, contactID, now, out)
+	if err != nil {
 		return err
 	}
-	moment := said.deriveMomentPast(ctx, now, out, dismissed, said.proposer(ctx, out, followUps, dismissed))
+	moment := said.deriveMomentPast(ctx, now, out, dismissed, said.proposer(out, asks, dismissed))
 	momentaction.WithholdContact(ctx, string(said.Lang()), &moment, out.Contact.Attachable != nil && *out.Contact.Attachable)
 	offerDone(&moment, ourLast, out)
 	out.Moment = &moment

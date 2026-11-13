@@ -115,33 +115,43 @@ func (s *Store) UpdateDSR(ctx context.Context, id ids.UUID, in UpdateDSRInput) (
 		if current.Kind == dsrKindErasure && closesAs(current, in, dsrStatusFulfilled) {
 			return &ValidationError{Field: fieldStatus, Reason: "an erasure request is fulfilled by carrying out the erasure"}
 		}
-		if dsrUpdateChangesNothing(current, in) {
-			out = current
-			return nil
+		if current.Kind == dsrKindRestriction && closesAs(current, in, dsrStatusFulfilled) {
+			return &ValidationError{Field: fieldStatus, Reason: "a restriction request is fulfilled by recording the restriction"}
 		}
-		source, err := s.readProofSource(ctx, tx, current, in)
-		if err != nil {
-			return err
-		}
-		var args []any
-		arg := func(v any) int { args = append(args, v); return len(args) }
-		held := dsrHeldSets(in, arg)
-		sql := storekit.SQLf(`
-			UPDATE data_subject_request SET
-			  status = coalesce($%d, status),
-			  %s,
-			  resolution = CASE WHEN $%d THEN NULL ELSE coalesce($%d, resolution) END
-			WHERE id = $%d
-			RETURNING `+dsrColumns, arg(in.Status), held, arg(in.ClearResolution), arg(in.Resolution), arg(id))
-		if out, err = scanDSR(tx.QueryRow(ctx, sql, args...)); err != nil {
-			return err
-		}
-		if err := auditDSRUpdate(ctx, tx, current, out); err != nil {
-			return err
-		}
-		return writeRequestProof(ctx, tx, source, out, nil)
+		out, err = s.applyDSRUpdateTx(ctx, tx, id, current, in)
+		return err
 	})
 	return out, err
+}
+
+// applyDSRUpdateTx writes a validated patch to a request the caller holds
+// locked, with its audit row and proof.
+func (s *Store) applyDSRUpdateTx(ctx context.Context, tx pgx.Tx, id ids.UUID, current dsrRow, in UpdateDSRInput) (dsrRow, error) {
+	if dsrUpdateChangesNothing(current, in) {
+		return current, nil
+	}
+	source, err := s.readProofSource(ctx, tx, current, in)
+	if err != nil {
+		return dsrRow{}, err
+	}
+	var args []any
+	arg := func(v any) int { args = append(args, v); return len(args) }
+	held := dsrHeldSets(in, arg)
+	sql := storekit.SQLf(`
+		UPDATE data_subject_request SET
+		  status = coalesce($%d, status),
+		  %s,
+		  resolution = CASE WHEN $%d THEN NULL ELSE coalesce($%d, resolution) END
+		WHERE id = $%d
+		RETURNING `+dsrColumns, arg(in.Status), held, arg(in.ClearResolution), arg(in.Resolution), arg(id))
+	out, err := scanDSR(tx.QueryRow(ctx, sql, args...))
+	if err != nil {
+		return dsrRow{}, err
+	}
+	if err := auditDSRUpdate(ctx, tx, current, out); err != nil {
+		return dsrRow{}, err
+	}
+	return out, writeRequestProof(ctx, tx, source, out, nil)
 }
 
 // auditDSRUpdate is the update audit both writers share. The images carry the

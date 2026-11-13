@@ -101,7 +101,8 @@ func registryWithGate(db *database.DB, gate *auth.Gate, drafter activities.Email
 		agents.WithSeatNamer(seatNamer(identity.NewServiceFor(db))), agents.WithActivityListCalendar(activityListCalendar(captureHealthRegistry(db))),
 		agents.WithChangeWords(agentChangeWords(db)),
 		agents.WithContactCaseMerger(contactCaseMergerSeam(db)),
-		agents.WithDealTaskSettler(dealclosetasks.New(activities.NewStore(db), db)))
+		agents.WithDealTaskSettler(dealclosetasks.New(activities.NewStore(db), db)),
+		agents.WithRecordSidecars(recordSidecars(db)))
 	// Approval decisions need the same registered effects as the HTTP path.
 	approvalsSvc := decidingApprovalsService(pool, send, log)
 	registry := agents.NewRegistry(approvalsAdapter{svc: approvalsSvc}, gate, opts...)

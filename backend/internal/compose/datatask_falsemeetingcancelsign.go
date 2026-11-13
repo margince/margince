@@ -49,7 +49,7 @@ var storedCopiesSQL = `SELECT copy.source_system, ` + originalstore.SQL("rc") + 
   FROM (SELECT $2::text AS source_system, $3::text AS source_id, $4::text AS seat
         UNION
         SELECT split_part(alias, ':', 1), regexp_replace(alias, '^[^:]*:[^:]*:', ''), ci.user_id::text
-          FROM capture_import ci, unnest(ci.provider_message_ids) alias WHERE ci.activity_id = $1) copy
+          FROM capture_import ci, unnest(ci.provider_message_ids) alias WHERE ci.activity_id = $1 AND ci.user_id IS NOT NULL) copy
   JOIN raw_capture rc ON rc.source_system = copy.source_system AND rc.source_id = copy.source_id
   LEFT JOIN LATERAL (SELECT c.account_label FROM capture_connection c
         WHERE c.provider = copy.source_system AND c.user_id::text = copy.seat LIMIT 1) owner ON true`

@@ -196,43 +196,6 @@ func render(all schemas, shared map[string]*parameter, paths map[string]map[stri
 	return []byte(b.String()), nil
 }
 
-// contractEnums are the closed vocabularies a hand-written tool schema would
-// otherwise re-spell. Each is emitted as a ready-to-splice JSON array so the
-// schema literal that uses it cannot hold a stale copy.
-//
-// They are here because both hand-written copies had already drifted, in
-// opposite directions: log_activity omitted `whatsapp` and `telegram`, so a
-// message the server stores could not be logged through the tool; and both
-// log_activity and book_meeting advertised a `project` link the contract does
-// not accept, so an agent following the schema was refused. A vocabulary spelled
-// twice is a vocabulary that disagrees with itself.
-var contractEnums = []struct{ name, schema, path string }{
-	{"activityKindEnum", "CreateActivityRequest", "kind"},
-	{"activityLinkEntityTypeEnum", "CreateActivityRequest", "links.items.entity_type"},
-	{"activityMeetingStatusEnum", "CreateActivityRequest", "meeting_status"},
-}
-
-func renderEnums(b *strings.Builder, all schemas) error {
-	b.WriteString("\n// The contract's own closed vocabularies, as JSON arrays a tool's InputSchema\n")
-	b.WriteString("// splices in place of a hand-written enum literal.\n")
-	for _, want := range contractEnums {
-		schema, ok := all[want.schema]
-		if !ok {
-			return fmt.Errorf("crm.yaml declares no %s", want.schema)
-		}
-		target, err := walk(schema, want.path, all)
-		if err != nil {
-			return fmt.Errorf("%s.%s: %w", want.schema, want.path, err)
-		}
-		values := enumValues(target)
-		if len(values) == 0 {
-			return fmt.Errorf("%s.%s declares no enum", want.schema, want.path)
-		}
-		b.WriteString("\nconst " + want.name + " = `[" + strings.Join(values, ",") + "]`\n")
-	}
-	return nil
-}
-
 // walk follows a dotted path through properties, using the literal segment
 // `items` to step into an array's element schema.
 func walk(from *node, path string, all schemas) (*node, error) {

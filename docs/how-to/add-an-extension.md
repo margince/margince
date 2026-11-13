@@ -184,8 +184,8 @@ func open(ctx context.Context, rt extension.Runtime, in json.RawMessage) (json.R
 
 `rt` is the **only** way a unit reaches the core. The core makes a new one for each call, and it stops
 working the moment the handler returns (`extension.ErrRuntimeExpired`). Today it gives `rt.Secrets()`,
-`rt.Tx()`, `rt.Caller()`, `rt.Ingest()` and `rt.SyncNow()`. A handler with nobody behind it also gets four system
-reads: `rt.Deals().Get()`, `rt.Deals().Responsible()`, `rt.Authority().CanRead()` and `rt.Directory().Emails()`
+`rt.Tx()`, `rt.Caller()`, `rt.Ingest()` and `rt.SyncNow()`. A handler with nobody behind it also gets six system
+reads. They are `rt.Deals()`, `rt.Authority()`, `rt.Directory()`, `rt.Activities()` and `rt.SetAside()`
 (see [Read deals and colleagues from a handler](#read-deals-and-colleagues-from-a-handler)).
 
 What the surface will serve, and what it will not:
@@ -749,6 +749,181 @@ An admin changes them with `PUT /v1/extensions/{name}/settings`. Send `overwrite
 
 The core stores the values and does not yet hand them to the unit's code. Only core code reads them today. A unit that needs to read its own setting has to wait for that.
 
+## Declare a company type
+
+Core gives a company a fixed list of types, such as `customer` and `supplier`. A unit that needs one more declares it, and sets it on a company. The unit's types are kept apart from core's: they come back in `extension_relationship_types`, and core's `relationship_types` stays the closed list.
+
+```go
+CompanyTypes: []extension.CompanyType{
+	{Type: "reseller", Label: "Reseller"},
+},
+```
+
+| Field | Meaning |
+|---|---|
+| `Type` | The short name: lower-case letters and digits, joined by single `_` marks. A unit cannot declare one name twice. |
+| `Label` | What a screen shows for the type. Required, in English. |
+
+The stored value is `ext:<unit>:<type>`, for example `ext:acme-pack:reseller`. The core builds it from the unit's own name, so two units can each declare `reseller` and neither can set the other's. `make gen` and the start both refuse a declaration that breaks the table above, and the generated manifest lists the types.
+
+Set the types on a company with `Core().Companies().SetExtensionTypes(ctx, companyID, []string{"reseller"})`. Name the short types. The call replaces the types your unit holds on that company and leaves the types of other units alone. An empty list removes your own. A name you did not declare is `ErrInvalid`. It is a write, so a scheduled job gets `ErrForbidden`, and the caller needs the permission to update the company, like any other edit.
+
+A user or an agent can also set a declared value with `PATCH /v1/companies/{id}`, in `extension_relationship_types`. A value that no unit declares is refused with a 422 on that field and the code `invalid_enum`. A company that already holds a value keeps it when its unit is later removed, and a save that does not change it is accepted. `GET /v1/company-types` lists every declared value with its label, for any signed-in user. The company list takes a declared value in `extension_relationship_type`. The `relationship_type` filter stays core's own list.
+
+## Declare a record kind
+
+A unit that keeps records core does not know, such as a ledger account, can declare them as a record kind. Core then
+lets a user tag the record, put it on a Shortlist and see it in the audit log. A role holds no right on a kind unless the declaration or an admin gives it. The rows stay
+in your own table.
+
+```go
+RecordKinds: []extension.RecordKindDeclaration{{
+	Kind:        "ledger_account",
+	DisplayName: "Ledger account",
+	Table:       "ext_finance_demo_ledger_account",
+	Fields:      []extension.RecordKindField{{Name: "account_code", Label: "Account code"}},
+	NaturalKey:  []string{"account_code"},
+	Defaults:    []extension.RbacDefault{{Role: "admin", Actions: []extension.RbacAction{extension.RbacRead}}},
+}},
+```
+
+| Field | Meaning |
+|---|---|
+| `Kind` | The short name: a lower-case letter, then lower-case letters, digits or `_`, up to 32 characters. The stored name is `ext:<unit>:<kind>`. |
+| `DisplayName` | What a screen calls one record. Required, in English. |
+| `Table` | Your own table, `ext_<unit>_<name>`. It needs an `id uuid` primary key and an `archived_at timestamptz` column. Give `margince_app` the same four rights as on any unit table (see the table rules above), because core reads it with that role. |
+| `Fields` | The columns that make up a record, each with a label. Every one must exist in the table. A field may list `Options`, a short list of allowed values. A filter then offers them as a list of values and refuses any other value, and the boot and `make gen` refuse a blank option or one that is listed twice. |
+| `NaturalKey` | The fields that name one record. The table must hold a unique index over these columns and no others, and the index must cover every row. |
+| `Defaults` | Starting rights per system role. Leave it out and every role is refused until an admin ticks the kind's object. |
+| `DeletePolicy` | `extension.DeleteArchiveOnly` (the default) or `extension.DeleteErasable`. |
+
+The kind is gated on the RBAC object `ext_<unit>_<kind>`. The unit's hyphens become `_` in that name. Before core links,
+tags or lists a record, it checks the `read` right and a live row. A caller without the right gets `404`. The start
+refuses a declaration that breaks the table above.
+
+The service reports itself unready while your table, a column or the unique index is missing. It does the same while
+`margince_app` holds fewer than the four rights on the table.
+
+`GET /v1/record-kinds` lists the kinds a seat may read. The reference page
+[extension record kinds, links, signals and reports](../reference/extension-record-kinds-links-signals-and-reports.md#extension-record-kinds-and-link-registry)
+says what core does with a kind today, and what it leaves out.
+
+### Show a kind's rows in a record's History
+
+Add `Timeline` to the declaration and the rows of the kind that reference a contact, company or deal show in that
+record's History tab. You name three things and core builds the entry. You write no timeline code.
+
+```go
+Timeline: &extension.RecordKindTimeline{
+	LabelField: "account_code",
+	AtColumn:   "posted_at",
+	Subjects:   []extension.TimelineSubject{{Entity: "company", Column: "company_id"}},
+},
+```
+
+| Field | Meaning |
+|---|---|
+| `LabelField` | A declared field. Its text is the entry's title. An empty value shows the kind's `DisplayName`. |
+| `AtColumn` | A `timestamptz` column in your table. It places the entry in time. A row with no value there is left out. |
+| `Subjects` | One entry per core record a row can reference: `Entity` is `contact`, `company` or `deal`, and `Column` is the `uuid` column that holds that record's id. Each record kind may appear once. |
+
+An archived row is left out. A reader sees an entry only with the `read` right on the kind, and only on a record the
+reader may see. Core reads at most 50 rows per kind, newest first.
+
+Signals of your own kinds (see [Declare a signal type](#declare-a-signal-type)) show in the same History. They need no
+declaration. They must be about a contact, company or deal. A reader sees one only inside the signal row scope.
+`GET /v1/extension-history` serves both; the History tab merges them with the activities in time order. The Changes cut
+stays the record's own field changes.
+
+### Find a kind in search, lists and saved views
+
+A declared kind needs no extra code to show up in search or to be listed and filtered. Core reads your declaration.
+
+| Where | What core does with the kind |
+|---|---|
+| `GET /v1/search` | Takes `ext:<unit>:<kind>` in `types`, and returns matches of that `type`. The title is the `LabelField` of the `Timeline`, or else the first `NaturalKey` field. A match carries no text from the record. A seat with no `read` right on the kind gets no match of it. An archived row is never a match. |
+| `GET /v1/filters/vocabulary` and `POST /v1/filters/preview` | Take the kind as `resource`. A declared field is a text field, or a list of values when it lists `Options`. A preview shows `id` and the declared fields as columns. |
+| Lists | A Shortlist or a Live List takes the kind as its `entity_type`. A member of another type is refused with `entity_type_mismatch`. |
+| Saved views | Take the kind as `resource`. A kind no unit declares is refused. |
+| Filters screen | Offers each kind the seat may read after the four core record types. |
+
+`GET /v1/search` without `types` searches every kind the seat may read, yours included. The agent
+search tool and the AI lookups keep to core's types.
+
+Search takes an optional `exclude_ids` list of record ids, of any type. Those records are dropped before ranking, so a
+page stays full and `types_with_more` counts only what is left. The agent tool `search_records` takes the same
+argument. The list members endpoint has no such parameter. It takes `entity_id`, which keeps only the ids named.
+
+## Declare a report count or breakdown
+
+A unit can add a number to Reports and Home. A count says how many live records a population holds. A breakdown splits
+that count by one field.
+
+```go
+ReportCounts: []extension.ReportCount{{Name: "ledger_accounts", Label: "Ledger accounts", Population: "ledger_account"}},
+ReportBreakdowns: []extension.ReportBreakdown{{Name: "by_name", Label: "Ledger accounts by name", Population: "ledger_account", By: "name"}},
+```
+
+| Field | Meaning |
+|---|---|
+| `Name` | The short name, written like a kind name. The wire name is `ext:<unit>:<name>`. |
+| `Label` | What a screen shows. Required, in English. |
+| `Population` | The short name of one of your record kinds, or the key of a core deal report such as `pipeline-current`. |
+| `By` | For a breakdown only. A field your kind declares. On a core deal report, a custom field: `cf_<name>` for the deal's, `company_cf_<name>` for its company's. The field may be a multi-select. |
+
+You write no query. Core runs it through the report engine. The seat's row scope and its mask both apply.
+
+A group below the group floor, five records by default, is held back. So are the smallest group left and the total.
+A seat that may not read your kind does not see the report.
+
+The reference page
+[extension record kinds, links, signals and reports](../reference/extension-record-kinds-links-signals-and-reports.md#extension-report-breakdowns-and-counts)
+lists what each part does.
+
+## Declare a signal type
+
+A unit can add its own kinds of signal. Each has an evidence layout, which says what a signal of that kind may carry.
+
+```go
+SignalTypes: []extension.SignalTypeDeclaration{{
+	Kind:  "ledger_loss",
+	Label: "Loss reported on a ledger account",
+	Evidence: []extension.SignalEvidenceField{
+		{Name: "amount", Label: "Amount", Type: extension.SignalFieldNumber, Required: true},
+		{Name: "reporter", Label: "Reporter", Type: extension.SignalFieldText, Personal: true},
+	},
+}},
+```
+
+| Field | Meaning |
+|---|---|
+| `Kind` | The short name, written like a record kind name. The stored kind is `ext:<unit>:<kind>`. |
+| `Label` | What a screen shows. It is also the summary of a signal that gives none. |
+| `Evidence` | The members a signal may carry. Each has a name, a label, a type (`SignalFieldText`, `SignalFieldNumber` or `SignalFieldBool`), and two flags. |
+| `Required` | A signal without the member is refused. |
+| `Personal` | The member holds personal data. It is removed when the contact the signal is about is erased or anonymized. |
+
+File a signal from a handler with the core port:
+
+```go
+sig, created, err := tx.Core().Signals().Create(ctx, "ledger_loss",
+	extension.SignalSubject{Type: "company", ID: companyID},
+	extension.SignalEvidence{Fields: map[string]any{"amount": 120.5}},
+	"ledger:acct-7:2026-10")
+```
+
+The subject is a deal, company, contact or project. The fingerprint is required. A second call with the same fingerprint
+files nothing and answers the signal already filed, with `created` false. A feed and a colleague who report the same
+event with the same fingerprint therefore leave one signal. The second call is still a read, so the row scope of the
+signed-in seat applies to it.
+
+Core adds a `provenance` member with the unit and the signed-in seat. You cannot set it. A scheduled job or a bus
+delivery cannot file a signal, because no seat stands behind it.
+
+The reference page
+[extension record kinds, links, signals and reports](../reference/extension-record-kinds-links-signals-and-reports.md#extension-signal-types-with-structured-evidence)
+lists what each part does.
+
 ## Draw a panel on a core page
 
 A unit with a frontend package can draw its own part of a page inline on a core page. Declare one
@@ -766,6 +941,8 @@ Panels: []extension.Panel{{
 
 | Slot | Where the panel shows |
 |---|---|
+| `extension.SlotContactPanel` (`record_panel.contact`) | The end of a contact page's **Data & tools** tab, after its lists |
+| `extension.SlotCompanyPanel` (`record_panel.company`) | The end of a company page's **Contacts** tab, after the reach card |
 | `extension.SlotDealPanel` (`record_panel.deal`) | The end of a deal page's **Edit details** drawer, after its lists |
 
 - **`Export`** is a named export of your frontend package's `main` module: the function the page mounts.
@@ -912,6 +1089,57 @@ The browser side is guarded too. An export that fails is logged in the browser's
 every other declaration. The manifest then shows them as `instrumentation`. For a small example that uses all
 three, see `fixtures/extensions/crm-hello/instrumentation.go` and its `frontend/screen.tsx`.
 
+## Link a message to a record
+
+A unit can name the deal, company, contact or project a message belongs to. A user decides in a queue on the
+Worklist, and nothing is filed until they accept. Call it from a handler that runs for a signed-in user:
+
+```go
+outcome, err := tx.Core().LinkSuggestions().Propose(ctx, extension.LinkSuggestionRequest{
+	Activity: messageID,
+	Target:   extension.RecordRef{Type: "deal", ID: dealID},
+	Reason:   "The subject names this deal.",
+	Score:    0.8,
+})
+```
+
+- `Type` is `contact`, `company`, `deal` or `project`. `Reason` is one sentence of at most 200 characters, and
+  `Score` is from 0 to 1.
+- The answer is `LinkSuggestionCreated`, `LinkSuggestionExisting` or `LinkSuggestionExcluded`. The same target for
+  the same message is `Existing`, even after a user said no to it. A target that is the message's own sender is
+  `Excluded`.
+- The user you act for needs the right to update the message and to link the target. A scheduled job or a bus
+  delivery has no user and gets `ErrForbidden`.
+- Keep no score for a user. The queue stores the message, the target, your unit's name, the reason and the score of
+  the link.
+
+The details are in the
+[package overview](../reference/extension-record-kinds-links-signals-and-reports.md#suggested-link-resolver).
+
+## Declare a link type
+
+A unit can name a way to link two core records, such as a deal that follows up another deal. Users then link records
+with it on the deal page, in the deal list filter and in Reports. Declare it as data:
+
+```go
+LinkTypes: []extension.LinkType{{
+	Type:  "follow_up_of",
+	Label: "Follow-up of",
+	From:  []string{"deal"},
+	To:    []string{"deal"},
+}},
+```
+
+- `Type` is a lower-case letter, then lower-case letters, digits or `_`, up to 32 characters. It is stored as
+  `ext:<unit>:<type>`, so two units can use the same word.
+- `From` and `To` name the records the type may join: `deal`, `company` or `contact`. An empty list allows all three.
+- The boot and `make gen` refuse a bad name, a missing label, a wrong end and a type you declare twice.
+- A user links under the rights of both records. Your unit gets no extra right.
+- A report may split a deal population by `link_type`.
+
+The reference unit declares one in `extensions/finance-demo`. The details are in
+[Typed links between records](../reference/record-links.md).
+
 ## Own scheduled jobs
 
 Declare **two kinds** in `api/jobs.yaml`. One is a `dispatcher` on a clock that fans out over every workspace.
@@ -977,16 +1205,19 @@ plan for:
 ### Read deals and colleagues from a handler
 
 Your SQL may touch only your own tables. So a handler reads a core deal, and the colleagues on it, through
-four system reads. No user's rights limit what they read. That is why they answer on a job tick or a bus
+six system reads. No user's rights limit what they read. That is why they answer on a job tick or a bus
 delivery, where no user gets the answer.
 
-In all other places `Deals().Get`, `Deals().Responsible` and
-`Directory().Emails` answer `extension.ErrAttendedRead`. Those places are a tool call, a route, the inbound
+In all other places `Deals().Get`, `Deals().Responsible`,
+`Directory().Emails`, `Activities().Mail` and `SetAside` answer `extension.ErrAttendedRead`. Those places are a tool call, a route, the inbound
 edge, a finance source's read and a transport's send. There the answer, or an error that quotes it, could reach a user whose
 own rights hide it.
 
 `Authority().CanRead` and `CanWrite` also answer on a route, but only about the signed-in user. See
 [Ask what a colleague may do](#ask-what-a-colleague-may-do-canread-and-canwrite).
+
+Each system read leaves one row in the system log: your unit, which read, the record and the time. A read whose row
+cannot be written is refused.
 
 The refusal guards the call, not your own tables. If you save what a read returned and show it later, ask
 `CanRead` first.
@@ -998,6 +1229,8 @@ SystemReads: []extension.SystemRead{
 	extension.SystemReadDeals,     // Deals().Get and Deals().Responsible
 	extension.SystemReadAuthority, // Authority().CanRead and CanWrite
 	extension.SystemReadDirectory, // Directory().Emails
+	extension.SystemReadActivities, // Activities().Mail
+	extension.SystemReadSetAside, // SetAside().Contact and Contacts
 },
 ```
 
@@ -1010,6 +1243,7 @@ subscription that reads the deal its event names.
 deal, err := rt.Deals().Get(ctx, d.Entity.ID)            // extension.ErrNotFound once the deal is gone
 team, err := rt.Deals().Responsible(ctx, d.Entity.ID)    // owner first, then by email
 emails, err := rt.Directory().Emails(ctx, ids)           // active human members only
+mail, err := rt.Activities().Mail(ctx, member, d.Entity.ID, extension.MailQuery{}) // the deal's shared emails as that member may see the deal, newest first
 ```
 
 - **`Get` reads a `DealSummary`.** It holds the name, the stage's name, the status, the value and currency,
@@ -1020,6 +1254,24 @@ emails, err := rt.Directory().Emails(ctx, ids)           // active human members
   teams on it. It leaves out agents, members who cannot sign in, users taken off the deal, and archived teams. It stops at
   `extension.MaxResponsible` colleagues.
 - **`Emails` takes at most `extension.MaxResponsible` users**, so the list `Responsible` gave always fits.
+- **`Mail` answers the emails of one deal.** It tells a unit if a mail is sent and if a reply is in. Each
+  `MailSummary` holds the id, the direction, the time, what kind of sender wrote it (empty for a human) and the
+  deal id. It holds no subject, body, address or file. It leaves out mail kept private to its senders and
+  receivers, archived mail unless you set `IncludeArchived`, and mail held back from reading. It gives pages,
+  newest first, of at most `extension.MaxReadPage`.
+
+  You name the member it answers for. A deal that member cannot open answers `ErrNotFound`.
+- **`SetAside` reads who put a contact aside.** A colleague can put a contact aside for up to 90 days, or for
+  good. `SetAside().Contact(ctx, user, contact)` answers `none`, `until` with a date, or `permanent`. A contact
+  whose time ran out answers `none`. `Contacts` takes up to `extension.MaxResponsible` contacts for one colleague
+  in one call, so a nightly job does not ask once per contact.
+
+  It answers only for a colleague who connected your unit and has not left. Any other colleague answers `ErrForbidden`.
+  It gives that colleague's own answer, never another's, and nothing else about the contact. A contact that is not
+  there answers `none`. It only reads: the colleague changes it through the product's own routes.
+- **A private reply is not seen.** A reply that sits only in a private mailbox is not in `Mail`. So "no reply
+  yet" is a reminder for a colleague to check, not a fact. Never act on it alone, for example by sending a
+  message.
 
 ### Ask what a colleague may do: `CanRead` and `CanWrite`
 
@@ -1136,8 +1388,9 @@ res, err := rt.Ingest(ctx, member, rec) // res.Disposition is Accepted or Skippe
 A source may also list `KindCompany` and `KindDeal`; see
 [land-companies-and-deals-from-an-extension.md](land-companies-and-deals-from-an-extension.md).
 
-You build no timeline entry. You hand over a record, and the core decides what to do with it. These rules fail
-you if you miss them:
+You hand over a record, and the core decides what to do with it. Rows of your own kinds and your own signals reach a
+record's History through [a timeline declaration](#show-a-kinds-rows-in-a-records-history), which core turns into
+entries. These rules fail you if you miss them:
 
 - **`Ingest` hangs off `Runtime`, not `Tx`.** The pipeline opens its own transaction. Called from inside
   yours, it takes a second connection while it holds one. When the `pool` is small, that hangs.
@@ -1204,7 +1457,11 @@ func live(ctx context.Context, rt extension.Runtime, member extension.UserID) (b
 **Your unit never sends on its own**: it declares a transport, and the core calls it. A human stages the
 message through the reply field on the timeline, and the seat gate reads them again. The dispatcher then hands
 you an `OutboundMessage`. It holds the member to send as, and the address on that channel of the contact it goes to.
-It also holds the body, what it replies to, and a key that stops copies.
+It also holds the body, what it replies to, a key that stops copies, and the `ActivityID` of the timeline entry.
+
+If your unit keeps a record of its sends, keep the `ActivityID` and declare it as a link to `privacy.Activity`.
+Do not keep the address. The activity already says who the message was sent to, and core's erasure and export
+reach your row through it.
 
 Return a `Receipt` that names the provider's own message id.
 The outbound rules of the tier still apply: you may not spend an outbound scope from a tool or a job tick.

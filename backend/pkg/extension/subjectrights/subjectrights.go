@@ -37,12 +37,14 @@ const (
 	Rectify RequestKind = "rectify"
 	// Erasure is the right to have it erased (GDPR Art. 17).
 	Erasure RequestKind = "erasure"
+	// Restriction is the right to have processing restricted (GDPR Art. 18).
+	Restriction RequestKind = "restriction"
 )
 
 // Validate enforces membership in the closed set.
 func (k RequestKind) Validate() error {
 	switch k {
-	case Access, Rectify, Erasure:
+	case Access, Rectify, Erasure, Restriction:
 		return nil
 	}
 	return fmt.Errorf("request kind %q is not one the request queue carries", string(k))

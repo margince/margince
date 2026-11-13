@@ -198,6 +198,7 @@ func (s *TagSuggester) readBacklog(ctx context.Context, now time.Time) (tagSugge
 			                WHERE l.activity_id = a.id AND l.entity_type IN ('contact', 'company'))
 			   AND ` + collections.TagInterestUnreadClause("a.id", arg(backlog.vocabulary), tagSuggestContentDigestSQL("a")) + `
 			   AND ` + collections.TagInterestContactsLiveClause("a.id") + `
+			   AND NOT ` + auth.ActivityRestrictedSQL("a.id") + `
 			 ORDER BY a.occurred_at DESC, a.id
 			 LIMIT ` + arg(tagSuggestItemCap)
 		rows, err := tx.Query(ctx, query, args...)

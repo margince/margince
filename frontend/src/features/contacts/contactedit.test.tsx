@@ -103,3 +103,63 @@ describe("handing a private contact to a colleague", () => {
     expect(window.location.hash).toBe("#/contacts/p-1");
   });
 });
+
+describe("saving the LinkedIn field", () => {
+  async function savedSocial(linkedin: string) {
+    let body: Record<string, unknown> = {};
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (input: RequestInfo | URL) => {
+        const request = input instanceof Request ? input : new Request(input);
+        if (request.method === "PATCH") {
+          body = await request.json();
+        }
+        return jsonResponse({ ...contact, version: 5 });
+      }),
+    );
+    const linked: Contact = {
+      ...contact,
+      social: { linkedin: "https://www.linkedin.com/in/dana", github: "dana" },
+    };
+    const { result } = renderHook(() => useContactEdit(linked), { wrapper });
+    await act(async () => {
+      await result.current.save({ "social.linkedin": linkedin }, {}, linked);
+    });
+    return body.social;
+  }
+
+  it("sends a cleared link as an empty value, so the server removes it", async () => {
+    expect(await savedSocial("")).toMatchObject({ linkedin: "" });
+  });
+
+  it("sends a changed link as the profile it now names", async () => {
+    expect(
+      await savedSocial("https://www.linkedin.com/in/dana-new"),
+    ).toMatchObject({ linkedin: "https://www.linkedin.com/in/dana-new" });
+  });
+});
+
+describe("a stored social key outside the list", () => {
+  it("stays on the record and is never sent back, because the server refuses it", async () => {
+    let body: Record<string, unknown> = {};
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (input: RequestInfo | URL) => {
+        const request = input instanceof Request ? input : new Request(input);
+        if (request.method === "PATCH") {
+          body = await request.json();
+        }
+        return jsonResponse({ ...contact, version: 5 });
+      }),
+    );
+    const legacy: Contact = {
+      ...contact,
+      social: { linkedin: "https://www.linkedin.com/in/dana", myspace: "dana" },
+    };
+    const { result } = renderHook(() => useContactEdit(legacy), { wrapper });
+    await act(async () => {
+      await result.current.save({ "social.linkedin": "" }, {}, legacy);
+    });
+    expect(body.social).toEqual({ linkedin: "" });
+  });
+});

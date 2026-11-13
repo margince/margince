@@ -29,16 +29,17 @@ func setupBookingApp(t *testing.T) *apptest.AppEnv {
 	return e
 }
 
-func setupBookingProvider(t *testing.T) (*apptest.AppEnv, *apptest.BookingProvider) {
+func setupBookingProvider(t *testing.T, extra ...compose.Option) (*apptest.AppEnv, *apptest.BookingProvider) {
 	t.Helper()
 	previous := http.DefaultTransport
 	provider := apptest.NewBookingProvider(previous)
 	http.DefaultTransport = provider
 	t.Cleanup(func() { http.DefaultTransport = previous })
 	vault := keyvault.NewMemory()
-	e := apptest.SetupAppWithOptions(t, compose.WithKeyvault(vault), compose.WithGmailCapture(compose.GmailConfig{
+	opts := append([]compose.Option{compose.WithKeyvault(vault), compose.WithGmailCapture(compose.GmailConfig{
 		ClientID: "calendar-fixture", ClientSecret: "calendar-fixture", StateKey: "0123456789abcdef0123456789abcdef", PublicBaseURL: "https://mail.example.test",
-	}, compose.CaptureConfig{}))
+	}, compose.CaptureConfig{})}, extra...)
+	e := apptest.SetupAppWithOptions(t, opts...)
 	e.Vault = vault
 	return e, provider
 }

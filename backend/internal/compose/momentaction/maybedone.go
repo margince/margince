@@ -21,8 +21,8 @@ var doneWords = struct{ YourEmail, MaybeDone, Done langcopy.Phrase }{
 	Done:      langcopy.Phrase{En: "Done", De: "Erledigt", Vi: "Hoàn thành"},
 }
 
-// DoneQuestion is a promise card and the later mail that may have kept it.
-type DoneQuestion struct {
+// doneQuestion is a promise card and the later mail that may have kept it.
+type doneQuestion struct {
 	Plain     crmcontracts.ContactMoment
 	Kind      crmcontracts.ContactMomentMayBeDonePromiseType
 	PromiseID openapi_types.UUID
@@ -32,9 +32,9 @@ type DoneQuestion struct {
 	Key string
 }
 
-// DoneEvidence is the plain card's own evidence plus the mail. The mail is in
+// doneEvidence is the plain card's own evidence plus the mail. The mail is in
 // the fingerprint, so Not yet holds only until we write on the thread again.
-func DoneEvidence(said langcopy.Spoken, q DoneQuestion) []crmcontracts.ContactMomentEvidence {
+func doneEvidence(said langcopy.Spoken, q doneQuestion) []crmcontracts.ContactMomentEvidence {
 	label := q.Sent.Subject
 	if label == "" {
 		label = said.Say(doneWords.YourEmail)
@@ -46,9 +46,9 @@ func DoneEvidence(said langcopy.Spoken, q DoneQuestion) []crmcontracts.ContactMo
 	}}
 }
 
-// AskDone is the card that asks whether the mail kept the promise. Both
+// askDone is the card that asks whether the mail kept the promise. Both
 // record pages draw it, so both say the same sentence and offer one Done.
-func AskDone(said langcopy.Spoken, zone *time.Location, q DoneQuestion, evidence []crmcontracts.ContactMomentEvidence, fingerprint string) crmcontracts.ContactMoment {
+func askDone(said langcopy.Spoken, zone *time.Location, q doneQuestion, evidence []crmcontracts.ContactMomentEvidence, fingerprint string) crmcontracts.ContactMoment {
 	at := q.Sent.At
 	return crmcontracts.ContactMoment{
 		ClaimKey:            q.Key,

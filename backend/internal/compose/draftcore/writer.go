@@ -100,6 +100,9 @@ type Input interface {
 	// Addresses is where the draft is sent, empty when the record holds none.
 	Addresses() []string
 	RequestedSubject() string
+	// Subjects are the contacts and activities the payload carries, for a
+	// restriction of processing.
+	Subjects() *model.Subjects
 	// Booked says whether the record carries a meeting with this recipient.
 	//
 	// False is the common answer and the one that binds: with nothing booked, a
@@ -330,6 +333,7 @@ func BuildRequest(surface Surface, in Input, voice draftvoice.Context) (model.Re
 		MaxTokens:      ai.ReasoningOutputMaxTokens,
 		ResponseSchema: surface.schema(),
 		SecretStripper: ai.NewSecretStripper(),
+		Subjects:       in.Subjects(),
 	}, nil
 }
 

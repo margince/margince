@@ -8,10 +8,9 @@ import (
 	"testing"
 )
 
-// advance_deal and relink_thread stay callable by name and are not offered.
-// progress_deal takes every argument advance_deal takes and stages the same
-// command, and relink_thread refuses every call over MCP in favour of
-// relink_activities.
+// advance_deal and relink_thread are kept but not offered, and no client can
+// call them. progress_deal takes every argument advance_deal takes and stages
+// the same command, and relink_activities does what relink_thread did.
 var superseded = []struct{ tool, by string }{
 	{"advance_deal", "progress_deal"},
 	{"relink_thread", "relink_activities"},

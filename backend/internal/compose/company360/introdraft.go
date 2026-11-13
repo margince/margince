@@ -63,6 +63,8 @@ type IntroRequest struct {
 // less than the model would make "which wrote this" a question about content
 // rather than about phrasing.
 type introFacts struct {
+	// subjects are the contacts whose data the draft carries.
+	subjects  []ids.UUID
 	colleague string
 	// greeting is the colleague's chosen greeting name, empty when they chose
 	// none; colleagueGreeting decides what the draft actually opens with.
@@ -171,6 +173,7 @@ func (s *Service) introFactsFor(
 		return introFacts{}, err
 	}
 	facts := introFacts{
+		subjects:  []ids.UUID{req.ContactID.UUID},
 		colleague: route.DisplayName,
 		greeting:  greeting,
 		contact:   who.fullName,

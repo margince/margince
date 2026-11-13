@@ -311,7 +311,7 @@ func privateLeadLinksTx(ctx context.Context, tx pgx.Tx, scope, key string, user 
 		  JOIN activity_link l ON l.activity_id = a.id AND l.entity_type = 'lead'
 		 WHERE `+scope+` AND a.archived_at IS NULL AND a.restricted_at IS NULL
 		   AND EXISTS (SELECT 1 FROM capture_import ci WHERE ci.activity_id = a.id AND ci.user_id = $2)
-		   AND NOT EXISTS (SELECT 1 FROM capture_import o WHERE o.activity_id = a.id AND o.user_id <> $2)
+		   AND NOT EXISTS (SELECT 1 FROM capture_import o WHERE o.activity_id = a.id AND o.user_id IS DISTINCT FROM $2)
 		 ORDER BY l.activity_id, l.lead_id`, key, user)
 	if err != nil {
 		return nil, fmt.Errorf("capture: reading the lead links on private mail: %w", err)

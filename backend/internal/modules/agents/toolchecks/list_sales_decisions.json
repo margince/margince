@@ -1,7 +1,6 @@
 {
   "verb": "list_sales_decisions",
   "checks": [
-    "activity.read",
-    "relationship.read"
+    "activity.read"
   ]
 }

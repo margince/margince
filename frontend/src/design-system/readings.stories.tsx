@@ -15,7 +15,7 @@ import { LocaleProvider } from "../i18n";
 import { Badge } from "./atoms";
 import { Avatar } from "./avatar";
 import { ProviderMark } from "./provider-mark";
-import { BarList, Chip, Meter, SegmentBar, Sparkline } from "./readings";
+import { BarList, Chip, Meter, Sparkline } from "./readings";
 
 // The three reading primitives: a proportion, a series, an attribute.
 const meta: Meta = {
@@ -283,83 +283,6 @@ export const MetersWithAPart: Story = {
         <Meter value={68} part={41} max={100} label="Won" dense />
         <Meter value={90} part={90} max={100} label="Lost" dense />
       </div>
-    </>
-  ),
-};
-
-// Disjoint parts of one total with a target marked across them. The call lands
-// inside the parts in the first frame and past them in the second, which leaves
-// recessed track between the last part and the mark.
-export const SegmentBars: Story = {
-  render: () => (
-    <>
-      <SegmentBar
-        label="How the period is made up"
-        parts={[
-          { key: "won", label: "Already won", value: 92_000, amount: "€92K" },
-          {
-            key: "evidence",
-            label: "Evidence",
-            value: 148_000,
-            amount: "€148K",
-          },
-          {
-            key: "best",
-            label: "Best case beyond evidence",
-            value: 112_000,
-            amount: "€112K",
-          },
-        ]}
-        marker={{
-          key: "call",
-          label: "Current call",
-          value: 200_000,
-          amount: "€200K",
-        }}
-      />
-      <SegmentBar
-        label="How the period is made up"
-        parts={[
-          { key: "won", label: "Already won", value: 40_000, amount: "€40K" },
-          { key: "evidence", label: "Evidence", value: 60_000, amount: "€60K" },
-        ]}
-        marker={{
-          key: "call",
-          label: "Current call",
-          value: 180_000,
-          amount: "€180K",
-        }}
-      />
-      <SegmentBar
-        label="Closed revenue against the goal"
-        parts={[
-          {
-            key: "product",
-            label: "Product sales",
-            value: 91_000,
-            amount: "€91K",
-          },
-          {
-            key: "service",
-            label: "Services / projects",
-            value: 88_000,
-            amount: "€88K",
-          },
-          {
-            key: "unresolved",
-            label: "Unclassified",
-            value: 4_000,
-            amount: "€4K",
-          },
-        ]}
-        ahead={{
-          key: "planned",
-          label: "Planned, not counted",
-          value: 85_000,
-          amount: "€85K",
-        }}
-        marker={{ key: "goal", label: "Goal", value: 250_000, amount: "€250K" }}
-      />
     </>
   ),
 };

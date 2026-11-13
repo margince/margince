@@ -1,12 +1,10 @@
 import { useQuery } from "@tanstack/react-query";
-import { ChevronDown, FileText } from "lucide-react";
 import { type ReactNode, Suspense } from "react";
 import { api } from "../../api/client";
 import type { components } from "../../api/schema";
 import { Button, PendingBody } from "../../design-system/atoms";
 import { Callout } from "../../design-system/callout";
 import { FilterBar } from "../../design-system/filterbar";
-import { Popover } from "../../design-system/popover";
 import { QueryStates } from "../../design-system/querystates";
 import { RecordTabs } from "../../design-system/recordtabs";
 import { type Locale, useLocale, useT } from "../../i18n";
@@ -47,15 +45,13 @@ import {
   ReportingTargets,
   SharedForecastView,
 } from "./analytics.sections";
-import {
-  SETUP_LABEL,
-  type SetupSection,
-  useAnalyticsSections,
-} from "./analytics.tabs";
+import { useAnalyticsSections } from "./analytics.tabs";
+import { TabVerbs } from "./analytics.tabverbs";
 import { stagesOfEveryPipeline } from "./pipelinestages";
 import { VIEW_SHAPE, viewOfSection } from "./reporting.views";
 import "./analytics.css";
 
+import { ExtensionReports } from "../../components/extensionreports";
 import { SECTION_REPORTS, useReportRun } from "./analytics.reports.queries";
 
 export function AnalyticsScreen({
@@ -217,58 +213,6 @@ function ScopeRefused({
     >
       <p>{t("analytics.scopeRefusedBody")}</p>
     </Callout>
-  );
-}
-
-function TabVerbs({
-  library,
-  setup,
-  section,
-}: Readonly<{
-  library: Section | undefined;
-  setup: readonly SetupSection[];
-  section: Section;
-}>) {
-  const t = useT();
-  if (!library && setup.length === 0) return null;
-  return (
-    <div className="analytics-tab-verbs">
-      {library && (
-        <Button
-          variant="ghost"
-          aria-current={section === library ? "page" : undefined}
-          onClick={() => openAnalyticsSection(library)}
-        >
-          <FileText aria-hidden="true" />
-          {t(
-            library === "reports"
-              ? "analytics.sectionReports"
-              : "analytics.sectionQuestions",
-          )}
-        </Button>
-      )}
-      {setup.length > 0 && (
-        <Popover
-          variant="ghost"
-          label={
-            <>
-              {t("analytics.setup")}
-              <ChevronDown aria-hidden="true" />
-            </>
-          }
-        >
-          {setup.map((candidate) => (
-            <Button
-              key={candidate}
-              variant="link"
-              onClick={() => openAnalyticsSection(candidate)}
-            >
-              {t(SETUP_LABEL[candidate])}
-            </Button>
-          ))}
-        </Popover>
-      )}
-    </div>
   );
 }
 
@@ -491,6 +435,7 @@ function PipelineSection({
         locale={locale}
         scope={scope}
       />
+      <ExtensionReports />
     </>
   );
 }

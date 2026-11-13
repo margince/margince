@@ -5,13 +5,11 @@
 
 package compose
 
-// Overnight follow-up reconciliation over real migrated Postgres
-// (features/07 §8a, B-E06.2a): the nightly pass turns a captured
-// interaction with no next step into a STAGED follow-up proposal —
-// never a silent write. After a run, the deal is untouched and the
-// follow-up sits in the morning approval inbox; a human confirm creates
-// it exactly once, a reject creates nothing, and a rep who cannot see
-// the deal cannot see — or decide — its proposal.
+// Overnight follow-up reconciliation over real migrated Postgres. The nightly
+// pass turns an interaction with no next step into the deal owner's task, once
+// per interaction. A proposal staged before that still decides as it did. A
+// confirm creates the task once, and a reject creates nothing. A rep who cannot
+// see the deal cannot decide it.
 
 import (
 	"context"
@@ -29,6 +27,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/deals"
 	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
+	"github.com/margince/margince/backend/internal/shared/kernel/diffhash"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
@@ -73,17 +72,16 @@ func setupReconcile(t *testing.T) *reconcileEnv {
 	// in production reached it.
 	stager := followUpStager{
 		svc:   e.svc,
+		tasks: e.Activities,
 		draft: newCommsAdapter(e.Pool, nil, SendPath{}),
 		owner: dealOwnerAuthority{db: e.DB(), users: identity.NewServiceFor(e.DB())},
 		pool:  e.Pool,
 	}
 	e.reconciler = deals.NewFollowUpReconciler(e.DB(), stager, quiet)
-	// The deal owner needs REAL grants, not the harness's in-memory ones: the
-	// drafter composes under the owner's authority resolved from the database,
-	// which is the whole point — a draft is only written under grants that
-	// contact actually holds. Without this every deal falls back to the task
-	// proposal, which is correct behaviour and would make the draft tests
-	// silently prove nothing.
+	// The deal owner needs real grants, not the harness's in-memory ones. The
+	// drafter composes under the owner's authority as the database holds it.
+	// Without them every deal falls back to the task, and the draft tests
+	// would prove nothing.
 	e.grantOwner(t, e.Rep1, reconcileOwnerPolicy)
 	return e
 }
@@ -219,29 +217,60 @@ func (e *reconcileEnv) linkActivity(t *testing.T, activityID, dealID ids.UUID) {
 	}
 }
 
-func (e *reconcileEnv) pendingFollowUps(t *testing.T, dealID ids.UUID) int {
+// followUps counts the overnight follow-up tasks on the deal.
+func (e *reconcileEnv) followUps(t *testing.T, dealID ids.UUID) int {
 	t.Helper()
-	var n int
-	if err := e.owner.QueryRow(context.Background(),
-		`SELECT count(*) FROM approval WHERE kind = 'deal_follow_up' AND target_entity_id = $1 AND status = 'pending'`,
-		dealID).Scan(&n); err != nil {
-		t.Fatal(err)
-	}
-	return n
+	count, _, _, _ := e.dealTasks(t, dealID)
+	return count
 }
 
-func (e *reconcileEnv) followUpApproval(t *testing.T, dealID ids.UUID) (ids.ApprovalID, deals.FollowUpProposal) {
+// followUpEvidence reads the interaction the deal's latest follow-up task
+// answers, and that interaction's kind and time.
+func (e *reconcileEnv) followUpEvidence(t *testing.T, dealID ids.UUID) (ids.UUID, string, time.Time) {
 	t.Helper()
-	var id ids.ApprovalID
-	var raw []byte
-	if err := e.owner.QueryRow(context.Background(),
-		`SELECT id, proposed_change FROM approval WHERE kind = 'deal_follow_up' AND target_entity_id = $1 AND status = 'pending'`,
-		dealID).Scan(&id, &raw); err != nil {
-		t.Fatalf("no staged follow-up to decide: %v", err)
+	var evidence ids.UUID
+	var kind string
+	var occurred time.Time
+	if err := e.owner.QueryRow(context.Background(), `
+		SELECT ev.id, ev.kind, ev.occurred_at FROM activity a
+		JOIN activity_link l ON l.activity_id = a.id AND l.deal_id = $1
+		JOIN activity ev ON a.source_id = $1::text || '/' || ev.id::text
+		WHERE a.kind = 'task' AND a.source_system = 'overnight-reconcile'
+		ORDER BY a.created_at DESC LIMIT 1`, dealID).Scan(&evidence, &kind, &occurred); err != nil {
+		t.Fatalf("no follow-up task names its evidence: %v", err)
 	}
-	proposal, err := deals.UnmarshalFollowUpProposal(raw)
+	return evidence, kind, occurred
+}
+
+// stageLegacyFollowUp stages the proposal the pass staged before it filed
+// tasks directly, for the rows still waiting on a decision.
+func (e *reconcileEnv) stageLegacyFollowUp(t *testing.T, dealID, evidence ids.UUID) (ids.ApprovalID, deals.FollowUpProposal) {
+	t.Helper()
+	proposal := deals.FollowUpProposal{
+		DealID:             ids.From[ids.DealKind](dealID),
+		DueDate:            today().AddDate(0, 0, 3).Format(time.DateOnly),
+		Subject:            "Follow up on the deal",
+		Body:               "Follow up on the call.",
+		EvidenceActivityID: ids.From[ids.ActivityKind](evidence),
+		EvidenceKind:       "call",
+		EvidenceOccurredAt: today(),
+	}
+	raw, err := json.Marshal(proposal)
 	if err != nil {
-		t.Fatalf("staged proposal does not round-trip: %v", err)
+		t.Fatal(err)
+	}
+	canonical, hash, err := diffhash.Canonical(raw)
+	if err != nil {
+		t.Fatal(err)
+	}
+	ctx := principal.WithWorkspaceID(context.Background(), e.WS)
+	ctx = onBehalfOf(principal.SystemActing(ctx, overnightAgent), e.Rep1)
+	id, err := e.svc.Stage(ctx, approvals.StageInput{
+		Kind: deals.FollowUpReconcileKind, ProposedChange: canonical, DiffHash: hash,
+		TargetType: approvalTargetDeal, TargetID: dealID, Summary: "Draft a follow-up",
+	})
+	if err != nil {
+		t.Fatalf("staging a follow-up proposal: %v", err)
 	}
 	return id, proposal
 }
@@ -280,9 +309,9 @@ func (e *reconcileEnv) dealVersion(t *testing.T, dealID ids.UUID) int64 {
 	return v
 }
 
-// --- staging: a real touch with no next step becomes a proposal, not a write ---
+// --- filing: a real touch with no next step becomes the owner's task ---
 
-func TestFollowUpReconcileStagesProposalAndCommitsNothing(t *testing.T) {
+func TestFollowUpReconcileFilesTheTaskOnTheOwnersList(t *testing.T) {
 	e := setupReconcile(t)
 	deal := e.SeedDeal(t, "Touched, no next step", e.pipeline, e.open, &e.Rep1)
 	call := e.seedInteraction(t, deal, "call", "Discovery call", 1)
@@ -292,28 +321,31 @@ func TestFollowUpReconcileStagesProposalAndCommitsNothing(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if got := e.pendingFollowUps(t, deal); got != 1 {
-		t.Fatalf("pending follow-up proposals = %d, want 1", got)
+	count, capturedBy, sourceSystem, due := e.dealTasks(t, deal)
+	if count != 1 {
+		t.Fatalf("follow-up tasks = %d, want 1", count)
 	}
-	// None committed: the deal is untouched and no task exists yet.
-	if after := e.dealVersion(t, deal); after != before {
-		t.Errorf("deal version moved %d → %d; the pass must stage, not write", before, after)
-	}
-	if got, _, _, _ := e.dealTasks(t, deal); got != 0 {
-		t.Errorf("tasks created pre-approval = %d, want 0 (staged, not committed)", got)
-	}
-
-	// The proposal is grounded in the real interaction and dated ahead.
-	_, proposal := e.followUpApproval(t, deal)
-	if proposal.EvidenceActivityID.UUID != call {
-		t.Errorf("evidence activity = %s, want the seeded call %s", proposal.EvidenceActivityID, call)
-	}
-	if proposal.EvidenceKind != "call" {
-		t.Errorf("evidence kind = %q, want call", proposal.EvidenceKind)
+	if capturedBy != "agent:overnight" || sourceSystem != "overnight-reconcile" {
+		t.Errorf("task captured by %q from %q, want agent:overnight from overnight-reconcile", capturedBy, sourceSystem)
 	}
 	wantDue := today().AddDate(0, 0, 3).Format(time.DateOnly)
-	if proposal.DueDate != wantDue {
-		t.Errorf("proposed due date = %q, want %q (today + follow-up lead)", proposal.DueDate, wantDue)
+	if due == nil || due.UTC().Format(time.DateOnly) != wantDue {
+		t.Errorf("task due = %v, want %s (today + follow-up lead)", due, wantDue)
+	}
+	if evidence, kind, _ := e.followUpEvidence(t, deal); evidence != call || kind != "call" {
+		t.Errorf("task answers %s %s, want the seeded call %s", kind, evidence, call)
+	}
+	// Nothing waits on a decision, and the deal's own fields are untouched.
+	var staged int
+	if err := e.owner.QueryRow(context.Background(),
+		`SELECT count(*) FROM approval WHERE target_entity_id = $1`, deal).Scan(&staged); err != nil {
+		t.Fatal(err)
+	}
+	if staged != 0 {
+		t.Errorf("the pass staged %d approvals, want none: the task is filed directly", staged)
+	}
+	if after := e.dealVersion(t, deal); after != before {
+		t.Errorf("deal version moved %d → %d; the pass writes a task, not the deal", before, after)
 	}
 }
 
@@ -335,11 +367,11 @@ func TestFollowUpReconcileSuppressesWhenNoDiscrepancy(t *testing.T) {
 	if err := e.reconcile(); err != nil {
 		t.Fatal(err)
 	}
-	if got := e.pendingFollowUps(t, planned); got != 0 {
-		t.Errorf("deal with an open next step staged %d proposals, want 0", got)
+	if got := e.followUps(t, planned); got != 0 {
+		t.Errorf("deal with an open next step filed %d follow-up tasks, want 0", got)
 	}
-	if got := e.pendingFollowUps(t, noteOnly); got != 0 {
-		t.Errorf("deal with no recent interaction staged %d proposals, want 0", got)
+	if got := e.followUps(t, noteOnly); got != 0 {
+		t.Errorf("deal with no recent interaction filed %d follow-up tasks, want 0", got)
 	}
 }
 
@@ -362,20 +394,15 @@ func TestAMeetingBookedForTomorrowIsNotEvidenceOfAMissedNextStep(t *testing.T) {
 	if err := e.reconcile(); err != nil {
 		t.Fatal(err)
 	}
-	if got := e.pendingFollowUps(t, deal); got != 0 {
-		t.Errorf("a meeting booked for tomorrow staged %d proposals, want 0 — "+
+	if got := e.followUps(t, deal); got != 0 {
+		t.Errorf("a meeting booked for tomorrow filed %d follow-up tasks, want 0 — "+
 			"it has not happened, so it is neither a touch to reconcile nor a "+
 			"conversation that ended without a next step", got)
 	}
 
-	// What the proposal WOULD have said, had one been staged: the summary names
-	// the evidence, and the bug's signature was a future date in that sentence.
-	// Asserting on the count alone would not catch a sweep that stopped naming
-	// the meeting but still staged on it.
 	if t.Failed() {
-		_, proposal := e.followUpApproval(t, deal)
-		t.Logf("staged proposal named evidence of kind %q at %s",
-			proposal.EvidenceKind, proposal.EvidenceOccurredAt)
+		_, kind, at := e.followUpEvidence(t, deal)
+		t.Logf("the task named evidence of kind %q at %s", kind, at)
 	}
 }
 
@@ -390,8 +417,8 @@ func TestAnImportedMeetingNobodyTakesPartInIsNotANextStep(t *testing.T) {
 	if err := e.reconcile(); err != nil {
 		t.Fatal(err)
 	}
-	if got := e.pendingFollowUps(t, deal); got != 1 {
-		t.Errorf("a deal whose only meeting nobody here takes part in staged %d proposals, want 1", got)
+	if got := e.followUps(t, deal); got != 1 {
+		t.Errorf("a deal whose only meeting nobody here takes part in filed %d follow-up tasks, want 1", got)
 	}
 }
 
@@ -408,8 +435,8 @@ func TestABookedMeetingCountsAsThePlannedNextStep(t *testing.T) {
 	if err := e.reconcile(); err != nil {
 		t.Fatal(err)
 	}
-	if got := e.pendingFollowUps(t, deal); got != 0 {
-		t.Errorf("a deal with a meeting on the calendar staged %d proposals, want 0", got)
+	if got := e.followUps(t, deal); got != 0 {
+		t.Errorf("a deal with a meeting on the calendar filed %d follow-up tasks, want 0", got)
 	}
 
 	// The guard on this test's own premise: the same call WITHOUT the booked
@@ -420,8 +447,8 @@ func TestABookedMeetingCountsAsThePlannedNextStep(t *testing.T) {
 	if err := e.reconcile(); err != nil {
 		t.Fatal(err)
 	}
-	if got := e.pendingFollowUps(t, bare); got != 1 {
-		t.Errorf("a call with no next step staged %d proposals, want 1 — if this is "+
+	if got := e.followUps(t, bare); got != 1 {
+		t.Errorf("a call with no next step filed %d follow-up tasks, want 1 — if this is "+
 			"0 the sweep is silent for some other reason and the case above proves "+
 			"nothing", got)
 	}
@@ -438,25 +465,24 @@ func TestACancelledFutureMeetingIsNotANextStep(t *testing.T) {
 	if err := e.reconcile(); err != nil {
 		t.Fatal(err)
 	}
-	if got := e.pendingFollowUps(t, deal); got != 1 {
-		t.Errorf("a cancelled meeting suppressed the proposal (%d staged, want 1) — "+
+	if got := e.followUps(t, deal); got != 1 {
+		t.Errorf("a cancelled meeting suppressed the follow-up (%d filed, want 1) — "+
 			"a meeting that will never happen leaves the deal owing a next step", got)
 		return
 	}
 
-	// And the proposal must name the CALL, not the cancelled meeting in the
+	// And the task must name the CALL, not the cancelled meeting in the
 	// future. This is the assertion that isolates the evidence window: a
 	// cancelled meeting is not a next step, so nothing else stops the sweep
 	// reaching for it as the newest row — only the upper time bound does.
-	_, proposal := e.followUpApproval(t, deal)
-	if proposal.EvidenceKind != "call" {
-		t.Errorf("the proposal named a %q from %s as its evidence, want the call — "+
+	_, kind, at := e.followUpEvidence(t, deal)
+	if kind != "call" {
+		t.Errorf("the task named a %q from %s as its evidence, want the call — "+
 			"a meeting that has not happened cannot be the interaction that left "+
-			"no next step", proposal.EvidenceKind, proposal.EvidenceOccurredAt)
+			"no next step", kind, at)
 	}
-	if proposal.EvidenceOccurredAt.After(time.Now()) {
-		t.Errorf("the proposal's evidence is dated %s, which is in the future",
-			proposal.EvidenceOccurredAt)
+	if at.After(time.Now()) {
+		t.Errorf("the task's evidence is dated %s, which is in the future", at)
 	}
 }
 
@@ -476,8 +502,8 @@ func TestAMeetingStillRunningIsNotYetEvidence(t *testing.T) {
 	if err := e.reconcile(); err != nil {
 		t.Fatal(err)
 	}
-	if got := e.pendingFollowUps(t, deal); got != 0 {
-		t.Errorf("a meeting still running staged %d proposals, want 0 — a rep in "+
+	if got := e.followUps(t, deal); got != 0 {
+		t.Errorf("a meeting still running filed %d follow-up tasks, want 0 — a rep in "+
 			"the meeting is not a rep who forgot to plan one", got)
 	}
 }
@@ -494,45 +520,35 @@ func TestAFutureMeetingAlreadyMarkedHeldIsNotAPlan(t *testing.T) {
 	if err := e.reconcile(); err != nil {
 		t.Fatal(err)
 	}
-	if got := e.pendingFollowUps(t, deal); got != 1 {
-		t.Errorf("a future meeting marked held suppressed the proposal (%d staged, "+
+	if got := e.followUps(t, deal); got != 1 {
+		t.Errorf("a future meeting marked held suppressed the follow-up (%d filed, "+
 			"want 1) — `held` says the meeting happened, so it is not a plan", got)
 	}
 }
 
-// The task proposal records the deal's owner, driven through the REAL
-// reconciler rather than a hand-populated field: the writer is the half that
-// was missing, and a test that set on_behalf_of itself would have passed
-// against the bug it exists to catch.
-func TestATaskProposalRecordsTheDealOwnerItIsFor(t *testing.T) {
+// The task lands on the deal owner's list, driven through the REAL reconciler.
+func TestTheFollowUpTaskIsAssignedToTheDealOwner(t *testing.T) {
 	e := setupReconcile(t)
 	deal := e.SeedDeal(t, "Owned by a rep", e.pipeline, e.open, &e.Rep1)
-	// A CALL, so the sweep takes the task-proposal path rather than drafting a
-	// reply — the drafted branch already recorded the owner.
 	e.seedInteraction(t, deal, "call", "Discovery call", 3)
 
 	if err := e.reconcile(); err != nil {
 		t.Fatal(err)
 	}
-	var onBehalfOf *ids.UUID
-	if err := e.owner.QueryRow(context.Background(),
-		`SELECT on_behalf_of FROM approval
-		  WHERE kind = 'deal_follow_up' AND target_entity_id = $1 AND status = 'pending'`,
-		deal).Scan(&onBehalfOf); err != nil {
-		t.Fatalf("reading the staged proposal: %v", err)
+	var assignee *ids.UUID
+	if err := e.owner.QueryRow(context.Background(), `
+		SELECT a.assignee_id FROM activity a
+		JOIN activity_link l ON l.activity_id = a.id AND l.deal_id = $1
+		WHERE a.source_system = 'overnight-reconcile'`, deal).Scan(&assignee); err != nil {
+		t.Fatalf("reading the follow-up task: %v", err)
 	}
-	if onBehalfOf == nil {
-		t.Fatal("the proposal names nobody, so it sits on every colleague's queue " +
-			"and the rep whose deal it is has no claim on it")
-	}
-	if *onBehalfOf != e.Rep1 {
-		t.Errorf("the proposal is filed for %s, want the deal owner %s", *onBehalfOf, e.Rep1)
+	if assignee == nil || *assignee != e.Rep1 {
+		t.Errorf("the task is assigned to %v, want the deal owner %s", assignee, e.Rep1)
 	}
 }
 
-// A deal nobody owns gets no follow-up proposal. A request always names the
-// member it is for, and an unowned deal has nobody to follow it up.
-func TestAProposalOnAnUnownedDealRecordsNobody(t *testing.T) {
+// A deal nobody owns gets no follow-up: nobody is there to do it.
+func TestAnUnownedDealGetsNoFollowUpTask(t *testing.T) {
 	e := setupReconcile(t)
 	deal := e.SeedDeal(t, "Nobody owns this", e.pipeline, e.open, nil)
 	// CreateDeal falls back to the ACTING principal when handed no owner
@@ -548,14 +564,8 @@ func TestAProposalOnAnUnownedDealRecordsNobody(t *testing.T) {
 	if err := e.reconcile(); err != nil {
 		t.Fatal(err)
 	}
-	var staged int
-	if err := e.owner.QueryRow(context.Background(),
-		`SELECT count(*) FROM approval WHERE kind = 'deal_follow_up' AND target_entity_id = $1`,
-		deal).Scan(&staged); err != nil {
-		t.Fatalf("counting staged proposals: %v", err)
-	}
-	if staged != 0 {
-		t.Errorf("an unowned deal got %d follow-up proposal(s), want none", staged)
+	if got := e.followUps(t, deal); got != 0 {
+		t.Errorf("an unowned deal got %d follow-up task(s), want none", got)
 	}
 }
 
@@ -602,21 +612,18 @@ func TestFollowUpReconcileDoesNotStackAcrossPasses(t *testing.T) {
 			t.Fatalf("pass %d: %v", pass, err)
 		}
 	}
-	if got := e.pendingFollowUps(t, deal); got != 1 {
-		t.Errorf("after two passes, pending proposals = %d, want still 1 (no duplicate)", got)
+	if got := e.followUps(t, deal); got != 1 {
+		t.Errorf("after two passes, follow-up tasks = %d, want still 1 (no duplicate)", got)
 	}
 }
 
-// --- confirm / reject: the human decision is the only write ---
+// --- a proposal staged before tasks were filed directly ---
 
 func TestFollowUpConfirmCreatesTheTaskExactlyOnce(t *testing.T) {
 	e := setupReconcile(t)
 	deal := e.SeedDeal(t, "Confirm me", e.pipeline, e.open, &e.Rep1)
-	e.seedInteraction(t, deal, "call", "Discovery", 1)
-	if err := e.reconcile(); err != nil {
-		t.Fatal(err)
-	}
-	approvalID, proposal := e.followUpApproval(t, deal)
+	call := e.seedInteraction(t, deal, "call", "Discovery", 1)
+	approvalID, proposal := e.stageLegacyFollowUp(t, deal, call)
 
 	human := e.As(e.Rep1, []ids.UUID{e.Team1}, reconcilePerms)
 	if _, err := e.svc.Decide(human, approvalID, true, nil); err != nil {
@@ -660,11 +667,8 @@ func TestFollowUpConfirmCreatesTheTaskExactlyOnce(t *testing.T) {
 func TestADealEditDoesNotCancelAWaitingFollowUp(t *testing.T) {
 	e := setupReconcile(t)
 	deal := e.SeedDeal(t, "Edited while the question waited", e.pipeline, e.open, &e.Rep1)
-	e.seedInteraction(t, deal, "call", "Discovery", 1)
-	if err := e.reconcile(); err != nil {
-		t.Fatal(err)
-	}
-	approvalID, _ := e.followUpApproval(t, deal)
+	call := e.seedInteraction(t, deal, "call", "Discovery", 1)
+	approvalID, _ := e.stageLegacyFollowUp(t, deal, call)
 
 	human := e.As(e.Rep1, []ids.UUID{e.Team1}, reconcilePerms)
 	before := e.dealVersion(t, deal)
@@ -692,11 +696,8 @@ func TestADealEditDoesNotCancelAWaitingFollowUp(t *testing.T) {
 func TestFollowUpRejectWritesNothing(t *testing.T) {
 	e := setupReconcile(t)
 	deal := e.SeedDeal(t, "Reject me", e.pipeline, e.open, &e.Rep1)
-	e.seedInteraction(t, deal, "call", "Sync", 1)
-	if err := e.reconcile(); err != nil {
-		t.Fatal(err)
-	}
-	approvalID, _ := e.followUpApproval(t, deal)
+	call := e.seedInteraction(t, deal, "call", "Sync", 1)
+	approvalID, _ := e.stageLegacyFollowUp(t, deal, call)
 
 	human := e.As(e.Rep1, []ids.UUID{e.Team1}, reconcilePerms)
 	if _, err := e.svc.Decide(human, approvalID, false, nil); err != nil {
@@ -715,66 +716,29 @@ func TestFollowUpRejectWritesNothing(t *testing.T) {
 	}
 }
 
-// A rejection STICKS. The nightly pass runs again tomorrow over the same deal,
-// and a rep who said no must not be asked the same thing a second time.
-//
-// The pass only ever asked whether a proposal was still PENDING, so a rejected
-// one left no trace it could see: the next run staged a fresh proposal, and the
-// rep's no became a daily question. That is the failure StageUnlessDeclined
-// exists to prevent, and it needs a stable logical identity to recognise the
-// proposal as the same one.
-func TestARejectedFollowUpIsNotAskedAgainTomorrow(t *testing.T) {
-	e := setupReconcile(t)
-	deal := e.SeedDeal(t, "Asked once", e.pipeline, e.open, &e.Rep1)
-	e.seedInteraction(t, deal, "call", "Sync", 1)
-	if err := e.reconcile(); err != nil {
-		t.Fatal(err)
-	}
-	approvalID, _ := e.followUpApproval(t, deal)
-	human := e.As(e.Rep1, []ids.UUID{e.Team1}, reconcilePerms)
-	if _, err := e.svc.Decide(human, approvalID, false, nil); err != nil {
-		t.Fatalf("reject: %v", err)
-	}
+// A rep's answer to a proposal staged before tasks were filed directly still
+// stands: the next pass over the same interaction writes no task.
+func TestALegacyFollowUpTheRepAnsweredIsNotFiledAgain(t *testing.T) {
+	for name, approve := range map[string]bool{"declined": false, "approved and done": true} {
+		t.Run(name, func(t *testing.T) {
+			e := setupReconcile(t)
+			deal := e.SeedDeal(t, "Answered once", e.pipeline, e.open, &e.Rep1)
+			call := e.seedInteraction(t, deal, "call", "Sync", 1)
+			approvalID, _ := e.stageLegacyFollowUp(t, deal, call)
+			human := e.As(e.Rep1, []ids.UUID{e.Team1}, reconcilePerms)
+			if _, err := e.svc.Decide(human, approvalID, approve, nil); err != nil {
+				t.Fatalf("decide: %v", err)
+			}
+			e.WsExec(t, `UPDATE activity SET is_done = true, done_at = now() WHERE source_system = 'overnight-reconcile'`)
+			before, _, _, _ := e.dealTasks(t, deal)
 
-	// Tomorrow's pass, over a deal whose situation has not changed.
-	if err := e.reconcile(); err != nil {
-		t.Fatal(err)
-	}
-	if got := e.pendingFollowUps(t, deal); got != 0 {
-		t.Errorf("after a rejection the next pass staged %d proposals, want 0 — "+
-			"the rep is being asked again", got)
-	}
-}
-
-// A rejection on ONE deal says nothing about another. The identity is the deal,
-// so declining a follow-up must not quiet the whole pipeline — which is the way
-// a too-broad identity fails, and it fails silently: proposals simply stop
-// appearing and nobody can point at the moment they stopped.
-func TestARejectionOnOneDealDoesNotSilenceAnother(t *testing.T) {
-	e := setupReconcile(t)
-	declined := e.SeedDeal(t, "Said no here", e.pipeline, e.open, &e.Rep1)
-	other := e.SeedDeal(t, "Never asked", e.pipeline, e.open, &e.Rep1)
-	e.seedInteraction(t, declined, "call", "Sync", 1)
-	if err := e.reconcile(); err != nil {
-		t.Fatal(err)
-	}
-	approvalID, _ := e.followUpApproval(t, declined)
-	human := e.As(e.Rep1, []ids.UUID{e.Team1}, reconcilePerms)
-	if _, err := e.svc.Decide(human, approvalID, false, nil); err != nil {
-		t.Fatalf("reject: %v", err)
-	}
-
-	// The other deal now earns a proposal of its own.
-	e.seedInteraction(t, other, "call", "First contact", 1)
-	if err := e.reconcile(); err != nil {
-		t.Fatal(err)
-	}
-	if got := e.pendingFollowUps(t, other); got != 1 {
-		t.Errorf("the untouched deal has %d proposals, want 1 — a rejection "+
-			"elsewhere silenced it", got)
-	}
-	if got := e.pendingFollowUps(t, declined); got != 0 {
-		t.Errorf("the declined deal has %d proposals, want 0", got)
+			if err := e.reconcile(); err != nil {
+				t.Fatal(err)
+			}
+			if after, _, _, _ := e.dealTasks(t, deal); after != before {
+				t.Errorf("tasks after the next pass = %d, want still %d", after, before)
+			}
+		})
 	}
 }
 
@@ -789,11 +753,8 @@ func TestARejectionOnOneDealDoesNotSilenceAnother(t *testing.T) {
 func TestAnEditTheEffectCannotUseRefusesTheDecision(t *testing.T) {
 	e := setupReconcile(t)
 	deal := e.SeedDeal(t, "Edited badly", e.pipeline, e.open, &e.Rep1)
-	e.seedInteraction(t, deal, "call", "Sync", 1)
-	if err := e.reconcile(); err != nil {
-		t.Fatal(err)
-	}
-	approvalID, proposal := e.followUpApproval(t, deal)
+	call := e.seedInteraction(t, deal, "call", "Sync", 1)
+	approvalID, proposal := e.stageLegacyFollowUp(t, deal, call)
 
 	proposal.DueDate = "next Tuesday"
 	edited, err := json.Marshal(proposal)
@@ -836,11 +797,8 @@ func TestAnEditTheEffectCannotUseRefusesTheDecision(t *testing.T) {
 func TestAValidEditIsApprovedAndTheEffectUsesIt(t *testing.T) {
 	e := setupReconcile(t)
 	deal := e.SeedDeal(t, "Edited well", e.pipeline, e.open, &e.Rep1)
-	e.seedInteraction(t, deal, "call", "Sync", 1)
-	if err := e.reconcile(); err != nil {
-		t.Fatal(err)
-	}
-	approvalID, proposal := e.followUpApproval(t, deal)
+	call := e.seedInteraction(t, deal, "call", "Sync", 1)
+	approvalID, proposal := e.stageLegacyFollowUp(t, deal, call)
 
 	moved := time.Now().UTC().AddDate(0, 0, 9).Format(time.DateOnly)
 	proposal.DueDate = moved
@@ -862,79 +820,54 @@ func TestAValidEditIsApprovedAndTheEffectUsesIt(t *testing.T) {
 	}
 }
 
-// The rejection survives a payload that has MOVED. The proposal's due date is
-// computed from "today", so tomorrow's proposal is a different document — and
-// supersession matches by containment of the identity, not by equality of the
-// payload. If that were the other way round, the memory would last exactly one
-// night and this fix would be decorative.
-func TestARejectionSurvivesTheProposalChangingUnderIt(t *testing.T) {
-	e := setupReconcile(t)
-	deal := e.SeedDeal(t, "Payload moves", e.pipeline, e.open, &e.Rep1)
-	e.seedInteraction(t, deal, "call", "Sync", 1)
-	if err := e.reconcile(); err != nil {
-		t.Fatal(err)
-	}
-	approvalID, first := e.followUpApproval(t, deal)
-	human := e.As(e.Rep1, []ids.UUID{e.Team1}, reconcilePerms)
-	if _, err := e.svc.Decide(human, approvalID, false, nil); err != nil {
-		t.Fatalf("reject: %v", err)
-	}
+// A task the rep cleared is not written again: the next night's pass over
+// the same interaction gets the first task back instead.
+func TestAFollowUpTheRepClearedIsNotWrittenAgain(t *testing.T) {
+	for _, clear := range []string{"is_done = true, done_at = now()", "archived_at = now()"} {
+		t.Run(clear, func(t *testing.T) {
+			e := setupReconcile(t)
+			deal := e.SeedDeal(t, "Cleared once", e.pipeline, e.open, &e.Rep1)
+			e.seedInteraction(t, deal, "call", "Sync", 1)
+			if err := e.reconcile(); err != nil {
+				t.Fatal(err)
+			}
+			e.WsExec(t, `UPDATE activity SET `+clear+` WHERE source_system = 'overnight-reconcile'`)
 
-	// Move the deal's clock so the next pass computes a different due date over
-	// the SAME interaction — a different document, the same question.
-	e.WsExec(t, `UPDATE deal SET last_activity_at = now() - interval '2 days' WHERE id = $1`, deal)
-	if err := e.reconcile(); err != nil {
-		t.Fatal(err)
-	}
-	if got := e.pendingFollowUps(t, deal); got != 0 {
-		t.Errorf("a moved payload staged %d proposals past the rejection, want 0 — "+
-			"the memory is keyed on the payload rather than on the situation", got)
-	}
-	if first.DealID.UUID != deal {
-		t.Errorf("the first proposal named deal %s, want %s", first.DealID.UUID, deal)
+			if err := e.reconcile(); err != nil {
+				t.Fatal(err)
+			}
+			var written int
+			if err := e.owner.QueryRow(context.Background(),
+				`SELECT count(*) FROM activity WHERE source_system = 'overnight-reconcile'`).Scan(&written); err != nil {
+				t.Fatal(err)
+			}
+			if written != 1 {
+				t.Errorf("follow-up tasks after the rep cleared the first = %d, want still 1", written)
+			}
+		})
 	}
 }
 
-// A rejection covers the conversation it answered, not the deal forever.
-//
-// The admit case beside the three refusals above, and the one that decides
-// whether the memory is a memory or a mute button. A decline is remembered with
-// no expiry, so keying it on the deal alone would let one "no" bury every later
-// follow-up: the rep says no after a discovery call, has a real conversation
-// weeks later that again ends with no next step, and is never asked. The
-// evidence activity is what tells those apart.
-func TestANewConversationIsProposedAgainAfterAnEarlierRejection(t *testing.T) {
+// A cleared task covers the conversation it answered, not the deal forever. A
+// later conversation that ends with no next step gets its own task.
+func TestANewConversationGetsANewFollowUpAfterTheLastWasDone(t *testing.T) {
 	e := setupReconcile(t)
 	deal := e.SeedDeal(t, "Moved on", e.pipeline, e.open, &e.Rep1)
-	// Both interactions sit inside the pass's 48h lookback; the declined one is
-	// simply the older, so the later call becomes the evidence on the reruns.
 	e.seedInteraction(t, deal, "call", "Discovery", 40)
 	if err := e.reconcile(); err != nil {
 		t.Fatal(err)
 	}
-	approvalID, declined := e.followUpApproval(t, deal)
-	human := e.As(e.Rep1, []ids.UUID{e.Team1}, reconcilePerms)
-	if _, err := e.svc.Decide(human, approvalID, false, nil); err != nil {
-		t.Fatalf("reject: %v", err)
-	}
+	e.WsExec(t, `UPDATE activity SET is_done = true, done_at = now() WHERE source_system = 'overnight-reconcile'`)
 
-	// A genuinely new interaction, later than the one that was declined.
-	e.WsExec(t, `UPDATE deal SET last_activity_at = now() - interval '2 days' WHERE id = $1`, deal)
 	fresh := e.seedInteraction(t, deal, "call", "They called back", 1)
 	if err := e.reconcile(); err != nil {
 		t.Fatal(err)
 	}
-	if got := e.pendingFollowUps(t, deal); got != 1 {
-		t.Fatalf("a new conversation staged %d proposals, want 1 — an old rejection "+
-			"is silencing a deal it was never asked about", got)
+	if got := e.followUps(t, deal); got != 2 {
+		t.Fatalf("follow-up tasks = %d, want 2: the new conversation has none", got)
 	}
-	_, asked := e.followUpApproval(t, deal)
-	if asked.EvidenceActivityID.UUID != fresh {
-		t.Errorf("the new proposal cites interaction %s, want the fresh one %s",
-			asked.EvidenceActivityID.UUID, fresh)
-	}
-	if asked.EvidenceActivityID == declined.EvidenceActivityID {
-		t.Error("the new proposal cites the interaction that was already declined")
+	if evidence, _, _ := e.followUpEvidence(t, deal); evidence != fresh {
+		t.Errorf("the new task answers %s, want the fresh call %s", evidence, fresh)
 	}
 }
 
@@ -943,11 +876,8 @@ func TestANewConversationIsProposedAgainAfterAnEarlierRejection(t *testing.T) {
 func TestFollowUpProposalRespectsRowScope(t *testing.T) {
 	e := setupReconcile(t)
 	deal := e.SeedDeal(t, "Rep1's deal", e.pipeline, e.open, &e.Rep1)
-	e.seedInteraction(t, deal, "call", "Private call", 1)
-	if err := e.reconcile(); err != nil {
-		t.Fatal(err)
-	}
-	approvalID, _ := e.followUpApproval(t, deal)
+	call := e.seedInteraction(t, deal, "call", "Private call", 1)
+	approvalID, _ := e.stageLegacyFollowUp(t, deal, call)
 
 	// rep3 sits in team2; rep1's deal is invisible to them, so the staged
 	// proposal reads as absent — no decide oracle for a leaked UUID.
@@ -982,8 +912,8 @@ func TestFollowUpReconcileGroundsOnlyOnACallThatReachedSomebody(t *testing.T) {
 	if err := e.reconcile(); err != nil {
 		t.Fatal(err)
 	}
-	if got := e.pendingFollowUps(t, deal); got != 0 {
-		t.Fatalf("a voicemail grounded %d follow-up proposals, want none", got)
+	if got := e.followUps(t, deal); got != 0 {
+		t.Fatalf("a voicemail grounded %d follow-up tasks, want none", got)
 	}
 
 	reached := e.seedInteraction(t, deal, "call", "Spoke to the buyer", 1)
@@ -993,7 +923,7 @@ func TestFollowUpReconcileGroundsOnlyOnACallThatReachedSomebody(t *testing.T) {
 	if err := e.reconcile(); err != nil {
 		t.Fatal(err)
 	}
-	if _, proposal := e.followUpApproval(t, deal); proposal.EvidenceActivityID.UUID != reached {
-		t.Errorf("the proposal is grounded on %s, want the reached call %s", proposal.EvidenceActivityID, reached)
+	if evidence, _, _ := e.followUpEvidence(t, deal); evidence != reached {
+		t.Errorf("the task is grounded on %s, want the reached call %s", evidence, reached)
 	}
 }

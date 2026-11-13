@@ -85,7 +85,7 @@ type DealTaskSettler interface {
 // declared verb with no tool is not a gap to describe here:
 // TestEveryDeclaredToolVerbIsRegistered fails the build for it.
 func RegisterCoreTools(r *Registry, p datasource.SystemOfRecordProvider, stages StageResolver, promoter LeadPromoter, consumerMail ConsumerMail, duplicates OpenDuplicatesFor, tagOffer TagOfferFor) {
-	r.Register(readRecord{p: p, name: r.seats})
+	r.Register(readRecord{p: p, name: r.seats, sidecars: r.recordSidecars})
 	r.Register(createRecord{p: p, duplicates: duplicates, tagOffer: tagOffer, language: r.language, words: r.changeWords})
 	r.Register(updateRecord{p: p, language: r.language, words: r.changeWords})
 	r.Register(logActivity{p: p})
@@ -164,8 +164,9 @@ func listResult(ctx context.Context, name SeatNamer, res datasource.SearchResult
 // --- read_record (🟢 read) ---
 
 type readRecord struct {
-	p    datasource.SystemOfRecordProvider
-	name SeatNamer
+	p        datasource.SystemOfRecordProvider
+	name     SeatNamer
+	sidecars RecordSidecarsFor
 }
 
 func (t readRecord) Spec() mcp.ToolSpec {
@@ -179,7 +180,7 @@ func (t readRecord) Spec() mcp.ToolSpec {
 			"record_type":{"type":"string","enum":["contact","company","deal","lead","activity","project","partner","product","offer_template","offer","commission","deal_room"],"description":"partner is addressed by its COMPANY's id: the row is that company's partner terms, not a separate record."},
 			"id":{"type":"string","format":"uuid"}},
 			"additionalProperties":false}`),
-		OutputSchema: schemaFor[recordWithOwner](),
+		OutputSchema: schemaFor[readRecordResult](),
 	}
 }
 
@@ -195,7 +196,11 @@ func (t readRecord) Handle(ctx context.Context, in json.RawMessage) (json.RawMes
 	if err != nil {
 		return nil, err
 	}
-	return json.Marshal(withOwners(ctx, t.name, []wireRecord{newWireRecord(ctx, rec)})[0])
+	out, err := withSidecars(ctx, t.sidecars, withOwners(ctx, t.name, []wireRecord{newWireRecord(ctx, rec)})[0])
+	if err != nil {
+		return nil, err
+	}
+	return json.Marshal(out)
 }
 
 // --- create_record (🟢 write, reversible) ---

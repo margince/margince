@@ -79,6 +79,8 @@ var filterSetModules = []string{
 var unofferedSeamFilters = gatekit.Waive(map[string]string{
 	"company.id": "a screen's batch read of companies it already holds ids for; an agent reads a " +
 		"company by id through read_record, and a second route to the same answer is prompt text for nothing",
+	"activity.collapse_copies": "the seam collapses a record's timeline itself (Provider.SearchEntity), so an agent " +
+		"never sees one mail once per mailbox, and an unscoped agent read keeps every row as an export does",
 })
 
 func TestEveryDeclaredFilterTheStoreBindsIsOfferedToTheSeam(t *testing.T) {

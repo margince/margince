@@ -142,6 +142,10 @@ type OutboundMessage struct {
 	// the caller who released it. A unit sends as a contact, never as the
 	// installation.
 	Member UserID
+	// ActivityID is the timeline entry this send is, as a uuid. Record it in
+	// place of the recipient. The core holds who the activity went to, and its
+	// erasure and export reach a row linked to it.
+	ActivityID string
 	// Recipient is the provider account id, never the username: a username is
 	// re-assignable and an account id is not, so routing on the readable one
 	// delivers to whoever holds the handle today.

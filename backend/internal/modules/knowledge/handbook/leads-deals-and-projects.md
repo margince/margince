@@ -264,8 +264,11 @@ To create a project in Margince, open **Projects** in the sidebar and choose **N
 2. Pick the **Company** (required): the client the work is for.
 3. Pick the **Owner**. You are picked first; you may pick a colleague instead.
 4. You may add a **Description** and a **Target end date**.
-5. Fill any custom fields, then choose **Create**.
-The owner must be "an active colleague you may assign work to", the same rule as **Assign to a colleague**. Margince creates the project key from the name. Read-only seats cannot create projects.
+5. Under **Key**, Margince shows the key it suggests from the name. Leave it empty to use that key, or type your own.
+6. Pick the **Starting phase**: **Initiative**, **Pursuing** or **Delivering**. A new project cannot start closed.
+7. Under **Deal**, you may pick an open deal of the company that has no project yet. The deal then belongs to the new project.
+8. Fill any custom fields, then choose **Create**.
+The owner must be "an active colleague you may assign work to", the same rule as **Assign to a colleague**. Linking a deal needs the right to edit that deal. Read-only seats cannot create projects.
 Also called: start a new project for a client, new engagement.
 
 ### Can I create a project from a company page or a deal?
@@ -333,28 +336,29 @@ under the name of the colleague whose action caused it.
 
 ### The key
 
-Every project gets a short key, which Margince creates. You cannot choose it.
+Every project has a short key. You choose it when you create the project, or
+keep the one Margince suggests from the name. It never changes after that.
 
-The key comes from the project's name, plus the lowest free number. A name of
-several words gives its first letters; a single word gives its first eight
-letters. So "Nordwind ERP rollout" becomes `NER-1`, and "ERP rollout Acme"
-becomes `ERA-1`. The number counts up on its own for each set of letters.
+A name of several words gives its first letters, and a single word gives its
+first eight letters. When a live project already uses those letters, the next
+one gets a number: `NER`, then `NER-2`. Margince refuses, with a reason, a
+word of a colleague's name, a word such as `FWD` or `URGENT`, and the key of
+another live project.
 
 The key is what files email on its own. Any subject carrying it **in square
-brackets** goes under that project. See [Capture](capture.md).
-
-Two live projects never share a key. Archiving a project frees its key.
+brackets** goes under that project. See [Capture](capture.md). Two live
+projects never share a key. Archiving a project frees its key.
 
 ### How do I choose a good project key?
-To get a project key you can read in Margince, pick the right project name. The key is made from the name once, when the project is created, and never changes.
-Lead with the customer, then the work: "Nordwind ERP rollout" gives `NER-1`, while "ERP rollout" gives `ER-1`, which names nobody. A one-word name gives a long key: "Datenmigration" gives `DATENMIG-1`. Three or four words give a short key.
+To get a project key you can read in Margince, type a short one under **Key** on **New project**, such as `NORD`.
+If you leave **Key** empty, the key comes from the name. Lead with the customer, then the work: "Nordwind ERP rollout" gives `NER`, while "ERP rollout" gives `ER`, which names nobody.
 
 A name that opens with numbers drops them, and a name with too few letters falls back to `PRJ`. Renaming a project keeps its key; to get a different one, archive the project and create it again. Also called: project code, project number, ticket prefix.
 
 ### How do I get a customer's emails filed under a project?
-To have a customer's emails filed under a project in Margince, get the project's key in square brackets into the subject, such as `[NER-1]`.
+To have a customer's emails filed under a project in Margince, get the project's key in square brackets into the subject, such as `[NER]`.
 Send from the deal or project, or pick the project under **Project** in the composer. Margince then puts the tag at the start of your subject, and a reply that keeps the subject brings the answer in.
-Ask the customer in your first mail to keep `[NER-1]` in the subject. See [Capture](capture.md) for every filing rule. Also called: email not on the project, project reference in email.
+Ask the customer in your first mail to keep `[NER]` in the subject. See [Capture](capture.md) for every filing rule. Also called: email not on the project, project reference in email.
 
 ### Companies and stakeholders
 

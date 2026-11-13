@@ -184,6 +184,7 @@ func PlanRequest(in Input, floor Plan, lang string) model.Request {
 		Messages:       []model.Message{{Role: "user", Content: fence.Wrap(planRefs(in, floor).Show(prompt))}},
 		MaxTokens:      ai.ReasoningOutputMaxTokens,
 		SecretStripper: ai.NewSecretStripper(),
+		Subjects:       in.subjects(),
 	}
 }
 

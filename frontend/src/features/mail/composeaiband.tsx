@@ -10,6 +10,7 @@ import { LanguageSelect } from "../../design-system/languageselect";
 import { useT } from "../../i18n";
 import { isLocale, LOCALES, type Locale } from "../../i18n/locale";
 import { DraftBand, RewriteRow } from "./composedraftband";
+import { rewriteBlock } from "./composedraftcall";
 import { DraftOffer } from "./composedraftcontext";
 import type { ComposeFields } from "./composefields";
 import type { VoiceDraft } from "./composevoicedraft";
@@ -34,12 +35,16 @@ export function AiDraftBand({
 }>) {
   const t = useT();
   const { provenance, account } = fields;
-  const drafted = provenance?.ai_generated === true;
-  // A rewrite replaces the body, so it is offered over the model's own
-  // untouched words. A draft in flight blocks it too.
-  const untouched = fields.body !== "" && fields.body === fields.servedBody;
-  const discard = voice.discardControl;
   const control = voice.control;
+  const drafted = provenance?.ai_generated === true;
+  const rewrites = fields.body.trim() !== "" && (
+    <RewriteRow
+      disabled={control.pending || control.disabled}
+      refusal={rewriteRefusal(fields, t)}
+      onRewrite={voice.rewrite}
+    />
+  );
+  const discard = voice.discardControl;
   const shownLanguage = draftLanguage(fields);
   const languagePick = shownLanguage && (
     <DraftLanguagePick
@@ -67,6 +72,7 @@ export function AiDraftBand({
       <div className="compose-aiband">
         {offer}
         {languagePick}
+        {rewrites}
       </div>
     );
   }
@@ -80,12 +86,7 @@ export function AiDraftBand({
         actions={
           <>
             {languagePick}
-            {untouched && (
-              <RewriteRow
-                disabled={control.pending || control.disabled}
-                onRewrite={voice.rewrite}
-              />
-            )}
+            {rewrites}
             <IconAction
               label={t("compose.askAgain")}
               icon={<RefreshCw aria-hidden="true" />}
@@ -117,6 +118,20 @@ export function AiDraftBand({
   );
 }
 
+function rewriteRefusal(
+  fields: ComposeFields,
+  t: ReturnType<typeof useT>,
+): string | null {
+  switch (rewriteBlock({ text: fields.body, html: fields.html })) {
+    case "formatted":
+      return t("compose.rewriteFormatted");
+    case "long":
+      return t("compose.rewriteTooLong");
+    default:
+      return null;
+  }
+}
+
 // The rep's pick, else the language the server reported for the last draft
 // that filled the body. A code this build does not ship offers no picker.
 function draftLanguage(fields: ComposeFields): Locale | null {
@@ -125,8 +140,8 @@ function draftLanguage(fields: ComposeFields): Locale | null {
   return reported !== undefined && isLocale(reported) ? reported : null;
 }
 
-// Unlike a rewrite verb, the pick stays over edited words, which it sends to
-// be written again in another language under the same ask.
+// Over edited words, the pick sends them to be written again in another
+// language under the same ask.
 function DraftLanguagePick({
   language,
   onPick,

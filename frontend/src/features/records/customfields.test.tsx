@@ -95,6 +95,30 @@ describe("FieldTable", () => {
     expect(screen.getByText("You")).toBeInTheDocument();
   });
 
+  it("names a record field's type, and a type this build does not know by its own name", () => {
+    wrap(
+      <FieldTable
+        object="deal"
+        fields={[
+          field({ id: "f-record", label: "Visit", type: "record" }),
+          field({
+            id: "f-newer",
+            label: "Newer",
+            type: "geopoint" as CustomField["type"],
+          }),
+        ]}
+        canEdit
+        meUserId="u1"
+        onRename={() => {}}
+        onArchive={() => {}}
+        onKinds={() => {}}
+        onSetting={() => {}}
+      />,
+    );
+    expect(screen.getByText(en["cf.type.record"])).toBeInTheDocument();
+    expect(screen.getByText("geopoint")).toBeInTheDocument();
+  });
+
   it("offers a live field's verbs in its row menu", async () => {
     wrap(
       <FieldTable

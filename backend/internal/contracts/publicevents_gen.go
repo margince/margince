@@ -642,6 +642,7 @@ const (
 	ActivityCaptured                      SubscribableEventType = "activity.captured"
 	ActivityDispositionRecorded           SubscribableEventType = "activity.disposition_recorded"
 	ActivityInvitationAnswered            SubscribableEventType = "activity.invitation_answered"
+	ActivityLinkSuggestionChanged         SubscribableEventType = "activity.link_suggestion_changed"
 	ActivityMarkedHandled                 SubscribableEventType = "activity.marked_handled"
 	ActivityReadinessRecorded             SubscribableEventType = "activity.readiness_recorded"
 	ActivityUpdated                       SubscribableEventType = "activity.updated"
@@ -753,6 +754,7 @@ const (
 	ProjectHealthAssessed                 SubscribableEventType = "project.health_assessed"
 	ProjectPhaseChanged                   SubscribableEventType = "project.phase_changed"
 	ProjectUpdated                        SubscribableEventType = "project.updated"
+	RecordLinkChanged                     SubscribableEventType = "record_link.changed"
 	RelationshipNudgeDecided              SubscribableEventType = "relationship_nudge.decided"
 	RetentionApplied                      SubscribableEventType = "retention.applied"
 	RetentionRestricted                   SubscribableEventType = "retention.restricted"
@@ -798,6 +800,8 @@ func (e SubscribableEventType) Valid() bool {
 	case ActivityDispositionRecorded:
 		return true
 	case ActivityInvitationAnswered:
+		return true
+	case ActivityLinkSuggestionChanged:
 		return true
 	case ActivityMarkedHandled:
 		return true
@@ -1020,6 +1024,8 @@ func (e SubscribableEventType) Valid() bool {
 	case ProjectPhaseChanged:
 		return true
 	case ProjectUpdated:
+		return true
+	case RecordLinkChanged:
 		return true
 	case RelationshipNudgeDecided:
 		return true
@@ -1264,6 +1270,19 @@ type PublicEventActivityInvitationAnswered struct {
 
 // PublicEventActivityInvitationAnsweredResponse defines model for PublicEventActivityInvitationAnswered.Response.
 type PublicEventActivityInvitationAnsweredResponse string
+
+// PublicEventActivityLinkSuggestionChanged Payload for activity.link_suggestion_changed. An extension proposed a record a message may belong to, or a reader accepted or rejected one (activities/linksuggestion.go). A proposal attaches nothing. Accepting it files the message through the ordinary relink, which announces activity.updated as well. Who decided is on the audit row, not on the wire.
+type PublicEventActivityLinkSuggestionChanged struct {
+	ActivityId openapi_types.UUID `json:"activity_id"`
+
+	// Status One of proposed, accepted or rejected.
+	Status       string             `json:"status"`
+	SuggestionId openapi_types.UUID `json:"suggestion_id"`
+	TargetId     openapi_types.UUID `json:"target_id"`
+
+	// TargetType The kind of record the suggestion names, one of contact, company, deal or project.
+	TargetType string `json:"target_type"`
+}
 
 // PublicEventActivityMarkedHandled Payload for activity.marked_handled. One reader marked an activity on their Worklist done. It is a waiting message, a message of their own still unanswered, or a meeting still owed a follow-up. They dealt with it another way, by phone, in a meeting, or with nothing owed (activities/disposition.go). It is that reader's own state, like a snooze, and the reader is not on the wire. No reply was sent. The undo is activity.disposition_recorded with `picked_up`.
 type PublicEventActivityMarkedHandled struct {
@@ -2584,6 +2603,17 @@ type PublicEventProjectUpdated struct {
 	ChangedFields map[string]interface{} `json:"changed_fields"`
 }
 
+// PublicEventRecordLinkChanged Payload for record_link.changed. A typed link was made or removed. The subject is the record the link starts on (deal, company or contact), so only a subscriber who may see that record gets the event. It names the link and its type. It does not name the record on the other end, which that subscriber may not be allowed to see.
+type PublicEventRecordLinkChanged struct {
+	LinkId openapi_types.UUID `json:"link_id"`
+
+	// LinkType A core type word, or `ext:<unit>:<type>`.
+	LinkType string `json:"link_type"`
+
+	// Status One of added or removed.
+	Status string `json:"status"`
+}
+
 // PublicEventRelationshipNudgeDecided Payload for relationship_nudge.decided. A rep set a lapsed contact aside so their own Worklist stops raising them, or put them back (the contacts module's nudge dismissal). The entity is the contact, which is what the judgement is about. Whose morning it was is not on the wire, for the same reason as in activity.disposition_recorded. A dismissal binds a single reader. A consumer reading it as a workspace-wide fact would report one rep's private decision as the contact's own state. The reader stays on the row, for a caller entitled to it.
 type PublicEventRelationshipNudgeDecided struct {
 	// Action What was decided. The undo, `restored`, is carried rather than inferred from a row going quiet. A decision withdrawn is itself a decision. A consumer counting how often reps put relationships down has to see it happen.
@@ -3061,6 +3091,12 @@ func (PublicEventActivityInvitationAnswered) EventType() string {
 
 func (PublicEventActivityInvitationAnswered) EntityType() string { return "activity" }
 
+func (PublicEventActivityLinkSuggestionChanged) EventType() string {
+	return "activity.link_suggestion_changed"
+}
+
+func (PublicEventActivityLinkSuggestionChanged) EntityType() string { return "activity" }
+
 func (PublicEventActivityMarkedHandled) EventType() string { return "activity.marked_handled" }
 
 func (PublicEventActivityMarkedHandled) EntityType() string { return "activity" }
@@ -3517,6 +3553,10 @@ func (PublicEventProjectUpdated) EventType() string { return "project.updated" }
 
 func (PublicEventProjectUpdated) EntityType() string { return "project" }
 
+func (PublicEventRecordLinkChanged) EventType() string { return "record_link.changed" }
+
+func (PublicEventRecordLinkChanged) EntityType() string { return "dynamic" }
+
 func (PublicEventRelationshipNudgeDecided) EventType() string { return "relationship_nudge.decided" }
 
 func (PublicEventRelationshipNudgeDecided) EntityType() string { return "contact" }
@@ -3659,6 +3699,7 @@ var PublicEventVersions = map[string]int{
 	"activity.captured":                         1,
 	"activity.disposition_recorded":             1,
 	"activity.invitation_answered":              1,
+	"activity.link_suggestion_changed":          1,
 	"activity.marked_handled":                   1,
 	"activity.readiness_recorded":               1,
 	"activity.updated":                          1,
@@ -3770,6 +3811,7 @@ var PublicEventVersions = map[string]int{
 	"project.health_assessed":                   1,
 	"project.phase_changed":                     1,
 	"project.updated":                           1,
+	"record_link.changed":                       1,
 	"relationship_nudge.decided":                1,
 	"retention.applied":                         1,
 	"retention.restricted":                      1,
@@ -3812,6 +3854,7 @@ var PublicEventSamples = map[string]string{
 	"activity.captured":                         "{\"channel_provider\":\"Sample channel provider\",\"import_run_id\":\"0190a7f2-0000-7000-8000-000000000010\",\"imported\":true,\"kind\":\"Sample kind\",\"source_system\":\"Sample source system\"}",
 	"activity.disposition_recorded":             "{\"activity_id\":\"0190a7f2-0000-7000-8000-000000000010\",\"disposition\":\"not_sales\"}",
 	"activity.invitation_answered":              "{\"activity_id\":\"0190a7f2-0000-7000-8000-000000000010\",\"response\":\"accepted\"}",
+	"activity.link_suggestion_changed":          "{\"activity_id\":\"0190a7f2-0000-7000-8000-000000000010\",\"status\":\"Sample status\",\"suggestion_id\":\"0190a7f2-0000-7000-8000-000000000010\",\"target_id\":\"0190a7f2-0000-7000-8000-000000000010\",\"target_type\":\"Sample target type\"}",
 	"activity.marked_handled":                   "{\"activity_id\":\"0190a7f2-0000-7000-8000-000000000010\"}",
 	"activity.readiness_recorded":               "{\"activity_id\":\"0190a7f2-0000-7000-8000-000000000010\",\"preparation_revision\":\"Sample preparation revision\",\"state\":\"ready\"}",
 	"activity.updated":                          "{\"changed_fields\":{\"agenda_changed\":true,\"assignee_id\":\"0190a7f2-0000-7000-8000-000000000010\",\"audience\":\"workspace\",\"automatic_task_repaired\":true,\"body\":true,\"calendar_method\":\"PUBLISH\",\"call_outcome\":\"reached\",\"call_outcome_cleared\":true,\"commitment_admissions_changed\":true,\"direction\":\"outbound\",\"due_at\":\"2026-10-14T09:12:00Z\",\"due_has_time\":true,\"host_user_id\":\"0190a7f2-0000-7000-8000-000000000010\",\"is_done\":true,\"meeting_status\":\"booked\",\"meeting_status_cleared\":true,\"occurred_at\":\"2026-10-14T09:12:00Z\",\"occurred_precision\":\"instant\",\"outbound_attested\":true,\"project_filing_undone\":true,\"relinked\":{\"entity_id\":\"0190a7f2-0000-7000-8000-000000000010\",\"entity_type\":\"Sample entity type\"},\"remind_at\":\"2026-10-14T09:12:00Z\",\"remind_at_cleared\":true,\"request_settlement_changed\":true,\"restored\":true,\"subject\":\"Sample subject\",\"task_type\":\"reply\",\"thread_key\":\"Sample thread key\"},\"import_run_id\":\"0190a7f2-0000-7000-8000-000000000010\",\"imported\":true}",
@@ -3923,6 +3966,7 @@ var PublicEventSamples = map[string]string{
 	"project.health_assessed":                   "{\"assessment_id\":\"0190a7f2-0000-7000-8000-000000000010\",\"source\":\"Sample source\",\"state\":\"Sample state\"}",
 	"project.phase_changed":                     "{\"from_phase\":\"Sample from phase\",\"reason\":\"Sample reason\",\"to_phase\":\"Sample to phase\"}",
 	"project.updated":                           "{\"changed_fields\":{}}",
+	"record_link.changed":                       "{\"link_id\":\"0190a7f2-0000-7000-8000-000000000010\",\"link_type\":\"Sample link type\",\"status\":\"Sample status\"}",
 	"relationship_nudge.decided":                "{\"action\":\"dismissed\",\"contact_id\":\"0190a7f2-0000-7000-8000-000000000010\",\"dismissed_until\":\"2026-10-14T09:12:00Z\",\"permanent\":true}",
 	"retention.applied":                         "{\"action\":\"archive\",\"policy\":\"0190a7f2-0000-7000-8000-000000000010\",\"reason\":\"Sample reason\"}",
 	"retention.restricted":                      "{\"action\":\"restrict\",\"activity_id\":\"0190a7f2-0000-7000-8000-000000000010\",\"restricted_until\":\"2026-10-14T09:12:00Z\",\"retention_class\":\"Sample retention class\"}",

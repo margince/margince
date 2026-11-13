@@ -26,6 +26,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/modules/ai"
 	"github.com/margince/margince/backend/internal/modules/capture"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/promptfence"
 	"github.com/margince/margince/backend/internal/shared/kernel/promptref"
 	"github.com/margince/margince/backend/internal/shared/kernel/textcut"
@@ -66,6 +67,7 @@ func verdictRequest(row capture.PendingCounterparty) model.Request {
 		MaxTokens:      ai.ReasoningOutputMaxTokens,
 		ResponseSchema: verdictSchema(ref),
 		SecretStripper: ai.NewSecretStripper(),
+		Subjects:       &model.Subjects{Activities: []ids.UUID{row.ActivityID}, Addresses: []string{row.Email}},
 	}
 }
 

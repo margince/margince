@@ -57,6 +57,17 @@ describe("grouping the account's chronology", () => {
     expect(groups).toHaveLength(1);
   });
 
+  it("keeps one mail held in several mailboxes as one row, not a bulk send", () => {
+    const groups = groupChronology([
+      mail("2", "Update zu Margince", "2026-07-17T09:00:01Z", { copies: 4 }),
+      mail("1", "Update zu Margince", "2026-07-17T09:00:00Z"),
+    ]);
+    // Four colleagues' copies of one message are one recipient, so two
+    // same-subject rows stay below the bulk threshold.
+    expect(groups.map((g) => g.kind)).toEqual(["single", "single"]);
+    expect(groups[0].entries).toHaveLength(1);
+  });
+
   it("folds a bulk send addressed to several contacts into one event", () => {
     const groups = groupChronology([
       mail("1", "Update zu Margince", "2026-07-17T09:00:00Z"),

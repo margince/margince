@@ -107,7 +107,7 @@ func (h filterPreviewHandlers) PreviewFilter(w http.ResponseWriter, r *http.Requ
 	if req.Cursor != nil {
 		token = *req.Cursor
 	}
-	after, err := storekit.DecodeIDCursor(token)
+	scope, after, err := previewCursor(req.Resource, *req.Filter, token)
 	if err != nil {
 		httperr.Write(w, r, err)
 		return
@@ -124,12 +124,12 @@ func (h filterPreviewHandlers) PreviewFilter(w http.ResponseWriter, r *http.Requ
 	}
 
 	actor, _ := principal.Actor(r.Context())
-	preview, err := h.preview(r.Context(), engine, *req.Filter, after, limit, actor.Type == principal.PrincipalAgent)
+	preview, err := h.preview(r.Context(), engine, *req.Filter, scope, after, limit, actor.Type == principal.PrincipalAgent)
 	if err != nil {
 		writeFilterPreviewError(w, r, err)
 		return
 	}
-	preview.Resource = crmcontracts.FilterPreviewResource(req.Resource)
+	preview.Resource = req.Resource
 	httperr.WriteJSON(w, http.StatusOK, preview)
 }
 
@@ -147,12 +147,12 @@ func (h filterPreviewHandlers) PreviewFilter(w http.ResponseWriter, r *http.Requ
 // typing is not logged; an agent's preview is, because for an agent the same
 // read is a bulk read of records that must leave a trace.
 func (h filterPreviewHandlers) preview(
-	ctx context.Context, engine storekit.Query, pred storekit.Predicate, after *ids.UUID, limit int, logged bool,
+	ctx context.Context, engine storekit.Query, pred storekit.Predicate, scope string, after *ids.UUID, limit int, logged bool,
 ) (crmcontracts.FilterPreview, error) {
 	var out crmcontracts.FilterPreview
 	err := database.WithWorkspaceSnapshot(ctx, h.pool, func(ctx context.Context) error {
 		return database.WithWorkspaceTx(ctx, h.pool, func(tx pgx.Tx) error {
-			return previewIn(ctx, tx, engine, pred, after, limit, logged, &out)
+			return previewIn(ctx, tx, engine, pred, scope, after, limit, logged, &out)
 		})
 	})
 	return out, err
@@ -161,7 +161,7 @@ func (h filterPreviewHandlers) preview(
 // previewIn is preview's body: every statement runs on tx, the snapshot's.
 func previewIn(
 	ctx context.Context, tx pgx.Tx, engine storekit.Query, pred storekit.Predicate,
-	after *ids.UUID, limit int, logged bool, out *crmcontracts.FilterPreview,
+	scope string, after *ids.UUID, limit int, logged bool, out *crmcontracts.FilterPreview,
 ) error {
 	// The count is unbounded, and the caller writes its predicate: up to
 	// PredicateMaxLeaves substring matches, each a possible sequential scan.
@@ -178,11 +178,7 @@ func previewIn(
 	if err != nil {
 		return err
 	}
-	columns, err := exportableColumns(ctx, tx, engine.Table)
-	if err != nil {
-		return err
-	}
-	rows, err := readRowsByID(ctx, tx, engine.Table, columns, matched)
+	columns, rows, err := previewProjection(ctx, tx, engine, matched)
 	if err != nil {
 		return err
 	}
@@ -192,7 +188,11 @@ func previewIn(
 		Rows:       rowsAsMaps(memberData{table: engine.Table, columns: columns, rows: rows}),
 		Truncated:  more,
 	}
-	if page := storekit.IDPage(matched, more); page.HasMore {
+	page, err := storekit.IDPage(scope, matched, more)
+	if err != nil {
+		return err
+	}
+	if page.HasMore {
 		out.NextCursor = &page.NextCursor
 	}
 	if !logged {
@@ -233,4 +233,16 @@ func writeFilterPreviewError(w http.ResponseWriter, r *http.Request, err error) 
 		return
 	}
 	httperr.Write(w, r, err)
+}
+
+// previewCursor reads a preview's cursor for the one paging it continues: this
+// resource under this filter. Both doors, the route and read_lists, read it
+// here, so a cursor minted by either continues on the other.
+func previewCursor(resource string, pred storekit.Predicate, token string) (string, *ids.UUID, error) {
+	scope, err := storekit.CursorScope("filter_preview", resource, pred)
+	if err != nil {
+		return "", nil, err
+	}
+	after, err := storekit.DecodeIDCursor(scope, token)
+	return scope, after, err
 }

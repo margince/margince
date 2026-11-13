@@ -3,11 +3,11 @@
 
 package deals
 
-// The inbox line the follow-up pass writes when it stages a proposal.
+// The words the follow-up pass and the stage policy write onto records.
 //
-// An approval's summary is shared-record text: stored once and read by every
-// seat, so it follows the installation's base language, resolved when the
-// proposal is staged. Rows already stored keep the words they were written in.
+// They are shared-record text: stored once and read by every seat, so they
+// follow the installation's base language, resolved when they are written.
+// Rows already stored keep the words they were written in.
 
 import (
 	"context"
@@ -23,10 +23,6 @@ import (
 // summaryCopy is one language's set. Every field is required, and the census
 // (summarycopy_test.go) refuses a partial set.
 type summaryCopy struct {
-	// draftFollowUp asks for a follow-up on a touched deal. %q is the deal's
-	// name, then %s the interaction kind (an identifier, untranslated) and %s
-	// its date, in that order.
-	draftFollowUp string
 	// followUpSubject titles the drafted task. %s is the deal's name.
 	followUpSubject string
 	// followUpBody grounds the task in the exchange it answers: %s the
@@ -61,7 +57,6 @@ type summaryCopy struct {
 // textlang.Shipped and ask this map directly.
 var summaryByLang = map[textlang.Lang]summaryCopy{
 	textlang.English: {
-		draftFollowUp:      systemtext.Copy("deals.draftFollowUp", textlang.English),
 		followUpSubject:    systemtext.Copy("deals.followUpSubject", textlang.English),
 		followUpBody:       systemtext.Copy("deals.followUpBody", textlang.English),
 		followUpBodyQuoted: systemtext.Copy("deals.followUpBodyQuoted", textlang.English),
@@ -84,7 +79,6 @@ var summaryByLang = map[textlang.Lang]summaryCopy{
 		protectedRecently:     "this deal is protected from automatic moves right now",
 	},
 	textlang.German: {
-		draftFollowUp:      systemtext.Copy("deals.draftFollowUp", textlang.German),
 		followUpSubject:    systemtext.Copy("deals.followUpSubject", textlang.German),
 		followUpBody:       systemtext.Copy("deals.followUpBody", textlang.German),
 		followUpBodyQuoted: systemtext.Copy("deals.followUpBodyQuoted", textlang.German),
@@ -107,7 +101,6 @@ var summaryByLang = map[textlang.Lang]summaryCopy{
 		protectedRecently:     "dieser Deal ist derzeit vor automatischen Phasenwechseln geschützt",
 	},
 	textlang.Vietnamese: {
-		draftFollowUp:      systemtext.Copy("deals.draftFollowUp", textlang.Vietnamese),
 		followUpSubject:    systemtext.Copy("deals.followUpSubject", textlang.Vietnamese),
 		followUpBody:       systemtext.Copy("deals.followUpBody", textlang.Vietnamese),
 		followUpBodyQuoted: systemtext.Copy("deals.followUpBodyQuoted", textlang.Vietnamese),

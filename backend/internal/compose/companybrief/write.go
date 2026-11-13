@@ -23,6 +23,7 @@ import (
 	"github.com/margince/margince/backend/internal/compose/promptvoice"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/ai"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/promptfence"
 	"github.com/margince/margince/backend/internal/shared/ports/model"
 )
@@ -181,7 +182,33 @@ func groundedRequest(systemFor func(promptfence.Fence, string) string, in Input,
 		Messages:       []model.Message{{Role: "user", Content: fence.Wrap(shownRefs(in).Show(encodeInput(in)))}},
 		MaxTokens:      ai.ReasoningOutputMaxTokens,
 		SecretStripper: ai.NewSecretStripper(),
+		Subjects:       in.Subjects(),
 	}
+}
+
+// Subjects are the company, contacts and activities the input carries.
+func (in Input) Subjects() *model.Subjects {
+	var contacts, activities []string
+	for _, c := range in.Contacts {
+		contacts = append(contacts, c.ID)
+	}
+	for _, a := range in.Recent {
+		activities = append(activities, a.ID)
+	}
+	if in.LastContact != nil {
+		activities = append(activities, in.LastContact.ID)
+	}
+	for _, t := range in.OpenTasks {
+		activities = append(activities, t.ID)
+	}
+	for _, c := range in.OpenCommitments {
+		activities = append(activities, c.ActivityID)
+	}
+	about := model.SubjectsOf(contacts, activities)
+	if company, err := ids.Parse(in.ID); err == nil {
+		about.Companies = []ids.UUID{company}
+	}
+	return about
 }
 
 // encodeInput renders the assembled account as the JSON the prompts read.

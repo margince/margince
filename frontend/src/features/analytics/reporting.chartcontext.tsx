@@ -1,4 +1,5 @@
 import { Info } from "lucide-react";
+import { AppLink } from "../../design-system/applink";
 import { Badge } from "../../design-system/atoms";
 import { Popover } from "../../design-system/popover";
 import { formatAnalyticsNumber, formatDateTime } from "../../format/format";
@@ -10,6 +11,7 @@ import {
   useT,
 } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
+import { useProgressDoor } from "./progress.links";
 import {
   type ReportingChart,
   type ReportingEvaluation,
@@ -248,8 +250,19 @@ function OwnerAttainmentNotes({
   const elapsed = target
     ? elapsedShare(target, evaluation.context.evaluated_at)
     : null;
+  // Sales won against goals is what Progress reads, member by member.
+  const progress = useProgressDoor(evaluation.context.scope);
+  const door =
+    !captured && target && chart.metric === "bookings_won"
+      ? progress
+      : undefined;
   return (
     <>
+      {door && (
+        <AppLink href={door.href} className="t-caption">
+          {t(door.label)}
+        </AppLink>
+      )}
       {credit && <span className="t-caption">{t(credit)}</span>}
       {elapsed != null && (
         <span className="t-caption">

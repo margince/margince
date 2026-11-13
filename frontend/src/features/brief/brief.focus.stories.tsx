@@ -376,9 +376,46 @@ export const LegacyStalledDeal: Story = {
       card.getByRole("link", { name: en["deal.openDeal"] }),
     ).toBeTruthy();
     await expect(card.queryByText("Why first?")).toBeNull();
+    // Mark handled is folded into the card's menu, drawn outside the card.
     await expect(
-      card.getByRole("button", { name: en["brief.act"] }),
+      card.queryByRole("button", { name: en["brief.act"] }),
+    ).toBeNull();
+    await userEvent.click(
+      card.getByRole("button", { name: /More actions for Acme Expansion/ }),
+    );
+    await expect(
+      await within(canvasElement.ownerDocument.body).findByRole("button", {
+        name: en["brief.act"],
+      }),
     ).toBeTruthy();
+  },
+};
+
+/** A deal closing soon: the card says so first, and keeps its verbs on one line. */
+export const ClosingSoonDeal: Story = {
+  render: panel([
+    {
+      ...legacyStalledRow(),
+      kind: "closing_soon",
+      because: [{ kind: "closing_soon" }, { kind: "no_next_step" }],
+    },
+    detailedDeal(),
+  ]),
+  play: async ({ canvasElement }) => {
+    const card = await focusedCard(canvasElement);
+    await expect(
+      card.getByText(en["worklist.ask.brief.closing_soon"]),
+    ).toBeTruthy();
+    await expect(
+      card.queryByText(en["worklist.because.closing_soon"]),
+    ).toBeNull();
+    await expect(
+      card.getByRole("link", { name: en["deal.openDeal"] }),
+    ).toBeTruthy();
+    // Mark handled, Snooze and Dismiss wait in the card's menu.
+    await expect(
+      card.queryByRole("button", { name: en["brief.dismiss"] }),
+    ).toBeNull();
   },
 };
 

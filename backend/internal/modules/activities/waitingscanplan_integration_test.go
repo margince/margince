@@ -16,6 +16,8 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/jackc/pgx/v5"
+
 	"github.com/margince/margince/backend/internal/platform/clocktest"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/platform/testdb"
@@ -46,6 +48,7 @@ func explainOnMailbox(t *testing.T, extra, setting, explain, statement string, a
 		}
 	}()
 	seedMailbox(ctx, t, tx, busyMailbox)
+	pinNeverAnalyzed(ctx, t, tx)
 	if extra != "" {
 		if _, err := tx.Exec(ctx, extra); err != nil {
 			t.Fatalf("seeding %s: %v", extra, err)
@@ -59,6 +62,16 @@ func explainOnMailbox(t *testing.T, extra, setting, explain, statement string, a
 		t.Fatalf("planning %s: %v", statement, err)
 	}
 	return decodePlan(t, raw)
+}
+
+// pinNeverAnalyzed gives the planner the table sizes of a database nothing has
+// analyzed. Earlier tests in the same process may have left small statistics.
+// Those steer a plan test to a scan the seeded rows do not warrant.
+func pinNeverAnalyzed(ctx context.Context, t *testing.T, tx pgx.Tx) {
+	t.Helper()
+	if _, err := tx.Exec(ctx, "UPDATE pg_class SET reltuples = -1, relpages = 0 WHERE relkind = 'r' AND relnamespace = 'public'::regnamespace"); err != nil {
+		t.Fatal(err)
+	}
 }
 
 // decodePlan reads the one plan an EXPLAIN (FORMAT JSON) answered.
@@ -147,16 +160,18 @@ func TestASeatsMailCandidatesUseTimeAndHeldIDIndexes(t *testing.T) {
 	// quarter of it: an empty window prices every path the same. ANALYZE fixes
 	// the statistics, so earlier tests in the shared database cannot move the plan.
 	plan := explainOnMailbox(t, `
-		INSERT INTO activity_participant (activity_id, address, role)
-		  SELECT id, CASE WHEN g % 10 = 0 THEN 'seat' ELSE 'rep'||g % 10 END||'@work.test', 'to' FROM mailbox_inbound;
+		UPDATE activity_participant p SET address = 'rep'||i.g % 10||'@work.test'
+		  FROM mailbox_inbound i WHERE p.activity_id = i.id AND p.role = 'to' AND i.g % 10 <> 0;
 		ANALYZE`,
 		"SET LOCAL enable_seqscan = off; SET LOCAL plan_cache_mode = force_generic_plan",
-		"EXPLAIN (FORMAT JSON) ", statement, seat.String(), "seat@work.test", clocktest.Now(t).AddDate(0, 0, -90))
+		"EXPLAIN (ANALYZE, FORMAT JSON) ", statement, seat.String(), "seat@work.test", clocktest.Now(t).AddDate(0, 0, -90))
 	var recentByTime, heldByID int
+	var recentRows float64
 	var reads []string
 	plan.walk(func(n planNode) {
 		if strings.Contains(n.IndexName, "participant") && strings.Contains(n.IndexCond, "domain_evidence_at >=") {
 			recentByTime++
+			recentRows += n.ActualRows
 		}
 		if strings.Contains(n.IndexName, "participant") && strings.Contains(n.IndexCond, "activity_id =") {
 			heldByID++
@@ -165,6 +180,9 @@ func TestASeatsMailCandidatesUseTimeAndHeldIDIndexes(t *testing.T) {
 			reads = append(reads, n.IndexName+" "+n.IndexCond)
 		}
 	})
+	if recentRows == 0 {
+		t.Error("the time-bound recipient lookup read no rows; the mailbox must exercise the recent-mail arm")
+	}
 	if recentByTime == 0 || heldByID == 0 {
 		t.Errorf("seat mail plan misses a time-bound or held-id participant lookup (recent=%d held=%d): %v", recentByTime, heldByID, reads)
 	}
