@@ -1779,7 +1779,7 @@ hooks:
 # host binaries (e.g. `make sbom SYFT=syft GRANT=grant`).
 SBOM_DIR     := sboms
 SYFT_IMAGE   ?= anchore/syft@sha256:0356562f495d432056237fbea5cbc2d4839c9c75cd500784a66de2e7cc95ca7c # v1.54.0
-GRANT_IMAGE  ?= anchore/grant@sha256:172463611795f43b77302cdfbd7b3f81295492a7330e0820cfe41c3674920237 # v0.6.8
+GRANT_IMAGE  ?= anchore/grant@sha256:2f273ee261204d24a4d7e8799c2bcc210374c652000e7c415da2bb5173ec99d3 # v0.7.0
 COSIGN_IMAGE ?= gcr.io/projectsigstore/cosign@sha256:c77247c92f4dfea851c70555738226498393e34e2f9ca83cb959e51c230e4ad7 # v2.4.3
 # Per-format validators (sbom-validate). No single tool covers all three, so:
 # cyclonedx-cli is the first-party CycloneDX validator and bundles its own spec
