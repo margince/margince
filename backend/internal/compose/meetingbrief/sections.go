@@ -214,14 +214,14 @@ func goalSection(in Input, ranked *rankedClaims) []Sentence {
 func (said briefCopy) goalLine(ask ClaimIn, now time.Time) string {
 	switch ask.Kind {
 	case kindOpenQuestion:
-		return fmt.Sprintf(said.Say(sectionWords.AnswerQuestion), ask.ContactName, ask.Body)
+		return fmt.Sprintf(said.Say(sectionWords.AnswerQuestion), said.whom(ask), ask.Body)
 	case kindDecision:
-		return fmt.Sprintf(said.Say(sectionWords.GetDecision), ask.ContactName, ask.Body)
+		return fmt.Sprintf(said.Say(sectionWords.GetDecision), said.whom(ask), ask.Body)
 	default:
 		if deadline.Passed(ask.DueAt, now) {
-			return fmt.Sprintf(said.Say(sectionWords.CloseOverdue), ask.ContactName, ask.DueAt.UTC().Format(time.DateOnly), ask.Body)
+			return fmt.Sprintf(said.Say(sectionWords.CloseOverdue), said.whom(ask), ask.DueAt.UTC().Format(time.DateOnly), ask.Body)
 		}
-		return fmt.Sprintf(said.Say(sectionWords.ClosePromise), ask.ContactName, ask.Body)
+		return fmt.Sprintf(said.Say(sectionWords.ClosePromise), said.whom(ask), ask.Body)
 	}
 }
 
@@ -306,7 +306,7 @@ func (said briefCopy) commitmentLine(claim ClaimIn) string {
 			phrase = headerWords.PromisedTheirs
 		}
 	}
-	line := fmt.Sprintf(said.Say(phrase), claim.ContactName, claim.Body)
+	line := fmt.Sprintf(said.Say(phrase), said.whom(claim), claim.Body)
 	if claim.DueAt != nil {
 		line += fmt.Sprintf(said.Say(headerWords.Due), claim.DueAt.UTC().Format(time.DateOnly))
 	}
@@ -369,7 +369,7 @@ func (said briefCopy) lastConversationLine(last ActIn) string {
 }
 
 func (said briefCopy) dealStateLine(claim ClaimIn) string {
-	return fmt.Sprintf(said.Say(sectionWords.Agreed), claim.ContactName, claim.Body)
+	return fmt.Sprintf(said.Say(sectionWords.Agreed), said.whom(claim), claim.Body)
 }
 
 // risksSection (M, ≤3) is OMITTED when empty, and that is spelled in the spec
@@ -398,13 +398,13 @@ const riskCap = 3
 // spec forbids.
 func (said briefCopy) riskLine(claim ClaimIn, now time.Time) (string, bool) {
 	if claim.Kind == kindObjection && claim.Status == statusOpen {
-		return fmt.Sprintf(said.Say(sectionWords.OpenObjection), claim.ContactName, claim.Body), true
+		return fmt.Sprintf(said.Say(sectionWords.OpenObjection), said.whom(claim), claim.Body), true
 	}
 	overdue := claim.Kind == kindCommitmentOurs &&
 		claim.Status == statusOpen &&
 		deadline.Passed(claim.DueAt, now)
 	if overdue {
-		return fmt.Sprintf(said.Say(sectionWords.OweOverdue), claim.ContactName, claim.Body), true
+		return fmt.Sprintf(said.Say(sectionWords.OweOverdue), said.whom(claim), claim.Body), true
 	}
 	return "", false
 }
@@ -436,17 +436,17 @@ func (said briefCopy) talkingPointLine(claim ClaimIn) string {
 	switch claim.Kind {
 	case kindObjection:
 		if claim.Status == statusOpen {
-			return fmt.Sprintf(said.Say(sectionWords.AnswerObjection), claim.ContactName, claim.Body)
+			return fmt.Sprintf(said.Say(sectionWords.AnswerObjection), said.whom(claim), claim.Body)
 		}
-		return fmt.Sprintf(said.Say(sectionWords.CheckObjection), claim.ContactName, claim.Body)
+		return fmt.Sprintf(said.Say(sectionWords.CheckObjection), said.whom(claim), claim.Body)
 	case kindDecisionProcess:
-		return fmt.Sprintf(said.Say(sectionWords.DecisionProcess), claim.ContactName, claim.Body)
+		return fmt.Sprintf(said.Say(sectionWords.DecisionProcess), said.whom(claim), claim.Body)
 	case kindSuccessCriterion:
-		return fmt.Sprintf(said.Say(sectionWords.Success), claim.ContactName, claim.Body)
+		return fmt.Sprintf(said.Say(sectionWords.Success), said.whom(claim), claim.Body)
 	case kindCommitmentTheirs:
-		return fmt.Sprintf(said.Say(sectionWords.TheirPromise), claim.ContactName, claim.Body)
+		return fmt.Sprintf(said.Say(sectionWords.TheirPromise), said.whom(claim), claim.Body)
 	default:
-		return fmt.Sprintf(said.Say(sectionWords.Priority), claim.ContactName, claim.Body)
+		return fmt.Sprintf(said.Say(sectionWords.Priority), said.whom(claim), claim.Body)
 	}
 }
 

@@ -138,6 +138,7 @@
     border: 0;
     border-radius: 0;
     background: none;
+    box-shadow: none;
     /* A row is no pane, so it hands on its host's ground and edge. */
     --ground: inherit;
     --groundEdge: inherit;
@@ -190,7 +191,12 @@
     margin-block-end: 0;
     min-block-size: 0;
   }
-  .stat-strip:has(.stat-card-narrow-row, .stat-card-narrow-stack) > * + * {
+  /* The `:is()` arm outranks the row's own `border: 0` above, which had
+     erased every rule between two cards. */
+  .stat-strip:has(.stat-card-narrow-row, .stat-card-narrow-stack) > * + *,
+  .stat-strip:has(.stat-card-narrow-row, .stat-card-narrow-stack)
+    > *
+    + :is(.stat-card-narrow-row, .stat-card-narrow-stack) {
     border-block-start: 1px solid var(--groundEdge);
   }
   .stat-strip:has(.stat-card-narrow-stack) .stat-card-narrow-stack {
