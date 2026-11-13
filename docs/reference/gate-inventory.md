@@ -30,7 +30,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `analyticsvocabularylabels_test.go` | H3 | The question builder names the analytics vocabulary the server serves, no more and no fewer. |
 | `approvalfieldlabels_test.go` | H2 | An approval names a withheld field with the label the record's history panel gives it. |
 | `approvalpreviewwords_test.go` | H2 | An approval's email and read\_approval word a preview's effects and states as the approval card does. |
-| `approvalreadingcatalog_test.go` | H2 | _(no doc comment)_ |
+| `approvalreadingcatalog_test.go` | H2 | Every change that can make the approval reading catalog stale runs fe-drift. |
 | `appviewfixtures_test.go` | H2 | Each MCP App view's test fixture has the member names of the Go result its tool returns. |
 | `attachmenttypes_test.go` | H3 | The file picker offers the kinds of file the server keeps, no more and no fewer. |
 | `auditcoherence_test.go` | H3 | The audit\_log action and actor\_type vocabularies in crm.yaml match the table's CHECK constraints. |
@@ -666,6 +666,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `seatfixturepick_test.go` | H1 | A fixture that needs this session's seat does not pick one out of app\_user. |
 | `seenaddressrule_test.go` | H2 | SPDX-License-Identifier: BUSL-1.1 SPDX-FileCopyrightText: 2026 Gradion |
 | `sharedtreereads_test.go` | H2 | A gate reads the tree through gatekit's shared view, never from the disk on its own. |
+| `shellbash32_test.go` | H2 | bash32Breakers are tests a bash 3.2 parser rejects outright. |
 | `stagemoveorigin_test.go` | H2 | A stage reader names the moves another system made through the stagemove kernel, so a new provenance value reaches every reader at once. |
 | `standingexceptionwriter_test.go` | H2 | No door records a new standing exception. |
 | `storedoriginal_test.go` | H2 | An activity is correlated to its stored original in one place. |

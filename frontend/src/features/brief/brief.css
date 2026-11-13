@@ -203,6 +203,12 @@
   vertical-align: top;
   min-block-size: 1lh;
 }
+/* The same line, empty, where the read settled on no sentence. It sets the
+   sentence's font so that 1lh is the height the skeleton held. */
+.glance-sentence-hold {
+  min-block-size: 1lh;
+  font: var(--fontBodyLarge);
+}
 /* A section's name on this page is a quiet label over its rows, not a title:
    the greeting is the page's one headline and the card in hand its second. */
 .t-eyebrow.brief-section-label,
