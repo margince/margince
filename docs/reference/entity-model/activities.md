@@ -552,7 +552,7 @@ The 34 tables owned by `activities`, as the migrations build them. [Back to the 
 
 ## activity_participant
 
-17 columns · primary key `(id)` · referenced by 0 foreign keys
+18 columns · primary key `(id)` · referenced by 0 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
@@ -568,6 +568,7 @@ The 34 tables owned by `activities`, as the migrations build them. [Back to the 
 | `domain_evidence_precision` | `text` |  |  |
 | `domain_evidence_visible` | `boolean` |  |  |
 | `past_party_cap` | `boolean`, default `false` | yes |  |
+| `relinked_at` | `timestamp with time zone` |  |  |
 | `response` | `text` |  | One of `accepted`, `declined`, `tentative`, `needs_action`. |
 | `role` | `text` | yes | One of `from`, `to`, `cc`, `bcc`, `attendee`, `organizer`. |
 | `roster_seat` | `uuid` |  | Points at `app_user.id`. |
