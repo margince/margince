@@ -1,0 +1,7 @@
+{
+  "verdict": "no",
+  "reason": "The answer names only three contacts by name (fewer than thirty) and explicitly presents them as a sample ('A few of them') rather than the whole list.",
+  "model": "claude-haiku-4-5-20251001",
+  "criterion": "Criterion 1. The answer lists thirty contacts tagged Husum Wind 2026 by name and presents them as the whole list. Answer no if it names fewer than thirty contacts, or says it shows only a sample or a first page.",
+  "answer": "A live list on the Husum Wind 2026 tag would hold 30 contacts. A few of them: Anke Petersen, Dörte Rickmers and Hella Momsen, among others."
+}
