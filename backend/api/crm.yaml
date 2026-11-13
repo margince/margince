@@ -5530,7 +5530,8 @@ paths:
         connected source serves no documents (`invoice_documents` on the summary is false),
         and 502 when the source could not be reached or answered something other than a PDF.
         Each request is a live call to the vendor, so one caller may fetch at most 20
-        documents a minute; past that the read answers 429 until the minute is out.
+        documents in each fixed one-minute window; past that the read answers 429 until
+        the window ends.
       responses:
         '200':
           description: The PDF bytes; Content-Disposition names the file.
@@ -5541,7 +5542,7 @@ paths:
         '404': { $ref: '#/components/responses/NotFound' }
         '422': { $ref: '#/components/responses/ValidationError' }
         '429':
-          description: The caller fetched 20 invoice documents in the last minute.
+          description: The caller fetched 20 invoice documents in the current one-minute window.
           content:
             application/problem+json:
               schema: { $ref: '#/components/schemas/Problem' }

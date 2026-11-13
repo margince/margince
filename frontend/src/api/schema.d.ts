@@ -3714,7 +3714,8 @@ export interface paths {
          *     connected source serves no documents (`invoice_documents` on the summary is false),
          *     and 502 when the source could not be reached or answered something other than a PDF.
          *     Each request is a live call to the vendor, so one caller may fetch at most 20
-         *     documents a minute; past that the read answers 429 until the minute is out.
+         *     documents in each fixed one-minute window; past that the read answers 429 until
+         *     the window ends.
          */
         get: operations["downloadFinanceInvoicePdf"];
         put?: never;
@@ -66787,7 +66788,7 @@ export interface operations {
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
             422: components["responses"]["ValidationError"];
-            /** @description The caller fetched 20 invoice documents in the last minute. */
+            /** @description The caller fetched 20 invoice documents in the current one-minute window. */
             429: {
                 headers: {
                     [name: string]: unknown;
