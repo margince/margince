@@ -2519,6 +2519,10 @@ func (stubs) GetInstallationSetup(w nethttp.ResponseWriter, r *nethttp.Request) 
 	httperr.NotImplemented(w, r, "GetInstallationSetup")
 }
 
+func (stubs) GetDispactAppManifest(w nethttp.ResponseWriter, r *nethttp.Request) {
+	httperr.NotImplemented(w, r, "GetDispactAppManifest")
+}
+
 func (stubs) GetIntegrationsSettings(w nethttp.ResponseWriter, r *nethttp.Request) {
 	httperr.NotImplemented(w, r, "GetIntegrationsSettings")
 }

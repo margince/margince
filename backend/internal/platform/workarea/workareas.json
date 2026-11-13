@@ -1296,6 +1296,7 @@
     "getDealViability": "deals",
     "getDealWinEvidence": "deals",
     "getDedupeCandidate": "duplicates",
+    "getDispactAppManifest": "connectors",
     "getEmailPresentation": "activities",
     "getEmailSignatureTemplate": "sales_rules",
     "getExtensionIngestHealth": "system_health",

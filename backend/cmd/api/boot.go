@@ -32,6 +32,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/netguard"
 	"github.com/margince/margince/backend/internal/platform/providerhealthstore"
 	"github.com/margince/margince/backend/internal/platform/ratelimit"
+	"github.com/margince/margince/backend/internal/platform/replayguard"
 	"github.com/margince/margince/backend/internal/shared/buildinfo"
 	"github.com/margince/margince/backend/pkg/extension"
 )
@@ -260,12 +261,11 @@ func declaredSurfaceOptions(ctx context.Context, cfg apiConfig, bootstrap deploy
 	// /me carries both facts, from two options, because they are two facts: the
 	// deployment posture, and whether the reset exists here at all.
 	opts = append(opts, compose.WithNonProduction(cfg.posture), compose.WithDataResetAvailable(allowDataReset))
-	// Gate 1: the connector's whole route group — /mcp, the authorization
-	// server and both discovery documents — exists only when the deployment
-	// declared it. The boot check in bindInstallation already proved the
-	// canonical base URL those routes advertise.
+	// Gate 1: /mcp, its OAuth server, discovery and Dispact call tokens exist only
+	// when declared. bindInstallation already proved the base URL they advertise.
 	if cfg.mcpConnector {
-		opts = append(opts, compose.WithMCPConnector(), compose.WithClientRegistrationLimit(cfg.clientRegistration))
+		opts = append(opts, compose.WithMCPConnector(), compose.WithClientRegistrationLimit(cfg.clientRegistration),
+			compose.WithDispactCalls(replayguard.New(rdb), cfg.posture.IsNonProduction()))
 	}
 
 	passwordOpts, err := passwordResetOptions(ctx, cfg.settings, pool, vault, cfg.publicBaseURL, logger, stdout)

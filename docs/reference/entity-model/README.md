@@ -31,7 +31,7 @@ module to put a change in, read [modules.md](../modules.md).
 | | |
 |---|--:|
 | Tables | 367 |
-| Columns | 4500 |
+| Columns | 4502 |
 | Foreign keys | 623 |
 | Owning areas | 40 |
 
@@ -50,7 +50,7 @@ Ranked by how many foreign keys point at them.
 | [`project`](projects.md#project) | [projects](projects.md) | 24 | 13 |
 | [`team`](identity.md#team) | [identity](identity.md) | 6 | 10 |
 | [`legal_entity`](contacts.md#legal_entity) | [contacts](contacts.md) | 29 | 9 |
-| [`passport`](identity.md#passport) | [identity](identity.md) | 12 | 9 |
+| [`passport`](identity.md#passport) | [identity](identity.md) | 14 | 9 |
 | [`stage`](deals.md#stage) | [deals](deals.md) | 11 | 9 |
 | [`consent_purpose`](consent.md#consent_purpose) | [consent](consent.md) | 7 | 8 |
 
@@ -390,7 +390,7 @@ erDiagram
 | [`onboarding_wizard_state`](identity.md#onboarding_wizard_state) | identity | 15 | 0 |
 | [`partner`](contacts.md#partner) | contacts | 29 | 0 |
 | [`partner_stage`](contacts.md#partner_stage) | contacts | 13 | 1 |
-| [`passport`](identity.md#passport) | identity | 12 | 9 |
+| [`passport`](identity.md#passport) | identity | 14 | 9 |
 | [`pipeline`](deals.md#pipeline) | deals | 8 | 7 |
 | [`preference_token`](consent.md#preference_token) | consent | 9 | 0 |
 | [`privacy_notice_case`](consent.md#privacy_notice_case) | consent | 23 | 0 |

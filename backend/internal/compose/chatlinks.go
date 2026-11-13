@@ -12,6 +12,7 @@ import (
 	"github.com/riverqueue/river"
 
 	"github.com/margince/margince/backend/internal/compose/chatsync"
+	"github.com/margince/margince/backend/internal/compose/dispactapp"
 	"github.com/margince/margince/backend/internal/modules/ai"
 	"github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/modules/chatlinks"
@@ -78,8 +79,15 @@ func chatLinks(pool *pgxpool.Pool, vault func() keyvault.Vault, in chatsync.TxIn
 func WithChatLinks(inserter *jobs.Runner, private bool, lane ai.Completer) Option {
 	return func(s *Server, pool *pgxpool.Pool) {
 		store, chats := chatLinks(pool, func() keyvault.Vault { return s.vault }, inserter, 0, private)
-		s.chatLinkHandlers = chatlinks.NewHandlers(store, chatsync.NewFiler(pool, store, chats, lane))
+		s.chatLinkHandlers = chatlinks.NewHandlers(store, chatsync.NewFiler(pool, store, chats, lane)).WithManifestBase(func() string { return s.send.PublicBaseURL })
 		s.channelHandlers = s.WithBotCheck(chatlinks.ProviderDispact, chatsync.BotCheck{HTTP: chatsync.HTTPClient(private), AllowHTTP: private})
+	}
+}
+
+// WithDispactCalls lets the Dispact app call /mcp; replays holds each token id once.
+func WithDispactCalls(replays dispactapp.Replays, private bool) Option {
+	return func(s *Server, pool *pgxpool.Pool) {
+		s.dispactCalls = dispactapp.Wire(InstallationDB(pool), replays, private)
 	}
 }
 
