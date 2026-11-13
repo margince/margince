@@ -407,8 +407,9 @@ export const RowDetailsOpen: Story = {
       throw new Error("Focus shows no context button to open");
     }
     await userEvent.click(context);
+    // The details are named by the row they open on.
     await within(document.body).findByRole("dialog", {
-      name: en["brief.focus.context"],
+      name: /Meet next Tues/,
     });
   },
 };

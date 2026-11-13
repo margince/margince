@@ -28,6 +28,9 @@ type SharedCredential struct {
 	ClientID     string `json:"client_id"`
 	ClientSecret string `json:"client_secret"`
 	Mailbox      string `json:"mailbox"`
+	// UserID is the mailbox's directory object id, which Graph may name it by
+	// in a link. Empty when the app may not read the user object.
+	UserID string `json:"user_id,omitempty"`
 }
 
 // SealShared encodes the bundle the registry stores encrypted in the vault.

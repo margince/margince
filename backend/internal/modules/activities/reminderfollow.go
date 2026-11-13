@@ -28,6 +28,7 @@ func admitTaskTime(in *LogActivityInput) error {
 	if in.RemindAt == nil {
 		due := *in.DueAt
 		in.RemindAt = &due
+		in.RemindIntent = in.DueIntent
 	}
 	return nil
 }
@@ -63,6 +64,7 @@ func (in *UpdateActivityInput) followReminder(current crmcontracts.Activity) {
 	if in.DueAt != nil && in.DueHasTime != nil && *in.DueHasTime {
 		due := *in.DueAt
 		in.RemindAt = &due
+		in.RemindIntent = in.DueIntent
 		return
 	}
 	moved := in.DueAt != nil || in.clears("due_at")

@@ -8,7 +8,7 @@ import type { CommunicationContext } from "../../lib/compose-context";
 import { throwProblem } from "../../lib/problem";
 import type { ChosenFile } from "./composeattachments";
 import type { RelinkKind } from "./composerelink";
-import { scheduleFields } from "./composeschedule";
+import { type ScheduleFields, scheduleFields } from "./composeschedule";
 
 // The saved draft's calls to the server, and the anchor and cache key they
 // share. The hook that decides when to make them is composesaveddraft.tsx.
@@ -34,6 +34,7 @@ export type SavedDraftFields = Readonly<{
   context: CommunicationContext | "";
   /** The send-later moment as the composer holds it: wall-clock text. */
   sendAt: string;
+  sendSchedule?: ScheduleFields;
   // Where an agent drafted it, so a restore files the send there rather than
   // wherever the composer was opened.
   //
@@ -141,7 +142,7 @@ export async function writeDraft(ask: SaveAsk): Promise<MailDraft> {
     html_body: ask.fields.html.trim() === "" ? null : ask.fields.html,
     attachment_ids: ask.fields.files.map((file) => file.id),
     communication_context: ask.fields.context || undefined,
-    ...scheduleFields(ask.fields.sendAt),
+    ...scheduleFields(ask.fields.sendAt, ask.fields.sendSchedule),
     editor_state: ask.fields.editorState,
   };
   const keepalive =

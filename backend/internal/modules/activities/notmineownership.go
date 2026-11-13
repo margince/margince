@@ -239,7 +239,7 @@ func (s *Store) ClearNotMineOnHandOff(
 			return fmt.Errorf("activities: re-arming set-aside messages: %w", err)
 		}
 		for _, id := range freed {
-			if err := s.recordDisposition(ctx, tx, ids.From[ids.ActivityKind](id), statePickedUp, nil, ""); err != nil {
+			if err := s.recordDisposition(ctx, tx, ids.From[ids.ActivityKind](id), statePickedUp, nil, "", nil); err != nil {
 				return err
 			}
 		}

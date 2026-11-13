@@ -247,6 +247,10 @@ export const SETTINGS_SECTIONS = {
       "settings.part.integrations.telegram",
       "connectors.telegramTitle",
     ],
+    "shared-mailboxes": [
+      "settings.part.integrations.sharedMailboxes",
+      "sharedMailboxes.title",
+    ],
     units: ["settings.part.integrations.units"],
   },
   "web-forms": ["webForms.title"],

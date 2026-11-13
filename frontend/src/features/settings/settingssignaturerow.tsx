@@ -10,6 +10,7 @@ import type { Toast } from "../../design-system/toast";
 import { useT } from "../../i18n";
 import { unwrap } from "../../lib/problem";
 import { useSignOff } from "../mail/composesignoff";
+import { GmailSignatureImport } from "./gmailsignatureimport";
 import { useSaveSignature } from "./settingssignature";
 
 import {
@@ -19,6 +20,21 @@ import {
 } from "./settingssignatureeditor";
 
 const FORMATS: readonly Format[] = ["text", "html"];
+
+type StoredSignature = Partial<
+  Record<"body" | "title" | "phone" | "html", string | null>
+>;
+
+// The saved signature as the editor's draft; a missing field is empty.
+function storedDraft(data: StoredSignature | undefined): Draft {
+  return {
+    body: data?.body ?? "",
+    title: data?.title ?? "",
+    phone: data?.phone ?? "",
+    html: data?.html ?? "",
+    format: data?.html ? "html" : "text",
+  };
+}
 
 // Personal HTML takes precedence over the company template and plain text.
 export function SignatureSettingRow({ toast }: Readonly<{ toast: Toast }>) {
@@ -51,13 +67,7 @@ export function SignatureSettingRow({ toast }: Readonly<{ toast: Toast }>) {
     toast.show(t("settings.saved"));
   });
 
-  const stored: Draft = {
-    body: signature.data?.body ?? "",
-    title: signature.data?.title ?? "",
-    phone: signature.data?.phone ?? "",
-    html: signature.data?.html ?? "",
-    format: signature.data?.html ? "html" : "text",
-  };
+  const stored = storedDraft(signature.data);
   // The saved value until the member types; theirs from then on.
   const shown = draft ?? stored;
   const dirty =
@@ -124,6 +134,19 @@ export function SignatureSettingRow({ toast }: Readonly<{ toast: Toast }>) {
           }}
         >
           <WriteRefused titleKey="settings.saveFailed" error={save.error} />
+          <p className="t-caption">
+            {t(
+              templated
+                ? "settings.signatureChoiceTemplate"
+                : "settings.signatureChoicePlain",
+            )}
+          </p>
+          <GmailSignatureImport
+            disabled={save.isPending}
+            onImported={(html, text) =>
+              setDraft({ ...shown, html, body: text, format: "html" })
+            }
+          />
           <SegmentedControl
             options={FORMATS}
             value={shown.format}

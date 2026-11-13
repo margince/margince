@@ -6,10 +6,13 @@
 package integration
 
 import (
+	"context"
 	"net/http"
 	"net/url"
 	"strings"
 	"testing"
+
+	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/compose"
 	"github.com/margince/margince/backend/internal/compose/integration/apptest"
@@ -24,8 +27,17 @@ func TestASortedListPagesPastARowWithAVeryLongSortValue(t *testing.T) {
 	shared := stamp + strings.Repeat("d", 300)
 	names := []string{stamp + strings.Repeat("a", 20000), stamp + "b", shared + "1", shared + "2"}
 	for _, name := range names {
-		if status := e.Call(t, "POST", "/v1/companies", AnyMap{"display_name": name, "source": "manual"}, nil, nil); status != http.StatusCreated {
+		var created struct {
+			ID string `json:"id"`
+		}
+		if status := e.Call(t, "POST", "/v1/companies", AnyMap{"display_name": stamp + " placeholder", "source": "manual"}, nil, &created); status != http.StatusCreated {
 			t.Fatalf("create company → %d", status)
+		}
+		// A name past the typed label limit comes from an import or an earlier
+		// row, so it is written past the typed path.
+		if _, err := SchemaPool(t).Exec(context.Background(), `UPDATE company SET display_name = @name WHERE id = @id`,
+			pgx.NamedArgs{"name": name, "id": created.ID}); err != nil {
+			t.Fatalf("store the long name: %v", err)
 		}
 	}
 

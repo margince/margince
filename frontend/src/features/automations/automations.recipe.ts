@@ -3,7 +3,9 @@
 
 import type { Translator } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
+import { WEBSITE_INQUIRY_RECIPE } from "../../lib/websiteinquiries";
 import { humanizeToken } from "../settings/audit";
+import { ACTION_WORDS } from "./automations.actionwords";
 
 // The catalog's trigger and action vocabularies, in the words a reader uses.
 // Both sets are closed on the server (catalog_triggers.go, catalog_actions.go).
@@ -18,16 +20,6 @@ const TRIGGER: Readonly<Record<string, MessageKey>> = {
   "list.evaluated": "auto.trigger.listEvaluated",
 };
 
-const ACTION: Readonly<Record<string, MessageKey>> = {
-  create_task: "auto.action.createTask",
-  notify: "auto.action.notify",
-  assign_owner: "auto.action.assignOwner",
-  set_field: "auto.action.setField",
-  draft_email: "auto.action.draftEmail",
-  request_approval: "auto.action.requestApproval",
-  add_to_shortlist: "auto.action.addToShortlist",
-};
-
 // A value newer than this client still reads as words rather than as a key.
 function spelledOut(raw: string): string {
   return humanizeToken(raw.replace(/^clock:/, ""));
@@ -40,10 +32,11 @@ export function triggerLabel(trigger: string, t: Translator): string {
 
 /** What an automation does and when, as one line: "New lead: create a task". */
 export function recipeSentence(
-  recipe: Readonly<{ trigger: string; action: string }>,
+  recipe: Readonly<{ key?: string; trigger: string; action: string }>,
   t: Translator,
 ): string {
-  const action = ACTION[recipe.action];
+  if (recipe.key === WEBSITE_INQUIRY_RECIPE) return t("inquiry.trigger");
+  const action = ACTION_WORDS[recipe.action];
   return t("auto.recipe", {
     trigger: triggerLabel(recipe.trigger, t),
     action: action ? t(action) : spelledOut(recipe.action),

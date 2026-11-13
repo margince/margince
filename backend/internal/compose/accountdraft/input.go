@@ -337,12 +337,13 @@ func foldCommitment(view crmcontracts.Company360) *TaskIn {
 // first touch. That is the conservative end of the axis and the right answer
 // here: a caller who cannot see the history has no basis for a draft that
 // refers to it.
-func ConversationState(view crmcontracts.Company360, now time.Time, zone *time.Location) convstate.State {
+// logged carries the newest logged touch read past the timeline page.
+func ConversationState(view crmcontracts.Company360, now time.Time, zone *time.Location, logged ...crmcontracts.Activity) convstate.State {
 	var activities []crmcontracts.Activity
 	if view.Activities != nil {
 		activities = view.Activities.Data
 	}
-	return draftcore.ClassifyWithLogged(now, zone, instant(view.LastInboundAt), instant(view.LastOutboundAt), activities)
+	return draftcore.ClassifyWithLogged(now, zone, instant(view.LastInboundAt), instant(view.LastOutboundAt), append(activities, logged...))
 }
 
 // instant reads one optional stamp, treating an absent one as never.

@@ -44,11 +44,7 @@ import (
 // guarantee stays a dependency rather than a rule somebody remembers.
 func WithAccountDraft(brain completer) Option {
 	return func(s *Server, pool *pgxpool.Pool) {
-		svc := accountdraft.NewService(s.company360Svc, brain).
-			WithEnvelope(draftEnvelope(pool, s.log)).
-			WithEmailSummaries(emailRows(pool)).
-			WithDossier(s.companyDossierSvc).
-			WithVoice(ai.NewVoiceStore(InstallationDB(pool)), s.log)
+		svc := s.accountDraft(pool, brain).WithVoice(ai.NewVoiceStore(InstallationDB(pool)), s.log)
 		s.firstDrafts.account = svc
 		s.accountDraftHandlers = accountdraft.NewHandlers(svc)
 	}

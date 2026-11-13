@@ -75,6 +75,14 @@ type Service struct {
 	// whole would carry the learning-signal writes with it.
 	voice draftvoice.Reader
 	log   *slog.Logger
+	// loggedTouches reads the newest note or past meeting past the bounded timeline.
+	loggedTouches draftcore.LoggedTouchReader
+}
+
+// WithLoggedTouches binds the read of the newest logged touch on the lead.
+func (s *Service) WithLoggedTouches(reader draftcore.LoggedTouchReader) *Service {
+	s.loggedTouches = reader
+	return s
 }
 
 // NewService binds the draft to the reads it is grounded in and the model lane
@@ -133,12 +141,17 @@ func (s *Service) Draft(
 		return crmcontracts.CompanyEmailDraft{}, nil, err
 	}
 	zone := s.envelope.Zone(ctx)
+	logged, err := draftcore.WithNewestLogged(ctx, s.loggedTouches,
+		draftcore.LoggedOn{RecordType: "lead", ID: leadID.UUID}, s.envelope.Now(), nil)
+	if err != nil {
+		return crmcontracts.CompanyEmailDraft{}, nil, err
+	}
 	envelope := s.envelope.Resolve(ctx,
 		draftfloor.Written{
 			Chosen: req.Language, Thread: draftcore.LanguageEvidenceOf(activities, s.envelope.Now(), zone),
 			Rewrite: req.RewriteOf, Purpose: req.Intent, DraftSubject: req.Subject,
 		},
-		ConversationState(activities, s.envelope.Now(), zone)).InZone(zone)
+		ConversationState(activities, s.envelope.Now(), zone, logged...)).InZone(zone)
 	in := FromLead(lead, activities, req, envelope)
 	grounding, err := in.Grounding()
 	if err != nil {

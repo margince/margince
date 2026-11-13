@@ -299,3 +299,60 @@ func TestTheEmailSummaryBatchRefusesAWithheldRowOnItsOwn(t *testing.T) {
 		t.Error("the batch withheld the author's own mail from them")
 	}
 }
+
+// A selected audience's member reads the summary whole, and a teammate outside
+// it gets no row. A content column narrower than the gate would blank the
+// member's subject here.
+func TestASelectedMemberReadsTheLimitedMailsSummaryInFull(t *testing.T) {
+	e := Setup(t)
+	author := e.As(e.Rep1, []ids.UUID{e.Team1}, activityLifecyclePerms)
+	member := e.As(e.Rep3, []ids.UUID{e.Team2}, activityLifecyclePerms)
+	teammate := e.As(e.Rep2, []ids.UUID{e.Team1}, activityLifecyclePerms)
+	contact := e.SeedContact(t, "Dana Buyer", &e.Rep1)
+
+	subject, body := "Board seat terms", "the board seat comes with the second tranche"
+	logged, _, err := e.Activities.LogActivity(author, activities.LogActivityInput{
+		Kind: "email", Subject: &subject, Body: &body, Direction: new("inbound"),
+		Links: []activities.ActivityLinkInput{{EntityType: "contact", EntityID: contact}},
+	})
+	if err != nil {
+		t.Fatalf("log: %v", err)
+	}
+	id := ids.UUID(logged.Id)
+
+	read := func(ctx context.Context) map[ids.UUID]crmcontracts.EmailSummary {
+		t.Helper()
+		var got map[ids.UUID]crmcontracts.EmailSummary
+		if err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
+			var readErr error
+			got, readErr = activities.EmailSummariesByIDBatch(ctx, tx, []ids.UUID{id}, clocktest.Now(t))
+			return readErr
+		}); err != nil {
+			t.Fatalf("batch read: %v", err)
+		}
+		return got
+	}
+
+	if _, ok := read(teammate)[id]; !ok {
+		t.Fatal("the teammate got no row for an unlimited mail; the fixture proves nothing")
+	}
+	if _, err := e.Activities.SetAudience(author, ids.From[ids.ActivityKind](id), activities.SetAudienceInput{
+		Audience: "selected", Members: []activities.AudienceMember{{SubjectType: "user", SubjectID: e.Rep3}},
+	}); err != nil {
+		t.Fatalf("limiting: %v", err)
+	}
+
+	row, ok := read(member)[id]
+	if !ok {
+		t.Fatal("the batch withheld a limited mail from a member of its audience")
+	}
+	if row.Subject == nil || *row.Subject != subject {
+		t.Errorf("member's summary subject = %v, want %q", row.Subject, subject)
+	}
+	if row.Preview == nil || *row.Preview == "" {
+		t.Error("member's summary carried no preview of a mail they may read")
+	}
+	if row, ok := read(teammate)[id]; ok {
+		t.Errorf("the batch handed a teammate outside the audience a limited mail's row: %+v", row)
+	}
+}

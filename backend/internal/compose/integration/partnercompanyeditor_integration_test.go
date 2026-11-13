@@ -34,13 +34,12 @@ func TestACompanyEditorSetsUpAPartnerProgramWithoutATier(t *testing.T) {
 	e := Setup(t)
 	company := ids.From[ids.CompanyKind](e.SeedCompany(t, "Harbour Hosting", &e.Rep1))
 	owner := e.As(e.Rep1, []ids.UUID{e.Team1}, companyEditorPerms())
-	step := "send the agreement"
 
 	if err := e.Contacts.CheckPartnerSetUp(owner, company, nil); err != nil {
 		t.Fatalf("the set-up check refused the company's own editor: %v", err)
 	}
 	written, err := e.Contacts.UpsertPartner(owner, contacts.UpsertPartnerInput{
-		CompanyID: company, PartnerRole: "hosting", NextStep: &step,
+		CompanyID: company, PartnerRole: "hosting",
 	})
 	if err != nil {
 		t.Fatalf("the company's editor setting up its partner program: %v", err)
@@ -49,9 +48,9 @@ func TestACompanyEditorSetsUpAPartnerProgramWithoutATier(t *testing.T) {
 		t.Errorf("margin_tier = %v, want none set", *written.MarginTier)
 	}
 
-	edited := "call the partner manager"
+	edited := []string{"manufacturing"}
 	if _, err := e.Contacts.UpsertPartner(owner, contacts.UpsertPartnerInput{
-		CompanyID: company, PartnerRole: "consulting", NextStep: &edited,
+		CompanyID: company, PartnerRole: "consulting", ServedSegments: &edited,
 	}); err != nil {
 		t.Fatalf("the company's editor changing the program's terms: %v", err)
 	}
@@ -59,8 +58,8 @@ func TestACompanyEditorSetsUpAPartnerProgramWithoutATier(t *testing.T) {
 	if err != nil {
 		t.Fatalf("reading the partner back: %v", err)
 	}
-	if after.NextStep == nil || *after.NextStep != edited {
-		t.Errorf("next_step = %v, want %q", after.NextStep, edited)
+	if after.ServedSegments == nil || len(*after.ServedSegments) != 1 || (*after.ServedSegments)[0] != edited[0] {
+		t.Errorf("served_segments = %v, want %v", after.ServedSegments, edited)
 	}
 }
 

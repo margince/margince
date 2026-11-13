@@ -37,6 +37,7 @@ import { TaskAssigneeField } from "./assigneepicker";
 import { LogActivityEntries } from "./extensionentries";
 import { ActivityKindField } from "./logactivity.kindfield";
 import { TaskCompletionChoice } from "./logactivity.taskcompletion";
+import { assignedRecord } from "./recordassignments.queries";
 import { TaskTypeField } from "./tasktype";
 import "./logactivity.css";
 import { useViewerZone } from "../lib/viewerzone";
@@ -54,6 +55,7 @@ import {
   recordOnMeeting,
   useRecordOfMeeting,
 } from "./logactivity.openmeeting";
+import { PolishWording } from "./logactivity.polish";
 import {
   attachLoggedFiles,
   LogActivityFilesField,
@@ -368,6 +370,7 @@ export function LogActivityForm({
         active={draft.kind === "task"}
         value={draft.assigneeId}
         onChange={(value) => setField({ assigneeId: value })}
+        records={assignedRecord(entityType, entityId)}
       />
       {asksAttendees && entityType && entityId && (
         <MeetingAttendeeFields
@@ -413,11 +416,19 @@ export function LogActivityForm({
         value={draft.body}
         onChange={(body) => setField({ body })}
       />
+      <PolishWording
+        words={draft}
+        onChange={setField}
+        offered={!transcript}
+        entityType={entityType}
+        entityId={entityId}
+      />
       {custom.controls}
       {draft.kind !== "task" && (
         <FollowUpTaskFields
           value={draft.followUp}
           onChange={(followUp) => setField({ followUp })}
+          records={assignedRecord(entityType, entityId)}
         />
       )}
       {transcript && (

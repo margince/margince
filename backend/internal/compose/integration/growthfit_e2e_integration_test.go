@@ -37,6 +37,7 @@ type growthFitResponse struct {
 	BandCappedReason *string `json:"band_capped_reason"`
 	NextStep         *string `json:"next_step"`
 	GeneratedBy      string  `json:"generated_by"`
+	ServedFrom       string  `json:"served_from"`
 	DataCompleteness struct {
 		Present  int      `json:"present"`
 		Expected int      `json:"expected"`
@@ -213,6 +214,10 @@ func TestAnIndustryTheCompanyShowsIsNotListedAsMissing(t *testing.T) {
 	if again := cachedGrowthFitGeneratedAt(t, e, companyID); !again.Equal(generatedAt) {
 		t.Error("a read with no write between re-assessed, so the cache is not serving")
 	}
+	if before.ServedFrom != "generated" || cached.ServedFrom != "cache" {
+		t.Errorf("served_from = %q then %q, want the first read generated and the second from the cache",
+			before.ServedFrom, cached.ServedFrom)
+	}
 
 	var company struct {
 		Version int64 `json:"version"`
@@ -236,6 +241,9 @@ func TestAnIndustryTheCompanyShowsIsNotListedAsMissing(t *testing.T) {
 	}
 	if rewritten := cachedGrowthFitGeneratedAt(t, e, companyID); !rewritten.After(generatedAt) {
 		t.Error("the patch did not change the fingerprint, so the read served the old assessment")
+	}
+	if after.ServedFrom != "generated" {
+		t.Errorf("served_from after the patch = %q, want generated", after.ServedFrom)
 	}
 }
 

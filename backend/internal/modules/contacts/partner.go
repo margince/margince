@@ -214,6 +214,10 @@ func (s *Store) UpsertPartner(ctx context.Context, in UpsertPartnerInput) (crmco
 		return crmcontracts.Partner{}, err
 	}
 	in.PartnerKinds = &kinds
+	nextStep, err := takePartnerNextStep(&in)
+	if err != nil {
+		return crmcontracts.Partner{}, err
+	}
 	capturedBy, err := storekit.CapturedBy(ctx)
 	if err != nil {
 		return crmcontracts.Partner{}, err
@@ -267,26 +271,36 @@ func (s *Store) UpsertPartner(ctx context.Context, in UpsertPartnerInput) (crmco
 		if err != nil {
 			return err
 		}
-		if written.landed {
-			auditID, err := storekit.Audit(ctx, tx, "update", "company", in.CompanyID.UUID, written.before, written.after)
-			if err != nil {
-				return err
-			}
-			if err := storekit.EmitEvent(ctx, tx, auditID, in.CompanyID.UUID, crmcontracts.PublicEventCompanyUpdated{
-				ChangedFields: map[string]any{
-					eventKeyDelta: map[string]any{eventKeyPartner: map[string]any{
-						"role": legacyPartnerRole(kinds), "kinds": kinds, "cert_status": written.row.CertStatus,
-					}},
-				},
-			}); err != nil {
-				return err
-			}
+		if err := recordPartnerWrite(ctx, tx, in.CompanyID, kinds, written); err != nil {
+			return err
+		}
+		if err := s.writePartnerNextStepTx(ctx, tx, nextStep); err != nil {
+			return err
 		}
 		// The echo is a read: the writer's own role masks it like any other.
 		out, err = wirePartnerForCaller(ctx, tx, written.row)
 		return err
 	})
 	return out, err
+}
+
+// recordPartnerWrite writes the audit row and the company event for a partner
+// write that changed something, in the write's own transaction.
+func recordPartnerWrite(ctx context.Context, tx pgx.Tx, company ids.CompanyID, kinds []string, written partnerWrite) error {
+	if !written.landed {
+		return nil
+	}
+	auditID, err := storekit.Audit(ctx, tx, "update", "company", company.UUID, written.before, written.after)
+	if err != nil {
+		return err
+	}
+	return storekit.EmitEvent(ctx, tx, auditID, company.UUID, crmcontracts.PublicEventCompanyUpdated{
+		ChangedFields: map[string]any{
+			eventKeyDelta: map[string]any{eventKeyPartner: map[string]any{
+				"role": legacyPartnerRole(kinds), eventKeyPartnerKinds: kinds, "cert_status": written.row.CertStatus,
+			}},
+		},
+	})
 }
 
 // resolvePartnerFit pre-reads the current row under the company lock — one

@@ -84,6 +84,7 @@ type ModelPath struct {
 	// values (DOSS-PARAM-7).
 	GrowthFit  completer
 	DraftReply completer // activity-anchored email reply drafting
+	Rewrite    completer // the rewrite verbs over a rep's own words, premium first
 	OfferDraft completer // the offer regenerate-from-signal drafting call
 	// CaptureClassify is the §2.8 batched mail-label lane (ADR-0063) —
 	// the highest-volume, cheapest task, routed L-S with the C-C solo
@@ -351,6 +352,7 @@ func modelPathForRouter(router *ai.Router, companyContext *companyContextProvide
 		CorpusAsk:                     brain(ai.TaskCorpusAsk),
 		GrowthFit:                     brain(ai.TaskGrowthFit),
 		DraftReply:                    brain(ai.TaskDraftReply),
+		Rewrite:                       brain(ai.TaskRewrite),
 		OfferDraft:                    brain(ai.TaskOfferDraft),
 		CaptureClassify:               brain(ai.TaskCaptureClassify),
 		OwedVerdict:                   brain(ai.TaskOwedVerdict),

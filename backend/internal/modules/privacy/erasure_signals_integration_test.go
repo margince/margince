@@ -76,8 +76,8 @@ func TestErasingAContactRedactsTheExtensionEvidenceAboutThem(t *testing.T) {
 	signaltypes.Register("erasetest", []extension.SignalTypeDeclaration{{
 		Kind: "loss", Label: "Loss",
 		Evidence: []extension.SignalEvidenceField{
-			{Name: "amount", Label: "Amount", Type: extension.SignalFieldNumber},
-			{Name: "reporter", Label: "Reporter", Type: extension.SignalFieldText, Personal: true},
+			{Name: "amount", Label: "Amount", Type: extension.SignalFieldNumber, NotPersonal: true},
+			{Name: "reporter", Label: "Reporter", Type: extension.SignalFieldText},
 		},
 	}})
 	subject, other := ids.New[ids.ContactKind](), ids.New[ids.ContactKind]()

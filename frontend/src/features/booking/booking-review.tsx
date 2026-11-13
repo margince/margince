@@ -17,6 +17,7 @@ import { Panel, PanelBody } from "../../design-system/panel";
 import { RecordPicker } from "../../design-system/recordpicker";
 import { Switch } from "../../design-system/switch";
 import { formatDateTime, formatNumber } from "../../format/format";
+import { wallClockIntent } from "../../format/timezone";
 import { useLocale, usePlural, useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
 import { proposalEmailBody } from "../../lib/booking-proposal-message";
@@ -211,7 +212,15 @@ export function BookingReview({
           <InviteSend
             label={cta}
             disabled={!ready || picks.length < 1}
-            request={picks[0] ? { ...shared, ...picks[0] } : undefined}
+            request={
+              picks[0]
+                ? {
+                    ...shared,
+                    ...picks[0],
+                    start_intent: wallClockIntent(picks[0].start, zone),
+                  }
+                : undefined
+            }
           />
         ) : (
           <ProposalSend

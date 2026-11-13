@@ -21,6 +21,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/compose/dealfiler"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/capture"
@@ -116,6 +117,7 @@ func (a whichDealAsker) Ask(ctx context.Context, tx pgx.Tx, q capture.WhichDeal)
 }
 
 // respondent is the one colleague the mail names as responsible, or zero.
+// Mail only a shared mailbox captured goes to its work owner.
 //
 // Only rows the mailbox confirms count, never an address the sender typed. The
 // seat imported the mail. It sent the mail with the provider attesting it, or
@@ -136,10 +138,16 @@ func (a whichDealAsker) respondent(ctx context.Context, tx pgx.Tx, mail ids.UUID
 		return ids.Nil, fmt.Errorf("compose: reading who a deal question is for: %w", err)
 	}
 	seats, err := pgx.CollectRows(rows, pgx.RowTo[ids.UUID])
-	if err != nil || len(seats) != 1 {
+	if err != nil || len(seats) > 1 {
 		return ids.Nil, err
 	}
-	seat, nobody := seats[0], ids.Nil
+	var seat ids.UUID
+	if len(seats) == 1 {
+		seat = seats[0]
+	} else if seat, err = storekit.SharedMailWorkOwnerTx(ctx, tx, mail, false); err != nil || seat.IsZero() {
+		return ids.Nil, err
+	}
+	nobody := ids.Nil
 	may, err := auth.SeatMayHoldPrivateWorkTx(ctx, tx, mail, &nobody, seat)
 	if err != nil || !may {
 		return ids.Nil, err
@@ -167,29 +175,5 @@ func seatLanguage(ctx context.Context, tx pgx.Tx, seat ids.UUID) (textlang.Lang,
 	return textlang.Lang(base), nil
 }
 
-// ActivityDealFiler is capture.DealFiler over the activities module, which
-// owns activity_link and the relink event. Capture and its repair write
-// through it.
-type ActivityDealFiler struct{}
-
-// FileOnDealIfUnfiled is activities.FileOnDealIfUnfiledTx.
-func (ActivityDealFiler) FileOnDealIfUnfiled(
-	ctx context.Context, tx pgx.Tx, id ids.ActivityID, deal ids.UUID, evidence map[string]any,
-) (landed, filed bool, err error) {
-	outcome, err := activities.FileOnDealIfUnfiledTx(ctx, tx, id, deal, evidence)
-	return outcome == activities.DealFilingLanded, outcome == activities.DealFilingAlreadyFiled, err
-}
-
-// StampDealTopic is activities.StampDealTopicCheckedTx. A held or archived
-// mail keeps no memo, and needs none: no pass files it.
-func (ActivityDealFiler) StampDealTopic(ctx context.Context, tx pgx.Tx, id ids.ActivityID, digest string) error {
-	_, err := activities.StampDealTopicCheckedTx(ctx, tx, id, digest)
-	return err
-}
-
-// RetractMachineDeal is activities.RetractMachineDealTx.
-func (ActivityDealFiler) RetractMachineDeal(
-	ctx context.Context, tx pgx.Tx, id ids.ActivityID, deal ids.UUID, evidence map[string]any,
-) (bool, error) {
-	return activities.RetractMachineDealTx(ctx, tx, id, deal, evidence)
-}
+// ActivityDealFiler is capture.DealFiler over the activities module (dealfiler.Activities).
+type ActivityDealFiler = dealfiler.Activities

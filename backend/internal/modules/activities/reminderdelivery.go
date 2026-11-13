@@ -10,6 +10,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -38,8 +39,9 @@ func (s *Store) recordReminderClaim(ctx context.Context, id ids.ActivityID, remi
 	err := s.tx(ctx, func(tx pgx.Tx) error {
 		tag, err := tx.Exec(ctx, `
 			INSERT INTO activity_reminder_delivery (activity_id, delivered_for, delivered_to)
-			SELECT id, remind_at, assignee_id FROM activity
-			 WHERE id = $1 AND remind_at = $2 AND assignee_id = $3 AND NOT is_done AND archived_at IS NULL
+			SELECT a.id, `+storekit.IntentInstantSQL("a", "remind")+`, a.assignee_id FROM activity a
+			 WHERE a.id = $1 AND `+storekit.IntentInstantSQL("a", "remind")+` = $2 AND a.assignee_id = $3
+			   AND NOT a.is_done AND a.archived_at IS NULL AND a.restricted_at IS NULL
 			   FOR SHARE
 			ON CONFLICT (activity_id) DO UPDATE
 			   SET delivered_for = excluded.delivered_for, delivered_to = excluded.delivered_to

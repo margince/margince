@@ -220,7 +220,7 @@ export const NewDealFailed: Story = {
     );
     await userEvent.click(body.getByRole("button", { name: "Create" }));
     await body.findByText(
-      "currency comes with amount_minor or expected_arr_minor, and neither figure comes without it",
+      "Currency comes with amount_minor or expected_arr_minor, and neither figure comes without it.",
     );
   },
 };

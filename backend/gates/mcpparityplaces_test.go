@@ -276,6 +276,7 @@ var parityPathAreas = map[string]string{
 	"/records/{entity_type}/{id}/history": "audit",
 	"/records/{record_type}":              "sharing",
 	"/retention":                          "retention",
+	"/rewrites":                           "ai_help",
 	"/retention-policies":                 "retention",
 	"/roles":                              "members",
 	"/scheduling":                         "scheduling",

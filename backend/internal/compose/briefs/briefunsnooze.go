@@ -94,13 +94,15 @@ func (e *BriefEngine) MarkUnsnoozed(ctx context.Context, itemID ids.UUID) (Brief
 		}
 		before := map[string]any{
 			auditFieldState: item.State, auditFieldStateAt: item.StateAt,
-			auditFieldSnoozedUntil: item.SnoozedUntil,
-			auditFieldReopenOn:     item.ReopenOn, auditFieldReopenRef: item.ReopenRef,
+			auditFieldSnoozedUntil:  item.SnoozedUntil,
+			auditFieldSnoozedIntent: item.SnoozedIntent,
+			auditFieldReopenOn:      item.ReopenOn, auditFieldReopenRef: item.ReopenRef,
 		}
 		after := map[string]any{
 			auditFieldState: briefStateNew, auditFieldStateAt: nil,
-			auditFieldSnoozedUntil: nil,
-			auditFieldReopenOn:     nil, auditFieldReopenRef: nil,
+			auditFieldSnoozedUntil:  nil,
+			auditFieldSnoozedIntent: nil,
+			auditFieldReopenOn:      nil, auditFieldReopenRef: nil,
 		}
 		if _, err := storekit.Audit(ctx, tx, "update", "brief_item", itemID, before, after); err != nil {
 			return err
@@ -108,6 +110,7 @@ func (e *BriefEngine) MarkUnsnoozed(ctx context.Context, itemID ids.UUID) (Brief
 		item.State = briefStateNew
 		item.StateAt = nil
 		item.SnoozedUntil = nil
+		item.SnoozedIntent = nil
 		item.ReopenOn = ""
 		item.ReopenRef = nil
 		return nil

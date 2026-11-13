@@ -27,6 +27,7 @@ import {
   todoLine,
   useHappenedClock,
 } from "../../lib/worklisthappened";
+import { WebsiteInquiryFacts } from "./websiteinquiryfacts";
 import { useBriefAnswer, withFoldedBrief } from "./worklist.briefverbs";
 import { consequenceLine } from "./worklist.consequence";
 import type { WorklistItem } from "./worklist.queries";
@@ -86,6 +87,9 @@ export function WorklistWhy({
                   <p>{detail}</p>
                 ))}
             </WhySection>
+          )}
+          {item.website_inquiry && (
+            <WebsiteInquiryFacts facts={item.website_inquiry} />
           )}
           {reasons.length > 0 && (
             <WhySection heading={t("worklist.why.now")}>

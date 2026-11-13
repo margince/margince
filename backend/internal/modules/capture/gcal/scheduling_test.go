@@ -36,7 +36,7 @@ func TestInvitationRetryReconcilesTheSameGoogleEvent(t *testing.T) {
 			return
 		}
 		reads++
-		if err := json.NewEncoder(w).Encode(scheduledEvent{ID: "0123456789abcdef0123456789abcdef", UID: "event@example.test", Status: "confirmed", Start: eventTime{time.Date(2026, 10, 5, 10, 0, 0, 0, time.UTC)}, End: eventTime{time.Date(2026, 10, 5, 10, 30, 0, 0, time.UTC)}}); err != nil {
+		if err := json.NewEncoder(w).Encode(scheduledEvent{ID: "0123456789abcdef0123456789abcdef", UID: "event@example.test", Status: "confirmed", Start: eventTime{At: time.Date(2026, 10, 5, 10, 0, 0, 0, time.UTC)}, End: eventTime{At: time.Date(2026, 10, 5, 10, 30, 0, 0, time.UTC)}}); err != nil {
 			t.Error(err)
 		}
 	}))
@@ -45,6 +45,28 @@ func TestInvitationRetryReconcilesTheSameGoogleEvent(t *testing.T) {
 	receipt, err := api.Save(context.Background(), "calendar-token", connector.CalendarAppointment{CalendarID: "primary", RequestID: "01234567-89ab-cdef-0123-456789abcdef", Attendees: []string{"guest@example.test"}, Start: time.Date(2026, 10, 5, 10, 0, 0, 0, time.UTC), End: time.Date(2026, 10, 5, 10, 30, 0, 0, time.UTC)})
 	if err != nil || receipt.EventID == "" || attempts != 1 || reads != 1 {
 		t.Fatalf("receipt=%+v err=%v posts=%d reads=%d", receipt, err, attempts, reads)
+	}
+}
+
+func TestABookingWithAChosenZoneTellsGoogleTheZone(t *testing.T) {
+	var sent scheduledEvent
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if err := json.NewDecoder(r.Body).Decode(&sent); err != nil {
+			t.Error(err)
+		}
+		if err := json.NewEncoder(w).Encode(scheduledEvent{ID: "0123456789abcdef0123456789abcdef", Status: "confirmed"}); err != nil {
+			t.Error(err)
+		}
+	}))
+	defer server.Close()
+	api := &httpAPI{client: server.Client(), base: server.URL}
+	start := time.Date(2026, 10, 5, 8, 0, 0, 0, time.UTC)
+	_, err := api.Save(context.Background(), "token", connector.CalendarAppointment{
+		CalendarID: "primary", RequestID: "01234567-89ab-cdef-0123-456789abcdef", Start: start, End: start.Add(30 * time.Minute),
+		StartWall: "2026-10-05T10:00:00", StartZone: "Europe/Berlin",
+	})
+	if err != nil || sent.Start.Zone != "Europe/Berlin" || sent.End.Zone != "Europe/Berlin" || !sent.Start.At.Equal(start) {
+		t.Fatalf("start=%+v end=%+v err=%v", sent.Start, sent.End, err)
 	}
 }
 
@@ -195,7 +217,7 @@ func TestInvitationConflictDoesNotConfirmADifferentInterval(t *testing.T) {
 			w.WriteHeader(http.StatusConflict)
 			return
 		}
-		if err := json.NewEncoder(w).Encode(scheduledEvent{ID: "0123456789abcdef0123456789abcdef", Status: "confirmed", Start: eventTime{time.Date(2026, 10, 5, 11, 0, 0, 0, time.UTC)}, End: eventTime{time.Date(2026, 10, 5, 11, 30, 0, 0, time.UTC)}}); err != nil {
+		if err := json.NewEncoder(w).Encode(scheduledEvent{ID: "0123456789abcdef0123456789abcdef", Status: "confirmed", Start: eventTime{At: time.Date(2026, 10, 5, 11, 0, 0, 0, time.UTC)}, End: eventTime{At: time.Date(2026, 10, 5, 11, 30, 0, 0, time.UTC)}}); err != nil {
 			t.Error(err)
 		}
 	}))

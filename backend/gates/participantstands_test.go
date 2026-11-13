@@ -49,6 +49,7 @@ const participantStandsRule = "ParticipantStandsSQL"
 // "package-dir:FuncName". Every entry says why a guessed owner cannot matter
 // there; an entry whose declaration stops reading the table fails as stale.
 var presenceReadsAdmitted = gatekit.Waive(map[string]string{
+	"internal/platform/database/storekit:DirectMailActivitiesSQL": "its user_id test is on capture_import, picking the mail only shared mailboxes imported. The participant arms match addresses, and the seat test inside SharedMailWorkOwnerSQL composes the standing rule through auth.SeatMayReadMailSQL",
 	"internal/modules/activities:participantCandidatesSQL": "the participant backfill's batch: its NOT EXISTS asks " +
 		"whether an activity has any participant row, with no user_id test, so a guessed owner's row defers the " +
 		"activity until the guess is retired. The user_id it selects is the owner it writes. No presence is decided here",

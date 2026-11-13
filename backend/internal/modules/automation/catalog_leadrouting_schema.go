@@ -46,8 +46,8 @@ func leadRoutingSchema() map[string]any {
 		schemaKeyAdditionalProps: false,
 		schemaKeyProperties: map[string]any{
 			"owners": map[string]any{
-				schemaKeyType:        "array",
-				"items":              map[string]any{schemaKeyType: schemaTypeString, "format": "uuid"},
+				schemaKeyType:        schemaTypeArray,
+				schemaKeyItems:       map[string]any{schemaKeyType: schemaTypeString, schemaKeyFormat: schemaFormatUUID},
 				schemaKeyDescription: "Round-robin pool of user ids, in rotation order.",
 			},
 			"cap_per_owner": map[string]any{
@@ -56,16 +56,16 @@ func leadRoutingSchema() map[string]any {
 				schemaKeyDescription: "Max open (new, contacted, engaged) leads an owner may hold; omitted = uncapped.",
 			},
 			"rules": map[string]any{
-				schemaKeyType:        "array",
+				schemaKeyType:        schemaTypeArray,
 				schemaKeyDescription: "Evaluated in order before round-robin; a matching lead goes to the rule's owner if under cap.",
-				"items": map[string]any{
+				schemaKeyItems: map[string]any{
 					schemaKeyType:            schemaTypeObject,
 					schemaKeyAdditionalProps: false,
 					"required":               []string{ruleKeyField, ruleKeyEquals, keyOwnerID},
 					schemaKeyProperties: map[string]any{
 						ruleKeyField:  map[string]any{"enum": RoutableLeadFields},
 						ruleKeyEquals: map[string]any{schemaKeyType: schemaTypeString},
-						keyOwnerID:    map[string]any{schemaKeyType: schemaTypeString, "format": "uuid"},
+						keyOwnerID:    map[string]any{schemaKeyType: schemaTypeString, schemaKeyFormat: schemaFormatUUID},
 					},
 				},
 			},

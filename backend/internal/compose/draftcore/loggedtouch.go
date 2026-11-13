@@ -4,11 +4,14 @@
 package draftcore
 
 import (
+	"context"
+	"slices"
 	"time"
 
 	"github.com/margince/margince/backend/internal/compose/activitywhen"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/shared/kernel/convstate"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/occurredday"
 	"github.com/margince/margince/backend/internal/shared/kernel/relstrength"
 )
@@ -64,4 +67,32 @@ func IsLoggedTouch(activity crmcontracts.Activity, now time.Time, zone *time.Loc
 		return relstrength.HadContact(string(activity.Kind), status, "", at, now, zone)
 	}
 	return relstrength.MeetingStatusNotCalledOff(status)
+}
+
+// LoggedOn names the record whose newest logged touch a draft reads: a
+// contact, company or lead, narrowed to one project when the draft is.
+type LoggedOn struct {
+	RecordType string
+	ID         ids.UUID
+	ProjectID  *ids.ProjectID
+}
+
+// LoggedTouchReader reads the newest note or past meeting on one record that
+// the caller may read. The timeline page a draft folds is bounded, and a note
+// older than a page of newer activity is still contact.
+type LoggedTouchReader interface {
+	NewestLoggedTouch(ctx context.Context, on LoggedOn, now time.Time) ([]crmcontracts.Activity, error)
+}
+
+// WithNewestLogged is rows with the newest logged touch on the record added,
+// for ClassifyWithLogged. A nil reader adds nothing.
+func WithNewestLogged(ctx context.Context, reader LoggedTouchReader, on LoggedOn, now time.Time, rows []crmcontracts.Activity) ([]crmcontracts.Activity, error) {
+	if reader == nil {
+		return rows, nil
+	}
+	newest, err := reader.NewestLoggedTouch(ctx, on, now)
+	if err != nil {
+		return nil, err
+	}
+	return append(slices.Clone(rows), newest...), nil
 }

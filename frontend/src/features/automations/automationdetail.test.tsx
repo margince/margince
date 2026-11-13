@@ -269,6 +269,76 @@ function previewBackend(
 }
 
 describe("AutomationPreview", () => {
+  it("describes event rules without treating compatibility counts as eligible work", async () => {
+    vi.stubGlobal(
+      "fetch",
+      previewBackend(
+        () =>
+          jsonResponse({
+            preview_kind: "event",
+            matches_now_available: false,
+            historical_preview_available: false,
+            matches_now: 999,
+            would_have_fired: 999,
+            excluded_by_permission: 999,
+            window_days: 30,
+          }),
+        [],
+      ),
+    );
+    render(<AutomationPreview automationId="au-1" />);
+    await waitFor(() => expect(screen.getByText("From now on")).toBeTruthy());
+    expect(screen.getByText("Historical preview unavailable")).toBeTruthy();
+    expect(
+      screen.getByText(
+        "Turning this rule on handles new events. It does not process existing records.",
+      ),
+    ).toBeTruthy();
+    expect(screen.queryByText(/Matches now:/)).toBeNull();
+    expect(screen.queryByText(/Would fire:/)).toBeNull();
+    expect(screen.queryByText(/hidden \(no access\)/)).toBeNull();
+    expect(screen.queryByRole("group", { name: "Window" })).toBeNull();
+  });
+
+  it("shows annual renewal dates and counts missing dates without a historical estimate", async () => {
+    vi.stubGlobal(
+      "fetch",
+      previewBackend(
+        () =>
+          jsonResponse({
+            preview_kind: "population",
+            matches_now_available: true,
+            historical_preview_available: false,
+            matches_now: 1,
+            window_days: 30,
+            renewal: {
+              missing_dates: 2,
+              recurs_yearly: true,
+              samples: [
+                {
+                  entity_id: "customer-1",
+                  reminder_date: "2026-12-06",
+                  occurrence_date: "2027-01-05",
+                },
+              ],
+            },
+          }),
+        [],
+      ),
+    );
+    render(<AutomationPreview automationId="au-1" />);
+    await waitFor(() =>
+      expect(screen.getByText("Repeat each year")).toBeTruthy(),
+    );
+    expect(
+      screen.getByText("2 visible records have no renewal date"),
+    ).toBeTruthy();
+    const dates = screen.getByText(/^Remind on .* for the renewal on /);
+    expect(dates.textContent).toMatch(/2026.*2027/);
+    expect(screen.queryByRole("group", { name: "Window" })).toBeNull();
+    expect(screen.getByText("Trailing estimate unavailable")).toBeTruthy();
+  });
+
   it("posts window_days:30 on open and shows matches-now + would-fire", async () => {
     const bodies: PreviewBody[] = [];
     vi.stubGlobal(

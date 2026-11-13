@@ -21,29 +21,35 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
+// memberAlias is the name every member's table takes in readMember, and so
+// the alias each scope clause qualifies its columns with.
+const memberAlias = "t"
+
 // memberScope renders the row-visibility predicate for one member,
 // dispatching to the same clause its list endpoint uses. An empty clause
 // means unbounded (row_scope=all, or the system actor) or workspace-wide
-// reference data.
-func memberScope(ctx context.Context, m exportMember, alias string, arg func(any) int) (string, error) {
+// reference data. `with` is the `WITH` clause `where` reads from, and is empty
+// for every member that reads no gated set.
+func memberScope(ctx context.Context, m exportMember, arg func(any) int) (with, where string, err error) {
+	alias := memberAlias
 	switch m.scope {
 	case scopeShareable:
-		return auth.ScopeClauseFor(ctx, m.table, alias, arg)
+		where, err = auth.ScopeClauseFor(ctx, m.table, alias, arg)
 	case scopeActivity:
-		return auth.ActivityContentClause(ctx, alias, arg)
+		where, err = auth.ActivityContentClause(ctx, alias, arg)
 	case scopeRelationship:
-		return relationshipExportScope(ctx, alias, arg)
+		where, err = relationshipExportScope(ctx, alias, arg)
 	case scopeAttachment:
-		return polymorphicVisible(ctx, alias+".entity_type", alias+".entity_id", arg)
+		where, err = polymorphicVisible(ctx, alias+".entity_type", alias+".entity_id", arg)
 	case scopeAudit:
 		return auditExportScope(ctx, alias, arg)
 	case scopeWorkspace:
-		return "", nil
 	case scopeContactChild:
-		return contactChildExportScope(ctx, alias, arg)
+		where, err = contactChildExportScope(ctx, alias, arg)
 	default:
-		return "", fmt.Errorf("export: unknown scope mode %d for %q", m.scope, m.table)
+		err = fmt.Errorf("export: unknown scope mode %d for %q", m.scope, m.table)
 	}
+	return "", where, err
 }
 
 // contactChildExportScope scopes a contact child row by its parent
@@ -102,10 +108,20 @@ func relationshipExportScope(ctx context.Context, alias string, arg func(any) in
 	return "(" + strings.Join(clauses, " AND ") + ")", nil
 }
 
-// polymorphicVisible renders "the referenced record is visible" for a
-// polymorphic (entity_type, entity_id) pair — the attachment manifest and
-// the audit-log member both ride it so neither leaks a row pointing at a
-// record outside the caller's scope.
+// polymorphicVisible renders "the referenced record is visible" for the
+// attachment manifest's polymorphic (entity_type, entity_id) pair. No row then
+// points at a record outside the caller's scope.
+func polymorphicVisible(ctx context.Context, typeCol, idCol string, arg func(any) int) (string, error) {
+	activityArm, err := activityMemberClause(ctx, typeCol, idCol, arg)
+	if err != nil {
+		return "", err
+	}
+	return polymorphicVisibleWith(ctx, typeCol, idCol, activityArm, arg, nil)
+}
+
+// polymorphicVisibleWith is that test with the activity arm supplied. The
+// attachment manifest supplies the correlated content gate, and the audit
+// member a test against the set it gates once.
 //
 // An actor unbounded over every RECORD arm is spared the record walk and is
 // NOT spared the activity arm. Row scope and audience are different
@@ -124,20 +140,12 @@ func relationshipExportScope(ctx context.Context, alias string, arg func(any) in
 // legacyTypes, when set, widens one kind's arm to the extra values a column
 // may still hold. Only the audit trail needs it, and only for the company —
 // see auditlegacytype.go for why those rows cannot be rewritten.
-func polymorphicVisible(ctx context.Context, typeCol, idCol string, arg func(any) int) (string, error) {
-	return polymorphicVisibleWith(ctx, typeCol, idCol, arg, nil)
-}
-
-func polymorphicVisibleWith(ctx context.Context, typeCol, idCol string, arg func(any) int,
+func polymorphicVisibleWith(ctx context.Context, typeCol, idCol, activityArm string, arg func(any) int,
 	legacyTypes map[string][]string,
 ) (string, error) {
 	actor, ok := principal.Actor(ctx)
 	if !ok {
 		return "", errors.New("compose: no actor bound to export context")
-	}
-	activityArm, err := activityMemberClause(ctx, typeCol, idCol, arg)
-	if err != nil {
-		return "", err
 	}
 	if auth.UnboundedFor(actor, "contact", "company", "deal", "lead") {
 		// Every non-activity row passes; an activity row faces the audience.
@@ -169,9 +177,8 @@ func polymorphicVisibleWith(ctx context.Context, typeCol, idCol string, arg func
 }
 
 // activityMemberClause renders "this row points at an activity whose content
-// the caller may read". Split out of polymorphicVisible because both of its
-// arms need it — the bounded actor as one disjunct beside the record arms, the
-// unbounded actor as the only test it still owes.
+// the caller may read" for polymorphicVisible. It stands apart because the
+// audit member replaces it with a test against its once-gated set.
 func activityMemberClause(ctx context.Context, typeCol, idCol string, arg func(any) int) (string, error) {
 	// Activities have no owner; they inherit visibility from their links, and
 	// their content additionally from their audience.
@@ -191,39 +198,45 @@ func activityMemberClause(ctx context.Context, typeCol, idCol string, arg func(a
 // object types outside the row-scoped core (login, config) stay with the
 // unbounded admin. Full row-count reconciliation with the actor's RBAC
 // view is B-E11.9; this keeps the writer from leaking before that lands.
-func auditExportScope(ctx context.Context, alias string, arg func(any) int) (string, error) {
+func auditExportScope(ctx context.Context, alias string, arg func(any) int) (with, where string, err error) {
 	actor, ok := principal.Actor(ctx)
 	if !ok {
-		return "", errors.New("compose: no actor bound to export context")
+		return "", "", errors.New("compose: no actor bound to export context")
 	}
-	entity, err := polymorphicVisibleWith(ctx, alias+".entity_type", alias+".entity_id", arg,
+	// Three arms below test message content. Postgres plans every copy of a
+	// gate a statement carries, so the gate renders once, in this set.
+	readable, err := auth.ContentReadableActivitiesSQL(ctx, auditReachedActivities, arg)
+	if err != nil {
+		return "", "", err
+	}
+	with = "WITH " + exportReadableActivity + " AS MATERIALIZED (" + readable + ") "
+	activityArm := fmt.Sprintf("(%[1]s.entity_type = 'activity' AND %[1]s.entity_id IN (SELECT id FROM %[2]s))",
+		alias, exportReadableActivity)
+	entity, err := polymorphicVisibleWith(ctx, alias+".entity_type", alias+".entity_id", activityArm, arg,
 		map[string][]string{string(recordTypeCompany): auditCompanyTypes()})
 	if err != nil {
-		return "", err
+		return "", "", err
 	}
 	// Two shapes reach a message, not one. An audit row may target the ACTIVITY,
 	// and it may target an ATTACHMENT of it — whose image carries the filename,
 	// and a filename states what the message is about. Excluding only the first
 	// is the half-fix that leaves the same content reachable by the longer
 	// route, so both arms below take this one test.
-	noLimitedMessage, err := carriesNoLimitedMessage(ctx, alias, arg)
-	if err != nil {
-		return "", err
-	}
+	noLimitedMessage := carriesNoLimitedMessage(alias)
 	if auth.UnboundedFor(actor, "contact", "company", "deal", "lead") {
 		// The system principal's branch, and only its: contact and company
 		// are owner-private (auth.ownerPrivateTables), so UnboundedFor is false
 		// for every human including one with row_scope=all, and an admin export
 		// takes the bounded path below.
 		//
-		// It carries the message test anyway, because polymorphicVisible asks
-		// the audience of a row that names an activity DIRECTLY and an
-		// attachment row would pass that arm on its own. Composing it here
-		// rather than returning the entity clause alone is what keeps the
-		// branch honest if the owner-private set ever changes.
-		return fmt.Sprintf("(%s AND %s)", entity, noLimitedMessage), nil
+		// It carries the message test anyway. The entity clause tests only a
+		// row that names an activity DIRECTLY, and an attachment row would
+		// pass it on its own. Composing it here rather than returning the
+		// entity clause alone keeps attachment rows gated if the owner-private
+		// set ever changes.
+		return with, fmt.Sprintf("(%s AND %s)", entity, noLimitedMessage), nil
 	}
-	return fmt.Sprintf("(%s OR (%s.actor_id = $%d AND %s))",
+	return with, fmt.Sprintf("(%s OR (%s.actor_id = $%d AND %s))",
 		entity, alias, arg(actor.ID), noLimitedMessage), nil
 }
 
@@ -235,23 +248,28 @@ func auditExportScope(ctx context.Context, alias string, arg func(any) int) (str
 // filename states what the message is about. Both take the same audience
 // clause, so an attachment of an OPEN message still travels: the limit is the
 // message's audience, never the fact that a row points at an attachment.
-func carriesNoLimitedMessage(ctx context.Context, alias string, arg func(any) int) (string, error) {
-	readable, err := auth.ActivityContentClause(ctx, "av", arg)
-	if err != nil {
-		return "", err
-	}
+func carriesNoLimitedMessage(alias string) string {
 	// One arm per shape rather than a CASE that picks the id: an attachment row
 	// has to reach its activity through the attachment table, and folding that
 	// hop into the same EXISTS as the direct arm made a subquery whose
 	// correlation was easy to get subtly wrong and impossible to read.
 	return fmt.Sprintf(
 		`(%[1]s.entity_type NOT IN ('activity', 'attachment')
-		  OR (%[1]s.entity_type = 'activity' AND EXISTS (
-		       SELECT 1 FROM activity av WHERE av.id = %[1]s.entity_id AND %[2]s))
+		  OR (%[1]s.entity_type = 'activity' AND %[1]s.entity_id IN (SELECT id FROM %[2]s))
 		  OR (%[1]s.entity_type = 'attachment' AND NOT EXISTS (
 		       SELECT 1 FROM attachment ata
-		        JOIN activity av ON av.id = ata.entity_id
 		       WHERE ata.id = %[1]s.entity_id AND ata.entity_type = 'activity'
-		         AND NOT (%[2]s))))`,
-		alias, readable), nil
+		         AND ata.entity_id NOT IN (SELECT id FROM %[2]s))))`,
+		alias, exportReadableActivity)
 }
+
+// exportReadableActivity names the audit member's one gated set: the messages
+// its rows reach, directly or through an attachment, whose content the caller
+// may read.
+const exportReadableActivity = "export_readable_activity"
+
+// auditReachedActivities selects the activities audit rows name, directly or
+// through an attachment. exportReadableActivity gates this need set.
+const auditReachedActivities = `SELECT reached.entity_id FROM audit_log reached WHERE reached.entity_type = 'activity'
+ UNION SELECT ata.entity_id FROM audit_log reached JOIN attachment ata ON ata.id = reached.entity_id
+ WHERE reached.entity_type = 'attachment' AND ata.entity_type = 'activity'`

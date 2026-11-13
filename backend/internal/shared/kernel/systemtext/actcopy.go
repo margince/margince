@@ -11,6 +11,10 @@ import (
 )
 
 var actDefinitions = map[string]Definition{
+	"act.verbs.assign_website_inquiry":             {Words: langcopy.Phrase{En: "Assign website inquiry", De: "Website-Anfrage zuweisen", Vi: "Giao yêu cầu từ website"}},
+	"act.verbs.preview_website_inquiry_assignment": {Words: langcopy.Phrase{En: "Preview inquiry assignment", De: "Zuweisung der Website-Anfrage prüfen", Vi: "Xem trước người nhận yêu cầu từ website"}},
+	"act.verbs.preview_website_inquiries":          {Words: langcopy.Phrase{En: "Preview website inquiries", De: "Website-Anfragen prüfen", Vi: "Xem trước các yêu cầu từ website"}},
+	"act.verbs.handle_website_inquiries":           {Words: langcopy.Phrase{En: "Handle website inquiries", De: "Website-Anfragen bearbeiten", Vi: "Xử lý các yêu cầu từ website"}},
 	"act.verbs.accept_applied_deal_change":         {Words: langcopy.Phrase{En: "Accept applied deal change", De: "Automatische Deal-Änderung annehmen", Vi: "Chấp nhận thay đổi giao dịch tự động"}},
 	"act.verbs.accept_attachment_extraction":       {Words: langcopy.Phrase{En: "Accept attachment extraction", De: "Aus einem Dokument gelesene Deal-Angaben übernehmen", Vi: "Chấp nhận thông tin giao dịch đọc từ tài liệu"}},
 	"act.verbs.accept_deal_suggestion":             {Words: langcopy.Phrase{En: "Accept deal suggestion", De: "Deal-Vorschlag annehmen", Vi: "Chấp nhận đề xuất giao dịch"}},

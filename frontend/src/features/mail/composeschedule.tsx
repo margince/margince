@@ -1,16 +1,28 @@
 import { CalendarDays, ChevronUp, Clock } from "lucide-react";
 import { useEffect, useId, useState } from "react";
+import type { components } from "../../api/schema";
 import { Button, Modal } from "../../design-system/atoms";
-import { Calendar, type ISODay, isoDay } from "../../design-system/calendar";
+import { Calendar, dateOf, type ISODay } from "../../design-system/calendar";
 import { Eyebrow } from "../../design-system/eyebrow";
 import { Heading } from "../../design-system/heading";
 import { Popover } from "../../design-system/popover";
+import {
+  calendarDay,
+  isRealCalendarDay,
+  localDateTimeValue,
+} from "../../format/calendarday";
 import {
   formatDateAbbrev,
   formatDateTime,
   INTL_LOCALE,
 } from "../../format/format";
-import { browserZone, zoneNameAndOffset } from "../../format/timezone";
+import {
+  browserZone,
+  instantAtWallClock,
+  startOfDayInZone,
+  wallClockTime,
+  zoneNameAndOffset,
+} from "../../format/timezone";
 import { type Locale, useLocale, useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
 import { useViewerZone } from "../../lib/viewerzone";
@@ -25,19 +37,24 @@ import { useViewerZone } from "../../lib/viewerzone";
 // slices have to fit inside, and every line spent moving code is a line not
 // spent on the change under review. What lands here is what was there.
 
-export function schedulePresets(now: Date): readonly {
+export function schedulePresets(
+  now: Date,
+  zone = browserZone(),
+): readonly {
   key: MessageKey;
   at: Date;
 }[] {
+  const today = calendarDay(now, zone);
   const at = (days: number, hour: number) => {
-    const day = new Date(now);
-    day.setDate(day.getDate() + days);
-    day.setHours(hour, 0, 0, 0);
-    return day;
+    const day = calendarDay(
+      new Date(startOfDayInZone(today, zone, days)),
+      zone,
+    );
+    return new Date(instantAtWallClock(day, hour * 3_600_000, zone));
   };
-  // Monday from a Monday is NEXT Monday: a rep picking "Monday morning" on a
-  // Monday afternoon means the one that has not happened yet.
-  const untilMonday = (8 - now.getDay()) % 7 || 7;
+  // The weekday of the zone's own date: arithmetic on a named day, no clock read.
+  const index = new Date(`${today}T12:00:00Z`).getUTCDay();
+  const untilMonday = (8 - index) % 7 || 7;
   return [
     { key: "compose.scheduleTomorrow", at: at(1, 8) },
     { key: "compose.scheduleAfternoon", at: at(1, 13) },
@@ -45,25 +62,73 @@ export function schedulePresets(now: Date): readonly {
   ];
 }
 
-/**
- * The picker's wall-clock text as the wire wants it: an instant plus the IANA
- * zone it was chosen in.
- *
- * `new Date(...)` resolves the text in the rep's own zone. The zone name
- * travels rather than an offset, which would freeze one day's DST rules. Empty
- * means send now.
- */
-export function scheduleFields(local: string): {
-  scheduled_at?: string;
-  scheduled_tz?: string;
-} {
+type ScheduleSource = Pick<
+  components["schemas"]["SendEmailRequest"],
+  "scheduled_at" | "scheduled_tz" | "scheduled_intent"
+>;
+export type ScheduleFields = {
+  [Key in keyof ScheduleSource]?: NonNullable<ScheduleSource[Key]>;
+};
+
+// A saved legacy instant remains an instant until the reader chooses a time.
+export function scheduleFields(
+  local: string,
+  saved?: ScheduleFields,
+  timezone = browserZone(),
+): ScheduleFields {
   if (local === "") return {};
-  const at = new Date(local);
-  if (Number.isNaN(at.getTime())) return {};
+  if (saved !== undefined) return saved;
+  const at = scheduleInstant(local, timezone);
   return {
     scheduled_at: at.toISOString(),
-    scheduled_tz: browserZone(),
+    scheduled_tz: timezone,
+    scheduled_intent: { wall_clock: local, timezone },
   };
+}
+
+function scheduleInstant(local: string, timezone: string): Date {
+  const parts =
+    /^([0-9]{4}-[0-9]{2}-[0-9]{2})T([0-9]{2}):([0-9]{2})(?::([0-9]{2}(?:\.[0-9]{1,6})?))?$/.exec(
+      local,
+    );
+  if (!parts || !isRealCalendarDay(parts[1] ?? ""))
+    throw new RangeError("Invalid scheduled time");
+  const day = parts[1] ?? "";
+  const hour = Number(parts[2]);
+  const minute = Number(parts[3]);
+  const second = Number(parts[4] ?? 0);
+  if (hour > 23 || minute > 59 || second >= 60)
+    throw new RangeError("Invalid scheduled time");
+  const milliseconds = (hour * 3600 + minute * 60 + Math.floor(second)) * 1000;
+  let instant: number;
+  try {
+    instant = instantAtWallClock(day, milliseconds, timezone);
+  } catch (error) {
+    if (!(error instanceof RangeError) || Number(day.substring(0, 4)) < 100)
+      throw error;
+    instant = Date.parse(startOfDayInZone(day, timezone, 1));
+  }
+  return new Date(instant);
+}
+
+export function scheduleSourceOf(saved: ScheduleSource): ScheduleFields {
+  return {
+    scheduled_at: saved.scheduled_at ?? undefined,
+    scheduled_tz: saved.scheduled_tz ?? undefined,
+    scheduled_intent: saved.scheduled_intent ?? undefined,
+  };
+}
+
+export function sameScheduleSource(
+  a?: ScheduleFields,
+  b?: ScheduleFields,
+): boolean {
+  return (
+    a?.scheduled_at === b?.scheduled_at &&
+    a?.scheduled_tz === b?.scheduled_tz &&
+    a?.scheduled_intent?.wall_clock === b?.scheduled_intent?.wall_clock &&
+    a?.scheduled_intent?.timezone === b?.scheduled_intent?.timezone
+  );
 }
 
 // The hours a business message is actually scheduled for. Four, not a clock:
@@ -74,23 +139,32 @@ const SCHEDULE_HOURS = [8, 9, 13, 17] as const;
 // A moment as `datetime-local` spells it: the wall clock, no offset. Built
 // field by field rather than sliced out of an ISO string, because
 // `toISOString` is UTC and would move every preset by the reader's own offset.
-function localMoment(at: Date): string {
-  const pad = (value: number) => String(value).padStart(2, "0");
-  return `${isoDay(at)}T${pad(at.getHours())}:${pad(at.getMinutes())}`;
+function localMoment(at: Date, zone = browserZone()): string {
+  return localDateTimeValue(at.toISOString(), zone);
 }
 
-/** A `datetime-local` value back as a `Date`, or nothing if the field is empty. */
-export function momentOf(local: string): Date | null {
-  if (!local) {
-    return null;
+export function momentOf(local: string, zone = browserZone()): Date | null {
+  if (!local) return null;
+  try {
+    return scheduleInstant(local, zone);
+  } catch (error) {
+    if (error instanceof RangeError) return null;
+    throw error;
   }
-  const at = new Date(local);
-  return Number.isNaN(at.getTime()) ? null : at;
 }
 
 /** A scheduled moment, spelled the way every line in this drawer spells one. */
 export function momentLabel(at: Date, locale: Locale, zone: string): string {
   return `${formatDateTime(at.toISOString(), locale, zone)} · ${zoneNameAndOffset(INTL_LOCALE[locale], at)}`;
+}
+
+export function scheduledSendLabel(
+  local: string,
+  locale: Locale,
+  zone: string,
+): string | null {
+  const at = momentOf(local, zone);
+  return at ? momentLabel(at, locale, zone) : null;
 }
 
 // The other way to send, behind the confirm button's own caret.
@@ -140,12 +214,14 @@ export function ScheduleDialog({
   open,
   onClose,
   sendAt,
+  timezone,
   onChoose,
   now,
 }: Readonly<{
   open: boolean;
   onClose: () => void;
   sendAt: string;
+  timezone?: string;
   onChoose: (next: string) => void;
   // The clock, passed in: a component that read it itself could not be tested
   // against a fixed set of presets.
@@ -153,28 +229,35 @@ export function ScheduleDialog({
 }>) {
   const t = useT();
   const { locale } = useLocale();
-  const zone = useViewerZone();
+  const viewerZone = useViewerZone();
+  const zone = timezone ?? viewerZone;
   const headingId = useId();
   const [picking, setPicking] = useState(false);
-  const chosen = momentOf(sendAt) ?? now;
-  const [day, setDay] = useState<ISODay>(isoDay(chosen));
-  const [hour, setHour] = useState(chosen.getHours());
-  const [month, setMonth] = useState(
-    () => new Date(chosen.getFullYear(), chosen.getMonth(), 1),
+  const chosen = momentOf(sendAt, zone) ?? now;
+  const [day, setDay] = useState<ISODay>(calendarDay(chosen, zone));
+  const [hour, setHour] = useState(
+    Number(wallClockTime(chosen.getTime(), zone).split(":")[0]),
   );
+  const [month, setMonth] = useState(() => {
+    const month = dateOf(calendarDay(chosen, zone));
+    month.setDate(1);
+    return month;
+  });
   // Each opening starts from the current moment, not wherever the last
   // opening left the calendar — a rep who paged to December and closed
   // without choosing should not find December still showing next time.
   // biome-ignore lint/correctness/useExhaustiveDependencies: trigger-only dep — this re-seeds the picker on open, not on every change to sendAt/now while it's already open.
   useEffect(() => {
     if (!open) return;
-    const start = momentOf(sendAt) ?? now;
+    const start = momentOf(sendAt, zone) ?? now;
     setPicking(false);
-    setDay(isoDay(start));
-    setHour(start.getHours());
-    setMonth(new Date(start.getFullYear(), start.getMonth(), 1));
+    setDay(calendarDay(start, zone));
+    setHour(Number(wallClockTime(start.getTime(), zone).split(":")[0]));
+    const month = dateOf(calendarDay(start, zone));
+    month.setDate(1);
+    setMonth(month);
   }, [open]);
-  const picked = new Date(`${day}T${String(hour).padStart(2, "0")}:00`);
+  const picked = new Date(instantAtWallClock(day, hour * 3_600_000, zone));
   return (
     <Modal open={open} onClose={onClose} labelledBy={headingId} intent="form">
       <Heading size="large" id={headingId} className="t-h2 modal-title">
@@ -224,7 +307,7 @@ export function ScheduleDialog({
             <Button
               variant="primary"
               onClick={() => {
-                onChoose(localMoment(picked));
+                onChoose(localMoment(picked, zone));
                 onClose();
               }}
             >
@@ -237,13 +320,13 @@ export function ScheduleDialog({
           <p className="t-caption">
             {zoneNameAndOffset(INTL_LOCALE[locale], now)}
           </p>
-          {schedulePresets(now).map((preset) => (
+          {schedulePresets(now, zone).map((preset) => (
             <button
               key={preset.key}
               type="button"
               className="schedule-preset"
               onClick={() => {
-                onChoose(localMoment(preset.at));
+                onChoose(localMoment(preset.at, zone));
                 onClose();
               }}
             >

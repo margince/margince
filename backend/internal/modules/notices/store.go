@@ -22,14 +22,15 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/systemtext"
 	"github.com/margince/margince/backend/internal/shared/kernel/textcut"
+	"github.com/margince/margince/backend/internal/shared/kernel/values"
 )
 
 // subjectBound and bodyBound cap what a producer can put in front of a
 // reader: a notice is a line and a paragraph, not a document, and the lane
 // that carries it ships bounded strings to every open tab.
 const (
-	subjectBound = 200
-	bodyBound    = 2000
+	subjectBound = values.TextLineCharacters
+	bodyBound    = values.TextNoteCharacters
 )
 
 // Store owns the notice table.

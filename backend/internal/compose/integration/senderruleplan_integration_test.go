@@ -59,8 +59,9 @@ func senderRulePlan(t *testing.T, tx pgx.Tx, e *Env, sql string, args ...any) se
 func TestTheSenderRuleReadsByIndexOverUnrelatedRows(t *testing.T) {
 	e := Setup(t)
 	contact := e.SeedContact(t, "Planned Sender", &e.Rep1)
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
-		_, err := tx.Exec(e.Admin(), `
+	// A seed of this size outlasts the request ceiling on a slow runner, so it
+	// goes through the owner connection, which tests may hold longer.
+	if _, err := OwnerConn(t).Exec(e.Admin(), `
 			WITH unrelated AS (
 			  INSERT INTO contact (full_name, owner_id, visibility, source, captured_by)
 			  SELECT 'Unrelated ' || n, $1, 'workspace', 'manual', 'test:plan' FROM generate_series(1, 4000) n RETURNING id),
@@ -74,9 +75,7 @@ func TestTheSenderRuleReadsByIndexOverUnrelatedRows(t *testing.T) {
 			INSERT INTO activity_participant (activity_id, role, address, contact_id)
 			SELECT m.id, 'from', a.email, CASE WHEN random() < 0.5 THEN a.contact_id END
 			  FROM (SELECT id, row_number() OVER () AS n FROM mail) m
-			  JOIN (SELECT contact_id, email, row_number() OVER () AS n FROM addresses) a ON a.n = m.n`, e.Rep1)
-		return err
-	}); err != nil {
+			  JOIN (SELECT contact_id, email, row_number() OVER () AS n FROM addresses) a ON a.n = m.n`, e.Rep1); err != nil {
 		t.Fatalf("seeding unrelated senders: %v", err)
 	}
 	if _, err := OwnerConn(t).Exec(e.Admin(), "ANALYZE contact_email, activity_participant, activity"); err != nil {

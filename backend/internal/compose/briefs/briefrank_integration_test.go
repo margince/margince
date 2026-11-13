@@ -727,7 +727,7 @@ func TestAnExpiredSnoozeDoesNotRetireTheDismissalLineage(t *testing.T) {
 		t.Fatalf("the deal did not return on day two: %v", second.Items)
 	}
 	until := dayTwo.Add(2 * time.Hour)
-	if _, err := b.engine.MarkSnoozed(b.repCtx, returned, values.ReopenOnTime, &until, nil, dayTwo.Add(time.Hour)); err != nil {
+	if _, err := b.engine.MarkSnoozed(b.repCtx, returned, values.ReopenOnTime, &until, nil, dayTwo.Add(time.Hour), nil); err != nil {
 		t.Fatal(err)
 	}
 
