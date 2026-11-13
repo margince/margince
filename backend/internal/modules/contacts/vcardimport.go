@@ -295,6 +295,7 @@ func ValidateVCardContacts(entry VCardEntry) error {
 func contactFromVCard(entry VCardEntry) CreateContactInput {
 	contact := CreateContactInput{
 		FullName:      VCardContactName(entry),
+		sourceNames:   true,
 		Source:        vcardSource,
 		auditEvidence: map[string]any{auditKeySource: vcardSource},
 	}

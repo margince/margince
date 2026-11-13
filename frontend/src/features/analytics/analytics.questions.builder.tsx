@@ -473,6 +473,7 @@ function FilterRow({
             type={controlType(entity, filter.field)}
             references={fieldReference(filter.field)}
             options={customFieldOf(entity, filter.field)?.options}
+            optionLabels={customFieldOf(entity, filter.field)?.option_labels}
             op={controlOp}
             value={filter.value}
             onChange={(value) => onChange({ ...filter, value })}

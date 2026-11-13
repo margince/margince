@@ -82,6 +82,7 @@ const TAB_LABELS: {
     accounting: "settings.part.integrations.accounting",
     webhooks: "settings.part.integrations.webhooks",
     telegram: "settings.part.integrations.telegram",
+    "shared-mailboxes": "settings.part.integrations.sharedMailboxes",
     units: "settings.part.integrations.units",
   },
   models: {

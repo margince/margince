@@ -4,6 +4,7 @@ import { useT } from "../i18n";
 import { isImeCommit } from "../lib/imecommit";
 import { problemMessageOf } from "../lib/problem";
 import { Button, SearchField } from "./atoms";
+import { SEARCH_DEBOUNCE_MS } from "./debouncedsearch";
 import { ErrorLine } from "./errorline";
 
 // The shared debounced search→candidate-list→pick pattern. MergeAction
@@ -16,8 +17,6 @@ import { ErrorLine } from "./errorline";
 // rather than aborted (the request still reaches the server), and the
 // candidate list is a list of buttons rather than a combobox — no
 // role=combobox, no aria-expanded, no arrow-key navigation.
-
-const SEARCH_DEBOUNCE_MS = 250;
 
 // `detail` is the line under the name that tells two look-alike names apart
 // (a contact's company and address, a company's domain).

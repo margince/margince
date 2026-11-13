@@ -7,6 +7,7 @@ import type { ProjectScope } from "../../design-system/projectpicker";
 import { paragraphsFrom } from "../../design-system/richtext";
 import { isLocale, type Locale } from "../../i18n/locale";
 import type { CommunicationContext } from "../../lib/compose-context";
+import { useViewerZone } from "../../lib/viewerzone";
 import type { DraftProvenance, DraftUnavailable } from "./composedraftcall";
 import {
   type DraftMarks,
@@ -17,6 +18,7 @@ import {
 } from "./composedraftmarks";
 import type { AddressLine } from "./composehead";
 import type { SavedDraftFields } from "./composesaveddraftcalls";
+import { type ScheduleFields, scheduleFields } from "./composeschedule";
 import type { EditSeed } from "./schedulededit";
 
 type DraftReason = components["schemas"]["AccountDraftReason"];
@@ -52,8 +54,10 @@ export type FieldsSnapshot = Readonly<{
   body: string;
   html: string;
   intent: string;
+  draftedIntent: string;
   context: CommunicationContext | "";
   sendAt: string;
+  sendSchedule?: ScheduleFields;
   provenance: DraftProvenance | null;
   draftRef: string | null;
   servedBody: string;
@@ -73,6 +77,7 @@ export function emptyFields(): FieldsSnapshot {
     body: "",
     html: "",
     intent: "",
+    draftedIntent: "",
     context: "",
     sendAt: "",
     provenance: null,
@@ -144,13 +149,17 @@ export function useComposeFields({
     () =>
       edit?.html ?? (initialMessage ? paragraphsFrom(initialMessage.body) : ""),
   );
-  const [intent, setIntent] = useState(askedIntent ?? "");
+  const asked = askedIntent ?? "";
+  const [intent, setIntent] = useState(asked);
+  // The purpose the words on screen were last drafted to. A rewrite verb keeps
+  // it, since it rewrites the words without reading the purpose.
+  const [draftedIntent, setDraftedIntent] = useState(asked);
   // Keyed on the caller's ask, so a second moment action replaces the reason
   // the first one seeded.
-  const [seededIntent, setSeededIntent] = useState(askedIntent ?? "");
-  if ((askedIntent ?? "") !== seededIntent) {
-    setSeededIntent(askedIntent ?? "");
-    setIntent(askedIntent ?? "");
+  const [seededIntent, setSeededIntent] = useState(asked);
+  if (asked !== seededIntent) {
+    setSeededIntent(asked);
+    setIntent(asked);
   }
   // What this message is, when the record does not say. Empty until the
   // reader answers, and never asked on a reply (see contextFor).
@@ -159,7 +168,22 @@ export function useComposeFields({
   );
   // The send-later moment as datetime-local text in the rep's zone. It
   // becomes an instant at submit (see scheduleFields).
-  const [sendAt, setSendAt] = useState(edit?.sendAt ?? "");
+  const [sendAt, setSendAtValue] = useState(edit?.sendAt ?? "");
+  const [sendSchedule, setSendSchedule] = useState<ScheduleFields | undefined>(
+    edit?.sendSchedule,
+  );
+  const readerZone = useViewerZone();
+  const scheduleZone =
+    sendSchedule?.scheduled_intent?.timezone ??
+    sendSchedule?.scheduled_tz ??
+    readerZone;
+  const setSendAt = useCallback(
+    (local: string) => {
+      setSendAtValue(local);
+      setSendSchedule(scheduleFields(local, undefined, scheduleZone));
+    },
+    [scheduleZone],
+  );
   const [provenance, setProvenance] = useState<DraftProvenance | null>(null);
   // The served draft the body came from, so the server can tell a sent draft
   // from a rewritten one. It may only name the text on screen.
@@ -235,6 +259,7 @@ export function useComposeFields({
           reasoning: account.reasoning,
           scope: account.scope,
           language,
+          draftedIntent,
         }
       : null;
   // An emptied body sets the marks aside, and the choice stays for the next draft.
@@ -243,7 +268,10 @@ export function useComposeFields({
     setProvenance(marks?.provenance ?? null);
     account.setReasoning(marks?.reasoning ?? []);
     account.setScope(marks?.scope);
-    if (marks) setLanguage(marks.language);
+    // The reader's own words keep the purpose: Redraft needs drafted words.
+    if (!marks) return;
+    setLanguage(marks.language);
+    setDraftedIntent(marks.draftedIntent);
   };
 
   const editBody = (next: Readonly<{ html: string; text: string }>) => {
@@ -285,6 +313,7 @@ export function useComposeFields({
           reasoning: [],
           scope: undefined,
           language,
+          draftedIntent,
         }
       : null;
     memory.current.remember(body, rejected);
@@ -306,9 +335,14 @@ export function useComposeFields({
     setBody(saved.body);
     setHtml(saved.html);
     setContext(saved.context);
-    setSendAt(saved.sendAt);
+    setSendAtValue(saved.sendAt);
+    setSendSchedule(saved.sendSchedule);
     const state = saved.editorState;
-    setIntent(state?.intent ?? "");
+    const savedIntent = state?.intent ?? "";
+    setIntent(savedIntent);
+    // The saved state does not carry the drafted purpose, so a restored
+    // purpose counts as the one its words were drafted to.
+    setDraftedIntent(savedIntent);
     setServedBody(state?.served_body ?? "");
     setLanguage(chosenLanguage(state?.language));
     setDraftRef(null);
@@ -333,8 +367,10 @@ export function useComposeFields({
     body,
     html,
     intent,
+    draftedIntent,
     context,
     sendAt,
+    sendSchedule,
     provenance,
     draftRef,
     servedBody,
@@ -357,8 +393,10 @@ export function useComposeFields({
     setBody(next.body);
     setHtml(next.html);
     setIntent(next.intent);
+    setDraftedIntent(next.draftedIntent);
     setContext(next.context);
-    setSendAt(next.sendAt);
+    setSendAtValue(next.sendAt);
+    setSendSchedule(next.sendSchedule);
     setProvenance(next.provenance);
     setDraftRef(next.draftRef);
     setServedBody(next.servedBody);
@@ -384,9 +422,13 @@ export function useComposeFields({
     html,
     intent,
     setIntent,
+    draftedIntent,
+    setDraftedIntent,
     context,
     setContext,
     sendAt,
+    sendSchedule,
+    scheduleControl: { sendAt, timezone: scheduleZone },
     setSendAt,
     provenance,
     setProvenance,

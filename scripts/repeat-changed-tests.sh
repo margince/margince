@@ -7,7 +7,7 @@
 #   scripts/repeat-changed-tests.sh scope BASE_REF       whether the diff touches a test file
 #   scripts/repeat-changed-tests.sh scope - < paths      the same, over the changed paths
 #   scripts/repeat-changed-tests.sh plan BASE_REF FILE   write the plan to FILE
-#   scripts/repeat-changed-tests.sh run FILE             run the plan
+#   scripts/repeat-changed-tests.sh run FILE             run the plan, under `make repeat-changed-tests`
 #   scripts/repeat-changed-tests.sh attempts COUNT LOG   name the attempt of each failure in a `go test -v` log
 #
 # backend/tools/changed-tests picks the tests and the repeat count of each. The
@@ -15,7 +15,9 @@
 # each lane runs on a loaded machine. Go repeats in one process (`-count`);
 # vitest has no report that names a failed repeat, so it runs the files once per
 # attempt. The integration lane runs through `make test-it`, and needs
-# `make db-up` and `make test-db-up` first.
+# `make db-up` and `make test-db-up` first. Run composes with the flags the
+# make profile (scripts/composition-profile.mk) gives `make test-db-up`, so the
+# test manifest names every extension ledger the template holds.
 #
 # With GITHUB_OUTPUT set, scope writes run=true|false, and plan writes which
 # lanes the plan holds (go, integration, vitest).
@@ -166,6 +168,10 @@ run() {
   if [[ ! -s "$plan" ]]; then
     echo "repeat-changed-tests: the plan is empty, so no test to repeat"
     return 0
+  fi
+  if grep -q '^go-' "$plan" && [[ ! -v COMPOSITION_FLAGS ]]; then
+    echo "repeat-changed-tests: run the plan through \`make repeat-changed-tests\`; without its composition profile the lanes compose without the examples the template holds" >&2
+    return 2
   fi
   logs="$(mktemp -d)"
   # Every lane below reads TEST_SHUFFLE_SEED, as the merge gate's own runs do.

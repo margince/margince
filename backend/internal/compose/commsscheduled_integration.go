@@ -116,3 +116,7 @@ func DriveScheduledSendRecoveryForTest(ctx context.Context, pool *pgxpool.Pool, 
 		JobRow: &rivertype.JobRow{Attempt: 1, MaxAttempts: 1},
 	})
 }
+
+// ScheduledSendRecoveryBatchForTest is how many messages one recovery pass
+// re-arms, so a test can queue more than one pass reaches.
+const ScheduledSendRecoveryBatchForTest = recoveryBatch

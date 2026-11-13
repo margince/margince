@@ -23,6 +23,7 @@ Each kind of record the role sweep hands a call, the function that seeds it, the
 | `approval_bundle` | `toolroleseedwork_integration_test.go workSeeders` |  |  |  |
 | `archived_pipeline` | `toolrolesetup_integration_test.go setupSeeders` | `/v1/pipelines/` |  |  |
 | `archived_tag` | `toolroleseedsales_integration_test.go salesSeeders` | `/v1/tags/` |  |  |
+| `assignable_website_inquiry` | `toolrolesetup_integration_test.go setupSeeders` |  |  |  |
 | `assignment` | `toolroleseed_integration_test.go configSeeders` | `/v1/records/company/` | `company` `record_role` `user` |  |
 | `attachment` | `toolroleseed_integration_test.go toolRoleSeeders` |  | `company` |  |
 | `auto_moved_deal` | `toolroleseedsales_integration_test.go salesSeeders` | `/v1/deals/` |  | yes |
@@ -71,6 +72,7 @@ Each kind of record the role sweep hands a call, the function that seeds it, the
 | `enrichable_contact` | `toolrolesetup_integration_test.go setupSeeders` | `/v1/provider-connections/surfe` |  |  |
 | `enrichment_run` | `toolroleseedwork_integration_test.go meetingSeeders` | `/v1/contacts/` |  |  |
 | `entity_logo` | `toolroleseedreports_integration_test.go companySeeders` | `/v1/legal-entities/` |  |  |
+| `existing_website_inquiry` | `toolrolesetup_integration_test.go setupSeeders` |  |  |  |
 | `exit_criterion` | `toolrolesetup_integration_test.go setupSeeders` | `/v1/stages/` |  |  |
 | `failed_approval` | `toolroleseedwork_integration_test.go workSeeders` | `/v1/approvals/` |  |  |
 | `failed_automation_run` | `toolroleadmin_integration_test.go adminSeeders` | `/v1/automations` `/v1/automations/` |  |  |

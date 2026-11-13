@@ -10,6 +10,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/compose/dueday"
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/modules/capture/mailmap"
@@ -43,7 +44,7 @@ func (c Commitment) proposeLate(read commitmentRead) bool {
 func (d *CommitmentDispatcher) admission(ctx context.Context, tx pgx.Tx, c Commitment) (commitmentRead, error) {
 	var due *time.Time
 	if c.DueDate != "" {
-		at, err := commitmentDueInstant(ctx, tx, c.DueDate, c.DueZone)
+		at, err := dueday.EndOf(ctx, tx, c.DueDate, c.DueZone)
 		if err != nil {
 			return commitmentRead{}, err
 		}
@@ -238,7 +239,7 @@ func (d *CommitmentDispatcher) renewTask(ctx context.Context, tx pgx.Tx, c Commi
 	if err != nil || held {
 		return CommitmentRemembered, ids.UUID{}, err
 	}
-	due, err := commitmentDueInstant(ctx, tx, c.DueDate, c.DueZone)
+	due, err := dueday.EndOf(ctx, tx, c.DueDate, c.DueZone)
 	if err != nil {
 		return CommitmentRemembered, ids.UUID{}, err
 	}

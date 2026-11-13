@@ -11,13 +11,16 @@ import type { TaskDraft } from "../lib/activitybody";
 import { useViewerZone } from "../lib/viewerzone";
 import { ActivityBodyField } from "./activitybodyfield";
 import { TaskAssigneeField } from "./assigneepicker";
+import type { AssignedRecord } from "./recordassignments.queries";
 
 export function FollowUpTaskFields({
   value,
   onChange,
+  records,
 }: Readonly<{
   value: TaskDraft | undefined;
   onChange: (value: TaskDraft | undefined) => void;
+  records?: readonly AssignedRecord[];
 }>) {
   const t = useT();
   const patch = (change: Partial<TaskDraft>) => {
@@ -65,6 +68,7 @@ export function FollowUpTaskFields({
             active
             value={value.assigneeId}
             onChange={(assigneeId) => patch({ assigneeId })}
+            records={records}
           />
           <ActivityBodyField
             label={t("log.body")}

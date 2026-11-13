@@ -247,7 +247,7 @@ var queryEnumTable = map[string][]queryEnum{
 		{Name: "prepare", Values: []string{"analytics"}, Array: false, Explode: true},
 	},
 	"GET /v1/me/ai-activity": {
-		{Name: "kinds", Values: []string{"morning_brief", "overnight_at_risk_sweep", "document_extract", "site_read", "brief_ranking", "capture_classify", "capture_confidentiality_verdict", "capture_counterparty_verdict", "cert_judge", "cold_start", "deal_health", "draft_reply", "enrich", "growth_fit", "nl_search", "offer_draft", "rate_extract", "signal_extract", "site_extract", "site_fact_extract", "site_triage", "stage_evidence_extract", "summarize", "transcript", "transcript_propose", "voice_build", "corpus_ask", "weekly_review", "weekly_learnings", "propose_roles", "owed_verdict", "request_settlement", "account_scan", "tag_suggest", "report_setup", "report_interpret", "reader_rendering", "deal_verdict"}, Array: true, Explode: true},
+		{Name: "kinds", Values: []string{"morning_brief", "overnight_at_risk_sweep", "document_extract", "site_read", "brief_ranking", "capture_classify", "capture_confidentiality_verdict", "capture_counterparty_verdict", "cert_judge", "cold_start", "deal_health", "draft_reply", "enrich", "growth_fit", "nl_search", "offer_draft", "rate_extract", "signal_extract", "site_extract", "site_fact_extract", "site_triage", "stage_evidence_extract", "summarize", "transcript", "transcript_propose", "voice_build", "corpus_ask", "weekly_review", "weekly_learnings", "propose_roles", "owed_verdict", "request_settlement", "account_scan", "tag_suggest", "report_setup", "report_interpret", "reader_rendering", "deal_verdict", "rewrite"}, Array: true, Explode: true},
 	},
 	"GET /v1/meeting-prep": {
 		{Name: "record_type", Values: []string{"contact", "company", "deal", "lead", "project", "activity"}, Array: false, Explode: true},
@@ -302,7 +302,7 @@ var queryEnumTable = map[string][]queryEnum{
 		{Name: "mode", Values: []string{"merge", "remove"}, Array: false, Explode: true},
 	},
 	"GET /v1/worklist": {
-		{Name: "filter", Values: []string{"all", "urgent", "customer_waiting", "leads", "prospecting", "deals_at_risk", "meetings", "tasks", "decisions", "relationships", "system", "except_decisions", "changed_since_brief", "upcoming"}, Array: false, Explode: true},
+		{Name: "filter", Values: []string{"all", "urgent", "customer_waiting", "leads", "prospecting", "deals_at_risk", "meetings", "tasks", "decisions", "relationships", "system", "except_decisions", "changed_since_brief", "upcoming", "website_inquiries"}, Array: false, Explode: true},
 		{Name: "relationships", Values: []string{"include", "omit"}, Array: false, Explode: true},
 		{Name: "scope", Values: []string{"mine", "unassigned", "team", "all"}, Array: false, Explode: true},
 		{Name: "view", Values: []string{"today", "decisions", "system"}, Array: false, Explode: true},

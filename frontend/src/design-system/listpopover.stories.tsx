@@ -58,6 +58,26 @@ export const SearchingPending: Story = {
   },
 };
 
+// A short list the caller already holds (an account's contacts) answers the
+// empty search, so the panel opens on it before a word is typed.
+export const ListedOnOpen: Story = {
+  args: {
+    options: undefined,
+    selected: undefined,
+    search: async (term: string) =>
+      COLLEAGUES.filter((colleague) =>
+        colleague.name.toLowerCase().includes(term.toLowerCase()),
+      ),
+    listOnOpen: true,
+  },
+  play: async (context) => {
+    await open(context);
+    await expect(
+      await page().findByRole("option", { name: /Anna Weber/ }),
+    ).toBeVisible();
+  },
+};
+
 export const Empty: Story = {
   args: {
     options: [],

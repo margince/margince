@@ -18,6 +18,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/compose/briefevidence"
 	"github.com/margince/margince/backend/internal/compose/contact360"
+	"github.com/margince/margince/backend/internal/compose/draftcore"
 	"github.com/margince/margince/backend/internal/compose/draftvoice"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/auth"
@@ -86,6 +87,14 @@ type Service struct {
 	others CoRecipients
 	// aboutReader resolves AboutActivityID under the caller's content gate.
 	aboutReader AboutActivities
+	// loggedTouches reads the newest note or past meeting past the timeline page.
+	loggedTouches draftcore.LoggedTouchReader
+}
+
+// WithLoggedTouches binds the read of the newest logged touch on the contact.
+func (s *Service) WithLoggedTouches(reader draftcore.LoggedTouchReader) *Service {
+	s.loggedTouches = reader
+	return s
 }
 
 // WithEmailSummaries binds the reader that opens a cited message, so a reason
@@ -144,12 +153,17 @@ func (s *Service) Draft(
 		return crmcontracts.CompanyEmailDraft{}, nil, err
 	}
 	zone := s.envelope.Zone(ctx)
+	logged, err := draftcore.WithNewestLogged(ctx, s.loggedTouches,
+		draftcore.LoggedOn{RecordType: "contact", ID: contactID.UUID, ProjectID: req.ProjectID}, s.envelope.Now(), nil)
+	if err != nil {
+		return crmcontracts.CompanyEmailDraft{}, nil, err
+	}
 	req.Envelope = s.envelope.Resolve(ctx,
 		draftfloor.Written{
 			Chosen: req.Language, Thread: languageEvidence(view, s.envelope.Now(), zone),
 			Rewrite: req.RewriteOf, Purpose: req.Intent, DraftSubject: req.Subject,
 		},
-		ConversationState(view, s.envelope.Now(), zone)).InZone(zone)
+		ConversationState(view, s.envelope.Now(), zone, logged...)).InZone(zone)
 	in := FromView(view, req)
 	if in.AlsoTo, err = s.coRecipients(ctx, contactID, req.AlsoTo); err != nil {
 		return crmcontracts.CompanyEmailDraft{}, nil, err

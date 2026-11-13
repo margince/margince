@@ -2142,6 +2142,24 @@ span.error-line {
 ) {
   color: var(--textSecondary);
 }
+/* The same words in a strip folded to rows (statstrip.css, 40rem): a word set
+   at the figure's size outweighed every number beside it. */
+@container (max-width: 40rem) {
+  .stat-strip .stat-card-narrow-row > .stat-card-value[data-word] {
+    font: var(--fontBodyLarge);
+    font-weight: var(--fontWeightMedium);
+  }
+  .stat-strip
+    .stat-card-narrow-row
+    > .stat-card-value[data-word]:not(
+      .stat-card-success,
+      .stat-card-info,
+      .stat-card-warning,
+      .stat-card-danger
+    ) {
+    color: var(--textSecondary);
+  }
+}
 .stat-strip[data-lead] .stat-card-basis::before {
   font: var(--fontHeadingXXSmall);
 }

@@ -6,6 +6,7 @@ import { render as rtlRender } from "@testing-library/react";
 import type { ReactNode } from "react";
 import { vi } from "vitest";
 import { LocaleProvider } from "../i18n";
+import type { Locale } from "../i18n/locale";
 import { ViewerZoneProvider } from "../lib/viewerzone";
 import { meFixture } from "../testing/mefixture";
 
@@ -25,13 +26,17 @@ export function jsonResponse(body: unknown, status = 200) {
 // agree with itself whichever zone the code used.
 export const READER_ZONE = "Asia/Ho_Chi_Minh";
 
-export function render(ui: ReactNode, zone = READER_ZONE) {
+export function render(
+  ui: ReactNode,
+  zone = READER_ZONE,
+  locale: Locale = "en",
+) {
   const client = new QueryClient({
     defaultOptions: { queries: { retry: false } },
   });
   return rtlRender(
     <QueryClientProvider client={client}>
-      <LocaleProvider initial="en">
+      <LocaleProvider initial={locale}>
         <ViewerZoneProvider zone={zone}>{ui}</ViewerZoneProvider>
       </LocaleProvider>
     </QueryClientProvider>,

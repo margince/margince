@@ -38,7 +38,11 @@ afterEach(() => {
 });
 
 const wrap = (ui: React.ReactNode) =>
-  render(<LocaleProvider initial="en">{ui}</LocaleProvider>);
+  render(
+    <QueryClientProvider client={new QueryClient()}>
+      <LocaleProvider initial="en">{ui}</LocaleProvider>
+    </QueryClientProvider>,
+  );
 
 type CustomField = components["schemas"]["CustomField"];
 

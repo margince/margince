@@ -9,14 +9,16 @@ package compose
 // connect flow in connectors.go.
 
 import (
-	"errors"
-	"log/slog"
+	"context"
 	"net/http"
 
+	"github.com/margince/margince/backend/internal/compose/imapprobe"
+	"github.com/margince/margince/backend/internal/compose/sharedmailboxhttp"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/capture/imap"
 	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/ports/connector"
 )
 
 const providerIMAP = "imap"
@@ -50,7 +52,8 @@ func (h connectorHandlers) connectIMAP(w http.ResponseWriter, r *http.Request) {
 	// authorized to grant them; the dial stays SSRF-guarded by netguard.
 	grantor := actor
 	grantor.Scopes = principal.NewScopeSet(imap.NewStanding().Descriptor().Scopes...)
-	r = r.WithContext(principal.WithActor(r.Context(), grantor))
+	ctx := principal.WithActor(r.Context(), grantor)
+	r = r.WithContext(ctx)
 	// The shared decoder bounds the body (1 MiB), rejects trailing/noncanonical
 	// input, and answers malformed JSON itself — so a decode failure is handled,
 	// never conflated with the credential check below.
@@ -58,78 +61,40 @@ func (h connectorHandlers) connectIMAP(w http.ResponseWriter, r *http.Request) {
 	if !httperr.Decode(w, r, &req) || !imapAsksNothingMore(w, r, req) {
 		return
 	}
-	if req.Imap == nil || req.Imap.Secret == nil || req.Imap.Host == "" || req.Imap.Username == "" {
-		httperr.Write(w, r, &httperr.DetailedError{
-			Status: http.StatusUnprocessableEntity,
-			Code:   "imap_credentials_required",
-			Detail: "The imap provider needs host, username and secret in the request body.",
-		})
+	auth, ok := h.probeIMAP(ctx, w, r, req.Imap)
+	if !ok {
 		return
 	}
-	port := 0
-	if req.Imap.Port != nil {
-		port = *req.Imap.Port
-	}
-	creds := imap.Credentials{
-		Host:     req.Imap.Host,
-		Port:     port,
-		Email:    req.Imap.Username,
-		Password: *req.Imap.Secret,
-	}
-	// Mailbox/MaxMessages are optional on the wire specifically so they are
-	// NOT defaulted here — an absent value leaves the zero value, and
-	// normalizeCredentials (the standing Authenticate path) applies the
-	// connector's own defaults/caps. Copying a zero here instead of the
-	// caller's choice would silently force every connection onto INBOX/50.
-	if req.Imap.Mailbox != nil {
-		creds.Mailbox = *req.Imap.Mailbox
-	}
-	if req.Imap.MaxMessages != nil {
-		creds.MaxMessages = *req.Imap.MaxMessages
-	}
-	authReq, err := imap.AuthRequestFrom(creds)
-	if err != nil {
-		httperr.Write(w, r, &httperr.DetailedError{
-			Status: http.StatusUnprocessableEntity,
-			Code:   "imap_credentials_invalid",
-			Detail: "These credentials could not be processed.",
-		})
-		return
-	}
+	h.storeConnection(ctx, w, r, providerIMAP, auth)
+}
+
+func (h connectorHandlers) probeIMAP(ctx context.Context, w http.ResponseWriter, r *http.Request, in *crmcontracts.ImapCredentials) (connector.Auth, bool) {
 	authenticate := h.imapAuthenticate
 	if authenticate == nil {
 		authenticate = imap.NewStanding().Authenticate
 	}
-	auth, err := authenticate(r.Context(), authReq)
-	if err != nil {
-		writeIMAPConnectError(w, r, err)
-		return
-	}
-	h.storeConnection(r.Context(), w, r, providerIMAP, auth)
+	return imapprobe.Probe(ctx, w, r, in, authenticate)
 }
 
-// writeIMAPConnectError maps the connector sentinels onto the transport
-// without leaking the provider's raw error.
-func writeIMAPConnectError(w http.ResponseWriter, r *http.Request, err error) {
-	switch {
-	case errors.Is(err, imap.ErrLoginRejected):
-		httperr.Write(w, r, &httperr.DetailedError{
-			Status: http.StatusUnprocessableEntity,
-			Code:   "imap_login_rejected",
-			Detail: "The mailbox rejected these credentials. Check host, email and app password.",
-		})
-	case errors.Is(err, imap.ErrUnreachable):
-		httperr.Write(w, r, &httperr.DetailedError{
-			Status: http.StatusBadGateway,
-			Code:   "imap_unreachable",
-			Detail: "The mail server could not be reached.",
-		})
-	default:
-		slog.ErrorContext(r.Context(), "imap connector: authenticate", "err", err)
-		httperr.Write(w, r, &httperr.DetailedError{
-			Status: http.StatusInternalServerError,
-			Code:   "imap_connect_failed",
-			Detail: "The connection could not be established.",
-		})
+func (h connectorHandlers) sharedMailboxes() sharedmailboxhttp.Handlers {
+	return sharedmailboxhttp.Handlers{
+		Registry: h.registry, ProbeIMAP: h.probeIMAP,
+		Scopes: func(provider string) []principal.Scope { return h.connectorDescriptor(provider).Scopes },
 	}
+}
+
+func (h connectorHandlers) ListSharedMailboxes(w http.ResponseWriter, r *http.Request) {
+	h.sharedMailboxes().List(w, r)
+}
+
+func (h connectorHandlers) ConnectSharedMailbox(w http.ResponseWriter, r *http.Request) {
+	h.sharedMailboxes().Connect(w, r)
+}
+
+func (h connectorHandlers) UpdateSharedMailbox(w http.ResponseWriter, r *http.Request, id crmcontracts.Id) {
+	h.sharedMailboxes().Update(w, r, id)
+}
+
+func (h connectorHandlers) DisconnectSharedMailbox(w http.ResponseWriter, r *http.Request, id crmcontracts.Id) {
+	h.sharedMailboxes().Disconnect(w, r, id)
 }

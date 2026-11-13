@@ -34,7 +34,7 @@ import type { ComposeFields } from "./composefields";
 import { FieldNeed } from "./composehead";
 import type { useSavedDraft } from "./composesaveddraft";
 import { SavedDraftFailure } from "./composesaveddraftnotices";
-import { momentLabel, momentOf, ScheduleMenu } from "./composeschedule";
+import { ScheduleMenu, scheduledSendLabel } from "./composeschedule";
 import type { ComposeSend, MissingField } from "./composesend";
 import { SignOffPreview } from "./composesignoff";
 import type { VoiceDraft } from "./composevoicedraft";
@@ -180,6 +180,7 @@ export function ComposeFoot({
   held,
   onPickMoment,
   sendAt,
+  timezone,
   savedDraft,
   busy,
   addressRefused,
@@ -194,6 +195,7 @@ export function ComposeFoot({
   held: boolean;
   onPickMoment: () => void;
   sendAt: string;
+  timezone?: string;
   savedDraft: ReturnType<typeof useSavedDraft>;
   /** A send or a rejection is in flight. */
   busy: boolean;
@@ -205,7 +207,8 @@ export function ComposeFoot({
   const readerZone = useViewerZone();
   const t = useT();
   const { locale } = useLocale();
-  const scheduled = momentOf(sendAt);
+  const zone = timezone ?? readerZone;
+  const scheduled = scheduledSendLabel(sendAt, locale, zone);
   const holdId = useId();
   // The address sentence has its own place under the button; the hold line
   // speaks only when no address is in the way.
@@ -241,9 +244,7 @@ export function ComposeFoot({
         <div className="compose-foot-marks" ref={marksRef} />
         <span className="t-caption compose-foot-status" role="status">
           {scheduled
-            ? t("compose.willGoOut", {
-                when: momentLabel(scheduled, locale, readerZone),
-              })
+            ? t("compose.willGoOut", { when: scheduled })
             : savedDraftStatus(savedDraft, t)}
         </span>
         {savedDraft.enabled && (

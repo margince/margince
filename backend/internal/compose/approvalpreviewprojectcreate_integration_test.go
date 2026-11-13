@@ -35,7 +35,7 @@ func TestProjectCreationApprovalMatchesTheWriter(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			fields := map[string]any{"name": "Buyer rollout", "source": "manual", "company_id": company.Id, "started_at": "2030-01-02", "target_end_date": "2030-06-30", "key": "buyr", "phase": projects.PhasePursuing}
+			fields := map[string]any{"name": "Buyer rollout", "source": "manual", "company_id": company.Id, "started_at": "2030-01-02", "target_end_date": "2030-06-30", "key": "buyr", "phase": projects.PhasePursuing, "deal_id": e.SeedOpenDealOn(t, "Buyer deal", ids.UUID(company.Id)).String()}
 			payload := map[string]any{"record_type": "project", "fields": fields}
 			if rest {
 				payload = map[string]any{"operation": "createProject", "body": fields}
@@ -71,8 +71,8 @@ func TestProjectCreationApprovalMatchesTheWriter(t *testing.T) {
 			if details["started_at"].Kind != "date" || details["target_end_date"].Kind != "date" {
 				t.Fatalf("untyped dates: %+v", details)
 			}
-			if details["key"].Text != "BUYR" {
-				t.Fatalf("preview shows key %q, want the chosen key as stored", details["key"].Text)
+			if details["key"].Text != "BUYR" || details["deal_id"].Text != "Buyer deal" {
+				t.Fatalf("preview shows key %q and deal %q, want the chosen key and the deal's name", details["key"].Text, details["deal_id"].Text)
 			}
 			if count := e.WsCount(t, `SELECT count(*) FROM project`); count != 0 {
 				t.Fatalf("preview wrote %d projects", count)

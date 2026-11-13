@@ -19,6 +19,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/values"
 )
 
 func TestCompanyDescriptionRoundTripsThroughCreateAndUpdate(t *testing.T) {
@@ -429,15 +430,15 @@ func applySiteReadDescription(ctx context.Context, t *testing.T, e *dedupeEnv, c
 	}
 }
 
-// The 500-character bound is the database's, so it holds for every writer and
+// The document bound is the database's, so it holds for every writer and
 // not only the ones that remember to check.
-func TestCompanyDescriptionRefusesAPastedParagraph(t *testing.T) {
+func TestCompanyDescriptionRefusesTextPastTheDocumentLimit(t *testing.T) {
 	e := setupDedupe(t)
 	ctx := e.as()
-	tooLong := strings.Repeat("a", 501)
+	tooLong := strings.Repeat("a", values.TextDocumentCharacters+1)
 	if _, err := e.store.CreateCompany(ctx, CreateCompanyInput{
 		DisplayName: "Overlong GmbH", Source: "manual", Description: &tooLong,
 	}); err == nil {
-		t.Fatal("a 501-character description was accepted; the column CHECK must refuse it")
+		t.Fatal("a description past the document limit was accepted; the column CHECK must refuse it")
 	}
 }

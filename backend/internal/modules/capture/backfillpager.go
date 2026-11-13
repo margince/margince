@@ -69,8 +69,7 @@ func (r *Registry) executeBackfillPage(ctx context.Context, backfillID ids.UUID)
 		// StartBackfill for the connection and never surfacing as failed.
 		return true, false, 0, errors.Join(err, r.failBackfill(ctx, backfillID, err))
 	}
-	bf, ok := supportsBackfill(c)
-	if !ok {
+	if _, ok := supportsBackfill(c); !ok {
 		return true, false, 0, errors.Join(ErrBackfillUnsupported, r.failBackfill(ctx, backfillID, ErrBackfillUnsupported))
 	}
 	runCtx, err := r.runContext(ctx, name, grantedBy, connID)
@@ -78,9 +77,13 @@ func (r *Registry) executeBackfillPage(ctx context.Context, backfillID ids.UUID)
 		return true, false, 0, errors.Join(err, r.failBackfill(ctx, backfillID, err))
 	}
 	runCtx = withMailboxConnection(runCtx, connID, generation)
-	auth, err := r.syncCredential(runCtx, credentialRef, authBytes)
+	c, auth, err := r.runCredential(runCtx, c, grantedBy, credentialRef, authBytes)
 	if err != nil {
 		return true, false, 0, errors.Join(err, r.failBackfill(ctx, backfillID, err))
+	}
+	bf, ok := supportsBackfill(c)
+	if !ok {
+		return true, false, 0, errors.Join(ErrBackfillUnsupported, r.failBackfill(ctx, backfillID, ErrBackfillUnsupported))
 	}
 
 	pageToken, err := backfillPageCursor(cursor)

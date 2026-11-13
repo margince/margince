@@ -29,6 +29,34 @@ afterEach(() => {
 // have to remember what it was to find it again. Every disposition beside it is
 // undoable from its own confirmation; this verb was not.
 describe("finishing a task from the row", () => {
+  it("marks an inquiry handled through the versioned task writer", async () => {
+    stub(
+      day({
+        queue: [
+          row({
+            id: "inquiry-task",
+            source: "task",
+            kind: "website_inquiry",
+            title: "Answer the website question",
+            actions: ["complete"],
+            primary_action: "complete",
+          }),
+        ],
+      }),
+    );
+    const user = userEvent.setup();
+    renderUnderAToastRegion();
+    await user.click(
+      await screen.findByRole("button", { name: en["inquiry.markHandled"] }),
+    );
+    await waitFor(async () =>
+      expect(await patchedTask()).toEqual({
+        id: "inquiry-task",
+        ifMatch: "3",
+        body: { is_done: true },
+      }),
+    );
+  });
   it("completes it, then reopens it when the reader undoes", async () => {
     stub(
       day({

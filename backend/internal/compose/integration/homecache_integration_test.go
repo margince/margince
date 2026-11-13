@@ -136,7 +136,7 @@ func TestAnAnswerLivesNoLongerThanTheNextSnoozeToEnd(t *testing.T) {
 		t.Fatalf("a run to snooze from: items=%d err=%v", len(run.Items), err)
 	}
 	until := now.Add(90 * time.Second)
-	if _, err := engine.MarkSnoozed(ctx, run.Items[0].ID, values.ReopenOnTime, &until, nil, now); err != nil {
+	if _, err := engine.MarkSnoozed(ctx, run.Items[0].ID, values.ReopenOnTime, &until, nil, now, nil); err != nil {
 		t.Fatal(err)
 	}
 

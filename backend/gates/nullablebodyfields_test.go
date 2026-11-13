@@ -33,6 +33,8 @@ const (
 // nullIgnoredByHandler are the operations whose handler reads no explicit null.
 // A null-clears test, or a read of the nulls in the handler, removes the entry.
 var nullIgnoredByHandler = gatekit.Waive(map[string]string{
+	"UpdateSharedMailbox": "delegates to sharedmailboxhttp.Handlers.Update, which reads httperr.ClearedFields " +
+		"and clears backup_owner_id on an explicit null",
 	// These two decode the body as raw JSON and read each key's presence in a
 	// helper of their own.
 	//

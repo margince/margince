@@ -8,6 +8,7 @@ import type { components } from "../api/schema";
 import type { useT } from "../i18n";
 import { unwrap } from "../lib/problem";
 import { listedSocial } from "../lib/socialplatforms";
+import { TEXT_LIMITS } from "../lib/textlimits_gen";
 import { addressPatch } from "./companyform";
 import type { CreateField, FormRows } from "./create";
 import type { NameOffer } from "./create.offered";
@@ -209,10 +210,27 @@ export function mapContactUpdate(
 // raw labels already fit to show ("1-10").
 export function contactCreateFields(t: ReturnType<typeof useT>): CreateField[] {
   return [
-    { key: "full_name", label: "create.fullName", required: true },
-    { key: "first_name", label: "create.firstName" },
-    { key: "last_name", label: "create.lastName" },
-    { key: "title", label: "create.contactTitle" },
+    {
+      key: "full_name",
+      label: "create.fullName",
+      required: true,
+      maxLength: TEXT_LIMITS.label,
+    },
+    {
+      key: "first_name",
+      label: "create.firstName",
+      maxLength: TEXT_LIMITS.label,
+    },
+    {
+      key: "last_name",
+      label: "create.lastName",
+      maxLength: TEXT_LIMITS.label,
+    },
+    {
+      key: "title",
+      label: "create.contactTitle",
+      maxLength: TEXT_LIMITS.label,
+    },
     contactCompanyField,
     { key: "social.linkedin", label: "create.linkedin" },
     {

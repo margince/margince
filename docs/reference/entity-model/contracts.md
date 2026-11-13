@@ -77,3 +77,5 @@ The 1 table owned by `contracts`, as the migrations build them. [Back to the ent
 **Triggers**
 
 - `contract_set_updated_at`: `BEFORE UPDATE FOR EACH ROW EXECUTE FUNCTION set_updated_at_bump_version()`
+- `text_bound_insert`: `AFTER INSERT FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL, '{"title": 120, "source": 20000, "status": 20000, "captured_by": 20000, "value_basis": 20000, "contract_number": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"captured_by":20000,"contract_number":20000,"source":20000,"status":20000,"title":120,"value_basis":20000}')`
+- `text_bound_update`: `AFTER UPDATE FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"title": 120, "source": 20000, "status": 20000, "captured_by": 20000, "value_basis": 20000, "contract_number": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"captured_by":20000,"contract_number":20000,"source":20000,"status":20000,"title":120,"value_basis":20000}')`

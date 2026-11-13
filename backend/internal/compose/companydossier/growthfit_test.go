@@ -229,6 +229,39 @@ func TestTheAbstentionFloorMatchesTheSpecsWorkedExamples(t *testing.T) {
 	}
 }
 
+// The card draws its checklist and its rule from the answer alone. So every
+// input arrives in order with its state, and the rule is the floor.
+func TestCompletenessListsEveryInputWithItsStateAndTheFloor(t *testing.T) {
+	got := Completeness(fourOfSeven(), assessedAt)
+
+	if got.Needed != 4 {
+		t.Errorf("needed = %d, want 4 — half of seven, rounded up", got.Needed)
+	}
+	if aboveFloor(crmcontracts.DataCompleteness{Present: got.Needed - 1, Expected: got.Expected}) {
+		t.Error("one short of needed cleared the floor; the card's rule would say otherwise")
+	}
+	want := map[crmcontracts.GrowthFitInput]bool{
+		crmcontracts.GrowthFitInputOfferSummary:  true,
+		crmcontracts.GrowthFitInputIcp:           true,
+		crmcontracts.GrowthFitInputIndustry:      true,
+		crmcontracts.GrowthFitInputBuyingCenter:  false,
+		crmcontracts.GrowthFitInputBuyingIntents: false,
+		crmcontracts.GrowthFitInputEmployeeRange: true,
+		crmcontracts.GrowthFitInputTechnology:    false,
+	}
+	if len(got.Inputs) != len(requiredInputs) {
+		t.Fatalf("inputs = %d, want one per required input (%d)", len(got.Inputs), len(requiredInputs))
+	}
+	for i, state := range got.Inputs {
+		if state.Input != requiredInputs[i].code {
+			t.Errorf("inputs[%d] = %q, want %q in the assessment's order", i, state.Input, requiredInputs[i].code)
+		}
+		if state.Present != want[state.Input] {
+			t.Errorf("%s present = %v, want %v", state.Input, state.Present, want[state.Input])
+		}
+	}
+}
+
 // An `unknown` band must never arrive bare, whatever produced it.
 //
 // The reader cannot distinguish "we could not tell" from "a poor fit" without

@@ -5,20 +5,40 @@ import { aiTaskLabel } from "./ai-task-label";
 const cases: ReadonlyArray<{
   locale: Locale;
   name: string;
+  rewrite: string;
   unknown: string;
 }> = [
-  { locale: "en", name: "Website triage", unknown: "AI task" },
-  { locale: "de", name: "Website-Prüfung", unknown: "KI-Aufgabe" },
-  { locale: "vi", name: "Đánh giá trang web", unknown: "Tác vụ AI" },
+  {
+    locale: "en",
+    name: "Website triage",
+    rewrite: "Rewriting",
+    unknown: "AI task",
+  },
+  {
+    locale: "de",
+    name: "Website-Prüfung",
+    rewrite: "Umformulieren",
+    unknown: "KI-Aufgabe",
+  },
+  {
+    locale: "vi",
+    name: "Đánh giá trang web",
+    rewrite: "Viết lại",
+    unknown: "Tác vụ AI",
+  },
 ];
 
 describe.each(cases)(
   "AI task names in $locale",
-  ({ locale, name, unknown }) => {
+  ({ locale, name, rewrite, unknown }) => {
     const t: Translator = (key, params) => translate(locale, key, params);
 
     it("uses the reader's language for a known task", () => {
       expect(aiTaskLabel("site_triage", t, "Website triage")).toBe(name);
+    });
+
+    it("names the rewrite verbs' own task, which the routing settings list", () => {
+      expect(aiTaskLabel("rewrite", t, "Rewriting")).toBe(rewrite);
     });
 
     it("names the separately routed embedding lane in the reader's language", () => {

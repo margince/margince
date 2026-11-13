@@ -198,6 +198,7 @@ func asCommitments(tasks []activities.OpenTask) []agents.OpenCommitment {
 		out = append(out, agents.OpenCommitment{
 			Source: agents.CommitmentFromTask,
 			TaskID: &taskID, Subject: t.Subject, DueAt: t.DueAt, DueHasTime: t.DueHasTime,
+			DueIntent:  t.DueIntent,
 			FiledAt:    t.CreatedAt,
 			AssigneeID: t.AssigneeID, AssigneeName: t.AssigneeName, About: about,
 		})

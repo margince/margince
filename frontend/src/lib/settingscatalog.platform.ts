@@ -80,6 +80,7 @@ export const PLATFORM_PAGES = [
       { id: "accounting" },
       { id: "webhooks" },
       { id: "telegram" },
+      { id: "shared-mailboxes" },
       { id: "units", requires: composedUnits("workspace") },
     ],
   },
@@ -181,7 +182,7 @@ export const PLATFORM_PAGES = [
   },
   {
     id: "automations",
-    group: "ai",
+    group: "data",
     scope: "workspace",
     // The write, which admin and ops alone hold. Management and manager read
     // `automation` to see what ran, on the records it touched. A role that

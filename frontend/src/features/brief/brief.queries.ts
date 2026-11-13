@@ -102,7 +102,12 @@ export function useBriefRefresh() {
  */
 export type BriefMarkRequest =
   | { itemId: string; mark: "act" | "dismiss" | "unsnooze" }
-  | { itemId: string; mark: "snooze"; snoozedUntil: string };
+  | {
+      itemId: string;
+      mark: "snooze";
+      snoozedUntil: string;
+      snoozedIntent?: components["schemas"]["IntentTime"];
+    };
 
 /** The bodyless marks and the route each one posts to. */
 const MARK_PATHS = {
@@ -127,7 +132,10 @@ export function useBriefItemMark() {
         return unwrap(
           await api.POST("/brief/items/{itemId}/snooze", {
             params: { path: { itemId: variables.itemId } },
-            body: { snoozed_until: variables.snoozedUntil },
+            body: {
+              snoozed_until: variables.snoozedUntil,
+              snoozed_intent: variables.snoozedIntent,
+            },
           }),
         );
       }

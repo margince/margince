@@ -329,6 +329,18 @@ function promiseRef(promise: Record<string, unknown>): string {
     : `claim_id ${asText(promise.claim_id)}`;
 }
 
+// The chosen clock a promise's task was given, when the read served one.
+function dueIntentOf(
+  promise: Record<string, unknown>,
+): { wall_clock: string; timezone: string } | undefined {
+  const intent = asRecord(promise.due_intent);
+  const wall = asText(intent.wall_clock);
+  const zone = asText(intent.timezone);
+  return wall !== "" && zone !== ""
+    ? { wall_clock: wall, timezone: zone }
+    : undefined;
+}
+
 // The due date as every task screen prints it: the day in the installation's
 // zone, with the time of day only for a promise that has one.
 function dueBadge(promise: Record<string, unknown>, zone: string): HTMLElement {
@@ -336,7 +348,13 @@ function dueBadge(promise: Record<string, unknown>, zone: string): HTMLElement {
   const due =
     at === "" || Number.isNaN(Date.parse(at))
       ? ""
-      : formatDueCompact(at, promise.due_has_time === true, "en", zone);
+      : formatDueCompact(
+          at,
+          promise.due_has_time === true,
+          "en",
+          zone,
+          dueIntentOf(promise),
+        );
   switch (asText(promise.state)) {
     case "overdue": {
       const days = asFiniteNumber(promise.days_overdue) ?? 0;

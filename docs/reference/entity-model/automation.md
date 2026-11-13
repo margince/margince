@@ -6,13 +6,14 @@ The 3 tables owned by `automation`, as the migrations build them. [Back to the e
 
 ## automation
 
-16 columns · primary key `(id)` · referenced by 0 foreign keys
+17 columns · primary key `(id)` · referenced by 1 foreign key
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
 | `id` | `uuid`, default `uuidv7()` | yes | Primary key. |
 | `action` | `jsonb` | yes |  |
 | `enabled` | `boolean`, default `false` | yes |  |
+| `enabled_from` | `timestamp with time zone` |  |  |
 | `key` | `text` | yes | The catalog type this instance is built from. |
 | `name` | `text` | yes |  |
 | `origin` | `text`, default `'catalog'::text` | yes | One of `catalog`, `agent_authored`. |
@@ -49,10 +50,12 @@ The 3 tables owned by `automation`, as the migrations build them. [Back to the e
 **Triggers**
 
 - `automation_owner_id_retirement_guard`: `BEFORE INSERT OR UPDATE FOR EACH ROW WHEN (((new.owner_id IS NOT NULL) AND (new.enabled AND (new.archived_at IS NULL)))) EXECUTE FUNCTION refuse_retired_member_work('owner_id')`
+- `text_bound_insert`: `AFTER INSERT FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL, '{"key": 20000, "name": 120, "tier": 20000, "origin": 20000, "paused_reason": 2000}')) EXECUTE FUNCTION refuse_oversized_text('{"key":20000,"name":120,"origin":20000,"paused_reason":2000,"tier":20000}')`
+- `text_bound_update`: `AFTER UPDATE FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"key": 20000, "name": 120, "tier": 20000, "origin": 20000, "paused_reason": 2000}')) EXECUTE FUNCTION refuse_oversized_text('{"key":20000,"name":120,"origin":20000,"paused_reason":2000,"tier":20000}')`
 
 ## automation_effect_claim
 
-6 columns · primary key `(id)` · referenced by 0 foreign keys
+7 columns · primary key `(id)` · referenced by 0 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
@@ -61,6 +64,7 @@ The 3 tables owned by `automation`, as the migrations build them. [Back to the e
 | `effect_fingerprint` | `text` | yes |  |
 | `handler` | `text` | yes |  |
 | `occurrence_key` | `text` | yes |  |
+| `planned` | `jsonb` |  |  |
 | `created_at` | `timestamp with time zone`, default `now()` | yes | When the row was created. Set once. |
 
 **Rules**
@@ -72,6 +76,11 @@ The 3 tables owned by `automation`, as the migrations build them. [Back to the e
 - `automation_effect_claim_pkey`: `unique, btree (id)`
 - `automation_effect_claim_unapplied`: `btree (created_at) WHERE (applied_at IS NULL)`
 - `automation_effect_claim_unique`: `unique, btree (handler, occurrence_key, effect_fingerprint)`
+
+**Triggers**
+
+- `text_bound_insert`: `AFTER INSERT FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL, '{"handler": 20000, "occurrence_key": 20000, "effect_fingerprint": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"effect_fingerprint":20000,"handler":20000,"occurrence_key":20000}')`
+- `text_bound_update`: `AFTER UPDATE FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"handler": 20000, "occurrence_key": 20000, "effect_fingerprint": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"effect_fingerprint":20000,"handler":20000,"occurrence_key":20000}')`
 
 ## workflow_run
 
@@ -102,3 +111,8 @@ The 3 tables owned by `automation`, as the migrations build them. [Back to the e
 - `workflow_run_pkey`: `unique, btree (id)`
 - `workflow_run_troubled`: `btree (created_at DESC, id DESC) WHERE (status = ANY (ARRAY['failed', 'blocked']))`
 - `workflow_run_unique`: `unique, btree (handler, idempotency_key)`
+
+**Triggers**
+
+- `text_bound_insert`: `AFTER INSERT FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL, '{"error": 20000, "status": 20000, "handler": 20000, "idempotency_key": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"error":20000,"handler":20000,"idempotency_key":20000,"status":20000}')`
+- `text_bound_update`: `AFTER UPDATE FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"error": 20000, "status": 20000, "handler": 20000, "idempotency_key": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"error":20000,"handler":20000,"idempotency_key":20000,"status":20000}')`

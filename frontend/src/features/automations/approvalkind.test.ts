@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { stable } from "../../format/collate";
 import { LOCALES, translate, translatePlural } from "../../i18n";
 import {
   approvalAcceptLabel,
@@ -79,7 +80,7 @@ describe("what a reader may change before accepting", () => {
 
   it("never offers an identifier, on any kind that declares a policy", () => {
     for (const [kind, fields] of Object.entries(EDITABLE_FIELDS)) {
-      for (const entry of fields) {
+      for (const entry of fields.filter((field) => field.as !== "doer")) {
         expect(
           entry.field.endsWith("_id"),
           `${kind} offers ${entry.field} for editing — changing an identifier ` +
@@ -87,6 +88,16 @@ describe("what a reader may change before accepting", () => {
         ).toBe(false);
       }
     }
+  });
+
+  // The server frees the doer member only on these kinds (doerPaths in the
+  // approvals module); a doer offered anywhere else is refused as a retarget.
+  it("offers a doer only on the kinds whose doer the server frees", () => {
+    const withDoer = Object.entries(EDITABLE_FIELDS)
+      .filter(([, fields]) => fields.some((field) => field.as === "doer"))
+      .map(([kind]) => kind)
+      .sort(stable);
+    expect(withDoer).toEqual(["commitment_task", "deal_follow_up"]);
   });
 
   it("declares a policy only for a kind this surface labels", () => {

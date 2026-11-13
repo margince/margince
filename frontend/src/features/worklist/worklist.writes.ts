@@ -271,6 +271,7 @@ export function useSetDisposition() {
       activityId: string;
       disposition: WorklistDisposition;
       snoozedUntil?: string;
+      snoozedIntent?: components["schemas"]["IntentTime"];
       reopenOn?: ReopenCondition;
       reopenRef?: string;
     }) => {
@@ -284,6 +285,9 @@ export function useSetDisposition() {
             // not a hand-off.
             ...(input.snoozedUntil
               ? { snoozed_until: input.snoozedUntil }
+              : {}),
+            ...(input.snoozedIntent
+              ? { snoozed_intent: input.snoozedIntent }
               : {}),
             ...(input.reopenOn ? { reopen_on: input.reopenOn } : {}),
             ...(input.reopenRef ? { reopen_ref: input.reopenRef } : {}),

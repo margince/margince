@@ -112,12 +112,28 @@ func TestAnErasureKeepsAnObjectAnotherRowStillNamesAndTakesItWithTheLastRow(t *t
 	if _, _, err := blob.Get(context.Background(), key); err != nil {
 		t.Fatalf("erasing one of two rows deleted the object the other row still names: %v", err)
 	}
+	if queued := queuedForDeletion(t, env.e, key); queued != 0 {
+		t.Fatal("erasing one of two rows queued the object the other row still names for deletion")
+	}
 	if err := eraseMessage(t, env.e, blob, "erase-b@globex.example"); err != nil {
 		t.Fatalf("erasing the second message: %v", err)
 	}
-	if _, _, err := blob.Get(context.Background(), key); !errors.Is(err, blobstore.ErrNotFound) {
-		t.Fatalf("erasing the last row left its object: err = %v, want ErrNotFound", err)
+	if queued := queuedForDeletion(t, env.e, key); queued != 1 {
+		t.Fatalf("erasing the last row queued its object %d times, want once", queued)
 	}
+}
+
+// queuedForDeletion counts the stored-object reap's entries for key.
+func queuedForDeletion(t *testing.T, e *integration.SearchEnv, key string) int {
+	t.Helper()
+	var queued int
+	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+		return tx.QueryRow(context.Background(),
+			`SELECT count(*) FROM stored_object_intent WHERE storage_key = $1 AND reaped_at IS NULL`, key).Scan(&queued)
+	}); err != nil {
+		t.Fatalf("reading the deletion queue: %v", err)
+	}
+	return queued
 }
 
 func TestAnErasureWaitingOnACaptureThatReusesItsObjectKeepsTheObject(t *testing.T) {
@@ -155,6 +171,9 @@ func TestAnErasureWaitingOnACaptureThatReusesItsObjectKeepsTheObject(t *testing.
 	}
 	if _, _, err := blob.Get(context.Background(), key); err != nil {
 		t.Fatalf("the erasure deleted an object a copy committed while it waited still names: %v", err)
+	}
+	if queued := queuedForDeletion(t, e, key); queued != 0 {
+		t.Fatal("the erasure queued an object a copy committed while it waited still names for deletion")
 	}
 }
 

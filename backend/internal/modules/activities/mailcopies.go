@@ -182,9 +182,9 @@ func carryMailCopyTx(ctx context.Context, tx pgx.Tx, duplicate, kept ids.Activit
 		return err
 	}
 	args = schedulingArgs{}
-	_, err = tx.Exec(ctx, `INSERT INTO activity_reader_state (activity_id,reader_id,state,snoozed_until,reopen_on,reopen_ref,set_by,set_at)
- SELECT `+args.add(kept)+`,reader_id,state,snoozed_until,reopen_on,reopen_ref,set_by,set_at FROM activity_reader_state WHERE activity_id=`+args.add(duplicate)+`
- ON CONFLICT (activity_id,reader_id) DO UPDATE SET state=excluded.state,snoozed_until=excluded.snoozed_until,reopen_on=excluded.reopen_on,reopen_ref=excluded.reopen_ref,set_by=excluded.set_by,set_at=excluded.set_at
+	_, err = tx.Exec(ctx, `INSERT INTO activity_reader_state (activity_id,reader_id,state,snoozed_until,reopen_on,reopen_ref,set_by,set_at,snoozed_wall,snoozed_zone)
+ SELECT `+args.add(kept)+`,reader_id,state,snoozed_until,reopen_on,reopen_ref,set_by,set_at,snoozed_wall,snoozed_zone FROM activity_reader_state WHERE activity_id=`+args.add(duplicate)+`
+ ON CONFLICT (activity_id,reader_id) DO UPDATE SET state=excluded.state,snoozed_until=excluded.snoozed_until,reopen_on=excluded.reopen_on,reopen_ref=excluded.reopen_ref,set_by=excluded.set_by,set_at=excluded.set_at,snoozed_wall=excluded.snoozed_wall,snoozed_zone=excluded.snoozed_zone
  WHERE activity_reader_state.set_at<excluded.set_at`, args...)
 	return err
 }

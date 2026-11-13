@@ -36,15 +36,6 @@
 [extend]
 useDefault = true
 
-# The generated preview catalog records source digests for drift checks.
-[[allowlists]]
-description = "Source file SHA-256 digests in the generated preview catalog"
-targetRules = ["generic-api-key"]
-condition = "AND"
-regexTarget = "match"
-paths = ['''(^|/)backend/internal/modules/agents/previewcatalog_gen\.json$''']
-regexes = ['''[a-zA-Z0-9_./-]+\.tsx?":\s*"[a-f0-9]{64}"''']
-
 # Tests and Storybook stories hold fabricated fixtures — stand-in passports and
 # approval tokens, demo ids, and deliberately malformed URLs. The credentialed
 # URLs in the fetch-policy tests are the clearest case: they exist so the code

@@ -3,15 +3,18 @@
 
 package extension
 
-import "testing"
+import (
+	"slices"
+	"testing"
+)
 
 func validSignalType() SignalTypeDeclaration {
 	return SignalTypeDeclaration{
 		Kind:  "loss",
 		Label: "Loss reported",
 		Evidence: []SignalEvidenceField{
-			{Name: "amount", Label: "Amount", Type: SignalFieldNumber, Required: true},
-			{Name: "reporter", Label: "Reporter", Type: SignalFieldText, Personal: true},
+			{Name: "amount", Label: "Amount", Type: SignalFieldNumber, Required: true, NotPersonal: true},
+			{Name: "reporter", Label: "Reporter", Type: SignalFieldText},
 		},
 	}
 }
@@ -70,6 +73,18 @@ func TestSignalTypeCheckFields(t *testing.T) {
 func TestSignalTypePersonalFieldsListsOnlyFlaggedFields(t *testing.T) {
 	got := validSignalType().PersonalFields()
 	if len(got) != 1 || got[0] != "reporter" {
+		t.Errorf("PersonalFields = %v, want [reporter]", got)
+	}
+}
+
+// A member is personal unless its declaration says otherwise, so a unit that
+// forgets the mark keeps the member out of an erased contact's signals.
+func TestAnUnmarkedEvidenceMemberIsPersonal(t *testing.T) {
+	d := SignalTypeDeclaration{Kind: "loss", Label: "Loss", Evidence: []SignalEvidenceField{
+		{Name: "reporter", Label: "Reporter", Type: SignalFieldText},
+		{Name: "amount", Label: "Amount", Type: SignalFieldNumber, NotPersonal: true},
+	}}
+	if got := d.PersonalFields(); !slices.Equal(got, []string{"reporter"}) {
 		t.Errorf("PersonalFields = %v, want [reporter]", got)
 	}
 }

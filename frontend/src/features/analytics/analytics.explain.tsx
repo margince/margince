@@ -18,6 +18,7 @@ import { INTL_LOCALE } from "../../format/intllocale";
 import { zoneNameAndOffset } from "../../format/timezone";
 import { type Locale, useLocale, usePlural, useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
+import { translatedPipeline } from "../../lib/labeltranslation";
 import { unwrap } from "../../lib/problem";
 import { ExplainDrawer } from "./analytics.explain.drawer";
 import { isMoneyField, isNativeMoneyField } from "./analytics.questions.vocab";
@@ -219,7 +220,9 @@ function DerivationPipelineName({
   stageId,
 }: Readonly<{ pipelineId: string; stageId?: string }>) {
   const t = useT();
+  const { locale } = useLocale();
   const pipeline = useQuery({
+    select: (data) => translatedPipeline(data, locale),
     queryKey: ["pipeline", pipelineId],
     queryFn: async () => {
       return unwrap(

@@ -4,7 +4,9 @@ import { useUnsavedGuard } from "../../components/unsaved";
 import { Button, Checkbox, Field, TextInput } from "../../design-system/atoms";
 import { RecordFormDialog } from "../../design-system/recordformdialog";
 import { Select } from "../../design-system/select";
+import { TimezoneSelect } from "../../design-system/timezoneselect";
 import { useT } from "../../i18n";
+import type { MessageKey } from "../../i18n/en";
 import { DateFieldSelect } from "./automations.datefield";
 import { ListParamSelect } from "./automations.lists";
 import {
@@ -14,9 +16,26 @@ import {
   scalarText,
 } from "./automations.params";
 import { recipeSentence } from "./automations.recipe";
+import { StageParamSelect } from "./automations.stageparams";
 
 type CatalogEntry = components["schemas"]["AutomationCatalogEntry"];
 type Automation = components["schemas"]["Automation"];
+
+const PARAM_LABELS: Record<string, MessageKey> = {
+  recipient: "auto.renewal.recipient",
+  include_imported_changes: "auto.lists.includeImports",
+  object: "auto.renewal.object",
+  date_field: "auto.renewal.dateField",
+  days_before: "auto.renewal.leadTime",
+  recurs_yearly: "auto.renewal.annual",
+  task_title: "auto.stages.taskTitle",
+  pipeline_id: "auto.stages.pipeline",
+  stage_ids: "auto.stages.destinations",
+  task_timezone: "auto.deadlineTimezone",
+  customer_list_id: "auto.quiet.customerList",
+  no_activity_days: "auto.quiet.days",
+  check_in_days: "auto.quiet.days",
+};
 
 // The dialog an automation is named and parameterised through, and the one
 // control that draws a single declared parameter. Create in the admin panel and
@@ -27,6 +46,7 @@ function ParamFieldControl({
   value,
   object,
   watchedList,
+  pipelineId,
   onChange,
 }: Readonly<{
   field: ParamField;
@@ -34,13 +54,48 @@ function ParamFieldControl({
   object: string;
   /** The Live List a list rule watches, which narrows its Shortlist picker. */
   watchedList: string;
+  pipelineId: string;
   onChange: (value: string) => void;
 }>) {
+  const t = useT();
+  const labelKey = PARAM_LABELS[field.key];
+  const label = labelKey ? t(labelKey) : field.key;
+  if (field.kind === "pipeline" || field.kind === "stages") {
+    const kind = field.kind;
+    return (
+      <Field
+        label={t(
+          field.kind === "pipeline"
+            ? "auto.stages.pipeline"
+            : "auto.stages.destinations",
+        )}
+      >
+        {(control) => (
+          <StageParamSelect
+            kind={kind}
+            pipelineId={pipelineId}
+            value={value}
+            onChange={onChange}
+            control={control}
+          />
+        )}
+      </Field>
+    );
+  }
+  if (field.kind === "timezone") {
+    return (
+      <Field label={t("auto.deadlineTimezone")}>
+        {(control) => (
+          <TimezoneSelect {...control} value={value} onChange={onChange} />
+        )}
+      </Field>
+    );
+  }
   if (field.kind === "boolean") {
     return (
       <div className="field">
         <Checkbox
-          label={field.key}
+          label={label}
           checked={value === "true"}
           onChange={(event) =>
             onChange(event.target.checked ? "true" : "false")
@@ -49,10 +104,14 @@ function ParamFieldControl({
       </div>
     );
   }
-  if (field.kind === "live_list" || field.kind === "shortlist") {
+  if (
+    field.kind === "live_list" ||
+    field.kind === "shortlist" ||
+    field.kind === "record_list"
+  ) {
     const kind = field.kind;
     return (
-      <Field label={field.key}>
+      <Field label={label}>
         {(control) => (
           <ListParamSelect
             kind={kind}
@@ -60,13 +119,14 @@ function ParamFieldControl({
             watchedList={watchedList}
             onChange={onChange}
             control={control}
+            allowedTypes={field.entityTypes}
           />
         )}
       </Field>
     );
   }
   return (
-    <Field label={field.key}>
+    <Field label={label}>
       {(control) =>
         field.kind === "date_field" ? (
           <DateFieldSelect
@@ -78,7 +138,18 @@ function ParamFieldControl({
         ) : field.kind === "enum" ? (
           <Select
             {...control}
-            options={(field.options ?? []).map((v) => ({ value: v, label: v }))}
+            options={(field.options ?? []).map((v) => ({
+              value: v,
+              label:
+                field.key === "recipient" &&
+                (v === "record_owner" || v === "authorizer")
+                  ? t(
+                      v === "record_owner"
+                        ? "auto.renewal.recordOwner"
+                        : "auto.renewal.authorizer",
+                    )
+                  : v,
+            }))}
             value={value}
             onChange={onChange}
           />
@@ -223,8 +294,15 @@ export function AutomationForm({
           value={values[field.key] ?? field.initial}
           object={values.object ?? ""}
           watchedList={values.list_id ?? ""}
+          pipelineId={values.pipeline_id ?? ""}
           onChange={(next) =>
-            setValues((current) => ({ ...current, [field.key]: next }))
+            setValues((current) => ({
+              ...current,
+              ...(field.kind === "pipeline" && next !== current[field.key]
+                ? { stage_ids: "[]" }
+                : {}),
+              [field.key]: next,
+            }))
           }
         />
       ))}

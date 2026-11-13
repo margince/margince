@@ -119,9 +119,12 @@ func checkMeetingStatusKind(kind string, meetingStatus *string) error {
 }
 
 const (
-	fieldDueAt    = "due_at"
-	fieldRemindAt = "remind_at"
-	fieldTaskType = "task_type"
+	fieldDueAt         = "due_at"
+	fieldRemindAt      = "remind_at"
+	fieldTaskType      = "task_type"
+	fieldMeetingIntent = "meeting_intent"
+	// fieldAIAssisted is the mark that a model rewrote the words.
+	fieldAIAssisted = "ai_assisted"
 )
 
 // taskFields are the update's members that only a task carries. The

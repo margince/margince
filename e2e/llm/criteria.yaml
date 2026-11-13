@@ -692,3 +692,13 @@ cases:
       statement: >-
         The model names no waiting item this task did not cause; at most it
         counts them.
+  case118_is_the_crane_job_at_risk:
+    1:
+      name: A project's health is read with its reason
+      statement: >-
+        The model reports the project's recorded health and the note that says why.
+  case119_who_came_to_the_fair:
+    1:
+      name: A list larger than one page is read whole
+      statement: >-
+        The model names every contact the filter matches, past the first page.

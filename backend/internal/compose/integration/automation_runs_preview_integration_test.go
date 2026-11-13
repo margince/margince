@@ -21,6 +21,7 @@ import (
 	"time"
 
 	"github.com/margince/margince/backend/internal/compose/integration/apptest"
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -57,7 +58,7 @@ func createRouteLeadAutomation(t *testing.T, e *apptest.AppEnv) string {
 	}
 	if status := e.Call(t, "POST", "/v1/automations", AnyMap{
 		"key": "assign_lead_owner", "name": "Router under observation",
-		"params": AnyMap{"owners": []string{"0198c0de-0000-7000-8000-000000000001"}, "cap_per_owner": 3},
+		"params": AnyMap{"owners": []string{apptest.SessionUserID(t, e)}, "cap_per_owner": 3},
 	}, nil, &created); status != http.StatusCreated {
 		t.Fatalf("create automation → %d", status)
 	}
@@ -95,7 +96,7 @@ func TestAutomationRunHistoryAndPreviewOverHTTP(t *testing.T) {
 
 	assertRunsStartEmptyAndHideAbsentInstances(t, e, autoID)
 	assertRunsRenderEveryOutcomeWithItsTrace(t, e, autoID)
-	assertPreviewMeasuresWithoutWriting(t, e, autoID)
+	assertEventPreviewWritesNothing(t, e, autoID)
 }
 
 // assertRunsStartEmptyAndHideAbsentInstances pins the empty-history page
@@ -187,11 +188,8 @@ func assertRunsRenderEveryOutcomeWithItsTrace(t *testing.T, e *apptest.AppEnv, a
 	}
 }
 
-// assertPreviewMeasuresWithoutWriting pins the dry-run: the stored
-// assign_lead_owner recipe counts the open unrouted lead pool, the draft
-// override previews another catalog type before saving, the editor's 422
-// vocabulary matches a save's, and the whole thing leaves zero rows.
-func assertPreviewMeasuresWithoutWriting(t *testing.T, e *apptest.AppEnv, autoID string) {
+// Event previews name what cannot be estimated and leave no audit, event or run rows.
+func assertEventPreviewWritesNothing(t *testing.T, e *apptest.AppEnv, autoID string) {
 	t.Helper()
 	var lead struct {
 		ID string `json:"id"`
@@ -213,24 +211,18 @@ func assertPreviewMeasuresWithoutWriting(t *testing.T, e *apptest.AppEnv, autoID
 		t.Fatal(err)
 	}
 
-	var preview struct {
-		MatchesNow           int       `json:"matches_now"`
-		WindowDays           int       `json:"window_days"`
-		WouldHaveFired       *int      `json:"would_have_fired"`
-		Sample               *[]string `json:"sample"`
-		ExcludedByPermission *int      `json:"excluded_by_permission"`
-	}
+	var preview crmcontracts.AutomationPreview
 	if status := e.Call(t, "POST", "/v1/automations/"+autoID+"/preview", AnyMap{}, nil, &preview); status != http.StatusOK {
 		t.Fatalf("preview → %d", status)
 	}
-	if preview.MatchesNow != 1 || preview.WindowDays != 30 {
-		t.Fatalf("preview = %d matches over %d days, want the 1 unrouted lead over the default 30", preview.MatchesNow, preview.WindowDays)
+	if preview.PreviewKind == nil || *preview.PreviewKind != crmcontracts.AutomationPreviewKindEvent || preview.WindowDays != 30 {
+		t.Fatalf("event preview = %+v", preview)
 	}
-	if preview.WouldHaveFired == nil || *preview.WouldHaveFired != 1 {
-		t.Fatalf("would_have_fired = %v, want 1 (the lead created inside the window)", preview.WouldHaveFired)
+	if preview.MatchesNowAvailable == nil || *preview.MatchesNowAvailable || preview.HistoricalPreviewAvailable == nil || *preview.HistoricalPreviewAvailable {
+		t.Fatalf("event preview claims a record count or historical estimate: %+v", preview)
 	}
-	if preview.Sample == nil || len(*preview.Sample) != 1 || (*preview.Sample)[0] != lead.ID {
-		t.Fatalf("sample = %v, want exactly the matching lead %s", preview.Sample, lead.ID)
+	if preview.MatchesNow != 0 || preview.WouldHaveFired != nil || (preview.Sample != nil && len(*preview.Sample) != 0) {
+		t.Fatalf("event preview inferred work from current leads: %+v", preview)
 	}
 	// Zero ships explicitly: "nothing was hidden" is information.
 	if preview.ExcludedByPermission == nil || *preview.ExcludedByPermission != 0 {
@@ -238,17 +230,14 @@ func assertPreviewMeasuresWithoutWriting(t *testing.T, e *apptest.AppEnv, autoID
 	}
 
 	// The draft override previews an edited recipe before it is saved.
-	var draft struct {
-		MatchesNow int `json:"matches_now"`
-		WindowDays int `json:"window_days"`
-	}
+	var draft crmcontracts.AutomationPreview
 	if status := e.Call(t, "POST", "/v1/automations/"+autoID+"/preview", AnyMap{
 		"key": "stage_change_create_task", "window_days": 7,
 	}, nil, &draft); status != http.StatusOK {
 		t.Fatalf("draft-override preview → %d", status)
 	}
-	if draft.MatchesNow != 0 || draft.WindowDays != 7 {
-		t.Fatalf("draft preview = %d matches over %d days, want 0 open deals over the requested 7", draft.MatchesNow, draft.WindowDays)
+	if draft.MatchesNow != 0 || draft.WindowDays != 7 || draft.MatchesNowAvailable == nil || *draft.MatchesNowAvailable || draft.WouldHaveFired != nil {
+		t.Fatalf("draft preview = %d matches over %d days, want no record estimate over the requested 7 days", draft.MatchesNow, draft.WindowDays)
 	}
 
 	// The editor's preview 422s match its save 422s.

@@ -11,10 +11,10 @@ package migrations
 // re-runnable from the top, and that is not a property a comment can promise.
 //
 // So the mode is narrowed to the statements it exists for. A concurrent build pairs
-// with a concurrent drop above it, because CREATE INDEX CONCURRENTLY IF NOT EXISTS
-// sees the name an earlier failure left behind and skips, leaving an INVALID index
-// forever. Anything else in such a file is a file that has lost atomicity for a
-// statement that never needed to.
+// with a concurrent drop above it. CREATE INDEX CONCURRENTLY IF NOT EXISTS sees the
+// name an earlier failure left behind and skips, leaving an INVALID index forever. A trigger on many tables may run unwrapped too, in its replace and
+// if-exists forms. Each table is then closed to writers only while its own trigger
+// is made. Anything else in such a file has lost atomicity for no reason.
 //
 // The mirror holds too: a WRAPPED file may not mention CONCURRENTLY outside a comment,
 // because Postgres would refuse it at deploy time and the gate is cheaper than a failed
@@ -29,9 +29,15 @@ import (
 	"github.com/margince/margince/backend/internal/platform/dbmigrate"
 )
 
-// The two statements an unwrapped migration may say, and nothing else: a concurrent
-// index build, and the concurrent drop that makes retrying one safe.
+// The only statements an unwrapped migration may say: a concurrent index build, the
+// drop that retries it, a re-runnable trigger, and the session lock wait.
 var (
+	rerunnableTrigger = regexp.MustCompile(
+		`(?is)^\s*(create\s+or\s+replace\s+trigger|drop\s+trigger\s+if\s+exists)\s`,
+	)
+	sessionLockWait = regexp.MustCompile(
+		`(?is)^\s*(set\s+lock_timeout\s*=\s*'\w+'|reset\s+lock_timeout)\s*$`,
+	)
 	concurrentBuild = regexp.MustCompile(
 		`(?is)^\s*create\s+(unique\s+)?index\s+concurrently\s+(if\s+not\s+exists\s+)?([\w".]+)`,
 	)
@@ -40,9 +46,9 @@ var (
 	)
 )
 
-// TestEveryUnwrappedMigrationOnlyBuildsIndexesConcurrently reads the embedded tree, so
+// TestEveryUnwrappedMigrationOnlySaysRerunnableStatements reads the embedded tree, so
 // a namespace added later is covered without anybody remembering this file.
-func TestEveryUnwrappedMigrationOnlyBuildsIndexesConcurrently(t *testing.T) {
+func TestEveryUnwrappedMigrationOnlySaysRerunnableStatements(t *testing.T) {
 	entries, err := fs.ReadDir(files, ".")
 	if err != nil {
 		t.Fatalf("reading the embedded migration namespaces: %v", err)
@@ -93,6 +99,7 @@ func checkTransactionShape(t *testing.T, namespace string, m dbmigrate.Migration
 			}
 			switch drop, build := concurrentDrop.FindStringSubmatch(bare),
 				concurrentBuild.FindStringSubmatch(bare); {
+			case rerunnableTrigger.MatchString(bare), sessionLockWait.MatchString(bare):
 			case drop != nil:
 				dropped = drop[1]
 			case build != nil:
@@ -111,7 +118,8 @@ func checkTransactionShape(t *testing.T, namespace string, m dbmigrate.Migration
 				dropped = ""
 			default:
 				t.Errorf("%s %s_%s (%s half) asked not to be wrapped and then says something "+
-					"other than a concurrent index build or the drop that retries it:\n\t%s\n"+
+					"other than a concurrent index build, the drop that retries it, a re-runnable "+
+					"trigger or the session lock wait:\n\t%s\n"+
 					"An unwrapped file gives up atomicity and its bookkeeping row; it may only "+
 					"contain the statements that need it. Move the rest to its own migration.",
 					namespace, m.Version, m.Name, half, bare)

@@ -75,14 +75,14 @@ func (said briefCopy) objectiveLine(ask ClaimIn, typ MeetingType, now time.Time)
 	if typ.Value == crmcontracts.MeetingPlanTypeValueMeetingPlanTypeRelationship {
 		return fmt.Sprintf(
 			said.Say(objectiveWords.Priority),
-			ask.ContactName, ask.Body)
+			said.whom(ask), ask.Body)
 	}
 	if deadline.Passed(ask.DueAt, now) {
 		return fmt.Sprintf(
 			said.Say(objectiveWords.Overdue),
-			ask.ContactName, ask.DueAt.UTC().Format(time.DateOnly), ask.Body)
+			said.whom(ask), ask.DueAt.UTC().Format(time.DateOnly), ask.Body)
 	}
-	return fmt.Sprintf(said.Say(objectiveWords.Answer), ask.ContactName, ask.Body)
+	return fmt.Sprintf(said.Say(objectiveWords.Answer), said.whom(ask), ask.Body)
 }
 
 func objectiveByType(typ MeetingType, in Input) string {
@@ -180,7 +180,7 @@ func responseFor(claim ClaimIn, in Input) Response {
 	return Response{
 		Say: fmt.Sprintf(
 			said.Say(objectiveWords.OwnDelay),
-			claim.ContactName, claim.Body),
+			said.whom(claim), claim.Body),
 		Show:  said.Say(objectiveWords.ShowReady),
 		Avoid: said.Say(objectiveWords.AvoidDate),
 	}

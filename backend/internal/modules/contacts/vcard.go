@@ -293,7 +293,7 @@ func applyVCardProperty(entry *VCardEntry, name string, params []string, raw str
 		// and "Acme; Holdings" would arrive as "Acme".
 		entry.Company = strings.TrimSpace(decodeVCardValue(params, firstComponent(raw)))
 	case "TITLE":
-		entry.Title = strings.TrimSpace(value)
+		entry.Title = MachineTitle(value)
 	case "EMAIL":
 		if v := strings.TrimSpace(value); v != "" {
 			entry.Emails = append(entry.Emails, VCardChannel{Value: v, Kind: emailKindFrom(params)})

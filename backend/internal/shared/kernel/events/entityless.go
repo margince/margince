@@ -38,6 +38,7 @@ var pipelineEventTypes = map[string]struct{}{
 	// Source policy and owner consent are private configuration, not webhook subjects.
 	"capture_settings.updated":      {},
 	"internal_mail_history.created": {},
+	"shared_mailbox.changed":        {},
 	// Reporting changes carry private configuration; they are not webhook subscriptions.
 	"reporting.changed": {},
 	// Host settings and invitation delivery state feed private UI recovery;

@@ -94,7 +94,11 @@ func (s *Store) PreviewProjectCreationForActor(ctx context.Context, in CreatePro
 	err = s.Tx(ctx, func(tx pgx.Tx) error {
 		var err error
 		out, err = admitProjectCreation(ctx, tx, in, storekit.OwnerOrActor(creatorCtx))
-		return err
+		if err != nil || out.DealID == nil {
+			return err
+		}
+		// The creator's authority, because the create links the deal as them.
+		return s.checkDeal(creatorCtx, tx, *out.DealID, out.CompanyID)
 	})
 	if err != nil {
 		return CreateProjectInput{}, err

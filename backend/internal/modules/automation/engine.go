@@ -53,6 +53,7 @@ type WorkflowEngine struct {
 	// clock fixes the instant a setter's expiry is judged at; nil reads the
 	// database's own clock, the one authentication judges a passport by.
 	clock func() time.Time
+	fence FiringFence
 }
 
 // NewWorkflowEngine builds the engine over the pool and the authz resolver
@@ -84,11 +85,11 @@ func (e *WorkflowEngine) RegisterWorkflow(h workflow.Handler) {
 		//craft:ignore panic-in-domain composition-time registration assertion — fires only while cmd wiring runs, never on a request path
 		panic("crmagents: registering a workflow with no name")
 	}
-	if spec.Trigger.EventType == "" && spec.Trigger.Schedule == "" {
+	if spec.Trigger.EventType == "" && (spec.Trigger.Schedule == "" || len(spec.Trigger.AdditionalEventTypes) > 0) {
 		//craft:ignore panic-in-domain composition-time registration assertion — fires only while cmd wiring runs, never on a request path
 		panic(fmt.Sprintf("crmagents: workflow %s declares no trigger", spec.Name))
 	}
-	if spec.Trigger.EventType != "" && spec.Trigger.Schedule != "" {
+	if spec.Trigger.Schedule != "" && (spec.Trigger.EventType != "" || len(spec.Trigger.AdditionalEventTypes) > 0) {
 		// isClockTrigger (engine_run.go) and runOne's dispatch both
 		// assume EventType/Schedule are mutually exclusive: a handler
 		// setting both would have its non-matches silently swallowed as a
@@ -116,7 +117,7 @@ func (e *WorkflowEngine) RegisterWorkflow(h workflow.Handler) {
 // run row still claims (handler, key), so redelivery stays exactly-once.
 func (e *WorkflowEngine) RegisterSystemWorkflow(h workflow.Handler) {
 	spec := h.Spec()
-	if spec.Name == "" || spec.Trigger.EventType == "" {
+	if spec.Name == "" || spec.Trigger.EventType == "" || spec.Trigger.Schedule != "" {
 		//craft:ignore panic-in-domain composition-time registration assertion — fires only while cmd wiring runs, never on a request path
 		panic("crmagents: system workflow needs a name and an event trigger")
 	}
@@ -167,7 +168,7 @@ func (e *WorkflowEngine) HandleEvent(ctx context.Context, env kevents.Envelope) 
 
 	var firstErr error
 	for _, h := range system {
-		if h.Spec().Trigger.EventType != env.Type {
+		if !h.Spec().Trigger.MatchesEventType(env.Type) {
 			continue
 		}
 		if err := e.runOne(runCtx, h, ev); err != nil && firstErr == nil {
@@ -180,7 +181,7 @@ func (e *WorkflowEngine) HandleEvent(ctx context.Context, env kevents.Envelope) 
 		}
 	}
 	for _, h := range handlers {
-		if h.Spec().Trigger.EventType != env.Type {
+		if !h.Spec().Trigger.MatchesEventType(env.Type) {
 			continue
 		}
 		for _, inst := range instances[h.Spec().Name] {
@@ -188,6 +189,7 @@ func (e *WorkflowEngine) HandleEvent(ctx context.Context, env kevents.Envelope) 
 			iev.AutomationID = inst.id.UUID
 			iev.OwnerID = inst.owner
 			iev.Params = inst.params
+			iev.EnabledFrom = inst.enabledFrom
 			if err := e.dispatch(runCtx, h, iev, inst.version); err != nil && firstErr == nil {
 				firstErr = fmt.Errorf("workflow %s: %w", h.Spec().Name, err)
 			}
@@ -199,6 +201,10 @@ func (e *WorkflowEngine) HandleEvent(ctx context.Context, env kevents.Envelope) 
 // dispatch runs one instance's firing. A list rule's event stands for every
 // record one check saw change, so it fans out first.
 func (e *WorkflowEngine) dispatch(ctx context.Context, h workflow.Handler, ev workflow.Event, version int64) error {
+	// Accepted website notes already name the policy that owes their handling.
+	if h.Spec().Name != inquiryRecipeName && !ev.EnabledFrom.IsZero() && ev.OccurredAt.Before(ev.EnabledFrom) {
+		return nil
+	}
 	if rule, ok := h.(listRule); ok {
 		// Before the fan-out, so a check that moved no records still stops the rule.
 		if stop, err := e.stopIfSetterLapsed(ctx, ev); stop || err != nil {
@@ -230,10 +236,11 @@ func (e *WorkflowEngine) clockHandlers() []workflow.Handler {
 // match-time gate reads it to decide whether a firing has a human
 // authority to re-check at all.
 type automationInstance struct {
-	id      ids.AutomationID
-	owner   ids.UUID
-	params  json.RawMessage
-	version int64
+	id          ids.AutomationID
+	owner       ids.UUID
+	params      json.RawMessage
+	version     int64
+	enabledFrom time.Time
 }
 
 // liveInstances loads the workspace's enabled, unarchived automations,
@@ -243,7 +250,8 @@ func (e *WorkflowEngine) liveInstances(ctx context.Context) (map[string][]automa
 	out := map[string][]automationInstance{}
 	err := e.db.Tx(ctx, func(tx pgx.Tx) error {
 		rows, err := tx.Query(ctx,
-			`SELECT id, key, params, owner_id, version FROM automation WHERE enabled AND archived_at IS NULL ORDER BY created_at, id`)
+			`SELECT id, key, params, owner_id, version, enabled_from
+			 FROM automation WHERE enabled AND archived_at IS NULL ORDER BY created_at, id`)
 		if err != nil {
 			return err
 		}
@@ -252,11 +260,15 @@ func (e *WorkflowEngine) liveInstances(ctx context.Context) (map[string][]automa
 			var inst automationInstance
 			var key string
 			var owner *ids.UUID
-			if err := rows.Scan(&inst.id, &key, &inst.params, &owner, &inst.version); err != nil {
+			var enabledFrom *time.Time
+			if err := rows.Scan(&inst.id, &key, &inst.params, &owner, &inst.version, &enabledFrom); err != nil {
 				return err
 			}
 			if owner != nil {
 				inst.owner = *owner
+			}
+			if enabledFrom != nil {
+				inst.enabledFrom = *enabledFrom
 			}
 			out[key] = append(out[key], inst)
 		}

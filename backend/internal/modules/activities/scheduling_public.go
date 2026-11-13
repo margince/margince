@@ -66,13 +66,21 @@ func (s *Store) ResolveBookingPage(ctx context.Context, slug string) (BookingPag
 	return page, nil
 }
 
+// publicBookingSource is the source a record written by the public booking door carries.
+const publicBookingSource = "public_booking"
+
 // ContactEnsurer is the contacts seam of the public capture path (compose
 // injects it — activities never imports a sibling).
 type ContactEnsurer interface {
 	// EnsureBookerByEmail answers the contact holding the address, or the live
 	// lead holding it when no contact does. It creates a contact only when
-	// neither does. One of the two ids is set.
-	EnsureBookerByEmail(ctx context.Context, fullName, email, source string, erasure storekit.ErasureAdmission) (ids.UUID, ids.LeadID, error)
+	// neither does. One of the two ids is set, and created says the contact
+	// is new. host is the booking page's host, who owns a contact it creates.
+	EnsureBookerByEmail(ctx context.Context, host ids.UserID, fullName, email, source string, erasure storekit.ErasureAdmission) (contact ids.UUID, lead ids.LeadID, created bool, err error)
+	// FillBookerGaps gives an existing booker the host as owner and their
+	// domain's company where the contact has none, with the host's own
+	// authority. It runs only after that authority over the contact is confirmed.
+	FillBookerGaps(ctx context.Context, contact ids.UUID, host ids.UserID, source string) error
 }
 
 // BookingConsent is the CaptureConsent passthrough: the purpose and the
@@ -346,7 +354,7 @@ func (h Handlers) BookPublicMeeting(w http.ResponseWriter, r *http.Request, host
 }
 
 func (h Handlers) bookPublicMeetingForBooker(w http.ResponseWriter, r *http.Request, page BookingPage, req crmcontracts.BookPublicMeetingJSONRequestBody, bookingConsent BookingConsent, intent *publicBookingIntent, length *int) {
-	contactID, leadID, ok := h.ensureBooker(w, r, req)
+	contactID, leadID, created, ok := h.ensureBooker(w, r, page.HostUserID, req)
 	if !ok {
 		return
 	}
@@ -357,6 +365,14 @@ func (h Handlers) bookPublicMeetingForBooker(w http.ResponseWriter, r *http.Requ
 	if err := h.store.calendar.CheckRecipient(r.Context(), page.HostUserID, contactID, string(req.Booker.Email)); err != nil {
 		writeStoreErr(w, r, err)
 		return
+	}
+	// A created contact already has what the fill would give it, and a second
+	// pass would ask an unclaimed domain's question again.
+	if !created {
+		if err := h.publicContacts.FillBookerGaps(r.Context(), contactID, page.HostUserID, publicBookingSource); err != nil {
+			writeStoreErr(w, r, err)
+			return
+		}
 	}
 	marketingOutcome, err := h.publicConsent.CaptureBookingConsent(r.Context(), contactID, bookingConsent)
 	if err != nil {
@@ -369,18 +385,18 @@ func (h Handlers) bookPublicMeetingForBooker(w http.ResponseWriter, r *http.Requ
 
 // ensureBooker is the contact or the live lead the booking lands on, or the
 // refusal written.
-func (h Handlers) ensureBooker(w http.ResponseWriter, r *http.Request, req crmcontracts.BookPublicMeetingJSONRequestBody) (ids.UUID, ids.LeadID, bool) {
-	contactID, leadID, err := h.publicContacts.EnsureBookerByEmail(r.Context(), req.Booker.Name, string(req.Booker.Email), "public_booking", storekit.AdmitSelfBooking)
+func (h Handlers) ensureBooker(w http.ResponseWriter, r *http.Request, host ids.UserID, req crmcontracts.BookPublicMeetingJSONRequestBody) (contact ids.UUID, lead ids.LeadID, created, ok bool) {
+	contactID, leadID, created, err := h.publicContacts.EnsureBookerByEmail(r.Context(), host, req.Booker.Name, string(req.Booker.Email), publicBookingSource, storekit.AdmitSelfBooking)
 	if badValue, ok := errors.AsType[*values.ParseError](err); ok {
 		// The contacts store names its own field; this form's address is booker.email.
 		httperr.Write(w, r, httperr.Validation("booker.email", badValue.Code, badValue.Message))
-		return ids.Nil, ids.LeadID{}, false
+		return ids.Nil, ids.LeadID{}, false, false
 	}
 	if err != nil {
 		writeStoreErr(w, r, err)
-		return ids.Nil, ids.LeadID{}, false
+		return ids.Nil, ids.LeadID{}, false, false
 	}
-	return contactID, leadID, true
+	return contactID, leadID, created, true
 }
 
 // bookPublicMeetingForLead files the meeting on the live lead. The lead's

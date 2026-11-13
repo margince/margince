@@ -187,6 +187,19 @@ describe("a promise's due date", () => {
     ).toBe("Due 27 Oct");
   });
 
+  it("prints the clock the task was given rather than the stored instant", () => {
+    const chosen = coming({
+      due_has_time: true,
+      due_intent: {
+        wall_clock: "2026-10-27T09:30:00",
+        timezone: "Europe/Berlin",
+      },
+    });
+    expect(badgeText(mount({ ...chosen, time_zone: "Europe/Berlin" }))).toBe(
+      "Due 27 Oct, 09:30",
+    );
+  });
+
   it("does not move a day due late in the evening onto the next UTC day", () => {
     const late = coming({ due_at: "2026-10-28T06:59:59Z" });
     expect(

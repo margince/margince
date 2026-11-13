@@ -8,6 +8,7 @@ package capture
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/jackc/pgx/v5"
 
@@ -28,12 +29,16 @@ func (s *Sink) derivationStart(ctx context.Context, tx pgx.Tx, rec connector.Nor
 	if s.ensurer == nil || cp.Email == "" {
 		return dispositionRow{}, counterpartyDecision{}, false, nil
 	}
-	// A shared mailbox has no owner by design, not by fault: its mail files
-	// under existing records and mints none.
-	if _, shared := sharedMailboxOf(ctx); shared {
-		return dispositionRow{}, counterpartyDecision{}, false, nil
-	}
 	actor, owner := capturePrincipal(ctx)
+	// A shared mailbox has no owner by design, not by fault: its mail files
+	// under existing records and mints none, so the ladder is skipped.
+	if box, shared := sharedMailboxOf(ctx); shared {
+		var readers ids.UUID
+		if err := tx.QueryRow(ctx, `SELECT reader_team_id FROM capture_connection WHERE id = $1`, box).Scan(&readers); err != nil {
+			return dispositionRow{}, counterpartyDecision{}, false, fmt.Errorf("capture: reading the shared mailbox's readers: %w", err)
+		}
+		return dispositionRow{}, counterpartyDecision{linkOnly: true, readerTeam: readers, capturedBy: actor.ID, subject: cp}, false, nil
+	}
 	if owner.IsZero() {
 		// A fault, and one that reaches no other fault path: this returns
 		// ok=false with no error, so decideCounterpartyGuarded's arm never sees

@@ -112,7 +112,13 @@ function taskColumns(cells: Cells): DataTableColumn<NextStep>[] {
       header: t("co.next.col.due"),
       render: (step) =>
         step.due_at
-          ? formatDueCompact(step.due_at, step.due_has_time, locale, zone)
+          ? formatDueCompact(
+              step.due_at,
+              step.due_has_time,
+              locale,
+              zone,
+              step.due_intent,
+            )
           : "",
     },
     {

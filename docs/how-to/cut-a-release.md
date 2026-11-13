@@ -50,7 +50,7 @@ compares every commit.
 
 A title such as `feat(api)!: …` lists under **Breaking**, and that section is never cut for length.
 Other titles (`refactor`, `test`, `docs`, `ci`, dependency updates) are left to the compare link.
-[`scripts/release-notes.sh`](../../scripts/release-notes.sh) builds that half. A tag with an added
+[`scripts/release_notes.py`](../../scripts/release_notes.py) builds that half. A tag with an added
 part needs no draft, and its page holds only the generated half.
 
 ## Prepare the release commit
@@ -118,7 +118,7 @@ Two kinds of release live here, and they carry different versions:
 | Trigger | a `v*` tag | the same `v*` tag, or started by hand to test the lane |
 | Version | `v1.0.0` (semver) | `YYYY.edition.bugfix`, from the tag; a run by hand is `1970.<run>` |
 | Publishes to | the GitHub release page | the dist service at `dist.test.margince.com` |
-| Carries | the notes, the images on `ghcr.io`, a server bundle for each Linux platform, SBOMs, a signed `SHA256SUMS` | the patch of changes, SBOMs, role images |
+| Carries | the notes, the images on `ghcr.io`, a server bundle for each Linux platform, SBOMs, a signed `SHA256SUMS` | the patch of changes, SBOMs, a changelog, role images |
 
 The version form of the dist service does not accept a `v` prefix, so the two lanes use different names.
 `scripts/release-dist-version.sh` derives one from the other by a fixed rule, so the dist version can be
@@ -150,4 +150,23 @@ If no release was ever published on `main`, the release is the first one. Its pa
 
 `scripts/release-patch-base.sh` reads the record of the release CLI. It accepts a base or the first-release mark,
 and it fails on any other record. `make test-release-patch-base` runs these cases.
+
+### The changelog of a dist release
+
+The dist service publishes no release without a changelog. The lane writes it from the subject of every commit
+since the patch base, so the changelog lists what the patch carries. Merge commits are left out. A change that
+reached `main` through another branch keeps its own subject. If a lane was skipped, the next changelog lists its
+changes too.
+
+[`scripts/release_changelog.py`](../../scripts/release_changelog.py) writes the file. Under the heading
+**Changes** come the sections of [`scripts/release_notes.py`](../../scripts/release_notes.py), and then a link
+that compares every commit since the base. The dist page shows the version above the file, so the file does not
+name it. A release with no subject a user notices gets only the link. The first release gets one sentence: its
+patch is the whole tree.
+
+The script drops a byte that is not valid UTF-8 from a subject. The history of `main` does not change, so one
+bad subject would otherwise stop every later release. The lane fails before the draft when no commit is new since
+the base, or when the **Breaking** subjects alone are too long. The release CLI also refuses a file that is empty
+or over its size limit.
+`make test-release-changelog` runs these cases.
 

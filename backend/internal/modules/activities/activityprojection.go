@@ -28,6 +28,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/occurredday"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/kernel/provenance"
 	"github.com/margince/margince/backend/internal/shared/kernel/relstrength"
@@ -50,6 +51,8 @@ type activityScan struct {
 	// dueHasTime is answered on a task only; the column is false on every
 	// other kind and means nothing there.
 	dueHasTime bool
+	// aiAssisted is withheld with the content it describes.
+	aiAssisted bool
 	taskType   *string
 	// replyChannel is how the message a reply task answers came in.
 	replyChannel *string
@@ -124,14 +127,18 @@ var activityProjection = []activityColumn{
 	{"a.channel_provider", func(s *activityScan) any { return &s.channelProvider }},
 	{"a.subject", func(s *activityScan) any { return &s.a.Subject }},
 	{"a.body", func(s *activityScan) any { return &s.a.Body }},
-	{"a.occurred_at", func(s *activityScan) any { return &s.a.OccurredAt }},
+	{"a.ai_assisted", func(s *activityScan) any { return &s.aiAssisted }},
+	{occurredday.BookedStartSQL("a"), func(s *activityScan) any { return &s.a.OccurredAt }},
 	{"a.occurred_precision", func(s *activityScan) any { return &s.occurredPrecision }},
 	{"a.direction", func(s *activityScan) any { return &s.direction }},
 	{storekit.TaskDueSQL("a"), func(s *activityScan) any { return &s.a.DueAt }},
 	{"a.due_has_time", func(s *activityScan) any { return &s.dueHasTime }},
 	{storekit.TaskTypeSQL("a"), func(s *activityScan) any { return &s.taskType }},
 	{storekit.ReplyChannelSQL("a"), func(s *activityScan) any { return &s.replyChannel }},
-	{"a.remind_at", func(s *activityScan) any { return &s.a.RemindAt }},
+	{storekit.IntentInstantSQL("a", "remind"), func(s *activityScan) any { return &s.a.RemindAt }},
+	{storekit.IntentWireSQL("a", "due"), func(s *activityScan) any { return &s.a.DueIntent }},
+	{storekit.IntentWireSQL("a", "remind"), func(s *activityScan) any { return &s.a.RemindIntent }},
+	{storekit.IntentWireSQL("a", "meeting"), func(s *activityScan) any { return &s.a.MeetingIntent }},
 	{"a.assignee_id", func(s *activityScan) any { return &s.assigneeID }},
 	{"a.is_done", func(s *activityScan) any { return &s.a.IsDone }},
 	{"a.done_at", func(s *activityScan) any { return &s.a.DoneAt }},
@@ -447,6 +454,9 @@ func (s *activityScan) contentProjection(ctx context.Context, a *crmcontracts.Ac
 		threadKey, captureLabel, audienceReason = nil, nil, nil
 	}
 	a.ContentState = &state
+	if s.contentAvailable && s.aiAssisted {
+		a.AiAssisted = new(true)
+	}
 	if s.contentAvailable {
 		a.SystemDisplay = activitySystemDisplay(ctx, s.systemText, a.Subject, a.Body, s.version)
 	}

@@ -106,6 +106,7 @@ func (o observedOutcome) landed() bool {
 // archived_at: the sidecar writer holds the subject live, but a mirror is a
 // second statement and Art. 17 erasure can commit between them.
 func applyObservedField(ctx context.Context, tx pgx.Tx, contactID ids.ContactID, f observedField) (observedOutcome, error) {
+	f.Value, f.Evidence = machineProfileField(f.Value, f.Evidence)
 	// The subject before any row this transaction writes, and the write
 	// authority before any of it: Art. 17 erasure holds the subject and then
 	// deletes what hangs off it, so taking them the other way round deadlocks

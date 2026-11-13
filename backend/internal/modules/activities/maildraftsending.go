@@ -19,6 +19,13 @@ import (
 // counted. Refusing it would lose the words of an autosave over one file.
 func (s *Store) prepareDraft(ctx context.Context, anchor MailDraftAnchor, content MailDraftContent) (MailDraftContent, resolvedFiles, error) {
 	content = canonicalDraft(content)
+	if content.Schedule != nil {
+		schedule, err := normalizeSchedule(*content.Schedule)
+		if err != nil {
+			return MailDraftContent{}, resolvedFiles{}, err
+		}
+		content.Schedule = &schedule
+	}
 	if err := validateDraft(anchor, content, s.now()); err != nil {
 		return MailDraftContent{}, resolvedFiles{}, err
 	}
@@ -56,11 +63,11 @@ func validateDraftSending(content MailDraftContent, now time.Time) error {
 	return nil
 }
 
-// draftScheduleColumns spells a schedule as its two columns, both NULL for none.
-func draftScheduleColumns(schedule *SendSchedule) (*time.Time, *string) {
+// draftScheduleColumns leaves legacy instants distinct from saved local choices.
+func draftScheduleColumns(schedule *SendSchedule) (*time.Time, *string, *string) {
 	if schedule == nil {
-		return nil, nil
+		return nil, nil, nil
 	}
 	at := schedule.At.UTC()
-	return &at, &schedule.TZ
+	return &at, &schedule.TZ, schedule.wallClock()
 }

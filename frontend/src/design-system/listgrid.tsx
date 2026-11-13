@@ -43,7 +43,8 @@ function RowSelect<Row>({
   return (
     <Checkbox
       className="lt-select"
-      label={<span className="sr-only">{selection.label(row)}</span>}
+      label={selection.label(row)}
+      labelHidden
       checked={selection.selected.has(rowKey(row))}
       onChange={() =>
         selection.onChange([row], !selection.selected.has(rowKey(row)))

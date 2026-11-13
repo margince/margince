@@ -2,11 +2,15 @@ import { useQuery } from "@tanstack/react-query";
 import { api } from "../../api/client";
 import type { components } from "../../api/schema";
 import { CreateAction, type CreateField } from "../../components/create";
-import { currencyOptions } from "../../format/currencychoices";
+import { currencyField } from "../../components/currencyfield";
 import { toMinorUnits } from "../../format/minorunits";
-import { useT } from "../../i18n";
+import { useLocale, useT } from "../../i18n";
 import { useCanWrite } from "../../lib/capability";
 import { currencyBeside } from "../../lib/dealcurrency";
+import {
+  translatedLabel,
+  translatedPipeline,
+} from "../../lib/labeltranslation";
 import { useLeadingCurrencies } from "../../lib/leadingcurrencies";
 import { defaultPipelineOf } from "../../lib/pipelines.queries";
 import { unwrap } from "../../lib/problem";
@@ -32,7 +36,15 @@ type Stage = components["schemas"]["Stage"];
  * deal board applies the same rule to its own stage picker.
  */
 function useDealTarget() {
+  const { locale } = useLocale();
   return useQuery({
+    select: ({ pipeline, open }) => ({
+      pipeline: pipeline && translatedPipeline(pipeline, locale),
+      open: open.map((stage) => ({
+        ...stage,
+        name: translatedLabel(stage.name, stage.name_translations, locale),
+      })),
+    }),
     queryKey: ["pipelines", "dealTarget"],
     queryFn: async () => {
       const data = unwrap(
@@ -73,6 +85,7 @@ export function NewDealAction({
   onCreated?: (deal: components["schemas"]["Deal"]) => void;
 }>) {
   const t = useT();
+  const { locale } = useLocale();
   const target = useDealTarget();
   const leading = useLeadingCurrencies();
   const pipeline = target.data?.pipeline;
@@ -93,13 +106,7 @@ export function NewDealAction({
       min: "0",
       wireField: "amount_minor",
     },
-    {
-      key: "currency",
-      label: "create.currency",
-      type: "select",
-      required: true,
-      options: currencyOptions(leading),
-    },
+    currencyField(leading, locale),
     {
       key: "stage_id",
       label: "create.stage",
