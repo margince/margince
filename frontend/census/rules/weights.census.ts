@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-// Three weights, and a drawn file for every one of them. A weight the request
-// does not load is synthesized: the engine smears or thins a face nobody drew.
-// Both sides are read off the tree: what index.html loads, what the
-// stylesheets ask for. Weight tokens resolve through tokens.css, and a raw
+// Three weights, and a drawn file for every one of them. A weight the app does
+// not bundle is synthesized: the engine smears or thins a face nobody drew.
+// Both sides are read off the tree: the font faces app.css imports, and what
+// the stylesheets ask for. Weight tokens resolve through tokens.css, and a raw
 // 400 or 700 is still measured.
 
 import { readFileSync } from "node:fs";
@@ -15,8 +15,9 @@ export const SHIPPED: readonly number[] = [400, 500, 700];
 export const TOKENS = "src/design-system/tokens.css";
 const read = (file: string) => readFileSync(join(frontendRoot, file), "utf8");
 
-const REQUEST = /href="(https:\/\/fonts\.googleapis\.com\/css2\?[^"]*)"/;
-const FAMILY = /family=([^:&]+)(?::wght@([^&]*))?/g;
+export const FONT_SHEET = "src/app.css";
+const FACE_IMPORT = /@import\s+["']@fontsource\/([\w-]+)\/([1-9]00)\.css["']/g;
+const FACE_FAMILY = /font-family:\s*["']([^"']+)["']/;
 const WEIGHT_DECL = /font-weight\s*:([^;}]*)/g;
 const TYPE_VALUE = /(?:^|[;{\s])(?:font|--font[\w-]*)\s*:([^;}]*)/g;
 // The whole value, not its first word. An inline weight is a var() string,
@@ -48,20 +49,25 @@ export function declaredFamily(token: string): string {
   return declared[1];
 }
 
-/** Every family index.html asks for, with the weights it asks for each in. */
+/**
+ * Every family app.css bundles, with the weights it imports for each. The
+ * family's name is read from the face sheet the import loads. A package named
+ * apart from its family then counts under the family tokens.css names.
+ */
 export function requested(): Map<string, number[]> {
-  const href = REQUEST.exec(read("index.html"));
-  if (!href) throw new Error("index.html requests no font stylesheet");
   const families = new Map<string, number[]>();
-  for (const family of href[1].matchAll(FAMILY)) {
-    const name = decodeURIComponent(family[1]).replaceAll("+", " ");
-    const asked = (family[2] ?? "").split(";");
-    const weights = asked.filter((w) => /^[1-9]00$/.test(w)).map(Number);
-    if (weights.length === 0) throw new Error(`${name} loads no weight`);
-    weights.sort((a, b) => a - b);
-    families.set(name, weights);
+  for (const [, pkg, weight] of read(FONT_SHEET).matchAll(FACE_IMPORT)) {
+    const face = read(
+      join("node_modules", "@fontsource", pkg, `${weight}.css`),
+    );
+    const family = FACE_FAMILY.exec(face)?.[1];
+    if (!family)
+      throw new Error(`@fontsource/${pkg}/${weight}.css names no family`);
+    families.set(family, [...(families.get(family) ?? []), Number(weight)]);
   }
-  if (families.size === 0) throw new Error("the request names no family");
+  if (families.size === 0)
+    throw new Error(`${FONT_SHEET} imports no font face`);
+  for (const weights of families.values()) weights.sort((a, b) => a - b);
   return families;
 }
 
@@ -153,6 +159,6 @@ export const rule: CensusRule = {
       .filter(({ weight }) => !SHIPPED.includes(weight))
       .map(({ weight, where }) => `${where} asks for ${weight}`),
   advice:
-    "Ask for a weight through --fontWeightRegular, Medium or Bold. index.html " +
-    "loads 400, 500 and 700 only; any other weight is synthesized.",
+    "Ask for a weight through --fontWeightRegular, Medium or Bold. app.css " +
+    "bundles 400, 500 and 700 only; any other weight is synthesized.",
 };

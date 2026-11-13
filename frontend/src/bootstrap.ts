@@ -6,13 +6,6 @@ import { parseHash } from "./lib/router";
 import { readPreparedAnalyticsSession } from "./lib/session.read";
 import { reloadOnStaleBuild } from "./lib/stalebuild";
 
-for (const link of document.querySelectorAll<HTMLLinkElement>(
-  "link[data-font-stylesheet]",
-)) {
-  link.rel = "stylesheet";
-  link.removeAttribute("as");
-}
-
 reloadOnStaleBuild();
 restoreReturnRoute();
 if (parseHash(location.hash).screen === "analytics") {
