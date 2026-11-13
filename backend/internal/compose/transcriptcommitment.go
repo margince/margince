@@ -44,6 +44,7 @@ func (p *TranscriptProposer) commitmentFrom(
 		Party:            owner,
 		DueDate:          step.DueDate,
 		Confidence:       float64(step.Confidence),
+		Tentative:        step.tentative(),
 		Links:            reading.Links,
 		Evidence:         stepEvidence(step, reading.Lines, activityID),
 	}
@@ -57,7 +58,7 @@ func (p *TranscriptProposer) commitmentFrom(
 	if err := attributeCommitmentRecipients(&c, step.RecipientRefs, verified); err != nil {
 		return Commitment{}, err
 	}
-	c.NeedsConfirmation = !transcriptPromiserSpoke(step, reading.Lines, verified)
+	c.NeedsConfirmation = c.Tentative || !transcriptPromiserSpoke(step, reading.Lines, verified)
 	c.Body = transcriptCommitmentBody(c.Party, step.SourceLines)
 	c.SystemText = &systemtext.Message{Subject: systemtext.Prose(systemtext.Generated, ""), Body: transcriptCommitmentComponent(c.Party, step.SourceLines)}
 	// The first cited line is part of the span: the same words said twice in

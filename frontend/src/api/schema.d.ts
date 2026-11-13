@@ -52088,6 +52088,29 @@ export interface components {
             finished_at?: string | null;
             /** Format: date-time */
             created_at: string;
+            /** @description The meeting's summary as this reading leaves it: the one this reading wrote, or the newest one an earlier reading wrote. Absent when no reading has written one. */
+            summary?: components["schemas"]["TranscriptSummary"];
+            /** @description True when this reading finished without writing a summary, because the summary failed the check that every point cites lines the transcript has. The meeting keeps `summary` as it was. */
+            summary_refused: boolean;
+        };
+        /** @description A short summary of one meeting, written by a model from its transcript and never by a member. A client marks it as AI-written. Each point cites the transcript lines it was read from; the transcript itself is unchanged. */
+        TranscriptSummary: {
+            /**
+             * Format: uuid
+             * @description The reading that wrote this summary.
+             */
+            read_id: string;
+            /** Format: date-time */
+            generated_at: string;
+            /** @description What the meeting covered, in the language the meeting was held in. */
+            key_points: components["schemas"]["TranscriptSummaryPoint"][];
+            /** @description What the meeting agreed would happen next. Empty when it agreed nothing. */
+            next_steps: components["schemas"]["TranscriptSummaryPoint"][];
+        };
+        TranscriptSummaryPoint: {
+            text: string;
+            /** @description The 1-based transcript lines this point was read from. */
+            source_lines: number[];
         };
         /** @description One approval a transcript reading staged, and who it waits on. */
         TranscriptReadProposal: {

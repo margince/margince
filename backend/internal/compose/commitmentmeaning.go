@@ -107,6 +107,15 @@ func quotedFrom(source, quote string) bool {
 	return false
 }
 
+// withheldFor is the meaning's verdict, except that a tentative reading may
+// be optional: a member decides on it, and no task is written without them.
+func withheldFor(meaning *commitmentMeaning, tentative bool) CommitmentOutcome {
+	if tentative && meaning != nil && meaning.State == "optional" {
+		return ""
+	}
+	return meaning.withheldOutcome()
+}
+
 func (meaning *commitmentMeaning) withheldOutcome() CommitmentOutcome {
 	if meaning == nil || !slices.Contains(commitmentMeaningStates, meaning.State) {
 		return "semantic_unassessed"

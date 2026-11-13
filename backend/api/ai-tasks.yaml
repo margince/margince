@@ -236,7 +236,7 @@ tasks:
 
   transcript_propose:
     display_name: "Meeting follow-up extraction"
-    summary: "Reads next steps and commitments out of a meeting transcript."
+    summary: "Reads next steps and commitments out of a meeting transcript, and writes a short summary of the meeting."
     ladder: [premium]
     execution_mode: background
     on_budget_exhausted: queue
@@ -244,7 +244,7 @@ tasks:
     subject_restriction: honour
     sites: [next_steps]
     company_context: none
-    doc: "the reading of next steps and commitments out of a meeting transcript, each citing the 1-based transcript lines it was read from. Floor 0.7; below it the proposal is dropped, never guessed, and a transcript stating none yields no proposal at all. Each commitment goes through the shared commitment rule: a customer's promise is filed on their contact and never becomes a task; a named colleague's promise read at or above 0.85 becomes their task directly, marked as the reader's; anything else stages for a human (approval kind commitment_task)."
+    doc: "the reading of next steps and commitments out of a meeting transcript, each citing the 1-based transcript lines it was read from. A reading at 0.7 or above is firm. From 0.3 up to just under 0.7 it is a tentative promise, such as \"I will try\": it is kept and always stages for a human (approval kind commitment_task), marked tentative, and never becomes a task by itself. Below 0.3 it is dropped, never guessed, and a transcript stating none yields no proposal at all. Each commitment goes through the shared commitment rule: a customer's promise is filed on their contact and never becomes a task, and a new one stages a follow-up for the member who logged the meeting, titled \"Follow up if <promise> has not arrived\" and due the day after the promised day; nobody responsible means no follow-up. A named colleague's firm promise read at or above 0.85 becomes their task directly, marked as the reader's; anything else stages for a human (approval kind commitment_task). The same call writes a short summary onto the meeting: key points and next steps in the language the meeting was held in, each citing the transcript lines it was read from. A summary citing a line the transcript lacks is dropped, the meeting keeps its earlier summary, and the reading says so; the proposals still count."
 
   propose_roles:
     display_name: "Buying-role reading"

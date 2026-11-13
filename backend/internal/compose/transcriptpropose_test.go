@@ -5,6 +5,8 @@ package compose
 
 import (
 	"encoding/json"
+	"fmt"
+	"slices"
 	"strconv"
 	"strings"
 	"testing"
@@ -121,18 +123,26 @@ func TestAReadingIsRefusedWhenItProposesMoreThanAMeetingCanHold(t *testing.T) {
 	}
 }
 
-func TestTheConfidenceFloorDropsAnUnsureReadingRatherThanRefusingIt(t *testing.T) {
-	sure := proposedStep{Meaning: &commitmentMeaning{State: "open", DeadlinePrecision: "none"}, Summary: "Send pricing", Owner: "Priya", SourceLines: []int{3}, Confidence: transcriptConfidenceFloor}
-	unsure := proposedStep{Meaning: &commitmentMeaning{State: "open", DeadlinePrecision: "none"}, Summary: "Maybe review", Owner: "Dana", SourceLines: []int{4}, Confidence: transcriptConfidenceFloor - 0.01}
-
-	// Both are VALID: the floor is a question about whether a well-formed
-	// reading earns a human's attention, not about whether it may be read.
-	if msg := validateTranscriptPayload(payloadOf(t, sure, unsure), meetingLines(), nil); msg != "" {
+// A firm reading is kept and a guess is dropped. A tentative one is kept for
+// a member to accept, even when it is only optional willingness.
+func TestTheFloorKeepsFirmAndTentativeReadingsAndDropsAGuess(t *testing.T) {
+	var steps []proposedStep
+	for i, confidence := range []schema.Confidence{0.9, 0.69, 0.3, 0.29} {
+		steps = append(steps, proposedStep{
+			Meaning: &commitmentMeaning{State: "optional", DeadlinePrecision: "none"},
+			Summary: fmt.Sprint(confidence), Owner: "Priya", SourceLines: []int{i + 1}, Confidence: confidence,
+		})
+	}
+	if msg := validateTranscriptPayload(payloadOf(t, steps...), meetingLines(), nil); msg != "" {
 		t.Fatalf("an unsure but well-formed reading is valid, got refusal %q", msg)
 	}
-	kept := aboveFloor([]proposedStep{sure, unsure})
-	if len(kept) != 1 || kept[0].Summary != sure.Summary {
-		t.Errorf("only the reading at or above the floor is staged, got %+v", kept)
+	var kept []string
+	for _, step := range aboveFloor(steps) {
+		kept = append(kept, fmt.Sprintf("%s tentative=%v withheld=%q", step.Summary, step.tentative(), step.withheldOutcome()))
+	}
+	want := []string{`0.9 tentative=false withheld="semantic_optional"`, `0.69 tentative=true withheld=""`, `0.3 tentative=true withheld=""`}
+	if !slices.Equal(kept, want) {
+		t.Errorf("the floor kept %q, want %q", kept, want)
 	}
 }
 
@@ -213,15 +223,6 @@ func TestATaskBodySaysWhoPromisedItAndWhereToCheck(t *testing.T) {
 	many := transcriptCommitmentBody("Dana", []int{3, 4})
 	if !strings.Contains(many, "lines 3, 4") {
 		t.Errorf("a multi-line citation must pluralize and list them, got %q", many)
-	}
-}
-
-// The floor checks above all rest on this: schema.Confidence orders against a
-// plain float constant.
-func TestConfidenceComparesAgainstTheFloorConstant(t *testing.T) {
-	var c schema.Confidence = 0.75
-	if !(c >= transcriptConfidenceFloor) {
-		t.Errorf("%v must compare at or above the floor %v", c, transcriptConfidenceFloor)
 	}
 }
 

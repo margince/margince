@@ -9,9 +9,15 @@ import {
 import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { browserZone } from "../format/timezone";
 import { LocaleProvider } from "../i18n";
 import { activityTimeline } from "./activitytimeline";
-import { isTranscriptActivity, TranscriptReadCard } from "./transcriptread";
+import { TimelineRow } from "./timeline";
+import {
+  isTranscriptActivity,
+  TranscriptReadCard,
+  TranscriptSummary,
+} from "./transcriptread";
 
 // Reading a meeting transcript for the next steps it states (S-E04.3).
 //
@@ -58,6 +64,13 @@ type Report = {
     asked_of: { seat_id: string; name?: string | null; is_you: boolean };
   }[];
   created_at: string;
+  summary_refused: boolean;
+  summary?: {
+    read_id: string;
+    generated_at: string;
+    key_points: { text: string; source_lines: number[] }[];
+    next_steps: { text: string; source_lines: number[] }[];
+  };
 };
 
 function report(overrides: Partial<Report>): Report {
@@ -69,6 +82,7 @@ function report(overrides: Partial<Report>): Report {
     proposal_ids: [],
     proposals: [],
     created_at: "2026-08-01T09:00:00Z",
+    summary_refused: false,
     ...overrides,
   };
 }
@@ -563,5 +577,102 @@ describe("which activity carries a transcript", () => {
     ]);
     expect(transcript.detail).toBeTruthy();
     expect(note.detail).toBeUndefined();
+    expect(transcript.lead).toBeTruthy();
+    expect(note.lead).toBeUndefined();
+  });
+});
+
+describe("the summary a reading wrote onto the meeting", () => {
+  const summary = {
+    read_id: "rd-1",
+    generated_at: "2026-08-01T09:01:00Z",
+    key_points: [
+      { text: "Volumes rose fifteen percent.", source_lines: [3, 4] },
+    ],
+    next_steps: [
+      { text: "Lars sends the revised pricing by Friday.", source_lines: [4] },
+    ],
+  };
+
+  it("shows the key points and next steps with the AI mark and the lines each cites", async () => {
+    stubReads({ stored: report({ summary }) });
+    render(<TranscriptSummary activityId="a-1" />);
+
+    const section = await screen.findByRole("region", {
+      name: "Meeting summary",
+    });
+    expect(section.textContent).toContain("AI-assisted");
+    expect(screen.getByText("Volumes rose fifteen percent.")).toBeTruthy();
+    expect(screen.getByText("lines 3–4")).toBeTruthy();
+    expect(
+      screen.getByText("Lars sends the revised pricing by Friday."),
+    ).toBeTruthy();
+    expect(screen.getByText("line 4")).toBeTruthy();
+  });
+
+  it("sits above the transcript on the meeting's timeline row", async () => {
+    stubReads({ stored: report({ summary }) });
+    const [entry] = activityTimeline([
+      {
+        id: "a-1",
+        kind: "meeting",
+        subject: "Graz volumes",
+        source_system: "transcript",
+        body: "Ines: Thanks for making time.\nLars: I will send the pricing.",
+        occurred_at: "2026-08-01T09:00:00Z",
+        occurred_precision: "instant",
+        offers_email: false,
+        is_done: false,
+        source: "manual",
+        captured_by: "human:u-1",
+        created_at: "2026-08-01T09:00:00Z",
+        updated_at: "2026-08-01T09:00:00Z",
+      },
+    ]);
+    if (!entry) throw new Error("the adapter dropped the row");
+    render(
+      <ul>
+        <TimelineRow entry={entry} zone={browserZone()} />
+      </ul>,
+    );
+
+    const point = await screen.findByText("Volumes rose fifteen percent.");
+    const transcript = screen.getByText(/Thanks for making time/);
+    expect(
+      point.compareDocumentPosition(transcript) &
+        Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
+  });
+
+  it("draws nothing for a meeting no reading has summarized", async () => {
+    const { calls } = stubReads({});
+    const { container } = render(<TranscriptSummary activityId="a-1" />);
+    await waitFor(() =>
+      expect(calls.some((call) => call.endsWith("/latest"))).toBe(true),
+    );
+    expect(container.textContent).toBe("");
+  });
+
+  it("says in the reading box that this reading wrote no summary, and keeps the earlier one", async () => {
+    stubReads({
+      stored: report({
+        summary_refused: true,
+        summary,
+        status_detail: "Nobody committed to anything in this call.",
+      }),
+    });
+    render(
+      <>
+        <TranscriptSummary activityId="a-1" />
+        <TranscriptReadCard activityId="a-1" />
+      </>,
+    );
+
+    expect(
+      await screen.findByText(
+        "No summary was written this time. Read the transcript again to retry.",
+      ),
+    ).toBeTruthy();
+    expect(screen.getByText("Volumes rose fifteen percent.")).toBeTruthy();
   });
 });

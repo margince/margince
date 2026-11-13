@@ -7018,6 +7018,11 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "transcriptread.failedFallback": "Chưa có đề xuất nào.",
   "transcriptread.effectFailedTitle":
     "Đã chấp nhận nhưng không thể tạo việc cần làm",
+  "transcriptread.summaryTitle": "Tóm tắt cuộc họp",
+  "transcriptread.keyPoints": "Ý chính",
+  "transcriptread.nextSteps": "Bước tiếp theo",
+  "transcriptread.summaryRefused":
+    "Lần này chưa viết được bản tóm tắt. Đọc lại bản chép lời để thử lại.",
 
   "create.cancel": "Hủy",
   "create.save": "Tạo",
@@ -20654,6 +20659,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "magic.action.approval_overnight": "Xem xét đề xuất",
   "approval.commitment.proposalExpiresIn": "Đề xuất hết hạn sau {countdown}",
   "approval.commitment.noDueDay": "Chưa nêu ngày",
+  "approval.commitment.strength": "Mức chắc chắn",
+  "approval.commitment.tentative": "Chưa chắc chắn: chỉ nói sẽ cố gắng",
   "approval.commitment.promiseStatus": "Trạng thái cam kết",
   "approval.commitment.notFulfilled":
     "Tạo công việc không có nghĩa là cam kết đã được thực hiện.",

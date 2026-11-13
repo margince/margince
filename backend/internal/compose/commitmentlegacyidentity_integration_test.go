@@ -101,8 +101,8 @@ func TestAnUnattributedPromiseLaterFoundToBeTheCustomersIsFiledOnThem(t *testing
 		t.Fatal(err)
 	}
 	e.linkTranscriptContact(t, ids.UUID(contact.Id))
-	again := e.read(t, cannedBrain{reply: attributedReply(t, "Priya Raman", "contact:"+contact.Id.String(), 0.95)})
-	if len(again.ProposalIDs) != 0 || e.taskCount(t) != 0 {
+	e.read(t, cannedBrain{reply: attributedReply(t, "Priya Raman", "contact:"+contact.Id.String(), 0.95)})
+	if e.taskCount(t) != 0 || e.WsCount(t, `SELECT count(*) FROM approval WHERE NOT proposed_change ? 'follow_up_of'`) != 0 {
 		t.Fatal("customer attribution recreated our work")
 	}
 	if got := e.WsCount(t, `SELECT count(*) FROM conversation_claim WHERE kind='commitment_theirs' AND contact_id=$1`, ids.UUID(contact.Id)); got != 1 {

@@ -8,11 +8,8 @@ package compose
 // Reading a meeting transcript for the next steps in it, over real migrated
 // Postgres (S-E04.3, MEET-AC-3/4).
 //
-// The four things that have to be true: a proposal appears staged citing the
-// transcript lines it was read from; NOTHING is written to the timeline before
-// a human confirms (GATE-AI-2); confirming creates the task exactly once, even
-// when the decision is driven twice; and a transcript stating no next steps
-// produces no proposal rather than a guess (GATE-AI-1).
+// A proposal cites its lines, nothing reaches the timeline before a human
+// confirms, confirming writes the task once, and silence proposes nothing.
 
 import (
 	"context"
@@ -82,7 +79,7 @@ func groundedReply(t *testing.T, line int, confidence float64, promiser ids.UUID
 		"summary": "Send the revised pricing", "owner": "Priya", "promiser_ref": "seat:" + promiser.String(),
 		"source_lines": []int{line}, "confidence": confidence,
 		"commitment": &commitmentMeaning{State: "open", DeadlinePrecision: "none"},
-	}}})
+	}}, "meeting_summary": activities.TranscriptSummary{KeyPoints: []activities.TranscriptSummaryPoint{{Text: "Pricing by Friday", SourceLines: []int{line}}}}})
 	if err != nil {
 		t.Fatalf("building the model reply: %v", err)
 	}
@@ -204,6 +201,9 @@ func TestATranscriptReadingStagesACitedProposalAndWritesNothingYet(t *testing.T)
 	if evidence[0].SourceID != e.activity.String() {
 		t.Errorf("the evidence must point back at the transcript activity, got %q", evidence[0].SourceID)
 	}
+	if read.Summary == nil || read.Summary.ReadID != read.ID || read.Summary.KeyPoints[0].SourceLines[0] != 3 {
+		t.Errorf("the reading must write its grounded summary onto the meeting, got %+v", read.Summary)
+	}
 }
 
 // storedEvidence reads the approval's persisted evidence. The test asserts on
@@ -321,6 +321,9 @@ func TestATranscriptStatingNothingProducesNoProposalAndSaysSo(t *testing.T) {
 	if read.StatusDetail == nil || *read.StatusDetail == "" {
 		t.Error("an empty result must explain itself, or it reads as a broken feature")
 	}
+	if read.Outcome == nil || !read.Outcome.SummaryRefused || read.Summary != nil {
+		t.Errorf("a reply with no summary must write none and say so, got %+v", read.Outcome)
+	}
 }
 
 // Lines cited across a gap are not one passage of the transcript. The reading
@@ -369,10 +372,24 @@ func TestAReadingThatCitesALineThatDoesNotExistStagesNothing(t *testing.T) {
 	}
 }
 
+// "I will try" read in the tentative band is put to its promiser, marked
+// tentative, and never written as a task by itself.
+func TestATentativePromiseWaitsForItsPromiserAndIsMarked(t *testing.T) {
+	e := setupTranscript(t)
+	reply := strings.Replace(groundedReply(t, 3, 0.5, e.Rep1), `"state":"open"`, `"state":"optional"`, 1)
+	read := e.read(t, cannedBrain{reply: reply})
+	if len(read.ProposalIDs) != 1 || e.taskCount(t) != 0 {
+		t.Fatalf("a tentative promise became %d proposal(s) and %d task(s); want one proposal", len(read.ProposalIDs), e.taskCount(t))
+	}
+	if n := e.WsCount(t, `SELECT count(*) FROM approval WHERE (proposed_change->>'tentative')::boolean`); n != 1 {
+		t.Errorf("%d proposal(s) are marked tentative, want 1", n)
+	}
+}
+
 func TestAnUnsureReadingIsDroppedRatherThanPutInFrontOfAHuman(t *testing.T) {
 	e := setupTranscript(t)
 
-	read := e.read(t, cannedBrain{reply: groundedReply(t, 3, transcriptConfidenceFloor-0.2, e.Rep1)})
+	read := e.read(t, cannedBrain{reply: groundedReply(t, 3, 0.29, e.Rep1)})
 
 	if read.Status != activities.TranscriptReadDone {
 		t.Fatalf("a below-floor reading is well-formed, so the read completes; got %s", read.Status)
@@ -625,22 +642,11 @@ func datedReply(t *testing.T, line int, due string, promiser ids.UUID) string {
 	return string(raw)
 }
 
-// A deadline stated in the meeting becomes the task's own date.
-//
-// It did not. The proposal carried the day in its title and nothing else, so
-// the accepted task read "No date" on the contact and on the company while its
-// own subject named the eighth — a task nobody would be reminded about, whose
-// text said when it was due.
-//
-// The instant is the END of the named day in the installation's zone: a task
-// due "the 8th" filed at that day's midnight is overdue for the whole of the
-// 8th, which is not what anybody in the meeting agreed to.
+// A deadline stated in the meeting becomes the task's own date. It is the end
+// of the named day in the installation's zone, so it is not overdue that day.
 func TestAStatedDeadlineBecomesTheTasksDueDate(t *testing.T) {
 	e := setupTranscript(t)
-	// The zone is PINNED rather than read back out of settings. Reading it
-	// back would compare the conversion against itself: a broken conversion
-	// and a broken read agree, and the harness runs in UTC where the two are
-	// the same answer anyway.
+	// Pinned, not read back: a broken conversion and a broken read would agree.
 	e.WsExec(t, `UPDATE setting SET value = '"Europe/Berlin"'::jsonb
 		WHERE key = 'installation.timezone'`)
 	read := e.read(t, cannedBrain{reply: datedReply(t, 3, "2026-09-08", e.Rep1)})
@@ -660,24 +666,14 @@ func TestAStatedDeadlineBecomesTheTasksDueDate(t *testing.T) {
 		t.Errorf("the task is due %q, want the end of 8 September in the "+
 			"installation's own zone", due)
 	}
-	// The day the REVIEWER approved, spelled the way the approval card spells
-	// it. The card renders the proposal's `due_date` string with no conversion
-	// at all, so this is literally what the contact clicking Accept was looking
-	// at; asserting the task against the same string is what makes "the
-	// approved day survives acceptance" a checkable claim rather than two
-	// separate ones about a stamp and a render. A proposal for the 8th came
-	// back as a task the reader saw as the 9th, and neither half of it was
-	// wrong on its own.
+	// The card shows the proposal's `due_date` string as it is, so the task's
+	// day must equal the day the reviewer approved.
 	if day, _, _ := strings.Cut(due, " "); day != "2026-09-08" {
 		t.Errorf("the approved day was %q and the task landed on %q", "2026-09-08", day)
 	}
 }
 
 // A next step nobody dated carries no date, rather than today's.
-//
-// The common case, and the one an invented deadline would corrupt: a task due
-// the day it was created is overdue tomorrow, and nobody in the meeting agreed
-// to that either.
 func TestAnUndatedNextStepCarriesNoDeadline(t *testing.T) {
 	e := setupTranscript(t)
 	read := e.read(t, cannedBrain{reply: datedReply(t, 3, "", e.Rep1)})
@@ -795,26 +791,46 @@ func TestAnAmbiguousOwnerAsksNobody(t *testing.T) {
 	e.assertNobodyAsked(t, read)
 }
 
-// A promise the CUSTOMER made is filed on them and watched. It is never a task
-// and never a question: nobody here can do it.
-func TestACustomersPromiseIsWatchedAndNeverATask(t *testing.T) {
+// A customer's promise is filed on them and is never a task. The member who
+// logged the meeting is asked once to chase it, the day after its day.
+func TestACustomersPromiseIsWatchedAndItsLoggerAskedToFollowItUp(t *testing.T) {
 	e := setupTranscript(t)
 	contact, err := e.Contacts.CreateContact(e.Admin(), contacts.CreateContactInput{FullName: "Frédéric de Gombert"})
 	if err != nil {
 		t.Fatalf("creating the customer: %v", err)
 	}
 	e.linkTranscriptContact(t, ids.UUID(contact.Id))
-
-	read := e.read(t, cannedBrain{reply: attributedReply(t, "Frédéric de Gombert", "contact:"+contact.Id.String(), 0.9)})
-	if len(read.ProposalIDs) != 0 || e.taskCount(t) != 0 {
-		t.Fatalf("the customer's promise became %d proposal(s) and %d task(s); it must become neither",
-			len(read.ProposalIDs), e.taskCount(t))
+	promised := clocktest.Now(t).AddDate(0, 0, 7)
+	reply, err := json.Marshal(map[string]any{"proposals": []map[string]any{{
+		"summary": "Send the revised pricing.", "owner": "Frédéric de Gombert", "promiser_ref": "contact:" + contact.Id.String(),
+		"due_date": promised.Format(time.DateOnly), "source_lines": []int{3}, "confidence": 0.9,
+		"commitment": &commitmentMeaning{State: "open", DeadlinePrecision: "day", DeadlineQuote: "Friday"},
+	}}})
+	if err != nil {
+		t.Fatal(err)
 	}
-	watched := e.WsCount(t, `SELECT count(*) FROM conversation_claim
-		WHERE kind = 'commitment_theirs' AND contact_id = $1 AND source_activity_id = $2`,
-		contact.Id, e.activity.UUID)
-	if watched != 1 {
-		t.Errorf("want the customer's promise filed once on their record, got %d claims", watched)
+	first := e.read(t, cannedBrain{reply: string(reply)})
+	e.read(t, cannedBrain{reply: string(reply)})
+	if e.taskCount(t) != 0 || len(first.ProposalIDs) != 1 {
+		t.Fatalf("the customer's promise became %d task(s) and %d proposal(s); want only the follow-up", e.taskCount(t), len(first.ProposalIDs))
+	}
+	got := e.wsString(t, `SELECT count(*)::text || ' ' || string_agg(a.requested_decider_id::text || ' ' || (a.proposed_change->>'due_date') || ' ' ||
+		(a.proposed_change->>'summary') || ' ' || ((a.proposed_change->>'follow_up_of') = c.id::text)::text, ',')
+		FROM conversation_claim c JOIN approval a ON a.kind = 'commitment_task' AND a.status = 'pending'
+		WHERE c.kind = 'commitment_theirs' AND c.contact_id = $1 AND c.source_activity_id = $2`, contact.Id, e.activity.UUID)
+	want := "1 " + e.Rep1.String() + " " + promised.AddDate(0, 0, 1).Format(time.DateOnly) + " Follow up if Send the revised pricing has not arrived true"
+	if got != want {
+		t.Errorf("after two readings the claim and its follow-up read %q, want %q", got, want)
+	}
+	claim := ids.MustParse(e.wsString(t, `SELECT id::text FROM conversation_claim`))
+	e.GrantRole(t, e.AdminUser, "admin")
+	if err := e.Contacts.SettleConversationClaim(e.Admin(), claim, "dismissed"); err != nil {
+		t.Fatalf("dismissing the promise: %v", err)
+	}
+	settled := keptCommitment{transcriptEnv: e, claim: claim, settle: NewCommitmentSettleTrigger(e.Pool, slog.Default())}
+	settled.deliver(t, settled.newest(t, eventClaimChanged, `envelope->'payload'->>'claim_id' = $2`, claim.String()))
+	if status := e.wsString(t, `SELECT status FROM approval WHERE id = $1`, first.ProposalIDs[0]); status == "pending" {
+		t.Error("the follow-up of a dismissed promise still waits for a decision")
 	}
 }
 
