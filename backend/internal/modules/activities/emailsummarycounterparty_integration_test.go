@@ -20,15 +20,16 @@ func TestAPageOfEmailRowsNamesTheFarSideAsTheViewerDoes(t *testing.T) {
 	contact := ids.NewV7()
 	e.exec(t, `INSERT INTO contact (id, full_name, source, captured_by)
 		VALUES ($1, 'Buyer Contact', 'seed', 'system')`, contact)
+	address := "buyer-" + contact.String() + "@far.test"
 	e.exec(t, `INSERT INTO contact_email (contact_id, email, source, captured_by)
-		VALUES ($1, 'buyer@far.test', 'seed', 'system')`, contact)
+		VALUES ($1, $2, 'seed', 'system')`, contact, address)
 	sent := seedPartiedEmail(t, e, "outbound", []partyRow{
 		{role: "from", user: &e.rep},
-		{role: "to", contact: &contact, address: "buyer@far.test"},
+		{role: "to", contact: &contact, address: address},
 		{role: "to", address: "second@far.test"},
 	})
 	received := seedPartiedEmail(t, e, "inbound", []partyRow{
-		{role: "from", contact: &contact, address: "buyer@far.test"},
+		{role: "from", contact: &contact, address: address},
 		{role: "to", user: &e.rep},
 	})
 
