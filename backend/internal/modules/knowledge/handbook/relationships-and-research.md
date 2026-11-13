@@ -334,12 +334,12 @@ An address Margince cannot split stays whole under **Registered address** in the
 
 ### Other readings
 
-- **Dossier**: what this company *is*, written only from facts already on file,
-  with every sentence naming one.
+- **Dossier**: what this company *is*, written only from facts already on file, with every sentence naming one.
 - **Account scan**: a reading of one company *for you*, naming records and
   showing words. It is never shared, because it is made from what you can see.
 - **Growth fit**: what this company is worth to *you*, in bands. While facts are missing, it lists
-  the facts it is judged on and how many it needs. You can add a missing one there.
+  the facts it is judged on and how many it needs. If you may edit the company, add one there.
+  Technology is the one you cannot add: only a read of the website finds it.
 - **VAT check**: asks the EU list and keeps the answer. A company never
   checked shows as not checked, not as failed.
 - **Hierarchy rollup**: the numbers of a parent company, with the companies under it that you can read added in.

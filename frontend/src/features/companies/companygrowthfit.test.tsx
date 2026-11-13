@@ -1,6 +1,7 @@
 /** @vitest-environment happy-dom */
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { cleanup, render, screen, waitFor } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../../api/schema";
 import { LocaleProvider, translate } from "../../i18n";
@@ -367,7 +368,9 @@ describe("what the fit is judged on", () => {
     },
   };
 
-  function route(fit: GrowthFit) {
+  type ProfileField = components["schemas"]["CompanyProfileField"];
+
+  function route(fit: GrowthFit, read: readonly ProfileField[]) {
     const answer = (body: unknown) =>
       new Response(JSON.stringify(body), {
         status: 200,
@@ -397,6 +400,7 @@ describe("what the fit is judged on", () => {
                 version: 1,
                 updated_at: "2026-08-01T09:00:00Z",
               },
+              ...read,
             ],
           });
         }
@@ -420,8 +424,11 @@ describe("what the fit is judged on", () => {
     );
   }
 
-  async function showFor(record: typeof company) {
-    route(THREE_OF_SEVEN);
+  async function showFor(
+    record: typeof company,
+    read: readonly ProfileField[] = [],
+  ) {
+    route(THREE_OF_SEVEN, read);
     render(
       <QueryClientProvider
         client={
@@ -437,16 +444,17 @@ describe("what the fit is judged on", () => {
   }
 
   it("lists all seven inputs, the three recorded with their values", async () => {
+    const user = userEvent.setup();
     await showFor({ ...company, industry: null });
 
     for (const label of [
-      "What they offer",
-      "Who they sell to",
+      "Offering",
+      "Ideal customer profile",
       "Industry",
-      "Who does the buying",
-      "What they buy for",
-      "Company size",
-      "Technology they run",
+      "Buying center",
+      "Purchase triggers",
+      "Employees",
+      "Technology",
     ]) {
       expect(screen.getByText(label)).toBeTruthy();
     }
@@ -459,9 +467,30 @@ describe("what the fit is judged on", () => {
     // Technology has no form: it comes from reading the site.
     expect(screen.getByText("Found when the website is read.")).toBeTruthy();
     // A gap opens the Profile tab's own editor for that field.
+    await user.click(
+      await screen.findByRole("button", { name: /Ideal customer profile/ }),
+    );
     expect(
-      await screen.findByRole("button", { name: /Who they sell to/ }),
+      await screen.findByRole("textbox", { name: /Ideal customer profile/ }),
     ).toBeTruthy();
+  });
+
+  it("shows a site-read industry the record field lacks, as out of date", async () => {
+    await showFor({ ...company, industry: null }, [
+      {
+        field: "industry",
+        value: "Logistics",
+        source: "site_read",
+        captured_by: "agent-1",
+        retrieved_at: "2025-01-01T09:00:00Z",
+        version: 1,
+        updated_at: "2025-01-01T09:00:00Z",
+      },
+    ]);
+
+    expect(screen.getByText(/Logistics/)).toBeTruthy();
+    expect(screen.getAllByText("Out of date")).toHaveLength(1);
+    expect(screen.getAllByText("Missing")).toHaveLength(3);
   });
 
   it("tells a reader who cannot edit the account why, once", async () => {
@@ -478,7 +507,7 @@ describe("what the fit is judged on", () => {
     // The gaps still show, with no editor that could only fail at the save.
     expect(screen.getAllByText("Missing")).toHaveLength(4);
     expect(
-      screen.queryByRole("button", { name: /Who they sell to/ }),
+      screen.queryByRole("button", { name: /Ideal customer profile/ }),
     ).toBeNull();
   });
 });

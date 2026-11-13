@@ -26,16 +26,16 @@ type GrowthFitInput = components["schemas"]["GrowthFitInput"];
 type ProfileFieldKey = components["parameters"]["ProfileFieldKey"];
 type Edit = ReturnType<typeof useCompanyEditGate>;
 
-// A full record: an input added to the contract without a label here fails
-// the type check.
+// Each row reads as the Profile tab and facts panel name the same field. A
+// full record, so an input added to the contract without a label fails tsc.
 const ROW_LABELS: Record<GrowthFitInput, MessageKey> = {
-  offer_summary: "co.growthFit.row.offerSummary",
-  icp: "co.growthFit.row.icp",
-  industry: "co.growthFit.row.industry",
-  buying_center: "co.growthFit.row.buyingCenter",
-  buying_intents: "co.growthFit.row.buyingIntents",
-  employee_range: "co.growthFit.row.employeeRange",
-  technology: "co.growthFit.row.technology",
+  offer_summary: "co.profileField.offer_summary",
+  icp: "co.profileField.icp",
+  industry: "co.profileField.industry",
+  buying_center: "co.profileField.buying_center",
+  buying_intents: "co.profileField.buying_intents",
+  employee_range: "co.factField.employee_range",
+  technology: "co.factField.technology",
 };
 
 // The inputs held as profile fields, written through the Profile tab's writer.
@@ -77,7 +77,7 @@ export function GrowthFitInputs({
       <FieldGrid>
         {completeness.inputs.map((state) => (
           <InputRow
-            key={state.input}
+            key={`${company.id}:${state.input}`}
             company={company}
             input={state.input}
             present={state.present}
@@ -141,14 +141,21 @@ function ProfileInputRow({
   );
 }
 
+// The fit counts a site-read industry when the record's own is empty. So the
+// row shows that read value too.
 function IndustryRow({ company, input, present, edit }: RowProps) {
   const t = useT();
   const { choice } = useRowBuilders(company, edit);
   const options = useIndustryOptions(company);
   const row = choice("industry", "create.industry", options);
+  const profile = useCompanyProfileFields(company.id);
+  const read = row.empty
+    ? (profile.data ?? []).find((one) => one.field === "industry")?.value.trim()
+    : undefined;
   return (
     <FieldRow label={t(labelFor(ROW_LABELS, input))}>
-      <InputState present={present} recorded={!row.empty} />
+      <InputState present={present} recorded={!row.empty || Boolean(read)} />
+      {read && <span>{read} </span>}
       {row.value}
     </FieldRow>
   );
