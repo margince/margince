@@ -95,11 +95,7 @@ export function RowActs({
     (way) => way !== lead && !(linked && way.destination === href),
   );
   const pins = allowPin && !item.batch;
-  // Only a task carries an assignee, and a group row names no single activity.
-  // The server withholds Done from a task the reader may not change, and the
-  // hand-off's write would be refused there the same way.
-  const handsOff =
-    item.source === "task" && !item.batch && item.actions.includes("complete");
+  const handsOff = handsOffTask(item);
   // One write for Done and the menu's lines, so the two cannot write twice.
   const write = useRowPutDown(item);
   const putsDown = write.offered.some(
@@ -163,13 +159,7 @@ export function RowActs({
           ))}
           {pins && <PinLine item={item} />}
           {handsOff && (
-            <Button variant="ghost" onClick={() => setHandingOff(true)}>
-              {t(
-                item.kind === "website_inquiry"
-                  ? "inquiry.assignment.assign"
-                  : "worklist.manager.reassign",
-              )}
-            </Button>
+            <HandOffLine item={item} onHandOff={() => setHandingOff(true)} />
           )}
           <HandBackLines write={write} />
         </OverflowMenu>
@@ -185,6 +175,32 @@ export function RowActs({
         </QuietVerbs>
       )}
     </div>
+  );
+}
+
+// Only a task carries an assignee, and a group row names no single activity.
+// The server withholds Done from a task the reader may not change, and the
+// hand-off's write would be refused there the same way.
+function handsOffTask(item: WorklistItem): boolean {
+  return (
+    item.source === "task" && !item.batch && item.actions.includes("complete")
+  );
+}
+
+/** The menu line that opens the hand-off form, in the words of what it moves. */
+function HandOffLine({
+  item,
+  onHandOff,
+}: Readonly<{ item: WorklistItem; onHandOff: () => void }>) {
+  const t = useT();
+  return (
+    <Button variant="ghost" onClick={onHandOff}>
+      {t(
+        item.kind === "website_inquiry"
+          ? "inquiry.assignment.assign"
+          : "worklist.manager.reassign",
+      )}
+    </Button>
   );
 }
 
