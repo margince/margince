@@ -1,6 +1,8 @@
 package ownerbranch
 
 import (
+	"context"
+	"fmt"
 	"net/http"
 
 	"example.test/auth"
@@ -67,4 +69,18 @@ func (h Handlers) GetEachRowCheckingInside(w http.ResponseWriter, r *http.Reques
 func (h Handlers) GetAfterTheCatalog(w http.ResponseWriter, r *http.Request) {
 	names := auth.Catalog()
 	httperr.WriteJSON(w, http.StatusOK, map[string][]int{names[0]: teamFigures()})
+}
+
+// A new error beside a figure does not make the return a refusal.
+func teamFigureBesideARefusal(ctx context.Context) ([]int, error) {
+	return teamFigures(), fmt.Errorf("the team is too small")
+}
+
+func (h Handlers) GetAFigureBesideARefusal(w http.ResponseWriter, r *http.Request) {
+	out, err := teamFigureBesideARefusal(r.Context())
+	if err != nil {
+		httperr.Write(w, r, err)
+		return
+	}
+	httperr.WriteJSON(w, http.StatusOK, out)
 }

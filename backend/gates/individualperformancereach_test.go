@@ -63,6 +63,9 @@ var answersNoColleagueFigure = []switchReader{
 	{"commissions", "Store.Summary"},     // what is owed to partners, grouped by partner, never by seat
 }
 
+// toolDispatchers run the tool a route names by its verb.
+var toolDispatchers = []switchReader{{"agents", "Registry.Invoke"}}
+
 // valueSite is one expression stored in a variable or field of func type,
 // with the type information of the file it is written in.
 type valueSite struct {
@@ -87,17 +90,18 @@ type paramSlot struct {
 // some expression turns into an interface value; stored holds what each
 // func-typed variable or field is ever given.
 type switchGraph struct {
-	fset      *token.FileSet
-	decls     map[*types.Func]*ast.FuncDecl
-	pkgOf     map[*types.Func]string
-	infos     map[*types.Func]*types.Info
-	converted map[types.Type]bool
-	stored    map[*types.Var][]valueSite
-	calls     map[*types.Func][]invocation
-	paramOf   map[*types.Var]paramSlot
-	writers   map[*types.Var]bool
-	readerSet map[*types.Func]bool
-	bareSet   map[*types.Func]bool
+	fset        *token.FileSet
+	decls       map[*types.Func]*ast.FuncDecl
+	pkgOf       map[*types.Func]string
+	infos       map[*types.Func]*types.Info
+	converted   map[types.Type]bool
+	stored      map[*types.Var][]valueSite
+	calls       map[*types.Func][]invocation
+	paramOf     map[*types.Var]paramSlot
+	writers     map[*types.Var]bool
+	readerSet   map[*types.Func]bool
+	bareSet     map[*types.Func]bool
+	dispatchSet map[*types.Func]bool
 }
 
 // loadSwitchGraph type-checks the packages under dirs, each after the ones it
@@ -404,6 +408,14 @@ func (g *switchGraph) readers(readers, bare []switchReader) error {
 		return err
 	}
 	g.bareSet, err = g.resolveNamed(bare)
+	return err
+}
+
+// dispatchers names the functions that run the tool their second argument
+// names, as the tool registry does for a route that serves a tool.
+func (g *switchGraph) dispatchers(named []switchReader) error {
+	var err error
+	g.dispatchSet, err = g.resolveNamed(named)
 	return err
 }
 
