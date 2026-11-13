@@ -61,6 +61,7 @@ var taskSourceWriters = map[string][]string{
 	"compose/commitmenttask.go:writeCommitmentTask":                       {provenance.CommitmentTaskSource},
 	"compose/leadsla.go:Apply":                                            {provenance.LeadSLATaskSource},
 	"compose/reconcile.go:followUpTaskInput":                              {provenance.OvernightReconcileSource},
+	"compose/reconcile.go:followUpConfirmEffect":                          {provenance.OvernightReconcileSource},
 	"modules/activities/requesttask.go:emailRequestTaskInput":             {provenance.EmailRequestSource},
 	"modules/automation/taskeffect.go:taskCreateEffectFor":                provenance.EngineTaskSources(),
 	"compose/csvactivityfields.go:activityCreateFrom":                     {writesCallerSource},

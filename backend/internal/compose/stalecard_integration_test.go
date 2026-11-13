@@ -33,12 +33,8 @@ func TestAFollowUpNoLongerNeededIsWithdrawnWithItsReason(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			e := setupReconcile(t)
 			deal := e.SeedDeal(t, "Moved on", e.pipeline, e.open, &e.Rep1)
-			e.seedInteraction(t, deal, "call", "Discovery", 1)
-			if err := e.reconcile(); err != nil {
-				t.Fatal(err)
-			}
-			evidence, _, _ := e.followUpEvidence(t, deal)
-			id, _ := e.stageLegacyFollowUp(t, deal, evidence)
+			call := e.seedInteraction(t, deal, "call", "Discovery", 1)
+			id, _ := e.stageLegacyFollowUp(t, deal, call)
 			meanwhile(e, deal)
 
 			_, err := e.svc.Decide(e.As(e.Rep1, []ids.UUID{e.Team1}, reconcilePerms), id, true, nil)
@@ -56,12 +52,8 @@ func TestAFollowUpNoLongerNeededIsWithdrawnWithItsReason(t *testing.T) {
 func TestTheFollowUpEffectWritesNothingOnceTheDealHasANextStep(t *testing.T) {
 	e := setupReconcile(t)
 	deal := e.SeedDeal(t, "Booked meanwhile", e.pipeline, e.open, &e.Rep1)
-	e.seedInteraction(t, deal, "call", "Discovery", 1)
-	if err := e.reconcile(); err != nil {
-		t.Fatal(err)
-	}
-	evidence, _, _ := e.followUpEvidence(t, deal)
-	id, _ := e.stageLegacyFollowUp(t, deal, evidence)
+	call := e.seedInteraction(t, deal, "call", "Discovery", 1)
+	id, _ := e.stageLegacyFollowUp(t, deal, call)
 	e.seedMeeting(t, deal, "Next Thursday", -72, 3600, "booked")
 
 	effectOnly := approvals.NewService(e.DB())

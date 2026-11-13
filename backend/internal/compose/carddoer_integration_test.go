@@ -149,13 +149,9 @@ func TestTheDealOwnerHandsAFollowUpToAColleague(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			e := setupReconcile(t)
 			deal := e.SeedDeal(t, "Handed on", e.pipeline, e.open, &e.Rep1)
-			e.seedInteraction(t, deal, "call", "Discovery", 1)
-			if err := e.reconcile(); err != nil {
-				t.Fatal(err)
-			}
+			call := e.seedInteraction(t, deal, "call", "Discovery", 1)
 			doer := c.prepare(e)
-			evidence, _, _ := e.followUpEvidence(t, deal)
-			id, proposal := e.stageLegacyFollowUp(t, deal, evidence)
+			id, proposal := e.stageLegacyFollowUp(t, deal, call)
 			proposal.DoerID = doer.String()
 			edited, err := json.Marshal(proposal)
 			if err != nil {
