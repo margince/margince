@@ -177,18 +177,21 @@ func TestPolicyNoneClearsCallerMetadataWithoutReadingCompany(t *testing.T) {
 		System: "unchanged", Messages: []model.Message{{Role: "user", Content: "classify"}},
 		ContextScopes: []string{"administrative"}, ContextFingerprint: strings.Repeat("f", 64),
 	}
-	got, err := provider.Prepare(context.Background(), ai.TaskCaptureClassify, original)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if len(reader.calls) != 0 {
-		t.Fatalf("policy-none task read company context: %v", reader.calls)
-	}
-	if len(got.ContextScopes) != 0 || got.ContextFingerprint != "" {
-		t.Fatalf("policy-none task retained caller metadata: %+v", got)
-	}
-	if got.System != original.System || !reflect.DeepEqual(got.Messages, original.Messages) {
-		t.Fatalf("policy-none task prompt changed: %+v", got)
+	// A rewrite keeps the rep's words, so it is held to carry no company context too.
+	for _, task := range []ai.Task{ai.TaskCaptureClassify, ai.TaskRewrite} {
+		got, err := provider.Prepare(context.Background(), task, original)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if len(reader.calls) != 0 {
+			t.Fatalf("%s read company context: %v", task, reader.calls)
+		}
+		if len(got.ContextScopes) != 0 || got.ContextFingerprint != "" {
+			t.Fatalf("%s retained caller metadata: %+v", task, got)
+		}
+		if got.System != original.System || !reflect.DeepEqual(got.Messages, original.Messages) {
+			t.Fatalf("%s prompt changed: %+v", task, got)
+		}
 	}
 }
 

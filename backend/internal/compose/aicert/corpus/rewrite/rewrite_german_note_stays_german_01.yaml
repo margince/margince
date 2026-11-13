@@ -1,5 +1,5 @@
-name: draft_reply_rewrite_german_note_stays_german
-task: draft_reply
+name: rewrite_german_note_stays_german
+task: rewrite
 site: rewrite
 source: hand_authored
 sanitized_by: hand_authored/claude-opus-5-5

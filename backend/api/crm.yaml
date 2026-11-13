@@ -70229,6 +70229,7 @@ components:
         - report_interpret
         - report_setup
         - request_settlement
+        - rewrite
         - signal_extract
         - site_extract
         - site_fact_extract
@@ -70253,7 +70254,7 @@ components:
          site_triage, stage_evidence_extract, summarize, transcript, transcript_propose, voice_build,
          corpus_ask, weekly_review, weekly_learnings, propose_roles, owed_verdict,
          request_settlement, account_scan, tag_suggest, report_setup, report_interpret,
-         reader_rendering, deal_verdict]
+         reader_rendering, deal_verdict, rewrite]
       x-extensible-enum: true
       description: |
         What kind of AI work an occurrence is. Every AI task this build can run reports here,

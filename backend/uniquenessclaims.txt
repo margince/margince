@@ -241,7 +241,7 @@ internal/modules/activities/projectcoverage.go#type ProjectActivityFacts.Unattri
 internal/modules/activities/retentionstamp.go#const retentionClassCorrespondence
 internal/modules/activities/retentionstampproject.go#const BasisProjectLinked
 internal/modules/activities/scheduledsend.go#const block at const FieldScheduledAt
-internal/modules/activities/scheduledsendfire.go#method Store.OverdueScheduledSends
+internal/modules/activities/scheduledsendrearm.go#method Store.OverdueScheduledSends
 internal/modules/activities/scheduledsendstore.go#const scheduledSendStatusExpr
 internal/modules/activities/scheduling.go#const block at const assumedMeetingDuration
 internal/modules/activities/scheduling.go#var block at var errAvailabilityToNotAfterFrom

@@ -250,3 +250,44 @@ describe("a conversation's chosen deal", () => {
     expect(view.result.current.body).toBe("The first draft.");
   });
 });
+
+describe("the purpose the words were drafted to", () => {
+  it("parks and restores it with the purpose on a switch of conversation", () => {
+    const view = renderHook(() =>
+      useComposeFields({ askedIntent: "Follow up" }),
+    );
+    act(() => view.result.current.setIntent("Send the offer"));
+    const parked = view.result.current.snapshot();
+    act(() => view.result.current.load(emptyFields()));
+    expect(view.result.current.draftedIntent).toBe("");
+
+    act(() => view.result.current.load(parked));
+
+    expect(view.result.current.intent).toBe("Send the offer");
+    expect(view.result.current.draftedIntent).toBe("Follow up");
+  });
+
+  it("counts a restored purpose as the one its saved words were drafted to", () => {
+    const view = renderHook(() =>
+      useComposeFields({ askedIntent: "Follow up" }),
+    );
+
+    act(() =>
+      view.result.current.restoreSaved({
+        to: [],
+        cc: [],
+        bcc: [],
+        subject: "",
+        body: DRAFTED,
+        html: "",
+        files: [],
+        context: "",
+        sendAt: "",
+        editorState: { intent: "Send the offer", ai_generated: true },
+      }),
+    );
+
+    expect(view.result.current.intent).toBe("Send the offer");
+    expect(view.result.current.draftedIntent).toBe("Send the offer");
+  });
+});

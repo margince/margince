@@ -21,7 +21,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/ports/model"
 )
 
-const certSite = "draft_reply/rewrite"
+const certSite = "rewrite/rewrite"
 
 // certFixture is one press of a rewrite verb: the rep's words and the reader.
 type certFixture struct {
@@ -38,12 +38,12 @@ type certExpectation struct {
 	Omits []string `json:"omits"`
 }
 
-// CertCases serves the draft_reply/rewrite site to the certification lane.
+// CertCases serves the rewrite/rewrite site to the certification lane.
 type CertCases struct{}
 
-// Site names the draft_reply/rewrite site this case certifies.
+// Site names the rewrite/rewrite site this case certifies.
 func (CertCases) Site() aitasks.Site {
-	return aitasks.Site{Task: ai.TaskDraftReply, Variant: "rewrite", Kind: ai.SiteKindOneShot}
+	return aitasks.Site{Task: ai.TaskRewrite, Variant: "rewrite", Kind: ai.SiteKindOneShot}
 }
 
 // Prepare refuses a scenario no answer could pass: no text, an unshipped

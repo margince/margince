@@ -14,7 +14,7 @@ import {
   writeMessage,
 } from "../../design-system/richtext-testing";
 import { LocaleProvider } from "../../i18n";
-import { draftButton } from "../../testing/composedraft.testkit";
+import { draftButton, redraft } from "../../testing/composedraft.testkit";
 import {
   allowedPreview,
   isPreviewDoor,
@@ -209,10 +209,7 @@ describe("drafting to a lead", () => {
     });
 
     writeMessage("Body", "Hi Dung, short. My own line.");
-    await userEvent.click(
-      screen.getByRole("button", { name: "Change the ask" }),
-    );
-    await userEvent.click(draftButton());
+    await redraft();
     await waitFor(() => expect(messageText("Body")).toBe(third.body));
     const again = sent.filter((c) => c.key === "POST /leads/l-1/draft-email");
     expect(again[1]?.body).toMatchObject({

@@ -281,7 +281,7 @@ func (s *Store) Invitation(ctx context.Context, id ids.UUID) (crmcontracts.Meeti
 func invitationSource(ctx context.Context) string {
 	actor, _ := principal.Actor(ctx)
 	if actor.ID == "system:public_booking" {
-		return "public_booking"
+		return publicBookingSource
 	}
 	return sourceManual
 }

@@ -42,6 +42,7 @@ var familyPaths = map[string][]string{
 	"reports": {
 		"/analytics/reports", "/reports", "/analytics/evaluate", "/analytics/evaluate.csv", "/analytics/metrics",
 		"/analytics/schedules", "/analytics/executions", "/analytics/sdr-summary", "/analytics/sdr-team",
+		"/analytics/assessment", "/analytics/account-coverage", "/analytics/context",
 	},
 	"analytics questions":           {"/analytics/schema", "/analytics/query", "/analytics/runs", "/analytics/explain", "/analytics/vocabulary"},
 	"forecasts and forecast shares": {"/forecast"},
@@ -126,6 +127,11 @@ func scopedOperations(paths map[string]any, families []string, placed map[string
 		}
 		if count == 0 {
 			return nil, fmt.Errorf("the family %q lies on no contract operation, so nothing of it is checked", family)
+		}
+		for _, prefix := range placed[family] {
+			if !slices.ContainsFunc(slices.Collect(maps.Keys(paths)), func(path string) bool { return onPath(path, prefix) }) {
+				return nil, fmt.Errorf("the family %q names the path %q, which the contract no longer has", family, prefix)
+			}
 		}
 	}
 	return ops, nil

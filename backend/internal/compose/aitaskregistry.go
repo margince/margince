@@ -59,7 +59,7 @@ func NewTaskCensus() (*aitasks.Registry, error) {
 	oneShot(ai.TaskSummarize, "meeting_brief", meetingBriefCases{})
 	oneShot(ai.TaskDraftReply, "intro", introDraftCases{})
 	oneShot(ai.TaskDraftReply, "intro_note", introNoteCases{})
-	oneShot(ai.TaskDraftReply, "rewrite", rewrite.CertCases{})
+	oneShot(ai.TaskRewrite, "rewrite", rewrite.CertCases{})
 	oneShot(ai.TaskProposeRoles, "committee", proposeRolesCases{})
 	oneShot(ai.TaskNlSearch, "filter_propose", filterProposeCases{})
 	oneShot(ai.TaskReaderRendering, "activity_text", readerRenderingCases{})

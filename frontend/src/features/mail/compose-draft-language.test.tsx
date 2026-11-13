@@ -12,7 +12,7 @@ import {
   writeMessage,
 } from "../../design-system/richtext-testing";
 import { pickOption } from "../../design-system/select-testing";
-import { draftButton } from "../../testing/composedraft.testkit";
+import { draftButton, redraft } from "../../testing/composedraft.testkit";
 import { ComposeModal } from "./compose";
 import {
   jsonResponse,
@@ -279,8 +279,7 @@ describe("the language of an AI draft", () => {
 
     await user.click(screen.getByRole("button", { name: "Shorter" }));
     await waitFor(() => expect(messageText("Body")).toBe("Chào chị,"));
-    await user.click(screen.getByRole("button", { name: "Change the ask" }));
-    await user.click(draftButton());
+    await redraft(user);
     await waitFor(() =>
       expect(draftCalls(sent, CONTACT_ROUTE)).toHaveLength(3),
     );
@@ -290,7 +289,10 @@ describe("the language of an AI draft", () => {
       verb: "shorter",
       language: "vi",
     });
-    expect(again?.body).toMatchObject({ intent: INTENT, language: "vi" });
+    expect(again?.body).toMatchObject({
+      intent: `${INTENT} again`,
+      language: "vi",
+    });
   });
 
   it("is left to the server while the rep has picked none", async () => {
@@ -373,8 +375,7 @@ describe("the language of an AI draft", () => {
     expect(await screen.findByText(KEPT_NOTICE)).toBeTruthy();
     expect(messageText("Body")).toBe("Hello Dana, and my own line.");
     expect(languagePicker().textContent).toContain("English");
-    await user.click(screen.getByRole("button", { name: "Change the ask" }));
-    await user.click(draftButton());
+    await redraft(user);
     await waitFor(() =>
       expect(draftCalls(sent, CONTACT_ROUTE)).toHaveLength(3),
     );
@@ -449,8 +450,7 @@ describe("the language of an AI draft", () => {
     await waitFor(() =>
       expect(languagePicker().textContent).toContain("English"),
     );
-    await user.click(screen.getByRole("button", { name: "Change the ask" }));
-    await user.click(draftButton());
+    await redraft(user);
     await waitFor(() =>
       expect(draftCalls(sent, CONTACT_ROUTE)).toHaveLength(3),
     );

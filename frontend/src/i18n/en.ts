@@ -3289,7 +3289,7 @@ export const en = {
   // a reader, so the screen states the fact it can stand behind and stops.
   "common.errorNoCause": "The request failed. No cause reported.",
   "common.assistantUnavailable":
-    "The assistant did not respond, so no draft was created. Enter the details manually, or ask an administrator to check the model in Settings under AI.",
+    "The AI did not answer. Try again, or ask your admin to check Settings → AI.",
   "common.providerOutOfCredit":
     "The AI provider has no credit left. Contact your system administrator.",
   "common.providerUnauthorized":
@@ -7781,7 +7781,7 @@ export const en = {
   "compose.draftEmail": "Draft email",
   "compose.drafting": "Drafting…",
   "compose.draftingBody": "Writing the draft.",
-  "compose.askAgain": "Change the ask",
+  "compose.redraft": "Redraft",
   "compose.discardDraft": "Discard draft",
   "compose.discardDraftHint":
     "Marks this draft as a miss for your Voice DNA. The generated text is never kept.",
@@ -21605,6 +21605,7 @@ export const en = {
   "aiTask.name.report_setup": "Setting up a report from a description",
   "aiTask.name.request_settlement":
     "Checking whether the reply answered the request",
+  "aiTask.name.rewrite": "Rewriting",
   "aiTask.name.signal_extract": "Signal extraction",
   "aiTask.name.site_extract": "Website research",
   "aiTask.name.site_fact_extract": "Website fact extraction",

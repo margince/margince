@@ -1,8 +1,7 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-import { RefreshCw, RotateCcw, Undo2 } from "lucide-react";
-import { useId, useState } from "react";
+import { RotateCcw, Undo2 } from "lucide-react";
 import type { components } from "../../api/schema";
 import { ErrorLine } from "../../design-system/errorline";
 import { IconAction } from "../../design-system/iconaction";
@@ -20,8 +19,8 @@ type VoiceProfile = components["schemas"]["VoiceProfile"];
 
 /**
  * The line above the words that a model writes through: the ask for a draft.
- * Once a draft stands, one line discloses it and holds its rewrites, the ask
- * again (folded, so a changed steer can redraft) and the discard.
+ * Once a draft stands, the purpose it was written to stays on screen to be
+ * corrected, and one line discloses the draft with its rewrites and discard.
  */
 export function AiDraftBand({
   replying,
@@ -65,9 +64,6 @@ export function AiDraftBand({
       disabled={control.pending || control.disabled}
     />
   );
-  const offerId = useId();
-  // Held per draft: a new draft is a new provenance, which folds the ask away.
-  const [askingOver, setAskingOver] = useState<typeof provenance>(null);
   const offer = (
     <DraftOffer
       replying={replying}
@@ -76,6 +72,10 @@ export function AiDraftBand({
       draft={control}
       unavailable={fields.draftUnavailable}
       need={voice.need}
+      verb={offerVerb(
+        drafted && provenance !== null,
+        fields.intent !== fields.draftedIntent,
+      )}
     />
   );
   if (!drafted || !provenance) {
@@ -87,9 +87,9 @@ export function AiDraftBand({
       </div>
     );
   }
-  const asking = askingOver === provenance;
   return (
     <div className="compose-aiband">
+      {offer}
       <DraftBand
         provenance={provenance}
         maturity={voiceMaturity}
@@ -98,12 +98,6 @@ export function AiDraftBand({
           <>
             {languagePick}
             {rewrites}
-            <IconAction
-              label={t("compose.askAgain")}
-              icon={<RefreshCw aria-hidden="true" />}
-              onClick={() => setAskingOver(asking ? null : provenance)}
-              disclosure={{ expanded: asking, controls: offerId }}
-            />
             {discard && (
               <IconAction
                 // Discarding tells the voice profile this draft missed; it is
@@ -119,14 +113,17 @@ export function AiDraftBand({
           </>
         }
       />
-      {asking ? (
-        <div id={offerId}>{offer}</div>
-      ) : (
-        control.error && <ErrorLine>{control.error}</ErrorLine>
-      )}
       {discard?.error && <ErrorLine>{discard.error}</ErrorLine>}
     </div>
   );
+}
+
+function offerVerb(
+  standing: boolean,
+  purposeChanged: boolean,
+): "draft" | "redraft" | null {
+  if (!standing) return "draft";
+  return purposeChanged ? "redraft" : null;
 }
 
 function rewriteRefusal(
