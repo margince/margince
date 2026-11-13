@@ -26,8 +26,7 @@ func promiseFor(body string, due time.Time) crmcontracts.ConversationClaim {
 }
 
 // One invitation sent to three attendees is filed as a promise to each of
-// them. The second mailbox that received it was read in other words. The brief
-// asks about it once and names all three.
+// them. The brief asks about it once and names all three.
 func TestOnePromiseToSeveralAttendeesIsAskedOnce(t *testing.T) {
 	due := at(20)
 	names := []string{"Ana Roth", "Ben Ito", "Cleo Marx"}
@@ -38,9 +37,7 @@ func TestOnePromiseToSeveralAttendeesIsAskedOnce(t *testing.T) {
 		room.Attendees = append(room.Attendees, attendeeRow{ContactID: contact, FullName: name})
 		perAttendee[contact] = []crmcontracts.ConversationClaim{promiseFor(sessionPromise, due)}
 	}
-	reworded := "Lan Pham will conduct an introduction and clarification session on the archive solution on October 30, 2026."
 	perAttendee[room.Attendees[1].ContactID] = append(perAttendee[room.Attendees[1].ContactID],
-		promiseFor(reworded, due),
 		promiseFor("Lan Pham will send the pricing sheet.", due))
 
 	in := FromMeeting(room, perAttendee, at(10))
@@ -79,6 +76,8 @@ func TestClaimsThatOnlyReadAlikeStayApart(t *testing.T) {
 		first, second string
 		secondDue     *time.Time
 	}{
+		"another wording, same day":  {sessionPromise, "Lan Pham will conduct an introduction session on the archive solution on October 30, 2026.", &due},
+		"one word apart":             {"Lan will send the signed contract.", "Lan will send the signed invoice.", &due},
 		"another deliverable":        {"Lan will send the pricing sheet.", "Lan will send the signed contract.", &due},
 		"another order, another day": {"Send the contract before the invoice.", "Send the invoice before the contract.", &later},
 	} {

@@ -5,10 +5,8 @@ package meetingbrief
 
 // One promise, one line. The claim store files a claim per contact, so a
 // promise made on a thread with three attendees reaches the brief three times.
-// Every mailbox that received the same invitation is also read on its own, so
-// one promise can come back a second time in other words. Both are folded here,
-// before anything ranks or quotes a claim, into one claim that names everyone
-// it was made to.
+// The copies are folded here, before anything ranks or quotes a claim, into one
+// claim that names everyone it was made to.
 
 import (
 	"fmt"
@@ -16,21 +14,9 @@ import (
 	"strings"
 	"time"
 	"unicode"
-	"unicode/utf8"
 
 	"github.com/margince/margince/backend/internal/shared/kernel/langcopy"
 )
-
-// nearClaimOverlap is the share of the shorter claim's long words the other
-// must repeat for two claims due the same day to be one promise. Two readings
-// of one invitation share the names, the subject and the date, and differ in
-// the verb the extractor chose.
-const nearClaimOverlap = 0.6
-
-// longWord is the fewest letters a word needs to count toward the overlap.
-// Two different promises share their articles and prepositions; the object of
-// the promise is what tells them apart.
-const longWord = 4
 
 var claimWords = struct{ And langcopy.Phrase }{
 	And: langcopy.Phrase{En: "%s and %s", De: "%s und %s", Vi: "%s và %s"},
@@ -58,45 +44,20 @@ func foldSameClaims(claims []ClaimIn) []ClaimIn {
 }
 
 // sameClaim needs the same kind and status, because a kept promise and an open
-// one are two facts even when they read alike. The same words in the same
-// order are one promise unless the two are due on different days. Similar
-// wording is one promise only when both are due the same day.
+// one are two facts even when they read alike. It needs the same words in the
+// same order. Two wordings can share most of their words and still name two
+// deliverables, so close wording is never one promise. Known due days agree.
 func sameClaim(a, b ClaimIn) bool {
-	if a.Kind != b.Kind || a.Status != b.Status {
+	if a.Kind != b.Kind || a.Status != b.Status || !slices.Equal(bodyWords(a.Body), bodyWords(b.Body)) {
 		return false
 	}
-	left, right := bodyWords(a.Body), bodyWords(b.Body)
-	if slices.Equal(left, right) {
-		return a.DueAt == nil || b.DueAt == nil || sameDueDay(a.DueAt, b.DueAt)
-	}
-	if !sameDueDay(a.DueAt, b.DueAt) {
-		return false
-	}
-	longLeft, longRight := longWords(left), longWords(right)
-	shared := 0
-	for word := range longLeft {
-		if _, ok := longRight[word]; ok {
-			shared++
-		}
-	}
-	shorter := min(len(longLeft), len(longRight))
-	return shorter > 0 && float64(shared) >= nearClaimOverlap*float64(shorter)
+	return a.DueAt == nil || b.DueAt == nil || sameDueDay(a.DueAt, b.DueAt)
 }
 
 func bodyWords(body string) []string {
 	return strings.FieldsFunc(strings.ToLower(body), func(r rune) bool {
 		return !unicode.IsLetter(r) && !unicode.IsDigit(r)
 	})
-}
-
-func longWords(words []string) map[string]struct{} {
-	set := make(map[string]struct{}, len(words))
-	for _, word := range words {
-		if utf8.RuneCountInString(word) >= longWord {
-			set[word] = struct{}{}
-		}
-	}
-	return set
 }
 
 func sameDueDay(a, b *time.Time) bool {
