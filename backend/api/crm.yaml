@@ -16287,6 +16287,36 @@ paths:
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/Forbidden' }
         '422': { $ref: '#/components/responses/ValidationError' }
+  /analytics/progress/summary:
+    post:
+      tags: [Reports]
+      operationId: summarizeSalesProgress
+      x-waits-on-model: on-miss
+      x-agent-access: human-only
+      x-human-only-reason: covered   # covered: read_view reads the same figures, and an agent sums them up itself
+      security: [ { cookieAuth: [] } ]
+      summary: A few written sentences on where one Progress reading stands against its sales goal and what is still open.
+      description: |
+        The model reads the figures `GET /analytics/progress` answers for the same period and
+        scope, under the caller's own reach, and nothing else. Each sentence cites the figures it
+        rests on, and a sentence quoting a number none of them holds is dropped. The answer is kept
+        per reader until a figure moves. Without a model, or when the reply cannot be grounded, it
+        answers no sentences and `generated_by` says so, and Progress shows its figures alone.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/SalesProgressSummaryRequest' }
+      responses:
+        '200':
+          description: The summary.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/SalesAssessment' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/ValidationError' }
   /analytics/sales-goals:
     get:
       tags: [Reports]
@@ -16398,6 +16428,39 @@ paths:
         '403': { $ref: '#/components/responses/Forbidden' }
         '404': { $ref: '#/components/responses/NotFound' }
         '409': { $ref: '#/components/responses/VersionConflict' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+  /analytics/sales-goals/{owner_id}/{year}/proposed-months:
+    parameters: *salesGoalPath
+    post:
+      tags: [Reports]
+      operationId: proposeSalesGoalMonths
+      x-waits-on-model: always
+      x-agent-access: human-only
+      x-human-only-reason: security
+      security: [ { cookieAuth: [] } ]
+      summary: Twelve monthly goals proposed for one seller from their closed revenue. Nothing is saved.
+      description: |
+        The model reads the seller's closed revenue by month for the plan year and the year before,
+        and the yearly goal when the request gives one. It answers twelve months and one or two
+        sentences on the pattern it followed. With a yearly goal the months add up to it exactly.
+        The reader reviews the months in the editor and saves them as a draft with origin `ai`.
+        Only a reader who may set this seller's goals may ask. Without a model it answers 409
+        `ai_not_configured`, and with no closed revenue in either year 409 `no_sales_history`.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/SalesGoalProposalRequest' }
+      responses:
+        '200':
+          description: The proposal.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/SalesGoalProposal' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
         '422': { $ref: '#/components/responses/ValidationError' }
   /analytics/sales-goals/{owner_id}/{year}/publish:
     parameters: *salesGoalPath
@@ -54725,6 +54788,17 @@ components:
         selection: { $ref: '#/components/schemas/ReportingSelection' }
         refresh: { type: boolean, description: "Ask the model again, whatever is kept." }
       additionalProperties: false
+    SalesProgressSummaryRequest:
+      type: object
+      required: [period, year]
+      properties:
+        period: { type: string, enum: [month, year] }
+        year: { type: integer, minimum: 2000, maximum: 2200 }
+        month: { type: integer, minimum: 1, maximum: 12, description: "Required with `period: month`." }
+        scope_kind: { type: string, enum: [owner, team], description: "Absent reads the caller's own figures." }
+        scope_id: { type: string, format: uuid }
+        refresh: { type: boolean, description: "Ask the model again, whatever is kept." }
+      additionalProperties: false
     SalesAssessment:
       type: object
       required: [evaluation_key, generated_at, generated_by, sentences, cells, decisions]
@@ -54780,7 +54854,7 @@ components:
       type: object
       required: [id, label, value]
       properties:
-        id: { type: string, description: "`metric:<metric id>` or `point:<metric id>:<group key>`." }
+        id: { type: string, description: "`metric:<metric id>` or `point:<metric id>:<group key>`; a Progress summary names its own figures `progress:<figure>`." }
         label: { type: string }
         value: { type: string, description: Raw source quantity with its unit. }
         display: { type: string, description: Locale-formatted quantity for reader text. }
@@ -64993,6 +65067,26 @@ components:
         declared_total_minor: { type: integer, format: int64, minimum: 0 }
         reason: { type: string, minLength: 1, maxLength: 1000 }
         origin: { type: string, enum: [manual, ai, adopted], default: manual }
+    SalesGoalProposalRequest:
+      type: object
+      additionalProperties: false
+      properties:
+        yearly_total_minor: { type: integer, format: int64, minimum: 1, description: 'The yearly goal the months must add up to, when the reader has set one.' }
+    SalesGoalProposal:
+      type: object
+      additionalProperties: false
+      required: [months, total_minor, reason, generated_by]
+      properties:
+        months:
+          type: array
+          minItems: 12
+          maxItems: 12
+          description: January to December, each an amount of zero or more in minor units of the plan currency.
+          items: { type: integer, format: int64 }
+        total_minor: { type: integer, format: int64, description: 'What the twelve months add up to.' }
+        reason: { type: string, maxLength: 400, description: 'The pattern the proposal followed, in the reader''s language, with no figure in it.' }
+        generated_by: { $ref: '#/components/schemas/WrittenBy' }
+        model_used: { type: string }
     SalesGoalPublishInput:
       type: object
       additionalProperties: false
@@ -71637,7 +71731,7 @@ components:
         What one reading of one transcript did. The three outcomes are kept apart on purpose: still
         reading, read it and it stated nothing, and could not read it are different answers, and
         collapsing the last two makes a correct empty result look like a broken feature.
-      required: [read_id, activity_id, status, line_count, proposal_ids, proposals, created_at]
+      required: [read_id, activity_id, status, line_count, proposal_ids, proposals, created_at, summary_refused]
       properties:
         read_id: { type: string, format: uuid }
         activity_id: { type: string, format: uuid }
@@ -71675,6 +71769,46 @@ components:
         started_at: { type: [string, 'null'], format: date-time }
         finished_at: { type: [string, 'null'], format: date-time }
         created_at: { type: string, format: date-time }
+        summary:
+          allOf: [ { $ref: '#/components/schemas/TranscriptSummary' } ]
+          description: >-
+            The meeting's summary as this reading leaves it: the one this reading wrote, or the
+            newest one an earlier reading wrote. Absent when no reading has written one.
+        summary_refused:
+          type: boolean
+          description: >-
+            True when this reading finished without writing a summary, because the summary failed
+            the check that every point cites lines the transcript has. The meeting keeps `summary`
+            as it was.
+
+    TranscriptSummary:
+      type: object
+      description: >-
+        A short summary of one meeting, written by a model from its transcript and never by a
+        member. A client marks it as AI-written. Each point cites the transcript lines it was read
+        from; the transcript itself is unchanged.
+      required: [read_id, generated_at, key_points, next_steps]
+      properties:
+        read_id: { type: string, format: uuid, description: 'The reading that wrote this summary.' }
+        generated_at: { type: string, format: date-time }
+        key_points:
+          type: array
+          description: What the meeting covered, in the language the meeting was held in.
+          items: { $ref: '#/components/schemas/TranscriptSummaryPoint' }
+        next_steps:
+          type: array
+          description: What the meeting agreed would happen next. Empty when it agreed nothing.
+          items: { $ref: '#/components/schemas/TranscriptSummaryPoint' }
+
+    TranscriptSummaryPoint:
+      type: object
+      required: [text, source_lines]
+      properties:
+        text: { type: string }
+        source_lines:
+          type: array
+          description: The 1-based transcript lines this point was read from.
+          items: { type: integer }
 
     TranscriptReadProposal:
       type: object

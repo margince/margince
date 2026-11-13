@@ -69,6 +69,12 @@ func FinishInputCheck(t *testing.T, e *AppEnv, perms principal.Permissions) {
 // `at`, by a seat holding perms, and answers its id.
 func FreezeAt(t *testing.T, e *AppEnv, perms principal.Permissions, at time.Time) string {
 	t.Helper()
+	return FreezeScopeAt(t, e, perms, forecasting.Scope{Kind: forecasting.ScopeWorkspace}, at)
+}
+
+// FreezeScopeAt is FreezeAt for one population.
+func FreezeScopeAt(t *testing.T, e *AppEnv, perms principal.Permissions, scope forecasting.Scope, at time.Time) string {
+	t.Helper()
 	admin := AdminContext(t, e, perms)
 	store := forecasting.NewStore(compose.InstallationDB(e.DB().Pool()))
 	var id ids.UUID
@@ -78,7 +84,7 @@ func FreezeAt(t *testing.T, e *AppEnv, perms principal.Permissions, at time.Time
 			return err
 		}
 		id, err = store.TakeSnapshot(admin, tx, forecasting.NewSnapshot{
-			Period: period, Scope: forecasting.Scope{Kind: forecasting.ScopeWorkspace},
+			Period: period, Scope: scope,
 			Trigger: forecasting.TriggerRecheck, BaseCurrency: base, TakenAt: at,
 		})
 		return err

@@ -43,8 +43,8 @@ func appendEntityLinkClauses(in ListActivitiesInput, arg func(any) int, where []
 }
 
 func entityLinkFilter(in ListActivitiesInput, arg func(any) int) (where []string, err error) {
-	column := linkColumn(*in.EntityType)
-	if column == "" {
+	target, ok := linkTargetOf(*in.EntityType)
+	if !ok {
 		return nil, &InvalidLinkTypeError{EntityType: *in.EntityType}
 	}
 	if *in.EntityType == string(datasource.RecordCompany) {
@@ -62,10 +62,8 @@ func entityLinkFilter(in ListActivitiesInput, arg func(any) int) (where []string
 	// row, and the keyset tuple — which names `created_at` and `id` alone,
 	// since every other list it serves reads one table — is ambiguous the
 	// moment activity_link, which carries both, is in the FROM list.
-	return []string{sprintf(
-		`EXISTS (SELECT 1 FROM activity_link al
-		          WHERE al.activity_id = a.id AND al.entity_type = $%d AND al.%s = $%d)`,
-		arg(*in.EntityType), column, arg(*in.EntityID))}, nil
+	return []string{"EXISTS (SELECT 1 FROM activity_link al WHERE al.activity_id = a.id AND " +
+		target.linkedSQL("al", arg(*in.EntityID)) + ")"}, nil
 }
 
 // listActivitiesFilter builds the timeline query's join, WHERE terms and

@@ -18,3 +18,5 @@ func Require(ctx context.Context) error {
 
 // Catalog answers names and definitions, and no figure.
 func Catalog() []string { return []string{"won"} }
+
+var ErrTooSmall = OffError{}

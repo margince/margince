@@ -2307,7 +2307,7 @@
   "aiTask.name.propose_roles": "Xác định vai trò mua hàng",
   "aiTask.name.rate_extract": "Trích xuất tỷ giá",
   "aiTask.name.report_interpret": "Đánh giá báo cáo bán hàng",
-  "aiTask.name.report_setup": "Thiết lập báo cáo từ mô tả",
+  "aiTask.name.report_setup": "Đề xuất thiết lập báo cáo hoặc mục tiêu doanh số",
   "aiTask.name.request_settlement": "Kiểm tra yêu cầu đã được giải đáp",
   "aiTask.name.rewrite": "Viết lại",
   "aiTask.name.signal_extract": "Trích xuất tín hiệu từ cuộc trao đổi",

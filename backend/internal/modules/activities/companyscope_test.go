@@ -156,17 +156,19 @@ func TestEveryOtherEntityTypeKeepsItsFlatLinkJoin(t *testing.T) {
 		if !strings.Contains(where, "EXISTS (SELECT 1 FROM activity_link al") {
 			t.Errorf("%s filter is not an EXISTS over activity_link: %s", entityType, where)
 		}
-		if !strings.Contains(where, "al.entity_type = $1") {
+		// The type is a literal, so a generic plan still matches the partial
+		// index on activity_link.
+		if !strings.Contains(where, "al.entity_type = '"+entityType+"'") {
 			t.Errorf("%s filter does not pin the link's entity_type: %s", entityType, where)
 		}
-		if !strings.Contains(where, column+" = $2") {
+		if !strings.Contains(where, column+" = $1") {
 			t.Errorf("%s filter does not match %s: %s", entityType, column, where)
 		}
 		if strings.Contains(where, "r.kind = 'employment'") {
 			t.Errorf("%s filter walks the account's employment arm; only an account does", entityType)
 		}
-		if len(args) != 2 {
-			t.Errorf("%s filter bound %d args, want 2: %v", entityType, len(args), args)
+		if len(args) != 1 {
+			t.Errorf("%s filter bound %d args, want 1: %v", entityType, len(args), args)
 		}
 	}
 }

@@ -178,9 +178,10 @@ check-root-gates:
 
 # The steps of `make check` that rewrite files another step reads, measured
 # step by step: the frontend install (frontend/node_modules), composition
-# (build/composition/), drift (the generated Go, config and docs files) and
-# contract-frontend-drift (frontend/src/api/). They run first, one at a time.
-CHECK_WRITERS := fe-install composition drift contract-frontend-drift
+# (build/composition/), drift (the generated Go, config and docs files),
+# contract-frontend-drift (frontend/src/api/) and generators-twice (every
+# committed generated file, put back afterwards). They run first, one at a time.
+CHECK_WRITERS := fe-install composition drift contract-frontend-drift generators-twice
 
 # The lanes `make check` runs side by side once the writers are done. Under
 # CHECK_WRITERS_RAN no lane reaches a writer: composition and fe-drift print a

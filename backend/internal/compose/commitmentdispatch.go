@@ -6,8 +6,8 @@ package compose
 // One rule for every promise an extractor reads out of a conversation, whether
 // the conversation was a meeting or a mail thread.
 //
-//   - A promise the CUSTOMER made is filed as a claim on them and watched. It
-//     is never a task: nobody here can do it.
+//   - A promise the CUSTOMER made is filed as a claim on them and watched.
+//     The member responsible for the conversation is asked to chase it.
 //   - A promise one of OUR colleagues made becomes their task. Read confidently
 //     enough, it is written directly and marked as the extractor's; otherwise
 //     it is proposed to them and written when they accept.
@@ -98,7 +98,9 @@ type Commitment struct {
 	Confidence float64
 	// NeedsConfirmation keeps reported promises from assigning work without review.
 	NeedsConfirmation bool
-	Links             []activities.ActivityLinkInput
+	// Tentative is a promise read below the firm floor (promiseband.Tentative).
+	Tentative bool
+	Links     []activities.ActivityLinkInput
 	// PrivateTo is the one member the conversation answers to, when it is
 	// private mail. A promise another colleague made there is theirs only when
 	// they may open its message, and its task is read by the two of them.
@@ -112,6 +114,8 @@ type Commitment struct {
 	Evidence        approvals.Evidence
 	RenewalEvidence *approvals.Evidence
 }
+
+func (c Commitment) withheldOutcome() CommitmentOutcome { return withheldFor(c.Meaning, c.Tentative) }
 
 // CommitmentOutcome is what the rule did with one promise.
 type CommitmentOutcome string
@@ -247,7 +251,7 @@ func (d *CommitmentDispatcher) routeCommitment(ctx context.Context, tx pgx.Tx, c
 	if reason != activities.CommitmentSourceUnavailable {
 		var held bool
 		renewedBy, renewedAt := c.AdmissionSourceID, c.RenewedAt
-		if c.Meaning.withheldOutcome() != "" {
+		if c.withheldOutcome() != "" {
 			renewedBy, renewedAt = nil, nil
 		}
 		held, recorded, err = activities.CommitmentAdmissionStateTx(ctx, tx, ids.From[ids.ActivityKind](c.SourceActivityID), c.Locator, c.AsOf, renewedBy, renewedAt)
@@ -255,7 +259,7 @@ func (d *CommitmentDispatcher) routeCommitment(ctx context.Context, tx pgx.Tx, c
 			return CommitmentRemembered, ids.UUID{}, err
 		}
 	}
-	if outcome := c.Meaning.withheldOutcome(); outcome != "" {
+	if outcome := c.withheldOutcome(); outcome != "" {
 		return outcome, ids.UUID{}, nil
 	}
 	if late {
@@ -270,7 +274,7 @@ func (d *CommitmentDispatcher) routeCommitment(ctx context.Context, tx pgx.Tx, c
 		return d.retainWithheld(ctx, tx, c, reason, recorded)
 	}
 	if c.Theirs != nil {
-		return d.watchCommitment(filing, tx, c, reason)
+		return d.watchCommitment(ctx, tx, c, reason, bundleID)
 	}
 
 	return d.createOurCommitment(ctx, tx, c, bundleID, false)
@@ -312,7 +316,7 @@ func (d *CommitmentDispatcher) createOurCommitment(ctx context.Context, tx pgx.T
 	proposal := CommitmentTaskProposal{
 		SourceActivityID: c.SourceActivityID, Summary: c.Summary, Party: c.Party, SystemText: c.SystemText,
 		SeatID: &asked, PromiserSeatID: &asked, DueDate: c.DueDate, DueZone: c.DueZone, Links: c.Links, Quote: c.Quote,
-		Locator: c.Locator, ClaimID: claimID, ClaimIDs: claimIDs, Body: c.Body, PrivateTo: c.PrivateTo,
+		Locator: c.Locator, ClaimID: claimID, ClaimIDs: claimIDs, Body: c.Body, PrivateTo: c.PrivateTo, Tentative: c.Tentative,
 	}
 	return d.stageCommitmentProposal(ctx, tx, c, proposal, bundleID, asked, commitmentWindow(state, late))
 }
@@ -328,15 +332,22 @@ func commitmentWindow(state activities.SeatWorkState, late bool) *time.Duration 
 	return new(time.Duration(provenance.CommitmentHorizonDays) * 24 * time.Hour)
 }
 
-func (d *CommitmentDispatcher) watchCommitment(ctx context.Context, tx pgx.Tx, c Commitment, reason activities.CommitmentAdmissionReason) (CommitmentOutcome, ids.UUID, error) {
-	claim, created, err := d.fileClaim(ctx, tx, c, *c.Theirs, claimKindTheirs, reason)
+// watchCommitment files a customer's promise on them. A new one also asks the
+// member responsible for the conversation to chase it; the id is that request.
+func (d *CommitmentDispatcher) watchCommitment(ctx context.Context, tx pgx.Tx, c Commitment, reason activities.CommitmentAdmissionReason, bundleID ids.UUID) (CommitmentOutcome, ids.UUID, error) {
+	claim, created, err := d.fileClaim(extractorContext(ctx, c.Extractor), tx, c, *c.Theirs, claimKindTheirs, reason)
 	if err != nil || claim.Status != crmcontracts.ConversationClaimStatusOpen {
 		return CommitmentRemembered, ids.UUID{}, err
 	}
 	if !created {
 		return CommitmentRetained, ids.UUID{}, nil
 	}
-	return CommitmentWatched, ids.UUID{}, nil
+	proposal, state, err := followUpOf(extractorContext(ctx, c.Extractor), tx, c, ids.UUID(claim.Id))
+	if err != nil || proposal.SeatID == nil {
+		return CommitmentWatched, ids.UUID{}, err
+	}
+	_, id, err := d.stageCommitmentProposal(ctx, tx, c, proposal, bundleID, *proposal.SeatID, commitmentWindow(state, false))
+	return CommitmentWatched, id, err
 }
 
 func (d *CommitmentDispatcher) retainWithheld(ctx context.Context, tx pgx.Tx, c Commitment, reason activities.CommitmentAdmissionReason, recorded bool) (CommitmentOutcome, ids.UUID, error) {
@@ -392,6 +403,9 @@ func (d *CommitmentDispatcher) offeredBefore(ctx context.Context, tx pgx.Tx, c C
 		var offer CommitmentTaskProposal
 		if err := json.Unmarshal(held.Change, &offer); err != nil {
 			return nil, fmt.Errorf("compose: unmarshal a commitment proposal: %w", err)
+		}
+		if offer.FollowUpOf != nil {
+			continue
 		}
 		if offer.Locator == c.Locator {
 			if !held.Approved() {

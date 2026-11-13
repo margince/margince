@@ -293,18 +293,14 @@ func openTasksFilter(ctx context.Context, in ListOpenTasksInput, identities stri
 		where = append(where, ActivityWithinProject(arg(*in.WithinProjectID)))
 	}
 	if in.EntityType != nil && in.EntityID != nil {
-		column := linkColumn(*in.EntityType)
-		if column == "" {
+		target, ok := linkTargetOf(*in.EntityType)
+		if !ok {
 			return nil, &InvalidLinkTypeError{EntityType: *in.EntityType}
 		}
 		// EXISTS rather than a join: a task linked to both a project and its
 		// deal must stay ONE row, or the bound above would count it twice and
 		// the reviewer would read the same promise as two.
-		where = append(where, sprintf(
-			`EXISTS (SELECT 1 FROM activity_link l WHERE l.activity_id = a.id
-				AND l.entity_type = $%d AND l.%s = $%d)`,
-			arg(*in.EntityType), column, arg(*in.EntityID),
-		))
+		where = append(where, "EXISTS (SELECT 1 FROM activity_link l WHERE l.activity_id = a.id AND "+target.linkedSQL("l", arg(*in.EntityID))+")")
 	}
 	return where, nil
 }

@@ -86,6 +86,7 @@ var carriesNoColleagueFigure = gatekit.Waive(map[string]string{
 	"listForecastShares":              "lists the share links the reader issued, with no figure",
 	"createForecastShare":             "answers the share link just issued, with no figure; opening it re-reads the forecast for whoever opens it",
 	"revokeForecastShare":             "revokes a share link and answers nothing",
+	"listInputChecks":                 "lists deals the reader may already read, with their amounts; GroupFindings sums per finding type and currency, never per seat",
 })
 
 // notYetHeldOnEveryPath holds operations the walk still flags and nobody has
@@ -98,14 +99,9 @@ var notYetHeldOnEveryPath = gatekit.Waive(map[string]string{
 	"discardSalesGoalDraft":       "goalAccess proves the reader's own seat by comparing ids, which the walk cannot read as a check",
 	"publishSalesGoalPlan":        "goalAccess proves the reader's own seat by comparing ids, which the walk cannot read as a check",
 	"withdrawSalesGoalPlan":       "goalAccess proves the reader's own seat by comparing ids, which the walk cannot read as a check",
+	"proposeSalesGoalMonths":      "goalAccess proves the reader's own seat by comparing ids, which the walk cannot read as a check",
 	"answerReportingQuestionCard": "the restricted answer carries no figure, but the walk reads its write as one",
 	"assessSalesReview":           "a refusal returned through RequireHumanOrItsAgent reads to the walk as a success",
-	"openForecastShare":           "the snapshot and live paths are not yet sorted into a floored path or walk imprecision",
-	"exportForecastShare":         "the snapshot and live paths are not yet sorted into a floored path or walk imprecision",
-	"listInputChecks":             "the assurance exceptions list is not yet sorted into a floored path or walk imprecision",
-	"runAnalyticsQuery":           "the run_analytics_query tool path is not yet sorted; the HTTP route passes",
-	"runReport":                   "the report tool path is not yet sorted",
-	"searchReportEvidence":        "the evidence search route in toolroutes.go is not yet sorted",
 	"createReportingTarget":       "answers an owner-scoped target value, and the write path is not yet held to the switch on every scope",
 	"recordForecastCall":          "answers a forecast call's amount for an owner scope, and the write path is not yet held to the switch on every scope",
 	"evaluateReporting":           "the read_reporting tool shares one handler, and its editions mode gathers checked editions in a loop that may run no time",
@@ -221,6 +217,9 @@ func TestEverySurfaceTheSwitchCoversReadsIt(t *testing.T) {
 	if err := g.readers(switchReaders, answersNoColleagueFigure); err != nil {
 		t.Fatal(err)
 	}
+	if err := g.dispatchers(toolDispatchers); err != nil {
+		t.Fatal(err)
+	}
 	walk := newSwitchWalk(g)
 	for _, op := range ops {
 		census, paths := surfaceFindings(walk, op)
@@ -252,7 +251,7 @@ func surfaceFindings(walk *switchWalk, op scopedOperation) (census, paths []stri
 		}
 	}
 	for _, root := range slices.Concat(handlers, tools) {
-		verdict := walk.walk(fnValue{decl: root}, nil, pathState{}, 0)
+		verdict := walk.walk(run{fn: fnValue{decl: root}}, pathState{}, 0)
 		figures := verdict.writes
 		if slices.Contains(tools, root) {
 			figures.merge(verdict.returns)

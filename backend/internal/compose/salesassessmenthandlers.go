@@ -17,6 +17,8 @@ import (
 // salesAssessmentHandlers serves the Sales review's assessment.
 type salesAssessmentHandlers struct {
 	svc *salesAssessments
+	// The summary of a Progress reading is written on the same lane.
+	progressSummaryHandlers
 }
 
 // AssessSalesReview implements POST /analytics/assessment.
