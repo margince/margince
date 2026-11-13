@@ -1,0 +1,22 @@
+// A package named auth that is not the switch's: its reader shares a name
+// with the real one, and a path that asks it has asked nothing.
+package auth
+
+import (
+	"context"
+	"net/http"
+
+	"example.test/httperr"
+)
+
+func IndividualPerformanceOf(ctx context.Context) (allowed, bound bool) { return true, true }
+
+type Handlers struct{}
+
+func (h Handlers) GetThroughAnImpostor(w http.ResponseWriter, r *http.Request) {
+	if allowed, _ := IndividualPerformanceOf(r.Context()); !allowed {
+		httperr.Write(w, r, nil)
+		return
+	}
+	httperr.WriteJSON(w, http.StatusOK, []int{1})
+}

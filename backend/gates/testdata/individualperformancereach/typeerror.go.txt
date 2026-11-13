@@ -1,0 +1,14 @@
+package typeerror
+
+import (
+	"net/http"
+
+	"example.test/httperr"
+)
+
+type Handlers struct{}
+
+func (h Handlers) GetAMistypedFigure(w http.ResponseWriter, r *http.Request) {
+	var figure int = "one"
+	httperr.WriteJSON(w, http.StatusOK, figure)
+}

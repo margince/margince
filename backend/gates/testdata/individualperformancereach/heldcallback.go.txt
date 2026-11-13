@@ -1,0 +1,51 @@
+package heldcallback
+
+import (
+	"context"
+	"net/http"
+	"slices"
+	"sync"
+
+	"example.test/auth"
+	"example.test/hooks"
+	"example.test/httperr"
+)
+
+type Handlers struct{ once sync.Once }
+
+// sync.Once runs its callback at most once in the process, so a second
+// request passes no check at all.
+func (h *Handlers) GetAfterOnce(w http.ResponseWriter, r *http.Request) {
+	var err error
+	h.once.Do(func() { err = auth.Require(r.Context()) })
+	if err != nil {
+		httperr.Write(w, r, err)
+		return
+	}
+	httperr.WriteJSON(w, http.StatusOK, []int{1})
+}
+
+// A registration keeps its callback for later, and runs none of it now.
+func (h *Handlers) GetAfterARegistration(w http.ResponseWriter, r *http.Request) {
+	if err := hooks.OnReady(func(ctx context.Context) error { return auth.Require(ctx) }); err != nil {
+		httperr.Write(w, r, err)
+		return
+	}
+	httperr.WriteJSON(w, http.StatusOK, []int{1})
+}
+
+// An iterator over no rows calls its callback no time.
+func (h *Handlers) GetAfterAnIterator(w http.ResponseWriter, r *http.Request) {
+	rows := []int{}
+	refused := slices.ContainsFunc(rows, func(int) bool {
+		if allowed, _ := auth.IndividualPerformanceOf(r.Context()); !allowed {
+			return true
+		}
+		return false
+	})
+	if refused {
+		httperr.Write(w, r, auth.OffError{})
+		return
+	}
+	httperr.WriteJSON(w, http.StatusOK, rows)
+}

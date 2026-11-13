@@ -8,6 +8,7 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"log/slog"
 	"strconv"
@@ -84,7 +85,7 @@ func (s *salesAssessments) AssessView(ctx context.Context, selection crmcontract
 	}
 	actor, ok := principal.Actor(ctx)
 	if !ok {
-		return crmcontracts.SalesAssessment{}, auth.RequireHumanOrItsAgent(ctx)
+		return crmcontracts.SalesAssessment{}, errors.New("compose: no actor bound to context")
 	}
 	evaluation, in, err := s.prepareAssessment(ctx, selection, view, receipt, actor.UserID)
 	if err != nil {

@@ -64,7 +64,7 @@ func TestAPreviewRecordsNothing(t *testing.T) {
 	scanner := NewScanner(e.store, previewSubjects(e.rep.String()), previewCoverage(), DefaultConfig())
 
 	before := e.countRows(t)
-	preview, err := scanner.Preview(ctx, time.Now().UTC())
+	preview, err := scanner.Preview(ctx, time.Now().UTC(), noPreviewFloor)
 	if err != nil {
 		t.Fatalf("previewing: %v", err)
 	}
@@ -100,7 +100,7 @@ func TestAWorkspaceSaysWhetherItHasEverBeenChecked(t *testing.T) {
 
 	scanner := NewScanner(e.store, previewSubjects(e.rep.String()), previewCoverage(), DefaultConfig())
 
-	before, err := scanner.Preview(ctx, time.Now().UTC())
+	before, err := scanner.Preview(ctx, time.Now().UTC(), noPreviewFloor)
 	if err != nil {
 		t.Fatalf("previewing: %v", err)
 	}
@@ -113,7 +113,7 @@ func TestAWorkspaceSaysWhetherItHasEverBeenChecked(t *testing.T) {
 		t.Fatalf("the first pass: %v", err)
 	}
 
-	after, err := scanner.Preview(ctx, time.Now().UTC())
+	after, err := scanner.Preview(ctx, time.Now().UTC(), noPreviewFloor)
 	if err != nil {
 		t.Fatalf("previewing after the pass: %v", err)
 	}
@@ -137,7 +137,7 @@ func TestAPreviewCountsWhatTheRunThenRaises(t *testing.T) {
 	scanner := NewScanner(e.store, previewSubjects(e.rep.String()), previewCoverage(), DefaultConfig())
 	at := time.Now().UTC()
 
-	preview, err := scanner.Preview(ctx, at)
+	preview, err := scanner.Preview(ctx, at, noPreviewFloor)
 	if err != nil {
 		t.Fatalf("previewing: %v", err)
 	}
@@ -230,3 +230,7 @@ func (e *scanEnv) requesterOf(t *testing.T, runID string) *string {
 	}
 	return out
 }
+
+// noPreviewFloor holds nothing back: these tests read what a preview counts,
+// and the floor that judges it lives in compose.
+func noPreviewFloor(context.Context, pgx.Tx, Contributions) error { return nil }

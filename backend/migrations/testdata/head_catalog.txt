@@ -1631,7 +1631,9 @@ public.assurance_run.assurance_run_version_js_safe CHECK (((version >= '-9007199
 public.assurance_run.captured_by text NOT NULL gen=- def=-
 public.assurance_run.created_at timestamp with time zone NOT NULL gen=- def=now()
 public.assurance_run.digest text gen=- def=-
+public.assurance_run.eligible_deal_owners uuid[] gen=- def=-
 public.assurance_run.eligible_deals integer NOT NULL gen=- def=0
+public.assurance_run.eligible_signal_owners uuid[] gen=- def=-
 public.assurance_run.eligible_signals integer NOT NULL gen=- def=0
 public.assurance_run.id uuid NOT NULL gen=- def=uuidv7()
 public.assurance_run.outbox_inputs_tracked boolean NOT NULL gen=- def=false

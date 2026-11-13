@@ -1,0 +1,70 @@
+package notsentinel
+
+import (
+	"context"
+	"net/http"
+
+	"example.test/auth"
+	"example.test/httperr"
+	"example.test/store"
+)
+
+// errLast is spelled like a sentinel, but nothing makes it non-nil.
+var errLast error
+
+// errLooked is whatever a lookup answered, which may be nil.
+var errLooked = store.Lookup()
+
+func checkedFigures(ctx context.Context) ([]int, error) {
+	if err := auth.Require(ctx); err != nil {
+		return nil, err
+	}
+	return []int{1}, nil
+}
+
+func figuresUnlessLast(ctx context.Context, last bool) ([]int, error) {
+	if last {
+		return nil, errLast
+	}
+	return checkedFigures(ctx)
+}
+
+func figuresUnlessLooked(ctx context.Context, looked bool) ([]int, error) {
+	if looked {
+		return nil, errLooked
+	}
+	return checkedFigures(ctx)
+}
+
+// An Err name of a package nobody declared to hold only errors.
+func figuresUnlessGone(ctx context.Context, gone bool) ([]int, error) {
+	if gone {
+		return nil, store.ErrGone
+	}
+	return checkedFigures(ctx)
+}
+
+type Handlers struct{}
+
+func serve(w http.ResponseWriter, r *http.Request, out []int, err error) {
+	if err != nil {
+		httperr.Write(w, r, err)
+		return
+	}
+	httperr.WriteJSON(w, http.StatusOK, out)
+}
+
+func (h Handlers) GetUnlessLast(w http.ResponseWriter, r *http.Request) {
+	out, err := figuresUnlessLast(r.Context(), r.URL == nil)
+	serve(w, r, out, err)
+}
+
+func (h Handlers) GetUnlessLooked(w http.ResponseWriter, r *http.Request) {
+	out, err := figuresUnlessLooked(r.Context(), r.URL == nil)
+	serve(w, r, out, err)
+}
+
+func (h Handlers) GetUnlessGone(w http.ResponseWriter, r *http.Request) {
+	out, err := figuresUnlessGone(r.Context(), r.URL == nil)
+	serve(w, r, out, err)
+}
