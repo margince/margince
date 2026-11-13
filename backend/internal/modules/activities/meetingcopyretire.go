@@ -131,13 +131,14 @@ func carryMeetingDocumentLinksTx(ctx context.Context, tx pgx.Tx, duplicate, surv
 
 // carryMissingParticipantsTx copies onto the survivor each party of the copy
 // it does not list yet. A party is matched by address, else seat, else contact.
-// The survivor's guest list and the seats it holds busy stay whole.
+// The survivor's guest list and the seats it holds busy stay whole. A party a
+// member relinked keeps that mark, so no roster on the survivor retires it.
 func carryMissingParticipantsTx(ctx context.Context, tx pgx.Tx, duplicate, survivor ids.ActivityID) ([]ids.UUID, error) {
 	rows, err := tx.Query(ctx, `
 		INSERT INTO activity_participant (activity_id, user_id, contact_id, address, address_domain_folded, channel_user_id,
-		                                  role, display_name, roster_seat, response, past_party_cap)
+		                                  role, display_name, roster_seat, response, past_party_cap, relinked_at)
 		SELECT $2, d.user_id, d.contact_id, d.address, d.address_domain_folded, d.channel_user_id,
-		       d.role, d.display_name, d.roster_seat, d.response, d.past_party_cap
+		       d.role, d.display_name, d.roster_seat, d.response, d.past_party_cap, d.relinked_at
 		  FROM activity_participant d
 		 WHERE d.activity_id = $1
 		   AND NOT EXISTS (SELECT 1 FROM activity_participant s WHERE s.activity_id = $2 AND CASE

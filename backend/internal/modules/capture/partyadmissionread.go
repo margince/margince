@@ -53,9 +53,12 @@ func partyAdmissionOwner(ctx context.Context, tx pgx.Tx, activity ids.ActivityID
 	return owners[0], nil
 }
 
+// meetingPartyEligibleSQL holds a party row to what a calendar said. A row a
+// member relinked keeps its seat for the answers. Its contact is the member's
+// choice, not the calendar's, so it is no evidence of meeting anyone.
 func meetingPartyEligibleSQL(activity, party string) string {
 	return party + `.role IN ('attendee','organizer') AND coalesce(` + party + `.response,'')<>'declined'
- AND NOT ` + party + `.past_party_cap AND ` + party + `.roster_seat IS NOT NULL
+ AND NOT ` + party + `.past_party_cap AND ` + party + `.roster_seat IS NOT NULL AND ` + party + `.relinked_at IS NULL
  AND EXISTS (SELECT 1 FROM activity_participant owner
  WHERE owner.activity_id=` + activity + `.id AND owner.roster_seat=` + party + `.roster_seat
  AND owner.user_id=` + party + `.roster_seat AND NOT owner.past_party_cap
