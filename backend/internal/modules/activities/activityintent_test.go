@@ -80,8 +80,8 @@ func TestAChosenDueClockMakesATimedDeadlineAndADateOnlyOneStaysDateOnly(t *testi
 	}
 }
 
-// The agent surface tells a model to write a date-only deadline with this
-// clock, so the server must read exactly it, and nothing near it, as no time.
+// The agent surface tells a model to write a date-only deadline with this clock.
+// The server reads that clock as no time, and any clock near it as a time.
 func TestTheDayOnlyClockTheAgentRuleNamesIsTheOneTheServerReadsAsNoTime(t *testing.T) {
 	for clock, timed := range map[string]bool{"T" + values.DayOnlyClock: false, "T23:59": true, "T23:58:59": true} {
 		in := LogActivityInput{Kind: "task", DueIntent: &crmcontracts.IntentTime{WallClock: "2026-11-20" + clock, Timezone: "Europe/Berlin"}}

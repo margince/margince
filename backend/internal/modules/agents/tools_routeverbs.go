@@ -478,8 +478,8 @@ func (d describeRouterActions) Handle(_ context.Context, in json.RawMessage) (js
 		actions = append(actions, shape)
 	}
 	if args.Action != "" && len(actions) == 0 {
-		// A client that reads tool schemas from a file has no inputSchema at hand,
-		// so an action the router runs itself is described from its own spec.
+		// A client that reads tool schemas from a file has no inputSchema at hand.
+		// An action the router runs itself is described from its own spec.
 		spec, runs := d.runs(args.Router, args.Action)
 		if !runs {
 			return nil, &BadArgsError{Field: "action", Cause: fmt.Errorf(

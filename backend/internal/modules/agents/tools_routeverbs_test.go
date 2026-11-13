@@ -173,8 +173,8 @@ func TestReadWorkspaceListsWhatARoutersActionsTake(t *testing.T) {
 	}
 }
 
-// An action the router runs in process has no route, and is described from its
-// own spec: a client that reads schemas from a file has no inputSchema at hand.
+// An action the router runs in process has no route, so it is described from
+// its own spec. A client that reads schemas from a file has no inputSchema.
 // A name the router does not have is refused as one.
 func TestARouterRunActionIsDescribedFromItsOwnSpec(t *testing.T) {
 	runs := func(router, action string) (mcp.ToolSpec, bool) {

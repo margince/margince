@@ -926,8 +926,8 @@ func TestDecoratingAResultDoesNotRewriteTheHandlersBytes(t *testing.T) {
 	}
 }
 
-// A client's model is told how to set a time the user named: the local pick,
-// in the user's own zone, and what the server derives from it.
+// A client's model is told how to set a time the user named. It hears of the
+// local pick, the user's own zone, and what the server derives from it.
 func TestTheInstructionsTellAClientsModelHowToSetALocalTime(t *testing.T) {
 	instructions := modernDispatcher(t).instructions()
 	if !strings.Contains(instructions, mcp.LocalTimeRule) {
