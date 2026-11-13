@@ -229,58 +229,70 @@
   flex-direction: column;
   gap: var(--space-4);
 }
-/* A reading in the rail is one line: the name, its basis quiet at the end,
-   the figure, and an arrow into its lane. Context, so it stays smaller than
-   the cards it is read beside. The arrow's track is held on every row, with or
-   without an arrow, so all the figures end on one edge. */
+/* A reading in the rail: its name over its basis, the figure at the end, and
+   the arrow's track after it. The basis wraps rather than cutting to a stub. */
 .brief-rail .stat-strip:has(.stat-card-narrow-row) .stat-card-narrow-row {
-  grid-template-areas: "label basis figure foot";
-  grid-template-columns: auto minmax(0, 1fr) auto var(--controlIcon);
+  grid-template-areas:
+    "label figure foot"
+    "basis figure foot";
+  grid-template-columns: minmax(0, 1fr) auto var(--controlIcon);
   align-items: center;
   column-gap: var(--space-3);
-  padding-block: var(--space-2);
   row-gap: 0;
+  padding-block: var(--space-3);
 }
 .brief-rail
   .stat-strip:has(.stat-card-narrow-row)
   .stat-card-narrow-row
-  > .stat-card-value {
-  font: var(
-    --fontHeadingSmall
-  ); /* ds:ignore the rail's one-line rows read the figure a rung down */
+  > .stat-card-label {
+  align-self: end;
+  color: var(--textPrimary);
 }
 .brief-rail
   .stat-strip:has(.stat-card-narrow-row)
   .stat-card-narrow-row
   > .stat-card-detail {
-  min-width: 0;
-  text-align: end;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  align-self: start;
+}
+.brief-rail
+  .stat-strip:has(.stat-card-narrow-row)
+  .stat-card-narrow-row
+  > .stat-card-value:not([data-word]) {
+  font: var(
+    --fontHeadingSmall
+  ); /* ds:ignore the rail's rows read the figure a rung down */
+  font-variant-numeric: tabular-nums;
 }
 .brief-rail
   .stat-strip:has(.stat-card-narrow-row)
   .stat-card-narrow-row
   > .stat-card-foot {
   justify-self: end;
-  /* One text line high, so a row with an arrow is no taller than one without;
-     the arrow's target overhangs into the row's padding. */
   padding-top: 0;
-  block-size: 1lh;
-  align-items: center;
+}
+/* The whole row is the door, so the arrow shows where a pointer rests. A
+   thumb has no hover, so it keeps every arrow in view. */
+@media (hover: hover) {
+  .brief-rail .stat-card-narrow-row .stat-card-arrow {
+    opacity: 0;
+  }
+  .brief-rail .stat-card-narrow-row:hover .stat-card-arrow,
+  .brief-rail .stat-card-open:focus-visible .stat-card-arrow {
+    opacity: 1;
+  }
+}
+@media (hover: hover) and (prefers-reduced-motion: no-preference) {
+  .brief-rail .stat-card-narrow-row .stat-card-arrow {
+    transition:
+      opacity var(--dur-state) var(--ease-out),
+      transform var(--dur-state) var(--ease-out);
+  }
 }
 /* Under a thumb the door is 44px tall, so every row grows to hold it and taps
    never land on the row next to it. */
 @media (pointer: coarse) {
   .brief-rail .stat-strip:has(.stat-card-narrow-row) .stat-card-narrow-row {
     min-block-size: calc(max(var(--controlHeight), 44px) + 2 * var(--space-2));
-  }
-  .brief-rail
-    .stat-strip:has(.stat-card-narrow-row)
-    .stat-card-narrow-row
-    > .stat-card-foot {
-    block-size: auto;
   }
 }
 /* The arrow alone opens the lane here; its word stays for a screen reader. */
@@ -291,12 +303,6 @@
   overflow: hidden;
   clip-path: inset(50%);
   white-space: nowrap;
-}
-.brief-rail
-  .stat-strip:has(.stat-card-narrow-row)
-  .stat-card-narrow-row
-  > .stat-card-label {
-  color: var(--textPrimary);
 }
 
 .rail-count,
