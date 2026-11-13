@@ -54,7 +54,7 @@ name: Release
 # its patch is the whole tree.
 #
 # The changelog is built from every non-merge commit subject since that same
-# revision, through scripts/release-changelog.sh, so it describes what the patch
+# revision, through scripts/release_changelog.py, so it describes what the patch
 # carries.
 # The first release gets one fixed sentence.
 on:
@@ -193,10 +193,10 @@ jobs:
           # CLI refuses an empty or too large file before any request.
           changelog_file="${GITHUB_REF_NAME//\//-}-$AFTER.changelog.md"
           if [ "$first_release" = true ]; then
-            bash scripts/release-changelog.sh "$version" "$GITHUB_REPOSITORY" "$AFTER" > "$changelog_file"
+            python3 scripts/release_changelog.py "$version" "$GITHUB_REPOSITORY" "$AFTER" > "$changelog_file"
           else
             git log --no-merges --format=%s "$base_revision..$AFTER" |
-              bash scripts/release-changelog.sh "$version" "$GITHUB_REPOSITORY" "$AFTER" "$base_version" "$base_revision" > "$changelog_file"
+              python3 scripts/release_changelog.py "$version" "$GITHUB_REPOSITORY" "$AFTER" "$base_version" "$base_revision" > "$changelog_file"
           fi
           docker run --rm \
             --user "$(id -u):$(id -g)" \
