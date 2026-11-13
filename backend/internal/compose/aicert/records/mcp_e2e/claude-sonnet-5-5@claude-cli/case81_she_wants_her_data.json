@@ -12,12 +12,12 @@
   "search": "semantic",
   "self_judged": true,
   "usage": {
-    "input_tokens": 14,
-    "output_tokens": 1920,
-    "cache_creation_input_tokens": 6963,
-    "cache_read_input_tokens": 438946,
+    "input_tokens": 18,
+    "output_tokens": 2487,
+    "cache_creation_input_tokens": 8162,
+    "cache_read_input_tokens": 569454,
     "runs_measured": 2,
     "runs_costed": 2,
-    "cost_usd": 0.091
+    "cost_usd": 0.1145
   }
 }

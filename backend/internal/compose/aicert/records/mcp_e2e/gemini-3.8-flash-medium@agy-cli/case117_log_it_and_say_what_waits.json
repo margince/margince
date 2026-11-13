@@ -3,8 +3,8 @@
   "criteria": [
     2
   ],
-  "passed": 3,
-  "runs": 3,
+  "passed": 2,
+  "runs": 2,
   "pass_at": 2,
   "driver": "gemini:cli",
   "effort": "reasoning medium",
@@ -12,11 +12,11 @@
   "search": "semantic",
   "self_judged": false,
   "usage": {
-    "input_tokens": 506674,
-    "output_tokens": 95982,
+    "input_tokens": 99856,
+    "output_tokens": 33807,
     "cache_creation_input_tokens": 0,
-    "cache_read_input_tokens": 1838051,
-    "runs_measured": 3,
+    "cache_read_input_tokens": 425576,
+    "runs_measured": 2,
     "runs_costed": 0,
     "cost_usd": null
   }
