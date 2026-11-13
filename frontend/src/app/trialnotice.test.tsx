@@ -33,8 +33,8 @@ function entitlement(endsIn: number, ended = false): LicenseEntitlement {
   };
 }
 
-// Reads the standing the banner reads, in the same render, so a test can see
-// that the answer arrived before it says the banner stayed away.
+// Reads the standing the banner reads, in the same render. A test waits on it
+// to know the answer arrived before it says the banner stayed away.
 function StandingRead() {
   const standing = useTrialStanding();
   return standing ? <output data-testid="standing" /> : null;
