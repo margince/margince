@@ -27,13 +27,14 @@ import (
 // inviteUID is the event every copy names, whichever seat organizes it.
 const inviteUID = "5c32ehv2a2j2aso23n324ua1ke@google.com"
 
-// guestCopy is the copy of one send that Google mails to guest. sequence is
-// the event's revision, so a changed sequence is a later send.
-func guestCopy(organizer, guest, sequence string) []byte {
+// guestCopy is the copy of one send that Google mails to guest from sender's
+// mailbox. sequence is the event's revision, so a changed sequence is a later
+// send. The calendar part names one organizer whichever seat sends it.
+func guestCopy(sender, guest, sequence string) []byte {
 	return []byte(strings.Join([]string{
 		"Sender: Google Calendar <calendar-notification@google.com>",
 		"Message-ID: <calendar-" + ids.NewV7().String() + "@google.com>",
-		"From: " + organizer, "To: " + guest,
+		"From: " + sender, "To: " + guest,
 		"Subject: Invitation: Document Management @ Fri Oct 30, 2026 2pm - 3pm (" + guest + ")",
 		"Date: Fri, 23 Oct 2026 10:52:51 +0000",
 		"MIME-Version: 1.0",
@@ -54,7 +55,7 @@ func guestCopy(organizer, guest, sequence string) []byte {
 		"SUMMARY:Document Management",
 		"DTSTART:20261030T070000Z",
 		"DTEND:20261030T080000Z",
-		"ORGANIZER:mailto:" + organizer,
+		"ORGANIZER:mailto:organizer@ws.example",
 		"ATTENDEE;PARTSTAT=NEEDS-ACTION:mailto:ana@customer.example",
 		"ATTENDEE;PARTSTAT=NEEDS-ACTION:mailto:ben@customer.example",
 		"END:VEVENT",
@@ -118,12 +119,15 @@ func TestEveryGuestsCopyOfOneInvitationIsOneActivity(t *testing.T) {
 	seat := guestCopyMailbox(t, e, e.Rep1)
 
 	first := captureCopy(t, e, e.Rep1, seat, "mailbox-1", guestCopy(seat, "ana@customer.example", "0"))
-	second := captureCopy(t, e, e.Rep1, seat, "mailbox-2", guestCopy(seat, "ben@customer.example", "0"))
+	bens := guestCopy(seat, "ben@customer.example", "0")
+	second := captureCopy(t, e, e.Rep1, seat, "mailbox-2", bens)
 	if second != first {
 		t.Errorf("the second guest's copy landed as %s, want the invitation %s", second, first)
 	}
 	// A sync that reads the second copy again changes nothing.
-	captureCopy(t, e, e.Rep1, seat, "mailbox-2", guestCopy(seat, "ben@customer.example", "0"))
+	if replay := captureCopy(t, e, e.Rep1, seat, "mailbox-2", bens); replay != first {
+		t.Errorf("the replayed copy landed as %s, want the invitation %s", replay, first)
+	}
 	if rows, held := storedInvitations(t, e, e.Rep1, inviteUID); rows != 1 || held != 2 {
 		t.Errorf("stored %d invitations holding %d mailbox ids, want 1 holding both copies", rows, held)
 	}
@@ -135,8 +139,8 @@ func TestEveryGuestsCopyOfOneInvitationIsOneActivity(t *testing.T) {
 	}
 }
 
-// Two seats' copies of one event never share a row through a calendar send,
-// because a seat's mail joins only that seat's own rows.
+// Two seats' copies of one send never share a row, because a seat's mail joins
+// only that seat's own rows. Each seat's own copies still fold.
 func TestAnotherSeatsCopiesStayTheirOwn(t *testing.T) {
 	e := integration.Setup(t)
 	e.GrantRole(t, e.Rep2, "rep")
@@ -145,5 +149,9 @@ func TestAnotherSeatsCopiesStayTheirOwn(t *testing.T) {
 	theirs := captureCopy(t, e, e.Rep2, two, "mailbox-1", guestCopy(two, "ana@customer.example", "0"))
 	if mine == theirs {
 		t.Fatal("two seats' invitations were captured as one activity")
+	}
+	// The second seat's own copies of the send still fold together.
+	if again := captureCopy(t, e, e.Rep2, two, "mailbox-2", guestCopy(two, "ben@customer.example", "0")); again != theirs {
+		t.Errorf("the second seat's next copy landed as %s, want its invitation %s", again, theirs)
 	}
 }
