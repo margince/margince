@@ -818,7 +818,7 @@ func TestACustomersPromiseIsWatchedAndItsLoggerAskedToFollowItUp(t *testing.T) {
 		(a.proposed_change->>'summary') || ' ' || ((a.proposed_change->>'follow_up_of') = c.id::text)::text, ',')
 		FROM conversation_claim c JOIN approval a ON a.kind = 'commitment_task' AND a.status = 'pending'
 		WHERE c.kind = 'commitment_theirs' AND c.contact_id = $1 AND c.source_activity_id = $2`, contact.Id, e.activity.UUID)
-	want := "1 " + e.Rep1.String() + " " + promised.AddDate(0, 0, 1).Format(time.DateOnly) + " Follow up if Send the revised pricing has not arrived true"
+	want := "1 " + e.Rep1.String() + " " + promised.AddDate(0, 0, 1).Format(time.DateOnly) + " Follow up on: Send the revised pricing true"
 	if got != want {
 		t.Errorf("after two readings the claim and its follow-up read %q, want %q", got, want)
 	}

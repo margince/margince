@@ -18,7 +18,7 @@ var definitions = map[string]Definition{
 	}},
 	"task.reply_to_email": {Words: langcopy.Phrase{En: "Reply to email", De: "Auf die E-Mail antworten", Vi: "Trả lời email"}},
 	"commitment.follow_up": {
-		Words:     langcopy.Phrase{En: "Follow up if %s has not arrived", De: "Nachfassen, falls %s nicht eingetroffen ist", Vi: "Hỏi lại nếu %s chưa đến"},
+		Words:     langcopy.Phrase{En: "Follow up on: %s", De: "Nachfassen: %s", Vi: "Hỏi lại: %s"},
 		Arguments: []string{argumentText},
 	},
 	"commitment.explanation": {
