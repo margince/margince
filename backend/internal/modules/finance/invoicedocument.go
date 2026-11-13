@@ -33,15 +33,36 @@ const maxInvoiceDocumentBytes = 20 << 20
 // source sends could be rendered by the browser as a page of our origin.
 const pdfMediaType = "application/pdf"
 
-// invoiceDocumentsPerMinute is how many documents one caller may fetch in a
-// minute. Each one is a live call to the vendor, whose quota the whole
-// installation shares, and a reader opening invoices by hand needs far fewer.
+// invoiceDocumentsPerMinute is how many documents one person may fetch in a
+// minute. Each one is a live call against the vendor's quota. The ceiling stops
+// one runaway reader or agent loop from draining it; a reader opening invoices
+// by hand needs far fewer.
 const invoiceDocumentsPerMinute = 20
 
-// invoiceDocumentFetches meters document fetches per caller. FailClosed: an
+// invoiceDocumentFetches meters document fetches per person. FailClosed: an
 // unmetered window can spend the vendor quota for the day, and that cannot be
 // taken back.
-var invoiceDocumentFetches = ratelimit.New("finance-invoice-document", ratelimit.FailClosed, invoiceDocumentsPerMinute, time.Minute)
+var invoiceDocumentFetches = ratelimit.New("finance/invoice-document-per-user", ratelimit.FailClosed, invoiceDocumentsPerMinute, time.Minute)
+
+// documentCeilingError refuses a fetch past the ceiling. It names the ceiling
+// and the wait, so a client reads Retry-After rather than parsing a sentence.
+type documentCeilingError struct{ waitSeconds int }
+
+func (e documentCeilingError) Error() string {
+	return fmt.Sprintf("at most %d invoice documents a minute; try again in %d seconds", invoiceDocumentsPerMinute, e.waitSeconds)
+}
+
+func (e documentCeilingError) Unwrap() error { return apperrors.ErrBudgetExceeded }
+
+func (e documentCeilingError) Unreferenced() error {
+	return fmt.Errorf("%s: %w", e.Error(), apperrors.ErrBudgetExceeded)
+}
+
+func (e documentCeilingError) FaultReference() map[string]any {
+	return map[string]any{"limit": map[string]any{"ceiling": invoiceDocumentsPerMinute, "window_seconds": 60}}
+}
+
+func (e documentCeilingError) RetryAfterSeconds() int { return e.waitSeconds }
 
 // unsafeFileRune is what a source's invoice number may not carry into a file name.
 var unsafeFileRune = regexp.MustCompile(`[^A-Za-z0-9._-]+`)
@@ -104,15 +125,21 @@ func (s *Store) InvoiceDocumentFor(ctx context.Context, invoiceID ids.UUID) (Inv
 }
 
 // admitDocumentFetch counts one document fetch against the caller's minute,
-// and refuses it once the caller is past the ceiling.
+// and refuses it once the caller is past the ceiling. The budget is the
+// human's, shared by every agent acting for them, so minting passports or
+// refreshing a token does not buy a fresh one. A principal with no human
+// behind it is counted under its own id.
 func admitDocumentFetch(ctx context.Context) error {
 	actor, ok := principal.Actor(ctx)
 	if !ok {
 		return apperrors.ErrPermissionDenied
 	}
-	if !invoiceDocumentFetches.Allow(actor.ID) {
-		return fmt.Errorf("%w: at most %d invoice documents a minute; try again in %d seconds",
-			apperrors.ErrBudgetExceeded, invoiceDocumentsPerMinute, invoiceDocumentFetches.RetryAfterSeconds())
+	key := actor.ID
+	if !actor.UserID.IsZero() {
+		key = "user:" + actor.UserID.String()
+	}
+	if !invoiceDocumentFetches.Allow(key) {
+		return documentCeilingError{waitSeconds: invoiceDocumentFetches.RetryAfterSeconds()}
 	}
 	return nil
 }

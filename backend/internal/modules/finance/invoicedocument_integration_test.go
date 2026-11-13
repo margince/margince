@@ -87,18 +87,25 @@ func TestAnInvoiceOfAHiddenCompanyAnswersAsIfItDidNotExist(t *testing.T) {
 	expect(t, download(noGrant, a.handlers, ids.UUID(invoice.Id)), http.StatusForbidden, "permission_denied")
 }
 
-// Each document is a live call against a vendor quota the whole installation
-// shares, so one caller's fetches are counted, and another caller keeps theirs.
+// Each document is a live call against the vendor's quota, so one reader's
+// fetches are counted. A miss is answered before the count, so probing ids
+// the reader cannot see spends nothing.
 func TestOneCallerFetchesAtMostTwentyDocumentsAMinute(t *testing.T) {
 	a := setupSourceAdmin(t)
 	invoice := a.mirroredInvoice(t)
 
 	reader := a.documentReader(principal.RowScopeAll)
 	for range invoiceDocumentsPerMinute {
+		expect(t, download(reader, a.handlers, ids.NewV7()), http.StatusNotFound, "not_found")
+	}
+	for range invoiceDocumentsPerMinute {
 		expect(t, download(reader, a.handlers, ids.UUID(invoice.Id)), http.StatusOK, "")
 	}
-	expect(t, download(reader, a.handlers, ids.UUID(invoice.Id)), http.StatusTooManyRequests, "rate_limited")
-	expect(t, download(a.documentReader(principal.RowScopeAll), a.handlers, ids.UUID(invoice.Id)), http.StatusOK, "")
+	refused := download(reader, a.handlers, ids.UUID(invoice.Id))
+	expect(t, refused, http.StatusTooManyRequests, "rate_limited")
+	if got := refused.Header().Get("Retry-After"); got != "60" {
+		t.Errorf("Retry-After = %q, want 60: the refusal says when the window ends", got)
+	}
 }
 
 // An archived company's card is not found, and neither are the documents it
