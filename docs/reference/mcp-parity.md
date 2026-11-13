@@ -9,7 +9,7 @@ Counting what another tool covers, it is 85.1%. Once every pending operation ope
 
 | Counted over | Operations | Open to an agent | Parity |
 |---|---:|---:|---:|
-| Every operation in the contract | 1096 | 863 | 78.7% |
+| Every operation in the contract | 1097 | 863 | 78.6% |
 | Operations a signed-in user reaches | 1053 | 863 | 81.9% |
 | Operations the web app calls for a signed-in user | 911 | 753 | 82.6% |
 
@@ -54,7 +54,7 @@ Each operation is in one group. Ask first is a part of Open, so leave it out of 
 | [The user's own account and security](#the-users-own-account-and-security) | My account | 32 | 18 | 5 | 0 | 11 | 2 | 29 | 58.6% | 56.2% |
 | [Agent governance](#agent-governance) | every passport, in no area | 27 | 8 | 0 | 0 | 18 | 1 | 27 | 29.6% | 29.6% |
 | [Operator and system](#operator-and-system) | Admin settings, held as that area | 24 | 17 | 3 | 0 | 7 | 0 | 21 | 71.4% | 70.8% |
-| [Public, with no signed-in user](#public-with-no-signed-in-user) | none: no agent acts here | 43 | 0 | 0 | 0 | 0 | 0 | 34 | n/a | n/a |
+| [Public, with no signed-in user](#public-with-no-signed-in-user) | none: no agent acts here | 44 | 0 | 0 | 0 | 0 | 0 | 34 | n/a | n/a |
 
 ## Business operations
 
@@ -215,6 +215,7 @@ Passport area: none: no agent acts here.
 | Buyer deal rooms | 10 | 0 | 0 | 0 | 0 | 0 | 9 | n/a | n/a |
 | Booking and meeting pages | 14 | 0 | 0 | 0 | 0 | 0 | 12 | n/a | n/a |
 | Forms, confirmations and preference links | 8 | 0 | 0 | 0 | 0 | 0 | 6 | n/a | n/a |
+| Signed notices from connected chats | 1 | 0 | 0 | 0 | 0 | 0 | 0 | n/a | n/a |
 
 ## How an operation gets its group
 

@@ -38,6 +38,9 @@ var publicRequests = map[string]map[string]bool{
 	// The reachability probe external uptime monitors call: a fixed body,
 	// no dependency work, nothing disclosed (see compose.Server.GetStatus).
 	"/v1/status": {http.MethodGet: true},
+	// Dispact's push receiver: the signature with the sealed events secret is
+	// the credential, and the handler checks it before reading anything.
+	"/v1/channel-events/dispact": {http.MethodPost: true},
 	// The OAuth AS endpoints authenticate by their own means: DCR is
 	// open (public clients + PKCE), token exchange proves possession via
 	// the code + verifier, and RFC 7009 revocation proves it by presenting

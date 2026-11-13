@@ -17128,7 +17128,7 @@ paths:
       summary: Disconnect a messaging channel (archives the binding and destroys the credential).
       description: |
         Archives the connection as `disconnected` — which is what stops ingress, since only a
-        live `connected` binding is polled — and destroys the sealed bot token. Already-captured
+        live `connected` binding is polled — and destroys the sealed bot token and events secret. Already-captured
         activities are retained: disconnecting stops capture, it does not erase history.
       responses:
         '204': { description: Disconnected. }
@@ -17352,6 +17352,68 @@ paths:
         '403': { $ref: '#/components/responses/Forbidden' }
         '503':
           description: 'This deployment serves no chat channel links, or has no public base URL configured (`code: channel_links_not_configured`).'
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+
+  # ----------------------- /channel-events/dispact -------------------------
+  # Dispact's push receiver. Dispact signs each notice with the events secret
+  # sealed on the connected bot; the signature is the only credential.
+  /channel-events/dispact:
+    post:
+      tags: [Connectors]
+      operationId: receiveDispactChannelEvent
+      security: []   # anonymous: the Standard Webhooks signature with the sealed events secret is the authentication
+      x-agent-access: human-only
+      summary: Take a signed notice of new talk in a linked Dispact channel (anonymous).
+      description: |
+        Dispact posts here when a linked channel has new messages. The body is signed under
+        Standard Webhooks: `webhook-id`, `webhook-timestamp` (unix seconds) and
+        `webhook-signature` (`v1,<base64 HMAC-SHA256>` entries separated by spaces) over
+        `<id>.<timestamp>.<body>`, keyed by the events secret sealed on the connected bot.
+
+        A URL check (`type: url_verification`) is answered with its `challenge`. A message notice
+        queues one read of the bot's channels, and notices that arrive while that read waits add
+        nothing. `channel.archived` pauses the channel's link. A notice for a channel no live link
+        has is answered `200` and changes nothing.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/DispactChannelEvent' }
+      responses:
+        '200':
+          description: The notice was taken.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/DispactChannelEventReceipt' }
+        '400':
+          description: 'The signed body is not a notice: an unknown `type`, or a field its type needs is missing (`code: channel_event_malformed`).'
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+        '401':
+          description: 'The notice is not signed by the connected bot: no Dispact bot with an events secret is connected, or the signature, the timestamp or the team does not match (`code: channel_event_rejected`). The answer is the same for each cause.'
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+        '409':
+          description: 'This `webhook-id` was taken in the last 24 hours (`code: channel_event_replayed`).'
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+        '413':
+          description: 'The body is larger than a notice can be (`code: channel_event_too_large`).'
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+        '429':
+          description: Rate-limited; Dispact retries.
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+        '503':
+          description: 'This deployment takes no chat notices, or could not record the notice id (`code: channel_events_unavailable`); Dispact retries.'
           content:
             application/problem+json:
               schema: { $ref: '#/components/schemas/Problem' }
@@ -45474,8 +45536,8 @@ components:
     ChannelConnection:
       type: object
       description: >-
-        One workspace-level messaging-channel binding. The bot token never appears in this
-        shape — it lives sealed in the vault, and it is the only secret a binding holds.
+        One workspace-level messaging-channel binding. The bot token and the Dispact events
+        secret never appear in this shape: both live sealed in the vault.
       required: [id, provider, channelId, channelLabel, status, version]
       properties:
         id: { type: string, format: uuid }
@@ -45500,6 +45562,10 @@ components:
             polled again until an operator acts. `pending` is a value NO server produces: it is
             retained because the code generator disambiguates enum member names across the whole
             document, so dropping it renames unrelated generated constants in other schemas.
+        eventsSecretSet:
+          type: boolean
+          readOnly: true
+          description: Whether a Dispact events secret is sealed for this connection, so signed notices of new messages are taken. The secret itself is never shown.
         version: { type: integer, format: int64 }
         createdAt: { type: string, format: date-time }
         updatedAt: { type: string, format: date-time }
@@ -45521,6 +45587,10 @@ components:
           type: string
           maxLength: 500
           description: The chat's web address, such as `https://chat.example.com`. Required for Dispact, which every team hosts itself; refused for Telegram.
+        eventsSecret:
+          type: string
+          maxLength: 200
+          description: The Dispact app's events secret, `whsec_…`, which signs each notice of a new message. Optional; without it Margince reads the channels every minute. Refused for Telegram. Sealed into the vault on arrival and never echoed back.
     ReplaceChannelTokenRequest:
       type: object
       required: [botToken]
@@ -45528,7 +45598,39 @@ components:
         botToken:
           type: string
           minLength: 1
-          description: The replacement BotFather token. Sealed into the vault on arrival and never echoed back.
+          description: The replacement bot token. Sealed into the vault on arrival and never echoed back.
+        eventsSecret:
+          type: string
+          maxLength: 200
+          description: A new Dispact events secret, `whsec_…`. Absent keeps the sealed one. Refused for Telegram. Sealed into the vault on arrival and never echoed back.
+    DispactChannelEvent:
+      type: object
+      description: >-
+        One signed notice from Dispact, or its URL check. A notice names the channel and the newest
+        message sequence, and never carries message text.
+      required: [type]
+      properties:
+        type:
+          type: string
+          enum: [url_verification, message.created, thread.replied, message.updated, channel.archived]
+        challenge: { type: string, maxLength: 500, description: The value a URL check expects back. }
+        workspace_id: { type: string, description: The Dispact team; it must be the connected bot's team. }
+        channel_slug: { type: string }
+        seq: { type: integer, description: 'The highest message sequence of the burst. Margince reads the history itself and uses the notice only as a signal.' }
+        message_id: { type: string }
+        event_id: { type: string }
+        ts: { type: integer, format: int64 }
+    DispactChannelEventReceipt:
+      type: object
+      additionalProperties: false
+      description: The answer to a taken notice. A URL check gets `challenge` alone.
+      properties:
+        challenge: { type: string }
+        status:
+          type: string
+          enum: [pull_queued, link_paused, ignored]
+          x-extensible-enum: true
+          description: '`pull_queued`: the channel''s history is read soon. `link_paused`: the archived channel''s link is paused. `ignored`: no live link has this channel.'
 
     # ---- chat channel links ----
     ChannelLinkRecordType:

@@ -79,7 +79,8 @@ const (
 
 // channelConnectionColumns is the read shape, spelled once so every scan
 // agrees with every select.
-const channelConnectionColumns = `id, provider, channel_id, channel_label, address, status, version, created_at, updated_at`
+const channelConnectionColumns = `id, provider, channel_id, channel_label, address, status, version, created_at, updated_at,
+	events_credential_ref IS NOT NULL`
 
 // ChannelConnection is one channel binding as read back. No vault ref rides this
 // shape: the bot token lives sealed in the vault, addressed by a ref no caller
@@ -96,11 +97,14 @@ type ChannelConnection struct {
 	ChannelLabel string
 	// Address is the web address of a self-hosted provider's install, and
 	// empty for a provider with one fixed API.
-	Address   string
-	Status    string
-	Version   int64
-	CreatedAt time.Time
-	UpdatedAt time.Time
+	Address string
+	// EventsSecretSet reports a sealed secret the provider signs its
+	// notices with. The secret itself never leaves the vault through here.
+	EventsSecretSet bool
+	Status          string
+	Version         int64
+	CreatedAt       time.Time
+	UpdatedAt       time.Time
 }
 
 // ConnectRequest is Connect's input: which provider, and the BotFather token to
@@ -111,6 +115,8 @@ type ConnectRequest struct {
 	Provider string
 	BotToken string
 	Address  string
+	// EventsSecret is optional; only a provider that pushes notices takes one.
+	EventsSecret string
 }
 
 // ErrChannelWorkspaceBotAlreadyBound reports that this installation already
@@ -195,6 +201,9 @@ func (s *ChannelStore) Connect(ctx context.Context, req ConnectRequest) (Channel
 	if err := check.ValidateToken(req.BotToken); err != nil {
 		return ChannelConnection{}, err
 	}
+	if err := checkEventsSecret(check, req.EventsSecret); err != nil {
+		return ChannelConnection{}, err
+	}
 	ws, ok := principal.WorkspaceID(ctx)
 	if !ok {
 		return ChannelConnection{}, errors.New("capture: channel connect called outside a workspace context")
@@ -203,17 +212,17 @@ func (s *ChannelStore) Connect(ctx context.Context, req ConnectRequest) (Channel
 	if err != nil {
 		return ChannelConnection{}, err
 	}
-	credentialRef, err := s.sealBotToken(ctx, ws, req.BotToken)
+	refs, err := s.sealConnectionSecrets(ctx, ws, req.BotToken, req.EventsSecret)
 	if err != nil {
 		return ChannelConnection{}, err
 	}
-	row, err := s.insertConnected(ctx, req.Provider, address, bot, credentialRef)
+	row, err := s.insertConnected(ctx, req.Provider, address, bot, refs)
 	if err != nil {
 		// A lost race for a unique index GUARANTEES no row persisted, so the
-		// just-sealed ref is safe to destroy. Any other error leaves the commit
+		// just-sealed refs are safe to destroy. Any other error leaves the commit
 		// outcome ambiguous, and deleting then could strand a live credential.
 		if constraint, unique := storekit.UniqueViolation(err); unique {
-			keyvault.DeleteDetached(ctx, s.vault, s.log, ws, credentialRef, "channel-connect-lost-race")
+			s.destroyDetached(ctx, ws, "channel-connect-lost-race", refs.token, refs.events)
 			return ChannelConnection{}, channelUniquenessRefusal(constraint)
 		}
 		return ChannelConnection{}, err
@@ -280,13 +289,15 @@ func connectAddress(check ChannelBotCheck, raw string) (string, error) {
 	return address, nil
 }
 
-// sealBotToken puts the token in the vault before any row names it
-// (put-then-commit). One secret per connection now: a poll authenticates with the
-// bot token alone, so there is no second value to mint, rotate or destroy.
-func (s *ChannelStore) sealBotToken(ctx context.Context, ws ids.UUID, token string) (keyvault.Ref, error) {
-	ref, err := s.vault.Put(ctx, ids.From[ids.WorkspaceKind](ws), []byte(token))
+// sealSecret puts one secret in the vault before any row names it
+// (put-then-commit). An empty secret seals nothing and answers an empty ref.
+func (s *ChannelStore) sealSecret(ctx context.Context, ws ids.UUID, what, secret string) (keyvault.Ref, error) {
+	if secret == "" {
+		return "", nil
+	}
+	ref, err := s.vault.Put(ctx, ids.From[ids.WorkspaceKind](ws), []byte(secret))
 	if err != nil {
-		return "", fmt.Errorf("capture: sealing the bot token: %w", err)
+		return "", fmt.Errorf("capture: sealing the %s: %w", what, err)
 	}
 	return ref, nil
 }
@@ -294,7 +305,7 @@ func (s *ChannelStore) sealBotToken(ctx context.Context, ws ids.UUID, token stri
 // insertConnected writes the live row and its audit in one transaction. The
 // cursor starts at 0 — "whatever Telegram still holds" — so a freshly connected
 // bot collects the messages waiting for it rather than starting from silence.
-func (s *ChannelStore) insertConnected(ctx context.Context, provider, address string, bot ChannelBot, credentialRef keyvault.Ref) (ChannelConnection, error) {
+func (s *ChannelStore) insertConnected(ctx context.Context, provider, address string, bot ChannelBot, refs connectionRefs) (ChannelConnection, error) {
 	connectedBy, err := channelActor(ctx)
 	if err != nil {
 		return ChannelConnection{}, err
@@ -303,11 +314,11 @@ func (s *ChannelStore) insertConnected(ctx context.Context, provider, address st
 	err = s.db.Tx(ctx, func(tx pgx.Tx) error {
 		out, err = scanChannelConnection(tx.QueryRow(ctx, `
 			INSERT INTO channel_connection
-			  (provider, channel_id, channel_label, address, credential_ref, status, poll_offset, connected_by)
-			VALUES ($1, $2, $3, NULLIF($4, ''), $5, $6, 0, $7)
+			  (provider, channel_id, channel_label, address, credential_ref, events_credential_ref, status, poll_offset, connected_by)
+			VALUES ($1, $2, $3, NULLIF($4, ''), $5, NULLIF($6, ''), $7, 0, $8)
 			RETURNING `+channelConnectionColumns,
 			provider, bot.ID, bot.Label, address,
-			string(credentialRef), channelStatusConnected, connectedBy))
+			string(refs.token), string(refs.events), channelStatusConnected, connectedBy))
 		if err != nil {
 			return err
 		}
@@ -340,13 +351,15 @@ func channelActor(ctx context.Context) (ids.UUID, error) {
 // channelAuditImage is one side of a channel connection's audit trail. Neither
 // vault ref appears: the audit spine must not become a second custodian of the
 // credentials, and a ref tells a reader nothing the bot's own identity does not.
+// Whether an events secret is sealed does appear, so setting one is on record.
 func channelAuditImage(c ChannelConnection) map[string]any {
 	return map[string]any{
-		"provider":      c.Provider,
-		"channel_id":    c.ChannelID,
-		"channel_label": c.ChannelLabel,
-		"address":       c.Address,
-		"status":        c.Status,
+		"provider":          c.Provider,
+		"channel_id":        c.ChannelID,
+		"channel_label":     c.ChannelLabel,
+		"address":           c.Address,
+		"status":            c.Status,
+		"events_secret_set": c.EventsSecretSet,
 	}
 }
 
@@ -354,7 +367,7 @@ func scanChannelConnection(r pgx.Row) (ChannelConnection, error) {
 	var c ChannelConnection
 	var address *string
 	err := r.Scan(&c.ID, &c.Provider, &c.ChannelID, &c.ChannelLabel, &address,
-		&c.Status, &c.Version, &c.CreatedAt, &c.UpdatedAt)
+		&c.Status, &c.Version, &c.CreatedAt, &c.UpdatedAt, &c.EventsSecretSet)
 	if address != nil {
 		c.Address = *address
 	}

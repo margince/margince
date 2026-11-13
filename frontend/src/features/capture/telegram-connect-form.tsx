@@ -32,10 +32,16 @@ import { BOT_COPY, type BotProvider } from "./botcopy";
 // first-connect (no `connection` prop) and that in-place edit (a `connection`
 // prop supplies the id PATCH targets). A self-hosted provider (Dispact) adds
 // its chat's address on first connect; a token rotation keeps the address.
+// Dispact also takes an optional events secret, on connect and on rotation;
+// left empty on a rotation, the saved one stays.
 
 type ChannelConnection = components["schemas"]["ChannelConnection"];
 
-type BotCredentials = Readonly<{ token: string; address: string }>;
+type BotCredentials = Readonly<{
+  token: string;
+  address: string;
+  eventsSecret: string;
+}>;
 
 export function BotConnectForm({
   provider = "telegram",
@@ -59,21 +65,26 @@ export function BotConnectForm({
   const queryClient = useQueryClient();
   const [botToken, setBotToken] = useState("");
   const [address, setAddress] = useState("");
+  const [eventsSecret, setEventsSecret] = useState("");
   const copy = BOT_COPY[provider];
   // Only a new Dispact binding names its chat; the server refuses an address
   // for Telegram, and a token rotation takes the token alone.
   const asksAddress = provider === "dispact" && !connection;
+  // Only Dispact pushes signed notices; the server refuses a secret for Telegram.
+  const asksEventsSecret = provider === "dispact";
 
   const connect = useMutation({
     mutationFn: async ({
       token,
       address: chatAddress,
+      eventsSecret: secret,
     }: BotCredentials): Promise<ChannelConnection> => {
+      const withSecret = secret ? { eventsSecret: secret } : {};
       if (connection) {
         return unwrap(
           await api.PATCH("/channel-connections/{id}", {
             params: { path: { id: connection.id } },
-            body: { botToken: token },
+            body: { botToken: token, ...withSecret },
           }),
           t,
         );
@@ -84,6 +95,7 @@ export function BotConnectForm({
             provider,
             botToken: token,
             ...(chatAddress ? { address: chatAddress } : {}),
+            ...withSecret,
           },
         }),
         t,
@@ -95,11 +107,13 @@ export function BotConnectForm({
       // GET /channel-connections drive whatever it shows next.
       queryClient.invalidateQueries({ queryKey: ["channel-connections"] });
       setBotToken("");
+      setEventsSecret("");
     },
     onError: () => {
       // The token is never retained after a failed submit — the same
       // posture the IMAP form holds for its secret.
       setBotToken("");
+      setEventsSecret("");
     },
   });
 
@@ -114,6 +128,7 @@ export function BotConnectForm({
     if (open && !wasOpen.current) {
       setBotToken("");
       setAddress("");
+      setEventsSecret("");
       resetConnect();
     }
     wasOpen.current = open;
@@ -174,6 +189,7 @@ export function BotConnectForm({
               connect.mutate({
                 token: botToken.trim(),
                 address: asksAddress ? address.trim() : "",
+                eventsSecret: asksEventsSecret ? eventsSecret.trim() : "",
               });
             }}
           >
@@ -217,6 +233,13 @@ export function BotConnectForm({
                 />
               )}
             </Field>
+            {asksEventsSecret && (
+              <EventsSecretField
+                value={eventsSecret}
+                onChange={setEventsSecret}
+                keepsSaved={connection?.eventsSecretSet === true}
+              />
+            )}
             {errorMessage && (
               <Callout
                 tone="danger"
@@ -251,5 +274,39 @@ export function BotConnectForm({
         </>
       )}
     </Modal>
+  );
+}
+
+// The optional Dispact events secret. On a rotation an empty field keeps the
+// saved secret, so the hint says so once one is saved.
+function EventsSecretField({
+  value,
+  onChange,
+  keepsSaved,
+}: Readonly<{
+  value: string;
+  onChange: (value: string) => void;
+  keepsSaved: boolean;
+}>) {
+  const t = useT();
+  return (
+    <Field
+      label={t("connectors.bot.eventsSecret")}
+      hint={t(
+        keepsSaved
+          ? "connectors.bot.eventsSecretKeepHint"
+          : "connectors.bot.eventsSecretHint",
+      )}
+    >
+      {(control) => (
+        <TextInput
+          {...control}
+          type="password"
+          autoComplete="off"
+          value={value}
+          onChange={(event) => onChange(event.target.value)}
+        />
+      )}
+    </Field>
   );
 }

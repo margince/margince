@@ -137,6 +137,71 @@ describe("BotConnectForm", () => {
     expect(screen.queryByLabelText("Chat address *")).toBeNull();
   });
 
+  it("sends a Dispact events secret only when one is typed, and never for Telegram", async () => {
+    const calls: unknown[] = [];
+    installFetchStub({
+      "POST /channel-connections": (body) => {
+        calls.push(body);
+        return jsonResponse(
+          { ...connectedConnection, provider: "dispact" },
+          201,
+        );
+      },
+    });
+    const user = userEvent.setup();
+    const { rerender } = render(<BotConnectForm open onClose={() => {}} />);
+    expect(screen.queryByLabelText("Events secret")).toBeNull();
+    rerender(<BotConnectForm provider="dispact" open onClose={() => {}} />);
+    expect(
+      screen.getByText(/checks every channel each minute/),
+    ).toBeInTheDocument();
+    await user.type(screen.getByLabelText("Bot token *"), "gwapp_fake");
+    await user.type(
+      screen.getByLabelText("Chat address *"),
+      "https://chat.example.com",
+    );
+    await user.type(screen.getByLabelText("Events secret"), "whsec_c2VjcmV0");
+    await user.click(screen.getByRole("button", { name: "Connect" }));
+    await waitFor(() => expect(calls).toHaveLength(1));
+    expect(calls[0]).toEqual({
+      provider: "dispact",
+      botToken: "gwapp_fake",
+      address: "https://chat.example.com",
+      eventsSecret: "whsec_c2VjcmV0",
+    });
+  });
+
+  it("keeps the saved events secret when a Dispact token is replaced without one", async () => {
+    const calls: unknown[] = [];
+    const dispact: ChannelConnection = {
+      ...connectedConnection,
+      provider: "dispact",
+      eventsSecretSet: true,
+    };
+    installFetchStub({
+      "PATCH /channel-connections/018f3a1b-0000-7000-8000-0000000000d1": (
+        body,
+      ) => {
+        calls.push(body);
+        return jsonResponse(dispact);
+      },
+    });
+    const user = userEvent.setup();
+    render(
+      <BotConnectForm
+        provider="dispact"
+        open
+        onClose={() => {}}
+        connection={dispact}
+      />,
+    );
+    expect(screen.getByText(/keep the events secret/)).toBeInTheDocument();
+    await user.type(screen.getByLabelText("Bot token *"), "gwapp_rotated");
+    await user.click(screen.getByRole("button", { name: "Replace token" }));
+    await waitFor(() => expect(calls).toHaveLength(1));
+    expect(calls[0]).toEqual({ botToken: "gwapp_rotated" });
+  });
+
   it("renders a pending connection as pending, never as connected", async () => {
     installFetchStub({});
     render(

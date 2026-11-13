@@ -1723,6 +1723,7 @@
     "readCorpus": "knowledge",
     "readTranscriptForNextSteps": "activities",
     "reassignHandoff": "leads",
+    "receiveDispactChannelEvent": "provider_notices",
     "recordAIFeedback": "ai_help",
     "recordCommunicationContext": "consent",
     "recordConsent": "consent",

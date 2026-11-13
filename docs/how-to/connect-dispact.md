@@ -13,6 +13,8 @@ what each step does on the server, and what each failure means. The REST surface
   below names.
 - A credential store on this installation. The token is sealed in it, as the Telegram bot token is.
 - A worker running. The worker posts to the channel; the API only schedules the post.
+- Optional: the app's events secret, so Dispact can tell Margince when a channel has new messages. See
+  [Turn on push](#turn-on-push).
 
 ## Connect the bot
 
@@ -73,6 +75,39 @@ that member's agent. The member sees the passport in **Settings → AI assistant
 and can revoke it there. After a revoke, Dispact calls for that member are refused. After the passport
 expires, the next call mints a new one for the same member.
 
+## Turn on push
+
+Without push, the worker reads every linked channel once a minute. With push, Dispact sends a signed
+notice to `<public_base_url>/v1/channel-events/dispact` when a linked channel has new messages, and the
+worker reads that bot's channels at once.
+
+1. Install the app from the manifest as above. Its `events` block names the URL and the notice types:
+   `message.created`, `thread.replied`, `message.updated` and `channel.archived`.
+2. Dispact shows the app's events secret once, at install. It starts with `whsec_`.
+3. An admin pastes it into **Events secret** when connecting the bot, or with **Replace token** on a
+   bot already connected. The secret is sealed in the credential store beside the token, and the bot's
+   row shows only `eventsSecretSet: true`. A replacement with the field left empty keeps the saved
+   secret. Disconnecting the bot destroys both. Setting or replacing the secret is in the audit log of
+   the connection.
+4. Dispact checks the URL with a signed `url_verification` notice, and Margince answers with its
+   `challenge`. Dispact runs this check again after it rotates the secret or the URL changes, so paste
+   the new secret in Margince before you rotate it in Dispact.
+
+Every notice is signed under Standard Webhooks: the headers `webhook-id`, `webhook-timestamp` and
+`webhook-signature`. The route needs no session, and the signature is the only credential. The answers:
+
+| Answer | What it means |
+|---|---|
+| `200` `pull_queued` | The channel is linked. The bot's channels are read soon. Notices that arrive while that read waits add nothing. |
+| `200` `link_paused` | `channel.archived` for a linked channel. The link is paused, as when the chat answers `404`. |
+| `200` `ignored` | No live link of this bot has the channel. Nothing changes. |
+| `400` `channel_event_malformed` | The signed body is not a notice: its `type` is unknown, a notice lacks `workspace_id` or `channel_slug`, or a URL check has no challenge. Nothing is counted. |
+| `401` `channel_event_rejected` | No Dispact bot with an events secret is connected, the signature does not match the sealed secret, the timestamp is more than 5 minutes off this server's clock, or `workspace_id` is not the connected bot's team. The answer is the same for each cause, so a stranger cannot tell whether push is set up. The API log names the cause. Check that the secret is saved, that it matches, and the server clock. |
+| `409` `channel_event_replayed` | This `webhook-id` was taken in the last 24 hours. Ids are held in Redis. A notice whose read could not be queued, or whose link could not be paused, gives its id back, so Dispact's retry is taken. |
+| `413` `channel_event_too_large` | The body is over 16 KiB. |
+| `429` | One sender sent more than 600 notices in a minute, or Redis cannot count them. |
+| `503` `channel_events_unavailable` | Redis could not record the id, or the read could not be queued. Dispact retries. |
+
 ## The address must be public in production
 
 In production, the server refuses to call an address that resolves to a private or loopback IP, and it
@@ -86,10 +121,12 @@ follows no redirect. Otherwise a token holder could point the server at its own 
   event adds nothing. It starts only when the worker has a credential store.
 - **The job `chat_link_flush`** sends one post per link with the rows that are waiting, after a window of
   two minutes. It also posts the record's card once and edits it when a fact on it changes.
-- **The job `chat_pull_sweep`** runs every minute and enqueues one **`chat_pull`** per live bot. The pull
-  reads each linked channel's history and files an AI summary note for each stretch of talk that
-  matters. It needs a model bound to the `chat_summary` task in the AI routing. Without one, the talk is
-  read and passed over, and no note is filed.
+- **The job `chat_pull_sweep`** runs every minute and enqueues one **`chat_pull`** per live bot. While
+  the bot has had a valid notice in the last hour, the sweep enqueues it only once an hour, because the
+  notices start the pulls. When the notices stop, the sweep reads every minute again within the hour.
+  The pull reads each linked channel's history and files an AI summary note for each stretch of talk
+  that matters. It needs a model bound to the `chat_summary` task in the AI routing. Without one, the
+  talk is read and passed over, and no note is filed.
 
 ## When the chat refuses
 

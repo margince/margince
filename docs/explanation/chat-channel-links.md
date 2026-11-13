@@ -1,4 +1,4 @@
-<!-- describes: backend/internal/modules/chatlinks backend/internal/compose/chatsync backend/internal/compose/chatsummary backend/internal/compose/dispactapp -->
+<!-- describes: backend/internal/modules/chatlinks backend/internal/compose/chatsync backend/internal/compose/chatsummary backend/internal/compose/dispactapp backend/internal/platform/lastseen -->
 # How chat channel links work
 
 A deal or a project can be linked to one private channel of a team chat (Dispact). Margince keeps a
@@ -57,6 +57,32 @@ channel cannot loop into the same channel.
 The job `chat_pull_sweep` runs every minute and enqueues one `chat_pull` for each live Dispact bot. The
 pull is unique per bot while it waits or runs, so any caller that wants a channel read again enqueues the
 same job.
+
+### Push, then pull
+
+A Dispact notice carries no message text. It only says that a channel has news, so the receiver
+(`chatsync.Receiver`) checks the signature and enqueues that same `chat_pull`. The pull then reads the
+history after the cursor, as it does on a timer. Ten notices while one pull waits make one pull. A
+notice that comes while the pull runs finds the job still running and adds nothing, so the pull checks
+when it ends whether a notice came after it started, and runs once more if one did.
+
+`channel.archived` pauses the channel's link through `MarkChannelGone`, the same write a `404` from the
+chat makes. A notice is matched only to the links of the connected bot, and its `workspace_id` must be
+that bot's team, so a notice for another team cannot reach this installation's links.
+
+### The cadence switch
+
+The function `SweepDue` decides when the sweep reads a bot. Each valid notice records its time. While
+the last one is under an hour old, the sweep reads the bot only when an hour has passed since the sweep
+last read it. That hourly read catches what a lost notice missed and closes episodes whose quiet time
+ended with no new message. Once the last notice is an hour old, the sweep reads every minute again. A
+broken push therefore falls back to polling without anyone acting.
+
+The two times live in Redis with a time to live of one hour (`platform/lastseen`), not in a column. A
+notice can come every two minutes per busy channel, and a write per notice to `channel_connection`
+would cost a row version, a WAL record and an audit question each time. A Redis key costs none of that,
+and losing it only means the sweep polls every minute until the next notice. When the worker cannot
+read Redis, the sweep reads every minute.
 
 For each active link, the pull reads the channel's history after the link's `history_cursor`, at most
 five pages of 99 messages. It skips the bot's own posts and the chat's `system` and `member_join`
