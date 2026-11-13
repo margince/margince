@@ -11,7 +11,7 @@ import { routeHash } from "../lib/router";
 import { settingsHref } from "../lib/settingsrouting";
 import { Recommended } from "./agentadvice";
 import type { AgentJob } from "./agentjobs";
-import { Readings } from "./agentpanel-readings";
+import { Readings, TaskDial } from "./agentpanel-readings";
 import { ReadyWork } from "./agentpanel-work";
 import type { PanelFrame } from "./agentpanelframe";
 import { modelText } from "./agentrail.model";
@@ -136,15 +136,22 @@ function PanelHead({
   name,
   line,
   model,
+  tasks,
+  children,
 }: Readonly<{
   state: MarginceCoreState;
   name: string;
   line: SpokenLine;
   model: Readonly<{ allowed: boolean; calls: readonly AiCall[] }>;
+  /** The reader's open tasks; undefined until the day is read. */
+  tasks: number | undefined;
+  /** The figures, on the head's last line. */
+  children: ReactNode;
 }>) {
   const t = useT();
   return (
     <header className="arphead">
+      {tasks !== undefined && <TaskDial count={tasks} />}
       <Heading size="medium" as="h2" className="arptitle">
         {name}
       </Heading>
@@ -154,14 +161,15 @@ function PanelHead({
         <i aria-hidden="true" />
         {t(STATE_WORD[state])}
       </p>
+      <p className="arpsaying">
+        <RailLine line={line} />
+      </p>
+      {children}
       {model.allowed && (
         <p className="arpmodel t-caption">
           {t("agent.fact.model")} <b>{modelText(model, t)}</b>
         </p>
       )}
-      <p className="arpsaying">
-        <RailLine line={line} />
-      </p>
     </header>
   );
 }
@@ -172,7 +180,7 @@ type Tab = (typeof TABS)[number];
 /**
  * The panel: the agent's control centre.
  *
- * The head and the readings stand over three bodies. Now holds what is running,
+ * The head carries the task dial and the figures, over three bodies. Now holds what is running,
  * the reader's open tasks and what the agent recommends. Activity holds what
  * settled. System holds what it stands on. The promise closes all three.
  *
@@ -239,27 +247,20 @@ export function AgentPanel({
         maxHeight: frame.maxHeight,
       }}
     >
-      <PanelHead state={state} name={signals.name} line={line} model={model} />
-      <Readings
+      <PanelHead
+        state={state}
+        name={signals.name}
+        line={line}
+        model={model}
         tasks={ready?.length}
-        waiting={signals.waiting}
-        done={done}
-        spend={spend}
-        logHref={mayOpenLog ? AI_SETTINGS_HREF : undefined}
-      />
-      <div className="artabs">
-        <SegmentedControl
-          options={TABS}
-          value={tab}
-          onChange={setTab}
-          label={t("agent.tab.label")}
-          labels={{
-            now: t("agent.tab.now"),
-            activity: t("agent.tab.activity"),
-            system: t("agent.tab.system"),
-          }}
+      >
+        <Readings
+          waiting={signals.waiting}
+          done={done}
+          spend={spend}
+          logHref={mayOpenLog ? AI_SETTINGS_HREF : undefined}
         />
-      </div>
+      </PanelHead>
 
       {/* The three bodies stay mounted: a job started under Now keeps its
           answer while the reader looks at Activity. */}
@@ -310,6 +311,21 @@ export function AgentPanel({
         </PanelSection>
         {/* The one control here, under everything that reports. */}
         <EdgeLightSetting />
+      </div>
+
+      {/* The switch between the bodies closes the panel, as its dock. */}
+      <div className="artabs">
+        <SegmentedControl
+          options={TABS}
+          value={tab}
+          onChange={setTab}
+          label={t("agent.tab.label")}
+          labels={{
+            now: t("agent.tab.now"),
+            activity: t("agent.tab.activity"),
+            system: t("agent.tab.system"),
+          }}
+        />
       </div>
 
       {/* Last, and the only line here no read produced: the agent reaches no

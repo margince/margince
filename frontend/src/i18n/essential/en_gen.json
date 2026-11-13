@@ -1635,8 +1635,6 @@
   "agent.ready.count_other": "{count} things ready for you",
   "agent.job.start": "Start",
   "agent.job.startNamed": "Start: {job}",
-  "agent.job.followUps.why": "Writes a draft on each of the deals slipping most. Nothing is sent.",
-  "agent.job.enrich.why": "Reads the company’s website and proposes details. Nothing is saved until you approve it.",
   "agent.job.followUps": "Draft follow-ups for slipping deals",
   "agent.job.followUps.running": "Drafting follow-ups",
   "agent.job.followUps.done_one": "Drafted {count} follow-up. It waits on the deal and nothing was sent.",

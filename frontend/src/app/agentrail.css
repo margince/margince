@@ -666,8 +666,74 @@
   display: grid;
   grid-template-columns: auto auto 1fr;
   align-items: baseline;
-  gap: var(--space-1) var(--space-3);
-  padding: var(--space-4) var(--space-4) var(--space-3);
+  row-gap: var(--space-1);
+  padding: var(--space-4);
+  border-bottom: 1px solid var(--borderSubtle);
+}
+/* The dial stands beside all three lines; without it they start at the edge. */
+.ardial {
+  position: relative;
+  grid-column: 1;
+  grid-row: 1 / span 4;
+  align-self: start;
+  width: var(--space-16);
+  height: var(--space-16);
+}
+.arphead > .ardial {
+  margin-inline-end: var(--space-4);
+}
+.ardial > svg {
+  display: block;
+  transform: rotate(-90deg);
+}
+.ardial > svg circle {
+  fill: none;
+  stroke-width: 5;
+}
+.ardialtrack {
+  stroke: var(--borderSubtle);
+}
+.ardialmark {
+  stroke: var(--ai);
+  stroke-linecap: round;
+}
+.ardialcount {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  font: var(--fontHeadingLarge);
+  color: var(--textPrimary);
+}
+.ardialcount svg {
+  width: var(--space-6);
+  height: var(--space-6);
+  color: var(--success);
+}
+@media (prefers-reduced-motion: no-preference) {
+  .ardialmark {
+    animation: ardialin var(--dur-enter) var(--ease-out) backwards;
+  }
+  .artab:not([hidden]) > * {
+    animation: arrise var(--dur-enter) var(--ease-out) backwards;
+  }
+  .artab > :nth-child(2) {
+    animation-delay: 60ms;
+  }
+  .artab > :nth-child(3) {
+    animation-delay: 120ms;
+  }
+}
+@keyframes ardialin {
+  from {
+    stroke-dasharray: 0 100;
+  }
+}
+@keyframes arrise {
+  from {
+    opacity: 0;
+    transform: translateY(var(--space-2));
+  }
 }
 .arphead > * {
   margin: 0;
@@ -677,6 +743,7 @@
    only place the vocabulary is written out, and it is written out because the
    sentence below it says what is HAPPENING rather than what the agent is. */
 .arpstate {
+  grid-column: 3;
   display: flex;
   align-items: center;
   gap: var(--space-2);
@@ -690,10 +757,13 @@
   background: var(--arTone);
   box-shadow: 0 0 6px -1px var(--arTone);
 }
-/* The model, at the end of the state's line: meta, never wider than its half. */
+/* The model, on the head's last line: meta, cut short before it wraps. */
+.arphead > .arpstate {
+  margin-inline-start: var(--space-3);
+}
 .arpmodel {
+  grid-column: 2 / -1;
   min-width: 0;
-  text-align: end;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -705,10 +775,11 @@
   font-weight: var(--fontWeightMedium);
 }
 .arptitle {
+  grid-column: 2;
   color: var(--textPrimary);
 }
 .arpsaying {
-  grid-column: 1 / -1;
+  grid-column: 2 / -1;
   color: var(--textPrimary);
 }
 
@@ -718,27 +789,21 @@
  * body in view: titled sections at one inset.
  */
 .arreadings {
+  grid-column: 2 / -1;
   display: flex;
-  margin: 0 var(--space-4);
-  border: 1px solid var(--borderSubtle);
-  border-radius: var(--r-md);
-  background: var(--bgWell);
+  flex-wrap: wrap;
+  gap: var(--space-1) var(--space-4);
+  color: var(--textSecondary);
 }
 .arreading {
   display: flex;
-  flex: 1 1 auto;
-  flex-direction: column;
   gap: var(--space-1);
-  padding: var(--space-3);
   white-space: nowrap;
-}
-.arreading + .arreading {
-  border-inline-start: 1px solid var(--borderSubtle);
 }
 .arfigure {
   margin: 0;
-  font: var(--fontHeadingSmall);
   color: var(--textPrimary);
+  font-weight: var(--fontWeightMedium);
 }
 .arfiguredoor {
   color: inherit;
@@ -753,12 +818,17 @@
 }
 .artabs {
   display: flex;
-  padding: var(--space-3) var(--space-4) 0;
+  padding: var(--space-3) var(--space-4);
+  border-top: 1px solid var(--borderSubtle);
 }
 .artab {
   display: grid;
   gap: var(--space-4);
   padding: var(--space-4) 0;
+}
+/* The dock's rule closes the body, so the promise under it needs its own air. */
+.artabs + .arclaim {
+  padding-top: 0;
 }
 .artab[hidden] {
   display: none;
@@ -1051,7 +1121,7 @@
   grid-template-columns: auto minmax(0, 1fr) auto;
   align-items: center;
   gap: var(--space-3);
-  padding: var(--space-3) 0;
+  padding: var(--space-2) 0;
   border-top: 1px solid var(--borderSubtle);
 }
 .aradvice:first-child {
@@ -1083,10 +1153,10 @@
   background: var(--warningBg);
   color: var(--warningText);
 }
-.aradvicetext p {
+.aradvicetext p,
+.aradvicename {
   margin: 0;
 }
 .aradvicename {
   color: var(--textPrimary);
-  font-weight: var(--fontWeightMedium);
 }

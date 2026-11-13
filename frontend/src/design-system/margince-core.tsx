@@ -196,17 +196,30 @@ const TALLY_SEGMENTS = 12;
 /** The gap between two segments, in the ring's 100-unit path length. */
 const TALLY_GAP = 3;
 
-/** One segment per waiting thing, on the line the progress ring draws on. */
-function TallyRing({ count }: Readonly<{ count: number }>) {
+/**
+ * The dashes of a ring of one segment per thing, on a 100-unit path. The Core
+ * and any dial that echoes it count with the same marks.
+ */
+export function tallyDashes(
+  count: number,
+): readonly Readonly<{ dash: string; offset: number }>[] {
   const segments = Math.min(count, TALLY_SEGMENTS);
   const length = 100 / segments - (segments > 1 ? TALLY_GAP : 0);
+  return Array.from({ length: segments }, (_, index) => ({
+    dash: `${length} ${100 - length}`,
+    offset: -(index * 100) / segments - TALLY_GAP / 2,
+  }));
+}
+
+/** One segment per waiting thing, on the line the progress ring draws on. */
+function TallyRing({ count }: Readonly<{ count: number }>) {
   return (
     <svg
       className="core-progress core-tally"
       viewBox="0 0 100 100"
       aria-hidden="true"
     >
-      {Array.from({ length: segments }, (_, index) => (
+      {tallyDashes(count).map((mark, index) => (
         <circle
           // biome-ignore lint/suspicious/noArrayIndexKey: the segments are interchangeable marks, counted rather than named
           key={index}
@@ -214,8 +227,8 @@ function TallyRing({ count }: Readonly<{ count: number }>) {
           cy="50"
           r="48.5"
           pathLength="100"
-          strokeDasharray={`${length} ${100 - length}`}
-          strokeDashoffset={-(index * 100) / segments - TALLY_GAP / 2}
+          strokeDasharray={mark.dash}
+          strokeDashoffset={mark.offset}
         />
       ))}
     </svg>

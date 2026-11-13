@@ -12,13 +12,15 @@ import type { Signals } from "./agentrail-reads";
 
 const CONNECTIONS_HREF = routeHash(settingsHref("connections"));
 
-/** A step the reader takes themselves: what stands, why it matters, the door. */
+/** How many recommendations the panel names at once. */
+const ADVICE_ROWS = 3;
+
+/** A step the reader takes themselves: what stands, and the door to it. */
 type Pointer = Readonly<{
   id: string;
   mark: LucideIcon;
   tone: "warn" | "plain";
   title: string;
-  why: string;
   href: string;
   open: string;
 }>;
@@ -34,7 +36,6 @@ function usePointers(signals: Signals): readonly Pointer[] {
       mark: Unplug,
       tone: "warn",
       title: t("agent.advice.offline", { source: source.label }),
-      why: t("agent.advice.offline.why"),
       href: CONNECTIONS_HREF,
       open: t("agent.advice.offline.open"),
     }),
@@ -50,7 +51,6 @@ function usePointers(signals: Signals): readonly Pointer[] {
       title: plural("agent.advice.approvals", waiting, {
         count: formatNumber(waiting, locale),
       }),
-      why: t("agent.advice.approvals.why"),
       href: "#/worklist",
       open: t("agent.advice.approvals.open"),
     },
@@ -67,9 +67,11 @@ export function Recommended({
 }: Readonly<{ signals: Signals; jobs: readonly AgentJob[] }>) {
   const pointers = usePointers(signals);
   if (pointers.length === 0 && jobs.length === 0) return null;
+  const shown = pointers.slice(0, ADVICE_ROWS);
+  const offered = jobs.slice(0, ADVICE_ROWS - shown.length);
   return (
     <ul className="aradvices">
-      {pointers.map((pointer) => (
+      {shown.map((pointer) => (
         <li className="aradvice" key={pointer.id}>
           <span
             className={
@@ -81,16 +83,13 @@ export function Recommended({
           >
             <pointer.mark />
           </span>
-          <div className="aradvicetext">
-            <p className="aradvicename">{pointer.title}</p>
-            <p className="t-caption">{pointer.why}</p>
-          </div>
+          <p className="aradvicename">{pointer.title}</p>
           <AppLink className="link-button" href={pointer.href}>
             {pointer.open}
           </AppLink>
         </li>
       ))}
-      {jobs.map((job) => (
+      {offered.map((job) => (
         <AgentJobRow key={job.id} job={job} />
       ))}
     </ul>

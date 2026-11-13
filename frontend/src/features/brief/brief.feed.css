@@ -517,3 +517,21 @@
   height: var(--controlIcon);
   color: var(--textSecondary);
 }
+/* The next task in a narrow panel: its name, one line, and the press that opens it. */
+.brief-pod-hero {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+  padding: var(--space-4);
+}
+.brief-pod-hero-text {
+  flex: 1;
+  min-width: 0;
+}
+.brief-pod-hero-text p {
+  margin: 0;
+}
+.brief-pod-hero-name {
+  font: var(--fontHeadingXSmall);
+  color: var(--textPrimary);
+}

@@ -2,16 +2,14 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import { useState } from "react";
-import { SegmentedControl } from "../design-system/atoms";
+import { Button } from "../design-system/atoms";
 import { ReadyStack } from "../features/brief/brief.feed";
 import type { WorklistItem } from "../features/worklist/worklist.queries";
-import { useT } from "../i18n";
-
-const SCOPES = ["here", "all"] as const;
-type Scope = (typeof SCOPES)[number];
+import { formatNumber } from "../format/format";
+import { useLocale, usePlural, useT } from "../i18n";
 
 /**
- * The reader's work in the panel: one card in hand, answered here the way Home
+ * The reader's work in the panel: the next task, answered here the way Home
  * answers it. Where the open page has rows of its own they come first, and the
  * whole day is one press away.
  */
@@ -24,30 +22,32 @@ export function ReadyWork({
   here: readonly WorklistItem[];
 }>) {
   const t = useT();
-  const [chosen, setChosen] = useState<Scope | null>(null);
+  const plural = usePlural();
+  const { locale } = useLocale();
+  const [whole, setWhole] = useState(false);
   // A page with rows of its own opens on them. One whose rows are the whole
   // day has nothing to choose between.
   const splits = here.length > 0 && here.length < rows.length;
-  const scope: Scope = splits ? (chosen ?? "here") : "all";
+  const narrowed = splits && !whole;
   return (
     <div className="arwork">
+      {/* Keyed by scope: the card in hand belongs to the list it was taken from. */}
+      <ReadyStack
+        key={narrowed ? "here" : "all"}
+        rows={narrowed ? here : rows}
+        solo
+      />
       {splits && (
         <div className="arscope">
-          <SegmentedControl
-            options={SCOPES}
-            value={scope}
-            onChange={setChosen}
-            label={t("agent.ready.scope")}
-            labels={{
-              here: t("agent.ready.scope.here"),
-              all: t("agent.ready.scope.all"),
-            }}
-            counts={{ here: here.length, all: rows.length }}
-          />
+          <Button variant="link" onClick={() => setWhole(narrowed)}>
+            {narrowed
+              ? plural("agent.ready.showAll", rows.length, {
+                  count: formatNumber(rows.length, locale),
+                })
+              : t("agent.ready.showHere")}
+          </Button>
         </div>
       )}
-      {/* Keyed by scope: the card in hand belongs to the list it was taken from. */}
-      <ReadyStack key={scope} rows={scope === "here" ? here : rows} solo />
     </div>
   );
 }

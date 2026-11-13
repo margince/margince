@@ -472,7 +472,7 @@ describe("the agent panel as a control centre", () => {
     expect(opened.textContent).not.toContain(en["agent.stat.cost"]);
   });
 
-  it("lists the day by name and takes one in hand on a press", async () => {
+  it("names the next task and takes it in hand on a press", async () => {
     const opened = await openPanel({
       day: [
         taskRow("t1", "Call Ana Roth back"),
@@ -481,8 +481,11 @@ describe("the agent panel as a control centre", () => {
     });
     const user = userEvent.setup();
     const row = await within(opened as HTMLElement).findByRole("button", {
-      name: "Call Ana Roth back",
+      name: en["brief.pod.open"],
     });
+    expect(opened.querySelector(".brief-pod-hero")?.textContent).toContain(
+      "Call Ana Roth back",
+    );
     expect(opened.querySelector(".brief-triage")).toBeNull();
     await user.click(row);
     await waitFor(() =>
@@ -508,12 +511,11 @@ describe("the agent panel as a control centre", () => {
     expect(advice.querySelector("a")?.getAttribute("href")).toBe("/#/worklist");
   });
 
-  it("offers the follow-up job with what it will do", async () => {
+  it("offers the follow-up job by name", async () => {
     const opened = await openPanel();
     const names = [...opened.querySelectorAll(".aradvicename")].map(
       (el) => el.textContent,
     );
     expect(names).toContain(en["agent.job.followUps"]);
-    expect(opened.textContent).toContain(en["agent.job.followUps.why"]);
   });
 });

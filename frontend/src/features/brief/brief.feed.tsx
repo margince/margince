@@ -123,8 +123,8 @@ export function BriefFeed({
   );
 }
 
-/** How many of the day's rows a narrow panel names before it counts the rest. */
-const POD_ROWS = 5;
+/** How many rows a narrow panel names under the next one before it counts the rest. */
+const POD_ROWS = 2;
 
 /**
  * The day's rows as cards, the one in hand open, with Next. Home's "Needs you"
@@ -153,10 +153,30 @@ export function ReadyStack({
   // A narrow panel lists the day by name first; a press takes one in hand.
   const [inHand, setInHand] = useState(false);
   const listed = solo && !inHand;
-  const shown = rows.slice(0, POD_ROWS);
+  const [first, ...queued] = rows;
+  const shown = queued.slice(0, POD_ROWS);
   const next = rows[(at + 1) % rows.length];
+  const take = (item: WorklistItem) => {
+    choose(item);
+    setInHand(true);
+  };
+  const firstLine = first && taskLine(first, t, locale, readerZone);
   return (
     <>
+      {listed && first && (
+        <Card as="article" className="brief-pod-hero">
+          <div className="brief-pod-hero-text">
+            <p className="t-eyebrow">{t("brief.pod.next")}</p>
+            <p className="brief-pod-hero-name">
+              {taskName(first, viewer, t, locale)}
+            </p>
+            {firstLine && <p className="t-caption">{firstLine}</p>}
+          </div>
+          <Button variant="primary" onClick={() => take(first)}>
+            {t("brief.pod.open")}
+          </Button>
+        </Card>
+      )}
       {listed && shown.length > 0 && (
         <PeekCard
           head={t("brief.pod.head")}
@@ -164,14 +184,10 @@ export function ReadyStack({
           items={shown.map((item) => ({
             key: identity(item),
             title: taskName(item, viewer, t, locale),
-            sub: taskLine(item, t, locale, readerZone) ?? undefined,
             right: <ChevronRight aria-hidden className="brief-pod-open" />,
-            onOpen: () => {
-              choose(item);
-              setInHand(true);
-            },
+            onOpen: () => take(item),
           }))}
-          foot={partialFoot(shown.length, rows.length, {
+          foot={partialFoot(shown.length + 1, rows.length, {
             t,
             plural,
             locale,

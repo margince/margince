@@ -24,8 +24,6 @@ export type AgentJob = Readonly<{
   id: "followUps" | "enrichCompany";
   /** The verb on the button. */
   label: string;
-  /** What it will do, and that nothing leaves without the reader. */
-  why: string;
   /** What the orb says while it runs. */
   running: string;
   pending: boolean;
@@ -83,7 +81,6 @@ function useFollowUpsJob(): AgentJob {
   return {
     id: "followUps",
     label: t("agent.job.followUps"),
-    why: t("agent.job.followUps.why"),
     running: t("agent.job.followUps.running"),
     pending: write.isPending,
     outcome: outcome(),
@@ -115,7 +112,6 @@ function useEnrichJob(company: string | undefined): AgentJob | undefined {
   return {
     id: "enrichCompany",
     label: t("agent.job.enrich"),
-    why: t("agent.job.enrich.why"),
     running: t("agent.job.enrich.running"),
     pending: read.isPending,
     outcome:
@@ -149,7 +145,6 @@ export function AgentJobRow({ job }: Readonly<{ job: AgentJob }>) {
       </span>
       <div className="aradvicetext">
         <p className="aradvicename">{job.label}</p>
-        <p className="t-caption">{job.why}</p>
         {!job.pending && job.outcome && (
           <p className="t-caption arjobsaid" role="status">
             {job.outcome.said}{" "}
