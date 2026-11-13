@@ -32,11 +32,12 @@ type PullWorker[T PullJob] struct {
 
 // Work implements River's worker for the pull.
 func (w *PullWorker[T]) Work(ctx context.Context, job *river.Job[T]) error {
-	ctx, err := w.Bind(ctx, job.Args)
+	// Bind answers no context when it refuses, so the fault rides the job's own.
+	bound, err := w.Bind(ctx, job.Args)
 	if err != nil {
 		return jobs.FaultContext(ctx, err)
 	}
-	return jobs.FaultContext(ctx, w.Puller.Pull(ctx, job.Args.Connection()))
+	return jobs.FaultContext(bound, w.Puller.Pull(bound, job.Args.Connection()))
 }
 
 // NewPuller builds the pull of a worker role over the chat sessions of chats.

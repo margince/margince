@@ -242,9 +242,10 @@ type Worker[T FlushJob] struct {
 
 // Work implements River's worker for the flush.
 func (w *Worker[T]) Work(ctx context.Context, job *river.Job[T]) error {
-	ctx, err := w.Bind(ctx, job.Args)
+	// Bind answers no context when it refuses, so the fault rides the job's own.
+	bound, err := w.Bind(ctx, job.Args)
 	if err != nil {
 		return jobs.FaultContext(ctx, err)
 	}
-	return jobs.FaultContext(ctx, w.Flusher.Flush(ctx, job.Args.Link()))
+	return jobs.FaultContext(bound, w.Flusher.Flush(bound, job.Args.Link()))
 }
