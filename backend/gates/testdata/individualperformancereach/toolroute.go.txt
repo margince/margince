@@ -6,6 +6,7 @@ import (
 
 	"example.test/auth"
 	"example.test/httperr"
+	"example.test/runner"
 )
 
 type ToolSpec struct{ Name string }
@@ -71,4 +72,35 @@ func (h Handlers) GetUncheckedTool(w http.ResponseWriter, r *http.Request) {
 // A name the walk cannot read leaves the registry, which checks nothing.
 func (h Handlers) GetToolByPath(w http.ResponseWriter, r *http.Request) {
 	serveTool(w, r, h.registry.Invoke, r.URL.Path)
+}
+
+// A wrapper that is handed one name and then names another runs the other.
+func serveRenamed(w http.ResponseWriter, r *http.Request, invoke func(context.Context, string, []byte) ([]byte, error), name string) {
+	name = "unchecked_tool"
+	serveTool(w, r, invoke, name)
+}
+
+func (h Handlers) GetRenamedTool(w http.ResponseWriter, r *http.Request) {
+	serveRenamed(w, r, h.registry.Invoke, "checked_tool")
+}
+
+// An outside runner need not hand its callback the arguments it was given.
+func (h Handlers) GetToolThroughARunner(w http.ResponseWriter, r *http.Request) {
+	runner.Run(r.Context(), "checked_tool", func(ctx context.Context, name string) {
+		serveTool(w, r, h.registry.Invoke, name)
+	})
+}
+
+func invokeUnchecked(ctx context.Context, name string, in []byte) ([]byte, error) {
+	return uncheckedTool{}.Handle(ctx, in)
+}
+
+// A wrapper that is handed one function and then calls another runs the other.
+func serveRewired(w http.ResponseWriter, r *http.Request, invoke func(context.Context, string, []byte) ([]byte, error), name string) {
+	invoke = invokeUnchecked
+	serveTool(w, r, invoke, name)
+}
+
+func (h Handlers) GetRewiredTool(w http.ResponseWriter, r *http.Request) {
+	serveRewired(w, r, h.registry.Invoke, "checked_tool")
 }

@@ -131,7 +131,8 @@ func (w *pathWalk) runs(call *ast.CallExpr, callee *types.Func) (runs []run, res
 }
 
 // handedFuncs are the func values call passes, each run where it is handed.
-// One the walk cannot resolve makes the call one that does not check.
+// One the walk cannot resolve makes the call one that does not check. The
+// outside caller chooses what it hands each, so their parameters stay unbound.
 func (w *pathWalk) handedFuncs(call *ast.CallExpr) []run {
 	var runs []run
 	for _, arg := range call.Args {
@@ -143,7 +144,7 @@ func (w *pathWalk) handedFuncs(call *ast.CallExpr) []run {
 			return nil
 		}
 		for _, value := range values {
-			runs = append(runs, w.bind(value, call))
+			runs = append(runs, run{fn: value})
 		}
 	}
 	return runs
@@ -184,7 +185,7 @@ func (w *pathWalk) constantString(call *ast.CallExpr, index int) (string, bool) 
 		return "", false
 	}
 	v, ok := w.frame.info.Uses[ident].(*types.Var)
-	for frame := w.frame; ok && frame != nil; frame = frame.parent {
+	for frame := w.frame; ok && !w.sw.g.reassigned[v] && frame != nil; frame = frame.parent {
 		if name, found := frame.names[v]; found {
 			return name, true
 		}
@@ -281,7 +282,7 @@ func (w *pathWalk) funcValues(fn *types.Func) ([]fnValue, bool) {
 func (w *pathWalk) varValues(v *types.Var) ([]fnValue, bool) {
 	for frame := w.frame; frame != nil; frame = frame.parent {
 		if values, ok := frame.bound[v]; ok {
-			return values, values != nil
+			return values, values != nil && !w.sw.g.reassigned[v]
 		}
 	}
 	origin := v.Origin()

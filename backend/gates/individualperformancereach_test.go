@@ -88,7 +88,8 @@ type paramSlot struct {
 
 // switchGraph is the code the walk reads. converted holds each concrete type
 // some expression turns into an interface value; stored holds what each
-// func-typed variable or field is ever given.
+// func-typed variable or field is ever given. reassigned holds each variable
+// an assignment gives a new value, which a call site's binding cannot name.
 type switchGraph struct {
 	fset        *token.FileSet
 	decls       map[*types.Func]*ast.FuncDecl
@@ -99,6 +100,7 @@ type switchGraph struct {
 	calls       map[*types.Func][]invocation
 	paramOf     map[*types.Var]paramSlot
 	writers     map[*types.Var]bool
+	reassigned  map[*types.Var]bool
 	readerSet   map[*types.Func]bool
 	bareSet     map[*types.Func]bool
 	dispatchSet map[*types.Func]bool
@@ -126,6 +128,7 @@ func newSwitchGraph(fset *token.FileSet, byPackage map[string][]*ast.File) *swit
 		infos: map[*types.Func]*types.Info{}, converted: map[types.Type]bool{},
 		stored: map[*types.Var][]valueSite{}, writers: map[*types.Var]bool{},
 		calls: map[*types.Func][]invocation{}, paramOf: map[*types.Var]paramSlot{},
+		reassigned: map[*types.Var]bool{},
 	}
 	checked := sharedImports{}
 	for _, path := range importOrder(byPackage) {
@@ -217,6 +220,7 @@ func (g *switchGraph) census(file *ast.File, info *types.Info) {
 	ast.Inspect(file, func(n ast.Node) bool {
 		switch node := n.(type) {
 		case *ast.AssignStmt:
+			g.censusReassigned(node.Lhs, info)
 			if len(node.Lhs) == len(node.Rhs) {
 				for i, lhs := range node.Lhs {
 					g.flow(info.TypeOf(lhs), node.Rhs[i], info)
@@ -241,6 +245,16 @@ func (g *switchGraph) census(file *ast.File, info *types.Info) {
 		}
 		return true
 	})
+}
+
+func (g *switchGraph) censusReassigned(lhs []ast.Expr, info *types.Info) {
+	for _, target := range lhs {
+		if ident, ok := ast.Unparen(target).(*ast.Ident); ok {
+			if v, ok := info.Uses[ident].(*types.Var); ok {
+				g.reassigned[v] = true
+			}
+		}
+	}
 }
 
 func (g *switchGraph) censusLiteral(lit *ast.CompositeLit, info *types.Info) {

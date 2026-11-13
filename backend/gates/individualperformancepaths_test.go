@@ -456,19 +456,20 @@ var refusalConstructors = map[string]bool{"fmt.Errorf": true, "errors.New": true
 
 // refuses reports an error result that cannot be nil. That is a variable a
 // condition proved set, a literal, a sentinel, a new error, or a wrapped one.
+// Beside a value, only an error a condition proved set is a refusal.
 func (w *pathWalk) refuses(expr ast.Expr, s pathState, valued bool) bool {
 	info := w.frame.info
 	switch e := ast.Unparen(expr).(type) {
 	case *ast.Ident:
 		obj := info.Uses[e]
-		return obj != nil && (s.nonNil[obj] || (isPackageVar(obj) && isSentinelName(obj.Name())))
+		return obj != nil && (s.nonNil[obj] || (!valued && isPackageVar(obj) && isSentinelName(obj.Name())))
 	case *ast.CompositeLit:
-		return true
+		return !valued
 	case *ast.UnaryExpr:
 		_, lit := ast.Unparen(e.X).(*ast.CompositeLit)
-		return e.Op == token.AND && lit
+		return !valued && e.Op == token.AND && lit
 	case *ast.SelectorExpr:
-		return qualifiesAPackage(e.X, info) && isSentinelName(e.Sel.Name)
+		return !valued && qualifiesAPackage(e.X, info) && isSentinelName(e.Sel.Name)
 	case *ast.CallExpr:
 		return (!valued && refusalConstructors[importedCallee(e, info)]) || slices.ContainsFunc(e.Args, func(arg ast.Expr) bool {
 			_, literal := ast.Unparen(arg).(*ast.CompositeLit)

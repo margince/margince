@@ -290,12 +290,26 @@ function TranscriptReadBody({
   const { locale } = useLocale();
   const queryClient = useQueryClient();
   const status = report.status;
+  const readId = report.read_id;
   const previous = useRef(status);
   useEffect(() => {
     const wasWorking =
       previous.current === "queued" || previous.current === "running";
     previous.current = status;
-    if (!(wasWorking && status === "done")) {
+    if (status !== "done") {
+      return;
+    }
+    if (!wasWorking) {
+      // A reading first seen done may have finished after the shared latest
+      // read was fetched, and that read carries the summary.
+      const latest = queryClient.getQueryData<TranscriptReadReport | null>(
+        transcriptReadLatestKey(activityId),
+      );
+      if (latest?.read_id !== readId || latest.status !== "done") {
+        queryClient.invalidateQueries({
+          queryKey: transcriptReadLatestKey(activityId),
+        });
+      }
       return;
     }
     // The reading wrote tasks and findings onto records this card is not told
@@ -308,7 +322,7 @@ function TranscriptReadBody({
     queryClient.invalidateQueries({
       queryKey: transcriptReadLatestKey(activityId),
     });
-  }, [status, queryClient, activityId]);
+  }, [status, readId, queryClient, activityId]);
 
   return (
     <div className="transcript-reading">
@@ -330,10 +344,9 @@ function TranscriptReadBody({
 }
 
 /**
- * TranscriptReadCard offers one reading of one transcript (S-E04.3): the model
- * reads the normalized lines and stages every next step the conversation
- * STATES as a 🟡 proposal, citing the lines it read them from. Nothing reaches
- * the timeline until a human confirms in the inbox.
+ * TranscriptReadCard offers one reading of one transcript (S-E04.3). The model
+ * reads the next steps the conversation STATES, each citing its lines. A staged
+ * proposal waits for a human to confirm it. The summary is shown at once.
  *
  * 422 (this activity carries no transcript) and 501 (no model configured)
  * surface their honest cause rather than a generic failure.
@@ -476,7 +489,7 @@ function SummaryPoints({
   const plural = usePlural();
   return (
     <>
-      <Eyebrow>{title}</Eyebrow>
+      <Eyebrow as="h3">{title}</Eyebrow>
       <ul className="transcript-summary-points">
         {points.map((point) => (
           <li key={`${point.source_lines.join(",")}:${point.text}`}>

@@ -31135,9 +31135,9 @@
     "project_id/boolean/true":
      "Ja",
     "promise_strength/text/tentative":
-     "Unverbindlich: Es hieß, man versuche es",
+     "Mit Vorbehalt: Es hieß, man versuche es",
     "promise_strength/lifecycle/tentative":
-     "Unverbindlich: Es hieß, man versuche es",
+     "Mit Vorbehalt: Es hieß, man versuche es",
     "promise_strength/boolean/true":
      "Ja",
     "promote_create_contact/lifecycle/customer":
@@ -51001,9 +51001,9 @@
     "project_id/boolean/true":
      "Có",
     "promise_strength/text/tentative":
-     "Chưa chắc chắn: chỉ nói sẽ cố gắng",
+     "Chưa chắc chắn: họ nói sẽ cố gắng",
     "promise_strength/lifecycle/tentative":
-     "Chưa chắc chắn: chỉ nói sẽ cố gắng",
+     "Chưa chắc chắn: họ nói sẽ cố gắng",
     "promise_strength/boolean/true":
      "Có",
     "promote_create_contact/lifecycle/customer":

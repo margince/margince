@@ -259,12 +259,12 @@ func (c *transcriptProposeCase) AnswerConfidence(trace aitasks.Trace) (low, high
 // commitment. Only line numbers are named in the detail — the transcript's own
 // words are a speaker's, and they have no business being echoed into a record.
 func (c *transcriptProposeCase) disagreements(payload transcriptPayload) []string {
-	wanted := make(map[string]string, len(c.expected))
-	tentative, optional := map[string]bool{}, map[string]bool{}
+	wanted, optional := make(map[string]string, len(c.expected)), map[string]string{}
+	tentative := map[string]bool{}
 	for _, step := range c.expected {
 		key := fmt.Sprintf("%d:%s", step.Line, step.Promiser)
 		if step.Optional {
-			optional[key] = true
+			optional[key] = step.DueDate
 			continue
 		}
 		wanted[key], tentative[key] = step.DueDate, step.Tentative
@@ -291,7 +291,8 @@ func (c *transcriptProposeCase) disagreements(payload transcriptPayload) []strin
 				answered[key] = true
 				matched = true
 			}
-			matched = matched || (optional[key] && step.tentative())
+			due, isOptional := optional[key]
+			matched = matched || (isOptional && step.tentative() && step.DueDate == due)
 		}
 		if !matched {
 			out = append(out, fmt.Sprintf(
