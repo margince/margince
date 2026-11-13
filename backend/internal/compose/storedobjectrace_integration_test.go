@@ -49,7 +49,7 @@ func TestAnImportCannotAdoptAnObjectDuringOrAfterItsReap(t *testing.T) {
 		}
 		return nil
 	}
-	if err := reapWorkerOver(e, blob).reapWorkspace(context.Background(), e.WS); err != nil {
+	if err := reapWorkerOver(e, blob).reapWorkspace(context.Background(), e.WS, unbudgeted); err != nil {
 		t.Fatal(err)
 	}
 	if !called || !blob.deleted[key] {
@@ -96,7 +96,7 @@ func TestAnAdopterHoldingTheIntentMakesTheSweepLeaveItsBytes(t *testing.T) {
 		finished <- err
 		t.Fatalf("adopter did not acquire its intent: %v", err)
 	}
-	if err := reapWorkerOver(e, blob).reapWorkspace(ctx, e.WS); err != nil {
+	if err := reapWorkerOver(e, blob).reapWorkspace(ctx, e.WS, unbudgeted); err != nil {
 		t.Fatal(err)
 	}
 	if blob.deleted[key] {
@@ -111,7 +111,7 @@ func TestAnImportCannotAdoptWhileAClaimedDeleteNeedsARetry(t *testing.T) {
 	orphanedObjectOfKind(t, e, blob, key, storedobjects.KindImport)
 	blob.refuseDelete = errors.New("temporary object-store failure")
 	worker := reapWorkerOver(e, blob)
-	if err := worker.reapWorkspace(context.Background(), e.WS); err != nil {
+	if err := worker.reapWorkspace(context.Background(), e.WS, unbudgeted); err != nil {
 		t.Fatal(err)
 	}
 	runs := migration.NewRunStore(e.DB())
@@ -120,7 +120,7 @@ func TestAnImportCannotAdoptWhileAClaimedDeleteNeedsARetry(t *testing.T) {
 		t.Fatalf("adoption during delete retry was not refused: %v", err)
 	}
 	blob.refuseDelete = nil
-	if err := worker.reapWorkspace(context.Background(), e.WS); err != nil {
+	if err := worker.reapWorkspace(context.Background(), e.WS, unbudgeted); err != nil {
 		t.Fatal(err)
 	}
 	if !blob.deleted[key] {

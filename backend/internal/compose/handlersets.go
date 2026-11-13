@@ -151,6 +151,7 @@ func (s *Server) wireContact360(pool *pgxpool.Pool) {
 	s.roomBriefSvc = newRoomBriefService(pool)
 	s.roomBriefHandlers = roombrief.NewHandlers(s.roomBriefSvc)
 	s.readerRenderingHandlers = readerrendering.NewHandlers(newReaderRenderingService(pool))
+	s.rewriteHandlers = newRewriteHandlers(pool, nil)
 	// No provider is registered, which is the supported configuration rather
 	// than a gap: the surface answers "not connected" and writes nothing
 	// (ADR-0096 D4). Connecting one later is a provider implementation.

@@ -55,7 +55,7 @@ func TestAMessageSnoozedUntilTheyReplyComesBackWhenTheyDo(t *testing.T) {
 		t.Fatal("the message never reached the lane, so this proves nothing")
 	}
 	if err := atWaitingInstant(e).SnoozeMessage(
-		e.As(e.Rep1, nil, AdminPerms), id, values.ReopenOnReply, nil, nil); err != nil {
+		e.As(e.Rep1, nil, AdminPerms), id, values.ReopenOnReply, nil, nil, nil); err != nil {
 		t.Fatalf("snoozing until they reply: %v", err)
 	}
 	// No reply, and no amount of time changes that.
@@ -96,7 +96,7 @@ func TestAReplySnoozeOnAThreadThatGetsNoNewInboundStillHolds(t *testing.T) {
 	id := waitingMessageID(t, e, subject)
 
 	if err := atWaitingInstant(e).SnoozeMessage(
-		e.As(e.Rep1, nil, AdminPerms), id, values.ReopenOnReply, nil, nil); err != nil {
+		e.As(e.Rep1, nil, AdminPerms), id, values.ReopenOnReply, nil, nil, nil); err != nil {
 		t.Fatalf("snoozing until they reply: %v", err)
 	}
 	if waitsForAt(t, e, e.Rep1, subject, waitingInstant.Add(30*24*time.Hour)) {
@@ -123,7 +123,7 @@ func TestAReplyThisReaderCannotSeeDoesNotLiftTheirSnooze(t *testing.T) {
 	id := waitingMessageID(t, e, subject)
 
 	if err := atWaitingInstant(e).SnoozeMessage(
-		e.As(e.Rep1, nil, AdminPerms), id, values.ReopenOnReply, nil, nil); err != nil {
+		e.As(e.Rep1, nil, AdminPerms), id, values.ReopenOnReply, nil, nil, nil); err != nil {
 		t.Fatalf("snoozing until they reply: %v", err)
 	}
 	// The reply arrives on the same thread, but narrowed to its participants —
@@ -152,7 +152,7 @@ func TestAnUnrelatedThreadIsNotTheReplyBeingWaitedFor(t *testing.T) {
 	id := waitingMessageID(t, e, subject)
 
 	if err := atWaitingInstant(e).SnoozeMessage(
-		e.As(e.Rep1, nil, AdminPerms), id, values.ReopenOnReply, nil, nil); err != nil {
+		e.As(e.Rep1, nil, AdminPerms), id, values.ReopenOnReply, nil, nil, nil); err != nil {
 		t.Fatalf("snoozing until they reply: %v", err)
 	}
 	// The same customer, a different conversation.
@@ -176,7 +176,7 @@ func TestOurOwnReplyDoesNotLiftAMessageSnooze(t *testing.T) {
 	id := waitingMessageID(t, e, subject)
 
 	if err := atWaitingInstant(e).SnoozeMessage(
-		e.As(e.Rep1, nil, AdminPerms), id, values.ReopenOnReply, nil, nil); err != nil {
+		e.As(e.Rep1, nil, AdminPerms), id, values.ReopenOnReply, nil, nil, nil); err != nil {
 		t.Fatalf("snoozing until they reply: %v", err)
 	}
 	ours := waitingInstant.Add(2 * time.Hour)
@@ -200,7 +200,7 @@ func TestAMessageSnoozedUntilAMeetingComesBackAfterIt(t *testing.T) {
 		VALUES ($1, 'meeting', 'the demo', $2, 'manual', 'human:x')`, meetsAt)
 
 	if err := atWaitingInstant(e).SnoozeMessage(
-		e.As(e.Rep1, nil, AdminPerms), id, values.ReopenOnMeeting, nil, &meeting); err != nil {
+		e.As(e.Rep1, nil, AdminPerms), id, values.ReopenOnMeeting, nil, &meeting, nil); err != nil {
 		t.Fatalf("snoozing until after the meeting: %v", err)
 	}
 	if waitsForAt(t, e, e.Rep1, subject, meetsAt.Add(-time.Hour)) {
@@ -226,7 +226,7 @@ func TestACancelledMeetingReturnsTheMessage(t *testing.T) {
 		VALUES ($1, 'meeting', 'the demo', $2, 'manual', 'human:x')`, meetsAt)
 
 	if err := atWaitingInstant(e).SnoozeMessage(
-		e.As(e.Rep1, nil, AdminPerms), id, values.ReopenOnMeeting, nil, &meeting); err != nil {
+		e.As(e.Rep1, nil, AdminPerms), id, values.ReopenOnMeeting, nil, &meeting, nil); err != nil {
 		t.Fatalf("snoozing until after the meeting: %v", err)
 	}
 	stillWaiting := waitingInstant.Add(4 * time.Hour)
@@ -257,7 +257,7 @@ func TestAnEventSnoozeStaysTheSnoozersOwn(t *testing.T) {
 		t.Fatal("the second rep never saw the message, so this proves nothing about hiding it")
 	}
 	if err := atWaitingInstant(e).SnoozeMessage(
-		e.As(e.Rep1, nil, AdminPerms), id, values.ReopenOnReply, nil, nil); err != nil {
+		e.As(e.Rep1, nil, AdminPerms), id, values.ReopenOnReply, nil, nil, nil); err != nil {
 		t.Fatalf("snoozing until they reply: %v", err)
 	}
 	later := waitingInstant.Add(5 * 24 * time.Hour)
@@ -294,7 +294,7 @@ func TestAMessageSnoozeShapeIsRefused(t *testing.T) {
 	} {
 		t.Run(bad.name, func(t *testing.T) {
 			if err := atWaitingInstant(e).SnoozeMessage(
-				e.As(e.Rep1, nil, AdminPerms), id, bad.on, bad.till, bad.ref); err == nil {
+				e.As(e.Rep1, nil, AdminPerms), id, bad.on, bad.till, bad.ref, nil); err == nil {
 				t.Fatal("accepted, and the row it would write describes a wait nothing can lift")
 			}
 		})

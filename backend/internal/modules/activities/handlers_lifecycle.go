@@ -188,7 +188,7 @@ func (h Handlers) SetActivityDisposition(w http.ResponseWriter, r *http.Request,
 	// judge, because the two tables that hold set-asides answer it identically
 	// and a copy here would be the half that drifts.
 	isSnooze := req.Disposition == crmcontracts.SetActivityDispositionRequestDispositionSnooze
-	if !isSnooze && (req.SnoozedUntil != nil || req.ReopenOn != nil || req.ReopenRef != nil) {
+	if !isSnooze && (req.SnoozedUntil != nil || req.SnoozedIntent != nil || req.ReopenOn != nil || req.ReopenRef != nil) {
 		httperr.Write(w, r, momentMismatch(false))
 		return
 	}
@@ -322,7 +322,7 @@ func (h Handlers) snoozeFromRequest(
 		named := ids.UUID(*req.ReopenRef)
 		ref = &named
 	}
-	return h.store.SnoozeMessage(r.Context(), id, on, req.SnoozedUntil, ref)
+	return h.store.SnoozeMessage(r.Context(), id, on, req.SnoozedUntil, ref, req.SnoozedIntent)
 }
 
 // ClaimTaskReminderDelivery answers whether this tab shows a due reminder's

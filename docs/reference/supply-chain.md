@@ -141,7 +141,7 @@ The allow list, as set up:
 | Group | License names |
 |---|---|
 | Open licenses with few rules | `Apache-2.0`, `MIT`, `BSD-2-Clause`, `BSD-3-Clause`, `ISC`, `0BSD`, `Zlib`, `BSL-1.0`, `CC0-1.0` |
-| Found in the tree, added to cover it | `MIT-0`, `BlueOak-1.0.0`, `MPL-2.0`, `PostgreSQL` |
+| Found in the tree, added to cover it | `MIT-0`, `BlueOak-1.0.0`, `MPL-2.0`, `PostgreSQL`, `Unicode-3.0` |
 | Set by a maintainer | `CC-BY-4.0`, `Python-2.0`, `Unlicense` |
 | The own source license of Margince | `BUSL-1.1` |
 

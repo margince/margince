@@ -20,6 +20,7 @@ import (
 	"github.com/margince/margince/backend/internal/compose"
 	ps "github.com/margince/margince/backend/internal/compose/programsettings"
 	"github.com/margince/margince/backend/internal/modules/ai"
+	"github.com/margince/margince/backend/internal/modules/webforms"
 	"github.com/margince/margince/backend/internal/platform/agentvolume"
 	"github.com/margince/margince/backend/internal/platform/config"
 	"github.com/margince/margince/backend/internal/platform/database"
@@ -249,6 +250,7 @@ func declaredSurfaceOptions(ctx context.Context, cfg apiConfig, bootstrap deploy
 		// `uploads` section UploadLimitsFrom resolves the compiled-in defaults,
 		// so this stays the one place the numbers are decided.
 		compose.WithUploadLimits(compose.UploadLimitsFrom(cfg.settings)),
+		compose.WithWebFormThrottle(webforms.ThrottleLimitsFrom(cfg.settings)),
 	}
 	reset, err := newResetLane(allowDataReset, pool, rdb, logger)
 	if err != nil {

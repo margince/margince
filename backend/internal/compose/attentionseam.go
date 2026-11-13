@@ -197,9 +197,6 @@ func NewAttentionService(pool *pgxpool.Pool, svc *approvals.Service, now attenti
 // without a test that reads them end to end.
 func newAttentionService(pool *pgxpool.Pool, svc *approvals.Service, now attention.Clock) *attention.Service {
 	db := InstallationDB(pool)
-	// ONE deal-status service for both seams below: the move and the standing
-	// are two reads of the same cached card, and a second service value would
-	// be a second set of stores over the same pool for no reason.
 	cards := newDealStatusService(pool, now)
 	waiting := attentionWaiting{
 		store: activities.NewStore(db).WithOwnDomains(
@@ -207,7 +204,6 @@ func newAttentionService(pool *pgxpool.Pool, svc *approvals.Service, now attenti
 		deals:    deals.NewStore(db, DealsInstallation()),
 		contacts: newContactsStore(db),
 	}
-	// The lane's sweeps and the scroll tail read one candidate set.
 	atRisk := attentionAtRisk{
 		lister: quietDealScanWithClock(pool, deals.QuietThresholdDays, now),
 		tail:   quietDealTail(pool, deals.QuietThresholdDays),
@@ -216,12 +212,10 @@ func newAttentionService(pool *pgxpool.Pool, svc *approvals.Service, now attenti
 	return attention.NewService(
 		attentionApprovals{svc: svc},
 		attentionDuplicates{store: newContactsStore(db)},
-		attentionTasks{store: activities.NewStore(db), claims: newContactsStore(db), db: db},
+		attentionTasks{store: activities.NewStore(db), claims: newContactsStore(db), work: newInquiryWork(db), db: db},
 		attentionReceipts{tasks: activities.NewStore(db).WithRecordZone(installationZoneTx), svc: svc, deals: deals.NewStore(db, DealsInstallation())},
 		attentionBriefing{
-			engine: briefs.NewBriefEngine(pool, newContactsStore(db)),
-			// The same reader WithDealFacts binds below, so the lane keeps an
-			// entry exactly when the figures pass can state its deal.
+			engine:  briefs.NewBriefEngine(pool, newContactsStore(db)),
 			figures: attentionDealFacts{store: deals.NewStore(db, DealsInstallation())},
 		},
 		nil, // Assigned promises are tasks; taskless claims name no personal owner.
@@ -229,148 +223,57 @@ func newAttentionService(pool *pgxpool.Pool, svc *approvals.Service, now attenti
 		attentionDecay{pool: pool, store: newContactsStore(db), now: now},
 		attentionMeetings{store: activities.NewStore(db)},
 		attentionFailedEffects{svc: svc},
-		// The compliance clock: the open DSR cases, due-soonest first, served
-		// exactly as far as consent's own DSR-admin gate reaches — the store
-		// refuses everyone else and the lane renders that as withheld.
 		attentionDSRs{store: consent.NewStore(db)},
-		// The reader's own mailbox connections, through the capture module's
-		// registry over the same rows the settings screen lists. Bare, so the
-		// lane lives on every role that serves the feed — captureHealthRegistry
-		// carries what that construction depends on.
 		attentionCaptureHealth{registry: captureHealthRegistry(db)},
-		// The reader's own troubled AI runs, from the same projection the
-		// activity rail reads.
 		attentionAIWork{store: aiactivity.NewStore(db)},
-		// The reader's own sends that never arrived, from the bounce stamp
-		// comms records on the row.
 		attentionBounces{store: comms.NewStore(db, time.Now, activities.NewStore(db))},
-		// The rules that stopped doing their work, through the automation
-		// store's own gate.
 		attentionAutomations{store: automation.NewAutomationStore(db)},
-		// The reader's own unread notices — the durable informational line.
 		attentionNotices{store: notices.NewStore(db), users: identity.NewService(db.Pool())},
-		// The label resolver: every card that names a record gets that
-		// record's display name under the reader's own grants, one gated get
-		// per distinct subject (attentionnames.go).
 		newAttentionNames(db),
 		now,
-		// The installation's own midnight is where "today" ends for the
-		// due-dated lanes. Unbound it would be UTC's, which is nobody's day
-		// outside one timezone.
 		attention.WithZone(attentionZone(pool)),
-		// The day's other half: the meetings that already started and whose
-		// result nobody recorded. Same store as the lane above, opposite
-		// question — that one is what to prepare for, this is what to close off.
 		attention.WithMeetingsAwaitingOutcome(
 			attentionMeetingsAwaitingOutcome{store: activities.NewStore(db)}),
-		// The other compliance clock, beside the DSR one: the disclosure
-		// duties a contact is owed for how it was obtained. Bound here rather
-		// than left nil because the deadline is the whole point of the row —
-		// a case recorded, dated and shown to nobody is a control that only
-		// looks like one.
 		attention.WithNoticeCases(attentionNoticeCases{store: consent.NewStore(db)}),
-		// Contact pairs reach the queue as cases, one per group of contacts.
 		attention.WithContactCases(attentionContactCases{store: newContactsStore(db)}),
 	).WithWaiting(waiting).
-		// The same seam counts the waiting cards whole and reads on past the scan.
 		WithWaitingBacklog(waiting).
-		// The staged decisions continue past the census depth through the inbox read.
 		WithRiskBacklog(atRisk).WithApprovalBacklog(attentionApprovals{svc: svc}).
-		// The mirror: the reader's own sends nobody has answered, once the
-		// workspace's follow-up window has passed.
 		WithAwaiting(attentionAwaiting{
 			store: activities.NewStore(db).WithOwnDomains(
 				ownDomainReader{store: capture.NewOwnDomainStore(db)}),
 		}).
-		// The reader's own override. The ranking has carried a pin level since
-		// it was written and nothing could set it, so the one control that says
-		// "I know, and I want this first anyway" did not exist.
 		WithPins(attentionPins{pool: pool, store: activities.NewStore(db)}).
 		WithDone(attentionPins{pool: pool, store: activities.NewStore(db).WithClock(now)}).
-		// One reader's walk, held still while they page it. Without it the
-		// cursor is an offset into a ranking rebuilt on every read, so the
-		// count above the queue climbs as work arrives behind somebody who is
-		// still paging and a row crossing the page boundary is served twice or
-		// not at all.
 		WithWalks(worklistsnap.New(pool, now)).
-		// The task lane's whole count past its cap, so its categories state a total.
-		WithTaskBacklog(attentionTasks{store: activities.NewStore(db)}).
-		// The done lane's own window, so the worklist's receipts and Home's
-		// lane start at the same instant.
+		WithTaskBacklog(attentionTasks{store: activities.NewStore(db), work: newInquiryWork(db)}).
 		WithHandledWindow(func(ctx context.Context, asOf time.Time) (time.Time, error) {
 			return magic.ResolveWindow(ctx, magicBriefCutoff{engine: briefs.NewBriefEngine(pool, nil), now: now}, nil, asOf)
 		}).
 		WithReceiptDetails(attentionReceiptDetails{magic: newMagicService(pool, svc, now), names: newAttentionNames(db)}).
-		// The whole page as ONE unit of work. Every lane reader below opens its
-		// own transaction by default, which cost this surface ~40 of them and
-		// as many instants per assembled day; bound, they join one read-only
-		// snapshot. margince#4912 has the measurements.
 		WithSnapshots(attentionSnapshots{pool: pool}).
-		// The asks waiting on this colleague to answer. Until this lane existed
-		// a colleague learned they had been asked only by opening that
-		// contact's Network tab, so an ask nobody went looking for expired
-		// unanswered — which to the requester reads exactly like a refusal.
 		WithIntroductions(attentionIntroductions{
 			store: introductions.NewStore(db, time.Now),
 		}).
-		// The reader's own sends that never left, from the stamp the
-		// dispatcher's park records on the row.
 		WithUndelivered(attentionUndelivered{store: comms.NewStore(db, time.Now, activities.NewStore(db))}).
 		WithMachineSender(capture.IsMachineAddress).
 		WithMeetingHorizon(attentionMeetingHorizon{
 			registry: captureHealthRegistry(db), store: activities.NewStore(db),
 		}).
-		// The reader's OWN undecided domains. Bound to the contacts store the
-		// rest of this seam already reads: the question is opened by capture and
-		// answered against the same disposition ledger the admin list shows, so
-		// a second store over the same pool would be a second answer to "what is
-		// still open".
 		WithDomainQuestions(attentionDomainQuestions{store: newContactsStore(db)}).
-		// The reader's own booking page, once it was used and while it takes
-		// no bookings.
 		WithBookingHealth(newAttentionBookingHealth(pool, db)).
 		WithDealSuggestions(attentionDealSuggestions{store: deals.NewStore(db, DealsInstallation())}).
 		WithTagSuggestions(attentionTagSuggestions{store: collections.NewStore(db)}).
-		// The figures behind a deal a row names but does not carry — the
-		// overnight brief's rows, which rank ids and keep their evidence
-		// behind the brief's own endpoint.
 		WithDealFacts(attentionDealFacts{store: deals.NewStore(db, DealsInstallation())}).
-		// When the contact a row names last wrote to us and when we last wrote
-		// to them, from the same reader the contact's own page uses.
 		WithContactTouch(attentionContactTouch{pool: pool}).
-		// And the same pair for a row about an account, from the company page's reader.
 		WithCompanyTouch(attentionCompanyTouch{pool: pool, now: now}).
-		// Which account a meeting row's contact works for, from the employer
-		// read every contact page carries.
 		WithContactEmployers(newContactsStore(db)).
 		WithMeetingOrganizers(activities.NewStore(db)).
-		// The step a deal row suggests, decided ONCE by the deal's own status
-		// card and read here. The queue does not reason about next steps: it
-		// reads what that card already worked out, so the row and the deal page
-		// name the same move rather than arriving at two answers.
-		//
-		// Reads the card's cache and never assembles one — a page holds thirty
-		// rows and assembling costs a timeline, seats and possibly a model call
-		// each. A deal nobody has opened simply carries no step.
+		// Cached cards keep queue reads from starting model work.
 		WithDealMoves(attentionDealMoves{cards: cards}).
-		// And the standing above that step, from the SAME card, the same cache
-		// and the same service value. Two seams because they are read at
-		// different moments and a caller wanting one should not pay for the
-		// other's work; ONE service because a second would be a second set of
-		// stores over the same pool for no reason.
 		WithDealStandings(attentionDealStandings{cards: cards}).
-		// The base-currency conversion the ranked queue's money comparisons
-		// run in — the same engine every other money surface prices with.
 		WithBaseMoney(AttentionBaseMoney{Pool: pool}).
-		// Whether a team-scoped reader may open a named contact's queue. Bound
-		// unconditionally: unbound, that reader is refused, so a seam that
-		// dropped this would present as a Team Lead unable to open their own
-		// rep's day rather than as one able to open a stranger's.
 		WithWeeklyPlans(attentionWeeklyPlan{store: weeklyPlanStore(pool), pool: pool}).WithNamedTeams(newTeammatesSeam(pool)).WithTeammates(newTeammatesSeam(pool)).WithFormerTeammates(newTeammatesSeam(pool)).
-		// How many promises each teammate has already missed, for the team
-		// board. Counted rather than listed, because the task lane above stops
-		// at a dozen and a board built from it would call every loaded rep
-		// equally loaded.
 		WithOverdueLoad(attentionOverdue{store: activities.NewStore(db)})
 }
 

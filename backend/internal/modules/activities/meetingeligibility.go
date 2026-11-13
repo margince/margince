@@ -5,10 +5,18 @@ package activities
 
 import (
 	"context"
+	"strings"
 	"time"
 
+	"github.com/jackc/pgx/v5"
+
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/auth"
+	"github.com/margince/margince/backend/internal/platform/database"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/occurredday"
+	"github.com/margince/margince/backend/internal/shared/kernel/provenance"
+	"github.com/margince/margince/backend/internal/shared/kernel/values"
 )
 
 // CustomerMeetingSQL shares the customer-link rule between capture and reporting.
@@ -98,4 +106,40 @@ func openCustomerMeeting(ctx context.Context, asOf time.Time, arg func(any) int)
 		return "", "", err
 	}
 	return customer + " AND " + OpenMeetingStatusSQL, occurredday.MeetingTookPlaceSQL("a", sprintf("$%d::timestamptz", arg(asOf))), nil
+}
+
+// ReadyForRecap checks the meeting as the authorizer can see it.
+func (s *Store) ReadyForRecap(ctx context.Context, id ids.ActivityID, asOf time.Time) (bool, error) {
+	rows, _, err := s.ListActivities(ctx, ListActivitiesInput{
+		IDs:                  []ids.ActivityID{id},
+		CustomerMeetingsOnly: true,
+		ReadableOnly:         true,
+		WithOutsideParty:     true,
+		ConversationAsOf:     &asOf,
+	})
+	if err != nil || len(rows) == 0 {
+		return false, err
+	}
+	meeting := rows[0]
+	if meeting.SourceSystem != nil && provenance.ImporterNamespace(*meeting.SourceSystem) {
+		return false, nil
+	}
+	if !meetingReadyForRecap(meeting) {
+		return false, nil
+	}
+	capturedBody := meeting.CapturedBy != nil && strings.HasPrefix(*meeting.CapturedBy, "connector:")
+	if !capturedBody && (meeting.CapturedBy != nil || meeting.SourceSystem == nil) {
+		return true, nil
+	}
+	var notes bool
+	err = database.WithWorkspaceTx(ctx, s.db.Pool(), func(tx pgx.Tx) error {
+		return tx.QueryRow(ctx, `SELECT EXISTS(SELECT 1 FROM audit_log edit
+ WHERE edit.entity_type='activity' AND edit.entity_id=@id AND `+meetingBodyAuthoredSQL+`)`, pgx.NamedArgs{"id": id}).Scan(&notes)
+	})
+	return notes, err
+}
+
+func meetingReadyForRecap(meeting crmcontracts.Activity) bool {
+	return meeting.Kind == crmcontracts.ActivityKindMeeting && meeting.MeetingStatus != nil &&
+		*meeting.MeetingStatus == crmcontracts.ActivityMeetingStatusHeld && meeting.Body != nil && values.HasVisibleText(*meeting.Body)
 }

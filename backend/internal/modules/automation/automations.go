@@ -15,6 +15,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"maps"
 	"time"
 
 	"github.com/jackc/pgx/v5"
@@ -25,6 +26,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/ports/authz"
 	"github.com/margince/margince/backend/internal/shared/ports/fieldcatalog"
 )
 
@@ -32,17 +34,15 @@ import (
 // module) and the catalog lookups the transport needs.
 type AutomationStore struct {
 	// db binds the workspace this pass runs for (ADR-0091 §9 step 3).
-	db  *database.DB
-	now func() time.Time
-	// catalog is the fieldcatalog.Reader seam renewal_reminder's preview
-	// (automations_preview_renewal.go) validates a draft/stored
-	// object+date_field pair against before ever building a previewDef
-	// around it — nil is the zero-cost pass-through every other
-	// WithFieldCatalog consumer (deals.Store, contacts.Store) falls back to
-	// when the seam is unwired (tests, or a role that never mounted it).
+	db      *database.DB
+	now     func() time.Time
 	catalog fieldcatalog.Reader
 	// lists answers whether the lists a list rule names exist for its author.
-	lists Lists
+	lists            Lists
+	inquiries        InquiryRouting
+	stages           StageLookup
+	quiet            QuietPopulationScan
+	previewAuthority authz.Resolver
 }
 
 // NewAutomationStore binds the automation tables to the pool it is given.
@@ -58,12 +58,7 @@ func (s *AutomationStore) SetClock(now func() time.Time) *AutomationStore {
 	return s
 }
 
-// WithFieldCatalog wires the workspace custom-field catalog in (compose
-// injects modules/customfields' Service here — ADR-0054: a module never
-// imports a sibling), so renewal_reminder's preview can validate a
-// workspace-controlled (object, date_field) pair before building SQL
-// around it, exactly like deals.Store/contacts.Store already do for their
-// own custom-column reads. Returns the store for chaining.
+// WithFieldCatalog supplies the current custom fields for setup and preview.
 func (s *AutomationStore) WithFieldCatalog(catalog fieldcatalog.Reader) *AutomationStore {
 	s.catalog = catalog
 	return s
@@ -77,15 +72,16 @@ func (s *AutomationStore) WithLists(lists Lists) *AutomationStore {
 
 // Automation is one configured instance.
 type Automation struct {
-	ID        ids.AutomationID
-	OwnerID   *ids.UserID
-	Key       string
-	Name      string
-	Enabled   bool
-	Params    json.RawMessage
-	Version   int64
-	CreatedAt time.Time
-	UpdatedAt *time.Time
+	Configuration *configurationState
+	ID            ids.AutomationID
+	OwnerID       *ids.UserID
+	Key           string
+	Name          string
+	Enabled       bool
+	Params        json.RawMessage
+	Version       int64
+	CreatedAt     time.Time
+	UpdatedAt     *time.Time
 	// PausedReason says why a rule paused itself; nil for a rule paused by
 	// hand or running.
 	PausedReason *string
@@ -106,11 +102,12 @@ type CreateAutomationInput struct {
 
 // UpdateAutomationInput carries the PATCH subset; nil means unchanged.
 type UpdateAutomationInput struct {
-	Name      *string
-	Params    map[string]any
-	Enabled   *bool
-	OwnerID   *ids.UserID
-	IfVersion *int64
+	InitialRunConfirmed bool
+	Name                *string
+	Params              map[string]any
+	Enabled             *bool
+	OwnerID             *ids.UserID
+	IfVersion           *int64
 }
 
 // AutomationPage is one keyset page, newest first.
@@ -175,6 +172,9 @@ func (s *AutomationStore) List(ctx context.Context, cursor *string, limit *int) 
 	if err != nil {
 		return AutomationPage{}, err
 	}
+	if err := s.readConfigurationStates(ctx, page.Items); err != nil {
+		return AutomationPage{}, err
+	}
 	if len(page.Items) > n {
 		page.Items = page.Items[:n]
 		last := page.Items[len(page.Items)-1]
@@ -208,7 +208,11 @@ func (s *AutomationStore) Get(ctx context.Context, id ids.AutomationID) (Automat
 	if err != nil {
 		return Automation{}, err
 	}
-	return a, nil
+	records := []Automation{a}
+	if err := s.readConfigurationStates(ctx, records); err != nil {
+		return Automation{}, err
+	}
+	return records[0], nil
 }
 
 // Create instantiates a catalog key, always paused. The catalog entry —
@@ -219,13 +223,19 @@ func (s *AutomationStore) Create(ctx context.Context, in CreateAutomationInput) 
 	}
 	entry, ok := CatalogEntryByKey(in.Key)
 	if !ok {
-		return Automation{}, &ParamError{Field: "key", Reason: "not a catalog automation type"}
+		return Automation{}, &ParamError{Field: keyCatalogKey, Reason: "not a catalog automation type"}
 	}
 	if err := requireAuthorCeiling(ctx, entry); err != nil {
 		return Automation{}, err
 	}
 	if in.Name == "" {
 		return Automation{}, &ParamError{Field: keyName, Reason: "must not be empty"}
+	}
+	if entry.Trigger == eventListEvaluated {
+		in.Params = maps.Clone(nonNilParams(in.Params))
+		if _, set := in.Params[paramIncludeImportedChanges]; !set {
+			in.Params[paramIncludeImportedChanges] = false
+		}
 	}
 	if err := entry.Validate(in.Params); err != nil {
 		return Automation{}, err
@@ -261,7 +271,7 @@ func (s *AutomationStore) Create(ctx context.Context, in CreateAutomationInput) 
 			return err
 		}
 		_, err = storekit.Audit(ctx, tx, "create", "automation", a.ID.UUID, nil, map[string]any{
-			"key": a.Key, keyName: a.Name, keyParams: in.Params, keyStatus: "paused", keySetterPassport: storekit.UUIDOrNil(setter),
+			keyCatalogKey: a.Key, keyName: a.Name, keyParams: in.Params, keyStatus: "paused", keySetterPassport: storekit.UUIDOrNil(setter),
 		})
 		return err
 	})
@@ -271,9 +281,9 @@ func (s *AutomationStore) Create(ctx context.Context, in CreateAutomationInput) 
 	return a, nil
 }
 
-// Update re-parameterizes, renames, or flips enabled/paused, honoring
+// updateRule re-parameterizes, renames, or flips enabled/paused, honoring
 // If-Match version skew.
-func (s *AutomationStore) Update(ctx context.Context, id ids.AutomationID, in UpdateAutomationInput) (Automation, error) {
+func (s *AutomationStore) updateRule(ctx context.Context, id ids.AutomationID, in UpdateAutomationInput) (Automation, error) {
 	if err := auth.Require(ctx, "automation", principal.ActionUpdate); err != nil {
 		return Automation{}, err
 	}
@@ -296,7 +306,7 @@ func (s *AutomationStore) Update(ctx context.Context, id ids.AutomationID, in Up
 		if in.IfVersion != nil && *in.IfVersion != before.Version {
 			return apperrors.ErrVersionSkew
 		}
-		if updateChangesNothing(before, in) && !takesOverAgentsRule(ctx, before) {
+		if nothingToWrite(ctx, before, in) {
 			a = before
 			return nil
 		}
@@ -313,32 +323,28 @@ func (s *AutomationStore) Update(ctx context.Context, id ids.AutomationID, in Up
 				return err
 			}
 		}
-		if err := s.revalidate(ctx, before, in); err != nil {
-			return err
-		}
-		var paramsJSON []byte
-		if in.Params != nil {
-			if paramsJSON, err = json.Marshal(in.Params); err != nil {
-				return err
-			}
-		}
-		setter, err := setterAfterUpdate(ctx, tx, before, in)
+		paramsJSON, setter, err := s.checkedUpdate(ctx, tx, before, in)
 		if err != nil {
 			return err
 		}
 		a, err = scanAutomation(tx.QueryRow(ctx, storekit.SQLf(`
 			UPDATE automation SET
-			  name = coalesce($2, name),
-			  params = coalesce($3, params),
-			  enabled = coalesce($4, enabled),
-			  owner_id = coalesce($6, owner_id),
-			  setter_passport_id = $7,
-			  paused_reason = CASE WHEN $4::boolean IS NULL THEN paused_reason END,
+			  name = coalesce(@name, name),
+			  params = coalesce(@params, params),
+			  enabled = coalesce(@enabled, enabled),
+			  enabled_from = CASE WHEN (NOT enabled AND @enabled::boolean)
+			    OR (enabled AND @params::jsonb IS NOT NULL AND params IS DISTINCT FROM @params::jsonb)
+			    THEN @changed ELSE enabled_from END,
+			  owner_id = coalesce(@owner, owner_id),
+			  setter_passport_id = @setter,
+			  paused_reason = CASE WHEN @enabled::boolean IS NULL THEN paused_reason END,
 			  version = version + 1,
-			  updated_at = $5
-			WHERE id = $1
-			RETURNING %s`, automationColumns),
-			id, in.Name, paramsJSON, in.Enabled, s.now().UTC(), in.OwnerID, setter))
+			  updated_at = @changed
+			WHERE id = @id
+			RETURNING %s`, automationColumns), pgx.NamedArgs{
+			"id": id, "name": in.Name, keyParams: paramsJSON, "enabled": in.Enabled,
+			"changed": s.now().UTC(), argOwner: in.OwnerID, "setter": setter,
+		}))
 		if err != nil {
 			return err
 		}
@@ -352,50 +358,27 @@ func (s *AutomationStore) Update(ctx context.Context, id ids.AutomationID, in Up
 	return a, nil
 }
 
-// revalidate re-authors a re-parameterized automation: the ceiling and the
-// params schema run again, not just once at creation. Resuming a list rule
-// asks again whether its lists are still there for the author, so a rule
-// paused for an archived list cannot be resumed onto it.
-func (s *AutomationStore) revalidate(ctx context.Context, before Automation, in UpdateAutomationInput) error {
-	resuming := in.Enabled != nil && *in.Enabled
-	if in.Params == nil && !resuming {
-		return nil
+// checkedUpdate revalidates the change and works out the params and setter
+// the rule is written with.
+func (s *AutomationStore) checkedUpdate(ctx context.Context, tx pgx.Tx, before Automation, in UpdateAutomationInput) ([]byte, *ids.UUID, error) {
+	if err := s.revalidate(ctx, before, in); err != nil {
+		return nil, nil, err
 	}
-	entry, ok := CatalogEntryByKey(before.Key)
-	if !ok {
-		return fmt.Errorf("automation %s names catalog key %q the registry no longer carries", before.ID, before.Key)
-	}
-	params := in.Params
-	if params == nil {
-		if err := json.Unmarshal(before.Params, &params); err != nil {
-			return fmt.Errorf("automation %s: reading its stored params: %w", before.ID, err)
-		}
-	} else {
-		if err := requireAuthorCeiling(ctx, entry); err != nil {
-			return err
-		}
-		if err := entry.Validate(params); err != nil {
-			return err
+	var paramsJSON []byte
+	if in.Params != nil {
+		var err error
+		if paramsJSON, err = json.Marshal(in.Params); err != nil {
+			return nil, nil, err
 		}
 	}
-	return s.validateRefs(ctx, entry, params)
+	setter, err := setterAfterUpdate(ctx, tx, before, in)
+	return paramsJSON, setter, err
 }
 
-// validateRefs asks the entry's reference check, when it has one.
-func (s *AutomationStore) validateRefs(ctx context.Context, entry CatalogEntry, params map[string]any) error {
-	if entry.ValidateRefs == nil {
-		return nil
-	}
-	if s.lists == nil {
-		return &ParamError{Field: "key", Reason: "needs lists, which are not switched on in this installation"}
-	}
-	return entry.ValidateRefs(ctx, s.lists, params)
-}
-
-// Archive soft-deletes: the instance stops firing on the next event and
+// archiveRule soft-deletes: the instance stops firing on the next event and
 // vanishes from the surface, while its run records keep their referent.
 // Audited as `archive` — the vocabulary has no `delete` verb.
-func (s *AutomationStore) Archive(ctx context.Context, id ids.AutomationID) error {
+func (s *AutomationStore) archiveRule(ctx context.Context, id ids.AutomationID) error {
 	if err := auth.Require(ctx, "automation", principal.ActionDelete); err != nil {
 		return err
 	}
@@ -417,7 +400,7 @@ func (s *AutomationStore) Archive(ctx context.Context, id ids.AutomationID) erro
 			return err
 		}
 		_, err = storekit.Audit(ctx, tx, "archive", "automation", id.UUID,
-			map[string]any{"key": before.Key, keyName: before.Name, auditEnabled: before.Enabled}, nil)
+			map[string]any{keyCatalogKey: before.Key, keyName: before.Name, auditEnabled: before.Enabled}, nil)
 		return err
 	})
 }
@@ -430,9 +413,7 @@ func SeedStarterAutomationsTx(ctx context.Context, tx pgx.Tx) error {
 		if !entry.Seeded {
 			continue
 		}
-		if err := entry.Validate(nil); err != nil {
-			return fmt.Errorf("seed automation %s: default params fail catalog validation: %w", entry.Key, err)
-		}
+		ready := entry.Validate(nil) == nil
 		paramsJSON, err := json.Marshal(nonNilParams(nil))
 		if err != nil {
 			return fmt.Errorf("seed automation %s: %w", entry.Key, err)
@@ -445,9 +426,9 @@ func SeedStarterAutomationsTx(ctx context.Context, tx pgx.Tx) error {
 			INSERT INTO automation (key, name, origin, trigger, action, params, enabled, tier)
 			VALUES (@key, @name, 'catalog', @trigger, @action, @params, @enabled, @tier)`,
 			pgx.NamedArgs{
-				"key": entry.Key, keyName: entry.Name, "trigger": triggerJSON,
+				keyCatalogKey: entry.Key, keyName: entry.Name, "trigger": triggerJSON,
 				"action": actionJSON, keyParams: paramsJSON, "tier": entry.Tier,
-				auditEnabled: entry.Action != string(ActionTypeDraftEmail),
+				auditEnabled: ready && entry.Action != string(ActionTypeDraftEmail),
 			}); err != nil {
 			return fmt.Errorf("seed automation %s: %w", entry.Key, err)
 		}

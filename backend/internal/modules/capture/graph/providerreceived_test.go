@@ -47,7 +47,7 @@ func TestDeltaAPIKeepsArrivalForEachMessage(t *testing.T) {
 	if len(messages) != 2 || !messages[0].ReceivedAt.Equal(received) || !messages[1].ReceivedAt.IsZero() {
 		t.Fatalf("anchor messages = %+v", messages)
 	}
-	messages, _, _, err = collectDelta(context.Background(), api, "access", link)
+	messages, _, err = collectDelta(context.Background(), api, "access", link)
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -98,6 +98,8 @@ func (p contactsEnsurer) EnsureCounterpartyTx(ctx context.Context, tx pgx.Tx, in
 		CapturedBy:      in.CapturedBy,
 		SuppressCompany: in.SuppressCompany,
 		Replied:         in.Replied,
+		LinkOnly:        in.LinkOnly,
+		ReaderTeam:      in.ReaderTeam,
 		// The SINK's ensure, which runs while the sender is still unjudged.
 		// Owner-scoped until something says otherwise; the verdict path is the
 		// only caller that asks for the workspace.

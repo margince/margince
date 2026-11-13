@@ -72,7 +72,7 @@ func decodeApplicableClaims(claims []provider.Claim) (applicableClaims, error) {
 			if err := decodeClaim(c, &e); err != nil {
 				return applicableClaims{}, err
 			}
-			out.title = strings.TrimSpace(e.JobTitle)
+			out.title = MachineTitle(e.JobTitle)
 			out.companyName = strings.TrimSpace(e.CompanyName)
 			out.companyDomain = strings.TrimSpace(e.CompanyDomain)
 		case provider.ClaimProfessionalEmails:

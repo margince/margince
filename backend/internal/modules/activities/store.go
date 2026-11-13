@@ -24,6 +24,7 @@ import (
 // Store owns this module's tables (data-seam ownership, ADR-0014 Am.1);
 // every write rides the storekit audit+outbox shape in one transaction.
 type Store struct {
+	inquiryAssignment  InquiryAssignment
 	identityProver     AddressProver
 	dealFilingResolver DealFilingResolver
 	taskRecommendation TaskRecommendation

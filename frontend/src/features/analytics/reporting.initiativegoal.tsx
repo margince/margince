@@ -7,6 +7,7 @@ import { DateInput, isoOrBlank } from "../../design-system/dateinput";
 import { Field, Textarea, TextInput } from "../../design-system/field";
 import { Select } from "../../design-system/select";
 import { useT } from "../../i18n";
+import { TEXT_LIMITS } from "../../lib/textlimits_gen";
 import type { SalesInitiative } from "./reporting.initiatives.queries";
 import { useMetricNames, useReportingCatalog } from "./reporting.queries";
 import {
@@ -131,6 +132,7 @@ export function GoalFields({
           <TextInput
             {...field}
             value={goal.name}
+            maxLength={TEXT_LIMITS.label}
             placeholder={t("reporting.initiativeNamePlaceholder")}
             onChange={(event) =>
               onChange({ ...goal, name: event.target.value })
@@ -147,7 +149,7 @@ export function GoalFields({
             {...field}
             value={goal.description}
             rows={3}
-            maxLength={2000}
+            maxLength={TEXT_LIMITS.document}
             onChange={(event) =>
               onChange({ ...goal, description: event.target.value })
             }

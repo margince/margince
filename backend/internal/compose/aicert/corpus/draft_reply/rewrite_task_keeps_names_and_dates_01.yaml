@@ -1,0 +1,21 @@
+name: draft_reply_rewrite_task_keeps_names_and_dates
+task: draft_reply
+site: rewrite
+source: hand_authored
+sanitized_by: hand_authored/claude-opus-5-5
+fixture:
+  envelope: "note"
+  verb: "polish"
+  subject: "call anna re pricing"
+  body: "anna (Brightline) wants new pricing for 40 seats before 12.12.2026, send her the deck at anna.berg@brightline.test, ask if procurement needs the security sheet?"
+  reader: "en"
+expect:
+  outcome: accepted
+  answer:
+    keeps: ["Brightline", "40", "12.12.2026", "anna.berg@brightline.test"]
+    omits: ["Dear", "Best regards"]
+  bands:
+    certified_min: 80
+    degraded_min: 60
+    floor: 50
+  rubric: "The task reads as a clear instruction to a colleague. It keeps the company, the seat count, the date and the address, and the question about the security sheet stays a question. It adds no greeting or sign-off."

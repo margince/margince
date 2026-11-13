@@ -23,6 +23,7 @@ func TestAssertSameEntityRefsPinsEveryRecordTheProposalNames(t *testing.T) {
 
 	tests := []struct {
 		name        string
+		kind        string
 		original    string
 		edited      string
 		wantChanged []string
@@ -54,6 +55,26 @@ func TestAssertSameEntityRefsPinsEveryRecordTheProposalNames(t *testing.T) {
 			original:    `{"proposed_name":"Acme"}`,
 			edited:      `{"proposed_name":"Acme","owner_id":"` + theirs + `"}`,
 			wantChanged: []string{"/owner_id"},
+		},
+		{
+			name:     "the colleague who does a promise is the accepter's to choose",
+			kind:     kindCommitmentTask,
+			original: `{"seat_id":"` + mine + `","doer_id":""}`,
+			edited:   `{"seat_id":"` + mine + `","doer_id":"` + alice + `"}`,
+		},
+		{
+			name:        "the doer is free only on a kind that declares it",
+			kind:        "lifecycle_change",
+			original:    `{"company_id":"` + mine + `","doer_id":""}`,
+			edited:      `{"company_id":"` + mine + `","doer_id":"` + alice + `"}`,
+			wantChanged: []string{"/doer_id"},
+		},
+		{
+			name:        "choosing a doer never frees the record the promise is about",
+			kind:        kindDealFollowUp,
+			original:    `{"deal_id":"` + mine + `","doer_id":""}`,
+			edited:      `{"deal_id":"` + theirs + `","doer_id":"` + alice + `"}`,
+			wantChanged: []string{"/deal_id"},
 		},
 		{
 			name:        "a reference nested in a list is pinned like a top-level one",
@@ -99,7 +120,7 @@ func TestAssertSameEntityRefsPinsEveryRecordTheProposalNames(t *testing.T) {
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			err := assertSameEntityRefs(json.RawMessage(tc.original), json.RawMessage(tc.edited))
+			err := assertSameEntityRefs(tc.kind, json.RawMessage(tc.original), json.RawMessage(tc.edited))
 			if len(tc.wantChanged) == 0 {
 				if err != nil {
 					t.Fatalf("edit refused: %v — a human must stay free to correct the action's content", err)

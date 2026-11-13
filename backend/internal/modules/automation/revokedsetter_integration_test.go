@@ -56,7 +56,9 @@ func newSetterRig(t *testing.T) *setterRig {
 	passport := ids.NewV7()
 	fx.exec(t, `INSERT INTO passport (id, on_behalf_of, granted_by, label, scopes, token_hash, expires_at)
 		VALUES ($1, $2, $2, 'rule setter', ARRAY['read','write'], $3, now() + interval '1 day')`, passport, fx.rep1, "hash-"+passport.String())
-	return &setterRig{fx: fx, store: NewAutomationStore(db), engine: engine, notices: notices, passport: passport, applied: &applied}
+	// Enabled before the fixture's events, which a reviewed rule acts on only from its enabling.
+	store := NewAutomationStore(db).SetClock(func() time.Time { return activityEventFor(ids.Nil).OccurredAt.Add(-time.Hour) })
+	return &setterRig{fx: fx, store: store, engine: engine, notices: notices, passport: passport, applied: &applied}
 }
 
 func (r *setterRig) user() context.Context {
@@ -198,7 +200,7 @@ func TestAUsersOwnRuleIgnoresARevokedPassport(t *testing.T) {
 // A seeded rule belongs to the product. An agent enabling one leaves no setter on it.
 func TestAnAgentEnablingASeededRuleLeavesNoSetter(t *testing.T) {
 	r := newSetterRig(t)
-	current := r.seededRule(t, stageChangeNotifyName)
+	current := r.seededRule(t, routeLeadName)
 	r.enable(r.agent(), t, current)
 	if _, _, setter := r.ruleState(t, current); setter != nil {
 		t.Errorf("the seeded rule names passport %s", *setter)
@@ -242,7 +244,7 @@ func TestARevokedSettersRuleIsNotRetried(t *testing.T) {
 // A rule an agent creates from a seeded key is the agent's, so revoking stops it.
 func TestAnAgentsRuleFromASeededKeyNamesItsPassport(t *testing.T) {
 	r := newSetterRig(t)
-	rule, err := r.store.Create(r.agent(), CreateAutomationInput{Key: stageChangeNotifyName, Name: "Mine too", Params: map[string]any{}})
+	rule, err := r.store.Create(r.agent(), CreateAutomationInput{Key: routeLeadName, Name: "Mine too", Params: map[string]any{}})
 	if err != nil {
 		t.Fatal(err)
 	}

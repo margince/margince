@@ -13,6 +13,7 @@ import {
   type MailDraft,
   type SavedDraftFields,
 } from "./composesaveddraftcalls";
+import { sameScheduleSource, scheduleSourceOf } from "./composeschedule";
 
 /** What the composer holds that a saved draft keeps. */
 export function savedFieldsOf(
@@ -30,6 +31,7 @@ export function savedFieldsOf(
     files,
     context: fields.context,
     sendAt: fields.sendAt,
+    sendSchedule: fields.sendSchedule,
     editorState: {
       ...fields.editorState,
       filing: selectedFiling(filing),
@@ -61,7 +63,12 @@ export function fieldsOfDraft(draft: MailDraft): SavedDraftFields {
       byteSize: file.byte_size,
     })),
     context: draft.communication_context ?? "",
-    sendAt: draft.scheduled_at ? localDateTimeValue(draft.scheduled_at) : "",
+    sendAt:
+      draft.scheduled_intent?.wall_clock ??
+      (draft.scheduled_at && draft.scheduled_tz
+        ? localDateTimeValue(draft.scheduled_at, draft.scheduled_tz)
+        : ""),
+    sendSchedule: scheduleSourceOf(draft),
     editorState: draft.editor_state,
     grounding: (draft.grounding ?? []).map((ground) => ({
       type: ground.anchor_type,
@@ -120,6 +127,7 @@ export function sameFields(a: SavedDraftFields, b: SavedDraftFields): boolean {
     sameList(idsOf(a.files), idsOf(b.files)) &&
     a.context === b.context &&
     a.sendAt === b.sendAt &&
+    sameScheduleSource(a.sendSchedule, b.sendSchedule) &&
     sameList(filingKeys(a), filingKeys(b)) &&
     sameEditorState(a.editorState, b.editorState)
   );

@@ -19,6 +19,7 @@ import (
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/platform/httperr"
+	"github.com/margince/margince/backend/internal/platform/labeltranslation"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -114,6 +115,12 @@ func (h Handlers) RenameCustomField(w http.ResponseWriter, r *http.Request, id c
 		return
 	}
 	patch := FieldPatch{Label: req.Label, ShowInCreate: req.ShowInCreate, Reportable: req.Reportable}
+	if req.LabelTranslations != nil {
+		patch.LabelTranslations = labeltranslation.FromWire(req.LabelTranslations)
+	}
+	if req.OptionTranslations != nil {
+		patch.OptionTranslations = labeltranslation.OptionsFromWire(req.OptionTranslations)
+	}
 	if req.ActivityKinds != nil {
 		kinds := kindStrings(*req.ActivityKinds)
 		patch.ActivityKinds = &kinds

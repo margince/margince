@@ -5,6 +5,7 @@ package automation
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 
 	"github.com/jackc/pgx/v5"
@@ -13,14 +14,18 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
-// claimDraftStarter gives an unowned draft template the enabling contact's
+// claimStarterAuthorizer gives a reviewed template the enabling contact's
 // authority. Existing owners never change when somebody toggles the template.
-func claimDraftStarter(ctx context.Context, tx pgx.Tx, before Automation) (ids.UUID, error) {
+func claimStarterAuthorizer(ctx context.Context, tx pgx.Tx, before Automation) (ids.UUID, error) {
 	entry, ok := CatalogEntryByKey(before.Key)
 	if !ok {
 		return ids.Nil, fmt.Errorf("automation %s names an unknown catalog key", before.ID)
 	}
-	if entry.Action != string(ActionTypeDraftEmail) {
+	needed, err := starterNeedsAuthorizer(entry, before.Params)
+	if err != nil {
+		return ids.Nil, err
+	}
+	if !needed {
 		return ids.Nil, nil
 	}
 	if err := requireAuthorCeiling(ctx, entry); err != nil {
@@ -32,9 +37,25 @@ func claimDraftStarter(ctx context.Context, tx pgx.Tx, before Automation) (ids.U
 	}
 	updated, err := tx.Exec(ctx, `UPDATE automation SET owner_id = @owner
 		WHERE id = @id AND owner_id IS NULL`,
-		pgx.NamedArgs{"owner": actor.UserID, "id": before.ID})
+		pgx.NamedArgs{argOwner: actor.UserID, "id": before.ID})
 	if err != nil || updated.RowsAffected() == 0 {
 		return ids.Nil, err
 	}
 	return actor.UserID, nil
+}
+
+func starterNeedsAuthorizer(entry CatalogEntry, params json.RawMessage) (bool, error) {
+	if entry.Action == string(ActionTypeDraftEmail) {
+		return true, nil
+	}
+	if _, quiet := activityScanHandlers[entry.Key]; quiet {
+		population, err := quietPopulation(params)
+		return population.configured(), err
+	}
+	if entry.Key == stageChangeNotifyName || entry.Key == stageChangeCreateTaskName {
+		var scope stageChangeParams
+		err := json.Unmarshal(params, &scope)
+		return !scope.PipelineID.IsZero(), err
+	}
+	return false, nil
 }

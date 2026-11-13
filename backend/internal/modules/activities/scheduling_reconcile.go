@@ -96,6 +96,10 @@ func (s *Store) reconcileInvitation(ctx context.Context, observed invitationRow,
 		if state.Canceled {
 			row.Status = invitationCanceled
 		} else {
+			// A start the calendar moved is no longer the host's chosen clock.
+			if !state.Start.Equal(row.Appointment.Start) {
+				setBookedStartIntent(&row.Appointment, nil)
+			}
 			row.Appointment.Start = state.Start
 			row.Appointment.End = state.End
 		}

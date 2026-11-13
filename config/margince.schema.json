@@ -2037,6 +2037,154 @@
         }
       }
     },
+    "webforms": {
+      "type": [
+        "object",
+        "null"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "throttle": {
+          "type": [
+            "object",
+            "null"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "block_after_minutes": {
+              "description": "Minutes in a row over a limit after which every post is refused for a while (a block).",
+              "type": [
+                "integer",
+                "null"
+              ],
+              "minimum": 1,
+              "maximum": 60,
+              "default": 5
+            },
+            "cooldown_minutes": {
+              "description": "Minutes a first block lasts. Each block that follows soon after another lasts twice as long.",
+              "type": [
+                "integer",
+                "null"
+              ],
+              "minimum": 1,
+              "maximum": 1440,
+              "default": 15
+            },
+            "form_expiry_seconds": {
+              "description": "Seconds a known form address is used without reading it again, even while loads fail.",
+              "type": [
+                "integer",
+                "null"
+              ],
+              "minimum": 1,
+              "maximum": 86400,
+              "default": 120
+            },
+            "form_refresh_seconds": {
+              "description": "Seconds between loads of every form address the intake knows. A form made on another server is taken within it.",
+              "type": [
+                "integer",
+                "null"
+              ],
+              "minimum": 1,
+              "maximum": 3600,
+              "default": 30
+            },
+            "max_cooldown_hours": {
+              "description": "Longest a block lasts, in hours. A block always ends on its own.",
+              "type": [
+                "integer",
+                "null"
+              ],
+              "minimum": 1,
+              "maximum": 168,
+              "default": 24
+            },
+            "min_senders": {
+              "description": "Distinct addresses a minute over the workspace or installation limit must hold before all forms are blocked. Fewer only get 429.",
+              "type": [
+                "integer",
+                "null"
+              ],
+              "minimum": 1,
+              "maximum": 100000,
+              "default": 10
+            },
+            "per_address_per_minute": {
+              "description": "Posts one address may send to all web forms together in a minute before it gets 429.",
+              "type": [
+                "integer",
+                "null"
+              ],
+              "minimum": 1,
+              "maximum": 10000,
+              "default": 10
+            },
+            "per_form_per_minute": {
+              "description": "Posts one web form takes in a minute, from every address together, before it gets 429.",
+              "type": [
+                "integer",
+                "null"
+              ],
+              "minimum": 1,
+              "maximum": 100000,
+              "default": 30
+            },
+            "per_installation_per_minute": {
+              "description": "Posts all web forms of the installation take in a minute before they get 429.",
+              "type": [
+                "integer",
+                "null"
+              ],
+              "minimum": 1,
+              "maximum": 10000000,
+              "default": 600
+            },
+            "per_ip_per_minute": {
+              "description": "Posts one address may send to one web form in a minute before it gets 429.",
+              "type": [
+                "integer",
+                "null"
+              ],
+              "minimum": 1,
+              "maximum": 10000,
+              "default": 5
+            },
+            "per_workspace_per_minute": {
+              "description": "Posts all web forms of one workspace take in a minute before they get 429.",
+              "type": [
+                "integer",
+                "null"
+              ],
+              "minimum": 1,
+              "maximum": 1000000,
+              "default": 120
+            },
+            "preflights_per_minute": {
+              "description": "OPTIONS requests a browser asks before a post, that one address may send to all web forms in a minute before it gets 429.",
+              "type": [
+                "integer",
+                "null"
+              ],
+              "minimum": 1,
+              "maximum": 10000,
+              "default": 20
+            },
+            "unknown_keys_per_minute": {
+              "description": "Lookups of form addresses not yet known, from all senders together, in a minute. Past it such an address is answered as one that names no form.",
+              "type": [
+                "integer",
+                "null"
+              ],
+              "minimum": 1,
+              "maximum": 100000,
+              "default": 60
+            }
+          }
+        }
+      }
+    },
     "webhook_key": {
       "description": "Base64 32-byte key sealing outbound-webhook signing secrets; unset, the webhook paths that change data answer 503 and the worker sends nothing.",
       "type": [

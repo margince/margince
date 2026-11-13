@@ -1,10 +1,12 @@
 /** @vitest-environment happy-dom */
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { cleanup, render, screen, waitFor } from "@testing-library/react";
+import { act, cleanup, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { CACHE_ANSWER_GRACE_MS } from "../../api/client";
 import type { components } from "../../api/schema";
 import { LocaleProvider, translate } from "../../i18n";
+import { en } from "../../i18n/en";
 import { meFixture } from "../../testing/mefixture";
 import { company } from "./company360.testkit";
 import { GrowthFitPanel } from "./companygrowthfit";
@@ -81,43 +83,69 @@ async function show(fit: GrowthFit, locale: "en" | "de" | "vi" = "en") {
       </LocaleProvider>
     </QueryClientProvider>,
   );
-  // The "as of" stamp only renders once the query has resolved, so waiting for
-  // it is what makes the synchronous assertions below run against loaded
-  // content. The panel heading is static and would match while the skeleton is
-  // up.
-  await screen.findByText(/as of |Stand |tính đến/i);
+  // The stamp only renders once the query has resolved, so waiting for it is
+  // what makes the synchronous assertions below run against loaded content.
+  // The panel heading is static and would match while the skeleton is up.
+  await screen.findByText(
+    /as of |Stand |tính đến|written just now|gerade geschrieben|vừa được viết/i,
+  );
 }
 
-describe("the wait before the first assessment", () => {
-  // A cold assessment is assembled on the request, model call included, and
-  // that runs into tens of seconds. For all of it the panel drew its heading
-  // and then a mute grey rectangle, which reads as a panel that is broken
-  // rather than one that is working — and to a screen reader it read as
-  // nothing at all.
-  it("says what it is waiting for, out loud and to assistive tech", () => {
-    // A fetch that never settles IS the pending state; there is no clock here
-    // to advance and nothing to wait for.
-    vi.stubGlobal(
-      "fetch",
-      vi.fn(() => new Promise<Response>(() => {})),
-    );
-    const { container } = render(
-      <QueryClientProvider
-        client={
-          new QueryClient({ defaultOptions: { queries: { retry: false } } })
-        }
-      >
-        <LocaleProvider initial="en">
-          <GrowthFitPanel company={company} onOpenReceipt={() => {}} />
-        </LocaleProvider>
-      </QueryClientProvider>,
-    );
+function showPending() {
+  // A fetch that never settles is the pending state.
+  vi.stubGlobal(
+    "fetch",
+    vi.fn(() => new Promise<Response>(() => {})),
+  );
+  return render(
+    <QueryClientProvider
+      client={
+        new QueryClient({ defaultOptions: { queries: { retry: false } } })
+      }
+    >
+      <LocaleProvider initial="en">
+        <GrowthFitPanel company={company} onOpenReceipt={() => {}} />
+      </LocaleProvider>
+    </QueryClientProvider>,
+  );
+}
 
+describe("the wait for the assessment", () => {
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  // A stored assessment answers inside the grace, so a wait that short is a
+  // load and says nothing about a model at work.
+  it("waits as a plain load while a stored answer could still arrive", () => {
+    vi.useFakeTimers();
+    const { container } = showPending();
     const live = container.querySelector("[role='status'][aria-busy='true']");
-    expect(live).toBeTruthy();
+    expect(live?.textContent).toContain(en["state.loading"]);
+    expect(screen.queryByText(/Assessing this company/)).toBeNull();
+  });
+
+  // A first assessment is written on the request, model call included, and
+  // runs into tens of seconds. Past the grace the wait says what it is
+  // waiting for, out loud and to a screen reader.
+  it("says the assessment is being written once the wait outlasts a stored answer", () => {
+    vi.useFakeTimers();
+    const { container } = showPending();
+    act(() => {
+      vi.advanceTimersByTime(CACHE_ANSWER_GRACE_MS);
+    });
+    const live = container.querySelector("[role='status'][aria-busy='true']");
     expect(live?.textContent).toContain("Assessing this company");
-    // And it must not have resolved into any of the panel's verdicts.
     expect(screen.queryByText("Not enough data")).toBeNull();
+  });
+
+  it("stamps a stored assessment with its age and a new one as just written", async () => {
+    await show({ ...ABSTAINED, served_from: "cache" });
+    expect(screen.queryByText(en["co.assembly.writtenNow"])).toBeNull();
+    cleanup();
+    await show({ ...ABSTAINED, served_from: "generated" });
+    expect(screen.getByText(en["co.assembly.writtenNow"])).toBeTruthy();
+    expect(screen.queryByText(/as of /)).toBeNull();
   });
 });
 

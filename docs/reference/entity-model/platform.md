@@ -93,6 +93,11 @@ The 13 tables owned by `platform`, as the migrations build them. [Back to the en
 - `data_task_review_expiry`: `btree (expires_at)`
 - `data_task_review_pkey`: `unique, btree (token_hash)`
 
+**Triggers**
+
+- `text_bound_insert`: `AFTER INSERT FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL, '{"task_id": 20000, "operator": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"operator":20000,"task_id":20000}')`
+- `text_bound_update`: `AFTER UPDATE FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"task_id": 20000, "operator": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"operator":20000,"task_id":20000}')`
+
 ## data_task_run
 
 22 columns · primary key `(task_id, step)` · referenced by 0 foreign keys
@@ -140,6 +145,11 @@ The 13 tables owned by `platform`, as the migrations build them. [Back to the en
 - `data_task_run_pkey`: `unique, btree (task_id, step)`
 - `data_task_run_run_id_key`: `unique, btree (run_id)`
 
+**Triggers**
+
+- `text_bound_insert`: `AFTER INSERT FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL, '{"step": 20000, "status": 20000, "task_id": 20000, "first_release": 20000, "last_error_class": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"first_release":20000,"last_error_class":20000,"status":20000,"step":20000,"task_id":20000}')`
+- `text_bound_update`: `AFTER UPDATE FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"step": 20000, "status": 20000, "task_id": 20000, "first_release": 20000, "last_error_class": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"first_release":20000,"last_error_class":20000,"status":20000,"step":20000,"task_id":20000}')`
+
 ## data_task_run_history
 
 5 columns · primary key `(run_id)` · referenced by 0 foreign keys
@@ -155,6 +165,11 @@ The 13 tables owned by `platform`, as the migrations build them. [Back to the en
 **Indexes**
 
 - `data_task_run_history_pkey`: `unique, btree (run_id)`
+
+**Triggers**
+
+- `text_bound_insert`: `AFTER INSERT FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL, '{"step": 20000, "task_id": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"step":20000,"task_id":20000}')`
+- `text_bound_update`: `AFTER UPDATE FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"step": 20000, "task_id": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"step":20000,"task_id":20000}')`
 
 ## event_outbox
 
@@ -206,6 +221,11 @@ The 13 tables owned by `platform`, as the migrations build them. [Back to the en
 - `extension_secret_workspace_key`: `unique, btree (extension_name, key) WHERE (user_id IS NULL)`
 - `extension_secret_workspace_user`: `btree (user_id)`
 
+**Triggers**
+
+- `text_bound_insert`: `AFTER INSERT FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL, '{"key": 20000, "vault_ref": 20000, "extension_name": 120}')) EXECUTE FUNCTION refuse_oversized_text('{"extension_name":120,"key":20000,"vault_ref":20000}')`
+- `text_bound_update`: `AFTER UPDATE FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"key": 20000, "vault_ref": 20000, "extension_name": 120}')) EXECUTE FUNCTION refuse_oversized_text('{"extension_name":120,"key":20000,"vault_ref":20000}')`
+
 ## field_provenance
 
 9 columns · primary key `(id)` · referenced by 0 foreign keys
@@ -231,6 +251,11 @@ The 13 tables owned by `platform`, as the migrations build them. [Back to the en
 
 - `field_provenance_pkey`: `unique, btree (id)`
 - `idx_field_provenance_object`: `btree (object_type, object_id, field_name, captured_at DESC)`
+
+**Triggers**
+
+- `text_bound_insert`: `AFTER INSERT FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL, '{"source": 20000, "field_name": 120, "captured_by": 20000, "object_type": 20000, "evidence_ref": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"captured_by":20000,"evidence_ref":20000,"field_name":120,"object_type":20000,"source":20000}')`
+- `text_bound_update`: `AFTER UPDATE FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"source": 20000, "field_name": 120, "captured_by": 20000, "object_type": 20000, "evidence_ref": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"captured_by":20000,"evidence_ref":20000,"field_name":120,"object_type":20000,"source":20000}')`
 
 ## report_projection_fence
 
@@ -271,6 +296,11 @@ The 13 tables owned by `platform`, as the migrations build them. [Back to the en
 
 - `setting_pkey`: `unique, btree (key)`
 
+**Triggers**
+
+- `text_bound_insert`: `AFTER INSERT FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL, '{"key": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"key":20000}')`
+- `text_bound_update`: `AFTER UPDATE FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"key": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"key":20000}')`
+
 ## stored_object_intent
 
 5 columns · primary key `(storage_key)` · referenced by 0 foreign keys
@@ -288,6 +318,11 @@ The 13 tables owned by `platform`, as the migrations build them. [Back to the en
 - `stored_object_intent_pending_idx`: `btree (COALESCE(reaping_since, recorded_at), storage_key) WHERE (reaped_at IS NULL)`
 - `stored_object_intent_pkey`: `unique, btree (storage_key)`
 - `stored_object_intent_recorded_idx`: `btree (recorded_at)`
+
+**Triggers**
+
+- `text_bound_insert`: `AFTER INSERT FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL, '{"kind": 20000, "storage_key": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"kind":20000,"storage_key":20000}')`
+- `text_bound_update`: `AFTER UPDATE FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"kind": 20000, "storage_key": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"kind":20000,"storage_key":20000}')`
 
 ## system_log
 
@@ -324,6 +359,8 @@ The 13 tables owned by `platform`, as the migrations build them. [Back to the en
 
 **Triggers**
 
+- `text_bound_insert`: `AFTER INSERT FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL, '{"action": 20000, "actor_id": 20000, "actor_type": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"action":20000,"actor_id":20000,"actor_type":20000}')`
+- `text_bound_update`: `AFTER UPDATE FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"action": 20000, "actor_id": 20000, "actor_type": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"action":20000,"actor_id":20000,"actor_type":20000}')`
 - `trg_system_log_no_mutate`: `BEFORE DELETE OR UPDATE FOR EACH ROW EXECUTE FUNCTION system_log_immutable()`
 
 ## vault_secret
@@ -340,3 +377,8 @@ The 13 tables owned by `platform`, as the migrations build them. [Back to the en
 **Indexes**
 
 - `vault_secret_pkey`: `unique, btree (ref)`
+
+**Triggers**
+
+- `text_bound_insert`: `AFTER INSERT FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL, '{"ref": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"ref":20000}')`
+- `text_bound_update`: `AFTER UPDATE FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"ref": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"ref":20000}')`

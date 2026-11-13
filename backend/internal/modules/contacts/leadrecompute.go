@@ -23,6 +23,7 @@ import (
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/ports/mcp"
@@ -277,13 +278,21 @@ func (w leadScoreRecompute) Apply(ctx context.Context, ev workflow.Event, eff wo
 		return workflow.RunResult{}, err
 	}
 	now := w.now().UTC()
+	recomputed := 0
 	for _, leadID := range leads {
 		if err := w.store.RecomputeLeadScore(ctx, leadID, now); err != nil {
+			if errors.Is(err, apperrors.ErrNotFound) {
+				continue
+			}
 			return workflow.RunResult{}, fmt.Errorf("recompute lead %s: %w", leadID, err)
 		}
+		recomputed++
 	}
 	if len(leads) == 0 {
 		return workflow.RunResult{}, nil
+	}
+	if recomputed == 0 {
+		return workflow.RunResult{}, workflow.Declined("the activity has no available lead to score")
 	}
 	return workflow.RunResult{Applied: eff.Actions}, nil
 }

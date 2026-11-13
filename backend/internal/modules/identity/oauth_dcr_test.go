@@ -36,6 +36,24 @@ func parseDocument(t *testing.T, document string) (dcrRequest, *dcrRefusal) {
 	return parseDCR(members)
 }
 
+func TestRegistrationNamesUseTheSharedCharacterBound(t *testing.T) {
+	for _, size := range []int{maxAgentClientNameRunes, maxAgentClientNameRunes + 1} {
+		name := strings.Repeat("界", size)
+		document := strings.Replace(thirdPartyRegistration, "Le Chat", name, 1)
+		_, refusal := parseDocument(t, document)
+		if size == maxAgentClientNameRunes && refusal != nil {
+			t.Fatalf("name at the character bound: %+v", refusal)
+		}
+		if size > maxAgentClientNameRunes && (refusal == nil || refusal.code != oauthErrInvalidClientMetadata || refusal.member != "client_name") {
+			t.Fatalf("oversized name refusal = %+v", refusal)
+		}
+	}
+	req, refusal := parseDocument(t, strings.Replace(thirdPartyRegistration, "Le Chat", "  Le Chat  ", 1))
+	if refusal != nil || req.ClientName != "Le Chat" {
+		t.Fatalf("normalized registration = %+v, refusal %+v", req, refusal)
+	}
+}
+
 func TestRegistrationIgnoresMetadataItDoesNotUnderstand(t *testing.T) {
 	req, refusal := parseDocument(t, thirdPartyRegistration)
 	if refusal != nil {

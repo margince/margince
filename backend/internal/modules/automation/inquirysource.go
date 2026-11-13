@@ -1,0 +1,124 @@
+// SPDX-License-Identifier: BUSL-1.1
+// SPDX-FileCopyrightText: 2026 Gradion
+
+package automation
+
+import (
+	"context"
+	"encoding/json"
+	"errors"
+	"strings"
+
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/shared/apperrors"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/provenance"
+	"github.com/margince/margince/backend/internal/shared/ports/datasource"
+	"github.com/margince/margince/backend/internal/shared/ports/workflow"
+)
+
+type inquiryReceipt struct {
+	Activity crmcontracts.Activity
+	Target   datasource.EntityRef
+	Key      string
+}
+
+func readInquiryReceipt(ctx context.Context, ex Executors, ev workflow.Event, policy crmcontracts.WebsiteInquiryPolicy) (inquiryReceipt, error) {
+	return readAcceptedInquiry(ctx, ex, ev, policy, false)
+}
+
+func readAcceptedInquiry(ctx context.Context, ex Executors, ev workflow.Event, policy crmcontracts.WebsiteInquiryPolicy, allowLegacy bool) (inquiryReceipt, error) {
+	if ex.Provider == nil {
+		return inquiryReceipt{}, errors.New("automation: inquiry record reader is not configured")
+	}
+	admit, err := ownerContext(ctx, ex.Authority, ev.WorkspaceID, ev.OwnerID)
+	if err != nil {
+		return inquiryReceipt{}, err
+	}
+	activity, err := readInquiryNote(admit, ex, ev)
+	if err != nil {
+		return inquiryReceipt{}, err
+	}
+	if err := checkInquiryOwnership(ev, policy, activity, allowLegacy); err != nil {
+		return inquiryReceipt{}, err
+	}
+	target, err := InquiryTarget(activity)
+	if err != nil {
+		return inquiryReceipt{}, err
+	}
+	if _, err := ex.Provider.Read(admit, target); err != nil {
+		if errors.Is(err, apperrors.ErrNotFound) {
+			return inquiryReceipt{}, workflow.Declined("the inquiry target is no longer available")
+		}
+		return inquiryReceipt{}, err
+	}
+	return inquiryReceipt{Activity: activity, Target: target, Key: *activity.SourceId}, nil
+}
+
+// readInquiryNote reads the accepted website note the event names, as the
+// rule owner. A note that is gone or no longer one declines the firing.
+func readInquiryNote(admit context.Context, ex Executors, ev workflow.Event) (crmcontracts.Activity, error) {
+	var activity crmcontracts.Activity
+	record, err := ex.Provider.Read(admit, ev.Entity)
+	if errors.Is(err, apperrors.ErrNotFound) {
+		return activity, workflow.Declined("the accepted website inquiry is no longer available")
+	}
+	if err != nil {
+		return activity, err
+	}
+	if err := json.Unmarshal(record.Fields, &activity); err != nil {
+		return activity, err
+	}
+	if activity.Kind != crmcontracts.ActivityKindNote || activity.SourceSystem == nil || *activity.SourceSystem != provenance.WebFormSource || activity.SourceId == nil || activity.Raw == nil || activity.Links == nil || activity.ArchivedAt != nil {
+		return activity, workflow.Declined("the trigger is not an available accepted website note")
+	}
+	return activity, nil
+}
+
+// checkInquiryOwnership declines a note the event does not name, one from
+// another form, or one that another policy accepted. allowLegacy also admits
+// a note that no policy accepted.
+func checkInquiryOwnership(ev workflow.Event, policy crmcontracts.WebsiteInquiryPolicy, activity crmcontracts.Activity, allowLegacy bool) error {
+	var payload crmcontracts.PublicEventActivityCaptured
+	if err := json.Unmarshal(ev.Payload, &payload); err != nil {
+		return err
+	}
+	if payload.WebsiteSubmissionKey == nil || *payload.WebsiteSubmissionKey != *activity.SourceId {
+		return workflow.Declined("the event does not name this accepted website note")
+	}
+	form, _, ok := strings.Cut(*activity.SourceId, ":")
+	if !ok || form != policy.FormId.String() {
+		return workflow.Declined("the accepted inquiry belongs to another form")
+	}
+	owner, err := AcceptedInquiryOwner(activity.Raw)
+	if err != nil {
+		return err
+	}
+	if (owner == nil && !allowLegacy) || (owner != nil && *owner != ev.AutomationID) {
+		return workflow.Declined("this handling policy does not own the accepted inquiry")
+	}
+	return nil
+}
+
+// InquiryTarget is the one lead or contact an accepted inquiry note is filed
+// under. A note with none declines; a note with two is an error.
+func InquiryTarget(activity crmcontracts.Activity) (datasource.EntityRef, error) {
+	var target datasource.EntityRef
+	if activity.Links == nil {
+		return target, workflow.Declined("the accepted inquiry has no available lead or contact")
+	}
+	for _, link := range *activity.Links {
+		kind := datasource.EntityType(link.EntityType)
+		if kind != datasource.EntityLead && kind != datasource.EntityContact {
+			continue
+		}
+		if target.ID != ids.Nil {
+			return target, errors.New("automation: inquiry has more than one routing target")
+		}
+		target = datasource.EntityRef{Type: kind, ID: ids.UUID(link.EntityId)}
+	}
+	if target.ID == ids.Nil {
+		return target, workflow.Declined("the accepted inquiry has no available lead or contact")
+	}
+	return target, nil
+}

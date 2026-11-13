@@ -124,7 +124,7 @@ func vendorDeciderSQL(ctx context.Context, domain, reader, identities string, as
 	} else if err != nil {
 		return "", err
 	}
-	sole := storekit.SoleDirectMailSeatSQL("vendor_mail", identities)
+	sole := storekit.SoleToLineSeatSQL("vendor_mail", identities)
 	readable, err := auth.ActivityContentClause(ctx, "vendor_mail", arg)
 	if err != nil {
 		return "", err

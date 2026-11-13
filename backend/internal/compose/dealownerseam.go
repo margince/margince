@@ -30,6 +30,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/compose/carddoer"
 	"github.com/margince/margince/backend/internal/modules/deals"
 	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/platform/database"
@@ -92,6 +93,12 @@ func lockedDealOwner(ctx context.Context, tx pgx.Tx, dealID ids.UUID) (ids.UUID,
 		return ids.Nil, nil
 	}
 	return *owner, nil
+}
+
+// colleagueAuthority reads as any one colleague, for a card that hands work to
+// them, through the same snapshot asOwner takes.
+func colleagueAuthority(db *database.DB) carddoer.ColleagueAuthority {
+	return dealOwnerAuthority{db: db, users: identity.NewServiceFor(db)}.asOwner
 }
 
 // asOwner binds one member as the acting principal.

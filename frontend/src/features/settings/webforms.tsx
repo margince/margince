@@ -7,18 +7,24 @@ import { useState } from "react";
 import { api } from "../../api/client";
 import { ifMatch } from "../../api/version";
 import { ArchiveAction } from "../../components/archive";
+import { WebsiteInquiryDialog } from "../../components/websiteinquirydialog";
 import { Badge, Button, OverflowMenu } from "../../design-system/atoms";
 import { ConfirmModal } from "../../design-system/confirmmodal";
 import { ErrorLine } from "../../design-system/errorline";
 import { Panel, PanelBody, PanelIntro } from "../../design-system/panel";
 import { QueryGate } from "../../design-system/querystates";
 import { SettingList, SettingRow } from "../../design-system/settingrow";
-import { formatDate } from "../../format/format";
+import {
+  formatDate,
+  formatDateTime,
+  formatTimeOfDay,
+} from "../../format/format";
 import { useLocale, useT } from "../../i18n";
-import { useCanWrite } from "../../lib/capability";
+import { useCan, useCanWrite } from "../../lib/capability";
 import { problemMessageOf, throwProblem, unwrap } from "../../lib/problem";
 import { useMe } from "../../lib/session";
 import { useViewerZone } from "../../lib/viewerzone";
+import { WEBSITE_INQUIRY_RECIPE } from "../../lib/websiteinquiries";
 import { WebFormDrawer } from "./webformdrawer";
 import {
   mintsSecret,
@@ -148,6 +154,39 @@ function RotateAction({
   );
 }
 
+function HandlingAction({
+  form,
+  canEdit,
+}: Readonly<{ form: WebForm; canEdit: boolean }>) {
+  const t = useT();
+  const [handling, setHandling] = useState(false);
+  const readPolicies = useCan("automation", "read");
+  const createPolicies = useCanWrite("automation", "create");
+  const editPolicies = useCanWrite("automation", "update");
+  const canHandle =
+    canEdit &&
+    readPolicies &&
+    editPolicies &&
+    (!!form.handling_automation_id || createPolicies);
+  const catalog = useQuery({
+    queryKey: ["automation-catalog"],
+    enabled: canHandle,
+    queryFn: async () => unwrap(await api.GET("/automations/catalog")),
+  });
+  if (!canHandle) return null;
+  if (catalog.error) return <ErrorLine inline error={catalog.error} />;
+  if (!catalog.data?.data.some((entry) => entry.key === WEBSITE_INQUIRY_RECIPE))
+    return null;
+  return (
+    <>
+      <Button onClick={() => setHandling(true)}>{t("inquiry.handling")}</Button>
+      {handling && (
+        <WebsiteInquiryDialog form={form} onClose={() => setHandling(false)} />
+      )}
+    </>
+  );
+}
+
 function FormRow({
   form,
   canEdit,
@@ -170,8 +209,11 @@ function FormRow({
             {form.sender === "browser"
               ? form.allowed_origins.join(", ")
               : t(`webForms.senderLine.${form.sender}`)}
-            {form.owner_id && <FormOwnerLine ownerId={form.owner_id} />}
+            {!form.handling_automation_id && form.owner_id && (
+              <FormOwnerLine ownerId={form.owner_id} />
+            )}
             <LastPostLine lastPostAt={form.last_post_at} />
+            <IntakeLine intake={form.intake} />
             <span className="webform-row-actions">
               <Button
                 data-testid="web-form-setup"
@@ -187,6 +229,7 @@ function FormRow({
                   {t("webForms.edit")}
                 </Button>
               )}
+              <HandlingAction form={form} canEdit={canEdit} />
               {(canEdit || canArchive) && (
                 <OverflowMenu label={t("record.moreActions")}>
                   {canEdit && <PauseAction form={form} />}
@@ -253,6 +296,42 @@ function LastPostLine({
           })}
     </span>
   );
+}
+
+// The throttle's refusals, so an admin whose site sees 429s knows why.
+function IntakeLine({ intake }: Readonly<{ intake: WebForm["intake"] }>) {
+  const readerZone = useViewerZone();
+  const t = useT();
+  const { locale } = useLocale();
+  if (!intake) {
+    return null;
+  }
+  if (intake.state === "throttled" && intake.since) {
+    return (
+      <span data-testid="web-form-intake">
+        {t("webForms.row.intake.throttled", {
+          when: formatTimeOfDay(intake.since, locale, readerZone),
+        })}
+      </span>
+    );
+  }
+  if (intake.state === "blocked" && intake.until) {
+    return (
+      <span data-testid="web-form-intake">
+        {t("webForms.row.intake.blocked", {
+          when: formatDateTime(intake.until, locale, readerZone),
+        })}
+      </span>
+    );
+  }
+  if (intake.state === "paused_all") {
+    return (
+      <span data-testid="web-form-intake">
+        {t("webForms.row.intake.pausedAll")}
+      </span>
+    );
+  }
+  return null;
 }
 
 export function WebFormsCard() {

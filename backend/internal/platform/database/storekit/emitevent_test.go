@@ -10,8 +10,10 @@ package storekit
 // a runtime value.
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"strings"
 	"testing"
 
@@ -206,5 +208,40 @@ func TestEmitSeamRejectsMismatchedPayloadEntityPairing(t *testing.T) {
 	if err := EmitEvent(ctx, &fakeTx{}, auditID, ids.NewV7(),
 		crmcontracts.PublicEventConsentChanged{}); err == nil {
 		t.Fatal("EmitEvent must reject a dynamic-entity payload — it would stamp the literal \"dynamic\" entity type")
+	}
+}
+
+func TestEmitEventEnvelopeReturnsTheExactSavedEvent(t *testing.T) {
+	tx := &fakeTx{}
+	audit, entity := ids.NewV7(), ids.NewV7()
+	returned, err := EmitEventEnvelope(emitTestContext(), tx, audit, entity, crmcontracts.PublicEventDealStageChanged{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if returned.EventID == ids.Nil || returned.Trace.AuditLogID != audit || returned.Entity.ID != entity {
+		t.Fatalf("incomplete emitted identity: %+v", returned)
+	}
+	if len(tx.execArgs) != 2 {
+		t.Fatalf("outbox arguments: %d", len(tx.execArgs))
+	}
+	saved, ok := tx.execArgs[1].([]byte)
+	if !ok {
+		t.Fatal("outbox envelope is not JSON bytes")
+	}
+	serialized, err := json.Marshal(returned)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !bytes.Equal(saved, serialized) {
+		t.Fatalf("returned event differs from saved event: saved %s, returned %s", saved, serialized)
+	}
+}
+
+func TestEmitEventEnvelopeDoesNotReturnAnEventWhenTheWriteFails(t *testing.T) {
+	unavailable := errors.New("outbox unavailable")
+	tx := &fakeTx{execErr: unavailable}
+	returned, err := EmitEventEnvelope(emitTestContext(), tx, ids.NewV7(), ids.NewV7(), crmcontracts.PublicEventDealStageChanged{})
+	if !errors.Is(err, unavailable) || returned.EventID != ids.Nil {
+		t.Fatalf("failed write returned an event: %+v, %v", returned, err)
 	}
 }

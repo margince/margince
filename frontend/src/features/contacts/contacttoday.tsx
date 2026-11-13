@@ -292,7 +292,13 @@ function TaskBar({
         holder,
         task.due_at
           ? t("co.next.due", {
-              when: formatDue(task.due_at, task.due_has_time, locale, zone),
+              when: formatDue(
+                task.due_at,
+                task.due_has_time,
+                locale,
+                zone,
+                task.due_intent,
+              ),
             })
           : t("co.next.undated"),
       ])}

@@ -6,6 +6,7 @@ package activities
 import (
 	"context"
 	"fmt"
+	"slices"
 	"time"
 
 	"github.com/jackc/pgx/v5"
@@ -327,11 +328,11 @@ func withheldAccess() crmcontracts.EmailAccess {
 // every message would make opening the newest one cost the whole history.
 //
 // It runs the same gated list every timeline runs. Narrowing to a thread_key
-// upgrades that list to the CONTENT gate, so a member the caller may not read
-// is absent rather than withheld: the drawer shows the conversation this
-// reader is party to, not its true length. That is the existing behaviour of
-// a thread-narrowed list and not a choice made here, but it means the member
-// count is the reader's own and no one else's.
+// upgrades that list to the CONTENT gate. A member the caller may not read is
+// then absent rather than withheld. The drawer shows the conversation this
+// reader is party to, not its true length. A thread-narrowed list always did
+// this. So the member count is the reader's own and no one else's. A mail several mailboxes
+// captured counts once, as on the timeline.
 func readThreadPage(
 	ctx context.Context,
 	tx pgx.Tx,
@@ -348,16 +349,17 @@ func readThreadPage(
 	key := *activity.ThreadKey
 	limit := maxThreadMembers
 	members, page, err := ListActivitiesTx(ctx, tx, ListActivitiesInput{
-		ThreadKey: &key,
-		Cursor:    cursor,
-		Limit:     &limit,
+		ThreadKey:          &key,
+		Cursor:             cursor,
+		Limit:              &limit,
+		CollapseSeatCopies: true,
 	})
 	if err != nil {
 		return empty, err
 	}
 	out := crmcontracts.EmailThreadPage{Members: []crmcontracts.EmailSummary{}}
 	for _, member := range members {
-		if member.Kind != crmcontracts.ActivityKindEmail {
+		if member.Kind != crmcontracts.ActivityKindEmail || standsFor(member, activity.Id) {
 			continue
 		}
 		if member.EmailSummary != nil {
@@ -368,4 +370,11 @@ func readThreadPage(
 		out.NextCursor = &page.NextCursor
 	}
 	return out, nil
+}
+
+// standsFor reports whether a collapsed row is another mailbox's copy of the
+// opened message. The drawer already shows that message, so the copy is no
+// second member of its thread.
+func standsFor(member crmcontracts.Activity, opened openapi_types.UUID) bool {
+	return member.CopyIds != nil && slices.Contains(*member.CopyIds, opened)
 }

@@ -86,6 +86,20 @@ components:
         received_before: { type: string, format: date-time }
       additionalProperties: false
 
+    InternalEventSharedMailboxChanged:
+      type: object
+      x-event-type: shared_mailbox.changed
+      x-entity-type: capture_connection
+      x-version: 1
+      description: >-
+        An admin connected, reconnected or disconnected a shared mailbox, changed who reads it or
+        its backup owner, or started or continued its history import.
+        Addresses, readers and credentials are omitted; consumers re-read the connection.
+      required: [change]
+      properties:
+        change: { type: string, enum: [connected, reconnected, readers_changed, visibility_changed, backup_owner_changed, disconnected, history_import_started] }
+      additionalProperties: false
+
     InternalEventCaptureSettingsUpdated:
       type: object
       x-event-type: capture_settings.updated

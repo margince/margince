@@ -26,9 +26,7 @@ import (
 // customDimension is one reportable custom field as a report may group and
 // filter by it.
 type customDimension struct {
-	label   string
-	typ     string
-	options []string
+	fieldcatalog.ReportableColumn
 	// company says the field is the deal's company's, so a count over it owes
 	// the company's row scope as well as the deal's.
 	company bool
@@ -37,9 +35,8 @@ type customDimension struct {
 // describe names the field in the vocabulary: its label, and the value shape
 // and choices a builder offers for it.
 func (d customDimension) describe(field analyticsquery.Field) analyticsquery.Field {
-	field.Label = d.label
-	field.Options = d.options
-	if d.typ == fieldcatalog.TypeBoolean {
+	field.Label, field.Options, field.OptionLabels = d.Label, d.Options, d.OptionLabels
+	if d.Type == fieldcatalog.TypeBoolean {
 		field.Shape = analyticsquery.ShapeBoolean
 	}
 	return field
@@ -113,7 +110,7 @@ func withCustomDimensions(spec reportSpec, cols reportableColumns) reportSpec {
 	add := func(name, expr string, col fieldcatalog.ReportableColumn, company bool) {
 		spec.dimensions[name] = expr
 		spec.filters[name] = expr
-		spec.customFields[expr] = customDimension{label: col.Label, typ: col.Type, options: col.Options, company: company}
+		spec.customFields[expr] = customDimension{ReportableColumn: col, company: company}
 	}
 	for _, col := range cols.deal {
 		add(col.Name, "t."+pgx.Identifier{col.Name}.Sanitize(), col, false)
@@ -270,7 +267,7 @@ func analyticsCustomFieldsOf(entity analyticsquery.Entity) *[]crmcontracts.Analy
 		}
 		out = append(out, crmcontracts.AnalyticsCustomField{
 			Name: name, Label: field.Label, Type: typ, Options: options, Object: object,
-			Records: coverage.Records, WithValue: coverage.WithValue,
+			Records: coverage.Records, WithValue: coverage.WithValue, OptionLabels: &field.OptionLabels,
 		})
 	}
 	if out == nil {

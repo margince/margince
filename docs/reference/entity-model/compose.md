@@ -16,6 +16,11 @@ The 48 tables owned by `compose`, as the migrations build them. [Back to the ent
 
 - `activity_kind_pkey`: `unique, btree (kind)`
 
+**Triggers**
+
+- `text_bound_insert`: `AFTER INSERT FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL, '{"kind": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"kind":20000}')`
+- `text_bound_update`: `AFTER UPDATE FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"kind": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"kind":20000}')`
+
 ## activity_meeting_attendee_repair
 
 4 columns · primary key `(activity_id)` · referenced by 0 foreign keys
@@ -41,6 +46,11 @@ The 48 tables owned by `compose`, as the migrations build them. [Back to the ent
 
 - `activity_meeting_attendee_repair_pkey`: `unique, btree (activity_id)`
 
+**Triggers**
+
+- `text_bound_insert`: `AFTER INSERT FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL, '{"outcome": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"outcome":20000}')`
+- `text_bound_update`: `AFTER UPDATE FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"outcome": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"outcome":20000}')`
+
 ## activity_meeting_rsvp_backfill
 
 3 columns · primary key `(activity_id)` · referenced by 0 foreign keys
@@ -65,6 +75,11 @@ The 48 tables owned by `compose`, as the migrations build them. [Back to the ent
 
 - `activity_meeting_rsvp_backfill_pkey`: `unique, btree (activity_id)`
 
+**Triggers**
+
+- `text_bound_insert`: `AFTER INSERT FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL, '{"outcome": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"outcome":20000}')`
+- `text_bound_update`: `AFTER UPDATE FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"outcome": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"outcome":20000}')`
+
 ## activity_own_sent_mail_repair
 
 3 columns · primary key `(activity_id)` · referenced by 0 foreign keys
@@ -88,6 +103,11 @@ The 48 tables owned by `compose`, as the migrations build them. [Back to the ent
 **Indexes**
 
 - `activity_own_sent_mail_repair_pkey`: `unique, btree (activity_id)`
+
+**Triggers**
+
+- `text_bound_insert`: `AFTER INSERT FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL, '{"outcome": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"outcome":20000}')`
+- `text_bound_update`: `AFTER UPDATE FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"outcome": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"outcome":20000}')`
 
 ## activity_own_sent_mail_repair_cutoff
 
@@ -130,6 +150,11 @@ The 48 tables owned by `compose`, as the migrations build them. [Back to the ent
 
 - `activity_participant_replay_pkey`: `unique, btree (activity_id)`
 
+**Triggers**
+
+- `text_bound_insert`: `AFTER INSERT FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL, '{"outcome": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"outcome":20000}')`
+- `text_bound_update`: `AFTER UPDATE FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"outcome": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"outcome":20000}')`
+
 ## agent_task
 
 13 columns · primary key `(id)` · referenced by 0 foreign keys
@@ -170,6 +195,11 @@ The 48 tables owned by `compose`, as the migrations build them. [Back to the ent
 - `idx_agent_task_approval`: `unique, btree (approval_id)`
 - `idx_agent_task_expiry`: `btree (expires_at)`
 - `idx_agent_task_passport`: `btree (passport_id)`
+
+**Triggers**
+
+- `text_bound_insert`: `AFTER INSERT FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL, '{"tool": 20000, "status": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"status":20000,"tool":20000}')`
+- `text_bound_update`: `AFTER UPDATE FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"tool": 20000, "status": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"status":20000,"tool":20000}')`
 
 ## analytics_share
 
@@ -226,10 +256,12 @@ The 48 tables owned by `compose`, as the migrations build them. [Back to the ent
 **Triggers**
 
 - `analytics_share_scope_user_id_retirement_guard`: `BEFORE INSERT OR UPDATE FOR EACH ROW WHEN (((new.scope_id IS NOT NULL) AND ((new.scope_kind = 'owner') AND (new.revoked_at IS NULL) AND (new.expires_at > now())))) EXECUTE FUNCTION refuse_retired_member_work('scope_id')`
+- `text_bound_insert`: `AFTER INSERT FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL, '{"kind": 20000, "target": 20000, "scope_kind": 20000, "token_hash": 20000, "captured_by": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"captured_by":20000,"kind":20000,"scope_kind":20000,"target":20000,"token_hash":20000}')`
+- `text_bound_update`: `AFTER UPDATE FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"kind": 20000, "target": 20000, "scope_kind": 20000, "token_hash": 20000, "captured_by": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"captured_by":20000,"kind":20000,"scope_kind":20000,"target":20000,"token_hash":20000}')`
 
 ## brief_item
 
-15 columns · primary key `(id)` · referenced by 0 foreign keys
+17 columns · primary key `(id)` · referenced by 0 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
@@ -239,13 +271,15 @@ The 48 tables owned by `compose`, as the migrations build them. [Back to the ent
 | `deal_id` | `uuid` | yes | Points at `deal.id`. |
 | `evidence_ids` | `uuid[]` | yes |  |
 | `feature_vector` | `jsonb` | yes |  |
-| `finding` | `text` |  | At most 600 characters. |
+| `finding` | `text` |  |  |
 | `rank` | `integer` | yes |  |
 | `reopen_on` | `text` |  | One of `time`, `reply`, `meeting`. |
 | `reopen_ref` | `uuid` |  |  |
 | `returned_after_dismissal_on` | `date` |  |  |
 | `returned_with_activity_at` | `timestamp with time zone` |  |  |
 | `snoozed_until` | `timestamp with time zone` |  |  |
+| `snoozed_wall` | `timestamp without time zone` |  |  |
+| `snoozed_zone` | `text` |  |  |
 | `state` | `text`, default `'new'::text` | yes | One of `new`, `acted`, `dismissed`, `snoozed`. |
 | `state_at` | `timestamp with time zone` |  |  |
 
@@ -259,7 +293,7 @@ The 48 tables owned by `compose`, as the migrations build them. [Back to the ent
 **Rules**
 
 - `brief_item_composite_check`: `CHECK (((composite >= (0)::double precision) AND (composite <= (1)::double precision)))`
-- `brief_item_finding_length`: `CHECK (((finding IS NULL) OR (char_length(finding) <= 600)))`
+- `brief_item_intent_pair`: `CHECK (valid_intent_time(snoozed_wall, snoozed_zone))`
 - `brief_item_lineage_whole`: `CHECK (((returned_after_dismissal_on IS NULL) = (returned_with_activity_at IS NULL)))`
 - `brief_item_rank_check`: `CHECK ((rank >= 1))`
 - `brief_item_reopen_belongs_to_a_snooze`: `CHECK ((NOT ((reopen_on IS NOT NULL) IS DISTINCT FROM (state = 'snoozed'))))`
@@ -279,6 +313,13 @@ The 48 tables owned by `compose`, as the migrations build them. [Back to the ent
 - `uq_brief_item_run_deal`: `unique, btree (brief_run_id, deal_id)`
 - `uq_brief_item_run_rank`: `unique, btree (brief_run_id, rank)`
 
+**Triggers**
+
+- `snooze_intent_insert`: `BEFORE INSERT FOR EACH ROW WHEN ((new.snoozed_wall IS NOT NULL)) EXECUTE FUNCTION maintain_intent_times('snoozed_wall', 'snoozed_zone', 'snoozed_until')`
+- `snooze_intent_update`: `BEFORE UPDATE OF snoozed_wall, snoozed_zone, snoozed_until FOR EACH ROW WHEN (((new.snoozed_wall IS NOT NULL) OR (old.snoozed_wall IS NOT NULL))) EXECUTE FUNCTION maintain_intent_times('snoozed_wall', 'snoozed_zone', 'snoozed_until')`
+- `text_bound_insert`: `AFTER INSERT FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL, '{"state": 20000, "finding": 500, "reopen_on": 20000, "snoozed_zone": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"finding":500,"reopen_on":20000,"snoozed_zone":20000,"state":20000}')`
+- `text_bound_update`: `AFTER UPDATE FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"state": 20000, "finding": 500, "reopen_on": 20000, "snoozed_zone": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"finding":500,"reopen_on":20000,"snoozed_zone":20000,"state":20000}')`
+
 ## brief_run
 
 13 columns · primary key `(id)` · referenced by 1 foreign key
@@ -294,7 +335,7 @@ The 48 tables owned by `compose`, as the migrations build them. [Back to the ent
 | `local_day` | `date` | yes |  |
 | `mail_attempted_at` | `timestamp with time zone` |  |  |
 | `mail_error` | `text` |  | At most 500 characters. |
-| `narrative` | `text` |  | At most 600 characters. |
+| `narrative` | `text` |  | At most 2000 characters. |
 | `revenue_norm_currency` | `text`, default `''::text` | yes |  |
 | `revenue_norm_minor` | `bigint` | yes |  |
 | `user_id` | `uuid` | yes | Points at `app_user.id`. |
@@ -311,7 +352,7 @@ The 48 tables owned by `compose`, as the migrations build them. [Back to the ent
 - `brief_run_factors_omitted_vocabulary`: `CHECK ((factors_omitted <@ ARRAY['warmth']))`
 - `brief_run_mail_error_length`: `CHECK (((mail_error IS NULL) OR (char_length(mail_error) <= 500)))`
 - `brief_run_mail_error_needs_an_attempt`: `CHECK (((mail_error IS NULL) OR (mail_attempted_at IS NOT NULL)))`
-- `brief_run_narrative_length`: `CHECK (((narrative IS NULL) OR (char_length(narrative) <= 600)))`
+- `brief_run_narrative_length`: `CHECK (((narrative IS NULL) OR (char_length(narrative) <= 2000)))`
 - `brief_run_narrative_needs_a_pass`: `CHECK (((narrative IS NULL) OR (annotated_at IS NOT NULL)))`
 - `brief_run_revenue_norm_currency_check`: `CHECK (((revenue_norm_currency = '') OR (revenue_norm_currency ~ '^[A-Z]{3}$')))`
 - `brief_run_revenue_norm_minor_check`: `CHECK ((revenue_norm_minor > 0))`
@@ -323,6 +364,11 @@ The 48 tables owned by `compose`, as the migrations build them. [Back to the ent
 - `brief_run_pkey`: `unique, btree (id)`
 - `idx_brief_run_user`: `btree (user_id, generated_at DESC)`
 - `uq_brief_run_user_day`: `unique, btree (user_id, local_day)`
+
+**Triggers**
+
+- `text_bound_insert`: `AFTER INSERT FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL, '{"narrative": 2000, "mail_error": 500, "factors_omitted": 20000, "revenue_norm_currency": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"factors_omitted":20000,"mail_error":500,"narrative":2000,"revenue_norm_currency":20000}')`
+- `text_bound_update`: `AFTER UPDATE FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"narrative": 2000, "mail_error": 500, "factors_omitted": 20000, "revenue_norm_currency": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"factors_omitted":20000,"mail_error":500,"narrative":2000,"revenue_norm_currency":20000}')`
 
 ## bulk_confirmation
 
@@ -346,6 +392,11 @@ The 48 tables owned by `compose`, as the migrations build them. [Back to the ent
 
 - `bulk_confirmation_pkey`: `unique, btree (token_hash)`
 - `idx_bulk_confirmation_expires`: `btree (expires_at)`
+
+**Triggers**
+
+- `text_bound_insert`: `AFTER INSERT FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL, '{"requested_by": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"requested_by":20000}')`
+- `text_bound_update`: `AFTER UPDATE FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"requested_by": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"requested_by":20000}')`
 
 ## bulk_operation
 
@@ -380,6 +431,11 @@ The 48 tables owned by `compose`, as the migrations build them. [Back to the ent
 - `idx_bulk_operation_requested_by`: `btree (requested_by, created_at)`
 - `uq_bulk_operation_undo_of`: `unique, btree (undo_of) WHERE (undo_of IS NOT NULL)`
 
+**Triggers**
+
+- `text_bound_insert`: `AFTER INSERT FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL, '{"verb": 20000, "record_type": 20000, "requested_by": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"record_type":20000,"requested_by":20000,"verb":20000}')`
+- `text_bound_update`: `AFTER UPDATE FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"verb": 20000, "record_type": 20000, "requested_by": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"record_type":20000,"requested_by":20000,"verb":20000}')`
+
 ## channel_provider
 
 5 columns · primary key `(provider)` · referenced by 2 foreign keys
@@ -401,6 +457,11 @@ The 48 tables owned by `compose`, as the migrations build them. [Back to the ent
 **Indexes**
 
 - `channel_provider_pkey`: `unique, btree (provider)`
+
+**Triggers**
+
+- `text_bound_insert`: `AFTER INSERT FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL, '{"label": 120, "transport": 20000, "credential_model": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"credential_model":20000,"label":120,"transport":20000}')`
+- `text_bound_update`: `AFTER UPDATE FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"label": 120, "transport": 20000, "credential_model": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"credential_model":20000,"label":120,"transport":20000}')`
 
 ## company_brief
 
@@ -434,6 +495,11 @@ The 48 tables owned by `compose`, as the migrations build them. [Back to the ent
 - `company_brief_pkey`: `unique, btree (id)`
 - `company_brief_user_id_company_id_key`: `unique, btree (user_id, company_id)`
 
+**Triggers**
+
+- `text_bound_insert`: `AFTER INSERT FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL, '{"fingerprint": 20000, "generated_by": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"fingerprint":20000,"generated_by":20000}')`
+- `text_bound_update`: `AFTER UPDATE FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"fingerprint": 20000, "generated_by": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"fingerprint":20000,"generated_by":20000}')`
+
 ## company_dossier
 
 6 columns · primary key `(user_id, company_id)` · referenced by 0 foreign keys
@@ -463,6 +529,11 @@ The 48 tables owned by `compose`, as the migrations build them. [Back to the ent
 - `company_dossier_company_ix`: `btree (company_id)`
 - `company_dossier_pkey`: `unique, btree (user_id, company_id)`
 
+**Triggers**
+
+- `text_bound_insert`: `AFTER INSERT FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL, '{"fingerprint": 20000, "generated_by": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"fingerprint":20000,"generated_by":20000}')`
+- `text_bound_update`: `AFTER UPDATE FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"fingerprint": 20000, "generated_by": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"fingerprint":20000,"generated_by":20000}')`
+
 ## company_growth_fit
 
 6 columns · primary key `(user_id, company_id)` · referenced by 0 foreign keys
@@ -491,6 +562,11 @@ The 48 tables owned by `compose`, as the migrations build them. [Back to the ent
 
 - `company_growth_fit_company_ix`: `btree (company_id)`
 - `company_growth_fit_pkey`: `unique, btree (user_id, company_id)`
+
+**Triggers**
+
+- `text_bound_insert`: `AFTER INSERT FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL, '{"fingerprint": 20000, "generated_by": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"fingerprint":20000,"generated_by":20000}')`
+- `text_bound_update`: `AFTER UPDATE FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"fingerprint": 20000, "generated_by": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"fingerprint":20000,"generated_by":20000}')`
 
 ## company_scan
 
@@ -539,6 +615,11 @@ The 48 tables owned by `compose`, as the migrations build them. [Back to the ent
 - `company_scan_pkey`: `unique, btree (id)`
 - `company_scan_user_id_company_id_key`: `unique, btree (user_id, company_id)`
 
+**Triggers**
+
+- `text_bound_insert`: `AFTER INSERT FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL, '{"status": 20000, "fingerprint": 20000, "generated_by": 20000, "degrade_reason": 2000}')) EXECUTE FUNCTION refuse_oversized_text('{"degrade_reason":2000,"fingerprint":20000,"generated_by":20000,"status":20000}')`
+- `text_bound_update`: `AFTER UPDATE FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"status": 20000, "fingerprint": 20000, "generated_by": 20000, "degrade_reason": 2000}')) EXECUTE FUNCTION refuse_oversized_text('{"degrade_reason":2000,"fingerprint":20000,"generated_by":20000,"status":20000}')`
+
 ## contact_brief
 
 6 columns · primary key `(user_id, contact_id)` · referenced by 0 foreign keys
@@ -568,6 +649,11 @@ The 48 tables owned by `compose`, as the migrations build them. [Back to the ent
 - `contact_brief_contact_ix`: `btree (contact_id)`
 - `contact_brief_pkey`: `unique, btree (user_id, contact_id)`
 
+**Triggers**
+
+- `text_bound_insert`: `AFTER INSERT FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL, '{"fingerprint": 20000, "generated_by": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"fingerprint":20000,"generated_by":20000}')`
+- `text_bound_update`: `AFTER UPDATE FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"fingerprint": 20000, "generated_by": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"fingerprint":20000,"generated_by":20000}')`
+
 ## contact_moment_dismissal
 
 5 columns · primary key `(user_id, contact_id, claim_key)` · referenced by 0 foreign keys
@@ -591,6 +677,11 @@ The 48 tables owned by `compose`, as the migrations build them. [Back to the ent
 
 - `contact_moment_dismissal_contact_ix`: `btree (contact_id)`
 - `contact_moment_dismissal_pkey`: `unique, btree (user_id, contact_id, claim_key)`
+
+**Triggers**
+
+- `text_bound_insert`: `AFTER INSERT FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL, '{"claim_key": 20000, "evidence_fingerprint": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"claim_key":20000,"evidence_fingerprint":20000}')`
+- `text_bound_update`: `AFTER UPDATE FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"claim_key": 20000, "evidence_fingerprint": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"claim_key":20000,"evidence_fingerprint":20000}')`
 
 ## deal_move_dismissal
 
@@ -618,6 +709,11 @@ The 48 tables owned by `compose`, as the migrations build them. [Back to the ent
 
 - `deal_move_dismissal_deal_ix`: `btree (deal_id)`
 - `deal_move_dismissal_pkey`: `unique, btree (user_id, deal_id)`
+
+**Triggers**
+
+- `text_bound_insert`: `AFTER INSERT FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL, '{"fingerprint": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"fingerprint":20000}')`
+- `text_bound_update`: `AFTER UPDATE FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"fingerprint": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"fingerprint":20000}')`
 
 ## deal_status_card
 
@@ -648,6 +744,11 @@ The 48 tables owned by `compose`, as the migrations build them. [Back to the ent
 - `deal_status_card_deal_ix`: `btree (deal_id)`
 - `deal_status_card_pkey`: `unique, btree (user_id, deal_id)`
 
+**Triggers**
+
+- `text_bound_insert`: `AFTER INSERT FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL, '{"fingerprint": 20000, "generated_by": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"fingerprint":20000,"generated_by":20000}')`
+- `text_bound_update`: `AFTER UPDATE FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"fingerprint": 20000, "generated_by": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"fingerprint":20000,"generated_by":20000}')`
+
 ## extension_ingest_position
 
 4 columns · primary key `(unit, source_system)` · referenced by 0 foreign keys
@@ -666,6 +767,11 @@ The 48 tables owned by `compose`, as the migrations build them. [Back to the ent
 **Indexes**
 
 - `extension_ingest_position_pkey`: `unique, btree (unit, source_system)`
+
+**Triggers**
+
+- `text_bound_insert`: `AFTER INSERT FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL, '{"unit": 20000, "position": 20000, "source_system": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"position":20000,"source_system":20000,"unit":20000}')`
+- `text_bound_update`: `AFTER UPDATE FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"unit": 20000, "position": 20000, "source_system": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"position":20000,"source_system":20000,"unit":20000}')`
 
 ## extension_ingest_refusal
 
@@ -689,6 +795,11 @@ The 48 tables owned by `compose`, as the migrations build them. [Back to the ent
 
 - `extension_ingest_refusal_day_idx`: `btree (day DESC, unit)`
 - `extension_ingest_refusal_pkey`: `unique, btree (unit, refusal, day)`
+
+**Triggers**
+
+- `text_bound_insert`: `AFTER INSERT FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL, '{"unit": 20000, "refusal": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"refusal":20000,"unit":20000}')`
+- `text_bound_update`: `AFTER UPDATE FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"unit": 20000, "refusal": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"refusal":20000,"unit":20000}')`
 
 ## home_read_cache
 
@@ -718,6 +829,11 @@ The 48 tables owned by `compose`, as the migrations build them. [Back to the ent
 **Indexes**
 
 - `home_read_cache_pkey`: `unique, btree (reader_id, read, request_key)`
+
+**Triggers**
+
+- `text_bound_insert`: `AFTER INSERT FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL, '{"read": 20000, "request_key": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"read":20000,"request_key":20000}')`
+- `text_bound_update`: `AFTER UPDATE FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"read": 20000, "request_key": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"read":20000,"request_key":20000}')`
 
 ## home_read_fence
 
@@ -757,6 +873,8 @@ The 48 tables owned by `compose`, as the migrations build them. [Back to the ent
 **Triggers**
 
 - `home_read_fence_at_commit`: `AFTER INSERT DEFERRABLE INITIALLY DEFERRED FOR EACH ROW EXECUTE FUNCTION commit_home_read_fence()`
+- `text_bound_insert`: `AFTER INSERT FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL, '{"fence": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"fence":20000}')`
+- `text_bound_update`: `AFTER UPDATE FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"fence": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"fence":20000}')`
 
 ## home_read_forgotten
 
@@ -799,6 +917,11 @@ The 48 tables owned by `compose`, as the migrations build them. [Back to the ent
 - `idempotency_key_pkey`: `unique, btree (principal_id, key, endpoint)`
 - `idx_idempotency_key_created`: `btree (created_at)`
 
+**Triggers**
+
+- `text_bound_insert`: `AFTER INSERT FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL, '{"key": 20000, "endpoint": 20000, "principal_id": 20000, "request_digest": 20000, "response_content_type": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"endpoint":20000,"key":20000,"principal_id":20000,"request_digest":20000,"response_content_type":20000}')`
+- `text_bound_update`: `AFTER UPDATE FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"key": 20000, "endpoint": 20000, "principal_id": 20000, "request_digest": 20000, "response_content_type": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"endpoint":20000,"key":20000,"principal_id":20000,"request_digest":20000,"response_content_type":20000}')`
+
 ## report_run
 
 11 columns · primary key `(id)` · referenced by 0 foreign keys
@@ -834,6 +957,11 @@ The 48 tables owned by `compose`, as the migrations build them. [Back to the ent
 - `idx_report_run_asker`: `btree (asked_by, created_at DESC, id DESC)`
 - `report_run_pkey`: `unique, btree (id)`
 
+**Triggers**
+
+- `text_bound_insert`: `AFTER INSERT FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL, '{"captured_by": 20000, "schema_version": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"captured_by":20000,"schema_version":20000}')`
+- `text_bound_update`: `AFTER UPDATE FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"captured_by": 20000, "schema_version": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"captured_by":20000,"schema_version":20000}')`
+
 ## signal_thread_scan
 
 10 columns · primary key `(thread_key)` · referenced by 0 foreign keys
@@ -865,6 +993,11 @@ The 48 tables owned by `compose`, as the migrations build them. [Back to the ent
 
 - `signal_thread_scan_pkey`: `unique, btree (thread_key)`
 
+**Triggers**
+
+- `text_bound_insert`: `AFTER INSERT FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL, '{"thread_key": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"thread_key":20000}')`
+- `text_bound_update`: `AFTER UPDATE FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"thread_key": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"thread_key":20000}')`
+
 ## suggestion_dismissal
 
 4 columns · primary key `(id)` · referenced by 0 foreign keys
@@ -893,6 +1026,11 @@ The 48 tables owned by `compose`, as the migrations build them. [Back to the ent
 - `suggestion_dismissal_company_ix`: `btree (company_id)`
 - `suggestion_dismissal_pkey`: `unique, btree (id)`
 - `suggestion_dismissal_user_id_company_id_f_key`: `unique, btree (user_id, company_id, fingerprint)`
+
+**Triggers**
+
+- `text_bound_insert`: `AFTER INSERT FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL, '{"fingerprint": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"fingerprint":20000}')`
+- `text_bound_update`: `AFTER UPDATE FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"fingerprint": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"fingerprint":20000}')`
 
 ## team_weekly_review
 
@@ -945,6 +1083,11 @@ The 48 tables owned by `compose`, as the migrations build them. [Back to the ent
 - `team_weekly_review_pkey`: `unique, btree (id)`
 - `uq_team_weekly_review_team_week`: `unique, btree (team_id, local_week_start)`
 
+**Triggers**
+
+- `text_bound_insert`: `AFTER INSERT FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL, '{"summary": 500, "team_name": 120, "summary_language": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"summary":500,"summary_language":20000,"team_name":120}')`
+- `text_bound_update`: `AFTER UPDATE FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"summary": 500, "team_name": 120, "summary_language": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"summary":500,"summary_language":20000,"team_name":120}')`
+
 ## team_weekly_review_coverage
 
 13 columns · primary key `(id)` · referenced by 0 foreign keys
@@ -992,6 +1135,11 @@ The 48 tables owned by `compose`, as the migrations build them. [Back to the ent
 
 - `team_weekly_review_coverage_pkey`: `unique, btree (id)`
 - `uq_team_weekly_review_coverage_period`: `unique, btree (team_weekly_review_id, period_kind)`
+
+**Triggers**
+
+- `text_bound_insert`: `AFTER INSERT FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL, '{"basis": 20000, "absent": 20000, "period_kind": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"absent":20000,"basis":20000,"period_kind":20000}')`
+- `text_bound_update`: `AFTER UPDATE FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"basis": 20000, "absent": 20000, "period_kind": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"absent":20000,"basis":20000,"period_kind":20000}')`
 
 ## team_weekly_review_member
 
@@ -1069,6 +1217,11 @@ The 48 tables owned by `compose`, as the migrations build them. [Back to the ent
 - `team_weekly_review_outlook_pkey`: `unique, btree (id)`
 - `uq_team_weekly_review_outlook_period`: `unique, btree (team_weekly_review_id, period_kind)`
 
+**Triggers**
+
+- `text_bound_insert`: `AFTER INSERT FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL, '{"period_kind": 20000, "forward_measure": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"forward_measure":20000,"period_kind":20000}')`
+- `text_bound_update`: `AFTER UPDATE FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"period_kind": 20000, "forward_measure": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"forward_measure":20000,"period_kind":20000}')`
+
 ## team_weekly_review_rep
 
 12 columns · primary key `(id)` · referenced by 2 foreign keys
@@ -1107,6 +1260,11 @@ The 48 tables owned by `compose`, as the migrations build them. [Back to the ent
 - `idx_team_weekly_review_rep_review`: `btree (team_weekly_review_id, display_name)`
 - `team_weekly_review_rep_pkey`: `unique, btree (id)`
 - `uq_team_weekly_review_rep`: `unique, btree (team_weekly_review_id, user_id)`
+
+**Triggers**
+
+- `text_bound_insert`: `AFTER INSERT FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL, '{"focus_kind": 20000, "focus_label": 120}')) EXECUTE FUNCTION refuse_oversized_text('{"focus_kind":20000,"focus_label":120}')`
+- `text_bound_update`: `AFTER UPDATE FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"focus_kind": 20000, "focus_label": 120}')) EXECUTE FUNCTION refuse_oversized_text('{"focus_kind":20000,"focus_label":120}')`
 
 ## team_weekly_review_rep_funnel
 
@@ -1147,6 +1305,11 @@ The 48 tables owned by `compose`, as the migrations build them. [Back to the ent
 - `team_weekly_review_rep_funnel_pkey`: `unique, btree (id)`
 - `uq_team_weekly_review_rep_funnel_position`: `unique, btree (team_weekly_review_rep_id, "position")`
 
+**Triggers**
+
+- `text_bound_insert`: `AFTER INSERT FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL, '{"stage_name": 120, "pipeline_name": 120, "next_stage_name": 120}')) EXECUTE FUNCTION refuse_oversized_text('{"next_stage_name":120,"pipeline_name":120,"stage_name":120}')`
+- `text_bound_update`: `AFTER UPDATE FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"stage_name": 120, "pipeline_name": 120, "next_stage_name": 120}')) EXECUTE FUNCTION refuse_oversized_text('{"next_stage_name":120,"pipeline_name":120,"stage_name":120}')`
+
 ## team_weekly_review_rep_pattern
 
 5 columns · primary key `(id)` · referenced by 0 foreign keys
@@ -1178,6 +1341,11 @@ The 48 tables owned by `compose`, as the migrations build them. [Back to the ent
 - `team_weekly_review_rep_pattern_pkey`: `unique, btree (id)`
 - `uq_team_weekly_review_rep_pattern_kind`: `unique, btree (team_weekly_review_rep_id, kind)`
 - `uq_team_weekly_review_rep_pattern_position`: `unique, btree (team_weekly_review_rep_id, "position")`
+
+**Triggers**
+
+- `text_bound_insert`: `AFTER INSERT FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL, '{"kind": 20000, "label": 120}')) EXECUTE FUNCTION refuse_oversized_text('{"kind":20000,"label":120}')`
+- `text_bound_update`: `AFTER UPDATE FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"kind": 20000, "label": 120}')) EXECUTE FUNCTION refuse_oversized_text('{"kind":20000,"label":120}')`
 
 ## user_record_view
 
@@ -1219,6 +1387,8 @@ The 48 tables owned by `compose`, as the migrations build them. [Back to the ent
 
 **Triggers**
 
+- `text_bound_insert`: `AFTER INSERT FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL, '{"entity_type": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"entity_type":20000}')`
+- `text_bound_update`: `AFTER UPDATE FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"entity_type": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"entity_type":20000}')`
 - `trg_user_record_view_entity_keys`: `BEFORE INSERT OR UPDATE FOR EACH ROW EXECUTE FUNCTION trg_user_record_view_entity_keys()`
 
 ## weekly_review
@@ -1282,7 +1452,7 @@ The 48 tables owned by `compose`, as the migrations build them. [Back to the ent
 - `weekly_review_mail_error_length`: `CHECK (((mail_error IS NULL) OR (char_length(mail_error) <= 500)))`
 - `weekly_review_mail_error_needs_an_attempt`: `CHECK (((mail_error IS NULL) OR (mail_attempted_at IS NOT NULL)))`
 - `weekly_review_money_names_its_currency`: `CHECK (((base_currency IS NULL) = ((pipeline_created_minor IS NULL) AND (pipeline_won_minor IS NULL) AND (pipeline_lost_minor IS NULL))))`
-- `weekly_review_narrative_length`: `CHECK (((narrative IS NULL) OR (char_length(narrative) <= 600)))`
+- `weekly_review_narrative_length`: `CHECK (((narrative IS NULL) OR (char_length(narrative) <= 2000)))`
 - `weekly_review_narrative_needs_a_pass`: `CHECK (((narrative IS NULL) OR (narrated_at IS NOT NULL)))`
 - `weekly_review_new_counts_are_tallies`: `CHECK (((leads_routed >= 0) AND (leads_answered_in_target >= 0) AND (leads_breached >= 0) AND (meetings_held >= 0) AND (meetings_with_next_step >= 0) AND ((pipeline_created_minor IS NULL) OR (pipeline_created_minor >= 0)) AND ((pipeline_won_minor IS NULL) OR (pipeline_won_minor >= 0)) AND ((pipeline_lost_minor IS NULL) OR (pipeline_lost_minor >= 0))))`
 - `weekly_review_next_steps_were_meetings`: `CHECK ((meetings_with_next_step <= meetings_held))`
@@ -1293,6 +1463,11 @@ The 48 tables owned by `compose`, as the migrations build them. [Back to the ent
 - `idx_weekly_review_user`: `btree (user_id, local_week_start DESC)`
 - `uq_weekly_review_user_week`: `unique, btree (user_id, local_week_start)`
 - `weekly_review_pkey`: `unique, btree (id)`
+
+**Triggers**
+
+- `text_bound_insert`: `AFTER INSERT FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL, '{"narrative": 2000, "mail_error": 500, "learnings_state": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"learnings_state":20000,"mail_error":500,"narrative":2000}')`
+- `text_bound_update`: `AFTER UPDATE FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"narrative": 2000, "mail_error": 500, "learnings_state": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"learnings_state":20000,"mail_error":500,"narrative":2000}')`
 
 ## weekly_review_deal
 
@@ -1328,6 +1503,11 @@ The 48 tables owned by `compose`, as the migrations build them. [Back to the ent
 - `idx_weekly_review_deal_review`: `btree (weekly_review_id, occurred_at DESC)`
 - `weekly_review_deal_pkey`: `unique, btree (id)`
 
+**Triggers**
+
+- `text_bound_insert`: `AFTER INSERT FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL, '{"outcome": 20000, "deal_label": 120, "to_stage_label": 120}')) EXECUTE FUNCTION refuse_oversized_text('{"deal_label":120,"outcome":20000,"to_stage_label":120}')`
+- `text_bound_update`: `AFTER UPDATE FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"outcome": 20000, "deal_label": 120, "to_stage_label": 120}')) EXECUTE FUNCTION refuse_oversized_text('{"deal_label":120,"outcome":20000,"to_stage_label":120}')`
+
 ## weekly_review_driver
 
 7 columns · primary key `(id)` · referenced by 0 foreign keys
@@ -1360,6 +1540,11 @@ The 48 tables owned by `compose`, as the migrations build them. [Back to the ent
 - `uq_weekly_review_driver_deal`: `unique, btree (weekly_review_id, period_kind, bar, deal_id)`
 - `weekly_review_driver_pkey`: `unique, btree (id)`
 
+**Triggers**
+
+- `text_bound_insert`: `AFTER INSERT FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL, '{"bar": 20000, "deal_label": 120, "period_kind": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"bar":20000,"deal_label":120,"period_kind":20000}')`
+- `text_bound_update`: `AFTER UPDATE FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"bar": 20000, "deal_label": 120, "period_kind": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"bar":20000,"deal_label":120,"period_kind":20000}')`
+
 ## weekly_review_learning
 
 6 columns · primary key `(id)` · referenced by 1 foreign key
@@ -1384,13 +1569,18 @@ The 48 tables owned by `compose`, as the migrations build them. [Back to the ent
 - `uq_weekly_review_learning_slot`: `UNIQUE (weekly_review_id, "position")`
 - `weekly_review_learning_kind_check`: `CHECK ((kind = ANY (ARRAY['worked', 'did_not_work', 'pattern', 'experiment'])))`
 - `weekly_review_learning_position_sane`: `CHECK (("position" >= 0))`
-- `weekly_review_learning_text_bound`: `CHECK ((length(text) <= 400))`
+- `weekly_review_learning_text_bound`: `CHECK ((char_length(text) <= 500))`
 - `weekly_review_learning_text_present`: `CHECK ((btrim(text) <> ''))`
 
 **Indexes**
 
 - `uq_weekly_review_learning_slot`: `unique, btree (weekly_review_id, "position")`
 - `weekly_review_learning_pkey`: `unique, btree (id)`
+
+**Triggers**
+
+- `text_bound_insert`: `AFTER INSERT FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL, '{"kind": 20000, "text": 500}')) EXECUTE FUNCTION refuse_oversized_text('{"kind":20000,"text":500}')`
+- `text_bound_update`: `AFTER UPDATE FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"kind": 20000, "text": 500}')) EXECUTE FUNCTION refuse_oversized_text('{"kind":20000,"text":500}')`
 
 ## weekly_review_learning_citation
 
@@ -1421,6 +1611,11 @@ The 48 tables owned by `compose`, as the migrations build them. [Back to the ent
 - `uq_weekly_review_learning_citation`: `unique, btree (learning_id, subject_type, subject_id)`
 - `weekly_review_learning_citation_pkey`: `unique, btree (id)`
 
+**Triggers**
+
+- `text_bound_insert`: `AFTER INSERT FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL, '{"label": 120, "subject_type": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"label":120,"subject_type":20000}')`
+- `text_bound_update`: `AFTER UPDATE FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"label": 120, "subject_type": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"label":120,"subject_type":20000}')`
+
 ## weekly_review_movement
 
 5 columns · primary key `(id)` · referenced by 0 foreign keys
@@ -1449,6 +1644,11 @@ The 48 tables owned by `compose`, as the migrations build them. [Back to the ent
 
 - `uq_weekly_review_movement_bar`: `unique, btree (weekly_review_id, period_kind, bar)`
 - `weekly_review_movement_pkey`: `unique, btree (id)`
+
+**Triggers**
+
+- `text_bound_insert`: `AFTER INSERT FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL, '{"bar": 20000, "period_kind": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"bar":20000,"period_kind":20000}')`
+- `text_bound_update`: `AFTER UPDATE FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"bar": 20000, "period_kind": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"bar":20000,"period_kind":20000}')`
 
 ## weekly_review_outlook
 
@@ -1497,6 +1697,11 @@ The 48 tables owned by `compose`, as the migrations build them. [Back to the ent
 
 - `uq_weekly_review_outlook_period`: `unique, btree (weekly_review_id, period_kind)`
 - `weekly_review_outlook_pkey`: `unique, btree (id)`
+
+**Triggers**
+
+- `text_bound_insert`: `AFTER INSERT FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL, '{"period_kind": 20000, "forward_measure": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"forward_measure":20000,"period_kind":20000}')`
+- `text_bound_update`: `AFTER UPDATE FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"period_kind": 20000, "forward_measure": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"forward_measure":20000,"period_kind":20000}')`
 
 ## weekly_review_scorecard
 
@@ -1582,3 +1787,8 @@ The 48 tables owned by `compose`, as the migrations build them. [Back to the ent
 
 - `worklist_snapshot_by_reader`: `btree (reader_id, created_at DESC)`
 - `worklist_snapshot_pkey`: `unique, btree (id)`
+
+**Triggers**
+
+- `text_bound_insert`: `AFTER INSERT FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL, '{"params_fingerprint": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"params_fingerprint":20000}')`
+- `text_bound_update`: `AFTER UPDATE FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"params_fingerprint": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"params_fingerprint":20000}')`

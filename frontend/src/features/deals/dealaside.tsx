@@ -6,6 +6,7 @@ import { RecordListsActions } from "../../components/addtoshortlist";
 import { useEmployerSummary } from "../../components/contactemployersummary";
 import {
   customFieldHref,
+  customFieldLabel,
   useCustomFieldDisplay,
   useObjectCustomFields,
 } from "../../components/customfields.form";
@@ -114,7 +115,7 @@ function DealAsideBody({
           const href = value ? customFieldHref(value) : null;
           return {
             key: field.column_name,
-            term: field.label,
+            term: customFieldLabel(field, locale),
             value: href ? (
               <OffsiteLink href={href}>{value}</OffsiteLink>
             ) : (

@@ -206,7 +206,7 @@ func (s *GrowthFitService) Get(ctx context.Context, companyID ids.CompanyID, for
 		return zero, err
 	}
 	if found && !force && cached.usable(fingerprint, utc()) {
-		return s.enrich(ctx, cached.wire(companyID))
+		return s.enrich(ctx, cached.wire(companyID, crmcontracts.AssemblyServedFromCache))
 	}
 
 	lane, withheld := ai.ReadLane(ctx, s.lane)
@@ -221,7 +221,7 @@ func (s *GrowthFitService) Get(ctx context.Context, companyID ids.CompanyID, for
 		// The contract says as much for this endpoint: a refresh the budget
 		// refuses returns the cached assembly with its age rather than an
 		// error. Its `generated_at` is that age.
-		return s.enrich(ctx, cached.wire(companyID))
+		return s.enrich(ctx, cached.wire(companyID, crmcontracts.AssemblyServedFromCache))
 	}
 	written := storedGrowthFit{
 		Fingerprint:  fingerprint,
@@ -243,12 +243,12 @@ func (s *GrowthFitService) Get(ctx context.Context, companyID ids.CompanyID, for
 	// retry never happens. For a company held on human-entered values there is
 	// no expiry either, so that would be permanent.
 	if laneFailed || withheld {
-		return s.enrich(ctx, written.wire(companyID))
+		return s.enrich(ctx, written.wire(companyID, crmcontracts.AssemblyServedFromGenerated))
 	}
 	if err := s.save(ctx, userID, companyID, written); err != nil {
 		return zero, err
 	}
-	return s.enrich(ctx, written.wire(companyID))
+	return s.enrich(ctx, written.wire(companyID, crmcontracts.AssemblyServedFromGenerated))
 }
 
 // usable reports whether this build may still serve a cached entry.
@@ -295,13 +295,14 @@ func growthFitFingerprint(in Input, routingVersion string, offering Offering, la
 	return hex.EncodeToString(sum[:]), nil
 }
 
-func (g storedGrowthFit) wire(companyID ids.CompanyID) crmcontracts.CompanyGrowthFit {
+func (g storedGrowthFit) wire(companyID ids.CompanyID, from crmcontracts.AssemblyServedFrom) crmcontracts.CompanyGrowthFit {
 	out := crmcontracts.CompanyGrowthFit{
 		CompanyId:        openapi_types.UUID(companyID.UUID),
 		Band:             crmcontracts.GrowthFitBand(g.Band),
 		DataCompleteness: g.Completeness,
 		GeneratedAt:      g.GeneratedAt,
 		GeneratedBy:      crmcontracts.WrittenBy(g.GeneratedBy),
+		ServedFrom:       &from,
 	}
 	// Both stay ABSENT rather than empty when nothing capped the band and
 	// nothing is outstanding: an empty string would render as a reason and a

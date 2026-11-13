@@ -28,6 +28,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/provenance"
 	"github.com/margince/margince/backend/internal/shared/ports/mcp"
 	"github.com/margince/margince/backend/internal/shared/ports/workflow"
 )
@@ -117,6 +118,7 @@ func (followUpOwnerReconcile) IdempotencyKey(ev workflow.Event) string {
 // carries the audit row and the activity.updated event a human reassignment
 // carries. A bulk UPDATE would move the work and leave no history of who now
 // owns it.
+// Accepted inquiries move only through their explicit assignment operation.
 func (s *Store) AlignSystemTaskAssigneeToLead(ctx context.Context, leadID ids.LeadID) (int, error) {
 	owner, ok, err := s.leadOwner(ctx, leadID)
 	if err != nil || !ok {
@@ -135,6 +137,7 @@ func (s *Store) AlignSystemTaskAssigneeToLead(ctx context.Context, leadID ids.Le
 			  AND (a.captured_by = $4 OR a.captured_by LIKE $5)
 			  AND a.is_done = false AND a.archived_at IS NULL
 			  AND a.assignee_id IS DISTINCT FROM $6
+			  AND NOT `+provenance.WebsiteInquiryTaskSQL("a")+`
 			ORDER BY a.id`,
 			leadID, string(crmcontracts.ActivityKindTask), systemSource,
 			systemCapturedBy, systemCapturedByPattern, owner)

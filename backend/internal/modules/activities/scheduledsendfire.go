@@ -277,7 +277,7 @@ func (c claimedSend) replay() (SendOrigin, SendEmailInput, error) {
 // there is nothing to fire. The lock is what makes two timers safe.
 func (s *Store) claimForFire(ctx context.Context, tx pgx.Tx, id ids.UUID) (claimedSend, bool, error) {
 	rows, err := tx.Query(ctx, `
-		SELECT scheduled_at, origin_kind, anchor_activity_id,
+		SELECT `+scheduleInstantSQL+`, origin_kind, anchor_activity_id,
 		       origin_links, also_links, payload, payload_version, version, created_at,
 		       coalesce((payload->>'replies_reviewed_at')::timestamptz, created_at)
 		  FROM scheduled_send
@@ -374,7 +374,7 @@ func (s *Store) notifyHeld(ctx context.Context, tx pgx.Tx, id ids.UUID, reason s
 		scheduledAt time.Time
 	)
 	if err := tx.QueryRow(ctx, `
-		SELECT scheduled_by, payload, scheduled_at FROM scheduled_send WHERE id = $1`,
+		SELECT scheduled_by, payload, `+scheduleInstantSQL+` FROM scheduled_send WHERE id = $1`,
 		id).Scan(&scheduledBy, &payloadRaw, &scheduledAt); err != nil {
 		return fmt.Errorf("scheduled send: reading the held message for its rep: %w", err)
 	}
@@ -412,6 +412,23 @@ func holdReasonFor(err error) (string, bool) {
 	return "", false
 }
 
+// zoneRuleShift bounds how far a chosen local time's instant can move when its
+// zone's rules change: the UTC offsets in use span UTC-12 to UTC+14.
+const zoneRuleShift = 26 * time.Hour
+
+// overdueScheduledSendsSQL reads idx_scheduled_send_due in cached-instant order
+// up to zoneRuleShift past the cutoff, and resolves the chosen local time only
+// for the rows in that range.
+const overdueScheduledSendsSQL = `
+	SELECT id FROM scheduled_send
+	 WHERE status = 'scheduled' AND scheduled_at < @horizon AND ` + scheduleInstantSQL + ` < @before
+	 ORDER BY scheduled_at ASC
+	 LIMIT @limit`
+
+func overdueScheduledSendsArgs(before time.Time, limit int) pgx.NamedArgs {
+	return pgx.NamedArgs{"before": before, "horizon": before.Add(zoneRuleShift), "limit": limit}
+}
+
 // OverdueScheduledSends returns messages whose moment has passed and which are
 // still waiting — the shape a message takes when the job that should have fired
 // it is gone. Why that state exists and what the caller does about it is in
@@ -423,20 +440,14 @@ func holdReasonFor(err error) (string, bool) {
 // race safe rather than harmful, but a sweep that fights the normal path on
 // every pass is a sweep nobody can read the logs of.
 //
-// There is no workspace predicate, and none is needed: an installation holds
-// exactly one workspace (ADR-0061), so "every row still scheduled and overdue"
-// already means the whole installation's queue. The WHERE clause matches
-// idx_scheduled_send_due (scheduled_at, partial on status = 'scheduled')
-// exactly, so this walks that index in scheduled_at order and stops at the
-// limit rather than scanning the table.
+// There is no workspace predicate, and none is needed. An installation holds
+// one workspace, so every row still scheduled and overdue is its whole
+// queue. A chosen local time resolves here too, so a rules change that makes a
+// send due earlier does not leave it waiting.
 func (s *Store) OverdueScheduledSends(ctx context.Context, olderThan time.Duration, limit int) ([]ids.UUID, error) {
 	var out []ids.UUID
 	err := s.tx(ctx, func(tx pgx.Tx) error {
-		rows, err := tx.Query(ctx, `
-			SELECT id FROM scheduled_send
-			 WHERE status = 'scheduled' AND scheduled_at < $1
-			 ORDER BY scheduled_at ASC
-			 LIMIT $2`, s.now().Add(-olderThan), limit)
+		rows, err := tx.Query(ctx, overdueScheduledSendsSQL, overdueScheduledSendsArgs(s.now().Add(-olderThan), limit))
 		if err != nil {
 			return fmt.Errorf("scheduled send: finding messages nothing will wake: %w", err)
 		}

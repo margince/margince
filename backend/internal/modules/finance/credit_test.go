@@ -50,6 +50,29 @@ func TestTheHashIgnoresEverythingDerivedFromToday(t *testing.T) {
 	}
 }
 
+// A row mirrored before sources could state a dunning level keeps its hash,
+// so the first pass after the upgrade writes nothing. The constant is that
+// invoice's hash as the mirror stored it before.
+func TestAnUnstatedDunningLevelKeepsTheStoredHash(t *testing.T) {
+	due := time.Date(2026, time.June, 1, 0, 0, 0, 0, time.UTC)
+	invoice := SourceInvoice{
+		ExternalID: "INV-1", Number: "INV-1",
+		IssuedOn: due.AddDate(0, 0, -30), DueOn: &due,
+		Currency: "EUR", NetMinor: 100000, GrossMinor: 119000,
+	}
+	const stored = "5342ccb3d4a920e585a02d1c268b7c04e81685626d72f0ebe8d92e1f35a1a3fd"
+	if got := invoiceHash(invoice); got != stored {
+		t.Fatalf("hash %s, want the stored %s", got, stored)
+	}
+	none, two := 0, 2
+	invoice.DunningLevel = &none
+	unreminded := invoiceHash(invoice)
+	invoice.DunningLevel = &two
+	if unreminded == stored || invoiceHash(invoice) == unreminded {
+		t.Fatal("a stated dunning level does not move the hash, so a new reminder would never be mirrored")
+	}
+}
+
 // Overdue is money owed past its date. An invoice with nothing open owes
 // nothing, so its passed due date must not paint it as a payment failure.
 func TestOnlyAnInvoiceWithSomethingOpenIsOverdue(t *testing.T) {

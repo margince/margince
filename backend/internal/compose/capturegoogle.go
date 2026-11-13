@@ -14,6 +14,7 @@ import (
 
 	"github.com/jackc/pgx/v5/pgxpool"
 
+	"github.com/margince/margince/backend/internal/compose/gmailsignature"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/modules/capture/gcal"
@@ -145,7 +146,7 @@ func newCaptureRegistryWithGoogle(
 	reg := NewCaptureRegistry(pool, vault, cfg)
 	if appReachable(resolve, c.canSync()) {
 		reg.Register(gmail.New(newGmailAuthorizer(resolve, c), gmail.NewAPIWithQuota(nil, "", cfg.GmailMailboxQuota, cfg.GmailProjectQuota)).
-			WithBounceSink(newBounceSink(pool)))
+			WithBounceSink(newBounceSink(pool)).WithSharedMailboxes(gmail.SharedAuthConfig{}))
 		reg.Register(gcal.New(newGcalAuthorizer(resolve, c), gcal.NewAPI(nil, "")))
 		reg.Register(gdocs.New(newGdocsAuthorizer(resolve, c), gdocs.NewOwner(nil, "")).WithDocs(gdocs.NewDocsAPI(nil, "")))
 	}
@@ -275,8 +276,10 @@ func WithGmailCapture(c GmailConfig, cfg CaptureConfig) Option {
 		if c.canSync() {
 			gmailOAuth, gcalOAuth, gdocsOAuth = newGmailOAuth(c), newGcalOAuth(c), newGdocsOAuth(c)
 		}
+		registry := newCaptureRegistryWithGoogle(pool, s.vault, s.googleAppResolver, c, cfg)
+		s.ImportHandlers = gmailsignature.ImportHandlers{Source: registry}
 		s.connectorHandlers = connectorHandlers{
-			registry:      newCaptureRegistryWithGoogle(pool, s.vault, s.googleAppResolver, c, cfg),
+			registry:      registry,
 			authority:     identity.NewService(pool),
 			oauth:         gmailOAuth,
 			gmailAPI:      gmail.NewAPIWithQuota(nil, "", cfg.GmailMailboxQuota, cfg.GmailProjectQuota),

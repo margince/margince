@@ -147,7 +147,13 @@ function FollowUpRow({
             {" "}
             ·{" "}
             {t("co.next.due", {
-              when: formatDue(task.due_at, task.due_has_time, locale, zone),
+              when: formatDue(
+                task.due_at,
+                task.due_has_time,
+                locale,
+                zone,
+                task.due_intent,
+              ),
             })}
           </>
         )}

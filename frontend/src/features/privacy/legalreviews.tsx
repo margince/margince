@@ -40,6 +40,7 @@ import {
 } from "../../lib/legalreviews.queries";
 import { navigate } from "../../lib/router";
 import { useMe } from "../../lib/session";
+import { TEXT_LIMITS } from "../../lib/textlimits_gen";
 import { useViewerZone } from "../../lib/viewerzone";
 import { calendarDayLabel, LegalReviewPack } from "./legalreviewpack";
 
@@ -229,7 +230,7 @@ function DecidePanel({ review }: Readonly<{ review: LegalReview }>) {
             <Textarea
               {...control}
               value={comments}
-              maxLength={8000}
+              maxLength={TEXT_LIMITS.note}
               disabled={own || !canDecide}
               onChange={(event) => setComments(event.target.value)}
             />

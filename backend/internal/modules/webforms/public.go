@@ -70,13 +70,13 @@ func (h Handlers) answerRefusal(w http.ResponseWriter, r *http.Request, err erro
 	h.writePage(w, r, status, message)
 }
 
-// ServePreflight answers a browser's CORS preflight for a form's address. A
-// website on the form's list may post with any Content-Type; any other
-// website gets no CORS headers, so its browser refuses to send.
-func (h Handlers) ServePreflight(w http.ResponseWriter, r *http.Request, formKey string) {
-	f, err := h.store.PublicForm(r.Context(), formKey)
+// ServePreflight answers a browser's CORS preflight for f, the form the
+// throttle resolved. A website on the form's list may post with any
+// Content-Type; any other website gets no CORS headers, so its browser refuses
+// to send. A key that names no form resolves to a zero Form, which allows none.
+func (h Handlers) ServePreflight(w http.ResponseWriter, r *http.Request, f Form) {
 	origin := r.Header.Get("Origin")
-	if err == nil && f.AllowsOrigin(origin) {
+	if f.AllowsOrigin(origin) {
 		allowReading(w, origin)
 		w.Header().Set("Access-Control-Allow-Methods", http.MethodPost)
 		w.Header().Set("Access-Control-Allow-Headers", "Content-Type")

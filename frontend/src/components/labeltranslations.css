@@ -1,0 +1,6 @@
+/* The names given in further languages, quieter than the stored name. */
+.label-translations {
+  font: var(--fontBodySmall);
+  color: var(--textSecondary);
+  overflow-wrap: anywhere;
+}

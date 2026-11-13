@@ -70,6 +70,38 @@ it("labels archived evidence while keeping its permitted text", async () => {
   expect(await screen.findByText("Archived")).toBeTruthy();
   expect(screen.getByText("The buyer asked for a revised quote.")).toBeTruthy();
 });
+it.each([
+  [true, 1],
+  [false, 0],
+])(
+  "marks words AI polished as AI-assisted (ai_assisted %s)",
+  async (assisted, badges) => {
+    installFetchStub({
+      "GET /me": meRoute({ activity: ["read"] }),
+      "GET /activities/source": () =>
+        jsonResponse({
+          id: "source",
+          kind: "task",
+          subject: "Call Anna about pricing",
+          occurred_at: "2026-07-01T09:00:00Z",
+          content_state: "available",
+          ai_assisted: assisted,
+          links: [],
+        }),
+    });
+    renderWithQueryClient(
+      <OpenActivityDrawer
+        activityId="source"
+        zone={browserZone()}
+        onClose={() => {}}
+      />,
+    );
+    expect(
+      await screen.findAllByText("Call Anna about pricing"),
+    ).not.toHaveLength(0);
+    expect(screen.queryAllByText("AI-assisted")).toHaveLength(badges);
+  },
+);
 it("lists the activity's files and offers an upload while it is live", async () => {
   installFetchStub({
     "GET /me": meRoute({ activity: ["read", "update"] }),

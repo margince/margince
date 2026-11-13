@@ -21,6 +21,7 @@ import {
   previewedAddresses,
 } from "../../testing/sendpermission.testkit";
 import { ComposeModal } from "./compose";
+import { REWRITE_ROUTE, rewrittenBody } from "./compose.testkit";
 
 // Drafting to a LEAD.
 //
@@ -177,13 +178,13 @@ describe("drafting to a lead", () => {
 
   it("rewrites the lead draft on screen, and revises a rep's edit when asked again", async () => {
     const first = { ...LEAD_DRAFT, body: "Hi Dung, what 40 seats cost." };
-    const second = { ...LEAD_DRAFT, body: "Hi Dung, short." };
     const third = { ...LEAD_DRAFT, body: "Hi Dung, short, with your line." };
-    const answers = [first, second, third];
+    const answers = [first, third];
     let call = 0;
     const sent = stubRoutes({
       "POST /leads/l-1/draft-email": () =>
         jsonResponse(answers[Math.min(call++, answers.length - 1)]),
+      [REWRITE_ROUTE]: () => rewrittenBody("Hi Dung, short."),
       "PUT /mail-drafts": () => new Response(null, { status: 204 }),
     });
     render(
@@ -200,10 +201,12 @@ describe("drafting to a lead", () => {
     await userEvent.click(draftButton());
     await waitFor(() => expect(messageText("Body")).toBe(first.body));
     await userEvent.click(screen.getByRole("button", { name: "Shorter" }));
-    await waitFor(() => expect(messageText("Body")).toBe(second.body));
-
-    const calls = sent.filter((c) => c.key === "POST /leads/l-1/draft-email");
-    expect(calls[1]?.body).toMatchObject({ rewrite_of: first.body });
+    await waitFor(() => expect(messageText("Body")).toBe("Hi Dung, short."));
+    expect(sent.find((c) => c.key === REWRITE_ROUTE)?.body).toMatchObject({
+      verb: "shorter",
+      body: first.body,
+      about: { entity_type: "lead", entity_id: "l-1" },
+    });
 
     writeMessage("Body", "Hi Dung, short. My own line.");
     await userEvent.click(
@@ -212,7 +215,7 @@ describe("drafting to a lead", () => {
     await userEvent.click(draftButton());
     await waitFor(() => expect(messageText("Body")).toBe(third.body));
     const again = sent.filter((c) => c.key === "POST /leads/l-1/draft-email");
-    expect(again[2]?.body).toMatchObject({
+    expect(again[1]?.body).toMatchObject({
       rewrite_of: "Hi Dung, short. My own line.",
     });
   });

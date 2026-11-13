@@ -34,13 +34,11 @@ import (
 // never a server fault" — and this is the net that makes it true for the paths
 // that forgot.
 //
-// It names no field, because at this depth the only thing that knows one is the
-// CONSTRAINT NAME, and that is schema: `company_owner_id_fkey` tells a
-// caller our table and column names. A path that can name the field should
-// refuse before the database does, the way checkLifecycle and checkSizeBand do —
-// this answers the ones that do not, and the constraint goes to the operator's
-// log through InfraCause instead.
+// Only a declared text bound exposes a field. Other schema details stay in InfraCause.
 func constraintFault(err error) (Fault, bool) {
+	if fault, ok := textBoundFault(err); ok {
+		return fault, true
+	}
 	if constraint, ok := storekit.CheckViolation(err); ok && constraint == "member_work_reference_retired" {
 		return Fault{Status: http.StatusConflict, Code: "conflict", Detail: "Choose a current member before assigning or reopening this work.", InfraCause: err}, true
 	}

@@ -31,3 +31,8 @@ The 1 table owned by `recordlinks`, as the migrations build them. [Back to the e
 - `idx_record_link_to`: `btree (to_type, to_id)`
 - `record_link_pkey`: `unique, btree (id)`
 - `uq_record_link_pair`: `unique, btree (from_type, from_id, to_type, to_id, link_type)`
+
+**Triggers**
+
+- `text_bound_insert`: `AFTER INSERT FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL, '{"to_type": 20000, "from_type": 20000, "link_type": 20000, "captured_by": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"captured_by":20000,"from_type":20000,"link_type":20000,"to_type":20000}')`
+- `text_bound_update`: `AFTER UPDATE FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"to_type": 20000, "from_type": 20000, "link_type": 20000, "captured_by": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"captured_by":20000,"from_type":20000,"link_type":20000,"to_type":20000}')`
