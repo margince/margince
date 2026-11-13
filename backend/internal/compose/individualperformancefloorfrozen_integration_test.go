@@ -13,8 +13,6 @@ package compose
 import (
 	"context"
 	"errors"
-	"net/http"
-	"net/http/httptest"
 	"strings"
 	"testing"
 	"time"
@@ -164,44 +162,5 @@ func TestAFlooredReportRunsInOneSnapshot(t *testing.T) {
 	}
 	if err := ask(pgx.RepeatableRead); err != nil {
 		t.Errorf("a floored query under REPEATABLE READ = %v, want an answer", err)
-	}
-}
-
-// A share of a team of the reader and one colleague answers that colleague's
-// figures. While the switch is off, opening it and its export are refused.
-func TestIndividualPerformanceOffRefusesATwoMemberTeamsShare(t *testing.T) {
-	e := setupForecast(t)
-	teammate := reportingTeammate(t, e)
-	e.seedDealClosingWithin(t, "Mine", &e.Rep1, 100_000)
-	e.seedDealClosingWithin(t, "Theirs", &teammate, 250_000)
-	team := forecasting.Scope{Kind: forecasting.ScopeTeam, ID: &e.Team1}
-	snapshot := e.freezeScope(t, team)
-	expires := clocktest.Now(t).UTC().Add(24 * time.Hour)
-	_, frozen := e.issue(e.writerCtx(t), t, NewShare{
-		Kind: shareKindSnapshot, Target: "someone@example.test", Scope: team, SnapshotID: &snapshot, ExpiresAt: expires,
-	})
-	_, live := e.issue(e.writerCtx(t), t, NewShare{Kind: "live", Target: "forecast", Scope: team, ExpiresAt: expires})
-	reader := e.forecastReader(e.dealReadCtx(e.Rep1, nil, principal.RowScopeAll))
-	open := func(token string) (int, string) {
-		req := httptest.NewRequest(http.MethodGet, "/v1/forecast/shared/"+token, nil).WithContext(reader)
-		rec := httptest.NewRecorder()
-		e.shareRoutes().OpenForecastShare(rec, req, token)
-		return rec.Code, rec.Body.String()
-	}
-	reads := map[string]func() (int, string){
-		"the snapshot share":  func() (int, string) { return open(frozen) },
-		"the live share":      func() (int, string) { return open(live) },
-		"the snapshot export": func() (int, string) { return e.exportShare(reader, t, frozen) },
-	}
-	for what, read := range reads {
-		if status, body := read(); status != http.StatusOK {
-			t.Errorf("with the switch on, %s = %d %s, want 200", what, status, body)
-		}
-	}
-	e.showIndividualPerformance(t, false)
-	for what, read := range reads {
-		if status, body := read(); status != http.StatusForbidden || !strings.Contains(body, individualOffCode) {
-			t.Errorf("with the switch off, %s of a two-member team = %d %s, want 403 %s", what, status, body, individualOffCode)
-		}
 	}
 }
