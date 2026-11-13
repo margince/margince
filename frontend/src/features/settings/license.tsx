@@ -204,10 +204,9 @@ export function SeatUsageReading({
  * The banner, the agent rail and this card then all show the new posture, and
  * /me says again whether the trial still locks the app.
  */
-export function LicenseCheck() {
-  const t = useT();
+export function useLicenseCheck() {
   const queryClient = useQueryClient();
-  const check = useMutation({
+  return useMutation({
     mutationFn: async () =>
       unwrap(await api.POST("/installation/license/check")),
     onSuccess: (entitlement) => {
@@ -217,6 +216,28 @@ export function LicenseCheck() {
         .catch(logUnexpectedError);
     },
   });
+}
+
+/** What the last check came to. One line for any failure: the server's detail
+ * is English text and names nothing an admin can fix from here. */
+export function LicenseCheckResult({
+  check,
+}: Readonly<{ check: ReturnType<typeof useLicenseCheck> }>) {
+  const t = useT();
+  if (!check.isSuccess && !check.isError) {
+    return null;
+  }
+  return (
+    <span className="t-caption" role="status">
+      {check.isError ? t("license.check.failed") : t("license.check.done")}
+    </span>
+  );
+}
+
+/** "Check now" as a settings row lays it out: the button, then why and what came of it. */
+export function LicenseCheck() {
+  const t = useT();
+  const check = useLicenseCheck();
   return (
     <CellStack>
       <span>
@@ -229,13 +250,7 @@ export function LicenseCheck() {
         </Button>
       </span>
       <span className="t-caption">{t("license.check.hint")}</span>
-      {/* One line for any failure: the server's detail is English text and
-          names nothing an admin can fix from here. */}
-      {(check.isSuccess || check.isError) && (
-        <span className="t-caption" role="status">
-          {check.isError ? t("license.check.failed") : t("license.check.done")}
-        </span>
-      )}
+      <LicenseCheckResult check={check} />
     </CellStack>
   );
 }

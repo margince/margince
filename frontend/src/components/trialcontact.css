@@ -19,3 +19,11 @@
 .trialmail-head dd {
   margin: 0;
 }
+
+/* The address stays readable and copyable, for a reader whose mail app is not
+   set up and who writes from somewhere else. */
+.trialmail-to {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}

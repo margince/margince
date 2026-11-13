@@ -7,13 +7,17 @@ import { Button, Field, Modal, Textarea } from "../design-system/atoms";
 import { Callout, type CalloutTone } from "../design-system/callout";
 import { ChoiceList } from "../design-system/choicelist";
 import { CopyableText, useClipboardCopy } from "../design-system/clipboardcopy";
+import { CopyEmail, EmailFace } from "../design-system/contactlink";
 import { Heading } from "../design-system/heading";
+import { OffsiteLink } from "../design-system/offsitelink";
 import { formatNumber } from "../format/format";
 import { formatDayLong } from "../format/format.dates";
 import { type Translator, useLocale, usePlural, useT } from "../i18n";
 import type { TrialStanding } from "../lib/license-posture";
 import { useMe } from "../lib/session";
 import {
+  MARGINCE_CONTACT_FORM,
+  MARGINCE_TEAM_ADDRESS,
   TRIAL_ASKS,
   type TrialAsk,
   trialMailtoHref,
@@ -160,13 +164,17 @@ export function TrialContactDialog({
           </Heading>
           <dl className="trialmail-head">
             <dt>{t("trial.contact.to")}</dt>
-            <dd>{t("trial.contact.team")}</dd>
+            <dd className="trialmail-to">
+              <EmailFace address={MARGINCE_TEAM_ADDRESS} />
+              <CopyEmail address={MARGINCE_TEAM_ADDRESS} />
+            </dd>
             <dt>{t("trial.contact.subject")}</dt>
             <dd>
               <b>{mail.subject}</b>
             </dd>
           </dl>
           <CopyableText text={mail.body} label={t("trial.contact.preview")} />
+          <p className="t-caption">{t("trial.contact.how")}</p>
         </section>
         {copy.notice}
       </div>
@@ -174,9 +182,12 @@ export function TrialContactDialog({
         <Button onClick={copy.copy} pending={copy.pending}>
           {copy.label}
         </Button>
-        <AppLink className="btn btn-primary" href={trialMailtoHref(mail)}>
+        <AppLink className="btn btn-ghost" href={trialMailtoHref(mail)}>
           {t("trial.contact.open")}
         </AppLink>
+        <OffsiteLink className="btn btn-primary" href={MARGINCE_CONTACT_FORM}>
+          {t("trial.contact.form")}
+        </OffsiteLink>
       </div>
     </Modal>
   );

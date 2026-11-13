@@ -7,6 +7,9 @@
 /** Where the Margince team reads a trial's request. */
 export const MARGINCE_TEAM_ADDRESS = "info@margince.com";
 
+/** The contact form on the Margince website, for a reader with no mail app set up. */
+export const MARGINCE_CONTACT_FORM = "https://margince.com/contact/";
+
 /** What the reader asks the team for. */
 export type TrialAsk = "time" | "license" | "call";
 

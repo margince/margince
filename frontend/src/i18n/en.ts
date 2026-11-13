@@ -15167,14 +15167,16 @@ export const en = {
   "trial.contact.ask.call.hint": "Talk it through first.",
   "trial.contact.note": "Anything to add?",
   "trial.contact.optional": "Optional",
-  "trial.contact.preview": "Your email",
+  "trial.contact.preview": "Your message",
   "trial.contact.to": "To",
-  "trial.contact.team": "The Margince team",
   "trial.contact.subject": "Subject",
   "trial.contact.copy": "Copy text",
   "trial.contact.copied": "Text copied",
   "trial.contact.copyRemedy": "Select the email text and copy it yourself.",
   "trial.contact.open": "Open in my mail app",
+  "trial.contact.form": "Open the contact form",
+  "trial.contact.how":
+    "Paste it into the contact form on the Margince website, or send it to this address from any mail program.",
   "trial.mail.subject.time": "{company}: more time for the Margince trial",
   "trial.mail.subject.license": "{company}: a Margince license",
   "trial.mail.subject.call": "{company}: a short call about Margince",
@@ -15192,10 +15194,11 @@ export const en = {
   "trial.mail.signoff": "Best regards,",
   "trial.locked.pageTitle": "Trial ended",
   "trial.locked.title": "Your Margince trial has ended",
+  "trial.locked.adminTitle": "Have a license key?",
   "trial.locked.body":
     "Margince has stopped working until it has a license. Your data stays as it is, and nothing is deleted.",
   "trial.locked.admin":
-    "Once the Margince team sends a license key, set it as license.token in this installation’s configuration, or as the MARGINCE_LICENSE variable, and restart it.",
+    "Set it as license.token or MARGINCE_LICENSE in this installation’s configuration, then start Margince again. If you replaced a token file, check now instead.",
   "trial.locked.member":
     "Your admin can get a license from the Margince team. You can also write to them yourself.",
   "common.trialEnded":

@@ -14849,14 +14849,16 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "trial.contact.ask.call.hint": "Trao đổi trước khi quyết định.",
   "trial.contact.note": "Bạn muốn nói thêm gì không?",
   "trial.contact.optional": "Không bắt buộc",
-  "trial.contact.preview": "Email của bạn",
+  "trial.contact.preview": "Tin nhắn của bạn",
   "trial.contact.to": "Đến",
-  "trial.contact.team": "Đội ngũ Margince",
   "trial.contact.subject": "Tiêu đề",
   "trial.contact.copy": "Sao chép nội dung",
   "trial.contact.copied": "Đã sao chép nội dung",
   "trial.contact.copyRemedy": "Hãy tự chọn và sao chép nội dung email.",
   "trial.contact.open": "Mở trong ứng dụng email",
+  "trial.contact.form": "Mở biểu mẫu liên hệ",
+  "trial.contact.how":
+    "Dán nội dung vào biểu mẫu liên hệ trên trang web Margince, hoặc gửi đến địa chỉ này từ bất kỳ ứng dụng email nào.",
   "trial.mail.subject.time": "{company}: thêm thời gian dùng thử Margince",
   "trial.mail.subject.license": "{company}: giấy phép Margince",
   "trial.mail.subject.call": "{company}: một cuộc gọi ngắn về Margince",
@@ -14874,10 +14876,11 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "trial.mail.signoff": "Trân trọng,",
   "trial.locked.pageTitle": "Hết hạn dùng thử",
   "trial.locked.title": "Thời gian dùng thử Margince đã kết thúc",
+  "trial.locked.adminTitle": "Bạn đã có khóa giấy phép?",
   "trial.locked.body":
     "Margince đã ngừng hoạt động cho đến khi có giấy phép. Dữ liệu của bạn vẫn được giữ nguyên, không có gì bị xóa.",
   "trial.locked.admin":
-    "Khi đội ngũ Margince gửi khóa giấy phép, hãy đặt nó vào license.token trong cấu hình của bản cài đặt này, hoặc vào biến MARGINCE_LICENSE, rồi khởi động lại.",
+    "Hãy đặt khóa vào license.token hoặc MARGINCE_LICENSE trong cấu hình của bản cài đặt này, rồi khởi động lại Margince. Nếu bạn đã thay tệp token, chỉ cần bấm Kiểm tra ngay.",
   "trial.locked.member":
     "Quản trị viên của bạn có thể nhận giấy phép từ đội ngũ Margince. Bạn cũng có thể tự viết cho họ.",
   "common.trialEnded":

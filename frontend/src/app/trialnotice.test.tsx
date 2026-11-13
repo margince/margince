@@ -6,6 +6,10 @@ import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import type { components } from "../api/schema";
 import { LocaleProvider } from "../i18n";
 import { en } from "../i18n/en";
+import {
+  MARGINCE_CONTACT_FORM,
+  MARGINCE_TEAM_ADDRESS,
+} from "../lib/trialcontact";
 import { meFixture } from "../testing/mefixture";
 import { LicenseBanner } from "./licensebanner";
 
@@ -110,6 +114,21 @@ it("writes the email the reader chose, with the facts the team needs to answer",
   expect(body).toContain("Seats in use: 12");
   expect(body).toContain("We onboard a second team next month.");
   expect(body.endsWith("Best regards,\nTest User")).toBe(true);
+});
+
+it("leads a reader with no mail app to the website's form and shows the team's address", async () => {
+  const user = userEvent.setup();
+  mount(entitlement(3 * DAY));
+  await user.click(
+    await screen.findByRole("button", { name: en["trial.contact.title"] }),
+  );
+  const dialog = await screen.findByRole("dialog");
+  const form = within(dialog).getByRole("link", {
+    name: en["trial.contact.form"],
+  });
+  expect(form.getAttribute("href")).toBe(MARGINCE_CONTACT_FORM);
+  expect(form.getAttribute("target")).toBe("_blank");
+  expect(within(dialog).getByText(MARGINCE_TEAM_ADDRESS)).toBeTruthy();
 });
 
 it("reads the licence again once the trial's end passes under an open page", async () => {

@@ -15249,15 +15249,17 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "trial.contact.ask.call.hint": "Erst einmal darüber reden.",
   "trial.contact.note": "Noch etwas?",
   "trial.contact.optional": "Optional",
-  "trial.contact.preview": "Deine E-Mail",
+  "trial.contact.preview": "Deine Nachricht",
   "trial.contact.to": "An",
-  "trial.contact.team": "Das Margince-Team",
   "trial.contact.subject": "Betreff",
   "trial.contact.copy": "Text kopieren",
   "trial.contact.copied": "Text kopiert",
   "trial.contact.copyRemedy":
     "Markiere den Text der E-Mail und kopiere ihn selbst.",
   "trial.contact.open": "In meinem Mailprogramm öffnen",
+  "trial.contact.form": "Kontaktformular öffnen",
+  "trial.contact.how":
+    "Füg sie ins Kontaktformular auf der Margince-Website ein oder schick sie aus einem beliebigen Mailprogramm an diese Adresse.",
   "trial.mail.subject.time": "{company}: mehr Zeit für die Margince-Testphase",
   "trial.mail.subject.license": "{company}: eine Margince-Lizenz",
   "trial.mail.subject.call": "{company}: ein kurzes Gespräch über Margince",
@@ -15275,10 +15277,11 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "trial.mail.signoff": "Viele Grüße",
   "trial.locked.pageTitle": "Testphase beendet",
   "trial.locked.title": "Deine Margince-Testphase ist beendet",
+  "trial.locked.adminTitle": "Du hast einen Lizenzschlüssel?",
   "trial.locked.body":
     "Margince arbeitet nicht mehr, bis eine Lizenz da ist. Deine Daten bleiben, wie sie sind, und nichts wird gelöscht.",
   "trial.locked.admin":
-    "Sobald das Margince-Team einen Lizenzschlüssel schickt, trage ihn als license.token in die Konfiguration dieser Installation oder als Variable MARGINCE_LICENSE ein und starte sie neu.",
+    "Trag ihn als license.token oder MARGINCE_LICENSE in die Konfiguration dieser Installation ein und starte Margince neu. Hast du eine Token-Datei ersetzt, reicht „Jetzt prüfen“.",
   "trial.locked.member":
     "Deine Admins können eine Lizenz vom Margince-Team bekommen. Du kannst dem Team auch selbst schreiben.",
   "common.trialEnded":
