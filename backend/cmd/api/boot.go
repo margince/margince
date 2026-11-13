@@ -362,7 +362,6 @@ func inlineRelayLane(ctx context.Context, cfg apiConfig, pool *pgxpool.Pool, lic
 		// No inline relay to stop: cmd/worker is running it.
 		return nil, func() {}, nil
 	}
-	// The lanes here hold on the trial as the worker's do.
 	paused := installtrial.New(pool, cfg.posture, license.Posture, time.Now).Paused(logger)
 	busReady, stop, err := startInlineRelay(ctx, pool, cfg.redisAddr, cfg.redisPassword, cfg.webhookKey, cfg.publicBaseURL, paused, logger)
 	if err != nil {
