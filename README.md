@@ -107,7 +107,7 @@ accept [CLA.md](CLA.md) to send code.
 - To host it as a service for other companies, you need a hosting partner agreement with Gradion.
 - Each release becomes Apache 2.0 no later than two years after it ships.
 
-Without a license token, an install runs a 14-day trial and then stops working until a token is
+Without a license token, a production install runs a 14-day trial and then stops working until a token is
 set up. For up to 3 seats, ask for a free token with the
 [free license form](https://dist.margince.com/free-license). It lasts one year. If this blocks you, please say so
 in an issue.
