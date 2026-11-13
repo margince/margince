@@ -4,6 +4,12 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import type { ReactNode } from "react";
 import { userEvent, within } from "storybook/test";
+import type { WorklistItem } from "../features/worklist/worklist.queries";
+import {
+  readingsDay,
+  taskRow,
+  waitingEmailRow,
+} from "../testing/brief.fixtures";
 import type { GrantSpec } from "../testing/mefixture";
 import {
   installFetchStub,
@@ -50,6 +56,9 @@ type Answers = Readonly<{
    *  a price prints no figure at all, which is a different statement from
    *  "this cost nothing". */
   pricedMinor?: number;
+  /** The rows of the reader's day the agent prepared, as Home's "Needs you"
+   *  reads them. Absent is a day with nothing waiting. */
+  ready?: readonly WorklistItem[];
 }>;
 
 /** One occurrence as the wire spells it. */
@@ -216,6 +225,8 @@ function story(
           currency: "USD",
           computed_at: "2026-08-01T09:00:00Z",
         }),
+      "GET /worklist": () =>
+        jsonResponse(readingsDay({}, [...(answers.ready ?? [])], [])),
       "GET /me/ai-activity": () =>
         jsonResponse({
           running: answers.running ?? [],
@@ -574,4 +585,43 @@ export const LicenceWithheld: Story = {
   render: story({ ...HEALTHY, licenseState: "absent" }, "expanded", {
     automation: ["update"],
   }),
+};
+
+/** Three things the agent prepared, so the orb draws them: one segment each on
+ *  its ring's line, the count on the ball's edge, the first by name in the
+ *  line, and Start under it. */
+const A_READY_DAY: readonly WorklistItem[] = [
+  waitingEmailRow(),
+  taskRow("task-proposal", "Send the proposal to Acme"),
+  taskRow("task-call", "Call Ana Roth back"),
+];
+
+export const ReadyForYou: Story = {
+  render: story({ ...HEALTHY, ready: A_READY_DAY }),
+};
+
+export const ReadyForYouDark: Story = {
+  globals: { theme: "dark" },
+  render: story({ ...HEALTHY, ready: A_READY_DAY }),
+};
+
+/** Start opens the panel on the same cards Home lists under "Needs you", one
+ *  stack shared with Home, and the report stays below them. */
+export const ReadyPanelOpen: Story = {
+  render: story({ ...HEALTHY, ready: A_READY_DAY, recent: A_DAYS_WORK }),
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await userEvent.click(await canvas.findByRole("button", { name: "Start" }));
+  },
+};
+
+/** A collapsed rail keeps the count on the orb and drops the line and Start. */
+export const ReadyCollapsed: Story = {
+  render: story({ ...HEALTHY, ready: A_READY_DAY }, "collapsed"),
+};
+
+/** The phone bar: the count rides the orb in the bar's centre cell. */
+export const ReadyPhone: Story = {
+  tags: ["uat-phone"],
+  render: story({ ...HEALTHY, ready: A_READY_DAY }),
 };

@@ -2,6 +2,8 @@ import { type ReactNode, type RefObject, useId } from "react";
 import { AppLink } from "../design-system/applink";
 import { Heading } from "../design-system/heading";
 import type { MarginceCoreState } from "../design-system/margince-core";
+import { ReadyStack } from "../features/brief/brief.stack";
+import type { WorklistItem } from "../features/worklist/worklist.queries";
 import { formatMoney, formatNumber } from "../format/format";
 import { useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
@@ -194,6 +196,7 @@ export function AgentPanel({
   spend,
   panel,
   frame,
+  ready,
 }: Readonly<{
   state: MarginceCoreState;
   /** The same line the card carries, so the two never disagree. */
@@ -208,6 +211,8 @@ export function AgentPanel({
   spend: Spend;
   panel: RefObject<HTMLElement | null>;
   frame: PanelFrame;
+  /** The reader's day, the open record's rows first; undefined until it is read. */
+  ready?: readonly WorklistItem[];
 }>) {
   const { locale } = useLocale();
   const t = useT();
@@ -229,6 +234,14 @@ export function AgentPanel({
       }}
     >
       <PanelHead state={state} name={signals.name} line={line} spend={spend} />
+
+      {/* The work comes first: what the agent prepared or found for the
+          reader, answered here the way Home answers it. The report follows. */}
+      {ready !== undefined && ready.length > 0 && (
+        <PanelSection title={t("agent.ready.section")}>
+          <ReadyStack rows={ready} />
+        </PanelSection>
+      )}
 
       {/* Above the counts: a run happening this second outranks a queue that
           has been waiting since yesterday. Only live work is listed here. What

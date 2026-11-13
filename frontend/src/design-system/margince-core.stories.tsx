@@ -82,6 +82,18 @@ export const IngestWithProgress: Story = {
 };
 
 /**
+ * Three things wait on the reader: a segment each on the ring's own line and
+ * the count on the ball's edge. Past twelve the ring stays whole and the
+ * figure carries the rest.
+ */
+export const Tally: Story = { args: { state: "idle", tally: 3 } };
+
+/** A running job takes the line; the count stays on the ball's edge. */
+export const TallyUnderProgress: Story = {
+  args: { state: "ingest", tally: 3, progress: 0.58 },
+};
+
+/**
  * Under prefers-reduced-motion the ring and the fallback dress change at once.
  * With the setting on (in the system, or the browser's rendering emulation),
  * stepping the ring moves it in one frame with no sweep. With it off, each step

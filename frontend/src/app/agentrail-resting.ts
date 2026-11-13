@@ -139,6 +139,8 @@ export type RestingFacts = Readonly<{
   developmentLine: string | null;
   /** The runs still fresh enough to be news, already in the reader's words. */
   settled: readonly SpokenLine[];
+  /** What waits on the reader in their day (`readyLine`), or null when nothing does. */
+  ready: SpokenLine | null;
 }>;
 
 /**
@@ -165,9 +167,12 @@ export function restingReadings(
     sources: facts.sourcesUnknown
       ? [plain(words.t("agent.line.sourcesUnknown"))]
       : undefined,
-    finished: facts.settled,
+    // The day's rows already hold the approvals and the finished runs' work,
+    // and a line that rotated away from them would hide the one it can act on.
+    ready: facts.ready === null ? undefined : [facts.ready],
+    finished: facts.ready === null ? facts.settled : undefined,
     waiting:
-      facts.waiting !== undefined && facts.waiting > 0
+      facts.ready === null && facts.waiting !== undefined && facts.waiting > 0
         ? [plain(words.waiting(facts.waiting))]
         : undefined,
     // The development path answers every call with an invention, and a reader who

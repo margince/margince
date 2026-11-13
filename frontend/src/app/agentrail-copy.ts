@@ -38,7 +38,8 @@ export const RUNNING: ReadonlySet<MarginceCoreState> = new Set([
 /**
  * The READINGS the section rotates through while the agent is at rest.
  *
- * All three are the AGENT's own facts, and that is the whole selection rule.
+ * Each is the AGENT's own fact or the work it prepared for the reader, and
+ * that is the whole selection rule.
  * This rotation used to carry six, and the other three were about the
  * installation rather than the agent: the duplicate queue, the month's spend,
  * the licence. Six subjects taking turns in one slot at the edge of every screen
@@ -63,6 +64,9 @@ export const IDLE_ORDER = [
   // A dropped read is not a fault, so the orb stays idle. But the rotation
   // may not leave this line out because there is other news.
   "sources",
+  // What waits on the reader, by name. While it is there it stands in for the
+  // approvals count and the finished runs, which it already contains.
+  "ready",
   "waiting",
   // Second: what the scheduled runner finished while nobody was looking is news
   // rather than a task, so it does not push the queue a contact has to answer

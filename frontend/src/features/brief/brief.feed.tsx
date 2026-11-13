@@ -1,8 +1,7 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-import { useQueryClient } from "@tanstack/react-query";
-import { type ReactNode, useId, useState } from "react";
+import { type ReactNode, useId } from "react";
 import { AppLink } from "../../design-system/applink";
 import { Badge, Button, Card, PendingBody } from "../../design-system/atoms";
 import { Eyebrow } from "../../design-system/eyebrow";
@@ -12,21 +11,13 @@ import {
 } from "../../design-system/surfacestate";
 import { formatNumber } from "../../format/format";
 import { useLocale, usePlural, useT } from "../../i18n";
-import { OpenEmailDrawer } from "../mail/openemaildrawer";
-import {
-  type Worklist,
-  type WorklistItem,
-  worklistKey,
-} from "../worklist/worklist.queries";
-import { Triage } from "./brief.focus";
-import { identity } from "./brief.focuslink";
-import { HomeListReturnScope } from "./brief.queue";
+import type { Worklist, WorklistItem } from "../worklist/worklist.queries";
 import { laneUnread } from "./brief.readings.honesty";
 import { waitingRows } from "./brief.sentence";
+import { ReadyStack } from "./brief.stack";
 import { HOME_DAY_TIMING } from "./elementtiming";
 
 import "../worklist/worklist.css";
-import { useViewerZone } from "../../lib/viewerzone";
 import "./brief.feed.css";
 
 export function BriefFeed({
@@ -47,19 +38,11 @@ export function BriefFeed({
   /** The way into the whole queue, under the day's order. */
   queueToggle?: ReactNode;
 }>) {
-  const readerZone = useViewerZone();
   const t = useT();
   const { locale } = useLocale();
   const plural = usePlural();
-  const [openEmail, setOpenEmail] = useState<string | null>(null);
-  // The row in hand, by identity. The queue is re-read and answered rows
-  // leave it, so an index would hand over the row that moved up. A chosen
-  // row that has gone falls back to the day's first.
-  const client = useQueryClient();
   const titleId = useId();
   const rows = waitingRows(day);
-  const { at, choose } = useCardChoice(rows);
-  const lead = rows[at];
   const partial = Boolean(
     !day?.focus || day.readings?.more_available || laneUnread(day),
   );
@@ -119,44 +102,9 @@ export function BriefFeed({
           detail={{ onRetry }}
         >
           {rows.length === 0 && partial && <p>{t("brief.feed.incomplete")}</p>}
-          {lead && (
-            <HomeListReturnScope>
-              <Triage
-                rows={rows}
-                at={at}
-                lead={lead}
-                onChoose={choose}
-                onOpenEmail={setOpenEmail}
-                onContext={onContext}
-              />
-            </HomeListReturnScope>
-          )}
+          <ReadyStack rows={rows} onContext={onContext} />
         </SurfaceState>
       )}
-      <OpenEmailDrawer
-        activityId={openEmail}
-        zone={readerZone}
-        onClose={() => setOpenEmail(null)}
-        onReplySent={() =>
-          void client.invalidateQueries({ queryKey: worklistKey })
-        }
-      />
     </section>
   );
-}
-
-function useCardChoice(rows: readonly WorklistItem[]) {
-  const [choice, setChoice] = useState<{ key: string | null; at: number }>({
-    key: null,
-    at: 0,
-  });
-  const found = rows.findIndex((item) => identity(item) === choice.key);
-  const at =
-    found >= 0 ? found : Math.max(0, Math.min(choice.at, rows.length - 1));
-  if (at !== choice.at) setChoice({ ...choice, at });
-  return {
-    at,
-    choose: (item: WorklistItem) =>
-      setChoice({ key: identity(item), at: Math.max(0, rows.indexOf(item)) }),
-  };
 }

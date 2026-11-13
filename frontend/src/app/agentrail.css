@@ -398,6 +398,10 @@
   --coreGlass: 48px;
   --coreHalo: 0.5;
 }
+/* The ball is small here, so the figure shrinks with it and leaves it seen. */
+.rail.collapsed .arorb .core-count {
+  --coreCount: 16px;
+}
 
 /* ===== The rail showing one section's entries =====
  *
@@ -1023,4 +1027,76 @@
 .arclaim {
   margin: 0;
   padding: 0 var(--space-4) var(--space-4);
+}
+
+/* The one press under the line while something waits. Its own row, so the
+   line above keeps the two-line room it holds for itself. */
+.arready {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  justify-content: center;
+  width: 100%;
+  padding: var(--space-2) var(--space-2) var(--space-1);
+}
+.arready .btn {
+  min-inline-size: 0;
+}
+.rail.collapsed .arready,
+.rail.leveled .arready {
+  display: none;
+}
+@media (max-height: 780px) {
+  .arready {
+    display: none;
+  }
+}
+@media (max-width: 700px) {
+  .rail .arready {
+    display: none;
+  }
+  /* The well is a 56px circle: a full-size figure would cover the ball. */
+  .rail .arorb .core-count {
+    --coreCount: 18px;
+    right: -9px;
+    bottom: -7px;
+  }
+}
+
+/* A press answered elsewhere flies into the orb (agentrail-ready.tsx).
+   Reduced motion never mounts it; fly() sets the distance per flight. */
+.arflight {
+  --arFlyX: 0px;
+  --arFlyY: 0px;
+  position: fixed;
+  z-index: 60;
+  width: 12px;
+  height: 12px;
+  translate: -50% -50%;
+  border-radius: 50%;
+  corner-shape: round;
+  background: var(--ai);
+  box-shadow:
+    0 0 0 5px var(--aiLight),
+    0 0 18px var(--ai);
+  pointer-events: none;
+  animation: arflight 0.9s cubic-bezier(0.5, 0, 0.3, 1) forwards;
+}
+@keyframes arflight {
+  0% {
+    opacity: 0;
+    transform: translate(0, 0) scale(0.6);
+  }
+  15% {
+    opacity: 1;
+    transform: translate(
+        calc(var(--arFlyX) * 0.05),
+        calc(var(--arFlyY) * 0.05 - 24px)
+      )
+      scale(1);
+  }
+  100% {
+    opacity: 0.2;
+    transform: translate(var(--arFlyX), var(--arFlyY)) scale(0.4);
+  }
 }

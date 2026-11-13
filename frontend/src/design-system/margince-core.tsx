@@ -101,6 +101,7 @@ function useDarkPage(): boolean {
 export function MarginceCoreScene({
   state = "idle",
   progress,
+  tally,
   size = "hero",
   feed = false,
   surface = "auto",
@@ -109,6 +110,12 @@ export function MarginceCoreScene({
   state?: MarginceCoreState;
   /** 0..1. Draws the ring; omit it and no ring renders (WDS-CORE-2). */
   progress?: number;
+  /**
+   * How many things wait on the reader: one segment each on the ring's line,
+   * and the figure on the ball's edge. Absent or 0 draws neither. The progress
+   * ring takes the line while it shows, and the figure stays.
+   */
+  tally?: number;
   size?: "hero" | "md";
   /**
    * Context arriving at the Core, which the shader draws as the intake
@@ -158,6 +165,12 @@ export function MarginceCoreScene({
         <div className="core-rim" />
         <div className="core-glass" />
       </div>
+      {tally !== undefined && tally > 0 && (
+        <>
+          {progress === undefined && <TallyRing count={tally} />}
+          <span className="core-count">{tally}</span>
+        </>
+      )}
       {progress === undefined ? null : (
         <svg className="core-progress" viewBox="0 0 100 100" aria-hidden="true">
           <circle cx="50" cy="50" r="48.5" pathLength="100" />
@@ -172,5 +185,36 @@ export function MarginceCoreScene({
         </svg>
       )}
     </div>
+  );
+}
+
+/** Past this many the segments would be dots; the figure carries the rest. */
+const TALLY_SEGMENTS = 12;
+/** The gap between two segments, in the ring's 100-unit path length. */
+const TALLY_GAP = 3;
+
+/** One segment per waiting thing, on the line the progress ring draws on. */
+function TallyRing({ count }: Readonly<{ count: number }>) {
+  const segments = Math.min(count, TALLY_SEGMENTS);
+  const length = 100 / segments - (segments > 1 ? TALLY_GAP : 0);
+  return (
+    <svg
+      className="core-progress core-tally"
+      viewBox="0 0 100 100"
+      aria-hidden="true"
+    >
+      {Array.from({ length: segments }, (_, index) => (
+        <circle
+          // biome-ignore lint/suspicious/noArrayIndexKey: the segments are interchangeable marks, counted rather than named
+          key={index}
+          cx="50"
+          cy="50"
+          r="48.5"
+          pathLength="100"
+          strokeDasharray={`${length} ${100 - length}`}
+          strokeDashoffset={-(index * 100) / segments - TALLY_GAP / 2}
+        />
+      ))}
+    </svg>
   );
 }

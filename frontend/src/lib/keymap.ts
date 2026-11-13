@@ -105,6 +105,13 @@ const BINDING_ROWS = [
     answeredBy: "dispatcher",
   },
   {
+    id: "agent",
+    keys: single("."),
+    group: "anywhere",
+    labelKey: "shell.shortcuts.agent",
+    answeredBy: "dispatcher",
+  },
+  {
     id: "dismiss",
     keys: { kind: "named", key: "Escape" },
     group: "anywhere",

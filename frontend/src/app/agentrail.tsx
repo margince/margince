@@ -17,9 +17,17 @@ import {
   type MarginceCoreState,
 } from "../design-system/margince-core";
 import { usePrefersReducedMotion } from "../design-system/motion";
-import { formatMoney } from "../format/format";
+import { formatMoney, formatNumber } from "../format/format";
 import { useNow } from "../format/now";
-import { type Translator, useLocale, usePlural, useT } from "../i18n";
+import {
+  type Locale,
+  type PluralTranslator,
+  type Translator,
+  useLocale,
+  usePlural,
+  useT,
+} from "../i18n";
+import { useShortcutHandler } from "../lib/shortcuts";
 import { usePhoneViewport } from "../lib/viewport";
 import { clearAgentEdge, publishAgentEdge } from "./agent-edge-signal";
 import { useAgentFault } from "./agent-fault";
@@ -27,6 +35,7 @@ import { RUNNING } from "./agentrail-copy";
 import { RailLine } from "./agentrail-line";
 import type { Signals } from "./agentrail-reads";
 import { useAiSpend, useLastCall, useSignals } from "./agentrail-reads";
+import { ReadyButton, useReadyPeek, useSettledFlight } from "./agentrail-ready";
 import {
   type RailWords,
   railWords,
@@ -35,6 +44,7 @@ import {
   useRestingLine,
 } from "./agentrail-resting";
 import { useAgentTicker } from "./agentrail-ticker";
+import { useAgentReady } from "./agentready";
 import { useAiActivity } from "./ai-activity";
 import { plain, type SpokenLine, speak, spokenText } from "./ai-activity-speak";
 import { usePopoverDismiss } from "./popover";
@@ -252,6 +262,14 @@ export function AgentRail({
   const { fault, acknowledge } = useAgentFault(server.faults);
   const { state, cause, register } = derive(signals, server, fault);
   const hit = useHit(open, setOpen, acknowledge);
+  const ready = useAgentReady();
+  const openPanel = useCallback(() => {
+    acknowledge();
+    setOpen(true);
+  }, [acknowledge]);
+  useShortcutHandler("agent", () => (open ? setOpen(false) : openPanel()));
+  const peek = useReadyPeek(ready.rows, !open, openPanel, trigger);
+  useSettledFlight(ready.rows?.length, trigger);
 
   // What the screen's margins draw, published rather than re-derived: the reads
   // above are all local to this component, so a second consumer calling the same
@@ -305,6 +323,7 @@ export function AgentRail({
         developmentLine:
           signals.ai === "development" ? t("auth.coreDevelopment") : null,
         settled,
+        ready: ready.line,
       },
       said,
     ),
@@ -364,6 +383,7 @@ export function AgentRail({
                 unnamed={server.unnamed}
                 settled={server.answered ? server.recent : undefined}
                 spend={spend}
+                ready={ready.rows}
               />
             </Suspense>
           </div>,
@@ -383,6 +403,7 @@ export function AgentRail({
           type="button"
           className="artoggle"
           ref={trigger}
+          {...peek.props}
           aria-expanded={open}
           // The spend joins the NAME, not only the box.
           //
@@ -391,12 +412,13 @@ export function AgentRail({
           // figure and its scope reach a screen reader from nowhere else. A
           // figure somebody is accountable for cannot be the half of this
           // control that only some readers get.
-          aria-label={hitLabel}
+          aria-label={readyLabel(hitLabel, ready.rows?.length, plural, locale)}
         >
           <MarginceCoreScene
             state={state}
             feed={false}
             progress={ring}
+            tally={ready.rows?.length}
             size="md"
             className="arorb"
           />
@@ -409,6 +431,9 @@ export function AgentRail({
               regardless, because it is the agent's report. */}
           <RailSaying line={shown} />
         </span>
+        {state === "idle" && (
+          <ReadyButton ready={ready} open={open} onOpen={openPanel} />
+        )}
         {/* The block's last line, and it exists whether or not there is a figure
             on it: the chevron reports whether the panel is open, which is a fact
             about the block rather than about the spend, so a row that came and
@@ -441,6 +466,19 @@ export function AgentRail({
           />
         </span>
       </div>
+      {peek.panel}
     </section>
   );
+}
+
+/** The button's name carries the count, which the orb draws for sighted readers only. */
+function readyLabel(
+  name: string,
+  count: number | undefined,
+  plural: PluralTranslator,
+  locale: Locale,
+): string {
+  return count === undefined || count === 0
+    ? name
+    : `${name}. ${plural("agent.ready.count", count, { count: formatNumber(count, locale) })}`;
 }

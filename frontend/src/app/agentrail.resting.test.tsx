@@ -103,6 +103,7 @@ describe("restingReadings", () => {
     sourcesUnknown: false,
     developmentLine: null,
     settled: [] as readonly SpokenLine[],
+    ready: null,
   };
 
   // The words the rotation says its readings in, as the rail hands them over:
@@ -152,6 +153,7 @@ describe("restingReadings", () => {
         sourcesUnknown: false,
         developmentLine: "offline model",
         settled: [plain("brief ready"), plain("summary ready")],
+        ready: null,
       },
       WORDS,
     );
@@ -159,6 +161,50 @@ describe("restingReadings", () => {
       en["agent.line.waiting_other"].replace("{count}", "2"),
       "brief ready",
       "summary ready",
+      "offline model",
+    ]);
+  });
+});
+
+describe("restingReadings with the day's rows waiting", () => {
+  const WORDS = {
+    t: (key: MessageKey) => en[key],
+    waiting: (count: number) =>
+      translatePlural("en", "agent.line.waiting", count, {
+        count: String(count),
+      }),
+  };
+
+  // The rows already hold the approvals and what the runs prepared, so the
+  // line stays on the one sentence the reader can act on.
+  it("names what waits in place of the approvals count and the finished runs", () => {
+    const lines = restingReadings(
+      {
+        waiting: 2,
+        sourcesUnknown: false,
+        developmentLine: null,
+        settled: [plain("brief ready")],
+        ready: plain("3 ready for you. First: Reply to Anna"),
+      },
+      WORDS,
+    );
+    expect(lines.map(said)).toEqual(["3 ready for you. First: Reply to Anna"]);
+  });
+
+  it("still says first that the sources could not be checked", () => {
+    const lines = restingReadings(
+      {
+        waiting: undefined,
+        sourcesUnknown: true,
+        developmentLine: "offline model",
+        settled: [],
+        ready: plain("1 ready for you: Reply to Anna"),
+      },
+      WORDS,
+    );
+    expect(lines.map(said)).toEqual([
+      "Could not check your connected sources",
+      "1 ready for you: Reply to Anna",
       "offline model",
     ]);
   });

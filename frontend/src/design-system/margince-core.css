@@ -39,6 +39,7 @@
   max-height: min(var(--coreCap), var(--coreSize));
   --coreSize: 230px;
   --coreGlass: 172px;
+  --coreBall: 0.627;
   /* The state triple, idle's by default: a Core with no data-core-state
      renders as rest rather than as nothing. */
   --coreC1: var(--orbGlow);
@@ -402,7 +403,6 @@
    progress. `--coreBall` is that share, and it is the shader's constant
    restated rather than a tuning: move the camera and this moves with it. */
 .core-progress {
-  --coreBall: 0.627;
   --coreRingGap: 4px;
   position: absolute;
   inset: calc(
@@ -446,4 +446,42 @@
     --coreSize: 150px;
     --coreGlass: 126px;
   }
+}
+
+/* The tally sits on the progress ring's own line, so it costs no room
+   around the ball. Indigo: the waiting things are the agent's. */
+.core-tally circle {
+  stroke: var(--ai);
+  stroke-width: 2.5;
+  stroke-linecap: round;
+}
+/* --coreCount sizes the figure, so a tight well can shrink it as one piece. */
+.core-count {
+  --coreCount: 22px;
+  position: absolute;
+  z-index: 4;
+  right: calc((var(--coreSize) - var(--coreGlass) * var(--coreBall)) / 2 - 8px);
+  bottom: calc(
+    (var(--coreSize) - var(--coreGlass) * var(--coreBall)) /
+    2 -
+    6px
+  );
+  min-width: var(--coreCount);
+  height: var(--coreCount);
+  padding: 0 calc(var(--coreCount) / 4);
+  border-radius: var(--r-full);
+  corner-shape: round;
+  box-sizing: border-box;
+  background: var(--ai);
+  box-shadow: 0 0 0 2px var(--ground);
+  color: var(--textOnAccent);
+  font: var(--fontBodySmall);
+  font-weight: var(--fontWeightMedium);
+  line-height: var(--coreCount);
+  font-variant-numeric: tabular-nums;
+  text-align: center;
+}
+.core-still .core-count {
+  right: calc((var(--coreSize) - var(--coreGlass)) / 2 - 6px);
+  bottom: calc((var(--coreSize) - var(--coreGlass)) / 2 - 4px);
 }

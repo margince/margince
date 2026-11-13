@@ -64,12 +64,15 @@ export function usePeek<Anchor extends HTMLElement>({
   content,
   focusable = false,
   pressOpens = false,
+  anchor: given,
 }: Readonly<{
   // Absent or empty, there is nothing to peek at. The element behaves as if it
   // had no peek, and no hover or focus opens an empty card.
   content: PeekContent | undefined;
   focusable?: boolean;
   pressOpens?: boolean;
+  // The anchor's own ref, when its owner already holds one for it.
+  anchor?: RefObject<Anchor | null>;
 }>): Readonly<{
   ref: RefObject<Anchor | null>;
   props: Partial<PeekAnchor>;
@@ -80,7 +83,8 @@ export function usePeek<Anchor extends HTMLElement>({
   const has = content !== undefined && content.items.length > 0;
   const [open, setOpen] = useState(false);
   const [openedBy, setOpenedBy] = useState<Opened>("hover");
-  const anchor = useRef<Anchor | null>(null);
+  const own = useRef<Anchor | null>(null);
+  const anchor = given ?? own;
   const panel = useRef<HTMLElement | null>(null);
   const panelId = useId();
   const at = useAnchoredToTrigger(open, anchor, panel, "start");
