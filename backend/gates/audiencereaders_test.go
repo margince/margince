@@ -63,6 +63,9 @@ var audienceScopeMarkers = []string{
 	// Gates a statement's activities once; TestEveryContentGateRendersItsMarkOnce
 	// in platform/auth holds that it renders the content gate.
 	"ContentReadableActivitiesSQL",
+	// Gates mails and their threads through ContentReadableActivitiesSQL;
+	// TestAMailThreadSetCarriesOneContentGate in activities holds it.
+	"MailThreadReadableSQL",
 	"EnsureActivityContentVisible", "EnsureActivityContentVisibleLive",
 	"EnsureActivityWritable",
 	// The documents library reaches the clause two hops down —
