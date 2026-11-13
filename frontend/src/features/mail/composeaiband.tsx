@@ -20,7 +20,7 @@ type VoiceProfile = components["schemas"]["VoiceProfile"];
 /**
  * The line above the words that a model writes through: the ask for a draft.
  * Once a draft stands, the purpose it was written to stays on screen to be
- * corrected, and one line discloses the draft with its rewrites and discard.
+ * corrected. One line discloses the draft with its rewrites and discard.
  */
 export function AiDraftBand({
   replying,

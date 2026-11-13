@@ -3384,7 +3384,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "common.errorNoCause":
     "Die Anfrage ist fehlgeschlagen. Es wurde keine Ursache gemeldet.",
   "common.assistantUnavailable":
-    "Die KI hat nicht geantwortet. Bitte versuche es noch mal, oder frag deinen Admin nach Einstellungen → KI.",
+    "Die KI hat nicht geantwortet. Bitte versuche es noch mal, oder frage deinen Admin nach Einstellungen → KI.",
   "common.providerOutOfCredit":
     "Beim KI-Anbieter ist kein Guthaben mehr vorhanden. Bitte wende dich an die Systemadministration.",
   "common.providerUnauthorized":

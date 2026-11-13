@@ -267,6 +267,42 @@ describe("the purpose the words were drafted to", () => {
     expect(view.result.current.draftedIntent).toBe("Follow up");
   });
 
+  it("comes back with the words an undo takes back to an earlier draft", () => {
+    const view = renderHook(() => useComposeFields({}));
+    const redrafted = "Hello Anna,\n\nThe offer is attached.";
+    const draft = (text: string, purpose: string) =>
+      act(() => {
+        view.result.current.setIntent(purpose);
+        view.result.current.adoptDraftedBody(text);
+        view.result.current.setServedBody(text);
+        view.result.current.setProvenance(MARKS);
+        view.result.current.setDraftedIntent(purpose);
+      });
+    draft(DRAFTED, "Follow up");
+    draft(redrafted, "Send the offer");
+
+    act(() => view.result.current.editBody(edit(DRAFTED)));
+
+    expect(view.result.current.intent).toBe("Send the offer");
+    expect(view.result.current.draftedIntent).toBe("Follow up");
+  });
+
+  it("stays on the reader's own words after a draft is emptied", () => {
+    const view = renderHook(() =>
+      useComposeFields({ askedIntent: "Follow up" }),
+    );
+    act(() => {
+      view.result.current.adoptDraftedBody(DRAFTED);
+      view.result.current.setProvenance(MARKS);
+    });
+
+    act(() => view.result.current.editBody(edit("")));
+    act(() => view.result.current.editBody(edit("My own words.")));
+
+    expect(view.result.current.provenance).toBeNull();
+    expect(view.result.current.draftedIntent).toBe("Follow up");
+  });
+
   it("counts a restored purpose as the one its saved words were drafted to", () => {
     const view = renderHook(() =>
       useComposeFields({ askedIntent: "Follow up" }),

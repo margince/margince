@@ -259,6 +259,7 @@ export function useComposeFields({
           reasoning: account.reasoning,
           scope: account.scope,
           language,
+          draftedIntent,
         }
       : null;
   // An emptied body sets the marks aside, and the choice stays for the next draft.
@@ -267,7 +268,10 @@ export function useComposeFields({
     setProvenance(marks?.provenance ?? null);
     account.setReasoning(marks?.reasoning ?? []);
     account.setScope(marks?.scope);
-    if (marks) setLanguage(marks.language);
+    // The reader's own words keep the purpose: Redraft needs drafted words.
+    if (!marks) return;
+    setLanguage(marks.language);
+    setDraftedIntent(marks.draftedIntent);
   };
 
   const editBody = (next: Readonly<{ html: string; text: string }>) => {
@@ -309,6 +313,7 @@ export function useComposeFields({
           reasoning: [],
           scope: undefined,
           language,
+          draftedIntent,
         }
       : null;
     memory.current.remember(body, rejected);
