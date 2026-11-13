@@ -3,8 +3,8 @@
 
 // The done lane on Home, as the last card of Done for you: the small changes
 // Margince made beside the deals. Lines that say the same thing stand as one
-// step with a count, and what a reader needs only before an undo waits in
-// each line's Details.
+// step with a count. What a reader needs only before an undo waits in each
+// line's Details.
 
 import { useState } from "react";
 import { Badge, Card } from "../../design-system/atoms";
@@ -193,7 +193,7 @@ function LineDetail({
 /**
  * The lines in reading order, those that say the same words as one group at
  * the place of its newest line. Grouped by the words a reader sees, so two
- * lines group exactly when they would have read as repeats.
+ * lines group when they would have read as repeats.
  */
 export function groupBySentence(
   rows: readonly MagicLine[],
