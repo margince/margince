@@ -5016,12 +5016,15 @@ func (e ChangeContractStatusRequestStatus) Valid() bool {
 
 // Defines values for ChannelConnectionProvider.
 const (
+	ChannelConnectionProviderDispact  ChannelConnectionProvider = "dispact"
 	ChannelConnectionProviderTelegram ChannelConnectionProvider = "telegram"
 )
 
 // Valid indicates whether the value is a known member of the ChannelConnectionProvider enum.
 func (e ChannelConnectionProvider) Valid() bool {
 	switch e {
+	case ChannelConnectionProviderDispact:
+		return true
 	case ChannelConnectionProviderTelegram:
 		return true
 	default:
@@ -5056,6 +5059,81 @@ func (e ChannelConnectionStatus) Valid() bool {
 	}
 }
 
+// Defines values for ChannelLinkProvider.
+const (
+	ChannelLinkProviderDispact ChannelLinkProvider = "dispact"
+)
+
+// Valid indicates whether the value is a known member of the ChannelLinkProvider enum.
+func (e ChannelLinkProvider) Valid() bool {
+	switch e {
+	case ChannelLinkProviderDispact:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ChannelLinkStatus.
+const (
+	ChannelLinkStatusActive      ChannelLinkStatus = "active"
+	ChannelLinkStatusChannelGone ChannelLinkStatus = "channel_gone"
+)
+
+// Valid indicates whether the value is a known member of the ChannelLinkStatus enum.
+func (e ChannelLinkStatus) Valid() bool {
+	switch e {
+	case ChannelLinkStatusActive:
+		return true
+	case ChannelLinkStatusChannelGone:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ChannelLinkRecordType.
+const (
+	ChannelLinkRecordTypeDeal    ChannelLinkRecordType = "deal"
+	ChannelLinkRecordTypeProject ChannelLinkRecordType = "project"
+)
+
+// Valid indicates whether the value is a known member of the ChannelLinkRecordType enum.
+func (e ChannelLinkRecordType) Valid() bool {
+	switch e {
+	case ChannelLinkRecordTypeDeal:
+		return true
+	case ChannelLinkRecordTypeProject:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ChannelLinkStateState.
+const (
+	ChannelLinkStateStateLinked ChannelLinkStateState = "linked"
+	ChannelLinkStateStateNone   ChannelLinkStateState = "none"
+	ChannelLinkStateStateOff    ChannelLinkStateState = "off"
+	ChannelLinkStateStatePaused ChannelLinkStateState = "paused"
+)
+
+// Valid indicates whether the value is a known member of the ChannelLinkStateState enum.
+func (e ChannelLinkStateState) Valid() bool {
+	switch e {
+	case ChannelLinkStateStateLinked:
+		return true
+	case ChannelLinkStateStateNone:
+		return true
+	case ChannelLinkStateStateOff:
+		return true
+	case ChannelLinkStateStatePaused:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for ChannelProviderEntryCredentialModel.
 const (
 	ChannelProviderEntryCredentialModelPerMember    ChannelProviderEntryCredentialModel = "per_member"
@@ -5068,6 +5146,30 @@ func (e ChannelProviderEntryCredentialModel) Valid() bool {
 	case ChannelProviderEntryCredentialModelPerMember:
 		return true
 	case ChannelProviderEntryCredentialModelWorkspaceBot:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ChannelVerbosity.
+const (
+	ChannelVerbosityEverything ChannelVerbosity = "everything"
+	ChannelVerbosityImportant  ChannelVerbosity = "important"
+	ChannelVerbosityMilestones ChannelVerbosity = "milestones"
+	ChannelVerbositySilent     ChannelVerbosity = "silent"
+)
+
+// Valid indicates whether the value is a known member of the ChannelVerbosity enum.
+func (e ChannelVerbosity) Valid() bool {
+	switch e {
+	case ChannelVerbosityEverything:
+		return true
+	case ChannelVerbosityImportant:
+		return true
+	case ChannelVerbosityMilestones:
+		return true
+	case ChannelVerbositySilent:
 		return true
 	default:
 		return false
@@ -7401,12 +7503,15 @@ func (e ConfirmSubmissionResolution) Valid() bool {
 
 // Defines values for ConnectChannelRequestProvider.
 const (
+	ConnectChannelRequestProviderDispact  ConnectChannelRequestProvider = "dispact"
 	ConnectChannelRequestProviderTelegram ConnectChannelRequestProvider = "telegram"
 )
 
 // Valid indicates whether the value is a known member of the ConnectChannelRequestProvider enum.
 func (e ConnectChannelRequestProvider) Valid() bool {
 	switch e {
+	case ConnectChannelRequestProviderDispact:
+		return true
 	case ConnectChannelRequestProviderTelegram:
 		return true
 	default:
@@ -16240,6 +16345,24 @@ func (e LifecyclePreviewEvidenceScope) Valid() bool {
 	case LifecyclePreviewEvidenceScopeUnknown:
 		return true
 	case LifecyclePreviewEvidenceScopeWorkstream:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for LinkChannelRequestMode.
+const (
+	LinkChannelRequestModeCreate   LinkChannelRequestMode = "create"
+	LinkChannelRequestModeExisting LinkChannelRequestMode = "existing"
+)
+
+// Valid indicates whether the value is a known member of the LinkChannelRequestMode enum.
+func (e LinkChannelRequestMode) Valid() bool {
+	switch e {
+	case LinkChannelRequestModeCreate:
+		return true
+	case LinkChannelRequestModeExisting:
 		return true
 	default:
 		return false
@@ -39245,7 +39368,10 @@ type ChangeUserRoleRequest struct {
 
 // ChannelConnection One workspace-level messaging-channel binding. The bot token never appears in this shape — it lives sealed in the vault, and it is the only secret a binding holds.
 type ChannelConnection struct {
-	// ChannelId The provider's own id for the bot — the key the binding is unique on.
+	// Address The web address of a self-hosted provider's install (Dispact). Absent for Telegram.
+	Address *string `json:"address,omitempty"`
+
+	// ChannelId The provider's own id for the bot — the key the binding is unique on. For Dispact it is the chat's team id.
 	ChannelId string `json:"channelId"`
 
 	// ChannelLabel The bot's @username. Display only — a username is mutable and re-assignable, so it identifies nothing.
@@ -39270,6 +39396,58 @@ type ChannelConnectionStatus string
 type ChannelConnectionListResponse struct {
 	Data []ChannelConnection `json:"data"`
 }
+
+// ChannelInvites Who a newly created channel was opened to.
+type ChannelInvites struct {
+	// Invited Members added to the channel.
+	Invited int `json:"invited"`
+
+	// NotInChat Members invited who have no chat account.
+	NotInChat int `json:"not_in_chat"`
+
+	// SkippedOverCap Members left out because a new channel invites at most 50.
+	SkippedOverCap int `json:"skipped_over_cap"`
+}
+
+// ChannelLink defines model for ChannelLink.
+type ChannelLink struct {
+	ChannelName string `json:"channel_name"`
+	ChannelSlug string `json:"channel_slug"`
+
+	// ChannelUrl The channel's address in the chat.
+	ChannelUrl string              `json:"channel_url"`
+	CreatedAt  time.Time           `json:"created_at"`
+	DealId     *openapi_types.UUID `json:"deal_id,omitempty"`
+	Id         openapi_types.UUID  `json:"id"`
+	ProjectId  *openapi_types.UUID `json:"project_id,omitempty"`
+	Provider   ChannelLinkProvider `json:"provider"`
+	Status     ChannelLinkStatus   `json:"status"`
+
+	// Verbosity How much Margince posts into a linked channel.
+	Verbosity ChannelVerbosity `json:"verbosity"`
+}
+
+// ChannelLinkProvider defines model for ChannelLink.Provider.
+type ChannelLinkProvider string
+
+// ChannelLinkStatus defines model for ChannelLink.Status.
+type ChannelLinkStatus string
+
+// ChannelLinkRecordType The kind of record a chat channel is linked to.
+type ChannelLinkRecordType string
+
+// ChannelLinkState defines model for ChannelLinkState.
+type ChannelLinkState struct {
+	// Invites Who a newly created channel was opened to.
+	Invites *ChannelInvites `json:"invites,omitempty"`
+	Link    *ChannelLink    `json:"link,omitempty"`
+
+	// State `off`: no chat bot is connected. `none`: no channel yet. `linked`: posting and reading. `paused`: the channel is gone or the bot lost access.
+	State ChannelLinkStateState `json:"state"`
+}
+
+// ChannelLinkStateState `off`: no chat bot is connected. `none`: no channel yet. `linked`: posting and reading. `paused`: the channel is gone or the bot lost access.
+type ChannelLinkStateState string
 
 // ChannelProviderDirectory Every messaging transport this installation has registered (ADR-0107).
 type ChannelProviderDirectory struct {
@@ -39365,6 +39543,9 @@ type ChannelProviderEntry struct {
 // provider vocabulary: this describes the SHAPE of a credential, which is
 // installation-independent.
 type ChannelProviderEntryCredentialModel string
+
+// ChannelVerbosity How much Margince posts into a linked channel.
+type ChannelVerbosity string
 
 // ClaimEvidence The receipt behind one cited record (DOSS-WIRE-3). Each `source_kind` owes its own
 // identifying fields (DOSS-PARAM-9), carried in `identity`; a receipt that cannot fill one
@@ -42693,7 +42874,10 @@ type ConfirmSubmissionReceipt struct {
 
 // ConnectChannelRequest defines model for ConnectChannelRequest.
 type ConnectChannelRequest struct {
-	// BotToken The BotFather token, `<bot id>:<secret>`. Sealed into the vault on arrival and never echoed back.
+	// Address The chat's web address, such as `https://chat.example.com`. Required for Dispact, which every team hosts itself; refused for Telegram.
+	Address *string `json:"address,omitempty"`
+
+	// BotToken The bot token. For Telegram the BotFather token, `<bot id>:<secret>`; for Dispact the app token, `gwapp_…`. Sealed into the vault on arrival and never echoed back.
 	BotToken string                        `json:"botToken"`
 	Provider ConnectChannelRequestProvider `json:"provider"`
 }
@@ -54340,6 +54524,22 @@ type LifecyclePreviewEvidence struct {
 // LifecyclePreviewEvidenceScope defines model for LifecyclePreviewEvidence.Scope.
 type LifecyclePreviewEvidenceScope string
 
+// LinkChannelRequest defines model for LinkChannelRequest.
+type LinkChannelRequest struct {
+	// Channel For `existing`, the channel's slug or its link.
+	Channel *string                `json:"channel,omitempty"`
+	Mode    LinkChannelRequestMode `json:"mode"`
+
+	// SummarizeHistory For `existing`, required. True files up to five summaries of the talk so far.
+	SummarizeHistory *bool `json:"summarize_history,omitempty"`
+
+	// Verbosity How much Margince posts into a linked channel.
+	Verbosity *ChannelVerbosity `json:"verbosity,omitempty"`
+}
+
+// LinkChannelRequestMode defines model for LinkChannelRequest.Mode.
+type LinkChannelRequestMode string
+
 // LinkCompanyContactsRequest defines model for LinkCompanyContactsRequest.
 type LinkCompanyContactsRequest struct {
 	// ContactIds The candidates to link. An empty list answers 422 `required`, more than 50 `too_many`, and a repeated id `duplicate`.
@@ -64549,6 +64749,12 @@ type SetBlockedDomainRequest struct {
 
 // SetBlockedDomainRequestAdmission defines model for SetBlockedDomainRequest.Admission.
 type SetBlockedDomainRequestAdmission string
+
+// SetChannelVerbosityRequest defines model for SetChannelVerbosityRequest.
+type SetChannelVerbosityRequest struct {
+	// Verbosity How much Margince posts into a linked channel.
+	Verbosity ChannelVerbosity `json:"verbosity"`
+}
 
 // SetConnectorContextTagRequest The word this connector files what it captures under.
 type SetConnectorContextTagRequest struct {
@@ -80730,6 +80936,12 @@ type ConnectChannelJSONRequestBody = ConnectChannelRequest
 // ReplaceChannelTokenJSONRequestBody defines body for ReplaceChannelToken for application/json ContentType.
 type ReplaceChannelTokenJSONRequestBody = ReplaceChannelTokenRequest
 
+// SetChannelVerbosityJSONRequestBody defines body for SetChannelVerbosity for application/json ContentType.
+type SetChannelVerbosityJSONRequestBody = SetChannelVerbosityRequest
+
+// LinkChannelJSONRequestBody defines body for LinkChannel for application/json ContentType.
+type LinkChannelJSONRequestBody = LinkChannelRequest
+
 // SettleConversationClaimJSONRequestBody defines body for SettleConversationClaim for application/json ContentType.
 type SettleConversationClaimJSONRequestBody = SettleClaimRequest
 
@@ -95826,6 +96038,18 @@ type ServerInterface interface {
 	// Replace a channel connection's bot token in place.
 	// (PATCH /channel-connections/{id})
 	ReplaceChannelToken(w http.ResponseWriter, r *http.Request, id Id)
+	// Stop syncing a record with its chat channel.
+	// (DELETE /channel-links/{record_type}/{id})
+	UnlinkChannel(w http.ResponseWriter, r *http.Request, recordType ChannelLinkRecordType, id Id)
+	// The chat channel a deal or project is linked to, if any.
+	// (GET /channel-links/{record_type}/{id})
+	GetChannelLink(w http.ResponseWriter, r *http.Request, recordType ChannelLinkRecordType, id Id)
+	// Choose how much Margince posts into a record's channel.
+	// (PATCH /channel-links/{record_type}/{id})
+	SetChannelVerbosity(w http.ResponseWriter, r *http.Request, recordType ChannelLinkRecordType, id Id)
+	// Link a deal or project to a new or existing private chat channel.
+	// (POST /channel-links/{record_type}/{id})
+	LinkChannel(w http.ResponseWriter, r *http.Request, recordType ChannelLinkRecordType, id Id)
 	// Which messaging transports THIS installation has registered.
 	// (GET /channel-providers)
 	ListChannelProviders(w http.ResponseWriter, r *http.Request)
@@ -99906,6 +100130,30 @@ func (_ Unimplemented) DisconnectChannel(w http.ResponseWriter, r *http.Request,
 // Replace a channel connection's bot token in place.
 // (PATCH /channel-connections/{id})
 func (_ Unimplemented) ReplaceChannelToken(w http.ResponseWriter, r *http.Request, id Id) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Stop syncing a record with its chat channel.
+// (DELETE /channel-links/{record_type}/{id})
+func (_ Unimplemented) UnlinkChannel(w http.ResponseWriter, r *http.Request, recordType ChannelLinkRecordType, id Id) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// The chat channel a deal or project is linked to, if any.
+// (GET /channel-links/{record_type}/{id})
+func (_ Unimplemented) GetChannelLink(w http.ResponseWriter, r *http.Request, recordType ChannelLinkRecordType, id Id) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Choose how much Margince posts into a record's channel.
+// (PATCH /channel-links/{record_type}/{id})
+func (_ Unimplemented) SetChannelVerbosity(w http.ResponseWriter, r *http.Request, recordType ChannelLinkRecordType, id Id) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Link a deal or project to a new or existing private chat channel.
+// (POST /channel-links/{record_type}/{id})
+func (_ Unimplemented) LinkChannel(w http.ResponseWriter, r *http.Request, recordType ChannelLinkRecordType, id Id) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -116906,6 +117154,178 @@ func (siw *ServerInterfaceWrapper) ReplaceChannelToken(w http.ResponseWriter, r 
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.ReplaceChannelToken(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// UnlinkChannel operation middleware
+func (siw *ServerInterfaceWrapper) UnlinkChannel(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "record_type" -------------
+	var recordType ChannelLinkRecordType
+
+	err = runtime.BindStyledParameterWithOptions("simple", "record_type", chi.URLParam(r, "record_type"), &recordType, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "record_type", Err: err})
+		return
+	}
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.UnlinkChannel(w, r, recordType, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// GetChannelLink operation middleware
+func (siw *ServerInterfaceWrapper) GetChannelLink(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "record_type" -------------
+	var recordType ChannelLinkRecordType
+
+	err = runtime.BindStyledParameterWithOptions("simple", "record_type", chi.URLParam(r, "record_type"), &recordType, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "record_type", Err: err})
+		return
+	}
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetChannelLink(w, r, recordType, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// SetChannelVerbosity operation middleware
+func (siw *ServerInterfaceWrapper) SetChannelVerbosity(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "record_type" -------------
+	var recordType ChannelLinkRecordType
+
+	err = runtime.BindStyledParameterWithOptions("simple", "record_type", chi.URLParam(r, "record_type"), &recordType, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "record_type", Err: err})
+		return
+	}
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.SetChannelVerbosity(w, r, recordType, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// LinkChannel operation middleware
+func (siw *ServerInterfaceWrapper) LinkChannel(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "record_type" -------------
+	var recordType ChannelLinkRecordType
+
+	err = runtime.BindStyledParameterWithOptions("simple", "record_type", chi.URLParam(r, "record_type"), &recordType, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "record_type", Err: err})
+		return
+	}
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.LinkChannel(w, r, recordType, id)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -153726,6 +154146,18 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Patch(options.BaseURL+"/channel-connections/{id}", wrapper.ReplaceChannelToken)
+	})
+	r.Group(func(r chi.Router) {
+		r.Delete(options.BaseURL+"/channel-links/{record_type}/{id}", wrapper.UnlinkChannel)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/channel-links/{record_type}/{id}", wrapper.GetChannelLink)
+	})
+	r.Group(func(r chi.Router) {
+		r.Patch(options.BaseURL+"/channel-links/{record_type}/{id}", wrapper.SetChannelVerbosity)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/channel-links/{record_type}/{id}", wrapper.LinkChannel)
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/channel-providers", wrapper.ListChannelProviders)

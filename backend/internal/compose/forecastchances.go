@@ -120,7 +120,7 @@ var forecastStageEntriesSQL = `
 		   AND h.changed_at >= $1 AND h.changed_at < $2
 		 ORDER BY h.deal_id, h.to_stage_id, h.changed_at, COALESCE(h.write_seq, 0), h.id
 	)
-	SELECT e.stage_id,
+	SELECT e.stage_id, (SELECT d.owner_id FROM deal d WHERE d.id = e.deal_id),
 	       CASE WHEN closed.semantic IS NULL THEN 0 WHEN closed.semantic = 'won' THEN 1 ELSE 2 END,
 	       greatest(extract(epoch FROM COALESCE(closed.at, left_pipeline.at, $2) - e.changed_at) / 86400, 0)
 	  FROM entry e
@@ -145,23 +145,29 @@ func forecastStageEvidence(ctx context.Context, tx pgx.Tx, cutoff time.Time) (ma
 		return nil, fmt.Errorf("compose: reading the recorded stage entries: %w", err)
 	}
 	defer rows.Close()
-	byStage := map[string][]forecasting.StageEntry{}
+	byStage, seats := map[string][]forecasting.StageEntry{}, map[string][]ids.UUID{}
 	for rows.Next() {
 		var stage ids.UUID
+		var owner *ids.UUID
 		var outcome int
 		var entry forecasting.StageEntry
-		if err := rows.Scan(&stage, &outcome, &entry.Days); err != nil {
+		if err := rows.Scan(&stage, &owner, &outcome, &entry.Days); err != nil {
 			return nil, fmt.Errorf("compose: reading a recorded stage entry: %w", err)
 		}
 		entry.Outcome = forecasting.EntryOutcome(outcome)
 		byStage[stage.String()] = append(byStage[stage.String()], entry)
+		if owner != nil {
+			seats[stage.String()] = append(seats[stage.String()], *owner)
+		}
 	}
 	if err := rows.Err(); err != nil {
 		return nil, fmt.Errorf("compose: reading the recorded stage entries: %w", err)
 	}
 	out := make(map[string]forecasting.StageEvidence, len(byStage))
 	for stage, entries := range byStage {
-		out[stage] = forecasting.EstimateStageEvidence(entries)
+		evidence := forecasting.EstimateStageEvidence(entries)
+		evidence.Seats = seats[stage]
+		out[stage] = evidence
 	}
 	return out, nil
 }
@@ -301,6 +307,13 @@ func ForecastStageChances(ctx context.Context, tx pgx.Tx, at time.Time) (forecas
 	out := forecasting.StageChances{SelfCorrecting: on, EvidenceCutoff: period.LocalDay(at)}
 	evidence, err := forecastStageEvidence(principal.SystemActing(ctx, forecastChanceActor), tx, out.EvidenceCutoff)
 	if err != nil {
+		return forecasting.StageChances{}, err
+	}
+	groups := make([][]ids.UUID, 0, len(evidence))
+	for _, stage := range evidence {
+		groups = append(groups, stage.Seats)
+	}
+	if err := requireNoLoneColleague(ctx, tx, groups); err != nil {
 		return forecasting.StageChances{}, err
 	}
 	rows, err := tx.Query(ctx, `

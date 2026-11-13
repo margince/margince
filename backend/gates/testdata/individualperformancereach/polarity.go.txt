@@ -1,0 +1,72 @@
+package polarity
+
+import (
+	"net/http"
+	"slices"
+
+	"example.test/auth"
+	"example.test/httperr"
+)
+
+type Handlers struct{}
+
+func teamFigure() []int { return []int{2} }
+
+// thinGroups is a planted floor: true where a group is too small to show.
+func thinGroups(groups [][]string) []bool { return make([]bool, len(groups)) }
+
+// The switch is off on this branch, and it hands out the team's figure.
+func (h Handlers) GetTheTeamWhileOff(w http.ResponseWriter, r *http.Request) {
+	if allowed, _ := auth.IndividualPerformanceOf(r.Context()); !allowed {
+		httperr.WriteJSON(w, http.StatusOK, teamFigure())
+		return
+	}
+	httperr.Write(w, r, auth.OffError{})
+}
+
+func (h Handlers) GetTheTeamUnlessOff(w http.ResponseWriter, r *http.Request) {
+	if allowed, _ := auth.IndividualPerformanceOf(r.Context()); !allowed {
+		httperr.Write(w, r, auth.OffError{})
+		return
+	}
+	httperr.WriteJSON(w, http.StatusOK, teamFigure())
+}
+
+// While the switch is off, the team's figure passes the floor first.
+func (h Handlers) GetTheTeamOrTheFloor(w http.ResponseWriter, r *http.Request) {
+	if allowed, _ := auth.IndividualPerformanceOf(r.Context()); allowed {
+		httperr.WriteJSON(w, http.StatusOK, teamFigure())
+		return
+	}
+	if slices.Contains(thinGroups([][]string{{"a", "b"}}), true) {
+		httperr.Write(w, r, auth.OffError{})
+		return
+	}
+	httperr.WriteJSON(w, http.StatusOK, teamFigure())
+}
+
+func (h Handlers) GetPastTheFloor(w http.ResponseWriter, r *http.Request) {
+	thin := thinGroups([][]string{{"a", "b"}})
+	if thin[0] {
+		httperr.Write(w, r, auth.OffError{})
+		return
+	}
+	httperr.WriteJSON(w, http.StatusOK, teamFigure())
+}
+
+// The floor said the group is too small, and the figure goes out anyway.
+func (h Handlers) GetInsideTheFloor(w http.ResponseWriter, r *http.Request) {
+	thin := thinGroups([][]string{{"a"}})
+	if thin[0] {
+		httperr.WriteJSON(w, http.StatusOK, teamFigure())
+		return
+	}
+	httperr.Write(w, r, auth.OffError{})
+}
+
+// A figure-free call after an unchecked figure does not make it figure-free.
+func (h Handlers) GetAFigureThenTheCatalog(w http.ResponseWriter, r *http.Request) {
+	figures := teamFigure()
+	auth.Catalog()
+	httperr.WriteJSON(w, http.StatusOK, figures)
+}

@@ -17213,6 +17213,136 @@ paths:
             application/problem+json:
               schema: { $ref: '#/components/schemas/Problem' }
 
+  # --------------------------- /channel-links -------------------------------
+  # A deal or a project linked to one channel of the team chat (Dispact). Margince
+  # keeps a card in the channel and posts what happens on the record; what the
+  # channel decides comes back as summarised notes. Linking needs the right to
+  # edit the record, and reading needs the right to see it.
+  /channel-links/{record_type}/{id}:
+    parameters:
+      - name: record_type
+        in: path
+        required: true
+        schema: { $ref: '#/components/schemas/ChannelLinkRecordType' }
+      - $ref: '#/components/parameters/Id'
+    get:
+      tags: [Connectors]
+      operationId: getChannelLink
+      security: [ { bearerAuth: [] }, { cookieAuth: [] } ]
+      x-mcp-tool: { verb: channel_link, router: read_details, action: channel_link, tier: auto_execute, scope: read, served_by: route }
+      summary: The chat channel a deal or project is linked to, if any.
+      description: |
+        `off` means no chat bot is connected, so nothing can be linked. `none` means the record has
+        no channel yet. `paused` means the channel was archived or deleted in the chat, or the bot
+        lost its access; nothing is posted until the link is replaced. A deal's channel is also its
+        project's, so a project reads the channel of its deal when it has none of its own.
+      responses:
+        '200':
+          description: The link state.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ChannelLinkState' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+    post:
+      tags: [Connectors]
+      operationId: linkChannel
+      security: [ { bearerAuth: [] }, { cookieAuth: [] } ]
+      x-mcp-tool: { verb: link_channel, router: send_outbound, action: link_channel, tier: auto_execute, scope: send, served_by: route, ask_user_first: true }
+      summary: Link a deal or project to a new or existing private chat channel.
+      description: |
+        `create` makes a private channel named after the record and invites the member linking it
+        and the record's owner, when they have a chat account. `existing` takes a private channel the bot is
+        already in, named by its slug or its link, and changes nobody's membership.
+
+        Linking an existing channel requires `summarize_history`. When it is true, the talk so far
+        is read and up to five summaries are filed as notes; an agent must ask the user first. A
+        channel Margince creates has no history to summarise.
+
+        A deal and its project share one channel: linking a deal whose project has none links both.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/LinkChannelRequest' }
+      responses:
+        '201':
+          description: The record is linked.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ChannelLinkState' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404':
+          description: 'The record is not visible, or the channel was not found (`code: channel_not_found`).'
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+        '409':
+          description: 'No bot is connected (`code: channel_bot_not_connected`), the record already has a channel (`code: record_already_linked`), or the channel already belongs to another record (`code: channel_already_linked`).'
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+        '422':
+          description: 'The channel is public (`code: channel_not_private`), the bot is not in it (`code: channel_bot_not_member`), or the request is malformed.'
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+        '502':
+          description: 'The chat could not be reached (`code: channel_provider_unreachable`); nothing was written.'
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+    patch:
+      tags: [Connectors]
+      operationId: setChannelVerbosity
+      security: [ { bearerAuth: [] }, { cookieAuth: [] } ]
+      x-mcp-tool: { verb: set_channel_verbosity, router: change_capture, action: set_channel_verbosity, tier: auto_execute, scope: write, served_by: route }
+      summary: Choose how much Margince posts into a record's channel.
+      description: |
+        `everything` posts every change, `important` (the default) the changes a team acts on,
+        `milestones` only stage, offer and contract steps, and `silent` posts nothing but keeps the
+        card current.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/SetChannelVerbosityRequest' }
+      responses:
+        '200':
+          description: The link state.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ChannelLinkState' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404':
+          description: 'The record is not visible, or it has no channel (`code: channel_link_not_found`).'
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+    delete:
+      tags: [Connectors]
+      operationId: unlinkChannel
+      security: [ { bearerAuth: [] }, { cookieAuth: [] } ]
+      x-mcp-tool: { verb: unlink_channel, router: change_capture, action: unlink_channel, tier: auto_execute, scope: write, served_by: route, ask_user_first: true }
+      summary: Stop syncing a record with its chat channel.
+      description: |
+        Margince stops posting and reading. The channel and its messages stay in the chat, and the
+        notes already filed stay on the record. Linking the same channel again later files no
+        summary twice.
+      responses:
+        '204': { description: Unlinked. }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404':
+          description: 'The record is not visible, or it has no channel (`code: channel_link_not_found`).'
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+
   # ----------------------- /webhook-subscriptions ---------------------------
   # Outbound webhook subscriptions (E10/S-E10.6, A51): a first-party outbound
   # surface — signed, retried delivery of published domain events to a
@@ -45364,13 +45494,16 @@ components:
       required: [id, provider, channelId, channelLabel, status, version]
       properties:
         id: { type: string, format: uuid }
-        provider: { type: string, enum: [telegram], x-extensible-enum: true }
+        provider: { type: string, enum: [telegram, dispact], x-extensible-enum: true }
         channelId:
           type: string
-          description: The provider's own id for the bot — the key the binding is unique on.
+          description: The provider's own id for the bot — the key the binding is unique on. For Dispact it is the chat's team id.
         channelLabel:
           type: string
           description: The bot's @username. Display only — a username is mutable and re-assignable, so it identifies nothing.
+        address:
+          type: string
+          description: The web address of a self-hosted provider's install (Dispact). Absent for Telegram.
         status:
           type: string
           enum: [pending, connected, disconnected, error, reauth_required]
@@ -45394,11 +45527,15 @@ components:
       type: object
       required: [provider, botToken]
       properties:
-        provider: { type: string, enum: [telegram] }
+        provider: { type: string, enum: [telegram, dispact] }
         botToken:
           type: string
           minLength: 1
-          description: The BotFather token, `<bot id>:<secret>`. Sealed into the vault on arrival and never echoed back.
+          description: The bot token. For Telegram the BotFather token, `<bot id>:<secret>`; for Dispact the app token, `gwapp_…`. Sealed into the vault on arrival and never echoed back.
+        address:
+          type: string
+          maxLength: 500
+          description: The chat's web address, such as `https://chat.example.com`. Required for Dispact, which every team hosts itself; refused for Telegram.
     ReplaceChannelTokenRequest:
       type: object
       required: [botToken]
@@ -45407,6 +45544,77 @@ components:
           type: string
           minLength: 1
           description: The replacement BotFather token. Sealed into the vault on arrival and never echoed back.
+
+    # ---- chat channel links ----
+    ChannelLinkRecordType:
+      type: string
+      enum: [deal, project]
+      description: The kind of record a chat channel is linked to.
+    ChannelVerbosity:
+      type: string
+      enum: [everything, important, milestones, silent]
+      x-extensible-enum: true
+      description: How much Margince posts into a linked channel.
+    ChannelLinkState:
+      type: object
+      additionalProperties: false
+      required: [state]
+      properties:
+        state:
+          type: string
+          enum: [off, none, linked, paused]
+          x-extensible-enum: true
+          description: '`off`: no chat bot is connected. `none`: no channel yet. `linked`: posting and reading. `paused`: the channel is gone or the bot lost access.'
+        link:
+          $ref: '#/components/schemas/ChannelLink'
+        invites:
+          $ref: '#/components/schemas/ChannelInvites'
+    ChannelLink:
+      type: object
+      additionalProperties: false
+      required: [id, provider, channel_slug, channel_name, channel_url, verbosity, status, created_at]
+      properties:
+        id: { type: string, format: uuid }
+        provider: { type: string, enum: [dispact], x-extensible-enum: true }
+        channel_slug: { type: string }
+        channel_name: { type: string }
+        channel_url: { type: string, description: The channel's address in the chat. }
+        verbosity: { $ref: '#/components/schemas/ChannelVerbosity' }
+        status: { type: string, enum: [active, channel_gone], x-extensible-enum: true }
+        deal_id: { type: [string, 'null'], format: uuid }
+        project_id: { type: [string, 'null'], format: uuid }
+        created_at: { type: string, format: date-time }
+    ChannelInvites:
+      type: object
+      additionalProperties: false
+      required: [invited, not_in_chat, skipped_over_cap]
+      description: Who a newly created channel was opened to.
+      properties:
+        invited: { type: integer, description: Members added to the channel. }
+        not_in_chat: { type: integer, description: Members invited who have no chat account. }
+        skipped_over_cap: { type: integer, description: Members left out because a new channel invites at most 50. }
+    LinkChannelRequest:
+      type: object
+      additionalProperties: false
+      required: [mode]
+      properties:
+        mode:
+          type: string
+          enum: [create, existing]
+        channel:
+          type: string
+          maxLength: 500
+          description: For `existing`, the channel's slug or its link.
+        verbosity: { $ref: '#/components/schemas/ChannelVerbosity' }
+        summarize_history:
+          type: boolean
+          description: For `existing`, required. True files up to five summaries of the talk so far.
+    SetChannelVerbosityRequest:
+      type: object
+      additionalProperties: false
+      required: [verbosity]
+      properties:
+        verbosity: { $ref: '#/components/schemas/ChannelVerbosity' }
 
     ImportObject:
       type: string

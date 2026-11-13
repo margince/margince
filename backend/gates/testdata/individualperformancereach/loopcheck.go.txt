@@ -1,0 +1,84 @@
+package loopcheck
+
+import (
+	"context"
+	"net/http"
+
+	"example.test/auth"
+	"example.test/httperr"
+)
+
+type Handlers struct{}
+
+func checkedFigure(ctx context.Context, row string) (int, error) {
+	if err := auth.Require(ctx); err != nil {
+		return 0, err
+	}
+	return len(row), nil
+}
+
+func uncheckedFigure(row string) int { return len(row) }
+
+// Each loop runs over the figure-free catalog, as a document's cells are read
+// after the document is validated.
+
+// Every pass reads its figure through a check.
+func (h Handlers) GetEachRowChecked(w http.ResponseWriter, r *http.Request) {
+	var out []int
+	for _, row := range auth.Catalog() {
+		figure, err := checkedFigure(r.Context(), row)
+		if err != nil {
+			httperr.Write(w, r, err)
+			return
+		}
+		out = append(out, figure)
+	}
+	httperr.WriteJSON(w, http.StatusOK, out)
+}
+
+// One way through a pass skips the check.
+func (h Handlers) GetEachRowSkippingOnePass(w http.ResponseWriter, r *http.Request) {
+	var out []int
+	for _, row := range auth.Catalog() {
+		if row == "won" {
+			out = append(out, uncheckedFigure(row))
+			continue
+		}
+		figure, err := checkedFigure(r.Context(), row)
+		if err != nil {
+			httperr.Write(w, r, err)
+			return
+		}
+		out = append(out, figure)
+	}
+	httperr.WriteJSON(w, http.StatusOK, out)
+}
+
+// A figure held from before the loop is not covered by checks inside it.
+func (h Handlers) GetAfterAnUncheckedFigure(w http.ResponseWriter, r *http.Request) {
+	names := auth.Catalog()
+	out := []int{uncheckedFigure(names[0])}
+	for _, row := range names {
+		figure, err := checkedFigure(r.Context(), row)
+		if err != nil {
+			httperr.Write(w, r, err)
+			return
+		}
+		out = append(out, figure)
+	}
+	httperr.WriteJSON(w, http.StatusOK, out)
+}
+
+// No row, so the loop runs no time and nothing holds a figure.
+func (h Handlers) GetNoRows(w http.ResponseWriter, r *http.Request) {
+	var out []int
+	for _, row := range auth.Catalog()[:0] {
+		figure, err := checkedFigure(r.Context(), row)
+		if err != nil {
+			httperr.Write(w, r, err)
+			return
+		}
+		out = append(out, figure)
+	}
+	httperr.WriteJSON(w, http.StatusOK, out)
+}

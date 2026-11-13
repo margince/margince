@@ -15,9 +15,9 @@ input and output schema in folds below it. What a tool may do and whether a huma
 |---|---:|
 | Tools | 48 |
 | Resources | 14 |
-| Tool catalog | 233.3 KB |
+| Tool catalog | 233.7 KB |
 | Resource catalog | 5.5 KB |
-| Approx. wire tokens | 61139 |
+| Approx. wire tokens | 61233 |
 | Largest tool | `read_context` (11.7 KB) |
 | Scopes rendered | `read`, `draft`, `write`, `send`, `enrich` |
 
@@ -33,10 +33,10 @@ tool adds to that listing, and what it costs each scheduled agent, agent by agen
 | Part | Bytes | Share | In a run's prompt? |
 |---|---:|---:|---|
 | Output schemas | 51.5 KB | 22% | **No**: a result's shape, never listed to a model |
-| Descriptions (incl. governance clause) | 54.1 KB | 23% | Yes, every step |
-| Input schemas | 115.9 KB | 49% | Yes, every step |
+| Descriptions (incl. governance clause) | 54.2 KB | 23% | Yes, every step |
+| Input schemas | 116.2 KB | 49% | Yes, every step |
 | _Names, annotations, punctuation_ | 11.8 KB | 5% | Partly |
-| **Description + input schema** | **170.0 KB** | **72%** | **the recurring cost** |
+| **Description + input schema** | **170.4 KB** | **72%** | **the recurring cost** |
 
 Output schemas are the largest part of the total and are never sent to a model;
 descriptions and input schemas are what each step pays for.
@@ -70,7 +70,7 @@ descriptions and input schemas are what each step pays for.
 | [`change_access`](#change_access) | Share records and set up members and teams |  |  | 706 |
 | [`change_activities`](#change_activities) | Log, plan and file activities |  |  | 2116 |
 | [`change_attention`](#change_attention) | Act on proposals, notices and the weekly plan |  |  | 899 |
-| [`change_capture`](#change_capture) | Decide what comes into the CRM |  |  | 1080 |
+| [`change_capture`](#change_capture) | Decide what comes into the CRM |  |  | 1129 |
 | [`change_compliance`](#change_compliance) | Record consent, stops, holds and privacy work |  |  | 879 |
 | [`change_lists`](#change_lists) | Make and change lists |  |  | 620 |
 | [`change_my_settings`](#change_my_settings) | Change the user's own preferences and voice |  |  | 601 |
@@ -95,7 +95,7 @@ descriptions and input schemas are what each step pays for.
 | [`read_approval`](#read_approval) | Read one staged action in full | yes | [`ui://margince/approval.html`](#approval_view) | 154 |
 | [`read_attention`](#read_attention) | See what needs attention | yes | [`ui://margince/attention.html`](#attention_view) | 365 |
 | [`read_context`](#read_context) | Get the story so far | yes | [`ui://margince/context.html`](#context_view) | 413 |
-| [`read_details`](#read_details) | Read a record's panels and the day's lists | yes |  | 2230 |
+| [`read_details`](#read_details) | Read a record's panels and the day's lists | yes |  | 2241 |
 | [`read_forecast`](#read_forecast) | Read the forecast and how it moved | yes | [`ui://margince/forecast.html`](#forecast_view) | 978 |
 | [`read_import`](#read_import) | Read an import run or the import format | yes |  | 235 |
 | [`read_lists`](#read_lists) | Find and read lists | yes |  | 797 |
@@ -109,7 +109,7 @@ descriptions and input schemas are what each step pays for.
 | [`resolve_duplicates`](#resolve_duplicates) | Merge two records or dismiss a flagged pair |  |  | 618 |
 | [`run_research`](#run_research) | Run AI work for your user |  |  | 776 |
 | [`schedule_meeting`](#schedule_meeting) | Invite to a meeting |  |  | 456 |
-| [`send_outbound`](#send_outbound) | Send a message |  |  | 1695 |
+| [`send_outbound`](#send_outbound) | Send a message |  |  | 1722 |
 | [`update_record`](#update_record) | Update a record |  | [`ui://margince/update.html`](#update_view) | 626 |
 | [`whoami`](#whoami) | Who this passport acts for | yes |  | 129 |
 
@@ -1794,9 +1794,9 @@ change_tags to tag a record. (Runs immediately; the user's yes is needed for the
 add_consumer_mail_domain, add_workspace_email_domain, archive_corpus, disconnect_channel,
 disconnect_mailbox, import_vcards, lift_counterparty_hold, lift_exclusion,
 remove_consumer_mail_domain, remove_workspace_email_domain, set_blocked_domain, set_mail_posture,
-set_sender_decision, share_counterparty_hold_history, undo_import_run, withdraw_owner_identity, so
-tell them what the call will change and get it before calling, unless they asked for this call
-themselves; requires passport scope "write".)
+set_sender_decision, share_counterparty_hold_history, undo_import_run, unlink_channel,
+withdraw_owner_identity, so tell them what the call will change and get it before calling, unless
+they asked for this call themselves; requires passport scope "write".)
 ```
 
 <details><summary>Input schema</summary>
@@ -1831,6 +1831,7 @@ themselves; requires passport scope "write".)
         "reopen_domain",
         "restore_owner_identity",
         "set_blocked_domain",
+        "set_channel_verbosity",
         "set_context_tag",
         "set_history_baseline",
         "set_mail_posture",
@@ -1838,6 +1839,7 @@ themselves; requires passport scope "write".)
         "set_signature_enrichment",
         "share_counterparty_hold_history",
         "undo_import_run",
+        "unlink_channel",
         "update_corpus",
         "update_import_run",
         "upload_corpus_document",
@@ -1868,7 +1870,7 @@ themselves; requires passport scope "write".)
       "type": "string"
     },
     "id": {
-      "description": "archive_corpus, cancel_import_run, disconnect_channel, lift_counterparty_hold, lift_exclusion, remove_consumer_mail_domain, restore_owner_identity, undo_import_run, update_corpus, update_import_run, upload_corpus_document, validate_import_run, withdraw_owner_identity only",
+      "description": "archive_corpus, cancel_import_run, disconnect_channel, lift_counterparty_hold, lift_exclusion, remove_consumer_mail_domain, restore_owner_identity, set_channel_verbosity, undo_import_run, unlink_channel, update_corpus, update_import_run, upload_corpus_document, validate_import_run, withdraw_owner_identity only",
       "type": "string"
     },
     "idempotency_key": {
@@ -1880,8 +1882,12 @@ themselves; requires passport scope "write".)
       "description": "cancel_backfill, disconnect_mailbox, dismiss_mailbox_silence, set_context_tag, set_history_baseline, set_mail_posture, set_signature_enrichment only",
       "type": "string"
     },
+    "record_type": {
+      "description": "set_channel_verbosity, unlink_channel only",
+      "type": "string"
+    },
     "request_body": {
-      "description": "add_consumer_mail_domain, add_counterparty_hold, add_exclusion, add_owner_identity, add_workspace_email_domain, create_corpus, dismiss_mailbox_silence, keep_domain_as_company, set_blocked_domain, set_context_tag, set_history_baseline, set_mail_posture, set_sender_decision, set_signature_enrichment, update_corpus, update_import_run, validate_import_run only: The chosen action's request body; read_workspace topic actions lists its shape",
+      "description": "add_consumer_mail_domain, add_counterparty_hold, add_exclusion, add_owner_identity, add_workspace_email_domain, create_corpus, dismiss_mailbox_silence, keep_domain_as_company, set_blocked_domain, set_channel_verbosity, set_context_tag, set_history_baseline, set_mail_posture, set_sender_decision, set_signature_enrichment, update_corpus, update_import_run, validate_import_run only: The chosen action's request body; read_workspace topic actions lists its shape",
       "type": "object"
     }
   },
@@ -9061,6 +9067,7 @@ needs the user now, and read_record for a record's own fields.
         "automation_preview",
         "backfill_preview",
         "capture_triage",
+        "channel_link",
         "communication_review",
         "company_brief",
         "company_contracts",
@@ -9256,7 +9263,7 @@ needs the user now, and read_record for a record's own fields.
       "type": "boolean"
     },
     "id": {
-      "description": "activity_pipeline, automation_preview, capture_triage, communication_review, company_brief, company_contracts, company_linkedin_reach, company_logo, company_logo_icon, company_scan, contact_brief, contact_consent, contact_consent_guard, contact_overrides, contact_profile_fields, contact_stops, contract, controller_mail_preview, deal_legal_reviews, deal_lines, deal_margince_changes, deal_products, deal_room_brief, deal_suggestion, document_extraction, dossier, enrichment_run, evidence, finance_invoice_pdf, growth_fit, handoff_assignee, import_problems, intro_requests, knowledge_document, lead_promotion_preview, lead_score, lead_signals, lead_stops, legal_entity_logo, legal_review, link_candidates, magic_line_records, meeting_availability, notice_case, notice_case_review, notice_source_evidence, notice_source_preview, offer_pdf, offered_values, ownership_offer, ownership_offer_candidates, ownership_request, product_translations, project_filing, relationship_nudge, scheduled_send, tag_suggestion, voice_source_preview, website_inquiry_preview, win_evidence only",
+      "description": "activity_pipeline, automation_preview, capture_triage, channel_link, communication_review, company_brief, company_contracts, company_linkedin_reach, company_logo, company_logo_icon, company_scan, contact_brief, contact_consent, contact_consent_guard, contact_overrides, contact_profile_fields, contact_stops, contract, controller_mail_preview, deal_legal_reviews, deal_lines, deal_margince_changes, deal_products, deal_room_brief, deal_suggestion, document_extraction, dossier, enrichment_run, evidence, finance_invoice_pdf, growth_fit, handoff_assignee, import_problems, intro_requests, knowledge_document, lead_promotion_preview, lead_score, lead_signals, lead_stops, legal_entity_logo, legal_review, link_candidates, magic_line_records, meeting_availability, notice_case, notice_case_review, notice_source_evidence, notice_source_preview, offer_pdf, offered_values, ownership_offer, ownership_offer_candidates, ownership_request, product_translations, project_filing, relationship_nudge, scheduled_send, tag_suggestion, voice_source_preview, website_inquiry_preview, win_evidence only",
       "type": "string"
     },
     "kind": {
@@ -9326,7 +9333,7 @@ needs the user now, and read_record for a record's own fields.
       "type": "string"
     },
     "record_type": {
-      "description": "activity_deal_filing, ownership_offer, ownership_offer_candidates, ownership_request only",
+      "description": "activity_deal_filing, channel_link, ownership_offer, ownership_offer_candidates, ownership_request only",
       "type": "string"
     },
     "request_body": {
@@ -12606,7 +12613,7 @@ approval binds that exact message, so changed text needs a new one. email_new an
 conversation's activity_id. (Runs immediately; the user's yes is needed for the actions
 add_room_document, answer_invitation, change_invitation, chat_reply, deal_room_invite,
 deal_room_resend, details_confirmation, direct_send, double_opt_in, email_new, email_reply,
-invite_member, meeting_proposal, my_signature, open_room_thread, privacy_notice,
+invite_member, link_channel, meeting_proposal, my_signature, open_room_thread, privacy_notice,
 remove_room_document, reply_room_thread, resend_member_invite, resume_room, set_room_expiry,
 signature_template, update_room, update_room_document, so tell them what the call will change and
 get it before calling, unless they asked for this call themselves; requires passport scope "send".)
@@ -12642,6 +12649,7 @@ get it before calling, unless they asked for this call themselves; requires pass
         "email_new",
         "email_reply",
         "invite_member",
+        "link_channel",
         "meeting_proposal",
         "my_signature",
         "open_room_thread",
@@ -12713,7 +12721,7 @@ get it before calling, unless they asked for this call themselves; requires pass
       "type": "object"
     },
     "id": {
-      "description": "add_room_document, answer_invitation, change_invitation, deal_room_invite, deal_room_resend, details_confirmation, direct_send, double_opt_in, open_room_thread, privacy_notice, remove_room_document, reply_room_thread, resend_member_invite, resume_room, set_room_expiry, update_room, update_room_document only",
+      "description": "add_room_document, answer_invitation, change_invitation, deal_room_invite, deal_room_resend, details_confirmation, direct_send, double_opt_in, link_channel, open_room_thread, privacy_notice, remove_room_document, reply_room_thread, resend_member_invite, resume_room, set_room_expiry, update_room, update_room_document only",
       "type": "string"
     },
     "idempotency_key": {
@@ -12768,8 +12776,12 @@ get it before calling, unless they asked for this call themselves; requires pass
       "description": "deal_room_resend only",
       "type": "string"
     },
+    "record_type": {
+      "description": "link_channel only",
+      "type": "string"
+    },
     "request_body": {
-      "description": "add_room_document, answer_invitation, change_invitation, deal_room_invite, details_confirmation, direct_send, double_opt_in, invite_member, meeting_proposal, my_signature, open_room_thread, privacy_notice, reply_room_thread, set_room_expiry, signature_template, update_room, update_room_document only: The chosen action's request body; read_workspace topic actions lists its shape",
+      "description": "add_room_document, answer_invitation, change_invitation, deal_room_invite, details_confirmation, direct_send, double_opt_in, invite_member, link_channel, meeting_proposal, my_signature, open_room_thread, privacy_notice, reply_room_thread, set_room_expiry, signature_template, update_room, update_room_document only: The chosen action's request body; read_workspace topic actions lists its shape",
       "type": "object"
     },
     "scheduled_at": {

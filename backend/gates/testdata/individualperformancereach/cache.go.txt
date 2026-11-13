@@ -1,0 +1,92 @@
+package cache
+
+import (
+	"context"
+	"net/http"
+
+	"example.test/auth"
+	"example.test/httperr"
+)
+
+func checkedFigure(ctx context.Context, key string) (int, error) {
+	if err := auth.Require(ctx); err != nil {
+		return 0, err
+	}
+	return len(key), nil
+}
+
+func uncheckedFigure(key string) int { return len(key) }
+
+// heldCache is filled only after a checked read.
+type heldCache struct{ cache map[string]int }
+
+func (c *heldCache) read(ctx context.Context, key string) (int, error) {
+	if figure, ok := c.cache[key]; ok {
+		return figure, nil
+	}
+	figure, err := checkedFigure(ctx, key)
+	if err != nil {
+		return 0, err
+	}
+	c.cache[key] = figure
+	return figure, nil
+}
+
+// leakyCache reads like heldCache, but prime fills it unchecked.
+type leakyCache struct{ cache map[string]int }
+
+func (c *leakyCache) read(ctx context.Context, key string) (int, error) {
+	if figure, ok := c.cache[key]; ok {
+		return figure, nil
+	}
+	figure, err := checkedFigure(ctx, key)
+	if err != nil {
+		return 0, err
+	}
+	c.cache[key] = figure
+	return figure, nil
+}
+
+func (c *leakyCache) prime(key string) { c.cache[key] = uncheckedFigure(key) }
+
+type Handlers struct {
+	held  *heldCache
+	leaky *leakyCache
+}
+
+func New() Handlers {
+	return Handlers{held: &heldCache{cache: map[string]int{}}, leaky: &leakyCache{cache: map[string]int{}}}
+}
+
+func serve(w http.ResponseWriter, r *http.Request, figure int, err error) {
+	if err != nil {
+		httperr.Write(w, r, err)
+		return
+	}
+	httperr.WriteJSON(w, http.StatusOK, figure)
+}
+
+func (h Handlers) GetThroughAHeldCache(w http.ResponseWriter, r *http.Request) {
+	figure, err := h.held.read(r.Context(), r.URL.Path)
+	serve(w, r, figure, err)
+}
+
+func (h Handlers) GetThroughALeakyCache(w http.ResponseWriter, r *http.Request) {
+	figure, err := h.leaky.read(r.Context(), r.URL.Path)
+	serve(w, r, figure, err)
+}
+
+// A read with no ok cannot tell a hit from a miss.
+func (h Handlers) GetThroughAPlainRead(w http.ResponseWriter, r *http.Request) {
+	httperr.WriteJSON(w, http.StatusOK, h.held.cache[r.URL.Path])
+}
+
+// On the miss branch the cache holds nothing that was checked.
+func (h Handlers) GetOnTheMissBranch(w http.ResponseWriter, r *http.Request) {
+	figure, ok := h.held.cache[r.URL.Path]
+	if !ok {
+		httperr.WriteJSON(w, http.StatusOK, figure)
+		return
+	}
+	httperr.Write(w, r, auth.OffError{})
+}

@@ -941,17 +941,19 @@ The 28 tables owned by `capture`, as the migrations build them. [Back to the ent
 
 ## channel_connection
 
-12 columns · primary key `(id)` · referenced by 0 foreign keys
+14 columns · primary key `(id)` · referenced by 1 foreign key
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
 | `id` | `uuid`, default `uuidv7()` | yes | Primary key. |
+| `address` | `text` |  | The web address of a self-hosted provider's install (Dispact). |
 | `channel_id` | `text` | yes |  |
 | `channel_label` | `text` | yes |  |
 | `connected_by` | `uuid` | yes | Points at `app_user.id`. |
 | `credential_ref` | `text` | yes |  |
+| `events_credential_ref` | `text` |  |  |
 | `poll_offset` | `bigint`, default `0` | yes |  |
-| `provider` | `text` | yes | Always `telegram`: the column exists for the values it may hold later. |
+| `provider` | `text` | yes | One of `telegram`, `dispact`. |
 | `status` | `text` | yes | Only `connected` is live, and it is the only state a connect can produce: a pull ingress makes no provider call after the write, so there is no half-connected state. |
 | `archived_at` | `timestamp with time zone` |  | Soft-delete marker. `NULL` means live, and nearly every read filters on it. |
 | `created_at` | `timestamp with time zone`, default `now()` | yes | When the row was created. Set once. |
@@ -966,7 +968,8 @@ The 28 tables owned by `capture`, as the migrations build them. [Back to the ent
 
 **Rules**
 
-- `channel_connection_provider_check`: `CHECK ((provider = 'telegram'))`
+- `channel_connection_address_check`: `CHECK ((((provider = 'dispact') = (address IS NOT NULL)) AND ((address IS NULL) OR (address ~ '^https?://'))))`
+- `channel_connection_provider_check`: `CHECK ((provider = ANY (ARRAY['telegram', 'dispact'])))`
 - `channel_connection_status_check`: `CHECK ((status = ANY (ARRAY['connected', 'disconnected', 'error', 'reauth_required'])))`
 - `channel_connection_version_js_safe`: `CHECK (((version >= '-9007199254740991'::bigint) AND (version <= '9007199254740991'::bigint)))`
 
@@ -977,8 +980,8 @@ The 28 tables owned by `capture`, as the migrations build them. [Back to the ent
 
 **Triggers**
 
-- `text_bound_insert`: `AFTER INSERT FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL, '{"status": 20000, "provider": 20000, "channel_id": 20000, "channel_label": 120, "credential_ref": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"channel_id":20000,"channel_label":120,"credential_ref":20000,"provider":20000,"status":20000}')`
-- `text_bound_update`: `AFTER UPDATE FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"status": 20000, "provider": 20000, "channel_id": 20000, "channel_label": 120, "credential_ref": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"channel_id":20000,"channel_label":120,"credential_ref":20000,"provider":20000,"status":20000}')`
+- `text_bound_insert`: `AFTER INSERT FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL, '{"status": 20000, "address": 500, "provider": 20000, "channel_id": 20000, "channel_label": 120, "credential_ref": 20000, "events_credential_ref": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"address":500,"channel_id":20000,"channel_label":120,"credential_ref":20000,"events_credential_ref":20000,"provider":20000,"status":20000}')`
+- `text_bound_update`: `AFTER UPDATE FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"status": 20000, "address": 500, "provider": 20000, "channel_id": 20000, "channel_label": 120, "credential_ref": 20000, "events_credential_ref": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"address":500,"channel_id":20000,"channel_label":120,"credential_ref":20000,"events_credential_ref":20000,"provider":20000,"status":20000}')`
 - `trg_channel_connection_updated`: `BEFORE UPDATE FOR EACH ROW WHEN (((to_jsonb(old.*) - 'poll_offset') IS DISTINCT FROM (to_jsonb(new.*) - 'poll_offset'))) EXECUTE FUNCTION set_updated_at_bump_version()`
 
 ## raw_capture

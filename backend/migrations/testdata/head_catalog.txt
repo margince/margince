@@ -1632,7 +1632,9 @@ public.assurance_run.assurance_run_version_js_safe CHECK (((version >= '-9007199
 public.assurance_run.captured_by text NOT NULL gen=- def=-
 public.assurance_run.created_at timestamp with time zone NOT NULL gen=- def=now()
 public.assurance_run.digest text gen=- def=-
+public.assurance_run.eligible_deal_owners uuid[] gen=- def=-
 public.assurance_run.eligible_deals integer NOT NULL gen=- def=0
+public.assurance_run.eligible_signal_owners uuid[] gen=- def=-
 public.assurance_run.eligible_signals integer NOT NULL gen=- def=0
 public.assurance_run.id uuid NOT NULL gen=- def=uuidv7()
 public.assurance_run.outbox_inputs_tracked boolean NOT NULL gen=- def=false
@@ -2748,10 +2750,12 @@ public.capture_trace_pkey CREATE UNIQUE INDEX capture_trace_pkey ON public.captu
 public.capture_trace_user_window CREATE INDEX capture_trace_user_window ON public.capture_trace USING btree (user_id, occurred_at DESC)
 public.capture_trace_window CREATE INDEX capture_trace_window ON public.capture_trace USING btree (occurred_at DESC)
 public.channel_connection acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
+public.channel_connection.address text gen=- def=-
 public.channel_connection.archived_at timestamp with time zone gen=- def=-
+public.channel_connection.channel_connection_address_check CHECK ((((provider = 'dispact'::text) = (address IS NOT NULL)) AND ((address IS NULL) OR (address ~ '^https?://'::text))))
 public.channel_connection.channel_connection_connected_by_fkey FOREIGN KEY (connected_by) REFERENCES app_user(id) ON DELETE RESTRICT
 public.channel_connection.channel_connection_pkey PRIMARY KEY (id)
-public.channel_connection.channel_connection_provider_check CHECK ((provider = 'telegram'::text))
+public.channel_connection.channel_connection_provider_check CHECK ((provider = ANY (ARRAY['telegram'::text, 'dispact'::text])))
 public.channel_connection.channel_connection_status_check CHECK ((status = ANY (ARRAY['connected'::text, 'disconnected'::text, 'error'::text, 'reauth_required'::text])))
 public.channel_connection.channel_connection_version_js_safe CHECK (((version >= '-9007199254740991'::bigint) AND (version <= '9007199254740991'::bigint)))
 public.channel_connection.channel_id text NOT NULL gen=- def=-
@@ -2759,12 +2763,13 @@ public.channel_connection.channel_label text NOT NULL gen=- def=-
 public.channel_connection.connected_by uuid NOT NULL gen=- def=-
 public.channel_connection.created_at timestamp with time zone NOT NULL gen=- def=now()
 public.channel_connection.credential_ref text NOT NULL gen=- def=-
+public.channel_connection.events_credential_ref text gen=- def=-
 public.channel_connection.id uuid NOT NULL gen=- def=uuidv7()
 public.channel_connection.poll_offset bigint NOT NULL gen=- def=0
 public.channel_connection.provider text NOT NULL gen=- def=-
 public.channel_connection.status text NOT NULL gen=- def=-
-public.channel_connection.text_bound_insert CREATE TRIGGER text_bound_insert AFTER INSERT ON public.channel_connection FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL::jsonb, '{"status": 20000, "provider": 20000, "channel_id": 20000, "channel_label": 120, "credential_ref": 20000}'::jsonb)) EXECUTE FUNCTION refuse_oversized_text('{"channel_id":20000,"channel_label":120,"credential_ref":20000,"provider":20000,"status":20000}')
-public.channel_connection.text_bound_update CREATE TRIGGER text_bound_update AFTER UPDATE ON public.channel_connection FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"status": 20000, "provider": 20000, "channel_id": 20000, "channel_label": 120, "credential_ref": 20000}'::jsonb)) EXECUTE FUNCTION refuse_oversized_text('{"channel_id":20000,"channel_label":120,"credential_ref":20000,"provider":20000,"status":20000}')
+public.channel_connection.text_bound_insert CREATE TRIGGER text_bound_insert AFTER INSERT ON public.channel_connection FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL::jsonb, '{"status": 20000, "address": 500, "provider": 20000, "channel_id": 20000, "channel_label": 120, "credential_ref": 20000, "events_credential_ref": 20000}'::jsonb)) EXECUTE FUNCTION refuse_oversized_text('{"address":500,"channel_id":20000,"channel_label":120,"credential_ref":20000,"events_credential_ref":20000,"provider":20000,"status":20000}')
+public.channel_connection.text_bound_update CREATE TRIGGER text_bound_update AFTER UPDATE ON public.channel_connection FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"status": 20000, "address": 500, "provider": 20000, "channel_id": 20000, "channel_label": 120, "credential_ref": 20000, "events_credential_ref": 20000}'::jsonb)) EXECUTE FUNCTION refuse_oversized_text('{"address":500,"channel_id":20000,"channel_label":120,"credential_ref":20000,"events_credential_ref":20000,"provider":20000,"status":20000}')
 public.channel_connection.trg_channel_connection_updated CREATE TRIGGER trg_channel_connection_updated BEFORE UPDATE ON public.channel_connection FOR EACH ROW WHEN (((to_jsonb(old.*) - 'poll_offset'::text) IS DISTINCT FROM (to_jsonb(new.*) - 'poll_offset'::text))) EXECUTE FUNCTION set_updated_at_bump_version()
 public.channel_connection.updated_at timestamp with time zone NOT NULL gen=- def=now()
 public.channel_connection.version bigint NOT NULL gen=- def=1
@@ -2782,6 +2787,67 @@ public.channel_provider.text_bound_insert CREATE TRIGGER text_bound_insert AFTER
 public.channel_provider.text_bound_update CREATE TRIGGER text_bound_update AFTER UPDATE ON public.channel_provider FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"label": 120, "transport": 20000, "credential_model": 20000}'::jsonb)) EXECUTE FUNCTION refuse_oversized_text('{"credential_model":20000,"label":120,"transport":20000}')
 public.channel_provider.transport text NOT NULL gen=- def=-
 public.channel_provider_pkey CREATE UNIQUE INDEX channel_provider_pkey ON public.channel_provider USING btree (provider)
+public.chat_link acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
+public.chat_link.archived_at timestamp with time zone gen=- def=-
+public.chat_link.backfill_requested boolean NOT NULL gen=- def=false
+public.chat_link.card_fingerprint text gen=- def=-
+public.chat_link.card_message_id text gen=- def=-
+public.chat_link.channel_external_key text gen=- def=-
+public.chat_link.channel_name text NOT NULL gen=- def=-
+public.chat_link.channel_slug text NOT NULL gen=- def=-
+public.chat_link.chat_link_connection_id_fkey FOREIGN KEY (connection_id) REFERENCES channel_connection(id) ON DELETE RESTRICT
+public.chat_link.chat_link_deal_id_fkey FOREIGN KEY (deal_id) REFERENCES deal(id) ON DELETE CASCADE
+public.chat_link.chat_link_history_cursor_js_safe CHECK (((history_cursor IS NULL) OR ((history_cursor >= 0) AND (history_cursor <= '9007199254740991'::bigint))))
+public.chat_link.chat_link_linked_by_fkey FOREIGN KEY (linked_by) REFERENCES app_user(id) ON DELETE RESTRICT
+public.chat_link.chat_link_pkey PRIMARY KEY (id)
+public.chat_link.chat_link_project_id_fkey FOREIGN KEY (project_id) REFERENCES project(id) ON DELETE CASCADE
+public.chat_link.chat_link_provider_check CHECK ((provider = 'dispact'::text))
+public.chat_link.chat_link_record_check CHECK (((deal_id IS NOT NULL) OR (project_id IS NOT NULL)))
+public.chat_link.chat_link_status_check CHECK ((status = ANY (ARRAY['active'::text, 'channel_gone'::text])))
+public.chat_link.chat_link_verbosity_check CHECK ((verbosity = ANY (ARRAY['everything'::text, 'important'::text, 'milestones'::text, 'silent'::text])))
+public.chat_link.chat_link_version_js_safe CHECK (((version >= '-9007199254740991'::bigint) AND (version <= '9007199254740991'::bigint)))
+public.chat_link.connection_id uuid NOT NULL gen=- def=-
+public.chat_link.created_at timestamp with time zone NOT NULL gen=- def=now()
+public.chat_link.deal_id uuid gen=- def=-
+public.chat_link.history_cursor bigint gen=- def=-
+public.chat_link.history_synced_at timestamp with time zone gen=- def=-
+public.chat_link.id uuid NOT NULL gen=- def=uuidv7()
+public.chat_link.linked_by uuid NOT NULL gen=- def=-
+public.chat_link.project_id uuid gen=- def=-
+public.chat_link.provider text NOT NULL gen=- def=-
+public.chat_link.status text NOT NULL gen=- def='active'::text
+public.chat_link.text_bound_insert CREATE TRIGGER text_bound_insert AFTER INSERT ON public.chat_link FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL::jsonb, '{"status": 20000, "provider": 20000, "verbosity": 20000, "channel_name": 500, "channel_slug": 500, "card_message_id": 500, "card_fingerprint": 120, "channel_external_key": 500}'::jsonb)) EXECUTE FUNCTION refuse_oversized_text('{"card_fingerprint":120,"card_message_id":500,"channel_external_key":500,"channel_name":500,"channel_slug":500,"provider":20000,"status":20000,"verbosity":20000}')
+public.chat_link.text_bound_update CREATE TRIGGER text_bound_update AFTER UPDATE ON public.chat_link FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"status": 20000, "provider": 20000, "verbosity": 20000, "channel_name": 500, "channel_slug": 500, "card_message_id": 500, "card_fingerprint": 120, "channel_external_key": 500}'::jsonb)) EXECUTE FUNCTION refuse_oversized_text('{"card_fingerprint":120,"card_message_id":500,"channel_external_key":500,"channel_name":500,"channel_slug":500,"provider":20000,"status":20000,"verbosity":20000}')
+public.chat_link.trg_chat_link_updated CREATE TRIGGER trg_chat_link_updated BEFORE UPDATE ON public.chat_link FOR EACH ROW WHEN (((to_jsonb(old.*) - ARRAY['history_cursor'::text, 'history_synced_at'::text, 'card_message_id'::text, 'card_fingerprint'::text]) IS DISTINCT FROM (to_jsonb(new.*) - ARRAY['history_cursor'::text, 'history_synced_at'::text, 'card_message_id'::text, 'card_fingerprint'::text]))) EXECUTE FUNCTION set_updated_at_bump_version()
+public.chat_link.updated_at timestamp with time zone NOT NULL gen=- def=now()
+public.chat_link.verbosity text NOT NULL gen=- def='important'::text
+public.chat_link.version bigint NOT NULL gen=- def=1
+public.chat_link_pkey CREATE UNIQUE INDEX chat_link_pkey ON public.chat_link USING btree (id)
+public.chat_post_item acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
+public.chat_post_item.activity_id uuid gen=- def=-
+public.chat_post_item.attempts integer NOT NULL gen=- def=0
+public.chat_post_item.chat_post_item_attempts_check CHECK ((attempts >= 0))
+public.chat_post_item.chat_post_item_link_id_fkey FOREIGN KEY (link_id) REFERENCES chat_link(id) ON DELETE CASCADE
+public.chat_post_item.chat_post_item_pkey PRIMARY KEY (id)
+public.chat_post_item.chat_post_item_posted_check CHECK (((posted_at IS NULL) OR (post_id IS NOT NULL)))
+public.chat_post_item.chat_post_item_tier_check CHECK ((tier = ANY (ARRAY['milestone'::text, 'important'::text, 'everything'::text])))
+public.chat_post_item.created_at timestamp with time zone NOT NULL gen=- def=now()
+public.chat_post_item.detail jsonb NOT NULL gen=- def='{}'::jsonb
+public.chat_post_item.entity_id uuid NOT NULL gen=- def=-
+public.chat_post_item.entity_type text NOT NULL gen=- def=-
+public.chat_post_item.event_id uuid NOT NULL gen=- def=-
+public.chat_post_item.event_type text NOT NULL gen=- def=-
+public.chat_post_item.id uuid NOT NULL gen=- def=uuidv7()
+public.chat_post_item.last_error text gen=- def=-
+public.chat_post_item.link_id uuid NOT NULL gen=- def=-
+public.chat_post_item.message_id text gen=- def=-
+public.chat_post_item.post_id uuid gen=- def=-
+public.chat_post_item.posted_at timestamp with time zone gen=- def=-
+public.chat_post_item.text_bound_insert CREATE TRIGGER text_bound_insert AFTER INSERT ON public.chat_post_item FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL::jsonb, '{"tier": 20000, "event_type": 20000, "last_error": 500, "message_id": 500, "entity_type": 20000}'::jsonb)) EXECUTE FUNCTION refuse_oversized_text('{"entity_type":20000,"event_type":20000,"last_error":500,"message_id":500,"tier":20000}')
+public.chat_post_item.text_bound_update CREATE TRIGGER text_bound_update AFTER UPDATE ON public.chat_post_item FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"tier": 20000, "event_type": 20000, "last_error": 500, "message_id": 500, "entity_type": 20000}'::jsonb)) EXECUTE FUNCTION refuse_oversized_text('{"entity_type":20000,"event_type":20000,"last_error":500,"message_id":500,"tier":20000}')
+public.chat_post_item.tier text NOT NULL gen=- def=-
+public.chat_post_item.withdrawn_at timestamp with time zone gen=- def=-
+public.chat_post_item_pkey CREATE UNIQUE INDEX chat_post_item_pkey ON public.chat_post_item USING btree (id)
 public.close_date_run acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.close_date_run.as_of date NOT NULL gen=- def=-
 public.close_date_run.captured_by text NOT NULL gen=- def=-
@@ -6098,6 +6164,8 @@ public.idx_capture_pending_counterparty_suppressed CREATE UNIQUE INDEX idx_captu
 public.idx_capture_sync_due CREATE INDEX idx_capture_sync_due ON public.capture_sync_state USING btree (next_sync_at)
 public.idx_capture_test_mailbox_sent_unechoed CREATE INDEX idx_capture_test_mailbox_sent_unechoed ON public.capture_test_mailbox_sent USING btree (user_id, sent_at) WHERE (echoed_at IS NULL)
 public.idx_capture_watch_renew CREATE INDEX idx_capture_watch_renew ON public.capture_connection USING btree (watch_expires_at) WHERE ((watch_expires_at IS NOT NULL) AND (status = 'connected'::text))
+public.idx_chat_post_item_activity CREATE INDEX idx_chat_post_item_activity ON public.chat_post_item USING btree (activity_id) WHERE (activity_id IS NOT NULL)
+public.idx_chat_post_item_pending CREATE INDEX idx_chat_post_item_pending ON public.chat_post_item USING btree (link_id, created_at) WHERE (posted_at IS NULL)
 public.idx_close_date_run_member_deal CREATE INDEX idx_close_date_run_member_deal ON public.close_date_run_member USING btree (deal_id)
 public.idx_commission_deal CREATE INDEX idx_commission_deal ON public.commission_entry USING btree (deal_id)
 public.idx_commission_partner CREATE INDEX idx_commission_partner ON public.commission_entry USING btree (partner_company_id, status)
@@ -10403,6 +10471,11 @@ public.uq_capture_backfill_live CREATE UNIQUE INDEX uq_capture_backfill_live ON 
 public.uq_capture_exclusion CREATE UNIQUE INDEX uq_capture_exclusion ON public.capture_exclusion USING btree (scope, user_id, kind, value) NULLS NOT DISTINCT
 public.uq_capture_freemail_domain CREATE UNIQUE INDEX uq_capture_freemail_domain ON public.capture_freemail_domain USING btree (domain)
 public.uq_channel_connection_provider CREATE UNIQUE INDEX uq_channel_connection_provider ON public.channel_connection USING btree (provider) WHERE (archived_at IS NULL)
+public.uq_chat_link_channel CREATE UNIQUE INDEX uq_chat_link_channel ON public.chat_link USING btree (provider, channel_slug) WHERE (archived_at IS NULL)
+public.uq_chat_link_deal CREATE UNIQUE INDEX uq_chat_link_deal ON public.chat_link USING btree (deal_id) WHERE ((archived_at IS NULL) AND (deal_id IS NOT NULL))
+public.uq_chat_link_project CREATE UNIQUE INDEX uq_chat_link_project ON public.chat_link USING btree (project_id) WHERE ((archived_at IS NULL) AND (project_id IS NOT NULL))
+public.uq_chat_post_item_activity CREATE UNIQUE INDEX uq_chat_post_item_activity ON public.chat_post_item USING btree (link_id, activity_id) WHERE (activity_id IS NOT NULL)
+public.uq_chat_post_item_event CREATE UNIQUE INDEX uq_chat_post_item_event ON public.chat_post_item USING btree (link_id, event_id)
 public.uq_close_date_run_one_running CREATE UNIQUE INDEX uq_close_date_run_one_running ON public.close_date_run USING btree (status) WHERE (status = 'running'::text)
 public.uq_commission_live_per_deal CREATE UNIQUE INDEX uq_commission_live_per_deal ON public.commission_entry USING btree (deal_id) WHERE ((status <> 'void'::text) AND (reversal_of IS NULL))
 public.uq_commission_trigger_event CREATE UNIQUE INDEX uq_commission_trigger_event ON public.commission_entry USING btree (trigger_event_id) WHERE (trigger_event_id IS NOT NULL)

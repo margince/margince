@@ -11088,6 +11088,57 @@ export interface paths {
         patch: operations["replaceChannelToken"];
         trace?: never;
     };
+    "/channel-links/{record_type}/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                record_type: components["schemas"]["ChannelLinkRecordType"];
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        /**
+         * The chat channel a deal or project is linked to, if any.
+         * @description `off` means no chat bot is connected, so nothing can be linked. `none` means the record has
+         *     no channel yet. `paused` means the channel was archived or deleted in the chat, or the bot
+         *     lost its access; nothing is posted until the link is replaced. A deal's channel is also its
+         *     project's, so a project reads the channel of its deal when it has none of its own.
+         */
+        get: operations["getChannelLink"];
+        put?: never;
+        /**
+         * Link a deal or project to a new or existing private chat channel.
+         * @description `create` makes a private channel named after the record and invites the member linking it
+         *     and the record's owner, when they have a chat account. `existing` takes a private channel the bot is
+         *     already in, named by its slug or its link, and changes nobody's membership.
+         *
+         *     Linking an existing channel requires `summarize_history`. When it is true, the talk so far
+         *     is read and up to five summaries are filed as notes; an agent must ask the user first. A
+         *     channel Margince creates has no history to summarise.
+         *
+         *     A deal and its project share one channel: linking a deal whose project has none links both.
+         */
+        post: operations["linkChannel"];
+        /**
+         * Stop syncing a record with its chat channel.
+         * @description Margince stops posting and reading. The channel and its messages stay in the chat, and the
+         *     notes already filed stay on the record. Linking the same channel again later files no
+         *     summary twice.
+         */
+        delete: operations["unlinkChannel"];
+        options?: never;
+        head?: never;
+        /**
+         * Choose how much Margince posts into a record's channel.
+         * @description `everything` posts every change, `important` (the default) the changes a team acts on,
+         *     `milestones` only stage, offer and contract steps, and `silent` posts nothing but keeps the
+         *     card current.
+         */
+        patch: operations["setChannelVerbosity"];
+        trace?: never;
+    };
     "/web-forms": {
         parameters: {
             query?: never;
@@ -31826,11 +31877,13 @@ export interface components {
             /** Format: uuid */
             id: string;
             /** @enum {string} */
-            provider: "telegram";
-            /** @description The provider's own id for the bot — the key the binding is unique on. */
+            provider: "telegram" | "dispact";
+            /** @description The provider's own id for the bot — the key the binding is unique on. For Dispact it is the chat's team id. */
             channelId: string;
             /** @description The bot's @username. Display only — a username is mutable and re-assignable, so it identifies nothing. */
             channelLabel: string;
+            /** @description The web address of a self-hosted provider's install (Dispact). Absent for Telegram. */
+            address?: string;
             /**
              * @description Only `connected` is live, and it is the only state a connect can produce: a pull ingress makes no provider call after the write, so there is no half-connected state. `error` and `reauth_required` are where ingress parks a binding it can no longer poll (another consumer holds the bot's updates; the token was refused), and neither is polled again until an operator acts. `pending` is a value NO server produces: it is retained because the code generator disambiguates enum member names across the whole document, so dropping it renames unrelated generated constants in other schemas.
              * @enum {string}
@@ -31848,13 +31901,74 @@ export interface components {
         };
         ConnectChannelRequest: {
             /** @enum {string} */
-            provider: "telegram";
-            /** @description The BotFather token, `<bot id>:<secret>`. Sealed into the vault on arrival and never echoed back. */
+            provider: "telegram" | "dispact";
+            /** @description The bot token. For Telegram the BotFather token, `<bot id>:<secret>`; for Dispact the app token, `gwapp_…`. Sealed into the vault on arrival and never echoed back. */
             botToken: string;
+            /** @description The chat's web address, such as `https://chat.example.com`. Required for Dispact, which every team hosts itself; refused for Telegram. */
+            address?: string;
         };
         ReplaceChannelTokenRequest: {
             /** @description The replacement BotFather token. Sealed into the vault on arrival and never echoed back. */
             botToken: string;
+        };
+        /**
+         * @description The kind of record a chat channel is linked to.
+         * @enum {string}
+         */
+        ChannelLinkRecordType: "deal" | "project";
+        /**
+         * @description How much Margince posts into a linked channel.
+         * @enum {string}
+         */
+        ChannelVerbosity: "everything" | "important" | "milestones" | "silent";
+        ChannelLinkState: {
+            /**
+             * @description `off`: no chat bot is connected. `none`: no channel yet. `linked`: posting and reading. `paused`: the channel is gone or the bot lost access.
+             * @enum {string}
+             */
+            state: "off" | "none" | "linked" | "paused";
+            link?: components["schemas"]["ChannelLink"];
+            invites?: components["schemas"]["ChannelInvites"];
+        };
+        ChannelLink: {
+            /** Format: uuid */
+            id: string;
+            /** @enum {string} */
+            provider: "dispact";
+            channel_slug: string;
+            channel_name: string;
+            /** @description The channel's address in the chat. */
+            channel_url: string;
+            verbosity: components["schemas"]["ChannelVerbosity"];
+            /** @enum {string} */
+            status: "active" | "channel_gone";
+            /** Format: uuid */
+            deal_id?: string | null;
+            /** Format: uuid */
+            project_id?: string | null;
+            /** Format: date-time */
+            created_at: string;
+        };
+        /** @description Who a newly created channel was opened to. */
+        ChannelInvites: {
+            /** @description Members added to the channel. */
+            invited: number;
+            /** @description Members invited who have no chat account. */
+            not_in_chat: number;
+            /** @description Members left out because a new channel invites at most 50. */
+            skipped_over_cap: number;
+        };
+        LinkChannelRequest: {
+            /** @enum {string} */
+            mode: "create" | "existing";
+            /** @description For `existing`, the channel's slug or its link. */
+            channel?: string;
+            verbosity?: components["schemas"]["ChannelVerbosity"];
+            /** @description For `existing`, required. True files up to five summaries of the talk so far. */
+            summarize_history?: boolean;
+        };
+        SetChannelVerbosityRequest: {
+            verbosity: components["schemas"]["ChannelVerbosity"];
         };
         /**
          * @description What the file's rows are, and therefore what the run creates.
@@ -80422,6 +80536,172 @@ export interface operations {
                     "application/problem+json": components["schemas"]["Problem"];
                 };
             };
+        };
+    };
+    getChannelLink: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                record_type: components["schemas"]["ChannelLinkRecordType"];
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The link state. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ChannelLinkState"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    linkChannel: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                record_type: components["schemas"]["ChannelLinkRecordType"];
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["LinkChannelRequest"];
+            };
+        };
+        responses: {
+            /** @description The record is linked. */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ChannelLinkState"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            /** @description The record is not visible, or the channel was not found (`code: channel_not_found`). */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description No bot is connected (`code: channel_bot_not_connected`), the record already has a channel (`code: record_already_linked`), or the channel already belongs to another record (`code: channel_already_linked`). */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description The channel is public (`code: channel_not_private`), the bot is not in it (`code: channel_bot_not_member`), or the request is malformed. */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description The chat could not be reached (`code: channel_provider_unreachable`); nothing was written. */
+            502: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    unlinkChannel: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                record_type: components["schemas"]["ChannelLinkRecordType"];
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Unlinked. */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            /** @description The record is not visible, or it has no channel (`code: channel_link_not_found`). */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    setChannelVerbosity: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                record_type: components["schemas"]["ChannelLinkRecordType"];
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SetChannelVerbosityRequest"];
+            };
+        };
+        responses: {
+            /** @description The link state. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ChannelLinkState"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            /** @description The record is not visible, or it has no channel (`code: channel_link_not_found`). */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            422: components["responses"]["ValidationError"];
         };
     };
     listWebForms: {

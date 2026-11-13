@@ -28,6 +28,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/compose/assurancefloor"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/assurance"
 	"github.com/margince/margince/backend/internal/modules/deals"
@@ -66,7 +67,33 @@ func AssuranceExceptionsIn(
 	if err := reportingDimensionContext(ctx, tx, selection, &frame); err != nil {
 		return nil, err
 	}
-	return assuranceExceptionsWith(ctx, tx, nil, requested, 0, nil, frame)
+	found, err := assuranceExceptionsWith(ctx, tx, nil, requested, 0, nil, frame)
+	if err != nil {
+		return nil, err
+	}
+	return found, requireFlooredFindings(ctx, tx, requested, found)
+}
+
+// requireFlooredFindings holds the list's groups and totals to the floor while
+// the switch is off. Those are each type's count, its exposure per currency,
+// and the whole list. With no scope named the list covers every deal the
+// reader may read, so it is judged by its contributors, as a company total is.
+func requireFlooredFindings(ctx context.Context, tx pgx.Tx, requested *RequestedScope, found []assurance.Exception) error {
+	allowed, err := individualPerformance(ctx, tx)
+	if err != nil || allowed {
+		return err
+	}
+	resolved := ResolvedScope{Kind: ScopeKindWorkspace}
+	if requested != nil {
+		if resolved, err = ResolveAnalyticsScope(ctx, tx, *requested); err != nil {
+			return err
+		}
+	}
+	groups, err := assurancefloor.ListGroups(ctx, tx, populationMembers, found)
+	if err != nil {
+		return err
+	}
+	return requireFlooredTotals(ctx, tx, resolved, groups)
 }
 
 // TeamAssuranceExceptions reads the open findings on deals the members own

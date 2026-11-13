@@ -16,6 +16,7 @@ import (
 	"go/ast"
 	"go/token"
 	"go/types"
+	"maps"
 	"path"
 	"slices"
 	"strings"
@@ -54,33 +55,43 @@ type figurePoints struct {
 	unchecked []token.Pos
 }
 
+// add counts one figure. A branch is walked for each way into it, so it can
+// reach one place again; unchecked holds no place twice.
 func (p *figurePoints) add(at token.Pos, checked bool) {
 	p.count++
-	if !checked {
+	if !checked && !slices.Contains(p.unchecked, at) {
 		p.unchecked = append(p.unchecked, at)
 	}
 }
 
 func (p *figurePoints) merge(other figurePoints) {
 	p.count += other.count
-	p.unchecked = append(p.unchecked, other.unchecked...)
+	for _, at := range other.unchecked {
+		p.add(at, false)
+		p.count--
+	}
 }
 
 // walkVerdict is what walking one function from one entry state found.
 // guards says every success return passed a check, and bare says each that did
 // not carries no figure. writes are the response writes that carry a figure;
-// returns are the returns that carry a value.
+// returns are the returns that carry a value. answers marks each result that
+// carries the switch's answer on every success return, and captured holds the
+// outer variables a literal leaves holding one.
 type walkVerdict struct {
-	guards  bool
-	bare    bool
-	writes  figurePoints
-	returns figurePoints
+	guards   bool
+	bare     bool
+	writes   figurePoints
+	returns  figurePoints
+	answers  []bool
+	captured map[types.Object]bool
+	exits    int
 }
 
 type walkKey struct {
-	decl          *types.Func
-	lit           *ast.FuncLit
-	checked, bare bool
+	decl                *types.Func
+	lit                 *ast.FuncLit
+	checked, bare, held bool
 }
 
 // switchWalk walks the graph, reusing the verdict of a call whose parameters
@@ -100,8 +111,8 @@ func newSwitchWalk(g *switchGraph) *switchWalk {
 // one that does not check, so recursion cannot lend itself a check.
 func (sw *switchWalk) walk(next run, entry pathState, depth int) walkVerdict {
 	fn := next.fn
-	key := walkKey{fn.decl, fn.lit, entry.checked, entry.bare}
-	reusable := len(next.bound) == 0 && len(next.names) == 0 && fn.env == nil
+	key := walkKey{fn.decl, fn.lit, entry.checked, entry.bare, entry.held}
+	reusable := len(next.bound) == 0 && len(next.names) == 0 && fn.env == nil && len(entry.answers) == 0
 	if verdict, ok := sw.memo[key]; ok && reusable {
 		return verdict
 	}
@@ -116,15 +127,18 @@ func (sw *switchWalk) walk(next run, entry pathState, depth int) walkVerdict {
 	}
 	w := &pathWalk{
 		sw: sw, frame: &pathFrame{info: info, bound: next.bound, names: next.names, parent: fn.env, depth: depth},
-		shape: shapeOf(ft, info), verdict: walkVerdict{guards: true, bare: true},
+		shape: shapeOf(ft, info), verdict: walkVerdict{guards: true, bare: true}, lit: fn.lit,
+		answerCalls: map[*ast.CallExpr]callAnswer{}, discarded: map[*ast.CallExpr]bool{}, hits: map[types.Object]bool{},
+		floorCalls: map[*ast.CallExpr]int{}, floors: map[types.Object]bool{},
 	}
 	// Only a function that returns nothing keeps the caller's figure-free
 	// state, as a writer of what it was handed does. Any other makes its own.
-	start := pathState{checked: entry.checked, bare: entry.bare && w.shape.results == 0}
+	start := pathState{checked: entry.checked, bare: entry.bare && w.shape.results == 0, answers: entry.answers, held: entry.held}
 	end, falls := w.block(body.List, start)
 	if falls {
 		w.exit(nil, end, body.Rbrace)
 	}
+	w.finishAnswers()
 	if reusable {
 		sw.memo[key] = w.verdict
 	}
@@ -142,12 +156,12 @@ func (sw *switchWalk) parts(fn fnValue) (*ast.FuncType, *ast.BlockStmt, *types.I
 	return decl.Type, decl.Body, sw.g.infos[fn.decl]
 }
 
-// resultShape is how many results a function declares and whether the last
-// is an error.
+// resultShape is how many results a function declares, whether the last is
+// an error, and the named results a bare return hands back.
 type resultShape struct {
 	results int
 	errLast bool
-	named   bool
+	named   []types.Object
 }
 
 func shapeOf(ft *ast.FuncType, info *types.Info) resultShape {
@@ -157,7 +171,9 @@ func shapeOf(ft *ast.FuncType, info *types.Info) resultShape {
 	}
 	for _, field := range ft.Results.List {
 		shape.results += max(1, len(field.Names))
-		shape.named = shape.named || len(field.Names) > 0
+		for _, name := range field.Names {
+			shape.named = append(shape.named, info.Defs[name])
+		}
 	}
 	last := ft.Results.List[len(ft.Results.List)-1]
 	shape.errLast = types.Identical(info.TypeOf(last.Type), errorType)
@@ -166,23 +182,45 @@ func shapeOf(ft *ast.FuncType, info *types.Info) resultShape {
 
 // pathState is what holds on one path. checked says a check was passed. bare
 // says all it holds came from a call that answers no figure. nonNil holds the
-// error variables known not to be nil.
+// error variables known not to be nil. answers holds the variables that hold
+// the switch's answer: it checks only on a branch a condition on it decides.
 type pathState struct {
 	checked bool
 	bare    bool
 	nonNil  map[types.Object]bool
+	answers map[types.Object]bool
+	// held says the path got a figure from a call no check covered. A
+	// figure-free call after it cannot make the path figure-free again.
+	held bool
 }
 
 // covered reports a path whose output needs nothing more from the switch.
 func (s pathState) covered() bool { return s.checked || s.bare }
 
 func (s pathState) withNonNil(obj types.Object) pathState {
-	next := map[types.Object]bool{obj: true}
-	for known := range s.nonNil {
-		next[known] = true
-	}
-	s.nonNil = next
+	s.nonNil = withMember(s.nonNil, obj, true)
 	return s
+}
+
+// withMember is set with obj in it or not, leaving set itself unchanged.
+func withMember(set map[types.Object]bool, obj types.Object, in bool) map[types.Object]bool {
+	if set[obj] == in {
+		return set
+	}
+	next := maps.Clone(set)
+	if next == nil {
+		next = map[types.Object]bool{}
+	}
+	if in {
+		next[obj] = true
+	} else {
+		delete(next, obj)
+	}
+	return next
+}
+
+func (s pathState) same(other pathState) bool {
+	return s.checked == other.checked && s.bare == other.bare && s.held == other.held && maps.Equal(s.nonNil, other.nonNil) && maps.Equal(s.answers, other.answers)
 }
 
 // breakTarget is a statement a break leaves, and for a loop one a continue
@@ -194,13 +232,23 @@ type breakTarget struct {
 	continues []pathState
 }
 
-// pathWalk walks the body of one function.
+// pathWalk walks the body of one function. answerCalls holds what each call
+// it walked answers, for the condition or assignment that reads it.
 type pathWalk struct {
-	sw      *switchWalk
-	frame   *pathFrame
-	shape   resultShape
-	verdict walkVerdict
-	targets []*breakTarget
+	sw          *switchWalk
+	frame       *pathFrame
+	shape       resultShape
+	verdict     walkVerdict
+	targets     []*breakTarget
+	lit         *ast.FuncLit
+	answerCalls map[*ast.CallExpr]callAnswer
+	discarded   map[*ast.CallExpr]bool
+	// hits holds the ok variables of comma-ok reads of held caches.
+	hits map[types.Object]bool
+	// floorCalls holds the result each floor call answers in; floors holds
+	// the variables that hold one.
+	floorCalls map[*ast.CallExpr]int
+	floors     map[types.Object]bool
 }
 
 func (w *pathWalk) block(stmts []ast.Stmt, s pathState) (pathState, bool) {
@@ -219,13 +267,22 @@ func (w *pathWalk) stmt(stmt ast.Stmt, s pathState, label string) (pathState, bo
 	case *ast.BlockStmt:
 		return w.block(node.List, s)
 	case *ast.ExprStmt:
+		if call, ok := ast.Unparen(node.X).(*ast.CallExpr); ok {
+			w.discarded[call] = true
+		}
 		return w.expr(node.X, s), !stopsThePath(node.X, w.frame.info)
 	case *ast.AssignStmt:
+		if call, ok := ast.Unparen(node.Rhs[0]).(*ast.CallExpr); ok && len(node.Rhs) == 1 && allBlank(node.Lhs) {
+			w.discarded[call] = true
+		}
 		for _, rhs := range node.Rhs {
 			s = w.expr(rhs, s)
 		}
+		w.sw.g.observeWrite(node, s)
+		s = w.assign(node.Lhs, node.Rhs, s)
 	case *ast.DeclStmt:
 		s = w.expr(declValues(node), s)
+		s = w.declare(node, s)
 	case *ast.IncDecStmt:
 		s = w.expr(node.X, s)
 	case *ast.SendStmt:
@@ -272,21 +329,34 @@ func declValues(decl *ast.DeclStmt) ast.Expr {
 	return values
 }
 
+// ifStmt walks each branch once for each way into it, so a check one way
+// proves does not stand for another. In err != nil || !allowed, the first
+// way in knows err is set, and the second knows the answer.
 func (w *pathWalk) ifStmt(node *ast.IfStmt, s pathState) (pathState, bool) {
 	if node.Init != nil {
 		s, _ = w.stmt(node.Init, s, "")
 	}
 	s = w.expr(node.Cond, s)
-	thenState, thenFalls := w.block(node.Body.List, narrowed(node.Cond, true, s, w.frame.info))
-	elseState, elseFalls := narrowed(node.Cond, false, s, w.frame.info), true
-	if node.Else != nil {
-		elseState, elseFalls = w.stmt(node.Else, elseState, "")
+	var ends []pathState
+	var falls []bool
+	for _, entry := range w.cases(node.Cond, true, s) {
+		end, fell := w.block(node.Body.List, entry)
+		ends, falls = append(ends, end), append(falls, fell)
 	}
-	return joinPaths(s, []pathState{thenState, elseState}, []bool{thenFalls, elseFalls})
+	for _, entry := range w.cases(node.Cond, false, s) {
+		end, fell := entry, true
+		if node.Else != nil {
+			end, fell = w.stmt(node.Else, entry, "")
+		}
+		ends, falls = append(ends, end), append(falls, fell)
+	}
+	return joinPaths(s, ends, falls)
 }
 
 // loop walks a body that may run no time at all. What follows holds only what
-// held on entry and at every way an iteration ends.
+// held on entry and at every way an iteration ends. A loop entered with no
+// figure stays figure-free when every way an iteration ends is checked or
+// figure-free. Zero passes add nothing, and each pass adds only checked ones.
 func (w *pathWalk) loop(init ast.Stmt, cond ast.Expr, body *ast.BlockStmt, s pathState, label string) (pathState, bool) {
 	if init != nil {
 		s, _ = w.stmt(init, s, "")
@@ -301,7 +371,8 @@ func (w *pathWalk) loop(init ast.Stmt, cond ast.Expr, body *ast.BlockStmt, s pat
 		ends = append(ends, end)
 	}
 	for _, e := range ends {
-		s.bare = s.bare && e.bare
+		s.bare = s.bare && e.covered()
+		s.held = s.held || e.held
 	}
 	return s, true
 }
@@ -334,6 +405,9 @@ func (w *pathWalk) switchStmt(init ast.Stmt, tag ast.Expr, body *ast.BlockStmt, 
 		entry := s
 		for _, expr := range list {
 			entry = w.expr(expr, entry)
+		}
+		if tag == nil && len(list) == 1 {
+			entry = w.joinedCase(list[0], entry)
 		}
 		end, fell := w.block(stmts, entry)
 		ends, falls = append(ends, end), append(falls, fell)
@@ -377,9 +451,17 @@ func (w *pathWalk) branch(node *ast.BranchStmt, s pathState) {
 func joinPaths(before pathState, ends []pathState, falls []bool) (pathState, bool) {
 	joined, someFall := pathState{checked: true, bare: true, nonNil: before.nonNil}, false
 	for i, end := range ends {
-		if falls[i] {
-			joined.checked, joined.bare, someFall = joined.checked && end.checked, joined.bare && end.bare, true
+		if !falls[i] {
+			continue
 		}
+		if !someFall {
+			joined.answers = end.answers
+		}
+		for obj := range joined.answers {
+			joined.answers = withMember(joined.answers, obj, end.answers[obj])
+		}
+		joined.checked, joined.bare, someFall = joined.checked && end.checked, joined.bare && end.bare, true
+		joined.held = joined.held || end.held
 	}
 	if !someFall {
 		return before, false
@@ -402,18 +484,81 @@ func stopsThePath(expr ast.Expr, info *types.Info) bool {
 }
 
 // exit records one way out of the function. A return of an error known not to
-// be nil is a refusal, and hands out nothing.
+// be nil is a refusal, and hands out nothing. A return that hands back the
+// error of a call that checks has passed that check if the error is nil.
 func (w *pathWalk) exit(results []ast.Expr, s pathState, at token.Pos) {
 	if w.shape.errLast && len(results) == w.shape.results && w.refuses(results[len(results)-1], s, w.carriesValue(results)) {
 		return
 	}
-	if !s.checked {
+	answered := w.returnAnswers(results, s)
+	checked := s.checked || (w.shape.errLast && answered[w.shape.results-1])
+	if !checked {
 		w.verdict.guards = false
 		w.verdict.bare = w.verdict.bare && s.bare
 	}
 	if w.carriesValue(results) {
-		w.verdict.returns.add(at, s.covered())
+		w.verdict.returns.add(at, s.covered() || checked)
 	}
+	if w.verdict.exits == 0 {
+		w.verdict.answers, w.verdict.captured = answered, w.outerAnswers(s)
+	}
+	for i := range w.verdict.answers {
+		w.verdict.answers[i] = w.verdict.answers[i] && answered[i]
+	}
+	for obj := range w.verdict.captured {
+		w.verdict.captured = withMember(w.verdict.captured, obj, s.answers[obj])
+	}
+	w.verdict.exits++
+}
+
+// finishAnswers settles the error result: it carries the answer when every
+// success return passed a check, so the caller checks where it is nil.
+func (w *pathWalk) finishAnswers() {
+	if w.verdict.answers == nil {
+		w.verdict.answers = make([]bool, w.shape.results)
+	}
+	if w.shape.errLast {
+		w.verdict.answers[w.shape.results-1] = w.verdict.guards
+	}
+}
+
+// returnAnswers marks each result of a return that holds the switch's
+// answer. That is a variable holding one, a reader's call, or one result of
+// a call whose results it passes on whole.
+func (w *pathWalk) returnAnswers(results []ast.Expr, s pathState) []bool {
+	answered := make([]bool, w.shape.results)
+	switch {
+	case len(results) == 0:
+		for i, obj := range w.shape.named {
+			answered[i] = obj != nil && s.answers[obj]
+		}
+	case len(results) == w.shape.results:
+		for i, result := range results {
+			answered[i] = w.isAnswer(result, s)
+		}
+	case len(results) == 1:
+		if call, ok := ast.Unparen(results[0]).(*ast.CallExpr); ok {
+			for i := range answered {
+				answered[i] = w.answerCalls[call].at(i, w.shape.results)
+			}
+		}
+	}
+	return answered
+}
+
+// outerAnswers are the variables a literal's state holds an answer in that
+// were declared outside it, which its caller keeps when the literal is run.
+func (w *pathWalk) outerAnswers(s pathState) map[types.Object]bool {
+	if w.lit == nil {
+		return nil
+	}
+	var out map[types.Object]bool
+	for obj := range s.answers {
+		if obj.Pos() < w.lit.Pos() || obj.Pos() > w.lit.End() {
+			out = withMember(out, obj, true)
+		}
+	}
+	return out
 }
 
 // carriesValue reports a return that hands out something besides its error,
@@ -449,29 +594,28 @@ func spelledZero(expr ast.Expr) bool {
 	return false
 }
 
-// refusalConstructors are outside functions that always answer a new error.
-// The stand-in importer leaves their bodies unread, so they are declared here.
-// A return beside a value that is not spelled zero is no refusal through them.
-var refusalConstructors = map[string]bool{"fmt.Errorf": true, "errors.New": true, "httperr.Validation": true}
-
 // refuses reports an error result that cannot be nil. That is a variable a
-// condition proved set, a literal, a sentinel, a new error, or a wrapped one.
-// Beside a value, only an error a condition proved set is a refusal.
+// condition proved set, a literal, a sentinel, or a new error. It is also a
+// call whose types and returns prove one, or one of those wrapped. Beside a
+// value that is not spelled zero, only an error a condition proved set is one.
 func (w *pathWalk) refuses(expr ast.Expr, s pathState, valued bool) bool {
-	info := w.frame.info
+	info, g := w.frame.info, w.sw.g
 	switch e := ast.Unparen(expr).(type) {
 	case *ast.Ident:
 		obj := info.Uses[e]
-		return obj != nil && (s.nonNil[obj] || (!valued && isPackageVar(obj) && isSentinelName(obj.Name())))
+		return obj != nil && (s.nonNil[obj] || (!valued && g.isSentinel(obj)))
 	case *ast.CompositeLit:
 		return !valued
 	case *ast.UnaryExpr:
 		_, lit := ast.Unparen(e.X).(*ast.CompositeLit)
 		return !valued && e.Op == token.AND && lit
 	case *ast.SelectorExpr:
-		return !valued && qualifiesAPackage(e.X, info) && isSentinelName(e.Sel.Name)
+		return !valued && (g.isSentinel(info.Uses[e.Sel]) || g.declaredSentinel(e, info))
 	case *ast.CallExpr:
-		return (!valued && refusalConstructors[importedCallee(e, info)]) || slices.ContainsFunc(e.Args, func(arg ast.Expr) bool {
+		if !valued && (slices.Contains(g.config.refusalConstructors, g.outsideCallee(e, info)) || g.alwaysRefuses(calledFunc(e, info))) {
+			return true
+		}
+		return slices.ContainsFunc(e.Args, func(arg ast.Expr) bool {
 			_, literal := ast.Unparen(arg).(*ast.CompositeLit)
 			return !literal && w.refuses(arg, s, valued)
 		})
@@ -479,56 +623,136 @@ func (w *pathWalk) refuses(expr ast.Expr, s pathState, valued bool) bool {
 	return false
 }
 
-// qualifiesAPackage reports a selector's left side naming an import. An import
-// whose path ends in a version (pgx/v5) leaves its name unresolved under the
-// stand-in importer, and is read as one too.
-func qualifiesAPackage(x ast.Expr, info *types.Info) bool {
-	ident, ok := ast.Unparen(x).(*ast.Ident)
-	if !ok {
-		return false
-	}
-	obj := info.Uses[ident]
-	_, isPkg := obj.(*types.PkgName)
-	return isPkg || obj == nil
-}
-
-// isSentinelName reports a package error spelled the Go way, errX or ErrX. The
-// name is read because errors.New under a stand-in import leaves no type.
-func isSentinelName(name string) bool {
-	return strings.HasPrefix(name, "err") || strings.HasPrefix(name, "Err")
-}
-
 func isPackageVar(obj types.Object) bool {
 	v, ok := obj.(*types.Var)
 	return ok && v.Pkg() != nil && v.Parent() == v.Pkg().Scope()
 }
 
-// narrowed is the state inside a branch of cond: an error compared with nil,
-// or one errors.Is or errors.As matched, is known set.
-func narrowed(cond ast.Expr, taken bool, s pathState, info *types.Info) pathState {
+// maxCases bounds the ways into one branch the walk tells apart. Past it they
+// are joined, and a check holds only if it holds on each.
+const maxCases = 16
+
+// cases are the states inside a branch of cond, one for each way into it.
+// An error compared with nil, or one errors.Is or errors.As matched, is known
+// set. A condition on an answer decides it: an error answer checks where it
+// is nil, and a bool answer checks on either side.
+func (w *pathWalk) cases(cond ast.Expr, taken bool, s pathState) []pathState {
+	info := w.frame.info
 	switch e := ast.Unparen(cond).(type) {
 	case *ast.UnaryExpr:
 		if e.Op == token.NOT {
-			return narrowed(e.X, !taken, s, info)
+			return w.cases(e.X, !taken, s)
 		}
 	case *ast.BinaryExpr:
-		switch {
-		case e.Op == token.LAND && taken, e.Op == token.LOR && !taken:
-			return narrowed(e.Y, taken, narrowed(e.X, taken, s, info), info)
-		case (e.Op == token.NEQ && taken) || (e.Op == token.EQL && !taken):
-			if obj := comparedWithNil(e, info); obj != nil {
-				return s.withNonNil(obj)
-			}
-		}
+		return w.binaryCases(e, taken, s)
 	case *ast.CallExpr:
 		name := importedCallee(e, info)
 		if taken && (name == "errors.Is" || name == "errors.As") && len(e.Args) == 2 && !isNilIdent(ast.Unparen(e.Args[1])) {
 			if ident, ok := ast.Unparen(e.Args[0]).(*ast.Ident); ok && info.Uses[ident] != nil {
-				return s.withNonNil(info.Uses[ident])
+				return []pathState{s.withNonNil(info.Uses[ident])}
 			}
 		}
+		s.checked = s.checked || (taken && w.answerCalls[e].at(0, 1)) || (!taken && w.floorHeld(e))
+	case *ast.IndexExpr:
+		s.checked = s.checked || (!taken && w.floorHeld(e))
+	case *ast.Ident:
+		s.checked = s.checked || (taken && (s.answers[info.Uses[e]] || w.hits[info.Uses[e]]))
 	}
-	return s
+	return []pathState{s}
+}
+
+func (w *pathWalk) binaryCases(e *ast.BinaryExpr, taken bool, s pathState) []pathState {
+	then := func(states []pathState, y bool) []pathState {
+		var out []pathState
+		for _, state := range states {
+			out = append(out, w.cases(e.Y, y, state)...)
+		}
+		return out
+	}
+	switch {
+	case e.Op == token.LAND && taken, e.Op == token.LOR && !taken:
+		return distinctCases(s, then(w.cases(e.X, taken, s), taken))
+	case e.Op == token.LAND, e.Op == token.LOR:
+		return distinctCases(s, append(w.cases(e.X, taken, s), then(w.cases(e.X, !taken, s), taken)...))
+	case e.Op == token.EQL || e.Op == token.NEQ:
+		isNil := (e.Op == token.EQL) == taken
+		if obj := comparedWithNil(e, w.frame.info); obj != nil && !isNil {
+			return []pathState{s.withNonNil(obj)}
+		} else if obj != nil {
+			s.checked = s.checked || s.answers[obj]
+		}
+		if call := calledBesideNil(e); call != nil && isNil {
+			s.checked = s.checked || w.answerCalls[call].at(0, 1)
+		}
+	}
+	return []pathState{s}
+}
+
+// distinctCases drops a way in that holds what another does, and joins them
+// all past maxCases.
+func distinctCases(before pathState, states []pathState) []pathState {
+	var out []pathState
+	for _, state := range states {
+		if !slices.ContainsFunc(out, state.same) {
+			out = append(out, state)
+		}
+	}
+	if len(out) > maxCases {
+		joined, _ := joinPaths(before, out, slices.Repeat([]bool{true}, len(out)))
+		return []pathState{joined}
+	}
+	return out
+}
+
+// joinedCase is the state inside a switch clause cond selects, every way in
+// joined.
+func (w *pathWalk) joinedCase(cond ast.Expr, s pathState) pathState {
+	ways := w.cases(cond, true, s)
+	joined, _ := joinPaths(s, ways, slices.Repeat([]bool{true}, len(ways)))
+	return joined
+}
+
+// floorHeld reports a condition that is true where the floor withholds a
+// figure: thin[i], or slices.Contains(thin, true), over a floor's answer.
+func (w *pathWalk) floorHeld(cond ast.Expr) bool {
+	var held ast.Expr
+	switch e := ast.Unparen(cond).(type) {
+	case *ast.IndexExpr:
+		held = e.X
+	case *ast.CallExpr:
+		if index, isFloor := w.floorCalls[e]; isFloor {
+			return index == 0
+		}
+		if importedCallee(e, w.frame.info) != "slices.Contains" || len(e.Args) != 2 {
+			return false
+		}
+		if value := w.frame.info.Types[e.Args[1]].Value; value == nil || value.String() != "true" {
+			return false
+		}
+		held = e.Args[0]
+	}
+	switch e := ast.Unparen(held).(type) {
+	case *ast.Ident:
+		return w.floors[w.frame.info.Uses[e]]
+	case *ast.CallExpr:
+		index, isFloor := w.floorCalls[e]
+		return isFloor && index == 0
+	}
+	return false
+}
+
+// calledBesideNil is the call a comparison with nil reads, as in
+// auth.Require(ctx) != nil.
+func calledBesideNil(e *ast.BinaryExpr) *ast.CallExpr {
+	x, y := ast.Unparen(e.X), ast.Unparen(e.Y)
+	if isNilIdent(x) {
+		x, y = y, x
+	}
+	call, ok := x.(*ast.CallExpr)
+	if !ok || !isNilIdent(y) {
+		return nil
+	}
+	return call
 }
 
 func comparedWithNil(e *ast.BinaryExpr, info *types.Info) types.Object {

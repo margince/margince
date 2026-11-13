@@ -2071,6 +2071,21 @@ kinds:
       forever; registered it fails with a message that says the installation has
       no model configured.
 
+  chat_link_flush:
+    role: worker
+    go_type: ChatLinkFlushArgs
+    queue: default
+    timeout: 2m
+    opts_owner: caller
+    registration: {when: [ChannelVault], absent: registers_nothing}
+    args:
+      Workspace: id
+      LinkID: id
+    reason: >-
+      One linked channel's pending events become one post, and its card is kept
+      current. A few calls to the chat, each bounded at fifteen seconds, so two
+      minutes covers a card, a rewrite and the post with room to spare.
+
   telegram_ingest:
     role: worker
     go_type: TelegramIngestArgs

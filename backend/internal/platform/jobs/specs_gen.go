@@ -11,7 +11,7 @@ import "time"
 // would believe. It says nothing about the file on disk — a pair
 // regenerated TOGETHER from a stale contract matches here, and the drift
 // gate is what catches that.
-const JobContractHash = "080ec4617990fa0a2364b0339ec4e13e4a017fa4e3f7c0e7141f9b632758c544"
+const JobContractHash = "df5b6ef945af1f37757c7679fe05d9e8f0f700f94ff77a7e26b3f060405b497d"
 
 // specs is every declared kind. A kind absent from this table is a kind
 // nobody declared, and MustBeTotal is what names them: the runner calls it
@@ -316,6 +316,16 @@ var specs = map[string]Spec{
 		FanOutTo:   "captured_deal_refile",
 		OptsOwner:  OptsCaller,
 		Cadence:    Cadence{Fixed: 1 * time.Hour},
+	},
+	"chat_link_flush": {
+		Kind:         "chat_link_flush",
+		GoType:       "ChatLinkFlushArgs",
+		Role:         Worker,
+		Queue:        "default",
+		Timeout:      TimeoutPolicy{Fixed: 2 * time.Minute},
+		OptsOwner:    OptsCaller,
+		Registration: Registration{When: []string{"ChannelVault"}},
+		Args:         []ArgField{{Name: "LinkID"}, {Name: "Workspace"}},
 	},
 	"check_company_vat": {
 		Kind:         "check_company_vat",

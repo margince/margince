@@ -124,6 +124,7 @@ type Server struct {
 	promiseTakeOverHandlers
 	importHandlers
 	channelHandlers
+	chatLinkHandlers
 	traceHandlers
 	pipelineTraceHandlers
 	filteredExportHandlers

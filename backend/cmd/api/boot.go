@@ -302,12 +302,11 @@ func declaredSurfaceOptions(ctx context.Context, cfg apiConfig, bootstrap deploy
 
 // sharedRedisClient opens the ONE raw-Redis handle this role holds, plus the
 // close func the caller defers for the process lifetime. Two surfaces share it:
-// the agent volume meter and the
-// non-production data reset, which purges the streams and announces itself over
-// the same connection. Sharing is the point — a second client would be a second
-// connection to the same server for no gain — and it is deliberately NOT the
-// inline relay's client, which a split deployment (--inline-relay=false) does
-// not build at all.
+// the agent volume meter and the non-production data reset, which purges the
+// streams and announces itself over the same connection. A second client would
+// be a second connection to the same server for no gain. It is not the inline
+// relay's client, which a split deployment (--inline-relay=false) does not
+// build at all.
 //
 // A LAZY client (no boot ping): a split-deployment api that cannot reach Redis
 // must still boot. A reset then reports the unreachable bus as the error it is,
@@ -359,7 +358,6 @@ func agentVolumeOptions(volumeMeter *agentvolume.Meter) []compose.Option {
 // no-op in that split case, so the caller stops one lane either way.
 func inlineRelayLane(ctx context.Context, cfg apiConfig, pool *pgxpool.Pool, license *licensecheck.Watcher, logger *slog.Logger, stdout io.Writer) ([]compose.Option, func(), error) {
 	if !cfg.inlineRelay {
-		// No inline relay to stop: cmd/worker is running it.
 		return nil, func() {}, nil
 	}
 	paused := installtrial.New(pool, cfg.posture, license.Posture, time.Now).Paused(logger)
@@ -435,7 +433,7 @@ func modelAndHandoffOptions(ctx context.Context, cfg apiConfig, bootstrap deploy
 		return nil, nil, err
 	}
 	handoffOpts, err := workerHandoffOptions(pool, logger, modelPath,
-		queueGates{vatCheck: cfg.vatCheckBaseURL, geocode: cfg.geocodeBaseURL})
+		queueGates{vatCheck: cfg.vatCheckBaseURL, geocode: cfg.geocodeBaseURL, privateChat: cfg.posture.IsNonProduction()})
 	if err != nil {
 		return nil, nil, err
 	}
@@ -477,6 +475,8 @@ func workerHandoffOptions(
 		// An approved import commits, and an undo reverses, in the worker: the
 		// move and its job are one transaction, so the 202 means work is queued.
 		compose.WithImportJobs(sendInserter),
+		// After WithChannelSurface, so a Dispact bot connects beside Telegram.
+		compose.WithChatLinks(sendInserter, gates.privateChat),
 	}
 
 	enqueueOpts, err := jobEnqueueOptions(pool, logger, modelPath, gates)
