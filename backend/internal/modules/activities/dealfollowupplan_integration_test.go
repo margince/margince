@@ -44,17 +44,19 @@ func TestTheDealFollowUpBatchReadsEachMeetingOnceWhateverTheStatisticsSay(t *tes
 		}
 	}()
 	asOf := clocktest.Now(t)
+	analyzeAnEarlierTestsMail(ctx, t, tx)
 	deals := seedDealMeetingsAmongOtherMail(ctx, t, tx, e.rep)
 	if _, err := tx.Exec(ctx, "SET LOCAL jit = off"); err != nil {
 		t.Fatal(err)
 	}
 	pinNeverAnalyzed(ctx, t, tx)
+	forgetAllButLinkStatistics(ctx, t, tx)
 	statement, args, err := meetingFollowUpsByDealStatement(e.as(), asOf, 3, deals)
 	if err != nil {
 		t.Fatal(err)
 	}
-	// First as a busy shared database leaves it, with nothing analyzed since
-	// the rows landed, then with the statistics current.
+	// First as a busy shared database leaves it, with nothing but the links
+	// analyzed since the rows landed, then with the statistics current.
 	for _, stats := range []string{"stale", "current"} {
 		if stats == "current" {
 			if _, err := tx.Exec(ctx, "ANALYZE"); err != nil {
@@ -141,6 +143,39 @@ func readByKey(n planNode) bool {
 		n = n.Plans[0]
 	}
 	return strings.HasPrefix(n.IndexCond, "(id = ")
+}
+
+// analyzeAnEarlierTestsMail leaves the column statistics that autovacuum
+// takes from an earlier test's few links on three contacts. Planned with
+// those, a lookup of one contact's links reads a third of every link.
+func analyzeAnEarlierTestsMail(ctx context.Context, t *testing.T, tx pgx.Tx) {
+	t.Helper()
+	if _, err := tx.Exec(ctx, `
+	CREATE TEMP TABLE earlier_contact AS SELECT gen_random_uuid() id, n FROM generate_series(1, 3) n;
+	INSERT INTO contact (id, full_name, source, captured_by) SELECT id, 'Earlier '||n, 'manual', 'human:seed' FROM earlier_contact;
+	CREATE TEMP TABLE earlier_mail AS SELECT gen_random_uuid() id, g FROM generate_series(1, 60) g;
+	INSERT INTO activity (id, kind, subject, occurred_at, direction, source, captured_by, thread_key)
+	  SELECT id, 'email', 'Earlier mail', '2026-01-01T00:00:00Z', 'outbound', 'manual', 'human:seed', 'earlier'||g FROM earlier_mail;
+	INSERT INTO activity_link (activity_id, entity_type, contact_id)
+	  SELECT m.id, 'contact', c.id FROM earlier_mail m JOIN earlier_contact c ON c.n = 1 + m.g % 3;
+	ANALYZE`); err != nil {
+		t.Fatalf("analyzing an earlier test's mail: %v", err)
+	}
+}
+
+// forgetAllButLinkStatistics leaves column statistics only on the links and
+// participants that file an activity under a contact, as autovacuum leaves
+// them once those tables grow. Without them the planner guesses that each
+// contact holds a twentieth of all links. At that guess a scan costs about
+// what the index does, so the dead rows of earlier tests pick the plan.
+func forgetAllButLinkStatistics(ctx context.Context, t *testing.T, tx pgx.Tx) {
+	t.Helper()
+	if _, err := tx.Exec(ctx, `
+	DELETE FROM pg_statistic WHERE starelid IN (SELECT oid FROM pg_class WHERE relnamespace = 'public'::regnamespace);
+	DELETE FROM pg_statistic_ext_data WHERE stxoid IN (SELECT oid FROM pg_statistic_ext WHERE stxnamespace = 'public'::regnamespace);
+	ANALYZE activity_link, activity_participant`); err != nil {
+		t.Fatal(err)
+	}
 }
 
 // seedDealMeetingsAmongOtherMail files most held meetings under one deal and
