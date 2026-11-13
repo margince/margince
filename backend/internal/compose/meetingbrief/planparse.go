@@ -108,6 +108,7 @@ type replyQuestion struct {
 type replyScenario struct {
 	Label    string          `json:"label"`
 	Play     string          `json:"play"`
+	Coach    string          `json:"coach"`
 	Evidence []replyEvidence `json:"evidence"`
 }
 
@@ -298,7 +299,12 @@ func keptScenarios(raw []replyScenario, known map[Evidence]string) []Scenario {
 		if !groundedEvidenceOnly(cited, known) {
 			continue
 		}
-		out = append(out, Scenario{Label: scenario.Label, Play: scenario.Play, Evidence: cited})
+		coach := strings.TrimSpace(scenario.Coach)
+		// A coach line that spells an id, or only restates the play, gives the lead nothing.
+		if spellsAnID(coach) || normalisedSubject(coach) == normalisedSubject(scenario.Play) {
+			coach = ""
+		}
+		out = append(out, Scenario{Label: scenario.Label, Play: scenario.Play, Coach: coach, Evidence: cited})
 	}
 	return out
 }

@@ -55809,7 +55809,7 @@ type MeetingPlanCoaching struct {
 	// ListenFor What a good version of this conversation sounds like.
 	ListenFor string `json:"listen_for"`
 
-	// Paths The ways this meeting can go, for a lead to rehearse against.
+	// Paths The plan's own branches as a lead reads them: each carries the label of a plan scenario and, in `play`, what the lead watches for and asks the rep, never the rep's play again. A branch the model wrote no coach line for is left out, so this can be empty.
 	Paths []MeetingPlanCoachingPath `json:"paths"`
 
 	// WatchFor The move that says it is going wrong.

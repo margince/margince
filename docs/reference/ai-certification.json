@@ -27749,7 +27749,7 @@
           },
           "state": "stale",
           "band": "supported_degraded",
-          "scenarios_measured": 1,
+          "scenarios_measured": 0,
           "scenarios_total": 2,
           "runs": 12,
           "passed": 12,
@@ -27762,13 +27762,15 @@
             "invalid": 0,
             "abstained": 0
           },
-          "stale_reason": "the prompt this build sends and how a run is graded changed under scenario meeting_plan_reads_the_thread_that_matters since the record scored it",
+          "stale_reason": "2 scenarios it scored have changed since (the prompt this build sends and how a run is graded): meeting_plan_reads_the_thread_that_matters, meeting_plan_serves_the_meetings_deal",
           "stale_cause": {
             "prompt_changed": [
-              "meeting_plan_reads_the_thread_that_matters"
+              "meeting_plan_reads_the_thread_that_matters",
+              "meeting_plan_serves_the_meetings_deal"
             ],
             "grader_changed": [
-              "meeting_plan_reads_the_thread_that_matters"
+              "meeting_plan_reads_the_thread_that_matters",
+              "meeting_plan_serves_the_meetings_deal"
             ]
           }
         },
@@ -27844,7 +27846,7 @@
           },
           "state": "stale",
           "band": "supported_degraded",
-          "scenarios_measured": 1,
+          "scenarios_measured": 0,
           "scenarios_total": 2,
           "runs": 6,
           "passed": 6,
@@ -27857,13 +27859,15 @@
             "invalid": 0,
             "abstained": 0
           },
-          "stale_reason": "the prompt this build sends and how a run is graded changed under scenario meeting_plan_reads_the_thread_that_matters since the record scored it",
+          "stale_reason": "2 scenarios it scored have changed since (the prompt this build sends and how a run is graded): meeting_plan_reads_the_thread_that_matters, meeting_plan_serves_the_meetings_deal",
           "stale_cause": {
             "prompt_changed": [
-              "meeting_plan_reads_the_thread_that_matters"
+              "meeting_plan_reads_the_thread_that_matters",
+              "meeting_plan_serves_the_meetings_deal"
             ],
             "grader_changed": [
-              "meeting_plan_reads_the_thread_that_matters"
+              "meeting_plan_reads_the_thread_that_matters",
+              "meeting_plan_serves_the_meetings_deal"
             ]
           }
         },
@@ -27875,7 +27879,7 @@
           },
           "state": "stale",
           "band": "certified",
-          "scenarios_measured": 1,
+          "scenarios_measured": 0,
           "scenarios_total": 2,
           "runs": 12,
           "passed": 12,
@@ -27888,13 +27892,15 @@
             "invalid": 0,
             "abstained": 0
           },
-          "stale_reason": "the prompt this build sends and how a run is graded changed under scenario meeting_plan_reads_the_thread_that_matters since the record scored it",
+          "stale_reason": "2 scenarios it scored have changed since (the prompt this build sends and how a run is graded): meeting_plan_reads_the_thread_that_matters, meeting_plan_serves_the_meetings_deal",
           "stale_cause": {
             "prompt_changed": [
-              "meeting_plan_reads_the_thread_that_matters"
+              "meeting_plan_reads_the_thread_that_matters",
+              "meeting_plan_serves_the_meetings_deal"
             ],
             "grader_changed": [
-              "meeting_plan_reads_the_thread_that_matters"
+              "meeting_plan_reads_the_thread_that_matters",
+              "meeting_plan_serves_the_meetings_deal"
             ]
           }
         },
@@ -28061,7 +28067,7 @@
           },
           "state": "stale",
           "band": "supported_degraded",
-          "scenarios_measured": 1,
+          "scenarios_measured": 0,
           "scenarios_total": 2,
           "runs": 12,
           "passed": 8,
@@ -28074,13 +28080,15 @@
             "invalid": 0,
             "abstained": 0
           },
-          "stale_reason": "the prompt this build sends and how a run is graded changed under scenario meeting_plan_reads_the_thread_that_matters since the record scored it",
+          "stale_reason": "2 scenarios it scored have changed since (the prompt this build sends and how a run is graded): meeting_plan_reads_the_thread_that_matters, meeting_plan_serves_the_meetings_deal",
           "stale_cause": {
             "prompt_changed": [
-              "meeting_plan_reads_the_thread_that_matters"
+              "meeting_plan_reads_the_thread_that_matters",
+              "meeting_plan_serves_the_meetings_deal"
             ],
             "grader_changed": [
-              "meeting_plan_reads_the_thread_that_matters"
+              "meeting_plan_reads_the_thread_that_matters",
+              "meeting_plan_serves_the_meetings_deal"
             ]
           }
         },
@@ -28092,7 +28100,7 @@
           },
           "state": "stale",
           "band": "supported_degraded",
-          "scenarios_measured": 1,
+          "scenarios_measured": 0,
           "scenarios_total": 2,
           "runs": 12,
           "passed": 9,
@@ -28105,13 +28113,15 @@
             "invalid": 3,
             "abstained": 0
           },
-          "stale_reason": "the prompt this build sends and how a run is graded changed under scenario meeting_plan_reads_the_thread_that_matters since the record scored it",
+          "stale_reason": "2 scenarios it scored have changed since (the prompt this build sends and how a run is graded): meeting_plan_reads_the_thread_that_matters, meeting_plan_serves_the_meetings_deal",
           "stale_cause": {
             "prompt_changed": [
-              "meeting_plan_reads_the_thread_that_matters"
+              "meeting_plan_reads_the_thread_that_matters",
+              "meeting_plan_serves_the_meetings_deal"
             ],
             "grader_changed": [
-              "meeting_plan_reads_the_thread_that_matters"
+              "meeting_plan_reads_the_thread_that_matters",
+              "meeting_plan_serves_the_meetings_deal"
             ]
           }
         }
