@@ -252,7 +252,7 @@ export const briefManager: MeetingBrief = {
         },
         {
           label: "A new stakeholder appears",
-          play: "Watch who the rep sells to; ask what the new person decides.",
+          play: "Watch who the rep sells to; ask what the newcomer decides.",
         },
       ],
     },
