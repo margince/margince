@@ -18,6 +18,11 @@ prompt: |
 must_call:
   - resolve_entities
 
+# A Lucy Vo is on file at another company, so the honest answer reports her and
+# says how she differs, rather than only repeating the name the prompt gave.
+must_mention:
+  - "(?i)saigon|l\.vo@|procurement lead|(?:different|another|other) (?:company|employer|email|address|person)"
+
 may_call:
   - search_records
   - list_records
