@@ -16,6 +16,7 @@ The unit legs and `integration unit coverage` pass `-shuffle=<seed>` to `go test
 shard passes `-test.shuffle=<seed>` to its binaries. vitest puts the tests inside each file in a
 mixed order. The files keep their order, so the `fe-unit` shards split the same files.
 `repeat-changed-tests` repeats the changed tests in that order too.
+`fe-census` keeps its fixed rule order, because that order is part of its time budget.
 
 | Job | What it checks |
 |---|---|

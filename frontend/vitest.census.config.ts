@@ -6,7 +6,6 @@
 // cases. No DOM and no setup file, because no case here renders anything.
 
 import { defineConfig } from "vitest/config";
-import { shuffledTests } from "./scripts/vitest-shards.ts";
 import base from "./vite.config.ts";
 import { TEST_TIMEOUT_MS } from "./vitest.budget.ts";
 
@@ -19,6 +18,7 @@ export default defineConfig({
     pool: "threads",
     testTimeout: TEST_TIMEOUT_MS,
     hookTimeout: TEST_TIMEOUT_MS,
-    sequence: shuffledTests(process.env.TEST_SHUFFLE_SEED),
+    // No TEST_SHUFFLE_SEED here: the rules run in a fixed order, and that order
+    // is part of their time budget (census/census.test.ts).
   },
 });

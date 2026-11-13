@@ -690,7 +690,6 @@ fe-unit:
 ## once, then runs each rule in frontend/census/rules/ as its own named case.
 ## fe-unit excludes census/, so each census runs once, on one parse.
 fe-census:
-	$(FE_SHUFFLE_NOTE)
 	cd frontend && pnpm install --frozen-lockfile && pnpm exec vitest run \
 		-c vitest.census.config.ts
 

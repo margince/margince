@@ -5,7 +5,7 @@
 import "@testing-library/jest-dom/vitest";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { cleanup, render, screen, within } from "@testing-library/react";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 import { LocaleProvider } from "../i18n";
 import { type GrantSpec, meFixture } from "../testing/mefixture";
 import { steppedClock } from "../testing/steppedclock";
@@ -169,10 +169,18 @@ function answerPanel() {
   return screen.findByRole("region", { name: "Answer from Margince" });
 }
 
+// The answer's lazy chunks load here, on the real clock. Under a case's fake clock
+// the import can stay unsettled after the case, and every later case waits on it.
+beforeAll(async () => {
+  await import("../features/voice-knowledge/corpusanswer");
+  await import("../features/voice-knowledge/citeddocument");
+});
+
 afterEach(() => {
   cleanup();
   window.location.hash = "";
   vi.unstubAllGlobals();
+  vi.useRealTimers();
 });
 
 describe("asking the handbook from the search box", () => {
