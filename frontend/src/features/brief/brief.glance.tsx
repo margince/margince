@@ -272,6 +272,8 @@ function GlanceOpening({
         {t(sentence.key, sentence.values)}
       </p>
     );
+  // The morning keeps the line whether or not a sentence lands. A day with no
+  // sentence would otherwise pull the whole page up a line once it is read.
   if (view === "morning")
     return pending ? (
       <div
@@ -280,7 +282,9 @@ function GlanceOpening({
       >
         <Skeleton width="6ch" />
       </div>
-    ) : null;
+    ) : (
+      <div className="glance-sentence-hold" aria-hidden="true" />
+    );
   return <p className="glance-sentence">{t("brief.glance.introWeekly")}</p>;
 }
 
