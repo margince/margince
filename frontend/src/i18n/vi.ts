@@ -3121,9 +3121,9 @@ export const vi: Readonly<Record<MessageKey, string>> = {
 
   "nav.partners": "Đối tác",
   "deal.partnerAttribution": "Ghi công đối tác",
-  "deal.attributionUnset": "Chưa chọn (tính là mang deal về)",
-  "deal.attributionSourced": "Mang deal về (được hoa hồng)",
-  "deal.attributionInfluenced": "Hỗ trợ một deal đã có (không có hoa hồng)",
+  "deal.attributionUnset": "Chưa chọn (tính là mang về)",
+  "deal.attributionSourced": "Mang về (có hoa hồng)",
+  "deal.attributionInfluenced": "Có hỗ trợ (không hoa hồng)",
   "partnerDeals.panelTitle": "Deal của đối tác",
   "partnerDeals.none": "Chưa có deal nào của đối tác",
   "partnerDeals.column.deal": "Tên deal",
@@ -3732,6 +3732,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "co.overview.kind.task": "việc",
   "co.overview.kind.message": "tin nhắn",
   "record.details.about": "Thông tin",
+  "section.help": "Về mục này",
   "record.details.ownership": "Phụ trách",
   "co.aside.size": "Số nhân viên",
   "co.aside.wayIn": "Đường vào",
@@ -4398,6 +4399,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "co.brief.generatedAt": "tính đến {when}",
   "co.assembly.writtenNow": "vừa được viết",
   "co.growthFit.title": "Mức độ phù hợp",
+  "co.growthFit.help":
+    "Đánh giá của AI về mức độ phù hợp của công ty này với những gì nhóm bạn bán, dựa trên bảy thông tin như ngành, quy mô và công nghệ họ dùng. Ghi thêm thông tin để kết quả chắc chắn hơn.",
   "co.growthFit.unavailable":
     "Không thể tải đánh giá. Hồ sơ công ty không thay đổi.",
   "co.growthFit.assembling":
@@ -4419,6 +4422,12 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "co.growthFit.completeness":
     "Đã ghi nhận {present}/{expected} dữ liệu đầu vào",
   "co.growthFit.missing": "Còn thiếu",
+  "co.growthFit.inputs": "Căn cứ để đánh giá",
+  "co.growthFit.rule":
+    "Cần ít nhất {needed}/{expected} dữ liệu đầu vào để đánh giá mức độ phù hợp.",
+  "co.growthFit.inputMissing": "Còn thiếu",
+  "co.growthFit.inputStale": "Đã cũ",
+  "co.growthFit.fromSiteRead": "Có được khi đọc trang web.",
   "co.growthFit.capped": "Bị giới hạn: {reason}.",
   "industry.agriculture": "Nông nghiệp",
   "industry.automotive": "Ô tô",
@@ -4706,6 +4715,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
 
   // The review queue and the reach table (ADR-0078 §2.1b).
   "companyReach.title": "Ai c\u00f3 th\u1ec3 gi\u1edbi thi\u1ec7u b\u1ea1n",
+  "companyReach.help":
+    "Những đồng nghiệp quen biết nhân viên của công ty này qua LinkedIn, chỉ hiển thị số lượng. Hãy nhờ một đồng nghiệp trong số đó giới thiệu bạn.",
   "companyReach.sub":
     "Những đồng nghiệp có người quen trên LinkedIn đang làm việc tại công ty này. Chỉ hiển thị số người quen, không hiển thị tên của họ. Bạn có thể nhờ đồng nghiệp giới thiệu.",
   "companyReach.colleaguesLabel":
@@ -5905,6 +5916,12 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "deal.ownerMe": "Giao cho tôi",
   "deal.ownerUnassign": "Hủy giao",
   "deal.partnerCompany": "Đối tác giới thiệu",
+  "deal.partnerNoneYet":
+    "Chưa có đối tác. Liên hệ quản trị viên để thêm đối tác.",
+  "deal.referredBy": "Đối tác giới thiệu:",
+  "deal.supportedBy": "Đối tác hỗ trợ:",
+  "deal.referral.sourced": "(mang về)",
+  "deal.referral.influenced": "(có hỗ trợ)",
   "deal.recordedBy": "Bên ghi nhận",
   "deal.companyWithheld": "Công ty bị ẩn",
   "deal.partnerWithheld": "Đối tác bị ẩn",
@@ -6200,6 +6217,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
 
   "deal.monthlyApproximate": "khoảng",
   "assignments.title": "Vai trò trong nhóm",
+  "assignments.help":
+    "Ai trong nhóm bạn phụ trách hồ sơ này, theo vai trò. Mục này không thay đổi ai được xem hồ sơ; hãy chia sẻ hồ sơ nếu cần.",
   "assignments.noAccessNote":
     "Ghi nhận ai phụ trách việc gì. Không cấp quyền truy cập vào hồ sơ này.",
   "assignments.empty": "Chưa giao vai trò nào",
@@ -7951,7 +7970,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "tasks.origin.analytics_decision":
     "Ghi từ một lần xem xét bán hàng: một quyết định có thành viên chịu trách nhiệm và ngày xem lại. Ghi kết quả trong Quyết định từ lần xem xét trước.",
   "tasks.origin.overnight_reconcile":
-    "Việc này được tạo từ một bước tiếp theo do lượt rà soát ban đêm đề xuất và đã được duyệt.",
+    "Việc này được tạo từ một bước tiếp theo do lượt rà soát ban đêm đề xuất.",
   "tasks.origin.commitment":
     "Việc này được tạo từ một cam kết đọc được trong một cuộc trao đổi.",
   "tasks.origin.email_request": "Việc này được tạo từ một yêu cầu trong email.",
@@ -18587,6 +18606,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "lists.note": "L\u00fd do (kh\u00f4ng b\u1eaft bu\u1ed9c)",
   "lists.noteHint": "Lưu cùng thay đổi để đồng nghiệp biết lý do.",
   "lists.record.title": "Danh s\u00e1ch",
+  "lists.record.help":
+    "Các danh sách có công ty này. Danh sách tự cập nhật thêm công ty theo quy tắc của nó; danh sách chọn tay do bạn tự thêm. Dùng danh sách để xử lý lần lượt từng công ty.",
   "lists.record.loading": "\u0110ang t\u1ea3i danh s\u00e1ch",
   "lists.record.empty": "Hồ sơ này chưa nằm trong danh sách nào bạn xem được.",
   "lists.record.check": "Kiểm tra với danh sách tự cập nhật",
@@ -19378,7 +19399,21 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "Margince không thể kiểm tra việc này đã được trả lời chưa: nội dung thư không còn đọc được. Hãy đánh dấu là xong khi đã xong.",
   "worklist.ask.task_unchecked_reply": "Trả lời đã gửi gần nhất: {date}",
   "worklist.ask.brief_item":
-    "Lượt rà soát ban đêm đã đánh dấu deal này. Xử lý, tạm gác, hoặc bỏ qua.",
+    "Margince đã chọn deal này để xem lại hôm nay. Hãy xem và lên kế hoạch cho bước tiếp theo.",
+  "worklist.ask.brief.closing_soon":
+    "Deal này dự kiến chốt trong vòng 2 tuần. Hãy xem lại và bảo đảm bước tiếp theo đã được lên kế hoạch.",
+  "worklist.ask.brief.no_next_step":
+    "Deal này chưa ghi nhận bước tiếp theo nào. Hãy xem lại và thống nhất bước tiếp theo.",
+  "worklist.ask.brief.no_champion":
+    "Không ai phía khách hàng đang tích cực ủng hộ deal này. Hãy xem lại và tìm ai đó sẽ ủng hộ.",
+  "worklist.ask.brief.signal.closing_soon":
+    "Ngày chốt của deal này đã gần. Hãy xem lại và bảo đảm bước tiếp theo đã được lên kế hoạch.",
+  "worklist.ask.brief.signal.stalled":
+    "Deal này đã im ắng và có thể bị trễ. Hãy xem lại và lên kế hoạch cho bước tiếp theo.",
+  "worklist.ask.brief.signal.opportunity":
+    "Deal này đáng theo đuổi ngay bây giờ. Hãy xem lại và lên kế hoạch cho bước tiếp theo.",
+  "worklist.ask.brief.signal.moved":
+    "Deal này có hoạt động mới. Hãy xem lại điều đã xảy ra.",
   "worklist.ask.conversation_claim":
     "Bạn đã cam kết việc này trong một cuộc trao đổi. Làm xong rồi đánh dấu là xong.",
   "worklist.ask.invitation":

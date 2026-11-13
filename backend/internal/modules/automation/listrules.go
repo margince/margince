@@ -39,6 +39,8 @@ const (
 	paramDirection   = "direction"
 	paramShortlistID = "shortlist_id"
 	paramDueInDays   = "due_in_days"
+	paramRecipient   = "recipient"
+	paramTaskTitle   = "task_title"
 )
 
 // The directions a rule watches, and the observed actions each one fires on.
@@ -81,8 +83,8 @@ func listRuleEntries() []CatalogEntry {
 			ActionTypeCreateTask, map[string]any{
 				paramDueInDays:    intParamProperty(defaultListTaskDueInDays, 30, "How many days out the follow-up task is due."),
 				paramTaskTimezone: taskTimezoneSchema(),
-				"recipient":       taskRecipientSchema(),
-				"task_title":      map[string]any{schemaKeyType: schemaTypeString, "minLength": 1, "maxLength": maxTaskTitleCharacters},
+				paramRecipient:    taskRecipientSchema(),
+				paramTaskTitle:    map[string]any{schemaKeyType: schemaTypeString, schemaKeyMinLength: 1, schemaKeyMaxLength: maxTaskTitleCharacters},
 			}),
 		entry(listNotifyName, "Tell me when this list changes",
 			"Sends the rule's owner a notice for each record that joins or leaves the list.",
@@ -124,8 +126,8 @@ func requiredListParams(extra map[string]any) []string {
 	if _, ok := extra[paramShortlistID]; ok {
 		required = append(required, paramShortlistID)
 	}
-	if extra["recipient"] != nil {
-		required = append(required, "recipient", "task_title")
+	if extra[paramRecipient] != nil {
+		required = append(required, paramRecipient, paramTaskTitle)
 	}
 	return required
 }
@@ -168,12 +170,12 @@ func validateListRuleParam(params map[string]any, key string, extra map[string]a
 			return &ParamError{Field: field, Reason: "must be entered, left or either"}
 		}
 		return nil
-	case "recipient":
+	case paramRecipient:
 		if extra[key] == nil {
 			return &ParamError{Field: field, Reason: errNotAParameter}
 		}
 		return validateTaskRecipientParam(params)
-	case "task_title":
+	case paramTaskTitle:
 		value, ok := params[key].(string)
 		if extra[key] == nil || !ok || !validTaskTitle(value) {
 			return &ParamError{Field: field, Reason: "enter a task title of up to 200 characters"}

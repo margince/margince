@@ -18,7 +18,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/margince/margince/backend/internal/shared/kernel/values"
 	"unicode/utf8"
 
 	"github.com/jackc/pgx/v5"
@@ -28,6 +27,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/draftfloor"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/values"
 )
 
 // greetingNameField is the name this answers to in the audit images and the

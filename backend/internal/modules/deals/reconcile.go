@@ -3,18 +3,12 @@
 
 package deals
 
-// The overnight follow-up reconciliation pass (features/07 §8a,
-// B-E06.2a): the deterministic half of the overnight agent's
-// "reconcile the day's captured calls/mail/meetings into staged
-// proposals" contract. Over every open deal that had a real captured
-// interaction (call/mail/meeting) in the reconciliation window but has
-// NO open follow-up on its timeline, the pass stages a "draft this
-// follow-up" proposal — never a silent write. A human confirms (or
-// edits) it in the morning approval inbox; only then is the follow-up
-// task created. It follows the close-date corrector's shape exactly:
-// one read pass per live workspace, the truth decided in Go over an
-// injectable clock, staging through an approvals seam the composition
-// root fills, and the confirm effect owned there too.
+// The overnight follow-up reconciliation pass. An open deal with a recent
+// call, mail or meeting and no open follow-up gets one. A task lands on the
+// deal owner's list as their own work. A reply to an inbound email is drafted
+// and waits for their approval, because it would leave the building. The pass
+// reads each live workspace once, over an injectable clock, and writes through
+// a seam the composition root fills.
 //
 // Scope note (B-E06.2a): the value-judgement proposals in §8a — a stage
 // / next-step / amount change inferred from what was SAID on a call —
@@ -73,9 +67,8 @@ const (
 // triggering activity id) — a proposal never floats free of the record
 // it came from (P5/P12).
 type FollowUpProposal struct {
-	SystemText  *systemtext.Message   `json:"-"`
-	SummaryText *systemtext.Component `json:"-"`
-	DealID      ids.DealID            `json:"deal_id"`
+	SystemText *systemtext.Message `json:"-"`
+	DealID     ids.DealID          `json:"deal_id"`
 	// DueDate is the proposed follow-up due date, date-only wire form.
 	DueDate string `json:"due_date"`
 	Subject string `json:"subject"`
@@ -112,14 +105,12 @@ func UnmarshalFollowUpProposal(raw json.RawMessage) (FollowUpProposal, error) {
 	return p, nil
 }
 
-// FollowUpStager is the approvals seam the composition root fills (a
-// module never imports a sibling): stage a follow-up proposal, and ask
-// whether one is already pending so a nightly sweep — whose proposal
-// moves with "today" — cannot stack duplicates on one still awaiting a
-// decision.
+// FollowUpStager is the seam the composition root fills, as a module never
+// imports a sibling. It files one deal's follow-up. It also reports a drafted
+// reply already waiting, so a nightly sweep cannot stack a second on it.
 type FollowUpStager interface {
 	HasPendingFollowUp(ctx context.Context, dealID ids.UUID) (bool, error)
-	StageFollowUp(ctx context.Context, dealID ids.UUID, summary string, proposal FollowUpProposal) error
+	StageFollowUp(ctx context.Context, dealID ids.UUID, proposal FollowUpProposal) error
 }
 
 // FollowUpReconciler drives the pass; the worker ticks it nightly.
@@ -280,8 +271,8 @@ func (r *FollowUpReconciler) reconcileWorkspace(ctx context.Context) error {
 	return nil
 }
 
-// stage records one deal's follow-up proposal unless one is already
-// pending — the pass proposes, it never writes the follow-up itself.
+// stage files one deal's follow-up unless one is already waiting for a
+// decision.
 func (r *FollowUpReconciler) stage(ctx context.Context, cand followUpCandidate, now time.Time, words followUpWords) error {
 	pending, err := r.stager.HasPendingFollowUp(ctx, cand.dealID.UUID)
 	if err != nil {
@@ -303,9 +294,7 @@ func (r *FollowUpReconciler) stage(ctx context.Context, cand followUpCandidate, 
 	}
 	day := words.day(cand.occurredAt)
 	proposal.SystemText = &systemtext.Message{Subject: systemtext.Sentence("deals.followUpSubject", systemtext.Label(cand.dealName)), Body: followUpBodyComponent(cand, day)}
-	proposal.SummaryText = systemtext.Sentence("deals.draftFollowUp", systemtext.Label(cand.dealName), systemtext.ActivityKindArgument(cand.activityKind), systemtext.Text(day))
-	summary := fmt.Sprintf(words.said.draftFollowUp, cand.dealName, cand.activityKind, day)
-	return r.stager.StageFollowUp(ctx, cand.dealID.UUID, summary, proposal)
+	return r.stager.StageFollowUp(ctx, cand.dealID.UUID, proposal)
 }
 
 // followUpBody grounds the drafted follow-up in the real last exchange

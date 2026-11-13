@@ -183,8 +183,8 @@ export const NewMessageObjected: StoryObj = {
   },
 };
 
-/** Several recipients refused for one cause: the line saying whom it applies
- *  to stands on its own line under the explanation. */
+/** Several recipients refused for one cause: each address gets its own line
+ *  with the reason. */
 export const NewMessageSharedAddress: StoryObj = {
   render: () => <NewMessage preview={SHARED_ADDRESS} />,
   play: async () => {
@@ -194,7 +194,13 @@ export const NewMessageSharedAddress: StoryObj = {
       to,
       "x@one.example; y@two.example; z@three.example{Enter}",
     );
-    await dialog.findByText(/This applies to x@one.example and 2 other/);
+    for (const address of [
+      "x@one.example",
+      "y@two.example",
+      "z@three.example",
+    ]) {
+      await dialog.findByText(new RegExp(`^${address}: `));
+    }
   },
 };
 

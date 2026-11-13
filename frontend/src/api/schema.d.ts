@@ -17078,7 +17078,7 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * Privacy notices already owed, where the source is confirmed, soonest deadline first. A contact whose source nobody has confirmed is in notice_case_reviews.
+         * Privacy notices already owed, where the source is confirmed, soonest deadline first. A contact whose source nobody has confirmed is in notice_case_reviews (GET /privacy/notice-case-reviews).
          * @description Every Art. 13 / Art. 14 duty the installation has not discharged, with who owns it and by
          *     when it falls due.
          *
@@ -17215,7 +17215,7 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * Every contact's privacy-notice case, including a source nobody has confirmed yet (a bought list, an import), soonest deadline first. Start here for what we owe one contact.
+         * Every contact's privacy-notice case, including one whose source was never recorded (an older contact), soonest deadline first. Without state it lists unresolved cases only, so an empty page is not an empty notice history, and a contact imported moments ago may have no case yet. For one contact, read their contact_360 view (GET /contacts/{id}/360) instead; its privacy_source_reviews and privacy_notice_duties carry the case ids.
          * @description Acquisition-source reviews and notice duties, under privacy-request read authority.
          *     Unconfirmed sources have no deadline or sending route. Confirmed indirect sources stay owed;
          *     when their acquisition date is unknown, the deadline is labelled as a latest possible bound.
@@ -17240,7 +17240,7 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * One contact's privacy-notice case — its source, whether a notice is owed, and by when. The id comes from notice_case_reviews, not the contact's id.
+         * One contact's privacy-notice case — its source, whether a notice is owed, and by when. The id comes from notice_case_reviews or the contact's contact_360 view, not the contact's id.
          * @description The administrative record for a source review or notice duty. Human privacy-request read
          *     authority covers the record; contact names remain limited by ordinary contact visibility.
          */
@@ -17293,7 +17293,7 @@ export interface paths {
         /** Read accessible evidence for a contact source assessment. */
         get: operations["getNoticeSourceEvidence"];
         put?: never;
-        /** Confirm where a contact came from (bought list, import, their own enquiry), which decides whether a privacy notice is owed. Preview it first. */
+        /** Confirm where a contact came from (bought list, import, their own enquiry), which decides whether a privacy notice is owed. Preview it first (POST /privacy/notice-case-reviews/{id}/source/preview). Only a contact with no recorded source is up for review; when its evidence does not name where the data first came from, ask the user rather than guessing a kind. */
         post: operations["assessNoticeSource"];
         delete?: never;
         options?: never;
@@ -17312,7 +17312,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Preview what confirming a contact's source decides — whether a notice is owed and by when — without changing the case. Confirming is the user's decision, so offer confirm_notice_source and ask them. */
+        /** Preview what confirming a contact's source decides — whether a notice is owed and by when — without changing the case. Confirming is the user's decision, so offer confirm_notice_source (POST /privacy/notice-case-reviews/{id}/source) and ask them, unless they already named the source and asked you to confirm it. */
         post: operations["previewNoticeSource"];
         delete?: never;
         options?: never;
@@ -34337,6 +34337,13 @@ export interface components {
              *     proportion without its denominator is not a completeness figure.
              */
             expected: number;
+            /** @description The fewest present inputs the assembly judges on. Below it the band is `unknown`. */
+            needed: number;
+            /**
+             * @description Every required input in the assembly's order, with whether it counts. An input
+             *     that does not count is missing or no longer fresh.
+             */
+            inputs: components["schemas"]["GrowthFitInputState"][];
             /**
              * @description Which required inputs are missing, as codes. The client words them in the
              *     reader's language, so the server sends no sentence here.
@@ -34348,6 +34355,12 @@ export interface components {
          * @enum {string}
          */
         GrowthFitInput: "offer_summary" | "icp" | "industry" | "buying_center" | "buying_intents" | "employee_range" | "technology";
+        /** @description One required growth-fit input and whether it counts toward the band. */
+        GrowthFitInputState: {
+            input: components["schemas"]["GrowthFitInput"];
+            /** @description True when the input is recorded and not stale. */
+            present: boolean;
+        };
         /**
          * @description The one thing to do that would most improve a growth-fit answer. The client words it.
          *     `gather_inputs` is to find the inputs in `data_completeness.missing`, `record_profile`
@@ -45541,11 +45554,11 @@ export interface components {
             /** @enum {string} */
             severity?: "info" | "warn" | "urgent";
             /**
-             * @description Corrects the signal's type. Only the kinds a human files by hand are accepted. The audit row keeps the old kind.
+             * @description Corrects the signal's type. Only a human may, and only to the kinds a human files by hand. The audit row keeps the old kind.
              * @enum {string}
              */
             kind?: "stalled_deal" | "champion_left" | "reengagement" | "buying_intent" | "risk" | "other";
-            /** @description Replaces the signal's evidence. The audit row keeps the old evidence. */
+            /** @description Replaces the signal's evidence. Only a human may. The audit row keeps the old evidence. */
             evidence?: components["schemas"]["SignalEvidence"][];
         };
         SignalListResponse: {

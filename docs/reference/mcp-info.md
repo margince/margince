@@ -17,7 +17,7 @@ input and output schema in folds below it. What a tool may do and whether a huma
 | Resources | 14 |
 | Tool catalog | 233.3 KB |
 | Resource catalog | 5.5 KB |
-| Approx. wire tokens | 61129 |
+| Approx. wire tokens | 61139 |
 | Largest tool | `read_context` (11.7 KB) |
 | Scopes rendered | `read`, `draft`, `write`, `send`, `enrich` |
 
@@ -34,7 +34,7 @@ tool adds to that listing, and what it costs each scheduled agent, agent by agen
 |---|---:|---:|---|
 | Output schemas | 51.5 KB | 22% | **No**: a result's shape, never listed to a model |
 | Descriptions (incl. governance clause) | 54.1 KB | 23% | Yes, every step |
-| Input schemas | 115.8 KB | 49% | Yes, every step |
+| Input schemas | 115.9 KB | 49% | Yes, every step |
 | _Names, annotations, punctuation_ | 11.8 KB | 5% | Partly |
 | **Description + input schema** | **170.0 KB** | **72%** | **the recurring cost** |
 
@@ -98,7 +98,7 @@ descriptions and input schemas are what each step pays for.
 | [`read_details`](#read_details) | Read a record's panels and the day's lists | yes |  | 2230 |
 | [`read_forecast`](#read_forecast) | Read the forecast and how it moved | yes | [`ui://margince/forecast.html`](#forecast_view) | 978 |
 | [`read_import`](#read_import) | Read an import run or the import format | yes |  | 235 |
-| [`read_lists`](#read_lists) | Find and read lists | yes |  | 788 |
+| [`read_lists`](#read_lists) | Find and read lists | yes |  | 797 |
 | [`read_project`](#read_project) | Read a project or its handover | yes |  | 318 |
 | [`read_record`](#read_record) | Read a record | yes |  | 336 |
 | [`read_relationships`](#read_relationships) | Read who we know, and how well | yes |  | 359 |
@@ -10205,7 +10205,7 @@ change, and next_cursor to read the next page.
   "additionalProperties": false,
   "properties": {
     "cursor": {
-      "description": "For members and history: the next_cursor a page answered",
+      "description": "For members, history and preview: the next_cursor a page answered, with the same list or filter",
       "type": "string"
     },
     "definition": {

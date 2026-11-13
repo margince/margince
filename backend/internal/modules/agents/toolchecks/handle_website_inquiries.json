@@ -11,5 +11,9 @@
     "integrations.update",
     "lead.read",
     "relationship.read"
+  ],
+  "takes": [
+    "existing_website_inquiry",
+    "web_form"
   ]
 }

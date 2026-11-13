@@ -68,6 +68,8 @@ func (s Settings) existingPolicy(ctx context.Context, formID ids.UUID, in crmcon
 	return saved, policy, nil
 }
 
+// HandleExisting runs a form's saved policy over submissions it accepted
+// earlier, one at a time, and reports each one's outcome.
 func (s Settings) HandleExisting(ctx context.Context, formID ids.UUID, in crmcontracts.WebsiteInquiryExistingRequest) (crmcontracts.WebsiteInquiryHandlingResults, error) {
 	if err := auth.Require(ctx, "automation", principal.ActionUpdate); err != nil {
 		return crmcontracts.WebsiteInquiryHandlingResults{}, err
@@ -83,14 +85,14 @@ func (s Settings) HandleExisting(ctx context.Context, formID ids.UUID, in crmcon
 		return crmcontracts.WebsiteInquiryHandlingResults{}, err
 	}
 	routing := s.routing
-	if err := routing.validate(ctx, policy, false); err != nil {
+	if err := routing.validatePolicy(ctx, policy, false); err != nil {
 		return crmcontracts.WebsiteInquiryHandlingResults{}, err
 	}
 	authorizer, err := routing.human(ctx, saved.OwnerID.UUID)
 	if err != nil {
 		return crmcontracts.WebsiteInquiryHandlingResults{}, err
 	}
-	if err := routing.validate(authorizer, policy, false); err != nil {
+	if err := routing.validatePolicy(authorizer, policy, false); err != nil {
 		return crmcontracts.WebsiteInquiryHandlingResults{}, err
 	}
 	engine := s.engine()

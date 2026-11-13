@@ -52,7 +52,7 @@ func (s *EffectClaimStore) FreezeInquiry(ctx context.Context, key string, choose
 				if err := storekit.LockWriteIdentity(bound, tx, provenance.WebsiteInquirySource, key); err != nil {
 					return err
 				}
-				args := pgx.NamedArgs{"handler": inquiryRecipeName, "occurrence": key, "fingerprint": inquiryPlanFingerprint}
+				args := pgx.NamedArgs{argHandler: inquiryRecipeName, "occurrence": key, "fingerprint": inquiryPlanFingerprint}
 				var raw json.RawMessage
 				err := tx.QueryRow(bound, `SELECT planned FROM automation_effect_claim
      WHERE handler=@handler AND occurrence_key=@occurrence AND effect_fingerprint=@fingerprint
@@ -90,6 +90,7 @@ func (s *EffectClaimStore) FreezeInquiry(ctx context.Context, key string, choose
 	return out, nil
 }
 
+// InquiryPlan reads the plan frozen for a submission key, if there is one.
 func (s *EffectClaimStore) InquiryPlan(ctx context.Context, key string) (InquiryPlan, bool, error) {
 	if err := auth.Require(ctx, "automation", principal.ActionRead); err != nil {
 		return InquiryPlan{}, false, err
@@ -105,7 +106,7 @@ func (s *EffectClaimStore) inquiryPlans(ctx context.Context, keys []string) (map
 		return out, nil
 	}
 	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
-		rows, err := tx.Query(ctx, `SELECT occurrence_key,planned FROM automation_effect_claim WHERE handler=@handler AND occurrence_key=ANY(@keys) AND effect_fingerprint=@fingerprint AND planned IS NOT NULL`, pgx.NamedArgs{"handler": inquiryRecipeName, "keys": keys, "fingerprint": inquiryPlanFingerprint})
+		rows, err := tx.Query(ctx, `SELECT occurrence_key,planned FROM automation_effect_claim WHERE handler=@handler AND occurrence_key=ANY(@keys) AND effect_fingerprint=@fingerprint AND planned IS NOT NULL`, pgx.NamedArgs{argHandler: inquiryRecipeName, argKeys: keys, "fingerprint": inquiryPlanFingerprint})
 		if err != nil {
 			return err
 		}

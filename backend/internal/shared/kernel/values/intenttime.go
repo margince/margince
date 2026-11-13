@@ -8,6 +8,8 @@ import (
 	"time"
 )
 
+// IntentWallClockLayout is how a chosen local time is written: no zone, and up
+// to microseconds.
 const IntentWallClockLayout = "2006-01-02T15:04:05.999999"
 
 var localIntentFormat = regexp.MustCompile(`^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}(:[0-9]{2}(\.[0-9]{1,6})?)?$`)
@@ -19,6 +21,8 @@ type IntentTime struct {
 	zone Timezone
 }
 
+// ParseIntentTime reads a local wall clock in zone. Seconds and fractions are
+// optional, and the zone must be set.
 func ParseIntentTime(wall string, zone Timezone) (IntentTime, error) {
 	if zone.IsZero() || !localIntentFormat.MatchString(wall) {
 		return IntentTime{}, invalidIntent()
@@ -34,8 +38,13 @@ func ParseIntentTime(wall string, zone Timezone) (IntentTime, error) {
 	return IntentTime{wall: parsed, zone: zone}, nil
 }
 
-func (i IntentTime) IsZero() bool       { return i.zone.IsZero() }
-func (i IntentTime) WallClock() string  { return i.wall.Format(IntentWallClockLayout) }
+// IsZero reports an IntentTime that holds no choice.
+func (i IntentTime) IsZero() bool { return i.zone.IsZero() }
+
+// WallClock is the chosen local time in IntentWallClockLayout.
+func (i IntentTime) WallClock() string { return i.wall.Format(IntentWallClockLayout) }
+
+// Timezone is the zone the local time was chosen in.
 func (i IntentTime) Timezone() Timezone { return i.zone }
 
 // Resolve reloads current rules. Gaps move to their first valid instant;

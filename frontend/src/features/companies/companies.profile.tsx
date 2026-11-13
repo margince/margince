@@ -66,7 +66,7 @@ export function CompanyProfileTab({
               with nothing in flight is asking. */}
           {live && view && !hasWorkInFlight(view) && (
             <GrowthFitPanel
-              companyId={company.id}
+              company={company}
               onOpenRecord={onOpenRecord}
               onOpenReceipt={onOpenReceipt}
               onOpenEmail={onOpenEmail}

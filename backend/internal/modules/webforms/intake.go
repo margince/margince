@@ -86,7 +86,7 @@ func NewIntake(store *Store, lander LeadLander) *Intake {
 // a system principal. The form's own admission rule is what decides here.
 func (in *Intake) Submit(ctx context.Context, a Arrival) (Receipt, error) {
 	if in.store.fence == nil {
-		return in.submit(ctx, a)
+		return in.landPost(ctx, a)
 	}
 	form, err := in.store.PublicForm(ctx, a.FormKey)
 	if err != nil {
@@ -95,13 +95,13 @@ func (in *Intake) Submit(ctx context.Context, a Arrival) (Receipt, error) {
 	receipt := formReceipt(form, a.Header.Get("Origin"))
 	err = in.store.fence.Within(ctx, form.ID, func(bound context.Context) error {
 		var err error
-		receipt, err = in.submit(bound, a)
+		receipt, err = in.landPost(bound, a)
 		return err
 	})
 	return receipt, err
 }
 
-func (in *Intake) submit(ctx context.Context, a Arrival) (Receipt, error) {
+func (in *Intake) landPost(ctx context.Context, a Arrival) (Receipt, error) {
 	f, err := in.store.PublicForm(ctx, a.FormKey)
 	if err != nil {
 		return Receipt{}, err

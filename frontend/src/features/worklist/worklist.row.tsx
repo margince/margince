@@ -10,7 +10,7 @@ import { useLocale, useT } from "../../i18n";
 import { useCompanyZone } from "../../lib/companyzone";
 import { isUnprepared } from "../../lib/meetingreadiness";
 import { useMe } from "../../lib/session";
-import { askSentence, saysOpen } from "../../lib/worklistask";
+import { askedReason, askSentence, saysOpen } from "../../lib/worklistask";
 import {
   briefContextTitle,
   briefSubjectLabel,
@@ -202,7 +202,10 @@ export function WorklistRow({
   // line takes `due_today` the same way when it is drawn: the moment names the
   // hour a rep is racing, and "due today" underneath it is that clock said
   // again in a coarser register.
+  // A card's ask already states its leading reason as a sentence.
+  const asked = askedReason(item, framed);
   const reasons = phrasedReasons(item, when !== null)
+    .filter((reason) => reason.kind !== asked)
     .map((reason) => reasonText(reason, t, locale, zone, partyName(item)))
     .filter((phrase): phrase is string => phrase !== null);
   // The row says its one current reason; the rest are facts its Details lists.

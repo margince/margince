@@ -97,19 +97,21 @@ type RetryOutcome struct {
 // LEFT, because a missing envelope is an ANSWER here (refusal 3) rather than a
 // reason to report the run as absent.
 func baseRunKeySQL(alias string) string {
-	column := pgx.Identifier{"idempotency_key"}
-	if alias != "" {
-		column = pgx.Identifier{alias, "idempotency_key"}
-	}
-	return `regexp_replace(` + column.Sanitize() + `, '^retry[0-9]+:', '')`
+	return `regexp_replace(` + idempotencyKeySQL(alias) + `, '^retry[0-9]+:', '')`
 }
 
 func retryOrdinalSQL(alias string) string {
+	return `COALESCE(max(substring(` + idempotencyKeySQL(alias) + ` from '^retry([0-9]+):')::bigint),0)`
+}
+
+// idempotencyKeySQL is the run's idempotency_key column, qualified by alias
+// when one is given.
+func idempotencyKeySQL(alias string) string {
 	column := pgx.Identifier{"idempotency_key"}
 	if alias != "" {
-		column = pgx.Identifier{alias, "idempotency_key"}
+		column = pgx.Identifier{alias, column[0]}
 	}
-	return `COALESCE(max(substring(` + column.Sanitize() + ` from '^retry([0-9]+):')::bigint),0)`
+	return column.Sanitize()
 }
 
 var retryCandidateSQL = `

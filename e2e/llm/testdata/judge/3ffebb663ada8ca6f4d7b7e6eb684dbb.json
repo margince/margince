@@ -1,0 +1,7 @@
+{
+  "verdict": "yes",
+  "reason": "The answer states the project was judged at risk and gives the correct reason: the supplier moved the control cabinets (Steuerschränke) back by six weeks.",
+  "model": "claude-haiku-4-5-20251001",
+  "criterion": "Criterion 1. The answer says the project was judged at risk because the supplier moved the control cabinets (Steuerschränke) by about six weeks. Answer no if it gives no reason, or a reason other than the supplier's delay.",
+  "answer": "The Hafenkran Retrofit for Kranwerk Nord is in delivery, and it has been flagged: someone judged it at risk. The reason on record is that the supplier moved the control cabinets (Steuerschränke) back by six weeks, so the installation will slip unless that is recovered."
+}

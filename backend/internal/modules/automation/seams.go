@@ -167,10 +167,12 @@ type EffectClaims interface {
 // unguarded.
 var ErrNoEffectClaims = errors.New("automation: no effect claim store configured, so a create cannot be deduplicated across instances")
 
+// RecapDraftClaims stages a meeting recap draft once per occurrence.
 type RecapDraftClaims interface {
 	StageOnce(context.Context, string, string, string, func(context.Context) (ids.ApprovalID, error)) (ids.ApprovalID, error)
 }
 
+// MeetingRecapReader reports whether a meeting is ready for a recap.
 type MeetingRecapReader interface {
 	ReadyForRecap(context.Context, ids.ActivityID, time.Time) (bool, error)
 }

@@ -13,8 +13,8 @@ func TestSignalTypesDeriveIntoTheManifest(t *testing.T) {
 		SignalTypes: []extension.SignalTypeDeclaration{{
 			Kind: "loss", Label: "Loss reported",
 			Evidence: []extension.SignalEvidenceField{
-				{Name: "amount", Label: "Amount", Type: extension.SignalFieldNumber, Required: true},
-				{Name: "reporter", Label: "Reporter", Type: extension.SignalFieldText, Personal: true},
+				{Name: "amount", Label: "Amount", Type: extension.SignalFieldNumber, Required: true, NotPersonal: true},
+				{Name: "reporter", Label: "Reporter", Type: extension.SignalFieldText},
 			},
 		}},`))
 	if err != nil {
@@ -26,13 +26,16 @@ func TestSignalTypesDeriveIntoTheManifest(t *testing.T) {
 			t.Errorf("the manifest misses %s:\n%s", want, s)
 		}
 	}
+	if n := strings.Count(s, `"personal": true`); n != 1 {
+		t.Errorf("the manifest marks %d members personal, want only the unmarked reporter:\n%s", n, s)
+	}
 }
 
 func TestASignalTypeTheReaderCannotDeriveIsRefused(t *testing.T) {
 	for name, body := range map[string]string{
 		"a computed kind":      `SignalTypes: []extension.SignalTypeDeclaration{{Kind: name(), Label: "L"}},`,
 		"a kind used twice":    `SignalTypes: []extension.SignalTypeDeclaration{{Kind: "a", Label: "L"}, {Kind: "a", Label: "M"}},`,
-		"a computed flag":      `SignalTypes: []extension.SignalTypeDeclaration{{Kind: "a", Label: "L", Evidence: []extension.SignalEvidenceField{{Name: "n", Label: "N", Type: extension.SignalFieldText, Personal: flag()}}}},`,
+		"a computed flag":      `SignalTypes: []extension.SignalTypeDeclaration{{Kind: "a", Label: "L", Evidence: []extension.SignalEvidenceField{{Name: "n", Label: "N", Type: extension.SignalFieldText, NotPersonal: flag()}}}},`,
 		"a type from nowhere":  `SignalTypes: []extension.SignalTypeDeclaration{{Kind: "a", Label: "L", Evidence: []extension.SignalEvidenceField{{Name: "n", Label: "N", Type: kind()}}}},`,
 		"an unknown field key": `SignalTypes: []extension.SignalTypeDeclaration{{Kind: "a", Label: "L", Extra: 1}},`,
 	} {

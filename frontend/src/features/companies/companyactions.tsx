@@ -2,7 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import { api } from "../../api/client";
 import type { components } from "../../api/schema";
 import { CreateAction, type CreateField } from "../../components/create";
-import { currencyOptions } from "../../format/currencychoices";
+import { currencyField } from "../../components/currencyfield";
 import { toMinorUnits } from "../../format/minorunits";
 import { useLocale, useT } from "../../i18n";
 import { useCanWrite } from "../../lib/capability";
@@ -85,6 +85,7 @@ export function NewDealAction({
   onCreated?: (deal: components["schemas"]["Deal"]) => void;
 }>) {
   const t = useT();
+  const { locale } = useLocale();
   const target = useDealTarget();
   const leading = useLeadingCurrencies();
   const pipeline = target.data?.pipeline;
@@ -105,13 +106,7 @@ export function NewDealAction({
       min: "0",
       wireField: "amount_minor",
     },
-    {
-      key: "currency",
-      label: "create.currency",
-      type: "select",
-      required: true,
-      options: currencyOptions(leading),
-    },
+    currencyField(leading, locale),
     {
       key: "stage_id",
       label: "create.stage",

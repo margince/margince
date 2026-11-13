@@ -204,7 +204,9 @@ func (s *Service) assembleFiled(ctx context.Context, activityID ids.UUID, reques
 		Omitted:     omissions(in),
 		Plan:        &plan,
 	}
-	if err := briefevidence.Attach(ctx, s.emailRows, meetingEvidence(&out)); err != nil {
+	citations := meetingCitations(&out)
+	nameCitations(citations, in)
+	if err := briefevidence.Attach(ctx, s.emailRows, emailTargets(citations)); err != nil {
 		return crmcontracts.MeetingBrief{}, nil, err
 	}
 	return out, filed, nil

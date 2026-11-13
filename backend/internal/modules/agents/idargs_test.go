@@ -488,6 +488,7 @@ func malformedCall(t *testing.T, spec mcp.ToolSpec, prop string) json.RawMessage
 }
 
 func TestAMalformedIDIsRefusedAsTheCallersMistakeOnEveryTool(t *testing.T) {
+	servingUnofferedNames(t)
 	s := idProbeDispatcher(t)
 	// EVERY scope the surface defines. A missing one does not shrink the walk
 	// visibly — the gate refuses on authority before validation runs, and the

@@ -15,18 +15,21 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
+// Update changes a rule. A website inquiry policy changes under its form's
+// fence, so no submission is handled halfway through the change.
 func (s *AutomationStore) Update(ctx context.Context, id ids.AutomationID, in UpdateAutomationInput) (Automation, error) {
 	var out Automation
 	err := s.withInquiryChange(ctx, id, principal.ActionUpdate, func(bound context.Context) error {
 		var err error
-		out, err = s.update(bound, id, in)
+		out, err = s.updateRule(bound, id, in)
 		return err
 	})
 	return out, err
 }
 
+// Archive archives a rule, under its form's fence as Update does.
 func (s *AutomationStore) Archive(ctx context.Context, id ids.AutomationID) error {
-	return s.withInquiryChange(ctx, id, principal.ActionDelete, func(bound context.Context) error { return s.archive(bound, id) })
+	return s.withInquiryChange(ctx, id, principal.ActionDelete, func(bound context.Context) error { return s.archiveRule(bound, id) })
 }
 
 func (s *AutomationStore) withInquiryChange(ctx context.Context, id ids.AutomationID, action principal.Action, run func(context.Context) error) error {

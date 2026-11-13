@@ -44,7 +44,7 @@ func wonStageOf(t *testing.T, e *Env, pipeline ids.UUID) ids.StageID {
 // reading is ctx as a request whose screen shows locale, as the display
 // locale middleware leaves it. The principal's own choice says English, so a
 // read that ignored the screen would answer in English.
-func reading(t *testing.T, ctx context.Context, locale string) context.Context {
+func reading(ctx context.Context, t *testing.T, locale string) context.Context {
 	t.Helper()
 	actor, ok := principal.Actor(ctx)
 	if !ok {
@@ -67,7 +67,7 @@ func TestTheCompanyPageAndTheMoveConfirmationNameStagesInTheReadersLanguage(t *t
 	}
 	stageOf := func(locale string) string {
 		t.Helper()
-		page, err := companySurfaceService(e).Assemble(reading(t, e.Admin(), locale), companyIDOf(company))
+		page, err := companySurfaceService(e).Assemble(reading(e.Admin(), t, locale), companyIDOf(company))
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -100,7 +100,7 @@ func TestTheCompanyPageAndTheMoveConfirmationNameStagesInTheReadersLanguage(t *t
 		t.Fatal(err)
 	}
 	reason := "verbal"
-	advanced, err := e.Deals.AdvanceDeal(reading(t, e.Admin(), "vi"), moved, deals.AdvanceDealInput{ToStageID: won, WonWithoutContractReason: &reason})
+	advanced, err := e.Deals.AdvanceDeal(reading(e.Admin(), t, "vi"), moved, deals.AdvanceDealInput{ToStageID: won, WonWithoutContractReason: &reason})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -132,7 +132,7 @@ func TestReportableChoicesCarryTheReadersNames(t *testing.T) {
 		t.Helper()
 		var label string
 		var named map[string]string
-		ctx := reading(t, e.Admin(), locale)
+		ctx := reading(e.Admin(), t, locale)
 		if err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
 			cols, err := customfields.ReportableColumnsIn(ctx, tx, "deal")
 			if err != nil || len(cols) != 1 {

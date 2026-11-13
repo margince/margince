@@ -15,6 +15,8 @@ import (
 	"github.com/margince/margince/backend/internal/shared/ports/workflow"
 )
 
+// InquiryPreview is what a policy would do with one submission. ExistingTask is
+// set when a task is already filed for it.
 type InquiryPreview struct {
 	ExistingTask  *crmcontracts.Activity
 	SourceID      ids.UUID
@@ -26,6 +28,8 @@ type InquiryPreview struct {
 	Effect        workflow.Effect
 }
 
+// InquiryDueAt is when the policy's task falls due for a submission received
+// at received.
 func InquiryDueAt(policy crmcontracts.WebsiteInquiryPolicy, received time.Time) (time.Time, error) {
 	raw, err := json.Marshal(policy)
 	if err != nil {
@@ -34,6 +38,8 @@ func InquiryDueAt(policy crmcontracts.WebsiteInquiryPolicy, received time.Time) 
 	return taskDueAt(raw, received, 1)
 }
 
+// Preview plans how the policy would handle one accepted submission and
+// writes nothing.
 func (s *InquiryService) Preview(ctx context.Context, ex Executors, ev workflow.Event) (InquiryPreview, error) {
 	policy, err := ParseInquiryPolicy(ev.Params)
 	if err != nil {
@@ -64,6 +70,11 @@ func (s *InquiryService) Preview(ctx context.Context, ex Executors, ev workflow.
 		}
 		return frozen, nil
 	}
+	return s.freshPreview(ctx, admit, ev, policy, receipt)
+}
+
+// freshPreview plans a submission no earlier run froze a choice for.
+func (s *InquiryService) freshPreview(ctx, admit context.Context, ev workflow.Event, policy crmcontracts.WebsiteInquiryPolicy, receipt inquiryReceipt) (InquiryPreview, error) {
 	recipient, reason, err := s.routing.Preview(ctx, admit, policy, receipt.Target, ev.Entity.ID)
 	if err != nil {
 		return InquiryPreview{}, err
@@ -79,22 +90,27 @@ func (s *InquiryService) Preview(ctx context.Context, ex Executors, ev workflow.
 	if err != nil {
 		return InquiryPreview{}, err
 	}
-	var args map[string]json.RawMessage
-	if err := json.Unmarshal(effect.Actions[0].Args, &args); err != nil {
-		return InquiryPreview{}, err
-	}
-	args["assignee_id"], err = json.Marshal(recipient)
-	if err != nil {
-		return InquiryPreview{}, err
-	}
-	effect.Actions[0].Args, err = json.Marshal(args)
-	if err != nil {
+	if effect.Actions[0].Args, err = withAssignee(effect.Actions[0].Args, recipient); err != nil {
 		return InquiryPreview{}, err
 	}
 	if receipt.Activity.Version == nil {
 		return InquiryPreview{}, errors.New("automation: the accepted inquiry has no version")
 	}
 	return InquiryPreview{SourceID: ev.Entity.ID, SourceVersion: int64(*receipt.Activity.Version), Target: receipt.Target, Recipient: recipient, Reason: reason, DueAt: due, Effect: effect}, nil
+}
+
+// withAssignee sets the assignee_id of a planned task's args.
+func withAssignee(raw json.RawMessage, recipient ids.UUID) (json.RawMessage, error) {
+	var args map[string]json.RawMessage
+	if err := json.Unmarshal(raw, &args); err != nil {
+		return nil, err
+	}
+	assignee, err := json.Marshal(recipient)
+	if err != nil {
+		return nil, err
+	}
+	args["assignee_id"] = assignee
+	return json.Marshal(args)
 }
 
 func (s *InquiryService) frozenPreview(ctx context.Context, ev workflow.Event, receipt inquiryReceipt) (InquiryPreview, bool, error) {

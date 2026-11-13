@@ -9,35 +9,39 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/workforce"
 )
 
-type configurationState struct{ State, Reason string }
+type configurationState struct {
+	State  crmcontracts.AutomationSetupState
+	Reason string
+}
 
 func configurationOf(a Automation, authorizerActive bool) configurationState {
 	entry, known := CatalogEntryByKey(a.Key)
 	var params map[string]any
 	if !known || json.Unmarshal(a.Params, &params) != nil || entry.Validate(params) != nil || validateRequiredSetup(entry, params) != nil {
-		return configurationState{"needs_setup", "configuration_incomplete"}
+		return configurationState{crmcontracts.AutomationSetupStateNeedsSetup, "configuration_incomplete"}
 	}
 	needsAuthorizer, err := starterNeedsAuthorizer(entry, a.Params)
 	if err != nil {
-		return configurationState{"needs_setup", "configuration_incomplete"}
+		return configurationState{crmcontracts.AutomationSetupStateNeedsSetup, "configuration_incomplete"}
 	}
 	if needsAuthorizer && a.OwnerID == nil {
-		return configurationState{"needs_setup", "authorizer_missing"}
+		return configurationState{crmcontracts.AutomationSetupStateNeedsSetup, "authorizer_missing"}
 	}
 	if a.OwnerID != nil && !authorizerActive {
-		return configurationState{"needs_attention", "authorizer_inactive"}
+		return configurationState{crmcontracts.AutomationSetupStateNeedsAttention, "authorizer_inactive"}
 	}
 	if a.PausedReason != nil {
-		return configurationState{"needs_attention", "paused_by_system"}
+		return configurationState{crmcontracts.AutomationSetupStateNeedsAttention, "paused_by_system"}
 	}
 	if a.Enabled {
-		return configurationState{State: "on"}
+		return configurationState{State: crmcontracts.AutomationSetupStateOn}
 	}
-	return configurationState{State: "paused"}
+	return configurationState{State: crmcontracts.AutomationSetupStatePaused}
 }
 
 func (s *AutomationStore) readConfigurationStates(ctx context.Context, records []Automation) error {
@@ -50,7 +54,7 @@ func (s *AutomationStore) readConfigurationStates(ctx context.Context, records [
 	active := map[ids.UUID]bool{}
 	if len(owners) > 0 {
 		if err := s.db.Tx(ctx, func(tx pgx.Tx) error {
-			rows, err := tx.Query(ctx, `SELECT u.id, `+workforce.LiveHumanSQL("u")+` FROM app_user u WHERE u.id=ANY(@owners)`, pgx.NamedArgs{"owners": owners})
+			rows, err := tx.Query(ctx, `SELECT u.id, `+workforce.LiveHumanSQL("u")+` FROM app_user u WHERE u.id=ANY(@authorizers)`, pgx.NamedArgs{"authorizers": owners})
 			if err != nil {
 				return err
 			}

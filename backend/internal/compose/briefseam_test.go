@@ -5,13 +5,13 @@ package compose
 
 import (
 	"encoding/json"
-	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"reflect"
 	"strings"
 	"testing"
 	"time"
 
 	"github.com/margince/margince/backend/internal/compose/briefs"
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/shared/gatekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/values"

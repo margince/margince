@@ -79,11 +79,11 @@ func (e *BriefEngine) MarkSnoozed(
 	intent *crmcontracts.IntentTime,
 ) (BriefRunItem, error) {
 	if intent != nil {
-		resolved, err := storekit.ResolveIntentTime("snoozed_intent", intent)
+		resolved, err := storekit.ResolveIntentTime("snoozed_intent", *intent)
 		if err != nil {
 			return BriefRunItem{}, err
 		}
-		until = resolved
+		until = &resolved
 	}
 	held := snooze{on: on, ref: ref, intent: intent}
 	if on.WantsInstant() {

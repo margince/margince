@@ -321,7 +321,7 @@ func wireAutomationRun(automationID crmcontracts.Id, rec AutomationRunRecord) cr
 // for a staged one; the reasoned outcomes speak through Reason instead.
 func runActionResult(rec AutomationRunRecord) string {
 	switch rec.Status {
-	case "applied":
+	case runStatusApplied:
 		kinds := runActionKinds(rec.Applied)
 		if len(kinds) == 0 {
 			return "applied"
@@ -387,10 +387,11 @@ func wireSetter(setter *ids.UUID) *openapi_types.UUID {
 	return &id
 }
 
+// WireAutomation turns a stored rule into its API shape.
 func WireAutomation(a Automation) (crmcontracts.Automation, error) {
-	status := crmcontracts.AutomationStatus("paused")
+	status := crmcontracts.AutomationStatusPaused
 	if a.Enabled {
-		status = crmcontracts.AutomationStatus("enabled")
+		status = crmcontracts.AutomationStatusEnabled
 	}
 	params := map[string]any{}
 	if len(a.Params) > 0 {
@@ -419,7 +420,7 @@ func WireAutomation(a Automation) (crmcontracts.Automation, error) {
 		UpdatedAt:                 a.UpdatedAt,
 	}
 	if a.Configuration != nil {
-		wire.SetupState = new(crmcontracts.AutomationSetupState(a.Configuration.State))
+		wire.SetupState = new(a.Configuration.State)
 		if a.Configuration.Reason != "" {
 			wire.SetupReason = new(crmcontracts.AutomationSetupReason(a.Configuration.Reason))
 		}

@@ -31,7 +31,7 @@ func ParseInquiryPolicy(raw json.RawMessage) (crmcontracts.WebsiteInquiryPolicy,
 	decoder := json.NewDecoder(bytes.NewReader(raw))
 	decoder.DisallowUnknownFields()
 	if err := decoder.Decode(&policy); err != nil {
-		return policy, &ParamError{Field: "params", Reason: "must match the website inquiry policy"}
+		return policy, &ParamError{Field: keyParams, Reason: "must match the website inquiry policy"}
 	}
 	return policy, checkInquiryPolicy(policy)
 }
@@ -45,7 +45,7 @@ func checkInquiryPolicy(p crmcontracts.WebsiteInquiryPolicy) error {
 	case !p.Mode.Valid():
 		return inquiryParamError("mode", "must be one_colleague, rotate or coordinator")
 	case !validTaskTitle(p.TaskTitle):
-		return inquiryParamError("task_title", "must contain between 1 and 200 characters")
+		return inquiryParamError(paramTaskTitle, "must contain between 1 and 200 characters")
 	case p.DueInDays < 1 || p.DueInDays > 30:
 		return inquiryParamError(paramDueInDays, "must be between 1 and 30 calendar days")
 	}
@@ -62,31 +62,55 @@ func checkInquiryRouting(p crmcontracts.WebsiteInquiryPolicy) error {
 	if p.Routing.CapPerOwner != nil || (p.Routing.Rules != nil && len(*p.Routing.Rules) != 0) {
 		return inquiryParamError("routing", "website inquiries support selected colleagues without capacity or territory rules")
 	}
-	owners := map[ids.UUID]bool{}
-	if p.Routing.Owners != nil {
-		for _, owner := range *p.Routing.Owners {
-			id := ids.UUID(owner)
-			if id == ids.Nil || owners[id] {
-				return inquiryParamError("routing.owners", "must name distinct colleagues")
-			}
-			owners[id] = true
-		}
+	owners, err := distinctRoutingOwners(p)
+	if err != nil {
+		return err
 	}
+	if err := checkInquiryMode(p, len(owners)); err != nil {
+		return err
+	}
+	return checkLeadRoutingShape(p)
+}
+
+// distinctRoutingOwners is the set of colleagues the routing pool names. A
+// colleague named twice, or the zero id, is refused.
+func distinctRoutingOwners(p crmcontracts.WebsiteInquiryPolicy) (map[ids.UUID]bool, error) {
+	owners := map[ids.UUID]bool{}
+	if p.Routing.Owners == nil {
+		return owners, nil
+	}
+	for _, owner := range *p.Routing.Owners {
+		id := ids.UUID(owner)
+		if id == ids.Nil || owners[id] {
+			return nil, inquiryParamError("routing.owners", "must name distinct colleagues")
+		}
+		owners[id] = true
+	}
+	return owners, nil
+}
+
+// checkInquiryMode holds the pool size each mode needs.
+func checkInquiryMode(p crmcontracts.WebsiteInquiryPolicy, owners int) error {
 	switch p.Mode {
 	case crmcontracts.WebsiteInquiryModeOneColleague:
-		if len(owners) != 1 {
+		if owners != 1 {
 			return inquiryParamError("routing.owners", "must name exactly one colleague")
 		}
 	case crmcontracts.WebsiteInquiryModeRotate:
-		if len(owners) == 0 {
+		if owners == 0 {
 			return inquiryParamError("routing.owners", "must name at least one colleague")
 		}
 	case crmcontracts.WebsiteInquiryModeCoordinator:
-		if len(owners) != 0 || p.Routing.CapPerOwner != nil || (p.Routing.Rules != nil && len(*p.Routing.Rules) != 0) {
+		if owners != 0 || p.Routing.CapPerOwner != nil || (p.Routing.Rules != nil && len(*p.Routing.Rules) != 0) {
 			return inquiryParamError("routing", "coordinator review leaves the lead unowned")
 		}
 	}
+	return nil
+}
 
+// checkLeadRoutingShape runs the lead routing params check over the policy's
+// routing, and names any refusal under params.routing.
+func checkLeadRoutingShape(p crmcontracts.WebsiteInquiryPolicy) error {
 	raw, err := json.Marshal(p.Routing)
 	if err != nil {
 		return err
@@ -104,7 +128,7 @@ func checkInquiryRouting(p crmcontracts.WebsiteInquiryPolicy) error {
 
 func inquiryParamError(field, reason string) error {
 	if field == "" {
-		return &ParamError{Field: "params", Reason: reason}
+		return &ParamError{Field: keyParams, Reason: reason}
 	}
 	return &ParamError{Field: "params." + field, Reason: reason}
 }

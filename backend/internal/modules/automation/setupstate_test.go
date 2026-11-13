@@ -27,7 +27,7 @@ func TestConfigurationStateDoesNotConfuseSetupWithRunOutcomes(t *testing.T) {
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
 			got := configurationOf(tc.record, tc.active)
-			if got.State != tc.state || got.Reason != tc.reason {
+			if string(got.State) != tc.state || got.Reason != tc.reason {
 				t.Fatalf("state=%+v, want %s/%s", got, tc.state, tc.reason)
 			}
 		})

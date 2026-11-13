@@ -7,7 +7,6 @@ package activities
 
 import (
 	"context"
-	"encoding/json"
 	"slices"
 	"strconv"
 	"strings"
@@ -45,7 +44,10 @@ func scheduleBerlinSend(t *testing.T, e *sendEnv) ids.UUID {
 }
 
 // cloneScheduledSend copies the written row once per offset from draftClock,
-// keeping its Berlin wall clock in step with the copy's instant.
+// keeping its Berlin wall clock in step with the copy's instant. A copy past
+// zoneRuleShift, which the overdue read never reaches, keeps no wall clock.
+// The wall clock's CHECK scans the whole zone catalog per row, so 5000 such
+// copies take minutes on a slow runner.
 func cloneScheduledSend(t *testing.T, e *sendEnv, source ids.UUID, offsets string) {
 	t.Helper()
 	if _, err := e.owner.Exec(context.Background(), `
@@ -53,9 +55,10 @@ func cloneScheduledSend(t *testing.T, e *sendEnv, source ids.UUID, offsets strin
 		SELECT (jsonb_populate_record(s, jsonb_build_object(
 		         'id', uuidv7(),
 		         'scheduled_at', $2::timestamptz + offset_minutes * interval '1 minute',
-		         'scheduled_wall', ($2::timestamptz + offset_minutes * interval '1 minute') AT TIME ZONE 'Europe/Berlin'))).*
+		         'scheduled_wall', CASE WHEN offset_minutes < $4
+		           THEN ($2::timestamptz + offset_minutes * interval '1 minute') AT TIME ZONE 'Europe/Berlin' END))).*
 		  FROM scheduled_send s, unnest($3::int[]) AS offset_minutes
-		 WHERE s.id = $1`, source, draftClock, offsets); err != nil {
+		 WHERE s.id = $1`, source, draftClock, offsets, int(zoneRuleShift/time.Minute)); err != nil {
 		t.Fatalf("cloning the scheduled message: %v", err)
 	}
 }
@@ -112,45 +115,21 @@ func TestOverdueScheduledSendsReadsOnlyTheDueIndexRange(t *testing.T) {
 			len(overdue), slices.Contains(overdue, ruleMovedEarlier), slices.Contains(overdue, ruleMovedLater))
 	}
 
-	var plan json.RawMessage
+	var plan string
 	if err := e.owner.QueryRow(ctx, `EXPLAIN (ANALYZE, FORMAT JSON) `+overdueScheduledSendsSQL,
 		overdueScheduledSendsArgs(draftClock.Add(-overdueGrace), 100)).Scan(&plan); err != nil {
 		t.Fatal(err)
 	}
 	t.Logf("plan over %d queued messages: %s", overdueQueueSize, plan)
-	var nodes []struct {
-		Plan explainNode `json:"Plan"`
-	}
-	if err := json.Unmarshal(plan, &nodes); err != nil || len(nodes) != 1 {
-		t.Fatalf("reading the plan: %v", err)
-	}
-	scan, ok := nodes[0].Plan.find("scheduled_send")
-	if !ok || scan.Index != "idx_scheduled_send_due" || scan.Rows > 60 {
-		t.Fatalf("the overdue read scanned scheduled_send by %q via %q and read %d rows, want idx_scheduled_send_due over the next %s only",
-			scan.Type, scan.Index, scan.Rows, zoneRuleShift)
-	}
-}
-
-type explainNode struct {
-	Type     string        `json:"Node Type"`
-	Relation string        `json:"Relation Name"`
-	Index    string        `json:"Index Name"`
-	Rows     int           `json:"Actual Rows"`
-	Removed  int           `json:"Rows Removed by Filter"`
-	Children []explainNode `json:"Plans"`
-}
-
-// find returns the scan of relation, with Rows counting every row it read
-// before its filter.
-func (n explainNode) find(relation string) (explainNode, bool) {
-	if n.Relation == relation {
-		n.Rows += n.Removed
-		return n, true
-	}
-	for _, child := range n.Children {
-		if found, ok := child.find(relation); ok {
-			return found, true
+	var scan planNode
+	decodePlan(t, plan).walk(func(n planNode) {
+		if n.RelationName == "scheduled_send" && scan.RelationName == "" {
+			scan = n
 		}
+	})
+	read := scan.ActualRows + scan.RemovedByFilter
+	if scan.IndexName != "idx_scheduled_send_due" || read > 60 {
+		t.Fatalf("the overdue read scanned scheduled_send by %q via %q and read %.0f rows, want idx_scheduled_send_due over the next %s only",
+			scan.NodeType, scan.IndexName, read, zoneRuleShift)
 	}
-	return explainNode{}, false
 }

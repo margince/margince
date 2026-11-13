@@ -5,5 +5,9 @@
     "activity.update",
     "lead.read",
     "relationship.read"
+  ],
+  "takes": [
+    "activity",
+    "assignable_website_inquiry"
   ]
 }

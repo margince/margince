@@ -191,7 +191,7 @@ func mayAttach(ctx context.Context, tx pgx.Tx, link ActivityLinkInput) error {
 // not-found, because the caller never sent that field.
 func linkRefusal(fromRequest bool, err error) error {
 	if fromRequest {
-		return auth.NameMissingReference("links", err)
+		return auth.NameMissingReference(fieldLinks, err)
 	}
 	return err
 }

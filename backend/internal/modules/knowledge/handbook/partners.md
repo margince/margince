@@ -108,7 +108,7 @@ Also called: new partner tier, new partner kind.
 To give a partner credit for a deal in Margince, set **via partner** to the partner and choose the **Partner attribution**. Both are on the deal's form and in its **Details** panel.
 1. On **New deal**, or in an open deal's **Details**, pick the partner under **via partner**.
 2. Under **Partner attribution**, choose **Sourced the deal (earns commission)** or **Influenced an existing deal (no commission)**.
-If you leave it empty, it reads **Not set (counted as sourced)**. The two fields show only once at least one company is a partner.
+If you leave it empty, it reads **Not set (counted as sourced)**. With no partner company yet, the field asks you to have an admin add one. Once set, the partner shows under the deal's name.
 Also called: partner-sourced deal, referral, partner influenced.
 
 A partner's own **Partner** tab lists **Partner deals**: the deals of other companies that came through this partner, sourced or influenced. Each shows the **Customer**, the **Attribution**, the **Deal value** and the **Status**. The partner's own Deals tab does not show them, because each of those deals belongs to its customer. On **Deals**, the **Partner-sourced** and **Partner** filters cut the list down to deals through any partner, or through one.

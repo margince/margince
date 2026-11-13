@@ -36,40 +36,8 @@ func (s *Store) ReuseWebsiteArrivalTask(ctx, admit context.Context, key string, 
 		found = false
 		return database.WithWorkspaceSnapshot(ctx, s.db.Pool(), func(bound context.Context) error {
 			return s.tx(bound, func(tx pgx.Tx) error {
-				system, sourceKey := provenance.WebsiteInquiryTaskSource(key, true)
-				var id ids.ActivityID
-				err := tx.QueryRow(bound, `SELECT id FROM activity WHERE source_system=@system AND source_id=@key FOR UPDATE`, pgx.NamedArgs{"system": system, "key": sourceKey}).Scan(&id)
-				if errors.Is(err, pgx.ErrNoRows) {
-					return nil
-				}
-				if err != nil {
-					return err
-				}
-				current, err := readActivity(admit, tx, id, storekit.IncludeArchived)
-				if err != nil {
-					return err
-				}
-				if current.Kind != crmcontracts.ActivityKindTask {
-					return apperrors.ErrConflict
-				}
-				found = true
-				if current.ArchivedAt != nil || (current.IsDone != nil && *current.IsDone) {
-					return nil
-				}
-				if err := auth.EnsureActivityWritableIn(admit, tx, id.UUID, true); err != nil {
-					return err
-				}
-				if current.SourceActivityId != nil && ids.UUID(*current.SourceActivityId) != source {
-					return apperrors.ErrConflict
-				}
-				if _, err := readActivityContent(admit, tx, ids.From[ids.ActivityKind](source), storekit.LiveOnly); err != nil {
-					return err
-				}
-				in, err := s.inquiryArrivalPatch(bound, tx, id, source, recipient, due)
-				if err != nil {
-					return err
-				}
-				_, err = updateActivityInTx(bound, tx, id, in)
+				var err error
+				found, err = s.reuseArrivalTaskTx(bound, admit, tx, key, source, recipient, due)
 				return err
 			})
 		})
@@ -78,12 +46,51 @@ func (s *Store) ReuseWebsiteArrivalTask(ctx, admit context.Context, key string, 
 	return found, err
 }
 
+// reuseArrivalTaskTx updates the arrival task filed for key, if there is one.
+// A task that is done or archived is found and left as it is.
+func (s *Store) reuseArrivalTaskTx(ctx, admit context.Context, tx pgx.Tx, key string, source, recipient ids.UUID, due time.Time) (bool, error) {
+	system, sourceKey := provenance.WebsiteInquiryTaskSource(key, true)
+	var id ids.ActivityID
+	err := tx.QueryRow(ctx, `SELECT id FROM activity WHERE source_system=@system AND source_id=@source_id FOR UPDATE`, pgx.NamedArgs{"system": system, "source_id": sourceKey}).Scan(&id)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return false, nil
+	}
+	if err != nil {
+		return false, err
+	}
+	current, err := readActivity(admit, tx, id, storekit.IncludeArchived)
+	if err != nil {
+		return false, err
+	}
+	if current.Kind != crmcontracts.ActivityKindTask {
+		return false, apperrors.ErrConflict
+	}
+	if current.ArchivedAt != nil || (current.IsDone != nil && *current.IsDone) {
+		return true, nil
+	}
+	if err := auth.EnsureActivityWritableIn(admit, tx, id.UUID, true); err != nil {
+		return true, err
+	}
+	if current.SourceActivityId != nil && ids.UUID(*current.SourceActivityId) != source {
+		return true, apperrors.ErrConflict
+	}
+	if _, err := readActivityContent(admit, tx, ids.From[ids.ActivityKind](source), storekit.LiveOnly); err != nil {
+		return true, err
+	}
+	in, err := s.inquiryArrivalPatch(ctx, tx, id, source, recipient, due)
+	if err != nil {
+		return true, err
+	}
+	_, err = updateActivityInTx(ctx, tx, id, in)
+	return true, err
+}
+
 func (s *Store) inquiryArrivalPatch(ctx context.Context, tx pgx.Tx, id ids.ActivityID, source, recipient ids.UUID, due time.Time) (UpdateActivityInput, error) {
 	var holderEdited, deadlineEdited bool
 	// A delayed rule fills in handling details without undoing the colleague's choices.
 	err := tx.QueryRow(ctx, `SELECT COALESCE(bool_or("after" ? 'assignee_id'),FALSE),COALESCE(bool_or("after" ?| @deadline_fields),FALSE)
  FROM audit_log WHERE entity_type='activity' AND entity_id=@id AND actor_type=ANY(@actors)`, pgx.NamedArgs{
-		"id": id.UUID, "deadline_fields": []string{"due_at", fieldDueHasTime}, "actors": []string{string(principal.PrincipalHuman), string(principal.PrincipalAgent)},
+		"id": id.UUID, "deadline_fields": []string{fieldDueAt, fieldDueHasTime}, "actors": []string{string(principal.PrincipalHuman), string(principal.PrincipalAgent)},
 	}).Scan(&holderEdited, &deadlineEdited)
 	if err != nil {
 		return UpdateActivityInput{}, err

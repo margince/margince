@@ -3789,6 +3789,7 @@ export const en = {
   "co.overview.kind.task": "task",
   "co.overview.kind.message": "message",
   "record.details.about": "About",
+  "section.help": "About this section",
   "record.details.ownership": "Ownership",
   "co.aside.size": "Employees",
   "co.aside.wayIn": "Way in",
@@ -4471,6 +4472,8 @@ export const en = {
   "co.brief.generatedAt": "as of {when}",
   "co.assembly.writtenNow": "written just now",
   "co.growthFit.title": "Growth fit",
+  "co.growthFit.help":
+    "An AI reading of how well this company fits what your team sells, from seven inputs such as industry, size and the technology they run. Record more of them for a firmer answer.",
   "co.growthFit.unavailable":
     "Assessment could not be loaded. The company record is unchanged.",
   "co.growthFit.assembling":
@@ -4491,6 +4494,12 @@ export const en = {
   "co.growthFit.band.unknown": "Not enough data",
   "co.growthFit.completeness": "{present} of {expected} inputs recorded",
   "co.growthFit.missing": "Still missing",
+  "co.growthFit.inputs": "What the fit is judged on",
+  "co.growthFit.rule":
+    "At least {needed} of {expected} inputs are needed to judge the fit.",
+  "co.growthFit.inputMissing": "Missing",
+  "co.growthFit.inputStale": "Out of date",
+  "co.growthFit.fromSiteRead": "Found when the website is read.",
   "co.growthFit.capped": "Held back: {reason}.",
   "industry.agriculture": "Agriculture",
   "industry.automotive": "Automotive",
@@ -4780,6 +4789,8 @@ export const en = {
 
   // The review queue and the reach table (ADR-0078 §2.1b).
   "companyReach.title": "Who can get you in",
+  "companyReach.help":
+    "Colleagues whose LinkedIn connections work at this company, as a count. Ask one of them to introduce you.",
   "companyReach.sub":
     "Colleagues whose LinkedIn connections work here. A count, never the names. Ask them for an introduction.",
   "companyReach.colleaguesLabel": "Colleagues with connections here",
@@ -5989,6 +6000,11 @@ export const en = {
   "deal.ownerMe": "Assign to me",
   "deal.ownerUnassign": "Unassign",
   "deal.partnerCompany": "Referring partner",
+  "deal.partnerNoneYet": "No partners yet. Ask an admin to add one.",
+  "deal.referredBy": "Referred by",
+  "deal.supportedBy": "Supported by",
+  "deal.referral.sourced": "(sourced)",
+  "deal.referral.influenced": "(influenced)",
   "deal.recordedBy": "Recorded by",
   // A reference the reader may not read, on a surface with no room for the
   // mask glyph: a Kanban card's company line, and the one entry a withheld
@@ -6333,6 +6349,8 @@ export const en = {
 
   "deal.monthlyApproximate": "approx.",
   "assignments.title": "Responsibilities",
+  "assignments.help":
+    "Who on your team looks after this record, by role. It does not change who can see the record; share the record for that.",
   "assignments.noAccessNote":
     "Records who looks after what. It does not grant access to this record.",
   "assignments.empty": "No one is assigned yet",
@@ -8157,7 +8175,7 @@ export const en = {
   "tasks.origin.analytics_decision":
     "Recorded from a sales review: a decision with an owner and a review date. Record the outcome under Decisions from the last review.",
   "tasks.origin.overnight_reconcile":
-    "Created from a follow-up that the overnight review proposed and someone approved.",
+    "Created from a follow-up that the overnight review proposed.",
   "tasks.origin.commitment":
     "Created from a commitment read out of a conversation.",
   "tasks.origin.email_request": "Created from a request in an email.",
@@ -18902,6 +18920,8 @@ export const en = {
   "lists.note": "Why (optional)",
   "lists.noteHint": "Kept with the change so colleagues can see why.",
   "lists.record.title": "Lists",
+  "lists.record.help":
+    "The lists this company is on. Live Lists add it by their rules; you add it to a Shortlist yourself. Use a list to work through accounts one after another.",
   "lists.record.loading": "Loading lists",
   "lists.record.empty": "Not on any list you can find.",
   "lists.record.check": "Check a Live List",
@@ -19651,7 +19671,21 @@ export const en = {
     "Margince cannot check whether this was answered: the mail’s text can no longer be read. Mark it done once it is handled.",
   "worklist.ask.task_unchecked_reply": "Latest reply sent: {date}",
   "worklist.ask.brief_item":
-    "The overnight review flagged this deal. Act on it, set it aside, or dismiss it.",
+    "Margince picked this deal for a review today. Look at it and plan the next step.",
+  "worklist.ask.brief.closing_soon":
+    "This deal is expected to close within 2 weeks. Review it and make sure the next step is planned.",
+  "worklist.ask.brief.no_next_step":
+    "No next step is recorded on this deal. Review it and agree on the next step.",
+  "worklist.ask.brief.no_champion":
+    "Nobody at the customer is actively championing this deal. Review it and find someone who will.",
+  "worklist.ask.brief.signal.closing_soon":
+    "The close date of this deal is near. Review it and make sure the next step is planned.",
+  "worklist.ask.brief.signal.stalled":
+    "This deal has gone quiet and may slip. Review it and plan the next step.",
+  "worklist.ask.brief.signal.opportunity":
+    "This deal is worth pursuing now. Review it and plan the next step.",
+  "worklist.ask.brief.signal.moved":
+    "There is new activity on this deal. Review what happened.",
   "worklist.ask.conversation_claim":
     "You committed to this in a conversation. Do it, then mark it done.",
   "worklist.ask.invitation":

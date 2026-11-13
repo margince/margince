@@ -126,6 +126,7 @@ function RailBody({
     sections.push({
       key: "lists",
       label: t("lists.record.title"),
+      help: t("lists.record.help"),
       children: lists,
     });
   }
@@ -139,8 +140,12 @@ function RailBody({
 
 export type Edit = Readonly<{ canEdit: boolean; reason?: string }>;
 
-/** Whether this reader may change the account's own fields, and if not, why. */
-function useCompanyEditGate(company: Company): Edit {
+/**
+ * Whether this reader may change the account's own fields, and if not, why.
+ * Every surface that edits them (the rail, the Profile tab, the growth-fit
+ * checklist) refuses with this one answer.
+ */
+export function useCompanyEditGate(company: Company): Edit {
   const t = useT();
   const writable = useCanWriteRecord("company", company);
   const reason = useCompanyReadOnlyReason(company);
@@ -253,7 +258,7 @@ export function useRowBuilders(company: Company, edit: Edit) {
 
 // The fixed list in the reader's order. A value that is no code, from a row not
 // yet repaired, is offered as it is stored so the row never reads as unset.
-function useIndustryOptions(company: Company) {
+export function useIndustryOptions(company: Company) {
   const t = useT();
   const { locale } = useLocale();
   const options = industryOptions(t, locale);

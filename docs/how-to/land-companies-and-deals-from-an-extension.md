@@ -129,7 +129,7 @@ An unattended run can also raise a signal about a record, with the evidence layo
 | Repeat | The same kind, subject and key answers `DispositionAlreadyRaised` with the held signal's `Ref`. That is a success, so move your cursor on. A signal a user dismissed stays dismissed, and a replay does not raise it again. |
 | New signal | `DispositionAccepted`. Core writes the signal, its audit row and its `signal.detected` event in one transaction. |
 | Edits | A unit cannot change a signal's kind or evidence afterwards. |
-| Personal data | A layout member marked `Personal` is removed when the contact it is about is erased. |
+| Personal data | A layout member not marked `NotPersonal` is removed when the contact it is about is erased. |
 
 An attended call is refused with `ErrAttendedIngest`, as for every kind. The integration tests are in `backend/internal/compose/extingresssignal_integration_test.go`.
 

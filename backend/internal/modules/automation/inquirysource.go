@@ -35,37 +35,12 @@ func readAcceptedInquiry(ctx context.Context, ex Executors, ev workflow.Event, p
 	if err != nil {
 		return inquiryReceipt{}, err
 	}
-	record, err := ex.Provider.Read(admit, ev.Entity)
-	if errors.Is(err, apperrors.ErrNotFound) {
-		return inquiryReceipt{}, workflow.Declined("the accepted website inquiry is no longer available")
-	}
+	activity, err := readInquiryNote(admit, ex, ev)
 	if err != nil {
 		return inquiryReceipt{}, err
 	}
-	var activity crmcontracts.Activity
-	if err := json.Unmarshal(record.Fields, &activity); err != nil {
+	if err := checkInquiryOwnership(ev, policy, activity, allowLegacy); err != nil {
 		return inquiryReceipt{}, err
-	}
-	if activity.Kind != crmcontracts.ActivityKindNote || activity.SourceSystem == nil || *activity.SourceSystem != provenance.WebFormSource || activity.SourceId == nil || activity.Raw == nil || activity.Links == nil || activity.ArchivedAt != nil {
-		return inquiryReceipt{}, workflow.Declined("the trigger is not an available accepted website note")
-	}
-	var payload crmcontracts.PublicEventActivityCaptured
-	if err := json.Unmarshal(ev.Payload, &payload); err != nil {
-		return inquiryReceipt{}, err
-	}
-	if payload.WebsiteSubmissionKey == nil || *payload.WebsiteSubmissionKey != *activity.SourceId {
-		return inquiryReceipt{}, workflow.Declined("the event does not name this accepted website note")
-	}
-	form, _, ok := strings.Cut(*activity.SourceId, ":")
-	if !ok || form != policy.FormId.String() {
-		return inquiryReceipt{}, workflow.Declined("the accepted inquiry belongs to another form")
-	}
-	owner, err := AcceptedInquiryOwner(activity.Raw)
-	if err != nil {
-		return inquiryReceipt{}, err
-	}
-	if (owner == nil && !allowLegacy) || (owner != nil && *owner != ev.AutomationID) {
-		return inquiryReceipt{}, workflow.Declined("this handling policy does not own the accepted inquiry")
 	}
 	target, err := InquiryTarget(activity)
 	if err != nil {
@@ -80,6 +55,53 @@ func readAcceptedInquiry(ctx context.Context, ex Executors, ev workflow.Event, p
 	return inquiryReceipt{Activity: activity, Target: target, Key: *activity.SourceId}, nil
 }
 
+// readInquiryNote reads the accepted website note the event names, as the
+// rule owner. A note that is gone or no longer one declines the firing.
+func readInquiryNote(admit context.Context, ex Executors, ev workflow.Event) (crmcontracts.Activity, error) {
+	var activity crmcontracts.Activity
+	record, err := ex.Provider.Read(admit, ev.Entity)
+	if errors.Is(err, apperrors.ErrNotFound) {
+		return activity, workflow.Declined("the accepted website inquiry is no longer available")
+	}
+	if err != nil {
+		return activity, err
+	}
+	if err := json.Unmarshal(record.Fields, &activity); err != nil {
+		return activity, err
+	}
+	if activity.Kind != crmcontracts.ActivityKindNote || activity.SourceSystem == nil || *activity.SourceSystem != provenance.WebFormSource || activity.SourceId == nil || activity.Raw == nil || activity.Links == nil || activity.ArchivedAt != nil {
+		return activity, workflow.Declined("the trigger is not an available accepted website note")
+	}
+	return activity, nil
+}
+
+// checkInquiryOwnership declines a note the event does not name, one from
+// another form, or one that another policy accepted. allowLegacy also admits
+// a note that no policy accepted.
+func checkInquiryOwnership(ev workflow.Event, policy crmcontracts.WebsiteInquiryPolicy, activity crmcontracts.Activity, allowLegacy bool) error {
+	var payload crmcontracts.PublicEventActivityCaptured
+	if err := json.Unmarshal(ev.Payload, &payload); err != nil {
+		return err
+	}
+	if payload.WebsiteSubmissionKey == nil || *payload.WebsiteSubmissionKey != *activity.SourceId {
+		return workflow.Declined("the event does not name this accepted website note")
+	}
+	form, _, ok := strings.Cut(*activity.SourceId, ":")
+	if !ok || form != policy.FormId.String() {
+		return workflow.Declined("the accepted inquiry belongs to another form")
+	}
+	owner, err := AcceptedInquiryOwner(activity.Raw)
+	if err != nil {
+		return err
+	}
+	if (owner == nil && !allowLegacy) || (owner != nil && *owner != ev.AutomationID) {
+		return workflow.Declined("this handling policy does not own the accepted inquiry")
+	}
+	return nil
+}
+
+// InquiryTarget is the one lead or contact an accepted inquiry note is filed
+// under. A note with none declines; a note with two is an error.
 func InquiryTarget(activity crmcontracts.Activity) (datasource.EntityRef, error) {
 	var target datasource.EntityRef
 	if activity.Links == nil {

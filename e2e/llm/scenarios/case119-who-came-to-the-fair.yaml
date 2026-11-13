@@ -1,0 +1,71 @@
+# CASE 119 — Who would be on the fair list?
+#
+# Thirty contacts carry the tag "Husum Wind 2026", put there by this case's own
+# setup step so no other case counts them. Thirty is five past the filter
+# preview's first page of 25, so an answer built from one page leaves contacts
+# out. read_lists' preview pages with the cursor each page answers since
+# #10288; find_records pages too, and a larger limit reads all thirty at once.
+# Every one of those is right, so no tool is pinned and the answer is scored.
+name: case119_who_came_to_the_fair
+criteria: [1]
+
+setup: fair_guests_tagged
+
+# Read-only by its prompt: the user asks who WOULD be on a list. Saving one is a
+# write the prompt does not ask for, and is refused below.
+writes: true
+
+prompt: |
+  Before I turn our Husum Wind 2026 contacts into a live list, tell me who
+  exactly would be on it. I need every name, not a sample.
+
+must_not_call_with:
+  - change_lists~.
+
+may_call:
+  - read_lists
+  - find_records
+  - list_records
+  - search_records
+  - read_workspace
+
+must_mention:
+  - "30|thirty"
+  # Every name the setup step writes, so an answer that fills the count with
+  # invented names fails here; the judge sees only the answer.
+  - "Anke Petersen"
+  - "Bjarne Hansen"
+  - "Carla Jessen"
+  - "Dirk Matthiesen"
+  - "Elke Nissen"
+  - "Frerk Andresen"
+  - "Gesa Lorenzen"
+  - "Hauke Clausen"
+  - "Inken Sönksen"
+  - "Jens Paulsen"
+  - "Kirsten Thomsen"
+  - "Lars Bahnsen"
+  - "Maren Feddersen"
+  - "Nils Ketelsen"
+  - "Ocke Jürgensen"
+  - "Pia Carstensen"
+  - "Rasmus Boysen"
+  - "Silke Hinrichsen"
+  - "Thore Lassen"
+  - "Ute Martensen"
+  - "Volker Brodersen"
+  - "Wiebke Nommensen"
+  - "Arne Dethlefsen"
+  - "Britta Ingwersen"
+  - "Claas Volquardsen"
+  - "Dörte Rickmers"
+  - "Eike Jacobsen"
+  - "Finja Christiansen"
+  - "Gunnar Asmussen"
+  - "Hella Momsen"
+
+judge:
+  - "Criterion 1. The answer lists thirty contacts tagged Husum Wind 2026 by name and presents them as the whole list. Answer no if it names fewer than thirty contacts, or says it shows only a sample or a first page."
+
+runs: 3
+pass_at: 2

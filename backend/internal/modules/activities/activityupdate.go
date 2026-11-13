@@ -113,7 +113,7 @@ func (s *Store) UpdateActivity(ctx context.Context, id ids.ActivityID, in Update
 // never a withheld one with its subject and body nulled out.
 func activityColumnImage(a crmcontracts.Activity) map[string]any {
 	return map[string]any{
-		"subject":              derefOrNil(a.Subject),
+		fieldSubject:           derefOrNil(a.Subject),
 		fieldBody:              derefOrNil(a.Body),
 		auditFieldOccurredAt:   a.OccurredAt,
 		fieldOccurredPrecision: string(a.OccurredPrecision),

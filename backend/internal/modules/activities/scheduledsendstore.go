@@ -190,7 +190,7 @@ func readScheduledSendForSeatTx(ctx context.Context, tx pgx.Tx, id, seat ids.UUI
 	rows, err := tx.Query(ctx, `
 		SELECT`+scheduledSendColumns+`
 		  FROM scheduled_send
-		 WHERE id = @id AND scheduled_by = @seat`, pgx.NamedArgs{"id": id, "seat": seat})
+		 WHERE id = @id AND scheduled_by = @seat`, pgx.NamedArgs{"id": id, argSeat: seat})
 	if err != nil {
 		return ScheduledSend{}, fmt.Errorf("scheduled send: reading: %w", err)
 	}
@@ -281,7 +281,7 @@ func (s *Store) RescheduleInTx(ctx context.Context, tx pgx.Tx, id ids.UUID, sche
 			       version = version + 1, updated_at = now()
 			 WHERE id = @id AND status IN ('scheduled','held') AND version = @version
  RETURNING scheduled_wall,scheduled_at`, pgx.NamedArgs{
-			"at": sched.At.UTC(), "zone": sched.TZ, "wall": sched.wallClock(), "id": id, "version": expectedVersion,
+			"at": sched.At.UTC(), argZone: sched.TZ, argWall: sched.wallClock(), "id": id, fieldVersion: expectedVersion,
 			"replied": HeldRecipientReplied, "reviewed": s.now(),
 		}).Scan(&keptWall, &keptAt)
 		if errors.Is(err, pgx.ErrNoRows) {
@@ -291,8 +291,8 @@ func (s *Store) RescheduleInTx(ctx context.Context, tx pgx.Tx, id ids.UUID, sche
 			return fmt.Errorf("scheduled send: moving the due moment: %w", err)
 		}
 		if _, err := storekit.Audit(ctx, tx, "reschedule", "scheduled_send", id,
-			map[string]any{FieldScheduledAt: current.ScheduledAt, FieldScheduledTZ: current.ScheduledTZ, "scheduled_intent": current.IntentWire()},
-			map[string]any{FieldScheduledAt: keptAt, FieldScheduledTZ: sched.TZ, "scheduled_intent": (ScheduledSend{ScheduledWall: keptWall, ScheduledTZ: sched.TZ}).IntentWire()}); err != nil {
+			map[string]any{FieldScheduledAt: current.ScheduledAt, FieldScheduledTZ: current.ScheduledTZ, fieldScheduledIntent: current.IntentWire()},
+			map[string]any{FieldScheduledAt: keptAt, FieldScheduledTZ: sched.TZ, fieldScheduledIntent: (ScheduledSend{ScheduledWall: keptWall, ScheduledTZ: sched.TZ}).IntentWire()}); err != nil {
 			return err
 		}
 		// A FRESH timer for the new moment. The old one still wakes at the old

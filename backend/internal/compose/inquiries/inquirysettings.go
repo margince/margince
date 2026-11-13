@@ -20,6 +20,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/provenance"
 )
 
+// Settings saves, previews and applies a web form's website inquiry policy.
 type Settings struct {
 	routing   Routing
 	executors automation.Executors
@@ -30,10 +31,12 @@ type Settings struct {
 	fence     webforms.HandlingFence
 }
 
+// NewSettings saves policies through the automation store, checked by routing.
 func NewSettings(db *database.DB, forms *webforms.Store, routing Routing, executors automation.Executors, engine func() *automation.WorkflowEngine) Settings {
 	return Settings{db: db, forms: forms, policies: automation.NewAutomationStore(db).WithInquiryRouting(routing), fence: routing.fence, routing: routing, executors: executors, engine: engine}
 }
 
+// Save stores a form's policy and links the form to it, under the form's fence.
 func (s Settings) Save(ctx context.Context, id ids.UUID, version int64, in crmcontracts.WebsiteInquiryHandlingRequest) (crmcontracts.WebsiteInquiryHandling, error) {
 	if err := auth.Require(ctx, "automation", principal.ActionRead); err != nil {
 		return crmcontracts.WebsiteInquiryHandling{}, err
@@ -43,7 +46,7 @@ func (s Settings) Save(ctx context.Context, id ids.UUID, version int64, in crmco
 		run := func() error {
 			return database.WithWorkspaceSnapshot(leased, s.db.Pool(), func(bound context.Context) error {
 				var err error
-				out, err = s.save(bound, id, version, in)
+				out, err = s.saveHandling(bound, id, version, in)
 				return err
 			})
 		}
@@ -52,7 +55,7 @@ func (s Settings) Save(ctx context.Context, id ids.UUID, version int64, in crmco
 	return out, err
 }
 
-func (s Settings) save(ctx context.Context, id ids.UUID, version int64, in crmcontracts.WebsiteInquiryHandlingRequest) (crmcontracts.WebsiteInquiryHandling, error) {
+func (s Settings) saveHandling(ctx context.Context, id ids.UUID, version int64, in crmcontracts.WebsiteInquiryHandlingRequest) (crmcontracts.WebsiteInquiryHandling, error) {
 	form, err := s.forms.GetForm(ctx, id)
 	if err != nil {
 		return crmcontracts.WebsiteInquiryHandling{}, err

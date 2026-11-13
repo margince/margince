@@ -102,11 +102,15 @@ func WebsiteInquiryTaskSource(submission string, contact bool) (string, string) 
 	return WebsiteInquirySource, submission
 }
 
+// IsWebsiteInquiryTask reports whether a task's source names a website
+// inquiry, for a lead or for a contact.
 func IsWebsiteInquiryTask(system, source string) bool {
 	contact, prefix := WebsiteInquiryTaskSource("", true)
 	return source != "" && (system == WebsiteInquirySource || (system == contact && strings.HasPrefix(source, prefix)))
 }
 
+// WebsiteInquirySubmission is the submission key a website inquiry task was
+// filed for, and false for any other task.
 func WebsiteInquirySubmission(system, source string) (string, bool) {
 	if !IsWebsiteInquiryTask(system, source) {
 		return "", false
@@ -118,6 +122,8 @@ func WebsiteInquirySubmission(system, source string) (string, bool) {
 	return source, true
 }
 
+// WebsiteInquiryTaskSQL is IsWebsiteInquiryTask in SQL, over the activity at
+// alias. alias is a compile-time literal.
 func WebsiteInquiryTaskSQL(alias string) string {
 	contact, prefix := WebsiteInquiryTaskSource("", true)
 	return fmt.Sprintf("COALESCE((%[1]s.source_id <> '' AND (%[1]s.source_system = '%[2]s' OR (%[1]s.source_system = '%[3]s' AND starts_with(%[1]s.source_id, '%[4]s')))), FALSE)", alias, WebsiteInquirySource, contact, prefix)
@@ -193,6 +199,7 @@ func EngineTaskSources() []string {
 	return append(EngineReminderSources(), WebsiteInquirySource, LeadForContactSource)
 }
 
+// EngineTaskSource reports whether source is one of EngineTaskSources.
 func EngineTaskSource(source string) bool { return slices.Contains(EngineTaskSources(), source) }
 
 // RetiredTaskSources are automatic task families whose writers were removed.

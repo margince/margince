@@ -1,0 +1,7 @@
+{
+  "verdict": "yes",
+  "reason": "The answer lists exactly thirty contacts by name and explicitly presents them as the complete list with the phrase 'Here is every one:', not as a sample or partial page.",
+  "model": "claude-haiku-4-5-20251001",
+  "criterion": "Criterion 1. The answer lists thirty contacts tagged Husum Wind 2026 by name and presents them as the whole list. Answer no if it names fewer than thirty contacts, or says it shows only a sample or a first page.",
+  "answer": "A live list on the Husum Wind 2026 tag would hold 30 contacts. Here is every one:\n1. Anke Petersen\n2. Bjarne Hansen\n3. Carla Jessen\n4. Dirk Matthiesen\n5. Elke Nissen\n6. Frerk Andresen\n7. Gesa Lorenzen\n8. Hauke Clausen\n9. Inken Sönksen\n10. Jens Paulsen\n11. Kirsten Thomsen\n12. Lars Bahnsen\n13. Maren Feddersen\n14. Nils Ketelsen\n15. Ocke Jürgensen\n16. Pia Carstensen\n17. Rasmus Boysen\n18. Silke Hinrichsen\n19. Thore Lassen\n20. Ute Martensen\n21. Volker Brodersen\n22. Wiebke Nommensen\n23. Arne Dethlefsen\n24. Britta Ingwersen\n25. Claas Volquardsen\n26. Dörte Rickmers\n27. Eike Jacobsen\n28. Finja Christiansen\n29. Gunnar Asmussen\n30. Hella Momsen"
+}

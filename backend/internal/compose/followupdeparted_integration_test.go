@@ -10,14 +10,14 @@ package compose
 
 import "testing"
 
-func TestADealWhoseOwnerHasLeftStagesNoFollowUpCard(t *testing.T) {
+func TestADealWhoseOwnerHasLeftGetsNoFollowUp(t *testing.T) {
 	cases := []struct {
 		name, kind, update string
 	}{
 		{"deactivated owner, call evidence", "call", `status = 'deactivated'`},
 		{"archived owner, call evidence", "call", `archived_at = now()`},
 		// An answerable thread would be drafted for a live owner. For one who left
-		// the pass falls back to the task proposal, and that is staged for nobody.
+		// the pass falls back to the task, and that is filed for nobody.
 		{"deactivated owner, answerable email thread", "email", `status = 'deactivated'`},
 	}
 	for _, tc := range cases {
@@ -41,6 +41,9 @@ func TestADealWhoseOwnerHasLeftStagesNoFollowUpCard(t *testing.T) {
 				WHERE target_entity_id = $1 AND kind IN ('deal_follow_up', 'held_draft')`, deal); n != 0 {
 				t.Errorf("%d follow-up cards staged for a deal whose owner has left, want 0 — "+
 					"nobody reads them, so they expire and are staged again", n)
+			}
+			if n := e.followUps(t, deal); n != 0 {
+				t.Errorf("%d follow-up tasks filed for a deal whose owner has left, want 0", n)
 			}
 		})
 	}

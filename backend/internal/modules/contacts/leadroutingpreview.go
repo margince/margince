@@ -13,6 +13,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
+// PreviewLeadRouting decides who a lead would go to under cfg, and writes nothing.
 func (s *Store) PreviewLeadRouting(ctx context.Context, leadID ids.LeadID, cfg RoutingConfig) (RoutingDecision, error) {
 	if err := auth.Require(ctx, "lead", principal.ActionUpdate); err != nil {
 		return RoutingDecision{}, err

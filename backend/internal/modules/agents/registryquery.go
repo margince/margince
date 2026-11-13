@@ -171,6 +171,15 @@ func (r *Registry) Offered(ctx context.Context) []mcp.ToolSpec {
 	return out
 }
 
+// OnSurface reports whether name is on the public MCP surface for this caller:
+// a listed tool or router, or a Gated tool the gate admits. A router's target
+// and a superseded tool are not. It decides nothing about the caller's grants,
+// which each tool's gate holds.
+func (r *Registry) OnSurface(ctx context.Context, name string) bool {
+	spec, ok := r.Spec(name)
+	return ok && (!spec.Unlisted || r.gateAdmits(ctx, spec))
+}
+
 // Runnable is what a Surface-B run may choose among: every tool this caller may
 // invoke, offered on the external listing or not. A scheduled agent's allowlist
 // narrows it to the verbs that agent names, each with its own full copy.

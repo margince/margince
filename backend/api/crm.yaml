@@ -48,6 +48,9 @@ openapi: 3.1.0
 #     agent principal (403 code: permission_denied) — never silently admitted. So a new endpoint that
 #     forgets `x-mcp-tool` fails closed, not open. CONTRACT INVARIANT (drift-lint): every mutating
 #     operation (POST/PUT/PATCH/DELETE) MUST carry either `x-mcp-tool` (a tier) OR `x-agent-access`.
+#   - `x-human-only: true` on a request body MEMBER — only a human may change it. The agent tool
+#     built from the route is not offered the member, the agent gate refuses an agent body that
+#     carries it, and the store refuses any other principal that changes it.
 #   - `x-agent-access: human-only` — the operation rejects an AGENT (Passport) principal outright
 #     (403 code: permission_denied), whatever its scope/seat. Used for governance the agent must not
 #     self-serve: approval decisions (approve/reject — an agent may STAGE a 🟡 action but never
@@ -25194,7 +25197,7 @@ paths:
       operationId: listNoticeCases
       security: [ { bearerAuth: [] }, { cookieAuth: [] } ]
       x-mcp-tool: { verb: list_notice_cases, router: read_workspace, action: notice_cases, tier: auto_execute, scope: read, served_by: route }
-      summary: Privacy notices already owed, where the source is confirmed, soonest deadline first. A contact whose source nobody has confirmed is in notice_case_reviews.
+      summary: Privacy notices already owed, where the source is confirmed, soonest deadline first. A contact whose source nobody has confirmed is in notice_case_reviews (GET /privacy/notice-case-reviews).
       description: |
         Every Art. 13 / Art. 14 duty the installation has not discharged, with who owns it and by
         when it falls due.
@@ -25365,7 +25368,7 @@ paths:
       operationId: listNoticeCaseReviews
       security: [ { bearerAuth: [] }, { cookieAuth: [] } ]
       x-mcp-tool: { verb: list_notice_case_reviews, router: read_workspace, action: notice_case_reviews, tier: auto_execute, scope: read, served_by: route }
-      summary: Every contact's privacy-notice case, including a source nobody has confirmed yet (a bought list, an import), soonest deadline first. Start here for what we owe one contact.
+      summary: Every contact's privacy-notice case, including one whose source was never recorded (an older contact), soonest deadline first. Without state it lists unresolved cases only, so an empty page is not an empty notice history, and a contact imported moments ago may have no case yet. For one contact, read their contact_360 view (GET /contacts/{id}/360) instead; its privacy_source_reviews and privacy_notice_duties carry the case ids.
       description: |
         Acquisition-source reviews and notice duties, under privacy-request read authority.
         Unconfirmed sources have no deadline or sending route. Confirmed indirect sources stay owed;
@@ -25416,7 +25419,7 @@ paths:
       operationId: getNoticeCaseReview
       security: [ { bearerAuth: [] }, { cookieAuth: [] } ]
       x-mcp-tool: { verb: get_notice_case_review, router: read_details, action: notice_case_review, tier: auto_execute, scope: read, served_by: route }
-      summary: One contact's privacy-notice case — its source, whether a notice is owed, and by when. The id comes from notice_case_reviews, not the contact's id.
+      summary: One contact's privacy-notice case — its source, whether a notice is owed, and by when. The id comes from notice_case_reviews or the contact's contact_360 view, not the contact's id.
       description: |
         The administrative record for a source review or notice duty. Human privacy-request read
         authority covers the record; contact names remain limited by ordinary contact visibility.
@@ -25488,7 +25491,7 @@ paths:
       operationId: assessNoticeSource
       security: [ { bearerAuth: [] }, { cookieAuth: [] } ]
       x-mcp-tool: { verb: confirm_notice_source, router: change_compliance, action: confirm_notice_source, tier: auto_execute, scope: write, served_by: route, ask_user_first: true }
-      summary: Confirm where a contact came from (bought list, import, their own enquiry), which decides whether a privacy notice is owed. Preview it first.
+      summary: Confirm where a contact came from (bought list, import, their own enquiry), which decides whether a privacy notice is owed. Preview it first (POST /privacy/notice-case-reviews/{id}/source/preview). Only a contact with no recorded source is up for review; when its evidence does not name where the data first came from, ask the user rather than guessing a kind.
       requestBody:
         required: true
         content:
@@ -25512,7 +25515,7 @@ paths:
       operationId: previewNoticeSource
       x-mcp-tool: { verb: preview_notice_source, router: read_details, action: notice_source_preview, tier: auto_execute, scope: read, served_by: route }
       security: [ { bearerAuth: [] }, { cookieAuth: [] } ]
-      summary: Preview what confirming a contact's source decides — whether a notice is owed and by when — without changing the case. Confirming is the user's decision, so offer confirm_notice_source and ask them.
+      summary: Preview what confirming a contact's source decides — whether a notice is owed and by when — without changing the case. Confirming is the user's decision, so offer confirm_notice_source (POST /privacy/notice-case-reviews/{id}/source) and ask them, unless they already named the source and asked you to confirm it.
       requestBody:
         required: true
         content:
@@ -48516,7 +48519,7 @@ components:
       description: |
         How much of what the band needs is actually present — with BOTH counts. "4 of 9"
         and "4 of 40" are different claims and must never render identically (DOSS-AC-12).
-      required: [present, expected]
+      required: [present, expected, needed, inputs]
       properties:
         present: { type: integer, description: Required inputs available and not stale. }
         expected:
@@ -48524,6 +48527,16 @@ components:
           description: |
             Required inputs the assembly wanted. Never omitted and never implied — a
             proportion without its denominator is not a completeness figure.
+        needed:
+          type: integer
+          description: |
+            The fewest present inputs the assembly judges on. Below it the band is `unknown`.
+        inputs:
+          type: array
+          description: |
+            Every required input in the assembly's order, with whether it counts. An input
+            that does not count is missing or no longer fresh.
+          items: { $ref: '#/components/schemas/GrowthFitInputState' }
         missing:
           type: array
           description: |
@@ -48536,6 +48549,14 @@ components:
       enum: [offer_summary, icp, industry, buying_center, buying_intents, employee_range, technology]
       x-extensible-enum: true
       description: One input the growth-fit assessment needs about a company. The client words it.
+
+    GrowthFitInputState:
+      type: object
+      description: One required growth-fit input and whether it counts toward the band.
+      required: [input, present]
+      properties:
+        input: { $ref: '#/components/schemas/GrowthFitInput' }
+        present: { type: boolean, description: True when the input is recorded and not stale. }
 
     GrowthFitNextStep:
       type: string
@@ -62237,11 +62258,13 @@ components:
         kind:
           type: string
           enum: [stalled_deal, champion_left, reengagement, buying_intent, risk, other]
-          description: Corrects the signal's type. Only the kinds a human files by hand are accepted. The audit row keeps the old kind.
+          x-human-only: true
+          description: Corrects the signal's type. Only a human may, and only to the kinds a human files by hand. The audit row keeps the old kind.
         evidence:
           type: array
           items: { $ref: '#/components/schemas/SignalEvidence' }
-          description: Replaces the signal's evidence. The audit row keeps the old evidence.
+          x-human-only: true
+          description: Replaces the signal's evidence. Only a human may. The audit row keeps the old evidence.
 
     SignalListResponse:
       type: object

@@ -29,6 +29,7 @@ type Throttle struct {
 // ThrottleLevel names the ceiling that refused a post.
 type ThrottleLevel string
 
+// The ceilings that can refuse a post.
 const (
 	LevelInstallation ThrottleLevel = "installation"
 	LevelWorkspace    ThrottleLevel = "workspace"

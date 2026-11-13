@@ -90,6 +90,7 @@ type Trigger struct {
 	AdditionalEventTypes []string
 }
 
+// MatchesEventType reports whether an event of this type starts the handler.
 func (t Trigger) MatchesEventType(eventType string) bool {
 	return eventType != "" && (eventType == t.EventType || slices.Contains(t.AdditionalEventTypes, eventType))
 }

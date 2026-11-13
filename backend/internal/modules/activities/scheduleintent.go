@@ -53,6 +53,16 @@ func (schedule SendSchedule) wallClock() *string {
 	return &wall
 }
 
+// The named arguments that several scheduling and mail draft statements share.
+const (
+	argWall   = "wall"
+	argSeat   = "seat"
+	argZone   = "zone"
+	argAuthor = "author"
+	argHTML   = "html"
+)
+
+// IntentWire is the chosen local send time on the wire, or nil when none was chosen.
 func (schedule SendSchedule) IntentWire() *crmcontracts.IntentTime {
 	if schedule.Intent == nil {
 		return nil
@@ -60,11 +70,12 @@ func (schedule SendSchedule) IntentWire() *crmcontracts.IntentTime {
 	return &crmcontracts.IntentTime{WallClock: schedule.Intent.WallClock(), Timezone: schedule.Intent.Timezone().String()}
 }
 
-func (row ScheduledSend) IntentWire() *crmcontracts.IntentTime {
-	if row.ScheduledWall == nil {
+// IntentWire is the stored chosen local send time on the wire, or nil when none was kept.
+func (message ScheduledSend) IntentWire() *crmcontracts.IntentTime {
+	if message.ScheduledWall == nil {
 		return nil
 	}
-	return &crmcontracts.IntentTime{WallClock: row.ScheduledWall.Format(values.IntentWallClockLayout), Timezone: row.ScheduledTZ}
+	return &crmcontracts.IntentTime{WallClock: message.ScheduledWall.Format(values.IntentWallClockLayout), Timezone: message.ScheduledTZ}
 }
 
 func readSchedule(at *time.Time, zone *string, wall *time.Time) (*SendSchedule, error) {

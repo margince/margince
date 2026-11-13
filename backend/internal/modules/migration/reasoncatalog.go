@@ -367,12 +367,12 @@ var reasonCatalog = withUndoReasons(withActivityReasons(withDealReasons(map[Reas
 		textlang.German:     "{value:q} ist keine Domain, die gespeichert werden kann.",
 		textlang.Vietnamese: "{value:q} không phải tên miền có thể ghi.",
 	}},
-	ReasonValueTooLong: {params: []string{"length", "max"}, text: map[textlang.Lang]string{
+	ReasonValueTooLong: {params: []string{paramLength, paramMax}, text: map[textlang.Lang]string{
 		textlang.English:    "This value is {length} characters. The field holds at most {max}.",
 		textlang.German:     "Der Wert hat {length} Zeichen; das Feld fasst höchstens {max}.",
 		textlang.Vietnamese: "Giá trị dài {length} ký tự; trường này tối đa {max}.",
 	}},
-	ReasonDescriptionTooLong: {params: []string{"length", "max"}, text: map[textlang.Lang]string{
+	ReasonDescriptionTooLong: {params: []string{paramLength, paramMax}, text: map[textlang.Lang]string{
 		textlang.English:    "The description is {length} characters. A company description holds at most {max}.",
 		textlang.German:     "Die Beschreibung hat {length} Zeichen; eine Unternehmensbeschreibung fasst höchstens {max}.",
 		textlang.Vietnamese: "Mô tả dài {length} ký tự; mô tả công ty tối đa {max}.",
@@ -422,7 +422,7 @@ var reasonCatalog = withUndoReasons(withActivityReasons(withDealReasons(map[Reas
 		textlang.German:     "Im CRM gibt es kein Unternehmen namens {name:q}, daher gab es nichts, womit dieser Kontakt verknüpft werden konnte. Die Zeile wurde ohne Verknüpfung importiert.",
 		textlang.Vietnamese: "Không có công ty nào tên {name:q} trong CRM nên không có gì để liên kết liên hệ này. Hàng đã được nhập mà không có liên kết.",
 	}},
-	ReasonAuthorTooLong: {params: []string{"max"}, text: map[textlang.Lang]string{
+	ReasonAuthorTooLong: {params: []string{paramMax}, text: map[textlang.Lang]string{
 		textlang.English:    "Author is longer than {max} characters.",
 		textlang.German:     "Der Verfasser ist länger als {max} Zeichen.",
 		textlang.Vietnamese: "Tác giả dài hơn {max} ký tự.",

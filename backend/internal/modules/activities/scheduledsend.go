@@ -39,6 +39,9 @@ const (
 	FieldScheduledTZ = "scheduled_tz"
 )
 
+// fieldScheduledIntent is the audit key of the chosen local send time.
+const fieldScheduledIntent = "scheduled_intent"
+
 // ScheduleTimer wakes a scheduled send when it comes due. It is the seam
 // between the decision to defer, which this module owns, and the job runner,
 // which it must not reach into directly.
@@ -361,23 +364,23 @@ func (s *Store) scheduleSend(
    payload,payload_version,scheduled_by,principal_kind,
    agent_actor_id,agent_passport_id,agent_on_behalf_of)
  SELECT @id,@status,planned.instant,COALESCE(planned.timezone,@zone),planned.wall_time,
-  @origin,@anchor,@links::jsonb,@also_links::jsonb,
+  @origin,@anchor,@origin_links::jsonb,@also_links::jsonb,
   @payload::jsonb,@payload_version,@seat,@principal,
   @agent_actor,@passport,@on_behalf
  FROM public.update_intent_time(NULL,NULL,NULL,@wall::text::timestamp,@zone,@at) AS planned
  RETURNING created_at,updated_at,scheduled_wall,scheduled_at`, pgx.NamedArgs{
-			"id": row.ID, "status": row.Status, "at": row.ScheduledAt, "zone": row.ScheduledTZ, "wall": sched.wallClock(),
-			"origin": row.OriginKind, "anchor": nullableAnchor(origin), "links": originLinks, "also_links": alsoLinks,
-			"payload": payload, "payload_version": payloadVersionCurrent, "seat": row.ScheduledBy, "principal": principalKind(actor),
+			"id": row.ID, "status": row.Status, "at": row.ScheduledAt, argZone: row.ScheduledTZ, argWall: sched.wallClock(),
+			"origin": row.OriginKind, "anchor": nullableAnchor(origin), "origin_links": originLinks, "also_links": alsoLinks,
+			"payload": payload, "payload_version": payloadVersionCurrent, argSeat: row.ScheduledBy, "principal": principalKind(actor),
 			"agent_actor": prov.ActorID, "passport": prov.PassportID, "on_behalf": prov.OnBehalfOf,
 		}).Scan(&row.CreatedAt, &row.UpdatedAt, &row.ScheduledWall, &row.ScheduledAt); err != nil {
 			return fmt.Errorf("scheduled send: recording the intention: %w", err)
 		}
 		if _, err := storekit.Audit(ctx, tx, "schedule", "scheduled_send", row.ID, nil, map[string]any{
-			FieldScheduledAt:   row.ScheduledAt,
-			FieldScheduledTZ:   row.ScheduledTZ,
-			"scheduled_intent": row.IntentWire(),
-			"subject":          row.Subject,
+			FieldScheduledAt:     row.ScheduledAt,
+			FieldScheduledTZ:     row.ScheduledTZ,
+			fieldScheduledIntent: row.IntentWire(),
+			fieldSubject:         row.Subject,
 		}); err != nil {
 			return err
 		}

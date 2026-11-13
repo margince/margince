@@ -3,14 +3,8 @@
 
 package compose
 
-// Overnight follow-up reconciliation wiring (features/07 §8a,
-// B-E06.2a): the deals module owns the nightly read pass and the
-// approvals module owns the 🟡 morning inbox — this file is the
-// cross-module edge between them, injected here like every other one.
-// The pass stages kind "deal_follow_up" through the adapter below; a
-// human approval releases the confirm effect, which redeems the staging
-// and creates the drafted follow-up task through the activities store's
-// own gated write path.
+// Overnight follow-up reconciliation wiring. The deals module owns the nightly
+// read pass. This file joins it to the activities store and to approvals.
 
 import (
 	"context"
@@ -33,52 +27,38 @@ import (
 	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
-	"github.com/margince/margince/backend/internal/shared/kernel/diffhash"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/kernel/provenance"
 	"github.com/margince/margince/backend/internal/shared/kernel/systemtext"
+	"github.com/margince/margince/backend/internal/shared/kernel/workforce"
 )
 
-// followUpStager adapts the approvals service onto the deals module's
-// FollowUpStager seam. The proposal carries no target_version: a
-// follow-up is a new activity, independent of the deal's current field
-// values, so a concurrent deal edit must not invalidate the human's yes
-// (unlike a close-date correction, which overwrites a deal field).
-//
-// Leaving TargetVersion unset is NOT what makes that true, which is worth
-// saying because it used to be. The pin is taken server-side now, at the one
-// place every stager passes through, so a stager cannot decline it by
-// omission — and for a while this comment described an intention the code had
-// silently stopped honouring. What declines it is the kind's entry in
-// approvals' contextTargetKinds, and this paragraph is accurate exactly as
-// long as that entry exists.
+// followUpStager fills the deals module's FollowUpStager seam. A task goes
+// straight onto the deal owner's list; a drafted reply is staged for them,
+// because approving it sends mail.
 type followUpStager struct {
-	svc *approvals.Service
+	svc   *approvals.Service
+	tasks *activities.Store
 	// draft composes the reply when the evidence is an email thread. Nil is a
 	// real configuration rather than a missing one: a role with no send path
-	// wired stages the task proposal for every candidate, which is what the
-	// pass did before the drafted reply existed.
+	// wired files the task for every candidate.
 	draft followUpReplySeam
 	// owner resolves the authority the DRAFT is read under. The reply carries a
 	// counterparty's address and the message it answers, both of which end up
 	// stored on the card — so they are read as the contact the card is for, never
 	// under the sweep's own unbounded principal. Its handle is also the
-	// transaction the owner is read and the proposal staged in.
+	// transaction the owner is read and the follow-up filed in.
 	owner dealOwnerAuthority
 	// pool reads the installation's base language the drafted reply's card is
 	// written in.
 	pool *pgxpool.Pool
 }
 
-// HasPendingFollowUp answers for BOTH shapes a follow-up can take.
-//
-// The pass proposes either a task or a drafted reply, and they are different
-// approval kinds. Asking only about the task let a second email stack a second
-// drafted reply on a deal whose first was still pending — two independently
-// approvable messages, and approving both sends both. The question the caller
-// is really asking is "has this deal already been asked about", which neither
-// kind answers alone.
+// HasPendingFollowUp reports a drafted reply still waiting on the deal, so a
+// second email cannot stack a second one: approving both would send both. A
+// task proposal staged before tasks were filed directly counts too, so its
+// deal gets no second task beside it.
 func (s followUpStager) HasPendingFollowUp(ctx context.Context, dealID ids.UUID) (bool, error) {
 	for _, kind := range []string{deals.FollowUpReconcileKind, automation.HeldDraftKind} {
 		pending, err := s.svc.HasPendingKind(ctx, kind, dealID)
@@ -92,7 +72,7 @@ func (s followUpStager) HasPendingFollowUp(ctx context.Context, dealID ids.UUID)
 	return false, nil
 }
 
-func (s followUpStager) StageFollowUp(ctx context.Context, dealID ids.UUID, summary string, proposal deals.FollowUpProposal) error {
+func (s followUpStager) StageFollowUp(ctx context.Context, dealID ids.UUID, proposal deals.FollowUpProposal) error {
 	// An INBOUND email can be answered, so the rep gets the reply itself rather
 	// than a task telling them to write one.
 	//
@@ -114,14 +94,9 @@ func (s followUpStager) StageFollowUp(ctx context.Context, dealID ids.UUID, summ
 			draft = &composed
 		}
 	}
-	task, err := followUpTaskStaging(dealID, summary, proposal)
-	if err != nil {
-		return err
-	}
-	// The owner is read and the proposal staged in ONE transaction, under a
-	// lock a reassignment waits behind, so the card cannot name a seat the deal
-	// already left. The draft was composed before it, because a drafting call
-	// must not hold a lock on the deal.
+	// The owner is read and the follow-up filed in one transaction, under a lock
+	// a reassignment waits behind. So it cannot land with a seat the deal left.
+	// The draft was composed before it: a drafting call must not hold the lock.
 	return s.owner.db.Tx(ctx, func(tx pgx.Tx) error {
 		owner, err := lockedDealOwner(ctx, tx, dealID)
 		if err != nil {
@@ -129,87 +104,28 @@ func (s followUpStager) StageFollowUp(ctx context.Context, dealID ids.UUID, summ
 		}
 		// A draft composed for someone who no longer owns the deal is text in
 		// their name. It is dropped and nothing is staged, so the deal stays
-		// eligible and the next sweep drafts for the new owner; a task staged
-		// here would hold that draft back until the task was decided.
+		// eligible and the next sweep drafts for the new owner.
+		if draft != nil && draft.owner != owner {
+			return nil
+		}
+		answered, err := followUpAlreadyAnswered(ctx, tx, s.svc, dealID, proposal)
+		if err != nil || answered {
+			return err
+		}
 		if draft != nil {
-			if draft.owner != owner {
-				return nil
+			filed, err := followUpAlreadyFiled(ctx, tx, proposal)
+			if err != nil || filed {
+				return err
 			}
 			return stageFollowUpDraft(onBehalfOf(ctx, owner), tx, s.svc, draft.summary,
 				dealID, proposal.EvidenceActivityID.UUID, draft.proposal)
 		}
-		// An unowned deal has nobody to follow it up, so nothing is staged.
+		// An unowned deal has nobody to follow it up, so nothing is filed.
 		if owner.IsZero() {
 			return nil
 		}
-		_, _, err = s.svc.StageUnlessDeclinedTx(onBehalfOf(ctx, owner), tx, task)
-		if errors.Is(err, approvals.ErrNoDecider) {
-			return nil
-		}
-		return err
+		return writeOvernightFollowUp(ctx, tx, s.tasks, owner, proposal)
 	})
-}
-
-// followUpTaskStaging builds the task proposal's staging input.
-func followUpTaskStaging(dealID ids.UUID, summary string, proposal deals.FollowUpProposal) (approvals.StageInput, error) {
-	metadata := systemtext.ForWrite(context.Background(), proposal.SystemText, proposal.Subject, proposal.Body)
-
-	raw, err := json.Marshal(proposal)
-	if err != nil {
-		return approvals.StageInput{}, fmt.Errorf("compose: marshal follow-up proposal: %w", err)
-	}
-	canonical, hash, err := diffhash.Canonical(raw)
-	if err != nil {
-		return approvals.StageInput{}, fmt.Errorf("compose: canonicalize follow-up proposal: %w", err)
-	}
-	// The logical identity is the deal AND the interaction the proposal was
-	// drawn from — the two fields that say WHICH follow-up this is.
-	//
-	// It must not include the due date. The proposal's date moves with "today",
-	// so an identity carrying it makes every night's proposal a different one —
-	// and StageUnlessDeclined, which recognises a proposal a human already
-	// declined, would recognise nothing. A rep's "no" then became a question
-	// they were asked again the following morning.
-	//
-	// It must not be the deal ALONE either, for the opposite reason. A decline
-	// is remembered with no expiry, so a deal-only identity lets one "no" bury
-	// every future follow-up on that deal: the rep declines after a discovery
-	// call, has a real conversation three weeks later that again ends with no
-	// next step, and is never asked. The evidence activity is what separates
-	// those two cases — the nightly pass picks the LATEST interaction, so it is
-	// the same value while the situation is unchanged and a new one exactly when
-	// the deal has genuinely moved.
-	//
-	// Identity fields must appear in ProposedChange with the same value
-	// (canonicalIdentity enforces it), and both do: the payload carries the deal
-	// this follow-up is for and the interaction that triggered it.
-	identity, err := json.Marshal(map[string]string{
-		"deal_id":              dealID.String(),
-		"evidence_activity_id": proposal.EvidenceActivityID.String(),
-	})
-	if err != nil {
-		return approvals.StageInput{}, fmt.Errorf("compose: marshal follow-up identity: %w", err)
-	}
-	// The task proposal records the deal's owner as the human it is FOR, the
-	// same as the drafted reply beside it (the caller names them).
-	//
-	// It is one rep's morning work: the follow-up it asks for lands on their
-	// deal, and approvals narrows a proposal to the seat it names. Staged under
-	// the sweep alone the row named nobody, so it appeared on every colleague's
-	// queue who held the grant, and a manager could answer a question the rep
-	// never saw.
-	return approvals.StageInput{
-		Kind:             deals.FollowUpReconcileKind,
-		SystemText:       &systemtext.Message{Subject: proposal.SummaryText},
-		EffectSystemText: metadata,
-		ProposedChange:   canonical,
-		DiffHash:         hash,
-		TargetType:       approvalTargetDeal,
-		TargetID:         dealID,
-		Summary:          summary,
-		Identity:         identity,
-		JoinPending:      true,
-	}, nil
 }
 
 // answerableThread reports whether the evidence is a message somebody is
@@ -228,9 +144,8 @@ type followUpDraft struct {
 }
 
 // composeDraftedReply drafts the reply, and reports whether there is one. A
-// thread with no answerable counterparty falls back to the task proposal rather
-// than dropping the candidate — the rep is still told about the deal, they
-// simply get "write a follow-up" instead of a draft to send.
+// thread with no answerable counterparty falls back to the task. The rep is
+// still told about the deal; they get a task instead of a draft to send.
 func (s followUpStager) composeDraftedReply(
 	ctx context.Context, dealID ids.UUID, proposal deals.FollowUpProposal,
 ) (followUpDraft, bool, error) {
@@ -250,7 +165,7 @@ func (s followUpStager) composeDraftedReply(
 	// owner's authority.
 	//
 	// A deal nobody owns, or one whose owner is no longer live, gets the TASK
-	// proposal instead of a draft. The rep is still told about the deal; there
+	// instead of a draft. The rep is still told about the deal; there
 	// is simply no authority under which a reply may be composed.
 	ownerCtx, err := s.owner.contextFor(ctx, dealID)
 	if err != nil {
@@ -265,7 +180,7 @@ func (s followUpStager) composeDraftedReply(
 		// gate working rather than a fault: composing under their authority is
 		// exactly what stops a card carrying a read they could not have made.
 		// It is also SETTLED — a grant, not an outage — so retrying tomorrow
-		// changes nothing, and the rep gets the task proposal instead.
+		// changes nothing, and the rep gets the task instead.
 		//
 		// draftFollowUpReply itself treats a denial as a failure, correctly: it
 		// is handed an authority and cannot know whose. Only here is it known
@@ -275,11 +190,6 @@ func (s followUpStager) composeDraftedReply(
 	if err != nil || !answerable {
 		return followUpDraft{}, false, err
 	}
-	// Its OWN summary rather than the task proposal's with a clause appended.
-	// The task's line names a task ("Draft a follow-up on …"), and a reply
-	// waiting to be sent is a different thing to tell a rep — appending to it
-	// produced a sentence that described both and read as neither.
-	//
 	// The draft's own subject is what the rep recognises: it is the thread
 	// they are answering, in the words the counterparty used.
 	replySummary := fmt.Sprintf(approvalSummaryCopyOver(ctx, s.pool).draftedReplyWaiting, draft.Subject)
@@ -323,6 +233,7 @@ func NewFollowUpReconciler(pool *pgxpool.Pool, log *slog.Logger) *deals.FollowUp
 	drafter := newCommsAdapter(pool, nil, SendPath{})
 	stager := followUpStager{
 		svc:   NewApprovalsService(db),
+		tasks: activities.NewStore(db),
 		draft: drafter,
 		owner: dealOwnerAuthority{db: db, users: identity.NewServiceFor(db)},
 		pool:  pool,
@@ -369,15 +280,15 @@ func followUpPrecheck(db *database.DB, now func() time.Time) approvals.ReleasePr
 		if err != nil {
 			return err
 		}
-		deal := []activities.ActivityLinkInput{{EntityType: "deal", EntityID: proposal.DealID.UUID}}
+		deal := []activities.ActivityLinkInput{{EntityType: entityDeal, EntityID: proposal.DealID.UUID}}
 		return db.Tx(ctx, func(tx pgx.Tx) error {
 			if gone, err := stillowed.FollowUpTx(ctx, tx, proposal.DealID.UUID, now().UTC()); err != nil || gone != "" {
 				return obsoleteOr(gone, err)
 			}
-			if doer == nil {
+			if doer.IsZero() {
 				return nil
 			}
-			return carddoer.EnsureMayHold(ctx, tx, *doer, deal, colleagueAuthority(db))
+			return carddoer.EnsureMayHold(ctx, tx, doer, deal, colleagueAuthority(db))
 		})
 	}
 }
@@ -391,8 +302,8 @@ func followUpDoer(ctx context.Context, tx pgx.Tx, proposal deals.FollowUpProposa
 	if err != nil {
 		return nil, err
 	}
-	if chosen != nil {
-		return new(ids.From[ids.UserKind](*chosen)), nil
+	if !chosen.IsZero() {
+		return new(ids.From[ids.UserKind](chosen)), nil
 	}
 	owner, err := lockedDealOwner(ctx, tx, proposal.DealID.UUID)
 	if err != nil {
@@ -407,16 +318,13 @@ func followUpDoer(ctx context.Context, tx pgx.Tx, proposal deals.FollowUpProposa
 	return new(ids.From[ids.UserKind](owner)), nil
 }
 
-// followUpConfirmEffect executes an approved follow-up: redeem-then-
-// create like every 🟡 executor, then log the drafted (possibly human-
-// edited) follow-up task through the activities store — the same
-// RBAC-gated write a rep's own "add task" takes. The single-use
-// redemption is the exactly-once claim, and the write is additionally
-// idempotent on (source_system, source_id) keyed to the approval, so a
-// re-driven decision creates nothing twice. It runs as the overnight
-// agent on behalf of the deciding human: captured_by=agent:overnight
-// (the follow-up is the agent's suggestion), the human is on the
-// decision's own audit row.
+// followUpConfirmEffect executes a follow-up proposal staged before the pass
+// filed its tasks directly. It redeems, then creates, like every 🟡 executor.
+// The task goes through the activities store, the RBAC-gated write a rep's own
+// "add task" takes. The single-use redemption claims it once, and the write is
+// idempotent on (source_system, source_id) keyed to the approval. So a
+// re-driven decision creates nothing twice. It runs as the overnight agent on
+// behalf of the deciding human, who is on the decision's own audit row.
 func followUpConfirmEffect(svc *approvals.Service, store *activities.Store, now func() time.Time) approvals.ApprovedEffect {
 	return func(ctx context.Context, approvalID ids.ApprovalID, proposedChange json.RawMessage, diffHash string) error {
 		proposal, err := deals.UnmarshalFollowUpProposal(proposedChange)
@@ -429,9 +337,9 @@ func followUpConfirmEffect(svc *approvals.Service, store *activities.Store, now 
 		}
 		metadata := approvals.EffectSystemText(staged.SummaryParts)
 
-		due, err := time.Parse(time.DateOnly, proposal.DueDate)
+		task, err := followUpTaskInput(metadata, proposal, approvalID.String())
 		if err != nil {
-			return fmt.Errorf("compose: follow-up due date: %w", err)
+			return err
 		}
 		decider, ok := principal.Actor(ctx)
 		if !ok {
@@ -439,14 +347,10 @@ func followUpConfirmEffect(svc *approvals.Service, store *activities.Store, now 
 		}
 		execCtx := principal.WithActor(ctx, principal.Principal{
 			Type:       principal.PrincipalSystem,
-			ID:         "agent:overnight",
+			ID:         overnightAgent,
 			UserID:     decider.UserID,
 			OnBehalfOf: decider.UserID,
 		})
-		subject := proposal.Subject
-		body := proposal.Body
-		sourceSystem := provenance.OvernightReconcileSource
-		sourceID := approvalID.String()
 		// Redemption and the write in ONE transaction. Consuming the approval
 		// first and writing after leaves the two able to disagree: the approval
 		// reads as redeemed while no task exists, and the audit row asserts a
@@ -472,26 +376,111 @@ func followUpConfirmEffect(svc *approvals.Service, store *activities.Store, now 
 				if err != nil {
 					return err
 				}
-				in := activities.LogActivityInput{
-					Kind:         "task",
-					AssigneeID:   doer,
-					SystemText:   metadata,
-					Subject:      &subject,
-					Body:         &body,
-					DueAt:        &due,
-					SourceSystem: &sourceSystem,
-					SourceID:     &sourceID,
-					Source:       "overnight-reconcile",
-					Links:        []activities.ActivityLinkInput{{EntityType: "deal", EntityID: proposal.DealID.UUID}},
-				}
+				task.AssigneeID = doer
 				if proposal.DoerID == "" {
-					return logTaskOrUnassignedTx(execCtx, tx, store, in)
+					return logTaskOrUnassignedTx(execCtx, tx, store, task)
 				}
 				// A chosen colleague is the accepter's word: refused, the
 				// approval stays unspent rather than landing on nobody.
-				_, _, err = store.LogActivityTx(execCtx, tx, in)
+				_, _, err = store.LogActivityTx(execCtx, tx, task)
 				return err
 			})
 		return obsoleteOr(gone, err)
 	}
+}
+
+// overnightAgent captures the overnight pass's follow-up tasks, so a task
+// reads as the agent's suggestion and not as something a rep typed.
+const overnightAgent = "agent:overnight"
+
+// writeOvernightFollowUp puts the follow-up task on the deal owner's list, when
+// the owner still works here.
+//
+// The source is the deal and the interaction the task answers. A later pass over
+// that interaction gets the first task back, even one the rep finished or
+// deleted. So a task they cleared is not written again. A new interaction is a
+// new source, and gets a new task.
+func writeOvernightFollowUp(
+	sweepCtx context.Context, tx pgx.Tx, tasks *activities.Store, owner ids.UUID, proposal deals.FollowUpProposal,
+) error {
+	var live bool
+	if err := tx.QueryRow(sweepCtx, `SELECT EXISTS (SELECT 1 FROM app_user WHERE id = $1 AND `+
+		workforce.LiveHumanSQL("")+`)`, owner).Scan(&live); err != nil || !live {
+		return err
+	}
+	metadata := systemtext.ForWrite(sweepCtx, proposal.SystemText, proposal.Subject, proposal.Body)
+	in, err := followUpTaskInput(metadata, proposal, followUpSourceID(proposal))
+	if err != nil {
+		return err
+	}
+	assignee := ids.From[ids.UserKind](owner)
+	in.AssigneeID = &assignee
+	return logTaskOrUnassignedTx(onBehalfOf(extractorContext(sweepCtx, overnightAgent), owner), tx, tasks, in)
+}
+
+// followUpAlreadyAnswered reports a proposal for this interaction that a rep
+// approved or declined before tasks were filed directly. Their answer stands:
+// a declined follow-up is not filed, and an approved one already has its task.
+func followUpAlreadyAnswered(
+	ctx context.Context, tx pgx.Tx, svc *approvals.Service, dealID ids.UUID, proposal deals.FollowUpProposal,
+) (bool, error) {
+	offers, err := svc.OffersForTx(ctx, tx, deals.FollowUpReconcileKind, dealID)
+	if err != nil {
+		return false, err
+	}
+	for _, offer := range offers {
+		if !offer.Approved() && !offer.Rejected() {
+			continue
+		}
+		var staged struct {
+			EvidenceActivityID ids.ActivityID `json:"evidence_activity_id"`
+		}
+		if err := json.Unmarshal(offer.Change, &staged); err != nil {
+			return false, fmt.Errorf("compose: read a staged follow-up: %w", err)
+		}
+		if staged.EvidenceActivityID == proposal.EvidenceActivityID {
+			return true, nil
+		}
+	}
+	return false, nil
+}
+
+// followUpAlreadyFiled reports a task an earlier pass filed for this
+// interaction, done or deleted included. The rep already has it, so a reply
+// address that resolves later does not add a drafted reply on top. A held
+// (restricted) task counts as absent, as it does for every other reader.
+func followUpAlreadyFiled(ctx context.Context, tx pgx.Tx, proposal deals.FollowUpProposal) (bool, error) {
+	var filed bool
+	err := tx.QueryRow(ctx, `SELECT EXISTS (SELECT 1 FROM activity WHERE source_system = $1 AND source_id = $2 AND restricted_at IS NULL)`,
+		provenance.OvernightReconcileSource, followUpSourceID(proposal)).Scan(&filed)
+	return filed, err
+}
+
+// followUpSourceID names one follow-up by its deal and the interaction behind it.
+func followUpSourceID(proposal deals.FollowUpProposal) string {
+	return proposal.DealID.String() + "/" + proposal.EvidenceActivityID.String()
+}
+
+// followUpTaskInput is the task the overnight pass files on a deal. The pass
+// writes it itself, or a rep approves a proposal staged for it earlier.
+func followUpTaskInput(
+	metadata *systemtext.Message, proposal deals.FollowUpProposal, sourceID string,
+) (activities.LogActivityInput, error) {
+	due, err := time.Parse(time.DateOnly, proposal.DueDate)
+	if err != nil {
+		return activities.LogActivityInput{}, fmt.Errorf("compose: follow-up due date: %w", err)
+	}
+	subject, body := proposal.Subject, proposal.Body
+	sourceSystem := provenance.OvernightReconcileSource
+	return activities.LogActivityInput{
+		Kind:         string(crmcontracts.ActivityKindTask),
+		SystemText:   metadata,
+		Subject:      &subject,
+		Body:         &body,
+		DueAt:        &due,
+		SourceSystem: &sourceSystem,
+		SourceID:     &sourceID,
+		Source:       provenance.OvernightReconcileSource,
+		Links:        []activities.ActivityLinkInput{{EntityType: string(recordTypeDeal), EntityID: proposal.DealID.UUID}},
+	}, nil
 }

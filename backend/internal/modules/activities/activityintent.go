@@ -17,11 +17,11 @@ func applyPickedTime(field string, wire *crmcontracts.IntentTime, target **time.
 	if wire == nil {
 		return nil
 	}
-	instant, err := storekit.ResolveIntentTime(field, wire)
+	instant, err := storekit.ResolveIntentTime(field, *wire)
 	if err != nil {
 		return err
 	}
-	*target = instant
+	*target = &instant
 	return nil
 }
 
@@ -97,12 +97,15 @@ func (in *UpdateActivityInput) admitPickedTimes(kind string) error {
 // admitBookedStart lets a chosen local start govern the booked instant, and
 // the meeting keeps the length the request gave it.
 func admitBookedStart(intent *crmcontracts.IntentTime, start, end *time.Time) error {
-	instant, err := storekit.ResolveIntentTime("start_intent", intent)
-	if err != nil || instant == nil {
+	if intent == nil {
+		return nil
+	}
+	instant, err := storekit.ResolveIntentTime("start_intent", *intent)
+	if err != nil {
 		return err
 	}
 	length := end.Sub(*start)
-	*start, *end = *instant, instant.Add(length)
+	*start, *end = instant, instant.Add(length)
 	return nil
 }
 

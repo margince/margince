@@ -3,6 +3,7 @@
 
 package values
 
+// The character limits a text column can have, from a short label to a document.
 const (
 	TextLabelCharacters    = 120
 	TextLineCharacters     = 500

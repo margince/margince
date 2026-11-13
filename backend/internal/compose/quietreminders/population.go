@@ -20,12 +20,15 @@ import (
 	"github.com/margince/margince/backend/internal/shared/ports/datasource"
 )
 
+// Reader is automation.QuietPopulationScan over activities, lists and deals.
 type Reader struct {
 	activityScanAdapter
 	lists *collections.Store
 	deals *deals.Store
 }
 
+// NewReader reads quiet records from store, list members from lists and
+// pipelines from records.
 func NewReader(store *activities.Store, lists *collections.Store, records *deals.Store) Reader {
 	return Reader{store: store, lists: lists, deals: records}
 }
@@ -58,11 +61,14 @@ func (a Reader) population(ctx context.Context, in automation.QuietPopulation) (
 	return activities.QuietPopulation{EntityType: list.EntityType, Members: members, Readers: in.Readers}, nil
 }
 
+// ValidateQuietPopulation refuses a pipeline or list the caller cannot use.
 func (a Reader) ValidateQuietPopulation(ctx context.Context, in automation.QuietPopulation) error {
 	_, err := a.population(ctx, in)
 	return err
 }
 
+// QuietCandidates is a page of quiet records in the population. A list
+// population keeps only members every reader may see.
 func (a Reader) QuietCandidates(ctx context.Context, in automation.QuietPopulation, cutoff time.Time, limit int) (automation.QuietCandidates, error) {
 	population, err := a.population(ctx, in)
 	if err != nil {

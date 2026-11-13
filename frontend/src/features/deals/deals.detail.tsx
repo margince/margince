@@ -55,6 +55,7 @@ import { useDealCoverage } from "./deal360/usedealcoverage";
 import { DealAside } from "./dealaside";
 import { useDealEdit } from "./dealedit";
 import { DealFiles } from "./dealfiles";
+import { DealReferralLine } from "./dealpartner";
 import { DealProjectLine } from "./dealproject";
 import type { Deal, Offer, Stage } from "./deals";
 import { useAdvanceDeal } from "./deals.board";
@@ -282,12 +283,13 @@ export function DealScreen({ id }: Readonly<{ id: string }>) {
               aside={<DealAside deal={deal} stages={stages} />}
               name={deal.name}
               identity={deal.id}
-              // One fact per line under the name: the account, then the
-              // project the deal delivers into.
+              // One fact per line under the name: the account, the project
+              // the deal delivers into, then the partner who referred it.
               nameBadge={
                 <>
                   <DealSubtitle deal={deal} />
                   <DealProjectLine deal={deal} />
+                  <DealReferralLine deal={deal} />
                 </>
               }
               zone={readerZone}

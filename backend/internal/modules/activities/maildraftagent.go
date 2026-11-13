@@ -104,7 +104,7 @@ func (s *Store) withWhatTheDraftHolds(
 	var tz, claimed *string
 	err := tx.QueryRow(ctx, `SELECT attachment_ids, communication_context, `+scheduleInstantSQL+`,scheduled_tz,scheduled_wall FROM mail_draft
  WHERE author_id=@author AND anchor_type=@anchor_type AND anchor_id=@anchor_id AND agent_drafted FOR UPDATE`,
-		pgx.NamedArgs{"author": author, "anchor_type": string(anchor.Type), "anchor_id": anchor.ID}).Scan(&held.AttachmentIDs, &claimed, &at, &tz, &wall)
+		pgx.NamedArgs{argAuthor: author, fieldAnchorType: string(anchor.Type), fieldAnchorID: anchor.ID}).Scan(&held.AttachmentIDs, &claimed, &at, &tz, &wall)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return content, nil
 	}
@@ -176,8 +176,9 @@ type groundedContent struct {
 }
 
 func upsertAgentMailDraft(ctx context.Context, tx pgx.Tx, author ids.UUID, anchor MailDraftAnchor, draft groundedContent) (MailDraft, error) {
-	content := draft.content
-	at, tz, wall := draftScheduleColumns(content.Schedule)
+	args := mailDraftArgs(author, anchor, draft.content)
+	args["id"], args["grounding"] = ids.NewV7(), groundingColumn(draft.grounding)
+	args["keep_grounding"], args[fieldVersion] = draft.keepsGrounding, draft.expected
 	row := tx.QueryRow(ctx, `
  INSERT INTO mail_draft(id,author_id,anchor_type,anchor_id,to_addresses,cc_addresses,
  bcc_addresses,subject,body,html_body,agent_drafted,grounding,attachment_ids,
@@ -197,13 +198,7 @@ func upsertAgentMailDraft(ctx context.Context, tx pgx.Tx, author ids.UUID, ancho
  EXCLUDED.scheduled_wall,EXCLUDED.scheduled_tz,EXCLUDED.scheduled_at) AS planned),
  editor_state='{}'::jsonb,version=mail_draft.version+1,updated_at=now()
  WHERE mail_draft.agent_drafted AND (@version::bigint IS NULL OR mail_draft.version=@version)
- RETURNING `+mailDraftColumns, pgx.NamedArgs{
-		"id": ids.NewV7(), "author": author, "anchor_type": string(anchor.Type), "anchor_id": anchor.ID,
-		"to": addressLine(content.To), "cc": addressLine(content.Cc), "bcc": addressLine(content.Bcc),
-		"subject": content.Subject, "body": content.Body, "html": nullableText(content.HTMLBody),
-		"grounding": groundingColumn(draft.grounding), "attachments": content.AttachmentIDs, "context": nullableText(string(content.Context)),
-		"at": at, "zone": tz, "wall": wall, "keep_grounding": draft.keepsGrounding, "version": draft.expected,
-	})
+ RETURNING `+mailDraftColumns, args)
 	saved, err := scanMailDraft(row)
 	if errors.Is(err, apperrors.ErrNotFound) {
 		return MailDraft{}, whyTheDraftStood(ctx, tx, author, anchor)

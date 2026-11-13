@@ -24,11 +24,14 @@ type InquiryRouting interface {
 	ReuseArrivalTask(context.Context, context.Context, string, ids.UUID, ids.UUID, time.Time) (bool, error)
 }
 
+// WithInquiryRouting lets inquiry policies be checked and changed under their
+// form's fence.
 func (s *AutomationStore) WithInquiryRouting(routing InquiryRouting) *AutomationStore {
 	s.inquiries = routing
 	return s
 }
 
+// WithInquiryRouting hands routing to the handlers' automation store.
 func (h Handlers) WithInquiryRouting(routing InquiryRouting) Handlers {
 	h.automations = h.automations.WithInquiryRouting(routing)
 	return h

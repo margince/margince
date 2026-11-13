@@ -24,8 +24,8 @@ func (s *AutomationStore) handOnAccess(ctx context.Context, entry CatalogEntry, 
 	}
 	switch {
 	case isQuietRule(entry.Key):
-		population, err := quietPopulation(raw)
-		if err != nil || !population.configured() {
+		population, parsed := namedRecords(quietPopulation(raw))
+		if !parsed || !population.configured() {
 			return nil
 		}
 		if s.quiet == nil {
@@ -35,8 +35,8 @@ func (s *AutomationStore) handOnAccess(ctx context.Context, entry CatalogEntry, 
 	case entry.Key == stageChangeCreateTaskName || entry.Key == stageChangeNotifyName:
 		return s.stageAccess(ctx, params)
 	case entry.Key == inquiryRecipeName:
-		policy, err := ParseInquiryPolicy(raw)
-		if err != nil {
+		policy, parsed := namedRecords(ParseInquiryPolicy(raw))
+		if !parsed {
 			return nil
 		}
 		if s.inquiries == nil {
@@ -49,14 +49,18 @@ func (s *AutomationStore) handOnAccess(ctx context.Context, entry CatalogEntry, 
 	return nil
 }
 
+// namedRecords reports whether stored params still parse. A param that does not
+// parse names no record, so the hand-on check has nothing to ask about it.
+func namedRecords[T any](decoded T, err error) (T, bool) { return decoded, err == nil }
+
 func isQuietRule(key string) bool {
 	_, quiet := activityScanHandlers[key]
 	return quiet
 }
 
 func (s *AutomationStore) stageAccess(ctx context.Context, params map[string]any) error {
-	scope, err := decodeStageParams(params)
-	if err != nil || len(scope.StageIDs) == 0 {
+	scope, parsed := namedRecords(decodeStageParams(params))
+	if !parsed || len(scope.StageIDs) == 0 {
 		return nil
 	}
 	if s.stages == nil {
@@ -77,8 +81,8 @@ type listRef struct {
 }
 
 func (s *AutomationStore) listAccess(ctx context.Context, raw []byte) error {
-	rule, err := decodeListRuleParams(raw)
-	if err != nil {
+	rule, parsed := namedRecords(decodeListRuleParams(raw))
+	if !parsed {
 		return nil
 	}
 	if s.lists == nil {

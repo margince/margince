@@ -4,5 +4,10 @@
     "activity.create",
     "automation.read",
     "integrations.read"
+  ],
+  "takes": [
+    "user",
+    "versioned_web_form",
+    "web_form"
   ]
 }

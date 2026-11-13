@@ -71,6 +71,8 @@ var renewalReminderObjectSet = func() map[string]bool {
 // repeated at every call site.
 const (
 	paramKeyDateField = "date_field"
+	paramDaysBefore   = "days_before"
+	paramObject       = "object"
 	paramFieldObject  = "params.object"
 )
 
@@ -85,12 +87,12 @@ func renewalReminderSchema() map[string]any {
 	return map[string]any{
 		schemaKeyType:            schemaTypeObject,
 		schemaKeyAdditionalProps: false,
-		schemaKeyRequired:        []string{"object", paramKeyDateField, "days_before", "recipient"},
+		schemaKeyRequired:        []string{paramObject, paramKeyDateField, paramDaysBefore, paramRecipient},
 		schemaKeyProperties: map[string]any{
-			"recipient": taskRecipientSchema(),
-			"days_before": intParamProperty(defaultRenewalDaysBefore, 365,
+			paramRecipient: taskRecipientSchema(),
+			paramDaysBefore: intParamProperty(defaultRenewalDaysBefore, 365,
 				"How many days ahead of the renewal date to remind."),
-			"object": map[string]any{
+			paramObject: map[string]any{
 				schemaKeyType:        schemaTypeString,
 				schemaKeyEnum:        renewalReminderObjects,
 				schemaKeyDescription: "Which record type owns the watched date field: one of " + strings.Join(renewalReminderObjects, ", ") + ".",
@@ -113,7 +115,7 @@ func renewalReminderSchema() map[string]any {
 // that function stays a flat dispatch rather than growing a branch per
 // key's own validation shape.
 func validateRenewalDaysBeforeParam(params map[string]any) error {
-	v, ok := params["days_before"]
+	v, ok := params[paramDaysBefore]
 	if !ok {
 		return nil
 	}
@@ -131,7 +133,7 @@ func validateRenewalDaysBeforeParam(params map[string]any) error {
 // renewalReminderObjectSet — split out for the same reason
 // validateRenewalDaysBeforeParam is.
 func validateRenewalObjectParam(params map[string]any) error {
-	v, ok := params["object"]
+	v, ok := params[paramObject]
 	if !ok {
 		return nil
 	}
@@ -178,7 +180,7 @@ func validateRenewalRecursYearlyParam(params map[string]any) error {
 func validateRenewalReminderParams(params map[string]any) error {
 	for k := range params {
 		switch k {
-		case "days_before", "object", paramKeyDateField, "recurs_yearly", "recipient":
+		case paramDaysBefore, paramObject, paramKeyDateField, "recurs_yearly", paramRecipient:
 		default:
 			return &ParamError{Field: "params." + k, Reason: errNotAParameter}
 		}

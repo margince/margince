@@ -15,13 +15,13 @@ import (
 // error here rather than a database check failure later.
 func TestAPaddedZoneNameIsRefusedAsAFieldError(t *testing.T) {
 	for _, zone := range []string{" Europe/Berlin", "Europe/Berlin\n"} {
-		_, err := ResolveIntentTime("due_intent", &crmcontracts.IntentTime{WallClock: "2026-10-05T09:00", Timezone: zone})
+		_, err := ResolveIntentTime("due_intent", crmcontracts.IntentTime{WallClock: "2026-10-05T09:00", Timezone: zone})
 		parseErr, ok := errors.AsType[*values.ParseError](err)
 		if !ok || parseErr.Field != "due_intent.timezone" {
 			t.Errorf("zone %q: err = %v", zone, err)
 		}
 	}
-	if _, err := ResolveIntentTime("due_intent", &crmcontracts.IntentTime{WallClock: "2026-10-05T09:00", Timezone: "Europe/Berlin"}); err != nil {
+	if _, err := ResolveIntentTime("due_intent", crmcontracts.IntentTime{WallClock: "2026-10-05T09:00", Timezone: "Europe/Berlin"}); err != nil {
 		t.Fatalf("canonical zone refused: %v", err)
 	}
 }

@@ -20,44 +20,28 @@ import (
 	"github.com/margince/margince/backend/internal/shared/ports/workflow"
 )
 
+// InquiryService applies a website inquiry policy: it picks the recipient once
+// per submission and files the task.
 type InquiryService struct {
 	db      *database.DB
 	claims  *EffectClaimStore
 	routing InquiryRouting
 }
 
+// NewInquiryService picks recipients through routing.
 func NewInquiryService(db *database.DB, routing InquiryRouting) *InquiryService {
 	return &InquiryService{db: db, claims: NewEffectClaims(db), routing: routing}
 }
 
+// Apply files the task for one accepted submission. A submission that already
+// has its task declines.
 func (s *InquiryService) Apply(ctx context.Context, ex Executors, ev workflow.Event, effect workflow.Effect) (workflow.RunResult, error) {
 	if s.routing == nil {
 		return workflow.RunResult{}, errors.New("automation: inquiry routing is not configured")
 	}
-	policy, err := ParseInquiryPolicy(ev.Params)
+	plan, receipt, err := s.frozenPlan(ctx, ex, ev)
 	if err != nil {
 		return workflow.RunResult{}, err
-	}
-	receipt, err := readInquiryReceipt(ctx, ex, ev, policy)
-	if err != nil {
-		return workflow.RunResult{}, err
-	}
-	if _, err := s.currentPolicy(ctx, ev); err != nil {
-		return workflow.RunResult{}, err
-	}
-	if task, found, err := s.existingTask(ctx, ex, ev, receipt); err != nil {
-		return workflow.RunResult{}, err
-	} else if found && inquiryTaskHandled(task) {
-		return workflow.RunResult{}, workflow.Declined("this accepted inquiry already has its task")
-	}
-	plan, err := s.claims.FreezeInquiry(ctx, receipt.Key, func(bound context.Context) (InquiryPlan, error) {
-		return s.choose(bound, ex, ev, policy, receipt)
-	})
-	if err != nil {
-		return workflow.RunResult{}, err
-	}
-	if plan.PolicyID != ev.AutomationID || plan.SourceActivityID != ev.Entity.ID || plan.Target != receipt.Target {
-		return workflow.RunResult{}, errors.New("automation: another policy owns this inquiry assignment")
 	}
 	admit, err := ownerContext(ctx, ex.Authority, ev.WorkspaceID, ev.OwnerID)
 	if err != nil {
@@ -86,6 +70,37 @@ func (s *InquiryService) Apply(ctx context.Context, ex Executors, ev workflow.Ev
 	return s.applyTask(ctx, ex, effect)
 }
 
+// frozenPlan is the plan this firing acts on. It is chosen once per submission
+// and kept, so a retry hands the inquiry to the same colleague.
+func (s *InquiryService) frozenPlan(ctx context.Context, ex Executors, ev workflow.Event) (InquiryPlan, inquiryReceipt, error) {
+	policy, err := ParseInquiryPolicy(ev.Params)
+	if err != nil {
+		return InquiryPlan{}, inquiryReceipt{}, err
+	}
+	receipt, err := readInquiryReceipt(ctx, ex, ev, policy)
+	if err != nil {
+		return InquiryPlan{}, receipt, err
+	}
+	if _, err := s.currentPolicy(ctx, ev); err != nil {
+		return InquiryPlan{}, receipt, err
+	}
+	if task, found, err := s.existingTask(ctx, ex, ev, receipt); err != nil {
+		return InquiryPlan{}, receipt, err
+	} else if found && inquiryTaskHandled(task) {
+		return InquiryPlan{}, receipt, workflow.Declined("this accepted inquiry already has its task")
+	}
+	plan, err := s.claims.FreezeInquiry(ctx, receipt.Key, func(bound context.Context) (InquiryPlan, error) {
+		return s.choose(bound, ex, ev, policy, receipt)
+	})
+	if err != nil {
+		return plan, receipt, err
+	}
+	if plan.PolicyID != ev.AutomationID || plan.SourceActivityID != ev.Entity.ID || plan.Target != receipt.Target {
+		return plan, receipt, errors.New("automation: another policy owns this inquiry assignment")
+	}
+	return plan, receipt, nil
+}
+
 func (s *InquiryService) applyTask(ctx context.Context, ex Executors, effect workflow.Effect) (workflow.RunResult, error) {
 	var applied []workflow.Action
 	// The local provider joins this transaction, so a failed task cannot leave a fresh claim behind.
@@ -111,7 +126,7 @@ func (s *InquiryService) choose(ctx context.Context, ex Executors, ev workflow.E
 		return plan, err
 	}
 	err = s.db.Tx(ctx, func(tx pgx.Tx) error {
-		return tx.QueryRow(ctx, `SELECT id FROM workflow_run WHERE handler=@handler AND idempotency_key=@key`, pgx.NamedArgs{"handler": inquiryRecipeName, "key": runKey(websiteInquiry{}, ev)}).Scan(&plan.OriginalRunID)
+		return tx.QueryRow(ctx, `SELECT id FROM workflow_run WHERE handler=@handler AND idempotency_key=@run_key`, pgx.NamedArgs{argHandler: inquiryRecipeName, argRunKey: runKey(websiteInquiry{}, ev)}).Scan(&plan.OriginalRunID)
 	})
 	if err != nil {
 		return plan, err
@@ -135,7 +150,7 @@ func (s *InquiryService) originalTask(ctx context.Context, plan InquiryPlan) (wo
 	}
 	var raw json.RawMessage
 	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
-		return tx.QueryRow(ctx, `SELECT planned FROM workflow_run WHERE id=@id AND handler=@handler`, pgx.NamedArgs{"id": plan.OriginalRunID, "handler": inquiryRecipeName}).Scan(&raw)
+		return tx.QueryRow(ctx, `SELECT planned FROM workflow_run WHERE id=@id AND handler=@handler`, pgx.NamedArgs{"id": plan.OriginalRunID, argHandler: inquiryRecipeName}).Scan(&raw)
 	})
 	if err != nil {
 		return workflow.Action{}, err
@@ -172,7 +187,7 @@ func (s *InquiryService) currentPolicy(ctx context.Context, ev workflow.Event) (
 	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
 		return tx.QueryRow(ctx, `SELECT version FROM automation
  WHERE id=@id AND key=@key AND (enabled OR @selected) AND archived_at IS NULL AND params=@params::jsonb AND owner_id=@owner
- FOR SHARE`, pgx.NamedArgs{"id": ev.AutomationID, "key": inquiryRecipeName, "params": ev.Params, "owner": ev.OwnerID, "selected": selectedInquiryAllowed(ctx, ev)}).Scan(&version)
+ FOR SHARE`, pgx.NamedArgs{"id": ev.AutomationID, keyCatalogKey: inquiryRecipeName, keyParams: ev.Params, argOwner: ev.OwnerID, "selected": selectedInquiryAllowed(ctx, ev)}).Scan(&version)
 	})
 	if errors.Is(err, pgx.ErrNoRows) {
 		return 0, apperrors.ErrConflict

@@ -37,7 +37,7 @@ func claimStarterAuthorizer(ctx context.Context, tx pgx.Tx, before Automation) (
 	}
 	updated, err := tx.Exec(ctx, `UPDATE automation SET owner_id = @owner
 		WHERE id = @id AND owner_id IS NULL`,
-		pgx.NamedArgs{"owner": actor.UserID, "id": before.ID})
+		pgx.NamedArgs{argOwner: actor.UserID, "id": before.ID})
 	if err != nil || updated.RowsAffected() == 0 {
 		return ids.Nil, err
 	}

@@ -16,17 +16,22 @@ import (
 	"github.com/margince/margince/backend/internal/shared/ports/workflow"
 )
 
+// QuietPopulation is the records a quiet reminder watches: one pipeline's deals
+// or one customer list. Readers bound what the scan may read.
 type QuietPopulation struct {
 	PipelineID ids.UUID              `json:"pipeline_id"`
 	ListID     ids.UUID              `json:"customer_list_id"`
 	Readers    []principal.Principal `json:"-"`
 }
 
+// QuietCandidates is one page of quiet records and the total that match.
 type QuietCandidates struct {
 	Records []EntityAnchor
 	Total   int
 }
 
+// QuietPopulationScan finds the quiet records of a population, and checks that
+// a caller may use the population.
 type QuietPopulationScan interface {
 	QuietCandidates(context.Context, QuietPopulation, time.Time, int) (QuietCandidates, error)
 	ValidateQuietPopulation(context.Context, QuietPopulation) error
@@ -43,11 +48,13 @@ func quietPopulation(raw json.RawMessage) (QuietPopulation, error) {
 
 func (p QuietPopulation) configured() bool { return !p.PipelineID.IsZero() || !p.ListID.IsZero() }
 
+// WithQuietPopulationScan lets quiet reminders check the population they name.
 func (s *AutomationStore) WithQuietPopulationScan(scan QuietPopulationScan) *AutomationStore {
 	s.quiet = scan
 	return s
 }
 
+// WithQuietPopulationScan hands scan to the handlers' automation store.
 func (h Handlers) WithQuietPopulationScan(scan QuietPopulationScan) Handlers {
 	h.automations = h.automations.WithQuietPopulationScan(scan)
 	return h

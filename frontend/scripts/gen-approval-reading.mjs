@@ -186,12 +186,18 @@ try {
       },
     };
   }
-  const output = JSON.stringify({
-    inputs: Object.fromEntries(
-      Object.entries(hashes).sort((a, b) => stable(String(a), String(b))),
-    ),
-    languages,
-  });
+  // Each string value sits on its own line below its key. Git merges two edits
+  // only when an unchanged line parts them, and the key parts neighbour values.
+  const output = `${JSON.stringify(
+    {
+      inputs: Object.fromEntries(
+        Object.entries(hashes).sort(([a], [b]) => stable(a, b)),
+      ),
+      languages,
+    },
+    null,
+    1,
+  ).replace(/^( *)("(?:[^"\\]|\\.)*"): "/gm, '$1$2:\n$1 "')}\n`;
   const path = join(
     root,
     "../backend/internal/modules/agents/previewcatalog_gen.json",

@@ -53,6 +53,8 @@ const (
 	schemaTypeString         = "string"
 	schemaTypeInteger        = "integer"
 	schemaTypeBoolean        = "boolean"
+	schemaTypeArray          = "array"
+	schemaFormatUUID         = "uuid"
 	schemaKeyType            = "type"
 	schemaKeyProperties      = "properties"
 	schemaKeyAdditionalProps = "additionalProperties"
@@ -63,6 +65,9 @@ const (
 	schemaKeyEnum            = "enum"
 	schemaKeyFormat          = "format"
 	schemaKeyRequired        = "required"
+	schemaKeyItems           = "items"
+	schemaKeyMinLength       = "minLength"
+	schemaKeyMaxLength       = "maxLength"
 )
 
 // minParamDays is the lower bound every "how many days" knob shares: a
@@ -153,11 +158,11 @@ func validateDueInDays(params map[string]any) error {
 // params, so the editor's schema and the handler's reader can never
 // drift onto two different knob names for the same automation.
 func noActivityReminderSchema() map[string]any {
-	return quietReminderSchema("no_activity_days", defaultNoActivityDays, "pipeline_id", "pipeline")
+	return quietReminderSchema("no_activity_days", defaultNoActivityDays, paramPipelineID, "pipeline")
 }
 
 // validateNoActivityReminderParams is noActivityReminderSchema's validator.
-var validateNoActivityReminderParams = validateQuietReminderParams("no_activity_days", "pipeline_id")
+var validateNoActivityReminderParams = validateQuietReminderParams("no_activity_days", paramPipelineID)
 
 // checkInCadenceSchema is check_in_cadence's own one-knob shape, keyed
 // "check_in_days" — checkInCadenceDays' (handlers_clock.go)

@@ -1,7 +1,9 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-package compose
+// Package webformlead lands a website form submission as a lead and a note on
+// its timeline, through the lead and activity writers.
+package webformlead
 
 import (
 	"context"
@@ -33,29 +35,46 @@ import (
 // webFormLeadSource is the lead and note `source` a website form stamps.
 const webFormLeadSource = "web_form"
 
-// webFormLeads lands a website form submission through the lead and activity
+// FieldValue is the value a lead custom field takes from the text a form sent
+// for it. It answers false when the text does not fit the field.
+//
+//craft:ignore naked-any the value is a lead CustomFields entry, shaped by the column type
+type FieldValue func(name string, column fieldcatalog.Column, text string) (any, bool)
+
+// Lander lands a website form submission through the lead and activity
 // writers. A new email is a new lead. An email an open lead holds gets the
 // note on that lead. An email a contact holds gets it on the contact, whose
 // owner the lead writer has already told.
-type webFormLeads struct {
+type Lander struct {
 	leads      *contacts.Store
 	activities *activities.Store
 	catalog    fieldcatalog.Reader
 	legacy     *automation.AutomationStore
+	fieldValue FieldValue
 }
 
-func (l webFormLeads) Land(ctx context.Context, landing webforms.Landing) error {
+// New builds the lander. fieldValue reads a cf_<key> field the way the import
+// reads a cell, so a form and a spreadsheet accept the same text.
+func New(leads *contacts.Store, notes *activities.Store, catalog fieldcatalog.Reader,
+	legacy *automation.AutomationStore, fieldValue FieldValue,
+) Lander {
+	return Lander{leads: leads, activities: notes, catalog: catalog, legacy: legacy, fieldValue: fieldValue}
+}
+
+// Land writes the submission's lead, or finds the record that holds its
+// address, and puts the form's note on it.
+func (l Lander) Land(ctx context.Context, landing webforms.Landing) error {
 	active, err := l.catalog.ActiveColumns(ctx, "lead")
 	if err != nil {
 		return fmt.Errorf("compose: reading the lead custom fields: %w", err)
 	}
-	in := webFormLeadInput(landing)
-	in.CustomFields = webFormCustomFields(active, landing.Enquiry)
+	in := LeadInput(landing)
+	in.CustomFields = webFormCustomFields(active, landing.Enquiry, l.fieldValue)
 	target, err := l.lead(ctx, in)
 	if err != nil || target == nil {
 		return err
 	}
-	if landing.HandlingAutomationID != nil && target.EntityType == string(recordTypeLead) {
+	if landing.HandlingAutomationID != nil && target.EntityType == (ids.LeadID{}).EntityType() {
 		owned, err := l.legacyOwnsInquiry(ctx, target.EntityID, landing.SourceKey)
 		if err != nil {
 			return err
@@ -85,16 +104,16 @@ func (l webFormLeads) Land(ctx context.Context, landing webforms.Landing) error 
 // lead answers the record the note belongs on. Nil with no error means nothing
 // more is written. That is a contact this principal may not read, whose owner
 // has a task about it, or an address on the erasure list.
-func (l webFormLeads) lead(ctx context.Context, in contacts.CreateLeadInput) (*activities.ActivityLinkInput, error) {
+func (l Lander) lead(ctx context.Context, in contacts.CreateLeadInput) (*activities.ActivityLinkInput, error) {
 	lead, err := l.createLead(ctx, in)
 	if duplicate, ok := errors.AsType[*contacts.DuplicateLeadError](err); ok {
-		return &activities.ActivityLinkInput{EntityType: string(recordTypeLead), EntityID: duplicate.ExistingID.UUID}, nil
+		return &activities.ActivityLinkInput{EntityType: (ids.LeadID{}).EntityType(), EntityID: duplicate.ExistingID.UUID}, nil
 	}
 	if held, ok := errors.AsType[*contacts.ContactHoldsIdentityError](err); ok {
 		if held.ContactID.IsZero() {
 			return nil, nil //nolint:nilnil // a contact this principal may not read has no note target, and that is no failure
 		}
-		return &activities.ActivityLinkInput{EntityType: string(recordTypeContact), EntityID: held.ContactID.UUID}, nil
+		return &activities.ActivityLinkInput{EntityType: (ids.ContactID{}).EntityType(), EntityID: held.ContactID.UUID}, nil
 	}
 	if _, erased := errors.AsType[*storekit.ErasedIdentifierError](err); erased {
 		// The visitor gets the receipt every post gets. A refusal would tell an
@@ -104,13 +123,13 @@ func (l webFormLeads) lead(ctx context.Context, in contacts.CreateLeadInput) (*a
 	if err != nil {
 		return nil, err
 	}
-	return &activities.ActivityLinkInput{EntityType: string(recordTypeLead), EntityID: ids.UUID(lead.Id)}, nil
+	return &activities.ActivityLinkInput{EntityType: (ids.LeadID{}).EntityType(), EntityID: ids.UUID(lead.Id)}, nil
 }
 
 // createLead lands the lead without whatever the form names that has gone since
 // it was saved. A visitor is never refused over the form's own setup. Each retry
 // clears one thing, and any of them can be the one refused first.
-func (l webFormLeads) createLead(ctx context.Context, in contacts.CreateLeadInput) (crmcontracts.Lead, error) {
+func (l Lander) createLead(ctx context.Context, in contacts.CreateLeadInput) (crmcontracts.Lead, error) {
 	for {
 		lead, _, err := l.leads.CreateLead(ctx, in)
 		_, fieldGone := errors.AsType[storekit.CustomFieldErrors](err)
@@ -130,7 +149,8 @@ func (l webFormLeads) createLead(ctx context.Context, in contacts.CreateLeadInpu
 	}
 }
 
-func webFormLeadInput(landing webforms.Landing) contacts.CreateLeadInput {
+// LeadInput is the lead a submission lands as, before its custom fields.
+func LeadInput(landing webforms.Landing) contacts.CreateLeadInput {
 	e := landing.Enquiry
 	system, key := provenance.WebFormSource, landing.SourceKey
 	in := contacts.CreateLeadInput{
@@ -156,7 +176,7 @@ func webFormLeadInput(landing webforms.Landing) contacts.CreateLeadInput {
 // not fit is left to the note, so the visitor is never refused over it.
 //
 //craft:ignore naked-any the values are the lead writer's CustomFields, whose shape depends on the column type
-func webFormCustomFields(active []fieldcatalog.Column, e webforms.Enquiry) map[string]any {
+func webFormCustomFields(active []fieldcatalog.Column, e webforms.Enquiry, fieldValue FieldValue) map[string]any {
 	byName := make(map[string]fieldcatalog.Column, len(active))
 	for _, col := range active {
 		byName[col.Name] = col
@@ -170,9 +190,9 @@ func webFormCustomFields(active []fieldcatalog.Column, e webforms.Enquiry) map[s
 	}
 	out := make(map[string]any, len(sent))
 	for name, texts := range sent {
-		// A checkbox group sends one field per ticked box; checkCell reads a
+		// A checkbox group sends one field per ticked box; the import reads a
 		// multiselect as one semicolon list.
-		if value, problem := checkCell(name, byName[name], strings.Join(texts, ";"), false); problem == nil {
+		if value, fits := fieldValue(name, byName[name], strings.Join(texts, ";")); fits {
 			out[name] = value
 		}
 	}
@@ -348,7 +368,7 @@ func quoted(text string) string {
 	return strings.Join(lines, "\n")
 }
 
-func (l webFormLeads) legacyOwnsInquiry(ctx context.Context, id ids.UUID, key string) (bool, error) {
+func (l Lander) legacyOwnsInquiry(ctx context.Context, id ids.UUID, key string) (bool, error) {
 	lead, err := l.leads.GetLead(ctx, ids.From[ids.LeadKind](id), storekit.LiveOnly)
 	if err != nil {
 		return false, err
@@ -360,4 +380,11 @@ func (l webFormLeads) legacyOwnsInquiry(ctx context.Context, id ids.UUID, key st
 		return false, errors.New("compose: legacy inquiry ownership reader is not configured")
 	}
 	return l.legacy.LegacyLeadOccurrenceOwned(ctx, id)
+}
+
+func optional(s string) *string {
+	if s == "" {
+		return nil
+	}
+	return &s
 }

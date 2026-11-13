@@ -202,7 +202,7 @@ func (p *RulePauser) PauseRulesOnList(ctx context.Context, listID ids.UUID, reas
 		rows, err := tx.Query(ctx, `SELECT id, version FROM automation
 			WHERE enabled AND archived_at IS NULL AND key = ANY(@keys)
 			  AND (params ->> 'list_id' = @list_id OR params ->> 'shortlist_id' = @list_id)`,
-			pgx.StrictNamedArgs{"keys": listRuleKeys, "list_id": listID.String()})
+			pgx.StrictNamedArgs{argKeys: listRuleKeys, "list_id": listID.String()})
 		if err != nil {
 			return err
 		}

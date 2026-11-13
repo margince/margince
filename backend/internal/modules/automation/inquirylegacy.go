@@ -17,6 +17,8 @@ import (
 	"github.com/margince/margince/backend/internal/shared/ports/workflow"
 )
 
+// LegacyLeadHandlerNames names the rules that fire on a new lead, which handled
+// website leads before inquiry policies did.
 func LegacyLeadHandlerNames() []string {
 	var names []string
 	for _, entry := range Catalog() {
@@ -29,10 +31,11 @@ func LegacyLeadHandlerNames() []string {
 
 // LegacyLeadOccurrenceOwned preserves work claimed before its website note could commit.
 func (s *AutomationStore) LegacyLeadOccurrenceOwned(ctx context.Context, lead ids.UUID) (bool, error) {
-	return s.legacyLeadOccurrenceOwned(ctx, lead, LegacyLeadHandlerNames(), false)
+	return s.leadRunsClaim(ctx, lead, LegacyLeadHandlerNames(), false)
 }
 
-// Submission identity survives promotion, merging and task closure.
+// LegacyLeadTaskOwned reports whether lead routing already filed a task for a
+// submission. Submission identity survives promotion, merging and task closure.
 func (s *AutomationStore) LegacyLeadTaskOwned(ctx context.Context, submission string) (bool, error) {
 	if err := auth.Require(ctx, "automation", principal.ActionRead); err != nil {
 		return false, err
@@ -55,10 +58,10 @@ func (s *AutomationStore) LegacyLeadTaskOwned(ctx context.Context, submission st
 	if err != nil {
 		return false, err
 	}
-	return s.legacyLeadOccurrenceOwned(ctx, lead, []string{routeLeadName}, true)
+	return s.leadRunsClaim(ctx, lead, []string{routeLeadName}, true)
 }
 
-func (s *AutomationStore) legacyLeadOccurrenceOwned(ctx context.Context, lead ids.UUID, handlers []string, taskOnly bool) (bool, error) {
+func (s *AutomationStore) leadRunsClaim(ctx context.Context, lead ids.UUID, handlers []string, taskOnly bool) (bool, error) {
 	if err := auth.Require(ctx, "automation", principal.ActionRead); err != nil {
 		return false, err
 	}

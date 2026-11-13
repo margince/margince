@@ -22,6 +22,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/margince/margince/backend/internal/compose/inquiries"
+	"github.com/margince/margince/backend/internal/compose/webformlead"
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/automation"
 	"github.com/margince/margince/backend/internal/modules/customfields"
@@ -32,6 +33,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/httpserver"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/ports/fieldcatalog"
 )
 
 const publicFormsPrefix = "/v1/public/forms/"
@@ -47,14 +49,19 @@ func newWebFormHandlers(pool *pgxpool.Pool, log *slog.Logger) webforms.Handlers 
 }
 
 // newWebFormLander is the lead and activity writers a submission lands through.
-func newWebFormLander(db *database.DB, pool *pgxpool.Pool, log *slog.Logger) webFormLeads {
+func newWebFormLander(db *database.DB, pool *pgxpool.Pool, log *slog.Logger) webformlead.Lander {
 	catalog := customfields.NewService(pool, nil)
-	return webFormLeads{
-		leads:      newContactsStore(db).WithFieldCatalog(catalog).WithLeadArrivals(newLeadWorkTasks(db, log)),
-		activities: activities.NewStore(db),
-		catalog:    catalog,
-		legacy:     automation.NewAutomationStore(db),
-	}
+	leads := newContactsStore(db).WithFieldCatalog(catalog).WithLeadArrivals(newLeadWorkTasks(db, log))
+	return webformlead.New(leads, activities.NewStore(db), catalog, automation.NewAutomationStore(db), webFormFieldValue)
+}
+
+// webFormFieldValue reads a form field as the import reads a cell. The visitor
+// sees no refusal, so the refusal's wording is dropped.
+//
+//craft:ignore naked-any the value is a lead CustomFields entry, shaped by the column type
+func webFormFieldValue(name string, column fieldcatalog.Column, text string) (any, bool) {
+	value, problem := checkCell(name, column, text, false)
+	return value, problem == nil
 }
 
 // WithWebFormThrottle sets the intake throttle's limits from the deployment's

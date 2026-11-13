@@ -17,6 +17,7 @@ func quietReminderSchema(daysKey string, defaultDays int, populationKey, format 
 	}
 }
 
+// QuietCustomerTypes are the record types a quiet reminder's customer list may hold.
 func QuietCustomerTypes() []string { return []string{"contact", "company"} }
 
 func validateQuietReminderParams(daysKey, populationKey string) func(map[string]any) error {

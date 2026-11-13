@@ -53,8 +53,8 @@ func TestAResearchClaimPastTheLimitIsRefused(t *testing.T) {
 		Field: "role", Value: strings.Repeat("ế", limit+1),
 		Quote: "Mira leads the platform team.", SourceURL: "https://voltaq.test/team",
 	}})
-	column, max, ok := storekit.TextBoundViolation(err)
-	if !ok || column != "value" || max != limit {
+	column, refusedAt, ok := storekit.TextBoundViolation(err)
+	if !ok || column != "value" || refusedAt != limit {
 		t.Fatalf("SaveResearchClaims answered %v, want the value column refused at %d", err, limit)
 	}
 }

@@ -35,19 +35,22 @@ var limits = map[string]int{
 	"document": values.TextDocumentCharacters,
 }
 
-// A bounded column may carry Checked: what its writers were read for, so the
-// limit records a decision and not only a default.
+// Policy is one column's character limit. An exempt column has no limit and
+// says why in Exception. A bounded one may say in Checked what its writers
+// were read for. Then the limit records a decision and not only a default.
 type Policy struct {
 	Limit     int
 	Exception string
 	Checked   string
 }
 
+// Column is one text column of the catalog, by key public.table.name.
 type Column struct {
 	Key, Table, Name string
 	Array, Generated bool
 }
 
+// Policies reads the column policies that columns.txt declares.
 func Policies() (map[string]Policy, error) { return ParsePolicies(strings.NewReader(columnPolicies)) }
 
 // embeddedPolicies panics on a malformed columns.txt, which the package tests refuse
@@ -73,6 +76,8 @@ func Fit(column, text string) string {
 	return text
 }
 
+// ParsePolicies reads policies in the columns.txt form, one column and its
+// limit name per line. A duplicate or unknown limit is an error.
 func ParsePolicies(input io.Reader) (map[string]Policy, error) {
 	policies := map[string]Policy{}
 	scanner := bufio.NewScanner(input)
@@ -105,6 +110,8 @@ func ParsePolicies(input io.Reader) (map[string]Policy, error) {
 	return policies, nil
 }
 
+// Columns reads the text and text[] columns from a catalog listing. A listing
+// with none is an error, so a short read cannot pass as an empty schema.
 func Columns(input io.Reader) ([]Column, error) {
 	var columns []Column
 	scanner := bufio.NewScanner(input)

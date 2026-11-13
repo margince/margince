@@ -49,7 +49,7 @@ func parseDCR(members map[string]json.RawMessage) (dcrRequest, *dcrRefusal) {
 	if req.RedirectURIs, err = dcrMember[[]string](members, "redirect_uris"); err != nil {
 		return dcrRequest{}, err
 	}
-	if req.ClientName, err = dcrMember[string](members, "client_name"); err != nil {
+	if req.ClientName, err = dcrMember[string](members, agentClientFieldClient); err != nil {
 		return dcrRequest{}, err
 	}
 	if req.TokenEndpointAuthMethod, err = dcrMember[string](members, "token_endpoint_auth_method"); err != nil {
@@ -84,7 +84,7 @@ func (req dcrRequest) validate() *dcrRefusal {
 		}
 	}
 	if !validAgentClientName(req.ClientName) {
-		return &dcrRefusal{oauthErrInvalidClientMetadata, fmt.Sprintf("client_name must use at most %d characters", maxAgentClientNameRunes), "client_name"}
+		return &dcrRefusal{oauthErrInvalidClientMetadata, fmt.Sprintf("client_name must use at most %d characters", maxAgentClientNameRunes), agentClientFieldClient}
 	}
 	for _, raw := range req.RedirectURIs {
 		if !validRedirectURI(raw) {

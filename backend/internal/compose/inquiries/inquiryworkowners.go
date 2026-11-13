@@ -19,33 +19,16 @@ import (
 	"github.com/margince/margince/backend/internal/shared/ports/datasource"
 )
 
+// owners adds who owns each task's record, and whether the reader may take
+// the task, to facts.
 func (w *Work) owners(ctx context.Context, tasks []crmcontracts.Activity, notes map[string]crmcontracts.Activity, facts map[ids.UUID]*crmcontracts.WebsiteInquiryWork) error {
-	targets := map[ids.UUID]datasource.EntityRef{}
-	grouped := map[string][]ids.UUID{}
-	for _, task := range tasks {
-		if facts[ids.UUID(task.Id)] == nil {
-			continue
-		}
-		target, err := inquiryAssignmentTarget(task)
-		if errors.Is(err, apperrors.ErrNotFound) || errors.Is(err, apperrors.ErrConflict) {
-			continue
-		}
-		if err != nil {
-			return err
-		}
-		targets[ids.UUID(task.Id)] = target
-		grouped[string(target.Type)] = append(grouped[string(target.Type)], target.ID)
+	targets, grouped, err := inquiryWorkTargets(tasks, facts)
+	if err != nil {
+		return err
 	}
-	ownership := map[string]map[ids.UUID]contacts.WorkOwnership{}
-	for kind, ids := range grouped {
-		rows, err := w.contacts.WorkOwners(ctx, kind, ids)
-		if errors.Is(err, apperrors.ErrPermissionDenied) {
-			continue
-		}
-		if err != nil {
-			return err
-		}
-		ownership[kind] = rows
+	ownership, err := w.workOwnership(ctx, grouped)
+	if err != nil {
+		return err
 	}
 	eligible, err := w.readerCanTake(ctx)
 	if err != nil {
@@ -68,35 +51,91 @@ func (w *Work) owners(ctx context.Context, tasks []crmcontracts.Activity, notes 
 			value := crmcontracts.Id(*owner.OwnerID)
 			detail.RecordOwnerId = &value
 		}
-		if !eligible || task.SourceSystem == nil || task.SourceId == nil || (task.AssigneeId != nil && ids.UUID(*task.AssigneeId) == actor.UserID && (target.Type != datasource.EntityLead || owner.OwnerID != nil)) {
+		if !eligible {
 			continue
 		}
-		key, _ := provenance.WebsiteInquirySubmission(*task.SourceSystem, *task.SourceId)
-		note, readable := notes[key]
-		if !readable || note.WebForm == nil || (task.SourceActivityId != nil && *task.SourceActivityId != note.Id) {
+		take, err := mayTake(ctx, actor, task, target, owner, notes)
+		if err != nil {
+			return err
+		}
+		if take {
+			detail.CanTake = new(true)
+		}
+	}
+	return nil
+}
+
+// inquiryWorkTargets is the one lead or contact each inquiry task is filed
+// under, also grouped by record type. A task with none, or two, is left out.
+func inquiryWorkTargets(tasks []crmcontracts.Activity, facts map[ids.UUID]*crmcontracts.WebsiteInquiryWork) (map[ids.UUID]datasource.EntityRef, map[string][]ids.UUID, error) {
+	targets := map[ids.UUID]datasource.EntityRef{}
+	grouped := map[string][]ids.UUID{}
+	for _, task := range tasks {
+		if facts[ids.UUID(task.Id)] == nil {
 			continue
 		}
-		sourceTarget, err := inquiryAssignmentTarget(note)
+		target, err := inquiryAssignmentTarget(task)
 		if errors.Is(err, apperrors.ErrNotFound) || errors.Is(err, apperrors.ErrConflict) {
 			continue
 		}
 		if err != nil {
-			return err
+			return nil, nil, err
 		}
-		if sourceTarget != target {
+		targets[ids.UUID(task.Id)] = target
+		grouped[string(target.Type)] = append(grouped[string(target.Type)], target.ID)
+	}
+	return targets, grouped, nil
+}
+
+// workOwnership reads the owners of the grouped records. A record type the
+// reader may not read is left out.
+func (w *Work) workOwnership(ctx context.Context, grouped map[string][]ids.UUID) (map[string]map[ids.UUID]contacts.WorkOwnership, error) {
+	ownership := map[string]map[ids.UUID]contacts.WorkOwnership{}
+	for kind, ids := range grouped {
+		rows, err := w.contacts.WorkOwners(ctx, kind, ids)
+		if errors.Is(err, apperrors.ErrPermissionDenied) {
 			continue
 		}
-		if target.Type == datasource.EntityLead {
-			if owner.OwnerID != nil && *owner.OwnerID != actor.UserID {
-				continue
-			}
-			if owner.OwnerID == nil && !auth.AllowsWrite(ctx, "lead", principal.ActionUpdate) {
-				continue
-			}
+		if err != nil {
+			return nil, err
 		}
-		detail.CanTake = new(true)
+		ownership[kind] = rows
 	}
-	return nil
+	return ownership, nil
+}
+
+// mayTake reports whether the reader may take a task they do not already
+// hold. The task and its source note must name the same record, and a lead
+// must be the reader's own or unowned and writable.
+func mayTake(ctx context.Context, actor principal.Principal, task crmcontracts.Activity, target datasource.EntityRef, owner contacts.WorkOwnership, notes map[string]crmcontracts.Activity) (bool, error) {
+	if task.SourceSystem == nil || task.SourceId == nil || (task.AssigneeId != nil && ids.UUID(*task.AssigneeId) == actor.UserID && (target.Type != datasource.EntityLead || owner.OwnerID != nil)) {
+		return false, nil
+	}
+	if matches, err := sourceNoteMatches(task, target, notes); err != nil || !matches {
+		return false, err
+	}
+	if target.Type != datasource.EntityLead {
+		return true, nil
+	}
+	if owner.OwnerID != nil {
+		return *owner.OwnerID == actor.UserID, nil
+	}
+	return auth.AllowsWrite(ctx, leadObject, principal.ActionUpdate), nil
+}
+
+// sourceNoteMatches reports whether the reader can read the task's source
+// note, and the note names the same record as the task.
+func sourceNoteMatches(task crmcontracts.Activity, target datasource.EntityRef, notes map[string]crmcontracts.Activity) (bool, error) {
+	key, _ := provenance.WebsiteInquirySubmission(*task.SourceSystem, *task.SourceId)
+	note, readable := notes[key]
+	if !readable || note.WebForm == nil || (task.SourceActivityId != nil && *task.SourceActivityId != note.Id) {
+		return false, nil
+	}
+	sourceTarget, err := inquiryAssignmentTarget(note)
+	if errors.Is(err, apperrors.ErrNotFound) || errors.Is(err, apperrors.ErrConflict) {
+		return false, nil
+	}
+	return err == nil && sourceTarget == target, err
 }
 
 func (w *Work) readerCanTake(ctx context.Context) (bool, error) {
