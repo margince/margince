@@ -169,9 +169,13 @@ run() {
   fi
   logs="$(mktemp -d)"
   # The lanes below only read build/composition/; one write first keeps a
-  # lane from reading it while another rewrites it.
+  # lane from reading it while another rewrites it. It is the test profile
+  # composition-profile.mk gives every test goal: a bare `composition` goal
+  # drops the example units the template was migrated with, and every clone of
+  # it is then refused.
   if grep -q '^go-' "$plan"; then
-    make -C "$ROOT/backend" --no-print-directory composition
+    make -C "$ROOT/backend" --no-print-directory composition \
+      COMPOSITION_FLAGS="${COMPOSITION_FLAGS--include-development}"
   fi
   go_lane go-unit "$plan" "$logs" &
   pids+=($!)
