@@ -1,0 +1,41 @@
+# CASE 118 — How is the crane project doing?
+#
+# A project's health is a judgement someone recorded: a state and the note that
+# says why. The seed records one human reading on Hafenkran Retrofit, at risk,
+# with a note that the supplier moved the control cabinets by six weeks. No task,
+# activity or deal says so, so an answer that gives the reason read the
+# project's current health. An answer built from the phase or the open work
+# alone cannot name it.
+#
+# SCORED ON THE ANSWER. The project page (read_project, view overview) carries
+# the health since #10289; read_view can reach the readings too. Either path is
+# right, so no tool is pinned.
+name: case118_is_the_crane_job_at_risk
+criteria: [1]
+
+# Read-only by its prompt. Set because the server offers every tool and a run
+# can write regardless.
+writes: true
+
+prompt: |
+  How is the Hafenkran retrofit going? Has anyone flagged it, and if so, why?
+
+may_call:
+  - read_project
+  - read_record
+  - read_view
+  - find_records
+  - search_records
+  - catch_me_up_on
+  - review_commitments
+
+must_mention:
+  - "Hafenkran"
+  # The state, in the words a user would use for at_risk.
+  - "(?i)at[ _-]?risk|risk"
+
+judge:
+  - "Criterion 1. The answer says the project was judged at risk because the supplier moved the control cabinets (Steuerschränke) by about six weeks. Answer no if it gives no reason, or a reason other than the supplier's delay."
+
+runs: 3
+pass_at: 2
