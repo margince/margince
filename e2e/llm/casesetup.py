@@ -154,7 +154,26 @@ def fair_guests_tagged(admin):
         raise SetupFault(f"the {FAIR_TAG} filter matches {preview.get('match_count')} contacts, want {len(FAIR_GUESTS)}")
 
 
-STEPS = {"card_reviews_and_recap": card_reviews_and_recap, "fair_guests_tagged": fair_guests_tagged}
+STAGE_CHANGE_RULE = "stage_change_notify"
+
+
+def stage_change_rule_on(admin):
+    """The seeded stage-change rule switched on by a human, so it runs with no
+    owner. A seeded rule starts paused, and an agent may not quiet one that runs."""
+    rules = admin.call("GET", "/automations?limit=100").get("data", [])
+    rule = next((rule for rule in rules if rule.get("key") == STAGE_CHANGE_RULE), None)
+    if rule is None:
+        raise SetupFault(f"the workspace has no {STAGE_CHANGE_RULE} rule")
+    enabled = admin.call("PATCH", f"/automations/{rule['id']}", {"status": "enabled"})
+    if enabled.get("status") != "enabled" or enabled.get("owner_id"):
+        raise SetupFault(f"switching on {STAGE_CHANGE_RULE} answered {enabled}, want it enabled with no owner")
+
+
+STEPS = {
+    "card_reviews_and_recap": card_reviews_and_recap,
+    "fair_guests_tagged": fair_guests_tagged,
+    "stage_change_rule_on": stage_change_rule_on,
+}
 
 
 def main(argv):
