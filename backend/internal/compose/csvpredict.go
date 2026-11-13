@@ -229,6 +229,54 @@ func (w *csvWriters) reconcilePrediction(
 	if !auth.Allows(ctx, w.object, principal.ActionUpdate) {
 		return predictUnwritable, cannotEditWhy(w.object), nil
 	}
+	return w.predictMovedKey(ctx, row, typed, changed)
+}
+
+// predictMovedKey answers for a row that moves a held key onto a value another
+// record holds. The commit skips that row, so a preview calling it an update
+// promises a write that will not happen.
+//
+// Only a key this row changes is asked about. The probes answer whether any
+// record at all holds the value, and the record being updated holds its own.
+//
+// So an unchanged key would read as taken by itself.
+func (w *csvWriters) predictMovedKey(
+	ctx context.Context, row migration.Row, typed map[string]any, changed map[string]string,
+) (predictedOutcome, migration.Reason, error) {
+	if _, moved := changed[fieldEmail]; moved {
+		claimed, err := w.contactEmailAlreadyHeld(ctx, row)
+		if err != nil {
+			return predictUpdate, migration.Reason{}, err
+		}
+		if claimed {
+			return predictUnwritable, contactEmailClaimedWhy, nil
+		}
+		takenLead, err := w.leadEmailAlreadyHeld(ctx, row)
+		if err != nil {
+			return predictUpdate, migration.Reason{}, err
+		}
+		if takenLead {
+			return predictUnwritable, naturalKeyTakenWhy, nil
+		}
+	}
+	if _, moved := changed[fieldDomain]; moved {
+		takenDomain, err := w.companyDomainAlreadyHeld(ctx, row)
+		if err != nil {
+			return predictUpdate, migration.Reason{}, err
+		}
+		if takenDomain {
+			return predictUnwritable, domainClaimedWhy, nil
+		}
+	}
+	if _, moved := changed[fieldLinkedIn]; moved {
+		takenLinkedIn, err := w.linkedInAlreadyHeld(ctx, typed)
+		if err != nil {
+			return predictUpdate, migration.Reason{}, err
+		}
+		if takenLinkedIn {
+			return predictUnwritable, linkedInClaimedWhy, nil
+		}
+	}
 	return predictUpdate, migration.Reason{}, nil
 }
 
