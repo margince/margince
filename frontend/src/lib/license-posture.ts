@@ -1,8 +1,14 @@
-import { useQuery } from "@tanstack/react-query";
+import {
+  type QueryClient,
+  useQuery,
+  useQueryClient,
+} from "@tanstack/react-query";
+import { useEffect } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
+import { useNow } from "../format/now";
 import { useCan } from "./capability";
-import { throwProblem } from "./problem";
+import { logUnexpectedError, throwProblem } from "./problem";
 
 // The installation's licence, and the one thing the chrome does with it.
 //
@@ -26,12 +32,29 @@ type LicenseEntitlement = components["schemas"]["LicenseEntitlement"];
  * agent with a footnote, it is a standing fault, and the rail used to state it
  * as a grey row at the very bottom that nobody read.
  *
+ * `trial` is a production installation with no licence, on its free 14 days
+ * or past them. It is not a fault while it runs; `useTrialStanding` counts it.
+ *
  * `grace` is a valid licence past its expiry. It works today, but a restart
  * after the module's grace period ends refuses to boot, so the chrome warns
  * until it is renewed. Over the seat cap and renewal due stay off this type:
  * nothing stops on either, and the settings card gives the numbers.
  */
-export type LicensePosture = "ok" | "grace" | "refused" | "none";
+export type LicensePosture = "ok" | "grace" | "refused" | "none" | "trial";
+
+export const LICENSE_ENTITLEMENT_KEY = ["installation-license"] as const;
+
+/**
+ * Reads again what the trial lock shows: /me, which holds every seat to the
+ * lock screen, and the entitlement the trial notices count from.
+ */
+export function refreshTrialLock(client: QueryClient): void {
+  for (const queryKey of [["me"], LICENSE_ENTITLEMENT_KEY]) {
+    client
+      .invalidateQueries({ queryKey, exact: true })
+      .catch(logUnexpectedError);
+  }
+}
 
 /**
  * What the license grants and how much of it is used.
@@ -41,7 +64,7 @@ export type LicensePosture = "ok" | "grace" | "refused" | "none";
  */
 export function useLicenseEntitlement(enabled = true) {
   return useQuery({
-    queryKey: ["installation-license"],
+    queryKey: LICENSE_ENTITLEMENT_KEY,
     // A principal without `license:read` would get a 403 on every route. The
     // caller that knows the grant passes it, and the request is never made.
     enabled,
@@ -84,8 +107,105 @@ export function licensePostureOf(
   if (entitlement.state === "rejected") {
     return "refused";
   }
+  if (entitlement.trial) {
+    return "trial";
+  }
   if (entitlement.state !== "valid") {
     return "none";
   }
   return entitlement.license?.in_grace ? "grace" : "ok";
+}
+
+type LicenseTrial = components["schemas"]["LicenseTrial"];
+
+/** Where the installation's trial stands, as the chrome counts it. */
+export type TrialStanding = Readonly<{
+  endsAt: string;
+  /** The trial's length in whole days, from the server's start and end. */
+  totalDays: number;
+  /** Whole days left, at least 1 while the trial runs and 0 once it ended. */
+  daysLeft: number;
+  ended: boolean;
+  /** The last days, when the chrome stops being calm about it. */
+  closing: boolean;
+}>;
+
+const DAY_MS = 86_400_000;
+
+/** How many days before the end the chrome turns from calm to a warning. */
+export const TRIAL_WARNING_DAYS = 7;
+
+/**
+ * The trial counted at `now`. The days round up, so the last afternoon still
+ * reads as a day left. Whether it has ended is the server's word, so a reader
+ * with a wrong clock sees the state the installation acts on.
+ */
+export function trialStandingOf(
+  trial: LicenseTrial,
+  now: number,
+): TrialStanding {
+  const daysLeft = trial.ended
+    ? 0
+    : Math.max(1, Math.ceil((Date.parse(trial.ends_at) - now) / DAY_MS));
+  const totalDays = Math.max(
+    1,
+    Math.round(
+      (Date.parse(trial.ends_at) - Date.parse(trial.started_at)) / DAY_MS,
+    ),
+  );
+  return {
+    endsAt: trial.ends_at,
+    totalDays,
+    daysLeft: Math.min(daysLeft, totalDays),
+    ended: trial.ended,
+    closing: trial.ended || daysLeft <= TRIAL_WARNING_DAYS,
+  };
+}
+
+/**
+ * The trial this installation runs on, for a seat that may read the licence.
+ * Undefined while licensed, for a development installation, and for a seat
+ * without `license:read`: the lock screen reaches everyone through /me instead.
+ */
+export function useTrialStanding(): TrialStanding | undefined {
+  const mayRead = useCan("license", "read");
+  const query = useLicenseEntitlement(mayRead);
+  // Once a minute is plenty for a count in whole days.
+  const now = useNow(60_000);
+  const trial = query.data?.trial;
+  useRefreshAtTrialEnd(trial);
+  if (!mayRead || !trial) {
+    return undefined;
+  }
+  return trialStandingOf(trial, now);
+}
+
+// The longest delay a browser timer keeps; a longer one fires at once.
+const MAX_TIMER_MS = 2 ** 31 - 1;
+
+/** How often a session past the end asks again while the server still runs it. */
+export const TRIAL_END_RETRY_MS = 60_000;
+
+// A session left open past the end reads the lock at the end. The server's
+// clock may run behind, so it asks again each minute while the trial still
+// runs there. An ended trial schedules nothing.
+export function useRefreshAtTrialEnd(trial: LicenseTrial | undefined): void {
+  const client = useQueryClient();
+  const endsAt =
+    trial === undefined || trial.ended ? undefined : Date.parse(trial.ends_at);
+  useEffect(() => {
+    if (endsAt === undefined || Number.isNaN(endsAt)) {
+      return;
+    }
+    const delay = Math.min(Math.max(0, endsAt - Date.now()), MAX_TIMER_MS);
+    let retry: ReturnType<typeof setInterval> | undefined;
+    const timer = setTimeout(() => {
+      refreshTrialLock(client);
+      retry = setInterval(() => refreshTrialLock(client), TRIAL_END_RETRY_MS);
+    }, delay);
+    return () => {
+      clearTimeout(timer);
+      clearInterval(retry);
+    };
+  }, [client, endsAt]);
 }

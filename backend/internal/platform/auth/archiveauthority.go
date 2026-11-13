@@ -47,10 +47,13 @@ func activityWrites(ctx context.Context, tx pgx.Tx, _ principal.Principal, rowID
 	return ActivityWritableSubset(ctx, tx, rowIDs)
 }
 
-// ActivityArchive admits the author of a hand-logged note or task. Captured
-// correspondence and a colleague's notes keep needing activity.delete.
+// ActivityArchive admits the author of a note, task, call or meeting logged by
+// hand that no provider import backs. Sent mail and messages are what a
+// customer received, so they, captured rows and a colleague's entries keep
+// needing activity.delete.
 var ActivityArchive = ArchiveRule{object: "activity", table: "activity", writable: activityWrites, own: func(alias string, me int, arg func(any) int) string {
-	return fmt.Sprintf(`(%[1]s.kind IN ('note', 'task') AND %[1]s.source = $%[2]d AND %[3]s)`,
+	return fmt.Sprintf(`(%[1]s.kind IN ('note', 'task', 'call', 'meeting') AND %[1]s.source = $%[2]d
+	  AND NOT EXISTS (SELECT 1 FROM capture_import imported WHERE imported.activity_id = %[1]s.id) AND %[3]s)`,
 		alias, arg(provenance.RecordSourceManual), ActivityAuthorSQL(alias, me, arg))
 }}
 

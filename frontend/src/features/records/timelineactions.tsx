@@ -227,7 +227,8 @@ function RelinkAction({
 }
 
 // ActivityArchiveAction takes one row off the History. The server says per row
-// whether this reader may: a delete grant, or a note or task they wrote.
+// whether this reader may: a delete grant, or a note, task, call or meeting they
+// logged by hand. A meeting a live invitation holds is archivable by no one.
 function ActivityArchiveAction({
   activity,
   entityType,
@@ -242,7 +243,11 @@ function ActivityArchiveAction({
     <ArchiveAction
       requires={{ object: "activity", action: "delete" }}
       archivable={activity.archivable ?? false}
-      refusedReason={t("activity.archiveRefused")}
+      refusedReason={t(
+        activity.calendar_managed
+          ? "activity.archiveCalendarManaged"
+          : "activity.archiveRefused",
+      )}
       label={t("activity.archive")}
       confirmText={t("activity.archiveConfirm")}
       archivedMessage={t("activity.archiveDone")}

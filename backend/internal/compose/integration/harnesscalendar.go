@@ -53,29 +53,52 @@ func (e *Env) ConnectorOwnerCtx(owner ids.UUID, connectorName string) context.Co
 	})
 }
 
-// CalendarMeeting is one meeting on the admin seat's calendar. It has no
-// direction, because a calendar capture never records one.
+// CalendarMeeting is one meeting on a seat's calendar: Seat's, or the admin's
+// when Seat is zero. That seat hosts it. It has no direction, because a
+// calendar capture never records one. A stated Identity binds it to the row
+// that already holds that occurrence, as a live calendar's sink does.
 type CalendarMeeting struct {
-	Event   string
-	At      time.Time
-	Links   []datasource.EntityRef
-	Parties []connector.MessageParticipant
+	Event    string
+	At       time.Time
+	Links    []datasource.EntityRef
+	Parties  []connector.MessageParticipant
+	Seat     ids.UUID
+	Identity connector.CrossDoorIdentity
+	// DeliveredTo is the calendar owner's address. It records the seat's
+	// import of the meeting where the seat's connection proves that address.
+	DeliveredTo string
 }
 
 // Capture lands the meeting as a calendar pull does and answers its id.
 func (m CalendarMeeting) Capture(t *testing.T, e *Env) ids.UUID {
 	t.Helper()
-	ref, err := e.CalendarSink().Upsert(e.ConnectorOwnerCtx(e.AdminUser, CalendarSystem), connector.NormalizedRecord{
+	return m.CaptureThrough(t, e, e.CalendarSink())
+}
+
+// CaptureThrough is Capture through sink, with the cross-door identity wired
+// on it as compose wires a live calendar's.
+func (m CalendarMeeting) CaptureThrough(t *testing.T, e *Env, sink *capture.Sink) ids.UUID {
+	t.Helper()
+	seat := m.Seat
+	if seat.IsZero() {
+		seat = e.AdminUser
+	}
+	sink = sink.WithMessageIdentity(
+		activities.IdentityKindMail, activities.IdentityKindMeeting, activities.MeetingIdentityKey,
+		activities.ResolveBindableIdentity, activities.ClaimIdentity)
+	ref, err := sink.Upsert(e.ConnectorOwnerCtx(seat, CalendarSystem), connector.NormalizedRecord{
 		EntityType: "activity",
 		NaturalKey: connector.NaturalKey{SourceSystem: CalendarSystem, SourceID: m.Event},
 		Fields: capture.ActivityFields{
 			Kind: "meeting", Subject: "Account review", OccurredAt: m.At,
 		},
-		Links:        m.Links,
-		Participants: m.Parties,
-		Source:       CalendarSystem + ":" + m.Event,
-		CapturedBy:   "connector:" + CalendarSystem,
-		Raw:          []byte(`{"id":"` + m.Event + `"}`),
+		Links:             m.Links,
+		Participants:      m.Parties,
+		Source:            CalendarSystem + ":" + m.Event,
+		CapturedBy:        "connector:" + CalendarSystem,
+		Raw:               []byte(`{"id":"` + m.Event + `"}`),
+		CrossDoorIdentity: m.Identity,
+		DeliveredTo:       m.DeliveredTo,
 	}.WithProviderAttestedParticipants(true))
 	if err != nil {
 		t.Fatalf("capturing meeting %s: %v", m.Event, err)

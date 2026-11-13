@@ -291,7 +291,7 @@ Old automatic findings without a current check stay with their source for review
 
 ### Why an item needs attention
 Each item shows its record, the current facts that call for action, and the action it offers.
-A request can name who is waiting and when they asked. A task shows its due date.
+A request can name who is waiting and when they asked. A follow-up on mail you sent names who it went to and their company. A task shows its due date.
 A deal can show days since the last recorded activity, a missing next step or a close date that needs review.
 
 Suggested deal steps are checked against current records before the list is cut. **Earlier assessment** and its date open the saved words. It does not change the order of work. A changed suggestion asks you to refresh before you can accept its task or open its prepared action. Tasks you create yourself keep their normal controls.

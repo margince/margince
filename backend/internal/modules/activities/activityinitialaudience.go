@@ -42,7 +42,7 @@ func recordInitialActivity(ctx context.Context, tx pgx.Tx, id ids.ActivityID, in
 			return err
 		}
 		maps.Copy(after, audience)
-		after["source_system"], after["source_activity_id"], after["assignee_id"] = in.SourceSystem, in.SourceActivityID, in.AssigneeID
+		after["source_system"], after["source_activity_id"], after["assignee_id"] = in.SourceSystem, in.sourceActivity(), in.AssigneeID
 	}
 	if in.audienceOf != nil {
 		if err := inheritAudienceTx(ctx, tx, id, *in.audienceOf); err != nil {

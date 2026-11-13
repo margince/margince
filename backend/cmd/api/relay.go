@@ -32,7 +32,7 @@ import (
 // the moment the lane exists; on the served path that lands after the HTTP
 // drain, so late-committing requests usually ship before exit, and anything
 // still unshipped waits durably in the outbox for the next boot.
-func startInlineRelay(ctx context.Context, pool *pgxpool.Pool, redisAddr, redisPassword, webhookKey, publicBaseURL string, logger *slog.Logger) (compose.Option, func(), error) {
+func startInlineRelay(ctx context.Context, pool *pgxpool.Pool, redisAddr, redisPassword, webhookKey, publicBaseURL string, paused func(context.Context) bool, logger *slog.Logger) (compose.Option, func(), error) {
 	rdb, err := events.NewClient(ctx, redisAddr, redisPassword)
 	if err != nil {
 		return nil, nil, err
@@ -45,7 +45,7 @@ func startInlineRelay(ctx context.Context, pool *pgxpool.Pool, redisAddr, redisP
 	relayCtx, cancel := context.WithCancel(context.WithoutCancel(ctx))
 	var relay sync.WaitGroup
 	relay.Go(func() {
-		events.NewRelay(pool, rdb, logger).Run(relayCtx)
+		events.NewRelay(pool, rdb, logger).WithPause(paused).Run(relayCtx)
 	})
 	// When a webhook signing key is configured, this role also runs the
 	// cg:webhooks delivery consumer — the owner-scoped fan-out (BYO-EVT-4)
@@ -53,7 +53,7 @@ func startInlineRelay(ctx context.Context, pool *pgxpool.Pool, redisAddr, redisP
 	// PARKED delivery is not here: that sweep is a River periodic job, and
 	// this role runs no River runner, so cmd/worker owns it.
 	if webhookKey != "" {
-		if derr := startInlineWebhookDelivery(relayCtx, &relay, rdb, pool, webhookKey, publicBaseURL, logger); derr != nil {
+		if derr := startInlineWebhookDelivery(relayCtx, &relay, rdb, pool, webhookKey, publicBaseURL, paused, logger); derr != nil {
 			// Mirror the stop closure's order below: cancel, drain the relay
 			// goroutine, THEN close the bus client — the relay's Run(relayCtx)
 			// is already in flight and must observe cancellation and stop
@@ -83,7 +83,7 @@ func startInlineRelay(ctx context.Context, pool *pgxpool.Pool, redisAddr, redisP
 // registers its cg:webhooks consumer on the relay group. Kept out of
 // startInlineRelay so that function stays flat; the consumer shares the
 // relay's lifecycle context and WaitGroup.
-func startInlineWebhookDelivery(ctx context.Context, relay *sync.WaitGroup, rdb *redis.Client, pool *pgxpool.Pool, webhookKey, publicBaseURL string, logger *slog.Logger) error {
+func startInlineWebhookDelivery(ctx context.Context, relay *sync.WaitGroup, rdb *redis.Client, pool *pgxpool.Pool, webhookKey, publicBaseURL string, paused func(context.Context) bool, logger *slog.Logger) error {
 	deliverer, err := compose.NewWebhookDeliverer(pool, webhookKey, publicBaseURL, logger)
 	if err != nil {
 		return err
@@ -95,7 +95,7 @@ func startInlineWebhookDelivery(ctx context.Context, relay *sync.WaitGroup, rdb 
 		}
 	}
 	relay.Go(func() {
-		sub := events.NewSubscriber(rdb, group, events.Dedupe(rdb, group.Name, compose.WebhookEventHandler(pool, deliverer)), logger)
+		sub := events.NewSubscriber(rdb, group, events.Dedupe(rdb, group.Name, compose.WebhookEventHandler(pool, deliverer)), logger).WithPause(paused)
 		if err := sub.Run(ctx); err != nil && !errors.Is(err, context.Canceled) {
 			logger.Error("subscriber cg:webhooks", "err", err)
 		}

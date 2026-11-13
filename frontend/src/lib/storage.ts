@@ -174,6 +174,11 @@ export const STORAGE_KEYS = {
     area: "local",
     lifetime: "seat",
   },
+  trialNoticeHiddenOn: {
+    name: "margince.trial.noticeHiddenOn",
+    area: "local",
+    lifetime: "seat",
+  },
 } as const satisfies Record<string, Declared>;
 
 type Registered = (typeof STORAGE_KEYS)[keyof typeof STORAGE_KEYS];

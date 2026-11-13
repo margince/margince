@@ -203,6 +203,7 @@ func leadBehavioralSignals(ctx context.Context, tx pgx.Tx, leadID ids.LeadID) ([
 		FROM activity a
 		JOIN activity_link l ON l.activity_id = a.id
 		WHERE l.lead_id = $1 AND a.archived_at IS NULL AND `+auth.ActivityExternalEvidenceClause("a")+`
+		  AND `+meetingCountsSQL("a")+`
 		ORDER BY a.occurred_at, a.id`, leadID)
 	if err != nil {
 		return nil, err

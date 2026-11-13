@@ -134,6 +134,9 @@ type Handlers struct {
 	// embedReindexAvailable reports whether an embeddings model is bound now,
 	// so the reindex routes serve rather than 501. Injected for the same reason.
 	embedReindexAvailable func() bool
+	// trialEnded answers whether the installation's trial is over (triallock.go).
+	// Nil on a role that wired none, which locks nothing.
+	trialEnded TrialEnded
 	// listsAvailable is the installation's lists.enabled.
 	listsAvailable bool
 	coreFeatures   corefeatures.Availability

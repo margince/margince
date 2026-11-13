@@ -99,6 +99,7 @@ var dailyFlows = []dailyFlow{
 		return []dailyCall{
 			paletteCall("search", in.DealName),
 			{Name: "deal", Path: page},
+			{Name: "status", Path: page + "/status"},
 			{Name: "offers", Path: page + "/offers"},
 			{Name: "documents", Path: page + "/documents"},
 			{Name: "coverage", Path: page + "/coverage"},

@@ -26,6 +26,7 @@ describe("the contactlink rule", () => {
       "src/features/p.tsx builds a mailto from an address",
       "src/design-system/contactlink.tsx is listed as a mailto builder and builds none",
       "src/design-system/richtext-html.ts is listed as a mailto builder and builds none",
+      "src/lib/trialcontact.ts is listed as a mailto builder and builds none",
     ]);
   });
 });
