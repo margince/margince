@@ -16,7 +16,12 @@ import {
   connectivityNow,
   subscribeConnectivity,
 } from "../lib/connectivity";
-import { logUnexpectedError, ProblemError } from "../lib/problem";
+import { refreshTrialLock } from "../lib/license-posture";
+import {
+  logUnexpectedError,
+  ProblemError,
+  problemCodeOf,
+} from "../lib/problem";
 import { INSTALLATION_SETTINGS_KEY } from "../lib/uploadlimit";
 import { SEND_PERMISSION_KEY } from "../lib/usesendpermission";
 import {
@@ -150,18 +155,6 @@ function problemStatusOf(error: unknown): number | null {
   if (typeof problem !== "object" || problem === null || !("status" in problem))
     return null;
   return typeof problem.status === "number" ? problem.status : null;
-}
-
-// The RFC-7807 `code` a failure carries, on the same terms as the status above.
-function problemCodeOf(error: unknown): string | null {
-  if (!(error instanceof ProblemError)) {
-    return null;
-  }
-  const problem = error.problem;
-  if (typeof problem !== "object" || problem === null || !("code" in problem)) {
-    return null;
-  }
-  return typeof problem.code === "string" ? problem.code : null;
 }
 
 // FE-PARAM-2: retry a server error that the server may yet recover from —
@@ -310,7 +303,14 @@ export function createQueryClient(): QueryClient {
     // words, and a refusal a form renders field by field is a routine answer
     // to a mutation, not a fault anyone should open a console for.
     mutationCache: new MutationCache({
-      onError: logUnexpectedError,
+      onError: (error) => {
+        logUnexpectedError(error);
+        // The trial ended under an open session: show the lock now, not at
+        // the next read of /me.
+        if (problemCodeOf(error) === "trial_ended") {
+          refreshTrialLock(client);
+        }
+      },
       onSuccess: () => {
         refreshNamedReferences(client);
         refreshRecordHistory(client);

@@ -444,3 +444,4 @@ migrations/enginebackfill_integration_test.go 1
 migrations/mailboxhistorynotice_integration_test.go 2
 migrations/sentfromformeraddressnotice_integration_test.go 2
 pkg/extension/messaging/messaging_test.go 1
+tools/check-generators-twice/twice_test.go 3

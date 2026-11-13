@@ -24,7 +24,7 @@ import {
 } from "./app/authscreens";
 import { isPublicBookingId } from "./app/bookingroute";
 import { AuthSplash } from "./app/bootsplash";
-import { ConfinedAccountScreen, useProbeAnswer } from "./app/confinement";
+import { lockScreen, useProbeAnswer } from "./app/confinement";
 import { DateFormatsProvider } from "./app/dateformats";
 import { useFeatureLanding } from "./app/featurelanding";
 import { prefetchHome } from "./app/homeprefetch";
@@ -371,12 +371,9 @@ function AuthedApp({
       </RaillessFrame>
     );
   }
-  if (confinement) {
-    return (
-      <RaillessFrame>
-        <ConfinedAccountScreen {...confinement} />
-      </RaillessFrame>
-    );
+  const lock = lockScreen(confinement, refusal, me.data);
+  if (lock) {
+    return <RaillessFrame>{lock}</RaillessFrame>;
   }
   if (refusal !== null) {
     const kind =

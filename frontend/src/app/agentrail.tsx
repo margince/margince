@@ -38,6 +38,7 @@ import { useAgentTicker } from "./agentrail-ticker";
 import { useAiActivity } from "./ai-activity";
 import { plain, type SpokenLine, speak, spokenText } from "./ai-activity-speak";
 import { usePopoverDismiss } from "./popover";
+import { TrialOrbRing, TrialPill } from "./trialpill";
 import "./agentrail.css";
 
 // The agent's place in the app: the foot of the workspace rail, under the
@@ -400,6 +401,7 @@ export function AgentRail({
             size="md"
             className="arorb"
           />
+          <TrialOrbRing />
         </button>
         {/* Hidden by the stylesheet on the collapsed rail, where the orb and the
             count are the whole report and the button's name carries the rest. */}
@@ -441,6 +443,9 @@ export function AgentRail({
           />
         </span>
       </div>
+      {/* Beside the hit area, not in it: its press opens the dialog to the
+          Margince team, and a press inside the area opens the agent's panel. */}
+      <TrialPill />
     </section>
   );
 }

@@ -51,6 +51,7 @@ var mapping = []struct {
 	{apperrors.ErrApprovalTokenInvalid, http.StatusForbidden, "approval_token_invalid"},
 	{apperrors.ErrSeatTierInsufficient, http.StatusForbidden, "seat_tier_insufficient"},
 	{apperrors.ErrSeatLimitReached, http.StatusForbidden, "seat_limit_reached"},
+	{apperrors.ErrTrialEnded, http.StatusForbidden, "trial_ended"},
 	{apperrors.ErrConsentNotGranted, http.StatusConflict, "consent_not_granted"},
 	{apperrors.ErrBudgetExceeded, http.StatusTooManyRequests, "rate_limited"},
 	{apperrors.ErrUnsupportedBySoR, http.StatusUnprocessableEntity, "unsupported_by_sor"},

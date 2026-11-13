@@ -2,6 +2,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import type { ReactNode } from "react";
 import { api } from "../../api/client";
 import type { components } from "../../api/schema";
+import { TrialNotice } from "../../components/trialcontact";
 import { Button } from "../../design-system/atoms";
 import { Callout } from "../../design-system/callout";
 import { CellStack } from "../../design-system/cellstack";
@@ -10,10 +11,15 @@ import { QueryGate } from "../../design-system/querystates";
 import { Meter } from "../../design-system/readings";
 import { SettingList, SettingRow } from "../../design-system/settingrow";
 import { formatNumber } from "../../format/format";
+import { useNow } from "../../format/now";
 import { type Locale, useLocale, useT } from "../../i18n";
 import { useCan, useCanWrite } from "../../lib/capability";
-import { useLicenseEntitlement } from "../../lib/license-posture";
-import { throwProblem, unwrap } from "../../lib/problem";
+import {
+  LICENSE_ENTITLEMENT_KEY,
+  trialStandingOf,
+  useLicenseEntitlement,
+} from "../../lib/license-posture";
+import { logUnexpectedError, throwProblem, unwrap } from "../../lib/problem";
 import { useMe } from "../../lib/session";
 import "./license.css";
 import { LicenseHolderCard } from "./licenseholder";
@@ -195,17 +201,43 @@ export function SeatUsageReading({
  * "Check now": the api reads the deployment's license token again at once.
  *
  * The answer is the entitlement itself, so it replaces the shared query's data.
- * The banner, the agent rail and this card then all show the new posture.
+ * The banner, the agent rail and this card then all show the new posture, and
+ * /me says again whether the trial still locks the app.
  */
-export function LicenseCheck() {
-  const t = useT();
+export function useLicenseCheck() {
   const queryClient = useQueryClient();
-  const check = useMutation({
+  return useMutation({
     mutationFn: async () =>
       unwrap(await api.POST("/installation/license/check")),
-    onSuccess: (entitlement) =>
-      queryClient.setQueryData(["installation-license"], entitlement),
+    onSuccess: (entitlement) => {
+      queryClient.setQueryData(LICENSE_ENTITLEMENT_KEY, entitlement);
+      queryClient
+        .invalidateQueries({ queryKey: ["me"], exact: true })
+        .catch(logUnexpectedError);
+    },
   });
+}
+
+/** What the last check came to. One line for any failure: the server's detail
+ * is English text and names nothing an admin can fix from here. */
+export function LicenseCheckResult({
+  check,
+}: Readonly<{ check: ReturnType<typeof useLicenseCheck> }>) {
+  const t = useT();
+  if (!check.isSuccess && !check.isError) {
+    return null;
+  }
+  return (
+    <span className="t-caption" role="status">
+      {check.isError ? t("license.check.failed") : t("license.check.done")}
+    </span>
+  );
+}
+
+/** "Check now" as a settings row lays it out: the button, then why and what came of it. */
+export function LicenseCheck() {
+  const t = useT();
+  const check = useLicenseCheck();
   return (
     <CellStack>
       <span>
@@ -218,13 +250,7 @@ export function LicenseCheck() {
         </Button>
       </span>
       <span className="t-caption">{t("license.check.hint")}</span>
-      {/* One line for any failure: the server's detail is English text and
-          names nothing an admin can fix from here. */}
-      {(check.isSuccess || check.isError) && (
-        <span className="t-caption" role="status">
-          {check.isError ? t("license.check.failed") : t("license.check.done")}
-        </span>
-      )}
+      <LicenseCheckResult check={check} />
     </CellStack>
   );
 }
@@ -235,6 +261,7 @@ export function LicenseReading({
 }: Readonly<{ entitlement: LicenseEntitlement; action?: ReactNode }>) {
   const t = useT();
   const { locale } = useLocale();
+  const now = useNow(60_000);
   const granted = entitlement.seats_granted;
   const capped = granted !== undefined && granted !== null;
   // The callout and the seat row both name the grant. One spelling keeps them
@@ -273,11 +300,17 @@ export function LicenseReading({
                 : t("license.refused.bodyUncapped")}
             </Callout>
           )}
-          {entitlement.state === "absent" && (
-            <Callout kind="standing" title={t("license.absent.title")}>
-              {t("license.absent.body")}
-            </Callout>
-          )}
+          {entitlement.state === "absent" &&
+            (entitlement.trial ? (
+              <TrialNotice
+                standing={trialStandingOf(entitlement.trial, now)}
+                seatsUsed={entitlement.seats_used}
+              />
+            ) : (
+              <Callout kind="standing" title={t("license.absent.title")}>
+                {t("license.absent.body")}
+              </Callout>
+            ))}
           {entitlement.over_limit && (
             // `live` overrides the silence `standing` derives. A breach is true on
             // render and still interrupts, because the admin has to act on it.
