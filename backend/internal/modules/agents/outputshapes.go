@@ -125,9 +125,9 @@ type jsonSchema struct {
 	Format string `json:"format,omitempty"`
 	// Enum, Minimum and Maximum come from a field's `enum`, `minimum` and
 	// `maximum` tags, which Invoke then holds a call to.
-	Enum    []string `json:"enum,omitempty"`
-	Minimum *float64 `json:"minimum,omitempty"`
-	Maximum *float64 `json:"maximum,omitempty"`
+	Enum    enumMembers `json:"enum,omitempty"`
+	Minimum *float64    `json:"minimum,omitempty"`
+	Maximum *float64    `json:"maximum,omitempty"`
 	// Description is carried only where a field's own type cannot say it.
 	Description string                 `json:"description,omitempty"`
 	Properties  map[string]*jsonSchema `json:"properties,omitempty"`
@@ -416,4 +416,29 @@ func spliceResultSchema(envelope, inner json.RawMessage) (json.RawMessage, error
 		return nil, fmt.Errorf("cannot encode the enveloped schema: %w", err)
 	}
 	return sealed, nil
+}
+
+// enumMembers are an enum's values as text. A tag writes strings. A schema read
+// back may hold numbers or null, as the contract's billing_interval_months
+// does, and each is kept as its JSON text. ResultDefect checks types and never enum
+// members, so the text is all a reader of a parsed schema needs.
+type enumMembers []string
+
+// UnmarshalJSON reads every member of an enum, of any JSON type.
+func (e *enumMembers) UnmarshalJSON(raw []byte) error {
+	var members []json.RawMessage
+	if err := json.Unmarshal(raw, &members); err != nil {
+		return err
+	}
+	out := make(enumMembers, len(members))
+	for i, member := range members {
+		out[i] = string(member)
+		if len(member) > 0 && member[0] == '"' {
+			if err := json.Unmarshal(member, &out[i]); err != nil {
+				return err
+			}
+		}
+	}
+	*e = out
+	return nil
 }

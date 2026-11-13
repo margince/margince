@@ -57,6 +57,21 @@ export function factsKey(companyId: string) {
   return ["company-facts", companyId] as const;
 }
 
+/** Every stored fact about one company, technical ones included. */
+export function useCompanyFacts(companyId: string) {
+  return useQuery({
+    queryKey: factsKey(companyId),
+    queryFn: async () => {
+      const data = unwrap(
+        await api.GET("/companies/{id}/facts", {
+          params: { path: { id: companyId } },
+        }),
+      );
+      return data.data ?? [];
+    },
+  });
+}
+
 // How many rows of a category are shown before the reader asks for the rest. A
 // real account returns ninety-odd facts, and rendering them all made this card
 // taller than the page beside it — at which point nobody reads any of it.
@@ -108,17 +123,7 @@ export function CompanyFactsPanel({
     setOpenFor(companyId);
     setAdding(false);
   }
-  const factsQuery = useQuery({
-    queryKey: factsKey(companyId),
-    queryFn: async () => {
-      const data = unwrap(
-        await api.GET("/companies/{id}/facts", {
-          params: { path: { id: companyId } },
-        }),
-      );
-      return data.data ?? [];
-    },
-  });
+  const factsQuery = useCompanyFacts(companyId);
 
   // The technical fields are excluded because the technical card claims them.
   // Both read the same endpoint, so without this every mail provider and
@@ -239,22 +244,27 @@ function FactCategoryBlock({
   );
 }
 
-function AddFactForm({
+export function AddFactForm({
   companyId,
   anchor,
   canEdit,
+  only,
   onDone,
 }: Readonly<{
   companyId: string;
   anchor: boolean;
   canEdit: boolean;
+  // A caller asking for one kind of fact, as `category:field`, gets no picker:
+  // the row it sits in already names the kind.
+  only?: string;
   onDone: () => void;
 }>) {
   const t = useT();
   const queryClient = useQueryClient();
   const fieldId = useId();
   const valueId = useId();
-  const [field, setField] = useState<string>("");
+  const [picked, setField] = useState<string>("");
+  const field = only ?? picked;
   const [value, setValue] = useState("");
 
   const options: SelectOption[] = Object.entries(STATEABLE).flatMap(
@@ -289,16 +299,20 @@ function AddFactForm({
 
   return (
     <div className="co-facts-add">
-      <label className="sr-only" htmlFor={fieldId}>
-        {t("co.facts.addField")}
-      </label>
-      <Select
-        id={fieldId}
-        options={options}
-        value={field}
-        onChange={setField}
-        placeholder={t("co.facts.addField")}
-      />
+      {!only && (
+        <>
+          <label className="sr-only" htmlFor={fieldId}>
+            {t("co.facts.addField")}
+          </label>
+          <Select
+            id={fieldId}
+            options={options}
+            value={field}
+            onChange={setField}
+            placeholder={t("co.facts.addField")}
+          />
+        </>
+      )}
       <label className="sr-only" htmlFor={valueId}>
         {t("co.facts.addValue")}
       </label>

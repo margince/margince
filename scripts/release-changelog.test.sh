@@ -10,7 +10,7 @@
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
-BUILD="$SCRIPT_DIR/release-changelog.sh"
+BUILD="$SCRIPT_DIR/release_changelog.py"
 
 FAILURES=0
 AFTER="9f86d081884c7d659a2feaa0c55ad015a3bf4f1b"
@@ -24,7 +24,7 @@ BASE="3f786850e387550fdab836ed7e6dc881de23001b"
 expect() {
 	local name="$1" want="$2" input="$3" got
 	shift 3
-	if ! got="$(bash "$BUILD" "$@" 2>/dev/null < <(printf '%s' "$input"))"; then
+	if ! got="$(python3 "$BUILD" "$@" 2>/dev/null < <(printf '%s' "$input"))"; then
 		printf 'FAIL: %s — refused a call it must accept\n' "$name"
 		FAILURES=$((FAILURES + 1))
 		return
@@ -42,7 +42,7 @@ expect() {
 refuse() {
 	local name="$1" input="$2" got status=0
 	shift 2
-	got="$(bash "$BUILD" "$@" 2>/dev/null < <(printf '%s' "$input"))" || status=$?
+	got="$(python3 "$BUILD" "$@" 2>/dev/null < <(printf '%s' "$input"))" || status=$?
 	if [[ "$status" -ne 1 || -n "$got" ]]; then
 		printf 'FAIL: %s — exit %d with stdout %q, want exit 1 and no stdout\n' "$name" "$status" "$got"
 		FAILURES=$((FAILURES + 1))
@@ -98,7 +98,7 @@ EOF
 )" $'fix(offers): a caf\xe9 total rounds to the cent (#15)\n' \
 	2026.1.1 margince/margince "$AFTER" 2026.1.0 "$BASE"
 
-# The room: release-notes.sh lists every fix up to 250000 characters and
+# The room: release_notes.py lists every fix up to 250000 characters and
 # collapses them over it. 2400 fixes of 100 characters fit it, 2600 do not.
 fixes() {
 	local i
@@ -128,6 +128,9 @@ expect "fixes over the room collapse into a count" "$(
 $compare
 EOF
 )" "$(fixes 2600)" 2026.1.1 margince/margince "$AFTER" 2026.1.0 "$BASE"
+
+expect "a no-break space is a subject, not an empty patch" "$compare" $'\xc2\xa0\n' \
+	2026.1.1 margince/margince "$AFTER" 2026.1.0 "$BASE"
 
 refuse "a base with no subject since it" "" \
 	2026.1.1 margince/margince "$AFTER" 2026.1.0 "$BASE"

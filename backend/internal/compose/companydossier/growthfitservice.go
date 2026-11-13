@@ -64,12 +64,9 @@ var growthFitPromptVersion = ai.PromptDigest(func(fence promptfence.Fence) strin
 })
 
 // growthFitStoredVersion is the payload SHAPE this build writes and can read.
-// v2 adds the sub-scores (DOSS-AC-17). A v1 payload has none, and serving one
-// would render a card with a band and no bars that looks like a complete
-// answer. v3 carries the missing inputs and the next step as
-// codes. A v2 payload holds English sentences the client no longer words. v4 names the
-// offering the company was judged against; a v3 payload has no such name.
-const growthFitStoredVersion = 4
+// A payload of an older version lacks a part the card draws (sub-scores, input
+// codes, the offering, the per-input states), so it is assessed again.
+const growthFitStoredVersion = 5
 
 // GrowthFitService assembles and caches one company's growth fit per reader.
 type GrowthFitService struct {

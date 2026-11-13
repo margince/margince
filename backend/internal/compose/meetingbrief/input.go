@@ -172,10 +172,13 @@ type AttendeeIn struct {
 // obligations, and the body alone loses which one it was.
 type ClaimIn struct {
 	ContactName string
-	Kind        string
-	Body        string
-	Status      string
-	SourceID    string
+	// AlsoTo names the other attendees the same claim was filed for
+	// (foldSameClaims), so one promise is said once to all of them.
+	AlsoTo   []string
+	Kind     string
+	Body     string
+	Status   string
+	SourceID string
 	// SourceLabel names the conversation in prose, so a sentence can say where
 	// the promise was made without pasting a record id into the text.
 	SourceLabel string
@@ -248,6 +251,7 @@ func FromMeeting(room meeting, perAttendee map[ids.UUID][]crmcontracts.Conversat
 		in.LastTouchAt = latest(in.LastTouchAt, attendee.LastTouch.occurred())
 		in.Commitments = append(in.Commitments, foldClaims(attendee.FullName, perAttendee[attendee.ContactID])...)
 	}
+	in.Commitments = foldSameClaims(in.Commitments)
 	return in
 }
 

@@ -2,9 +2,17 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { leadRow, readingsDay, wholeLeads } from "../../testing/brief.fixtures";
+import { Panel, PanelBody } from "../../design-system/panel";
+import {
+  leadRow,
+  meetingRow,
+  readingsDay,
+  wholeLeads,
+  wholeMeetings,
+} from "../../testing/brief.fixtures";
 import { StoryProviders } from "../../testing/story-utils";
 import { BriefReadingsStrip } from "./brief.readings";
+import "./brief.css";
 
 const meta: Meta<typeof BriefReadingsStrip> = {
   title: "Shell/Home/Prospecting readings",
@@ -113,4 +121,34 @@ export const InTheRail: Story = {
       </div>
     ),
   ],
+};
+
+// Home's Numbers panel whole: a quiet day with one prepared meeting, no flagged
+// deal, and zeros that open nothing.
+export const NumbersPanel: Story = {
+  args: {
+    day: {
+      ...readingsDay(
+        { prospecting: 0, review: 0 },
+        [meetingRow("m1", true)],
+        [wholeMeetings(1)],
+      ),
+      calendar: "connected",
+    },
+  },
+  decorators: [
+    (Story) => (
+      <div className="brief-rail" style={{ inlineSize: 360 }}>
+        <Panel title="Numbers" flatHead className="brief-overview">
+          <PanelBody>
+            <Story />
+          </PanelBody>
+        </Panel>
+      </div>
+    ),
+  ],
+};
+export const NumbersPanelDark: Story = {
+  ...NumbersPanel,
+  globals: { theme: "dark" },
 };

@@ -9,7 +9,7 @@ import { saveRecordEdit } from "../../components/recordedit";
 import type { FieldGroup } from "../../components/recordfieldtypes";
 import { rawRecord } from "../../components/recordfieldtypes";
 import { useOwnerPicker, useRecordOwners } from "../../components/recordowners";
-import { useT } from "../../i18n";
+import { useLocale, useT } from "../../i18n";
 import { useAcquisitionSources } from "../../lib/acquisitionsources.queries";
 import { useCanWriteRecord } from "../../lib/capability";
 import { useLeadingCurrencies } from "../../lib/leadingcurrencies";
@@ -23,6 +23,7 @@ import {
   attributedPartner,
   dealEditFields,
   editProjectFields,
+  useNoPartnersYet,
   usePartnerOptions,
 } from "./deals.fields";
 import { dealEditRecord, mapDealUpdate, stringValues } from "./deals.write";
@@ -45,7 +46,9 @@ export function useDealEdit(
 ): RailEdit &
   Readonly<{ groups: FieldGroup[]; maskedFields: readonly string[] }> {
   const t = useT();
+  const { locale } = useLocale();
   const partnerOptions = usePartnerOptions([]);
+  const noPartnersYet = useNoPartnersYet();
   const acquisitionSources = useAcquisitionSources().data;
   const leadingCurrencies = useLeadingCurrencies();
   const masked = deal.masked_fields ?? [];
@@ -78,6 +81,7 @@ export function useDealEdit(
     ...dealEditFields(t, {
       partnerOptions,
       attributedPartner: attributedPartner(deal, partnerName),
+      noPartnersYet,
       currentCompany,
       masked,
       closed: deal.status === "won" || deal.status === "lost",
@@ -85,6 +89,7 @@ export function useDealEdit(
       currentOwner: deal.owner_id ?? null,
       currency: deal.currency ?? "",
       leadingCurrencies,
+      locale,
       acquisitionSources,
       currentAcquisitionSource: deal.acquisition_source,
     }).map(

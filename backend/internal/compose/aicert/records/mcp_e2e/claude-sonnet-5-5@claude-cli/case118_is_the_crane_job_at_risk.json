@@ -1,0 +1,23 @@
+{
+  "scenario": "case118_is_the_crane_job_at_risk",
+  "criteria": [
+    1
+  ],
+  "passed": 3,
+  "runs": 3,
+  "pass_at": 2,
+  "driver": "claude:cli",
+  "effort": "thinking off",
+  "system_prompt": "cli-default",
+  "search": "semantic",
+  "self_judged": true,
+  "usage": {
+    "input_tokens": 18,
+    "output_tokens": 2220,
+    "cache_creation_input_tokens": 72701,
+    "cache_read_input_tokens": 496157,
+    "runs_measured": 3,
+    "runs_costed": 3,
+    "cost_usd": 0.3627
+  }
+}

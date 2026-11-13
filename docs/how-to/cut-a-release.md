@@ -50,7 +50,7 @@ compares every commit.
 
 A title such as `feat(api)!: …` lists under **Breaking**, and that section is never cut for length.
 Other titles (`refactor`, `test`, `docs`, `ci`, dependency updates) are left to the compare link.
-[`scripts/release-notes.sh`](../../scripts/release-notes.sh) builds that half. A tag with an added
+[`scripts/release_notes.py`](../../scripts/release_notes.py) builds that half. A tag with an added
 part needs no draft, and its page holds only the generated half.
 
 ## Prepare the release commit
@@ -158,8 +158,8 @@ since the patch base, so the changelog lists what the patch carries. Merge commi
 reached `main` through another branch keeps its own subject. If a lane was skipped, the next changelog lists its
 changes too.
 
-[`scripts/release-changelog.sh`](../../scripts/release-changelog.sh) writes the file. Under the heading
-**Changes** come the sections of [`scripts/release-notes.sh`](../../scripts/release-notes.sh), and then a link
+[`scripts/release_changelog.py`](../../scripts/release_changelog.py) writes the file. Under the heading
+**Changes** come the sections of [`scripts/release_notes.py`](../../scripts/release_notes.py), and then a link
 that compares every commit since the base. The dist page shows the version above the file, so the file does not
 name it. A release with no subject a user notices gets only the link. The first release gets one sentence: its
 patch is the whole tree.

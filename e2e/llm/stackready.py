@@ -33,7 +33,8 @@ _DEGRADED = "semantic_ranking_degraded_to_lexical"
 def semantic_problem(session):
     """(why search_context is not answering semantically, whether that is a
     lexical fallback) — ("", False) when it answers by meaning."""
-    text, is_error = session.call("search_context", {"query": _PROBE, "limit": 5})
+    # Through its router: tools/call refuses a name tools/list does not offer.
+    text, is_error = session.call("find_records", {"engine": "meaning", "query": _PROBE, "limit": 5})
     if is_error:
         return f"search_context refused the probe: {text[:200]}", False
     reply = json.loads(text)

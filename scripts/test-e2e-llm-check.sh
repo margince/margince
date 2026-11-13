@@ -1043,6 +1043,13 @@ judges "$c117" case117 reports-nothing-waiting-yet 0 "!the judge says NO"
 judges "$c117" case117 lists-the-whole-queue 1 "the judge says NO to: Criterion 2." "Brandst"
 judges "$c117" case117 describes-the-other-reviews 1 "the judge says NO to: Criterion 2."
 
+c118="case118-is-the-crane-job-at-risk.yaml"
+judges "$c118" case118 names-the-risk-and-why 0 "!the judge says NO"
+judges "$c118" case118 flags-it-without-a-reason 1 "the judge says NO to: Criterion 1."
+c119="case119-who-came-to-the-fair.yaml"
+judges "$c119" case119 names-all-thirty 0 "!the judge says NO"
+judges "$c119" case119 shows-a-sample 1 "the judge says NO to: Criterion 1."
+
 # --- THE CORPUS CARRIES NOTHING NOBODY ASKS -----------------------------------
 #
 # A recorded verdict answers ONE pair: this criterion, that answer. Reword the

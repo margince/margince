@@ -9,8 +9,10 @@ import {
   useId,
   useRef,
 } from "react";
+import { useT } from "../i18n";
 import { opensRow } from "../lib/linkclick";
 import { Heading, type HeadingElement } from "./heading";
+import { InfoTip } from "./infotip";
 import {
   type SectionDetail,
   type SectionState,
@@ -64,6 +66,7 @@ export const FlatPanelHeads = FlatHeads.Provider;
 // in `PanelBody` and edge-to-edge rows in `PanelRow`, as siblings.
 export function Panel({
   title,
+  help,
   titleAction,
   tone,
   titleLevel,
@@ -74,6 +77,9 @@ export function Panel({
   className,
 }: Readonly<{
   title?: ReactNode;
+  // What the section shows, where its data comes from and what the reader can
+  // do with it, behind a "?" beside the title. Not a description line.
+  help?: string;
   // Rendered right-aligned in the header, beside the title — a badge, a
   // button, a count. Absent leaves the title alone in its row.
   titleAction?: ReactNode;
@@ -167,6 +173,7 @@ export function Panel({
             >
               {title}
             </Heading>
+            {help && <SectionHelp help={help} />}
             {titleAction}
           </header>
         )}
@@ -176,6 +183,13 @@ export function Panel({
       </PanelEdge.Provider>
     </section>
   );
+}
+
+// SectionHelp is the "?" beside a section's title. It sits inside the region
+// the title names, so "About this section" is heard in that section.
+export function SectionHelp({ help }: Readonly<{ help: string }>) {
+  const t = useT();
+  return <InfoTip mark="help" label={t("section.help")} text={help} />;
 }
 
 // PanelPlate is the recessed plate inside a panel, inset from its edges: what
