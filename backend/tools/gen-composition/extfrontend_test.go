@@ -276,7 +276,7 @@ func TestExtScreensGenImportsOnlyUnitsWithAScreen(t *testing.T) {
 	got := string(extScreensGen([]extensionUnit{
 		{Name: "notes", Frontend: &unitFrontend{Package: "@margince-ext/notes", Export: "@margince-ext/notes"}},
 		{Name: "de"},
-	}, nil))
+	}, nil, nil))
 	for _, want := range []string{
 		`import NotesScreen from "@margince-ext/notes";`,
 		`"notes": NotesScreen,`,
@@ -297,7 +297,7 @@ func TestExtScreensGenIsOrderedByUnitName(t *testing.T) {
 	got := string(extScreensGen([]extensionUnit{
 		{Name: "alpha", Frontend: &unitFrontend{Package: "@margince-ext/alpha", Export: "@margince-ext/alpha"}},
 		{Name: "beta", Frontend: &unitFrontend{Package: "@margince-ext/beta", Export: "@margince-ext/beta"}},
-	}, nil))
+	}, nil, nil))
 	if strings.Index(got, "AlphaScreen") > strings.Index(got, "BetaScreen") {
 		t.Errorf("imports are not in unit order:\n%s", got)
 	}
@@ -316,7 +316,7 @@ func TestExtScreensGenImportsEachDeclaredPanel(t *testing.T) {
 	}, map[string][]declaredPanel{
 		"alpha": {{Slot: "record_panel.deal", Export: "DealPanel", Object: "ext_alpha_x"}},
 		"beta":  {{Slot: "record_panel.deal", Export: "DealPanel", Object: "ext_beta_x"}},
-	}))
+	}, nil))
 	for _, want := range []string{
 		`import AlphaScreen, { DealPanel as Alpha__DealPanel } from "@margince-ext/alpha";`,
 		`import BetaScreen, { DealPanel as Beta__DealPanel } from "@margince-ext/beta";`,
@@ -330,8 +330,28 @@ func TestExtScreensGenImportsEachDeclaredPanel(t *testing.T) {
 	if strings.Contains(got, `"gamma": {`) {
 		t.Errorf("a unit with no panel must add none:\n%s", got)
 	}
-	if !strings.HasSuffix(string(extScreensGen(nil, nil)), "export const extensionPanels = {};\n") {
-		t.Error("the empty set must still export an empty panel registry")
+	if !strings.HasSuffix(string(extScreensGen(nil, nil, nil)), "export const extensionPanels = {};\n\nexport const extensionApps = {};\n") {
+		t.Error("the empty set must still export an empty panel and app registry")
+	}
+}
+
+// A declared app rides the unit's one import under a name of its own. So it
+// cannot collide with a panel that exports the same component name.
+func TestExtScreensGenImportsEachDeclaredApp(t *testing.T) {
+	front := &unitFrontend{Package: "@margince-ext/alpha", Export: "@margince-ext/alpha"}
+	got := string(extScreensGen(
+		[]extensionUnit{{Name: "alpha", Frontend: front}, {Name: "beta", Frontend: &unitFrontend{Package: "@margince-ext/beta", Export: "@margince-ext/beta"}}},
+		map[string][]declaredPanel{"alpha": {{Slot: "record_panel.deal", Export: "AlphaApp", Object: "ext_alpha_x"}}},
+		map[string]declaredApp{"alpha": {Export: "AlphaApp"}},
+	))
+	for _, want := range []string{
+		`import AlphaScreen, { AlphaApp as Alpha__AlphaApp, AlphaApp as Alpha__app__AlphaApp } from "@margince-ext/alpha";`,
+		"export const extensionApps = {\n  \"alpha\": Alpha__app__AlphaApp,\n};\n",
+		`import BetaScreen from "@margince-ext/beta";`,
+	} {
+		if !strings.Contains(got, want) {
+			t.Errorf("emitted registry is missing %q:\n%s", want, got)
+		}
 	}
 }
 

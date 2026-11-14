@@ -1599,6 +1599,7 @@
   "notifications.empty": "Bisher ist nichts eingegangen. Was das Produkt dir mitteilt, erscheint hier.",
   "reminder.notification.body": "Deine Erinnerung ist fällig. Klicke, um die Aufgabe zu öffnen.",
   "reminder.notification.untitled": "Erinnerung an eine Aufgabe",
+  "extUnits.openNamed": "Einstellungen für {name}",
   "connectors.provGmail": "Gmail",
   "connectors.provGcal": "Google Kalender",
   "connectors.provGdocs": "Google Docs",

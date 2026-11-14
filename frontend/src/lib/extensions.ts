@@ -56,12 +56,13 @@ export type ExtensionScreenRegistry = Readonly<
  * namespace token everywhere else in the tier (tables, roles, job kinds,
  * `/v1/ext/<name>` routes); this is its hash-route spelling.
  *
- * NOT REACHABLE FROM THE RAIL. `nav.ts` keeps `NAV_GROUPS` as the canonical
- * 12-item list whose order `rail.test.tsx` pins, and an installation cannot
- * add a thirteenth: enabling a unit is not the product growing a destination.
- * A unit is OFFERED in Settings instead, on the page that already holds the
- * kind of credential it is configured with — see `unitsForSecretScope` below
- * and `features/automations/extension-units.tsx`.
+ * This is the unit's SUB-SETTING, not its drawer entry. `nav.ts` keeps
+ * `NAV_GROUPS` as the canonical list whose order `rail.test.tsx` pins, and a
+ * unit adds no row to it. A unit is OFFERED in Settings, on the page that
+ * already holds the kind of credential it is configured with. See
+ * `unitsForSecretScope` below and `features/automations/extension-units.tsx`.
+ * A unit that declares an App is also listed in the drawer, at
+ * `#/app/<unit>` (lib/extensionapps.ts).
  *
  * `RAIL_LESS_SCREENS` was reviewed with it and is unchanged: a unit's screen
  * wants the rail like any other destination, and `nav.ts` marks Settings

@@ -12,7 +12,11 @@
 // published-operations card, which is what a unit with no bespoke screen gets.
 // extensionPanels holds the components units draw inline on core pages, by
 // unit and slot; a page's slot draws nothing when no unit fills it.
+// extensionApps holds each unit's own destination for the home side drawer, by
+// unit; a unit absent from it has no drawer entry.
 
 export const extensionScreens = {};
 
 export const extensionPanels = {};
+
+export const extensionApps = {};

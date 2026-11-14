@@ -2,6 +2,7 @@ import { lazy } from "react";
 import { AuthScreen } from "./app/authscreens";
 import { findCustomScreen } from "./app/custom";
 import { opensReservedPage } from "./app/nav";
+import { AppLink } from "./design-system/applink";
 import {
   Card,
   EmptyState,
@@ -10,8 +11,15 @@ import {
 } from "./design-system/atoms";
 import { useLocale, useT } from "./i18n";
 import type { MessageKey } from "./i18n/en";
-import { composedScreens, findExtension, unitTitle } from "./lib/extensions";
-import { navigate } from "./lib/router";
+import { composedApps, findApp, mayOpenApp } from "./lib/extensionapps";
+import {
+  composedScreens,
+  EXTENSION_SCREEN,
+  findExtension,
+  unitTitle,
+} from "./lib/extensions";
+import { navigate, routeHash } from "./lib/router";
+import { useMe } from "./lib/session";
 
 // Every route chunk, registered as it is declared. A screen is split so the
 // login screen does not carry the app. It is warmed once a session exists, so a
@@ -412,6 +420,38 @@ export function CustomRoute({ name }: Readonly<{ name?: string }>) {
   }
   const ForkScreen = screen.component;
   return <ForkScreen />;
+}
+
+// A unit's app, at `#/app/<unit>`, drawn in the home layout with no Settings
+// trail. A refused reader, a unit with no app and an app with no component all
+// get the unknown-page card. So the address never tells a refused reader that
+// the unit exists.
+export function ExtensionAppRoute({ name }: Readonly<{ name?: string }>) {
+  const t = useT();
+  const { locale } = useLocale();
+  const me = useMe();
+  const app = findApp(name);
+  if (me.isPending) {
+    return <ScreenPending />;
+  }
+  const UnitApp =
+    app && Object.hasOwn(composedApps, app.unit)
+      ? composedApps[app.unit]
+      : undefined;
+  const unit = findExtension(name);
+  if (!app || !unit || !UnitApp || !mayOpenApp(me.data, app)) {
+    return <ScreenNotice messageKey="shell.unknownPage" />;
+  }
+  return (
+    <>
+      <UnitApp />
+      <div className="wrap narrow">
+        <AppLink href={routeHash({ screen: EXTENSION_SCREEN, id: unit.name })}>
+          {t("extUnits.openNamed", { name: unitTitle(unit, locale) })}
+        </AppLink>
+      </div>
+    </>
+  );
 }
 
 export function ExtensionRoute({ name }: Readonly<{ name?: string }>) {

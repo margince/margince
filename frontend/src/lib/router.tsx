@@ -49,6 +49,9 @@ export const SCREENS = [
   // reader has no nav to reach it from.
   "reset-password",
   "ext",
+  // A unit's own app in the home layout (lib/extensionapps.ts), apart from its
+  // sub-setting at `ext`.
+  "app",
   "x",
   // reach:external what `parseRoute` answers for an address this app does not
   // have; a link to it would be a link to the fact that a link was wrong.

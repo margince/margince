@@ -104,7 +104,7 @@ type unitManifest struct {
 	reportDecls
 	// Panels are the places on core pages that draw the unit's own component.
 	Panels []declaredPanel `json:"panels,omitempty"`
-
+	appDecl
 	// Instrumentation says what the unit observes of the whole process.
 	Instrumentation *unitInstrumentation `json:"instrumentation,omitempty"`
 

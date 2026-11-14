@@ -37,6 +37,8 @@ const OUTSIDE_THE_SHELL = new Set<string>([
   // the unit's own descriptor, which the shell resolves at runtime.
   "x",
   "ext",
+  // An app is named by the words its unit declared for its drawer entry.
+  "app",
 ]);
 
 const HEADS_ITSELF = (screen: string) =>

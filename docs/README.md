@@ -196,6 +196,10 @@ ready before we need it, because the first date comes 24 hours after we learn of
   rights and routes.
 - [extension-privacy-and-retention.md](reference/extension-privacy-and-retention.md): how an extension's data
   follows core's privacy and retention rules, feature by feature.
+- [extension-apps-in-the-drawer.md](explanation/extension-apps-in-the-drawer.md): why an extension may have an app,
+  and what limits it.
+- [extensions-can-appear-as-apps-in-the-hom.md](reference/extensions-can-appear-as-apps-in-the-hom.md): the
+  package of work that gives an extension an app.
 - [mcp-protocol.md](reference/mcp-protocol.md): how `/mcp` works: message forms, limits and client sign-in.
 - [mcp-info.md](reference/mcp-info.md): each MCP tool's text as a client sees it. Generated.
 - [ai-prompts.md](reference/ai-prompts.md): every text this build sends to a model. Generated.

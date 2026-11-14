@@ -8,6 +8,7 @@ import { IconAction } from "../design-system/iconaction";
 import { SETTINGS_SCREEN } from "../features/settings/settingsnav";
 import { useLocale, useT } from "../i18n";
 import { lazy } from "../i18n/lazy";
+import { useOpenableApp } from "../lib/extensionapps";
 import { EXTENSION_SCREEN, findExtension } from "../lib/extensions";
 import {
   ariaKeyShortcuts,
@@ -84,6 +85,7 @@ function useCrumbs(route: Route, section?: NavSection): readonly Crumb[] {
   const unit =
     route.screen === EXTENSION_SCREEN ? findExtension(route.id) : null;
   const filtersCrumbs = useFiltersCrumbs(route);
+  const onApp = useOpenableApp(route) !== null;
 
   if (belowList(route)) {
     // A record's trail leads back to the list it was opened from. The list
@@ -109,6 +111,11 @@ function useCrumbs(route: Route, section?: NavSection): readonly Crumb[] {
       },
       { label: subject },
     ];
+  }
+  if (onApp) {
+    // An app is a destination of the drawer, not a page under Settings, so
+    // its trail is its own name and nothing above it.
+    return [{ label: subject }];
   }
   if (inSection) {
     return [

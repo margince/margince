@@ -52,6 +52,19 @@ export type ExtensionPanelDescriptor = {
   readonly object: string;
 };
 
+/**
+ * A unit's own destination in the home side drawer. The icon and group are
+ * plain strings here; lib/extensionapps.ts narrows them to the lists the core
+ * draws.
+ */
+export type ExtensionAppDescriptor = {
+  readonly icon: string;
+  readonly label: `ext${string}`;
+  readonly group: string;
+  readonly object: string;
+  readonly export: string;
+};
+
 /** One enabled extension unit, as the composed installation publishes it. */
 export type ExtensionDescriptor = {
   readonly name: string;
@@ -63,6 +76,8 @@ export type ExtensionDescriptor = {
   readonly verbs: readonly ExtensionVerbDescriptor[];
   readonly entries: readonly ExtensionEntryDescriptor[];
   readonly panels: readonly ExtensionPanelDescriptor[];
+  /** The unit's drawer destination, absent when it declares none. */
+  readonly app?: ExtensionAppDescriptor;
   /**
    * The scope the unit's declared secrets ask for, or "" when it declares
    * none. A unit spanning both scopes is refused at generation time, so this

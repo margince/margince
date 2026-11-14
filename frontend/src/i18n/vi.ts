@@ -11469,6 +11469,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   // Các đơn vị bản cài đặt này ghép vào, đặt trên trang cài đặt giữ loại thông tin
   // đăng nhập mà đơn vị đó dùng.
   "extUnits.openNamed": "Cài đặt cho {name}",
+  "extUnits.openApp": "Mở {name}",
   "extUnits.user.title": "Tài khoản khác",
   "extUnits.user.sub":
     "Các tiện ích bản cài đặt này cung cấp, đăng nhập với tư cách của bạn. Mỗi tiện ích chỉ thuộc về bạn, và ngắt kết nối chỉ ảnh hưởng tới bạn.",

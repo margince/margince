@@ -11779,6 +11779,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   // die Art von Zugangsdaten trägt, mit der die jeweilige Einheit konfiguriert
   // wird.
   "extUnits.openNamed": "Einstellungen für {name}",
+  "extUnits.openApp": "{name} öffnen",
   "extUnits.user.title": "Weitere Konten",
   "extUnits.user.sub":
     "Erweiterungen dieser Installation, die sich in deinem Namen anmelden. Jede ist privat, und das Trennen betrifft nur dich.",

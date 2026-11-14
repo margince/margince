@@ -100,6 +100,31 @@ func TestPreflightPanelsAdmitsOnePanelPerSlot(t *testing.T) {
 	}
 }
 
+func visitApp() *extension.App {
+	return &extension.App{Icon: extension.IconPlug, Label: "extVisits.app", Group: extension.AppGroupWork, Object: "ext_visits_report", Export: "VisitApp"}
+}
+
+func TestPreflightAppRunsThePublishedValidate(t *testing.T) {
+	unit := extension.Extension{Name: "visits", Version: "0.1.0", App: visitApp()}
+	if err := preflightSurfaces(unit); err != nil {
+		t.Fatalf("a well-formed app was refused: %v", err)
+	}
+	unit.App.Group = "settings"
+	if err := preflightSurfaces(unit); err == nil || !strings.Contains(err.Error(), "drawer heading") {
+		t.Fatalf("err = %v, want the unknown-group refusal", err)
+	}
+}
+
+func TestPreflightEntryObjectsHoldsAnAppToTheSameRule(t *testing.T) {
+	units := []extension.Extension{{Name: "visits", Version: "0.1.0", App: visitApp()}}
+	if err := preflightEntryObjects(units, []extension.Verb{{Unit: "visits", RbacObject: "ext_visits_report"}}); err != nil {
+		t.Fatalf("an app on a gated object was refused: %v", err)
+	}
+	if err := preflightEntryObjects(units, []extension.Verb{{Unit: "visits", RbacObject: "ext_visits_note"}}); err == nil {
+		t.Fatal("an app on an object no operation gates on was admitted")
+	}
+}
+
 func TestPreflightEntryObjectsHoldsPanelsToTheSameRule(t *testing.T) {
 	units := []extension.Extension{{
 		Name: "visits", Version: "0.1.0",

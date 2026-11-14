@@ -483,6 +483,10 @@ type Extension struct {
 	// deal page's side column. See Panel.
 	Panels []Panel
 
+	// App is the unit's own screen offered in the home side drawer, apart
+	// from its sub-setting under Settings. Nil means the unit has none. See App.
+	App *App
+
 	// Instrumentation observes the whole process and the browser: logs,
 	// requests, jobs, panics, errors and navigation. See Instrumentation.
 	Instrumentation *Instrumentation

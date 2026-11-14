@@ -18,6 +18,7 @@ import {
   ContactsScreen,
   CustomRoute,
   DealsRoute,
+  ExtensionAppRoute,
   ExtensionRoute,
   FiltersScreen,
   LeadScreen,
@@ -51,6 +52,7 @@ import { RESET_ROUTE } from "./features/sign-in/auth.route";
 import { CompleteLocale } from "./i18n";
 import { isContactTab } from "./lib/contacttab";
 import { screenEnabled, useDisabledCoreFeatures } from "./lib/corefeatures";
+import { EXTENSION_APP_SCREEN } from "./lib/extensionapps";
 import { EXTENSION_SCREEN } from "./lib/extensions";
 import { routeIdentity } from "./lib/routeidentity";
 import { navigate, parseHash, routeHash, type Screen } from "./lib/router";
@@ -160,6 +162,7 @@ const SCREEN_VIEWS: Readonly<Record<Screen, (args: ScreenArgs) => ReactNode>> =
     "oauth-consent": () => <OAuthConsent />,
     [RESET_ROUTE]: () => <ResetRoute />,
     [EXTENSION_SCREEN]: ({ id }) => <ExtensionRoute name={id} />,
+    [EXTENSION_APP_SCREEN]: ({ id }) => <ExtensionAppRoute name={id} />,
     // The fork seam (app/custom.ts). Upstream's registry is empty, so in
     // vanilla this arm renders the not-found card for every address. That is
     // the right answer, so the arm does not need to be conditional.

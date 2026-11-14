@@ -612,15 +612,17 @@ refuses any bare package name your own `package.json` does not declare.
 `devDependencies` count for test files only, so a screen cannot pull a test runner into the bundle.
 
 **Name your page in one level-1 header.** The app shell makes the page's `h1` for a core screen. It *steps
-back* for a unit, because the shell has no title key for a route the menu rail does not carry. So the top
+back* for a unit, because the shell has no title key for a route the core does not own. So the top
 `<SectionHeader …  level={1} />` of your screen is the page's heading.
 
 Every header under it stays at the
 default `2`. If you leave the top one at the default, your page ships with no heading a reader can go to.
 
-**Your `Secrets` scope places your screen.** Your screen lives at `#/ext/<name>`, and the rail does not carry
-it. Turning on a unit gives an installation something to set up, not a new rail entry beside Pipeline and
-Reports. It is listed in Settings instead, on the page that already holds the kind of key you asked for:
+**Your `Secrets` scope places your screen under Settings.** Your default export lives at `#/ext/<name>`. It is
+the unit's setting page. No drawer row leads to it unless you also declare an app (see
+[Show an app in the home side drawer](#show-an-app-in-the-home-side-drawer)). Turning on a unit gives an
+installation something to set up. It is listed in Settings, on the page that already holds the kind of key you
+asked for:
 
 | Your declaration | Where the unit is listed | What the page means |
 |---|---|---|
@@ -633,7 +635,7 @@ that is half one user's own account and half the installation's has no single pa
 
 Either way of choosing
 hides one half from the one who holds the other. Make two units if you need both. And **the settings row grants no
-rights**: it carries no grant of its own, like the rail row it replaced.
+rights**: it carries no grant of its own.
 
 Your screen still gates itself
 on the object it declares. Settings → Integrations is also gated on the grants its own cards ask for.
@@ -666,6 +668,50 @@ otherwise both claim `extFoo1.`. The `composition` tool merges them into the one
 keys and the core's in the same way. Give **every** language the installation ships (`en`, `de`, `vi`),
 or the generator refuses. A reader of the missing one would get an empty screen. Keys outside your space are
 refused too: a unit does not write over core text.
+
+## Show an app in the home side drawer
+
+A unit with a screen can also ask for a row in the home side drawer, with its own icon and name. Declare one
+`extension.App` on the `Extension`. A unit has at most one:
+
+```go
+App: &extension.App{
+	Icon:   extension.IconPlug,
+	Label:  "extOpenchannel.title",
+	Group:  extension.AppGroupWork,
+	Object: "ext_openchannel_endpoint",
+	Export: "OpenchannelApp",
+},
+```
+
+| Field | What it means |
+|---|---|
+| `Icon` | An icon from the same short list an entry uses (`extension.EntryIcons()`) |
+| `Label` | A copy key from your own `frontend/i18n/` files. The generator refuses one that is missing from a language |
+| `Group` | The drawer heading the row sits under: `AppGroupRecords`, `AppGroupWork` or `AppGroupIntelligence` |
+| `Object` | The RBAC object a reader needs `read` on. It must be one of your own objects that one of your operations gates on |
+| `Export` | The named export of your frontend package that draws the app |
+
+Your frontend package exports the app by name, beside the default export that stays your setting page:
+
+```tsx
+export function OpenchannelApp() {
+  return <OpenchannelScreen />;
+}
+```
+
+The app opens at `#/app/<name>`, inside the home layout, with no Settings path above it. The setting page stays at
+`#/ext/<name>`. A unit with no default export still gets the published-operations card there.
+
+| Address | What it draws | Where it is offered |
+|---|---|---|
+| `#/app/<name>` | the named export `Export` | a row in the home side drawer, under `Group` |
+| `#/ext/<name>` | the default export, or the card of published operations | Settings, on the page that matches your `Secrets` scope |
+
+A reader without `read` on `Object` sees no row, and the address answers the unknown-page card. The drawer and
+the route ask the same question, so they cannot disagree. The app links to its setting page, and the unit's row in
+Settings links to the app. A unit that declares no app works as before. The reason the drawer may carry a
+unit is in [explanation/extension-apps-in-the-drawer.md](../explanation/extension-apps-in-the-drawer.md).
 
 ## Offer an entry on a core screen
 

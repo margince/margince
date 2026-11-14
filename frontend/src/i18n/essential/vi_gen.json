@@ -1599,6 +1599,7 @@
   "notifications.empty": "Chưa có thông báo nào. Những gì cần báo cho bạn sẽ hiển thị ở đây.",
   "reminder.notification.body": "Đã đến giờ nhắc. Bấm để mở việc này.",
   "reminder.notification.untitled": "Lời nhắc việc",
+  "extUnits.openNamed": "Cài đặt cho {name}",
   "connectors.provGmail": "Gmail",
   "connectors.provGcal": "Google Calendar",
   "connectors.provGdocs": "Google Docs",

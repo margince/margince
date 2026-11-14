@@ -112,16 +112,24 @@ func (r *unitReader) readEntry(elt ast.Expr, ext string) (declaredEntry, error) 
 // copy in any locale. A reader of that language would see a raw key.
 func checkEntryLabels(manifests []derivedManifest, merged map[string]map[string]string) error {
 	for _, m := range manifests {
-		prefix := localeKeyPrefix(m.Unit.Name)
 		for _, entry := range m.Manifest.Entries {
-			if !strings.HasPrefix(entry.Label, prefix) {
-				return fmt.Errorf("extensions/%s: entry label %q is outside the unit's copy namespace %q", m.Unit.Name, entry.Label, prefix)
+			if err := checkCopyKey(m.Unit.Name, "entry", entry.Label, merged); err != nil {
+				return err
 			}
-			for _, locale := range composedLocales {
-				if _, ok := merged[locale][entry.Label]; !ok {
-					return fmt.Errorf("extensions/%s: entry label %q is missing from %s/%s/%s.json", m.Unit.Name, entry.Label, frontendLayer, localesLayer, locale)
-				}
-			}
+		}
+	}
+	return nil
+}
+
+// checkCopyKey refuses a label that is outside the unit's copy namespace or
+// missing from any locale. what names the surface the label belongs to.
+func checkCopyKey(unit, what, key string, merged map[string]map[string]string) error {
+	if prefix := localeKeyPrefix(unit); !strings.HasPrefix(key, prefix) {
+		return fmt.Errorf("extensions/%s: %s label %q is outside the unit's copy namespace %q", unit, what, key, prefix)
+	}
+	for _, locale := range composedLocales {
+		if _, ok := merged[locale][key]; !ok {
+			return fmt.Errorf("extensions/%s: %s label %q is missing from %s/%s/%s.json", unit, what, key, frontendLayer, localesLayer, locale)
 		}
 	}
 	return nil

@@ -11741,6 +11741,7 @@ export const en = {
   // headings differ because the two pages mean different things: one is your
   // own account somewhere, the other is the installation's.
   "extUnits.openNamed": "Settings for {name}",
+  "extUnits.openApp": "Open {name}",
   "extUnits.user.title": "Other accounts",
   "extUnits.user.sub":
     "Add-ons this installation offers that sign in as you. Each is private to you, and disconnecting one affects only you.",
