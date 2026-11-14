@@ -19,6 +19,8 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/margince/margince/backend/internal/platform/mailcopy"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/ports/commsauthz"
 	"github.com/margince/margince/backend/internal/shared/ports/messagingrules"
 )
@@ -305,5 +307,176 @@ func TestWithdrawingCorrespondenceIsNotAnAdvertisingRefusal(t *testing.T) {
 	}
 	if stager.calls != 0 {
 		t.Errorf("withdrawing correspondence staged %d acknowledgements, want none", stager.calls)
+	}
+}
+
+// TestAWithdrawalOnTheRecordPageIsAcknowledged. A contact whose country's rules
+// owe a receipt (Vietnam's Decree 91) refuses news on the record-confirmation
+// page. That refusal owes the receipt an unsubscribe press owes.
+func TestAWithdrawalOnTheRecordPageIsAcknowledged(t *testing.T) {
+	e := setupChannelConsent(t)
+	seedMarketingPurpose(t, e)
+	stager := owingAcknowledgement(t, e, true)
+	link := issueLink(t, e)
+	before := stager.calls
+
+	if _, err := e.store.SubmitConfirmation(e.ctx, link.Token, ConfirmSubmission{
+		MarketingChoice: string(StateWithdrawn),
+	}); err != nil {
+		t.Fatalf("submitting the refusal: %v", err)
+	}
+	if got := stager.calls - before; got != 1 {
+		t.Fatalf("the record page's refusal staged %d receipts, want 1", got)
+	}
+	if stager.seen.Category != commsauthz.CategoryOptoutConfirmation {
+		t.Errorf("the receipt went out as %q, want optout_confirmation", stager.seen.Category)
+	}
+}
+
+// TestAGrantOnTheRecordPageIsNotAcknowledged. Only a refusal owes a receipt.
+func TestAGrantOnTheRecordPageIsNotAcknowledged(t *testing.T) {
+	e := setupChannelConsent(t)
+	seedMarketingPurpose(t, e)
+	stager := owingAcknowledgement(t, e, true)
+	link := issueLink(t, e)
+	before := stager.calls
+
+	if _, err := e.store.SubmitConfirmation(e.ctx, link.Token, ConfirmSubmission{
+		MarketingChoice:  string(StateGranted),
+		MarketingWording: "News from time to time.",
+	}); err != nil {
+		t.Fatalf("submitting the grant: %v", err)
+	}
+	if got := stager.calls - before; got != 0 {
+		t.Errorf("a grant on the record page staged %d receipts, want none", got)
+	}
+}
+
+// TestEveryDoorThatWithdrawsAcknowledges drives each public and member door
+// that records a withdrawal of a marketing purpose.
+func TestEveryDoorThatWithdrawsAcknowledges(t *testing.T) {
+	doors := map[string]func(e *channelConsentEnv) error{
+		"preference centre save": func(e *channelConsentEnv) error {
+			_, err := e.store.PublicSaveChoices(e.ctx, e.contact, []PreferenceChoiceInput{
+				{PurposeKey: "newsletter", State: StateWithdrawn},
+			})
+			return err
+		},
+		"preference centre toggle": func(e *channelConsentEnv) error {
+			_, err := e.store.PublicSetConsent(e.ctx, e.contact, "newsletter", string(StateWithdrawn), nil)
+			return err
+		},
+		"member records it": func(e *channelConsentEnv) error {
+			_, err := e.store.Record(e.ctx, RecordInput{
+				ContactID: e.contact, PurposeID: e.newsletter, NewState: string(StateWithdrawn),
+			})
+			return err
+		},
+	}
+	for name, withdraw := range doors {
+		t.Run(name, func(t *testing.T) {
+			e := setupChannelConsent(t)
+			seedSubjectAddress(t, e)
+			stager := owingAcknowledgement(t, e, true)
+			if _, err := e.store.Record(e.ctx, RecordInput{
+				ContactID: e.contact, PurposeID: e.newsletter, NewState: string(StateGranted),
+				PolicyText: &grantWording,
+			}); err != nil {
+				t.Fatalf("granting before the refusal: %v", err)
+			}
+			if err := withdraw(e); err != nil {
+				t.Fatalf("withdrawing: %v", err)
+			}
+			if stager.calls != 1 {
+				t.Errorf("the withdrawal staged %d receipts, want 1", stager.calls)
+			}
+		})
+	}
+}
+
+// TestOneActWithdrawingTwoPurposesIsOneReceipt. Two purposes stopped by one
+// press are one refusal, so the subject gets one receipt.
+func TestOneActWithdrawingTwoPurposesIsOneReceipt(t *testing.T) {
+	e := setupChannelConsent(t)
+	seedSubjectAddress(t, e)
+	stager := owingAcknowledgement(t, e, true)
+	if _, err := e.owner.Exec(context.Background(), `
+		INSERT INTO consent_purpose (key, label, class) VALUES ('seasonal_offers', 'Seasonal offers', 'marketing')`); err != nil {
+		t.Fatalf("seeding a second marketing purpose: %v", err)
+	}
+
+	withdrawn, err := e.store.PublicWithdrawAll(e.ctx, e.contact, []string{"newsletter", "seasonal_offers"})
+	if err != nil {
+		t.Fatalf("the press failed: %v", err)
+	}
+	if len(withdrawn) != 2 {
+		t.Fatalf("the press withdrew %v, want both purposes", withdrawn)
+	}
+	if stager.calls != 1 {
+		t.Errorf("one press for two purposes staged %d receipts, want 1", stager.calls)
+	}
+}
+
+// TestTheReceiptSpeaksTheLanguageOfTheLastLinkMailWeSent. A Vietnamese record
+// confirmation went out as mail. A newer English link was minted with no mail,
+// as a booking without a lane mints one. The receipt is in Vietnamese, the
+// language the subject last read from us.
+func TestTheReceiptSpeaksTheLanguageOfTheLastLinkMailWeSent(t *testing.T) {
+	e := setupChannelConsent(t)
+	seedSubjectAddress(t, e)
+	stager := owingAcknowledgement(t, e, true)
+	if _, err := e.store.IssueConfirmToken(e.ctx, e.contact, "vi"); err != nil {
+		t.Fatalf("minting the Vietnamese link: %v", err)
+	}
+	seedLinkDelivery(t, e, stager.seen.LinkID)
+	if _, err := e.storeNoLane.IssueBookedConsentLink(e.ctx, e.contact, e.doiNews, ""); err != nil {
+		t.Fatalf("minting the English link with no mail: %v", err)
+	}
+
+	if err := e.store.Suppress(e.ctx, SuppressInput{
+		ContactID: e.contact, Kind: commsauthz.ReasonObjection,
+	}); err != nil {
+		t.Fatalf("recording the objection: %v", err)
+	}
+	if got := stager.seen.Rendered.Language; got != "vi" {
+		t.Errorf("the receipt went out in %q, want vi: the newer English link was never mailed", got)
+	}
+}
+
+// seedLinkDelivery stands for the controller delivery that carried a link, as
+// compose's queue stages it. The recording stager writes no row of its own.
+func seedLinkDelivery(t *testing.T, e *channelConsentEnv, linkID ids.UUID) {
+	t.Helper()
+	activityID := ids.New[ids.ActivityKind]()
+	if _, err := e.owner.Exec(context.Background(), `
+		INSERT INTO activity (id, kind, source, captured_by)
+		VALUES ($1, 'email', 'test', 'human:x')`, activityID); err != nil {
+		t.Fatalf("seeding the link mail's activity: %v", err)
+	}
+	if _, err := e.owner.Exec(context.Background(), `
+		INSERT INTO comms_outbound
+		    (id, activity_id, provider, message_id, recipients, subject, body,
+		     status, sender_kind, template_key, template_version, link_id)
+		VALUES ($1, $2, 'controller', $3, '["subject@link.test"]'::jsonb,
+		        'Your details', 'body', 'sent', 'controller', $4, 1, $5)`,
+		ids.NewV7(), activityID, "link-"+activityID.String()+"@test.invalid",
+		TemplateRecordConfirmation, linkID); err != nil {
+		t.Fatalf("seeding the link mail: %v", err)
+	}
+}
+
+// TestAReceiptWithNoEarlierLinkSpeaksTheInstallationsLanguage.
+func TestAReceiptWithNoEarlierLinkSpeaksTheInstallationsLanguage(t *testing.T) {
+	e := setupChannelConsent(t)
+	seedSubjectAddress(t, e)
+	stager := owingAcknowledgement(t, e, true)
+
+	if err := e.store.Suppress(e.ctx, SuppressInput{
+		ContactID: e.contact, Kind: commsauthz.ReasonObjection,
+	}); err != nil {
+		t.Fatalf("recording the objection: %v", err)
+	}
+	if got := stager.seen.Rendered.Language; got != string(mailcopy.Fallback) {
+		t.Errorf("the receipt went out in %q, want the installation's %q", got, mailcopy.Fallback)
 	}
 }

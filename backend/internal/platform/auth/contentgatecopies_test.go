@@ -5,6 +5,7 @@ package auth
 
 import (
 	"context"
+	"strings"
 	"testing"
 
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -37,6 +38,23 @@ func TestEveryContentGateRendersItsMarkOnce(t *testing.T) {
 			if got := ContentGateCopies(sql); got != gate.marks {
 				t.Errorf("the %s gate under row scope %s renders %d marks, want %d", name, scope, got, gate.marks)
 			}
+		}
+	}
+}
+
+// Postgres keeps a plan of every clause copy on each pooled connection. So the
+// content gate tests internal mail once per row it reads. Those rows are the
+// activity and the message its task evidence names.
+func TestTheContentGateTestsInternalMailOncePerRowItReads(t *testing.T) {
+	for _, scope := range []principal.RowScope{principal.RowScopeOwn, principal.RowScopeTeam, principal.RowScopeAll} {
+		ctx := principal.WithActor(context.Background(), human(scope))
+		var args []any
+		sql, err := ActivityContentClause(ctx, "a", func(v any) int { args = append(args, v); return len(args) })
+		if err != nil {
+			t.Fatalf("content gate under row scope %s: %v", scope, err)
+		}
+		if got := strings.Count(sql, "FROM app_user internal_reader"); got != 2 {
+			t.Errorf("the content gate under row scope %s tests internal mail %d times, want 2", scope, got)
 		}
 	}
 }

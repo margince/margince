@@ -430,7 +430,6 @@ export const routes: readonly MockRoute[] = [
     path: (path) => path.includes("/context"),
     handle: reply({ anchor: { type: "contact", id: "x" }, sections: [] }),
   },
-  { path: "/digest", handle: reply(insight.digest) },
   { path: "/capture/activity", handle: reply(captureActivity) },
   { path: "/capture/activity/workspace", handle: reply(captureActivity) },
   {

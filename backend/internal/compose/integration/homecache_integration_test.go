@@ -106,8 +106,8 @@ func TestAnAnswerLivesNoLongerThanTheNextGrantToExpire(t *testing.T) {
 	}
 	if n := e.WsCount(t, `SELECT count(*) FROM home_read_cache
 		WHERE reader_id = $1 AND valid_until <= computed_at + make_interval(secs => $2)`,
-		e.Rep1, homecache.Life.Seconds()); n != 1 {
-		t.Errorf("the kept answer outlives homecache.Life (%d rows bounded)", n)
+		e.Rep1, (homecache.Life + homecache.StaleGrace).Seconds()); n != 1 {
+		t.Errorf("the kept answer outlives homecache.Life and its grace (%d rows bounded)", n)
 	}
 }
 
@@ -197,9 +197,9 @@ func TestAnAnswerNearTheEndOfItsLifeIsServedAndReadAgainBehindIt(t *testing.T) {
 		return crmcontracts.Worklist{View: new(crmcontracts.WorklistViewToday)}, nil
 	}
 	noWalk := func(crmcontracts.Worklist) (*ids.UUID, error) { return nil, nil } //nolint:nilnil // the fake page starts no walk, which Serve reads as nil
-	got, err := homecache.Serve(ctx, c, e.Rep1, homecache.Worklist, "home", fresh, noWalk)
-	if err != nil || got.View == nil || *got.View != "decisions" {
-		t.Fatalf("serve near the end of life = %+v (err %v), want the kept answer", got, err)
+	got, stale, err := homecache.Serve(ctx, c, e.Rep1, homecache.Worklist, "home", fresh, noWalk)
+	if err != nil || stale || got.View == nil || *got.View != "decisions" {
+		t.Fatalf("serve near the end of life = %+v (stale %v, err %v), want the kept answer, fresh", got, stale, err)
 	}
 	c.Settle()
 	if reads != 1 {
@@ -208,6 +208,58 @@ func TestAnAnswerNearTheEndOfItsLifeIsServedAndReadAgainBehindIt(t *testing.T) {
 	kept, age, hit, err := homecache.Lookup[crmcontracts.Worklist](ctx, c, e.Rep1, homecache.Worklist, "home")
 	if err != nil || !hit || kept.View == nil || *kept.View != crmcontracts.WorklistViewToday || age > time.Minute {
 		t.Errorf("after the refresh the kept answer is %+v aged %s (hit %v, err %v), want the fresh one", kept, age, hit, err)
+	}
+}
+
+func TestAnAnswerPastItsLifeIsServedStaleUntilItsGraceEnds(t *testing.T) {
+	e := Setup(t)
+	c := homecache.New(e.Pool)
+	ctx := e.As(e.Rep1, []ids.UUID{e.Team1}, RepPerms)
+	reads := 0
+	fresh := func(context.Context) (crmcontracts.Worklist, error) {
+		reads++
+		return crmcontracts.Worklist{View: new(crmcontracts.WorklistViewToday)}, nil
+	}
+	noWalk := func(crmcontracts.Worklist) (*ids.UUID, error) { return nil, nil } //nolint:nilnil // the fake page starts no walk, which Serve reads as nil
+	age := func(by time.Duration) {
+		e.WsExec(t, `UPDATE home_read_cache SET computed_at = computed_at - $1::interval,
+		    valid_until = valid_until - $1::interval WHERE reader_id = $2`, by.String(), e.Rep1)
+	}
+
+	keep(ctx, t, c, e.Rep1, homecache.Worklist, nil, "decisions")
+	age(homecache.Life + time.Minute)
+	got, stale, err := homecache.Serve(ctx, c, e.Rep1, homecache.Worklist, "home", fresh, noWalk)
+	if err != nil || !stale || got.View == nil || *got.View != "decisions" {
+		t.Fatalf("serve past its life = %+v (stale %v, err %v), want the kept answer, stale", got, stale, err)
+	}
+	c.Settle()
+	if reads != 1 {
+		t.Fatalf("read again %d times behind the stale answer, want once", reads)
+	}
+
+	keep(ctx, t, c, e.Rep1, homecache.Worklist, nil, "decisions")
+	age(homecache.Life + homecache.StaleGrace + time.Second)
+	if got, stale, err := homecache.Serve(ctx, c, e.Rep1, homecache.Worklist, "home", fresh, noWalk); err != nil || stale ||
+		got.View == nil || *got.View != crmcontracts.WorklistViewToday || reads != 2 {
+		t.Errorf("serve past its grace = %+v (stale %v, reads %d, err %v), want a fresh read", got, stale, reads, err)
+	}
+}
+
+func TestAReceiptPastItsLifeIsReadFresh(t *testing.T) {
+	e := Setup(t)
+	c := homecache.New(e.Pool)
+	ctx := e.As(e.Rep1, []ids.UUID{e.Team1}, RepPerms)
+	keep(ctx, t, c, e.Rep1, homecache.Magic, nil, "decisions")
+	e.WsExec(t, `UPDATE home_read_cache SET computed_at = computed_at - $1::interval WHERE reader_id = $2`,
+		(homecache.Life + time.Minute).String(), e.Rep1)
+	reads := 0
+	fresh := func(context.Context) (crmcontracts.Worklist, error) {
+		reads++
+		return crmcontracts.Worklist{}, nil
+	}
+	noWalk := func(crmcontracts.Worklist) (*ids.UUID, error) { return nil, nil } //nolint:nilnil // the fake receipt starts no walk, which Serve reads as nil
+	if _, stale, err := homecache.Serve(ctx, c, e.Rep1, homecache.Magic, "home", fresh, noWalk); err != nil || stale || reads != 1 {
+		t.Errorf("a receipt past its life: stale %v, %d fresh reads (err %v); want it read fresh once", stale, reads, err)
 	}
 }
 
@@ -247,7 +299,7 @@ func TestAnUnreadableKeptAnswerIsServedFreshAndReplaced(t *testing.T) {
 		return crmcontracts.Worklist{View: new(crmcontracts.WorklistViewToday)}, nil
 	}
 	noWalk := func(crmcontracts.Worklist) (*ids.UUID, error) { return nil, nil } //nolint:nilnil // the fake page starts no walk, which Serve reads as nil
-	if _, err := homecache.Serve(ctx, c, e.Rep1, homecache.Worklist, "home", fresh, noWalk); err != nil || reads != 1 {
+	if _, _, err := homecache.Serve(ctx, c, e.Rep1, homecache.Worklist, "home", fresh, noWalk); err != nil || reads != 1 {
 		t.Fatalf("serve over an unreadable answer: err %v after %d fresh reads, want the fresh read", err, reads)
 	}
 	if !served(ctx, t, c, e.Rep1, homecache.Worklist) {
@@ -265,7 +317,7 @@ func TestServeCountsItsHitsAndMissesOnMetrics(t *testing.T) {
 	hits, misses := homeCacheReads(t, homecache.Magic, "hit"), homeCacheReads(t, homecache.Magic, "miss")
 
 	for range 2 {
-		if _, err := homecache.Serve(ctx, c, e.Rep1, homecache.Magic, "home", fresh, noWalk); err != nil {
+		if _, _, err := homecache.Serve(ctx, c, e.Rep1, homecache.Magic, "home", fresh, noWalk); err != nil {
 			t.Fatal(err)
 		}
 	}

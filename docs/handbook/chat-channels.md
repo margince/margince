@@ -24,8 +24,10 @@ Open the deal. The **Team chat** card is on its overview.
 - Click **Create a channel** to make a new private channel named after the deal. Every member who can
   see the deal is invited, at most 50, starting with the deal's owner and you. Someone without a chat
   account is not added.
-- Click **Link an existing channel** to use a private channel you already have. Enter the **Channel name
-  or link**. The bot must already be in that channel, and the channel must be private.
+- Click **Link an existing channel** to use a private channel you already have. **Channel name or link**
+  lists the private channels the bot is in that no record has yet. Pick one, or type its name or link.
+- A private channel the bot is not in is not listed, because the chat does not show it to the bot. A
+  member of that channel adds the bot to it in the chat first. Then it shows up in the list.
 
 A project's **Team chat** card works the same way.
 

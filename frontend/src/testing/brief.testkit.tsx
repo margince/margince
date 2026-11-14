@@ -69,9 +69,8 @@ export type Routes = Record<
   (body: unknown, query: URLSearchParams) => Response | Promise<Response>
 >;
 
-// Every read Brief fans out to, answered honestly by default so each case
-// declares only the route it is about: a session, no nightly digest, no brief
-// run.
+// Every read Brief fans out to, answered as the server would by default. Each
+// case then declares only the route it is about: a session and no brief run.
 //
 // The table is exhaustive, and `stubApi` fails a case that asks for anything
 // not in it. So a route leaves here when its caller does — the deals-by-stage
@@ -83,8 +82,6 @@ const DEFAULTS: Routes = {
   "GET /link-suggestions": () => jsonResponse({ data: [] }),
   "GET /me": () => jsonResponse(meFixture()),
   "GET /brief": () => jsonResponse({ title: "Not Found" }, 404),
-  "GET /digest": () =>
-    jsonResponse({ title: "Not Found", code: "no_digest_yet" }, 404),
   // The Brief's strip, sentence and Do next section are all drawn from this ONE
   // answer, so an unrouted read has to reply with the real shape. The generic
   // empty page carries no `readings` and no `counts`, and a screen reading a

@@ -6672,13 +6672,6 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "brief.task.done": "Đánh dấu xong: {title}",
   "brief.task.reply": "Trả lời {name}: {subject}",
   "brief.first.title": "Cần bạn xử lý",
-  "brief.intro.waiting": "Đang chờ bạn",
-  "brief.intro.meetings": "Cuộc họp hôm nay",
-  "brief.intro.urgent": "Khẩn cấp",
-  "brief.intro.read_one": "Lần chạy ban đêm gần nhất: đã đồng bộ 1 email.",
-  "brief.intro.read_other":
-    "Lần chạy ban đêm gần nhất: đã đồng bộ {count} email.",
-  "brief.intro.skip": "Nhấn phím bất kỳ hoặc bấm để tiếp tục",
   "brief.order.withheld": "Thứ tự này chưa tính: {factors}",
   "brief.factor.warmth": "mức độ thân thiết của quan hệ",
   "brief.factor.unknown": "một yếu tố mà phiên bản này không thể gọi tên",
@@ -10763,6 +10756,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "privacynotice.rights.title": "Quyền của quý khách đối với thông tin này",
   "privacynotice.rights.how":
     "Để sử dụng bất kỳ quyền nào, vui lòng trả lời tin nhắn đã đưa quý khách đến đây, hoặc liên hệ qua địa chỉ trên trang web của chúng tôi.",
+  "privacynotice.rights.howContact":
+    "Để sử dụng bất kỳ quyền nào, vui lòng liên hệ: {contact}",
   "privacynotice.right.access":
     "Yêu cầu bản sao thông tin đang lưu về quý khách.",
   "privacynotice.right.rectification": "Yêu cầu sửa những thông tin chưa đúng.",
@@ -10770,8 +10765,12 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "privacynotice.right.restriction":
     "Yêu cầu ngừng sử dụng thông tin trong khi có nội dung đang tranh chấp.",
   "privacynotice.right.objection": "Phản đối cách sử dụng thông tin.",
+  "privacynotice.right.portability":
+    "Yêu cầu nhận dữ liệu quý khách đã cung cấp ở định dạng phổ biến, máy đọc được, hoặc chuyển dữ liệu đó cho bên khác.",
+  "privacynotice.right.withdrawConsent":
+    "Rút lại sự đồng ý đã cho bất cứ lúc nào. Việc này không thay đổi những gì chúng tôi đã làm trước đó.",
   "privacynotice.right.complain":
-    "Khiếu nại với cơ quan bảo vệ dữ liệu cá nhân của quý khách.",
+    "Khiếu nại với cơ quan có thẩm quyền về bảo vệ dữ liệu cá nhân, ví dụ tại quốc gia nơi quý khách sống hoặc làm việc.",
   "privacynotice.controller.title": "Đơn vị chịu trách nhiệm",
   "privacynotice.controller.contact": "Câu hỏi về dữ liệu: {contact}",
   "privacynotice.categories.title": "Thông tin đang lưu",
@@ -10814,6 +10813,10 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "privacynotice.recipient.colleagues": "Nhân viên của chúng tôi dùng CRM này.",
   "privacynotice.recipient.serviceProviders":
     "Các công ty vận hành CRM và gửi email thay mặt chúng tôi. Hợp đồng buộc họ chỉ dùng dữ liệu theo chỉ dẫn của chúng tôi.",
+  "privacynotice.retention.afterYears_one": "{count} năm",
+  "privacynotice.retention.afterYears_other": "{count} năm",
+  "privacynotice.retention.afterDays_one": "{count} ngày",
+  "privacynotice.retention.afterDays_other": "{count} ngày",
   "privacynotice.retention.title": "Thời gian lưu",
   "privacynotice.retention.archive":
     "{scope}: ngừng dùng hằng ngày sau {days}.",
@@ -11910,7 +11913,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "channelLink.linkCta": "Liên kết kênh",
   "channelLink.linkFailed": "Chưa liên kết được kênh",
   "channelLink.channelField": "Tên hoặc liên kết của kênh",
-  "channelLink.channelHint": "Một kênh riêng tư mà bot đã là thành viên.",
+  "channelLink.channelHint":
+    "Chọn một kênh riêng tư có bot. Để liên kết kênh khác, hãy thêm bot vào kênh đó trong chat trước.",
   "channelLink.summarize":
     "Tóm tắt cuộc trao đổi đến nay (tối đa 5 bản tóm tắt)",
   "channelLink.verbosity": "Margince đăng những gì",
@@ -11944,7 +11948,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "channelLink.refused.botNotConnected":
     "Chưa có bot chat nào được kết nối. Quản trị viên kết nối bot trong Cài đặt.",
   "channelLink.refused.channelNotFound":
-    "Không tìm thấy kênh nào với tên hoặc liên kết này.",
+    "Bot không ở trong kênh nào có tên này. Hãy thêm bot vào kênh trong chat, rồi thử lại.",
   "channelLink.refused.channelNotPrivate":
     "Kênh này là kênh công khai. Hãy liên kết một kênh riêng tư.",
   "channelLink.refused.botNotMember":
@@ -13053,7 +13057,9 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "prefs.alwaysOn": "Luôn bật",
   "confirm.title": "Thông tin của quý khách",
   "confirm.intro":
-    "Margince, một hệ thống AI, vận hành CRM này. Dưới đây là toàn bộ thông tin đã ghi nhận về quý khách. Quý khách có thể sửa bất kỳ thông tin nào, hoặc yêu cầu xóa.",
+    "Dưới đây là toàn bộ thông tin đã ghi nhận về quý khách. Quý khách có thể sửa bất kỳ thông tin nào, hoặc yêu cầu xóa.",
+  "confirm.introNamed":
+    "{controller} đang lưu các thông tin dưới đây về quý khách. Quý khách có thể sửa bất kỳ thông tin nào, hoặc yêu cầu xóa.",
   "confirm.card.title": "Thông tin đã ghi nhận",
   "confirm.field.fullName": "Họ tên",
   "confirm.field.title": "Chức danh",
@@ -13089,7 +13095,9 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "confirm.done.body":
     "Đã ghi nhận câu trả lời. Mọi thay đổi sẽ được chuyển cho một nhân viên ở đây áp dụng, và liên kết này giờ đã hết lượt dùng.",
   "confirm.invalidLink":
-    "Liên kết này không còn hiệu lực. Có thể liên kết đã được dùng hoặc đã hết hạn.",
+    "Liên kết này không còn hiệu lực. Có thể liên kết đã được dùng hoặc đã hết hạn. Nếu quý khách vẫn cần hỗ trợ, vui lòng trả lời email đã đưa quý khách đến đây.",
+  "confirm.questionChanged":
+    "Câu hỏi trên trang này đã thay đổi sau khi quý khách mở trang. Vui lòng tải lại trang và trả lời lại.",
   "prefs.lockedWhy": "Cần thiết cho việc quý khách đã yêu cầu, nên vẫn bật.",
   "prefs.confirmationNeededWhy":
     "Để bật mục này, dùng liên kết xác nhận trong email đã gửi đến quý khách. Có thể tắt mục này ở đây bất cứ lúc nào.",

@@ -66,6 +66,11 @@ const SCOPE_LABEL: Partial<Record<Retention["scope"], MessageKey>> = {
   "lead/unconverted": "privacynotice.retention.scope.leadUnconverted",
 };
 
+const AFTER_UNIT = {
+  "retention.keepYears": "privacynotice.retention.afterYears",
+  "retention.keepDays": "privacynotice.retention.afterDays",
+} as const;
+
 const ACTION_LABEL: Readonly<Record<Retention["action"], MessageKey>> = {
   archive: "privacynotice.retention.archive",
   anonymize: "privacynotice.retention.anonymize",
@@ -85,8 +90,10 @@ export function ControllerCard({
       <Heading size="large" className="t-h3">
         {t("privacynotice.controller.title")}
       </Heading>
-      {controller.identity ? (
-        <p className="t-body confirm-lines">{controller.identity}</p>
+      {controller.identity || controller.legal_name ? (
+        <p className="t-body confirm-lines">
+          {controller.identity ?? controller.legal_name}
+        </p>
       ) : null}
       {controller.privacy_contact ? (
         <p className="t-body">
@@ -141,10 +148,11 @@ export function RetentionCard({
   const t = useT();
   const plural = usePlural();
   const { locale } = useLocale();
-  // The window reads as the retention settings screen shows it.
+  // The window is counted as the retention settings screen counts it, in the
+  // case "after …" takes (German "nach 3 Jahren").
   const windowOf = (days: number) => {
     const window = keepFor(days);
-    return plural(window.unit, window.count, {
+    return plural(AFTER_UNIT[window.unit], window.count, {
       count: formatNumber(window.count, locale),
     });
   };

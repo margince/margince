@@ -90,7 +90,7 @@ func (s *Store) queueRestrictionLiftTx(ctx context.Context, tx pgx.Tx, sub subje
 	if err != nil {
 		return err
 	}
-	rendered, category, err := RenderControllerTemplate(TemplateRestrictionLift, time.Time{}, s.mailLanguage(ctx, tx))
+	rendered, category, err := RenderControllerTemplate(TemplateRestrictionLift, time.Time{}, s.replyLanguage(ctx, tx, sub))
 	if err != nil {
 		return err
 	}

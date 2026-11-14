@@ -156,7 +156,7 @@ Margince writes the review on the Monday after the week, and then it is **Frozen
 ### What is on Today?
 **Today**, on **Home**, shows the kinds of work that need attention when the list is complete.
 Each item names its record and shows the facts that call for action. A badge says when Margince made the brief.
-- **Needs you**: at most 6 cards in Worklist order, each with its kind of work and who it is with, if Margince has that.
+- **Needs you**: at most 6 cards in Worklist order, each with its kind of work and who it is with, if Margince has that. A mailbox, booking page, AI task or automation that stopped takes no card. A badge beside **Needs you** counts the system issues and opens the Worklist on **System**. Mail that could not be delivered keeps its card and is counted there too.
   A dated task also shows its due day. The round mark marks a task done; a press opens the card where it stands.
 - Proposals, commitments due today and meetings in the next 24 hours sit there too. A task due later shows once its reminder is due. A quiet day says "No immediate priorities. The full Worklist is available."
 - **Review N deal suggestions** opens the saved brief. Its deals stay separate from the work that needs action now. A brief with no deals shows no opener.
@@ -167,8 +167,7 @@ Each item names its record and shows the facts that call for action. A badge say
 - **Done for you**, the deals Margince changed, to keep or undo, and the other work it finished; beside them **Your day** and **Numbers**.
 - **Your day** is a line through today. **Now** sits at your clock and says "Free until" the next meeting, or "Nothing else booked today". The next meeting says how soon it starts and offers **Prepare for meeting**. Margince then writes the brief for that meeting and opens it on Home.
 
-A greeting covers the page on the day's first visit, once per browser, unless your settings turn motion off. It shows the date and the emails synced overnight. It also counts the items waiting on you in Today, how many of them are urgent and how many meetings you have. It stands at least 1.5 seconds and lifts once your page is ready, or after 4.5 seconds; any key or click ends it sooner.
-Also called: morning brief, daily brief, today, priorities, top cards, welcome screen.
+Also called: morning brief, daily brief, today, priorities, top cards.
 
 ### What comes first on Today?
 A customer who waits for your reply, and a reply deadline that comes close, come first on Today and in the Worklist.
@@ -189,7 +188,7 @@ Today names each source it could not read, with **Refresh brief**, and never sho
 - That value is the full deal amount, not the amount you expect to lose. It may not be complete, and it is not a forecast.
 - Meetings count calendar entries still to come. Margince does not say you are prepared unless the source says so.
 
-The work counts come from the current Worklist read. The greeting's email count comes from the nightly run; it does not count today's decisions. Each part of Home can refresh at a different time. Home reads your day when it holds no copy under five minutes old, and again right after you act on it. Another Worklist page keeps the same members but reads their current state; pages do not share one fixed time.
+The work counts come from the current Worklist read. Each part of Home can refresh at a different time. Home reads your day when it holds no copy under five minutes old, and again right after you act on it. For a few seconds, Home may show a copy up to 15 minutes old. It then reads your day again and shows the new copy on its own. Another Worklist page keeps the same members but reads their current state; pages do not share one fixed time.
 
 **Since your last brief** says when some activity could not be counted. Its count then says how much it could count, and an empty list does not mean nothing happened. A change that covers several records lists each record with its time and its full values, before and after. Each record keeps the **Undo** its change allows.
 

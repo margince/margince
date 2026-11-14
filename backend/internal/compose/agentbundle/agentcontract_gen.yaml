@@ -18759,6 +18759,11 @@ paths:
               required: [purpose_id]
               properties:
                 purpose_id: {type: string, format: uuid}
+                language:
+                  allOf: [{$ref: '#/components/schemas/MailLanguage'}]
+                  description: |-
+                    The language of the mail and of the page its link opens. Absent means the
+                    installation's mail language.
       responses:
         '201':
           description: Link issued, and what became of the delivery.
@@ -54707,6 +54712,13 @@ components:
       required: [as_of, queue, summary, sources_unavailable, scope, scope_options, reach, counts, readings]
       properties:
         as_of: {type: string, format: date-time, description: 'The instant every source below was read at.'}
+        served_stale:
+          type: boolean
+          description: |-
+            True when this answer is Home's kept answer past its five-minute freshness,
+            served while the server reads it again. It still holds every access rule the
+            fresh read would apply. A client asks again a few seconds later for the fresh
+            answer. Absent or false means the answer is fresh.
         scope:
           type: string
           enum: [mine, unassigned, team, all]

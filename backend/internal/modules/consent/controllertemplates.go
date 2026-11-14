@@ -132,30 +132,28 @@ type controllerTemplate struct {
 // — which is both a deliverability problem and a fair reaction.
 var controllerTemplates = map[string]controllerTemplate{
 	TemplateRecordConfirmation: {
-		version:  3,
+		version:  4,
 		category: commsauthz.CategoryRecordConfirmation,
 		subject:  func(w mailcopy.Copy) string { return w.ConfirmRecordSubject },
 		intro:    func(w mailcopy.Copy) string { return w.ConfirmRecordBody },
 		closing:  func(w mailcopy.Copy) string { return w.ConfirmRecordIgnore },
 	},
 	TemplateConsentConfirmation: {
-		version:  5,
+		version:  6,
 		category: commsauthz.CategoryConsentConfirmation,
 		subject:  func(w mailcopy.Copy) string { return w.ConfirmConsentSubject },
 		intro:    func(w mailcopy.Copy) string { return w.ConfirmConsentBody },
 		closing:  func(w mailcopy.Copy) string { return w.ConfirmConsentIgnore },
 	},
-	// Version 1, because this wording has never shipped. The two above moved
-	// for changes made after they had.
 	TemplatePrivacyNotice: {
-		version:  3,
+		version:  4,
 		category: commsauthz.CategoryPrivacyNotice,
 		subject:  func(w mailcopy.Copy) string { return w.NoticeSubject },
 		intro:    func(w mailcopy.Copy) string { return w.NoticeBody },
 		closing:  func(w mailcopy.Copy) string { return w.NoticeIgnore },
 	},
 	TemplateOptOutAcknowledgement: {
-		version:  2,
+		version:  3,
 		category: commsauthz.CategoryOptoutConfirmation,
 		subject:  func(w mailcopy.Copy) string { return w.OptOutAckSubject },
 		intro:    func(w mailcopy.Copy) string { return w.OptOutAckBody },
@@ -166,7 +164,7 @@ var controllerTemplates = map[string]controllerTemplate{
 		linkless: true,
 	},
 	TemplateRestrictionLift: {
-		version:  1,
+		version:  2,
 		category: commsauthz.CategoryPrivacyNotice,
 		subject:  func(w mailcopy.Copy) string { return w.RestrictionLiftSubject },
 		intro:    func(w mailcopy.Copy) string { return w.RestrictionLiftBody },
@@ -245,7 +243,7 @@ func renderTemplateContext(key string, expiresAt time.Time, language, purpose st
 		// it: the shipped English replaced a phrase inside its own body text,
 		// which stops working the moment a language spells that sentence
 		// differently.
-		fmt.Fprintf(&body, words.ConfirmExpiry, words.Instant(expiresAt.UTC()))
+		fmt.Fprintf(&body, words.ConfirmExpiry, words.Instant(expiresAt))
 	}
 	body.WriteString("\n\n" + t.closing(words) + "\n")
 	return Rendered{Key: key, Version: t.version, Subject: subject, Body: body.String(), Language: language}, t.category, nil
@@ -298,12 +296,14 @@ func controllerLetterhead(brand, logoContentID string, words mailcopy.Copy) emai
 func historicalControllerVersion(key string, version int) bool {
 	switch key {
 	case TemplateRecordConfirmation:
-		return version == 2
+		return version == 2 || version == 3
 	case TemplateConsentConfirmation:
-		return version == 3 || version == 4
+		return version >= 3 && version <= 5
 	case TemplatePrivacyNotice:
-		return version == 1 || version == 2
+		return version >= 1 && version <= 3
 	case TemplateOptOutAcknowledgement:
+		return version == 1 || version == 2
+	case TemplateRestrictionLift:
 		return version == 1
 	}
 	return false

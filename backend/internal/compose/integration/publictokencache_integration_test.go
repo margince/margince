@@ -232,10 +232,11 @@ func TestEveryConfirmAnswerIsUncacheable(t *testing.T) {
 
 	// Spending the link is the one answer the subject actually acts on, and
 	// the spent link's refusal that follows it.
+	served := servedQuestion(t, c.AppEnv, live).Text
 	assertNoStore(t, c.AppEnv, []tokenCase{
 		{
 			"the subject spending their link", "POST", "/v1/public/confirm/" + live,
-			AnyMap{"marketing_choice": "granted", "marketing_wording": "Yes, send me product news."},
+			AnyMap{"marketing_choice": "granted", "marketing_wording": served},
 		},
 		{"a consumed link", "GET", "/v1/public/confirm/" + live, nil},
 		{

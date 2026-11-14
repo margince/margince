@@ -18,7 +18,7 @@ type MailLines = Readonly<{
 const MARKER: Record<MailLanguage, string> = {
   en: "[Personal link, created when you send]",
   de: "[Persönlicher Link, wird beim Senden erstellt]",
-  vi: "[Liên kết cá nhân, được tạo khi bạn gửi]",
+  vi: "[Liên kết cá nhân, được tạo khi gửi]",
 };
 
 const PERSONAL: Record<MailLanguage, string> = {
@@ -51,7 +51,7 @@ const LINES: Record<MailPreview["kind"], Record<MailLanguage, MailLines>> = {
         "Quý khách có thể kiểm tra thông tin liên hệ chúng tôi lưu và sửa thông tin chưa đúng.\nViệc đăng ký nhận tin là tùy chọn và độc lập với việc kiểm tra thông tin.",
       action: "Xem thông tin liên hệ",
       closing:
-        "Việc kiểm tra thông tin là tùy chọn. Không trả lời email này không đăng ký quý khách nhận bất kỳ nội dung nào.",
+        "Việc kiểm tra thông tin là tùy chọn. Nếu quý khách không trả lời, quý khách sẽ không được đăng ký nhận nội dung nào.",
     },
   },
   privacy_notice: {

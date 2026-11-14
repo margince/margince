@@ -6822,12 +6822,6 @@ export const en = {
   "brief.task.done": "Mark done: {title}",
   "brief.task.reply": "Reply to {name}: {subject}",
   "brief.first.title": "Needs you",
-  "brief.intro.waiting": "Waiting on you",
-  "brief.intro.meetings": "Meetings today",
-  "brief.intro.urgent": "Urgent",
-  "brief.intro.read_one": "Last nightly run: 1 email synced.",
-  "brief.intro.read_other": "Last nightly run: {count} emails synced.",
-  "brief.intro.skip": "Press any key or click to continue",
   // What the ORDER could not weigh, as against what scored low. A fragment
   // like the source lines it sits with, and it names no cause: the run says
   // which factor it lost, never why.
@@ -11038,6 +11032,8 @@ export const en = {
   "privacynotice.rights.title": "Your rights over this",
   "privacynotice.rights.how":
     "To use any of these, reply to the message that brought you here, or contact us through the address on our website.",
+  "privacynotice.rights.howContact":
+    "To use any of these, contact us: {contact}",
   "privacynotice.right.access": "Ask for a copy of what we hold about you.",
   "privacynotice.right.rectification":
     "Ask us to correct anything that is wrong.",
@@ -11045,7 +11041,12 @@ export const en = {
   "privacynotice.right.restriction":
     "Ask us to stop using it while something is disputed.",
   "privacynotice.right.objection": "Object to how we use it.",
-  "privacynotice.right.complain": "Complain to your data protection authority.",
+  "privacynotice.right.portability":
+    "Ask for the data you gave us in a common machine-readable format, or have it sent to someone else.",
+  "privacynotice.right.withdrawConsent":
+    "Withdraw a consent you gave, at any time. This does not change what we did before.",
+  "privacynotice.right.complain":
+    "Complain to a data protection supervisory authority, for example in the country where you live or work.",
   "privacynotice.controller.title": "Who is responsible",
   "privacynotice.controller.contact": "Questions about your data: {contact}",
   "privacynotice.categories.title": "What we hold",
@@ -11083,6 +11084,10 @@ export const en = {
   "privacynotice.recipient.colleagues": "Staff who work with our CRM.",
   "privacynotice.recipient.serviceProviders":
     "Companies that run our CRM and deliver its email for us. A contract binds them to use your data only as we instruct.",
+  "privacynotice.retention.afterYears_one": "{count} year",
+  "privacynotice.retention.afterYears_other": "{count} years",
+  "privacynotice.retention.afterDays_one": "{count} day",
+  "privacynotice.retention.afterDays_other": "{count} days",
   "privacynotice.retention.title": "How long we keep it",
   "privacynotice.retention.archive":
     "{scope}: taken out of daily use after {days}.",
@@ -12190,7 +12195,7 @@ export const en = {
   "channelLink.linkFailed": "Channel not linked",
   "channelLink.channelField": "Channel name or link",
   "channelLink.channelHint":
-    "A private channel the bot is already a member of.",
+    "Pick a private channel the bot is in. To link another one, add the bot to it in the chat first.",
   "channelLink.summarize": "Summarize the talk so far (up to 5 summaries)",
   "channelLink.verbosity": "What Margince posts",
   "channelLink.verbosityHint":
@@ -12223,7 +12228,7 @@ export const en = {
   "channelLink.refused.botNotConnected":
     "No chat bot is connected. An administrator connects one in Settings.",
   "channelLink.refused.channelNotFound":
-    "No channel with this name or link was found.",
+    "The bot is in no channel with this name. Add the bot to the channel in the chat, then try again.",
   "channelLink.refused.channelNotPrivate":
     "This channel is public. Link a private channel instead.",
   "channelLink.refused.botNotMember":
@@ -13385,7 +13390,9 @@ export const en = {
   // not do, no em dashes.
   "confirm.title": "Your details",
   "confirm.intro":
-    "Margince, an AI system, runs this CRM. Below is everything recorded about you. You can correct any of it, or request its removal.",
+    "Below is everything recorded about you. You can correct any of it, or request its removal.",
+  "confirm.introNamed":
+    "{controller} holds the details below about you. You can correct any of them, or request their removal.",
   "confirm.card.title": "Recorded details",
   "confirm.field.fullName": "Name",
   "confirm.field.title": "Job title",
@@ -13422,7 +13429,9 @@ export const en = {
   "confirm.done.body":
     "Your answer is recorded. Any changes go to a person here to apply, and this link is now used up.",
   "confirm.invalidLink":
-    "This link is no longer valid. It may have been used or may have expired.",
+    "This link is no longer valid. It may have been used or may have expired. If you still need something, reply to the email that brought you here.",
+  "confirm.questionChanged":
+    "The question on this page changed after you opened it. Reload the page and answer again.",
   "prefs.lockedWhy": "Needed for something you requested, so it stays on.",
   "prefs.confirmationNeededWhy":
     "To switch this on, use the confirmation link in the email sent to you. You can switch it off here at any time.",

@@ -19,6 +19,7 @@ const ProviderDispact = "dispact"
 type Chat interface {
 	Me(ctx context.Context) (dispact.Bot, error)
 	Channel(ctx context.Context, slug string) (dispact.Channel, error)
+	Channels(ctx context.Context) ([]dispact.Channel, error)
 	CreateChannel(ctx context.Context, externalKey, name string) (dispact.Channel, error)
 	AddMembers(ctx context.Context, slug string, emails []string) (dispact.MemberResult, error)
 	Post(ctx context.Context, slug, text, clientMsgID, threadTS string) (dispact.Posted, error)

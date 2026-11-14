@@ -184,21 +184,21 @@ func TestTheRenderedBodyNeverCarriesTheLink(t *testing.T) {
 //
 // gatekit:fixture the sha256 of each registered template's rendered wording
 var pinnedWording = map[string]string{
-	"record_confirmation@3@de":    "1b43a49c716496407f12328ebcc68f43ee586909b6b8edfcc92e45212f58fb9f",
-	"record_confirmation@3@en":    "5eea97facb021167689fd7d55a9f7eb111f6d5f3a97bce0d132c48a6146cffd7",
-	"record_confirmation@3@vi":    "c946125439097475f3fdf0f913ae1934e78a3930a5e8283bc34b254c2848becb",
-	"consent_confirmation@5@de":   "438713f6c4d1e06e3e33704c99598619c5501df3ed0536e8207372fb32523426",
-	"consent_confirmation@5@en":   "bab89519d00d6bb80cec81685416a9074b7c2f3bb17fd7e540cbcb581cca8344",
-	"consent_confirmation@5@vi":   "89946d61f45cf08a282a6d17dddcd8a0e50ae3b18f0afe25b8b9e09ffbaf3b1a",
-	"privacy_notice@3@de":         "afd5793238fb2ed046bafb2e7b39c42fedba0ef885f9e966e3609adf0b7e06f9",
-	"privacy_notice@3@en":         "57940dbb8dbf58affde9b4f1fcf8026951c2112f2a64fd9fbab5f326534b1eec",
-	"privacy_notice@3@vi":         "a5049a2fe4c29bb62dcc3a44f729d827dd3fd17318d25d3485d937ecd9b1062e",
-	"optout_acknowledgement@2@de": "e7c1a1b705acc9fc43860cff63f4de049a694ca8d66734d9ecec54e489f54b8f",
-	"optout_acknowledgement@2@en": "1e536284d3200b99a38a349e55aa65cdc8b7e0482e1b2f4559c546830751500b",
-	"optout_acknowledgement@2@vi": "4ce293fb0948756cc75f2b27a1ba054e7364c347a6e6ab71f250de5a922c32b8",
-	"restriction_lift@1@de":       "34752802be82b4a703cb52a4ca5d02eece3595ea71d955bb6ecebf0436fd0e0d",
-	"restriction_lift@1@en":       "4e31b4aad01b43dce8700ef8abdbdbda4989e72138e7b9ad76a5bb3f3915e538",
-	"restriction_lift@1@vi":       "3903eb642861db8d8a8f30329aff02a23d64577e4146435ce26dca84868bc257",
+	"record_confirmation@4@de":    "1b43a49c716496407f12328ebcc68f43ee586909b6b8edfcc92e45212f58fb9f",
+	"record_confirmation@4@en":    "5eea97facb021167689fd7d55a9f7eb111f6d5f3a97bce0d132c48a6146cffd7",
+	"record_confirmation@4@vi":    "281e83f35490981fc497269357c73c08836ac37b610fa2752a1552e8cdf28f92",
+	"consent_confirmation@6@de":   "945ebb0caa0cf98950c131cf04d704ccdfe12d5610e3e1436b09aaa4f1af2b12",
+	"consent_confirmation@6@en":   "eeed2e8f83ce4228bff3b3ab05afd3b7c8cc67373e73d5cc90d5201a189bd1fe",
+	"consent_confirmation@6@vi":   "52c3d3bc2d9e6b5a6a27518aae7a1598862b383a8178e6e7ca4ac3752a4a1fc0",
+	"privacy_notice@4@de":         "afd5793238fb2ed046bafb2e7b39c42fedba0ef885f9e966e3609adf0b7e06f9",
+	"privacy_notice@4@en":         "57940dbb8dbf58affde9b4f1fcf8026951c2112f2a64fd9fbab5f326534b1eec",
+	"privacy_notice@4@vi":         "a5049a2fe4c29bb62dcc3a44f729d827dd3fd17318d25d3485d937ecd9b1062e",
+	"optout_acknowledgement@3@de": "e7c1a1b705acc9fc43860cff63f4de049a694ca8d66734d9ecec54e489f54b8f",
+	"optout_acknowledgement@3@en": "1e536284d3200b99a38a349e55aa65cdc8b7e0482e1b2f4559c546830751500b",
+	"optout_acknowledgement@3@vi": "4ce293fb0948756cc75f2b27a1ba054e7364c347a6e6ab71f250de5a922c32b8",
+	"restriction_lift@2@de":       "34752802be82b4a703cb52a4ca5d02eece3595ea71d955bb6ecebf0436fd0e0d",
+	"restriction_lift@2@en":       "4e31b4aad01b43dce8700ef8abdbdbda4989e72138e7b9ad76a5bb3f3915e538",
+	"restriction_lift@2@vi":       "3903eb642861db8d8a8f30329aff02a23d64577e4146435ce26dca84868bc257",
 }
 
 // TestEveryControllerTemplateIsPinnedToItsWording fails when a registered

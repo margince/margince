@@ -212,28 +212,13 @@ func contentGateFor(p principal.Principal, alias string, arg func(any) int) stri
 	if p.Type == principal.PrincipalSystem {
 		return discover + " AND " + CommitmentContentRetainedClause(alias)
 	}
-	return discover + " AND " + activityContentAudienceArm(p, alias, arg)
+	return discover + " AND " + contentAudienceArm(p, alias, arg, activityAudienceMembership)
 }
 
-// Source availability is independent of the task's audience. A reminder cannot
-// grant access to evidence that the reader can no longer open.
+// activityContentAudienceArm is the content gate's audience half for a reader
+// that does not also apply the discover gate.
 func activityContentAudienceArm(p principal.Principal, alias string, arg func(any) int) string {
-	own := activityAudienceArm(p, alias, arg)
-	// Reassignment hands over the reminder, never a grant to its source email.
-	own = fmt.Sprintf("(%s OR coalesce(%s.source_system = '%s' AND %s.assignee_id = $%d, false))",
-		own, alias, provenance.EmailRequestSource, alias, arg(p.UserID))
-	// A captured request is a personal reminder of its source, not a new grant
-	// to that correspondence. Archiving or restricting the source withholds it.
-	source := discoverGateFor(p, contentGateSource, arg) + " AND " + activityAudienceArm(p, contentGateSource, arg) + agentRestrictionArm(p, contentGateSource)
-	sourceID := provenance.TaskSourceActivitySQL(alias)
-	sourceBound := own + fmt.Sprintf(` AND (%[5]s
-	 OR EXISTS (SELECT 1 FROM activity %[4]s
-	   WHERE %[4]s.id = %[3]s
-     AND (coalesce(%[1]s.source_system, '') <> '`+provenance.EmailRequestSource+`' OR %[4]s.archived_at IS NULL)
-	     AND %[4]s.restricted_at IS NULL AND %[2]s))`, alias, source, sourceID, contentGateSource, taskFreeSQL(alias))
-	return sourceBound + fmt.Sprintf(" AND (coalesce(%s.source_system, '') <> '%s' OR %s)",
-		alias, provenance.CommitmentTaskSource, commitmentEvidenceArm(p, alias+".source_activity_id", alias+".source_id", arg)) +
-		agentRestrictionArm(p, alias)
+	return contentAudienceArm(p, alias, arg, activityAudienceArm)
 }
 
 // agentRestrictionArm withholds from an agent, the product's own or one a seat
@@ -272,6 +257,13 @@ func ActivityAudienceArm(ctx context.Context, alias string, arg func(any) int) (
 // audienceorphan.go. Change an arm here and change it there; the pair is held by
 // a test named in that file's doc comment.
 func activityAudienceArm(p principal.Principal, alias string, arg func(any) int) string {
+	return "(" + activityAudienceMembership(p, alias, arg) + " AND " + internalMailAccessClause(p, alias, arg) + ")"
+}
+
+// activityAudienceMembership is activityAudienceArm without its internal-mail
+// test, for a gate whose discover half already applies that test to the row.
+// Postgres plans and keeps every copy, so the gate states it once.
+func activityAudienceMembership(p principal.Principal, alias string, arg func(any) int) string {
 	me := arg(p.UserID)
 	// captured_by is `human:<uuid>` for a hand-logged row and
 	// `connector:<name>:<uuid>` for a captured one; both end in the user's
@@ -296,7 +288,7 @@ func activityAudienceArm(p principal.Principal, alias string, arg func(any) int)
 	        AND ((am.subject_type = 'user' AND am.subject_id IN (%[2]s))
 	          OR (am.subject_type = 'team' AND am.subject_id = ANY($%[3]d))))))`,
 		alias, memberIdentitySQL(me), teams, activityMembershipArm(p, alias, arg), memberAuthorshipSQL(alias, me, arg), WorkspaceAudienceSQL(alias))
-	return "(" + ordinary + " AND " + internalMailAccessClause(p, alias, arg) + ")"
+	return ordinary
 }
 
 // EnsureActivityVisible is EnsureVisible for activities under the DISCOVER

@@ -8,6 +8,7 @@ import { useLocale, useT } from "../i18n";
 import { liveCapture } from "../lib/capture-progress";
 import { useConnectors } from "../lib/connectors";
 import { useImportRunOnScreen } from "../lib/import-onscreen";
+import { useFirstScreenSettled } from "../lib/journeymarks";
 import "./capture-chip.css";
 
 /** Where the chip leads: the connections card, which holds the run in full. */
@@ -36,7 +37,12 @@ const CONNECTIONS_HREF = "#/settings/connections";
  * card, onboarding's backread step). Those surfaces say so themselves
  * (lib/import-onscreen.ts) rather than being listed here as routes.
  */
-export function CaptureChip({
+/** The import gauge, read once the first screen's day is on screen. */
+export function CaptureChip(props: Readonly<{ linked: boolean }>) {
+  return useFirstScreenSettled() ? <CaptureGauge {...props} /> : null;
+}
+
+function CaptureGauge({
   linked,
 }: Readonly<{
   /**

@@ -4,13 +4,7 @@ import { api } from "../api/client";
 import type { components } from "../api/schema";
 import type { QueryLike } from "../design-system/querystates";
 import { unwrap } from "./problem";
-import {
-  briefKey,
-  digestKey,
-  isLiveWorkRead,
-  magicKey,
-  worklistKey,
-} from "./workkeys";
+import { briefKey, isLiveWorkRead, magicKey, worklistKey } from "./workkeys";
 
 // The approvals query-hook family.
 //
@@ -245,7 +239,6 @@ export function invalidateApprovalViews(client: QueryClient) {
       worklistKey,
       briefKey,
       magicKey,
-      digestKey,
     ].map((queryKey) => client.invalidateQueries({ queryKey })),
   );
 }
