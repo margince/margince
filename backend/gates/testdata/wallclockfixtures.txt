@@ -11,6 +11,7 @@
 # This file is the only place the population is counted; documents point here
 # rather than repeat a number that moves with every merge.
 
+cmd/api/coldstart_bench_test.go 1
 cmd/migrate/drill_integration_test.go 5
 internal/compose/agentcost_test.go 2
 internal/compose/agenttaskhandle_integration_test.go 1
