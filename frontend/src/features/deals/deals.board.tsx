@@ -228,7 +228,6 @@ export function DealBoardBody({
   dealFilters,
   stageTotalsQuery,
   companies,
-  companiesSettled,
   openDeal,
   cardDragHandlers,
   columnDropHandlers,
@@ -244,7 +243,6 @@ export function DealBoardBody({
   // column's explanation and the query's absence cannot disagree.
   totalsWithheld?: MessageKey;
   companies: Company[];
-  companiesSettled: boolean;
   openDeal: ComponentProps<typeof PipelineBoard>["onOpen"];
   cardDragHandlers: ComponentProps<typeof PipelineBoard>["cardDragHandlers"];
   columnDropHandlers: ComponentProps<
@@ -279,11 +277,7 @@ export function DealBoardBody({
   // Only the board asks. The table names its companies through the per-record
   // reference every other cross-record cell uses, and handing it this map too
   // would read each company twice.
-  const companyMarks = useCompanyMarks(
-    loadedDeals,
-    companies,
-    companiesSettled,
-  );
+  const companyMarks = useCompanyMarks(loadedDeals, companies);
   const suggestionGhosts = useSuggestionGhosts(
     effectivePipeline?.id,
     ownerDialParams(dealFilters.filters),

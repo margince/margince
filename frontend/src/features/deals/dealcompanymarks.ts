@@ -25,28 +25,16 @@ export type {
  * page did not cover are read by id (`useCompanyMarksByID`). A withheld company
  * sends no id, so this cannot turn a mask into a name.
  */
-export function useCompanyMarks(
-  deals: Deal[],
-  page: Company[],
-  pageSettled: boolean,
-): CompanyNaming {
+export function useCompanyMarks(deals: Deal[], page: Company[]): CompanyNaming {
   const fromPage = new Map<string, CompanyMark>(
     page.map((company) => [
       company.id,
       { name: company.display_name, logoUrl: company.logo_url },
     ]),
   );
-  // Nothing is asked for until the picker's page has ANSWERED. The two reads
-  // are issued together and settle in no fixed order, so on every render where
-  // the deals have arrived and the companies have not, `fromPage` is empty
-  // and every company a loaded deal names looks unresolved.
-  const unnamed = pageSettled
-    ? deals.flatMap((deal) =>
-        deal.company_id && !fromPage.has(deal.company_id)
-          ? [deal.company_id]
-          : [],
-      )
-    : [];
+  const unnamed = deals.flatMap((deal) =>
+    deal.company_id && !fromPage.has(deal.company_id) ? [deal.company_id] : [],
+  );
   const byID = useCompanyMarksByID(unnamed);
   const marks = new Map(fromPage);
   for (const [id, mark] of byID.marks) {

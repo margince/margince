@@ -1,6 +1,6 @@
 import { useInfiniteQuery, useQueryClient } from "@tanstack/react-query";
 import type { components } from "../../api/schema";
-import { entityNameQuery } from "../../components/entityref";
+import { companyReferenceQuery } from "../../components/entityref.queries";
 import {
   nextEmploymentCursor,
   readEmploymentPage,
@@ -24,7 +24,8 @@ export function useEmploymentPages(view: View) {
             async (company) =>
               [
                 company,
-                await client.fetchQuery(entityNameQuery("company", company)),
+                (await client.fetchQuery(companyReferenceQuery(company)))
+                  ?.name ?? null,
               ] as const,
           ),
         ),

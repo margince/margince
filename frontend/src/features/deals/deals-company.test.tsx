@@ -82,13 +82,14 @@ const render = (ui: ReactNode) => {
   const client = new QueryClient({
     defaultOptions: { queries: { retry: false } },
   });
-  return rtlRender(
+  const rendered = rtlRender(
     <QueryClientProvider client={client}>
       <LocaleProvider initial="en">
         <RecordShell>{ui}</RecordShell>
       </LocaleProvider>
     </QueryClientProvider>,
   );
+  return { ...rendered, client };
 };
 
 /**
@@ -462,34 +463,33 @@ describe("the board past the picker's first page", () => {
     expect(screen.queryByText("o-refused")).toBeNull();
   });
 
-  // The two reads are issued together and settle in any order. While the page
-  // read is still out every company a loaded deal names looks unresolved, and
-  // asking per id then is a request each for names the page is about to carry
-  // — a hundred of them on a cold board, none of which can be un-sent.
-  it("asks for no company by id until the picker's page has answered", async () => {
+  // Earlier labels cost a targeted batch even when the picker later includes them.
+  it("names companies before the picker's page answers", async () => {
     let openPage = () => {};
     const pageGate = new Promise<void>((resolve) => {
       openPage = resolve;
     });
+    const company = { id: "o-north", display_name: "Northgate Systems" };
     const fetchMock = stubBackend({
-      deals: [deal({ company_id: "o-offpage" })],
-      page: [{ id: "o1", display_name: "Acme Corp" }],
-      byId: {
-        "o-offpage": { id: "o-offpage", display_name: "Northgate Systems" },
-      },
+      deals: [deal({ company_id: company.id })],
+      page: [company],
+      byId: { [company.id]: company },
       pageGate,
     });
     vi.stubGlobal("fetch", fetchMock);
-    render(<DealsScreen />);
+    const { client } = render(<DealsScreen />);
 
-    // The board has the deals and not the page: the card is on screen with no
-    // company on it, and nothing has been asked for by id.
-    await boardCard("Fleet retrofit");
-    expect(byIdCalls(fetchMock)).toEqual([]);
+    const card = await boardCard("Fleet retrofit");
+    expect(await within(card).findByText("Northgate Systems")).toBeTruthy();
+    expect(client.getQueryState(["companies"])?.status).toBe("pending");
+    expect(byIdCalls(fetchMock)).toEqual([[company.id]]);
 
     openPage();
-    expect(await screen.findByText("Northgate Systems")).toBeTruthy();
-    expect(byIdCalls(fetchMock)).toEqual([["o-offpage"]]);
+    await waitFor(() =>
+      expect(client.getQueryState(["companies"])?.status).toBe("success"),
+    );
+    expect(within(card).getByText("Northgate Systems")).toBeTruthy();
+    expect(byIdCalls(fetchMock)).toEqual([[company.id]]);
   });
 
   // One read for every company the page did not hold, not one each: a cold

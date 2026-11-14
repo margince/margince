@@ -4,16 +4,23 @@ import { cleanup, renderHook, waitFor } from "@testing-library/react";
 import type { ReactNode } from "react";
 import { afterEach, expect, it, vi } from "vitest";
 import type { components } from "../../api/schema";
+import { companyReferenceQuery } from "../../components/entityref.queries";
 import { useEmploymentPages } from "./employmentpages";
 
 afterEach(() => {
   cleanup();
   vi.unstubAllGlobals();
 });
-it.each([true, false])(
-  "loads all roles when company visibility is %s",
-  async (visible) => {
+it.each([
+  { visible: true, cached: false },
+  { visible: false, cached: false },
+  { visible: true, cached: true },
+  { visible: false, cached: true },
+])(
+  "loads roles with string names when company visibility is $visible and cached is $cached",
+  async ({ visible, cached }) => {
     const cursors: string[] = [];
+    const companyReads: string[] = [];
     vi.stubGlobal(
       "fetch",
       vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
@@ -33,6 +40,7 @@ it.each([true, false])(
             page: { has_more: false },
           });
         }
+        companyReads.push(url.pathname);
         // A company the reader may not see is left out of the name read.
         return Response.json({
           data: visible
@@ -61,6 +69,12 @@ it.each([true, false])(
     const client = new QueryClient({
       defaultOptions: { queries: { retry: false } },
     });
+    if (cached) {
+      client.setQueryData(
+        companyReferenceQuery("company").queryKey,
+        visible ? { name: "Earlier Company", archived: false } : null,
+      );
+    }
     const { result } = renderHook(() => useEmploymentPages(view), {
       wrapper: ({ children }: { children: ReactNode }) => (
         <QueryClientProvider client={client}>{children}</QueryClientProvider>
@@ -75,5 +89,7 @@ it.each([true, false])(
       version: 4,
     });
     expect(result.current.hasNextPage).toBe(false);
+    expect(companyReads).toHaveLength(cached ? 0 : 1);
+    client.clear();
   },
 );
