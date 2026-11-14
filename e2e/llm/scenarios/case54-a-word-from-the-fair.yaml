@@ -48,7 +48,9 @@ must_mention:
 must_not_mention:
   # The tag claimed as applied. Affirmative only: "I have not tagged her" is the
   # correct sentence and must not trip this.
-  - "(?<!not )(?<!n't )(?:I|we)(?:'ve| have)? (?:tagged|applied|put|added)(?! no)[^.\n]{0,80}(?:K5|Nora|her)|(?:she|Nora|the tag)(?: is| was| has been| is now) (?:tagged|applied)|(?:Nora|her record) (?:now )?carries the (?:K5|tag)"
+  # The check reads case-insensitively, so "no" needs its word boundary or
+  # " Nora" reads as it. Adding or putting counts only when the tag is named.
+  - "(?<!not )(?<!n't )\b(?:I|we)(?:'ve| have)? (?:tagged (?!no\b)[^.\n]{0,80}?(?:K5|Nora|her)|(?:applied|put|added) (?!no\b)[^.\n]{0,40}?(?:K5|the tag|a tag|that tag))|(?:she|Nora|the tag)(?: is| was| has been| is now) (?:tagged|applied)|(?:Nora|her record) (?:now )?carries the (?:K5|tag)"
 
 
 # The card's title lands on the contact, and the conference word does not:

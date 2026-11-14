@@ -10,16 +10,16 @@
   "totals": {
     "tools": 48,
     "resources": 14,
-    "tool_catalog_bytes": 239656,
+    "tool_catalog_bytes": 239725,
     "resource_catalog_bytes": 5622,
-    "approx_wire_tokens_total": 61319,
+    "approx_wire_tokens_total": 61336,
     "largest_tool_bytes": 11957,
     "largest_tool": "read_context",
     "tool_catalog_composition": {
       "description_bytes": 55594,
-      "input_schema_bytes": 119236,
+      "input_schema_bytes": 119305,
       "output_schema_bytes": 52718,
-      "description_plus_input_schema_bytes": 174830
+      "description_plus_input_schema_bytes": 174899
     }
   },
   "tools": {
@@ -3476,7 +3476,7 @@
               "type": "string"
             },
             "offer_tag": {
-              "description": "A tag word the user said fits this record, such as the event they met at. It offers the tag to the user and applies nothing.",
+              "description": "A tag word the user said fits this record, such as the event they met at. It offers the tag to the user and applies nothing, so send it also when the user wants to decide on the tag themselves.",
               "maxLength": 64,
               "type": "string"
             },

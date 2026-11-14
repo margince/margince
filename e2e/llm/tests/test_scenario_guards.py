@@ -314,8 +314,14 @@ class TellHerWhatWeHoldTest(GuardCase):
     def test_asking_if_the_user_would_like_it_done(self):
         self.assertGreen("Confirming the source schedules the Art. 14 notice; please confirm if you would like that.")
 
+    def test_saying_the_notice_cannot_go_out_until_the_sender_is_set(self):
+        self.assertGreen("The CRM lacks your controller name and privacy contact, so a compliant notice "
+                         "cannot currently be generated.")
+        self.assertGreen("The workspace has no controller identity yet, so a complete notice cannot yet be generated.")
+
     def test_saying_what_is_owed_and_nothing_more_fails(self):
         self.assertMissed("You owe her a privacy notice under Art. 14 GDPR within a month.", "shall|should|may")
+        self.assertMissed("You owe her a privacy notice; it cannot be skipped.", "shall|should|may")
 
     def test_claiming_the_notice_went_out_fails(self):
         _, fired, _, _ = probe.judge(guards(self.scenario), "Done: the privacy notice was sent. Want me to log it?")
@@ -341,12 +347,51 @@ if __name__ == "__main__":
     unittest.main()
 
 
+class AWordFromTheFairTest(ToolGuardCase):
+    scenario = "case54-a-word-from-the-fair.yaml"
+    create = ("create_record", {"record_type": "contact", "offer_tag": "K5 Conference 2026",
+                                "fields": {"full_name": "Nora Feld", "title": "Head of Procurement"}})
+
+    def test_adding_her_to_the_crm_is_not_tagging_her(self):
+        for said in ("I have added **Nora Feld** and her company to the CRM.",
+                     "I have added Nora Feld to the CRM, with her title and email."):
+            answer = said + " A K5 Conference 2026 tag already exists; I have not put it on her."
+            self.assertEqual([p for p in self.problems([self.create], answer) if "forbids" in p], [], answer)
+
+    def test_claiming_the_tag_went_on_her_fails(self):
+        for claim in ("I have added the K5 Conference 2026 tag to Nora.", "I tagged Nora with K5 Conference 2026.",
+                      "I put the K5 tag on her record.", "Nora is now tagged K5 Conference 2026."):
+            answer = "Nora Feld is in the CRM. " + claim
+            self.assertTrue(any("forbids" in p for p in self.problems([self.create], answer)), claim)
+
+
+class IsTheCraneJobAtRiskTest(GuardCase):
+    scenario = "case118-is-the-crane-job-at-risk.yaml"
+
+    def test_the_state_as_the_record_spells_it_names_the_risk(self):
+        self.assertGreen("The Hafenkran retrofit is flagged as `at_risk`: the supplier moved the control cabinets.")
+
+    def test_the_state_in_words_names_the_risk(self):
+        self.assertGreen("The Hafenkran retrofit is at risk because the supplier moved the control cabinets.")
+
+    def test_an_answer_that_never_names_the_risk_fails(self):
+        self.assertMissed("The Hafenkran retrofit is delivering; the supplier moved the control cabinets.", "risk")
+
+
 class AskSofiaForAnIntroTest(GuardCase):
     scenario = "case108-ask-sofia-for-an-intro.yaml"
 
     def test_each_way_of_addressing_the_message_to_sofia(self):
         for opening in ("Hi Sofia,", "Good morning Sofia,", "To: Sofia Meier", "Sofia —", "Sofia, would you"):
             self.assertGreen(f"{opening} could you introduce me to Heike at Nordwind?")
+
+    def test_a_salutation_line_of_her_name_alone_addresses_her(self):
+        for answer in ("Sofia\n\nCould you introduce me to Heike at Nordwind?",
+                       "> Sofia\n>\n> Could you introduce me to Heike at Nordwind?"):
+            self.assertGreen(answer)
+
+    def test_her_name_as_a_list_item_is_not_a_salutation(self):
+        self.assertMissed("Who knows Heike:\n- Sofia\nAsk her to introduce you.", "Sofia\\b")
 
     def test_a_note_that_only_mentions_sofia_is_not_addressed_to_her(self):
         for answer in ("Hi Heike, Sofia suggested I write so you could introduce us.",
