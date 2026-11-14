@@ -23,13 +23,14 @@ import (
 // it today.
 func (s *Service) edition(ctx context.Context, tx pgx.Tx, owners MeasurableOwners, id ids.UUID) (crmcontracts.ReportingEdition, []Fact, error) {
 	var out crmcontracts.ReportingEdition
-	if err := s.requireEditionAudience(ctx, tx, id); err != nil {
+	if err := editionPublishedToReader(ctx, tx, id); err != nil {
 		return out, nil, err
 	}
 	var b bindings
 	var redacted *time.Time
 	query := "SELECT manifest,redacted_at FROM report_edition WHERE id=" + b.add(id)
-	if err := tx.QueryRow(ctx, query, b.values...).Scan(&out, &redacted); err != nil {
+	err := tx.QueryRow(ctx, query, b.values...).Scan(&out, &redacted)
+	if err != nil {
 		return out, nil, storedError(err)
 	}
 	if _, err := s.report(ctx, tx, ids.UUID(out.ReportId), false); err != nil {
@@ -66,15 +67,15 @@ func (s *Service) edition(ctx context.Context, tx pgx.Tx, owners MeasurableOwner
 	return out, visible, nil
 }
 
-// requireEditionAudience reports not-found unless the reader is in the edition's
-// publication audience.
-func (s *Service) requireEditionAudience(ctx context.Context, tx pgx.Tx, id ids.UUID) error {
+// editionPublishedToReader refuses an edition the reader's audience does not
+// reach. The audience is the one recorded at publication, so a later
+// expansion cannot make an originally private edition public.
+func editionPublishedToReader(ctx context.Context, tx pgx.Tx, id ids.UUID) error {
 	var b bindings
 	audience, err := audienceClause(ctx, &b)
 	if err != nil {
 		return err
 	}
-	// A later audience expansion cannot make an originally private edition public.
 	published := "(SELECT owner_id,publication_audience AS audience,publication_team_id AS audience_team_id FROM report_edition WHERE id=" + b.add(id) + ") d"
 	var permitted bool
 	if err := tx.QueryRow(ctx, "SELECT EXISTS(SELECT 1 FROM "+published+" WHERE "+audience+")", b.values...).Scan(&permitted); err != nil {
@@ -86,6 +87,7 @@ func (s *Service) requireEditionAudience(ctx context.Context, tx pgx.Tx, id ids.
 	return nil
 }
 
+// editionFacts reads the contributions frozen with an edition, in a stable order.
 func editionFacts(ctx context.Context, tx pgx.Tx, id ids.UUID) ([]Fact, error) {
 	var b bindings
 	statement := "SELECT fact FROM report_edition_contribution WHERE edition_id=" + b.add(id) + " ORDER BY metric,context_id,contribution_key"
