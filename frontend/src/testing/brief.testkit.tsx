@@ -69,7 +69,7 @@ export type Routes = Record<
   (body: unknown, query: URLSearchParams) => Response | Promise<Response>
 >;
 
-// Every read Brief fans out to, answered honestly by default so each case
+// Every read Brief fans out to, answered honestly by default. Each case then
 // declares only the route it is about: a session and no brief run.
 //
 // The table is exhaustive, and `stubApi` fails a case that asks for anything

@@ -11,18 +11,18 @@
       "covered": 39,
       "sign_in": 1,
       "no_signed_in_user": 0,
-      "web_app_calls": 915,
+      "web_app_calls": 914,
       "web_app_calls_open": 753,
       "web_app_calls_ask_first": 106,
       "web_app_calls_pending": 0,
-      "web_app_calls_security": 136,
+      "web_app_calls_security": 135,
       "web_app_calls_covered": 25,
       "parity_signed_in_percent": 81.6,
-      "parity_web_app_percent": 82.2
+      "parity_web_app_percent": 82.3
     },
     "open_with_no_web_app_call_found": 110,
-    "parity_web_app_counting_covered_percent": 85,
-    "parity_web_app_once_pending_is_open_percent": 85
+    "parity_web_app_counting_covered_percent": 85.1,
+    "parity_web_app_once_pending_is_open_percent": 85.1
   },
   "web_app_scan": {
     "computed_calls_no_path_was_found_for": []
@@ -769,14 +769,14 @@
       "covered": 1,
       "sign_in": 0,
       "no_signed_in_user": 0,
-      "web_app_calls": 59,
+      "web_app_calls": 58,
       "web_app_calls_open": 44,
       "web_app_calls_ask_first": 11,
       "web_app_calls_pending": 0,
-      "web_app_calls_security": 14,
+      "web_app_calls_security": 13,
       "web_app_calls_covered": 1,
       "parity_signed_in_percent": 74.1,
-      "parity_web_app_percent": 74.5,
+      "parity_web_app_percent": 75.8,
       "areas": [
         {
           "key": "capture_triage",
@@ -789,14 +789,14 @@
           "covered": 0,
           "sign_in": 0,
           "no_signed_in_user": 0,
-          "web_app_calls": 18,
+          "web_app_calls": 17,
           "web_app_calls_open": 17,
           "web_app_calls_ask_first": 2,
           "web_app_calls_pending": 0,
-          "web_app_calls_security": 1,
+          "web_app_calls_security": 0,
           "web_app_calls_covered": 0,
           "parity_signed_in_percent": 94.7,
-          "parity_web_app_percent": 94.4
+          "parity_web_app_percent": 100
         },
         {
           "key": "connectors",
@@ -10571,8 +10571,7 @@
       ],
       "group": "capture",
       "area": "capture_triage",
-      "state": "security",
-      "web_app": "direct"
+      "state": "security"
     },
     {
       "method": "GET",
