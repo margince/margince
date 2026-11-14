@@ -87,3 +87,41 @@ export function preloadEntries(entries: readonly string[]): Plugin {
     },
   };
 }
+
+/** The chunks named, each over its byte budget, as the build would refuse them. */
+export function chunksOverBudget(
+  chunks: readonly { name: string; bytes: number }[],
+  budgets: Readonly<Record<string, number>>,
+): string[] {
+  return chunks.flatMap(({ name, bytes }) => {
+    const budget = budgets[name];
+    return budget !== undefined && bytes > budget
+      ? [`${name} is ${bytes} bytes, over its ${budget}-byte budget`]
+      : [];
+  });
+}
+
+/**
+ * Fails the build when a named chunk outgrows its budget. Home's chunk is what
+ * a cold load on Home waits for, so code it opens on demand belongs in a lazy
+ * import rather than in this chunk.
+ */
+export function chunkBudgets(
+  budgets: Readonly<Record<string, number>>,
+): Plugin {
+  return {
+    name: "chunk-budgets",
+    apply: "build",
+    generateBundle(_options, bundle) {
+      const over = chunksOverBudget(
+        Object.values(bundle).flatMap((output) =>
+          output.type === "chunk"
+            ? [{ name: output.name, bytes: Buffer.byteLength(output.code) }]
+            : [],
+        ),
+        budgets,
+      );
+      if (over.length > 0) this.error(over.join("; "));
+    },
+  };
+}
