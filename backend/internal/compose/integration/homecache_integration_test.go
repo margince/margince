@@ -228,9 +228,13 @@ func TestAnAnswerPastItsLifeIsServedStaleUntilItsGraceEnds(t *testing.T) {
 
 	keep(ctx, t, c, e.Rep1, homecache.Worklist, nil, "decisions")
 	age(homecache.Life + time.Minute)
+	staleBefore, hitsBefore := homeCacheReads(t, homecache.Worklist, "stale"), homeCacheReads(t, homecache.Worklist, "hit")
 	got, stale, err := homecache.Serve(ctx, c, e.Rep1, homecache.Worklist, "home", fresh, noWalk)
 	if err != nil || !stale || got.View == nil || *got.View != "decisions" {
 		t.Fatalf("serve past its life = %+v (stale %v, err %v), want the kept answer, stale", got, stale, err)
+	}
+	if grew, hits := homeCacheReads(t, homecache.Worklist, "stale")-staleBefore, homeCacheReads(t, homecache.Worklist, "hit")-hitsBefore; grew != 1 || hits != 0 {
+		t.Errorf("an answer served past its life counted %d stale and %d hits, want 1 and 0", grew, hits)
 	}
 	c.Settle()
 	if reads != 1 {
@@ -258,8 +262,12 @@ func TestAReceiptPastItsLifeIsReadFresh(t *testing.T) {
 		return crmcontracts.Worklist{}, nil
 	}
 	noWalk := func(crmcontracts.Worklist) (*ids.UUID, error) { return nil, nil } //nolint:nilnil // the fake receipt starts no walk, which Serve reads as nil
+	misses, stales := homeCacheReads(t, homecache.Magic, "miss"), homeCacheReads(t, homecache.Magic, "stale")
 	if _, stale, err := homecache.Serve(ctx, c, e.Rep1, homecache.Magic, "home", fresh, noWalk); err != nil || stale || reads != 1 {
 		t.Errorf("a receipt past its life: stale %v, %d fresh reads (err %v); want it read fresh once", stale, reads, err)
+	}
+	if grew, stale := homeCacheReads(t, homecache.Magic, "miss")-misses, homeCacheReads(t, homecache.Magic, "stale")-stales; grew != 1 || stale != 0 {
+		t.Errorf("a receipt read fresh past its life counted %d misses and %d stale, want 1 and 0", grew, stale)
 	}
 }
 
@@ -299,8 +307,12 @@ func TestAnUnreadableKeptAnswerIsServedFreshAndReplaced(t *testing.T) {
 		return crmcontracts.Worklist{View: new(crmcontracts.WorklistViewToday)}, nil
 	}
 	noWalk := func(crmcontracts.Worklist) (*ids.UUID, error) { return nil, nil } //nolint:nilnil // the fake page starts no walk, which Serve reads as nil
+	misses := homeCacheReads(t, homecache.Worklist, "miss")
 	if _, _, err := homecache.Serve(ctx, c, e.Rep1, homecache.Worklist, "home", fresh, noWalk); err != nil || reads != 1 {
 		t.Fatalf("serve over an unreadable answer: err %v after %d fresh reads, want the fresh read", err, reads)
+	}
+	if grew := homeCacheReads(t, homecache.Worklist, "miss") - misses; grew != 1 {
+		t.Errorf("a kept answer this build cannot read counted %d misses, want 1", grew)
 	}
 	if !served(ctx, t, c, e.Rep1, homecache.Worklist) {
 		t.Error("the fresh answer was not kept in place of the unreadable one")
