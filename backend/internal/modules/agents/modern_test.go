@@ -940,3 +940,17 @@ func TestTheInstructionsTellAClientsModelHowToSetALocalTime(t *testing.T) {
 		}
 	}
 }
+
+// Whose record an answer reports is one rule, stated once to a client's model,
+// not again in every tool that serves a record.
+func TestTheInstructionsSayWhoseRecordItIsAndNoToolRepeatsIt(t *testing.T) {
+	d := modernDispatcher(t)
+	if !strings.Contains(d.instructions(), mcp.OwnershipRule) {
+		t.Fatalf("the surface does not carry the ownership rule:\n%s", d.instructions())
+	}
+	for _, spec := range d.registry.Specs() {
+		if strings.Contains(spec.Description, mcp.OwnershipRule) {
+			t.Errorf("%s repeats the ownership rule the instructions already state", spec.Name)
+		}
+	}
+}

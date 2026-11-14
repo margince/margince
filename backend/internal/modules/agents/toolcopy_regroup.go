@@ -76,7 +76,9 @@ var changeActivitiesCopy = toolCopy{
 		"relink_many a named set; with replace_existing_of_type they move it off the old record " +
 		"of that type instead. ready says the user is ready for a meeting they attend; unready " +
 		"takes it back.",
-	Limits: "relink and relink_many run at once. Tell the user before you file under a project, " +
+	Limits: "relink and relink_many usually run at once; filing under a project, or a move the " +
+		"installation's policy holds, answers staged with an approval id, and nothing has moved " +
+		"until the retry answers. Tell the user before you file under a project, " +
 		"which only a member can undo from the activity. attach checks the record first; read list_documents before " +
 		"attaching the same file again. A logged meeting names who takes part: leave off anyone " +
 		"whose invitation did not go out.",
@@ -92,7 +94,8 @@ var scheduleMeetingCopy = toolCopy{
 		"provider sends the invitation to every attendee: the contact, and any further addresses.",
 	Limits: "invite reaches attendees outside the workspace, so name them and the time and get " +
 		"the user's yes first; the call stages for approval. Read check_availability before " +
-		"choosing a time.",
+		"choosing a time. A start_intent (the user's local time) replaces start, and end moves " +
+		"with it so the meeting keeps its length.",
 	Instead: "Use change_activities with log to record a meeting without inviting anyone, or one " +
 		"that already happened.",
 	Retain: "Keep the invitation id and inspect its status before claiming it was delivered. A " +
@@ -100,7 +103,7 @@ var scheduleMeetingCopy = toolCopy{
 }
 
 var changeStateCopy = toolCopy{
-	Purpose: "merge_member_accounts consolidates an unused member into a different surviving colleague after a confirmed retirement preview. Move a lead, deal or project on, or set up a company as a partner. qualify fills what a lead's own data already " +
+	Purpose: "Move a lead, deal or project on, or set up a company as a partner. qualify fills what a lead's own data already " +
 		"implies, today the company name from its email domain, and names the fields still " +
 		"empty. promote turns a lead who has genuinely engaged into a contact. disqualify " +
 		"closes out a lead going nowhere. demote reverses a promotion. move_deal moves a deal " +
@@ -108,7 +111,9 @@ var changeStateCopy = toolCopy{
 		"partner program on a company, with company_id, partner_kinds and optionally " +
 		"relationship_stage, next_step and next_step_due_at. record_project_health and " +
 		"correct_project_health say how a project is going, transfer_projects hands one owner's " +
-		"projects to another, and decide_commission approves, pays or voids a commission entry.",
+		"projects to another, and decide_commission approves, pays or voids a commission entry. " +
+		"merge_member_accounts consolidates an unused member into a different surviving colleague " +
+		"after a confirmed retirement preview.",
 	Limits: "promote needs a trigger naming the engagement; cold outreach nobody answered " +
 		"never promotes. demote needs a reason and is refused once the contact owns a deal. " +
 		"set_up_partner always waits for a human, takes no margin tier (a human sets that on the " +
@@ -126,7 +131,7 @@ var changeStateCopy = toolCopy{
 }
 
 var readWorkspaceCopy = toolCopy{
-	Purpose: "member_retirement previews a member removal, or a merge when mode is merge and to_user_id names the survivor. Read how this workspace is set up. colleagues: the seats that can receive work, " +
+	Purpose: "Read how this workspace is set up. colleagues: the seats that can receive work, " +
 		"not the contacts stored as records; q narrows by name. pipelines: every pipeline with " +
 		"its stages, each open, won or lost. channel_providers: the messaging transports. The " +
 		"other topics name what a tool accepts: query (find_records engine query), analytics " +
@@ -139,7 +144,9 @@ var readWorkspaceCopy = toolCopy{
 		"user's own mail decisions. my_working_hours and my_brief_delivery are the user's own settings. " +
 		"system_health, job_health, capture_health, recovery_health, automatic_work_health and data_tasks are " +
 		"health and operations pages, each under its own grant. ai_routing, ai_calls, retention_settings, tax_rates, fx_rates and ai_model_rates are " +
-		"separate settings, traces and rates; ask first before ai_calls and ai_call.",
+		"separate settings, traces and rates; ask first before ai_calls and ai_call. " +
+		"member_retirement previews a member removal, or a merge when mode is merge and " +
+		"to_user_id names the survivor.",
 	Limits: "A q matching nobody answers with every colleague and a warning. A stage's semantic, " +
 		"not its name, says whether it closes a deal, and only a user changes it, in the app. None of the name topics is a " +
 		"prerequisite: each tool refuses an unknown name with the accepted list.",

@@ -57987,7 +57987,7 @@ components:
         start_intent: { $ref: '#/components/schemas/IntentTime' }
         contact_id: { type: string, format: uuid }
         attendee_email: { type: string, format: email }
-        start: { type: string, format: date-time }
+        start: { type: string, format: date-time, description: 'The booked instant. A start_intent, when sent, replaces it, and end moves with it so the meeting keeps its length.' }
         end: { type: string, format: date-time }
         subject: { type: string, maxLength: 200 }
         location: { type: string, maxLength: 1000 }

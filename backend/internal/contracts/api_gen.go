@@ -56198,7 +56198,9 @@ type MeetingInvitationRequest struct {
 	// Links Further records to file the meeting on, beside the invitee.
 	Links    *[]MeetingRecordLink `json:"links,omitempty"`
 	Location string               `json:"location"`
-	Start    time.Time            `json:"start"`
+
+	// Start The booked instant. A start_intent, when sent, replaces it, and end moves with it so the meeting keeps its length.
+	Start time.Time `json:"start"`
 
 	// StartIntent A chosen local time in an IANA zone, resolved with current rules. A time in a gap moves forward; a repeated time takes its first occurrence.
 	StartIntent *IntentTime `json:"start_intent,omitempty"`

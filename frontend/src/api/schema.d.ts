@@ -41987,7 +41987,10 @@ export interface components {
             contact_id: string;
             /** Format: email */
             attendee_email: string;
-            /** Format: date-time */
+            /**
+             * Format: date-time
+             * @description The booked instant. A start_intent, when sent, replaces it, and end moves with it so the meeting keeps its length.
+             */
             start: string;
             /** Format: date-time */
             end: string;
