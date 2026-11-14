@@ -68,6 +68,8 @@ BENCH_DAILY_DB_NAME          ?= margince_bench_daily
 BENCH_DAILY_TEST             ?= TestDailyUseBudgets
 BENCH_BACKLOG_DB_NAME        ?= margince_bench_backlog
 BENCH_HOME_DB_NAME           ?= margince_bench_home
+BENCH_GROWTH_DB_NAME         ?= margince_bench_growth
+BENCH_GROWTH_TIMEOUT         ?= 60m
 export MARGINCE_TEST_APP_DSN ?= postgres://margince_app:margince_app_dev@localhost:$(PG_PORT)/$(TEST_DB_NAME)
 export MARGINCE_TEST_REDIS    ?= localhost:$(REDIS_PORT)
 export MARGINCE_TEST_REDIS_DB ?= 15
@@ -667,6 +669,14 @@ home-budget-api: composition ## Home's reads for the heaviest owner, cold and wa
 	  $(BENCH_DSN_ENV) \
 	  $(GO) test -tags "integration bench" -run "^TestHomeBudget$$" -count=1 -v -timeout 20m ./internal/compose/integration; st=$$?; \
 	  cd .. && db_admin drop-db --name $(BENCH_HOME_DB_NAME) >/dev/null || st=1; exit $$st'
+
+# Home's reads as the bench mail grows by a year per step, on its own database,
+# dropped at the end. The MARGINCE_BENCH_GROWTH_* settings size the run.
+bench-growth: composition ## Home's reads as the mail grows a year per step, with a delay per round trip; fails when a read is predicted to reach 10 s soon (needs db-up)
+	@$(GOWORK_COMPOSED) bash -c 'cd .. && source scripts/lib-testdb.sh && parse_test_dsn && bench_db $(BENCH_GROWTH_DB_NAME) && cd backend || exit; \
+	  $(BENCH_DSN_ENV) \
+	  $(GO) test -tags "integration bench" -run "^TestHomeGrowth$$" -count=1 -v -timeout $(BENCH_GROWTH_TIMEOUT) ./internal/compose/integration; st=$$?; \
+	  cd .. && db_admin drop-db --name $(BENCH_GROWTH_DB_NAME) >/dev/null || st=1; exit $$st'
 
 # The Worklist over a synthetic backlog past every lane bound, on a small daily
 # corpus: the stage 0 measurement of the Worklist redesign. It records nothing.
