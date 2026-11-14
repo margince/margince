@@ -149,7 +149,7 @@ deps:
     # xmod: the API policy uses the standard semantic-version parser.
     # xtext: pdftext NFKC-folds a PDF's typographic ligatures back to the
     # characters the word is made of — a Unicode normal form the stdlib lacks.
-    canUse: [pgx, chi, oapi, redis, river, minio, yaml, xnet, ximage, oksvg, wazero, brotli, prometheus, pdfium, gopool, fpdf, xtext, xmod]
+    canUse: [pgx, chi, oapi, redis, river, minio, yaml, xnet, ximage, oksvg, wazero, brotli, prometheus, pdfium, gopool, fpdf, xtext, xmod, xsemaphore]
   # Modules import shared + platform + contracts — NEVER a sibling; every
   # cross-module edge is injected by the composition layer.
   identity:

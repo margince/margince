@@ -255,8 +255,13 @@ func dailyNotes(m measurement) string {
 	if m.Status422 > 0 {
 		notes = append(notes, fmt.Sprintf("%d refused as too broad (422)", m.Status422))
 	}
+	if m.AdmissionWaitMs > 0 {
+		notes = append(notes, fmt.Sprintf("read admission wait %s in all, %s process maximum, %d process peak waiters",
+			millis(m.AdmissionWaitMs), millis(m.AdmissionWaitMaxMs), m.AdmissionPeakWaiters))
+	}
+
 	if m.Acquires > 0 {
-		notes = append(notes, fmt.Sprintf("pool wait %s in all, %s at most, over %d acquires on a pool of %d",
+		notes = append(notes, fmt.Sprintf("pool wait %s in all, %s worst half-second mean, over %d acquires on a pool of %d",
 			millis(m.PoolWaitMs), millis(m.PoolWaitMaxMs), m.Acquires, m.PoolSize))
 	}
 	return strings.Join(notes, "; ")

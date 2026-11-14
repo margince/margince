@@ -20,6 +20,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/compose/integration/apptest"
 	"github.com/margince/margince/backend/internal/modules/search"
+	"github.com/margince/margince/backend/internal/platform/database"
 )
 
 // The morning load's pacing: background polls, a cheap route timed four times
@@ -33,6 +34,7 @@ const (
 
 // morningLoad is what the whole team's start did to a cheap request and to the pool.
 type morningLoad struct {
+	Admission                    database.ReadAdmissionCost
 	CheapP50, CheapP95, CheapP99 time.Duration
 	CheapSamples                 int
 	S5xx, S422                   int
@@ -127,6 +129,7 @@ func runMorningLoad(t *testing.T, e *apptest.AppEnv, s Seats, c DailyCorpus, abs
 	cheap := cheapRouteSeat(t, e, s.Reps[len(s.Reps)-1])
 	tally := &dailyLoadTally{errorsBy: map[string]string{}}
 	before := e.Pool.Stat()
+	admissionBefore := database.ReadAdmissionStats(e.Pool)
 	done := make(chan struct{})
 	watched := make(chan time.Duration, 1)
 	go func() { watched <- watchPoolWait(e.Pool, before, done) }()
@@ -168,8 +171,11 @@ func runMorningLoad(t *testing.T, e *apptest.AppEnv, s Seats, c DailyCorpus, abs
 	if err != nil {
 		t.Fatalf("the cheap route was never timed during the morning load: %v", err)
 	}
+	admission := database.ReadAdmissionStats(e.Pool)
+	admission.Wait -= admissionBefore.Wait
 	return morningLoad{
-		CheapP50: stats.P50, CheapP95: stats.P95, CheapP99: stats.P99, CheapSamples: stats.Samples,
+		Admission: admission,
+		CheapP50:  stats.P50, CheapP95: stats.P95, CheapP99: stats.P99, CheapSamples: stats.Samples,
 		S5xx: tally.s5xx, S422: tally.s422,
 		PoolWaitTotal: after.EmptyAcquireWaitTime() - before.EmptyAcquireWaitTime(),
 		PoolWaitMax:   worst,
@@ -302,6 +308,9 @@ func morningLoadRow(m morningLoad) dailyRow {
 	row := MeasurementFrom("LOAD-1", "morning_load_cheap_route", m.CheapP50, m.CheapP95, m.CheapP99, Load1Budget, m.CheapSamples)
 	row.Seat, row.Flow, row.Verdict, row.KnownIssue = "team", "morning_load", string(verdict), issue
 	row.Status5xx, row.Status422 = m.S5xx, m.S422
+	row.AdmissionWaitMs = float64(m.Admission.Wait) / float64(time.Millisecond)
+	row.AdmissionWaitMaxMs = float64(m.Admission.MaxWait) / float64(time.Millisecond)
+	row.AdmissionPeakWaiters = m.Admission.PeakWaiters
 	row.PoolWaitMs = float64(m.PoolWaitTotal) / float64(time.Millisecond)
 	row.PoolWaitMaxMs = float64(m.PoolWaitMax) / float64(time.Millisecond)
 	row.Acquires, row.PoolSize = m.Acquires, m.PoolSize

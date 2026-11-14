@@ -17,7 +17,7 @@ import (
 // rankedSearchDB is the handle GET /v1/search and search_records both rank on.
 // server.go says why it carries the caller-predicate budget.
 func rankedSearchDB(pool *pgxpool.Pool) *database.DB {
-	return InstallationDB(pool).Bounded(database.CallerPredicateBudget)
+	return InstallationDB(pool).Bounded(database.CallerPredicateBudget).WithReadAdmission()
 }
 
 // recordSearchSeam runs search_records on the engine GET /v1/search runs, so

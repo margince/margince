@@ -46,12 +46,10 @@ const (
 )
 
 // KnownIssue ties a flow, or one row of it when Row is set, already over
-// budget to the open issue tracking it. Allow5xx lets that row's server errors
-// pass the gate, for an issue whose evidence shows them as its own symptom.
+// budget to the open issue tracking it.
 type KnownIssue struct {
 	Flow, Row string
 	Issue     int
-	Allow5xx  bool
 }
 
 // covers reports whether the entry lists this row of this flow.
@@ -75,7 +73,6 @@ func subject(flow, row string) string {
 var DailyKnownIssues = []KnownIssue{
 	{Flow: "worklist", Issue: 4912},
 	{Flow: "home", Row: "home_worklist", Issue: 4912},
-	{Flow: "morning_load", Issue: 7068, Allow5xx: true},
 }
 
 // DailyResult is one row of a flow measured for one seat, as the gate judges it.
@@ -123,9 +120,6 @@ func knownEntryFor(flow, row string) KnownIssue {
 
 func knownIssueFor(flow, row string) int { return knownEntryFor(flow, row).Issue }
 
-// allows5xx reports whether the entry covering this row lets its server errors pass.
-func allows5xx(flow, row string) bool { return knownEntryFor(flow, row).Allow5xx }
-
 // JudgeDaily returns the verdict for one row's p95 and, when it is over budget
 // and listed, the issue that tracks it. A p95 equal to the budget is over, as
 // gen-perfdoc renders it.
@@ -152,15 +146,15 @@ func judgeP95(p95, budget time.Duration, samples int) DailyVerdict {
 	return DailyOver
 }
 
-// DailyGate fails the run on every unlisted breach, every 5xx outside an
-// Allow5xx entry and every 422 outside a listed flow.
+// DailyGate fails the run on every unlisted breach, every server error and
+// every refusal outside a listed flow.
 func DailyGate(results []DailyResult, scale float64) error {
 	var problems []string
 	for _, r := range results {
 		if r.Verdict == DailyOver {
 			problems = append(problems, fmt.Sprintf("%s is over budget for %s and no open issue lists it", subject(r.Flow, r.Row), r.Seat))
 		}
-		if r.Status5xx > 0 && !allows5xx(r.Flow, r.Row) {
+		if r.Status5xx > 0 {
 			problems = append(problems, fmt.Sprintf("%s answered %d server errors for %s", subject(r.Flow, r.Row), r.Status5xx, r.Seat))
 		}
 		if r.Status422 > 0 && !r.Allow422 {
@@ -383,10 +377,24 @@ func TestTheDailyScaleRefusesAValueThatSeedsNothing(t *testing.T) {
 	}
 }
 
-func TestTheMorningLoadIsJudgedOnItsOwnBudgetAgainstItsIssue(t *testing.T) {
-	v, issue := JudgeDaily("morning_load", "morning_load_cheap_route", 700*time.Millisecond, Load1Budget, 40)
-	if v != DailyOverKnown || issue != 7068 {
-		t.Fatalf("got %q #%d, want over budget against #7068", v, issue)
+func TestTheMorningLoadIsGatedOnItsOwnBudget(t *testing.T) {
+	for _, tc := range []struct {
+		elapsed time.Duration
+		verdict DailyVerdict
+		over    bool
+	}{
+		{149 * time.Millisecond, DailyWithin, false}, {Load1Budget, DailyOver, true}, {700 * time.Millisecond, DailyOver, true},
+	} {
+		elapsed := tc.elapsed
+		verdict, issue := JudgeDaily("morning_load", "morning_load_cheap_route", elapsed, Load1Budget, 40)
+		over := tc.over
+		if want := tc.verdict; verdict != want || issue != 0 {
+			t.Fatalf("p95 %s: got %q #%d, want %q with no exception", elapsed, verdict, issue, want)
+		}
+		err := DailyGate([]DailyResult{{Flow: "morning_load", Row: "morning_load_cheap_route", Verdict: verdict}}, 1)
+		if (err != nil) != over {
+			t.Fatalf("p95 %s: gate = %v, want failure=%v", elapsed, err, over)
+		}
 	}
 }
 
@@ -517,16 +525,14 @@ func TestAServedFirstLoadKeepsItsColdCacheNote(t *testing.T) {
 	}
 }
 
-func TestAServerErrorPassesOnlyOnAnEntryThatAllowsIt(t *testing.T) {
-	allowed := DailyResult{Flow: "morning_load", Row: "morning_load_cheap_route", Seat: "team", Verdict: DailyOverKnown, Issue: 7068, Status5xx: 1}
-	if err := DailyGate([]DailyResult{allowed}, 1); err != nil {
-		t.Fatalf("a 5xx on an entry with Allow5xx must not fail the run: %v", err)
-	}
-	listedOnly := DailyResult{Flow: "worklist", Row: "worklist", Seat: "rep", Verdict: DailyOverKnown, Issue: 4912, Status5xx: 1}
-	unlisted := DailyResult{Flow: "lists", Row: "lists_contacts", Seat: "rep", Verdict: DailyWithin, Status5xx: 1}
-	for _, r := range []DailyResult{listedOnly, unlisted} {
-		if err := DailyGate([]DailyResult{r}, 1); err == nil || !strings.Contains(err.Error(), "answered 1 server errors") {
-			t.Errorf("%s: got %v; a 5xx outside an Allow5xx entry must fail the run", r.Row, err)
+func TestEveryServerErrorFailsTheDailyGate(t *testing.T) {
+	for _, row := range []DailyResult{
+		{Flow: "morning_load", Row: "morning_load_cheap_route", Seat: "team", Verdict: DailyWithin, Status5xx: 1},
+		{Flow: "worklist", Row: "worklist", Seat: "rep", Verdict: DailyOverKnown, Issue: 4912, Status5xx: 1},
+		{Flow: "lists", Row: "lists_contacts", Seat: "rep", Verdict: DailyWithin, Status5xx: 1},
+	} {
+		if err := DailyGate([]DailyResult{row}, 1); err == nil || !strings.Contains(err.Error(), "answered 1 server errors") {
+			t.Errorf("%s: got %v; every server error must fail the run", row.Row, err)
 		}
 	}
 }

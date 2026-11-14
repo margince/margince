@@ -1,5 +1,5 @@
 <!-- prose:plain -->
-<!-- describes: backend/internal/compose/dealstatus backend/internal/platform/database/storekit/leadengagement.go backend/internal/compose/leadworktasks.go backend/internal/compose/attention backend/internal/compose/attentionseam.go backend/internal/compose/attentionsnapshotseam.go backend/internal/compose/worklistmetrics.go backend/internal/platform/database/statementmeter.go backend/internal/platform/database/planreuse.go backend/internal/modules/activities/waitingsql.go backend/internal/modules/activities/replysettled.go backend/internal/modules/activities/followupsetting.go backend/internal/platform/settings/memo.go backend/internal/platform/database/txmemo.go backend/internal/platform/database/savepoint.go backend/internal/platform/database/degradableread.go backend/internal/compose/integration/worklistcost_integration_test.go backend/internal/platform/testdb/roundtrips.go backend/internal/modules/consent/noticecase.go backend/internal/compose/commitmentdispatch.go backend/internal/compose/commitmentsettle.go backend/internal/compose/weekly backend/internal/compose/weeklyjobs.go backend/internal/modules/deals/closedate.go backend/internal/modules/deals/changeacceptance.go frontend/src/features/brief/brief.queue.tsx backend/internal/compose/slipping.go backend/internal/compose/attentionriskseam.go backend/internal/modules/deals/deal_read.go backend/internal/modules/deals/atrisklist.go -->
+<!-- describes: backend/internal/platform/database/readadmission.go backend/internal/platform/database/db.go backend/internal/compose/dealstatus backend/internal/platform/database/storekit/leadengagement.go backend/internal/compose/leadworktasks.go backend/internal/compose/attention backend/internal/compose/attentionseam.go backend/internal/compose/attentionsnapshotseam.go backend/internal/compose/worklistmetrics.go backend/internal/platform/database/statementmeter.go backend/internal/platform/database/planreuse.go backend/internal/modules/activities/waitingsql.go backend/internal/modules/activities/replysettled.go backend/internal/modules/activities/followupsetting.go backend/internal/platform/settings/memo.go backend/internal/platform/database/txmemo.go backend/internal/platform/database/savepoint.go backend/internal/platform/database/degradableread.go backend/internal/compose/integration/worklistcost_integration_test.go backend/internal/platform/testdb/roundtrips.go backend/internal/modules/consent/noticecase.go backend/internal/compose/commitmentdispatch.go backend/internal/compose/commitmentsettle.go backend/internal/compose/weekly backend/internal/compose/weeklyjobs.go backend/internal/modules/deals/closedate.go backend/internal/modules/deals/changeacceptance.go frontend/src/features/brief/brief.queue.tsx backend/internal/compose/slipping.go backend/internal/compose/attentionriskseam.go backend/internal/modules/deals/deal_read.go backend/internal/modules/deals/atrisklist.go -->
 # Home and the Worklist: how the day is ranked
 
 Home has one ranking engine behind three views: the Worklist, the **Needs you** section on Home, and the
@@ -27,6 +27,15 @@ Home asks for the Worklist with `shape=home`. The read assembles and ranks the s
 the summary, the counted candidates and the figures are the same as the queue's. It then carries only
 the day's meeting rows, which Home's schedule draws, and skips the page cut, the walk and the rows below
 the cut. The Worklist drawer reads the queue itself when it opens.
+
+Worklist snapshots and ranked search queries share the pool's read allowance in
+`database/readadmission.go`. They wait for that allowance before they use a connection.
+This leaves room for short transactions such as the signed-in user's profile.
+The wait ends when the caller leaves or the queue deadline expires.
+
+Joining a snapshot shares its allowance and keeps its isolation and access checks.
+A single-connection pool can still run one large read. Ordinary snapshots and writes use the pool directly.
+Statement costs, process metrics and the morning load test count admission wait apart from pool checkout.
 
 The Worklist assembles its lanes in one database snapshot and reuses plans for that read.
 The waiting queue binds its scan cap so its statement text stays stable across pages, and it keeps

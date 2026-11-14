@@ -62,8 +62,8 @@ scope() {
 }
 
 plan() {
-  local base="$1" out="$2" files=()
-  mapfile -t files < <(changed_test_files "$base")
+  local base="$1" out="$2" files=() path
+  while IFS= read -r path; do files+=("$path"); done < <(changed_test_files "$base")
   : >"$out"
   if ((${#files[@]} > 0)); then
     git -C "$ROOT" diff -U0 --no-color --no-ext-diff "$base"...HEAD -- "${files[@]}" |
@@ -139,9 +139,9 @@ go_lane() {
 }
 
 vitest_lane() {
-  local plan="$1" logs="$2" count files=() failed=0 attempt log
+  local plan="$1" logs="$2" count files=() failed=0 attempt log path
   count="$(awk -F'\t' '$1 == "vitest" { print $2; exit }' "$plan")"
-  mapfile -t files < <(awk -F'\t' '$1 == "vitest" { print $3 }' "$plan")
+  while IFS= read -r path; do files+=("$path"); done < <(awk -F'\t' '$1 == "vitest" { print $3 }' "$plan")
   ((${#files[@]} > 0)) || return 0
   echo "vitest: ${#files[@]} files, $count attempts: ${files[*]}"
   for attempt in $(seq 1 "$count"); do

@@ -17,6 +17,7 @@ import (
 	"time"
 
 	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/margince/margince/backend/internal/platform/database"
 )
 
 // MetricsInput is everything a role wires into its /metrics endpoint. It is a
@@ -171,6 +172,7 @@ func writePoolMetrics(out *exposition, pool *pgxpool.Pool) {
 	if pool == nil || out.gone() {
 		return
 	}
+	writeReadAdmissionMetrics(out, database.ReadAdmissionStats(pool))
 	stat := pool.Stat()
 	out.printf("# HELP margince_pgxpool_conns Connection pool state by class.\n")
 	out.printf("# TYPE margince_pgxpool_conns gauge\n")

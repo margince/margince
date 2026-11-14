@@ -19,6 +19,12 @@ import (
 type attentionSnapshots struct{ pool *pgxpool.Pool }
 
 func (a attentionSnapshots) InSnapshot(ctx context.Context, read string, fn func(context.Context) error) error {
+	return database.WithReadAdmission(ctx, a.pool, func(ctx context.Context) error {
+		return a.readSnapshot(ctx, read, fn)
+	})
+}
+
+func (a attentionSnapshots) readSnapshot(ctx context.Context, read string, fn func(context.Context) error) error {
 	return database.WithWorkspaceSnapshot(ctx, a.pool, func(ctx context.Context) error {
 		if read == attention.ReadWorklist || read == attention.ReadWorklistDone {
 			return database.ReuseGenericPlans(ctx, func(ctx context.Context) error {

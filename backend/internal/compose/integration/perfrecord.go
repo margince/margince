@@ -117,17 +117,16 @@ type BudgetMeasurement struct {
 	Verdict    string `json:"verdict,omitempty"`
 	KnownIssue int    `json:"known_issue,omitempty"`
 	Status5xx  int    `json:"status_5xx,omitempty"`
-	// Allowed5xx marks server errors a known issue lists as its own symptom;
-	// the gate let them pass, so the page reads them against that issue.
-	Allowed5xx bool `json:"allowed_5xx,omitempty"`
-	Status422  int  `json:"status_422,omitempty"`
-	// Allowed422 marks refusals a known issue lists as its own symptom, as
-	// Allowed5xx does for server errors.
-	Allowed422    bool    `json:"allowed_422,omitempty"`
-	PoolWaitMs    float64 `json:"pool_wait_ms,omitempty"`
-	PoolWaitMaxMs float64 `json:"pool_wait_max_ms,omitempty"`
-	Acquires      int64   `json:"acquires,omitempty"`
-	PoolSize      int32   `json:"pool_size,omitempty"`
+	Status422  int    `json:"status_422,omitempty"`
+	// Allowed422 marks refusals a known issue lists as its own symptom.
+	Allowed422           bool    `json:"allowed_422,omitempty"`
+	PoolWaitMs           float64 `json:"pool_wait_ms,omitempty"`
+	PoolWaitMaxMs        float64 `json:"pool_wait_max_ms,omitempty"`
+	Acquires             int64   `json:"acquires,omitempty"`
+	AdmissionWaitMs      float64 `json:"admission_wait_ms,omitempty"`
+	AdmissionWaitMaxMs   float64 `json:"admission_wait_max_ms,omitempty"`
+	AdmissionPeakWaiters int64   `json:"admission_peak_waiters,omitempty"`
+	PoolSize             int32   `json:"pool_size,omitempty"`
 	// Note says what a reader should know about a row without doubting its
 	// verdict; anything that does cast doubt on it is a Caveat.
 	Note string `json:"note,omitempty"`

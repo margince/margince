@@ -217,7 +217,7 @@ func (s *Store) Search(ctx context.Context, in Input) (Page, error) {
 	}
 
 	var page Page
-	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
+	err := s.db.Read(ctx, func(ctx context.Context, tx pgx.Tx) error {
 		var args []any
 		arg := func(v any) int { args = append(args, v); return len(args) }
 

@@ -292,7 +292,7 @@ func (e *QueryExecutor) answerRows(ctx context.Context, plan ValidatedPlan, bind
 		return nil, false, err
 	}
 	var rows []QueryRow
-	err = e.store.db.Tx(ctx, func(tx pgx.Tx) error {
+	err = e.store.db.Read(ctx, func(ctx context.Context, tx pgx.Tx) error {
 		queried, err := tx.Query(ctx, sql, compiler.args...)
 		if err != nil {
 			return fmt.Errorf("search: running the query plan: %w", err)
