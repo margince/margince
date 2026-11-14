@@ -181,16 +181,14 @@ func TestExtensionListAnswersTheHolderOfTheReadGrantAndRefusesTheRest(t *testing
 func TestExtensionInventoryListsWhatAUnitBorrowsFromTheCore(t *testing.T) {
 	t.Parallel()
 	exts := []extension.Extension{
-		{Name: "summaries", Needs: []extension.Need{{Capability: extension.CapabilityObjects, Reason: "Keeps the summaries."},
-			{Capability: extension.CapabilityModels, Reason: "Writes the summaries."}}},
+		{Name: "summaries", Needs: []extension.Need{{Capability: extension.CapabilityObjects, Reason: "Keeps."}, {Capability: extension.CapabilityModels, Reason: "Writes."}}},
 		{Name: "plain"},
 	}
 	got := composedExtensionInventory(exts, nil, nil)
 	if got[0].Name != "plain" || got[0].Needs != nil {
 		t.Errorf("a unit declaring no need = %+v, want Needs absent", got[0])
 	}
-	want := []crmcontracts.ComposedExtensionNeed{{Capability: "models", Reason: "Writes the summaries."},
-		{Capability: "objects", Reason: "Keeps the summaries."}}
+	want := []crmcontracts.ComposedExtensionNeed{{Capability: "models", Reason: "Writes."}, {Capability: "objects", Reason: "Keeps."}}
 	if got[1].Needs == nil || !slices.Equal(*got[1].Needs, want) {
 		t.Errorf("needs = %+v, want %+v sorted by capability", got[1].Needs, want)
 	}

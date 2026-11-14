@@ -52,6 +52,10 @@ const NOT_OURS_TO_INSET: ReadonlyMap<string, string> = new Map([
     "a composed unit's screen arrives from the generated @composition/screens registry; the unit lays its own surface out, and the two branches this build does draw for it are inset",
   ],
   [
+    "app",
+    "a composed unit's app arrives from the same generated registry as its screen; the unit lays its own surface out, and the pending, refused and link branches this build does draw for it are inset",
+  ],
+  [
     "x",
     "a fork's screen arrives from app/custom.ts's registry, which is empty upstream; the fallback this build draws for it is inset",
   ],
