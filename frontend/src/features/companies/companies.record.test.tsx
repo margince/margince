@@ -86,6 +86,19 @@ const rollup = {
 describe("CompanyScreen — Relationships tab (P-5)", () => {
   it("shows an Overview/Relationships tab bar and lists relationships by company_id", async () => {
     stubFetch(async (url) => {
+      const asked = new URL(url);
+      if (
+        asked.pathname === "/v1/records/references" &&
+        asked.searchParams.get("kind") === "contact"
+      ) {
+        return jsonResponse({
+          data: asked.searchParams
+            .getAll("id")
+            .flatMap((id) =>
+              id === "p-1" ? [{ id, name: null, archived: false }] : [],
+            ),
+        });
+      }
       if (url.includes("/relationships") && url.includes("company_id=o-1")) {
         return jsonResponse({
           data: [employmentRel],
@@ -102,7 +115,7 @@ describe("CompanyScreen — Relationships tab (P-5)", () => {
 
     await waitFor(() => expect(screen.getByText("Employment")).toBeTruthy());
     expect(screen.getByText("cto")).toBeTruthy();
-    expect(screen.getByText("p-1")).toBeTruthy();
+    expect(await screen.findByText("p-1")).toBeTruthy();
   });
 
   it("adding a relationship from the company side POSTs company_id + the picked contact_id", async () => {
@@ -241,6 +254,21 @@ describe("CompanyScreen — the account pulse line (P-4)", () => {
       async (url) => {
         if (url.includes("/activities")) {
           return jsonResponse({ data: [] });
+        }
+        const asked = new URL(url);
+        if (
+          asked.pathname === "/v1/records/references" &&
+          asked.searchParams.get("kind") === "contact"
+        ) {
+          return jsonResponse({
+            data: asked.searchParams
+              .getAll("id")
+              .flatMap((id) =>
+                id === "p-1"
+                  ? [{ id, name: "Dana Buyer", archived: false }]
+                  : [],
+              ),
+          });
         }
         if (url.includes("/contacts/p-1")) {
           return jsonResponse({

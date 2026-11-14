@@ -49,7 +49,6 @@ it.each([
   { path: "/v1/projects/p-1/360", useRead: () => useProject360("p-1") },
   { path: "/v1/companies/c-1/360", useRead: () => useCompany360("c-1") },
   { path: "/v1/companies/c-1", useRead: () => useEmployerSummary("c-1") },
-  { path: "/v1/leads/l-1", useRead: () => useEntityName("lead", "l-1") },
   {
     path: "/v1/deals/d-1",
     useRead: () =>

@@ -73,12 +73,27 @@ function mount(options: FilingOptions, returnedDeal?: string) {
   });
   const routed = globalThis.fetch;
   vi.stubGlobal("fetch", (input: RequestInfo | URL, init?: RequestInit) => {
-    urls.push(
-      new URL(
-        input instanceof Request ? input.url : String(input),
-        "https://test.local",
-      ),
+    const url = new URL(
+      input instanceof Request ? input.url : String(input),
+      "https://test.local",
     );
+    urls.push(url);
+    const method =
+      input instanceof Request ? input.method : (init?.method ?? "GET");
+    if (method === "GET" && url.pathname === "/v1/records/references") {
+      const ids = url.searchParams.getAll("id");
+      return Promise.resolve(
+        jsonResponse({
+          data:
+            url.searchParams.get("kind") === "deal"
+              ? [
+                  { id: "d1", name: "Only open deal", archived: false },
+                  { id: "d2", name: "Chosen renewal", archived: false },
+                ].filter((reference) => ids.includes(reference.id))
+              : [],
+        }),
+      );
+    }
     return routed(input, init);
   });
   render(

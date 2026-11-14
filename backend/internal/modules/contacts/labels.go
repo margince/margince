@@ -3,85 +3,125 @@
 
 package contacts
 
-// Display names for a SET of this module's records, one query per shape.
-//
-// The attention feed names every subject on the page, and the page can carry
-// a hundred contacts. Read one at a time that is a hundred gated round trips
-// whose count grows with how busy the workspace is; read together it is one
-// query whose cost grows with the same page.
-//
-// Each read carries the object grant and the row-scope clause its
-// single-record get carries, so a name is exactly as visible as the record.
-// A record the caller may not see is ABSENT from the answer rather than
-// refused: the caller asked about a set, and one unreadable member is not a
-// failure of the question.
-
 import (
 	"context"
 	"fmt"
 
 	"github.com/jackc/pgx/v5"
+	openapi_types "github.com/oapi-codegen/runtime/types"
 
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
-// ContactLabels answers each named contact's display name, under the caller's
-// own grants. The column is full_name — the field a merge card names —
-// and a contact with none is absent rather than blank.
+type contactIdentity struct {
+	reference crmcontracts.RecordReference
+	email     *string
+	logoKey   *string
+}
+
 func (s *Store) ContactLabels(ctx context.Context, want []ids.UUID) (map[ids.UUID]string, error) {
-	return s.labelsOf(ctx, entityContact, "contact", "full_name", want)
+	return s.labelsOf(ctx, contactEntity, want)
 }
 
-// CompanyLabels answers each named company's display name.
 func (s *Store) CompanyLabels(ctx context.Context, want []ids.UUID) (map[ids.UUID]string, error) {
-	return s.labelsOf(ctx, entityCompany, "company", "display_name", want)
+	return s.labelsOf(ctx, companyEntity, want)
 }
 
-// LeadLabels answers each named lead's display name. A lead captured without
-// one is absent, which is what its face does with an empty label.
 func (s *Store) LeadLabels(ctx context.Context, want []ids.UUID) (map[ids.UUID]string, error) {
-	return s.labelsOf(ctx, entityLead, "lead", "full_name", want)
+	return s.labelsOf(ctx, leadEntity, want)
 }
 
-// labelsOf is the one read the three shapes above are: the same grant, the
-// same row scope, the same archived exclusion, differing only in which table
-// and which column carries the name.
-//
-// The table and column are constants from the callers above and never reach
-// this from a request, which is what makes the format string safe here; the
-// ids travel as a parameter like every other value.
-func (s *Store) labelsOf(ctx context.Context, object, table, column string, want []ids.UUID) (map[ids.UUID]string, error) {
-	if err := auth.Require(ctx, object, principal.ActionRead); err != nil {
+func (s *Store) labelsOf(ctx context.Context, object string, want []ids.UUID) (map[ids.UUID]string, error) {
+	query, args, err := identityQuery(ctx, object, want, storekit.LiveOnly, false)
+	if err != nil {
 		return nil, err
 	}
 	labels := map[ids.UUID]string{}
 	if len(want) == 0 {
 		return labels, nil
 	}
+	err = s.tx(ctx, func(tx pgx.Tx) error {
+		var err error
+		labels, err = storekit.LabelsByID(ctx, tx, query, args...)
+		return err
+	})
+	if err != nil {
+		return nil, fmt.Errorf("contacts: reading %s labels: %w", object, err)
+	}
+	return labels, nil
+}
+
+func (s *Store) recordIdentities(ctx context.Context, object string, want []ids.UUID, archived storekit.ArchivedFilter) ([]contactIdentity, error) {
+	query, args, err := identityQuery(ctx, object, want, archived, true)
+	if err != nil {
+		return nil, err
+	}
+	found := []contactIdentity{}
+	if len(want) == 0 {
+		return found, nil
+	}
+	err = s.tx(ctx, func(tx pgx.Tx) error {
+		rows, err := tx.Query(ctx, query, args...)
+		if err != nil {
+			return err
+		}
+		found, err = pgx.CollectRows(rows, func(row pgx.CollectableRow) (contactIdentity, error) {
+			var identity contactIdentity
+			var id ids.UUID
+			err := row.Scan(&id, &identity.reference.Name, &identity.reference.Archived, &identity.email, &identity.logoKey)
+			identity.reference.Id = openapi_types.UUID(id)
+			return identity, err
+		})
+		return err
+	})
+	if err != nil {
+		return nil, fmt.Errorf("contacts: reading %s identities: %w", object, err)
+	}
+	return found, nil
+}
+
+// Legacy labels keep their two-column projection; references also need archive and identity fields.
+func identityQuery(ctx context.Context, object string, want []ids.UUID, archived storekit.ArchivedFilter, reference bool) (string, []any, error) {
+	if err := auth.Require(ctx, object, principal.ActionRead); err != nil {
+		return "", nil, err
+	}
+	if len(want) == 0 {
+		return "", nil, nil
+	}
+	table, name, email, logo := "", "r.full_name", "NULL::text", "NULL::text"
+	switch object {
+	case contactEntity:
+		table = "contact"
+	case companyEntity:
+		table, name, logo = "company", "r.display_name", "r.logo_object_key"
+	case leadEntity:
+		table, email = "lead", "r.email"
+	default:
+		return "", nil, apperrors.ErrInvalidArgument
+	}
+	columns := "r.id, coalesce(" + name + ", '')"
+	if reference {
+		columns = "r.id, " + name + ", r.archived_at IS NOT NULL, " + email + ", " + logo
+	}
 	var args []any
 	arg := func(v any) int { args = append(args, v); return len(args) }
 	idsPos := arg(want)
 	scope, err := auth.ScopeClauseFor(ctx, object, "r", arg)
 	if err != nil {
-		return nil, err
+		return "", nil, err
 	}
 	if scope == "" {
 		scope = sqlAlwaysVisible
 	}
-	err = s.tx(ctx, func(tx pgx.Tx) error {
-		found, err := storekit.LabelsByID(ctx, tx, fmt.Sprintf(`
-			SELECT r.id, coalesce(r.%s, '')
-			  FROM %s r
-			 WHERE r.id = ANY($%d) AND r.archived_at IS NULL AND (%s)`,
-			column, table, idsPos, scope), args...)
-		labels = found
-		return err
-	})
-	if err != nil {
-		return nil, fmt.Errorf("contacts: reading %s display names: %w", table, err)
+	live := ""
+	if archived == storekit.LiveOnly {
+		live = " AND r.archived_at IS NULL"
 	}
-	return labels, nil
+	query := fmt.Sprintf(`SELECT %s FROM %s r WHERE r.id = ANY($%d) AND (%s)%s`, columns, table, idsPos, scope, live)
+	return query, args, nil
 }

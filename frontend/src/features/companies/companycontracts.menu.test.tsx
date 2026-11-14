@@ -48,8 +48,26 @@ const GRANTED = meFixture({
 function stub(contracts: unknown[], me: unknown = GRANTED) {
   vi.stubGlobal(
     "fetch",
-    vi.fn(async (input: RequestInfo | URL) => {
+    vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
       const url = input instanceof Request ? input.url : String(input);
+      const asked = new URL(url, "https://test.local");
+      const method =
+        input instanceof Request ? input.method : (init?.method ?? "GET");
+      if (method === "GET" && asked.pathname === "/v1/records/references") {
+        return Response.json({
+          data:
+            asked.searchParams.get("kind") === "deal" &&
+            asked.searchParams.getAll("id").includes(RENEWED_DEAL.id)
+              ? [
+                  {
+                    id: RENEWED_DEAL.id,
+                    name: RENEWED_DEAL.name,
+                    archived: false,
+                  },
+                ]
+              : [],
+        });
+      }
       const body = url.includes("/me")
         ? me
         : url.includes("/documents")

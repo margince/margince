@@ -109,7 +109,9 @@ function byIdCalls(fetchMock: { mock: { calls: unknown[][] } }): string[][] {
       "http://localhost",
     );
     const named = url.searchParams.getAll("id");
-    return url.pathname.endsWith("/companies") && named.length > 0
+    return url.pathname.endsWith("/records/references") &&
+      url.searchParams.get("kind") === "company" &&
+      named.length > 0
       ? [named]
       : [];
   });
@@ -152,25 +154,51 @@ function stubBackend(opts: {
         rows: [],
       });
     }
+    const referenceURL = new URL(url, "http://localhost");
+    if (referenceURL.pathname === "/v1/records/references") {
+      const ids = referenceURL.searchParams.getAll("id");
+      if (referenceURL.searchParams.get("kind") === "company") {
+        if (ids.some((id) => opts.refuse?.includes(id))) {
+          return jsonResponse(
+            { code: "permission_denied", title: "permission denied" },
+            403,
+          );
+        }
+        return jsonResponse({
+          data: ids.flatMap((id) => {
+            const company = opts.byId?.[id];
+            return company
+              ? [
+                  {
+                    id,
+                    name: company.display_name,
+                    archived: false,
+                    logo: company.logo_url,
+                  },
+                ]
+              : [];
+          }),
+        });
+      }
+      return jsonResponse({
+        data:
+          opts.project && ids.includes(opts.project.id)
+            ? [
+                {
+                  id: opts.project.id,
+                  name: opts.project.name,
+                  archived: false,
+                },
+              ]
+            : [],
+      });
+    }
     const byId = /\/companies\/([^/?]+)/.exec(url);
     if (byId) {
       const company = opts.byId?.[byId[1]];
       return company
         ? jsonResponse(company)
         : jsonResponse({ code: "not_found", title: "not found" }, 404);
-    }
-    const named = new URL(url, "http://localhost").searchParams.getAll("id");
-    if (url.includes("/companies") && named.length > 0) {
-      if (named.some((id) => opts.refuse?.includes(id))) {
-        return jsonResponse(
-          { code: "permission_denied", title: "permission denied" },
-          403,
-        );
-      }
-      return jsonResponse({
-        data: named.flatMap((id) => (opts.byId?.[id] ? [opts.byId[id]] : [])),
-        page: { next_cursor: null },
-      });
     }
     if (url.includes("/companies")) {
       if (opts.pageGate) {
@@ -521,8 +549,8 @@ describe("the board past the picker's first page", () => {
         return String(first instanceof Request ? first.url : first);
       })
       .find((url) => url.includes("id=o-north"));
-    expect(read).toContain("include_archived=true");
-    expect(read).toContain("include_anchor=true");
+    expect(read).toContain("/records/references?");
+    expect(read).toContain("kind=company");
   });
 });
 

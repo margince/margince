@@ -58,6 +58,7 @@ func (s *Server) wireSystemOfRecordReads(pool *pgxpool.Pool) {
 	}
 	s.marginceChangeHandlers = newMarginceChangeHandlers(pool)
 	s.claimHandlers = claimHandlers{contacts: s.contactsStore, deals: deals.NewStore(InstallationDB(pool), DealsInstallation())}
+	s.recordReferenceHandlers = recordReferenceHandlers{contacts: s.contactsStore, deals: s.claimHandlers.deals, projects: ProjectsStore(pool)}
 	s.ownershipRequestHandlers = ownershipRequestHandlers{transfers: newOwnershipTransfers(pool)}
 	s.dealCommitmentHandlers = newDealCommitmentHandlers(pool, time.Now)
 	s.promiseTakeOverHandlers = newPromiseTakeOverHandlers(pool)

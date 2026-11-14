@@ -699,6 +699,7 @@
     "readAttachmentForFields": "business",
     "readCaptureTracePipeline": "capture",
     "readCorpus": "business",
+    "readRecordReferences": "business",
     "readTranscriptForNextSteps": "business",
     "reassignHandoff": "business",
     "recordCommunicationContext": "compliance",
@@ -1723,6 +1724,7 @@
     "readAttachmentForFields": "documents",
     "readCaptureTracePipeline": "capture_triage",
     "readCorpus": "knowledge",
+    "readRecordReferences": "search",
     "readTranscriptForNextSteps": "activities",
     "reassignHandoff": "leads",
     "receiveDispactChannelEvent": "provider_notices",
@@ -3541,6 +3543,7 @@
       "sales_lists",
       "sales_rules",
       "scheduling",
+      "search",
       "sharing",
       "signals",
       "system_facts"

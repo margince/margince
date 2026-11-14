@@ -119,6 +119,7 @@ type Server struct {
 	captureCounterpartyHoldHandlers
 	conversationSuggestionHandlers
 	claimHandlers
+	recordReferenceHandlers
 	marginceChangeHandlers
 	ownershipRequestHandlers
 	dealCommitmentHandlers

@@ -7,6 +7,7 @@ import type { CreateFieldOption } from "../../components/create.fields";
 import type { ListColumn } from "../../design-system/listtable";
 import { LocaleProvider, useT } from "../../i18n";
 import { useCompanyZone } from "../../lib/companyzone";
+import { companyNamesAnswer } from "../../testing/companynames.testkit";
 import { leadColumns } from "./leads.columns";
 
 type Lead = components["schemas"]["Lead"];
@@ -106,16 +107,23 @@ describe("the lead table's columns", () => {
   it("open a linked company under its own name, without opening the row", async () => {
     vi.stubGlobal(
       "fetch",
-      vi.fn(
-        async () =>
-          new Response(
-            JSON.stringify({
-              data: [{ id: "c-7", display_name: "Northwind Holding" }],
-              next_cursor: null,
-            }),
-            { status: 200, headers: { "Content-Type": "application/json" } },
-          ),
-      ),
+      vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+        const url = input instanceof Request ? input.url : String(input);
+        const method =
+          input instanceof Request ? input.method : (init?.method ?? "GET");
+        const reference =
+          method === "GET"
+            ? companyNamesAnswer(url, { "c-7": "Northwind Holding" })
+            : null;
+        if (reference) return reference;
+        return new Response(
+          JSON.stringify({
+            data: [{ id: "c-7", display_name: "Northwind Holding" }],
+            next_cursor: null,
+          }),
+          { status: 200, headers: { "Content-Type": "application/json" } },
+        );
+      }),
     );
     const onRow = vi.fn();
     renderCell("company", { ...lead, company_id: "c-7" }, onRow);

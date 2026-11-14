@@ -99,7 +99,18 @@ function draw(node: ReactNode) {
       if (company) {
         return company;
       }
-      const path = new URL(url, "https://test.local").pathname;
+      const asked = new URL(url, "https://test.local");
+      if (
+        asked.pathname === "/v1/records/references" &&
+        asked.searchParams.get("kind") === "contact"
+      ) {
+        return Response.json({
+          data: asked.searchParams.getAll("id").includes(ANA)
+            ? [{ id: ANA, name: "Ana Sommer", archived: false }]
+            : [],
+        });
+      }
+      const path = asked.pathname;
       const named: Record<string, unknown> = {
         [`/v1/contacts/${ANA}`]: { id: ANA, full_name: "Ana Sommer" },
       };
