@@ -562,6 +562,8 @@ describe("a commitment's task detail", () => {
     due_at: null,
     assignee_id: null,
     assignee_name: null,
+    due_has_time: false,
+    version: 1,
     overdue: false,
   };
 
@@ -645,6 +647,59 @@ describe("a commitment's task detail", () => {
         name: en["tasks.complete"],
       }),
     ).toBeTruthy();
+  });
+});
+
+// The row carries the task's version, so ticking it off reads no task first.
+// A page of commitments is one request, not one more for each row.
+describe("a commitment's tick", () => {
+  it("marks the task done at the row's version without reading the task", async () => {
+    const row = {
+      activity_id: "a-tick",
+      subject: "Confirm the depot slot",
+      due_at: null,
+      due_has_time: false,
+      version: 7,
+      assignee_id: null,
+      assignee_name: null,
+      overdue: false,
+    };
+    const writes: { method: string; ifMatch: string | null }[] = [];
+    const { urls } = projectsBackend({
+      view: project360({
+        commitments: { data: [row], page: { has_more: false } },
+      }),
+      respond: async (url, method, request) => {
+        if (url.endsWith("/v1/me")) {
+          return jsonResponse(
+            meFixture({
+              allow: {
+                project: ["read", "update"],
+                activity: ["read", "update"],
+              },
+            }),
+          );
+        }
+        if (url.includes(`/v1/activities/${row.activity_id}`)) {
+          writes.push({ method, ifMatch: request.headers.get("If-Match") });
+          return jsonResponse({ id: row.activity_id, version: 8 });
+        }
+        return null;
+      },
+    });
+    render(<ProjectScreen id={project().id} />);
+
+    await userEvent.click(
+      lastOf(
+        await screen.findAllByRole("checkbox", { name: en["tasks.complete"] }),
+      ),
+    );
+
+    await waitFor(() => expect(writes).toHaveLength(1));
+    expect(writes[0]).toEqual({ method: "PATCH", ifMatch: "7" });
+    expect(
+      urls.filter((url) => url.includes(`/v1/activities/${row.activity_id}`)),
+    ).toHaveLength(1);
   });
 });
 
