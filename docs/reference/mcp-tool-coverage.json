@@ -4282,7 +4282,7 @@
     },
     {
       "name": "read_details",
-      "tokens": 2230,
+      "tokens": 2241,
       "agents": [],
       "required_by_cases": [
         "case112_my_plan_and_the_dossier",
@@ -4326,7 +4326,7 @@
     },
     {
       "name": "change_activities",
-      "tokens": 2141,
+      "tokens": 2176,
       "agents": [
         "overnight_at_risk_sweep"
       ],
@@ -4543,7 +4543,7 @@
     },
     {
       "name": "send_outbound",
-      "tokens": 1695,
+      "tokens": 1722,
       "agents": [],
       "required_by_cases": [
         "case44_chase_what_is_slipping",
@@ -4610,7 +4610,7 @@
     },
     {
       "name": "change_capture",
-      "tokens": 1080,
+      "tokens": 1129,
       "agents": [],
       "required_by_cases": [
         "case82_keep_that_newsletter_out",

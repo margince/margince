@@ -84,6 +84,8 @@ internal/compose/handledreceiptdetail_integration_test.go 2
 internal/compose/handoffseam_integration_test.go 1
 internal/compose/hiddenbacklogrows_integration_test.go 4
 internal/compose/integration/activity_audience_integration_test.go 1
+internal/compose/integration/agentaccess/dispactcalls_integration_test.go 1
+internal/compose/integration/agentaccess/dispactpush_integration_test.go 1
 internal/compose/integration/agentaccess/oauth_grant_integration_test.go 1
 internal/compose/integration/agentaccess/oauth_refresh_integration_test.go 1
 internal/compose/integration/agentassignee_integration_test.go 3

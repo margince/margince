@@ -38,6 +38,8 @@ type clauseMemo struct {
 var (
 	contentClauses  = &clauseMemo{entries: map[string]clauseTemplate{}}
 	discoverClauses = &clauseMemo{entries: map[string]clauseTemplate{}}
+
+	messageContentClauses = &clauseMemo{entries: map[string]clauseTemplate{}}
 )
 
 // clauseTemplate is one rendering whose placeholders start at templateBase,

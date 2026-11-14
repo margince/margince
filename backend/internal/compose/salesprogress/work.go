@@ -30,17 +30,26 @@ func (h Reading) ListSalesProgressDeals(w http.ResponseWriter, r *http.Request, 
 	ctx := r.Context()
 	var out crmcontracts.SalesProgressDealPage
 	err := h.DB.TxIsolated(ctx, pgx.RepeatableRead, func(tx pgx.Tx) error {
+		allowed, err := identity.IndividualPerformanceFor(ctx, tx)
+		if err != nil {
+			return err
+		}
 		scope, err := h.readableScope(ctx, tx, (*crmcontracts.GetSalesProgressParamsScopeKind)(params.ScopeKind), params.ScopeId)
 		if err != nil {
 			return err
 		}
 		in := deals.ListDealsInput{Status: new("open"), Cursor: params.Cursor, Limit: params.Limit}
 		if scope.Kind == crmcontracts.ReportingScopeKindTeam {
-			if err := requireTeamDealsShown(ctx, tx); err != nil {
-				return err
+			// The list names each member's deals one by one, so it is refused
+			// while the switch is off. The team totals keep their floor.
+			if !allowed {
+				return auth.IndividualPerformanceOffError{}
 			}
 			in.OwnerTeamID = new(ids.From[ids.TeamKind](ids.UUID(*scope.Id)))
 		} else {
+			if !auth.MayMeasureSeat(ctx, allowed, ids.UUID(*scope.Id)) {
+				return auth.IndividualPerformanceOffError{}
+			}
 			in.OwnerID = new(ids.From[ids.UserKind](ids.UUID(*scope.Id)))
 		}
 		page, next, err := h.Deals.ListDealsTx(ctx, tx, in, deals.CustomColumns{})
@@ -59,16 +68,6 @@ func (h Reading) ListSalesProgressDeals(w http.ResponseWriter, r *http.Request, 
 		return
 	}
 	httperr.WriteJSON(w, http.StatusOK, out)
-}
-
-// requireTeamDealsShown refuses a team's deal list while the switch is off.
-// The list names each member's deals one by one; the team totals keep their floor.
-func requireTeamDealsShown(ctx context.Context, tx pgx.Tx) error {
-	allowed, err := identity.IndividualPerformanceFor(ctx, tx)
-	if err != nil || allowed {
-		return err
-	}
-	return auth.IndividualPerformanceOffError{}
 }
 
 func dealWork(ctx context.Context, tx pgx.Tx, page []crmcontracts.Deal, now time.Time) (crmcontracts.SalesProgressDealPage, error) {

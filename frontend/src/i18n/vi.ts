@@ -2333,6 +2333,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "systemJob.deal_key_names": "Bổ sung tên deal",
   "systemJob.deal_room_link_request": "Yêu cầu liên kết Deal Room",
   "systemJob.deal_room_timeline": "Lịch sử Deal Room",
+  "systemJob.chat_links": "Kênh chat",
   "systemJob.dedupe_recheck": "Kiểm tra lại hàng chờ trùng lặp",
   "systemJob.deployment_secret_seal": "Niêm phong thông tin bí mật",
   "systemJob.domain_triage": "Phân loại trang web",
@@ -4789,6 +4790,11 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "timeline.kind.extension": "Tiện ích mở rộng",
   "timeline.kind.signal": "Tín hiệu",
   "timeline.withheld": "Nội dung chỉ dành cho người tham gia",
+  "timeline.chatSummary.badge": "Tóm tắt AI",
+  "timeline.chatSummary.from": "Từ {provider}",
+  "timeline.chatSummary.meta_one": "{count} tin nhắn, đến {ended}",
+  "timeline.chatSummary.meta_other": "{count} tin nhắn, đến {ended}",
+  "timeline.chatSummary.open": "Mở trong {provider}",
   "compose.deadRecipients":
     "Thư gửi đến {addresses} đang bị trả lại: lần gửi gần nhất bị từ chối và từ đó chưa lần nào thành công. Vẫn gửi, hoặc dùng địa chỉ khác.",
   "compose.threadShare": "Chia sẻ với công ty",
@@ -9599,6 +9605,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "settings.passportLastUsedOn": "Dùng lần cuối {date}",
   "settings.passportExpiresOn": "Hết hạn {date}",
   "settings.revokeNamed": "Thu hồi {name}",
+  "settings.allowAgain": "Cho phép lại",
+  "settings.allowAgainNamed": "Cho phép lại {name}",
   "settings.revokeConfirm":
     "Thông tin xác thực của passport sẽ mất hiệu lực ngay. Agent sẽ mất quyền truy cập ở lần gọi tiếp theo.",
   "import.withheld":
@@ -10224,6 +10232,9 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "jobs.kind.technical_enrich_company": "Tra cứu kỹ thuật công ty",
   "jobs.kind.telegram_ingest": "Tiếp nhận tin nhắn Telegram",
   "jobs.kind.telegram_poll": "Lấy tin nhắn Telegram",
+  "jobs.kind.chat_link_flush": "Đăng vào kênh chat",
+  "jobs.kind.chat_pull": "Tóm tắt kênh chat",
+  "jobs.kind.chat_pull_sweep": "Kiểm tra kênh chat",
   "jobs.kind.telegram_poll_sweep": "Lên lịch lấy tin nhắn Telegram",
   "jobs.kind.time_scan": "Kiểm tra tự động hóa theo thời gian",
   "jobs.kind.transcript_propose": "Đọc bản chép lời",
@@ -11867,6 +11878,78 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "connectors.telegramReplaceCta": "Thay token",
   "connectors.telegramConnectedAs": "Đã kết nối với tên @{username}.",
   "connectors.telegramConnectFailed": "Không thể kết nối bot",
+
+  "connectors.bot.provDispact": "Dispact",
+  "connectors.bot.dispactTitle": "Bot Dispact",
+  "connectors.bot.dispactSub":
+    "Một bot đăng tin về giao dịch và dự án vào các kênh riêng tư trong chat nhóm, và đọc những gì nhóm trao đổi ở đó.",
+  "connectors.bot.dispactConnectCta": "Kết nối bot Dispact",
+  "connectors.bot.dispactEmptyNote":
+    "Khi đã kết nối bot, mỗi giao dịch và dự án có thể liên kết với một kênh riêng tư trong chat nhóm.",
+  "connectors.bot.dispactDisconnectBody":
+    "Thao tác này xóa token đã lưu. Margince ngừng đăng và đọc ở mọi kênh đã liên kết; các ghi chú đã lưu vẫn ở trong CRM.",
+  "connectors.bot.dispactModalTitle": "Kết nối bot Dispact",
+  "connectors.bot.dispactTokenHint":
+    "Token ứng dụng của bot. Token bắt đầu bằng gwapp_, được lưu trong kho khóa và sẽ không hiển thị lại.",
+  "connectors.bot.dispactAddress": "Địa chỉ chat",
+  "connectors.bot.dispactAddressHint":
+    "Địa chỉ web của chat nhóm, ví dụ https://chat.example.com.",
+  "connectors.bot.eventsSecret": "Khóa sự kiện",
+  "connectors.bot.eventsSecretHint":
+    "Không bắt buộc. Sao chép khóa sự kiện (whsec_…) từ trang ứng dụng Margince trong chat của bạn. Có khóa này, Margince đọc một kênh ngay khi kênh có tin nhắn mới và kiểm tra phần còn lại mỗi giờ; nếu không, Margince kiểm tra mọi kênh mỗi phút.",
+  "connectors.bot.eventsSecretKeepHint": "Để trống để giữ khóa sự kiện đã lưu.",
+
+  "channelLink.title": "Chat nhóm",
+  "channelLink.off": "Hãy kết nối bot chat trong Cài đặt để liên kết kênh.",
+  "channelLink.openSettings": "Mở cài đặt bot chat",
+  "channelLink.none": "Chưa có kênh",
+  "channelLink.noneSub":
+    "Một kênh riêng tư giúp cả nhóm nắm được tình hình của hồ sơ này.",
+  "channelLink.create": "Tạo kênh",
+  "channelLink.linkExisting": "Liên kết kênh có sẵn",
+  "channelLink.linkCta": "Liên kết kênh",
+  "channelLink.linkFailed": "Chưa liên kết được kênh",
+  "channelLink.channelField": "Tên hoặc liên kết của kênh",
+  "channelLink.channelHint": "Một kênh riêng tư mà bot đã là thành viên.",
+  "channelLink.summarize":
+    "Tóm tắt cuộc trao đổi đến nay (tối đa 5 bản tóm tắt)",
+  "channelLink.verbosity": "Margince đăng những gì",
+  "channelLink.verbosityHint": "Ở mọi mức, thẻ trong kênh luôn được cập nhật.",
+  "channelLink.verbosityFailed": "Chưa lưu được cài đặt",
+  "channelLink.verbosity.everything": "Mọi thứ",
+  "channelLink.verbosity.important": "Chỉ điều quan trọng",
+  "channelLink.verbosity.milestones": "Chỉ các mốc chính",
+  "channelLink.verbosity.silent": "Im lặng (chỉ thẻ)",
+  "channelLink.open": "Mở {name} trong chat nhóm",
+  "channelLink.copy": "Sao chép liên kết kênh",
+  "channelLink.copied": "Đã sao chép liên kết kênh",
+  "channelLink.copyRemedy": "Mở kênh và sao chép địa chỉ của kênh ở đó.",
+  "channelLink.notInChat_one":
+    "{count} thành viên được mời chưa có tài khoản chat.",
+  "channelLink.notInChat_other":
+    "{count} thành viên được mời chưa có tài khoản chat.",
+  "channelLink.pausedBadge": "Tạm dừng",
+  "channelLink.paused": "Kênh đang tạm dừng",
+  "channelLink.pausedBody":
+    "Kênh đã được lưu trữ, hoặc bot đã mất quyền truy cập. Margince không đăng gì cho đến khi bạn hủy liên kết và liên kết kênh khác.",
+  "channelLink.unlink": "Hủy liên kết",
+  "channelLink.unlinkNamed": "Hủy liên kết {name}",
+  "channelLink.unlinkTitle": "Hủy liên kết kênh này?",
+  "channelLink.unlinkBody":
+    "Margince ngừng đăng và đọc. Kênh và các tin nhắn của kênh vẫn ở trong chat.",
+  "channelLink.refused.botNotConnected":
+    "Chưa có bot chat nào được kết nối. Quản trị viên kết nối bot trong Cài đặt.",
+  "channelLink.refused.channelNotFound":
+    "Không tìm thấy kênh nào với tên hoặc liên kết này.",
+  "channelLink.refused.channelNotPrivate":
+    "Kênh này là kênh công khai. Hãy liên kết một kênh riêng tư.",
+  "channelLink.refused.botNotMember":
+    "Bot chưa là thành viên của kênh này. Hãy thêm bot vào kênh rồi thử lại.",
+  "channelLink.refused.channelAlreadyLinked":
+    "Kênh này đã thuộc về một giao dịch hoặc dự án khác.",
+  "channelLink.refused.recordAlreadyLinked": "Hồ sơ này đã có kênh.",
+  "channelLink.refused.providerUnreachable":
+    "Không kết nối được tới chat. Chưa có gì thay đổi, hãy thử lại.",
 
   // The workspace's own consumer-mail list (CAP-PARAM-5): what the shipped
   // baseline missed, and what it got wrong. Admin-curated and shared, because
@@ -13540,7 +13623,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "settings.part.integrations.contact": "Dữ liệu liên hệ",
   "settings.part.integrations.accounting": "Kế toán",
   "settings.part.integrations.webhooks": "Webhook",
-  "settings.part.integrations.telegram": "Bot Telegram",
+  "settings.part.integrations.telegram": "Bot chat",
   "settings.part.integrations.sharedMailboxes": "Hộp thư dùng chung",
   "sharedMailboxes.title": "Hộp thư dùng chung",
   "sharedMailboxes.intro":
@@ -21383,6 +21466,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "Đề xuất thiết lập báo cáo hoặc mục tiêu doanh số",
   "aiTask.name.request_settlement": "Kiểm tra yêu cầu đã được giải đáp",
   "aiTask.name.rewrite": "Viết lại",
+  "aiTask.name.chat_summary": "Tóm tắt kênh chat",
   "aiTask.name.signal_extract": "Trích xuất tín hiệu từ cuộc trao đổi",
   "aiTask.name.site_extract": "Phân tích chuyên sâu trang web",
   "aiTask.name.site_fact_extract": "Trích xuất thông tin từ trang web",

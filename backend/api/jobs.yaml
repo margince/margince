@@ -2071,6 +2071,55 @@ kinds:
       forever; registered it fails with a message that says the installation has
       no model configured.
 
+  chat_link_flush:
+    role: worker
+    go_type: ChatLinkFlushArgs
+    queue: default
+    timeout: 2m
+    opts_owner: caller
+    registration: {when: [ChannelVault], absent: registers_nothing}
+    args:
+      Workspace: id
+      LinkID: id
+    reason: >-
+      One linked channel's pending events become one post, and its card is kept
+      current. A few calls to the chat, each bounded at fifteen seconds, so two
+      minutes covers a card, a rewrite and the post with room to spare.
+
+  chat_pull:
+    role: worker
+    go_type: ChatPullArgs
+    queue: default
+    timeout: 10m
+    max_attempts: 3
+    opts_owner: args
+    registration: {when: [ChannelVault], absent: registers_nothing}
+    args:
+      Workspace: id
+      ConnectionID: id
+    reason: >-
+      One bot's linked channels each read at most five history pages, and each
+      closed stretch of talk is one model call. Ten minutes covers a busy hour
+      across a few dozen channels. Three attempts, because chat_pull_sweep
+      enqueues the next pull every minute, and the pull is unique per
+      connection while one waits or runs.
+
+  chat_pull_sweep:
+    role: dispatcher
+    go_type: ChatPullSweepArgs
+    queue: default
+    timeout: 2m
+    opts_owner: caller
+    cadence: 1m
+    registration: {when: [ChannelVault], absent: registers_nothing}
+    fans_out_to: chat_pull
+    fan_out_unit: connection
+    reason: >-
+      Every minute, so a stretch of talk is judged soon after its thirty quiet
+      minutes end. A connection whose channels have nothing new costs one
+      history read per channel. A connection Dispact pushed a notice for in
+      the last hour is read only hourly, because the notices start its pulls.
+
   telegram_ingest:
     role: worker
     go_type: TelegramIngestArgs

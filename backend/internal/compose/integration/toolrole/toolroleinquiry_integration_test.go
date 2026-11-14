@@ -8,12 +8,15 @@ package toolrole
 import (
 	"slices"
 	"strconv"
+	"strings"
+	"sync"
 	"testing"
 
 	"github.com/margince/margince/backend/internal/compose"
 	"github.com/margince/margince/backend/internal/compose/integration"
 	"github.com/margince/margince/backend/internal/compose/integration/apptest"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -38,6 +41,51 @@ func TestInquiryPreviewRequiresPermissionToCreateTheWorkItPlans(t *testing.T) {
 	run, reached := recorded.take(calls[0].verb, human)
 	if !reached || apptest.VerdictOf(got, run.Refused) != apptest.VerdictRefused || !slices.Contains(run.Refused, "activity.create") {
 		t.Fatalf("preview refusal = %s, recorded = %+v, reached = %v", got.Text, run, reached)
+	}
+}
+
+// webFormWork is held by each seed and call that works a web form. A form's
+// fence pins a session from a quarter of the pool, two at the lane's eight
+// connections, and answers website_form_busy past that. Every role seeds and
+// calls at once, so the sweep works one form at a time.
+var webFormWork sync.Mutex
+
+// webFormKinds are the kinds a call that works a web form takes. None is a
+// late kind: a late seed runs inside the call, which already holds webFormWork.
+var webFormKinds = map[string]bool{
+	"web_form": true, "versioned_web_form": true, "existing_website_inquiry": true, "assignable_website_inquiry": true,
+}
+
+// oneWebFormAtATime runs work under webFormWork when call takes a web form.
+func oneWebFormAtATime(t *testing.T, call toolRoleCall, work func()) {
+	t.Helper()
+	counting := countingPool(t)
+	call.args(counting)
+	for kind := range counting.wanted {
+		if webFormKinds[kind] {
+			webFormWork.Lock()
+			defer webFormWork.Unlock()
+			break
+		}
+	}
+	work()
+}
+
+// oneFormAtATime is seed run while no other seed or call works a web form.
+func (s sweepSeed) oneFormAtATime(seed func(sweepSeed) string) func() string {
+	return func() string {
+		webFormWork.Lock()
+		defer webFormWork.Unlock()
+		return seed(s)
+	}
+}
+
+// holdNoBusyForm fails a call a form's fence turned away: its verb takes a web
+// form through a kind webFormKinds does not name.
+func holdNoBusyForm(t *testing.T, verb string, got apptest.MCPResult) {
+	t.Helper()
+	if got.IsError && strings.Contains(got.Text, httperr.WebsiteFormBusyCode) {
+		t.Fatalf("%s met a busy web form; add the kind it takes to webFormKinds: %s", verb, got.Text)
 	}
 }
 

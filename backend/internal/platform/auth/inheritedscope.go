@@ -39,9 +39,15 @@ func ActivityAvailableClause(alias string) string {
 }
 
 func discoverGateFor(p principal.Principal, alias string, arg func(any) int) string {
-	available := ActivityAvailableClause(alias) + " AND " + internalMailAccessClause(p, alias, arg)
+	return ActivityAvailableClause(alias) + " AND " + discoverReach(p, alias, arg, assignedCommitmentArm)
+}
+
+// discoverReach is the discover gate past availability. taskArm is the task
+// holder's way in, which only a task can use; nil leaves it out.
+func discoverReach(p principal.Principal, alias string, arg func(any) int, taskArm clauseBuilder) string {
+	access := internalMailAccessClause(p, alias, arg)
 	if UnboundedFor(p, linkTargetTables...) {
-		return available
+		return access
 	}
 	// One correlated pass over the activity's links, not two. bool_or is
 	// exactly the ANY-link rule, and its empty-set answer — NULL, coalesced
@@ -69,8 +75,11 @@ func discoverGateFor(p principal.Principal, alias string, arg func(any) int) str
 	// host_user_id: that column labels whose calendar a row came off, which is
 	// ownership rather than membership, and a label is not evidence that anybody
 	// was present.
-	return fmt.Sprintf(`%[1]s AND (%[4]s.internal_mail_authorization IS NOT NULL OR %[2]s OR %[3]s)`,
-		available, activityReachArms(p, alias, arg), assignedCommitmentArm(p, alias, arg), alias)
+	reach := activityReachArms(p, alias, arg)
+	if taskArm != nil {
+		reach += " OR " + taskArm(p, alias, arg)
+	}
+	return fmt.Sprintf(`%[1]s AND (%[3]s.internal_mail_authorization IS NOT NULL OR %[2]s)`, access, reach, alias)
 }
 
 // activityReachArms is discovery through the row's own links or its attendance.
@@ -217,11 +226,11 @@ func activityContentAudienceArm(p principal.Principal, alias string, arg func(an
 	// to that correspondence. Archiving or restricting the source withholds it.
 	source := discoverGateFor(p, contentGateSource, arg) + " AND " + activityAudienceArm(p, contentGateSource, arg) + agentRestrictionArm(p, contentGateSource)
 	sourceID := provenance.TaskSourceActivitySQL(alias)
-	sourceBound := own + fmt.Sprintf(` AND ((coalesce(%[1]s.source_system, '') NOT IN ('`+provenance.EmailRequestSource+`', '`+provenance.CommitmentTaskSource+`', '`+provenance.LeadRepliedSource+`') AND (%[1]s.kind <> 'task' OR %[1]s.source_activity_id IS NULL))
+	sourceBound := own + fmt.Sprintf(` AND (%[5]s
 	 OR EXISTS (SELECT 1 FROM activity %[4]s
 	   WHERE %[4]s.id = %[3]s
      AND (coalesce(%[1]s.source_system, '') <> '`+provenance.EmailRequestSource+`' OR %[4]s.archived_at IS NULL)
-	     AND %[4]s.restricted_at IS NULL AND %[2]s))`, alias, source, sourceID, contentGateSource)
+	     AND %[4]s.restricted_at IS NULL AND %[2]s))`, alias, source, sourceID, contentGateSource, taskFreeSQL(alias))
 	return sourceBound + fmt.Sprintf(" AND (coalesce(%s.source_system, '') <> '%s' OR %s)",
 		alias, provenance.CommitmentTaskSource, commitmentEvidenceArm(p, alias+".source_activity_id", alias+".source_id", arg)) +
 		agentRestrictionArm(p, alias)

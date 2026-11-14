@@ -37,7 +37,7 @@ func replaceTestTelegramBot(t *testing.T, e *integration.Env, vault keyvault.Vau
 	api := &telegramPollFakeAPI{bot: telegram.Bot{ID: botID, Username: username}}
 	store := capture.NewChannelStore(e.DB(), vault, api, quietTestLogger())
 	err := store.ReplaceToken(telegramAdminContext(e.WS, e.Rep1), connID,
-		fmt.Sprintf("%d:AAH-fixture-secret-for-%s", botID, username))
+		fmt.Sprintf("%d:AAH-fixture-secret-for-%s", botID, username), "")
 	if err != nil {
 		t.Fatalf("ReplaceToken: %v", err)
 	}

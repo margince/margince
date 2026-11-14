@@ -78,25 +78,36 @@ func requireMeasurableSeat(ctx context.Context, tx pgx.Tx, seat ids.UUID) error 
 
 // requireNoLoneColleagueIn runs requireNoLoneColleague over a statement that
 // answers one array of contributing owners per group, the way contributorsSQL
-// renders it. Nothing is read while the switch is on.
+// renders it. Nothing is read while the switch is on. An answer that names no
+// seat ("" for sql) has no group, and still passes the floor itself.
 func requireNoLoneColleagueIn(ctx context.Context, tx pgx.Tx, frame reportFrame, sql string, args []any) error {
 	allowed, err := individualPerformance(ctx, tx)
-	if err != nil || allowed || sql == "" {
+	if err != nil || allowed {
 		return err
 	}
+	var groups [][]ids.UUID
+	if sql != "" {
+		if groups, err = reportContributors(ctx, tx, frame, sql, args); err != nil {
+			return err
+		}
+	}
+	return requireNoLoneColleague(ctx, tx, groups)
+}
+
+func reportContributors(ctx context.Context, tx pgx.Tx, frame reportFrame, sql string, args []any) ([][]ids.UUID, error) {
 	bound, boundArgs, err := bindReportTokens(ctx, tx, frame, sql, args)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	rows, err := tx.Query(ctx, bound, boundArgs...)
 	if err != nil {
-		return fmt.Errorf("compose: reading who contributes to an answer: %w", err)
+		return nil, fmt.Errorf("compose: reading who contributes to an answer: %w", err)
 	}
 	groups, err := pgx.CollectRows(rows, pgx.RowTo[[]ids.UUID])
 	if err != nil {
-		return fmt.Errorf("compose: reading who contributes to an answer: %w", err)
+		return nil, fmt.Errorf("compose: reading who contributes to an answer: %w", err)
 	}
-	return requireNoLoneColleague(ctx, tx, groups)
+	return groups, nil
 }
 
 // contributorsSQL renders the statement requireNoLoneColleagueIn reads: the

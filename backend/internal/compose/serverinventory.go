@@ -18,6 +18,7 @@ import (
 	"github.com/margince/margince/backend/internal/compose/companyscan"
 	"github.com/margince/margince/backend/internal/compose/contact360"
 	"github.com/margince/margince/backend/internal/compose/dealstatus"
+	"github.com/margince/margince/backend/internal/compose/dispactapp"
 	"github.com/margince/margince/backend/internal/compose/gmailsignature"
 	"github.com/margince/margince/backend/internal/compose/homecache"
 	"github.com/margince/margince/backend/internal/compose/magic"
@@ -124,6 +125,8 @@ type Server struct {
 	promiseTakeOverHandlers
 	importHandlers
 	channelHandlers
+	chatLinkHandlers
+	chatEventHandlers
 	traceHandlers
 	pipelineTraceHandlers
 	filteredExportHandlers
@@ -247,17 +250,15 @@ type Server struct {
 	mcpResource, mcpAllowedOrigin string
 	// mcpInputStateKey signs the questions a tool asks in the chat.
 	mcpInputStateKey string
+	// dispactCalls checks the Dispact app's call tokens on /mcp; nil serves none.
+	dispactCalls *dispactapp.Edge
+	// chatPulls queues a chat_pull for a Dispact notice; WithChatLinks sets it.
+	chatPulls *jobs.Runner
 
-	// metricsToken gates /metrics, injected by WithMetricsToken from the
-	// deployment's --metrics-token. Empty — the default — configures no
-	// credential, and with metricsOpen unset the exposition then refuses every
-	// scrape: unlike /healthz and /readyz this endpoint discloses the route
-	// catalogue and per-workspace job-runtime telemetry (queue depth, which
-	// connectors are configured). A token set here is checked over plain HTTP
-	// — this process terminates no TLS — so it authenticates a scraper across a
-	// trusted hop, the one the session cookie already takes, and is not a
-	// credential to carry over an untrusted network. See gateMetrics in
-	// routes.go.
+	// metricsToken gates /metrics, from --metrics-token. Empty refuses every
+	// scrape unless metricsOpen is set, because the exposition names routes and
+	// per-workspace job telemetry. It is checked over plain HTTP, so it holds
+	// only across a trusted hop (gateMetrics in routes.go).
 	metricsToken string
 	// trustedProxies are the direct peers whose X-Forwarded-* headers this process
 	// believes, from WithTrustedProxies. The zero value trusts nobody.

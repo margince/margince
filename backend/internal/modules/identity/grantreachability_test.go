@@ -67,7 +67,9 @@ var grantedToNobody = gatekit.Waive(map[string]string{})
 // activity read to a record, whose type linkColumn holds to the link vocabulary.
 // 96: initiatives.visibleRecords takes the record type of a pick or an
 // exclusion, lead or deal, from its two callers.
-const dynamicObjectCeiling = 96
+// 100: the four chatlinks.Store doors take the record a channel carries, deal
+// or project, which recordColumn holds to those two.
+const dynamicObjectCeiling = 100
 
 // dynamicActionCeiling is the same bound for the OTHER unresolved argument: a
 // call site naming a known object and an action computed at runtime, as

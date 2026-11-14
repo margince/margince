@@ -1,0 +1,26 @@
+name: decision_on_discount
+task: chat_summary
+site: episode
+source: hand_authored
+sanitized_by: hand_authored/claude-opus-5-5
+# The team agrees a discount and leaves one question open: the note keeps the
+# number, the date and the open question.
+fixture:
+  record: "deal Acme renewal"
+  facts: ["Stage: Proposal"]
+  channel: "acme-renewal"
+  messages:
+    - {author: "Rita Rep", at: "2026-11-10T09:00:00Z", text: "Acme asked again for a better price on the 40 seats."}
+    - {author: "Sam Lead", at: "2026-11-10T09:05:00Z", text: "We can go to 12% if they sign by 30.11.2026."}
+    - {author: "Rita Rep", at: "2026-11-10T09:07:00Z", text: "Agreed, I will send the new offer today. Who checks whether legal needs to see it?"}
+expect:
+  outcome: accepted
+  answer:
+    relevant: true
+    keeps: ["12%", "30.11.2026"]
+    omits: []
+  bands:
+    certified_min: 80
+    degraded_min: 60
+    floor: 50
+  rubric: "The note says the team agreed 12% if Acme signs by 30.11.2026, that Rita sends the new offer, and that it is open who checks with legal."

@@ -345,8 +345,8 @@ func setupSeeders(s sweepSeed) map[string]func() string {
 		"automation": func() string {
 			return versioned("/v1/automations", integration.AnyMap{"key": "assign_lead_owner", "name": uniqueName(), "params": integration.AnyMap{}})
 		},
-		"existing_website_inquiry":   func() string { return seedExistingWebsiteInquiry(s) },
-		"assignable_website_inquiry": func() string { return seedAssignableWebsiteInquiry(s) },
+		"existing_website_inquiry":   s.oneFormAtATime(seedExistingWebsiteInquiry),
+		"assignable_website_inquiry": s.oneFormAtATime(seedAssignableWebsiteInquiry),
 		"versioned_web_form": func() string {
 			return versioned("/v1/web-forms", integration.AnyMap{"name": uniqueName(), "sender": "browser", "allowed_origins": []string{"https://example.test"}})
 		},
