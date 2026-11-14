@@ -53,7 +53,6 @@ reach features/brief/brief.focus.tsx features/worklist/worklist.queries.ts
 reach features/brief/brief.focus.tsx features/worklist/worklist.row.captions.tsx
 reach features/brief/brief.focus.tsx features/worklist/worklist.row.tsx
 reach features/brief/brief.glance.tsx features/worklist/worklist.queries.ts
-reach features/brief/brief.intro.tsx features/worklist/worklist.queries.ts
 reach features/brief/brief.plan.add.tsx features/worklist/weeklyplan.queries.ts
 reach features/brief/brief.plan.contract.stories.tsx features/worklist/weeklyplan.queries.ts
 reach features/brief/brief.plan.contract.test.tsx features/worklist/weeklyplan.queries.ts

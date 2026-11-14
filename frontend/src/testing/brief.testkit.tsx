@@ -69,8 +69,8 @@ export type Routes = Record<
   (body: unknown, query: URLSearchParams) => Response | Promise<Response>
 >;
 
-// Every read Brief fans out to, answered honestly by default. Each case then
-// declares only the route it is about: a session and no brief run.
+// Every read Brief fans out to, answered as the server would by default. Each
+// case then declares only the route it is about: a session and no brief run.
 //
 // The table is exhaustive, and `stubApi` fails a case that asks for anything
 // not in it. So a route leaves here when its caller does — the deals-by-stage
