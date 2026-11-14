@@ -76,6 +76,15 @@ function servingHistory(
 ) {
   return vi.fn(async (input: RequestInfo | URL) => {
     const url = String(input instanceof Request ? input.url : input);
+    const asked = new URL(url);
+    if (asked.pathname === "/v1/records/references") {
+      expect(asked.searchParams.get("kind")).toBe("company");
+      expect(asked.searchParams.getAll("id")).toEqual(["company-9"]);
+      if (!onOtherLookup) {
+        throw new Error(`unexpected endpoint lookup: ${url}`);
+      }
+      return onOtherLookup();
+    }
     if (new URL(url).pathname.startsWith("/v1/companies")) {
       if (!onOtherLookup) {
         throw new Error(`unexpected endpoint lookup: ${url}`);

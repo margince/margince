@@ -13,10 +13,10 @@ import {
 import { Badge } from "../../design-system/atoms";
 import { CellStrip, type ListColumn } from "../../design-system/listtable";
 import { formatDateAbbrev, formatNumber } from "../../format/format";
-import { leadIdentityName } from "../../format/leadname";
 import type { useLocale, useT } from "../../i18n";
 import { type LeadOrigin, originLabelFor } from "../../lib/leadorigins";
 import { LeadCompanyName } from "./leadcompany";
+import { leadIdentityName } from "./leadname";
 import { openTaskCountLabel } from "./leadopentasks";
 import { LeadPartnerName } from "./leadpartner";
 import {

@@ -119,6 +119,10 @@ it("opens the list narrowed to the contact a timeline linked from", async () => 
           )
         : jsonResponse({ status: 503, title: "Unavailable" }, 503),
     {
+      "GET /records/references": () =>
+        jsonResponse({
+          data: [{ id: "contact-one", name: "Lena Brandt", archived: false }],
+        }),
       "GET /contacts/contact-one": () =>
         jsonResponse({ id: "contact-one", full_name: "Lena Brandt" }),
     },
@@ -149,6 +153,13 @@ it("never shows one contact's threads under the next contact's name", async () =
             heldThreadList([thread("t-lena", "Lena's contract", "mail-one")]),
           ),
     {
+      "GET /records/references": () =>
+        jsonResponse({
+          data: [
+            { id: "contact-one", name: "Lena Brandt", archived: false },
+            { id: "contact-two", name: "Sam Okafor", archived: false },
+          ],
+        }),
       "GET /contacts/contact-one": () =>
         jsonResponse({ id: "contact-one", full_name: "Lena Brandt" }),
       "GET /contacts/contact-two": () =>

@@ -22,6 +22,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -30,36 +31,63 @@ import (
 
 // DealLabels answers each named deal's own name, under the caller's grants.
 func (s *Store) DealLabels(ctx context.Context, want []ids.UUID) (map[ids.UUID]string, error) {
-	if err := auth.Require(ctx, "deal", principal.ActionRead); err != nil {
+	query, args, err := dealIdentityQuery(ctx, want, storekit.LiveOnly, false)
+	if err != nil {
 		return nil, err
 	}
 	labels := map[ids.UUID]string{}
 	if len(want) == 0 {
 		return labels, nil
 	}
-	var args []any
-	arg := func(v any) int { args = append(args, v); return len(args) }
-	idsPos := arg(want)
-	scope, err := auth.ScopeClauseFor(ctx, dealTable, "d", arg)
-	if err != nil {
-		return nil, err
-	}
-	if scope == "" {
-		scope = "true"
-	}
 	err = s.Tx(ctx, func(tx pgx.Tx) error {
-		found, err := storekit.LabelsByID(ctx, tx, fmt.Sprintf(`
-			SELECT d.id, coalesce(d.name, '')
-			  FROM %s d
-			 WHERE d.id = ANY($%d) AND d.archived_at IS NULL AND (%s)`,
-			dealTable, idsPos, scope), args...)
-		labels = found
+		var err error
+		labels, err = storekit.LabelsByID(ctx, tx, query, args...)
 		return err
 	})
 	if err != nil {
 		return nil, fmt.Errorf("deals: reading deal names: %w", err)
 	}
 	return labels, nil
+}
+
+// DealReferences returns scoped deal names and archive state without full detail reads.
+func (s *Store) DealReferences(ctx context.Context, want []ids.UUID) ([]crmcontracts.RecordReference, error) {
+	query, args, err := dealIdentityQuery(ctx, want, storekit.IncludeArchived, true)
+	if err != nil {
+		return nil, err
+	}
+	return storekit.ReadRecordReferences(ctx, s, query, args...)
+}
+
+// Legacy labels keep their two-column projection and existing collector.
+func dealIdentityQuery(ctx context.Context, want []ids.UUID, archived storekit.ArchivedFilter, reference bool) (string, []any, error) {
+	if err := auth.Require(ctx, maintenanceObject, principal.ActionRead); err != nil {
+		return "", nil, err
+	}
+	if len(want) == 0 {
+		return "", nil, nil
+	}
+	name := "d.name"
+	columns := "d.id, coalesce(" + name + ", '')"
+	if reference {
+		columns = "d.id, " + name + ", d.archived_at IS NOT NULL"
+	}
+	var args []any
+	arg := func(v any) int { args = append(args, v); return len(args) }
+	idsPos := arg(want)
+	scope, err := auth.ScopeClauseFor(ctx, dealTable, "d", arg)
+	if err != nil {
+		return "", nil, err
+	}
+	if scope == "" {
+		scope = "true"
+	}
+	live := ""
+	if archived == storekit.LiveOnly {
+		live = " AND d.archived_at IS NULL"
+	}
+	query := fmt.Sprintf(`SELECT %s FROM %s d WHERE d.id = ANY($%d) AND (%s)%s`, columns, dealTable, idsPos, scope, live)
+	return query, args, nil
 }
 
 // PipelineLabels names the live pipelines in a set, under the grant

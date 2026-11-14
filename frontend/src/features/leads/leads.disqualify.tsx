@@ -5,11 +5,11 @@ import type { components } from "../../api/schema";
 import { Field, Textarea } from "../../design-system/atoms";
 import { ConfirmModal } from "../../design-system/confirmmodal";
 import { Select } from "../../design-system/select";
-import { leadIdentityName } from "../../format/leadname";
 import { useT } from "../../i18n";
 import { leadWriteKeys } from "../../lib/leadkeys";
 import { problemMessageOf, unwrap } from "../../lib/problem";
 import { useLeadDisqualifyReasons } from "./leadhandling";
+import { leadIdentityName } from "./leadname";
 
 type Lead = components["schemas"]["Lead"];
 

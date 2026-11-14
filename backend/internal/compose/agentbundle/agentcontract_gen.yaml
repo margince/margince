@@ -95,6 +95,8 @@ tags:
     description: The typed relationship edge (employment + deal stakeholder).
   - name: Deals
     description: Deals, including stage advancement.
+  - name: Links
+    description: Typed links between a deal, a company and a contact, and the link types.
   - name: Pipelines
     description: Pipelines and their ordered stages.
   - name: Projects
@@ -19686,6 +19688,45 @@ paths:
           content:
             application/problem+json:
               schema: {$ref: '#/components/schemas/Problem'}
+  /records/references:
+    get:
+      tags: [Links]
+      operationId: readRecordReferences
+      summary: Read names and archive state for a bounded set of records.
+      description: |-
+        Requires the selected record kind's read grant. A denied object is 403.
+        Missing and row-hidden ids are omitted without distinguishing them.
+        Includes readable archived records and the company anchor. Results are
+        unique and follow the first occurrence of each requested id. This is not
+        a page: there is no cursor or total. The input bound applies before deduplication.
+        Lead names fall back to email when the full name is blank. Company logos
+        use the same revision URL as the company detail read.
+      parameters:
+        - name: kind
+          in: query
+          required: true
+          schema:
+            type: string
+            enum: [contact, company, lead, deal, project]
+        - name: id
+          in: query
+          required: true
+          style: form
+          explode: true
+          schema:
+            type: array
+            minItems: 1
+            maxItems: 100
+            items: {type: string, format: uuid}
+      responses:
+        '200':
+          description: The readable references, or an empty data array.
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/RecordReferenceListResponse'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '422': {$ref: '#/components/responses/ValidationError'}
   /users/names:
     get:
       tags: [Identity]
@@ -46260,6 +46301,21 @@ components:
         created_at: {type: string, format: date-time}
         updated_at: {type: string, format: date-time}
         archived_at: {type: [string, 'null'], format: date-time}
+    RecordReference:
+      type: object
+      required: [id, name, archived]
+      properties:
+        id: {type: string, format: uuid}
+        name: {type: [string, 'null']}
+        archived: {type: boolean}
+        logo: {type: [string, 'null'], description: Company logo URL; omitted for other kinds.}
+    RecordReferenceListResponse:
+      type: object
+      required: [data]
+      properties:
+        data:
+          type: array
+          items: {$ref: '#/components/schemas/RecordReference'}
     SeatName:
       type: object
       description: >-

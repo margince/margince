@@ -83,6 +83,20 @@ function stubServer(activity: Record<string, unknown> = meeting) {
       return json({ id: "p-1", full_name: "Dana Buyer" });
     const company = companyNamesAnswer(url, { "c-1": "Demo GmbH" });
     if (company) return company;
+    const asked = new URL(url, "https://test.local");
+    if (asked.pathname === "/v1/records/references") {
+      const kind = asked.searchParams.get("kind");
+      const references =
+        kind === "contact"
+          ? [{ id: "p-1", name: "Dana Buyer", archived: false }]
+          : kind === "deal"
+            ? [{ id: "d-1", name: "Demo rollout", archived: false }]
+            : [];
+      const ids = asked.searchParams.getAll("id");
+      return json({
+        data: references.filter((reference) => ids.includes(reference.id)),
+      });
+    }
     if (url.includes("/deals/d-1"))
       return json({ id: "d-1", name: "Demo rollout" });
     if (url.includes("/attachments"))

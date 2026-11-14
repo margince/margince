@@ -40,6 +40,10 @@ async function mountHost(seat: "full" | "read" = "full") {
   const posted: unknown[] = [];
   installFetchStub({
     "GET /me": meRoute({ activity: ["create"], contact: ["read"] }, { seat }),
+    "GET /records/references": () =>
+      jsonResponse({
+        data: [{ id: "p-1", name: "Dana Buyer", archived: false }],
+      }),
     "GET /contacts/p-1": () =>
       jsonResponse({ id: "p-1", full_name: "Dana Buyer" }),
     "POST /activities": (body) => {

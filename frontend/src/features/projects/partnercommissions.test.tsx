@@ -141,6 +141,21 @@ describe("the commission panel", () => {
     vi.stubGlobal(
       "fetch",
       vi.fn(async (request: Request) => {
+        const url = new URL(request.url);
+        if (
+          url.pathname === "/v1/records/references" &&
+          url.searchParams.get("kind") === "deal"
+        ) {
+          return Response.json({
+            data: url.searchParams
+              .getAll("id")
+              .flatMap((id) =>
+                id === "d-1"
+                  ? [{ id, name: "Northgate rollout", archived: false }]
+                  : [],
+              ),
+          });
+        }
         const body = request.url.includes("/deals/")
           ? { id: "d-1", name: "Northgate rollout" }
           : { data: [accrued], page: { has_more: false } };

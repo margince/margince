@@ -48,8 +48,16 @@ function primaryEmailOf(
   return (emails.find((row) => row.is_primary) ?? emails[0])?.email ?? null;
 }
 
-export const createContact: Handler = ({ route, json }) => {
+export const createContact: Handler = (
+  { route, json },
+  { recordReferences },
+) => {
   const body = route.request().postDataJSON();
+  recordReferences.set("contact:p-new", {
+    id: "p-new",
+    name: String(body.full_name),
+    archived: false,
+  });
   return json(
     {
       ...anna,
@@ -78,8 +86,16 @@ export const jonas = {
   primary_email: null,
 };
 
-export const createCompany: Handler = ({ route, json }) => {
+export const createCompany: Handler = (
+  { route, json },
+  { recordReferences },
+) => {
   const body = route.request().postDataJSON();
+  recordReferences.set("company:o-new", {
+    id: "o-new",
+    name: String(body.display_name),
+    archived: false,
+  });
   return json(
     {
       ...brandt,
@@ -158,8 +174,13 @@ function newLead(fields: {
   };
 }
 
-export const createLead: Handler = ({ route, json }) => {
+export const createLead: Handler = ({ route, json }, { recordReferences }) => {
   const body = route.request().postDataJSON();
+  recordReferences.set("lead:l-new", {
+    id: "l-new",
+    name: body.full_name?.trim() || body.email?.trim() || null,
+    archived: false,
+  });
   return json(
     newLead({
       full_name: body.full_name ?? null,
@@ -176,8 +197,13 @@ export const createdLead = newLead({
   company_name: null,
 });
 
-export const createDeal: Handler = ({ route, json }) => {
+export const createDeal: Handler = ({ route, json }, { recordReferences }) => {
   const body = route.request().postDataJSON();
+  recordReferences.set("deal:d-new", {
+    id: "d-new",
+    name: String(body.name),
+    archived: false,
+  });
   return json(
     {
       ...deals[0],
@@ -306,6 +332,15 @@ export const promotedLead = {
   },
   merged: false,
   lead_id: "l-1",
+};
+
+export const promoteLead: Handler = ({ json }, { recordReferences }) => {
+  recordReferences.set("contact:p-new", {
+    id: promotedLead.contact.id,
+    name: promotedLead.contact.full_name,
+    archived: false,
+  });
+  return json(promotedLead);
 };
 
 // Names only the ids asked about. An id the roster does not hold is absent,
