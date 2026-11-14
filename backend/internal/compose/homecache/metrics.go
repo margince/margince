@@ -15,12 +15,12 @@ import (
 type outcome int
 
 const (
-	hit outcome = iota
-	stale
-	miss
+	outcomeHit outcome = iota
+	outcomeStale
+	outcomeMiss
 )
 
-var outcomeLabels = [...]string{hit: "hit", stale: "stale", miss: "miss"}
+var outcomeLabels = [...]string{outcomeHit: "hit", outcomeStale: "stale", outcomeMiss: "miss"}
 
 // served counts, per read, the answers Serve gave by outcome since process
 // start. A background refresh is none: no reader waited on it.

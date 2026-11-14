@@ -132,7 +132,14 @@ func Serve[A Answer](
 	}
 	stale = hit && age > Life
 	served := hit && (!stale || read == Worklist)
-	countServed(read, outcomeOf(served, stale))
+	switch {
+	case !served:
+		countServed(read, outcomeMiss)
+	case stale:
+		countServed(read, outcomeStale)
+	default:
+		countServed(read, outcomeHit)
+	}
 	if !served {
 		answer, err = keepFresh(ctx, c, reader, read, key, fresh, walkOf)
 		return answer, false, err
@@ -144,17 +151,6 @@ func Serve[A Answer](
 		})
 	}
 	return kept, stale, nil
-}
-
-func outcomeOf(served, pastLife bool) outcome {
-	switch {
-	case !served:
-		return miss
-	case pastLife:
-		return stale
-	default:
-		return hit
-	}
 }
 
 // keepFresh assembles the answer and keeps it, stamped before it was read.
