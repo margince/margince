@@ -4,9 +4,10 @@
 package compose
 
 // The published transaction seam: the three SQL verbs a unit's own tables
-// need (run by unitsql), the door onto the governed core port, and the doors
-// onto the core's models and objects. These are the types a unit holds;
-// extruntime.go owns the Runtime's lifetime and scope.
+// need (run by unitsql), and the door onto the governed core port. The doors
+// onto the core's models and objects are here too.
+// These are the types a unit holds; extruntime.go owns the Runtime's lifetime
+// and scope.
 
 import (
 	"context"
