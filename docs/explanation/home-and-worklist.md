@@ -24,7 +24,7 @@ The code:
 - `frontend/src/lib/router.tsx` and `frontend/src/features/brief/brief.queue.tsx`: old addresses.
 
 Home asks for the Worklist with `shape=home`. The read assembles and ranks the same lanes, and Focus,
-the summary, the counted candidates and the readings are the same as the queue's. It then carries only
+the summary, the counted candidates and the figures are the same as the queue's. It then carries only
 the day's meeting rows, which Home's schedule draws, and skips the page cut, the walk and the rows below
 the cut. The Worklist drawer reads the queue itself when it opens.
 
