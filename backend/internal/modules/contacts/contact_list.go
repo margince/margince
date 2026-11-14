@@ -184,9 +184,10 @@ func contactCommonFilters(in ListContactsInput) listFilters {
 func (s *Store) ListContacts(ctx context.Context, in ListContactsInput) ([]crmcontracts.Contact, storekit.Page, error) {
 	shared := contactCommonFilters(in)
 	return listPage(ctx, s, in.Sort, in.Limit, listPageSpec[crmcontracts.Contact]{
-		entity:  contactEntity,
-		columns: contactColumns,
-		fields:  contactListFields,
+		entity:    contactEntity,
+		firstPage: in.Cursor == nil || *in.Cursor == "",
+		columns:   contactColumns,
+		fields:    contactListFields,
 		filters: func(ctx context.Context, active []fieldcatalog.Column, sorted *storekit.ListSort, arg func(any) int) ([]string, error) {
 			where, err := shared.clauses(ctx, active, sorted, arg)
 			if err != nil {
