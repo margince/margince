@@ -1,3 +1,4 @@
+import { loadHome } from "./app/homecode";
 import { registerStartupSession } from "./app/startup-session";
 import { loadEssentialLocale, loadLocale } from "./i18n/catalogs";
 import { preferredLocale } from "./i18n/locale";
@@ -44,7 +45,7 @@ const languageFailed = (error: unknown) =>
   console.error("The selected language could not be loaded", error);
 if (parseHash(location.hash).screen === "home") {
   // Fetched beside the startup code rather than after the shell's gates.
-  void import("./features/brief/brief").catch((error: unknown) =>
+  loadHome().catch((error: unknown) =>
     console.error("Home code could not be loaded", error),
   );
 }

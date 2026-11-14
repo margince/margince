@@ -19,6 +19,8 @@ import { Panel, PanelBody } from "../../design-system/panel";
 import { greetingNameOf } from "../../format/greetingname";
 import { useNow } from "../../format/now";
 import { useLocale, useT } from "../../i18n";
+import { lazy } from "../../i18n/lazy";
+import { APPROVAL_PARAM } from "../../lib/approvalhref";
 import { useCanWrite } from "../../lib/capability";
 import { markJourney } from "../../lib/journeymarks";
 import { useMagic } from "../../lib/magic.queries";
@@ -40,15 +42,12 @@ import {
 } from "../worklist/worklist.queries";
 import { changedSinceBrief } from "./brief.changed";
 import {
-  ActivityDetailModal,
   ContactMeetingBrief,
-  LinkedApprovalDrawer,
-  MeetingDetailModal,
-  TaskDetailModal,
+  deferredLoads,
+  Quiet,
   WeeklyPage,
   WeekStepper,
-  WorklistPane,
-  warmDeferred,
+  warm,
 } from "./brief.deferred";
 import { BriefDials } from "./brief.dials";
 import { DoneForYou } from "./brief.doneforyou";
@@ -65,7 +64,7 @@ import {
 import { BriefGlance } from "./brief.glance";
 import { homeJourneyMarks } from "./brief.journey";
 import { useMorningBrief, useWeeklyReview } from "./brief.queries";
-import { BriefQueue } from "./brief.queue";
+import { BriefQueue, loadWorklistScreen } from "./brief.queue";
 import { BriefReadingsPending, BriefReadingsStrip } from "./brief.readings";
 import { SchedulePanel } from "./brief.schedule";
 import { BriefSuggestions } from "./brief.suggestions";
@@ -457,7 +456,60 @@ let warmed = false;
 function warmWhenIdle() {
   if (warmed) return;
   warmed = true;
+  const all = () =>
+    warm([
+      ...deferredLoads,
+      loadDetails,
+      loadPane,
+      loadApproval,
+      loadWorklistScreen,
+    ]);
   if (typeof requestIdleCallback === "function")
-    requestIdleCallback(warmDeferred, { timeout: 5_000 });
-  else setTimeout(warmDeferred, 0);
+    requestIdleCallback(all, { timeout: 5_000 });
+  else setTimeout(all, 0);
+}
+
+const loadDetails = () => import("../worklist/taskdetailmodal");
+const loadPane = () => import("../worklist/worklist.pane");
+const loadApproval = () => import("../automations/approvaldrawer");
+
+const TaskDetailModal = lazy(
+  async () => ({ default: (await loadDetails()).TaskDetailModal }),
+  "complete",
+  Quiet,
+);
+
+const MeetingDetailModal = lazy(
+  async () => ({ default: (await loadDetails()).MeetingDetailModal }),
+  "complete",
+  Quiet,
+);
+
+const ActivityDetailModal = lazy(
+  async () => ({ default: (await loadDetails()).ActivityDetailModal }),
+  "complete",
+  Quiet,
+);
+
+const WorklistPane = lazy(
+  async () => ({ default: (await loadPane()).WorklistPane }),
+  "complete",
+  Quiet,
+);
+
+const ApprovalDrawer = lazy(
+  async () => ({ default: (await loadApproval()).LinkedApprovalDrawer }),
+  "complete",
+  Quiet,
+);
+
+/**
+ * A link to one decision, from a notice or a receipt, opens it over Home. Once
+ * opened it stays mounted, so closing it plays the drawer's exit.
+ */
+function LinkedApprovalDrawer() {
+  const [params] = useUrlParams();
+  const [asked, setAsked] = useState(false);
+  if (params.get(APPROVAL_PARAM) && !asked) setAsked(true);
+  return asked ? <ApprovalDrawer /> : null;
 }
