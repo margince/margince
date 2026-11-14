@@ -56,16 +56,31 @@ func owedSQL(asOf, dismissedStillOwed, informsStillOwed, unjudgedResponseStillOw
 	 AND ((` + confirmedRequestSQL + `) OR NOT ` + calendarCopySQL + `
 	   OR (` + unjudgedResponseStillOwed + ` AND a.owed_verdict IS NULL))
 	 AND ((` + requestIntentSQL + `)
-	   OR (NOT EXISTS (SELECT 1 FROM activity newer
-	         WHERE newer.thread_key = a.thread_key
+	   OR (` + notSettledBySQL(asOf) + `
+	       AND NOT EXISTS (SELECT 1 FROM activity newer WHERE ` + newerInboundSQL(asOf) + `)
+	       AND NOT ` + answeredSQL("a", asOf) + `)))`
+}
+
+// newerInboundSQL is a message under alias newer that came in after the inbound
+// row under alias a, on its thread, and has begun by asOf.
+func newerInboundSQL(asOf string) string {
+	return `newer.thread_key = a.thread_key
 	           AND newer.kind = a.kind
 	           AND newer.kind IN ('email', 'message')
 	           AND newer.channel_provider IS NOT DISTINCT FROM a.channel_provider
 	           AND newer.direction = 'inbound'
 	           AND newer.archived_at IS NULL
 	           AND ` + occurredday.BegunSQL("newer", asOf) + `
-	           AND (newer.occurred_at, newer.id) > (a.occurred_at, a.id))
-	       AND NOT ` + answeredSQL("a", asOf) + `)))`
+	           AND (newer.occurred_at, newer.id) > (a.occurred_at, a.id)`
+}
+
+// notSettledBySQL keeps the inbound row under alias a unless its kept stamp
+// says a same-thread fact settled it by asOf. Only the stamping job writes the
+// stamp, from the two thread arms below, so the cheap test answers what the
+// full clause would. A restricted row may not be written, so its stamp is not
+// read.
+func notSettledBySQL(asOf string) string {
+	return `(a.reply_settled_at IS NULL OR a.reply_settled_at > ` + asOf + ` OR a.restricted_at IS NOT NULL)`
 }
 
 // machineSenderSQL is true when the message came from an address no human

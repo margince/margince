@@ -13,6 +13,7 @@ public.activity.activity_call_outcome_kind_check CHECK (((call_outcome IS NULL) 
 public.activity.activity_capture_label_check CHECK (((capture_label IS NULL) OR (capture_label = ANY (ARRAY['commitment'::text, 'meeting'::text, 'noise'::text]))))
 public.activity.activity_capture_label_stamped CHECK (((capture_label IS NULL) = (capture_labeled_at IS NULL)))
 public.activity.activity_channel_provider_fkey FOREIGN KEY (channel_provider) REFERENCES channel_provider(provider)
+public.activity.activity_clears_reply_settled CREATE TRIGGER activity_clears_reply_settled AFTER INSERT OR DELETE OR UPDATE OF thread_key, kind, channel_provider, direction, archived_at, occurred_at, occurred_precision, counterparty_email ON public.activity FOR EACH ROW EXECUTE FUNCTION activity_clears_reply_settled()
 public.activity.activity_colleague_mail_is_outbound CHECK (((sent_by_colleague IS NULL) OR (direction = 'outbound'::text)))
 public.activity.activity_day_holds_no_host_slot CHECK (((occurred_precision = 'instant'::text) OR (NOT claims_host_slot)))
 public.activity.activity_direction_check CHECK (((direction IS NULL) OR (direction = ANY (ARRAY['inbound'::text, 'outbound'::text]))))
@@ -139,6 +140,7 @@ public.activity.remind_at timestamp with time zone gen=- def=-
 public.activity.remind_wall timestamp without time zone gen=- def=-
 public.activity.remind_zone text gen=- def=-
 public.activity.reopen_deleted_signature_source CREATE TRIGGER reopen_deleted_signature_source BEFORE DELETE ON public.activity FOR EACH ROW EXECUTE FUNCTION reopen_deleted_signature_source()
+public.activity.reply_settled_at timestamp with time zone gen=- def=-
 public.activity.reply_verdict text gen=- def=-
 public.activity.reply_verdict_at timestamp with time zone gen=- def=-
 public.activity.reply_verdict_by text gen=- def=-
@@ -205,6 +207,22 @@ BEGIN
     RAISE EXCEPTION 'activity % carries a retention class with no evidence recording what qualified it', OLD.activity_id
       USING ERRCODE = 'check_violation',
             CONSTRAINT = 'activity_class_needs_evidence';
+  END IF;
+  RETURN NULL;
+END;
+
+public.activity_clears_reply_settled() secdef=false cfg=- acl=- 
+BEGIN
+  IF TG_OP = 'INSERT' THEN
+    IF NEW.kind IN ('email', 'message') THEN
+      PERFORM clear_reply_settled(ARRAY[NEW.thread_key], NEW.occurred_at);
+    END IF;
+  ELSIF TG_OP = 'DELETE' THEN
+    IF OLD.kind IN ('email', 'message') THEN
+      PERFORM clear_reply_settled(ARRAY[OLD.thread_key], OLD.occurred_at);
+    END IF;
+  ELSIF NEW.kind IN ('email', 'message') OR OLD.kind IN ('email', 'message') THEN
+    PERFORM clear_reply_settled(ARRAY[NEW.thread_key, OLD.thread_key], least(NEW.occurred_at, OLD.occurred_at));
   END IF;
   RETURN NULL;
 END;
@@ -487,6 +505,7 @@ public.activity_participant.fk_participant_domain_evidence_version FOREIGN KEY (
 public.activity_participant.home_read_fence_participant CREATE TRIGGER home_read_fence_participant AFTER UPDATE ON public.activity_participant FOR EACH ROW WHEN (((old.user_id IS NOT NULL) AND ((old.user_id IS DISTINCT FROM new.user_id) OR (old.activity_id IS DISTINCT FROM new.activity_id) OR ((old.address IS NOT NULL) AND (new.address IS NULL)) OR ((old.contact_id IS NOT NULL) AND (new.contact_id IS NULL)) OR ((old.channel_user_id IS NOT NULL) AND (new.channel_user_id IS NULL))))) EXECUTE FUNCTION advance_home_read_fence()
 public.activity_participant.home_read_fence_participant_removed CREATE TRIGGER home_read_fence_participant_removed AFTER DELETE ON public.activity_participant FOR EACH ROW WHEN ((old.user_id IS NOT NULL)) EXECUTE FUNCTION advance_home_read_fence()
 public.activity_participant.id uuid NOT NULL gen=- def=uuidv7()
+public.activity_participant.participant_clears_reply_settled CREATE TRIGGER participant_clears_reply_settled AFTER INSERT OR DELETE OR UPDATE ON public.activity_participant FOR EACH ROW EXECUTE FUNCTION participant_clears_reply_settled()
 public.activity_participant.past_party_cap boolean NOT NULL gen=- def=false
 public.activity_participant.relinked_at timestamp with time zone gen=- def=-
 public.activity_participant.response text gen=- def=-
@@ -2848,6 +2867,21 @@ public.chat_post_item.text_bound_update CREATE TRIGGER text_bound_update AFTER U
 public.chat_post_item.tier text NOT NULL gen=- def=-
 public.chat_post_item.withdrawn_at timestamp with time zone gen=- def=-
 public.chat_post_item_pkey CREATE UNIQUE INDEX chat_post_item_pkey ON public.chat_post_item USING btree (id)
+public.clear_reply_settled(threads text[], since timestamp with time zone) secdef=false cfg=- acl=- 
+DECLARE
+  moving text := current_setting('margince.last_activity_move', true);
+BEGIN
+  PERFORM set_config('margince.last_activity_move', 'on', true);
+  UPDATE activity
+     SET reply_settled_at = NULL
+   WHERE thread_key = ANY(threads)
+     AND direction = 'inbound'
+     AND kind IN ('email', 'message')
+     AND restricted_at IS NULL
+     AND reply_settled_at >= coalesce(since, '-infinity');
+  PERFORM set_config('margince.last_activity_move', coalesce(moving, ''), true);
+END;
+
 public.close_date_run acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.close_date_run.as_of date NOT NULL gen=- def=-
 public.close_date_run.captured_by text NOT NULL gen=- def=-
@@ -4206,6 +4240,7 @@ public.contact_email acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd
 public.contact_email.archived_at timestamp with time zone gen=- def=-
 public.contact_email.bind_requests_on_address_move CREATE TRIGGER bind_requests_on_address_move BEFORE UPDATE OF contact_id ON public.contact_email FOR EACH ROW WHEN ((old.contact_id IS DISTINCT FROM new.contact_id)) EXECUTE FUNCTION bind_requests_on_address_move()
 public.contact_email.captured_by text NOT NULL gen=- def=-
+public.contact_email.contact_email_clears_reply_settled CREATE TRIGGER contact_email_clears_reply_settled AFTER INSERT OR DELETE OR UPDATE ON public.contact_email FOR EACH ROW EXECUTE FUNCTION contact_email_clears_reply_settled()
 public.contact_email.contact_email_contact_id_fkey FOREIGN KEY (contact_id) REFERENCES contact(id) ON DELETE CASCADE
 public.contact_email.contact_email_email_type_check CHECK ((email_type = ANY (ARRAY['work'::text, 'personal'::text, 'other'::text])))
 public.contact_email.contact_email_norm CHECK ((email = lower(email)))
@@ -4227,6 +4262,17 @@ public.contact_email.text_bound_update CREATE TRIGGER text_bound_update AFTER UP
 public.contact_email.trg_contact_email_updated CREATE TRIGGER trg_contact_email_updated BEFORE UPDATE ON public.contact_email FOR EACH ROW EXECUTE FUNCTION set_updated_at_bump_version()
 public.contact_email.updated_at timestamp with time zone NOT NULL gen=- def=now()
 public.contact_email.version bigint NOT NULL gen=- def=1
+public.contact_email_clears_reply_settled() secdef=false cfg=- acl=- 
+BEGIN
+  PERFORM clear_reply_settled(ARRAY(
+    SELECT DISTINCT a.thread_key FROM activity_participant p
+      JOIN activity a ON a.id = p.activity_id
+     WHERE p.role = 'from'
+       AND p.contact_id IN (CASE WHEN TG_OP = 'DELETE' THEN NULL ELSE NEW.contact_id END,
+                            CASE WHEN TG_OP = 'INSERT' THEN NULL ELSE OLD.contact_id END)), NULL);
+  RETURN NULL;
+END;
+
 public.contact_email_pkey CREATE UNIQUE INDEX contact_email_pkey ON public.contact_email USING btree (id)
 public.contact_moment_dismissal acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.contact_moment_dismissal.claim_key text NOT NULL gen=- def=-
@@ -6072,6 +6118,7 @@ public.idx_activity_participants_by_reason CREATE INDEX idx_activity_participant
 public.idx_activity_raw_capture CREATE INDEX idx_activity_raw_capture ON public.activity USING btree (raw_capture_id) WHERE (raw_capture_id IS NOT NULL)
 public.idx_activity_receipt_order CREATE INDEX idx_activity_receipt_order ON public.activity USING btree (created_at, id) WHERE (archived_at IS NULL)
 public.idx_activity_reminders CREATE INDEX idx_activity_reminders ON public.activity USING btree (remind_at) WHERE ((kind = 'task'::text) AND (remind_at IS NOT NULL) AND (is_done = false) AND (archived_at IS NULL))
+public.idx_activity_reply_unstamped CREATE INDEX idx_activity_reply_unstamped ON public.activity USING btree (occurred_at DESC, id) WHERE ((reply_settled_at IS NULL) AND (direction = 'inbound'::text) AND (kind = ANY (ARRAY['email'::text, 'message'::text])))
 public.idx_activity_reply_verdict_history_activity CREATE INDEX idx_activity_reply_verdict_history_activity ON public.activity_reply_verdict_history USING btree (activity_id, decided_at DESC)
 public.idx_activity_request_settlement_judged_through_activity CREATE INDEX idx_activity_request_settlement_judged_through_activity ON public.activity_request_settlement USING btree (judged_through_activity_id)
 public.idx_activity_restricted_until CREATE INDEX idx_activity_restricted_until ON public.activity USING btree (restricted_until) WHERE (restricted_at IS NOT NULL)
@@ -6622,6 +6669,21 @@ public.ix_contact_confirm_submission_open CREATE INDEX ix_contact_confirm_submis
 public.ix_deal_room_engagement_participant CREATE INDEX ix_deal_room_engagement_participant ON public.deal_room_engagement USING btree (participant_id, occurred_at DESC)
 public.ix_deal_room_engagement_room CREATE INDEX ix_deal_room_engagement_room ON public.deal_room_engagement USING btree (room_id, occurred_at DESC)
 public.ix_lead_privacy_notice_approval CREATE INDEX ix_lead_privacy_notice_approval ON public.lead_privacy_notice USING btree (approval_id) WHERE (approval_id IS NOT NULL)
+public.keep_reply_settled(messages uuid[], settled timestamp with time zone[]) secdef=false cfg=- acl=- 
+DECLARE
+  moving text := current_setting('margince.last_activity_move', true);
+  kept bigint;
+BEGIN
+  PERFORM set_config('margince.last_activity_move', 'on', true);
+  UPDATE activity a
+     SET reply_settled_at = s.at
+    FROM unnest(messages, settled) AS s(id, at)
+   WHERE a.id = s.id AND a.reply_settled_at IS NULL AND a.restricted_at IS NULL;
+  GET DIAGNOSTICS kept = ROW_COUNT;
+  PERFORM set_config('margince.last_activity_move', coalesce(moving, ''), true);
+  RETURN kept;
+END;
+
 public.key_shipped_review_questions() secdef=false cfg=- acl=- 
 BEGIN
   NEW.questions = (
@@ -7881,6 +7943,15 @@ public.onboarding_wizard_state.voice_skipped boolean NOT NULL gen=- def=false
 public.onboarding_wizard_state.website_url text gen=- def=-
 public.onboarding_wizard_state_pkey CREATE UNIQUE INDEX onboarding_wizard_state_pkey ON public.onboarding_wizard_state USING btree (id)
 public.onboarding_wizard_state_user_id_key CREATE UNIQUE INDEX onboarding_wizard_state_user_id_key ON public.onboarding_wizard_state USING btree (user_id)
+public.participant_clears_reply_settled() secdef=false cfg=- acl=- 
+BEGIN
+  PERFORM clear_reply_settled(ARRAY(
+    SELECT a.thread_key FROM activity a
+     WHERE a.id IN (CASE WHEN TG_OP = 'DELETE' THEN NULL ELSE NEW.activity_id END,
+                    CASE WHEN TG_OP = 'INSERT' THEN NULL ELSE OLD.activity_id END)), NULL);
+  RETURN NULL;
+END;
+
 public.partner acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.partner.activated_at timestamp with time zone gen=- def=-
 public.partner.activated_by text gen=- def=-
