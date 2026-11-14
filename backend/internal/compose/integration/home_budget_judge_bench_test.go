@@ -38,8 +38,10 @@ func TestHomeSQLSizeBudgetRequiresAProductStatement(t *testing.T) {
 
 func homeRow(row string, p95, budget time.Duration, samples int) DailyResult {
 	flow := homeWarmFlow.Name
-	if strings.HasPrefix(row, homeColdFlow.Name) {
-		flow = homeColdFlow.Name
+	for _, pass := range []dailyFlow{homeColdFlow, homeMissFlow} {
+		if strings.HasPrefix(row, pass.Name) {
+			flow = pass.Name
+		}
 	}
 	return DailyResult{Flow: flow, Row: row, P95: p95, Budget: budget, Samples: samples}
 }
@@ -112,25 +114,28 @@ func TestAServerErrorOrARefusalFailsAHomeReadWithinBudget(t *testing.T) {
 	}
 }
 
-func TestEveryRequiredHomeReadIsJudgedInBothPasses(t *testing.T) {
+func TestEveryRequiredHomeReadIsJudgedInEveryPass(t *testing.T) {
 	calls := homeCalls(dailyInput{})
 	measured := func(name string, samples int) dailyRow {
 		result := homeRow(name, time.Millisecond, time.Second, samples)
 		return dailyRow{Measurement: BudgetMeasurement{Name: name}, Result: result}
 	}
-	// The cold brief is missing entirely; the optional digest has nothing behind it.
+	// The cold brief is missing entirely, and the optional digest has nothing
+	// behind it. The miss pass times only what the cold pass found, so it has no
+	// digest row at all.
 	rows := []dailyRow{measured("home_cold_digest", 0), measured("home_warm_digest", 0)}
 	for _, call := range calls {
 		if call.Name != "digest" {
-			rows = append(rows, measured(dailyRowName("home_warm", call), dailySamples))
+			rows = append(rows, measured(dailyRowName("home_warm", call), dailySamples),
+				measured(dailyRowName("home_miss", call), homeColdRounds))
 			if call.Name != "brief" {
 				rows = append(rows, measured(dailyRowName("home_cold", call), homeColdRounds))
 			}
 		}
 	}
 	required := homeRequired(rows, calls)
-	if want := 2 * (len(calls) - 1); len(required) != want {
-		t.Fatalf("judged %d rows, want %d: every required read in both passes", len(required), want)
+	if want := 3 * (len(calls) - 1); len(required) != want {
+		t.Fatalf("judged %d rows, want %d: every required read in all three passes", len(required), want)
 	}
 	failures := HomeBudgetFailures(required, homeBudgetAbsolute)
 	if len(failures) != 1 || !strings.Contains(failures[0], "home_cold_brief: no samples") {
