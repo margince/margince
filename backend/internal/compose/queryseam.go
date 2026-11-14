@@ -49,7 +49,7 @@ func queryVocabulary(pool *pgxpool.Pool) *search.VocabularyResolver {
 // which lane ranked it, not why.
 func queryRunner(pool *pgxpool.Pool, embedder search.Embedder) agents.QueryRunner {
 	validator := search.NewPlanValidator(queryVocabulary(pool))
-	executor := search.NewQueryExecutor(search.NewStore(InstallationDB(pool)), embedder,
+	executor := search.NewQueryExecutor(search.NewStore(rankedSearchDB(pool)), embedder,
 		search.NewColumnCatalog(InstallationDB(pool))).
 		// The place cache a radius predicate resolves its centre against.
 		// Injected here rather than imported, like every other cross-module

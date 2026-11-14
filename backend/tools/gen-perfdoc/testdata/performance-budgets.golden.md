@@ -54,7 +54,7 @@ A row with no data had nothing to time, and its note says why; a row not gated i
 | `app_shell_notices` | rep | 5.0 ms | 7.0 ms | 150 ms | 30 | within budget | empty on the seeded corpus |
 | `analytics_evaluate` | rep |  |  | 300 ms | 12 | no data | 12 samples, under the floor of 30: no p95 is claimed |
 | `worklist_first_load` | rep | 5200 ms | 5200 ms | 1000 ms | 1 | not gated |  |
-| `morning_load_cheap_route` | team | 60.0 ms | 240 ms | 150 ms | 40 | over budget (#7068) | pool wait 1250 ms in all, 48.0 ms at most, over 3200 acquires on a pool of 16 |
+| `morning_load_cheap_route` | team | 60.0 ms | 240 ms | 150 ms | 40 | over budget (#7068) | pool wait 1250 ms in all, 48.0 ms worst half-second mean, over 3200 acquires on a pool of 16 |
 
 ### Known-issue entries that could be removed
 
