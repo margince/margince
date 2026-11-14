@@ -64,8 +64,8 @@ func TestAModelCallThatPassesTheGateIsTracedThenAnswered(t *testing.T) {
 	}
 }
 
-// A declaration removed between the first check and the call is honoured: the
-// gate is asked again just before the lane, so access does not outlive it.
+// A declaration removed between the first check and the call is honoured.
+// The gate is asked again just before the lane, so access does not outlive it.
 func TestADeclarationRemovedDuringTheCallStopsTheCallBeforeTheLane(t *testing.T) {
 	t.Parallel()
 	l, asked := &lane{}, 0

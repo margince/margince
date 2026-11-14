@@ -614,9 +614,9 @@ func TestAModelCallNamesTheUnitInTheAuditTrail(t *testing.T) {
 	}
 }
 
-// A unit that leaves the composed set loses its objects, and the sweep is made
-// good by a later boot: one that ran with no store bound deletes nothing, and
-// the next one with a store deletes them. Another unit's objects stay.
+// A unit that leaves the composed set loses its objects. A boot with no store
+// bound deletes nothing, and the next boot with a store deletes them. Another
+// unit's objects stay.
 func TestARemovedUnitsObjectsAreSweptByALaterBootIfTheFirstHadNoStore(t *testing.T) {
 	e := integration.Setup(t)
 	ctx := e.Admin()
