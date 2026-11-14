@@ -123,28 +123,31 @@ func planningTime(e *apptest.AppEnv, sql string) (time.Duration, bool) {
 	if sql == "" {
 		return 0, false
 	}
+	ctx := context.Background()
+	conn, err := e.Pool.Acquire(ctx)
+	if err != nil {
+		return 0, false
+	}
+	defer conn.Release()
 	best := time.Duration(-1)
 	for range 3 {
-		rows, err := e.Pool.Query(context.Background(), "EXPLAIN (GENERIC_PLAN, COSTS false, SUMMARY) "+sql,
-			pgx.QueryExecModeSimpleProtocol)
-		if err != nil {
+		// The raw simple protocol sends the text as it is, so its $n stay parameters.
+		results, err := conn.Conn().PgConn().Exec(ctx, "EXPLAIN (GENERIC_PLAN, COSTS false, SUMMARY) "+sql).ReadAll()
+		if err != nil || len(results) != 1 || results[0].Err != nil {
 			return 0, false
 		}
-		for rows.Next() {
-			var line string
-			if rows.Scan(&line) != nil {
+		for _, row := range results[0].Rows {
+			m := planningLine.FindSubmatch(row[0])
+			if m == nil {
 				continue
 			}
-			if m := planningLine.FindStringSubmatch(line); m != nil {
-				planned, _ := strconv.ParseFloat(m[1], 64)
-				if took := time.Duration(planned * float64(time.Millisecond)); best < 0 || took < best {
-					best = took
-				}
+			planned, err := strconv.ParseFloat(string(m[1]), 64)
+			if err != nil {
+				return 0, false
 			}
-		}
-		rows.Close()
-		if rows.Err() != nil {
-			return 0, false
+			if took := time.Duration(planned * float64(time.Millisecond)); best < 0 || took < best {
+				best = took
+			}
 		}
 	}
 	return best, best >= 0
