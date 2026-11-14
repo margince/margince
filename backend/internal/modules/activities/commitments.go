@@ -72,6 +72,8 @@ type OpenTask struct {
 	AssigneeName string
 	CreatedAt    time.Time
 	About        []TaskAbout
+	// Version is the task row's, which a write to the task names.
+	Version int64
 }
 
 // ListOpenTasksInput narrows one sweep. Every field is optional except the
@@ -358,7 +360,7 @@ func attachTaskAbout(ctx context.Context, tx pgx.Tx, tasks []OpenTask) error {
 
 func scanOpenTask(row pgx.CollectableRow) (OpenTask, error) {
 	var t OpenTask
-	err := row.Scan(&t.ID, &t.Subject, &t.DueAt, &t.DueHasTime, &t.AssigneeID, &t.AssigneeName, &t.CreatedAt, &t.DueIntent)
+	err := row.Scan(&t.ID, &t.Subject, &t.DueAt, &t.DueHasTime, &t.AssigneeID, &t.AssigneeName, &t.CreatedAt, &t.DueIntent, &t.Version)
 	t.DueHasTime = t.DueHasTime && t.DueAt != nil
 	return t, err
 }
@@ -392,5 +394,6 @@ func joinAnd(terms []string) string {
 
 func openTaskColumns() string {
 	return "a.id, coalesce(a.subject, ''), " + storekit.TaskDueSQL("a") +
-		", a.due_has_time, a.assignee_id, coalesce(u.display_name, ''), a.created_at, " + storekit.IntentWireSQL("a", "due")
+		", a.due_has_time, a.assignee_id, coalesce(u.display_name, ''), a.created_at, " + storekit.IntentWireSQL("a", "due") +
+		", a.version"
 }

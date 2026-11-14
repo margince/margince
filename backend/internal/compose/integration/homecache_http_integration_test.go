@@ -11,12 +11,12 @@ package integration
 import (
 	"context"
 	"encoding/json"
-	"github.com/margince/margince/backend/internal/compose/homecache"
 	"net/http"
 	"strings"
 	"testing"
 	"time"
 
+	"github.com/margince/margince/backend/internal/compose/homecache"
 	"github.com/margince/margince/backend/internal/compose/integration/apptest"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )

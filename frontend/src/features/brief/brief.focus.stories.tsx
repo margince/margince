@@ -471,7 +471,9 @@ export const RecordedNextStepGap: Story = {
   play: async ({ canvasElement }) => {
     const card = await focusedCard(canvasElement);
     await waitFor(() =>
-      expect(card.getByText(en["worklist.because.no_next_step"])).toBeVisible(),
+      expect(
+        card.getByText(en["worklist.ask.brief.no_next_step"]),
+      ).toBeVisible(),
     );
     await expect(
       card.getByRole("link", { name: en["deal.openDeal"] }),

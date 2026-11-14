@@ -1,0 +1,25 @@
+{
+  "target": "bench-ai",
+  "measured_on": "2026-11-14",
+  "machine": {
+    "os": "darwin",
+    "arch": "arm64",
+    "cpu": "Apple M4",
+    "cores": 10,
+    "memory_gib": 24,
+    "toolchain": "go1.27.4",
+    "postgres": "16.15"
+  },
+  "budgets": [
+    {
+      "id": "PERF-5",
+      "name": "ai_draft_contact",
+      "p50_ms": 73.023333,
+      "p95_ms": 108.640083,
+      "p99_ms": 351.967834,
+      "budget_ms": 1500,
+      "samples": 30,
+      "note": "the whole draft from an offline model that answers at once: the product's share, without the model's latency"
+    }
+  ]
+}

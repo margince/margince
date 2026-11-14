@@ -187,6 +187,7 @@ func BriefRequest(in Input, lang string) model.Request {
 		Messages:       []model.Message{{Role: "user", Content: fence.Wrap(shownRefs(in).Show(encodeInput(in)))}},
 		MaxTokens:      ai.ReasoningOutputMaxTokens,
 		SecretStripper: ai.NewSecretStripper(),
+		ResponseSchema: briefSchema(),
 		Subjects:       in.subjects(),
 	}
 }

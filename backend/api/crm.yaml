@@ -57038,11 +57038,14 @@ components:
 
     Project360Commitment:
       type: object
-      required: [activity_id, subject, due_at, assignee_id, assignee_name, overdue]
+      required: [activity_id, subject, due_at, due_has_time, assignee_id, assignee_name, overdue, version]
       properties:
         activity_id: { type: string, format: uuid }
         subject: { type: string }
         due_at: { type: [string, 'null'], format: date-time }
+        due_has_time: { type: boolean, description: 'True when `due_at` names an agreed time of day, as on the task itself. A snooze keeps that time.' }
+        due_intent: { $ref: '#/components/schemas/IntentTime' }
+        version: { type: integer, format: int64, description: "The task row's version, which a write to the task names." }
         assignee_id: { type: [string, 'null'], format: uuid }
         assignee_name: { type: [string, 'null'] }
         overdue: { type: boolean, description: Dated and already past at `as_of`. }

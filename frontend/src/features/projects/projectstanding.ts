@@ -206,6 +206,10 @@ export function quietStretch(view: Project360): LastUpdate | undefined {
 
 export type NextCommitment = Readonly<{
   activityId: string;
+  // The task row's version and due facts, which its Done and Snooze write.
+  version: number;
+  dueHasTime: boolean;
+  dueIntent: components["schemas"]["IntentTime"] | undefined;
   subject: string;
   dueAt: string | null;
   overdue: boolean;
@@ -226,6 +230,9 @@ export function nextCommitment(view: Project360): NextCommitment | undefined {
   const open = Math.max(view.rollups?.open_commitments ?? 0, rows.length);
   return {
     activityId: first.activity_id,
+    version: first.version,
+    dueHasTime: first.due_has_time,
+    dueIntent: first.due_intent,
     subject: first.subject,
     dueAt: first.due_at,
     overdue: first.overdue,

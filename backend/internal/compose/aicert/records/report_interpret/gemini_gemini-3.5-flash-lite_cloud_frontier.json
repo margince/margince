@@ -1,0 +1,140 @@
+{
+  "task": "report_interpret",
+  "provider": "gemini",
+  "served_model": "gemini-3.5-flash-lite",
+  "env_class": "cloud_frontier",
+  "prompt_version": "p86c9298e672652c6ddcdded5872a917e",
+  "corpus_version": "v1",
+  "verdict": "not_supported",
+  "runs": 24,
+  "passed": 14,
+  "reliability": 0.5833333333333334,
+  "reported_accepted": 14,
+  "reported_wrong_answer": 5,
+  "reported_invalid": 5,
+  "reported_abstained": 0,
+  "certified_scope": "full_invocation",
+  "context_applied": false,
+  "context_scopes": null,
+  "judge_score_p50": 81,
+  "judge_score_min": 3,
+  "latency_p50": 1378,
+  "latency_p95": 1712,
+  "mean_tokens": 2173,
+  "mean_tokens_in": 1984,
+  "mean_tokens_out": 189,
+  "mean_cached_tokens": 0,
+  "mean_cache_write_tokens": 0,
+  "est_cost_microusd": 1067,
+  "judge_served_model": "claude-sonnet-5-5",
+  "judge_provider": "claude_cli",
+  "self_judged": false,
+  "served_identity_source": "response",
+  "ran_at": "2026-11-14T06:43:15Z",
+  "scenarios": [
+    {
+      "scenario": "progress_summary_judges_nothing_against_a_goal_nobody_set",
+      "site": "progress_summary",
+      "stamp": "5c8999533281b4c65b2f503d0e467de23ae1e8b80f9fb951f6c5ca49021a4511741f6e2e05c2fd229850c2cbbefbb9a8963ae107a561450d8b794fc889fe5a8c178be134210c7ce1b05929b2209dddc8e9641e51e570aa7708d4b35c8b4b8aef",
+      "verdict": "certified",
+      "judge_band": "certified",
+      "runs": 3,
+      "passed": 3,
+      "judge_scores": [
+        90,
+        88,
+        90
+      ],
+      "bands": {
+        "certified_min": 70,
+        "degraded_min": 50,
+        "floor": 40
+      },
+      "reported_accepted": 3,
+      "reported_wrong_answer": 0,
+      "reported_invalid": 0,
+      "reported_abstained": 0
+    },
+    {
+      "scenario": "progress_summary_names_what_is_missing_to_the_goal",
+      "site": "progress_summary",
+      "stamp": "579b1fb7da37495ed3e71582fe92fb5478a017cd545f7cc6fc76dfe962a1943d00f218e2606a5dcc442883fa02200fd5047755d25ad851b11c97761076daf91a6ee087976b771212a1223f85635565e593679283a1ff20b53aae330911f5b806",
+      "verdict": "certified",
+      "judge_band": "certified",
+      "runs": 3,
+      "passed": 3,
+      "judge_scores": [
+        93,
+        90,
+        90
+      ],
+      "bands": {
+        "certified_min": 70,
+        "degraded_min": 50,
+        "floor": 40
+      },
+      "reported_accepted": 3,
+      "reported_wrong_answer": 0,
+      "reported_invalid": 0,
+      "reported_abstained": 0
+    },
+    {
+      "scenario": "sales_assessment_acknowledges_an_open_decision",
+      "site": "sales_assessment",
+      "stamp": "2d9c7a9743ffb10f5c808f4d91aa94cc22ef4248eb52ba0da2e41040d6111df12162986488ef774b3c79b309ea49daa1cacd3cee13a803ee2c04e9895fb147b5bcbe6f6305ac041e9962b1fe1a85e7175250a170975d093b5585a08ff2aaa07c",
+      "verdict": "supported_degraded",
+      "judge_band": "supported_degraded",
+      "runs": 9,
+      "passed": 3,
+      "judge_scores": [
+        88,
+        90,
+        4,
+        5,
+        82,
+        3,
+        88,
+        4,
+        80
+      ],
+      "bands": {
+        "certified_min": 70,
+        "degraded_min": 50,
+        "floor": 40
+      },
+      "reported_accepted": 3,
+      "reported_wrong_answer": 3,
+      "reported_invalid": 3,
+      "reported_abstained": 0
+    },
+    {
+      "scenario": "sales_assessment_names_the_deal_no_decision_covers",
+      "site": "sales_assessment",
+      "stamp": "d665af1f0806ddecf480613517aa4a29a596634aa4d6bf4e71f7592fd193a3e89e17c3f9b3c774d2f98cf3b52c66ba0bc0ac106b41768043ee36f14a68b43473aa32e1f930f014e097da2a54ca126542a6bc19f27bd6bccd84044cf08642c6d3",
+      "verdict": "supported_degraded",
+      "judge_band": "supported_degraded",
+      "runs": 9,
+      "passed": 5,
+      "judge_scores": [
+        80,
+        22,
+        6,
+        88,
+        81,
+        22,
+        40,
+        80,
+        82
+      ],
+      "bands": {
+        "certified_min": 70,
+        "degraded_min": 50,
+        "floor": 40
+      },
+      "reported_accepted": 5,
+      "reported_wrong_answer": 2,
+      "reported_invalid": 2,
+      "reported_abstained": 0
+    }
+  ]
+}
