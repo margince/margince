@@ -50,6 +50,8 @@ CREATE FUNCTION activity_clears_reply_settled() RETURNS trigger LANGUAGE plpgsql
 BEGIN
   IF TG_OP = 'INSERT' THEN
     PERFORM clear_reply_settled(ARRAY[NEW.thread_key]);
+  ELSIF TG_OP = 'DELETE' THEN
+    PERFORM clear_reply_settled(ARRAY[OLD.thread_key]);
   ELSE
     PERFORM clear_reply_settled(ARRAY[NEW.thread_key, OLD.thread_key]);
   END IF;
@@ -60,7 +62,7 @@ $$;
 -- Every column the thread arms of the owed check read. The stamp itself is not
 -- among them, so the job's own write fires nothing.
 CREATE TRIGGER activity_clears_reply_settled
-  AFTER INSERT OR UPDATE OF thread_key, kind, channel_provider, direction, archived_at,
+  AFTER INSERT OR DELETE OR UPDATE OF thread_key, kind, channel_provider, direction, archived_at,
     occurred_at, occurred_precision, counterparty_email
   ON activity FOR EACH ROW EXECUTE FUNCTION activity_clears_reply_settled();
 

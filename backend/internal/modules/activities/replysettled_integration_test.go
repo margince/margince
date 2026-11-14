@@ -134,4 +134,9 @@ func TestTheSettledStampNeverChangesWhatIsOwed(t *testing.T) {
 	if owed := e.owedAt(t, []ids.UUID{asked}, []time.Time{now}); !owed[asked][0] {
 		t.Error("with its only reply archived, the message is still read as settled")
 	}
+
+	e.exec(t, `DELETE FROM activity WHERE id = $1`, second)
+	if stamp, _ := e.stampOf(t, first); stamp != nil {
+		t.Errorf("deleting the follow-up left the first message settled at %v", stamp)
+	}
 }
