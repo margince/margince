@@ -341,6 +341,19 @@ if __name__ == "__main__":
     unittest.main()
 
 
+class IsTheCraneJobAtRiskTest(GuardCase):
+    scenario = "case118-is-the-crane-job-at-risk.yaml"
+
+    def test_the_state_as_the_record_spells_it_names_the_risk(self):
+        self.assertGreen("The Hafenkran retrofit is flagged as `at_risk`: the supplier moved the control cabinets.")
+
+    def test_the_state_in_words_names_the_risk(self):
+        self.assertGreen("The Hafenkran retrofit is at risk because the supplier moved the control cabinets.")
+
+    def test_an_answer_that_never_names_the_risk_fails(self):
+        self.assertMissed("The Hafenkran retrofit is delivering; the supplier moved the control cabinets.", "risk")
+
+
 class AskSofiaForAnIntroTest(GuardCase):
     scenario = "case108-ask-sofia-for-an-intro.yaml"
 

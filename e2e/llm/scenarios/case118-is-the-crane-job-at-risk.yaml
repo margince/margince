@@ -31,8 +31,8 @@ may_call:
 
 must_mention:
   - "Hafenkran"
-  # The state, in the words a user would use for at_risk.
-  - "(?i)\brisk"
+  # The state, in a user's words or as the record spells it (at_risk).
+  - "(?i)(?:\b|_)risk"
 
 judge:
   - "Criterion 1. The answer says the project was judged at risk because the supplier moved the control cabinets (Steuerschränke) by about six weeks. Answer no if it gives no reason, or a reason other than the supplier's delay."
