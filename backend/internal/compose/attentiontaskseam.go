@@ -88,24 +88,64 @@ func openTasksDueBy(
 	return in, true
 }
 
-func (t attentionTasks) OpenForViewer(
-	ctx context.Context, asOf, until time.Time, limit int, scope attention.TaskScope, owner ids.UUID, team []ids.UUID,
-) ([]attention.Task, error) {
-	// The store answers "open and due by then" itself, so the limit bounds the
-	// rows that QUALIFY. This used to read ten times the lane and narrow
-	// afterwards, which put the bound on the wrong set: a pile of completed
-	// tasks filled the scan, the overdue promise underneath never reached the
-	// reader, and the day rendered clear while the work was still there.
-	in, ok := openTasksDueBy(ctx, asOf, until, scope, owner, team)
-	if !ok {
-		return nil, nil
+// PlannedForViewer reads the planned lane's windows, then enriches every task
+// they hold in one pass. A reminded task can also be due today; it is enriched
+// once and appears in both lists. Each window's limit bounds the rows that
+// qualify, because the store answers "open and due by then" itself.
+func (t attentionTasks) PlannedForViewer(ctx context.Context, ask attention.PlannedAsk) (attention.PlannedTasks, error) {
+	w := ask.Window
+	var day, upcoming, reminders []crmcontracts.Activity
+	if in, ok := openTasksDueBy(ctx, w.AsOf, w.Until, w.Scope, w.Owner, w.Team); ok {
+		in.Limit = &ask.DayLimit
+		var err error
+		if day, err = t.listOpenTasks(ctx, in); err != nil {
+			return attention.PlannedTasks{}, err
+		}
 	}
-	in.Limit = &limit
-	rows, err := t.listOpenTasks(ctx, in)
+	if in, ok := openTasksDueBy(ctx, w.AsOf, ask.Horizon, w.Scope, w.Owner, w.Team); ok {
+		in.OpenAndDueAfter, in.Limit = &w.Until, &ask.UpcomingLimit
+		var err error
+		if upcoming, err = t.listOpenTasks(ctx, in); err != nil {
+			return attention.PlannedTasks{}, err
+		}
+	}
+	if ask.Reminders {
+		var err error
+		if reminders, err = t.dueReminders(ctx, w.AsOf); err != nil {
+			return attention.PlannedTasks{}, err
+		}
+	}
+	enriched, err := t.asTasks(ctx, distinctActivities(day, upcoming, reminders), w.Scope, w.AsOf)
 	if err != nil {
-		return nil, err
+		return attention.PlannedTasks{}, err
 	}
-	return t.asTasks(ctx, rows, scope, asOf)
+	byID := make(map[ids.UUID]attention.Task, len(enriched))
+	for _, task := range enriched {
+		byID[task.ID] = task
+	}
+	pick := func(rows []crmcontracts.Activity) []attention.Task {
+		tasks := make([]attention.Task, 0, len(rows))
+		for _, row := range rows {
+			tasks = append(tasks, byID[ids.UUID(row.Id)])
+		}
+		return tasks
+	}
+	return attention.PlannedTasks{Open: pick(day), Upcoming: pick(upcoming), Reminders: pick(reminders)}, nil
+}
+
+// distinctActivities lists each activity of the windows once, in order.
+func distinctActivities(windows ...[]crmcontracts.Activity) []crmcontracts.Activity {
+	seen := map[openapi_types.UUID]bool{}
+	var out []crmcontracts.Activity
+	for _, window := range windows {
+		for _, row := range window {
+			if !seen[row.Id] {
+				seen[row.Id] = true
+				out = append(out, row)
+			}
+		}
+	}
+	return out
 }
 
 // asTasks carries a window's rows across as tasks. Each carries the reminder
@@ -151,28 +191,6 @@ func (t attentionTasks) listOpenTasks(ctx context.Context, in activities.ListAct
 		return err
 	})
 	return rows, err
-}
-
-// UpcomingForViewer reads the work due after the day's end, to a horizon.
-//
-// Same narrowing as OpenForViewer — the scope arms are openTasksDueBy's, so a
-// colleague's tasks cannot leak into a personal lane through the newer read —
-// and the window is closed at both ends in the QUERY, so the limit bounds rows
-// that qualify rather than a wider set narrowed afterwards.
-func (t attentionTasks) UpcomingForViewer(
-	ctx context.Context, asOf, from, until time.Time, limit int, scope attention.TaskScope, owner ids.UUID, team []ids.UUID,
-) ([]attention.Task, error) {
-	in, ok := openTasksDueBy(ctx, asOf, until, scope, owner, team)
-	if !ok {
-		return nil, nil
-	}
-	in.OpenAndDueAfter = &from
-	in.Limit = &limit
-	rows, err := t.listOpenTasks(ctx, in)
-	if err != nil {
-		return nil, err
-	}
-	return t.asTasks(ctx, rows, scope, asOf)
 }
 
 // CountTasks counts a later task window whole, under the lane's own
@@ -256,15 +274,14 @@ func (t attentionTasks) TasksOnDeals(
 	}
 }
 
-// RemindersForViewer reads every due reminder of the reader's through the
-// store's reminder_due filter, the same read GET /v1/activities?reminder_due=true
-// makes, following its cursor. All of them, because the badge counts all.
-func (t attentionTasks) RemindersForViewer(ctx context.Context, asOf time.Time) ([]attention.Task, error) {
-	reader := activities.ReminderReader(ctx)
-	if reader.IsZero() {
+// dueReminders reads every due reminder of the reader's through the store's
+// reminder_due filter, the same read GET /v1/activities?reminder_due=true makes,
+// following its cursor. All of them, because the badge counts all.
+func (t attentionTasks) dueReminders(ctx context.Context, asOf time.Time) ([]crmcontracts.Activity, error) {
+	if activities.ReminderReader(ctx).IsZero() {
 		return nil, nil
 	}
-	var due []attention.Task
+	var due []crmcontracts.Activity
 	page := reminderPage
 	in := activities.ListActivitiesInput{RemindersDue: true, AsOf: &asOf, Limit: &page, ReadableOnly: true}
 	for {
@@ -272,13 +289,9 @@ func (t attentionTasks) RemindersForViewer(ctx context.Context, asOf time.Time) 
 		if err != nil {
 			return nil, err
 		}
-		pageTasks, err := t.taskRows(ctx, rows, attention.TasksMine, asOf)
-		if err != nil {
-			return nil, err
-		}
-		due = append(due, pageTasks...)
+		due = append(due, rows...)
 		if !next.HasMore {
-			return t.markReadOnly(ctx, due, asOf)
+			return due, nil
 		}
 		in.Cursor = &next.NextCursor
 	}

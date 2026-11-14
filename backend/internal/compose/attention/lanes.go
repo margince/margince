@@ -148,24 +148,32 @@ const (
 // with a colleague's rows and hide the reader's own overdue task. The team argument is TaskWindow.Team: the seats a
 // team view keeps, plus unassigned work. Nil reads the scope unnarrowed.
 type Tasks interface {
-	OpenForViewer(ctx context.Context, asOf, until time.Time, limit int, scope TaskScope, owner ids.UUID, team []ids.UUID) ([]Task, error)
+	// PlannedForViewer answers the planned lane's reads under one narrowing,
+	// with each task enriched once across them.
+	PlannedForViewer(ctx context.Context, ask PlannedAsk) (PlannedTasks, error)
 	// CountOpenForViewer answers how many there ARE under the same narrowing,
 	// which is not the page length: the lane is capped at a dozen, so a badge
 	// showing the cap tells a reader with thirteen that they have twelve, and
 	// there is no second page to reach the thirteenth by.
 	CountOpenForViewer(ctx context.Context, asOf, until time.Time, scope TaskScope, owner ids.UUID, team []ids.UUID) (int, error)
-	// UpcomingForViewer answers the work due AFTER the day's end, up to a
-	// horizon, under the same narrowing.
-	//
-	// A second read rather than a wider one, because the two allocations must
-	// not compete: a full day's backlog would fill a shared limit before a
-	// single upcoming row was reached, and the reader who most needs next
-	// week's deadline is exactly the one who would never see it.
-	UpcomingForViewer(ctx context.Context, asOf, from, until time.Time, limit int, scope TaskScope, owner ids.UUID, team []ids.UUID) ([]Task, error)
-	// RemindersForViewer answers every one of the reader's tasks whose reminder
-	// is due, latest reminder first. Not under the day's cap, which orders by
-	// due date, and not under any cap, because the lane's count counts them all.
-	RemindersForViewer(ctx context.Context, asOf time.Time) ([]Task, error)
+}
+
+// PlannedAsk is the planned lane's question. The day's work, due by
+// Window.Until, and the work due after it up to Horizon are two bounded reads,
+// because a full day's backlog would fill a shared limit before a single
+// upcoming row was reached. Reminders asks for every task of the reader's own
+// whose reminder is due, latest first and uncapped, because the lane's count
+// counts them all.
+type PlannedAsk struct {
+	Window                  TaskWindow
+	Horizon                 time.Time
+	DayLimit, UpcomingLimit int
+	Reminders               bool
+}
+
+// PlannedTasks answers a PlannedAsk, one list per read.
+type PlannedTasks struct {
+	Open, Upcoming, Reminders []Task
 }
 
 // Task is one piece of agreed work.
