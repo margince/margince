@@ -4,12 +4,16 @@
 package compose
 
 // The published transaction seam: the three SQL verbs a unit's own tables
-// need (run by unitsql), and the door onto the governed core port. These are
-// the types a unit holds; extruntime.go owns the Runtime's lifetime and scope.
+// need (run by unitsql), and the door onto the governed core port. The doors
+// onto the core's models and objects are here too.
+// These are the types a unit holds; extruntime.go owns the Runtime's lifetime
+// and scope.
 
 import (
 	"context"
+	"fmt"
 
+	"github.com/margince/margince/backend/internal/compose/extcapability"
 	"github.com/margince/margince/backend/internal/compose/unitsql"
 	"github.com/margince/margince/backend/pkg/extension"
 )
@@ -61,4 +65,37 @@ func (t extensionTx) Query(ctx context.Context, sql string, args ...any) (extens
 //nolint:ireturn // Row is the published deferred read; the error is deferred to Scan by design.
 func (t extensionTx) QueryRow(ctx context.Context, sql string, args ...any) extension.Row {
 	return t.sql.QueryRow(ctx, sql, args...)
+}
+
+// needed is the gate every capability passes: the Runtime's lifetime and scope,
+// then the unit's declaration. The composition is read on each call, so a unit
+// that stops declaring a need loses it on its next call.
+func (r *callRuntime) needed(ctx context.Context, capability extension.Capability) (context.Context, error) {
+	ctx, err := r.scoped(ctx)
+	if err != nil {
+		return nil, err
+	}
+	for _, ext := range ComposedExtensions() {
+		if string(ext.Name) == r.unit && ext.Declares(capability) {
+			return ctx, nil
+		}
+	}
+	return nil, fmt.Errorf("%w: add extension.Need %q to it", extension.ErrNotDeclared, capability)
+}
+
+//nolint:ireturn // returning the published port IS the seam: a unit holds extension.Models, never a core type.
+func (r *callRuntime) Models() extension.Models {
+	return extcapability.Models{
+		Lane: r.deps.models, Unit: r.unit,
+		Gate:  func(ctx context.Context) (context.Context, error) { return r.needed(ctx, extension.CapabilityModels) },
+		Trace: func(ctx context.Context) error { return extcapability.Trace(ctx, r.deps.pool, r.unit) },
+	}
+}
+
+//nolint:ireturn // returning the published port IS the seam: a unit holds extension.Objects, never a core type.
+func (r *callRuntime) Objects() extension.Objects {
+	return extcapability.Objects{
+		Store: r.deps.blob, Unit: r.unit,
+		Gate: func(ctx context.Context) (context.Context, error) { return r.needed(ctx, extension.CapabilityObjects) },
+	}
 }

@@ -205,6 +205,22 @@ func TestRegisterExtensionsPreflightsDuplicateJurisdictions(t *testing.T) {
 	}
 }
 
+// The boot refuses a need the manifest could not publish: an unknown
+// capability, an empty reason, or one capability listed twice.
+func TestRegisterExtensionsRejectsABadNeed(t *testing.T) {
+	good := extension.Need{Capability: extension.CapabilityModels, Reason: "Summarises a thread."}
+	for name, needs := range map[string][]extension.Need{
+		"unknown capability": {{Capability: "vault", Reason: "Reads tokens."}},
+		"empty reason":       {{Capability: extension.CapabilityModels}},
+		"declared twice":     {good, good},
+	} {
+		err := RegisterExtensions(composableAll([]extension.Extension{{Name: "needy", Version: "0.0.1", Needs: needs}}), nil, nil)
+		if err == nil || !strings.Contains(err.Error(), `extension "needy"`) {
+			t.Errorf("%s: err = %v, want the boot to refuse the unit", name, err)
+		}
+	}
+}
+
 // TestRegisterExtensionsRejectsAnUnknownRetentionClass: the class set is
 // closed (vocabulary registration is deferred, ADR-0120 §13) — a typo'd
 // or invented class would be a statutory floor that looks registered
