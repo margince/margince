@@ -10,7 +10,7 @@ import { useT } from "../../i18n";
 import { RecordListsPanel } from "../records/recordlists";
 import { omitted } from "./contact360";
 import { ContactBillingRoles } from "./contactbillingroles";
-import { ContactClaimReadings } from "./contactcards";
+import { ContactClaimReadings, openClaims } from "./contactcards";
 import { ContactConfirmCallout } from "./contactconfirm";
 import { ContactConsentPanel } from "./contactconsentpanel";
 import { EnrichedFields } from "./contactcorrections";
@@ -57,9 +57,12 @@ export function ContactResearchTab({
     view != null &&
     !providerWithheld &&
     (view.provider_profiles?.length ?? 0) === 0;
-  // Neither half has anything to say: the tab says so once, in Sources, and
-  // has nothing to check.
-  const nothing = view != null && providerHasNothing && fieldsState === "empty";
+  // Nothing to check and no source: the tab says so once, in Sources.
+  const nothing =
+    view != null &&
+    providerHasNothing &&
+    fieldsState === "empty" &&
+    openClaims(view).length === 0;
   const ids = {
     check: `${baseId}-check`,
     sources: `${baseId}-sources`,

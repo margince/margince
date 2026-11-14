@@ -195,11 +195,16 @@ export function ContactUnderstandingCard({
  * to dismiss one that got it wrong. The Research tab draws it, where
  * Understanding's "Correct something" leads.
  */
-export function ContactClaimReadings({ view }: Readonly<{ view: Contact360 }>) {
-  const t = useT();
-  const open = omitted(view, "claims")
+/** The claims still open for a verdict; none where the section was withheld. */
+export function openClaims(view: Contact360) {
+  return omitted(view, "claims")
     ? []
     : (view.claims ?? []).filter((claim) => claim.status === "open");
+}
+
+export function ContactClaimReadings({ view }: Readonly<{ view: Contact360 }>) {
+  const t = useT();
+  const open = openClaims(view);
   if (open.length === 0) {
     return null;
   }

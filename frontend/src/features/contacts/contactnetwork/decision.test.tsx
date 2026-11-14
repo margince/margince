@@ -171,6 +171,20 @@ describe("the latest change states no receipt it does not have", () => {
 
 // A name the server sent as whitespace is a name it does not have. Letting it
 // through reads as a reading which failed to load.
+// Colleagues the reader may not see are not "nobody": the answer says some
+// are hidden rather than that no path exists.
+describe("routes withheld for lack of a grant", () => {
+  it("does not read hidden colleagues as no way in", () => {
+    stubSession();
+    const result = readings({ routesWithheld: true });
+
+    expect(result.current.wayIn.chip).toBe(en["reading.restricted"]);
+    expect(result.current.wayIn.answer).toBe(
+      en["contact.graph.withheldDirect"],
+    );
+  });
+});
+
 describe("a name the server sent blank is no name", () => {
   it("reads a blank legacy route name as no way in", () => {
     stubSession();

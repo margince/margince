@@ -36,6 +36,7 @@ export type ChapterReading = Readonly<{ chip: string; answer: string }>;
  */
 export function useNetworkReadings({
   routes,
+  routesWithheld,
   legacyVia,
   change,
   changeWithheld,
@@ -44,6 +45,8 @@ export function useNetworkReadings({
   openUnread,
 }: Readonly<{
   routes: readonly RouteCandidate[];
+  // Some colleagues were not shown, so no route in view is not "no route".
+  routesWithheld?: boolean;
   // The colleague named by a server that predates the candidate list. Without
   // it the answer would read "nobody reaches them" over a card naming the
   // contact who does.
@@ -65,7 +68,13 @@ export function useNetworkReadings({
   const own = useOwnRoute();
   const reader = useMe().data?.user;
   return {
-    wayIn: wayInReading(routes, legacyVia, routes.some(own), t, plural, locale),
+    wayIn:
+      routes.length === 0 && !legacyVia?.trim() && routesWithheld
+        ? {
+            chip: t("reading.restricted"),
+            answer: t("contact.graph.withheldDirect"),
+          }
+        : wayInReading(routes, legacyVia, routes.some(own), t, plural, locale),
     progress: progressReading(
       changeReading(change, changeWithheld, locale, t),
       handoffReading(open, openPending, openUnread, reader, t),

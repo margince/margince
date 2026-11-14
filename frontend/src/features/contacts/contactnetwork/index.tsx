@@ -164,6 +164,7 @@ function NetworkChapters({
   const moved = latestChange(view);
   const readings = useNetworkReadings({
     routes: read.routes,
+    routesWithheld: (data.groups_omitted ?? []).includes("direct"),
     legacyVia: read.legacy?.via_display_name,
     change: moved.change,
     changeWithheld: moved.withheld,

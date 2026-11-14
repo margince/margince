@@ -12,6 +12,10 @@
 .chapter:focus {
   outline: none;
 }
+.chapter:focus-visible {
+  border-radius: var(--r-lg);
+  box-shadow: var(--focus-glow);
+}
 .chapter-top {
   display: flex;
   flex-wrap: wrap;

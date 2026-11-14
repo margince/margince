@@ -186,4 +186,28 @@ describe("the research tab's enrichment evidence", () => {
       screen.queryByText("No enriched fields have evidence yet."),
     ).toBeNull();
   });
+
+  it("keeps an open reading from conversations when nothing else is there", () => {
+    withProviders(
+      <ContactResearchTab
+        view={view({
+          profile_fields: [],
+          claims: [
+            {
+              id: "c-1",
+              kind: "commitment_ours",
+              body: "Send the pilot quote",
+              source_activity_id: "a-1",
+              occurred_precision: "instant",
+              status: "open",
+              needs_review: false,
+              due_at: null,
+            },
+          ],
+        })}
+      />,
+    );
+    expect(screen.getByText("Read from conversations")).toBeTruthy();
+    expect(screen.getByText("Send the pilot quote")).toBeTruthy();
+  });
 });

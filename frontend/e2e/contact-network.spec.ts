@@ -184,13 +184,19 @@ test.describe("Network tab — visual weight", () => {
   for (const width of [900, 1920]) {
     test(`the chapters stack in order at ${width}px`, async ({ page }) => {
       await page.setViewportSize({ width, height: 900 });
-      const tops = await page
+      const boxes = await page
         .locator(".pn-stack .chapter")
         .evaluateAll((chapters) =>
-          chapters.map((c) => c.getBoundingClientRect().top),
+          chapters.map((c) => {
+            const box = c.getBoundingClientRect();
+            return { top: box.top, bottom: box.bottom };
+          }),
         );
-      expect(tops).toHaveLength(3);
-      expect([...tops].sort((x, y) => x - y)).toEqual(tops);
+      expect(boxes).toHaveLength(3);
+      // Each starts below the one before ends, so two never share a row.
+      for (let i = 1; i < boxes.length; i++) {
+        expect(boxes[i].top).toBeGreaterThanOrEqual(boxes[i - 1].bottom);
+      }
     });
   }
 

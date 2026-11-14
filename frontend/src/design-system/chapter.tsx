@@ -6,7 +6,7 @@ import { type ReactNode, useId } from "react";
 import { Card } from "./atoms";
 import { Heading } from "./heading";
 import { useJumpTo } from "./jumpbar";
-import { FlatPanelHeads } from "./panel";
+import { FlatPanelHeads, PanelTitleLevel } from "./panel";
 import "./chapter.css";
 
 // A long record tab reads as a few chapters in a fixed order. Every chapter
@@ -55,7 +55,9 @@ export function Chapter({
       {children ? (
         <Card as="div" className="chapter-card">
           <div className="chapter-parts" data-layout={rows ? "rows" : "stack"}>
-            <FlatPanelHeads value>{children}</FlatPanelHeads>
+            <FlatPanelHeads value>
+              <PanelTitleLevel value={3}>{children}</PanelTitleLevel>
+            </FlatPanelHeads>
           </div>
         </Card>
       ) : null}
