@@ -243,6 +243,14 @@ class RunCodexTest(unittest.TestCase):
         for feature in ("plugins", "hooks", "memories"):
             self.assertIn(f"features.{feature}=false", argv)
 
+    def test_every_agent_spawning_tool_is_forced_off(self):
+        # A run measured on a Codex session that delegated to a sub-agent does
+        # not measure the model answering this lane's tools.
+        self.run_codex()
+        argv = self.seen()["argv"]
+        for feature in ("multi_agent", "collaboration_modes"):
+            self.assertIn(f"features.{feature}=false", argv)
+
     def test_a_login_codex_refreshed_goes_back_to_the_operator(self):
         # The refresh voids the old token, so keeping only the copy would sign the operator out.
         self.run_codex(FAKE_CODEX_REFRESH='{"tokens": "login-v2"}')
