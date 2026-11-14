@@ -165,32 +165,21 @@ func (s *stubTasks) CountOpenForViewer(
 	return len(s.rows), nil
 }
 
-func (s *stubTasks) OpenForViewer(
-	_ context.Context, _, until time.Time, _ int, scope TaskScope, owner ids.UUID, _ []ids.UUID,
-) ([]Task, error) {
-	s.until = &until
-	s.scope = scope
-	s.owner = owner
-	return s.rows, s.err
-}
-
-// UpcomingForViewer answers the work due after today. Recorded separately from
-// OpenForViewer's window so a test can prove the two reads are bounded
-// independently rather than sharing one allocation.
-func (s *stubTasks) UpcomingForViewer(
-	_ context.Context, _, from, until time.Time, limit int, scope TaskScope, owner ids.UUID, _ []ids.UUID,
-) ([]Task, error) {
-	s.upcomingFrom, s.upcomingUntil, s.upcomingLimit = &from, &until, limit
-	s.scope = scope
-	s.owner = owner
-	return s.upcoming, s.upcomingErr
-}
-
-// RemindersForViewer answers the reader's due reminders, recorded so a test
-// can prove the read is made only for the reader's own queue.
-func (s *stubTasks) RemindersForViewer(context.Context, time.Time) ([]Task, error) {
-	s.remindersAsked = true
-	return s.reminders, nil
+// PlannedForViewer answers the day's rows, the upcoming rows and the reminders.
+// Each window is recorded on its own, so a test can prove the reads are bounded
+// apart rather than sharing one allocation.
+func (s *stubTasks) PlannedForViewer(_ context.Context, ask PlannedAsk) (PlannedTasks, error) {
+	s.until, s.scope, s.owner = &ask.Window.Until, ask.Window.Scope, ask.Window.Owner
+	s.upcomingFrom, s.upcomingUntil, s.upcomingLimit = &ask.Window.Until, &ask.Horizon, ask.UpcomingLimit
+	s.remindersAsked = ask.Reminders
+	if err := errors.Join(s.err, s.upcomingErr); err != nil {
+		return PlannedTasks{}, err
+	}
+	read := PlannedTasks{Open: s.rows, Upcoming: s.upcoming}
+	if ask.Reminders {
+		read.Reminders = s.reminders
+	}
+	return read, nil
 }
 
 // mineOnly is what most callers actually ask of the recorded scope.

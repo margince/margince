@@ -190,12 +190,12 @@ func TestTheTaskCountCountsEachDueReminderOnce(t *testing.T) {
 	if total != 3 {
 		t.Errorf("the lane counts %d tasks, want 3", total)
 	}
-	reminders, err := tasks.RemindersForViewer(r.rep1, r.now)
+	read, err := plannedRead(r.rep1, tasks, r.now, r.now, true)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(reminders) != 2 {
-		t.Errorf("the reminder read lists %d tasks, want 2", len(reminders))
+	if len(read.Reminders) != 2 {
+		t.Errorf("the reminder read lists %d tasks, want 2", len(read.Reminders))
 	}
 }
 
@@ -235,12 +235,12 @@ func TestTheReminderReadFollowsItsCursor(t *testing.T) {
 	for range reminderPage + 1 {
 		r.task(t, "Reminded", r.now.AddDate(0, 0, 7), new(r.now.Add(-time.Minute)), &r.e.Rep1)
 	}
-	due, err := attentionTasks{store: r.e.Activities}.RemindersForViewer(r.rep1, r.now)
+	read, err := plannedRead(r.rep1, attentionTasks{store: r.e.Activities}, r.now, r.now, true)
 	if err != nil {
 		t.Fatal(err)
 	}
 	seen := map[ids.UUID]bool{}
-	for _, task := range due {
+	for _, task := range read.Reminders {
 		seen[task.ID] = true
 	}
 	if len(seen) != reminderPage+1 {
@@ -361,4 +361,13 @@ func TestATaskTheReaderMayNotReadIsNotOnTheirWorklist(t *testing.T) {
 			t.Error("the hidden task's subject reached the Worklist")
 		}
 	}
+}
+
+// plannedRead asks the planned lane's seam for the reader's own day up to
+// until, with nothing after it, and their due reminders when asked.
+func plannedRead(ctx context.Context, tasks attentionTasks, asOf, until time.Time, reminders bool) (attention.PlannedTasks, error) {
+	return tasks.PlannedForViewer(ctx, attention.PlannedAsk{
+		Window:  attention.TaskWindow{AsOf: asOf, Until: until, Scope: attention.TasksMine},
+		Horizon: until, DayLimit: 100, UpcomingLimit: 1, Reminders: reminders,
+	})
 }

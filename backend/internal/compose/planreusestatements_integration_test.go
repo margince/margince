@@ -139,7 +139,7 @@ func TestTheReadsThatReuseGenericPlansBindNoPartialIndexPredicate(t *testing.T) 
 		if _, err := emailSummariesReusingPlans(ctx, store, []ids.UUID{ids.UUID(mail.Id)}, at); err != nil {
 			return err
 		}
-		if _, err := (attentionTasks{store: store}).RemindersForViewer(ctx, at); err != nil {
+		if _, err := plannedRead(ctx, attentionTasks{store: store}, at, at, true); err != nil {
 			return err
 		}
 		if _, _, err := (attentionAwaiting{store: store}).AwaitingReplies(ctx, at); err != nil {
