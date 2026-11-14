@@ -24,7 +24,7 @@ export type HeldRead = {
   answer: (body: unknown, status?: number) => void;
 };
 
-// Deliberately accepts late answers after abort, so tests can check cache rollback.
+// Late answers after abort let the tests check cache rollback.
 export function holdReads(matches: (url: URL) => boolean) {
   const reads: HeldRead[] = [];
   vi.spyOn(globalThis, "fetch").mockImplementation((input, init) => {
