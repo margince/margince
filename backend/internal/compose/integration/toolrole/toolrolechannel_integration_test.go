@@ -11,7 +11,6 @@ import (
 	"net/http/httptest"
 	"strings"
 	"sync"
-	"time"
 
 	"github.com/margince/margince/backend/internal/compose/integration"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -31,7 +30,8 @@ var (
 )
 
 // sweepChat is the Dispact bot API as the channel verbs call it. Every channel
-// is private with the bot in it, and every history holds one message, seq 1.
+// is private with the bot in it, and every history holds one message, seq 1,
+// posted after any link the sweep makes, since talk from before a link is not read.
 func sweepChat() string {
 	sweepChatOnce.Do(func() {
 		srv := httptest.NewServer(http.HandlerFunc(serveSweepChat))
@@ -53,7 +53,7 @@ func serveSweepChat(w http.ResponseWriter, r *http.Request) {
 		messages := []map[string]any{}
 		if r.URL.Query().Get("after") == "0" {
 			messages = append(messages, map[string]any{"id": "m1", "seq": 1, "user_name": "Role Sweep",
-				"text": "We agree the role sweep.", "posted_at": time.Now().Add(time.Hour).UTC().Format(time.RFC3339)})
+				"text": "We agree the role sweep.", "posted_at": "2099-01-01T00:00:00Z"})
 		}
 		answer = map[string]any{"messages": messages}
 	case rest == "messages":
