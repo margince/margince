@@ -6839,13 +6839,6 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "brief.task.done": "Als erledigt markieren: {title}",
   "brief.task.reply": "{name} antworten: {subject}",
   "brief.first.title": "Braucht dich",
-  "brief.intro.waiting": "Wartet auf dich",
-  "brief.intro.meetings": "Termine heute",
-  "brief.intro.urgent": "Dringend",
-  "brief.intro.read_one": "Letzter Nachtlauf: 1 E-Mail synchronisiert.",
-  "brief.intro.read_other":
-    "Letzter Nachtlauf: {count} E-Mails synchronisiert.",
-  "brief.intro.skip": "Beliebige Taste drücken oder klicken, um fortzufahren",
   "brief.order.withheld":
     "In dieser Reihenfolge nicht berücksichtigt: {factors}",
   "brief.factor.warmth": "Beziehungsnähe",

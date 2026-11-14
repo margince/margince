@@ -59,7 +59,6 @@ import {
   useStaleFocusCleared,
 } from "./brief.focuslink";
 import { BriefGlance } from "./brief.glance";
-import { BriefIntro } from "./brief.intro";
 import { homeJourneyMarks } from "./brief.journey";
 import { PlanSection } from "./brief.plan";
 import { PlanConstraints } from "./brief.plan.contract";
@@ -163,9 +162,6 @@ export function BriefScreen() {
     <div className="wrap brief-wrap">
       {/* A link to one decision, from a notice or a receipt, opens it here. */}
       <LinkedApprovalDrawer />
-      {morning && (
-        <BriefIntro firstName={firstName} day={day} now={new Date(nowMs)} />
-      )}
       {/* The head stands over the panes in both views, so the dial never
           moves when it is pressed. */}
       <div className="brief-frame">
