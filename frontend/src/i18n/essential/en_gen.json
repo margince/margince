@@ -2117,6 +2117,7 @@
   "worklist.title.automation_run.failed": "{name} failed",
   "worklist.title.automation_run.blocked": "{name} was blocked",
   "worklist.title.meeting_outcome": "Record the outcome of {name}",
+  "worklist.title.meeting_outcome.read_only": "No outcome yet for {name}",
   "worklist.title.meeting_follow_up": "Follow up on {name}",
   "worklist.title.awaiting_reply": "No reply yet: {name}",
   "worklist.title.bounce": "Bounced: {name}",
