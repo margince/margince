@@ -57,7 +57,11 @@ func UseCustomPlansTx(ctx context.Context, tx pgx.Tx, fn func(context.Context) e
 
 // ReuseGenericPlansTx applies the same scoped mode to an explicit transaction.
 // Its statements must keep partial-index predicates literal, as for snapshot reuse.
+// On the ambient snapshot already reusing generic plans it only runs fn.
 func ReuseGenericPlansTx(ctx context.Context, tx pgx.Tx, fn func() error) error {
+	if snapshot, joined := snapshotOf(ctx); joined && snapshot == tx && GenericPlansEnabled(ctx) {
+		return fn()
+	}
 	return withPlanCacheMode(ctx, tx, "force_generic_plan", fn)
 }
 
