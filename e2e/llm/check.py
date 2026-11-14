@@ -290,6 +290,7 @@ _MONEY = re.compile(
     rf"|\b({_DIGITS})({_SCALE})\s?(?:€|{_CURRENCY_WORD})"
 )
 _NUMBER = re.compile(r"\d[\d.,]*\d|\d")
+_RATE = re.compile(r"(\d{1,3}(?:[.,]\d+)?)\s?%")
 _SCALES = {"k": 1e3, "thousand": 1e3, "m": 1e6, "million": 1e6, "mio": 1e6, "mio.": 1e6, "bn": 1e9}
 
 
@@ -321,7 +322,9 @@ def figure_problems(said, results):
     A result may carry an amount in minor units, so each number there counts
     also as a hundredth of itself; an answer may round, so a figure holds when
     a result is within half the step the answer wrote it to. A figure the answer
-    worked out, the sum or the gap of two returned figures, holds too.
+    worked out, the sum or the gap of two returned figures, holds too, and so does a
+    returned amount at a rate the answer states and a result holds: a weighted value
+    is an amount at its stage's probability.
     """
     held = []
     for text in results:
@@ -332,6 +335,9 @@ def figure_problems(said, results):
             # for a reader, never as cents.
             if token.isdigit():
                 held.append(number / 100)
+    rates = {rate for rate in (_amount(token, "")[0] for token in _RATE.findall(said))
+             if 0 < rate <= 100 and any(abs(rate - number) < 1e-9 for number in held)}
+    held += [amount * rate / 100 for amount in list(held) for rate in rates]
     problems = []
     for match in _MONEY.finditer(said):
         digits = match.group(1) or match.group(3)

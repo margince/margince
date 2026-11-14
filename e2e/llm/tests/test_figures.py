@@ -27,6 +27,17 @@ class FigureProblemsTest(unittest.TestCase):
         # 174,000 - 164,500: the gap between two figures the run read.
         self.assertEqual(check.figure_problems("The two differ by €9,500.", RESULTS), [])
 
+    def test_an_amount_at_a_rate_the_answer_states_and_a_result_holds_holds(self):
+        # 12,500 at 10% weighs 1,250; the move to 75% adds 9,375 - 1,250.
+        results = ['{"base_minor": 1250000, "previous_probability": 10, "weighted_display": "9375.00 EUR"}']
+        said = "At 10% the deal weighed EUR 1,250.00; at 75% it weighs EUR 9,375.00, a gain of EUR 8,125.00."
+        self.assertEqual(check.figure_problems(said, results), [])
+
+    def test_a_rate_no_result_holds_or_the_answer_never_states_licenses_nothing(self):
+        results = ['{"base_minor": 1250000, "previous_probability": 10}']
+        self.assertEqual(len(check.figure_problems("At 12% it weighed €1,500.", results)), 1)
+        self.assertEqual(len(check.figure_problems("It weighed €1,250.", results)), 1)
+
     def test_a_spelled_out_currency_or_scale_is_still_checked(self):
         self.assertEqual(check.figure_problems("Weighted: 1,240,000 euros, or €1.24 million.",
                                                ['{"weighted": "1,240,000 EUR"}']), [])
