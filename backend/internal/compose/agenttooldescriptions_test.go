@@ -636,7 +636,7 @@ func TestTheRouterActionLineCheckNamesTheActionWhoseLineIsGone(t *testing.T) {
 		t.Fatalf("reading %s's action description: %v", spec.Name, err)
 	}
 	var kept []string
-	for _, line := range strings.Split(text, "\n") {
+	for line := range strings.SplitSeq(text, "\n") {
 		if !strings.HasPrefix(line, gone+": ") {
 			kept = append(kept, line)
 		}
