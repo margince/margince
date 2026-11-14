@@ -32,6 +32,16 @@ type fakeChat struct {
 
 func (f *fakeChat) Me(context.Context) (dispact.Bot, error) { return dispact.Bot{TeamID: "team"}, nil }
 
+func (f *fakeChat) Channels(context.Context) ([]dispact.Channel, error) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	out := make([]dispact.Channel, 0, len(f.channels))
+	for _, ch := range f.channels {
+		out = append(out, ch)
+	}
+	return out, nil
+}
+
 func (f *fakeChat) Channel(_ context.Context, slug string) (dispact.Channel, error) {
 	f.mu.Lock()
 	defer f.mu.Unlock()
@@ -242,6 +252,27 @@ func TestAnExistingChannelMustExistBePrivateAndHoldTheBot(t *testing.T) {
 	}
 	if n := e.count(t, `SELECT count(*) FROM chat_link`); n != 0 {
 		t.Fatalf("refused links wrote %d rows", n)
+	}
+}
+
+func TestOnlyAPrivateChannelWithTheBotThatNoRecordHoldsIsOffered(t *testing.T) {
+	e := setupLinks(t)
+	e.chat.channels["team-beta"] = dispact.Channel{Slug: "team-beta", Name: "team-beta", IsPrivate: true, BotIsMember: true}
+	e.chat.channels["old-team"] = dispact.Channel{Slug: "old-team", Name: "old-team", IsPrivate: true, BotIsMember: true, IsArchived: true}
+	ctx := e.seat(e.rep)
+	no := false
+	if _, err := e.store.Link(ctx, RecordDeal, e.second, LinkRequest{Mode: ModeExisting, Channel: "team-beta", SummarizeHistory: &no}); err != nil {
+		t.Fatal(err)
+	}
+	channels, err := e.store.LinkableChannels(ctx, RecordDeal, e.deal)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(channels) != 1 || channels[0].Slug != "team-acme" {
+		t.Fatalf("offered %+v; want team-acme alone (lobby is public, secret lacks the bot, team-beta is linked, old-team is archived)", channels)
+	}
+	if _, err := e.store.LinkableChannels(e.seat(e.other), RecordDeal, e.deal); !errors.Is(err, apperrors.ErrPermissionDenied) {
+		t.Errorf("a rep who may not edit the deal listed its channels: %v", err)
 	}
 }
 

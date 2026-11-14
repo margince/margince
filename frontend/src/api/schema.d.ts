@@ -11167,6 +11167,33 @@ export interface paths {
         patch: operations["setChannelVerbosity"];
         trace?: never;
     };
+    "/channel-links/{record_type}/{id}/channels": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                record_type: components["schemas"]["ChannelLinkRecordType"];
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        /**
+         * The private channels this record can be linked to.
+         * @description The private, unarchived channels the bot is a member of that no live link holds, by name.
+         *     Only a member who may link this record reads it. A private channel the bot is not in is
+         *     never listed: the chat does not tell the bot it exists. A member of that channel adds the
+         *     bot to it first.
+         */
+        get: operations["listLinkableChannels"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/channel-links/{record_type}/{id}/notes": {
         parameters: {
             query?: never;
@@ -32143,6 +32170,14 @@ export interface components {
             url: string;
             /** @description The notice types the app subscribes to. */
             types: string[];
+        };
+        LinkableChannels: {
+            channels: components["schemas"]["LinkableChannel"][];
+        };
+        LinkableChannel: {
+            /** @description The value a link request names the channel by. */
+            slug: string;
+            name: string;
         };
         LinkChannelRequest: {
             /** @enum {string} */
@@ -80956,6 +80991,51 @@ export interface operations {
                 };
             };
             422: components["responses"]["ValidationError"];
+        };
+    };
+    listLinkableChannels: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                record_type: components["schemas"]["ChannelLinkRecordType"];
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The channels, sorted by name. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LinkableChannels"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            /** @description No chat bot is connected (`code: channel_bot_not_connected`). */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description The chat could not be reached (`code: channel_provider_unreachable`). */
+            502: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
         };
     };
     fileChannelMessage: {

@@ -1630,7 +1630,7 @@
   "connectors.roleCannotCapture.lead": "Vai trò của bạn không được tạo lead, nên Margince không thể thu thập thư của bạn. Liên hệ quản trị viên để đổi vai trò của bạn.",
   "connectors.roleCannotCapture.seat": "Tài khoản của bạn chỉ có quyền xem, nên Margince không thể thu thập thư của bạn. Liên hệ quản trị viên để nâng cấp tài khoản.",
   "channelLink.refused.botNotConnected": "Chưa có bot chat nào được kết nối. Quản trị viên kết nối bot trong Cài đặt.",
-  "channelLink.refused.channelNotFound": "Không tìm thấy kênh nào với tên hoặc liên kết này.",
+  "channelLink.refused.channelNotFound": "Bot không ở trong kênh nào có tên này. Hãy thêm bot vào kênh trong chat, rồi thử lại.",
   "channelLink.refused.channelNotPrivate": "Kênh này là kênh công khai. Hãy liên kết một kênh riêng tư.",
   "channelLink.refused.botNotMember": "Bot chưa là thành viên của kênh này. Hãy thêm bot vào kênh rồi thử lại.",
   "channelLink.refused.channelAlreadyLinked": "Kênh này đã thuộc về một giao dịch hoặc dự án khác.",

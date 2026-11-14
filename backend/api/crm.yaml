@@ -17373,6 +17373,46 @@ paths:
               schema: { $ref: '#/components/schemas/Problem' }
         '422': { $ref: '#/components/responses/ValidationError' }
 
+  /channel-links/{record_type}/{id}/channels:
+    parameters:
+      - name: record_type
+        in: path
+        required: true
+        schema: { $ref: '#/components/schemas/ChannelLinkRecordType' }
+      - $ref: '#/components/parameters/Id'
+    get:
+      tags: [Connectors]
+      operationId: listLinkableChannels
+      # Human-only: the picker in the web form's Link an existing channel. An
+      # agent names the channel it links through link_channel.
+      x-agent-access: human-only
+      x-human-only-reason: covered
+      security: [ { cookieAuth: [] } ]
+      summary: The private channels this record can be linked to.
+      description: |
+        The private, unarchived channels the bot is a member of that no live link holds, by name.
+        Only a member who may link this record reads it. A private channel the bot is not in is
+        never listed: the chat does not tell the bot it exists. A member of that channel adds the
+        bot to it first.
+      responses:
+        '200':
+          description: The channels, sorted by name.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/LinkableChannels' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409':
+          description: 'No chat bot is connected (`code: channel_bot_not_connected`).'
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+        '502':
+          description: 'The chat could not be reached (`code: channel_provider_unreachable`).'
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
   /channel-links/{record_type}/{id}/notes:
     parameters:
       - name: record_type
@@ -45864,6 +45904,21 @@ components:
           type: array
           items: { type: string }
           description: The notice types the app subscribes to.
+    LinkableChannels:
+      type: object
+      additionalProperties: false
+      required: [channels]
+      properties:
+        channels:
+          type: array
+          items: { $ref: '#/components/schemas/LinkableChannel' }
+    LinkableChannel:
+      type: object
+      additionalProperties: false
+      required: [slug, name]
+      properties:
+        slug: { type: string, description: The value a link request names the channel by. }
+        name: { type: string }
     LinkChannelRequest:
       type: object
       additionalProperties: false

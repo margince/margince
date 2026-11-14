@@ -23,7 +23,17 @@ function OpenDialog() {
       state: "linked",
     }),
   });
-  return <LinkExistingDialog open onClose={() => {}} link={link} />;
+  return (
+    <LinkExistingDialog
+      open
+      onClose={() => {}}
+      link={link}
+      channels={[
+        { slug: "deal-acme", name: "deal-acme" },
+        { slug: "deal-globex", name: "deal-globex" },
+      ]}
+    />
+  );
 }
 
 export const Open: Story = {

@@ -197,6 +197,46 @@ type recordFacts struct {
 	projectID *ids.UUID
 }
 
+// LinkableChannels lists the private channels the bot is in that no live link
+// holds, sorted by slug, for a member who may link this record.
+func (s *Store) LinkableChannels(ctx context.Context, kind string, id ids.UUID) ([]dispact.Channel, error) {
+	if _, err := s.precheckLink(ctx, kind, id); err != nil {
+		return nil, err
+	}
+	session, err := s.chats.Open(ctx)
+	if err != nil {
+		return nil, err
+	}
+	channels, err := session.Chat.Channels(ctx)
+	if err != nil {
+		return nil, ChatFailure(err)
+	}
+	linked := map[string]bool{}
+	err = s.db.Tx(ctx, func(tx pgx.Tx) error {
+		rows, err := tx.Query(ctx, `SELECT channel_slug FROM chat_link
+			WHERE connection_id = $1 AND archived_at IS NULL`, session.ConnectionID)
+		if err != nil {
+			return err
+		}
+		slugs, err := pgx.CollectRows(rows, pgx.RowTo[string])
+		for _, slug := range slugs {
+			linked[slug] = true
+		}
+		return err
+	})
+	if err != nil {
+		return nil, err
+	}
+	out := make([]dispact.Channel, 0, len(channels))
+	for _, ch := range channels {
+		if ch.IsPrivate && ch.BotIsMember && !ch.IsArchived && !linked[ch.Slug] {
+			out = append(out, ch)
+		}
+	}
+	slices.SortFunc(out, func(a, b dispact.Channel) int { return strings.Compare(a.Slug, b.Slug) })
+	return out, nil
+}
+
 // precheckLink refuses early what the write would refuse anyway. So the chat
 // is never asked for a channel the record cannot take.
 func (s *Store) precheckLink(ctx context.Context, kind string, id ids.UUID) (recordFacts, error) {

@@ -1630,7 +1630,7 @@
   "connectors.roleCannotCapture.lead": "Your role cannot create leads, so Margince cannot capture your mail. Ask an admin to change your role.",
   "connectors.roleCannotCapture.seat": "Your seat is read-only, so Margince cannot capture your mail. Ask an admin for a full seat.",
   "channelLink.refused.botNotConnected": "No chat bot is connected. An administrator connects one in Settings.",
-  "channelLink.refused.channelNotFound": "No channel with this name or link was found.",
+  "channelLink.refused.channelNotFound": "The bot is in no channel with this name. Add the bot to the channel in the chat, then try again.",
   "channelLink.refused.channelNotPrivate": "This channel is public. Link a private channel instead.",
   "channelLink.refused.botNotMember": "The bot is not a member of this channel. Add it to the channel, then try again.",
   "channelLink.refused.channelAlreadyLinked": "This channel already belongs to another deal or project.",

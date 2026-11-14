@@ -84,6 +84,11 @@ func (s *Server) AddChannel(slug string) {
 	s.put(channel{Slug: slug, Name: slug, IsPrivate: true, BotIsMember: true})
 }
 
+// AddChannelWithoutBot adds a private channel the bot is not in.
+func (s *Server) AddChannelWithoutBot(slug string) {
+	s.put(channel{Slug: slug, Name: slug, IsPrivate: true})
+}
+
 // AddPublicChannel adds a public channel with the bot in it.
 func (s *Server) AddPublicChannel(slug string) {
 	s.put(channel{Slug: slug, Name: slug, BotIsMember: true})
@@ -194,6 +199,8 @@ func (s *Server) route(method string, u *url.URL, body map[string]any) map[strin
 		return map[string]any{"ok": true, "team": "Test team", "team_id": s.teamID, fieldBotID: botID, "bot_user": "margince"}
 	case method == http.MethodPost && path == "channels":
 		return s.create(body)
+	case method == http.MethodGet && path == "channels":
+		return s.list()
 	case method == http.MethodGet && strings.HasPrefix(path, "channel-keys/"):
 		slug, ok := s.keys[strings.TrimPrefix(path, "channel-keys/")]
 		if !ok {
@@ -206,6 +213,19 @@ func (s *Server) route(method string, u *url.URL, body map[string]any) map[strin
 		return s.update(body)
 	}
 	return s.routeChannel(method, strings.TrimPrefix(path, "channels/"), u.Query(), body)
+}
+
+// list answers the channels the bot can see: every public channel and each
+// private one it is in, by slug, archived ones left out, as Dispact does.
+func (s *Server) list() map[string]any {
+	out := []map[string]any{}
+	for slug, ch := range s.channels {
+		if ch.IsArchived || (ch.IsPrivate && !ch.BotIsMember) {
+			continue
+		}
+		out = append(out, map[string]any{"id": "id-" + slug, "name": slug, "is_private": ch.IsPrivate, "is_archived": false})
+	}
+	return map[string]any{"ok": true, "channels": out, "response_metadata": map[string]any{"next_cursor": ""}}
 }
 
 // routeChannel answers the routes under /api/bot/channels/{slug}.

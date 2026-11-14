@@ -31,6 +31,7 @@ import {
   verbosityOptions,
 } from "./channellinkdialog";
 
+type LinkableChannel = components["schemas"]["LinkableChannel"];
 type ChannelLinkState = components["schemas"]["ChannelLinkState"];
 type ChannelLink = components["schemas"]["ChannelLink"];
 type ChannelInvites = components["schemas"]["ChannelInvites"];
@@ -146,6 +147,29 @@ function useLinkChannel(
   });
 }
 
+// The channels the record can be linked to, read only while the dialog is open:
+// the list is the bot's, and it changes in the chat, not here.
+function useLinkableChannels(record: RecordRef, open: boolean) {
+  const t = useT();
+  return useQuery({
+    queryKey: [
+      CHANNEL_LINK_KEY,
+      "linkable",
+      record.recordType,
+      record.recordId,
+    ],
+    enabled: open,
+    queryFn: async (): Promise<LinkableChannel[]> =>
+      unwrap(
+        await api.GET(
+          "/channel-links/{record_type}/{id}/channels",
+          linkPath(record),
+        ),
+        t,
+      ).channels,
+  });
+}
+
 function UnlinkedBody({
   record,
   canEdit,
@@ -158,6 +182,7 @@ function UnlinkedBody({
   const t = useT();
   const link = useLinkChannel(record, onCreated);
   const [existingOpen, setExistingOpen] = useState(false);
+  const linkable = useLinkableChannels(record, existingOpen);
   const createFailed = link.isError && link.variables?.mode === "create";
   return (
     <>
@@ -193,6 +218,7 @@ function UnlinkedBody({
       )}
       <LinkExistingDialog
         open={existingOpen}
+        channels={linkable.data}
         onClose={() => {
           setExistingOpen(false);
           link.reset();

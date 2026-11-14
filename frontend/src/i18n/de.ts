@@ -12229,7 +12229,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "channelLink.linkFailed": "Kanal nicht verknüpft",
   "channelLink.channelField": "Kanalname oder Link",
   "channelLink.channelHint":
-    "Ein privater Kanal, in dem der Bot schon Mitglied ist.",
+    "Wähle einen privaten Kanal, in dem der Bot ist. Für einen anderen Kanal füge den Bot dort zuerst im Chat hinzu.",
   "channelLink.summarize":
     "Bisherige Unterhaltung zusammenfassen (bis zu 5 Zusammenfassungen)",
   "channelLink.verbosity": "Was Margince postet",
@@ -12264,7 +12264,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "channelLink.refused.botNotConnected":
     "Es ist kein Chat-Bot verbunden. Ein Admin verbindet ihn in den Einstellungen.",
   "channelLink.refused.channelNotFound":
-    "Zu diesem Namen oder Link wurde kein Kanal gefunden.",
+    "Der Bot ist in keinem Kanal mit diesem Namen. Füge den Bot im Chat zum Kanal hinzu und versuche es dann erneut.",
   "channelLink.refused.channelNotPrivate":
     "Dieser Kanal ist öffentlich. Verknüpfe stattdessen einen privaten Kanal.",
   "channelLink.refused.botNotMember":
