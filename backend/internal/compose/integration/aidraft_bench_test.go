@@ -28,8 +28,8 @@ const aiDraftReply = `{"subject":"Next steps","body":"Hello,\n\nShall we pick th
 
 // TestAIDraftBudget times POST /v1/contacts/{id}/draft-email with an offline
 // model that answers at once. The endpoint answers whole rather than as a
-// stream, so its answer is its first token, and the time is the product's
-// own share of the budget: the model's latency is not in it.
+// stream, so its answer is its first token. The time is the product's own
+// share of the budget, without the model's latency.
 func TestAIDraftBudget(t *testing.T) {
 	spec := recordBenchSpec
 	model := ai.NewFakeClient().Script(slices.Repeat([]string{aiDraftReply}, spec.warmups+spec.sample)...)

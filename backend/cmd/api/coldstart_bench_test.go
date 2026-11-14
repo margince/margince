@@ -110,8 +110,8 @@ func (b coldBoot) once(t *testing.T) (time.Duration, error) {
 	t.Helper()
 	addr := freeAddr(t)
 	var logs bytes.Buffer
-	// The shipped deployment config, without the dev overlay: that overlay turns
-	// the MCP connector on, whose boot fetch waits for a web tier this run has not.
+	// The shipped deployment config, without the dev overlay. That overlay turns
+	// the MCP connector on, whose boot fetch waits for a web tier this run lacks.
 	api := exec.Command(b.binary, "--addr", addr, "--dsn", b.appDSN, "--redis", b.redisAddr,
 		"--config", filepath.Join(b.root, "config", "margince.example.yaml"))
 	api.Dir = b.work
@@ -144,24 +144,30 @@ func (b coldBoot) once(t *testing.T) (time.Duration, error) {
 // patience runs out.
 func awaitReady(url string, start time.Time, exited <-chan error) (time.Duration, error) {
 	client := http.Client{Timeout: time.Second}
-	for time.Since(start) < coldStartPatience {
+	poll := time.NewTicker(5 * time.Millisecond)
+	defer poll.Stop()
+	patience := time.NewTimer(coldStartPatience - time.Since(start))
+	defer patience.Stop()
+	for {
 		select {
 		case err := <-exited:
 			return 0, fmt.Errorf("the binary exited before it was ready: %w", err)
-		default:
+		case <-patience.C:
+			return 0, fmt.Errorf("not ready after %s", coldStartPatience)
+		case <-poll.C:
 		}
-		if resp, err := client.Get(url); err == nil {
-			ready := resp.StatusCode == http.StatusOK
-			if closeErr := resp.Body.Close(); closeErr != nil {
-				return 0, closeErr
-			}
-			if ready {
-				return time.Since(start), nil
-			}
+		resp, err := client.Get(url)
+		if err != nil {
+			continue
 		}
-		time.Sleep(5 * time.Millisecond)
+		ready := resp.StatusCode == http.StatusOK
+		if err := resp.Body.Close(); err != nil {
+			return 0, err
+		}
+		if ready {
+			return time.Since(start), nil
+		}
 	}
-	return 0, fmt.Errorf("not ready after %s", coldStartPatience)
 }
 
 // stop ends the binary the way a supervisor does and waits for it to go.
