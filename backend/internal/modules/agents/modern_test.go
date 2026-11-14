@@ -941,8 +941,8 @@ func TestTheInstructionsTellAClientsModelHowToSetALocalTime(t *testing.T) {
 	}
 }
 
-// Whose record an answer reports is one rule, stated once to a client's model,
-// not again in every tool that serves a record.
+// Whose record an answer reports is a rule the server instructions give a
+// client's model, and no tool that serves a record repeats it.
 func TestTheInstructionsSayWhoseRecordItIsAndNoToolRepeatsIt(t *testing.T) {
 	d := modernDispatcher(t)
 	if !strings.Contains(d.instructions(), mcp.OwnershipRule) {
