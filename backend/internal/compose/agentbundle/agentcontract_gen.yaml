@@ -30253,11 +30253,12 @@ components:
     ChannelInvites:
       type: object
       additionalProperties: false
-      required: [invited, not_in_chat, skipped_over_cap]
+      required: [invited, not_in_chat, not_added, skipped_over_cap]
       description: Who a newly created channel was opened to.
       properties:
-        invited: {type: integer, description: Members added to the channel.}
-        not_in_chat: {type: integer, description: Members invited who have no chat account.}
+        invited: {type: integer, description: 'Members added to the channel, or already in it.'}
+        not_in_chat: {type: integer, description: Members invited who have no active chat account.}
+        not_added: {type: integer, description: 'Members the chat would not add: outside the app''s audience, or the add failed.'}
         skipped_over_cap: {type: integer, description: Members left out because a new channel invites at most 50.}
     LinkChannelRequest:
       type: object

@@ -7,6 +7,7 @@ import (
 	"context"
 	"crypto/rand"
 	"crypto/rsa"
+	"encoding/json"
 	"fmt"
 	"sync"
 	"testing"
@@ -18,7 +19,7 @@ import (
 // newTestVerifier pins the verifier's clock to the rig's fixed base instant;
 // tests that exercise time behavior override it via SetClock.
 func testMatchIdentity(c Claims) error {
-	if c.Aud != oidctokentest.Aud {
+	if !c.Aud.Is(oidctokentest.Aud) {
 		return fmt.Errorf("%w: aud mismatch", ErrRejected)
 	}
 	if c.Email != oidctokentest.SA {
@@ -222,5 +223,28 @@ func TestOIDCVerifyCoalescesConcurrentJWKSRefresh(t *testing.T) {
 	}
 	if got := rig.CertsHitCount(); got != 1 {
 		t.Fatalf("certs hits after concurrent cold-cache burst = %d, want 1", got)
+	}
+}
+
+func TestAnAudienceIsReadAsAStringOrAListAndMustNameOnlyUs(t *testing.T) {
+	for raw, want := range map[string]bool{
+		`{"aud":"app:x"}`:           true,
+		`{"aud":["app:x"]}`:         true,
+		`{"aud":["app:x","app:y"]}`: false,
+		`{"aud":["app:y"]}`:         false,
+		`{"aud":[]}`:                false,
+		`{}`:                        false,
+	} {
+		var c Claims
+		if err := json.Unmarshal([]byte(raw), &c); err != nil {
+			t.Fatalf("%s: %v", raw, err)
+		}
+		if got := c.Aud.Is("app:x"); got != want {
+			t.Errorf("%s: Is(app:x) = %t, want %t", raw, got, want)
+		}
+	}
+	var c Claims
+	if err := json.Unmarshal([]byte(`{"aud":7}`), &c); err == nil {
+		t.Error("a numeric aud was read")
 	}
 }

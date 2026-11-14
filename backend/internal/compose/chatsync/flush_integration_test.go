@@ -8,14 +8,11 @@ package chatsync
 import (
 	"context"
 	"encoding/json"
-	"fmt"
 	"log/slog"
-	"net/http"
 	"net/http/httptest"
 	"os"
 	"slices"
 	"strings"
-	"sync"
 	"testing"
 
 	"github.com/jackc/pgx/v5"
@@ -24,6 +21,7 @@ import (
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/chatlinks"
 	"github.com/margince/margince/backend/internal/modules/chatlinks/dispact"
+	"github.com/margince/margince/backend/internal/modules/chatlinks/dispact/dispacttest"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/testdb"
 	"github.com/margince/margince/backend/internal/shared/kernel/events"
@@ -31,47 +29,12 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
-// fakeDispact is the chat's bot API as the flush calls it: what was posted
-// and what was rewritten.
-type fakeDispact struct {
-	mu      sync.Mutex
-	posts   []map[string]any
-	updates map[string]string
-	invited []string
-}
-
-func (f *fakeDispact) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	f.mu.Lock()
-	defer f.mu.Unlock()
-	var body map[string]any
-	if r.Body != nil {
-		_ = json.NewDecoder(r.Body).Decode(&body) //craft:ignore swallowed-errors a GET carries no body to decode
-	}
-	switch {
-	case r.Method == http.MethodPost && strings.HasSuffix(r.URL.Path, "/messages"):
-		f.posts = append(f.posts, body)
-		_, _ = fmt.Fprintf(w, `{"id":"m%d","seq":%d}`, len(f.posts), len(f.posts))
-	case r.Method == http.MethodPost && r.URL.Path == "/api/bot/channels":
-		_, _ = fmt.Fprintf(w, `{"slug":"new","name":%q,"is_private":true,"bot_is_member":true}`, body["name"])
-	case r.Method == http.MethodPost && strings.HasSuffix(r.URL.Path, "/members"):
-		for _, email := range body["emails"].([]any) {
-			f.invited = append(f.invited, email.(string))
-		}
-		_ = json.NewEncoder(w).Encode(map[string]any{"added": body["emails"], "not_found": []string{}}) //craft:ignore swallowed-errors a failed write fails the client's decode, which the test reports
-	case r.Method == http.MethodPatch:
-		f.updates[strings.TrimPrefix(r.URL.Path, "/api/bot/messages/")] = body["text"].(string)
-		_, _ = w.Write([]byte(`{}`))
-	default:
-		w.WriteHeader(http.StatusNotFound)
-	}
-}
-
-func (f *fakeDispact) texts() []string {
-	f.mu.Lock()
-	defer f.mu.Unlock()
-	out := make([]string, 0, len(f.posts))
-	for _, p := range f.posts {
-		out = append(out, p["text"].(string))
+// postTexts are the texts the bot posted, oldest first.
+func postTexts(chat *dispacttest.Server) []string {
+	posts := chat.Posts()
+	out := make([]string, 0, len(posts))
+	for _, p := range posts {
+		out = append(out, p.Text)
 	}
 	return out
 }
@@ -92,7 +55,7 @@ func (noFlush) EnqueueFlushTx(context.Context, pgx.Tx, ids.UUID) error { return 
 type flushEnv struct {
 	owner           *pgx.Conn
 	pool            *pgxpool.Pool
-	chat            *fakeDispact
+	chat            *dispacttest.Server
 	store           *chatlinks.Store
 	sync            *Sync
 	flusher         *Flusher
@@ -145,7 +108,8 @@ func setupFlush(t *testing.T) *flushEnv {
 		t.Fatal(err)
 	}
 	testdb.AssertPoolsQuiesced(t)
-	e.chat = &fakeDispact{updates: map[string]string{}}
+	e.chat = dispacttest.New("team")
+	e.chat.AddChannel("acme")
 	srv := httptest.NewServer(e.chat)
 	t.Cleanup(srv.Close)
 	db := database.BindTo(e.pool, ids.From[ids.WorkspaceKind](e.ws))
@@ -185,7 +149,7 @@ func TestAFlushPostsTheCardAndOnePostWithOnlyWhatTheWorkspaceMayRead(t *testing.
 	e.handle(t, "deal.stage_changed", "deal", e.deal, `{"to_stage_name":"Proposal"}`)
 	e.flush(t)
 
-	texts := e.chat.texts()
+	texts := postTexts(e.chat)
 	if len(texts) != 2 {
 		t.Fatalf("posts = %q, want the card and one update", texts)
 	}
@@ -202,7 +166,7 @@ func TestAFlushPostsTheCardAndOnePostWithOnlyWhatTheWorkspaceMayRead(t *testing.
 	}
 
 	e.flush(t)
-	if n := len(e.chat.texts()); n != 2 {
+	if n := len(postTexts(e.chat)); n != 2 {
 		t.Fatalf("a flush with nothing new posted again: %d posts", n)
 	}
 }
@@ -217,14 +181,14 @@ func TestANoteNarrowedAfterPostingIsRewrittenOutOfItsPost(t *testing.T) {
 	e.handle(t, "activity.updated", "activity", e.shared, `{"changed_fields":{"audience":"participants"}}`)
 	e.flush(t)
 
-	rewritten, ok := e.chat.updates["m2"]
+	rewritten, ok := e.chat.Updated(dispacttest.TS(2))
 	if !ok {
-		t.Fatalf("updates = %v, want post m2 rewritten", e.chat.updates)
+		t.Fatal("the second post was not rewritten")
 	}
 	if strings.Contains(rewritten, "Shared plan") || !strings.Contains(rewritten, "Stage moved to Proposal") {
 		t.Fatalf("rewritten post = %q, want the stage alone", rewritten)
 	}
-	if n := len(e.chat.texts()); n != 2 {
+	if n := len(postTexts(e.chat)); n != 2 {
 		t.Fatalf("the withdrawal posted anew: %d posts", n)
 	}
 }
@@ -239,7 +203,7 @@ func TestAnArchivedNoteIsRewrittenOutOfItsPost(t *testing.T) {
 	e.handle(t, "activity.archived", "activity", e.shared, `{}`)
 	e.flush(t)
 
-	if rewritten := e.chat.updates["m2"]; strings.Contains(rewritten, "Shared plan") || rewritten == "" {
+	if rewritten, _ := e.chat.Updated(dispacttest.TS(2)); strings.Contains(rewritten, "Shared plan") || rewritten == "" {
 		t.Fatalf("rewritten post = %q, want the archived note gone", rewritten)
 	}
 }
@@ -267,7 +231,7 @@ func TestANoteOfARestrictedContactIsRewrittenOutOfItsPost(t *testing.T) {
 	e.handle(t, restricted.EventType(), restricted.EntityType(), e.shared, `{"action":"restrict"}`)
 	e.flush(t)
 
-	rewritten, ok := e.chat.updates["m2"]
+	rewritten, ok := e.chat.Updated(dispacttest.TS(2))
 	if !ok || strings.Contains(rewritten, "Shared plan") || !strings.Contains(rewritten, "Stage moved to Proposal") {
 		t.Fatalf("rewritten post = %q (%v), want the stage alone", rewritten, ok)
 	}
@@ -282,7 +246,7 @@ func TestALinkOfAReplacedBotPausesInsteadOfPostingOnTheNewOne(t *testing.T) {
 	e.handle(t, "deal.stage_changed", "deal", e.deal, `{"to_stage_name":"Proposal"}`)
 	e.flush(t)
 
-	if n := len(e.chat.texts()); n != 0 {
+	if n := len(postTexts(e.chat)); n != 0 {
 		t.Fatalf("a link of a replaced bot posted %d messages", n)
 	}
 	var status string

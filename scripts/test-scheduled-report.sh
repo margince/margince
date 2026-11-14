@@ -315,6 +315,9 @@ expect_split() {
 		"comment 10" "$open" "$res=failure"
 }
 
+expect_split growth GROWTH_RESULT GROWTH_OUTCOME breach \
+	"the nightly Home growth bench could not complete" \
+	"a Home growth budget is breaching on main"
 expect_split perf PERF_RESULT PERF_OUTCOME breach \
 	"the weekly PERF-3/PERF-7 run could not complete" \
 	"a PERF-3/PERF-7 budget is breaching on main"

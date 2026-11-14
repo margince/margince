@@ -55,7 +55,7 @@ import {
 // so a calendar read whole showed `3+` because an unrelated lane stopped, and a
 // mark on the exact figures is one a reader learns to discount. Per slot is not
 // guesswork: `counts` carries `more_available` PER CATEGORY, seeded from the
-// bounded SOURCES through `categoryOfSource` (reach.go).
+// bounded SOURCES through `categoryOfSource` (attention/kinds.go).
 
 // Open the worklist on the lane a reading counted.
 //

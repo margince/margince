@@ -20,13 +20,14 @@ const contractsSourceFile = "../../contracts/api_gen.go"
 
 // everyReachSource reads the contract's reach vocabulary out of the generated
 // constants.
-//
-// Derived from the generated file because the enum has no runtime
-// enumeration — `Valid()` is a switch, which answers about a value you already
-// hold and cannot list the ones you do not. Scanning the declarations is the
-// only way to ask "what is the whole set" from a test, and asking that is the
-// point: the failure this guards against is a source nobody classified.
 func everyReachSource(t *testing.T) []crmcontracts.WorklistItemSource {
+	t.Helper()
+	return contractEnum(t, "WorklistReachSource")
+}
+
+// contractEnum lists the string constants of one generated enum type. The enum
+// has no runtime list (`Valid()` is a switch), so the declarations are scanned.
+func contractEnum(t *testing.T, typeName string) []crmcontracts.WorklistItemSource {
 	t.Helper()
 	fset := token.NewFileSet()
 	file, err := parser.ParseFile(fset, contractsSourceFile, nil, 0)
@@ -40,7 +41,7 @@ func everyReachSource(t *testing.T) []crmcontracts.WorklistItemSource {
 			return true
 		}
 		named, ok := spec.Type.(*ast.Ident)
-		if !ok || named.Name != "WorklistReachSource" {
+		if !ok || named.Name != typeName {
 			return true
 		}
 		lit, ok := spec.Values[0].(*ast.BasicLit)
@@ -49,38 +50,16 @@ func everyReachSource(t *testing.T) []crmcontracts.WorklistItemSource {
 		}
 		word, err := strconv.Unquote(lit.Value)
 		if err != nil {
-			t.Fatalf("a reach source constant that is not a string: %s", lit.Value)
+			t.Fatalf("a %s constant that is not a string: %s", typeName, lit.Value)
 		}
 		out = append(out, crmcontracts.WorklistItemSource(word))
 		return true
 	})
 	if len(out) == 0 {
-		t.Fatal("no reach sources were found in the generated contract, so this test certifies " +
-			"nothing — the scan is reading the wrong file or the wrong shape")
+		t.Fatalf("no %s values were found in the generated contract, so this test certifies "+
+			"nothing — the scan is reading the wrong file or the wrong shape", typeName)
 	}
 	return out
-}
-
-// Every source says whether `all` widened it, and none of them says so by
-// default: a source missing from the map reads as `false`, so the key set must
-// EQUAL the contract's vocabulary rather than merely contain it.
-func TestEveryWorklistSourceSaysWhetherItWidens(t *testing.T) {
-	t.Parallel()
-	known := map[crmcontracts.WorklistItemSource]bool{}
-	for _, source := range everyReachSource(t) {
-		known[source] = true
-		if _, ok := sourceAnswersForTheActorOnly[source]; !ok {
-			t.Errorf("%q is a source a reader can be told about and it says nothing about whether "+
-				"`all` widened it — an unlisted source reads as widened, which is a claim about "+
-				"this producer that nobody made", source)
-		}
-	}
-	for source := range sourceAnswersForTheActorOnly {
-		if !known[source] {
-			t.Errorf("%q is classified here but the contract no longer offers it — a key matching "+
-				"nothing ratifies a producer that is gone", source)
-		}
-	}
 }
 
 // The per-user sources are the ones their own ports declare per-user.
@@ -107,13 +86,13 @@ func TestThePerUserSourcesAreTheOnesTheirPortsDeclare(t *testing.T) {
 		"meeting_follow_up":    "Awaiting: the reader's own meetings, read only on their own day",
 	}
 	for source, why := range perUser {
-		if !sourceAnswersForTheActorOnly[source] {
+		if !answersForTheActorOnly(source) {
 			t.Errorf("%q is not marked as answering for the actor only, but its port says it is — %s",
 				source, why)
 		}
 	}
-	for source, personal := range sourceAnswersForTheActorOnly {
-		if personal && perUser[source] == "" {
+	for source, kind := range worklistKinds {
+		if kind.personal && perUser[source] == "" {
 			t.Errorf("%q is marked as answering for the actor only with no port declaration behind "+
 				"it here — name the port that declares it, or let it widen", source)
 		}
