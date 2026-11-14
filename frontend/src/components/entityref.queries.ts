@@ -123,8 +123,11 @@ const NAME_READERS: Record<
 export function fetchEntityName(
   kind: EntityKind,
   id: string,
+  signal?: AbortSignal,
 ): Promise<string | null> {
-  return NAME_READERS[kind](id).then((reference) => reference?.name ?? null);
+  return NAME_READERS[kind](id, signal).then(
+    (reference) => reference?.name ?? null,
+  );
 }
 
 export async function fetchEntityReference(
@@ -145,7 +148,8 @@ export function entityNameQuery(
 ) {
   return {
     queryKey: [kind, ENTITY_NAME_KEY, id],
-    queryFn: () => fetchEntityName(kind, id),
+    queryFn: ({ signal }: { signal: AbortSignal }) =>
+      fetchEntityName(kind, id, signal),
     // References change rarely relative to the pages that render them; a short
     // cache keeps a 360 from re-fetching the same name on every hover/refetch.
     staleTime: 60_000,

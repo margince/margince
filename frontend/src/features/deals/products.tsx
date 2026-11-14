@@ -61,9 +61,11 @@ type Product = components["schemas"]["Product"];
 async function fetchProductsPage(
   query: ListQuery,
   cursor: string | null,
+  signal?: AbortSignal,
 ): Promise<ListPage<Product>> {
   const data = unwrap(
     await api.GET("/products", {
+      signal,
       params: {
         query: {
           q: query.q || undefined,

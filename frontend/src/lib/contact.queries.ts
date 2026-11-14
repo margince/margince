@@ -13,9 +13,10 @@ export function contactQuery(contactId: string | undefined) {
     queryFn:
       contactId == null
         ? skipToken
-        : async () =>
+        : async ({ signal }) =>
             unwrap(
               await api.GET("/contacts/{id}", {
+                signal,
                 params: { path: { id: contactId } },
               }),
             ),
@@ -25,9 +26,10 @@ export function contactQuery(contactId: string | undefined) {
 export function contact360Query(contactId: string) {
   return queryOptions({
     queryKey: ["contact360", contactId],
-    queryFn: async () =>
+    queryFn: async ({ signal }) =>
       unwrap(
         await api.GET("/contacts/{id}/360", {
+          signal,
           params: { path: { id: contactId } },
         }),
       ),
@@ -43,9 +45,10 @@ export function relatedContactsQuery(contactId: string | undefined) {
     queryFn:
       contactId == null
         ? skipToken
-        : async () =>
+        : async ({ signal }) =>
             unwrap(
               await api.GET("/contacts", {
+                signal,
                 params: { query: { related_to: contactId, limit: 200 } },
               }),
             ).data,
