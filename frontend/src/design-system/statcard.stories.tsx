@@ -172,6 +172,8 @@ export const LongGermanReadings: Story = {
   ),
   play: async ({ canvasElement }) => {
     await within(canvasElement).findByText("Kein Termin geplant");
+    // Measured once the web fonts load. A fallback face is wider and overflows.
+    await document.fonts.ready;
     const whole = canvasElement.querySelectorAll<HTMLElement>(
       ".stat-card-label-text, .stat-card-value",
     );
