@@ -11,7 +11,10 @@ import { de } from "./de";
 vi.mock("@composition/copy", () => ({
   extensionCopy: { en: { "extAcme.title": "Acme" } },
   extensionOverrides: {
-    en: { "nav.contacts": "Customers", "worklist.relationships.optional": "{q}" },
+    en: {
+      "nav.contacts": "Customers",
+      "worklist.relationships.optional": "{q}",
+    },
   },
 }));
 
@@ -42,6 +45,12 @@ describe("overrideProblems", () => {
     expect(overrideProblems("en", { "users.editTitle": "Edit" })).toEqual([
       "en users.editTitle: drops {name}",
     ]);
+  });
+
+  it("refuses an override that adds a placeholder core lacks", () => {
+    expect(
+      overrideProblems("en", { "users.editTitle": "Edit {name} in {team}" }),
+    ).toEqual(["en users.editTitle: adds {team}"]);
   });
 
   it("refuses an override that omits a plural form core has", () => {
