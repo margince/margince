@@ -23,6 +23,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/testdb"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/kernel/relationshipmark"
 )
 
 // explainWithoutSeqScans plans statement on the seeded mailbox plus extra, with
@@ -246,5 +247,30 @@ func TestThePageScanJudgesNoMoreYoungMailThanItsCap(t *testing.T) {
 	}
 	if split := probed(strings.ReplaceAll(waitingCappedArmsSQL, waitingEligibleFromSQL, eligible)); split > 2*pageCap {
 		t.Errorf("the page judged %v messages for a cap of %d (one scan judges %v): it reads the whole horizon before it sorts", split, pageCap, whole)
+	}
+}
+
+// The marked-sender check runs once per walked mail. Planned as a join, a
+// generic plan that expects one mail scans every participant for each one.
+func TestTheMarkedSenderCheckLooksUpEachMailByItsID(t *testing.T) {
+	statement := `SELECT a.id FROM activity a
+		WHERE a.kind = 'email' AND a.direction = 'inbound' AND a.archived_at IS NULL
+		  AND ` + relationshipmark.SenderMayRaiseWorkSQL("a") + `
+		ORDER BY a.occurred_at DESC, a.id DESC LIMIT $1`
+	plan := explainOnMailbox(t, "", "SET LOCAL plan_cache_mode = force_generic_plan",
+		"EXPLAIN (FORMAT JSON) ", statement, 3)
+	var reads []planNode
+	plan.walk(func(n planNode) {
+		if n.Alias == "marked_sender" {
+			reads = append(reads, n)
+		}
+	})
+	if len(reads) == 0 {
+		t.Fatal("the plan never reads marked_sender, so this test checks nothing")
+	}
+	for _, read := range reads {
+		if read.NodeType == "Seq Scan" {
+			t.Errorf("marked_sender is read by a sequential scan, once per walked mail, instead of by the mail's id")
+		}
 	}
 }
