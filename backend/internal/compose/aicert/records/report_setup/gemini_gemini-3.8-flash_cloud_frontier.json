@@ -3,35 +3,35 @@
   "provider": "gemini",
   "served_model": "gemini-3.8-flash",
   "env_class": "cloud_frontier",
-  "prompt_version": "pa7cfe1237d07e48534d3cf883db85197",
+  "prompt_version": "p5b6612d8f56d0db569421f123658ec1a",
   "corpus_version": "v1",
-  "verdict": "supported_degraded",
-  "runs": 24,
-  "passed": 24,
+  "verdict": "certified",
+  "runs": 18,
+  "passed": 18,
   "reliability": 1,
-  "reported_accepted": 24,
+  "reported_accepted": 18,
   "reported_wrong_answer": 0,
   "reported_invalid": 0,
   "reported_abstained": 0,
   "certified_scope": "full_invocation",
   "context_applied": false,
   "context_scopes": null,
-  "judge_score_p50": 95,
-  "judge_score_min": 15,
-  "latency_p50": 2757,
-  "latency_p95": 21046,
-  "mean_tokens": 1370,
-  "mean_tokens_in": 786,
-  "mean_tokens_out": 584,
+  "judge_score_p50": 96,
+  "judge_score_min": 86,
+  "latency_p50": 2998,
+  "latency_p95": 18300,
+  "mean_tokens": 1206,
+  "mean_tokens_in": 808,
+  "mean_tokens_out": 397,
   "mean_cached_tokens": 0,
   "mean_cache_write_tokens": 0,
-  "est_cost_microusd": 2779,
+  "est_cost_microusd": 2094,
   "judge_served_model": "claude-sonnet-5-5",
   "judge_provider": "claude_cli",
   "self_judged": false,
   "served_identity_source": "response",
   "thinking_level": "low",
-  "ran_at": "2026-11-14T06:07:27Z",
+  "ran_at": "2026-11-14T07:18:14Z",
   "scenarios": [
     {
       "scenario": "custom_report_setup_names_back_a_measure_it_cannot_express",
@@ -42,8 +42,8 @@
       "runs": 3,
       "passed": 3,
       "judge_scores": [
-        96,
-        96,
+        97,
+        97,
         96
       ],
       "bands": {
@@ -111,9 +111,9 @@
       "runs": 3,
       "passed": 3,
       "judge_scores": [
-        96,
         97,
-        96
+        96,
+        97
       ],
       "bands": {
         "certified_min": 70,
@@ -134,9 +134,9 @@
       "runs": 3,
       "passed": 3,
       "judge_scores": [
-        93,
-        92,
-        92
+        96,
+        94,
+        93
       ],
       "bands": {
         "certified_min": 70,
@@ -151,28 +151,22 @@
     {
       "scenario": "sales_goal_months_spreads_a_given_yearly_goal",
       "site": "sales_goal_months",
-      "stamp": "8d37ce29b78af75e066c60a8b1f214ee8feceba32f964b22315f4fe113e0978a83b51d2a5d51b9f20d16dddc0cf159f30113253ffbf4ff9230cb280328600e9c3d643a9f0448db3665e2f48b9c8c74dc87b16b088d950b4c624059cce8adbfda",
-      "verdict": "supported_degraded",
-      "judge_band": "supported_degraded",
-      "runs": 9,
-      "passed": 9,
+      "stamp": "5734dd3c0d15d749edfe313a89c432e8357df70935db953ba2d86d46706150f883b51d2a5d51b9f20d16dddc0cf159f30113253ffbf4ff9230cb280328600e9c1e4e949cdc9ab33d3108752f292c9e8dd41fea96051af32d297dd1d2784ab89e",
+      "verdict": "certified",
+      "judge_band": "certified",
+      "runs": 3,
+      "passed": 3,
       "judge_scores": [
-        95,
-        92,
-        15,
-        78,
-        15,
         93,
-        95,
-        95,
-        92
+        86,
+        88
       ],
       "bands": {
         "certified_min": 70,
         "degraded_min": 50,
         "floor": 40
       },
-      "reported_accepted": 9,
+      "reported_accepted": 3,
       "reported_wrong_answer": 0,
       "reported_invalid": 0,
       "reported_abstained": 0
