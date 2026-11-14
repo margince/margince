@@ -135,8 +135,11 @@ export const DetailsOpened: Story = {
     const [, details] = await canvas.findAllByText("Details");
     if (!details) throw new Error("no Details");
     await userEvent.click(details);
+    // Every line holds its own note; the one to read is in the line opened.
+    const opened = details.closest("details");
+    if (!opened) throw new Error("Details is not a disclosure");
     await expect(
-      await canvas.findByText("This kind of change cannot be undone."),
+      await within(opened).findByText("This kind of change cannot be undone."),
     ).toBeVisible();
   },
 };
