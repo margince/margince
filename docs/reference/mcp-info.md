@@ -15,9 +15,9 @@ input and output schema in folds below it. What a tool may do and whether a huma
 |---|---:|
 | Tools | 48 |
 | Resources | 14 |
-| Tool catalog | 269.2 KB |
+| Tool catalog | 273.3 KB |
 | Resource catalog | 5.5 KB |
-| Approx. wire tokens | 70317 |
+| Approx. wire tokens | 71373 |
 | Largest tool | `read_details` (17.2 KB) |
 | Scopes rendered | `read`, `draft`, `write`, `send`, `enrich` |
 
@@ -32,11 +32,11 @@ tool adds to that listing, and what it costs each scheduled agent, agent by agen
 
 | Part | Bytes | Share | In a run's prompt? |
 |---|---:|---:|---|
-| Output schemas | 51.5 KB | 19% | **No**: a result's shape, never listed to a model |
+| Output schemas | 51.5 KB | 18% | **No**: a result's shape, never listed to a model |
 | Descriptions (incl. governance clause) | 53.4 KB | 19% | Yes, every step |
-| Input schemas | 152.5 KB | 56% | Yes, every step |
+| Input schemas | 156.6 KB | 57% | Yes, every step |
 | _Names, annotations, punctuation_ | 11.8 KB | 4% | Partly |
-| **Description + input schema** | **205.9 KB** | **76%** | **the recurring cost** |
+| **Description + input schema** | **210.0 KB** | **76%** | **the recurring cost** |
 
 Output schemas are the largest part of the total and are never sent to a model;
 descriptions and input schemas are what each step pays for.
@@ -104,7 +104,7 @@ descriptions and input schemas are what each step pays for.
 | [`read_relationships`](#read_relationships) | Read who we know, and how well | yes |  | 359 |
 | [`read_reports`](#read_reports) | Read sales reports | yes |  | 2784 |
 | [`read_tags`](#read_tags) | Read tags | yes |  | 358 |
-| [`read_view`](#read_view) | Read a view | yes |  | 815 |
+| [`read_view`](#read_view) | Read a view | yes |  | 1871 |
 | [`read_workspace`](#read_workspace) | Read how this workspace is set up | yes |  | 2755 |
 | [`resolve_duplicates`](#resolve_duplicates) | Merge two records or dismiss a flagged pair |  |  | 618 |
 | [`run_research`](#run_research) | Run AI work for your user |  |  | 1344 |
@@ -11415,9 +11415,9 @@ contacts, documents, facts, graph or strength, a deal's status, documents or sta
 contact's cases; the workspace's reference lists, such as stages, custom fields, lead sources, loss
 reasons, teams and lists; and reporting objects, such as targets, schedules, executions, sales
 progress and forecast calls. Each view takes only a few of the arguments listed here: a record view
-its id, and its own filters. read_workspace with topic=views names what each view takes, and a
-refusal names the arguments the view accepts. Use find_records to find or list records, and
-read_reports for the standard metrics and named reports.
+its id, and its own filters. Each argument names the views that take it, read_workspace with
+topic=views names what each view takes, and a refusal names the arguments the view accepts. Use
+find_records to find or list records, and read_reports for the standard metrics and named reports.
 ```
 
 <details><summary>Input schema</summary>
@@ -11427,219 +11427,280 @@ read_reports for the standard metrics and named reports.
   "additionalProperties": false,
   "properties": {
     "agg": {
+      "description": "views: explain_report",
       "items": {
         "type": "string"
       },
       "type": "array"
     },
     "as_of": {
+      "description": "views: forecast_calls",
       "type": "string"
     },
     "blocks": {
+      "description": "views: export_reporting_evaluation",
       "items": {
         "type": "string"
       },
       "type": "array"
     },
     "by": {
+      "description": "views: explain_report",
       "items": {
         "type": "string"
       },
       "type": "array"
     },
     "category": {
+      "description": "views: company_documents, deal_documents",
       "type": "string"
     },
     "close_end_at": {
+      "description": "views: export_reporting_evaluation",
       "type": "string"
     },
     "close_start_at": {
+      "description": "views: export_reporting_evaluation",
       "type": "string"
     },
     "close_window": {
+      "description": "views: export_reporting_evaluation",
       "type": "string"
     },
     "company_id": {
+      "description": "views: relationships, signals",
       "type": "string"
     },
     "contact_id": {
+      "description": "views: contact_case, relationships",
       "type": "string"
     },
     "contract_id": {
+      "description": "views: company_documents",
       "type": "string"
     },
     "country": {
+      "description": "views: export_reporting_evaluation",
       "type": "string"
     },
     "cursor": {
       "type": "string"
     },
     "deal_id": {
+      "description": "views: relationships",
       "type": "string"
     },
     "doc_state": {
+      "description": "views: company_documents",
       "type": "string"
     },
     "end_at": {
+      "description": "views: export_reporting_evaluation",
       "type": "string"
     },
     "entity_id": {
-      "description": "one value; a list of values for list_members",
+      "description": "views: latest_inbound, list_members, record_lists; one value; a list of values for list_members",
       "type": "string"
     },
     "entity_type": {
+      "description": "views: dedupe_candidates, latest_inbound, lists, record_lists",
       "type": "string"
     },
     "evaluated_at": {
+      "description": "views: export_reporting_evaluation",
       "type": "string"
     },
     "evaluation_key": {
+      "description": "views: export_reporting_evaluation",
       "type": "string"
     },
     "facts_only": {
+      "description": "views: deal_status",
       "type": "boolean"
     },
     "framework_revision": {
+      "description": "views: export_reporting_evaluation",
       "type": "integer"
     },
     "handle_version": {
+      "description": "views: explain_report",
       "type": "string"
     },
     "id": {
-      "description": "one value; a list of values for name_seats",
+      "description": "views: automation, bulk_change, company_360, company_contacts, company_coverage, company_documents, company_facts, company_finance_summary, company_graph, company_hierarchy_rollup, company_profile_fields, company_strength, company_vat_check, contact_360, contact_conversation_suggestions, contact_graph, contact_strength, custom_field_live_lists, deal_commitments, deal_documents, deal_outcome_reviews, deal_stakeholders, deal_status, dedupe_candidate, email_presentation, export_reporting_edition, import_run, latest_site_read, latest_technical_enrich, latest_transcript_read, lead_conversation_suggestions, list_members, meeting_brief, meeting_invitation, name_seats, pipeline, preview_contact_employment_import, project_health_assessments, project_stakeholders, reply_recipient, reporting_execution, reporting_executions, reporting_schedules, reporting_target, signal, signal_intro_path, signal_warmth, site_read, stage, stage_evidence, stage_exit_criteria, transcript_read; one value; a list of values for name_seats",
       "type": "string"
     },
     "if_recommendation": {
+      "description": "views: deal_status",
       "type": "string"
     },
     "if_rule": {
+      "description": "views: deal_status",
       "type": "string"
     },
     "include_archived": {
+      "description": "views: lists, relationships, signals, stage_exit_criteria, stages",
       "type": "boolean"
     },
     "include_hidden": {
+      "description": "views: deal_documents",
       "type": "boolean"
     },
     "industry": {
+      "description": "views: export_reporting_evaluation",
       "type": "string"
     },
     "initiative_id": {
+      "description": "views: export_reporting_evaluation",
       "type": "string"
     },
     "kind": {
+      "description": "views: relationships, signals",
       "type": "string"
     },
     "limit": {
       "type": "integer"
     },
     "list_type": {
+      "description": "views: lists",
       "type": "string"
     },
     "metrics": {
+      "description": "views: export_reporting_evaluation",
       "items": {
         "type": "string"
       },
       "type": "array"
     },
     "month": {
+      "description": "views: sales_progress",
       "type": "integer"
     },
     "object": {
+      "description": "views: custom_fields",
       "type": "string"
     },
     "owner_id": {
+      "description": "views: sales_goal_plan",
       "type": "string"
     },
     "period": {
+      "description": "views: export_reporting_evaluation, forecast_calls, sales_progress",
       "type": "string"
     },
     "period_month": {
+      "description": "views: company_hierarchy_rollup",
       "type": "string"
     },
     "period_quarter": {
+      "description": "views: company_hierarchy_rollup",
       "type": "string"
     },
     "period_start": {
+      "description": "views: reporting_targets",
       "type": "string"
     },
     "period_year": {
+      "description": "views: company_hierarchy_rollup",
       "type": "string"
     },
     "pinned_only": {
+      "description": "views: company_documents",
       "type": "boolean"
     },
     "pipeline_id": {
-      "description": "comes from the workspace's pipeline list",
+      "description": "views: export_reporting_evaluation, stages; comes from the workspace's pipeline list",
       "type": "string"
     },
     "plan_owned": {
+      "description": "views: reporting_targets",
       "type": "boolean"
     },
     "product_id": {
+      "description": "views: export_reporting_evaluation",
       "type": "string"
     },
     "project_id": {
+      "description": "views: company_360, contact_360, meeting_brief",
       "type": "string"
     },
     "q": {
+      "description": "views: company_contacts, lists, teams",
       "type": "string"
     },
     "readId": {
+      "description": "views: site_read, transcript_read",
       "type": "string"
     },
     "record_id": {
+      "description": "views: record_assignments",
       "type": "string"
     },
     "record_type": {
+      "description": "views: record_assignments",
       "type": "string"
     },
     "refresh": {
+      "description": "views: deal_status",
       "type": "boolean"
     },
     "report": {
+      "description": "views: explain_report",
       "type": "string"
     },
     "resolution_state": {
+      "description": "views: signals",
       "type": "string"
     },
     "resource": {
+      "description": "views: filter_vocabulary",
       "type": "string"
     },
     "retired": {
+      "description": "views: reporting_targets",
       "type": "boolean"
     },
     "scope": {
+      "description": "views: company_hierarchy_rollup, contact_cases",
       "type": "string"
     },
     "scope_id": {
+      "description": "views: explain_report, export_reporting_evaluation, forecast_calls, sales_progress, sales_progress_deals",
       "type": "string"
     },
     "scope_kind": {
+      "description": "views: explain_report, export_reporting_evaluation, forecast_calls, sales_progress, sales_progress_deals",
       "type": "string"
     },
     "sharing": {
+      "description": "views: lists",
       "items": {
         "type": "string"
       },
       "type": "array"
     },
     "sort": {
+      "description": "views: company_contacts, custom_fields",
       "type": "string"
     },
     "start_at": {
+      "description": "views: export_reporting_evaluation",
       "type": "string"
     },
     "status": {
+      "description": "views: company_contacts, custom_fields, dedupe_candidates, signals",
       "type": "string"
     },
     "target_basis": {
+      "description": "views: export_reporting_evaluation",
       "type": "string"
     },
     "thread_cursor": {
+      "description": "views: email_presentation",
       "type": "string"
     },
     "value_basis": {
+      "description": "views: export_reporting_evaluation",
       "type": "string"
     },
     "view": {
@@ -11650,6 +11711,7 @@ read_reports for the standard metrics and named reports.
       "type": "string"
     },
     "year": {
+      "description": "views: sales_goal_plan, sales_goal_sellers, sales_progress",
       "type": "integer"
     }
   },

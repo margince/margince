@@ -6,7 +6,7 @@
     "required_only_as_one_of_a_set": 2,
     "never_driven": 9,
     "permitted_but_never_required": 4,
-    "tokens_served_but_never_driven": 6407,
+    "tokens_served_but_never_driven": 7463,
     "use_case_cases": 73,
     "acceptance_criteria_named": 120,
     "tools_added_by_shipped_units": 0,
@@ -3896,6 +3896,26 @@
   ],
   "tools": [
     {
+      "name": "read_view",
+      "tokens": 1871,
+      "agents": [],
+      "required_by_cases": [],
+      "required_as_one_of_a_set_by_cases": [],
+      "permitted_in_cases": [
+        "case102_shorter_in_my_voice",
+        "case106_turn_that_rule_off",
+        "case118_is_the_crane_job_at_risk",
+        "case76_she_said_yes_at_the_fair",
+        "case77_record_her_yes",
+        "case91_add_a_review_stage",
+        "case94_a_field_for_the_region"
+      ],
+      "driven": false,
+      "required_only_as_one_of_a_set": false,
+      "graded_by_certification_tasks": null,
+      "measured_by_model": {}
+    },
+    {
       "name": "run_research",
       "tokens": 1344,
       "agents": [],
@@ -3944,26 +3964,6 @@
       "required_by_cases": [],
       "required_as_one_of_a_set_by_cases": [],
       "permitted_in_cases": [],
-      "driven": false,
-      "required_only_as_one_of_a_set": false,
-      "graded_by_certification_tasks": null,
-      "measured_by_model": {}
-    },
-    {
-      "name": "read_view",
-      "tokens": 815,
-      "agents": [],
-      "required_by_cases": [],
-      "required_as_one_of_a_set_by_cases": [],
-      "permitted_in_cases": [
-        "case102_shorter_in_my_voice",
-        "case106_turn_that_rule_off",
-        "case118_is_the_crane_job_at_risk",
-        "case76_she_said_yes_at_the_fair",
-        "case77_record_her_yes",
-        "case91_add_a_review_stage",
-        "case94_a_field_for_the_region"
-      ],
       "driven": false,
       "required_only_as_one_of_a_set": false,
       "graded_by_certification_tasks": null,

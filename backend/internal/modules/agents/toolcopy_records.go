@@ -37,8 +37,8 @@ var readViewCopy = toolCopy{
 		"fields, lead sources, loss reasons, teams and lists; and reporting objects, such as targets, " +
 		"schedules, executions, sales progress and forecast calls.",
 	Limits: "Each view takes only a few of the arguments listed here: a record view its id, and its " +
-		"own filters. describe_views names what each view takes, and a refusal names the arguments " +
-		"the view accepts.",
+		"own filters. Each argument names the views that take it, describe_views names what each view " +
+		"takes, and a refusal names the arguments the view accepts.",
 	Instead: "Use find_records to find or list records, and read_reports for the standard metrics " +
 		"and named reports.",
 }

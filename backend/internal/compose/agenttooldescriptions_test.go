@@ -282,31 +282,15 @@ const (
 	listingBudgetDenominator = 24
 )
 
-// oneToolBudgetNumerator/Denominator bound a SINGLE tool's rendered entry.
-//
-// The two bounds above ration the listing as a whole, and neither of them is
-// what actually moves: between 2026-09-03 and 2026-09-06 the catalog grew 1,809
-// tokens, and 707 of that was existing tools getting fatter — run_report alone
-// took +153 across six changes that each appended one more aggregate to the
-// same sentence. No individual change was worth objecting to and nothing
-// counted them together, which is what a whole-catalog floor 7,000 tokens away
-// cannot see.
-//
-// 1/32 of the window. The fraction is not a judgement about how much a tool
-// deserves — it is set just above the fattest tool the surface ships, so the
-// bound is a ratchet on the ONE tool that is drifting rather than a budget
-// every tool is invited to spend up to.
-//
-// WHEN THIS FIRES, the answer is not a bigger fraction. It is the move this
-// tree has already made twice and measured both times: publish the enumeration
-// as a document and have the description name it. run_report's own vocabulary
-// went that way (reportvocabularydoc.go) and so did the per-record_type write
-// fields, and the second one bought back 18% of the whole listing. A tool that
-// cannot be answered that way is a tool worth splitting, and either is a better
-// conversation than raising this by one thirty-second.
+// oneToolBudgetNumerator/Denominator bound one tool's rendered entry: a
+// ratchet set just above the fattest non-router tool, not a share every tool
+// may spend. A description that names what each argument accepts is worth its
+// tokens. Models that met an undescribed argument went looking outside the
+// surface for the answer. When this fires, publish a long enumeration as a
+// document and name it, or split the tool.
 const (
 	oneToolBudgetNumerator   = 1
-	oneToolBudgetDenominator = 32
+	oneToolBudgetDenominator = 16
 )
 
 // Every written description rides in every step of the window of every agent
