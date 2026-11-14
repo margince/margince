@@ -1,21 +1,42 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-import { type ReactNode, useEffect, useId, useRef, useState } from "react";
+import {
+  type ComponentProps,
+  type ReactNode,
+  useEffect,
+  useId,
+  useRef,
+  useState,
+} from "react";
 import { Modal } from "../../design-system/atoms";
 import { DrawerBody, DrawerHead } from "../../design-system/drawerbands";
 import { Heading } from "../../design-system/heading";
 import type { DrawerSpan } from "../../design-system/modal";
 import { useT } from "../../i18n";
+import { lazy } from "../../i18n/lazy";
 import { navigateReplacing, useHash } from "../../lib/router";
 import { useScrollMemory } from "../../lib/scrollmemory";
 import { readStored, STORAGE_KEYS, writeStored } from "../../lib/storage";
 import { NO_URL_PARAMS, useUrlParams } from "../../lib/urlstate";
-import { WorklistScreen } from "../worklist/worklist";
 import { drawerScope } from "../worklist/worklist.address";
 import { worklistFilterFrom } from "../worklist/worklist.header";
 import { WorklistReturnScope } from "../worklist/worklist.return";
+import { Pending } from "./brief.deferred";
 import "./brief.css";
+
+/** The Worklist screen the drawer holds, loaded when the drawer opens. */
+export const loadWorklistScreen = () => import("../worklist/worklist");
+
+const WorklistScreen = lazy<
+  NonNullable<
+    ComponentProps<typeof import("../worklist/worklist").WorklistScreen>
+  >
+>(
+  async () => ({ default: (await loadWorklistScreen()).WorklistScreen }),
+  "complete",
+  Pending,
+);
 
 /** Older shared links open the same queue, including its owner and narrowing. */
 export function WorklistRedirect({ opensOn }: Readonly<{ opensOn?: string }>) {
