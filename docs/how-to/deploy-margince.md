@@ -91,7 +91,7 @@ down, rebuild the index as `margince_owner`, for example `REINDEX INDEX CONCURRE
 Outside `dev` and `test` mode, an installation with no license token runs for 14 days, counted from
 the day its oldest workspace was created. Then it stops
 working until a token is set up ([what it still does](../reference/storage-secrets-and-license.md#the-trial)).
-A dev stack needs no token and no such limit. To get a token:
+A `dev` stack has no such limit, because it is for working on the code and not for real use. To get a token:
 
 - Ask the Margince team, from **Talk to the Margince team** in the app. They give more time or
   issue a license.

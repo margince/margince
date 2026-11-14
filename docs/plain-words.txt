@@ -105,6 +105,7 @@ daily
 data
 database
 date
+day
 deal
 decide
 declare
@@ -133,7 +134,6 @@ endpoint
 enough
 erase
 error
-even
 event
 every
 expect
@@ -471,6 +471,7 @@ touch
 track
 transaction
 tree
+trial
 trust
 turn
 tutorial
