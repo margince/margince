@@ -18,12 +18,14 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/margince/margince/backend/internal/compose/analyticsquery"
+	"github.com/margince/margince/backend/internal/compose/assurancetools"
 	"github.com/margince/margince/backend/internal/compose/dealclosetasks"
 	"github.com/margince/margince/backend/internal/compose/partnersteps"
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/agents"
 	"github.com/margince/margince/backend/internal/modules/agents/runner"
 	"github.com/margince/margince/backend/internal/modules/approvals"
+	"github.com/margince/margince/backend/internal/modules/assurance"
 	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/modules/deals"
 	"github.com/margince/margince/backend/internal/modules/identity"
@@ -133,9 +135,9 @@ func registryWithGate(db *database.DB, gate *auth.Gate, drafter activities.Email
 	agents.RegisterReportBlocksTool(registry, agents.NewReportBlocksResource(reportBlockGrammar()))
 	agents.RegisterForecastTool(registry, forecastToolReader(pool))
 	agents.RegisterMovementTool(registry, movementToolReader(pool))
-	agents.RegisterAssuranceTool(registry, assuranceToolReader(pool))
-	agents.RegisterInputChecksTool(registry, inputChecksToolReader(pool))
-	agents.RegisterCoverageTool(registry, coverageToolReader(pool))
+	agents.RegisterAssuranceTool(registry, assurancetools.RunReader(assuranceRun(pool)))
+	agents.RegisterInputChecksTool(registry, assurancetools.InputChecksReader(assurance.NewStore(InstallationDB(pool)), AssuranceExceptionsIn))
+	agents.RegisterCoverageTool(registry, assurancetools.CoverageReader(assurance.NewStore(InstallationDB(pool))))
 	// Search references are read back through the governed provider before disclosure.
 	agents.RegisterQueryTool(registry, provider,
 		queryRunner(pool, embedder))

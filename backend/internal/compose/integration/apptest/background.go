@@ -59,7 +59,7 @@ func FinishInputCheck(t *testing.T, e *AppEnv, perms principal.Permissions) {
 			}
 		}
 		ready := assurance.Readiness(coverage, nil, assurance.Config{})
-		return store.FinishRun(ctx, tx, run, 1, 0, 0, assurance.StatusComplete, ready)
+		return store.FinishRun(ctx, tx, run, assurance.Eligible{Deals: 1}, 0, assurance.StatusComplete, ready)
 	}); err != nil {
 		t.Fatalf("recording a finished input check: %v", err)
 	}

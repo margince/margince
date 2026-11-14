@@ -11,7 +11,7 @@ import (
 // jobContractHash is the sha256 of api/jobs.yaml this file was generated
 // from — the same fingerprint jobs.JobContractHash carries, so a stale
 // half of the pair is visible without diffing the two tables.
-const jobContractHash = "080ec4617990fa0a2364b0339ec4e13e4a017fa4e3f7c0e7141f9b632758c544"
+const jobContractHash = "684fade9d5b178dcc2b78407458d52d53b7d5d602cf03148f3276f1014f7bdab"
 
 // declaredJobArgs requires the generated registration marker for the exact args type.
 // Handwritten markers are refused by the registration census.
@@ -49,6 +49,9 @@ func (CaptureSyncArgs) declaredJobType(CaptureSyncArgs)                         
 func (CaptureTraceSweepArgs) declaredJobType(CaptureTraceSweepArgs)               {}
 func (CapturedDealRefileArgs) declaredJobType(CapturedDealRefileArgs)             {}
 func (CapturedDealRefileSweepArgs) declaredJobType(CapturedDealRefileSweepArgs)   {}
+func (ChatLinkFlushArgs) declaredJobType(ChatLinkFlushArgs)                       {}
+func (ChatPullArgs) declaredJobType(ChatPullArgs)                                 {}
+func (ChatPullSweepArgs) declaredJobType(ChatPullSweepArgs)                       {}
 func (CheckCompanyVatArgs) declaredJobType(CheckCompanyVatArgs)                   {}
 func (CloseDateSweepArgs) declaredJobType(CloseDateSweepArgs)                     {}
 func (AuthzDisagreementArgs) declaredJobType(AuthzDisagreementArgs)               {}
@@ -154,6 +157,7 @@ var (
 	_ jobs.FleetWide = CaptureEnrichArgs{}
 	_ jobs.FleetWide = CaptureTraceSweepArgs{}
 	_ jobs.FleetWide = CapturedDealRefileSweepArgs{}
+	_ jobs.FleetWide = ChatPullSweepArgs{}
 	_ jobs.FleetWide = CloseDateSweepArgs{}
 	_ jobs.FleetWide = CompanyNamePromotionArgs{}
 	_ jobs.FleetWide = DataTaskReconcileArgs{}
@@ -203,6 +207,8 @@ var (
 	_ jobs.WorkspaceScoped = CaptureBackfillArgs{}
 	_ jobs.WorkspaceScoped = CaptureSyncArgs{}
 	_ jobs.WorkspaceScoped = CapturedDealRefileArgs{}
+	_ jobs.WorkspaceScoped = ChatLinkFlushArgs{}
+	_ jobs.WorkspaceScoped = ChatPullArgs{}
 	_ jobs.WorkspaceScoped = CheckCompanyVatArgs{}
 	_ jobs.WorkspaceScoped = ScheduledSendArgs{}
 	_ jobs.WorkspaceScoped = SendEmailArgs{}

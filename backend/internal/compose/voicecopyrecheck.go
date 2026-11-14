@@ -18,17 +18,8 @@ import (
 
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/kernel/events"
-	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
-
-// voiceCopyRecheckEvents are the events after which a mail may no longer feed
-// a voice. Each names the activity it changed.
-var voiceCopyRecheckEvents = map[string]bool{
-	"activity.updated":     true,
-	"activity.archived":    true,
-	"retention.restricted": true,
-}
 
 // VoiceCopyRecheckGen is the consumer (cg:voice-copy-recheck).
 type VoiceCopyRecheckGen struct {
@@ -44,7 +35,7 @@ func NewVoiceCopyRecheckGen(pool *pgxpool.Pool) *VoiceCopyRecheckGen {
 // HandleEvent rechecks the mail an event changed. The recheck reads the row as
 // it stands, so a redelivered or out-of-order event answers the same.
 func (g *VoiceCopyRecheckGen) HandleEvent(ctx context.Context, env events.Envelope) error {
-	if !voiceCopyRecheckEvents[env.Type] || env.Entity.Type != "activity" || env.Entity.ID == ids.Nil {
+	if !events.NarrowsActivity(env) {
 		return nil
 	}
 	ws, err := g.db.Workspace(ctx)

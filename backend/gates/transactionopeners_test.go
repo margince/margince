@@ -54,6 +54,10 @@ func TestTheDatabasePackageOpensATransactionInOneFunction(t *testing.T) {
 		t.Fatalf("reading %s: %v", databasePackage, err)
 	}
 
+	nested := gatekit.Waive(map[string]string{
+		"deferredtx.go: Begin": "a pseudo-nested savepoint on the read snapshot's own transaction, never a pool transaction. It sends the snapshot's deferred session statements first, so none of them lands inside the savepoint",
+	})
+	defer nested.AssertAllMatched(t)
 	// The corpus is asserted before the verdict: a scan that read no files
 	// would report PASS having checked nothing, which is the one way a census
 	// must not fail.
@@ -70,7 +74,11 @@ func TestTheDatabasePackageOpensATransactionInOneFunction(t *testing.T) {
 			t.Fatalf("parsing %s: %v", path, err)
 		}
 		scanned++
-		offenders = append(offenders, beginCallersOutside(file, name)...)
+		for _, offender := range beginCallersOutside(file, name) {
+			if !nested.Waived(t, offender) {
+				offenders = append(offenders, offender)
+			}
+		}
 	}
 
 	if scanned == 0 {

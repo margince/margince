@@ -56,6 +56,7 @@ func (w *pathWalk) expr(expr ast.Expr, s pathState) pathState {
 	ast.Inspect(expr, func(n ast.Node) bool {
 		switch node := n.(type) {
 		case *ast.FuncLit:
+			s = w.uncoverAssigned(node, s)
 			return false
 		case *ast.CallExpr:
 			s = w.call(node, s)
@@ -66,8 +67,27 @@ func (w *pathWalk) expr(expr ast.Expr, s pathState) pathState {
 	return s
 }
 
-// call walks one call after its operands. It checks when it reads the switch,
-// or when everything it runs checks on every success return.
+// callAnswer is what a call answers of the switch: each result that carries
+// the answer. lastErr marks the last result, for a call whose results a
+// stand-in leaves unknown.
+type callAnswer struct {
+	results []bool
+	lastErr bool
+}
+
+// at reports the answer at result i of a call read as n results.
+func (a callAnswer) at(i, n int) bool {
+	if a.lastErr && i == n-1 {
+		return true
+	}
+	return len(a.results) == n && a.results[i]
+}
+
+// call walks one call after its operands. A reader's call answers the
+// switch, which checks only where a condition reads that answer. So does a
+// call whose error carries a check. Any other call checks when everything it
+// runs checks on every success return. Its results are covered when a
+// figure-free call answers them, or what it runs hands out only covered values.
 func (w *pathWalk) call(call *ast.CallExpr, s pathState) pathState {
 	s = w.expr(call.Fun, s)
 	for _, arg := range call.Args {
@@ -78,35 +98,216 @@ func (w *pathWalk) call(call *ast.CallExpr, s pathState) pathState {
 		return s
 	}
 	callee := calledFunc(call, info)
-	switch {
-	case callee != nil && w.sw.g.readerSet[callee.Origin()]:
-		s.checked = true
-		return s
-	case callee != nil && w.sw.g.bareSet[callee.Origin()]:
-		s.bare = true
-		return s
+	if callee != nil {
+		if index, isReader := w.sw.g.readerSet[callee.Origin()]; isReader {
+			return w.readerCall(call, callee, index, s)
+		}
+		if index, isFloor := w.sw.g.floorSet[callee.Origin()]; isFloor {
+			w.floorCalls[call] = index
+			return s
+		}
+		if w.sw.g.bareSet[callee.Origin()] {
+			w.covers[call] = true
+			return s
+		}
 	}
 	runs, resolved, external := w.runs(call, callee)
 	runs = w.dispatched(call, runs)
 	if w.writesFigure(call, resolved && !external) {
-		w.verdict.writes.add(call.Pos(), s.covered())
+		w.verdict.writes.add(call.Pos(), s.checked || w.payloadCovered(call, s))
 	}
 	guards, bare := resolved && len(runs) > 0, resolved && len(runs) > 0
-	for _, next := range runs {
-		verdict := w.sw.walk(next, pathState{checked: s.checked, bare: s.bare}, w.frame.depth+1)
+	answer := callAnswer{}
+	var captured, outer map[types.Object]bool
+	var kept [][]bool
+	for i, next := range runs {
+		entry := pathState{checked: s.checked, covered: w.entryCovered(next.fn, call, external, s), answers: w.answeredParams(next.fn, call, s)}
+		verdict := w.sw.walk(next, entry, w.frame.depth+1)
 		w.verdict.writes.merge(verdict.writes)
 		guards, bare = guards && verdict.guards, bare && verdict.bare
+		answer.results = andAnswers(answer.results, verdict.answers, i == 0)
+		captured = keptAnswers(captured, verdict.captured, i == 0)
+		outer = keptAnswers(outer, verdict.outer, i == 0)
+		kept = append(kept, slotKept(next.fn, verdict.kept))
 	}
-	s.checked = s.checked || guards
-	if !external || len(runs) > 0 {
-		s.bare = !guards && bare
+	for obj := range captured {
+		s.answers = withMember(s.answers, obj, true)
+	}
+	for obj, kept := range outer {
+		s.covered = withMember(s.covered, obj, kept)
+	}
+	covers := (external && len(runs) == 0 && w.pureCall(call, callee, s)) || (!guards && bare)
+	if errLast, known := errorLast(info.TypeOf(call)); guards && (errLast || (!known && external)) {
+		answer.lastErr = true
+	} else {
+		s.checked = s.checked || guards
+	}
+	w.answerCalls[call] = answer
+	w.covers[call] = covers
+	if external || !resolved {
+		kept = nil
+	}
+	return w.stored(call, covers, kept, s)
+}
+
+// readerCall records what a reader answers. Some answer is neither a bool
+// nor an error, as the reader's own scope is. Such a reader checks where it
+// is made, unless its result is dropped.
+func (w *pathWalk) readerCall(call *ast.CallExpr, reader *types.Func, index int, s pathState) pathState {
+	sig, ok := reader.Type().(*types.Signature)
+	if !ok || index >= sig.Results().Len() {
+		return s
+	}
+	answer := callAnswer{results: make([]bool, sig.Results().Len())}
+	answer.results[index] = true
+	w.answerCalls[call] = answer
+	result := sig.Results().At(index).Type()
+	if !types.Identical(result, types.Typ[types.Bool]) && !types.Identical(result, errorType) && !w.discarded[call] {
+		s.checked = true
 	}
 	return s
 }
 
+// errorLast reports whether a call's results end in an error, and false for
+// known when a stand-in left its type unread.
+func errorLast(t types.Type) (errLast, known bool) {
+	switch results := t.(type) {
+	case nil:
+		return false, false
+	case *types.Tuple:
+		return results.Len() > 0 && types.Identical(results.At(results.Len()-1).Type(), errorType), true
+	case *types.Basic:
+		return false, results.Kind() != types.Invalid
+	}
+	return types.Identical(t, errorType), true
+}
+
+func andAnswers(acc, next []bool, first bool) []bool {
+	if first {
+		return slices.Clone(next)
+	}
+	for i := range acc {
+		acc[i] = acc[i] && i < len(next) && next[i]
+	}
+	return acc
+}
+
+func keptAnswers(acc, next map[types.Object]bool, first bool) map[types.Object]bool {
+	if first {
+		return next
+	}
+	for obj := range acc {
+		acc = withMember(acc, obj, next[obj])
+	}
+	return acc
+}
+
+// assign keeps, for each variable lhs names, whether it now holds an answer
+// and whether its value is covered. A store through a field, index or pointer
+// keeps its variable covered only when what it stores is.
+func (w *pathWalk) assign(lhs, rhs []ast.Expr, tok token.Token, s pathState) pathState {
+	for i, target := range lhs {
+		covered := w.assignedCovered(lhs, rhs, i, s)
+		if _, plain := ast.Unparen(target).(*ast.Ident); !plain || (tok != token.ASSIGN && tok != token.DEFINE) {
+			if root := rootOf(target, w.frame.info); root != nil {
+				s.covered = withMember(s.covered, root, s.covered[root] && covered)
+			}
+		}
+		obj := assignedObject(target, w.frame.info)
+		if obj == nil {
+			continue
+		}
+		if _, plain := ast.Unparen(target).(*ast.Ident); plain && (tok == token.ASSIGN || tok == token.DEFINE) {
+			s.covered = withMember(s.covered, obj, covered)
+		}
+		answered := false
+		if len(rhs) == len(lhs) {
+			answered = w.isAnswer(rhs[i], s)
+		} else if call, ok := ast.Unparen(rhs[0]).(*ast.CallExpr); ok && len(rhs) == 1 {
+			answered = w.answerCalls[call].at(i, len(lhs))
+		}
+		s.answers = withMember(s.answers, obj, answered)
+		s.nonNil = withMember(s.nonNil, obj, false)
+		delete(w.hits, obj)
+		delete(w.floors, obj)
+		if call, ok := ast.Unparen(rhs[0]).(*ast.CallExpr); ok && len(rhs) == 1 {
+			if index, isFloor := w.floorCalls[call]; isFloor && index == i {
+				w.floors[obj] = true
+			}
+		}
+	}
+	if hit := w.cacheHit(lhs, rhs); hit != nil {
+		w.hits[hit] = true
+	}
+	return s
+}
+
+// declare walks a var block. A variable declared without a value holds its
+// zero value, which is covered.
+func (w *pathWalk) declare(decl *ast.DeclStmt, s pathState) pathState {
+	gen, ok := decl.Decl.(*ast.GenDecl)
+	if !ok {
+		return s
+	}
+	for _, spec := range gen.Specs {
+		vs, ok := spec.(*ast.ValueSpec)
+		if !ok {
+			continue
+		}
+		lhs := make([]ast.Expr, len(vs.Names))
+		for i, name := range vs.Names {
+			lhs[i] = name
+			if len(vs.Values) == 0 {
+				s.covered = withMember(s.covered, w.frame.info.Defs[name], true)
+			}
+		}
+		if len(vs.Values) > 0 {
+			s = w.assign(lhs, vs.Values, token.DEFINE, s)
+		}
+	}
+	return s
+}
+
+// assignedCovered reports whether the value lhs[i] receives is covered. One
+// call answering every target covers each where its results are covered; a
+// comma-ok read covers its ok, a bool.
+func (w *pathWalk) assignedCovered(lhs, rhs []ast.Expr, i int, s pathState) bool {
+	switch {
+	case s.checked:
+		return true
+	case len(rhs) == len(lhs):
+		return w.isCovered(rhs[i], s)
+	case len(rhs) == 1 && i > 0:
+		if _, isCall := ast.Unparen(rhs[0]).(*ast.CallExpr); !isCall {
+			return true
+		}
+	}
+	return len(rhs) == 1 && w.isCovered(rhs[0], s)
+}
+
+// isAnswer reports an expression that holds the switch's answer.
+func (w *pathWalk) isAnswer(expr ast.Expr, s pathState) bool {
+	switch e := ast.Unparen(expr).(type) {
+	case *ast.Ident:
+		obj := w.frame.info.Uses[e]
+		return obj != nil && s.answers[obj]
+	case *ast.CallExpr:
+		return w.answerCalls[e].at(0, 1)
+	}
+	return false
+}
+
+func allBlank(lhs []ast.Expr) bool {
+	return !slices.ContainsFunc(lhs, func(e ast.Expr) bool {
+		ident, ok := e.(*ast.Ident)
+		return !ok || ident.Name != "_"
+	})
+}
+
 // runs resolves what call runs. A function outside the walked packages runs
-// the func values it is handed, and so does one on a stand-in type. That is
-// how a transaction runs its body.
+// the func values it is handed only when the config declares it synchronous.
+// A transaction is one: it runs its body before it returns. Any other may
+// keep, defer, skip or repeat a callback, so none lends its check.
 func (w *pathWalk) runs(call *ast.CallExpr, callee *types.Func) (runs []run, resolved, external bool) {
 	info := w.frame.info
 	if lit, ok := ast.Unparen(call.Fun).(*ast.FuncLit); ok {
@@ -117,12 +318,12 @@ func (w *pathWalk) runs(call *ast.CallExpr, callee *types.Func) (runs []run, res
 	switch {
 	case callee == nil && calledVar(call.Fun, info) != nil:
 		values, resolved = w.varValues(calledVar(call.Fun, info))
-	case callee == nil:
-		return w.handedFuncs(call), true, true
-	case isInterfaceMethod(callee) || w.sw.g.decls[callee.Origin()] != nil:
+	case callee != nil && (isInterfaceMethod(callee) || w.sw.g.decls[callee.Origin()] != nil):
 		values, resolved = w.funcValues(callee)
-	default:
+	case w.sw.g.synchronous[w.sw.g.outsideCallee(call, info)]:
 		return w.handedFuncs(call), true, true
+	default:
+		return nil, true, true
 	}
 	for _, value := range values {
 		runs = append(runs, w.bind(value, call))
@@ -196,12 +397,7 @@ func (w *pathWalk) constantString(call *ast.CallExpr, index int) (string, bool) 
 // bind maps each func-typed parameter of fn to what call passes for it, and
 // each string parameter to the constant it passes.
 func (w *pathWalk) bind(fn fnValue, call *ast.CallExpr) run {
-	var sig *types.Signature
-	if fn.lit != nil {
-		sig, _ = fn.info.TypeOf(fn.lit).(*types.Signature)
-	} else {
-		sig, _ = fn.decl.Type().(*types.Signature)
-	}
+	sig := signatureOf(fn)
 	out := run{fn: fn}
 	if sig == nil {
 		return out
@@ -225,6 +421,32 @@ func (w *pathWalk) bind(fn fnValue, call *ast.CallExpr) run {
 			values = nil
 		}
 		out.bound[param] = values
+	}
+	return out
+}
+
+func signatureOf(fn fnValue) *types.Signature {
+	var sig *types.Signature
+	if fn.lit != nil {
+		sig, _ = fn.info.TypeOf(fn.lit).(*types.Signature)
+	} else {
+		sig, _ = fn.decl.Type().(*types.Signature)
+	}
+	return sig
+}
+
+// answeredParams are the parameters of fn that call hands an answer, so a
+// helper that tests the error it is passed decides it.
+func (w *pathWalk) answeredParams(fn fnValue, call *ast.CallExpr, s pathState) map[types.Object]bool {
+	sig := signatureOf(fn)
+	if sig == nil {
+		return nil
+	}
+	var out map[types.Object]bool
+	for i := range min(sig.Params().Len(), len(call.Args)) {
+		if w.isAnswer(call.Args[i], s) {
+			out = withMember(out, sig.Params().At(i), true)
+		}
 	}
 	return out
 }

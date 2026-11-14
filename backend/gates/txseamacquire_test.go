@@ -169,9 +169,12 @@ type txBorrowing struct {
 	declares map[string]bool
 }
 
-// promotedTx is the heldTx entry for an EMBEDDED pgx.Tx, which has no field
-// name to spell: its methods are promoted onto the receiver.
+// promotedTx is the heldTx entry for an EMBEDDED pgx.Tx. Its methods are
+// promoted onto the receiver, and its field is spelled embeddedTxField.
 const promotedTx = ""
+
+// embeddedTxField is the name Go gives an embedded pgx.Tx field: its type's.
+const embeddedTxField = "Tx"
 
 // promotedTxMethods are the acquirer names that belong to pgx.Tx ITSELF, so a
 // call on a receiver embedding one is the borrowed handle rather than a method
@@ -530,6 +533,9 @@ func (b txBorrowing) isHeldTxField(sel *ast.SelectorExpr) bool {
 	base, ok := sel.X.(*ast.Ident)
 	if !ok || b.recv == "" || base.Name != b.recv {
 		return false
+	}
+	if b.embedsTx() && sel.Sel.Name == embeddedTxField {
+		return true
 	}
 	return slices.Contains(b.heldTx, sel.Sel.Name)
 }
@@ -968,6 +974,18 @@ func (c core) Nested(ctx context.Context) error {
 `
 	// The declaring method is judged on its own body, which takes a connection.
 	assertHeldTxGateReads(t, shadowed, "core.Begin", "Acquire")
+	// The embedded field spelled by name is the held transaction, so its Begin
+	// is the savepoint.
+	const delegated = fixtureImports + `
+type core struct {
+	pgx.Tx
+}
+
+func (c core) Begin(ctx context.Context) (pgx.Tx, error) {
+	return c.Tx.Begin(ctx)
+}
+`
+	assertHeldTxGateReads(t, delegated, "core.Begin")
 	// And its CALLER's `c.Begin(…)` is that method rather than a savepoint, so
 	// the promoted exemption does not apply to it either.
 	assertHeldTxGateReads(t, shadowed, "core.Nested", "Begin")

@@ -21,6 +21,9 @@ var servesUnoffered atomic.Bool
 // answer, not the door's. The door binds only agents; another caller meets each
 // tool's own gate.
 func (s *Dispatcher) unoffered(ctx context.Context, name string) bool {
+	if outside, app := outsideAppSurface(ctx, name); app {
+		return outside
+	}
 	p, ok := principal.Actor(ctx)
 	if !ok || p.Type != principal.PrincipalAgent || servesUnoffered.Load() {
 		return false

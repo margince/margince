@@ -256,7 +256,7 @@ func (s *Store) waitingStatement(
 	arg func(any) int,
 ) (string, error) {
 	instant := arg(asOf)
-	content, err := auth.ActivityContentClause(ctx, "a", arg)
+	content, err := auth.ActivityMessageContentClause(ctx, "a", arg)
 	if err != nil {
 		return "", err
 	}

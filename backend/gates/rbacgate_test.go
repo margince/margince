@@ -294,6 +294,7 @@ var ungatedEntryPoints = gatekit.Waive(map[string]string{
 	"internal/modules/identity:Logout":                    "session retirement; the bearer's possession of the session IS the authority being revoked",
 	"internal/modules/identity:Authenticate":              "pre-principal: this resolves the session cookie INTO the principal every other gate consumes",
 	"internal/modules/identity:AuthenticateAgent":         "pre-principal: passport verification is what admits the agent actor (every call re-authenticates, ADR-0055)",
+	"internal/modules/identity:AuthenticateAppCaller":     "pre-principal: a chat app's signed call token, already verified at the /mcp edge, is what admits the agent actor of the member it names",
 	"internal/modules/identity:AuthenticateAgentByID":     "pre-principal: the by-id half of passport verification, same admission seam",
 	"internal/modules/identity:AgentForStoredWork":        "passport verification again, for the agent whose queued work is about to run: the same predicate AgentForStagedCallTx reads",
 	"internal/modules/identity:AgentForStagedCallTx":      "passport verification again, for the agent whose staged call an approval will release: the approvals engine asks it so a preview and a context pin read as that agent. It answers about a credential the approval row already names, never about a record",
@@ -780,15 +781,15 @@ var authNotDecisions = map[string]string{
 // with the reason it refuses — expected data about the auth package, not costs
 // this gate is paying.
 //
-// authDecisionsByRatification are the decisions whose names do not carry a
-// refusal verb. Each entry says why it refuses, because a name that reads like
-// a query and behaves like a gate is the thing a reader gets wrong.
+// authDecisionsByRatification each say why they refuse: a name that reads
+// like a query and behaves like a gate is the thing a reader gets wrong.
 var authDecisionsByRatification = map[string]string{
 	"EdgeReadAdmitted": "the relationship-edge admission itself: it answers whether this caller may read an edge, and the readers that compose a clause call it first",
 	"EdgeReadScope":    "calls EdgeReadAdmitted before composing, so a caller it refuses gets an error rather than a predicate",
 	"VisibleTo":        "per-record read admission — it answers about ONE row and its callers act on the refusal",
 	"WritableBy":       "the write half of the same question",
 	"Allows":           "Require read as a boolean, recording nothing: its callers withhold what the caller lacks, by the same decision Require refuses on",
+	"OwnSeat":          "the reader's own seat, refusing a caller with no signed-in seat: its callers read a record keyed by it as the reader's own",
 }
 
 // TestTheAuthDecisionVerbsStillDescribeThePackage holds the convention the gate

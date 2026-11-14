@@ -41,6 +41,9 @@ func WithDegradableRead(ctx context.Context, budget time.Duration, fn func(conte
 
 // WithDegradableSavepoint isolates one bounded attempt without aborting its enclosing transaction.
 func WithDegradableSavepoint(ctx context.Context, tx pgx.Tx, budget time.Duration, fn func(pgx.Tx) error) error {
+	if deferred, ok := deferredOf(tx); ok {
+		return deferredLane(ctx, deferred, budget, fn)
+	}
 	page, err := openLane(ctx, tx, budget)
 	if err != nil {
 		return err
@@ -56,6 +59,53 @@ func WithDegradableSavepoint(ctx context.Context, tx pgx.Tx, budget time.Duratio
 	if err := tx.SendBatch(ctx, closing).Close(); err != nil {
 		return errors.Join(fmt.Errorf("pg: closing a degradable read: %w", err), abandonLane(ctx, tx))
 	}
+	return nil
+}
+
+// deferredLane is WithDegradableSavepoint on a snapshot that carries the lane's
+// opening and closing on the exchanges around it. A lane that sends nothing
+// costs nothing.
+func deferredLane(ctx context.Context, tx *deferredTx, budget time.Duration, fn func(pgx.Tx) error) error {
+	milliseconds, err := budgetMilliseconds(budget)
+	if err != nil {
+		return err
+	}
+	if aborted(tx) {
+		return errors.New("pg: opening a degradable read: the snapshot is already aborted")
+	}
+	var page string
+	savepoint := fmt.Sprintf("degradable_read_%d", tx.scopes+1)
+	lane := tx.open(
+		deferredStatement{sql: `SELECT current_setting('statement_timeout')`, scan: func(row pgx.Row) error { return row.Scan(&page) }},
+		deferredStatement{sql: `SAVEPOINT ` + savepoint, opens: true, savepoint: true},
+		deferredStatement{sql: boundStatementSQL, args: []any{milliseconds}},
+	)
+	if err := fn(tx); err != nil {
+		return errors.Join(err, abandonDeferredLane(ctx, tx, lane, savepoint))
+	}
+	// No closing exchange runs here to find a failure the lane swallowed.
+	if aborted(tx) {
+		return errors.Join(errors.New("pg: a degradable read left its transaction aborted"), abandonDeferredLane(ctx, tx, lane, savepoint))
+	}
+	tx.close(lane, deferredStatement{sql: boundStatementSQL, args: []any{page}}, deferredStatement{sql: `RELEASE SAVEPOINT ` + savepoint})
+	return nil
+}
+
+// aborted is whether a failed statement left tx's transaction aborted; the
+// driver tracks it from the server's last answer, so asking costs nothing.
+func aborted(tx pgx.Tx) bool { return tx.Conn().PgConn().TxStatus() == 'E' }
+
+// abandonDeferredLane is abandonLane for a deferred lane: one that never
+// reached the server has nothing to undo, and what it left pending goes.
+func abandonDeferredLane(ctx context.Context, tx *deferredTx, lane *deferredScope, savepoint string) error {
+	tx.drop(lane)
+	if !lane.sent {
+		return nil
+	}
+	if _, err := tx.Tx.Exec(ctx, `ROLLBACK TO SAVEPOINT `+savepoint+`; RELEASE SAVEPOINT `+savepoint); err != nil {
+		return fmt.Errorf("pg: rolling back a degradable read: %w", err)
+	}
+	Forget(tx, "")
 	return nil
 }
 

@@ -1,0 +1,10 @@
+{
+  "verb": "set_channel_verbosity",
+  "checks": [
+    "deal.update"
+  ],
+  "takes": [
+    "channel_deal",
+    "company"
+  ]
+}

@@ -6,7 +6,7 @@ The 22 tables owned by `identity`, as the migrations build them. [Back to the en
 
 ## app_user
 
-39 columns · primary key `(id)` · referenced by 157 foreign keys
+39 columns · primary key `(id)` · referenced by 158 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
@@ -485,11 +485,13 @@ The 22 tables owned by `identity`, as the migrations build them. [Back to the en
 
 ## passport
 
-12 columns · primary key `(id)` · referenced by 9 foreign keys
+14 columns · primary key `(id)` · referenced by 9 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
 | `id` | `uuid`, default `uuidv7()` | yes | Primary key. |
+| `app_issuer` | `text` |  |  |
+| `app_subject` | `text` |  |  |
 | `expires_at` | `timestamp with time zone` | yes |  |
 | `granted_by` | `uuid` | yes | Points at `app_user.id`. |
 | `label` | `text` |  |  |
@@ -512,12 +514,14 @@ The 22 tables owned by `identity`, as the migrations build them. [Back to the en
 
 **Rules**
 
+- `passport_app_caller_pair`: `CHECK (((app_issuer IS NULL) = (app_subject IS NULL)))`
 - `passport_expires_after_creation`: `CHECK ((expires_at > created_at))`
 - `passport_token_hash_key`: `UNIQUE (token_hash)`
 - `uq_passport_id_owner`: `UNIQUE (id, on_behalf_of)`
 
 **Indexes**
 
+- `idx_passport_app_caller`: `btree (app_issuer, app_subject, created_at DESC) WHERE (app_issuer IS NOT NULL)`
 - `idx_passport_on_behalf_of`: `btree (on_behalf_of)`
 - `passport_oauth_grant_ix`: `btree (oauth_grant_id)`
 - `passport_pkey`: `unique, btree (id)`
@@ -526,8 +530,8 @@ The 22 tables owned by `identity`, as the migrations build them. [Back to the en
 
 **Triggers**
 
-- `text_bound_insert`: `AFTER INSERT FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL, '{"label": 120, "scopes": 20000, "token_hash": 20000, "work_areas": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"label":120,"scopes":20000,"token_hash":20000,"work_areas":20000}')`
-- `text_bound_update`: `AFTER UPDATE FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"label": 120, "scopes": 20000, "token_hash": 20000, "work_areas": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"label":120,"scopes":20000,"token_hash":20000,"work_areas":20000}')`
+- `text_bound_insert`: `AFTER INSERT FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL, '{"label": 120, "scopes": 20000, "app_issuer": 500, "token_hash": 20000, "work_areas": 20000, "app_subject": 500}')) EXECUTE FUNCTION refuse_oversized_text('{"app_issuer":500,"app_subject":500,"label":120,"scopes":20000,"token_hash":20000,"work_areas":20000}')`
+- `text_bound_update`: `AFTER UPDATE FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"label": 120, "scopes": 20000, "app_issuer": 500, "token_hash": 20000, "work_areas": 20000, "app_subject": 500}')) EXECUTE FUNCTION refuse_oversized_text('{"app_issuer":500,"app_subject":500,"label":120,"scopes":20000,"token_hash":20000,"work_areas":20000}')`
 
 ## record_grant
 

@@ -84,7 +84,7 @@ func (s *Scanner) scanOneDeal(
 	subjects, err := s.dealSubjects(ctx, tx, now, coverage, deal)
 	if err != nil {
 		out.Status, out.Readiness = StatusIncomplete, ReadinessChecksIncomplete
-		return s.store.FinishRun(ctx, tx, runID, 0, 0, 0, out.Status, out.Readiness)
+		return s.store.FinishRun(ctx, tx, runID, Eligible{}, 0, out.Status, out.Readiness)
 	}
 	pass := askEveryRule(now, subjects, s.cfg, coverage)
 	out.EligibleDeals, out.Findings = pass.eligible, len(pass.raised)
@@ -112,7 +112,7 @@ func (s *Scanner) scanOneDeal(
 	} else if err := s.store.clearDealMarker(ctx, tx, deal, generation); err != nil {
 		return err
 	}
-	return s.store.FinishRun(ctx, tx, runID, out.EligibleDeals, 0, out.Cleared, out.Status, out.Readiness)
+	return s.store.FinishRun(ctx, tx, runID, Eligible{Deals: out.EligibleDeals, DealOwners: pass.owners}, out.Cleared, out.Status, out.Readiness)
 }
 
 // DealChangePending answers whether the deal has a change no pass has read.

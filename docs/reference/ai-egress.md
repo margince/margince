@@ -41,6 +41,7 @@ bound for its ladder's rungs, and may retain the prompt for debugging.
 | `capture_confidentiality_verdict` | `local_small` | yes | yes | yes | only a local decision provider | shipped |
 | `capture_counterparty_verdict` | `local_small` | yes | yes | yes | only a local decision provider | shipped |
 | `cert_judge` | `premium` → `cheap_cloud` | no | no | no | none | shipped |
+| `chat_summary` | `cheap_cloud` → `premium` | no | yes | no | none | shipped |
 | `cold_start` | `cheap_cloud` → `premium` | no | no | no | none | shipped |
 | `corpus_ask` | `premium` | no | no | no | none | shipped |
 | `deal_health` | `cheap_cloud` → `premium` | no | no | no | none | shipped |
@@ -127,6 +128,7 @@ a processing record can be written from the rows marked yes.
 | the identity provider's published key set | no |  | the identity provider binding |
 | the mailbox provider (IMAP) | yes | the mailbox credential and the folders it reads | the mailbox connection; removing it stops the sync |
 | the provider an installed extension unit calls | yes | whatever that unit sends its provider, which can include the deals and colleagues' details its manifest lists under system_reads | removing the unit from the installation |
+| the team's own Dispact install | yes | linked deal and project names, stages, close dates, owner names and emails, the subjects of activities shared with the whole workspace, and the emails of members invited to a new channel | Settings → Integrations: disconnecting the Dispact bot stops every call; unlinking a record stops posts for it |
 | this installation's own public address | no |  | not optional: it is how the installation learns whether it is reachable |
 
 A row here is what the installation can do. Most of these are inert until an administrator supplies a credential or turns a setting on, and

@@ -59,7 +59,7 @@ import (
 // directly, and the Ensure* probes reach it through
 // EnsureActivityContentVisible.
 var audienceScopeMarkers = []string{
-	"ActivityContentClause", "ActivityAudienceArm", "AudienceWorkspaceOnly", "WorkspaceAudienceSQL", "AutomaticMailContent",
+	"ActivityContentClause", "ActivityMessageContentClause", "ActivityAudienceArm", "AudienceWorkspaceOnly", "WorkspaceAudienceSQL", "AutomaticMailContent",
 	// Gates a statement's activities once; TestEveryContentGateRendersItsMarkOnce
 	// in platform/auth holds that it renders the content gate.
 	"ContentReadableActivitiesSQL",

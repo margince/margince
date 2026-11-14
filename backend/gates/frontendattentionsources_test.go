@@ -5,22 +5,17 @@
 
 package gates
 
-// Every source the Worklist can carry must have a body the decision lane knows
-// how to draw, or the lane asks the wrong endpoint about it.
+// Every source the Worklist can carry has a row in the frontend's kind table,
+// or the client shows a reader the source's own identifier.
 //
-// The decision lane used to branch on one source and treat everything else as a
-// staged proposal, fetching `/approvals/{id}` with the item's own id. That read
-// answers 404 for an item that is not an approval, so the card rendered as a
-// failed one — on the single surface whose promise is that it can be finished.
-// Nothing failed when a source was added, because the assumption was spelled as
-// an `else` rather than as a case.
+// The table is generated from api/worklist-kinds.yaml, and KNOWN_SOURCES in
+// frontend/src/lib/worklistcopy.ts re-exports it. Reading the generated file
+// holds the catalog to the contract on the side the client reads.
 //
-// The corpus is the contract's own enum, read out of crm.yaml rather than out of
-// the generated Go constants: a source is added to the schema first, and a gate
-// that read the generated side would agree with a tree nobody had regenerated
-// yet. Both directions are compared — a source with no entry fails, and an entry
-// naming no source fails too, because a dead entry teaches the next author that
-// the map is not maintained.
+// The corpus is the contract's own enum, read out of crm.yaml. A source is
+// added to the schema first, so a gate reading the generated Go constants
+// would agree with a tree nobody had regenerated yet. Both directions are
+// compared: a source with no entry fails, and so does an entry naming no source.
 //
 // The contract is PARSED, not pattern-matched. A first cut read the enum with a
 // regex over the raw file and had the one defect a gate must not have: writing
@@ -43,16 +38,12 @@ import (
 
 const (
 	attentionContract    = "api/crm.yaml"
-	frontendAttentionMap = "../frontend/src/lib/worklistcopy.ts"
+	frontendAttentionMap = "../frontend/src/lib/worklistkinds.gen.ts"
 )
 
-// focusSurfaceEntry reads one `source: "surface"` pair out of the map.
-var focusSurfaceEntry = regexp.MustCompile(`["']?\b([a-z][a-z0-9_]*)\b["']?:\s*(?:["'][a-z]+["']|true)`)
-
-// tsCommentInSources strips comments before the entries are read: the map is
-// commented and the prose names sources, so a source deleted from the map but
-// mentioned above it would keep this gate green.
-var tsCommentInSources = regexp.MustCompile(`(?s)//[^\n]*|/\*.*?\*/`)
+// kindTableRow matches a key followed by the opening brace of its fields, so a
+// field's own key is never read as a kind.
+var kindTableRow = regexp.MustCompile(`(?m)^\s+"?([a-z][a-z0-9_]*)"?:\s*\{`)
 
 // contract is as much of the OpenAPI document as this gate reads: one schema's
 // one property's enum. Named down to that so the corpus comes from the path the
@@ -98,36 +89,30 @@ func contractSources(t *testing.T) []string {
 	return slices.Compact(sources)
 }
 
-// surfacedSources reads the KNOWN_SOURCES literal out of the TypeScript module.
-//
-// The map moved when the lane page became the ranked queue: the decision lane's
-// FOCUS_SURFACE chose which BODY to draw, and this one decides whether a source
-// has a sentence at all. The invariant is the same either way — a source the
-// contract can emit and the client cannot name reaches a reader as an
-// identifier — so the gate follows the map rather than being deleted with the
-// page it used to guard.
+// surfacedSources reads the kinds out of the generated frontend table that
+// KNOWN_SOURCES re-exports. The table is generated from api/worklist-kinds.yaml,
+// so this holds the catalog to the contract on the side the client reads.
 func surfacedSources(t *testing.T) []string {
 	t.Helper()
 	source, err := gatekit.ReadFile(frontendAttentionMap)
 	if err != nil {
-		t.Fatalf("reading the frontend focus-surface map: %v", err)
+		t.Fatalf("reading the frontend kind table: %v", err)
 	}
-	const opener = "const KNOWN_SOURCES = {"
+	const opener = "export const WORKLIST_KINDS = {"
 	start := strings.Index(string(source), opener)
 	if start < 0 {
 		t.Fatalf("no %s declaration in %s", opener, frontendAttentionMap)
 	}
-	body := string(source)[start:]
+	body := string(source)[start+len(opener):]
 	if end := strings.Index(body, "\n}"); end >= 0 {
 		body = body[:end]
 	}
-	body = tsCommentInSources.ReplaceAllString(body, "")
 	var sources []string
-	for _, match := range focusSurfaceEntry.FindAllStringSubmatch(body, -1) {
+	for _, match := range kindTableRow.FindAllStringSubmatch(body, -1) {
 		sources = append(sources, match[1])
 	}
 	if len(sources) == 0 {
-		t.Fatalf("read no entries out of KNOWN_SOURCES — the parser has stopped seeing the map")
+		t.Fatalf("read no rows out of WORKLIST_KINDS: the parser has stopped seeing the table")
 	}
 	slices.Sort(sources)
 	return slices.Compact(sources)
@@ -140,12 +125,12 @@ func TestEveryAttentionSourceHasAFocusSurface(t *testing.T) {
 
 	for _, source := range contract {
 		if !slices.Contains(surfaced, source) {
-			t.Errorf("source %q can reach the Worklist but has no entry in FOCUS_SURFACE: the decision lane would read /approvals with an id that is not an approval's", source)
+			t.Errorf("source %q can reach the Worklist but has no entry in WORKLIST_KINDS: add it to backend/api/worklist-kinds.yaml and run make gen", source)
 		}
 	}
 	for _, source := range surfaced {
 		if !slices.Contains(contract, source) {
-			t.Errorf("FOCUS_SURFACE carries %q, which the contract cannot emit: a dead entry teaches the next author the map is not maintained", source)
+			t.Errorf("WORKLIST_KINDS carries %q, which the contract cannot emit: a dead entry teaches the next author the table is not maintained", source)
 		}
 	}
 }

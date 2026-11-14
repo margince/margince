@@ -56,7 +56,7 @@ func waitingReplyEntityClause(entityType string, entityID ids.UUID, arg func(any
 // query's is harmless.
 func waitingReplyExistsClause(ctx context.Context, arg func(any) int, asOf time.Time, entityType *string, entityID *ids.UUID, ownDomains, readerAddresses []string, horizonDays int, alsoBeforeTheCap, unjudgedResponses string) (string, error) {
 	instant := arg(asOf)
-	content, err := auth.ActivityContentClause(ctx, "a", arg)
+	content, err := auth.ActivityMessageContentClause(ctx, "a", arg)
 	if err != nil {
 		return "", err
 	}

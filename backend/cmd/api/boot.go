@@ -34,6 +34,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/netguard"
 	"github.com/margince/margince/backend/internal/platform/providerhealthstore"
 	"github.com/margince/margince/backend/internal/platform/ratelimit"
+	"github.com/margince/margince/backend/internal/platform/replayguard"
 	"github.com/margince/margince/backend/internal/shared/buildinfo"
 	"github.com/margince/margince/backend/pkg/extension"
 )
@@ -262,12 +263,11 @@ func declaredSurfaceOptions(ctx context.Context, cfg apiConfig, bootstrap deploy
 	// /me carries both facts, from two options, because they are two facts: the
 	// deployment posture, and whether the reset exists here at all.
 	opts = append(opts, compose.WithNonProduction(cfg.posture), compose.WithDataResetAvailable(allowDataReset))
-	// Gate 1: the connector's whole route group — /mcp, the authorization
-	// server and both discovery documents — exists only when the deployment
-	// declared it. The boot check in bindInstallation already proved the
-	// canonical base URL those routes advertise.
+	// Gate 1: /mcp, its OAuth server, discovery and Dispact call tokens exist only
+	// when declared. bindInstallation already proved the base URL they advertise.
 	if cfg.mcpConnector {
-		opts = append(opts, compose.WithMCPConnector(), compose.WithClientRegistrationLimit(cfg.clientRegistration))
+		opts = append(opts, compose.WithMCPConnector(), compose.WithClientRegistrationLimit(cfg.clientRegistration),
+			compose.WithDispactCalls(replayguard.New(rdb), cfg.posture.IsNonProduction()))
 	}
 
 	passwordOpts, err := passwordResetOptions(ctx, cfg.settings, pool, vault, cfg.publicBaseURL, logger, stdout)
@@ -302,12 +302,11 @@ func declaredSurfaceOptions(ctx context.Context, cfg apiConfig, bootstrap deploy
 
 // sharedRedisClient opens the ONE raw-Redis handle this role holds, plus the
 // close func the caller defers for the process lifetime. Two surfaces share it:
-// the agent volume meter and the
-// non-production data reset, which purges the streams and announces itself over
-// the same connection. Sharing is the point — a second client would be a second
-// connection to the same server for no gain — and it is deliberately NOT the
-// inline relay's client, which a split deployment (--inline-relay=false) does
-// not build at all.
+// the agent volume meter and the non-production data reset, which purges the
+// streams and announces itself over the same connection. A second client would
+// be a second connection to the same server for no gain. It is not the inline
+// relay's client, which a split deployment (--inline-relay=false) does not
+// build at all.
 //
 // A LAZY client (no boot ping): a split-deployment api that cannot reach Redis
 // must still boot. A reset then reports the unreachable bus as the error it is,
@@ -359,7 +358,6 @@ func agentVolumeOptions(volumeMeter *agentvolume.Meter) []compose.Option {
 // no-op in that split case, so the caller stops one lane either way.
 func inlineRelayLane(ctx context.Context, cfg apiConfig, pool *pgxpool.Pool, license *licensecheck.Watcher, logger *slog.Logger, stdout io.Writer) ([]compose.Option, func(), error) {
 	if !cfg.inlineRelay {
-		// No inline relay to stop: cmd/worker is running it.
 		return nil, func() {}, nil
 	}
 	paused := installtrial.New(pool, cfg.posture, license.Posture, time.Now).Paused(logger)
@@ -435,7 +433,7 @@ func modelAndHandoffOptions(ctx context.Context, cfg apiConfig, bootstrap deploy
 		return nil, nil, err
 	}
 	handoffOpts, err := workerHandoffOptions(pool, logger, modelPath,
-		queueGates{vatCheck: cfg.vatCheckBaseURL, geocode: cfg.geocodeBaseURL})
+		queueGates{vatCheck: cfg.vatCheckBaseURL, geocode: cfg.geocodeBaseURL, privateChat: cfg.posture.IsNonProduction()})
 	if err != nil {
 		return nil, nil, err
 	}
@@ -477,6 +475,8 @@ func workerHandoffOptions(
 		// An approved import commits, and an undo reverses, in the worker: the
 		// move and its job are one transaction, so the 202 means work is queued.
 		compose.WithImportJobs(sendInserter),
+		// After WithChannelSurface, so a Dispact bot connects beside Telegram.
+		compose.WithChatLinks(sendInserter, gates.privateChat, chatSummaryLane(modelPath)),
 	}
 
 	enqueueOpts, err := jobEnqueueOptions(pool, logger, modelPath, gates)

@@ -40,6 +40,7 @@ type Population struct {
 type Handlers struct {
 	store      *Store
 	exceptions ExceptionsFunc
+	run        RunFunc
 	// now is injected so the suppression ceiling is a function of the request's
 	// own clock rather than of whenever the process happened to start.
 	now func() time.Time
@@ -58,7 +59,7 @@ func (h Handlers) ListInputChecks(w http.ResponseWriter, r *http.Request, params
 	}
 	var found []Exception
 	var answerable map[ids.UUID]bool
-	err := h.store.InTx(r.Context(), func(ctx context.Context, tx pgx.Tx) error {
+	err := h.store.InSnapshot(r.Context(), func(ctx context.Context, tx pgx.Tx) error {
 		var err error
 		if found, err = h.exceptions(ctx, tx, population); err != nil {
 			return err
@@ -201,14 +202,19 @@ func decodeSlots(raw []byte) *map[string]any {
 	return &out
 }
 
+// RunFunc reads the latest completed run and the sources it reached, held to
+// the small-group floor. Injected, because the floor lives in compose.
+type RunFunc func(ctx context.Context) (Run, []SourceCoverage, error)
+
+// WithRun serves GET /forecast/assurance through read.
+func (h Handlers) WithRun(read RunFunc) Handlers {
+	h.run = read
+	return h
+}
+
 // GetForecastAssurance answers the most recent completed run.
 func (h Handlers) GetForecastAssurance(w http.ResponseWriter, r *http.Request) {
-	run, err := h.store.LatestRun(r.Context())
-	if err != nil {
-		httperr.Write(w, r, err)
-		return
-	}
-	coverage, err := h.store.CoverageFor(r.Context(), run.ID)
+	run, coverage, err := h.run(r.Context())
 	if err != nil {
 		httperr.Write(w, r, err)
 		return

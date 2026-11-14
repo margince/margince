@@ -135,6 +135,8 @@ export function deliveringProject360(
           due_at: "2026-07-03T09:00:00Z",
           assignee_id: "u-me",
           assignee_name: "Lena Fischer",
+          due_has_time: false,
+          version: 1,
           overdue: true,
         },
       ],

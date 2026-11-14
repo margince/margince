@@ -10,6 +10,7 @@ import { ProvenanceTag } from "./trust";
 import { VisibilityBadge } from "./visibility";
 import "./composed.css";
 
+import { ChatEpisodeLine, ChatSummaryFlag } from "./timelinechat";
 import {
   AiAssistedFlag,
   AutomaticFlag,
@@ -387,6 +388,7 @@ export function TimelineRow({
           )}
           <AutomaticFlag entry={entry} />
           <AiAssistedFlag entry={entry} />
+          <ChatSummaryFlag entry={entry} />
           <CopiesFlag entry={entry} />
           <CommitmentReviewFlag
             count={entry.withheld ? 0 : entry.commitmentReviewCount}
@@ -418,6 +420,7 @@ export function TimelineRow({
             server has not caught up should not lose the fold. */}
         <TimelineRowText entry={entry} />
         {entry.detail}
+        <ChatEpisodeLine entry={entry} />
         <span className="tl-meta">
           <ProvenanceTag provenance={entry.provenance} />
         </span>

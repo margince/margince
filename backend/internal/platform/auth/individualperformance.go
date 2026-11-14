@@ -39,8 +39,18 @@ func MayMeasureSeat(ctx context.Context, allowed bool, seat ids.UUID) bool {
 	if allowed {
 		return true
 	}
+	own, err := OwnSeat(ctx)
+	return err == nil && seat == own
+}
+
+// OwnSeat is the reader's own seat, the one the switch never withholds. A
+// caller cannot name another, so a record read by it is the reader's own.
+func OwnSeat(ctx context.Context) (ids.UUID, error) {
 	p, ok := principal.Actor(ctx)
-	return ok && !seat.IsZero() && seat == p.UserID
+	if !ok || p.UserID.IsZero() {
+		return ids.Nil, apperrors.ErrPermissionDenied
+	}
+	return p.UserID, nil
 }
 
 // IndividualPerformanceOffError refuses a question about a colleague, or one that splits

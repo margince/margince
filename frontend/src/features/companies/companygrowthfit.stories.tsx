@@ -6,6 +6,7 @@ import type { components } from "../../api/schema";
 import {
   installFetchStub,
   jsonResponse,
+  meRoute,
   StoryProviders,
 } from "../../testing/story-utils";
 import { GrowthFitPanel } from "./companygrowthfit";
@@ -289,6 +290,7 @@ function Panel({
     "GET /companies/o-1/growth-fit": route,
     "GET /companies/o-1/profile-fields": () => jsonResponse(profileFields),
     "GET /companies/o-1/facts": () => jsonResponse(facts),
+    "GET /me": meRoute({ company: ["read", "update"] }),
   });
   return (
     <StoryProviders>

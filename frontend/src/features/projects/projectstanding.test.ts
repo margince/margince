@@ -28,6 +28,8 @@ function task(
     activity_id: id,
     subject: `Task ${id}`,
     due_at: "2026-07-03T09:00:00Z",
+    due_has_time: false,
+    version: 1,
     assignee_id: null,
     assignee_name: null,
     overdue: false,

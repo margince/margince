@@ -133,7 +133,14 @@ func SetupAppWithOriginOptions(t *testing.T, opts func(origin string) []compose.
 // the vault is durable storage, and a browser keeps its cookies.
 func (e *AppEnv) Reboot(t *testing.T) *AppEnv {
 	t.Helper()
-	pool, err := testdb.OwnPool(context.Background(), AppDSN(t))
+	return e.RebootWith(t, nil)
+}
+
+// RebootWith is Reboot with tune applied to the new pool's config, for a suite
+// that meters the rebooted app's connections.
+func (e *AppEnv) RebootWith(t *testing.T, tune func(*pgxpool.Config)) *AppEnv {
+	t.Helper()
+	pool, err := testdb.OwnPoolWith(context.Background(), AppDSN(t), tune)
 	if err != nil {
 		t.Fatalf("opening the rebooted app pool: %v", err)
 	}

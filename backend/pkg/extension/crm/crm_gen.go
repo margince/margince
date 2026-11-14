@@ -1843,6 +1843,9 @@ type Activity struct {
 	// are separate axes, and reading one off the other is what ADR-0107 retired.
 	ChannelProvider *ProviderRef `json:"channel_provider,omitempty"`
 
+	// ChatEpisode On a note summarising chat talk (`source_system` `dispact`), what talk it summarises. The note's subject and body are an AI summary. Absent on every other row. Withheld with the content, like `body`.
+	ChatEpisode *ChatEpisode `json:"chat_episode,omitempty"`
+
 	// ColleagueIds The colleagues recorded as taking part: the one who logged a call or meeting, the ones named as attending, and the seats capture stamped on a captured one, never a blind copy. Filled wherever one activity is answered whole (its read, its update); a list leaves it out. Withheld with the content, so it is absent whenever `content_state` is `withheld`.
 	ColleagueIds *[]string `json:"colleague_ids,omitempty"`
 
@@ -2187,6 +2190,19 @@ type AddressCountryMismatch struct {
 // settlement, and the events read from a conversation) is read only from a `complete` mail
 // body.
 type BodyCompleteness string
+
+// ChatEpisode The chat talk a summary note was written from. The talk itself is not kept: open `url`
+// to read it in the chat.
+type ChatEpisode struct {
+	// EndedAt When the last of them was posted.
+	EndedAt time.Time `json:"ended_at"`
+
+	// MessageCount How many messages the summary covers.
+	MessageCount int `json:"message_count" minimum:"1"`
+
+	// Url The first message in the chat.
+	Url string `json:"url"`
+}
 
 // CommitmentAdmission A recorded decision about whether a promise creates current work. Re-reading replaces this decision without changing human-owned work.
 type CommitmentAdmission struct {
@@ -3705,6 +3721,14 @@ func (a *Activity) UnmarshalJSON(b []byte) error {
 		delete(object, "channel_provider")
 	}
 
+	if raw, found := object["chat_episode"]; found {
+		err = json.Unmarshal(raw, &a.ChatEpisode)
+		if err != nil {
+			return fmt.Errorf("error reading 'chat_episode': %w", err)
+		}
+		delete(object, "chat_episode")
+	}
+
 	if raw, found := object["colleague_ids"]; found {
 		err = json.Unmarshal(raw, &a.ColleagueIds)
 		if err != nil {
@@ -4252,6 +4276,13 @@ func (a Activity) MarshalJSON() ([]byte, error) {
 		object["channel_provider"], err = json.Marshal(a.ChannelProvider)
 		if err != nil {
 			return nil, fmt.Errorf("error marshaling 'channel_provider': %w", err)
+		}
+	}
+
+	if a.ChatEpisode != nil {
+		object["chat_episode"], err = json.Marshal(a.ChatEpisode)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'chat_episode': %w", err)
 		}
 	}
 

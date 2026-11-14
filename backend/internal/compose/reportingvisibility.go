@@ -27,13 +27,9 @@ func factVisibilityKey(fact reporting.Fact) reportingVisibilityKey {
 	return reportingVisibilityKey{table: fact.SourceType, metric: fact.Metric, money: fact.SourceType == string(recordTypeDeal) && fact.Metric != reportingClosedWinRate && fact.Metric != reportingStageAge}
 }
 
-func (a reportingAuthority) Visible(ctx context.Context, tx pgx.Tx, frame crmcontracts.ReportingContext, facts []reporting.Fact) ([]reporting.Fact, bool, error) {
+func (a reportingAuthority) Visible(ctx context.Context, tx pgx.Tx, owners reporting.MeasurableOwners, frame crmcontracts.ReportingContext, facts []reporting.Fact) ([]reporting.Fact, bool, error) {
 	if _, ok := principal.Actor(ctx); !ok {
 		return nil, false, apperrors.ErrPermissionDenied
-	}
-	owners, err := readerMeasurableOwners(ctx, tx)
-	if err != nil {
-		return nil, false, err
 	}
 	thin, err := frozenPopulationBelowFloor(ctx, tx, frame, owners)
 	if err != nil || thin {

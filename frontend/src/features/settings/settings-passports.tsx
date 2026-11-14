@@ -1,7 +1,9 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
+import { useMutation } from "@tanstack/react-query";
 import { useState } from "react";
+import { api } from "../../api/client";
 import type { components } from "../../api/schema";
 import { PassportAreasDrawer } from "../../components/passport-areas";
 import { usePassportRevoke } from "../../components/passport-revoke";
@@ -29,6 +31,7 @@ import { formatDate, formatNumber } from "../../format/format";
 import { useLocale, usePlural, useT } from "../../i18n";
 import { useEndedRows } from "../../lib/ended-rows";
 import { usePassports } from "../../lib/passports.queries";
+import { unwrap } from "../../lib/problem";
 import {
   PassportUsageLine,
   usePassportUsageDetail,
@@ -84,6 +87,18 @@ export function PassportCard() {
     focusAfter: passportAnchor,
     onRevoked: (id) => keep(id),
   });
+  // A revoked passport a chat app minted still refuses its chat user. Releasing
+  // it lets that user's next call mint a fresh passport.
+  const allowAgain = useMutation({
+    mutationFn: async (id: string) => {
+      unwrap(
+        await api.DELETE("/passports/{id}/app-binding", {
+          params: { path: { id } },
+        }),
+      );
+    },
+    onSuccess: () => list.refetch(),
+  });
 
   return (
     <Panel
@@ -104,6 +119,7 @@ export function PassportCard() {
           passports={shown}
           reachable={reachable}
           onRevoke={revoke.ask}
+          onAllowAgain={(id) => allowAgain.mutate(id)}
           onChangeAreas={setChangingAreas}
         />
       ) : list.isSuccess && hidden.length > 0 ? null : (
@@ -155,11 +171,13 @@ function PassportTable({
   passports,
   reachable,
   onRevoke,
+  onAllowAgain,
   onChangeAreas,
 }: Readonly<{
   passports: readonly PassportSummary[];
   reachable: readonly WorkArea[];
   onRevoke: (id: string) => void;
+  onAllowAgain: (id: string) => void;
   onChangeAreas: (passport: PassportSummary) => void;
 }>) {
   const t = useT();
@@ -227,7 +245,20 @@ function PassportTable({
       align: "end",
       fold: "end",
       render: (passport) =>
-        passport.revoked_at == null && (
+        passport.revoked_at != null ? (
+          passport.app_bound && (
+            <span className="cell-actions">
+              <Button
+                aria-label={t("settings.allowAgainNamed", {
+                  name: passport.label,
+                })}
+                onClick={() => onAllowAgain(passport.id)}
+              >
+                {t("settings.allowAgain")}
+              </Button>
+            </span>
+          )
+        ) : (
           <span className="cell-actions">
             <OverflowMenu
               label={t("table.rowActions", { name: passport.label })}

@@ -25,7 +25,6 @@ package assurance
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"sort"
 	"time"
@@ -36,16 +35,6 @@ import (
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
-
-// errSubjectsUnreadable is the deals not being readable, carried out of the
-// preview's transaction as an OUTCOME rather than a failure.
-//
-// The same answer Scan gives: we could not look. It travels as an error because
-// that is how a transaction is told to stop, and it is unwrapped at the top
-// because a preview reporting zero findings here would tell a reader the
-// pipeline is clean when nothing was read — and they would start the cycle on
-// it. The cause is wrapped with it so a log still says what actually broke.
-var errSubjectsUnreadable = errors.New("assurance: the deals could not be read")
 
 // Preview is one pass's findings as counts, plus what it would conclude.
 type Preview struct {
@@ -67,13 +56,30 @@ type TypeCount struct {
 	Count    int
 }
 
+// Contribution is one finding a pass raised and the seat it was raised for.
+type Contribution struct {
+	Finding Finding
+	Owner   string
+}
+
+// Contributions are the seats behind a pass's figures: the owner of each deal
+// it checked, and each finding it raised.
+type Contributions struct {
+	DealOwners []string
+	Raised     []Contribution
+}
+
+// PreviewFloor holds a preview's figures to the small-group floor of "Show
+// individual performance", inside the preview's own transaction.
+type PreviewFloor func(ctx context.Context, tx pgx.Tx, seats Contributions) error
+
 // Preview asks every rule the real pass asks and records none of the answers.
 //
 // It shares askEveryRule with Scan, so it cannot promise a finding the run it
 // authorises then does not raise. What it does not share is the writing half,
 // and the transaction it runs in is rolled back regardless — a rule that later
 // learns to write cannot quietly start writing here.
-func (s *Scanner) Preview(ctx context.Context, now time.Time) (Preview, error) {
+func (s *Scanner) Preview(ctx context.Context, now time.Time, floor PreviewFloor) (Preview, error) {
 	var out Preview
 	started, err := s.store.EverRun(ctx)
 	if err != nil {
@@ -85,29 +91,32 @@ func (s *Scanner) Preview(ctx context.Context, now time.Time) (Preview, error) {
 		out.Coverage = s.coverage(ctx, tx, now)
 		subjects, err := s.subjects(ctx, tx, now, out.Coverage)
 		if err != nil {
-			return fmt.Errorf("%w: %w", errSubjectsUnreadable, err)
+			return unreadablePreview(ctx, tx, &out, floor)
 		}
 		pass := askEveryRule(now, subjects, s.cfg, out.Coverage)
 		if _, err := s.askSignals(ctx, tx, now, &pass); err != nil {
-			return fmt.Errorf("%w: %w", errSubjectsUnreadable, err)
+			return unreadablePreview(ctx, tx, &out, floor)
 		}
 		if err := s.askCalls(ctx, tx, now, &pass); err != nil {
-			return fmt.Errorf("%w: %w", errSubjectsUnreadable, err)
+			return unreadablePreview(ctx, tx, &out, floor)
 		}
 		out.EligibleDeals = pass.eligible
 		out.Counts = countByType(pass.findings())
 		out.Readiness = Readiness(out.Coverage, pass.findings(), s.cfg)
-		return nil
+		return floor(ctx, tx, pass.contributions())
 	})
-	if errors.Is(err, errSubjectsUnreadable) {
-		out.EligibleDeals, out.Counts = 0, nil
-		out.Readiness = ReadinessChecksIncomplete
-		return out, nil
-	}
 	if err != nil {
 		return Preview{}, err
 	}
 	return out, nil
+}
+
+// unreadablePreview is the answer Scan gives when the deals could not be read:
+// we could not look. It counts nothing, because zero findings would tell a
+// reader the pipeline is clean when nothing was read, and it names no seat.
+func unreadablePreview(ctx context.Context, tx pgx.Tx, out *Preview, floor PreviewFloor) error {
+	out.EligibleDeals, out.Counts, out.Readiness = 0, nil, ReadinessChecksIncomplete
+	return floor(ctx, tx, Contributions{})
 }
 
 // countByType tallies findings into the shape a reader decides on, ordered so
@@ -131,34 +140,29 @@ func countByType(findings []Finding) []TypeCount {
 	return out
 }
 
-// errPreviewUnwind rolls a preview's transaction back. It is not a failure —
-// it is how this driver's helper is told not to commit, and the preview's whole
-// guarantee is that nothing it touched survives it.
-var errPreviewUnwind = errors.New("assurance: preview complete")
-
-// InPreviewTx runs fn against this workspace and ALWAYS rolls back.
+// InPreviewTx runs fn against this workspace and always rolls back what fn
+// wrote.
 //
-// The guarantee is structural rather than a promise in a comment: a rule that
-// later learns to write cannot start writing in preview without the rollback
-// taking it back. Detached first, because a preview joined to an ambient read
-// snapshot would unwind the caller's transaction along with its own.
+// fn runs in a savepoint rolled back however fn ends, so a rule that learns to
+// write cannot write in preview. The floor fn reads after its walk sees the
+// walk's snapshot. A detached context never unwinds a caller's transaction.
 //
-// Gated on create, not read. The only reason to open this door is to decide
-// whether to start a pass, and starting one is a create.
+// Gated on create: the only reason to look is to decide whether to start a pass.
 func (s *Store) InPreviewTx(ctx context.Context, fn func(context.Context, pgx.Tx) error) error {
 	if err := auth.Require(ctx, "forecast", principal.ActionCreate); err != nil {
 		return err
 	}
-	err := database.WithWorkspaceTx(database.Detached(ctx), s.db.Pool(), func(tx pgx.Tx) error {
-		if err := fn(ctx, tx); err != nil {
-			return err
+	return s.db.TxIsolated(database.Detached(ctx), pgx.RepeatableRead, func(tx pgx.Tx) error {
+		walk, err := tx.Begin(ctx)
+		if err != nil {
+			return fmt.Errorf("assurance: opening the preview's savepoint: %w", err)
 		}
-		return errPreviewUnwind
+		err = fn(ctx, walk)
+		if unwound := walk.Rollback(ctx); unwound != nil {
+			return fmt.Errorf("assurance: rolling the preview back: %w", unwound)
+		}
+		return err
 	})
-	if errors.Is(err, errPreviewUnwind) {
-		return nil
-	}
-	return err
 }
 
 // EverRun answers whether any pass has ever run in this workspace.

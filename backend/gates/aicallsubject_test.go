@@ -69,6 +69,10 @@ var namesItsSubject = map[string]subjectClaim{
 		"internal/compose/rewrite/service.go",
 		"the record the words on screen are written on, which every rewrite names; the rep's words are the request",
 	},
+	"internal/compose/chatsync/summary.go:summarise": {
+		"internal/compose/chatsync/summary.go",
+		"the deal or project whose linked channel's talk is the request",
+	},
 	"internal/compose/transcriptpropose.go:ask": {
 		"internal/compose/transcriptproposerun.go",
 		"the meeting whose transcript IS the request — the case this citation was built for",

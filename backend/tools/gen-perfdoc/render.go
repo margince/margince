@@ -24,7 +24,7 @@ measured is listed as not measured. The budgets are the published claim; a
 record is evidence about one machine on one day.
 
 Re-measure with ` + "`make bench-perf`" + `, ` + "`make bench-record`" + `,
-` + "`make bench-capture`" + `, ` + "`make bench-daily`" + ` (each needs ` + "`make db-up`" + `) or
+` + "`make bench-ai`" + `, ` + "`make bench-coldstart`" + `, ` + "`make bench-capture`" + `, ` + "`make bench-daily`" + ` (each needs ` + "`make db-up`" + `) or
 ` + "`make bench-mobile`" + `. Each writes its own record and re-renders this page.
 ` + "`make bench-perf-check`" + ` and ` + "`make bench-mobile-check`" + ` measure
 without recording. The weekly scheduled job records the SMB tier of

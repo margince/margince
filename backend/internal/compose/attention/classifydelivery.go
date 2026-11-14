@@ -85,22 +85,14 @@ func classifySystem(item crmcontracts.AttentionItem, asOf time.Time) ranked {
 	}
 }
 
-// systemRowOwner separates the personal system rows from the workspace ones.
-//
-// classifySystem draws five sources and they do not agree about ownership. A
-// notice, a mailbox and a booking page each belong to one colleague. Their lanes
-// read per-user, so the row is the reader's by construction. A broken AI task
-// and a stopped automation are the workspace's. Those services
-// read no user, several admins see the same row, and naming the reader would
-// make one shared failure look like several colleagues' problems.
-//
-// Stated here rather than in the classifier's literal so the difference is
-// visible: a source added to that switch has to answer this question too.
+// systemRowOwner gives a system row to the reader when its kind states the
+// reader and nothing else, as a notice or a mailbox does. Any other
+// declaration stays unowned, so one shared failure does not read as several
+// colleagues' problems.
 func systemRowOwner(source crmcontracts.AttentionItemSource) ownerRef {
-	switch source {
-	case sourceNotice, sourceCaptureHealth, sourceBookingHealth:
+	owners := worklistKinds[crmcontracts.WorklistItemSource(source)].owner
+	if len(owners) == 1 && owners[ownerTheReader] {
 		return ownedByWhoeverIsReading()
-	default:
-		return unassigned()
 	}
+	return unassigned()
 }

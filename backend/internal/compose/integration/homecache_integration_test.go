@@ -262,26 +262,27 @@ func TestServeCountsItsHitsAndMissesOnMetrics(t *testing.T) {
 	ctx := e.As(e.Rep1, []ids.UUID{e.Team1}, RepPerms)
 	fresh := func(context.Context) (crmcontracts.MagicReceipt, error) { return crmcontracts.MagicReceipt{}, nil }
 	noWalk := func(crmcontracts.MagicReceipt) (*ids.UUID, error) { return nil, nil } //nolint:nilnil // the receipt starts no walk, which Serve reads as nil
-	hits, misses := magicCacheReads(t, "hit"), magicCacheReads(t, "miss")
+	hits, misses := homeCacheReads(t, homecache.Magic, "hit"), homeCacheReads(t, homecache.Magic, "miss")
 
 	for range 2 {
 		if _, err := homecache.Serve(ctx, c, e.Rep1, homecache.Magic, "home", fresh, noWalk); err != nil {
 			t.Fatal(err)
 		}
 	}
-	if got := magicCacheReads(t, "miss") - misses; got != 1 {
+	if got := homeCacheReads(t, homecache.Magic, "miss") - misses; got != 1 {
 		t.Errorf("misses grew by %d, want 1: the first read found nothing kept", got)
 	}
-	if got := magicCacheReads(t, "hit") - hits; got != 1 {
+	if got := homeCacheReads(t, homecache.Magic, "hit") - hits; got != 1 {
 		t.Errorf("hits grew by %d, want 1: the second read was served the kept answer", got)
 	}
 }
 
-func magicCacheReads(t *testing.T, outcome string) int {
+// homeCacheReads reads one series of the cache's counter from its /metrics lines.
+func homeCacheReads(t *testing.T, read homecache.Read, outcome string) int {
 	t.Helper()
 	var out strings.Builder
 	homecache.WriteMetrics(&out)
-	prefix := `margince_home_cache_reads_total{read="magic",outcome="` + outcome + `"} `
+	prefix := `margince_home_cache_reads_total{read="` + string(read) + `",outcome="` + outcome + `"} `
 	for line := range strings.Lines(out.String()) {
 		if value, ok := strings.CutPrefix(strings.TrimSpace(line), prefix); ok {
 			n, err := strconv.Atoi(value)

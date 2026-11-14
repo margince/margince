@@ -29,7 +29,6 @@ import { QueryGate } from "../../design-system/querystates";
 import { RecordView } from "../../design-system/recordview";
 import { useT } from "../../i18n";
 import { taskWriteKeys } from "../../lib/activitykeys";
-import { useActivity } from "../../lib/activityread";
 import { useCan } from "../../lib/capability";
 import { labelFor } from "../../lib/labelfor";
 import { unwrap } from "../../lib/problem";
@@ -63,7 +62,11 @@ import {
   projectEditRecord,
   projectFields,
 } from "./projects.form";
-import { type Project360, StakeholdersCard } from "./projectsections";
+import {
+  type Commitment,
+  type Project360,
+  StakeholdersCard,
+} from "./projectsections";
 import { nextCommitment } from "./projectstanding";
 import { ProjectStanding } from "./projectstandingcard";
 import { ProjectTabs } from "./projecttabs";
@@ -204,6 +207,7 @@ function ProjectPage({ view }: Readonly<{ view: Project360 }>) {
       />
       <ProjectCards
         view={view}
+        canEdit={!readOnly}
         newDeal={
           // New Deal from here binds the deal to this project. Binding is held
           // to project write authority rather than deal permission alone.
@@ -222,8 +226,8 @@ function ProjectPage({ view }: Readonly<{ view: Project360 }>) {
         }
         tick={
           canUpdateTask
-            ? (activityId) => (
-                <CommitmentTick activityId={activityId} update={taskUpdate} />
+            ? (commitment) => (
+                <CommitmentTick commitment={commitment} update={taskUpdate} />
               )
             : undefined
         }
@@ -295,8 +299,7 @@ function ProjectPage({ view }: Readonly<{ view: Project360 }>) {
   );
 }
 
-// A commitment carries no row version, and a task write must name one. So
-// the verbs read their task whole first and offer themselves once they have.
+// The verbs write the task at the version the commitment row carries.
 function useNextTaskVerbs(
   view: Project360,
   update: ReturnType<typeof useTaskUpdate>,
@@ -304,8 +307,7 @@ function useNextTaskVerbs(
 ) {
   const zone = useViewerZone();
   const next = nextCommitment(view);
-  const task = useActivity(next?.activityId, enabled).data;
-  if (!next || !task) {
+  if (!next || !enabled) {
     return {};
   }
   return {
@@ -313,7 +315,7 @@ function useNextTaskVerbs(
     action: (
       <TaskQuickActions
         activityId={next.activityId}
-        version={task.version}
+        version={next.version}
         dueAt={null}
         update={update}
       />
@@ -323,15 +325,15 @@ function useNextTaskVerbs(
           onSnooze: () => {
             const nextDue = snoozedDueAt(
               next.dueAt,
-              task.due_has_time,
+              next.dueHasTime,
               zone,
               new Date(),
-              task.due_intent,
+              next.dueIntent,
             );
             if (nextDue)
               update.mutate({
                 id: next.activityId,
-                version: task.version,
+                version: next.version,
                 body: nextDue,
               });
           },
@@ -342,20 +344,16 @@ function useNextTaskVerbs(
 }
 
 function CommitmentTick({
-  activityId,
+  commitment,
   update,
 }: Readonly<{
-  activityId: string;
+  commitment: Commitment;
   update: ReturnType<typeof useTaskUpdate>;
 }>) {
-  const task = useActivity(activityId).data;
-  if (!task) {
-    return null;
-  }
   return (
     <TaskCompleteCheck
-      activityId={activityId}
-      version={task.version}
+      activityId={commitment.activity_id}
+      version={commitment.version}
       update={update}
     />
   );

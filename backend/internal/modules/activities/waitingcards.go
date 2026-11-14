@@ -191,7 +191,7 @@ func (s *Store) waitingCandidates(
 	}
 	// The content gate here as well. The position after the last judged message
 	// goes to the client, so a message the reader may not read is never judged.
-	content, err := auth.ActivityContentClause(ctx, "a", arg)
+	content, err := auth.ActivityMessageContentClause(ctx, "a", arg)
 	if err != nil {
 		return nil, false, err
 	}

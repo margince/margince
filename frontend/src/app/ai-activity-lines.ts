@@ -188,6 +188,7 @@ export const ACTIVITY_LINE: Readonly<
   capture_classify: SYSTEM_SWEEP,
   owed_verdict: SYSTEM_SWEEP,
   tag_suggest: SYSTEM_SWEEP,
+  chat_summary: SYSTEM_SWEEP,
   request_settlement: SYSTEM_SWEEP,
   deal_verdict: SYSTEM_SWEEP,
   capture_confidentiality_verdict: SYSTEM_SWEEP,

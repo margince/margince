@@ -419,6 +419,39 @@ elif [[ "${ROLE_SWEEP_RESULT:-}" = "success" ]]; then
   resolve "the MCP role sweep failed on main"
 fi
 
+# Split two ways for the reason the PERF arms give: GROWTH_OUTCOME is "breach"
+# only when the bench printed its own breach line, so a lane that never measured
+# is never reported as a slow Home.
+if [[ "${GROWTH_RESULT:-}" = "failure" ]] && [[ "${GROWTH_OUTCOME:-}" != "breach" ]]; then
+  report "the nightly Home growth bench could not complete" "priority: normal,area: ci-tests,bug" \
+"\`make bench-growth\` failed on the nightly run of \`main\` WITHOUT reaching a
+budget verdict: $RUN_URL
+
+No Home budget is known to be breaching, and none is known to hold. Read the log
+for the first failure: the database, the seed, a Home read that answered an
+error, or the \`go test\` timeout.
+
+Reproduce with \`make db-up && make bench-growth MARGINCE_BENCH_GROWTH_STEPS=4\`."\
+    || unreported=1
+elif [[ "${GROWTH_RESULT:-}" = "success" ]] || [[ "${GROWTH_OUTCOME:-}" = "breach" ]]; then
+  resolve "the nightly Home growth bench could not complete"
+fi
+
+if [[ "${GROWTH_OUTCOME:-}" = "breach" ]]; then
+  report "a Home growth budget is breaching on main" "priority: normal,area: ci-tests,bug" \
+"\`make bench-growth\` measured a broken budget on the nightly run of \`main\`: $RUN_URL
+
+The lines after \`home-growth: breach\` in the log name each one: a read predicted
+to reach 10 s within the horizon, a cold read already over it, a warm read's
+database time, the memory a connection holds, or the Home cache's hit rate on
+repeat opens. The \`home-growth: fit\` lines show how each read grows per year.
+
+Reproduce with \`make db-up && make bench-growth MARGINCE_BENCH_GROWTH_STEPS=4\`."\
+    || unreported=1
+elif [[ "${GROWTH_RESULT:-}" = "success" ]]; then
+  resolve "a Home growth budget is breaching on main"
+fi
+
 if [[ "${STORIES_RESULT:-}" = "failure" ]]; then
   report "a story does not render clean on main" "priority: normal,area: ci-tests,bug" \
 "\`make fe-uat ARGS=--all-stories\` failed on the scheduled run of \`main\`: $RUN_URL

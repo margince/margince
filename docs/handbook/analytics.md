@@ -90,6 +90,8 @@ The modelled range is separate from that forecast. A chart under the readings sh
 
 **Needs your attention** names the three most urgent open forecast checks. Each says which deal to review and why, who owns it (or **Unassigned**), when it was found and how much money it puts in question. **Answer** opens that check on the forecast review, and a seat that may only read it gets **Open**. Below, all open checks are counted by kind, in checks and in deals, and **Show** lists one kind. The checks cover every pipeline and close date of the record scope. A data source the last check could not read shows as **Connection maintenance**, apart from the checks.
 
+With **Show individual performance** off, the checks of a team or the company can be hidden. They are hidden when a count or amount in them holds the work of fewer than two colleagues besides you. Your own checks still show.
+
 The open pipeline by stage follows these words and decisions, with **All open pipeline** and its count of deals in its heading. Sales won by team member follows, in name order. Two colleagues who share a name show their email after it. With **Show individual performance** off, the team member chart shows no names. **Since the last capture** shows how the open pipeline moved and needs two captures before it can compare.
 
 **My prospecting** counts **Accepted handoffs** this week when an SDR hands prospects on, and **Leads qualified** when nobody does. When Margince cannot read which applies, it says so and offers **Retry**. Beside the figure, your last six weeks show one column each, empty where a week has no reading, and **Monthly targets** below names its month. The readings below separate leads still waiting for a reply from those that came in during the selected period. They include **Meetings held**, **First response time** with the leads still waiting, and **Booked meetings** for 14 days. A qualification counts whether it joins an existing deal or opens a new one.
@@ -395,6 +397,4 @@ see and close your own links. The list never shows a link's address, so a lost
 link cannot be copied from it.
 
 A link also stops when it expires or when you lose forecast access. A seat
-without permission to share sees neither button.
-
-A link that no longer works shows **not found**, no matter the reason. An agent can make and open one for its user. What a link shows is worked out for whoever opens it, with their own rights.
+without permission to share sees neither button. A link that no longer works shows **not found**, no matter the reason. An agent can make and open one for its user. What a link shows is worked out for whoever opens it, with their own rights.

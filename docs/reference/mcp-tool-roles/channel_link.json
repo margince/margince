@@ -1,0 +1,18 @@
+{
+  "tool": "read_details",
+  "action": "channel_link",
+  "verb": "channel_link",
+  "allowed_for": [
+    "admin",
+    "management",
+    "manager",
+    "ops",
+    "read_only",
+    "rep"
+  ],
+  "refused_for": [],
+  "colleague_record": {
+    "manager": "ran",
+    "rep": "ran"
+  }
+}
