@@ -254,7 +254,8 @@ func WithWorkspaceSnapshot(ctx context.Context, pool *pgxpool.Pool, fn func(cont
 		return fn(ctx)
 	}
 	return runTxWith(ctx, pool, pgx.TxOptions{IsoLevel: pgx.RepeatableRead}, func(tx pgx.Tx) error {
-		return fn(context.WithValue(ctx, snapshotKey{}, tx))
+		var snapshot pgx.Tx = newDeferredTx(tx)
+		return fn(context.WithValue(ctx, snapshotKey{}, snapshot))
 	})
 }
 

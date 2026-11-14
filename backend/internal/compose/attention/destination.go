@@ -3,21 +3,10 @@
 
 package attention
 
-// Which screen a row belongs on, decided once.
-//
-// A worklist row is not one kind of thing. A buyer waiting on a reply is work a
-// seller executes; a duplicate pair is a judgement somebody makes before work
-// continues; a stopped mailbox is a source an administrator restores. Putting
-// all three in one list under one vocabulary is what made the queue read as a
-// feed: a rep scanning for the next call had to step over the product's own
-// housekeeping to find it.
-//
-// THE SERVER DECIDES, ONCE, HERE. The counts, the folding and the page cut all
-// read the value the row carries, so a client that groups by it cannot disagree
-// with the figures above it. The alternative — a client-side map over `source`
-// — was rejected because it is a second authority: the day the two spellings
-// drift, a row sits on one screen while the count above it says another, and
-// nothing fails.
+// Which screen a row belongs on: work a seller executes, a judgement before
+// work continues, or a source an administrator restores. Each kind's screen is
+// stated once, in api/worklist-kinds.yaml, and the counts, the folding and the
+// page cut all read the value the row carries.
 
 import (
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
@@ -38,96 +27,14 @@ const (
 	destinationSystemHealth = crmcontracts.WorklistItemDestinationWorklistDestinationSystemHealth
 )
 
-// destinationOfSource is the whole mapping, and the only one.
-//
-// EXHAUSTIVE over the source enum, held by TestEveryWorklistSourceHasADestination: a
-// twenty-second source fails that test until somebody decides where it belongs.
-// The failure is the point. A source added without a destination would default
-// to whatever the zero value is, and the reader would find it on a screen
-// nobody chose for it.
-//
-// `dsr` is deliberately absent from seller work: a subject request is a legal
-// obligation with its own authorized queue and its own clock, and a seller
-// usually cannot act on one at all. It is `review` here so the count above the
-// queue stays honest about it existing, and the sales screens filter it out by
-// destination rather than by naming the source a second time.
-//
-// `batch` has NO entry, and cannot: it stands for a group of other rows, so its
-// destination is its members'. `destinationOfBatch` answers for it.
-var destinationOfSource = map[crmcontracts.WorklistItemSource]crmcontracts.WorklistItemDestination{
-	// Seller work. Somebody is waiting, a date is arriving, or revenue moves.
-	crmcontracts.WorklistItemSourceCustomerWaiting:   destinationToday,
-	crmcontracts.WorklistItemSourceLeadResponse:      destinationToday,
-	crmcontracts.WorklistItemSourceDealAtRisk:        destinationToday,
-	crmcontracts.WorklistItemSourceMeeting:           destinationToday,
-	crmcontracts.WorklistItemSourceMeetingOutcome:    destinationToday,
-	crmcontracts.WorklistItemSourceWeeklyCommitment:  destinationToday,
-	crmcontracts.WorklistItemSourceAwaitingReply:     destinationToday,
-	crmcontracts.WorklistItemSourceMeetingFollowUp:   destinationToday,
-	crmcontracts.WorklistItemSourceTask:              destinationToday,
-	crmcontracts.WorklistItemSourceConversationClaim: destinationToday,
-	crmcontracts.WorklistItemSourceBriefItem:         destinationToday,
-	// A contact going quiet is a seller's call to make — reach out, or decide
-	// this relationship is over. The dismissal path exists because it is a
-	// judgement about their own week, not a queue of somebody else's.
-	crmcontracts.WorklistItemSourceRelationshipDecay: destinationToday,
-	// A bounced or undelivered message is a customer consequence: this named
-	// contact did not receive what was sent to them, and the seller is the one
-	// who notices. The mailbox that carried it may be healthy.
-	crmcontracts.WorklistItemSourceBounce:      destinationToday,
-	crmcontracts.WorklistItemSourceUndelivered: destinationToday,
-	// The rep pressed Accept and believes it happened, and that belief is the
-	// damage. It is classified at the promise level and carried back to the
-	// APPROVER rather than to an administrator, so it is that contact's own
-	// broken promise — the same shape as the undelivered message beside it, and
-	// not a pipe anybody else can restore.
-	crmcontracts.WorklistItemSourceFailedApproval: destinationToday,
-	// A notice is addressed to one reader and offers `acknowledge`. Nothing
-	// waits on a judgement and nothing is broken: reading it IS the work, and it
-	// leaves the lane when they do.
-	crmcontracts.WorklistItemSourceNotice: destinationToday,
-
-	// Judgements. Work waits on a contact deciding.
-	crmcontracts.WorklistItemSourceApproval:            destinationReview,
-	crmcontracts.WorklistItemSourceDedupeCandidate:     destinationReview,
-	crmcontracts.WorklistItemSourceContactCase:         destinationReview,
-	crmcontracts.WorklistItemSourceDealSuggestion:      destinationReview,
-	crmcontracts.WorklistItemSourceTagSuggestion:       destinationReview,
-	crmcontracts.WorklistItemSourceIntroductionRequest: destinationReview,
-	crmcontracts.WorklistItemSourceDsr:                 destinationReview,
-	crmcontracts.WorklistItemSourceNoticeCase:          destinationReview,
-	// An undecided domain is a judgement, not a broken pipe. The capture health
-	// lane reports machinery an administrator restores; this asks the colleague
-	// whose mail raised the question whether a company should exist, and nobody
-	// else can answer it for them.
-	crmcontracts.WorklistItemSourceDomainQuestion: destinationReview,
-
-	// The product reporting on itself. The screen follows what broke, not who
-	// repairs it. An administrator restores the workspace's machinery, while a
-	// mailbox or a booking page goes to the colleague who owns it.
-	crmcontracts.WorklistItemSourceCaptureHealth: destinationSystemHealth,
-	crmcontracts.WorklistItemSourceBookingHealth: destinationSystemHealth,
-	crmcontracts.WorklistItemSourceAiWorkHealth:  destinationSystemHealth,
-	crmcontracts.WorklistItemSourceAutomationRun: destinationSystemHealth,
-}
-
-// destinationOf answers for one row.
-//
-// A batch asks its members, because a group's destination is not a property of
-// the word `batch` — it is whatever the rows inside it were. Folding is only
-// ever applied to rows that already agree (see destinationOfBatch), so the
-// first member answers for all of them.
-//
-// A source with no entry answers `review` rather than `today`. That is the safe
-// direction: an unclassified row on the review screen is one row somebody has
-// to look at, while the same row in Today claims to be executable seller work
-// and offers a verb nobody wrote. The census test means this fallback should
-// never run in production — it is what happens if it ever does.
+// destinationOf answers for one row; a batch asks its members. A source with
+// no screen answers review: one row somebody looks at, never a claim of seller
+// work with a verb nobody wrote.
 func destinationOf(row ranked) crmcontracts.WorklistItemDestination {
 	if row.item.Batch != nil {
 		return destinationOfBatch(row)
 	}
-	if at, ok := destinationOfSource[row.item.Source]; ok {
+	if at := worklistKinds[row.item.Source].destination; at != destinationNone {
 		return at
 	}
 	return destinationReview
@@ -146,16 +53,15 @@ func destinationOfBatch(row ranked) crmcontracts.WorklistItemDestination {
 	return destinationReview
 }
 
-// ClassifiedSources is which sources this map decides a screen for.
-//
-// Exported for the gate that holds the map exhaustive against the contract's
-// own enum. It is the map's key set rather than a second list: a gate that
-// hard-codes part of its subject has become a copy of it, and the copy is what
-// goes stale.
+// ClassifiedSources is which sources the catalog decides a screen for: every
+// kind but a fold. Exported for the gate that holds it exhaustive against the
+// contract's own enum, as the catalog's key set rather than a second list.
 func ClassifiedSources() []crmcontracts.WorklistItemSource {
-	out := make([]crmcontracts.WorklistItemSource, 0, len(destinationOfSource))
-	for source := range destinationOfSource {
-		out = append(out, source)
+	out := make([]crmcontracts.WorklistItemSource, 0, len(worklistKinds))
+	for source, kind := range worklistKinds {
+		if kind.destination != destinationNone {
+			out = append(out, source)
+		}
 	}
 	return out
 }
@@ -167,7 +73,7 @@ func ClassifiedSources() []crmcontracts.WorklistItemSource {
 // that the schema does not carry fails at the gate rather than as a validation
 // error on a reader's queue.
 func DestinationOfSource(source crmcontracts.WorklistItemSource) crmcontracts.WorklistItemDestination {
-	return destinationOfSource[source]
+	return worklistKinds[source].destination
 }
 
 // sameDestination says whether these rows may be folded into one.

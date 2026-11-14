@@ -1,0 +1,237 @@
+# backend/api/worklist-kinds.yaml
+#
+# Every kind of row the Worklist can show, and what the engine needs to know
+# about it. tools/gen-worklist compiles this file into the engine's table
+# (internal/compose/attention/kinds_gen.go) and the frontend's
+# (frontend/src/lib/worklistkinds.gen.ts); `make gen` runs it and `make drift`
+# fails a stale copy.
+#
+# One entry per value of WorklistItem.source in crm.yaml, and no other. Every
+# field is required and has no default, because a default is a decision nobody
+# made for the new kind. An unknown field or a value outside its set fails
+# generation.
+#
+#   category       the Worklist category the kind's rows are counted under:
+#                  customer_waiting, leads, deals_at_risk, meetings, tasks,
+#                  decisions, relationships, system.
+#   destination    the screen the rows belong on: today, review, system_health.
+#                  A fold (batch) says none; its members answer.
+#   owner          the owner answers a row of this kind may state: named,
+#                  nobody, the_reader, from_the_deal, unreadable, and unstated
+#                  for a fold whose members disagree. A row stating any other
+#                  answer is refused and its lane reported failed.
+#   personal       true when the read is bound to the acting member, so the
+#                  team and all scopes reach no more of it.
+#   done_in_place  true when the row itself offers Done.
+#
+# Every title key worklist.untitled.<kind> must exist in each frontend locale,
+# or generation fails.
+
+kinds:
+  # Seller work: somebody waits, a date arrives, or revenue moves.
+  customer_waiting:
+    category: customer_waiting
+    destination: today
+    # The sole addressed seat or the owning record, nobody, or withheld.
+    owner: [named, nobody, unreadable]
+    personal: false
+    done_in_place: true
+  lead_response:
+    category: leads
+    destination: today
+    # An assignee or owner column: named, or nobody when it is empty.
+    owner: [named, nobody]
+    personal: false
+    done_in_place: true
+  deal_at_risk:
+    category: deals_at_risk
+    destination: today
+    # The deal's owner, attached after classification.
+    owner: [from_the_deal]
+    personal: false
+    done_in_place: true
+  brief_item:
+    category: deals_at_risk
+    destination: today
+    owner: [from_the_deal]
+    personal: false
+    done_in_place: false
+  meeting:
+    category: meetings
+    destination: today
+    # The meeting's recorded host or attendee seat.
+    owner: [named, nobody]
+    personal: false
+    done_in_place: true
+  meeting_outcome:
+    category: meetings
+    destination: today
+    owner: [named, nobody]
+    personal: false
+    # An attendee who may not change the meeting leaves the question to the
+    # organizer with Done.
+    done_in_place: true
+  task:
+    category: tasks
+    destination: today
+    owner: [named, nobody]
+    personal: false
+    done_in_place: false
+  weekly_commitment:
+    category: tasks
+    destination: today
+    owner: [named]
+    personal: true
+    done_in_place: false
+  conversation_claim:
+    category: tasks
+    destination: today
+    # A promise read for its promiser; keepUnowned places it.
+    owner: [nobody]
+    personal: false
+    done_in_place: false
+  # The reader's own sends, read only on their own day.
+  awaiting_reply:
+    category: tasks
+    destination: today
+    owner: [the_reader]
+    personal: true
+    done_in_place: true
+  meeting_follow_up:
+    category: meetings
+    destination: today
+    owner: [the_reader]
+    personal: true
+    done_in_place: true
+  relationship_decay:
+    category: relationships
+    destination: today
+    # The contact's live owner, never the reader who was copied or wrote.
+    owner: [named, nobody]
+    personal: false
+    done_in_place: false
+  # A bounced or undelivered message is a customer consequence the seller
+  # notices; the mailbox that carried it may be healthy.
+  bounce:
+    category: system
+    destination: today
+    owner: [the_reader]
+    personal: true
+    done_in_place: true
+  undelivered:
+    category: system
+    destination: today
+    owner: [the_reader]
+    personal: true
+    done_in_place: true
+  # Carried back to the approver: their own broken promise, not a pipe an
+  # administrator restores.
+  failed_approval:
+    category: system
+    destination: today
+    owner: [the_reader]
+    personal: true
+    done_in_place: false
+  notice:
+    category: system
+    destination: today
+    owner: [the_reader]
+    personal: true
+    done_in_place: false
+
+  # Judgements: work waits on somebody deciding.
+  approval:
+    category: decisions
+    destination: review
+    # The requested decider, or nobody when no one was asked.
+    owner: [named, nobody]
+    personal: false
+    done_in_place: false
+  dedupe_candidate:
+    category: decisions
+    destination: review
+    owner: [named, nobody]
+    personal: false
+    done_in_place: false
+  contact_case:
+    category: decisions
+    destination: review
+    owner: [named, nobody]
+    personal: false
+    # Done sets a case aside for this owner alone; the other owners keep it.
+    done_in_place: true
+  deal_suggestion:
+    category: decisions
+    destination: review
+    owner: [named, nobody]
+    personal: false
+    done_in_place: false
+  tag_suggestion:
+    category: decisions
+    destination: review
+    owner: [named, nobody]
+    personal: false
+    done_in_place: false
+  introduction_request:
+    category: decisions
+    destination: review
+    owner: [the_reader]
+    personal: true
+    done_in_place: true
+  # A subject request has its own authorized queue and clock, and a seller
+  # usually cannot act on one, so it stays off the seller's screen.
+  dsr:
+    category: system
+    destination: review
+    owner: [named, nobody]
+    personal: false
+    done_in_place: true
+  notice_case:
+    category: system
+    destination: review
+    owner: [named, nobody]
+    personal: false
+    done_in_place: true
+  # Only the colleague whose mail raised the domain can say whether the company
+  # should exist.
+  domain_question:
+    category: decisions
+    destination: review
+    owner: [the_reader]
+    personal: true
+    done_in_place: true
+
+  # The product reporting on itself. A mailbox or a booking page belongs to one
+  # colleague; a broken AI task and a stopped automation are the workspace's.
+  capture_health:
+    category: system
+    destination: system_health
+    owner: [the_reader]
+    personal: true
+    done_in_place: true
+  booking_health:
+    category: system
+    destination: system_health
+    owner: [the_reader]
+    personal: true
+    done_in_place: true
+  ai_work_health:
+    category: system
+    destination: system_health
+    owner: [nobody]
+    personal: true
+    done_in_place: true
+  automation_run:
+    category: system
+    destination: system_health
+    owner: [nobody]
+    personal: false
+    done_in_place: true
+
+  # A fold stands for a group of other rows and carries their common answers.
+  batch:
+    category: system
+    destination: none
+    owner: [unstated, named, nobody, the_reader, from_the_deal, unreadable]
+    personal: false
+    done_in_place: true

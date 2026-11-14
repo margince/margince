@@ -13,11 +13,9 @@ package gates
 // the tree fails when that happens: the row renders, the figures add up, and
 // the only symptom is a duplicate pair sitting in a seller's morning.
 //
-// BOTH SIDES ARE DERIVED. The vocabulary comes from crm.yaml, the classified
-// set from the map's own keys. A list repeated here would be a second copy of
-// the subject, and the copy is what goes stale — this gate would then read a
-// smaller world, report PASS, and the new source would be exactly as unclassified
-// as it was before anybody wrote a gate.
+// Both sides are derived: the vocabulary from crm.yaml, the classified set from
+// the catalog's own keys. A list repeated here would be a second copy of the
+// subject, and a stale copy reads a smaller world and reports PASS.
 
 import (
 	"slices"
@@ -74,7 +72,7 @@ func TestEveryWorklistSourceHasADestination(t *testing.T) {
 		}
 		if !slices.Contains(classified, source) {
 			t.Errorf("the worklist can emit %q and nothing says which screen it belongs on: "+
-				"add it to destinationOfSource in internal/compose/attention/destination.go, "+
+				"add it to backend/api/worklist-kinds.yaml and run make gen, "+
 				"choosing today, review or system_health", source)
 		}
 	}
@@ -83,7 +81,7 @@ func TestEveryWorklistSourceHasADestination(t *testing.T) {
 	// author as though that source still exists.
 	for _, source := range classified {
 		if !slices.Contains(declared, source) {
-			t.Errorf("destinationOfSource classifies %q, which crm.yaml no longer declares as a worklist source", source)
+			t.Errorf("api/worklist-kinds.yaml classifies %q, which crm.yaml no longer declares as a worklist source", source)
 		}
 	}
 }

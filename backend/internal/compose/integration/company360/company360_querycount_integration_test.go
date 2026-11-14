@@ -48,20 +48,44 @@ type countingTracer struct {
 }
 
 func (t *countingTracer) TraceQueryStart(ctx context.Context, _ *pgx.Conn, data pgx.TraceQueryStartData) context.Context {
-	sql := strings.TrimSpace(strings.ToUpper(data.SQL))
-	if strings.HasPrefix(sql, "BEGIN") || strings.HasPrefix(sql, "COMMIT") ||
-		strings.HasPrefix(sql, "ROLLBACK") || strings.HasPrefix(sql, "SELECT SET_CONFIG") {
-		return ctx
+	t.counted(data.SQL, data.Args)
+	return ctx
+}
+
+// A read snapshot sends some statements inside batches, so a batch's
+// statements count too. Its session statements are plumbing, as BEGIN is.
+func (*countingTracer) TraceBatchStart(ctx context.Context, _ *pgx.Conn, _ pgx.TraceBatchStartData) context.Context {
+	return ctx
+}
+
+func (t *countingTracer) TraceBatchQuery(_ context.Context, _ *pgx.Conn, data pgx.TraceBatchQueryData) {
+	t.counted(data.SQL, data.Args)
+}
+
+func (*countingTracer) TraceBatchEnd(context.Context, *pgx.Conn, pgx.TraceBatchEndData) {}
+
+// sessionPlumbing are the prefixes of the transaction and session statements
+// every read pays, whatever it reads.
+var sessionPlumbing = []string{
+	"BEGIN", "COMMIT", "ROLLBACK", "SELECT SET_CONFIG", "SAVEPOINT", "RELEASE SAVEPOINT",
+	"SELECT CURRENT_SETTING", "WITH PREVIOUS AS MATERIALIZED (SELECT CURRENT_SETTING",
+}
+
+func (t *countingTracer) counted(statement string, args []any) {
+	sql := strings.TrimSpace(strings.ToUpper(statement))
+	for _, plumbing := range sessionPlumbing {
+		if strings.HasPrefix(sql, plumbing) {
+			return
+		}
 	}
 	t.mu.Lock()
 	defer t.mu.Unlock()
 	t.count++
-	for _, arg := range data.Args {
+	for _, arg := range args {
 		if key, ok := arg.(string); ok && key == identity.BaseLanguage.Key() {
 			t.languageReads++
 		}
 	}
-	return ctx
 }
 
 func (t *countingTracer) TraceQueryEnd(context.Context, *pgx.Conn, pgx.TraceQueryEndData) {}

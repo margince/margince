@@ -46,6 +46,18 @@ func (s *sentStatements) TraceQueryStart(ctx context.Context, _ *pgx.Conn, data 
 
 func (*sentStatements) TraceQueryEnd(context.Context, *pgx.Conn, pgx.TraceQueryEndData) {}
 
+// A snapshot sends its session statements inside batches, so the census reads
+// a batch's statements as well.
+func (*sentStatements) TraceBatchStart(ctx context.Context, _ *pgx.Conn, _ pgx.TraceBatchStartData) context.Context {
+	return ctx
+}
+
+func (s *sentStatements) TraceBatchQuery(_ context.Context, _ *pgx.Conn, data pgx.TraceBatchQueryData) {
+	s.sql = append(s.sql, data.SQL)
+}
+
+func (*sentStatements) TraceBatchEnd(context.Context, *pgx.Conn, pgx.TraceBatchEndData) {}
+
 // predicateSpelling strips what a partial-index predicate says besides its
 // columns: literals, casts, null tests (of a column or a call) and calls. A
 // bound strict comparison proves the null test, so the generic plan keeps it.
