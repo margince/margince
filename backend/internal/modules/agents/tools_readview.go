@@ -155,6 +155,7 @@ func (t readView) Spec() mcp.ToolSpec {
 	return mcp.ToolSpec{
 		Name: ReadViewTool, Title: "Read a view", Version: toolVersionV1,
 		Description:   readViewCopy.render(),
+		Instead:       readViewCopy.Instead,
 		RequiredScope: principal.ScopeRead, Tier: mcp.TierAutoExecute,
 		OpenAPIOp: strings.Join(ops, "/"),
 		InputSchema: schema(`{"type":"object","required":["view"],"properties":{` + strings.Join(properties, ",") +

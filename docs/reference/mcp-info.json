@@ -10,16 +10,16 @@
   "totals": {
     "tools": 48,
     "resources": 14,
-    "tool_catalog_bytes": 274296,
+    "tool_catalog_bytes": 274840,
     "resource_catalog_bytes": 5622,
-    "approx_wire_tokens_total": 69979,
+    "approx_wire_tokens_total": 70115,
     "largest_tool_bytes": 17633,
     "largest_tool": "read_details",
     "tool_catalog_composition": {
-      "description_bytes": 54230,
+      "description_bytes": 54774,
       "input_schema_bytes": 155240,
       "output_schema_bytes": 52718,
-      "description_plus_input_schema_bytes": 209470
+      "description_plus_input_schema_bytes": 210014
     }
   },
   "tools": {
@@ -10551,7 +10551,7 @@
           "readOnlyHint": true,
           "title": "Read a view"
         },
-        "description": "Read derived record views, workspace reference lists and reporting objects through their REST routes. Name the view, its id and filters. Unknown arguments are refused with the accepted names.",
+        "description": "Read one view the app draws that no other tool answers: a record's panels, such as a company's 360, contacts, documents, facts, graph or strength, a deal's status, documents or stakeholders, and a contact's cases; the workspace's reference lists, such as stages, custom fields, lead sources, loss reasons, teams and lists; and reporting objects, such as targets, schedules, executions, sales progress and forecast calls. Each view takes only a few of the arguments listed here: a record view its id, and its own filters. read_workspace with topic=views names what each view takes, and a refusal names the arguments the view accepts. Use find_records to find or list records, and read_reports for the standard metrics and named reports.",
         "inputSchema": {
           "additionalProperties": false,
           "properties": {

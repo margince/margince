@@ -31,8 +31,16 @@ var listRecordsCopy = toolCopy{
 }
 
 var readViewCopy = toolCopy{
-	Purpose: "Read derived record views, workspace reference lists and reporting objects through their REST routes.",
-	Limits:  "Name the view, its id and filters. Unknown arguments are refused with the accepted names.",
+	Purpose: "Read one view the app draws that no other tool answers: a record's panels, such as a " +
+		"company's 360, contacts, documents, facts, graph or strength, a deal's status, documents or " +
+		"stakeholders, and a contact's cases; the workspace's reference lists, such as stages, custom " +
+		"fields, lead sources, loss reasons, teams and lists; and reporting objects, such as targets, " +
+		"schedules, executions, sales progress and forecast calls.",
+	Limits: "Each view takes only a few of the arguments listed here: a record view its id, and its " +
+		"own filters. describe_views names what each view takes, and a refusal names the arguments " +
+		"the view accepts.",
+	Instead: "Use find_records to find or list records, and read_reports for the standard metrics " +
+		"and named reports.",
 }
 
 var changeRecordPartsCopy = toolCopy{

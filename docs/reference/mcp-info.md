@@ -15,9 +15,9 @@ input and output schema in folds below it. What a tool may do and whether a huma
 |---|---:|
 | Tools | 48 |
 | Resources | 14 |
-| Tool catalog | 267.9 KB |
+| Tool catalog | 268.4 KB |
 | Resource catalog | 5.5 KB |
-| Approx. wire tokens | 69979 |
+| Approx. wire tokens | 70115 |
 | Largest tool | `read_details` (17.2 KB) |
 | Scopes rendered | `read`, `draft`, `write`, `send`, `enrich` |
 
@@ -33,10 +33,10 @@ tool adds to that listing, and what it costs each scheduled agent, agent by agen
 | Part | Bytes | Share | In a run's prompt? |
 |---|---:|---:|---|
 | Output schemas | 51.5 KB | 19% | **No**: a result's shape, never listed to a model |
-| Descriptions (incl. governance clause) | 53.0 KB | 19% | Yes, every step |
+| Descriptions (incl. governance clause) | 53.5 KB | 19% | Yes, every step |
 | Input schemas | 151.6 KB | 56% | Yes, every step |
 | _Names, annotations, punctuation_ | 11.8 KB | 4% | Partly |
-| **Description + input schema** | **204.6 KB** | **76%** | **the recurring cost** |
+| **Description + input schema** | **205.1 KB** | **76%** | **the recurring cost** |
 
 Output schemas are the largest part of the total and are never sent to a model;
 descriptions and input schemas are what each step pays for.
@@ -104,7 +104,7 @@ descriptions and input schemas are what each step pays for.
 | [`read_relationships`](#read_relationships) | Read who we know, and how well | yes |  | 359 |
 | [`read_reports`](#read_reports) | Read sales reports | yes |  | 2784 |
 | [`read_tags`](#read_tags) | Read tags | yes |  | 358 |
-| [`read_view`](#read_view) | Read a view | yes |  | 683 |
+| [`read_view`](#read_view) | Read a view | yes |  | 815 |
 | [`read_workspace`](#read_workspace) | Read how this workspace is set up | yes |  | 2755 |
 | [`resolve_duplicates`](#resolve_duplicates) | Merge two records or dismiss a flagged pair |  |  | 618 |
 | [`run_research`](#run_research) | Run AI work for your user |  |  | 1344 |
@@ -11408,8 +11408,14 @@ which applies and stores nothing and says whether the tag exists.
 **Read a view**
 
 ```text
-Read derived record views, workspace reference lists and reporting objects through their REST
-routes. Name the view, its id and filters. Unknown arguments are refused with the accepted names.
+Read one view the app draws that no other tool answers: a record's panels, such as a company's 360,
+contacts, documents, facts, graph or strength, a deal's status, documents or stakeholders, and a
+contact's cases; the workspace's reference lists, such as stages, custom fields, lead sources, loss
+reasons, teams and lists; and reporting objects, such as targets, schedules, executions, sales
+progress and forecast calls. Each view takes only a few of the arguments listed here: a record view
+its id, and its own filters. read_workspace with topic=views names what each view takes, and a
+refusal names the arguments the view accepts. Use find_records to find or list records, and
+read_reports for the standard metrics and named reports.
 ```
 
 <details><summary>Input schema</summary>
