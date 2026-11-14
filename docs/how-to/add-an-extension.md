@@ -612,15 +612,17 @@ refuses any bare package name your own `package.json` does not declare.
 `devDependencies` count for test files only, so a screen cannot pull a test runner into the bundle.
 
 **Name your page in one level-1 header.** The app shell makes the page's `h1` for a core screen. It *steps
-back* for a unit, because the shell has no title key for a route the menu rail does not carry. So the top
+back* for a unit, because the shell has no title key for a route the core does not own. So the top
 `<SectionHeader …  level={1} />` of your screen is the page's heading.
 
 Every header under it stays at the
 default `2`. If you leave the top one at the default, your page ships with no heading a reader can go to.
 
-**Your `Secrets` scope places your screen.** Your screen lives at `#/ext/<name>`, and the rail does not carry
-it. Turning on a unit gives an installation something to set up, not a new rail entry beside Pipeline and
-Reports. It is listed in Settings instead, on the page that already holds the kind of key you asked for:
+**Your `Secrets` scope places your screen under Settings.** Your default export lives at `#/ext/<name>`. It is
+the unit's setting page. No drawer row leads to it unless you also declare an app (see
+[Show an app in the home side drawer](#show-an-app-in-the-home-side-drawer)). Turning on a unit gives an
+installation something to set up. It is listed in Settings, on the page that already holds the kind of key you
+asked for:
 
 | Your declaration | Where the unit is listed | What the page means |
 |---|---|---|
@@ -633,7 +635,7 @@ that is half one user's own account and half the installation's has no single pa
 
 Either way of choosing
 hides one half from the one who holds the other. Make two units if you need both. And **the settings row grants no
-rights**: it carries no grant of its own, like the rail row it replaced.
+rights**: it carries no grant of its own.
 
 Your screen still gates itself
 on the object it declares. Settings → Integrations is also gated on the grants its own cards ask for.
@@ -665,7 +667,88 @@ So two different unit names can never give one start: `foo-1` and `foo1` would
 otherwise both claim `extFoo1.`. The `composition` tool merges them into the one catalog, so `useT()` finds your
 keys and the core's in the same way. Give **every** language the installation ships (`en`, `de`, `vi`),
 or the generator refuses. A reader of the missing one would get an empty screen. Keys outside your space are
-refused too: a unit does not write over core text.
+refused too: your own copy never writes over core text. To change core wording, use an override, below.
+
+## Override core wording
+
+An installation can change the text of the screens without forking core, for example "Deal" becomes "Opportunity". Put one flat
+JSON object per language in `frontend/i18n-overrides/<locale>.json`, in a folder of its own, apart from
+`frontend/i18n/`. The keys are core keys, named as in the core catalog.
+
+```json
+{ "nav.deals": "Opportunities" }
+```
+
+| Rule | What happens |
+|---|---|
+| An override may cover only some languages | A language with no file keeps core's wording. |
+| The files are the declaration | `make gen` reads them from every enabled unit. There is no runtime or admin editing. |
+| A key that core does not have | `make gen` refuses it and names the key. |
+| Two units override one key in one language | `make gen` refuses it and names both units. |
+| Any core key | All can be changed: consent, erasure, approval and sign-in wording included. |
+
+`translate()` looks in the overrides first, then the core catalog, then your own copy.
+
+Two gates in `frontend/src/i18n/overrides.test.ts` fail the frontend test lane. One fails when an override drops a
+part that core's text has, such as `{count}`. The other fails when an override gives one count form of a key
+(`_one`) and not every form core has for it (`_other`).
+
+The installation owns the wording of every key it overrides. Core does not carry its later changes into that
+key. Check your overrides when you upgrade core.
+
+Limits:
+
+- **Grammar is yours.** A new word can need another article, case or count form. The gates check the parts and count
+  forms, not whether the sentence reads right.
+- **Longer text can break a layout.** Buttons and table headers do not grow without limit.
+- **An override can go stale.** If core changes what a key means, your text still says the old thing.
+
+Not covered: renaming a record type itself, AI prompts, agent tools, text the backend writes, the offline page and the
+docs. An override changes frontend wording only.
+
+## Show an app in the home side drawer
+
+A unit with a screen can also ask for a row in the home side drawer, with its own icon and name. Declare one
+`extension.App` on the `Extension`. A unit has at most one:
+
+```go
+App: &extension.App{
+	Icon:   extension.IconPlug,
+	Label:  "extOpenchannel.title",
+	Group:  extension.AppGroupWork,
+	Object: "ext_openchannel_endpoint",
+	Export: "OpenchannelApp",
+},
+```
+
+| Field | What it means |
+|---|---|
+| `Icon` | An icon from the same short list an entry uses (`extension.EntryIcons()`) |
+| `Label` | A copy key from your own `frontend/i18n/` files. The generator refuses one that is missing from a language |
+| `Group` | The drawer heading the row sits under: `AppGroupRecords`, `AppGroupWork` or `AppGroupIntelligence` |
+| `Object` | The RBAC object a reader needs `read` on. It must be one of your own objects that one of your operations gates on |
+| `Export` | The named export of your frontend package that draws the app |
+
+Your frontend package exports the app by name, beside the default export that stays your setting page:
+
+```tsx
+export function OpenchannelApp() {
+  return <OpenchannelScreen />;
+}
+```
+
+The app opens at `#/app/<name>`, inside the home layout, with no Settings path above it. The setting page stays at
+`#/ext/<name>`. A unit with no default export still gets the published-operations card there.
+
+| Address | What it draws | Where it is offered |
+|---|---|---|
+| `#/app/<name>` | the named export `Export` | a row in the home side drawer, under `Group` |
+| `#/ext/<name>` | the default export, or the card of published operations | Settings, on the page that matches your `Secrets` scope |
+
+A reader without `read` on `Object` sees no row, and the address answers the unknown-page card. The drawer and
+the route ask the same question, so they cannot disagree. The app links to its setting page, and the unit's row in
+Settings links to the app. A unit that declares no app works as before. The reason the drawer may carry a
+unit is in [explanation/extension-apps-in-the-drawer.md](../explanation/extension-apps-in-the-drawer.md).
 
 ## Offer an entry on a core screen
 
@@ -1593,6 +1676,36 @@ Under `MARGINCE_ENV=dev`, a client from `OutboundClient()` or `OutboundTransport
 refused under every value, and so does loopback under any value but `dev`. The core sets this once at
 start. Never call `extension.BindEgress` from a unit; the same gate fails that too.
 
+## Use the core's models and object store
+
+Declare the capability first. `rt.Models()` and `rt.Objects()` return `extension.ErrNotDeclared` until
+`Extension.Needs` lists them, and the admin who installs the unit reads each reason on its card:
+
+```go
+Needs: []extension.Need{
+    {Capability: extension.CapabilityModels, Reason: "Writes a one-line summary of a deal's changes."},
+    {Capability: extension.CapabilityObjects, Reason: "Keeps the summaries it wrote."},
+},
+```
+
+Ask a model with `rt.Models().Complete`. Name the core records the text was built from in `About`, or say in
+`NoContactData` why it holds none of a contact's data:
+
+```go
+text, err := rt.Models().Complete(ctx, extension.CompleteRequest{
+    System:   "Summarise the change in one sentence.",
+    Messages: []extension.Message{{Role: "user", Text: change}},
+    About:    []extension.EntityRef{{Type: "deal", ID: dealID}},
+})
+```
+
+Keep a file with `rt.Objects().Put(ctx, "summary-2026-11.txt", body)`. Read it back with `Get` and remove it with
+`Delete`. The name is flat: lower-case letters, digits, `.`, `-` and `_`. The core finds the content type from the
+bytes. Removing the unit from the build deletes its objects at the next boot.
+
+The limits, the refusals and the audit rows are in
+[extension-capabilities.md](../reference/extension-capabilities.md).
+
 ## Write the unit's own test
 
 Each unit is its own Go module, so the `./...` of the backend never reaches it. It carries its own tests, which
@@ -1697,6 +1810,8 @@ under `extensions/`. Run the `rm -rf` after it. `git rm` takes the tracked files
 
 A unit for one installation only is not in git. Remove it from that installation's `go.mod`, and its name from
 `extensions/operator-units`. Then delete its folder under `extensions/`; there is nothing to stage.
+
+At the next boot the core deletes the objects the removed unit kept with `rt.Objects()`.
 
 No other core file or core test needs an edit. Removing it *turns the unit off* (routes answer 404, the list leaves
 the unit out, migrations skip it), but it does **not erase**. The unit's tables and rows, its `extension_secret`

@@ -55,7 +55,27 @@ type unitLocale struct {
 // locale the unit shipped for one language and not another — a screen that
 // renders in English and blanks in German is worse than one that does not build.
 func collectUnitLocales(name, dir string) ([]unitLocale, error) {
-	layer := filepath.Join(dir, frontendLayer, localesLayer)
+	out, err := readLocaleFiles(name, filepath.Join(dir, frontendLayer, localesLayer))
+	if err != nil {
+		return nil, err
+	}
+	supplied := map[string]bool{}
+	for _, l := range out {
+		supplied[l.Locale] = true
+	}
+	for _, locale := range composedLocales {
+		if len(out) > 0 && !supplied[locale] {
+			return nil, fmt.Errorf("extensions/%s: %s/%s ships no %s.json — a unit supplies every locale the installation does, or a reader of one language gets a blank screen",
+				name, frontendLayer, localesLayer, locale)
+		}
+	}
+	return out, nil
+}
+
+// readLocaleFiles reads one flat <locale>.json per language from a layer
+// directory. Copy and overrides share it, so both refuse the same malformed
+// files; only the "every language" rule differs, and it stays with the copy.
+func readLocaleFiles(name, layer string) ([]unitLocale, error) {
 	entries, err := os.ReadDir(layer)
 	if os.IsNotExist(err) {
 		return nil, nil
@@ -64,17 +84,17 @@ func collectUnitLocales(name, dir string) ([]unitLocale, error) {
 		return nil, err
 	}
 
-	supplied := map[string]bool{}
+	rel := filepath.Join(frontendLayer, filepath.Base(layer))
 	var out []unitLocale
 	for _, e := range entries {
 		if e.IsDir() || !strings.HasSuffix(e.Name(), ".json") {
-			return nil, fmt.Errorf("extensions/%s: %s/%s/%s is not a <locale>.json file — a unit's copy is one flat JSON object per locale",
-				name, frontendLayer, localesLayer, e.Name())
+			return nil, fmt.Errorf("extensions/%s: %s/%s is not a <locale>.json file — a unit's copy is one flat JSON object per locale",
+				name, rel, e.Name())
 		}
 		locale := strings.TrimSuffix(e.Name(), ".json")
 		if !contains(composedLocales, locale) {
-			return nil, fmt.Errorf("extensions/%s: %s/%s/%s names locale %q, which this installation does not ship (%s) — its copy could never be selected",
-				name, frontendLayer, localesLayer, e.Name(), locale, strings.Join(composedLocales, ", "))
+			return nil, fmt.Errorf("extensions/%s: %s/%s names locale %q, which this installation does not ship (%s) — its copy could never be selected",
+				name, rel, e.Name(), locale, strings.Join(composedLocales, ", "))
 		}
 		raw, err := os.ReadFile(filepath.Join(layer, e.Name())) // #nosec G304 -- the unit tree this composer was pointed at
 		if err != nil {
@@ -82,17 +102,10 @@ func collectUnitLocales(name, dir string) ([]unitLocale, error) {
 		}
 		var keys map[string]string
 		if err := json.Unmarshal(raw, &keys); err != nil {
-			return nil, fmt.Errorf("extensions/%s: %s/%s/%s: %w — a locale file is a flat object of string to string",
-				name, frontendLayer, localesLayer, e.Name(), err)
+			return nil, fmt.Errorf("extensions/%s: %s/%s: %w — a locale file is a flat object of string to string",
+				name, rel, e.Name(), err)
 		}
-		supplied[locale] = true
 		out = append(out, unitLocale{Unit: name, Locale: locale, Keys: keys})
-	}
-	for _, locale := range composedLocales {
-		if len(out) > 0 && !supplied[locale] {
-			return nil, fmt.Errorf("extensions/%s: %s/%s ships no %s.json — a unit supplies every locale the installation does, or a reader of one language gets a blank screen",
-				name, frontendLayer, localesLayer, locale)
-		}
 	}
 	return out, nil
 }

@@ -188,6 +188,12 @@ type Runtime interface {
 	Directory() Directory
 	Activities() Activities
 	SetAside() SetAside
+
+	// Models and Objects are the core's AI models and object store. Each
+	// answers ErrNotDeclared until the unit lists the capability in
+	// Extension.Needs. See models.go and objects.go.
+	Models() Models
+	Objects() Objects
 }
 
 // CallerType is which kind of principal an invocation is running as. It mirrors

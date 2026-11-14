@@ -11485,6 +11485,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   // Các đơn vị bản cài đặt này ghép vào, đặt trên trang cài đặt giữ loại thông tin
   // đăng nhập mà đơn vị đó dùng.
   "extUnits.openNamed": "Cài đặt cho {name}",
+  "extUnits.openApp": "Mở {name}",
   "extUnits.user.title": "Tài khoản khác",
   "extUnits.user.sub":
     "Các tiện ích bản cài đặt này cung cấp, đăng nhập với tư cách của bạn. Mỗi tiện ích chỉ thuộc về bạn, và ngắt kết nối chỉ ảnh hưởng tới bạn.",
@@ -14638,6 +14639,9 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "extAccess.brings.objects": "Đối tượng phân quyền",
   "extAccess.brings.routes": "Đường dẫn",
   "extAccess.brings.jobs": "Tác vụ nền",
+  "extAccess.brings.needs": "Dùng từ lõi",
+  "extAccess.need.models": "Mô hình AI",
+  "extAccess.need.objects": "Lưu trữ tệp",
   "extAccess.brings.none": "Không có",
   "extAccess.noObjects":
     "Đơn vị này không đăng ký đối tượng phân quyền nào, nên không có gì để cấp.",
@@ -21459,6 +21463,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "aiTask.name.document_extract": "Trích xuất tài liệu",
   "aiTask.name.draft_reply": "Soạn bản nháp trả lời",
   "aiTask.name.enrich": "Bổ sung thông tin từ chữ ký",
+  "aiTask.name.extension_call": "Lệnh gọi mô hình của tiện ích mở rộng",
   "aiTask.name.growth_fit": "Đánh giá mức độ phù hợp của công ty",
   "aiTask.name.nl_search": "Tìm kiếm bằng ngôn ngữ tự nhiên",
   "aiTask.name.offer_draft": "Soạn bản nháp báo giá",

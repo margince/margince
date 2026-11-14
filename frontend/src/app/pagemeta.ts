@@ -1,6 +1,7 @@
 import { useEntityName } from "../components/entityref";
-import { useLocale, useT } from "../i18n";
+import { translate, useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
+import { useOpenableApp } from "../lib/extensionapps";
 import { EXTENSION_SCREEN, findExtension, unitTitle } from "../lib/extensions";
 import { opensAFocusedFiltersPage } from "../lib/filtersaddress";
 import { useReadsTeamProgress } from "../lib/progressreader";
@@ -205,6 +206,9 @@ export function useRouteSubject(route: Route): string {
   // knows perfectly well.
   const unit =
     route.screen === EXTENSION_SCREEN ? findExtension(route.id) : null;
+  // An app is named by the words its unit declared for its drawer entry, so
+  // the trail, the heading and the entry say one name.
+  const app = useOpenableApp(route);
   // A record kind, and only then: an id segment that names no record is a
   // screen's own state — the settings tab, for one — and the subject is still
   // the page.
@@ -218,6 +222,9 @@ export function useRouteSubject(route: Route): string {
   }
   if (unit) {
     return unitTitle(unit, locale);
+  }
+  if (app) {
+    return translate(locale, app.label);
   }
   const reserved = reservedPageTitle(route);
   return reserved

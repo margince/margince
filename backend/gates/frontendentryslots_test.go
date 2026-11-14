@@ -25,6 +25,7 @@ const (
 	frontendEntrySlots = "../frontend/src/lib/extensionentries.ts"
 	frontendEntryIcons = "../frontend/src/components/extensionentries.tsx"
 	frontendPanelSlots = "../frontend/src/components/extensionpanels.slots.ts"
+	frontendAppGroups  = "../frontend/src/lib/extensionapps.ts"
 )
 
 // tsKey reads object keys in either spelling an object literal admits, bare or
@@ -87,6 +88,22 @@ func goPanelSlots() []string {
 		inGo = append(inGo, string(slot))
 	}
 	return inGo
+}
+
+// An app's icon is one of the entry icons, so the glyph test below covers it.
+// Its group is a drawer heading, and the frontend files each app under one.
+func TestTheFrontendAppGroupsMatchTheGoOnes(t *testing.T) {
+	t.Parallel()
+	literal := tsLiteral(t, frontendAppGroups, "export const EXTENSION_APP_GROUPS = [", "] as const;")
+	var inTS []string
+	for _, m := range tsQuoted.FindAllStringSubmatch(literal, -1) {
+		inTS = append(inTS, m[1])
+	}
+	var inGo []string
+	for _, group := range extension.AppGroups() {
+		inGo = append(inGo, string(group))
+	}
+	compareSets(t, "app group", inGo, inTS)
 }
 
 func TestTheFrontendEntryIconsMatchTheGoOnes(t *testing.T) {

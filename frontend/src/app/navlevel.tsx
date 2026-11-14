@@ -18,8 +18,10 @@ import { useHoverIntent } from "../design-system/hoverintent";
 import { formatNumber } from "../format/format";
 import { useLocale, useT } from "../i18n";
 import { useDisabledCoreFeatures } from "../lib/corefeatures";
+import { appsFor } from "../lib/extensionapps";
 import { useReadsTeamProgress } from "../lib/progressreader";
 import { navigate, type Route, routeHash } from "../lib/router";
+import { useMe } from "../lib/session";
 import {
   currentClaim,
   entryLabel,
@@ -149,7 +151,8 @@ export function useNavLevel(
 ) {
   const disabled = useDisabledCoreFeatures();
   const readsTeam = useReadsTeamProgress();
-  const trail = railTrail(route, section, disabled, readsTeam);
+  const apps = appsFor(useMe().data);
+  const trail = railTrail(route, section, disabled, readsTeam, apps);
   const depth = trail.length - 1;
   const shown = trail[depth];
   if (shown === undefined)

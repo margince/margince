@@ -97,6 +97,12 @@ function useEndpoint(enabled: boolean) {
   });
 }
 
+// The same screen is the unit's app in the home side drawer (`#/app/<unit>`)
+// and its sub-setting under Settings (`#/ext/<unit>`, the default export).
+export function OpenchannelApp() {
+  return <OpenchannelScreen />;
+}
+
 export default function OpenchannelScreen() {
   const t = useT();
   const canReadEndpoint = useCan(ENDPOINT_OBJECT, "read");

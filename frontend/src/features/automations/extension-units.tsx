@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
+import { ArrowUpRight } from "lucide-react";
+import { IconAction } from "../../design-system/iconaction";
 import {
   Panel,
   PanelBody,
@@ -9,6 +11,7 @@ import {
 } from "../../design-system/panel";
 import { RowOpen } from "../../design-system/rowopen";
 import { useLocale, useT } from "../../i18n";
+import { appRoute, findApp, mayOpenApp } from "../../lib/extensionapps";
 import {
   EXTENSION_SCREEN,
   type ExtensionDescriptor,
@@ -17,6 +20,7 @@ import {
   unitTitle,
 } from "../../lib/extensions";
 import { navigate, routeHash } from "../../lib/router";
+import { useMe } from "../../lib/session";
 import "./extension-units.css";
 
 // Where an installation's own units are offered: on the settings page that
@@ -87,10 +91,34 @@ function UnitRow({ unit }: Readonly<{ unit: ExtensionDescriptor }>) {
       <span className="extunits-name" data-testid={`ext-unit-${name}`}>
         {title}
       </span>
-      <RowOpen
-        label={t("extUnits.openNamed", { name: title })}
-        href={routeHash(address)}
-      />
+      <span className="extunits-actions">
+        {unit.app && <OpenAppAction unit={unit} title={title} />}
+        <RowOpen
+          label={t("extUnits.openNamed", { name: title })}
+          href={routeHash(address)}
+        />
+      </span>
     </PanelRow>
+  );
+}
+
+/** The link to the unit's app, shown only to a reader who may open it. */
+function OpenAppAction({
+  unit,
+  title,
+}: Readonly<{ unit: ExtensionDescriptor; title: string }>) {
+  const t = useT();
+  const me = useMe();
+  const app = findApp(unit.name, [unit]);
+  if (!app || !mayOpenApp(me.data, app)) {
+    return null;
+  }
+  return (
+    <IconAction
+      variant="ghost"
+      icon={<ArrowUpRight aria-hidden />}
+      label={t("extUnits.openApp", { name: title })}
+      href={routeHash(appRoute(unit.name))}
+    />
   );
 }

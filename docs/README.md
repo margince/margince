@@ -159,6 +159,9 @@ ready before we need it, because the first date comes 24 hours after we learn of
   (`make bench-daily`).
 - [register-a-webhook.md](how-to/register-a-webhook.md): send events to your own HTTPS endpoint.
 - [add-an-extension.md](how-to/add-an-extension.md): add an extension under `extensions/`.
+- Extension text: [the work](reference/extensions-can-override-core-s-translati.md), how an extension changes the text core shows.
+- Extension use of core's AI models and files: [the work](reference/extensions-can-use-core-s-ai-models-s3-a.md), [what it can use](reference/extension-capabilities.md), [why](explanation/extension-capability-grants.md).
+- Extension apps: [the work](reference/extensions-can-appear-as-apps-in-the-hom.md), [why](explanation/extension-apps-in-the-drawer.md).
 - [install-extensions-as-go-modules.md](how-to/install-extensions-as-go-modules.md): turn
   extensions on from `instance/go.mod`, here or in a client's own repository.
 - [declare-a-service-member.md](how-to/declare-a-service-member.md): make the account that a timed job
