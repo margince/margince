@@ -134,8 +134,14 @@ func TestEveryRequiredHomeReadIsJudgedInEveryPass(t *testing.T) {
 		}
 	}
 	required := homeRequired(rows, calls)
-	if want := 3 * (len(calls) - 1); len(required) != want {
-		t.Fatalf("judged %d rows, want %d: every required read in all three passes", len(required), want)
+	perPass := map[string]int{}
+	for _, r := range required {
+		perPass[r.Flow]++
+	}
+	for _, pass := range []dailyFlow{homeColdFlow, homeMissFlow, homeWarmFlow} {
+		if perPass[pass.Name] != len(calls)-1 {
+			t.Fatalf("judged %d %s rows, want %d: every required read in every pass", perPass[pass.Name], pass.Name, len(calls)-1)
+		}
 	}
 	failures := HomeBudgetFailures(required, homeBudgetAbsolute)
 	if len(failures) != 1 || !strings.Contains(failures[0], "home_cold_brief: no samples") {
