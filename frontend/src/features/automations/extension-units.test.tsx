@@ -31,6 +31,7 @@ vi.mock("../../lib/extensions", async (importOriginal) => ({
 // A unit's copy as gen-composition merges it, so a title resolves as it would composed.
 vi.mock("@composition/copy", () => ({
   extensionCopy: { en: { "extDispactConnector.title": "Dispact" } },
+  extensionOverrides: {},
 }));
 
 const DISPACT: ExtensionDescriptor = {
