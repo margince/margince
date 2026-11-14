@@ -1,3 +1,4 @@
+import { useQuery } from "@tanstack/react-query";
 import { api } from "../../api/client";
 import type { components } from "../../api/schema";
 import { CreateAction, type CreateField } from "../../components/create";
@@ -6,8 +7,12 @@ import { toMinorUnits } from "../../format/minorunits";
 import { useLocale, useT } from "../../i18n";
 import { useCanWrite } from "../../lib/capability";
 import { currencyBeside } from "../../lib/dealcurrency";
+import { translatedPipeline } from "../../lib/labeltranslation";
 import { useLeadingCurrencies } from "../../lib/leadingcurrencies";
-import { defaultPipelineOf, usePipelines } from "../../lib/pipelines.queries";
+import {
+  defaultPipelineOf,
+  pipelinesOptions,
+} from "../../lib/pipelines.queries";
 import { unwrap } from "../../lib/problem";
 import { useProjectCreateForm } from "../projects/projects.create";
 
@@ -37,9 +42,9 @@ export function NewDealAction({
 }>) {
   const t = useT();
   const { locale } = useLocale();
-  const pipelines = usePipelines();
+  const target = useQuery({ ...pipelinesOptions, select: defaultPipelineOf });
   const leading = useLeadingCurrencies();
-  const pipeline = defaultPipelineOf(pipelines.data ?? []);
+  const pipeline = target.data && translatedPipeline(target.data, locale);
   const open =
     pipeline?.stages?.filter((stage) => stage.semantic === "open") ?? [];
   // No pipeline, or none of its stages is open, means there is nowhere for a
