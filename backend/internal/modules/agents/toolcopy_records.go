@@ -31,8 +31,16 @@ var listRecordsCopy = toolCopy{
 }
 
 var readViewCopy = toolCopy{
-	Purpose: "Read derived record views, workspace reference lists and reporting objects through their REST routes.",
-	Limits:  "Name the view, its id and filters. Unknown arguments are refused with the accepted names.",
+	Purpose: "Read one view the app draws that no other tool answers: a record's panels, such as a " +
+		"company's 360, contacts, documents, facts, graph or strength, a deal's status, documents or " +
+		"stakeholders, and a contact's cases; the workspace's reference lists, such as stages, custom " +
+		"fields, lead sources, loss reasons, teams and lists; and reporting objects, such as targets, " +
+		"schedules, executions, sales progress and forecast calls.",
+	Limits: "Each view takes only a few of the arguments listed here: a record view its id, and its " +
+		"own filters. Each argument names the views that take it, describe_views names what each view " +
+		"takes, and a refusal names the arguments the view accepts.",
+	Instead: "Use find_records to find or list records, and read_reports for the standard metrics " +
+		"and named reports.",
 }
 
 var changeRecordPartsCopy = toolCopy{
@@ -40,8 +48,7 @@ var changeRecordPartsCopy = toolCopy{
 		"profile fields, a project's companies and stakeholders. Prices are in minor units; read a " +
 		"product for its unit_price_minor rather than inventing one.",
 	Limits: "An offer's totals are computed from its lines and cannot be supplied, and a sent or " +
-		"accepted offer keeps its lines. Pass if_version from your read so a change made since is " +
-		"refused. Each action answers as its route does.",
+		"accepted offer keeps its lines.",
 	Instead: "Use update_record for a record's own fields, and create_record with record_type offer " +
 		"to make an offer with its first lines.",
 }

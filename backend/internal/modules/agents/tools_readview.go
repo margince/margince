@@ -99,16 +99,20 @@ const (
 var pageArgs = []string{"cursor", "limit"}
 
 // viewArgSchema publishes one argument with the type its routes give it. Where
-// one view takes a list and another one value, the schema says one value. It
-// names the views that take a list, which the handler accepts.
-func viewArgSchema(arg string, byType map[string][]string) string {
-	description := ""
+// one view takes a list and another one value, the schema says one value. Its
+// description names the views that take it, unless every view does. A caller
+// left to guess goes looking for the answer outside the surface.
+func viewArgSchema(arg string, byType map[string][]string, viewCount int) string {
+	var notes []string
+	if takers := viewsTaking(byType); len(takers) < viewCount {
+		notes = append(notes, "views: "+strings.Join(takers, ", "))
+	}
 	if arg == pipelineArg {
-		description = "comes from " + pipelinesSource
+		notes = append(notes, "comes from "+pipelinesSource)
 	}
 	arrays, takesList := byType[schemaArray]
 	if takesList && len(byType) == 1 {
-		return `{"type":"array","items":{"type":"string"}}`
+		return `{"type":"array","items":{"type":"string"}` + descriptionMember(notes) + `}`
 	}
 	// A path parameter is a string only because a path spells text. operand
 	// passes a number on, so where views disagree the typed one is published.
@@ -120,12 +124,28 @@ func viewArgSchema(arg string, byType map[string][]string) string {
 		}
 	}
 	if takesList {
-		description = "one value; a list of values for " + strings.Join(arrays, ", ")
+		notes = append(notes, "one value; a list of values for "+strings.Join(arrays, ", "))
 	}
-	if description == "" {
-		return `{"type":` + strconv.Quote(jsonType) + `}`
+	return `{"type":` + strconv.Quote(jsonType) + descriptionMember(notes) + `}`
+}
+
+// viewsTaking lists, once each and in name order, the views behind an argument.
+func viewsTaking(byType map[string][]string) []string {
+	var views []string
+	for _, named := range byType {
+		views = append(views, named...)
 	}
-	return `{"type":` + strconv.Quote(jsonType) + `,"description":` + strconv.Quote(description) + `}`
+	slices.Sort(views)
+	return slices.Compact(views)
+}
+
+// descriptionMember is a schema's description member, or "" when there is
+// nothing to say.
+func descriptionMember(notes []string) string {
+	if len(notes) == 0 {
+		return ""
+	}
+	return `,"description":` + strconv.Quote(strings.Join(notes, "; "))
 }
 
 func (t readView) Spec() mcp.ToolSpec {
@@ -150,11 +170,12 @@ func (t readView) Spec() mcp.ToolSpec {
 	}
 	properties := []string{strconv.Quote(viewArg) + ":" + viewNameSchema(t.views)}
 	for _, arg := range slices.Sorted(maps.Keys(types)) {
-		properties = append(properties, strconv.Quote(arg)+":"+viewArgSchema(arg, types[arg]))
+		properties = append(properties, strconv.Quote(arg)+":"+viewArgSchema(arg, types[arg], len(t.views)))
 	}
 	return mcp.ToolSpec{
 		Name: ReadViewTool, Title: "Read a view", Version: toolVersionV1,
 		Description:   readViewCopy.render(),
+		Instead:       readViewCopy.Instead,
 		RequiredScope: principal.ScopeRead, Tier: mcp.TierAutoExecute,
 		OpenAPIOp: strings.Join(ops, "/"),
 		InputSchema: schema(`{"type":"object","required":["view"],"properties":{` + strings.Join(properties, ",") +

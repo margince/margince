@@ -27,6 +27,26 @@ func applyRouterWording(routerName, field string, routerOwn objectSchema, proper
 	return nil
 }
 
+// actionLines is a router's own action wording with a line for every action it
+// leaves unnamed. The router's own "action: ..." clause stands, since it can
+// say what the verb's own first sentence cannot.
+func actionLines(own json.RawMessage, choices, sentences []string) json.RawMessage {
+	var text string
+	if own != nil && json.Unmarshal(own, &text) != nil {
+		return own
+	}
+	var lines []string
+	if text != "" {
+		lines = append(lines, text)
+	}
+	for i, choice := range choices {
+		if !strings.HasPrefix(text, choice+": ") && !strings.Contains(text, "; "+choice+": ") {
+			lines = append(lines, choice+": "+sentences[i])
+		}
+	}
+	return mustMarshal(strings.Join(lines, "\n"))
+}
+
 // describeArguments names the choices an argument is for where only some take
 // it, and the bound each choice holds it to.
 func describeArguments(field string, choices []string, schemas []objectSchema, routerOwn objectSchema, properties map[string]argument, takers map[string][]string) {

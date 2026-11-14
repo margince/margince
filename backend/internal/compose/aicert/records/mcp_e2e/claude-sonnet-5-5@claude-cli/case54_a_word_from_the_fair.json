@@ -13,11 +13,11 @@
   "self_judged": true,
   "usage": {
     "input_tokens": 24,
-    "output_tokens": 2434,
-    "cache_creation_input_tokens": 24664,
-    "cache_read_input_tokens": 805724,
+    "output_tokens": 2437,
+    "cache_creation_input_tokens": 25341,
+    "cache_read_input_tokens": 972535,
     "runs_measured": 2,
     "runs_costed": 2,
-    "cost_usd": 0.2036
+    "cost_usd": 0.223
   }
 }
