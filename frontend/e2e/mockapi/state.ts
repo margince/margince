@@ -79,7 +79,11 @@ export type CounterpartyHold = {
   created_at: string;
 };
 
-export type DealPatches = Record<string, Partial<(typeof deals)[number]>>;
+export type DealPatches = Record<
+  string,
+  Partial<(typeof deals)[number]> &
+    Pick<Partial<components["schemas"]["Deal"]>, "archived_at">
+>;
 
 function captureSettings(): components["schemas"]["CaptureSettings"] {
   return {
