@@ -40,10 +40,11 @@ func (s *Store) PreviewInitialGrant(ctx context.Context, in RecordInput) (State,
 		if err := probe(ctx, tx, sub.entityType, sub.id); err != nil {
 			return err
 		}
-		key, doi, err := loadConsentPurpose(ctx, tx, in.PurposeID)
+		purpose, err := loadConsentPurpose(ctx, tx, in.PurposeID)
 		if err != nil {
 			return err
 		}
+		key, doi := purpose.key, purpose.requiresDOI
 		current, err := currentConsentState(ctx, tx, sub, in.PurposeID)
 		if err != nil {
 			return err

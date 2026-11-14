@@ -196,6 +196,7 @@ func (s *Server) rewireConfirmationLane(pool *pgxpool.Pool) {
 	s.authHandlers = s.WithContactMailLane(true)
 	s.siteLeadNotices.store.Store(consent.NewStore(InstallationDB(pool)).
 		WithMailLanguage(consent.MailLanguageFunc(identity.LanguageOf)).
+		WithInstallationZone(identity.ZoneAppliedTx).
 		WithConfirmationLane(queue, confirmLinkVault{s.vault}, s.confirmLinkBase).
 		WithMissedReceipts(receiptAlarm{db: InstallationDB(pool)}))
 }

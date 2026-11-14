@@ -13,6 +13,7 @@ export function initialEntries(root: string) {
       join(root, "src/app/queryclient.instance.ts"),
     ],
     analytics: [join(root, "src/App.analytics.tsx")],
+    home: [join(root, "src/features/brief/brief.tsx")],
   };
 }
 

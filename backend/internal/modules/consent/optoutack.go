@@ -19,35 +19,49 @@ import (
 	"github.com/margince/margince/backend/internal/shared/ports/commsauthz"
 )
 
-// acknowledgeWithdrawalTx stages the acknowledgement an UNSUBSCRIBE owes.
+// acknowledgeWithdrawalTx stages the receipt one withdrawal of a marketing-class
+// purpose owes. recordAdmittedTx calls it for every changed withdrawal. So every
+// door that records one is covered, the record-confirmation page included.
 //
-// THE ORDINARY REFUSAL, and the one Codex found this feature missing. A
-// suppression is what a rep records and what the stronger public stop writes; a
-// press of an unsubscribe link writes per-purpose withdrawals and no
-// suppression at all. Acknowledging only the first would answer the rarer act
-// and stay silent on the common one, which is the shape of an obligation that
-// looks discharged and is not.
-//
-// One message for the press, not one per purpose: a stop that withdrew four
-// subscriptions is one refusal. withdrawalMessageID names the press by contact
-// and the transaction that recorded it, so every later press gets its own receipt.
-//
-// NOTHING WITHDRAWN, NOTHING TO ACKNOWLEDGE. A replayed press changes no state,
-// and telling somebody again that we stopped is a second message they did not
-// ask for.
-func (s *Store) acknowledgeWithdrawalTx(
-	ctx context.Context, tx pgx.Tx, contactID ids.ContactID, withdrawn []string,
-) error {
-	if len(withdrawn) == 0 {
+// One receipt per act, not per purpose: a press that withdrew four purposes is
+// one refusal. withdrawalMessageID names the act by subject and transaction.
+func (s *Store) acknowledgeWithdrawalTx(ctx context.Context, tx pgx.Tx, sub subject, purposeClass string) error {
+	if !slices.Contains(commsauthz.MarketingPurposeClasses(), purposeClass) {
 		return nil
 	}
 	act, err := withdrawalActTx(ctx, tx)
 	if err != nil {
 		return err
 	}
-	return s.stageAcknowledgementTx(ctx, tx,
-		subject{id: contactID.UUID, entityType: entityContact},
-		withdrawalMessageID(contactID, act), ids.UUID{})
+	messageID := withdrawalMessageID(sub.id, act)
+	first, err := firstAcknowledgementOfActTx(ctx, tx, messageID)
+	if err != nil || !first {
+		return err
+	}
+	return s.stageAcknowledgementTx(ctx, tx, sub, messageID, ids.UUID{})
+}
+
+// acknowledgedActsSetting is the transaction-local setting that lists the
+// receipts this transaction has staged. set_config(..., true) drops it at commit
+// or rollback, so it never reaches the next transaction on the connection.
+const acknowledgedActsSetting = "margince.acknowledged_refusals"
+
+// firstAcknowledgementOfActTx marks messageID as acknowledged in this
+// transaction, and answers whether it was not marked before.
+func firstAcknowledgementOfActTx(ctx context.Context, tx pgx.Tx, messageID string) (bool, error) {
+	var acts string
+	if err := tx.QueryRow(ctx, `SELECT coalesce(current_setting($1, true), '')`,
+		acknowledgedActsSetting).Scan(&acts); err != nil {
+		return false, fmt.Errorf("consent: reading the refusals this transaction acknowledged: %w", err)
+	}
+	if slices.Contains(strings.Fields(acts), messageID) {
+		return false, nil
+	}
+	if _, err := tx.Exec(ctx, `SELECT set_config($1, $2, true)`,
+		acknowledgedActsSetting, acts+" "+messageID); err != nil {
+		return false, fmt.Errorf("consent: marking the refusal this receipt acknowledges: %w", err)
+	}
+	return true, nil
 }
 
 // acknowledgeOptOutTx stages the acknowledgement this stop owes, if any.
@@ -147,7 +161,7 @@ func (s *Store) receiptOwedTx(ctx context.Context, tx pgx.Tx, sub subject) (bool
 func (s *Store) prepareAcknowledgementTx(
 	ctx context.Context, tx pgx.Tx, sub subject, dueAt *time.Time, address, messageID string,
 ) error {
-	rendered, category, err := RenderControllerTemplate(TemplateOptOutAcknowledgement, time.Time{}, s.mailLanguage(ctx, tx))
+	rendered, category, err := RenderControllerTemplate(TemplateOptOutAcknowledgement, time.Time{}, s.replyLanguage(ctx, tx, sub))
 	if err != nil {
 		return err
 	}
@@ -247,12 +261,12 @@ func acknowledgementMessageID(stopID ids.UUID) string {
 	return "optout-ack-" + strings.ReplaceAll(stopID.String(), "-", "") + "@margince.invalid"
 }
 
-// withdrawalMessageID names one press by its contact and its act.
+// withdrawalMessageID names one withdrawal by its subject and its act.
 //
 // A second press of the same purposes on one day, after a re-grant, is a
 // second refusal. It owes its own receipt.
-func withdrawalMessageID(contactID ids.ContactID, act string) string {
-	return "optout-ack-" + strings.ReplaceAll(contactID.String(), "-", "") + "-" + act + "@margince.invalid"
+func withdrawalMessageID(subjectID ids.UUID, act string) string {
+	return "optout-ack-" + strings.ReplaceAll(subjectID.String(), "-", "") + "-" + act + "@margince.invalid"
 }
 
 // withdrawalActTx names the transaction recording this press: the database day

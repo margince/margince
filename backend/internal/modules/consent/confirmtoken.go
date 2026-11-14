@@ -42,10 +42,9 @@ import (
 // they were looking for, which is why it is a constant rather than a literal.
 const contactIDKey = "contact_id"
 
-// confirmTokenTTL bounds how long a link showing somebody their own record
-// stays live. Longer than the 72-hour double-opt-in window, because a contact may
-// read the mail next week and the page is a courtesy rather than a deadline;
-// short enough that an old mailbox stops being a window onto a live record.
+// confirmTokenTTL bounds how long every confirm link stays live: the record
+// confirmation, the double opt-in and the privacy notice. A contact may read the
+// mail next week; an old mailbox must still stop being a window onto a live record.
 const confirmTokenTTL = 14 * 24 * time.Hour
 
 // IssuedConfirm carries the plaintext exactly once, with the deadline the mail
@@ -184,11 +183,13 @@ func (s *Store) PreviewConsentLink(ctx context.Context, contactID ids.ContactID,
 // the one they still read. Refusing the mismatch is the only honest answer: the
 // two addresses disagree about who asked, and the mint cannot tell which is
 // right.
-func (s *Store) IssueConsentLink(ctx context.Context, contactID ids.ContactID, purposeID ids.PurposeID, expectedAddress string) (IssuedConfirm, error) {
+func (s *Store) IssueConsentLink(
+	ctx context.Context, contactID ids.ContactID, purposeID ids.PurposeID, expectedAddress, language string,
+) (IssuedConfirm, error) {
 	if err := httperr.RequireBodyID(purposeIDField, purposeID.UUID); err != nil {
 		return IssuedConfirm{}, err
 	}
-	return s.issueLink(ctx, contactID, LinkConsentConfirmation, purposeID, expectedAddress, refuseWithoutMailLane, "")
+	return s.issueLink(ctx, contactID, LinkConsentConfirmation, purposeID, expectedAddress, refuseWithoutMailLane, language)
 }
 
 // IssueBookedConsentLink mints the same double opt-in for the public booking

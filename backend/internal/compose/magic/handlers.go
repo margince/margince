@@ -90,7 +90,9 @@ func (h Handlers) receipt(ctx context.Context, since *time.Time, limit int) (crm
 	}
 	key := fmt.Sprintf("limit=%d&window=%s", limit, window)
 	fresh := func(ctx context.Context) (crmcontracts.MagicReceipt, error) { return h.svc.Read(ctx, nil, limit) }
-	return homecache.Serve(ctx, h.home, reader, homecache.Magic, key, fresh, startsNoWalk)
+	// Only the day answer is served past its freshness; a receipt is read fresh then.
+	receipt, _, err := homecache.Serve(ctx, h.home, reader, homecache.Magic, key, fresh, startsNoWalk)
+	return receipt, err
 }
 
 // startsNoWalk is a receipt's walk: it starts none.

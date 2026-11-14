@@ -37,10 +37,8 @@ func CommitmentEvidenceClause(ctx context.Context, source, locator string, arg f
 }
 
 func commitmentEvidenceArm(actor principal.Principal, source, locator string, arg func(any) int) string {
-	content := discoverGateFor(actor, "renewal_source", arg)
-	if actor.Type != principal.PrincipalSystem {
-		content += " AND " + activityAudienceArm(actor, "renewal_source", arg)
-	}
+	// A renewal is a message, so the message gate holds its content.
+	content := messageContentGateFor(actor, "renewal_source", arg)
 	return commitmentEvidenceRetained(source, locator) + " AND " + fmt.Sprintf(`NOT EXISTS (
  SELECT 1 FROM activity_commitment_admission renewal
  LEFT JOIN activity renewal_source ON renewal_source.id = renewal.renewed_by

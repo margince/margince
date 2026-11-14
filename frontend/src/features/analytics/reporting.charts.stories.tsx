@@ -11,6 +11,7 @@ import { ReportingCharts } from "./reporting.charts";
 import {
   reportingCatalogClient,
   reportingStoryEvaluation,
+  reportingStoryRoutes,
 } from "./reporting.story-fixtures";
 
 const meta: Meta = {
@@ -22,6 +23,7 @@ export default meta;
 type Story = StoryObj;
 function Preview() {
   const [reference, select] = useState("");
+  installFetchStub(reportingStoryRoutes());
   return (
     <StoryProviders client={reportingCatalogClient()}>
       <ReportingCharts
@@ -35,52 +37,58 @@ function Preview() {
 export const FourQuestions: Story = { render: () => <Preview /> };
 
 export const PartialHistory: Story = {
-  render: () => (
-    <StoryProviders client={reportingCatalogClient()}>
-      <ReportingCharts
-        evaluation={{
-          ...reportingStoryEvaluation,
-          charts: reportingStoryEvaluation.charts.map((chart) => ({
-            ...chart,
-            coverage: {
-              ...chart.coverage,
-              status: "partial",
-              reason:
-                "Older records have incomplete attribution. Only known contributions are included.",
-            },
-          })),
-        }}
-        onEvidence={() => {}}
-      />
-    </StoryProviders>
-  ),
+  render: () => {
+    installFetchStub(reportingStoryRoutes());
+    return (
+      <StoryProviders client={reportingCatalogClient()}>
+        <ReportingCharts
+          evaluation={{
+            ...reportingStoryEvaluation,
+            charts: reportingStoryEvaluation.charts.map((chart) => ({
+              ...chart,
+              coverage: {
+                ...chart.coverage,
+                status: "partial",
+                reason:
+                  "Older records have incomplete attribution. Only known contributions are included.",
+              },
+            })),
+          }}
+          onEvidence={() => {}}
+        />
+      </StoryProviders>
+    );
+  },
 };
 
 export const LongStageNames: Story = {
-  render: () => (
-    <StoryProviders client={reportingCatalogClient()}>
-      <ReportingCharts
-        evaluation={{
-          ...reportingStoryEvaluation,
-          charts: reportingStoryEvaluation.charts.map((chart) =>
-            chart.kind === "stage_distribution"
-              ? {
-                  ...chart,
-                  points: chart.points.map((point, index) => ({
-                    ...point,
-                    label:
-                      index % 2 === 0
-                        ? "Procurement, legal and security approval"
-                        : "Technical pilot and stakeholder alignment",
-                  })),
-                }
-              : chart,
-          ),
-        }}
-        onEvidence={() => {}}
-      />
-    </StoryProviders>
-  ),
+  render: () => {
+    installFetchStub(reportingStoryRoutes());
+    return (
+      <StoryProviders client={reportingCatalogClient()}>
+        <ReportingCharts
+          evaluation={{
+            ...reportingStoryEvaluation,
+            charts: reportingStoryEvaluation.charts.map((chart) =>
+              chart.kind === "stage_distribution"
+                ? {
+                    ...chart,
+                    points: chart.points.map((point, index) => ({
+                      ...point,
+                      label:
+                        index % 2 === 0
+                          ? "Procurement, legal and security approval"
+                          : "Technical pilot and stakeholder alignment",
+                    })),
+                  }
+                : chart,
+            ),
+          }}
+          onEvidence={() => {}}
+        />
+      </StoryProviders>
+    );
+  },
 };
 
 const boundEvaluation = {

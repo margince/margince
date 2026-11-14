@@ -4,14 +4,9 @@
 import type { UseMutationResult } from "@tanstack/react-query";
 import { useId, useState } from "react";
 import type { components } from "../api/schema";
-import {
-  Button,
-  Checkbox,
-  Field,
-  Modal,
-  TextInput,
-} from "../design-system/atoms";
+import { Button, Checkbox, Field, Modal } from "../design-system/atoms";
 import { Callout } from "../design-system/callout";
+import { ComboBox } from "../design-system/combobox";
 import { Heading } from "../design-system/heading";
 import { Select } from "../design-system/select";
 import { type Translator, useT } from "../i18n";
@@ -21,6 +16,7 @@ import { problemMessageOf } from "../lib/problem";
 
 type ChannelLinkState = components["schemas"]["ChannelLinkState"];
 type LinkChannelRequest = components["schemas"]["LinkChannelRequest"];
+type LinkableChannel = components["schemas"]["LinkableChannel"];
 export type Verbosity = components["schemas"]["ChannelVerbosity"];
 
 const VERBOSITY_LABEL: Readonly<Record<Verbosity, MessageKey>> = {
@@ -50,15 +46,18 @@ export function verbosityOptions(t: Translator) {
 
 // The form that links a channel the team already talks in. The history summary
 // is asked for by default, as the talk so far is what a new reader of the
-// record lacks.
+// record lacks. The field offers the channels the bot is in, and still takes a
+// typed name or link.
 export function LinkExistingDialog({
   open,
   onClose,
   link,
+  channels,
 }: Readonly<{
   open: boolean;
   onClose: () => void;
   link: UseMutationResult<ChannelLinkState, Error, LinkChannelRequest>;
+  channels: readonly LinkableChannel[] | undefined;
 }>) {
   const t = useT();
   const headingId = useId();
@@ -96,11 +95,14 @@ export function LinkExistingDialog({
           hint={t("channelLink.channelHint")}
         >
           {(control) => (
-            <TextInput
+            <ComboBox
               {...control}
-              autoComplete="off"
               value={channel}
-              onChange={(event) => setChannel(event.target.value)}
+              onChange={setChannel}
+              suggestions={(channels ?? []).map((offered) => ({
+                value: offered.slug,
+                label: offered.name,
+              }))}
             />
           )}
         </Field>

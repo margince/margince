@@ -25,10 +25,14 @@ import (
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/agents"
+	"github.com/margince/margince/backend/internal/modules/ai"
 	"github.com/margince/margince/backend/internal/modules/approvals"
 	"github.com/margince/margince/backend/internal/modules/capture/mailmap"
 	"github.com/margince/margince/backend/internal/modules/collections"
+	"github.com/margince/margince/backend/internal/modules/comms"
+	"github.com/margince/margince/backend/internal/modules/consent"
 	"github.com/margince/margince/backend/internal/modules/contacts"
+	"github.com/margince/margince/backend/internal/modules/customfields"
 	"github.com/margince/margince/backend/internal/modules/deals"
 	"github.com/margince/margince/backend/internal/platform/clocktest"
 	"github.com/margince/margince/backend/internal/platform/database"
@@ -139,7 +143,7 @@ func TestTheReadsThatReuseGenericPlansBindNoPartialIndexPredicate(t *testing.T) 
 		if _, err := emailSummariesReusingPlans(ctx, store, []ids.UUID{ids.UUID(mail.Id)}, at); err != nil {
 			return err
 		}
-		if _, err := (attentionTasks{store: store}).RemindersForViewer(ctx, at); err != nil {
+		if _, err := plannedRead(ctx, attentionTasks{store: store}, at, at, true); err != nil {
 			return err
 		}
 		if _, _, err := (attentionAwaiting{store: store}).AwaitingReplies(ctx, at); err != nil {
@@ -180,6 +184,14 @@ func TestTheReadsThatReuseGenericPlansBindNoPartialIndexPredicate(t *testing.T) 
 	if _, err := page.Assemble(reader, account); err != nil {
 		t.Fatalf("opening the account page: %v", err)
 	}
+	contactPage := contact360.NewService(pool, e.Contacts, e.Deals, e.Projects,
+		consent.NewStore(InstallationDB(pool)),
+		comms.NewStore(InstallationDB(pool), func() time.Time { return at }, activities.NewStore(InstallationDB(pool))),
+		ai.NewFeedbackStore(InstallationDB(pool)), func() time.Time { return at }).
+		WithActivityFields(activities.NewStore(InstallationDB(pool)).WithFieldCatalog(customfields.NewService(pool, nil)))
+	if _, err := contactPage.Assemble(reader, ids.From[ids.ContactKind](contact)); err != nil {
+		t.Fatalf("opening the contact page: %v", err)
+	}
 	sent.sql = append(sent.sql, capturedPartyPlanStatements(t, e, pool)...)
 	boundIndexedColumn := boundIndexedColumns(t, e.Pool)
 	for _, bad := range []string{"WHERE a.kind = $3", "AND p.role IN ($2", "AND m.status = ANY($7)", "AND a.is_done = $4"} {
@@ -192,7 +204,7 @@ func TestTheReadsThatReuseGenericPlansBindNoPartialIndexPredicate(t *testing.T) 
 	}
 	for _, held := range []string{
 		"FROM activity_commitment_admission d", "FROM deal_suggestion s", "FROM tag_suggestion s",
-		"FROM brief_item bi", "'deal_stakeholder'", "wd.source = 'domain_question'", "task_claims AS MATERIALIZED",
+		"FROM brief_item bi", "r.kind = 'deal_stakeholder' AND r.contact_id", "'deal_stakeholder'", "wd.source = 'domain_question'", "task_claims AS MATERIALIZED",
 		"a.meeting_status IS NULL OR a.meeting_status = 'booked'", "NOT (a.captured_by = 'system'",
 		"al.entity_type = 'deal'",
 	} {
@@ -270,7 +282,7 @@ func TestAWholeWorklistReadReusesPlansWithoutBindingPartialIndexPredicates(t *te
 			// The notice's custom-plan call restores the Worklist's generic mode.
 			generic = true
 		}
-		if strings.Contains(sql, "n.state = ANY(") && !generic {
+		if strings.Contains(sql, "n.state IN (") && !generic {
 			noticeCustom = true
 		}
 		if found := boundIndexedColumn.FindString(sql); generic && found != "" {

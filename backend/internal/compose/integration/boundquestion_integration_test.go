@@ -26,6 +26,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/margince/margince/backend/internal/compose/integration/apptest"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/mailcopy"
 )
@@ -61,29 +62,80 @@ func mintAConfirmLink(t *testing.T, c *consentEnv) string {
 	return confirmLinkToken(t, c.AppEnv)
 }
 
-// THE PROOF NAMES THE PUBLISHED QUESTION, NOT THE CLIENT'S SENTENCE.
+// servedQuestion is the question a confirm page's GET serves for this link.
+func servedQuestion(t *testing.T, e *apptest.AppEnv, token string) crmcontracts.ConfirmQuestion {
+	t.Helper()
+	var page struct {
+		Question *crmcontracts.ConfirmQuestion `json:"question"`
+	}
+	if s := publicCall(t, e, "GET", "/v1/public/confirm/"+token, nil, nil, &page); s != http.StatusOK {
+		t.Fatalf("opening the confirm page → %d", s)
+	}
+	if page.Question == nil {
+		t.Fatal("the page serves no question for a link that pinned one")
+	}
+	return *page.Question
+}
+
+// grantWithServedQuestion answers yes with the words the page was served, as
+// the page sends them.
+func grantWithServedQuestion(t *testing.T, e *apptest.AppEnv, token string) {
+	t.Helper()
+	if s := publicCall(t, e, "POST", "/v1/public/confirm/"+token, AnyMap{
+		"marketing_choice":  "granted",
+		"marketing_wording": servedQuestion(t, e, token).Text,
+	}, nil, nil); s != http.StatusOK {
+		t.Fatalf("spending the confirm link with the served question → %d, want 200", s)
+	}
+}
+
+// A page older than its question is refused, not recorded. A frontend from
+// before the page rendered the served question shows its own catalog sentence,
+// with the purpose's stored label. Recording the served text for that answer
+// would name words the subject never saw. The link stays unspent.
+func TestAPageOlderThanItsQuestionIsRefusedNotRecorded(t *testing.T) {
+	c := setupConsent(t)
+	if status := c.Call(t, "PATCH", "/v1/installation/settings",
+		AnyMap{"base_language": "de"}, nil, nil); status != http.StatusOK {
+		t.Fatalf("switching the installation to German → %d", status)
+	}
+	if status := c.Call(t, "POST", "/v1/contacts/"+c.contactID+"/consent/double-opt-in",
+		AnyMap{"purpose_id": c.purposes["marketing_email"]}, nil, nil); status >= 400 {
+		t.Fatalf("minting the double-opt-in link → %d", status)
+	}
+	token := confirmLinkToken(t, c.AppEnv)
+
+	if s := publicCall(t, c.AppEnv, "POST", "/v1/public/confirm/"+token, AnyMap{
+		"marketing_choice":  "granted",
+		"marketing_wording": "Bestätigen Sie, dass Sie Marketing email erhalten möchten.",
+	}, nil, nil); s != http.StatusConflict {
+		t.Fatalf("an old page's wording → %d, want 409 so the reader reloads", s)
+	}
+	var proofs int
+	if err := c.Owner.QueryRow(context.Background(),
+		`SELECT count(*) FROM consent_event WHERE source = 'consent_link'`).Scan(&proofs); err != nil {
+		t.Fatalf("counting proofs: %v", err)
+	}
+	if proofs != 0 {
+		t.Errorf("the refused answer left %d proof rows", proofs)
+	}
+	grantWithServedQuestion(t, c.AppEnv, token)
+}
+
+// The proof records the question the page served, word for word.
 func TestAGrantNamesThePublishedQuestionItAnswered(t *testing.T) {
 	c := setupConsent(t)
 	token := mintAConfirmLink(t, c)
+	served := servedQuestion(t, c.AppEnv, token)
+	grantWithServedQuestion(t, c.AppEnv, token)
 
-	// The client sends something else entirely. Before this change it would
-	// have been recorded verbatim as what the subject agreed to.
-	var receipt crmcontracts.ConfirmSubmissionReceipt
-	if s := publicCall(t, c.AppEnv, "POST", "/v1/public/confirm/"+token, AnyMap{
-		"marketing_choice":  "granted",
-		"marketing_wording": "I agree to absolutely anything whatsoever.",
-	}, nil, &receipt); s != http.StatusOK {
-		t.Fatalf("the subject spends their own link → %d, want 200", s)
+	if got := readGrantedProof(t, c, "confirm_details").text; got != served.Text {
+		t.Errorf("the proof records\n  %q\nwhile the page was served\n  %q", got, served.Text)
 	}
-
 	proof := readGrantedProof(t, c, "confirm_details")
 	if proof.versionID == nil {
 		t.Fatal("the grant names no published question, so its proof still rests on a sentence " +
 			"that arrived in the same request as the answer it is meant to evidence")
-	}
-	if strings.Contains(proof.text, "absolutely anything whatsoever") {
-		t.Error("the proof quotes the CLIENT's sentence — a client that chose a different one " +
-			"would be believed")
 	}
 
 	// IT NAMES A ROW THAT EXISTS AND SAYS THE SAME THING, so a reader following
@@ -125,14 +177,7 @@ func TestADedicatedConsentLinkBindsTheQuestionToo(t *testing.T) {
 		t.Fatalf("minting the double-opt-in link → %d", status)
 	}
 	token := confirmLinkToken(t, c.AppEnv)
-
-	var receipt crmcontracts.ConfirmSubmissionReceipt
-	if s := publicCall(t, c.AppEnv, "POST", "/v1/public/confirm/"+token, AnyMap{
-		"marketing_choice":  "granted",
-		"marketing_wording": "whatever the client says",
-	}, nil, &receipt); s != http.StatusOK {
-		t.Fatalf("spending the consent link → %d, want 200", s)
-	}
+	grantWithServedQuestion(t, c.AppEnv, token)
 
 	proof := readGrantedProof(t, c, "consent_link")
 	if proof.versionID == nil {
@@ -168,11 +213,7 @@ func TestADedicatedConsentLinkBindsTheQuestionToo(t *testing.T) {
 	if strings.Contains(proof.text, "{purpose}") {
 		t.Errorf("the proof records a sentence with a hole in it: %q", proof.text)
 	}
-	var label string
-	if err := c.Owner.QueryRow(context.Background(),
-		`SELECT label FROM consent_purpose WHERE key = 'marketing_email'`).Scan(&label); err != nil {
-		t.Fatalf("reading the purpose label: %v", err)
-	}
+	label := mailcopy.For("en").MarketingPurpose
 	if !strings.Contains(proof.text, label) {
 		t.Errorf("the proof does not name what the subject subscribed to:\n  proof: %q\n  want it to contain: %q",
 			proof.text, label)
@@ -214,8 +255,8 @@ func TestALinkThatPinnedNoQuestionStillRecordsTheGrant(t *testing.T) {
 	}
 }
 
-// A German link records the German question, filled with the purpose's stored
-// label. The page shows that same sentence (frontend/src/features/privacy/confirm.test.tsx),
+// A German link records the German question, filled with the purpose's German
+// name. The page shows that same sentence (frontend/src/features/privacy/confirm.test.tsx),
 // so what the proof says the subject read is what they read.
 func TestAGermanConsentLinkRecordsTheSentenceThePageShows(t *testing.T) {
 	c := setupConsent(t)
@@ -228,22 +269,15 @@ func TestAGermanConsentLinkRecordsTheSentenceThePageShows(t *testing.T) {
 		t.Fatalf("minting the double-opt-in link → %d", status)
 	}
 	token := confirmLinkToken(t, c.AppEnv)
-	var receipt crmcontracts.ConfirmSubmissionReceipt
-	if s := publicCall(t, c.AppEnv, "POST", "/v1/public/confirm/"+token, AnyMap{
-		"marketing_choice":  "granted",
-		"marketing_wording": "whatever the client says",
-	}, nil, &receipt); s != http.StatusOK {
-		t.Fatalf("spending the consent link → %d, want 200", s)
-	}
+	served := servedQuestion(t, c.AppEnv, token)
+	grantWithServedQuestion(t, c.AppEnv, token)
 
-	var label string
-	if err := c.Owner.QueryRow(context.Background(),
-		`SELECT label FROM consent_purpose WHERE key = 'marketing_email'`).Scan(&label); err != nil {
-		t.Fatalf("reading the purpose label: %v", err)
-	}
 	words := mailcopy.For("de")
-	want := strings.ReplaceAll(words.ConfirmSubscriptionAsk, "{purpose}", label) + "\n" +
+	want := strings.ReplaceAll(words.ConfirmSubscriptionAsk, "{purpose}", words.MarketingPurpose) + "\n" +
 		words.ConfirmSubscriptionConfirm
+	if served.Text != want {
+		t.Errorf("the German page was served\n  %q\nwant\n  %q", served.Text, want)
+	}
 	if got := readGrantedProof(t, c, "consent_link").text; got != want {
 		t.Errorf("the German grant recorded\n  %q\nwant the sentence the page shows\n  %q", got, want)
 	}

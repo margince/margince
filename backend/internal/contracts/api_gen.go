@@ -19090,8 +19090,10 @@ const (
 	PrivacyInformationPageRightsComplainToAuthority PrivacyInformationPageRights = "complain_to_authority"
 	PrivacyInformationPageRightsErasure             PrivacyInformationPageRights = "erasure"
 	PrivacyInformationPageRightsObjection           PrivacyInformationPageRights = "objection"
+	PrivacyInformationPageRightsPortability         PrivacyInformationPageRights = "portability"
 	PrivacyInformationPageRightsRectification       PrivacyInformationPageRights = "rectification"
 	PrivacyInformationPageRightsRestriction         PrivacyInformationPageRights = "restriction"
+	PrivacyInformationPageRightsWithdrawConsent     PrivacyInformationPageRights = "withdraw_consent"
 )
 
 // Valid indicates whether the value is a known member of the PrivacyInformationPageRights enum.
@@ -19105,9 +19107,13 @@ func (e PrivacyInformationPageRights) Valid() bool {
 		return true
 	case PrivacyInformationPageRightsObjection:
 		return true
+	case PrivacyInformationPageRightsPortability:
+		return true
 	case PrivacyInformationPageRightsRectification:
 		return true
 	case PrivacyInformationPageRightsRestriction:
+		return true
+	case PrivacyInformationPageRightsWithdrawConsent:
 		return true
 	default:
 		return false
@@ -42905,6 +42911,23 @@ type ConfirmPage struct {
 	union json.RawMessage
 }
 
+// ConfirmQuestion The question this link pinned, in the link's language and resolved with its purpose. The
+// page shows `ask` and offers `answers`, and sends `text` back unchanged as
+// `marketing_wording`. The proof records `text`. Absent on a link that pinned no question.
+type ConfirmQuestion struct {
+	// Answers The labels of the answers the page offers, in order.
+	Answers []string `json:"answers"`
+
+	// Ask The sentence the reader answers.
+	Ask string `json:"ask"`
+
+	// Text The whole question as the proof records it: the ask, then each answer, one per line.
+	Text string `json:"text"`
+
+	// Version The published version the link pinned.
+	Version string `json:"version"`
+}
+
 // ConfirmRequestIssued A confirm link that now exists, and whether a message carrying it was queued. What
 // becomes of that message afterwards is the delivery's own answer, not this one: the
 // dispatcher transmits it later, retries a transient failure, and parks one it cannot send.
@@ -54867,6 +54890,19 @@ type LinkTypeList struct {
 	Data []LinkType `json:"data"`
 }
 
+// LinkableChannel defines model for LinkableChannel.
+type LinkableChannel struct {
+	Name string `json:"name"`
+
+	// Slug The value a link request names the channel by.
+	Slug string `json:"slug"`
+}
+
+// LinkableChannels defines model for LinkableChannels.
+type LinkableChannels struct {
+	Channels []LinkableChannel `json:"channels"`
+}
+
 // LinkedInAccount defines model for LinkedInAccount.
 type LinkedInAccount struct {
 	// Connected Whether this member has authorized LinkedIn.
@@ -58627,6 +58663,9 @@ type PrivacyInformationController struct {
 	// Identity The legal name and postal address, as lines. Absent unless both are stated.
 	Identity *string `json:"identity,omitempty"`
 
+	// LegalName The legal name alone, which every controller mail opens with. Absent when not stated.
+	LegalName *string `json:"legal_name,omitempty"`
+
 	// ObjectionRoute How to object, where the installation states a way of its own.
 	ObjectionRoute *string `json:"objection_route,omitempty"`
 
@@ -59034,9 +59073,18 @@ type Project360Commitment struct {
 	AssigneeName *string             `json:"assignee_name"`
 	DueAt        *time.Time          `json:"due_at"`
 
+	// DueHasTime True when `due_at` names an agreed time of day, as on the task itself. A snooze keeps that time.
+	DueHasTime bool `json:"due_has_time"`
+
+	// DueIntent A chosen local time in an IANA zone, resolved with current rules. A time in a gap moves forward; a repeated time takes its first occurrence.
+	DueIntent *IntentTime `json:"due_intent,omitempty"`
+
 	// Overdue Dated and already past at `as_of`.
 	Overdue bool   `json:"overdue"`
 	Subject string `json:"subject"`
+
+	// Version The task row's version, which a write to the task names.
+	Version int64 `json:"version"`
 }
 
 // Project360Company The company the project is for — the two fields a page header needs, read under the company grant and row scope.
@@ -60298,10 +60346,14 @@ type RecordCommunicationContextRequestKind string
 // working notes — owner, lifecycle, scores — rather than the subject's own data.
 type RecordConfirmationPage struct {
 	// Company The current employer, read through the live employment relationship. Not correctable here.
-	Company  string                     `json:"company"`
-	Email    string                     `json:"email"`
-	FullName string                     `json:"full_name"`
-	Kind     RecordConfirmationPageKind `json:"kind"`
+	Company string `json:"company"`
+
+	// Controller Who is responsible for the data, from the installation's own controller particulars, by the
+	// rule the mail's disclosure lines use. A part the installation has not stated is absent.
+	Controller *PrivacyInformationController `json:"controller,omitempty"`
+	Email      string                        `json:"email"`
+	FullName   string                        `json:"full_name"`
+	Kind       RecordConfirmationPageKind    `json:"kind"`
 
 	// Language The language the link's mail was written in, which the page asks in too. Absent when the link records no language.
 	Language *MailLanguage `json:"language,omitempty"`
@@ -60312,7 +60364,12 @@ type RecordConfirmationPage struct {
 
 	// Provenance Where each held value came from and when (Art. 14). Empty for a field nothing has stamped.
 	Provenance []ConfirmFieldOrigin `json:"provenance"`
-	Title      string               `json:"title"`
+
+	// Question The question this link pinned, in the link's language and resolved with its purpose. The
+	// page shows `ask` and offers `answers`, and sends `text` back unchanged as
+	// `marketing_wording`. The proof records `text`. Absent on a link that pinned no question.
+	Question *ConfirmQuestion `json:"question,omitempty"`
+	Title    string           `json:"title"`
 }
 
 // RecordConfirmationPageKind defines model for RecordConfirmationPage.Kind.
@@ -66091,7 +66148,10 @@ type StatedAmount struct {
 // address, phone and provenance trail — wider than the mail described and wider than this
 // link's own write side allows.
 type SubscriptionConfirmationPage struct {
-	Kind SubscriptionConfirmationPageKind `json:"kind"`
+	// Controller Who is responsible for the data, from the installation's own controller particulars, by the
+	// rule the mail's disclosure lines use. A part the installation has not stated is absent.
+	Controller *PrivacyInformationController    `json:"controller,omitempty"`
+	Kind       SubscriptionConfirmationPageKind `json:"kind"`
 
 	// Language The language the link's mail was written in, which the page asks in too. Absent when the link records no language.
 	Language *MailLanguage `json:"language,omitempty"`
@@ -66101,6 +66161,11 @@ type SubscriptionConfirmationPage struct {
 
 	// PurposeLabel Its published name, for the page to show.
 	PurposeLabel string `json:"purpose_label"`
+
+	// Question The question this link pinned, in the link's language and resolved with its purpose. The
+	// page shows `ask` and offers `answers`, and sends `text` back unchanged as
+	// `marketing_wording`. The proof records `text`. Absent on a link that pinned no question.
+	Question *ConfirmQuestion `json:"question,omitempty"`
 
 	// State Their answer today, so somebody who already said yes is not asked as though they had not.
 	State SubscriptionConfirmationPageState `json:"state"`
@@ -70808,6 +70873,12 @@ type Worklist struct {
 	// say so would read as a clear day. Absent or false means the scope was answered
 	// whole.
 	ScopeTruncated *bool `json:"scope_truncated,omitempty"`
+
+	// ServedStale True when this answer is Home's kept answer past its five-minute freshness,
+	// served while the server reads it again. It still holds every access rule the
+	// fresh read would apply. A client asks again a few seconds later for the fresh
+	// answer. Absent or false means the answer is fresh.
+	ServedStale *bool `json:"served_stale,omitempty"`
 
 	// SourcesUnavailable Sources that could not be included, and why. Empty is the honest common case.
 	SourcesUnavailable []WorklistSourceUnavailable `json:"sources_unavailable"`
@@ -75589,6 +75660,9 @@ type RevokeOverrideJSONBody struct {
 
 // IssueDoubleOptInJSONBody defines parameters for IssueDoubleOptIn.
 type IssueDoubleOptInJSONBody struct {
+	// Language The language of the mail and of the page its link opens. Absent means the
+	// installation's mail language.
+	Language  *MailLanguage      `json:"language,omitempty"`
 	PurposeId openapi_types.UUID `json:"purpose_id"`
 }
 
@@ -79058,9 +79132,12 @@ type SubmitConfirmDetailsJSONBody struct {
 	// MarketingChoice Their answer. Omit entirely for no answer — a page view grants nothing.
 	MarketingChoice *SubmitConfirmDetailsJSONBodyMarketingChoice `json:"marketing_choice,omitempty"`
 
-	// MarketingWording The exact sentence shown beside the choice, stored verbatim as proof. Required with a
-	// grant. Bounded because it is stored on the proof row and read back through the subject
-	// access export — the same bound is enforced server-side, and the two are one rule.'
+	// MarketingWording The wording shown beside the choice. Required with a grant. Where the page carried a
+	// `question`, send its `text` unchanged: the proof records the served question, and a
+	// grant with other words is refused with 409 `version_skew`, because the page is older
+	// than the question the link pinned. Where the page carried none, this sentence is
+	// stored verbatim as proof. Bounded because it is stored on the proof row and read back
+	// through the subject access export.
 	MarketingWording *string `json:"marketing_wording,omitempty"`
 
 	// RequestErasure The subject asked to be removed. Files a request for a human; never erases directly.
@@ -96305,6 +96382,9 @@ type ServerInterface interface {
 	// Link a deal or project to a new or existing private chat channel.
 	// (POST /channel-links/{record_type}/{id})
 	LinkChannel(w http.ResponseWriter, r *http.Request, recordType ChannelLinkRecordType, id Id)
+	// The private channels this record can be linked to.
+	// (GET /channel-links/{record_type}/{id}/channels)
+	ListLinkableChannels(w http.ResponseWriter, r *http.Request, recordType ChannelLinkRecordType, id Id)
 	// File a summary of one message in a record's channel, or of its thread, as a note.
 	// (POST /channel-links/{record_type}/{id}/notes)
 	FileChannelMessage(w http.ResponseWriter, r *http.Request, recordType ChannelLinkRecordType, id Id)
@@ -100424,6 +100504,12 @@ func (_ Unimplemented) SetChannelVerbosity(w http.ResponseWriter, r *http.Reques
 // Link a deal or project to a new or existing private chat channel.
 // (POST /channel-links/{record_type}/{id})
 func (_ Unimplemented) LinkChannel(w http.ResponseWriter, r *http.Request, recordType ChannelLinkRecordType, id Id) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// The private channels this record can be linked to.
+// (GET /channel-links/{record_type}/{id}/channels)
+func (_ Unimplemented) ListLinkableChannels(w http.ResponseWriter, r *http.Request, recordType ChannelLinkRecordType, id Id) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -117628,6 +117714,47 @@ func (siw *ServerInterfaceWrapper) LinkChannel(w http.ResponseWriter, r *http.Re
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.LinkChannel(w, r, recordType, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// ListLinkableChannels operation middleware
+func (siw *ServerInterfaceWrapper) ListLinkableChannels(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "record_type" -------------
+	var recordType ChannelLinkRecordType
+
+	err = runtime.BindStyledParameterWithOptions("simple", "record_type", chi.URLParam(r, "record_type"), &recordType, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "record_type", Err: err})
+		return
+	}
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ListLinkableChannels(w, r, recordType, id)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -154558,6 +154685,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/channel-links/{record_type}/{id}", wrapper.LinkChannel)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/channel-links/{record_type}/{id}/channels", wrapper.ListLinkableChannels)
 	})
 	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/channel-links/{record_type}/{id}/notes", wrapper.FileChannelMessage)

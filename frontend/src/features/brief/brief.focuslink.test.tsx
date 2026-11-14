@@ -36,7 +36,9 @@ it("opens the named row beside the day, and closing clears the address", async (
     within(dialog).getByRole("heading", { name: /quarterly review/ }),
   ).toBeTruthy();
   // m2 is the prepared meeting; only m1 carries the unprepared reason.
-  expect(dialog.textContent).toContain(en["worklist.todo.meeting"]);
+  await waitFor(() =>
+    expect(dialog.textContent).toContain(en["worklist.todo.meeting"]),
+  );
   expect(dialog.textContent).not.toContain(
     en["worklist.because.meeting_unprepared"],
   );

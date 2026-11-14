@@ -12500,9 +12500,12 @@ paths:
                   type: string
                   maxLength: 2000
                   description: |
-                    The exact sentence shown beside the choice, stored verbatim as proof. Required with a
-                    grant. Bounded because it is stored on the proof row and read back through the subject
-                    access export — the same bound is enforced server-side, and the two are one rule.'
+                    The wording shown beside the choice. Required with a grant. Where the page carried a
+                    `question`, send its `text` unchanged: the proof records the served question, and a
+                    grant with other words is refused with 409 `version_skew`, because the page is older
+                    than the question the link pinned. Where the page carried none, this sentence is
+                    stored verbatim as proof. Bounded because it is stored on the proof row and read back
+                    through the subject access export.
       responses:
         '200':
           description: |
@@ -12514,6 +12517,7 @@ paths:
             application/json:
               schema: { $ref: '#/components/schemas/ConfirmSubmissionReceipt' }
         '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
         '422': { $ref: '#/components/responses/ValidationError' }
 
   /public/preferences/{token}/unsubscribe:
@@ -17373,6 +17377,47 @@ paths:
               schema: { $ref: '#/components/schemas/Problem' }
         '422': { $ref: '#/components/responses/ValidationError' }
 
+  /channel-links/{record_type}/{id}/channels:
+    parameters:
+      - name: record_type
+        in: path
+        required: true
+        schema: { $ref: '#/components/schemas/ChannelLinkRecordType' }
+      - $ref: '#/components/parameters/Id'
+    get:
+      tags: [Connectors]
+      operationId: listLinkableChannels
+      # Human-only: the picker in the web form's Link an existing channel. An
+      # agent names the channel it links through link_channel.
+      x-agent-access: human-only
+      x-human-only-reason: covered
+      security: [ { cookieAuth: [] } ]
+      summary: The private channels this record can be linked to.
+      description: |
+        The private, unarchived channels the bot is a member of that no live link holds, by name.
+        Only a member who may link this record reads it. A private channel the bot is not in is
+        never listed: the chat does not tell the bot it exists. A member of that channel adds the
+        bot to it first.
+      responses:
+        '200':
+          description: The channels, sorted by name.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/LinkableChannels' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+        '409':
+          description: 'No chat bot is connected (`code: channel_bot_not_connected`).'
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+        '502':
+          description: 'The chat could not be reached (`code: channel_provider_unreachable`).'
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
   /channel-links/{record_type}/{id}/notes:
     parameters:
       - name: record_type
@@ -25521,10 +25566,10 @@ paths:
         reports that disclosure as unmeetable rather than inventing one, which is what makes an
         unconfigured installation visible instead of silently non-compliant.
 
-        NOTHING RENDERS THESE INTO A MESSAGE YET. The particulars are stated here and the mapping
-        from a jurisdiction's obligation to the words that meet it exists, but no step between
-        composing a body and handing it to a provider asks for them. The gap is recorded in
-        `backend/gates/messagingruleapplied_test.go`.
+        The legal name opens and heads every mail the installation sends as controller. The
+        particulars a jurisdiction requires are printed at the end of that mail, each under a label
+        in the mail's language, and at the end of a marketing mail a member sends. The particulars
+        themselves are printed as stated, in the language they were typed in.
       responses:
         '200':
           description: The stated particulars. Empty fields where nothing has been said.
@@ -27898,6 +27943,11 @@ paths:
               required: [purpose_id]
               properties:
                 purpose_id: { type: string, format: uuid }
+                language:
+                  allOf: [{ $ref: '#/components/schemas/MailLanguage' }]
+                  description: |
+                    The language of the mail and of the page its link opens. Absent means the
+                    installation's mail language.
       responses:
         '201':
           description: Link issued, and what became of the delivery.
@@ -45864,6 +45914,21 @@ components:
           type: array
           items: { type: string }
           description: The notice types the app subscribes to.
+    LinkableChannels:
+      type: object
+      additionalProperties: false
+      required: [channels]
+      properties:
+        channels:
+          type: array
+          items: { $ref: '#/components/schemas/LinkableChannel' }
+    LinkableChannel:
+      type: object
+      additionalProperties: false
+      required: [slug, name]
+      properties:
+        slug: { type: string, description: The value a link request names the channel by. }
+        name: { type: string }
     LinkChannelRequest:
       type: object
       additionalProperties: false
@@ -56973,11 +57038,14 @@ components:
 
     Project360Commitment:
       type: object
-      required: [activity_id, subject, due_at, assignee_id, assignee_name, overdue]
+      required: [activity_id, subject, due_at, due_has_time, assignee_id, assignee_name, overdue, version]
       properties:
         activity_id: { type: string, format: uuid }
         subject: { type: string }
         due_at: { type: [string, 'null'], format: date-time }
+        due_has_time: { type: boolean, description: 'True when `due_at` names an agreed time of day, as on the task itself. A snooze keeps that time.' }
+        due_intent: { $ref: '#/components/schemas/IntentTime' }
+        version: { type: integer, format: int64, description: "The task row's version, which a write to the task names." }
         assignee_id: { type: [string, 'null'], format: uuid }
         assignee_name: { type: [string, 'null'] }
         overdue: { type: boolean, description: Dated and already past at `as_of`. }
@@ -75065,7 +75133,7 @@ components:
             language. Art. 14(2)(c)-(e) requires naming them.
           items:
             type: string
-            enum: [access, rectification, erasure, restriction, objection, complain_to_authority]
+            enum: [access, rectification, erasure, restriction, portability, objection, withdraw_consent, complain_to_authority]
             x-extensible-enum: true
         language:
           allOf: [{ $ref: '#/components/schemas/MailLanguage' }]
@@ -75077,6 +75145,7 @@ components:
         Who is responsible for the data, from the installation's own controller particulars, by the
         rule the mail's disclosure lines use. A part the installation has not stated is absent.
       properties:
+        legal_name: { type: string, description: 'The legal name alone, which every controller mail opens with. Absent when not stated.' }
         identity: { type: string, description: 'The legal name and postal address, as lines. Absent unless both are stated.' }
         privacy_contact: { type: string, description: 'How to reach whoever answers questions about the data.' }
         objection_route: { type: string, description: 'How to object, where the installation states a way of its own.' }
@@ -75121,6 +75190,8 @@ components:
         language:
           allOf: [{ $ref: '#/components/schemas/MailLanguage' }]
           description: The language the link's mail was written in, which the page asks in too. Absent when the link records no language.
+        controller: { $ref: '#/components/schemas/PrivacyInformationController' }
+        question: { $ref: '#/components/schemas/ConfirmQuestion' }
 
     RecordConfirmationPage:
       type: object
@@ -75151,6 +75222,24 @@ components:
         language:
           allOf: [{ $ref: '#/components/schemas/MailLanguage' }]
           description: The language the link's mail was written in, which the page asks in too. Absent when the link records no language.
+        controller: { $ref: '#/components/schemas/PrivacyInformationController' }
+        question: { $ref: '#/components/schemas/ConfirmQuestion' }
+
+    ConfirmQuestion:
+      type: object
+      description: |
+        The question this link pinned, in the link's language and resolved with its purpose. The
+        page shows `ask` and offers `answers`, and sends `text` back unchanged as
+        `marketing_wording`. The proof records `text`. Absent on a link that pinned no question.
+      required: [version, text, ask, answers]
+      properties:
+        version: { type: string, description: 'The published version the link pinned.' }
+        text: { type: string, description: 'The whole question as the proof records it: the ask, then each answer, one per line.' }
+        ask: { type: string, description: 'The sentence the reader answers.' }
+        answers:
+          type: array
+          items: { type: string }
+          description: 'The labels of the answers the page offers, in order.'
 
     ConfirmFieldOrigin:
       type: object
@@ -79624,6 +79713,13 @@ components:
       required: [as_of, queue, summary, sources_unavailable, scope, scope_options, reach, counts, readings]
       properties:
         as_of: { type: string, format: date-time, description: 'The instant every source below was read at.' }
+        served_stale:
+          type: boolean
+          description: |
+            True when this answer is Home's kept answer past its five-minute freshness,
+            served while the server reads it again. It still holds every access rule the
+            fresh read would apply. A client asks again a few seconds later for the fresh
+            answer. Absent or false means the answer is fresh.
         scope:
           type: string
           enum: [mine, unassigned, team, all]

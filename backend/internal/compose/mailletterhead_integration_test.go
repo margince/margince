@@ -175,3 +175,32 @@ func putWidePNG(t *testing.T, blob blobstore.Store, key string) {
 		t.Fatal(err)
 	}
 }
+
+// A controller mail is headed by the controller it names. The company profile
+// and the controller particulars are two settings. Where they name different
+// companies, the legal name heads the mail, without the other company's logo.
+func TestAControllerMailIsHeadedByTheControllerItNames(t *testing.T) {
+	e := integration.Setup(t)
+	blob := blobstore.NewMemory()
+	logoKey := "logos/" + ids.NewV7().String() + ".png"
+	putPNG(t, blob, logoKey)
+	e.WsExec(t, `INSERT INTO company (id, display_name, is_anchor, logo_object_key, logo_origin, source, captured_by)
+		VALUES ($1, 'Northstar GmbH', true, $2, 'upload', 'manual', 'human:x')`, ids.NewV7(), logoKey)
+	e.WsExec(t, `INSERT INTO setting (key, value) VALUES ('consent.controller_particulars', '{"LegalName": "Example Trading GmbH"}'::jsonb)
+		ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value`)
+
+	var mail presentedControllerMail
+	if err := InstallationDB(e.Pool).Tx(e.Admin(), func(tx pgx.Tx) error {
+		var err error
+		mail, err = presentControllerMailTx(e.Admin(), tx, consent.Rendered{Body: "We recorded your request.", Language: "en", Subject: "Your request"})
+		return err
+	}); err != nil {
+		t.Fatal(err)
+	}
+	if !strings.HasPrefix(mail.body, "Example Trading GmbH\n\n") {
+		t.Errorf("the controller mail opens %q, want the controller's legal name", mail.body)
+	}
+	if strings.Contains(mail.rendered.HTMLBody, "Northstar GmbH") || mail.logoKey != "" {
+		t.Errorf("the controller mail still carries the company profile's name or logo (logo key %q)", mail.logoKey)
+	}
+}

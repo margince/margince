@@ -50,16 +50,15 @@ func ContactNotMarkedSQL(idExpr string) string {
 }
 
 // SenderMayRaiseWorkSQL excludes marked senders even when mail also links a company.
-//
-// The marked addresses are one uncorrelated ARRAY, which Postgres reads once
-// per statement. Joined per message instead, a sender's address matched
-// contact_email through an expression no index holds, so every message
-// scanned the whole table.
+// The marked addresses are one uncorrelated ARRAY, read once per statement;
+// matched per message, they scanned contact_email for every message.
+// OFFSET 0 keeps the test a lookup by the message's id. As an anti-join, a
+// generic plan expecting one message scanned every participant per message.
 func SenderMayRaiseWorkSQL(activity string) string {
 	return `NOT EXISTS (SELECT 1 FROM activity_participant marked_sender
       WHERE marked_sender.activity_id = ` + activity + `.id AND marked_sender.role = 'from'
         AND lower(btrim(marked_sender.address)) = ANY (ARRAY(
           SELECT lower(btrim(marked_email.email)) FROM contact marked_contact
             JOIN contact_email marked_email ON marked_email.contact_id = marked_contact.id AND marked_email.archived_at IS NULL
-           WHERE marked_contact.archived_at IS NULL AND NOT (` + NotMarkedSQL("marked_contact") + `))))`
+           WHERE marked_contact.archived_at IS NULL AND NOT (` + NotMarkedSQL("marked_contact") + `))) OFFSET 0)`
 }

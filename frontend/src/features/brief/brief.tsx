@@ -19,6 +19,8 @@ import { Panel, PanelBody } from "../../design-system/panel";
 import { greetingNameOf } from "../../format/greetingname";
 import { useNow } from "../../format/now";
 import { useLocale, useT } from "../../i18n";
+import { lazy } from "../../i18n/lazy";
+import { APPROVAL_PARAM } from "../../lib/approvalhref";
 import { useCanWrite } from "../../lib/capability";
 import { markJourney } from "../../lib/journeymarks";
 import { useMagic } from "../../lib/magic.queries";
@@ -31,14 +33,7 @@ import { readerTask } from "../../lib/worklistcopy";
 import { pillFigure } from "../../lib/worklistcounts";
 import { WORKLIST_VIEW_PARAM } from "../../lib/worklistrouting";
 import { DEFAULT_VIEW } from "../../lib/worklistviews";
-import { LinkedApprovalDrawer } from "../automations/approvaldrawer";
 import { MagicPanel, WAITING_LANES } from "../sign-in/magic";
-import {
-  ActivityDetailModal,
-  MeetingDetailModal,
-  TaskDetailModal,
-} from "../worklist/taskdetailmodal";
-import { WorklistPane } from "../worklist/worklist.pane";
 import {
   useHandledForYou,
   useWorklist,
@@ -46,6 +41,13 @@ import {
   worklistKey,
 } from "../worklist/worklist.queries";
 import { changedSinceBrief } from "./brief.changed";
+import {
+  ContactMeetingBrief,
+  Quiet,
+  WeeklyPage,
+  WeekStepper,
+  warmWhenIdle,
+} from "./brief.deferred";
 import { BriefDials } from "./brief.dials";
 import { DoneForYou } from "./brief.doneforyou";
 import { shownReceiptIds } from "./brief.doneforyou.groups";
@@ -59,21 +61,15 @@ import {
   useStaleFocusCleared,
 } from "./brief.focuslink";
 import { BriefGlance } from "./brief.glance";
-import { BriefIntro } from "./brief.intro";
 import { homeJourneyMarks } from "./brief.journey";
-import { PlanSection } from "./brief.plan";
-import { PlanConstraints } from "./brief.plan.contract";
 import { useMorningBrief, useWeeklyReview } from "./brief.queries";
-import { BriefQueue } from "./brief.queue";
+import { BriefQueue, loadWorklistScreen } from "./brief.queue";
 import { BriefReadingsPending, BriefReadingsStrip } from "./brief.readings";
 import { SchedulePanel } from "./brief.schedule";
 import { BriefSuggestions } from "./brief.suggestions";
 import { taskName } from "./brief.taskcard";
 import { addressFrom, type BriefAddress, paramsFor } from "./brief.view";
-import { WeeklySection, WeekStepper } from "./brief.weekly";
-import { useWeeklyRailShown, WeeklyRail } from "./brief.weekly.rail";
 import { BriefCoverage } from "./briefcoverage";
-import { ContactMeetingBrief } from "./meetingbrief";
 import "./brief.css";
 
 // The dials that narrow the drawer. The Home button clears them, so it always
@@ -163,9 +159,6 @@ export function BriefScreen() {
     <div className="wrap brief-wrap">
       {/* A link to one decision, from a notice or a receipt, opens it here. */}
       <LinkedApprovalDrawer />
-      {morning && (
-        <BriefIntro firstName={firstName} day={day} now={new Date(nowMs)} />
-      )}
       {/* The head stands over the panes in both views, so the dial never
           moves when it is pressed. */}
       <div className="brief-frame">
@@ -190,26 +183,6 @@ function BriefBody({
 }>) {
   if (address.view === "weekly") return <WeeklyPage />;
   return <PersonalMorning query={query} queueToggle={queueToggle} />;
-}
-
-function WeeklyPage() {
-  const t = useT();
-  // An aside handed over empty still draws its column and landmark.
-  const railShown = useWeeklyRailShown();
-  return (
-    <PageZones
-      shape="aside"
-      panes
-      className="brief-weekly-page"
-      mainClassName="brief-main"
-      asideClassName="brief-rail"
-      asideLabel={t("brief.weekly.rail")}
-      main={<WeeklySection plan={<PlanSection withContract={false} />} />}
-      aside={
-        railShown ? <WeeklyRail constraints={<PlanConstraints />} /> : undefined
-      }
-    />
-  );
 }
 
 // The reports wait for the day's own reads, so their request never competes
@@ -271,6 +244,8 @@ function PersonalMorning({
       receipt: magic.data,
     });
     for (const mark of marks) markJourney(mark);
+    if (marks.includes("home:useful"))
+      warmWhenIdle([loadDetails, loadPane, loadApproval, loadWorklistScreen]);
   }, [state, day, settled, magic.data]);
   return (
     <>
@@ -444,20 +419,27 @@ function ScheduleWithMeetings({
 }: Readonly<Omit<ComponentProps<typeof SchedulePanel>, "onOpenMeeting">>) {
   const [meeting, setMeeting] = useState<string | null>(null);
   const [prepFor, setPrepFor] = useState<string | null>(null);
+  // Mounted from the first open on, so closing the brief plays its exit.
+  const [briefAsked, setBriefAsked] = useState(false);
   return (
     <>
       <SchedulePanel
         day={day}
         state={state}
         onOpenMeeting={setMeeting}
-        onPrepareMeeting={setPrepFor}
+        onPrepareMeeting={(activityId) => {
+          setPrepFor(activityId);
+          setBriefAsked(true);
+        }}
       />
       {/* Opening it is what has Margince write the brief. */}
-      <ContactMeetingBrief
-        activityId={prepFor}
-        open={prepFor !== null}
-        onClose={() => setPrepFor(null)}
-      />
+      {briefAsked && (
+        <ContactMeetingBrief
+          activityId={prepFor}
+          open={prepFor !== null}
+          onClose={() => setPrepFor(null)}
+        />
+      )}
       {meeting && (
         <ActivityDetailModal
           activityId={meeting}
@@ -466,4 +448,49 @@ function ScheduleWithMeetings({
       )}
     </>
   );
+}
+
+const loadDetails = () => import("../worklist/taskdetailmodal");
+const loadPane = () => import("../worklist/worklist.pane");
+const loadApproval = () => import("../automations/approvaldrawer");
+
+const TaskDetailModal = lazy(
+  async () => ({ default: (await loadDetails()).TaskDetailModal }),
+  "complete",
+  Quiet,
+);
+
+const MeetingDetailModal = lazy(
+  async () => ({ default: (await loadDetails()).MeetingDetailModal }),
+  "complete",
+  Quiet,
+);
+
+const ActivityDetailModal = lazy(
+  async () => ({ default: (await loadDetails()).ActivityDetailModal }),
+  "complete",
+  Quiet,
+);
+
+const WorklistPane = lazy(
+  async () => ({ default: (await loadPane()).WorklistPane }),
+  "complete",
+  Quiet,
+);
+
+const ApprovalDrawer = lazy(
+  async () => ({ default: (await loadApproval()).LinkedApprovalDrawer }),
+  "complete",
+  Quiet,
+);
+
+/**
+ * A link to one decision, from a notice or a receipt, opens it over Home. Once
+ * opened it stays mounted, so closing it plays the drawer's exit.
+ */
+function LinkedApprovalDrawer() {
+  const [params] = useUrlParams();
+  const [asked, setAsked] = useState(false);
+  if (params.get(APPROVAL_PARAM) && !asked) setAsked(true);
+  return asked ? <ApprovalDrawer /> : null;
 }

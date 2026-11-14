@@ -19,6 +19,7 @@ import {
 import { formatNumber } from "../format/format";
 import { useLocale, usePlural, useT } from "../i18n";
 import { lazy } from "../i18n/lazy";
+import { useFirstScreenSettled } from "../lib/journeymarks";
 import { problemMessageOf } from "../lib/problem";
 import { worklistKey } from "../lib/workkeys";
 import { usePopoverDismiss } from "./popover";
@@ -55,7 +56,8 @@ export function NotificationBell() {
   const trigger = useRef<HTMLButtonElement>(null);
   const panel = useRef<HTMLDivElement>(null);
   const panelId = useId();
-  const notices = useNotifications();
+  // The bell is drawn at once; its read waits for the first screen's day.
+  const notices = useNotifications({ enabled: useFirstScreenSettled() });
   // BOTH SETTLES OUTLIVE THE PANEL. The centre renders only while open, so a
   // refusal declared inside it is thrown away by the dismissal that follows the
   // press — and a write still in flight loses the listener its invalidation

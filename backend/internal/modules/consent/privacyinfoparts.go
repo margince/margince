@@ -91,6 +91,14 @@ func readControllerTx(ctx context.Context, tx pgx.Tx, out *PrivacyInformation) e
 	return nil
 }
 
+// controllerParticulars reads the installation's particulars for a confirm page,
+// in a transaction of its own.
+func (s *Store) controllerParticulars(ctx context.Context) (ControllerParticulars, error) {
+	var out PrivacyInformation
+	err := s.db.Tx(ctx, func(tx pgx.Tx) error { return readControllerTx(ctx, tx, &out) })
+	return out.Controller, err
+}
+
 // readHeld fills the parts read about this subject. Unwired, the page says
 // nothing about them rather than something it cannot back.
 func (s *Store) readHeld(ctx context.Context, subject NoticeSubject, out *PrivacyInformation) error {

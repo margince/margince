@@ -31,6 +31,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/comms"
 	"github.com/margince/margince/backend/internal/modules/consent"
+	"github.com/margince/margince/backend/internal/platform/config"
 	"github.com/margince/margince/backend/internal/platform/jobs"
 	"github.com/margince/margince/backend/internal/platform/mailcopy"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -207,9 +208,8 @@ func presentControllerMailTx(ctx context.Context, tx pgx.Tx, rendered consent.Re
 	if rendered.Language == "" && rendered.HTMLBody == "" {
 		return mail, nil
 	}
-	// The same name and logo product mail is headed by (mailletterhead.go).
 	// The logo is read at send; one gone by then leaves the name.
-	brand, key, err := letterheadNameTx(ctx, tx)
+	brand, key, err := controllerLetterheadTx(ctx, tx)
 	if err != nil {
 		return presentedControllerMail{}, err
 	}
@@ -222,6 +222,27 @@ func presentControllerMailTx(ctx context.Context, tx pgx.Tx, rendered consent.Re
 		mail.body = brand + "\n\n" + mail.body
 	}
 	return mail, nil
+}
+
+// controllerLetterheadTx is the name and logo a controller mail is headed by.
+// The controller's legal name heads it once it is stated, so the brand line and
+// "This message is from" cannot name two companies. Refusing the send instead
+// would withhold a notice the law owes the subject over a branding setting. The
+// company logo stays only while the company is the controller.
+func controllerLetterheadTx(ctx context.Context, tx pgx.Tx) (string, string, error) {
+	brand, key, err := letterheadNameTx(ctx, tx)
+	if err != nil {
+		return "", "", err
+	}
+	identity, err := config.StoredApplyTx(ctx, tx, loadedConfig(), consent.ControllerIdentity)
+	if err != nil {
+		return "", "", err
+	}
+	legal := strings.TrimSpace(identity.LegalName)
+	if legal == "" || strings.EqualFold(legal, strings.TrimSpace(brand)) {
+		return brand, key, nil
+	}
+	return legal, "", nil
 }
 
 // controllerMailSubject files the notice under the record it was sent to: the

@@ -13,6 +13,7 @@ import { ToastProvider, ToastRegion } from "./design-system/toast";
 import { LocaleProvider } from "./i18n";
 import { localeReady } from "./i18n/catalogs";
 import { preferredLocale } from "./i18n/locale";
+import { bootsOnEssentialCopy } from "./lib/essentialscreens";
 import {
   type BrowserInstrument,
   reportError,
@@ -21,7 +22,6 @@ import {
 import { listenForInstall, registerServiceWorker } from "./lib/pwa";
 import { SPA_RELEASE } from "./lib/release";
 import { restoreReturnRoute } from "./lib/returnroute";
-import { parseHash } from "./lib/router";
 import { startTheme } from "./lib/theme";
 import "./app.css";
 
@@ -60,9 +60,7 @@ async function mountApp(root: HTMLElement) {
     await Promise.all([
       localeReady(
         preferredLocale(),
-        parseHash(location.hash).screen === "analytics"
-          ? "essential"
-          : "complete",
+        bootsOnEssentialCopy(location.hash) ? "essential" : "complete",
       ),
       startupSessionReady(),
     ]);
@@ -95,7 +93,7 @@ async function mountApp(root: HTMLElement) {
       <QueryClientProvider client={queryClient}>
         <AppErrorBoundary>
           <LocaleProvider
-            initialEssential={parseHash(location.hash).screen === "analytics"}
+            initialEssential={bootsOnEssentialCopy(location.hash)}
           >
             <AppErrorBoundary>
               <AttentionProvider>

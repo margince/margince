@@ -188,7 +188,6 @@ func homeCalls(dailyInput) []dailyCall {
 		{Name: "worklist", Path: worklistDay + "mine&view=today"},
 		{Name: "handled", Path: "/v1/worklist/handled"},
 		{Name: "magic", Path: "/v1/magic?limit=100"},
-		{Name: "digest", Path: "/v1/digest", Optional: true},
 	}
 }
 

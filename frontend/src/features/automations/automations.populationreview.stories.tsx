@@ -1,5 +1,5 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { expect, within } from "storybook/test";
+import { expect, waitFor, within } from "storybook/test";
 import {
   installFetchStub,
   jsonResponse,
@@ -46,7 +46,8 @@ export const MatchingRecords: Story = {
   render: () => <Review />,
   play: async ({ canvasElement }) => {
     const body = within(canvasElement.ownerDocument.body);
-    await expect(await body.findByText("Matches now: 4")).toBeVisible();
+    // The dialog fades in, so the line is visible only once it has opened.
+    await waitFor(() => expect(body.getByText("Matches now: 4")).toBeVisible());
   },
 };
 export const MatchingRecordsDark: Story = {

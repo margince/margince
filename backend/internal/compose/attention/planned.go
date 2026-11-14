@@ -26,31 +26,18 @@ func (s *Service) planned(
 ) ([]crmcontracts.AttentionItem, int, error) {
 	defer timeStage(ctx, "planned")()
 	team := s.rosterSeats()
-	open, err := s.tasks.OpenForViewer(ctx, asOf, until, plannedCap, scope, s.taskOwner, team)
-	if err != nil {
-		return nil, 0, err
-	}
-	// What is COMING, in its own allocation. A second bounded read rather than
-	// a wider one: sharing a limit would let a full day's backlog consume it
-	// before a single upcoming row was reached, and the reader who most needs
-	// next week's deadline is exactly the one who would never see it.
-	//
-	// Only when a lane is actually bound — an installation with no task reader
-	// answers neither.
-	upcoming, err := s.tasks.UpcomingForViewer(
-		ctx, asOf, until, until.AddDate(0, 0, upcomingHorizonDays), upcomingCap, scope, s.taskOwner, team)
-	if err != nil {
-		return nil, 0, err
-	}
 	// Only the reader's own queue is reminded: a reminder is for its assignee,
 	// and a manager looking at a colleague's work is not its assignee.
-	var reminders []Task
-	if scope == TasksMine {
-		if reminders, err = s.tasks.RemindersForViewer(ctx, asOf); err != nil {
-			return nil, 0, err
-		}
+	read, err := s.tasks.PlannedForViewer(ctx, PlannedAsk{
+		Window:   TaskWindow{AsOf: asOf, Until: until, Scope: scope, Owner: s.taskOwner, Team: team},
+		Horizon:  until.AddDate(0, 0, upcomingHorizonDays),
+		DayLimit: plannedCap, UpcomingLimit: upcomingCap,
+		Reminders: scope == TasksMine,
+	})
+	if err != nil {
+		return nil, 0, err
 	}
-	open = remindersFirst(reminders, append(open, upcoming...))
+	open := remindersFirst(read.Reminders, append(read.Open, read.Upcoming...))
 	// How many there ARE, beside the page. The lane is capped at a dozen, so a
 	// badge of len(items) tells a reader with thirteen that they have twelve —
 	// and there is no second page on this lane to find the thirteenth by. The

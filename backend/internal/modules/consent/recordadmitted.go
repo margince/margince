@@ -51,10 +51,11 @@ func (s *Store) recordAdmittedTx(
 	if err := probe(ctx, tx, sub.entityType, sub.id); err != nil {
 		return State{}, err
 	}
-	purposeKey, requiresDOI, err := loadConsentPurpose(ctx, tx, in.PurposeID)
+	purpose, err := loadConsentPurpose(ctx, tx, in.PurposeID)
 	if err != nil {
 		return State{}, err
 	}
+	purposeKey, requiresDOI := purpose.key, purpose.requiresDOI
 	// FOR UPDATE, because what follows is a read-modify-write and the decision
 	// it makes is "nothing to do". Without the lock this read sees the state
 	// the transaction started with, so a write to the same (subject, purpose)
@@ -123,6 +124,13 @@ func (s *Store) recordAdmittedTx(
 	if err := storekit.EmitEventForEntity(ctx, tx, auditID, sub.entityType, sub.id,
 		consentChangedPayload(in.PurposeID, purposeKey, in.NewState)); err != nil {
 		return State{}, err
+	}
+	// Here rather than at each door, so no door that records a withdrawal can
+	// leave out the receipt a refusal of advertising owes.
+	if ConsentState(in.NewState) == StateWithdrawn && !reassertion {
+		if err := s.acknowledgeWithdrawalTx(ctx, tx, sub, purpose.class); err != nil {
+			return State{}, err
+		}
 	}
 	out = State{
 		PurposeID: in.PurposeID, PurposeKey: purposeKey, State: in.NewState,

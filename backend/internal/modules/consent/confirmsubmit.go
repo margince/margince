@@ -163,7 +163,7 @@ func (s *Store) recordMarketingAnswerTx(ctx context.Context, tx pgx.Tx, ref Conf
 	// THE QUESTION THE SUBJECT ANSWERED, where the link pinned one. See
 	// boundquestion.go: in.MarketingWording is what the client said it had
 	// shown, and a client that said something else would be believed.
-	wording, err := s.wordingForGrantTx(ctx, tx, ref, in.MarketingWording)
+	wording, err := s.wordingForGrantTx(ctx, tx, ref, in)
 	if err != nil {
 		return err
 	}
@@ -285,7 +285,7 @@ func (s *Store) recordLinkedPurposeTx(ctx context.Context, tx pgx.Tx, ref Confir
 	// path most double-opt-in grants actually arrive through, so leaving it on
 	// the client's sentence would have fixed the defect for the door fewer
 	// callers use.
-	wording, err := s.wordingForGrantTx(ctx, tx, ref, in.MarketingWording)
+	wording, err := s.wordingForGrantTx(ctx, tx, ref, in)
 	if err != nil {
 		return err
 	}

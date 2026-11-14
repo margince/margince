@@ -10,6 +10,7 @@ package consent
 
 import (
 	"net/http"
+	"strings"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/httperr"
@@ -50,6 +51,14 @@ func (h Handlers) GetConfirmDetails(w http.ResponseWriter, r *http.Request, toke
 		}
 		page := wireSubscriptionCard(card)
 		page.Language = pageLanguage(ref)
+		if page.Controller, err = h.pageController(r); err != nil {
+			writeConsentErr(w, r, err)
+			return
+		}
+		if page.Question, err = h.pageQuestion(r, ref); err != nil {
+			writeConsentErr(w, r, err)
+			return
+		}
 		httperr.WriteJSON(w, http.StatusOK, page)
 		return
 	}
@@ -87,7 +96,35 @@ func (h Handlers) GetConfirmDetails(w http.ResponseWriter, r *http.Request, toke
 	}
 	page := wireConfirmCard(card)
 	page.Language = pageLanguage(ref)
+	if page.Controller, err = h.pageController(r); err != nil {
+		writeConsentErr(w, r, err)
+		return
+	}
+	if page.Question, err = h.pageQuestion(r, ref); err != nil {
+		writeConsentErr(w, r, err)
+		return
+	}
 	httperr.WriteJSON(w, http.StatusOK, page)
+}
+
+// pageQuestion is the pinned question the page shows and the proof records.
+func (h Handlers) pageQuestion(r *http.Request, ref ConfirmRef) (*crmcontracts.ConfirmQuestion, error) {
+	served, err := h.store.servedQuestionFor(r.Context(), ref)
+	if err != nil || served == nil {
+		return nil, err
+	}
+	ask, answers := served.Parts()
+	return &crmcontracts.ConfirmQuestion{Version: served.Version, Text: served.Text, Ask: ask, Answers: answers}, nil
+}
+
+// pageController names the controller on a confirm page the way the mail that
+// carried the link named it.
+func (h Handlers) pageController(r *http.Request) (*crmcontracts.PrivacyInformationController, error) {
+	particulars, err := h.store.controllerParticulars(r.Context())
+	if err != nil {
+		return nil, err
+	}
+	return wireController(particulars), nil
 }
 
 // pageLanguage is the language the link's mail was written in, which its page
@@ -233,7 +270,10 @@ func wireController(p ControllerParticulars) *crmcontracts.PrivacyInformationCon
 		PrivacyContact: stated(messagingrules.PrivacyContact),
 		ObjectionRoute: stated(messagingrules.ObjectionRoute),
 	}
-	if out.Identity == nil && out.PrivacyContact == nil && out.ObjectionRoute == nil {
+	if name := strings.TrimSpace(p.LegalName); name != "" {
+		out.LegalName = &name
+	}
+	if out.LegalName == nil && out.Identity == nil && out.PrivacyContact == nil && out.ObjectionRoute == nil {
 		return nil
 	}
 	return &out
