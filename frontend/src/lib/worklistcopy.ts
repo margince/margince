@@ -1,4 +1,5 @@
 import { taskHref } from "./taskreminders";
+import { WORKLIST_KINDS } from "./worklistkinds.gen";
 import { sourceName } from "./worklistsources";
 
 export { sourceName } from "./worklistsources";
@@ -15,6 +16,7 @@ import {
   THREAD_PARAM,
 } from "./contactpage.address";
 import { ENTITY, recordRoute } from "./entity";
+import { valueFor } from "./labelfor";
 import { caseHref } from "./privacycaselink";
 import { routeHash } from "./router";
 import { settingsHref } from "./settingsrouting";
@@ -350,15 +352,14 @@ export function itemTitle(
     // — it was only the sentence that discarded it.
     return named && !own.includes(named) ? `${own} · ${named}` : own;
   }
-  if (!knownSource(item.source)) {
+  const kind = valueFor(WORKLIST_KINDS, item.source, undefined);
+  if (!kind) {
     return t("worklist.untitled.generic");
   }
   const title = t(
     nonBuyerRequest(item)
       ? "worklist.source.awaiting_reply"
-      : (connectionTitleKey(item) ??
-          bookingTitleKey(item) ??
-          (`worklist.untitled.${item.source}` as const)),
+      : (connectionTitleKey(item) ?? bookingTitleKey(item) ?? kind.titleKey),
   );
   return named ? `${title} · ${named}` : title;
 }
@@ -388,51 +389,10 @@ export function sourceUnavailableText(
 // Through the same known-source check the titles use, so a source this build
 // has never heard of is described generically rather than printed as its own
 // identifier — a reader must never be shown `ai_work_health` as a noun.
-// The sources this build can name without its own sentence.
 //
-// Exported so a gate over these sentences derives its corpus from here rather
-// than keeping a second copy of the list: a hand-maintained census goes short
-// of its subject the moment a source is added, and going short is the one way
-// this kind of check must not break — it reads a smaller product, reports PASS,
-// and leaves no failing assertion to notice.
-export const KNOWN_SOURCES = {
-  approval: true,
-  dedupe_candidate: true,
-  contact_case: true,
-  deal_suggestion: true,
-  tag_suggestion: true,
-  task: true,
-  weekly_commitment: true,
-  brief_item: true,
-  conversation_claim: true,
-  customer_waiting: true,
-  awaiting_reply: true,
-  meeting_follow_up: true,
-  lead_response: true,
-  deal_at_risk: true,
-  meeting: true,
-  meeting_outcome: true,
-  relationship_decay: true,
-  failed_approval: true,
-  dsr: true,
-  notice_case: true,
-  capture_health: true,
-  booking_health: true,
-  ai_work_health: true,
-  bounce: true,
-  undelivered: true,
-  automation_run: true,
-  notice: true,
-  introduction_request: true,
-  domain_question: true,
-  batch: true,
-} as const;
-
-function knownSource(
-  source: WorklistItem["source"],
-): source is keyof typeof KNOWN_SOURCES {
-  return source in KNOWN_SOURCES;
-}
+// Generated from backend/api/worklist-kinds.yaml, and exported so a gate over
+// these sentences derives its corpus from the catalog instead of a second list.
+export const KNOWN_SOURCES = WORKLIST_KINDS;
 
 export type Viewer = Readonly<{ id: string; display_name: string }>;
 

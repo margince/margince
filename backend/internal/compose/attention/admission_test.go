@@ -14,22 +14,6 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
-func TestEveryWorklistSourceDeclaresWhoItsWorkIsFor(t *testing.T) {
-	t.Parallel()
-	known := map[crmcontracts.WorklistItemSource]bool{}
-	for _, source := range everyReachSource(t) {
-		known[source] = true
-		if _, ok := sourceOwnerAnswers[source]; !ok {
-			t.Errorf("%q has no admission policy, so none of its rows can reach a page", source)
-		}
-	}
-	for source := range sourceOwnerAnswers {
-		if !known[source] {
-			t.Errorf("%q has a policy but the contract no longer offers it", source)
-		}
-	}
-}
-
 func TestEveryProducedRowGivesAnOwnerItsSourceAllows(t *testing.T) {
 	t.Parallel()
 	rows := classifyDay(dayOfEveryLane(), rankInstant, dayMoney{})
@@ -37,7 +21,7 @@ func TestEveryProducedRowGivesAnOwnerItsSourceAllows(t *testing.T) {
 		t.Fatal("the census classified nothing")
 	}
 	for _, row := range rows {
-		if allowed := sourceOwnerAnswers[row.item.Source]; !allowed[row.ownerRef.kind] {
+		if !worklistKinds[row.item.Source].owner[row.ownerRef.kind] {
 			t.Errorf("%q produced owner kind %d, which its policy does not allow", row.item.Source, row.ownerRef.kind)
 		}
 	}

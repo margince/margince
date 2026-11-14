@@ -230,6 +230,7 @@ asks "is this diff good?", and runs because a diff exists.
 | every story renders | daily | `make fe-uat ARGS=--all-stories`: every story the Storybook build registers renders clean | `make fe-uat` on a branch renders only the stories the diff reaches, so a story that fails on `main` stays hidden until a change reaches it. |
 | backend clock drift | daily | The Go tests, unit and real-Postgres, run on a runner whose clock is 200 days later, with the same result | The same calendar break on the backend, where a test can read the clock of Go or the `now()` of Postgres. |
 | PERF-3/PERF-7 budgets | weekly | `make bench-perf BENCH_PERF_TIER=smb`: the budgets on the SMB tier (10,000 test contacts), writing a record | Weekly is enough for a budget that no merge needs. |
+| Home growth (`make bench-growth`) | daily | Home's reads over `4` steps of mail history, each a year more, with a fixed wait per round trip. It fails when the fit expects a read to reach `10 s` soon | A merge gate cannot wait for it, and history grows with the calendar, not with a diff. |
 | `MOBILE-AC-2` budget | weekly | `make bench-mobile`: record open `p95` on a throttled Fast-3G profile at 390px, writing a record | The browser half of the PERF-1 budget, which no merge gate measures. |
 | vendor live check (`make vendor-live`) | daily | `GET /v1/credits` on Surfe, through the production adapter, against the fields `surfe/testdata/vendor-wire.json` records | The offline tests read a recording, which stays green when the vendor changes its API. |
 | use cases a model drives (`make e2e-llm`) | weekly | The deck test cases run by a real model, checking what it said, writing a verdict per case | The fixed tests pin payloads and the cases where it refuses, and stay green while a model can no longer drive the product. |
@@ -275,8 +276,7 @@ The three weekly jobs record what they measure, and none of them writes to `main
 - The model lane searches by word overlap, because no embedding key reaches the runner. Its verdicts
   say `search: lexical`, and they replace the verdicts in the same `<model>@<route>` folder.
 
-Findings become issues (`scripts/scheduled-report.sh`): one open issue per check, keyed on a fixed
-title, because a red scheduled run tells nobody.
+Findings become issues (`scripts/scheduled-report.sh`): one open issue per check, keyed on a fixed title, because a red scheduled run tells nobody.
 
 - Each finding carries one `priority:` and one `area:` per case, plus its provenance label, because
   this filer runs with no human there. `docs/reference/issue-labels.md` keeps the rule that an issue
@@ -285,7 +285,7 @@ title, because a red scheduled run tells nobody.
 - A check that comes back green closes its own issue, so the report job runs no matter what the lanes
   said. Without that, a finding stays open after its fix, and each red becomes its own issue, not
   one standing title. A `skipped` result is not a pass or a fail, and closes nothing.
-- The PERF budgets and the model lane each turn one job result into two findings. They are "the
+- The PERF budgets, Home growth and the model lane each turn one job result into two findings. They are "the
   thing under test is wrong" and "the lane could not run". To file the first for the second sends someone
   looking for a slow-down that nobody measured. A lane that ran and measured something bad has
   proved that it could run. So that finding is closed on the same run that files the other one.

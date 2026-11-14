@@ -46,9 +46,9 @@ type HomeProfile struct {
 // a brief, a busy agent log and unanswered mail, and checks every count.
 // Every shape goes through the product's own writers, so no audit row or
 // participant is written behind the product's back.
-func seedHomeProfile(t *testing.T, e *apptest.AppEnv, seats Seats) HomeProfile {
+func seedHomeProfile(t *testing.T, e *apptest.AppEnv, seats Seats, scale float64) HomeProfile {
 	t.Helper()
-	loadDailyCorpus(t, e, seats, homeBudgetScale).dropOrdinals()
+	loadDailyCorpus(t, e, seats, scale).dropOrdinals()
 	owner := heaviestOwner(t, e, seats)
 	// The receipt's window opens at the owner's last brief, so the brief comes
 	// before the agent's changes it must show.

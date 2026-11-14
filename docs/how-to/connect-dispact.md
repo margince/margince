@@ -42,7 +42,8 @@ The `@Margince` agent in Dispact calls this installation's MCP tools. It needs t
    `mcp.endpoint` (`<public_base_url>/mcp`), the scopes, and the `events` block that points at
    `<public_base_url>/v1/channel-events/dispact`.
 3. Dispact reads the tool list once, with the installing admin's token, and shows that list to every
-   user. The list is fixed, as agreed with Dispact: `Tools` in
+   user. The admin needs no Margince seat for this. An app is served no resources and no prompts, so
+   those two lists answer empty, and no tool names a view. The list is fixed, as agreed with Dispact: `Tools` in
    [backend/internal/compose/dispactapp/surface.go](../../backend/internal/compose/dispactapp/surface.go).
    A tool whose verb this build does not register is left out until it does.
 
@@ -53,13 +54,15 @@ and changes nothing when any of these fails:
 
 - The signature does not verify against a key at `<address>/.well-known/jwks.json`, or the token is not
   RS256. The header's `alg` is never trusted. An unknown key id fetches the keys at most once a minute.
-- `iss` is not the connected bot's address, `aud` is not `app:margince:mcp`, or `workspace_id` is not
-  the bot's team id.
+- `iss` is not the connected bot's address, `aud` is not `app:margince:mcp` alone (a string, or a list
+  of that one value), or `workspace_id` is not the bot's team id.
 - `exp` is missing, is more than 120 seconds after `iat`, or has passed. `iat` and `exp` may be off by 30
   seconds.
 - `jti` was used before. Token ids are held in Redis until the token expires. When Redis cannot answer,
   the call gets `503` instead.
 - `email_verified` is not `true`.
+
+The API log names the check that failed, under `dispact app: a call token was refused`.
 - The caller's Margince passport for Dispact was revoked, or the address on the token is no longer their
   sign-in address.
 
@@ -90,8 +93,10 @@ worker reads that bot's channels at once.
    secret. Disconnecting the bot destroys both. Setting or replacing the secret is in the audit log of
    the connection.
 4. Dispact checks the URL with a signed `url_verification` notice, and Margince answers with its
-   `challenge`. Dispact runs this check again after it rotates the secret or the URL changes, so paste
-   the new secret in Margince before you rotate it in Dispact.
+   `challenge`. The check at install runs before the bot is connected in Margince, so it fails with
+   `401`. After connecting, press **Check URL** on the app's page in Dispact. Dispact runs this check
+   again after it rotates the secret or the URL changes, so paste the new secret in Margince before you
+   rotate it in Dispact.
 
 Every notice is signed under Standard Webhooks: the headers `webhook-id`, `webhook-timestamp` and
 `webhook-signature`. The route needs no session, and the signature is the only credential. The answers:
@@ -101,9 +106,9 @@ Every notice is signed under Standard Webhooks: the headers `webhook-id`, `webho
 | `200` `pull_queued` | The channel is linked. The bot's channels are read soon. Notices that arrive while that read waits add nothing. |
 | `200` `link_paused` | `channel.archived` for a linked channel. The link is paused, as when the chat answers `404`. |
 | `200` `ignored` | No live link of this bot has the channel. Nothing changes. |
+| `200` `already_taken` | This `webhook-id` was taken in the last 24 hours. Ids are held in Redis. Nothing changes, and Dispact stops retrying. A notice whose read could not be queued, or whose link could not be paused, gives its id back, so Dispact's retry is acted on. |
 | `400` `channel_event_malformed` | The signed body is not a notice: its `type` is unknown, a notice lacks `workspace_id` or `channel_slug`, or a URL check has no challenge. Nothing is counted. |
 | `401` `channel_event_rejected` | No Dispact bot with an events secret is connected, the signature does not match the sealed secret, the timestamp is more than 5 minutes off this server's clock, or `workspace_id` is not the connected bot's team. The answer is the same for each cause, so a stranger cannot tell whether push is set up. The API log names the cause. Check that the secret is saved, that it matches, and the server clock. |
-| `409` `channel_event_replayed` | This `webhook-id` was taken in the last 24 hours. Ids are held in Redis. A notice whose read could not be queued, or whose link could not be paused, gives its id back, so Dispact's retry is taken. |
 | `413` `channel_event_too_large` | The body is over 16 KiB. |
 | `429` | One sender sent more than 600 notices in a minute, or Redis cannot count them. |
 | `503` `channel_events_unavailable` | Redis could not record the id, or the read could not be queued. Dispact retries. |

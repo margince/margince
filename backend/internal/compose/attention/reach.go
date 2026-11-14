@@ -33,7 +33,7 @@ func reachOf(considered, shown []ranked, bounds map[crmcontracts.WorklistItemSou
 		if row, ok := seen[source]; ok {
 			return row
 		}
-		personal := sourceAnswersForTheActorOnly[source]
+		personal := answersForTheActorOnly(source)
 		row := &crmcontracts.WorklistReach{
 			Source: crmcontracts.WorklistReachSource(source), MoreAvailable: bounds[source],
 			Personal: &personal,
@@ -156,43 +156,4 @@ func countsOf(
 	// of one unchanged day have to produce the same bytes.
 	sort.Slice(out, func(i, j int) bool { return out[i].Category < out[j].Category })
 	return out
-}
-
-// categoryOfSource says which cut of the queue a producer's rows land in.
-//
-// The classifiers decide this per row, and this is the only other place that
-// needs it: to seed a category for a bounded source that contributed no
-// surviving row. Two spellings of one fact, and the test beside it feeds every
-// source through a classifier and requires the same answer, so a source that
-// changes lane fails here rather than reporting its truncation against the
-// wrong cut.
-func categoryOfSource(source crmcontracts.WorklistItemSource) crmcontracts.WorklistItemCategory {
-	switch source {
-	case sourceWaiting:
-		return "customer_waiting"
-	case sourceLeadResponse:
-		return categoryLeads
-	case sourceAtRisk, sourceDealAdvice, "brief_item":
-		return "deals_at_risk"
-	case sourceMeeting, sourceMeetingOutcome, sourceCalendar, sourceNextMeeting:
-		return "meetings"
-	case sourceTask, sourceWeeklyCommitment, "conversation_claim":
-		return "tasks"
-	case sourceDecay:
-		return categoryRelationships
-	case "approval", sourceDuplicate, sourceContactCase, sourceDealSuggestion, sourceTagSuggestion, "introduction_request":
-		// An introduction ask is a colleague waiting on this reader to decide,
-		// which classifyIntroduction files under decisions at levelBlocking.
-		// It reached the default and was reported as `system` — so a truncated
-		// introductions lane told the reader their SYSTEM cut was short while
-		// the decisions pill, where the rows actually are, read as complete.
-		return "decisions"
-	default:
-		// Everything the product reports about ITSELF — health, notices,
-		// bounces, undelivered mail, failed approvals, privacy deadlines. The
-		// default rather than a list, because a source added tomorrow is far
-		// more likely to be one of those than a new kind of sales work, and
-		// naming it "system" is the answer that under-claims.
-		return "system"
-	}
 }

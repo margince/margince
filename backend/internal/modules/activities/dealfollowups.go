@@ -5,6 +5,7 @@ package activities
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	"github.com/jackc/pgx/v5"
@@ -51,11 +52,15 @@ func meetingFollowUpsByDealStatement(ctx context.Context, asOf time.Time, days i
 		return "", nil, err
 	}
 	var dealScope string
-	query, args, err := unpagedMeetingFollowUpsStatement(ctx, asOf, days, func(arg func(any) int) (string, error) {
+	query, args, err := unpagedMeetingFollowUpsStatement(ctx, asOf, days, func(arg func(any) int) (meetingNarrowing, error) {
+		// The candidates are only the asked deals' meetings, so the per-meeting
+		// work never runs on the reader's other meetings.
+		onTheDeals := fmt.Sprintf(`EXISTS (SELECT 1 FROM activity_link asked
+   WHERE asked.activity_id = a.id AND asked.deal_id = ANY($%d))`, arg(dealIDs))
 		var err error
 		dealScope, err = readableDealBatchSQL(ctx, dealIDs, arg)
-		return `cardinality(recipient_set.recipients) > 0 AND EXISTS (SELECT 1 FROM activity_link on_deal
-   JOIN deal d ON d.id = on_deal.deal_id WHERE on_deal.activity_id = a.id AND ` + dealScope + `)`, err
+		return meetingNarrowing{candidates: onTheDeals, reported: `cardinality(recipient_set.recipients) > 0 AND EXISTS (SELECT 1 FROM activity_link on_deal
+   JOIN deal d ON d.id = on_deal.deal_id WHERE on_deal.activity_id = a.id AND ` + dealScope + `)`}, err
 	})
 	if err != nil {
 		return "", nil, err

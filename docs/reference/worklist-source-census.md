@@ -71,8 +71,8 @@ cases, pairs, approvals and both suggestion kinds.
 "Order", "continue" and "count" ask whether the owning store can, in SQL today, order the admitted population,
 resume it after a position, and count it.
 
-Step F applies only to the sources in `doneInPlace` (`done.go`) and to `customer_waiting`. The others leave through
-a verb of their own: a task is completed, a decision is decided.
+Step F applies only to the kinds that set `done_in_place` in `backend/api/worklist-kinds.yaml`. The others leave
+through a verb of their own: a task is completed, a decision is decided.
 
 | Source | Steps that remove or merge its rows | Order | Continue | Count |
 |---|---|---|---|---|
@@ -180,9 +180,9 @@ Their categories stay a floor when their lane is cut, and scrolling ends at the 
 
 ## System sources
 
-`categoryOfSource` in `reach.go` files every source it does not name under `system` (`categorySystem` in
-`batches.go`). Ownership depends on the classifier. Among the rows `classifySystem` draws, `systemRowOwner` in
-`classifydelivery.go` makes `notice`, `capture_health` and `booking_health` the reader's and the rest unowned, so step C drops
+`backend/api/worklist-kinds.yaml` files these sources under `system`. Ownership depends on the classifier. Among the
+rows `classifySystem` draws, `systemRowOwner` in `classifydelivery.go` makes a kind whose catalog `owner` allows
+`the_reader` the reader's: `notice`, `capture_health` and `booking_health`. The rest are unowned, so step C drops
 those from `mine`. `bounce`, `undelivered` and `failed_approval` are the reader's. `dsr` and `notice_case` belong
 to their assignee (`classifylegal.go`).
 
@@ -208,9 +208,8 @@ No system source states an exact total. Each one's reason:
   count of it exists yet. The `system` category would state a total only when every other system source was read
   whole too.
 
-`categoryOfSource` also files `domain_question`, `awaiting_reply`, `meeting_follow_up` and `batch` under `system`,
-while their classifiers give the rows `decisions`, `tasks`, `meetings`, and `decisions` or `system`. `counts` and
-`sources_unavailable` for those sources therefore name the wrong category.
+A `batch` row takes its members' category, `decisions` or `system`. The catalog files `batch` under `system`, the
+category `counts` and `sources_unavailable` name when a fold reports itself short.
 
 ## Filter values
 

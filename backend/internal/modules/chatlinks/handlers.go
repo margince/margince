@@ -23,6 +23,8 @@ type Handlers struct {
 	// manifestBase reads public_base_url when the manifest is asked for, so
 	// the option that sets it may run after this one.
 	manifestBase func() string
+	// publisher reads the asking member's address, the manifest's publisher.
+	publisher func(ctx context.Context) (string, error)
 }
 
 // MessageFiler files a chosen channel message as a summary note. compose
@@ -33,7 +35,7 @@ type MessageFiler interface {
 
 // NewHandlers wires the transport over the store and the message filer.
 func NewHandlers(store *Store, filer MessageFiler) Handlers {
-	return Handlers{store: store, filer: filer}
+	return Handlers{store: store, filer: filer, publisher: store.memberEmail}
 }
 
 // FileChannelMessage files a summary of one message, or its thread, as a note.
@@ -139,7 +141,7 @@ func wireState(s State) crmcontracts.ChannelLinkState {
 	}
 	if s.Invites != nil {
 		out.Invites = &crmcontracts.ChannelInvites{
-			Invited: s.Invites.Invited, NotInChat: s.Invites.NotInChat, SkippedOverCap: s.Invites.SkippedOverCap,
+			Invited: s.Invites.Invited, NotInChat: s.Invites.NotInChat, NotAdded: s.Invites.NotAdded, SkippedOverCap: s.Invites.SkippedOverCap,
 		}
 	}
 	return out
