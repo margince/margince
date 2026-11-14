@@ -1,7 +1,9 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-import { type ComponentProps, type ReactNode, Suspense } from "react";
+import { type ComponentProps, type ReactNode, Suspense, useState } from "react";
+import { PendingBody } from "../../design-system/atoms";
+import { useT } from "../../i18n";
 import { lazy } from "../../i18n/lazy";
 import { APPROVAL_PARAM } from "../../lib/approvalhref";
 import { useUrlParams } from "../../lib/urlstate";
@@ -13,9 +15,38 @@ function Quiet({ children }: Readonly<{ children: ReactNode }>) {
   return <Suspense fallback={null}>{children}</Suspense>;
 }
 
+// A piece drawn in the page holds its place while its code arrives.
+function Pending({ children }: Readonly<{ children: ReactNode }>) {
+  const t = useT();
+  return (
+    <Suspense fallback={<PendingBody label={t("common.loading")} />}>
+      {children}
+    </Suspense>
+  );
+}
+
+const loads = {
+  details: () => import("../worklist/taskdetailmodal"),
+  pane: () => import("../worklist/worklist.pane"),
+  meetingBrief: () => import("./meetingbrief/drawer"),
+  worklist: () => import("../worklist/worklist"),
+  weeklyPage: () => import("./brief.weeklypage"),
+  weekly: () => import("./brief.weekly"),
+  approval: () => import("../automations/approvaldrawer"),
+};
+
+/** Fetches what Home opens on demand, once its day is on screen. */
+export function warmDeferred(): void {
+  for (const load of Object.values(loads)) {
+    load().catch((error: unknown) =>
+      console.warn("Home could not fetch a piece it opens on demand", error),
+    );
+  }
+}
+
 export const TaskDetailModal = lazy(
   async () => ({
-    default: (await import("../worklist/taskdetailmodal")).TaskDetailModal,
+    default: (await loads.details()).TaskDetailModal,
   }),
   "complete",
   Quiet,
@@ -23,7 +54,7 @@ export const TaskDetailModal = lazy(
 
 export const MeetingDetailModal = lazy(
   async () => ({
-    default: (await import("../worklist/taskdetailmodal")).MeetingDetailModal,
+    default: (await loads.details()).MeetingDetailModal,
   }),
   "complete",
   Quiet,
@@ -31,7 +62,7 @@ export const MeetingDetailModal = lazy(
 
 export const ActivityDetailModal = lazy(
   async () => ({
-    default: (await import("../worklist/taskdetailmodal")).ActivityDetailModal,
+    default: (await loads.details()).ActivityDetailModal,
   }),
   "complete",
   Quiet,
@@ -39,7 +70,7 @@ export const ActivityDetailModal = lazy(
 
 export const WorklistPane = lazy(
   async () => ({
-    default: (await import("../worklist/worklist.pane")).WorklistPane,
+    default: (await loads.pane()).WorklistPane,
   }),
   "complete",
   Quiet,
@@ -47,7 +78,7 @@ export const WorklistPane = lazy(
 
 export const ContactMeetingBrief = lazy(
   async () => ({
-    default: (await import("./meetingbrief/drawer")).ContactMeetingBrief,
+    default: (await loads.meetingBrief()).ContactMeetingBrief,
   }),
   "complete",
   Quiet,
@@ -59,35 +90,39 @@ export const WorklistScreen = lazy<
   >
 >(
   async () => ({
-    default: (await import("../worklist/worklist")).WorklistScreen,
+    default: (await loads.worklist()).WorklistScreen,
   }),
   "complete",
-  Quiet,
+  Pending,
 );
 
 export const WeeklyPage = lazy(
-  async () => ({ default: (await import("./brief.weeklypage")).WeeklyPage }),
+  async () => ({ default: (await loads.weeklyPage()).WeeklyPage }),
   "complete",
-  Quiet,
+  Pending,
 );
 
 export const WeekStepper = lazy(
-  async () => ({ default: (await import("./brief.weekly")).WeekStepper }),
+  async () => ({ default: (await loads.weekly()).WeekStepper }),
   "complete",
   Quiet,
 );
 
 const ApprovalDrawer = lazy(
   async () => ({
-    default: (await import("../automations/approvaldrawer"))
-      .LinkedApprovalDrawer,
+    default: (await loads.approval()).LinkedApprovalDrawer,
   }),
   "complete",
   Quiet,
 );
 
-/** A link to one decision, from a notice or a receipt, opens it over Home. */
+/**
+ * A link to one decision, from a notice or a receipt, opens it over Home. Once
+ * opened it stays mounted, so closing it plays the drawer's exit.
+ */
 export function LinkedApprovalDrawer() {
   const [params] = useUrlParams();
-  return params.get(APPROVAL_PARAM) ? <ApprovalDrawer /> : null;
+  const [asked, setAsked] = useState(false);
+  if (params.get(APPROVAL_PARAM) && !asked) setAsked(true);
+  return asked ? <ApprovalDrawer /> : null;
 }

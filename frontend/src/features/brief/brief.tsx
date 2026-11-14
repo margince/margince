@@ -48,6 +48,7 @@ import {
   WeeklyPage,
   WeekStepper,
   WorklistPane,
+  warmDeferred,
 } from "./brief.deferred";
 import { BriefDials } from "./brief.dials";
 import { DoneForYou } from "./brief.doneforyou";
@@ -245,6 +246,7 @@ function PersonalMorning({
       receipt: magic.data,
     });
     for (const mark of marks) markJourney(mark);
+    if (marks.includes("home:useful")) warmWhenIdle();
   }, [state, day, settled, magic.data]);
   return (
     <>
@@ -418,19 +420,24 @@ function ScheduleWithMeetings({
 }: Readonly<Omit<ComponentProps<typeof SchedulePanel>, "onOpenMeeting">>) {
   const [meeting, setMeeting] = useState<string | null>(null);
   const [prepFor, setPrepFor] = useState<string | null>(null);
+  // Mounted from the first open on, so closing the brief plays its exit.
+  const [briefAsked, setBriefAsked] = useState(false);
   return (
     <>
       <SchedulePanel
         day={day}
         state={state}
         onOpenMeeting={setMeeting}
-        onPrepareMeeting={setPrepFor}
+        onPrepareMeeting={(activityId) => {
+          setPrepFor(activityId);
+          setBriefAsked(true);
+        }}
       />
       {/* Opening it is what has Margince write the brief. */}
-      {prepFor !== null && (
+      {briefAsked && (
         <ContactMeetingBrief
           activityId={prepFor}
-          open
+          open={prepFor !== null}
           onClose={() => setPrepFor(null)}
         />
       )}
@@ -442,4 +449,15 @@ function ScheduleWithMeetings({
       )}
     </>
   );
+}
+
+// What Home opens on demand is fetched once its day is on screen, so the first
+// click on a task, a meeting or the Worklist does not wait for its code.
+let warmed = false;
+function warmWhenIdle() {
+  if (warmed) return;
+  warmed = true;
+  if (typeof requestIdleCallback === "function")
+    requestIdleCallback(warmDeferred, { timeout: 5_000 });
+  else setTimeout(warmDeferred, 0);
 }

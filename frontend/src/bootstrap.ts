@@ -42,6 +42,12 @@ if (parseHash(location.hash).screen === "analytics") {
 const locale = preferredLocale();
 const languageFailed = (error: unknown) =>
   console.error("The selected language could not be loaded", error);
+if (parseHash(location.hash).screen === "home") {
+  // Fetched beside the startup code rather than after the shell's gates.
+  void import("./features/brief/brief").catch((error: unknown) =>
+    console.error("Home code could not be loaded", error),
+  );
+}
 if (bootsOnEssentialCopy(location.hash)) {
   loadEssentialLocale(locale).catch(languageFailed);
   // The rest of the app reads the complete catalog; it loads once the first
@@ -49,7 +55,7 @@ if (bootsOnEssentialCopy(location.hash)) {
   addEventListener("load", () => {
     const later = (complete: () => void) =>
       typeof requestIdleCallback === "function"
-        ? requestIdleCallback(complete)
+        ? requestIdleCallback(complete, { timeout: 5_000 })
         : setTimeout(complete, 0);
     later(() => void loadLocale(locale).catch(languageFailed));
   });

@@ -101,8 +101,8 @@ const analyticsPreparation = entryChunks(
   15,
 );
 const analytics = entryChunks("analytics", entries.analytics);
-// Home is the screen most loads open on. Its chunk is preloaded with the
-// startup code, ranked below it and Analytics so it takes none of their modules.
+// Home is the screen most loads open on, and bootstrap.ts fetches its chunk
+// early on Home. Ranked below startup and Analytics, it takes none of their modules.
 const home = entryChunks("home", entries.home, 5);
 
 // Classifying the suite reads every test file, so only a test run pays for it.
@@ -141,11 +141,7 @@ export default defineConfig({
   // module scripts and /@vite/client, which the api's admission check refuses by
   // name — so both views would be permanently unadvertised in every dev stack.
   plugins: [
-    preloadEntries([
-      ...entries.startup,
-      ...entries.analyticsPreparation,
-      ...entries.home,
-    ]),
+    preloadEntries([...entries.startup, ...entries.analyticsPreparation]),
     bootstrap.plugin,
     analyticsPreparation.plugin,
     startup.plugin,
