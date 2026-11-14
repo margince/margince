@@ -98,7 +98,7 @@ func (r *Registry) routedSpec(rt router) mcp.ToolSpec {
 		panic(fmt.Sprintf("crmagents: router %s must pick its target either by one argument or by the arguments named", spec.Name))
 	}
 	spec.ActionField = field
-	schema, err := routedSchema(spec.Name, field, choices, spec.InputSchema, targets)
+	schema, err := routedSchema(spec.Name, field, choices, r.actionSentences(spec.Name, field, choices, targets), spec.InputSchema, targets)
 	if err != nil {
 		//craft:ignore panic-in-domain composition-time registration assertion — fires only while cmd wiring runs, never on a request path
 		panic("crmagents: " + err.Error())
@@ -109,6 +109,30 @@ func (r *Registry) routedSpec(rt router) mcp.ToolSpec {
 		spec.OutputSchema = targetsOutput(spec.Name, targets)
 	}
 	return spec
+}
+
+// actionSentences says what each action of an action router does, in its verb's
+// own first words. A route verb's are its summary. An in-process verb's are the
+// first sentence of its description, which opens with its purpose.
+func (r *Registry) actionSentences(routerName, field string, choices []string, targets []mcp.ToolSpec) []string {
+	if field != actionArg {
+		return nil
+	}
+	r.mu.RLock()
+	routes := r.routeActions[routerName]
+	r.mu.RUnlock()
+	sentences := make([]string, len(choices))
+	for i, choice := range choices {
+		text := targets[i].Description
+		if _, route := routes[choice]; route {
+			text = targets[i].Title
+		}
+		if end := strings.Index(text, ". "); end >= 0 {
+			text = text[:end]
+		}
+		sentences[i] = strings.TrimSuffix(strings.TrimSpace(text), ".")
+	}
+	return sentences
 }
 
 // routerRunSpec is the spec of the tool a router runs for one of its actions,
@@ -204,7 +228,8 @@ func readObjectSchema(owner string, raw json.RawMessage) (objectSchema, error) {
 // required only when every target requires it; the target's own check still
 // refuses a call missing one only it needs. The router may only word an
 // argument for every action at once, never restate its shape.
-func routedSchema(routerName, field string, choices []string, own json.RawMessage, targets []mcp.ToolSpec) (json.RawMessage, error) {
+// Each action of an action router is given a line saying what it does.
+func routedSchema(routerName, field string, choices, actionSentences []string, own json.RawMessage, targets []mcp.ToolSpec) (json.RawMessage, error) {
 	schemas, err := targetSchemas(targets)
 	if err != nil {
 		return nil, err
@@ -226,7 +251,11 @@ func routedSchema(routerName, field string, choices []string, own json.RawMessag
 		out[name] = mustMarshal(arg)
 	}
 	if field != "" {
-		out[field] = mustMarshal(routeChoice{Type: schemaString, Enum: choices, Description: routerOwn.Properties[field][schemaDescription]})
+		description := routerOwn.Properties[field][schemaDescription]
+		if actionSentences != nil {
+			description = actionLines(description, choices, actionSentences)
+		}
+		out[field] = mustMarshal(routeChoice{Type: schemaString, Enum: choices, Description: description})
 		required = append([]string{field}, required...)
 	}
 	return mustMarshal(routedObject{Type: schemaObject, Required: required, Properties: out}), nil

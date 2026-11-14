@@ -56252,7 +56252,9 @@ type MeetingInvitationRequest struct {
 	// Links Further records to file the meeting on, beside the invitee.
 	Links    *[]MeetingRecordLink `json:"links,omitempty"`
 	Location string               `json:"location"`
-	Start    time.Time            `json:"start"`
+
+	// Start The booked instant. A start_intent, when sent, replaces it, and end moves with it so the meeting keeps its length.
+	Start time.Time `json:"start"`
 
 	// StartIntent A chosen local time in an IANA zone, resolved with current rules. A time in a gap moves forward; a repeated time takes its first occurrence.
 	StartIntent *IntentTime `json:"start_intent,omitempty"`
@@ -96486,13 +96488,13 @@ type ServerInterface interface {
 	// Who can open this company and who can change it, and why.
 	// (GET /companies/{id}/access)
 	GetCompanyAccess(w http.ResponseWriter, r *http.Request, id Id, params GetCompanyAccessParams)
-	// Ask one of the prepared questions about this account.
+	// Ask one of the prepared questions about this company.
 	// (POST /companies/{id}/ask)
 	AskAboutCompany(w http.ResponseWriter, r *http.Request, id Id)
-	// The standing account brief — what this account is, where it stands, and what changed.
+	// The standing company brief — what this company is, where it stands, and what changed.
 	// (GET /companies/{id}/brief)
 	GetCompanyBrief(w http.ResponseWriter, r *http.Request, id Id, params GetCompanyBriefParams)
-	// Regenerate this account's brief, ignoring the cached one.
+	// Regenerate this company's brief, ignoring the cached one.
 	// (POST /companies/{id}/brief)
 	RegenerateCompanyBrief(w http.ResponseWriter, r *http.Request, id Id, params RegenerateCompanyBriefParams)
 	// Which mail domains were triaged into this company, and what each concluded.
@@ -96501,7 +96503,7 @@ type ServerInterface interface {
 	// The account's contacts, ranked by who is worth writing to next, filtered and paged over the WHOLE account.
 	// (GET /companies/{id}/contacts)
 	ListCompanyContacts(w http.ResponseWriter, r *http.Request, id Id, params ListCompanyContactsParams)
-	// The agreements this account holds, newest first (CONTRACT-WIRE-1).
+	// The agreements this company holds, newest first (CONTRACT-WIRE-1).
 	// (GET /companies/{id}/contracts)
 	ListCompanyContracts(w http.ResponseWriter, r *http.Request, id Id, params ListCompanyContractsParams)
 	// How well this account is covered — who answers, who is missing from the buying team, and the warmest way in.
@@ -96606,10 +96608,10 @@ type ServerInterface interface {
 	// This is not a company — archive it and refuse its domain as one (admin/ops).
 	// (POST /companies/{id}/reject)
 	RejectCompany(w http.ResponseWriter, r *http.Request, id Id, params RejectCompanyParams)
-	// What this account needs, as the model last judged it for this reader.
+	// What this company needs, as the model last judged it for this reader.
 	// (GET /companies/{id}/scan)
 	GetCompanyScan(w http.ResponseWriter, r *http.Request, id Id)
-	// Make sure this reader's scan of the account is current, reading it again only when the account changed.
+	// Make sure this reader's scan of the company is current, reading it again only when the company changed.
 	// (POST /companies/{id}/scan)
 	EnsureCompanyScan(w http.ResponseWriter, r *http.Request, id Id)
 	// Share the company's current contacts with a person or team.
@@ -97218,7 +97220,7 @@ type ServerInterface interface {
 	// Start a new email conversation from a record — runs directly, consent-gated.
 	// (POST /emails)
 	SendCompanyEmail(w http.ResponseWriter, r *http.Request, params SendCompanyEmailParams)
-	// Would this account-started message be allowed, and on what ground.
+	// Would a new message with no thread behind it be allowed, and on what ground.
 	// (POST /emails:preview)
 	PreviewAccountSendAuthorization(w http.ResponseWriter, r *http.Request)
 	// The sign-off a send of this message would append beneath it.
@@ -97836,7 +97838,7 @@ type ServerInterface interface {
 	// Import your own LinkedIn connections export.
 	// (POST /me/linkedin-connections)
 	ImportLinkedInConnections(w http.ResponseWriter, r *http.Request)
-	// Which accounts your imported network reaches.
+	// Which companies your imported network reaches.
 	// (GET /me/linkedin-reach)
 	GetMyLinkedInReach(w http.ResponseWriter, r *http.Request, params GetMyLinkedInReachParams)
 	// Choose the language your own interface is in.
@@ -98667,7 +98669,7 @@ type ServerInterface interface {
 	// Reactivate a deactivated member. Admin-only.
 	// (POST /users/{id}/reactivate)
 	ReactivateUser(w http.ResponseWriter, r *http.Request, id Id)
-	// Retire an account while preserving historical attribution.
+	// Retire a member while preserving historical attribution.
 	// (POST /users/{id}/remove)
 	RemoveMember(w http.ResponseWriter, r *http.Request, id Id)
 	// Mail an invited member a new set-password link. Admin-only.
@@ -100683,19 +100685,19 @@ func (_ Unimplemented) GetCompanyAccess(w http.ResponseWriter, r *http.Request, 
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
-// Ask one of the prepared questions about this account.
+// Ask one of the prepared questions about this company.
 // (POST /companies/{id}/ask)
 func (_ Unimplemented) AskAboutCompany(w http.ResponseWriter, r *http.Request, id Id) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
-// The standing account brief — what this account is, where it stands, and what changed.
+// The standing company brief — what this company is, where it stands, and what changed.
 // (GET /companies/{id}/brief)
 func (_ Unimplemented) GetCompanyBrief(w http.ResponseWriter, r *http.Request, id Id, params GetCompanyBriefParams) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
-// Regenerate this account's brief, ignoring the cached one.
+// Regenerate this company's brief, ignoring the cached one.
 // (POST /companies/{id}/brief)
 func (_ Unimplemented) RegenerateCompanyBrief(w http.ResponseWriter, r *http.Request, id Id, params RegenerateCompanyBriefParams) {
 	w.WriteHeader(http.StatusNotImplemented)
@@ -100713,7 +100715,7 @@ func (_ Unimplemented) ListCompanyContacts(w http.ResponseWriter, r *http.Reques
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
-// The agreements this account holds, newest first (CONTRACT-WIRE-1).
+// The agreements this company holds, newest first (CONTRACT-WIRE-1).
 // (GET /companies/{id}/contracts)
 func (_ Unimplemented) ListCompanyContracts(w http.ResponseWriter, r *http.Request, id Id, params ListCompanyContractsParams) {
 	w.WriteHeader(http.StatusNotImplemented)
@@ -100923,13 +100925,13 @@ func (_ Unimplemented) RejectCompany(w http.ResponseWriter, r *http.Request, id 
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
-// What this account needs, as the model last judged it for this reader.
+// What this company needs, as the model last judged it for this reader.
 // (GET /companies/{id}/scan)
 func (_ Unimplemented) GetCompanyScan(w http.ResponseWriter, r *http.Request, id Id) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
-// Make sure this reader's scan of the account is current, reading it again only when the account changed.
+// Make sure this reader's scan of the company is current, reading it again only when the company changed.
 // (POST /companies/{id}/scan)
 func (_ Unimplemented) EnsureCompanyScan(w http.ResponseWriter, r *http.Request, id Id) {
 	w.WriteHeader(http.StatusNotImplemented)
@@ -102147,7 +102149,7 @@ func (_ Unimplemented) SendCompanyEmail(w http.ResponseWriter, r *http.Request, 
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
-// Would this account-started message be allowed, and on what ground.
+// Would a new message with no thread behind it be allowed, and on what ground.
 // (POST /emails:preview)
 func (_ Unimplemented) PreviewAccountSendAuthorization(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNotImplemented)
@@ -103383,7 +103385,7 @@ func (_ Unimplemented) ImportLinkedInConnections(w http.ResponseWriter, r *http.
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
-// Which accounts your imported network reaches.
+// Which companies your imported network reaches.
 // (GET /me/linkedin-reach)
 func (_ Unimplemented) GetMyLinkedInReach(w http.ResponseWriter, r *http.Request, params GetMyLinkedInReachParams) {
 	w.WriteHeader(http.StatusNotImplemented)
@@ -105045,7 +105047,7 @@ func (_ Unimplemented) ReactivateUser(w http.ResponseWriter, r *http.Request, id
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
-// Retire an account while preserving historical attribution.
+// Retire a member while preserving historical attribution.
 // (POST /users/{id}/remove)
 func (_ Unimplemented) RemoveMember(w http.ResponseWriter, r *http.Request, id Id) {
 	w.WriteHeader(http.StatusNotImplemented)
