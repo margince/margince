@@ -34,9 +34,10 @@ export function useWorklist(
   owner?: string,
   enabled = true,
   view?: WorklistView,
+  shape?: Parameters<typeof worklistDayOptions>[4],
 ) {
   return useInfiniteQuery({
-    ...worklistDayOptions(scope, filter, owner, view),
+    ...worklistDayOptions(scope, filter, owner, view, shape),
     enabled,
   });
 }

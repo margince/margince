@@ -4,8 +4,7 @@
 import { InfiniteQueryObserver } from "@tanstack/react-query";
 import { afterEach, expect, it, vi } from "vitest";
 import { handledForYouOptions } from "../lib/handled";
-import { worklistDayOptions } from "../lib/worklistday";
-import { DEFAULT_VIEW } from "../lib/worklistviews";
+import { homeDayOptions } from "../lib/worklistday";
 import { quietRun } from "../testing/brief.fixtures";
 import { prefetchHome } from "./homeprefetch";
 import { createQueryClient, liveOnMount } from "./queryclient";
@@ -98,10 +97,9 @@ it("leaves the read running when Home already watches it", async () => {
   const client = createQueryClient();
   const leave = prefetchHome(client, new Map());
   await vi.waitFor(() => expect(worklist()).toBeDefined());
-  const home = new InfiniteQueryObserver(
-    client,
-    worklistDayOptions("mine", "all", undefined, DEFAULT_VIEW),
-  ).subscribe(() => undefined);
+  const home = new InfiniteQueryObserver(client, homeDayOptions()).subscribe(
+    () => undefined,
+  );
 
   leave();
   expect(worklist()?.aborted).toBe(false);
@@ -118,8 +116,7 @@ it("lets go of the day's Worklist once its read answers", async () => {
   prefetchHome(client, new Map());
   const day = () =>
     client.getQueryCache().find({
-      queryKey: worklistDayOptions("mine", "all", undefined, DEFAULT_VIEW)
-        .queryKey,
+      queryKey: homeDayOptions().queryKey,
       exact: true,
     });
   await vi.waitFor(() => expect(day()?.state.fetchStatus).toBe("idle"));

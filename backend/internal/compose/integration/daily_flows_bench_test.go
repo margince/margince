@@ -179,13 +179,13 @@ func worklistCalls(in dailyInput) []dailyCall {
 }
 
 // homeCalls are what a browser on Today sends once the shell's gates clear.
-// The day is the Today view of the reader's queue, as readWorklistPage sends it.
+// The day is Home's shape of the reader's Today view, as homeDayOptions sends it.
 // The weekly review is the Weekly view's read, which Today never sends. Every
 // seat has a brief from the brief step, so its 404 fails the run.
 func homeCalls(dailyInput) []dailyCall {
 	return []dailyCall{
 		{Name: "brief", Path: "/v1/brief"},
-		{Name: "worklist", Path: worklistDay + "mine&view=today"},
+		{Name: "worklist", Path: worklistDay + "mine&view=today&shape=home"},
 		{Name: "handled", Path: "/v1/worklist/handled"},
 		{Name: "magic", Path: "/v1/magic?limit=100"},
 	}

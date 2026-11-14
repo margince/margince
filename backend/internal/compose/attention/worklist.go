@@ -329,9 +329,7 @@ func (s *Service) worklistFrom(
 	// the three it was assembled from.
 	rows = markCrowding(rows)
 	sortByRank(rows)
-	shown, more, reached, walk := s.pageOf(
-		ctx, rows, limit, cursor, scope, askedFor(s.view, filter), unreadSources(missing), day.AsOf)
-	shown, rest, tailFailed := s.withTail(ctx, tailPage{scope, filter, day, bounded, cursor.Params == "", nil}, shown, more, limit, cursor.Rest, rows)
+	shown, more, reached, walk, rest, tailFailed := s.cut(ctx, rows, limit, cursor, scope, filter, day, bounded, missing)
 	// A walk this reader named and cannot continue — expired, somebody else's,
 	// or minted under another question. It cannot be answered with a page: an
 	// empty queue on this surface means the day is clear, so an expired walk
@@ -464,4 +462,26 @@ func pageLimit(limit int) int {
 		return worklistPage
 	}
 	return min(limit, worklistMaxPage)
+}
+
+// cut is the page this read answers. Home's shape is the day's meetings, which
+// its schedule draws beside Focus: no walk is frozen and no tail is read.
+func (s *Service) cut(
+	ctx context.Context, rows []ranked, limit int, cursor worklistCursor, scope, filter string,
+	day crmcontracts.Attention, bounded map[crmcontracts.WorklistItemSource]bool,
+	missing []crmcontracts.WorklistSourceUnavailable,
+) ([]ranked, bool, int, walkState, *backlogCursor, []crmcontracts.WorklistSourceUnavailable) {
+	if s.homeShape {
+		var meetings []ranked
+		for _, row := range rows {
+			if row.item.Source == sourceMeeting {
+				meetings = append(meetings, row)
+			}
+		}
+		return meetings, false, 0, walkState{}, nil, nil
+	}
+	shown, more, reached, walk := s.pageOf(
+		ctx, rows, limit, cursor, scope, askedFor(s.view, filter), unreadSources(missing), day.AsOf)
+	shown, rest, tailFailed := s.withTail(ctx, tailPage{scope, filter, day, bounded, cursor.Params == "", nil}, shown, more, limit, cursor.Rest, rows)
+	return shown, more, reached, walk, rest, tailFailed
 }

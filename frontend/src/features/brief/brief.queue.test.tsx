@@ -467,12 +467,12 @@ it("counts a closed drawer over the reader's own queue from Home's one read", as
   ]);
 });
 
-it("reads the day once when Home opens with the drawer open", async () => {
+it("reads Home's shape for Home and the queue for an open drawer", async () => {
   window.location.hash = "#/home?queue=1";
-  const views: (string | null)[] = [];
+  const shapes: (string | null)[] = [];
   stubApi({
     "GET /worklist": (_body, query) => {
-      views.push(query.get("view"));
+      shapes.push(query.get("shape"));
       return jsonResponse(readingsDay({}, [taskRow("t", "Call Weber")]));
     },
   });
@@ -480,7 +480,7 @@ it("reads the day once when Home opens with the drawer open", async () => {
 
   await screen.findByRole("dialog", { name: en["brief.queue.title"] });
   await screen.findAllByText("Call Weber");
-  expect(views, "Home and its drawer each read the day").toEqual(["today"]);
+  expect(shapes.sort()).toEqual(["home", null]);
 });
 
 it("keeps a closed drawer's count on Home's live read after the drawer was open", async () => {
@@ -515,7 +515,7 @@ it("keeps a closed drawer's count on Home's live read after the drawer was open"
   await user.click(screen.getByRole("button", { name: /close/i }));
   tasks = 9;
   await client.refetchQueries({
-    queryKey: ["worklist", "mine", "all", "", "today"],
+    queryKey: ["worklist", "mine", "all", "", "today", "home"],
     exact: true,
   });
 
@@ -545,7 +545,8 @@ it.each(["failed", "bounded", "scope"])(
     const { client } = render(<BriefScreen />);
     await waitFor(() =>
       expect(
-        client.getQueryState(["worklist", "mine", "all", "", "today"])?.status,
+        client.getQueryState(["worklist", "mine", "all", "", "today", "home"])
+          ?.status,
       ).toBe("success"),
     );
     // The tabs draw the same "42+", so the way into the queue agrees with them.
@@ -714,7 +715,7 @@ it("snoozes the Home task before a slow day refresh and pins the next click to i
   expect(client.isFetching({ queryKey: ["worklist"] })).toBeGreaterThan(0);
   const cached = client.getQueryData<{
     pages: components["schemas"]["Worklist"][];
-  }>(["worklist", "mine", "all", "", "today"]);
+  }>(["worklist", "mine", "all", "", "today", "home"]);
   expect(cached?.pages[0]?.focus?.items[0]?.due_at).toBe(dueAt);
   expect(cached?.pages[0]?.focus?.items[0]?.version).toBe(2);
   await user.click(snooze);

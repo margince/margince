@@ -87,7 +87,14 @@ export function BriefScreen() {
   const nowMs = useNow(60_000);
   const me = useMe();
   // The drawer's default queue, so an open drawer joins this read.
-  const query = useWorklist("mine", "all", undefined, true, DEFAULT_VIEW);
+  const query = useWorklist(
+    "mine",
+    "all",
+    undefined,
+    true,
+    DEFAULT_VIEW,
+    "home",
+  );
   const [params, setParams] = useUrlParams();
   const address = addressFrom(params);
   const day = briefDay(query.data?.pages);
