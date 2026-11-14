@@ -88,7 +88,7 @@ export function BriefScreen() {
   const nowMs = useNow(60_000);
   const me = useMe();
   const [params, setParams] = useUrlParams();
-  const query = useHomeDay(params.get(FOCUS_PARAM) !== null);
+  const query = useHomeDay(Boolean(params.get(FOCUS_PARAM)));
   const address = addressFrom(params);
   const day = briefDay(query.data?.pages);
   const drawerOpen = params.get("queue") === "1";
