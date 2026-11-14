@@ -42,6 +42,7 @@ does in this state.
 | `capture_confidentiality_verdict` | Thread confidentiality check | background | `local_small` | waits for the provider's next check; the attempt is not spent | a failed decision call hands the task to its ladder |
 | `capture_counterparty_verdict` | First-time sender check | background | `local_small` | waits for the provider's next check; the attempt is not spent | a failed decision call hands the task to its ladder |
 | `cert_judge` | Certification judging | background | `premium` → `cheap_cloud` | waits for the provider's next check; the attempt is not spent | — |
+| `chat_summary` | Chat channel summary | background | `cheap_cloud` → `premium` | waits for the provider's next check; the attempt is not spent | — |
 | `cold_start` | Onboarding read | interactive | `cheap_cloud` → `premium` | fails at once with a 503 naming the cause | — |
 | `corpus_ask` | Document corpus question | interactive | `premium` | answers from its own facts instead of failing | — |
 | `deal_health` | Deal status card | interactive | `cheap_cloud` → `premium` | answers from its own facts instead of failing | — |
@@ -58,7 +59,7 @@ does in this state.
 | `rate_extract` | Exchange rate extraction | background | `premium` → `cheap_cloud` | waits for the provider's next check; the attempt is not spent | — |
 | `reader_rendering` | Showing a message in your language | interactive | `cheap_cloud` → `premium` | fails at once with a 503 naming the cause | — |
 | `report_interpret` | Assessing a sales report | interactive | `premium` → `cheap_cloud` | fails at once with a 503 naming the cause | — |
-| `report_setup` | Setting up a report from a description | interactive | `cheap_cloud` → `premium` | fails at once with a 503 naming the cause | — |
+| `report_setup` | Proposing a report setup or sales goals | interactive | `cheap_cloud` → `premium` | fails at once with a 503 naming the cause | — |
 | `request_settlement` | Checking whether the reply answered the request | background | `local_small` → `cheap_cloud` | waits for the provider's next check; the attempt is not spent | — |
 | `rewrite` | Rewriting | interactive | `premium` → `cheap_cloud` | fails at once with a 503 naming the cause | — |
 | `signal_extract` | Signal extraction | background | `frontier` | waits for the provider's next check; the attempt is not spent | — |

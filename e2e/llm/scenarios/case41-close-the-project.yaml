@@ -45,6 +45,8 @@ prompt: |
 must_call:
   - read_project
   - advance_project_phase
+must_call_with:
+  - advance_project_phase.to_phase=closed
 may_call:
   - list_records
   - search_records
@@ -57,9 +59,6 @@ may_call:
 # `pursuing`, or forward to `delivering` it is already in — the wrong phase on
 # the right record, with prose about closing beside it. The phase is the whole
 # act, so the phase is pinned.
-must_call_with:
-  - read_project.view=overview
-  - advance_project_phase.to_phase=closed
 
 must_mention:
   # MECHANICAL, all three, and none of them has ever leaked.

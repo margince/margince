@@ -25,11 +25,13 @@ setup: card_reviews_and_recap
 # holds this line against the tools the case names.
 writes: true
 
+# The deadline is not judged here. A weekday name reads two ways when the run
+# falls on that weekday, and a run spent deciding which one never reaches the queue.
 prompt: |
   Had coffee with Jannik Feddersen from Husumer Windservice this morning at
   9:30 at their office. They want a quote for the gearbox inspection on their six
   turbines in Q1. Please log the meeting in the CRM and add a follow-up task for
-  me to send him the quote by Friday.
+  me to send him the quote within a week.
 
 # The finish-time check is the behaviour under test, so the run must make it.
 # The prompt gives a start time: a held meeting with only today's date is

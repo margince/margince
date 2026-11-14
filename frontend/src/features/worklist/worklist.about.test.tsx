@@ -263,3 +263,53 @@ it("prefers the contact's moments to the account's on a row naming both", async 
   expect(touch).not.toContain("14/07/2026");
   expect(touch).not.toContain("28/08/2026");
 });
+
+// A follow-up on mail the rep sent says whom it went to and their company.
+// Two rows with one subject can then be told apart without opening either.
+it("names the recipient of a follow-up and their company", async () => {
+  const contact = "01a05500-0000-7000-8000-0000000000c1";
+  stub(
+    day({
+      queue: [
+        row({
+          id: "w-followup",
+          source: "awaiting_reply",
+          category: "tasks",
+          title: "Re: Great to meet you",
+          because: [{ kind: "you_wrote_last" }],
+          contact: {
+            id: contact,
+            label: "Contact A",
+            employer: {
+              company_id: "01a05500-0000-7000-8000-0000000000c2",
+              company_name: "Company A",
+            },
+          },
+          email_summary: {
+            activity_id: "mail-sent",
+            subject: "Re: Great to meet you",
+            occurred_at: "2026-09-03T16:46:00Z",
+            occurred_precision: "instant",
+            direction: "outbound",
+            counterparty: "Contact A",
+            counterparty_contact_id: contact,
+            attachment_count: 0,
+            move: "waiting_for_them",
+            display_status: "team",
+            version: 1,
+          },
+        }),
+      ],
+      summary: { urgent: 0, due: 1, lower_priority: 0, total: 1 },
+    }),
+  );
+  renderWorklist();
+
+  expect(
+    (await screen.findAllByText("Sent to Contact A")).length,
+  ).toBeGreaterThan(0);
+  const about = [...document.querySelectorAll(".worklist-row-about a")].map(
+    (link) => link.textContent,
+  );
+  expect(about).toEqual(["Contact A", "Company A"]);
+});

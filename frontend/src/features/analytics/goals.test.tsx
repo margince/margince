@@ -11,6 +11,7 @@ import { SalesGoalsScreen } from "./goals";
 import { GoalEditor } from "./goals.editor";
 import {
   draftPlan,
+  goalProposal,
   goalRoster,
   publishedPlan,
   sellerMarch,
@@ -290,5 +291,99 @@ describe("GoalEditor", () => {
     expect(
       screen.getByRole("button", { name: "Publish" }).hasAttribute("disabled"),
     ).toBe(true);
+  });
+});
+
+describe("GoalProposalStep", () => {
+  const PROPOSAL = `POST ${PLAN}/proposed-months`;
+
+  it("takes proposed months into the editor and saves them as proposed", async () => {
+    const sent = stubWrites(draftPlan);
+    const asked: unknown[] = [];
+    installFetchStub({
+      [`PUT ${PLAN}/draft`]: (body: unknown) => {
+        sent.push({ method: "PUT", path: "draft", body });
+        return jsonResponse(draftPlan);
+      },
+      [PROPOSAL]: (body: unknown) => {
+        asked.push(body);
+        return jsonResponse(goalProposal);
+      },
+    });
+    const user = userEvent.setup();
+    render(<GoalEditor plan={{ ...draftPlan, draft: undefined }} />);
+    await user.click(screen.getByRole("button", { name: "Propose months" }));
+    expect(
+      await screen.findByText("Proposed: €1,200,000 for the year"),
+    ).toBeTruthy();
+    expect(asked[0]).toEqual({});
+    expect(screen.getByText("12 months are not set.")).toBeTruthy();
+    await user.click(screen.getByRole("button", { name: "Use these months" }));
+    expect(
+      await screen.findByText("The months add up to €1,200,000."),
+    ).toBeTruthy();
+    expect(screen.getByText("Proposed by Margince")).toBeTruthy();
+    await user.click(screen.getByRole("button", { name: "Save draft" }));
+    await waitFor(() => expect(sent).toHaveLength(1));
+    expect(sent[0]?.body).toMatchObject({
+      months: goalProposal.months,
+      declared_total_minor: 120000000,
+      reason: goalProposal.reason,
+      origin: "ai",
+    });
+  });
+
+  it("asks to spread the yearly goal already entered, and keeps the reason written", async () => {
+    const asked: unknown[] = [];
+    installFetchStub({
+      [PROPOSAL]: (body: unknown) => {
+        asked.push(body);
+        return jsonResponse(goalProposal);
+      },
+    });
+    const user = userEvent.setup();
+    render(<GoalEditor plan={draftPlan} />);
+    await user.click(screen.getByRole("button", { name: "Propose months" }));
+    await user.click(
+      await screen.findByRole("button", { name: "Use these months" }),
+    );
+    expect(asked[0]).toEqual({ yearly_total_minor: 120000000 });
+    expect(screen.getByLabelText("Reason")).toHaveProperty(
+      "value",
+      "Agreed in the yearly review",
+    );
+  });
+
+  it("leaves the months alone when the proposal is dismissed", async () => {
+    installFetchStub({ [PROPOSAL]: () => jsonResponse(goalProposal) });
+    const user = userEvent.setup();
+    render(<GoalEditor plan={{ ...draftPlan, draft: undefined }} />);
+    await user.click(screen.getByRole("button", { name: "Propose months" }));
+    await user.click(await screen.findByRole("button", { name: "Dismiss" }));
+    expect(screen.queryByText(/^Proposed:/)).toBeNull();
+    expect(screen.getByText("12 months are not set.")).toBeTruthy();
+    expect(screen.queryByText("Proposed by Margince")).toBeNull();
+  });
+
+  it("says so when there is no model or nothing won to read", async () => {
+    const refuse = (code: string) => () =>
+      new Response(JSON.stringify({ code, detail: code }), { status: 409 });
+    installFetchStub({ [PROPOSAL]: refuse("no_sales_history") });
+    const user = userEvent.setup();
+    const { unmount } = render(<GoalEditor plan={draftPlan} />);
+    await user.click(screen.getByRole("button", { name: "Propose months" }));
+    expect(
+      await screen.findByText(
+        /^Alex Brandt has no sales won in 2026 or the year before/,
+      ),
+    ).toBeTruthy();
+    unmount();
+    installFetchStub({ [PROPOSAL]: refuse("ai_not_configured") });
+    render(<GoalEditor plan={draftPlan} />);
+    await user.click(screen.getByRole("button", { name: "Propose months" }));
+    expect(
+      await screen.findByText(/^Proposing months needs an AI model/),
+    ).toBeTruthy();
+    expect(screen.queryByRole("button", { name: "Propose months" })).toBeNull();
   });
 });

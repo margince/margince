@@ -36,6 +36,7 @@ here: put it in the area's word list instead. A name that no plain page uses mus
 | de | The language code for German, as a setting value. |
 | dev | The development mode of a local install, set by `MARGINCE_ENV`. |
 | Diátaxis | A way to sort docs into tutorials, how-to guides, reference and explanation. |
+| Dispact | A team chat a company hosts itself, where a deal or project can have its own channel. |
 | dmy | The date order day, month, year, as a setting value. |
 | Doc | One Google Docs file, such as the notes Google Meet writes for a meeting. |
 | Docs | Google Docs, the Google editor where Meet writes meeting notes and transcripts. |

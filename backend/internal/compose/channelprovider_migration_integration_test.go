@@ -71,8 +71,9 @@ func TestActivityKindAndChannelProviderAreSeededByMigration(t *testing.T) {
 	// sender yet, which is the honest description while A103's WhatsApp
 	// connector is still coming. Registration is what lets a hand-logged
 	// WhatsApp message name its transport; sendability is a separate question
-	// the send pre-flight answers.
-	wantProviders := []string{"telegram/core", "whatsapp/core"}
+	// the send pre-flight answers. dispact is the team chat whose channels a
+	// deal or project links; it supplies no transport to a contact.
+	wantProviders := []string{"dispact/core", "telegram/core", "whatsapp/core"}
 	if len(providers) != len(wantProviders) {
 		t.Fatalf("channel_provider seeded %v, want %v", providers, wantProviders)
 	}

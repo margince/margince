@@ -19,6 +19,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/compose/assurancetools"
 	"github.com/margince/margince/backend/internal/compose/integration"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/activities"
@@ -374,7 +375,7 @@ func TestTheToolMarksAnEditedDealsFindingsOutOfDate(t *testing.T) {
 	e := setupFreshness(t)
 	e.deliver(t, e.editDeal(t, e.faulted, 3900000))
 
-	raw, err := inputChecksToolReader(e.Pool)(e.Admin(), agents.InputChecksArgs{})
+	raw, err := assurancetools.InputChecksReader(assurance.NewStore(InstallationDB(e.Pool)), AssuranceExceptionsIn)(e.Admin(), agents.InputChecksArgs{})
 	if err != nil {
 		t.Fatalf("list_input_checks: %v", err)
 	}

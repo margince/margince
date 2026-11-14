@@ -484,6 +484,13 @@ _REFUSALS = re.compile(
 )
 
 
+# The CLI's own call to the model failing. Its terminal result opens with "API
+# Error:", which a tool's refusal never does: that one arrives as a tool result,
+# and the run goes on. A run cut off here was not scored by the model, whatever
+# it had called before.
+_MODEL_API_FAILED = re.compile(r"^(?:Failed to authenticate\.\s*)?API Error:", re.IGNORECASE)
+
+
 def unrun(path):
     """Why this run never happened, or "" when it did.
 
@@ -535,6 +542,8 @@ def unrun(path):
     # guess at wording.
     if failure and not called_tool and _REFUSALS.search(failure):
         return failure
+    if _MODEL_API_FAILED.match(failure):
+        return "the model's API stopped answering mid-run: " + failure
     return ""
 
 

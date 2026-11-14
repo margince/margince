@@ -236,7 +236,7 @@ tasks:
 
   transcript_propose:
     display_name: "Meeting follow-up extraction"
-    summary: "Reads next steps and commitments out of a meeting transcript."
+    summary: "Reads next steps and commitments out of a meeting transcript, and writes a short summary of the meeting."
     ladder: [premium]
     execution_mode: background
     on_budget_exhausted: queue
@@ -244,7 +244,7 @@ tasks:
     subject_restriction: honour
     sites: [next_steps]
     company_context: none
-    doc: "the reading of next steps and commitments out of a meeting transcript, each citing the 1-based transcript lines it was read from. Floor 0.7; below it the proposal is dropped, never guessed, and a transcript stating none yields no proposal at all. Each commitment goes through the shared commitment rule: a customer's promise is filed on their contact and never becomes a task; a named colleague's promise read at or above 0.85 becomes their task directly, marked as the reader's; anything else stages for a human (approval kind commitment_task)."
+    doc: "the reading of next steps and commitments out of a meeting transcript, each citing the 1-based transcript lines it was read from. A reading at 0.7 or above is firm. From 0.3 up to just under 0.7 it is a tentative promise, such as \"I will try\", kept and marked tentative. A colleague's tentative promise always stages for a human (approval kind commitment_task) and never becomes a task by itself. A customer's tentative promise follows the customer rule below, and its follow-up is marked tentative. Below 0.3 it is dropped, never guessed, and a transcript stating none yields no proposal at all. Each commitment goes through the shared commitment rule: a customer's promise is filed on their contact and never becomes a task, and a new one stages a follow-up for the member who logged the meeting, titled \"Follow up if <promise> has not arrived\" and due the day after the promised day; nobody responsible means no follow-up. A named colleague's firm promise read at or above 0.85 becomes their task directly, marked as the reader's; anything else stages for a human (approval kind commitment_task). The same call writes a short summary onto the meeting: key points and next steps in the language the meeting was held in, each citing the transcript lines it was read from. A summary citing a line the transcript lacks is dropped, the meeting keeps its earlier summary, and the reading says so; the proposals still count."
 
   propose_roles:
     display_name: "Buying-role reading"
@@ -378,17 +378,17 @@ tasks:
     doc: "Declared, not built (ADR-0074). Pasted transcript text is T2/untrusted per ai-operational-spec §1 when a site lands."
 
   report_setup:
-    display_name: "Setting up a report from a description"
-    summary: "Turns a described sales initiative or custom report into a setup you check before saving."
+    display_name: "Proposing a report setup or sales goals"
+    summary: "Turns a described sales initiative or custom report, or a seller's closed revenue, into a proposal you check before saving."
     ladder: [cheap_cloud, premium]
     execution_mode: interactive
     on_budget_exhausted: degrade
     status: shipped
     subject_restriction: none
-    subject_restriction_reason: "reads the manager's description and the report catalog, never a record"
-    sites: [initiative_setup, custom_report_setup]
+    subject_restriction_reason: "reads the manager's description, the report catalog and a seller's closed revenue by month, never a record"
+    sites: [initiative_setup, custom_report_setup, sales_goal_months]
     company_context: none
-    doc: "Turn a manager's description into a typed, catalog-resolved proposal for a sales initiative or a custom report; nothing is written until the reader confirms. Every product, industry, metric, chart and objective the reply names is checked against the catalog the reader may use, and what fails is named back with a reason. Without a model the drawers offer no proposal."
+    doc: "Turn a manager's description into a typed, catalog-resolved proposal for a sales initiative or a custom report; nothing is written until the reader confirms. Every product, industry, metric, chart and objective the reply names is checked against the catalog the reader may use, and what fails is named back with a reason. Without a model the drawers offer no proposal. sales_goal_months — twelve monthly sales goals for one seller, read from their closed revenue by month in the plan year and the year before; a yearly goal the reader gave is spread over the proposed pattern to the minor unit, and the reason carries no figure. The manager reviews the months and saves them as a draft."
 
   report_interpret:
     display_name: "Assessing a sales report"
@@ -399,10 +399,10 @@ tasks:
     status: shipped
     subject_restriction: none
     subject_restriction_reason: "reads evaluated report figures and deal names, never a contact's record or mail"
-    sites: [sales_assessment]
+    sites: [sales_assessment, progress_summary]
     company_context: none
     no_payload: true
-    doc: "Read an evaluated report and write cited paragraphs for sales review, personal prospecting or team prospecting. Quantities must match supplied evidence, and action identifiers must come from the application. A proposed decision must name a supplied candidate deal. Without a supported explanation, measured figures and application actions remain usable."
+    doc: "Read an evaluated report and write cited paragraphs for sales review, personal prospecting or team prospecting. Quantities must match supplied evidence, and action identifiers must come from the application. A proposed decision must name a supplied candidate deal. Without a supported explanation, measured figures and application actions remain usable. progress_summary — the same request over the figures of one Progress reading: closed revenue against the sales goal, what is still missing to it and the open deals expected in the period."
 
   reader_rendering:
     display_name: "Showing a message in your language"
@@ -619,6 +619,19 @@ tasks:
     sites: [fx]
     company_context: none
     doc: "extract foreign-exchange rates from a fetched rates page, evidence-gated; feeds the FX refresh proposal producer. Model prices are not extracted: a broker's catalogue states them."
+
+  chat_summary:
+    display_name: "Chat channel summary"
+    summary: "Reads one stretch of talk in a deal's or project's chat channel and writes a short note when it matters."
+    ladder: [cheap_cloud, premium]
+    execution_mode: background
+    on_budget_exhausted: queue
+    status: shipped
+    subject_restriction: honour
+    sites: [episode]
+    company_context: none
+    no_payload: true
+    doc: "read one closed stretch of a linked chat channel's talk (the episode site): a run of messages that ended in 30 minutes of quiet or at the end of the day. It is read again from the chat when it closes and never stored. The model answers whether the talk matters to the record and, when it does, a title of at most 120 characters, a summary of at most 800, the decisions and the open questions. A relevant answer is filed as one note on the deal or project, keyed on the channel and the episode's first message, so a replay files nothing. An irrelevant answer files nothing and the channel's cursor moves past it. With no lane the episode is passed over the same way, so a channel never waits for a model. no_payload because the prompt carries the team's own chat messages."
 
 # embed is a workload, not a task (ADR-0074). It has a real ladder and a real
 # cost rule, but its tier is deliberately NOT one of the chat tiers above, and

@@ -964,3 +964,14 @@
   display: inline-block;
   text-wrap: balance;
 }
+
+/* A small change names its record first on its line, so the record takes no
+   gap of its own before it. */
+.brief-done-small .magic-line-subject {
+  margin-inline-start: 0;
+}
+
+/* The embedded receipt's caveat body stays out of the grid when it has none. */
+.brief-done > .panel-body:empty {
+  display: none;
+}

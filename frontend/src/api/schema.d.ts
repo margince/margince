@@ -663,6 +663,32 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/passports/{id}/app-binding": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /**
+         * Allow a chat app's user again after their passport was revoked.
+         * @description A revoked passport that a chat app (Dispact) minted keeps naming that app's user, so the
+         *     user stays refused. Releasing it lets the user's next call mint a fresh passport under the
+         *     same checks as a first call. The passport itself stays revoked. A user releases their own
+         *     passport; releasing another user's requires the admin role. Audited.
+         */
+        delete: operations["releasePassportAppBinding"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/passports/{id}/areas": {
         parameters: {
             query?: never;
@@ -10557,6 +10583,30 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/analytics/progress/summary": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * A few written sentences on where one Progress reading stands against its sales goal and what is still open.
+         * @description The model reads the figures `GET /analytics/progress` answers for the same period and
+         *     scope, under the caller's own reach, and nothing else. Each sentence cites the figures it
+         *     rests on, and a sentence quoting a number none of them holds is dropped. The answer is kept
+         *     per reader until a figure moves. Without a model, or when the reply cannot be grounded, it
+         *     answers no sentences and `generated_by` says so, and Progress shows its figures alone.
+         */
+        post: operations["summarizeSalesProgress"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/analytics/sales-goals": {
         parameters: {
             query?: never;
@@ -10624,6 +10674,34 @@ export interface paths {
         post?: never;
         /** Discard the shared draft and keep the published goals. */
         delete: operations["discardSalesGoalDraft"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/analytics/sales-goals/{owner_id}/{year}/proposed-months": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                owner_id: string;
+                year: number;
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Twelve monthly goals proposed for one seller from their closed revenue. Nothing is saved.
+         * @description The model reads the seller's closed revenue by month for the plan year and the year before,
+         *     and the yearly goal when the request gives one. It answers twelve months and one or two
+         *     sentences on the pattern it followed. With a yearly goal the months add up to it exactly.
+         *     The reader reviews the months in the editor and saves them as a draft with origin `ai`.
+         *     Only a reader who may set this seller's goals may ask. Without a model it answers 409
+         *     `ai_not_configured`, and with no closed revenue in either year 409 `no_sales_history`.
+         */
+        post: operations["proposeSalesGoalMonths"];
+        delete?: never;
         options?: never;
         head?: never;
         patch?: never;
@@ -11015,7 +11093,7 @@ export interface paths {
         /**
          * Disconnect a messaging channel (archives the binding and destroys the credential).
          * @description Archives the connection as `disconnected` — which is what stops ingress, since only a
-         *     live `connected` binding is polled — and destroys the sealed bot token. Already-captured
+         *     live `connected` binding is polled — and destroys the sealed bot token and events secret. Already-captured
          *     activities are retained: disconnecting stops capture, it does not erase history.
          */
         delete: operations["disconnectChannel"];
@@ -11034,6 +11112,136 @@ export interface paths {
          *     anything it has ever sent, and every message it received would be skipped silently.
          */
         patch: operations["replaceChannelToken"];
+        trace?: never;
+    };
+    "/channel-links/{record_type}/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                record_type: components["schemas"]["ChannelLinkRecordType"];
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        /**
+         * The chat channel a deal or project is linked to, if any.
+         * @description `off` means no chat bot is connected, so nothing can be linked. `none` means the record has
+         *     no channel yet. `paused` means the channel was archived or deleted in the chat, or the bot
+         *     lost its access; nothing is posted until the link is replaced. A deal's channel is also its
+         *     project's, so a project reads the channel of its deal when it has none of its own.
+         */
+        get: operations["getChannelLink"];
+        put?: never;
+        /**
+         * Link a deal or project to a new or existing private chat channel.
+         * @description `create` makes a private channel named after the record and invites every live member who may
+         *     open the record, the record's owner and the member linking it first, at most 50. A member with
+         *     no chat account is counted in `not_in_chat`, and members over the 50 in `skipped_over_cap`.
+         *     `existing` takes a private channel the bot is already in, named by its slug or its link, and
+         *     changes nobody's membership.
+         *
+         *     Linking an existing channel requires `summarize_history`. When it is true, the talk so far
+         *     is read and up to five summaries are filed as notes; an agent must ask the user first. A
+         *     channel Margince creates has no history to summarise.
+         *
+         *     A deal and its project share one channel: linking a deal whose project has none links both.
+         */
+        post: operations["linkChannel"];
+        /**
+         * Stop syncing a record with its chat channel.
+         * @description Margince stops posting and reading. The channel and its messages stay in the chat, and the
+         *     notes already filed stay on the record. Linking the same channel again later files no
+         *     summary twice.
+         */
+        delete: operations["unlinkChannel"];
+        options?: never;
+        head?: never;
+        /**
+         * Choose how much Margince posts into a record's channel.
+         * @description `everything` posts every change, `important` (the default) the changes a team acts on,
+         *     `milestones` only stage, offer and contract steps, and `silent` posts nothing but keeps the
+         *     card current.
+         */
+        patch: operations["setChannelVerbosity"];
+        trace?: never;
+    };
+    "/channel-links/{record_type}/{id}/notes": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                record_type: components["schemas"]["ChannelLinkRecordType"];
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * File a summary of one message in a record's channel, or of its thread, as a note.
+         * @description Reads the message from the chat, has the AI write a short summary of it, and files that
+         *     summary as a note on the record, as the caller. The message text is not stored. Filing the
+         *     same message again returns the note already filed.
+         */
+        post: operations["fileChannelMessage"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/integrations/dispact/manifest": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * The manifest that installs the Margince app in a Dispact team (admin).
+         * @description Read-only. Dispact reads `mcp.endpoint` to send each `@Margince` call to this
+         *     installation's `/mcp`, signed with a call token for the caller who asked. `events` is where
+         *     Dispact sends signed notices of new messages in a linked channel. Needs the right to
+         *     connect a chat bot (the `channel_connection` RBAC object).
+         */
+        get: operations["getDispactAppManifest"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/channel-events/dispact": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Take a signed notice of new talk in a linked Dispact channel (anonymous).
+         * @description Dispact posts here when a linked channel has new messages. The body is signed under
+         *     Standard Webhooks: `webhook-id`, `webhook-timestamp` (unix seconds) and
+         *     `webhook-signature` (`v1,<base64 HMAC-SHA256>` entries separated by spaces) over
+         *     `<id>.<timestamp>.<body>`, keyed by the events secret sealed on the connected bot.
+         *
+         *     A URL check (`type: url_verification`) is answered with its `challenge`. A message notice
+         *     queues one read of the bot's channels, and notices that arrive while that read waits add
+         *     nothing. `channel.archived` pauses the channel's link. A notice for a channel no live link
+         *     has is answered `200` and changes nothing.
+         */
+        post: operations["receiveDispactChannelEvent"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
         trace?: never;
     };
     "/web-forms": {
@@ -16987,7 +17195,7 @@ export interface paths {
         get: operations["listDataSubjectRequests"];
         put?: never;
         /**
-         * Open a data-subject request (access/rectify/erasure). Admin-mediated; ties to retention and erasure.
+         * Open a data-subject request (access/rectify/erasure). subject_ref is the subject's contact id when they are a contact, else the email they wrote from; only a contact id can be fulfilled. Admin-mediated; ties to retention and erasure.
          * @description The server computes the deadline from `received_at` under the installation's
          *     jurisdiction (`GET /data-subject-requests/deadline` shows it before filing).
          *
@@ -31769,21 +31977,25 @@ export interface components {
             /** @description What a screen calls the task, as task_display_name on a call. Absent for a task with no name, which a screen shows by its key. */
             display_name?: string | null;
         };
-        /** @description One workspace-level messaging-channel binding. The bot token never appears in this shape — it lives sealed in the vault, and it is the only secret a binding holds. */
+        /** @description One workspace-level messaging-channel binding. The bot token and the Dispact events secret never appear in this shape: both live sealed in the vault. */
         ChannelConnection: {
             /** Format: uuid */
             id: string;
             /** @enum {string} */
-            provider: "telegram";
-            /** @description The provider's own id for the bot — the key the binding is unique on. */
+            provider: "telegram" | "dispact";
+            /** @description The provider's own id for the bot — the key the binding is unique on. For Dispact it is the chat's team id. */
             channelId: string;
             /** @description The bot's @username. Display only — a username is mutable and re-assignable, so it identifies nothing. */
             channelLabel: string;
+            /** @description The web address of a self-hosted provider's install (Dispact). Absent for Telegram. */
+            address?: string;
             /**
              * @description Only `connected` is live, and it is the only state a connect can produce: a pull ingress makes no provider call after the write, so there is no half-connected state. `error` and `reauth_required` are where ingress parks a binding it can no longer poll (another consumer holds the bot's updates; the token was refused), and neither is polled again until an operator acts. `pending` is a value NO server produces: it is retained because the code generator disambiguates enum member names across the whole document, so dropping it renames unrelated generated constants in other schemas.
              * @enum {string}
              */
             status: "pending" | "connected" | "disconnected" | "error" | "reauth_required";
+            /** @description Whether a Dispact events secret is sealed for this connection, so signed notices of new messages are taken. The secret itself is never shown. */
+            readonly eventsSecretSet?: boolean;
             /** Format: int64 */
             version: number;
             /** Format: date-time */
@@ -31796,13 +32008,147 @@ export interface components {
         };
         ConnectChannelRequest: {
             /** @enum {string} */
-            provider: "telegram";
-            /** @description The BotFather token, `<bot id>:<secret>`. Sealed into the vault on arrival and never echoed back. */
+            provider: "telegram" | "dispact";
+            /** @description The bot token. For Telegram the BotFather token, `<bot id>:<secret>`; for Dispact the app token, `gwapp_…`. Sealed into the vault on arrival and never echoed back. */
             botToken: string;
+            /** @description The chat's web address, such as `https://chat.example.com`. Required for Dispact, which every team hosts itself; refused for Telegram. */
+            address?: string;
+            /** @description The Dispact app's events secret, `whsec_…`, which signs each notice of a new message. Optional; without it Margince reads the channels every minute. Refused for Telegram. Sealed into the vault on arrival and never echoed back. */
+            eventsSecret?: string;
         };
         ReplaceChannelTokenRequest: {
-            /** @description The replacement BotFather token. Sealed into the vault on arrival and never echoed back. */
+            /** @description The replacement bot token. Sealed into the vault on arrival and never echoed back. */
             botToken: string;
+            /** @description A new Dispact events secret, `whsec_…`. Absent keeps the sealed one. Refused for Telegram. Sealed into the vault on arrival and never echoed back. */
+            eventsSecret?: string;
+        };
+        /** @description One signed notice from Dispact, or its URL check. A notice names the channel and the newest message sequence, and never carries message text. */
+        DispactChannelEvent: {
+            /** @enum {string} */
+            type: "url_verification" | "message.created" | "thread.replied" | "message.updated" | "channel.archived";
+            /** @description The value a URL check expects back. */
+            challenge?: string;
+            /** @description The Dispact team; it must be the connected bot's team. */
+            workspace_id?: string;
+            channel_slug?: string;
+            /** @description The highest message sequence of the burst. Margince reads the history itself and uses the notice only as a signal. */
+            seq?: number;
+            message_id?: string;
+            event_id?: string;
+            /** Format: int64 */
+            ts?: number;
+        };
+        /** @description The answer to a taken notice. A URL check gets `challenge` alone. */
+        DispactChannelEventReceipt: {
+            challenge?: string;
+            /**
+             * @description `pull_queued`: the channel's history is read soon. `link_paused`: the archived channel's link is paused. `ignored`: no live link has this channel.
+             * @enum {string}
+             */
+            status?: "pull_queued" | "link_paused" | "ignored";
+        };
+        /**
+         * @description The kind of record a chat channel is linked to.
+         * @enum {string}
+         */
+        ChannelLinkRecordType: "deal" | "project";
+        /**
+         * @description How much Margince posts into a linked channel.
+         * @enum {string}
+         */
+        ChannelVerbosity: "everything" | "important" | "milestones" | "silent";
+        ChannelLinkState: {
+            /**
+             * @description `off`: no chat bot is connected. `none`: no channel yet. `linked`: posting and reading. `paused`: the channel is gone or the bot lost access.
+             * @enum {string}
+             */
+            state: "off" | "none" | "linked" | "paused";
+            link?: components["schemas"]["ChannelLink"];
+            invites?: components["schemas"]["ChannelInvites"];
+        };
+        ChannelLink: {
+            /** Format: uuid */
+            id: string;
+            /** @enum {string} */
+            provider: "dispact";
+            channel_slug: string;
+            channel_name: string;
+            /** @description The channel's address in the chat. */
+            channel_url: string;
+            verbosity: components["schemas"]["ChannelVerbosity"];
+            /** @enum {string} */
+            status: "active" | "channel_gone";
+            /** Format: uuid */
+            deal_id?: string | null;
+            /** Format: uuid */
+            project_id?: string | null;
+            /** Format: date-time */
+            created_at: string;
+        };
+        /** @description Who a newly created channel was opened to. */
+        ChannelInvites: {
+            /** @description Members added to the channel. */
+            invited: number;
+            /** @description Members invited who have no chat account. */
+            not_in_chat: number;
+            /** @description Members left out because a new channel invites at most 50. */
+            skipped_over_cap: number;
+        };
+        /** @description What Dispact needs to install the Margince app in a team. */
+        DispactAppManifest: {
+            /** @enum {string} */
+            slug: "margince";
+            name: string;
+            mcp: components["schemas"]["DispactAppManifestMcp"];
+            /** @description The bot scopes the app asks for, separated by spaces. */
+            scopes: string;
+            events: components["schemas"]["DispactAppManifestEvents"];
+        };
+        DispactAppManifestMcp: {
+            /** @description This installation's MCP address, `<public_base_url>/mcp`. */
+            endpoint: string;
+        };
+        DispactAppManifestEvents: {
+            /** @description Where Dispact sends signed notices, `<public_base_url>/v1/channel-events/dispact`. */
+            url: string;
+            /** @description The notice types the app subscribes to. */
+            types: string[];
+        };
+        LinkChannelRequest: {
+            /** @enum {string} */
+            mode: "create" | "existing";
+            /** @description For `existing`, the channel's slug or its link. */
+            channel?: string;
+            verbosity?: components["schemas"]["ChannelVerbosity"];
+            /** @description For `existing`, required. True files up to five summaries of the talk so far. */
+            summarize_history?: boolean;
+        };
+        SetChannelVerbosityRequest: {
+            verbosity: components["schemas"]["ChannelVerbosity"];
+        };
+        FileChannelMessageRequest: {
+            /**
+             * @description The message in the record's channel: its sequence number, `#slug:seq`, the chat's
+             *     `<m:#slug:seq|…>` mention, or its link. A message in another channel is not found.
+             */
+            message: string;
+            /** @description True files the message and the replies in its thread that follow it. */
+            thread?: boolean;
+        };
+        /**
+         * @description The chat talk a summary note was written from. The talk itself is not kept: open `url`
+         *     to read it in the chat.
+         */
+        ChatEpisode: {
+            /** @description How many messages the summary covers. */
+            message_count: number;
+            /**
+             * Format: date-time
+             * @description When the last of them was posted.
+             */
+            ended_at: string;
+            /** @description The first message in the chat. */
+            url: string;
         };
         /**
          * @description What the file's rows are, and therefore what the run creates.
@@ -39032,6 +39378,22 @@ export interface components {
             /** @description Ask the model again, whatever is kept. */
             refresh?: boolean;
         };
+        SalesProgressSummaryRequest: {
+            /** @enum {string} */
+            period: "month" | "year";
+            year: number;
+            /** @description Required with `period: month`. */
+            month?: number;
+            /**
+             * @description Absent reads the caller's own figures.
+             * @enum {string}
+             */
+            scope_kind?: "owner" | "team";
+            /** Format: uuid */
+            scope_id?: string;
+            /** @description Ask the model again, whatever is kept. */
+            refresh?: boolean;
+        };
         SalesAssessment: {
             /** @description The evaluation the assessment read. */
             evaluation_key: string;
@@ -39067,7 +39429,7 @@ export interface components {
             text: string;
         };
         SalesAssessmentCell: {
-            /** @description `metric:<metric id>` or `point:<metric id>:<group key>`. */
+            /** @description `metric:<metric id>` or `point:<metric id>:<group key>`; a Progress summary names its own figures `progress:<figure>`. */
             id: string;
             label: string;
             /** @description Raw source quantity with its unit. */
@@ -42009,6 +42371,8 @@ export interface components {
             readonly created_by?: components["schemas"]["PrincipalAttribution"];
             /** @description What a website form sent, field by field, on the note it wrote (`source_system` `web_form`). `body` carries the same facts as text for search and for readers that draw text only; a surface that draws fields reads them here. Null on every other row, and on a form note written before the fields were kept. Withheld with the content, like `body`. */
             readonly web_form?: components["schemas"]["WebFormSubmission"] | null;
+            /** @description On a note summarising chat talk (`source_system` `dispact`), what talk it summarises. The note's subject and body are an AI summary. Absent on every other row. Withheld with the content, like `body`. */
+            readonly chat_episode?: components["schemas"]["ChatEpisode"];
             raw?: {
                 [key: string]: unknown;
             } | null;
@@ -47674,6 +48038,26 @@ export interface components {
              */
             origin: "manual" | "ai" | "adopted";
         };
+        SalesGoalProposalRequest: {
+            /**
+             * Format: int64
+             * @description The yearly goal the months must add up to, when the reader has set one.
+             */
+            yearly_total_minor?: number;
+        };
+        SalesGoalProposal: {
+            /** @description January to December, each an amount of zero or more in minor units of the plan currency. */
+            months: number[];
+            /**
+             * Format: int64
+             * @description What the twelve months add up to.
+             */
+            total_minor: number;
+            /** @description The pattern the proposal followed, in the reader's language, with no figure in it. */
+            reason: string;
+            generated_by: components["schemas"]["WrittenBy"];
+            model_used?: string;
+        };
         SalesGoalPublishInput: {
             reason: string;
             /**
@@ -49663,15 +50047,6 @@ export interface components {
             routes: components["schemas"]["ComposedExtensionRoute"][];
             /** @description The scheduled jobs this boot actually RUNS for the unit — a job the unit declared with no handler ticks nothing and is deliberately absent, because an operator reading this list is asking what runs, not what was written down. Sorted. */
             jobs: string[];
-            /** @description The core capabilities the unit declares it uses, each with the reason its author gave. The core grants exactly these and refuses the rest, so this list is the whole of what the unit can borrow from the core (its AI models, its object store). Sorted by capability; absent for a unit that declares none. */
-            needs?: components["schemas"]["ComposedExtensionNeed"][];
-        };
-        /** @description One core capability a unit declares it uses. */
-        ComposedExtensionNeed: {
-            /** @description What the unit uses. `models` is the installation's AI models; `objects` is a key prefix of its own in the object store. */
-            capability: string;
-            /** @description One sentence from the unit's author saying what it does with the capability. */
-            reason: string;
         };
         /** @description The governance settings of one composed extension unit. */
         ExtensionSettings: {
@@ -51005,7 +51380,7 @@ export interface components {
          * @description AI task key from the task catalog, used to localize its display name.
          * @enum {string}
          */
-        AiTask: "account_scan" | "agent_loop" | "brief_ranking" | "capture_classify" | "capture_confidentiality_verdict" | "capture_counterparty_verdict" | "cert_judge" | "cold_start" | "corpus_ask" | "deal_health" | "deal_verdict" | "document_extract" | "draft_reply" | "enrich" | "extension_call" | "growth_fit" | "nl_search" | "offer_draft" | "owed_verdict" | "propose_roles" | "rate_extract" | "reader_rendering" | "report_interpret" | "report_setup" | "request_settlement" | "rewrite" | "signal_extract" | "site_extract" | "site_fact_extract" | "site_triage" | "stage_evidence_extract" | "summarize" | "tag_suggest" | "transcript" | "transcript_propose" | "voice_build" | "weekly_learnings" | "weekly_review";
+        AiTask: "account_scan" | "agent_loop" | "brief_ranking" | "capture_classify" | "capture_confidentiality_verdict" | "capture_counterparty_verdict" | "chat_summary" | "cert_judge" | "cold_start" | "corpus_ask" | "deal_health" | "deal_verdict" | "document_extract" | "draft_reply" | "enrich" | "growth_fit" | "nl_search" | "offer_draft" | "owed_verdict" | "propose_roles" | "rate_extract" | "reader_rendering" | "report_interpret" | "report_setup" | "request_settlement" | "rewrite" | "signal_extract" | "site_extract" | "site_fact_extract" | "site_triage" | "stage_evidence_extract" | "summarize" | "tag_suggest" | "transcript" | "transcript_propose" | "voice_build" | "weekly_learnings" | "weekly_review";
         /**
          * @description What kind of AI work an occurrence is. Every AI task this build can run reports here,
          *     because a task that reports nothing is AI work the product performed and then denied.
@@ -51031,7 +51406,7 @@ export interface components {
          *     edits one.
          * @enum {string}
          */
-        AiActivityKind: "morning_brief" | "overnight_at_risk_sweep" | "document_extract" | "site_read" | "brief_ranking" | "capture_classify" | "capture_confidentiality_verdict" | "capture_counterparty_verdict" | "cert_judge" | "cold_start" | "deal_health" | "draft_reply" | "enrich" | "growth_fit" | "nl_search" | "offer_draft" | "rate_extract" | "signal_extract" | "site_extract" | "site_fact_extract" | "site_triage" | "stage_evidence_extract" | "summarize" | "transcript" | "transcript_propose" | "voice_build" | "corpus_ask" | "weekly_review" | "weekly_learnings" | "propose_roles" | "owed_verdict" | "request_settlement" | "account_scan" | "tag_suggest" | "report_setup" | "report_interpret" | "reader_rendering" | "deal_verdict" | "rewrite" | "extension_call";
+        AiActivityKind: "morning_brief" | "overnight_at_risk_sweep" | "document_extract" | "site_read" | "brief_ranking" | "capture_classify" | "capture_confidentiality_verdict" | "capture_counterparty_verdict" | "cert_judge" | "cold_start" | "deal_health" | "draft_reply" | "enrich" | "growth_fit" | "nl_search" | "offer_draft" | "rate_extract" | "signal_extract" | "site_extract" | "site_fact_extract" | "site_triage" | "stage_evidence_extract" | "summarize" | "transcript" | "transcript_propose" | "voice_build" | "corpus_ask" | "weekly_review" | "weekly_learnings" | "propose_roles" | "owed_verdict" | "request_settlement" | "account_scan" | "tag_suggest" | "report_setup" | "report_interpret" | "reader_rendering" | "deal_verdict" | "rewrite" | "chat_summary";
         AiActivityItem: {
             /** Format: uuid */
             id: string;
@@ -52129,6 +52504,29 @@ export interface components {
             finished_at?: string | null;
             /** Format: date-time */
             created_at: string;
+            /** @description The meeting's summary as this reading leaves it: the one this reading wrote, or the newest one an earlier reading wrote. Absent when no reading has written one. */
+            summary?: components["schemas"]["TranscriptSummary"];
+            /** @description True when this reading finished without writing a summary, because the summary failed the check that every point cites lines the transcript has. The meeting keeps `summary` as it was. */
+            summary_refused: boolean;
+        };
+        /** @description A short summary of one meeting, written by a model from its transcript and never by a member. A client marks it as AI-written. Each point cites the transcript lines it was read from; the transcript itself is unchanged. */
+        TranscriptSummary: {
+            /**
+             * Format: uuid
+             * @description The reading that wrote this summary.
+             */
+            read_id: string;
+            /** Format: date-time */
+            generated_at: string;
+            /** @description What the meeting covered, in the language the meeting was held in. */
+            key_points: components["schemas"]["TranscriptSummaryPoint"][];
+            /** @description What the meeting agreed would happen next. Empty when it agreed nothing. */
+            next_steps: components["schemas"]["TranscriptSummaryPoint"][];
+        };
+        TranscriptSummaryPoint: {
+            text: string;
+            /** @description The 1-based transcript lines this point was read from. */
+            source_lines: number[];
         };
         /** @description One approval a transcript reading staged, and who it waits on. */
         TranscriptReadProposal: {
@@ -54143,6 +54541,11 @@ export interface components {
         CreateDataSubjectRequest: {
             /** @enum {string} */
             kind: "access" | "rectify" | "erasure" | "restriction";
+            /**
+             * @description The data subject: their contact id when they are a contact, else the identifier they
+             *     wrote from, such as an email. Only a contact id can be fulfilled; anything else waits
+             *     until somebody resolves it to a contact.
+             */
             subject_ref: string;
             /**
              * Format: date-time
@@ -56492,6 +56895,8 @@ export interface components {
             last_used_at?: string | null;
             /** Format: date-time */
             revoked_at?: string | null;
+            /** @description True while a chat app's user is bound to this passport. A revoked passport that is still bound refuses that user until it is released. */
+            app_bound?: boolean;
             /**
              * @description What this passport has used of its allowances in the window that is running. A
              *     connection's passports share one count, so a renewed credential keeps it. **Omitted**
@@ -62648,6 +63053,39 @@ export interface operations {
             };
             401: components["responses"]["Unauthorized"];
             404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    releasePassportAppBinding: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The user may be bound again. */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            401: components["responses"]["Unauthorized"];
+            404: components["responses"]["NotFound"];
+            /** @description The passport is still live (`code: passport_still_live`). Revoke it first. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
             422: components["responses"]["ValidationError"];
         };
     };
@@ -79284,6 +79722,34 @@ export interface operations {
             422: components["responses"]["ValidationError"];
         };
     };
+    summarizeSalesProgress: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SalesProgressSummaryRequest"];
+            };
+        };
+        responses: {
+            /** @description The summary. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SalesAssessment"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
     listSalesGoalSellers: {
         parameters: {
             query: {
@@ -79419,6 +79885,38 @@ export interface operations {
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
             409: components["responses"]["VersionConflict"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    proposeSalesGoalMonths: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                owner_id: string;
+                year: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SalesGoalProposalRequest"];
+            };
+        };
+        responses: {
+            /** @description The proposal. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SalesGoalProposal"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
             422: components["responses"]["ValidationError"];
         };
     };
@@ -80252,6 +80750,349 @@ export interface operations {
                 };
             };
             /** @description This deployment serves no messaging channels (`code: channel_connections_not_configured`), or has no credential store configured to seal a bot token in (`code: channel_credentials_not_configured`). */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    getChannelLink: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                record_type: components["schemas"]["ChannelLinkRecordType"];
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The link state. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ChannelLinkState"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    linkChannel: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                record_type: components["schemas"]["ChannelLinkRecordType"];
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["LinkChannelRequest"];
+            };
+        };
+        responses: {
+            /** @description The record is linked. */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ChannelLinkState"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            /** @description The record is not visible, or the channel was not found (`code: channel_not_found`). */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description No bot is connected (`code: channel_bot_not_connected`), the record already has a channel (`code: record_already_linked`), or the channel already belongs to another record (`code: channel_already_linked`). */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description The channel is public (`code: channel_not_private`), the bot is not in it (`code: channel_bot_not_member`), or the request is malformed. */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description The chat could not be reached (`code: channel_provider_unreachable`); nothing was written. */
+            502: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    unlinkChannel: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                record_type: components["schemas"]["ChannelLinkRecordType"];
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Unlinked. */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            /** @description The record is not visible, or it has no channel (`code: channel_link_not_found`). */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    setChannelVerbosity: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                record_type: components["schemas"]["ChannelLinkRecordType"];
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SetChannelVerbosityRequest"];
+            };
+        };
+        responses: {
+            /** @description The link state. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ChannelLinkState"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            /** @description The record is not visible, or it has no channel (`code: channel_link_not_found`). */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    fileChannelMessage: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                record_type: components["schemas"]["ChannelLinkRecordType"];
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["FileChannelMessageRequest"];
+            };
+        };
+        responses: {
+            /** @description The note. */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Activity"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            /** @description The record is not visible, it has no channel (`code: channel_link_not_found`), or the message is not in its channel (`code: channel_message_not_found`). */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description No bot is connected (`code: channel_bot_not_connected`), no AI model is bound (`code: ai_not_configured`), or a note not written by the chat summary holds the message's key (`code: conflict`). */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description The request is malformed, or the thread is longer than one filing reads (`code: channel_thread_too_long`); nothing was filed. */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description The chat could not be reached (`code: channel_provider_unreachable`), or the summary could not be written (`code: channel_summary_failed`); nothing was filed. */
+            502: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    getDispactAppManifest: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The app manifest. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DispactAppManifest"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            /** @description This deployment serves no chat channel links, or has no public base URL configured (`code: channel_links_not_configured`). */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    receiveDispactChannelEvent: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DispactChannelEvent"];
+            };
+        };
+        responses: {
+            /** @description The notice was taken. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DispactChannelEventReceipt"];
+                };
+            };
+            /** @description The signed body is not a notice: an unknown `type`, or a field its type needs is missing (`code: channel_event_malformed`). */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description The notice is not signed by the connected bot: no Dispact bot with an events secret is connected, or the signature, the timestamp or the team does not match (`code: channel_event_rejected`). The answer is the same for each cause. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description This `webhook-id` was taken in the last 24 hours (`code: channel_event_replayed`). */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description The body is larger than a notice can be (`code: channel_event_too_large`). */
+            413: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Rate-limited; Dispact retries. */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description This deployment takes no chat notices, or could not record the notice id (`code: channel_events_unavailable`); Dispact retries. */
             503: {
                 headers: {
                     [name: string]: unknown;

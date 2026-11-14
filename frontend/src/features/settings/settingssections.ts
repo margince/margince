@@ -246,6 +246,7 @@ export const SETTINGS_SECTIONS = {
     telegram: [
       "settings.part.integrations.telegram",
       "connectors.telegramTitle",
+      "connectors.bot.dispactTitle",
     ],
     "shared-mailboxes": [
       "settings.part.integrations.sharedMailboxes",

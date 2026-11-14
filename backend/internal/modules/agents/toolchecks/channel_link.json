@@ -1,0 +1,10 @@
+{
+  "verb": "channel_link",
+  "checks": [
+    "deal.read"
+  ],
+  "takes": [
+    "channel_deal",
+    "company"
+  ]
+}

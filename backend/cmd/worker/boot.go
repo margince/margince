@@ -176,6 +176,7 @@ func startEventLanes(laneCtx context.Context, background *sync.WaitGroup, cfg wo
 		return lanes, err
 	}
 	startProjectionLanes(laneCtx, pool, rdb, modelPath, lanes.background, lanes.inserter, logger, stdout)
+	startChatLinkSync(laneCtx, pool, rdb, vault, lanes.inserter, cfg.posture, lanes.background, logger, stdout)
 	// Said out loud for the reason the api says it: each role reads its own
 	// --config, so an unarmed worker beside an armed api is a purge whose cache
 	// flush never reaches this process.

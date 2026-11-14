@@ -102,7 +102,8 @@ const surfaceInstructions = "A governed CRM tool surface. Every call re-authenti
 	"the granting human's own permissions, so a tool may refuse a record this passport cannot " +
 	"reach. Tools that a human must approve say so in their own description; calling one " +
 	"stages the effect for review rather than performing it. A tool whose description names no " +
-	"governance runs immediately and needs only the read scope. " + mcp.ConflictingSourcesRule
+	"governance runs immediately and needs only the read scope. " + mcp.ConflictingSourcesRule + " " +
+	mcp.LocalTimeRule
 
 // queueInstruction is the REPORTING RULE, appended where the queue is served.
 //

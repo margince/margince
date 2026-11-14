@@ -46,7 +46,7 @@ func dueIntentHasTime(intent *crmcontracts.IntentTime) bool {
 		return false
 	}
 	_, clock, _ := strings.Cut(intent.WallClock, "T")
-	return strings.TrimRight(strings.TrimPrefix(clock, "23:59:59"), ".0") != ""
+	return strings.TrimRight(strings.TrimPrefix(clock, values.DayOnlyClock), ".0") != ""
 }
 
 // admitPatchDueTime pairs a chosen due clock with due_has_time: the clock

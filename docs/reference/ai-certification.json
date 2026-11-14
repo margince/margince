@@ -1,13 +1,13 @@
 {
   "totals": {
-    "sites": 58,
+    "sites": 60,
     "sites_best_current": 47,
     "sites_best_partial": 0,
     "sites_best_stale": 10,
-    "sites_absent": 1,
-    "scenarios": 322,
+    "sites_absent": 3,
+    "scenarios": 329,
     "records": 357,
-    "bindings": 16,
+    "bindings": 17,
     "self_judged_records": 0
   },
   "presets": [
@@ -218,6 +218,35 @@
           "cases_below_quality_bar": 0
         },
         {
+          "task": "chat_summary",
+          "label": "Chat channel summary",
+          "tier": "cheap_cloud",
+          "model": {
+            "provider": "gemini",
+            "model": "gemini-3.1-flash-lite",
+            "env": "cloud_frontier"
+          },
+          "band": "",
+          "state": "",
+          "fallback": {
+            "tier": "premium",
+            "model": {
+              "provider": "gemini",
+              "model": "gemini-3.6-flash",
+              "env": "cloud_frontier",
+              "thinking_level": "low"
+            },
+            "same_model": false,
+            "band": "",
+            "state": ""
+          },
+          "abandoned": 0,
+          "runs": 0,
+          "passed": 0,
+          "cases_failing_often": 0,
+          "cases_below_quality_bar": 0
+        },
+        {
           "task": "cold_start",
           "label": "Onboarding read",
           "tier": "cheap_cloud",
@@ -393,35 +422,6 @@
           "abandoned": 0,
           "runs": 12,
           "passed": 12,
-          "cases_failing_often": 0,
-          "cases_below_quality_bar": 0
-        },
-        {
-          "task": "extension_call",
-          "label": "Extension model call",
-          "tier": "cheap_cloud",
-          "model": {
-            "provider": "gemini",
-            "model": "gemini-3.1-flash-lite",
-            "env": "cloud_frontier"
-          },
-          "band": "",
-          "state": "",
-          "fallback": {
-            "tier": "premium",
-            "model": {
-              "provider": "gemini",
-              "model": "gemini-3.6-flash",
-              "env": "cloud_frontier",
-              "thinking_level": "low"
-            },
-            "same_model": false,
-            "band": "",
-            "state": ""
-          },
-          "abandoned": 0,
-          "runs": 0,
-          "passed": 0,
           "cases_failing_often": 0,
           "cases_below_quality_bar": 0
         },
@@ -658,7 +658,7 @@
         },
         {
           "task": "report_setup",
-          "label": "Setting up a report from a description",
+          "label": "Proposing a report setup or sales goals",
           "tier": "cheap_cloud",
           "model": {
             "provider": "gemini",
@@ -932,11 +932,11 @@
             "env": "cloud_frontier",
             "thinking_level": "low"
           },
-          "band": "certified",
-          "state": "current",
+          "band": "",
+          "state": "",
           "abandoned": 0,
-          "runs": 96,
-          "passed": 93,
+          "runs": 0,
+          "passed": 0,
           "cases_failing_often": 0,
           "cases_below_quality_bar": 0
         },
@@ -1029,11 +1029,11 @@
         }
       ],
       "bands": {
-        "certified": 27,
+        "certified": 26,
         "supported_degraded": 8,
         "not_supported": 1
       },
-      "untested": 1,
+      "untested": 2,
       "unbound": 0,
       "unrecognised": 0
     },
@@ -1308,6 +1308,35 @@
           }
         },
         {
+          "task": "chat_summary",
+          "label": "Chat channel summary",
+          "tier": "cheap_cloud",
+          "model": {
+            "provider": "gemini_vertex",
+            "model": "gemini-3.1-flash-lite",
+            "env": "eu_hosted"
+          },
+          "band": "",
+          "state": "",
+          "fallback": {
+            "tier": "premium",
+            "model": {
+              "provider": "gemini_vertex",
+              "model": "gemini-3.6-flash",
+              "env": "eu_hosted",
+              "thinking_level": "low"
+            },
+            "same_model": false,
+            "band": "",
+            "state": ""
+          },
+          "abandoned": 0,
+          "runs": 0,
+          "passed": 0,
+          "cases_failing_often": 0,
+          "cases_below_quality_bar": 0
+        },
+        {
           "task": "cold_start",
           "label": "Onboarding read",
           "tier": "cheap_cloud",
@@ -1550,35 +1579,6 @@
             "model": "gemini-3.1-flash-lite",
             "env": "cloud_frontier"
           }
-        },
-        {
-          "task": "extension_call",
-          "label": "Extension model call",
-          "tier": "cheap_cloud",
-          "model": {
-            "provider": "gemini_vertex",
-            "model": "gemini-3.1-flash-lite",
-            "env": "eu_hosted"
-          },
-          "band": "",
-          "state": "",
-          "fallback": {
-            "tier": "premium",
-            "model": {
-              "provider": "gemini_vertex",
-              "model": "gemini-3.6-flash",
-              "env": "eu_hosted",
-              "thinking_level": "low"
-            },
-            "same_model": false,
-            "band": "",
-            "state": ""
-          },
-          "abandoned": 0,
-          "runs": 0,
-          "passed": 0,
-          "cases_failing_often": 0,
-          "cases_below_quality_bar": 0
         },
         {
           "task": "growth_fit",
@@ -1900,7 +1900,7 @@
         },
         {
           "task": "report_setup",
-          "label": "Setting up a report from a description",
+          "label": "Proposing a report setup or sales goals",
           "tier": "cheap_cloud",
           "model": {
             "provider": "gemini_vertex",
@@ -2272,19 +2272,13 @@
             "env": "eu_hosted",
             "thinking_level": "low"
           },
-          "band": "certified",
-          "state": "current",
+          "band": "",
+          "state": "",
           "abandoned": 0,
-          "runs": 96,
-          "passed": 93,
+          "runs": 0,
+          "passed": 0,
           "cases_failing_often": 0,
-          "cases_below_quality_bar": 0,
-          "measured_on": {
-            "provider": "gemini",
-            "model": "gemini-3.6-flash",
-            "env": "cloud_frontier",
-            "thinking_level": "low"
-          }
+          "cases_below_quality_bar": 0
         },
         {
           "task": "voice_build",
@@ -2408,11 +2402,11 @@
         }
       ],
       "bands": {
-        "certified": 27,
+        "certified": 26,
         "supported_degraded": 8,
         "not_supported": 1
       },
-      "untested": 1,
+      "untested": 2,
       "unbound": 0,
       "unrecognised": 0
     },
@@ -2617,6 +2611,34 @@
           "cases_below_quality_bar": 0
         },
         {
+          "task": "chat_summary",
+          "label": "Chat channel summary",
+          "tier": "cheap_cloud",
+          "model": {
+            "provider": "openai_compatible",
+            "model": "openai/gpt-6-luna",
+            "env": "cloud_frontier"
+          },
+          "band": "",
+          "state": "",
+          "fallback": {
+            "tier": "premium",
+            "model": {
+              "provider": "openai_compatible",
+              "model": "openai/gpt-6-sol",
+              "env": "cloud_frontier"
+            },
+            "same_model": false,
+            "band": "",
+            "state": ""
+          },
+          "abandoned": 0,
+          "runs": 0,
+          "passed": 0,
+          "cases_failing_often": 0,
+          "cases_below_quality_bar": 0
+        },
+        {
           "task": "cold_start",
           "label": "Onboarding read",
           "tier": "cheap_cloud",
@@ -2787,34 +2809,6 @@
           "abandoned": 0,
           "runs": 12,
           "passed": 12,
-          "cases_failing_often": 0,
-          "cases_below_quality_bar": 0
-        },
-        {
-          "task": "extension_call",
-          "label": "Extension model call",
-          "tier": "cheap_cloud",
-          "model": {
-            "provider": "openai_compatible",
-            "model": "openai/gpt-6-luna",
-            "env": "cloud_frontier"
-          },
-          "band": "",
-          "state": "",
-          "fallback": {
-            "tier": "premium",
-            "model": {
-              "provider": "openai_compatible",
-              "model": "openai/gpt-6-sol",
-              "env": "cloud_frontier"
-            },
-            "same_model": false,
-            "band": "",
-            "state": ""
-          },
-          "abandoned": 0,
-          "runs": 0,
-          "passed": 0,
           "cases_failing_often": 0,
           "cases_below_quality_bar": 0
         },
@@ -3044,7 +3038,7 @@
         },
         {
           "task": "report_setup",
-          "label": "Setting up a report from a description",
+          "label": "Proposing a report setup or sales goals",
           "tier": "cheap_cloud",
           "model": {
             "provider": "openai_compatible",
@@ -3612,6 +3606,34 @@
           "cases_below_quality_bar": 0
         },
         {
+          "task": "chat_summary",
+          "label": "Chat channel summary",
+          "tier": "cheap_cloud",
+          "model": {
+            "provider": "openai_compatible",
+            "model": "openai/gpt-oss-120b",
+            "env": "cloud_frontier"
+          },
+          "band": "",
+          "state": "",
+          "fallback": {
+            "tier": "premium",
+            "model": {
+              "provider": "openai_compatible",
+              "model": "mistralai/mistral-medium-3-5",
+              "env": "cloud_frontier"
+            },
+            "same_model": false,
+            "band": "",
+            "state": ""
+          },
+          "abandoned": 0,
+          "runs": 0,
+          "passed": 0,
+          "cases_failing_often": 0,
+          "cases_below_quality_bar": 0
+        },
+        {
           "task": "cold_start",
           "label": "Onboarding read",
           "tier": "cheap_cloud",
@@ -3782,34 +3804,6 @@
           "abandoned": 0,
           "runs": 21,
           "passed": 18,
-          "cases_failing_often": 0,
-          "cases_below_quality_bar": 0
-        },
-        {
-          "task": "extension_call",
-          "label": "Extension model call",
-          "tier": "cheap_cloud",
-          "model": {
-            "provider": "openai_compatible",
-            "model": "openai/gpt-oss-120b",
-            "env": "cloud_frontier"
-          },
-          "band": "",
-          "state": "",
-          "fallback": {
-            "tier": "premium",
-            "model": {
-              "provider": "openai_compatible",
-              "model": "mistralai/mistral-medium-3-5",
-              "env": "cloud_frontier"
-            },
-            "same_model": false,
-            "band": "",
-            "state": ""
-          },
-          "abandoned": 0,
-          "runs": 0,
-          "passed": 0,
           "cases_failing_often": 0,
           "cases_below_quality_bar": 0
         },
@@ -4039,7 +4033,7 @@
         },
         {
           "task": "report_setup",
-          "label": "Setting up a report from a description",
+          "label": "Proposing a report setup or sales goals",
           "tier": "cheap_cloud",
           "model": {
             "provider": "openai_compatible",
@@ -4607,6 +4601,34 @@
           "cases_below_quality_bar": 0
         },
         {
+          "task": "chat_summary",
+          "label": "Chat channel summary",
+          "tier": "cheap_cloud",
+          "model": {
+            "provider": "openai_compatible",
+            "model": "google/gemma-4-31b-it",
+            "env": "cloud_frontier"
+          },
+          "band": "",
+          "state": "",
+          "fallback": {
+            "tier": "premium",
+            "model": {
+              "provider": "openai_compatible",
+              "model": "google/gemma-4-31b-it",
+              "env": "cloud_frontier"
+            },
+            "same_model": true,
+            "band": "",
+            "state": ""
+          },
+          "abandoned": 0,
+          "runs": 0,
+          "passed": 0,
+          "cases_failing_often": 0,
+          "cases_below_quality_bar": 0
+        },
+        {
           "task": "cold_start",
           "label": "Onboarding read",
           "tier": "cheap_cloud",
@@ -4778,34 +4800,6 @@
           "runs": 6,
           "passed": 3,
           "cases_failing_often": 1,
-          "cases_below_quality_bar": 0
-        },
-        {
-          "task": "extension_call",
-          "label": "Extension model call",
-          "tier": "cheap_cloud",
-          "model": {
-            "provider": "openai_compatible",
-            "model": "google/gemma-4-31b-it",
-            "env": "cloud_frontier"
-          },
-          "band": "",
-          "state": "",
-          "fallback": {
-            "tier": "premium",
-            "model": {
-              "provider": "openai_compatible",
-              "model": "google/gemma-4-31b-it",
-              "env": "cloud_frontier"
-            },
-            "same_model": true,
-            "band": "",
-            "state": ""
-          },
-          "abandoned": 0,
-          "runs": 0,
-          "passed": 0,
-          "cases_failing_often": 0,
           "cases_below_quality_bar": 0
         },
         {
@@ -5034,7 +5028,7 @@
         },
         {
           "task": "report_setup",
-          "label": "Setting up a report from a description",
+          "label": "Proposing a report setup or sales goals",
           "tier": "cheap_cloud",
           "model": {
             "provider": "openai_compatible",
@@ -5602,6 +5596,34 @@
           "cases_below_quality_bar": 0
         },
         {
+          "task": "chat_summary",
+          "label": "Chat channel summary",
+          "tier": "cheap_cloud",
+          "model": {
+            "provider": "openai_compatible",
+            "model": "mistralai/ministral-14b-2512",
+            "env": "eu_hosted"
+          },
+          "band": "",
+          "state": "",
+          "fallback": {
+            "tier": "premium",
+            "model": {
+              "provider": "openai_compatible",
+              "model": "mistralai/mistral-medium-3-5",
+              "env": "eu_hosted"
+            },
+            "same_model": false,
+            "band": "",
+            "state": ""
+          },
+          "abandoned": 0,
+          "runs": 0,
+          "passed": 0,
+          "cases_failing_often": 0,
+          "cases_below_quality_bar": 0
+        },
+        {
           "task": "cold_start",
           "label": "Onboarding read",
           "tier": "cheap_cloud",
@@ -5772,34 +5794,6 @@
           "abandoned": 0,
           "runs": 12,
           "passed": 12,
-          "cases_failing_often": 0,
-          "cases_below_quality_bar": 0
-        },
-        {
-          "task": "extension_call",
-          "label": "Extension model call",
-          "tier": "cheap_cloud",
-          "model": {
-            "provider": "openai_compatible",
-            "model": "mistralai/ministral-14b-2512",
-            "env": "eu_hosted"
-          },
-          "band": "",
-          "state": "",
-          "fallback": {
-            "tier": "premium",
-            "model": {
-              "provider": "openai_compatible",
-              "model": "mistralai/mistral-medium-3-5",
-              "env": "eu_hosted"
-            },
-            "same_model": false,
-            "band": "",
-            "state": ""
-          },
-          "abandoned": 0,
-          "runs": 0,
-          "passed": 0,
           "cases_failing_often": 0,
           "cases_below_quality_bar": 0
         },
@@ -6029,7 +6023,7 @@
         },
         {
           "task": "report_setup",
-          "label": "Setting up a report from a description",
+          "label": "Proposing a report setup or sales goals",
           "tier": "cheap_cloud",
           "model": {
             "provider": "openai_compatible",
@@ -6597,6 +6591,34 @@
           "cases_below_quality_bar": 0
         },
         {
+          "task": "chat_summary",
+          "label": "Chat channel summary",
+          "tier": "cheap_cloud",
+          "model": {
+            "provider": "ollama",
+            "model": "gemma4:12b",
+            "env": "sovereign"
+          },
+          "band": "",
+          "state": "",
+          "fallback": {
+            "tier": "premium",
+            "model": {
+              "provider": "ollama",
+              "model": "gemma4:12b",
+              "env": "sovereign"
+            },
+            "same_model": true,
+            "band": "",
+            "state": ""
+          },
+          "abandoned": 0,
+          "runs": 0,
+          "passed": 0,
+          "cases_failing_often": 0,
+          "cases_below_quality_bar": 0
+        },
+        {
           "task": "cold_start",
           "label": "Onboarding read",
           "tier": "cheap_cloud",
@@ -6755,34 +6777,6 @@
           "state": "",
           "fallback": {
             "tier": "cheap_cloud",
-            "model": {
-              "provider": "ollama",
-              "model": "gemma4:12b",
-              "env": "sovereign"
-            },
-            "same_model": true,
-            "band": "",
-            "state": ""
-          },
-          "abandoned": 0,
-          "runs": 0,
-          "passed": 0,
-          "cases_failing_often": 0,
-          "cases_below_quality_bar": 0
-        },
-        {
-          "task": "extension_call",
-          "label": "Extension model call",
-          "tier": "cheap_cloud",
-          "model": {
-            "provider": "ollama",
-            "model": "gemma4:12b",
-            "env": "sovereign"
-          },
-          "band": "",
-          "state": "",
-          "fallback": {
-            "tier": "premium",
             "model": {
               "provider": "ollama",
               "model": "gemma4:12b",
@@ -7024,7 +7018,7 @@
         },
         {
           "task": "report_setup",
-          "label": "Setting up a report from a description",
+          "label": "Proposing a report setup or sales goals",
           "tier": "cheap_cloud",
           "model": {
             "provider": "ollama",
@@ -7592,6 +7586,34 @@
           "cases_below_quality_bar": 0
         },
         {
+          "task": "chat_summary",
+          "label": "Chat channel summary",
+          "tier": "cheap_cloud",
+          "model": {
+            "provider": "vllm",
+            "model": "mlx-community/Qwen3-14B-4bit",
+            "env": "sovereign"
+          },
+          "band": "",
+          "state": "",
+          "fallback": {
+            "tier": "premium",
+            "model": {
+              "provider": "vllm",
+              "model": "mlx-community/Qwen3-14B-4bit",
+              "env": "sovereign"
+            },
+            "same_model": true,
+            "band": "",
+            "state": ""
+          },
+          "abandoned": 0,
+          "runs": 0,
+          "passed": 0,
+          "cases_failing_often": 0,
+          "cases_below_quality_bar": 0
+        },
+        {
           "task": "cold_start",
           "label": "Onboarding read",
           "tier": "cheap_cloud",
@@ -7750,34 +7772,6 @@
           "state": "",
           "fallback": {
             "tier": "cheap_cloud",
-            "model": {
-              "provider": "vllm",
-              "model": "mlx-community/Qwen3-14B-4bit",
-              "env": "sovereign"
-            },
-            "same_model": true,
-            "band": "",
-            "state": ""
-          },
-          "abandoned": 0,
-          "runs": 0,
-          "passed": 0,
-          "cases_failing_often": 0,
-          "cases_below_quality_bar": 0
-        },
-        {
-          "task": "extension_call",
-          "label": "Extension model call",
-          "tier": "cheap_cloud",
-          "model": {
-            "provider": "vllm",
-            "model": "mlx-community/Qwen3-14B-4bit",
-            "env": "sovereign"
-          },
-          "band": "",
-          "state": "",
-          "fallback": {
-            "tier": "premium",
             "model": {
               "provider": "vllm",
               "model": "mlx-community/Qwen3-14B-4bit",
@@ -8019,7 +8013,7 @@
         },
         {
           "task": "report_setup",
-          "label": "Setting up a report from a description",
+          "label": "Proposing a report setup or sales goals",
           "tier": "cheap_cloud",
           "model": {
             "provider": "vllm",
@@ -8391,9 +8385,9 @@
     {
       "name": "Gemini",
       "answer": "mostly",
-      "sites_shipped": 58,
-      "sites_measured": 57,
-      "ready": 41,
+      "sites_shipped": 60,
+      "sites_measured": 56,
+      "ready": 40,
       "usable_with_care": 15,
       "not_reliable_yet": 1,
       "recheck_pending": 10,
@@ -8425,16 +8419,16 @@
             "env": "cloud_frontier",
             "thinking_level": "low"
           },
-          "sites": 48,
-          "sites_current": 41,
+          "sites": 47,
+          "sites_current": 40,
           "sites_partial": 0,
           "sites_stale": 7,
-          "runs": 879,
-          "passed": 873,
-          "reliability": 0.9931740614334471,
+          "runs": 783,
+          "passed": 780,
+          "reliability": 0.9961685823754789,
           "slowest_p95_ms": 10422,
           "bands": {
-            "certified": 31,
+            "certified": 30,
             "supported_degraded": 16,
             "not_supported": 1
           }
@@ -9159,21 +9153,6 @@
           "records": 1
         },
         {
-          "key": "transcript_propose/next_steps",
-          "task": "transcript_propose",
-          "best": {
-            "provider": "gemini",
-            "model": "gemini-3.6-flash",
-            "env": "cloud_frontier",
-            "thinking_level": "low"
-          },
-          "band": "certified",
-          "state": "current",
-          "runs": 96,
-          "passed": 93,
-          "records": 1
-        },
-        {
           "key": "voice_build/demo_draft",
           "task": "voice_build",
           "best": {
@@ -9263,7 +9242,7 @@
     {
       "name": "GPT",
       "answer": "mostly",
-      "sites_shipped": 58,
+      "sites_shipped": 60,
       "sites_measured": 52,
       "ready": 35,
       "usable_with_care": 14,
@@ -10065,7 +10044,7 @@
     {
       "name": "Mistral",
       "answer": "mostly",
-      "sites_shipped": 58,
+      "sites_shipped": 60,
       "sites_measured": 44,
       "ready": 24,
       "usable_with_care": 12,
@@ -10775,7 +10754,7 @@
     {
       "name": "Gemma",
       "answer": "not_enough_tested",
-      "sites_shipped": 58,
+      "sites_shipped": 60,
       "sites_measured": 6,
       "ready": 1,
       "usable_with_care": 1,
@@ -10977,19 +10956,39 @@
       "binding": {
         "provider": "gemini",
         "model": "gemini-3.6-flash",
+        "env": "cloud_frontier"
+      },
+      "sites": 1,
+      "sites_current": 1,
+      "sites_partial": 0,
+      "sites_stale": 0,
+      "runs": 96,
+      "passed": 96,
+      "reliability": 1,
+      "slowest_p95_ms": 7304,
+      "bands": {
+        "certified": 1,
+        "supported_degraded": 0,
+        "not_supported": 0
+      }
+    },
+    {
+      "binding": {
+        "provider": "gemini",
+        "model": "gemini-3.6-flash",
         "env": "cloud_frontier",
         "thinking_level": "low"
       },
-      "sites": 48,
-      "sites_current": 41,
+      "sites": 47,
+      "sites_current": 40,
       "sites_partial": 0,
       "sites_stale": 7,
-      "runs": 879,
-      "passed": 873,
-      "reliability": 0.9931740614334471,
+      "runs": 783,
+      "passed": 780,
+      "reliability": 0.9961685823754789,
       "slowest_p95_ms": 10422,
       "bands": {
-        "certified": 31,
+        "certified": 30,
         "supported_degraded": 16,
         "not_supported": 1
       }
@@ -11021,9 +11020,9 @@
         "env": "cloud_frontier"
       },
       "sites": 53,
-      "sites_current": 43,
+      "sites_current": 42,
       "sites_partial": 0,
-      "sites_stale": 10,
+      "sites_stale": 11,
       "runs": 1398,
       "passed": 1373,
       "reliability": 0.9821173104434907,
@@ -11181,9 +11180,9 @@
         "env": "cloud_frontier"
       },
       "sites": 53,
-      "sites_current": 43,
+      "sites_current": 42,
       "sites_partial": 0,
-      "sites_stale": 10,
+      "sites_stale": 11,
       "runs": 1665,
       "passed": 1548,
       "reliability": 0.9297297297297298,
@@ -11201,9 +11200,9 @@
         "env": "cloud_frontier"
       },
       "sites": 53,
-      "sites_current": 43,
+      "sites_current": 42,
       "sites_partial": 0,
-      "sites_stale": 10,
+      "sites_stale": 11,
       "runs": 1380,
       "passed": 1370,
       "reliability": 0.9927536231884058,
@@ -14697,6 +14696,36 @@
           "stale_reason": ""
         }
       ]
+    },
+    {
+      "task": "chat_summary",
+      "site": "episode",
+      "key": "chat_summary/episode",
+      "scope": "full_invocation",
+      "missing_context_scopes": [],
+      "best_state": "absent",
+      "recommended": null,
+      "scenarios": [
+        {
+          "name": "decision_on_discount",
+          "expects": "accepted",
+          "graded_by": "judge",
+          "file": "backend/internal/compose/aicert/corpus/chat_summary/decision_on_discount_01.yaml"
+        },
+        {
+          "name": "instruction_in_chat_is_data",
+          "expects": "accepted",
+          "graded_by": "judge",
+          "file": "backend/internal/compose/aicert/corpus/chat_summary/instruction_in_chat_is_data_01.yaml"
+        },
+        {
+          "name": "small_talk_is_not_filed",
+          "expects": "accepted",
+          "graded_by": "judge",
+          "file": "backend/internal/compose/aicert/corpus/chat_summary/small_talk_is_not_filed_01.yaml"
+        }
+      ],
+      "records": []
     },
     {
       "task": "cold_start",
@@ -19718,30 +19747,6 @@
       ]
     },
     {
-      "task": "extension_call",
-      "site": "extension_call",
-      "key": "extension_call/extension_call",
-      "scope": "full_invocation",
-      "missing_context_scopes": [],
-      "best_state": "absent",
-      "recommended": null,
-      "scenarios": [
-        {
-          "name": "extension_call_instruction_in_data_is_data",
-          "expects": "accepted",
-          "graded_by": "judge",
-          "file": "backend/internal/compose/aicert/corpus/extension_call/extension_call_instruction_in_data_is_data_01.yaml"
-        },
-        {
-          "name": "extension_call_one_sentence_summary",
-          "expects": "accepted",
-          "graded_by": "judge",
-          "file": "backend/internal/compose/aicert/corpus/extension_call/extension_call_one_sentence_summary_01.yaml"
-        }
-      ],
-      "records": []
-    },
-    {
       "task": "growth_fit",
       "site": "growth_fit",
       "key": "growth_fit/growth_fit",
@@ -22280,6 +22285,30 @@
     },
     {
       "task": "report_interpret",
+      "site": "progress_summary",
+      "key": "report_interpret/progress_summary",
+      "scope": "full_invocation",
+      "missing_context_scopes": [],
+      "best_state": "absent",
+      "recommended": null,
+      "scenarios": [
+        {
+          "name": "progress_summary_judges_nothing_against_a_goal_nobody_set",
+          "expects": "accepted",
+          "graded_by": "judge",
+          "file": "backend/internal/compose/aicert/corpus/report_interpret/progress_summary_judges_nothing_against_a_goal_nobody_set_01.yaml"
+        },
+        {
+          "name": "progress_summary_names_what_is_missing_to_the_goal",
+          "expects": "accepted",
+          "graded_by": "judge",
+          "file": "backend/internal/compose/aicert/corpus/report_interpret/progress_summary_names_what_is_missing_to_the_goal_01.yaml"
+        }
+      ],
+      "records": []
+    },
+    {
+      "task": "report_interpret",
       "site": "sales_assessment",
       "key": "report_interpret/sales_assessment",
       "scope": "full_invocation",
@@ -22728,6 +22757,30 @@
           "stale_reason": ""
         }
       ]
+    },
+    {
+      "task": "report_setup",
+      "site": "sales_goal_months",
+      "key": "report_setup/sales_goal_months",
+      "scope": "full_invocation",
+      "missing_context_scopes": [],
+      "best_state": "absent",
+      "recommended": null,
+      "scenarios": [
+        {
+          "name": "sales_goal_months_follows_last_years_seasons",
+          "expects": "accepted",
+          "graded_by": "judge",
+          "file": "backend/internal/compose/aicert/corpus/report_setup/sales_goal_months_follows_last_years_seasons_01.yaml"
+        },
+        {
+          "name": "sales_goal_months_spreads_a_given_yearly_goal",
+          "expects": "accepted",
+          "graded_by": "judge",
+          "file": "backend/internal/compose/aicert/corpus/report_setup/sales_goal_months_spreads_a_given_yearly_goal_01.yaml"
+        }
+      ],
+      "records": []
     },
     {
       "task": "request_settlement",
@@ -28560,8 +28613,8 @@
       "best_state": "current",
       "recommended": {
         "binding": {
-          "provider": "openai_compatible",
-          "model": "qwen/qwen3.8-27b",
+          "provider": "gemini",
+          "model": "gemini-3.6-flash",
           "env": "cloud_frontier"
         },
         "band": "certified",
@@ -28624,6 +28677,12 @@
           "file": "backend/internal/compose/aicert/corpus/transcript_propose/shared_deliverable_named_recipients.yaml"
         },
         {
+          "name": "tentative_intro_within_a_week",
+          "expects": "accepted",
+          "graded_by": "mechanical",
+          "file": "backend/internal/compose/aicert/corpus/transcript_propose/tentative_intro_within_a_week.yaml"
+        },
+        {
           "name": "tentative_promise_with_a_day",
           "expects": "accepted",
           "graded_by": "mechanical",
@@ -28682,6 +28741,12 @@
           "expects": "accepted",
           "graded_by": "judge",
           "file": "backend/internal/compose/aicert/corpus/transcript_propose/future_attachment_is_a_current_promise_vi.yaml"
+        },
+        {
+          "name": "transcript_meeting_summary_cites_its_lines_de",
+          "expects": "accepted",
+          "graded_by": "judge",
+          "file": "backend/internal/compose/aicert/corpus/transcript_propose/meeting_summary_cites_its_lines_de.yaml"
         },
         {
           "name": "transcript_optional_commitment_preserves_its_meaning_de",
@@ -28760,7 +28825,7 @@
           "state": "stale",
           "band": "not_supported",
           "scenarios_measured": 0,
-          "scenarios_total": 30,
+          "scenarios_total": 32,
           "runs": 102,
           "passed": 92,
           "reliability": 0.9019607843137255,
@@ -28776,9 +28841,11 @@
           "stale_cause": {
             "case_changed": [
               "meeting_speaker_reports_customer_promise",
+              "tentative_promise_with_a_day",
               "transcript_conditional_commitment_preserves_its_meaning_de",
               "transcript_conditional_commitment_preserves_its_meaning_en",
-              "transcript_conditional_commitment_preserves_its_meaning_vi"
+              "transcript_conditional_commitment_preserves_its_meaning_vi",
+              "we_might_follow_up_some_time"
             ],
             "prompt_changed": [
               "a_meeting_that_promised_nothing",
@@ -28838,7 +28905,7 @@
           "state": "stale",
           "band": "certified",
           "scenarios_measured": 0,
-          "scenarios_total": 30,
+          "scenarios_total": 32,
           "runs": 18,
           "passed": 18,
           "reliability": 1,
@@ -28883,7 +28950,7 @@
           "state": "stale",
           "band": "certified",
           "scenarios_measured": 0,
-          "scenarios_total": 30,
+          "scenarios_total": 32,
           "runs": 18,
           "passed": 18,
           "reliability": 1,
@@ -28923,21 +28990,20 @@
           "binding": {
             "provider": "gemini",
             "model": "gemini-3.6-flash",
-            "env": "cloud_frontier",
-            "thinking_level": "low"
+            "env": "cloud_frontier"
           },
           "state": "current",
           "band": "certified",
-          "scenarios_measured": 30,
-          "scenarios_total": 30,
+          "scenarios_measured": 32,
+          "scenarios_total": 32,
           "runs": 96,
-          "passed": 93,
-          "reliability": 0.96875,
-          "latency_p50_ms": 1864,
-          "latency_p95_ms": 4414,
+          "passed": 96,
+          "reliability": 1,
+          "latency_p50_ms": 4484,
+          "latency_p95_ms": 7304,
           "reported": {
-            "accepted": 93,
-            "wrong_answer": 3,
+            "accepted": 96,
+            "wrong_answer": 0,
             "invalid": 0,
             "abstained": 0
           },
@@ -28949,10 +29015,10 @@
             "model": "google/gemma-4-31b-it",
             "env": "cloud_frontier"
           },
-          "state": "current",
+          "state": "stale",
           "band": "supported_degraded",
-          "scenarios_measured": 30,
-          "scenarios_total": 30,
+          "scenarios_measured": 0,
+          "scenarios_total": 32,
           "runs": 102,
           "passed": 95,
           "reliability": 0.9313725490196079,
@@ -28964,7 +29030,59 @@
             "invalid": 0,
             "abstained": 0
           },
-          "stale_reason": ""
+          "stale_reason": "30 scenarios it scored have changed since (the case and the prompt this build sends and how a run is graded): a_meeting_that_promised_nothing, a_speaker_tries_to_write_the_record, copied_contact_is_not_a_recipient, customer_promises_data_in_the_meeting, firm_promises_take_the_available_slots, meeting_speaker_reports_customer_promise and 24 more",
+          "stale_cause": {
+            "case_changed": [
+              "tentative_promise_with_a_day",
+              "we_might_follow_up_some_time"
+            ],
+            "prompt_changed": [
+              "a_meeting_that_promised_nothing",
+              "a_speaker_tries_to_write_the_record",
+              "copied_contact_is_not_a_recipient",
+              "customer_promises_data_in_the_meeting",
+              "firm_promises_take_the_available_slots",
+              "meeting_speaker_reports_customer_promise",
+              "named_third_party_promiser",
+              "one_side_promises_revised_pricing",
+              "shared_deliverable_named_recipients",
+              "tentative_promise_with_a_day",
+              "transcript_completed_attachment_is_not_a_new_promise_de",
+              "transcript_completed_attachment_is_not_a_new_promise_en",
+              "transcript_completed_attachment_is_not_a_new_promise_vi",
+              "transcript_conditional_commitment_preserves_its_meaning_de",
+              "transcript_conditional_commitment_preserves_its_meaning_en",
+              "transcript_conditional_commitment_preserves_its_meaning_vi",
+              "transcript_future_attachment_is_a_current_promise_de",
+              "transcript_future_attachment_is_a_current_promise_en",
+              "transcript_future_attachment_is_a_current_promise_vi",
+              "transcript_optional_commitment_preserves_its_meaning_de",
+              "transcript_optional_commitment_preserves_its_meaning_en",
+              "transcript_optional_commitment_preserves_its_meaning_vi",
+              "transcript_range_commitment_preserves_its_meaning_de",
+              "transcript_range_commitment_preserves_its_meaning_en",
+              "transcript_range_commitment_preserves_its_meaning_vi",
+              "transcript_request_creates_no_work",
+              "transcript_same_named_promiser_unresolved",
+              "transcript_unclear_creates_no_work",
+              "we_might_follow_up_some_time",
+              "we_promise_the_integration_spec_by_a_day"
+            ],
+            "grader_changed": [
+              "copied_contact_is_not_a_recipient",
+              "customer_promises_data_in_the_meeting",
+              "firm_promises_take_the_available_slots",
+              "meeting_speaker_reports_customer_promise",
+              "named_third_party_promiser",
+              "one_side_promises_revised_pricing",
+              "shared_deliverable_named_recipients",
+              "transcript_future_attachment_is_a_current_promise_de",
+              "transcript_future_attachment_is_a_current_promise_en",
+              "transcript_future_attachment_is_a_current_promise_vi",
+              "transcript_same_named_promiser_unresolved",
+              "we_promise_the_integration_spec_by_a_day"
+            ]
+          }
         },
         {
           "binding": {
@@ -28975,7 +29093,7 @@
           "state": "stale",
           "band": "not_supported",
           "scenarios_measured": 0,
-          "scenarios_total": 30,
+          "scenarios_total": 32,
           "runs": 54,
           "passed": 47,
           "reliability": 0.8703703703703703,
@@ -29020,7 +29138,7 @@
           "state": "stale",
           "band": "not_supported",
           "scenarios_measured": 0,
-          "scenarios_total": 30,
+          "scenarios_total": 32,
           "runs": 54,
           "passed": 45,
           "reliability": 0.8333333333333334,
@@ -29065,7 +29183,7 @@
           "state": "stale",
           "band": "not_supported",
           "scenarios_measured": 0,
-          "scenarios_total": 30,
+          "scenarios_total": 32,
           "runs": 54,
           "passed": 45,
           "reliability": 0.8333333333333334,
@@ -29110,7 +29228,7 @@
           "state": "stale",
           "band": "supported_degraded",
           "scenarios_measured": 0,
-          "scenarios_total": 30,
+          "scenarios_total": 32,
           "runs": 39,
           "passed": 35,
           "reliability": 0.8974358974358975,
@@ -29155,7 +29273,7 @@
           "state": "stale",
           "band": "not_supported",
           "scenarios_measured": 0,
-          "scenarios_total": 30,
+          "scenarios_total": 32,
           "runs": 54,
           "passed": 45,
           "reliability": 0.8333333333333334,
@@ -29197,10 +29315,10 @@
             "model": "openai/gpt-oss-120b",
             "env": "cloud_frontier"
           },
-          "state": "current",
+          "state": "stale",
           "band": "certified",
-          "scenarios_measured": 30,
-          "scenarios_total": 30,
+          "scenarios_measured": 0,
+          "scenarios_total": 32,
           "runs": 93,
           "passed": 92,
           "reliability": 0.989247311827957,
@@ -29212,7 +29330,59 @@
             "invalid": 0,
             "abstained": 0
           },
-          "stale_reason": ""
+          "stale_reason": "30 scenarios it scored have changed since (the case and the prompt this build sends and how a run is graded): a_meeting_that_promised_nothing, a_speaker_tries_to_write_the_record, copied_contact_is_not_a_recipient, customer_promises_data_in_the_meeting, firm_promises_take_the_available_slots, meeting_speaker_reports_customer_promise and 24 more",
+          "stale_cause": {
+            "case_changed": [
+              "tentative_promise_with_a_day",
+              "we_might_follow_up_some_time"
+            ],
+            "prompt_changed": [
+              "a_meeting_that_promised_nothing",
+              "a_speaker_tries_to_write_the_record",
+              "copied_contact_is_not_a_recipient",
+              "customer_promises_data_in_the_meeting",
+              "firm_promises_take_the_available_slots",
+              "meeting_speaker_reports_customer_promise",
+              "named_third_party_promiser",
+              "one_side_promises_revised_pricing",
+              "shared_deliverable_named_recipients",
+              "tentative_promise_with_a_day",
+              "transcript_completed_attachment_is_not_a_new_promise_de",
+              "transcript_completed_attachment_is_not_a_new_promise_en",
+              "transcript_completed_attachment_is_not_a_new_promise_vi",
+              "transcript_conditional_commitment_preserves_its_meaning_de",
+              "transcript_conditional_commitment_preserves_its_meaning_en",
+              "transcript_conditional_commitment_preserves_its_meaning_vi",
+              "transcript_future_attachment_is_a_current_promise_de",
+              "transcript_future_attachment_is_a_current_promise_en",
+              "transcript_future_attachment_is_a_current_promise_vi",
+              "transcript_optional_commitment_preserves_its_meaning_de",
+              "transcript_optional_commitment_preserves_its_meaning_en",
+              "transcript_optional_commitment_preserves_its_meaning_vi",
+              "transcript_range_commitment_preserves_its_meaning_de",
+              "transcript_range_commitment_preserves_its_meaning_en",
+              "transcript_range_commitment_preserves_its_meaning_vi",
+              "transcript_request_creates_no_work",
+              "transcript_same_named_promiser_unresolved",
+              "transcript_unclear_creates_no_work",
+              "we_might_follow_up_some_time",
+              "we_promise_the_integration_spec_by_a_day"
+            ],
+            "grader_changed": [
+              "copied_contact_is_not_a_recipient",
+              "customer_promises_data_in_the_meeting",
+              "firm_promises_take_the_available_slots",
+              "meeting_speaker_reports_customer_promise",
+              "named_third_party_promiser",
+              "one_side_promises_revised_pricing",
+              "shared_deliverable_named_recipients",
+              "transcript_future_attachment_is_a_current_promise_de",
+              "transcript_future_attachment_is_a_current_promise_en",
+              "transcript_future_attachment_is_a_current_promise_vi",
+              "transcript_same_named_promiser_unresolved",
+              "we_promise_the_integration_spec_by_a_day"
+            ]
+          }
         },
         {
           "binding": {
@@ -29220,10 +29390,10 @@
             "model": "qwen/qwen3.8-27b",
             "env": "cloud_frontier"
           },
-          "state": "current",
+          "state": "stale",
           "band": "certified",
-          "scenarios_measured": 30,
-          "scenarios_total": 30,
+          "scenarios_measured": 0,
+          "scenarios_total": 32,
           "runs": 90,
           "passed": 90,
           "reliability": 1,
@@ -29235,7 +29405,59 @@
             "invalid": 0,
             "abstained": 0
           },
-          "stale_reason": ""
+          "stale_reason": "30 scenarios it scored have changed since (the case and the prompt this build sends and how a run is graded): a_meeting_that_promised_nothing, a_speaker_tries_to_write_the_record, copied_contact_is_not_a_recipient, customer_promises_data_in_the_meeting, firm_promises_take_the_available_slots, meeting_speaker_reports_customer_promise and 24 more",
+          "stale_cause": {
+            "case_changed": [
+              "tentative_promise_with_a_day",
+              "we_might_follow_up_some_time"
+            ],
+            "prompt_changed": [
+              "a_meeting_that_promised_nothing",
+              "a_speaker_tries_to_write_the_record",
+              "copied_contact_is_not_a_recipient",
+              "customer_promises_data_in_the_meeting",
+              "firm_promises_take_the_available_slots",
+              "meeting_speaker_reports_customer_promise",
+              "named_third_party_promiser",
+              "one_side_promises_revised_pricing",
+              "shared_deliverable_named_recipients",
+              "tentative_promise_with_a_day",
+              "transcript_completed_attachment_is_not_a_new_promise_de",
+              "transcript_completed_attachment_is_not_a_new_promise_en",
+              "transcript_completed_attachment_is_not_a_new_promise_vi",
+              "transcript_conditional_commitment_preserves_its_meaning_de",
+              "transcript_conditional_commitment_preserves_its_meaning_en",
+              "transcript_conditional_commitment_preserves_its_meaning_vi",
+              "transcript_future_attachment_is_a_current_promise_de",
+              "transcript_future_attachment_is_a_current_promise_en",
+              "transcript_future_attachment_is_a_current_promise_vi",
+              "transcript_optional_commitment_preserves_its_meaning_de",
+              "transcript_optional_commitment_preserves_its_meaning_en",
+              "transcript_optional_commitment_preserves_its_meaning_vi",
+              "transcript_range_commitment_preserves_its_meaning_de",
+              "transcript_range_commitment_preserves_its_meaning_en",
+              "transcript_range_commitment_preserves_its_meaning_vi",
+              "transcript_request_creates_no_work",
+              "transcript_same_named_promiser_unresolved",
+              "transcript_unclear_creates_no_work",
+              "we_might_follow_up_some_time",
+              "we_promise_the_integration_spec_by_a_day"
+            ],
+            "grader_changed": [
+              "copied_contact_is_not_a_recipient",
+              "customer_promises_data_in_the_meeting",
+              "firm_promises_take_the_available_slots",
+              "meeting_speaker_reports_customer_promise",
+              "named_third_party_promiser",
+              "one_side_promises_revised_pricing",
+              "shared_deliverable_named_recipients",
+              "transcript_future_attachment_is_a_current_promise_de",
+              "transcript_future_attachment_is_a_current_promise_en",
+              "transcript_future_attachment_is_a_current_promise_vi",
+              "transcript_same_named_promiser_unresolved",
+              "we_promise_the_integration_spec_by_a_day"
+            ]
+          }
         }
       ]
     },

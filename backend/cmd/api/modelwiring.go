@@ -301,6 +301,9 @@ func jobEnqueueOptions(
 type queueGates struct {
 	vatCheck string
 	geocode  string
+	// privateChat lets the chat a channel is linked in sit on a private
+	// address, which only dev and test allow.
+	privateChat bool
 }
 
 // geocodeEnqueueOptions wires the coordinate-lookup enqueue only when
@@ -365,4 +368,15 @@ func knowledgeAskOption(modelPath *compose.ModelPath, log *slog.Logger) compose.
 		return compose.WithCorpusAsk(nil, nil, log)
 	}
 	return compose.WithCorpusAsk(modelPath.Embedder, modelPath.CorpusAsk, log)
+}
+
+// chatSummaryLane is the lane a chosen chat message is summarised on; a role
+// with no model path has none.
+//
+//nolint:ireturn // the chat links take the one Completer seam every model lane serves.
+func chatSummaryLane(modelPath *compose.ModelPath) ai.Completer {
+	if modelPath == nil || modelPath.ChatSummary == nil {
+		return nil
+	}
+	return modelPath.ChatSummary
 }

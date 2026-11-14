@@ -119,6 +119,8 @@ type joinTable struct {
 // neither, which is what fails the gate. The reason is the point: a bare
 // exclusion list would read as "handled" and this reads as "decided".
 var notAnEdge = map[string]string{
+	"chat_link": "A deal and its project share one chat channel, and the deal's own project_id already joins the two. " +
+		"The link names a channel, not a relation a query asks about, so no hop traverses it",
 	"consent_qualifying_event": "An exchange belongs to either a contact or a lead, enforced by the one-subject check. These references are alternatives, so the row cannot connect two subjects for a query hop.",
 	"confirm_token": "contact_id and lead_id are alternative SUBJECTS of one emailed link, and the " +
 		"confirm_token_one_subject CHECK admits exactly one. A link is a credential sent to one " +

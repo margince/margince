@@ -142,12 +142,11 @@ var unscopedReferenceReads = gatekit.Waive(map[string]string{
 	// joins no deal, no stage and no company, so there is no current row
 	// for a scope to narrow. Freezing is the point — a past week that changed
 	// when a deal was renamed, archived or deleted would not be a record of
-	// that week. The review itself is already the acting rep's own
-	// (weeklystore.go's reviewUser reads the principal and takes no user id),
-	// so the lines a caller reaches are the lines of their own weeks; the deal
-	// id travels so the card can offer a link, which the deal page then gates
-	// on its own terms.
-	"internal/compose/weekly:readDealLines": "the weekly review's frozen deal lines: every word served was written when the review was and no live record is joined, and the review row is already scoped to the acting rep by reviewUser",
+	// that week. The review itself is already the acting rep's own:
+	// auth.OwnSeat reads the principal and takes no user id. So the lines a
+	// caller reaches are the lines of their own weeks. The deal id travels so
+	// the card can offer a link, which the deal page then gates on its own terms.
+	"internal/compose/weekly:readDealLines": "the weekly review's frozen deal lines: every word served was written when the review was and no live record is joined, and the review row is already scoped to the acting rep by auth.OwnSeat",
 
 	// The movement bridge's frozen drivers, the same shape as the deal lines
 	// above and for the same reasons: the label was written when the review was,
@@ -218,7 +217,7 @@ var rowScopeSpellings = map[string]bool{
 	"EnsureVisible": true, "EnsureVisibleLive": true, "EnsureVisibleExisting": true, "EnsureVisibleForSubjectRights": true,
 	"EnsureLinkTarget": true, "EnsureAttachTarget": true,
 	"VisibleTo": true, "LinkTargetVisibleClause": true, "LinkTargetReadableClause": true,
-	"ActivityDiscoverClause": true, "ActivityContentClause": true,
+	"ActivityDiscoverClause": true, "ActivityContentClause": true, "ActivityMessageContentClause": true,
 	"EnsureActivityVisible": true, "EnsureActivityVisibleLive": true,
 	"EnsureActivityContentVisible": true, "EnsureActivityContentVisibleLive": true,
 	"SignalScopeClause": true, "EnsureSignalVisible": true, "EnsureSignalVisibleLive": true,

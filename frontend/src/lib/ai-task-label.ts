@@ -32,6 +32,7 @@ const TASK_NAME_KEYS: Readonly<Record<AiTask, MessageKey>> = {
   report_setup: "aiTask.name.report_setup",
   request_settlement: "aiTask.name.request_settlement",
   rewrite: "aiTask.name.rewrite",
+  chat_summary: "aiTask.name.chat_summary",
   deal_verdict: "aiTask.name.deal_verdict",
   signal_extract: "aiTask.name.signal_extract",
   site_extract: "aiTask.name.site_extract",

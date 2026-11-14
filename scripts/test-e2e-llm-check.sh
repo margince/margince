@@ -118,6 +118,15 @@ case_is "a 401 from a tool the model called is a run that happened" 0 "" <<'JSON
 {"type":"result","subtype":"error","is_error":true,"result":"tool call failed: HTTP 401 Unauthorized"}
 JSONL
 
+# The model's own API failing mid-run, after tool calls, is a run that never
+# finished: the CLI reports "API Error:" as the terminal result, as it did for a
+# lane cut off by an upstream block. A tool refusal never reads that way.
+case_is "the model's API failing mid-run is a run that never finished" 1 "the model's API stopped answering mid-run" <<'JSONL'
+{"type":"system","subtype":"init","tools":["mcp__margince__list_records"]}
+{"type":"assistant","message":{"content":[{"type":"tool_use","name":"mcp__margince__list_records","input":{}}]}}
+{"type":"result","subtype":"success","is_error":true,"result":"Failed to authenticate. API Error: 403 Attention Required! | Cloudflare"}
+JSONL
+
 # A number that merely CONTAINS a refusal code is not one. A bare substring
 # search finds 401 inside 4011, and reading that as "never reached" discards a
 # real finding and abandons the lane after it.

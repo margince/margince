@@ -163,7 +163,7 @@ func (s *Service) planForWrite(ctx context.Context, tx pgx.Tx, owner ids.UUID, y
 	if year < minGoalYear || year > maxGoalYear {
 		return nil, refuse("year", "out_of_range", "choose a year from 2000 to 2200")
 	}
-	if err := s.requireGoalEdit(ctx, tx, owner); err != nil {
+	if err := s.RequireGoalEdit(ctx, tx, owner); err != nil {
 		return nil, err
 	}
 	if err := lockGoalYear(ctx, tx, owner, year); err != nil {

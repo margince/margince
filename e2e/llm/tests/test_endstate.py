@@ -408,21 +408,20 @@ class AgentLimitReadersTest(unittest.TestCase):
             session.open()
             return endstate.end_state(session, list(entries))
 
-    SEEDED_RULE = {"id": "a1", "name": "Stage-change notify", "status": "enabled", "owner_id": None}
+    SEEDED_RULE = {"id": "a1", "name": "Tell the owner when someone moves their deal", "status": "paused", "owner_id": "u1"}
 
-    def test_the_seeded_rule_left_alone_holds(self):
+    def test_the_users_rule_paused_holds(self):
         entries = committed("case106-turn-that-rule-off.yaml")
         self.assertEqual(self.read(entries, rules=[self.SEEDED_RULE]), (entries, []))
 
-    def test_a_paused_or_taken_rule_fails(self):
+    def test_a_rule_still_running_fails(self):
         entries = committed("case106-turn-that-rule-off.yaml")
-        _, problems = self.read(entries, rules=[dict(self.SEEDED_RULE, status="paused", owner_id="u1")])
-        self.assertEqual(problems, ['ended with automation "Stage-change notify" status=paused, wanted enabled',
-                                    'ended with automation "Stage-change notify" owner=Sofia Meier, wanted (none)'])
+        _, problems = self.read(entries, rules=[dict(self.SEEDED_RULE, status="enabled")])
+        self.assertEqual(problems, ['ended with automation "Tell the owner when someone moves their deal" status=enabled, wanted paused'])
 
     def test_an_archived_rule_is_absent(self):
         _, problems = self.read(committed("case106-turn-that-rule-off.yaml"))
-        self.assertIn('ended with 0 automations named "Stage-change notify"', problems)
+        self.assertIn('ended with 0 automations named "Tell the owner when someone moves their deal"', problems)
 
     def test_the_rooms_welcome_left_as_seeded_holds(self):
         entries = committed("case107-tidy-up-the-room.yaml")

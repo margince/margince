@@ -89,6 +89,7 @@ type ModelPath struct {
 	// the whole prompt; the lane adds the installation's model choice, budget and
 	// call record.
 	ExtensionCall completer
+	ChatSummary   completer // judges and summarises a linked chat channel's talk
 	OfferDraft    completer // the offer regenerate-from-signal drafting call
 	// CaptureClassify is the §2.8 batched mail-label lane (ADR-0063) —
 	// the highest-volume, cheapest task, routed L-S with the C-C solo
@@ -358,6 +359,7 @@ func modelPathForRouter(router *ai.Router, companyContext *companyContextProvide
 		DraftReply:                    brain(ai.TaskDraftReply),
 		Rewrite:                       brain(ai.TaskRewrite),
 		ExtensionCall:                 brain(ai.TaskExtensionCall),
+		ChatSummary:                   brain(ai.TaskChatSummary),
 		OfferDraft:                    brain(ai.TaskOfferDraft),
 		CaptureClassify:               brain(ai.TaskCaptureClassify),
 		OwedVerdict:                   brain(ai.TaskOwedVerdict),

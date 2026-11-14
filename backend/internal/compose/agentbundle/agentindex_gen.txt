@@ -621,6 +621,11 @@ Every call a passport can make, grouped by area. Find the operationId in openapi
 | --- | --- | --- | --- | --- |
 | `GET /channel-connections` | listChannelConnections | List the workspace's messaging-channel connections. | Read records | at once |
 | `DELETE /channel-connections/{id}` | disconnectChannel | Disconnect a messaging channel (archives the binding and destroys the credential). | Change records | at once |
+| `GET /channel-links/{record_type}/{id}` | getChannelLink | The chat channel a deal or project is linked to, if any. | Read records | at once |
+| `POST /channel-links/{record_type}/{id}` | linkChannel | Link a deal or project to a new or existing private chat channel. | Send messages | at once |
+| `PATCH /channel-links/{record_type}/{id}` | setChannelVerbosity | Choose how much Margince posts into a record's channel. | Change records | at once |
+| `DELETE /channel-links/{record_type}/{id}` | unlinkChannel | Stop syncing a record with its chat channel. | Change records | at once |
+| `POST /channel-links/{record_type}/{id}/notes` | fileChannelMessage | File a summary of one message in a record's channel, or of its thread, as a note. | Change records | at once |
 | `GET /connectors` | listConnectors | List the calling user's capture connections + sync state. | Read records | at once |
 | `POST /connectors/{provider}/disconnect` | disconnectConnector | Disconnect the calling user's mail/calendar capture. | Change records | at once |
 | `PUT /connectors/{provider}/signature-enrichment` | setConnectorSignatureEnrichment | Set this mailbox's own answer to the nightly signature pass. | Change records | at once |
@@ -889,7 +894,7 @@ Every call a passport can make, grouped by area. Find the operationId in openapi
 | Call | operationId | What it does | Permission | Runs |
 | --- | --- | --- | --- | --- |
 | `GET /data-subject-requests` | listDataSubjectRequests | List GDPR data-subject requests. | Read records | at once |
-| `POST /data-subject-requests` | createDataSubjectRequest | Open a data-subject request (access/rectify/erasure). Admin-mediated; ties to retention and erasure. | Change records | at once |
+| `POST /data-subject-requests` | createDataSubjectRequest | Open a data-subject request (access/rectify/erasure). subject_ref is the subject's contact id when they are a contact, else the email they wrote from; only a contact id can be fulfilled. Admin-mediated; ties to retention and erasure. | Change records | at once |
 | `GET /data-subject-requests/deadline` | getDataSubjectRequestDeadline | The deadline a request would get, and the rule that sets it. | Read records | at once |
 | `GET /privacy/controller-particulars` | getControllerParticulars | What this installation says about itself in the messages it sends. | Read records | at once |
 | `GET /privacy/notice-cases` | listNoticeCases | Privacy notices already owed, where the source is confirmed, soonest deadline first. A contact whose source nobody has confirmed is in notice_case_reviews (GET /privacy/notice-case-reviews). | Read records | at once |

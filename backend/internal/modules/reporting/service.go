@@ -104,10 +104,11 @@ type Authority interface {
 	// published about its population, so it needs the strict tier rule that a
 	// read of the totals does not.
 	AssertedScope(context.Context, pgx.Tx, crmcontracts.ReportingScope) (crmcontracts.ReportingScope, error)
-	// Visible narrows frozen facts to what the reader may see today. The
-	// context is the one they were captured under; a population the
-	// small-group floor holds back today shows none of them.
-	Visible(context.Context, pgx.Tx, crmcontracts.ReportingContext, []Fact) ([]Fact, bool, error)
+	// Visible narrows frozen facts to what the reader may see today, owners
+	// being their measurable owners. The context is the one they were
+	// captured under; a population the small-group floor holds back today
+	// shows none of them.
+	Visible(context.Context, pgx.Tx, MeasurableOwners, crmcontracts.ReportingContext, []Fact) ([]Fact, bool, error)
 }
 
 // MeasurableOwners is whose figures a reader may see one by one.

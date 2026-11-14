@@ -96,6 +96,9 @@ type TranscriptRead struct {
 	// projection ages a live row from it, so a reading re-armed an hour after
 	// it was created would otherwise be past its lease before a worker saw it.
 	AttemptAt time.Time
+	// Summary is the meeting's summary as this reading leaves it: its own, or
+	// an earlier reading's. Set only by the two reads that serve the report.
+	Summary *StandingTranscriptSummary
 }
 
 // Live reports whether the reading is still expected to move on its own — the
@@ -401,7 +404,7 @@ func (s *Store) GetTranscriptRead(ctx context.Context, activityID ids.ActivityID
 		if err != nil {
 			return fmt.Errorf("read transcript read: %w", err)
 		}
-		return nil
+		return withStandingSummary(ctx, tx, &out)
 	})
 	return out, err
 }
@@ -431,7 +434,16 @@ func (s *Store) LatestTranscriptRead(ctx context.Context, activityID ids.Activit
 		if err != nil {
 			return fmt.Errorf("read latest transcript read: %w", err)
 		}
-		return nil
+		return withStandingSummary(ctx, tx, &out)
 	})
 	return out, err
+}
+
+// withStandingSummary attaches the meeting's summary as read leaves it.
+func withStandingSummary(ctx context.Context, tx pgx.Tx, read *TranscriptRead) error {
+	summary, found, err := standingTranscriptSummary(ctx, tx, *read)
+	if found {
+		read.Summary = &summary
+	}
+	return err
 }

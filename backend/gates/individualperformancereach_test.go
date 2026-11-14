@@ -12,6 +12,7 @@ package gates
 import (
 	"fmt"
 	"go/ast"
+	"go/build"
 	"go/constant"
 	"go/token"
 	"go/types"
@@ -35,32 +36,82 @@ var switchReachDirs = []string{
 	"internal/modules/agents",
 	"internal/modules/assurance",
 	"internal/modules/commissions",
+	"internal/modules/initiatives",
 	"internal/compose",
 }
 
-// switchReader names one function a path may pass instead of asking the
-// switch itself: a method is named Type.Method.
-type switchReader struct{ pkg, name string }
-
-// switchReaders are the switch's readers: the value a request bound, the
-// stored setting, and the rule that answers both for one seat.
-var switchReaders = []switchReader{
-	{"auth", "IndividualPerformanceOf"},
-	{"auth", "MayMeasureSeat"},
-	{"identity", "IndividualPerformanceTx"},
-	// The reader's own seat: MayMeasureSeat answers yes for it whatever the
-	// switch says, so a path that builds it has nothing left to ask.
-	{"compose", "ownScope"},
+// switchReader names one function by the import path of its package and its
+// name, a method as Type.Method. answer places the result that carries the
+// switch's answer. It is a bool a condition must read, or an error the caller
+// must return or compare with nil. It may also be a value, such as the
+// reader's own scope.
+type switchReader struct {
+	pkg, name string
+	answer    int
 }
 
-// answersNoColleagueFigure are functions whose answer carries no figure keyed
-// to a colleague. They are not a check: a figure made after one still needs
-// the switch. A tool that serves them beside figures cannot be waived whole.
-var answersNoColleagueFigure = []switchReader{
-	{"reporting", "Service.Catalog"},     // the metric catalog: names and definitions
-	{"reporting", "Service.ListReports"}, // saved report definitions by name
-	{"reporting", "Service.GetReport"},   // one report definition: its selection, not its figures
-	{"commissions", "Store.Summary"},     // what is owed to partners, grouped by partner, never by seat
+const (
+	authPath      = modulePath + "/internal/platform/auth"
+	reportingPath = modulePath + "/internal/modules/reporting"
+	composePath   = modulePath + "/internal/compose"
+)
+
+// walkConfig is what the walk takes as given about code it reads: the
+// switch's readers and the outside functions whose behaviour no body here
+// shows.
+type walkConfig struct {
+	readers, bare, dispatchers []switchReader
+	// floors answer, per group of a figure, whether the floor withholds it:
+	// true refuses, so only the branch where it is false is checked.
+	floors []switchReader
+	// synchronous are the outside callees that run a callback they are
+	// handed before they return, spelled path.Func or path.Type.Method.
+	synchronous []string
+	// sentinelPackages are the outside packages whose Err names are errors
+	// that are never nil.
+	sentinelPackages []string
+	// refusalConstructors are outside functions that always answer a new error.
+	refusalConstructors []string
+}
+
+// switchWalkConfig is the real tree's. The readers are the value a request
+// bound, the stored setting, and the rule that answers both for one seat.
+// The reader's own seat counts too. MayMeasureSeat answers yes for it, whatever
+// the switch says, so a path that builds it has nothing left to ask.
+var switchWalkConfig = walkConfig{
+	readers: []switchReader{
+		{authPath, "IndividualPerformanceOf", 0},
+		{authPath, "MayMeasureSeat", 0},
+		{identityPath, "IndividualPerformanceTx", 0},
+		{authPath, "OwnSeat", 0},
+		{composePath, "ownScope", 0},
+		// The grouping rule while the switch is off: nil only where no group
+		// splits the answer by a colleague's seat.
+		{composePath, "requireOwnGrouping", 0},
+	},
+	// thinGroups is the floor itself. measuresOwners is true where a spec
+	// counts owners, so a false answer leaves no seat to floor.
+	floors: []switchReader{{composePath, "thinGroups", 0}, {composePath, "measuresOwners", 0}},
+	// Functions whose answer carries no figure keyed to a colleague. They are
+	// not a check: a figure made after one still needs the switch.
+	bare: []switchReader{
+		{reportingPath, "Service.Catalog", 0},                              // the metric catalog: names and definitions
+		{reportingPath, "Service.ListReports", 0},                          // saved report definitions by name
+		{reportingPath, "Service.GetReport", 0},                            // one report definition: its selection, not its figures
+		{modulePath + "/internal/modules/commissions", "Store.Summary", 0}, // owed to partners, never by seat
+		{composePath, "restrictedQuestionAnswer", 0},                       // a restricted card's binding, with no answer
+		{composePath + "/reportdoc", "Validate", 0},                        // the run ids a document cites, read from the document alone
+		// valueFromAnswer reads one cell out of an answer it is handed, and
+		// RenderReport hands it only answers ReadReportRun read through a check.
+		{composePath, "valueFromAnswer", 0},
+	},
+	dispatchers: []switchReader{{modulePath + "/internal/modules/agents", "Registry.Invoke", 0}},
+	synchronous: []string{
+		databasePath + ".WithWorkspaceTx", databasePath + ".WithWorkspaceSnapshot",
+		databasePath + ".DB.Tx", databasePath + ".DB.TxIsolated",
+	},
+	sentinelPackages:    []string{modulePath + "/internal/shared/apperrors", "github.com/jackc/pgx/v5"},
+	refusalConstructors: []string{"fmt.Errorf", "errors.New", modulePath + "/internal/platform/httperr.Validation"},
 }
 
 // valueSite is one expression stored in a variable or field of func type,
@@ -85,60 +136,146 @@ type paramSlot struct {
 
 // switchGraph is the code the walk reads. converted holds each concrete type
 // some expression turns into an interface value; stored holds what each
-// func-typed variable or field is ever given.
+// func-typed variable or field is ever given. spelled holds the declared
+// type of each variable whose type a stand-in import leaves invalid.
+// reassigned holds each variable an assignment gives a new value.
 type switchGraph struct {
-	fset      *token.FileSet
-	decls     map[*types.Func]*ast.FuncDecl
-	pkgOf     map[*types.Func]string
-	infos     map[*types.Func]*types.Info
-	converted map[types.Type]bool
-	stored    map[*types.Var][]valueSite
-	calls     map[*types.Func][]invocation
-	paramOf   map[*types.Var]paramSlot
-	writers   map[*types.Var]bool
-	readerSet map[*types.Func]bool
-	bareSet   map[*types.Func]bool
+	fset        *token.FileSet
+	decls       map[*types.Func]*ast.FuncDecl
+	pkgOf       map[*types.Func]string
+	infos       map[*types.Func]*types.Info
+	converted   map[types.Type]bool
+	stored      map[*types.Var][]valueSite
+	calls       map[*types.Func][]invocation
+	paramOf     map[*types.Var]paramSlot
+	writers     map[*types.Var]bool
+	spelled     map[*types.Var]string
+	inits       map[*types.Var]valueSite
+	reassigned  map[*types.Var]bool
+	outside     map[string]bool
+	readerSet   map[*types.Func]int
+	floorSet    map[*types.Func]int
+	bareSet     map[*types.Func]bool
+	dispatchSet map[*types.Func]bool
+	config      walkConfig
+	synchronous map[string]bool
+	sentinels   map[*types.Var]bool
+	refusing    map[*types.Func]bool
+	caches      fieldCaches
 }
 
 // loadSwitchGraph type-checks the packages under dirs, each after the ones it
-// imports, so a call across them resolves to its real declaration.
-func loadSwitchGraph(t *testing.T, dirs ...string) *switchGraph {
+// imports, so a call across them resolves to its real declaration. A file
+// the default build leaves out is not read.
+func loadSwitchGraph(t *testing.T, config walkConfig, dirs ...string) *switchGraph {
 	t.Helper()
 	fset := gatekit.SourceFileSet()
 	byPackage := map[string][]*ast.File{}
 	for _, dir := range dirs {
 		_, files := parseGoFilesUnder(t, dir)
 		for _, file := range files {
-			pkgDir := filepath.ToSlash(filepath.Dir(fset.Position(file.Pos()).Filename))
+			name := fset.Position(file.Pos()).Filename
+			if built, err := build.Default.MatchFile(filepath.Dir(name), filepath.Base(name)); err != nil || !built {
+				continue
+			}
+			pkgDir := filepath.ToSlash(filepath.Dir(name))
 			byPackage[modulePath+"/"+pkgDir] = append(byPackage[modulePath+"/"+pkgDir], file)
 		}
 	}
-	return newSwitchGraph(fset, byPackage)
+	g, err := newSwitchGraph(fset, byPackage, config)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return g
 }
 
-func newSwitchGraph(fset *token.FileSet, byPackage map[string][]*ast.File) *switchGraph {
+// newSwitchGraph reads byPackage and resolves config against it. It fails on
+// a type error no stand-in import explains, since the walk would read that
+// code wrong. It fails on a declared name it cannot find.
+func newSwitchGraph(fset *token.FileSet, byPackage map[string][]*ast.File, config walkConfig) (*switchGraph, error) {
 	g := &switchGraph{
 		fset: fset, decls: map[*types.Func]*ast.FuncDecl{}, pkgOf: map[*types.Func]string{},
 		infos: map[*types.Func]*types.Info{}, converted: map[types.Type]bool{},
 		stored: map[*types.Var][]valueSite{}, writers: map[*types.Var]bool{},
 		calls: map[*types.Func][]invocation{}, paramOf: map[*types.Var]paramSlot{},
+		spelled: map[*types.Var]string{}, inits: map[*types.Var]valueSite{}, reassigned: map[*types.Var]bool{},
+		outside: map[string]bool{}, config: config, sentinels: map[*types.Var]bool{}, refusing: map[*types.Func]bool{},
+		caches: newFieldCaches(),
 	}
-	checked := sharedImports{}
+	checked := switchImports{}
+	var unexplained []string
 	for _, path := range importOrder(byPackage) {
 		files := byPackage[path]
 		info := &types.Info{
 			Defs: map[*ast.Ident]types.Object{}, Uses: map[*ast.Ident]types.Object{},
 			Types: map[ast.Expr]types.TypeAndValue{}, Selections: map[*ast.SelectorExpr]*types.Selection{},
 		}
-		conf := types.Config{Importer: checked, Error: func(error) {}}
-		pkg, _ := conf.Check(path, fset, files, info)
+		var errs []types.Error
+		conf := types.Config{Importer: checked, Error: func(err error) {
+			if typeErr, ok := err.(types.Error); ok {
+				errs = append(errs, typeErr)
+			}
+		}}
+		pkg, err := conf.Check(path, fset, files, info)
+		if pkg == nil {
+			return nil, fmt.Errorf("type-checking %s: %w", path, err)
+		}
 		checked[path] = pkg
+		unexplained = append(unexplained, unexplainedTypeErrors(errs, files, info, checked)...)
 		for _, file := range files {
 			g.index(file, info)
+		}
+		for _, file := range files {
 			g.census(file, info)
+			g.censusCaches(file, info)
 		}
 	}
-	return g
+	if len(unexplained) > 0 {
+		return nil, fmt.Errorf("type-checking the walked packages found %d errors no stand-in import explains, "+
+			"so the walk would read that code wrong. Fix the code, or teach the gate's importer:\n\t%s",
+			len(unexplained), strings.Join(unexplained[:min(len(unexplained), 20)], "\n\t"))
+	}
+	return g, g.resolveConfig()
+}
+
+// resolveConfig resolves the declared readers and dispatchers to their
+// declarations. Each synchronous callee must be one some package calls, so
+// the list holds only what the tree uses.
+func (g *switchGraph) resolveConfig() error {
+	readers, err := g.resolveNamed(g.config.readers)
+	if err != nil {
+		return err
+	}
+	g.readerSet = readers
+	if g.floorSet, err = g.resolveNamed(g.config.floors); err != nil {
+		return err
+	}
+	bare, err := g.resolveNamed(g.config.bare)
+	if err != nil {
+		return err
+	}
+	g.bareSet = boolSet(bare)
+	dispatch, err := g.resolveNamed(g.config.dispatchers)
+	if err != nil {
+		return err
+	}
+	g.dispatchSet = boolSet(dispatch)
+	g.synchronous = map[string]bool{}
+	for _, name := range g.config.synchronous {
+		if !g.outside[name] {
+			return fmt.Errorf("no walked package calls %s, which the scope gate declares synchronous; drop it", name)
+		}
+		g.synchronous[name] = true
+	}
+	return nil
+}
+
+func boolSet(named map[*types.Func]int) map[*types.Func]bool {
+	out := make(map[*types.Func]bool, len(named))
+	for fn := range named {
+		out[fn] = true
+	}
+	return out
 }
 
 // importOrder lists the packages so that each follows every package of the
@@ -175,7 +312,7 @@ func (g *switchGraph) index(file *ast.File, info *types.Info) {
 			continue
 		}
 		if obj, ok := info.Defs[fn.Name].(*types.Func); ok {
-			g.decls[obj], g.pkgOf[obj], g.infos[obj] = fn, file.Name.Name, info
+			g.decls[obj], g.pkgOf[obj], g.infos[obj] = fn, obj.Pkg().Path(), info
 			if sig, ok := obj.Type().(*types.Signature); ok {
 				for i := range sig.Params().Len() {
 					g.paramOf[sig.Params().At(i)] = paramSlot{obj, i}
@@ -184,11 +321,36 @@ func (g *switchGraph) index(file *ast.File, info *types.Info) {
 		}
 	}
 	ast.Inspect(file, func(n ast.Node) bool {
-		if ft, ok := n.(*ast.FuncType); ok {
-			g.indexWriters(ft, info)
+		switch node := n.(type) {
+		case *ast.FuncType:
+			g.indexWriters(node, info)
+		case *ast.Field:
+			g.spell(node.Names, node.Type, info)
+		case *ast.ValueSpec:
+			g.spell(node.Names, node.Type, info)
 		}
 		return true
 	})
+	for _, decl := range file.Decls {
+		if gen, ok := decl.(*ast.GenDecl); ok && gen.Tok == token.VAR {
+			g.indexInits(gen, info)
+		}
+	}
+}
+
+// indexInits records the value each package variable is declared with.
+func (g *switchGraph) indexInits(gen *ast.GenDecl, info *types.Info) {
+	for _, spec := range gen.Specs {
+		vs, ok := spec.(*ast.ValueSpec)
+		if !ok || len(vs.Values) != len(vs.Names) {
+			continue
+		}
+		for i, name := range vs.Names {
+			if v, ok := info.Defs[name].(*types.Var); ok {
+				g.inits[v] = valueSite{vs.Values[i], info}
+			}
+		}
+	}
 }
 
 // indexWriters records each parameter spelled as an http.ResponseWriter. The
@@ -213,6 +375,8 @@ func (g *switchGraph) census(file *ast.File, info *types.Info) {
 	ast.Inspect(file, func(n ast.Node) bool {
 		switch node := n.(type) {
 		case *ast.AssignStmt:
+			g.censusReassigned(node, info)
+			g.spellFromCall(node, info)
 			if len(node.Lhs) == len(node.Rhs) {
 				for i, lhs := range node.Lhs {
 					g.flow(info.TypeOf(lhs), node.Rhs[i], info)
@@ -282,6 +446,9 @@ func (g *switchGraph) censusElements(lit *ast.CompositeLit, elem, key types.Type
 // censusCall reads each argument as handed to its parameter, and an explicit
 // conversion I(x) as a conversion.
 func (g *switchGraph) censusCall(call *ast.CallExpr, info *types.Info) {
+	if name := g.outsideCallee(call, info); name != "" {
+		g.outside[name] = true
+	}
 	if fn := calledFunc(call, info); fn != nil {
 		g.calls[fn] = append(g.calls[fn], invocation{call, info})
 	}
@@ -396,24 +563,13 @@ func byTypeName(a, b types.Type) int {
 	return strings.Compare(a.String(), b.String())
 }
 
-// readers resolves the switch's readers, and the functions that answer no
-// colleague's figure, to their declarations.
-func (g *switchGraph) readers(readers, bare []switchReader) error {
-	var err error
-	if g.readerSet, err = g.resolveNamed(readers); err != nil {
-		return err
-	}
-	g.bareSet, err = g.resolveNamed(bare)
-	return err
-}
-
-func (g *switchGraph) resolveNamed(named []switchReader) (map[*types.Func]bool, error) {
-	found := map[*types.Func]bool{}
+func (g *switchGraph) resolveNamed(named []switchReader) (map[*types.Func]int, error) {
+	found := map[*types.Func]int{}
 	for _, reader := range named {
 		hit := false
 		for fn, decl := range g.decls {
 			if g.pkgOf[fn] == reader.pkg && declLabel(decl) == reader.name {
-				found[fn], hit = true, true
+				found[fn], hit = reader.answer, true
 			}
 		}
 		if !hit {

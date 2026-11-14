@@ -156,17 +156,19 @@ func TestEveryOtherEntityTypeKeepsItsFlatLinkJoin(t *testing.T) {
 		if !strings.Contains(where, "EXISTS (SELECT 1 FROM activity_link al") {
 			t.Errorf("%s filter is not an EXISTS over activity_link: %s", entityType, where)
 		}
-		if !strings.Contains(where, "al.entity_type = $1") {
+		// The type is a literal, so a generic plan still matches the partial
+		// index on activity_link.
+		if !strings.Contains(where, "al.entity_type = '"+entityType+"'") {
 			t.Errorf("%s filter does not pin the link's entity_type: %s", entityType, where)
 		}
-		if !strings.Contains(where, column+" = $2") {
+		if !strings.Contains(where, column+" = $1") {
 			t.Errorf("%s filter does not match %s: %s", entityType, column, where)
 		}
 		if strings.Contains(where, "r.kind = 'employment'") {
 			t.Errorf("%s filter walks the account's employment arm; only an account does", entityType)
 		}
-		if len(args) != 2 {
-			t.Errorf("%s filter bound %d args, want 2: %v", entityType, len(args), args)
+		if len(args) != 1 {
+			t.Errorf("%s filter bound %d args, want 1: %v", entityType, len(args), args)
 		}
 	}
 }
@@ -260,12 +262,19 @@ func TestTheWaitingQueryUsesTheContentGate(t *testing.T) {
 	if !strings.Contains(waitingRepliesSQL, "%[2]s") {
 		t.Fatal("the waiting query no longer binds an activity scope clause at all")
 	}
+	// Every surface that judges waiting mail, so none disagrees with the queue.
+	for _, file := range []string{"waitingslots.go", "waitingcards.go", "waitingrecordscope.go", "hiddenbacklog.go"} {
+		judged, err := os.ReadFile(file)
+		if err != nil {
+			t.Fatalf("reading the waiting source: %v", err)
+		}
+		if !strings.Contains(string(judged), `auth.ActivityMessageContentClause(ctx, "a"`) {
+			t.Fatalf("%s judges waiting mail without the message content gate the queue uses", file)
+		}
+	}
 	source, err := os.ReadFile("waitingslots.go")
 	if err != nil {
 		t.Fatalf("reading the waiting source: %v", err)
-	}
-	if !strings.Contains(string(source), "auth.ActivityContentClause") {
-		t.Fatal("the waiting read admits rows through the discover gate, which is for safe markers only")
 	}
 	if !strings.Contains(string(source), "auth.LinkTargetReadableClause") {
 		t.Fatal("the waiting read returns links without checking the reader may read what they point at")

@@ -1231,6 +1231,32 @@ paths:
         '404': { $ref: '#/components/responses/NotFound' }
         '422': { $ref: '#/components/responses/ValidationError' }
 
+  /passports/{id}/app-binding:
+    parameters:
+      - $ref: '#/components/parameters/Id'
+    delete:
+      tags: [Identity]
+      operationId: releasePassportAppBinding
+      security: [ { cookieAuth: [] } ]
+      x-agent-access: human-only
+      x-human-only-reason: security
+      summary: Allow a chat app's user again after their passport was revoked.
+      description: |
+        A revoked passport that a chat app (Dispact) minted keeps naming that app's user, so the
+        user stays refused. Releasing it lets the user's next call mint a fresh passport under the
+        same checks as a first call. The passport itself stays revoked. A user releases their own
+        passport; releasing another user's requires the admin role. Audited.
+      responses:
+        '204': { description: The user may be bound again. }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409':
+          description: 'The passport is still live (`code: passport_still_live`). Revoke it first.'
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+
   /passports/{id}/areas:
     parameters:
       - $ref: '#/components/parameters/Id'
@@ -16287,6 +16313,36 @@ paths:
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/Forbidden' }
         '422': { $ref: '#/components/responses/ValidationError' }
+  /analytics/progress/summary:
+    post:
+      tags: [Reports]
+      operationId: summarizeSalesProgress
+      x-waits-on-model: on-miss
+      x-agent-access: human-only
+      x-human-only-reason: covered   # covered: read_view reads the same figures, and an agent sums them up itself
+      security: [ { cookieAuth: [] } ]
+      summary: A few written sentences on where one Progress reading stands against its sales goal and what is still open.
+      description: |
+        The model reads the figures `GET /analytics/progress` answers for the same period and
+        scope, under the caller's own reach, and nothing else. Each sentence cites the figures it
+        rests on, and a sentence quoting a number none of them holds is dropped. The answer is kept
+        per reader until a figure moves. Without a model, or when the reply cannot be grounded, it
+        answers no sentences and `generated_by` says so, and Progress shows its figures alone.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/SalesProgressSummaryRequest' }
+      responses:
+        '200':
+          description: The summary.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/SalesAssessment' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/ValidationError' }
   /analytics/sales-goals:
     get:
       tags: [Reports]
@@ -16398,6 +16454,39 @@ paths:
         '403': { $ref: '#/components/responses/Forbidden' }
         '404': { $ref: '#/components/responses/NotFound' }
         '409': { $ref: '#/components/responses/VersionConflict' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+  /analytics/sales-goals/{owner_id}/{year}/proposed-months:
+    parameters: *salesGoalPath
+    post:
+      tags: [Reports]
+      operationId: proposeSalesGoalMonths
+      x-waits-on-model: always
+      x-agent-access: human-only
+      x-human-only-reason: security
+      security: [ { cookieAuth: [] } ]
+      summary: Twelve monthly goals proposed for one seller from their closed revenue. Nothing is saved.
+      description: |
+        The model reads the seller's closed revenue by month for the plan year and the year before,
+        and the yearly goal when the request gives one. It answers twelve months and one or two
+        sentences on the pattern it followed. With a yearly goal the months add up to it exactly.
+        The reader reviews the months in the editor and saves them as a draft with origin `ai`.
+        Only a reader who may set this seller's goals may ask. Without a model it answers 409
+        `ai_not_configured`, and with no closed revenue in either year 409 `no_sales_history`.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/SalesGoalProposalRequest' }
+      responses:
+        '200':
+          description: The proposal.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/SalesGoalProposal' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
         '422': { $ref: '#/components/responses/ValidationError' }
   /analytics/sales-goals/{owner_id}/{year}/publish:
     parameters: *salesGoalPath
@@ -17136,7 +17225,7 @@ paths:
       summary: Disconnect a messaging channel (archives the binding and destroys the credential).
       description: |
         Archives the connection as `disconnected` — which is what stops ingress, since only a
-        live `connected` binding is polled — and destroys the sealed bot token. Already-captured
+        live `connected` binding is polled — and destroys the sealed bot token and events secret. Already-captured
         activities are retained: disconnecting stops capture, it does not erase history.
       responses:
         '204': { description: Disconnected. }
@@ -17146,6 +17235,284 @@ paths:
         '422': { $ref: '#/components/responses/ValidationError' }
         '503':
           description: 'This deployment serves no messaging channels (`code: channel_connections_not_configured`), or has no credential store configured to seal a bot token in (`code: channel_credentials_not_configured`).'
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+
+  # --------------------------- /channel-links -------------------------------
+  # A deal or a project linked to one channel of the team chat (Dispact). Margince
+  # keeps a card in the channel and posts what happens on the record; what the
+  # channel decides comes back as summarised notes. Linking needs the right to
+  # edit the record, and reading needs the right to see it.
+  /channel-links/{record_type}/{id}:
+    parameters:
+      - name: record_type
+        in: path
+        required: true
+        schema: { $ref: '#/components/schemas/ChannelLinkRecordType' }
+      - $ref: '#/components/parameters/Id'
+    get:
+      tags: [Connectors]
+      operationId: getChannelLink
+      security: [ { bearerAuth: [] }, { cookieAuth: [] } ]
+      x-mcp-tool: { verb: channel_link, router: read_details, action: channel_link, tier: auto_execute, scope: read, served_by: route }
+      summary: The chat channel a deal or project is linked to, if any.
+      description: |
+        `off` means no chat bot is connected, so nothing can be linked. `none` means the record has
+        no channel yet. `paused` means the channel was archived or deleted in the chat, or the bot
+        lost its access; nothing is posted until the link is replaced. A deal's channel is also its
+        project's, so a project reads the channel of its deal when it has none of its own.
+      responses:
+        '200':
+          description: The link state.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ChannelLinkState' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+    post:
+      tags: [Connectors]
+      operationId: linkChannel
+      security: [ { bearerAuth: [] }, { cookieAuth: [] } ]
+      x-mcp-tool: { verb: link_channel, router: send_outbound, action: link_channel, tier: auto_execute, scope: send, served_by: route, ask_user_first: true }
+      summary: Link a deal or project to a new or existing private chat channel.
+      description: |
+        `create` makes a private channel named after the record and invites every live member who may
+        open the record, the record's owner and the member linking it first, at most 50. A member with
+        no chat account is counted in `not_in_chat`, and members over the 50 in `skipped_over_cap`.
+        `existing` takes a private channel the bot is already in, named by its slug or its link, and
+        changes nobody's membership.
+
+        Linking an existing channel requires `summarize_history`. When it is true, the talk so far
+        is read and up to five summaries are filed as notes; an agent must ask the user first. A
+        channel Margince creates has no history to summarise.
+
+        A deal and its project share one channel: linking a deal whose project has none links both.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/LinkChannelRequest' }
+      responses:
+        '201':
+          description: The record is linked.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ChannelLinkState' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404':
+          description: 'The record is not visible, or the channel was not found (`code: channel_not_found`).'
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+        '409':
+          description: 'No bot is connected (`code: channel_bot_not_connected`), the record already has a channel (`code: record_already_linked`), or the channel already belongs to another record (`code: channel_already_linked`).'
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+        '422':
+          description: 'The channel is public (`code: channel_not_private`), the bot is not in it (`code: channel_bot_not_member`), or the request is malformed.'
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+        '502':
+          description: 'The chat could not be reached (`code: channel_provider_unreachable`); nothing was written.'
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+    patch:
+      tags: [Connectors]
+      operationId: setChannelVerbosity
+      security: [ { bearerAuth: [] }, { cookieAuth: [] } ]
+      x-mcp-tool: { verb: set_channel_verbosity, router: change_capture, action: set_channel_verbosity, tier: auto_execute, scope: write, served_by: route }
+      summary: Choose how much Margince posts into a record's channel.
+      description: |
+        `everything` posts every change, `important` (the default) the changes a team acts on,
+        `milestones` only stage, offer and contract steps, and `silent` posts nothing but keeps the
+        card current.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/SetChannelVerbosityRequest' }
+      responses:
+        '200':
+          description: The link state.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ChannelLinkState' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404':
+          description: 'The record is not visible, or it has no channel (`code: channel_link_not_found`).'
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+    delete:
+      tags: [Connectors]
+      operationId: unlinkChannel
+      security: [ { bearerAuth: [] }, { cookieAuth: [] } ]
+      x-mcp-tool: { verb: unlink_channel, router: change_capture, action: unlink_channel, tier: auto_execute, scope: write, served_by: route, ask_user_first: true }
+      summary: Stop syncing a record with its chat channel.
+      description: |
+        Margince stops posting and reading. The channel and its messages stay in the chat, and the
+        notes already filed stay on the record. Linking the same channel again later files no
+        summary twice.
+      responses:
+        '204': { description: Unlinked. }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404':
+          description: 'The record is not visible, or it has no channel (`code: channel_link_not_found`).'
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+
+  /channel-links/{record_type}/{id}/notes:
+    parameters:
+      - name: record_type
+        in: path
+        required: true
+        schema: { $ref: '#/components/schemas/ChannelLinkRecordType' }
+      - $ref: '#/components/parameters/Id'
+    post:
+      tags: [Connectors]
+      operationId: fileChannelMessage
+      security: [ { bearerAuth: [] }, { cookieAuth: [] } ]
+      x-mcp-tool: { verb: file_channel_message, router: change_activities, action: file_channel_message, tier: auto_execute, scope: write, served_by: route }
+      summary: File a summary of one message in a record's channel, or of its thread, as a note.
+      description: |
+        Reads the message from the chat, has the AI write a short summary of it, and files that
+        summary as a note on the record, as the caller. The message text is not stored. Filing the
+        same message again returns the note already filed.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/FileChannelMessageRequest' }
+      responses:
+        '201':
+          description: The note.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Activity' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404':
+          description: 'The record is not visible, it has no channel (`code: channel_link_not_found`), or the message is not in its channel (`code: channel_message_not_found`).'
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+        '409':
+          description: 'No bot is connected (`code: channel_bot_not_connected`), no AI model is bound (`code: ai_not_configured`), or a note not written by the chat summary holds the message''s key (`code: conflict`).'
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+        '422':
+          description: 'The request is malformed, or the thread is longer than one filing reads (`code: channel_thread_too_long`); nothing was filed.'
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+        '502':
+          description: 'The chat could not be reached (`code: channel_provider_unreachable`), or the summary could not be written (`code: channel_summary_failed`); nothing was filed.'
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+
+  # ------------------------ /integrations/dispact ---------------------------
+  # The manifest an admin pastes into Dispact to install the Margince app. It is
+  # built from this installation's public_base_url, so it names no install of
+  # its own.
+  /integrations/dispact/manifest:
+    get:
+      tags: [Connectors]
+      operationId: getDispactAppManifest
+      security: [ { cookieAuth: [] } ]
+      x-agent-access: human-only
+      x-human-only-reason: security
+      summary: The manifest that installs the Margince app in a Dispact team (admin).
+      description: |
+        Read-only. Dispact reads `mcp.endpoint` to send each `@Margince` call to this
+        installation's `/mcp`, signed with a call token for the caller who asked. `events` is where
+        Dispact sends signed notices of new messages in a linked channel. Needs the right to
+        connect a chat bot (the `channel_connection` RBAC object).
+      responses:
+        '200':
+          description: The app manifest.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/DispactAppManifest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '503':
+          description: 'This deployment serves no chat channel links, or has no public base URL configured (`code: channel_links_not_configured`).'
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+
+  # ----------------------- /channel-events/dispact -------------------------
+  # Dispact's push receiver. Dispact signs each notice with the events secret
+  # sealed on the connected bot; the signature is the only credential.
+  /channel-events/dispact:
+    post:
+      tags: [Connectors]
+      operationId: receiveDispactChannelEvent
+      security: []   # anonymous: the Standard Webhooks signature with the sealed events secret is the authentication
+      x-agent-access: human-only
+      summary: Take a signed notice of new talk in a linked Dispact channel (anonymous).
+      description: |
+        Dispact posts here when a linked channel has new messages. The body is signed under
+        Standard Webhooks: `webhook-id`, `webhook-timestamp` (unix seconds) and
+        `webhook-signature` (`v1,<base64 HMAC-SHA256>` entries separated by spaces) over
+        `<id>.<timestamp>.<body>`, keyed by the events secret sealed on the connected bot.
+
+        A URL check (`type: url_verification`) is answered with its `challenge`. A message notice
+        queues one read of the bot's channels, and notices that arrive while that read waits add
+        nothing. `channel.archived` pauses the channel's link. A notice for a channel no live link
+        has is answered `200` and changes nothing.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/DispactChannelEvent' }
+      responses:
+        '200':
+          description: The notice was taken.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/DispactChannelEventReceipt' }
+        '400':
+          description: 'The signed body is not a notice: an unknown `type`, or a field its type needs is missing (`code: channel_event_malformed`).'
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+        '401':
+          description: 'The notice is not signed by the connected bot: no Dispact bot with an events secret is connected, or the signature, the timestamp or the team does not match (`code: channel_event_rejected`). The answer is the same for each cause.'
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+        '409':
+          description: 'This `webhook-id` was taken in the last 24 hours (`code: channel_event_replayed`).'
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+        '413':
+          description: 'The body is larger than a notice can be (`code: channel_event_too_large`).'
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+        '429':
+          description: Rate-limited; Dispact retries.
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+        '503':
+          description: 'This deployment takes no chat notices, or could not record the notice id (`code: channel_events_unavailable`); Dispact retries.'
           content:
             application/problem+json:
               schema: { $ref: '#/components/schemas/Problem' }
@@ -25092,7 +25459,7 @@ paths:
       operationId: createDataSubjectRequest
       security: [ { bearerAuth: [] }, { cookieAuth: [] } ]
       x-mcp-tool: { verb: open_data_subject_request, router: change_compliance, action: open_data_subject_request, tier: auto_execute, scope: write, served_by: route, ask_user_first: true }
-      summary: Open a data-subject request (access/rectify/erasure). Admin-mediated; ties to retention and erasure.
+      summary: Open a data-subject request (access/rectify/erasure). subject_ref is the subject's contact id when they are a contact, else the email they wrote from; only a contact id can be fulfilled. Admin-mediated; ties to retention and erasure.
       description: |
         The server computes the deadline from `received_at` under the installation's
         jurisdiction (`GET /data-subject-requests/deadline` shows it before filing).
@@ -45296,18 +45663,21 @@ components:
     ChannelConnection:
       type: object
       description: >-
-        One workspace-level messaging-channel binding. The bot token never appears in this
-        shape — it lives sealed in the vault, and it is the only secret a binding holds.
+        One workspace-level messaging-channel binding. The bot token and the Dispact events
+        secret never appear in this shape: both live sealed in the vault.
       required: [id, provider, channelId, channelLabel, status, version]
       properties:
         id: { type: string, format: uuid }
-        provider: { type: string, enum: [telegram], x-extensible-enum: true }
+        provider: { type: string, enum: [telegram, dispact], x-extensible-enum: true }
         channelId:
           type: string
-          description: The provider's own id for the bot — the key the binding is unique on.
+          description: The provider's own id for the bot — the key the binding is unique on. For Dispact it is the chat's team id.
         channelLabel:
           type: string
           description: The bot's @username. Display only — a username is mutable and re-assignable, so it identifies nothing.
+        address:
+          type: string
+          description: The web address of a self-hosted provider's install (Dispact). Absent for Telegram.
         status:
           type: string
           enum: [pending, connected, disconnected, error, reauth_required]
@@ -45319,6 +45689,10 @@ components:
             polled again until an operator acts. `pending` is a value NO server produces: it is
             retained because the code generator disambiguates enum member names across the whole
             document, so dropping it renames unrelated generated constants in other schemas.
+        eventsSecretSet:
+          type: boolean
+          readOnly: true
+          description: Whether a Dispact events secret is sealed for this connection, so signed notices of new messages are taken. The secret itself is never shown.
         version: { type: integer, format: int64 }
         createdAt: { type: string, format: date-time }
         updatedAt: { type: string, format: date-time }
@@ -45331,11 +45705,19 @@ components:
       type: object
       required: [provider, botToken]
       properties:
-        provider: { type: string, enum: [telegram] }
+        provider: { type: string, enum: [telegram, dispact] }
         botToken:
           type: string
           minLength: 1
-          description: The BotFather token, `<bot id>:<secret>`. Sealed into the vault on arrival and never echoed back.
+          description: The bot token. For Telegram the BotFather token, `<bot id>:<secret>`; for Dispact the app token, `gwapp_…`. Sealed into the vault on arrival and never echoed back.
+        address:
+          type: string
+          maxLength: 500
+          description: The chat's web address, such as `https://chat.example.com`. Required for Dispact, which every team hosts itself; refused for Telegram.
+        eventsSecret:
+          type: string
+          maxLength: 200
+          description: The Dispact app's events secret, `whsec_…`, which signs each notice of a new message. Optional; without it Margince reads the channels every minute. Refused for Telegram. Sealed into the vault on arrival and never echoed back.
     ReplaceChannelTokenRequest:
       type: object
       required: [botToken]
@@ -45343,7 +45725,167 @@ components:
         botToken:
           type: string
           minLength: 1
-          description: The replacement BotFather token. Sealed into the vault on arrival and never echoed back.
+          description: The replacement bot token. Sealed into the vault on arrival and never echoed back.
+        eventsSecret:
+          type: string
+          maxLength: 200
+          description: A new Dispact events secret, `whsec_…`. Absent keeps the sealed one. Refused for Telegram. Sealed into the vault on arrival and never echoed back.
+    DispactChannelEvent:
+      type: object
+      description: >-
+        One signed notice from Dispact, or its URL check. A notice names the channel and the newest
+        message sequence, and never carries message text.
+      required: [type]
+      properties:
+        type:
+          type: string
+          enum: [url_verification, message.created, thread.replied, message.updated, channel.archived]
+        challenge: { type: string, maxLength: 500, description: The value a URL check expects back. }
+        workspace_id: { type: string, description: The Dispact team; it must be the connected bot's team. }
+        channel_slug: { type: string }
+        seq: { type: integer, description: 'The highest message sequence of the burst. Margince reads the history itself and uses the notice only as a signal.' }
+        message_id: { type: string }
+        event_id: { type: string }
+        ts: { type: integer, format: int64 }
+    DispactChannelEventReceipt:
+      type: object
+      additionalProperties: false
+      description: The answer to a taken notice. A URL check gets `challenge` alone.
+      properties:
+        challenge: { type: string }
+        status:
+          type: string
+          enum: [pull_queued, link_paused, ignored]
+          x-extensible-enum: true
+          description: '`pull_queued`: the channel''s history is read soon. `link_paused`: the archived channel''s link is paused. `ignored`: no live link has this channel.'
+
+    # ---- chat channel links ----
+    ChannelLinkRecordType:
+      type: string
+      enum: [deal, project]
+      description: The kind of record a chat channel is linked to.
+    ChannelVerbosity:
+      type: string
+      enum: [everything, important, milestones, silent]
+      x-extensible-enum: true
+      description: How much Margince posts into a linked channel.
+    ChannelLinkState:
+      type: object
+      additionalProperties: false
+      required: [state]
+      properties:
+        state:
+          type: string
+          enum: [off, none, linked, paused]
+          x-extensible-enum: true
+          description: '`off`: no chat bot is connected. `none`: no channel yet. `linked`: posting and reading. `paused`: the channel is gone or the bot lost access.'
+        link:
+          $ref: '#/components/schemas/ChannelLink'
+        invites:
+          $ref: '#/components/schemas/ChannelInvites'
+    ChannelLink:
+      type: object
+      additionalProperties: false
+      required: [id, provider, channel_slug, channel_name, channel_url, verbosity, status, created_at]
+      properties:
+        id: { type: string, format: uuid }
+        provider: { type: string, enum: [dispact], x-extensible-enum: true }
+        channel_slug: { type: string }
+        channel_name: { type: string }
+        channel_url: { type: string, description: The channel's address in the chat. }
+        verbosity: { $ref: '#/components/schemas/ChannelVerbosity' }
+        status: { type: string, enum: [active, channel_gone], x-extensible-enum: true }
+        deal_id: { type: [string, 'null'], format: uuid }
+        project_id: { type: [string, 'null'], format: uuid }
+        created_at: { type: string, format: date-time }
+    ChannelInvites:
+      type: object
+      additionalProperties: false
+      required: [invited, not_in_chat, skipped_over_cap]
+      description: Who a newly created channel was opened to.
+      properties:
+        invited: { type: integer, description: Members added to the channel. }
+        not_in_chat: { type: integer, description: Members invited who have no chat account. }
+        skipped_over_cap: { type: integer, description: Members left out because a new channel invites at most 50. }
+    DispactAppManifest:
+      type: object
+      additionalProperties: false
+      required: [slug, name, mcp, scopes, events]
+      description: What Dispact needs to install the Margince app in a team.
+      properties:
+        slug: { type: string, enum: [margince], x-extensible-enum: true }
+        name: { type: string }
+        mcp: { $ref: '#/components/schemas/DispactAppManifestMcp' }
+        scopes:
+          type: string
+          description: The bot scopes the app asks for, separated by spaces.
+        events: { $ref: '#/components/schemas/DispactAppManifestEvents' }
+    DispactAppManifestMcp:
+      type: object
+      additionalProperties: false
+      required: [endpoint]
+      properties:
+        endpoint: { type: string, description: 'This installation''s MCP address, `<public_base_url>/mcp`.' }
+    DispactAppManifestEvents:
+      type: object
+      additionalProperties: false
+      required: [url, types]
+      properties:
+        url: { type: string, description: 'Where Dispact sends signed notices, `<public_base_url>/v1/channel-events/dispact`.' }
+        types:
+          type: array
+          items: { type: string }
+          description: The notice types the app subscribes to.
+    LinkChannelRequest:
+      type: object
+      additionalProperties: false
+      required: [mode]
+      properties:
+        mode:
+          type: string
+          enum: [create, existing]
+        channel:
+          type: string
+          maxLength: 500
+          description: For `existing`, the channel's slug or its link.
+        verbosity: { $ref: '#/components/schemas/ChannelVerbosity' }
+        summarize_history:
+          type: boolean
+          description: For `existing`, required. True files up to five summaries of the talk so far.
+    SetChannelVerbosityRequest:
+      type: object
+      additionalProperties: false
+      required: [verbosity]
+      properties:
+        verbosity: { $ref: '#/components/schemas/ChannelVerbosity' }
+
+    FileChannelMessageRequest:
+      type: object
+      additionalProperties: false
+      required: [message]
+      properties:
+        message:
+          type: string
+          minLength: 1
+          maxLength: 500
+          description: |
+            The message in the record's channel: its sequence number, `#slug:seq`, the chat's
+            `<m:#slug:seq|…>` mention, or its link. A message in another channel is not found.
+        thread:
+          type: boolean
+          description: True files the message and the replies in its thread that follow it.
+
+    ChatEpisode:
+      type: object
+      readOnly: true
+      description: |
+        The chat talk a summary note was written from. The talk itself is not kept: open `url`
+        to read it in the chat.
+      required: [message_count, ended_at, url]
+      properties:
+        message_count: { type: integer, minimum: 1, description: How many messages the summary covers. }
+        ended_at: { type: string, format: date-time, description: When the last of them was posted. }
+        url: { type: string, description: The first message in the chat. }
 
     ImportObject:
       type: string
@@ -54725,6 +55267,17 @@ components:
         selection: { $ref: '#/components/schemas/ReportingSelection' }
         refresh: { type: boolean, description: "Ask the model again, whatever is kept." }
       additionalProperties: false
+    SalesProgressSummaryRequest:
+      type: object
+      required: [period, year]
+      properties:
+        period: { type: string, enum: [month, year] }
+        year: { type: integer, minimum: 2000, maximum: 2200 }
+        month: { type: integer, minimum: 1, maximum: 12, description: "Required with `period: month`." }
+        scope_kind: { type: string, enum: [owner, team], description: "Absent reads the caller's own figures." }
+        scope_id: { type: string, format: uuid }
+        refresh: { type: boolean, description: "Ask the model again, whatever is kept." }
+      additionalProperties: false
     SalesAssessment:
       type: object
       required: [evaluation_key, generated_at, generated_by, sentences, cells, decisions]
@@ -54780,7 +55333,7 @@ components:
       type: object
       required: [id, label, value]
       properties:
-        id: { type: string, description: "`metric:<metric id>` or `point:<metric id>:<group key>`." }
+        id: { type: string, description: "`metric:<metric id>` or `point:<metric id>:<group key>`; a Progress summary names its own figures `progress:<figure>`." }
         label: { type: string }
         value: { type: string, description: Raw source quantity with its unit. }
         display: { type: string, description: Locale-formatted quantity for reader text. }
@@ -58040,6 +58593,13 @@ components:
             draw text only; a surface that draws fields reads them here. Null on every other
             row, and on a form note written before the fields were kept. Withheld with the
             content, like `body`.
+        chat_episode:
+          allOf: [{ $ref: '#/components/schemas/ChatEpisode' }]
+          readOnly: true
+          description: >-
+            On a note summarising chat talk (`source_system` `dispact`), what talk it summarises.
+            The note's subject and body are an AI summary. Absent on every other row. Withheld with
+            the content, like `body`.
         raw: { type: [object, 'null'], additionalProperties: true }
         version: { $ref: '#/components/schemas/RowVersion' }
         created_at: { type: string, format: date-time }
@@ -64993,6 +65553,26 @@ components:
         declared_total_minor: { type: integer, format: int64, minimum: 0 }
         reason: { type: string, minLength: 1, maxLength: 1000 }
         origin: { type: string, enum: [manual, ai, adopted], default: manual }
+    SalesGoalProposalRequest:
+      type: object
+      additionalProperties: false
+      properties:
+        yearly_total_minor: { type: integer, format: int64, minimum: 1, description: 'The yearly goal the months must add up to, when the reader has set one.' }
+    SalesGoalProposal:
+      type: object
+      additionalProperties: false
+      required: [months, total_minor, reason, generated_by]
+      properties:
+        months:
+          type: array
+          minItems: 12
+          maxItems: 12
+          description: January to December, each an amount of zero or more in minor units of the plan currency.
+          items: { type: integer, format: int64 }
+        total_minor: { type: integer, format: int64, description: 'What the twelve months add up to.' }
+        reason: { type: string, maxLength: 400, description: 'The pattern the proposal followed, in the reader''s language, with no figure in it.' }
+        generated_by: { $ref: '#/components/schemas/WrittenBy' }
+        model_used: { type: string }
     SalesGoalPublishInput:
       type: object
       additionalProperties: false
@@ -70293,6 +70873,7 @@ components:
         - capture_classify
         - capture_confidentiality_verdict
         - capture_counterparty_verdict
+        - chat_summary
         - cert_judge
         - cold_start
         - corpus_ask
@@ -70337,7 +70918,7 @@ components:
          site_triage, stage_evidence_extract, summarize, transcript, transcript_propose, voice_build,
          corpus_ask, weekly_review, weekly_learnings, propose_roles, owed_verdict,
          request_settlement, account_scan, tag_suggest, report_setup, report_interpret,
-         reader_rendering, deal_verdict, rewrite, extension_call]
+         reader_rendering, deal_verdict, rewrite, extension_call, chat_summary]
       x-extensible-enum: true
       description: |
         What kind of AI work an occurrence is. Every AI task this build can run reports here,
@@ -71659,7 +72240,7 @@ components:
         What one reading of one transcript did. The three outcomes are kept apart on purpose: still
         reading, read it and it stated nothing, and could not read it are different answers, and
         collapsing the last two makes a correct empty result look like a broken feature.
-      required: [read_id, activity_id, status, line_count, proposal_ids, proposals, created_at]
+      required: [read_id, activity_id, status, line_count, proposal_ids, proposals, created_at, summary_refused]
       properties:
         read_id: { type: string, format: uuid }
         activity_id: { type: string, format: uuid }
@@ -71697,6 +72278,46 @@ components:
         started_at: { type: [string, 'null'], format: date-time }
         finished_at: { type: [string, 'null'], format: date-time }
         created_at: { type: string, format: date-time }
+        summary:
+          allOf: [ { $ref: '#/components/schemas/TranscriptSummary' } ]
+          description: >-
+            The meeting's summary as this reading leaves it: the one this reading wrote, or the
+            newest one an earlier reading wrote. Absent when no reading has written one.
+        summary_refused:
+          type: boolean
+          description: >-
+            True when this reading finished without writing a summary, because the summary failed
+            the check that every point cites lines the transcript has. The meeting keeps `summary`
+            as it was.
+
+    TranscriptSummary:
+      type: object
+      description: >-
+        A short summary of one meeting, written by a model from its transcript and never by a
+        member. A client marks it as AI-written. Each point cites the transcript lines it was read
+        from; the transcript itself is unchanged.
+      required: [read_id, generated_at, key_points, next_steps]
+      properties:
+        read_id: { type: string, format: uuid, description: 'The reading that wrote this summary.' }
+        generated_at: { type: string, format: date-time }
+        key_points:
+          type: array
+          description: What the meeting covered, in the language the meeting was held in.
+          items: { $ref: '#/components/schemas/TranscriptSummaryPoint' }
+        next_steps:
+          type: array
+          description: What the meeting agreed would happen next. Empty when it agreed nothing.
+          items: { $ref: '#/components/schemas/TranscriptSummaryPoint' }
+
+    TranscriptSummaryPoint:
+      type: object
+      required: [text, source_lines]
+      properties:
+        text: { type: string }
+        source_lines:
+          type: array
+          description: The 1-based transcript lines this point was read from.
+          items: { type: integer }
 
     TranscriptReadProposal:
       type: object
@@ -73993,7 +74614,12 @@ components:
       required: [kind, subject_ref]
       properties:
         kind: { type: string, enum: [access, rectify, erasure, restriction] }
-        subject_ref: { type: string }
+        subject_ref:
+          type: string
+          description: |
+            The data subject: their contact id when they are a contact, else the identifier they
+            wrote from, such as an email. Only a contact id can be fulfilled; anything else waits
+            until somebody resolves it to a contact.
         received_at:
           type: string
           format: date-time
@@ -76409,6 +77035,9 @@ components:
         expires_at: { type: [string, 'null'], format: date-time }
         last_used_at: { type: [string, 'null'], format: date-time }
         revoked_at: { type: [string, 'null'], format: date-time }
+        app_bound:
+          type: boolean
+          description: True while a chat app's user is bound to this passport. A revoked passport that is still bound refuses that user until it is released.
         usage:
           allOf: [ { $ref: '#/components/schemas/AgentUsage' } ]
           description: |

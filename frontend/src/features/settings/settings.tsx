@@ -23,7 +23,7 @@ import { BriefDeliveryPanel } from "../brief/briefdelivery";
 import { BlockedDomainsCard } from "../capture/blocked-domains";
 import { CaptureActivityTab } from "../capture/capture-activity";
 import { OwnerIdentitiesCard } from "../capture/capture-owner-identities";
-import { ConnectorsCard, TelegramConnectorsPanel } from "../capture/connectors";
+import { ConnectorsCard, WorkspaceBotPanel } from "../capture/connectors";
 import { ConsumerMailDomainsCard } from "../capture/consumer-mail-domains";
 import { ProviderCard } from "../capture/integrations-provider";
 import { OwnDomainsCard } from "../capture/own-domains";
@@ -378,7 +378,12 @@ function integrationsTab(tab: string): ReactNode {
     case "webhooks":
       return <WebhooksCard />;
     case "telegram":
-      return <TelegramConnectorsPanel />;
+      return (
+        <>
+          <WorkspaceBotPanel provider="telegram" />
+          <WorkspaceBotPanel provider="dispact" />
+        </>
+      );
     case "shared-mailboxes":
       return <SharedMailboxesCard />;
     case "units":
