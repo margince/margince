@@ -59,9 +59,10 @@ const PREFERENCES_KEY = ["notification-preferences"] as const;
  * Keyset, never an offset: notices arrive while somebody is reading, and an
  * offset page would show them a line twice for every one that landed above it.
  */
-export function useNotifications() {
+export function useNotifications({ enabled = true } = {}) {
   return useInfiniteQuery({
     queryKey: NOTIFICATIONS_KEY,
+    enabled,
     refetchOnWindowFocus: true,
     initialPageParam: FIRST_PAGE,
     queryFn: async ({ pageParam }) => {
