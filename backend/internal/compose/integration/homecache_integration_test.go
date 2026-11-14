@@ -228,9 +228,13 @@ func TestAnAnswerPastItsLifeIsServedStaleUntilItsGraceEnds(t *testing.T) {
 
 	keep(ctx, t, c, e.Rep1, homecache.Worklist, nil, "decisions")
 	age(homecache.Life + time.Minute)
+	staleBefore, hitsBefore := homeCacheReads(t, homecache.Worklist, "stale"), homeCacheReads(t, homecache.Worklist, "hit")
 	got, stale, err := homecache.Serve(ctx, c, e.Rep1, homecache.Worklist, "home", fresh, noWalk)
 	if err != nil || !stale || got.View == nil || *got.View != "decisions" {
 		t.Fatalf("serve past its life = %+v (stale %v, err %v), want the kept answer, stale", got, stale, err)
+	}
+	if grew, hits := homeCacheReads(t, homecache.Worklist, "stale")-staleBefore, homeCacheReads(t, homecache.Worklist, "hit")-hitsBefore; grew != 1 || hits != 0 {
+		t.Errorf("an answer served past its life counted %d stale and %d hits, want 1 and 0", grew, hits)
 	}
 	c.Settle()
 	if reads != 1 {
