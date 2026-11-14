@@ -137,7 +137,7 @@ func readLeadWorkQueue(ctx context.Context, tx pgx.Tx, in ListLeadsInput, active
 	query := `SELECT ` + columns + storekit.SelectSuffix(active) + `, ` + rank +
 		` FROM lead WHERE ` + strings.Join(where, " AND ") +
 		` ORDER BY ` + rank + `, score DESC, created_at, id` + storekit.SQLf(` LIMIT %d`, limit+1)
-	return readLeadQueuePage(ctx, tx, query, *args, active, limit, asOf, policy, total)
+	return readLeadQueuePage(ctx, tx, query, *args, active, limit, asOf, policy, total, cursor == nil)
 }
 
 func leadQueueWhere(ctx context.Context, in ListLeadsInput, active []fieldcatalog.Column, policy leadSLAPolicy) ([]string, *[]any, func(any) int, error) {
@@ -190,10 +190,9 @@ func leadQueueRank(policy leadSLAPolicy, arg func(any) int, asOf time.Time) stri
 		deadline, arg(risk), arg(asOf), leadQueueRankAtRisk, leadQueueRankWithinTarget)
 }
 
-func readLeadQueuePage(ctx context.Context, tx pgx.Tx, query string, args []any, active []fieldcatalog.Column, limit int, asOf time.Time, policy leadSLAPolicy, total countQuery) ([]crmcontracts.Lead, storekit.Page, error) {
+func readLeadQueuePage(ctx context.Context, tx pgx.Tx, query string, args []any, active []fieldcatalog.Column, limit int, asOf time.Time, policy leadSLAPolicy, total countQuery, firstPage bool) ([]crmcontracts.Lead, storekit.Page, error) {
 	var leads []crmcontracts.Lead
 	var ranks []int
-	var matching int
 
 	rows, err := tx.Query(ctx, query, args...)
 	if err != nil {
@@ -212,9 +211,8 @@ func readLeadQueuePage(ctx context.Context, tx pgx.Tx, query string, args []any,
 	if err := rows.Err(); err != nil {
 		return nil, storekit.Page{}, err
 	}
-	// Counted on the page's own transaction, so the number and the rows
-	// describe one instant.
-	if err := tx.QueryRow(ctx, total.sql, total.args...).Scan(&matching); err != nil {
+	matching, err := exactListTotal(ctx, tx, total, len(leads), limit, firstPage)
+	if err != nil {
 		return nil, storekit.Page{}, fmt.Errorf("count lead: %w", err)
 	}
 	// This page path must stamp writability before offering edits to colleagues’ rows.
