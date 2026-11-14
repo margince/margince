@@ -114,9 +114,6 @@ func stateOf(ctx context.Context, tx pgx.Tx, kind string, id ids.UUID) (State, e
 // is already in. The record is checked before and again after the chat is
 // called, because no transaction is held across the call.
 func (s *Store) Link(ctx context.Context, kind string, id ids.UUID, req LinkRequest) (State, error) {
-	if err := auth.Require(ctx, kind, principal.ActionUpdate); err != nil {
-		return State{}, err
-	}
 	if err := validateLink(&req); err != nil {
 		return State{}, err
 	}
@@ -240,6 +237,9 @@ func (s *Store) LinkableChannels(ctx context.Context, kind string, id ids.UUID) 
 // precheckLink refuses early what the write would refuse anyway. So the chat
 // is never asked for a channel the record cannot take.
 func (s *Store) precheckLink(ctx context.Context, kind string, id ids.UUID) (recordFacts, error) {
+	if err := auth.Require(ctx, kind, principal.ActionUpdate); err != nil {
+		return recordFacts{}, err
+	}
 	actor, err := linkActor(ctx)
 	if err != nil {
 		return recordFacts{}, err

@@ -274,6 +274,10 @@ func TestOnlyAPrivateChannelWithTheBotThatNoRecordHoldsIsOffered(t *testing.T) {
 	if _, err := e.store.LinkableChannels(e.seat(e.other), RecordDeal, e.deal); !errors.Is(err, apperrors.ErrPermissionDenied) {
 		t.Errorf("a rep who may not edit the deal listed its channels: %v", err)
 	}
+	reader := e.seatWith(e.rep, principal.RowScopeOwn, map[string]principal.ObjectGrant{"deal": {Read: true}})
+	if _, err := e.store.LinkableChannels(reader, RecordDeal, e.deal); !errors.Is(err, apperrors.ErrPermissionDenied) {
+		t.Errorf("the owner with no edit right on deals listed its channels: %v", err)
+	}
 }
 
 func TestARecordAndAChannelCarryOneLinkEach(t *testing.T) {
