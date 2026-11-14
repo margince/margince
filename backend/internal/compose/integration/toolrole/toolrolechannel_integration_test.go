@@ -11,6 +11,7 @@ import (
 	"net/http/httptest"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/margince/margince/backend/internal/compose/integration"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -52,7 +53,7 @@ func serveSweepChat(w http.ResponseWriter, r *http.Request) {
 		messages := []map[string]any{}
 		if r.URL.Query().Get("after") == "0" {
 			messages = append(messages, map[string]any{"id": "m1", "seq": 1, "user_name": "Role Sweep",
-				"text": "We agree the role sweep.", "posted_at": "2026-11-10T09:00:00Z"})
+				"text": "We agree the role sweep.", "posted_at": time.Now().Add(time.Hour).UTC().Format(time.RFC3339)})
 		}
 		answer = map[string]any{"messages": messages}
 	case rest == "messages":
