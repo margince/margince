@@ -31,14 +31,7 @@ import { readerTask } from "../../lib/worklistcopy";
 import { pillFigure } from "../../lib/worklistcounts";
 import { WORKLIST_VIEW_PARAM } from "../../lib/worklistrouting";
 import { DEFAULT_VIEW } from "../../lib/worklistviews";
-import { LinkedApprovalDrawer } from "../automations/approvaldrawer";
 import { MagicPanel, WAITING_LANES } from "../sign-in/magic";
-import {
-  ActivityDetailModal,
-  MeetingDetailModal,
-  TaskDetailModal,
-} from "../worklist/taskdetailmodal";
-import { WorklistPane } from "../worklist/worklist.pane";
 import {
   useHandledForYou,
   useWorklist,
@@ -46,6 +39,16 @@ import {
   worklistKey,
 } from "../worklist/worklist.queries";
 import { changedSinceBrief } from "./brief.changed";
+import {
+  ActivityDetailModal,
+  ContactMeetingBrief,
+  LinkedApprovalDrawer,
+  MeetingDetailModal,
+  TaskDetailModal,
+  WeeklyPage,
+  WeekStepper,
+  WorklistPane,
+} from "./brief.deferred";
 import { BriefDials } from "./brief.dials";
 import { DoneForYou } from "./brief.doneforyou";
 import { shownReceiptIds } from "./brief.doneforyou.groups";
@@ -60,8 +63,6 @@ import {
 } from "./brief.focuslink";
 import { BriefGlance } from "./brief.glance";
 import { homeJourneyMarks } from "./brief.journey";
-import { PlanSection } from "./brief.plan";
-import { PlanConstraints } from "./brief.plan.contract";
 import { useMorningBrief, useWeeklyReview } from "./brief.queries";
 import { BriefQueue } from "./brief.queue";
 import { BriefReadingsPending, BriefReadingsStrip } from "./brief.readings";
@@ -69,10 +70,7 @@ import { SchedulePanel } from "./brief.schedule";
 import { BriefSuggestions } from "./brief.suggestions";
 import { taskName } from "./brief.taskcard";
 import { addressFrom, type BriefAddress, paramsFor } from "./brief.view";
-import { WeeklySection, WeekStepper } from "./brief.weekly";
-import { useWeeklyRailShown, WeeklyRail } from "./brief.weekly.rail";
 import { BriefCoverage } from "./briefcoverage";
-import { ContactMeetingBrief } from "./meetingbrief";
 import "./brief.css";
 
 // The dials that narrow the drawer. The Home button clears them, so it always
@@ -186,26 +184,6 @@ function BriefBody({
 }>) {
   if (address.view === "weekly") return <WeeklyPage />;
   return <PersonalMorning query={query} queueToggle={queueToggle} />;
-}
-
-function WeeklyPage() {
-  const t = useT();
-  // An aside handed over empty still draws its column and landmark.
-  const railShown = useWeeklyRailShown();
-  return (
-    <PageZones
-      shape="aside"
-      panes
-      className="brief-weekly-page"
-      mainClassName="brief-main"
-      asideClassName="brief-rail"
-      asideLabel={t("brief.weekly.rail")}
-      main={<WeeklySection plan={<PlanSection withContract={false} />} />}
-      aside={
-        railShown ? <WeeklyRail constraints={<PlanConstraints />} /> : undefined
-      }
-    />
-  );
 }
 
 // The reports wait for the day's own reads, so their request never competes
@@ -449,11 +427,13 @@ function ScheduleWithMeetings({
         onPrepareMeeting={setPrepFor}
       />
       {/* Opening it is what has Margince write the brief. */}
-      <ContactMeetingBrief
-        activityId={prepFor}
-        open={prepFor !== null}
-        onClose={() => setPrepFor(null)}
-      />
+      {prepFor !== null && (
+        <ContactMeetingBrief
+          activityId={prepFor}
+          open
+          onClose={() => setPrepFor(null)}
+        />
+      )}
       {meeting && (
         <ActivityDetailModal
           activityId={meeting}

@@ -301,7 +301,9 @@ it("opens a deal row on why it needs attention", async () => {
     await screen.findByRole("button", { name: en["brief.focus.context"] }),
   );
   const details = await screen.findByRole("dialog");
-  expect(within(details).getByText(en["worklist.why.title"])).toBeTruthy();
+  expect(
+    await within(details).findByText(en["worklist.why.title"]),
+  ).toBeTruthy();
   expect(
     within(details).getByText(en["worklist.because.approved_and_failed"]),
   ).toBeTruthy();

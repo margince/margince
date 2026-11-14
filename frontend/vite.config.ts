@@ -101,6 +101,9 @@ const analyticsPreparation = entryChunks(
   15,
 );
 const analytics = entryChunks("analytics", entries.analytics);
+// Home is the screen most loads open on. Its chunk is preloaded with the
+// startup code, ranked below it and Analytics so it takes none of their modules.
+const home = entryChunks("home", entries.home, 5);
 
 // Classifying the suite reads every test file, so only a test run pays for it.
 const sourceScans = process.env.VITEST ? await compilerTests(frontendRoot) : [];
@@ -118,6 +121,7 @@ export default defineConfig({
             analyticsPreparation.group,
             startup.group,
             analytics.group,
+            home.group,
             {
               name: "shared",
               minShareCount: 2,
@@ -137,11 +141,16 @@ export default defineConfig({
   // module scripts and /@vite/client, which the api's admission check refuses by
   // name — so both views would be permanently unadvertised in every dev stack.
   plugins: [
-    preloadEntries([...entries.startup, ...entries.analyticsPreparation]),
+    preloadEntries([
+      ...entries.startup,
+      ...entries.analyticsPreparation,
+      ...entries.home,
+    ]),
     bootstrap.plugin,
     analyticsPreparation.plugin,
     startup.plugin,
     analytics.plugin,
+    home.plugin,
     react(),
     tailwindcss(),
     // The Material files say 48px; without dimensions the glyph's `size` prop decides.

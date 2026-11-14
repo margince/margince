@@ -1,6 +1,7 @@
 import { registerStartupSession } from "./app/startup-session";
 import { loadEssentialLocale, loadLocale } from "./i18n/catalogs";
 import { preferredLocale } from "./i18n/locale";
+import { bootsOnEssentialCopy } from "./lib/essentialscreens";
 import { restoreReturnRoute } from "./lib/returnroute";
 import { parseHash } from "./lib/router";
 import { readPreparedAnalyticsSession } from "./lib/session.read";
@@ -38,11 +39,21 @@ if (parseHash(location.hash).screen === "analytics") {
   });
   registerStartupSession(preparation.catch(fail));
 }
-const load =
-  parseHash(location.hash).screen === "analytics"
-    ? loadEssentialLocale
-    : loadLocale;
-load(preferredLocale()).catch((error: unknown) => {
+const locale = preferredLocale();
+const languageFailed = (error: unknown) =>
   console.error("The selected language could not be loaded", error);
-});
+if (bootsOnEssentialCopy(location.hash)) {
+  loadEssentialLocale(locale).catch(languageFailed);
+  // The rest of the app reads the complete catalog; it loads once the first
+  // screen has had the main thread.
+  addEventListener("load", () => {
+    const later = (complete: () => void) =>
+      typeof requestIdleCallback === "function"
+        ? requestIdleCallback(complete)
+        : setTimeout(complete, 0);
+    later(() => void loadLocale(locale).catch(languageFailed));
+  });
+} else {
+  loadLocale(locale).catch(languageFailed);
+}
 void import("./main");

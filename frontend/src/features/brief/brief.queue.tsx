@@ -11,10 +11,10 @@ import { navigateReplacing, useHash } from "../../lib/router";
 import { useScrollMemory } from "../../lib/scrollmemory";
 import { readStored, STORAGE_KEYS, writeStored } from "../../lib/storage";
 import { NO_URL_PARAMS, useUrlParams } from "../../lib/urlstate";
-import { WorklistScreen } from "../worklist/worklist";
 import { drawerScope } from "../worklist/worklist.address";
 import { worklistFilterFrom } from "../worklist/worklist.header";
 import { WorklistReturnScope } from "../worklist/worklist.return";
+import { WorklistScreen } from "./brief.deferred";
 import "./brief.css";
 
 /** Older shared links open the same queue, including its owner and narrowing. */
