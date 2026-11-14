@@ -2117,6 +2117,7 @@
   "worklist.title.automation_run.failed": "{name} ist fehlgeschlagen",
   "worklist.title.automation_run.blocked": "{name} wurde blockiert",
   "worklist.title.meeting_outcome": "Ergebnis von {name} festhalten",
+  "worklist.title.meeting_outcome.read_only": "Noch kein Ergebnis für {name}",
   "worklist.title.meeting_follow_up": "Bei {name} nachfassen",
   "worklist.title.awaiting_reply": "Noch keine Antwort: {name}",
   "worklist.title.bounce": "Unzustellbar: {name}",
