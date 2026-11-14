@@ -6,7 +6,7 @@
     "sites_best_stale": 0,
     "sites_absent": 0,
     "scenarios": 329,
-    "records": 394,
+    "records": 396,
     "bindings": 18,
     "self_judged_records": 0
   },
@@ -3536,8 +3536,8 @@
             "model": "openai/gpt-oss-120b",
             "env": "cloud_frontier"
           },
-          "band": "supported_degraded",
-          "state": "stale",
+          "band": "certified",
+          "state": "current",
           "fallback": {
             "tier": "cheap_cloud",
             "model": {
@@ -3546,14 +3546,14 @@
               "env": "cloud_frontier"
             },
             "same_model": true,
-            "band": "supported_degraded",
-            "state": "stale"
+            "band": "certified",
+            "state": "current"
           },
           "abandoned": 0,
-          "runs": 33,
-          "passed": 32,
+          "runs": 36,
+          "passed": 36,
           "cases_failing_often": 0,
-          "cases_below_quality_bar": 1
+          "cases_below_quality_bar": 0
         },
         {
           "task": "capture_confidentiality_verdict",
@@ -4024,8 +4024,8 @@
             "model": "mistralai/mistral-medium-3-5",
             "env": "cloud_frontier"
           },
-          "band": "",
-          "state": "",
+          "band": "supported_degraded",
+          "state": "current",
           "fallback": {
             "tier": "cheap_cloud",
             "model": {
@@ -4034,14 +4034,14 @@
               "env": "cloud_frontier"
             },
             "same_model": false,
-            "band": "supported_degraded",
-            "state": "stale"
+            "band": "not_supported",
+            "state": "current"
           },
           "abandoned": 0,
-          "runs": 0,
-          "passed": 0,
+          "runs": 36,
+          "passed": 35,
           "cases_failing_often": 0,
-          "cases_below_quality_bar": 0
+          "cases_below_quality_bar": 1
         },
         {
           "task": "report_setup",
@@ -4052,7 +4052,7 @@
             "model": "openai/gpt-oss-120b",
             "env": "cloud_frontier"
           },
-          "band": "certified",
+          "band": "supported_degraded",
           "state": "current",
           "fallback": {
             "tier": "premium",
@@ -4062,14 +4062,14 @@
               "env": "cloud_frontier"
             },
             "same_model": false,
-            "band": "",
-            "state": ""
+            "band": "not_supported",
+            "state": "current"
           },
           "abandoned": 0,
-          "runs": 12,
-          "passed": 12,
-          "cases_failing_often": 0,
-          "cases_below_quality_bar": 0
+          "runs": 39,
+          "passed": 34,
+          "cases_failing_often": 1,
+          "cases_below_quality_bar": 1
         },
         {
           "task": "request_settlement",
@@ -4081,7 +4081,7 @@
             "env": "cloud_frontier"
           },
           "band": "supported_degraded",
-          "state": "stale",
+          "state": "current",
           "fallback": {
             "tier": "cheap_cloud",
             "model": {
@@ -4091,11 +4091,11 @@
             },
             "same_model": true,
             "band": "supported_degraded",
-            "state": "stale"
+            "state": "current"
           },
           "abandoned": 0,
           "runs": 81,
-          "passed": 69,
+          "passed": 73,
           "cases_failing_often": 0,
           "cases_below_quality_bar": 3
         },
@@ -4255,7 +4255,7 @@
             "env": "cloud_frontier"
           },
           "band": "not_supported",
-          "state": "stale",
+          "state": "current",
           "fallback": {
             "tier": "premium",
             "model": {
@@ -4264,14 +4264,14 @@
               "env": "cloud_frontier"
             },
             "same_model": false,
-            "band": "supported_degraded",
-            "state": "stale"
+            "band": "not_supported",
+            "state": "current"
           },
           "abandoned": 0,
-          "runs": 129,
-          "passed": 110,
+          "runs": 126,
+          "passed": 108,
           "cases_failing_often": 1,
-          "cases_below_quality_bar": 8
+          "cases_below_quality_bar": 5
         },
         {
           "task": "tag_suggest",
@@ -4405,10 +4405,10 @@
       ],
       "bands": {
         "certified": 14,
-        "supported_degraded": 11,
+        "supported_degraded": 12,
         "not_supported": 7
       },
-      "untested": 5,
+      "untested": 4,
       "unbound": 0,
       "unrecognised": 0
     },
@@ -9315,11 +9315,11 @@
       "name": "GPT",
       "answer": "mostly",
       "sites_shipped": 60,
-      "sites_measured": 52,
-      "ready": 35,
-      "usable_with_care": 14,
-      "not_reliable_yet": 3,
-      "recheck_pending": 25,
+      "sites_measured": 54,
+      "ready": 38,
+      "usable_with_care": 11,
+      "not_reliable_yet": 5,
+      "recheck_pending": 23,
       "models": [
         {
           "binding": {
@@ -9367,17 +9367,17 @@
             "model": "openai/gpt-oss-120b",
             "env": "cloud_frontier"
           },
-          "sites": 49,
-          "sites_current": 38,
+          "sites": 51,
+          "sites_current": 45,
           "sites_partial": 0,
-          "sites_stale": 11,
-          "runs": 1305,
-          "passed": 1231,
-          "reliability": 0.9432950191570881,
+          "sites_stale": 6,
+          "runs": 1344,
+          "passed": 1262,
+          "reliability": 0.9389880952380952,
           "slowest_p95_ms": 9507,
           "bands": {
-            "certified": 19,
-            "supported_degraded": 22,
+            "certified": 22,
+            "supported_degraded": 21,
             "not_supported": 8
           }
         }
@@ -9447,10 +9447,10 @@
             "model": "openai/gpt-oss-120b",
             "env": "cloud_frontier"
           },
-          "band": "supported_degraded",
-          "state": "stale",
-          "runs": 24,
-          "passed": 23,
+          "band": "certified",
+          "state": "current",
+          "runs": 27,
+          "passed": 27,
           "records": 2
         },
         {
@@ -9790,6 +9790,20 @@
           "records": 1
         },
         {
+          "key": "report_interpret/progress_summary",
+          "task": "report_interpret",
+          "best": {
+            "provider": "openai_compatible",
+            "model": "openai/gpt-oss-120b",
+            "env": "cloud_frontier"
+          },
+          "band": "not_supported",
+          "state": "current",
+          "runs": 18,
+          "passed": 12,
+          "records": 1
+        },
+        {
           "key": "report_interpret/sales_assessment",
           "task": "report_interpret",
           "best": {
@@ -9797,10 +9811,10 @@
             "model": "openai/gpt-oss-120b",
             "env": "cloud_frontier"
           },
-          "band": "supported_degraded",
-          "state": "stale",
-          "runs": 18,
-          "passed": 16,
+          "band": "not_supported",
+          "state": "current",
+          "runs": 12,
+          "passed": 7,
           "records": 1
         },
         {
@@ -9811,10 +9825,10 @@
             "model": "openai/gpt-oss-120b",
             "env": "cloud_frontier"
           },
-          "band": "supported_degraded",
+          "band": "certified",
           "state": "current",
-          "runs": 6,
-          "passed": 6,
+          "runs": 12,
+          "passed": 12,
           "records": 1
         },
         {
@@ -9825,10 +9839,24 @@
             "model": "openai/gpt-oss-120b",
             "env": "cloud_frontier"
           },
+          "band": "certified",
+          "state": "current",
+          "runs": 12,
+          "passed": 12,
+          "records": 1
+        },
+        {
+          "key": "report_setup/sales_goal_months",
+          "task": "report_setup",
+          "best": {
+            "provider": "openai_compatible",
+            "model": "openai/gpt-oss-120b",
+            "env": "cloud_frontier"
+          },
           "band": "supported_degraded",
           "state": "current",
-          "runs": 6,
-          "passed": 6,
+          "runs": 15,
+          "passed": 10,
           "records": 1
         },
         {
@@ -9911,8 +9939,8 @@
           },
           "band": "certified",
           "state": "current",
-          "runs": 27,
-          "passed": 27,
+          "runs": 24,
+          "passed": 24,
           "records": 3
         },
         {
@@ -9967,8 +9995,8 @@
           },
           "band": "supported_degraded",
           "state": "current",
-          "runs": 24,
-          "passed": 22,
+          "runs": 36,
+          "passed": 31,
           "records": 1
         },
         {
@@ -10117,11 +10145,11 @@
       "name": "Mistral",
       "answer": "mostly",
       "sites_shipped": 60,
-      "sites_measured": 44,
-      "ready": 24,
-      "usable_with_care": 12,
-      "not_reliable_yet": 8,
-      "recheck_pending": 34,
+      "sites_measured": 50,
+      "ready": 23,
+      "usable_with_care": 17,
+      "not_reliable_yet": 10,
+      "recheck_pending": 31,
       "models": [
         {
           "binding": {
@@ -10169,18 +10197,18 @@
             "model": "mistralai/mistral-medium-3-5",
             "env": "cloud_frontier"
           },
-          "sites": 38,
-          "sites_current": 10,
+          "sites": 44,
+          "sites_current": 22,
           "sites_partial": 0,
-          "sites_stale": 28,
-          "runs": 561,
-          "passed": 531,
-          "reliability": 0.946524064171123,
+          "sites_stale": 22,
+          "runs": 687,
+          "passed": 634,
+          "reliability": 0.9228529839883551,
           "slowest_p95_ms": 13541,
           "bands": {
-            "certified": 20,
-            "supported_degraded": 12,
-            "not_supported": 6
+            "certified": 18,
+            "supported_degraded": 16,
+            "not_supported": 10
           }
         },
         {
@@ -10570,6 +10598,76 @@
           "records": 3
         },
         {
+          "key": "report_interpret/progress_summary",
+          "task": "report_interpret",
+          "best": {
+            "provider": "openai_compatible",
+            "model": "mistralai/mistral-medium-3-5",
+            "env": "cloud_frontier"
+          },
+          "band": "supported_degraded",
+          "state": "current",
+          "runs": 18,
+          "passed": 17,
+          "records": 1
+        },
+        {
+          "key": "report_interpret/sales_assessment",
+          "task": "report_interpret",
+          "best": {
+            "provider": "openai_compatible",
+            "model": "mistralai/mistral-medium-3-5",
+            "env": "cloud_frontier"
+          },
+          "band": "certified",
+          "state": "current",
+          "runs": 18,
+          "passed": 18,
+          "records": 1
+        },
+        {
+          "key": "report_setup/custom_report_setup",
+          "task": "report_setup",
+          "best": {
+            "provider": "openai_compatible",
+            "model": "mistralai/mistral-medium-3-5",
+            "env": "cloud_frontier"
+          },
+          "band": "not_supported",
+          "state": "current",
+          "runs": 18,
+          "passed": 11,
+          "records": 1
+        },
+        {
+          "key": "report_setup/initiative_setup",
+          "task": "report_setup",
+          "best": {
+            "provider": "openai_compatible",
+            "model": "mistralai/mistral-medium-3-5",
+            "env": "cloud_frontier"
+          },
+          "band": "supported_degraded",
+          "state": "current",
+          "runs": 18,
+          "passed": 15,
+          "records": 1
+        },
+        {
+          "key": "report_setup/sales_goal_months",
+          "task": "report_setup",
+          "best": {
+            "provider": "openai_compatible",
+            "model": "mistralai/mistral-medium-3-5",
+            "env": "cloud_frontier"
+          },
+          "band": "supported_degraded",
+          "state": "current",
+          "runs": 18,
+          "passed": 14,
+          "records": 1
+        },
+        {
           "key": "request_settlement/request_settle",
           "task": "request_settlement",
           "best": {
@@ -10645,12 +10743,12 @@
           "best": {
             "provider": "openai_compatible",
             "model": "mistralai/mistral-medium-3-5",
-            "env": "cloud_frontier"
+            "env": "eu_hosted"
           },
-          "band": "certified",
+          "band": "supported_degraded",
           "state": "stale",
-          "runs": 12,
-          "passed": 12,
+          "runs": 6,
+          "passed": 6,
           "records": 3
         },
         {
@@ -10662,9 +10760,9 @@
             "env": "cloud_frontier"
           },
           "band": "supported_degraded",
-          "state": "stale",
-          "runs": 18,
-          "passed": 18,
+          "state": "current",
+          "runs": 24,
+          "passed": 24,
           "records": 3
         },
         {
@@ -10676,9 +10774,9 @@
             "env": "cloud_frontier"
           },
           "band": "supported_degraded",
-          "state": "stale",
-          "runs": 6,
-          "passed": 6,
+          "state": "current",
+          "runs": 3,
+          "passed": 3,
           "records": 3
         },
         {
@@ -10687,13 +10785,27 @@
           "best": {
             "provider": "openai_compatible",
             "model": "mistralai/mistral-medium-3-5",
-            "env": "cloud_frontier"
+            "env": "eu_hosted"
           },
           "band": "certified",
           "state": "stale",
+          "runs": 12,
+          "passed": 12,
+          "records": 3
+        },
+        {
+          "key": "summarize/deal_room_brief",
+          "task": "summarize",
+          "best": {
+            "provider": "openai_compatible",
+            "model": "mistralai/mistral-medium-3-5",
+            "env": "cloud_frontier"
+          },
+          "band": "not_supported",
+          "state": "current",
           "runs": 15,
           "passed": 15,
-          "records": 3
+          "records": 1
         },
         {
           "key": "summarize/meeting_brief",
@@ -10703,10 +10815,10 @@
             "model": "mistralai/mistral-medium-3-5",
             "env": "cloud_frontier"
           },
-          "band": "certified",
-          "state": "stale",
-          "runs": 9,
-          "passed": 9,
+          "band": "supported_degraded",
+          "state": "current",
+          "runs": 3,
+          "passed": 3,
           "records": 3
         },
         {
@@ -10715,12 +10827,12 @@
           "best": {
             "provider": "openai_compatible",
             "model": "mistralai/mistral-medium-3-5",
-            "env": "cloud_frontier"
+            "env": "eu_hosted"
           },
           "band": "supported_degraded",
           "state": "stale",
-          "runs": 6,
-          "passed": 6,
+          "runs": 3,
+          "passed": 3,
           "records": 3
         },
         {
@@ -11172,18 +11284,18 @@
         "model": "mistralai/mistral-medium-3-5",
         "env": "cloud_frontier"
       },
-      "sites": 39,
-      "sites_current": 10,
+      "sites": 45,
+      "sites_current": 22,
       "sites_partial": 0,
-      "sites_stale": 29,
-      "runs": 585,
-      "passed": 555,
-      "reliability": 0.9487179487179487,
+      "sites_stale": 23,
+      "runs": 711,
+      "passed": 658,
+      "reliability": 0.9254571026722925,
       "slowest_p95_ms": 13541,
       "bands": {
-        "certified": 21,
-        "supported_degraded": 12,
-        "not_supported": 6
+        "certified": 19,
+        "supported_degraded": 16,
+        "not_supported": 10
       }
     },
     {
@@ -11272,17 +11384,17 @@
         "model": "openai/gpt-oss-120b",
         "env": "cloud_frontier"
       },
-      "sites": 53,
-      "sites_current": 41,
+      "sites": 55,
+      "sites_current": 48,
       "sites_partial": 0,
-      "sites_stale": 12,
-      "runs": 1665,
-      "passed": 1548,
-      "reliability": 0.9297297297297298,
+      "sites_stale": 7,
+      "runs": 1704,
+      "passed": 1579,
+      "reliability": 0.9266431924882629,
       "slowest_p95_ms": 9507,
       "bands": {
-        "certified": 22,
-        "supported_degraded": 22,
+        "certified": 25,
+        "supported_degraded": 21,
         "not_supported": 9
       }
     },
@@ -12967,8 +13079,8 @@
       "best_state": "current",
       "recommended": {
         "binding": {
-          "provider": "gemini",
-          "model": "gemini-3.1-flash-lite",
+          "provider": "openai_compatible",
+          "model": "openai/gpt-oss-120b",
           "env": "cloud_frontier"
         },
         "band": "certified",
@@ -13306,38 +13418,22 @@
             "model": "openai/gpt-oss-120b",
             "env": "cloud_frontier"
           },
-          "state": "stale",
-          "band": "supported_degraded",
-          "scenarios_measured": 0,
+          "state": "current",
+          "band": "certified",
+          "scenarios_measured": 9,
           "scenarios_total": 9,
-          "runs": 24,
-          "passed": 23,
-          "reliability": 0.9583333333333334,
-          "latency_p50_ms": 929,
-          "latency_p95_ms": 6097,
+          "runs": 27,
+          "passed": 27,
+          "reliability": 1,
+          "latency_p50_ms": 849,
+          "latency_p95_ms": 1299,
           "reported": {
-            "accepted": 23,
-            "wrong_answer": 1,
+            "accepted": 27,
+            "wrong_answer": 0,
             "invalid": 0,
             "abstained": 0
           },
-          "stale_reason": "5 scenarios it scored have changed since (the prompt this build sends and how a run is graded): a_message_that_is_both_is_labelled_commitment, a_mixed_batch_keeps_every_label_on_its_own_message, a_stated_promise_is_a_commitment, an_auto_reply_carries_no_commitment_and_no_meeting, meeting_request_from_reply",
-          "stale_cause": {
-            "prompt_changed": [
-              "a_message_that_is_both_is_labelled_commitment",
-              "a_mixed_batch_keeps_every_label_on_its_own_message",
-              "a_stated_promise_is_a_commitment",
-              "an_auto_reply_carries_no_commitment_and_no_meeting",
-              "meeting_request_from_reply"
-            ],
-            "grader_changed": [
-              "a_message_that_is_both_is_labelled_commitment",
-              "a_mixed_batch_keeps_every_label_on_its_own_message",
-              "a_stated_promise_is_a_commitment",
-              "an_auto_reply_carries_no_commitment_and_no_meeting",
-              "meeting_request_from_reply"
-            ]
-          }
+          "stale_reason": ""
         },
         {
           "binding": {
@@ -13389,8 +13485,8 @@
       "best_state": "current",
       "recommended": {
         "binding": {
-          "provider": "gemini",
-          "model": "gemini-3.5-flash-lite",
+          "provider": "openai_compatible",
+          "model": "openai/gpt-oss-120b",
           "env": "cloud_frontier"
         },
         "band": "certified",
@@ -13500,8 +13596,8 @@
           "runs": 9,
           "passed": 9,
           "reliability": 1,
-          "latency_p50_ms": 929,
-          "latency_p95_ms": 6097,
+          "latency_p50_ms": 849,
+          "latency_p95_ms": 1299,
           "reported": {
             "accepted": 9,
             "wrong_answer": 0,
@@ -23143,6 +23239,52 @@
             "abstained": 0
           },
           "stale_reason": ""
+        },
+        {
+          "binding": {
+            "provider": "openai_compatible",
+            "model": "mistralai/mistral-medium-3-5",
+            "env": "cloud_frontier"
+          },
+          "state": "current",
+          "band": "supported_degraded",
+          "scenarios_measured": 2,
+          "scenarios_total": 2,
+          "runs": 18,
+          "passed": 17,
+          "reliability": 0.9444444444444444,
+          "latency_p50_ms": 2067,
+          "latency_p95_ms": 3069,
+          "reported": {
+            "accepted": 17,
+            "wrong_answer": 1,
+            "invalid": 0,
+            "abstained": 0
+          },
+          "stale_reason": ""
+        },
+        {
+          "binding": {
+            "provider": "openai_compatible",
+            "model": "openai/gpt-oss-120b",
+            "env": "cloud_frontier"
+          },
+          "state": "current",
+          "band": "not_supported",
+          "scenarios_measured": 2,
+          "scenarios_total": 2,
+          "runs": 18,
+          "passed": 12,
+          "reliability": 0.6666666666666666,
+          "latency_p50_ms": 1183,
+          "latency_p95_ms": 1809,
+          "reported": {
+            "accepted": 12,
+            "wrong_answer": 4,
+            "invalid": 2,
+            "abstained": 0
+          },
+          "stale_reason": ""
         }
       ]
     },
@@ -23155,10 +23297,9 @@
       "best_state": "current",
       "recommended": {
         "binding": {
-          "provider": "gemini",
-          "model": "gemini-3.8-flash",
-          "env": "cloud_frontier",
-          "thinking_level": "low"
+          "provider": "openai_compatible",
+          "model": "mistralai/mistral-medium-3-5",
+          "env": "cloud_frontier"
         },
         "band": "certified",
         "reliability": 1,
@@ -23317,31 +23458,48 @@
         {
           "binding": {
             "provider": "openai_compatible",
+            "model": "mistralai/mistral-medium-3-5",
+            "env": "cloud_frontier"
+          },
+          "state": "current",
+          "band": "certified",
+          "scenarios_measured": 2,
+          "scenarios_total": 2,
+          "runs": 18,
+          "passed": 18,
+          "reliability": 1,
+          "latency_p50_ms": 2067,
+          "latency_p95_ms": 3069,
+          "reported": {
+            "accepted": 18,
+            "wrong_answer": 0,
+            "invalid": 0,
+            "abstained": 0
+          },
+          "stale_reason": ""
+        },
+        {
+          "binding": {
+            "provider": "openai_compatible",
             "model": "openai/gpt-oss-120b",
             "env": "cloud_frontier"
           },
-          "state": "stale",
-          "band": "supported_degraded",
-          "scenarios_measured": 0,
+          "state": "current",
+          "band": "not_supported",
+          "scenarios_measured": 2,
           "scenarios_total": 2,
-          "runs": 18,
-          "passed": 16,
-          "reliability": 0.8888888888888888,
-          "latency_p50_ms": 1467,
-          "latency_p95_ms": 1987,
+          "runs": 12,
+          "passed": 7,
+          "reliability": 0.5833333333333334,
+          "latency_p50_ms": 1183,
+          "latency_p95_ms": 1809,
           "reported": {
-            "accepted": 16,
-            "wrong_answer": 1,
-            "invalid": 1,
+            "accepted": 7,
+            "wrong_answer": 3,
+            "invalid": 2,
             "abstained": 0
           },
-          "stale_reason": "2 scenarios it scored have changed since (the prompt this build sends): sales_assessment_acknowledges_an_open_decision, sales_assessment_names_the_deal_no_decision_covers",
-          "stale_cause": {
-            "prompt_changed": [
-              "sales_assessment_acknowledges_an_open_decision",
-              "sales_assessment_names_the_deal_no_decision_covers"
-            ]
-          }
+          "stale_reason": ""
         },
         {
           "binding": {
@@ -23526,20 +23684,43 @@
         {
           "binding": {
             "provider": "openai_compatible",
+            "model": "mistralai/mistral-medium-3-5",
+            "env": "cloud_frontier"
+          },
+          "state": "current",
+          "band": "not_supported",
+          "scenarios_measured": 2,
+          "scenarios_total": 2,
+          "runs": 18,
+          "passed": 11,
+          "reliability": 0.6111111111111112,
+          "latency_p50_ms": 1420,
+          "latency_p95_ms": 1989,
+          "reported": {
+            "accepted": 11,
+            "wrong_answer": 7,
+            "invalid": 0,
+            "abstained": 0
+          },
+          "stale_reason": ""
+        },
+        {
+          "binding": {
+            "provider": "openai_compatible",
             "model": "openai/gpt-oss-120b",
             "env": "cloud_frontier"
           },
           "state": "current",
-          "band": "supported_degraded",
+          "band": "certified",
           "scenarios_measured": 2,
           "scenarios_total": 2,
-          "runs": 6,
-          "passed": 6,
+          "runs": 12,
+          "passed": 12,
           "reliability": 1,
-          "latency_p50_ms": 986,
-          "latency_p95_ms": 1178,
+          "latency_p50_ms": 1145,
+          "latency_p95_ms": 1872,
           "reported": {
-            "accepted": 6,
+            "accepted": 12,
             "wrong_answer": 0,
             "invalid": 0,
             "abstained": 0
@@ -23723,20 +23904,43 @@
         {
           "binding": {
             "provider": "openai_compatible",
-            "model": "openai/gpt-oss-120b",
+            "model": "mistralai/mistral-medium-3-5",
             "env": "cloud_frontier"
           },
           "state": "current",
           "band": "supported_degraded",
           "scenarios_measured": 2,
           "scenarios_total": 2,
-          "runs": 6,
-          "passed": 6,
-          "reliability": 1,
-          "latency_p50_ms": 986,
-          "latency_p95_ms": 1178,
+          "runs": 18,
+          "passed": 15,
+          "reliability": 0.8333333333333334,
+          "latency_p50_ms": 1420,
+          "latency_p95_ms": 1989,
           "reported": {
-            "accepted": 6,
+            "accepted": 15,
+            "wrong_answer": 3,
+            "invalid": 0,
+            "abstained": 0
+          },
+          "stale_reason": ""
+        },
+        {
+          "binding": {
+            "provider": "openai_compatible",
+            "model": "openai/gpt-oss-120b",
+            "env": "cloud_frontier"
+          },
+          "state": "current",
+          "band": "certified",
+          "scenarios_measured": 2,
+          "scenarios_total": 2,
+          "runs": 12,
+          "passed": 12,
+          "reliability": 1,
+          "latency_p50_ms": 1145,
+          "latency_p95_ms": 1872,
+          "reported": {
+            "accepted": 12,
             "wrong_answer": 0,
             "invalid": 0,
             "abstained": 0
@@ -23906,6 +24110,52 @@
             "accepted": 6,
             "wrong_answer": 0,
             "invalid": 0,
+            "abstained": 0
+          },
+          "stale_reason": ""
+        },
+        {
+          "binding": {
+            "provider": "openai_compatible",
+            "model": "mistralai/mistral-medium-3-5",
+            "env": "cloud_frontier"
+          },
+          "state": "current",
+          "band": "supported_degraded",
+          "scenarios_measured": 2,
+          "scenarios_total": 2,
+          "runs": 18,
+          "passed": 14,
+          "reliability": 0.7777777777777778,
+          "latency_p50_ms": 1420,
+          "latency_p95_ms": 1989,
+          "reported": {
+            "accepted": 14,
+            "wrong_answer": 1,
+            "invalid": 3,
+            "abstained": 0
+          },
+          "stale_reason": ""
+        },
+        {
+          "binding": {
+            "provider": "openai_compatible",
+            "model": "openai/gpt-oss-120b",
+            "env": "cloud_frontier"
+          },
+          "state": "current",
+          "band": "supported_degraded",
+          "scenarios_measured": 2,
+          "scenarios_total": 2,
+          "runs": 15,
+          "passed": 10,
+          "reliability": 0.6666666666666666,
+          "latency_p50_ms": 1145,
+          "latency_p95_ms": 1872,
+          "reported": {
+            "accepted": 10,
+            "wrong_answer": 4,
+            "invalid": 1,
             "abstained": 0
           },
           "stale_reason": ""
@@ -24292,46 +24542,22 @@
             "model": "openai/gpt-oss-120b",
             "env": "cloud_frontier"
           },
-          "state": "stale",
+          "state": "current",
           "band": "supported_degraded",
-          "scenarios_measured": 0,
+          "scenarios_measured": 9,
           "scenarios_total": 9,
           "runs": 81,
-          "passed": 69,
-          "reliability": 0.8518518518518519,
-          "latency_p50_ms": 830,
-          "latency_p95_ms": 1153,
+          "passed": 73,
+          "reliability": 0.9012345679012346,
+          "latency_p50_ms": 908,
+          "latency_p95_ms": 1312,
           "reported": {
-            "accepted": 69,
-            "wrong_answer": 1,
-            "invalid": 11,
+            "accepted": 73,
+            "wrong_answer": 2,
+            "invalid": 6,
             "abstained": 0
           },
-          "stale_reason": "9 scenarios it scored have changed since (the case and the prompt this build sends and how a run is graded): a_reply_that_says_nothing_either_way_is_answered_unsure, an_answer_off_the_thread_can_leave_the_request_owed, an_answer_off_the_thread_settles_a_request, an_answer_settles_a_request_and_an_acknowledgement_does_not, answering_one_of_two_asks_leaves_the_other_owed, declining_settles_a_request_and_so_does_handing_it_to_a_named_colleague and 3 more",
-          "stale_cause": {
-            "case_changed": [
-              "an_answer_off_the_thread_settles_a_request",
-              "delivering_feedback_then_asking_them_does_not_reverse_the_duty",
-              "partial_delivery_keeps_the_remaining_invoice_vi"
-            ],
-            "prompt_changed": [
-              "a_reply_that_says_nothing_either_way_is_answered_unsure",
-              "an_answer_off_the_thread_can_leave_the_request_owed",
-              "an_answer_off_the_thread_settles_a_request",
-              "an_answer_settles_a_request_and_an_acknowledgement_does_not",
-              "answering_one_of_two_asks_leaves_the_other_owed",
-              "declining_settles_a_request_and_so_does_handing_it_to_a_named_colleague",
-              "delivering_feedback_then_asking_them_does_not_reverse_the_duty",
-              "partial_delivery_keeps_the_remaining_invoice_vi",
-              "signature_completion_requires_the_matching_document"
-            ],
-            "grader_changed": [
-              "an_answer_off_the_thread_can_leave_the_request_owed",
-              "an_answer_settles_a_request_and_an_acknowledgement_does_not",
-              "answering_one_of_two_asks_leaves_the_other_owed",
-              "delivering_feedback_then_asking_them_does_not_reverse_the_duty"
-            ]
-          }
+          "stale_reason": ""
         },
         {
           "binding": {
@@ -27348,35 +27574,22 @@
             "model": "mistralai/mistral-medium-3-5",
             "env": "cloud_frontier"
           },
-          "state": "stale",
-          "band": "certified",
-          "scenarios_measured": 0,
+          "state": "current",
+          "band": "supported_degraded",
+          "scenarios_measured": 3,
           "scenarios_total": 3,
-          "runs": 12,
-          "passed": 12,
-          "reliability": 1,
-          "latency_p50_ms": 2809,
-          "latency_p95_ms": 5339,
+          "runs": 24,
+          "passed": 21,
+          "reliability": 0.875,
+          "latency_p50_ms": 1756,
+          "latency_p95_ms": 4147,
           "reported": {
-            "accepted": 12,
-            "wrong_answer": 0,
+            "accepted": 21,
+            "wrong_answer": 3,
             "invalid": 0,
             "abstained": 0
           },
-          "stale_reason": "2 scenarios it scored have changed since (the case and the prompt this build sends and how a run is graded): ask_meeting_prep_stays_silent_about_a_withheld_section, ask_whats_open_answers_the_pipeline_not_the_history",
-          "stale_cause": {
-            "case_changed": [
-              "ask_meeting_prep_stays_silent_about_a_withheld_section"
-            ],
-            "prompt_changed": [
-              "ask_meeting_prep_stays_silent_about_a_withheld_section",
-              "ask_whats_open_answers_the_pipeline_not_the_history"
-            ],
-            "grader_changed": [
-              "ask_meeting_prep_stays_silent_about_a_withheld_section",
-              "ask_whats_open_answers_the_pipeline_not_the_history"
-            ]
-          }
+          "stale_reason": ""
         },
         {
           "binding": {
@@ -27496,13 +27709,13 @@
           "band": "certified",
           "scenarios_measured": 3,
           "scenarios_total": 3,
-          "runs": 27,
-          "passed": 27,
+          "runs": 24,
+          "passed": 24,
           "reliability": 1,
-          "latency_p50_ms": 1216,
-          "latency_p95_ms": 1768,
+          "latency_p50_ms": 1266,
+          "latency_p95_ms": 2027,
           "reported": {
-            "accepted": 27,
+            "accepted": 24,
             "wrong_answer": 0,
             "invalid": 0,
             "abstained": 0
@@ -27767,36 +27980,22 @@
             "model": "mistralai/mistral-medium-3-5",
             "env": "cloud_frontier"
           },
-          "state": "stale",
+          "state": "current",
           "band": "supported_degraded",
-          "scenarios_measured": 0,
+          "scenarios_measured": 2,
           "scenarios_total": 2,
-          "runs": 18,
-          "passed": 18,
+          "runs": 24,
+          "passed": 24,
           "reliability": 1,
-          "latency_p50_ms": 2809,
-          "latency_p95_ms": 5339,
+          "latency_p50_ms": 1756,
+          "latency_p95_ms": 4147,
           "reported": {
-            "accepted": 18,
+            "accepted": 24,
             "wrong_answer": 0,
             "invalid": 0,
             "abstained": 0
           },
-          "stale_reason": "2 scenarios it scored have changed since (the case and the prompt this build sends and how a run is graded): brief_names_the_stalled_deal_and_the_last_touch, brief_stays_silent_about_a_withheld_section",
-          "stale_cause": {
-            "case_changed": [
-              "brief_names_the_stalled_deal_and_the_last_touch",
-              "brief_stays_silent_about_a_withheld_section"
-            ],
-            "prompt_changed": [
-              "brief_names_the_stalled_deal_and_the_last_touch",
-              "brief_stays_silent_about_a_withheld_section"
-            ],
-            "grader_changed": [
-              "brief_names_the_stalled_deal_and_the_last_touch",
-              "brief_stays_silent_about_a_withheld_section"
-            ]
-          }
+          "stale_reason": ""
         },
         {
           "binding": {
@@ -27916,16 +28115,16 @@
             "env": "cloud_frontier"
           },
           "state": "current",
-          "band": "not_supported",
+          "band": "supported_degraded",
           "scenarios_measured": 2,
           "scenarios_total": 2,
-          "runs": 21,
-          "passed": 21,
+          "runs": 18,
+          "passed": 18,
           "reliability": 1,
-          "latency_p50_ms": 1216,
-          "latency_p95_ms": 1768,
+          "latency_p50_ms": 1266,
+          "latency_p95_ms": 2027,
           "reported": {
-            "accepted": 21,
+            "accepted": 18,
             "wrong_answer": 0,
             "invalid": 0,
             "abstained": 0
@@ -28171,30 +28370,22 @@
             "model": "mistralai/mistral-medium-3-5",
             "env": "cloud_frontier"
           },
-          "state": "stale",
+          "state": "current",
           "band": "supported_degraded",
-          "scenarios_measured": 0,
+          "scenarios_measured": 1,
           "scenarios_total": 1,
-          "runs": 6,
-          "passed": 6,
+          "runs": 3,
+          "passed": 3,
           "reliability": 1,
-          "latency_p50_ms": 2809,
-          "latency_p95_ms": 5339,
+          "latency_p50_ms": 1756,
+          "latency_p95_ms": 4147,
           "reported": {
-            "accepted": 6,
+            "accepted": 3,
             "wrong_answer": 0,
             "invalid": 0,
             "abstained": 0
           },
-          "stale_reason": "the prompt this build sends and how a run is graded changed under scenario dossier_describes_the_company_not_the_relationship since the record scored it",
-          "stale_cause": {
-            "prompt_changed": [
-              "dossier_describes_the_company_not_the_relationship"
-            ],
-            "grader_changed": [
-              "dossier_describes_the_company_not_the_relationship"
-            ]
-          }
+          "stale_reason": ""
         },
         {
           "binding": {
@@ -28302,8 +28493,8 @@
           "runs": 3,
           "passed": 3,
           "reliability": 1,
-          "latency_p50_ms": 1216,
-          "latency_p95_ms": 1768,
+          "latency_p50_ms": 1266,
+          "latency_p95_ms": 2027,
           "reported": {
             "accepted": 3,
             "wrong_answer": 0,
@@ -28576,36 +28767,22 @@
             "model": "mistralai/mistral-medium-3-5",
             "env": "cloud_frontier"
           },
-          "state": "stale",
-          "band": "certified",
-          "scenarios_measured": 0,
+          "state": "current",
+          "band": "not_supported",
+          "scenarios_measured": 3,
           "scenarios_total": 3,
-          "runs": 15,
-          "passed": 15,
+          "runs": 21,
+          "passed": 21,
           "reliability": 1,
-          "latency_p50_ms": 2809,
-          "latency_p95_ms": 5339,
+          "latency_p50_ms": 1756,
+          "latency_p95_ms": 4147,
           "reported": {
-            "accepted": 15,
+            "accepted": 21,
             "wrong_answer": 0,
             "invalid": 0,
             "abstained": 0
           },
-          "stale_reason": "2 scenarios it scored have changed since (the case and the prompt this build sends and how a run is graded): contact_brief_reads_what_was_said, contact_brief_stays_silent_about_what_the_reader_may_not_see",
-          "stale_cause": {
-            "case_changed": [
-              "contact_brief_reads_what_was_said",
-              "contact_brief_stays_silent_about_what_the_reader_may_not_see"
-            ],
-            "prompt_changed": [
-              "contact_brief_reads_what_was_said",
-              "contact_brief_stays_silent_about_what_the_reader_may_not_see"
-            ],
-            "grader_changed": [
-              "contact_brief_reads_what_was_said",
-              "contact_brief_stays_silent_about_what_the_reader_may_not_see"
-            ]
-          }
+          "stale_reason": ""
         },
         {
           "binding": {
@@ -28725,17 +28902,17 @@
             "env": "cloud_frontier"
           },
           "state": "current",
-          "band": "not_supported",
+          "band": "supported_degraded",
           "scenarios_measured": 3,
           "scenarios_total": 3,
-          "runs": 33,
-          "passed": 25,
-          "reliability": 0.7575757575757576,
-          "latency_p50_ms": 1216,
-          "latency_p95_ms": 1768,
+          "runs": 27,
+          "passed": 21,
+          "reliability": 0.7777777777777778,
+          "latency_p50_ms": 1266,
+          "latency_p95_ms": 2027,
           "reported": {
-            "accepted": 25,
-            "wrong_answer": 8,
+            "accepted": 21,
+            "wrong_answer": 6,
             "invalid": 0,
             "abstained": 0
           },
@@ -28939,6 +29116,29 @@
         {
           "binding": {
             "provider": "openai_compatible",
+            "model": "mistralai/mistral-medium-3-5",
+            "env": "cloud_frontier"
+          },
+          "state": "current",
+          "band": "not_supported",
+          "scenarios_measured": 5,
+          "scenarios_total": 5,
+          "runs": 15,
+          "passed": 15,
+          "reliability": 1,
+          "latency_p50_ms": 1756,
+          "latency_p95_ms": 4147,
+          "reported": {
+            "accepted": 15,
+            "wrong_answer": 0,
+            "invalid": 0,
+            "abstained": 0
+          },
+          "stale_reason": ""
+        },
+        {
+          "binding": {
+            "provider": "openai_compatible",
             "model": "openai/gpt-oss-120b",
             "env": "cloud_frontier"
           },
@@ -28946,14 +29146,14 @@
           "band": "supported_degraded",
           "scenarios_measured": 5,
           "scenarios_total": 5,
-          "runs": 24,
-          "passed": 22,
-          "reliability": 0.9166666666666666,
-          "latency_p50_ms": 1216,
-          "latency_p95_ms": 1768,
+          "runs": 36,
+          "passed": 31,
+          "reliability": 0.8611111111111112,
+          "latency_p50_ms": 1266,
+          "latency_p95_ms": 2027,
           "reported": {
-            "accepted": 22,
-            "wrong_answer": 2,
+            "accepted": 31,
+            "wrong_answer": 5,
             "invalid": 0,
             "abstained": 0
           },
@@ -29216,30 +29416,22 @@
             "model": "mistralai/mistral-medium-3-5",
             "env": "cloud_frontier"
           },
-          "state": "stale",
-          "band": "certified",
-          "scenarios_measured": 0,
+          "state": "current",
+          "band": "supported_degraded",
+          "scenarios_measured": 1,
           "scenarios_total": 1,
-          "runs": 9,
-          "passed": 9,
+          "runs": 3,
+          "passed": 3,
           "reliability": 1,
-          "latency_p50_ms": 2809,
-          "latency_p95_ms": 5339,
+          "latency_p50_ms": 1756,
+          "latency_p95_ms": 4147,
           "reported": {
-            "accepted": 9,
+            "accepted": 3,
             "wrong_answer": 0,
             "invalid": 0,
             "abstained": 0
           },
-          "stale_reason": "the prompt this build sends and how a run is graded changed under scenario meeting_brief_reads_the_thread_that_matters since the record scored it",
-          "stale_cause": {
-            "prompt_changed": [
-              "meeting_brief_reads_the_thread_that_matters"
-            ],
-            "grader_changed": [
-              "meeting_brief_reads_the_thread_that_matters"
-            ]
-          }
+          "stale_reason": ""
         },
         {
           "binding": {
@@ -29340,30 +29532,22 @@
             "model": "openai/gpt-oss-120b",
             "env": "cloud_frontier"
           },
-          "state": "stale",
+          "state": "current",
           "band": "not_supported",
-          "scenarios_measured": 0,
+          "scenarios_measured": 1,
           "scenarios_total": 1,
           "runs": 9,
-          "passed": 4,
-          "reliability": 0.4444444444444444,
-          "latency_p50_ms": 1216,
-          "latency_p95_ms": 1768,
+          "passed": 3,
+          "reliability": 0.3333333333333333,
+          "latency_p50_ms": 1266,
+          "latency_p95_ms": 2027,
           "reported": {
-            "accepted": 4,
-            "wrong_answer": 5,
+            "accepted": 3,
+            "wrong_answer": 6,
             "invalid": 0,
             "abstained": 0
           },
-          "stale_reason": "the prompt this build sends and how a run is graded changed under scenario meeting_brief_reads_the_thread_that_matters since the record scored it",
-          "stale_cause": {
-            "prompt_changed": [
-              "meeting_brief_reads_the_thread_that_matters"
-            ],
-            "grader_changed": [
-              "meeting_brief_reads_the_thread_that_matters"
-            ]
-          }
+          "stale_reason": ""
         },
         {
           "binding": {
@@ -29647,33 +29831,22 @@
             "model": "mistralai/mistral-medium-3-5",
             "env": "cloud_frontier"
           },
-          "state": "stale",
-          "band": "supported_degraded",
-          "scenarios_measured": 0,
+          "state": "current",
+          "band": "not_supported",
+          "scenarios_measured": 2,
           "scenarios_total": 2,
-          "runs": 6,
-          "passed": 6,
-          "reliability": 1,
-          "latency_p50_ms": 2809,
-          "latency_p95_ms": 5339,
+          "runs": 12,
+          "passed": 7,
+          "reliability": 0.5833333333333334,
+          "latency_p50_ms": 1756,
+          "latency_p95_ms": 4147,
           "reported": {
-            "accepted": 6,
-            "wrong_answer": 0,
+            "accepted": 7,
+            "wrong_answer": 5,
             "invalid": 0,
             "abstained": 0
           },
-          "stale_reason": "the case and the prompt this build sends and how a run is graded changed under scenario meeting_plan_reads_the_thread_that_matters since the record scored it",
-          "stale_cause": {
-            "case_changed": [
-              "meeting_plan_reads_the_thread_that_matters"
-            ],
-            "prompt_changed": [
-              "meeting_plan_reads_the_thread_that_matters"
-            ],
-            "grader_changed": [
-              "meeting_plan_reads_the_thread_that_matters"
-            ]
-          }
+          "stale_reason": ""
         },
         {
           "binding": {
@@ -29783,35 +29956,22 @@
             "model": "openai/gpt-oss-120b",
             "env": "cloud_frontier"
           },
-          "state": "stale",
+          "state": "current",
           "band": "supported_degraded",
-          "scenarios_measured": 0,
+          "scenarios_measured": 2,
           "scenarios_total": 2,
-          "runs": 12,
+          "runs": 9,
           "passed": 8,
-          "reliability": 0.6666666666666666,
-          "latency_p50_ms": 1216,
-          "latency_p95_ms": 1768,
+          "reliability": 0.8888888888888888,
+          "latency_p50_ms": 1266,
+          "latency_p95_ms": 2027,
           "reported": {
             "accepted": 8,
-            "wrong_answer": 4,
+            "wrong_answer": 1,
             "invalid": 0,
             "abstained": 0
           },
-          "stale_reason": "2 scenarios it scored have changed since (the case and the prompt this build sends and how a run is graded): meeting_plan_reads_the_thread_that_matters, meeting_plan_serves_the_meetings_deal",
-          "stale_cause": {
-            "case_changed": [
-              "meeting_plan_reads_the_thread_that_matters"
-            ],
-            "prompt_changed": [
-              "meeting_plan_reads_the_thread_that_matters",
-              "meeting_plan_serves_the_meetings_deal"
-            ],
-            "grader_changed": [
-              "meeting_plan_reads_the_thread_that_matters",
-              "meeting_plan_serves_the_meetings_deal"
-            ]
-          }
+          "stale_reason": ""
         },
         {
           "binding": {
