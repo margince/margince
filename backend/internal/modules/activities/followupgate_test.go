@@ -11,6 +11,8 @@ package activities
 import (
 	"context"
 	"errors"
+	"fmt"
+	"slices"
 	"strings"
 	"testing"
 
@@ -48,7 +50,7 @@ func TestTheAwaitingRepliesStatementCarriesOneContentGate(t *testing.T) {
 }
 
 func TestTheMeetingFollowUpStatementCarriesOneContentGate(t *testing.T) {
-	everyMeeting := func(func(any) int) (string, error) { return scopeUnbounded, nil }
+	everyMeeting := everyMeetingFollowUp
 	sql, _, err := meetingFollowUpsStatement(teamScopedCtx(), clocktest.Now(t), 3, everyMeeting, AwaitingReplyScanCap)
 	if err != nil {
 		t.Fatalf("rendering the meeting follow-up read: %v", err)
@@ -59,7 +61,7 @@ func TestTheMeetingFollowUpStatementCarriesOneContentGate(t *testing.T) {
 }
 
 func TestTheMeetingFollowUpMaterializesRecipientsBeforeCheckingLaterActivities(t *testing.T) {
-	everyMeeting := func(func(any) int) (string, error) { return scopeUnbounded, nil }
+	everyMeeting := everyMeetingFollowUp
 	query, _, err := meetingFollowUpsStatement(teamScopedCtx(), clocktest.Now(t), 3, everyMeeting, AwaitingReplyScanCap)
 	if err != nil {
 		t.Fatal(err)
@@ -79,7 +81,7 @@ func TestTheMeetingFollowUpMaterializesRecipientsBeforeCheckingLaterActivities(t
 }
 
 func TestAMeetingFollowUpPageOfZeroHoldsNone(t *testing.T) {
-	everyMeeting := func(func(any) int) (string, error) { return scopeUnbounded, nil }
+	everyMeeting := everyMeetingFollowUp
 	const newestFirst = "ORDER BY a.occurred_at DESC, a.id DESC"
 	paged, _, err := meetingFollowUpsStatement(teamScopedCtx(), clocktest.Now(t), 3, everyMeeting, 0)
 	if err != nil {
@@ -97,6 +99,34 @@ func TestAMeetingFollowUpPageOfZeroHoldsNone(t *testing.T) {
 	}
 	if !strings.HasSuffix(strings.Join(strings.Fields(unpaged), " "), newestFirst) {
 		t.Error("the unpaged read carries a page")
+	}
+}
+
+// The deal read's per-meeting work runs only on the asked deals' meetings.
+func TestTheDealFollowUpReadNarrowsItsCandidatesToTheAskedDeals(t *testing.T) {
+	ctx := principal.WithActor(context.Background(), principal.Principal{
+		Type: principal.PrincipalHuman, ID: "human:rep", UserID: ids.NewV7(),
+		Permissions: principal.Permissions{RoleKeys: []string{"rep"}, Objects: map[string]principal.ObjectGrant{
+			"activity": {Read: true}, "deal": {Read: true},
+		}, RowScope: principal.RowScopeAll},
+	})
+	asked := []ids.UUID{ids.NewV7()}
+	sql, args, err := meetingFollowUpsByDealStatement(ctx, clocktest.Now(t), 3, asked)
+	if err != nil {
+		t.Fatal(err)
+	}
+	start := strings.Index(sql, followUpCandidates+" AS MATERIALIZED (")
+	end := strings.Index(sql, followUpReadable+" AS MATERIALIZED (")
+	if start < 0 || end < start {
+		t.Fatalf("the statement has no candidate set ahead of the readable set:\n%.300s", sql)
+	}
+	position := slices.IndexFunc(args, func(v any) bool {
+		deals, ok := v.([]ids.UUID)
+		return ok && slices.Equal(deals, asked)
+	})
+	want := fmt.Sprintf("asked.deal_id = ANY($%d)", position+1)
+	if position < 0 || !strings.Contains(sql[start:end], want) {
+		t.Errorf("the candidate set does not hold %q, so every meeting the reader held is judged:\n%s", want, sql[start:end])
 	}
 }
 
