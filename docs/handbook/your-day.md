@@ -167,7 +167,7 @@ Each item names its record and shows the facts that call for action. A badge say
 - **Done for you**, the deals Margince changed, to keep or undo, and the other work it finished; beside them **Your day** and **Numbers**.
 - **Your day** is a line through today. **Now** sits at your clock and says "Free until" the next meeting, or "Nothing else booked today". The next meeting says how soon it starts and offers **Prepare for meeting**. Margince then writes the brief for that meeting and opens it on Home.
 
-Also called: morning brief, daily brief, today, priorities, top cards, welcome screen.
+Also called: morning brief, daily brief, today, priorities, top cards.
 
 ### What comes first on Today?
 A customer who waits for your reply, and a reply deadline that comes close, come first on Today and in the Worklist.
