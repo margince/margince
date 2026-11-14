@@ -88,31 +88,43 @@ export function preloadEntries(entries: readonly string[]): Plugin {
   };
 }
 
-/** The chunks named, each over its byte budget, as the build would refuse them. */
+/**
+ * What the build refuses: a budgeted chunk over its bytes, and a budget that
+ * names no chunk or several. A renamed chunk would otherwise pass unchecked.
+ */
 export function chunksOverBudget(
   chunks: readonly { name: string; bytes: number }[],
   budgets: Readonly<Record<string, number>>,
 ): string[] {
-  return chunks.flatMap(({ name, bytes }) => {
-    const budget = budgets[name];
-    return budget !== undefined && bytes > budget
+  return Object.entries(budgets).flatMap(([name, budget]) => {
+    const named = chunks.filter((chunk) => chunk.name === name);
+    if (named.length !== 1)
+      return [`the ${name} budget names ${named.length} chunks, not one`];
+    const { bytes } = named[0];
+    return bytes > budget
       ? [`${name} is ${bytes} bytes, over its ${budget}-byte budget`]
       : [];
   });
 }
 
 /**
- * Fails the build when a named chunk outgrows its budget. Home's chunk is what
- * a cold load on Home waits for, so code it opens on demand belongs in a lazy
- * import rather than in this chunk.
+ * Fails the build when a named chunk outgrows its budget. A cold load on Home
+ * waits for Home's chunk. Code Home opens on demand belongs in a lazy import.
  */
 export function chunkBudgets(
   budgets: Readonly<Record<string, number>>,
 ): Plugin {
+  // A test build bundles React's development code, so only a production build
+  // measures what a reader downloads.
+  let production = true;
   return {
     name: "chunk-budgets",
     apply: "build",
+    configResolved(config) {
+      production = config.isProduction;
+    },
     generateBundle(_options, bundle) {
+      if (!production) return;
       const over = chunksOverBudget(
         Object.values(bundle).flatMap((output) =>
           output.type === "chunk"

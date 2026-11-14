@@ -197,3 +197,19 @@ it("names only the chunks that outgrow their budget", () => {
     ),
   ).toEqual(["home is 820001 bytes, over its 820000-byte budget"]);
 });
+
+it("refuses a budget whose chunk was renamed or split", () => {
+  expect(
+    chunksOverBudget(
+      [
+        { name: "home-2", bytes: 1 },
+        { name: "brief", bytes: 1 },
+        { name: "brief", bytes: 1 },
+      ],
+      { home: 820_000, brief: 10 },
+    ),
+  ).toEqual([
+    "the home budget names 0 chunks, not one",
+    "the brief budget names 2 chunks, not one",
+  ]);
+});
