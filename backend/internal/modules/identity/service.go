@@ -397,12 +397,6 @@ func (s *Service) Authenticate(ctx context.Context, rawToken string) (Identity, 
 			id.Timezone = *timezone
 		}
 
-		if _, err := tx.Exec(ctx,
-			`UPDATE session SET last_seen_at = now(),
-			   idle_expires_at = least(now() + $2::interval, expires_at)
-			 WHERE id = $1`, sessionID, idleTTL.String()); err != nil {
-			return err
-		}
 		var loadErr error
 		id.Roles, id.Teams, id.Permissions, loadErr = loadGrants(ctx, tx, userID)
 		if loadErr != nil {
@@ -419,6 +413,13 @@ func (s *Service) Authenticate(ctx context.Context, rawToken string) (Identity, 
 				return err
 			}
 			id.MustEnrolMFA = !confirmed
+		}
+		// Keep concurrent requests off the session row lock while authentication reads run.
+		if _, err := tx.Exec(ctx,
+			`UPDATE session SET last_seen_at = now(),
+			   idle_expires_at = least(now() + $2::interval, expires_at)
+			 WHERE id = $1`, sessionID, idleTTL.String()); err != nil {
+			return err
 		}
 		return nil
 	})
