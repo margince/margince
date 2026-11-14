@@ -53,8 +53,10 @@ func serveSweepChat(w http.ResponseWriter, r *http.Request) {
 	case rest == "messages" && r.Method == http.MethodGet:
 		messages := []map[string]any{}
 		if r.URL.Query().Get("after") == "0" {
-			messages = append(messages, map[string]any{"id": "m1", "seq": 1, "user_name": "Role Sweep",
-				"text": "We agree the role sweep.", "posted_at": "2099-01-01T00:00:00Z"})
+			messages = append(messages, map[string]any{
+				"id": "m1", "seq": 1, "user_name": "Role Sweep",
+				"text": "We agree the role sweep.", "posted_at": "2099-01-01T00:00:00Z",
+			})
 		}
 		answer = map[string]any{"messages": messages}
 	case rest == "messages":

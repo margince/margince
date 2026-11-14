@@ -56,7 +56,7 @@ func (s *Sync) HandleEvent(ctx context.Context, env events.Envelope) error {
 			return err
 		}
 	}
-	if env.Type == "deal.updated" && chatChangedField(env.Payload, "project_id") {
+	if env.Type == eventDealUpdated && chatChangedField(env.Payload, "project_id") {
 		if err := s.store.AdoptProject(ctx, env.Entity.ID); err != nil {
 			return err
 		}
@@ -65,8 +65,10 @@ func (s *Sync) HandleEvent(ctx context.Context, env events.Envelope) error {
 	if !posts {
 		return nil
 	}
-	ev := chatlinks.Event{EventID: env.EventID, EventType: env.Type, EntityType: env.Entity.Type,
-		EntityID: env.Entity.ID, Tier: tier, Detail: detail}
+	ev := chatlinks.Event{
+		EventID: env.EventID, EventType: env.Type, EntityType: env.Entity.Type,
+		EntityID: env.Entity.ID, Tier: tier, Detail: detail,
+	}
 	if env.Entity.Type == "activity" {
 		shared, err := s.activityPosts(ctx, env.Entity.ID)
 		if err != nil || !shared {
@@ -196,12 +198,12 @@ func chatTier(env events.Envelope) (string, map[string]any, bool) {
 		return tier, chatDetail(env), true
 	}
 	switch env.Type {
-	case "deal.updated", "project.updated":
+	case eventDealUpdated, eventProjectUpdated:
 		fields := chatChangedFields(env.Payload)
 		if hasAny(fields, chatImportantFields[env.Type]) {
-			return chatlinks.TierImportant, map[string]any{"fields": fields}, true
+			return chatlinks.TierImportant, map[string]any{detailFields: fields}, true
 		}
-		return chatlinks.TierEverything, map[string]any{"fields": fields}, true
+		return chatlinks.TierEverything, map[string]any{detailFields: fields}, true
 	case "activity.captured":
 		var captured crmcontracts.PublicEventActivityCaptured
 		if err := json.Unmarshal(env.Payload, &captured); err != nil {
@@ -214,7 +216,7 @@ func chatTier(env events.Envelope) (string, map[string]any, bool) {
 	case "activity.updated":
 		fields := chatChangedFields(env.Payload)
 		if fields["meeting_status"] == "held" || fields["is_done"] == true {
-			return chatlinks.TierImportant, map[string]any{"fields": fields}, true
+			return chatlinks.TierImportant, map[string]any{detailFields: fields}, true
 		}
 		return "", nil, false
 	}
@@ -223,6 +225,15 @@ func chatTier(env events.Envelope) (string, map[string]any, bool) {
 	}
 	return "", nil, false
 }
+
+// The event types and changed fields the tiers and the lines both name.
+const (
+	eventDealUpdated    = "deal.updated"
+	eventProjectUpdated = "project.updated"
+	detailFields        = "fields"
+	fieldCurrency       = "currency"
+	fieldName           = "name"
+)
 
 // chatMilestones are the steps every level but silent posts.
 var chatMilestones = map[string]string{
@@ -259,8 +270,8 @@ var chatIgnoredEvents = map[string]bool{
 
 // chatImportantFields are the fields whose change a team acts on.
 var chatImportantFields = map[string][]string{
-	"deal.updated":    {"amount_minor", "currency", "expected_close_date", "name"},
-	"project.updated": {"name", "owner_id", "target_end_date"},
+	eventDealUpdated:    {"amount_minor", fieldCurrency, "expected_close_date", fieldName},
+	eventProjectUpdated: {fieldName, "owner_id", "target_end_date"},
 }
 
 // chatImportantKinds are the activity kinds the important level posts.

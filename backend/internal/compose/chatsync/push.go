@@ -98,14 +98,14 @@ func sweepKey(connection ids.UUID) string { return "chat-sweep|" + connection.St
 // rejection answers alike, so a stranger cannot learn whether push is set up;
 // the log keeps the cause.
 func (r *Receiver) Receive(ctx context.Context, d chatlinks.Delivery) (crmcontracts.DispactChannelEventReceipt, error) {
-	receipt, err := r.receive(principal.WithActor(ctx, chatLinksPrincipal), d)
+	receipt, err := r.receiveNotice(principal.WithActor(ctx, chatLinksPrincipal), d)
 	if errors.Is(err, chatlinks.ErrEventRejected) {
 		r.Log.InfoContext(ctx, "chat links: a Dispact notice was rejected", "webhook_id", d.ID, "err", err)
 	}
 	return receipt, err
 }
 
-func (r *Receiver) receive(ctx context.Context, d chatlinks.Delivery) (crmcontracts.DispactChannelEventReceipt, error) {
+func (r *Receiver) receiveNotice(ctx context.Context, d chatlinks.Delivery) (crmcontracts.DispactChannelEventReceipt, error) {
 	var none crmcontracts.DispactChannelEventReceipt
 	bot, secret, err := r.Bots.LiveBotEvents(ctx, chatlinks.ProviderDispact)
 	if errors.Is(err, capture.ErrNoConnection) || errors.Is(err, capture.ErrNoEventsSecret) {

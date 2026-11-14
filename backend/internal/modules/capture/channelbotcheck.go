@@ -64,6 +64,8 @@ func (c telegramBotCheck) Confirm(ctx context.Context, _, token string) (Channel
 
 // botCheck returns the provider's check, or refuses a provider this deployment
 // composed no check for.
+//
+//nolint:ireturn // each provider's check is a different struct behind the ChannelBotCheck seam.
 func (s *ChannelStore) botCheck(provider string) (ChannelBotCheck, error) {
 	check, ok := s.bots[provider]
 	if !ok {

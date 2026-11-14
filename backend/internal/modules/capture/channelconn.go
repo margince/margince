@@ -260,6 +260,8 @@ const channelOneLiveBotIndex = "uq_channel_connection_provider"
 // requireConnectWiring refuses a connect this deployment cannot honestly
 // complete: a provider with no composed check, or a missing vault (nothing could
 // seal the token). Each refusal names what to fix.
+//
+//nolint:ireturn // returns the provider's check through the ChannelBotCheck seam, as botCheck does.
 func (s *ChannelStore) requireConnectWiring(provider string) (ChannelBotCheck, error) {
 	check, err := s.botCheck(provider)
 	if err != nil {
@@ -272,6 +274,10 @@ func (s *ChannelStore) requireConnectWiring(provider string) (ChannelBotCheck, e
 	return check, nil
 }
 
+// addressScheme is the scheme a self-hosted provider's address uses, with or
+// without TLS.
+const addressScheme = "http"
+
 // connectAddress holds the provider's address rule: a self-hosted provider
 // needs its install's web address, and a fixed-API one takes none.
 func connectAddress(check ChannelBotCheck, raw string) (string, error) {
@@ -283,7 +289,7 @@ func connectAddress(check ChannelBotCheck, raw string) (string, error) {
 		return "", nil
 	}
 	parsed, err := url.Parse(address)
-	if err != nil || (parsed.Scheme != "https" && parsed.Scheme != "http") || parsed.Host == "" {
+	if err != nil || (parsed.Scheme != addressScheme && parsed.Scheme != addressScheme+"s") || parsed.Host == "" {
 		return "", fmt.Errorf("enter the chat's web address, such as https://chat.example.com: %w", apperrors.ErrInvalidArgument)
 	}
 	return address, nil

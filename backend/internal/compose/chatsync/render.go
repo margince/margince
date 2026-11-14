@@ -153,7 +153,7 @@ func chatItemLine(item chatlinks.Item, shared sharedText) string {
 		return "Phase moved to " + detail("to_phase")
 	case "contract.status_changed":
 		return "Contract is now " + detail("status")
-	case "deal.updated", "project.updated":
+	case eventDealUpdated, eventProjectUpdated:
 		return "Updated: " + changedFieldWords(item.Detail)
 	}
 	if line, ok := chatEventLines[item.EventType]; ok {
@@ -183,7 +183,7 @@ func activityLine(item chatlinks.Item, shared sharedText) string {
 		subject = "(no subject)"
 	}
 	if item.EventType == "activity.updated" {
-		if fields, ok := item.Detail["fields"].(map[string]any); ok && fields["meeting_status"] == "held" {
+		if fields, ok := item.Detail[detailFields].(map[string]any); ok && fields["meeting_status"] == "held" {
 			return "Meeting held: " + subject
 		}
 		return "Done: " + subject
@@ -193,15 +193,15 @@ func activityLine(item chatlinks.Item, shared sharedText) string {
 
 var chatFieldWords = map[string]string{
 	"amount_minor":        "amount",
-	"currency":            "currency",
+	fieldCurrency:         "currency",
 	"expected_close_date": "close date",
-	"name":                "name",
+	fieldName:             "name",
 	"owner_id":            "owner",
 	"target_end_date":     "target end",
 }
 
 func changedFieldWords(detail map[string]any) string {
-	fields, _ := detail["fields"].(map[string]any)
+	fields, _ := detail[detailFields].(map[string]any)
 	var words []string
 	for field := range fields {
 		word, ok := chatFieldWords[field]

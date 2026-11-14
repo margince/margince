@@ -107,8 +107,10 @@ func (c *certCase) Evaluate(trace aitasks.Trace) aitasks.Outcome {
 		return aitasks.Outcome{Result: aitasks.OutcomeInvalid, Detail: err.Error()}
 	}
 	if reply.Relevant != c.expected.Relevant {
-		return aitasks.Outcome{Result: aitasks.OutcomeWrongAnswer,
-			Detail: fmt.Sprintf("relevant = %t, want %t", reply.Relevant, c.expected.Relevant)}
+		return aitasks.Outcome{
+			Result: aitasks.OutcomeWrongAnswer,
+			Detail: fmt.Sprintf("relevant = %t, want %t", reply.Relevant, c.expected.Relevant),
+		}
 	}
 	note := strings.Join(append(append([]string{reply.Title, reply.Summary}, reply.Decisions...), reply.OpenQuestions...), "\n")
 	for _, span := range c.expected.Keeps {

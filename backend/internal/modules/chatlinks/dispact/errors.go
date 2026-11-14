@@ -9,16 +9,16 @@ import (
 )
 
 var (
-	// ErrTokenRejected: the chat refused the bot token, so the admin must
+	// ErrTokenRejected means the chat refused the bot token, so the admin must
 	// replace it.
 	ErrTokenRejected = errors.New("dispact: the bot token was rejected")
-	// ErrNotMember: the bot may not act in this channel.
+	// ErrNotMember means the bot may not act in this channel.
 	ErrNotMember = errors.New("dispact: the bot is not a member of the channel")
-	// ErrChannelGone: the channel or message no longer exists.
+	// ErrChannelGone means the channel or message no longer exists.
 	ErrChannelGone = errors.New("dispact: the channel is gone")
-	// ErrUnreachable: the chat could not be reached or answered with a fault.
+	// ErrUnreachable means the chat could not be reached or answered with a fault.
 	ErrUnreachable = errors.New("dispact: the chat could not be reached")
-	// ErrRequestRejected: the chat refused the request as malformed.
+	// ErrRequestRejected means the chat refused the request as malformed.
 	ErrRequestRejected = errors.New("dispact: the chat refused the request")
 )
 
