@@ -629,6 +629,21 @@ bench-record: composition ## PERF-1/PERF-4 record open + save budgets, measured 
 	     $(GO) test -tags "integration bench" -run TestRecordOpenAndSaveBudgets -count=1 -v -timeout 15m ./internal/compose/integration'
 	@$(MAKE) --no-print-directory perfdoc
 
+bench-ai: composition ## PERF-5 AI baseline action: a contact draft with an offline model, 1.5s p95 (needs db-up)
+	@$(GOWORK_COMPOSED) bash -c 'cd .. && source scripts/lib-testdb.sh && parse_test_dsn && bench_db $(BENCH_DB_NAME) \
+	  && cd backend && MARGINCE_TEST_DSN="$$BENCH_OWNER_DSN" MARGINCE_TEST_APP_DSN="$$BENCH_APP_DSN" \
+	     $(GO) test -tags "integration bench" -run "^TestAIDraftBudget$$" -count=1 -v -timeout 15m ./internal/compose/integration'
+	@$(MAKE) --no-print-directory perfdoc
+
+# The binary boots against a database it must find migrated, so the target
+# migrates the private database first; the harness builds cmd/api itself.
+bench-coldstart: composition ## PERF-6 cold start: the built API binary to /readyz 200, 2s p95 (needs db-up)
+	@$(GOWORK_COMPOSED) bash -c 'cd .. && source scripts/lib-testdb.sh && parse_test_dsn && resolve_test_redis && bench_db $(BENCH_DB_NAME) \
+	  && cd backend && MARGINCE_OWNER_DSN="$$BENCH_OWNER_DSN" $(GO) run ./cmd/migrate up >/dev/null \
+	  && MARGINCE_TEST_DSN="$$BENCH_OWNER_DSN" MARGINCE_TEST_APP_DSN="$$BENCH_APP_DSN" \
+	     $(GO) test -tags "integration bench" -run "^TestColdStartBudget$$" -count=1 -v -timeout 15m ./cmd/api'
+	@$(MAKE) --no-print-directory perfdoc
+
 bench-capture: composition ## CAP-PARAM-1 capture-to-timeline latency, 60s p95 (needs db-up)
 	$(GOWORK_COMPOSED) $(GO) test -tags 'integration bench' -run TestCaptureToTimelineLatencyBudget -count=1 -v -timeout 15m ./internal/compose/integration/capture
 	@$(MAKE) --no-print-directory perfdoc

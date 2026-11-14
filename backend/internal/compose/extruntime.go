@@ -481,36 +481,3 @@ func BindExtensionObjectsFromConfig(ctx context.Context, settings *config.Config
 	BindExtensionObjects(store)
 	return nil
 }
-
-// needed is the gate every capability passes: the Runtime's lifetime and scope,
-// then the unit's declaration. The composition is read on each call, so a unit
-// that stops declaring a need loses it on its next call.
-func (r *callRuntime) needed(ctx context.Context, capability extension.Capability) (context.Context, error) {
-	ctx, err := r.scoped(ctx)
-	if err != nil {
-		return nil, err
-	}
-	for _, ext := range ComposedExtensions() {
-		if string(ext.Name) == r.unit && ext.Declares(capability) {
-			return ctx, nil
-		}
-	}
-	return nil, fmt.Errorf("%w: add extension.Need %q to it", extension.ErrNotDeclared, capability)
-}
-
-//nolint:ireturn // returning the published port IS the seam: a unit holds extension.Models, never a core type.
-func (r *callRuntime) Models() extension.Models {
-	return extcapability.Models{
-		Lane: r.deps.models, Unit: r.unit,
-		Gate:  func(ctx context.Context) (context.Context, error) { return r.needed(ctx, extension.CapabilityModels) },
-		Trace: func(ctx context.Context) error { return extcapability.Trace(ctx, r.deps.pool, r.unit) },
-	}
-}
-
-//nolint:ireturn // returning the published port IS the seam: a unit holds extension.Objects, never a core type.
-func (r *callRuntime) Objects() extension.Objects {
-	return extcapability.Objects{
-		Store: r.deps.blob, Unit: r.unit,
-		Gate: func(ctx context.Context) (context.Context, error) { return r.needed(ctx, extension.CapabilityObjects) },
-	}
-}

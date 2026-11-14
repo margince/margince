@@ -7,7 +7,6 @@ import (
 	"context"
 	"fmt"
 	"slices"
-	"strings"
 
 	"github.com/jackc/pgx/v5"
 	openapi_types "github.com/oapi-codegen/runtime/types"
@@ -33,21 +32,12 @@ var writtenAboutKinds = []crmcontracts.ActivityKind{
 var eligibleRowsSQL = `
 	SELECT a.id, a.kind
 	  FROM activity a
-	 WHERE a.id = ANY($1) AND a.kind IN (` + sqlLiterals(writtenAboutKinds) + `) AND a.archived_at IS NULL
+	 WHERE a.id = ANY($1) AND a.kind IN (` + storekit.TextLiterals(writtenAboutKinds...) + `) AND a.archived_at IS NULL
 	   AND (a.kind <> '` + string(crmcontracts.ActivityKindTask) + `' OR ` + storekit.TaskTypeSQL("a") + ` IN (` +
-	sqlLiterals(writingTaskTypes) + `))`
+	storekit.TextLiterals(writingTaskTypes...) + `))`
 
 // writingTaskTypes are the task types whose work is a mail.
 var writingTaskTypes = []crmcontracts.TaskType{crmcontracts.TaskTypeReply, crmcontracts.TaskTypeReachOut}
-
-// sqlLiterals spells compile-time values as a list of SQL literals.
-func sqlLiterals[T ~string](values []T) string {
-	quoted := make([]string, 0, len(values))
-	for _, value := range values {
-		quoted = append(quoted, "'"+string(value)+"'")
-	}
-	return strings.Join(quoted, ", ")
-}
 
 // contactCandidatesSQL reads the contacts a row is filed under, with the
 // address Write email would use, under the contact scope.

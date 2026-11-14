@@ -93,7 +93,7 @@ func ObserveExtensionInventory(ctx context.Context, pool *pgxpool.Pool, log *slo
 	if err != nil {
 		return err
 	}
-	// Every boot, not only one that saw a change: the set of removed units comes
+	// Every boot runs it, not only one that saw a change. The removed units come
 	// from the recorded history, so a failed or skipped sweep is retried. A
 	// storage fault does not stop the boot.
 	if err := extcapability.SweepGone(ctx, pool, boundExtensionRuntime().blob, extensionCompositionObserved, installationMarker(ctx), exts); err != nil {

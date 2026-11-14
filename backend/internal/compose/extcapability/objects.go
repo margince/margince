@@ -145,8 +145,8 @@ func Gone(ever []string, composed []extension.Extension) []string {
 }
 
 // SweepGone deletes the objects of every unit the installation recorded as
-// composed (in the system_log rows of observeAction) and no longer composes. It
-// derives the set from that history on every call, so a boot with no store, or
+// composed and no longer composes. The record is the system_log rows of
+// observeAction. The set is derived on every call, so a boot with no store, or
 // a delete that failed, is made good by the next boot.
 func SweepGone(ctx context.Context, pool *pgxpool.Pool, store blobstore.Store, observeAction, installation string, composed []extension.Extension) error {
 	var ever []string
