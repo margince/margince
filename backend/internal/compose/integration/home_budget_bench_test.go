@@ -305,8 +305,12 @@ type preparedStatement struct {
 	name string
 }
 
-// planCount is how often Postgres planned a prepared statement each way.
-type planCount struct{ custom, generic int64 }
+// planCount is how often Postgres ran a prepared statement on each kind of
+// plan, and the statement's SQL.
+type planCount struct {
+	custom, generic int64
+	sql             string
+}
 
 // preparedPlans reads every prepared statement on every connection of the
 // booted pool. All of them must be idle, or a busy one's statements would be
@@ -326,7 +330,7 @@ func preparedPlans(t *testing.T, booted *apptest.AppEnv) map[preparedStatement]p
 	plans := map[preparedStatement]planCount{}
 	for _, conn := range idle {
 		// The simple protocol prepares nothing, so the census does not count itself.
-		rows, err := conn.Query(ctx, `SELECT name, custom_plans, generic_plans FROM pg_prepared_statements`,
+		rows, err := conn.Query(ctx, `SELECT name, custom_plans, generic_plans, statement FROM pg_prepared_statements`,
 			pgx.QueryExecModeSimpleProtocol)
 		if err != nil {
 			t.Fatalf("reading prepared plans: %v", err)
@@ -335,7 +339,7 @@ func preparedPlans(t *testing.T, booted *apptest.AppEnv) map[preparedStatement]p
 		for rows.Next() {
 			var name string
 			var count planCount
-			if err := rows.Scan(&name, &count.custom, &count.generic); err != nil {
+			if err := rows.Scan(&name, &count.custom, &count.generic, &count.sql); err != nil {
 				t.Fatalf("reading prepared plans: %v", err)
 			}
 			plans[preparedStatement{pid, name}] = count

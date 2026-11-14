@@ -13,23 +13,22 @@ import (
 	"testing"
 	"time"
 
-	"github.com/jackc/pgx/v5"
-
 	"github.com/margince/margince/backend/internal/compose/integration/apptest"
 )
 
-// homePlanning is how much of one read went to planning. Postgres plans a
-// statement again on each run while it keeps a custom plan; a chosen generic
-// plan is planned once per connection.
+// homePlanning is how much of one read went to planning, counted per run of a
+// prepared statement on one connection. Postgres plans a custom plan on every
+// run; a generic plan it keeps is planned once per connection.
 type homePlanning struct {
-	statements, replanned, unexplained int
-	replanning, firstPlans             time.Duration
+	runs, customRuns, untimed  int64
+	customPlanning, firstPlans time.Duration
 }
 
 // logHomePlanning runs each timed read once more, untimed, after its kept answer
-// is forgotten. It names the statements the read ran and those Postgres planned
-// again, and how long their planning takes. A cold read plans every statement
-// once, so firstPlans is what planning adds to it.
+// is forgotten. It counts the runs of the read's prepared statements, the runs
+// on a custom plan, and how long their planning takes. A cold read plans every
+// statement once, so first-plans is what planning adds to it. Untimed counts
+// runs whose SQL Postgres could not plan without its arguments.
 func logHomePlanning(t *testing.T, e *apptest.AppEnv, s Seat, timed []dailyCall, results []DailyResult) {
 	t.Helper()
 	p50 := map[string]time.Duration{}
@@ -46,71 +45,41 @@ func logHomePlanning(t *testing.T, e *apptest.AppEnv, s Seat, timed []dailyCall,
 		if status, _, _ := s.Get(t, e, call.Path); status != http.StatusOK {
 			t.Fatalf("planning %s answered %d", call.Name, status)
 		}
-		got := homePlanningOf(t, e, before, preparedPlans(t, e))
-		t.Logf("home-budget: plan %-10s statements=%d replanned=%d replanning=%.1fms first-plans=%.1fms unexplained=%d miss-p50=%dms",
-			call.Name, got.statements, got.replanned, ms(got.replanning), ms(got.firstPlans), got.unexplained,
+		got := homePlanningOf(e, before, preparedPlans(t, e))
+		t.Logf("home-budget: plan %-10s runs=%d custom-plan-runs=%d custom-planning=%.1fms first-plans=%.1fms untimed-runs=%d miss-p50=%dms",
+			call.Name, got.runs, got.customRuns, ms(got.customPlanning), ms(got.firstPlans), got.untimed,
 			p50[call.Name].Milliseconds())
 	}
 }
 
-func homePlanningOf(t *testing.T, e *apptest.AppEnv, before, after map[preparedStatement]planCount) homePlanning {
-	t.Helper()
-	texts := preparedTexts(t, e)
+// homePlanningOf weighs each run between the two readings by its statement's
+// planning time. Both readings come from one query per connection, so the SQL
+// and the counts belong to the same statement.
+func homePlanningOf(e *apptest.AppEnv, before, after map[preparedStatement]planCount) homePlanning {
 	var out homePlanning
-	timed := map[string]time.Duration{}
+	planned := map[string]time.Duration{}
+	timed := map[string]bool{}
 	for statement, now := range after {
 		then := before[statement]
-		if now.custom+now.generic == then.custom+then.generic {
+		runs := now.custom + now.generic - then.custom - then.generic
+		if runs == 0 {
 			continue
 		}
-		out.statements++
-		took, seen := timed[statement.name]
+		took, seen := planned[now.sql]
 		if !seen {
-			var ok bool
-			if took, ok = planningTime(e, texts[statement]); !ok {
-				out.unexplained++
-			}
-			timed[statement.name] = took
+			took, timed[now.sql] = planningTime(e, now.sql)
+			planned[now.sql] = took
 		}
+		custom := now.custom - then.custom
+		out.runs += runs
+		out.customRuns += custom
+		if !timed[now.sql] {
+			out.untimed += runs
+		}
+		out.customPlanning += time.Duration(custom) * took
 		out.firstPlans += took
-		if now.custom > then.custom {
-			out.replanned++
-			out.replanning += took
-		}
 	}
 	return out
-}
-
-// preparedTexts reads the SQL of every statement prepared on the pool's
-// connections. The simple protocol prepares nothing, so it reads only the app's.
-func preparedTexts(t *testing.T, e *apptest.AppEnv) map[preparedStatement]string {
-	t.Helper()
-	ctx := context.Background()
-	idle := e.Pool.AcquireAllIdle(ctx)
-	defer func() {
-		for _, conn := range idle {
-			conn.Release()
-		}
-	}()
-	texts := map[preparedStatement]string{}
-	for _, conn := range idle {
-		rows, err := conn.Query(ctx, `SELECT name, statement FROM pg_prepared_statements`, pgx.QueryExecModeSimpleProtocol)
-		if err != nil {
-			t.Fatalf("reading prepared statements: %v", err)
-		}
-		pid := conn.Conn().PgConn().PID()
-		for rows.Next() {
-			var name, text string
-			if err := rows.Scan(&name, &text); err != nil {
-				t.Fatalf("reading prepared statements: %v", err)
-			}
-			texts[preparedStatement{pid, name}] = text
-		}
-		if err := rows.Err(); err != nil {
-			t.Fatalf("reading prepared statements: %v", err)
-		}
-	}
-	return texts
 }
 
 var planningLine = regexp.MustCompile(`^Planning Time: ([0-9.]+) ms$`)
