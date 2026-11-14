@@ -72,16 +72,18 @@ type replySettledWorker struct {
 }
 
 func (w *replySettledWorker) Work(ctx context.Context, _ *river.Job[ReplySettledStampArgs]) error {
-	return jobs.FaultContext(ctx, runPerWorkspace(ctx, w.pool, func(ctx context.Context, workspace ids.UUID) error {
-		ctx = principal.WithActor(principal.WithWorkspaceID(ctx, workspace), principal.Principal{
-			Type: principal.PrincipalSystem, ID: "system:reply_settled_stamp",
-			Permissions: principal.Permissions{RowScope: principal.RowScopeAll},
-		})
-		for range replySettledBatchesPerTick {
-			if n, err := w.store.StampReplySettledBatch(ctx, replySettledBatch); err != nil || n < replySettledBatch {
-				return jobs.FaultContext(ctx, err)
-			}
+	return jobs.FaultContext(ctx, runPerWorkspace(ctx, w.pool, w.stampWorkspace))
+}
+
+func (w *replySettledWorker) stampWorkspace(ctx context.Context, workspace ids.UUID) error {
+	ctx = principal.WithActor(principal.WithWorkspaceID(ctx, workspace), principal.Principal{
+		Type: principal.PrincipalSystem, ID: "system:reply_settled_stamp",
+		Permissions: principal.Permissions{RowScope: principal.RowScopeAll},
+	})
+	for range replySettledBatchesPerTick {
+		if n, err := w.store.StampReplySettledBatch(ctx, replySettledBatch); err != nil || n < replySettledBatch {
+			return jobs.FaultContext(ctx, err)
 		}
-		return nil
-	}))
+	}
+	return nil
 }

@@ -38,8 +38,8 @@ func (s *Store) StampReplySettledBatch(ctx context.Context, limit int) (int, err
 }
 
 // stampReplySettled locks the batch before it reads the threads. A write that
-// would clear a stamp waits on that lock, so it clears what this pass wrote;
-// one that committed first is in the snapshot the read takes. The database
+// would clear a stamp waits on that lock, so it clears what this pass wrote. A
+// write that committed first is in the snapshot the read takes. The database
 // writes the stamps, as bookkeeping that moves no version.
 func stampReplySettled(ctx context.Context, tx pgx.Tx, limit int) (int, error) {
 	rows, err := tx.Query(ctx, `

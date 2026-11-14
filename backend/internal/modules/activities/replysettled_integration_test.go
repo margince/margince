@@ -84,8 +84,8 @@ func (e *loadEnv) stampOf(t *testing.T, message ids.UUID) (stamp *time.Time, ver
 	return stamp, version
 }
 
-// The stamp only lets the owed check stop early: at every instant, a message is
-// owed exactly when it was before the stamp existed.
+// The stamp only lets the owed check stop early. At every instant, a message is
+// owed when and only when it was before the stamp existed.
 func TestTheSettledStampNeverChangesWhatIsOwed(t *testing.T) {
 	e := setupLoad(t)
 	buyer := "buyer-" + ids.NewV7().String() + "@customer.test"
