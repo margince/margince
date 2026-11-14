@@ -243,6 +243,14 @@ export const WithCustomFieldsDark: Story = {
 
 // A meeting logged on a record where a booked meeting still owes its outcome.
 // The form asks whether this is that meeting's record, Yes by default.
+// Two hours ago, or the start of today when that is still yesterday, so the
+// meeting is on the form's day whenever the story renders.
+function earlierToday(): Date {
+  const midnight = new Date();
+  midnight.setHours(0, 0, 0, 0);
+  return new Date(Math.max(midnight.getTime(), Date.now() - 2 * 3_600_000));
+}
+
 function openMeeting(calendarManaged: boolean) {
   return () =>
     jsonResponse({
@@ -251,7 +259,7 @@ function openMeeting(calendarManaged: boolean) {
           id: "m-1",
           kind: "meeting",
           subject: "Quarterly review",
-          occurred_at: new Date(Date.now() - 2 * 3_600_000).toISOString(),
+          occurred_at: earlierToday().toISOString(),
           occurred_precision: "instant",
           meeting_status: "booked",
           awaiting_outcome: true,
