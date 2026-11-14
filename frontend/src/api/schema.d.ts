@@ -60110,6 +60110,13 @@ export interface components {
              */
             review: number;
             /**
+             * Format: date-time
+             * @description When the nearest open task on a lead is due, over every task this read weighed.
+             *     Absent when no such task has a due time, or when the task lane was read to its
+             *     bound or could not be read, so an unseen task could be due sooner.
+             */
+            soonest_lead_due?: string;
+            /**
              * @description True when any source behind any figure here was read to its work bound, so
              *     every number above is a floor. Set once for the strip rather than per reading:
              *     the four are read as one row, and a reader who cannot trust one of them cannot
@@ -85647,6 +85654,15 @@ export interface operations {
                  *     is still read and still reaches the queue. Nothing else on the page changes.
                  */
                 relationships?: "include" | "omit";
+                /**
+                 * @description How much of the ranked day the page carries. `queue` is the page of the queue
+                 *     and its cursor. `home` is what Home draws: `focus`, every figure, and as `queue`
+                 *     the day's meeting rows plus every row that comes due in the next five minutes,
+                 *     with no cursor and no rows below the cut. Focus, the
+                 *     summary, `counts[].considered`, `reach[].considered` and the readings are the
+                 *     same in both shapes; `shown` counts the rows this page carries.
+                 */
+                shape?: "queue" | "home";
             };
             header?: never;
             path?: never;

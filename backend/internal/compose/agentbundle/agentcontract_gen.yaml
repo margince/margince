@@ -15461,6 +15461,16 @@ paths:
             page carries neither `optional_relationships` nor
             `optional_relationships_more_available`. A reconnection the reader pinned
             is still read and still reaches the queue. Nothing else on the page changes.
+        - name: shape
+          in: query
+          schema: {type: string, enum: [queue, home], default: queue}
+          description: |-
+            How much of the ranked day the page carries. `queue` is the page of the queue
+            and its cursor. `home` is what Home draws: `focus`, every figure, and as `queue`
+            the day's meeting rows plus every row that comes due in the next five minutes,
+            with no cursor and no rows below the cut. Focus, the
+            summary, `counts[].considered`, `reach[].considered` and the readings are the
+            same in both shapes; `shown` counts the rows this page carries.
       responses:
         '200':
           description: The ranked day.
@@ -55353,6 +55363,13 @@ components:
             hundred alike approvals read as a hundred here even where the queue draws
             them as one row — the strip says how much work there is, and the queue says
             how much reading it costs.
+        soonest_lead_due:
+          type: string
+          format: date-time
+          description: |-
+            When the nearest open task on a lead is due, over every task this read weighed.
+            Absent when no such task has a due time, or when the task lane was read to its
+            bound or could not be read, so an unseen task could be due sooner.
         more_available:
           type: boolean
           description: |-

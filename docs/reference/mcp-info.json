@@ -10,16 +10,16 @@
   "totals": {
     "tools": 48,
     "resources": 14,
-    "tool_catalog_bytes": 239576,
+    "tool_catalog_bytes": 239656,
     "resource_catalog_bytes": 5622,
-    "approx_wire_tokens_total": 61299,
+    "approx_wire_tokens_total": 61319,
     "largest_tool_bytes": 11957,
     "largest_tool": "read_context",
     "tool_catalog_composition": {
       "description_bytes": 55594,
-      "input_schema_bytes": 119156,
+      "input_schema_bytes": 119236,
       "output_schema_bytes": 52718,
-      "description_plus_input_schema_bytes": 174750
+      "description_plus_input_schema_bytes": 174830
     }
   },
   "tools": {
@@ -11161,6 +11161,14 @@
             },
             "served_provider": {
               "description": "ai_calls only",
+              "type": "string"
+            },
+            "shape": {
+              "description": "worklist only",
+              "enum": [
+                "queue",
+                "home"
+              ],
               "type": "string"
             },
             "source_id": {
