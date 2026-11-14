@@ -9877,6 +9877,8 @@ export const en = {
   "settings.passportLastUsedOn": "Last used {date}",
   "settings.passportExpiresOn": "Expires {date}",
   "settings.revokeNamed": "Revoke {name}",
+  "settings.allowAgain": "Allow again",
+  "settings.allowAgainNamed": "Allow {name} again",
   "settings.revokeConfirm":
     "The passport’s credential is invalidated immediately. The agent loses access on its next call.",
   "import.withheld":
@@ -12169,6 +12171,11 @@ export const en = {
   "connectors.bot.dispactAddress": "Chat address",
   "connectors.bot.dispactAddressHint":
     "The web address of your team chat, such as https://chat.example.com.",
+  "connectors.bot.eventsSecret": "Events secret",
+  "connectors.bot.eventsSecretHint":
+    "Optional. Copy the events secret (whsec_…) from the Margince app page in your chat. With it, Margince reads a channel as soon as it has new messages and checks the rest hourly; without it, Margince checks every channel each minute.",
+  "connectors.bot.eventsSecretKeepHint":
+    "Leave empty to keep the events secret already saved.",
 
   // The team chat card on a deal or project.
   "channelLink.title": "Team chat",

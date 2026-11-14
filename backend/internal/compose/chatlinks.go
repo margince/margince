@@ -5,6 +5,7 @@ package compose
 
 import (
 	"context"
+	"errors"
 	"log/slog"
 	"time"
 
@@ -79,6 +80,7 @@ func chatLinks(pool *pgxpool.Pool, vault func() keyvault.Vault, in chatsync.TxIn
 func WithChatLinks(inserter *jobs.Runner, private bool, lane ai.Completer) Option {
 	return func(s *Server, pool *pgxpool.Pool) {
 		store, chats := chatLinks(pool, func() keyvault.Vault { return s.vault }, inserter, 0, private)
+		s.chatPulls = inserter
 		s.chatLinkHandlers = chatlinks.NewHandlers(store, chatsync.NewFiler(pool, store, chats, lane)).WithManifestBase(func() string { return s.send.PublicBaseURL })
 		s.channelHandlers = s.WithBotCheck(chatlinks.ProviderDispact, chatsync.BotCheck{HTTP: chatsync.HTTPClient(private), AllowHTTP: private})
 	}
@@ -104,26 +106,55 @@ func registerChatLinkFlush(reg *jobRegistry, pool *pgxpool.Pool, cfg JobRunnerCo
 		addDeclaredWorker[ChatLinkFlushArgs](reg, &chatsync.Worker[ChatLinkFlushArgs]{Bind: workspaceJobCtx,
 			Flusher: chatsync.NewFlusher(pool, chats, store, cfg.SendOrigin.PublicBaseURL, log)})
 		addDeclaredWorker[ChatPullArgs](reg, &chatsync.PullWorker[ChatPullArgs]{Bind: workspaceJobCtx,
-			Puller: chatsync.NewPuller(pool, store, chats, cfg.ChatSummaryBrain, log)})
-		addDeclaredWorker[ChatPullSweepArgs](reg, &chatPullSweepWorker{pool: pool, log: log})
+			Puller: chatsync.NewPuller(pool, store, chats, cfg.ChatSummaryBrain, log), Marks: cfg.ChatPushMarks})
+		addDeclaredWorker[ChatPullSweepArgs](reg, &chatPullSweepWorker{pool: pool, log: log,
+			cadence: chatsync.Sweeper{Marks: cfg.ChatPushMarks, Now: time.Now, Log: log}})
 		return periodicFor(cfg, ChatPullSweepArgs{})
 	}
 	return nil
 }
 
-// chatPullSweepWorker enqueues one chat_pull per live Dispact bot. A failed
-// enqueue is logged and the next tick tries again; a failed scan is returned.
+// chatPullSweepWorker enqueues one chat_pull per live Dispact bot the cadence
+// finds due. A failed enqueue is logged and the next tick tries again; a
+// failed scan is returned.
 type chatPullSweepWorker struct {
-	pool *pgxpool.Pool
-	log  *slog.Logger
+	pool    *pgxpool.Pool
+	log     *slog.Logger
+	cadence chatsync.Sweeper
 }
 
 func (w *chatPullSweepWorker) Work(ctx context.Context, _ *river.Job[ChatPullSweepArgs]) error {
 	due, scanErr := capture.DueChannelConnections(ctx, w.pool, chatlinks.ProviderDispact)
 	for _, d := range due {
+		if !w.cadence.Due(ctx, d.ID) {
+			continue
+		}
 		if err := dispatchOne(ctx, w.pool, ChatPullArgs{Workspace: d.WorkspaceID, ConnectionID: d.ID}, nil); err != nil {
 			w.log.WarnContext(ctx, "chat pull enqueue failed", "connection", d.ID.String(), "err", err)
+			continue
 		}
+		w.cadence.Swept(ctx, d.ID)
 	}
 	return jobs.FaultContext(ctx, scanErr)
+}
+
+// WithChatEvents composes Dispact's push receiver. A notice queues the
+// chat_pull through the inserter WithChatLinks holds. It is read per notice, so
+// the two options may come in any order. replays holds each notice id once.
+// marks keeps when the last valid notice came, for the sweep's cadence.
+func WithChatEvents(replays chatsync.Replays, marks chatsync.Marks) Option {
+	return func(s *Server, pool *pgxpool.Pool) {
+		store, _ := chatLinks(pool, func() keyvault.Vault { return s.vault }, nil, 0, false)
+		s.chatEventHandlers = chatlinks.NewEventHandlers(&chatsync.Receiver{
+			Bots:  chatsync.LiveEventBots{DB: InstallationDB(pool), Vault: func() keyvault.Vault { return s.vault }},
+			Links: store, Replays: replays, Marks: marks, Now: time.Now, Log: s.log,
+			Pull: func(ctx context.Context, ws, connection ids.UUID) error {
+				if s.chatPulls == nil {
+					return errors.New("chat links: this role queues no chat_pull")
+				}
+				args := ChatPullArgs{Workspace: ws, ConnectionID: connection}
+				return s.chatPulls.Enqueue(ctx, args, jobs.QueuedAsArgs(args, nil))
+			},
+		})
+	}
 }

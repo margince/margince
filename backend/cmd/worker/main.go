@@ -39,6 +39,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/deployconfig"
 	"github.com/margince/margince/backend/internal/platform/events"
 	"github.com/margince/margince/backend/internal/platform/keyvault"
+	"github.com/margince/margince/backend/internal/platform/lastseen"
 	"github.com/margince/margince/backend/internal/platform/licensecheck"
 	"github.com/margince/margince/backend/internal/platform/netguard"
 	"github.com/margince/margince/backend/internal/shared/buildinfo"
@@ -198,7 +199,7 @@ func run(ctx context.Context, args []string, stdout io.Writer) error {
 	_, _ = fmt.Fprintln(stdout, weeklyMailBanner(weeklyMail))
 
 	stopJobs, err := startJobRunner(ctx, pool, vault,
-		logger, cfg, modelPath, lanes, weeklyMail, stdout)
+		logger, cfg, modelPath, lanes.withPushMarks(lastseen.New(coordination)), weeklyMail, stdout)
 	if err != nil {
 		return err
 	}

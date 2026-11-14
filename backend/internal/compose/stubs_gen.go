@@ -1091,6 +1091,10 @@ func (stubs) ReplaceChannelToken(w nethttp.ResponseWriter, r *nethttp.Request, i
 	httperr.NotImplemented(w, r, "ReplaceChannelToken")
 }
 
+func (stubs) ReceiveDispactChannelEvent(w nethttp.ResponseWriter, r *nethttp.Request) {
+	httperr.NotImplemented(w, r, "ReceiveDispactChannelEvent")
+}
+
 func (stubs) UnlinkChannel(w nethttp.ResponseWriter, r *nethttp.Request, recordType crmcontracts.ChannelLinkRecordType, id crmcontracts.Id) {
 	httperr.NotImplemented(w, r, "UnlinkChannel")
 }
@@ -3197,6 +3201,10 @@ func (stubs) IssuePassport(w nethttp.ResponseWriter, r *nethttp.Request) {
 
 func (stubs) RevokePassport(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {
 	httperr.NotImplemented(w, r, "RevokePassport")
+}
+
+func (stubs) ReleasePassportAppBinding(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {
+	httperr.NotImplemented(w, r, "ReleasePassportAppBinding")
 }
 
 func (stubs) SetPassportAreas(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {

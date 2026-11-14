@@ -663,6 +663,32 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/passports/{id}/app-binding": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /**
+         * Allow a chat app's user again after their passport was revoked.
+         * @description A revoked passport that a chat app (Dispact) minted keeps naming that app's user, so the
+         *     user stays refused. Releasing it lets the user's next call mint a fresh passport under the
+         *     same checks as a first call. The passport itself stays revoked. A user releases their own
+         *     passport; releasing another user's requires the admin role. Audited.
+         */
+        delete: operations["releasePassportAppBinding"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/passports/{id}/areas": {
         parameters: {
             query?: never;
@@ -11067,7 +11093,7 @@ export interface paths {
         /**
          * Disconnect a messaging channel (archives the binding and destroys the credential).
          * @description Archives the connection as `disconnected` — which is what stops ingress, since only a
-         *     live `connected` binding is polled — and destroys the sealed bot token. Already-captured
+         *     live `connected` binding is polled — and destroys the sealed bot token and events secret. Already-captured
          *     activities are retained: disconnecting stops capture, it does not erase history.
          */
         delete: operations["disconnectChannel"];
@@ -11182,6 +11208,34 @@ export interface paths {
         get: operations["getDispactAppManifest"];
         put?: never;
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/channel-events/dispact": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Take a signed notice of new talk in a linked Dispact channel (anonymous).
+         * @description Dispact posts here when a linked channel has new messages. The body is signed under
+         *     Standard Webhooks: `webhook-id`, `webhook-timestamp` (unix seconds) and
+         *     `webhook-signature` (`v1,<base64 HMAC-SHA256>` entries separated by spaces) over
+         *     `<id>.<timestamp>.<body>`, keyed by the events secret sealed on the connected bot.
+         *
+         *     A URL check (`type: url_verification`) is answered with its `challenge`. A message notice
+         *     queues one read of the bot's channels, and notices that arrive while that read waits add
+         *     nothing. `channel.archived` pauses the channel's link. A notice for a channel no live link
+         *     has is answered `200` and changes nothing.
+         */
+        post: operations["receiveDispactChannelEvent"];
         delete?: never;
         options?: never;
         head?: never;
@@ -31921,7 +31975,7 @@ export interface components {
             /** @description What a screen calls the task, as task_display_name on a call. Absent for a task with no name, which a screen shows by its key. */
             display_name?: string | null;
         };
-        /** @description One workspace-level messaging-channel binding. The bot token never appears in this shape — it lives sealed in the vault, and it is the only secret a binding holds. */
+        /** @description One workspace-level messaging-channel binding. The bot token and the Dispact events secret never appear in this shape: both live sealed in the vault. */
         ChannelConnection: {
             /** Format: uuid */
             id: string;
@@ -31938,6 +31992,8 @@ export interface components {
              * @enum {string}
              */
             status: "pending" | "connected" | "disconnected" | "error" | "reauth_required";
+            /** @description Whether a Dispact events secret is sealed for this connection, so signed notices of new messages are taken. The secret itself is never shown. */
+            readonly eventsSecretSet?: boolean;
             /** Format: int64 */
             version: number;
             /** Format: date-time */
@@ -31955,10 +32011,39 @@ export interface components {
             botToken: string;
             /** @description The chat's web address, such as `https://chat.example.com`. Required for Dispact, which every team hosts itself; refused for Telegram. */
             address?: string;
+            /** @description The Dispact app's events secret, `whsec_…`, which signs each notice of a new message. Optional; without it Margince reads the channels every minute. Refused for Telegram. Sealed into the vault on arrival and never echoed back. */
+            eventsSecret?: string;
         };
         ReplaceChannelTokenRequest: {
-            /** @description The replacement BotFather token. Sealed into the vault on arrival and never echoed back. */
+            /** @description The replacement bot token. Sealed into the vault on arrival and never echoed back. */
             botToken: string;
+            /** @description A new Dispact events secret, `whsec_…`. Absent keeps the sealed one. Refused for Telegram. Sealed into the vault on arrival and never echoed back. */
+            eventsSecret?: string;
+        };
+        /** @description One signed notice from Dispact, or its URL check. A notice names the channel and the newest message sequence, and never carries message text. */
+        DispactChannelEvent: {
+            /** @enum {string} */
+            type: "url_verification" | "message.created" | "thread.replied" | "message.updated" | "channel.archived";
+            /** @description The value a URL check expects back. */
+            challenge?: string;
+            /** @description The Dispact team; it must be the connected bot's team. */
+            workspace_id?: string;
+            channel_slug?: string;
+            /** @description The highest message sequence of the burst. Margince reads the history itself and uses the notice only as a signal. */
+            seq?: number;
+            message_id?: string;
+            event_id?: string;
+            /** Format: int64 */
+            ts?: number;
+        };
+        /** @description The answer to a taken notice. A URL check gets `challenge` alone. */
+        DispactChannelEventReceipt: {
+            challenge?: string;
+            /**
+             * @description `pull_queued`: the channel's history is read soon. `link_paused`: the archived channel's link is paused. `ignored`: no live link has this channel.
+             * @enum {string}
+             */
+            status?: "pull_queued" | "link_paused" | "ignored";
         };
         /**
          * @description The kind of record a chat channel is linked to.
@@ -56803,6 +56888,8 @@ export interface components {
             last_used_at?: string | null;
             /** Format: date-time */
             revoked_at?: string | null;
+            /** @description True while a chat app's user is bound to this passport. A revoked passport that is still bound refuses that user until it is released. */
+            app_bound?: boolean;
             /**
              * @description What this passport has used of its allowances in the window that is running. A
              *     connection's passports share one count, so a renewed credential keeps it. **Omitted**
@@ -62959,6 +63046,39 @@ export interface operations {
             };
             401: components["responses"]["Unauthorized"];
             404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    releasePassportAppBinding: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The user may be bound again. */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            401: components["responses"]["Unauthorized"];
+            404: components["responses"]["NotFound"];
+            /** @description The passport is still live (`code: passport_still_live`). Revoke it first. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
             422: components["responses"]["ValidationError"];
         };
     };
@@ -80888,6 +81008,84 @@ export interface operations {
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
             /** @description This deployment serves no chat channel links, or has no public base URL configured (`code: channel_links_not_configured`). */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    receiveDispactChannelEvent: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DispactChannelEvent"];
+            };
+        };
+        responses: {
+            /** @description The notice was taken. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DispactChannelEventReceipt"];
+                };
+            };
+            /** @description The signed body is not a notice: an unknown `type`, or a field its type needs is missing (`code: channel_event_malformed`). */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description The notice is not signed by the connected bot: no Dispact bot with an events secret is connected, or the signature, the timestamp or the team does not match (`code: channel_event_rejected`). The answer is the same for each cause. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description This `webhook-id` was taken in the last 24 hours (`code: channel_event_replayed`). */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description The body is larger than a notice can be (`code: channel_event_too_large`). */
+            413: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Rate-limited; Dispact retries. */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description This deployment takes no chat notices, or could not record the notice id (`code: channel_events_unavailable`); Dispact retries. */
             503: {
                 headers: {
                     [name: string]: unknown;

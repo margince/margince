@@ -143,3 +143,42 @@ func mintAppPassport(ctx context.Context, tx pgx.Tx, c AppCaller, expired appBin
 	}
 	return issued.ID, nil
 }
+
+// ErrAppBindingLive refuses to release a passport that is still live: the
+// binding is released only after the passport was revoked.
+var ErrAppBindingLive = errors.New("identity: revoke the passport before allowing its chat user again")
+
+// ReleaseAppBinding lets a chat app's user be bound again after their passport
+// was revoked. The passport stays revoked; it only stops naming the user, so
+// their next call mints a fresh passport under the same checks as a first one.
+func (s *Service) ReleaseAppBinding(ctx context.Context, id Identity, passportID ids.PassportID) error {
+	ctx = actorCtx(ctx, id)
+	return s.db.Tx(ctx, func(tx pgx.Tx) error {
+		var onBehalfOf ids.UserID
+		var revokedAt *time.Time
+		var issuer, subject *string
+		err := tx.QueryRow(ctx, `SELECT on_behalf_of, revoked_at, app_issuer, app_subject FROM passport
+			WHERE id = $1 FOR UPDATE`, passportID).Scan(&onBehalfOf, &revokedAt, &issuer, &subject)
+		if errors.Is(err, pgx.ErrNoRows) {
+			return apperrors.ErrNotFound
+		}
+		if err != nil {
+			return err
+		}
+		if err := mayManagePassport(ctx, tx, id, onBehalfOf); err != nil {
+			return err
+		}
+		if issuer == nil {
+			return apperrors.ErrNotFound
+		}
+		if revokedAt == nil {
+			return ErrAppBindingLive
+		}
+		if _, err := tx.Exec(ctx, `UPDATE passport SET app_issuer = NULL, app_subject = NULL WHERE id = $1`, passportID); err != nil {
+			return err
+		}
+		_, err = storekit.Audit(ctx, tx, "update", "passport", passportID.UUID,
+			map[string]any{"app_issuer": *issuer, "app_subject": *subject}, map[string]any{"app_issuer": nil, "app_subject": nil})
+		return err
+	})
+}

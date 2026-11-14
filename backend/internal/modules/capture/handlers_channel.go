@@ -88,9 +88,10 @@ func (h ChannelHandlers) ConnectChannel(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 	conn, err := h.store.Connect(r.Context(), ConnectRequest{
-		Provider: string(req.Provider),
-		BotToken: req.BotToken,
-		Address:  deref(req.Address),
+		Provider:     string(req.Provider),
+		BotToken:     req.BotToken,
+		Address:      deref(req.Address),
+		EventsSecret: deref(req.EventsSecret),
 	})
 	if err != nil {
 		writeChannelErr(w, r, err)
@@ -110,7 +111,7 @@ func (h ChannelHandlers) ReplaceChannelToken(w http.ResponseWriter, r *http.Requ
 	if !httperr.Decode(w, r, &req) {
 		return
 	}
-	if err := h.store.ReplaceToken(r.Context(), ids.UUID(id), req.BotToken); err != nil {
+	if err := h.store.ReplaceToken(r.Context(), ids.UUID(id), req.BotToken, deref(req.EventsSecret)); err != nil {
 		writeChannelErr(w, r, err)
 		return
 	}
@@ -151,15 +152,16 @@ func (h ChannelHandlers) composed(w http.ResponseWriter, r *http.Request) bool {
 
 func wireChannelConnection(c ChannelConnection) crmcontracts.ChannelConnection {
 	return crmcontracts.ChannelConnection{
-		Id:           openapi_types.UUID(c.ID),
-		Provider:     crmcontracts.ChannelConnectionProvider(c.Provider),
-		ChannelId:    c.ChannelID,
-		ChannelLabel: c.ChannelLabel,
-		Address:      optionalString(c.Address),
-		Status:       crmcontracts.ChannelConnectionStatus(c.Status),
-		Version:      c.Version,
-		CreatedAt:    &c.CreatedAt,
-		UpdatedAt:    &c.UpdatedAt,
+		Id:              openapi_types.UUID(c.ID),
+		Provider:        crmcontracts.ChannelConnectionProvider(c.Provider),
+		ChannelId:       c.ChannelID,
+		ChannelLabel:    c.ChannelLabel,
+		Address:         optionalString(c.Address),
+		EventsSecretSet: &c.EventsSecretSet,
+		Status:          crmcontracts.ChannelConnectionStatus(c.Status),
+		Version:         c.Version,
+		CreatedAt:       &c.CreatedAt,
+		UpdatedAt:       &c.UpdatedAt,
 	}
 }
 

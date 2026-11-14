@@ -9605,6 +9605,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "settings.passportLastUsedOn": "Dùng lần cuối {date}",
   "settings.passportExpiresOn": "Hết hạn {date}",
   "settings.revokeNamed": "Thu hồi {name}",
+  "settings.allowAgain": "Cho phép lại",
+  "settings.allowAgainNamed": "Cho phép lại {name}",
   "settings.revokeConfirm":
     "Thông tin xác thực của passport sẽ mất hiệu lực ngay. Agent sẽ mất quyền truy cập ở lần gọi tiếp theo.",
   "import.withheld":
@@ -11892,6 +11894,10 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "connectors.bot.dispactAddress": "Địa chỉ chat",
   "connectors.bot.dispactAddressHint":
     "Địa chỉ web của chat nhóm, ví dụ https://chat.example.com.",
+  "connectors.bot.eventsSecret": "Khóa sự kiện",
+  "connectors.bot.eventsSecretHint":
+    "Không bắt buộc. Sao chép khóa sự kiện (whsec_…) từ trang ứng dụng Margince trong chat của bạn. Có khóa này, Margince đọc một kênh ngay khi kênh có tin nhắn mới và kiểm tra phần còn lại mỗi giờ; nếu không, Margince kiểm tra mọi kênh mỗi phút.",
+  "connectors.bot.eventsSecretKeepHint": "Để trống để giữ khóa sự kiện đã lưu.",
 
   "channelLink.title": "Chat nhóm",
   "channelLink.off": "Hãy kết nối bot chat trong Cài đặt để liên kết kênh.",

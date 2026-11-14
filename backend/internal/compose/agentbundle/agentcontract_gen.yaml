@@ -12370,7 +12370,7 @@ paths:
       summary: Disconnect a messaging channel (archives the binding and destroys the credential).
       description: |-
         Archives the connection as `disconnected` — which is what stops ingress, since only a
-        live `connected` binding is polled — and destroys the sealed bot token. Already-captured
+        live `connected` binding is polled — and destroys the sealed bot token and events secret. Already-captured
         activities are retained: disconnecting stops capture, it does not erase history.
 
         Needs the passport permission Change records.
@@ -30181,7 +30181,7 @@ components:
     ChannelConnection:
       type: object
       description: >-
-        One workspace-level messaging-channel binding. The bot token never appears in this shape — it lives sealed in the vault, and it is the only secret a binding holds.
+        One workspace-level messaging-channel binding. The bot token and the Dispact events secret never appear in this shape: both live sealed in the vault.
       required: [id, provider, channelId, channelLabel, status, version]
       properties:
         id: {type: string, format: uuid}
@@ -30200,6 +30200,10 @@ components:
           enum: [pending, connected, disconnected, error, reauth_required]
           description: >-
             Only `connected` is live, and it is the only state a connect can produce: a pull ingress makes no provider call after the write, so there is no half-connected state. `error` and `reauth_required` are where ingress parks a binding it can no longer poll (another consumer holds the bot's updates; the token was refused), and neither is polled again until an operator acts. `pending` is a value NO server produces: it is retained because the code generator disambiguates enum member names across the whole document, so dropping it renames unrelated generated constants in other schemas.
+        eventsSecretSet:
+          type: boolean
+          readOnly: true
+          description: Whether a Dispact events secret is sealed for this connection, so signed notices of new messages are taken. The secret itself is never shown.
         version: {type: integer, format: int64}
         createdAt: {type: string, format: date-time}
         updatedAt: {type: string, format: date-time}
