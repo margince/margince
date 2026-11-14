@@ -61,16 +61,29 @@ type FlushEnqueuer interface {
 	EnqueueFlushTx(ctx context.Context, tx pgx.Tx, linkID ids.UUID) error
 }
 
-// Store owns chat_link and chat_post_item.
-type Store struct {
-	db    *database.DB
-	chats Chats
-	flush FlushEnqueuer
+// Viewer is a live member, by the address the chat knows them by.
+type Viewer struct {
+	ID    ids.UUID
+	Email string
 }
 
-// NewStore wires the store over the chat it acts in and the flush scheduler.
-func NewStore(db *database.DB, chats Chats, flush FlushEnqueuer) *Store {
-	return &Store{db: db, chats: chats, flush: flush}
+// Viewers names, in tx, every live human member who may open the record under
+// their own rights. compose implements it over the members' live grants and
+// the row gate, which this package cannot reach.
+type Viewers func(ctx context.Context, tx pgx.Tx, kind string, id ids.UUID) ([]Viewer, error)
+
+// Store owns chat_link and chat_post_item.
+type Store struct {
+	db      *database.DB
+	chats   Chats
+	flush   FlushEnqueuer
+	viewers Viewers
+}
+
+// NewStore wires the store over the chat it acts in, the flush scheduler, and
+// who a new channel may be opened to.
+func NewStore(db *database.DB, chats Chats, flush FlushEnqueuer, viewers Viewers) *Store {
+	return &Store{db: db, chats: chats, flush: flush, viewers: viewers}
 }
 
 const linkColumns = `id, connection_id, provider, channel_slug, channel_name, deal_id, project_id, verbosity,

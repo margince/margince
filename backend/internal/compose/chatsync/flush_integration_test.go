@@ -13,6 +13,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"os"
+	"slices"
 	"strings"
 	"sync"
 	"testing"
@@ -20,6 +21,7 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/chatlinks"
 	"github.com/margince/margince/backend/internal/modules/chatlinks/dispact"
 	"github.com/margince/margince/backend/internal/platform/database"
@@ -35,6 +37,7 @@ type fakeDispact struct {
 	mu      sync.Mutex
 	posts   []map[string]any
 	updates map[string]string
+	invited []string
 }
 
 func (f *fakeDispact) ServeHTTP(w http.ResponseWriter, r *http.Request) {
@@ -48,6 +51,13 @@ func (f *fakeDispact) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	case r.Method == http.MethodPost && strings.HasSuffix(r.URL.Path, "/messages"):
 		f.posts = append(f.posts, body)
 		_, _ = fmt.Fprintf(w, `{"id":"m%d","seq":%d}`, len(f.posts), len(f.posts))
+	case r.Method == http.MethodPost && r.URL.Path == "/api/bot/channels":
+		_, _ = fmt.Fprintf(w, `{"slug":"new","name":%q,"is_private":true,"bot_is_member":true}`, body["name"])
+	case r.Method == http.MethodPost && strings.HasSuffix(r.URL.Path, "/members"):
+		for _, email := range body["emails"].([]any) {
+			f.invited = append(f.invited, email.(string))
+		}
+		_ = json.NewEncoder(w).Encode(map[string]any{"added": body["emails"], "not_found": []string{}}) //craft:ignore swallowed-errors a failed write fails the client's decode, which the test reports
 	case r.Method == http.MethodPatch:
 		f.updates[strings.TrimPrefix(r.URL.Path, "/api/bot/messages/")] = body["text"].(string)
 		_, _ = w.Write([]byte(`{}`))
@@ -140,7 +150,7 @@ func setupFlush(t *testing.T) *flushEnv {
 	t.Cleanup(srv.Close)
 	db := database.BindTo(e.pool, ids.From[ids.WorkspaceKind](e.ws))
 	chats := httpChats{client: dispact.New(srv.Client(), srv.URL, "gwapp_test"), connection: connection}
-	e.store = chatlinks.NewStore(db, chats, noFlush{})
+	e.store = chatlinks.NewStore(db, chats, noFlush{}, Viewers)
 	e.sync = New(e.pool, db, e.store)
 	e.flusher = NewFlusher(e.pool, chats, e.store, "https://crm.test", slog.Default())
 	return e
@@ -234,6 +244,35 @@ func TestAnArchivedNoteIsRewrittenOutOfItsPost(t *testing.T) {
 	}
 }
 
+// A contact's erasure restricts their correspondence, and the event rides the
+// contact stream naming each activity. A note posted before is rewritten out.
+func TestANoteOfARestrictedContactIsRewrittenOutOfItsPost(t *testing.T) {
+	e := setupFlush(t)
+	contact := ids.NewV7()
+	e.exec(t, `INSERT INTO contact (id, full_name, source, captured_by) VALUES ($1, 'Clara Contact', 'manual', 'system')`, contact)
+	e.exec(t, `INSERT INTO activity_link (activity_id, entity_type, contact_id) VALUES ($1, 'contact', $2)`, e.shared, contact)
+	e.handle(t, "activity.captured", "activity", e.shared, `{"kind":"note"}`)
+	e.handle(t, "deal.stage_changed", "deal", e.deal, `{"to_stage_name":"Proposal"}`)
+	e.flush(t)
+
+	e.exec(t, `INSERT INTO activity_retention_evidence (activity_id, basis, qualified_at, decided_by_name, reason)
+		VALUES ($1, 'controller_pin', now(), 'Privacy desk', 'erasure request')`, e.shared)
+	e.exec(t, `UPDATE activity SET restricted_at = now(), archived_at = now(), restricted_reason = 'erasure request',
+		restricted_until = now() + interval '1 year', retention_class = 'commercial_correspondence', retention_class_at = now()
+		WHERE id = $1`, e.shared)
+	restricted := crmcontracts.PublicEventRetentionRestricted{}
+	if !groupReads(t, "cg:chat-links", restricted.EventType()) {
+		t.Fatal("cg:chat-links does not read the stream retention.restricted rides")
+	}
+	e.handle(t, restricted.EventType(), restricted.EntityType(), e.shared, `{"action":"restrict"}`)
+	e.flush(t)
+
+	rewritten, ok := e.chat.updates["m2"]
+	if !ok || strings.Contains(rewritten, "Shared plan") || !strings.Contains(rewritten, "Stage moved to Proposal") {
+		t.Fatalf("rewritten post = %q (%v), want the stage alone", rewritten, ok)
+	}
+}
+
 func TestALinkOfAReplacedBotPausesInsteadOfPostingOnTheNewOne(t *testing.T) {
 	e := setupFlush(t)
 	e.exec(t, `UPDATE channel_connection SET status = 'disconnected', archived_at = now()`)
@@ -250,4 +289,18 @@ func TestALinkOfAReplacedBotPausesInsteadOfPostingOnTheNewOne(t *testing.T) {
 	if err := e.owner.QueryRow(context.Background(), `SELECT status FROM chat_link WHERE id = $1`, e.link).Scan(&status); err != nil || status != chatlinks.StatusChannelGone {
 		t.Fatalf("link status = %q, %v; want channel_gone", status, err)
 	}
+}
+
+func groupReads(t *testing.T, name, eventType string) bool {
+	t.Helper()
+	stream, err := events.StreamFor(eventType)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, g := range events.Groups() {
+		if g.Name == name {
+			return slices.Contains(g.Streams, stream)
+		}
+	}
+	return false
 }

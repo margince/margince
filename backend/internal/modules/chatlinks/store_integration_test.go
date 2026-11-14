@@ -155,8 +155,14 @@ func setupLinks(t *testing.T) *linkEnv {
 		"secret":    {Slug: "secret", Name: "Secret", IsPrivate: true, BotIsMember: false},
 	}, members: map[string][]string{}}
 	e.flush = &flushes{links: map[ids.UUID]int{}}
-	e.store = NewStore(database.BindTo(pool, ids.From[ids.WorkspaceKind](e.ws)), fakeChats{chat: e.chat, connection: connection}, e.flush)
+	e.store = NewStore(database.BindTo(pool, ids.From[ids.WorkspaceKind](e.ws)), fakeChats{chat: e.chat, connection: connection}, e.flush, e.onlyRep)
 	return e
+}
+
+// onlyRep is the member judgement compose injects, answering that the rep
+// alone may open every record; compose/chatsync tests the real judgement.
+func (e *linkEnv) onlyRep(context.Context, pgx.Tx, string, ids.UUID) ([]Viewer, error) {
+	return []Viewer{{ID: e.rep, Email: "rep-" + e.rep.String() + "@chat.test"}}, nil
 }
 
 func (e *linkEnv) exec(t *testing.T, sql string, args ...any) {
@@ -366,5 +372,36 @@ func TestADealsProjectJoinsItsChannelOnlyWhenTheRepMayEditTheProject(t *testing.
 	}
 	if state.Link.ProjectID != nil {
 		t.Fatalf("the project joined a channel its reader may not edit: %+v", state.Link)
+	}
+}
+
+func TestAWithdrawDuringAPostLeavesTheFlushMoreToDo(t *testing.T) {
+	e := setupLinks(t)
+	state, err := e.store.Link(e.seat(e.rep, principal.RowScopeOwn), RecordDeal, e.deal, LinkRequest{Mode: ModeCreate})
+	if err != nil {
+		t.Fatal(err)
+	}
+	activity := ids.NewV7()
+	if err := e.store.RecordEvent(e.system(), Event{EventID: ids.NewV7(), EventType: "activity.captured", EntityType: "activity",
+		EntityID: activity, ActivityID: &activity, Tier: TierImportant, Deals: []ids.UUID{e.deal}}); err != nil {
+		t.Fatal(err)
+	}
+	pending, err := e.store.PendingFor(e.system(), state.Link.ID)
+	if err != nil || len(pending.Items) != 1 {
+		t.Fatalf("pending = %+v, %v", pending, err)
+	}
+	// The post went out; the withdraw lands before the flush records it.
+	if err := e.store.Withdraw(e.system(), activity); err != nil {
+		t.Fatal(err)
+	}
+	if err := e.store.MarkPosted(e.system(), state.Link.ID, pending.Items[0].ID, "m1", []ids.UUID{pending.Items[0].ID}); err != nil {
+		t.Fatal(err)
+	}
+	more, err := e.store.HasPending(e.system(), state.Link.ID)
+	if err != nil || !more {
+		t.Fatalf("after a withdraw during the post HasPending = %v, %v; want the flush to run once more", more, err)
+	}
+	if pending, _ = e.store.PendingFor(e.system(), state.Link.ID); len(pending.Rewrites) != 1 {
+		t.Fatalf("rewrites = %+v, want message m1 rewritten", pending.Rewrites)
 	}
 }

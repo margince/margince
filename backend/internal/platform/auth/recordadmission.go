@@ -15,6 +15,7 @@ package auth
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"strings"
 
@@ -87,6 +88,20 @@ func AdmitReaders(ctx context.Context, tx pgx.Tx, table string, id ids.UUID, ps 
 		at := st.probe(table, clause)
 		return func(answers []bool) error { return notFoundUnless(answers[at]) }, nil
 	})
+}
+
+// Admitted reads one answer of AdmitReaders or AdmitChangers: nil is yes, a
+// refusal is no, and any other error is a fault the caller returns.
+func Admitted(refusal error) (bool, error) {
+	switch {
+	case refusal == nil:
+		return true, nil
+	case errors.Is(refusal, apperrors.ErrNotFound),
+		errors.Is(refusal, apperrors.ErrPermissionDenied),
+		errors.Is(refusal, apperrors.ErrSeatTierInsufficient):
+		return false, nil
+	}
+	return false, refusal
 }
 
 // AdmitChangers answers EnsureChangeable for each principal. The row halves are

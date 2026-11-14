@@ -43,9 +43,18 @@ workspace may read it. The function `sharedActivity` decides this, and a test fa
 reads activity text in any other place. It is asked when the event is recorded and again right before the
 post is sent.
 
-When an activity's audience narrows after it was posted, its item is taken out. The next flush rewrites
-that post without it. The deal value stays off the card, because it is hidden from members who may not
-see it.
+When an activity's audience narrows after it was posted, or it is archived or restricted, its item is
+taken out. The next flush rewrites that post without it. A restriction (`retention.restricted`) rides the
+contact stream, so `cg:chat-links` reads that stream too. The events that narrow an activity are one list,
+`events.NarrowsActivity`, which the voice-copy recheck reads as well. The deal value stays off the card,
+because it is hidden from members who may not see it.
+
+## Who a new channel is opened to
+
+A channel Margince creates is opened to every live member who may open the record, at most 50. The
+record's owner and the member linking it come first. Each member is judged by the record's own read
+admission (`auth.AdmitReaders`) under their live grants, in `chatsync.Viewers`. Members over the 50 are
+counted as `skipped_over_cap`, and members the chat does not know as `not_in_chat`.
 
 ## Messages from the chat itself
 

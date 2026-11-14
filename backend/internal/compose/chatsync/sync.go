@@ -5,6 +5,7 @@ package chatsync
 
 // The cg:chat-links consumer. An event on a deal, project, offer, contract or
 // activity becomes a pending item of the channels linked to those records. The flush (flush.go) turns the items into one post.
+// From the contact stream it takes only retention.restricted.
 //
 // An activity reaches a channel only when the whole workspace may read it.
 // sharedActivity decides that, both when the item is recorded and again
@@ -42,7 +43,7 @@ func New(pool *pgxpool.Pool, db *database.DB, store *chatlinks.Store) *Sync {
 
 // HandleEvent routes one envelope. An event no channel shows answers nil.
 func (s *Sync) HandleEvent(ctx context.Context, env events.Envelope) error {
-	if env.Entity.ID == ids.Nil {
+	if _, linked := chatRecordQueries[env.Entity.Type]; env.Entity.ID == ids.Nil || !linked && !events.NarrowsActivity(env) {
 		return nil
 	}
 	ws, err := s.db.Workspace(ctx)
@@ -50,7 +51,7 @@ func (s *Sync) HandleEvent(ctx context.Context, env events.Envelope) error {
 		return err
 	}
 	ctx = systemContext(ctx, ws.UUID, env)
-	if env.Type == "activity.updated" || env.Type == "activity.archived" {
+	if events.NarrowsActivity(env) {
 		if err := s.withdrawIfNarrowed(ctx, env.Entity.ID); err != nil {
 			return err
 		}

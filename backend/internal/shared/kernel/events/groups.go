@@ -150,8 +150,9 @@ func Groups() []Group {
 		// What happens on a deal, its project, offers, contracts and activities,
 		// posted into the record's linked chat channel. Its own group because a
 		// post is live talk a team waits on, and a projection backlog must not
-		// hold it.
-		{Name: "cg:chat-links", Streams: forEntities(dealStreamEntity, activityStreamEntity)},
+		// hold it. The contact stream carries retention.restricted, which takes
+		// a restricted activity back out of its post.
+		{Name: "cg:chat-links", Streams: forEntities(dealStreamEntity, activityStreamEntity, contactStreamEntity)},
 		// Marking the input check's last reading out of date when something it
 		// read changes. Deals and stages ride the deal stream, forecast calls
 		// the identity stream, and activities theirs. Buying signals ride the
