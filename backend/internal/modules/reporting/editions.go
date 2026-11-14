@@ -23,24 +23,13 @@ import (
 // it today.
 func (s *Service) edition(ctx context.Context, tx pgx.Tx, owners MeasurableOwners, id ids.UUID) (crmcontracts.ReportingEdition, []Fact, error) {
 	var out crmcontracts.ReportingEdition
+	if err := editionPublishedToReader(ctx, tx, id); err != nil {
+		return out, nil, err
+	}
 	var b bindings
-	audience, err := audienceClause(ctx, &b)
-	if err != nil {
-		return out, nil, err
-	}
-	// A later audience expansion cannot make an originally private edition public.
-	published := "(SELECT owner_id,publication_audience AS audience,publication_team_id AS audience_team_id FROM report_edition WHERE id=" + b.add(id) + ") d"
-	var permitted bool
-	if err := tx.QueryRow(ctx, "SELECT EXISTS(SELECT 1 FROM "+published+" WHERE "+audience+")", b.values...).Scan(&permitted); err != nil {
-		return out, nil, err
-	}
-	if !permitted {
-		return crmcontracts.ReportingEdition{}, nil, storedError(pgx.ErrNoRows)
-	}
-	b = bindings{}
 	var redacted *time.Time
 	query := "SELECT manifest,redacted_at FROM report_edition WHERE id=" + b.add(id)
-	err = tx.QueryRow(ctx, query, b.values...).Scan(&out, &redacted)
+	err := tx.QueryRow(ctx, query, b.values...).Scan(&out, &redacted)
 	if err != nil {
 		return out, nil, storedError(err)
 	}
@@ -50,13 +39,7 @@ func (s *Service) edition(ctx context.Context, tx pgx.Tx, owners MeasurableOwner
 	if !s.evaluator.FeaturesAvailable(ctx, out.Evaluation.Selection) {
 		return crmcontracts.ReportingEdition{}, nil, errFeatureUnavailable
 	}
-	b = bindings{}
-	statement := "SELECT fact FROM report_edition_contribution WHERE edition_id=" + b.add(id) + " ORDER BY metric,context_id,contribution_key"
-	rows, err := tx.Query(ctx, statement, b.values...)
-	if err != nil {
-		return out, nil, err
-	}
-	facts, err := pgx.CollectRows(rows, pgx.RowTo[Fact])
+	facts, err := editionFacts(ctx, tx, id)
 	if err != nil {
 		return out, nil, err
 	}
@@ -82,6 +65,37 @@ func (s *Service) edition(ctx context.Context, tx pgx.Tx, owners MeasurableOwner
 		return out, nil, err
 	}
 	return out, visible, nil
+}
+
+// editionPublishedToReader refuses an edition the reader's audience does not
+// reach. The audience is the one recorded at publication, so a later
+// expansion cannot make an originally private edition public.
+func editionPublishedToReader(ctx context.Context, tx pgx.Tx, id ids.UUID) error {
+	var b bindings
+	audience, err := audienceClause(ctx, &b)
+	if err != nil {
+		return err
+	}
+	published := "(SELECT owner_id,publication_audience AS audience,publication_team_id AS audience_team_id FROM report_edition WHERE id=" + b.add(id) + ") d"
+	var permitted bool
+	if err := tx.QueryRow(ctx, "SELECT EXISTS(SELECT 1 FROM "+published+" WHERE "+audience+")", b.values...).Scan(&permitted); err != nil {
+		return err
+	}
+	if !permitted {
+		return storedError(pgx.ErrNoRows)
+	}
+	return nil
+}
+
+// editionFacts reads the contributions frozen with an edition, in a stable order.
+func editionFacts(ctx context.Context, tx pgx.Tx, id ids.UUID) ([]Fact, error) {
+	var b bindings
+	statement := "SELECT fact FROM report_edition_contribution WHERE edition_id=" + b.add(id) + " ORDER BY metric,context_id,contribution_key"
+	rows, err := tx.Query(ctx, statement, b.values...)
+	if err != nil {
+		return nil, err
+	}
+	return pgx.CollectRows(rows, pgx.RowTo[Fact])
 }
 
 // GetEdition rechecks current disclosure authority before returning frozen data.
