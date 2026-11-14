@@ -227,7 +227,7 @@ func (h Handlers) GetWorklist(w http.ResponseWriter, r *http.Request, params crm
 		return
 	}
 	markRefusedMoves(r.Context(), &out)
-	httperr.WriteJSON(w, http.StatusOK, out)
+	httperr.WriteJSONTagged(w, r, out)
 }
 
 // MarkWorklistRowsDone takes rows off the calling reader's own Worklist.

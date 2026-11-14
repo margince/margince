@@ -15474,9 +15474,25 @@ paths:
       responses:
         '200':
           description: The ranked day.
+          headers:
+            ETag:
+              description: A weak tag of the answer's bytes, quoted.
+              schema: {type: string}
+            Cache-Control:
+              description: Always `private, no-cache`.
+              schema: {type: string}
           content:
             application/json:
               schema: {$ref: '#/components/schemas/Worklist'}
+        '304':
+          description: The client already holds this answer.
+          headers:
+            ETag:
+              description: The tag the client holds, quoted.
+              schema: {type: string}
+            Cache-Control:
+              description: Always `private, no-cache`.
+              schema: {type: string}
         '401': {$ref: '#/components/responses/Unauthorized'}
         '403': {$ref: '#/components/responses/Forbidden'}
         '422': {$ref: '#/components/responses/ValidationError'}
