@@ -89,6 +89,12 @@ class FromAgyTest(unittest.TestCase):
         lines = before_answer(sample(), tool_step(9, "search_web", state="ERROR", query="margince"))
         self.assertEqual(convert(lines)[0], 3)
 
+    def test_a_web_search_stop_says_what_was_searched(self):
+        lines = before_answer(sample(), tool_step(9, "search_web", query="Kugellager-online GmbH"))
+        code, _out, raw = convert(lines)
+        self.assertEqual(code, 3)
+        self.assertIn("Kugellager-online GmbH", raw)
+
     def test_a_failed_call_that_names_no_server_reached_nothing(self):
         lines = before_answer(sample(), tool_step(9, "call_mcp_tool", state="ERROR", ToolName="echo"))
         self.assertEqual(convert(lines)[0], 0)
@@ -140,6 +146,24 @@ class FromAgyTest(unittest.TestCase):
     def test_reading_a_spill_of_another_conversation_stops_the_run(self):
         lines = before_answer(sample(), tool_step(9, "read_file", Path=OTHER_SPILL.format(5, "output.txt")))
         self.assertEqual(convert(lines)[0], 3)
+
+    def test_a_long_lane_result_reaches_the_transcript_from_the_file_agy_spilled_it_to(self):
+        conversation = SPILL.split("/brain/")[1].split("/")[0]
+        home = tempfile.mkdtemp()
+        self.addCleanup(shutil.rmtree, home)
+        spilled = os.path.join(home, ".gemini", "antigravity-cli", "brain", conversation,
+                               ".system_generated", "steps", "9")
+        os.makedirs(spilled)
+        with open(os.path.join(spilled, "output.txt"), "w", encoding="utf-8") as handle:
+            handle.write('{"data":"the whole long answer"}')
+        long_call = json.dumps({"event": "step_update", "step_update": {
+            "step_index": 9, "state": "DONE", "step_type": "tool", "tool_name": "call_mcp_tool",
+            "tool_info": {"name": "call_mcp_tool", "output": "",
+                          "parameters": {"ServerName": transcript.SERVER, "ToolName": "echo", "Arguments": {}}}}})
+        with unittest.mock.patch.dict(os.environ, {"HOME": home}):
+            code, _out, raw = convert(before_answer(sample(), long_call))
+        self.assertEqual(code, 0)
+        self.assertIn("the whole long answer", raw)
 
     def test_a_failed_lane_call_reaches_the_transcript_as_an_error(self):
         failed = json.dumps({"event": "step_update", "step_update": {

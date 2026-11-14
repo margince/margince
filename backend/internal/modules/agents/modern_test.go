@@ -19,6 +19,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/kernel/values"
 	"github.com/margince/margince/backend/internal/shared/ports/mcp"
 )
 
@@ -922,5 +923,20 @@ func TestDecoratingAResultDoesNotRewriteTheHandlersBytes(t *testing.T) {
 
 	if !strings.Contains(string(body), `9007199254740993`) {
 		t.Errorf("result = %s, want the handler's integer unchanged", body)
+	}
+}
+
+// A client's model is told how to set a time the user named. It hears of the
+// local pick, the user's own zone, and what the server derives from it.
+func TestTheInstructionsTellAClientsModelHowToSetALocalTime(t *testing.T) {
+	instructions := modernDispatcher(t).instructions()
+	if !strings.Contains(instructions, mcp.LocalTimeRule) {
+		t.Fatalf("the surface does not carry the local-time rule:\n%s", instructions)
+	}
+	rule := mcp.LocalTimeRule
+	for _, want := range []string{"_intent", "wall_clock", "IANA timezone", "whoami", "T" + values.DayOnlyClock, "exact instant", "does not list"} {
+		if !strings.Contains(rule, want) {
+			t.Errorf("the local-time rule does not say %q", want)
+		}
 	}
 }

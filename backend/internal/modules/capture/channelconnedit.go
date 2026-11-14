@@ -104,7 +104,7 @@ func (s *ChannelStore) ReplaceToken(ctx context.Context, id ids.UUID, token, eve
 }
 
 // confirmReplacement runs the provider's checks on a replacement token before
-// anything is sealed, and refuses a token of another team where links are bound
+// anything is sealed. It refuses a token of another team where links are bound
 // to the bot's team.
 func (s *ChannelStore) confirmReplacement(ctx context.Context, current channelRow, token, eventsSecret string) (ChannelBot, error) {
 	check, err := s.requireConnectWiring(current.Provider)
