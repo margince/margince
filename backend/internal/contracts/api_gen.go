@@ -19090,8 +19090,10 @@ const (
 	PrivacyInformationPageRightsComplainToAuthority PrivacyInformationPageRights = "complain_to_authority"
 	PrivacyInformationPageRightsErasure             PrivacyInformationPageRights = "erasure"
 	PrivacyInformationPageRightsObjection           PrivacyInformationPageRights = "objection"
+	PrivacyInformationPageRightsPortability         PrivacyInformationPageRights = "portability"
 	PrivacyInformationPageRightsRectification       PrivacyInformationPageRights = "rectification"
 	PrivacyInformationPageRightsRestriction         PrivacyInformationPageRights = "restriction"
+	PrivacyInformationPageRightsWithdrawConsent     PrivacyInformationPageRights = "withdraw_consent"
 )
 
 // Valid indicates whether the value is a known member of the PrivacyInformationPageRights enum.
@@ -19105,9 +19107,13 @@ func (e PrivacyInformationPageRights) Valid() bool {
 		return true
 	case PrivacyInformationPageRightsObjection:
 		return true
+	case PrivacyInformationPageRightsPortability:
+		return true
 	case PrivacyInformationPageRightsRectification:
 		return true
 	case PrivacyInformationPageRightsRestriction:
+		return true
+	case PrivacyInformationPageRightsWithdrawConsent:
 		return true
 	default:
 		return false
@@ -42905,6 +42911,23 @@ type ConfirmPage struct {
 	union json.RawMessage
 }
 
+// ConfirmQuestion The question this link pinned, in the link's language and resolved with its purpose. The
+// page shows `ask` and offers `answers`, and sends `text` back unchanged as
+// `marketing_wording`. The proof records `text`. Absent on a link that pinned no question.
+type ConfirmQuestion struct {
+	// Answers The labels of the answers the page offers, in order.
+	Answers []string `json:"answers"`
+
+	// Ask The sentence the reader answers.
+	Ask string `json:"ask"`
+
+	// Text The whole question as the proof records it: the ask, then each answer, one per line.
+	Text string `json:"text"`
+
+	// Version The published version the link pinned.
+	Version string `json:"version"`
+}
+
 // ConfirmRequestIssued A confirm link that now exists, and whether a message carrying it was queued. What
 // becomes of that message afterwards is the delivery's own answer, not this one: the
 // dispatcher transmits it later, retries a transient failure, and parks one it cannot send.
@@ -58638,6 +58661,9 @@ type PrivacyInformationController struct {
 	// Identity The legal name and postal address, as lines. Absent unless both are stated.
 	Identity *string `json:"identity,omitempty"`
 
+	// LegalName The legal name alone, which every controller mail opens with. Absent when not stated.
+	LegalName *string `json:"legal_name,omitempty"`
+
 	// ObjectionRoute How to object, where the installation states a way of its own.
 	ObjectionRoute *string `json:"objection_route,omitempty"`
 
@@ -60309,10 +60335,14 @@ type RecordCommunicationContextRequestKind string
 // working notes — owner, lifecycle, scores — rather than the subject's own data.
 type RecordConfirmationPage struct {
 	// Company The current employer, read through the live employment relationship. Not correctable here.
-	Company  string                     `json:"company"`
-	Email    string                     `json:"email"`
-	FullName string                     `json:"full_name"`
-	Kind     RecordConfirmationPageKind `json:"kind"`
+	Company string `json:"company"`
+
+	// Controller Who is responsible for the data, from the installation's own controller particulars, by the
+	// rule the mail's disclosure lines use. A part the installation has not stated is absent.
+	Controller *PrivacyInformationController `json:"controller,omitempty"`
+	Email      string                        `json:"email"`
+	FullName   string                        `json:"full_name"`
+	Kind       RecordConfirmationPageKind    `json:"kind"`
 
 	// Language The language the link's mail was written in, which the page asks in too. Absent when the link records no language.
 	Language *MailLanguage `json:"language,omitempty"`
@@ -60323,7 +60353,12 @@ type RecordConfirmationPage struct {
 
 	// Provenance Where each held value came from and when (Art. 14). Empty for a field nothing has stamped.
 	Provenance []ConfirmFieldOrigin `json:"provenance"`
-	Title      string               `json:"title"`
+
+	// Question The question this link pinned, in the link's language and resolved with its purpose. The
+	// page shows `ask` and offers `answers`, and sends `text` back unchanged as
+	// `marketing_wording`. The proof records `text`. Absent on a link that pinned no question.
+	Question *ConfirmQuestion `json:"question,omitempty"`
+	Title    string           `json:"title"`
 }
 
 // RecordConfirmationPageKind defines model for RecordConfirmationPage.Kind.
@@ -66102,7 +66137,10 @@ type StatedAmount struct {
 // address, phone and provenance trail — wider than the mail described and wider than this
 // link's own write side allows.
 type SubscriptionConfirmationPage struct {
-	Kind SubscriptionConfirmationPageKind `json:"kind"`
+	// Controller Who is responsible for the data, from the installation's own controller particulars, by the
+	// rule the mail's disclosure lines use. A part the installation has not stated is absent.
+	Controller *PrivacyInformationController    `json:"controller,omitempty"`
+	Kind       SubscriptionConfirmationPageKind `json:"kind"`
 
 	// Language The language the link's mail was written in, which the page asks in too. Absent when the link records no language.
 	Language *MailLanguage `json:"language,omitempty"`
@@ -66112,6 +66150,11 @@ type SubscriptionConfirmationPage struct {
 
 	// PurposeLabel Its published name, for the page to show.
 	PurposeLabel string `json:"purpose_label"`
+
+	// Question The question this link pinned, in the link's language and resolved with its purpose. The
+	// page shows `ask` and offers `answers`, and sends `text` back unchanged as
+	// `marketing_wording`. The proof records `text`. Absent on a link that pinned no question.
+	Question *ConfirmQuestion `json:"question,omitempty"`
 
 	// State Their answer today, so somebody who already said yes is not asked as though they had not.
 	State SubscriptionConfirmationPageState `json:"state"`
@@ -75600,6 +75643,9 @@ type RevokeOverrideJSONBody struct {
 
 // IssueDoubleOptInJSONBody defines parameters for IssueDoubleOptIn.
 type IssueDoubleOptInJSONBody struct {
+	// Language The language of the mail and of the page its link opens. Absent means the
+	// installation's mail language.
+	Language  *MailLanguage      `json:"language,omitempty"`
 	PurposeId openapi_types.UUID `json:"purpose_id"`
 }
 
@@ -79069,9 +79115,12 @@ type SubmitConfirmDetailsJSONBody struct {
 	// MarketingChoice Their answer. Omit entirely for no answer — a page view grants nothing.
 	MarketingChoice *SubmitConfirmDetailsJSONBodyMarketingChoice `json:"marketing_choice,omitempty"`
 
-	// MarketingWording The exact sentence shown beside the choice, stored verbatim as proof. Required with a
-	// grant. Bounded because it is stored on the proof row and read back through the subject
-	// access export — the same bound is enforced server-side, and the two are one rule.'
+	// MarketingWording The wording shown beside the choice. Required with a grant. Where the page carried a
+	// `question`, send its `text` unchanged: the proof records the served question, and a
+	// grant with other words is refused with 409 `version_skew`, because the page is older
+	// than the question the link pinned. Where the page carried none, this sentence is
+	// stored verbatim as proof. Bounded because it is stored on the proof row and read back
+	// through the subject access export.
 	MarketingWording *string `json:"marketing_wording,omitempty"`
 
 	// RequestErasure The subject asked to be removed. Files a request for a human; never erases directly.

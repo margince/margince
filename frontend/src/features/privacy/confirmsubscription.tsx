@@ -26,14 +26,37 @@ import { ErrorLine } from "../../design-system/errorline";
 import { Heading } from "../../design-system/heading";
 import { useT } from "../../i18n";
 import { labelOf } from "../../lib/preferences.logic";
-import { throwProblem } from "../../lib/problem";
+import { ProblemError, problemCode, throwProblem } from "../../lib/problem";
 import {
   explainPublicError,
   LinkInvalidError,
   RateLimitedError,
 } from "../settings/preferences";
+import { ControllerCard } from "./confirmprivacyparts";
+import { PublicPage } from "./publicpage";
 
 type SubscriptionPage = components["schemas"]["SubscriptionConfirmationPage"];
+
+/**
+ * A confirm page's own refusals. A used or expired link says what the reader
+ * can still do, which differs from a preference link's answer. A page older
+ * than the question its link pinned is asked to reload.
+ */
+export function explainConfirmError(
+  error: unknown,
+  t: ReturnType<typeof useT>,
+): string {
+  if (error instanceof LinkInvalidError) {
+    return t("confirm.invalidLink");
+  }
+  if (
+    error instanceof ProblemError &&
+    problemCode(error.problem) === "version_skew"
+  ) {
+    return t("confirm.questionChanged");
+  }
+  return explainPublicError(error, t);
+}
 
 // SubscriptionConfirm owns the consent link end to end: its own submit, its own
 // wording, its own confirmed and refused states.
@@ -51,10 +74,8 @@ export function SubscriptionConfirm({
   const t = useT();
   const [done, setDone] = useState(false);
 
-  // The sentence THIS page shows, which is the one the server stores verbatim
-  // as consent evidence. Read where it is rendered, not re-derived at submit
-  // time, because the two drifting is how proof stops matching the promise.
-  const wording = subscriptionWording(t, card);
+  // The text the server recorded the question as, sent back unchanged.
+  const wording = subscriptionQuestion(t, card).text;
 
   const submit = useMutation({
     mutationFn: async ({ policyText }: { policyText: string }) => {
@@ -89,7 +110,7 @@ export function SubscriptionConfirm({
     <SubscriptionConfirmBody
       card={done ? { ...card, state: "granted" } : card}
       submitting={submit.isPending}
-      error={submit.error ? explainPublicError(submit.error, t) : undefined}
+      error={submit.error ? explainConfirmError(submit.error, t) : undefined}
       onConfirm={() => submit.mutate({ policyText: wording })}
     />
   );
@@ -100,13 +121,22 @@ function purposeName(t: ReturnType<typeof useT>, card: SubscriptionPage) {
   return labelOf(t, { key: card.purpose_key, label: card.purpose_label });
 }
 
-// The sentence the reader agrees to keeps the stored label. The server records
-// the published question filled with that label, so proof and page agree.
-function subscriptionWording(
+// The question the server served for this link: the sentence, the button, and
+// the whole text it records. A link that pinned none falls back to this build's
+// own sentence, naming the purpose as the heading and the mail do.
+function subscriptionQuestion(
   t: ReturnType<typeof useT>,
   card: SubscriptionPage,
 ) {
-  return t("confirm.subscription.ask", { purpose: card.purpose_label });
+  if (card.question) {
+    return {
+      ask: card.question.ask,
+      confirm: card.question.answers[0] ?? t("confirm.subscription.confirm"),
+      text: card.question.text,
+    };
+  }
+  const ask = t("confirm.subscription.ask", { purpose: purposeName(t, card) });
+  return { ask, confirm: t("confirm.subscription.confirm"), text: ask };
 }
 
 export function SubscriptionConfirmBody({
@@ -125,6 +155,7 @@ export function SubscriptionConfirmBody({
 }>) {
   const t = useT();
   const purpose = purposeName(t, card);
+  const question = subscriptionQuestion(t, card);
 
   // ALREADY ANSWERED is its own state, not a disabled button.
   //
@@ -133,7 +164,7 @@ export function SubscriptionConfirmBody({
   // their answer is recorded rather than shown a form that looks broken.
   if (card.state === "granted") {
     return (
-      <div className="pref-page">
+      <PublicPage>
         <Card>
           <Heading size="xlarge" className="t-h2">
             {t("confirm.subscription.alreadyTitle")}
@@ -144,27 +175,28 @@ export function SubscriptionConfirmBody({
             })}
           </p>
         </Card>
-      </div>
+      </PublicPage>
     );
   }
 
   return (
-    <div className="pref-page">
+    <PublicPage>
       <Heading size="xlarge" className="t-h2">
         {t("confirm.subscription.title")}
       </Heading>
+      <ControllerCard controller={card.controller} />
       <Card>
         <Heading size="large" className="t-h3">
           {purpose}
         </Heading>
-        <p className="t-body">{subscriptionWording(t, card)}</p>
+        <p className="t-body">{question.ask}</p>
         {/* One affirmative act, never a pre-selected one: a page that arrives
             with the answer already given is not the contact's own act. */}
         <Button onClick={onConfirm} disabled={submitting}>
-          {t("confirm.subscription.confirm")}
+          {question.confirm}
         </Button>
         {error && <ErrorLine>{error}</ErrorLine>}
       </Card>
-    </div>
+    </PublicPage>
   );
 }

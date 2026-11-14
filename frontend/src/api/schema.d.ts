@@ -17281,10 +17281,10 @@ export interface paths {
          *     reports that disclosure as unmeetable rather than inventing one, which is what makes an
          *     unconfigured installation visible instead of silently non-compliant.
          *
-         *     NOTHING RENDERS THESE INTO A MESSAGE YET. The particulars are stated here and the mapping
-         *     from a jurisdiction's obligation to the words that meet it exists, but no step between
-         *     composing a body and handing it to a provider asks for them. The gap is recorded in
-         *     `backend/gates/messagingruleapplied_test.go`.
+         *     The legal name opens and heads every mail the installation sends as controller. The
+         *     particulars a jurisdiction requires are printed at the end of that mail, each under a label
+         *     in the mail's language, and at the end of a marketing mail a member sends. The particulars
+         *     themselves are printed as stated, in the language they were typed in.
          */
         get: operations["getControllerParticulars"];
         /**
@@ -54996,7 +54996,7 @@ export interface components {
              * @description The rights the contact holds over this data, as codes a page renders in its own
              *     language. Art. 14(2)(c)-(e) requires naming them.
              */
-            rights: ("access" | "rectification" | "erasure" | "restriction" | "objection" | "complain_to_authority")[];
+            rights: ("access" | "rectification" | "erasure" | "restriction" | "portability" | "objection" | "withdraw_consent" | "complain_to_authority")[];
             /** @description The language the link's mail was written in, which the page asks in too. Absent when the link records no language. */
             language?: components["schemas"]["MailLanguage"];
         };
@@ -55005,6 +55005,8 @@ export interface components {
          *     rule the mail's disclosure lines use. A part the installation has not stated is absent.
          */
         PrivacyInformationController: {
+            /** @description The legal name alone, which every controller mail opens with. Absent when not stated. */
+            legal_name?: string;
             /** @description The legal name and postal address, as lines. Absent unless both are stated. */
             identity?: string;
             /** @description How to reach whoever answers questions about the data. */
@@ -55049,6 +55051,8 @@ export interface components {
             state: "unknown" | "granted" | "withdrawn";
             /** @description The language the link's mail was written in, which the page asks in too. Absent when the link records no language. */
             language?: components["schemas"]["MailLanguage"];
+            controller?: components["schemas"]["PrivacyInformationController"];
+            question?: components["schemas"]["ConfirmQuestion"];
         };
         /**
          * @description One contact's own view of what the workspace holds about them, for the no-login confirm page.
@@ -55076,6 +55080,23 @@ export interface components {
             provenance: components["schemas"]["ConfirmFieldOrigin"][];
             /** @description The language the link's mail was written in, which the page asks in too. Absent when the link records no language. */
             language?: components["schemas"]["MailLanguage"];
+            controller?: components["schemas"]["PrivacyInformationController"];
+            question?: components["schemas"]["ConfirmQuestion"];
+        };
+        /**
+         * @description The question this link pinned, in the link's language and resolved with its purpose. The
+         *     page shows `ask` and offers `answers`, and sends `text` back unchanged as
+         *     `marketing_wording`. The proof records `text`. Absent on a link that pinned no question.
+         */
+        ConfirmQuestion: {
+            /** @description The published version the link pinned. */
+            version: string;
+            /** @description The whole question as the proof records it: the ask, then each answer, one per line. */
+            text: string;
+            /** @description The sentence the reader answers. */
+            ask: string;
+            /** @description The labels of the answers the page offers, in order. */
+            answers: string[];
         };
         /** @description One line of where a held value came from, for the Art. 14 disclosure on the confirm page. */
         ConfirmFieldOrigin: {
@@ -75555,9 +75576,12 @@ export interface operations {
                      */
                     marketing_choice?: "granted" | "withdrawn";
                     /**
-                     * @description The exact sentence shown beside the choice, stored verbatim as proof. Required with a
-                     *     grant. Bounded because it is stored on the proof row and read back through the subject
-                     *     access export — the same bound is enforced server-side, and the two are one rule.'
+                     * @description The wording shown beside the choice. Required with a grant. Where the page carried a
+                     *     `question`, send its `text` unchanged: the proof records the served question, and a
+                     *     grant with other words is refused with 409 `version_skew`, because the page is older
+                     *     than the question the link pinned. Where the page carried none, this sentence is
+                     *     stored verbatim as proof. Bounded because it is stored on the proof row and read back
+                     *     through the subject access export.
                      */
                     marketing_wording?: string;
                 };
@@ -75579,6 +75603,7 @@ export interface operations {
                 };
             };
             404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
             422: components["responses"]["ValidationError"];
         };
     };
@@ -90974,6 +90999,11 @@ export interface operations {
                 "application/json": {
                     /** Format: uuid */
                     purpose_id: string;
+                    /**
+                     * @description The language of the mail and of the page its link opens. Absent means the
+                     *     installation's mail language.
+                     */
+                    language?: components["schemas"]["MailLanguage"];
                 };
             };
         };

@@ -129,7 +129,11 @@ func (s *Store) renderConfirmMail(
 			return Rendered{}, "", err
 		}
 	}
-	rendered, category, err := renderTemplateContext(templateForLinkKind(in.kind), in.expiresAt, language, purpose)
+	expiresAt := in.expiresAt
+	if !expiresAt.IsZero() {
+		expiresAt = expiresAt.In(s.mailZone(ctx, tx))
+	}
+	rendered, category, err := renderTemplateContext(templateForLinkKind(in.kind), expiresAt, language, purpose)
 	if err != nil {
 		return Rendered{}, "", err
 	}
@@ -215,6 +219,44 @@ func (s *Store) sendLanguage(ctx context.Context, tx pgx.Tx, picked string) stri
 		return picked
 	}
 	return s.mailLanguage(ctx, tx)
+}
+
+// replyLanguage is the language of a linkless mail that answers the subject's
+// own act, such as an opt-out receipt. It is the language of the last link mail
+// staged for them, else the installation's: what they last read from us. A link
+// minted with no mail, as a booking without a lane mints one, was never read.
+func (s *Store) replyLanguage(ctx context.Context, tx pgx.Tx, sub subject) string {
+	column := subjectColumnContact
+	if sub.entityType == entityLead {
+		column = subjectColumnLead
+	}
+	var last string
+	err := tx.QueryRow(ctx, `
+		SELECT coalesce((SELECT t.question_locale
+		                   FROM confirm_token t
+		                   JOIN comms_outbound o ON o.link_id = t.id
+		                  WHERE t.`+column+` = $1 AND t.question_locale IS NOT NULL
+		                  ORDER BY o.created_at DESC, o.id DESC LIMIT 1), '')`, sub.id).Scan(&last)
+	if err != nil {
+		slog.WarnContext(ctx, "the subject's last mail language could not be read; answering in the installation's",
+			"cause", err)
+	}
+	if err == nil && mailcopy.Known(last) {
+		return last
+	}
+	return s.mailLanguage(ctx, tx)
+}
+
+// mailZone is the zone a controller mail prints a time in: the installation's,
+// else UTC. A zone that cannot be read costs the mail its local time, never the
+// mail itself.
+func (s *Store) mailZone(ctx context.Context, tx pgx.Tx) *time.Location {
+	zone, err := s.installationZone(ctx, tx)
+	if err != nil || zone == nil {
+		slog.WarnContext(ctx, "the installation's time zone could not be read; the mail prints UTC", "cause", err)
+		return time.UTC
+	}
+	return zone
 }
 
 // requireMailLanguage refuses a picked language this build has no copy for;

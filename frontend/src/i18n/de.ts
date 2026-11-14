@@ -11053,6 +11053,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "privacynotice.rights.title": "Ihre Rechte an diesen Daten",
   "privacynotice.rights.how":
     "Um eines dieser Rechte zu nutzen, antworten Sie auf die Nachricht, die Sie hierher geführt hat, oder kontaktieren Sie uns über die Adresse auf unserer Website.",
+  "privacynotice.rights.howContact":
+    "Um eines dieser Rechte zu nutzen, wenden Sie sich an uns: {contact}",
   "privacynotice.right.access":
     "Bitten Sie uns um eine Kopie der Daten, die wir über Sie gespeichert haben.",
   "privacynotice.right.rectification":
@@ -11062,8 +11064,12 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Bitten Sie uns, die Nutzung Ihrer Daten auszusetzen, solange etwas strittig ist.",
   "privacynotice.right.objection":
     "Widersprechen Sie der Nutzung Ihrer Daten durch uns.",
+  "privacynotice.right.portability":
+    "Verlangen Sie die Daten, die Sie uns gegeben haben, in einem gängigen maschinenlesbaren Format, oder lassen Sie sie an jemand anderen übermitteln.",
+  "privacynotice.right.withdrawConsent":
+    "Widerrufen Sie eine erteilte Einwilligung jederzeit. Das ändert nichts an dem, was wir vorher getan haben.",
   "privacynotice.right.complain":
-    "Reichen Sie eine Beschwerde bei der für Sie zuständigen Datenschutzbehörde ein.",
+    "Beschweren Sie sich bei einer Datenschutz-Aufsichtsbehörde, zum Beispiel in dem Land, in dem Sie leben oder arbeiten.",
   "privacynotice.controller.title": "Wer verantwortlich ist",
   "privacynotice.controller.contact": "Fragen zu Ihren Daten: {contact}",
   "privacynotice.categories.title": "Was wir speichern",
@@ -11105,6 +11111,10 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Mitarbeitende, die mit unserem CRM arbeiten.",
   "privacynotice.recipient.serviceProviders":
     "Unternehmen, die unser CRM betreiben und seine E-Mails für uns zustellen. Ein Vertrag verpflichtet sie, Ihre Daten nur nach unseren Weisungen zu nutzen.",
+  "privacynotice.retention.afterYears_one": "{count} Jahr",
+  "privacynotice.retention.afterYears_other": "{count} Jahren",
+  "privacynotice.retention.afterDays_one": "{count} Tag",
+  "privacynotice.retention.afterDays_other": "{count} Tagen",
   "privacynotice.retention.title": "Wie lange wir die Daten speichern",
   "privacynotice.retention.archive":
     "{scope}: nach {days} aus der täglichen Nutzung genommen.",
@@ -13402,7 +13412,9 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "prefs.alwaysOn": "Immer an",
   "confirm.title": "Ihre Angaben",
   "confirm.intro":
-    "Margince, ein KI-System, führt dieses CRM. Unten steht alles, was über Sie erfasst ist. Sie können jede Angabe korrigieren oder ihre Löschung beantragen.",
+    "Unten steht alles, was über Sie erfasst ist. Sie können jede Angabe korrigieren oder ihre Löschung beantragen.",
+  "confirm.introNamed":
+    "{controller} hat die folgenden Angaben über Sie gespeichert. Sie können jede Angabe korrigieren oder ihre Löschung beantragen.",
   "confirm.card.title": "Erfasste Angaben",
   "confirm.field.fullName": "Name",
   "confirm.field.title": "Jobtitel",
@@ -13440,7 +13452,9 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "confirm.done.body":
     "Ihre Antwort wurde erfasst. Änderungen gehen zur Übernahme an eine Person aus dem Team. Dieser Link kann nun nicht mehr verwendet werden.",
   "confirm.invalidLink":
-    "Dieser Link ist nicht mehr gültig. Der Link wurde möglicherweise bereits verwendet oder ist abgelaufen.",
+    "Dieser Link ist nicht mehr gültig. Er wurde vielleicht schon verwendet oder ist abgelaufen. Wenn Sie noch etwas brauchen, antworten Sie auf die E-Mail, die Sie hierher geführt hat.",
+  "confirm.questionChanged":
+    "Die Frage auf dieser Seite hat sich geändert, nachdem Sie sie geöffnet haben. Laden Sie die Seite neu und antworten Sie noch einmal.",
   "prefs.lockedWhy":
     "Dieser Zweck bleibt aktiviert, da er für einen von Ihnen angeforderten Vorgang benötigt wird.",
   "prefs.confirmationNeededWhy":

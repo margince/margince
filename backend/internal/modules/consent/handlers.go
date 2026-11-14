@@ -207,8 +207,12 @@ func (h Handlers) IssueDoubleOptIn(w http.ResponseWriter, r *http.Request, id cr
 	}
 	// No expected address: this door names a CONTACT, and the mint derives the
 	// mailbox from their record. There is no second address to disagree with.
+	language := ""
+	if req.Language != nil {
+		language = string(*req.Language)
+	}
 	issued, err := h.store.IssueConsentLink(r.Context(),
-		pathID[ids.ContactKind](id), ids.From[ids.PurposeKind](ids.UUID(req.PurposeId)), "")
+		pathID[ids.ContactKind](id), ids.From[ids.PurposeKind](ids.UUID(req.PurposeId)), "", language)
 	if err != nil {
 		writeConsentErr(w, r, err)
 		return

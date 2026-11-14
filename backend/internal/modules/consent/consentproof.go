@@ -19,19 +19,27 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
-// loadConsentPurpose resolves the target purpose's key and DOI flag; an
-// unknown or archived purpose is 404.
-func loadConsentPurpose(ctx context.Context, tx pgx.Tx, purposeID ids.PurposeID) (key string, requiresDOI bool, err error) {
-	err = tx.QueryRow(ctx,
-		`SELECT key, requires_double_opt_in FROM consent_purpose WHERE id = $1 AND archived_at IS NULL`,
-		purposeID).Scan(&key, &requiresDOI)
+// consentPurpose is what a decision needs to know about its purpose.
+type consentPurpose struct {
+	key         string
+	requiresDOI bool
+	class       string
+}
+
+// loadConsentPurpose resolves the target purpose; an unknown or archived
+// purpose is 404.
+func loadConsentPurpose(ctx context.Context, tx pgx.Tx, purposeID ids.PurposeID) (consentPurpose, error) {
+	var p consentPurpose
+	err := tx.QueryRow(ctx,
+		`SELECT key, requires_double_opt_in, class FROM consent_purpose WHERE id = $1 AND archived_at IS NULL`,
+		purposeID).Scan(&p.key, &p.requiresDOI, &p.class)
 	if errors.Is(err, pgx.ErrNoRows) {
-		return "", false, fmt.Errorf("purpose %s: %w", purposeID, apperrors.ErrNotFound)
+		return consentPurpose{}, fmt.Errorf("purpose %s: %w", purposeID, apperrors.ErrNotFound)
 	}
 	if err != nil {
-		return "", false, err
+		return consentPurpose{}, err
 	}
-	return key, requiresDOI, nil
+	return p, nil
 }
 
 // resolveDOIConfirmation enforces the German email norm: a DOI purpose's grant

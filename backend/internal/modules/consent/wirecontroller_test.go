@@ -10,11 +10,14 @@ import (
 )
 
 // The page names the controller by the rule a mail's disclosure line uses. So
-// a name with no address is shown as an identity on neither.
+// a name with no address is shown as an identity on neither. The name alone is
+// still the one "This message is from" names.
 func TestThePageAndTheMailAgreeOnWhatNamesTheController(t *testing.T) {
 	t.Parallel()
-	if got := wireController(ControllerParticulars{LegalName: "Beispiel GmbH"}); got != nil {
-		t.Errorf("a name with no address is shown as %+v, which the mail would report missing", got)
+	alone := wireController(ControllerParticulars{LegalName: "Beispiel GmbH"})
+	if alone == nil || alone.Identity != nil || alone.LegalName == nil || *alone.LegalName != "Beispiel GmbH" {
+		t.Errorf("a name with no address is shown as %+v, want the name alone and no identity, "+
+			"which the mail would report missing", alone)
 	}
 	stated := ControllerParticulars{LegalName: "Beispiel GmbH", PostalAddress: "Hauptstr. 1", PrivacyContact: "privacy@beispiel.test"}
 	got := wireController(stated)

@@ -266,7 +266,6 @@ reach features/onboarding/onboarding-conversation/use-linkedin-account.test.tsx 
 reach features/onboarding/onboarding-conversation/voice-act.tsx features/voice-knowledge/voice-insights.tsx
 reach features/onboarding/onboarding-conversation/voice-scenes.result.tsx features/voice-knowledge/voice-insights.tsx
 reach features/onboarding/onboarding.tsx features/companies/company-context.tsx
-reach features/privacy/confirm.tsx features/settings/preferences.css
 reach features/privacy/confirm.tsx features/settings/preferences.tsx
 reach features/privacy/confirmprivacy.stories.tsx features/settings/preferences.css
 reach features/privacy/confirmsubscription.stories.tsx features/settings/preferences.css

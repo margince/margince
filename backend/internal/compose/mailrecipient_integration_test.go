@@ -406,7 +406,7 @@ func TestProductionControllerStagingPreviews(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		if _, err := lane.store.IssueConsentLink(lane.ctx, ids.From[ids.ContactKind](lane.contact), purpose.ID, ""); err != nil {
+		if _, err := lane.store.IssueConsentLink(lane.ctx, ids.From[ids.ContactKind](lane.contact), purpose.ID, "", ""); err != nil {
 			t.Fatal(err)
 		}
 		rows, err := lane.e.Pool.Query(lane.ctx, "SELECT subject,body,html_body FROM comms_outbound WHERE sender_kind='controller' ORDER BY subject")

@@ -242,7 +242,7 @@ func TestSpendingTheResubscribeLinkLeavesAGrantTheGateHonours(t *testing.T) {
 	confirm := confirmLinkToken(t, c.AppEnv)
 	if s := publicCall(t, c.AppEnv, "POST", "/v1/public/confirm/"+confirm, AnyMap{
 		"marketing_choice":  "granted",
-		"marketing_wording": "Yes, keep me posted.",
+		"marketing_wording": servedQuestion(t, c.AppEnv, confirm).Text,
 	}, nil, nil); s != http.StatusOK {
 		t.Fatalf("spending the confirmation link → %d, want 200", s)
 	}
@@ -308,7 +308,7 @@ func TestAnUnconfirmedGrantIsRepairedByTheConfirmation(t *testing.T) {
 
 	confirm := confirmLinkToken(t, c.AppEnv)
 	if s := publicCall(t, c.AppEnv, "POST", "/v1/public/confirm/"+confirm, AnyMap{
-		"marketing_choice": "granted", "marketing_wording": "Yes, keep me posted.",
+		"marketing_choice": "granted", "marketing_wording": servedQuestion(t, c.AppEnv, confirm).Text,
 	}, nil, nil); s != http.StatusOK {
 		t.Fatalf("spending the confirmation link → %d", s)
 	}
@@ -344,7 +344,7 @@ func TestReTickingAConfirmedSubscriptionMailsNothing(t *testing.T) {
 	savePreference(t, c, token, "product_news", "granted")
 	confirm := confirmLinkToken(t, c.AppEnv)
 	if s := publicCall(t, c.AppEnv, "POST", "/v1/public/confirm/"+confirm, AnyMap{
-		"marketing_choice": "granted", "marketing_wording": "Yes.",
+		"marketing_choice": "granted", "marketing_wording": servedQuestion(t, c.AppEnv, confirm).Text,
 	}, nil, nil); s != http.StatusOK {
 		t.Fatalf("confirming → %d", s)
 	}
