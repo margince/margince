@@ -115,17 +115,18 @@ func TestAServerErrorOrARefusalFailsAHomeReadWithinBudget(t *testing.T) {
 }
 
 func TestEveryRequiredHomeReadIsJudgedInEveryPass(t *testing.T) {
-	calls := homeCalls(dailyInput{})
+	// An optional read joins Home's own, so the case covers a read with nothing behind it.
+	calls := append(homeCalls(dailyInput{}), dailyCall{Name: "notes", Path: "/v1/notes", Optional: true})
 	measured := func(name string, samples int) dailyRow {
 		result := homeRow(name, time.Millisecond, time.Second, samples)
 		return dailyRow{Measurement: BudgetMeasurement{Name: name}, Result: result}
 	}
-	// The cold brief is missing entirely, and the optional digest has nothing
-	// behind it. The miss pass times only what the cold pass found, so it has no
-	// digest row at all.
-	rows := []dailyRow{measured("home_cold_digest", 0), measured("home_warm_digest", 0)}
+	// The cold brief is missing entirely, and the optional notes have nothing
+	// behind them. The miss pass times only what the cold pass found, so it has
+	// no notes row at all.
+	rows := []dailyRow{measured("home_cold_notes", 0), measured("home_warm_notes", 0)}
 	for _, call := range calls {
-		if call.Name != "digest" {
+		if !call.Optional {
 			rows = append(rows, measured(dailyRowName("home_warm", call), dailySamples),
 				measured(dailyRowName("home_miss", call), homeColdRounds))
 			if call.Name != "brief" {
