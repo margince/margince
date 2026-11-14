@@ -153,6 +153,9 @@ func TestRecordReferencesPreserveBoundsOrderAndObjectDenials(t *testing.T) {
 			if _, err := first.read(denied, []ids.UUID{first.id}); !errors.Is(err, apperrors.ErrPermissionDenied) {
 				t.Fatalf("module denial=%v", err)
 			}
+			if _, err := first.read(denied, nil); !errors.Is(err, apperrors.ErrPermissionDenied) {
+				t.Fatalf("empty module read bypassed object grant: %v", err)
+			}
 			if response := referenceRequest(denied, router, kind, tooMany...); response.Code != 403 {
 				t.Fatalf("bounds preceded grant: %d", response.Code)
 			}
@@ -190,6 +193,11 @@ func TestRecordReferenceStatementCountDoesNotGrowWithIDs(t *testing.T) {
 			e := integration.Setup(t)
 			first := makeReferenceFixture(t, e, kind, "First cost reference")
 			second := makeReferenceFixture(t, e, kind, "Second cost reference")
+			emptyCtx, emptyMeter := database.WithStatementMeter(e.Admin())
+			empty, err := first.read(emptyCtx, nil)
+			if err != nil || empty == nil || len(empty) != 0 || emptyMeter.Cost().Statements != 0 {
+				t.Fatalf("empty read=%+v err=%v statements=%d", empty, err, emptyMeter.Cost().Statements)
+			}
 			counts := make([]int64, 0, 2)
 			for _, want := range [][]ids.UUID{{first.id}, {first.id, second.id}} {
 				ctx, meter := database.WithStatementMeter(e.Admin())

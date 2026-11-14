@@ -21,7 +21,6 @@ import (
 	"fmt"
 
 	"github.com/jackc/pgx/v5"
-	openapi_types "github.com/oapi-codegen/runtime/types"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/auth"
@@ -57,28 +56,7 @@ func (s *Store) DealReferences(ctx context.Context, want []ids.UUID) ([]crmcontr
 	if err != nil {
 		return nil, err
 	}
-	references := []crmcontracts.RecordReference{}
-	if len(want) == 0 {
-		return references, nil
-	}
-	err = s.Tx(ctx, func(tx pgx.Tx) error {
-		rows, err := tx.Query(ctx, query, args...)
-		if err != nil {
-			return err
-		}
-		references, err = pgx.CollectRows(rows, func(row pgx.CollectableRow) (crmcontracts.RecordReference, error) {
-			var reference crmcontracts.RecordReference
-			var id ids.UUID
-			err := row.Scan(&id, &reference.Name, &reference.Archived)
-			reference.Id = openapi_types.UUID(id)
-			return reference, err
-		})
-		return err
-	})
-	if err != nil {
-		return nil, fmt.Errorf("deals: reading deal references: %w", err)
-	}
-	return references, nil
+	return storekit.ReadRecordReferences(ctx, s, query, args...)
 }
 
 // Legacy labels keep their two-column projection and existing collector.
