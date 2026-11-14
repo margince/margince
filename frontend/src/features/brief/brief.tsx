@@ -36,7 +36,8 @@ import { DEFAULT_VIEW } from "../../lib/worklistviews";
 import { MagicPanel, WAITING_LANES } from "../sign-in/magic";
 import {
   useHandledForYou,
-  useWorklist,
+  useHomeDay,
+  type useWorklist,
   type WorklistItem,
   worklistKey,
 } from "../worklist/worklist.queries";
@@ -87,16 +88,7 @@ export function BriefScreen() {
   const nowMs = useNow(60_000);
   const me = useMe();
   const [params, setParams] = useUrlParams();
-  // Home's own shape, unless a link names a row that may be outside it: then
-  // the queue, so the row it names is there to open.
-  const query = useWorklist(
-    "mine",
-    "all",
-    undefined,
-    true,
-    DEFAULT_VIEW,
-    params.get(FOCUS_PARAM) ? undefined : "home",
-  );
+  const query = useHomeDay(params.get(FOCUS_PARAM) !== null);
   const address = addressFrom(params);
   const day = briefDay(query.data?.pages);
   const drawerOpen = params.get("queue") === "1";

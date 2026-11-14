@@ -4,6 +4,7 @@ import { unwrap } from "../../lib/problem";
 import { worklistKey } from "../../lib/workkeys";
 import { worklistDayOptions } from "../../lib/worklistday";
 import type { WorklistView } from "../../lib/worklistviews";
+import { DEFAULT_VIEW } from "../../lib/worklistviews";
 import type {
   TeamBoard,
   TeamExceptions,
@@ -40,6 +41,21 @@ export function useWorklist(
     ...worklistDayOptions(scope, filter, owner, view, shape),
     enabled,
   });
+}
+
+/**
+ * Home's day, in Home's own shape. A link that names a row reads the queue
+ * instead, because the row may be outside Focus and the day's meetings.
+ */
+export function useHomeDay(linksARow: boolean) {
+  return useWorklist(
+    "mine",
+    "all",
+    undefined,
+    true,
+    DEFAULT_VIEW,
+    linksARow ? undefined : "home",
+  );
 }
 
 /**

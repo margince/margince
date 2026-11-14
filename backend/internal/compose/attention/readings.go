@@ -191,7 +191,7 @@ func soonestLeadDue(
 			task.Subject.Type != crmcontracts.AttentionSubjectTypeLead || task.DueAt == nil {
 			continue
 		}
-		if soonest == nil || task.DueAt.Before(*soonest) {
+		if soonest == nil || task.DueAt.Compare(*soonest) < 0 {
 			soonest = task.DueAt
 		}
 	}
