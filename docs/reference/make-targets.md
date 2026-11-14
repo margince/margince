@@ -285,7 +285,7 @@ A weekly review is a frozen reading of one week, written once under `uq_weekly_r
 
 ### The `bench` lane: measurements, run by hand
 
-`bench-perf`, `bench-perf-check`, `bench-record`, `bench-ai`, `bench-coldstart`, `bench-capture`, `bench-dispatch`, `bench-daily`, `bench-worklist-backlog`, `bench-growth` and `home-budget-api` carry `//go:build integration && bench`, so no merge gate runs them: not `make check`, not the integration lane. They report the numbers behind the budgets `acceptance-standards.md` publishes, which is why each prints `p50`/`p95`/`p99` beside its budget. `bench-mobile` below is the frontend half of the same posture.
+The Go benchmarks in the table above, and `home-budget-api`, carry `//go:build integration && bench`, so no merge gate runs them: not `make check`, not the integration lane. They report the numbers behind the budgets `acceptance-standards.md` publishes, which is why each prints `p50`/`p95`/`p99` beside its budget. `bench-mobile` below is the frontend half of the same posture.
 
 They are still type-checked on every `make check`: both golangci passes carry the tag, and `gates/lintbuildtagreach_test.go` fails if either stops. Nothing else compiles these files, so this check is what catches a renamed helper before someone runs a benchmark by hand.
 
