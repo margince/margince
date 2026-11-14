@@ -4,9 +4,6 @@
 import { describe, expect, it } from "vitest";
 import { leadIdentityName } from "./leadname";
 
-// The same cases the server's own `TestLeadIdentityName` runs, because the two
-// answer one question and a browser that disagreed would draw a blank name
-// beside a promotion that names the lead by its address.
 describe("what a lead is called", () => {
   it("is its own name when it has one", () => {
     expect(leadIdentityName({ full_name: "Vera Lindqvist" })).toBe(
@@ -64,9 +61,6 @@ describe("what a lead is called", () => {
     );
   });
 
-  // A padded name over a padded address names nobody. Answering the padding
-  // would hand back a TRUTHY blank, and every caller's own last resort — the
-  // id, the word for a lead — is reached with `||` and would never fire.
   it("answers nothing when both fields are nothing but padding", () => {
     expect(leadIdentityName({ full_name: " ", email: "   " })).toBe("");
   });

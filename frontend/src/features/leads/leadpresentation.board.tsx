@@ -12,7 +12,6 @@ import {
 } from "../../design-system/pipelineboard";
 import { LoadMoreButton } from "../../design-system/querystates";
 import { formatNumber } from "../../format/format";
-import { leadIdentityName } from "../../format/leadname";
 import { translatePlural, useLocale, useT } from "../../i18n";
 import { leadWriteKeys } from "../../lib/leadkeys";
 import { originLabelFor, useLeadOrigins } from "../../lib/leadorigins";
@@ -25,6 +24,7 @@ import {
   useTerminalLeads,
 } from "./leadboard.queries";
 import { LeadCompanyName } from "./leadcompany";
+import { leadIdentityName } from "./leadname";
 import { openTaskCountLabel } from "./leadopentasks";
 import type { Lead } from "./leadpresentation";
 import { DisqualifyDialog } from "./leads.disqualify";

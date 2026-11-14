@@ -51,6 +51,7 @@ func (s *Store) DealLabels(ctx context.Context, want []ids.UUID) (map[ids.UUID]s
 	return labels, nil
 }
 
+// DealReferences returns scoped deal names and archive state without full detail reads.
 func (s *Store) DealReferences(ctx context.Context, want []ids.UUID) ([]crmcontracts.RecordReference, error) {
 	query, args, err := dealIdentityQuery(ctx, want, storekit.IncludeArchived, true)
 	if err != nil {
@@ -82,7 +83,7 @@ func (s *Store) DealReferences(ctx context.Context, want []ids.UUID) ([]crmcontr
 
 // Legacy labels keep their two-column projection and existing collector.
 func dealIdentityQuery(ctx context.Context, want []ids.UUID, archived storekit.ArchivedFilter, reference bool) (string, []any, error) {
-	if err := auth.Require(ctx, dealTable, principal.ActionRead); err != nil {
+	if err := auth.Require(ctx, maintenanceObject, principal.ActionRead); err != nil {
 		return "", nil, err
 	}
 	if len(want) == 0 {

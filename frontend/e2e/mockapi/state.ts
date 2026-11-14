@@ -174,6 +174,10 @@ export function createMockState(options: MockApiOptions = {}) {
       options.journey === "unstarted" || options.journey === "unconfigured",
     automations: [{ ...seededAutomation }],
     dealPatches,
+    recordReferences: new Map<
+      string,
+      components["schemas"]["RecordReference"]
+    >(),
     views: seededViews.map((view) => ({ ...view })),
     brief: {
       ...briefRun,

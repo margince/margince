@@ -14,6 +14,7 @@ import {
 import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { stable } from "../../format/collate";
 import { LocaleProvider } from "../../i18n";
 import { en } from "../../i18n/en";
 import type { FilterPreview, VocabularyField } from "../../lib/filterdata";
@@ -502,7 +503,7 @@ describe("a column that points at another record", () => {
           url.searchParams.get("kind") === "company",
       );
     expect(companyReads).toHaveLength(1);
-    expect(companyReads[0]?.searchParams.getAll("id").sort()).toEqual([
+    expect(companyReads[0]?.searchParams.getAll("id").sort(stable)).toEqual([
       "c-1",
       "c-2",
       "c-3",

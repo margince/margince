@@ -96,11 +96,11 @@ func identityQuery(ctx context.Context, object string, want []ids.UUID, archived
 	table, name, email, logo := "", "r.full_name", "NULL::text", "NULL::text"
 	switch object {
 	case contactEntity:
-		table = "contact"
+		table = contactEntity
 	case companyEntity:
-		table, name, logo = "company", "r.display_name", "r.logo_object_key"
+		table, name, logo = companyEntity, "r.display_name", "r.logo_object_key"
 	case leadEntity:
-		table, email = "lead", "r.email"
+		table, email = leadEntity, "r.email"
 	default:
 		return "", nil, apperrors.ErrInvalidArgument
 	}

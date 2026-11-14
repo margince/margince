@@ -385,6 +385,7 @@
     "GET /v1/read-views": "describe_views",
     "GET /v1/record-fields": "describe_record_fields",
     "GET /v1/record-roles": "read_view",
+    "GET /v1/records/references": "read_view",
     "GET /v1/records/{entity_type}/{entity_id}/lists": "read_view",
     "GET /v1/records/{entity_type}/{entity_id}/tags": "get_record_tags",
     "GET /v1/records/{entity_type}/{id}/history": "get_record_history",

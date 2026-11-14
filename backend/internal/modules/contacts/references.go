@@ -7,20 +7,24 @@ import (
 	"context"
 	"strings"
 
+	openapi_types "github.com/oapi-codegen/runtime/types"
+
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
-	openapi_types "github.com/oapi-codegen/runtime/types"
 )
 
+// ContactReferences returns visible contact identities, including archived records.
 func (s *Store) ContactReferences(ctx context.Context, want []ids.UUID) ([]crmcontracts.RecordReference, error) {
 	return s.recordReferences(ctx, contactEntity, want)
 }
 
+// CompanyReferences returns visible company identities with revisioned logos, including archives.
 func (s *Store) CompanyReferences(ctx context.Context, want []ids.UUID) ([]crmcontracts.RecordReference, error) {
 	return s.recordReferences(ctx, companyEntity, want)
 }
 
+// LeadReferences uses the detail name/email fallback for visible leads, including archives.
 func (s *Store) LeadReferences(ctx context.Context, want []ids.UUID) ([]crmcontracts.RecordReference, error) {
 	return s.recordReferences(ctx, leadEntity, want)
 }

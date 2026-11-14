@@ -2,7 +2,6 @@ import type { components } from "../../api/schema";
 import type { ReadingTone } from "../../design-system/readingtone";
 import { activityDay, type OccurredPrecision } from "../../format/activitywhen";
 import { formatDateAbbrev } from "../../format/format";
-import { leadIdentityName } from "../../format/leadname";
 import type { Locale, Translator } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
 import { labelFor } from "../../lib/labelfor";
@@ -10,6 +9,7 @@ import {
   disqualifyReasonLabel,
   type LeadDisqualifyReason,
 } from "./leadhandling";
+import { leadIdentityName } from "./leadname";
 
 type Lead = components["schemas"]["Lead"];
 

@@ -3,6 +3,7 @@ import { cleanup, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, expect, it, vi } from "vitest";
 import type { components } from "../../api/schema";
+import { stable } from "../../format/collate";
 import { en } from "../../i18n/en";
 import { briefKey } from "../../lib/workkeys";
 import { ranked } from "../../testing/brief.fixtures";
@@ -332,7 +333,7 @@ it("draws no quiet line when every deal under it is one the reader may no longer
   const { container } = render(<BriefSuggestions />);
   await user.click(await findOpener());
   await waitFor(() =>
-    expect([...referencedIDs].sort()).toEqual(["d-1", "d-2"]),
+    expect([...referencedIDs].sort(stable)).toEqual(["d-1", "d-2"]),
   );
   expect(calls.some((call) => call.path === "/records/references")).toBe(true);
   await waitFor(() =>

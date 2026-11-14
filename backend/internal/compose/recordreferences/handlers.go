@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-package compose
+package recordreferences
 
 import (
 	"context"
@@ -20,13 +20,20 @@ import (
 
 const maxRecordReferences = 100
 
-type recordReferenceHandlers struct {
+// Handlers serves bounded identity reads through the owning stores.
+type Handlers struct {
 	contacts *contacts.Store
 	deals    *deals.Store
 	projects *projects.Store
 }
 
-func (h recordReferenceHandlers) ReadRecordReferences(w http.ResponseWriter, r *http.Request, params crmcontracts.ReadRecordReferencesParams) {
+// NewHandlers shares the stores used by the full record readers.
+func NewHandlers(contactsStore *contacts.Store, dealsStore *deals.Store, projectsStore *projects.Store) Handlers {
+	return Handlers{contacts: contactsStore, deals: dealsStore, projects: projectsStore}
+}
+
+// ReadRecordReferences keeps requested order while omitting unreadable rows.
+func (h Handlers) ReadRecordReferences(w http.ResponseWriter, r *http.Request, params crmcontracts.ReadRecordReferencesParams) {
 	object := string(params.Kind)
 	switch object {
 	case "contact", "company", "lead", "deal", "project":
@@ -69,7 +76,7 @@ func (h recordReferenceHandlers) ReadRecordReferences(w http.ResponseWriter, r *
 	httperr.WriteJSON(w, http.StatusOK, crmcontracts.RecordReferenceListResponse{Data: ordered})
 }
 
-func (h recordReferenceHandlers) read(ctx context.Context, kind string, want []ids.UUID) ([]crmcontracts.RecordReference, error) {
+func (h Handlers) read(ctx context.Context, kind string, want []ids.UUID) ([]crmcontracts.RecordReference, error) {
 	switch kind {
 	case "contact":
 		return h.contacts.ContactReferences(ctx, want)

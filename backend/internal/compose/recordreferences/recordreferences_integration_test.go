@@ -3,26 +3,26 @@
 
 //go:build integration
 
-package compose
+package recordreferences_test
 
 import (
 	"context"
 	"encoding/json"
 	"errors"
-	"log/slog"
 	"maps"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
 	"reflect"
+	"slices"
 	"testing"
 
 	"github.com/go-chi/chi/v5"
+
 	"github.com/margince/margince/backend/internal/compose/integration"
+	"github.com/margince/margince/backend/internal/compose/recordreferences"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/contacts"
-	"github.com/margince/margince/backend/internal/modules/deals"
-	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
@@ -30,8 +30,18 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
+// Only the reference route is exercised here; production wiring is covered in compose/integration.
+type referenceServer struct {
+	crmcontracts.ServerInterface
+	handlers recordreferences.Handlers
+}
+
+func (s referenceServer) ReadRecordReferences(w http.ResponseWriter, r *http.Request, params crmcontracts.ReadRecordReferencesParams) {
+	s.handlers.ReadRecordReferences(w, r, params)
+}
+
 func referenceRouter(e *integration.Env) http.Handler {
-	server := newServer(e.Pool, slog.New(slog.DiscardHandler), identity.NewHandlers(identity.NewService(e.Pool)), deals.NewHandlers(InstallationDB(e.Pool), DealsInstallation()))
+	server := referenceServer{handlers: recordreferences.NewHandlers(e.Contacts, e.Deals, e.Projects)}
 	return crmcontracts.HandlerFromMuxWithBaseURL(server, chi.NewRouter(), "/v1")
 }
 
@@ -122,7 +132,8 @@ func TestRecordReferencesPreserveBoundsOrderAndObjectDenials(t *testing.T) {
 			if got := referenceResponse(t, referenceRequest(e.Admin(), router, kind, hundred...)); len(got) != 1 {
 				t.Fatalf("100 ids: %+v", got)
 			}
-			tooMany := append(hundred, first.id)
+			tooMany := slices.Clone(hundred)
+			tooMany = append(tooMany, first.id)
 			if response := referenceRequest(e.Admin(), router, kind, tooMany...); response.Code != 422 {
 				t.Fatalf("101 ids: %d %s", response.Code, response.Body.String())
 			}

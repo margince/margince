@@ -15,6 +15,7 @@ import (
 	"github.com/margince/margince/backend/internal/compose/companybrief"
 	"github.com/margince/margince/backend/internal/compose/companydossier"
 	"github.com/margince/margince/backend/internal/compose/companyscan"
+	"github.com/margince/margince/backend/internal/compose/recordreferences"
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/modules/customfields"
@@ -58,7 +59,7 @@ func (s *Server) wireSystemOfRecordReads(pool *pgxpool.Pool) {
 	}
 	s.marginceChangeHandlers = newMarginceChangeHandlers(pool)
 	s.claimHandlers = claimHandlers{contacts: s.contactsStore, deals: deals.NewStore(InstallationDB(pool), DealsInstallation())}
-	s.recordReferenceHandlers = recordReferenceHandlers{contacts: s.contactsStore, deals: s.claimHandlers.deals, projects: ProjectsStore(pool)}
+	s.recordReferenceHandlers = recordreferences.NewHandlers(s.contactsStore, s.claimHandlers.deals, ProjectsStore(pool))
 	s.ownershipRequestHandlers = ownershipRequestHandlers{transfers: newOwnershipTransfers(pool)}
 	s.dealCommitmentHandlers = newDealCommitmentHandlers(pool, time.Now)
 	s.promiseTakeOverHandlers = newPromiseTakeOverHandlers(pool)

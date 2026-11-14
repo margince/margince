@@ -6,7 +6,7 @@
     "required_only_as_one_of_a_set": 3,
     "never_driven": 8,
     "permitted_but_never_required": 3,
-    "tokens_served_but_never_driven": 6443,
+    "tokens_served_but_never_driven": 6461,
     "use_case_cases": 73,
     "acceptance_criteria_named": 120,
     "tools_added_by_shipped_units": 0,
@@ -3901,7 +3901,7 @@
   "tools": [
     {
       "name": "read_view",
-      "tokens": 1871,
+      "tokens": 1889,
       "agents": [],
       "required_by_cases": [],
       "required_as_one_of_a_set_by_cases": [],

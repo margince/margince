@@ -46,6 +46,7 @@ func (s *Store) ProjectLabels(ctx context.Context, want []ids.UUID) (map[ids.UUI
 	return labels, nil
 }
 
+// ProjectReferences returns scoped project names and archive state without full detail reads.
 func (s *Store) ProjectReferences(ctx context.Context, want []ids.UUID) ([]crmcontracts.RecordReference, error) {
 	query, args, err := projectIdentityQuery(ctx, want, storekit.IncludeArchived, true)
 	if err != nil {
