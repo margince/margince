@@ -5,7 +5,7 @@
 // entity kind, keyed and cached), as opposed to the components that render
 // them, which stay in entityref.tsx.
 
-import { useQuery } from "@tanstack/react-query";
+import { type UseQueryOptions, useQuery } from "@tanstack/react-query";
 import { api } from "../api/client";
 import { leadIdentityName } from "../format/leadname";
 import type { EntityKind } from "../lib/entity";
@@ -141,27 +141,43 @@ export async function fetchEntityReference(
   return reference;
 }
 
-/**
- * The query every reader of one record's name shares: the same key, reader and
- * freshness, so a name one surface read costs another nothing.
- *
- * A batched read does not retry on its own. Each retry would open its own
- * window after the batch closed, one request per name. The name is asked again
- * on the next invalidation instead.
- */
-export function entityNameQuery(kind: EntityKind, id: string) {
+// Non-company readers share a cached display name; companies share rich references.
+export function entityNameQuery(
+  kind: Exclude<EntityKind, "company">,
+  id: string,
+) {
   return {
     queryKey: [kind, ENTITY_NAME_KEY, id],
-    queryFn:
-      kind === "company"
-        ? () => fetchEntityName(kind, id)
-        : ({ signal }: { signal: AbortSignal }) =>
-            fetchEntityName(kind, id, signal),
+    queryFn: ({ signal }: { signal: AbortSignal }) =>
+      fetchEntityName(kind, id, signal),
     // References change rarely relative to the pages that render them; a short
     // cache keeps a 360 from re-fetching the same name on every hover/refetch.
     staleTime: 60_000,
-    ...(kind === "company" ? { retry: false } : {}),
   } as const;
+}
+
+// Retrying a failed batch here would send a separate request for each company.
+export function companyReferenceQuery(id: string) {
+  return {
+    queryKey: ["company", ENTITY_NAME_KEY, id, "reference"],
+    // The batch serves other observers too; keep its answer after unmount.
+    queryFn: () => NAME_READERS.company(id),
+    staleTime: 60_000,
+    retry: false,
+  } as const;
+}
+
+export function entityNameObserverQuery(
+  kind: EntityKind,
+  id: string,
+): UseQueryOptions<EntityReference | string | null, Error, string | null> {
+  const options =
+    kind === "company" ? companyReferenceQuery(id) : entityNameQuery(kind, id);
+  return {
+    ...options,
+    select: (value: EntityReference | string | null) =>
+      typeof value === "string" ? value : (value?.name ?? null),
+  };
 }
 
 /**
@@ -222,8 +238,7 @@ export function useEntityName(
   id: string | null | undefined,
 ): { name: string | null; reading: NameReading; fetching: boolean } {
   const query = useQuery({
-    ...entityNameQuery(kind, id ?? ""),
-    queryKey: [kind, ENTITY_NAME_KEY, id],
+    ...entityNameObserverQuery(kind, id ?? ""),
     enabled: Boolean(id),
   });
   // The reading travels with the name, because a caller handed only `null`
