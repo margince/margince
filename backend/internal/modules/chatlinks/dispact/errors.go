@@ -18,12 +18,13 @@ var (
 	ErrChannelGone = errors.New("dispact: the channel is gone")
 	// ErrUnreachable means the chat could not be reached or answered with a fault.
 	ErrUnreachable = errors.New("dispact: the chat could not be reached")
-	// ErrRequestRejected means the chat refused the request as malformed.
+	// ErrRequestRejected means the chat refused the request as malformed, or as
+	// one it will not do, such as a name already taken.
 	ErrRequestRejected = errors.New("dispact: the chat refused the request")
 )
 
 // StatusError keeps the HTTP status of a refusal next to its typed meaning.
-// A caller that needs the exact status, such as a 409 on create, reads it.
+// A log then names the status a proxy in front of Dispact answered.
 type StatusError struct {
 	Route   string
 	Status  int
@@ -36,9 +37,17 @@ func (e *StatusError) Error() string {
 
 func (e *StatusError) Unwrap() error { return e.wrapped }
 
-func statusOf(err error) (int, bool) {
-	if status, ok := errors.AsType[*StatusError](err); ok {
-		return status.Status, true
-	}
-	return 0, false
+// CodeError keeps the error code of a refusal Dispact sent with HTTP 200
+// next to its typed meaning. The code is Dispact's fixed vocabulary, never
+// channel content, so it may reach a log.
+type CodeError struct {
+	Route   string
+	Code    string
+	wrapped error
 }
+
+func (e *CodeError) Error() string {
+	return fmt.Sprintf("dispact: %s: refused with %q: %v", e.Route, e.Code, e.wrapped)
+}
+
+func (e *CodeError) Unwrap() error { return e.wrapped }

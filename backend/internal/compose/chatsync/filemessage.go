@@ -72,7 +72,7 @@ func (f *Filer) FileMessage(ctx context.Context, kind string, id ids.UUID, ref s
 	if thread {
 		key = link.ChannelSlug + ":" + strconv.FormatInt(seq, 10) + ":thread"
 	}
-	url := chatlinks.ChannelURL(session.Address, link.ChannelSlug) + "?seq=" + strconv.FormatInt(seq, 10)
+	url := chatlinks.ChannelURL(session.Address, link.ChannelSlug)
 	return fileNote(ctx, filing{pool: f.Pool, store: f.Store, acts: f.Activities, link: link}, talkOf(key, url, messages), reply)
 }
 
@@ -92,7 +92,7 @@ func chosenMessages(ctx context.Context, chat chatlinks.Chat, link chatlinks.Lin
 			return true
 		}
 		return thread && anchor != nil && judged(m) && postedSinceLink(m, link) && m.ThreadTS != "" &&
-			(m.ThreadTS == anchor.ThreadTS || m.ThreadTS == anchor.ID)
+			(m.ThreadTS == anchor.ThreadTS || m.ThreadTS == anchor.TS)
 	})
 	if err != nil {
 		return nil, chatlinks.ChatFailure(err)
@@ -115,12 +115,6 @@ func messageSeq(ref, slug string) (int64, bool) {
 	if inner, ok := strings.CutPrefix(ref, "<m:"); ok {
 		ref, _, _ = strings.Cut(strings.TrimSuffix(inner, ">"), "|")
 	}
-	if before, after, found := strings.Cut(ref, "?seq="); found {
-		if channelSlugOfLink(before) != slug {
-			return 0, false
-		}
-		ref = after
-	}
 	if channel, number, found := strings.Cut(ref, ":"); found {
 		if strings.ToLower(strings.TrimPrefix(channel, "#")) != slug {
 			return 0, false
@@ -130,10 +124,4 @@ func messageSeq(ref, slug string) (int64, bool) {
 	}
 	seq, err := strconv.ParseInt(ref, 10, 64)
 	return seq, err == nil && seq > 0
-}
-
-// channelSlugOfLink is the last path segment of a channel link.
-func channelSlugOfLink(link string) string {
-	link = strings.TrimRight(link, "/")
-	return strings.ToLower(link[strings.LastIndex(link, "/")+1:])
 }

@@ -63,7 +63,7 @@ func TestEverySourceOffersAWayOffTheList(t *testing.T) {
 		}
 		switch {
 		case placed == 0:
-			t.Errorf("a %q row has no way off the list: offer Done in doneInPlace, name the verb "+
+			t.Errorf("a %q row has no way off the list: set done_in_place in api/worklist-kinds.yaml, name the verb "+
 				"that clears it in leavesByItsOwnVerb, or say in leavesElsewhere why it cannot", source)
 		case placed > 1:
 			t.Errorf("%q is placed %d ways; keep the one that is true, so the census says one thing", source, placed)

@@ -157,6 +157,7 @@ internal/compose/integration/grants_integration_test.go 3
 internal/compose/integration/growthfit_e2e_integration_test.go 1
 internal/compose/integration/home_budget_bench_test.go 2
 internal/compose/integration/home_budget_seed_bench_test.go 2
+internal/compose/integration/home_growth_seed_bench_test.go 1
 internal/compose/integration/idempotency_integration_test.go 2
 internal/compose/integration/installation_integration_test.go 1
 internal/compose/integration/installationseam_integration_test.go 1
@@ -438,6 +439,7 @@ internal/platform/jobs/softstop_integration_test.go 1
 internal/platform/jobs/stats_integration_test.go 17
 internal/platform/jobs/sweepinflight_integration_test.go 2
 internal/platform/storedobjects/storedobjects_integration_test.go 2
+internal/platform/testdb/roundtrips.go 1
 internal/shared/kernel/events/events_test.go 1
 internal/shared/kernel/relstrength/relstrength_test.go 4
 migrations/capturedmailanswersnotice_integration_test.go 2

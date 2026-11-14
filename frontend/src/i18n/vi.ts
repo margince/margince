@@ -11929,6 +11929,10 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "{count} thành viên được mời chưa có tài khoản chat.",
   "channelLink.notInChat_other":
     "{count} thành viên được mời chưa có tài khoản chat.",
+  "channelLink.notAdded_one":
+    "{count} thành viên được mời chưa được thêm vào. Kiểm tra phạm vi truy cập của ứng dụng trong Dispact.",
+  "channelLink.notAdded_other":
+    "{count} thành viên được mời chưa được thêm vào. Kiểm tra phạm vi truy cập của ứng dụng trong Dispact.",
   "channelLink.pausedBadge": "Tạm dừng",
   "channelLink.paused": "Kênh đang tạm dừng",
   "channelLink.pausedBody":

@@ -18,6 +18,7 @@ import (
 	"time"
 
 	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/margince/margince/backend/internal/compose/homecache"
 	"github.com/margince/margince/backend/internal/compose/integration/apptest"
@@ -74,7 +75,7 @@ func TestHomeBudget(t *testing.T) {
 	e.BootstrapWorkspace(t)
 	e.DescribeCompany(t)
 	start := time.Now()
-	profile := seedHomeProfile(t, e, createDailySeats(t, e))
+	profile := seedHomeProfile(t, e, createDailySeats(t, e), homeBudgetScale)
 	t.Logf("home-budget: seed %s", time.Since(start).Round(time.Millisecond))
 	database.ResetLargestSQLStatementBytes()
 
@@ -368,8 +369,14 @@ func cacheHits(t *testing.T, e *apptest.AppEnv, s Seat, timed []dailyCall, since
 // remains part of the cold read. Database buffers remain warm.
 func coldBoot(t *testing.T, e *apptest.AppEnv) *apptest.AppEnv {
 	t.Helper()
+	return coldBootWith(t, e, nil)
+}
+
+// coldBootWith is coldBoot over a pool whose config tune has changed.
+func coldBootWith(t *testing.T, e *apptest.AppEnv, tune func(*pgxpool.Config)) *apptest.AppEnv {
+	t.Helper()
 	ctx := context.Background()
-	booted := e.Reboot(t)
+	booted := e.RebootWith(t, tune)
 	conn, err := booted.Pool.Acquire(ctx)
 	if err != nil {
 		t.Fatalf("dialling the rebooted pool: %v", err)

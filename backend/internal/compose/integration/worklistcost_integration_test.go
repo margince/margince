@@ -32,12 +32,13 @@ var worklistStages = []string{
 }
 
 // worklistOutsideStatements counts BEGIN, COMMIT, the reads before the day is
-// assembled, and the snapshot's plan-mode setup and restore.
-const worklistOutsideStatements = 8
+// assembled, and the snapshot's plan-mode setup and restore. A lane's deferred
+// savepoint statements count where the exchange that carries them does.
+const worklistOutsideStatements = 9
 
 // The seeded read includes every bound lane and an open task. Lower this
 // pgx-call ceiling when a batch or empty-set shortcut removes calls.
-const worklistExchangeBudget = 105
+const worklistExchangeBudget = 76
 
 const worklistRoundTripBudget = worklistExchangeBudget
 

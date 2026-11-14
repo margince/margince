@@ -27,7 +27,8 @@ func humanWith(objects map[string]principal.ObjectGrant) context.Context {
 func manifestAt(ctx context.Context, base string) *httptest.ResponseRecorder {
 	rec := httptest.NewRecorder()
 	req := httptest.NewRequestWithContext(ctx, http.MethodGet, "/v1/integrations/dispact/manifest", nil)
-	Handlers{}.WithManifestBase(func() string { return base }).GetDispactAppManifest(rec, req)
+	publisher := func(context.Context) (string, error) { return "admin@crm.example.test", nil }
+	Handlers{publisher: publisher}.WithManifestBase(func() string { return base }).GetDispactAppManifest(rec, req)
 	return rec
 }
 
@@ -45,8 +46,13 @@ func TestTheManifestIsBuiltFromThePublicBaseURL(t *testing.T) {
 		got.Events.Url != "https://crm.example.test/v1/channel-events/dispact" {
 		t.Fatalf("the manifest is %+v", got)
 	}
-	if got.Scopes != "chat:write:channel channel:create channel:members:write users:read:email channel:history:read channel:files:read" {
+	want := []string{"chat:write:channel", "channel:create", "channel:members:write", "users:read:email", "channel:history:read", "channel:files:read"}
+	if !slices.Equal(got.Scopes, want) {
 		t.Fatalf("the manifest asks for scopes %q", got.Scopes)
+	}
+	if got.ManifestVersion != "1" || got.Publisher.Email != "admin@crm.example.test" || got.Bot.DisplayName == "" ||
+		got.Description == "" || got.IconUrl != "https://crm.example.test/icon.svg" || got.Version == "" || got.Security.TokenTtlSeconds <= 0 {
+		t.Fatalf("the manifest lacks a field Dispact requires: %+v", got)
 	}
 	if !slices.Equal(got.Events.Types, []string{"message.created", "thread.replied", "message.updated", "channel.archived"}) {
 		t.Fatalf("the manifest subscribes to %v", got.Events.Types)

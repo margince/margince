@@ -7,15 +7,11 @@ package chatsync
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
-	"fmt"
 	"log/slog"
-	"net/http"
 	"net/http/httptest"
 	"strconv"
 	"strings"
-	"sync"
 	"testing"
 	"time"
 
@@ -24,6 +20,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/chatlinks"
 	"github.com/margince/margince/backend/internal/modules/chatlinks/dispact"
+	"github.com/margince/margince/backend/internal/modules/chatlinks/dispact/dispacttest"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -33,40 +30,6 @@ import (
 
 // linkedAt is when the test link was made; talk before it is history.
 var linkedAt = time.Date(2026, 11, 10, 8, 0, 0, 0, time.UTC)
-
-// historyChat is the chat's history API: messages per channel, and the
-// channels a pull asked for.
-type historyChat struct {
-	mu       sync.Mutex
-	channels map[string][]dispact.Message
-	read     map[string]int
-}
-
-func (h *historyChat) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	h.mu.Lock()
-	defer h.mu.Unlock()
-	slug, ok := strings.CutPrefix(strings.TrimSuffix(r.URL.Path, "/messages"), "/api/bot/channels/")
-	if r.Method != http.MethodGet || !ok {
-		w.WriteHeader(http.StatusNotFound)
-		return
-	}
-	h.read[slug]++
-	after, _ := strconv.ParseInt(r.URL.Query().Get("after"), 10, 64) //craft:ignore swallowed-errors a missing after reads from the start
-	limit, _ := strconv.Atoi(r.URL.Query().Get("limit"))             //craft:ignore swallowed-errors the client always sends a limit
-	page := dispact.HistoryPage{Messages: []dispact.Message{}}
-	for _, m := range h.channels[slug] {
-		if m.Seq > after && len(page.Messages) < limit {
-			page.Messages = append(page.Messages, m)
-		}
-	}
-	if n := len(page.Messages); n == limit && page.Messages[n-1].Seq < h.channels[slug][len(h.channels[slug])-1].Seq {
-		next := page.Messages[n-1].Seq
-		page.NextCursor = &next
-	}
-	if err := json.NewEncoder(w).Encode(page); err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
-	}
-}
 
 // scriptedSummary answers like the episode site: talk about lunch does not
 // matter, anything else does and is summarised in fixed words.
@@ -83,7 +46,7 @@ func (s *scriptedSummary) Complete(_ context.Context, req model.Request) (model.
 
 type pullEnv struct {
 	*flushEnv
-	history *historyChat
+	history *dispacttest.Server
 	lane    *scriptedSummary
 	puller  *Puller
 	filer   *Filer
@@ -98,7 +61,9 @@ func setupPull(t *testing.T) *pullEnv {
 	if err := e.owner.QueryRow(context.Background(), `SELECT connection_id FROM chat_link WHERE id = $1`, e.link).Scan(&e.conn); err != nil {
 		t.Fatal(err)
 	}
-	e.history = &historyChat{channels: map[string][]dispact.Message{}, read: map[string]int{}}
+	e.history = dispacttest.New("team")
+	e.history.AddChannel("acme")
+	e.history.AddChannel("other")
 	srv := httptest.NewServer(e.history)
 	t.Cleanup(srv.Close)
 	db := database.BindTo(e.pool, ids.From[ids.WorkspaceKind](e.ws))
@@ -114,10 +79,14 @@ func setupPull(t *testing.T) *pullEnv {
 
 // say adds a message to a channel, minutes after the link was made.
 func (e *pullEnv) say(slug string, seq int64, minutes int, text string) {
-	e.history.channels[slug] = append(e.history.channels[slug], dispact.Message{
-		ID: fmt.Sprintf("m%d", seq), Seq: seq, UserName: "Rita Rep", Text: text,
-		PostedAt: linkedAt.Add(time.Duration(minutes) * time.Minute),
-	})
+	e.sayIn(slug, dispacttest.Message{Seq: seq, Text: text}, minutes)
+}
+
+// sayIn adds a message shaped by the test, as Rita Rep, minutes after the
+// link was made.
+func (e *pullEnv) sayIn(slug string, m dispacttest.Message, minutes int) {
+	m.UserName, m.PostedAt = "Rita Rep", linkedAt.Add(time.Duration(minutes)*time.Minute)
+	e.history.Seed(slug, m)
 }
 
 func (e *pullEnv) pull(t *testing.T) {
@@ -173,8 +142,8 @@ func TestAPullFilesOneNoteForAClosedEpisodeAndAReplayFilesNone(t *testing.T) {
 	if !strings.HasPrefix(notes[0].body, "The team agreed a discount for the renewal.") {
 		t.Errorf("body = %q, want the summary", notes[0].body)
 	}
-	if notes[0].raw["message_count"] != float64(2) || !strings.HasSuffix(notes[0].raw["url"].(string), "/channels/acme?seq=1") {
-		t.Errorf("raw = %v, want the episode's count and the link to its first message", notes[0].raw)
+	if notes[0].raw["message_count"] != float64(2) || !strings.HasSuffix(notes[0].raw["url"].(string), "/channels/acme") {
+		t.Errorf("raw = %v, want the episode's count and the link to its channel", notes[0].raw)
 	}
 	if c := e.cursor(t); c == nil || *c != 2 {
 		t.Fatalf("cursor = %v, want 2: the open episode at seq 3 stays after it", c)
@@ -254,8 +223,8 @@ func TestEachLinkReadsAndFilesOnlyItsOwnChannel(t *testing.T) {
 	e.say("acme", 1, 60, "Acme wants 12% off")
 	e.pull(t)
 
-	if e.history.read["other"] == 0 || e.history.read["acme"] == 0 {
-		t.Fatalf("reads = %v, want both channels read", e.history.read)
+	if e.history.Reads("other") == 0 || e.history.Reads("acme") == 0 {
+		t.Fatalf("reads = %d of other and %d of acme, want both channels read", e.history.Reads("other"), e.history.Reads("acme"))
 	}
 	if notes := e.notes(t); len(notes) != 1 || notes[0].sourceID != "acme:1" {
 		t.Fatalf("the deal's notes = %+v, want only its own channel's acme:1", notes)
@@ -305,12 +274,9 @@ func TestAChosenMessageFromBeforeTheLinkAnswersAsMissing(t *testing.T) {
 
 func TestAChosenThreadLeavesOutAReplyStampedBeforeTheLink(t *testing.T) {
 	e := setupPull(t)
-	e.say("acme", 1, 60, "Can we do 12%?")
-	e.say("acme", 2, -30, "Stamped before the link")
-	e.say("acme", 3, 70, "Yes, 12% is fine")
-	for i := range e.history.channels["acme"][1:] {
-		e.history.channels["acme"][i+1].ThreadTS = "m1"
-	}
+	e.sayIn("acme", dispacttest.Message{Seq: 1, Text: "Can we do 12%?", ReplyCount: 2}, 60)
+	e.sayIn("acme", dispacttest.Message{Seq: 2, Text: "Stamped before the link", ThreadSeq: 1}, -30)
+	e.sayIn("acme", dispacttest.Message{Seq: 3, Text: "Yes, 12% is fine", ThreadSeq: 1}, 70)
 	note, err := e.filer.FileMessage(e.memberCtx(), chatlinks.RecordDeal, e.deal, "1", true)
 	if err != nil {
 		t.Fatal(err)
@@ -420,11 +386,9 @@ func TestAnEpisodeThatFillsTheWholeReadIsFiledSoTheLinkMovesOn(t *testing.T) {
 
 func TestAThreadLongerThanOneReadIsNotFiledInPart(t *testing.T) {
 	e := setupPull(t)
-	for seq := int64(1); seq <= 600; seq++ {
-		e.say("acme", seq, 60, "Thread talk")
-	}
-	for i := range e.history.channels["acme"][1:] {
-		e.history.channels["acme"][i+1].ThreadTS = "m1"
+	e.sayIn("acme", dispacttest.Message{Seq: 1, Text: "Thread talk", ReplyCount: 599}, 60)
+	for seq := int64(2); seq <= 600; seq++ {
+		e.sayIn("acme", dispacttest.Message{Seq: seq, Text: "Thread talk", ThreadSeq: 1}, 60)
 	}
 	if _, err := e.filer.FileMessage(e.memberCtx(), chatlinks.RecordDeal, e.deal, "1", true); !errors.Is(err, chatlinks.ErrThreadTooLong) {
 		t.Fatalf("filing a long thread = %v, want ErrThreadTooLong", err)

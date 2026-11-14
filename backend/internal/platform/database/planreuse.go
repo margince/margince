@@ -70,6 +70,9 @@ SELECT previous.mode, set_config('plan_cache_mode', 'force_generic_plan', true) 
 		statement = `WITH previous AS MATERIALIZED (SELECT current_setting('plan_cache_mode') AS mode)
 SELECT previous.mode, set_config('plan_cache_mode', 'force_custom_plan', true) FROM previous`
 	}
+	if deferred, ok := deferredOf(tx); ok {
+		return deferredPlanCacheMode(deferred, statement, fn)
+	}
 	if err := tx.QueryRow(ctx, statement).Scan(&before, &forced); err != nil {
 		return fmt.Errorf("pg: setting plan_cache_mode %s: %w", mode, err)
 	}
@@ -83,6 +86,20 @@ SELECT previous.mode, set_config('plan_cache_mode', 'force_custom_plan', true) F
 	if restoreErr := setPlanCacheMode(ctx, tx, before); restoreErr != nil {
 		return errors.Join(err, restoreErr)
 	}
+	return err
+}
+
+// deferredPlanCacheMode is withPlanCacheMode on a snapshot that carries the
+// mode and its restore on the exchanges around fn.
+func deferredPlanCacheMode(tx *deferredTx, statement string, fn func() error) error {
+	var before, forced string
+	scope := tx.open(deferredStatement{sql: statement, scan: func(row pgx.Row) error { return row.Scan(&before, &forced) }, opens: true})
+	err := fn()
+	if aborted(tx) {
+		tx.drop(scope)
+		return err
+	}
+	tx.close(scope, deferredStatement{sql: "SELECT set_config('plan_cache_mode', $1, true)", args: []any{before}})
 	return err
 }
 

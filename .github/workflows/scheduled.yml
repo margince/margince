@@ -51,6 +51,11 @@ name: scheduled
 #                        tests read a recording of the vendor's API, which stays
 #                        green when the vendor changes it.
 #
+#   home growth        — Home's reads as the bench mail grows a year per step,
+#                        nightly. It fits how a read grows and fails when one is
+#                        predicted to reach 10 s within the horizon. Too slow
+#                        for a merge gate, and growth is a calendar question.
+#
 #   role sweep         — every MCP tool and action called as every seeded role,
 #                        weekly. It takes longer than a merge-gate shard allows,
 #                        so the per-PR lane holds the committed matrix to the
@@ -101,6 +106,10 @@ on:
         default: false
       roles:
         description: "Also run the MCP role sweep (`make test-roles`, about an hour on a runner)"
+        type: boolean
+        default: false
+      growth:
+        description: "Also run the Home growth bench (`make bench-growth`, the nightly size)"
         type: boolean
         default: false
 
@@ -1206,12 +1215,59 @@ jobs:
       - name: The role sweep
         run: make test-roles
 
+  # Home's growth bench, on the nightly cron. The step tells a measured breach
+  # from a lane that never got to measure, as perf-budgets does: only the
+  # test's own breach line says a budget broke.
+  home-growth:
+    name: home growth bench (nightly)
+    outputs:
+      outcome: ${{ steps.bench.outputs.outcome }}
+    if: github.event.schedule == '0 1 * * *' || (github.event_name == 'workflow_dispatch' && inputs.growth)
+    runs-on: ubuntu-latest
+    # The target's go-test timeout is 45 minutes; this leaves room for setup.
+    timeout-minutes: 60
+    permissions:
+      contents: read
+    defaults:
+      run:
+        working-directory: .
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version-file: backend/go.mod
+          cache-dependency-path: backend/go.sum
+      - name: Restore the Go build cache
+        uses: ./.github/actions/go-build-cache
+        with:
+          flavor: integration
+      - name: Start the dev infra stack (compose + app role)
+        run: make db-up
+      - name: Home growth bench
+        id: bench
+        env:
+          MARGINCE_BENCH_GROWTH_STEPS: "4"
+        run: |
+          set -o pipefail
+          if make bench-growth BENCH_GROWTH_TIMEOUT=45m 2>&1 | tee growth.log; then
+            echo "outcome=ok" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          if grep -q "home-growth: breach" growth.log; then
+            echo "outcome=breach" >> "$GITHUB_OUTPUT"
+          else
+            echo "outcome=lane-failed" >> "$GITHUB_OUTPUT"
+          fi
+          exit 1
+
   # The one job holding `issues: write`, and it runs no build code — the same
   # permission isolation sbom.yml's signing job uses. It must RUN when an upstream
   # fails, so it is guarded on !cancelled() rather than needs alone.
   report:
     name: report
-    needs: [vuln, quality-gate, renovate-liveness, backend-clock-drift, fe-clock-drift, fe-all-stories, perf-budgets, perf-mobile, llm-use-cases, records, records-pr, reap-caches, slop-trend, vendor-live, role-sweep]
+    needs: [vuln, quality-gate, renovate-liveness, backend-clock-drift, fe-clock-drift, fe-all-stories, perf-budgets, perf-mobile, llm-use-cases, records, records-pr, reap-caches, slop-trend, vendor-live, role-sweep, home-growth]
     # Every result, not only the failures — see the same condition in
     # main-health.yml for why. In short: the reporter now retracts a finding
     # whose check came back green, and a job gated on a failure is never reached
@@ -1270,4 +1326,6 @@ jobs:
           VENDOR_LIVE_OUTCOME: ${{ needs['vendor-live'].outputs.outcome }}
           VENDOR_LIVE_DETAIL: ${{ needs['vendor-live'].outputs.detail }}
           ROLE_SWEEP_RESULT: ${{ needs['role-sweep'].result }}
+          GROWTH_RESULT: ${{ needs['home-growth'].result }}
+          GROWTH_OUTCOME: ${{ needs['home-growth'].outputs.outcome }}
         run: ./scripts/scheduled-report.sh
