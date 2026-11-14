@@ -54,5 +54,15 @@
   },
   "system_reads": [
     "deals"
+  ],
+  "needs": [
+    {
+      "capability": "models",
+      "reason": "Summarises a deal's changes in one sentence."
+    },
+    {
+      "capability": "objects",
+      "reason": "Keeps the summaries it writes."
+    }
   ]
 }

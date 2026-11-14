@@ -140,6 +140,9 @@ func fileReleaseHandbook(ctx context.Context, pool *pgxpool.Pool, logger *slog.L
 // Returns the bootstrap roots the later phases seed from, and the
 // license watcher whose posture baseComposeOptions reports.
 func bindInstallation(ctx context.Context, cfg apiConfig, pool *pgxpool.Pool, vault keyvault.Vault, logger *slog.Logger) (deployconfig.Bootstrap, *licensecheck.Watcher, error) {
+	if err := compose.BindExtensionObjectsFromConfig(ctx, cfg.settings); err != nil {
+		return deployconfig.Bootstrap{}, nil, err
+	}
 	files := cfg.settings.Files()
 	bootstrap, err := deployconfig.LoadBootstrapFiles(files.Base, files.ConfigFile)
 	if err != nil {
@@ -382,10 +385,7 @@ func inlineRelayLane(ctx context.Context, cfg apiConfig, pool *pgxpool.Pool, lic
 // surface over it, returning the path so the job-handoff lanes bind to the
 // same one.
 func modelSurfaceOptions(ctx context.Context, cfg apiConfig, bootstrap deployconfig.Bootstrap, pool *pgxpool.Pool, logger *slog.Logger) ([]compose.Option, *compose.ModelPath, error) {
-	// ONE resolution point: coldStartOptions, offerDraftOptions and the
-	// /readyz AI line all consume the same *compose.ModelPath rather than
-	// each running their own copy of the declared-routing/--ai-fake/
-	// neither switch (and, with it, their own Router, cache and budget).
+	// One resolution point: every consumer below shares one router and budget.
 	modelPath, aiState, assistantProfile, routingVersion, err := resolveModelPath(
 		ctx, modelPathSpecFrom(cfg, bootstrap), pool, logger,
 	)

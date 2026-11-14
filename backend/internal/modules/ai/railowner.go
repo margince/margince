@@ -109,6 +109,7 @@ var railOwners = map[Task]string{
 	TaskDealHealth:                    SourceRouter,
 	TaskDraftReply:                    SourceRouter,
 	TaskEnrich:                        SourceRouter,
+	TaskExtensionCall:                 SourceRouter,
 	TaskGrowthFit:                     SourceRouter,
 	TaskNlSearch:                      SourceRouter,
 	TaskOfferDraft:                    SourceRouter,

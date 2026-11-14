@@ -68433,6 +68433,27 @@ components:
             with no handler ticks nothing and is deliberately absent, because an operator
             reading this list is asking what runs, not what was written down. Sorted.
           items: { type: string }
+        needs:
+          type: array
+          description: >-
+            The core capabilities the unit declares it uses, each with the reason its author gave.
+            The core grants exactly these and refuses the rest, so this list is the whole of what
+            the unit can borrow from the core (its AI models, its object store). Sorted by
+            capability; absent for a unit that declares none.
+          items: { $ref: '#/components/schemas/ComposedExtensionNeed' }
+
+    ComposedExtensionNeed:
+      type: object
+      additionalProperties: false
+      required: [capability, reason]
+      description: One core capability a unit declares it uses.
+      properties:
+        capability:
+          type: string
+          description: What the unit uses. `models` is the installation's AI models; `objects` is a key prefix of its own in the object store.
+        reason:
+          type: string
+          description: One sentence from the unit's author saying what it does with the capability.
 
     ExtensionSettings:
       type: object
@@ -70280,6 +70301,7 @@ components:
         - document_extract
         - draft_reply
         - enrich
+        - extension_call
         - growth_fit
         - nl_search
         - offer_draft
@@ -70315,7 +70337,7 @@ components:
          site_triage, stage_evidence_extract, summarize, transcript, transcript_propose, voice_build,
          corpus_ask, weekly_review, weekly_learnings, propose_roles, owed_verdict,
          request_settlement, account_scan, tag_suggest, report_setup, report_interpret,
-         reader_rendering, deal_verdict, rewrite]
+         reader_rendering, deal_verdict, rewrite, extension_call]
       x-extensible-enum: true
       description: |
         What kind of AI work an occurrence is. Every AI task this build can run reports here,

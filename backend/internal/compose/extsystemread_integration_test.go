@@ -12,16 +12,21 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"io"
+	"log/slog"
 	"slices"
+	"strings"
 	"testing"
 	"time"
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/compose/extcapability"
 	"github.com/margince/margince/backend/internal/compose/integration"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/assignments"
 	"github.com/margince/margince/backend/internal/modules/deals"
+	"github.com/margince/margince/backend/internal/platform/blobstore"
 	"github.com/margince/margince/backend/internal/platform/database"
 	kevents "github.com/margince/margince/backend/internal/shared/kernel/events"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -580,5 +585,88 @@ func TestAnAttendedCanWriteAnswersTheCaller(t *testing.T) {
 	defer rt.release()
 	if _, err := rt.Authority().CanWrite(context.Background(), asUser(s.Rep1), deal); !errors.Is(err, extension.ErrAttendedRead) {
 		t.Errorf("CanWrite about a colleague on an attended call: err = %v, want ErrAttendedRead", err)
+	}
+}
+
+// A model call a unit makes leaves a system_log row naming the unit, and a call
+// refused for want of a declaration leaves none.
+func TestAModelCallNamesTheUnitInTheAuditTrail(t *testing.T) {
+	e := integration.Setup(t)
+	lane := &countingLane{}
+	composeNeeds(t, extensionRuntimeBinding{}, extension.Need{Capability: extension.CapabilityModels, Reason: "Summarises a thread."})
+	ctx := e.Admin()
+	rt := runtimeFor(ctx, "summaries", "1.0.0", "tool/probe", extensionRuntimeBinding{pool: e.Pool, models: lane})
+	defer rt.release()
+
+	const rows = `SELECT count(*) FROM system_log WHERE action = 'extension_model_call' AND detail->>'extension' = 'summaries'`
+	if text, err := rt.Models().Complete(ctx, oneMessage); err != nil || text != "ok" {
+		t.Fatalf("Complete = %q, %v, want the lane's answer", text, err)
+	}
+	if n := e.WsCount(t, rows); n != 1 {
+		t.Errorf("%d audit rows naming the unit after one call, want 1", n)
+	}
+	setComposedExtensions(nil)
+	if _, err := rt.Models().Complete(ctx, oneMessage); !errors.Is(err, extension.ErrNotDeclared) {
+		t.Fatalf("a call after the declaration was removed: err = %v, want ErrNotDeclared", err)
+	}
+	if n := e.WsCount(t, rows); n != 1 {
+		t.Errorf("a refused call left an audit row: %d rows", n)
+	}
+}
+
+// A unit that leaves the composed set loses its objects, and the sweep is made
+// good by a later boot: one that ran with no store bound deletes nothing, and
+// the next one with a store deletes them. Another unit's objects stay.
+func TestARemovedUnitsObjectsAreSweptByALaterBootIfTheFirstHadNoStore(t *testing.T) {
+	e := integration.Setup(t)
+	ctx := e.Admin()
+	raw, _ := principal.WorkspaceID(ctx)
+	ws := ids.From[ids.WorkspaceKind](raw)
+	store := blobstore.NewMemory()
+	previous := boundExtensionRuntime().blob
+	t.Cleanup(func() { BindExtensionObjects(previous) })
+	log := slog.New(slog.NewTextHandler(io.Discard, nil))
+	put := func(unit string) string {
+		key := extcapability.Prefix(ws, unit) + "report"
+		if err := store.Put(ctx, key, strings.NewReader("x"), 1, "text/plain"); err != nil {
+			t.Fatal(err)
+		}
+		return key
+	}
+	present := func(key string) bool {
+		body, _, err := store.Get(ctx, key)
+		if err != nil {
+			return false
+		}
+		if closeErr := body.Close(); closeErr != nil {
+			t.Error(closeErr)
+		}
+		return true
+	}
+
+	BindExtensionObjects(store)
+	both := []extension.Extension{{Name: "keeper", Version: "1"}, {Name: "leaver", Version: "1"}}
+	if err := ObserveExtensionInventory(ctx, e.Pool, log, both); err != nil {
+		t.Fatal(err)
+	}
+	keeper, leaver := put("keeper"), put("leaver")
+
+	BindExtensionObjects(nil)
+	only := both[:1]
+	if err := ObserveExtensionInventory(ctx, e.Pool, log, only); err != nil {
+		t.Fatal(err)
+	}
+	if !present(leaver) {
+		t.Fatal("a boot with no store deleted objects it could not reach")
+	}
+	BindExtensionObjects(store)
+	if err := ObserveExtensionInventory(ctx, e.Pool, log, only); err != nil {
+		t.Fatal(err)
+	}
+	if present(leaver) {
+		t.Error("the removed unit's object survived a boot that had the store")
+	}
+	if !present(keeper) {
+		t.Error("a unit still composed lost its object")
 	}
 }

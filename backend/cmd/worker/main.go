@@ -389,6 +389,10 @@ func admitBoot(
 	if err := compose.RequireCompiledInCountry(ctx, pool); err != nil {
 		return nil, nil, err
 	}
+	// Before the boot records the composed set: removing a unit sweeps its objects.
+	if err := compose.BindExtensionObjectsFromConfig(ctx, cfg.settings); err != nil {
+		return nil, nil, err
+	}
 	vault, err := resolveVault()
 	if err != nil {
 		return nil, nil, err

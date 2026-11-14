@@ -64,6 +64,7 @@ frames. A 0 means no fenced region was found in that call at all.
 | `draft_reply` | `intro_note` | one fenced item | 1 | 1 |
 | `draft_reply` | `reply` | one fenced item | 1 | 1 |
 | `enrich` | `signature` | several fenced items | 2 | 1 |
+| `extension_call` | `extension_call` | one fenced item | 0 | 1 |
 | `growth_fit` | `growth_fit` | several fenced items | 2 | 1 |
 | `nl_search` | `filter_propose` | several fenced items | 2 | 1 |
 | `offer_draft` | `draft` | one fenced item | 1 | 1 |
@@ -4368,6 +4369,18 @@ Data is delimited by <untrusted-fence> … </untrusted-fence> (the opening marke
   ],
   "type": "object"
 }
+```
+
+</details>
+
+### `extension_call` / `extension_call`
+
+`system 70 B (~17 tok)`: rules 70 B · boundary 0 B · after boundary 0 B · **cacheable 100%**
+
+<details><summary>system prompt</summary>
+
+```
+You summarise the note you are given for a sales rep, in one sentence.
 ```
 
 </details>

@@ -1,0 +1,22 @@
+name: extension_call_one_sentence_summary
+task: extension_call
+site: extension_call
+source: hand_authored
+sanitized_by: hand_authored/claude-opus-5-5
+# The core writes no prompt for this site: the unit does. The scenario pins what
+# the core is answerable for, which is that the unit's own instruction reaches
+# the model and the answer comes back to the unit.
+fixture:
+  messages:
+    - role: "user"
+      text: "The Brightline renewal moved from stage Proposal to Negotiation on 12 December, and the amount rose from 40 seats to 55 seats."
+expect:
+  outcome: accepted
+  answer:
+    keeps: ["Brightline", "55"]
+    omits: []
+  bands:
+    certified_min: 80
+    degraded_min: 60
+    floor: 50
+  rubric: "The answer is one sentence. It names the Brightline renewal and says it moved to Negotiation with 55 seats. It adds no fact that the message does not state."

@@ -21,6 +21,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/margince/margince/backend/internal/modules/capture"
+	"github.com/margince/margince/backend/internal/platform/blobstore"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/extsecrets"
 	"github.com/margince/margince/backend/internal/platform/keyvault"
@@ -75,6 +76,11 @@ type extensionRuntimeBinding struct {
 	// impossible. Nil on a role that composed no capture, and the port then
 	// refuses by name rather than half-working.
 	captureSink *capture.Sink
+	// models and blob are what a unit's Models and Objects reach, bound
+	// separately by BindExtensionModels and BindExtensionObjects. Nil on a role
+	// that wired none, and the capability then refuses by name.
+	models completer
+	blob   blobstore.Store
 }
 
 // BindExtensionCapture records the capture pipeline a unit's ingress lands
@@ -122,7 +128,9 @@ func BindExtensionRuntime(pool *pgxpool.Pool, vault keyvault.Vault) {
 		slog.Default().Warn("compose: the extension runtime was rebound to a different pool; " +
 			"every extension capability from now on runs against the new one")
 	}
-	extensionRuntimeDeps.extensionRuntimeBinding = extensionRuntimeBinding{pool: pool, vault: vault}
+	// Only its own two fields. The capture sink, model lane and object store are
+	// bound by their own calls, in any order.
+	extensionRuntimeDeps.pool, extensionRuntimeDeps.vault = pool, vault
 }
 
 // boundExtensionRuntime reads the binding. Read per CALL rather than

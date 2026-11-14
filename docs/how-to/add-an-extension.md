@@ -1593,6 +1593,36 @@ Under `MARGINCE_ENV=dev`, a client from `OutboundClient()` or `OutboundTransport
 refused under every value, and so does loopback under any value but `dev`. The core sets this once at
 start. Never call `extension.BindEgress` from a unit; the same gate fails that too.
 
+## Use the core's models and object store
+
+Declare the capability first. `rt.Models()` and `rt.Objects()` return `extension.ErrNotDeclared` until
+`Extension.Needs` lists them, and the admin who installs the unit reads each reason on its card:
+
+```go
+Needs: []extension.Need{
+    {Capability: extension.CapabilityModels, Reason: "Writes a one-line summary of a deal's changes."},
+    {Capability: extension.CapabilityObjects, Reason: "Keeps the summaries it wrote."},
+},
+```
+
+Ask a model with `rt.Models().Complete`. Name the core records the text was built from in `About`, or say in
+`NoContactData` why it holds none of a contact's data:
+
+```go
+text, err := rt.Models().Complete(ctx, extension.CompleteRequest{
+    System:   "Summarise the change in one sentence.",
+    Messages: []extension.Message{{Role: "user", Text: change}},
+    About:    []extension.EntityRef{{Type: "deal", ID: dealID}},
+})
+```
+
+Keep a file with `rt.Objects().Put(ctx, "summary-2026-11.txt", body)`. Read it back with `Get` and remove it with
+`Delete`. The name is flat: lower-case letters, digits, `.`, `-` and `_`. The core finds the content type from the
+bytes. Removing the unit from the build deletes its objects at the next boot.
+
+The limits, the refusals and the audit rows are in
+[extension-capabilities.md](../reference/extension-capabilities.md).
+
 ## Write the unit's own test
 
 Each unit is its own Go module, so the `./...` of the backend never reaches it. It carries its own tests, which
@@ -1697,6 +1727,8 @@ under `extensions/`. Run the `rm -rf` after it. `git rm` takes the tracked files
 
 A unit for one installation only is not in git. Remove it from that installation's `go.mod`, and its name from
 `extensions/operator-units`. Then delete its folder under `extensions/`; there is nothing to stage.
+
+At the next boot the core deletes the objects the removed unit kept with `rt.Objects()`.
 
 No other core file or core test needs an edit. Removing it *turns the unit off* (routes answer 404, the list leaves
 the unit out, migrations skip it), but it does **not erase**. The unit's tables and rows, its `extension_secret`

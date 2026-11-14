@@ -14946,6 +14946,9 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "extAccess.brings.objects": "Berechtigungsobjekte",
   "extAccess.brings.routes": "Routen",
   "extAccess.brings.jobs": "Hintergrund-Jobs",
+  "extAccess.brings.needs": "Nutzt vom Kern",
+  "extAccess.need.models": "KI-Modelle",
+  "extAccess.need.objects": "Dateispeicher",
   "extAccess.brings.none": "Keine",
   "extAccess.noObjects":
     "Es gibt nichts zu vergeben, da diese Einheit keine Berechtigungsobjekte registriert.",
@@ -21945,6 +21948,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "aiTask.name.document_extract": "Dokumentenauswertung",
   "aiTask.name.draft_reply": "Antwortentwurf",
   "aiTask.name.enrich": "Ergänzung aus Signaturen",
+  "aiTask.name.extension_call": "Modellaufruf einer Erweiterung",
   "aiTask.name.growth_fit": "Bewertung der Unternehmenseignung",
   "aiTask.name.nl_search": "Suche in natürlicher Sprache",
   "aiTask.name.offer_draft": "Angebotsentwurf",

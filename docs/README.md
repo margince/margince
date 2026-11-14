@@ -192,6 +192,8 @@ ready before we need it, because the first date comes 24 hours after we learn of
   that go with it.
 - [extension-record-kinds-links-signals-and-reports.md](reference/extension-record-kinds-links-signals-and-reports.md): the
   what an extension can add to Margince: its own record kinds, links and reports.
+- [extensions-can-use-core-s-ai-models-s3-a.md](reference/extensions-can-use-core-s-ai-models-s3-a.md): what an extension can use from the core.
+- [extension-capabilities.md](reference/extension-capabilities.md): declare and use the core's AI models and file store.
 - [record-links.md](reference/record-links.md): typed links for deals, companies and contacts: types,
   rights and routes.
 - [extension-privacy-and-retention.md](reference/extension-privacy-and-retention.md): how an extension's data
@@ -357,6 +359,7 @@ A generated page, and each `perfbench/` record, says so in its first line. Do no
 #### Extensions
 
 - [extensions-at-a-glance.md](explanation/extensions-at-a-glance.md): what an extension can add, in one table.
+- [extension-capability-grants.md](explanation/extension-capability-grants.md): why an extension declares what it uses.
 - [extensibility.md](explanation/extensibility.md): how an extension adds to Margince, and the checks
   that keep it in line.
 

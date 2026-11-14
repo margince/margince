@@ -18,6 +18,7 @@ here: put it in the area's word list instead. A name that no plain page uses mus
 | Beschäftigteninformation | The German notice each employee gets before their mailbox is read (Art. 13 GDPR). |
 | breakdown | A count of one population split by one field, which an extension can add. |
 | BUSL | The Business Source License 1.1, the license Margince uses. |
+| capability | A core feature an extension can ask to use, such as its AI models or file store. |
 | challenge | A check a WAF puts to the browser in the app's place, which only a page load can pass. |
 | changelog | A file listing the changes of each release, which this repository does not keep. |
 | CI | Continuous integration: the checks GitHub runs on every pull request. |
@@ -92,6 +93,7 @@ here: put it in the area's word list instead. A name that no plain page uses mus
 | React | The JavaScript library the web app is built with. |
 | Redis | The in-memory store Margince uses as its event bus. |
 | REST | The style of HTTP API Margince offers next to MCP. |
+| restriction | A hold a contact may ask for that stops processing of their data (GDPR Art. 18). |
 | RTF | Rich Text Format, a document format most word processors read. |
 | Shift | The key held while pressing another, as in Page Up/Down by year in `Calendar`. |
 | skill | A folder an AI tool loads to learn a task, led by a `SKILL.md` file. |

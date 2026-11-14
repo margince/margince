@@ -14866,6 +14866,9 @@ export const en = {
   "extAccess.brings.objects": "Permission objects",
   "extAccess.brings.routes": "Routes",
   "extAccess.brings.jobs": "Background jobs",
+  "extAccess.brings.needs": "Uses from the core",
+  "extAccess.need.models": "AI models",
+  "extAccess.need.objects": "File storage",
   "extAccess.brings.none": "None",
   "extAccess.noObjects":
     "This unit registers no permission objects, so there is nothing to grant.",
@@ -21662,6 +21665,7 @@ export const en = {
   "aiTask.name.document_extract": "Document extraction",
   "aiTask.name.draft_reply": "Reply drafting",
   "aiTask.name.enrich": "Signature enrichment",
+  "aiTask.name.extension_call": "Extension model call",
   "aiTask.name.growth_fit": "Company fit assessment",
   "aiTask.name.nl_search": "Natural-language search",
   "aiTask.name.offer_draft": "Offer drafting",

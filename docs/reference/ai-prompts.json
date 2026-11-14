@@ -2974,6 +2974,22 @@
       "cacheable_percent": 88
     },
     {
+      "task": "extension_call",
+      "site": "extension_call",
+      "isolation": "one fenced item",
+      "systems": [
+        "You summarise the note you are given for a sales rep, in one sentence."
+      ],
+      "spans_in_scenario": 0,
+      "calls": 1,
+      "system_bytes": 70,
+      "system_tokens_estimate": 17,
+      "rules_bytes": 70,
+      "boundary_bytes": 0,
+      "after_boundary_bytes": 0,
+      "cacheable_percent": 100
+    },
+    {
       "task": "growth_fit",
       "site": "growth_fit",
       "isolation": "several fenced items",

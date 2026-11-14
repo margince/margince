@@ -15,6 +15,7 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 
+	"github.com/margince/margince/backend/internal/compose/extcapability"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/pkg/extension"
@@ -91,6 +92,12 @@ func ObserveExtensionInventory(ctx context.Context, pool *pgxpool.Pool, log *slo
 	})
 	if err != nil {
 		return err
+	}
+	// Every boot, not only one that saw a change: the set of removed units comes
+	// from the recorded history, so a failed or skipped sweep is retried. A
+	// storage fault does not stop the boot.
+	if err := extcapability.SweepGone(ctx, pool, boundExtensionRuntime().blob, extensionCompositionObserved, installationMarker(ctx), exts); err != nil {
+		log.Error("compose: deleting the objects of removed extensions failed; the next boot tries again", "err", err)
 	}
 	// Logged only after the transaction COMMITTED: an in-closure log line
 	// would report a change the database may have rolled back.

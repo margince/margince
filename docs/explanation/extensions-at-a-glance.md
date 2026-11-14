@@ -106,6 +106,8 @@ Every field of `Extension` that brings something to the core.
 | `Jurisdictions` | Unit's jurisdiction packs (policy suppliers to the core retention engine, never actors). |
 | `Messaging` | Unit's outbound-messaging rule sets, the country rules the core authorization engine consults before a message goes out. |
 | `SubjectRights` | Unit's data-subject-request deadlines. |
+| `Reach` | Reach declares the unit's tables holding a core company, contact or lead id. |
+| `Privacy` | Privacy declares, for every table the unit owns, which core record its rows belong to, which columns are personal data and the retention class. |
 | `Documents` | Compliance documents the unit ships for its jurisdictions. |
 | `Tools` | Governed agent tools the unit contributes: named operations running at a requested risk tier. |
 | `Channels` | Messaging providers this unit supplies TRANSPORT for. |
@@ -123,11 +125,13 @@ Every field of `Extension` that brings something to the core.
 | `Inbound` | Session-less HTTP edges this unit asks the core to mount: a signed POST from a party that holds no session and no seat. |
 | `OAuthApps` | Vendors whose consent flow the core runs for this unit. |
 | `SystemReads` | System reads the unit's jobs and subscriptions make. |
+| `Needs` | Core's models and object store the unit asks to use, each with the reason an installing admin reads. |
 | `Migrations` | Unit's SQL schema layer: a read-only filesystem holding the MigrationsDir directory of NNNN_name.up.sql/.down.sql pairs, which a unit supplies with `//go:embed migrations`. |
 | `FailureClasses` | Ways this unit's background jobs fail, named in the unit's own vocabulary, each with what an operator does about it. |
 | `Entries` | Unit's ways into its own screen from core screens: the Log activity form and the contact, company and deal headers. |
 | `Settings` | Values an admin can change for the unit, drawn by the core on the unit's card of the Extensions page. |
 | `Panels` | Unit's components drawn inline on core pages, such as a deal page's side column. |
+| `Instrumentation` | Instrumentation observes the whole process and the browser: logs, requests, jobs, panics, errors and navigation. |
 
 ### Slots on a core page
 

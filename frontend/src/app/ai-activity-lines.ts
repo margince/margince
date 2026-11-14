@@ -247,6 +247,9 @@ export const ACTIVITY_LINE: Readonly<
   rewrite: notDisplayed(
     "the rewritten words replace the rep's own in the field they pressed the button under; a rail line would announce text already on screen",
   ),
+  extension_call: notDisplayed(
+    "an extension's model call answers inside the extension's own screen; a rail line would announce work the reader started there",
+  ),
   nl_search: notDisplayed(
     "a plain-words filter answers in the builder the reader pressed it from, under their own eyes; a rail line would announce a result already on screen",
   ),

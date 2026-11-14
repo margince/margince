@@ -49,6 +49,7 @@ does in this state.
 | `document_extract` | Document extraction | background | `premium` | waits for the provider's next check; the attempt is not spent | — |
 | `draft_reply` | Reply drafting | interactive | `cheap_cloud` → `premium` | answers from its own facts instead of failing | — |
 | `enrich` | Signature enrichment | background | `local_small` → `cheap_cloud` | waits for the provider's next check; the attempt is not spent | — |
+| `extension_call` | Extension model call | interactive | `cheap_cloud` → `premium` | fails at once with a 503 naming the cause | — |
 | `growth_fit` | Company fit assessment | interactive | `cheap_cloud` → `premium` | answers from its own facts instead of failing | — |
 | `nl_search` | Natural-language search | interactive | `cheap_cloud` → `premium` | fails at once with a 503 naming the cause | — |
 | `offer_draft` | Offer drafting | interactive | `cheap_cloud` → `premium` | answers from its own facts instead of failing | — |
