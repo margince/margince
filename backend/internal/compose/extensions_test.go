@@ -205,8 +205,6 @@ func TestRegisterExtensionsPreflightsDuplicateJurisdictions(t *testing.T) {
 	}
 }
 
-// The boot refuses a need the manifest could not publish: an unknown
-// capability, an empty reason, or one capability listed twice.
 func TestRegisterExtensionsRejectsABadNeed(t *testing.T) {
 	good := extension.Need{Capability: extension.CapabilityModels, Reason: "Summarises a thread."}
 	for name, needs := range map[string][]extension.Need{

@@ -79,9 +79,8 @@ type extensionRuntimeBinding struct {
 	// impossible. Nil on a role that composed no capture, and the port then
 	// refuses by name rather than half-working.
 	captureSink *capture.Sink
-	// models and blob are what a unit's Models and Objects reach, bound
-	// separately by BindExtensionModels and BindExtensionObjects. Nil on a role
-	// that wired none, and the capability then refuses by name.
+	// models and blob are what a unit's Models and Objects reach, bound by
+	// BindExtensionModels and BindExtensionObjects; nil, the capability refuses by name.
 	models completer
 	blob   blobstore.Store
 }
@@ -131,8 +130,7 @@ func BindExtensionRuntime(pool *pgxpool.Pool, vault keyvault.Vault) {
 		slog.Default().Warn("compose: the extension runtime was rebound to a different pool; " +
 			"every extension capability from now on runs against the new one")
 	}
-	// Only its own two fields. The capture sink, model lane and object store are
-	// bound by their own calls, in any order.
+	// Only its own two fields: the other dependencies are bound by their own calls.
 	extensionRuntimeDeps.pool, extensionRuntimeDeps.vault = pool, vault
 }
 

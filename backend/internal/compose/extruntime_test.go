@@ -362,7 +362,6 @@ func TestBoundExtensionRuntimeDepsReachTheHandler(t *testing.T) {
 	}
 }
 
-// countingLane is the model boundary: it records that it was reached.
 type countingLane struct{ calls int }
 
 func (c *countingLane) Complete(context.Context, model.Request) (model.Response, error) {
@@ -387,8 +386,6 @@ func composeNeeds(t *testing.T, deps extensionRuntimeBinding, needs ...extension
 	return rt, ctx
 }
 
-// A unit that did not declare a capability is refused it, and what is behind
-// the refusal is never reached.
 func TestAnUndeclaredCapabilityIsRefusedAndNeverReached(t *testing.T) {
 	lane, blob := &countingLane{}, blobstore.NewMemory()
 	rt, ctx := composeNeeds(t, extensionRuntimeBinding{models: lane, blob: blob})
@@ -407,8 +404,6 @@ func TestAnUndeclaredCapabilityIsRefusedAndNeverReached(t *testing.T) {
 	}
 }
 
-// Declaring one capability grants that one. Taking the declaration away cuts
-// access on the next call, on a Runtime minted while it held.
 func TestADeclaredCapabilityGrantsOnlyItselfAndRemovingItCutsAccess(t *testing.T) {
 	rt, ctx := composeNeeds(t, extensionRuntimeBinding{models: &countingLane{}, blob: blobstore.NewMemory()},
 		extension.Need{Capability: extension.CapabilityObjects, Reason: "Keeps generated files."})

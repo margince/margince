@@ -178,8 +178,6 @@ func TestExtensionListAnswersTheHolderOfTheReadGrantAndRefusesTheRest(t *testing
 	}
 }
 
-// The installing admin reads what a unit borrows from the core, with the unit's
-// own reason, and a unit that borrows nothing says nothing.
 func TestExtensionInventoryListsWhatAUnitBorrowsFromTheCore(t *testing.T) {
 	t.Parallel()
 	exts := []extension.Extension{
