@@ -9,7 +9,7 @@ import { ENTITY, type EntityKind } from "../lib/entity";
 import { useMemberName } from "../lib/membernames";
 import { routeHash } from "../lib/router";
 import {
-  entityNameQuery,
+  entityNameObserverQuery,
   type NameReading,
   readingOf,
   usableName,
@@ -276,7 +276,7 @@ function RecordRef({
   const available = recordEnabled(kind, useDisabledCoreFeatures());
   const supplied = usableName(name);
   const query = useQuery({
-    ...entityNameQuery(kind, id),
+    ...entityNameObserverQuery(kind, id),
     enabled: available && supplied == null,
   });
   // Only a resolved name is a safe link target; a reference with no name —
