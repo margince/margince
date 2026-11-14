@@ -8,11 +8,12 @@ SET LOCAL lock_timeout = '3s';
 -- the stamp of a restricted row, which no write may touch.
 ALTER TABLE activity ADD COLUMN reply_settled_at timestamptz;
 
--- Clears the stamps of every inbound message on the threads a change can
--- settle or unsettle, so the job reads them again. The stamp is bookkeeping:
--- it moves no version, so a reader's edit in flight is not refused for it. A
--- restricted row is immutable and is never stamped, so it is left alone.
-CREATE FUNCTION clear_reply_settled(threads text[]) RETURNS void LANGUAGE plpgsql AS $$
+-- Clears the stamps of the inbound messages on the threads a change can
+-- settle or unsettle, so the job reads them again. A fact at time t can only
+-- move a stamp at or after t, so with since given, earlier stamps stay. The
+-- stamp is bookkeeping: it moves no version, so a reader's edit in flight is
+-- not refused for it. A restricted row is immutable and is never stamped.
+CREATE FUNCTION clear_reply_settled(threads text[], since timestamptz) RETURNS void LANGUAGE plpgsql AS $$
 DECLARE
   moving text := current_setting('margince.last_activity_move', true);
 BEGIN
@@ -23,7 +24,7 @@ BEGIN
      AND direction = 'inbound'
      AND kind IN ('email', 'message')
      AND restricted_at IS NULL
-     AND reply_settled_at IS NOT NULL;
+     AND reply_settled_at >= coalesce(since, '-infinity');
   PERFORM set_config('margince.last_activity_move', coalesce(moving, ''), true);
 END;
 $$;
@@ -49,11 +50,15 @@ $$;
 CREATE FUNCTION activity_clears_reply_settled() RETURNS trigger LANGUAGE plpgsql AS $$
 BEGIN
   IF TG_OP = 'INSERT' THEN
-    PERFORM clear_reply_settled(ARRAY[NEW.thread_key]);
+    IF NEW.kind IN ('email', 'message') THEN
+      PERFORM clear_reply_settled(ARRAY[NEW.thread_key], NEW.occurred_at);
+    END IF;
   ELSIF TG_OP = 'DELETE' THEN
-    PERFORM clear_reply_settled(ARRAY[OLD.thread_key]);
-  ELSE
-    PERFORM clear_reply_settled(ARRAY[NEW.thread_key, OLD.thread_key]);
+    IF OLD.kind IN ('email', 'message') THEN
+      PERFORM clear_reply_settled(ARRAY[OLD.thread_key], OLD.occurred_at);
+    END IF;
+  ELSIF NEW.kind IN ('email', 'message') OR OLD.kind IN ('email', 'message') THEN
+    PERFORM clear_reply_settled(ARRAY[NEW.thread_key, OLD.thread_key], least(NEW.occurred_at, OLD.occurred_at));
   END IF;
   RETURN NULL;
 END;
@@ -72,7 +77,7 @@ BEGIN
   PERFORM clear_reply_settled(ARRAY(
     SELECT a.thread_key FROM activity a
      WHERE a.id IN (CASE WHEN TG_OP = 'DELETE' THEN NULL ELSE NEW.activity_id END,
-                    CASE WHEN TG_OP = 'INSERT' THEN NULL ELSE OLD.activity_id END)));
+                    CASE WHEN TG_OP = 'INSERT' THEN NULL ELSE OLD.activity_id END)), NULL);
   RETURN NULL;
 END;
 $$;
@@ -89,7 +94,7 @@ BEGIN
       JOIN activity a ON a.id = p.activity_id
      WHERE p.role = 'from'
        AND p.contact_id IN (CASE WHEN TG_OP = 'DELETE' THEN NULL ELSE NEW.contact_id END,
-                            CASE WHEN TG_OP = 'INSERT' THEN NULL ELSE OLD.contact_id END)));
+                            CASE WHEN TG_OP = 'INSERT' THEN NULL ELSE OLD.contact_id END)), NULL);
   RETURN NULL;
 END;
 $$;

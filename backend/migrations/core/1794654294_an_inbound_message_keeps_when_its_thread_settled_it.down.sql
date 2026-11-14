@@ -6,5 +6,5 @@ DROP FUNCTION IF EXISTS contact_email_clears_reply_settled();
 DROP FUNCTION IF EXISTS participant_clears_reply_settled();
 DROP FUNCTION IF EXISTS activity_clears_reply_settled();
 DROP FUNCTION IF EXISTS keep_reply_settled(uuid[], timestamptz[]);
-DROP FUNCTION IF EXISTS clear_reply_settled(text[]);
+DROP FUNCTION IF EXISTS clear_reply_settled(text[], timestamptz);
 ALTER TABLE activity DROP COLUMN IF EXISTS reply_settled_at;

@@ -201,7 +201,7 @@ The 34 tables owned by `activities`, as the migrations build them. [Back to the 
 **Triggers**
 
 - `activity_assignee_id_retirement_guard`: `BEFORE INSERT OR UPDATE FOR EACH ROW WHEN (((new.assignee_id IS NOT NULL) AND ((new.archived_at IS NULL) AND (new.kind = 'task') AND (NOT new.is_done)))) EXECUTE FUNCTION refuse_retired_member_work('assignee_id')`
-- `activity_clears_reply_settled`: `AFTER INSERT OR UPDATE OF thread_key, kind, channel_provider, direction, archived_at, occurred_at, occurred_precision, counterparty_email FOR EACH ROW EXECUTE FUNCTION activity_clears_reply_settled()`
+- `activity_clears_reply_settled`: `AFTER INSERT OR DELETE OR UPDATE OF thread_key, kind, channel_provider, direction, archived_at, occurred_at, occurred_precision, counterparty_email FOR EACH ROW EXECUTE FUNCTION activity_clears_reply_settled()`
 - `activity_due_time_follows_due_at`: `BEFORE INSERT OR UPDATE OF due_at, due_has_time FOR EACH ROW EXECUTE FUNCTION activity_due_time_follows_due_at()`
 - `activity_intent_insert`: `BEFORE INSERT FOR EACH ROW WHEN (((new.due_wall IS NOT NULL) OR (new.remind_wall IS NOT NULL))) EXECUTE FUNCTION maintain_intent_times('due_wall', 'due_zone', 'due_at', 'remind_wall', 'remind_zone', 'remind_at')`
 - `activity_intent_update`: `BEFORE UPDATE OF due_wall, due_zone, due_at, remind_wall, remind_zone, remind_at FOR EACH ROW WHEN (((new.due_wall IS NOT NULL) OR (new.remind_wall IS NOT NULL) OR (old.due_wall IS NOT NULL) OR (old.remind_wall IS NOT NULL))) EXECUTE FUNCTION maintain_intent_times('due_wall', 'due_zone', 'due_at', 'remind_wall', 'remind_zone', 'remind_at')`
