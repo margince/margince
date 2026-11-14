@@ -11,6 +11,7 @@ package integration
 import (
 	"context"
 	"encoding/json"
+	"io"
 	"net/http"
 	"strings"
 	"testing"
@@ -19,6 +20,7 @@ import (
 	"github.com/margince/margince/backend/internal/compose/homecache"
 	"github.com/margince/margince/backend/internal/compose/integration/apptest"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 const homeWorklistPath = "/v1/worklist?scope=mine&filter=all&relationships=omit&view=today&limit=100"
@@ -177,5 +179,63 @@ func TestHomesReceiptIsServedFromCacheWhileAMachineWrites(t *testing.T) {
 	}
 	if again := receiptComputedAt(t, e); again != first {
 		t.Errorf("the receipt was computed again after a machine write (%s → %s), want the cached answer", first, again)
+	}
+}
+
+// worklistAnswer reads Home's worklist with the reader's session, sending
+// ifNoneMatch when it is set.
+func worklistAnswer(t *testing.T, e *apptest.AppEnv, ifNoneMatch string) (status int, header http.Header, body []byte) {
+	t.Helper()
+	req, err := http.NewRequestWithContext(context.Background(), http.MethodGet, e.TS.URL+homeWorklistPath, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if ifNoneMatch != "" {
+		req.Header.Set("If-None-Match", ifNoneMatch)
+	}
+	resp, err := e.Client.Do(req) //nolint:bodyclose // closed by apptest.CloseBody below; bodyclose only recognises a Close in the same package
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer apptest.CloseBody(t, resp)
+	body, err = io.ReadAll(resp.Body)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return resp.StatusCode, resp.Header, body
+}
+
+func TestAnUnchangedWorklistComesBackAs304AndNoSharedCacheKeepsIt(t *testing.T) {
+	e := apptest.SetupApp(t)
+	apptest.BootstrapWorkspaceSession(t, e, "Home Tag", "admin@hometag.test", "Admin")
+	var admin ids.UUID
+	if err := e.Owner.QueryRow(context.Background(),
+		`SELECT id FROM app_user WHERE email = 'admin@hometag.test'`).Scan(&admin); err != nil {
+		t.Fatal(err)
+	}
+
+	status, header, body := worklistAnswer(t, e, "")
+	etag := header.Get("ETag")
+	if status != http.StatusOK || etag == "" || len(body) == 0 {
+		t.Fatalf("the first read answered %d with tag %q and %d bytes, want 200, a tag and the day", status, etag, len(body))
+	}
+	if got := header.Get("Cache-Control"); got != "private, no-cache" {
+		t.Errorf("the day carries Cache-Control %q, want private, no-cache", got)
+	}
+	status, header, body = worklistAnswer(t, e, etag)
+	if status != http.StatusNotModified || len(body) != 0 || header.Get("Cache-Control") != "private, no-cache" {
+		t.Errorf("an unchanged re-read answered %d with %d bytes and Cache-Control %q, want 304, none and private, no-cache",
+			status, len(body), header.Get("Cache-Control"))
+	}
+
+	overdueTask(t, e, admin, "Chase the signed order")
+	if err := homecache.New(e.Pool).Forget(
+		principal.WithWorkspaceID(context.Background(), apptest.InstallationWorkspaceUUID(context.Background(), t, e.Pool)),
+		[]ids.UUID{admin}); err != nil {
+		t.Fatal(err)
+	}
+	if status, header, body = worklistAnswer(t, e, etag); status != http.StatusOK || header.Get("ETag") == etag ||
+		!strings.Contains(string(body), "Chase the signed order") {
+		t.Errorf("a changed day answered %d with tag %q, want 200, a new tag and the new task", status, header.Get("ETag"))
 	}
 }

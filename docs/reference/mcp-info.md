@@ -15,9 +15,9 @@ input and output schema in folds below it. What a tool may do and whether a huma
 |---|---:|
 | Tools | 48 |
 | Resources | 14 |
-| Tool catalog | 234.0 KB |
+| Tool catalog | 234.1 KB |
 | Resource catalog | 5.5 KB |
-| Approx. wire tokens | 61316 |
+| Approx. wire tokens | 61336 |
 | Largest tool | `read_context` (11.7 KB) |
 | Scopes rendered | `read`, `draft`, `write`, `send`, `enrich` |
 
@@ -34,9 +34,9 @@ tool adds to that listing, and what it costs each scheduled agent, agent by agen
 |---|---:|---:|---|
 | Output schemas | 51.5 KB | 21% | **No**: a result's shape, never listed to a model |
 | Descriptions (incl. governance clause) | 54.3 KB | 23% | Yes, every step |
-| Input schemas | 116.4 KB | 49% | Yes, every step |
+| Input schemas | 116.5 KB | 49% | Yes, every step |
 | _Names, annotations, punctuation_ | 11.8 KB | 5% | Partly |
-| **Description + input schema** | **170.7 KB** | **72%** | **the recurring cost** |
+| **Description + input schema** | **170.8 KB** | **72%** | **the recurring cost** |
 
 Output schemas are the largest part of the total and are never sent to a model;
 descriptions and input schemas are what each step pays for.
@@ -105,7 +105,7 @@ descriptions and input schemas are what each step pays for.
 | [`read_reports`](#read_reports) | Read sales reports | yes |  | 2784 |
 | [`read_tags`](#read_tags) | Read tags | yes |  | 358 |
 | [`read_view`](#read_view) | Read a view | yes |  | 683 |
-| [`read_workspace`](#read_workspace) | Read how this workspace is set up | yes |  | 2755 |
+| [`read_workspace`](#read_workspace) | Read how this workspace is set up | yes |  | 2775 |
 | [`resolve_duplicates`](#resolve_duplicates) | Merge two records or dismiss a flagged pair |  |  | 618 |
 | [`run_research`](#run_research) | Run AI work for your user |  |  | 776 |
 | [`schedule_meeting`](#schedule_meeting) | Invite to a meeting |  |  | 456 |
@@ -12065,6 +12065,14 @@ deal. Take every name verbatim; a custom field is spelled cf_<slug>.
     },
     "served_provider": {
       "description": "ai_calls only",
+      "type": "string"
+    },
+    "shape": {
+      "description": "worklist only",
+      "enum": [
+        "queue",
+        "home"
+      ],
       "type": "string"
     },
     "source_id": {

@@ -32050,6 +32050,24 @@ func (e GetWorklistParamsRelationships) Valid() bool {
 	}
 }
 
+// Defines values for GetWorklistParamsShape.
+const (
+	GetWorklistParamsShapeHome  GetWorklistParamsShape = "home"
+	GetWorklistParamsShapeQueue GetWorklistParamsShape = "queue"
+)
+
+// Valid indicates whether the value is a known member of the GetWorklistParamsShape enum.
+func (e GetWorklistParamsShape) Valid() bool {
+	switch e {
+	case GetWorklistParamsShapeHome:
+		return true
+	case GetWorklistParamsShapeQueue:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for GetHiddenBacklogRowsParamsRule.
 const (
 	GetHiddenBacklogRowsParamsRuleColleagues  GetHiddenBacklogRowsParamsRule = "colleagues"
@@ -72237,6 +72255,11 @@ type WorklistReadings struct {
 	// able to give.
 	Review int `json:"review" minimum:"0"`
 
+	// SoonestLeadDue When the nearest open task on a lead is due, over every task this read weighed.
+	// Absent when no such task has a due time, or when the task lane was read to its
+	// bound or could not be read, so an unseen task could be due sooner.
+	SoonestLeadDue *time.Time `json:"soonest_lead_due,omitempty"`
+
 	// UnpricedDeals Distinct flagged deals excluded from the known value because no comparable expected value was available.
 	UnpricedDeals *int `json:"unpriced_deals,omitempty" minimum:"0"`
 }
@@ -80852,6 +80875,14 @@ type GetWorklistParams struct {
 	// `optional_relationships_more_available`. A reconnection the reader pinned
 	// is still read and still reaches the queue. Nothing else on the page changes.
 	Relationships *GetWorklistParamsRelationships `form:"relationships,omitempty" json:"relationships,omitempty"`
+
+	// Shape How much of the ranked day the page carries. `queue` is the page of the queue
+	// and its cursor. `home` is what Home draws: `focus`, every figure, and as `queue`
+	// the day's meeting rows plus every row that comes due in the next five minutes,
+	// with no cursor and no rows below the cut. Focus, the
+	// summary, `counts[].considered`, `reach[].considered` and the readings are the
+	// same in both shapes; `shown` counts the rows this page carries.
+	Shape *GetWorklistParamsShape `form:"shape,omitempty" json:"shape,omitempty"`
 }
 
 // GetWorklistParamsScope defines parameters for GetWorklist.
@@ -80865,6 +80896,9 @@ type GetWorklistParamsView string
 
 // GetWorklistParamsRelationships defines parameters for GetWorklist.
 type GetWorklistParamsRelationships string
+
+// GetWorklistParamsShape defines parameters for GetWorklist.
+type GetWorklistParamsShape string
 
 // GetHandledForYouParams defines parameters for GetHandledForYou.
 type GetHandledForYouParams struct {
@@ -153220,6 +153254,19 @@ func (siw *ServerInterfaceWrapper) GetWorklist(w http.ResponseWriter, r *http.Re
 			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "relationships"})
 		} else {
 			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "relationships", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "shape" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "shape", r.URL.Query(), &params.Shape, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "shape"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "shape", Err: err})
 		}
 		return
 	}

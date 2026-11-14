@@ -646,7 +646,7 @@ describe("the brief readings strip", () => {
 describe("the leads reading", () => {
   it("names when the nearest answer is due", () => {
     draw(
-      { prospecting: 2 },
+      { prospecting: 2, soonest_lead_due: "2026-08-31T15:00:00Z" },
       [leadRow("l1", "2026-08-31T15:00:00Z"), leadRow("l2")],
       [wholeLeads(2)],
     );
@@ -658,9 +658,9 @@ describe("the leads reading", () => {
     expect(screen.queryByText(en["brief.readings.leadsBasis"])).toBeNull();
   });
 
-  it("names the earliest of several, not the first it meets", () => {
+  it("names the server's earliest of several, not the first row it meets", () => {
     draw(
-      { prospecting: 2 },
+      { prospecting: 2, soonest_lead_due: "2026-08-31T09:00:00Z" },
       [
         leadRow("late", "2026-08-31T18:00:00Z"),
         leadRow("soon", "2026-08-31T09:00:00Z"),

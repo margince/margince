@@ -14,9 +14,12 @@ import (
 
 	"github.com/margince/margince/backend/internal/compose/installseam"
 	"github.com/margince/margince/backend/internal/compose/integration/apptest"
+	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/deals"
 	"github.com/margince/margince/backend/internal/modules/identity"
+	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 // The Home profile is the daily corpus at one small fixed scale. On top come
@@ -65,12 +68,25 @@ func seedHomeProfile(t *testing.T, e *apptest.AppEnv, seats Seats, scale float64
 	return profile
 }
 
-// settleHomeCorpus vacuums and analyzes the whole bench database. Otherwise
-// autovacuum first reaches the fresh corpus during the timed rounds and slows
-// the reads it overlaps. A server with few databases, as in CI, visits each
-// one often.
+// settleHomeCorpus stamps the seeded mail as the worker's pass does within a
+// minute of capture, then vacuums and analyzes the whole bench database.
+// Otherwise autovacuum first reaches the fresh corpus during the timed rounds
+// and slows the reads it overlaps. A server with few databases, as in CI,
+// visits each one often.
 func settleHomeCorpus(t *testing.T, e *apptest.AppEnv) {
 	t.Helper()
+	ws := apptest.InstallationWorkspaceUUID(context.Background(), t, e.Pool)
+	ctx := principal.WithActor(principal.WithWorkspaceID(context.Background(), ws), principal.Principal{
+		Type: principal.PrincipalSystem, ID: "system:reply_settled_stamp",
+		Permissions: principal.Permissions{RowScope: principal.RowScopeAll},
+	})
+	store := activities.NewStore(database.BindTo(e.Pool, ids.From[ids.WorkspaceKind](ws)))
+	for stamped := -1; stamped != 0; {
+		var err error
+		if stamped, err = store.StampReplySettledBatch(ctx, 500); err != nil {
+			t.Fatalf("stamping the seeded mail: %v", err)
+		}
+	}
 	if _, err := e.Owner.Exec(context.Background(), `VACUUM ANALYZE`); err != nil {
 		t.Fatalf("vacuuming the seeded Home corpus: %v", err)
 	}
