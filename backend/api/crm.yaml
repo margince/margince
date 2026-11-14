@@ -79710,6 +79710,13 @@ components:
       required: [as_of, queue, summary, sources_unavailable, scope, scope_options, reach, counts, readings]
       properties:
         as_of: { type: string, format: date-time, description: 'The instant every source below was read at.' }
+        served_stale:
+          type: boolean
+          description: |
+            True when this answer is Home's kept answer past its five-minute freshness,
+            served while the server reads it again. It still holds every access rule the
+            fresh read would apply. A client asks again a few seconds later for the fresh
+            answer. Absent or false means the answer is fresh.
         scope:
           type: string
           enum: [mine, unassigned, team, all]

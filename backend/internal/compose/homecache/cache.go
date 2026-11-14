@@ -22,9 +22,14 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
-// Life is how long an answer is served at most: how far behind Home may be
+// Life is how long an answer is served as fresh: how far behind Home may be
 // for what colleagues and background work changed.
 const Life = 5 * time.Minute
+
+// StaleGrace is how long past Life an answer is still served while it is read
+// again behind it. Grant expiry, a snooze's end, the fence and a forget still
+// end it at once.
+const StaleGrace = 10 * time.Minute
 
 // Read names one of Home's cached reads.
 type Read string
@@ -112,21 +117,25 @@ func Lookup[A Answer](ctx context.Context, c *Cache, reader ids.UUID, read Read,
 }
 
 // Serve answers read from the reader's kept answer while it holds, and from
-// fresh otherwise, keeping what fresh answered. An answer served near the end
-// of its life is read again in the background. The cache only saves work: one
-// that cannot be read or written is logged and passed over, and the answer is
-// the fresh read's. walkOf names the walk an answer's first page started.
+// fresh otherwise, keeping what fresh answered. An answer served near or past
+// the end of its Life is read again in the background, and stale says it is
+// past it. Only the Worklist is served past its Life; a receipt is read fresh. The cache only saves work: one that cannot be read or written is
+// logged and passed over, and the answer is the fresh read's. walkOf names the
+// walk an answer's first page started.
 func Serve[A Answer](
 	ctx context.Context, c *Cache, reader ids.UUID, read Read, key string,
 	fresh func(context.Context) (A, error), walkOf func(A) (*ids.UUID, error),
-) (A, error) {
+) (answer A, stale bool, err error) {
 	kept, age, hit, err := Lookup[A](ctx, c, reader, read, key)
 	if err != nil {
 		slog.ErrorContext(ctx, "a kept Home answer could not be read; reading it fresh", "read", read, "error", err)
 	}
-	countServed(read, hit)
-	if !hit {
-		return keepFresh(ctx, c, reader, read, key, fresh, walkOf)
+	stale = hit && age > Life
+	served := hit && (!stale || read == Worklist)
+	countServed(read, served)
+	if !served {
+		answer, err = keepFresh(ctx, c, reader, read, key, fresh, walkOf)
+		return answer, false, err
 	}
 	if age > Life-refreshAhead {
 		c.refresh(ctx, string(read)+"\x00"+reader.String()+"\x00"+key, func(ctx context.Context) error {
@@ -134,7 +143,7 @@ func Serve[A Answer](
 			return err
 		})
 	}
-	return kept, nil
+	return kept, stale, nil
 }
 
 // keepFresh assembles the answer and keeps it, stamped before it was read.
@@ -168,13 +177,17 @@ func (c *Cache) refresh(ctx context.Context, question string, read func(context.
 		return
 	}
 	c.background.Go(func() {
-		defer c.refreshing.Delete(question)
 		// A refresh that outlasts the answer's remaining life is no longer ahead of it.
 		detached, cancel := context.WithTimeout(context.WithoutCancel(ctx), refreshAhead)
 		defer cancel()
 		if err := read(detached); err != nil {
 			slog.ErrorContext(detached, "a Home answer could not be read again ahead of its expiry", "error", err)
+			// A stale answer is asked for again within seconds; a failing read
+			// is not repeated on each ask.
+			time.AfterFunc(refreshAhead, func() { c.refreshing.Delete(question) })
+			return
 		}
+		c.refreshing.Delete(question)
 	})
 }
 
@@ -201,7 +214,7 @@ func (c *Cache) Stamp(ctx context.Context) (Stamp, error) {
 			                      'infinity'::timestamptz),
 			             coalesce(`+briefs.NextSnoozeEndSQL("$2::uuid", "now()")+`, 'infinity'::timestamptz))
 			  FROM home_read_fence f`,
-			Life.Seconds(), actor.UserID, actor.TeamIDs).Scan(&s.fence, &s.at, &s.validUntil)
+			(Life+StaleGrace).Seconds(), actor.UserID, actor.TeamIDs).Scan(&s.fence, &s.at, &s.validUntil)
 	})
 	if err != nil {
 		return Stamp{}, fmt.Errorf("homecache: reading the access fence: %w", err)
