@@ -260,7 +260,8 @@ const ConflictingSourcesRule = "When two sources disagree, say that they disagre
 // conversation rule, so the instructions and the runner frame state it once.
 const OwnershipRule = "When a record's `owner.is_you` is false, say whose it is when you report it " +
 	"(or that its owner could not be named, when `owner.name` is absent), and treat contacting " +
-	"it as theirs to decide rather than advising an approach as though the record were unowned."
+	"it as theirs to decide rather than advising an approach as though the record were unowned. " +
+	"When the user tells you to act on it, act, and say whose it is."
 
 // LocalTimeRule is how a model sets a time the user named. Some writes offer
 // a local pick (`due_intent`) beside the instant, and some only the instant.
