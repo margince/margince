@@ -314,8 +314,14 @@ class TellHerWhatWeHoldTest(GuardCase):
     def test_asking_if_the_user_would_like_it_done(self):
         self.assertGreen("Confirming the source schedules the Art. 14 notice; please confirm if you would like that.")
 
+    def test_saying_the_notice_cannot_go_out_until_the_sender_is_set(self):
+        self.assertGreen("The CRM lacks your controller name and privacy contact, so a compliant notice "
+                         "cannot currently be generated.")
+        self.assertGreen("The workspace has no controller identity yet, so a complete notice cannot yet be generated.")
+
     def test_saying_what_is_owed_and_nothing_more_fails(self):
         self.assertMissed("You owe her a privacy notice under Art. 14 GDPR within a month.", "shall|should|may")
+        self.assertMissed("You owe her a privacy notice; it cannot be skipped.", "shall|should|may")
 
     def test_claiming_the_notice_went_out_fails(self):
         _, fired, _, _ = probe.judge(guards(self.scenario), "Done: the privacy notice was sent. Want me to log it?")
