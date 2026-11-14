@@ -72,3 +72,4 @@ e79906fc8ea528d9fc4a3dbcf1269d24d6db1100 b1ace03e3b7da348ba8f51d71b97d770f5fec04
 62e157754141f9711f9fef82d98db4e42ea74a11 120f33075b613f8189053156b4b796ec1068ad40 ratified-main-s-open-record-kind-patterns-and-text-limits-carried-into-develop-in-the-sync
 25bf088b1be4d1c62d08545e8fba13f33ebb7ce2 1b918b24c9129fc09123a3d060f2ab52b1665740 ratified-develop-s-shared-text-length-ladder-shared-mailbox-contract-and-narrowed-text-limits-carried-into-main-in-the-sync
 61abf0f13b03f18aca0ef3f462c5e6604ae1764d 7f74090761398c8ce4da42d24bf68e69eb200206 ratified-dispact-notice-ts-and-manifest-scopes-take-the-shapes-dispact-sends-never-shipped-in-a-release
+d2df8a6a65f2992ea52e1df62fc6272d3446ebc6 b8fecbe4e9110d366eb27e8101993187fc91aa40 ratified-dispact-notice-ts-and-manifest-scopes-take-the-shapes-dispact-sends-never-shipped-in-a-release
