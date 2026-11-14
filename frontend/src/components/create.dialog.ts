@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-import { useIsFetching } from "@tanstack/react-query";
+import { useIsFetching, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
 import { CF_OBJECTS, type CfObject } from "../lib/customfields.logic";
 import type { Screen } from "../lib/router";
@@ -30,11 +30,17 @@ export function catalogOfRecord(recordKey: string): CfObject | undefined {
 // Not while `catalog`'s first read, retries included, is in flight: the form
 // would open half-built. A read that fails for good or is slow opens the core.
 export function useSettledOpen(open: boolean, catalog?: CfObject): boolean {
-  const reading = useIsFetching({
+  const client = useQueryClient();
+  const catalogHash = client.defaultQueryOptions({
     queryKey: ["custom-fields", catalog],
-    exact: true,
+  }).queryHash;
+  // An exact-key filter rehashes the catalog key for every cache entry on each event.
+  const reading = useIsFetching({
     predicate: (query) =>
-      catalog !== undefined && query.state.data === undefined,
+      open &&
+      catalog !== undefined &&
+      query.queryHash === catalogHash &&
+      query.state.data === undefined,
   });
   const [waited, setWaited] = useState(false);
   useEffect(() => {
