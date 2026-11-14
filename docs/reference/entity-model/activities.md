@@ -6,7 +6,7 @@ The 34 tables owned by `activities`, as the migrations build them. [Back to the 
 
 ## activity
 
-87 columns · primary key `(id)` · referenced by 46 foreign keys
+88 columns · primary key `(id)` · referenced by 46 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
@@ -69,6 +69,7 @@ The 34 tables owned by `activities`, as the migrations build them. [Back to the 
 | `remind_at` | `timestamp with time zone` |  | Task only. |
 | `remind_wall` | `timestamp without time zone` |  |  |
 | `remind_zone` | `text` |  |  |
+| `reply_settled_at` | `timestamp with time zone` |  |  |
 | `reply_verdict` | `text` |  | One of `positive`, `negative`, `neutral`. |
 | `reply_verdict_at` | `timestamp with time zone` |  |  |
 | `reply_verdict_by` | `text` |  |  |
@@ -183,6 +184,7 @@ The 34 tables owned by `activities`, as the migrations build them. [Back to the 
 - `idx_activity_raw_capture`: `btree (raw_capture_id) WHERE (raw_capture_id IS NOT NULL)`
 - `idx_activity_receipt_order`: `btree (created_at, id) WHERE (archived_at IS NULL)`
 - `idx_activity_reminders`: `btree (remind_at) WHERE ((kind = 'task') AND (remind_at IS NOT NULL) AND (is_done = false) AND (archived_at IS NULL))`
+- `idx_activity_reply_unstamped`: `btree (occurred_at DESC, id) WHERE ((reply_settled_at IS NULL) AND (direction = 'inbound') AND (kind = ANY (ARRAY['email', 'message'])))`
 - `idx_activity_restricted_until`: `btree (restricted_until) WHERE (restricted_at IS NOT NULL)`
 - `idx_activity_search`: `gin (search_tsv)`
 - `idx_activity_source_activity`: `btree (source_activity_id) WHERE (source_activity_id IS NOT NULL)`
@@ -199,6 +201,7 @@ The 34 tables owned by `activities`, as the migrations build them. [Back to the 
 **Triggers**
 
 - `activity_assignee_id_retirement_guard`: `BEFORE INSERT OR UPDATE FOR EACH ROW WHEN (((new.assignee_id IS NOT NULL) AND ((new.archived_at IS NULL) AND (new.kind = 'task') AND (NOT new.is_done)))) EXECUTE FUNCTION refuse_retired_member_work('assignee_id')`
+- `activity_clears_reply_settled`: `AFTER INSERT OR UPDATE OF thread_key, kind, channel_provider, direction, archived_at, occurred_at, occurred_precision, counterparty_email FOR EACH ROW EXECUTE FUNCTION activity_clears_reply_settled()`
 - `activity_due_time_follows_due_at`: `BEFORE INSERT OR UPDATE OF due_at, due_has_time FOR EACH ROW EXECUTE FUNCTION activity_due_time_follows_due_at()`
 - `activity_intent_insert`: `BEFORE INSERT FOR EACH ROW WHEN (((new.due_wall IS NOT NULL) OR (new.remind_wall IS NOT NULL))) EXECUTE FUNCTION maintain_intent_times('due_wall', 'due_zone', 'due_at', 'remind_wall', 'remind_zone', 'remind_at')`
 - `activity_intent_update`: `BEFORE UPDATE OF due_wall, due_zone, due_at, remind_wall, remind_zone, remind_at FOR EACH ROW WHEN (((new.due_wall IS NOT NULL) OR (new.remind_wall IS NOT NULL) OR (old.due_wall IS NOT NULL) OR (old.remind_wall IS NOT NULL))) EXECUTE FUNCTION maintain_intent_times('due_wall', 'due_zone', 'due_at', 'remind_wall', 'remind_zone', 'remind_at')`
@@ -609,6 +612,7 @@ The 34 tables owned by `activities`, as the migrations build them. [Back to the 
 
 - `home_read_fence_participant`: `AFTER UPDATE FOR EACH ROW WHEN (((old.user_id IS NOT NULL) AND ((old.user_id IS DISTINCT FROM new.user_id) OR (old.activity_id IS DISTINCT FROM new.activity_id) OR ((old.address IS NOT NULL) AND (new.address IS NULL)) OR ((old.contact_id IS NOT NULL) AND (new.contact_id IS NULL)) OR ((old.channel_user_id IS NOT NULL) AND (new.channel_user_id IS NULL))))) EXECUTE FUNCTION advance_home_read_fence()`
 - `home_read_fence_participant_removed`: `AFTER DELETE FOR EACH ROW WHEN ((old.user_id IS NOT NULL)) EXECUTE FUNCTION advance_home_read_fence()`
+- `participant_clears_reply_settled`: `AFTER INSERT OR DELETE OR UPDATE FOR EACH ROW EXECUTE FUNCTION participant_clears_reply_settled()`
 - `settlement_evidence_share`: `BEFORE INSERT OR DELETE OR UPDATE FOR EACH ROW EXECUTE FUNCTION settlement_evidence_share_participant()`
 - `stamp_participant_domain_evidence`: `BEFORE INSERT OR UPDATE FOR EACH ROW EXECUTE FUNCTION stamp_participant_domain_evidence()`
 - `text_bound_insert`: `AFTER INSERT FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL, '{"role": 20000, "address": 20000, "response": 20000, "channel_user_id": 20000, "address_domain_folded": 20000, "domain_evidence_precision": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"address":20000,"address_domain_folded":20000,"channel_user_id":20000,"domain_evidence_precision":20000,"response":20000,"role":20000}')`
