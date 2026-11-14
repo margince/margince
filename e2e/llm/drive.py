@@ -108,7 +108,7 @@ def _loop(model, session, out):
 # Code mode stays on: it is the path codex's MCP calls take, and without it the
 # server attaches with none of its tools callable.
 _CODEX_OFF = (
-    "shell_tool", "unified_exec", "view_image", "multi_agent", "apps", "browser_use",
+    "shell_tool", "unified_exec", "view_image", "multi_agent", "collaboration_modes", "apps", "browser_use",
     "browser_use_external", "computer_use", "sleep_tool", "tool_suggest", "skill_search",
     "image_generation", "goals", "plugins", "hooks", "memories",
 )
