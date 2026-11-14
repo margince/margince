@@ -199,6 +199,7 @@ describe("the research tab's enrichment evidence", () => {
               body: "Send the pilot quote",
               source_activity_id: "a-1",
               occurred_precision: "instant",
+              source_quote: "I'll send the quote on Monday.",
               status: "open",
               needs_review: false,
               due_at: null,

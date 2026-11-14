@@ -17788,9 +17788,9 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "contact.chapter.routes_one": "{count} cách",
   "contact.chapter.routes_other": "{count} cách",
   "contact.chapter.allDirect_one": "trực tiếp",
-  "contact.chapter.allDirect_other": "tất cả trực tiếp",
-  "contact.chapter.allVia_one": "qua một liên hệ",
-  "contact.chapter.allVia_other": "tất cả qua liên hệ",
+  "contact.chapter.allDirect_other": "trực tiếp",
+  "contact.chapter.allVia_one": "qua liên hệ",
+  "contact.chapter.allVia_other": "qua liên hệ",
   "contact.chapter.wayInAnswer": "{routes}: {mix}.",
   "contact.chapter.withDetail": "{value} ({detail})",
   "contact.chapter.progressAnswer":
