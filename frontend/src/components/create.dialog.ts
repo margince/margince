@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-import { useIsFetching, useQueryClient } from "@tanstack/react-query";
-import { useEffect, useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
+import { useCallback, useEffect, useState, useSyncExternalStore } from "react";
 import { CF_OBJECTS, type CfObject } from "../lib/customfields.logic";
 import type { Screen } from "../lib/router";
 
@@ -34,14 +34,22 @@ export function useSettledOpen(open: boolean, catalog?: CfObject): boolean {
   const catalogHash = client.defaultQueryOptions({
     queryKey: ["custom-fields", catalog],
   }).queryHash;
-  // An exact-key filter rehashes the catalog key for every cache entry on each event.
-  const reading = useIsFetching({
-    predicate: (query) =>
-      open &&
-      catalog !== undefined &&
-      query.queryHash === catalogHash &&
-      query.state.data === undefined,
-  });
+  const cache = client.getQueryCache();
+  const subscribe = useCallback(
+    (changed: () => void) => {
+      if (!open || catalog === undefined) return () => undefined;
+      return cache.subscribe((event) => {
+        if (event.query.queryHash === catalogHash) changed();
+      });
+    },
+    [cache, catalogHash, catalog, open],
+  );
+  const snapshot = useCallback(() => {
+    if (!open || catalog === undefined) return false;
+    const state = cache.get(catalogHash)?.state;
+    return state?.fetchStatus === "fetching" && state.data === undefined;
+  }, [cache, catalogHash, catalog, open]);
+  const reading = useSyncExternalStore(subscribe, snapshot, () => false);
   const [waited, setWaited] = useState(false);
   useEffect(() => {
     if (!open) {
@@ -52,7 +60,7 @@ export function useSettledOpen(open: boolean, catalog?: CfObject): boolean {
     return () => clearTimeout(timer);
   }, [open]);
   const [shown, setShown] = useState(false);
-  const next = open && (shown || waited || reading === 0);
+  const next = open && (shown || waited || !reading);
   if (next !== shown) {
     setShown(next);
   }
