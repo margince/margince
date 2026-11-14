@@ -1528,7 +1528,7 @@ A check is `object.action`, or `object.a|b` for any one of them. `*.action` is t
 | Capture review | `read_workspace.held_threads` | `list_held_threads` |  |
 | Capture review | `read_workspace.my_capture_activity` | `list_my_capture_activity` |  |
 | Capture review | `read_workspace.workspace_capture_activity` | `list_workspace_capture_activity` | `capture_trace.read` |
-| Connectors and provider connections | `change_activities.file_channel_message` | `file_channel_message` | `activity.create` |
+| Connectors and provider connections | `change_activities.file_channel_message` | `file_channel_message` | `activity.create` `activity.read` |
 | Connectors and provider connections | `change_capture.cancel_backfill` | `cancel_connector_backfill` |  |
 | Connectors and provider connections | `change_capture.disconnect_channel` | `disconnect_channel` | `channel_connection.delete` |
 | Connectors and provider connections | `change_capture.disconnect_mailbox` | `disconnect_connector` |  |
