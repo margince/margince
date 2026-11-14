@@ -1,0 +1,25 @@
+{
+  "target": "bench-coldstart",
+  "measured_on": "2026-11-14",
+  "machine": {
+    "os": "darwin",
+    "arch": "arm64",
+    "cpu": "Apple M4",
+    "cores": 10,
+    "memory_gib": 24,
+    "toolchain": "go1.27.4",
+    "postgres": "16.15"
+  },
+  "budgets": [
+    {
+      "id": "PERF-6",
+      "name": "cold_start",
+      "p50_ms": 754.197875,
+      "p95_ms": 849.191833,
+      "p99_ms": 849.191833,
+      "budget_ms": 2000,
+      "samples": 10,
+      "note": "process start to /readyz 200 over a migrated database, with the example deployment config in the dev posture; the first boot is not counted"
+    }
+  ]
+}

@@ -13,7 +13,7 @@ measured is listed as not measured. The budgets are the published claim; a
 record is evidence about one machine on one day.
 
 Re-measure with `make bench-perf`, `make bench-record`,
-`make bench-capture`, `make bench-daily` (each needs `make db-up`) or
+`make bench-ai`, `make bench-coldstart`, `make bench-capture`, `make bench-daily` (each needs `make db-up`) or
 `make bench-mobile`. Each writes its own record and re-renders this page.
 `make bench-perf-check` and `make bench-mobile-check` measure
 without recording. The weekly scheduled job records the SMB tier of
@@ -39,11 +39,6 @@ records, so a row changes only when a maintainer merges it.
 | `LOAD-1` | A cheap request while the team starts at once | < 150 ms | 240 ms | over budget (#7068) | 2026-10-07 |
 | `CAP-PARAM-1` | Capture to timeline | 60 s p95 |  | **not measured** |  |
 | `MOBILE-AC-2` | Record open, perceived, Fast-3G | < 300 ms perceived |  | **not measured** |  |
-
-### Still unmeasured
-
-No harness covers `PERF-5` (AI baseline action (summary/draft)), `PERF-6` (Cold start (single binary)). They are listed above as `not measured` rather than
-omitted, because a budget missing from this page reads as one that holds.
 
 ## Daily use (`make bench-daily`)
 
