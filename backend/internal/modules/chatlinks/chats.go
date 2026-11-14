@@ -22,7 +22,7 @@ type Chat interface {
 	CreateChannel(ctx context.Context, externalKey, name string) (dispact.Channel, error)
 	AddMembers(ctx context.Context, slug string, emails []string) (dispact.MemberResult, error)
 	Post(ctx context.Context, slug, text, clientMsgID, threadTS string) (dispact.Posted, error)
-	Update(ctx context.Context, messageID, text string) error
+	Update(ctx context.Context, slug, ts, text string) error
 	History(ctx context.Context, slug string, after int64, limit int) (dispact.HistoryPage, error)
 }
 

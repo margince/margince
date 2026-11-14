@@ -6,13 +6,12 @@
 package toolrole
 
 import (
-	"encoding/json"
-	"net/http"
 	"net/http/httptest"
-	"strings"
 	"sync"
+	"time"
 
 	"github.com/margince/margince/backend/internal/compose/integration"
+	"github.com/margince/margince/backend/internal/modules/chatlinks/dispact/dispacttest"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -35,40 +34,14 @@ var (
 // is not read.
 func sweepChat() string {
 	sweepChatOnce.Do(func() {
-		srv := httptest.NewServer(http.HandlerFunc(serveSweepChat))
-		sweepChatURL = srv.URL
+		chat := dispacttest.New("sweep-team")
+		chat.SeedEveryChannel(dispacttest.Message{
+			Seq: 1, UserName: "Role Sweep", Text: "We agree the role sweep.",
+			PostedAt: time.Date(2099, 1, 1, 0, 0, 0, 0, time.UTC),
+		})
+		sweepChatURL = httptest.NewServer(chat).URL
 	})
 	return sweepChatURL
-}
-
-func serveSweepChat(w http.ResponseWriter, r *http.Request) {
-	path := strings.TrimPrefix(r.URL.Path, "/api/bot/")
-	slug, rest, _ := strings.Cut(strings.TrimPrefix(path, "channels/"), "/")
-	var answer any
-	switch {
-	case path == "me":
-		answer = map[string]any{"id": "sweep-bot", "name": "Sweep bot", "team_id": "sweep-team"}
-	case strings.HasPrefix(path, "messages/"):
-		answer = map[string]any{}
-	case rest == "messages" && r.Method == http.MethodGet:
-		messages := []map[string]any{}
-		if r.URL.Query().Get("after") == "0" {
-			messages = append(messages, map[string]any{
-				"id": "m1", "seq": 1, "user_name": "Role Sweep",
-				"text": "We agree the role sweep.", "posted_at": "2099-01-01T00:00:00Z",
-			})
-		}
-		answer = map[string]any{"messages": messages}
-	case rest == "messages":
-		answer = map[string]any{"id": "m1", "seq": 2}
-	case rest == "members":
-		answer = map[string]any{"added": []string{}, "not_found": []string{}}
-	default:
-		answer = map[string]any{"slug": slug, "name": slug, "is_private": true, "is_archived": false, "bot_is_member": true}
-	}
-	if err := json.NewEncoder(w).Encode(answer); err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
-	}
 }
 
 func uniqueChannel() string { return "sweep-" + ids.NewV7().String()[24:] }

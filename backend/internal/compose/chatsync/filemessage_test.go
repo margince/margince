@@ -20,9 +20,8 @@ func TestAMessageIsNamedBySeqMentionOrLinkInItsOwnChannelOnly(t *testing.T) {
 		{"#acme:42", 42, true},
 		{"<m:#acme:42|this message>", 42, true},
 		{"<m:#acme:40:42|this reply>", 40, true},
-		{"https://chat.test/channels/acme?seq=42", 42, true},
+		{"https://chat.test/channels/acme/messages/0c2f", 0, false},
 		{"#other:42", 0, false},
-		{"https://chat.test/channels/other?seq=42", 0, false},
 		{"latest", 0, false},
 		{"0", 0, false},
 	} {

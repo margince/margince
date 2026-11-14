@@ -35,8 +35,12 @@ func appSurfaceOf(ctx context.Context) (AppSurface, bool) {
 }
 
 // seatlessMethods are what a seatless app caller is served: the handshake and
-// the tool list. Everything else needs a member to act for.
-var seatlessMethods = []string{methodInitialize, methodPing, methodDiscover, methodToolsList}
+// the lists an app reads when it refreshes. An app is served no resources and
+// no prompts, so those lists are empty. Everything else needs a member.
+var seatlessMethods = []string{
+	methodInitialize, methodPing, methodDiscover, methodToolsList,
+	methodResourcesList, methodResourceTemplatesList, methodPromptsList,
+}
 
 // seatlessRefusal answers a method a seatless app caller may not use, and nil
 // for any other request.

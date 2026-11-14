@@ -11235,7 +11235,8 @@ export interface paths {
          *     A URL check (`type: url_verification`) is answered with its `challenge`. A message notice
          *     queues one read of the bot's channels, and notices that arrive while that read waits add
          *     nothing. `channel.archived` pauses the channel's link. A notice for a channel no live link
-         *     has is answered `200` and changes nothing.
+         *     has is answered `200` and changes nothing. A `webhook-id` taken in the last 24 hours is
+         *     answered `200` `already_taken`, so Dispact stops retrying a notice whose answer it lost.
          */
         post: operations["receiveDispactChannelEvent"];
         delete?: never;
@@ -32035,17 +32036,20 @@ export interface components {
             seq?: number;
             message_id?: string;
             event_id?: string;
-            /** Format: int64 */
-            ts?: number;
+            /**
+             * Format: date-time
+             * @description When the burst's newest event happened.
+             */
+            ts?: string;
         };
         /** @description The answer to a taken notice. A URL check gets `challenge` alone. */
         DispactChannelEventReceipt: {
             challenge?: string;
             /**
-             * @description `pull_queued`: the channel's history is read soon. `link_paused`: the archived channel's link is paused. `ignored`: no live link has this channel.
+             * @description `pull_queued`: the channel's history is read soon. `link_paused`: the archived channel's link is paused. `ignored`: no live link has this channel. `already_taken`: this `webhook-id` was taken in the last 24 hours, so nothing changes.
              * @enum {string}
              */
-            status?: "pull_queued" | "link_paused" | "ignored";
+            status?: "pull_queued" | "link_paused" | "ignored" | "already_taken";
         };
         /**
          * @description The kind of record a chat channel is linked to.
@@ -32087,22 +32091,48 @@ export interface components {
         };
         /** @description Who a newly created channel was opened to. */
         ChannelInvites: {
-            /** @description Members added to the channel. */
+            /** @description Members added to the channel, or already in it. */
             invited: number;
-            /** @description Members invited who have no chat account. */
+            /** @description Members invited who have no active chat account. */
             not_in_chat: number;
+            /** @description Members the chat would not add: outside the app's audience, or the add failed. */
+            not_added: number;
             /** @description Members left out because a new channel invites at most 50. */
             skipped_over_cap: number;
         };
-        /** @description What Dispact needs to install the Margince app in a team. */
+        /** @description What Dispact needs to install the Margince app in a team, in the shape of Dispact's app manifest. */
         DispactAppManifest: {
+            /** @enum {string} */
+            manifest_version: "1";
             /** @enum {string} */
             slug: "margince";
             name: string;
+            description: string;
+            /** @description This installation's icon, `<public_base_url>/icon.svg`. */
+            icon_url: string;
+            publisher: components["schemas"]["DispactAppManifestPublisher"];
+            /** @description The release this installation runs, or `dev` for a build with none. */
+            version: string;
+            /** @description Empty. The app adds no screens to Dispact. */
+            surfaces: Record<string, never>;
+            bot: components["schemas"]["DispactAppManifestBot"];
+            /** @description The bot scopes the app asks for. */
+            scopes: string[];
+            security: components["schemas"]["DispactAppManifestSecurity"];
             mcp: components["schemas"]["DispactAppManifestMcp"];
-            /** @description The bot scopes the app asks for, separated by spaces. */
-            scopes: string;
             events: components["schemas"]["DispactAppManifestEvents"];
+        };
+        DispactAppManifestPublisher: {
+            name: string;
+            /** @description The address of the admin who asked for the manifest. */
+            email: string;
+        };
+        DispactAppManifestBot: {
+            display_name: string;
+        };
+        DispactAppManifestSecurity: {
+            /** @description Lifetime of the session token Dispact gives the app. */
+            token_ttl_seconds: number;
         };
         DispactAppManifestMcp: {
             /** @description This installation's MCP address, `<public_base_url>/mcp`. */
@@ -81058,15 +81088,6 @@ export interface operations {
             };
             /** @description The notice is not signed by the connected bot: no Dispact bot with an events secret is connected, or the signature, the timestamp or the team does not match (`code: channel_event_rejected`). The answer is the same for each cause. */
             401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/problem+json": components["schemas"]["Problem"];
-                };
-            };
-            /** @description This `webhook-id` was taken in the last 24 hours (`code: channel_event_replayed`). */
-            409: {
                 headers: {
                     [name: string]: unknown;
                 };

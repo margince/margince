@@ -17474,7 +17474,8 @@ paths:
         A URL check (`type: url_verification`) is answered with its `challenge`. A message notice
         queues one read of the bot's channels, and notices that arrive while that read waits add
         nothing. `channel.archived` pauses the channel's link. A notice for a channel no live link
-        has is answered `200` and changes nothing.
+        has is answered `200` and changes nothing. A `webhook-id` taken in the last 24 hours is
+        answered `200` `already_taken`, so Dispact stops retrying a notice whose answer it lost.
       requestBody:
         required: true
         content:
@@ -17493,11 +17494,6 @@ paths:
               schema: { $ref: '#/components/schemas/Problem' }
         '401':
           description: 'The notice is not signed by the connected bot: no Dispact bot with an events secret is connected, or the signature, the timestamp or the team does not match (`code: channel_event_rejected`). The answer is the same for each cause.'
-          content:
-            application/problem+json:
-              schema: { $ref: '#/components/schemas/Problem' }
-        '409':
-          description: 'This `webhook-id` was taken in the last 24 hours (`code: channel_event_replayed`).'
           content:
             application/problem+json:
               schema: { $ref: '#/components/schemas/Problem' }
@@ -45746,7 +45742,7 @@ components:
         seq: { type: integer, description: 'The highest message sequence of the burst. Margince reads the history itself and uses the notice only as a signal.' }
         message_id: { type: string }
         event_id: { type: string }
-        ts: { type: integer, format: int64 }
+        ts: { type: string, format: date-time, description: When the burst's newest event happened. }
     DispactChannelEventReceipt:
       type: object
       additionalProperties: false
@@ -45755,9 +45751,9 @@ components:
         challenge: { type: string }
         status:
           type: string
-          enum: [pull_queued, link_paused, ignored]
+          enum: [pull_queued, link_paused, ignored, already_taken]
           x-extensible-enum: true
-          description: '`pull_queued`: the channel''s history is read soon. `link_paused`: the archived channel''s link is paused. `ignored`: no live link has this channel.'
+          description: '`pull_queued`: the channel''s history is read soon. `link_paused`: the archived channel''s link is paused. `ignored`: no live link has this channel. `already_taken`: this `webhook-id` was taken in the last 24 hours, so nothing changes.'
 
     # ---- chat channel links ----
     ChannelLinkRecordType:
@@ -45801,25 +45797,57 @@ components:
     ChannelInvites:
       type: object
       additionalProperties: false
-      required: [invited, not_in_chat, skipped_over_cap]
+      required: [invited, not_in_chat, not_added, skipped_over_cap]
       description: Who a newly created channel was opened to.
       properties:
-        invited: { type: integer, description: Members added to the channel. }
-        not_in_chat: { type: integer, description: Members invited who have no chat account. }
+        invited: { type: integer, description: 'Members added to the channel, or already in it.' }
+        not_in_chat: { type: integer, description: Members invited who have no active chat account. }
+        not_added: { type: integer, description: 'Members the chat would not add: outside the app''s audience, or the add failed.' }
         skipped_over_cap: { type: integer, description: Members left out because a new channel invites at most 50. }
     DispactAppManifest:
       type: object
       additionalProperties: false
-      required: [slug, name, mcp, scopes, events]
-      description: What Dispact needs to install the Margince app in a team.
+      required: [manifest_version, slug, name, description, icon_url, publisher, version, surfaces, bot, scopes, security, mcp, events]
+      description: What Dispact needs to install the Margince app in a team, in the shape of Dispact's app manifest.
       properties:
+        manifest_version: { type: string, enum: ['1'], x-extensible-enum: true }
         slug: { type: string, enum: [margince], x-extensible-enum: true }
         name: { type: string }
-        mcp: { $ref: '#/components/schemas/DispactAppManifestMcp' }
+        description: { type: string }
+        icon_url: { type: string, description: 'This installation''s icon, `<public_base_url>/icon.svg`.' }
+        publisher: { $ref: '#/components/schemas/DispactAppManifestPublisher' }
+        version: { type: string, description: 'The release this installation runs, or `dev` for a build with none.' }
+        surfaces:
+          type: object
+          additionalProperties: false
+          description: Empty. The app adds no screens to Dispact.
+        bot: { $ref: '#/components/schemas/DispactAppManifestBot' }
         scopes:
-          type: string
-          description: The bot scopes the app asks for, separated by spaces.
+          type: array
+          items: { type: string }
+          description: The bot scopes the app asks for.
+        security: { $ref: '#/components/schemas/DispactAppManifestSecurity' }
+        mcp: { $ref: '#/components/schemas/DispactAppManifestMcp' }
         events: { $ref: '#/components/schemas/DispactAppManifestEvents' }
+    DispactAppManifestPublisher:
+      type: object
+      additionalProperties: false
+      required: [name, email]
+      properties:
+        name: { type: string }
+        email: { type: string, description: The address of the admin who asked for the manifest. }
+    DispactAppManifestBot:
+      type: object
+      additionalProperties: false
+      required: [display_name]
+      properties:
+        display_name: { type: string }
+    DispactAppManifestSecurity:
+      type: object
+      additionalProperties: false
+      required: [token_ttl_seconds]
+      properties:
+        token_ttl_seconds: { type: integer, description: Lifetime of the session token Dispact gives the app. }
     DispactAppManifestMcp:
       type: object
       additionalProperties: false
