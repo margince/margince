@@ -13,7 +13,7 @@ measured is listed as not measured. The budgets are the published claim; a
 record is evidence about one machine on one day.
 
 Re-measure with `make bench-perf`, `make bench-record`,
-`make bench-capture`, `make bench-daily` (each needs `make db-up`) or
+`make bench-ai`, `make bench-coldstart`, `make bench-capture`, `make bench-daily` (each needs `make db-up`) or
 `make bench-mobile`. Each writes its own record and re-renders this page.
 `make bench-perf-check` and `make bench-mobile-check` measure
 without recording. The weekly scheduled job records the SMB tier of
@@ -28,8 +28,8 @@ records, so a row changes only when a maintainer merges it.
 | `PERF-2` | List/table view (50 rows, filtered) | < 150 ms server | 108 ms | within budget | 2026-11-11 |
 | `PERF-3` | Search (full-text) | < 200 ms | 140 ms | within budget | 2026-11-13 |
 | `PERF-4` | Save/mutation | < 150 ms server | 60.6 ms | within budget | 2026-10-07 |
-| `PERF-5` | AI baseline action (summary/draft) | first token < 1.5 s |  | **not measured** |  |
-| `PERF-6` | Cold start (single binary) | < 2 s |  | **not measured** |  |
+| `PERF-5` | AI baseline action (summary/draft) | first token < 1.5 s | 109 ms | within budget | 2026-11-14 |
+| `PERF-6` | Cold start (single binary) | < 2 s | 849 ms | within budget | 2026-11-14 |
 | `PERF-7` | Context-graph assembly | < 300 ms at mid-market | 112 ms | inconclusive: measured on the smb tier; the SLO binds at mid_market | 2026-11-13 |
 | `PERF-8` | Worklist and Home, as the screen calls them | < 1 s | 1757 ms | over budget (#4912) | 2026-11-11 |
 | `PERF-9` | Analytics screen | < 300 ms | 164 ms | within budget | 2026-11-11 |
@@ -39,11 +39,6 @@ records, so a row changes only when a maintainer merges it.
 | `LOAD-1` | A cheap request while the team starts at once | < 150 ms | 948 ms | over budget (#7068) | 2026-11-11 |
 | `CAP-PARAM-1` | Capture to timeline | 60 s p95 | 39.2 ms | within budget | 2026-08-15 |
 | `MOBILE-AC-2` | Record open, perceived, Fast-3G | < 300 ms perceived | 122 ms | within budget | 2026-11-13 |
-
-### Still unmeasured
-
-No harness covers `PERF-5` (AI baseline action (summary/draft)), `PERF-6` (Cold start (single binary)). They are listed above as `not measured` rather than
-omitted, because a budget missing from this page reads as one that holds.
 
 ## Daily use (`make bench-daily`)
 
@@ -227,6 +222,20 @@ source it could not read. A pass at 30 samples is exploratory, not a qualificati
 
 A latency is only true of the machine that produced it.
 
+### `make bench-ai` · measured 2026-11-14
+
+| | |
+|---|---|
+| os / arch | darwin / arm64 |
+| cpu | Apple M4 (10 cores) |
+| memory | 24 GiB |
+| toolchain | go1.27.4 |
+| postgres | 16.15 |
+
+| measurement | p50 | p95 | p99 | budget | samples |
+|---|---|---|---|---|---|
+| `ai_draft_contact` | 73.0 ms | 109 ms | 352 ms | 1500 ms | 30 |
+
 ### `make bench-capture` · measured 2026-08-15
 
 | | |
@@ -240,6 +249,20 @@ A latency is only true of the machine that produced it.
 | measurement | p50 | p95 | p99 | budget | samples |
 |---|---|---|---|---|---|
 | `capture_to_timeline` | 27.8 ms | 39.2 ms | 42.9 ms | 60000 ms | 20 |
+
+### `make bench-coldstart` · measured 2026-11-14
+
+| | |
+|---|---|
+| os / arch | darwin / arm64 |
+| cpu | Apple M4 (10 cores) |
+| memory | 24 GiB |
+| toolchain | go1.27.4 |
+| postgres | 16.15 |
+
+| measurement | p50 | p95 | p99 | budget | samples |
+|---|---|---|---|---|---|
+| `cold_start` | 754 ms | 849 ms | 849 ms | 2000 ms | 10 |
 
 ### `make bench-daily` · measured 2026-11-11
 
