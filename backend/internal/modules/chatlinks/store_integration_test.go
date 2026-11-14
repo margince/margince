@@ -58,10 +58,10 @@ func (f *fakeChat) AddMembers(_ context.Context, slug string, emails []string) (
 }
 
 func (f *fakeChat) Post(context.Context, string, string, string, string) (dispact.Posted, error) {
-	return dispact.Posted{ID: "m"}, nil
+	return dispact.Posted{ID: "0.000001", Seq: 1}, nil
 }
 
-func (f *fakeChat) Update(context.Context, string, string) error { return nil }
+func (f *fakeChat) Update(context.Context, string, string, string) error { return nil }
 
 func (f *fakeChat) History(context.Context, string, int64, int) (dispact.HistoryPage, error) {
 	return dispact.HistoryPage{}, nil
@@ -183,6 +183,7 @@ func (e *linkEnv) count(t *testing.T, sql string, args ...any) int {
 	return n
 }
 
+// seat is a rep who sees their own records and may edit deals and projects.
 func (e *linkEnv) seat(user ids.UUID) context.Context {
 	grant := principal.ObjectGrant{Read: true, Update: true}
 	return e.seatWith(user, principal.RowScopeOwn, map[string]principal.ObjectGrant{"deal": grant, "project": grant})

@@ -38,7 +38,7 @@ type State struct {
 
 // Invites says who a newly created channel was opened to.
 type Invites struct {
-	Invited, NotInChat, SkippedOverCap int
+	Invited, NotInChat, NotAdded, SkippedOverCap int
 }
 
 // LinkRequest is a link as the caller asked for it.
@@ -229,6 +229,20 @@ func readFacts(ctx context.Context, tx pgx.Tx, kind string, id ids.UUID, facts *
 	return tx.QueryRow(ctx, query, id).Scan(&facts.name, &facts.owner, &facts.projectID)
 }
 
+// memberEmail is the address of the member asking, or of the member an agent
+// acts for. Only the manifest reads it, after its own auth.Require.
+func (s *Store) memberEmail(ctx context.Context) (string, error) {
+	actor, err := linkActor(ctx)
+	if err != nil {
+		return "", err
+	}
+	var email string
+	err = s.db.Tx(ctx, func(tx pgx.Tx) error {
+		return tx.QueryRow(ctx, `SELECT coalesce(email, '') FROM app_user WHERE id = $1`, actor).Scan(&email)
+	})
+	return email, err
+}
+
 // linkActor is the human a link is recorded against: the signed-in member, or
 // the member an agent acts for.
 func linkActor(ctx context.Context) (ids.UUID, error) {
@@ -319,7 +333,10 @@ func (s *Store) invite(ctx context.Context, chat Chat, slug, kind string, id ids
 	if err != nil {
 		return nil, ChatFailure(err)
 	}
-	return &Invites{Invited: len(result.Added), NotInChat: len(result.NotFound), SkippedOverCap: skipped}, nil
+	return &Invites{
+		Invited:   len(result.Added) + len(result.AlreadyMember),
+		NotInChat: len(result.NotInChat), NotAdded: len(result.NotAdded), SkippedOverCap: skipped,
+	}, nil
 }
 
 // invitees orders the viewers owner first, then the linker, then as given,

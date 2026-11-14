@@ -49,7 +49,7 @@ function renderRow(row: Activity) {
 const episode = {
   message_count: 3,
   ended_at: "2026-11-12T09:10:00Z",
-  url: "https://chat.example.com/channels/acme?seq=41",
+  url: "https://chat.example.com/channels/acme",
 };
 
 afterEach(cleanup);

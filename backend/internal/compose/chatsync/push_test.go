@@ -143,7 +143,7 @@ func signed(t *testing.T, secret, id string, at time.Time, body string) chatlink
 }
 
 func notice(kind, team, slug string) string {
-	return fmt.Sprintf(`{"type":%q,"workspace_id":%q,"channel_slug":%q,"seq":42,"event_id":"ev1","ts":1}`, kind, team, slug)
+	return fmt.Sprintf(`{"type":%q,"workspace_id":%q,"channel_slug":%q,"seq":42,"message_id":"0c2f5a1e-6d3b-4e7a-9b1f-2a4d6c8e0f12","event_id":"1794620204214-0","ts":"2026-11-13T10:00:00.123Z"}`, kind, team, slug)
 }
 
 func (e *pushEnv) receive(d chatlinks.Delivery) (crmcontracts.DispactChannelEventReceipt, error) {
@@ -219,14 +219,14 @@ func TestOneValidSignatureAmongSeveralIsEnough(t *testing.T) {
 	}
 }
 
-func TestAReplayedNoticeIDIsRefused(t *testing.T) {
+func TestAReplayedNoticeIDIsTakenOnceAndAnsweredOK(t *testing.T) {
 	e := newPushEnv(t)
 	d := signed(t, pushSecret, "msg_1", pushNow, notice("message.created", pushTeam, "deal-acme"))
 	if _, err := e.receive(d); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := e.receive(d); !errors.Is(err, chatlinks.ErrEventReplayed) {
-		t.Errorf("the same webhook-id a second time: %v; want ErrEventReplayed", err)
+	if got, err := e.receive(d); err != nil || statusOf(got) != "already_taken" {
+		t.Errorf("the same webhook-id a second time → %+v, %v; want already_taken, so Dispact stops retrying", got, err)
 	}
 	if len(e.pulls) != 1 {
 		t.Errorf("a replay queued a second pull: %d", len(e.pulls))
@@ -239,6 +239,10 @@ func TestTheURLCheckEchoesItsChallengeOnlyWhenSigned(t *testing.T) {
 	got, err := e.receive(signed(t, pushSecret, "msg_check", pushNow, body))
 	if err != nil || got.Challenge == nil || *got.Challenge != "c-123" || got.Status != nil {
 		t.Fatalf("a signed URL check → %+v, %v; want only the challenge c-123 back", got, err)
+	}
+	again, err := e.receive(signed(t, pushSecret, "msg_check", pushNow, body))
+	if err != nil || again.Challenge == nil || *again.Challenge != "c-123" {
+		t.Errorf("a URL check sent again under its id → %+v, %v; want the challenge again", again, err)
 	}
 	unsigned := chatlinks.Delivery{ID: "msg_check2", Timestamp: strconv.FormatInt(pushNow.Unix(), 10), Body: []byte(body)}
 	if _, err := e.receive(unsigned); !errors.Is(err, chatlinks.ErrEventRejected) {
@@ -373,8 +377,8 @@ func TestANoticeWhoseActionFailedIsTakenOnRetry(t *testing.T) {
 		if got, err := e.receive(d); err != nil || statusOf(got) != tc.want {
 			t.Errorf("%s: Dispact's retry under the same id → %+v, %v; want %s", tc.kind, got, err, tc.want)
 		}
-		if _, err := e.receive(d); !errors.Is(err, chatlinks.ErrEventReplayed) {
-			t.Errorf("%s: a replay after the success: %v; want ErrEventReplayed", tc.kind, err)
+		if got, err := e.receive(d); err != nil || statusOf(got) != "already_taken" {
+			t.Errorf("%s: a replay after the success → %+v, %v; want already_taken", tc.kind, got, err)
 		}
 	}
 }

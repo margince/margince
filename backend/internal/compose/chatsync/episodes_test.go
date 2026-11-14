@@ -4,6 +4,7 @@
 package chatsync
 
 import (
+	"fmt"
 	"testing"
 	"time"
 
@@ -13,7 +14,7 @@ import (
 var day = time.Date(2026, 11, 10, 9, 0, 0, 0, time.UTC)
 
 func msg(seq int64, at time.Time) dispact.Message {
-	return dispact.Message{ID: "m" + string(rune('a'+seq)), Seq: seq, PostedAt: at, Text: "talk", UserName: "Rita"}
+	return dispact.Message{TS: "0." + fmt.Sprintf("%06d", seq), Seq: seq, PostedAt: at, Text: "talk", UserName: "Rita"}
 }
 
 func seqsOf(e episode) []int64 {
@@ -27,9 +28,9 @@ func seqsOf(e episode) []int64 {
 func TestAThreadAnsweredWithinTheQuietWindowIsOneEpisode(t *testing.T) {
 	root := msg(1, day)
 	reply1 := msg(2, day.Add(20*time.Minute))
-	reply1.ThreadTS = root.ID
+	reply1.ThreadTS = root.TS
 	reply2 := msg(3, day.Add(45*time.Minute))
-	reply2.ThreadTS = root.ID
+	reply2.ThreadTS = root.TS
 	now := day.Add(2 * time.Hour)
 
 	episodes := groupEpisodes([]dispact.Message{root, reply1, reply2}, now, time.UTC)

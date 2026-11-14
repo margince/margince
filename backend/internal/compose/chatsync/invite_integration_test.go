@@ -66,12 +66,12 @@ func TestANewChannelInvitesWhoMaySeeTheDealUpToTheCap(t *testing.T) {
 		t.Fatal(err)
 	}
 	if got := state.Invites; got == nil || got.Invited != 50 || got.SkippedOverCap != 2 {
-		t.Fatalf("invites = %+v to %v, want 50 invited and 2 over the cap", got, e.chat.invited)
+		t.Fatalf("invites = %+v to %v, want 50 invited and 2 over the cap", got, e.chat.Invited())
 	}
-	if e.chat.invited[0] != "rep@chat.test" {
-		t.Errorf("first invited = %q, want the owner", e.chat.invited[0])
+	if e.chat.Invited()[0] != "rep@chat.test" {
+		t.Errorf("first invited = %q, want the owner", e.chat.Invited()[0])
 	}
-	if slices.Contains(e.chat.invited, "outsider@chat.test") || slices.Contains(e.chat.invited, "agent@chat.test") {
-		t.Fatalf("invited %v, which holds a member who may not see the deal or an agent", e.chat.invited)
+	if slices.Contains(e.chat.Invited(), "outsider@chat.test") || slices.Contains(e.chat.Invited(), "agent@chat.test") {
+		t.Fatalf("invited %v, which holds a member who may not see the deal or an agent", e.chat.Invited())
 	}
 }

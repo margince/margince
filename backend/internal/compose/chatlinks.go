@@ -93,7 +93,7 @@ func WithChatLinks(inserter *jobs.Runner, private bool, lane ai.Completer) Optio
 // WithDispactCalls lets the Dispact app call /mcp; replays holds each token id once.
 func WithDispactCalls(replays dispactapp.Replays, private bool) Option {
 	return func(s *Server, pool *pgxpool.Pool) {
-		s.dispactCalls = dispactapp.Wire(InstallationDB(pool), replays, private)
+		s.dispactCalls = dispactapp.Wire(InstallationDB(pool), replays, private).SetLog(s.log)
 	}
 }
 

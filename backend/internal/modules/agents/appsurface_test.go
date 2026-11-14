@@ -152,3 +152,26 @@ func TestASeatlessAppCallerMayListAndNothingElse(t *testing.T) {
 		t.Fatalf("a seatless caller's tools/call answered %d %s, want the 403 refusal", status, body)
 	}
 }
+
+// Dispact refreshes an app with tools/list, resources/list and prompts/list,
+// as whichever admin pressed refresh. An app is served tools alone, so the
+// other two lists answer empty, seated or not.
+func TestAnAppReadsEmptyResourceAndPromptListsSeatedOrNot(t *testing.T) {
+	for _, seated := range []bool{false, true} {
+		server, _ := appServer(t, seated)
+		for method, key := range map[string]string{"resources/list": "resources", "resources/templates/list": "resourceTemplates", "prompts/list": "prompts"} {
+			status, body := appRPC(t, server, `{"jsonrpc":"2.0","id":1,"method":"`+method+`"}`)
+			if status != http.StatusOK || !strings.Contains(body, `"`+key+`":[]`) {
+				t.Errorf("seated=%t %s answered %d %s, want an empty %s list", seated, method, status, body, key)
+			}
+		}
+	}
+}
+
+func TestAnAppsToolListNamesNoView(t *testing.T) {
+	server, _ := appServer(t, true)
+	status, body := appRPC(t, server, appToolsList)
+	if status != http.StatusOK || strings.Contains(body, "resourceUri") {
+		t.Fatalf("an app's tools/list answered %d %s, want no view", status, body)
+	}
+}
