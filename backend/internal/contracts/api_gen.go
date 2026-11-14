@@ -45689,7 +45689,11 @@ type CreateDataSubjectRequest struct {
 
 	// ReceivedAt When the request arrived. Absent means now. Up to five minutes ahead of the server clock reads as now; later is refused with 422 naming `received_at`.
 	ReceivedAt *time.Time `json:"received_at,omitempty"`
-	SubjectRef string     `json:"subject_ref"`
+
+	// SubjectRef The data subject: their contact id when they are a contact, else the identifier they
+	// wrote from, such as an email. Only a contact id can be fulfilled; anything else waits
+	// until somebody resolves it to a contact.
+	SubjectRef string `json:"subject_ref"`
 }
 
 // CreateDataSubjectRequestKind defines model for CreateDataSubjectRequest.Kind.
@@ -96778,7 +96782,7 @@ type ServerInterface interface {
 	// List GDPR data-subject requests (B-E11.30).
 	// (GET /data-subject-requests)
 	ListDataSubjectRequests(w http.ResponseWriter, r *http.Request, params ListDataSubjectRequestsParams)
-	// Open a data-subject request (access/rectify/erasure). Admin-mediated; ties to retention and erasure.
+	// Open a data-subject request (access/rectify/erasure). subject_ref is the subject's contact id when they are a contact, else the email they wrote from; only a contact id can be fulfilled. Admin-mediated; ties to retention and erasure.
 	// (POST /data-subject-requests)
 	CreateDataSubjectRequest(w http.ResponseWriter, r *http.Request, params CreateDataSubjectRequestParams)
 	// The deadline a request would get, and the rule that sets it.
@@ -101437,7 +101441,7 @@ func (_ Unimplemented) ListDataSubjectRequests(w http.ResponseWriter, r *http.Re
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
-// Open a data-subject request (access/rectify/erasure). Admin-mediated; ties to retention and erasure.
+// Open a data-subject request (access/rectify/erasure). subject_ref is the subject's contact id when they are a contact, else the email they wrote from; only a contact id can be fulfilled. Admin-mediated; ties to retention and erasure.
 // (POST /data-subject-requests)
 func (_ Unimplemented) CreateDataSubjectRequest(w http.ResponseWriter, r *http.Request, params CreateDataSubjectRequestParams) {
 	w.WriteHeader(http.StatusNotImplemented)

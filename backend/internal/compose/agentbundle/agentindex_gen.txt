@@ -894,7 +894,7 @@ Every call a passport can make, grouped by area. Find the operationId in openapi
 | Call | operationId | What it does | Permission | Runs |
 | --- | --- | --- | --- | --- |
 | `GET /data-subject-requests` | listDataSubjectRequests | List GDPR data-subject requests. | Read records | at once |
-| `POST /data-subject-requests` | createDataSubjectRequest | Open a data-subject request (access/rectify/erasure). Admin-mediated; ties to retention and erasure. | Change records | at once |
+| `POST /data-subject-requests` | createDataSubjectRequest | Open a data-subject request (access/rectify/erasure). subject_ref is the subject's contact id when they are a contact, else the email they wrote from; only a contact id can be fulfilled. Admin-mediated; ties to retention and erasure. | Change records | at once |
 | `GET /data-subject-requests/deadline` | getDataSubjectRequestDeadline | The deadline a request would get, and the rule that sets it. | Read records | at once |
 | `GET /privacy/controller-particulars` | getControllerParticulars | What this installation says about itself in the messages it sends. | Read records | at once |
 | `GET /privacy/notice-cases` | listNoticeCases | Privacy notices already owed, where the source is confirmed, soonest deadline first. A contact whose source nobody has confirmed is in notice_case_reviews (GET /privacy/notice-case-reviews). | Read records | at once |

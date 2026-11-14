@@ -120,7 +120,7 @@ Leave out `SCENARIO=` for the full sweep, which section 4 counts. Add
 
 ## 4. Plan a full sweep, and know its cost
 
-A full sweep runs all 70 use cases. Each runs up to three times, and stops at two runs when both agree. `E2E_LLM_ALL_RUNS=1` makes all three runs, and is only for when you add one case ([add-an-mcp-e2e-case.md](add-an-mcp-e2e-case.md)).
+A full sweep runs every use case under `e2e/llm/scenarios/`. Each runs up to three times, and stops at two runs when both agree. `E2E_LLM_ALL_RUNS=1` makes all three runs, and is only for when you add one case ([add-an-mcp-e2e-case.md](add-an-mcp-e2e-case.md)).
 These numbers come from a full sweep of the test data on one machine, with no case red. They leave out the calls of the judge.
 
 | Model · route | Runs per case | Time per case (middle value) | Full sweep |

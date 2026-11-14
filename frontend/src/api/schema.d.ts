@@ -17195,7 +17195,7 @@ export interface paths {
         get: operations["listDataSubjectRequests"];
         put?: never;
         /**
-         * Open a data-subject request (access/rectify/erasure). Admin-mediated; ties to retention and erasure.
+         * Open a data-subject request (access/rectify/erasure). subject_ref is the subject's contact id when they are a contact, else the email they wrote from; only a contact id can be fulfilled. Admin-mediated; ties to retention and erasure.
          * @description The server computes the deadline from `received_at` under the installation's
          *     jurisdiction (`GET /data-subject-requests/deadline` shows it before filing).
          *
@@ -54541,6 +54541,11 @@ export interface components {
         CreateDataSubjectRequest: {
             /** @enum {string} */
             kind: "access" | "rectify" | "erasure" | "restriction";
+            /**
+             * @description The data subject: their contact id when they are a contact, else the identifier they
+             *     wrote from, such as an email. Only a contact id can be fulfilled; anything else waits
+             *     until somebody resolves it to a contact.
+             */
             subject_ref: string;
             /**
              * Format: date-time

@@ -15,9 +15,9 @@ input and output schema in folds below it. What a tool may do and whether a huma
 |---|---:|
 | Tools | 48 |
 | Resources | 14 |
-| Tool catalog | 233.9 KB |
+| Tool catalog | 234.0 KB |
 | Resource catalog | 5.5 KB |
-| Approx. wire tokens | 61274 |
+| Approx. wire tokens | 61299 |
 | Largest tool | `read_context` (11.7 KB) |
 | Scopes rendered | `read`, `draft`, `write`, `send`, `enrich` |
 
@@ -33,10 +33,10 @@ tool adds to that listing, and what it costs each scheduled agent, agent by agen
 | Part | Bytes | Share | In a run's prompt? |
 |---|---:|---:|---|
 | Output schemas | 51.5 KB | 22% | **No**: a result's shape, never listed to a model |
-| Descriptions (incl. governance clause) | 54.2 KB | 23% | Yes, every step |
+| Descriptions (incl. governance clause) | 54.3 KB | 23% | Yes, every step |
 | Input schemas | 116.4 KB | 49% | Yes, every step |
 | _Names, annotations, punctuation_ | 11.8 KB | 5% | Partly |
-| **Description + input schema** | **170.6 KB** | **72%** | **the recurring cost** |
+| **Description + input schema** | **170.7 KB** | **72%** | **the recurring cost** |
 
 Output schemas are the largest part of the total and are never sent to a model;
 descriptions and input schemas are what each step pays for.
@@ -68,7 +68,7 @@ descriptions and input schemas are what each step pays for.
 | [`archive_record`](#archive_record) | Archive a record |  |  | 300 |
 | [`bulk_update_records`](#bulk_update_records) | Change many records at once |  |  | 798 |
 | [`change_access`](#change_access) | Share records and set up members and teams |  |  | 706 |
-| [`change_activities`](#change_activities) | Log, plan and file activities |  |  | 2151 |
+| [`change_activities`](#change_activities) | Log, plan and file activities |  |  | 2176 |
 | [`change_attention`](#change_attention) | Act on proposals, notices and the weekly plan |  |  | 899 |
 | [`change_capture`](#change_capture) | Decide what comes into the CRM |  |  | 1129 |
 | [`change_compliance`](#change_compliance) | Record consent, stops, holds and privacy work |  |  | 879 |
@@ -1308,8 +1308,9 @@ before calling, unless they asked for this call themselves; requires passport sc
 
 ```text
 Log, plan and file activities. log records an email, call, meeting, note or message that already
-happened, on its records. task creates a task for a seat. attach attaches a file to a record. relink
-files one activity under another record too, and relink_many a named set; with
+happened, on its records; one the user only tells you about is logged from what they said, saying
+so, without its exact words. task creates a task for a seat. attach attaches a file to a record.
+relink files one activity under another record too, and relink_many a named set; with
 replace_existing_of_type they move it off the old record of that type instead. ready says the user
 is ready for a meeting they attend; unready takes it back. relink and relink_many run at once. Tell
 the user before you file under a project, which only a member can undo from the activity. attach
