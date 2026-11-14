@@ -112,8 +112,8 @@ export function ContactNetworkTab({
 
 type Graph = NonNullable<ReturnType<typeof useContactGraph>["data"]>;
 
-// The tab's three chapters over one read graph: the way in, the people behind
-// it, and where the introduction and the relationship stand.
+// The tab's three chapters over one read graph: the way in, who knows the
+// contact, and where the introduction and the relationship stand.
 function NetworkChapters({
   contactId,
   data,
