@@ -219,7 +219,7 @@ def run_agy(route, mcp_url, token_env, prompt, out_path, timeout=AGY_TIMEOUT):
     workspace file is within reach of a tool that slips through.
     """
     driver = f"{route.candidate}:{route.via}"
-    # agy names the effort in the model id (gemini-3.8-flash-high), so an effort
+    # agy names the effort in the model id (gemini-4-hydrogen-high), so an effort
     # set apart from it would be filed under a label the run never used.
     if route.effort != candidates.table()[route.candidate]["effort"]:
         print(f"the agy route takes its effort from the model id; set E2E_LLM_MODEL to that "

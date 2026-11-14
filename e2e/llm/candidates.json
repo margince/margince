@@ -67,12 +67,12 @@
     }
   },
   "gemini": {
-    "folder": "gemini-3.8-flash-medium",
+    "folder": "gemini-4-hydrogen-medium",
     "effort": "reasoning medium",
     "routes": {
       "cli": {
         "wire": "agy-cli",
-        "model": "gemini-3.8-flash-medium",
+        "model": "gemini-4-hydrogen-medium",
         "key_env": ""
       }
     }

@@ -12,7 +12,7 @@ The three targets are the assistants that users connect in real work:
 |---|---|---|---|
 | Claude (the default model of its CLI) | `claude` | `cli` | `claude-sonnet-5-5@claude-cli` |
 | GPT through Codex | `gpt` | `cli` | `gpt-5.6-sol@codex-cli` |
-| Gemini through Antigravity | `gemini` | `cli` | `gemini-3.8-flash-medium@agy-cli` |
+| Gemini through Antigravity | `gemini` | `cli` | `gemini-4-hydrogen-medium@agy-cli` |
 
 Mistral through OpenRouter, and the bridge (`E2E_LLM_VIA=api|openrouter`)
 that compares providers on equal terms, are good to have. Run them once a fix holds

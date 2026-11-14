@@ -23,7 +23,7 @@ OTHER_SPILL = "/home/operator/.gemini/antigravity-cli/brain/0000-other/.system_g
 
 def convert(lines):
     out = tempfile.NamedTemporaryFile(suffix=".jsonl", delete=False).name
-    code = transcript.from_agy(lines, out, "gemini-3.8-flash-medium", "gemini:cli", OFFERED)
+    code = transcript.from_agy(lines, out, "gemini-4-hydrogen-medium", "gemini:cli", OFFERED)
     with open(out, encoding="utf-8") as handle:
         return code, out, handle.read()
 
@@ -108,14 +108,14 @@ class FromAgyTest(unittest.TestCase):
         lines = before_answer(sample(), tool_step(9, "list_dir", DirectoryPath="/tmp/e2e-llm-agy.ws"),
                               tool_step(10, "read_file", Path="/tmp/e2e-llm-agy.ws/README.md"))
         out = tempfile.NamedTemporaryFile(suffix=".jsonl", delete=False).name
-        code = transcript.from_agy(lines, out, "gemini-3.8-flash-medium", "gemini:cli", OFFERED,
+        code = transcript.from_agy(lines, out, "gemini-4-hydrogen-medium", "gemini:cli", OFFERED,
                                    workspace="/tmp/e2e-llm-agy.ws")
         self.assertEqual(code, 0)
 
     def test_a_look_past_the_runs_own_folder_still_stops_the_run(self):
         lines = before_answer(sample(), tool_step(9, "read_file", Path="/tmp/e2e-llm-agy.ws/../secret.md"))
         out = tempfile.NamedTemporaryFile(suffix=".jsonl", delete=False).name
-        code = transcript.from_agy(lines, out, "gemini-3.8-flash-medium", "gemini:cli", OFFERED,
+        code = transcript.from_agy(lines, out, "gemini-4-hydrogen-medium", "gemini:cli", OFFERED,
                                    workspace="/tmp/e2e-llm-agy.ws")
         self.assertEqual(code, 3)
 
@@ -261,7 +261,7 @@ class RunAgyTest(unittest.TestCase):
         code, out, seen = self.run_agy()
         self.assertEqual(code, 0)
         argv = seen["argv"]
-        self.assertEqual(argv[argv.index("--model") + 1], "gemini-3.8-flash-medium")
+        self.assertEqual(argv[argv.index("--model") + 1], "gemini-4-hydrogen-medium")
         self.assertEqual(argv[argv.index("--output-format") + 1], "stream-json")
         self.assertEqual(argv[argv.index("-p") + 1], "Echo pelican.")
         agent = seen["agents"][argv[argv.index("--agent") + 1] + ".md"]
