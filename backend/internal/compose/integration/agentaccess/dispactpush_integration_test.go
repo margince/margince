@@ -119,7 +119,7 @@ func (e *connectorEnv) pullJobs(t *testing.T) int {
 }
 
 func messageNotice(team string) string {
-	return fmt.Sprintf(`{"type":"message.created","workspace_id":%q,"channel_slug":%q,"seq":7,"event_id":"ev","ts":1}`, team, pushSlug)
+	return fmt.Sprintf(`{"type":"message.created","workspace_id":%q,"channel_slug":%q,"seq":7,"message_id":"0c2f5a1e-6d3b-4e7a-9b1f-2a4d6c8e0f12","event_id":"1794620204214-0","ts":"2026-11-13T10:00:00.123Z"}`, team, pushSlug)
 }
 
 func TestTenNoticesQueueOnePullWithNoSession(t *testing.T) {

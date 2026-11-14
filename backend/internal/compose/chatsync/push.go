@@ -126,7 +126,16 @@ func (r *Receiver) receiveNotice(ctx context.Context, d chatlinks.Delivery) (crm
 		return none, fmt.Errorf("%w: the notice is for another team", chatlinks.ErrEventRejected)
 	}
 	key := "dispact-notice|" + bot.ConnectionID.String() + "|" + d.ID
-	if err := r.spend(ctx, key); err != nil {
+	err = r.spend(ctx, key)
+	if errors.Is(err, chatlinks.ErrEventReplayed) {
+		// Dispact sends an id again only when it saw no 2xx, so the first
+		// answer was lost. A 2xx ends its retries; the first take stands.
+		if isCheck {
+			return crmcontracts.DispactChannelEventReceipt{Challenge: notice.Challenge}, nil
+		}
+		return crmcontracts.DispactChannelEventReceipt{Status: new(crmcontracts.DispactChannelEventReceiptStatusAlreadyTaken)}, nil
+	}
+	if err != nil {
 		return none, err
 	}
 	if isCheck {

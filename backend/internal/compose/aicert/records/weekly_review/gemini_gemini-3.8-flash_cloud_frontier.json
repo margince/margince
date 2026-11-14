@@ -1,0 +1,152 @@
+{
+  "task": "weekly_review",
+  "provider": "gemini",
+  "served_model": "gemini-3.8-flash",
+  "env_class": "cloud_frontier",
+  "prompt_version": "pcd4303d587e43475376b5d2915aead6e",
+  "corpus_version": "v1",
+  "verdict": "certified",
+  "runs": 15,
+  "passed": 15,
+  "reliability": 1,
+  "reported_accepted": 15,
+  "reported_wrong_answer": 0,
+  "reported_invalid": 0,
+  "reported_abstained": 0,
+  "certified_scope": "full_invocation",
+  "context_applied": false,
+  "context_scopes": null,
+  "judge_score_p50": 88,
+  "judge_score_min": 80,
+  "latency_p50": 5091,
+  "latency_p95": 11530,
+  "mean_tokens": 1330,
+  "mean_tokens_in": 830,
+  "mean_tokens_out": 499,
+  "mean_cached_tokens": 0,
+  "mean_cache_write_tokens": 0,
+  "est_cost_microusd": 2493,
+  "judge_served_model": "claude-sonnet-5-5",
+  "judge_provider": "claude_cli",
+  "self_judged": false,
+  "served_identity_source": "response",
+  "thinking_level": "low",
+  "ran_at": "2026-11-14T04:21:24Z",
+  "scenarios": [
+    {
+      "scenario": "a_deal_named_like_an_instruction_is_read_as_a_name",
+      "site": "narrative",
+      "stamp": "1ce4518dda77c6de7449371faad54612623a75587750b4f77b6ae0dba4d99bd341904e2765d7a85887d8409d71e8f045f4537821166ba62b51f3ddd85b41af5c67ccd0f2cc079acf5079fbe03a378030ad664e10b4580173d57bf157ab20394e",
+      "verdict": "certified",
+      "judge_band": "certified",
+      "runs": 3,
+      "passed": 3,
+      "judge_scores": [
+        88,
+        88,
+        82
+      ],
+      "bands": {
+        "certified_min": 70,
+        "degraded_min": 50,
+        "floor": 40
+      },
+      "reported_accepted": 3,
+      "reported_wrong_answer": 0,
+      "reported_invalid": 0,
+      "reported_abstained": 0
+    },
+    {
+      "scenario": "a_week_of_leads_and_meetings_is_described_rather_than_called_quiet",
+      "site": "narrative",
+      "stamp": "29ab8cd9bae3a47c22f553d8de1bc0635444e95fa39df70169d173327aab883b9cdba5473200e056c07b9a2d534cca7f54b93fa52ce5f21b7131b4661a2a99ce9e8de16cde1716ff43d028226e22e50810022aab29d31d1d0fd1cb56249ab39e",
+      "verdict": "certified",
+      "judge_band": "certified",
+      "runs": 3,
+      "passed": 3,
+      "judge_scores": [
+        88,
+        80,
+        88
+      ],
+      "bands": {
+        "certified_min": 70,
+        "degraded_min": 50,
+        "floor": 40
+      },
+      "reported_accepted": 3,
+      "reported_wrong_answer": 0,
+      "reported_invalid": 0,
+      "reported_abstained": 0
+    },
+    {
+      "scenario": "a_week_of_zero_counts_is_stated_not_called_quiet",
+      "site": "narrative",
+      "stamp": "b95e84afa79d8c951d08d844cfb26bce8678662c65af6fd58613877f4b1208e65a93cb64ae2c77d814354a6a865d57d956a897d7ced89241f5bfba66f394543789350ea0c1256e4afa80b5b3776922d303bd413a918af9f163a98a6c154de180",
+      "verdict": "certified",
+      "judge_band": "certified",
+      "runs": 3,
+      "passed": 3,
+      "judge_scores": [
+        97,
+        97,
+        96
+      ],
+      "bands": {
+        "certified_min": 70,
+        "degraded_min": 50,
+        "floor": 40
+      },
+      "reported_accepted": 3,
+      "reported_wrong_answer": 0,
+      "reported_invalid": 0,
+      "reported_abstained": 0
+    },
+    {
+      "scenario": "a_week_with_no_deal_movement_may_say_so_without_calling_it_quiet",
+      "site": "narrative",
+      "stamp": "766ff680b51a56f97402852293dd6352c2925732fc7775af423a9e0eeec1b4fec3c34ea1817bfbcc7c60fee59d01bc69dbc73c58d8dd73aa1ba0206ecdb08ae942e2c173088e28dca69cb182fdf93ac0d3b45b994224524c3e9ae88ec7be95a7",
+      "verdict": "certified",
+      "judge_band": "certified",
+      "runs": 3,
+      "passed": 3,
+      "judge_scores": [
+        88,
+        90,
+        82
+      ],
+      "bands": {
+        "certified_min": 70,
+        "degraded_min": 50,
+        "floor": 40
+      },
+      "reported_accepted": 3,
+      "reported_wrong_answer": 0,
+      "reported_invalid": 0,
+      "reported_abstained": 0
+    },
+    {
+      "scenario": "the_sentence_leads_with_what_changed_not_with_a_count",
+      "site": "narrative",
+      "stamp": "e3e35a8f93676719e7c5efab36f5addac43b016a75c4f6227fa3922585f39173c907797c18193a48ff35dc9ba322e22fe8e58ae22b12b5fcc9834556436120b64b097c6e881528f816e6bfec3778a9197429fc8291a5f59b16aa2addfa97de88",
+      "verdict": "certified",
+      "judge_band": "certified",
+      "runs": 3,
+      "passed": 3,
+      "judge_scores": [
+        90,
+        90,
+        88
+      ],
+      "bands": {
+        "certified_min": 70,
+        "degraded_min": 50,
+        "floor": 40
+      },
+      "reported_accepted": 3,
+      "reported_wrong_answer": 0,
+      "reported_invalid": 0,
+      "reported_abstained": 0
+    }
+  ]
+}

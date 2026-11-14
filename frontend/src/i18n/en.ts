@@ -12207,6 +12207,10 @@ export const en = {
   "channelLink.notInChat_one": "{count} invited member has no chat account.",
   "channelLink.notInChat_other":
     "{count} invited members have no chat account.",
+  "channelLink.notAdded_one":
+    "{count} invited member was not added. Check the app’s audience in Dispact.",
+  "channelLink.notAdded_other":
+    "{count} invited members were not added. Check the app’s audience in Dispact.",
   "channelLink.pausedBadge": "Paused",
   "channelLink.paused": "Channel paused",
   "channelLink.pausedBody":

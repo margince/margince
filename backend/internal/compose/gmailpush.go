@@ -98,7 +98,7 @@ func WithGmailPush(inserter *jobs.Runner, cfg GmailPushConfig) Option {
 // pushIdentity admits a token only from the configured push service account,
 // for this endpoint's audience, with a verified email.
 func (c GmailPushConfig) pushIdentity(claims oidctoken.Claims) error {
-	if claims.Aud != c.Audience {
+	if !claims.Aud.Is(c.Audience) {
 		return fmt.Errorf("%w: aud mismatch", oidctoken.ErrRejected)
 	}
 	if claims.Email != c.ServiceAccount {

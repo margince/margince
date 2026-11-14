@@ -122,7 +122,12 @@ describe("ChannelPanel", () => {
         {
           state: "linked",
           link,
-          invites: { invited: 3, not_in_chat: 2, skipped_over_cap: 0 },
+          invites: {
+            invited: 3,
+            not_in_chat: 2,
+            not_added: 1,
+            skipped_over_cap: 0,
+          },
         },
         201,
       ),
@@ -133,7 +138,9 @@ describe("ChannelPanel", () => {
       await screen.findByRole("button", { name: "Create a channel" }),
     );
     expect(
-      await screen.findByText("2 invited members have no chat account."),
+      await screen.findByText(
+        "2 invited members have no chat account. 1 invited member was not added. Check the app’s audience in Dispact.",
+      ),
     ).toBeInTheDocument();
     expect(writes).toEqual([{ method: "POST", body: { mode: "create" } }]);
   });

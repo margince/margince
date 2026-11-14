@@ -15,6 +15,8 @@ handbook pages `your-day.md` and `your-week.md`; this page holds the reasons and
 The code:
 
 - `backend/internal/compose/attention/`: the ranking (`rank.go`, `ranksteps.go`, `bands.go`), the classifiers (`classify*.go`) and Focus (`focus.go`).
+- `backend/api/worklist-kinds.yaml`: each Worklist kind's category, screen, owner answers, personal read and Done.
+  `backend/tools/gen-worklist` writes it into `attention/kinds_gen.go` and `frontend/src/lib/worklistkinds.gen.ts`.
 - `backend/internal/compose/commitmentdispatch.go` and `backend/internal/compose/commitmentsettle.go`: promises and the tasks they become.
 - `backend/internal/compose/weeklyjobs.go`, `weeklyteamjobs.go`, `weeklyenrichjobs.go` and `backend/internal/compose/weekly/`: the weekly review.
 - `backend/internal/modules/deals/closedate.go` and `closedatesweep.go`: the nightly close date repair; `changeacceptance.go`: **Accept**.

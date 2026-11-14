@@ -23,34 +23,6 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
-// doneInPlace are the sources whose row offers Done. Each one is otherwise left
-// only by working the record elsewhere, or by waiting until its lane stops
-// reporting it. A source absent here leaves through a verb of its own, and
-// TestEverySourceOffersAWayOffTheList holds that each one does.
-var doneInPlace = map[crmcontracts.WorklistItemSource]bool{
-	crmcontracts.WorklistItemSourceAwaitingReply:   true,
-	crmcontracts.WorklistItemSourceDomainQuestion:  true,
-	crmcontracts.WorklistItemSourceMeetingFollowUp: true,
-	crmcontracts.WorklistItemSourceDealAtRisk:      true,
-	crmcontracts.WorklistItemSourceMeeting:         true,
-	// An attendee who may not change the meeting cannot answer it. Done is how
-	// they leave the organizer's question to the organizer.
-	crmcontracts.WorklistItemSourceMeetingOutcome:      true,
-	crmcontracts.WorklistItemSourceLeadResponse:        true,
-	crmcontracts.WorklistItemSourceIntroductionRequest: true,
-	crmcontracts.WorklistItemSourceBatch:               true,
-	crmcontracts.WorklistItemSourceAutomationRun:       true,
-	crmcontracts.WorklistItemSourceAiWorkHealth:        true,
-	crmcontracts.WorklistItemSourceCaptureHealth:       true,
-	crmcontracts.WorklistItemSourceBookingHealth:       true,
-	crmcontracts.WorklistItemSourceBounce:              true,
-	crmcontracts.WorklistItemSourceUndelivered:         true,
-	crmcontracts.WorklistItemSourceDsr:                 true,
-	crmcontracts.WorklistItemSourceNoticeCase:          true,
-	// Done sets a case aside for this owner alone; the other owners keep it.
-	crmcontracts.WorklistItemSourceContactCase: true,
-}
-
 // DoneStore keeps the reader's own Done set. OPTIONAL: unbound, no row is ever
 // hidden as done and every Done is refused as not found.
 type DoneStore interface {
@@ -74,12 +46,6 @@ type doneState struct {
 	asked map[crmcontracts.WorklistItemSource][]ids.UUID
 }
 
-// offersDone is whether a source's rows offer Done. dispositionsFor answers
-// the same for a row, and always leads with Done where it offers any.
-func offersDone(source crmcontracts.WorklistItemSource) bool {
-	return source == sourceWaiting || doneInPlace[source]
-}
-
 // dispositionsFor is what a row offers a reader who is putting it down.
 func dispositionsFor(row ranked, reader ids.UUID) []crmcontracts.WorklistItemDispositions {
 	if domainMaintenanceBatch(row) {
@@ -88,7 +54,7 @@ func dispositionsFor(row ranked, reader ids.UUID) []crmcontracts.WorklistItemDis
 	if row.item.Source == sourceWaiting {
 		return waitingDispositions(row, reader)
 	}
-	if doneInPlace[row.item.Source] {
+	if offersDone(row.item.Source) {
 		return []crmcontracts.WorklistItemDispositions{disposeHandled}
 	}
 	return nil

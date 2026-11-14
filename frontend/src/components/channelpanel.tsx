@@ -203,21 +203,23 @@ function UnlinkedBody({
   );
 }
 
-// Shown once, right after a create: a member without a chat account was asked
-// in and cannot read the channel until they have one.
+// Shown once, right after a create. A member left out cannot read the channel
+// until they have an account, or until an admin lets the app add them.
 function InvitesNotice({ invites }: Readonly<{ invites: ChannelInvites }>) {
   const plural = usePlural();
   const { locale } = useLocale();
-  if (invites.not_in_chat <= 0) return null;
-  return (
-    <Callout
-      tone="info"
-      kind="outcome"
-      title={plural("channelLink.notInChat", invites.not_in_chat, {
+  const lines = [
+    invites.not_in_chat > 0 &&
+      plural("channelLink.notInChat", invites.not_in_chat, {
         count: formatNumber(invites.not_in_chat, locale),
-      })}
-    />
-  );
+      }),
+    invites.not_added > 0 &&
+      plural("channelLink.notAdded", invites.not_added, {
+        count: formatNumber(invites.not_added, locale),
+      }),
+  ].filter((line): line is string => typeof line === "string");
+  if (lines.length === 0) return null;
+  return <Callout tone="info" kind="outcome" title={lines.join(" ")} />;
 }
 
 function LinkedBody({
