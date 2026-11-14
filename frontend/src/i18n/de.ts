@@ -12248,6 +12248,10 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "{count} eingeladenes Mitglied hat kein Chat-Konto.",
   "channelLink.notInChat_other":
     "{count} eingeladene Mitglieder haben kein Chat-Konto.",
+  "channelLink.notAdded_one":
+    "{count} eingeladenes Mitglied wurde nicht hinzugefügt. Prüfe die Zielgruppe der App in Dispact.",
+  "channelLink.notAdded_other":
+    "{count} eingeladene Mitglieder wurden nicht hinzugefügt. Prüfe die Zielgruppe der App in Dispact.",
   "channelLink.pausedBadge": "Pausiert",
   "channelLink.paused": "Kanal pausiert",
   "channelLink.pausedBody":

@@ -37,9 +37,10 @@ func (e episode) key(slug string) string {
 	return slug + ":" + strconv.FormatInt(e.firstSeq(), 10)
 }
 
-// url opens the episode's first message in the chat.
+// url opens the episode's channel. Dispact links a message by its id, which
+// the history read does not carry.
 func (e episode) url(address, slug string) string {
-	return chatlinks.ChannelURL(address, slug) + "?seq=" + strconv.FormatInt(e.firstSeq(), 10)
+	return chatlinks.ChannelURL(address, slug)
 }
 
 // judged reports whether a message is talk a note may summarise: a bot's own

@@ -12073,6 +12073,21 @@ func (e DismissDealSuggestionRequestReason) Valid() bool {
 	}
 }
 
+// Defines values for DispactAppManifestManifestVersion.
+const (
+	DispactAppManifestManifestVersionN1 DispactAppManifestManifestVersion = "1"
+)
+
+// Valid indicates whether the value is a known member of the DispactAppManifestManifestVersion enum.
+func (e DispactAppManifestManifestVersion) Valid() bool {
+	switch e {
+	case DispactAppManifestManifestVersionN1:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for DispactAppManifestSlug.
 const (
 	DispactAppManifestSlugMargince DispactAppManifestSlug = "margince"
@@ -12117,14 +12132,17 @@ func (e DispactChannelEventType) Valid() bool {
 
 // Defines values for DispactChannelEventReceiptStatus.
 const (
-	DispactChannelEventReceiptStatusIgnored    DispactChannelEventReceiptStatus = "ignored"
-	DispactChannelEventReceiptStatusLinkPaused DispactChannelEventReceiptStatus = "link_paused"
-	DispactChannelEventReceiptStatusPullQueued DispactChannelEventReceiptStatus = "pull_queued"
+	DispactChannelEventReceiptStatusAlreadyTaken DispactChannelEventReceiptStatus = "already_taken"
+	DispactChannelEventReceiptStatusIgnored      DispactChannelEventReceiptStatus = "ignored"
+	DispactChannelEventReceiptStatusLinkPaused   DispactChannelEventReceiptStatus = "link_paused"
+	DispactChannelEventReceiptStatusPullQueued   DispactChannelEventReceiptStatus = "pull_queued"
 )
 
 // Valid indicates whether the value is a known member of the DispactChannelEventReceiptStatus enum.
 func (e DispactChannelEventReceiptStatus) Valid() bool {
 	switch e {
+	case DispactChannelEventReceiptStatusAlreadyTaken:
+		return true
 	case DispactChannelEventReceiptStatusIgnored:
 		return true
 	case DispactChannelEventReceiptStatusLinkPaused:
@@ -39474,10 +39492,13 @@ type ChannelConnectionListResponse struct {
 
 // ChannelInvites Who a newly created channel was opened to.
 type ChannelInvites struct {
-	// Invited Members added to the channel.
+	// Invited Members added to the channel, or already in it.
 	Invited int `json:"invited"`
 
-	// NotInChat Members invited who have no chat account.
+	// NotAdded Members the chat would not add: outside the app's audience, or the add failed.
+	NotAdded int `json:"not_added"`
+
+	// NotInChat Members invited who have no active chat account.
 	NotInChat int `json:"not_in_chat"`
 
 	// SkippedOverCap Members left out because a new channel invites at most 50.
@@ -48623,19 +48644,41 @@ type DismissRelationshipNudgesRequest struct {
 	Permanent *bool `json:"permanent,omitempty"`
 }
 
-// DispactAppManifest What Dispact needs to install the Margince app in a team.
+// DispactAppManifest What Dispact needs to install the Margince app in a team, in the shape of Dispact's app manifest.
 type DispactAppManifest struct {
-	Events DispactAppManifestEvents `json:"events"`
-	Mcp    DispactAppManifestMcp    `json:"mcp"`
-	Name   string                   `json:"name"`
+	Bot         DispactAppManifestBot    `json:"bot"`
+	Description string                   `json:"description"`
+	Events      DispactAppManifestEvents `json:"events"`
 
-	// Scopes The bot scopes the app asks for, separated by spaces.
-	Scopes string                 `json:"scopes"`
-	Slug   DispactAppManifestSlug `json:"slug"`
+	// IconUrl This installation's icon, `<public_base_url>/icon.svg`.
+	IconUrl         string                            `json:"icon_url"`
+	ManifestVersion DispactAppManifestManifestVersion `json:"manifest_version"`
+	Mcp             DispactAppManifestMcp             `json:"mcp"`
+	Name            string                            `json:"name"`
+	Publisher       DispactAppManifestPublisher       `json:"publisher"`
+
+	// Scopes The bot scopes the app asks for.
+	Scopes   []string                   `json:"scopes"`
+	Security DispactAppManifestSecurity `json:"security"`
+	Slug     DispactAppManifestSlug     `json:"slug"`
+
+	// Surfaces Empty. The app adds no screens to Dispact.
+	Surfaces map[string]interface{} `json:"surfaces"`
+
+	// Version The release this installation runs, or `dev` for a build with none.
+	Version string `json:"version"`
 }
+
+// DispactAppManifestManifestVersion defines model for DispactAppManifest.ManifestVersion.
+type DispactAppManifestManifestVersion string
 
 // DispactAppManifestSlug defines model for DispactAppManifest.Slug.
 type DispactAppManifestSlug string
+
+// DispactAppManifestBot defines model for DispactAppManifestBot.
+type DispactAppManifestBot struct {
+	DisplayName string `json:"display_name"`
+}
 
 // DispactAppManifestEvents defines model for DispactAppManifestEvents.
 type DispactAppManifestEvents struct {
@@ -48652,6 +48695,19 @@ type DispactAppManifestMcp struct {
 	Endpoint string `json:"endpoint"`
 }
 
+// DispactAppManifestPublisher defines model for DispactAppManifestPublisher.
+type DispactAppManifestPublisher struct {
+	// Email The address of the admin who asked for the manifest.
+	Email string `json:"email"`
+	Name  string `json:"name"`
+}
+
+// DispactAppManifestSecurity defines model for DispactAppManifestSecurity.
+type DispactAppManifestSecurity struct {
+	// TokenTtlSeconds Lifetime of the session token Dispact gives the app.
+	TokenTtlSeconds int `json:"token_ttl_seconds"`
+}
+
 // DispactChannelEvent One signed notice from Dispact, or its URL check. A notice names the channel and the newest message sequence, and never carries message text.
 type DispactChannelEvent struct {
 	// Challenge The value a URL check expects back.
@@ -48661,8 +48717,10 @@ type DispactChannelEvent struct {
 	MessageId   *string `json:"message_id,omitempty"`
 
 	// Seq The highest message sequence of the burst. Margince reads the history itself and uses the notice only as a signal.
-	Seq  *int                    `json:"seq,omitempty"`
-	Ts   *int64                  `json:"ts,omitempty"`
+	Seq *int `json:"seq,omitempty"`
+
+	// Ts When the burst's newest event happened.
+	Ts   *time.Time              `json:"ts,omitempty"`
 	Type DispactChannelEventType `json:"type"`
 
 	// WorkspaceId The Dispact team; it must be the connected bot's team.
@@ -48676,11 +48734,11 @@ type DispactChannelEventType string
 type DispactChannelEventReceipt struct {
 	Challenge *string `json:"challenge,omitempty"`
 
-	// Status `pull_queued`: the channel's history is read soon. `link_paused`: the archived channel's link is paused. `ignored`: no live link has this channel.
+	// Status `pull_queued`: the channel's history is read soon. `link_paused`: the archived channel's link is paused. `ignored`: no live link has this channel. `already_taken`: this `webhook-id` was taken in the last 24 hours, so nothing changes.
 	Status *DispactChannelEventReceiptStatus `json:"status,omitempty"`
 }
 
-// DispactChannelEventReceiptStatus `pull_queued`: the channel's history is read soon. `link_paused`: the archived channel's link is paused. `ignored`: no live link has this channel.
+// DispactChannelEventReceiptStatus `pull_queued`: the channel's history is read soon. `link_paused`: the archived channel's link is paused. `ignored`: no live link has this channel. `already_taken`: this `webhook-id` was taken in the last 24 hours, so nothing changes.
 type DispactChannelEventReceiptStatus string
 
 // DisqualifyLeadRequest Why the lead is closed. Both fields are optional on the wire so an agent's governed disqualify still works; the UI always sends a reason.

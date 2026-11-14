@@ -215,11 +215,11 @@ func (s *Dispatcher) toolList(ctx context.Context, fr framing) []map[string]any 
 			tool["outputSchema"] = spec.OutputSchema
 		}
 		// The view, offered only where BOTH halves are real: this request
-		// declared the extension, and this server serves the documents. Either
-		// missing and the member is absent rather than empty — a client reads
-		// `_meta.ui` as "there is a view to fetch", so an entry pointing at a
-		// document this deployment does not publish is worse than none.
-		if s.appsOffered(fr) {
+		// declared the extension, and this server serves the documents. A
+		// client reads `_meta.ui` as "there is a view to fetch". So an entry
+		// pointing at a document this deployment does not publish is worse
+		// than none. An installed app is served tools alone, with no views.
+		if s.appsOffered(fr) && !IsAppCall(ctx) {
 			if ui := s.toolMeta(spec, actionTools); ui != nil {
 				tool[fieldMeta] = map[string]any{metaUIKey: ui}
 			}

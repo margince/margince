@@ -72,7 +72,7 @@ func TestActivityKindAndChannelProviderAreSeededByMigration(t *testing.T) {
 	// connector is still coming. Registration is what lets a hand-logged
 	// WhatsApp message name its transport; sendability is a separate question
 	// the send pre-flight answers.
-	wantProviders := []string{"telegram/core", "whatsapp/core"}
+	wantProviders := []string{"dispact/core", "telegram/core", "whatsapp/core"}
 	if len(providers) != len(wantProviders) {
 		t.Fatalf("channel_provider seeded %v, want %v", providers, wantProviders)
 	}

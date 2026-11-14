@@ -103,7 +103,7 @@ func (w *Flusher) send(ctx context.Context, session chatlinks.Session, pending c
 		if err != nil {
 			return err
 		}
-		if err := session.Chat.Update(ctx, rewrite.MessageID, chatPostText(record, lines, w.Origin)); err != nil && !errors.Is(err, dispact.ErrChannelGone) {
+		if err := session.Chat.Update(ctx, pending.Link.ChannelSlug, rewrite.MessageID, chatPostText(record, lines, w.Origin)); err != nil && !errors.Is(err, dispact.ErrChannelGone) {
 			return err
 		}
 		if err := w.Store.MarkRewritten(ctx, pending.Link.ID, rewrite.MessageID); err != nil {
@@ -173,7 +173,7 @@ func (w *Flusher) refreshCard(ctx context.Context, chat chatlinks.Chat, link cha
 		return nil
 	}
 	if link.CardMessageID != "" {
-		err := chat.Update(ctx, link.CardMessageID, text)
+		err := chat.Update(ctx, link.ChannelSlug, link.CardMessageID, text)
 		if err == nil {
 			return w.Store.SetCard(ctx, link.ID, link.CardMessageID, fingerprint)
 		}

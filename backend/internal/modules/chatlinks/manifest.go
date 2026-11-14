@@ -10,19 +10,29 @@ import (
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/httperr"
+	"github.com/margince/margince/backend/internal/shared/buildinfo"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 // The app manifest Dispact installs Margince from, as agreed with Dispact.
 const (
-	appName   = "Margince"
-	appScopes = "chat:write:channel channel:create channel:members:write users:read:email channel:history:read channel:files:read"
+	appName        = "Margince"
+	appDescription = "Links a deal or project to a channel: a card, short updates, and summaries of the talk filed on the record."
 	// eventsPath is the push receiver; the manifest names it before it serves.
 	eventsPath = "/v1/channel-events/dispact"
+	// appTokenTTL is Dispact's default session token lifetime; Margince opens
+	// no session in Dispact, and the MCP call tokens have their own.
+	appTokenTTL = 3600
 )
 
-// appEventTypes are the notices the app subscribes to.
-var appEventTypes = []string{"message.created", "thread.replied", "message.updated", "channel.archived"}
+var (
+	appScopes = []string{
+		"chat:write:channel", "channel:create", "channel:members:write",
+		"users:read:email", "channel:history:read", "channel:files:read",
+	}
+	// appEventTypes are the notices the app subscribes to.
+	appEventTypes = []string{"message.created", "thread.replied", "message.updated", "channel.archived"}
+)
 
 // botConnectObject is the RBAC object that admits connecting a chat bot. The
 // manifest is the other half of that install, so the same grant reads it.
@@ -53,16 +63,34 @@ func (h Handlers) GetDispactAppManifest(w http.ResponseWriter, r *http.Request) 
 		})
 		return
 	}
-	httperr.WriteJSON(w, http.StatusOK, AppManifest(base))
+	publisher, err := h.publisher(r.Context())
+	if err != nil {
+		httperr.Write(w, r, err)
+		return
+	}
+	httperr.WriteJSON(w, http.StatusOK, AppManifest(base, publisher))
 }
 
-// AppManifest is the manifest for an installation served at base.
-func AppManifest(base string) crmcontracts.DispactAppManifest {
+// AppManifest is the manifest for an installation served at base, published
+// by the admin at publisherEmail. Dispact refuses one without that address.
+func AppManifest(base, publisherEmail string) crmcontracts.DispactAppManifest {
+	version := buildinfo.ReleaseVersion
+	if version == "" {
+		version = "dev"
+	}
 	return crmcontracts.DispactAppManifest{
-		Slug:   crmcontracts.DispactAppManifestSlugMargince,
-		Name:   appName,
-		Mcp:    crmcontracts.DispactAppManifestMcp{Endpoint: base + "/mcp"},
-		Scopes: appScopes,
-		Events: crmcontracts.DispactAppManifestEvents{Url: base + eventsPath, Types: appEventTypes},
+		ManifestVersion: crmcontracts.DispactAppManifestManifestVersionN1,
+		Slug:            crmcontracts.DispactAppManifestSlugMargince,
+		Name:            appName,
+		Description:     appDescription,
+		IconUrl:         base + "/icon.svg",
+		Publisher:       crmcontracts.DispactAppManifestPublisher{Name: appName, Email: publisherEmail},
+		Version:         version,
+		Surfaces:        map[string]any{},
+		Bot:             crmcontracts.DispactAppManifestBot{DisplayName: appName},
+		Scopes:          appScopes,
+		Security:        crmcontracts.DispactAppManifestSecurity{TokenTtlSeconds: appTokenTTL},
+		Mcp:             crmcontracts.DispactAppManifestMcp{Endpoint: base + "/mcp"},
+		Events:          crmcontracts.DispactAppManifestEvents{Url: base + eventsPath, Types: appEventTypes},
 	}
 }

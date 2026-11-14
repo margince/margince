@@ -121,7 +121,6 @@ var eventRefusals = []struct {
 	detail string
 }{
 	{ErrEventRejected, http.StatusUnauthorized, "channel_event_rejected", "The notice is not signed by the connected Dispact bot."},
-	{ErrEventReplayed, http.StatusConflict, "channel_event_replayed", "This notice was already taken."},
 	{ErrEventMalformed, http.StatusBadRequest, "channel_event_malformed", "The body is not a Dispact notice."},
 	{ErrEventsUnavailable, http.StatusServiceUnavailable, "channel_events_unavailable", "The notice could not be taken now. Send it again later."},
 }

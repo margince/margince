@@ -11,6 +11,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"log/slog"
 	"net/http"
 	"strings"
 	"sync"
@@ -70,6 +71,7 @@ type Edge struct {
 	replays Replays
 	client  *http.Client
 	now     func() time.Time
+	log     *slog.Logger
 
 	mu       sync.Mutex
 	address  string
@@ -79,7 +81,15 @@ type Edge struct {
 // New builds the edge. client fetches the install's keys, so it must refuse
 // private addresses in production as the bot's own client does.
 func New(bots Bots, replays Replays, client *http.Client) *Edge {
-	return &Edge{bots: bots, replays: replays, client: client, now: time.Now}
+	return &Edge{bots: bots, replays: replays, client: client, now: time.Now, log: slog.Default()}
+}
+
+// SetLog replaces the logger that names why a call token was refused.
+func (e *Edge) SetLog(log *slog.Logger) *Edge {
+	if log != nil {
+		e.log = log
+	}
+	return e
 }
 
 // Wire builds the edge over the stored bot and the bot's own HTTP client,
@@ -106,7 +116,12 @@ func (e *Edge) Or(seats Seats, next func(*http.Request) (context.Context, error)
 		if err != nil {
 			return nil, fmt.Errorf("dispactapp: resolving the installation: %w: %w", err, agents.ErrAuthUnavailable)
 		}
-		return e.Authenticate(principal.WithWorkspaceID(r.Context(), wsID.UUID), seats, bearer)
+		ctx, err := e.Authenticate(principal.WithWorkspaceID(r.Context(), wsID.UUID), seats, bearer)
+		if errors.Is(err, ErrRejected) {
+			// The caller only learns 401; the log names the check that failed.
+			e.log.InfoContext(r.Context(), "dispact app: a call token was refused", "err", err)
+		}
+		return ctx, err
 	}
 }
 
@@ -174,8 +189,8 @@ func (e *Edge) verifierFor(address string) *oidctoken.Verifier {
 func (e *Edge) matchCall(teamID string) func(oidctoken.Claims) error {
 	return func(c oidctoken.Claims) error {
 		switch {
-		case c.Aud != Audience:
-			return fmt.Errorf("aud %q is not %s", c.Aud, Audience)
+		case !c.Aud.Is(Audience):
+			return fmt.Errorf("aud %q is not %s", c.Aud.String(), Audience)
 		case teamID == "" || c.WorkspaceID != teamID:
 			return fmt.Errorf("workspace_id %q is not the connected team", c.WorkspaceID)
 		case c.Exp-c.Iat > int64(maxLifetime/time.Second) || c.Exp <= c.Iat:

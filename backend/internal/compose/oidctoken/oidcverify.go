@@ -179,13 +179,13 @@ type oidcHeader struct {
 
 // Claims are the ID token fields a sign-in or push check reads.
 type Claims struct {
-	Iss           string `json:"iss"`
-	Aud           string `json:"aud"`
-	Sub           string `json:"sub"`
-	Email         string `json:"email"`
-	EmailVerified bool   `json:"email_verified"`
-	Exp           int64  `json:"exp"`
-	Iat           int64  `json:"iat"`
+	Iss           string   `json:"iss"`
+	Aud           Audience `json:"aud"`
+	Sub           string   `json:"sub"`
+	Email         string   `json:"email"`
+	EmailVerified bool     `json:"email_verified"`
+	Exp           int64    `json:"exp"`
+	Iat           int64    `json:"iat"`
 	// Tid is the Microsoft directory the account belongs to. Google issues no
 	// such claim; for Microsoft it is what says WHICH tenant vouched for the
 	// email, and the issuer is derived from it, so the two are read together.
