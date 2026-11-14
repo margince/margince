@@ -6,6 +6,7 @@ package httperr
 import (
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 )
 
@@ -26,6 +27,17 @@ func TestATaggedAnswerTheClientHoldsComesBackWithNoBody(t *testing.T) {
 	}
 	if again := serve(map[string]int{"total": 3}, etag); again.Code != http.StatusNotModified || again.Body.Len() != 0 {
 		t.Errorf("an unchanged answer the client holds comes back %d with %d bytes, want 304 and none", again.Code, again.Body.Len())
+	}
+	for _, w := range []*httptest.ResponseRecorder{first, serve(map[string]int{"total": 3}, etag)} {
+		if got := w.Header().Get("Cache-Control"); got != "private, no-cache" {
+			t.Errorf("answer %d carries Cache-Control %q, want private, no-cache so no shared cache keeps it", w.Code, got)
+		}
+	}
+	if strong := serve(map[string]int{"total": 3}, strings.TrimPrefix(etag, "W/")); strong.Code != http.StatusNotModified {
+		t.Errorf("the tag without its weak prefix comes back %d, want 304", strong.Code)
+	}
+	if !strings.HasPrefix(etag, `W/"`) {
+		t.Errorf("the tag %q is strong, but gzip changes the bytes it names", etag)
 	}
 	if changed := serve(map[string]int{"total": 4}, etag); changed.Code != http.StatusOK || changed.Header().Get("ETag") == etag {
 		t.Errorf("a changed answer comes back %d with tag %q, want 200 and a new tag", changed.Code, changed.Header().Get("ETag"))

@@ -14458,6 +14458,10 @@ export interface paths {
          *     `sources_unavailable`, exactly as `/attention` names a withheld lane, and a
          *     source that FAILED is named there too. A day cannot read as clear while something
          *     that would have filled it never answered.
+         *
+         *     `If-None-Match` with the answer's `ETag` answers 304 when the bytes have not
+         *     changed. The answer is `private, no-cache`: only the reader's own browser keeps it,
+         *     and it asks again before each use.
          */
         get: operations["getWorklist"];
         put?: never;
@@ -85673,11 +85677,26 @@ export interface operations {
             /** @description The ranked day. */
             200: {
                 headers: {
+                    /** @description A weak tag of the answer's bytes, quoted. */
+                    ETag?: string;
+                    /** @description Always `private, no-cache`. */
+                    "Cache-Control"?: string;
                     [name: string]: unknown;
                 };
                 content: {
                     "application/json": components["schemas"]["Worklist"];
                 };
+            };
+            /** @description The client already holds this answer. */
+            304: {
+                headers: {
+                    /** @description The tag the client holds, quoted. */
+                    ETag?: string;
+                    /** @description Always `private, no-cache`. */
+                    "Cache-Control"?: string;
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];

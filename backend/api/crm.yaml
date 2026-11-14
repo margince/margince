@@ -21769,6 +21769,10 @@ paths:
         `sources_unavailable`, exactly as `/attention` names a withheld lane, and a
         source that FAILED is named there too. A day cannot read as clear while something
         that would have filled it never answered.
+
+        `If-None-Match` with the answer's `ETag` answers 304 when the bytes have not
+        changed. The answer is `private, no-cache`: only the reader's own browser keeps it,
+        and it asks again before each use.
       x-mcp-tool: { verb: get_worklist, router: read_workspace, action: worklist, tier: auto_execute, scope: read, served_by: route }
       parameters:
         - name: scope
@@ -21990,9 +21994,25 @@ paths:
       responses:
         '200':
           description: The ranked day.
+          headers:
+            ETag:
+              description: A weak tag of the answer's bytes, quoted.
+              schema: { type: string }
+            Cache-Control:
+              description: Always `private, no-cache`.
+              schema: { type: string }
           content:
             application/json:
               schema: { $ref: '#/components/schemas/Worklist' }
+        '304':
+          description: The client already holds this answer.
+          headers:
+            ETag:
+              description: The tag the client holds, quoted.
+              schema: { type: string }
+            Cache-Control:
+              description: Always `private, no-cache`.
+              schema: { type: string }
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/Forbidden' }
         '422': { $ref: '#/components/responses/ValidationError' }
