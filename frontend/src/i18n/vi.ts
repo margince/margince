@@ -11910,7 +11910,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "channelLink.linkCta": "Liên kết kênh",
   "channelLink.linkFailed": "Chưa liên kết được kênh",
   "channelLink.channelField": "Tên hoặc liên kết của kênh",
-  "channelLink.channelHint": "Một kênh riêng tư mà bot đã là thành viên.",
+  "channelLink.channelHint":
+    "Chọn một kênh riêng tư có bot. Để liên kết kênh khác, hãy thêm bot vào kênh đó trong chat trước.",
   "channelLink.summarize":
     "Tóm tắt cuộc trao đổi đến nay (tối đa 5 bản tóm tắt)",
   "channelLink.verbosity": "Margince đăng những gì",
@@ -11944,7 +11945,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "channelLink.refused.botNotConnected":
     "Chưa có bot chat nào được kết nối. Quản trị viên kết nối bot trong Cài đặt.",
   "channelLink.refused.channelNotFound":
-    "Không tìm thấy kênh nào với tên hoặc liên kết này.",
+    "Bot không ở trong kênh nào có tên này. Hãy thêm bot vào kênh trong chat, rồi thử lại.",
   "channelLink.refused.channelNotPrivate":
     "Kênh này là kênh công khai. Hãy liên kết một kênh riêng tư.",
   "channelLink.refused.botNotMember":

@@ -1630,7 +1630,7 @@
   "connectors.roleCannotCapture.lead": "Deine Rolle darf keine Leads anlegen, darum kann Margince deine E-Mails nicht erfassen. Wende dich an einen Admin, um deine Rolle ändern zu lassen.",
   "connectors.roleCannotCapture.seat": "Du hast einen Leseplatz, darum kann Margince deine E-Mails nicht erfassen. Wende dich an einen Admin, um einen vollen Platz zu bekommen.",
   "channelLink.refused.botNotConnected": "Es ist kein Chat-Bot verbunden. Ein Admin verbindet ihn in den Einstellungen.",
-  "channelLink.refused.channelNotFound": "Zu diesem Namen oder Link wurde kein Kanal gefunden.",
+  "channelLink.refused.channelNotFound": "Der Bot ist in keinem Kanal mit diesem Namen. Füge den Bot im Chat zum Kanal hinzu und versuche es dann erneut.",
   "channelLink.refused.channelNotPrivate": "Dieser Kanal ist öffentlich. Verknüpfe stattdessen einen privaten Kanal.",
   "channelLink.refused.botNotMember": "Der Bot ist kein Mitglied dieses Kanals. Füge ihn dem Kanal hinzu und versuche es dann noch einmal.",
   "channelLink.refused.channelAlreadyLinked": "Dieser Kanal gehört schon zu einem anderen Deal oder Projekt.",

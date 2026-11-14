@@ -54867,6 +54867,19 @@ type LinkTypeList struct {
 	Data []LinkType `json:"data"`
 }
 
+// LinkableChannel defines model for LinkableChannel.
+type LinkableChannel struct {
+	Name string `json:"name"`
+
+	// Slug The value a link request names the channel by.
+	Slug string `json:"slug"`
+}
+
+// LinkableChannels defines model for LinkableChannels.
+type LinkableChannels struct {
+	Channels []LinkableChannel `json:"channels"`
+}
+
 // LinkedInAccount defines model for LinkedInAccount.
 type LinkedInAccount struct {
 	// Connected Whether this member has authorized LinkedIn.
@@ -96303,6 +96316,9 @@ type ServerInterface interface {
 	// Link a deal or project to a new or existing private chat channel.
 	// (POST /channel-links/{record_type}/{id})
 	LinkChannel(w http.ResponseWriter, r *http.Request, recordType ChannelLinkRecordType, id Id)
+	// The private channels this record can be linked to.
+	// (GET /channel-links/{record_type}/{id}/channels)
+	ListLinkableChannels(w http.ResponseWriter, r *http.Request, recordType ChannelLinkRecordType, id Id)
 	// File a summary of one message in a record's channel, or of its thread, as a note.
 	// (POST /channel-links/{record_type}/{id}/notes)
 	FileChannelMessage(w http.ResponseWriter, r *http.Request, recordType ChannelLinkRecordType, id Id)
@@ -100422,6 +100438,12 @@ func (_ Unimplemented) SetChannelVerbosity(w http.ResponseWriter, r *http.Reques
 // Link a deal or project to a new or existing private chat channel.
 // (POST /channel-links/{record_type}/{id})
 func (_ Unimplemented) LinkChannel(w http.ResponseWriter, r *http.Request, recordType ChannelLinkRecordType, id Id) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// The private channels this record can be linked to.
+// (GET /channel-links/{record_type}/{id}/channels)
+func (_ Unimplemented) ListLinkableChannels(w http.ResponseWriter, r *http.Request, recordType ChannelLinkRecordType, id Id) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -117626,6 +117648,47 @@ func (siw *ServerInterfaceWrapper) LinkChannel(w http.ResponseWriter, r *http.Re
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.LinkChannel(w, r, recordType, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// ListLinkableChannels operation middleware
+func (siw *ServerInterfaceWrapper) ListLinkableChannels(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "record_type" -------------
+	var recordType ChannelLinkRecordType
+
+	err = runtime.BindStyledParameterWithOptions("simple", "record_type", chi.URLParam(r, "record_type"), &recordType, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "record_type", Err: err})
+		return
+	}
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ListLinkableChannels(w, r, recordType, id)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -154556,6 +154619,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/channel-links/{record_type}/{id}", wrapper.LinkChannel)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/channel-links/{record_type}/{id}/channels", wrapper.ListLinkableChannels)
 	})
 	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/channel-links/{record_type}/{id}/notes", wrapper.FileChannelMessage)
