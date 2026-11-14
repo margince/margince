@@ -15,7 +15,7 @@ import type { components } from "../../api/schema";
 import { LocaleProvider } from "../../i18n";
 import { useMe } from "../../lib/session";
 import { meFixture } from "../../testing/mefixture";
-import { TelegramConnectorsPanel } from "./connectors.telegram";
+import { WorkspaceBotPanel } from "./connectors.telegram";
 
 type ChannelConnection = components["schemas"]["ChannelConnection"];
 
@@ -105,7 +105,7 @@ describe("the Telegram connector panel", () => {
 
   it("lists every connected bot, each with its own Disconnect", async () => {
     stubApi({ channels: [salesBot, supportBot], me: botManager });
-    render(<TelegramConnectorsPanel />);
+    render(<WorkspaceBotPanel provider="telegram" />);
 
     // One SettingRow per bot. The roster is a list of decisions now. A bot is
     // identified by its own row rather than by an <li> from the list wrapper.
@@ -124,7 +124,7 @@ describe("the Telegram connector panel", () => {
 
   it("opens the replace-token form on the bot whose row was clicked", async () => {
     stubApi({ channels: [salesBot, supportBot], me: botManager });
-    render(<TelegramConnectorsPanel />);
+    render(<WorkspaceBotPanel provider="telegram" />);
 
     const rows = await screen.findAllByTestId("telegram-connection");
     await userEvent.click(
@@ -143,7 +143,7 @@ describe("the Telegram connector panel", () => {
     stubApi({
       me: meFixture({ allow: { channel_connection: ["read", "create"] } }),
     });
-    render(<TelegramConnectorsPanel />);
+    render(<WorkspaceBotPanel provider="telegram" />);
     expect(await screen.findByTestId("telegram-connect")).toBeTruthy();
     expect(screen.queryByText(readOnlyNote)).toBeNull();
   });
@@ -158,7 +158,7 @@ describe("the Telegram connector panel", () => {
         allow: { channel_connection: ["read"] },
       }),
     });
-    render(<TelegramConnectorsPanel />);
+    render(<WorkspaceBotPanel provider="telegram" />);
     expect(await screen.findByText(readOnlyNote)).toBeTruthy();
     const row = screen.getByTestId("telegram-connection");
     expect(within(row).getByText("@acme_sales_bot")).toBeTruthy();
@@ -173,7 +173,7 @@ describe("the Telegram connector panel", () => {
         allow: { channel_connection: ["read"] },
       }),
     });
-    render(<TelegramConnectorsPanel />);
+    render(<WorkspaceBotPanel provider="telegram" />);
     // The panel is its own tab, so a blank one would read as a broken page.
     expect(await screen.findByText(readOnlyNote)).toBeTruthy();
     expect(await screen.findByText("No bot connected")).toBeTruthy();
@@ -188,7 +188,7 @@ describe("the Telegram connector panel", () => {
         allow: { channel_connection: ["read", "create", "update", "delete"] },
       }),
     });
-    render(<TelegramConnectorsPanel />);
+    render(<WorkspaceBotPanel provider="telegram" />);
     expect(await screen.findByText(readOnlyNote)).toBeTruthy();
     expect(
       within(screen.getByTestId("telegram-connection")).queryByRole("button"),
@@ -200,7 +200,7 @@ describe("the Telegram connector panel", () => {
       channels: [salesBot],
       me: meFixture({ allow: { channel_connection: ["read", "update"] } }),
     });
-    render(<TelegramConnectorsPanel />);
+    render(<WorkspaceBotPanel provider="telegram" />);
     const row = await screen.findByTestId("telegram-connection");
     expect(
       await within(row).findByRole("button", { name: "Replace token" }),
@@ -223,7 +223,7 @@ describe("the Telegram connector panel", () => {
     });
     render(
       <>
-        <TelegramConnectorsPanel />
+        <WorkspaceBotPanel provider="telegram" />
         <SessionSettled />
       </>,
     );
@@ -235,5 +235,32 @@ describe("the Telegram connector panel", () => {
     // Absence proves nothing while /me is in flight, when every grant is false.
     await screen.findByText("session settled");
     expect(screen.queryByText(readOnlyNote)).toBeNull();
+  });
+
+  it("draws each bot in its own provider's panel", async () => {
+    const chatBot: ChannelConnection = {
+      ...salesBot,
+      id: "018f3a1b-0000-7000-8000-0000000000d3",
+      provider: "dispact",
+      channelId: "team-acme",
+      channelLabel: "margince",
+      address: "https://chat.example.com",
+    };
+    stubApi({ channels: [salesBot, chatBot], me: botManager });
+    render(
+      <>
+        <WorkspaceBotPanel provider="telegram" />
+        <WorkspaceBotPanel provider="dispact" />
+      </>,
+    );
+    const telegramRow = await screen.findByTestId("telegram-connection");
+    const dispactRow = await screen.findByTestId("dispact-connection");
+    expect(within(telegramRow).getByText("@acme_sales_bot")).toBeTruthy();
+    expect(within(dispactRow).getByText("@margince")).toBeTruthy();
+    expect(
+      within(dispactRow).getByText("https://chat.example.com"),
+    ).toBeTruthy();
+    expect(screen.getAllByTestId("telegram-connection")).toHaveLength(1);
+    expect(screen.queryByTestId("dispact-connect")).toBeNull();
   });
 });

@@ -607,6 +607,19 @@ tasks:
     company_context: none
     doc: "extract foreign-exchange rates from a fetched rates page, evidence-gated; feeds the FX refresh proposal producer. Model prices are not extracted: a broker's catalogue states them."
 
+  chat_summary:
+    display_name: "Chat channel summary"
+    summary: "Reads one stretch of talk in a deal's or project's chat channel and writes a short note when it matters."
+    ladder: [cheap_cloud, premium]
+    execution_mode: background
+    on_budget_exhausted: queue
+    status: shipped
+    subject_restriction: honour
+    sites: [episode]
+    company_context: none
+    no_payload: true
+    doc: "read one closed stretch of a linked chat channel's talk (the episode site): a run of messages that ended in 30 minutes of quiet or at the end of the day. It is read again from the chat when it closes and never stored. The model answers whether the talk matters to the record and, when it does, a title of at most 120 characters, a summary of at most 800, the decisions and the open questions. A relevant answer is filed as one note on the deal or project, keyed on the channel and the episode's first message, so a replay files nothing. An irrelevant answer files nothing and the channel's cursor moves past it. With no lane the episode is passed over the same way, so a channel never waits for a model. no_payload because the prompt carries the team's own chat messages."
+
 # embed is a workload, not a task (ADR-0074). It has a real ladder and a real
 # cost rule, but its tier is deliberately NOT one of the chat tiers above, and
 # it has no prompt, no text answer and no completion path — so it carries no

@@ -2311,6 +2311,7 @@ export const en = {
   "systemJob.deal_key_names": "Deal key fill-in",
   "systemJob.deal_room_link_request": "Deal Room link request",
   "systemJob.deal_room_timeline": "Deal Room timeline",
+  "systemJob.chat_links": "Chat channels",
   "systemJob.dedupe_recheck": "Duplicate queue re-check",
   "systemJob.deployment_secret_seal": "Secret sealing",
   "systemJob.domain_triage": "Website triage",
@@ -4860,6 +4861,11 @@ export const en = {
   "timeline.kind.extension": "Extension",
   "timeline.kind.signal": "Signal",
   "timeline.withheld": "Content for participants only",
+  "timeline.chatSummary.badge": "AI summary",
+  "timeline.chatSummary.from": "From {provider}",
+  "timeline.chatSummary.meta_one": "{count} message, until {ended}",
+  "timeline.chatSummary.meta_other": "{count} messages, until {ended}",
+  "timeline.chatSummary.open": "Open in {provider}",
   "compose.deadRecipients":
     "Mail to {addresses} is bouncing: the last delivery was refused and none has succeeded since. Send anyway, or use another address.",
   "compose.threadShare": "Share with the company",
@@ -9871,6 +9877,8 @@ export const en = {
   "settings.passportLastUsedOn": "Last used {date}",
   "settings.passportExpiresOn": "Expires {date}",
   "settings.revokeNamed": "Revoke {name}",
+  "settings.allowAgain": "Allow again",
+  "settings.allowAgainNamed": "Allow {name} again",
   "settings.revokeConfirm":
     "The passport’s credential is invalidated immediately. The agent loses access on its next call.",
   "import.withheld":
@@ -10499,6 +10507,9 @@ export const en = {
   "jobs.kind.technical_enrich_company": "Company technical lookup",
   "jobs.kind.telegram_ingest": "Telegram message intake",
   "jobs.kind.telegram_poll": "Telegram message fetch",
+  "jobs.kind.chat_link_flush": "Chat channel posts",
+  "jobs.kind.chat_pull": "Chat channel summaries",
+  "jobs.kind.chat_pull_sweep": "Chat channel check",
   "jobs.kind.telegram_poll_sweep": "Telegram fetch scheduling",
   "jobs.kind.time_scan": "Time-based automation check",
   "jobs.kind.transcript_propose": "Transcript read",
@@ -12142,6 +12153,83 @@ export const en = {
   "connectors.telegramReplaceCta": "Replace token",
   "connectors.telegramConnectedAs": "Connected as @{username}.",
   "connectors.telegramConnectFailed": "Bot not connected",
+
+  // The Dispact bot: the self-hosted team chat a deal or project links a
+  // private channel in. Words it shares with the Telegram bot stay on those keys.
+  "connectors.bot.provDispact": "Dispact",
+  "connectors.bot.dispactTitle": "Dispact bot",
+  "connectors.bot.dispactSub":
+    "One bot posts deal and project news into private channels of your team chat and reads what the team says there.",
+  "connectors.bot.dispactConnectCta": "Connect Dispact bot",
+  "connectors.bot.dispactEmptyNote":
+    "A connected bot lets each deal and project link to a private channel in your team chat.",
+  "connectors.bot.dispactDisconnectBody":
+    "This deletes the stored token. Margince stops posting to and reading from every linked channel; notes already filed stay in the CRM.",
+  "connectors.bot.dispactModalTitle": "Connect Dispact bot",
+  "connectors.bot.dispactTokenHint":
+    "The app token of the bot. It starts with gwapp_, is stored in the key vault and is never shown again.",
+  "connectors.bot.dispactAddress": "Chat address",
+  "connectors.bot.dispactAddressHint":
+    "The web address of your team chat, such as https://chat.example.com.",
+  "connectors.bot.eventsSecret": "Events secret",
+  "connectors.bot.eventsSecretHint":
+    "Optional. Copy the events secret (whsec_…) from the Margince app page in your chat. With it, Margince reads a channel as soon as it has new messages and checks the rest hourly; without it, Margince checks every channel each minute.",
+  "connectors.bot.eventsSecretKeepHint":
+    "Leave empty to keep the events secret already saved.",
+
+  // The team chat card on a deal or project.
+  "channelLink.title": "Team chat",
+  "channelLink.off": "Connect a chat bot in Settings to link a channel.",
+  "channelLink.openSettings": "Open chat bot settings",
+  "channelLink.none": "No channel yet",
+  "channelLink.noneSub":
+    "A private channel keeps the team up to date on this record.",
+  "channelLink.create": "Create a channel",
+  "channelLink.linkExisting": "Link an existing channel",
+  "channelLink.linkCta": "Link channel",
+  "channelLink.linkFailed": "Channel not linked",
+  "channelLink.channelField": "Channel name or link",
+  "channelLink.channelHint":
+    "A private channel the bot is already a member of.",
+  "channelLink.summarize": "Summarize the talk so far (up to 5 summaries)",
+  "channelLink.verbosity": "What Margince posts",
+  "channelLink.verbosityHint":
+    "The card in the channel stays current at every level.",
+  "channelLink.verbosityFailed": "Setting not saved",
+  "channelLink.verbosity.everything": "Everything",
+  "channelLink.verbosity.important": "Important only",
+  "channelLink.verbosity.milestones": "Milestones only",
+  "channelLink.verbosity.silent": "Silent (card only)",
+  "channelLink.open": "Open {name} in the team chat",
+  "channelLink.copy": "Copy channel link",
+  "channelLink.copied": "Channel link copied",
+  "channelLink.copyRemedy": "Open the channel and copy its address there.",
+  "channelLink.notInChat_one": "{count} invited member has no chat account.",
+  "channelLink.notInChat_other":
+    "{count} invited members have no chat account.",
+  "channelLink.pausedBadge": "Paused",
+  "channelLink.paused": "Channel paused",
+  "channelLink.pausedBody":
+    "The channel was archived, or the bot lost access to it. Nothing is posted until you unlink it and link another channel.",
+  "channelLink.unlink": "Unlink",
+  "channelLink.unlinkNamed": "Unlink {name}",
+  "channelLink.unlinkTitle": "Unlink this channel?",
+  "channelLink.unlinkBody":
+    "Margince stops posting and reading. The channel and its messages stay in the chat.",
+  "channelLink.refused.botNotConnected":
+    "No chat bot is connected. An administrator connects one in Settings.",
+  "channelLink.refused.channelNotFound":
+    "No channel with this name or link was found.",
+  "channelLink.refused.channelNotPrivate":
+    "This channel is public. Link a private channel instead.",
+  "channelLink.refused.botNotMember":
+    "The bot is not a member of this channel. Add it to the channel, then try again.",
+  "channelLink.refused.channelAlreadyLinked":
+    "This channel already belongs to another deal or project.",
+  "channelLink.refused.recordAlreadyLinked":
+    "This record already has a channel.",
+  "channelLink.refused.providerUnreachable":
+    "The chat could not be reached. Nothing was changed, so try again.",
 
   // The workspace's own consumer-mail list (CAP-PARAM-5): what the shipped
   // baseline missed, and what it got wrong. Admin-curated and shared, because
@@ -13866,7 +13954,7 @@ export const en = {
   "settings.part.integrations.contact": "Contact data",
   "settings.part.integrations.accounting": "Accounting",
   "settings.part.integrations.webhooks": "Webhooks",
-  "settings.part.integrations.telegram": "Telegram bot",
+  "settings.part.integrations.telegram": "Chat bots",
   "settings.part.integrations.sharedMailboxes": "Shared mailboxes",
   "sharedMailboxes.title": "Shared mailboxes",
   "sharedMailboxes.intro":
@@ -21683,6 +21771,7 @@ export const en = {
   "aiTask.name.request_settlement":
     "Checking whether the reply answered the request",
   "aiTask.name.rewrite": "Rewriting",
+  "aiTask.name.chat_summary": "Chat channel summary",
   "aiTask.name.signal_extract": "Signal extraction",
   "aiTask.name.site_extract": "Website research",
   "aiTask.name.site_fact_extract": "Website fact extraction",

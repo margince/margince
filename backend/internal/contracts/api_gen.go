@@ -1185,6 +1185,7 @@ const (
 	AiActivityKindCaptureConfidentialityVerdict AiActivityKind = "capture_confidentiality_verdict"
 	AiActivityKindCaptureCounterpartyVerdict    AiActivityKind = "capture_counterparty_verdict"
 	AiActivityKindCertJudge                     AiActivityKind = "cert_judge"
+	AiActivityKindChatSummary                   AiActivityKind = "chat_summary"
 	AiActivityKindColdStart                     AiActivityKind = "cold_start"
 	AiActivityKindCorpusAsk                     AiActivityKind = "corpus_ask"
 	AiActivityKindDealHealth                    AiActivityKind = "deal_health"
@@ -1234,6 +1235,8 @@ func (e AiActivityKind) Valid() bool {
 	case AiActivityKindCaptureCounterpartyVerdict:
 		return true
 	case AiActivityKindCertJudge:
+		return true
+	case AiActivityKindChatSummary:
 		return true
 	case AiActivityKindColdStart:
 		return true
@@ -1783,6 +1786,7 @@ const (
 	AiTaskCaptureConfidentialityVerdict AiTask = "capture_confidentiality_verdict"
 	AiTaskCaptureCounterpartyVerdict    AiTask = "capture_counterparty_verdict"
 	AiTaskCertJudge                     AiTask = "cert_judge"
+	AiTaskChatSummary                   AiTask = "chat_summary"
 	AiTaskColdStart                     AiTask = "cold_start"
 	AiTaskCorpusAsk                     AiTask = "corpus_ask"
 	AiTaskDealHealth                    AiTask = "deal_health"
@@ -1831,6 +1835,8 @@ func (e AiTask) Valid() bool {
 	case AiTaskCaptureCounterpartyVerdict:
 		return true
 	case AiTaskCertJudge:
+		return true
+	case AiTaskChatSummary:
 		return true
 	case AiTaskColdStart:
 		return true
@@ -5016,12 +5022,15 @@ func (e ChangeContractStatusRequestStatus) Valid() bool {
 
 // Defines values for ChannelConnectionProvider.
 const (
+	ChannelConnectionProviderDispact  ChannelConnectionProvider = "dispact"
 	ChannelConnectionProviderTelegram ChannelConnectionProvider = "telegram"
 )
 
 // Valid indicates whether the value is a known member of the ChannelConnectionProvider enum.
 func (e ChannelConnectionProvider) Valid() bool {
 	switch e {
+	case ChannelConnectionProviderDispact:
+		return true
 	case ChannelConnectionProviderTelegram:
 		return true
 	default:
@@ -5056,6 +5065,81 @@ func (e ChannelConnectionStatus) Valid() bool {
 	}
 }
 
+// Defines values for ChannelLinkProvider.
+const (
+	ChannelLinkProviderDispact ChannelLinkProvider = "dispact"
+)
+
+// Valid indicates whether the value is a known member of the ChannelLinkProvider enum.
+func (e ChannelLinkProvider) Valid() bool {
+	switch e {
+	case ChannelLinkProviderDispact:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ChannelLinkStatus.
+const (
+	ChannelLinkStatusActive      ChannelLinkStatus = "active"
+	ChannelLinkStatusChannelGone ChannelLinkStatus = "channel_gone"
+)
+
+// Valid indicates whether the value is a known member of the ChannelLinkStatus enum.
+func (e ChannelLinkStatus) Valid() bool {
+	switch e {
+	case ChannelLinkStatusActive:
+		return true
+	case ChannelLinkStatusChannelGone:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ChannelLinkRecordType.
+const (
+	ChannelLinkRecordTypeDeal    ChannelLinkRecordType = "deal"
+	ChannelLinkRecordTypeProject ChannelLinkRecordType = "project"
+)
+
+// Valid indicates whether the value is a known member of the ChannelLinkRecordType enum.
+func (e ChannelLinkRecordType) Valid() bool {
+	switch e {
+	case ChannelLinkRecordTypeDeal:
+		return true
+	case ChannelLinkRecordTypeProject:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ChannelLinkStateState.
+const (
+	ChannelLinkStateStateLinked ChannelLinkStateState = "linked"
+	ChannelLinkStateStateNone   ChannelLinkStateState = "none"
+	ChannelLinkStateStateOff    ChannelLinkStateState = "off"
+	ChannelLinkStateStatePaused ChannelLinkStateState = "paused"
+)
+
+// Valid indicates whether the value is a known member of the ChannelLinkStateState enum.
+func (e ChannelLinkStateState) Valid() bool {
+	switch e {
+	case ChannelLinkStateStateLinked:
+		return true
+	case ChannelLinkStateStateNone:
+		return true
+	case ChannelLinkStateStateOff:
+		return true
+	case ChannelLinkStateStatePaused:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for ChannelProviderEntryCredentialModel.
 const (
 	ChannelProviderEntryCredentialModelPerMember    ChannelProviderEntryCredentialModel = "per_member"
@@ -5068,6 +5152,30 @@ func (e ChannelProviderEntryCredentialModel) Valid() bool {
 	case ChannelProviderEntryCredentialModelPerMember:
 		return true
 	case ChannelProviderEntryCredentialModelWorkspaceBot:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ChannelVerbosity.
+const (
+	ChannelVerbosityEverything ChannelVerbosity = "everything"
+	ChannelVerbosityImportant  ChannelVerbosity = "important"
+	ChannelVerbosityMilestones ChannelVerbosity = "milestones"
+	ChannelVerbositySilent     ChannelVerbosity = "silent"
+)
+
+// Valid indicates whether the value is a known member of the ChannelVerbosity enum.
+func (e ChannelVerbosity) Valid() bool {
+	switch e {
+	case ChannelVerbosityEverything:
+		return true
+	case ChannelVerbosityImportant:
+		return true
+	case ChannelVerbosityMilestones:
+		return true
+	case ChannelVerbositySilent:
 		return true
 	default:
 		return false
@@ -7401,12 +7509,15 @@ func (e ConfirmSubmissionResolution) Valid() bool {
 
 // Defines values for ConnectChannelRequestProvider.
 const (
+	ConnectChannelRequestProviderDispact  ConnectChannelRequestProvider = "dispact"
 	ConnectChannelRequestProviderTelegram ConnectChannelRequestProvider = "telegram"
 )
 
 // Valid indicates whether the value is a known member of the ConnectChannelRequestProvider enum.
 func (e ConnectChannelRequestProvider) Valid() bool {
 	switch e {
+	case ConnectChannelRequestProviderDispact:
+		return true
 	case ConnectChannelRequestProviderTelegram:
 		return true
 	default:
@@ -11962,6 +12073,69 @@ func (e DismissDealSuggestionRequestReason) Valid() bool {
 	}
 }
 
+// Defines values for DispactAppManifestSlug.
+const (
+	DispactAppManifestSlugMargince DispactAppManifestSlug = "margince"
+)
+
+// Valid indicates whether the value is a known member of the DispactAppManifestSlug enum.
+func (e DispactAppManifestSlug) Valid() bool {
+	switch e {
+	case DispactAppManifestSlugMargince:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for DispactChannelEventType.
+const (
+	DispactChannelEventTypeChannelArchived DispactChannelEventType = "channel.archived"
+	DispactChannelEventTypeMessageCreated  DispactChannelEventType = "message.created"
+	DispactChannelEventTypeMessageUpdated  DispactChannelEventType = "message.updated"
+	DispactChannelEventTypeThreadReplied   DispactChannelEventType = "thread.replied"
+	DispactChannelEventTypeUrlVerification DispactChannelEventType = "url_verification"
+)
+
+// Valid indicates whether the value is a known member of the DispactChannelEventType enum.
+func (e DispactChannelEventType) Valid() bool {
+	switch e {
+	case DispactChannelEventTypeChannelArchived:
+		return true
+	case DispactChannelEventTypeMessageCreated:
+		return true
+	case DispactChannelEventTypeMessageUpdated:
+		return true
+	case DispactChannelEventTypeThreadReplied:
+		return true
+	case DispactChannelEventTypeUrlVerification:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for DispactChannelEventReceiptStatus.
+const (
+	DispactChannelEventReceiptStatusIgnored    DispactChannelEventReceiptStatus = "ignored"
+	DispactChannelEventReceiptStatusLinkPaused DispactChannelEventReceiptStatus = "link_paused"
+	DispactChannelEventReceiptStatusPullQueued DispactChannelEventReceiptStatus = "pull_queued"
+)
+
+// Valid indicates whether the value is a known member of the DispactChannelEventReceiptStatus enum.
+func (e DispactChannelEventReceiptStatus) Valid() bool {
+	switch e {
+	case DispactChannelEventReceiptStatusIgnored:
+		return true
+	case DispactChannelEventReceiptStatusLinkPaused:
+		return true
+	case DispactChannelEventReceiptStatusPullQueued:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for DomainQuestionContextSiteRead.
 const (
 	DomainQuestionContextSiteReadRead   DomainQuestionContextSiteRead = "read"
@@ -16240,6 +16414,24 @@ func (e LifecyclePreviewEvidenceScope) Valid() bool {
 	case LifecyclePreviewEvidenceScopeUnknown:
 		return true
 	case LifecyclePreviewEvidenceScopeWorkstream:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for LinkChannelRequestMode.
+const (
+	LinkChannelRequestModeCreate   LinkChannelRequestMode = "create"
+	LinkChannelRequestModeExisting LinkChannelRequestMode = "existing"
+)
+
+// Valid indicates whether the value is a known member of the LinkChannelRequestMode enum.
+func (e LinkChannelRequestMode) Valid() bool {
+	switch e {
+	case LinkChannelRequestModeCreate:
+		return true
+	case LinkChannelRequestModeExisting:
 		return true
 	default:
 		return false
@@ -32223,6 +32415,9 @@ type Activity struct {
 	// are separate axes, and reading one off the other is what ADR-0107 retired.
 	ChannelProvider *ProviderRef `json:"channel_provider,omitempty"`
 
+	// ChatEpisode On a note summarising chat talk (`source_system` `dispact`), what talk it summarises. The note's subject and body are an AI summary. Absent on every other row. Withheld with the content, like `body`.
+	ChatEpisode *ChatEpisode `json:"chat_episode,omitempty"`
+
 	// ColleagueIds The colleagues recorded as taking part: the one who logged a call or meeting, the ones named as attending, and the seats capture stamped on a captured one, never a blind copy. Filled wherever one activity is answered whole (its read, its update); a list leaves it out. Withheld with the content, so it is absent whenever `content_state` is `withheld`.
 	ColleagueIds *[]openapi_types.UUID `json:"colleague_ids,omitempty"`
 
@@ -39243,16 +39438,22 @@ type ChangeUserRoleRequest struct {
 	Role string `json:"role"`
 }
 
-// ChannelConnection One workspace-level messaging-channel binding. The bot token never appears in this shape — it lives sealed in the vault, and it is the only secret a binding holds.
+// ChannelConnection One workspace-level messaging-channel binding. The bot token and the Dispact events secret never appear in this shape: both live sealed in the vault.
 type ChannelConnection struct {
-	// ChannelId The provider's own id for the bot — the key the binding is unique on.
+	// Address The web address of a self-hosted provider's install (Dispact). Absent for Telegram.
+	Address *string `json:"address,omitempty"`
+
+	// ChannelId The provider's own id for the bot — the key the binding is unique on. For Dispact it is the chat's team id.
 	ChannelId string `json:"channelId"`
 
 	// ChannelLabel The bot's @username. Display only — a username is mutable and re-assignable, so it identifies nothing.
-	ChannelLabel string                    `json:"channelLabel"`
-	CreatedAt    *time.Time                `json:"createdAt,omitempty"`
-	Id           openapi_types.UUID        `json:"id"`
-	Provider     ChannelConnectionProvider `json:"provider"`
+	ChannelLabel string     `json:"channelLabel"`
+	CreatedAt    *time.Time `json:"createdAt,omitempty"`
+
+	// EventsSecretSet Whether a Dispact events secret is sealed for this connection, so signed notices of new messages are taken. The secret itself is never shown.
+	EventsSecretSet *bool                     `json:"eventsSecretSet,omitempty"`
+	Id              openapi_types.UUID        `json:"id"`
+	Provider        ChannelConnectionProvider `json:"provider"`
 
 	// Status Only `connected` is live, and it is the only state a connect can produce: a pull ingress makes no provider call after the write, so there is no half-connected state. `error` and `reauth_required` are where ingress parks a binding it can no longer poll (another consumer holds the bot's updates; the token was refused), and neither is polled again until an operator acts. `pending` is a value NO server produces: it is retained because the code generator disambiguates enum member names across the whole document, so dropping it renames unrelated generated constants in other schemas.
 	Status    ChannelConnectionStatus `json:"status"`
@@ -39270,6 +39471,58 @@ type ChannelConnectionStatus string
 type ChannelConnectionListResponse struct {
 	Data []ChannelConnection `json:"data"`
 }
+
+// ChannelInvites Who a newly created channel was opened to.
+type ChannelInvites struct {
+	// Invited Members added to the channel.
+	Invited int `json:"invited"`
+
+	// NotInChat Members invited who have no chat account.
+	NotInChat int `json:"not_in_chat"`
+
+	// SkippedOverCap Members left out because a new channel invites at most 50.
+	SkippedOverCap int `json:"skipped_over_cap"`
+}
+
+// ChannelLink defines model for ChannelLink.
+type ChannelLink struct {
+	ChannelName string `json:"channel_name"`
+	ChannelSlug string `json:"channel_slug"`
+
+	// ChannelUrl The channel's address in the chat.
+	ChannelUrl string              `json:"channel_url"`
+	CreatedAt  time.Time           `json:"created_at"`
+	DealId     *openapi_types.UUID `json:"deal_id,omitempty"`
+	Id         openapi_types.UUID  `json:"id"`
+	ProjectId  *openapi_types.UUID `json:"project_id,omitempty"`
+	Provider   ChannelLinkProvider `json:"provider"`
+	Status     ChannelLinkStatus   `json:"status"`
+
+	// Verbosity How much Margince posts into a linked channel.
+	Verbosity ChannelVerbosity `json:"verbosity"`
+}
+
+// ChannelLinkProvider defines model for ChannelLink.Provider.
+type ChannelLinkProvider string
+
+// ChannelLinkStatus defines model for ChannelLink.Status.
+type ChannelLinkStatus string
+
+// ChannelLinkRecordType The kind of record a chat channel is linked to.
+type ChannelLinkRecordType string
+
+// ChannelLinkState defines model for ChannelLinkState.
+type ChannelLinkState struct {
+	// Invites Who a newly created channel was opened to.
+	Invites *ChannelInvites `json:"invites,omitempty"`
+	Link    *ChannelLink    `json:"link,omitempty"`
+
+	// State `off`: no chat bot is connected. `none`: no channel yet. `linked`: posting and reading. `paused`: the channel is gone or the bot lost access.
+	State ChannelLinkStateState `json:"state"`
+}
+
+// ChannelLinkStateState `off`: no chat bot is connected. `none`: no channel yet. `linked`: posting and reading. `paused`: the channel is gone or the bot lost access.
+type ChannelLinkStateState string
 
 // ChannelProviderDirectory Every messaging transport this installation has registered (ADR-0107).
 type ChannelProviderDirectory struct {
@@ -39365,6 +39618,22 @@ type ChannelProviderEntry struct {
 // provider vocabulary: this describes the SHAPE of a credential, which is
 // installation-independent.
 type ChannelProviderEntryCredentialModel string
+
+// ChannelVerbosity How much Margince posts into a linked channel.
+type ChannelVerbosity string
+
+// ChatEpisode The chat talk a summary note was written from. The talk itself is not kept: open `url`
+// to read it in the chat.
+type ChatEpisode struct {
+	// EndedAt When the last of them was posted.
+	EndedAt time.Time `json:"ended_at"`
+
+	// MessageCount How many messages the summary covers.
+	MessageCount int `json:"message_count" minimum:"1"`
+
+	// Url The first message in the chat.
+	Url string `json:"url"`
+}
 
 // ClaimEvidence The receipt behind one cited record (DOSS-WIRE-3). Each `source_kind` owes its own
 // identifying fields (DOSS-PARAM-9), carried in `identity`; a receipt that cannot fill one
@@ -42693,9 +42962,15 @@ type ConfirmSubmissionReceipt struct {
 
 // ConnectChannelRequest defines model for ConnectChannelRequest.
 type ConnectChannelRequest struct {
-	// BotToken The BotFather token, `<bot id>:<secret>`. Sealed into the vault on arrival and never echoed back.
-	BotToken string                        `json:"botToken"`
-	Provider ConnectChannelRequestProvider `json:"provider"`
+	// Address The chat's web address, such as `https://chat.example.com`. Required for Dispact, which every team hosts itself; refused for Telegram.
+	Address *string `json:"address,omitempty"`
+
+	// BotToken The bot token. For Telegram the BotFather token, `<bot id>:<secret>`; for Dispact the app token, `gwapp_…`. Sealed into the vault on arrival and never echoed back.
+	BotToken string `json:"botToken"`
+
+	// EventsSecret The Dispact app's events secret, `whsec_…`, which signs each notice of a new message. Optional; without it Margince reads the channels every minute. Refused for Telegram. Sealed into the vault on arrival and never echoed back.
+	EventsSecret *string                       `json:"eventsSecret,omitempty"`
+	Provider     ConnectChannelRequestProvider `json:"provider"`
 }
 
 // ConnectChannelRequestProvider defines model for ConnectChannelRequest.Provider.
@@ -48352,6 +48627,66 @@ type DismissRelationshipNudgesRequest struct {
 	Permanent *bool `json:"permanent,omitempty"`
 }
 
+// DispactAppManifest What Dispact needs to install the Margince app in a team.
+type DispactAppManifest struct {
+	Events DispactAppManifestEvents `json:"events"`
+	Mcp    DispactAppManifestMcp    `json:"mcp"`
+	Name   string                   `json:"name"`
+
+	// Scopes The bot scopes the app asks for, separated by spaces.
+	Scopes string                 `json:"scopes"`
+	Slug   DispactAppManifestSlug `json:"slug"`
+}
+
+// DispactAppManifestSlug defines model for DispactAppManifest.Slug.
+type DispactAppManifestSlug string
+
+// DispactAppManifestEvents defines model for DispactAppManifestEvents.
+type DispactAppManifestEvents struct {
+	// Types The notice types the app subscribes to.
+	Types []string `json:"types"`
+
+	// Url Where Dispact sends signed notices, `<public_base_url>/v1/channel-events/dispact`.
+	Url string `json:"url"`
+}
+
+// DispactAppManifestMcp defines model for DispactAppManifestMcp.
+type DispactAppManifestMcp struct {
+	// Endpoint This installation's MCP address, `<public_base_url>/mcp`.
+	Endpoint string `json:"endpoint"`
+}
+
+// DispactChannelEvent One signed notice from Dispact, or its URL check. A notice names the channel and the newest message sequence, and never carries message text.
+type DispactChannelEvent struct {
+	// Challenge The value a URL check expects back.
+	Challenge   *string `json:"challenge,omitempty"`
+	ChannelSlug *string `json:"channel_slug,omitempty"`
+	EventId     *string `json:"event_id,omitempty"`
+	MessageId   *string `json:"message_id,omitempty"`
+
+	// Seq The highest message sequence of the burst. Margince reads the history itself and uses the notice only as a signal.
+	Seq  *int                    `json:"seq,omitempty"`
+	Ts   *int64                  `json:"ts,omitempty"`
+	Type DispactChannelEventType `json:"type"`
+
+	// WorkspaceId The Dispact team; it must be the connected bot's team.
+	WorkspaceId *string `json:"workspace_id,omitempty"`
+}
+
+// DispactChannelEventType defines model for DispactChannelEvent.Type.
+type DispactChannelEventType string
+
+// DispactChannelEventReceipt The answer to a taken notice. A URL check gets `challenge` alone.
+type DispactChannelEventReceipt struct {
+	Challenge *string `json:"challenge,omitempty"`
+
+	// Status `pull_queued`: the channel's history is read soon. `link_paused`: the archived channel's link is paused. `ignored`: no live link has this channel.
+	Status *DispactChannelEventReceiptStatus `json:"status,omitempty"`
+}
+
+// DispactChannelEventReceiptStatus `pull_queued`: the channel's history is read soon. `link_paused`: the archived channel's link is paused. `ignored`: no live link has this channel.
+type DispactChannelEventReceiptStatus string
+
 // DisqualifyLeadRequest Why the lead is closed. Both fields are optional on the wire so an agent's governed disqualify still works; the UI always sends a reason.
 type DisqualifyLeadRequest struct {
 	Note *string `json:"note,omitempty"`
@@ -49537,6 +49872,16 @@ type FieldHistoryEntryEntityType string
 type FieldHistoryListResponse struct {
 	Data []FieldHistoryEntry `json:"data"`
 	Page PageInfo            `json:"page"`
+}
+
+// FileChannelMessageRequest defines model for FileChannelMessageRequest.
+type FileChannelMessageRequest struct {
+	// Message The message in the record's channel: its sequence number, `#slug:seq`, the chat's
+	// `<m:#slug:seq|…>` mention, or its link. A message in another channel is not found.
+	Message string `json:"message"`
+
+	// Thread True files the message and the replies in its thread that follow it.
+	Thread *bool `json:"thread,omitempty"`
 }
 
 // FileChatCaptureRequest defines model for FileChatCaptureRequest.
@@ -54344,6 +54689,22 @@ type LifecyclePreviewEvidence struct {
 // LifecyclePreviewEvidenceScope defines model for LifecyclePreviewEvidence.Scope.
 type LifecyclePreviewEvidenceScope string
 
+// LinkChannelRequest defines model for LinkChannelRequest.
+type LinkChannelRequest struct {
+	// Channel For `existing`, the channel's slug or its link.
+	Channel *string                `json:"channel,omitempty"`
+	Mode    LinkChannelRequestMode `json:"mode"`
+
+	// SummarizeHistory For `existing`, required. True files up to five summaries of the talk so far.
+	SummarizeHistory *bool `json:"summarize_history,omitempty"`
+
+	// Verbosity How much Margince posts into a linked channel.
+	Verbosity *ChannelVerbosity `json:"verbosity,omitempty"`
+}
+
+// LinkChannelRequestMode defines model for LinkChannelRequest.Mode.
+type LinkChannelRequestMode string
+
 // LinkCompanyContactsRequest defines model for LinkCompanyContactsRequest.
 type LinkCompanyContactsRequest struct {
 	// ContactIds The candidates to link. An empty list answers 422 `required`, more than 50 `too_many`, and a repeated id `duplicate`.
@@ -57889,8 +58250,11 @@ type PassportConnection struct {
 // PassportSummary Agent Seat Passport metadata for the Settings list (feedback/13). Never carries the token.
 type PassportSummary struct {
 	// AgentId The agent this passport is bound to, if any.
-	AgentId *string       `json:"agent_id,omitempty"`
-	Areas   PassportAreas `json:"areas"`
+	AgentId *string `json:"agent_id,omitempty"`
+
+	// AppBound True while a chat app's user is bound to this passport. A revoked passport that is still bound refuses that user until it is released.
+	AppBound *bool         `json:"app_bound,omitempty"`
+	Areas    PassportAreas `json:"areas"`
 
 	// Connection Present when this passport IS a connection's credential — issued to an MCP client by the
 	// token exchange, not minted by a human. **Omitted entirely** on a human-minted passport —
@@ -60597,8 +60961,11 @@ type ReopenCondition string
 
 // ReplaceChannelTokenRequest defines model for ReplaceChannelTokenRequest.
 type ReplaceChannelTokenRequest struct {
-	// BotToken The replacement BotFather token. Sealed into the vault on arrival and never echoed back.
+	// BotToken The replacement bot token. Sealed into the vault on arrival and never echoed back.
 	BotToken string `json:"botToken"`
+
+	// EventsSecret A new Dispact events secret, `whsec_…`. Absent keeps the sealed one. Refused for Telegram. Sealed into the vault on arrival and never echoed back.
+	EventsSecret *string `json:"eventsSecret,omitempty"`
 }
 
 // ReplaceDealProductsRequest defines model for ReplaceDealProductsRequest.
@@ -64553,6 +64920,12 @@ type SetBlockedDomainRequest struct {
 
 // SetBlockedDomainRequestAdmission defines model for SetBlockedDomainRequest.Admission.
 type SetBlockedDomainRequestAdmission string
+
+// SetChannelVerbosityRequest defines model for SetChannelVerbosityRequest.
+type SetChannelVerbosityRequest struct {
+	// Verbosity How much Margince posts into a linked channel.
+	Verbosity ChannelVerbosity `json:"verbosity"`
+}
 
 // SetConnectorContextTagRequest The word this connector files what it captures under.
 type SetConnectorContextTagRequest struct {
@@ -80734,6 +81107,18 @@ type ConnectChannelJSONRequestBody = ConnectChannelRequest
 // ReplaceChannelTokenJSONRequestBody defines body for ReplaceChannelToken for application/json ContentType.
 type ReplaceChannelTokenJSONRequestBody = ReplaceChannelTokenRequest
 
+// ReceiveDispactChannelEventJSONRequestBody defines body for ReceiveDispactChannelEvent for application/json ContentType.
+type ReceiveDispactChannelEventJSONRequestBody = DispactChannelEvent
+
+// SetChannelVerbosityJSONRequestBody defines body for SetChannelVerbosity for application/json ContentType.
+type SetChannelVerbosityJSONRequestBody = SetChannelVerbosityRequest
+
+// LinkChannelJSONRequestBody defines body for LinkChannel for application/json ContentType.
+type LinkChannelJSONRequestBody = LinkChannelRequest
+
+// FileChannelMessageJSONRequestBody defines body for FileChannelMessage for application/json ContentType.
+type FileChannelMessageJSONRequestBody = FileChannelMessageRequest
+
 // SettleConversationClaimJSONRequestBody defines body for SettleConversationClaim for application/json ContentType.
 type SettleConversationClaimJSONRequestBody = SettleClaimRequest
 
@@ -81934,6 +82319,14 @@ func (a *Activity) UnmarshalJSON(b []byte) error {
 		delete(object, "channel_provider")
 	}
 
+	if raw, found := object["chat_episode"]; found {
+		err = json.Unmarshal(raw, &a.ChatEpisode)
+		if err != nil {
+			return fmt.Errorf("error reading 'chat_episode': %w", err)
+		}
+		delete(object, "chat_episode")
+	}
+
 	if raw, found := object["colleague_ids"]; found {
 		err = json.Unmarshal(raw, &a.ColleagueIds)
 		if err != nil {
@@ -82481,6 +82874,13 @@ func (a Activity) MarshalJSON() ([]byte, error) {
 		object["channel_provider"], err = json.Marshal(a.ChannelProvider)
 		if err != nil {
 			return nil, fmt.Errorf("error marshaling 'channel_provider': %w", err)
+		}
+	}
+
+	if a.ChatEpisode != nil {
+		object["chat_episode"], err = json.Marshal(a.ChatEpisode)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'chat_episode': %w", err)
 		}
 	}
 
@@ -95830,6 +96230,24 @@ type ServerInterface interface {
 	// Replace a channel connection's bot token in place.
 	// (PATCH /channel-connections/{id})
 	ReplaceChannelToken(w http.ResponseWriter, r *http.Request, id Id)
+	// Take a signed notice of new talk in a linked Dispact channel (anonymous).
+	// (POST /channel-events/dispact)
+	ReceiveDispactChannelEvent(w http.ResponseWriter, r *http.Request)
+	// Stop syncing a record with its chat channel.
+	// (DELETE /channel-links/{record_type}/{id})
+	UnlinkChannel(w http.ResponseWriter, r *http.Request, recordType ChannelLinkRecordType, id Id)
+	// The chat channel a deal or project is linked to, if any.
+	// (GET /channel-links/{record_type}/{id})
+	GetChannelLink(w http.ResponseWriter, r *http.Request, recordType ChannelLinkRecordType, id Id)
+	// Choose how much Margince posts into a record's channel.
+	// (PATCH /channel-links/{record_type}/{id})
+	SetChannelVerbosity(w http.ResponseWriter, r *http.Request, recordType ChannelLinkRecordType, id Id)
+	// Link a deal or project to a new or existing private chat channel.
+	// (POST /channel-links/{record_type}/{id})
+	LinkChannel(w http.ResponseWriter, r *http.Request, recordType ChannelLinkRecordType, id Id)
+	// File a summary of one message in a record's channel, or of its thread, as a note.
+	// (POST /channel-links/{record_type}/{id}/notes)
+	FileChannelMessage(w http.ResponseWriter, r *http.Request, recordType ChannelLinkRecordType, id Id)
 	// Which messaging transports THIS installation has registered.
 	// (GET /channel-providers)
 	ListChannelProviders(w http.ResponseWriter, r *http.Request)
@@ -96892,6 +97310,9 @@ type ServerInterface interface {
 	// What this installation still has to be configured with before it can be used.
 	// (GET /installation/setup)
 	GetInstallationSetup(w http.ResponseWriter, r *http.Request)
+	// The manifest that installs the Margince app in a Dispact team (admin).
+	// (GET /integrations/dispact/manifest)
+	GetDispactAppManifest(w http.ResponseWriter, r *http.Request)
 	// The installation's provider-lookup posture.
 	// (GET /integrations/settings)
 	GetIntegrationsSettings(w http.ResponseWriter, r *http.Request)
@@ -97393,6 +97814,9 @@ type ServerInterface interface {
 	// Revoke a Passport (kill switch for one agent binding).
 	// (DELETE /passports/{id})
 	RevokePassport(w http.ResponseWriter, r *http.Request, id Id)
+	// Allow a chat app's user again after their passport was revoked.
+	// (DELETE /passports/{id}/app-binding)
+	ReleasePassportAppBinding(w http.ResponseWriter, r *http.Request, id Id)
 	// Choose the work areas one of the caller's own passports may act in.
 	// (PUT /passports/{id}/areas)
 	SetPassportAreas(w http.ResponseWriter, r *http.Request, id Id)
@@ -99913,6 +100337,42 @@ func (_ Unimplemented) ReplaceChannelToken(w http.ResponseWriter, r *http.Reques
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
+// Take a signed notice of new talk in a linked Dispact channel (anonymous).
+// (POST /channel-events/dispact)
+func (_ Unimplemented) ReceiveDispactChannelEvent(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Stop syncing a record with its chat channel.
+// (DELETE /channel-links/{record_type}/{id})
+func (_ Unimplemented) UnlinkChannel(w http.ResponseWriter, r *http.Request, recordType ChannelLinkRecordType, id Id) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// The chat channel a deal or project is linked to, if any.
+// (GET /channel-links/{record_type}/{id})
+func (_ Unimplemented) GetChannelLink(w http.ResponseWriter, r *http.Request, recordType ChannelLinkRecordType, id Id) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Choose how much Margince posts into a record's channel.
+// (PATCH /channel-links/{record_type}/{id})
+func (_ Unimplemented) SetChannelVerbosity(w http.ResponseWriter, r *http.Request, recordType ChannelLinkRecordType, id Id) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Link a deal or project to a new or existing private chat channel.
+// (POST /channel-links/{record_type}/{id})
+func (_ Unimplemented) LinkChannel(w http.ResponseWriter, r *http.Request, recordType ChannelLinkRecordType, id Id) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// File a summary of one message in a record's channel, or of its thread, as a note.
+// (POST /channel-links/{record_type}/{id}/notes)
+func (_ Unimplemented) FileChannelMessage(w http.ResponseWriter, r *http.Request, recordType ChannelLinkRecordType, id Id) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
 // Which messaging transports THIS installation has registered.
 // (GET /channel-providers)
 func (_ Unimplemented) ListChannelProviders(w http.ResponseWriter, r *http.Request) {
@@ -102037,6 +102497,12 @@ func (_ Unimplemented) GetInstallationSetup(w http.ResponseWriter, r *http.Reque
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
+// The manifest that installs the Margince app in a Dispact team (admin).
+// (GET /integrations/dispact/manifest)
+func (_ Unimplemented) GetDispactAppManifest(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
 // The installation's provider-lookup posture.
 // (GET /integrations/settings)
 func (_ Unimplemented) GetIntegrationsSettings(w http.ResponseWriter, r *http.Request) {
@@ -103036,6 +103502,12 @@ func (_ Unimplemented) IssuePassport(w http.ResponseWriter, r *http.Request) {
 // Revoke a Passport (kill switch for one agent binding).
 // (DELETE /passports/{id})
 func (_ Unimplemented) RevokePassport(w http.ResponseWriter, r *http.Request, id Id) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Allow a chat app's user again after their passport was revoked.
+// (DELETE /passports/{id}/app-binding)
+func (_ Unimplemented) ReleasePassportAppBinding(w http.ResponseWriter, r *http.Request, id Id) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -116910,6 +117382,235 @@ func (siw *ServerInterfaceWrapper) ReplaceChannelToken(w http.ResponseWriter, r 
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.ReplaceChannelToken(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// ReceiveDispactChannelEvent operation middleware
+func (siw *ServerInterfaceWrapper) ReceiveDispactChannelEvent(w http.ResponseWriter, r *http.Request) {
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ReceiveDispactChannelEvent(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// UnlinkChannel operation middleware
+func (siw *ServerInterfaceWrapper) UnlinkChannel(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "record_type" -------------
+	var recordType ChannelLinkRecordType
+
+	err = runtime.BindStyledParameterWithOptions("simple", "record_type", chi.URLParam(r, "record_type"), &recordType, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "record_type", Err: err})
+		return
+	}
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.UnlinkChannel(w, r, recordType, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// GetChannelLink operation middleware
+func (siw *ServerInterfaceWrapper) GetChannelLink(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "record_type" -------------
+	var recordType ChannelLinkRecordType
+
+	err = runtime.BindStyledParameterWithOptions("simple", "record_type", chi.URLParam(r, "record_type"), &recordType, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "record_type", Err: err})
+		return
+	}
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetChannelLink(w, r, recordType, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// SetChannelVerbosity operation middleware
+func (siw *ServerInterfaceWrapper) SetChannelVerbosity(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "record_type" -------------
+	var recordType ChannelLinkRecordType
+
+	err = runtime.BindStyledParameterWithOptions("simple", "record_type", chi.URLParam(r, "record_type"), &recordType, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "record_type", Err: err})
+		return
+	}
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.SetChannelVerbosity(w, r, recordType, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// LinkChannel operation middleware
+func (siw *ServerInterfaceWrapper) LinkChannel(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "record_type" -------------
+	var recordType ChannelLinkRecordType
+
+	err = runtime.BindStyledParameterWithOptions("simple", "record_type", chi.URLParam(r, "record_type"), &recordType, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "record_type", Err: err})
+		return
+	}
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.LinkChannel(w, r, recordType, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// FileChannelMessage operation middleware
+func (siw *ServerInterfaceWrapper) FileChannelMessage(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "record_type" -------------
+	var recordType ChannelLinkRecordType
+
+	err = runtime.BindStyledParameterWithOptions("simple", "record_type", chi.URLParam(r, "record_type"), &recordType, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "record_type", Err: err})
+		return
+	}
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.FileChannelMessage(w, r, recordType, id)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -132716,6 +133417,26 @@ func (siw *ServerInterfaceWrapper) GetInstallationSetup(w http.ResponseWriter, r
 	handler.ServeHTTP(w, r)
 }
 
+// GetDispactAppManifest operation middleware
+func (siw *ServerInterfaceWrapper) GetDispactAppManifest(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetDispactAppManifest(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // GetIntegrationsSettings operation middleware
 func (siw *ServerInterfaceWrapper) GetIntegrationsSettings(w http.ResponseWriter, r *http.Request) {
 
@@ -139533,6 +140254,38 @@ func (siw *ServerInterfaceWrapper) RevokePassport(w http.ResponseWriter, r *http
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.RevokePassport(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// ReleasePassportAppBinding operation middleware
+func (siw *ServerInterfaceWrapper) ReleasePassportAppBinding(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ReleasePassportAppBinding(w, r, id)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -153732,6 +154485,24 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 		r.Patch(options.BaseURL+"/channel-connections/{id}", wrapper.ReplaceChannelToken)
 	})
 	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/channel-events/dispact", wrapper.ReceiveDispactChannelEvent)
+	})
+	r.Group(func(r chi.Router) {
+		r.Delete(options.BaseURL+"/channel-links/{record_type}/{id}", wrapper.UnlinkChannel)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/channel-links/{record_type}/{id}", wrapper.GetChannelLink)
+	})
+	r.Group(func(r chi.Router) {
+		r.Patch(options.BaseURL+"/channel-links/{record_type}/{id}", wrapper.SetChannelVerbosity)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/channel-links/{record_type}/{id}", wrapper.LinkChannel)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/channel-links/{record_type}/{id}/notes", wrapper.FileChannelMessage)
+	})
+	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/channel-providers", wrapper.ListChannelProviders)
 	})
 	r.Group(func(r chi.Router) {
@@ -154794,6 +155565,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 		r.Get(options.BaseURL+"/installation/setup", wrapper.GetInstallationSetup)
 	})
 	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/integrations/dispact/manifest", wrapper.GetDispactAppManifest)
+	})
+	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/integrations/settings", wrapper.GetIntegrationsSettings)
 	})
 	r.Group(func(r chi.Router) {
@@ -155293,6 +156067,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Delete(options.BaseURL+"/passports/{id}", wrapper.RevokePassport)
+	})
+	r.Group(func(r chi.Router) {
+		r.Delete(options.BaseURL+"/passports/{id}/app-binding", wrapper.ReleasePassportAppBinding)
 	})
 	r.Group(func(r chi.Router) {
 		r.Put(options.BaseURL+"/passports/{id}/areas", wrapper.SetPassportAreas)

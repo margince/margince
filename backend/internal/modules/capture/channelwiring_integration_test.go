@@ -47,7 +47,7 @@ func TestAVaultLessDeploymentRefusesConnectByName(t *testing.T) {
 			})
 			return err
 		},
-		"rotate":     func() error { return f.store.ReplaceToken(f.ctx, conn.ID, replacement) },
+		"rotate":     func() error { return f.store.ReplaceToken(f.ctx, conn.ID, replacement, "") },
 		"disconnect": func() error { return f.store.Disconnect(f.ctx, conn.ID) },
 	} {
 		t.Run(name, func(t *testing.T) {

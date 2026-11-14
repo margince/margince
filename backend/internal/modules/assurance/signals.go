@@ -62,6 +62,7 @@ func (s *Scanner) askSignals(ctx context.Context, tx pgx.Tx, now time.Time, pass
 			finding.Observed["suggestion_id"] = subject.SuggestionID
 		}
 		pass.raised = append(pass.raised, raised{finding: finding, owner: subject.Owner})
+		pass.signalOwners = append(pass.signalOwners, subject.Owner)
 		pass.seen = append(pass.seen, LogicalKey(finding))
 	}
 	return len(subjects), nil

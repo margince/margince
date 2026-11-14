@@ -14,11 +14,15 @@ package channelaxis_test
 
 import (
 	"context"
+	"maps"
 	"os"
 	"path/filepath"
 	"regexp"
+	"slices"
 	"strings"
 	"testing"
+
+	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/compose/integration"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
@@ -65,14 +69,54 @@ func contractPath(t *testing.T, name string) string {
 	return filepath.Join("..", "..", "..", "api", name)
 }
 
+// providerCheckLiteralRe reads the names a provider CHECK admits from its
+// definition, which spells each as 'name'::text.
+var providerCheckLiteralRe = regexp.MustCompile(`'([a-z0-9_]+)'::text`)
+
+// botBindingProviderSets reads the provider sets the schema compiles into the
+// two bot-binding tables. An enum is exempt only when it equals one of them.
+// So only a bot connector added to the schema widens the exception.
+func botBindingProviderSets(ctx context.Context, t *testing.T, owner *pgx.Conn) map[string]bool {
+	t.Helper()
+	rows, err := owner.Query(ctx, `SELECT pg_get_constraintdef(oid) FROM pg_constraint
+		WHERE contype = 'c' AND conrelid IN ('channel_connection'::regclass, 'chat_link'::regclass)
+		  AND conname LIKE '%\_provider\_check'`)
+	if err != nil {
+		t.Fatalf("reading the bot-binding provider checks: %v", err)
+	}
+	defs, err := pgx.CollectRows(rows, pgx.RowTo[string])
+	if err != nil {
+		t.Fatalf("scanning a bot-binding provider check: %v", err)
+	}
+	if len(defs) != 2 {
+		t.Fatalf("found %d bot-binding provider checks, want one each on channel_connection and chat_link", len(defs))
+	}
+	sets := make(map[string]bool, len(defs))
+	for _, def := range defs {
+		members := map[string]bool{}
+		for _, m := range providerCheckLiteralRe.FindAllStringSubmatch(def, -1) {
+			members[m[1]] = true
+		}
+		if len(members) == 0 {
+			t.Fatalf("the provider check %q names no provider, so the exception would read nothing", def)
+		}
+		sets[enumKey(members)] = true
+	}
+	return sets
+}
+
+// enumKey spells a member set in one order, so two sets compare as strings.
+func enumKey(members map[string]bool) string {
+	return strings.Join(slices.Sorted(maps.Keys(members)), ",")
+}
+
 // A registered transport must not appear as a member of any kind-style enum in
 // the contract. Derived from channel_provider — the registry IS the list, so a
 // provider registered tomorrow is covered without touching this test.
 //
-// Written as ONE assertion with a NAMED exception set rather than a headline
-// plus a proviso: the two workspace-bot enums legitimately contain `telegram`
-// because they bind a bot to a workspace, a surface an extension unit never
-// writes (ADR-0107 §6). Anything outside that set is the conflation returning.
+// The one exception is an enum of the core bot connectors a workspace binds
+// (ChannelConnection, ConnectChannelRequest, ChannelLink). An extension unit
+// never writes that surface (ADR-0107).
 func TestNoContractEnumSpellsARegisteredTransport(t *testing.T) {
 	integration.Setup(t)
 	owner := integration.OwnerConn(t)
@@ -100,29 +144,15 @@ func TestNoContractEnumSpellsARegisteredTransport(t *testing.T) {
 		t.Fatalf("reading the contract: %v", err)
 	}
 
-	// The workspace-bot binding surface: ChannelConnection.provider and
-	// ConnectChannelRequest.provider both legitimately enumerate the core bot
-	// connectors. Identified by the enum's exact content rather than by a
-	// schema name, because the name is not visible in a raw scan and a
-	// content match cannot silently widen.
-	allowed := map[string]bool{"telegram": true}
+	allowed := botBindingProviderSets(ctx, t, owner)
 
 	for _, members := range contractEnums(string(raw)) {
 		trimmed := make(map[string]bool, len(members))
 		for _, m := range members {
 			trimmed[strings.Trim(strings.TrimSpace(m), `'"`)] = true
 		}
-		// A closed bot-binding enum is exactly the allowed set and nothing else.
-		if len(trimmed) == len(allowed) {
-			onlyAllowed := true
-			for m := range trimmed {
-				if !allowed[m] {
-					onlyAllowed = false
-				}
-			}
-			if onlyAllowed {
-				continue
-			}
+		if allowed[enumKey(trimmed)] {
+			continue
 		}
 		for _, provider := range providers {
 			if trimmed[provider] {

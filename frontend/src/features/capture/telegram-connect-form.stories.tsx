@@ -9,13 +9,12 @@ import {
   jsonResponse,
   StoryProviders,
 } from "../../testing/story-utils";
-import { TelegramConnectForm } from "./telegram-connect-form";
+import { BotConnectForm } from "./telegram-connect-form";
 
-// TelegramConnectForm stories for the fe-uat render gate: the idle
-// first-connect form, the resolved-username success view, the edit-in-place
-// form on a pending connection (rendered as pending, never as connected —
-// design §9.1), and the webhook-conflict refusal (§5) — each captured after
-// a play() drives the actual interaction, not just the empty form.
+// BotConnectForm stories for the fe-uat render gate. They show the idle
+// first-connect form, the success view, the edit form on a pending
+// connection, and the webhook-conflict refusal. Each is captured after a
+// play() drives the interaction, not just the empty form.
 
 type ChannelConnection = components["schemas"]["ChannelConnection"];
 
@@ -33,12 +32,12 @@ const connectedConnection: ChannelConnection = {
   status: "connected",
 };
 
-const meta: Meta<typeof TelegramConnectForm> = {
+const meta: Meta<typeof BotConnectForm> = {
   title: "Settings/Data/Integrations/Telegram connect form",
-  component: TelegramConnectForm,
+  component: BotConnectForm,
 };
 export default meta;
-type Story = StoryObj<typeof TelegramConnectForm>;
+type Story = StoryObj<typeof BotConnectForm>;
 
 // `screen`, not the story canvas: the form is inside a portalled Modal.
 async function fillAndSubmit(cta: string) {
@@ -55,7 +54,7 @@ export const Idle: Story = {
     installFetchStub({});
     return (
       <StoryProviders>
-        <TelegramConnectForm open onClose={() => {}} />
+        <BotConnectForm open onClose={() => {}} />
       </StoryProviders>
     );
   },
@@ -68,7 +67,7 @@ export const Connected: Story = {
     });
     return (
       <StoryProviders>
-        <TelegramConnectForm open onClose={() => {}} />
+        <BotConnectForm open onClose={() => {}} />
       </StoryProviders>
     );
   },
@@ -83,7 +82,7 @@ export const EditPendingConnection: Story = {
     installFetchStub({});
     return (
       <StoryProviders>
-        <TelegramConnectForm
+        <BotConnectForm
           open
           onClose={() => {}}
           connection={pendingConnection}
@@ -108,12 +107,24 @@ export const WorkspaceAlreadyBound: Story = {
     });
     return (
       <StoryProviders>
-        <TelegramConnectForm open onClose={() => {}} />
+        <BotConnectForm open onClose={() => {}} />
       </StoryProviders>
     );
   },
   play: async () => {
     await fillAndSubmit("Connect");
     await screen.findByText(/already connected to this workspace/i);
+  },
+};
+
+// A Dispact bot asks for its chat's address beside the token.
+export const DispactIdle: Story = {
+  render: () => {
+    installFetchStub({});
+    return (
+      <StoryProviders>
+        <BotConnectForm provider="dispact" open onClose={() => {}} />
+      </StoryProviders>
+    );
   },
 };

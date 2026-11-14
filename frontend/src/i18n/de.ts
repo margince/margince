@@ -2398,6 +2398,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "systemJob.deal_key_names": "Ergänzung von Deal-Schlüsseln",
   "systemJob.deal_room_link_request": "Link-Anfrage für den Deal Room",
   "systemJob.deal_room_timeline": "Verlauf im Deal Room",
+  "systemJob.chat_links": "Chat-Kanäle",
   "systemJob.dedupe_recheck": "Erneute Prüfung der Duplikat-Prüfliste",
   "systemJob.deployment_secret_seal": "Versiegelung von Geheimnissen",
   "systemJob.domain_triage": "Vorprüfung von Websites",
@@ -4912,6 +4913,11 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "timeline.kind.extension": "Erweiterung",
   "timeline.kind.signal": "Signal",
   "timeline.withheld": "Inhalt nur für Teilnehmende",
+  "timeline.chatSummary.badge": "KI-Zusammenfassung",
+  "timeline.chatSummary.from": "Aus {provider}",
+  "timeline.chatSummary.meta_one": "{count} Nachricht, bis {ended}",
+  "timeline.chatSummary.meta_other": "{count} Nachrichten, bis {ended}",
+  "timeline.chatSummary.open": "In {provider} öffnen",
   "compose.deadRecipients":
     "E-Mails an {addresses} kommen nicht an: Die letzte Zustellung wurde abgelehnt, und seitdem war keine erfolgreich. Sende trotzdem oder verwende eine andere Adresse.",
   "compose.threadShare": "Mit dem Unternehmen teilen",
@@ -9866,6 +9872,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "settings.passportLastUsedOn": "Zuletzt genutzt am {date}",
   "settings.passportExpiresOn": "Läuft am {date} ab",
   "settings.revokeNamed": "{name} widerrufen",
+  "settings.allowAgain": "Wieder zulassen",
+  "settings.allowAgainNamed": "{name} wieder zulassen",
   "settings.revokeConfirm":
     "Die Zugangsdaten des Passports werden sofort ungültig. Der Agent verliert beim nächsten Aufruf den Zugriff.",
   "import.withheld": "Nur Admins und Operations können Dateien importieren.",
@@ -10513,6 +10521,9 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "jobs.kind.technical_enrich_company": "Technische Abfrage für Unternehmen",
   "jobs.kind.telegram_ingest": "Übernahme von Telegram-Nachrichten",
   "jobs.kind.telegram_poll": "Abruf von Telegram-Nachrichten",
+  "jobs.kind.chat_link_flush": "Beiträge in Chat-Kanälen",
+  "jobs.kind.chat_pull": "Zusammenfassungen aus Chat-Kanälen",
+  "jobs.kind.chat_pull_sweep": "Prüfung der Chat-Kanäle",
   "jobs.kind.telegram_poll_sweep": "Planung der Telegram-Abrufe",
   "jobs.kind.time_scan": "Prüfung zeitgesteuerter Automatisierungen",
   "jobs.kind.transcript_propose": "Lesen des Transkripts",
@@ -12183,6 +12194,83 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "connectors.telegramReplaceCta": "Token ersetzen",
   "connectors.telegramConnectedAs": "Verbunden als @{username}.",
   "connectors.telegramConnectFailed": "Bot nicht verbunden",
+
+  "connectors.bot.provDispact": "Dispact",
+  "connectors.bot.dispactTitle": "Dispact-Bot",
+  "connectors.bot.dispactSub":
+    "Ein Bot postet Neues zu Deals und Projekten in private Kanäle eures Team-Chats und liest, was das Team dort schreibt.",
+  "connectors.bot.dispactConnectCta": "Dispact-Bot verbinden",
+  "connectors.bot.dispactEmptyNote":
+    "Mit einem verbundenen Bot kann jeder Deal und jedes Projekt einen privaten Kanal im Team-Chat bekommen.",
+  "connectors.bot.dispactDisconnectBody":
+    "Das löscht den gespeicherten Token. Margince postet nicht mehr in verknüpfte Kanäle und liest dort nicht mehr mit; bereits abgelegte Notizen bleiben im CRM.",
+  "connectors.bot.dispactModalTitle": "Dispact-Bot verbinden",
+  "connectors.bot.dispactTokenHint":
+    "Der App-Token des Bots. Er beginnt mit gwapp_, wird im Schlüsseltresor gespeichert und nie wieder angezeigt.",
+  "connectors.bot.dispactAddress": "Chat-Adresse",
+  "connectors.bot.dispactAddressHint":
+    "Die Webadresse eures Team-Chats, etwa https://chat.example.com.",
+  "connectors.bot.eventsSecret": "Ereignis-Schlüssel",
+  "connectors.bot.eventsSecretHint":
+    "Optional. Kopiert den Ereignis-Schlüssel (whsec_…) von der Seite der Margince-App in eurem Chat. Mit ihm liest Margince einen Kanal, sobald er neue Nachrichten hat, und prüft den Rest stündlich; ohne ihn prüft Margince jeden Kanal jede Minute.",
+  "connectors.bot.eventsSecretKeepHint":
+    "Leer lassen, um den gespeicherten Ereignis-Schlüssel zu behalten.",
+
+  "channelLink.title": "Team-Chat",
+  "channelLink.off":
+    "Verbinde in den Einstellungen einen Chat-Bot, um einen Kanal zu verknüpfen.",
+  "channelLink.openSettings": "Chat-Bot-Einstellungen öffnen",
+  "channelLink.none": "Noch kein Kanal",
+  "channelLink.noneSub":
+    "Ein privater Kanal hält das Team zu diesem Datensatz auf dem Laufenden.",
+  "channelLink.create": "Kanal erstellen",
+  "channelLink.linkExisting": "Vorhandenen Kanal verknüpfen",
+  "channelLink.linkCta": "Kanal verknüpfen",
+  "channelLink.linkFailed": "Kanal nicht verknüpft",
+  "channelLink.channelField": "Kanalname oder Link",
+  "channelLink.channelHint":
+    "Ein privater Kanal, in dem der Bot schon Mitglied ist.",
+  "channelLink.summarize":
+    "Bisherige Unterhaltung zusammenfassen (bis zu 5 Zusammenfassungen)",
+  "channelLink.verbosity": "Was Margince postet",
+  "channelLink.verbosityHint":
+    "Die Karte im Kanal bleibt auf jeder Stufe aktuell.",
+  "channelLink.verbosityFailed": "Einstellung nicht gespeichert",
+  "channelLink.verbosity.everything": "Alles",
+  "channelLink.verbosity.important": "Nur Wichtiges",
+  "channelLink.verbosity.milestones": "Nur Meilensteine",
+  "channelLink.verbosity.silent": "Still (nur die Karte)",
+  "channelLink.open": "{name} im Team-Chat öffnen",
+  "channelLink.copy": "Kanallink kopieren",
+  "channelLink.copied": "Kanallink kopiert",
+  "channelLink.copyRemedy": "Öffne den Kanal und kopiere dort seine Adresse.",
+  "channelLink.notInChat_one":
+    "{count} eingeladenes Mitglied hat kein Chat-Konto.",
+  "channelLink.notInChat_other":
+    "{count} eingeladene Mitglieder haben kein Chat-Konto.",
+  "channelLink.pausedBadge": "Pausiert",
+  "channelLink.paused": "Kanal pausiert",
+  "channelLink.pausedBody":
+    "Der Kanal wurde archiviert, oder der Bot hat den Zugriff verloren. Es wird nichts gepostet, bis du ihn trennst und einen anderen Kanal verknüpfst.",
+  "channelLink.unlink": "Trennen",
+  "channelLink.unlinkNamed": "{name} trennen",
+  "channelLink.unlinkTitle": "Diesen Kanal trennen?",
+  "channelLink.unlinkBody":
+    "Margince postet und liest dort nicht mehr. Der Kanal und seine Nachrichten bleiben im Chat.",
+  "channelLink.refused.botNotConnected":
+    "Es ist kein Chat-Bot verbunden. Ein Admin verbindet ihn in den Einstellungen.",
+  "channelLink.refused.channelNotFound":
+    "Zu diesem Namen oder Link wurde kein Kanal gefunden.",
+  "channelLink.refused.channelNotPrivate":
+    "Dieser Kanal ist öffentlich. Verknüpfe stattdessen einen privaten Kanal.",
+  "channelLink.refused.botNotMember":
+    "Der Bot ist kein Mitglied dieses Kanals. Füge ihn dem Kanal hinzu und versuche es dann noch einmal.",
+  "channelLink.refused.channelAlreadyLinked":
+    "Dieser Kanal gehört schon zu einem anderen Deal oder Projekt.",
+  "channelLink.refused.recordAlreadyLinked":
+    "Dieser Datensatz hat schon einen Kanal.",
+  "channelLink.refused.providerUnreachable":
+    "Der Chat war nicht erreichbar. Es wurde nichts geändert, versuche es also noch einmal.",
 
   // Die Consumer-Mail-Liste des Workspace (CAP-PARAM-5).
   "consumerMail.title": "Freemail-Domains",
@@ -13910,7 +13998,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "settings.part.integrations.contact": "Kontaktdaten",
   "settings.part.integrations.accounting": "Buchhaltung",
   "settings.part.integrations.webhooks": "Webhooks",
-  "settings.part.integrations.telegram": "Telegram-Bot",
+  "settings.part.integrations.telegram": "Chat-Bots",
   "settings.part.integrations.sharedMailboxes": "Gemeinsame Postfächer",
   "sharedMailboxes.title": "Gemeinsame Postfächer",
   "sharedMailboxes.intro":
@@ -21966,6 +22054,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Berichtseinrichtung oder Umsatzziele vorschlagen",
   "aiTask.name.request_settlement": "Prüfung der Antwort auf das Anliegen",
   "aiTask.name.rewrite": "Umformulieren",
+  "aiTask.name.chat_summary": "Zusammenfassung eines Chat-Kanals",
   "aiTask.name.signal_extract": "Erkennung von Gesprächssignalen",
   "aiTask.name.site_extract": "Ausführliche Website-Auswertung",
   "aiTask.name.site_fact_extract": "Erfassung von Website-Fakten",

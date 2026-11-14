@@ -358,15 +358,30 @@ public.capture_trace.source_id exempt bounded diagnostic identities keep the exi
 public.capture_trace.source_system exempt bounded diagnostic identities keep the existing trace format and privacy limits
 public.capture_trace.stage exempt system-written rows on the write path of every change or capture; a guard would serialize each whole row
 public.capture_trace.subject exempt bounded diagnostic copies retain their existing privacy excerpt limit
+public.channel_connection.address line
 public.channel_connection.channel_id document
 public.channel_connection.channel_label label
 public.channel_connection.credential_ref document
+public.channel_connection.events_credential_ref document
 public.channel_connection.provider document
 public.channel_connection.status document
 public.channel_provider.credential_model document
 public.channel_provider.label label
 public.channel_provider.provider exempt bounded provider identifiers follow the shared connector grammar
 public.channel_provider.transport document
+public.chat_link.card_fingerprint label
+public.chat_link.card_message_id line
+public.chat_link.channel_external_key line
+public.chat_link.channel_name line
+public.chat_link.channel_slug line
+public.chat_link.provider document
+public.chat_link.status document
+public.chat_link.verbosity document
+public.chat_post_item.entity_type document
+public.chat_post_item.event_type document
+public.chat_post_item.last_error line
+public.chat_post_item.message_id line
+public.chat_post_item.tier document
 public.close_date_run.captured_by document
 public.close_date_run.status document
 public.close_date_run_member.outcome document
@@ -1121,6 +1136,8 @@ public.partner_stage.label_key exempt generated from independently checked sourc
 public.partner_stage.meaning document
 public.partner_stage.shipped_label label
 public.partner_stage.shipped_label_key document
+public.passport.app_issuer line
+public.passport.app_subject line
 public.passport.label label
 public.passport.scopes document
 public.passport.token_hash document

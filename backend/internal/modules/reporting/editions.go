@@ -19,27 +19,17 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
-func (s *Service) edition(ctx context.Context, tx pgx.Tx, id ids.UUID) (crmcontracts.ReportingEdition, []Fact, error) {
+// edition reads one edition as owners, the reader's measurable owners, may see
+// it today.
+func (s *Service) edition(ctx context.Context, tx pgx.Tx, owners MeasurableOwners, id ids.UUID) (crmcontracts.ReportingEdition, []Fact, error) {
 	var out crmcontracts.ReportingEdition
+	if err := s.requireEditionAudience(ctx, tx, id); err != nil {
+		return out, nil, err
+	}
 	var b bindings
-	audience, err := audienceClause(ctx, &b)
-	if err != nil {
-		return out, nil, err
-	}
-	// A later audience expansion cannot make an originally private edition public.
-	published := "(SELECT owner_id,publication_audience AS audience,publication_team_id AS audience_team_id FROM report_edition WHERE id=" + b.add(id) + ") d"
-	var permitted bool
-	if err := tx.QueryRow(ctx, "SELECT EXISTS(SELECT 1 FROM "+published+" WHERE "+audience+")", b.values...).Scan(&permitted); err != nil {
-		return out, nil, err
-	}
-	if !permitted {
-		return crmcontracts.ReportingEdition{}, nil, storedError(pgx.ErrNoRows)
-	}
-	b = bindings{}
 	var redacted *time.Time
 	query := "SELECT manifest,redacted_at FROM report_edition WHERE id=" + b.add(id)
-	err = tx.QueryRow(ctx, query, b.values...).Scan(&out, &redacted)
-	if err != nil {
+	if err := tx.QueryRow(ctx, query, b.values...).Scan(&out, &redacted); err != nil {
 		return out, nil, storedError(err)
 	}
 	if _, err := s.report(ctx, tx, ids.UUID(out.ReportId), false); err != nil {
@@ -48,17 +38,11 @@ func (s *Service) edition(ctx context.Context, tx pgx.Tx, id ids.UUID) (crmcontr
 	if !s.evaluator.FeaturesAvailable(ctx, out.Evaluation.Selection) {
 		return crmcontracts.ReportingEdition{}, nil, errFeatureUnavailable
 	}
-	b = bindings{}
-	statement := "SELECT fact FROM report_edition_contribution WHERE edition_id=" + b.add(id) + " ORDER BY metric,context_id,contribution_key"
-	rows, err := tx.Query(ctx, statement, b.values...)
+	facts, err := editionFacts(ctx, tx, id)
 	if err != nil {
 		return out, nil, err
 	}
-	facts, err := pgx.CollectRows(rows, pgx.RowTo[Fact])
-	if err != nil {
-		return out, nil, err
-	}
-	visible, withheld, err := s.authority.Visible(ctx, tx, out.Evaluation.Context, facts)
+	visible, withheld, err := s.authority.Visible(ctx, tx, owners, out.Evaluation.Context, facts)
 	if err != nil {
 		return out, nil, err
 	}
@@ -67,11 +51,7 @@ func (s *Service) edition(ctx context.Context, tx pgx.Tx, id ids.UUID) (crmcontr
 		return out, nil, err
 	}
 	ownerNarrowed := slices.ContainsFunc(visible, func(f Fact) bool { return f.OwnerWithheld })
-	rosterNarrowed, err := s.rosterNarrowed(ctx, tx, out.Evaluation.Context.MemberIds)
-	if err != nil {
-		return out, nil, err
-	}
-	withheld = withheld || contextWithheld || ownerNarrowed || rosterNarrowed
+	withheld = withheld || contextWithheld || ownerNarrowed || rosterNarrowed(owners, out.Evaluation.Context.MemberIds)
 	out.Redacted = redacted != nil
 	out.Withheld = withheld || out.Redacted
 	if out.Withheld {
@@ -86,6 +66,36 @@ func (s *Service) edition(ctx context.Context, tx pgx.Tx, id ids.UUID) (crmcontr
 	return out, visible, nil
 }
 
+// requireEditionAudience reports not-found unless the reader is in the edition's
+// publication audience.
+func (s *Service) requireEditionAudience(ctx context.Context, tx pgx.Tx, id ids.UUID) error {
+	var b bindings
+	audience, err := audienceClause(ctx, &b)
+	if err != nil {
+		return err
+	}
+	// A later audience expansion cannot make an originally private edition public.
+	published := "(SELECT owner_id,publication_audience AS audience,publication_team_id AS audience_team_id FROM report_edition WHERE id=" + b.add(id) + ") d"
+	var permitted bool
+	if err := tx.QueryRow(ctx, "SELECT EXISTS(SELECT 1 FROM "+published+" WHERE "+audience+")", b.values...).Scan(&permitted); err != nil {
+		return err
+	}
+	if !permitted {
+		return storedError(pgx.ErrNoRows)
+	}
+	return nil
+}
+
+func editionFacts(ctx context.Context, tx pgx.Tx, id ids.UUID) ([]Fact, error) {
+	var b bindings
+	statement := "SELECT fact FROM report_edition_contribution WHERE edition_id=" + b.add(id) + " ORDER BY metric,context_id,contribution_key"
+	rows, err := tx.Query(ctx, statement, b.values...)
+	if err != nil {
+		return nil, err
+	}
+	return pgx.CollectRows(rows, pgx.RowTo[Fact])
+}
+
 // GetEdition rechecks current disclosure authority before returning frozen data.
 func (s *Service) GetEdition(ctx context.Context, id ids.UUID) (crmcontracts.ReportingEdition, error) {
 	var out crmcontracts.ReportingEdition
@@ -98,7 +108,11 @@ func (s *Service) GetEditionTx(ctx context.Context, tx pgx.Tx, id ids.UUID) (crm
 	if err := auth.Require(ctx, "report_edition", principal.ActionRead); err != nil {
 		return crmcontracts.ReportingEdition{}, err
 	}
-	out, _, err := s.edition(ctx, tx, id)
+	owners, err := s.authority.MeasurableOwnerSet(ctx, tx)
+	if err != nil {
+		return crmcontracts.ReportingEdition{}, err
+	}
+	out, _, err := s.edition(ctx, tx, owners, id)
 	if err != nil {
 		return out, err
 	}
@@ -140,8 +154,12 @@ func (s *Service) ListEditions(ctx context.Context, reportID ids.UUID, after *id
 			out.NextCursor = &cursor
 			editionIDs = editionIDs[:limit]
 		}
+		owners, err := s.authority.MeasurableOwnerSet(ctx, tx)
+		if err != nil {
+			return err
+		}
 		for _, id := range editionIDs {
-			edition, _, err := s.edition(ctx, tx, id)
+			edition, _, err := s.edition(ctx, tx, owners, id)
 			if errors.Is(err, errFeatureUnavailable) {
 				continue
 			}
@@ -162,7 +180,11 @@ func (s *Service) EditionEvidence(ctx context.Context, id ids.UUID, metric crmco
 	}
 	var out crmcontracts.ReportingEvidence
 	err := s.store.db.TxIsolated(ctx, pgx.RepeatableRead, func(tx pgx.Tx) error {
-		edition, facts, err := s.edition(ctx, tx, id)
+		owners, err := s.authority.MeasurableOwnerSet(ctx, tx)
+		if err != nil {
+			return err
+		}
+		edition, facts, err := s.edition(ctx, tx, owners, id)
 		if err != nil {
 			return err
 		}
@@ -179,11 +201,15 @@ func (s *Service) Compare(ctx context.Context, left, right ids.UUID) (crmcontrac
 		return out, err
 	}
 	err := s.store.db.TxIsolated(ctx, pgx.RepeatableRead, func(tx pgx.Tx) error {
-		a, _, err := s.edition(ctx, tx, left)
+		owners, err := s.authority.MeasurableOwnerSet(ctx, tx)
 		if err != nil {
 			return err
 		}
-		b, _, err := s.edition(ctx, tx, right)
+		a, _, err := s.edition(ctx, tx, owners, left)
+		if err != nil {
+			return err
+		}
+		b, _, err := s.edition(ctx, tx, owners, right)
 		if err != nil {
 			return err
 		}
@@ -216,12 +242,8 @@ func (s *Service) editionContextWithheld(ctx context.Context, tx pgx.Tx, scope c
 // rosterNarrowed answers whether a stored roster names owners the reader may
 // not measure one by one. A company or team edition is open to every seat for
 // totals, but its owner list and targets are not.
-func (s *Service) rosterNarrowed(ctx context.Context, tx pgx.Tx, roster []openapi_types.UUID) (bool, error) {
-	owners, err := s.authority.MeasurableOwnerSet(ctx, tx)
-	if err != nil {
-		return false, err
-	}
+func rosterNarrowed(owners MeasurableOwners, roster []openapi_types.UUID) bool {
 	return slices.ContainsFunc(roster, func(id openapi_types.UUID) bool {
 		return !owners.Includes(ids.UUID(id))
-	}), nil
+	})
 }

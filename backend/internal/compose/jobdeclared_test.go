@@ -519,4 +519,5 @@ var argsForKind = map[string]river.JobArgs{
 	PrivacyRetentionArgs{}.Kind():        PrivacyRetentionArgs{},
 	ProviderRunSubmitArgs{}.Kind():       ProviderRunSubmitArgs{},
 	TelegramPollArgs{}.Kind():            TelegramPollArgs{},
+	ChatPullArgs{}.Kind():                ChatPullArgs{},
 }

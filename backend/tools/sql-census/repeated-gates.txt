@@ -9,6 +9,4 @@
 backend/internal/modules/activities/activitylisttx.go activities.ListActivitiesTx a request or waiting list also gates the later reply that lifts a snooze, and an open-or-reminders list tests the audience in its filter and its projection
 backend/internal/modules/activities/dealactivitylists.go activities.ListActivitiesByDealTx a request or waiting list also gates the later reply that lifts a snooze, and an open-or-reminders list tests the audience in its filter and its projection
 backend/internal/modules/search/queryexec.go search.(*QueryExecutor).answerRows.func1 gated once per target row, a selective traversal over 200k activities ran 1.4-2.2x slower against its 5s plan budget
-backend/internal/modules/activities/waiting.go activities.(*Store).queryWaitingQueue gated once, the set holds every candidate and loses the early stop of the page and the card tail; bench-daily measured it slower
-backend/internal/modules/activities/hiddenbacklog.go activities.(*Store).countWaiting gated once, the set holds every candidate and loses the scan cap's early stop; bench-daily measured it slower
 backend/internal/modules/activities/hiddenbacklogrows.go activities.(*Store).HiddenWaitingRows.func1 gated once, the set holds every candidate and loses the scan cap's early stop; bench-daily measured it slower

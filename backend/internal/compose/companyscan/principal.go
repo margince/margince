@@ -37,13 +37,6 @@ func WorkerContext(ctx context.Context, authority Authority, viewer ids.UserID, 
 	if err != nil {
 		return nil, fmt.Errorf("companyscan: resolving the reader's authority: %w", err)
 	}
-	ctx = principal.WithActor(ctx, principal.Principal{
-		Type:        principal.PrincipalHuman,
-		ID:          "human:" + viewer.String(),
-		UserID:      viewer.UUID,
-		SeatType:    seat,
-		TeamIDs:     rbac.TeamIDs,
-		Permissions: rbac.Permissions,
-	})
+	ctx = principal.WithActor(ctx, authz.HumanPrincipal(viewer.UUID, rbac, seat))
 	return principal.WithCorrelationID(ctx, scanID), nil
 }

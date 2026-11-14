@@ -36,9 +36,10 @@ const scopeClauseOwner = "specNarrowings"
 // narrowingCalls are the clause builders a population's WHERE is made of.
 // Calling one outside the owner is the shape this gate reports.
 var narrowingCalls = map[string]bool{
-	"ActivityContentClause": true,
-	"ScopeClauseFor":        true,
-	"maskExclusionClauses":  true,
+	"ActivityContentClause":        true,
+	"ActivityMessageContentClause": true,
+	"ScopeClauseFor":               true,
+	"maskExclusionClauses":         true,
 	// The scope HALF counts as a partial answer. Calling it instead of the
 	// whole composer is exactly the defect this gate exists for — it was the
 	// first thing tried against this gate and it passed, because the waiver

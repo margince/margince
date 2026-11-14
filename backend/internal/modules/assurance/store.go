@@ -248,7 +248,7 @@ func (s *Store) UpsertException(ctx context.Context, tx pgx.Tx, f Finding, owner
 // FinishRun closes a pass with what it found and what it could reach.
 func (s *Store) FinishRun(
 	ctx context.Context, tx pgx.Tx, runID ids.UUID,
-	eligibleDeals, eligibleSignals int, cleared int64, status, readiness string,
+	eligible Eligible, cleared int64, status, readiness string,
 ) error {
 	if err := auth.Require(ctx, "forecast", principal.ActionCreate); err != nil {
 		return err
@@ -257,10 +257,11 @@ func (s *Store) FinishRun(
 	err := tx.QueryRow(ctx, `
 		UPDATE assurance_run
 		SET eligible_deals = $2, eligible_signals = $3, status = $4,
-		    readiness = $5, updated_at = now()
+		    readiness = $5, eligible_deal_owners = $6, eligible_signal_owners = $7, updated_at = now()
 		WHERE id = $1 AND status = 'running'
 		RETURNING subject_deal_id`,
-		runID, eligibleDeals, eligibleSignals, status, readiness).Scan(&deal)
+		runID, eligible.Deals, eligible.Signals, status, readiness,
+		seatsOf(eligible.DealOwners), seatsOf(eligible.SignalOwners)).Scan(&deal)
 	if errors.Is(err, pgx.ErrNoRows) {
 		// Already closed, or never opened. Either way this call would be
 		// rewriting a verdict somebody may have read.
@@ -282,8 +283,8 @@ func (s *Store) FinishRun(
 		map[string]any{
 			auditStatusKey:     status,
 			"readiness":        readiness,
-			"eligible_deals":   eligibleDeals,
-			"eligible_signals": eligibleSignals,
+			"eligible_deals":   eligible.Deals,
+			"eligible_signals": eligible.Signals,
 			// How many findings this pass closed in absence. A night that
 			// silently retired four hundred findings must not read like one
 			// that retired none.
@@ -303,8 +304,8 @@ func (s *Store) FinishRun(
 	event := crmcontracts.PublicEventForecastAssuranceCreated{
 		RunId:           openapi_types.UUID(runID),
 		Status:          crmcontracts.PublicEventForecastAssuranceCreatedStatus(status),
-		EligibleDeals:   eligibleDeals,
-		EligibleSignals: &eligibleSignals,
+		EligibleDeals:   eligible.Deals,
+		EligibleSignals: &eligible.Signals,
 		DealId:          (*openapi_types.UUID)(deal),
 	}
 	if readiness != "" {
@@ -339,13 +340,14 @@ func (s *Store) LatestRun(ctx context.Context) (Run, error) {
 	var out Run
 	err := database.WithWorkspaceTx(ctx, s.db.Pool(), func(tx pgx.Tx) error {
 		err := tx.QueryRow(ctx, `
-			SELECT id, as_of, eligible_deals, eligible_signals, status, readiness
+			SELECT id, as_of, eligible_deals, eligible_signals, status, readiness,
+			       eligible_deal_owners, eligible_signal_owners
 			FROM assurance_run
 			WHERE status <> 'running' AND subject_deal_id IS NULL
 			ORDER BY as_of DESC, id DESC
 			LIMIT 1`).
 			Scan(&out.ID, &out.AsOf, &out.EligibleDeals, &out.EligibleSignals,
-				&out.Status, &out.Readiness)
+				&out.Status, &out.Readiness, &out.DealOwners, &out.SignalOwners)
 		if err != nil {
 			return err
 		}
@@ -369,6 +371,10 @@ type Run struct {
 	EligibleSignals int
 	Status          string
 	Readiness       *string
+	// DealOwners and SignalOwners are the seats behind the eligible counts,
+	// nil for a run recorded before they were kept.
+	DealOwners   []ids.UUID
+	SignalOwners []ids.UUID
 	// Freshness is what changed after this reading. A reading the records
 	// moved past is never shown as current.
 	Freshness Freshness

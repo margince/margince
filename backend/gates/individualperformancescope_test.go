@@ -34,7 +34,9 @@ var switchScopeSentence = regexp.MustCompile(`Off, (.+?) carry no figure keyed t
 
 // familyPaths places each family the sentence names on the contract's paths.
 // The contract marks no operation with a family, so this map is typed by hand.
-// A test holds its keys to the sentence both ways.
+// A test holds its keys to the sentence both ways. It only names a family.
+// The census walks every operation under the first segment of a path here,
+// and every tool the families' routers run, placed here or not.
 var familyPaths = map[string][]string{
 	"reports": {
 		"/analytics/reports", "/reports", "/analytics/evaluate", "/analytics/evaluate.csv", "/analytics/metrics",
@@ -57,7 +59,6 @@ var carriesNoColleagueFigure = gatekit.Waive(map[string]string{
 	"describeAnalyticsVocabulary":     "describes the populations and fields a question is written in, with no figure",
 	"getAnalyticsSchema":              "lists the fields a question may group or measure by; a query naming an owner is refused when it runs",
 	"listReportRuns":                  "lists the reader's own saved questions by their shape alone, with no answer and no figure",
-	"getForecastAssurance":            "answers one installation-wide check run: deals checked, sources read and readiness, keyed to no seat",
 	"startForecastAssuranceRun":       "queues an installation-wide check run and answers its id, with no figure",
 	"resolveInputCheck":               "records a reader's answer to one deal's check and returns no figure",
 	"getForecastAssuranceEnforcement": "retired: the route answers 501 and serves no data at all",
@@ -79,42 +80,28 @@ var carriesNoColleagueFigure = gatekit.Waive(map[string]string{
 	"listReportingExecutions":         "lists a report's runs by status, with no figure",
 	"retryReportingExecution":         "answers the status of the run queued again, with no figure",
 	"freezeReportingEdition":          "answers the status of the capture just queued; its figures are read through the edition, which meets the floor",
-	"getForecastStageChances":         "answers each stage's chance over the whole installation's outcomes, never grouped by seat",
 	"getAccountCoverage":              "lists accounts and how they are covered, records the reader may already read, not a total per seat",
 	"getAnalyticsContext":             "answers which populations the reader may measure, with no figure",
 	"listSdrUpcomingMeetings":         "lists meetings as records the reader may already read, not a total per seat",
 	"listForecastShares":              "lists the share links the reader issued, with no figure",
 	"createForecastShare":             "answers the share link just issued, with no figure; opening it re-reads the forecast for whoever opens it",
 	"revokeForecastShare":             "revokes a share link and answers nothing",
-	"listInputChecks":                 "lists deals the reader may already read, with their amounts; GroupFindings sums per finding type and currency, never per seat",
-})
-
-// notYetHeldOnEveryPath holds operations the walk still flags and nobody has
-// sorted into a fixed path or an exact walk. Each says what is left. An entry
-// whose operation passes fails the test, so the list only shrinks.
-var notYetHeldOnEveryPath = gatekit.Waive(map[string]string{
-	"listSalesProgressDeals":      "salesprogress progressScope builds the reader's own scope inline instead of through ownScope",
-	"getSalesGoalPlan":            "goalAccess proves the reader's own seat by comparing ids, which the walk cannot read as a check",
-	"saveSalesGoalDraft":          "goalAccess proves the reader's own seat by comparing ids, which the walk cannot read as a check",
-	"discardSalesGoalDraft":       "goalAccess proves the reader's own seat by comparing ids, which the walk cannot read as a check",
-	"publishSalesGoalPlan":        "goalAccess proves the reader's own seat by comparing ids, which the walk cannot read as a check",
-	"withdrawSalesGoalPlan":       "goalAccess proves the reader's own seat by comparing ids, which the walk cannot read as a check",
-	"proposeSalesGoalMonths":      "goalAccess proves the reader's own seat by comparing ids, which the walk cannot read as a check",
-	"answerReportingQuestionCard": "the restricted answer carries no figure, but the walk reads its write as one",
-	"assessSalesReview":           "a refusal returned through RequireHumanOrItsAgent reads to the walk as a success",
-	"createReportingTarget":       "answers an owner-scoped target value, and the write path is not yet held to the switch on every scope",
-	"recordForecastCall":          "answers a forecast call's amount for an owner scope, and the write path is not yet held to the switch on every scope",
-	"evaluateReporting":           "the read_reporting tool shares one handler, and its editions mode gathers checked editions in a loop that may run no time",
-	"evaluateReportingReport":     "the read_reporting tool shares one handler, and its editions mode gathers checked editions in a loop that may run no time",
-	"getReportingMetrics":         "the read_reporting tool shares one handler, and its editions mode gathers checked editions in a loop that may run no time",
-	"listReportingReports":        "the read_reporting tool shares one handler, and its editions mode gathers checked editions in a loop that may run no time",
-	"getReportingReport":          "the read_reporting tool shares one handler, and its editions mode gathers checked editions in a loop that may run no time",
-	"getReportingEditionEvidence": "the read_reporting tool shares one handler, and its editions mode gathers checked editions in a loop that may run no time",
-	"getReportingEvidence":        "the read_reporting tool shares one handler, and its editions mode gathers checked editions in a loop that may run no time",
-	"compareReportingEditions":    "the read_reporting tool shares one handler, and its editions mode gathers checked editions in a loop that may run no time",
-	"getReportingEdition":         "the read_reporting tool shares one handler, and its editions mode gathers checked editions in a loop that may run no time",
-	"listReportingEditions":       "the edition list gathers checked editions in a loop that may run no time, here and in the read_reporting tool",
-	"renderAnalyticsReport":       "the route and the compose_analytics_report tool check inside a loop that may run no time",
+	"createReportingTarget":           "answers the target just written: the scope, period and value the caller sent, with no measured figure; a colleague's own scope is refused where it resolves",
+	"recordForecastCall":              "answers the call just recorded: the amount and note the caller sent; the baseline it freezes is read later through the floored snapshot reads",
+	"getDataCoverage":                 "answers each source's state and the time it was checked through, keyed to no seat",
+	"listSalesDecisions":              "lists decisions kept as tasks on deals, read through the activity list's own scope; each carries the words someone wrote, no measured figure",
+	"recordSalesDecision":             "answers the decision task just written: the deal, the words and the review date the caller sent",
+	"recordSalesDecisionOutcome":      "answers a decision task with the result the caller typed, no measured figure",
+	"getReportingFramework":           "answers the stage framework: qualifying stages, capture scopes and thresholds, with no figure",
+	"publishReportingFramework":       "answers the stage framework just published, with no figure",
+	"listSalesInitiatives":            "lists initiative definitions: name, rules, owner, target and deadline; their results are read through the floored reporting evaluation",
+	"createSalesInitiative":           "answers the initiative definition just saved, with no result",
+	"getSalesInitiative":              "answers one initiative definition, with no result",
+	"updateSalesInitiative":           "answers the initiative definition just changed, with no result",
+	"launchSalesInitiative":           "answers the initiative definition just launched, with no result",
+	"listSalesInitiativeMembers":      "lists the leads and deals an initiative holds, each under the reader's row scope and masks, and how many the list holds; records, not a total per seat",
+	"replaceSalesInitiativeMembers":   "answers the initiative's member records under the reader's row scope and masks, and how many the list holds",
+	"proposeReportSetup":              "answers a model's proposed selection, read from the metric catalog, products and industries, with no figure",
 })
 
 // scopedOperation is one contract operation inside a family.
@@ -122,8 +109,10 @@ type scopedOperation struct {
 	family, method, path, id string
 	// tool is the x-mcp-tool verb, and route says the tool runs through
 	// this operation's own HTTP handler, as read_view runs each view's route.
-	tool  string
-	route bool
+	// toolOnly is a tool a family's router runs that no operation serves.
+	tool     string
+	route    bool
+	toolOnly bool
 }
 
 // switchFamilies reads the families from the switch's description.
@@ -144,32 +133,25 @@ func onPath(path, prefix string) bool {
 	return path == prefix || strings.HasPrefix(path, prefix+"/")
 }
 
+// unplacedFamily names an operation of the census that no path in
+// familyPaths places in a family.
+const unplacedFamily = "no family placed"
+
 // scopedOperations places every contract operation in the families whose
-// paths it lies on, and fails a family that holds none.
+// paths it lies on, and fails a family that holds none. Every other operation
+// under the first segment of a placed path is in the census too. One added
+// beside a family's paths is walked before anyone places it.
 func scopedOperations(paths map[string]any, families []string, placed map[string][]string) ([]scopedOperation, error) {
 	var ops []scopedOperation
+	inFamily := map[string]bool{}
 	for _, family := range families {
 		count := 0
 		for _, path := range slices.Sorted(maps.Keys(paths)) {
 			if !slices.ContainsFunc(placed[family], func(prefix string) bool { return onPath(path, prefix) }) {
 				continue
 			}
-			item, _ := paths[path].(map[string]any)
-			for _, method := range slices.Sorted(maps.Keys(item)) {
-				op, ok := item[method].(map[string]any)
-				if !ok || !httpMethods[method] {
-					continue
-				}
-				id, _ := op["operationId"].(string)
-				scoped := scopedOperation{family: family, method: method, path: path, id: id}
-				if tool, ok := op["x-mcp-tool"].(map[string]any); ok {
-					scoped.tool, _ = tool["verb"].(string)
-					servedBy, _ := tool["served_by"].(string)
-					scoped.route = servedBy == "route" || scoped.tool == agents.ReadViewTool
-				}
-				ops = append(ops, scoped)
-				count++
-			}
+			found := operationsAt(paths, path, family)
+			ops, count, inFamily[path] = append(ops, found...), count+len(found), true
 		}
 		if count == 0 {
 			return nil, fmt.Errorf("the family %q lies on no contract operation, so nothing of it is checked", family)
@@ -180,7 +162,50 @@ func scopedOperations(paths map[string]any, families []string, placed map[string
 			}
 		}
 	}
+	segments := familySegments(placed)
+	for _, path := range slices.Sorted(maps.Keys(paths)) {
+		if !inFamily[path] && slices.ContainsFunc(segments, func(segment string) bool { return onPath(path, segment) }) {
+			ops = append(ops, operationsAt(paths, path, unplacedFamily)...)
+		}
+	}
 	return ops, nil
+}
+
+// familySegments are the first segments of the paths the families are
+// placed on, as /analytics is of /analytics/reports.
+func familySegments(placed map[string][]string) []string {
+	var segments []string
+	for _, prefixes := range placed {
+		for _, prefix := range prefixes {
+			first, _, _ := strings.Cut(strings.TrimPrefix(prefix, "/"), "/")
+			if segment := "/" + first; !slices.Contains(segments, segment) {
+				segments = append(segments, segment)
+			}
+		}
+	}
+	slices.Sort(segments)
+	return segments
+}
+
+// operationsAt are the operations of one contract path, in family.
+func operationsAt(paths map[string]any, path, family string) []scopedOperation {
+	var ops []scopedOperation
+	item, _ := paths[path].(map[string]any)
+	for _, method := range slices.Sorted(maps.Keys(item)) {
+		op, ok := item[method].(map[string]any)
+		if !ok || !httpMethods[method] {
+			continue
+		}
+		id, _ := op["operationId"].(string)
+		scoped := scopedOperation{family: family, method: method, path: path, id: id}
+		if tool, ok := op["x-mcp-tool"].(map[string]any); ok {
+			scoped.tool, _ = tool["verb"].(string)
+			servedBy, _ := tool["served_by"].(string)
+			scoped.route = servedBy == "route" || scoped.tool == agents.ReadViewTool
+		}
+		ops = append(ops, scoped)
+	}
+	return ops
 }
 
 func contractSwitchFamilies(t *testing.T, doc map[string]any) []string {
@@ -206,20 +231,15 @@ func TestEveryFamilyTheSwitchNamesIsPlacedOnTheContract(t *testing.T) {
 func TestEverySurfaceTheSwitchCoversReadsIt(t *testing.T) {
 	t.Parallel()
 	defer carriesNoColleagueFigure.AssertAllMatched(t)
-	defer notYetHeldOnEveryPath.AssertAllMatched(t)
 	doc := loadContract(t)
 	paths, _ := doc["paths"].(map[string]any)
 	ops, err := scopedOperations(paths, contractSwitchFamilies(t, doc), familyPaths)
 	if err != nil {
 		t.Fatal(err)
 	}
-	g := loadSwitchGraph(t, switchReachDirs...)
-	if err := g.readers(switchReaders, answersNoColleagueFigure); err != nil {
-		t.Fatal(err)
-	}
-	if err := g.dispatchers(toolDispatchers); err != nil {
-		t.Fatal(err)
-	}
+	g := loadSwitchGraph(t, switchWalkConfig, switchReachDirs...)
+	defer routersBesideTheFamilies.AssertAllMatched(t)
+	ops = append(ops, routedOperations(t, g, paths, ops)...)
 	walk := newSwitchWalk(g)
 	for _, op := range ops {
 		census, paths := surfaceFindings(walk, op)
@@ -227,7 +247,7 @@ func TestEverySurfaceTheSwitchCoversReadsIt(t *testing.T) {
 			t.Error(finding)
 		}
 		for _, finding := range paths {
-			if !carriesNoColleagueFigure.Waived(t, op.id) && !notYetHeldOnEveryPath.Waived(t, op.id) {
+			if !carriesNoColleagueFigure.Waived(t, op.id) {
 				t.Error(finding)
 			}
 		}
@@ -239,9 +259,9 @@ func TestEverySurfaceTheSwitchCoversReadsIt(t *testing.T) {
 // handed out on a path that never read the switch, or none the walk can see.
 func surfaceFindings(walk *switchWalk, op scopedOperation) (census, paths []string) {
 	g := walk.g
-	subject := fmt.Sprintf("%s %s (%s, of %q)", strings.ToUpper(op.method), op.path, op.id, op.family)
+	subject := fmt.Sprintf("%s (%s, of %q)", placedOn(op), op.id, op.family)
 	handlers := g.httpHandlers(op.id)
-	if len(handlers) == 0 {
+	if len(handlers) == 0 && !op.toolOnly {
 		census = append(census, subject+": no handler named "+handlerName(op.id)+" in "+strings.Join(switchReachDirs, ", "))
 	}
 	var tools []*types.Func
@@ -251,7 +271,7 @@ func surfaceFindings(walk *switchWalk, op scopedOperation) (census, paths []stri
 		}
 	}
 	for _, root := range slices.Concat(handlers, tools) {
-		verdict := walk.walk(run{fn: fnValue{decl: root}}, pathState{}, 0)
+		verdict := walk.walk(run{fn: fnValue{decl: root}}, pathState{covered: rootCovered(root)}, 0)
 		figures := verdict.writes
 		if slices.Contains(tools, root) {
 			figures.merge(verdict.returns)

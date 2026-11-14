@@ -151,7 +151,7 @@ func run(ctx context.Context, args []string, stdout io.Writer) error {
 	// the role that serves agent principals, so leaving it fail-closed would
 	// refuse every agent read an api with Redis configured could count.
 	volumeMeter := newVolumeMeter(rdb, pool)
-	opts = append(opts, agentVolumeOptions(volumeMeter)...)
+	opts = append(opts, redisSurfaceOptions(rdb, volumeMeter)...)
 
 	relayOpts, stopRelay, err := inlineRelayLane(ctx, cfg, pool, license, logger, stdout)
 	if err != nil {
