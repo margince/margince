@@ -11,9 +11,11 @@ package integration
 import (
 	"context"
 	"encoding/json"
+	"github.com/margince/margince/backend/internal/compose/homecache"
 	"net/http"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/margince/margince/backend/internal/compose/integration/apptest"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -77,6 +79,43 @@ func TestHomeOpensOnItsCachedWorklistUntilTheFenceOrTheReadersWriteEndsIt(t *tes
 	}
 	if !homeShows(t, e, "Send the revised offer") {
 		t.Error("a change of reach left Home on the answer from before it")
+	}
+}
+
+// Past its freshness the kept day is still served, and says so, so the browser
+// asks again for the one read behind it.
+func TestHomeServesItsKeptDayPastItsLifeAndSaysItIsStale(t *testing.T) {
+	e := apptest.SetupApp(t)
+	apptest.BootstrapWorkspaceSession(t, e, "Home Stale", "admin@homestale.test", "Admin")
+	var admin ids.UUID
+	if err := e.Owner.QueryRow(context.Background(),
+		`SELECT id FROM app_user WHERE email = 'admin@homestale.test'`).Scan(&admin); err != nil {
+		t.Fatal(err)
+	}
+	homeShows(t, e, "warm")
+	overdueTask(t, e, admin, "Chase the signed order")
+	// The reader's earlier writes are aged with the answer, so it stays newer than them.
+	for _, aged := range []string{
+		`UPDATE home_read_cache SET computed_at = computed_at - $1::interval WHERE reader_id = $2`,
+		`UPDATE home_read_forgotten SET at = at - $1::interval WHERE reader_id = $2`,
+	} {
+		if _, err := e.Owner.Exec(context.Background(), aged, (homecache.Life + time.Minute).String(), admin); err != nil {
+			t.Fatal(err)
+		}
+	}
+	var day struct {
+		ServedStale *bool `json:"served_stale"`
+	}
+	var raw json.RawMessage
+	if status := e.Call(t, "GET", homeWorklistPath, nil, nil, &raw); status != http.StatusOK {
+		t.Fatalf("GET worklist → %d", status)
+	}
+	if err := json.Unmarshal(raw, &day); err != nil {
+		t.Fatal(err)
+	}
+	if day.ServedStale == nil || !*day.ServedStale || strings.Contains(string(raw), "Chase the signed order") {
+		t.Errorf("past its life Home answered served_stale=%v with the new task shown %v; want the kept day, flagged stale",
+			day.ServedStale, strings.Contains(string(raw), "Chase the signed order"))
 	}
 }
 

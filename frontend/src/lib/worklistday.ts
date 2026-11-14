@@ -128,12 +128,21 @@ const DUE_SLACK_MS = 1_000;
 const LONGEST_WAIT_MS = 60 * 60_000;
 
 // A kept answer served past its freshness is read again behind it on the
-// server; asking shortly after picks up the fresh one.
+// server; asking shortly after picks up the fresh one. The same stale answer
+// three times means that read is failing, and the day waits as usual.
 export const HOME_DAY_STALE_RETRY_MS = 3_000;
+const HOME_DAY_STALE_RETRIES = 3;
+const staleSeen = { asOf: "", times: 0 };
 
 /** When Home's day is read again: its next due row, or once it is stale. */
 export function homeDayWait(pages: Worklist[], now: number): number {
-  if (pages[0]?.served_stale) return HOME_DAY_STALE_RETRY_MS;
+  const first = pages[0];
+  if (first?.served_stale) {
+    staleSeen.times = staleSeen.asOf === first.as_of ? staleSeen.times + 1 : 1;
+    staleSeen.asOf = first.as_of;
+    if (staleSeen.times <= HOME_DAY_STALE_RETRIES)
+      return HOME_DAY_STALE_RETRY_MS;
+  }
   const due = untilNextDue(pages, now);
   return due === false ? HOME_DAY_FRESH_MS : Math.min(due, HOME_DAY_FRESH_MS);
 }

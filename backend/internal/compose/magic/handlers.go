@@ -90,8 +90,7 @@ func (h Handlers) receipt(ctx context.Context, since *time.Time, limit int) (crm
 	}
 	key := fmt.Sprintf("limit=%d&window=%s", limit, window)
 	fresh := func(ctx context.Context) (crmcontracts.MagicReceipt, error) { return h.svc.Read(ctx, nil, limit) }
-	// A receipt past its freshness is served as it stands; the read behind it
-	// keeps the next one, and the receipt carries no flag a client could ask on.
+	// Only the day answer is served past its freshness; a receipt is read fresh then.
 	receipt, _, err := homecache.Serve(ctx, h.home, reader, homecache.Magic, key, fresh, startsNoWalk)
 	return receipt, err
 }

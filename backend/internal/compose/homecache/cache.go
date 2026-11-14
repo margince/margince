@@ -119,7 +119,7 @@ func Lookup[A Answer](ctx context.Context, c *Cache, reader ids.UUID, read Read,
 // Serve answers read from the reader's kept answer while it holds, and from
 // fresh otherwise, keeping what fresh answered. An answer served near or past
 // the end of its Life is read again in the background, and stale says it is
-// past it. The cache only saves work: one that cannot be read or written is
+// past it. Only the Worklist is served past its Life; a receipt is read fresh. The cache only saves work: one that cannot be read or written is
 // logged and passed over, and the answer is the fresh read's. walkOf names the
 // walk an answer's first page started.
 func Serve[A Answer](
@@ -130,8 +130,10 @@ func Serve[A Answer](
 	if err != nil {
 		slog.ErrorContext(ctx, "a kept Home answer could not be read; reading it fresh", "read", read, "error", err)
 	}
-	countServed(read, hit)
-	if !hit {
+	stale = hit && age > Life
+	served := hit && (!stale || read == Worklist)
+	countServed(read, served)
+	if !served {
 		answer, err = keepFresh(ctx, c, reader, read, key, fresh, walkOf)
 		return answer, false, err
 	}
@@ -141,7 +143,7 @@ func Serve[A Answer](
 			return err
 		})
 	}
-	return kept, age > Life, nil
+	return kept, stale, nil
 }
 
 // keepFresh assembles the answer and keeps it, stamped before it was read.
@@ -175,13 +177,17 @@ func (c *Cache) refresh(ctx context.Context, question string, read func(context.
 		return
 	}
 	c.background.Go(func() {
-		defer c.refreshing.Delete(question)
 		// A refresh that outlasts the answer's remaining life is no longer ahead of it.
 		detached, cancel := context.WithTimeout(context.WithoutCancel(ctx), refreshAhead)
 		defer cancel()
 		if err := read(detached); err != nil {
 			slog.ErrorContext(detached, "a Home answer could not be read again ahead of its expiry", "error", err)
+			// A stale answer is asked for again within seconds; a failing read
+			// is not repeated on each ask.
+			time.AfterFunc(refreshAhead, func() { c.refreshing.Delete(question) })
+			return
 		}
+		c.refreshing.Delete(question)
 	})
 }
 

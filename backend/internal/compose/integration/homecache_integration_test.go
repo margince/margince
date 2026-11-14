@@ -245,6 +245,24 @@ func TestAnAnswerPastItsLifeIsServedStaleUntilItsGraceEnds(t *testing.T) {
 	}
 }
 
+func TestAReceiptPastItsLifeIsReadFresh(t *testing.T) {
+	e := Setup(t)
+	c := homecache.New(e.Pool)
+	ctx := e.As(e.Rep1, []ids.UUID{e.Team1}, RepPerms)
+	keep(ctx, t, c, e.Rep1, homecache.Magic, nil, "decisions")
+	e.WsExec(t, `UPDATE home_read_cache SET computed_at = computed_at - $1::interval WHERE reader_id = $2`,
+		(homecache.Life + time.Minute).String(), e.Rep1)
+	reads := 0
+	fresh := func(context.Context) (crmcontracts.Worklist, error) {
+		reads++
+		return crmcontracts.Worklist{}, nil
+	}
+	noWalk := func(crmcontracts.Worklist) (*ids.UUID, error) { return nil, nil } //nolint:nilnil // the fake receipt starts no walk, which Serve reads as nil
+	if _, stale, err := homecache.Serve(ctx, c, e.Rep1, homecache.Magic, "home", fresh, noWalk); err != nil || stale || reads != 1 {
+		t.Errorf("a receipt past its life: stale %v, %d fresh reads (err %v); want it read fresh once", stale, reads, err)
+	}
+}
+
 // A background refresh that began before a reader's miss must not replace the
 // newer answer that miss kept.
 func TestAnOlderAnswerNeverReplacesANewerOne(t *testing.T) {
