@@ -193,7 +193,7 @@ func worklistAnswer(t *testing.T, e *apptest.AppEnv, ifNoneMatch string) (status
 	if ifNoneMatch != "" {
 		req.Header.Set("If-None-Match", ifNoneMatch)
 	}
-	resp, err := e.Client.Do(req)
+	resp, err := e.Client.Do(req) //nolint:bodyclose // closed by apptest.CloseBody below
 	if err != nil {
 		t.Fatal(err)
 	}
