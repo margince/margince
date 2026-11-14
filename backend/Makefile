@@ -122,6 +122,13 @@ GATES_GOMEMLIMIT ?= 4GiB
 # the census over the same packages the cached pass replays.
 TEST_EXEC_FLAGS = $(if $(TEST_EXEC),-count=1 -exec $(TEST_EXEC))
 
+# TEST_SHUFFLE_SEED=<n> runs the tests of every package in the order
+# -shuffle=<n> gives, so a test that needs the state an earlier one left fails.
+# CI passes its run number. Unset, the tests run in source order. Go caches no
+# shuffled result, so a local run with a seed runs every package again.
+TEST_SHUFFLE_FLAGS = $(if $(TEST_SHUFFLE_SEED),-shuffle=$(TEST_SHUFFLE_SEED))
+TEST_SHUFFLE_NOTE = $(if $(TEST_SHUFFLE_SEED),@echo "$@: test order -shuffle=$(TEST_SHUFFLE_SEED); replay: make -C backend $@ TEST_SHUFFLE_SEED=$(TEST_SHUFFLE_SEED) or cd backend && $(GOWORK_COMPOSED) go test -shuffle=$(TEST_SHUFFLE_SEED) <package>")
+
 .DEFAULT_GOAL := help
 
 .PHONY: mcp-inaccessible perfdoc config-gen extdoc-gen extdoc-check help check check-static build fetch-test-deps test test-cached test-uncached test-v test-cover test-integration e2e-siteread e2e-ai e2e-ai-report ai-probe ai-eval test-db-up test-it test-roles test-integration-serial lint lint-base lint-strict lint-modules lint-tool arch-lint vet gen gen-workflow mcp-apps-vocab drift generators-twice composition check-composition test-extensions db-up db-init db-wait seed-reset seed-dev-db migrate migrate-up migrate-down run psql redis-cli tidy dev infra-down infra-logs infra-reset clean vuln vendor-live tools tools-go hooks
@@ -215,6 +222,7 @@ check-composition: composition ## Reproducibility gate: a clean regeneration mus
 # report — first-party extension coverage reaches the Sonar quality gate
 # like core coverage does, instead of hiding behind an exclusion.
 test-extensions: composition ## Every enabled extension's own test lane (each unit is its own module — ./... never reaches them), on the composed workspace [EXT_COVER_OUT=<file> merges a coverage profile]
+	$(TEST_SHUFFLE_NOTE)
 	@set -e; found=0; out="$(if $(EXT_COVER_OUT),$(abspath $(EXT_COVER_OUT)))"; \
 	[ -z "$$out" ] || { rm -f "$$out"; tmp=$$(mktemp); trap 'rm -f "$$tmp"' EXIT; }; \
 	members=../build/test-extensions.members; \
@@ -227,10 +235,10 @@ test-extensions: composition ## Every enabled extension's own test lane (each un
 		[ -e "$$dir/go.mod" ] || { echo "test-extensions: $$dir has no go.mod"; exit 1; }; found=1; \
 		echo "== $$dir"; \
 		if [ -n "$$out" ]; then \
-			(cd "$$dir" && $(GOWORK_COMPOSED) $(GO) test -coverprofile="$$tmp" -coverpkg=./... ./...); \
+			(cd "$$dir" && $(GOWORK_COMPOSED) $(GO) test $(TEST_SHUFFLE_FLAGS) -coverprofile="$$tmp" -coverpkg=./... ./...); \
 			if [ -s "$$out" ]; then tail -n +2 "$$tmp" >> "$$out"; else cp "$$tmp" "$$out"; fi; \
 		else \
-			(cd "$$dir" && $(GOWORK_COMPOSED) $(GO) test $(TEST_EXEC_FLAGS) ./...); \
+			(cd "$$dir" && $(GOWORK_COMPOSED) $(GO) test $(TEST_EXEC_FLAGS) $(TEST_SHUFFLE_FLAGS) ./...); \
 		fi; \
 	done < "$$members"; \
 	[ "$$found" = "1" ] || echo "test-extensions: no enabled Go extensions"
@@ -266,6 +274,7 @@ vet: composition ## Run go vet over every package, untagged (composed workspace)
 test: test-uncached test-cached test-solo ## Unit tests — every package exactly once, UNCACHED_TEST_PKGS uncached
 
 test-cached: composition
+	$(TEST_SHUFFLE_NOTE)
 	# ./... covers UNCACHED_TEST_PKGS too, and the result it computes for them
 	# is thrown away by the uncached pass seconds later. That wasted pass was
 	# the single biggest line in the gate: 316 s of a 648 s check-backend, all
@@ -290,16 +299,18 @@ test-cached: composition
 	    exit 1; \
 	  fi; \
 	  echo "go test: $$(printf '%s\n' "$$cached" | wc -l | tr -d ' ') cached packages + $$want run by test-uncached and test-solo"; \
-	  $(GOWORK_COMPOSED) $(GO) test $(TEST_EXEC_FLAGS) $$cached
+	  $(GOWORK_COMPOSED) $(GO) test $(TEST_EXEC_FLAGS) $(TEST_SHUFFLE_FLAGS) $$cached
 	# The tool chain is its own module, so ./... above never reaches it —
 	# its tests (generator determinism, scaffold behavior) run here or
 	# nowhere.
-	$(GOWORK_COMPOSED) $(GO) test $(TEST_EXEC_FLAGS) ./tools/...
+	$(GOWORK_COMPOSED) $(GO) test $(TEST_EXEC_FLAGS) $(TEST_SHUFFLE_FLAGS) ./tools/...
 
 test-solo: composition
-	$(GOWORK_COMPOSED) $(GO) test $(TEST_EXEC_FLAGS) $(SOLO_TEST_PKGS)
+	$(TEST_SHUFFLE_NOTE)
+	$(GOWORK_COMPOSED) $(GO) test $(TEST_EXEC_FLAGS) $(TEST_SHUFFLE_FLAGS) $(SOLO_TEST_PKGS)
 
 test-uncached: composition
+	$(TEST_SHUFFLE_NOTE)
 	# Uncached, for the reason UNCACHED_TEST_PKGS is declared: their subjects
 	# are files outside the package, so a green here can otherwise be replayed
 	# over a tree that has since changed. Verified once from the other end —
@@ -315,7 +326,7 @@ test-uncached: composition
 	# runs beside other legs. The parse cache alone holds ~1.9 GB, so a limit
 	# near it spends the run collecting: 3GiB cost 1.4x the wall time of 4GiB
 	# for the same 4 GB peak. A CI job with a runner to itself passes 6GiB.
-	GOMEMLIMIT=$(GATES_GOMEMLIMIT) $(GOWORK_COMPOSED) $(GO) test -count=1 -timeout 25m $(UNCACHED_TEST_PKGS)
+	GOMEMLIMIT=$(GATES_GOMEMLIMIT) $(GOWORK_COMPOSED) $(GO) test -count=1 -timeout 25m $(TEST_SHUFFLE_FLAGS) $(UNCACHED_TEST_PKGS)
 
 # -v is load-bearing, not chattiness: `go test` only names skipped tests in
 # verbose mode, and the zero-skip teeth below grep for them. A skip in this

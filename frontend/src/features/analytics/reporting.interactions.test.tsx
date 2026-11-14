@@ -238,10 +238,14 @@ it("opens keyboard-selected evidence with its receipt and restores focus", async
     </StoryProviders>,
   );
   await screen.findByRole("heading", { name: "Sales won over time" });
-  const point = container.querySelector<HTMLButtonElement>(
-    ".report-chart-point",
-  );
-  if (!point) throw new Error("No chart observation");
+  // The chart body is lazy, so it can draw after the heading.
+  const point = await waitFor(() => {
+    const found = container.querySelector<HTMLButtonElement>(
+      ".report-chart-point",
+    );
+    if (!found) throw new Error("No chart observation");
+    return found;
+  });
   point.focus();
   await user.keyboard("{Enter}");
   const drawer = await screen.findByRole("dialog");
@@ -463,6 +467,7 @@ it("labels a frozen pipeline drill-down with its historical state date", async (
       />
     </StoryProviders>,
   );
-  expect(screen.getByText("10/01/2025, 13:00")).toBeVisible();
+  // The drawer is lazy, so it may still be loading when no earlier case drew it.
+  expect(await screen.findByText("10/01/2025, 13:00")).toBeVisible();
   expect(screen.queryByText("Open pipeline today")).not.toBeInTheDocument();
 });

@@ -37,7 +37,7 @@ func TestTriageForwardedAliasesRemainSeparateOpenQuestions(t *testing.T) {
 		if status != contacts.DomainPending || readStatus != "done" || companies != 0 {
 			t.Fatalf("domain %s: status=%s read=%s companies=%d", domain, status, readStatus, companies)
 		}
-		if triage.calls != 0 || extract.calls != 0 {
+		if triage.calls.Load() != 0 || extract.calls.Load() != 0 {
 			t.Fatal("forwarded identity reached classification or extraction")
 		}
 		var reason, raw string
@@ -86,8 +86,8 @@ func TestTriageSameDomainRedirectStillClassifiesTheRequestedIdentity(t *testing.
 		t.Fatal(err)
 	}
 	status, readStatus, companies := triageState(t, e, triageTestDomain)
-	if status != contacts.DomainPersonal || readStatus != "cancelled" || companies != 0 || triage.calls != 1 {
-		t.Fatalf("status=%s read=%s companies=%d classifications=%d", status, readStatus, companies, triage.calls)
+	if status != contacts.DomainPersonal || readStatus != "cancelled" || companies != 0 || triage.calls.Load() != 1 {
+		t.Fatalf("status=%s read=%s companies=%d classifications=%d", status, readStatus, companies, triage.calls.Load())
 	}
 }
 
@@ -102,7 +102,7 @@ func TestTriageRedirectFailureRemainsAnUncertainQuestion(t *testing.T) {
 		t.Fatal(err)
 	}
 	status, readStatus, companies := triageState(t, e, triageTestDomain)
-	if status != contacts.DomainPending || readStatus != "failed" || companies != 0 || triage.calls != 0 || extract.calls != 0 {
-		t.Fatalf("status=%s read=%s companies=%d classifications=%d extractions=%d", status, readStatus, companies, triage.calls, extract.calls)
+	if status != contacts.DomainPending || readStatus != "failed" || companies != 0 || triage.calls.Load() != 0 || extract.calls.Load() != 0 {
+		t.Fatalf("status=%s read=%s companies=%d classifications=%d extractions=%d", status, readStatus, companies, triage.calls.Load(), extract.calls.Load())
 	}
 }

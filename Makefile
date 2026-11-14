@@ -426,6 +426,7 @@ fe-test:
 ## frontend/, so its default include never reached extensions/, and 2230 tests
 ## ran with none of them from a unit. They were typechecked and never executed.
 fe-test-ext: composition
+	$(FE_SHUFFLE_NOTE)
 	@[ -f build/composition/frontend/extlocales.gen.ts ] || { echo "fe-test-ext: build/composition/frontend/extlocales.gen.ts is missing after 'make composition' — a unit screen's suite would resolve the empty-tree copy registry and fail on every string" >&2; exit 1; }
 	@# The ROOT install first, and the order is load-bearing: the composed
 	@# workspace links react, react-dom, @tanstack/react-query and @types/react
@@ -671,7 +672,12 @@ FE_SHARD ?=
 ## Named on both sides because vitest's own default for --merge-reports moved
 ## between majors (.vitest-reports → .vitest/blob); the upload step reads it too.
 FE_BLOB_DIR := .vitest-reports
+## TEST_SHUFFLE_SEED=<n> shuffles the tests inside each vitest file with that
+## seed (frontend/scripts/vitest-shards.ts); CI passes its run number. Unset,
+## they run in source order.
+FE_SHUFFLE_NOTE = $(if $(TEST_SHUFFLE_SEED),@echo "$@: test order seed $(TEST_SHUFFLE_SEED); replay: make $@ TEST_SHUFFLE_SEED=$(TEST_SHUFFLE_SEED) or cd frontend && TEST_SHUFFLE_SEED=$(TEST_SHUFFLE_SEED) $(if $(filter fe-test-ext,$@),MARGINCE_COMPOSITION_FRONTEND=../build/composition/frontend pnpm test:ext,pnpm exec vitest run) <file>")
 fe-unit:
+	$(FE_SHUFFLE_NOTE)
 	node --test scripts/ensure-pnpm.test.mjs
 	bash frontend/scripts/check-lcov-paths.test.sh
 	bash frontend/scripts/check-shard-union.test.sh
@@ -744,7 +750,7 @@ backend-clock-drift:
 REPEAT_BASE ?= origin/main
 repeat-changed-tests:
 	@plan="$$(mktemp)"; trap 'rm -f "$$plan"' EXIT; \
-	./scripts/repeat-changed-tests.sh plan "$(REPEAT_BASE)" "$$plan" && ./scripts/repeat-changed-tests.sh run "$$plan"
+	./scripts/repeat-changed-tests.sh plan "$(REPEAT_BASE)" "$$plan" && ./scripts/repeat-changed-tests.sh run "$$plan" "$(REPEAT_BASE)"
 
 ## test-repeat-changed-tests — prove the repeat job's scope sees every test
 ## file, and that its log reader names the attempt of each failure.

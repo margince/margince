@@ -6,7 +6,7 @@ import { afterEach, expect, it, vi } from "vitest";
 import { handledForYouOptions } from "../lib/handled";
 import { worklistDayOptions } from "../lib/worklistday";
 import { DEFAULT_VIEW } from "../lib/worklistviews";
-import { quietRun } from "../testing/brief.fixtures";
+import { quietRun, readingsDay } from "../testing/brief.fixtures";
 import { prefetchHome } from "./homeprefetch";
 import { createQueryClient, liveOnMount } from "./queryclient";
 
@@ -33,9 +33,11 @@ function handledQuery(client: ReturnType<typeof createQueryClient>) {
 function answering(handled: unknown) {
   vi.spyOn(globalThis, "fetch").mockImplementation(async (input) => {
     const request = input instanceof Request ? input : new Request(input);
-    return Response.json(
-      new URL(request.url).pathname.endsWith("/handled") ? handled : brief,
-    );
+    const path = new URL(request.url).pathname;
+    if (path.endsWith("/worklist")) {
+      return Response.json(readingsDay({}, []));
+    }
+    return Response.json(path.endsWith("/handled") ? handled : brief);
   });
 }
 
@@ -50,10 +52,13 @@ it("lets Home's mount use an answer the prefetch fetched", async () => {
 it("keeps the mount refetch for an answer already cached before the prefetch", async () => {
   answering(handledPage);
   const client = createQueryClient();
-  client.setQueryData(handledForYouOptions.queryKey, {
-    pages: [handledPage],
-    pageParams: [undefined],
-  });
+  // The prefetch notes are module state, and an earlier case noted this query
+  // at its own stamp. A stamp later than every earlier note cannot match one.
+  client.setQueryData(
+    handledForYouOptions.queryKey,
+    { pages: [handledPage], pageParams: [undefined] },
+    { updatedAt: Date.now() + 1 },
+  );
   prefetchHome(client, new Map());
   await new Promise((resolve) => setTimeout(resolve, 0));
   expect(liveOnMount(handledQuery(client))).toBe("always");
@@ -111,9 +116,7 @@ it("leaves the read running when Home already watches it", async () => {
 // Once the read answers there is nothing to abort. A hold left in place would
 // count as a screen showing the day, and Home's mount would skip its re-read.
 it("lets go of the day's Worklist once its read answers", async () => {
-  vi.spyOn(globalThis, "fetch").mockImplementation(async () =>
-    Response.json(brief),
-  );
+  answering(handledPage);
   const client = createQueryClient();
   prefetchHome(client, new Map());
   const day = () =>
@@ -123,5 +126,6 @@ it("lets go of the day's Worklist once its read answers", async () => {
       exact: true,
     });
   await vi.waitFor(() => expect(day()?.state.fetchStatus).toBe("idle"));
+  expect(day()?.state.status).toBe("success");
   expect(day()?.getObserversCount()).toBe(0);
 });

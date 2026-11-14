@@ -193,7 +193,7 @@ describe("the settings search in the rail", () => {
     // Waited on a row a resolved snapshot draws, so the empty result below is
     // about the grants rather than about a rail that has not loaded.
     await screen.findByRole("link", { name: labelOf("account") });
-    await user.type(screen.getByRole("combobox"), "audit");
+    await user.type(await screen.findByRole("combobox"), "audit");
 
     expect(screen.queryAllByRole("option")).toHaveLength(0);
   });
@@ -209,7 +209,7 @@ describe("the settings search in the rail", () => {
     renderNav();
 
     await screen.findByRole("link", { name: labelOf("audit") });
-    await user.type(screen.getByRole("combobox"), "audit");
+    await user.type(await screen.findByRole("combobox"), "audit");
 
     expect(
       screen

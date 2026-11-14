@@ -239,7 +239,8 @@ describe("a call started inside a surface that logs in place", () => {
     const own = screen.getByRole("link", { name: "Call own" });
 
     fireEvent.click(own);
-    const log = screen.getByRole("region", { name: "Log activity" });
+    // The form is a lazy chunk, so the first case to open it waits for it.
+    const log = await screen.findByRole("region", { name: "Log activity" });
     await waitFor(() =>
       expect(log.contains(document.activeElement)).toBe(true),
     );
@@ -263,7 +264,7 @@ describe("a call started inside a surface that logs in place", () => {
     mountInline(vi.fn());
 
     fireEvent.click(screen.getByRole("link", { name: "Call own" }));
-    const log = screen.getByRole("region", { name: "Log activity" });
+    const log = await screen.findByRole("region", { name: "Log activity" });
     await user.type(
       within(log).getByRole("textbox", { name: "Subject" }),
       "Busy",

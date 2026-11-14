@@ -2,7 +2,7 @@
 import "@testing-library/jest-dom/vitest";
 import { cleanup, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { afterEach, expect, it, vi } from "vitest";
+import { afterEach, beforeAll, expect, it, vi } from "vitest";
 import { installFetchStub, StoryProviders } from "../../testing/story-utils";
 import { ReportingEvidenceDrawer } from "./analytics.drawers";
 import { ReportingCharts, wideCharts } from "./reporting.charts";
@@ -16,6 +16,24 @@ import {
 } from "./reporting.story-fixtures";
 
 const originalFetch = globalThis.fetch;
+
+// The chart bodies are lazy, so the first chart drawn in a file suspends. Many
+// cases read the chart at once, so the chunks load here, before any case.
+beforeAll(async () => {
+  installFetchStub(reportingStoryRoutes());
+  render(
+    <StoryProviders client={reportingCatalogClient()}>
+      <ReportingCharts
+        evaluation={reportingStoryEvaluation}
+        onEvidence={() => {}}
+      />
+    </StoryProviders>,
+  );
+  await screen.findAllByRole("figure");
+  cleanup();
+  globalThis.fetch = originalFetch;
+});
+
 afterEach(() => {
   cleanup();
   globalThis.fetch = originalFetch;

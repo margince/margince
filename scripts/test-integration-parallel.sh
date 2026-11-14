@@ -200,6 +200,8 @@ if [[ -n "${COVERDIR:-}" && -z "${INTEGRATION_TIMEOUT:-}" ]] && (( SHARD_TOTAL =
   IT_TIMEOUT=2700s
 fi
 export IT_TIMEOUT IT_BUDGET
+resolve_test_shuffle
+export IT_SHUFFLE
 
 ncpu() { sysctl -n hw.ncpu 2>/dev/null || nproc 2>/dev/null || echo 4; }
 JOBS="${INTEGRATION_JOBS:-$(( $(ncpu) < 8 ? $(ncpu) : 8 ))}"
@@ -496,7 +498,7 @@ run_one() {
   [[ -n "$runre" ]] && run_args=(-run "$runre")
   # -vet=off: `make lint` vets tagged code with a superset of these analyzers, and
   # gates/lintbuildtagreach_test.go holds that. A slot would only repeat it.
-  local test_cmd=(go test -p 1 -vet=off -tags=integration -v -count=1 -timeout="$IT_TIMEOUT"
+  local test_cmd=(go test -p 1 -vet=off -tags=integration -v -count=1 -timeout="$IT_TIMEOUT" ${IT_SHUFFLE:+"$IT_SHUFFLE"}
     "${cover_pre[@]+"${cover_pre[@]}"}" "${run_args[@]+"${run_args[@]}"}"
     "$rel" "${cover_post[@]+"${cover_post[@]}"}")
   [[ -z "${BIN_DIR:-}" ]] || test_cmd=(run_binary "$rel" "$COVERDIR/$idx" "${run_args[@]+"${run_args[@]}"}")
@@ -542,7 +544,8 @@ run_binary() {
   [[ "${1:-}" != "-run" ]] || run_flags=(-test.run="$2")
   t0="${EPOCHREALTIME:-$(date +%s)}"
   ( cd "$rel" && "$BIN_DIR/$rel/integration.test" -test.paniconexit0 -test.v=true -test.count=1 \
-      -test.timeout="$IT_TIMEOUT" "${run_flags[@]+"${run_flags[@]}"}" -test.gocoverdir="$coverdir" ) || st=$?
+      -test.timeout="$IT_TIMEOUT" ${IT_SHUFFLE:+"-test.${IT_SHUFFLE#-}"} "${run_flags[@]+"${run_flags[@]}"}" \
+      -test.gocoverdir="$coverdir" ) || st=$?
   t1="${EPOCHREALTIME:-$(date +%s)}"
   local verdict="ok  "
   (( st == 0 )) || verdict=FAIL
@@ -859,7 +862,7 @@ if [[ "$fail" -ne 0 ]]; then
   # re-run to even locate, and the re-run is precisely what does not reproduce
   # it.
   if [[ -s "$FAILED_PKGS" ]]; then
-    echo "FAIL: integration tests failed (parallel, $NPKGS packages):"
+    echo "FAIL: integration tests failed (parallel, $NPKGS packages)${IT_SHUFFLE:+, test order $IT_SHUFFLE}:"
     while IFS='|' read -r d rel base; do
       printf '  %s (%s)\n' "$rel" "$d"
     done < "$FAILED_PKGS"
@@ -895,6 +898,7 @@ if [[ "$fail" -ne 0 ]]; then
     # its artifact is non-empty — an empty dir would turn one honest red into two.
     {
       printf 'shard %s/%s failed\n' "${SHARD_IDX:-0}" "${SHARD_TOTAL:-0}"
+      [[ -z "$IT_SHUFFLE" ]] || printf 'test order %s; replay a failing test with: make test-it DIR=<package> RUN=<test> TEST_SHUFFLE_SEED=%s\n' "$IT_SHUFFLE" "$TEST_SHUFFLE_SEED"
       if [[ -s "$FAILED_PKGS" ]]; then
         printf 'failing packages:\n'
         cut -d'|' -f2 "$FAILED_PKGS" | sed 's/^/  /'

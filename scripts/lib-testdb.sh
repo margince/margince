@@ -524,6 +524,21 @@ resolve_it_timeout() {
   fi
 }
 
+# resolve_test_shuffle — TEST_SHUFFLE_SEED=<n> runs each package's tests in the
+# order -shuffle=<n> gives (CI passes its run number); unset keeps source order.
+# Sets IT_SHUFFLE to the go test flag, or to nothing. Go shuffles the whole list
+# before -run filters it, so a part or one test replays in the same order.
+resolve_test_shuffle() {
+  IT_SHUFFLE=""
+  [[ -n "${TEST_SHUFFLE_SEED:-}" ]] || return 0
+  if [[ ! "$TEST_SHUFFLE_SEED" =~ ^[0-9]+$ ]]; then
+    echo "FAIL: TEST_SHUFFLE_SEED must be a whole number, got '${TEST_SHUFFLE_SEED}'"
+    exit 1
+  fi
+  IT_SHUFFLE="-shuffle=$TEST_SHUFFLE_SEED"
+  echo "test order: $IT_SHUFFLE; replay one package with: make test-it DIR=<package> RUN=<tests> TEST_SHUFFLE_SEED=$TEST_SHUFFLE_SEED"
+}
+
 # The census a lane's package processes write (MARGINCE_SQL_CENSUS_DIR) holds
 # every statement of 8 KB or more they sent. check_repeated_gates fails when one
 # carries the activity content gate twice from a sender the allowlist does not

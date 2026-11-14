@@ -264,6 +264,8 @@ it("keeps refused source details hidden when another evidence page arrives", asy
   await waitFor(() =>
     expect(panel.queryByRole("radio", { name: /Original booking/ })).toBeNull(),
   );
+  // The drawer is a lazy chunk. Escape closes it only once it is drawn.
+  await screen.findByText(en["activity.detail.withheldReason"]);
   await user.keyboard("{Escape}");
   await user.click(
     panel.getByRole("button", { name: en["notice.source.moreEvidence"] }),
