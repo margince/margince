@@ -15,7 +15,7 @@ import {
   WIN_PROBABILITY_DIAL,
 } from "./dealranges";
 import { translatedPipeline } from "./labeltranslation";
-import { defaultPipelineOf } from "./pipelines.queries";
+import { defaultPipelineOf, pipelinesOptions } from "./pipelines.queries";
 import { throwProblem, unwrap } from "./problem";
 import { parseTagIDs, parseTagMode, tagQueryParams } from "./tagfilter";
 import { useInstallationSettings } from "./uploadlimit";
@@ -32,22 +32,16 @@ import { bandOfDial } from "./winprobabilitybands";
 export function usePipeline(pipelineId?: string | null) {
   const { locale } = useLocale();
   return useQuery({
-    select: (pipeline) => translatedPipeline(pipeline, locale),
-    queryKey: ["pipelines", pipelineId ?? "default"],
-    queryFn: async () => {
-      const data = unwrap(
-        await api.GET("/pipelines", {
-          params: { query: {} },
-        }),
-      );
+    ...pipelinesOptions,
+    select: (pipelines) => {
       const pipeline =
         (pipelineId &&
-          data.data.find((candidate) => candidate.id === pipelineId)) ||
-        defaultPipelineOf(data.data);
+          pipelines.find((candidate) => candidate.id === pipelineId)) ||
+        defaultPipelineOf(pipelines);
       if (!pipeline) {
         throw new Error("no pipeline");
       }
-      return pipeline;
+      return translatedPipeline(pipeline, locale);
     },
   });
 }

@@ -1,4 +1,3 @@
-import { useQuery } from "@tanstack/react-query";
 import { api } from "../../api/client";
 import type { components } from "../../api/schema";
 import { CreateAction, type CreateField } from "../../components/create";
@@ -7,58 +6,10 @@ import { toMinorUnits } from "../../format/minorunits";
 import { useLocale, useT } from "../../i18n";
 import { useCanWrite } from "../../lib/capability";
 import { currencyBeside } from "../../lib/dealcurrency";
-import {
-  translatedLabel,
-  translatedPipeline,
-} from "../../lib/labeltranslation";
 import { useLeadingCurrencies } from "../../lib/leadingcurrencies";
-import { defaultPipelineOf } from "../../lib/pipelines.queries";
+import { defaultPipelineOf, usePipelines } from "../../lib/pipelines.queries";
 import { unwrap } from "../../lib/problem";
 import { useProjectCreateForm } from "../projects/projects.create";
-
-// What a rep can START from the company page.
-//
-// The page could already say everything about an account and do nothing with
-// it: opening a deal meant leaving for the pipeline board and re-finding the
-// company there, and applying a tag or adding the account to a list had no
-// control at all. Each action below is the record's OWN verb — the company is
-// the subject, so it is never something the rep has to pick.
-
-type Pipeline = components["schemas"]["Pipeline"];
-type Stage = components["schemas"]["Stage"];
-
-/**
- * useDealTarget resolves where a deal created from this page should land: the
- * default pipeline and its first OPEN stage.
- *
- * Open only. A deal is born open (INV-CLOSE-PAST), so won and lost are reached
- * through the confirmed advance and must never be a create-time choice — the
- * deal board applies the same rule to its own stage picker.
- */
-function useDealTarget() {
-  const { locale } = useLocale();
-  return useQuery({
-    select: ({ pipeline, open }) => ({
-      pipeline: pipeline && translatedPipeline(pipeline, locale),
-      open: open.map((stage) => ({
-        ...stage,
-        name: translatedLabel(stage.name, stage.name_translations, locale),
-      })),
-    }),
-    queryKey: ["pipelines", "dealTarget"],
-    queryFn: async () => {
-      const data = unwrap(
-        await api.GET("/pipelines", {
-          params: { query: {} },
-        }),
-      );
-      const pipeline: Pipeline | undefined = defaultPipelineOf(data.data);
-      const stages: Stage[] = pipeline?.stages ?? [];
-      const open = stages.filter((stage) => stage.semantic === "open");
-      return { pipeline, open };
-    },
-  });
-}
 
 /**
  * NewDealAction opens a deal on THIS company.
@@ -86,10 +37,11 @@ export function NewDealAction({
 }>) {
   const t = useT();
   const { locale } = useLocale();
-  const target = useDealTarget();
+  const pipelines = usePipelines();
   const leading = useLeadingCurrencies();
-  const pipeline = target.data?.pipeline;
-  const open = target.data?.open ?? [];
+  const pipeline = defaultPipelineOf(pipelines.data ?? []);
+  const open =
+    pipeline?.stages?.filter((stage) => stage.semantic === "open") ?? [];
   // No pipeline, or none of its stages is open, means there is nowhere for a
   // deal to land. A button that can only fail is worse than no button.
   if (!pipeline || open.length === 0) {
