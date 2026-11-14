@@ -24,6 +24,7 @@ export const PROBLEM_CODE_COPY = new Map<string, MessageKey>([
   ["calendar_unavailable", "scheduling.calendarUnavailable"],
   ["permission_denied", "common.permissionDenied"],
   ["seat_tier_insufficient", "common.seatReadOnly"],
+  ["trial_ended", "common.trialEnded"],
   ["role_cannot_capture", "connectors.roleCannotCapture"],
   // The installation switched off individual performance; the detail is English.
   ["individual_performance_off", "common.individualPerformanceOff"],

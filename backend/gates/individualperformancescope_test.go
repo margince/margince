@@ -132,7 +132,9 @@ var notYetHeldOnEveryPath = gatekit.Waive(map[string]string{
 	"discardSalesGoalDraft":        goalsOffBranch,
 	"publishSalesGoalPlan":         goalsOffBranch,
 	"withdrawSalesGoalPlan":        goalsOffBranch,
+	"proposeSalesGoalMonths":       goalsOffBranch,
 	"getSalesProgress":             goalsOffBranch + "; " + evaluationOffBranch,
+	"summarizeSalesProgress":       "the summary reads the page through getSalesProgress's own read: " + goalsOffBranch + "; " + evaluationOffBranch,
 	"getForecastMovement":          "Store.SnapshotSide narrows a snapshot's rows through the lens, which filters them one by one and skips a colleague's row with continue",
 	"listSdrWaitingHandoffs":       "on the off branch withoutColleagueSubmitters blanks each colleague's submitter id in place, which the walk does not read as the floor",
 	"renderAnalyticsReport": evaluationOffBranch + "; requireNoLoneColleagueIn returns early on the off branch when the spec names no seat " +

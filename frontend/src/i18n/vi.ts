@@ -15082,6 +15082,68 @@ export const vi: Readonly<Record<MessageKey, string>> = {
 
   "licensebanner.body":
     "Token giấy phép của bản cài đặt này đã được kiểm tra và bị từ chối.",
+  "trial.pill.days_one": "Dùng thử · còn {count} ngày",
+  "trial.pill.days_other": "Dùng thử · còn {count} ngày",
+  "trial.pill.closing_one": "Còn {count} ngày dùng thử",
+  "trial.pill.closing_other": "Còn {count} ngày dùng thử",
+  "trial.pill.lastDay": "Ngày dùng thử cuối cùng",
+  "trial.pill.ended": "Hết hạn dùng thử · Liên hệ Margince",
+  "trial.notice.daysLeft_one": "Còn {count} ngày dùng thử",
+  "trial.notice.daysLeft_other": "Còn {count} ngày dùng thử",
+  "trial.notice.body":
+    "Từ {date}, Margince sẽ bị khóa và tác vụ nền sẽ tạm dừng cho đến khi có giấy phép. Dữ liệu của bạn vẫn được giữ nguyên.",
+  "trial.notice.endedTitle": "Thời gian dùng thử đã kết thúc",
+  "trial.notice.hideToday": "Ẩn đến ngày mai",
+  "trial.notice.endedBody":
+    "Margince đã bị khóa từ {date}, và tác vụ nền đang tạm dừng cho đến khi có giấy phép. Dữ liệu của bạn vẫn được giữ nguyên, không có gì bị xóa.",
+  "trial.contact.title": "Liên hệ đội ngũ Margince",
+  "trial.contact.endsOn": "Thời gian dùng thử kết thúc vào {date}",
+  "trial.contact.endedOn": "Thời gian dùng thử đã kết thúc vào {date}",
+  "trial.contact.legend": "Bạn cần gì?",
+  "trial.contact.ask.time": "Thêm thời gian",
+  "trial.contact.ask.time.hint": "Gia hạn dùng thử.",
+  "trial.contact.ask.license": "Một giấy phép",
+  "trial.contact.ask.license.hint": "Giữ Margince cùng toàn bộ dữ liệu.",
+  "trial.contact.ask.call": "Một cuộc gọi ngắn",
+  "trial.contact.ask.call.hint": "Trao đổi trước khi quyết định.",
+  "trial.contact.note": "Bạn muốn nói thêm gì không?",
+  "trial.contact.optional": "Không bắt buộc",
+  "trial.contact.preview": "Tin nhắn của bạn",
+  "trial.contact.to": "Đến",
+  "trial.contact.subject": "Tiêu đề",
+  "trial.contact.copy": "Sao chép nội dung",
+  "trial.contact.copied": "Đã sao chép nội dung",
+  "trial.contact.copyRemedy": "Hãy tự chọn và sao chép nội dung email.",
+  "trial.contact.open": "Mở trong ứng dụng email",
+  "trial.contact.form": "Mở biểu mẫu liên hệ",
+  "trial.contact.how":
+    "Dán nội dung vào biểu mẫu liên hệ trên trang web Margince, hoặc gửi đến địa chỉ này từ bất kỳ ứng dụng email nào.",
+  "trial.mail.subject.time": "{company}: thêm thời gian dùng thử Margince",
+  "trial.mail.subject.license": "{company}: giấy phép Margince",
+  "trial.mail.subject.call": "{company}: một cuộc gọi ngắn về Margince",
+  "trial.mail.greeting": "Chào đội ngũ Margince,",
+  "trial.mail.ask.time":
+    "Chúng tôi cần thêm thời gian để dùng thử Margince. Các bạn có thể gia hạn dùng thử cho chúng tôi không?",
+  "trial.mail.ask.license":
+    "Chúng tôi muốn tiếp tục dùng Margince. Các bạn có thể gửi báo giá giấy phép cho chúng tôi không?",
+  "trial.mail.ask.call":
+    "Chúng tôi muốn trao đổi về Margince trước khi quyết định. Chúng ta có thể hẹn một cuộc gọi ngắn không?",
+  "trial.mail.company": "Công ty: {company}",
+  "trial.mail.ends": "Hết hạn dùng thử: {date}",
+  "trial.mail.ended": "Đã hết hạn dùng thử: {date}",
+  "trial.mail.seats": "Số tài khoản đang dùng: {seats}",
+  "trial.mail.signoff": "Trân trọng,",
+  "trial.locked.pageTitle": "Hết hạn dùng thử",
+  "trial.locked.title": "Thời gian dùng thử Margince đã kết thúc",
+  "trial.locked.adminTitle": "Bạn đã có khóa giấy phép?",
+  "trial.locked.body":
+    "Margince đang bị khóa, và tác vụ nền đang tạm dừng cho đến khi có giấy phép. Dữ liệu của bạn vẫn được giữ nguyên, không có gì bị xóa.",
+  "trial.locked.admin":
+    "Hãy đặt khóa vào license.token hoặc MARGINCE_LICENSE trong cấu hình của bản cài đặt này, rồi khởi động lại Margince. Nếu bạn đã thay tệp token, chỉ cần bấm Kiểm tra ngay. Sau đó tác vụ nền sẽ tự chạy lại, không cần khởi động lại.",
+  "trial.locked.member":
+    "Quản trị viên của bạn có thể nhận giấy phép từ đội ngũ Margince. Bạn cũng có thể tự viết cho họ.",
+  "common.trialEnded":
+    "Thời gian dùng thử của bản cài đặt này đã kết thúc, nên thay đổi này phải chờ có giấy phép. Dữ liệu của bạn vẫn được giữ nguyên.",
   "licensebanner.link": "Mở {tab}",
   "licensebanner.grace.title": "Giấy phép đã hết hạn",
   "licensebanner.grace.body":
@@ -19299,6 +19361,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "worklist.title.automation_run.failed": "{name} bị lỗi",
   "worklist.title.automation_run.blocked": "{name} bị chặn",
   "worklist.title.meeting_outcome": "Ghi lại kết quả của {name}",
+  "worklist.title.meeting_outcome.read_only": "Chưa có kết quả cho {name}",
   "worklist.title.meeting_follow_up": "Liên hệ lại sau cuộc họp {name}",
   "worklist.title.awaiting_reply": "Chưa có phản hồi: {name}",
   "worklist.title.bounce": "Bị trả về: {name}",
@@ -19566,6 +19629,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "Một đồng nghiệp nhờ bạn giới thiệu với một liên hệ. Chấp nhận hoặc từ chối yêu cầu.",
   "worklist.ask.meeting_outcome":
     "Cuộc họp này đã kết thúc và chưa có ghi nhận nào về kết quả. Ghi lại kết quả. Nếu cuộc họp không diễn ra, chọn “Không diễn ra”, hoặc hủy qua lời mời trên lịch.",
+  "worklist.ask.meeting_outcome.read_only":
+    "Người tổ chức cuộc họp sẽ ghi lại kết quả, và bạn không thể thay đổi cuộc họp này. Nhắc họ nếu cần, rồi đánh dấu là xong.",
   "worklist.ask.weekly_commitment":
     "Bạn đã lên kế hoạch việc này cho tuần. Làm xong, hoặc dời trong kế hoạch tuần.",
   "worklist.ask.awaiting_reply":
@@ -20743,7 +20808,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "approval.commitment.proposalExpiresIn": "Đề xuất hết hạn sau {countdown}",
   "approval.commitment.noDueDay": "Chưa nêu ngày",
   "approval.commitment.strength": "Mức chắc chắn",
-  "approval.commitment.tentative": "Chưa chắc chắn: chỉ nói sẽ cố gắng",
+  "approval.commitment.tentative": "Chưa chắc chắn: họ nói sẽ cố gắng",
   "approval.commitment.promiseStatus": "Trạng thái cam kết",
   "approval.commitment.notFulfilled":
     "Tạo công việc không có nghĩa là cam kết đã được thực hiện.",
@@ -21397,7 +21462,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "aiTask.name.propose_roles": "Xác định vai trò mua hàng",
   "aiTask.name.rate_extract": "Trích xuất tỷ giá",
   "aiTask.name.report_interpret": "Đánh giá báo cáo bán hàng",
-  "aiTask.name.report_setup": "Thiết lập báo cáo từ mô tả",
+  "aiTask.name.report_setup":
+    "Đề xuất thiết lập báo cáo hoặc mục tiêu doanh số",
   "aiTask.name.request_settlement": "Kiểm tra yêu cầu đã được giải đáp",
   "aiTask.name.rewrite": "Viết lại",
   "aiTask.name.chat_summary": "Tóm tắt kênh chat",
@@ -22063,7 +22129,11 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "brief.done.noReason": "Không có lý do",
   "brief.done.markedLost": "Đã đánh dấu là mất",
   "brief.done.customerWrote": "Khách hàng đã viết:",
-  "magic.lane.doneOther": "Cập nhật khác",
+  "brief.done.small_one": "{count} thay đổi nhỏ",
+  "brief.done.small_other": "{count} thay đổi nhỏ",
+  "brief.done.smallLabel": "Thay đổi nhỏ, mới nhất trước",
+  "brief.done.why": "Lý do",
+  "brief.done.undoNote": "Hoàn tác",
   "changes.bulk.undone_one": "Đã hoàn tác trên {count} giao dịch.",
   "changes.bulk.undone_other": "Đã hoàn tác trên {count} giao dịch.",
   "changes.bulk.partly_one": "{count} giao dịch được hoàn tác một phần.",
@@ -22170,6 +22240,10 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "progress.work.more": "Xem thêm",
   "progress.plannedAhead": "Pipeline đang mở, chưa chốt",
   "progress.rail": "Mục tiêu và định nghĩa",
+  "progress.summary": "Tóm tắt",
+  "progress.summary.refresh": "Làm mới tóm tắt",
+  "progress.summary.writing": "Đang viết tóm tắt",
+  "progress.summary.more": "Đọc toàn bộ tóm tắt",
   "progress.goalFor": "Mục tiêu cho {period}",
   "progress.goalMonths": "Số tháng có mục tiêu",
   "progress.goalMonthsSet": "{set}/{needed}",
@@ -22215,6 +22289,16 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "goals.status": "Trạng thái",
   "goals.yearly": "Mục tiêu năm ({currency})",
   "goals.spread": "Chia đều",
+  "goals.propose": "Đề xuất các tháng",
+  "goals.propose.busy": "Đang đọc doanh số đã chốt",
+  "goals.propose.title": "Đề xuất: {total} cho cả năm",
+  "goals.propose.review": "Chưa có gì được lưu cho đến khi bạn lưu bản nháp.",
+  "goals.propose.apply": "Dùng các tháng này",
+  "goals.propose.noModel":
+    "Đề xuất các tháng cần một mô hình AI đã được thiết lập. Bạn vẫn có thể tự nhập từng tháng.",
+  "goals.propose.noHistory":
+    "{name} chưa có doanh số đã chốt trong năm {year} hay năm trước đó để đọc ra quy luật. Hãy tự nhập từng tháng.",
+  "goals.proposedByAi": "Do Margince đề xuất",
   "goals.monthsSum": "Các tháng cộng lại là {total}.",
   "goals.monthsMissing_one": "{count} tháng chưa đặt.",
   "goals.monthsMissing_other": "{count} tháng chưa đặt.",

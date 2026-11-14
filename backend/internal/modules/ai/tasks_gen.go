@@ -49,9 +49,9 @@ const (
 	TaskRateExtract Task = "rate_extract"
 	// TaskReaderRendering is activity_text — one note, email, meeting or call, written in one reader's language when that reader presses the button for it. It renders what the text means rather than its words: names, numbers, amounts, dates, addresses, links, commitments and questions are kept exactly, and a validator refuses a reply that lost a digit run, an email address or a link, or that is in another language than the target. A mail is rendered from its current message, without the quoted history. Nothing is stored and no payload is kept, because the text is a customer's correspondence and the rendering is for one reader. Text already in the target language is answered unchanged without a call; text past what one answer can carry is refused before the call. With no model bound the endpoint answers 409 ai_not_configured, because there is no deterministic rendering to fall back to.
 	TaskReaderRendering Task = "reader_rendering"
-	// TaskReportInterpret is Read an evaluated report and write cited paragraphs for sales review, personal prospecting or team prospecting. Quantities must match supplied evidence, and action identifiers must come from the application. A proposed decision must name a supplied candidate deal. Without a supported explanation, measured figures and application actions remain usable.
+	// TaskReportInterpret is Read an evaluated report and write cited paragraphs for sales review, personal prospecting or team prospecting. Quantities must match supplied evidence, and action identifiers must come from the application. A proposed decision must name a supplied candidate deal. Without a supported explanation, measured figures and application actions remain usable. progress_summary — the same request over the figures of one Progress reading: closed revenue against the sales goal, what is still missing to it and the open deals expected in the period.
 	TaskReportInterpret Task = "report_interpret"
-	// TaskReportSetup is Turn a manager's description into a typed, catalog-resolved proposal for a sales initiative or a custom report; nothing is written until the reader confirms. Every product, industry, metric, chart and objective the reply names is checked against the catalog the reader may use, and what fails is named back with a reason. Without a model the drawers offer no proposal.
+	// TaskReportSetup is Turn a manager's description into a typed, catalog-resolved proposal for a sales initiative or a custom report; nothing is written until the reader confirms. Every product, industry, metric, chart and objective the reply names is checked against the catalog the reader may use, and what fails is named back with a reason. Without a model the drawers offer no proposal. sales_goal_months — twelve monthly sales goals for one seller, read from their closed revenue by month in the plan year and the year before; a yearly goal the reader gave is spread over the proposed pattern to the minor unit, and the reason carries no figure. The manager reviews the months and saves them as a draft.
 	TaskReportSetup Task = "report_setup"
 	// TaskRequestSettlement is Whether OUR OWN reply settled the request an inbound message made — settled, still_owed or unsure. owed_verdict answers a question about one message from that message alone, so a request answered within the hour still reads as owed a week later; this is the second question, asked of the THREAD, and only askable once the workspace has written back. The candidates are requests we have since answered: our attested reply on the thread, our attested mail to the sender with the same subject, or a logged call or held meeting with the sender's contact — the answers the needs-reply check recognises. A conversation nobody has answered is never judged here and costs nothing; the off-thread answers reach the prompt marked as such, a call's or meeting's notes as its text. A REPLY IS EVIDENCE AND NOT AN ANSWER: 'thanks, I will check' is a reply that discharges nothing, which is exactly why this is a model reading of what our words did rather than a SQL test for whether words exist. A settled verdict completes the reminder the owed pass filed, through the ordinary activity writer, so it carries the audit row and the event a human ticking the box carries; still_owed may sharpen a MACHINE-FILED, undated reminder to name what is actually outstanding, and never touches a task a human accepted, dated or reopened. Below the confidence floor the verdict is unsure, which is a real answer: the request stays owed exactly as it was before this pass existed, and the watermark advances so the same thread is not re-asked until somebody writes again. No cost_unit, for owed_verdict's reason: the candidates are live requests rather than mailbox history, so the pass deliberately does not run at backfill.
 	TaskRequestSettlement Task = "request_settlement"
@@ -73,7 +73,7 @@ const (
 	TaskTagSuggest Task = "tag_suggest"
 	// TaskTranscript is Declared, not built (ADR-0074). Pasted transcript text is T2/untrusted per ai-operational-spec §1 when a site lands.
 	TaskTranscript Task = "transcript"
-	// TaskTranscriptPropose is the reading of next steps and commitments out of a meeting transcript, each citing the 1-based transcript lines it was read from. A reading at 0.7 or above is firm. From 0.3 up to just under 0.7 it is a tentative promise, such as "I will try": it is kept and always stages for a human (approval kind commitment_task), marked tentative, and never becomes a task by itself. Below 0.3 it is dropped, never guessed, and a transcript stating none yields no proposal at all. Each commitment goes through the shared commitment rule: a customer's promise is filed on their contact and never becomes a task, and a new one stages a follow-up for the member who logged the meeting, titled "Follow up if <promise> has not arrived" and due the day after the promised day; nobody responsible means no follow-up. A named colleague's firm promise read at or above 0.85 becomes their task directly, marked as the reader's; anything else stages for a human (approval kind commitment_task). The same call writes a short summary onto the meeting: key points and next steps in the language the meeting was held in, each citing the transcript lines it was read from. A summary citing a line the transcript lacks is dropped, the meeting keeps its earlier summary, and the reading says so; the proposals still count.
+	// TaskTranscriptPropose is the reading of next steps and commitments out of a meeting transcript, each citing the 1-based transcript lines it was read from. A reading at 0.7 or above is firm. From 0.3 up to just under 0.7 it is a tentative promise, such as "I will try", kept and marked tentative. A colleague's tentative promise always stages for a human (approval kind commitment_task) and never becomes a task by itself. A customer's tentative promise follows the customer rule below, and its follow-up is marked tentative. Below 0.3 it is dropped, never guessed, and a transcript stating none yields no proposal at all. Each commitment goes through the shared commitment rule: a customer's promise is filed on their contact and never becomes a task, and a new one stages a follow-up for the member who logged the meeting, titled "Follow up if <promise> has not arrived" and due the day after the promised day; nobody responsible means no follow-up. A named colleague's firm promise read at or above 0.85 becomes their task directly, marked as the reader's; anything else stages for a human (approval kind commitment_task). The same call writes a short summary onto the meeting: key points and next steps in the language the meeting was held in, each citing the transcript lines it was read from. A summary citing a line the transcript lacks is dropped, the meeting keeps its earlier summary, and the reading says so; the proposals still count.
 	TaskTranscriptPropose Task = "transcript_propose"
 	// TaskVoiceBuild is owner-requested or automatic durable Voice DNA candidate build; own-authored corpus only, CompanyContext none (ADR-0066). Four sites: the derive pass, the two evaluation passes, and the demonstration draft the profile card shows — a built voice nobody can read a sentence of is a voice nobody can judge.
 	TaskVoiceBuild Task = "voice_build"
@@ -113,7 +113,7 @@ var taskDisplayNames = map[Task]string{
 	TaskRateExtract:                   "Exchange rate extraction",
 	TaskReaderRendering:               "Showing a message in your language",
 	TaskReportInterpret:               "Assessing a sales report",
-	TaskReportSetup:                   "Setting up a report from a description",
+	TaskReportSetup:                   "Proposing a report setup or sales goals",
 	TaskRequestSettlement:             "Checking whether the reply answered the request",
 	TaskRewrite:                       "Rewriting",
 	TaskSignalExtract:                 "Signal extraction",
@@ -161,7 +161,7 @@ var taskSummaries = map[Task]string{
 	TaskRateExtract:                   "Reads exchange rates from a published rates page for the currency refresh.",
 	TaskReaderRendering:               "Shows a note, email or meeting in the reader's own language when they ask for it.",
 	TaskReportInterpret:               "Writes an assessment beside a report's leading chart, citing the figures it rests on.",
-	TaskReportSetup:                   "Turns a described sales initiative or custom report into a setup you check before saving.",
+	TaskReportSetup:                   "Turns a described sales initiative or custom report, or a seller's closed revenue, into a proposal you check before saving.",
 	TaskRequestSettlement:             "Checks whether our reply actually answered what the other side asked for.",
 	TaskRewrite:                       "Rewrites the words you typed when you press Polish, Shorter, Warmer, More formal or Add a deadline.",
 	TaskSignalExtract:                 "Picks out important events from a finished thread, such as a contract ending or a new opportunity.",
@@ -206,7 +206,7 @@ const (
 // TaskContractHash is the sha256 of api/ai-tasks.yaml at generation
 // time: a build fingerprint the cert runner can compare against a
 // freshly hashed contract file to catch a stale generated table.
-const TaskContractHash = "81f7ddcf0190e02b282495157f3a5720c88af2260bab9232b2f8aaf2d87e2bf0"
+const TaskContractHash = "5f39638fa0c3cfed0799806bfb470e2681eb8baa9aacd1c4c240e3848bfca4e8"
 
 // AllTasks returns every contract task, sorted — the completeness
 // check a certification run walks to prove it covers every routed
@@ -524,10 +524,12 @@ var taskSites = map[Task][]Site{
 	},
 	TaskReportInterpret: {
 		{Name: "sales_assessment", Kind: "one_shot"},
+		{Name: "progress_summary", Kind: "one_shot"},
 	},
 	TaskReportSetup: {
 		{Name: "initiative_setup", Kind: "one_shot"},
 		{Name: "custom_report_setup", Kind: "one_shot"},
+		{Name: "sales_goal_months", Kind: "one_shot"},
 	},
 	TaskRequestSettlement: {
 		{Name: "request_settle", Kind: "one_shot"},
@@ -679,7 +681,7 @@ var taskSubjectRestriction = map[Task]SubjectRestrictionPosture{
 	TaskRateExtract:                   {Posture: "none", Reason: "reads a published exchange-rate page"},
 	TaskReaderRendering:               {Posture: "honour", Reason: ""},
 	TaskReportInterpret:               {Posture: "none", Reason: "reads evaluated report figures and deal names, never a contact's record or mail"},
-	TaskReportSetup:                   {Posture: "none", Reason: "reads the manager's description and the report catalog, never a record"},
+	TaskReportSetup:                   {Posture: "none", Reason: "reads the manager's description, the report catalog and a seller's closed revenue by month, never a record"},
 	TaskRequestSettlement:             {Posture: "honour", Reason: ""},
 	TaskRewrite:                       {Posture: "honour", Reason: ""},
 	TaskSignalExtract:                 {Posture: "honour", Reason: ""},

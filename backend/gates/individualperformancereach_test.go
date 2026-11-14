@@ -140,6 +140,7 @@ type paramSlot struct {
 // some expression turns into an interface value; stored holds what each
 // func-typed variable or field is ever given. spelled holds the declared
 // type of each variable whose type a stand-in import leaves invalid.
+// reassigned holds each variable an assignment gives a new value.
 type switchGraph struct {
 	fset        *token.FileSet
 	decls       map[*types.Func]*ast.FuncDecl

@@ -16,8 +16,8 @@ import (
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
-	"github.com/margince/margince/backend/internal/compose/chatsummary"
 
+	"github.com/margince/margince/backend/internal/compose/chatsummary"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/ai"
@@ -102,8 +102,10 @@ type talk struct {
 
 // talkOf is what a note says about messages, oldest first.
 func talkOf(key, url string, messages []dispact.Message) talk {
-	return talk{key: key, url: url, count: len(messages),
-		started: messages[0].PostedAt, ended: messages[len(messages)-1].PostedAt}
+	return talk{
+		key: key, url: url, count: len(messages),
+		started: messages[0].PostedAt, ended: messages[len(messages)-1].PostedAt,
+	}
 }
 
 func recordRef(record chatRecord) ids.Ref { return ids.Ref{Type: record.kind, ID: record.id} }
@@ -149,8 +151,10 @@ func fileNote(ctx context.Context, f filing, said talk, reply chatsummary.Reply)
 	written := textlang.Detect(reply.Summary)
 	in := activities.LogActivityInput{
 		Kind: string(crmcontracts.ActivityKindNote),
-		SystemText: &systemtext.Message{Version: 1,
-			Subject: systemtext.Prose(systemtext.Generated, written), Body: systemtext.Prose(systemtext.Generated, written)},
+		SystemText: &systemtext.Message{
+			Version: 1,
+			Subject: systemtext.Prose(systemtext.Generated, written), Body: systemtext.Prose(systemtext.Generated, written),
+		},
 		Subject:      &reply.Title,
 		Body:         &body,
 		OccurredAt:   &said.started,

@@ -488,6 +488,7 @@ public.activity_participant.home_read_fence_participant CREATE TRIGGER home_read
 public.activity_participant.home_read_fence_participant_removed CREATE TRIGGER home_read_fence_participant_removed AFTER DELETE ON public.activity_participant FOR EACH ROW WHEN ((old.user_id IS NOT NULL)) EXECUTE FUNCTION advance_home_read_fence()
 public.activity_participant.id uuid NOT NULL gen=- def=uuidv7()
 public.activity_participant.past_party_cap boolean NOT NULL gen=- def=false
+public.activity_participant.relinked_at timestamp with time zone gen=- def=-
 public.activity_participant.response text gen=- def=-
 public.activity_participant.role text NOT NULL gen=- def=-
 public.activity_participant.roster_seat uuid gen=- def=-

@@ -596,21 +596,21 @@ func spelledZero(expr ast.Expr) bool {
 
 // refuses reports an error result that cannot be nil. That is a variable a
 // condition proved set, a literal, a sentinel, or a new error. It is also a
-// call whose types and returns prove one, or one of those wrapped. A new
-// error beside a value that is not spelled zero is no refusal.
+// call whose types and returns prove one, or one of those wrapped. Beside a
+// value that is not spelled zero, only an error a condition proved set is one.
 func (w *pathWalk) refuses(expr ast.Expr, s pathState, valued bool) bool {
 	info, g := w.frame.info, w.sw.g
 	switch e := ast.Unparen(expr).(type) {
 	case *ast.Ident:
 		obj := info.Uses[e]
-		return obj != nil && (s.nonNil[obj] || g.isSentinel(obj))
+		return obj != nil && (s.nonNil[obj] || (!valued && g.isSentinel(obj)))
 	case *ast.CompositeLit:
-		return true
+		return !valued
 	case *ast.UnaryExpr:
 		_, lit := ast.Unparen(e.X).(*ast.CompositeLit)
-		return e.Op == token.AND && lit
+		return !valued && e.Op == token.AND && lit
 	case *ast.SelectorExpr:
-		return g.isSentinel(info.Uses[e.Sel]) || g.declaredSentinel(e, info)
+		return !valued && (g.isSentinel(info.Uses[e.Sel]) || g.declaredSentinel(e, info))
 	case *ast.CallExpr:
 		if !valued && (slices.Contains(g.config.refusalConstructors, g.outsideCallee(e, info)) || g.alwaysRefuses(calledFunc(e, info))) {
 			return true

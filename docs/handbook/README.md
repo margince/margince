@@ -37,6 +37,7 @@ Settings in Margince, by page:
 - How do I book a meeting with a contact, move or cancel it, or fix an invitation that needs attention? → [Meetings and booking](meetings-and-booking.md)
 - My mailbox stopped syncing, or emails stopped coming in: what do I do? → [Connecting your mailbox and calendar](connecting-mail-and-calendars.md)
 - How do I invite a colleague or change a role? → [Seats, roles and who can see what](seats-roles-and-access.md)
+- How many days are left of the trial, and how do I get a licence? → [The trial](the-trial.md)
 - How do I add an AI provider's key, connect OpenRouter, or choose a Vertex location? → [AI providers](ai-providers.md)
 - What happens to an AI task while its provider is down? → [AI providers](ai-providers.md)
 
@@ -206,6 +207,9 @@ Records, deals and mail in Margince, by page:
 - [Importing data](importing-data.md): what a CSV or a ZIP can bring in, the
   template, and the steps. The test run, the problems that skip a row, deals,
   and importing the same file again. Undo and the limits.
+- [The trial](the-trial.md): the 14 days a new installation runs with no
+  licence. How to ask the Margince team for a licence or more time, and what
+  stops when the trial ends.
 - [Report a problem](report-a-problem.md): how to tell the Margince team that
   something is wrong. What to leave out of the mail, and where a security
   problem goes instead.

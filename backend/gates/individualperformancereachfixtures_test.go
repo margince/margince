@@ -29,8 +29,8 @@ const (
 )
 
 // fixtureConfig declares the planted auth package's reader and figure-free
-// function, the planted transaction and sentinels, and the tool registry a
-// planted package declares.
+// function, the planted transaction, runner and sentinels, and the tool
+// registry a planted package declares.
 func fixtureConfig(name string) walkConfig {
 	config := walkConfig{
 		readers:             []switchReader{{fixturePath + "auth", "IndividualPerformanceOf", 0}},
@@ -41,6 +41,7 @@ func fixtureConfig(name string) walkConfig {
 	switch name {
 	case "toolroute":
 		config.dispatchers = []switchReader{{fixturePath + "toolroute", "Registry.Invoke", 0}}
+		config.synchronous = []string{fixturePath + "runner.Run"}
 	case "everypath":
 		config.synchronous = []string{fixturePath + "database.DB.Tx"}
 	case "polarity":
@@ -119,7 +120,11 @@ func TestACallbackResolvesPerCallSiteAndAFieldByEveryValueItIsGiven(t *testing.T
 
 func TestABranchThatSkipsTheCheckBesideOneThatAsksFails(t *testing.T) {
 	t.Parallel()
-	ops := []string{"getProgress", "getProgressBySwitch", "getEachRowSkippingOne", "getEachRowCheckingInside", "getAfterTheCatalog", "getAFigureBesideARefusal"}
+	ops := []string{
+		"getProgress", "getProgressBySwitch", "getEachRowSkippingOne", "getEachRowCheckingInside", "getAfterTheCatalog", "getAFigureBesideARefusal",
+		"getAFigureBesideASentinel", "getAFigureBesideAWrappedSentinel",
+		"getAFigureBesideAnImportedSentinel", "getAFigureBesideAnErrorLiteral",
+	}
 	if got := walkFixture(t, "ownerbranch", ops...); !slices.Equal(got, ops) {
 		t.Errorf("flagged %v, want %v", got, ops)
 	}
@@ -149,8 +154,8 @@ func TestAHandlerWithNoFigureTheWalkSeesFailsTheCensus(t *testing.T) {
 // A route that hands a tool's name to the registry answers for that tool alone.
 func TestARouteTheRegistryServesAnswersForTheToolItNames(t *testing.T) {
 	t.Parallel()
-	got := walkFixture(t, "toolroute", "getCheckedTool", "getUncheckedTool", "getToolByPath")
-	if want := []string{"getUncheckedTool", "getToolByPath"}; !slices.Equal(got, want) {
+	ops := []string{"getCheckedTool", "getUncheckedTool", "getToolByPath", "getRenamedTool", "getRewiredTool", "getToolThroughARunner"}
+	if got, want := walkFixture(t, "toolroute", ops...), ops[1:]; !slices.Equal(got, want) {
 		t.Errorf("flagged %v, want %v", got, want)
 	}
 }

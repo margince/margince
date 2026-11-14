@@ -90,12 +90,9 @@ func deleteVisibleLinksOfType(ctx context.Context, tx pgx.Tx, id ids.ActivityID,
 // Displaced participants merge by role, user, address and channel account so replacing several
 // linked contacts cannot create duplicate participant rows.
 //
-// A moved row leaves its calendar roster. roster_seat says which seat's roster
-// settled the row, and a roster retires only its own rows. A stale seat there
-// lets the organiser's next sync destroy a link a member chose.
-//
-// So the row is the member's from then on: no roster retires it, and none
-// records a later answer on it either. Its last answer stays as it was.
+// A moved row is marked relinked_at. No calendar roster retires it after that,
+// so the organiser's next sync cannot destroy a link a member chose. It keeps
+// roster_seat, so the roster that settled it still records the guest's answer.
 func repointDisplacedParticipants(ctx context.Context, tx pgx.Tx, id ids.ActivityID, target ids.UUID, displaced []ids.UUID) error {
 	if err := unbindDisplacedSenders(ctx, tx, id, target, displaced); err != nil {
 		return err
@@ -105,7 +102,7 @@ func repointDisplacedParticipants(ctx context.Context, tx pgx.Tx, id ids.Activit
 		return err
 	}
 	_, err = tx.Exec(ctx, storekit.SQLf(`WITH planned AS (%s), promoted AS (
-  UPDATE activity_participant ap SET contact_id = $%d, roster_seat = NULL, role = p.role
+  UPDATE activity_participant ap SET contact_id = $%d, relinked_at = now(), role = p.role
   FROM planned p WHERE ap.id = p.id AND p.move
   RETURNING ap.id
  ) DELETE FROM activity_participant

@@ -56,7 +56,7 @@ Only the colleague who holds the task is reminded. A colleague who opens your qu
 ### Why is this on my list?
 The open card under **Needs you** on **Home** says what happened, what to do next and its one current reason. **View details** adds the messages, contact, deal and every fact behind the row. An approval card shows what the agent proposes, such as the task it would add with its due day and note. Its **View details** holds the decision, so you can approve, edit or reject it there.
 
-A meeting with no outcome asks **How did it go?** with **It happened**, **Add notes** and **Did not happen**. A task Margince made for you says what made it. A reminder about a quiet contact, company, deal or lead says so, and asks you to get in touch and then press **Done**. Also called: what is this task, where did this task come from.
+A meeting with no outcome asks **How did it go?** with **It happened** and **Add notes**, plus **Did not happen** unless Margince sent its invitation. A colleague's meeting you cannot change reads **No outcome yet for** the meeting. Press **Done** to take it off your list. A task Margince made for you says what made it. A reminder about a quiet contact, company, deal or lead says so, and asks you to get in touch and then press **Done**. Also called: what is this task, where did this task come from.
 
 The **Why this is on your list** panel in **View details** answers in four parts. **What happened** says the event, its day and who it is with, and for a contact the last contact each way. **Why now** lists the facts that put the row on your list. **If nothing is done** says what waiting costs, such as a contact who keeps waiting. **What to do** names the next step and who it is with. The title on the card and in **View details** says what is wrong, such as a deal that has gone quiet.
 
@@ -194,7 +194,9 @@ The work counts come from the current Worklist read. The greeting's email count 
 **Since your last brief** says when some activity could not be counted. Its count then says how much it could count, and an empty list does not mean nothing happened. A change that covers several records lists each record with its time and its full values, before and after. Each record keeps the **Undo** its change allows.
 
 ### Done for you
-**Done for you**, on **Today**, shows what Margince finished for you. Its band counts the deals Margince changed in the last 7 days and holds **Change history**, which opens the Worklist at its **Change history** panel. Each deal it changed is a card, then **Other updates** follows. One card is open at a time; a closed card shows the deal's newest change, and a press opens it.
+**Done for you**, on **Today**, shows what Margince finished for you. Its band counts the deals Margince changed in the last 7 days and holds **Change history**, which opens the Worklist at its **Change history** panel. Each deal it changed is a card, and the last card holds the small changes, such as **8 small changes**. One card is open at a time; a closed card shows the deal's newest change, and a press opens it.
+
+The small-changes card holds the work Margince did beside the deals, such as saving or filing an email. Closed, it names each kind of change on one line, and it opens by itself when no deal changed. Changes that read the same show as one step with a count, such as **Saved email or meeting** with **4 changes**. Each line in the step keeps its own **Undo**, and a line that touched more than one email or meeting opens with **View 2 changes**. **Details** under each one says when it happened, who did it, why, and why it cannot be undone when it cannot. When some activity could not be counted, a line under the card says so.
 
 An open card lists every change on the deal, newest first: what moved and when, and why Margince did it. When a change rests on the customer's own words, they show under "The customer wrote:". A deal Margince closed reads **Marked lost**, and "Reason unavailable" when you may not read why. Only the deal's owner reads why. A change a later one replaced is grey and reads "Replaced by a later change".
 
@@ -204,9 +206,7 @@ An open card lists every change on the deal, newest first: what moved and when, 
 
 Home shows the first five deals. **See all 6 deals** opens a list of every changed deal, in the same cards, each with a tick. Every deal starts ticked, and **Select all** ticks or clears them all. Open a deal from the list and press Back, and the list is open again. A change leaves **Done for you** after 7 days and stays in the deal's history with its **Undo**.
 
-At the foot of that list, **Undo changes on 6 deals** takes back the ticked deals, from those listed when you opened it. When some deals cannot be sent, the answer counts them and offers **Send again**. It reads them again and sends only those that still have a change to undo.
-
-A deal Margince took back while the answer failed counts as undone, and one with no change left to undo is counted apart. The answer stays when you refresh the page, until you press **Clear this result**. Only this browser keeps it. See [Approvals](approvals.md#can-i-undo-what-the-ai-changed). When some activity could not be counted, **Other updates** says so under its list.
+At the foot of that list, **Undo changes on 6 deals** takes back the ticked deals, from those listed when you opened it. When some deals cannot be sent, the answer counts them, and **Send again** sends only those that still have a change to undo. A deal Margince took back while the answer failed counts as undone, and one with no change left to undo is counted apart. The answer stays when you refresh the page, until you press **Clear this result**. Only this browser keeps it. See [Approvals](approvals.md#can-i-undo-what-the-ai-changed).
 
 A deal that changed again reads "Replaced by a later change". To make Margince ask first, see [Approvals](approvals.md). Also called: automatic changes, review changes, accept a change, check applied changes.
 
@@ -291,7 +291,7 @@ Old automatic findings without a current check stay with their source for review
 
 ### Why an item needs attention
 Each item shows its record, the current facts that call for action, and the action it offers.
-A request can name who is waiting and when they asked. A task shows its due date.
+A request can name who is waiting and when they asked. A follow-up on mail you sent names who it went to and their company. A task shows its due date.
 A deal can show days since the last recorded activity, a missing next step or a close date that needs review.
 
 Suggested deal steps are checked against current records before the list is cut. **Earlier assessment** and its date open the saved words. It does not change the order of work. A changed suggestion asks you to refresh before you can accept its task or open its prepared action. Tasks you create yourself keep their normal controls.

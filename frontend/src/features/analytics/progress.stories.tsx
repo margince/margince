@@ -15,9 +15,11 @@ import { GoalEditor } from "./goals.editor";
 import { ProgressScreen } from "./progress";
 import {
   draftPlan,
+  goalProposal,
   goalRoster,
   publishedPlan,
   sellerMarch,
+  sellerMarchSummary,
   teamMarch,
   workDeals,
 } from "./progress.fixtures";
@@ -90,6 +92,40 @@ export const GoalDraft: Story = {
   ),
 };
 
+// Asking for the months: "Propose months" answers twelve to take or dismiss.
+export const GoalProposed: Story = {
+  render: () => {
+    installFetchStub({
+      [`POST /analytics/sales-goals/${draftPlan.owner_id}/2026/proposed-months`]:
+        () => jsonResponse(goalProposal),
+    });
+    return (
+      <StoryProviders>
+        <GoalEditor plan={draftPlan} />
+      </StoryProviders>
+    );
+  },
+};
+
+// A draft whose months came from a proposal carries its provenance.
+export const GoalDraftProposed: Story = {
+  render: () => (
+    <StoryProviders>
+      <GoalEditor
+        plan={{
+          ...draftPlan,
+          draft: draftPlan.draft && {
+            ...draftPlan.draft,
+            months: goalProposal.months,
+            reason: goalProposal.reason,
+            origin: "ai",
+          },
+        }}
+      />
+    </StoryProviders>
+  ),
+};
+
 // What a seller reads: the published months and their sum.
 export const PublishedMonths: Story = {
   render: () => (
@@ -158,6 +194,25 @@ export const SellerPage: Story = {
       ...WORK_ROUTES,
       "GET /analytics/context": () => jsonResponse(CONTEXTS.sdr),
       "GET /analytics/progress": () => jsonResponse(sellerMarch),
+    });
+    window.location.hash = "#/progress?year=2026&month=3";
+    return (
+      <StoryProviders>
+        <ProgressScreen />
+      </StoryProviders>
+    );
+  },
+};
+
+// A seller's page where a model is set up: the written summary leads the rail.
+export const SellerPageSummary: Story = {
+  render: () => {
+    installFetchStub({
+      ...WORK_ROUTES,
+      "GET /analytics/context": () => jsonResponse(CONTEXTS.sdr),
+      "GET /analytics/progress": () => jsonResponse(sellerMarch),
+      "POST /analytics/progress/summary": () =>
+        jsonResponse(sellerMarchSummary),
     });
     window.location.hash = "#/progress?year=2026&month=3";
     return (

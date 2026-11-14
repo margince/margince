@@ -287,6 +287,37 @@ func TestAChosenMessageIsFiledOnceAsASummary(t *testing.T) {
 	}
 }
 
+func TestAChosenMessageFromBeforeTheLinkAnswersAsMissing(t *testing.T) {
+	e := setupPull(t)
+	e.say("acme", 1, -30, "Before the link: Acme may walk")
+	e.say("acme", 2, 60, "After the link: the 12% is fine")
+	for _, thread := range []bool{false, true} {
+		if _, err := e.filer.FileMessage(e.memberCtx(), chatlinks.RecordDeal, e.deal, "1", thread); !errors.Is(err, chatlinks.ErrMessageNotFound) {
+			t.Fatalf("filing a message from before the link (thread %t) = %v, want ErrMessageNotFound", thread, err)
+		}
+	}
+	if n := len(e.notes(t)); n != 0 {
+		t.Fatalf("talk from before the link was filed: %d notes", n)
+	}
+}
+
+func TestAChosenThreadLeavesOutAReplyStampedBeforeTheLink(t *testing.T) {
+	e := setupPull(t)
+	e.say("acme", 1, 60, "Can we do 12%?")
+	e.say("acme", 2, -30, "Stamped before the link")
+	e.say("acme", 3, 70, "Yes, 12% is fine")
+	for i := range e.history.channels["acme"][1:] {
+		e.history.channels["acme"][i+1].ThreadTS = "m1"
+	}
+	note, err := e.filer.FileMessage(e.memberCtx(), chatlinks.RecordDeal, e.deal, "1", true)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if note.ChatEpisode == nil || note.ChatEpisode.MessageCount != 2 {
+		t.Fatalf("chat_episode = %+v, want the message and the one reply since the link", note.ChatEpisode)
+	}
+}
+
 func (e *pullEnv) memberCtx() context.Context {
 	ctx := principal.WithCorrelationID(principal.WithWorkspaceID(context.Background(), e.ws), ids.NewV7())
 	return principal.WithActor(ctx, chatLinksPrincipal)

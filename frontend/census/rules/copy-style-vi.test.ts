@@ -17,7 +17,7 @@ const voices: Voices = {
   agentSpeaks: "ob.conv.",
   controllerSpeaks: "privacynotice.",
   spokenByTheReader: new Set(["prefs.wording.mine"]),
-  spokenByTheReaderPrefix: "prefs.wording.",
+  spokenByTheReaderPrefixes: ["prefs.wording.", "trial.mail."],
   readByAnOutsider: ["book."],
   serverWorded: new Set(["confirm.server"]),
 };

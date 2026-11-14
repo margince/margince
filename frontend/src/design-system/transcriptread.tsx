@@ -22,14 +22,12 @@ import { worklistKey } from "../lib/workkeys";
 import { Badge, Button, Card, EmptyState, Skeleton } from "./atoms";
 import { Callout } from "./callout";
 import { ErrorLine } from "./errorline";
-import { Eyebrow } from "./eyebrow";
-import { AutonomyDot, formatSourceLines } from "./trust";
+import { AutonomyDot } from "./trust";
 import "./transcriptread.css";
 import { approvalQuery } from "../lib/approvalread";
 
 type Activity = components["schemas"]["Activity"];
 type TranscriptReadReport = components["schemas"]["TranscriptReadReport"];
-type TranscriptSummaryPoint = components["schemas"]["TranscriptSummaryPoint"];
 
 // A transcript is a spoken conversation the rep pasted or uploaded, so only a
 // call or a meeting can carry one — `source_system` is an idempotency-key part
@@ -290,12 +288,26 @@ function TranscriptReadBody({
   const { locale } = useLocale();
   const queryClient = useQueryClient();
   const status = report.status;
+  const readId = report.read_id;
   const previous = useRef(status);
   useEffect(() => {
     const wasWorking =
       previous.current === "queued" || previous.current === "running";
     previous.current = status;
-    if (!(wasWorking && status === "done")) {
+    if (status !== "done") {
+      return;
+    }
+    if (!wasWorking) {
+      // A reading first seen done may have finished after the shared latest
+      // read was fetched, and that read carries the summary.
+      const latest = queryClient.getQueryData<TranscriptReadReport | null>(
+        transcriptReadLatestKey(activityId),
+      );
+      if (latest?.read_id !== readId || latest.status !== "done") {
+        queryClient.invalidateQueries({
+          queryKey: transcriptReadLatestKey(activityId),
+        });
+      }
       return;
     }
     // The reading wrote tasks and findings onto records this card is not told
@@ -308,7 +320,7 @@ function TranscriptReadBody({
     queryClient.invalidateQueries({
       queryKey: transcriptReadLatestKey(activityId),
     });
-  }, [status, queryClient, activityId]);
+  }, [status, readId, queryClient, activityId]);
 
   return (
     <div className="transcript-reading">
@@ -330,10 +342,9 @@ function TranscriptReadBody({
 }
 
 /**
- * TranscriptReadCard offers one reading of one transcript (S-E04.3): the model
- * reads the normalized lines and stages every next step the conversation
- * STATES as a 🟡 proposal, citing the lines it read them from. Nothing reaches
- * the timeline until a human confirms in the inbox.
+ * TranscriptReadCard offers one reading of one transcript. The model
+ * reads the next steps the conversation STATES, each citing its lines. A staged
+ * proposal waits for a human to confirm it. The summary is shown at once.
  *
  * 422 (this activity carries no transcript) and 501 (no model configured)
  * surface their honest cause rather than a generic failure.
@@ -410,7 +421,7 @@ export function TranscriptReadCard({
 
 // The newest reading of one transcript. The summary above the transcript and
 // the reading card below it share this one fetch.
-function useLatestTranscriptRead(activityId: string) {
+export function useLatestTranscriptRead(activityId: string) {
   return useQuery({
     queryKey: transcriptReadLatestKey(activityId),
     queryFn: async () => {
@@ -427,68 +438,4 @@ function useLatestTranscriptRead(activityId: string) {
       return data ?? null;
     },
   });
-}
-
-/**
- * TranscriptSummary is the short summary a reading wrote onto a meeting, drawn
- * above its transcript with the AI mark. Each point names the lines it was read
- * from. It draws nothing until a reading has written one, and a reading whose
- * summary was refused leaves the earlier one in place.
- */
-export function TranscriptSummary({
-  activityId,
-}: Readonly<{ activityId: string }>) {
-  const t = useT();
-  const latest = useLatestTranscriptRead(activityId);
-  // A failed re-read hides the summary rather than keep words an erasure may
-  // have removed.
-  const summary = latest.isError ? undefined : latest.data?.summary;
-  if (!summary) {
-    return null;
-  }
-  return (
-    <section
-      className="transcript-summary"
-      aria-label={t("transcriptread.summaryTitle")}
-    >
-      <p className="transcript-status">
-        <Badge tone="ai">{t("co.assistant.aiTag")}</Badge>
-        <span className="t-caption">{t("transcriptread.summaryTitle")}</span>
-      </p>
-      <SummaryPoints
-        title={t("transcriptread.keyPoints")}
-        points={summary.key_points}
-      />
-      {summary.next_steps.length > 0 && (
-        <SummaryPoints
-          title={t("transcriptread.nextSteps")}
-          points={summary.next_steps}
-        />
-      )}
-    </section>
-  );
-}
-
-function SummaryPoints({
-  title,
-  points,
-}: Readonly<{ title: string; points: TranscriptSummaryPoint[] }>) {
-  const plural = usePlural();
-  return (
-    <>
-      <Eyebrow>{title}</Eyebrow>
-      <ul className="transcript-summary-points">
-        {points.map((point) => (
-          <li key={`${point.source_lines.join(",")}:${point.text}`}>
-            {point.text}{" "}
-            <span className="t-caption">
-              {plural("trust.evidenceLine", point.source_lines.length, {
-                lines: formatSourceLines(point.source_lines),
-              })}
-            </span>
-          </li>
-        ))}
-      </ul>
-    </>
-  );
 }

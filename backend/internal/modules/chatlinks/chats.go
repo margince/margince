@@ -55,14 +55,14 @@ var (
 	ErrRecordAlreadyLinked = errors.New("chatlinks: the record already has a channel")
 	// ErrLinkNotFound: the record has no channel.
 	ErrLinkNotFound = errors.New("chatlinks: the record has no channel")
-	// ErrMessageNotFound: the named message is not in the record's channel.
+	// ErrMessageNotFound means the named message is not in the record's channel.
 	ErrMessageNotFound = errors.New("chatlinks: the message was not found in the channel")
-	// ErrThreadTooLong: the thread is longer than one filing reads, so it is
+	// ErrThreadTooLong means the thread is longer than one filing reads, so it is
 	// not filed in part.
 	ErrThreadTooLong = errors.New("chatlinks: the thread is too long to file")
-	// ErrNoSummaryModel: no AI model is bound to summarise chat talk.
+	// ErrNoSummaryModel means no AI model is bound to summarise chat talk.
 	ErrNoSummaryModel = errors.New("chatlinks: no AI model summarises chat talk")
-	// ErrSummaryFailed: the model could not summarise the talk; nothing was filed.
+	// ErrSummaryFailed means the model could not summarise the talk; nothing was filed.
 	ErrSummaryFailed = errors.New("chatlinks: the talk could not be summarised")
 	// ErrChatUnreachable: the chat could not be reached; nothing was written.
 	ErrChatUnreachable = errors.New("chatlinks: the chat could not be reached")

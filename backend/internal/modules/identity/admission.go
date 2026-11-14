@@ -45,6 +45,10 @@ func (h Handlers) serveAsAgent(ctx context.Context, w http.ResponseWriter, r *ht
 		httperr.Write(w, r, err)
 		return
 	}
+	if err := h.refuseAfterTrial(ctx, r); err != nil {
+		httperr.Write(w, r, err)
+		return
+	}
 	ctx = auth.WithIndividualPerformance(ctx, allowed)
 	next.ServeHTTP(w, r.WithContext(principal.WithActor(ctx, agent.Principal())))
 }
@@ -75,6 +79,12 @@ func (h Handlers) serveAsHuman(ctx context.Context, w http.ResponseWriter, r *ht
 	// mutating GET.
 	if id.SeatType == string(principal.SeatRead) && isMutating(r.Method) && !readSeatMayMutate(r) {
 		httperr.Write(w, r, apperrors.ErrSeatTierInsufficient)
+		return
+	}
+
+	// After the seat ceiling, so a read seat keeps its own answer.
+	if err := h.refuseAfterTrial(ctx, r); err != nil {
+		httperr.Write(w, r, err)
 		return
 	}
 

@@ -279,11 +279,12 @@ func typeOrInvalid(t types.Type) types.Type {
 	return t
 }
 
-// censusReassigned records each package variable some statement assigns, so
-// one is a sentinel only while its declaration is all it is ever given.
+// censusReassigned records each variable an assignment names. A package
+// variable is then no sentinel, and a parameter no longer resolves from what
+// its call site passed.
 func (g *switchGraph) censusReassigned(assign *ast.AssignStmt, info *types.Info) {
 	for _, lhs := range assign.Lhs {
-		if v, ok := assignedObject(lhs, info).(*types.Var); ok && isPackageVar(v) {
+		if v, ok := assignedObject(ast.Unparen(lhs), info).(*types.Var); ok {
 			g.reassigned[v] = true
 		}
 	}

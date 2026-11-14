@@ -14,6 +14,7 @@ import (
 	"fmt"
 	"strings"
 	"time"
+	"unicode/utf8"
 
 	"github.com/jackc/pgx/v5"
 
@@ -94,9 +95,9 @@ func summaryPointFault(point TranscriptSummaryPoint, lineCount int) string {
 	switch {
 	case strings.TrimSpace(point.Text) == "":
 		return "a summary point is empty"
-	case len(point.Text) > MaxTranscriptSummaryPointText:
+	case utf8.RuneCountInString(point.Text) > MaxTranscriptSummaryPointText:
 		return fmt.Sprintf("a summary point is %d characters, and at most %d may be written",
-			len(point.Text), MaxTranscriptSummaryPointText)
+			utf8.RuneCountInString(point.Text), MaxTranscriptSummaryPointText)
 	}
 	if msg := TranscriptCitationFault(point.SourceLines, lineCount, MaxTranscriptCitedLines); msg != "" {
 		return "a summary point " + msg

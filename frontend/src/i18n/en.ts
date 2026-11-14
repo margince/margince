@@ -15398,6 +15398,68 @@ export const en = {
 
   "licensebanner.body":
     "This installation’s license token was checked and refused.",
+  "trial.pill.days_one": "Trial · {count} day left",
+  "trial.pill.days_other": "Trial · {count} days left",
+  "trial.pill.closing_one": "{count} day left of your trial",
+  "trial.pill.closing_other": "{count} days left of your trial",
+  "trial.pill.lastDay": "Last day of your trial",
+  "trial.pill.ended": "Trial ended · Contact Margince",
+  "trial.notice.daysLeft_one": "{count} day left of your trial",
+  "trial.notice.daysLeft_other": "{count} days left of your trial",
+  "trial.notice.body":
+    "On {date}, Margince locks and background work pauses until it has a license. Your data stays as it is.",
+  "trial.notice.endedTitle": "Your trial has ended",
+  "trial.notice.hideToday": "Hide until tomorrow",
+  "trial.notice.endedBody":
+    "Margince locked on {date}, and background work is paused until it has a license. Your data stays as it is, and nothing is deleted.",
+  "trial.contact.title": "Talk to the Margince team",
+  "trial.contact.endsOn": "Your trial ends on {date}",
+  "trial.contact.endedOn": "Your trial ended on {date}",
+  "trial.contact.legend": "What would help?",
+  "trial.contact.ask.time": "More time",
+  "trial.contact.ask.time.hint": "Extend the trial.",
+  "trial.contact.ask.license": "A license",
+  "trial.contact.ask.license.hint": "Keep Margince, data and all.",
+  "trial.contact.ask.call": "A short call",
+  "trial.contact.ask.call.hint": "Talk it through first.",
+  "trial.contact.note": "Anything to add?",
+  "trial.contact.optional": "Optional",
+  "trial.contact.preview": "Your message",
+  "trial.contact.to": "To",
+  "trial.contact.subject": "Subject",
+  "trial.contact.copy": "Copy text",
+  "trial.contact.copied": "Text copied",
+  "trial.contact.copyRemedy": "Select the email text and copy it yourself.",
+  "trial.contact.open": "Open in my mail app",
+  "trial.contact.form": "Open the contact form",
+  "trial.contact.how":
+    "Paste it into the contact form on the Margince website, or send it to this address from any mail program.",
+  "trial.mail.subject.time": "{company}: more time for the Margince trial",
+  "trial.mail.subject.license": "{company}: a Margince license",
+  "trial.mail.subject.call": "{company}: a short call about Margince",
+  "trial.mail.greeting": "Hello Margince team,",
+  "trial.mail.ask.time":
+    "We need more time to try Margince. Could you extend our trial?",
+  "trial.mail.ask.license":
+    "We would like to keep using Margince. Could you send us an offer for a license?",
+  "trial.mail.ask.call":
+    "We would like to talk Margince through before we decide. Could we book a short call?",
+  "trial.mail.company": "Company: {company}",
+  "trial.mail.ends": "Trial ends: {date}",
+  "trial.mail.ended": "Trial ended: {date}",
+  "trial.mail.seats": "Seats in use: {seats}",
+  "trial.mail.signoff": "Best regards,",
+  "trial.locked.pageTitle": "Trial ended",
+  "trial.locked.title": "Your Margince trial has ended",
+  "trial.locked.adminTitle": "Have a license key?",
+  "trial.locked.body":
+    "Margince is locked, and background work is paused until it has a license. Your data stays as it is, and nothing is deleted.",
+  "trial.locked.admin":
+    "Set it as license.token or MARGINCE_LICENSE in this installation’s configuration, then start Margince again. If you replaced a token file, check now instead. Background work then resumes on its own, without a restart.",
+  "trial.locked.member":
+    "Your admin can get a license from the Margince team. You can also write to them yourself.",
+  "common.trialEnded":
+    "This installation’s trial has ended, so this change waits for a license. Your data stays as it is.",
   "licensebanner.link": "Open {tab}",
   "licensebanner.grace.title": "License expired",
   "licensebanner.grace.body":
@@ -19578,6 +19640,7 @@ export const en = {
   "worklist.title.automation_run.failed": "{name} failed",
   "worklist.title.automation_run.blocked": "{name} was blocked",
   "worklist.title.meeting_outcome": "Record the outcome of {name}",
+  "worklist.title.meeting_outcome.read_only": "No outcome yet for {name}",
   "worklist.title.meeting_follow_up": "Follow up on {name}",
   "worklist.title.awaiting_reply": "No reply yet: {name}",
   "worklist.title.bounce": "Bounced: {name}",
@@ -19844,6 +19907,8 @@ export const en = {
     "A colleague asks you to introduce them to a contact. Accept or decline the request.",
   "worklist.ask.meeting_outcome":
     "This meeting is over and nothing records how it went. Record what came of it. If it did not take place, choose “Did not happen”, or cancel it through its calendar invitation.",
+  "worklist.ask.meeting_outcome.read_only":
+    "Whoever organized this meeting records how it went, and you cannot change it. Remind them if it matters, then mark it done.",
   "worklist.ask.weekly_commitment":
     "You planned this for the week. Do the work, or move it in your weekly plan.",
   "worklist.ask.awaiting_reply":
@@ -21702,7 +21767,7 @@ export const en = {
   "aiTask.name.propose_roles": "Buying-role reading",
   "aiTask.name.rate_extract": "Exchange rate extraction",
   "aiTask.name.report_interpret": "Assessing a sales report",
-  "aiTask.name.report_setup": "Setting up a report from a description",
+  "aiTask.name.report_setup": "Proposing a report setup or sales goals",
   "aiTask.name.request_settlement":
     "Checking whether the reply answered the request",
   "aiTask.name.rewrite": "Rewriting",
@@ -22363,7 +22428,11 @@ export const en = {
   "brief.done.noReason": "Reason unavailable",
   "brief.done.markedLost": "Marked lost",
   "brief.done.customerWrote": "The customer wrote:",
-  "magic.lane.doneOther": "Other updates",
+  "brief.done.small_one": "{count} small change",
+  "brief.done.small_other": "{count} small changes",
+  "brief.done.smallLabel": "Small changes, newest first",
+  "brief.done.why": "Why",
+  "brief.done.undoNote": "Undo",
   "changes.bulk.undone_one": "Undone on {count} deal.",
   "changes.bulk.undone_other": "Undone on {count} deals.",
   "changes.bulk.partly_one": "{count} deal was partly undone.",
@@ -22469,6 +22538,10 @@ export const en = {
   "progress.work.more": "Show more",
   "progress.plannedAhead": "Open pipeline, not won yet",
   "progress.rail": "Goal and definition",
+  "progress.summary": "Summary",
+  "progress.summary.refresh": "Refresh summary",
+  "progress.summary.writing": "Writing the summary",
+  "progress.summary.more": "Read the full summary",
   "progress.goalFor": "Goal for {period}",
   "progress.goalMonths": "Months with a goal",
   "progress.goalMonthsSet": "{set} of {needed}",
@@ -22514,6 +22587,16 @@ export const en = {
   "goals.status": "Status",
   "goals.yearly": "Yearly goal in {currency}",
   "goals.spread": "Spread equally",
+  "goals.propose": "Propose months",
+  "goals.propose.busy": "Reading the sales won so far",
+  "goals.propose.title": "Proposed: {total} for the year",
+  "goals.propose.review": "Nothing is saved until you save the draft.",
+  "goals.propose.apply": "Use these months",
+  "goals.propose.noModel":
+    "Proposing months needs an AI model that is set up. You can still enter the months by hand.",
+  "goals.propose.noHistory":
+    "{name} has no sales won in {year} or the year before to read a pattern from. Enter the months by hand.",
+  "goals.proposedByAi": "Proposed by Margince",
   "goals.monthsSum": "The months add up to {total}.",
   "goals.monthsMissing_one": "{count} month is not set.",
   "goals.monthsMissing_other": "{count} months are not set.",

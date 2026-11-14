@@ -13,11 +13,8 @@ import { browserZone } from "../format/timezone";
 import { LocaleProvider } from "../i18n";
 import { activityTimeline } from "./activitytimeline";
 import { TimelineRow } from "./timeline";
-import {
-  isTranscriptActivity,
-  TranscriptReadCard,
-  TranscriptSummary,
-} from "./transcriptread";
+import { isTranscriptActivity, TranscriptReadCard } from "./transcriptread";
+import { TranscriptSummary } from "./transcriptsummary";
 
 // Reading a meeting transcript for the next steps it states (S-E04.3).
 //
@@ -97,6 +94,7 @@ function report(overrides: Partial<Report>): Report {
  */
 function stubReads(options: {
   stored?: Report;
+  latest?: () => Response;
   read?: () => Response;
   post?: () => Response;
   // What became of each staged approval, by id. The card asks the approval
@@ -139,6 +137,9 @@ function stubReads(options: {
         });
       }
       if (url.pathname.endsWith("/transcript-proposals/latest")) {
+        if (options.latest) {
+          return options.latest();
+        }
         return options.stored
           ? jsonResponse(options.stored)
           : jsonResponse({}, 404);
@@ -602,6 +603,11 @@ describe("the summary a reading wrote onto the meeting", () => {
       name: "Meeting summary",
     });
     expect(section.textContent).toContain("AI-assisted");
+    expect(
+      screen
+        .getAllByRole("heading", { level: 3 })
+        .map((heading) => heading.textContent),
+    ).toEqual(["Key points", "Next steps"]);
     expect(screen.getByText("Volumes rose fifteen percent.")).toBeTruthy();
     expect(screen.getByText("lines 3–4")).toBeTruthy();
     expect(
@@ -651,6 +657,32 @@ describe("the summary a reading wrote onto the meeting", () => {
       expect(calls.some((call) => call.endsWith("/latest"))).toBe(true),
     );
     expect(container.textContent).toBe("");
+  });
+
+  it("shows the summary of a reading that finished between the latest read and the card's own", async () => {
+    let latestReads = 0;
+    stubReads({
+      latest: () => {
+        latestReads += 1;
+        return jsonResponse(
+          latestReads === 1
+            ? report({ status: "running" })
+            : report({ summary }),
+        );
+      },
+      read: () => jsonResponse(report({ summary })),
+    });
+    render(
+      <>
+        <TranscriptSummary activityId="a-1" />
+        <TranscriptReadCard activityId="a-1" />
+      </>,
+    );
+
+    expect(
+      await screen.findByText("Volumes rose fifteen percent."),
+    ).toBeTruthy();
+    expect(latestReads).toBe(2);
   });
 
   it("says in the reading box that this reading wrote no summary, and keeps the earlier one", async () => {

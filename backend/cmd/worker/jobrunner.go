@@ -127,7 +127,7 @@ func startJobRunner(ctx context.Context, pool *pgxpool.Pool, vault keyvault.Vaul
 	} else {
 		schedules.CatchUpFrom(lastRuns)
 	}
-	runner, err := newJobRunner(pool, logger, cfg, schedules, captureReg, watchCfg, vault, lanes, modelPath, weeklyMail)
+	runner, err := newJobRunner(ctx, pool, logger, cfg, schedules, captureReg, watchCfg, vault, lanes, modelPath, weeklyMail)
 	if err != nil {
 		return nil, err
 	}
@@ -203,7 +203,7 @@ func stopJobRunner(ctx context.Context, lane jobLane, logger *slog.Logger, drain
 // deployment condition that turns it on — or the omission that honestly leaves
 // it off. One declaration, so no lane can be enabled by one boot phase and
 // starved by another.
-func newJobRunner(pool *pgxpool.Pool, logger *slog.Logger, cfg workerConfig, schedules *compose.ScheduleBook, captureReg *capture.Registry, watchCfg compose.GmailWatchConfig, vault keyvault.Vault, lanes workerLanes, modelPath compose.ModelPath, weeklyMail compose.WeeklyMailConfig) (*jobs.Runner, error) {
+func newJobRunner(ctx context.Context, pool *pgxpool.Pool, logger *slog.Logger, cfg workerConfig, schedules *compose.ScheduleBook, captureReg *capture.Registry, watchCfg compose.GmailWatchConfig, vault keyvault.Vault, lanes workerLanes, modelPath compose.ModelPath, weeklyMail compose.WeeklyMailConfig) (*jobs.Runner, error) {
 	// Firing a scheduled message stages its delivery and enqueues the dispatch
 	// job, through the SAME machinery an immediate send uses. Insert-only, like
 	// the api's: this role works what it inserts, and a stager built on the
@@ -213,6 +213,7 @@ func newJobRunner(pool *pgxpool.Pool, logger *slog.Logger, cfg workerConfig, sch
 		return nil, err
 	}
 	return compose.NewJobRunner(pool, logger, compose.JobRunnerConfig{
+		Paused:               workPause(ctx),
 		ListsEnabled:         cfg.listsEnabled,
 		DisabledCoreFeatures: config.Val(cfg.settings, ps.CoreFeaturesDisabled),
 		DataTasksPace:        cfg.dataTasksPace,

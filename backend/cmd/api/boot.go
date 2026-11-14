@@ -13,11 +13,13 @@ import (
 	"fmt"
 	"io"
 	"log/slog"
+	"time"
 
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/redis/go-redis/v9"
 
 	"github.com/margince/margince/backend/internal/compose"
+	"github.com/margince/margince/backend/internal/compose/installtrial"
 	ps "github.com/margince/margince/backend/internal/compose/programsettings"
 	"github.com/margince/margince/backend/internal/modules/ai"
 	"github.com/margince/margince/backend/internal/modules/webforms"
@@ -300,12 +302,11 @@ func declaredSurfaceOptions(ctx context.Context, cfg apiConfig, bootstrap deploy
 
 // sharedRedisClient opens the ONE raw-Redis handle this role holds, plus the
 // close func the caller defers for the process lifetime. Two surfaces share it:
-// the agent volume meter and the
-// non-production data reset, which purges the streams and announces itself over
-// the same connection. Sharing is the point — a second client would be a second
-// connection to the same server for no gain — and it is deliberately NOT the
-// inline relay's client, which a split deployment (--inline-relay=false) does
-// not build at all.
+// the agent volume meter and the non-production data reset, which purges the
+// streams and announces itself over the same connection. A second client would
+// be a second connection to the same server for no gain. It is not the inline
+// relay's client, which a split deployment (--inline-relay=false) does not
+// build at all.
 //
 // A LAZY client (no boot ping): a split-deployment api that cannot reach Redis
 // must still boot. A reset then reports the unreachable bus as the error it is,
@@ -355,12 +356,12 @@ func agentVolumeOptions(volumeMeter *agentvolume.Meter) []compose.Option {
 // inlineRelayLane runs the outbox relay in this process unless the deployment
 // split it out to cmd/worker (--inline-relay=false). The returned stop is a
 // no-op in that split case, so the caller stops one lane either way.
-func inlineRelayLane(ctx context.Context, cfg apiConfig, pool *pgxpool.Pool, logger *slog.Logger, stdout io.Writer) ([]compose.Option, func(), error) {
+func inlineRelayLane(ctx context.Context, cfg apiConfig, pool *pgxpool.Pool, license *licensecheck.Watcher, logger *slog.Logger, stdout io.Writer) ([]compose.Option, func(), error) {
 	if !cfg.inlineRelay {
-		// No inline relay to stop: cmd/worker is running it.
 		return nil, func() {}, nil
 	}
-	busReady, stop, err := startInlineRelay(ctx, pool, cfg.redisAddr, cfg.redisPassword, cfg.webhookKey, cfg.publicBaseURL, logger)
+	paused := installtrial.New(pool, cfg.posture, license.Posture, time.Now).Paused(logger)
+	busReady, stop, err := startInlineRelay(ctx, pool, cfg.redisAddr, cfg.redisPassword, cfg.webhookKey, cfg.publicBaseURL, paused, logger)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -474,8 +475,7 @@ func workerHandoffOptions(
 		// An approved import commits, and an undo reverses, in the worker: the
 		// move and its job are one transaction, so the 202 means work is queued.
 		compose.WithImportJobs(sendInserter),
-		// A chat link's card is posted by the worker. This follows
-		// WithChannelSurface, so a Dispact bot connects beside Telegram.
+		// After WithChannelSurface, so a Dispact bot connects beside Telegram.
 		compose.WithChatLinks(sendInserter, gates.privateChat, chatSummaryLane(modelPath)),
 	}
 

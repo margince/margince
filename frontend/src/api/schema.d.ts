@@ -3739,6 +3739,9 @@ export interface paths {
          *     an invoice they cannot see answers 404 like one that does not exist. 422 when the
          *     connected source serves no documents (`invoice_documents` on the summary is false),
          *     and 502 when the source could not be reached or answered something other than a PDF.
+         *     Each request is a live call to the vendor, so one caller may fetch at most 20
+         *     documents in each fixed one-minute window; past that the read answers 429 until
+         *     the window ends.
          */
         get: operations["downloadFinanceInvoicePdf"];
         put?: never;
@@ -10580,6 +10583,30 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/analytics/progress/summary": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * A few written sentences on where one Progress reading stands against its sales goal and what is still open.
+         * @description The model reads the figures `GET /analytics/progress` answers for the same period and
+         *     scope, under the caller's own reach, and nothing else. Each sentence cites the figures it
+         *     rests on, and a sentence quoting a number none of them holds is dropped. The answer is kept
+         *     per reader until a figure moves. Without a model, or when the reply cannot be grounded, it
+         *     answers no sentences and `generated_by` says so, and Progress shows its figures alone.
+         */
+        post: operations["summarizeSalesProgress"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/analytics/sales-goals": {
         parameters: {
             query?: never;
@@ -10647,6 +10674,34 @@ export interface paths {
         post?: never;
         /** Discard the shared draft and keep the published goals. */
         delete: operations["discardSalesGoalDraft"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/analytics/sales-goals/{owner_id}/{year}/proposed-months": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                owner_id: string;
+                year: number;
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Twelve monthly goals proposed for one seller from their closed revenue. Nothing is saved.
+         * @description The model reads the seller's closed revenue by month for the plan year and the year before,
+         *     and the yearly goal when the request gives one. It answers twelve months and one or two
+         *     sentences on the pattern it followed. With a yearly goal the months add up to it exactly.
+         *     The reader reviews the months in the editor and saves them as a draft with origin `ai`.
+         *     Only a reader who may set this seller's goals may ask. Without a model it answers 409
+         *     `ai_not_configured`, and with no closed revenue in either year 409 `no_sales_history`.
+         */
+        post: operations["proposeSalesGoalMonths"];
+        delete?: never;
         options?: never;
         head?: never;
         patch?: never;
@@ -27717,6 +27772,33 @@ export interface components {
              */
             checked_at: string;
             license?: components["schemas"]["LicenseHolder"];
+            trial?: components["schemas"]["LicenseTrial"];
+        };
+        /**
+         * @description The free period of a production installation that has no license. Present only while
+         *     `state` is `absent` on a production installation that has been set up; a development or
+         *     test installation runs unlicensed with no trial.
+         *
+         *     The trial starts when the installation's oldest workspace was created, archived ones
+         *     included, and lasts 14 days, with no grace period. Once `ended` is true, and until a
+         *     license is configured, every agent tool call is refused with `trial_ended`, and so is
+         *     every HTTP change except these: the license routes, `POST /v1/exports`, the data-subject
+         *     request routes, and a seat's own credential routes. Background jobs wait instead of
+         *     running; they do not fail.
+         */
+        LicenseTrial: {
+            /**
+             * Format: date-time
+             * @description When the installation's workspace was created.
+             */
+            started_at: string;
+            /**
+             * Format: date-time
+             * @description The first instant the trial no longer covers.
+             */
+            ends_at: string;
+            /** @description Whether `ends_at` has passed, as the server decides it, so a client with a wrong clock shows the state the installation acts on. */
+            ended: boolean;
         };
         /**
          * @description Who holds the license and how long it lasts, as the validation module proved it.
@@ -39294,6 +39376,22 @@ export interface components {
             /** @description Ask the model again, whatever is kept. */
             refresh?: boolean;
         };
+        SalesProgressSummaryRequest: {
+            /** @enum {string} */
+            period: "month" | "year";
+            year: number;
+            /** @description Required with `period: month`. */
+            month?: number;
+            /**
+             * @description Absent reads the caller's own figures.
+             * @enum {string}
+             */
+            scope_kind?: "owner" | "team";
+            /** Format: uuid */
+            scope_id?: string;
+            /** @description Ask the model again, whatever is kept. */
+            refresh?: boolean;
+        };
         SalesAssessment: {
             /** @description The evaluation the assessment read. */
             evaluation_key: string;
@@ -39329,7 +39427,7 @@ export interface components {
             text: string;
         };
         SalesAssessmentCell: {
-            /** @description `metric:<metric id>` or `point:<metric id>:<group key>`. */
+            /** @description `metric:<metric id>` or `point:<metric id>:<group key>`; a Progress summary names its own figures `progress:<figure>`. */
             id: string;
             label: string;
             /** @description Raw source quantity with its unit. */
@@ -47938,6 +48036,26 @@ export interface components {
              */
             origin: "manual" | "ai" | "adopted";
         };
+        SalesGoalProposalRequest: {
+            /**
+             * Format: int64
+             * @description The yearly goal the months must add up to, when the reader has set one.
+             */
+            yearly_total_minor?: number;
+        };
+        SalesGoalProposal: {
+            /** @description January to December, each an amount of zero or more in minor units of the plan currency. */
+            months: number[];
+            /**
+             * Format: int64
+             * @description What the twelve months add up to.
+             */
+            total_minor: number;
+            /** @description The pattern the proposal followed, in the reader's language, with no figure in it. */
+            reason: string;
+            generated_by: components["schemas"]["WrittenBy"];
+            model_used?: string;
+        };
         SalesGoalPublishInput: {
             reason: string;
             /**
@@ -48537,6 +48655,8 @@ export interface components {
             pipelines?: components["schemas"]["Pipeline"][];
         };
         MeResponse: {
+            /** @description True when this installation runs with no license and its 14-day trial is over. Every seat gets it, not only those who may read the license, because every seat is locked until a license is configured. `LicenseTrial` lists what the lock refuses. Absent while the installation is licensed or still on its trial. */
+            trial_ended?: boolean;
             /** @description Whether this human caller may use the configured activity reader-rendering lane. Absent or false keeps generated text original until an explicit request. */
             reader_rendering_available?: boolean;
             analytics_startup?: components["schemas"]["AnalyticsStartup"];
@@ -67150,6 +67270,15 @@ export interface operations {
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
             422: components["responses"]["ValidationError"];
+            /** @description The caller fetched 20 invoice documents in the current one-minute window. */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
             /** @description The accounting source could not be reached, or did not answer with a PDF. */
             502: {
                 headers: {
@@ -79586,6 +79715,34 @@ export interface operations {
             422: components["responses"]["ValidationError"];
         };
     };
+    summarizeSalesProgress: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SalesProgressSummaryRequest"];
+            };
+        };
+        responses: {
+            /** @description The summary. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SalesAssessment"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
     listSalesGoalSellers: {
         parameters: {
             query: {
@@ -79721,6 +79878,38 @@ export interface operations {
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
             409: components["responses"]["VersionConflict"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    proposeSalesGoalMonths: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                owner_id: string;
+                year: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SalesGoalProposalRequest"];
+            };
+        };
+        responses: {
+            /** @description The proposal. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SalesGoalProposal"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
             422: components["responses"]["ValidationError"];
         };
     };

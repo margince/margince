@@ -23,11 +23,8 @@ import {
   withCreator,
 } from "./provenanceof";
 import type { TimelineEntry } from "./timelineentry";
-import {
-  isTranscriptActivity,
-  TranscriptReadCard,
-  TranscriptSummary,
-} from "./transcriptread";
+import { isTranscriptActivity, TranscriptReadCard } from "./transcriptread";
+import { TranscriptSummary } from "./transcriptsummary";
 
 type Activity = components["schemas"]["Activity"];
 

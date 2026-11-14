@@ -89,6 +89,9 @@ type JobRunnerConfig struct {
 	// moment the context the runner was started under is — which only a test
 	// harness wants.
 	DrainWindow time.Duration
+	// Paused snoozes every job while it answers true: an installation whose
+	// trial has ended does no background work. Nil never pauses.
+	Paused func(context.Context) bool
 	// SendBlob is the object store the send lane AND the document reading read
 	// attachment bytes from. Both need it for the same reason — the bytes are
 	// object-store references, never rows — so they share the field rather than
@@ -386,6 +389,7 @@ func wireJobs(pool *pgxpool.Pool, log *slog.Logger, cfg JobRunnerConfig) (*jobRe
 	if pool != nil {
 		reg.sessionSlots = make(chan struct{}, database.WorkerSessionCapacity(pool.Config().MaxConns))
 	}
+	reg.paused = cfg.Paused
 
 	// The workers, in the groups their gating and their concern make: each
 	// helper registers its own and states what an absent dependency costs

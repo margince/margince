@@ -8,6 +8,7 @@ import (
 	"encoding/json"
 	"io"
 	"log/slog"
+	"strconv"
 	"strings"
 	"testing"
 	"time"
@@ -104,5 +105,30 @@ func TestTheInstructionNamesTheKeyTheSchemaRequires(t *testing.T) {
 		if !strings.Contains(string(raw), field) {
 			t.Errorf("the schema must carry %q, got %s", field, raw)
 		}
+	}
+}
+
+// The limit counts characters, so a German or Vietnamese sentence at the limit
+// is kept although it takes more bytes.
+func TestASummaryPointIsMeasuredInCharacters(t *testing.T) {
+	for _, tc := range []struct {
+		name  string
+		runes int
+		kept  bool
+	}{{"at the limit", activities.MaxTranscriptSummaryPointText, true}, {"one past it", activities.MaxTranscriptSummaryPointText + 1, false}} {
+		t.Run(tc.name, func(t *testing.T) {
+			text := strings.Repeat("ữ", tc.runes)
+			raw, err := json.Marshal(activities.TranscriptSummary{KeyPoints: []activities.TranscriptSummaryPoint{{Text: text, SourceLines: []int{1}}}})
+			if err != nil {
+				t.Fatal(err)
+			}
+			_, fault := Read(raw, 4)
+			if (fault == "") != tc.kept {
+				t.Fatalf("a point of %d characters: kept=%t want %t (%q)", tc.runes, fault == "", tc.kept, fault)
+			}
+			if !tc.kept && !strings.Contains(fault, strconv.Itoa(tc.runes)+" characters") {
+				t.Errorf("the refusal must count characters, got %q", fault)
+			}
+		})
 	}
 }

@@ -93,10 +93,13 @@ func isConsentEntry(r *http.Request) bool {
 //     the same way.
 func AdmittedWithoutSession(r *http.Request) bool {
 	return isPublicRequest(r) ||
-		strings.HasPrefix(r.URL.Path, "/v1/public/") ||
+		strings.HasPrefix(r.URL.Path, publicBookingPrefix) ||
 		isConnectorOAuthCallback(r.URL.Path) ||
 		isExtensionOAuthCallback(r.URL.Path)
 }
+
+// publicBookingPrefix is the anonymous booking surface's mount.
+const publicBookingPrefix = "/v1/public/"
 
 func isPublicRequest(r *http.Request) bool {
 	return publicRequests[r.URL.Path][r.Method] || (r.Method == http.MethodGet && isOIDCLoginRequest(r.URL.Path))
@@ -174,6 +177,14 @@ func (h Handlers) Middleware(next http.Handler) http.Handler {
 		ctx = principal.WithWorkspaceID(ctx, wsID.UUID)
 
 		if AdmittedWithoutSession(r) {
+			// Sign-in stays open after the trial, so a seat can reach the screen
+			// that says so. The anonymous booking surface is work, and stops.
+			if strings.HasPrefix(r.URL.Path, publicBookingPrefix) {
+				if err := h.refuseAfterTrial(ctx, r); err != nil {
+					httperr.Write(w, r, err)
+					return
+				}
+			}
 			next.ServeHTTP(w, r.WithContext(ctx))
 			return
 		}

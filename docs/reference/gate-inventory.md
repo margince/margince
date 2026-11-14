@@ -189,6 +189,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `rbacvocabulary_test.go` | H3 | The RBAC vocabulary is declared in the contract and restated in Go, and the two must not drift. |
 | `recordkindopenlist_test.go` | H3 | A column that names a kind of record accepts an extension's kind. |
 | `regionalformats_test.go` | H3 | The store validates through the generated read enum. |
+| `releasepublisheroption_test.go` | H2 | _(no doc comment)_ |
 | `reopenconditionparity_test.go` | H3 | What a snooze may wait for is spelled in four places, and all four must agree. |
 | `requestkeyconflict_test.go` | H2 | A row keyed by a client's request id is written conflict-first. |
 | `requirementseam_test.go` | H1 | The two halves of the requirement seam describe the same thing. |

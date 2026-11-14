@@ -92,7 +92,7 @@ var errModelDeferred = errors.New("chat pull: the model deferred the call")
 // at link time reads it.
 func (p *Puller) pullLink(ctx context.Context, session chatlinks.Session, link chatlinks.Link) error {
 	read, err := readHistory(ctx, session.Chat, link, pullPages, func(m dispact.Message) bool {
-		return judged(m) && !m.PostedAt.Before(link.CreatedAt)
+		return judged(m) && postedSinceLink(m, link)
 	})
 	if err != nil {
 		return err
@@ -119,6 +119,12 @@ func (p *Puller) pullLink(ctx context.Context, session chatlinks.Session, link c
 		_, err = p.Store.AdvanceHistory(ctx, link.ID, cursor, read.highest, false)
 	}
 	return err
+}
+
+// postedSinceLink says whether m was posted once the link existed. Talk from
+// before it reaches a record only through the backfill asked for at link time.
+func postedSinceLink(m dispact.Message, link chatlinks.Link) bool {
+	return !m.PostedAt.Before(link.CreatedAt)
 }
 
 // cutByPageCap reopens the last episode of a read that stopped at the page
