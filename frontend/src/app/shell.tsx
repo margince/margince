@@ -237,6 +237,9 @@ export function Shell({
                 onOpenSearch={onOpenSearch}
               />
             )}
+            {/* Mounted from the start: it holds the outage watcher, and a
+                known offline state shows in the first paint. */}
+            <ConnectivityBanner />
             <ShellBanners />
             {/* The import's gauge, floating bottom-centre of this column for as
             long as mail is arriving. Inside `.main` rather than beside the
@@ -279,7 +282,6 @@ function ShellBanners() {
   return (
     <>
       <CaptureHealthBanner />
-      <ConnectivityBanner />
       <EconomyBanner />
       <EmbedReindexBanner />
       <LicenseBanner />
