@@ -3,35 +3,35 @@
   "provider": "gemini",
   "served_model": "gemini-3.6-flash",
   "env_class": "cloud_frontier",
-  "prompt_version": "p36d82e96a5f1530f86b3c1bbac2816ec",
+  "prompt_version": "pa7cfe1237d07e48534d3cf883db85197",
   "corpus_version": "v1",
-  "verdict": "certified",
-  "runs": 12,
-  "passed": 12,
+  "verdict": "supported_degraded",
+  "runs": 30,
+  "passed": 30,
   "reliability": 1,
-  "reported_accepted": 12,
+  "reported_accepted": 30,
   "reported_wrong_answer": 0,
   "reported_invalid": 0,
   "reported_abstained": 0,
   "certified_scope": "full_invocation",
   "context_applied": false,
   "context_scopes": null,
-  "judge_score_p50": 96,
-  "judge_score_min": 95,
-  "latency_p50": 2070,
-  "latency_p95": 2502,
-  "mean_tokens": 1052,
-  "mean_tokens_in": 862,
-  "mean_tokens_out": 189,
+  "judge_score_p50": 95,
+  "judge_score_min": 7,
+  "latency_p50": 1666,
+  "latency_p95": 6718,
+  "mean_tokens": 1096,
+  "mean_tokens_in": 766,
+  "mean_tokens_out": 330,
   "mean_cached_tokens": 0,
   "mean_cache_write_tokens": 0,
-  "est_cost_microusd": 1355,
+  "est_cost_microusd": 1812,
   "judge_served_model": "claude-sonnet-5-5",
   "judge_provider": "claude_cli",
   "self_judged": false,
   "served_identity_source": "response",
   "thinking_level": "low",
-  "ran_at": "2026-11-10T09:18:42Z",
+  "ran_at": "2026-11-14T04:37:35Z",
   "scenarios": [
     {
       "scenario": "custom_report_setup_names_back_a_measure_it_cannot_express",
@@ -43,7 +43,7 @@
       "passed": 3,
       "judge_scores": [
         96,
-        95,
+        96,
         96
       ],
       "bands": {
@@ -67,7 +67,7 @@
       "judge_scores": [
         97,
         97,
-        97
+        96
       ],
       "bands": {
         "certified_min": 70,
@@ -89,7 +89,7 @@
       "passed": 3,
       "judge_scores": [
         96,
-        95,
+        96,
         96
       ],
       "bands": {
@@ -112,7 +112,7 @@
       "passed": 3,
       "judge_scores": [
         96,
-        96,
+        97,
         97
       ],
       "bands": {
@@ -121,6 +121,64 @@
         "floor": 40
       },
       "reported_accepted": 3,
+      "reported_wrong_answer": 0,
+      "reported_invalid": 0,
+      "reported_abstained": 0
+    },
+    {
+      "scenario": "sales_goal_months_follows_last_years_seasons",
+      "site": "sales_goal_months",
+      "stamp": "1a277977513b19b10a917f8b13120f8bd4ed4b5293e7f3cfabf00b7a6ffd4d76b889aca285cb77bd7cc4168fdd388c29799d4c85e14d392ae629c90a3cd0f9dae4e976139c193132a2bca79e9a2c72015fcb5c30e5fc1e611e2af029065e7e28",
+      "verdict": "supported_degraded",
+      "judge_band": "supported_degraded",
+      "runs": 9,
+      "passed": 9,
+      "judge_scores": [
+        88,
+        95,
+        7,
+        96,
+        92,
+        95,
+        95,
+        88,
+        90
+      ],
+      "bands": {
+        "certified_min": 70,
+        "degraded_min": 50,
+        "floor": 40
+      },
+      "reported_accepted": 9,
+      "reported_wrong_answer": 0,
+      "reported_invalid": 0,
+      "reported_abstained": 0
+    },
+    {
+      "scenario": "sales_goal_months_spreads_a_given_yearly_goal",
+      "site": "sales_goal_months",
+      "stamp": "8d37ce29b78af75e066c60a8b1f214ee8feceba32f964b22315f4fe113e0978a83b51d2a5d51b9f20d16dddc0cf159f30113253ffbf4ff9230cb280328600e9c3d643a9f0448db3665e2f48b9c8c74dc87b16b088d950b4c624059cce8adbfda",
+      "verdict": "supported_degraded",
+      "judge_band": "supported_degraded",
+      "runs": 9,
+      "passed": 9,
+      "judge_scores": [
+        95,
+        13,
+        92,
+        86,
+        17,
+        12,
+        95,
+        20,
+        25
+      ],
+      "bands": {
+        "certified_min": 70,
+        "degraded_min": 50,
+        "floor": 40
+      },
+      "reported_accepted": 9,
       "reported_wrong_answer": 0,
       "reported_invalid": 0,
       "reported_abstained": 0
