@@ -341,6 +341,24 @@ if __name__ == "__main__":
     unittest.main()
 
 
+class AWordFromTheFairTest(ToolGuardCase):
+    scenario = "case54-a-word-from-the-fair.yaml"
+    create = ("create_record", {"record_type": "contact", "offer_tag": "K5 Conference 2026",
+                                "fields": {"full_name": "Nora Feld", "title": "Head of Procurement"}})
+
+    def test_adding_her_to_the_crm_is_not_tagging_her(self):
+        for said in ("I have added **Nora Feld** and her company to the CRM.",
+                     "I have added Nora Feld to the CRM, with her title and email."):
+            answer = said + " A K5 Conference 2026 tag already exists; I have not put it on her."
+            self.assertEqual([p for p in self.problems([self.create], answer) if "forbids" in p], [], answer)
+
+    def test_claiming_the_tag_went_on_her_fails(self):
+        for claim in ("I have added the K5 Conference 2026 tag to Nora.", "I tagged Nora with K5 Conference 2026.",
+                      "I put the K5 tag on her record.", "Nora is now tagged K5 Conference 2026."):
+            answer = "Nora Feld is in the CRM. " + claim
+            self.assertTrue(any("forbids" in p for p in self.problems([self.create], answer)), claim)
+
+
 class IsTheCraneJobAtRiskTest(GuardCase):
     scenario = "case118-is-the-crane-job-at-risk.yaml"
 
