@@ -3,10 +3,10 @@
   "totals": {
     "tools": 48,
     "driven": 37,
-    "required_only_as_one_of_a_set": 2,
-    "never_driven": 9,
-    "permitted_but_never_required": 4,
-    "tokens_served_but_never_driven": 5192,
+    "required_only_as_one_of_a_set": 3,
+    "never_driven": 8,
+    "permitted_but_never_required": 3,
+    "tokens_served_but_never_driven": 4172,
     "use_case_cases": 73,
     "acceptance_criteria_named": 120,
     "tools_added_by_shipped_units": 0,
@@ -29,23 +29,22 @@
       "cases_with_a_committed_run": 73,
       "cases_that_reached_their_bar": 73,
       "cases_below_their_bar": 0,
-      "runs": 149,
+      "runs": 148,
       "passed": 146,
-      "reliability": 0.9798657718120806,
+      "reliability": 0.9864864864864865,
       "cases_below_their_bar_named": [],
       "route": "Antigravity CLI"
     },
     {
       "model": "gpt-5.6-sol@codex-cli",
       "cases_with_a_committed_run": 73,
-      "cases_that_reached_their_bar": 71,
-      "cases_below_their_bar": 2,
-      "runs": 152,
-      "passed": 142,
-      "reliability": 0.9342105263157895,
+      "cases_that_reached_their_bar": 72,
+      "cases_below_their_bar": 1,
+      "runs": 154,
+      "passed": 144,
+      "reliability": 0.935064935064935,
       "cases_below_their_bar_named": [
-        "case107_tidy_up_the_room",
-        "case86_tell_her_what_we_hold"
+        "case107_tidy_up_the_room"
       ],
       "route": "Codex CLI"
     }
@@ -1745,7 +1744,7 @@
         },
         {
           "model": "gpt-5.6-sol@codex-cli",
-          "runs": 3,
+          "runs": 2,
           "passed": 2,
           "pass_at": 2,
           "held": true,
@@ -1864,7 +1863,7 @@
         },
         {
           "model": "gemini-4-hydrogen-medium@agy-cli",
-          "runs": 3,
+          "runs": 2,
           "passed": 2,
           "pass_at": 2,
           "held": true,
@@ -1916,7 +1915,7 @@
         },
         {
           "model": "gpt-5.6-sol@codex-cli",
-          "runs": 3,
+          "runs": 2,
           "passed": 2,
           "pass_at": 2,
           "held": true,
@@ -1999,7 +1998,7 @@
         },
         {
           "model": "gpt-5.6-sol@codex-cli",
-          "runs": 2,
+          "runs": 3,
           "passed": 2,
           "pass_at": 2,
           "held": true,
@@ -2142,10 +2141,13 @@
       "criteria": [
         1
       ],
-      "requires": [
-        "read_reports"
+      "requires": [],
+      "requires_one_of": [
+        [
+          "read_analytics",
+          "read_reports"
+        ]
       ],
-      "requires_one_of": [],
       "by_model": [
         {
           "model": "claude-sonnet-5-5@claude-cli",
@@ -2465,7 +2467,7 @@
         },
         {
           "model": "gpt-5.6-sol@codex-cli",
-          "runs": 2,
+          "runs": 3,
           "passed": 2,
           "pass_at": 2,
           "held": true,
@@ -2876,9 +2878,9 @@
         {
           "model": "gpt-5.6-sol@codex-cli",
           "runs": 2,
-          "passed": 0,
+          "passed": 2,
           "pass_at": 2,
-          "held": false,
+          "held": true,
           "driver": "gpt:cli",
           "search": "semantic"
         }
@@ -3119,7 +3121,7 @@
         },
         {
           "model": "gpt-5.6-sol@codex-cli",
-          "runs": 2,
+          "runs": 3,
           "passed": 2,
           "pass_at": 2,
           "held": true,
@@ -3160,7 +3162,7 @@
         },
         {
           "model": "gpt-5.6-sol@codex-cli",
-          "runs": 2,
+          "runs": 3,
           "passed": 2,
           "pass_at": 2,
           "held": true,
@@ -3894,22 +3896,6 @@
   ],
   "tools": [
     {
-      "name": "read_analytics",
-      "tokens": 1020,
-      "agents": [],
-      "required_by_cases": [],
-      "required_as_one_of_a_set_by_cases": [],
-      "permitted_in_cases": [
-        "case20_put_it_in_the_board_pack",
-        "case49_who_can_introduce_us",
-        "case62_held_meetings_to_opportunities"
-      ],
-      "driven": false,
-      "required_only_as_one_of_a_set": false,
-      "graded_by_certification_tasks": null,
-      "measured_by_model": {}
-    },
-    {
       "name": "change_record_parts",
       "tokens": 815,
       "agents": [],
@@ -4020,6 +4006,23 @@
       ],
       "driven": false,
       "required_only_as_one_of_a_set": false,
+      "graded_by_certification_tasks": null,
+      "measured_by_model": {}
+    },
+    {
+      "name": "read_analytics",
+      "tokens": 1020,
+      "agents": [],
+      "required_by_cases": [],
+      "required_as_one_of_a_set_by_cases": [
+        "case62_held_meetings_to_opportunities"
+      ],
+      "permitted_in_cases": [
+        "case20_put_it_in_the_board_pack",
+        "case49_who_can_introduce_us"
+      ],
+      "driven": false,
+      "required_only_as_one_of_a_set": true,
       "graded_by_certification_tasks": null,
       "measured_by_model": {}
     },
@@ -4167,10 +4170,11 @@
       "tokens": 2784,
       "agents": [],
       "required_by_cases": [
-        "case49_who_can_introduce_us",
+        "case49_who_can_introduce_us"
+      ],
+      "required_as_one_of_a_set_by_cases": [
         "case62_held_meetings_to_opportunities"
       ],
-      "required_as_one_of_a_set_by_cases": [],
       "permitted_in_cases": [
         "case20_put_it_in_the_board_pack",
         "case22_can_i_trust_the_numbers"
@@ -4180,21 +4184,21 @@
       "graded_by_certification_tasks": null,
       "measured_by_model": {
         "claude-sonnet-5-5@claude-cli": {
-          "runs": 4,
-          "passed": 4,
+          "runs": 2,
+          "passed": 2,
           "reliability": 1,
           "cases_below_their_bar": []
         },
         "gemini-4-hydrogen-medium@agy-cli": {
-          "runs": 4,
-          "passed": 4,
+          "runs": 2,
+          "passed": 2,
           "reliability": 1,
           "cases_below_their_bar": []
         },
         "gpt-5.6-sol@codex-cli": {
-          "runs": 5,
-          "passed": 4,
-          "reliability": 0.8,
+          "runs": 2,
+          "passed": 2,
+          "reliability": 1,
           "cases_below_their_bar": []
         }
       }
@@ -4360,9 +4364,9 @@
           "cases_below_their_bar": []
         },
         "gpt-5.6-sol@codex-cli": {
-          "runs": 12,
+          "runs": 13,
           "passed": 12,
-          "reliability": 1,
+          "reliability": 0.9230769230769231,
           "cases_below_their_bar": []
         }
       }
@@ -4633,9 +4637,9 @@
           "cases_below_their_bar": []
         },
         "gpt-5.6-sol@codex-cli": {
-          "runs": 4,
+          "runs": 5,
           "passed": 4,
-          "reliability": 1,
+          "reliability": 0.8,
           "cases_below_their_bar": []
         }
       }
@@ -4745,8 +4749,46 @@
           "cases_below_their_bar": []
         },
         "gpt-5.6-sol@codex-cli": {
-          "runs": 6,
+          "runs": 7,
           "passed": 6,
+          "reliability": 0.8571428571428571,
+          "cases_below_their_bar": []
+        }
+      }
+    },
+    {
+      "name": "create_record",
+      "tokens": 891,
+      "agents": [],
+      "required_by_cases": [
+        "case54_a_word_from_the_fair",
+        "case56_not_the_same"
+      ],
+      "required_as_one_of_a_set_by_cases": [
+        "case1_log_it"
+      ],
+      "permitted_in_cases": [
+        "case117_log_it_and_say_what_waits"
+      ],
+      "driven": true,
+      "required_only_as_one_of_a_set": false,
+      "graded_by_certification_tasks": null,
+      "measured_by_model": {
+        "claude-sonnet-5-5@claude-cli": {
+          "runs": 4,
+          "passed": 4,
+          "reliability": 1,
+          "cases_below_their_bar": []
+        },
+        "gemini-4-hydrogen-medium@agy-cli": {
+          "runs": 4,
+          "passed": 4,
+          "reliability": 1,
+          "cases_below_their_bar": []
+        },
+        "gpt-5.6-sol@codex-cli": {
+          "runs": 4,
+          "passed": 4,
           "reliability": 1,
           "cases_below_their_bar": []
         }
@@ -4784,44 +4826,6 @@
           "runs": 8,
           "passed": 8,
           "reliability": 1,
-          "cases_below_their_bar": []
-        }
-      }
-    },
-    {
-      "name": "create_record",
-      "tokens": 873,
-      "agents": [],
-      "required_by_cases": [
-        "case54_a_word_from_the_fair",
-        "case56_not_the_same"
-      ],
-      "required_as_one_of_a_set_by_cases": [
-        "case1_log_it"
-      ],
-      "permitted_in_cases": [
-        "case117_log_it_and_say_what_waits"
-      ],
-      "driven": true,
-      "required_only_as_one_of_a_set": false,
-      "graded_by_certification_tasks": null,
-      "measured_by_model": {
-        "claude-sonnet-5-5@claude-cli": {
-          "runs": 4,
-          "passed": 4,
-          "reliability": 1,
-          "cases_below_their_bar": []
-        },
-        "gemini-4-hydrogen-medium@agy-cli": {
-          "runs": 5,
-          "passed": 4,
-          "reliability": 0.8,
-          "cases_below_their_bar": []
-        },
-        "gpt-5.6-sol@codex-cli": {
-          "runs": 5,
-          "passed": 4,
-          "reliability": 0.8,
           "cases_below_their_bar": []
         }
       }
@@ -4955,9 +4959,9 @@
           "cases_below_their_bar": []
         },
         "gpt-5.6-sol@codex-cli": {
-          "runs": 2,
+          "runs": 3,
           "passed": 2,
-          "reliability": 1,
+          "reliability": 0.6666666666666666,
           "cases_below_their_bar": []
         }
       }
@@ -5056,9 +5060,9 @@
           "cases_below_their_bar": []
         },
         "gpt-5.6-sol@codex-cli": {
-          "runs": 5,
+          "runs": 4,
           "passed": 4,
-          "reliability": 0.8,
+          "reliability": 1,
           "cases_below_their_bar": []
         }
       }
@@ -5335,9 +5339,9 @@
           "cases_below_their_bar": []
         },
         "gpt-5.6-sol@codex-cli": {
-          "runs": 7,
+          "runs": 6,
           "passed": 6,
-          "reliability": 0.8571428571428571,
+          "reliability": 1,
           "cases_below_their_bar": []
         }
       }
@@ -5372,9 +5376,9 @@
           "cases_below_their_bar": []
         },
         "gpt-5.6-sol@codex-cli": {
-          "runs": 3,
+          "runs": 2,
           "passed": 2,
-          "reliability": 0.6666666666666666,
+          "reliability": 1,
           "cases_below_their_bar": []
         }
       }
